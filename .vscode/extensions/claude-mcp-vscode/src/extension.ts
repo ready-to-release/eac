@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const workspacePath = workspaceFolder.uri.fsPath;
-            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-extension-commit-button.md');
+            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-ext-commit-button.md');
 
             // Execute the agent with progress indicator
             const commitMessage = await vscode.window.withProgress({

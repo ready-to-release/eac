@@ -223,7 +223,7 @@ func executeAction(action string, message string) string {
 
 func generateSemanticCommitMessage(agentFile string) (string, error) {
 	// Get workspace root from agent file path
-	// Agent file is at .claude/agents/vscode-extension-commit-button.md
+	// Agent file is at .claude/agents/vscode-ext-commit-button.md
 	workspaceRoot := filepath.Dir(filepath.Dir(filepath.Dir(agentFile)))
 
 	// Step 1: Read the agent instructions
@@ -263,11 +263,11 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 }
 
 type GitContext struct {
-	Status       string
-	Diff         string
-	RecentLog    string
-	HeadSHA      string
-	FileChanges  []FileChange
+	Status      string
+	Diff        string
+	RecentLog   string
+	HeadSHA     string
+	FileChanges []FileChange
 }
 
 func gatherGitContext(workspaceRoot string) (*GitContext, error) {
@@ -319,23 +319,47 @@ func readDocumentationFiles(workspaceRoot string) (map[string]string, error) {
 	docs := make(map[string]string)
 
 	// List of documentation files from the agent instructions
-	docFiles := []string{
+	docPatterns := []string{
 		"docs/reference/trunk/revisionable-timeline.md",
 		"docs/reference/trunk/repository-layout.md",
 		"docs/reference/trunk/versioning.md",
 		"docs/reference/trunk/semantic-commits.md",
-		"contracts/repository/0.1.0/definitions.yml",
+		"contracts/deployable-units/0.1.0/*.yml",
 	}
 
-	for _, docPath := range docFiles {
-		fullPath := filepath.Join(workspaceRoot, docPath)
-		content, err := ioutil.ReadFile(fullPath)
-		if err != nil {
-			// Log but don't fail - some docs might be optional
-			fmt.Fprintf(os.Stderr, "Warning: Could not read %s: %v\n", docPath, err)
-			continue
+	for _, docPattern := range docPatterns {
+		fullPattern := filepath.Join(workspaceRoot, docPattern)
+
+		// Check if pattern contains wildcards
+		if strings.Contains(docPattern, "*") {
+			// Expand glob pattern
+			matches, err := filepath.Glob(fullPattern)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Glob pattern error for %s: %v\n", docPattern, err)
+				continue
+			}
+
+			// Read each matched file
+			for _, fullPath := range matches {
+				content, err := ioutil.ReadFile(fullPath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: Could not read %s: %v\n", fullPath, err)
+					continue
+				}
+				// Use relative path as key
+				relPath, _ := filepath.Rel(workspaceRoot, fullPath)
+				docs[relPath] = string(content)
+			}
+		} else {
+			// Read single file directly
+			content, err := ioutil.ReadFile(fullPattern)
+			if err != nil {
+				// Log but don't fail - some docs might be optional
+				fmt.Fprintf(os.Stderr, "Warning: Could not read %s: %v\n", docPattern, err)
+				continue
+			}
+			docs[docPattern] = string(content)
 		}
-		docs[docPath] = string(content)
 	}
 
 	return docs, nil
@@ -679,13 +703,13 @@ func determineFileModule(filePath string) string {
 	// Pattern 10: Root config files → repo-config
 	if !strings.Contains(filePath, "/") {
 		if strings.HasPrefix(filePath, ".") ||
-		   filePath == "package.json" ||
-		   filePath == "mkdocs.yml" ||
-		   filePath == "LICENSE" ||
-		   strings.HasSuffix(filePath, ".json") ||
-		   strings.HasSuffix(filePath, ".yml") ||
-		   strings.HasSuffix(filePath, ".yaml") ||
-		   strings.HasSuffix(filePath, ".lock") {
+			filePath == "package.json" ||
+			filePath == "mkdocs.yml" ||
+			filePath == "LICENSE" ||
+			strings.HasSuffix(filePath, ".json") ||
+			strings.HasSuffix(filePath, ".yml") ||
+			strings.HasSuffix(filePath, ".yaml") ||
+			strings.HasSuffix(filePath, ".lock") {
 			return "repo-config"
 		}
 	}

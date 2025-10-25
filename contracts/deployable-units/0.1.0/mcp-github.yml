@@ -4,73 +4,18 @@
 moniker: "mcp-github"
 name: "GitHub MCP Server"
 type: "mcp-server"
-description: "Model Context Protocol server for GitHub API integration"
+description: "Internal MCP server for GitHub API integration"
+root: "src/mcp/github"
+root_type: "single-go-service"
+required_env: ['GITHUB_TOKEN']
 
 versioning:
-  current_version: "0.1.0"
-  strategy: "git-tag"
-  tag_format: "mcp-github/v{version}"
-  semver_scheme: "MAJOR.MINOR.PATCH"
-  changelog_path: "src/mcp/github/CHANGELOG.md"
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "/docs/CHANGELOG.md"
 
 source:
-  root: "src/mcp/github/"
+  includes:
+    - "src/mcp/github/go.mod"
+    - "src/mcp/github/**.go"
 
-build:
-  language: "go"
-  runtime_version: "1.21+"
-  build_command: "go build -o mcp-github"
-  test_command: "go test ./..."
-  lint_command: "golangci-lint run"
-  artifact_output: "mcp-github"
-  build_dependencies:
-    - "go"
-    - "git"
-
-deployment:
-  deployment_type: "standalone-process"
-  entry_point: "./run.sh"
-  execution_mode: "stdio"
-  runtime_dependencies: []
-  configuration_files:
-    - ".mcp.json"
-  environment_variables:
-    required:
-      - "GITHUB_TOKEN"
-    optional:
-      - "GITHUB_API_URL"
-      - "GITHUB_RATE_LIMIT"
-
-commits:
-  prefix: "mcp-github"
-  version_affecting_types:
-    - "feat"
-    - "fix"
-    - "perf"
-    - "feat!"
-    - "fix!"
-
-dependencies:
-  depends_on: []
-  used_by:
-    - "vscode-extension"
-
-lifecycle:
-  start_command: "bash src/mcp/github/run.sh"
-  stop_command: null
-  health_check: null
-  graceful_shutdown: true
-
-integration:
-  protocol: "MCP"
-  protocol_version: "1.0"
-  transport: "stdio"
-  tools_provided:
-    - "create-issue"
-    - "list-prs"
-    - "search-repos"
-    - "get-repo-info"
-
-metadata:
-  documentation_path: "src/mcp/github/README.md"
-  api_documentation: "https://docs.github.com/en/rest"
+depends_on: ['gh-cli']

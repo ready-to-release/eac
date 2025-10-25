@@ -8,7 +8,7 @@ Documentation is organized using **MkDocs** with the Material theme. The structu
 
 ## Directory Structure
 
-```
+```text
 cli/
 ├── mkdocs.yml                           # MkDocs configuration
 │
@@ -21,7 +21,7 @@ cli/
 │   │   └── (GIF files to be created)
 │   │
 │   ├── guide/                           # User guides
-│   │   └── vscode-extension/
+│   │   └── vscode-ext/
 │   │       ├── index.md                 # Extension guide
 │   │       └── recording-demos.md       # Recording instructions
 │   │
@@ -53,12 +53,12 @@ automation/sh-vscode/
 
 ### 2. Markdown Files Go in Proper Directories
 
-| Type | Directory | Example |
-|------|-----------|---------|
-| User guides | docs/guide/ | `docs/guide/vscode-extension/index.md` |
-| Tutorials | docs/tutorials/ | `docs/tutorials/building-mcp-tools.md` |
-| API reference | docs/reference/ | `docs/reference/mcp-api.md` |
-| Contributing | docs/development/ | `docs/development/contributing.md` |
+| Type          | Directory         | Example                                |
+| ------------- | ----------------- | -------------------------------------- |
+| User guides   | docs/guide/       | `docs/guide/vscode-ext/index.md`       |
+| Tutorials     | docs/tutorials/   | `docs/tutorials/building-mcp-tools.md` |
+| API reference | docs/reference/   | `docs/reference/mcp-api.md`            |
+| Contributing  | docs/development/ | `docs/development/contributing.md`     |
 
 ### 3. Root-Level Docs for Quick Access
 
@@ -98,15 +98,15 @@ nav:
     - Installation: installation.md
   - Guides:
     - VSCode Extension:
-      - Overview: guide/vscode-extension/index.md
-      - Recording Demos: guide/vscode-extension/recording-demos.md
+      - Overview: guide/vscode-ext/index.md
+      - Recording Demos: guide/vscode-ext/recording-demos.md
 ```
 
 ## Content Organization
 
 ### VSCode Extension Documentation
 
-Location: `docs/guide/vscode-extension/`
+Location: `docs/guide/vscode-ext/`
 
 **index.md** - Main guide:
 
@@ -136,7 +136,7 @@ Location: `docs/assets/`
 - `git-commit-demo.gif` (~2MB) - Button click workflow
 - `mcp-server-test.gif` (~2MB) - Terminal MCP test
 
-**Recording instructions:** See `docs/guide/vscode-extension/recording-demos.md`
+**Recording instructions:** See `docs/guide/vscode-ext/recording-demos.md`
 
 ## Building Documentation
 
@@ -176,7 +176,7 @@ mkdocs gh-deploy
 
 The navigation is hierarchical:
 
-```
+```text
 Home
 ├── Getting Started
 │   ├── Quick Start
@@ -264,7 +264,7 @@ cp myimage.png docs/assets/
 
 - Lowercase: `my-guide.md` ✅
 - Hyphens not underscores: `my-guide.md` not `my_guide.md` ✅
-- Descriptive: `vscode-extension-setup.md` not `setup.md` ✅
+- Descriptive: `vscode-ext-setup.md` not `setup.md` ✅
 
 ### Markdown Formatting
 
@@ -319,8 +319,8 @@ function hello() {
 - MkDocs configuration (mkdocs.yml)
 - Documentation structure (/docs)
 - Homepage (docs/index.md)
-- VSCode extension guide (docs/guide/vscode-extension/index.md)
-- Recording guide (docs/guide/vscode-extension/recording-demos.md)
+- VSCode extension guide (docs/guide/vscode-ext/index.md)
+- Recording guide (docs/guide/vscode-ext/recording-demos.md)
 - Assets directory structure
 - Documentation guide (docs/README-DOCS.md)
 
@@ -332,7 +332,7 @@ function hello() {
 - Tutorial pages (docs/tutorials/)
 - Reference pages (docs/reference/)
 - Development pages (docs/development/)
-- Demo GIF files (docs/assets/*.gif)
+- Demo GIF files (docs/assets/\*.gif)
 
 ## Migration Notes
 
@@ -340,7 +340,7 @@ function hello() {
 
 **Old Structure:**
 
-```
+```text
 docs/
 ├── assets/
 │   ├── README.md                   # ❌ Removed
@@ -352,14 +352,14 @@ docs/
 
 **New Structure:**
 
-```
+```text
 docs/
 ├── index.md                        # ✅ New homepage
 ├── README-DOCS.md                  # ✅ Structure guide
 ├── assets/                         # ✅ Binary only
 │   └── .gitkeep
 └── guide/
-    └── vscode-extension/
+    └── vscode-ext/
         ├── index.md                # ✅ Main guide
         └── recording-demos.md      # ✅ Recording instructions
 ```
@@ -368,11 +368,11 @@ docs/
 
 All recording-related content was consolidated into:
 
-- `docs/guide/vscode-extension/recording-demos.md`
+- `docs/guide/vscode-ext/recording-demos.md`
 
 All extension usage and development content was consolidated into:
 
-- `docs/guide/vscode-extension/index.md`
+- `docs/guide/vscode-ext/index.md`
 
 ## Resources
 

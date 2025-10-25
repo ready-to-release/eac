@@ -16,7 +16,7 @@ Visual learner? Check out these demo guides:
 
 1. [Initial Setup](#initial-setup)
 2. [Testing the MCP Server](#testing-the-mcp-server)
-3. [Using the VSCode Extension](#using-the-vscode-extension)
+3. [Using the VSCode Extension](#using-the-vscode-ext)
 4. [Example Workflows](#example-workflows)
 5. [Advanced Usage](#advanced-usage)
 

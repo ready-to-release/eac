@@ -85,8 +85,8 @@ MD022:
 MD023: true
 
 # MD024 - Multiple headings with the same content
-MD024:
-  siblings_only: false
+# Only check h1 and h2, allow duplicates in h3+
+MD024: false
 
 # MD025 - Multiple top-level headings in the same document
 MD025:

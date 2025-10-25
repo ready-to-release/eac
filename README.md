@@ -15,8 +15,8 @@ A monorepo encapsulating an OCI based extendable-cli-in-a-box with internal mcp 
 
 **Quick Links:**
 
-- [MCP Servers Guide](docs/guide/vscode-extension/mcp-servers.md)
-- [VSCode Extension Quick Start](docs/guide/vscode-extension/QUICKSTART.md)
+- [MCP Servers Guide](docs/guide/vscode-ext/mcp-servers.md)
+- [VSCode Extension Quick Start](docs/guide/vscode-ext/QUICKSTART.md)
 - [Project Architecture](docs/guide/architecture.md)
 
 ## License

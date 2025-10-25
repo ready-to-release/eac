@@ -42,7 +42,7 @@ func TestDetermineFileModule(t *testing.T) {
 		{"QUICKSTART.md", "docs"},
 
 		// Configuration
-		{".claude/agents/vscode-extension-commit-button.md", "claude-config"},
+		{".claude/agents/vscode-ext-commit-button.md", "claude-config"},
 		{".vscode/settings.json", "vscode-config"},
 		{".gitignore", "repo-config"},
 		{"mkdocs.yml", "repo-config"},
@@ -179,7 +179,7 @@ func printExamples() {
 		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
 		"contracts/repository/0.1.0/definitions.yml",
 		"docs/reference/trunk/semantic-commits.md",
-		".claude/agents/vscode-extension-commit-button.md",
+		".claude/agents/vscode-ext-commit-button.md",
 		"README.md",
 		".gitignore",
 	}
@@ -194,9 +194,9 @@ func printExamples() {
 // TestGetModuleGlobPattern verifies GitHub Actions glob pattern generation
 func TestGetModuleGlobPattern(t *testing.T) {
 	testCases := []struct {
-		module         string
-		expectedGlobs  []string
-		description    string
+		module        string
+		expectedGlobs []string
+		description   string
 	}{
 		// MCP servers
 		{
@@ -265,13 +265,13 @@ func TestGetModuleGlobPattern(t *testing.T) {
 			description:   "Claude configuration",
 		},
 		{
-			module:        "vscode-config",
+			module: "vscode-config",
 			expectedGlobs: []string{
 				".vscode/*.json",
 				".vscode/*.md",
 				".vscode/settings.*.json",
 			},
-			description:   "VSCode configuration",
+			description: "VSCode configuration",
 		},
 
 		// Documentation
@@ -290,7 +290,7 @@ func TestGetModuleGlobPattern(t *testing.T) {
 
 		// Repo config (multiple patterns)
 		{
-			module:        "repo-config",
+			module: "repo-config",
 			expectedGlobs: []string{
 				"*.json",
 				"*.yml",
@@ -300,7 +300,7 @@ func TestGetModuleGlobPattern(t *testing.T) {
 				"LICENSE",
 				"*.lock",
 			},
-			description:   "Repository configuration",
+			description: "Repository configuration",
 		},
 	}
 

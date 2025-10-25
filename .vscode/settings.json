@@ -11,6 +11,9 @@
   "markdown.preview.scrollPreviewWithEditor": true,
   "markdown.preview.scrollEditorWithPreview": true,
   "markdown.preview.markEditorSelection": true,
+  "markdownlint.config": {
+    "extends": ".markdownlint.yml"
+  },
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.quickSuggestions": {

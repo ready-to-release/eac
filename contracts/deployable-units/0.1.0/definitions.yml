@@ -73,8 +73,8 @@ deployable_units:
     type: "mcp-server"
     prefix: "mcp-vscode"
 
-  vscode-extension:
-    contract: "contracts/deployable-units/0.1.0/vscode-extension.yml"
+  vscode-ext:
+    contract: "contracts/deployable-units/0.1.0/vscode-ext.yml"
     type: "extension"
     prefix: "vscode-ext"
 

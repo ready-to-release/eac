@@ -77,8 +77,8 @@ nav:
 
   - Guides:
     - VSCode Extension:
-      - Overview: guide/vscode-extension/index.md
-      - Recording Demos: guide/vscode-extension/recording-demos.md
+      - Overview: guide/vscode-ext/index.md
+      - Recording Demos: guide/vscode-ext/recording-demos.md
     - MCP Servers: guide/mcp-servers.md
     - Automation Scripts: guide/automation.md
 

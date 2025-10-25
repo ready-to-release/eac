@@ -121,12 +121,13 @@ graph LR
     style M3 fill:#E0FFE0
 ```
 
-**Examples:**
-| File Path | Detected Module | Type Inferred |
-|-----------|----------------|---------------|
-| `automation/sh-vscode/install.sh` | `sh-vscode` | Shell (sh-) |
-| `automation/pwsh-build/build.ps1` | `pwsh-build` | PowerShell (pwsh-) |
-| `automation/py-test/test.py` | `py-test` | Python (py-) |
+### Examples
+
+| File Path                         | Detected Module | Type Inferred      |
+| --------------------------------- | --------------- | ------------------ |
+| `automation/sh-vscode/install.sh` | `sh-vscode`     | Shell (sh-)        |
+| `automation/pwsh-build/build.ps1` | `pwsh-build`    | PowerShell (pwsh-) |
+| `automation/py-test/test.py`      | `py-test`       | Python (py-)       |
 
 ### Pattern 2: Container Modules
 
@@ -150,12 +151,13 @@ graph LR
     style CM3 fill:#E0FFE0
 ```
 
-**Examples:**
-| File Path | Detected Module |
-|-----------|----------------|
-| `containers/mkdocs/Dockerfile` | `mkdocs` |
-| `containers/nginx-proxy/nginx.conf` | `nginx-proxy` |
-| `containers/postgres/init.sql` | `postgres` |
+### Examples
+
+| File Path                           | Detected Module |
+| ----------------------------------- | --------------- |
+| `containers/mkdocs/Dockerfile`      | `mkdocs`        |
+| `containers/nginx-proxy/nginx.conf` | `nginx-proxy`   |
+| `containers/postgres/init.sql`      | `postgres`      |
 
 ### Pattern 3: MCP Server Modules
 
@@ -183,25 +185,24 @@ graph LR
     style SM4 fill:#D4E8F0
 ```
 
-**Examples:**
-| File Path | Detected Module |
-|-----------|----------------|
-| `src/mcp/pwsh/main.go` | `mcp-pwsh` |
-| `src/mcp/docs/server.go` | `mcp-docs` |
-| `src/mcp/github/api.go` | `mcp-github` |
-| `src/mcp/vscode/main.go` | `mcp-vscode` |
+### Examples
+
+| File Path                | Detected Module |
+| ------------------------ | --------------- |
+| `src/mcp/pwsh/main.go`   | `mcp-pwsh`      |
+| `src/mcp/docs/server.go` | `mcp-docs`      |
+| `src/mcp/github/api.go`  | `mcp-github`    |
+| `src/mcp/vscode/main.go` | `mcp-vscode`    |
 
 ### Pattern 4: Contract Modules
 
 ```mermaid
 graph LR
     subgraph "contracts/ directory"
-        CT1["repository/0.1.0/"]
         CT2["deployable-units/0.1.0/"]
         CT3["schemas/1.0.0/"]
     end
 
-    CT1 --> CTM1["Module: contracts-repository"]
     CT2 --> CTM2["Module: contracts-deployable-units"]
     CT3 --> CTM3["Module: contracts-schemas"]
 
@@ -213,10 +214,10 @@ graph LR
     style CTM3 fill:#F0E0F8
 ```
 
-**Examples:**
-| File Path | Detected Module |
-|-----------|----------------|
-| `contracts/repository/0.1.0/definitions.yml` | `contracts-repository` |
+### Examples
+
+| File Path                                       | Detected Module              |
+| ----------------------------------------------- | ---------------------------- |
 | `contracts/deployable-units/0.1.0/mcp-pwsh.yml` | `contracts-deployable-units` |
 
 ## File-to-Module Mapping
@@ -341,7 +342,8 @@ graph TB
 ```
 
 **Result:**
-```
+
+```text
 # Revision abc123...
 
 This commit adds automated build tooling, updates container images,
@@ -432,12 +434,14 @@ graph TB
 **Commit Comparison:**
 
 ❌ **Before (Generic):**
-```
+
+```text
 infra: feat: add installation script
 ```
 
 ✅ **After (Specific):**
-```
+
+```text
 sh-vscode: feat: add automated installation
 
 Implements shell script for automated
@@ -479,7 +483,7 @@ flowchart LR
     style Use fill:#F0E68C
 ```
 
-**Example: Adding a Python Test Module**
+### Examples
 
 ```bash
 # 1. Create directory

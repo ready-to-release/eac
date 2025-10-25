@@ -13,7 +13,7 @@ Read and act upon the project instructions in `/CLAUDE.md`:
 
 After reading, provide a concise report:
 
-```
+```text
 Project Context Loaded:
 
 Active Constraints:

@@ -108,7 +108,7 @@ git tag mcp-github/v2.0.1
 ```
 
 ### VSCode Extension
-**Module**: `vscode-extension`
+**Module**: `vscode-ext`
 
 **Version Location**: `.vscode/extensions/claude-mcp-vscode/package.json`
 
@@ -155,7 +155,7 @@ Commit 1: mcp-vscode: feat: add commit-analyze tool
   → mcp-vscode: 1.2.0 → 1.3.0 (MINOR)
 
 Commit 2: vscode-ext: feat: add commit analysis UI
-  → vscode-extension: 2.1.0 → 2.2.0 (MINOR)
+  → vscode-ext: 2.1.0 → 2.2.0 (MINOR)
 ```
 
 ## Pre-Release Versions
@@ -292,7 +292,7 @@ Commits:
    → mcp-vscode: 2.0.0 → 2.1.0
 
 2. vscode-ext: feat: integrate file watching in UI
-   → vscode-extension: 1.5.0 → 1.6.0
+   → vscode-ext: 1.5.0 → 1.6.0
 ```
 
 ## Version Query Commands

@@ -17,7 +17,7 @@ Independently built, versioned, and deployed artifacts. Each has a detailed cont
 
 **Current deployable units**:
 - `mcp-pwsh`, `mcp-docs`, `mcp-github`, `mcp-vscode` (MCP servers)
-- `vscode-extension` (VSCode extension)
+- `vscode-ext` (VSCode extension)
 
 ### Supporting Modules
 Non-deployable modules that support the system:
@@ -93,7 +93,7 @@ Versioned contract definitions and schemas.
 
 | Module | Prefix | Location | Description |
 |--------|--------|----------|-------------|
-| `vscode-extension` | `vscode-ext:` | `.vscode/extensions/claude-mcp-vscode/` | MCP VSCode extension UI |
+| `vscode-ext` | `vscode-ext:` | `.vscode/extensions/claude-mcp-vscode/` | MCP VSCode extension UI |
 
 ### Infrastructure
 
@@ -155,7 +155,7 @@ mcp-vscode,vscode-ext: feat: add complete feature
 ## Module Dependencies
 
 ```
-vscode-extension
+vscode-ext
 ├── depends on: mcp-pwsh, mcp-docs, mcp-github, mcp-vscode
 └── used by: end users
 
@@ -222,11 +222,10 @@ Each deployable unit has a mandatory contract file at `contracts/deployable-unit
 
 **Example contracts**:
 - [mcp-pwsh.yml](../../../contracts/deployable-units/0.1.0/mcp-pwsh.yml)
-- [vscode-extension.yml](../../../contracts/deployable-units/0.1.0/vscode-extension.yml)
+- [vscode-ext.yml](../../../contracts/deployable-units/0.1.0/vscode-ext.yml)
 
 ## References
 
 - [Semantic Commits Guide](semantic-commits.md)
 - [Versioning Documentation](versioning.md)
-- [Repository Contract](../../../contracts/repository/0.1.0/definitions.yml)
-- [Deployable Units Directory](../../../contracts/deployable-units/0.1.0/)
+- [Deployable Units Contracts](../../../contracts/deployable-units/0.1.0/)
