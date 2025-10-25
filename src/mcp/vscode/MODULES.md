@@ -113,7 +113,7 @@ Updates mkdocs container to use Python
 
 | File Path | Detected Module |
 |-----------|----------------|
-| `.claude/agents/vscode-ext-commit-button.md` | `claude-config` |
+| `.claude/agents/vscode-extension-commit-button.md` | `claude-config` |
 | `.vscode/settings.json` | `vscode-config` |
 | `.gitignore` | `repo-config` |
 | `mkdocs.yml` | `repo-config` |

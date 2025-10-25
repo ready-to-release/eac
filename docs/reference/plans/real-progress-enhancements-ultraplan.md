@@ -581,7 +581,7 @@ vscode.window.showInformationNotification(
 
 ```
 [10:30:00] Starting commit message generation
-[10:30:00] Loading agent: vscode-ext-commit-button.md
+[10:30:00] Loading agent: vscode-extension-commit-button.md
 [10:30:00] Running: git status
 [10:30:01] Found 12 modified files
 [10:30:01] Running: git diff

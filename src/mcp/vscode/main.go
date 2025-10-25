@@ -181,20 +181,22 @@ func callTool(params *CallToolParams) ToolResult {
 	case "execute-agent":
 		agentFile, ok := params.Arguments["agentFile"].(string)
 		if !ok {
+			// Return error prefix so it can be detected
 			return ToolResult{
 				Content: []Content{{
 					Type: "text",
-					Text: "Error: agentFile must be a string",
+					Text: "ERROR: agentFile must be a string",
 				}},
 			}
 		}
 
 		commitMessage, err := generateSemanticCommitMessage(agentFile)
 		if err != nil {
+			// Return error prefix so it can be detected
 			return ToolResult{
 				Content: []Content{{
 					Type: "text",
-					Text: fmt.Sprintf("Error generating commit message: %v", err),
+					Text: fmt.Sprintf("ERROR: %v", err),
 				}},
 			}
 		}
@@ -223,7 +225,7 @@ func executeAction(action string, message string) string {
 
 func generateSemanticCommitMessage(agentFile string) (string, error) {
 	// Get workspace root from agent file path
-	// Agent file is at .claude/agents/vscode-ext-commit-button.md
+	// Agent file is at .claude/agents/vscode-extension-commit-button.md
 	workspaceRoot := filepath.Dir(filepath.Dir(filepath.Dir(agentFile)))
 
 	// Step 1: Read the agent instructions
@@ -544,8 +546,9 @@ func callClaude(prompt string) (string, error) {
 	commitMessage = strings.TrimSuffix(commitMessage, "```")
 	commitMessage = strings.TrimSpace(commitMessage)
 
-	// Remove any leading/trailing newlines but preserve structure
-	commitMessage = strings.TrimSpace(commitMessage)
+	// Ensure commit message ends with exactly one newline (MD047 compliance)
+	commitMessage = strings.TrimRight(commitMessage, "\n")
+	commitMessage = commitMessage + "\n"
 
 	return commitMessage, nil
 }

@@ -3,83 +3,19 @@ import * as child_process from 'child_process';
 import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Claude MCP VSCode extension is now active');
+    console.log('✓ Claude Commit Agent extension activated successfully');
+    // Show status bar item to indicate extension is loaded
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarItem.text = "$(robot) Claude Commit";
+    statusBarItem.tooltip = "Claude Commit Agent is active";
+    statusBarItem.command = "claude-mcp-vscode.callMCP";
+    statusBarItem.show();
+    context.subscriptions.push(statusBarItem);
 
     // Register the command
     let disposable = vscode.commands.registerCommand('claude-mcp-vscode.callMCP', async () => {
         try {
-            // Get the workspace root
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                vscode.window.showErrorMessage('No workspace folder found');
-                return;
-            }
-
-            const workspacePath = workspaceFolder.uri.fsPath;
-            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-ext-commit-button.md');
-
-            // Execute the agent with progress indicator
-            const commitMessage = await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: "Generating semantic commit message",
-                cancellable: false
-            }, async (progress) => {
-                // Simulate progress updates
-                progress.report({ increment: 0, message: "Analyzing git changes..." });
-
-                // Track last real progress message
-                let lastRealProgress = "";
-
-                // Start the actual agent execution with real progress callback
-                const agentPromise = executeAgent(workspacePath, agentFilePath, (realProgress) => {
-                    // Update with real progress from Go process
-                    lastRealProgress = realProgress;
-                    progress.report({ message: realProgress });
-                });
-
-                // Simulate progress while waiting (0-300 scale, mapped to 0-100%)
-                // Updates every 3s, increments by 14 → reaches "Finalizing..." at ~60s
-                // Operation typically completes at ~67s, leaving only ~7s at final stage
-                let currentProgress = 0;
-                const progressInterval = setInterval(() => {
-                    if (currentProgress < 280) {
-                        currentProgress += 14;
-                        const messages = [
-                            "Reading documentation...",
-                            "Analyzing commit history...",
-                            "Determining module changes...",
-                            "Calculating version impacts...",
-                            "Generating commit structure...",
-                            "Applying semantic conventions...",
-                            "Validating module boundaries...",
-                            "Computing glob patterns...",
-                            "Optimizing message format...",
-                            "Formatting commit message...",
-                            "Verifying 50/72 rule compliance...",
-                            "Finalizing...",
-                        ];
-                        const messageIndex = Math.floor(currentProgress / 25);
-                        // Use real progress if available, otherwise use simulated
-                        const displayMessage = lastRealProgress || messages[messageIndex] || "Processing...";
-                        progress.report({
-                            increment: 4.5, // 20 updates × 4.5% = 90%
-                            message: displayMessage
-                        });
-                    }
-                }, 3000); // Update every 3 seconds
-
-                try {
-                    const result = await agentPromise;
-                    clearInterval(progressInterval);
-                    progress.report({ increment: 10, message: "Complete!" });
-                    return result;
-                } catch (error) {
-                    clearInterval(progressInterval);
-                    throw error;
-                }
-            });
-
-            // Get the Git extension API
+            // FAIL-EARLY: Validate git state FIRST before doing anything else
             const gitExtension = vscode.extensions.getExtension('vscode.git');
             if (!gitExtension) {
                 vscode.window.showErrorMessage('Git extension not found');
@@ -94,8 +30,94 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            // Set the commit message in the first repository
             const repo = api.repositories[0];
+
+            // Validate git state IMMEDIATELY - fail early if invalid
+            const validationError = await validateGitState(repo);
+            if (validationError) {
+                vscode.window.showErrorMessage(validationError);
+                return;
+            }
+
+            // Only proceed with workspace and agent setup if git state is valid
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage('No workspace folder found');
+                return;
+            }
+
+            const workspacePath = workspaceFolder.uri.fsPath;
+            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-extension-commit-button.md');
+
+            // Execute the agent with progress indicator
+            let commitMessage: string;
+            try {
+                commitMessage = await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: "Generating semantic commit message",
+                    cancellable: false
+                }, async (progress) => {
+                    // Simulate progress updates
+                    progress.report({ increment: 0, message: "Analyzing git changes..." });
+
+                    // Track last real progress message
+                    let lastRealProgress = "";
+
+                    // Start the actual agent execution with real progress callback
+                    const agentPromise = executeAgent(workspacePath, agentFilePath, (realProgress) => {
+                        // Update with real progress from Go process
+                        lastRealProgress = realProgress;
+                        progress.report({ message: realProgress });
+                    });
+
+                    // Simulate progress while waiting (0-300 scale, mapped to 0-100%)
+                    // Updates every 3s, increments by 14 → reaches "Finalizing..." at ~60s
+                    // Operation typically completes at ~67s, leaving only ~7s at final stage
+                    let currentProgress = 0;
+                    const progressInterval = setInterval(() => {
+                        if (currentProgress < 280) {
+                            currentProgress += 14;
+                            const messages = [
+                                "Reading documentation...",
+                                "Analyzing commit history...",
+                                "Determining module changes...",
+                                "Calculating version impacts...",
+                                "Generating commit structure...",
+                                "Applying semantic conventions...",
+                                "Validating module boundaries...",
+                                "Computing glob patterns...",
+                                "Optimizing message format...",
+                                "Formatting commit message...",
+                                "Verifying 50/72 rule compliance...",
+                                "Finalizing...",
+                            ];
+                            const messageIndex = Math.floor(currentProgress / 25);
+                            // Use real progress if available, otherwise use simulated
+                            const displayMessage = lastRealProgress || messages[messageIndex] || "Processing...";
+                            progress.report({
+                                increment: 4.5, // 20 updates × 4.5% = 90%
+                                message: displayMessage
+                            });
+                        }
+                    }, 3000); // Update every 3 seconds
+
+                    try {
+                        const result = await agentPromise;
+                        clearInterval(progressInterval);
+                        progress.report({ increment: 10, message: "Complete!" });
+                        return result;
+                    } catch (error) {
+                        clearInterval(progressInterval);
+                        throw error;
+                    }
+                });
+            } catch (error) {
+                // Error occurred during agent execution - do NOT show success message
+                throw error;
+            }
+
+            // Only reach here if commit message was successfully generated
+            // Set the commit message in the repository
             repo.inputBox.value = commitMessage;
 
             vscode.window.showInformationMessage('✓ Commit message generated successfully!');
@@ -106,6 +128,42 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(disposable);
+}
+
+/**
+ * Validates the git repository state before generating commit message
+ * @param repo The git repository
+ * @returns Error message if validation fails, null if valid
+ */
+async function validateGitState(repo: any): Promise<string | null> {
+    // Get the current repository state
+    const state = repo.state;
+
+    // Debug: Log the state to understand what we're working with
+    console.log('Git State Debug:', {
+        workingTreeChanges: state.workingTreeChanges?.length || 0,
+        indexChanges: state.indexChanges?.length || 0,
+        mergeChanges: state.mergeChanges?.length || 0,
+        untrackedChanges: state.untrackedChanges?.length || 0
+    });
+
+    // Check if there are staged changes (indexChanges)
+    const hasStagedChanges = (state.indexChanges?.length || 0) > 0;
+
+    if (!hasStagedChanges) {
+        return 'No staged changes found. Stage your changes before generating a commit message.';
+    }
+
+    // Check if there are unstaged changes (working tree changes that aren't staged)
+    // This includes both modified files and untracked files
+    const hasUnstagedChanges = (state.workingTreeChanges?.length || 0) > 0;
+
+    if (hasUnstagedChanges) {
+        return 'You have unstaged changes. Please stage or stash them before generating a commit message.';
+    }
+
+    // All validations passed
+    return null;
 }
 
 async function executeAgent(workspacePath: string, agentFilePath: string, onProgress?: (message: string) => void): Promise<string> {
@@ -173,6 +231,13 @@ async function executeAgent(workspacePath: string, agentFilePath: string, onProg
                 // Extract the commit message from the tool result
                 if (response.result && response.result.content && response.result.content[0]) {
                     const commitMessage = response.result.content[0].text;
+
+                    // Check if the response is actually an error
+                    if (commitMessage.startsWith('ERROR:')) {
+                        reject(new Error(commitMessage.substring(7).trim()));
+                        return;
+                    }
+
                     resolve(commitMessage);
                 } else {
                     reject(new Error('Invalid response format from MCP server'));

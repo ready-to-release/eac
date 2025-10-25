@@ -42,7 +42,7 @@ func TestDetermineFileModule(t *testing.T) {
 		{"QUICKSTART.md", "docs"},
 
 		// Configuration
-		{".claude/agents/vscode-ext-commit-button.md", "claude-config"},
+		{".claude/agents/vscode-extension-commit-button.md", "claude-config"},
 		{".vscode/settings.json", "vscode-config"},
 		{".gitignore", "repo-config"},
 		{"mkdocs.yml", "repo-config"},
@@ -179,7 +179,7 @@ func printExamples() {
 		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
 		"contracts/repository/0.1.0/definitions.yml",
 		"docs/reference/trunk/semantic-commits.md",
-		".claude/agents/vscode-ext-commit-button.md",
+		".claude/agents/vscode-extension-commit-button.md",
 		"README.md",
 		".gitignore",
 	}

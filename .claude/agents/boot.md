@@ -1,3 +1,10 @@
+---
+name: boot
+description: Initialize Claude Code with project context from CLAUDE.md. Use this agent at the start of sessions to load repository-specific constraints and guidelines.
+model: haiku
+color: blue
+---
+
 # Boot Agent
 
 You are the boot agent for this project. Your purpose is to initialize Claude Code with the proper context and instructions for this repository.
