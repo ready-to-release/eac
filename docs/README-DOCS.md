@@ -266,6 +266,16 @@ mkdocs serve
 # Check code blocks render
 ```
 
+## Often fails on not generating proper level 3 section headers
+
+### Proper level 3 example
+
+<\nThis is a template for a missing level 3 content line.>
+
+```markdown
+**improper level 3 example**
+```
+
 ## Questions?
 
 - MkDocs docs: <https://www.mkdocs.org/>

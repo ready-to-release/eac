@@ -27,7 +27,14 @@
         {
           "command": "claude-mcp-vscode.callMCP",
           "group": "navigation",
-          "when": "scmProvider == git"
+          "when": "scmProvider == git && !claude-mcp-vscode.isGenerating",
+          "icon": "$(robot)"
+        },
+        {
+          "command": "claude-mcp-vscode.callMCP",
+          "group": "navigation",
+          "when": "scmProvider == git && claude-mcp-vscode.isGenerating",
+          "icon": "$(sync~spin)"
         }
       ]
     }

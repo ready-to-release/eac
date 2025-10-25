@@ -12,6 +12,9 @@ let debugLogPath: string = '';
 // Output channel for extension logs
 let outputChannel: vscode.OutputChannel;
 
+// Rainbow animation for status bar
+let rainbowInterval: NodeJS.Timeout | null = null;
+
 function log(message: string) {
     const timestamp = new Date().toISOString();
     const logLine = `[${timestamp}] ${message}\n`;
@@ -64,9 +67,27 @@ export function activate(context: vscode.ExtensionContext) {
 
         isGeneratingCommit = true;
 
-        // Change status bar to red robot during processing
-        statusBarItem.text = "$(debug-stop) Claude Commit";
-        statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+        // Start rainbow animation on status bar
+        const rainbowColors = [
+            'statusBarItem.errorBackground',      // Red
+            'statusBarItem.warningBackground',    // Orange/Yellow
+            'editorInfo.foreground',              // Blue
+            'editorWarning.foreground',           // Yellow
+            'charts.green',                       // Green
+            'charts.purple',                      // Purple
+        ];
+        let rainbowIndex = 0;
+
+        statusBarItem.text = "$(sync~spin) Claude Commit";
+        statusBarItem.backgroundColor = new vscode.ThemeColor(rainbowColors[0]);
+
+        rainbowInterval = setInterval(() => {
+            rainbowIndex = (rainbowIndex + 1) % rainbowColors.length;
+            statusBarItem.backgroundColor = new vscode.ThemeColor(rainbowColors[rainbowIndex]);
+        }, 400);
+
+        // Update command to show it's working (this affects the SCM button too)
+        vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', true);
 
         try {
             // FAIL-EARLY: Validate git state FIRST before doing anything else
@@ -93,6 +114,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (validationError) {
                 vscode.window.showErrorMessage(validationError);
                 isGeneratingCommit = false;
+                if (rainbowInterval) clearInterval(rainbowInterval);
                 statusBarItem.text = "$(robot) Claude Commit";
                 statusBarItem.backgroundColor = undefined;
                 return;
@@ -267,8 +289,13 @@ export function activate(context: vscode.ExtensionContext) {
         } finally {
             // Always reset the flag and status bar, even if there was an error
             isGeneratingCommit = false;
+            if (rainbowInterval) {
+                clearInterval(rainbowInterval);
+                rainbowInterval = null;
+            }
             statusBarItem.text = "$(robot) Claude Commit";
             statusBarItem.backgroundColor = undefined;
+            vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', false);
         }
     });
 
