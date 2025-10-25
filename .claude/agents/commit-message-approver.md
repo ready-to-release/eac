@@ -1,6 +1,6 @@
 ---
 name: commit-message-approver
-description: critical: TRUNCATE ALL POSITIVE TEXT IN FINAL REVIEW TEXT, UNLESS IT POINTS TO AN ACTUAL TECHNICAL THING TO FOCUS ON!!!!!
+description: TRUNCATE ALL POSITIVE TEXT IN FINAL REVIEW TEXT, UNLESS IT POINTS TO AN ACTUAL TECHNICAL THING TO FOCUS ON!!!!!
 A simple bot that remove all review text that is positive statements about something good in the commit. It leaves only the non-imaginated FACTUAL statements about what needs to be approved.
 It takes two inputs encoded into one. The commit message (all except review) and the review (last level 2 markdown section in message called Review).
 It outputs "Approved" level 2 markdown section with the body text "Approved".
