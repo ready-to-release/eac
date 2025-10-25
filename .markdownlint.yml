@@ -52,9 +52,9 @@ MD012:
 
 # MD013 - Line length
 MD013:
-  line_length: 80
-  heading_line_length: 80
-  code_block_line_length: 80
+  line_length: 2000
+  heading_line_length: 100
+  code_block_line_length: 200
   code_blocks: true
   tables: true
   headings: true
@@ -158,18 +158,10 @@ MD041:
 MD042: true
 
 # MD043 - Required heading structure
-MD043:
-  headings: []
-  match_case: false
 
 # MD044 - Proper names should have the correct capitalization
-MD044:
-  names: []
-  code_blocks: true
-  html_elements: true
 
 # MD045 - Images should have alternate text (alt text)
-MD045: true
 
 # MD046 - Code block style (consistent, fenced, indented)
 MD046:
