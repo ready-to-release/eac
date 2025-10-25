@@ -41,9 +41,9 @@ This repository follows the **Conventional Commits** specification for all commi
 **Examples**:
 
 ```
-mcp-vscode: feat: add commit-message-generate tool
-vscode-ext: feat: add toolbar button for quick commits
-mcp-github: feat: support pull request creation
+src-mcp-vscode: feat: add commit-message-generate tool
+vscode-ext-claude-commit: feat: add toolbar button for quick commits
+src-mcp-github: feat: support pull request creation
 ```
 
 #### `fix:` - Bug Fix (PATCH bump)
@@ -55,9 +55,9 @@ mcp-github: feat: support pull request creation
 **Examples**:
 
 ```
-mcp-pwsh: fix: handle null output from commands
-vscode-ext: fix: prevent duplicate button registration
-mcp-docs: fix: correct markdown parsing for code blocks
+src-mcp-pwsh: fix: handle null output from commands
+vscode-ext-claude-commit: fix: prevent duplicate button registration
+src-mcp-docs: fix: correct markdown parsing for code blocks
 ```
 
 #### `perf:` - Performance Improvement (PATCH bump)
@@ -69,8 +69,8 @@ mcp-docs: fix: correct markdown parsing for code blocks
 **Examples**:
 
 ```
-mcp-github: perf: cache API responses for 5 minutes
-mcp-vscode: perf: optimize file watching with debounce
+src-mcp-github: perf: cache API responses for 5 minutes
+src-mcp-vscode: perf: optimize file watching with debounce
 ```
 
 #### `feat!:` or `fix!:` - Breaking Change (MAJOR bump)
@@ -84,14 +84,14 @@ mcp-vscode: perf: optimize file watching with debounce
 **Examples**:
 
 ```
-mcp-vscode: feat!: change tool response schema
+src-mcp-vscode: feat!: change tool response schema
 
 BREAKING CHANGE: Tool responses now use {success, result, error}
 format instead of {status, data}. Update all tool implementations.
 ```
 
 ```
-vscode-ext: refactor!: remove deprecated executeCommand API
+vscode-ext-claude-commit: refactor!: remove deprecated executeCommand API
 
 BREAKING CHANGE: The executeCommand method has been removed.
 Use the new invokeAction method instead.
@@ -110,7 +110,7 @@ Use the new invokeAction method instead.
 ```
 docs: update quick start guide with new screenshots
 docs: add troubleshooting section for MCP servers
-mcp-vscode: docs: improve tool documentation in README
+src-mcp-vscode: docs: improve tool documentation in README
 ```
 
 #### `style:` - Code Style
@@ -122,8 +122,8 @@ mcp-vscode: docs: improve tool documentation in README
 **Examples**:
 
 ```
-mcp-pwsh: style: format code with gofmt
-vscode-ext: style: apply prettier formatting
+src-mcp-pwsh: style: format code with gofmt
+vscode-ext-claude-commit: style: apply prettier formatting
 ```
 
 #### `refactor:` - Refactoring
@@ -135,8 +135,8 @@ vscode-ext: style: apply prettier formatting
 **Examples**:
 
 ```
-mcp-github: refactor: extract HTTP client to separate package
-vscode-ext: refactor: reorganize command handlers
+src-mcp-github: refactor: extract HTTP client to separate package
+vscode-ext-claude-commit: refactor: reorganize command handlers
 ```
 
 #### `test:` - Tests
@@ -148,8 +148,8 @@ vscode-ext: refactor: reorganize command handlers
 **Examples**:
 
 ```
-mcp-vscode: test: add unit tests for commit parser
-vscode-ext: test: add integration tests for button actions
+src-mcp-vscode: test: add unit tests for commit parser
+vscode-ext-claude-commit: test: add integration tests for button actions
 ```
 
 #### `chore:` - Maintenance
@@ -203,7 +203,7 @@ build: add production build optimization
 **Examples**:
 
 ```
-revert: mcp-vscode: feat: add commit-message-generate tool
+revert: src-mcp-vscode: feat: add commit-message-generate tool
 
 This reverts commit abc123def456. The feature caused performance
 issues in large repositories.
@@ -215,11 +215,11 @@ Based on [repository-layout.md](repository-layout.md), use these module prefixes
 
 | Prefix | Module | Location |
 |--------|--------|----------|
-| `mcp-pwsh:` | PowerShell MCP Server | `src/mcp/pwsh/` |
-| `mcp-docs:` | Documentation MCP Server | `src/mcp/docs/` |
-| `mcp-github:` | GitHub MCP Server | `src/mcp/github/` |
-| `mcp-vscode:` | VSCode MCP Server | `src/mcp/vscode/` |
-| `vscode-ext:` | VSCode Extension | `.vscode/extensions/claude-mcp-vscode/` |
+| `src-mcp-pwsh:` | PowerShell MCP Server | `src/mcp/pwsh/` |
+| `src-mcp-docs:` | Documentation MCP Server | `src/mcp/docs/` |
+| `src-mcp-github:` | GitHub MCP Server | `src/mcp/github/` |
+| `src-mcp-vscode:` | VSCode MCP Server | `src/mcp/vscode/` |
+| `vscode-ext-claude-commit:` | VSCode Extension | `.vscode/extensions/claude-mcp-vscode/` |
 | `infra:` | Infrastructure | `automation/`, `containers/` |
 | `docs:` | Documentation | `docs/`, `*.md` files |
 | `config:` | Configuration | `.mcp.json`, `.gitignore`, etc. |
@@ -230,14 +230,14 @@ Based on [repository-layout.md](repository-layout.md), use these module prefixes
 **Preferred Approach**: Create separate commits for each module
 
 ```
-Commit 1: mcp-vscode: feat: add commit-analyze tool
-Commit 2: vscode-ext: feat: integrate commit analyzer in UI
+Commit 1: src-mcp-vscode: feat: add commit-analyze tool
+Commit 2: vscode-ext-claude-commit: feat: integrate commit analyzer in UI
 ```
 
 **Alternative**: Use comma-separated prefixes for tightly coupled changes
 
 ```
-mcp-vscode,vscode-ext: feat: add commit analysis feature
+src-mcp-vscode,vscode-ext-claude-commit: feat: add commit analysis feature
 ```
 
 ## Description Guidelines
@@ -297,7 +297,7 @@ Optional detailed explanation of the change.
 ### Example
 
 ```
-mcp-github: feat: add repository search tool
+src-mcp-github: feat: add repository search tool
 
 Add new tool for searching GitHub repositories with advanced filters.
 Supports filtering by:
@@ -344,7 +344,7 @@ Reviewed-by: Name <email@example.com>
 ### Example with Multiple Footers
 
 ```
-mcp-vscode: feat!: migrate to async tool interface
+src-mcp-vscode: feat!: migrate to async tool interface
 
 All tools now return Promises to support async operations.
 This enables better error handling and streaming responses.
@@ -385,7 +385,7 @@ Reviewed-by: John Doe <john@example.com>
 ### Example 1: Simple Feature
 
 ```
-mcp-pwsh: feat: add output formatting options
+src-mcp-pwsh: feat: add output formatting options
 
 Allow customization of command output format via new parameters.
 ```
@@ -395,7 +395,7 @@ Allow customization of command output format via new parameters.
 ### Example 2: Bug Fix with Context
 
 ```
-vscode-ext: fix: prevent duplicate toolbar buttons on reload
+vscode-ext-claude-commit: fix: prevent duplicate toolbar buttons on reload
 
 The extension was registering toolbar buttons multiple times when
 the window was reloaded, causing visual duplication. Now properly
@@ -409,7 +409,7 @@ Fixes #234
 ### Example 3: Breaking Change
 
 ```
-mcp-github: feat!: standardize error response format
+src-mcp-github: feat!: standardize error response format
 
 All API errors now return consistent error objects with code,
 message, and details fields.
@@ -439,13 +439,13 @@ Include screenshots and step-by-step guide for first-time users.
 
 ```
 Commit 1:
-mcp-vscode: feat: add semantic commit parser tool
+src-mcp-vscode: feat: add semantic commit parser tool
 
 Implement tool for parsing and validating semantic commit messages.
 Returns structured data with module, type, breaking flag, and scope.
 
 Commit 2:
-vscode-ext: feat: integrate semantic commit parser
+vscode-ext-claude-commit: feat: integrate semantic commit parser
 
 Add UI for generating semantic commit messages using the new parser.
 Validates messages in real-time and shows version impact.
@@ -477,7 +477,7 @@ Set up `commit-msg` hook to validate format:
 # .git/hooks/commit-msg
 
 commit_msg=$(cat "$1")
-pattern="^(mcp-pwsh|mcp-docs|mcp-github|mcp-vscode|vscode-ext|infra|docs|config|contracts): (feat|fix|perf|docs|style|refactor|test|chore|ci|build|revert)(!)?:"
+pattern="^(src-mcp-pwsh|src-mcp-docs|src-mcp-github|src-mcp-vscode|vscode-ext-claude-commit|infra|docs|config|contracts): (feat|fix|perf|docs|style|refactor|test|chore|ci|build|revert)(!)?:"
 
 if ! echo "$commit_msg" | grep -Eq "$pattern"; then
   echo "ERROR: Commit message does not follow semantic commit format"

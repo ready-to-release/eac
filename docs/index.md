@@ -14,8 +14,8 @@ This is an extensible CLI-in-a-box for managing software delivery flows with int
 
 ### Guides
 
-- [VSCode Extension](guide/vscode-ext/index.md) - Using and developing the extension
-- [Recording Demos](guide/vscode-ext/recording-demos.md) - Create demo videos
+- [VSCode Extension](guide/vscode-ext-claude-commit/index.md) - Using and developing the extension
+- [Recording Demos](guide/vscode-ext-claude-commit/recording-demos.md) - Create demo videos
 - [MCP Servers](reference/mcp-servers.md) - Working with MCP servers
 - [Automation Scripts](reference/automation.md) - Build and maintenance scripts
 
@@ -146,7 +146,7 @@ Technical specifications and API documentation:
 
 - Check the [Quick Start Guide](../QUICKSTART.md) for immediate help
 - Review [Usage Examples](../USAGE.md) for common scenarios
-- See [Troubleshooting](guide/vscode-ext/index.md#troubleshooting) for common issues
+- See [Troubleshooting](guide/vscode-ext-claude-commit/index.md#troubleshooting) for common issues
 - Open an issue on GitHub for bugs or feature requests
 
 ## Contributing
@@ -179,5 +179,5 @@ When contributing to this project:
 ## Next Steps
 
 1. **New Users**: Start with the [Quick Start Guide](../QUICKSTART.md)
-2. **Developers**: Read the [VSCode Extension Guide](guide/vscode-ext/index.md)
+2. **Developers**: Read the [VSCode Extension Guide](guide/vscode-ext-claude-commit/index.md)
 3. **Contributors**: Check the [Project Structure](reference/structure.md)

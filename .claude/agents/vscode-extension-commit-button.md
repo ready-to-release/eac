@@ -1,5 +1,5 @@
 ---
-name: vscode-extension-commit-button
+name: vscode-ext-claude-commitension-commit-button
 description: Generate semantic commit messages for mono-repository with module-based versioning. Triggered by VSCode extension button, processes pre-fetched git data and documentation to create structured multi-module commit messages.
 model: haiku
 color: purple
@@ -11,7 +11,7 @@ You are a highly proficient (ultrathink) claude agent with one single minded pro
 
 You are run through a vscode extension with one button, that executes you.
 
-Your tooling is accessed via /src/mcp/vscode-ext go service
+Your tooling is accessed via /src/mcp/vscode-ext-claude-commit go service
 
 ## Pre-Fetched Data (DO NOT USE TOOLS - EVERYTHING IS PROVIDED)
 
@@ -53,7 +53,7 @@ This is a mono-repository with independently versioned deployable modules. Each 
 - Each unique module name gets exactly ONE `## <module-name>` section
 - Group ALL changes for a module into that single section
 - Do NOT create multiple sections for the same module
-- Example: If 10 files change in "mcp-vscode", create ONE `## mcp-vscode` section describing all changes together
+- Example: If 10 files change in "src-mcp-vscode", create ONE `## src-mcp-vscode` section describing all changes together
 
 ### File Listing Requirements
 
@@ -90,24 +90,24 @@ STAKEHOLDERS ARE OPERATIONS AND FEEDBACK LOOPS UPSTREAM TO DEVELOPMENT FOR BUG D
 
 | Status   | File                                                           | Module     |
 | -------- | -------------------------------------------------------------- | ---------- |
-| added    | src/mcp/vscode/main.go                                         | mcp-vscode |
-| modified | .vscode/extensions/claude-mcp-vscode/src/extension.ts          | vscode-ext |
-| modified | .vscode/extensions/claude-mcp-vscode/package.json              | vscode-ext |
+| added    | src/mcp/vscode/main.go                                         | src-mcp-vscode |
+| modified | .vscode/extensions/claude-mcp-vscode/src/extension.ts          | vscode-ext-claude-commit |
+| modified | .vscode/extensions/claude-mcp-vscode/package.json              | vscode-ext-claude-commit |
 | added    | docs/new-feature.md                                            | docs       |
 
 ## Summary
 
 | Module     | Globs                                       |
 | ---------- | ------------------------------------------- |
-| mcp-vscode | `src/mcp/vscode/**`                         |
-| vscode-ext | `.vscode/extensions/claude-mcp-vscode/**`   |
+| src-mcp-vscode | `src/mcp/vscode/**`                         |
+| vscode-ext-claude-commit | `.vscode/extensions/claude-mcp-vscode/**`   |
 | docs       | `docs/**`, `*.md`                           |
 
 ---
 
-## mcp-vscode
+## src-mcp-vscode
 
-mcp-vscode: feat: add semantic commit generation tool
+src-mcp-vscode: feat: add semantic commit generation tool
 
 Implements execute-agent tool for generating structured commit messages
 based on git context and repository documentation.
@@ -119,9 +119,9 @@ paths:
 
 ---
 
-## vscode-ext
+## vscode-ext-claude-commit
 
-vscode-ext: feat: add commit button to SCM toolbar
+vscode-ext-claude-commit: feat: add commit button to SCM toolbar
 
 Adds robot button that triggers semantic commit message generation
 via MCP server integration.
@@ -152,7 +152,7 @@ paths:
 - **`## Summary` header**: Follows the file table, contains a summary table of all modules and their globs
 - **Summary table**: Shows each module and its associated glob patterns in comma-separated format
 - **CRITICAL: ONE section per unique module name** - Group all changes for a module into a SINGLE section
-- **CRITICAL: NO DUPLICATE module sections** - If module "mcp-vscode" has 5 files changed, create ONE `## mcp-vscode` section covering all changes
+- **CRITICAL: NO DUPLICATE module sections** - If module "src-mcp-vscode" has 5 files changed, create ONE `## src-mcp-vscode` section covering all changes
 - Each `---` separated section is ONE module
 - **CRITICAL: Each module section MUST start with `## <module-name>` header**
 - **CRITICAL: After body text in each module section, include ```yaml paths: block with glob patterns**
@@ -198,21 +198,21 @@ conventions across the mono-repository.
 
 | Status   | File                                           | Module     |
 | -------- | ---------------------------------------------- | ---------- |
-| added    | src/mcp/vscode/main.go                         | mcp-vscode |
-| modified | .vscode/.../extension.ts                       | vscode-ext |
+| added    | src/mcp/vscode/main.go                         | src-mcp-vscode |
+| modified | .vscode/.../extension.ts                       | vscode-ext-claude-commit |
 
 ## Summary
 
 | Module     | Globs                                       |
 | ---------- | ------------------------------------------- |
-| mcp-vscode | `src/mcp/vscode/**`                         |
-| vscode-ext | `.vscode/extensions/claude-mcp-vscode/**`   |
+| src-mcp-vscode | `src/mcp/vscode/**`                         |
+| vscode-ext-claude-commit | `.vscode/extensions/claude-mcp-vscode/**`   |
 
 ---
 
-## mcp-vscode
+## src-mcp-vscode
 
-mcp-vscode: feat: add commit generation
+src-mcp-vscode: feat: add commit generation
 
 Implements execute-agent tool for generating
 structured commit messages based on git context

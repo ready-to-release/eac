@@ -1,8 +1,8 @@
-# Deployable Unit Contract: vscode-ext
+# Deployable Unit Contract: vscode-ext-claude-commit
 # Version: 0.1.0
 
-moniker: "vscode-ext"
-name: "Claude MCP VSCode Extension"
+moniker: "vscode-ext-claude-commit"
+name: "VSCode Extension using local Claude MCP"
 type: "vscode-ext"
 description: "VSCode extension providing Git toolbar and MCP integration UI"
 root: ".vscode/extensions/claude-mcp-vscode"

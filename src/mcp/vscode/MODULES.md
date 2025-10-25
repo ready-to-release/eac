@@ -68,19 +68,19 @@ Updates mkdocs container to use Python
 
 | File Path | Detected Module |
 |-----------|----------------|
-| `src/mcp/pwsh/main.go` | `mcp-pwsh` |
-| `src/mcp/vscode/main.go` | `mcp-vscode` |
-| `src/mcp/docs/server.go` | `mcp-docs` |
-| `src/mcp/github/api.go` | `mcp-github` |
+| `src/mcp/pwsh/main.go` | `src-mcp-pwsh` |
+| `src/mcp/vscode/main.go` | `src-mcp-vscode` |
+| `src/mcp/docs/server.go` | `src-mcp-docs` |
+| `src/mcp/github/api.go` | `src-mcp-github` |
 
 ### 4. VSCode Extension
 
 **Pattern:** `.vscode/extensions/<name>/...`
-**Module:** `vscode-ext` (or extracted name)
+**Module:** `vscode-ext-claude-commit` (or extracted name)
 
 | File Path | Detected Module |
 |-----------|----------------|
-| `.vscode/extensions/claude-mcp-vscode/src/extension.ts` | `vscode-ext` |
+| `.vscode/extensions/claude-mcp-vscode/src/extension.ts` | `vscode-ext-claude-commit` |
 
 ### 5. Contract Modules
 
@@ -90,7 +90,7 @@ Updates mkdocs container to use Python
 | File Path                                       | Detected Module              |
 |-------------------------------------------------|------------------------------|
 | `contracts/repository/0.1.0/definitions.yml`    | `contracts-repository`       |
-| `contracts/deployable-units/0.1.0/mcp-pwsh.yml` | `contracts-deployable-units` |
+| `contracts/deployable-units/0.1.0/src-mcp-pwsh.yml` | `contracts-deployable-units` |
 
 ### 6. Documentation
 
@@ -113,7 +113,7 @@ Updates mkdocs container to use Python
 
 | File Path | Detected Module |
 |-----------|----------------|
-| `.claude/agents/vscode-extension-commit-button.md` | `claude-config` |
+| `.claude/agents/vscode-ext-claude-commitension-commit-button.md` | `claude-config` |
 | `.vscode/settings.json` | `vscode-config` |
 | `.gitignore` | `repo-config` |
 | `mkdocs.yml` | `repo-config` |

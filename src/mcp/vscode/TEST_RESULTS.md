@@ -31,13 +31,13 @@ Comprehensive test that:
 | `mkdocs` | 8 | MkDocs container |
 | `claude-config` | 6 | Claude configuration |
 | `repo-config` | 6 | Repository config files |
-| `vscode-ext` | 6 | VSCode extension |
+| `vscode-ext-claude-commit` | 6 | VSCode extension |
 | `contracts-deployable-units` | 5 | Deployable unit contracts |
-| `mcp-vscode` | 5 | MCP VSCode server |
+| `src-mcp-vscode` | 5 | MCP VSCode server |
 | `sh-vscode` | 4 | Shell automation for VSCode |
-| `mcp-docs` | 3 | MCP docs server |
-| `mcp-github` | 3 | MCP GitHub server |
-| `mcp-pwsh` | 3 | MCP PowerShell server |
+| `src-mcp-docs` | 3 | MCP docs server |
+| `src-mcp-github` | 3 | MCP GitHub server |
+| `src-mcp-pwsh` | 3 | MCP PowerShell server |
 | `vscode-config` | 3 | VSCode configuration |
 | `contracts-vscode-commit` | 2 | VSCode commit contracts |
 | `cli` | 1 | CLI module placeholder |
@@ -85,7 +85,7 @@ Comprehensive test that:
 
 **Solution:**
 
-- Code files: Extract module from path (`src/mcp/pwsh/main.go` → `mcp-pwsh`)
+- Code files: Extract module from path (`src/mcp/pwsh/main.go` → `src-mcp-pwsh`)
 - Docs files: Always classify as `docs` (`src/mcp/README.md` → `docs`)
 - Placeholder files: Inherit from parent (`.gitkeep` → parent's module)
 
@@ -144,7 +144,7 @@ Found 79 files in repository (tracked + untracked, excluding gitignored)
 ✓  mkdocs                        : 8 files
 ✓  claude-config                 : 6 files
 ✓  repo-config                   : 6 files
-✓  vscode-ext                    : 6 files
+✓  vscode-ext-claude-commit                    : 6 files
 ...
 
 Total files processed: 79

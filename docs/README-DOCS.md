@@ -10,7 +10,7 @@ docs/
 ├── assets/                     # Binary files ONLY (GIFs, images, PDFs)
 │   └── .gitkeep
 ├── guide/                      # User guides
-│   └── vscode-ext/
+│   └── vscode-ext-claude-commit/
 │       ├── index.md            # Extension usage and development
 │       └── recording-demos.md  # How to create demo videos
 ├── tutorials/                  # Step-by-step tutorials
@@ -128,7 +128,7 @@ cp myimage.png docs/assets/
 
 - Use lowercase
 - Use hyphens, not underscores: `my-guide.md` not `my_guide.md`
-- Be descriptive: `vscode-ext-setup.md` not `setup.md`
+- Be descriptive: `vscode-ext-claude-commit-setup.md` not `setup.md`
 
 ### Markdown Style
 
@@ -189,8 +189,8 @@ Use MkDocs admonitions for notes/warnings:
 ### Existing
 
 - ✅ `docs/index.md` - Homepage
-- ✅ `docs/guide/vscode-ext/index.md` - Extension guide
-- ✅ `docs/guide/vscode-ext/recording-demos.md` - Recording guide
+- ✅ `docs/guide/vscode-ext-claude-commit/index.md` - Extension guide
+- ✅ `docs/guide/vscode-ext-claude-commit/recording-demos.md` - Recording guide
 
 ### To Create
 
@@ -213,7 +213,7 @@ Binary files needed in `docs/assets/`:
 - ⏳ `git-commit-demo.gif` (~2MB) - Git commit demo
 - ⏳ `mcp-server-test.gif` (~2MB) - MCP server test demo
 
-See `docs/guide/vscode-ext/recording-demos.md` for recording instructions.
+See `docs/guide/vscode-ext-claude-commit/recording-demos.md` for recording instructions.
 
 ## MkDocs Configuration
 

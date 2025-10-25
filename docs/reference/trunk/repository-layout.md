@@ -16,8 +16,8 @@ Independently built, versioned, and deployed artifacts. Each has a detailed cont
 - Integration points and APIs
 
 **Current deployable units**:
-- `mcp-pwsh`, `mcp-docs`, `mcp-github`, `mcp-vscode` (MCP servers)
-- `vscode-ext` (VSCode extension)
+- `src-mcp-pwsh`, `src-mcp-docs`, `src-mcp-github`, `src-mcp-vscode` (MCP servers)
+- `vscode-ext-claude-commit` (VSCode extension)
 
 ### Supporting Modules
 Non-deployable modules that support the system:
@@ -84,16 +84,16 @@ Versioned contract definitions and schemas.
 
 | Module | Prefix | Location | Description |
 |--------|--------|----------|-------------|
-| `mcp-pwsh` | `mcp-pwsh:` | `src/mcp/pwsh/` | PowerShell command execution |
-| `mcp-docs` | `mcp-docs:` | `src/mcp/docs/` | Documentation management |
-| `mcp-github` | `mcp-github:` | `src/mcp/github/` | GitHub API integration |
-| `mcp-vscode` | `mcp-vscode:` | `src/mcp/vscode/` | VSCode integration |
+| `src-mcp-pwsh` | `src-mcp-pwsh:` | `src/mcp/pwsh/` | PowerShell command execution |
+| `src-mcp-docs` | `src-mcp-docs:` | `src/mcp/docs/` | Documentation management |
+| `src-mcp-github` | `src-mcp-github:` | `src/mcp/github/` | GitHub API integration |
+| `src-mcp-vscode` | `src-mcp-vscode:` | `src/mcp/vscode/` | VSCode integration |
 
 ### Extensions
 
 | Module | Prefix | Location | Description |
 |--------|--------|----------|-------------|
-| `vscode-ext` | `vscode-ext:` | `.vscode/extensions/claude-mcp-vscode/` | MCP VSCode extension UI |
+| `vscode-ext-claude-commit` | `vscode-ext-claude-commit:` | `.vscode/extensions/claude-mcp-vscode/` | MCP VSCode extension UI |
 
 ### Infrastructure
 
@@ -138,25 +138,25 @@ Versioned contract definitions and schemas.
 
 **Single module change**: Use module prefix
 ```
-mcp-pwsh: fix: handle empty command output
+src-mcp-pwsh: fix: handle empty command output
 ```
 
 **Multiple modules (preferred)**: Separate commits per module
 ```
-Commit 1: mcp-vscode: feat: add new tool
-Commit 2: vscode-ext: feat: integrate new tool
+Commit 1: src-mcp-vscode: feat: add new tool
+Commit 2: vscode-ext-claude-commit: feat: integrate new tool
 ```
 
 **Multiple modules (alternative)**: Combined prefix
 ```
-mcp-vscode,vscode-ext: feat: add complete feature
+src-mcp-vscode,vscode-ext-claude-commit: feat: add complete feature
 ```
 
 ## Module Dependencies
 
 ```
-vscode-ext
-├── depends on: mcp-pwsh, mcp-docs, mcp-github, mcp-vscode
+vscode-ext-claude-commit
+├── depends on: src-mcp-pwsh, src-mcp-docs, src-mcp-github, src-mcp-vscode
 └── used by: end users
 
 infrastructure
@@ -185,11 +185,11 @@ contracts-repository
 
 ### By Commit Prefix
 
-- `mcp-pwsh:` → `src/mcp/pwsh/`
-- `mcp-docs:` → `src/mcp/docs/`
-- `mcp-github:` → `src/mcp/github/`
-- `mcp-vscode:` → `src/mcp/vscode/`
-- `vscode-ext:` → `.vscode/extensions/claude-mcp-vscode/`
+- `src-mcp-pwsh:` → `src/mcp/pwsh/`
+- `src-mcp-docs:` → `src/mcp/docs/`
+- `src-mcp-github:` → `src/mcp/github/`
+- `src-mcp-vscode:` → `src/mcp/vscode/`
+- `vscode-ext-claude-commit:` → `.vscode/extensions/claude-mcp-vscode/`
 - `infra:` → `automation/`, `containers/`
 - `docs:` → `docs/`, root `*.md`
 - `config:` → `.claude/`, `.vscode/`, root config
@@ -198,7 +198,7 @@ contracts-repository
 ### By Location
 
 - `src/mcp/{name}/` → `mcp-{name}:`
-- `.vscode/extensions/{name}/` → `vscode-ext:`
+- `.vscode/extensions/{name}/` → `vscode-ext-claude-commit:`
 - `automation/`, `containers/` → `infra:`
 - `docs/` → `docs:`
 - `.claude/` → `config:`
@@ -221,8 +221,8 @@ Each deployable unit has a mandatory contract file at `contracts/deployable-unit
 - **Metadata**: owner, documentation_path, api_documentation
 
 **Example contracts**:
-- [mcp-pwsh.yml](../../../contracts/deployable-units/0.1.0/mcp-pwsh.yml)
-- [vscode-ext.yml](../../../contracts/deployable-units/0.1.0/vscode-ext.yml)
+- [src-mcp-pwsh.yml](../../../contracts/deployable-units/0.1.0/src-mcp-pwsh.yml)
+- [vscode-ext-claude-commit.yml](../../../contracts/deployable-units/0.1.0/vscode-ext-claude-commit.yml)
 
 ## References
 

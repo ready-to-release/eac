@@ -61,10 +61,10 @@ Get the VSCode extension running:
 # Launch extension (in VSCode, press F5)
 ```
 
-**See:** [VSCode Extension Quick Start](vscode-ext/QUICKSTART.md) for detailed instructions.
+**See:** [VSCode Extension Quick Start](vscode-ext-claude-commit/QUICKSTART.md) for detailed instructions.
 
 ## Next Steps
 
 - [Project Architecture](architecture.md) - Understand the project structure
-- [MCP Servers Guide](vscode-ext/mcp-servers.md) - Develop MCP servers
-- [VSCode Extension Guide](vscode-ext/index.md) - Customize the extension
+- [MCP Servers Guide](vscode-ext-claude-commit/mcp-servers.md) - Develop MCP servers
+- [VSCode Extension Guide](vscode-ext-claude-commit/index.md) - Customize the extension

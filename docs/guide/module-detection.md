@@ -26,7 +26,7 @@ flowchart TD
     PrefixMCP --> ReturnMCP([Return: mcp-service])
 
     CheckMCP -->|No| CheckVSCode{Starts with<br/>.vscode/extensions/?}
-    CheckVSCode -->|Yes| ReturnVSCode([Return: vscode-ext])
+    CheckVSCode -->|Yes| ReturnVSCode([Return: vscode-ext-claude-commit])
 
     CheckVSCode -->|No| CheckContracts{Starts with<br/>contracts/?}
     CheckContracts -->|Yes| ExtractContracts[Extract contracts/<name>]
@@ -66,7 +66,7 @@ flowchart TD
 graph TB
     subgraph Deployable["Deployable Units (Versioned)"]
         MCP["MCP Servers<br/>src/mcp/*/<br/>→ mcp-*"]
-        VSCodeExt["VSCode Extension<br/>.vscode/extensions/*/<br/>→ vscode-ext"]
+        VSCodeExt["VSCode Extension<br/>.vscode/extensions/*/<br/>→ vscode-ext-claude-commit"]
     end
 
     subgraph Infrastructure["Infrastructure (Type-Prefixed)"]
@@ -170,10 +170,10 @@ graph LR
         S4["vscode/"]
     end
 
-    S1 --> SM1["Module: mcp-pwsh"]
-    S2 --> SM2["Module: mcp-docs"]
-    S3 --> SM3["Module: mcp-github"]
-    S4 --> SM4["Module: mcp-vscode"]
+    S1 --> SM1["Module: src-mcp-pwsh"]
+    S2 --> SM2["Module: src-mcp-docs"]
+    S3 --> SM3["Module: src-mcp-github"]
+    S4 --> SM4["Module: src-mcp-vscode"]
 
     style S1 fill:#87CEEB
     style S2 fill:#87CEEB
@@ -189,10 +189,10 @@ graph LR
 
 | File Path                | Detected Module |
 | ------------------------ | --------------- |
-| `src/mcp/pwsh/main.go`   | `mcp-pwsh`      |
-| `src/mcp/docs/server.go` | `mcp-docs`      |
-| `src/mcp/github/api.go`  | `mcp-github`    |
-| `src/mcp/vscode/main.go` | `mcp-vscode`    |
+| `src/mcp/pwsh/main.go`   | `src-mcp-pwsh`      |
+| `src/mcp/docs/server.go` | `src-mcp-docs`      |
+| `src/mcp/github/api.go`  | `src-mcp-github`    |
+| `src/mcp/vscode/main.go` | `src-mcp-vscode`    |
 
 ### Pattern 4: Contract Modules
 
@@ -218,7 +218,7 @@ graph LR
 
 | File Path                                       | Detected Module              |
 | ----------------------------------------------- | ---------------------------- |
-| `contracts/deployable-units/0.1.0/mcp-pwsh.yml` | `contracts-deployable-units` |
+| `contracts/deployable-units/0.1.0/src-mcp-pwsh.yml` | `contracts-deployable-units` |
 
 ## File-to-Module Mapping
 
@@ -253,11 +253,11 @@ graph TD
 mindmap
   root((Modules))
     Deployable
-      mcp-pwsh
-      mcp-docs
-      mcp-github
-      mcp-vscode
-      vscode-ext
+      src-mcp-pwsh
+      src-mcp-docs
+      src-mcp-github
+      src-mcp-vscode
+      vscode-ext-claude-commit
     Infrastructure
       sh-vscode
       pwsh-build
@@ -317,7 +317,7 @@ graph TB
 
     F1 --> M1["pwsh-build"]
     F2 --> M2["mkdocs"]
-    F3 --> M3["mcp-vscode"]
+    F3 --> M3["src-mcp-vscode"]
     F4 --> M4["docs"]
 
     M1 --> CM["Commit Message"]
@@ -327,7 +327,7 @@ graph TB
 
     CM --> S1["pwsh-build: feat: ...]
     CM --> S2["mkdocs: chore: ...]
-    CM --> S3["mcp-vscode: feat: ...]
+    CM --> S3["src-mcp-vscode: feat: ...]
     CM --> S4["docs: docs: ...]
 
     style F1 fill:#FFE4B5
@@ -355,7 +355,7 @@ maintainability across the mono-repository.
 | -------- | --------------------------------------- | ----------- |
 | added    | automation/pwsh-build/build.ps1         | pwsh-build  |
 | modified | containers/mkdocs/Dockerfile            | mkdocs      |
-| modified | src/mcp/vscode/main.go                  | mcp-vscode  |
+| modified | src/mcp/vscode/main.go                  | src-mcp-vscode  |
 | added    | docs/guide/module-detection.md          | docs        |
 
 ---
@@ -374,7 +374,7 @@ and security patches.
 
 ---
 
-mcp-vscode: feat: add intelligent module detection
+src-mcp-vscode: feat: add intelligent module detection
 
 Implements path-based module extraction for
 automatic module identification from file paths.

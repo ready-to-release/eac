@@ -1,6 +1,5 @@
-# Repository Contract Definitions v0.1.0
-
-version: "0.1.0"
+# Repository Contract Definitions
+# version: "0.1.0"
 
 repository:
   name: "cli"

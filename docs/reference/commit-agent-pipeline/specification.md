@@ -181,7 +181,7 @@ All agents use YAML frontmatter with required fields:
 - `model:` Which model to use (enforced)
 - `color:` UI color hint
 
-#### Agent 1: Generator (vscode-extension-commit-button.md)
+#### Agent 1: Generator (vscode-ext-claude-commitension-commit-button.md)
 
 **Model**: `haiku`
 
@@ -201,21 +201,21 @@ All agents use YAML frontmatter with required fields:
 
 | Status   | File                        | Module     |
 | -------- | --------------------------- | ---------- |
-| added    | src/mcp/vscode/main.go      | mcp-vscode |
-| modified | .vscode/.../extension.ts    | vscode-ext |
+| added    | src/mcp/vscode/main.go      | src-mcp-vscode |
+| modified | .vscode/.../extension.ts    | vscode-ext-claude-commit |
 
 ## Summary
 
 | Module     | Globs                    |
 | ---------- | ------------------------ |
-| mcp-vscode | `src/mcp/vscode/**`      |
-| vscode-ext | `.vscode/extensions/...` |
+| src-mcp-vscode | `src/mcp/vscode/**`      |
+| vscode-ext-claude-commit | `.vscode/extensions/...` |
 
 ---
 
-## mcp-vscode
+## src-mcp-vscode
 
-mcp-vscode: feat: add commit generation
+src-mcp-vscode: feat: add commit generation
 
 [Body text explaining WHY, wrapped at 72 chars]
 
@@ -226,7 +226,7 @@ paths:
 
 ---
 
-## vscode-ext
+## vscode-ext-claude-commit
 
 [Same format for each module]
 ```
@@ -336,7 +336,7 @@ Approved (with concerns)
 
 **Output**:
 ```
-feat(mcp-vscode): add 5-agent commit workflow
+feat(src-mcp-vscode): add 5-agent commit workflow
 ```
 
 **Format**: `<type>(<scope>): <description>`

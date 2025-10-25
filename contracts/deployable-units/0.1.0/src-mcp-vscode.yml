@@ -1,7 +1,7 @@
-# Deployable Unit Contract: mcp-vscode
+# Deployable Unit Contract: src-mcp-vscode
 # Version: 0.1.0
 
-moniker: "mcp-vscode"
+moniker: "src-mcp-vscode"
 name: "VSCode MCP Server"
 type: "mcp-server"
 description: "Model Context Protocol server for VSCode integration and actions"

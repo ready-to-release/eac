@@ -29,8 +29,8 @@ The full commit message is provided below. DO NOT use any tools.
 - Maximum 72 characters (GitHub truncates longer titles)
 - Use format: `<type>(<scope>): <description>`
 - Examples:
-  - `feat(mcp-vscode): add commit message generation`
-  - `fix(vscode-ext): resolve progress bar stuck issue`
+  - `feat(src-mcp-vscode): add commit message generation`
+  - `fix(vscode-ext-claude-commit): resolve progress bar stuck issue`
   - `refactor(multi-module): simplify agent pipeline output`
   - `docs: update repository layout documentation`
 - Be concise but descriptive
@@ -51,7 +51,7 @@ The full commit message is provided below. DO NOT use any tools.
 
 ## Scope Guidelines
 
-- **Single module changed**: Use the module name (e.g., `mcp-vscode`, `vscode-ext`)
+- **Single module changed**: Use the module name (e.g., `src-mcp-vscode`, `vscode-ext-claude-commit`)
 - **2-3 modules changed**: Use primary module or `multi-module`
 - **4+ modules changed**: Use `multi-module` or category like `agents`, `docs`, etc.
 - **Cross-cutting changes**: Use component name like `pipeline`, `workflow`, etc.
@@ -59,10 +59,10 @@ The full commit message is provided below. DO NOT use any tools.
 ## Example Inputs/Outputs
 
 **Input**: Commit message with changes to src/mcp/vscode/main.go adding new tool
-**Output**: `feat(mcp-vscode): add commit generation tool`
+**Output**: `feat(src-mcp-vscode): add commit generation tool`
 
 **Input**: Commit message fixing bug in .vscode/extensions/*/extension.ts
-**Output**: `fix(vscode-ext): resolve concurrent commit generation`
+**Output**: `fix(vscode-ext-claude-commit): resolve concurrent commit generation`
 
 **Input**: Commit message updating docs in multiple files
 **Output**: `docs: update architecture and deployment guides`

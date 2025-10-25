@@ -228,7 +228,7 @@ func executeAction(action string, message string) string {
 
 func generateSemanticCommitMessage(agentFile string) (string, error) {
 	// Get workspace root from agent file path
-	// Agent file is at .claude/agents/vscode-extension-commit-button.md
+	// Agent file is at .claude/agents/vscode-ext-claude-commitension-commit-button.md
 	workspaceRoot := filepath.Dir(filepath.Dir(filepath.Dir(agentFile)))
 
 	// Step 1: Read the generator agent instructions
@@ -611,8 +611,8 @@ func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[st
 	prompt.WriteString("---\n\n")
 	prompt.WriteString("[Repeat for each affected module]\n\n")
 	prompt.WriteString("Example module section:\n\n")
-	prompt.WriteString("## mcp-vscode\n\n")
-	prompt.WriteString("mcp-vscode: feat: add commit generation\n\n")
+	prompt.WriteString("## src-mcp-vscode\n\n")
+	prompt.WriteString("src-mcp-vscode: feat: add commit generation\n\n")
 	prompt.WriteString("Implements tool for generating structured\n")
 	prompt.WriteString("commit messages from git context.\n\n")
 	prompt.WriteString("```yaml\n")
@@ -805,7 +805,7 @@ func determineFileModule(filePath string) string {
 	}
 
 	// Pattern 3: src/mcp/<service>/... → mcp-<service>
-	// Examples: src/mcp/pwsh/ → "mcp-pwsh", src/mcp/vscode/ → "mcp-vscode"
+	// Examples: src/mcp/pwsh/ → "src-mcp-pwsh", src/mcp/vscode/ → "src-mcp-vscode"
 	// Note: README.md files are handled above and won't reach here
 	if strings.HasPrefix(filePath, "src/mcp/") {
 		parts := strings.Split(filePath, "/")
@@ -820,19 +820,19 @@ func determineFileModule(filePath string) string {
 		return "cli"
 	}
 
-	// Pattern 4: .vscode/extensions/<name>/... → extract extension name or use "vscode-ext"
-	// Examples: .vscode/extensions/claude-mcp-vscode/ → "vscode-ext"
+	// Pattern 4: .vscode/extensions/<name>/... → extract extension name or use "vscode-ext-claude-commit"
+	// Examples: .vscode/extensions/claude-mcp-vscode/ → "vscode-ext-claude-commit"
 	if strings.HasPrefix(filePath, ".vscode/extensions/") {
 		parts := strings.Split(filePath, "/")
 		if len(parts) >= 3 && parts[2] != "" {
 			// Use short form for known extensions
 			extName := parts[2]
 			if strings.Contains(extName, "claude-mcp") {
-				return "vscode-ext"
+				return "vscode-ext-claude-commit"
 			}
 			return extName
 		}
-		return "vscode-ext" // fallback
+		return "vscode-ext-claude-commit" // fallback
 	}
 
 	// Pattern 5: contracts/<name>/<version>/... → contracts-<name>
@@ -908,7 +908,7 @@ func getModuleGlobPattern(module string) []string {
 
 	// Handle specific known modules
 	switch module {
-	case "vscode-ext":
+	case "vscode-ext-claude-commit":
 		return []string{".vscode/extensions/claude-mcp-vscode/**"}
 
 	case "cli":

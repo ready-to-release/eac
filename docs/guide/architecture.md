@@ -142,8 +142,8 @@ Configure markdown linting rules in `.markdownlint.yml`. See [Markdownlint Summa
 The project includes example integrations demonstrating MCP usage:
 
 - **VSCode Extension** - Located in `.vscode/extensions/claude-mcp-vscode/`
-  - See [VSCode Extension Guide](vscode-ext/index.md)
-  - See [Quick Start](vscode-ext/QUICKSTART.md)
+  - See [VSCode Extension Guide](vscode-ext-claude-commit/index.md)
+  - See [Quick Start](vscode-ext-claude-commit/QUICKSTART.md)
 
 ### Usage Patterns
 

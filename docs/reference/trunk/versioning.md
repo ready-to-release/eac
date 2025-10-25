@@ -32,8 +32,8 @@ Examples:
 
 **Examples**:
 ```
-mcp-vscode: feat!: change tool response format to new schema
-vscode-ext: refactor!: remove deprecated command API
+src-mcp-vscode: feat!: change tool response format to new schema
+vscode-ext-claude-commit: refactor!: remove deprecated command API
 
 BREAKING CHANGE: The tool response format has changed from
 {status, data} to {success, result, error}
@@ -51,8 +51,8 @@ BREAKING CHANGE: The tool response format has changed from
 
 **Examples**:
 ```
-mcp-github: feat: add repository search tool
-vscode-ext: feat: add commit history viewer
+src-mcp-github: feat: add repository search tool
+vscode-ext-claude-commit: feat: add commit history viewer
 ```
 
 #### PATCH (0.0.X)
@@ -69,8 +69,8 @@ vscode-ext: feat: add commit history viewer
 
 **Examples**:
 ```
-mcp-pwsh: fix: handle null output from PowerShell commands
-mcp-docs: perf: optimize markdown parsing performance
+src-mcp-pwsh: fix: handle null output from PowerShell commands
+src-mcp-docs: perf: optimize markdown parsing performance
 ```
 
 ### No Version Change
@@ -90,32 +90,32 @@ Each module maintains its own independent version number:
 
 ### MCP Servers (Go Modules)
 **Modules**:
-- `mcp-pwsh`
-- `mcp-docs`
-- `mcp-github`
-- `mcp-vscode`
+- `src-mcp-pwsh`
+- `src-mcp-docs`
+- `src-mcp-github`
+- `src-mcp-vscode`
 
 **Version Location**:
 - Not stored in `go.mod` (Go uses git tags)
-- Version tracked via git tags: `mcp-pwsh/v1.2.3`
+- Version tracked via git tags: `src-mcp-pwsh/v1.2.3`
 - Version may be embedded in build using ldflags
 
 **Tagging Convention**:
 ```bash
 # Tag format: <module-name>/v<version>
-git tag mcp-pwsh/v1.2.0
-git tag mcp-github/v2.0.1
+git tag src-mcp-pwsh/v1.2.0
+git tag src-mcp-github/v2.0.1
 ```
 
 ### VSCode Extension
-**Module**: `vscode-ext`
+**Module**: `vscode-ext-claude-commit`
 
 **Version Location**: `.vscode/extensions/claude-mcp-vscode/package.json`
 
 **Update Process**:
 1. Commit changes with semantic commit message
 2. Update `version` field in `package.json`
-3. Create git tag: `vscode-ext/v<version>`
+3. Create git tag: `vscode-ext-claude-commit/v<version>`
 
 **Example**:
 ```json
@@ -151,11 +151,11 @@ When changes affect multiple modules, each module gets its own version increment
 
 **Example**: Adding a new feature that requires both server and extension changes
 ```
-Commit 1: mcp-vscode: feat: add commit-analyze tool
-  → mcp-vscode: 1.2.0 → 1.3.0 (MINOR)
+Commit 1: src-mcp-vscode: feat: add commit-analyze tool
+  → src-mcp-vscode: 1.2.0 → 1.3.0 (MINOR)
 
-Commit 2: vscode-ext: feat: add commit analysis UI
-  → vscode-ext: 2.1.0 → 2.2.0 (MINOR)
+Commit 2: vscode-ext-claude-commit: feat: add commit analysis UI
+  → vscode-ext-claude-commit: 2.1.0 → 2.2.0 (MINOR)
 ```
 
 ## Pre-Release Versions
@@ -209,7 +209,7 @@ All versions are tagged in git:
 
 ```bash
 # List all tags for a module
-git tag -l "mcp-vscode/*"
+git tag -l "src-mcp-vscode/*"
 
 # Show version history
 git log --oneline --decorate
@@ -245,7 +245,7 @@ When specifying dependencies:
 
 ### Module Compatibility Matrix
 
-| VSCode Extension | mcp-vscode | mcp-pwsh | mcp-github | mcp-docs |
+| VSCode Extension | src-mcp-vscode | src-mcp-pwsh | src-mcp-github | src-mcp-docs |
 |-----------------|------------|----------|------------|----------|
 | 1.x.x           | ^1.0.0     | ^1.0.0   | ^1.0.0     | ^1.0.0   |
 | 2.x.x           | ^2.0.0     | ^1.0.0   | ^1.0.0     | ^1.0.0   |
@@ -256,56 +256,56 @@ When specifying dependencies:
 ```
 Current version: 1.2.3
 
-Commit: mcp-pwsh: fix: handle empty command output
+Commit: src-mcp-pwsh: fix: handle empty command output
 
 New version: 1.2.4 (PATCH increment)
-Tag: mcp-pwsh/v1.2.4
+Tag: src-mcp-pwsh/v1.2.4
 ```
 
 ### Example 2: New Feature
 ```
 Current version: 1.2.4
 
-Commit: mcp-github: feat: add pull request creation tool
+Commit: src-mcp-github: feat: add pull request creation tool
 
 New version: 1.3.0 (MINOR increment)
-Tag: mcp-github/v1.3.0
+Tag: src-mcp-github/v1.3.0
 ```
 
 ### Example 3: Breaking Change
 ```
 Current version: 1.3.0
 
-Commit: mcp-vscode: feat!: change tool interface to support async operations
+Commit: src-mcp-vscode: feat!: change tool interface to support async operations
 
 BREAKING CHANGE: All tools must now return Promises instead of
 synchronous values.
 
 New version: 2.0.0 (MAJOR increment)
-Tag: mcp-vscode/v2.0.0
+Tag: src-mcp-vscode/v2.0.0
 ```
 
 ### Example 4: Multi-Module Update
 ```
 Commits:
-1. mcp-vscode: feat: add file-watch tool
-   → mcp-vscode: 2.0.0 → 2.1.0
+1. src-mcp-vscode: feat: add file-watch tool
+   → src-mcp-vscode: 2.0.0 → 2.1.0
 
-2. vscode-ext: feat: integrate file watching in UI
-   → vscode-ext: 1.5.0 → 1.6.0
+2. vscode-ext-claude-commit: feat: integrate file watching in UI
+   → vscode-ext-claude-commit: 1.5.0 → 1.6.0
 ```
 
 ## Version Query Commands
 
 ```bash
 # Get current version of a module
-git describe --tags --match "mcp-vscode/*" --abbrev=0
+git describe --tags --match "src-mcp-vscode/*" --abbrev=0
 
 # Get all versions for a module
-git tag -l "mcp-vscode/*" --sort=-version:refname
+git tag -l "src-mcp-vscode/*" --sort=-version:refname
 
 # Check what version a commit belongs to
-git describe --tags --match "mcp-vscode/*" <commit-hash>
+git describe --tags --match "src-mcp-vscode/*" <commit-hash>
 ```
 
 ## References

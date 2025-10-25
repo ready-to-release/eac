@@ -20,4 +20,4 @@ source:
 
 depends_on: []
 used_by:
-  - "mcp-docs"
+  - "src-mcp-docs"

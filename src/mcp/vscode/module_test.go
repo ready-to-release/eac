@@ -23,18 +23,18 @@ func TestDetermineFileModule(t *testing.T) {
 		{"containers/nginx-proxy/config.conf", "nginx-proxy"},
 
 		// MCP servers - mcp-<service>
-		{"src/mcp/pwsh/main.go", "mcp-pwsh"},
-		{"src/mcp/vscode/main.go", "mcp-vscode"},
-		{"src/mcp/docs/server.go", "mcp-docs"},
-		{"src/mcp/github/api.go", "mcp-github"},
+		{"src/mcp/pwsh/main.go", "src-mcp-pwsh"},
+		{"src/mcp/vscode/main.go", "src-mcp-vscode"},
+		{"src/mcp/docs/server.go", "src-mcp-docs"},
+		{"src/mcp/github/api.go", "src-mcp-github"},
 
 		// VSCode extension
-		{".vscode/extensions/claude-mcp-vscode/src/extension.ts", "vscode-ext"},
-		{".vscode/extensions/claude-mcp-vscode/package.json", "vscode-ext"},
+		{".vscode/extensions/claude-mcp-vscode/src/extension.ts", "vscode-ext-claude-commit"},
+		{".vscode/extensions/claude-mcp-vscode/package.json", "vscode-ext-claude-commit"},
 
 		// Contracts - contracts-<name>
 		{"contracts/repository/0.1.0/definitions.yml", "contracts-repository"},
-		{"contracts/deployable-units/0.1.0/mcp-pwsh.yml", "contracts-deployable-units"},
+		{"contracts/deployable-units/0.1.0/src-mcp-pwsh.yml", "contracts-deployable-units"},
 
 		// Documentation
 		{"docs/reference/trunk/versioning.md", "docs"},
@@ -42,7 +42,7 @@ func TestDetermineFileModule(t *testing.T) {
 		{"QUICKSTART.md", "docs"},
 
 		// Configuration
-		{".claude/agents/vscode-extension-commit-button.md", "claude-config"},
+		{".claude/agents/vscode-ext-claude-commitension-commit-button.md", "claude-config"},
 		{".vscode/settings.json", "vscode-config"},
 		{".gitignore", "repo-config"},
 		{"mkdocs.yml", "repo-config"},
@@ -179,7 +179,7 @@ func printExamples() {
 		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
 		"contracts/repository/0.1.0/definitions.yml",
 		"docs/reference/trunk/semantic-commits.md",
-		".claude/agents/vscode-extension-commit-button.md",
+		".claude/agents/vscode-ext-claude-commitension-commit-button.md",
 		"README.md",
 		".gitignore",
 	}
@@ -200,22 +200,22 @@ func TestGetModuleGlobPattern(t *testing.T) {
 	}{
 		// MCP servers
 		{
-			module:        "mcp-vscode",
+			module:        "src-mcp-vscode",
 			expectedGlobs: []string{"src/mcp/vscode/**"},
 			description:   "MCP VSCode server",
 		},
 		{
-			module:        "mcp-pwsh",
+			module:        "src-mcp-pwsh",
 			expectedGlobs: []string{"src/mcp/pwsh/**"},
 			description:   "MCP PowerShell server",
 		},
 		{
-			module:        "mcp-docs",
+			module:        "src-mcp-docs",
 			expectedGlobs: []string{"src/mcp/docs/**"},
 			description:   "MCP Docs server",
 		},
 		{
-			module:        "mcp-github",
+			module:        "src-mcp-github",
 			expectedGlobs: []string{"src/mcp/github/**"},
 			description:   "MCP GitHub server",
 		},
@@ -241,7 +241,7 @@ func TestGetModuleGlobPattern(t *testing.T) {
 
 		// VSCode extension
 		{
-			module:        "vscode-ext",
+			module:        "vscode-ext-claude-commit",
 			expectedGlobs: []string{".vscode/extensions/claude-mcp-vscode/**"},
 			description:   "VSCode extension",
 		},

@@ -1,7 +1,7 @@
-# Deployable Unit Contract: mcp-pwsh
+# Deployable Unit Contract: src-mcp-pwsh
 # Version: 0.1.0
 
-moniker: "mcp-pwsh"
+moniker: "src-mcp-pwsh"
 name: "PowerShell MCP Server"
 type: "mcp-server"
 description: "Model Context Protocol server for executing PowerShell commands"

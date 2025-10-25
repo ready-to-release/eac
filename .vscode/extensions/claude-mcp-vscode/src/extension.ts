@@ -52,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (!fs.existsSync(outDir)) {
                 fs.mkdirSync(outDir, { recursive: true });
             }
-            debugLogPath = path.join(outDir, 'vscode-extension-debug.log');
+            debugLogPath = path.join(outDir, 'vscode-ext-claude-commitension-debug.log');
             // Clear previous log
             fs.writeFileSync(debugLogPath, '');
         }
@@ -129,7 +129,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const workspacePath = workspaceFolder.uri.fsPath;
-            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-extension-commit-button.md');
+            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-ext-claude-commitension-commit-button.md');
 
             // Execute the agent with progress indicator
             let commitMessage: string;
@@ -168,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
                             if (realProgress.includes('Generating initial commit')) {
                                 outputChannel.appendLine('');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                                outputChannel.appendLine('🤖 Running: vscode-extension-commit-button.md (generator)');
+                                outputChannel.appendLine('🤖 Running: vscode-ext-claude-commitension-commit-button.md (generator)');
                                 outputChannel.appendLine('Content: Git diff + documentation + module metadata');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }

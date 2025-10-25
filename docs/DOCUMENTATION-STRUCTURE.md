@@ -21,7 +21,7 @@ cli/
 │   │   └── (GIF files to be created)
 │   │
 │   ├── guide/                           # User guides
-│   │   └── vscode-ext/
+│   │   └── vscode-ext-claude-commit/
 │   │       ├── index.md                 # Extension guide
 │   │       └── recording-demos.md       # Recording instructions
 │   │
@@ -55,7 +55,7 @@ automation/sh-vscode/
 
 | Type          | Directory         | Example                                |
 | ------------- | ----------------- | -------------------------------------- |
-| User guides   | docs/guide/       | `docs/guide/vscode-ext/index.md`       |
+| User guides   | docs/guide/       | `docs/guide/vscode-ext-claude-commit/index.md`       |
 | Tutorials     | docs/tutorials/   | `docs/tutorials/building-mcp-tools.md` |
 | API reference | docs/reference/   | `docs/reference/mcp-api.md`            |
 | Contributing  | docs/development/ | `docs/development/contributing.md`     |
@@ -98,15 +98,15 @@ nav:
     - Installation: installation.md
   - Guides:
     - VSCode Extension:
-      - Overview: guide/vscode-ext/index.md
-      - Recording Demos: guide/vscode-ext/recording-demos.md
+      - Overview: guide/vscode-ext-claude-commit/index.md
+      - Recording Demos: guide/vscode-ext-claude-commit/recording-demos.md
 ```
 
 ## Content Organization
 
 ### VSCode Extension Documentation
 
-Location: `docs/guide/vscode-ext/`
+Location: `docs/guide/vscode-ext-claude-commit/`
 
 **index.md** - Main guide:
 
@@ -136,7 +136,7 @@ Location: `docs/assets/`
 - `git-commit-demo.gif` (~2MB) - Button click workflow
 - `mcp-server-test.gif` (~2MB) - Terminal MCP test
 
-**Recording instructions:** See `docs/guide/vscode-ext/recording-demos.md`
+**Recording instructions:** See `docs/guide/vscode-ext-claude-commit/recording-demos.md`
 
 ## Building Documentation
 
@@ -264,7 +264,7 @@ cp myimage.png docs/assets/
 
 - Lowercase: `my-guide.md` ✅
 - Hyphens not underscores: `my-guide.md` not `my_guide.md` ✅
-- Descriptive: `vscode-ext-setup.md` not `setup.md` ✅
+- Descriptive: `vscode-ext-claude-commit-setup.md` not `setup.md` ✅
 
 ### Markdown Formatting
 
@@ -319,8 +319,8 @@ function hello() {
 - MkDocs configuration (mkdocs.yml)
 - Documentation structure (/docs)
 - Homepage (docs/index.md)
-- VSCode extension guide (docs/guide/vscode-ext/index.md)
-- Recording guide (docs/guide/vscode-ext/recording-demos.md)
+- VSCode extension guide (docs/guide/vscode-ext-claude-commit/index.md)
+- Recording guide (docs/guide/vscode-ext-claude-commit/recording-demos.md)
 - Assets directory structure
 - Documentation guide (docs/README-DOCS.md)
 
@@ -359,7 +359,7 @@ docs/
 ├── assets/                         # ✅ Binary only
 │   └── .gitkeep
 └── guide/
-    └── vscode-ext/
+    └── vscode-ext-claude-commit/
         ├── index.md                # ✅ Main guide
         └── recording-demos.md      # ✅ Recording instructions
 ```
@@ -368,11 +368,11 @@ docs/
 
 All recording-related content was consolidated into:
 
-- `docs/guide/vscode-ext/recording-demos.md`
+- `docs/guide/vscode-ext-claude-commit/recording-demos.md`
 
 All extension usage and development content was consolidated into:
 
-- `docs/guide/vscode-ext/index.md`
+- `docs/guide/vscode-ext-claude-commit/index.md`
 
 ## Resources
 
