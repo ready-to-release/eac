@@ -5,18 +5,22 @@ This directory contains Model Context Protocol (MCP) server implementations writ
 ## Configured Servers
 
 ### 1. PowerShell (`pwsh`)
+
 Execute PowerShell commands in native sessions.
 
 **Tools:**
+
 - `execute-pwsh` - Execute a PowerShell command
 - `get-pwsh-modules` - List available PowerShell modules
 
 **Location:** `.claude/mcp-servers/pwsh/`
 
 ### 2. MkDocs (`docs`)
+
 Access and search repository documentation.
 
 **Tools:**
+
 - `search-docs` - Search documentation for a query
 - `get-doc-page` - Get content of a specific documentation page
 - `list-docs` - List all available documentation pages
@@ -24,9 +28,11 @@ Access and search repository documentation.
 **Location:** `.claude/mcp-servers/docs/`
 
 ### 3. GitHub (`github`)
+
 GitHub operations via GitHub CLI.
 
 **Tools:**
+
 - `gh-repo-view` - View repository details
 - `gh-issue-create` - Create a new issue
 - `gh-pr-list` - List pull requests
@@ -39,7 +45,7 @@ GitHub operations via GitHub CLI.
 ### Prerequisites
 
 - **Go 1.21+** - `go version` to check
-  - Windows: Download from https://go.dev/dl/
+  - Windows: Download from <https://go.dev/dl/>
   - Linux/WSL: `sudo apt install golang-go`
 - **PowerShell** - For pwsh server (Windows has it by default)
 - **GitHub CLI** - For github server: `winget install --id GitHub.cli` or `sudo apt install gh`
@@ -47,6 +53,7 @@ GitHub operations via GitHub CLI.
 ### Cross-Platform Setup
 
 The MCP servers work on both Windows and Linux using bash:
+
 - **Linux/WSL**: Native bash
 - **Windows**: Uses WSL bash (requires WSL to be installed)
 
@@ -56,9 +63,13 @@ Scripts are executable via `bash run.sh` wrapper.
 
 **Important:** The `.mcp.json` file is at project root and works on all platforms.
 
-1. **Configure servers** - Already done in `.mcp.json`
+#### 1. Configure servers
 
-2. **Set environment variables** in `.claude/settings.local.json`:
+Already done in `.mcp.json`
+
+#### 4. Set environment variables
+
+in `.claude/settings.local.json`:
 
 ```json
 {
@@ -69,7 +80,10 @@ Scripts are executable via `bash run.sh` wrapper.
 }
 ```
 
-3. **Authenticate GitHub CLI** (if using github server):
+#### 4. Authenticate GitHub CLI
+
+(if using github server):
+
 ```bash
 gh auth login
 ```
@@ -79,19 +93,22 @@ gh auth login
 The servers run automatically via `go run` - no build step needed!
 
 **Check server status:**
-```
+
+```claude
 /mcp
 ```
 
 **Use server tools:**
-```
+
+```text
 Use the pwsh server to run Get-Process
 Search the docs for authentication
 Create a GitHub issue about adding tests
 ```
 
 **Or use slash commands:**
-```
+
+```text
 /mcp__pwsh__execute-pwsh Get-Process
 /mcp__docs__search-docs authentication
 /mcp__github__gh-repo-view owner/repo

@@ -1,11 +1,11 @@
 # MkDocs Documentation Container
 # Provides MkDocs with Material theme and all plugins
 
-FROM python:3.11-slim
+FROM python:3.12-alpine
 
 LABEL maintainer="CLI Project Team"
 LABEL description="MkDocs container with Material theme and plugins"
-LABEL version="1.0"
+LABEL version="2.0"
 
 # Set working directory
 WORKDIR /docs
@@ -17,12 +17,14 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Alpine uses apk instead of apt-get
+RUN apk add --no-cache \
         git \
         openssh-client \
         ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+        gcc \
+        musl-dev \
+        libffi-dev
 
 # Copy requirements file
 COPY requirements.txt /tmp/requirements.txt

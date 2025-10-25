@@ -26,7 +26,7 @@ docker-compose up
 docker-compose -f containers/mkdocs/docker-compose.yml up
 ```
 
-Open http://localhost:8000 in your browser.
+Open <http://localhost:8000> in your browser.
 
 ### Build Documentation (Production)
 
@@ -45,18 +45,21 @@ Output will be in `site/` directory.
 ### Option 1: Docker Compose (Recommended)
 
 **Serve with live reload:**
+
 ```bash
 cd containers/mkdocs
 docker-compose up
 ```
 
 **Build static site:**
+
 ```bash
 cd containers/mkdocs
 docker-compose run --rm mkdocs-build
 ```
 
 **Run custom command:**
+
 ```bash
 docker-compose run --rm mkdocs mkdocs --help
 ```
@@ -64,12 +67,14 @@ docker-compose run --rm mkdocs mkdocs --help
 ### Option 2: Docker CLI
 
 **Build image:**
+
 ```bash
 cd containers/mkdocs
 docker build -f .Dockerfile -t cli-mkdocs:latest .
 ```
 
 **Serve documentation:**
+
 ```bash
 docker run --rm -it \
   -p 8000:8000 \
@@ -79,6 +84,7 @@ docker run --rm -it \
 ```
 
 **Build static site:**
+
 ```bash
 docker run --rm \
   -v $(pwd)/../..:/docs \
@@ -130,30 +136,6 @@ mkdocs serve
 
 Opens interactive shell in the container.
 
-## Container Details
-
-### Base Image
-- `python:3.11-slim` - Lightweight Python 3.11
-
-### Installed Packages
-- `mkdocs` 1.5.3
-- `mkdocs-material` 9.5.3 (Material theme)
-- `mkdocs-git-revision-date-localized-plugin` (Git dates)
-- `mkdocs-minify-plugin` (Minification)
-- `mkdocs-redirects` (URL redirects)
-- `pymdown-extensions` (Enhanced markdown)
-
-### Ports
-- `8000` - MkDocs development server
-
-### Volumes
-- `/docs` - Mounted project root
-
-### User
-- Non-root user `mkdocs` (UID 1000)
-
-## Configuration
-
 ### Update Dependencies
 
 Edit `requirements.txt`:
@@ -165,6 +147,7 @@ mkdocs-material==9.5.3
 ```
 
 Rebuild:
+
 ```bash
 docker-compose build --no-cache
 ```
@@ -197,7 +180,7 @@ cd containers/mkdocs
 docker-compose up
 ```
 
-Server starts at http://localhost:8000 with live reload.
+Server starts at <http://localhost:8000> with live reload.
 
 ### 2. Edit Documentation
 
@@ -220,16 +203,19 @@ Upload `site/` directory to your web server or hosting platform.
 ### Container Won't Start
 
 **Check Docker is running:**
+
 ```bash
 docker ps
 ```
 
 **Check logs:**
+
 ```bash
 docker-compose logs mkdocs
 ```
 
 **Rebuild container:**
+
 ```bash
 docker-compose build --no-cache
 docker-compose up
@@ -238,6 +224,7 @@ docker-compose up
 ### Port Already in Use
 
 **Check what's using port 8000:**
+
 ```bash
 # Linux/macOS
 lsof -i :8000
@@ -252,11 +239,13 @@ Edit `docker-compose.yml` and change `"8000:8000"` to `"8080:8000"`.
 ### Permission Errors
 
 **Check file permissions:**
+
 ```bash
 ls -la docs/
 ```
 
 **Fix permissions:**
+
 ```bash
 # Linux/macOS
 chmod -R 755 docs/
@@ -268,11 +257,13 @@ docker-compose run --user $(id -u):$(id -g) mkdocs mkdocs serve
 ### Build Fails
 
 **Check mkdocs.yml syntax:**
+
 ```bash
 docker-compose run --rm mkdocs mkdocs build --strict
 ```
 
 **Check for broken links:**
+
 ```bash
 docker-compose run --rm mkdocs mkdocs build --strict --verbose
 ```
@@ -280,16 +271,19 @@ docker-compose run --rm mkdocs mkdocs build --strict --verbose
 ### Changes Not Appearing
 
 **Hard refresh browser:**
+
 - Windows/Linux: `Ctrl + F5`
 - macOS: `Cmd + Shift + R`
 
 **Clear cache:**
+
 ```bash
 docker-compose down -v
 docker-compose up
 ```
 
 **Restart container:**
+
 ```bash
 docker-compose restart mkdocs
 ```
@@ -457,11 +451,13 @@ volumes:
 ## Resources
 
 **Documentation:**
+
 - [MkDocs](https://www.mkdocs.org/)
 - [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
 **Container:**
+
 - Base image: `python:3.11-slim`
 - Size: ~200MB
 - Platforms: linux/amd64, linux/arm64
