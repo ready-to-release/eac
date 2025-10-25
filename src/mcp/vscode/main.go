@@ -379,9 +379,10 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 	composite.WriteString("Agent: ")
 
 	// Determine final status
-	if strings.Contains(approvedSection, "Approved (with concerns)") && concernsResult != "" {
-		composite.WriteString("Approved (concerns handled)")
-	} else if strings.Contains(approvedSection, "Approved (with concerns)") {
+	// If concerns were handled, it's just "Approved" (concerns were fixed)
+	// If concerns exist but not handled, show "Approved (with concerns)"
+	// Otherwise, just "Approved"
+	if strings.Contains(approvedSection, "Approved (with concerns)") && concernsResult == "" {
 		composite.WriteString("Approved (with concerns)")
 	} else {
 		composite.WriteString("Approved")
