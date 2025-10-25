@@ -1,0 +1,24 @@
+{
+  "env": {},
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/user-prompt-submit.ps1"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [],
+    "ask": [],
+    "deny": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}

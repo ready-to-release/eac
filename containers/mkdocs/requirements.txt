@@ -1,0 +1,15 @@
+# MkDocs and theme
+mkdocs==1.5.3
+mkdocs-material==9.5.3
+
+# Plugins
+mkdocs-git-revision-date-localized-plugin==1.2.2
+mkdocs-minify-plugin==0.8.0
+mkdocs-redirects==1.2.1
+
+# Markdown extensions
+pymdown-extensions==10.7
+markdown==3.5.1
+
+# Additional utilities
+Pygments==2.17.2

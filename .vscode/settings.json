@@ -1,0 +1,23 @@
+{
+  "extensions.experimental.additionalPaths": [
+    ".vscode/extensions"
+  ],
+  "markdown.preview.fontFamily": "Consolas, 'Courier New', monospace",
+  "markdown.styles": [
+    ".vscode/markdown-preview-dark.css"
+  ],
+  "markdown.preview.lineHeight": 1.6,
+  "markdown.preview.fontSize": 14,
+  "markdown.preview.scrollPreviewWithEditor": true,
+  "markdown.preview.scrollEditorWithPreview": true,
+  "markdown.preview.markEditorSelection": true,
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.quickSuggestions": {
+      "comments": "on",
+      "strings": "on",
+      "other": "on"
+    },
+    "editor.wordWrap": "on"
+  }
+}

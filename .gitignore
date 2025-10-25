@@ -7,6 +7,14 @@
 *.dll
 *.so
 *.dylib
+null
+nul
+*.backup
+test.md
+
+out/*
+out/**
+!out/.gitkeep
 
 # Test binary, built with `go test -c`
 *.test
@@ -24,9 +32,37 @@ profile.cov
 go.work
 go.work.sum
 
+# Node.js (for VSCode extension)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+*.tsbuildinfo
+
+# VSCode extension build artifacts
+.vscode/extensions/*/out/
+.vscode/extensions/*/node_modules/
+.vscode/extensions/*/*.vsix
+.vscode/extensions/*/.vscode-test/
+
 # env file
 .env
 
 # Editor/IDE
 # .idea/
-# .vscode/
+# Keep .vscode/ for extension development but ignore build artifacts above
+
+# Claude Code local settings (personal preferences not shared with team)
+.claude/settings.local.json
+
+# VSCode local settings (API keys, personal config)
+.vscode/settings.local.json
+
+# MkDocs
+site/
+.cache/
+
+# Docker
+.docker/
+docker-compose.override.yml

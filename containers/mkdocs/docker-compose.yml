@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  mkdocs:
+    build:
+      context: .
+      dockerfile: .Dockerfile
+    image: cli-mkdocs:latest
+    container_name: cli-mkdocs
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount project root to access all files
+      - ../../:/docs
+    working_dir: /docs
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: mkdocs serve --dev-addr=0.0.0.0:8000
+    restart: unless-stopped
+    networks:
+      - mkdocs-network
+
+  # Alternative service for building only (no server)
+  mkdocs-build:
+    build:
+      context: .
+      dockerfile: .Dockerfile
+    image: cli-mkdocs:latest
+    container_name: cli-mkdocs-build
+    volumes:
+      - ../../:/docs
+    working_dir: /docs
+    command: mkdocs build --clean --strict
+    profiles:
+      - build
+    networks:
+      - mkdocs-network
+
+networks:
+  mkdocs-network:
+    driver: bridge

@@ -1,0 +1,17 @@
+[
+  {
+    "key": "ctrl+shift+v",
+    "command": "markdown.showPreview",
+    "when": "editorLangId == markdown"
+  },
+  {
+    "key": "ctrl+k v",
+    "command": "markdown.showPreviewToSide",
+    "when": "editorLangId == markdown"
+  },
+  {
+    "key": "alt+m",
+    "command": "markdown.showPreview",
+    "when": "editorLangId == markdown"
+  }
+]

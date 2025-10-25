@@ -1,0 +1,238 @@
+# Repository Contract Definitions v0.1.0
+# Defines module boundaries, commit conventions, and versioning rules
+
+version: "0.1.0"
+
+repository:
+  name: "cli"
+  type: "monorepo"
+  versioning_scheme: "semantic"
+  trunk_based: true
+  main_branch: "main"
+
+# Module type definitions
+module_types:
+  mcp-server:
+    description: "Go-based Model Context Protocol servers"
+    language: "go"
+    versioning: "git-tag"
+    tag_format: "{module}/v{version}"
+    structure: "src/mcp/{name}/"
+
+  extension:
+    description: "IDE extensions and integrations"
+    language: "typescript"
+    versioning: "package.json + git-tag"
+    tag_format: "{module}/v{version}"
+    structure: ".vscode/extensions/{name}/"
+
+  infrastructure:
+    description: "Build, deployment, and automation"
+    language: "shell"
+    versioning: "none"
+    structure: "automation/, containers/"
+
+  documentation:
+    description: "User-facing and reference docs"
+    language: "markdown"
+    versioning: "none"
+    structure: "docs/, *.md"
+
+  configuration:
+    description: "IDE, tool, and repository configuration"
+    language: "json"
+    versioning: "none"
+    structure: ".claude/, .vscode/, root config"
+
+  contract:
+    description: "Versioned contract definitions"
+    language: "yaml"
+    versioning: "path-based"
+    structure: "contracts/{name}/{version}/"
+
+# Deployable Units (independently versioned and deployable)
+# Each has a detailed contract in contracts/deployable-units/0.1.0/{moniker}.yml
+deployable_units:
+  mcp-pwsh:
+    contract: "contracts/deployable-units/0.1.0/mcp-pwsh.yml"
+    type: "mcp-server"
+    prefix: "mcp-pwsh"
+
+  mcp-docs:
+    contract: "contracts/deployable-units/0.1.0/mcp-docs.yml"
+    type: "mcp-server"
+    prefix: "mcp-docs"
+
+  mcp-github:
+    contract: "contracts/deployable-units/0.1.0/mcp-github.yml"
+    type: "mcp-server"
+    prefix: "mcp-github"
+
+  mcp-vscode:
+    contract: "contracts/deployable-units/0.1.0/mcp-vscode.yml"
+    type: "mcp-server"
+    prefix: "mcp-vscode"
+
+  vscode-extension:
+    contract: "contracts/deployable-units/0.1.0/vscode-extension.yml"
+    type: "extension"
+    prefix: "vscode-ext"
+
+# Non-Deployable Modules (supporting modules without independent deployment)
+supporting_modules:
+  infrastructure:
+    type: "infrastructure"
+    prefix: "infra"
+    location: "automation/, containers/"
+    description: "Build and deployment automation"
+
+  documentation:
+    type: "documentation"
+    prefix: "docs"
+    location: "docs/, *.md"
+    description: "User guides and references"
+
+  claude-config:
+    type: "configuration"
+    prefix: "config"
+    location: ".claude/"
+    description: "Claude Code configuration"
+
+  vscode-config:
+    type: "configuration"
+    prefix: "config"
+    location: ".vscode/"
+    description: "VSCode workspace settings"
+
+  repository-config:
+    type: "configuration"
+    prefix: "config"
+    location: "root"
+    description: "Repository-wide settings"
+
+  contracts-repository:
+    type: "contract"
+    prefix: "contracts"
+    location: "contracts/repository/{version}/"
+    description: "Repository structure contracts"
+
+  contracts-deployable-units:
+    type: "contract"
+    prefix: "contracts"
+    location: "contracts/deployable-units/{version}/"
+    description: "Deployable unit contracts"
+
+# Commit type definitions (Conventional Commits)
+commit_types:
+  feat:
+    description: "New feature"
+    version_impact: "minor"
+    changelog_section: "Added"
+
+  fix:
+    description: "Bug fix"
+    version_impact: "patch"
+    changelog_section: "Fixed"
+
+  perf:
+    description: "Performance improvement"
+    version_impact: "patch"
+    changelog_section: "Performance"
+
+  docs:
+    description: "Documentation only"
+    version_impact: "none"
+    changelog_section: "Documentation"
+
+  style:
+    description: "Code style (formatting)"
+    version_impact: "none"
+    changelog_section: null
+
+  refactor:
+    description: "Code refactoring"
+    version_impact: "none"
+    changelog_section: "Changed"
+
+  test:
+    description: "Tests"
+    version_impact: "none"
+    changelog_section: null
+
+  chore:
+    description: "Maintenance"
+    version_impact: "none"
+    changelog_section: null
+
+  ci:
+    description: "CI/CD changes"
+    version_impact: "none"
+    changelog_section: null
+
+  build:
+    description: "Build system"
+    version_impact: "none"
+    changelog_section: null
+
+  revert:
+    description: "Revert commit"
+    version_impact: "depends"
+    changelog_section: "Reverted"
+
+# Breaking change rules
+breaking_changes:
+  markers: ["!", "BREAKING CHANGE:"]
+  version_impact: "major"
+  required_footer: true
+
+# Versioning (SemVer 2.0.0)
+versioning:
+  scheme: "semver"
+  format: "MAJOR.MINOR.PATCH"
+
+  increment_rules:
+    major: ["feat!", "fix!", "refactor!", "BREAKING CHANGE:"]
+    minor: ["feat"]
+    patch: ["fix", "perf"]
+    none: ["docs", "style", "refactor", "test", "chore", "ci", "build"]
+
+  pre_release:
+    enabled: true
+    labels: ["alpha", "beta", "rc"]
+
+# Commit message format
+commit_format:
+  structure: "<module>: <type>[!]: <description>\n\n[body]\n\n[footer]"
+
+  module:
+    required: true
+    pattern: "^(mcp-pwsh|mcp-docs|mcp-github|mcp-vscode|vscode-ext|infra|docs|config|contracts)"
+
+  type:
+    required: true
+    pattern: "^(feat|fix|perf|docs|style|refactor|test|chore|ci|build|revert)"
+
+  description:
+    max_length: 72
+    style: "imperative"
+    case: "lowercase"
+    no_period: true
+
+# Git workflow
+workflow:
+  trunk_based: true
+  main_branch: "main"
+  max_branch_age_days: 2
+  delete_branch_on_merge: true
+
+# References
+references:
+  documentation:
+    - "docs/reference/trunk/semantic-commits.md"
+    - "docs/reference/trunk/versioning.md"
+    - "docs/reference/trunk/repository-layout.md"
+    - "docs/reference/trunk/revisionable-timeline.md"
+  specifications:
+    - "https://www.conventionalcommits.org/"
+    - "https://semver.org/"
+    - "https://trunkbaseddevelopment.com/"

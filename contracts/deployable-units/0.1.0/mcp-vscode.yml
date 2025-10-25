@@ -1,0 +1,86 @@
+# Deployable Unit Contract: mcp-vscode
+# Version: 0.1.0
+
+moniker: "mcp-vscode"
+name: "VSCode MCP Server"
+type: "mcp-server"
+description: "Model Context Protocol server for VSCode integration and actions"
+
+versioning:
+  current_version: "0.1.0"
+  strategy: "git-tag"
+  tag_format: "mcp-vscode/v{version}"
+  semver_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "src/mcp/vscode/CHANGELOG.md"
+
+source:
+  root: "src/mcp/vscode/"
+  includes:
+    - "**/*.go"
+    - "go.mod"
+    - "go.sum"
+    - "run.sh"
+    - "README.md"
+  excludes:
+    - "**/*_test.go"
+    - ".gitignore"
+
+build:
+  language: "go"
+  runtime_version: "1.21+"
+  build_command: "go build -o mcp-vscode"
+  test_command: "go test ./..."
+  lint_command: "golangci-lint run"
+  artifact_output: "mcp-vscode"
+  build_dependencies:
+    - "go"
+    - "git"
+
+deployment:
+  deployment_type: "standalone-process"
+  entry_point: "./run.sh"
+  execution_mode: "stdio"
+  runtime_dependencies: []
+  configuration_files:
+    - ".mcp.json"
+  environment_variables:
+    optional:
+      - "VSCODE_WORKSPACE_ROOT"
+      - "VSCODE_ACTION_TIMEOUT"
+
+commits:
+  prefix: "mcp-vscode"
+  version_affecting_types:
+    - "feat"
+    - "fix"
+    - "perf"
+    - "feat!"
+    - "fix!"
+
+dependencies:
+  depends_on: []
+  used_by:
+    - "vscode-extension"
+
+lifecycle:
+  start_command: "bash src/mcp/vscode/run.sh"
+  stop_command: null
+  health_check: null
+  graceful_shutdown: true
+
+integration:
+  protocol: "MCP"
+  protocol_version: "1.0"
+  transport: "stdio"
+  tools_provided:
+    - "execute-vscode-command"
+    - "read-workspace-file"
+    - "list-workspace-files"
+    - "git-status"
+    - "git-diff"
+
+metadata:
+  owner: "platform-team"
+  documentation_path: "src/mcp/vscode/README.md"
+  api_documentation: null
+  support_contact: null

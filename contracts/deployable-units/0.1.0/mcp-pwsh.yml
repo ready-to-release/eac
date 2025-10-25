@@ -1,0 +1,95 @@
+# Deployable Unit Contract: mcp-pwsh
+# Version: 0.1.0
+# This contract defines all aspects of the mcp-pwsh deployable unit
+
+# Identity
+moniker: "mcp-pwsh"
+name: "PowerShell MCP Server"
+type: "mcp-server"
+description: "Model Context Protocol server for executing PowerShell commands"
+
+# Versioning
+versioning:
+  current_version: "0.1.0"  # Initial, not yet tagged
+  strategy: "git-tag"
+  tag_format: "mcp-pwsh/v{version}"
+  semver_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "src/mcp/pwsh/CHANGELOG.md"
+
+# Source Location
+source:
+  root: "src/mcp/pwsh/"
+  includes:
+    - "**/*.go"
+    - "go.mod"
+    - "go.sum"
+    - "run.sh"
+    - "README.md"
+  excludes:
+    - "**/*_test.go"
+    - ".gitignore"
+
+# Build Configuration
+build:
+  language: "go"
+  runtime_version: "1.21+"
+  build_command: "go build -o mcp-pwsh"
+  test_command: "go test ./..."
+  lint_command: "golangci-lint run"
+  artifact_output: "mcp-pwsh"
+  build_dependencies:
+    - "go"
+    - "git"
+
+# Deployment Configuration
+deployment:
+  deployment_type: "standalone-process"
+  entry_point: "./run.sh"
+  execution_mode: "stdio"  # MCP protocol over stdio
+  runtime_dependencies:
+    - "powershell"  # Must have PowerShell available
+  configuration_files:
+    - ".mcp.json"
+  environment_variables:
+    optional:
+      - "PWSH_EXECUTION_POLICY"
+      - "PWSH_TIMEOUT"
+
+# Semantic Commit Configuration
+commits:
+  prefix: "mcp-pwsh"
+  version_affecting_types:
+    - "feat"   # MINOR bump
+    - "fix"    # PATCH bump
+    - "perf"   # PATCH bump
+    - "feat!"  # MAJOR bump
+    - "fix!"   # MAJOR bump
+
+# Dependencies
+dependencies:
+  depends_on: []  # No dependencies on other deployable units
+  used_by:
+    - "vscode-extension"
+
+# Lifecycle Management
+lifecycle:
+  start_command: "bash src/mcp/pwsh/run.sh"
+  stop_command: null  # Stdio-based, stops when parent stops
+  health_check: null  # No health endpoint for MCP servers
+  graceful_shutdown: true
+
+# Integration Points
+integration:
+  protocol: "MCP"
+  protocol_version: "1.0"
+  transport: "stdio"
+  tools_provided:
+    - "execute-powershell"
+    - "list-modules"
+
+# Metadata
+metadata:
+  owner: "platform-team"
+  documentation_path: "src/mcp/pwsh/README.md"
+  api_documentation: null
+  support_contact: null

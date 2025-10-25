@@ -1,0 +1,51 @@
+{
+  "name": "claude-mcp-vscode",
+  "displayName": "Claude Commit Agent",
+  "description": "VSCode extension to execute Claude commit agent",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "claude-mcp-vscode.callMCP",
+        "title": "Generate Commit Message",
+        "icon": "$(robot)"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "claude-mcp-vscode.callMCP",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {}
+}

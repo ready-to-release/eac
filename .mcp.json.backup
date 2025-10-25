@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "pwsh": {
+      "command": "bash",
+      "args": ["src/mcp/pwsh/run.sh"],
+      "env": {}
+    },
+    "docs": {
+      "command": "bash",
+      "args": ["src/mcp/docs/run.sh"],
+      "env": {
+        "DOCS_PATH": "${DOCS_PATH:-.}"
+      }
+    },
+    "github": {
+      "command": "bash",
+      "args": ["src/mcp/github/run.sh"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "vscode": {
+      "command": "bash",
+      "args": ["src/mcp/vscode/run.sh"],
+      "env": {}
+    }
+  }
+}

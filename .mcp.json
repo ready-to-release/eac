@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "pwsh": {
+      "command": "go",
+      "args": ["run", "./src/mcp/pwsh/main.go"],
+      "env": {}
+    },
+    "docs": {
+      "command": "go",
+      "args": ["run", "./src/mcp/docs/main.go"],
+      "env": {
+        "DOCS_PATH": "${DOCS_PATH:-.}"
+      }
+    },
+    "github": {
+      "command": "go",
+      "args": ["run", "./src/mcp/github/main.go"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "vscode": {
+      "command": "go",
+      "args": ["run", "./src/mcp/vscode/main.go"],
+      "env": {
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}

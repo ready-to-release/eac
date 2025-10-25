@@ -1,0 +1,102 @@
+/* Dark theme for Markdown preview with warm nighttime gradient */
+html, body, .vscode-body, .vscode-light, .vscode-dark {
+    background: linear-gradient(135deg, #0a0a08 0%, #1a1410 50%, #0f0d0a 100%) !important;
+    background-attachment: fixed !important;
+    color: #d4c5b0 !important;
+}
+
+body {
+    background: linear-gradient(135deg, #0a0a08 0%, #1a1410 50%, #0f0d0a 100%) !important;
+    background-attachment: fixed !important;
+    color: #d4c5b0 !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color: #e6d5b8 !important;
+    border-bottom-color: #3a3020 !important;
+}
+
+/* Links */
+a {
+    color: #d4a574 !important;
+}
+
+a:hover {
+    color: #e6c29a !important;
+}
+
+/* Code blocks */
+pre {
+    background-color: #1a1510 !important;
+    border: 1px solid #3a3020 !important;
+    color: #d4c5b0 !important;
+}
+
+code {
+    background-color: #1a1510 !important;
+    color: #d4c5b0 !important;
+}
+
+/* Inline code */
+p code,
+li code {
+    background-color: #1a1510 !important;
+    color: #e6b87d !important;
+    padding: 2px 4px !important;
+    border-radius: 3px !important;
+}
+
+/* Blockquotes */
+blockquote {
+    background-color: #0f0d0a !important;
+    border-left-color: #5a4a30 !important;
+    color: #b8aa90 !important;
+}
+
+/* Tables */
+table {
+    border-color: #3a3020 !important;
+}
+
+th {
+    background-color: #1a1510 !important;
+    color: #e6d5b8 !important;
+    border-color: #3a3020 !important;
+}
+
+td {
+    border-color: #3a3020 !important;
+}
+
+tr:nth-child(even) {
+    background-color: #0f0d0a !important;
+}
+
+/* Horizontal rules */
+hr {
+    border-color: #3a3020 !important;
+}
+
+/* Lists */
+ul, ol {
+    color: #d4c5b0 !important;
+}
+
+/* Strong/bold */
+strong, b {
+    color: #e6d5b8 !important;
+}
+
+/* Emphasis/italic */
+em, i {
+    color: #c4b5a0 !important;
+}
+
+/* Images */
+img {
+    background-color: #1a1510 !important;
+    border: 1px solid #3a3020 !important;
+    border-radius: 4px !important;
+    padding: 4px !important;
+}
