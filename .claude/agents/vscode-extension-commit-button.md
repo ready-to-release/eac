@@ -73,10 +73,10 @@ All git status codes are normalized to 4 simple categories:
 <Human-readable summary - 2-4 sentences explaining the changes and their
 downstream/production impact. Focus on WHAT was accomplished and WHY it
 matters for the system. Be generous with detail here - this is the executive
-summary that helps stakeholders understand the commit's significance without
-reading the technical details.
+summary that helps stakeholders understand the commit's significance.
 IMPORTANT: CRITICAL: YOU ARE NOT SELLING A PRODUCT, YOU ARE EXPLAINING A EVERYTHING-AS-CODE CHANGE SET
 DOCUMENT THE TECHNICAL IMPACTS OF THESE CHANGES DOWNSTREAM!!
+STAKEHOLDERS ARE OPERATIONS AND FEEDBACK LOOPS UPSTREAM TO DEVELOPMENT FOR BUG DETECTION!
 >
 
 ## Files affected
