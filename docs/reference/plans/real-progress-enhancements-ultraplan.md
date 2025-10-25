@@ -12,6 +12,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ## Architecture Analysis
 
 ### Current Strengths
+
 ✓ Clean JSON-RPC protocol over stdin/stdout
 ✓ Real-time streaming of progress notifications
 ✓ Graceful fallback to simulated progress
@@ -19,18 +20,18 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 
 ### Core Limitations
 
-| # | Limitation | Impact | Severity |
-|---|------------|--------|----------|
-| 1 | **No bidirectional communication** | Cannot cancel, pause, or configure operations | High |
-| 2 | **No progress quantification** | User can't estimate time remaining | Medium |
-| 3 | **Single-threaded progress model** | Can't show parallel operations (e.g., multiple git commands) | Medium |
-| 4 | **No error streaming** | Errors only surface at the end, poor UX for long operations | High |
-| 5 | **No cancellation protocol** | User must kill process, leaves dirty state | High |
-| 6 | **No progress persistence** | Lost on crash/restart, hard to debug | Medium |
-| 7 | **Limited context in messages** | Generic messages don't show what's being processed | Low |
-| 8 | **No sub-operation tracking** | Can't drill down into complex operations | Medium |
-| 9 | **No timing metadata** | Can't predict ETAs or identify performance bottlenecks | Low |
-| 10 | **Static stage model** | Stages hardcoded, can't adapt to different workflows | Medium |
+| #   | Limitation                         | Impact                                                       | Severity |
+| --- | ---------------------------------- | ------------------------------------------------------------ | -------- |
+| 1   | **No bidirectional communication** | Cannot cancel, pause, or configure operations                | High     |
+| 2   | **No progress quantification**     | User can't estimate time remaining                           | Medium   |
+| 3   | **Single-threaded progress model** | Can't show parallel operations (e.g., multiple git commands) | Medium   |
+| 4   | **No error streaming**             | Errors only surface at the end, poor UX for long operations  | High     |
+| 5   | **No cancellation protocol**       | User must kill process, leaves dirty state                   | High     |
+| 6   | **No progress persistence**        | Lost on crash/restart, hard to debug                         | Medium   |
+| 7   | **Limited context in messages**    | Generic messages don't show what's being processed           | Low      |
+| 8   | **No sub-operation tracking**      | Can't drill down into complex operations                     | Medium   |
+| 9   | **No timing metadata**             | Can't predict ETAs or identify performance bottlenecks       | Low      |
+| 10  | **Static stage model**             | Stages hardcoded, can't adapt to different workflows         | Medium   |
 
 ---
 
@@ -41,6 +42,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 #### 1.1 Percentage-Based Progress
 
 **Current:**
+
 ```json
 {
   "method": "$/progress",
@@ -52,6 +54,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Enhanced:**
+
 ```json
 {
   "method": "$/progress",
@@ -69,11 +72,13 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Benefits:**
+
 - Accurate progress bar positioning
 - User can estimate completion time
 - Better UX for long-running operations
 
 **Implementation:**
+
 - Add progress tracking to each operation in Go
 - Count total operations during planning phase
 - Emit progress fraction with each update
@@ -81,6 +86,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 #### 1.2 Hierarchical Progress (Parent/Child Operations)
 
 **Concept:**
+
 ```
 ├─ Generating commit message (0/100%)
    ├─ Loading agent configuration (100%)
@@ -92,6 +98,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Protocol:**
+
 ```json
 {
   "method": "$/progress",
@@ -106,11 +113,13 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **VSCode Display:**
+
 - Show current operation in progress message
 - Show sub-operations in expandable tree view
 - Calculate aggregate progress from hierarchy
 
 **Use Cases:**
+
 - Multi-file analysis
 - Batch commit operations
 - Complex git workflows (rebase, merge)
@@ -145,6 +154,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **VSCode Display:**
+
 - Show multiple progress bars (up to 4 slots)
 - Or show aggregated "3/10 files analyzed"
 - Display parallelism level: "Processing 4 operations..."
@@ -152,11 +162,13 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 #### 1.4 Dynamic Context in Messages
 
 **Current:**
+
 ```
 "Gathering git context..."
 ```
 
 **Enhanced:**
+
 ```
 "Gathering git context (12 modified files, 3 commits)..."
 "Reading documentation (guide/vscode-ext/...)..."
@@ -164,6 +176,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Implementation:**
+
 - Inject runtime metadata into message templates
 - Pass context data through progress params
 - Format in extension for display
@@ -171,6 +184,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 #### 1.5 Time Tracking & ETA Prediction
 
 **Protocol Extension:**
+
 ```json
 {
   "method": "$/progress",
@@ -187,11 +201,13 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **VSCode Display:**
+
 ```
 "Generating commit message... (30s remaining)"
 ```
 
 **ETA Algorithm:**
+
 - Track historical operation durations
 - Use rolling average for predictions
 - Adjust dynamically as operation progresses
@@ -204,6 +220,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 #### 2.1 Cancellation Support
 
 **Extension → Server (stdin):**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -216,6 +233,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Server → Extension (stdout):**
+
 ```json
 {
   "method": "$/progress",
@@ -231,6 +249,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Implementation in Go:**
+
 - Use context.Context with cancellation
 - Monitor stdin for cancel messages in goroutine
 - Cancel context when message received
@@ -238,6 +257,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 - Send cancellation confirmation
 
 **VSCode UX:**
+
 - Show "Cancel" button during progress
 - Confirm cancellation for destructive operations
 - Show cleanup progress after cancel
@@ -247,6 +267,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 **Use Case:** Long analysis, user needs to check something
 
 **Protocol:**
+
 ```json
 // Pause request
 {
@@ -272,6 +293,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Implementation Challenges:**
+
 - Cannot pause external processes (git, Claude API)
 - Can pause between operations
 - Save state to resume later
@@ -281,6 +303,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 **Scenario:** Conflict resolution, user input needed
 
 **Server → Extension:**
+
 ```json
 {
   "method": "$/prompt",
@@ -298,6 +321,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Extension → Server:**
+
 ```json
 {
   "method": "$/promptResponse",
@@ -309,6 +333,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **VSCode UX:**
+
 - Show modal dialog or quick pick
 - Block progress until user responds
 - Timeout after 60s with default choice
@@ -339,6 +364,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 **Current:** Errors only in final response
 
 **Enhanced:**
+
 ```json
 {
   "method": "$/error",
@@ -354,6 +380,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Severity Levels:**
+
 - `debug` - Development info
 - `info` - Informational messages
 - `warning` - Non-fatal issues
@@ -361,6 +388,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 - `critical` - System-level failures
 
 **VSCode Display:**
+
 - Show warnings in progress subtitle
 - Show errors in notification toast
 - Collect all errors in output channel
@@ -389,6 +417,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **VSCode UX:**
+
 ```
 "Generating commit message... (rate limited, retrying in 5s)"
 ```
@@ -420,6 +449,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **VSCode UX:**
+
 - Show partial success notification
 - Offer to retry failures
 - Show detailed failure report
@@ -444,6 +474,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 ```
 
 **Benefits:**
+
 - Fail fast
 - Clear error messages
 - Prevent wasted API calls
@@ -457,6 +488,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 **Use Case:** Batch commit multiple repositories
 
 **VSCode UI:**
+
 ```
 Overall Progress: 3/10 repositories
 Current: repo-alpha (Gathering git context...)
@@ -467,6 +499,7 @@ Current: repo-alpha (Gathering git context...)
 ```
 
 **Protocol:**
+
 ```json
 {
   "method": "$/progress",
@@ -505,6 +538,7 @@ Current: repo-alpha (Gathering git context...)
 ```
 
 **VSCode Commands:**
+
 - `MCP: View Operation History`
 - `MCP: Replay Last Operation`
 - `MCP: Show Operation Timeline`
@@ -527,6 +561,7 @@ vscode.window.showInformationNotification(
 ```
 
 **User Setting:**
+
 ```json
 {
   "mcp.notifications.enabled": true,
@@ -537,11 +572,13 @@ vscode.window.showInformationNotification(
 #### 4.4 Detailed Logs on Demand
 
 **VSCode UI:**
+
 - Progress notification shows summary
 - "Show Details" button opens output channel
 - Output channel shows full logs in real-time
 
 **Output Channel:**
+
 ```
 [10:30:00] Starting commit message generation
 [10:30:00] Loading agent: vscode-ext-commit-button.md
@@ -555,6 +592,7 @@ vscode.window.showInformationNotification(
 ```
 
 **Protocol:**
+
 ```json
 {
   "method": "$/log",
@@ -572,6 +610,7 @@ vscode.window.showInformationNotification(
 **Use Case:** Preview what will happen without executing
 
 **Protocol:**
+
 ```json
 {
   "method": "tools/call",
@@ -585,6 +624,7 @@ vscode.window.showInformationNotification(
 ```
 
 **Server Response:**
+
 ```json
 {
   "method": "$/progress",
@@ -610,6 +650,7 @@ vscode.window.showInformationNotification(
 **Log File:** `~/.vscode-mcp/logs/2025-10-24.jsonl`
 
 **Format (JSONL):**
+
 ```json
 {"timestamp":"2025-10-24T10:30:00Z","level":"info","stage":"init","message":"Starting operation","operationId":"op-123"}
 {"timestamp":"2025-10-24T10:30:01Z","level":"debug","stage":"git","message":"Executing git command","command":"git status"}
@@ -617,6 +658,7 @@ vscode.window.showInformationNotification(
 ```
 
 **Benefits:**
+
 - Easy to parse for analysis
 - Can pipe to log aggregators
 - Machine-readable for debugging tools
@@ -624,6 +666,7 @@ vscode.window.showInformationNotification(
 #### 5.2 Performance Metrics
 
 **Protocol:**
+
 ```json
 {
   "method": "$/metrics",
@@ -662,6 +705,7 @@ vscode.window.showInformationNotification(
 **VSCode Command:** `MCP: Show Performance Report`
 
 **Performance Dashboard:**
+
 ```
 Last 10 Operations:
 ┌─────────────────────────┬──────────┬─────────┬────────┐
@@ -701,6 +745,7 @@ func generateCommitMessage(ctx context.Context) {
 **Export:** Send traces to Jaeger/Zipkin for visualization
 
 **Benefits:**
+
 - Visualize operation flow
 - Identify bottlenecks
 - Compare performance across runs
@@ -708,6 +753,7 @@ func generateCommitMessage(ctx context.Context) {
 #### 5.4 Debug Mode
 
 **Enable:**
+
 ```json
 {
   "mcp.debug.enabled": true,
@@ -717,6 +763,7 @@ func generateCommitMessage(ctx context.Context) {
 ```
 
 **Behavior:**
+
 - Save all stdin/stdout to debug log
 - Show all JSON-RPC messages in output channel
 - Include stack traces in errors
@@ -724,6 +771,7 @@ func generateCommitMessage(ctx context.Context) {
 - Save intermediate artifacts
 
 **Debug Log:** `~/.vscode-mcp/debug/2025-10-24-10-30-15/`
+
 ```
 stdin.jsonl      # All messages sent to server
 stdout.jsonl     # All messages from server
@@ -756,6 +804,7 @@ artifacts/       # Temp files, prompts, responses
 ```
 
 **Use Cases:**
+
 - Crash recovery: Resume from snapshot
 - Debugging: Replay from specific point
 - Testing: Use snapshots as test fixtures
@@ -769,6 +818,7 @@ artifacts/       # Temp files, prompts, responses
 **Problem:** Large diffs (>1MB) slow down Claude API
 
 **Solution:**
+
 - Stream diff in chunks
 - Summarize large hunks
 - Paginate file-by-file
@@ -807,6 +857,7 @@ for file := range modifiedFiles {
 ```
 
 **Strategy:**
+
 - Cache `git log` results (TTL 1min)
 - Cache branch name until it changes
 - Invalidate on commit/checkout
@@ -818,6 +869,7 @@ for file := range modifiedFiles {
 **Use Case:** User commits frequently in same session
 
 **Track:**
+
 - Last processed commit SHA
 - Only diff since last commit
 - Reuse context from previous run
@@ -838,6 +890,7 @@ func getChanges() Diff {
 **Current:** Load all docs upfront (slow)
 
 **Optimized:**
+
 - Load docs index first
 - Only load relevant docs based on file types
 - Stream doc content as needed
@@ -863,6 +916,7 @@ for doc := range relevantDocs {
 **Enhanced:** Stream tokens as they arrive
 
 **Protocol:**
+
 ```json
 {
   "method": "$/progress",
@@ -878,6 +932,7 @@ for doc := range relevantDocs {
 ```
 
 **VSCode Display:**
+
 - Show partial message in preview pane
 - Update in real-time as tokens arrive
 - User can see quality immediately
@@ -891,6 +946,7 @@ for doc := range relevantDocs {
 **Use Case:** Monorepo with multiple independent modules
 
 **VSCode UI:**
+
 ```
 ╔═══════════════════════════════════════════════╗
 ║  Processing 3 repositories concurrently       ║
@@ -902,6 +958,7 @@ for doc := range relevantDocs {
 ```
 
 **Implementation:**
+
 - Launch multiple Go processes (one per repo)
 - Multiplex progress notifications
 - Aggregate results
@@ -935,6 +992,7 @@ func detectBatches(changes []FileChange) []Batch {
 ```
 
 **User Prompt:**
+
 ```
 Detected 3 logical change groups:
 1. Frontend updates (12 files)
@@ -949,6 +1007,7 @@ Create 3 separate commits? [Yes/No/Custom]
 **Use Case:** Notify team channel when commits happen
 
 **Configuration:**
+
 ```json
 {
   "mcp.webhooks": [
@@ -964,6 +1023,7 @@ Create 3 separate commits? [Yes/No/Custom]
 ```
 
 **Triggered on completion:**
+
 ```json
 POST https://hooks.slack.com/...
 {
@@ -979,6 +1039,7 @@ POST https://hooks.slack.com/...
 **Use Case:** Generate commits via CI pipeline
 
 **CLI Interface:**
+
 ```bash
 vscode-mcp commit --agent vscode-ext-commit-button \
   --workspace /path/to/repo \
@@ -988,6 +1049,7 @@ vscode-mcp commit --agent vscode-ext-commit-button \
 ```
 
 **Progress File (Live Updated):**
+
 ```jsonl
 {"stage":"init","message":"Starting...","timestamp":"2025-10-24T10:30:00Z"}
 {"stage":"git","message":"Gathering context...","progress":{"current":1,"total":6}}
@@ -995,6 +1057,7 @@ vscode-mcp commit --agent vscode-ext-commit-button \
 ```
 
 **GitHub Actions Example:**
+
 ```yaml
 - name: Generate commit message
   run: |
@@ -1008,6 +1071,7 @@ vscode-mcp commit --agent vscode-ext-commit-button \
 **Use Case:** Add project-specific validation stages
 
 **Configuration:**
+
 ```json
 {
   "mcp.stages.custom": [
@@ -1028,6 +1092,7 @@ vscode-mcp commit --agent vscode-ext-commit-button \
 ```
 
 **Execution Flow:**
+
 ```
 1. init
 2. git
@@ -1040,6 +1105,7 @@ vscode-mcp commit --agent vscode-ext-commit-button \
 ```
 
 **Progress:**
+
 ```json
 {
   "method": "$/progress",
@@ -1060,6 +1126,7 @@ vscode-mcp commit --agent vscode-ext-commit-button \
 #### 8.1 Progress Testing Framework
 
 **Mock Progress Server:**
+
 ```go
 // test_server.go
 type MockProgressServer struct {
@@ -1091,6 +1158,7 @@ func TestProgressDisplay(t *testing.T) {
 **Web UI:** `http://localhost:8080/progress-visualizer`
 
 **Features:**
+
 - Upload progress JSONL file
 - Visualize timeline
 - Show stage durations
@@ -1098,6 +1166,7 @@ func TestProgressDisplay(t *testing.T) {
 - Compare multiple runs
 
 **Timeline Visualization:**
+
 ```
 0s    10s   20s   30s   40s   50s   60s   70s
 |─────|─────|─────|─────|─────|─────|─────|
@@ -1108,6 +1177,7 @@ func TestProgressDisplay(t *testing.T) {
 #### 8.3 Schema Validation
 
 **JSON Schema for Progress Protocol:**
+
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1138,6 +1208,7 @@ func TestProgressDisplay(t *testing.T) {
 ```
 
 **Usage:**
+
 - Validate in Go before sending
 - Validate in TypeScript on receive
 - Catch protocol violations early
@@ -1145,6 +1216,7 @@ func TestProgressDisplay(t *testing.T) {
 #### 8.4 TypeScript Protocol Types
 
 **Generate from schema:**
+
 ```typescript
 // protocol.ts (auto-generated)
 export interface ProgressNotification {
@@ -1180,6 +1252,7 @@ function handleProgress(notification: ProgressNotification) {
 ## Implementation Roadmap
 
 ### Phase 1: Foundation (Week 1-2)
+
 **Goal:** Bidirectional communication + quantified progress
 
 1. Add percentage-based progress
@@ -1188,16 +1261,19 @@ function handleProgress(notification: ProgressNotification) {
 4. Structured logging to file
 
 **Deliverables:**
+
 - Go: Progress quantification, cancellation support
 - Extension: Cancel button, progress percentages
 - Protocol v2 with progress fractions
 
 **Success Metrics:**
+
 - User can cancel long operations
 - Progress bar shows accurate percentage
 - Errors appear in real-time
 
 ### Phase 2: Observability (Week 3-4)
+
 **Goal:** Debugging and performance insights
 
 5. Performance metrics collection
@@ -1206,17 +1282,20 @@ function handleProgress(notification: ProgressNotification) {
 8. Progress visualization tool
 
 **Deliverables:**
+
 - Metrics dashboard in VSCode
 - Operation history viewer
 - Debug log capture
 - Standalone visualizer
 
 **Success Metrics:**
+
 - Can replay past operations
 - Can identify performance bottlenecks
 - Debug logs help troubleshoot issues
 
 ### Phase 3: UX Polish (Week 5-6)
+
 **Goal:** Superior user experience
 
 9. Hierarchical progress display
@@ -1225,17 +1304,20 @@ function handleProgress(notification: ProgressNotification) {
 12. Time estimates & ETAs
 
 **Deliverables:**
+
 - Tree view for sub-operations
 - Background completion notifications
 - Expandable log viewer
 - ETA predictions
 
 **Success Metrics:**
+
 - Users understand what's happening
 - Can work on other tasks during long operations
 - Accurate time estimates
 
 ### Phase 4: Performance (Week 7-8)
+
 **Goal:** Faster operations
 
 13. Caching git operations
@@ -1244,16 +1326,19 @@ function handleProgress(notification: ProgressNotification) {
 16. Streaming Claude responses
 
 **Deliverables:**
+
 - 50% faster repeated operations
 - Reduced memory usage
 - Real-time response preview
 
 **Success Metrics:**
+
 - <5s for cached git operations
 - <30s average total time
 - Smooth progress updates
 
 ### Phase 5: Advanced Features (Week 9-12)
+
 **Goal:** Power user capabilities
 
 17. Multi-repository support
@@ -1262,11 +1347,13 @@ function handleProgress(notification: ProgressNotification) {
 20. CLI interface for CI/CD
 
 **Deliverables:**
+
 - Batch commit UI
 - Custom pipeline stages
 - CI/CD integration guide
 
 **Success Metrics:**
+
 - Can process multiple repos
 - Integrates with build pipelines
 - Extensible for custom workflows
@@ -1277,38 +1364,41 @@ function handleProgress(notification: ProgressNotification) {
 
 ### Technical Risks
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| **Stdin/stdout buffering issues** | High | Medium | Use line-buffered mode, flush after each message |
-| **Protocol version compatibility** | High | Medium | Version negotiation handshake, backward compatibility |
-| **Performance overhead from logging** | Medium | Medium | Async logging, configurable verbosity |
-| **Race conditions in cancellation** | High | Low | Proper context propagation, mutex protection |
-| **Large progress state memory usage** | Medium | Low | Streaming, pruning old history |
+| Risk                                  | Impact | Likelihood | Mitigation                                            |
+| ------------------------------------- | ------ | ---------- | ----------------------------------------------------- |
+| **Stdin/stdout buffering issues**     | High   | Medium     | Use line-buffered mode, flush after each message      |
+| **Protocol version compatibility**    | High   | Medium     | Version negotiation handshake, backward compatibility |
+| **Performance overhead from logging** | Medium | Medium     | Async logging, configurable verbosity                 |
+| **Race conditions in cancellation**   | High   | Low        | Proper context propagation, mutex protection          |
+| **Large progress state memory usage** | Medium | Low        | Streaming, pruning old history                        |
 
 ### UX Risks
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| **Information overload** | Medium | High | Progressive disclosure, summary view by default |
-| **Notification fatigue** | Medium | Medium | Smart defaults, user configuration |
-| **Progress inaccuracy** | Medium | Medium | Conservative estimates, dynamic adjustment |
+| Risk                     | Impact | Likelihood | Mitigation                                      |
+| ------------------------ | ------ | ---------- | ----------------------------------------------- |
+| **Information overload** | Medium | High       | Progressive disclosure, summary view by default |
+| **Notification fatigue** | Medium | Medium     | Smart defaults, user configuration              |
+| **Progress inaccuracy**  | Medium | Medium     | Conservative estimates, dynamic adjustment      |
 
 ---
 
 ## Success Metrics
 
 ### Performance Metrics
+
 - Average operation time: **<30s** (currently ~60s)
 - P95 operation time: **<60s** (currently ~90s)
 - Cache hit rate: **>70%** for repeated operations
 - Memory usage: **<100MB** per operation
 
 ### User Experience Metrics
+
 - Cancellation response time: **<500ms**
 - Progress accuracy: **±10%** of actual completion
 - Error visibility: **<1s** from occurrence to display
 
 ### Reliability Metrics
+
 - Operation success rate: **>95%**
 - Recovery from failures: **100%** (clean state)
 - Crash recovery: **100%** (resume from snapshot)
@@ -1318,18 +1408,22 @@ function handleProgress(notification: ProgressNotification) {
 ## Open Questions
 
 1. **Protocol Versioning:** How to handle breaking changes in JSON-RPC protocol?
+
    - Proposal: Handshake with version negotiation
    - Fallback to lowest common version
 
 2. **Concurrency Model:** How many parallel operations to allow?
+
    - Proposal: Configurable limit (default 4)
    - Queue excess operations
 
 3. **Storage Limits:** How much history/logs to retain?
+
    - Proposal: 30 days or 100MB, whichever comes first
    - User-configurable
 
 4. **Security:** Should we encrypt sensitive data in logs?
+
    - Proposal: Redact credentials, API keys by default
    - Optional full encryption
 
@@ -1360,12 +1454,14 @@ See: `/out/progress-v1-to-v2-migration.md` (to be created)
 This ultra enhancement plan transforms the progress notification system from a basic status display into a **production-grade, observable, interactive operation management system**.
 
 **Key Improvements:**
+
 - **10x better UX** - Cancellation, accurate progress, real-time feedback
 - **5x easier debugging** - Structured logs, metrics, traces
 - **2x faster** - Caching, streaming, optimization
 - **∞ more extensible** - Custom stages, webhooks, CI/CD
 
 **Next Steps:**
+
 1. Review and prioritize enhancements with stakeholders
 2. Implement Phase 1 (Foundation) as MVP
 3. Gather user feedback
@@ -1376,6 +1472,6 @@ This ultra enhancement plan transforms the progress notification system from a b
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2025-10-24*
-*Author: Claude (Sonnet 4.5)*
+_Document Version: 1.0_
+_Last Updated: 2025-10-24_
+_Author: Claude (Sonnet 4.5)_

@@ -74,7 +74,10 @@ All git status codes are normalized to 4 simple categories:
 downstream/production impact. Focus on WHAT was accomplished and WHY it
 matters for the system. Be generous with detail here - this is the executive
 summary that helps stakeholders understand the commit's significance without
-reading the technical details.>
+reading the technical details.
+IMPORTANT: CRITICAL: YOU ARE NOT SELLING A PRODUCT, YOU ARE EXPLAINING A EVERYTHING-AS-CODE CHANGE SET
+DOCUMENT THE TECHNICAL IMPACTS OF THESE CHANGES DOWNSTREAM!!
+>
 
 ## Files affected
 
