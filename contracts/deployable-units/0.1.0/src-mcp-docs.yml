@@ -2,7 +2,7 @@
 # Version: 0.1.0
 
 moniker: "src-mcp-docs"
-name: "Documentation MCP Server"
+name: "Go Documentation MCP Server"
 type: "mcp-server"
 description: "Model Context Protocol server for documentation management and queries"
 root: "src/mcp/docs"

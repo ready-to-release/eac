@@ -2,7 +2,7 @@
 # Version: 0.1.0
 
 moniker: "src-mcp-github"
-name: "GitHub MCP Server"
+name: "Go GitHub MCP Server"
 type: "mcp-server"
 description: "Internal MCP server for GitHub API integration"
 root: "src/mcp/github"

@@ -2,7 +2,7 @@
 # Version: 0.1.0
 
 moniker: "src-mcp-vscode"
-name: "VSCode MCP Server"
+name: "Go VSCode MCP Server"
 type: "mcp-server"
 description: "Model Context Protocol server for VSCode integration and actions"
 root: "src/mcp/vscode"

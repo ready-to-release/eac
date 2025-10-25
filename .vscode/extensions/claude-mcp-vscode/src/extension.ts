@@ -43,6 +43,40 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
 
+    // Initialize git change listener to enable/disable button
+    const gitExtension = vscode.extensions.getExtension('vscode.git');
+    if (gitExtension) {
+        const gitAPI = gitExtension.isActive ? gitExtension.exports : null;
+        if (gitAPI) {
+            const git = gitAPI.getAPI(1);
+
+            // Function to update button state
+            const updateButtonState = () => {
+                if (git.repositories.length > 0) {
+                    const repo = git.repositories[0];
+                    const hasStagedChanges = (repo.state.indexChanges?.length || 0) > 0;
+                    vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', hasStagedChanges);
+                } else {
+                    vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', false);
+                }
+            };
+
+            // Update immediately
+            updateButtonState();
+
+            // Listen for repository changes
+            git.repositories.forEach((repo: any) => {
+                repo.state.onDidChange(() => updateButtonState());
+            });
+
+            // Listen for new repositories
+            git.onDidOpenRepository((repo: any) => {
+                updateButtonState();
+                repo.state.onDidChange(() => updateButtonState());
+            });
+        }
+    }
+
     // Register the command
     let disposable = vscode.commands.registerCommand('claude-mcp-vscode.callMCP', async () => {
         // Set up debug log file in /out
