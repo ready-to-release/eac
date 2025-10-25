@@ -8,7 +8,7 @@ Logs are stored in this directory to keep them organized and separate from code.
 
 ### Structure
 
-```
+```text
 .claude/logs/
 ├── .gitignore         # Ignores all log files except .gitkeep and .gitignore
 ├── .gitkeep           # Ensures directory is tracked by git
@@ -19,11 +19,13 @@ Logs are stored in this directory to keep them organized and separate from code.
 ## Git Ignore
 
 The `.gitignore` in this directory ensures that:
+
 - ✅ Log files are NOT committed to git
 - ✅ The directory structure IS tracked
 - ✅ `.gitignore` and `.gitkeep` are tracked
 
 Pattern:
+
 ```gitignore
 # Ignore all files
 *
@@ -37,6 +39,7 @@ Pattern:
 ## Log Files
 
 Claude Code may generate various log files here:
+
 - Debug logs
 - Error logs
 - Session logs

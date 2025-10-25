@@ -11,6 +11,7 @@ null
 nul
 *.backup
 test.md
+test*.md
 
 out/*
 out/**

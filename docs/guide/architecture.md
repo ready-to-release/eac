@@ -31,7 +31,7 @@ This monorepo provides a complete MCP server infrastructure for building develop
 
 The MCP servers follow the official specification and communicate via JSON-RPC over stdin/stdout:
 
-```
+```text
 Client Application
     ↓ (spawn process)
 MCP Server (Go)

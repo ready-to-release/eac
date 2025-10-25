@@ -1,7 +1,4 @@
 {
-  "extensions.experimental.additionalPaths": [
-    ".vscode/extensions"
-  ],
   "markdown.preview.fontFamily": "Consolas, 'Courier New', monospace",
   "markdown.styles": [
     ".vscode/markdown-preview-dark.css"

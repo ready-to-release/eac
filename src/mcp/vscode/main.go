@@ -64,9 +64,12 @@ type Content struct {
 	Text string `json:"text"`
 }
 
+// Global encoder for stdout - shared across all responses and progress
+var stdoutEncoder *json.Encoder
+
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	encoder := json.NewEncoder(os.Stdout)
+	stdoutEncoder = json.NewEncoder(os.Stdout)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -76,11 +79,11 @@ func main() {
 
 		var req MCPRequest
 		if err := json.Unmarshal([]byte(line), &req); err != nil {
-			sendError(encoder, nil, -32700, "Parse error")
+			sendError(stdoutEncoder, nil, -32700, "Parse error")
 			continue
 		}
 
-		handleRequest(encoder, &req)
+		handleRequest(stdoutEncoder, &req)
 	}
 }
 
@@ -228,40 +231,167 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 	// Agent file is at .claude/agents/vscode-extension-commit-button.md
 	workspaceRoot := filepath.Dir(filepath.Dir(filepath.Dir(agentFile)))
 
-	// Step 1: Read the agent instructions
-	sendProgress("init", "Loading agent configuration...")
-	agentInstructions, err := ioutil.ReadFile(agentFile)
+	// Step 1: Read the generator agent instructions
+	sendProgress("init", "Loading generator agent...")
+	generatorInstructions, err := ioutil.ReadFile(agentFile)
 	if err != nil {
-		return "", fmt.Errorf("failed to read agent file: %w", err)
+		return "", fmt.Errorf("failed to read generator agent file: %w", err)
 	}
+	generatorModel := extractModelFromAgent(string(generatorInstructions))
 
-	// Step 2: Gather git context as specified in the agent file
+	// Step 2: Gather git context
 	sendProgress("git", "Gathering git context...")
 	gitContext, err := gatherGitContext(workspaceRoot)
 	if err != nil {
 		return "", fmt.Errorf("failed to gather git context: %w", err)
 	}
 
-	// Step 3: Read documentation files referenced in the agent
+	// Step 3: Read documentation files
 	sendProgress("docs", "Reading documentation...")
 	docs, err := readDocumentationFiles(workspaceRoot)
 	if err != nil {
 		return "", fmt.Errorf("failed to read documentation: %w", err)
 	}
 
-	// Step 4: Build the prompt for Claude
-	sendProgress("prompt", "Building prompt...")
-	prompt := buildClaudePrompt(string(agentInstructions), gitContext, docs)
+	// Step 4: Build prompt for generator
+	sendProgress("gen-prompt", "Building generator prompt...")
+	generatorPrompt := buildClaudePrompt(string(generatorInstructions), gitContext, docs)
 
-	// Step 5: Call Claude to generate the semantic commit message
-	sendProgress("claude", "Generating commit message...")
-	commitMessage, err := callClaude(prompt)
+	// Step 5: Call generator agent
+	sendProgress("gen-claude", "Generating initial commit message...")
+	initialCommit, err := callClaude(generatorPrompt, generatorModel)
 	if err != nil {
-		return "", fmt.Errorf("failed to call Claude: %w", err)
+		return "", fmt.Errorf("failed to generate initial commit: %w", err)
 	}
 
+	// Step 6: Load reviewer agent
+	sendProgress("rev-init", "Loading reviewer agent...")
+	reviewerPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-reviewer.md")
+	reviewerInstructions, err := ioutil.ReadFile(reviewerPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read reviewer agent file: %w", err)
+	}
+	reviewerModel := extractModelFromAgent(string(reviewerInstructions))
+
+	// Step 7: Call reviewer agent
+	sendProgress("rev-claude", "Reviewing commit message...")
+	reviewerPrompt := string(reviewerInstructions) + "\n\n---\n\n## Commit Message to Review\n\n```\n" + initialCommit + "\n```"
+	review, err := callClaude(reviewerPrompt, reviewerModel)
+	if err != nil {
+		return "", fmt.Errorf("failed to review commit: %w", err)
+	}
+
+	// Step 8: Load approver agent
+	sendProgress("app-init", "Loading approver agent...")
+	approverPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-approver.md")
+	approverInstructions, err := ioutil.ReadFile(approverPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read approver agent file: %w", err)
+	}
+	approverModel := extractModelFromAgent(string(approverInstructions))
+
+	// Step 9: Call approver agent with commit + review
+	sendProgress("app-claude", "Final approval...")
+	approverPrompt := string(approverInstructions) + "\n\n---\n\n" + initialCommit + "\n\n## Review\n\n" + review
+	approvedSection, err := callClaude(approverPrompt, approverModel)
+	if err != nil {
+		return "", fmt.Errorf("failed to approve commit: %w", err)
+	}
+
+	// Step 10: Check if there are concerns
+	var finalCommit string
+	var concernsResult string
+
+	if strings.Contains(approvedSection, "Approved (with concerns)") {
+		// Load concerns handler agent
+		sendProgress("concerns-init", "Loading concerns handler...")
+		concernsPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-concerns-handler.md")
+		concernsInstructions, err := ioutil.ReadFile(concernsPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read concerns handler agent file: %w", err)
+		}
+		concernsModel := extractModelFromAgent(string(concernsInstructions))
+
+		// Step 11: Call concerns handler to fix issues
+		sendProgress("concerns-claude", "Fixing concerns...")
+		commitWithApproval := initialCommit + "\n\n" + approvedSection
+		concernsPrompt := string(concernsInstructions) + "\n\n---\n\n" + commitWithApproval
+		correctedCommit, err := callClaude(concernsPrompt, concernsModel)
+		if err != nil {
+			return "", fmt.Errorf("failed to fix concerns: %w", err)
+		}
+		concernsResult = correctedCommit
+	}
+
+	// Step 12: Determine base commit (with or without concerns fixed)
+	var baseCommit string
+	if concernsResult != "" {
+		baseCommit = concernsResult
+	} else {
+		baseCommit = initialCommit
+	}
+	baseCommit = strings.TrimSpace(baseCommit)
+
+	// Step 13: Generate commit title (5th agent)
+	sendProgress("title-init", "Loading title generator agent...")
+	titleGenPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-title-generator.md")
+	titleGenInstructions, err := ioutil.ReadFile(titleGenPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read title generator agent file: %w", err)
+	}
+	titleGenModel := extractModelFromAgent(string(titleGenInstructions))
+
+	sendProgress("title-claude", "Generating commit title...")
+	titleGenPrompt := string(titleGenInstructions) + "\n\n---\n\n" + baseCommit
+	commitTitle, err := callClaude(titleGenPrompt, titleGenModel)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate commit title: %w", err)
+	}
+	// Clean the title (remove any extra whitespace/newlines)
+	commitTitle = strings.TrimSpace(commitTitle)
+
+	// Step 14: Stitch together final commit message from all agents
+	sendProgress("stitch", "Stitching agent outputs...")
+
+	// Build the composite commit message
+	var composite strings.Builder
+
+	// 1. Add commit title as top-level heading (MD041)
+	composite.WriteString("# ")
+	composite.WriteString(commitTitle)
+	composite.WriteString("\n\n")
+
+	// 2. Add the base commit message (remove any heading if present)
+	cleanCommit := baseCommit
+	if strings.HasPrefix(baseCommit, "# ") {
+		// Skip the first heading line
+		lines := strings.SplitN(baseCommit, "\n", 2)
+		if len(lines) > 1 {
+			cleanCommit = strings.TrimSpace(lines[1])
+		} else {
+			cleanCommit = ""
+		}
+	}
+	composite.WriteString(cleanCommit)
+	composite.WriteString("\n\n")
+
+	// 3. Add simplified agent status (single factual statement)
+	composite.WriteString("Agent: ")
+
+	// Determine final status
+	if strings.Contains(approvedSection, "Approved (with concerns)") && concernsResult != "" {
+		composite.WriteString("Approved (concerns handled)")
+	} else if strings.Contains(approvedSection, "Approved (with concerns)") {
+		composite.WriteString("Approved (with concerns)")
+	} else {
+		composite.WriteString("Approved")
+	}
+	composite.WriteString("\n")
+
+	finalCommit = composite.String()
+
 	sendProgress("complete", "Complete!")
-	return commitMessage, nil
+	return finalCommit, nil
 }
 
 type GitContext struct {
@@ -511,16 +641,24 @@ func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[st
 	return prompt.String()
 }
 
-func callClaude(prompt string) (string, error) {
+func callClaude(prompt string, model string) (string, error) {
 	// Use Claude Code CLI instead of direct API calls
 	// This leverages the user's existing Claude Code subscription
 
 	// Build command with optional model flag
-	// Check for CLAUDE_MODEL environment variable (can be set in .mcp.json or system env)
-	args := []string{"--print"}
-	if model := os.Getenv("CLAUDE_MODEL"); model != "" {
-		args = append(args, "--model", model)
+	// IMPORTANT: Use empty --setting-sources to bypass hooks and CLAUDE.md
+	// AND disable co-author attribution via settings JSON
+	args := []string{
+		"--print",
+		"--setting-sources", "",
+		"--settings", `{"includeCoAuthoredBy":false}`,
 	}
+
+	// ENFORCE: Model must be provided (from agent frontmatter)
+	if model == "" {
+		return "", fmt.Errorf("model not specified in agent frontmatter - all agents must define 'model:' field")
+	}
+	args = append(args, "--model", model)
 
 	cmd := exec.Command("claude", args...)
 
@@ -545,6 +683,29 @@ func callClaude(prompt string) (string, error) {
 	commitMessage = strings.TrimPrefix(commitMessage, "```")
 	commitMessage = strings.TrimSuffix(commitMessage, "```")
 	commitMessage = strings.TrimSpace(commitMessage)
+
+	// Remove Claude Code footer if present
+	claudeFooter := "🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+	commitMessage = strings.Replace(commitMessage, claudeFooter, "", -1)
+	// Also try without leading newlines
+	commitMessage = strings.Replace(commitMessage, "\n\n"+claudeFooter, "", -1)
+	commitMessage = strings.Replace(commitMessage, "\n"+claudeFooter, "", -1)
+	commitMessage = strings.TrimSpace(commitMessage)
+
+	// Fix bold headers to proper markdown headers
+	// Convert **Agent Pipeline Architecture** to ### Agent Pipeline Architecture
+	lines := strings.Split(commitMessage, "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		// Check if line is bold text (starts and ends with **)
+		if strings.HasPrefix(trimmed, "**") && strings.HasSuffix(trimmed, "**") && len(trimmed) > 4 {
+			// Remove ** and convert to ### header
+			headerText := strings.TrimPrefix(trimmed, "**")
+			headerText = strings.TrimSuffix(headerText, "**")
+			lines[i] = "### " + headerText
+		}
+	}
+	commitMessage = strings.Join(lines, "\n")
 
 	// Ensure commit message ends with exactly one newline (MD047 compliance)
 	commitMessage = strings.TrimRight(commitMessage, "\n")
@@ -875,6 +1036,40 @@ func formatFileTable(changes []FileChange) string {
 	return table.String()
 }
 
+// extractModelFromAgent parses the agent file frontmatter and extracts the model field
+func extractModelFromAgent(agentContent string) string {
+	// Look for "model: <name>" in the frontmatter
+	lines := strings.Split(agentContent, "\n")
+	inFrontmatter := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		if trimmed == "---" {
+			if inFrontmatter {
+				// End of frontmatter, didn't find model
+				break
+			}
+			inFrontmatter = true
+			continue
+		}
+
+		if inFrontmatter && strings.HasPrefix(trimmed, "model:") {
+			// Extract model name
+			parts := strings.SplitN(trimmed, ":", 2)
+			if len(parts) == 2 {
+				model := strings.TrimSpace(parts[1])
+				fmt.Fprintf(os.Stderr, "[DEBUG] Extracted model from agent: %s\n", model)
+				return model
+			}
+		}
+	}
+
+	// No model specified, return empty string (will use default)
+	fmt.Fprintf(os.Stderr, "[DEBUG] No model found in agent frontmatter, using default\n")
+	return ""
+}
+
 func sendResponse(encoder *json.Encoder, id interface{}, result interface{}) {
 	resp := MCPResponse{
 		JSONRPC: "2.0",
@@ -905,6 +1100,9 @@ type ProgressNotification struct {
 
 // sendProgress sends a progress notification to stdout (for the extension to display)
 func sendProgress(stage string, message string) {
+	// Debug: Log to stderr so we can see if this is being called
+	fmt.Fprintf(os.Stderr, "[DEBUG] Sending progress: %s - %s\n", stage, message)
+
 	notification := ProgressNotification{
 		JSONRPC: "2.0",
 		Method:  "$/progress",
@@ -913,6 +1111,15 @@ func sendProgress(stage string, message string) {
 			"message": message,
 		},
 	}
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.Encode(notification)
+
+	// Use the shared encoder to ensure consistent JSON output
+	if stdoutEncoder != nil {
+		if err := stdoutEncoder.Encode(notification); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to encode progress notification: %v\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "[DEBUG] Progress notification sent successfully\n")
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "[DEBUG] ERROR: stdoutEncoder is nil!\n")
+	}
 }

@@ -4,10 +4,7 @@
     "defaultMode": "bypassPermissions",
     "allow": [],
     "ask": [],
-    "deny": [
-      "Bash(git commit:*)",
-      "Bash(git push:*)"
-    ]
+    "deny": ["Bash(git commit:*)", "Bash(git push:*)"]
   },
   "hooks": {
     "SessionStart": [

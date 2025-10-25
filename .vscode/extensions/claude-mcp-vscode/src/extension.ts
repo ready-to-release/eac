@@ -1,9 +1,37 @@
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
+
+// Global flag to prevent concurrent commit generation
+let isGeneratingCommit = false;
+
+// Debug log file path
+let debugLogPath: string = '';
+
+// Output channel for extension logs
+let outputChannel: vscode.OutputChannel;
+
+function log(message: string) {
+    const timestamp = new Date().toISOString();
+    const logLine = `[${timestamp}] ${message}\n`;
+    console.log(logLine.trim());
+    if (debugLogPath) {
+        fs.appendFileSync(debugLogPath, logLine);
+    }
+    if (outputChannel) {
+        outputChannel.appendLine(message);
+    }
+}
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('✓ Claude Commit Agent extension activated successfully');
+
+    // Create output channel
+    outputChannel = vscode.window.createOutputChannel('Claude Commit Agent');
+    context.subscriptions.push(outputChannel);
+    outputChannel.appendLine('✓ Claude Commit Agent extension activated');
+
     // Show status bar item to indicate extension is loaded
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBarItem.text = "$(robot) Claude Commit";
@@ -14,11 +42,38 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register the command
     let disposable = vscode.commands.registerCommand('claude-mcp-vscode.callMCP', async () => {
+        // Set up debug log file in /out
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (workspaceFolder) {
+            const outDir = path.join(workspaceFolder.uri.fsPath, 'out');
+            if (!fs.existsSync(outDir)) {
+                fs.mkdirSync(outDir, { recursive: true });
+            }
+            debugLogPath = path.join(outDir, 'vscode-extension-debug.log');
+            // Clear previous log
+            fs.writeFileSync(debugLogPath, '');
+        }
+
+        log('=== Claude Commit Button Clicked ===');
+
+        // Check if already generating
+        if (isGeneratingCommit) {
+            vscode.window.showWarningMessage('A commit message is already being generated. Please wait...');
+            return;
+        }
+
+        isGeneratingCommit = true;
+
+        // Change status bar to red robot during processing
+        statusBarItem.text = "$(debug-stop) Claude Commit";
+        statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+
         try {
             // FAIL-EARLY: Validate git state FIRST before doing anything else
             const gitExtension = vscode.extensions.getExtension('vscode.git');
             if (!gitExtension) {
                 vscode.window.showErrorMessage('Git extension not found');
+                isGeneratingCommit = false;
                 return;
             }
 
@@ -27,6 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             if (api.repositories.length === 0) {
                 vscode.window.showErrorMessage('No Git repository found');
+                isGeneratingCommit = false;
                 return;
             }
 
@@ -36,6 +92,9 @@ export function activate(context: vscode.ExtensionContext) {
             const validationError = await validateGitState(repo);
             if (validationError) {
                 vscode.window.showErrorMessage(validationError);
+                isGeneratingCommit = false;
+                statusBarItem.text = "$(robot) Claude Commit";
+                statusBarItem.backgroundColor = undefined;
                 return;
             }
 
@@ -43,6 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
                 vscode.window.showErrorMessage('No workspace folder found');
+                isGeneratingCommit = false;
                 return;
             }
 
@@ -54,65 +114,145 @@ export function activate(context: vscode.ExtensionContext) {
             try {
                 commitMessage = await vscode.window.withProgress({
                     location: vscode.ProgressLocation.Notification,
-                    title: "Generating semantic commit message",
+                    title: `${['🚀', '⚡', '🎯', '✨', '💫', '🔥', '🌟', '⭐', '🎨', '🔮'][Math.floor(Math.random() * 10)]} Generating commit`,
                     cancellable: false
                 }, async (progress) => {
-                    // Simulate progress updates
-                    progress.report({ increment: 0, message: "Analyzing git changes..." });
-
-                    // Track last real progress message
-                    let lastRealProgress = "";
+                    // Show randomized initial message
+                    const randomMessages = [
+                        "🚀 Initializing 3-agent workflow...",
+                        "🔍 Preparing semantic commit generation...",
+                        "⚡ Starting commit analysis pipeline...",
+                        "🎯 Launching agent orchestration...",
+                        "🤖 Booting up commit generation...",
+                        "💫 Activating intelligent commit system...",
+                    ];
+                    const initialMsg = randomMessages[Math.floor(Math.random() * randomMessages.length)];
+                    progress.report({ message: initialMsg });
+                    // Track the last real progress stage and overall elapsed time
+                    let lastStage = '';
+                    let lastProgressTime = Date.now();
+                    let startTime = Date.now();
+                    let simulationInterval: NodeJS.Timeout | null = null;
+                    let tickCount = 0;
 
                     // Start the actual agent execution with real progress callback
                     const agentPromise = executeAgent(workspacePath, agentFilePath, (realProgress) => {
-                        // Update with real progress from Go process
-                        lastRealProgress = realProgress;
+                        log('[Real Progress Received] ' + realProgress);
+                        lastProgressTime = Date.now();
+
+                        // Extract stage from message and log agent execution
+                        if (realProgress.includes('generator') || realProgress.includes('gen-')) {
+                            lastStage = 'generator';
+                            if (realProgress.includes('Generating initial commit')) {
+                                outputChannel.appendLine('');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                                outputChannel.appendLine('🤖 Running: vscode-extension-commit-button.md (generator)');
+                                outputChannel.appendLine('Content: Git diff + documentation + module metadata');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                            }
+                        } else if (realProgress.includes('reviewer') || realProgress.includes('rev-')) {
+                            lastStage = 'reviewer';
+                            if (realProgress.includes('Reviewing commit')) {
+                                outputChannel.appendLine('');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                                outputChannel.appendLine('🔍 Running: commit-message-reviewer.md');
+                                outputChannel.appendLine('Content: Generated commit message');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                            }
+                        } else if (realProgress.includes('approver') || realProgress.includes('app-')) {
+                            lastStage = 'approver';
+                            if (realProgress.includes('Final approval')) {
+                                outputChannel.appendLine('');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                                outputChannel.appendLine('✅ Running: commit-message-approver.md');
+                                outputChannel.appendLine('Content: Commit message + review feedback');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                            }
+                        } else if (realProgress.includes('concerns')) {
+                            lastStage = 'concerns';
+                            if (realProgress.includes('Fixing concerns')) {
+                                outputChannel.appendLine('');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                                outputChannel.appendLine('🔧 Running: commit-message-concerns-handler.md');
+                                outputChannel.appendLine('Content: Commit message with approval concerns');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                            }
+                        } else if (realProgress.includes('title')) {
+                            lastStage = 'title';
+                            if (realProgress.includes('Generating commit title')) {
+                                outputChannel.appendLine('');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                                outputChannel.appendLine('✨ Running: commit-title-generator.md');
+                                outputChannel.appendLine('Content: Complete commit message (all modules)');
+                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
+                            }
+                        } else if (realProgress.includes('git') || realProgress.includes('docs')) {
+                            lastStage = 'setup';
+                        }
+
                         progress.report({ message: realProgress });
                     });
 
-                    // Simulate progress while waiting (0-300 scale, mapped to 0-100%)
-                    // Updates every 3s, increments by 14 → reaches "Finalizing..." at ~60s
-                    // Operation typically completes at ~67s, leaving only ~7s at final stage
-                    let currentProgress = 0;
-                    const progressInterval = setInterval(() => {
-                        if (currentProgress < 280) {
-                            currentProgress += 14;
-                            const messages = [
-                                "Reading documentation...",
-                                "Analyzing commit history...",
-                                "Determining module changes...",
-                                "Calculating version impacts...",
-                                "Generating commit structure...",
-                                "Applying semantic conventions...",
-                                "Validating module boundaries...",
-                                "Computing glob patterns...",
-                                "Optimizing message format...",
-                                "Formatting commit message...",
-                                "Verifying 50/72 rule compliance...",
-                                "Finalizing...",
-                            ];
-                            const messageIndex = Math.floor(currentProgress / 25);
-                            // Use real progress if available, otherwise use simulated
-                            const displayMessage = lastRealProgress || messages[messageIndex] || "Processing...";
-                            progress.report({
-                                increment: 4.5, // 20 updates × 4.5% = 90%
-                                message: displayMessage
-                            });
+                    // Smart simulation: Always show progress based on time elapsed
+                    simulationInterval = setInterval(() => {
+                        tickCount++;
+                        const totalElapsed = Math.floor((Date.now() - startTime) / 1000);
+                        const timeSinceLastProgress = Math.floor((Date.now() - lastProgressTime) / 1000);
+
+                        log(`[Simulation Tick ${tickCount}] Stage: ${lastStage}, Total: ${totalElapsed}s, Since last: ${timeSinceLastProgress}s`);
+
+                        // Smart stage detection: if no stage yet but time has passed, assume we're in generator
+                        if (!lastStage && totalElapsed > 5) {
+                            lastStage = 'generator';
+                            log('[Stage Detection] No progress received, assuming generator stage');
                         }
-                    }, 3000); // Update every 3 seconds
+
+                        // Show sub-progress based on current stage
+                        if (lastStage === 'generator') {
+                            if (timeSinceLastProgress < 10) {
+                                progress.report({ message: `🤖 Analyzing changes... (${timeSinceLastProgress}s)` });
+                            } else if (timeSinceLastProgress < 20) {
+                                progress.report({ message: `🔮 Discombulating abstractions into lists... (${timeSinceLastProgress}s)` });
+                            } else if (timeSinceLastProgress < 35) {
+                                progress.report({ message: `📝 Writing module sections... (${timeSinceLastProgress}s)` });
+                            } else if (timeSinceLastProgress < 50) {
+                                progress.report({ message: `✨ Finalizing commit message... (${timeSinceLastProgress}s)` });
+                            } else {
+                                progress.report({ message: `⏳ Still generating... (${timeSinceLastProgress}s)` });
+                            }
+                        } else if (lastStage === 'reviewer') {
+                            if (timeSinceLastProgress < 10) progress.report({ message: "Reviewing commit message..." });
+                            else progress.report({ message: `Reviewing commit message (${timeSinceLastProgress}s elapsed)...` });
+                        } else if (lastStage === 'approver') {
+                            if (timeSinceLastProgress < 8) progress.report({ message: "Final approval..." });
+                            else progress.report({ message: `Final approval (${timeSinceLastProgress}s elapsed)...` });
+                        } else if (lastStage === 'concerns') {
+                            if (timeSinceLastProgress < 12) progress.report({ message: "Fixing concerns..." });
+                            else progress.report({ message: `Fixing concerns (${timeSinceLastProgress}s elapsed)...` });
+                        } else if (lastStage === 'title') {
+                            if (timeSinceLastProgress < 8) progress.report({ message: "✨ Generating commit title..." });
+                            else progress.report({ message: `✨ Generating commit title (${timeSinceLastProgress}s elapsed)...` });
+                        } else if (lastStage === 'setup') {
+                            progress.report({ message: "Setting up context..." });
+                        } else {
+                            // No stage detected yet - show generic progress
+                            progress.report({ message: `Starting workflow (${totalElapsed}s elapsed)...` });
+                        }
+                    }, 3000);
 
                     try {
                         const result = await agentPromise;
-                        clearInterval(progressInterval);
-                        progress.report({ increment: 10, message: "Complete!" });
+                        if (simulationInterval) clearInterval(simulationInterval);
+                        progress.report({ message: "Complete!" });
                         return result;
                     } catch (error) {
-                        clearInterval(progressInterval);
+                        if (simulationInterval) clearInterval(simulationInterval);
                         throw error;
                     }
                 });
             } catch (error) {
                 // Error occurred during agent execution - do NOT show success message
+                isGeneratingCommit = false;
                 throw error;
             }
 
@@ -124,6 +264,11 @@ export function activate(context: vscode.ExtensionContext) {
 
         } catch (error) {
             vscode.window.showErrorMessage(`Error: ${error}`);
+        } finally {
+            // Always reset the flag and status bar, even if there was an error
+            isGeneratingCommit = false;
+            statusBarItem.text = "$(robot) Claude Commit";
+            statusBarItem.backgroundColor = undefined;
         }
     });
 
@@ -194,22 +339,28 @@ async function executeAgent(workspacePath: string, agentFilePath: string, onProg
 
                 if (line.trim()) {
                     outputLines.push(line);
+                    log('[MCP Server Output] ' + line);
 
                     // Try to parse as progress notification
                     try {
                         const parsed = JSON.parse(line);
+                        log('[MCP Parsed JSON] ' + JSON.stringify(parsed));
                         if (parsed.method === '$/progress' && parsed.params && onProgress) {
+                            log('[MCP Progress] ' + parsed.params.message);
                             onProgress(parsed.params.message);
                         }
                     } catch (e) {
                         // Not JSON or not a progress notification, that's fine
+                        log('[MCP Parse Error] ' + e);
                     }
                 }
             }
         });
 
         childProcess.stderr.on('data', (data) => {
-            errorOutput += data.toString();
+            const stderrText = data.toString();
+            errorOutput += stderrText;
+            log('[MCP Server Debug] ' + stderrText);
         });
 
         childProcess.on('close', (code) => {

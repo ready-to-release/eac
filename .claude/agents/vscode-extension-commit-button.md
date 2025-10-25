@@ -41,7 +41,6 @@ The Go MCP server has ALREADY collected ALL necessary data and provided it in th
 2. **Read the pre-fetched documentation** sections below to understand conventions
 3. **Group changes by unique module name** - Each module appears exactly once
 4. **Generate semantic commit message** directly from the provided data
-5. **Generate review summary** - After all module sections, add a `## Review` section with 2-4 line assessment per affected module
 
 ## CRITICAL COMMIT MESSAGE REQUIREMENTS
 
@@ -164,42 +163,7 @@ paths:
 - Glob patterns are pre-generated and provided in MODULE METADATA section
 - Recent commits (50 back) are provided for context only - NOT shown in output
 - **INTERNAL LOOP**: Iterate through unique module names only once - consolidate all changes per module
-- **CRITICAL: After ALL module sections, add `## Review` section** - Quality assessment per module
-
-### Review Section Requirements
-
-**CRITICAL - After ALL module sections, include a `## Review` heading with quality assessment:**
-
-**Purpose**: Act as a commit message reviewer to validate each module's commit message quality.
-
-**Format**:
-```text
-## Review
-
-**<module-name>**: [2-4 lines assessing commit message quality]
-Lines wrapped at 72 characters.
-
-**<another-module>**: [2-4 lines assessing commit message quality]
-Lines wrapped at 72 characters.
-```
-
-**Assessment Criteria** (inspired by commit-message-reviewer agent):
-- Subject line length and format (should be ≤50 chars)
-- Use of imperative mood ("Add" not "Added")
-- Body text clarity and focus on WHY not WHAT
-- Proper line wrapping at 72 characters
-- YAML paths accuracy and completeness
-- Overall quality: Excellent/Good/Needs Improvement
-- Specific strengths or areas of excellence
-
-**Key Points**:
-- Review EACH affected module separately
-- Keep each module review to 2-4 lines (wrapped at 72 chars)
-- Be constructive and specific
-- Mention character count of subject line
-- Validate yaml paths match module conventions
-- Check imperative mood usage
-- Verify body explains WHY, not just WHAT
+- **DO NOT add a Review section** - that will be handled by the reviewer agent in the pipeline
 
 ### 50/72 Rule Constraints
 
@@ -261,20 +225,6 @@ paths:
 
 ---
 
-## Review
-
-**mcp-vscode**: Commit message structure is excellent with clear subject
-line (47 chars) and focused body text. The implementation details are
-appropriately scoped and the yaml paths block correctly specifies the
-affected glob patterns for CI/CD integration.
-
-**vscode-ext**: Well-formatted subject line (48 chars) with imperative
-mood. Body text effectively explains the integration mechanism without
-over-explaining implementation details. YAML paths are accurate and
-follow the repository's module conventions.
-
----
-
 ```text
 
 Note:
@@ -285,8 +235,7 @@ Note:
 - Body lines wrapped at 72 characters
 - Each module section starts with ## <module-name> header
 - After body text, include ```yaml paths: block directly (no heading)
-- **AFTER all module sections, include `## Review` section**
-- **Review section has 2-4 lines per affected module with quality assessment**
+- **DO NOT include a Review section** - the reviewer agent will handle that
 - **CRITICAL: File MUST end with a newline character (MD047 compliance)**
 
 and finally: Present that precise, semantically correct, simple and focused commit message to the user in the vscode text field (through the vscode mcp in-repo extension)
