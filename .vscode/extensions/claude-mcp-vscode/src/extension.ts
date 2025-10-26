@@ -117,25 +117,22 @@ export function activate(context: vscode.ExtensionContext) {
 
         isGeneratingCommit = true;
 
-        // Start rainbow animation on status bar with vibrant colors
-        // Using color codes that work across all themes
+        // Rainbow animation cycling through 4 vibrant status bar colors
         const rainbowColors = [
-            '#FF6B35',  // Vibrant Orange
-            '#4ECDC4',  // Turquoise
-            '#45B7D1',  // Sky Blue
-            '#96CEB4',  // Mint Green
-            '#DDA15E',  // Gold
-            '#BC6C25',  // Brown/Orange
+            'statusBarItem.prominentBackground',   // Blue/Accent
+            'statusBarItem.warningBackground',     // Orange/Yellow
+            'statusBarItem.remoteBackground',      // Purple/Teal
+            'statusBarItem.offlineBackground',     // Gray/Muted
         ];
         let rainbowIndex = 0;
 
         statusBarItem.text = "$(sync~spin) Claude Commit";
-        statusBarItem.backgroundColor = rainbowColors[0];
+        statusBarItem.backgroundColor = new vscode.ThemeColor(rainbowColors[0]);
 
         rainbowInterval = setInterval(() => {
             rainbowIndex = (rainbowIndex + 1) % rainbowColors.length;
-            statusBarItem.backgroundColor = rainbowColors[rainbowIndex];
-        }, 400);
+            statusBarItem.backgroundColor = new vscode.ThemeColor(rainbowColors[rainbowIndex]);
+        }, 500);
 
         // Update command to show it's working (this affects the SCM button too)
         vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', true);
@@ -165,7 +162,10 @@ export function activate(context: vscode.ExtensionContext) {
             if (validationError) {
                 vscode.window.showErrorMessage(validationError);
                 isGeneratingCommit = false;
-                if (rainbowInterval) clearInterval(rainbowInterval);
+                if (rainbowInterval) {
+                    clearInterval(rainbowInterval);
+                    rainbowInterval = null;
+                }
                 statusBarItem.text = "$(robot) Claude Commit";
                 statusBarItem.backgroundColor = undefined;
                 return;
