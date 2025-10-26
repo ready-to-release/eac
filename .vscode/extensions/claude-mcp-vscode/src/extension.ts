@@ -87,6 +87,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', false);
     });
 
+    // Register no-op command for disabled state
+    let noOpDisposable = vscode.commands.registerCommand('claude-mcp-vscode.noOp', () => {
+        vscode.window.showInformationMessage('Stage some changes first to generate a commit message');
+    });
+    context.subscriptions.push(noOpDisposable);
+
     // Register the command
     let disposable = vscode.commands.registerCommand('claude-mcp-vscode.callMCP', async () => {
         // Set up debug log file in /out
@@ -111,23 +117,24 @@ export function activate(context: vscode.ExtensionContext) {
 
         isGeneratingCommit = true;
 
-        // Start rainbow animation on status bar
+        // Start rainbow animation on status bar with vibrant colors
+        // Using color codes that work across all themes
         const rainbowColors = [
-            'statusBarItem.warningBackground',    // Orange/Yellow
-            'editorInfo.foreground',              // Blue
-            'charts.green',                       // Green
-            'charts.purple',                      // Purple
-            'charts.blue',                        // Cyan/Blue
-            'charts.yellow',                      // Yellow
+            '#FF6B35',  // Vibrant Orange
+            '#4ECDC4',  // Turquoise
+            '#45B7D1',  // Sky Blue
+            '#96CEB4',  // Mint Green
+            '#DDA15E',  // Gold
+            '#BC6C25',  // Brown/Orange
         ];
         let rainbowIndex = 0;
 
         statusBarItem.text = "$(sync~spin) Claude Commit";
-        statusBarItem.backgroundColor = new vscode.ThemeColor(rainbowColors[0]);
+        statusBarItem.backgroundColor = rainbowColors[0];
 
         rainbowInterval = setInterval(() => {
             rainbowIndex = (rainbowIndex + 1) % rainbowColors.length;
-            statusBarItem.backgroundColor = new vscode.ThemeColor(rainbowColors[rainbowIndex]);
+            statusBarItem.backgroundColor = rainbowColors[rainbowIndex];
         }, 400);
 
         // Update command to show it's working (this affects the SCM button too)

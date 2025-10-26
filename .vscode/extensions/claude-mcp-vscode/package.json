@@ -20,19 +20,30 @@
         "command": "claude-mcp-vscode.callMCP",
         "title": "Generate Commit Message",
         "icon": "$(robot)"
+      },
+      {
+        "command": "claude-mcp-vscode.noOp",
+        "title": "No Staged Changes",
+        "icon": "$(circle-slash)"
       }
     ],
     "menus": {
       "scm/title": [
         {
+          "command": "claude-mcp-vscode.noOp",
+          "group": "navigation@1",
+          "when": "scmProvider == git && !claude-mcp-vscode.isGenerating && !claude-mcp-vscode.hasStagedChanges",
+          "icon": "$(circle-slash)"
+        },
+        {
           "command": "claude-mcp-vscode.callMCP",
-          "group": "navigation",
+          "group": "navigation@2",
           "when": "scmProvider == git && !claude-mcp-vscode.isGenerating && claude-mcp-vscode.hasStagedChanges",
           "icon": "$(robot)"
         },
         {
           "command": "claude-mcp-vscode.callMCP",
-          "group": "navigation",
+          "group": "navigation@2",
           "when": "scmProvider == git && claude-mcp-vscode.isGenerating",
           "icon": "$(sync~spin)"
         }
