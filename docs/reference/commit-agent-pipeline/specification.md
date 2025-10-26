@@ -6,43 +6,47 @@ The Commit Agent Pipeline is a 5-agent system that generates high-quality, seman
 
 ## Architecture
 
-```graphviz
-digraph CommitAgentPipeline {
-    rankdir=TB;
-    node [shape=box, style=filled];
+```mermaid
+flowchart TB
+    vscode["<b>VSCode Extension</b><br/>.vscode/extensions/claude-mcp-vscode/src/extension.ts<br/><br/>• UI: Status bar + Git SCM button<br/>• Progress tracking with elapsed time<br/>• Git state validation (staged only)"]
 
-    // VSCode Extension
-    vscode [label="VSCode Extension\n.vscode/extensions/claude-mcp-vscode/src/extension.ts\n\n• UI: Status bar + Git SCM button\n• Progress tracking with elapsed time\n• Git state validation (staged only)", fillcolor=lightblue];
+    mcp["<b>MCP Server (Go)</b><br/>src/mcp/vscode/main.go<br/><br/>1. Gathers git context (--staged diff, status, logs)<br/>2. Reads documentation files<br/>3. Orchestrates 5 agents sequentially<br/>4. Stitches outputs into final commit message"]
 
-    // MCP Server
-    mcp [label="MCP Server (Go)\nsrc/mcp/vscode/main.go\n\n1. Gathers git context (--staged diff, status, logs)\n2. Reads documentation files\n3. Orchestrates 5 agents sequentially\n4. Stitches outputs into final commit message", fillcolor=lightgreen];
+    cli["<b>Claude CLI</b><br/>(spawned process)"]
 
-    // Claude CLI
-    cli [label="Claude CLI\n(spawned process)", fillcolor=lightyellow];
+    agent1["<b>Agent 1: Generator</b><br/>vscode-extension-commit-button.md<br/>Model: haiku<br/><br/>Creates commit with module sections"]
 
-    // Agents
-    agent1 [label="Agent 1: Generator\nvscode-extension-commit-button.md\nModel: haiku\n\nCreates commit with module sections", fillcolor=lavender];
-    agent2 [label="Agent 2: Reviewer\ncommit-message-reviewer.md\nModel: haiku\n\nReviews and provides feedback", fillcolor=lavender];
-    agent3 [label="Agent 3: Approver\ncommit-message-approver.md\nModel: haiku\n\nExtracts factual concerns", fillcolor=lavender];
-    agent4 [label="Agent 4: Concerns Handler\ncommit-message-concerns-handler.md\nModel: haiku\n\nFixes issues (conditional)", fillcolor=lavender];
-    agent5 [label="Agent 5: Title Generator\ncommit-title-generator.md\nModel: haiku\n\nGenerates top-level heading", fillcolor=lavender];
+    agent2["<b>Agent 2: Reviewer</b><br/>commit-message-reviewer.md<br/>Model: haiku<br/><br/>Reviews and provides feedback"]
 
-    // Output
-    output [label="Final Commit Message\n(in SCM input box)", fillcolor=lightcyan];
+    agent3["<b>Agent 3: Approver</b><br/>commit-message-approver.md<br/>Model: haiku<br/><br/>Extracts factual concerns"]
 
-    // Edges
-    vscode -> mcp [label="JSON-RPC\nover stdio"];
-    mcp -> cli [label="spawns"];
-    cli -> agent1 [label="--print --model haiku"];
-    agent1 -> agent2 [label="commit message"];
-    agent2 -> agent3 [label="review feedback"];
-    agent3 -> agent4 [label="concerns list\n(conditional)"];
-    agent3 -> agent5 [label="approved\n(no concerns)", style=dashed];
-    agent4 -> agent5 [label="corrected commit"];
-    agent5 -> mcp [label="title"];
-    mcp -> vscode [label="final message"];
-    vscode -> output;
-}
+    agent4["<b>Agent 4: Concerns Handler</b><br/>commit-message-concerns-handler.md<br/>Model: haiku<br/><br/>Fixes issues (conditional)"]
+
+    agent5["<b>Agent 5: Title Generator</b><br/>commit-title-generator.md<br/>Model: haiku<br/><br/>Generates top-level heading"]
+
+    output["<b>Final Commit Message</b><br/>(in SCM input box)"]
+
+    vscode -->|"JSON-RPC<br/>over stdio"| mcp
+    mcp -->|spawns| cli
+    cli -->|"--print --model haiku"| agent1
+    agent1 -->|commit message| agent2
+    agent2 -->|review feedback| agent3
+    agent3 -.->|"approved<br/>(no concerns)"| agent5
+    agent3 -->|"concerns list<br/>(conditional)"| agent4
+    agent4 -->|corrected commit| agent5
+    agent5 -->|title| mcp
+    mcp -->|final message| vscode
+    vscode --> output
+
+    style vscode fill:#add8e6
+    style mcp fill:#90ee90
+    style cli fill:#ffffe0
+    style agent1 fill:#e6e6fa
+    style agent2 fill:#e6e6fa
+    style agent3 fill:#e6e6fa
+    style agent4 fill:#e6e6fa
+    style agent5 fill:#e6e6fa
+    style output fill:#e0ffff
 ```
 
 ## Components

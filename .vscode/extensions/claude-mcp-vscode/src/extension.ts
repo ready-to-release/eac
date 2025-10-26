@@ -248,8 +248,8 @@ export function activate(context: vscode.ExtensionContext) {
                             currentGlobalTime = globalTime;
                             // Update status bar with global time (clock will rotate via interval)
                             statusBarItem.text = `$(sync~spin) ${clockEmojis[clockIndex]} ${globalTime}`;
-                            // Display just the message (no time suffix)
-                            progress.report({ message: message });
+                            // Display with time on left side (fixed position)
+                            progress.report({ message: `${globalTime.padEnd(8)} ${message}` });
                         } else {
                             log('[Time Match Failed] Showing original message');
                             progress.report({ message: realProgress });
@@ -318,13 +318,23 @@ export function activate(context: vscode.ExtensionContext) {
                         progress.report({ message: realProgress });
                     });
 
+                    // Helper to format local elapsed time
+                    const formatLocalTime = (seconds: number) => {
+                        const mins = Math.floor(seconds / 60);
+                        const secs = seconds % 60;
+                        return mins > 0 ? `${String(mins).padStart(2, '0')}m${String(secs).padStart(2, '0')}s` : `${String(secs).padStart(2, '0')}s`;
+                    };
+
                     // Smart simulation: Always show progress based on time elapsed
                     simulationInterval = setInterval(() => {
                         tickCount++;
                         const totalElapsed = Math.floor((Date.now() - startTime) / 1000);
                         const timeSinceLastProgress = Math.floor((Date.now() - lastProgressTime) / 1000);
 
-                        log(`[Simulation Tick ${tickCount}] Stage: ${lastStage}, Total: ${totalElapsed}s, Since last: ${timeSinceLastProgress}s`);
+                        // Use real global time if available, otherwise calculate local elapsed
+                        const displayTime = currentGlobalTime !== '00s' ? currentGlobalTime : formatLocalTime(totalElapsed);
+
+                        log(`[Simulation Tick ${tickCount}] Stage: ${lastStage}, Total: ${totalElapsed}s, Since last: ${timeSinceLastProgress}s, Display: ${displayTime}`);
 
                         // Smart stage detection: if no stage yet but time has passed, assume we're in generator
                         if (!lastStage && totalElapsed > 5) {
@@ -332,36 +342,38 @@ export function activate(context: vscode.ExtensionContext) {
                             log('[Stage Detection] No progress received, assuming generator stage');
                         }
 
-                        // Show sub-progress based on current stage (using actual global time from server)
+                        // Show sub-progress based on current stage (using actual global time from server or local calculation)
+                        // Format with time left-aligned for fixed position
+                        const paddedTime = displayTime.padEnd(8);
                         if (lastStage === 'generator') {
                             if (timeSinceLastProgress < 10) {
-                                progress.report({ message: `🤖 Analyzing changes... | ${currentGlobalTime}` });
+                                progress.report({ message: `${paddedTime} 🤖 Analyzing changes...` });
                             } else if (timeSinceLastProgress < 20) {
-                                progress.report({ message: `🔮 Discombulating abstractions into lists... | ${currentGlobalTime}` });
+                                progress.report({ message: `${paddedTime} 🔮 Discombulating abstractions into lists...` });
                             } else if (timeSinceLastProgress < 35) {
-                                progress.report({ message: `📝 Writing module sections... | ${currentGlobalTime}` });
+                                progress.report({ message: `${paddedTime} 📝 Writing module sections...` });
                             } else if (timeSinceLastProgress < 50) {
-                                progress.report({ message: `✨ Finalizing commit message... | ${currentGlobalTime}` });
+                                progress.report({ message: `${paddedTime} ✨ Finalizing commit message...` });
                             } else {
-                                progress.report({ message: `⏳ Still generating... | ${currentGlobalTime}` });
+                                progress.report({ message: `${paddedTime} ⏳ Still generating...` });
                             }
                         } else if (lastStage === 'reviewer') {
-                            if (timeSinceLastProgress < 10) progress.report({ message: `Reviewing commit message... | ${currentGlobalTime}` });
-                            else progress.report({ message: `Reviewing commit message... | ${currentGlobalTime}` });
+                            if (timeSinceLastProgress < 10) progress.report({ message: `${paddedTime} Reviewing commit message...` });
+                            else progress.report({ message: `${paddedTime} Reviewing commit message...` });
                         } else if (lastStage === 'approver') {
-                            if (timeSinceLastProgress < 8) progress.report({ message: `Final approval... | ${currentGlobalTime}` });
-                            else progress.report({ message: `Final approval... | ${currentGlobalTime}` });
+                            if (timeSinceLastProgress < 8) progress.report({ message: `${paddedTime} Final approval...` });
+                            else progress.report({ message: `${paddedTime} Final approval...` });
                         } else if (lastStage === 'concerns') {
-                            if (timeSinceLastProgress < 12) progress.report({ message: `Fixing concerns... | ${currentGlobalTime}` });
-                            else progress.report({ message: `Fixing concerns... | ${currentGlobalTime}` });
+                            if (timeSinceLastProgress < 12) progress.report({ message: `${paddedTime} Fixing concerns...` });
+                            else progress.report({ message: `${paddedTime} Fixing concerns...` });
                         } else if (lastStage === 'title') {
-                            if (timeSinceLastProgress < 8) progress.report({ message: `✨ Generating commit title... | ${currentGlobalTime}` });
-                            else progress.report({ message: `✨ Generating commit title... | ${currentGlobalTime}` });
+                            if (timeSinceLastProgress < 8) progress.report({ message: `${paddedTime} ✨ Generating commit title...` });
+                            else progress.report({ message: `${paddedTime} ✨ Generating commit title...` });
                         } else if (lastStage === 'setup') {
-                            progress.report({ message: `Setting up context... | ${currentGlobalTime}` });
+                            progress.report({ message: `${paddedTime} Setting up context...` });
                         } else {
                             // No stage detected yet - show generic progress
-                            progress.report({ message: `Starting workflow... | ${currentGlobalTime}` });
+                            progress.report({ message: `${paddedTime} Starting workflow...` });
                         }
                     }, 3000);
 
