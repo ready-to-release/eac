@@ -199,11 +199,14 @@ export function activate(context: vscode.ExtensionContext) {
             // Execute the agent with progress indicator
             let commitMessage: string;
             const clockEmojis = ['🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛'];
+            const identityIcons = ['🚀', '⚡', '🎯', '✨', '💫', '🔥', '🌟', '⭐', '🎨', '🔮'];
             let clockIndex = 0;
+            // Pick one random identity icon for this entire session
+            const randomIdentityIcon = identityIcons[Math.floor(Math.random() * identityIcons.length)];
             try {
                 commitMessage = await vscode.window.withProgress({
                     location: vscode.ProgressLocation.Notification,
-                    title: `${clockEmojis[0]}`,
+                    title: `${randomIdentityIcon} ${clockEmojis[0]}`,
                     cancellable: false
                 }, async (progress) => {
                     // Show randomized initial message
@@ -226,10 +229,10 @@ export function activate(context: vscode.ExtensionContext) {
                     let currentGlobalTime = '00s'; // Track latest global time from server
                     let lastStageTimeInSec = 0; // Track when last stage started (in seconds from start)
 
-                    // Rotate clock emoji every 5 seconds (one hour on clock = 5 seconds real time)
+                    // Rotate clock emoji every 5 seconds (identity icon stays fixed for this session)
                     const clockInterval = setInterval(() => {
                         clockIndex = (clockIndex + 1) % clockEmojis.length;
-                        statusBarItem.text = `$(sync~spin) ${clockEmojis[clockIndex]} ${currentGlobalTime}`;
+                        statusBarItem.text = `$(sync~spin) ${randomIdentityIcon} ${clockEmojis[clockIndex]} ${currentGlobalTime}`;
                     }, 5000);
 
                     // Start the actual agent execution with real progress callback
@@ -246,8 +249,8 @@ export function activate(context: vscode.ExtensionContext) {
                             log('[Extracted Global Time] ' + globalTime);
                             // Store current global time for simulated messages
                             currentGlobalTime = globalTime;
-                            // Update status bar with global time (clock will rotate via interval)
-                            statusBarItem.text = `$(sync~spin) ${clockEmojis[clockIndex]} ${globalTime}`;
+                            // Update status bar with global time (clock rotates, identity icon stays same)
+                            statusBarItem.text = `$(sync~spin) ${randomIdentityIcon} ${clockEmojis[clockIndex]} ${globalTime}`;
                             // Display with time on left side (fixed position)
                             progress.report({ message: `${globalTime.padEnd(8)} ${message}` });
                         } else {

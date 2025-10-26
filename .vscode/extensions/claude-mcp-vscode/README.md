@@ -12,11 +12,13 @@ A simple VSCode extension that adds a button to the Git source control view. Thi
 ## Installation
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Compile the extension:
+
    ```bash
    npm run compile
    ```
