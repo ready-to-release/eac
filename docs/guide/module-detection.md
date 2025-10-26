@@ -22,8 +22,8 @@ flowchart TD
 
     CheckContainer -->|No| CheckMCP{Starts with<br/>src/mcp/?}
     CheckMCP -->|Yes| ExtractMCP[Extract src/mcp/<service>]
-    ExtractMCP --> PrefixMCP[Prefix with 'mcp-']
-    PrefixMCP --> ReturnMCP([Return: mcp-service])
+    ExtractMCP --> PrefixMCP[Prefix with 'src-mcp-']
+    PrefixMCP --> ReturnMCP([Return: src-mcp-<service>])
 
     CheckMCP -->|No| CheckVSCode{Starts with<br/>.vscode/extensions/?}
     CheckVSCode -->|Yes| ReturnVSCode([Return: vscode-extension])
