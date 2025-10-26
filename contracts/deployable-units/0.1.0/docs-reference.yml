@@ -1,7 +1,7 @@
 # Deployable Unit Contract: docs-reference
 # Version: 0.1.0
 
-module_moniker: "docs-reference"
+moniker: "docs-reference"
 name: "Reference documentation"
 type: "mkdocs-subsite"
 description: "mkdocs base files for reference documentation"

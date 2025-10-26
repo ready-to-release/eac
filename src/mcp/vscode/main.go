@@ -9,8 +9,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // MCP Server for VSCode integration
@@ -143,6 +146,14 @@ func handleRequest(encoder *json.Encoder, req *MCPRequest) {
 					Required: []string{"agentFile"},
 				},
 			},
+			{
+				Name:        "quick-commit",
+				Description: "Generate a quick commit message using only the generator (no review/approval pipeline)",
+				InputSchema: InputSchema{
+					Type:       "object",
+					Properties: map[string]Property{},
+				},
+			},
 		}
 		sendResponse(encoder, req.ID, map[string]interface{}{
 			"tools": tools,
@@ -219,6 +230,24 @@ func callTool(params *CallToolParams) ToolResult {
 			}},
 		}
 
+	case "quick-commit":
+		commitMessage, err := generateQuickCommitMessage()
+		if err != nil {
+			return ToolResult{
+				Content: []Content{{
+					Type: "text",
+					Text: fmt.Sprintf("ERROR: %v", err),
+				}},
+			}
+		}
+
+		return ToolResult{
+			Content: []Content{{
+				Type: "text",
+				Text: commitMessage,
+			}},
+		}
+
 	default:
 		return ToolResult{
 			Content: []Content{{
@@ -266,7 +295,7 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 
 	// Step 4: Build prompt for generator
 	sendProgress("gen-prompt", "Building generator prompt...")
-	generatorPrompt := buildClaudePrompt(string(generatorInstructions), gitContext, docs)
+	generatorPrompt := buildClaudePrompt(string(generatorInstructions), gitContext, docs, workspaceRoot)
 
 	// Step 5: Call generator agent
 	sendProgress("gen-claude", "Generating initial commit message...")
@@ -402,16 +431,386 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 
 	finalCommit = composite.String()
 
+	// Step 15: Validate the final commit message
+	sendProgress("validate", "Validating commit message structure...")
+	validationErrors := validateCommitMessage(finalCommit, workspaceRoot)
+	if len(validationErrors) > 0 {
+		// Auto-fix validation errors with fixer agent
+		sendProgress("fixer-init", "Loading commit message fixer...")
+		fixerPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-fixer.md")
+		fixerInstructions, err := ioutil.ReadFile(fixerPath)
+		if err != nil {
+			// If fixer agent doesn't exist, return validation errors
+			var errorMessages []string
+			errorMessages = append(errorMessages, "❌ Commit message validation failed:")
+			for _, verr := range validationErrors {
+				errorMessages = append(errorMessages, fmt.Sprintf("  • %s", verr.Message))
+			}
+			return "", fmt.Errorf("%s", strings.Join(errorMessages, "\n"))
+		}
+		fixerModel := extractModelFromAgent(string(fixerInstructions))
+
+		sendProgress("fixer-claude", "Auto-fixing validation errors...")
+
+		// Build fixer prompt with original message and errors
+		var fixerPrompt strings.Builder
+		fixerPrompt.WriteString(string(fixerInstructions))
+		fixerPrompt.WriteString("\n\n---\n\n## Original Commit Message\n\n```\n")
+		fixerPrompt.WriteString(finalCommit)
+		fixerPrompt.WriteString("\n```\n\n## Validation Errors\n\n")
+		for _, verr := range validationErrors {
+			fixerPrompt.WriteString(fmt.Sprintf("• %s\n", verr.Message))
+		}
+
+		fixedCommit, err := callClaude(fixerPrompt.String(), fixerModel)
+		if err != nil {
+			return "", fmt.Errorf("failed to auto-fix commit message: %w", err)
+		}
+
+		// Re-validate the fixed commit
+		sendProgress("revalidate", "Re-validating fixed commit...")
+		revalidationErrors := validateCommitMessage(fixedCommit, workspaceRoot)
+		if len(revalidationErrors) > 0 {
+			// Fixer didn't work, return both original and new errors
+			var errorMessages []string
+			errorMessages = append(errorMessages, "❌ Commit message validation failed even after auto-fix:")
+			for _, verr := range revalidationErrors {
+				errorMessages = append(errorMessages, fmt.Sprintf("  • %s", verr.Message))
+			}
+			return "", fmt.Errorf("%s", strings.Join(errorMessages, "\n"))
+		}
+
+		// Fixed successfully!
+		finalCommit = fixedCommit
+	}
+
 	sendProgress("complete", "Complete!")
 	return finalCommit, nil
 }
 
+// generateQuickCommitMessage generates a simple commit message using only the generator agent
+func generateQuickCommitMessage() (string, error) {
+	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
+	if workspaceRoot == "" {
+		return "", fmt.Errorf("WORKSPACE_ROOT environment variable not set")
+	}
+
+	// Step 1: Gather git context
+	sendProgress("git-context", "Gathering git context...")
+	gitContext, err := gatherGitContext(workspaceRoot)
+	if err != nil {
+		return "", fmt.Errorf("failed to gather git context: %w", err)
+	}
+
+	// Step 2: Read documentation files
+	sendProgress("docs", "Reading documentation...")
+	docs, err := readDocumentationFiles(workspaceRoot)
+	if err != nil {
+		return "", fmt.Errorf("failed to read documentation: %w", err)
+	}
+
+	// Step 3: Load generator agent
+	sendProgress("generator", "Loading generator agent...")
+	generatorPath := filepath.Join(workspaceRoot, ".claude", "agents", "vscode-extension-commit-button.md")
+	generatorInstructions, err := ioutil.ReadFile(generatorPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read generator agent file: %w", err)
+	}
+	generatorModel := extractModelFromAgent(string(generatorInstructions))
+
+	// Step 4: Build prompt and generate
+	sendProgress("generating", "Generating quick commit...")
+	generatorPrompt := buildClaudePrompt(string(generatorInstructions), gitContext, docs, workspaceRoot)
+	commitMessage, err := callClaude(generatorPrompt, generatorModel)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate commit: %w", err)
+	}
+
+	sendProgress("complete", "Complete!")
+	return commitMessage, nil
+}
+
 type GitContext struct {
-	Status      string
-	Diff        string
-	RecentLog   string
-	HeadSHA     string
-	FileChanges []FileChange
+	Status      string       // git status --porcelain output
+	Diff        string       // git diff --staged output
+	HeadSHA     string       // current commit SHA
+	FileChanges []FileChange // parsed from Status
+}
+
+// ModuleContract represents a deployable unit contract
+type ModuleContract struct {
+	Moniker     string       `yaml:"moniker"`
+	Name        string       `yaml:"name"`
+	Type        string       `yaml:"type"`
+	Description string       `yaml:"description"`
+	Root        string       `yaml:"root"`
+	Source      SourceConfig `yaml:"source"`
+}
+
+// SourceConfig represents the source configuration in a contract
+type SourceConfig struct {
+	Includes []string `yaml:"includes"`
+}
+
+// CommitValidationError represents a validation error
+type CommitValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e CommitValidationError) Error() string {
+	return fmt.Sprintf("[%s] %s", e.Field, e.Message)
+}
+
+// loadModuleContracts loads all module contracts from contracts/deployable-units/0.1.0/*.yml
+func loadModuleContracts(workspaceRoot string) (map[string]ModuleContract, error) {
+	contractsDir := filepath.Join(workspaceRoot, "contracts", "deployable-units", "0.1.0")
+	contracts := make(map[string]ModuleContract)
+
+	files, err := filepath.Glob(filepath.Join(contractsDir, "*.yml"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to glob contract files: %w", err)
+	}
+
+	for _, file := range files {
+		// Skip definitions.yml as it's not a module contract
+		if filepath.Base(file) == "definitions.yml" {
+			continue
+		}
+
+		data, err := ioutil.ReadFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read contract file %s: %w", file, err)
+		}
+
+		var contract ModuleContract
+		if err := yaml.Unmarshal(data, &contract); err != nil {
+			return nil, fmt.Errorf("failed to parse contract file %s: %w", file, err)
+		}
+
+		if contract.Moniker != "" {
+			contracts[contract.Moniker] = contract
+		}
+	}
+
+	return contracts, nil
+}
+
+// validateCommitMessage validates the structure and content of a commit message
+func validateCommitMessage(commitMessage string, workspaceRoot string) []CommitValidationError {
+	var errors []CommitValidationError
+
+	// Load module contracts
+	moduleContracts, err := loadModuleContracts(workspaceRoot)
+	if err != nil {
+		errors = append(errors, CommitValidationError{
+			Field:   "contracts",
+			Message: fmt.Sprintf("Failed to load module contracts: %v", err),
+		})
+		// Continue with validation even if contracts failed to load
+	}
+
+	lines := strings.Split(commitMessage, "\n")
+	if len(lines) == 0 {
+		errors = append(errors, CommitValidationError{
+			Field:   "structure",
+			Message: "Commit message is empty",
+		})
+		return errors
+	}
+
+	// 1. Validate unique top-level heading (MD041)
+	var topLevelHeadings []string
+	boldColonRegex := regexp.MustCompile(`^\*\*[^*]+:\*\*`)
+	for i, line := range lines {
+		if strings.HasPrefix(line, "# ") {
+			topLevelHeadings = append(topLevelHeadings, fmt.Sprintf("Line %d: %s", i+1, line))
+		}
+
+		// Check for **Bold:** pattern (forbidden)
+		trimmed := strings.TrimSpace(line)
+		if boldColonRegex.MatchString(trimmed) {
+			errors = append(errors, CommitValidationError{
+				Field:   "bold-colon",
+				Message: fmt.Sprintf("Line %d: Forbidden **Bold:** pattern detected. Use proper ### headers instead: %s", i+1, trimmed),
+			})
+		}
+	}
+
+	if len(topLevelHeadings) == 0 {
+		errors = append(errors, CommitValidationError{
+			Field:   "heading",
+			Message: "Missing top-level heading (# title)",
+		})
+	} else if len(topLevelHeadings) > 1 {
+		errors = append(errors, CommitValidationError{
+			Field:   "heading",
+			Message: fmt.Sprintf("Multiple top-level headings found (must have exactly 1):\n%s", strings.Join(topLevelHeadings, "\n")),
+		})
+	}
+
+	// 2. Validate module sections have semantic format: <module>: <type>: <description>
+	validTypes := map[string]bool{
+		"feat":     true,
+		"fix":      true,
+		"refactor": true,
+		"docs":     true,
+		"chore":    true,
+		"test":     true,
+		"perf":     true,
+		"style":    true,
+	}
+
+	// Regex to match module section subject lines
+	// Format: <module-name>: <semantic-type>: <description>
+	semanticFormatRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
+
+	// Track sections for 72-char validation
+	inSummarySection := false
+	inModuleBodySection := false
+
+	// Find all module sections (lines that look like module subject lines)
+	inModuleSection := false
+	currentModule := ""
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Track Summary section for line length validation
+		if strings.HasPrefix(trimmed, "## Summary") {
+			inSummarySection = true
+			inModuleBodySection = false
+			continue
+		}
+
+		// End Summary section when we hit Files affected
+		if strings.HasPrefix(trimmed, "## Files affected") {
+			inSummarySection = false
+			inModuleBodySection = false
+			continue
+		}
+
+		// Check if this is a module section header
+		if strings.HasPrefix(trimmed, "## ") && !strings.HasPrefix(trimmed, "## Summary") && !strings.HasPrefix(trimmed, "## Files affected") {
+			inModuleSection = true
+			inModuleBodySection = false
+			currentModule = strings.TrimPrefix(trimmed, "## ")
+
+			// Validate blank line after header (MD022)
+			if i+1 < len(lines) && strings.TrimSpace(lines[i+1]) != "" {
+				errors = append(errors, CommitValidationError{
+					Field:   "header-spacing",
+					Message: fmt.Sprintf("Line %d: Missing blank line after header '## %s' (MD022)", i+1, currentModule),
+				})
+			}
+			continue
+		}
+
+		// If we're in a module section, the next non-empty line should be the semantic subject line
+		if inModuleSection && trimmed != "" && !strings.HasPrefix(trimmed, "```") && !strings.HasPrefix(trimmed, "|") {
+			matches := semanticFormatRegex.FindStringSubmatch(trimmed)
+			if matches == nil {
+				errors = append(errors, CommitValidationError{
+					Field:   "semantic-format",
+					Message: fmt.Sprintf("Line %d: Module '%s' subject line does not follow semantic format '<module>: <type>: <description>'\nFound: %s\nExpected format: %s: <feat|fix|refactor|docs|chore|test|perf|style>: <description>", i+1, currentModule, trimmed, currentModule),
+				})
+			} else {
+				moduleName := matches[1]
+				semanticType := matches[2]
+				description := matches[3]
+
+				// Validate module name matches section header
+				if moduleName != currentModule {
+					errors = append(errors, CommitValidationError{
+						Field:   "module-mismatch",
+						Message: fmt.Sprintf("Line %d: Module name in subject line '%s' does not match section header '%s'", i+1, moduleName, currentModule),
+					})
+				}
+
+				// Validate semantic type
+				if !validTypes[semanticType] {
+					errors = append(errors, CommitValidationError{
+						Field:   "semantic-type",
+						Message: fmt.Sprintf("Line %d: Invalid semantic type '%s'. Must be one of: feat, fix, refactor, docs, chore, test, perf, style", i+1, semanticType),
+					})
+				}
+
+				// Validate description is not empty
+				if strings.TrimSpace(description) == "" {
+					errors = append(errors, CommitValidationError{
+						Field:   "description",
+						Message: fmt.Sprintf("Line %d: Description cannot be empty", i+1),
+					})
+				}
+
+				// Validate module exists in contracts (if contracts loaded successfully)
+				if len(moduleContracts) > 0 {
+					if _, exists := moduleContracts[moduleName]; !exists {
+						errors = append(errors, CommitValidationError{
+							Field:   "module-unknown",
+							Message: fmt.Sprintf("Line %d: Module '%s' not found in contracts/deployable-units/0.1.0/", i+1, moduleName),
+						})
+					}
+				}
+
+				// Subject line length (≤72 characters - GitHub hard limit)
+				// 50 chars is the soft limit for readability, 72 is the hard truncation limit
+				if len(trimmed) > 72 {
+					errors = append(errors, CommitValidationError{
+						Field:   "subject-length",
+						Message: fmt.Sprintf("Line %d: Subject line exceeds 72 characters (%d chars): %s", i+1, len(trimmed), trimmed),
+					})
+				}
+			}
+
+			inModuleSection = false
+			inModuleBodySection = true // Now we're in the body text after subject line
+			currentModule = ""
+		}
+
+		// Validate 72-character line limit for Summary and module body text
+		// Skip empty lines, headers, horizontal rules, table lines, and yaml blocks
+		if (inSummarySection || inModuleBodySection) &&
+		   trimmed != "" &&
+		   !strings.HasPrefix(trimmed, "#") &&
+		   !strings.HasPrefix(trimmed, "---") &&
+		   !strings.HasPrefix(trimmed, "|") &&
+		   !strings.HasPrefix(trimmed, "```") {
+			if len(trimmed) > 72 {
+				sectionName := "module body"
+				if inSummarySection {
+					sectionName = "Summary"
+				}
+				errors = append(errors, CommitValidationError{
+					Field:   "line-length",
+					Message: fmt.Sprintf("Line %d: %s text exceeds 72 characters (%d chars): %s", i+1, sectionName, len(trimmed), trimmed),
+				})
+			}
+		}
+
+		// Exit module body section when we hit yaml block or next module section
+		if inModuleBodySection && strings.HasPrefix(trimmed, "```yaml") {
+			inModuleBodySection = false
+		}
+	}
+
+	// Validate all yaml blocks are properly closed
+	yamlBlockOpen := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```yaml") {
+			yamlBlockOpen = true
+		} else if yamlBlockOpen && strings.HasPrefix(trimmed, "```") {
+			yamlBlockOpen = false
+		}
+	}
+	if yamlBlockOpen {
+		errors = append(errors, CommitValidationError{
+			Field:   "yaml-block",
+			Message: "Unclosed yaml code block - missing closing ```",
+		})
+	}
+
+	return errors
 }
 
 func gatherGitContext(workspaceRoot string) (*GitContext, error) {
@@ -444,16 +843,7 @@ func gatherGitContext(workspaceRoot string) (*GitContext, error) {
 	}
 	ctx.Diff = string(diffOutput)
 
-	// Get last 50 commits as specified in agent file
-	logCmd := exec.Command("git", "log", "-50", "--oneline", "--no-decorate")
-	logCmd.Dir = workspaceRoot
-	logOutput, err := logCmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("git log failed: %w", err)
-	}
-	ctx.RecentLog = string(logOutput)
-
-	// Parse and normalize file changes
+	// Parse file changes from status (no need for git log - status shows everything)
 	ctx.FileChanges = parseFileChanges(ctx.Status)
 
 	return ctx, nil
@@ -509,7 +899,7 @@ func readDocumentationFiles(workspaceRoot string) (map[string]string, error) {
 	return docs, nil
 }
 
-func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[string]string) string {
+func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[string]string, workspaceRoot string) string {
 	var prompt bytes.Buffer
 
 	// Start with the agent instructions (the main prompt)
@@ -537,12 +927,6 @@ func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[st
 	prompt.WriteString(gitCtx.Diff)
 	prompt.WriteString("```\n\n")
 
-	prompt.WriteString("## Recent Commits (Last 50 - For Style Reference Only)\n\n")
-	prompt.WriteString("Use these to match the commit message style, but DO NOT include them in your output:\n\n")
-	prompt.WriteString("```\n")
-	prompt.WriteString(gitCtx.RecentLog)
-	prompt.WriteString("```\n\n")
-
 	// Add documentation content
 	prompt.WriteString("---\n\n")
 	prompt.WriteString("# PRE-FETCHED DOCUMENTATION (DO NOT READ FILES)\n\n")
@@ -560,6 +944,13 @@ func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[st
 	prompt.WriteString("# MODULE METADATA (GitHub Actions Path Filters)\n\n")
 	prompt.WriteString("The following modules have been detected in this commit. Each module section\n")
 	prompt.WriteString("MUST include its GitHub Actions compatible glob pattern(s).\n\n")
+
+	// Load module contracts for glob patterns
+	moduleContracts, err := loadModuleContracts(workspaceRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load module contracts: %v\n", err)
+		moduleContracts = make(map[string]ModuleContract) // Empty map for fallback
+	}
 
 	// Group files by module
 	moduleMap := make(map[string]bool)
@@ -583,7 +974,7 @@ func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[st
 
 	// List each module with its glob patterns
 	for _, module := range modules {
-		globs := getModuleGlobPattern(module)
+		globs := getModuleGlobPattern(module, moduleContracts)
 		prompt.WriteString(fmt.Sprintf("**%s:**\n", module))
 		prompt.WriteString("```yaml\n")
 		prompt.WriteString("paths:\n")
@@ -798,6 +1189,13 @@ func determineFileModule(filePath string) string {
 		}
 	}
 
+	// Special case: ALL definitions.yml files anywhere in repo → repo-config
+	// These are repository-level metadata files regardless of location
+	// Examples: /definitions.yml, contracts/deployable-units/0.1.0/definitions.yml, etc.
+	if fileName == "definitions.yml" {
+		return "repo-config"
+	}
+
 	// Pattern 1: automation/<module-name>/... → extract module name
 	// Examples: automation/sh-vscode/ → "sh-vscode", automation/pwsh-build/ → "pwsh-build"
 	if strings.HasPrefix(filePath, "automation/") {
@@ -818,15 +1216,15 @@ func determineFileModule(filePath string) string {
 		return "containers" // fallback
 	}
 
-	// Pattern 3: src/mcp/<service>/... → mcp-<service>
+	// Pattern 3: src/mcp/<service>/... → src-mcp-<service>
 	// Examples: src/mcp/pwsh/ → "src-mcp-pwsh", src/mcp/vscode/ → "src-mcp-vscode"
 	// Note: README.md files are handled above and won't reach here
 	if strings.HasPrefix(filePath, "src/mcp/") {
 		parts := strings.Split(filePath, "/")
 		if len(parts) >= 3 && parts[2] != "" {
-			return "mcp-" + parts[2]
+			return "src-mcp-" + parts[2]
 		}
-		return "mcp" // fallback
+		return "src-mcp" // fallback
 	}
 
 	// Pattern 3b: src/cli/... → cli module
@@ -834,23 +1232,33 @@ func determineFileModule(filePath string) string {
 		return "cli"
 	}
 
-	// Pattern 4: .vscode/extensions/<name>/... → extract extension name or use "vscode-ext-claude-commit"
-	// Examples: .vscode/extensions/claude-mcp-vscode/ → "vscode-ext-claude-commit"
+	// Pattern 4: .vscode/extensions/<name>/... → use exact extension moniker
+	// Examples: .vscode/extensions/claude-mcp-vscode/ → "claude-mcp-vscode"
 	if strings.HasPrefix(filePath, ".vscode/extensions/") {
 		parts := strings.Split(filePath, "/")
 		if len(parts) >= 3 && parts[2] != "" {
-			// Use short form for known extensions
-			extName := parts[2]
-			if strings.Contains(extName, "claude-mcp") {
-				return "vscode-ext-claude-commit"
-			}
-			return extName
+			// Return the exact extension folder name (matches contract moniker)
+			return parts[2]
 		}
-		return "vscode-ext-claude-commit" // fallback
+		return "claude-mcp-vscode" // fallback
 	}
 
-	// Pattern 5: contracts/<name>/<version>/... → contracts-<name>
-	// Examples: contracts/repository/0.1.0/ → "contracts-repository"
+	// Pattern 5: contracts/deployable-units/<version>/*.yml → actual module from yml filename
+	// Examples: contracts/deployable-units/0.1.0/docs.yml → "docs"
+	//           contracts/deployable-units/0.1.0/src-mcp-vscode.yml → "src-mcp-vscode"
+	if strings.HasPrefix(filePath, "contracts/deployable-units/") {
+		parts := strings.Split(filePath, "/")
+		if len(parts) >= 4 && strings.HasSuffix(parts[3], ".yml") {
+			// Extract module name from filename (e.g., "docs.yml" → "docs")
+			moduleName := strings.TrimSuffix(parts[3], ".yml")
+			if moduleName != "definitions" {
+				return moduleName
+			}
+		}
+		return "contracts-deployable-units" // fallback for definitions.yml or unknown
+	}
+
+	// Pattern 5b: other contracts/<name>/... → contracts-<name>
 	if strings.HasPrefix(filePath, "contracts/") {
 		parts := strings.Split(filePath, "/")
 		if len(parts) >= 2 && parts[1] != "" {
@@ -899,7 +1307,33 @@ func determineFileModule(filePath string) string {
 
 // getModuleGlobPattern returns the GitHub Actions compatible glob pattern for a module
 // These patterns can be used in GitHub Actions workflow path filters
-func getModuleGlobPattern(module string) []string {
+// If a contract exists for the module, it uses the contract's source.includes patterns
+// Otherwise, it falls back to hardcoded patterns for known modules
+func getModuleGlobPattern(module string, contracts map[string]ModuleContract) []string {
+	// First, check if we have a contract for this module
+	if contract, exists := contracts[module]; exists {
+		// Use patterns from contract
+		var patterns []string
+		for _, include := range contract.Source.Includes {
+			// If pattern starts with root, it's already absolute
+			// Otherwise, combine root + pattern
+			if strings.HasPrefix(include, contract.Root) {
+				patterns = append(patterns, include)
+			} else if contract.Root != "" {
+				// Combine root with pattern, handling ** glob patterns
+				patterns = append(patterns, filepath.Join(contract.Root, include))
+			} else {
+				patterns = append(patterns, include)
+			}
+		}
+		// Normalize path separators for GitHub Actions (always use forward slash)
+		for i, p := range patterns {
+			patterns[i] = strings.ReplaceAll(p, "\\", "/")
+		}
+		return patterns
+	}
+
+	// Fallback to hardcoded patterns for modules without contracts
 	// Normalize path separators for cross-platform compatibility
 	// GitHub Actions uses forward slashes even on Windows
 
@@ -1120,8 +1554,12 @@ func formatDuration(seconds float64) string {
 	secs := totalSecs % 60
 
 	if mins == 0 {
+		if seconds == 0 {
+			return fmt.Sprintf("nil", secs)
+		}
 		return fmt.Sprintf("%02ds", secs)
 	}
+
 	return fmt.Sprintf("%02dm%02ds", mins, secs)
 }
 

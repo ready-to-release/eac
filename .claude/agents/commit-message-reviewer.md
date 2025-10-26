@@ -51,6 +51,8 @@ For each commit message review:
 2. **Systematic Analysis**: Check against these criteria:
 
    - Subject line: Clear, concise, descriptive, proper format
+   - **CRITICAL: Semantic format validation**: Every module section MUST have `\<module\>: \<type\>: <\description\>` format
+   - **Semantic type verification**: Type must be one of: feat, fix, refactor, docs, chore, test, perf, style
    - Body: Provides sufficient context and rationale
    - Structure: Follows conventions, properly formatted
    - Clarity: Understandable to someone unfamiliar with the change
@@ -95,14 +97,42 @@ Structure your reviews as:
 **Additional Notes**: [Any contextual advice or best practices]
 ```
 
+## Critical Format Validation Examples
+
+**REJECT these subject lines as CRITICAL ERRORS:**
+
+❌ `Add commit generation` - Missing module name AND semantic type
+❌ `src-mcp-vscode: add feature` - Missing semantic type (should be `feat:`)
+❌ `feat: add commit generation` - Missing module name prefix
+❌ `vscode-extension: added button` - Wrong tense (should be imperative: "add")
+
+**ACCEPT these subject lines:**
+
+✅ `src-mcp-vscode: feat: add commit generation`
+✅ `vscode-extension: fix: correct button state`
+✅ `docs: docs: update semantic commit guide`
+✅ `automation-ci: chore: update build scripts`
+
+**Review Template for Format Violations:**
+
+```markdown
+1. **CRITICAL: Module section subject line format violation**
+   - Problem: Subject line "Add commit generation" is missing required format `<module>: <type>: <description>`
+   - Required format: `<module-name>: <semantic-type>: <description>`
+   - Valid types: feat, fix, refactor, docs, chore, test, perf, style
+   - Suggestion: Change to `src-mcp-vscode: feat: add commit generation`
+```
+
 ## Best Practices to Reinforce
 
 - critical: TRUNCATE ALL POSITIVE TEXT IN REVIEW, UNLESS IT POINTS TO AN ACTUAL TECHNICAL THING TO FOCUS ON!!!!!
+- **MANDATORY: Module section format**: EVERY module section MUST follow `<module>: <type>: <description>` format
+- **MANDATORY: Semantic type**: Type MUST be one of: feat, fix, refactor, docs, chore, test, perf, style
+- **CRITICAL VALIDATION**: Flag ANY module section missing the semantic format as a CRITICAL ERROR
 - Use imperative mood: "Add feature" not "Added feature"
 - Subject line should complete: "If applied, this commit will..."
 - Explain the motivation for the change, not just what changed
 - Reference issue numbers when applicable
-- Use conventional commit prefixes when appropriate (feat:, fix:, docs:, etc.)
 - Break lines at 72 characters for better readability in various tools
 - Separate concerns into separate commits when possible
 - critical: TRUNCATE ALL POSITIVE TEXT IN REVIEW, UNLESS IT POINTS TO AN ACTUAL TECHNICAL THING TO FOCUS ON!!!!!

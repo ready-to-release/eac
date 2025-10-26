@@ -21,9 +21,8 @@ The Go MCP server has ALREADY collected ALL necessary data and provided it in th
 
 1. ✅ **Current HEAD SHA**
 2. ✅ **File Changes Table** - Pre-parsed with normalized status and module detection
-3. ✅ **Git Status (Raw)** - Raw porcelain output
-4. ✅ **Git Diff** - Complete diff of all changes
-5. ✅ **Recent Commits (Last 50)** - For style reference ONLY
+3. ✅ **Git Status (Raw)** - Raw porcelain output showing staged files
+4. ✅ **Git Diff** - Complete diff of all staged changes
 
 ### Documentation (✅ Pre-Fetched - DO NOT READ FILES)
 
@@ -55,6 +54,76 @@ This is a mono-repository with independently versioned deployable modules. Each 
 - Do NOT create multiple sections for the same module
 - Example: If 10 files change in "src-mcp-vscode", create ONE `## src-mcp-vscode` section describing all changes together
 
+### MANDATORY SEMANTIC SUBJECT LINE FORMAT
+
+**ABSOLUTE REQUIREMENT - NO EXCEPTIONS:**
+
+Every module section MUST have a subject line in this EXACT format:
+
+```text
+\<module-name\>: \<semantic-type\>: \<description\>
+```
+
+**Semantic Types (MUST use one of these):**
+
+- `feat` - New feature or functionality
+- `fix` - Bug fix
+- `refactor` - Code restructuring without behavior change
+- `docs` - Documentation changes
+- `chore` - Maintenance, configs, build tools
+- `test` - Test additions or modifications
+- `perf` - Performance improvements
+- `style` - Code formatting (no logic change)
+
+**Examples of CORRECT subject lines:**
+
+- ✅ `src-mcp-vscode: feat: add commit generation`
+- ✅ `vscode-extension: fix: correct button state`
+- ✅ `docs: docs: update semantic commit guide`
+
+**Examples of INCORRECT subject lines:**
+
+- ❌ `Add commit generation` (missing module and type)
+- ❌ `src-mcp-vscode: add feature` (missing semantic type)
+- ❌ `feat: add commit generation` (missing module name)
+- ❌ `\<module\>: \<type\>: \<description\>` (literal angle brackets - use actual values!)
+
+**CRITICAL MARKDOWN HEADER CONSTRAINT (MD026):**
+
+**NEVER, EVER, UNDER ANY CIRCUMSTANCES use colons (:) or any trailing punctuation in markdown section headers (## headers)!**
+
+This violates MD026 markdownlint rule and will cause validation to FAIL.
+
+- ❌ `## src-mcp-vscode: feat: add commit generation` - WRONG! Colons in header! (MD026 violation)
+- ❌ `## src-mcp-vscode.` - WRONG! Trailing period! (MD026 violation)
+- ❌ `## src-mcp-vscode!` - WRONG! Trailing punctuation! (MD026 violation)
+- ✅ `## src-mcp-vscode` - CORRECT! Plain module name only!
+
+The subject line `\<module\>: \<type\>: \<description\>` goes on the FIRST LINE AFTER the header, NOT in the header itself!
+
+**Correct structure (note the BLANK LINE after header):**
+
+```markdown
+## module-name
+
+module-name: type: description
+
+Body text here explaining WHY the change was made.
+Wrap at 72 characters per line.
+
+\`\`\`yaml
+paths:
+  - 'module/path/**'
+\`\`\`
+```
+
+**CRITICAL: Always add blank line after ## headers!**
+
+**VALIDATION:** Before outputting, verify:
+
+1. EVERY module section has `## module-name` header (NO COLONS!)
+2. FIRST LINE after header has `module-name: type: description` format (WITH colons, actual values not angle brackets!)
+
 ### File Listing Requirements
 
 **SINGLE MARKDOWN TABLE AT THE TOP**:
@@ -74,17 +143,23 @@ All git status codes are normalized to 4 simple categories:
 
 ### Format Structure
 
-```text
+**CRITICAL FORMATTING RULES:**
+
+1. **Blank line after EVERY ## header** (required!)
+2. **NO bold text with colons** - `**Text:**` pattern is FORBIDDEN
+3. **Use proper headers** - If you need a subsection, use `###` not `**Bold:**`
+
+````text
 ## Summary
 
-<Human-readable summary - 2-4 sentences explaining the changes and their
+Human-readable summary (2-4 sentences) explaining the changes and their
 downstream/production impact. Focus on WHAT was accomplished and WHY it
 matters for the system. Be generous with detail here - this is the executive
 summary that helps stakeholders understand the commit's significance.
-IMPORTANT: CRITICAL: YOU ARE NOT SELLING A PRODUCT, YOU ARE EXPLAINING AN EVERYTHING-AS-CODE CHANGE SET
-DOCUMENT THE TECHNICAL IMPACTS OF THESE CHANGES DOWNSTREAM!!
-STAKEHOLDERS ARE OPERATIONS AND FEEDBACK LOOPS UPSTREAM TO DEVELOPMENT FOR BUG DETECTION!
->
+IMPORTANT: CRITICAL: YOU ARE NOT SELLING A PRODUCT, YOU ARE EXPLAINING AN
+EVERYTHING-AS-CODE CHANGE SET. DOCUMENT THE TECHNICAL IMPACTS OF THESE
+CHANGES DOWNSTREAM!! STAKEHOLDERS ARE OPERATIONS AND FEEDBACK LOOPS UPSTREAM
+TO DEVELOPMENT FOR BUG DETECTION!
 
 ## Files affected
 
@@ -107,7 +182,7 @@ based on git context and repository documentation.
 ```yaml
 paths:
   - 'src/mcp/vscode/**'
-```
+````
 
 ---
 
@@ -139,8 +214,8 @@ paths:
 
 ### Key Points
 
-- **NO top-level `# Revision` header**: Title generator will add this later
-- **`## Summary` section**: First section, 2-4 sentences explaining production impact
+- **NO top-level `# Revision` header**: Your output should start with `## Summary`
+- **`## Summary` section**: First section, 2-4 sentences explaining production impact (wrap at 72 characters per line)
 - **`## Files affected` header**: Precedes the main file table
 - **File table appears ONCE** - shows ALL files with their normalized status and module
 - **NO summary table with module globs** - removed from format
@@ -153,31 +228,32 @@ paths:
 - Status is already normalized (added/modified/deleted/renamed)
 - Module is already determined based on file path
 - Glob patterns are pre-generated and provided in MODULE METADATA section
-- Recent commits (50 back) are provided for context only - NOT shown in output
 - **INTERNAL LOOP**: Iterate through unique module names only once - consolidate all changes per module
-- **DO NOT add a Review section** - that will be handled by the reviewer agent in the pipeline
+- **DO NOT add a Review section** - output only the commit message structure shown above
 
 ### 50/72 Rule Constraints
 
 **CRITICAL - Follow standard git commit message formatting:**
 
-**Per Module Subject Line (≤ 50 characters):**
+**Per Module Subject Line (≤72 characters - hard limit):**
 
-- Format: `<module>: <type>: <description>`
-- Maximum 50 characters total (including module prefix and type)
+- Format: `module-name: type: description` (use actual values!)
+- Maximum 72 characters total (including module prefix and type)
 - Must be concise and descriptive
 - No period at end
+- NO literal angle brackets `<>` - use real module names and types!
 
-**Body Text (≤ 72 characters per line):**
+**Body Text & Summary (≤ 72 characters per line):**
 
-- Each line in body text must not exceed 72 characters
+- Each line in ALL text sections must not exceed 72 characters
+- This includes Summary section, module body text, and all prose
 - Wrap text at 72 characters
 - Blank line between subject and body
 - Explain WHY the change was made, not just WHAT
 
 **Complete Example:**
 
-```text
+````text
 ## Summary
 
 This commit introduces automated semantic commit message generation for
@@ -206,7 +282,7 @@ and repository documentation.
 ```yaml
 paths:
   - 'src/mcp/vscode/**'
-```
+````
 
 ---
 
@@ -221,10 +297,10 @@ message generation via MCP server integration.
 paths:
   - '.vscode/extensions/claude-mcp-vscode/**'
 ```
-```
 
 Note:
-- NO top-level `# Revision` header (title generator will add this)
+
+- NO top-level `# Revision` header - start with `## Summary`
 - `## Summary` section is the first section with 2-4 sentences explaining production impact
 - `## Files affected` header precedes file table
 - NO summary table with module globs (removed)
@@ -232,9 +308,41 @@ Note:
 - Body lines wrapped at 72 characters
 - Each module section starts with ## <module-name> header
 - After body text, include ```yaml paths: block directly (no heading)
-- **DO NOT include a Review section** - the reviewer agent will handle that
+- **DO NOT include a Review section** - output only the structure shown above
 - **CRITICAL: File MUST end with a newline character (MD047 compliance)**
 
+## FINAL VALIDATION CHECKLIST
+
+Before submitting your commit message, verify:
+
+1. ✅ **NO top-level `# Revision` header** - output starts with `## Summary`
+2. ✅ **Blank line after EVERY `##` header** - required for proper markdown formatting
+3. ✅ **`## Summary` section** is first with 2-4 sentence production impact
+4. ✅ **`## Files affected` table** shows ALL files exactly once
+5. ✅ **Module headers** use plain name: `## module-name` (NO COLONS IN HEADERS!)
+6. ✅ **Subject line** on first line after header: `module-name: type: description` (actual values, not angle brackets!)
+7. ✅ **Semantic type** is one of: feat, fix, refactor, docs, chore, test, perf, style
+8. ✅ **Subject lines** are ≤72 characters (hard limit)
+9. ✅ **ALL text lines** wrapped at 72 characters (Summary, body, all prose)
+10. ✅ **NO bold text with colons** - `**Text:**` pattern is FORBIDDEN (use `###` headers instead)
+11. ✅ **`yaml paths:` block** after each module's body text - properly closed with ```
+12. ✅ **Every yaml block is closed** - each `yaml must have a matching closing`
+13. ✅ **File ends with newline** (MD047 compliance)
+14. ✅ **NO Review section** - output only the commit message structure
+
+**CRITICAL:**
+
+- If ANY `##` header is NOT followed by a blank line → WRONG! Add blank line!
+- If ANY module header contains colons (`:`) or trailing punctuation → WRONG! Violates MD026! Use plain `## module-name` only!
+- If you use `**Bold text:**` pattern → WRONG! Use `###` headers instead!
+- If ANY subject line is missing `module-name: type: description` format → STOP and fix immediately!
+- If you use literal `<angle>` brackets instead of actual values → WRONG! Use real module names and types!
+- If ANY yaml block is not closed with `→ WRONG! Every`yaml must have a closing ```!
+
+---
+
 and finally: Present that precise, semantically correct, simple and focused commit message to the user in the vscode text field (through the vscode mcp in-repo extension)
+
+```
 
 ```

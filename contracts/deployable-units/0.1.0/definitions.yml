@@ -1,23 +1,22 @@
-# Repository Contract Definitions
-# version: "0.1.0"
+# Deployable Unit Contract: definitions
+# Version: 0.1.0
 
-repository:
-  name: "cli"
-  type: "monorepo"
-  versioning_scheme: "semantic"
-  trunk_based: true
-  main_branch: "main"
-  max_branch_age_days: 2
-  delete_branch_on_merge: true
+moniker: "definitions"
+name: "Repository location based configurations"
+type: "definitions-type"
+description: "foldable yaml file constructs that defines repository configurations"
+root: "docs/guide/"
+root_type: "single-docs-subsite"
 
-# References
-references:
-  documentation:
-    - "docs/reference/trunk/semantic-commits.md"
-    - "docs/reference/trunk/versioning.md"
-    - "docs/reference/trunk/repository-layout.md"
-    - "docs/reference/trunk/revisionable-timeline.md"
-  specifications:
-    - "https://www.conventionalcommits.org/"
-    - "https://semver.org/"
-    - "https://trunkbaseddevelopment.com/"
+versioning:
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "/docs/guide/CHANGELOG.md"
+
+source:
+  includes:
+    - "definitions.yml"
+    - "**/definitions.yml"
+
+depends_on: []
+used_by:
+  - "automation"

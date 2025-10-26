@@ -131,7 +131,7 @@ Test output shows:
 
 ## Example Test Output
 
-```
+```text
 === RUN   TestAllRepositoryFiles
 
 Repository root: C:\projects\cli
@@ -157,7 +157,7 @@ Total files processed: 79
 
 When adding new files that don't match existing patterns:
 
-```
+```text
 === ❌ WARNING: 2 files could not be classified ===
 
   - new-directory/some-file.txt

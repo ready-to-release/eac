@@ -163,6 +163,7 @@ type FileChange struct {
 4. If concerns: Load & call concerns handler agent
 5. Load & call title generator agent (with final commit)
 6. Stitch all outputs together
+7. Validate commit message structure
 ```
 
 **Model Enforcement**:
@@ -189,6 +190,57 @@ finalCommit :=
     "# " + titleFromAgent5 + "\n\n" +
     cleanedCommitBody + "\n\n" +
     "Agent: " + approvalStatus + "\n"
+```
+
+**Commit Message Validation**:
+
+The final commit message is validated before being returned to the VSCode extension:
+
+```go
+type CommitValidationError struct {
+    Field   string
+    Message string
+}
+
+func validateCommitMessage(commitMessage, workspaceRoot string) []CommitValidationError
+```
+
+**Validation Checks**:
+
+1. **Unique Top-Level Heading**: Exactly one `# ` heading (MD041 compliance)
+2. **Semantic Format**: All module sections must have `<module>: <type>: <description>` format
+3. **Valid Semantic Type**: Type must be one of: feat, fix, refactor, docs, chore, test, perf, style
+4. **Module Name Match**: Subject line module name must match section header
+5. **Module Exists**: Module must be defined in `contracts/deployable-units/0.1.0/<module>.yml`
+6. **Subject Length**: Subject lines must be ≤50 characters
+7. **Non-Empty Description**: Description cannot be empty
+
+**Contract Loading**:
+
+The validator loads module contracts from YAML files:
+
+```go
+func loadModuleContracts(workspaceRoot string) (map[string]ModuleContract, error)
+```
+
+Reads all `*.yml` files from `contracts/deployable-units/0.1.0/` (except `definitions.yml`) and parses:
+
+```yaml
+moniker: "src-mcp-vscode"
+name: "Go VSCode MCP Server"
+type: "mcp-server"
+description: "Model Context Protocol server..."
+```
+
+**Validation Failure**:
+
+If validation fails, the MCP server returns an error with detailed messages:
+
+```
+❌ Commit message validation failed:
+  • Line 15: Module 'src-mcp-vscode' subject line does not follow semantic format...
+  • Line 23: Subject line exceeds 50 characters (62 chars): ...
+  • Line 30: Module 'unknown-module' not found in contracts/deployable-units/0.1.0/
 ```
 
 ### 3. Agent Definitions
@@ -479,6 +531,7 @@ The MCP server sends JSON-RPC notifications:
 - `title-init` - Loading title generator
 - `title-claude` - Generating commit title
 - `stitch` - Stitching outputs
+- `validate` - Validating commit message structure
 - `complete` - Done
 
 ## Error Handling

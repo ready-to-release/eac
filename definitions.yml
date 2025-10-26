@@ -1,0 +1,22 @@
+# This Repository Contract Root Definitions
+# version: "0.1.0", although placed in repo root, definitions system is todo atm.
+
+repository:
+  name: "cli"
+  type: "monorepo"
+  versioning_scheme: "semantic"
+  trunk_based: true
+  main_branch: "main"
+  max_branch_age_days: 2
+  delete_branch_on_merge: true
+
+references:
+  documentation:
+    - "docs/reference/trunk/semantic-commits.md"
+    - "docs/reference/trunk/versioning.md"
+    - "docs/reference/trunk/repository-layout.md"
+    - "docs/reference/trunk/revisionable-timeline.md"
+  specifications:
+    - "https://www.conventionalcommits.org/"
+    - "https://semver.org/"
+    - "https://trunkbaseddevelopment.com/"

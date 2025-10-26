@@ -1,0 +1,22 @@
+# Deployable Unit Contract: claude-config
+# Version: 0.1.0
+
+moniker: "claude-config"
+name: "Claude Code Configuration"
+type: "config"
+description: "Claude Code CLI configuration including agents, hooks, commands, and settings"
+root: ".claude/"
+root_type: "config-directory"
+
+versioning:
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: ".claude/CHANGELOG.md"
+
+source:
+  includes:
+    - "**/*.md"
+    - "**/*.json"
+    - "**/*.sh"
+    - "**/*.yml"
+
+depends_on: []

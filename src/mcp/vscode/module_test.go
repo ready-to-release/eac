@@ -306,8 +306,11 @@ func TestGetModuleGlobPattern(t *testing.T) {
 
 	fmt.Println("\n=== GitHub Actions Glob Pattern Generation ===")
 
+	// Use empty contract map for testing (will use fallback patterns)
+	emptyContracts := make(map[string]ModuleContract)
+
 	for _, tc := range testCases {
-		globs := getModuleGlobPattern(tc.module)
+		globs := getModuleGlobPattern(tc.module, emptyContracts)
 
 		// Check if we got the expected number of patterns
 		if len(globs) != len(tc.expectedGlobs) {
@@ -358,8 +361,11 @@ func TestModuleGlobPatternIntegration(t *testing.T) {
 	}
 
 	// For each module, show the glob pattern
+	// Use empty contract map for testing (will use fallback patterns)
+	emptyContracts := make(map[string]ModuleContract)
+
 	for module, files := range moduleFiles {
-		globs := getModuleGlobPattern(module)
+		globs := getModuleGlobPattern(module, emptyContracts)
 
 		fmt.Printf("Module: %s\n", module)
 		fmt.Printf("Files changed:\n")

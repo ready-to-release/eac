@@ -1,7 +1,7 @@
 # Deployable Unit Contract: docs
 # Version: 0.1.0
 
-module_moniker: "docs"
+moniker: "docs"
 name: "Documentation"
 type: "mkdocs-site"
 description: "mkdocs base docs source files, used to target one singular docs rendered site"

@@ -204,9 +204,10 @@ export function activate(context: vscode.ExtensionContext) {
             // Pick one random identity icon for this entire session
             const randomIdentityIcon = identityIcons[Math.floor(Math.random() * identityIcons.length)];
             try {
+                // Progress title needs to be updated via progress.report() since withProgress title is static
                 commitMessage = await vscode.window.withProgress({
                     location: vscode.ProgressLocation.Notification,
-                    title: `${randomIdentityIcon} ${clockEmojis[0]}`,
+                    title: `${randomIdentityIcon}`,
                     cancellable: false
                 }, async (progress) => {
                     // Show randomized initial message
@@ -251,11 +252,11 @@ export function activate(context: vscode.ExtensionContext) {
                             currentGlobalTime = globalTime;
                             // Update status bar with global time (clock rotates, identity icon stays same)
                             statusBarItem.text = `$(sync~spin) ${randomIdentityIcon} ${clockEmojis[clockIndex]} ${globalTime}`;
-                            // Display with time on left side (fixed position)
-                            progress.report({ message: `${globalTime.padEnd(8)} ${message}` });
+                            // Display with rotating clock and time on left side (fixed position)
+                            progress.report({ message: `${clockEmojis[clockIndex]} ${globalTime.padEnd(8)} ${message}` });
                         } else {
                             log('[Time Match Failed] Showing original message');
-                            progress.report({ message: realProgress });
+                            progress.report({ message: `${clockEmojis[clockIndex]} ${realProgress}` });
                         }
                         lastProgressTime = Date.now();
 
@@ -346,37 +347,38 @@ export function activate(context: vscode.ExtensionContext) {
                         }
 
                         // Show sub-progress based on current stage (using actual global time from server or local calculation)
-                        // Format with time left-aligned for fixed position
+                        // Format with rotating clock and time left-aligned for fixed position
                         const paddedTime = displayTime.padEnd(8);
+                        const clockPrefix = `${clockEmojis[clockIndex]} `;
                         if (lastStage === 'generator') {
                             if (timeSinceLastProgress < 10) {
-                                progress.report({ message: `${paddedTime} 🤖 Analyzing changes...` });
+                                progress.report({ message: `${clockPrefix}${paddedTime} 🤖 Analyzing changes...` });
                             } else if (timeSinceLastProgress < 20) {
-                                progress.report({ message: `${paddedTime} 🔮 Discombulating abstractions into lists...` });
+                                progress.report({ message: `${clockPrefix}${paddedTime} 🔮 Discombulating abstractions into lists...` });
                             } else if (timeSinceLastProgress < 35) {
-                                progress.report({ message: `${paddedTime} 📝 Writing module sections...` });
+                                progress.report({ message: `${clockPrefix}${paddedTime} 📝 Writing module sections...` });
                             } else if (timeSinceLastProgress < 50) {
-                                progress.report({ message: `${paddedTime} ✨ Finalizing commit message...` });
+                                progress.report({ message: `${clockPrefix}${paddedTime} ✨ Finalizing commit message...` });
                             } else {
-                                progress.report({ message: `${paddedTime} ⏳ Still generating...` });
+                                progress.report({ message: `${clockPrefix}${paddedTime} ⏳ Still generating...` });
                             }
                         } else if (lastStage === 'reviewer') {
-                            if (timeSinceLastProgress < 10) progress.report({ message: `${paddedTime} Reviewing commit message...` });
-                            else progress.report({ message: `${paddedTime} Reviewing commit message...` });
+                            if (timeSinceLastProgress < 10) progress.report({ message: `${clockPrefix}${paddedTime} Reviewing commit message...` });
+                            else progress.report({ message: `${clockPrefix}${paddedTime} Reviewing commit message...` });
                         } else if (lastStage === 'approver') {
-                            if (timeSinceLastProgress < 8) progress.report({ message: `${paddedTime} Final approval...` });
-                            else progress.report({ message: `${paddedTime} Final approval...` });
+                            if (timeSinceLastProgress < 8) progress.report({ message: `${clockPrefix}${paddedTime} Final approval...` });
+                            else progress.report({ message: `${clockPrefix}${paddedTime} Final approval...` });
                         } else if (lastStage === 'concerns') {
-                            if (timeSinceLastProgress < 12) progress.report({ message: `${paddedTime} Fixing concerns...` });
-                            else progress.report({ message: `${paddedTime} Fixing concerns...` });
+                            if (timeSinceLastProgress < 12) progress.report({ message: `${clockPrefix}${paddedTime} Fixing concerns...` });
+                            else progress.report({ message: `${clockPrefix}${paddedTime} Fixing concerns...` });
                         } else if (lastStage === 'title') {
-                            if (timeSinceLastProgress < 8) progress.report({ message: `${paddedTime} ✨ Generating commit title...` });
-                            else progress.report({ message: `${paddedTime} ✨ Generating commit title...` });
+                            if (timeSinceLastProgress < 8) progress.report({ message: `${clockPrefix}${paddedTime} ✨ Generating commit title...` });
+                            else progress.report({ message: `${clockPrefix}${paddedTime} ✨ Generating commit title...` });
                         } else if (lastStage === 'setup') {
-                            progress.report({ message: `${paddedTime} Setting up context...` });
+                            progress.report({ message: `${clockPrefix}${paddedTime} Setting up context...` });
                         } else {
                             // No stage detected yet - show generic progress
-                            progress.report({ message: `${paddedTime} Starting workflow...` });
+                            progress.report({ message: `${clockPrefix}${paddedTime} Starting workflow...` });
                         }
                     }, 3000);
 
@@ -402,6 +404,26 @@ export function activate(context: vscode.ExtensionContext) {
             // Set the commit message in the repository input box
             repo.inputBox.value = commitMessage;
 
+            // Also write to .git/COMMIT_EDITMSG so it appears in git commit editor
+            try {
+                const gitDir = path.join(workspacePath, '.git');
+                const commitEditmsgPath = path.join(gitDir, 'COMMIT_EDITMSG');
+
+                // Open COMMIT_EDITMSG in the editor BEFORE writing
+                const uri = vscode.Uri.file(commitEditmsgPath);
+                const doc = await vscode.window.showTextDocument(uri, {
+                    preview: false,
+                    viewColumn: vscode.ViewColumn.Beside
+                });
+
+                // Now write the commit message to the file
+                fs.writeFileSync(commitEditmsgPath, commitMessage, 'utf8');
+                log(`✓ Commit message written to ${commitEditmsgPath}`);
+            } catch (writeError) {
+                // Log but don't fail - the message is still in the input box
+                log(`Warning: Could not open/write COMMIT_EDITMSG: ${writeError}`);
+            }
+
             vscode.window.showInformationMessage('✓ Commit message generated and ready to review!');
 
         } catch (error) {
@@ -418,6 +440,155 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(disposable);
+
+    // Register Quick Message command (simplified, generator-only)
+    let quickDisposable = vscode.commands.registerCommand('claude-mcp-vscode.quickCommit', async () => {
+        log('=== Quick Message Button Clicked ===');
+
+        // Check if already generating
+        if (isGeneratingCommit) {
+            vscode.window.showWarningMessage('A commit message is already being generated. Please wait...');
+            return;
+        }
+
+        isGeneratingCommit = true;
+        statusBarItem.text = "$(sync~spin) Quick Message";
+        statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+        statusBarItem.command = undefined; // Disable clicking during generation
+
+        try {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                throw new Error('No workspace folder found');
+            }
+
+            const workspacePath = workspaceFolder.uri.fsPath;
+
+            // Get git repository
+            const gitExtension = vscode.extensions.getExtension('vscode.git');
+            if (!gitExtension) {
+                throw new Error('Git extension not found');
+            }
+
+            await gitExtension.activate();
+            const git = gitExtension.exports.getAPI(1);
+            const repo = git.repositories[0];
+
+            if (!repo) {
+                throw new Error('No git repository found');
+            }
+
+            // Validate git state
+            const validationError = await validateGitState(repo);
+            if (validationError) {
+                vscode.window.showErrorMessage(validationError);
+                return;
+            }
+
+            // Call quick-commit MCP tool
+            const commitMessage = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "⚡",
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ message: "Generating quick commit..." });
+
+                const mcpPath = path.join(workspacePath, 'src', 'mcp', 'vscode', 'mcp-vscode.exe');
+                const result = await new Promise<string>((resolve, reject) => {
+                    const mcpProcess = child_process.spawn(mcpPath, [], {
+                        cwd: workspacePath,
+                        env: { ...process.env, WORKSPACE_ROOT: workspacePath }
+                    });
+
+                    let output = '';
+                    let errorOutput = '';
+
+                    mcpProcess.stdout.on('data', (data: any) => {
+                        const chunk = data.toString();
+                        output += chunk;
+                    });
+
+                    mcpProcess.stderr.on('data', (data: any) => {
+                        errorOutput += data.toString();
+                    });
+
+                    mcpProcess.on('close', (code: number | null) => {
+                        if (code !== 0) {
+                            reject(new Error(`MCP process exited with code ${code}: ${errorOutput}`));
+                        } else {
+                            // Parse MCP response and extract commit message
+                            try {
+                                const lines = output.split('\n');
+                                for (const line of lines) {
+                                    if (line.trim()) {
+                                        const msg = JSON.parse(line);
+                                        if (msg.result && msg.result.content && msg.result.content[0]) {
+                                            const text = msg.result.content[0].text;
+                                            if (text.startsWith('ERROR:')) {
+                                                reject(new Error(text));
+                                            } else {
+                                                resolve(text);
+                                            }
+                                            return;
+                                        }
+                                    }
+                                }
+                                reject(new Error('No valid response from MCP server'));
+                            } catch (parseError) {
+                                reject(new Error(`Failed to parse MCP response: ${parseError}`));
+                            }
+                        }
+                    });
+
+                    // Send quick-commit request
+                    const request = {
+                        jsonrpc: "2.0",
+                        id: 1,
+                        method: "tools/call",
+                        params: {
+                            name: "quick-commit",
+                            arguments: {}
+                        }
+                    };
+
+                    mcpProcess.stdin.write(JSON.stringify(request) + '\n');
+                    mcpProcess.stdin.end();
+                });
+
+                return result;
+            });
+
+            // Set the commit message
+            repo.inputBox.value = commitMessage;
+
+            // Also write to COMMIT_EDITMSG
+            try {
+                const gitDir = path.join(workspacePath, '.git');
+                const commitEditmsgPath = path.join(gitDir, 'COMMIT_EDITMSG');
+                const uri = vscode.Uri.file(commitEditmsgPath);
+                const doc = await vscode.window.showTextDocument(uri, {
+                    preview: false,
+                    viewColumn: vscode.ViewColumn.Beside
+                });
+                fs.writeFileSync(commitEditmsgPath, commitMessage, 'utf8');
+                log(`✓ Quick commit message written to ${commitEditmsgPath}`);
+            } catch (writeError) {
+                log(`Warning: Could not open/write COMMIT_EDITMSG: ${writeError}`);
+            }
+
+            vscode.window.showInformationMessage('⚡ Quick commit message generated!');
+
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error: ${error}`);
+        } finally {
+            isGeneratingCommit = false;
+            statusBarItem.text = "$(robot) Commit Message AI";
+            statusBarItem.backgroundColor = undefined;
+            statusBarItem.command = "claude-mcp-vscode.callMCP";
+        }
+    });
+
+    context.subscriptions.push(quickDisposable);
 }
 
 /**

@@ -1,7 +1,7 @@
 # Deployable Unit Contract: docs-tutorial
 # Version: 0.1.0
 
-module_moniker: "docs-tutorial"
+moniker: "docs-tutorial"
 name: "Tutorial documentation"
 type: "mkdocs-subsite"
 description: "mkdocs base files for tutorial documentation"
