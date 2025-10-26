@@ -42,7 +42,7 @@
           "icon": "$(robot)"
         },
         {
-          "command": "claude-mcp-vscode.callMCP",
+          "command": "claude-mcp-vscode.noOp",
           "group": "navigation@2",
           "when": "scmProvider == git && claude-mcp-vscode.isGenerating",
           "icon": "$(sync~spin)"

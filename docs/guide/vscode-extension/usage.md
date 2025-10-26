@@ -10,7 +10,7 @@ Visual learner? Check out these demo guides:
 - [Git Commit Demo](docs/assets/git-commit-demo.md) - Using the extension button
 - [MCP Server Test](docs/assets/mcp-server-test.md) - Testing the server manually
 
-*Note: GIFs are not yet recorded. See the storyboards above for instructions.*
+_Note: GIFs are not yet recorded. See the storyboards above for instructions._
 
 ## Table of Contents
 
@@ -180,6 +180,7 @@ Press `Ctrl+C` to exit the server.
    ```
 
 2. **Press F5** (or Run → Start Debugging)
+
    - This opens a new VSCode window titled `[Extension Development Host]`
 
 3. **In the Extension Development Host window**:
@@ -189,6 +190,7 @@ Press `Ctrl+C` to exit the server.
 ### Step 2: Find the Extension Button
 
 1. **Open Source Control view:**
+
    - Click the Source Control icon in the Activity Bar (left sidebar)
    - Or press `Ctrl+Shift+G` (Windows/Linux) or `Cmd+Shift+G` (macOS)
 
@@ -201,12 +203,14 @@ Press `Ctrl+C` to exit the server.
 1. **Click the robot icon button**
 
 2. **Select an action** from the Quick Pick menu:
+
    - `Git Commit` - Stage and commit changes
    - `Git Push` - Push to remote
    - `Git Pull` - Pull from remote
    - `Custom Action` - Custom command
 
 3. **Enter a message** (if prompted):
+
    - For Git Commit or Custom Action
    - Example: "Initial commit"
    - Press Enter or leave blank

@@ -187,12 +187,12 @@ graph LR
 
 ### Examples
 
-| File Path                | Detected Module |
-| ------------------------ | --------------- |
-| `src/mcp/pwsh/main.go`   | `src-mcp-pwsh`      |
-| `src/mcp/docs/server.go` | `src-mcp-docs`      |
-| `src/mcp/github/api.go`  | `src-mcp-github`    |
-| `src/mcp/vscode/main.go` | `src-mcp-vscode`    |
+| File Path                | Detected Module  |
+| ------------------------ | ---------------- |
+| `src/mcp/pwsh/main.go`   | `src-mcp-pwsh`   |
+| `src/mcp/docs/server.go` | `src-mcp-docs`   |
+| `src/mcp/github/api.go`  | `src-mcp-github` |
+| `src/mcp/vscode/main.go` | `src-mcp-vscode` |
 
 ### Pattern 4: Contract Modules
 
@@ -216,8 +216,8 @@ graph LR
 
 ### Examples
 
-| File Path                                       | Detected Module              |
-| ----------------------------------------------- | ---------------------------- |
+| File Path                                           | Detected Module              |
+| --------------------------------------------------- | ---------------------------- |
 | `contracts/deployable-units/0.1.0/src-mcp-pwsh.yml` | `contracts-deployable-units` |
 
 ## File-to-Module Mapping

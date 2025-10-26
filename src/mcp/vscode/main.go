@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // MCP Server for VSCode integration
@@ -66,6 +67,12 @@ type Content struct {
 
 // Global encoder for stdout - shared across all responses and progress
 var stdoutEncoder *json.Encoder
+
+// Global start time for tracking elapsed time in progress messages
+var progressStartTime time.Time
+var stageStartTime time.Time
+var lastStageGlobalTime float64
+var lastStageLocalTime float64
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -227,6 +234,9 @@ func executeAction(action string, message string) string {
 }
 
 func generateSemanticCommitMessage(agentFile string) (string, error) {
+	// Initialize progress timer
+	progressStartTime = time.Now()
+
 	// Get workspace root from agent file path
 	// Agent file is at .claude/agents/vscode-extension-commit-button.md
 	workspaceRoot := filepath.Dir(filepath.Dir(filepath.Dir(agentFile)))
@@ -424,8 +434,8 @@ func gatherGitContext(workspaceRoot string) (*GitContext, error) {
 	}
 	ctx.Status = string(statusOutput)
 
-	// Get git diff for all changes
-	diffCmd := exec.Command("git", "diff", "HEAD")
+	// Get git diff for STAGED changes only
+	diffCmd := exec.Command("git", "diff", "--staged")
 	diffCmd.Dir = workspaceRoot
 	diffOutput, err := diffCmd.Output()
 	if err != nil {
@@ -649,6 +659,9 @@ func callClaude(prompt string, model string) (string, error) {
 	// Build command with optional model flag
 	// IMPORTANT: Use empty --setting-sources to bypass hooks and CLAUDE.md
 	// AND disable co-author attribution via settings JSON
+	// NOTE: We don't disable prompt caching as it significantly improves performance
+	// and Claude Code's API-level prompt caching is smart enough to invalidate
+	// when the actual git diff changes
 	args := []string{
 		"--print",
 		"--setting-sources", "",
@@ -1099,19 +1112,56 @@ type ProgressNotification struct {
 	Params  map[string]interface{} `json:"params"`
 }
 
+// formatDuration formats duration as 00m00s
+func formatDuration(seconds float64) string {
+	totalSecs := int(seconds)
+	mins := totalSecs / 60
+	secs := totalSecs % 60
+	return fmt.Sprintf("%02dm%02ds", mins, secs)
+}
+
 // sendProgress sends a progress notification to stdout (for the extension to display)
 func sendProgress(stage string, message string) {
+	// Calculate current elapsed times
+	globalElapsed := time.Since(progressStartTime).Seconds()
+
+	// Initialize stage timer if this is the first call
+	if stageStartTime.IsZero() {
+		stageStartTime = time.Now()
+	}
+	localElapsed := time.Since(stageStartTime).Seconds()
+
+	// Format stage/header with LAST stage's completion times
+	// This shows how long the previous stage took
+	var stageWithTime string
+	if lastStageGlobalTime > 0 {
+		// Show previous stage's times in the header
+		stageWithTime = fmt.Sprintf("%s (%s:%s)", stage,
+			formatDuration(lastStageGlobalTime),
+			formatDuration(lastStageLocalTime))
+	} else {
+		// First stage - no previous times to show
+		stageWithTime = fmt.Sprintf("%s (00m00s:00m00s)", stage)
+	}
+
 	// Debug: Log to stderr so we can see if this is being called
-	fmt.Fprintf(os.Stderr, "[DEBUG] Sending progress: %s - %s\n", stage, message)
+	fmt.Fprintf(os.Stderr, "[DEBUG] Sending progress: %s - %s\n", stageWithTime, message)
 
 	notification := ProgressNotification{
 		JSONRPC: "2.0",
 		Method:  "$/progress",
 		Params: map[string]interface{}{
-			"stage":   stage,
+			"stage":   stageWithTime,
 			"message": message,
 		},
 	}
+
+	// Save current times as "last stage" for next progress call
+	lastStageGlobalTime = globalElapsed
+	lastStageLocalTime = localElapsed
+
+	// Reset stage timer for next stage
+	stageStartTime = time.Now()
 
 	// Use the shared encoder to ensure consistent JSON output
 	if stdoutEncoder != nil {

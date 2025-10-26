@@ -75,13 +75,13 @@ All git status codes are normalized to 4 simple categories:
 ### Format Structure
 
 ```text
-# Revision
+## Summary
 
 <Human-readable summary - 2-4 sentences explaining the changes and their
 downstream/production impact. Focus on WHAT was accomplished and WHY it
 matters for the system. Be generous with detail here - this is the executive
 summary that helps stakeholders understand the commit's significance.
-IMPORTANT: CRITICAL: YOU ARE NOT SELLING A PRODUCT, YOU ARE EXPLAINING A EVERYTHING-AS-CODE CHANGE SET
+IMPORTANT: CRITICAL: YOU ARE NOT SELLING A PRODUCT, YOU ARE EXPLAINING AN EVERYTHING-AS-CODE CHANGE SET
 DOCUMENT THE TECHNICAL IMPACTS OF THESE CHANGES DOWNSTREAM!!
 STAKEHOLDERS ARE OPERATIONS AND FEEDBACK LOOPS UPSTREAM TO DEVELOPMENT FOR BUG DETECTION!
 >
@@ -94,14 +94,6 @@ STAKEHOLDERS ARE OPERATIONS AND FEEDBACK LOOPS UPSTREAM TO DEVELOPMENT FOR BUG D
 | modified | .vscode/extensions/claude-mcp-vscode/src/extension.ts          | vscode-extension |
 | modified | .vscode/extensions/claude-mcp-vscode/package.json              | vscode-extension |
 | added    | docs/new-feature.md                                            | docs       |
-
-## Summary
-
-| Module     | Globs                                       |
-| ---------- | ------------------------------------------- |
-| src-mcp-vscode | `src/mcp/vscode/**`                         |
-| vscode-extension | `.vscode/extensions/claude-mcp-vscode/**`   |
-| docs       | `docs/**`, `*.md`                           |
 
 ---
 
@@ -147,17 +139,17 @@ paths:
 
 ### Key Points
 
-- **`## Files affected` header**: Precedes the main file table at the top
-- **File table appears ONCE** at the top - shows ALL files with their normalized status and module
-- **`## Summary` header**: Follows the file table, contains a summary table of all modules and their globs
-- **Summary table**: Shows each module and its associated glob patterns in comma-separated format
+- **NO top-level `# Revision` header**: Title generator will add this later
+- **`## Summary` section**: First section, 2-4 sentences explaining production impact
+- **`## Files affected` header**: Precedes the main file table
+- **File table appears ONCE** - shows ALL files with their normalized status and module
+- **NO summary table with module globs** - removed from format
 - **CRITICAL: ONE section per unique module name** - Group all changes for a module into a SINGLE section
 - **CRITICAL: NO DUPLICATE module sections** - If module "src-mcp-vscode" has 5 files changed, create ONE `## src-mcp-vscode` section covering all changes
 - Each `---` separated section is ONE module
 - **CRITICAL: Each module section MUST start with `## <module-name>` header**
 - **CRITICAL: After body text in each module section, include ```yaml paths: block with glob patterns**
 - **NO file lists in module sections** - the table at top shows everything
-- **NO per-module summary tables** - the summary table at top shows all module globs
 - Status is already normalized (added/modified/deleted/renamed)
 - Module is already determined based on file path
 - Glob patterns are pre-generated and provided in MODULE METADATA section
@@ -186,7 +178,7 @@ paths:
 **Complete Example:**
 
 ```text
-# Revision abc123...
+## Summary
 
 This commit introduces automated semantic commit message generation for
 the VSCode extension, enabling developers to generate standardized,
@@ -200,13 +192,6 @@ conventions across the mono-repository.
 | -------- | ---------------------------------------------- | ---------- |
 | added    | src/mcp/vscode/main.go                         | src-mcp-vscode |
 | modified | .vscode/.../extension.ts                       | vscode-extension |
-
-## Summary
-
-| Module     | Globs                                       |
-| ---------- | ------------------------------------------- |
-| src-mcp-vscode | `src/mcp/vscode/**`                         |
-| vscode-extension | `.vscode/extensions/claude-mcp-vscode/**`   |
 
 ---
 
@@ -225,12 +210,24 @@ paths:
 
 ---
 
-```text
+## vscode-extension
+
+vscode-extension: feat: add commit button
+
+Adds robot button that triggers semantic commit
+message generation via MCP server integration.
+
+```yaml
+paths:
+  - '.vscode/extensions/claude-mcp-vscode/**'
+```
+```
 
 Note:
-- Summary is 2-4 sentences explaining production impact
-- `## Files affected` header precedes file table at top
-- `## Summary` header precedes module/glob summary table at top
+- NO top-level `# Revision` header (title generator will add this)
+- `## Summary` section is the first section with 2-4 sentences explaining production impact
+- `## Files affected` header precedes file table
+- NO summary table with module globs (removed)
 - Subject lines are ≤50 characters
 - Body lines wrapped at 72 characters
 - Each module section starts with ## <module-name> header

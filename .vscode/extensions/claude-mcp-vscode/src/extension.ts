@@ -86,7 +86,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register no-op command for disabled state
     let noOpDisposable = vscode.commands.registerCommand('claude-mcp-vscode.noOp', () => {
-        vscode.window.showInformationMessage('Stage some changes first to generate a commit message');
+        if (isGeneratingCommit) {
+            vscode.window.showInformationMessage('Working on it...');
+        } else {
+            vscode.window.showInformationMessage('Stage some changes first to generate a commit message');
+        }
     });
     context.subscriptions.push(noOpDisposable);
 
@@ -114,10 +118,10 @@ export function activate(context: vscode.ExtensionContext) {
 
         isGeneratingCommit = true;
 
-        // Use only prominent background (blue) - it's the most reliable and vibrant
-        // Warning (orange) looks like avocado in some themes, and error (red) is too alarming
+        // Show inactive/processing state with spinning icon and muted appearance
         statusBarItem.text = "$(sync~spin) Claude Commit";
         statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
+        statusBarItem.command = undefined; // Make icon inactive/non-clickable during generation
 
         // Update command to show it's working (this affects the SCM button too)
         vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', true);
@@ -149,6 +153,8 @@ export function activate(context: vscode.ExtensionContext) {
                 isGeneratingCommit = false;
                 statusBarItem.text = "$(robot) Claude Commit";
                 statusBarItem.backgroundColor = undefined;
+                statusBarItem.command = "claude-mcp-vscode.callMCP"; // Restore active state
+                vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', false);
                 return;
             }
 
@@ -311,14 +317,10 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             // Only reach here if commit message was successfully generated
-            // Set the commit message in the repository
+            // Set the commit message in the repository input box
             repo.inputBox.value = commitMessage;
 
-            // Trigger the git commit editor with the generated message
-            // This opens VSCode's COMMIT_EDITMSG file with the commit message pre-filled
-            await vscode.commands.executeCommand('git.commit');
-
-            vscode.window.showInformationMessage('✓ Commit message generated - review in Git editor!');
+            vscode.window.showInformationMessage('✓ Commit message generated and ready to review!');
 
         } catch (error) {
             vscode.window.showErrorMessage(`Error: ${error}`);
@@ -327,6 +329,7 @@ export function activate(context: vscode.ExtensionContext) {
             isGeneratingCommit = false;
             statusBarItem.text = "$(robot) Claude Commit";
             statusBarItem.backgroundColor = undefined;
+            statusBarItem.command = "claude-mcp-vscode.callMCP"; // Restore active/clickable state
             vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', false);
         }
     });
