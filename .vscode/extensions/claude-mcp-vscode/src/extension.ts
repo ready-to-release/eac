@@ -25,17 +25,17 @@ function log(message: string) {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('✓ Claude Commit Agent extension activated successfully');
+    console.log('✓ Commit Message AI extension activated successfully');
 
     // Create output channel
-    outputChannel = vscode.window.createOutputChannel('Claude Commit Agent');
+    outputChannel = vscode.window.createOutputChannel('Commit Message AI');
     context.subscriptions.push(outputChannel);
-    outputChannel.appendLine('✓ Claude Commit Agent extension activated');
+    outputChannel.appendLine('✓ Commit Message AI extension activated');
 
     // Show status bar item to indicate extension is loaded
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    statusBarItem.text = "$(robot) Claude Commit";
-    statusBarItem.tooltip = "Claude Commit Agent is active";
+    statusBarItem.text = "$(robot) Commit Message AI";
+    statusBarItem.tooltip = "Commit Message AI is active";
     statusBarItem.command = "claude-mcp-vscode.callMCP";
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
@@ -85,14 +85,41 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Register no-op command for disabled state
+    let clickCount = 0;
     let noOpDisposable = vscode.commands.registerCommand('claude-mcp-vscode.noOp', () => {
         if (isGeneratingCommit) {
-            vscode.window.showInformationMessage('Working on it...');
+            clickCount++;
+            const messages = [
+                'Working on it...',
+                'Still working... patience is a virtue! 🧘',
+                'Hey, I said working on it! ⏳',
+                'Seriously, give me a moment... 🤖',
+                'Are you testing my patience? 😅',
+                'OK, now you\'re just clicking for fun... 🎮',
+                'I\'m doing AI magic here! Takes time! ✨',
+                'Each click makes it slower... just kidding! 🐌',
+                'Brewing the perfect commit message... ☕',
+                'Rome wasn\'t built in a day! 🏛️',
+                'You must be really excited! Me too! 🎉',
+                'Pro tip: Watching the pot doesn\'t make it boil faster 👀',
+                'Computing... beep boop beep... 🤖',
+                'Nearly there... (not really, same progress) 📊',
+                'Your enthusiasm is noted and appreciated! 💝'
+            ];
+            const messageIndex = Math.min(clickCount - 1, messages.length - 1);
+            vscode.window.showInformationMessage(messages[messageIndex]);
         } else {
+            clickCount = 0; // Reset when not generating
             vscode.window.showInformationMessage('Stage some changes first to generate a commit message');
         }
     });
     context.subscriptions.push(noOpDisposable);
+
+    // Register command to show output channel
+    let showOutputDisposable = vscode.commands.registerCommand('claude-mcp-vscode.showOutput', () => {
+        outputChannel.show(true); // true = preserve focus on current editor
+    });
+    context.subscriptions.push(showOutputDisposable);
 
     // Register the command
     let disposable = vscode.commands.registerCommand('claude-mcp-vscode.callMCP', async () => {
@@ -108,7 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
             fs.writeFileSync(debugLogPath, '');
         }
 
-        log('=== Claude Commit Button Clicked ===');
+        log('=== Commit Message AI Button Clicked ===');
 
         // Check if already generating
         if (isGeneratingCommit) {
@@ -119,7 +146,7 @@ export function activate(context: vscode.ExtensionContext) {
         isGeneratingCommit = true;
 
         // Show inactive/processing state with spinning icon and muted appearance
-        statusBarItem.text = "$(sync~spin) Claude Commit";
+        statusBarItem.text = "$(sync~spin) Commit Message AI";
         statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
         statusBarItem.command = undefined; // Make icon inactive/non-clickable during generation
 
@@ -151,7 +178,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (validationError) {
                 vscode.window.showErrorMessage(validationError);
                 isGeneratingCommit = false;
-                statusBarItem.text = "$(robot) Claude Commit";
+                statusBarItem.text = "$(robot) Commit Message AI";
                 statusBarItem.backgroundColor = undefined;
                 statusBarItem.command = "claude-mcp-vscode.callMCP"; // Restore active state
                 vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', false);
@@ -171,10 +198,12 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Execute the agent with progress indicator
             let commitMessage: string;
+            const clockEmojis = ['🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛'];
+            let clockIndex = 0;
             try {
                 commitMessage = await vscode.window.withProgress({
                     location: vscode.ProgressLocation.Notification,
-                    title: `${['🚀', '⚡', '🎯', '✨', '💫', '🔥', '🌟', '⭐', '🎨', '🔮'][Math.floor(Math.random() * 10)]} Generating commit`,
+                    title: `${clockEmojis[0]}`,
                     cancellable: false
                 }, async (progress) => {
                     // Show randomized initial message
@@ -194,14 +223,44 @@ export function activate(context: vscode.ExtensionContext) {
                     let startTime = Date.now();
                     let simulationInterval: NodeJS.Timeout | null = null;
                     let tickCount = 0;
+                    let currentGlobalTime = '00s'; // Track latest global time from server
+                    let lastStageTimeInSec = 0; // Track when last stage started (in seconds from start)
+
+                    // Rotate clock emoji every 5 seconds (one hour on clock = 5 seconds real time)
+                    const clockInterval = setInterval(() => {
+                        clockIndex = (clockIndex + 1) % clockEmojis.length;
+                        statusBarItem.text = `$(sync~spin) ${clockEmojis[clockIndex]} ${currentGlobalTime}`;
+                    }, 5000);
 
                     // Start the actual agent execution with real progress callback
                     const agentPromise = executeAgent(workspacePath, agentFilePath, (realProgress) => {
                         log('[Real Progress Received] ' + realProgress);
+
+                        // Format: "stage (00m00s:00s) - message"
+                        // Extract global time and message
+                        const timeMatch = realProgress.match(/\(([^:]+):([^)]+)\) - (.+)$/);
+                        log('[Time Match Result] ' + JSON.stringify(timeMatch));
+                        if (timeMatch) {
+                            const globalTime = timeMatch[1].trim();
+                            const message = timeMatch[3].trim();
+                            log('[Extracted Global Time] ' + globalTime);
+                            // Store current global time for simulated messages
+                            currentGlobalTime = globalTime;
+                            // Update status bar with global time (clock will rotate via interval)
+                            statusBarItem.text = `$(sync~spin) ${clockEmojis[clockIndex]} ${globalTime}`;
+                            // Display just the message (no time suffix)
+                            progress.report({ message: message });
+                        } else {
+                            log('[Time Match Failed] Showing original message');
+                            progress.report({ message: realProgress });
+                        }
                         lastProgressTime = Date.now();
 
                         // Extract stage from message and log agent execution
                         if (realProgress.includes('generator') || realProgress.includes('gen-')) {
+                            if (lastStage !== 'generator') {
+                                lastStageTimeInSec = Math.floor((Date.now() - startTime) / 1000);
+                            }
                             lastStage = 'generator';
                             if (realProgress.includes('Generating initial commit')) {
                                 outputChannel.appendLine('');
@@ -211,6 +270,9 @@ export function activate(context: vscode.ExtensionContext) {
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }
                         } else if (realProgress.includes('reviewer') || realProgress.includes('rev-')) {
+                            if (lastStage !== 'reviewer') {
+                                lastStageTimeInSec = Math.floor((Date.now() - startTime) / 1000);
+                            }
                             lastStage = 'reviewer';
                             if (realProgress.includes('Reviewing commit')) {
                                 outputChannel.appendLine('');
@@ -220,6 +282,9 @@ export function activate(context: vscode.ExtensionContext) {
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }
                         } else if (realProgress.includes('approver') || realProgress.includes('app-')) {
+                            if (lastStage !== 'approver') {
+                                lastStageTimeInSec = Math.floor((Date.now() - startTime) / 1000);
+                            }
                             lastStage = 'approver';
                             if (realProgress.includes('Final approval')) {
                                 outputChannel.appendLine('');
@@ -267,46 +332,48 @@ export function activate(context: vscode.ExtensionContext) {
                             log('[Stage Detection] No progress received, assuming generator stage');
                         }
 
-                        // Show sub-progress based on current stage
+                        // Show sub-progress based on current stage (using actual global time from server)
                         if (lastStage === 'generator') {
                             if (timeSinceLastProgress < 10) {
-                                progress.report({ message: `🤖 Analyzing changes... (${timeSinceLastProgress}s)` });
+                                progress.report({ message: `🤖 Analyzing changes... | ${currentGlobalTime}` });
                             } else if (timeSinceLastProgress < 20) {
-                                progress.report({ message: `🔮 Discombulating abstractions into lists... (${timeSinceLastProgress}s)` });
+                                progress.report({ message: `🔮 Discombulating abstractions into lists... | ${currentGlobalTime}` });
                             } else if (timeSinceLastProgress < 35) {
-                                progress.report({ message: `📝 Writing module sections... (${timeSinceLastProgress}s)` });
+                                progress.report({ message: `📝 Writing module sections... | ${currentGlobalTime}` });
                             } else if (timeSinceLastProgress < 50) {
-                                progress.report({ message: `✨ Finalizing commit message... (${timeSinceLastProgress}s)` });
+                                progress.report({ message: `✨ Finalizing commit message... | ${currentGlobalTime}` });
                             } else {
-                                progress.report({ message: `⏳ Still generating... (${timeSinceLastProgress}s)` });
+                                progress.report({ message: `⏳ Still generating... | ${currentGlobalTime}` });
                             }
                         } else if (lastStage === 'reviewer') {
-                            if (timeSinceLastProgress < 10) progress.report({ message: "Reviewing commit message..." });
-                            else progress.report({ message: `Reviewing commit message (${timeSinceLastProgress}s elapsed)...` });
+                            if (timeSinceLastProgress < 10) progress.report({ message: `Reviewing commit message... | ${currentGlobalTime}` });
+                            else progress.report({ message: `Reviewing commit message... | ${currentGlobalTime}` });
                         } else if (lastStage === 'approver') {
-                            if (timeSinceLastProgress < 8) progress.report({ message: "Final approval..." });
-                            else progress.report({ message: `Final approval (${timeSinceLastProgress}s elapsed)...` });
+                            if (timeSinceLastProgress < 8) progress.report({ message: `Final approval... | ${currentGlobalTime}` });
+                            else progress.report({ message: `Final approval... | ${currentGlobalTime}` });
                         } else if (lastStage === 'concerns') {
-                            if (timeSinceLastProgress < 12) progress.report({ message: "Fixing concerns..." });
-                            else progress.report({ message: `Fixing concerns (${timeSinceLastProgress}s elapsed)...` });
+                            if (timeSinceLastProgress < 12) progress.report({ message: `Fixing concerns... | ${currentGlobalTime}` });
+                            else progress.report({ message: `Fixing concerns... | ${currentGlobalTime}` });
                         } else if (lastStage === 'title') {
-                            if (timeSinceLastProgress < 8) progress.report({ message: "✨ Generating commit title..." });
-                            else progress.report({ message: `✨ Generating commit title (${timeSinceLastProgress}s elapsed)...` });
+                            if (timeSinceLastProgress < 8) progress.report({ message: `✨ Generating commit title... | ${currentGlobalTime}` });
+                            else progress.report({ message: `✨ Generating commit title... | ${currentGlobalTime}` });
                         } else if (lastStage === 'setup') {
-                            progress.report({ message: "Setting up context..." });
+                            progress.report({ message: `Setting up context... | ${currentGlobalTime}` });
                         } else {
                             // No stage detected yet - show generic progress
-                            progress.report({ message: `Starting workflow (${totalElapsed}s elapsed)...` });
+                            progress.report({ message: `Starting workflow... | ${currentGlobalTime}` });
                         }
                     }, 3000);
 
                     try {
                         const result = await agentPromise;
                         if (simulationInterval) clearInterval(simulationInterval);
+                        if (clockInterval) clearInterval(clockInterval);
                         progress.report({ message: "Complete!" });
                         return result;
                     } catch (error) {
                         if (simulationInterval) clearInterval(simulationInterval);
+                        if (clockInterval) clearInterval(clockInterval);
                         throw error;
                     }
                 });
@@ -327,7 +394,8 @@ export function activate(context: vscode.ExtensionContext) {
         } finally {
             // Always reset the flag and status bar, even if there was an error
             isGeneratingCommit = false;
-            statusBarItem.text = "$(robot) Claude Commit";
+            clickCount = 0; // Reset click counter
+            statusBarItem.text = "$(robot) Commit Message AI";
             statusBarItem.backgroundColor = undefined;
             statusBarItem.command = "claude-mcp-vscode.callMCP"; // Restore active/clickable state
             vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', false);
@@ -408,8 +476,10 @@ async function executeAgent(workspacePath: string, agentFilePath: string, onProg
                         const parsed = JSON.parse(line);
                         log('[MCP Parsed JSON] ' + JSON.stringify(parsed));
                         if (parsed.method === '$/progress' && parsed.params && onProgress) {
-                            log('[MCP Progress] ' + parsed.params.message);
-                            onProgress(parsed.params.message);
+                            // Combine stage (with times) and message for display
+                            const progressText = `${parsed.params.stage} - ${parsed.params.message}`;
+                            log('[MCP Progress] ' + progressText);
+                            onProgress(progressText);
                         }
                     } catch (e) {
                         // Not JSON or not a progress notification, that's fine

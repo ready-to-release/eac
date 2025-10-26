@@ -73,6 +73,7 @@ var progressStartTime time.Time
 var stageStartTime time.Time
 var lastStageGlobalTime float64
 var lastStageLocalTime float64
+var lastStageName string
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -1112,11 +1113,15 @@ type ProgressNotification struct {
 	Params  map[string]interface{} `json:"params"`
 }
 
-// formatDuration formats duration as 00m00s
+// formatDuration formats duration as 00m00s, or just 00s if less than 1 minute
 func formatDuration(seconds float64) string {
 	totalSecs := int(seconds)
 	mins := totalSecs / 60
 	secs := totalSecs % 60
+
+	if mins == 0 {
+		return fmt.Sprintf("%02ds", secs)
+	}
 	return fmt.Sprintf("%02dm%02ds", mins, secs)
 }
 

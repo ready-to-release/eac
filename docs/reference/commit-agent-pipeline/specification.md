@@ -6,37 +6,43 @@ The Commit Agent Pipeline is a 5-agent system that generates high-quality, seman
 
 ## Architecture
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                         VSCode Extension                         │
-│  (.vscode/extensions/claude-mcp-vscode/src/extension.ts)        │
-│                                                                   │
-│  • UI: Status bar + Git SCM button                              │
-│  • Progress tracking with rainbow animation                      │
-│  • Git state validation (staged changes required)               │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │ JSON-RPC over stdio
-                      │
-┌─────────────────────▼───────────────────────────────────────────┐
-│                      MCP Server (Go)                             │
-│              (src/mcp/vscode/main.go)                           │
-│                                                                   │
-│  1. Gathers git context (diff, status, logs)                    │
-│  2. Reads documentation files                                    │
-│  3. Orchestrates 5 agents sequentially                          │
-│  4. Stitches outputs into final commit message                  │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │ Spawns claude CLI
-                      │
-┌─────────────────────▼───────────────────────────────────────────┐
-│                    5-Agent Pipeline                              │
-│                                                                   │
-│  Agent 1: Generator → Creates full commit with modules          │
-│  Agent 2: Reviewer  → Reviews and provides feedback             │
-│  Agent 3: Approver  → Extracts factual concerns                 │
-│  Agent 4: Concerns  → Fixes issues (conditional)                │
-│  Agent 5: Title     → Generates GitHub commit title             │
-└───────────────────────────────────────────────────────────────┘
+```graphviz
+digraph CommitAgentPipeline {
+    rankdir=TB;
+    node [shape=box, style=filled];
+
+    // VSCode Extension
+    vscode [label="VSCode Extension\n.vscode/extensions/claude-mcp-vscode/src/extension.ts\n\n• UI: Status bar + Git SCM button\n• Progress tracking with elapsed time\n• Git state validation (staged only)", fillcolor=lightblue];
+
+    // MCP Server
+    mcp [label="MCP Server (Go)\nsrc/mcp/vscode/main.go\n\n1. Gathers git context (--staged diff, status, logs)\n2. Reads documentation files\n3. Orchestrates 5 agents sequentially\n4. Stitches outputs into final commit message", fillcolor=lightgreen];
+
+    // Claude CLI
+    cli [label="Claude CLI\n(spawned process)", fillcolor=lightyellow];
+
+    // Agents
+    agent1 [label="Agent 1: Generator\nvscode-extension-commit-button.md\nModel: haiku\n\nCreates commit with module sections", fillcolor=lavender];
+    agent2 [label="Agent 2: Reviewer\ncommit-message-reviewer.md\nModel: haiku\n\nReviews and provides feedback", fillcolor=lavender];
+    agent3 [label="Agent 3: Approver\ncommit-message-approver.md\nModel: haiku\n\nExtracts factual concerns", fillcolor=lavender];
+    agent4 [label="Agent 4: Concerns Handler\ncommit-message-concerns-handler.md\nModel: haiku\n\nFixes issues (conditional)", fillcolor=lavender];
+    agent5 [label="Agent 5: Title Generator\ncommit-title-generator.md\nModel: haiku\n\nGenerates top-level heading", fillcolor=lavender];
+
+    // Output
+    output [label="Final Commit Message\n(in SCM input box)", fillcolor=lightcyan];
+
+    // Edges
+    vscode -> mcp [label="JSON-RPC\nover stdio"];
+    mcp -> cli [label="spawns"];
+    cli -> agent1 [label="--print --model haiku"];
+    agent1 -> agent2 [label="commit message"];
+    agent2 -> agent3 [label="review feedback"];
+    agent3 -> agent4 [label="concerns list\n(conditional)"];
+    agent3 -> agent5 [label="approved\n(no concerns)", style=dashed];
+    agent4 -> agent5 [label="corrected commit"];
+    agent5 -> mcp [label="title"];
+    mcp -> vscode [label="final message"];
+    vscode -> output;
+}
 ```
 
 ## Components

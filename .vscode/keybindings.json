@@ -13,5 +13,10 @@
     "key": "alt+m",
     "command": "markdown.showPreview",
     "when": "editorLangId == markdown"
+  },
+  {
+    "key": "ctrl+shift+c ctrl+shift+o",
+    "command": "claude-mcp-vscode.showOutput",
+    "when": "!terminalFocus"
   }
 ]

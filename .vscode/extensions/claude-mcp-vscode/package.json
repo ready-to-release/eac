@@ -1,7 +1,7 @@
 {
   "name": "claude-mcp-vscode",
-  "displayName": "Claude Commit Agent",
-  "description": "VSCode extension to execute Claude commit agent",
+  "displayName": "Commit Message AI",
+  "description": "VSCode extension for AI-powered semantic commit message generation",
   "version": "0.1.0",
   "publisher": "local",
   "engines": {
@@ -25,6 +25,11 @@
         "command": "claude-mcp-vscode.noOp",
         "title": "No Staged Changes",
         "icon": "$(circle-slash)"
+      },
+      {
+        "command": "claude-mcp-vscode.showOutput",
+        "title": "Commit Message AI: Show Output",
+        "icon": "$(output)"
       }
     ],
     "menus": {

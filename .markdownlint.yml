@@ -54,7 +54,7 @@ MD012:
 MD013:
   line_length: 2000
   heading_line_length: 100
-  code_block_line_length: 200
+  code_block_line_length: 300
   code_blocks: true
   tables: true
   headings: true
