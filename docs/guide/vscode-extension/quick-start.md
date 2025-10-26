@@ -8,7 +8,7 @@ Get up and running in 5 minutes!
 
 ```bash
 # Run the setup script
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/init.sh
 ```
 
 Wait for "✓ Initialization Complete!"
@@ -53,20 +53,20 @@ You now have:
 ## What's Next?
 
 - **Full guide**: See [USAGE.md](USAGE.md) for detailed instructions
-- **Automation**: See [automation/sh-vscode/README.md](automation/sh-vscode/README.md) for scripts
+- **Automation**: See [automation/sh/vscode/README.md](automation/sh/vscode/README.md) for scripts
 - **Development**: See [README.md](README.md) for architecture and development
 
 ## Common Commands
 
 ```bash
 # Restore dependencies (if issues)
-./automation/sh-vscode/restore.sh
+./automation/sh/vscode/restore.sh
 
 # Clean build artifacts
-./automation/sh-vscode/clean.sh
+./automation/sh/vscode/clean.sh
 
 # Rebuild everything
-./automation/sh-vscode/clean.sh && ./automation/sh-vscode/init.sh
+./automation/sh/vscode/clean.sh && ./automation/sh/vscode/init.sh
 ```
 
 ## Troubleshooting
@@ -76,7 +76,7 @@ You now have:
 | Robot icon not visible | Make sure you're in a Git repository (`git init`) |
 | "Go not found" | Install Go from <https://golang.org/dl/> |
 | "Node not found" | Install Node.js from <https://nodejs.org/> |
-| Build errors | Run `./automation/sh-vscode/restore.sh` |
+| Build errors | Run `./automation/sh/vscode/restore.sh` |
 
 ## Quick Reference
 
@@ -84,7 +84,7 @@ You now have:
 
 **MCP Servers**: `src/mcp/[pwsh|docs|github|vscode]/`
 
-**Scripts**: `automation/sh-vscode/[init|restore|clean].sh`
+**Scripts**: `automation/sh/vscode/[init|restore|clean].sh`
 
 **Reload Extension**: `Ctrl+R` in Extension Development Host
 

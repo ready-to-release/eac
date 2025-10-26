@@ -34,7 +34,7 @@ cli/
 ├── README.md                            # Project README (root level)
 └── CLAUDE.md                            # Claude Code instructions
 
-automation/sh-vscode/
+automation/sh/vscode/
 └── README.md                            # Automation scripts docs
 ```
 

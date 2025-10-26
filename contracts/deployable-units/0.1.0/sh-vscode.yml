@@ -1,0 +1,17 @@
+# Deployable Unit Contract: sh-vscode
+# Version: 0.1.0
+
+moniker: "sh-vscode"
+name: "Shell scripts for VSCode extension development"
+type: "automation"
+description: "Shell automation scripts for VSCode extension setup, cleanup, and initialization"
+root: "automation/sh/vscode"
+root_type: "script-collection"
+
+versioning:
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "automation/sh/vscode/CHANGELOG.md"
+
+source:
+  includes:
+    - "automation/sh/vscode/**"

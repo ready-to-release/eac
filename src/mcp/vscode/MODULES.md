@@ -29,7 +29,7 @@ containers/<module-name>/... → module-name
 
 | File Path | Detected Module | Type Prefix |
 |-----------|----------------|-------------|
-| `automation/sh-vscode/install.sh` | `sh-vscode` | `sh-` (shell) |
+| `automation/sh/vscode/install.sh` | `sh-vscode` | `sh-` (shell) |
 | `automation/pwsh-build/build.ps1` | `pwsh-build` | `pwsh-` (PowerShell) |
 | `automation/sh-deploy/deploy.sh` | `sh-deploy` | `sh-` (shell) |
 

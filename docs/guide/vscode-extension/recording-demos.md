@@ -87,7 +87,7 @@ Before recording:
 **Scene 1: Terminal - Initialize (0:00-0:08)**
 
 ```bash
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/init.sh
 ```
 
 - Show initialization running
@@ -298,7 +298,7 @@ The easiest way:
 
 ```bash
 # This guides you through recording
-./automation/sh-vscode/record-demo.sh
+./automation/sh/vscode/record-demo.sh
 ```
 
 The script will:
@@ -315,8 +315,8 @@ The script will:
 
 ```bash
 # Clean and initialize
-./automation/sh-vscode/clean.sh
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/clean.sh
+./automation/sh/vscode/init.sh
 
 # Clear terminal
 clear

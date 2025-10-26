@@ -52,4 +52,42 @@ Approved (with concerns)
 - [Factual issue 2]
 ```
 
+## CRITICAL OUTPUT REQUIREMENTS - ANTI-CORRUPTION LAYER
+
+Your output MUST be PURE CONTENT ONLY. The Go layer expects exactly ONE content block with NO wrapper text.
+
+FORBIDDEN patterns that will corrupt the output:
+
+- ❌ "The commit message is approved:"
+- ❌ "After reviewing, I conclude:"
+- ❌ "Here is my approval:"
+- ❌ Any conversational preamble
+- ❌ Any markdown code fences around the output
+- ❌ Any explanatory text
+
+✅ CORRECT: Start IMMEDIATELY with `## Approved`
+✅ Your first characters MUST be `## Approved`
+
+Example of CORRECT output:
+
+```markdown
+## Approved
+
+Approved
+```
+
+Example of INCORRECT output:
+
+```markdown
+After reviewing the commit message, I conclude:
+
+## Approved
+
+Approved
+```
+
+The Go layer will extract your content block and strip any wrapper text, but you MUST output pure content to ensure reliability.
+
+---
+
 Now process the input below:

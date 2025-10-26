@@ -1,0 +1,16 @@
+moniker: "containers"
+name: "Container Definitions"
+type: "containers"
+description: "Docker container definitions and configurations for deployable services"
+root: "containers/"
+root_type: "containers-directory"
+
+versioning:
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "containers/CHANGELOG.md"
+
+source:
+  includes:
+    - "**/*"
+
+depends_on: []

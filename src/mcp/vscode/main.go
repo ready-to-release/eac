@@ -223,6 +223,11 @@ func callTool(params *CallToolParams) ToolResult {
 			}
 		}
 
+		// Anti-corruption layer architecture:
+		// - Agents are instructed to output ONLY pure content (no meta-commentary)
+		// - callClaude() applies extractContentBlock() to strip any wrapper text
+		// - This function returns exactly ONE Content block to VSCode extension
+		// This ensures clean separation: agents produce content, Go ensures purity
 		return ToolResult{
 			Content: []Content{{
 				Type: "text",
@@ -302,6 +307,30 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 	initialCommit, err := callClaude(generatorPrompt, generatorModel)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate initial commit: %w", err)
+	}
+
+	// Step 5.5: Early validation for file/module completeness
+	// This provides ONE-TIME feedback to generator before continuing the pipeline
+	sendProgress("gen-validate", "Validating file completeness...")
+	earlyErrors := validateFileCompleteness(initialCommit, gitContext)
+	if len(earlyErrors) > 0 {
+		sendProgress("gen-feedback", "Providing feedback to generator...")
+		fmt.Fprintf(os.Stderr, "[DEBUG] Early validation found %d completeness issues, regenerating with feedback\n", len(earlyErrors))
+
+		// Build feedback prompt with specific issues
+		feedbackPrompt := buildFeedbackPrompt(generatorPrompt, initialCommit, earlyErrors)
+
+		// ONE-TIME regeneration with feedback
+		sendProgress("gen-regen", "Regenerating with feedback...")
+		regenerated, err := callClaude(feedbackPrompt, generatorModel)
+		if err != nil {
+			// If regeneration fails, continue with original (validator will catch issues later)
+			fmt.Fprintf(os.Stderr, "[WARN] Regeneration failed: %v, continuing with original\n", err)
+		} else {
+			// Use regenerated version
+			initialCommit = regenerated
+			fmt.Fprintf(os.Stderr, "[DEBUG] Regeneration successful, using improved version\n")
+		}
 	}
 
 	// Step 6: Load reviewer agent
@@ -390,6 +419,9 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 	// Clean the title (remove any extra whitespace/newlines)
 	commitTitle = strings.TrimSpace(commitTitle)
 
+	// Debug: Log the commit title
+	fmt.Fprintf(os.Stderr, "[DEBUG] Commit title: '%s' (length: %d)\n", commitTitle, len(commitTitle))
+
 	// Step 14: Stitch together final commit message from all agents
 	sendProgress("stitch", "Stitching agent outputs...")
 
@@ -400,6 +432,8 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 	composite.WriteString("# ")
 	composite.WriteString(commitTitle)
 	composite.WriteString("\n\n")
+
+	fmt.Fprintf(os.Stderr, "[DEBUG] After adding title, composite starts with: '%s'\n", composite.String()[:min(100, composite.Len())])
 
 	// 2. Add the base commit message (remove any heading if present)
 	cleanCommit := baseCommit
@@ -431,22 +465,31 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 
 	finalCommit = composite.String()
 
+	// Step 14.5: Apply pre-validation auto-corrections
+	sendProgress("auto-correct", "Applying formatting corrections...")
+	fmt.Fprintf(os.Stderr, "[DEBUG] Before auto-correct, first 300 chars:\n%s\n", finalCommit[:min(300, len(finalCommit))])
+	finalCommit = autoCorrectCommitMessage(finalCommit)
+	fmt.Fprintf(os.Stderr, "[DEBUG] After auto-correct, first 300 chars:\n%s\n", finalCommit[:min(300, len(finalCommit))])
+
 	// Step 15: Validate the final commit message
 	sendProgress("validate", "Validating commit message structure...")
-	validationErrors := validateCommitMessage(finalCommit, workspaceRoot)
+	validationErrors := validateCommitMessage(finalCommit, workspaceRoot, gitContext)
 	if len(validationErrors) > 0 {
 		// Auto-fix validation errors with fixer agent
 		sendProgress("fixer-init", "Loading commit message fixer...")
 		fixerPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-fixer.md")
 		fixerInstructions, err := ioutil.ReadFile(fixerPath)
 		if err != nil {
-			// If fixer agent doesn't exist, return validation errors
-			var errorMessages []string
-			errorMessages = append(errorMessages, "❌ Commit message validation failed:")
+			// If fixer agent doesn't exist, append validation errors to commit message
+			var errorSection strings.Builder
+			errorSection.WriteString("\n\n---\n\n")
+			errorSection.WriteString("⚠️ **VALIDATION ERRORS** - Please fix before committing:\n\n")
 			for _, verr := range validationErrors {
-				errorMessages = append(errorMessages, fmt.Sprintf("  • %s", verr.Message))
+				errorSection.WriteString(fmt.Sprintf("- %s\n", verr.Message))
 			}
-			return "", fmt.Errorf("%s", strings.Join(errorMessages, "\n"))
+			finalCommit = finalCommit + errorSection.String()
+			sendProgress("complete", "Complete (with validation warnings)")
+			return finalCommit, nil
 		}
 		fixerModel := extractModelFromAgent(string(fixerInstructions))
 
@@ -469,15 +512,19 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 
 		// Re-validate the fixed commit
 		sendProgress("revalidate", "Re-validating fixed commit...")
-		revalidationErrors := validateCommitMessage(fixedCommit, workspaceRoot)
+		revalidationErrors := validateCommitMessage(fixedCommit, workspaceRoot, gitContext)
 		if len(revalidationErrors) > 0 {
-			// Fixer didn't work, return both original and new errors
-			var errorMessages []string
-			errorMessages = append(errorMessages, "❌ Commit message validation failed even after auto-fix:")
+			// Fixer didn't work, append errors to commit message for user to fix manually
+			var errorSection strings.Builder
+			errorSection.WriteString("\n\n---\n\n")
+			errorSection.WriteString("⚠️ **VALIDATION ERRORS** (auto-fix attempted but failed):\n\n")
 			for _, verr := range revalidationErrors {
-				errorMessages = append(errorMessages, fmt.Sprintf("  • %s", verr.Message))
+				errorSection.WriteString(fmt.Sprintf("- %s\n", verr.Message))
 			}
-			return "", fmt.Errorf("%s", strings.Join(errorMessages, "\n"))
+			errorSection.WriteString("\n**Note**: Auto-fix was attempted but couldn't resolve all issues. Please fix manually.\n")
+			finalCommit = fixedCommit + errorSection.String()
+			sendProgress("complete", "Complete (with validation warnings)")
+			return finalCommit, nil
 		}
 
 		// Fixed successfully!
@@ -525,6 +572,10 @@ func generateQuickCommitMessage() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to generate commit: %w", err)
 	}
+
+	// Step 5: Apply auto-corrections
+	sendProgress("auto-correct", "Applying formatting corrections...")
+	commitMessage = autoCorrectCommitMessage(commitMessage)
 
 	sendProgress("complete", "Complete!")
 	return commitMessage, nil
@@ -596,8 +647,83 @@ func loadModuleContracts(workspaceRoot string) (map[string]ModuleContract, error
 	return contracts, nil
 }
 
+// autoCorrectCommitMessage applies simple auto-corrections before validation
+// This fixes common formatting issues without needing the full fixer agent
+func autoCorrectCommitMessage(commitMessage string) string {
+	lines := strings.Split(commitMessage, "\n")
+	var corrected []string
+
+	yamlBlockOpen := false
+	hasTopLevelHeading := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Track top-level heading
+		if strings.HasPrefix(line, "# ") {
+			hasTopLevelHeading = true
+		}
+
+		// Track YAML blocks
+		if strings.HasPrefix(trimmed, "```yaml") {
+			yamlBlockOpen = true
+			corrected = append(corrected, line)
+			continue
+		}
+
+		// Check if we're closing a YAML block
+		if yamlBlockOpen && strings.HasPrefix(trimmed, "```") && trimmed == "```" {
+			yamlBlockOpen = false
+			corrected = append(corrected, line)
+			continue
+		}
+
+		// If we hit next module section (##) while yaml block is open, close it first
+		if yamlBlockOpen && strings.HasPrefix(trimmed, "## ") {
+			corrected = append(corrected, "```")
+			yamlBlockOpen = false
+		}
+
+		// If we hit "Agent: " while yaml block is open, close it first
+		if yamlBlockOpen && strings.HasPrefix(trimmed, "Agent:") {
+			corrected = append(corrected, "```")
+			yamlBlockOpen = false
+		}
+
+		corrected = append(corrected, line)
+	}
+
+	// If yaml block is still open at end, close it
+	if yamlBlockOpen {
+		corrected = append(corrected, "```")
+	}
+
+	result := strings.Join(corrected, "\n")
+
+	// Debug: Log if heading is missing
+	if !hasTopLevelHeading {
+		fmt.Fprintf(os.Stderr, "[WARNING] Auto-correct: No top-level heading found in commit message!\n")
+		fmt.Fprintf(os.Stderr, "[DEBUG] First 200 chars: %s\n", result[:min(200, len(result))])
+	}
+
+	// Ensure file ends with newline
+	if !strings.HasSuffix(result, "\n") {
+		result += "\n"
+	}
+
+	return result
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // validateCommitMessage validates the structure and content of a commit message
-func validateCommitMessage(commitMessage string, workspaceRoot string) []CommitValidationError {
+func validateCommitMessage(commitMessage string, workspaceRoot string, gitContext *GitContext) []CommitValidationError {
 	var errors []CommitValidationError
 
 	// Load module contracts
@@ -770,11 +896,11 @@ func validateCommitMessage(commitMessage string, workspaceRoot string) []CommitV
 		// Validate 72-character line limit for Summary and module body text
 		// Skip empty lines, headers, horizontal rules, table lines, and yaml blocks
 		if (inSummarySection || inModuleBodySection) &&
-		   trimmed != "" &&
-		   !strings.HasPrefix(trimmed, "#") &&
-		   !strings.HasPrefix(trimmed, "---") &&
-		   !strings.HasPrefix(trimmed, "|") &&
-		   !strings.HasPrefix(trimmed, "```") {
+			trimmed != "" &&
+			!strings.HasPrefix(trimmed, "#") &&
+			!strings.HasPrefix(trimmed, "---") &&
+			!strings.HasPrefix(trimmed, "|") &&
+			!strings.HasPrefix(trimmed, "```") {
 			if len(trimmed) > 72 {
 				sectionName := "module body"
 				if inSummarySection {
@@ -810,7 +936,255 @@ func validateCommitMessage(commitMessage string, workspaceRoot string) []CommitV
 		})
 	}
 
+	// Validate 1-1 file match: every staged file MUST appear in Files affected table
+	if gitContext != nil {
+		// Extract files from the "## Files affected" table in the commit message
+		filesInTable := extractFilesFromTable(commitMessage)
+
+		// Create sets for comparison
+		stagedFiles := make(map[string]bool)
+		for _, change := range gitContext.FileChanges {
+			stagedFiles[change.FilePath] = true
+		}
+
+		tableFiles := make(map[string]bool)
+		for _, file := range filesInTable {
+			tableFiles[file] = true
+		}
+
+		// Check for files in staged but NOT in table
+		var missingFiles []string
+		for file := range stagedFiles {
+			if !tableFiles[file] {
+				missingFiles = append(missingFiles, file)
+			}
+		}
+
+		// Check for files in table but NOT in staged
+		var extraFiles []string
+		for file := range tableFiles {
+			if !stagedFiles[file] {
+				extraFiles = append(extraFiles, file)
+			}
+		}
+
+		// Report missing files
+		if len(missingFiles) > 0 {
+			errors = append(errors, CommitValidationError{
+				Field:   "file-completeness",
+				Message: fmt.Sprintf("Files affected table is missing %d staged file(s):\n  - %s",
+					len(missingFiles), strings.Join(missingFiles, "\n  - ")),
+			})
+		}
+
+		// Report extra files
+		if len(extraFiles) > 0 {
+			errors = append(errors, CommitValidationError{
+				Field:   "file-accuracy",
+				Message: fmt.Sprintf("Files affected table contains %d file(s) that are NOT staged:\n  - %s",
+					len(extraFiles), strings.Join(extraFiles, "\n  - ")),
+			})
+		}
+	}
+
 	return errors
+}
+
+// validateFileCompleteness performs early validation for file/module completeness
+// This is used to provide ONE-TIME feedback to the generator before the full pipeline
+func validateFileCompleteness(commitMessage string, gitContext *GitContext) []CommitValidationError {
+	var errors []CommitValidationError
+
+	if gitContext == nil {
+		return errors
+	}
+
+	// Extract files from the "## Files affected" table
+	filesInTable := extractFilesFromTable(commitMessage)
+
+	// Create sets for comparison
+	stagedFiles := make(map[string]bool)
+	for _, change := range gitContext.FileChanges {
+		stagedFiles[change.FilePath] = true
+	}
+
+	tableFiles := make(map[string]bool)
+	for _, file := range filesInTable {
+		tableFiles[file] = true
+	}
+
+	// Check for files in staged but NOT in table
+	var missingFiles []string
+	for file := range stagedFiles {
+		if !tableFiles[file] {
+			missingFiles = append(missingFiles, file)
+		}
+	}
+
+	// Check for files in table but NOT in staged
+	var extraFiles []string
+	for file := range tableFiles {
+		if !stagedFiles[file] {
+			extraFiles = append(extraFiles, file)
+		}
+	}
+
+	// Report missing files (completeness issue)
+	if len(missingFiles) > 0 {
+		errors = append(errors, CommitValidationError{
+			Field:   "file-completeness",
+			Message: fmt.Sprintf("Files affected table is missing %d staged file(s):\n  - %s",
+				len(missingFiles), strings.Join(missingFiles, "\n  - ")),
+		})
+	}
+
+	// Report extra files (accuracy issue)
+	if len(extraFiles) > 0 {
+		errors = append(errors, CommitValidationError{
+			Field:   "file-accuracy",
+			Message: fmt.Sprintf("Files affected table contains %d file(s) that are NOT staged:\n  - %s",
+				len(extraFiles), strings.Join(extraFiles, "\n  - ")),
+		})
+	}
+
+	// Check module completeness: all modules with changes should have ## sections
+	modulesInGit := make(map[string]bool)
+	for _, change := range gitContext.FileChanges {
+		if change.Module != "" && change.Module != "unknown" {
+			modulesInGit[change.Module] = true
+		}
+	}
+
+	modulesInCommit := extractModuleSections(commitMessage)
+	modulesInCommitMap := make(map[string]bool)
+	for _, module := range modulesInCommit {
+		modulesInCommitMap[module] = true
+	}
+
+	// Find modules that have file changes but no section
+	var missingModules []string
+	for module := range modulesInGit {
+		if !modulesInCommitMap[module] {
+			missingModules = append(missingModules, module)
+		}
+	}
+
+	if len(missingModules) > 0 {
+		errors = append(errors, CommitValidationError{
+			Field:   "module-completeness",
+			Message: fmt.Sprintf("Commit message is missing sections for %d module(s) that have changes:\n  - %s",
+				len(missingModules), strings.Join(missingModules, "\n  - ")),
+		})
+	}
+
+	return errors
+}
+
+// buildFeedbackPrompt creates a prompt for the generator to regenerate with specific feedback
+func buildFeedbackPrompt(originalPrompt string, firstAttempt string, validationErrors []CommitValidationError) string {
+	var feedback strings.Builder
+
+	feedback.WriteString(originalPrompt)
+	feedback.WriteString("\n\n---\n\n")
+	feedback.WriteString("# VALIDATOR FEEDBACK - ONE-TIME ADJUSTMENT\n\n")
+	feedback.WriteString("Your first attempt had the following completeness issues:\n\n")
+
+	for _, err := range validationErrors {
+		feedback.WriteString(fmt.Sprintf("## %s\n\n", err.Field))
+		feedback.WriteString(fmt.Sprintf("%s\n\n", err.Message))
+	}
+
+	feedback.WriteString("## Your First Attempt\n\n")
+	feedback.WriteString("```\n")
+	feedback.WriteString(firstAttempt)
+	feedback.WriteString("\n```\n\n")
+
+	feedback.WriteString("## Instructions\n\n")
+	feedback.WriteString("Please regenerate the commit message, fixing ALL the issues listed above:\n\n")
+	feedback.WriteString("1. Add ALL missing files to the Files affected table\n")
+	feedback.WriteString("2. Remove any files that are not actually staged\n")
+	feedback.WriteString("3. Ensure EVERY module with changes has a corresponding ## module section\n")
+	feedback.WriteString("4. Follow the exact same format and structure as before\n\n")
+	feedback.WriteString("Output the COMPLETE corrected commit message (starting with ## Summary).\n")
+
+	return feedback.String()
+}
+
+// extractModuleSections parses the commit message and returns list of module section headers
+func extractModuleSections(commitMessage string) []string {
+	var modules []string
+	lines := strings.Split(commitMessage, "\n")
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Look for ## headers that are NOT Summary or Files affected
+		if strings.HasPrefix(trimmed, "## ") {
+			header := strings.TrimPrefix(trimmed, "## ")
+			header = strings.TrimSpace(header)
+
+			// Skip special sections
+			if header != "Summary" && header != "Files affected" && header != "Approved" {
+				modules = append(modules, header)
+			}
+		}
+	}
+
+	return modules
+}
+
+// extractFilesFromTable parses the "## Files affected" table and returns the list of file paths
+func extractFilesFromTable(commitMessage string) []string {
+	var files []string
+	lines := strings.Split(commitMessage, "\n")
+	inFilesTable := false
+	tableHeaderSeen := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Detect start of Files affected section
+		if strings.HasPrefix(trimmed, "## Files affected") {
+			inFilesTable = true
+			continue
+		}
+
+		// Exit table when we hit next section or horizontal rule
+		if inFilesTable && (strings.HasPrefix(trimmed, "##") || trimmed == "---") {
+			break
+		}
+
+		// Parse table rows
+		if inFilesTable && strings.HasPrefix(trimmed, "|") {
+			// Skip header row (| Status | File | Module |)
+			if strings.Contains(trimmed, "Status") && strings.Contains(trimmed, "File") {
+				tableHeaderSeen = false
+				continue
+			}
+
+			// Skip separator row (| -------- | --- | --- |)
+			if strings.Contains(trimmed, "---") {
+				tableHeaderSeen = true
+				continue
+			}
+
+			// Parse data rows (after header)
+			if tableHeaderSeen {
+				// Split by | and extract the File column (index 2)
+				parts := strings.Split(trimmed, "|")
+				if len(parts) >= 4 { // Expected: empty, Status, File, Module, empty
+					filePath := strings.TrimSpace(parts[2])
+					// Preserve the full path as-is (including "old -> new" for renames)
+					// This matches what git status shows and what's in FileChange.FilePath
+					if filePath != "" {
+						files = append(files, filePath)
+					}
+				}
+			}
+		}
+	}
+
+	return files
 }
 
 func gatherGitContext(workspaceRoot string) (*GitContext, error) {
@@ -1044,6 +1418,101 @@ func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[st
 	return prompt.String()
 }
 
+// extractContentBlock implements an anti-corruption layer that extracts
+// pure content from agent output, removing any meta-commentary or instructions
+func extractContentBlock(agentOutput string) string {
+	// Anti-corruption layer: agents should only output content
+	// This function ensures we only extract the actual content block,
+	// stripping any conversational wrapper or meta-commentary
+
+	// Common patterns to strip:
+	// - "Let me output...", "Here is...", "I will provide..."
+	// - "Agent: Approved", "Agent: ..." at the end
+	// - Markdown code fences around the content
+
+	lines := strings.Split(agentOutput, "\n")
+	var contentLines []string
+	inContent := false
+	skipNextEmpty := false
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Skip meta-commentary at the start
+		if !inContent {
+			// Skip lines that look like conversational wrapper
+			if strings.HasPrefix(trimmed, "Let me ") ||
+				strings.HasPrefix(trimmed, "Here is ") ||
+				strings.HasPrefix(trimmed, "I will ") ||
+				strings.HasPrefix(trimmed, "I'll ") ||
+				strings.HasPrefix(trimmed, "I'm ") ||
+				strings.HasPrefix(trimmed, "The corrected ") ||
+				strings.HasPrefix(trimmed, "The generated ") ||
+				strings.HasPrefix(trimmed, "After reviewing") ||
+				(strings.HasPrefix(trimmed, "The ") && strings.Contains(trimmed, "message")) {
+				continue
+			}
+
+			// Skip opening markdown fence
+			if trimmed == "```" || trimmed == "```markdown" || trimmed == "```yaml" {
+				skipNextEmpty = true
+				continue
+			}
+
+			// Skip horizontal rules at start (but allow up to 5 lines in case of frontmatter)
+			if trimmed == "---" && i < 5 {
+				continue
+			}
+
+			// Skip empty lines before content starts
+			if trimmed == "" {
+				if skipNextEmpty {
+					skipNextEmpty = false
+				}
+				continue
+			}
+
+			// Content detection: starts with # (heading), ## (section), or any text
+			// This catches both "# title" and "## Summary" formats
+			inContent = true
+		}
+
+		// Strip "Agent: ..." suffix lines
+		if strings.HasPrefix(trimmed, "Agent:") {
+			break
+		}
+
+		// Strip closing markdown fence
+		if trimmed == "```" && inContent {
+			// Check if this is a closing fence for a code block vs the wrapper
+			// If we see ``` and the previous non-empty line was a yaml block, it's a valid closing
+			// Otherwise it might be the wrapper fence
+			if len(contentLines) > 0 {
+				// Look back for yaml block
+				foundYaml := false
+				for j := len(contentLines) - 1; j >= 0 && j >= len(contentLines)-10; j-- {
+					if strings.Contains(contentLines[j], "```yaml") {
+						foundYaml = true
+						break
+					}
+				}
+				if !foundYaml {
+					// This is the wrapper closing fence, stop here
+					break
+				}
+			}
+		}
+
+		// Collect content line
+		if inContent {
+			contentLines = append(contentLines, line)
+		}
+	}
+
+	result := strings.Join(contentLines, "\n")
+	return strings.TrimSpace(result)
+}
+
 func callClaude(prompt string, model string) (string, error) {
 	// Use Claude Code CLI instead of direct API calls
 	// This leverages the user's existing Claude Code subscription
@@ -1082,9 +1551,15 @@ func callClaude(prompt string, model string) (string, error) {
 		return "", fmt.Errorf("claude CLI failed: %w\nStderr: %s", err, stderr.String())
 	}
 
-	// The output should be the structured commit message
-	commitMessage := strings.TrimSpace(stdout.String())
+	// Apply anti-corruption layer: extract only the content block
+	rawOutput := stdout.String()
+	fmt.Fprintf(os.Stderr, "[DEBUG] Raw agent output length: %d bytes\n", len(rawOutput))
 
+	// The output should be the structured commit message
+	commitMessage := extractContentBlock(rawOutput)
+	fmt.Fprintf(os.Stderr, "[DEBUG] After extractContentBlock: %d bytes\n", len(commitMessage))
+
+	// Additional cleanup layers (for backward compatibility)
 	// Clean up any markdown code blocks if present
 	commitMessage = strings.TrimPrefix(commitMessage, "```")
 	commitMessage = strings.TrimSuffix(commitMessage, "```")
@@ -1116,6 +1591,9 @@ func callClaude(prompt string, model string) (string, error) {
 	// Ensure commit message ends with exactly one newline (MD047 compliance)
 	commitMessage = strings.TrimRight(commitMessage, "\n")
 	commitMessage = commitMessage + "\n"
+
+	fmt.Fprintf(os.Stderr, "[DEBUG] Final cleaned output: %d bytes, starts with: %s\n",
+		len(commitMessage), commitMessage[:min(50, len(commitMessage))])
 
 	return commitMessage, nil
 }
@@ -1176,15 +1654,23 @@ func determineFileModule(filePath string) string {
 		return "repo-config"
 	}
 
-	// Special case: README.md and documentation files in src/ directories
-	// These are docs, not part of the code module
+	// Special case: README.md and documentation files
+	// These belong to their parent module, NOT a separate "README.md" module
 	if fileName == "README.md" || fileName == "CONTRIBUTING.md" {
-		// If in src/mcp/ or src/cli/, it's documentation, not the module itself
-		if strings.HasPrefix(filePath, "src/") {
+		// Root README files are docs
+		if !strings.Contains(filePath, "/") {
 			return "docs"
 		}
-		// Root README files are also docs
-		if !strings.Contains(filePath, "/") {
+		// For module READMEs (e.g., automation/sh/vscode/README.md),
+		// remove the filename and detect the parent directory's module
+		parentDir := filepath.Dir(filePath)
+		if parentDir != "." && parentDir != "/" {
+			// Recursively detect module from parent directory
+			// Add a dummy file to make pattern matching work
+			return determineFileModule(parentDir + "/dummy.file")
+		}
+		// Fallback: if in src/ or docs/, it's documentation
+		if strings.HasPrefix(filePath, "src/") || strings.HasPrefix(filePath, "docs/") {
 			return "docs"
 		}
 	}
@@ -1196,12 +1682,17 @@ func determineFileModule(filePath string) string {
 		return "repo-config"
 	}
 
-	// Pattern 1: automation/<module-name>/... → extract module name
-	// Examples: automation/sh-vscode/ → "sh-vscode", automation/pwsh-build/ → "pwsh-build"
+	// Pattern 1: automation/<type>/<name>/... → extract module name as "<type>-<name>"
+	// Examples: automation/sh/vscode/ → "sh-vscode", automation/pwsh/build/ → "pwsh-build"
+	// Special case: automation/<module-name>/ (flat) → "<module-name>"
 	if strings.HasPrefix(filePath, "automation/") {
 		parts := strings.Split(filePath, "/")
-		if len(parts) >= 2 && parts[1] != "" {
-			return parts[1] // Module type detected from prefix (sh-, pwsh-, etc.)
+		if len(parts) >= 3 && parts[1] != "" && parts[2] != "" {
+			// Multi-level: automation/<type>/<name>/ → "type-name"
+			return parts[1] + "-" + parts[2]
+		} else if len(parts) >= 2 && parts[1] != "" {
+			// Flat: automation/<module>/ → "module"
+			return parts[1]
 		}
 		return "automation" // fallback for files directly in automation/
 	}
@@ -1426,10 +1917,20 @@ func parseFileChanges(status string) []FileChange {
 			statusCode := line[0:2]
 			filename := strings.TrimSpace(line[3:])
 
+			// Handle renamed files: "old -> new" format
+			// Extract destination for module detection, keep full path for FilePath
+			moduleDetectionPath := filename
+			if strings.Contains(filename, " -> ") {
+				renameParts := strings.SplitN(filename, " -> ", 2)
+				if len(renameParts) == 2 {
+					moduleDetectionPath = strings.TrimSpace(renameParts[1])
+				}
+			}
+
 			changes = append(changes, FileChange{
 				Status:   normalizeGitStatus(statusCode),
-				FilePath: filename,
-				Module:   determineFileModule(filename),
+				FilePath: filename, // Preserves "old -> new" format for renames
+				Module:   determineFileModule(moduleDetectionPath),
 			})
 		}
 	}

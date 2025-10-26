@@ -22,11 +22,6 @@
         "icon": "$(robot)"
       },
       {
-        "command": "claude-mcp-vscode.quickCommit",
-        "title": "Quick Message (Generator Only)",
-        "icon": "$(zap)"
-      },
-      {
         "command": "claude-mcp-vscode.noOp",
         "title": "No Staged Changes",
         "icon": "$(circle-slash)"
@@ -52,14 +47,8 @@
           "icon": "$(robot)"
         },
         {
-          "command": "claude-mcp-vscode.quickCommit",
-          "group": "navigation@3",
-          "when": "scmProvider == git && !claude-mcp-vscode.isGenerating && claude-mcp-vscode.hasStagedChanges",
-          "icon": "$(zap)"
-        },
-        {
           "command": "claude-mcp-vscode.noOp",
-          "group": "navigation@4",
+          "group": "navigation@3",
           "when": "scmProvider == git && claude-mcp-vscode.isGenerating",
           "icon": "$(sync~spin)"
         }

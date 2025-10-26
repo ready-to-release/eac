@@ -15,7 +15,7 @@ The extension provides:
 ### Prerequisites
 
 - VSCode 1.80.0+
-- Extension initialized: `./automation/sh-vscode/init.sh`
+- Extension initialized: `./automation/sh/vscode/init.sh`
 - Git repository open
 
 ### Using the Extension
@@ -359,7 +359,7 @@ npm run compile
 
 # Or use automation script
 cd ../../..
-./automation/sh-vscode/restore.sh
+./automation/sh/vscode/restore.sh
 ```
 
 ### Extension Not Reloading

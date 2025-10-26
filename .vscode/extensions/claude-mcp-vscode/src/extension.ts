@@ -404,27 +404,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Set the commit message in the repository input box
             repo.inputBox.value = commitMessage;
 
-            // Also write to .git/COMMIT_EDITMSG so it appears in git commit editor
-            try {
-                const gitDir = path.join(workspacePath, '.git');
-                const commitEditmsgPath = path.join(gitDir, 'COMMIT_EDITMSG');
-
-                // Open COMMIT_EDITMSG in the editor BEFORE writing
-                const uri = vscode.Uri.file(commitEditmsgPath);
-                const doc = await vscode.window.showTextDocument(uri, {
-                    preview: false,
-                    viewColumn: vscode.ViewColumn.Beside
-                });
-
-                // Now write the commit message to the file
-                fs.writeFileSync(commitEditmsgPath, commitMessage, 'utf8');
-                log(`✓ Commit message written to ${commitEditmsgPath}`);
-            } catch (writeError) {
-                // Log but don't fail - the message is still in the input box
-                log(`Warning: Could not open/write COMMIT_EDITMSG: ${writeError}`);
+            // Check if there are validation warnings in the message
+            if (commitMessage.includes('⚠️ **VALIDATION ERRORS**')) {
+                vscode.window.showWarningMessage('⚠️ Commit message generated with validation warnings. Please review and fix before committing.');
+            } else {
+                vscode.window.showInformationMessage('✓ Commit message generated and ready to review!');
             }
-
-            vscode.window.showInformationMessage('✓ Commit message generated and ready to review!');
 
         } catch (error) {
             vscode.window.showErrorMessage(`Error: ${error}`);
@@ -440,155 +425,6 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(disposable);
-
-    // Register Quick Message command (simplified, generator-only)
-    let quickDisposable = vscode.commands.registerCommand('claude-mcp-vscode.quickCommit', async () => {
-        log('=== Quick Message Button Clicked ===');
-
-        // Check if already generating
-        if (isGeneratingCommit) {
-            vscode.window.showWarningMessage('A commit message is already being generated. Please wait...');
-            return;
-        }
-
-        isGeneratingCommit = true;
-        statusBarItem.text = "$(sync~spin) Quick Message";
-        statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-        statusBarItem.command = undefined; // Disable clicking during generation
-
-        try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                throw new Error('No workspace folder found');
-            }
-
-            const workspacePath = workspaceFolder.uri.fsPath;
-
-            // Get git repository
-            const gitExtension = vscode.extensions.getExtension('vscode.git');
-            if (!gitExtension) {
-                throw new Error('Git extension not found');
-            }
-
-            await gitExtension.activate();
-            const git = gitExtension.exports.getAPI(1);
-            const repo = git.repositories[0];
-
-            if (!repo) {
-                throw new Error('No git repository found');
-            }
-
-            // Validate git state
-            const validationError = await validateGitState(repo);
-            if (validationError) {
-                vscode.window.showErrorMessage(validationError);
-                return;
-            }
-
-            // Call quick-commit MCP tool
-            const commitMessage = await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: "⚡",
-                cancellable: false
-            }, async (progress) => {
-                progress.report({ message: "Generating quick commit..." });
-
-                const mcpPath = path.join(workspacePath, 'src', 'mcp', 'vscode', 'mcp-vscode.exe');
-                const result = await new Promise<string>((resolve, reject) => {
-                    const mcpProcess = child_process.spawn(mcpPath, [], {
-                        cwd: workspacePath,
-                        env: { ...process.env, WORKSPACE_ROOT: workspacePath }
-                    });
-
-                    let output = '';
-                    let errorOutput = '';
-
-                    mcpProcess.stdout.on('data', (data: any) => {
-                        const chunk = data.toString();
-                        output += chunk;
-                    });
-
-                    mcpProcess.stderr.on('data', (data: any) => {
-                        errorOutput += data.toString();
-                    });
-
-                    mcpProcess.on('close', (code: number | null) => {
-                        if (code !== 0) {
-                            reject(new Error(`MCP process exited with code ${code}: ${errorOutput}`));
-                        } else {
-                            // Parse MCP response and extract commit message
-                            try {
-                                const lines = output.split('\n');
-                                for (const line of lines) {
-                                    if (line.trim()) {
-                                        const msg = JSON.parse(line);
-                                        if (msg.result && msg.result.content && msg.result.content[0]) {
-                                            const text = msg.result.content[0].text;
-                                            if (text.startsWith('ERROR:')) {
-                                                reject(new Error(text));
-                                            } else {
-                                                resolve(text);
-                                            }
-                                            return;
-                                        }
-                                    }
-                                }
-                                reject(new Error('No valid response from MCP server'));
-                            } catch (parseError) {
-                                reject(new Error(`Failed to parse MCP response: ${parseError}`));
-                            }
-                        }
-                    });
-
-                    // Send quick-commit request
-                    const request = {
-                        jsonrpc: "2.0",
-                        id: 1,
-                        method: "tools/call",
-                        params: {
-                            name: "quick-commit",
-                            arguments: {}
-                        }
-                    };
-
-                    mcpProcess.stdin.write(JSON.stringify(request) + '\n');
-                    mcpProcess.stdin.end();
-                });
-
-                return result;
-            });
-
-            // Set the commit message
-            repo.inputBox.value = commitMessage;
-
-            // Also write to COMMIT_EDITMSG
-            try {
-                const gitDir = path.join(workspacePath, '.git');
-                const commitEditmsgPath = path.join(gitDir, 'COMMIT_EDITMSG');
-                const uri = vscode.Uri.file(commitEditmsgPath);
-                const doc = await vscode.window.showTextDocument(uri, {
-                    preview: false,
-                    viewColumn: vscode.ViewColumn.Beside
-                });
-                fs.writeFileSync(commitEditmsgPath, commitMessage, 'utf8');
-                log(`✓ Quick commit message written to ${commitEditmsgPath}`);
-            } catch (writeError) {
-                log(`Warning: Could not open/write COMMIT_EDITMSG: ${writeError}`);
-            }
-
-            vscode.window.showInformationMessage('⚡ Quick commit message generated!');
-
-        } catch (error) {
-            vscode.window.showErrorMessage(`Error: ${error}`);
-        } finally {
-            isGeneratingCommit = false;
-            statusBarItem.text = "$(robot) Commit Message AI";
-            statusBarItem.backgroundColor = undefined;
-            statusBarItem.command = "claude-mcp-vscode.callMCP";
-        }
-    });
-
-    context.subscriptions.push(quickDisposable);
 }
 
 /**

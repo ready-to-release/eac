@@ -11,7 +11,7 @@
 
 ## Project Constraints
 
-DO NOT `git commit` or `git push` or any other git modifying operations, unless explicitly asked.
+DO NOT `git commit` or `git push` or `git add` or `git stash` or any other git modifying operations, unless explicitly asked.
 ONLY do lookups via `git log` etc.
 
 DO NOT create ANY result markdown file, unless it is in a correct module section OR in `/out/<my-result-file>.md`

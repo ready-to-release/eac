@@ -18,16 +18,16 @@ Use the automation scripts for easy setup:
 
 ```bash
 # First time setup - installs dependencies and verifies everything
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/init.sh
 
 # Restore dependencies (if you have issues)
-./automation/sh-vscode/restore.sh
+./automation/sh/vscode/restore.sh
 
 # Clean all build artifacts
-./automation/sh-vscode/clean.sh
+./automation/sh/vscode/clean.sh
 ```
 
-See [automation/sh-vscode/README.md](../../../automation/sh-vscode/README.md) for more details.
+See [automation/sh/vscode/README.md](../../../automation/sh/vscode/README.md) for more details.
 
 ### Option 2: Manual Setup
 

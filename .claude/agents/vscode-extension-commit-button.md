@@ -306,7 +306,7 @@ Note:
 - NO summary table with module globs (removed)
 - Subject lines are ≤50 characters
 - Body lines wrapped at 72 characters
-- Each module section starts with ## <module-name> header
+- Each module section starts with ## \<module-name\> header
 - After body text, include ```yaml paths: block directly (no heading)
 - **DO NOT include a Review section** - output only the structure shown above
 - **CRITICAL: File MUST end with a newline character (MD047 compliance)**
@@ -341,8 +341,48 @@ Before submitting your commit message, verify:
 
 ---
 
+## CRITICAL OUTPUT REQUIREMENTS - ANTI-CORRUPTION LAYER
+
+Your output MUST be PURE CONTENT ONLY. The Go layer expects exactly ONE content block with NO wrapper text.
+
+FORBIDDEN patterns that will corrupt the output:
+
+- ❌ "Let me generate the commit message:"
+- ❌ "Here is the commit message:"
+- ❌ "I will analyze the changes:"
+- ❌ "The commit message is:"
+- ❌ Any conversational preamble
+- ❌ Any markdown code fences around the entire output
+- ❌ Any explanatory text before or after the message
+
+✅ CORRECT: Start IMMEDIATELY with `## Summary`
+✅ Your first characters of output MUST be `## Summary` (the start of the first section)
+
+Example of CORRECT output:
+
+```markdown
+## Summary
+
+This commit reorganizes automation scripts...
+
+## Files affected
+
+| Status | File | Module |
+...
+```
+
+Example of INCORRECT output:
+
+```markdown
+Let me generate the commit message based on the changes:
+
+## Summary
+
+This commit reorganizes...
+```
+
+The Go layer will extract your content block and strip any wrapper text, but you MUST output pure content to ensure reliability.
+
+---
+
 and finally: Present that precise, semantically correct, simple and focused commit message to the user in the vscode text field (through the vscode mcp in-repo extension)
-
-```
-
-```

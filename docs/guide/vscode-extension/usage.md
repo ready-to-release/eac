@@ -29,7 +29,7 @@ _Note: GIFs are not yet recorded. See the storyboards above for instructions._
 From the project root:
 
 ```bash
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/init.sh
 ```
 
 **Expected Output:**
@@ -397,8 +397,8 @@ go version
 **Clean and restore:**
 
 ```bash
-./automation/sh-vscode/clean.sh
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/clean.sh
+./automation/sh/vscode/init.sh
 ```
 
 ### Extension not reloading
@@ -422,6 +422,6 @@ go version
 ## Getting Help
 
 - Check [README.md](README.md) for project overview
-- Check [automation/sh-vscode/README.md](automation/sh-vscode/README.md) for script details
+- Check [automation/sh/vscode/README.md](automation/sh/vscode/README.md) for script details
 - Review MCP server code in `src/mcp/vscode/main.go`
 - Review extension code in `.vscode/extensions/claude-mcp-vscode/src/extension.ts`

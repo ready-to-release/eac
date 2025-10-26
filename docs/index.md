@@ -65,7 +65,7 @@ Shell scripts for common tasks:
 │   └── vscode/                 # VSCode integration
 ├── .vscode/extensions/         # VSCode extensions
 │   └── claude-mcp-vscode/      # MCP integration extension
-├── automation/sh-vscode/       # Automation scripts
+├── automation/sh/vscode/       # Automation scripts
 ├── docs/                       # Documentation (you are here)
 └── .mcp.json                   # MCP server configuration
 ```
@@ -103,7 +103,7 @@ Shell scripts for common tasks:
 
 ```bash
 # Initialize everything
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/init.sh
 
 # Open in VSCode
 code .

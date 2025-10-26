@@ -16,7 +16,7 @@ This directory contains shell scripts to automate common tasks for the VSCode ex
 
 **Usage**:
 ```bash
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/init.sh
 ```
 
 **When to use**:
@@ -39,7 +39,7 @@ This directory contains shell scripts to automate common tasks for the VSCode ex
 
 **Usage**:
 ```bash
-./automation/sh-vscode/restore.sh
+./automation/sh/vscode/restore.sh
 ```
 
 **When to use**:
@@ -65,7 +65,7 @@ This directory contains shell scripts to automate common tasks for the VSCode ex
 
 **Usage**:
 ```bash
-./automation/sh-vscode/clean.sh
+./automation/sh/vscode/clean.sh
 ```
 
 **When to use**:
@@ -81,24 +81,24 @@ This directory contains shell scripts to automate common tasks for the VSCode ex
 ### First Time Setup
 ```bash
 # Clone the repo, then:
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/init.sh
 ```
 
 ### Fix Dependency Issues
 ```bash
-./automation/sh-vscode/restore.sh
+./automation/sh/vscode/restore.sh
 ```
 
 ### Complete Reset
 ```bash
-./automation/sh-vscode/clean.sh
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/clean.sh
+./automation/sh/vscode/init.sh
 ```
 
 ### Before Committing
 ```bash
 # Make sure no build artifacts are included
-./automation/sh-vscode/clean.sh
+./automation/sh/vscode/clean.sh
 git status
 ```
 
@@ -117,7 +117,7 @@ All scripts require:
 All scripts are executable (`chmod +x`). If you encounter permission errors:
 
 ```bash
-chmod +x automation/sh-vscode/*.sh
+chmod +x automation/sh/vscode/*.sh
 ```
 
 ## Exit Codes
@@ -137,7 +137,7 @@ All scripts use `set -e` to exit immediately on error. If a script fails:
 
 ### "npm install" fails
 - Check your network connection
-- Try running `./automation/sh-vscode/clean.sh` first
+- Try running `./automation/sh/vscode/clean.sh` first
 - Delete `package-lock.json` manually and retry
 
 ### Scripts won't run on Windows

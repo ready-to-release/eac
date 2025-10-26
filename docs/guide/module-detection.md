@@ -125,7 +125,7 @@ graph LR
 
 | File Path                         | Detected Module | Type Inferred      |
 | --------------------------------- | --------------- | ------------------ |
-| `automation/sh-vscode/install.sh` | `sh-vscode`     | Shell (sh-)        |
+| `automation/sh/vscode/install.sh` | `sh-vscode`     | Shell (sh-)        |
 | `automation/pwsh-build/build.ps1` | `pwsh-build`    | PowerShell (pwsh-) |
 | `automation/py-test/test.py`      | `py-test`       | Python (py-)       |
 
@@ -413,7 +413,7 @@ graph LR
 ```mermaid
 graph TB
     subgraph "Before: Hardcoded"
-        B1["automation/sh-vscode/install.sh"]
+        B1["automation/sh/vscode/install.sh"]
         B1 --> BM1["infra"]
 
         style B1 fill:#FFE4B5
@@ -421,7 +421,7 @@ graph TB
     end
 
     subgraph "After: Intelligent"
-        A1["automation/sh-vscode/install.sh"]
+        A1["automation/sh/vscode/install.sh"]
         A1 --> AM1["sh-vscode"]
         AM1 --> AT1["Type: Shell<br/>Module: sh-vscode"]
 

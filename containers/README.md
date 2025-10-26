@@ -43,7 +43,7 @@ See [containers/mkdocs/README.md](mkdocs/README.md) for full documentation.
 
 ### Directory Structure
 
-```
+```text
 containers/
 ├── README.md              # This file
 └── mkdocs/                # MkDocs documentation container

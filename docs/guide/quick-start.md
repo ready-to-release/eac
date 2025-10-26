@@ -56,7 +56,7 @@ Get the VSCode extension running:
 
 ```bash
 # Automated setup
-./automation/sh-vscode/init.sh
+./automation/sh/vscode/init.sh
 
 # Launch extension (in VSCode, press F5)
 ```

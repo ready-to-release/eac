@@ -14,7 +14,7 @@ func TestDetermineFileModule(t *testing.T) {
 		expected string
 	}{
 		// Automation modules - extracted by name
-		{"automation/sh-vscode/script.sh", "sh-vscode"},
+		{"automation/sh/vscode/script.sh", "sh-vscode"},
 		{"automation/pwsh-build/build.ps1", "pwsh-build"},
 		{"automation/sh-deploy/deploy.sh", "sh-deploy"},
 
@@ -172,7 +172,7 @@ func TestAllRepositoryFiles(t *testing.T) {
 // Helper function to print examples (not a test)
 func printExamples() {
 	examples := []string{
-		"automation/sh-vscode/install.sh",
+		"automation/sh/vscode/install.sh",
 		"automation/pwsh-build/build.ps1",
 		"containers/mkdocs/Dockerfile",
 		"src/mcp/pwsh/main.go",
@@ -223,7 +223,7 @@ func TestGetModuleGlobPattern(t *testing.T) {
 		// Automation modules
 		{
 			module:        "sh-vscode",
-			expectedGlobs: []string{"automation/sh-vscode/**"},
+			expectedGlobs: []string{"automation/sh/vscode/**"},
 			description:   "Shell automation",
 		},
 		{
@@ -348,7 +348,7 @@ func TestModuleGlobPatternIntegration(t *testing.T) {
 		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
 		".vscode/extensions/claude-mcp-vscode/package.json",
 		"docs/reference/trunk/semantic-commits.md",
-		"automation/sh-vscode/install.sh",
+		"automation/sh/vscode/install.sh",
 	}
 
 	fmt.Println("\n=== Integration Test: File Changes → Modules → Globs ===")

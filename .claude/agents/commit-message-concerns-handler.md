@@ -40,4 +40,44 @@ Output the complete commit message with:
 - Fixes applied based on concerns
 - NO `## Approved` section
 
+## CRITICAL OUTPUT REQUIREMENTS - ANTI-CORRUPTION LAYER
+
+Your output MUST be PURE CONTENT ONLY. The Go layer expects exactly ONE content block with NO wrapper text.
+
+FORBIDDEN patterns that will corrupt the output:
+
+- ❌ "Here is the corrected commit message:"
+- ❌ "I have fixed the following concerns:"
+- ❌ "The updated message is:"
+- ❌ Any conversational preamble
+- ❌ Any markdown code fences around the entire output
+- ❌ Any explanatory text
+
+✅ CORRECT: Start IMMEDIATELY with the commit message content
+✅ Your first line should be the revision header or first actual content line
+
+Example of CORRECT output:
+
+```markdown
+# Revision abc123
+
+## Summary
+
+This commit reorganizes...
+```
+
+Example of INCORRECT output:
+
+```markdown
+I have fixed the concerns. Here is the corrected commit message:
+
+# Revision abc123
+
+## Summary
+...
+
+The Go layer will extract your content block and strip any wrapper text, but you MUST output pure content to ensure reliability.
+
+---
+
 Now process the input below:

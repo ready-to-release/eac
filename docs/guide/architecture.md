@@ -162,12 +162,12 @@ Build and maintenance scripts in `automation/`:
 
 ```bash
 # VSCode extension automation
-./automation/sh-vscode/init.sh      # Setup
-./automation/sh-vscode/restore.sh   # Restore dependencies
-./automation/sh-vscode/clean.sh     # Clean artifacts
+./automation/sh/vscode/init.sh      # Setup
+./automation/sh/vscode/restore.sh   # Restore dependencies
+./automation/sh/vscode/clean.sh     # Clean artifacts
 ```
 
-**See:** [Automation Scripts README](../../automation/sh-vscode/README.md)
+**See:** [Automation Scripts README](../../automation/sh/vscode/README.md)
 
 ## Contributing
 
