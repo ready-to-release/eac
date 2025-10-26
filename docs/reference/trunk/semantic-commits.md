@@ -42,7 +42,7 @@ This repository follows the **Conventional Commits** specification for all commi
 
 ```
 src-mcp-vscode: feat: add commit-message-generate tool
-vscode-ext-claude-commit: feat: add toolbar button for quick commits
+vscode-extension: feat: add toolbar button for quick commits
 src-mcp-github: feat: support pull request creation
 ```
 
@@ -56,7 +56,7 @@ src-mcp-github: feat: support pull request creation
 
 ```
 src-mcp-pwsh: fix: handle null output from commands
-vscode-ext-claude-commit: fix: prevent duplicate button registration
+vscode-extension: fix: prevent duplicate button registration
 src-mcp-docs: fix: correct markdown parsing for code blocks
 ```
 
@@ -91,7 +91,7 @@ format instead of {status, data}. Update all tool implementations.
 ```
 
 ```
-vscode-ext-claude-commit: refactor!: remove deprecated executeCommand API
+vscode-extension: refactor!: remove deprecated executeCommand API
 
 BREAKING CHANGE: The executeCommand method has been removed.
 Use the new invokeAction method instead.
@@ -123,7 +123,7 @@ src-mcp-vscode: docs: improve tool documentation in README
 
 ```
 src-mcp-pwsh: style: format code with gofmt
-vscode-ext-claude-commit: style: apply prettier formatting
+vscode-extension: style: apply prettier formatting
 ```
 
 #### `refactor:` - Refactoring
@@ -136,7 +136,7 @@ vscode-ext-claude-commit: style: apply prettier formatting
 
 ```
 src-mcp-github: refactor: extract HTTP client to separate package
-vscode-ext-claude-commit: refactor: reorganize command handlers
+vscode-extension: refactor: reorganize command handlers
 ```
 
 #### `test:` - Tests
@@ -149,7 +149,7 @@ vscode-ext-claude-commit: refactor: reorganize command handlers
 
 ```
 src-mcp-vscode: test: add unit tests for commit parser
-vscode-ext-claude-commit: test: add integration tests for button actions
+vscode-extension: test: add integration tests for button actions
 ```
 
 #### `chore:` - Maintenance
@@ -219,7 +219,7 @@ Based on [repository-layout.md](repository-layout.md), use these module prefixes
 | `src-mcp-docs:` | Documentation MCP Server | `src/mcp/docs/` |
 | `src-mcp-github:` | GitHub MCP Server | `src/mcp/github/` |
 | `src-mcp-vscode:` | VSCode MCP Server | `src/mcp/vscode/` |
-| `vscode-ext-claude-commit:` | VSCode Extension | `.vscode/extensions/claude-mcp-vscode/` |
+| `vscode-extension:` | VSCode Extension | `.vscode/extensions/claude-mcp-vscode/` |
 | `infra:` | Infrastructure | `automation/`, `containers/` |
 | `docs:` | Documentation | `docs/`, `*.md` files |
 | `config:` | Configuration | `.mcp.json`, `.gitignore`, etc. |
@@ -231,13 +231,13 @@ Based on [repository-layout.md](repository-layout.md), use these module prefixes
 
 ```
 Commit 1: src-mcp-vscode: feat: add commit-analyze tool
-Commit 2: vscode-ext-claude-commit: feat: integrate commit analyzer in UI
+Commit 2: vscode-extension: feat: integrate commit analyzer in UI
 ```
 
 **Alternative**: Use comma-separated prefixes for tightly coupled changes
 
 ```
-src-mcp-vscode,vscode-ext-claude-commit: feat: add commit analysis feature
+src-mcp-vscode,vscode-extension: feat: add commit analysis feature
 ```
 
 ## Description Guidelines
@@ -395,7 +395,7 @@ Allow customization of command output format via new parameters.
 ### Example 2: Bug Fix with Context
 
 ```
-vscode-ext-claude-commit: fix: prevent duplicate toolbar buttons on reload
+vscode-extension: fix: prevent duplicate toolbar buttons on reload
 
 The extension was registering toolbar buttons multiple times when
 the window was reloaded, causing visual duplication. Now properly
@@ -445,7 +445,7 @@ Implement tool for parsing and validating semantic commit messages.
 Returns structured data with module, type, breaking flag, and scope.
 
 Commit 2:
-vscode-ext-claude-commit: feat: integrate semantic commit parser
+vscode-extension: feat: integrate semantic commit parser
 
 Add UI for generating semantic commit messages using the new parser.
 Validates messages in real-time and shows version impact.
@@ -477,7 +477,7 @@ Set up `commit-msg` hook to validate format:
 # .git/hooks/commit-msg
 
 commit_msg=$(cat "$1")
-pattern="^(src-mcp-pwsh|src-mcp-docs|src-mcp-github|src-mcp-vscode|vscode-ext-claude-commit|infra|docs|config|contracts): (feat|fix|perf|docs|style|refactor|test|chore|ci|build|revert)(!)?:"
+pattern="^(src-mcp-pwsh|src-mcp-docs|src-mcp-github|src-mcp-vscode|vscode-extension|infra|docs|config|contracts): (feat|fix|perf|docs|style|refactor|test|chore|ci|build|revert)(!)?:"
 
 if ! echo "$commit_msg" | grep -Eq "$pattern"; then
   echo "ERROR: Commit message does not follow semantic commit format"

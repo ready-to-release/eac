@@ -64,7 +64,7 @@ Retrieve the content of a specific documentation page.
 {
   "name": "get-doc-page",
   "arguments": {
-    "path": "guide/vscode-ext-claude-commit/index.md"
+    "path": "guide/vscode-extension/index.md"
   }
 }
 ```

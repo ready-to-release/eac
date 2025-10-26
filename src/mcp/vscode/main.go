@@ -228,7 +228,7 @@ func executeAction(action string, message string) string {
 
 func generateSemanticCommitMessage(agentFile string) (string, error) {
 	// Get workspace root from agent file path
-	// Agent file is at .claude/agents/vscode-ext-claude-commitension-commit-button.md
+	// Agent file is at .claude/agents/vscode-extension-commit-button.md
 	workspaceRoot := filepath.Dir(filepath.Dir(filepath.Dir(agentFile)))
 
 	// Step 1: Read the generator agent instructions

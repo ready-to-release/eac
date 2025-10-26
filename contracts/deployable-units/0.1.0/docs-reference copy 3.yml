@@ -1,0 +1,22 @@
+# Deployable Unit Contract: docs
+# Version: 0.1.0
+
+module_moniker: "docs-reference"
+name: "Reference documentation"
+type: "mkdocs-subsite"
+description: "mkdocs base files for reference documentation"
+root: "docs/reference/"
+root_type: "single-docs-subsite"
+
+versioning:
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "/docs/reference/CHANGELOG.md"
+
+source:
+  includes:
+    - "docs/reference/**"
+    - "assets/reference/**"
+
+depends_on: []
+used_by:
+  - "src-mcp-docs"

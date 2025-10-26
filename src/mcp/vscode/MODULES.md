@@ -76,11 +76,11 @@ Updates mkdocs container to use Python
 ### 4. VSCode Extension
 
 **Pattern:** `.vscode/extensions/<name>/...`
-**Module:** `vscode-ext-claude-commit` (or extracted name)
+**Module:** `vscode-extension` (or extracted name)
 
 | File Path | Detected Module |
 |-----------|----------------|
-| `.vscode/extensions/claude-mcp-vscode/src/extension.ts` | `vscode-ext-claude-commit` |
+| `.vscode/extensions/claude-mcp-vscode/src/extension.ts` | `vscode-extension` |
 
 ### 5. Contract Modules
 
@@ -113,7 +113,7 @@ Updates mkdocs container to use Python
 
 | File Path | Detected Module |
 |-----------|----------------|
-| `.claude/agents/vscode-ext-claude-commitension-commit-button.md` | `claude-config` |
+| `.claude/agents/vscode-extensionension-commit-button.md` | `claude-config` |
 | `.vscode/settings.json` | `vscode-config` |
 | `.gitignore` | `repo-config` |
 | `mkdocs.yml` | `repo-config` |

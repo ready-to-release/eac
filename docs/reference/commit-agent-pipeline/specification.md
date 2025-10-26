@@ -6,7 +6,7 @@ The Commit Agent Pipeline is a 5-agent system that generates high-quality, seman
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                         VSCode Extension                         │
 │  (.vscode/extensions/claude-mcp-vscode/src/extension.ts)        │
@@ -46,10 +46,12 @@ The Commit Agent Pipeline is a 5-agent system that generates high-quality, seman
 **Location**: `.vscode/extensions/claude-mcp-vscode/`
 
 **Files**:
+
 - `src/extension.ts` - Main extension logic
 - `package.json` - Extension manifest and contributions
 
 **Responsibilities**:
+
 - Register command `claude-mcp-vscode.callMCP`
 - Add button to Git SCM title bar with dynamic icon
 - Add status bar item with rainbow animation
@@ -60,16 +62,19 @@ The Commit Agent Pipeline is a 5-agent system that generates high-quality, seman
 **User Interface**:
 
 1. **Status Bar Item**:
+
    - Idle: `$(robot) Claude Commit` (normal background)
    - Active: `$(sync~spin) Claude Commit` (rainbow cycling background)
    - Location: Right side of status bar
 
 2. **Git SCM Button**:
+
    - Idle: `$(robot)` icon
    - Active: `$(sync~spin)` icon (animated)
    - Location: Git SCM title bar (navigation group)
 
 3. **Progress Notifications**:
+
    - Random emoji + title
    - Stage-aware messages (generator, reviewer, approver, concerns, title)
    - Smart simulation updates every 3 seconds
@@ -81,6 +86,7 @@ The Commit Agent Pipeline is a 5-agent system that generates high-quality, seman
    - Visual separators with agent emojis
 
 **Git State Validation**:
+
 - Requires staged changes (`indexChanges.length > 0`)
 - No unstaged changes allowed (`workingTreeChanges.length === 0`)
 - Shows error messages for invalid states
@@ -92,6 +98,7 @@ The Commit Agent Pipeline is a 5-agent system that generates high-quality, seman
 **Main File**: `main.go`
 
 **Responsibilities**:
+
 1. Implement MCP JSON-RPC protocol
 2. Gather git context (diff, status, logs, file changes)
 3. Read documentation files (with glob pattern support)
@@ -120,11 +127,13 @@ type FileChange struct {
 ```
 
 **Module Detection**:
+
 - Intelligent path-based module detection
 - Patterns: `src/mcp/<name>`, `.vscode/extensions/<name>`, `automation/<name>`, etc.
 - Special handling for docs, configs, and root files
 
 **Documentation Loading**:
+
 - Supports glob patterns (`contracts/deployable-units/0.1.0/*.yml`)
 - Files loaded:
   - `docs/reference/trunk/revisionable-timeline.md`
@@ -147,6 +156,7 @@ type FileChange struct {
 ```
 
 **Model Enforcement**:
+
 - Extracts `model:` from agent frontmatter
 - **Required**: Errors if model field is missing
 - Passes model via `--model` flag to Claude CLI
@@ -176,23 +186,26 @@ finalCommit :=
 **Location**: `.claude/agents/`
 
 All agents use YAML frontmatter with required fields:
+
 - `name:` Agent identifier
 - `description:` What the agent does
 - `model:` Which model to use (enforced)
 - `color:` UI color hint
 
-#### Agent 1: Generator (vscode-ext-claude-commitension-commit-button.md)
+#### Agent 1: Generator (vscode-extensionension-commit-button.md)
 
 **Model**: `haiku`
 
 **Input**:
+
 - Git context (diff, status, logs, HEAD SHA)
 - Documentation files (inline in prompt)
 - Module metadata with glob patterns
 - File changes table (pre-formatted)
 
 **Output**:
-```
+
+````markdown
 # Revision <sha>
 
 [2-4 sentence summary of changes and impact]
@@ -202,14 +215,14 @@ All agents use YAML frontmatter with required fields:
 | Status   | File                        | Module     |
 | -------- | --------------------------- | ---------- |
 | added    | src/mcp/vscode/main.go      | src-mcp-vscode |
-| modified | .vscode/.../extension.ts    | vscode-ext-claude-commit |
+| modified | .vscode/.../extension.ts    | vscode-extension |
 
 ## Summary
 
 | Module     | Globs                    |
 | ---------- | ------------------------ |
 | src-mcp-vscode | `src/mcp/vscode/**`      |
-| vscode-ext-claude-commit | `.vscode/extensions/...` |
+| vscode-extension | `.vscode/extensions/...` |
 
 ---
 
@@ -222,14 +235,15 @@ src-mcp-vscode: feat: add commit generation
 ```yaml
 paths:
   - 'src/mcp/vscode/**'
-```
+````
 
 ---
 
-## vscode-ext-claude-commit
+## vscode-extension
 
 [Same format for each module]
-```
+
+```markdown
 
 **Key Rules**:
 - One section per module (no duplicates)
@@ -248,6 +262,7 @@ paths:
 
 **Output**:
 ```
+
 ## Commit Message Review
 
 ### Overall Assessment
@@ -255,7 +270,9 @@ paths:
 [Excellent/Good/Needs Improvement/Poor]
 
 ### Issues
+
 1. [Most critical issue]
+
    - Problem: [Explain]
    - Suggestion: [Fix]
 
@@ -263,10 +280,12 @@ paths:
    ...
 
 ### Recommended Rewrite
+
 [Improved version if needed]
 
 **Additional Notes**: [Best practices advice]
-```
+
+```markdown
 
 **Key Rules**:
 - **CRITICAL**: Strip ALL positive affirmations
@@ -286,20 +305,24 @@ paths:
 
 **If no concerns**:
 ```
+
 ## Approved
 
 Approved
-```
+
+```markdown
 
 **If concerns exist**:
 ```
+
 ## Approved
 
 Approved (with concerns)
 
 - [Factual issue 1]
 - [Factual issue 2]
-```
+
+```markdown
 
 **Key Rules**:
 - Output ONLY the `## Approved` section
@@ -319,8 +342,10 @@ Approved (with concerns)
 
 **Output**:
 ```
+
 [Corrected commit message with concerns fixed]
-```
+
+```markdown
 
 **Key Rules**:
 - Apply ALL fixes from concerns list
@@ -336,8 +361,10 @@ Approved (with concerns)
 
 **Output**:
 ```
+
 feat(src-mcp-vscode): add 5-agent commit workflow
-```
+
+```markdown
 
 **Format**: `<type>(<scope>): <description>`
 
@@ -366,7 +393,10 @@ feat(src-mcp-vscode): add 5-agent commit workflow
 ## Final Output Format
 
 ```
+
+```markdown
 # feat(scope): description
+```
 
 [2-4 sentence summary]
 
@@ -394,16 +424,21 @@ paths:
 ---
 
 Agent: Approved
-```
+
+```markdown
 
 **Or with concerns**:
 ```
+
 Agent: Approved (with concerns)
-```
+
+```markdown
 
 ## Progress Notifications
 
 The MCP server sends JSON-RPC notifications:
+
+```
 
 ```json
 {
@@ -416,7 +451,10 @@ The MCP server sends JSON-RPC notifications:
 }
 ```
 
+````markdown
+
 **Stages**:
+
 - `git-init` - Gathering git context
 - `docs-init` - Loading documentation
 - `gen-init` - Loading generator agent
@@ -457,6 +495,7 @@ The MCP server sends JSON-RPC notifications:
 **Typical Execution Time**: 30-90 seconds
 
 **Breakdown**:
+
 - Git context gathering: 1-2s
 - Documentation loading: 1-2s
 - Generator agent (Haiku): 10-30s
@@ -473,12 +512,14 @@ The MCP server sends JSON-RPC notifications:
 ### Extension Configuration
 
 No user-facing settings. Behavior is controlled by:
+
 - Git state validation rules (hardcoded)
 - Agent file paths (hardcoded relative to workspace)
 
 ### Agent Configuration
 
 Each agent configures via frontmatter:
+
 ```yaml
 ---
 name: agent-identifier
@@ -486,11 +527,12 @@ description: What the agent does
 model: haiku
 color: blue
 ---
-```
+````
 
 ### MCP Server Configuration
 
 Configured via:
+
 - Agent file paths in `.claude/agents/`
 - Documentation patterns (hardcoded in `readDocumentationFiles()`)
 - Module detection patterns (hardcoded in `determineFileModule()`)
@@ -538,12 +580,15 @@ No separate deployment - extension spawns `go run .` in MCP server directory on 
 ## Markdown Compliance
 
 **MD041**: First line must be top-level heading
+
 - Enforced by adding `# <title>` from agent 5
 
 **MD047**: File must end with newline
+
 - Enforced in `callClaude()` function
 
 **Bold Headers**: Converted to markdown headers
+
 - `**Text**` → `### Text`
 - Applied in `callClaude()` post-processing
 
@@ -558,6 +603,7 @@ No separate deployment - extension spawns `go run .` in MCP server directory on 
 ## Future Enhancements
 
 Potential improvements:
+
 - Configurable documentation patterns
 - Custom module detection rules
 - Agent model selection via settings

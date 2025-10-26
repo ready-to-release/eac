@@ -9,18 +9,23 @@ This repository is organized as a monorepo with clearly defined module boundarie
 The repository distinguishes between two categories:
 
 ### Deployable Units
+
 Independently built, versioned, and deployed artifacts. Each has a detailed contract in `contracts/deployable-units/0.1.0/{moniker}.yml` defining:
+
 - Build and deployment configuration
 - Versioning strategy and current version
 - Runtime dependencies and environment
 - Integration points and APIs
 
 **Current deployable units**:
+
 - `src-mcp-pwsh`, `src-mcp-docs`, `src-mcp-github`, `src-mcp-vscode` (MCP servers)
-- `vscode-ext-claude-commit` (VSCode extension)
+- `vscode-extension` (VSCode extension)
 
 ### Supporting Modules
+
 Non-deployable modules that support the system:
+
 - Infrastructure (build/deploy tooling)
 - Documentation (user guides)
 - Configuration (IDE and tool settings)
@@ -29,51 +34,63 @@ Non-deployable modules that support the system:
 ## Module Types
 
 ### 1. MCP Server Modules
+
 Go-based Model Context Protocol servers providing integration capabilities.
 
 **Characteristics**:
+
 - Language: Go
 - Versioning: Independent semantic versioning via git tags
 - Tag format: `{module-name}/v{version}`
 - Structure: `src/mcp/{name}/`
 
 ### 2. Extension Modules
+
 IDE extensions and integrations.
 
 **Characteristics**:
+
 - Language: TypeScript/JavaScript
 - Versioning: Independent semantic versioning via package.json
 - Tag format: `{module-name}/v{version}`
 - Structure: `.vscode/extensions/{name}/`
 
 ### 3. Infrastructure Modules
+
 Build, deployment, and automation tooling.
 
 **Characteristics**:
+
 - Language: Shell/Docker/YAML
 - Versioning: Not independently versioned
 - Structure: `automation/`, `containers/`
 
 ### 4. Documentation Modules
+
 User-facing and reference documentation.
 
 **Characteristics**:
+
 - Language: Markdown
 - Versioning: Not independently versioned
 - Structure: `docs/`, root `.md` files
 
 ### 5. Configuration Modules
+
 IDE, tool, and repository configuration.
 
 **Characteristics**:
+
 - Language: JSON/YAML/Shell
 - Versioning: Not independently versioned
 - Structure: `.claude/`, `.vscode/`, root config files
 
 ### 6. Contract Modules
+
 Versioned contract definitions and schemas.
 
 **Characteristics**:
+
 - Language: YAML/JSON
 - Versioning: Semantic versioning in path structure
 - Structure: `contracts/{name}/{version}/`
@@ -82,43 +99,43 @@ Versioned contract definitions and schemas.
 
 ### MCP Servers
 
-| Module | Prefix | Location | Description |
-|--------|--------|----------|-------------|
-| `src-mcp-pwsh` | `src-mcp-pwsh:` | `src/mcp/pwsh/` | PowerShell command execution |
-| `src-mcp-docs` | `src-mcp-docs:` | `src/mcp/docs/` | Documentation management |
-| `src-mcp-github` | `src-mcp-github:` | `src/mcp/github/` | GitHub API integration |
-| `src-mcp-vscode` | `src-mcp-vscode:` | `src/mcp/vscode/` | VSCode integration |
+| Module           | Prefix            | Location          | Description                  |
+| ---------------- | ----------------- | ----------------- | ---------------------------- |
+| `src-mcp-pwsh`   | `src-mcp-pwsh:`   | `src/mcp/pwsh/`   | PowerShell command execution |
+| `src-mcp-docs`   | `src-mcp-docs:`   | `src/mcp/docs/`   | Documentation management     |
+| `src-mcp-github` | `src-mcp-github:` | `src/mcp/github/` | GitHub API integration       |
+| `src-mcp-vscode` | `src-mcp-vscode:` | `src/mcp/vscode/` | VSCode integration           |
 
 ### Extensions
 
-| Module | Prefix | Location | Description |
-|--------|--------|----------|-------------|
-| `vscode-ext-claude-commit` | `vscode-ext-claude-commit:` | `.vscode/extensions/claude-mcp-vscode/` | MCP VSCode extension UI |
+| Module             | Prefix              | Location                                | Description             |
+| ------------------ | ------------------- | --------------------------------------- | ----------------------- |
+| `vscode-extension` | `vscode-extension:` | `.vscode/extensions/claude-mcp-vscode/` | MCP VSCode extension UI |
 
 ### Infrastructure
 
-| Module | Prefix | Location | Description |
-|--------|--------|----------|-------------|
+| Module           | Prefix   | Location                     | Description                     |
+| ---------------- | -------- | ---------------------------- | ------------------------------- |
 | `infrastructure` | `infra:` | `automation/`, `containers/` | Build and deployment automation |
 
 ### Documentation
 
-| Module | Prefix | Location | Description |
-|--------|--------|----------|-------------|
+| Module          | Prefix  | Location               | Description                |
+| --------------- | ------- | ---------------------- | -------------------------- |
 | `documentation` | `docs:` | `docs/`, `*.md` (root) | User guides and references |
 
 ### Configuration
 
-| Module | Prefix | Location | Description |
-|--------|--------|----------|-------------|
-| `claude-config` | `config:` | `.claude/` | Claude Code configuration |
-| `vscode-config` | `config:` | `.vscode/` (non-extension files) | VSCode workspace settings |
-| `repository-config` | `config:` | Root config files | Repository-wide settings |
+| Module              | Prefix    | Location                         | Description               |
+| ------------------- | --------- | -------------------------------- | ------------------------- |
+| `claude-config`     | `config:` | `.claude/`                       | Claude Code configuration |
+| `vscode-config`     | `config:` | `.vscode/` (non-extension files) | VSCode workspace settings |
+| `repository-config` | `config:` | Root config files                | Repository-wide settings  |
 
 ### Contracts
 
-| Module | Prefix | Location | Description |
-|--------|--------|----------|-------------|
+| Module                 | Prefix       | Location                          | Description                    |
+| ---------------------- | ------------ | --------------------------------- | ------------------------------ |
 | `contracts-repository` | `contracts:` | `contracts/repository/{version}/` | Repository structure contracts |
 
 ## Module Identification Rules
@@ -137,25 +154,28 @@ Versioned contract definitions and schemas.
 ### Commit Prefix Selection
 
 **Single module change**: Use module prefix
-```
+
+```text
 src-mcp-pwsh: fix: handle empty command output
 ```
 
 **Multiple modules (preferred)**: Separate commits per module
-```
+
+```text
 Commit 1: src-mcp-vscode: feat: add new tool
-Commit 2: vscode-ext-claude-commit: feat: integrate new tool
+Commit 2: vscode-extension: feat: integrate new tool
 ```
 
 **Multiple modules (alternative)**: Combined prefix
-```
-src-mcp-vscode,vscode-ext-claude-commit: feat: add complete feature
+
+```text
+src-mcp-vscode,vscode-extension: feat: add complete feature
 ```
 
 ## Module Dependencies
 
-```
-vscode-ext-claude-commit
+```text
+vscode-extension
 ├── depends on: src-mcp-pwsh, src-mcp-docs, src-mcp-github, src-mcp-vscode
 └── used by: end users
 
@@ -171,12 +191,14 @@ contracts-repository
 
 ## Version Management
 
-**Independently Versioned Modules**:
+### Independently Versioned Modules
+
 - All MCP servers (git tags)
 - VSCode extension (package.json + git tag)
 - Contract modules (path-based versioning)
 
-**Non-Versioned Modules**:
+### Non-Versioned Modules
+
 - Infrastructure (affects versioned modules)
 - Documentation (informational only)
 - Configuration (behavioral changes may trigger module versions)
@@ -189,7 +211,7 @@ contracts-repository
 - `src-mcp-docs:` → `src/mcp/docs/`
 - `src-mcp-github:` → `src/mcp/github/`
 - `src-mcp-vscode:` → `src/mcp/vscode/`
-- `vscode-ext-claude-commit:` → `.vscode/extensions/claude-mcp-vscode/`
+- `vscode-extension:` → `.vscode/extensions/claude-mcp-vscode/`
 - `infra:` → `automation/`, `containers/`
 - `docs:` → `docs/`, root `*.md`
 - `config:` → `.claude/`, `.vscode/`, root config
@@ -198,7 +220,7 @@ contracts-repository
 ### By Location
 
 - `src/mcp/{name}/` → `mcp-{name}:`
-- `.vscode/extensions/{name}/` → `vscode-ext-claude-commit:`
+- `.vscode/extensions/{name}/` → `vscode-extension:`
 - `automation/`, `containers/` → `infra:`
 - `docs/` → `docs:`
 - `.claude/` → `config:`
@@ -209,6 +231,7 @@ contracts-repository
 Each deployable unit has a mandatory contract file at `contracts/deployable-units/0.1.0/{moniker}.yml`.
 
 **Contract Schema** (all fields required for consistency):
+
 - **Identity**: moniker, name, type, description
 - **Versioning**: current_version, strategy, tag_format, changelog_path
 - **Source**: root, includes, excludes
@@ -220,9 +243,10 @@ Each deployable unit has a mandatory contract file at `contracts/deployable-unit
 - **Integration**: protocol, transport, tools_provided/contributes
 - **Metadata**: owner, documentation_path, api_documentation
 
-**Example contracts**:
+## Example contracts
+
 - [src-mcp-pwsh.yml](../../../contracts/deployable-units/0.1.0/src-mcp-pwsh.yml)
-- [vscode-ext-claude-commit.yml](../../../contracts/deployable-units/0.1.0/vscode-ext-claude-commit.yml)
+- [vscode-extension.yml](../../../contracts/deployable-units/0.1.0/vscode-extension.yml)
 
 ## References
 

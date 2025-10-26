@@ -44,38 +44,48 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(statusBarItem);
 
     // Initialize git change listener to enable/disable button
-    const gitExtension = vscode.extensions.getExtension('vscode.git');
-    if (gitExtension) {
-        const gitAPI = gitExtension.isActive ? gitExtension.exports : null;
-        if (gitAPI) {
-            const git = gitAPI.getAPI(1);
-
-            // Function to update button state
-            const updateButtonState = () => {
-                if (git.repositories.length > 0) {
-                    const repo = git.repositories[0];
-                    const hasStagedChanges = (repo.state.indexChanges?.length || 0) > 0;
-                    vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', hasStagedChanges);
-                } else {
-                    vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', false);
-                }
-            };
-
-            // Update immediately
-            updateButtonState();
-
-            // Listen for repository changes
-            git.repositories.forEach((repo: any) => {
-                repo.state.onDidChange(() => updateButtonState());
-            });
-
-            // Listen for new repositories
-            git.onDidOpenRepository((repo: any) => {
-                updateButtonState();
-                repo.state.onDidChange(() => updateButtonState());
-            });
+    const initializeGitListener = async () => {
+        const gitExtension = vscode.extensions.getExtension('vscode.git');
+        if (!gitExtension) {
+            return;
         }
-    }
+
+        // Wait for git extension to activate
+        const gitAPI = gitExtension.isActive ? gitExtension.exports : await gitExtension.activate();
+        const git = gitAPI.getAPI(1);
+
+        // Function to update button state
+        const updateButtonState = () => {
+            if (git.repositories.length > 0) {
+                const repo = git.repositories[0];
+                const hasStagedChanges = (repo.state.indexChanges?.length || 0) > 0;
+                vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', hasStagedChanges);
+            } else {
+                vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', false);
+            }
+        };
+
+        // Update immediately
+        updateButtonState();
+
+        // Listen for repository changes
+        git.repositories.forEach((repo: any) => {
+            repo.state.onDidChange(() => updateButtonState());
+        });
+
+        // Listen for new repositories
+        git.onDidOpenRepository((repo: any) => {
+            updateButtonState();
+            repo.state.onDidChange(() => updateButtonState());
+        });
+    };
+
+    // Initialize git listener asynchronously
+    initializeGitListener().catch(err => {
+        console.error('Failed to initialize git listener:', err);
+        // Set to false as fallback
+        vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', false);
+    });
 
     // Register the command
     let disposable = vscode.commands.registerCommand('claude-mcp-vscode.callMCP', async () => {
@@ -103,12 +113,12 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Start rainbow animation on status bar
         const rainbowColors = [
-            'statusBarItem.errorBackground',      // Red
             'statusBarItem.warningBackground',    // Orange/Yellow
             'editorInfo.foreground',              // Blue
-            'editorWarning.foreground',           // Yellow
             'charts.green',                       // Green
             'charts.purple',                      // Purple
+            'charts.blue',                        // Cyan/Blue
+            'charts.yellow',                      // Yellow
         ];
         let rainbowIndex = 0;
 
@@ -163,7 +173,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const workspacePath = workspaceFolder.uri.fsPath;
-            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-ext-claude-commitension-commit-button.md');
+            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-extension-commit-button.md');
 
             // Execute the agent with progress indicator
             let commitMessage: string;
@@ -202,7 +212,7 @@ export function activate(context: vscode.ExtensionContext) {
                             if (realProgress.includes('Generating initial commit')) {
                                 outputChannel.appendLine('');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                                outputChannel.appendLine('🤖 Running: vscode-ext-claude-commitension-commit-button.md (generator)');
+                                outputChannel.appendLine('🤖 Running: vscode-extension-commit-button.md (generator)');
                                 outputChannel.appendLine('Content: Git diff + documentation + module metadata');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }
@@ -316,7 +326,11 @@ export function activate(context: vscode.ExtensionContext) {
             // Set the commit message in the repository
             repo.inputBox.value = commitMessage;
 
-            vscode.window.showInformationMessage('✓ Commit message generated successfully!');
+            // Trigger the git commit editor with the generated message
+            // This opens VSCode's COMMIT_EDITMSG file with the commit message pre-filled
+            await vscode.commands.executeCommand('git.commit');
+
+            vscode.window.showInformationMessage('✓ Commit message generated - review in Git editor!');
 
         } catch (error) {
             vscode.window.showErrorMessage(`Error: ${error}`);

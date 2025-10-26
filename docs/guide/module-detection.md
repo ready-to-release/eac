@@ -26,7 +26,7 @@ flowchart TD
     PrefixMCP --> ReturnMCP([Return: mcp-service])
 
     CheckMCP -->|No| CheckVSCode{Starts with<br/>.vscode/extensions/?}
-    CheckVSCode -->|Yes| ReturnVSCode([Return: vscode-ext-claude-commit])
+    CheckVSCode -->|Yes| ReturnVSCode([Return: vscode-extension])
 
     CheckVSCode -->|No| CheckContracts{Starts with<br/>contracts/?}
     CheckContracts -->|Yes| ExtractContracts[Extract contracts/<name>]
@@ -66,7 +66,7 @@ flowchart TD
 graph TB
     subgraph Deployable["Deployable Units (Versioned)"]
         MCP["MCP Servers<br/>src/mcp/*/<br/>→ mcp-*"]
-        VSCodeExt["VSCode Extension<br/>.vscode/extensions/*/<br/>→ vscode-ext-claude-commit"]
+        VSCodeExt["VSCode Extension<br/>.vscode/extensions/*/<br/>→ vscode-extension"]
     end
 
     subgraph Infrastructure["Infrastructure (Type-Prefixed)"]
@@ -257,7 +257,7 @@ mindmap
       src-mcp-docs
       src-mcp-github
       src-mcp-vscode
-      vscode-ext-claude-commit
+      vscode-extension
     Infrastructure
       sh-vscode
       pwsh-build

@@ -33,7 +33,7 @@ The server is configured in `.mcp.json` as:
 ## Environment Variables
 
 - `GITHUB_TOKEN` - GitHub personal access token (required)
-  - Create at: https://github.com/settings/tokens
+  - Create at: <https://github.com/settings/tokens>
   - Required scopes: `repo`, `workflow`, `read:org`
 
 ## Tools Provided
@@ -51,18 +51,20 @@ This uses the official MCP GitHub server which provides:
 
 ## Usage in Claude Code
 
-```
+```text
 Create a new issue in this repository about adding tests
 ```
 
 Or via slash command:
-```
+
+```text
 /mcp__github__create-issue
 ```
 
 ## Setup Instructions
 
 1. **Install GitHub CLI** (if not using npx):
+
    ```bash
    # Windows
    winget install --id GitHub.cli
@@ -75,17 +77,20 @@ Or via slash command:
    ```
 
 2. **Authenticate**:
+
    ```bash
    gh auth login
    ```
 
 3. **Create Personal Access Token**:
-   - Visit https://github.com/settings/tokens
+
+   - Visit <https://github.com/settings/tokens>
    - Click "Generate new token (classic)"
    - Select scopes: `repo`, `workflow`, `read:org`
    - Copy token and set environment variable
 
 4. **Configure in `.claude/settings.local.json`**:
+
    ```json
    {
      "env": {

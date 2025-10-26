@@ -171,7 +171,7 @@ This document presents a comprehensive enhancement roadmap for the VSCode Extens
 
 ```
 "Gathering git context (12 modified files, 3 commits)..."
-"Reading documentation (guide/vscode-ext-claude-commit/...)..."
+"Reading documentation (guide/vscode-extension/...)..."
 "Generating commit message (estimated 30s)..."
 ```
 
@@ -581,12 +581,12 @@ vscode.window.showInformationNotification(
 
 ```
 [10:30:00] Starting commit message generation
-[10:30:00] Loading agent: vscode-ext-claude-commitension-commit-button.md
+[10:30:00] Loading agent: vscode-extensionension-commit-button.md
 [10:30:00] Running: git status
 [10:30:01] Found 12 modified files
 [10:30:01] Running: git diff
 [10:30:02] Diff size: 4523 bytes
-[10:30:02] Reading docs: guide/vscode-ext-claude-commit/USAGE.md
+[10:30:02] Reading docs: guide/vscode-extension/USAGE.md
 [10:30:45] Claude API response received (42 tokens/s)
 [10:31:05] Complete! Generated 234 char message
 ```
@@ -1041,7 +1041,7 @@ POST https://hooks.slack.com/...
 **CLI Interface:**
 
 ```bash
-vscode-mcp commit --agent vscode-ext-claude-commit-commit-button \
+vscode-mcp commit --agent vscode-extension-commit-button \
   --workspace /path/to/repo \
   --output commit-message.txt \
   --format json \

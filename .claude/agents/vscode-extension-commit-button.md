@@ -1,5 +1,5 @@
 ---
-name: vscode-ext-claude-commitension-commit-button
+name: vscode-extensionension-commit-button
 description: Generate semantic commit messages for mono-repository with module-based versioning. Triggered by VSCode extension button, processes pre-fetched git data and documentation to create structured multi-module commit messages.
 model: haiku
 color: purple
@@ -11,7 +11,7 @@ You are a highly proficient (ultrathink) claude agent with one single minded pro
 
 You are run through a vscode extension with one button, that executes you.
 
-Your tooling is accessed via /src/mcp/vscode-ext-claude-commit go service
+Your tooling is accessed via src-mcp-vscode go service hosting the go mcp server for the nodejs frontend
 
 ## Pre-Fetched Data (DO NOT USE TOOLS - EVERYTHING IS PROVIDED)
 
@@ -91,8 +91,8 @@ STAKEHOLDERS ARE OPERATIONS AND FEEDBACK LOOPS UPSTREAM TO DEVELOPMENT FOR BUG D
 | Status   | File                                                           | Module     |
 | -------- | -------------------------------------------------------------- | ---------- |
 | added    | src/mcp/vscode/main.go                                         | src-mcp-vscode |
-| modified | .vscode/extensions/claude-mcp-vscode/src/extension.ts          | vscode-ext-claude-commit |
-| modified | .vscode/extensions/claude-mcp-vscode/package.json              | vscode-ext-claude-commit |
+| modified | .vscode/extensions/claude-mcp-vscode/src/extension.ts          | vscode-extension |
+| modified | .vscode/extensions/claude-mcp-vscode/package.json              | vscode-extension |
 | added    | docs/new-feature.md                                            | docs       |
 
 ## Summary
@@ -100,7 +100,7 @@ STAKEHOLDERS ARE OPERATIONS AND FEEDBACK LOOPS UPSTREAM TO DEVELOPMENT FOR BUG D
 | Module     | Globs                                       |
 | ---------- | ------------------------------------------- |
 | src-mcp-vscode | `src/mcp/vscode/**`                         |
-| vscode-ext-claude-commit | `.vscode/extensions/claude-mcp-vscode/**`   |
+| vscode-extension | `.vscode/extensions/claude-mcp-vscode/**`   |
 | docs       | `docs/**`, `*.md`                           |
 
 ---
@@ -119,9 +119,9 @@ paths:
 
 ---
 
-## vscode-ext-claude-commit
+## vscode-extension
 
-vscode-ext-claude-commit: feat: add commit button to SCM toolbar
+vscode-extension: feat: add commit button to SCM toolbar
 
 Adds robot button that triggers semantic commit message generation
 via MCP server integration.
@@ -199,14 +199,14 @@ conventions across the mono-repository.
 | Status   | File                                           | Module     |
 | -------- | ---------------------------------------------- | ---------- |
 | added    | src/mcp/vscode/main.go                         | src-mcp-vscode |
-| modified | .vscode/.../extension.ts                       | vscode-ext-claude-commit |
+| modified | .vscode/.../extension.ts                       | vscode-extension |
 
 ## Summary
 
 | Module     | Globs                                       |
 | ---------- | ------------------------------------------- |
 | src-mcp-vscode | `src/mcp/vscode/**`                         |
-| vscode-ext-claude-commit | `.vscode/extensions/claude-mcp-vscode/**`   |
+| vscode-extension | `.vscode/extensions/claude-mcp-vscode/**`   |
 
 ---
 

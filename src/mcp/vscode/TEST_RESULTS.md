@@ -31,7 +31,7 @@ Comprehensive test that:
 | `mkdocs` | 8 | MkDocs container |
 | `claude-config` | 6 | Claude configuration |
 | `repo-config` | 6 | Repository config files |
-| `vscode-ext-claude-commit` | 6 | VSCode extension |
+| `vscode-extension` | 6 | VSCode extension |
 | `contracts-deployable-units` | 5 | Deployable unit contracts |
 | `src-mcp-vscode` | 5 | MCP VSCode server |
 | `sh-vscode` | 4 | Shell automation for VSCode |
@@ -144,7 +144,7 @@ Found 79 files in repository (tracked + untracked, excluding gitignored)
 ✓  mkdocs                        : 8 files
 ✓  claude-config                 : 6 files
 ✓  repo-config                   : 6 files
-✓  vscode-ext-claude-commit                    : 6 files
+✓  vscode-extension                    : 6 files
 ...
 
 Total files processed: 79
