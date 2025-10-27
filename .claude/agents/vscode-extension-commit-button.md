@@ -149,7 +149,110 @@ All git status codes are normalized to 4 simple categories:
 2. **NO bold text with colons** - `**Text:**` pattern is FORBIDDEN
 3. **Use proper headers** - If you need a subsection, use `###` not `**Bold:**`
 
-````text
+### Code Extract Segment (NEW REQUIREMENT)
+
+**MANDATORY**: Each module section MUST include a code extract showing key changes
+
+**IMPORTANT**: Read the **Git Diff (Complete Changes)** section provided below in the prompt. Extract the most significant code changes for each module directly from the diff output.
+
+Between the body text and the `yaml paths:` block, you MUST include:
+
+1. **Code fence** with appropriate language identifier
+2. **Key code changes** that you found by reading the actual git diff for this module's files
+3. **Extract from the diff**: Look at the `+` lines (additions) and changed functions in the diff
+4. **Focus on**: Function signatures, new functions, critical logic changes
+5. **Keep it concise**: 5-15 lines showing the essence of the change
+6. **Add comments** to explain what changed if not obvious from the code alone
+
+**How to Extract:**
+
+1. Read the "Git Diff (Complete Changes)" section in the prompt below
+2. Find all changes for files in this module
+3. Identify the most significant additions/modifications
+4. Copy the key snippets (without the `+` prefix)
+5. Add clarifying comments if needed
+
+**Language Detection:**
+
+- `.go` files → `go`
+- `.ts`, `.tsx`, `.js` files → `typescript` or `javascript`
+- `.py` files → `python`
+- `.sh` files → `bash`
+- `.yml`, `.yaml` files → `yaml`
+- `.md` files → `markdown`
+- Config files → `json`, `yaml`, or `toml`
+- Unknown → use file extension or `text`
+
+**What to Extract:**
+
+- ✅ New function signatures
+- ✅ Modified function signatures
+- ✅ Key logic changes (if/else, loops with new behavior)
+- ✅ New constants, types, or interfaces
+- ✅ Configuration changes
+- ✅ Important comments added/changed
+- ❌ NOT entire functions (keep it concise!)
+- ❌ NOT formatting-only changes
+- ❌ NOT trivial variable renames
+
+**Example Extracts:**
+
+For Go code changes:
+
+```go
+// Added commit message validation
+func validateCommitMessage(msg string) []ValidationError {
+    // ... validation logic
+}
+
+// Enhanced module detection for nested paths
+if len(parts) >= 3 {
+    return parts[1] + "-" + parts[2]  // "sh-vscode"
+}
+```
+
+For TypeScript changes:
+
+```typescript
+// Added validation warning detection
+if (commitMessage.includes('⚠️ **VALIDATION ERRORS**')) {
+    vscode.window.showWarningMessage('...');
+} else {
+    vscode.window.showInformationMessage('...');
+}
+```
+
+For YAML/config changes:
+
+```yaml
+# New module contract
+moniker: "sh-vscode"
+root: "automation/sh/vscode"
+source:
+  includes:
+    - "automation/sh/vscode/**"
+```
+
+**Structure per Module:**
+
+````markdown
+## module-name
+
+module-name: type: description
+
+Body text explaining WHY the change was made.
+
+```<language>
+// Code extract showing WHAT changed
+<key-changes-from-diff>
+````
+
+```yaml
+paths:
+  - 'module/path/**'
+```
+
+```markdown
 ## Summary
 
 Human-readable summary (2-4 sentences) explaining the changes and their
@@ -163,12 +266,13 @@ TO DEVELOPMENT FOR BUG DETECTION!
 
 ## Files affected
 
-| Status   | File                                                           | Module     |
-| -------- | -------------------------------------------------------------- | ---------- |
-| added    | src/mcp/vscode/main.go                                         | src-mcp-vscode |
+| Status   | File                                                           | Module           |
+| -------- | -------------------------------------------------------------- | ---------------- |
+| added    | src/mcp/vscode/main.go                                         | src-mcp-vscode   |
 | modified | .vscode/extensions/claude-mcp-vscode/src/extension.ts          | vscode-extension |
 | modified | .vscode/extensions/claude-mcp-vscode/package.json              | vscode-extension |
-| added    | docs/new-feature.md                                            | docs       |
+| added    | docs/new-feature.md                                            | docs             |
+```
 
 ---
 
@@ -179,10 +283,19 @@ src-mcp-vscode: feat: add semantic commit generation tool
 Implements execute-agent tool for generating structured commit messages
 based on git context and repository documentation.
 
+```go
+// Key implementation changes
+func generateSemanticCommitMessage(agentFile string) (string, error) {
+    // Gather git context and generate commit message
+    gitContext, err := gatherGitContext(workspaceRoot)
+    // ... implementation details
+}
+```
+
 ```yaml
 paths:
   - 'src/mcp/vscode/**'
-````
+```
 
 ---
 
@@ -192,6 +305,15 @@ vscode-extension: feat: add commit button to SCM toolbar
 
 Adds robot button that triggers semantic commit message generation
 via MCP server integration.
+
+```typescript
+// Added validation warning detection
+if (commitMessage.includes('⚠️ **VALIDATION ERRORS**')) {
+    vscode.window.showWarningMessage('Generated with warnings');
+} else {
+    vscode.window.showInformationMessage('Ready to review!');
+}
+```
 
 ```yaml
 paths:
@@ -205,6 +327,14 @@ paths:
 docs: docs: add semantic commit documentation
 
 Adds documentation for the new semantic commit feature.
+
+```markdown
+# Semantic Commits
+
+All commits MUST follow semantic format:
+- module-name: type: description
+- Types: feat, fix, refactor, docs, chore, test, perf, style
+```
 
 ```yaml
 paths:
@@ -279,6 +409,15 @@ Implements execute-agent tool for generating
 structured commit messages based on git context
 and repository documentation.
 
+```go
+// New function for generating semantic commits
+func generateSemanticCommitMessage(agentFile string) (string, error) {
+    gitContext, err := gatherGitContext(workspaceRoot)
+    commitMessage, err := callClaude(generatorPrompt, model)
+    return commitMessage, nil
+}
+```
+
 ```yaml
 paths:
   - 'src/mcp/vscode/**'
@@ -292,6 +431,17 @@ vscode-extension: feat: add commit button
 
 Adds robot button that triggers semantic commit
 message generation via MCP server integration.
+
+```typescript
+// Added command registration for commit button
+let disposable = vscode.commands.registerCommand(
+    'claude-mcp-vscode.callMCP',
+    async () => {
+        const commitMessage = await executeAgent(workspacePath);
+        repo.inputBox.value = commitMessage;
+    }
+);
+```
 
 ```yaml
 paths:
@@ -325,10 +475,13 @@ Before submitting your commit message, verify:
 8. ✅ **Subject lines** are ≤72 characters (hard limit)
 9. ✅ **ALL text lines** wrapped at 72 characters (Summary, body, all prose)
 10. ✅ **NO bold text with colons** - `**Text:**` pattern is FORBIDDEN (use `###` headers instead)
-11. ✅ **`yaml paths:` block** after each module's body text - properly closed with ```
-12. ✅ **Every yaml block is closed** - each `yaml must have a matching closing`
-13. ✅ **File ends with newline** (MD047 compliance)
-14. ✅ **NO Review section** - output only the commit message structure
+11. ✅ **Code extract** included for EACH module - showing key changes from the git diff
+12. ✅ **Code language** correctly identified in fence (go, typescript, python, yaml, etc.)
+13. ✅ **Code extract is BETWEEN** body text and yaml paths block
+14. ✅ **`yaml paths:` block** after code extract - properly closed with ```
+15. ✅ **Every code/yaml block is closed** - each fence must have a matching closing ```
+16. ✅ **File ends with newline** (MD047 compliance)
+17. ✅ **NO Review section** - output only the commit message structure
 
 **CRITICAL:**
 
@@ -337,7 +490,9 @@ Before submitting your commit message, verify:
 - If you use `**Bold text:**` pattern → WRONG! Use `###` headers instead!
 - If ANY subject line is missing `module-name: type: description` format → STOP and fix immediately!
 - If you use literal `<angle>` brackets instead of actual values → WRONG! Use real module names and types!
-- If ANY yaml block is not closed with `→ WRONG! Every`yaml must have a closing ```!
+- If ANY module section is MISSING a code extract → WRONG! Every module needs code changes shown!
+- If code extract is NOT between body text and yaml paths → WRONG! Order is: subject, body, code, yaml!
+- If ANY code or yaml block is not closed with `→ WRONG! Every fence must have a closing`!
 
 ---
 

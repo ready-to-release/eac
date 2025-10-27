@@ -1,0 +1,189 @@
+# Commit Message Structure Contract
+# Version: 0.1.0
+# Purpose: Defines the expected format for semantic commit messages in this repository
+
+version: "0.1.0"
+name: "Semantic Commit Message Structure"
+description: "Contract defining the structure and format of commit messages for multi-module mono-repository"
+
+structure:
+  top_level_heading:
+    required: true
+    format: "# <descriptive-title>"
+    description: "Single top-level heading without semantic prefix"
+    examples:
+      - "# Add code extract requirements to commit workflow"
+      - "# Fix validation error display in VSCode extension"
+      - "# Refactor module detection for nested paths"
+    rules:
+      - "Must start with '# ' (heading level 1)"
+      - "Title should be descriptive and human-readable"
+      - "NO semantic prefix (feat/fix/etc.) in the heading"
+      - "NO module prefix in the heading"
+      - "Use imperative mood (Add not Added)"
+      - "NO period at end"
+      - "Maximum 72 characters recommended"
+
+  summary_section:
+    required: true
+    format: "## Summary"
+    description: "Executive summary of changes and production impact"
+    rules:
+      - "Must be second section after top-level heading"
+      - "2-4 sentences explaining WHAT and WHY"
+      - "Focus on downstream/production impact"
+      - "Lines wrapped at 72 characters"
+
+  files_affected_section:
+    required: true
+    format: "## Files affected"
+    description: "Markdown table listing all staged files"
+    rules:
+      - "Third section, after Summary"
+      - "Columns: Status | File | Module"
+      - "Must include ALL staged files"
+      - "Status normalized: added, modified, deleted, renamed"
+      - "Renamed files shown as: old -> new"
+
+  module_sections:
+    required: true
+    format: "## <module-name>"
+    description: "One section per unique module affected"
+    rules:
+      - "Separated by '---' horizontal rules"
+      - "Header is plain module name (NO colons)"
+      - "Blank line after header"
+      - "Contains: subject line, body, code extract, yaml paths"
+
+  module_subject_line:
+    required: true
+    format: "<module-name>: <type>: <description>"
+    description: "First line after module header"
+    examples:
+      - "src-mcp-vscode: feat: add commit generation"
+      - "vscode-extension: fix: resolve button state issue"
+      - "docs: docs: update semantic commit guide"
+    rules:
+      - "First line after module ## header"
+      - "Format: module-name: semantic-type: description"
+      - "Types: feat, fix, refactor, docs, chore, test, perf, style"
+      - "Maximum 72 characters"
+      - "Use imperative mood"
+      - "NO period at end"
+
+  module_body:
+    required: true
+    description: "Multi-line explanation of WHY the change was made"
+    rules:
+      - "Blank line after subject line"
+      - "Explain WHY not WHAT (diff shows what)"
+      - "Lines wrapped at 72 characters"
+      - "Focus on motivation and context"
+
+  code_extract:
+    required: true
+    format: "```<language>\n<code-snippet>\n```"
+    description: "Code fence showing key changes from git diff"
+    rules:
+      - "Appears after module body text"
+      - "Before yaml paths block"
+      - "Language identifier required (go, typescript, yaml, etc.)"
+      - "5-15 lines showing essence of change"
+      - "Extract from git diff (+ lines)"
+      - "Add comments to clarify if needed"
+      - "Must be properly closed with ```"
+
+  yaml_paths:
+    required: true
+    format: "```yaml\npaths:\n  - 'glob/pattern/**'\n```"
+    description: "YAML block with glob patterns for module files"
+    rules:
+      - "Appears after code extract"
+      - "Last item in module section"
+      - "Contains glob patterns matching module files"
+      - "Must be properly closed with ```"
+
+  agent_approval:
+    required: true
+    format: "Agent: Approved"
+    description: "Single line indicating agent approval"
+    rules:
+      - "Final line of commit message"
+      - "Exactly: 'Agent: Approved'"
+      - "Variants: 'Agent: Approved (with concerns)' if issues remain"
+
+  markdown_compliance:
+    required: true
+    rules:
+      - "MD041: First line must be top-level heading"
+      - "MD022: Blank line after every ## header"
+      - "MD026: NO trailing punctuation in headers"
+      - "MD047: File must end with newline"
+      - "All code blocks must be closed"
+      - "All yaml blocks must be closed"
+
+validation:
+  errors:
+    - code: "MISSING_TOP_HEADING"
+      message: "Missing top-level heading (# title)"
+      severity: "error"
+
+    - code: "WRONG_HEADING_FORMAT"
+      message: "Top-level heading should be descriptive, not semantic format"
+      severity: "error"
+      examples:
+        wrong: "# feat(multi-module): add feature"
+        correct: "# Add feature to multi-module system"
+
+    - code: "MISSING_SUMMARY"
+      message: "Missing ## Summary section"
+      severity: "error"
+
+    - code: "MISSING_FILES_TABLE"
+      message: "Missing ## Files affected table"
+      severity: "error"
+
+    - code: "INCOMPLETE_FILES_TABLE"
+      message: "Files affected table missing {count} staged file(s)"
+      severity: "error"
+
+    - code: "MISSING_MODULE_SECTION"
+      message: "Missing module section for: {module}"
+      severity: "error"
+
+    - code: "INVALID_SUBJECT_FORMAT"
+      message: "Module subject line does not follow '<module>: <type>: <description>'"
+      severity: "error"
+
+    - code: "MISSING_CODE_EXTRACT"
+      message: "Module section missing code extract"
+      severity: "warning"
+
+    - code: "MISSING_YAML_PATHS"
+      message: "Module section missing yaml paths block"
+      severity: "error"
+
+    - code: "UNCLOSED_CODE_BLOCK"
+      message: "Unclosed code block - missing closing ```"
+      severity: "error"
+
+    - code: "LINE_TOO_LONG"
+      message: "Line exceeds 72 characters"
+      severity: "warning"
+
+examples:
+  simple_commit:
+    title: "# Fix button state in commit workflow"
+    summary: |
+      This commit resolves a race condition where the commit button
+      remained disabled after generation completed, preventing users
+      from generating subsequent commit messages.
+    modules: ["vscode-extension"]
+
+  multi_module_commit:
+    title: "# Add code extract requirements to commit messages"
+    summary: |
+      This commit enhances commit message quality by requiring code
+      extracts in each module section. Changes span agent configuration
+      and validation logic.
+    modules: ["claude-config", "src-mcp-vscode"]

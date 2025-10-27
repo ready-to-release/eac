@@ -510,11 +510,23 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 			return "", fmt.Errorf("failed to auto-fix commit message: %w", err)
 		}
 
+		// Debug: Log fixed commit length
+		fmt.Fprintf(os.Stderr, "[DEBUG] Fixed commit length: %d bytes\n", len(fixedCommit))
+		fmt.Fprintf(os.Stderr, "[DEBUG] Fixed commit preview (first 200 chars): %s\n", fixedCommit[:min(200, len(fixedCommit))])
+
 		// Re-validate the fixed commit
 		sendProgress("revalidate", "Re-validating fixed commit...")
 		revalidationErrors := validateCommitMessage(fixedCommit, workspaceRoot, gitContext)
 		if len(revalidationErrors) > 0 {
 			// Fixer didn't work, append errors to commit message for user to fix manually
+			// BUT: If fixedCommit is empty or too short, use the original finalCommit instead
+			baseMessage := fixedCommit
+			if len(strings.TrimSpace(fixedCommit)) < 50 {
+				// Fixed commit is suspiciously short, use original
+				fmt.Fprintf(os.Stderr, "[WARN] Fixed commit is too short (%d chars), using original finalCommit\n", len(fixedCommit))
+				baseMessage = finalCommit
+			}
+
 			var errorSection strings.Builder
 			errorSection.WriteString("\n\n---\n\n")
 			errorSection.WriteString("⚠️ **VALIDATION ERRORS** (auto-fix attempted but failed):\n\n")
@@ -522,7 +534,7 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 				errorSection.WriteString(fmt.Sprintf("- %s\n", verr.Message))
 			}
 			errorSection.WriteString("\n**Note**: Auto-fix was attempted but couldn't resolve all issues. Please fix manually.\n")
-			finalCommit = fixedCommit + errorSection.String()
+			finalCommit = baseMessage + errorSection.String()
 			sendProgress("complete", "Complete (with validation warnings)")
 			return finalCommit, nil
 		}
@@ -1427,8 +1439,11 @@ func extractContentBlock(agentOutput string) string {
 
 	// Common patterns to strip:
 	// - "Let me output...", "Here is...", "I will provide..."
-	// - "Agent: Approved", "Agent: ..." at the end
+	// - "Agent: Approved", "Agent: ..." at the end (but KEEP if in commit message body!)
 	// - Markdown code fences around the content
+
+	// Debug log
+	fmt.Fprintf(os.Stderr, "[DEBUG] extractContentBlock input length: %d bytes\n", len(agentOutput))
 
 	lines := strings.Split(agentOutput, "\n")
 	var contentLines []string
@@ -1510,7 +1525,17 @@ func extractContentBlock(agentOutput string) string {
 	}
 
 	result := strings.Join(contentLines, "\n")
-	return strings.TrimSpace(result)
+	result = strings.TrimSpace(result)
+
+	// Debug log
+	fmt.Fprintf(os.Stderr, "[DEBUG] extractContentBlock output length: %d bytes\n", len(result))
+	if len(result) > 0 {
+		fmt.Fprintf(os.Stderr, "[DEBUG] extractContentBlock output preview (first 150 chars): %s\n", result[:min(150, len(result))])
+	} else {
+		fmt.Fprintf(os.Stderr, "[WARN] extractContentBlock returned EMPTY result!\n")
+	}
+
+	return result
 }
 
 func callClaude(prompt string, model string) (string, error) {

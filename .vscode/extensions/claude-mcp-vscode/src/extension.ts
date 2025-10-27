@@ -205,8 +205,9 @@ export function activate(context: vscode.ExtensionContext) {
             const randomIdentityIcon = identityIcons[Math.floor(Math.random() * identityIcons.length)];
             try {
                 // Progress title needs to be updated via progress.report() since withProgress title is static
+                // Use SourceControl location to avoid blocking the editor
                 commitMessage = await vscode.window.withProgress({
-                    location: vscode.ProgressLocation.Notification,
+                    location: vscode.ProgressLocation.SourceControl,
                     title: `${randomIdentityIcon}`,
                     cancellable: false
                 }, async (progress) => {
