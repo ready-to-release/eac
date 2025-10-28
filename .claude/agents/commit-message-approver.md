@@ -52,7 +52,7 @@ Approved (with concerns)
 - [Factual issue 2]
 ```
 
-## CRITICAL OUTPUT REQUIREMENTS - ANTI-CORRUPTION LAYER
+## CRITICAL OUTPUT REQUIREMENTS
 
 Your output MUST be PURE CONTENT ONLY. The Go layer expects exactly ONE content block with NO wrapper text.
 

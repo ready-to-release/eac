@@ -70,6 +70,7 @@ type Content struct {
 
 // Global encoder for stdout - shared across all responses and progress
 var stdoutEncoder *json.Encoder
+var stdoutWriter *bufio.Writer
 
 // Global start time for tracking elapsed time in progress messages
 var progressStartTime time.Time
@@ -80,7 +81,10 @@ var lastStageName string
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	stdoutEncoder = json.NewEncoder(os.Stdout)
+
+	// Create buffered writer for stdout so we can explicitly flush
+	stdoutWriter = bufio.NewWriter(os.Stdout)
+	stdoutEncoder = json.NewEncoder(stdoutWriter)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -2052,6 +2056,10 @@ func sendResponse(encoder *json.Encoder, id interface{}, result interface{}) {
 		Result:  result,
 	}
 	encoder.Encode(resp)
+	// Flush after sending response to ensure immediate delivery
+	if stdoutWriter != nil {
+		stdoutWriter.Flush()
+	}
 }
 
 func sendError(encoder *json.Encoder, id interface{}, code int, message string) {
@@ -2064,6 +2072,10 @@ func sendError(encoder *json.Encoder, id interface{}, code int, message string) 
 		},
 	}
 	encoder.Encode(resp)
+	// Flush after sending error to ensure immediate delivery
+	if stdoutWriter != nil {
+		stdoutWriter.Flush()
+	}
 }
 
 // Progress notification structure
@@ -2081,7 +2093,7 @@ func formatDuration(seconds float64) string {
 
 	if mins == 0 {
 		if seconds == 0 {
-			return fmt.Sprintf("nil", secs)
+			return "00s"
 		}
 		return fmt.Sprintf("%02ds", secs)
 	}
@@ -2137,6 +2149,12 @@ func sendProgress(stage string, message string) {
 		if err := stdoutEncoder.Encode(notification); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to encode progress notification: %v\n", err)
 		} else {
+			// CRITICAL: Flush immediately so progress appears without buffering delay
+			if stdoutWriter != nil {
+				if err := stdoutWriter.Flush(); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: Failed to flush stdout: %v\n", err)
+				}
+			}
 			fmt.Fprintf(os.Stderr, "[DEBUG] Progress notification sent successfully\n")
 		}
 	} else {

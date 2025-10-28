@@ -122,6 +122,74 @@ structure:
       - "All code blocks must be closed"
       - "All yaml blocks must be closed"
 
+agent_output_requirements:
+  anti_corruption_layer:
+    description: "Agents MUST output pure content without meta-commentary or wrapper text"
+    required: true
+    purpose: "Ensures agent output can be directly injected into SCM without corruption"
+
+    rules:
+      - "Output must start immediately with commit message content (no preamble)"
+      - "First line must be '# <title>' for generator/fixer agents"
+      - "Title generator outputs ONLY the single title line"
+      - "Fixer agent outputs ONLY the fixed commit message"
+      - "NO conversational wrapper or meta-commentary"
+      - "NO explanations of what was changed or why"
+      - "NO introductory sentences or concluding remarks"
+      - "NO analysis or commentary about the content"
+
+    forbidden_patterns:
+      conversational_wrappers:
+        - "Based on the validation errors..."
+        - "Here's the corrected commit message:"
+        - "Here is the generated message:"
+        - "The corrected message is:"
+        - "I can see that:"
+        - "Let me provide:"
+        - "After reviewing:"
+
+      explanatory_text:
+        - "I've fixed the following issues:"
+        - "The changes include:"
+        - "Corrections made:"
+        - Numbered lists explaining changes (1., 2., 3.)
+        - Bullet lists explaining what was fixed
+
+      meta_commentary:
+        - Any text that isn't part of the actual commit message
+        - Descriptions of the agent's actions
+        - Analysis of validation errors
+        - Suggestions or recommendations outside the message
+
+    enforcement:
+      layer: "Go extractContentBlock() function in src/mcp/vscode/main.go"
+      fallback: "Agent instructions explicitly forbid these patterns"
+      validation: "If agent output contains forbidden patterns, it indicates agent misconfiguration"
+
+    examples:
+      incorrect_fixer_output: |
+        Based on the validation errors, I can see that:
+        1. The summary needs to be wrapped at 72 characters
+        2. The module section uses "multi-module" but should use "claude-mcp-vscode"
+
+        Here's the corrected commit message:
+
+        # multi-module: feat: add validation
+
+      correct_fixer_output: |
+        # multi-module: feat: add validation
+
+        ## Summary
+
+        This commit adds validation for...
+
+      incorrect_title_output: |
+        The title for this commit is:
+        multi-module: feat: add validation
+
+      correct_title_output: |
+        multi-module: feat: add validation
+
 validation:
   errors:
     - code: "MISSING_TOP_HEADING"

@@ -40,7 +40,7 @@ Output the complete commit message with:
 - Fixes applied based on concerns
 - NO `## Approved` section
 
-## CRITICAL OUTPUT REQUIREMENTS - ANTI-CORRUPTION LAYER
+## CRITICAL OUTPUT REQUIREMENTS
 
 Your output MUST be PURE CONTENT ONLY. The Go layer expects exactly ONE content block with NO wrapper text.
 

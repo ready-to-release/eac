@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { StableStatusBar } from './stable-status-bar';
 
 // Global flag to prevent concurrent commit generation
 let isGeneratingCommit = false;
@@ -11,6 +12,9 @@ let debugLogPath: string = '';
 
 // Output channel for extension logs
 let outputChannel: vscode.OutputChannel;
+
+// Stable status bar instance
+let stableStatusBar: StableStatusBar;
 
 function log(message: string) {
     const timestamp = new Date().toISOString();
@@ -32,13 +36,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(outputChannel);
     outputChannel.appendLine('✓ Commit Message AI extension activated');
 
-    // Show status bar item to indicate extension is loaded
-    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    statusBarItem.text = "$(robot) Commit Message AI";
-    statusBarItem.tooltip = "Commit Message AI is active";
-    statusBarItem.command = "claude-mcp-vscode.callMCP";
-    statusBarItem.show();
-    context.subscriptions.push(statusBarItem);
+    // Create stable status bar
+    stableStatusBar = new StableStatusBar(context);
+    context.subscriptions.push(stableStatusBar);
 
     // Initialize git change listener to enable/disable button
     const initializeGitListener = async () => {
@@ -84,30 +84,32 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.hasStagedChanges', false);
     });
 
-    // Register no-op command for disabled state
+    // Register no-op command for disabled state - now injects fun text into status bar
     let clickCount = 0;
     let noOpDisposable = vscode.commands.registerCommand('claude-mcp-vscode.noOp', () => {
         if (isGeneratingCommit) {
             clickCount++;
             const messages = [
-                'Working on it...',
-                'Still working... patience is a virtue! 🧘',
-                'Hey, I said working on it! ⏳',
-                'Seriously, give me a moment... 🤖',
-                'Are you testing my patience? 😅',
-                'OK, now you\'re just clicking for fun... 🎮',
-                'I\'m doing AI magic here! Takes time! ✨',
-                'Each click makes it slower... just kidding! 🐌',
-                'Brewing the perfect commit message... ☕',
-                'Rome wasn\'t built in a day! 🏛️',
-                'You must be really excited! Me too! 🎉',
-                'Pro tip: Watching the pot doesn\'t make it boil faster 👀',
-                'Computing... beep boop beep... 🤖',
-                'Nearly there... (not really, same progress) 📊',
-                'Your enthusiasm is noted and appreciated! 💝'
+                '🔄 Working on it...',
+                '🧘 Still working... patience is a virtue!',
+                '⏳ Hey, I said working on it!',
+                '🤖 Seriously, give me a moment...',
+                '😅 Are you testing my patience?',
+                '🎮 OK, now you\'re just clicking for fun...',
+                '✨ I\'m doing AI magic here! Takes time!',
+                '🐌 Each click makes it slower... just kidding!',
+                '☕ Brewing the perfect commit message...',
+                '🏛️ Rome wasn\'t built in a day!',
+                '🎉 You must be really excited! Me too!',
+                '👀 Pro tip: Watching the pot doesn\'t make it boil faster',
+                '🤖 Computing... beep boop beep...',
+                '📊 Nearly there... (not really, same progress)',
+                '💝 Your enthusiasm is noted and appreciated!'
             ];
             const messageIndex = Math.min(clickCount - 1, messages.length - 1);
-            vscode.window.showInformationMessage(messages[messageIndex]);
+
+            // Inject fun text into status bar instead of popup
+            stableStatusBar.showEvent(messages[messageIndex], 5000);
         } else {
             clickCount = 0; // Reset when not generating
             vscode.window.showInformationMessage('Stage some changes first to generate a commit message');
@@ -145,10 +147,8 @@ export function activate(context: vscode.ExtensionContext) {
 
         isGeneratingCommit = true;
 
-        // Show inactive/processing state with spinning icon and muted appearance
-        statusBarItem.text = "$(sync~spin) Commit Message AI";
-        statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
-        statusBarItem.command = undefined; // Make icon inactive/non-clickable during generation
+        // Start stable status bar generation mode
+        stableStatusBar.startGeneration();
 
         // Update command to show it's working (this affects the SCM button too)
         vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', true);
@@ -178,9 +178,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (validationError) {
                 vscode.window.showErrorMessage(validationError);
                 isGeneratingCommit = false;
-                statusBarItem.text = "$(robot) Commit Message AI";
-                statusBarItem.backgroundColor = undefined;
-                statusBarItem.command = "claude-mcp-vscode.callMCP"; // Restore active state
+                stableStatusBar.stopGeneration();
                 vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', false);
                 return;
             }
@@ -196,78 +194,60 @@ export function activate(context: vscode.ExtensionContext) {
             const workspacePath = workspaceFolder.uri.fsPath;
             const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-extension-commit-button.md');
 
-            // Execute the agent with progress indicator
+            // Execute the agent with simplified progress
             let commitMessage: string;
-            const clockEmojis = ['🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛'];
-            const identityIcons = ['🚀', '⚡', '🎯', '✨', '💫', '🔥', '🌟', '⭐', '🎨', '🔮'];
-            let clockIndex = 0;
-            // Pick one random identity icon for this entire session
-            const randomIdentityIcon = identityIcons[Math.floor(Math.random() * identityIcons.length)];
             try {
-                // Progress title needs to be updated via progress.report() since withProgress title is static
-                // Use SourceControl location to avoid blocking the editor
+                // Simplified SCM progress - just shows stage, details in status bar
                 commitMessage = await vscode.window.withProgress({
                     location: vscode.ProgressLocation.SourceControl,
-                    title: `${randomIdentityIcon}`,
+                    title: "Generating commit message",
                     cancellable: false
                 }, async (progress) => {
-                    // Show randomized initial message
+                    // Show initial message in SCM panel
                     const randomMessages = [
-                        "🚀 Initializing 3-agent workflow...",
-                        "🔍 Preparing semantic commit generation...",
-                        "⚡ Starting commit analysis pipeline...",
-                        "🎯 Launching agent orchestration...",
-                        "🤖 Booting up commit generation...",
-                        "💫 Activating intelligent commit system...",
+                        "🚀 Initializing workflow...",
+                        "🔍 Preparing generation...",
+                        "⚡ Starting analysis...",
+                        "🎯 Launching agents...",
                     ];
                     const initialMsg = randomMessages[Math.floor(Math.random() * randomMessages.length)];
                     progress.report({ message: initialMsg });
-                    // Track the last real progress stage and overall elapsed time
-                    let lastStage = '';
-                    let lastProgressTime = Date.now();
-                    let startTime = Date.now();
-                    let simulationInterval: NodeJS.Timeout | null = null;
-                    let tickCount = 0;
-                    let currentGlobalTime = '00s'; // Track latest global time from server
-                    let lastStageTimeInSec = 0; // Track when last stage started (in seconds from start)
+                    stableStatusBar.addProgress(initialMsg);
 
-                    // Rotate clock emoji every 5 seconds (identity icon stays fixed for this session)
-                    const clockInterval = setInterval(() => {
-                        clockIndex = (clockIndex + 1) % clockEmojis.length;
-                        statusBarItem.text = `$(sync~spin) ${randomIdentityIcon} ${clockEmojis[clockIndex]} ${currentGlobalTime}`;
-                    }, 5000);
+                    // Track current stage for SCM display
+                    let lastStage = 'Initializing';
 
                     // Start the actual agent execution with real progress callback
                     const agentPromise = executeAgent(workspacePath, agentFilePath, (realProgress) => {
                         log('[Real Progress Received] ' + realProgress);
 
-                        // Format: "stage (00m00s:00s) - message"
-                        // Extract global time and message
-                        const timeMatch = realProgress.match(/\(([^:]+):([^)]+)\) - (.+)$/);
-                        log('[Time Match Result] ' + JSON.stringify(timeMatch));
-                        if (timeMatch) {
-                            const globalTime = timeMatch[1].trim();
-                            const message = timeMatch[3].trim();
-                            log('[Extracted Global Time] ' + globalTime);
-                            // Store current global time for simulated messages
-                            currentGlobalTime = globalTime;
-                            // Update status bar with global time (clock rotates, identity icon stays same)
-                            statusBarItem.text = `$(sync~spin) ${randomIdentityIcon} ${clockEmojis[clockIndex]} ${globalTime}`;
-                            // Display with rotating clock and time on left side (fixed position)
-                            progress.report({ message: `${clockEmojis[clockIndex]} ${globalTime.padEnd(8)} ${message}` });
-                        } else {
-                            log('[Time Match Failed] Showing original message');
-                            progress.report({ message: `${clockEmojis[clockIndex]} ${realProgress}` });
-                        }
-                        lastProgressTime = Date.now();
+                        // Extract clean message from various formats
+                        let message = realProgress;
 
-                        // Extract stage from message and log agent execution
-                        if (realProgress.includes('generator') || realProgress.includes('gen-')) {
-                            if (lastStage !== 'generator') {
-                                lastStageTimeInSec = Math.floor((Date.now() - startTime) / 1000);
+                        // Try format: "stage (00m00s:00s) - message"
+                        const timeMatch = realProgress.match(/\(([^:]+):([^)]+)\) - (.+)$/);
+                        if (timeMatch && timeMatch[3]) {
+                            message = timeMatch[3].trim();
+                        } else {
+                            // Try format: "prefix - message" (fallback)
+                            const dashMatch = realProgress.match(/^[^-]+ - (.+)$/);
+                            if (dashMatch && dashMatch[1]) {
+                                message = dashMatch[1].trim();
+                            } else {
+                                // Use as-is but clean it up
+                                message = realProgress.trim();
                             }
-                            lastStage = 'generator';
-                            if (realProgress.includes('Generating initial commit')) {
+                        }
+
+                        // Add to status bar buffer (only if message is reasonable)
+                        if (message && message.length > 0 && message.length < 200) {
+                            stableStatusBar.addProgress(message);
+                        }
+
+                        // Extract stage from message for SCM display and logging
+                        if (realProgress.includes('generator') || realProgress.includes('gen-')) {
+                            lastStage = 'Generating';
+                            if (realProgress.includes('Generating commit message')) {
                                 outputChannel.appendLine('');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                                 outputChannel.appendLine('🤖 Running: vscode-extension-commit-button.md (generator)');
@@ -275,11 +255,8 @@ export function activate(context: vscode.ExtensionContext) {
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }
                         } else if (realProgress.includes('reviewer') || realProgress.includes('rev-')) {
-                            if (lastStage !== 'reviewer') {
-                                lastStageTimeInSec = Math.floor((Date.now() - startTime) / 1000);
-                            }
-                            lastStage = 'reviewer';
-                            if (realProgress.includes('Reviewing commit')) {
+                            lastStage = 'Reviewing';
+                            if (realProgress.includes('Reviewing commit message')) {
                                 outputChannel.appendLine('');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                                 outputChannel.appendLine('🔍 Running: commit-message-reviewer.md');
@@ -287,10 +264,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }
                         } else if (realProgress.includes('approver') || realProgress.includes('app-')) {
-                            if (lastStage !== 'approver') {
-                                lastStageTimeInSec = Math.floor((Date.now() - startTime) / 1000);
-                            }
-                            lastStage = 'approver';
+                            lastStage = 'Approving';
                             if (realProgress.includes('Final approval')) {
                                 outputChannel.appendLine('');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
@@ -299,7 +273,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }
                         } else if (realProgress.includes('concerns')) {
-                            lastStage = 'concerns';
+                            lastStage = 'Fixing concerns';
                             if (realProgress.includes('Fixing concerns')) {
                                 outputChannel.appendLine('');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
@@ -308,7 +282,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }
                         } else if (realProgress.includes('title')) {
-                            lastStage = 'title';
+                            lastStage = 'Creating title';
                             if (realProgress.includes('Generating commit title')) {
                                 outputChannel.appendLine('');
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
@@ -317,81 +291,18 @@ export function activate(context: vscode.ExtensionContext) {
                                 outputChannel.appendLine('═══════════════════════════════════════════════════════');
                             }
                         } else if (realProgress.includes('git') || realProgress.includes('docs')) {
-                            lastStage = 'setup';
+                            lastStage = 'Setup';
                         }
 
-                        progress.report({ message: realProgress });
+                        // Update SCM panel with simple stage info
+                        progress.report({ message: lastStage });
                     });
-
-                    // Helper to format local elapsed time
-                    const formatLocalTime = (seconds: number) => {
-                        const mins = Math.floor(seconds / 60);
-                        const secs = seconds % 60;
-                        return mins > 0 ? `${String(mins).padStart(2, '0')}m${String(secs).padStart(2, '0')}s` : `${String(secs).padStart(2, '0')}s`;
-                    };
-
-                    // Smart simulation: Always show progress based on time elapsed
-                    simulationInterval = setInterval(() => {
-                        tickCount++;
-                        const totalElapsed = Math.floor((Date.now() - startTime) / 1000);
-                        const timeSinceLastProgress = Math.floor((Date.now() - lastProgressTime) / 1000);
-
-                        // Use real global time if available, otherwise calculate local elapsed
-                        const displayTime = currentGlobalTime !== '00s' ? currentGlobalTime : formatLocalTime(totalElapsed);
-
-                        log(`[Simulation Tick ${tickCount}] Stage: ${lastStage}, Total: ${totalElapsed}s, Since last: ${timeSinceLastProgress}s, Display: ${displayTime}`);
-
-                        // Smart stage detection: if no stage yet but time has passed, assume we're in generator
-                        if (!lastStage && totalElapsed > 5) {
-                            lastStage = 'generator';
-                            log('[Stage Detection] No progress received, assuming generator stage');
-                        }
-
-                        // Show sub-progress based on current stage (using actual global time from server or local calculation)
-                        // Format with rotating clock and time left-aligned for fixed position
-                        const paddedTime = displayTime.padEnd(8);
-                        const clockPrefix = `${clockEmojis[clockIndex]} `;
-                        if (lastStage === 'generator') {
-                            if (timeSinceLastProgress < 10) {
-                                progress.report({ message: `${clockPrefix}${paddedTime} 🤖 Analyzing changes...` });
-                            } else if (timeSinceLastProgress < 20) {
-                                progress.report({ message: `${clockPrefix}${paddedTime} 🔮 Discombulating abstractions into lists...` });
-                            } else if (timeSinceLastProgress < 35) {
-                                progress.report({ message: `${clockPrefix}${paddedTime} 📝 Writing module sections...` });
-                            } else if (timeSinceLastProgress < 50) {
-                                progress.report({ message: `${clockPrefix}${paddedTime} ✨ Finalizing commit message...` });
-                            } else {
-                                progress.report({ message: `${clockPrefix}${paddedTime} ⏳ Still generating...` });
-                            }
-                        } else if (lastStage === 'reviewer') {
-                            if (timeSinceLastProgress < 10) progress.report({ message: `${clockPrefix}${paddedTime} Reviewing commit message...` });
-                            else progress.report({ message: `${clockPrefix}${paddedTime} Reviewing commit message...` });
-                        } else if (lastStage === 'approver') {
-                            if (timeSinceLastProgress < 8) progress.report({ message: `${clockPrefix}${paddedTime} Final approval...` });
-                            else progress.report({ message: `${clockPrefix}${paddedTime} Final approval...` });
-                        } else if (lastStage === 'concerns') {
-                            if (timeSinceLastProgress < 12) progress.report({ message: `${clockPrefix}${paddedTime} Fixing concerns...` });
-                            else progress.report({ message: `${clockPrefix}${paddedTime} Fixing concerns...` });
-                        } else if (lastStage === 'title') {
-                            if (timeSinceLastProgress < 8) progress.report({ message: `${clockPrefix}${paddedTime} ✨ Generating commit title...` });
-                            else progress.report({ message: `${clockPrefix}${paddedTime} ✨ Generating commit title...` });
-                        } else if (lastStage === 'setup') {
-                            progress.report({ message: `${clockPrefix}${paddedTime} Setting up context...` });
-                        } else {
-                            // No stage detected yet - show generic progress
-                            progress.report({ message: `${clockPrefix}${paddedTime} Starting workflow...` });
-                        }
-                    }, 3000);
 
                     try {
                         const result = await agentPromise;
-                        if (simulationInterval) clearInterval(simulationInterval);
-                        if (clockInterval) clearInterval(clockInterval);
                         progress.report({ message: "Complete!" });
                         return result;
                     } catch (error) {
-                        if (simulationInterval) clearInterval(simulationInterval);
-                        if (clockInterval) clearInterval(clockInterval);
                         throw error;
                     }
                 });
@@ -418,9 +329,7 @@ export function activate(context: vscode.ExtensionContext) {
             // Always reset the flag and status bar, even if there was an error
             isGeneratingCommit = false;
             clickCount = 0; // Reset click counter
-            statusBarItem.text = "$(robot) Commit Message AI";
-            statusBarItem.backgroundColor = undefined;
-            statusBarItem.command = "claude-mcp-vscode.callMCP"; // Restore active/clickable state
+            stableStatusBar.stopGeneration();
             vscode.commands.executeCommand('setContext', 'claude-mcp-vscode.isGenerating', false);
         }
     });

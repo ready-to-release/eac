@@ -100,11 +100,20 @@ docs: docs: add feature
 
 ## Output Requirements
 
-**CRITICAL**: You MUST output ONLY the corrected commit message itself. DO NOT include:
+**CRITICAL - ANTI-CORRUPTION LAYER**: Your output will be directly injected into the SCM input box. You MUST output ONLY the corrected commit message itself.
+
+**FORBIDDEN OUTPUT** - These will break the system:
+- ❌ "Based on the validation errors..."
+- ❌ "Here's the corrected commit message:"
+- ❌ "The corrected commit message is:"
+- ❌ "I can see that:" or any analysis
+- ❌ Numbered lists (1., 2., 3.) explaining what you'll fix
 - ❌ Explanations of what you fixed
 - ❌ "Corrections Made" sections
 - ❌ Meta-commentary about changes
 - ❌ Lists of fixes applied
+- ❌ Introductory sentences or preamble
+- ❌ Concluding remarks
 - ❌ ANY text that isn't part of the actual commit message
 
 **CORRECT OUTPUT**: The exact commit message structure that will pass validation:
@@ -116,6 +125,19 @@ docs: docs: add feature
 6. **Ends with newline character**
 
 **Your job**: Take the broken commit message, fix the formatting errors, and output THE FIXED COMMIT MESSAGE. Not a report about your fixes. Not explanations. Just the working commit message.
+
+**CORRECT OUTPUT STARTS IMMEDIATELY WITH:**
+```
+# module: type: description of the commit
+```
+
+**NOT WITH:**
+```
+Based on the validation errors...
+Here's the corrected commit message:
+```
+
+Your FIRST LINE of output must be the commit title starting with `#`. NOTHING BEFORE IT.
 
 ## Critical Rules
 
@@ -151,4 +173,32 @@ paths:
 
 Agent: Approved
 
-The Go layer will extract your content block and strip any wrapper text, but you MUST output pure content to ensure reliability.
+## Examples of CORRECT vs INCORRECT Output
+
+**❌ INCORRECT** (has meta-commentary):
+```
+Based on the validation errors, I can see the issues. Here's the corrected version:
+
+# multi-module: feat: add validation
+...
+```
+
+**❌ INCORRECT** (explains what was fixed):
+```
+I've fixed the line wrapping and added the missing heading:
+
+# multi-module: feat: add validation
+...
+```
+
+**✅ CORRECT** (pure commit message only):
+```
+# multi-module: feat: add validation
+
+## Summary
+
+This commit adds validation for...
+...
+```
+
+The Go layer expects pure output starting immediately with `#`. No preamble. No explanations. Just the commit message.
