@@ -10,7 +10,7 @@ structure:
   top_level_heading:
     required: true
     format: "# <descriptive-title>"
-    description: "Single top-level heading without semantic prefix"
+    description: "Single top-level heading with markdown top section and semantic prefix"
     examples:
       - "# Add code extract requirements to commit workflow"
       - "# Fix validation error display in VSCode extension"
@@ -18,11 +18,10 @@ structure:
     rules:
       - "Must start with '# ' (heading level 1)"
       - "Title should be descriptive and human-readable"
-      - "NO semantic prefix (feat/fix/etc.) in the heading"
-      - "NO module prefix in the heading"
+      - "multiple-module or module-prefix in the heading, to show impact area"
       - "Use imperative mood (Add not Added)"
       - "NO period at end"
-      - "Maximum 72 characters recommended"
+      - "Maximum 72 characters"
 
   summary_section:
     required: true
