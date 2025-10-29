@@ -1,0 +1,29 @@
+# specification testing contract: specifications
+# Version: 0.1.0
+
+moniker: "specifications"
+name: "Repository location based specifications"
+type: "definitions-type"
+description: "foldable yaml file constructs that defines repository configurations"
+root: "contracts/testing/"
+root_type: "multi-feature-specifications"
+
+classifications:
+  
+- tdd
+- bdd
+- atdd
+
+
+versioning:
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "contracts/testing/CHANGELOG.md"
+
+source:
+  includes:
+    - "**/*.feature"
+    - "*.feature"
+
+depends_on: []
+used_by:
+  - "automation"

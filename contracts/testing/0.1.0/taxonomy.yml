@@ -1,0 +1,27 @@
+# taxonomy testing contract: taxonomy
+# Version: 0.1.0
+
+moniker: "taxonomy"
+name: "Testing taxonomy"
+type: "contract"
+description: "Docker container definitions and configurations for deployable services"
+root: "/contracts/testing/0.1.0"
+root_type: "contracts-directory"
+
+classifications:
+  - l0: Very fast unit tests
+  - l1: fast unit tests
+  - l2: container isolated tests
+  - l3: in-situ hosted isolated tests
+  - l4: In production non-isolated tests
+  - horizonal-e2e: In staged multi-runtime e2e
+
+versioning:
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: "/contracts/testing/0.1.0/CHANGELOG.md"
+
+source:
+  includes:
+    - "**/*"
+
+depends_on: []
