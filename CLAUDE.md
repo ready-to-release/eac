@@ -21,76 +21,133 @@ CREATE ALL intermediate files, shell scripts, results etc. in `/out/<my-result-f
 
 ## Testing Specifications
 
-This project uses a **three-layer testing approach**: ATDD -> BDD -> TDD
+This project uses a **three-layer testing approach** with **separate files for each layer**:
+
+- **ATDD** (acceptance.spec) → Gauge
+- **BDD** (behavior.feature) → Godog
+- **TDD** (unit tests) → Go test, pytest
 
 **Full documentation**: [docs/reference/testing/specifications/](docs/reference/testing/specifications/index.md)
 
 ### Quick Reference
 
-| Layer | Purpose | Format | Location |
-|-------|---------|--------|----------|
-| **ATDD** | Business requirements | User stories + acceptance criteria | `.feature` files (top) |
-| **BDD** | User-facing behavior | Gherkin scenarios (Given/When/Then) | `.feature` files (bottom) |
-| **TDD** | Implementation | Unit tests | Test files |
+| Layer | Tool | Format | File | Location |
+|-------|------|--------|------|----------|
+| **ATDD** | Gauge | Markdown specs | `acceptance.spec` | `requirements/<module>/<feature>/` |
+| **BDD** | Godog | Gherkin scenarios | `behavior.feature` | `requirements/<module>/<feature>/` |
+| **TDD** | Go test, pytest | Unit tests | `*_test.go`, `test_*.py` | `src/**` or `tests/**` |
 
-### Creating Feature Files
+### Directory Structure
 
-**Location**: `requirements/<module>/feature_name.feature`
+```text
+requirements/<module>/<feature_name>/
+├── acceptance.spec                 # Gauge (ATDD) - business requirements
+├── behavior.feature                # Godog (BDD) - executable scenarios
+├── acceptance_test.go              # Gauge step implementations
+├── step_definitions_test.go        # Godog step definitions
+└── issues.md                       # Optional: questions and blockers
+```
 
 **Modules**: `cli/`, `vscode/`, `docs/`, `mcp/`
 
-**Template**:
+### Creating Feature Specifications
+
+**Step 1**: Create feature directory
+```bash
+mkdir -p requirements/<module>/<feature_name>
+```
+
+**Step 2**: Create acceptance.spec (Gauge ATDD)
+
+**File**: `requirements/<module>/<feature_name>/acceptance.spec`
+
+```markdown
+# [Feature Name]
+
+> **Feature ID**: <module>_<feature_name>
+> **BDD Scenarios**: [behavior.feature](./behavior.feature)
+> **Module**: <Module>
+> **Tags**: <tags>
+
+## User Story
+
+* As a [role]
+* I want [capability]
+* So that [business value]
+
+## Acceptance Criteria
+
+* [Measurable criterion 1]
+* [Measurable criterion 2]
+
+## Acceptance Tests
+
+### AC1: [Criterion 1]
+**Validated by**: behavior.feature -> @ac1 scenarios
+
+* [Gauge step 1]
+* [Gauge step 2]
+* [Verification step]
+```
+
+**Step 3**: Create behavior.feature (Godog BDD)
+
+**File**: `requirements/<module>/<feature_name>/behavior.feature`
 
 ```gherkin
-@cli @critical
+# Feature ID: <module>_<feature_name>
+# Acceptance Spec: acceptance.spec
+# Module: <Module>
+
+@<module> @critical @<feature_name>
 Feature: [Feature Name]
 
-  # ATDD Layer
-  As a [role]
-  I want [capability]
-  So that [value]
-
-  Acceptance Criteria:
-  - [ ] [Criterion 1]
-  - [ ] [Criterion 2]
-
-  # BDD Layer
-  @success
+  @success @ac1
   Scenario: [Happy path]
     Given [precondition]
     When [action]
-    Then [outcome]
+    Then [observable outcome]
+    And [verification]
 
-  @error
+  @error @ac1
   Scenario: [Error case]
     Given [precondition]
     When [invalid action]
     Then [error behavior]
+    And [error verification]
 ```
 
-### Unit Test Linking
+### Feature ID Linkage
 
-Link tests to features with a comment:
+**Traceability** is maintained through Feature ID across all files:
 
 ```text
-# Feature: feature_name
+Feature ID: cli_init_project
 
-# Examples by language:
-# Go:         // Feature: feature_name
-# C#:         // Feature: feature_name
-# Python:     # Feature: feature_name
-# TypeScript: // Feature: feature_name
+Used in:
+- acceptance.spec: > **Feature ID**: cli_init_project
+- behavior.feature: # Feature ID: cli_init_project
+- acceptance_test.go: // Feature: cli_init_project
+- step_definitions_test.go: // Feature: cli_init_project
+- Unit tests: // Feature: cli_init_project
+```
+
+**Example by language**:
+```
+Go:     // Feature: cli_init_project
+Python: # Feature: cli_init_project
 ```
 
 ### Decision Tree for AI Assistants
 
 | User Request | Action |
 |--------------|--------|
-| "Create a feature spec" | Generate ATDD + BDD layers in `.feature` file |
-| "Implement feature X" | 1. Read `.feature` file <br> 2. Write unit tests with feature comment <br> 3. Implement to pass tests <br> 4. Verify scenarios pass |
-| "Add acceptance criteria" | Update ATDD layer with measurable criteria |
-| "Add a scenario" | Update BDD layer with Given/When/Then scenario |
-| "Validate feature file" | Check: both layers exist, tags correct, criteria measurable |
+| "Create a feature spec" | 1. Create feature directory<br>2. Create `acceptance.spec` (Gauge)<br>3. Create `behavior.feature` (Godog)<br>4. Add Feature ID to both files |
+| "Implement feature X" | 1. Read `acceptance.spec` and `behavior.feature`<br>2. Create `acceptance_test.go` (Gauge steps)<br>3. Create `step_definitions_test.go` (Godog steps)<br>4. Write unit tests with Feature ID comment<br>5. Implement feature code<br>6. Run: `gauge run` and `godog run` |
+| "Add acceptance criteria" | Update ATDD layer in `acceptance.spec` only |
+| "Add a scenario" | Update BDD layer in `behavior.feature` only |
+| "Validate feature files" | Check: both files exist, Feature ID matches, @ac tags link scenarios to criteria |
+| "Run tests" | `gauge run requirements/` (ATDD)<br>`godog requirements/**/behavior.feature` (BDD)<br>`go test ./...` (TDD) |
 
 ### Common Tags
 
@@ -98,8 +155,27 @@ Link tests to features with a comment:
 
 **Scenario-level**: `@success`, `@error`, `@flag`
 
+**Acceptance Criteria links**: `@ac1`, `@ac2`, `@ac3`, etc.
+
+### Running Tests
+
+```bash
+# Run ATDD acceptance tests (Gauge)
+gauge run requirements/
+
+# Run BDD behavior tests (Godog)
+godog requirements/**/behavior.feature
+
+# Run TDD unit tests
+go test ./...
+
+# Run specific feature
+gauge run requirements/cli/init_project/
+godog requirements/cli/init_project/behavior.feature
+```
+
 ### Detailed Guides
 
-- [ATDD Guide](docs/reference/testing/specifications/atdd.md) - User stories and acceptance criteria
-- [BDD Guide](docs/reference/testing/specifications/bdd.md) - Gherkin scenarios (Given/When/Then)
-- [TDD Guide](docs/reference/testing/specifications/tdd.md) - Unit tests (Go, .NET, Python, TypeScript)
+- [ATDD Guide](docs/reference/testing/specifications/atdd.md) - Gauge specs, Example Mapping, acceptance criteria
+- [BDD Guide](docs/reference/testing/specifications/bdd.md) - Godog scenarios, Gherkin syntax, step definitions
+- [TDD Guide](docs/reference/testing/specifications/tdd.md) - Unit tests (Go and Python)

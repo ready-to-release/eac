@@ -22,7 +22,8 @@
 
 | Layer | Location | Purpose |
 |-------|----------|---------|
-| ATDD/BDD | `.feature` files | Business requirements and user-facing behavior |
+| ATDD | `acceptance.spec` (Gauge) | Business requirements and acceptance criteria |
+| BDD | `behavior.feature` (Godog) | User-facing behavior scenarios |
 | TDD | Test files | Implementation testing and code correctness |
 
 ### Language-Specific Test Files
@@ -30,13 +31,11 @@
 | Language | Test File Pattern | Example |
 |----------|-------------------|---------|
 | **Go** | `*_test.go` | `config_test.go` |
-| **.NET (C#)** | `*.Tests.cs` or `*Tests.cs` | `ConfigTests.cs` |
 | **Python** | `test_*.py` or `*_test.py` | `test_config.py` |
-| **TypeScript** | `*.test.ts` or `*.spec.ts` | `config.test.ts` |
 
 ### Traceability Model
 
-Unit tests link to feature files via comments or attributes:
+Unit tests link to feature files via comments:
 
 #### Go
 
@@ -44,17 +43,6 @@ Unit tests link to feature files via comments or attributes:
 // TestInitProject validates project initialization logic
 // Feature: init_project
 func TestInitProject(t *testing.T) {
-    // Test implementation
-}
-```
-
-#### .NET (C#)
-
-```csharp
-// Feature: init_project
-[Fact]
-public void TestInitProject_CreatesDirectory()
-{
     // Test implementation
 }
 ```
@@ -68,20 +56,11 @@ def test_init_project_creates_directory():
     # Test implementation
 ```
 
-#### TypeScript
-
-```typescript
-// Feature: init_project
-describe('InitProject', () => {
-    it('creates directory structure', () => {
-        // Test implementation
-    });
-});
-```
-
 **Traceability**:
 
-- Feature file: `requirements/cli/init_project.feature`
+- Feature directory: `requirements/cli/init_project/`
+- ATDD spec: `acceptance.spec`
+- BDD scenarios: `behavior.feature`
 - Unit test comment: `Feature: init_project`
 - Search codebase for `Feature: init_project` to find all related tests
 
@@ -95,7 +74,7 @@ TDD follows a simple, repeating cycle:
 +-----------------------------------------------------------------+
 
 1. RED: Write a Failing Test
-   +- Read BDD scenario to understand expected behavior
+   +- Read BDD scenarios from behavior.feature to understand expected behavior
    +- Write test for one small piece of functionality
    +- Run test and verify it fails (RED)
    +- Test should fail for the right reason
@@ -117,94 +96,6 @@ TDD follows a simple, repeating cycle:
    +- Continue cycle for next piece of functionality
 ```
 
-### Cycle Details
-
-#### Phase 1: RED (Write Failing Test)
-
-**Goal**: Write a test that fails because the feature doesn't exist yet
-
-**Steps**:
-
-1. Identify next piece of functionality from BDD scenario
-2. Write test that exercises that functionality
-3. Run test and observe failure
-4. Verify test fails for expected reason (not syntax error)
-
-**Example** (TypeScript):
-
-```typescript
-// Feature: init_project
-describe('InitProject', () => {
-    it('creates src directory', () => {
-        const tmpDir = createTempDir();
-
-        // This will fail because initProject() doesn't exist yet
-        initProject(tmpDir);
-
-        expect(fs.existsSync(path.join(tmpDir, 'src'))).toBe(true);
-    });
-});
-```
-
-**Running**: Test fails (RED) (X)
-
-#### Phase 2: GREEN (Make It Pass)
-
-**Goal**: Write minimal code to make the test pass
-
-**Steps**:
-
-1. Implement just enough code for test to pass
-2. Avoid adding extra features not covered by test
-3. Run test and verify it passes
-
-**Example** (TypeScript):
-
-```typescript
-function initProject(dir: string): void {
-    const srcDir = path.join(dir, 'src');
-    fs.mkdirSync(srcDir, { recursive: true });
-}
-```
-
-**Running**: Test passes (GREEN) (check)
-
-#### Phase 3: REFACTOR (Improve Code)
-
-**Goal**: Clean up code while keeping tests green
-
-**Steps**:
-
-1. Review code for duplication
-2. Improve naming and structure
-3. Simplify complex logic
-4. Run tests after each change
-5. Keep all tests passing
-
-**Example** (TypeScript):
-
-```typescript
-// Before refactoring
-function initProject(dir: string): void {
-    fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-    fs.mkdirSync(path.join(dir, 'tests'), { recursive: true });
-    fs.mkdirSync(path.join(dir, 'docs'), { recursive: true });
-}
-
-// After refactoring (extracted helper)
-function initProject(dir: string): void {
-    const dirs = ['src', 'tests', 'docs'];
-    dirs.forEach(d => createDir(dir, d));
-}
-
-function createDir(base: string, name: string): void {
-    const dirPath = path.join(base, name);
-    fs.mkdirSync(dirPath, { recursive: true });
-}
-```
-
-**Running**: All tests still pass (GREEN) (check)
-
 ## Workflow
 
 ### TDD Development Process
@@ -215,9 +106,9 @@ function createDir(base: string, name: string): void {
 +-----------------------------------------------------------------+
 
 1. Read BDD Scenarios
-   +- Review feature file: requirements/<module>/<feature>.feature
+   +- Review behavior.feature in requirements/<module>/<feature>/
    +- Understand expected behavior from Given/When/Then
-   +- Note the feature file name for traceability
+   +- Note the feature directory name for traceability
    +- Identify internal components needed
       
 2. Write Failing Test (RED)
@@ -262,8 +153,8 @@ function createDir(base: string, name: string): void {
 
 Before starting TDD:
 
-- BDD scenarios exist in feature file
-- Feature file name is known (for traceability)
+- BDD scenarios exist in behavior.feature
+- Feature directory name is known (for traceability)
 - Test file location identified (language-specific)
 
 ### Outputs
@@ -276,6 +167,8 @@ After completing TDD:
 - Test coverage >80%
 - BDD scenarios verified
 - ATDD acceptance criteria met
+
+---
 
 ## Unit Test Structure by Language
 
@@ -318,52 +211,6 @@ go test ./...
 go test -cover ./...
 ```
 
-### .NET (C#)
-
-**File Organization**:
-
-```text
-src/
-+-- Config/
-|   +-- Config.cs              # Implementation
-tests/
-+-- Config.Tests/
-|   +-- ConfigTests.cs         # Tests
-```
-
-**Test Function Format** (xUnit):
-
-```csharp
-using Xunit;
-
-namespace Config.Tests
-{
-    // Feature: feature_file_name
-    public class ConfigTests
-    {
-        [Fact]
-        public void TestFunctionName_DescribesTest()
-        {
-            // Arrange
-            var expected = "value";
-
-            // Act
-            var result = FunctionUnderTest();
-
-            // Assert
-            Assert.Equal(expected, result);
-        }
-    }
-}
-```
-
-**Running Tests**:
-
-```bash
-dotnet test
-dotnet test /p:CollectCoverage=true
-```
-
 ### Python
 
 **File Organization**:
@@ -403,41 +250,7 @@ pytest
 pytest --cov=src tests/
 ```
 
-### TypeScript
-
-**File Organization**:
-
-```text
-src/
-+-- config/
-|   +-- config.ts              # Implementation
-|   +-- config.test.ts         # Tests
-```
-
-**Test Function Format** (Jest):
-
-```typescript
-// Feature: feature_file_name
-describe('ConfigModule', () => {
-    it('describes what is being tested', () => {
-        // Arrange
-        const expected = 'value';
-
-        // Act
-        const result = functionUnderTest();
-
-        // Assert
-        expect(result).toBe(expected);
-    });
-});
-```
-
-**Running Tests**:
-
-```bash
-npm test
-npm test -- --coverage
-```
+---
 
 ## Style Rules
 
@@ -465,11 +278,13 @@ npm test -- --coverage
 - **Write flaky tests**: Tests must be deterministic
 - **Skip refactor phase**: Clean code is critical
 
+---
+
 ## Multi-Language Examples
 
 ### Example 1: Simple Function Test
 
-**BDD Scenario** (from `requirements/cli/init_project.feature`):
+**BDD Scenario** (from `requirements/cli/init_project/behavior.feature`):
 
 ```gherkin
 Scenario: Initialize creates config file
@@ -510,31 +325,6 @@ func TestCreateConfig(t *testing.T) {
 }
 ```
 
-#### C# Implementation
-
-```csharp
-using System.IO;
-using Xunit;
-
-// Feature: init_project
-public class ConfigTests
-{
-    [Fact]
-    public void CreateConfig_CreatesFile()
-    {
-        // Arrange
-        var tmpDir = Path.GetTempPath();
-        var configPath = Path.Combine(tmpDir, "cc.yaml");
-
-        // Act
-        CreateConfig(configPath);
-
-        // Assert
-        Assert.True(File.Exists(configPath));
-    }
-}
-```
-
 #### Python Implementation
 
 ```python
@@ -556,32 +346,9 @@ def test_create_config_creates_file():
         assert os.path.exists(config_path)
 ```
 
-#### TypeScript Implementation
-
-```typescript
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-
-// Feature: init_project
-describe('createConfig', () => {
-    it('creates config file', () => {
-        // Arrange
-        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-'));
-        const configPath = path.join(tmpDir, 'cc.yaml');
-
-        // Act
-        createConfig(configPath);
-
-        // Assert
-        expect(fs.existsSync(configPath)).toBe(true);
-    });
-});
-```
-
 ### Example 2: Parameterized/Table-Driven Tests
 
-**BDD Scenario** (from `requirements/cli/handle_config_errors.feature`):
+**BDD Scenario** (from `requirements/cli/handle_config_errors/behavior.feature`):
 
 ```gherkin
 Scenario: Handle invalid field types
@@ -621,29 +388,6 @@ func TestValidateConfig_InvalidTypes(t *testing.T) {
 }
 ```
 
-#### C# Implementation
-
-```csharp
-// Feature: handle_config_errors
-[Theory]
-[InlineData("1.0.0", "Invalid type for 'version'")]
-[InlineData(null, "")]
-public void ValidateConfig_InvalidTypes(string version, string expectedError)
-{
-    // Arrange
-    var config = new Config { Version = version };
-
-    // Act
-    var error = ValidateConfig(config);
-
-    // Assert
-    if (string.IsNullOrEmpty(expectedError))
-        Assert.Null(error);
-    else
-        Assert.Contains(expectedError, error);
-}
-```
-
 #### Python Implementation
 
 ```python
@@ -662,32 +406,6 @@ def test_validate_config_invalid_types(config, expected_error):
         assert expected_error in str(error)
     else:
         assert error is None
-```
-
-#### TypeScript Implementation
-
-```typescript
-// Feature: handle_config_errors
-describe('validateConfig', () => {
-    const testCases = [
-        { config: { version: "1.0.0" }, expectedError: "Invalid type for 'version'" },
-        { config: { name: "test", version: 1.0 }, expectedError: null },
-    ];
-
-    testCases.forEach(({ config, expectedError }) => {
-        it(`validates ${JSON.stringify(config)}`, () => {
-            // Act
-            const error = validateConfig(config);
-
-            // Assert
-            if (expectedError) {
-                expect(error).toContain(expectedError);
-            } else {
-                expect(error).toBeNull();
-            }
-        });
-    });
-});
 ```
 
 ### Example 3: Error Handling
@@ -712,22 +430,6 @@ func TestInitProject_NonEmptyDirectory(t *testing.T) {
 }
 ```
 
-#### C#
-
-```csharp
-// Feature: init_project
-[Fact]
-public void InitProject_NonEmptyDirectory_ThrowsException()
-{
-    var tmpDir = Path.GetTempPath();
-    File.WriteAllText(Path.Combine(tmpDir, "existing.txt"), "content");
-
-    var exception = Assert.Throws<InvalidOperationException>(() => InitProject(tmpDir));
-
-    Assert.Contains("Directory must be empty", exception.Message);
-}
-```
-
 #### Python
 
 ```python
@@ -743,19 +445,6 @@ def test_init_project_non_empty_directory():
             init_project(tmpdir)
 ```
 
-#### TypeScript
-
-```typescript
-// Feature: init_project
-it('rejects non-empty directory', () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-'));
-    fs.writeFileSync(path.join(tmpDir, 'existing.txt'), 'content');
-
-    expect(() => initProject(tmpDir))
-        .toThrow('Directory must be empty');
-});
-```
-
 ## Test Coverage by Language
 
 ### Go
@@ -766,25 +455,11 @@ go test -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out
 ```
 
-### .NET (C#)
-
-```bash
-dotnet test /p:CollectCoverage=true
-dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
-```
-
 ### Python
 
 ```bash
 pytest --cov=src tests/
 pytest --cov=src --cov-report=html tests/
-```
-
-### TypeScript
-
-```bash
-npm test -- --coverage
-jest --coverage
 ```
 
 ### Coverage Guidelines
@@ -827,13 +502,15 @@ Use this checklist when reviewing unit tests:
 - [ ] Test verifies BDD scenario behavior
 - [ ] Test supports ATDD acceptance criteria
 
+---
+
 ## Integration with ATDD and BDD
 
 ### From BDD to TDD
 
-BDD scenarios guide unit test creation.
+BDD scenarios in behavior.feature guide unit test creation.
 
-**BDD Scenario**:
+**BDD Scenario** (from `requirements/cli/init_project/behavior.feature`):
 
 ```gherkin
 Scenario: Initialize creates config file
@@ -851,12 +528,12 @@ Scenario: Initialize creates config file
 
 ### From ATDD to TDD
 
-ATDD criteria inform test priorities.
+ATDD acceptance criteria from acceptance.spec inform test priorities.
 
-**ATDD Criterion**:
+**ATDD Criterion** (from `requirements/cli/init_project/acceptance.spec`):
 
-```text
-- [ ] Command completes in under 2 seconds
+```markdown
+* Command completes in under 2 seconds
 ```
 
 **TDD Test** (Python example):
@@ -873,12 +550,11 @@ def test_init_project_performance():
     assert duration < 2.0, f"Too slow: {duration}s"
 ```
 
+---
+
 ## Related Resources
 
 - **[ATDD Guide](./atdd.md)** - Define business value and acceptance criteria
 - **[BDD Guide](./bdd.md)** - Write scenarios that guide implementation
 - **[Testing Overview](./index.md)** - Understand the complete testing strategy
 
----
-
-**Implementation Complete**: You've now mastered TDD across multiple languages (Go, .NET, Python, TypeScript)!
