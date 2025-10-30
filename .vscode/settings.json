@@ -12,7 +12,7 @@
     "extends": ".markdownlint.yml"
   },
   "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "darkriszty.markdown-table-prettify",
     "editor.quickSuggestions": {
       "comments": "on",
       "strings": "on",
