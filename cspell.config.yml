@@ -1,0 +1,41 @@
+version: "0.2"
+words:
+  - ATDD
+languageSettings:
+  - languageId: yaml
+    words:
+      - robocopy
+      - callstack
+      - psobject
+      - pscustomobject
+      - psscriptroot
+      - hashtable
+      - cmatch
+      - cnotmatch
+      - imatch
+      - notin
+      - notlike
+      - notmatch
+      - notcontains
+      - LASTEXITCODE
+      - contentfiles
+      - buildtransitive
+  - languageId: powershell
+    words:
+      - robocopy
+      - callstack
+      - psobject
+      - pscustomobject
+      - psscriptroot
+      - hashtable
+      - cmatch
+      - cnotmatch
+      - imatch
+      - notin
+      - notlike
+      - notmatch
+      - notcontains
+      - LASTEXITCODE
+      - devbox
+      - winget
+      - runas
