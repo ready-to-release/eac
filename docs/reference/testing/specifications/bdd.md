@@ -2,6 +2,23 @@
 
 **[<- Back to Testing Overview](./index.md)**
 
+## Table of Contents
+
+- [What is BDD?](#what-is-bdd)
+- [BDD with Godog](#bdd-with-godog)
+- [behavior.feature File Structure](#behaviorfeature-file-structure)
+- [Godog Installation and Setup](#godog-installation-and-setup)
+- [From Example Mapping to Scenarios](#from-example-mapping-to-scenarios)
+- [Best Practices: Feature File Size and Organization](#best-practices-feature-file-size-and-organization)
+- [Gherkin Syntax](#gherkin-syntax)
+- [Workflow](#workflow)
+- [Running Godog Tests](#running-godog-tests)
+- [Complete Example](#complete-example)
+- [Tagging Taxonomy](#tagging-taxonomy)
+- [Related Resources](#related-resources)
+
+---
+
 ## What is BDD?
 
 **Behavior-Driven Development (BDD)** is a specification technique that describes user-facing behavior through concrete examples. In this project, BDD scenarios define **observable CLI behaviors** using Gherkin syntax (Given/When/Then).
@@ -131,6 +148,8 @@ Scenario: Initialize in empty directory
 
 **Common scenario tags**: `@success`, `@error`, `@flag`, `@io`
 
+---
+
 ## Godog Installation and Setup
 
 ### Installation
@@ -210,6 +229,8 @@ func stderrShouldContain(message string) error {
 }
 ```
 
+---
+
 ## From Example Mapping to Scenarios
 
 After the ATDD team completes an Example Mapping workshop (see [ATDD Guide](./atdd.md#example-mapping-workshop-collaborative-discovery)), you'll have **Green Cards** representing concrete examples. These become your Godog scenarios.
@@ -240,7 +261,8 @@ Scenario: [Descriptive name based on card]
 #### Example 1: Simple Conversion
 
 **Green Card**:
-```
+
+```text
 Empty folder -> run init -> creates directories
 ```
 
@@ -258,7 +280,8 @@ Scenario: Initialize in empty directory creates structure
 #### Example 2: Error Case
 
 **Green Card**:
-```
+
+```text
 Existing project -> run init -> error "already initialized"
 ```
 
@@ -277,7 +300,8 @@ Scenario: Initialize in existing project shows error
 #### Example 3: With Flags
 
 **Green Card**:
-```
+
+```text
 With --name flag -> cc.yaml contains custom name
 ```
 
@@ -300,6 +324,7 @@ A single Blue Card (rule/acceptance criterion) often has multiple Green Cards (e
 **Blue Card**: Generates valid configuration file
 
 **Green Cards**:
+
 1. New project -> init -> creates cc.yaml with defaults
 2. With --name flag -> cc.yaml contains custom name
 3. With --verbose flag -> shows configuration being written
@@ -329,6 +354,211 @@ BDD Layer (behavior.feature):
 
 Each Blue Card should have 2-4 Green Cards testing different aspects of that rule.
 
+## Best Practices: Feature File Size and Organization
+
+### Scenario Count Guidelines
+
+**Recommended scenario counts per `.feature` file**:
+
+| Scenario Count | Status | Action |
+|----------------|--------|--------|
+| **10-15** | ✅ Ideal | Optimal file size for maintainability |
+| **15-20** | ✅ Acceptable | Still manageable, consider splitting if growing |
+| **20-30** | ⚠️ Large | Should refactor into multiple files |
+| **30+** | ❌ Too Large | Must refactor - difficult to maintain and slow to run |
+
+### Why File Size Matters
+
+**Benefits of smaller feature files**:
+
+- **Faster test execution** - Enables parallel execution across files
+- **Easier maintenance** - Quickly find specific scenarios
+- **Better readability** - Clear, focused scope per file
+- **Improved CI/CD** - Run subsets of tests efficiently
+- **Team collaboration** - Multiple team members can work on different files without conflicts
+
+### When to Split a Feature File
+
+Split a feature file into multiple focused files when:
+
+1. **Scenario count exceeds 20** - File is becoming difficult to navigate
+2. **Multiple sub-features exist** - Feature has distinct aspects that can be separated
+3. **Different testing concerns** - Success paths vs error paths could be separated
+4. **Different components** - Feature touches multiple system components
+5. **Slow test execution** - File takes too long to run sequentially
+
+### Splitting Strategies
+
+#### Strategy 1: Split by Sub-Feature
+
+Best for features with distinct functional areas.
+
+**Example**: Module Detection (40 scenarios → 5 files)
+
+- `automation_module_detection.feature` - automation/ paths (8 scenarios)
+- `source_module_detection.feature` - src/mcp/ paths (8 scenarios)
+- `infrastructure_module_detection.feature` - containers, contracts (8 scenarios)
+- `documentation_module_detection.feature` - docs, .claude, requirements (8 scenarios)
+- `module_detection_edge_cases.feature` - fallbacks, consistency (8 scenarios)
+
+#### Strategy 2: Split by Flow
+
+Best for features with different user journeys or workflows.
+
+**Example**: Error Handling (40 scenarios → 4 files)
+
+- `git_errors.feature` - Git-specific error cases (10 scenarios)
+- `agent_errors.feature` - Claude CLI and agent failures (10 scenarios)
+- `system_errors.feature` - Filesystem, JSON-RPC, validation (10 scenarios)
+- `error_recovery.feature` - Graceful degradation, logging (10 scenarios)
+
+#### Strategy 3: Split by Validation Type
+
+Best for validation features with different validation concerns.
+
+**Example**: Commit Validation (45 scenarios → 3 files)
+
+- `format_validation.feature` - MD041, semantic format, line lengths (15 scenarios)
+- `completeness_validation.feature` - File and module completeness (15 scenarios)
+- `contract_validation.feature` - YAML blocks, contracts, error handling (15 scenarios)
+
+#### Strategy 4: Use Scenario Outlines
+
+Compress repetitive scenarios using data tables.
+
+**Before (3 scenarios, repetitive)**:
+
+```gherkin
+Scenario: Detect CLI module
+  When I determine module for "automation/cli/deploy/script.sh"
+  Then the detected module is "cli-deploy"
+
+Scenario: Detect container module
+  When I determine module for "automation/container/registry/config.yml"
+  Then the detected module is "container-registry"
+
+Scenario: Detect docs module
+  When I determine module for "automation/docs/build/Makefile"
+  Then the detected module is "docs-build"
+```
+
+**After (1 scenario outline, concise)**:
+
+```gherkin
+Scenario Outline: Detect automation modules
+  When I determine module for "<path>"
+  Then the detected module is "<module>"
+
+  Examples:
+    | path                                      | module              |
+    | automation/cli/deploy/script.sh           | cli-deploy          |
+    | automation/container/registry/config.yml  | container-registry  |
+    | automation/docs/build/Makefile            | docs-build          |
+```
+
+### How to Split a Feature
+
+#### Step 1: Update `acceptance.spec`
+
+Replace single BDD link with section listing all feature files:
+
+```markdown
+## BDD Feature Files
+
+This feature is split across multiple focused files for maintainability:
+
+- [sub_feature_1.feature](./sub_feature_1.feature) - Description of scope
+- [sub_feature_2.feature](./sub_feature_2.feature) - Description of scope
+- [sub_feature_3.feature](./sub_feature_3.feature) - Description of scope
+
+## Acceptance Tests
+
+### AC1: Description
+**Validated by**: sub_feature_1.feature -> @ac1 scenarios
+
+### AC2: Description
+**Validated by**: sub_feature_2.feature -> @ac2 scenarios
+```
+
+#### Step 2: Create Split Feature Files
+
+Each split file includes metadata showing it's part of a set:
+
+```gherkin
+# Feature ID: module_feature_name
+# Acceptance Spec: acceptance.spec
+# Module: module-name
+# Part: 1 of 3 - Descriptive Part Name
+
+@module @feature @part1
+Feature: Focused Feature Name
+
+  Background:
+    Given [shared setup]
+
+  @success @ac1
+  Scenario: Specific behavior
+    Given [precondition]
+    When [action]
+    Then [outcome]
+```
+
+#### Step 3: Delete Old Monolithic File
+
+```bash
+rm requirements/<module>/<feature>/behavior.feature
+```
+
+#### Step 4: Verify Structure
+
+```bash
+ls -la requirements/<module>/<feature>/
+```
+
+Expected output:
+
+```text
+acceptance.spec
+sub_feature_1.feature
+sub_feature_2.feature
+sub_feature_3.feature
+```
+
+### Running Split Features
+
+**Run all scenarios for a feature**:
+
+```bash
+godog requirements/<module>/<feature>/*.feature
+```
+
+**Run specific sub-feature**:
+
+```bash
+godog requirements/<module>/<feature>/sub_feature_1.feature
+```
+
+**Run by tags across all files**:
+
+```bash
+godog --tags="@ac1" requirements/<module>/<feature>/*.feature
+```
+
+**Run in parallel (if supported)**:
+
+```bash
+# Using GNU parallel
+ls requirements/<module>/<feature>/*.feature | parallel godog {}
+```
+
+### Maintenance Tips
+
+1. **Keep related scenarios together** - Don't split arbitrarily
+2. **Use consistent naming** - `<concept>_<aspect>.feature`
+3. **Document the split** - Explain in acceptance.spec why files are split
+4. **Maintain traceability** - Keep @ac tags linking to acceptance criteria
+5. **Update regularly** - Refactor as scenario count grows
+
 ## Gherkin Syntax
 
 ### Given/When/Then Structure
@@ -344,16 +574,19 @@ Each Blue Card should have 2-4 Green Cards testing different aspects of that rul
 ### Writing Effective Steps
 
 **Given** (Preconditions):
+
 - Describe the initial state
 - Set up test context
 - Use present tense: "I am in...", "the file exists..."
 
 **When** (Action):
+
 - Describe the user action
 - Usually a single action per scenario
 - Quote CLI commands: `When I run "cc init --force"`
 
 **Then** (Outcome):
+
 - Verify observable results
 - Check files, output, exit codes
 - Use "should" language: "should be created", "should contain"

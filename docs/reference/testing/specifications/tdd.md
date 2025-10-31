@@ -2,6 +2,22 @@
 
 **[<- Back to Testing Overview](./index.md)**
 
+## Table of Contents
+
+- [What is TDD?](#what-is-tdd)
+- [TDD in This Project](#tdd-in-this-project)
+- [The Red-Green-Refactor Cycle](#the-red-green-refactor-cycle)
+- [Workflow](#workflow)
+- [Unit Test Structure by Language](#unit-test-structure-by-language)
+- [Style Rules](#style-rules)
+- [Multi-Language Examples](#multi-language-examples)
+- [Test Coverage by Language](#test-coverage-by-language)
+- [Validation Checklist](#validation-checklist)
+- [Integration with ATDD and BDD](#integration-with-atdd-and-bdd)
+- [Related Resources](#related-resources)
+
+---
+
 ## What is TDD?
 
 **Test-Driven Development (TDD)** is a software development approach where you write tests **before** writing implementation code. In this project, TDD applies to **unit tests** that verify internal code correctness, distinct from the ATDD/BDD layers which specify requirements and behavior.
@@ -557,4 +573,3 @@ def test_init_project_performance():
 - **[ATDD Guide](./atdd.md)** - Define business value and acceptance criteria
 - **[BDD Guide](./bdd.md)** - Write scenarios that guide implementation
 - **[Testing Overview](./index.md)** - Understand the complete testing strategy
-

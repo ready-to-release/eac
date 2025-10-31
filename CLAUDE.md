@@ -53,6 +53,7 @@ requirements/<module>/<feature_name>/
 ### Creating Feature Specifications
 
 **Step 1**: Create feature directory
+
 ```bash
 mkdir -p requirements/<module>/<feature_name>
 ```
@@ -133,7 +134,8 @@ Used in:
 ```
 
 **Example by language**:
-```
+
+```text
 Go:     // Feature: cli_init_project
 Python: # Feature: cli_init_project
 ```
@@ -148,6 +150,50 @@ Python: # Feature: cli_init_project
 | "Add a scenario" | Update BDD layer in `behavior.feature` only |
 | "Validate feature files" | Check: both files exist, Feature ID matches, @ac tags link scenarios to criteria |
 | "Run tests" | `gauge run requirements/` (ATDD)<br>`godog requirements/**/behavior.feature` (BDD)<br>`go test ./...` (TDD) |
+
+### Feature File Size Best Practices
+
+**Scenario Count Guidelines per `.feature` file**:
+
+| Scenario Count | Status | Action |
+|----------------|--------|--------|
+| **10-15** | ✅ Ideal | Optimal for maintainability |
+| **15-20** | ✅ Acceptable | Still manageable |
+| **20-30** | ⚠️ Large | Should refactor into multiple files |
+| **30+** | ❌ Too Large | Must refactor |
+
+**When to split a feature file**:
+
+- Scenario count exceeds 20
+- Multiple distinct sub-features exist
+- File has both success and error scenarios that could be separated
+
+**How to split**:
+
+1. Update `acceptance.spec` to list multiple feature files
+2. Create focused `.feature` files (e.g., `format_validation.feature`, `completeness_validation.feature`)
+3. Update "Validated by" links to point to specific files
+4. Delete old monolithic `behavior.feature`
+
+**Example**: Module Detection (40 scenarios) split into:
+
+- `automation_module_detection.feature` (8 scenarios)
+- `source_module_detection.feature` (8 scenarios)
+- `infrastructure_module_detection.feature` (8 scenarios)
+- `documentation_module_detection.feature` (8 scenarios)
+- `module_detection_edge_cases.feature` (8 scenarios)
+
+**Run split features**:
+
+```bash
+# Run all scenarios for a feature
+godog requirements/<module>/<feature>/*.feature
+
+# Run specific sub-feature
+godog requirements/<module>/<feature>/sub_feature.feature
+```
+
+See [BDD Guide - Best Practices](docs/reference/testing/specifications/bdd.md#best-practices-feature-file-size-and-organization) for detailed splitting strategies.
 
 ### Common Tags
 

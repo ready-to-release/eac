@@ -2,6 +2,20 @@
 
 **[<- Back to Testing Overview](./index.md)**
 
+## Table of Contents
+
+- [What is ATDD?](#what-is-atdd)
+- [ATDD with Gauge](#atdd-with-gauge)
+- [acceptance.spec File Structure](#acceptancespec-file-structure)
+- [Gauge Installation and Setup](#gauge-installation-and-setup)
+- [Example Mapping Workshop (Collaborative Discovery)](#example-mapping-workshop-collaborative-discovery)
+- [Workflow](#workflow)
+- [Running Gauge Tests](#running-gauge-tests)
+- [Complete Example](#complete-example)
+- [Related Resources](#related-resources)
+
+---
+
 ## What is ATDD?
 
 **Acceptance Test-Driven Development (ATDD)** is a collaborative approach where business stakeholders, developers, and testers define acceptance criteria **before** development begins. It focuses on capturing business value and measurable success criteria from the customer's perspective.
