@@ -6,6 +6,22 @@
 
 ## Available Explanations
 
+### [Everything as Code](everything-as-code/index.md)
+
+Understanding the problem space in regulated industries and why "Everything as Code" principles are essential for modern software delivery while maintaining compliance.
+
+**Topics covered:**
+
+- The compliance-velocity paradox facing regulated industries
+- Understanding the problem domain through Cynefin framework
+- What "Everything as Code" means and why it matters
+- Single timeline for traceability
+- Collaboration through shared language and executable specifications
+- Why automation tooling is essential
+- Connection to DORA metrics and performance research
+
+---
+
 ### [Continuous Delivery](continuous-delivery/index.md)
 
 Understanding the mono-repository infrastructure, module organization, and continuous delivery approach.

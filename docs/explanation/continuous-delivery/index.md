@@ -28,4 +28,12 @@ Understanding trunk-based development practices and workflow.
 
 ---
 
+## See Also
+
+### [Everything as Code](../everything-as-code/index.md)
+
+Continuous Delivery in regulated industries requires "Everything as Code" principles. Understanding the problem space, Cynefin framework, and DORA metrics helps contextualize why continuous delivery practices work for compliance.
+
+---
+
 **Looking for technical details?** See [Continuous Delivery Reference](../../reference/continuous-delivery/index.md)

@@ -204,6 +204,46 @@ See [BDD Guide - Best Practices](docs/reference/testing/specifications/bdd.md#be
 
 **Verification tags (for implementation reports)**: `@IV` (Installation Verification), `@PV` (Performance Verification), OV is default when neither tag is present (Operational Verification)
 
+**Risk control tags**: `@risk<ID>` (e.g., `@risk1`, `@risk2`) - Link user scenarios to risk control requirements
+
+#### Risk Control Tags
+
+Link user scenarios to risk control requirements defined in `requirements/risk-controls/`.
+
+**Format**: `@risk<ID>` (e.g., `@risk1`, `@risk2`, `@risk10`)
+
+**How it works**:
+
+1. Risk controls are defined as Gherkin scenarios in `requirements/risk-controls/` that specify what the control requires
+2. Each risk control scenario is tagged with `@risk<ID>`
+3. User scenarios that implement the control are tagged with the same `@risk<ID>`
+
+**Example**:
+
+Risk control definition:
+
+```gherkin
+# requirements/risk-controls/authentication-controls.feature
+@risk1
+Scenario: RC-001 - User authentication required
+  Given a system with protected resources
+  Then all user access MUST be authenticated
+  And authentication MUST occur before granting access
+```
+
+User scenario implementation:
+
+```gherkin
+# requirements/cli/user-authentication/behavior.feature
+@success @ac1 @risk1
+Scenario: Valid credentials grant access
+  Given I have valid credentials
+  When I run "simply login --user admin"
+  Then I should be authenticated
+```
+
+**See**: [How to Link Risk Controls](docs/how-to-guides/testing/link-risk-controls.md) for detailed guide.
+
 ### Running Tests
 
 ```bash

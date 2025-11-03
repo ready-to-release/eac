@@ -5,6 +5,19 @@
 > **Component**: `<Component Name>` (e.g., API, UI, Backend, Service, CLI)
 > **Tags**: `<tags>`
 > **Priority**: `<Critical | High | Medium | Low>`
+> **Risk Control**: `@risk<ID>` (optional - if this feature implements risk control requirements)
+
+## Risk Control (Optional)
+
+If this feature implements a risk control from a risk assessment:
+
+* **Risk ID**: `<RISK-ID>` (e.g., R-023, R-015)
+* **Assessment**: `<ASSESSMENT-ID>` (e.g., Assessment-2025-001)
+* **Control Requirement**: [Brief description of what the control requires]
+* **Control Type**: [Preventive | Detective | Corrective]
+* **Risk Control Tag**: `@risk<ID>` (e.g., @risk1, @risk5)
+
+**Traceability**: Risk control defined in [requirements/risk-controls/](../../risk-controls/)
 
 ---
 
@@ -248,7 +261,11 @@ This feature includes the following verification types for implementation report
    - Use **PV** for performance requirement scenarios
 6. **Document Example Mapping** results from workshop (Yellow/Blue/Green cards)
 7. **Link to BDD scenarios** using @ac1, @ac2, @ac3 tags in behavior.feature
-8. **Remove unused sections** if not applicable to your feature
+8. **Add risk control information** (optional) if feature implements risk requirements:
+   - Reference the risk control scenario in requirements/risk-controls/
+   - Tag BDD scenarios with @risk<ID> to create traceability
+   - See: docs/how-to-guides/testing/link-risk-controls.md
+9. **Remove unused sections** if not applicable to your feature
 
 **Verification Type Guidelines**:
 - **Installation Verification (IV)**: Tests that verify system is properly installed, configured, and ready to use

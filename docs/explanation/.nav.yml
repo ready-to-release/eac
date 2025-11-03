@@ -1,6 +1,8 @@
 title: Explanation
 nav:
   - index.md
+  - references.md
+  - Everything as Code
   - Testing
   - Continuous Delivery
   - commit-agent-pipeline.md
