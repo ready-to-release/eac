@@ -1,0 +1,7 @@
+title: Explanation
+nav:
+  - index.md
+  - Testing
+  - Continuous Delivery
+  - commit-agent-pipeline.md
+  - vscode-extension-architecture.md

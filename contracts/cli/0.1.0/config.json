@@ -1,0 +1,325 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ready-to-release.org/schemas/cli/config/0.1.0",
+  "title": "R2R CLI Configuration Schema",
+  "description": "Configuration schema for Ready to Release CLI",
+  "type": "object",
+  "properties": {
+    "registry": {
+      "type": "object",
+      "description": "Container registry configuration",
+      "properties": {
+        "default": {
+          "type": "string",
+          "description": "Default registry hostname",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9]$",
+          "examples": ["ghcr.io", "docker.io"]
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Registry operation timeout in seconds",
+          "minimum": 0,
+          "default": 30
+        },
+        "retry_attempts": {
+          "type": "integer",
+          "description": "Number of retry attempts for registry operations",
+          "minimum": 0,
+          "default": 3
+        },
+        "authentication": {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether authentication is required",
+              "default": false
+            },
+            "username_env": {
+              "type": "string",
+              "description": "Environment variable containing username",
+              "pattern": "^[A-Z][A-Z0-9_]*$"
+            },
+            "token_env": {
+              "type": "string",
+              "description": "Environment variable containing token/password",
+              "pattern": "^[A-Z][A-Z0-9_]*$"
+            }
+          }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default values for container execution",
+      "properties": {
+        "registry": {
+          "type": "string",
+          "description": "Default registry prefix for images",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]*$"
+        },
+        "pull_policy": {
+          "type": "string",
+          "description": "Default image pull policy",
+          "enum": ["Always", "IfNotPresent", "Never"],
+          "default": "IfNotPresent"
+        },
+        "remove_after": {
+          "type": "boolean",
+          "description": "Remove container after execution",
+          "default": true
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Default execution timeout in seconds",
+          "minimum": 0,
+          "default": 0
+        },
+        "memory_limit": {
+          "type": "string",
+          "description": "Default memory limit (e.g., '512MB', '2GB')",
+          "pattern": "^(\\d+(\\.\\d+)?)\\s*([bBkKmMgG][bB]?)$"
+        },
+        "cpu_limit": {
+          "type": "string",
+          "description": "Default CPU limit (e.g., '0.5', '2')",
+          "pattern": "^\\d+(\\.\\d+)?$"
+        },
+        "environment": {
+          "type": "array",
+          "description": "Default environment variables for all containers",
+          "items": {
+            "$ref": "#/definitions/envvar"
+          }
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "description": "Global environment configuration",
+      "properties": {
+        "global": {
+          "type": "array",
+          "description": "Global environment variables",
+          "items": {
+            "$ref": "#/definitions/envvar"
+          }
+        },
+        "secrets": {
+          "type": "array",
+          "description": "Secret mappings from host to container",
+          "items": {
+            "$ref": "#/definitions/secretvar"
+          }
+        }
+      }
+    },
+    "extensions": {
+      "type": "array",
+      "description": "Container-based CLI extensions",
+      "items": {
+        "$ref": "#/definitions/extension"
+      }
+    }
+  },
+  "definitions": {
+    "envvar": {
+      "type": "object",
+      "required": ["name", "value"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Environment variable name",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "value": {
+          "type": "string",
+          "description": "Environment variable value"
+        }
+      }
+    },
+    "secretvar": {
+      "type": "object",
+      "required": ["name", "env"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Container environment variable name",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "env": {
+          "type": "string",
+          "description": "Host environment variable to read from",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        }
+      }
+    },
+    "volume": {
+      "type": "object",
+      "required": ["host", "container"],
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "Host path to mount"
+        },
+        "container": {
+          "type": "string",
+          "description": "Container path to mount to"
+        },
+        "readonly": {
+          "type": "boolean",
+          "description": "Mount as read-only",
+          "default": false
+        }
+      }
+    },
+    "port": {
+      "type": "object",
+      "required": ["host", "container"],
+      "properties": {
+        "host": {
+          "type": "integer",
+          "description": "Host port",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "container": {
+          "type": "integer",
+          "description": "Container port",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      }
+    },
+    "extension": {
+      "type": "object",
+      "required": ["name", "image"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Extension name (used as command)",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "description": "Extension description"
+        },
+        "version": {
+          "type": "string",
+          "description": "Extension version",
+          "pattern": "^v?\\d+\\.\\d+\\.\\d+(-[\\w.-]+)?(\\+[\\w.-]+)?$"
+        },
+        "image": {
+          "type": "string",
+          "description": "Container image reference",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$|^[a-zA-Z0-9][a-zA-Z0-9._/-]*$"
+        },
+        "image_pull_policy": {
+          "type": "string",
+          "description": "Image pull policy for this extension",
+          "enum": ["Always", "IfNotPresent", "Never", "AutoDetect"],
+          "default": "AutoDetect"
+        },
+        "env": {
+          "type": "array",
+          "description": "Extension-specific environment variables",
+          "items": {
+            "$ref": "#/definitions/envvar"
+          }
+        },
+        "volumes": {
+          "type": "array",
+          "description": "Volume mounts",
+          "items": {
+            "$ref": "#/definitions/volume"
+          }
+        },
+        "ports": {
+          "type": "array",
+          "description": "Port mappings",
+          "items": {
+            "$ref": "#/definitions/port"
+          }
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Working directory inside container"
+        },
+        "entrypoint": {
+          "type": "array",
+          "description": "Container entrypoint override",
+          "items": {
+            "type": "string"
+          }
+        },
+        "command": {
+          "type": "array",
+          "description": "Container command override",
+          "items": {
+            "type": "string"
+          }
+        },
+        "privileged": {
+          "type": "boolean",
+          "description": "Run container in privileged mode",
+          "default": false
+        },
+        "network_mode": {
+          "type": "string",
+          "description": "Container network mode",
+          "enum": ["bridge", "host", "none"],
+          "default": "bridge"
+        },
+        "memory_limit": {
+          "type": "string",
+          "description": "Memory limit (e.g., '512MB', '2GB')",
+          "pattern": "^(\\d+(\\.\\d+)?)\\s*([bBkKmMgG][bB]?)$"
+        },
+        "cpu_limit": {
+          "type": "string",
+          "description": "CPU limit (e.g., '0.5', '2')",
+          "pattern": "^\\d+(\\.\\d+)?$"
+        },
+        "repo_url": {
+          "type": "string",
+          "description": "Extension repository URL",
+          "format": "uri"
+        },
+        "docs_url": {
+          "type": "string",
+          "description": "Extension documentation URL",
+          "format": "uri"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "registry": {
+        "default": "ghcr.io",
+        "timeout": 30,
+        "retry_attempts": 3
+      },
+      "defaults": {
+        "registry": "ghcr.io/ready-to-release/r2r",
+        "pull_policy": "IfNotPresent",
+        "remove_after": true
+      },
+      "extensions": [
+        {
+          "name": "pwsh",
+          "description": "PowerShell extension",
+          "image": "ghcr.io/ready-to-release/r2r/extensions/pwsh:sha-abc123",
+          "env": [
+            {
+              "name": "PS_VERSION",
+              "value": "7.4"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

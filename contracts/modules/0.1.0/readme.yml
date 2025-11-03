@@ -1,0 +1,13 @@
+# Version: 0.1.0
+
+moniker: "readme"
+name: "The README.md's of the repository"
+type: "markdown"
+
+source:
+  root: "/"
+  includes:
+    - "README.md"
+    - "**/README.md"
+
+depends_on: []

@@ -1,0 +1,20 @@
+# Version: 0.1.0
+
+moniker: "src-mcp-vscode"
+name: "Go VSCode MCP Server"
+type: "mcp-server"
+description: "Model Context Protocol server for VSCode integration and actions"
+
+source:
+  changelog_path: "src/mcp/vscode/CHANGELOG.md"
+  root: "src/mcp/vscode"
+  includes:
+    - "go.mod"
+    - "go.sum"    
+    - "**.go"
+    - "*.go"
+    - "/requirements/src-mcp-vscode/**/*"
+    - "/requirements/src-mcp-vscode/*"
+    - run.sh
+
+depends_on: ["vscode-client"]

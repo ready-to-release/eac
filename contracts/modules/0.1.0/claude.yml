@@ -1,0 +1,18 @@
+# Version: 0.1.0
+
+moniker: "claude"
+name: "Claude Code configuration"
+type: "claude-config"
+
+source:
+  root: "/"
+  exclude_children_owned_source: false
+  includes:
+    - ".mcp.json"
+    - "CLAUDE.md"
+    - "**/CLAUDE.md"
+    - ".claude/*.json"
+    - ".claude/*.md"
+    - ".claude/logs/README.md"    
+
+depends_on: []

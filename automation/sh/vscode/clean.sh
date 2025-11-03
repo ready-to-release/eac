@@ -13,7 +13,7 @@ echo ""
 
 # Clean VSCode extension
 echo "Cleaning VSCode extension..."
-cd "$PROJECT_ROOT/.vscode/extensions/claude-mcp-vscode"
+cd "$PROJECT_ROOT/.vscode/extensions/vscode-ext-commit"
 
 CLEANED=false
 

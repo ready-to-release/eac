@@ -1,0 +1,15 @@
+# Version: 0.1.0
+
+moniker: "contracts-modules"
+name: "The module contracts of the repository"
+type: "contracts"
+description: "Repository specific module boundaries"
+
+source:
+  changelog_path: "contracts/modules/0.1.0/CHANGELOG.md"
+  root: "contracts/modules/0.1.0"
+  includes:
+    - "*.yml"
+
+parent: "contracts"
+depends_on: []

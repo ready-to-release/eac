@@ -1,0 +1,19 @@
+# Version: 0.1.0
+
+moniker: "src-mcp-github"
+name: "Go GitHub MCP Server"
+type: "mcp-server"
+description: "Internal MCP server for GitHub API integration"
+required_env: ['GITHUB_TOKEN']
+
+source:
+  changelog_path: "/docs/CHANGELOG.md"
+  root: "src/mcp/github"
+  includes:
+    - "go.sum"    
+    - "go.mod"
+    - "**.go"
+    - "*.go"
+    - run.sh
+
+depends_on: ['gh-cli']

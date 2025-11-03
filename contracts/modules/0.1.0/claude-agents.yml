@@ -1,0 +1,12 @@
+# Version: 0.1.0
+
+moniker: "claude-agents"
+name: "Claude Code Agents"
+
+source:
+  root: ".claude/agents"
+  includes:
+    - "*.md"
+
+parent: "claude"
+depends_on: []

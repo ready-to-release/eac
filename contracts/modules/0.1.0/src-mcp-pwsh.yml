@@ -1,0 +1,18 @@
+# Version: 0.1.0
+
+moniker: "src-mcp-pwsh"
+name: "Go PowerShell MCP Server"
+type: "mcp-server"
+description: "Model Context Protocol server for executing PowerShell commands"
+
+source:
+  changelog_path: "/docs/CHANGELOG.md"
+  root: "src/mcp/pwsh"
+  includes:
+    - "go.sum"    
+    - "go.mod"
+    - "**.go"
+    - "*.go"
+    - run.sh
+
+depends_on: ['pwsh-shell']

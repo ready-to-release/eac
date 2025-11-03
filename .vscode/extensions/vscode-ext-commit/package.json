@@ -1,0 +1,74 @@
+{
+  "name": "vscode-ext-commit",
+  "displayName": "Commit Message AI",
+  "description": "VSCode extension for AI-powered semantic commit message generation",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vscode-ext-commit.callMCP",
+        "title": "Generate Commit Message",
+        "icon": "$(robot)"
+      },
+      {
+        "command": "vscode-ext-commit.noOp",
+        "title": "No Staged Changes",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "vscode-ext-commit.showOutput",
+        "title": "Commit Message AI: Show Output",
+        "icon": "$(output)"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "vscode-ext-commit.noOp",
+          "group": "navigation@1",
+          "when": "scmProvider == git && !vscode-ext-commit.isGenerating && !vscode-ext-commit.hasStagedChanges",
+          "icon": "$(circle-slash)"
+        },
+        {
+          "command": "vscode-ext-commit.callMCP",
+          "group": "navigation@2",
+          "when": "scmProvider == git && !vscode-ext-commit.isGenerating && vscode-ext-commit.hasStagedChanges",
+          "icon": "$(robot)"
+        },
+        {
+          "command": "vscode-ext-commit.noOp",
+          "group": "navigation@3",
+          "when": "scmProvider == git && vscode-ext-commit.isGenerating",
+          "icon": "$(sync~spin)"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {}
+}

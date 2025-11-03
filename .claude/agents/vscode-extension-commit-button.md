@@ -269,8 +269,8 @@ TO DEVELOPMENT FOR BUG DETECTION!
 | Status   | File                                                           | Module           |
 | -------- | -------------------------------------------------------------- | ---------------- |
 | added    | src/mcp/vscode/main.go                                         | src-mcp-vscode   |
-| modified | .vscode/extensions/claude-mcp-vscode/src/extension.ts          | vscode-extension |
-| modified | .vscode/extensions/claude-mcp-vscode/package.json              | vscode-extension |
+| modified | .vscode/extensions/vscode-ext-commit/src/extension.ts          | vscode-extension |
+| modified | .vscode/extensions/vscode-ext-commit/package.json              | vscode-extension |
 | added    | docs/new-feature.md                                            | docs             |
 ```
 
@@ -317,7 +317,7 @@ if (commitMessage.includes('⚠️ **VALIDATION ERRORS**')) {
 
 ```yaml
 paths:
-  - '.vscode/extensions/claude-mcp-vscode/**'
+  - '.vscode/extensions/vscode-ext-commit/**'
 ```
 
 ---
@@ -435,7 +435,7 @@ message generation via MCP server integration.
 ```typescript
 // Added command registration for commit button
 let disposable = vscode.commands.registerCommand(
-    'claude-mcp-vscode.callMCP',
+    'vscode-ext-commit.callMCP',
     async () => {
         const commitMessage = await executeAgent(workspacePath);
         repo.inputBox.value = commitMessage;
@@ -445,7 +445,7 @@ let disposable = vscode.commands.registerCommand(
 
 ```yaml
 paths:
-  - '.vscode/extensions/claude-mcp-vscode/**'
+  - '.vscode/extensions/vscode-ext-commit/**'
 ```
 
 Note:

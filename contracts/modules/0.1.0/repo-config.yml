@@ -1,0 +1,17 @@
+# Version: 0.1.0
+
+moniker: "repo-config"
+name: "Repository Configuration"
+type: "config"
+description: "Root-level repository configuration files including package management, build tools, and git settings"
+
+source:
+  root: "/"
+  includes:
+    - "LICENSE"
+    - ".gitignore"
+    - ".gitattributes"
+    - ".markdownlint.yml" #markdown lint rules
+    - "cspell.config.yml" #global spelling rules
+
+depends_on: []

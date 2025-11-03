@@ -29,15 +29,15 @@ func TestDetermineFileModule(t *testing.T) {
 		{"src/mcp/github/api.go", "src-mcp-github"},
 
 		// VSCode extension
-		{".vscode/extensions/claude-mcp-vscode/src/extension.ts", "vscode-ext-claude-commit"},
-		{".vscode/extensions/claude-mcp-vscode/package.json", "vscode-ext-claude-commit"},
+		{".vscode/extensions/vscode-ext-commit/src/extension.ts", "vscode-ext-claude-commit"},
+		{".vscode/extensions/vscode-ext-commit/package.json", "vscode-ext-claude-commit"},
 
 		// Contracts - contracts-<name>
 		{"contracts/repository/0.1.0/definitions.yml", "contracts-repository"},
 		{"contracts/deployable-units/0.1.0/src-mcp-pwsh.yml", "contracts-deployable-units"},
 
 		// Documentation
-		{"docs/reference/trunk/versioning.md", "docs"},
+		{"docs/reference/continuous-delivery/versioning.md", "docs"},
 		{"README.md", "docs"},
 		{"QUICKSTART.md", "docs"},
 
@@ -176,9 +176,9 @@ func printExamples() {
 		"automation/pwsh-build/build.ps1",
 		"containers/mkdocs/Dockerfile",
 		"src/mcp/pwsh/main.go",
-		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
+		".vscode/extensions/vscode-ext-commit/src/extension.ts",
 		"contracts/repository/0.1.0/definitions.yml",
-		"docs/reference/trunk/semantic-commits.md",
+		"docs/reference/continuous-delivery/semantic-commits.md",
 		".claude/agents/vscode-extension-commit-button.md",
 		"README.md",
 		".gitignore",
@@ -242,7 +242,7 @@ func TestGetModuleGlobPattern(t *testing.T) {
 		// VSCode extension
 		{
 			module:        "vscode-ext-claude-commit",
-			expectedGlobs: []string{".vscode/extensions/claude-mcp-vscode/**"},
+			expectedGlobs: []string{".vscode/extensions/vscode-ext-commit/**"},
 			description:   "VSCode extension",
 		},
 
@@ -347,7 +347,7 @@ func TestModuleGlobPatternIntegration(t *testing.T) {
 		"src/mcp/vscode/module_test.go",
 		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
 		".vscode/extensions/claude-mcp-vscode/package.json",
-		"docs/reference/trunk/semantic-commits.md",
+		"docs/reference/continuous-delivery/semantic-commits.md",
 		"automation/sh/vscode/install.sh",
 	}
 

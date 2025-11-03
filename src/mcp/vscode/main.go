@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"github.com/ready-to-release/eac/src/contracts/modules"
 )
 
 // MCP Server for VSCode integration
@@ -337,96 +337,76 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 		}
 	}
 
-	// Step 6: Load reviewer agent
-	sendProgress("rev-init", "Loading reviewer agent...")
+	// Step 6: Call reviewer and title generator in parallel using goroutines
+	sendProgress("parallel-init", "Loading reviewer and title generator agents...")
+
 	reviewerPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-reviewer.md")
+	titleGenPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-title-generator.md")
+
 	reviewerInstructions, err := ioutil.ReadFile(reviewerPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read reviewer agent file: %w", err)
 	}
-	reviewerModel := extractModelFromAgent(string(reviewerInstructions))
 
-	// Step 7: Call reviewer agent
-	sendProgress("rev-claude", "Reviewing commit message...")
-	reviewerPrompt := string(reviewerInstructions) + "\n\n---\n\n## Commit Message to Review\n\n```\n" + initialCommit + "\n```"
-	review, err := callClaude(reviewerPrompt, reviewerModel)
-	if err != nil {
-		return "", fmt.Errorf("failed to review commit: %w", err)
-	}
-
-	// Step 8: Load approver agent
-	sendProgress("app-init", "Loading approver agent...")
-	approverPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-approver.md")
-	approverInstructions, err := ioutil.ReadFile(approverPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read approver agent file: %w", err)
-	}
-	approverModel := extractModelFromAgent(string(approverInstructions))
-
-	// Step 9: Call approver agent with commit + review
-	sendProgress("app-claude", "Final approval...")
-	approverPrompt := string(approverInstructions) + "\n\n---\n\n" + initialCommit + "\n\n## Review\n\n" + review
-	approvedSection, err := callClaude(approverPrompt, approverModel)
-	if err != nil {
-		return "", fmt.Errorf("failed to approve commit: %w", err)
-	}
-
-	// Step 10: Check if there are concerns
-	var finalCommit string
-	var concernsResult string
-
-	if strings.Contains(approvedSection, "Approved (with concerns)") {
-		// Load concerns handler agent
-		sendProgress("concerns-init", "Loading concerns handler...")
-		concernsPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-concerns-handler.md")
-		concernsInstructions, err := ioutil.ReadFile(concernsPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read concerns handler agent file: %w", err)
-		}
-		concernsModel := extractModelFromAgent(string(concernsInstructions))
-
-		// Step 11: Call concerns handler to fix issues
-		sendProgress("concerns-claude", "Fixing concerns...")
-		commitWithApproval := initialCommit + "\n\n" + approvedSection
-		concernsPrompt := string(concernsInstructions) + "\n\n---\n\n" + commitWithApproval
-		correctedCommit, err := callClaude(concernsPrompt, concernsModel)
-		if err != nil {
-			return "", fmt.Errorf("failed to fix concerns: %w", err)
-		}
-		concernsResult = correctedCommit
-	}
-
-	// Step 12: Determine base commit (with or without concerns fixed)
-	var baseCommit string
-	if concernsResult != "" {
-		baseCommit = concernsResult
-	} else {
-		baseCommit = initialCommit
-	}
-	baseCommit = strings.TrimSpace(baseCommit)
-
-	// Step 13: Generate commit title (5th agent)
-	sendProgress("title-init", "Loading title generator agent...")
-	titleGenPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-title-generator.md")
 	titleGenInstructions, err := ioutil.ReadFile(titleGenPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read title generator agent file: %w", err)
 	}
-	titleGenModel := extractModelFromAgent(string(titleGenInstructions))
 
-	sendProgress("title-claude", "Generating commit title...")
-	titleGenPrompt := string(titleGenInstructions) + "\n\n---\n\n" + baseCommit
-	commitTitle, err := callClaude(titleGenPrompt, titleGenModel)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate commit title: %w", err)
+	// Force both agents to use haiku for speed
+	reviewerModel := "haiku"
+	titleGenModel := "haiku"
+
+	sendProgress("parallel-exec", "Running reviewer and title generator in parallel...")
+
+	// Channel for review result
+	type reviewResult struct {
+		review string
+		err    error
 	}
-	// Clean the title (remove any extra whitespace/newlines)
-	commitTitle = strings.TrimSpace(commitTitle)
+	reviewChan := make(chan reviewResult, 1)
+
+	// Channel for title result
+	type titleResult struct {
+		title string
+		err   error
+	}
+	titleChan := make(chan titleResult, 1)
+
+	// Launch reviewer agent in goroutine
+	go func() {
+		reviewerPrompt := string(reviewerInstructions) + "\n\n---\n\n## Commit Message to Review\n\n```\n" + initialCommit + "\n```"
+		review, err := callClaude(reviewerPrompt, reviewerModel)
+		reviewChan <- reviewResult{review: review, err: err}
+	}()
+
+	// Launch title generator agent in goroutine
+	go func() {
+		titleGenPrompt := string(titleGenInstructions) + "\n\n---\n\n" + initialCommit
+		title, err := callClaude(titleGenPrompt, titleGenModel)
+		titleChan <- titleResult{title: title, err: err}
+	}()
+
+	// Wait for both to complete
+	reviewRes := <-reviewChan
+	titleRes := <-titleChan
+
+	if reviewRes.err != nil {
+		return "", fmt.Errorf("failed to review commit: %w", reviewRes.err)
+	}
+
+	if titleRes.err != nil {
+		return "", fmt.Errorf("failed to generate commit title: %w", titleRes.err)
+	}
+
+	review := reviewRes.review
+	commitTitle := strings.TrimSpace(titleRes.title)
+	baseCommit := strings.TrimSpace(initialCommit)
 
 	// Debug: Log the commit title
 	fmt.Fprintf(os.Stderr, "[DEBUG] Commit title: '%s' (length: %d)\n", commitTitle, len(commitTitle))
 
-	// Step 14: Stitch together final commit message from all agents
+	// Step 7: Stitch together final commit message from all agents
 	sendProgress("stitch", "Stitching agent outputs...")
 
 	// Build the composite commit message
@@ -453,98 +433,33 @@ func generateSemanticCommitMessage(agentFile string) (string, error) {
 	composite.WriteString(cleanCommit)
 	composite.WriteString("\n\n")
 
-	// 3. Add simplified agent status (single factual statement)
-	composite.WriteString("Agent: ")
-
-	// Determine final status
-	// If concerns were handled, it's just "Approved" (concerns were fixed)
-	// If concerns exist but not handled, show "Approved (with concerns)"
-	// Otherwise, just "Approved"
-	if strings.Contains(approvedSection, "Approved (with concerns)") && concernsResult == "" {
-		composite.WriteString("Approved (with concerns)")
-	} else {
-		composite.WriteString("Approved")
-	}
+	// 3. Add review feedback as a section
+	composite.WriteString("## Review\n\n")
+	composite.WriteString(review)
 	composite.WriteString("\n")
 
-	finalCommit = composite.String()
+	finalCommit := composite.String()
 
-	// Step 14.5: Apply pre-validation auto-corrections
+	// Step 8: Apply pre-validation auto-corrections
 	sendProgress("auto-correct", "Applying formatting corrections...")
 	fmt.Fprintf(os.Stderr, "[DEBUG] Before auto-correct, first 300 chars:\n%s\n", finalCommit[:min(300, len(finalCommit))])
 	finalCommit = autoCorrectCommitMessage(finalCommit)
 	fmt.Fprintf(os.Stderr, "[DEBUG] After auto-correct, first 300 chars:\n%s\n", finalCommit[:min(300, len(finalCommit))])
 
-	// Step 15: Validate the final commit message
+	// Step 9: Validate the final commit message
 	sendProgress("validate", "Validating commit message structure...")
 	validationErrors := validateCommitMessage(finalCommit, workspaceRoot, gitContext)
 	if len(validationErrors) > 0 {
-		// Auto-fix validation errors with fixer agent
-		sendProgress("fixer-init", "Loading commit message fixer...")
-		fixerPath := filepath.Join(workspaceRoot, ".claude", "agents", "commit-message-fixer.md")
-		fixerInstructions, err := ioutil.ReadFile(fixerPath)
-		if err != nil {
-			// If fixer agent doesn't exist, append validation errors to commit message
-			var errorSection strings.Builder
-			errorSection.WriteString("\n\n---\n\n")
-			errorSection.WriteString("⚠️ **VALIDATION ERRORS** - Please fix before committing:\n\n")
-			for _, verr := range validationErrors {
-				errorSection.WriteString(fmt.Sprintf("- %s\n", verr.Message))
-			}
-			finalCommit = finalCommit + errorSection.String()
-			sendProgress("complete", "Complete (with validation warnings)")
-			return finalCommit, nil
-		}
-		fixerModel := extractModelFromAgent(string(fixerInstructions))
-
-		sendProgress("fixer-claude", "Auto-fixing validation errors...")
-
-		// Build fixer prompt with original message and errors
-		var fixerPrompt strings.Builder
-		fixerPrompt.WriteString(string(fixerInstructions))
-		fixerPrompt.WriteString("\n\n---\n\n## Original Commit Message\n\n```\n")
-		fixerPrompt.WriteString(finalCommit)
-		fixerPrompt.WriteString("\n```\n\n## Validation Errors\n\n")
+		// Append validation errors to commit message for user awareness
+		var errorSection strings.Builder
+		errorSection.WriteString("\n\n---\n\n")
+		errorSection.WriteString("⚠️ **VALIDATION WARNINGS** - Review before committing:\n\n")
 		for _, verr := range validationErrors {
-			fixerPrompt.WriteString(fmt.Sprintf("• %s\n", verr.Message))
+			errorSection.WriteString(fmt.Sprintf("- %s\n", verr.Message))
 		}
-
-		fixedCommit, err := callClaude(fixerPrompt.String(), fixerModel)
-		if err != nil {
-			return "", fmt.Errorf("failed to auto-fix commit message: %w", err)
-		}
-
-		// Debug: Log fixed commit length
-		fmt.Fprintf(os.Stderr, "[DEBUG] Fixed commit length: %d bytes\n", len(fixedCommit))
-		fmt.Fprintf(os.Stderr, "[DEBUG] Fixed commit preview (first 200 chars): %s\n", fixedCommit[:min(200, len(fixedCommit))])
-
-		// Re-validate the fixed commit
-		sendProgress("revalidate", "Re-validating fixed commit...")
-		revalidationErrors := validateCommitMessage(fixedCommit, workspaceRoot, gitContext)
-		if len(revalidationErrors) > 0 {
-			// Fixer didn't work, append errors to commit message for user to fix manually
-			// BUT: If fixedCommit is empty or too short, use the original finalCommit instead
-			baseMessage := fixedCommit
-			if len(strings.TrimSpace(fixedCommit)) < 50 {
-				// Fixed commit is suspiciously short, use original
-				fmt.Fprintf(os.Stderr, "[WARN] Fixed commit is too short (%d chars), using original finalCommit\n", len(fixedCommit))
-				baseMessage = finalCommit
-			}
-
-			var errorSection strings.Builder
-			errorSection.WriteString("\n\n---\n\n")
-			errorSection.WriteString("⚠️ **VALIDATION ERRORS** (auto-fix attempted but failed):\n\n")
-			for _, verr := range revalidationErrors {
-				errorSection.WriteString(fmt.Sprintf("- %s\n", verr.Message))
-			}
-			errorSection.WriteString("\n**Note**: Auto-fix was attempted but couldn't resolve all issues. Please fix manually.\n")
-			finalCommit = baseMessage + errorSection.String()
-			sendProgress("complete", "Complete (with validation warnings)")
-			return finalCommit, nil
-		}
-
-		// Fixed successfully!
-		finalCommit = fixedCommit
+		finalCommit = finalCommit + errorSection.String()
+		sendProgress("complete", "Complete (with validation warnings)")
+		return finalCommit, nil
 	}
 
 	sendProgress("complete", "Complete!")
@@ -604,21 +519,6 @@ type GitContext struct {
 	FileChanges []FileChange // parsed from Status
 }
 
-// ModuleContract represents a deployable unit contract
-type ModuleContract struct {
-	Moniker     string       `yaml:"moniker"`
-	Name        string       `yaml:"name"`
-	Type        string       `yaml:"type"`
-	Description string       `yaml:"description"`
-	Root        string       `yaml:"root"`
-	Source      SourceConfig `yaml:"source"`
-}
-
-// SourceConfig represents the source configuration in a contract
-type SourceConfig struct {
-	Includes []string `yaml:"includes"`
-}
-
 // CommitValidationError represents a validation error
 type CommitValidationError struct {
 	Field   string
@@ -627,40 +527,6 @@ type CommitValidationError struct {
 
 func (e CommitValidationError) Error() string {
 	return fmt.Sprintf("[%s] %s", e.Field, e.Message)
-}
-
-// loadModuleContracts loads all module contracts from contracts/deployable-units/0.1.0/*.yml
-func loadModuleContracts(workspaceRoot string) (map[string]ModuleContract, error) {
-	contractsDir := filepath.Join(workspaceRoot, "contracts", "deployable-units", "0.1.0")
-	contracts := make(map[string]ModuleContract)
-
-	files, err := filepath.Glob(filepath.Join(contractsDir, "*.yml"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to glob contract files: %w", err)
-	}
-
-	for _, file := range files {
-		// Skip definitions.yml as it's not a module contract
-		if filepath.Base(file) == "definitions.yml" {
-			continue
-		}
-
-		data, err := ioutil.ReadFile(file)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read contract file %s: %w", file, err)
-		}
-
-		var contract ModuleContract
-		if err := yaml.Unmarshal(data, &contract); err != nil {
-			return nil, fmt.Errorf("failed to parse contract file %s: %w", file, err)
-		}
-
-		if contract.Moniker != "" {
-			contracts[contract.Moniker] = contract
-		}
-	}
-
-	return contracts, nil
 }
 
 // autoCorrectCommitMessage applies simple auto-corrections before validation
@@ -742,14 +608,15 @@ func min(a, b int) int {
 func validateCommitMessage(commitMessage string, workspaceRoot string, gitContext *GitContext) []CommitValidationError {
 	var errors []CommitValidationError
 
-	// Load module contracts
-	moduleContracts, err := loadModuleContracts(workspaceRoot)
+	// Load module contracts using the contracts library
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot, "0.1.0")
 	if err != nil {
 		errors = append(errors, CommitValidationError{
 			Field:   "contracts",
 			Message: fmt.Sprintf("Failed to load module contracts: %v", err),
 		})
 		// Continue with validation even if contracts failed to load
+		moduleRegistry = modules.NewRegistry("0.1.0", workspaceRoot) // Empty registry for fallback
 	}
 
 	lines := strings.Split(commitMessage, "\n")
@@ -885,11 +752,11 @@ func validateCommitMessage(commitMessage string, workspaceRoot string, gitContex
 				}
 
 				// Validate module exists in contracts (if contracts loaded successfully)
-				if len(moduleContracts) > 0 {
-					if _, exists := moduleContracts[moduleName]; !exists {
+				if moduleRegistry.Count() > 0 {
+					if !moduleRegistry.Has(moduleName) {
 						errors = append(errors, CommitValidationError{
 							Field:   "module-unknown",
-							Message: fmt.Sprintf("Line %d: Module '%s' not found in contracts/deployable-units/0.1.0/", i+1, moduleName),
+							Message: fmt.Sprintf("Line %d: Module '%s' not found in contracts/modules/0.1.0/", i+1, moduleName),
 						})
 					}
 				}
@@ -987,7 +854,7 @@ func validateCommitMessage(commitMessage string, workspaceRoot string, gitContex
 		// Report missing files
 		if len(missingFiles) > 0 {
 			errors = append(errors, CommitValidationError{
-				Field:   "file-completeness",
+				Field: "file-completeness",
 				Message: fmt.Sprintf("Files affected table is missing %d staged file(s):\n  - %s",
 					len(missingFiles), strings.Join(missingFiles, "\n  - ")),
 			})
@@ -996,7 +863,7 @@ func validateCommitMessage(commitMessage string, workspaceRoot string, gitContex
 		// Report extra files
 		if len(extraFiles) > 0 {
 			errors = append(errors, CommitValidationError{
-				Field:   "file-accuracy",
+				Field: "file-accuracy",
 				Message: fmt.Sprintf("Files affected table contains %d file(s) that are NOT staged:\n  - %s",
 					len(extraFiles), strings.Join(extraFiles, "\n  - ")),
 			})
@@ -1048,7 +915,7 @@ func validateFileCompleteness(commitMessage string, gitContext *GitContext) []Co
 	// Report missing files (completeness issue)
 	if len(missingFiles) > 0 {
 		errors = append(errors, CommitValidationError{
-			Field:   "file-completeness",
+			Field: "file-completeness",
 			Message: fmt.Sprintf("Files affected table is missing %d staged file(s):\n  - %s",
 				len(missingFiles), strings.Join(missingFiles, "\n  - ")),
 		})
@@ -1057,7 +924,7 @@ func validateFileCompleteness(commitMessage string, gitContext *GitContext) []Co
 	// Report extra files (accuracy issue)
 	if len(extraFiles) > 0 {
 		errors = append(errors, CommitValidationError{
-			Field:   "file-accuracy",
+			Field: "file-accuracy",
 			Message: fmt.Sprintf("Files affected table contains %d file(s) that are NOT staged:\n  - %s",
 				len(extraFiles), strings.Join(extraFiles, "\n  - ")),
 		})
@@ -1087,7 +954,7 @@ func validateFileCompleteness(commitMessage string, gitContext *GitContext) []Co
 
 	if len(missingModules) > 0 {
 		errors = append(errors, CommitValidationError{
-			Field:   "module-completeness",
+			Field: "module-completeness",
 			Message: fmt.Sprintf("Commit message is missing sections for %d module(s) that have changes:\n  - %s",
 				len(missingModules), strings.Join(missingModules, "\n  - ")),
 		})
@@ -1244,10 +1111,10 @@ func readDocumentationFiles(workspaceRoot string) (map[string]string, error) {
 
 	// List of documentation files from the agent instructions
 	docPatterns := []string{
-		"docs/reference/trunk/revisionable-timeline.md",
-		"docs/reference/trunk/repository-layout.md",
-		"docs/reference/trunk/versioning.md",
-		"docs/reference/trunk/semantic-commits.md",
+		"docs/explanation/continuous-delivery/trunk-based-development.md",
+		"docs/reference/continuous-delivery/repository-layout.md",
+		"docs/reference/continuous-delivery/versioning.md",
+		"docs/reference/continuous-delivery/semantic-commits.md",
 		"contracts/deployable-units/0.1.0/*.yml",
 	}
 
@@ -1336,10 +1203,10 @@ func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[st
 	prompt.WriteString("MUST include its GitHub Actions compatible glob pattern(s).\n\n")
 
 	// Load module contracts for glob patterns
-	moduleContracts, err := loadModuleContracts(workspaceRoot)
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot, "0.1.0")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to load module contracts: %v\n", err)
-		moduleContracts = make(map[string]ModuleContract) // Empty map for fallback
+		moduleRegistry = modules.NewRegistry("0.1.0", workspaceRoot) // Empty registry for fallback
 	}
 
 	// Group files by module
@@ -1363,9 +1230,9 @@ func buildClaudePrompt(agentInstructions string, gitCtx *GitContext, docs map[st
 	}
 
 	// List each module with its glob patterns
-	for _, module := range modules {
-		globs := getModuleGlobPattern(module, moduleContracts)
-		prompt.WriteString(fmt.Sprintf("**%s:**\n", module))
+	for _, moduleName := range modules {
+		globs := getModuleGlobPattern(moduleName, moduleRegistry)
+		prompt.WriteString(fmt.Sprintf("**%s:**\n", moduleName))
 		prompt.WriteString("```yaml\n")
 		prompt.WriteString("paths:\n")
 		for _, glob := range globs {
@@ -1547,14 +1414,13 @@ func callClaude(prompt string, model string) (string, error) {
 	// This leverages the user's existing Claude Code subscription
 
 	// Build command with optional model flag
-	// IMPORTANT: Use empty --setting-sources to bypass hooks and CLAUDE.md
-	// AND disable co-author attribution via settings JSON
+	// IMPORTANT: Disable co-author attribution via settings JSON
 	// NOTE: We don't disable prompt caching as it significantly improves performance
 	// and Claude Code's API-level prompt caching is smart enough to invalidate
 	// when the actual git diff changes
+	// NOTE: We don't use --setting-sources "" because it bypasses authentication
 	args := []string{
 		"--print",
-		"--setting-sources", "",
 		"--settings", `{"includeCoAuthoredBy":false}`,
 	}
 
@@ -1753,14 +1619,14 @@ func determineFileModule(filePath string) string {
 	}
 
 	// Pattern 4: .vscode/extensions/<name>/... → use exact extension moniker
-	// Examples: .vscode/extensions/claude-mcp-vscode/ → "claude-mcp-vscode"
+	// Examples: .vscode/extensions/vscode-ext-commit/ → "vscode-ext-commit"
 	if strings.HasPrefix(filePath, ".vscode/extensions/") {
 		parts := strings.Split(filePath, "/")
 		if len(parts) >= 3 && parts[2] != "" {
 			// Return the exact extension folder name (matches contract moniker)
 			return parts[2]
 		}
-		return "claude-mcp-vscode" // fallback
+		return "vscode-ext-commit" // fallback
 	}
 
 	// Pattern 5: contracts/deployable-units/<version>/*.yml → actual module from yml filename
@@ -1829,28 +1695,11 @@ func determineFileModule(filePath string) string {
 // These patterns can be used in GitHub Actions workflow path filters
 // If a contract exists for the module, it uses the contract's source.includes patterns
 // Otherwise, it falls back to hardcoded patterns for known modules
-func getModuleGlobPattern(module string, contracts map[string]ModuleContract) []string {
+func getModuleGlobPattern(moduleName string, registry *modules.Registry) []string {
 	// First, check if we have a contract for this module
-	if contract, exists := contracts[module]; exists {
-		// Use patterns from contract
-		var patterns []string
-		for _, include := range contract.Source.Includes {
-			// If pattern starts with root, it's already absolute
-			// Otherwise, combine root + pattern
-			if strings.HasPrefix(include, contract.Root) {
-				patterns = append(patterns, include)
-			} else if contract.Root != "" {
-				// Combine root with pattern, handling ** glob patterns
-				patterns = append(patterns, filepath.Join(contract.Root, include))
-			} else {
-				patterns = append(patterns, include)
-			}
-		}
-		// Normalize path separators for GitHub Actions (always use forward slash)
-		for i, p := range patterns {
-			patterns[i] = strings.ReplaceAll(p, "\\", "/")
-		}
-		return patterns
+	if moduleContract, exists := registry.Get(moduleName); exists {
+		// Use the GetGlobPatterns method from the module contract
+		return moduleContract.GetGlobPatterns()
 	}
 
 	// Fallback to hardcoded patterns for modules without contracts
@@ -1858,26 +1707,26 @@ func getModuleGlobPattern(module string, contracts map[string]ModuleContract) []
 	// GitHub Actions uses forward slashes even on Windows
 
 	// Handle MCP servers
-	if strings.HasPrefix(module, "mcp-") {
-		service := strings.TrimPrefix(module, "mcp-")
+	if strings.HasPrefix(moduleName, "mcp-") {
+		service := strings.TrimPrefix(moduleName, "mcp-")
 		return []string{fmt.Sprintf("src/mcp/%s/**", service)}
 	}
 
 	// Handle automation modules (sh-, pwsh-, py-, etc.)
-	if strings.HasPrefix(module, "sh-") || strings.HasPrefix(module, "pwsh-") || strings.HasPrefix(module, "py-") {
-		return []string{fmt.Sprintf("automation/%s/**", module)}
+	if strings.HasPrefix(moduleName, "sh-") || strings.HasPrefix(moduleName, "pwsh-") || strings.HasPrefix(moduleName, "py-") {
+		return []string{fmt.Sprintf("automation/%s/**", moduleName)}
 	}
 
 	// Handle contract modules
-	if strings.HasPrefix(module, "contracts-") {
-		contractType := strings.TrimPrefix(module, "contracts-")
+	if strings.HasPrefix(moduleName, "contracts-") {
+		contractType := strings.TrimPrefix(moduleName, "contracts-")
 		return []string{fmt.Sprintf("contracts/%s/**", contractType)}
 	}
 
 	// Handle specific known modules
-	switch module {
+	switch moduleName {
 	case "vscode-ext-claude-commit":
-		return []string{".vscode/extensions/claude-mcp-vscode/**"}
+		return []string{".vscode/extensions/vscode-ext-commit/**"}
 
 	case "cli":
 		return []string{"src/cli/**"}
@@ -1921,13 +1770,13 @@ func getModuleGlobPattern(module string, contracts map[string]ModuleContract) []
 
 	default:
 		// For container modules without explicit cases
-		if !strings.Contains(module, "-") && module != "unknown" {
+		if !strings.Contains(moduleName, "-") && moduleName != "unknown" {
 			// Likely a container module, try that first
-			return []string{fmt.Sprintf("containers/%s/**", module)}
+			return []string{fmt.Sprintf("containers/%s/**", moduleName)}
 		}
 
 		// Unknown module - return a safe default
-		return []string{fmt.Sprintf("**/%s/**", module)}
+		return []string{fmt.Sprintf("**/%s/**", moduleName)}
 	}
 }
 

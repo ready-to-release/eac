@@ -1,4 +1,4 @@
-module github.com/simply-cli/cli/mcp-server-github
+module github.com/ready-to-release/eac/mcp-server-github
 
 go 1.21
 

@@ -1,0 +1,77 @@
+# R2R CLI Examples Configuration File
+#
+# This file demonstrates the complete configuration schema for r2r-cli.yml
+# with all possible fields and their default values documented in comments.
+#
+# Configuration Hierarchy:
+# 1. Environment variables (highest priority)
+# 2. Values in r2r-cli.yml
+# 3. Sensible defaults programmed into the Go system
+# 4. Actual value used inside Go
+#
+# To use this file:
+# 1. Copy it to r2r-cli.yml
+# 2. Uncomment and modify the values you need
+# 3. Leave commented values to use the built-in defaults
+
+# Configuration schema version
+version: "1.0"   # Required: Configuration schema version
+                 # Should generally be left as "1.0" unless directed otherwise
+load_local: false     # Optional: Use local development images when available
+                      # Default: false (only use registry images)
+                      # When true: Prefers local builds (no RepoDigests) over registry
+
+# Extensions define containerized tools available through r2r-cli
+extensions:
+  # Each extension requires at minimum a name and image
+  - name:        # Required: Unique name used to invoke the extension (e.g., 'pwsh', 'pst')
+    description: # Optional: Human-readable description of the extension
+                 # Default: "" (empty string)
+    version:     # Optional: Version of the extension
+                 # Default: "" (empty string)
+    image:       # Required: Docker image to use for this extension
+                 # Format: registry/namespace/image:tag
+    repo_url:    # Optional: URL to the extension's source repository
+                 # Default: "" (empty string)
+    docs_url:    # Optional: URL to the extension's documentation
+                 # Default: "" (empty string)
+    env:         # Optional: Environment variables to pass to the container
+                 # Default: [] (empty array)
+      - name:    # Required if env is specified: Environment variable name
+        value:   # Required if env is specified: Environment variable value
+    memory_limit: # Optional: Memory limit for the container (e.g., "512m", "1g")
+                 # Default: "" (no limit)
+    cpu_limit:   # Optional: CPU limit for the container (e.g., "0.5", "1.0")
+                 # Default: "" (no limit)
+    auto_remove_children: # Optional: Automatically remove child containers created during extension execution
+                 # Default: false (shows warning instead)
+
+# Example configuration with actual values:
+# extensions:
+#   - name: 'pwsh'
+#     description: 'PowerShell Core environment for R2R CLI automation'
+#     version: '0.0.3'
+#     image: 'ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:0.0.3'
+#     repo_url: 'https://github.com/ready-to-release/r2r-cli-extensions-pwsh'
+#     docs_url: 'https://github.com/ready-to-release/r2r-cli-extensions-pwsh/blob/main/README.md'
+#     env:
+#       - name: 'POWERSHELL_TELEMETRY_OPTOUT'
+#         value: '1'
+#     auto_remove_children: true  # Automatically clean up Docker-in-Docker child containers
+#   - name: 'pst'
+#     description: 'PowerShell Testing framework for R2R CLI'
+#     version: '0.0.13'
+#     image: 'ghcr.io/ready-to-release/pst:0.0.13'
+#     repo_url: 'https://github.com/ready-to-release/pst'
+#     docs_url: 'https://github.com/ready-to-release/pst/blob/main/README.md'
+
+# Notes:
+# - The 'validation' and 'imagePullPolicy' fields seen in r2r-cli.example.yml
+#   are not part of the core schema in config.go
+# - Environment variables automatically set by r2r-cli:
+#   * R2R_CONTAINER_REPOROOT=/var/task (container path)
+#   * R2R_HOST_REPOROOT=<repository root> (host path)
+# - Additional environment variables in CI:
+#   * NO_COLOR=1
+#   * TERM=dumb
+#   * FORCE_COLOR=0

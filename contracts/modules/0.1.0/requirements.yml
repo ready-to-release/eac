@@ -1,0 +1,15 @@
+# Version: 0.1.0
+
+moniker: "requirements"
+name: "The requirements of the repository"
+type: "requirements"
+description: "Repository specific requirements"
+
+source:
+  changelog_path: "requirements/CHANGELOG.md"
+  root: "requirements"
+  includes:
+    - "*"
+    - "**/*"
+
+depends_on: []

@@ -16,7 +16,7 @@
   },
   {
     "key": "ctrl+shift+c ctrl+shift+o",
-    "command": "claude-mcp-vscode.showOutput",
+    "command": "vscode-ext-commit.showOutput",
     "when": "!terminalFocus"
   }
 ]

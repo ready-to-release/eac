@@ -1,0 +1,23 @@
+# Version: 0.1.0
+
+moniker: "src-cli"
+name: "The Cli of Cli's cli"
+type: "cli"
+description: "The extendable go-based cli tool"
+
+source:
+  changelog_path: "src/cli/CHANGELOG.md"
+  root: "src/cli"
+  includes:
+    - "go.sum"    
+    - "go.mod"
+    - "**.go"
+    - "*.go"
+    - "/build-cli.ps1"
+    - "r2r-cli.examples.yml"
+    - "r2r.example.yml"
+
+depends_on: []
+used_by:
+  - "claude-config"
+  - "src-mcp-vscode"

@@ -1,0 +1,18 @@
+# Version: 0.1.0
+
+moniker: "docs-guide"
+name: "Guide documentation"
+type: "mkdocs-subsite"
+description: "mkdocs base files for guide documentation"
+
+source:
+  changelog_path: "/docs/guide/CHANGELOG.md"
+  root: "docs/guide/"
+  includes:
+    - "docs/guide/**"
+    - "assets/guide/**"
+
+parent: "docs"
+depends_on: []
+used_by:
+  - "src-mcp-docs"

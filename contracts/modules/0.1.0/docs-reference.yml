@@ -1,0 +1,19 @@
+# Version: 0.1.0
+
+moniker: "docs-reference"
+name: "Reference documentation"
+type: "mkdocs-subsite"
+description: "mkdocs base files for reference documentation"
+
+source:
+  changelog_path: "/docs/reference/CHANGELOG.md"
+  root: "docs/reference/"
+  includes:
+    - "*"
+    - "**/*"
+    - "assets/reference/*"
+
+parent: "docs"
+depends_on: []
+used_by:
+  - "src-mcp-docs"

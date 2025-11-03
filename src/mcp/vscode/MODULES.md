@@ -80,7 +80,7 @@ Updates mkdocs container to use Python
 
 | File Path | Detected Module |
 |-----------|----------------|
-| `.vscode/extensions/claude-mcp-vscode/src/extension.ts` | `vscode-extension` |
+| `.vscode/extensions/vscode-ext-commit/src/extension.ts` | `vscode-extension` |
 
 ### 5. Contract Modules
 
@@ -99,7 +99,7 @@ Updates mkdocs container to use Python
 
 | File Path                            | Detected Module |
 |--------------------------------------|-----------------|
-| `docs/reference/trunk/versioning.md` | `docs`          |
+| `docs/reference/continuous-delivery/versioning.md` | `docs`          |
 | `README.md`                          | `docs`          |
 | `QUICKSTART.md`                      | `docs`          |
 
