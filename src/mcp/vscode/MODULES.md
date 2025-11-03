@@ -99,7 +99,7 @@ Updates mkdocs container to use Python
 
 | File Path                            | Detected Module |
 |--------------------------------------|-----------------|
-| `docs/reference/trunk/versioning.md` | `docs`          |
+| `docs/reference/continuous-delivery/versioning.md` | `docs`          |
 | `README.md`                          | `docs`          |
 | `QUICKSTART.md`                      | `docs`          |
 

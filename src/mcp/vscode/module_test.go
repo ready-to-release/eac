@@ -37,7 +37,7 @@ func TestDetermineFileModule(t *testing.T) {
 		{"contracts/deployable-units/0.1.0/src-mcp-pwsh.yml", "contracts-deployable-units"},
 
 		// Documentation
-		{"docs/reference/trunk/versioning.md", "docs"},
+		{"docs/reference/continuous-delivery/versioning.md", "docs"},
 		{"README.md", "docs"},
 		{"QUICKSTART.md", "docs"},
 
@@ -178,7 +178,7 @@ func printExamples() {
 		"src/mcp/pwsh/main.go",
 		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
 		"contracts/repository/0.1.0/definitions.yml",
-		"docs/reference/trunk/semantic-commits.md",
+		"docs/reference/continuous-delivery/semantic-commits.md",
 		".claude/agents/vscode-extension-commit-button.md",
 		"README.md",
 		".gitignore",
@@ -347,7 +347,7 @@ func TestModuleGlobPatternIntegration(t *testing.T) {
 		"src/mcp/vscode/module_test.go",
 		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
 		".vscode/extensions/claude-mcp-vscode/package.json",
-		"docs/reference/trunk/semantic-commits.md",
+		"docs/reference/continuous-delivery/semantic-commits.md",
 		"automation/sh/vscode/install.sh",
 	}
 

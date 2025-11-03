@@ -1,0 +1,8 @@
+title: VSCode Extension
+nav:
+  - index.md
+  - add-action.md
+  - add-command.md
+  - customize-commit-agents.md
+  - troubleshoot.md
+  - work-with-mcp-servers.md

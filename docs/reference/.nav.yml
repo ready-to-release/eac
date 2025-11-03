@@ -1,0 +1,8 @@
+title: Reference
+nav:
+  - index.md
+  - Testing
+  - Continuous Delivery
+  - Decision Records
+  - commit-agent-pipeline.md
+  - vscode-extension.md

@@ -25,7 +25,7 @@ This project uses a **three-layer testing approach** with **separate files for e
 
 - **ATDD** (acceptance.spec) → Gauge
 - **BDD** (behavior.feature) → Godog
-- **TDD** (unit tests) → Go test, pytest
+- **TDD** (unit tests) → Go test
 
 **Full documentation**: [docs/reference/testing/specifications/](docs/reference/testing/specifications/index.md)
 
@@ -35,7 +35,7 @@ This project uses a **three-layer testing approach** with **separate files for e
 |-------|------|--------|------|----------|
 | **ATDD** | Gauge | Markdown specs | `acceptance.spec` | `requirements/<module>/<feature>/` |
 | **BDD** | Godog | Gherkin scenarios | `behavior.feature` | `requirements/<module>/<feature>/` |
-| **TDD** | Go test, pytest | Unit tests | `*_test.go`, `test_*.py` | `src/**` or `tests/**` |
+| **TDD** | Go test | Unit tests | `*_test.go` | `src/**` |
 
 ### Directory Structure
 
@@ -133,11 +133,10 @@ Used in:
 - Unit tests: // Feature: cli_init_project
 ```
 
-**Example by language**:
+**Example**:
 
 ```text
-Go:     // Feature: cli_init_project
-Python: # Feature: cli_init_project
+Go: // Feature: cli_init_project
 ```
 
 ### Decision Tree for AI Assistants
@@ -203,6 +202,8 @@ See [BDD Guide - Best Practices](docs/reference/testing/specifications/bdd.md#be
 
 **Acceptance Criteria links**: `@ac1`, `@ac2`, `@ac3`, etc.
 
+**Verification tags (for implementation reports)**: `@IV` (Installation Verification), `@PV` (Performance Verification), OV is default when neither tag is present (Operational Verification)
+
 ### Running Tests
 
 ```bash
@@ -211,6 +212,11 @@ gauge run requirements/
 
 # Run BDD behavior tests (Godog)
 godog requirements/**/behavior.feature
+
+# Run BDD tests by verification type (for implementation reports)
+godog --tags="@IV" requirements/**/behavior.feature       # Installation Verification
+godog --tags="@PV" requirements/**/behavior.feature       # Performance Verification
+godog --tags="~@IV && ~@PV" requirements/**/behavior.feature  # Operational Verification
 
 # Run TDD unit tests
 go test ./...
@@ -224,4 +230,4 @@ godog requirements/cli/init_project/behavior.feature
 
 - [ATDD Guide](docs/reference/testing/specifications/atdd.md) - Gauge specs, Example Mapping, acceptance criteria
 - [BDD Guide](docs/reference/testing/specifications/bdd.md) - Godog scenarios, Gherkin syntax, step definitions
-- [TDD Guide](docs/reference/testing/specifications/tdd.md) - Unit tests (Go and Python)
+- [TDD Guide](docs/reference/testing/specifications/tdd.md) - Unit tests with Go

@@ -1244,10 +1244,10 @@ func readDocumentationFiles(workspaceRoot string) (map[string]string, error) {
 
 	// List of documentation files from the agent instructions
 	docPatterns := []string{
-		"docs/reference/trunk/revisionable-timeline.md",
-		"docs/reference/trunk/repository-layout.md",
-		"docs/reference/trunk/versioning.md",
-		"docs/reference/trunk/semantic-commits.md",
+		"docs/explanation/continuous-delivery/trunk-based-development.md",
+		"docs/reference/continuous-delivery/repository-layout.md",
+		"docs/reference/continuous-delivery/versioning.md",
+		"docs/reference/continuous-delivery/semantic-commits.md",
 		"contracts/deployable-units/0.1.0/*.yml",
 	}
 

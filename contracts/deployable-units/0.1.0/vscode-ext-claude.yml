@@ -1,0 +1,22 @@
+# Deployable Unit Contract: vscode-ext-claude
+# Version: 0.1.0
+
+moniker: "vscode-ext-claude"
+name: "NodeJS (npm) VSCode Extension using local src-mcp-vscode"
+type: "vscode-ext"
+description: "VSCode extension providing Git toolbar and Claude MCP integration UI"
+root: ".vscode/extensions/claude-mcp-vscode"
+root_type: "single-npm-service"
+
+versioning:
+  version_scheme: "MAJOR.MINOR.PATCH"
+  changelog_path: ".vscode/extensions/claude-mcp-vscode/CHANGELOG.md"
+
+source:
+  includes:
+    - ".vscode/extensions/claude-mcp-vscode/package.json"
+    - ".vscode/extensions/claude-mcp-vscode/README.md"
+    - ".vscode/extensions/claude-mcp-vscode/tsconfig.json"
+    - ".vscode/extensions/claude-mcp-vscode/**/.*"
+
+depends_on: ["vscode-client"]
