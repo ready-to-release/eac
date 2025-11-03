@@ -1,0 +1,15 @@
+# Version: 0.1.0
+
+moniker: "vscode"
+name: ".vscode repository configuration"
+type: "vscode-config"
+description: ".vscode repository configuration"
+
+source:
+  changelog_path: ".vscode/CHANGELOG.md"
+  root: ".vscode"
+  includes:
+    - "**/*"
+    - "*"
+
+depends_on: []

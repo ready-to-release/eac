@@ -219,7 +219,7 @@ Based on [repository-layout.md](./repository-layout.md), use these module prefix
 | `src-mcp-docs:` | Documentation MCP Server | `src/mcp/docs/` |
 | `src-mcp-github:` | GitHub MCP Server | `src/mcp/github/` |
 | `src-mcp-vscode:` | VSCode MCP Server | `src/mcp/vscode/` |
-| `vscode-extension:` | VSCode Extension | `.vscode/extensions/claude-mcp-vscode/` |
+| `vscode-extension:` | VSCode Extension | `.vscode/extensions/vscode-ext-commit/` |
 | `infra:` | Infrastructure | `automation/`, `containers/` |
 | `docs:` | Documentation | `docs/`, `*.md` files |
 | `config:` | Configuration | `.mcp.json`, `.gitignore`, etc. |

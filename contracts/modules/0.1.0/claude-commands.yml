@@ -1,0 +1,12 @@
+# Version: 0.1.0
+
+moniker: "claude-commands"
+name: "Claude Code Commands"
+
+source:
+  root: ".claude/commands"
+  includes:
+    - "*.md"
+
+parent: "claude"
+depends_on: []

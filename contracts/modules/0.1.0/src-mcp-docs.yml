@@ -1,0 +1,18 @@
+# Version: 0.1.0
+
+moniker: "src-mcp-docs"
+name: "Go Documentation MCP Server"
+type: "mcp-server"
+description: "Model Context Protocol server for documentation management and queries"
+
+source:
+  changelog_path: "/docs/CHANGELOG.md"
+  root: "src/mcp/docs"
+  includes:
+    - "go.sum"    
+    - "go.mod"
+    - "**.go"
+    - "*.go"
+    - run.sh
+
+depends_on: [container-mkdocs]

@@ -124,7 +124,7 @@ git tag src-mcp-github/v2.0.1
 
 **Module**: `vscode-extension`
 
-**Version Location**: `.vscode/extensions/claude-mcp-vscode/package.json`
+**Version Location**: `.vscode/extensions/vscode-ext-commit/package.json`
 
 **Update Process**:
 
@@ -136,7 +136,7 @@ git tag src-mcp-github/v2.0.1
 
 ```json
 {
-  "name": "claude-mcp-vscode",
+  "name": "vscode-ext-commit",
   "version": "1.3.0",
   ...
 }

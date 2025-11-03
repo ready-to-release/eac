@@ -169,25 +169,25 @@ agent_output_requirements:
       incorrect_fixer_output: |
         Based on the validation errors, I can see that:
         1. The summary needs to be wrapped at 72 characters
-        2. The module section uses "multi-module" but should use "claude-mcp-vscode"
+        2. The module section uses "multi-module" but should use "vscode-ext-commit"
 
         Here's the corrected commit message:
 
         # multi-module: feat: add validation
 
       correct_fixer_output: |
-        # claude-mcp-vscode: feat: add validation
+        # vscode-ext-commit: feat: add validation
 
         ## Summary
 
-        This commit adds validation for claude-mcp-vscode...
+        This commit adds validation for vscode-ext-commit...
 
       incorrect_title_output: |
         The title for this commit is:
         multi-module: feat: add validation
 
       correct_title_output: |
-        claude-mcp-vscode: feat: add validation
+        vscode-ext-commit: feat: add validation
 
 validation:
   errors:

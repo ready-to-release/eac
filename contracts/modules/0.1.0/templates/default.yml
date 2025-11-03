@@ -1,0 +1,46 @@
+# Version: 0.1.0
+# This file shows the complete module contract schema with default values
+# Use this as a template when creating new module contracts
+
+# Module identifier (REQUIRED - no default)
+# Must match the filename (without .yml extension)
+moniker: "my-module"
+
+# Human-readable name (REQUIRED - no default)
+name: "(no-default)"
+
+# Module type (defaults to "no-module-type")
+type: "no-module-type"
+
+# Description (defaults to name field value)
+description: "(defaults to name)"
+
+# Parent module moniker (defaults to "." which represents the "repository" module)
+parent: "."
+
+# Versioning configuration
+versioning:
+  # Version scheme (defaults to "semver")
+  version_scheme: "semver"
+
+# Source configuration
+source:
+  # Root directory for this module (REQUIRED - no default)
+  root: "(no-default)"
+  
+  # Glob patterns to include (defaults to ["**/*", "*"])
+  includes:
+    - "**/*"
+    - "*"
+  
+  # Path to changelog file (defaults to {root}/CHANGELOG.md or CHANGELOG.md if root=/)
+  changelog_path: "(defaults to {root}/CHANGELOG.md or CHANGELOG.md if root=/)"
+  
+  # Defer ownership to child modules when both match same file (defaults to true)
+  exclude_children_owned_source: true
+
+# Modules this module depends on (defaults to [])
+depends_on: []
+
+# Modules that use this module (defaults to [])
+used_by: []

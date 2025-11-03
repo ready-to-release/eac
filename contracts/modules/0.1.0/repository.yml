@@ -1,0 +1,10 @@
+# Version: 0.1.0
+
+moniker: "repository"
+name: "The repository root module"
+
+source:
+  root: "/"
+  includes: []
+
+depends_on: []

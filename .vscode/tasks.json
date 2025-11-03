@@ -5,7 +5,7 @@
       "label": "Watch VSCode Extension",
       "type": "npm",
       "script": "watch",
-      "path": ".vscode/extensions/claude-mcp-vscode/",
+      "path": ".vscode/extensions/vscode-ext-commit/",
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
       "presentation": {

@@ -11,7 +11,7 @@ echo "Restoring VSCode Extension"
 echo "=================================="
 echo ""
 
-cd "$PROJECT_ROOT/.vscode/extensions/claude-mcp-vscode"
+cd "$PROJECT_ROOT/.vscode/extensions/vscode-ext-commit"
 
 # Check if node_modules exists
 if [ -d "node_modules" ]; then

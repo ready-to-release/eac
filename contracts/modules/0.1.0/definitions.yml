@@ -1,0 +1,16 @@
+# Version: 0.1.0
+
+moniker: "definitions"
+name: "Repository location based configurations"
+type: "definitions-type"
+description: "foldable yaml file constructs that defines repository configurations"
+
+source:
+  root: "/"
+  includes:
+    - "definitions.yml"
+    - "**/definitions.yml"
+
+depends_on: []
+used_by:
+  - "automation"

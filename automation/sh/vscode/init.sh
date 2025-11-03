@@ -45,7 +45,7 @@ echo "Installing VSCode Extension"
 echo "=================================="
 echo ""
 
-cd "$PROJECT_ROOT/.vscode/extensions/claude-mcp-vscode"
+cd "$PROJECT_ROOT/.vscode/extensions/vscode-ext-commit"
 
 echo "Installing dependencies..."
 npm install

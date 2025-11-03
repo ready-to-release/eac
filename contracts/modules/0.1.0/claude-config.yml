@@ -1,0 +1,15 @@
+# Version: 0.1.0
+
+moniker: "claude-config"
+name: "Claude Code Configuration"
+description: "Claude Code CLI configuration including agents, hooks, commands, and settings"
+
+source:
+  root: ".claude"
+  includes:
+    - "*.json"
+    - "*.md"
+    - "logs/README.md"
+
+parent: "claude"
+depends_on: []

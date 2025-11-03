@@ -1,0 +1,17 @@
+# Version: 0.1.0
+
+moniker: "vscode-ext-commit"
+name: "NodeJS (npm) VSCode Extension using local src-mcp-vscode"
+type: "vscode-ext"
+description: "VSCode extension providing Git toolbar and Claude MCP integration UI"
+
+source:
+  changelog_path: ".vscode/extensions/vscode-ext-commit/CHANGELOG.md"
+  root: ".vscode/extensions/vscode-ext-commit"
+  includes:
+    - ".vscode/extensions/vscode-ext-commit/package.json"
+    - ".vscode/extensions/vscode-ext-commit/README.md"
+    - ".vscode/extensions/vscode-ext-commit/tsconfig.json"
+    - ".vscode/extensions/vscode-ext-commit/**/.*"
+
+depends_on: ["vscode-client"]

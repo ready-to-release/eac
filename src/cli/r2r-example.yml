@@ -1,0 +1,24 @@
+registry:
+  default: ghcr.io
+  timeout: 30
+  retry_attempts: 3
+
+defaults:
+  registry: ghcr.io/ready-to-release/r2r
+  pull_policy: IfNotPresent
+  remove_after: true
+
+extensions:
+  - name: pwsh
+    description: PowerShell 7 extension for running PowerShell scripts
+    image: ghcr.io/ready-to-release/r2r/extensions/pwsh:sha-abc123
+    env:
+      - name: PS_VERSION
+        value: "7.4"
+
+  - name: node
+    description: Node.js extension for running JavaScript/TypeScript
+    image: ghcr.io/ready-to-release/r2r/extensions/node:sha-def456
+    env:
+      - name: NODE_VERSION
+        value: "20"

@@ -1,0 +1,12 @@
+# Version: 0.1.0
+
+moniker: "sh-vscode"
+name: "Shell scripts for VSCode extension development"
+type: "automation"
+description: "Shell automation scripts for VSCode extension setup, cleanup, and initialization"
+
+source:
+  changelog_path: "automation/sh/vscode/CHANGELOG.md"
+  root: "automation/sh/vscode"
+  includes:
+    - "automation/sh/vscode/**"

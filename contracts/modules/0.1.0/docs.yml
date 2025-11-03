@@ -1,0 +1,18 @@
+# Version: 0.1.0
+
+moniker: "docs"
+name: "Documentation"
+type: "mkdocs-site"
+description: "mkdocs base docs source files, used to target one singular docs rendered site"
+
+source:
+  root: "docs/"
+  includes:
+    - "**/*.md"
+    - "**/*.nav.yml"
+    - "assets/**"
+    - "/mkdocs.yml"
+
+depends_on: []
+used_by:
+  - "src-mcp-docs"

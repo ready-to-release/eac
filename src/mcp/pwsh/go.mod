@@ -1,4 +1,4 @@
-module github.com/simply-cli/cli/mcp-server-pwsh
+module github.com/ready-to-release/eac/mcp-server-pwsh
 
 go 1.21
 

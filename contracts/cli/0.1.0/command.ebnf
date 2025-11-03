@@ -1,0 +1,61 @@
+(* R2R CLI Command Grammar *)
+(* EBNF specification for R2R CLI command-line interface *)
+
+(* Root command structure *)
+command = "r2r", [global_flags], subcommand, [subcommand_args] ;
+
+(* Global flags available for all commands *)
+global_flags = { global_flag } ;
+global_flag = "--r2r-debug" | "--r2r-quiet" | "--help" | "-h" ;
+
+(* Subcommands *)
+subcommand = "version"
+           | "init"
+           | "list"
+           | "validate"
+           | "install"
+           | "update"
+           | "run"
+           | "cleanup"
+           | extension_alias ;
+
+(* Subcommand arguments *)
+subcommand_args = { arg | flag } ;
+arg = word | quoted_string | path ;
+flag = long_flag | short_flag ;
+long_flag = "--", identifier, ["=", value] ;
+short_flag = "-", letter, [value] ;
+
+(* Extension execution *)
+extension_alias = identifier ;  (* Direct extension name as command *)
+run_command = "run", extension_name, [container_args] ;
+extension_name = identifier ;
+container_args = "--", { any_arg } ;  (* Arguments after -- go to container *)
+any_arg = word | quoted_string | flag ;
+
+(* Basic tokens *)
+identifier = letter, { letter | digit | "-" | "_" } ;
+word = { char - whitespace - special } ;
+quoted_string = '"', { char - '"' }, '"'
+              | "'", { char - "'" }, "'" ;
+path = { char - whitespace } ;
+value = word | quoted_string ;
+
+(* Character sets *)
+letter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M"
+       | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+       | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m"
+       | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" ;
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+char = ? any unicode character ? ;
+whitespace = " " | "\t" | "\n" | "\r" ;
+special = "-" | "=" | '"' | "'" ;
+
+(* Command examples *)
+(*
+  r2r version
+  r2r --r2r-debug list
+  r2r run pwsh -- Write-Host "Hello"
+  r2r pwsh -- Write-Host "Hello"   (* using extension alias *)
+  r2r init --config-file r2r.yml
+*)

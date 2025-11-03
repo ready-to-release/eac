@@ -110,7 +110,7 @@ Versioned contract definitions and schemas.
 
 | Module             | Prefix              | Location                                | Description             |
 | ------------------ | ------------------- | --------------------------------------- | ----------------------- |
-| `vscode-extension` | `vscode-extension:` | `.vscode/extensions/claude-mcp-vscode/` | MCP VSCode extension UI |
+| `vscode-extension` | `vscode-extension:` | `.vscode/extensions/vscode-ext-commit/` | MCP VSCode extension UI |
 
 ### Infrastructure
 
@@ -211,7 +211,7 @@ contracts-repository
 - `src-mcp-docs:` → `src/mcp/docs/`
 - `src-mcp-github:` → `src/mcp/github/`
 - `src-mcp-vscode:` → `src/mcp/vscode/`
-- `vscode-extension:` → `.vscode/extensions/claude-mcp-vscode/`
+- `vscode-extension:` → `.vscode/extensions/vscode-ext-commit/`
 - `infra:` → `automation/`, `containers/`
 - `docs:` → `docs/`, root `*.md`
 - `config:` → `.claude/`, `.vscode/`, root config

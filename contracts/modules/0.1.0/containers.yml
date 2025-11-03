@@ -1,0 +1,11 @@
+# Version: 0.1.0
+
+moniker: "containers"
+name: "Container Definitions"
+type: "containers"
+description: "Docker container definitions and configurations for deployable services"
+
+source:
+  root: "containers"
+
+depends_on: []

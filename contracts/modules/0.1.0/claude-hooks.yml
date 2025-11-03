@@ -1,0 +1,14 @@
+# Version: 0.1.0
+
+moniker: "claude-hooks"
+name: "Claude Code Hooks"
+type: "claude-hooks"
+
+source:
+  root: ".claude/hooks"
+  includes:
+    - "*.sh"
+    - "*.ps1"
+
+parent: "claude"
+depends_on: []

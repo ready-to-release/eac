@@ -29,8 +29,8 @@ func TestDetermineFileModule(t *testing.T) {
 		{"src/mcp/github/api.go", "src-mcp-github"},
 
 		// VSCode extension
-		{".vscode/extensions/claude-mcp-vscode/src/extension.ts", "vscode-ext-claude-commit"},
-		{".vscode/extensions/claude-mcp-vscode/package.json", "vscode-ext-claude-commit"},
+		{".vscode/extensions/vscode-ext-commit/src/extension.ts", "vscode-ext-claude-commit"},
+		{".vscode/extensions/vscode-ext-commit/package.json", "vscode-ext-claude-commit"},
 
 		// Contracts - contracts-<name>
 		{"contracts/repository/0.1.0/definitions.yml", "contracts-repository"},
@@ -176,7 +176,7 @@ func printExamples() {
 		"automation/pwsh-build/build.ps1",
 		"containers/mkdocs/Dockerfile",
 		"src/mcp/pwsh/main.go",
-		".vscode/extensions/claude-mcp-vscode/src/extension.ts",
+		".vscode/extensions/vscode-ext-commit/src/extension.ts",
 		"contracts/repository/0.1.0/definitions.yml",
 		"docs/reference/continuous-delivery/semantic-commits.md",
 		".claude/agents/vscode-extension-commit-button.md",
@@ -242,7 +242,7 @@ func TestGetModuleGlobPattern(t *testing.T) {
 		// VSCode extension
 		{
 			module:        "vscode-ext-claude-commit",
-			expectedGlobs: []string{".vscode/extensions/claude-mcp-vscode/**"},
+			expectedGlobs: []string{".vscode/extensions/vscode-ext-commit/**"},
 			description:   "VSCode extension",
 		},
 
