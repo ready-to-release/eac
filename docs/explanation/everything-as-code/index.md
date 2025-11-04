@@ -78,6 +78,8 @@ Explains what it means to treat everything as code and the three fundamental cha
 
 - **[Three-Layer Testing (Executable Specifications)](../testing/three-layer-approach.md)** - ATDD/BDD/TDD implements Specifications as Code through executable specifications that make requirements testable
 
+- **[Measuring and Improving Flow](measuring-and-improving-flow.md)** - How to use DORA metrics and Value Stream Mapping to continuously improve delivery performance
+
 ---
 
 ## The Role of This CLI

@@ -17,8 +17,8 @@ Understanding the problem space in regulated industries and why "Everything as C
 - What "Everything as Code" means and why it matters
 - Single timeline for traceability
 - Collaboration through shared language and executable specifications
+- Measuring and improving flow with DORA metrics and Value Stream Mapping
 - Why automation tooling is essential
-- Connection to DORA metrics and performance research
 
 ---
 

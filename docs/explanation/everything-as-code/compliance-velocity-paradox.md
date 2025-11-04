@@ -145,6 +145,23 @@ They recognize that:
 - **Traceability is better when automated** - Complete immutable history vs. manual reconstruction
 - **Documentation stays current when generated** - Auto-generated docs can't drift
 
+### How High Performers Achieve These Results
+
+High performers didn't achieve these metrics overnight. They used **DORA metrics** and **Value Stream Mapping** to systematically identify bottlenecks, then improved their delivery flow through automation and process optimization.
+
+**The continuous improvement cycle:**
+
+1. **Measure** - Collect DORA metrics (automated through Everything as Code)
+2. **Map** - Use Value Stream Mapping to visualize where time is wasted
+3. **Identify** - Find the biggest bottleneck (manual testing, approvals, deployment)
+4. **Improve** - Apply automation to remove the bottleneck
+5. **Validate** - Measure again to confirm improvement
+6. **Repeat** - Move to the next constraint
+
+Small improvements compound over time. Reducing lead time by 20% every quarter compounds to transformational change over a year.
+
+See: [Measuring and Improving Flow](measuring-and-improving-flow.md)
+
 ---
 
 ## Why Manual Processes Cannot Scale

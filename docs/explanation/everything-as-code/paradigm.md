@@ -197,6 +197,20 @@ Commit → Build → Test → Validate → Deploy → Document
 
 **Key Benefit**: Requirements can't drift from implementation because they ARE the tests. When tests pass, requirements are met by definition.
 
+### Measuring and Improving Flow
+
+**Connection:** [Measuring and Improving Flow](measuring-and-improving-flow.md) shows how to continuously optimize the delivery value stream using DORA metrics and Value Stream Mapping.
+
+**How Everything as Code Enables It:**
+
+- Automated pipelines provide DORA metrics data automatically
+- Reduced manual steps improve flow (less wait time)
+- Smaller batch sizes (continuous deployment) reduce lead time
+- Version control enables measurement and traceability
+- Complete audit trail supports continuous improvement
+
+**Key Benefit**: High performers achieve results through continuous measurement and improvement, enabled by automation.
+
 ---
 
 ## Key Principles
