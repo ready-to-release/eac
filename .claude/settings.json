@@ -2,7 +2,7 @@
   "env": {},
   "permissions": {
     "defaultMode": "bypassPermissions",
-    "allow": [],
+    "allow": ["Bash(git status:*)", "Bash(git log:*)"],
     "ask": [],
     "deny": ["Bash(git:*)"]
   },

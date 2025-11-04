@@ -1310,7 +1310,6 @@ func extractContentBlock(agentOutput string) string {
 
 	// Common patterns to strip:
 	// - "Let me output...", "Here is...", "I will provide..."
-	// - "Agent: Approved", "Agent: ..." at the end (but KEEP if in commit message body!)
 	// - Markdown code fences around the content
 
 	// Debug log

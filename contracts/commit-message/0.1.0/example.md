@@ -12,22 +12,32 @@ repository.
 
 ## Files affected
 
-| Status | File                                         | Module       |
-| ------ | -------------------------------------------- | ------------ |
-| added  | contracts/deployable-units/0.1.0/src-cli.yml | contracts    |
-| added  | requirements/contracts/.gitkeep              | requirements |
-| added  | requirements/docs/.gitkeep                   | requirements |
-| added  | requirements/src-cli/.gitkeep                | requirements |
-| added  | requirements/src-mcp-go/.gitkeep             | requirements |
-| added  | requirements/src-mcp-pwsh/.gitkeep           | requirements |
-| added  | requirements/src-mcp-vscode/.gitkeep         | requirements |
-| added  | src/cli/go.mod                               | src-cli      |
+| File                                                  | Modules                           |
+| ----------------------------------------------------- | --------------------------------- |
+| .claude/agents/commit-message-generator.md            | claude-agents                     |
+| .claude/agents/commit-message-title-generator.md      | claude-agents                     |
+| .claude/settings.json                                 | claude-config                     |
+| .vscode/extensions/vscode-ext-commit/README.md        | readme, vscode, vscode-ext-commit |
+| .vscode/extensions/vscode-ext-commit/src/extension.ts | vscode                            |
+| QUICK-START.md                                        | repository                        |
+| build-cli.ps1                                         | src-cli                           |
+| contracts/commit-message/0.1.0/example.md             | contracts                         |
+| contracts/commit-message/0.1.0/structure.yml          | contracts                         |
+| contracts/modules/0.1.0/src-cli.yml                   | contracts-modules                 |
+| contracts/modules/0.1.0/src-commands.yml              | contracts-modules                 |
+| contracts/modules/0.1.0/templates/README.md           | contracts, readme                 |
+| docs/reference/commands/commit-ai.md                  | docs-reference                    |
+| importer.ps1                                          | repository                        |
+| importer.sh                                           | repository                        |
+| scripts/pwsh/go-invoker/go.psm1                       | repository                        |
+| scripts/sh/go-invoker/go.sh                           | repository                        |
+| scripts/sh/vscode/README.md                           | readme                            |
 
 ---
 
 ## contracts
 
-contracts: chore: 
+contracts: chore: changed setting
 
 ## src-cli
 

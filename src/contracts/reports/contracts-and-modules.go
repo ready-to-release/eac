@@ -106,7 +106,7 @@ func (r *ModuleContractReport) FormatCompact() string {
 	sb.WriteString(fmt.Sprintf("=== Module Contracts (%d modules) ===\n\n", r.TotalModules))
 
 	for _, module := range r.Modules {
-		sb.WriteString(fmt.Sprintf("%-30s %-20s %s\n", module.Moniker, module.Type, module.Root))
+		sb.WriteString(fmt.Sprintf("%-30s %-20s %s\n", module.Moniker, module.Type, module.Source.Root))
 	}
 
 	return sb.String()
@@ -126,7 +126,7 @@ func (r *ModuleContractReport) GetModulesByType(moduleType string) []*modules.Mo
 func (r *ModuleContractReport) GetModulesByRoot(root string) []*modules.ModuleContract {
 	var result []*modules.ModuleContract
 	for _, module := range r.Modules {
-		if module.Root == root {
+		if module.Source.Root == root {
 			result = append(result, module)
 		}
 	}

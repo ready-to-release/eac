@@ -7,11 +7,13 @@ This directory contains template files for creating new module contracts.
 ### Quick Start
 
 1. **Copy the template:**
+
    ```bash
    cp contracts/modules/0.1.0/templates/default.yml contracts/modules/0.1.0/my-module.yml
    ```
 
 2. **Edit required fields:**
+
    - `moniker`: Must match filename (without `.yml`)
    - `name`: Human-readable name for your module
    - `source.root`: Root directory path
@@ -55,6 +57,7 @@ used_by: []
 ## Field Reference
 
 ### Required Fields
+
 - `moniker` - Unique ID (must match filename)
 - `name` - Display name
 - `source.root` - Root directory
@@ -62,16 +65,19 @@ used_by: []
 ### Common Customizations
 
 **Module Type:**
+
 ```yaml
 type: "documentation"  # or "source-code", "configuration", etc.
 ```
 
 **Parent Module:**
+
 ```yaml
 parent: "docs"  # Make this a child of another module
 ```
 
 **Custom Includes:**
+
 ```yaml
 source:
   includes:
@@ -80,6 +86,7 @@ source:
 ```
 
 **Shared Ownership with Children:**
+
 ```yaml
 source:
   exclude_children_owned_source: false  # Allow overlap with children

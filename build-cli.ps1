@@ -44,8 +44,11 @@ $RepoRoot = $PSScriptRoot
 $CliModulePath = Join-Path $RepoRoot "src/cli"
 $ContractsPath = Join-Path $RepoRoot "contracts"
 $ValidatorPath = Join-Path $CliModulePath "internal/validator"
+$ParserPath = Join-Path $CliModulePath "internal/command-parser"
 $SchemaSourcePath = Join-Path $ContractsPath "cli/0.1.0/config.json"
 $SchemaDestPath = Join-Path $ValidatorPath "config/schema.json"
+$EBNFSourcePath = Join-Path $ContractsPath "cli/0.1.0/command.ebnf"
+$EBNFDestPath = Join-Path $ParserPath "command.ebnf"
 
 # Step 1: Clean if requested
 if ($Clean) {
@@ -61,6 +64,12 @@ if ($Clean) {
     if (Test-Path $SchemaDestPath) {
         Remove-Item $SchemaDestPath -Force
         Write-Host "  ✓ Removed old schema copy: $SchemaDestPath"
+    }
+
+    # Remove parser EBNF copy
+    if (Test-Path $EBNFDestPath) {
+        Remove-Item $EBNFDestPath -Force
+        Write-Host "  ✓ Removed old EBNF copy: $EBNFDestPath"
     }
 }
 
@@ -91,6 +100,24 @@ if (-not (Test-Path $SchemaDestPath)) {
 
 $schemaSize = (Get-Item $SchemaDestPath).Length
 Write-Host "  ✓ Schema file size: $schemaSize bytes"
+
+# Copy EBNF grammar
+if (-not (Test-Path $EBNFSourcePath)) {
+    Write-Error "EBNF source not found: $EBNFSourcePath"
+    exit 1
+}
+
+Copy-Item $EBNFSourcePath $EBNFDestPath -Force
+Write-Host "  ✓ Copied EBNF: command.ebnf -> command-parser/command.ebnf"
+
+# Verify EBNF was copied
+if (-not (Test-Path $EBNFDestPath)) {
+    Write-Error "Failed to copy EBNF to: $EBNFDestPath"
+    exit 1
+}
+
+$ebnfSize = (Get-Item $EBNFDestPath).Length
+Write-Host "  ✓ EBNF file size: $ebnfSize bytes"
 
 # Step 3: Run go generate (if needed in the future)
 Write-Host "`n🔧 Running go generate..." -ForegroundColor Yellow

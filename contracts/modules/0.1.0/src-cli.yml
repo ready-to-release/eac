@@ -2,7 +2,7 @@
 
 moniker: "src-cli"
 name: "The Cli of Cli's cli"
-type: "cli"
+type: "go-cli"
 description: "The extendable go-based cli tool"
 
 source:

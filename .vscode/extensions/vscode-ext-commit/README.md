@@ -1,13 +1,15 @@
-# Claude MCP VSCode Extension
+# Commit Message AI - VSCode Extension
 
-A simple VSCode extension that adds a button to the Git source control view. This button allows you to interact with the Claude MCP server.
+A VSCode extension that generates AI-powered semantic commit messages using the 7-lever commit-ai system.
 
 ## Features
 
 - Adds a button to the Git source control view (SCM)
-- Calls the local Claude MCP vscode server
-- Supports Git actions (commit, push, pull)
-- Extensible for custom actions
+- Generates commit messages using `commit-ai` command
+- Automatic validation and cleanup
+- Self-healing via auto-fix
+- Contract-driven quality assurance
+- Real-time progress updates with whimsical messages
 
 ## Installation
 
@@ -27,16 +29,18 @@ A simple VSCode extension that adds a button to the Git source control view. Thi
 
 ## Usage
 
-1. Open the Source Control view in VSCode (Ctrl+Shift+G)
-2. Look for the robot icon button in the toolbar
-3. Click the button to select an action
-4. The extension will call the MCP server and display the result
+1. Stage your changes in Git
+2. Open the Source Control view in VSCode (Ctrl+Shift+G)
+3. Click the robot icon button in the toolbar
+4. Wait for the AI to generate your commit message
+5. Review and commit!
 
 ## Requirements
 
 - VSCode 1.80.0 or higher
-- Go installed (for running the MCP server)
-- The MCP server must be located at `src/mcp/vscode/` in your workspace
+- Go installed (for running commit-ai)
+- The `commit-ai` command must be available at `src/commands/` in your workspace
+- Claude Code authentication (subscription)
 
 ## Development
 
@@ -54,8 +58,26 @@ This extension doesn't require any specific settings.
 
 None at this time.
 
+## How It Works
+
+The extension calls the `commit-ai` command which orchestrates a 7-lever system:
+
+1. **LEVER 1**: Contract specification (formal rules)
+2. **LEVER 2**: Agent instructions (AI guidance)
+3. **LEVER 3**: Command orchestration
+4. **LEVER 3.1**: Pre-verification cleanup
+5. **LEVER 4**: Contract verification
+6. **LEVER 5**: Feedback loop (AI auto-fix)
+7. **LEVER 5.1**: Pre-re-verification cleanup
+
+See [commit-ai documentation](../../../docs/reference/commands/commit-ai.md) for details.
+
 ## Release Notes
+
+### 0.2.0
+
+Simplified architecture - now calls `commit-ai` command directly instead of using MCP server.
 
 ### 0.1.0
 
-Initial release with basic MCP server integration.
+Initial release with MCP server integration (deprecated).

@@ -192,7 +192,6 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const workspacePath = workspaceFolder.uri.fsPath;
-            const agentFilePath = path.join(workspacePath, '.claude', 'agents', 'vscode-extension-commit-button.md');
 
             // Execute the agent with simplified progress
             let commitMessage: string;
@@ -208,7 +207,7 @@ export function activate(context: vscode.ExtensionContext) {
                         "🚀 Initializing workflow...",
                         "🔍 Preparing generation...",
                         "⚡ Starting analysis...",
-                        "🎯 Launching agents...",
+                        "🎯 Launching commit-ai...",
                     ];
                     const initialMsg = randomMessages[Math.floor(Math.random() * randomMessages.length)];
                     progress.report({ message: initialMsg });
@@ -217,84 +216,34 @@ export function activate(context: vscode.ExtensionContext) {
                     // Track current stage for SCM display
                     let lastStage = 'Initializing';
 
-                    // Start the actual agent execution with real progress callback
-                    const agentPromise = executeAgent(workspacePath, agentFilePath, (realProgress) => {
-                        log('[Real Progress Received] ' + realProgress);
+                    // Start the actual commit-ai execution with real progress callback
+                    const agentPromise = executeAgent(workspacePath, (realProgress) => {
+                        log('[commit-ai Progress] ' + realProgress);
 
-                        // Extract clean message from various formats
-                        let message = realProgress;
-
-                        // Try format: "stage (00m00s:00s) - message"
-                        const timeMatch = realProgress.match(/\(([^:]+):([^)]+)\) - (.+)$/);
-                        if (timeMatch && timeMatch[3]) {
-                            message = timeMatch[3].trim();
-                        } else {
-                            // Try format: "prefix - message" (fallback)
-                            const dashMatch = realProgress.match(/^[^-]+ - (.+)$/);
-                            if (dashMatch && dashMatch[1]) {
-                                message = dashMatch[1].trim();
-                            } else {
-                                // Use as-is but clean it up
-                                message = realProgress.trim();
-                            }
+                        // Add to status bar buffer
+                        if (realProgress && realProgress.length > 0 && realProgress.length < 200) {
+                            stableStatusBar.addProgress(realProgress);
                         }
 
-                        // Add to status bar buffer (only if message is reasonable)
-                        if (message && message.length > 0 && message.length < 200) {
-                            stableStatusBar.addProgress(message);
-                        }
-
-                        // Extract stage from message for SCM display and logging
-                        if (realProgress.includes('generator') || realProgress.includes('gen-')) {
+                        // Extract stage from message for SCM display
+                        if (realProgress.includes('Generating') || realProgress.startsWith('🤖')) {
                             lastStage = 'Generating';
-                            if (realProgress.includes('Generating commit message')) {
-                                outputChannel.appendLine('');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                                outputChannel.appendLine('🤖 Running: vscode-extension-commit-button.md (generator)');
-                                outputChannel.appendLine('Content: Git diff + documentation + module metadata');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                            }
-                        } else if (realProgress.includes('reviewer') || realProgress.includes('rev-')) {
-                            lastStage = 'Reviewing';
-                            if (realProgress.includes('Reviewing commit message')) {
-                                outputChannel.appendLine('');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                                outputChannel.appendLine('🔍 Running: commit-message-reviewer.md');
-                                outputChannel.appendLine('Content: Generated commit message');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                            }
-                        } else if (realProgress.includes('approver') || realProgress.includes('app-')) {
-                            lastStage = 'Approving';
-                            if (realProgress.includes('Final approval')) {
-                                outputChannel.appendLine('');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                                outputChannel.appendLine('✅ Running: commit-message-approver.md');
-                                outputChannel.appendLine('Content: Commit message + review feedback');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                            }
-                        } else if (realProgress.includes('concerns')) {
-                            lastStage = 'Fixing concerns';
-                            if (realProgress.includes('Fixing concerns')) {
-                                outputChannel.appendLine('');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                                outputChannel.appendLine('🔧 Running: commit-message-concerns-handler.md');
-                                outputChannel.appendLine('Content: Commit message with approval concerns');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                            }
-                        } else if (realProgress.includes('title')) {
-                            lastStage = 'Creating title';
-                            if (realProgress.includes('Generating commit title')) {
-                                outputChannel.appendLine('');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                                outputChannel.appendLine('✨ Running: commit-title-generator.md');
-                                outputChannel.appendLine('Content: Complete commit message (all modules)');
-                                outputChannel.appendLine('═══════════════════════════════════════════════════════');
-                            }
-                        } else if (realProgress.includes('git') || realProgress.includes('docs')) {
-                            lastStage = 'Setup';
+                            outputChannel.appendLine('🤖 ' + realProgress);
+                        } else if (realProgress.includes('Cleaning up') || realProgress.includes('Auto-cleanup')) {
+                            lastStage = 'Cleaning up';
+                            outputChannel.appendLine('🔧 ' + realProgress);
+                        } else if (realProgress.includes('Auto-fix') || realProgress.includes('Feeding errors')) {
+                            lastStage = 'Auto-fixing';
+                            outputChannel.appendLine('🔧 ' + realProgress);
+                        } else if (realProgress.includes('complete')) {
+                            lastStage = 'Complete';
+                            outputChannel.appendLine('✅ ' + realProgress);
+                        } else {
+                            // Whimsical progress messages
+                            outputChannel.appendLine('   ' + realProgress);
                         }
 
-                        // Update SCM panel with simple stage info
+                        // Update SCM panel with stage info
                         progress.report({ message: lastStage });
                     });
 
@@ -373,111 +322,137 @@ async function validateGitState(repo: any): Promise<string | null> {
     return null;
 }
 
-async function executeAgent(workspacePath: string, agentFilePath: string, onProgress?: (message: string) => void): Promise<string> {
+async function executeAgent(workspacePath: string, onProgress?: (message: string) => void): Promise<string> {
     return new Promise((resolve, reject) => {
-        // Execute the agent using the MCP server
-        const mcpServerPath = path.join(workspacePath, 'src', 'mcp', 'vscode');
+        // Execute commit-ai command directly (replaces old MCP server approach)
+        // This leverages the new 7-lever system with auto-cleanup and validation
+        const commandsPath = path.join(workspacePath, 'src', 'commands');
 
-        // No API key needed - MCP server uses Claude Code CLI
-        const childProcess = child_process.spawn('go', ['run', '.'], {
-            cwd: mcpServerPath,
+        // Call commit-ai which handles everything: generation, cleanup, validation, auto-fix
+        const childProcess = child_process.spawn('go', ['run', '.', 'commit-ai'], {
+            cwd: commandsPath,
             stdio: ['pipe', 'pipe', 'pipe'],
             env: process.env
         });
 
-        let outputLines: string[] = [];
+        let fullOutput = '';
         let errorOutput = '';
-        let buffer = '';
 
-        // Read stdout line by line for streaming progress
+        // Capture all stdout
         childProcess.stdout.on('data', (data) => {
-            buffer += data.toString();
+            const text = data.toString();
+            fullOutput += text;
+            log('[commit-ai output] ' + text);
 
-            // Process complete lines
-            let newlineIndex;
-            while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-                const line = buffer.substring(0, newlineIndex);
-                buffer = buffer.substring(newlineIndex + 1);
+            // Extract progress indicators for real-time feedback
+            const lines = text.split('\n');
+            for (const line of lines) {
+                const trimmed = line.trim();
 
-                if (line.trim()) {
-                    outputLines.push(line);
-                    log('[MCP Server Output] ' + line);
-
-                    // Try to parse as progress notification
-                    try {
-                        const parsed = JSON.parse(line);
-                        log('[MCP Parsed JSON] ' + JSON.stringify(parsed));
-                        if (parsed.method === '$/progress' && parsed.params && onProgress) {
-                            // Combine stage (with times) and message for display
-                            const progressText = `${parsed.params.stage} - ${parsed.params.message}`;
-                            log('[MCP Progress] ' + progressText);
-                            onProgress(progressText);
-                        }
-                    } catch (e) {
-                        // Not JSON or not a progress notification, that's fine
-                        log('[MCP Parse Error] ' + e);
-                    }
+                // Detect progress messages (emoji indicators)
+                if (trimmed.startsWith('🤖')) {
+                    if (onProgress) onProgress('Generating commit message...');
+                } else if (trimmed.startsWith('🔧 Auto-cleanup')) {
+                    if (onProgress) onProgress('Cleaning up output...');
+                } else if (trimmed.startsWith('🔧 Attempting to auto-fix')) {
+                    if (onProgress) onProgress('Auto-fixing validation errors...');
+                } else if (trimmed.startsWith('🔄 Feeding validation errors')) {
+                    if (onProgress) onProgress('Feeding errors to AI...');
+                } else if (trimmed.startsWith('✅') && trimmed.includes('complete')) {
+                    if (onProgress) onProgress('Generation complete!');
+                } else if (trimmed.includes('Harmonizing module boundaries') ||
+                          trimmed.includes('Contemplating the WHY') ||
+                          trimmed.includes('Reticulating splines')) {
+                    // Whimsical progress messages
+                    if (onProgress) onProgress(trimmed);
                 }
             }
         });
 
+        // Capture stderr for errors
         childProcess.stderr.on('data', (data) => {
             const stderrText = data.toString();
             errorOutput += stderrText;
-            log('[MCP Server Debug] ' + stderrText);
+            log('[commit-ai error] ' + stderrText);
         });
 
         childProcess.on('close', (code) => {
-            if (code !== 0 && errorOutput) {
-                reject(new Error(`MCP server error: ${errorOutput}`));
+            if (code !== 0) {
+                const errorMsg = errorOutput || 'Command failed with exit code ' + code;
+                reject(new Error(`commit-ai error: ${errorMsg}`));
                 return;
             }
 
-            try {
-                // The last line should be the JSON-RPC response
-                const lastLine = outputLines[outputLines.length - 1];
-                const response = JSON.parse(lastLine);
+            // Extract commit message from output
+            const commitMessage = extractCommitMessageFromOutput(fullOutput);
 
-                if (response.error) {
-                    reject(new Error(response.error.message));
-                    return;
-                }
-
-                // Extract the commit message from the tool result
-                if (response.result && response.result.content && response.result.content[0]) {
-                    const commitMessage = response.result.content[0].text;
-
-                    // Check if the response is actually an error
-                    if (commitMessage.startsWith('ERROR:')) {
-                        reject(new Error(commitMessage.substring(7).trim()));
-                        return;
-                    }
-
-                    resolve(commitMessage);
-                } else {
-                    reject(new Error('Invalid response format from MCP server'));
-                }
-            } catch (parseError) {
-                reject(new Error(`Failed to parse MCP response: ${parseError}. Output: ${outputLines.join('\n')}`));
+            if (!commitMessage) {
+                reject(new Error('Failed to extract commit message from output'));
+                return;
             }
+
+            resolve(commitMessage);
         });
 
-        // Send the agent file path as input
-        const request = {
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'tools/call',
-            params: {
-                name: 'execute-agent',
-                arguments: {
-                    agentFile: agentFilePath
-                }
-            }
-        };
-
-        childProcess.stdin.write(JSON.stringify(request) + '\n');
+        // No input needed for commit-ai (it reads git directly)
         childProcess.stdin.end();
     });
+}
+
+/**
+ * Extracts the commit message from commit-ai output
+ * New simplified format:
+ * 1. Vanity progress messages (🤖, optional 🔧 if auto-fix)
+ * 2. THE COMMIT MESSAGE
+ * 3. "---"
+ * 4. Verification results
+ */
+function extractCommitMessageFromOutput(output: string): string | null {
+    const lines = output.split('\n');
+
+    // Find the separator "---"
+    let separatorIndex = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+        if (lines[i].trim() === '---') {
+            separatorIndex = i;
+            break;
+        }
+    }
+
+    if (separatorIndex === -1) {
+        // No separator found, something went wrong
+        return null;
+    }
+
+    // Everything before "---" is the commit message (minus vanity lines at start)
+    let messageStartIndex = 0;
+    for (let i = 0; i < separatorIndex; i++) {
+        const trimmed = lines[i].trim();
+
+        // Skip vanity progress messages
+        if (trimmed.startsWith('🤖') ||
+            trimmed.startsWith('🔧') ||
+            trimmed.startsWith('Discombobulating') ||
+            trimmed.startsWith('Reticulating') ||
+            trimmed.startsWith('Harmonizing') ||
+            trimmed.startsWith('Contemplating') ||
+            trimmed.startsWith('Ugh,') ||
+            trimmed.startsWith('*Sigh*') ||
+            trimmed.startsWith('Fine,') ||
+            trimmed === '') {
+            continue;
+        }
+
+        // Found the start of actual commit message
+        messageStartIndex = i;
+        break;
+    }
+
+    // Extract message from start to separator
+    const messageLines = lines.slice(messageStartIndex, separatorIndex);
+    const message = messageLines.join('\n').trim();
+
+    return message.length > 0 ? message : null;
 }
 
 export function deactivate() {
