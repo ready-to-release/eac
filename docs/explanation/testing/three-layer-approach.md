@@ -307,7 +307,7 @@ behavior.feature:
 
 ### Step 2: Create acceptance.spec (ATDD)
 
-**File**: `requirements/cli/init_project/acceptance.spec`
+**File**: `specs/cli/init_project/acceptance.spec`
 
 ```markdown
 # Initialize Project
@@ -349,7 +349,7 @@ behavior.feature:
 
 ### Step 3: Create behavior.feature (BDD)
 
-**File**: `requirements/cli/init_project/behavior.feature`
+**File**: `specs/cli/init_project/behavior.feature`
 
 ```gherkin
 # Feature ID: cli_init_project
@@ -395,7 +395,7 @@ Feature: Initialize project command behavior
 
 ### Step 4: Implement Gauge and Godog Steps
 
-**File**: `requirements/cli/init_project/acceptance_test.go` (Gauge)
+**File**: `specs/cli/init_project/acceptance_test.go` (Gauge)
 
 ```go
 // Feature: cli_init_project
@@ -412,7 +412,7 @@ func init() {
 }
 ```
 
-**File**: `requirements/cli/init_project/step_definitions_test.go` (Godog)
+**File**: `specs/cli/init_project/step_definitions_test.go` (Godog)
 
 ```go
 // Feature: cli_init_project
@@ -475,10 +475,10 @@ func InitProject(dir string) error {
 
 ```bash
 # Run ATDD acceptance tests
-gauge run requirements/cli/init_project/
+gauge run specs/cli/init_project/
 
 # Run BDD behavior tests
-godog requirements/cli/init_project/behavior.feature
+godog specs/cli/init_project/behavior.feature
 
 # Run TDD unit tests
 go test ./src/cli/...
@@ -561,7 +561,7 @@ For most features, all three layers add value and reduce risk.
 ```bash
 # Find all files for a feature
 grep -r "Feature: cli_init_project" .
-grep -r "Feature ID: cli_init_project" requirements/
+grep -r "Feature ID: cli_init_project" specs/
 ```
 
 ---

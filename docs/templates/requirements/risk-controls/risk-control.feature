@@ -155,7 +155,7 @@ Feature: [Control Category] Risk Controls
 # They define WHAT must be controlled, not HOW to implement it.
 #
 # Key Principles:
-# 1. Risk controls live ONLY in requirements/risk-controls/
+# 1. Risk controls live ONLY in specs/risk-controls/
 # 2. Risk controls have ONLY .feature files (NO acceptance.spec)
 # 3. Each control defines a requirement using "MUST" statements
 # 4. Implementation features reference these controls with @risk<ID> tags
@@ -163,7 +163,7 @@ Feature: [Control Category] Risk Controls
 # To use this template:
 #
 # 1. **Create feature file**:
-#    - File location: requirements/risk-controls/<category>-controls.feature
+#    - File location: specs/risk-controls/<category>-controls.feature
 #    - Examples: authentication-controls.feature, data-protection-controls.feature
 #
 # 2. **Define feature header**:
@@ -224,4 +224,4 @@ Feature: [Control Category] Risk Controls
 # For more information:
 # - How-to guide: docs/how-to-guides/testing/link-risk-controls.md
 # - BDD reference: docs/reference/testing/bdd-format.md
-# - Examples: Look for @risk tags in requirements/<module>/ directories
+# - Examples: Look for @risk tags in specs/<module>/ directories

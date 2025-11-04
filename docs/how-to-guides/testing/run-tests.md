@@ -26,22 +26,22 @@ This guide covers running tests for:
 
 ```bash
 # Run all tests
-gauge run requirements/
-godog requirements/**/behavior.feature
+gauge run specs/
+godog specs/**/behavior.feature
 go test ./...
 
 # Run specific feature
-gauge run requirements/cli/init_project/
-godog requirements/cli/init_project/behavior.feature
+gauge run specs/cli/init_project/
+godog specs/cli/init_project/behavior.feature
 go test ./src/cli/...
 
 # Run with tags
-gauge run --tags "critical" requirements/
-godog --tags="@critical" requirements/**/behavior.feature
+gauge run --tags "critical" specs/
+godog --tags="@critical" specs/**/behavior.feature
 
 # Generate reports
-gauge run --html-report requirements/
-godog --format=junit:test-results/godog.xml requirements/**/behavior.feature
+gauge run --html-report specs/
+godog --format=junit:test-results/godog.xml specs/**/behavior.feature
 go test -coverprofile=coverage.out ./...
 ```
 
@@ -52,7 +52,7 @@ go test -coverprofile=coverage.out ./...
 ### Run All Acceptance Tests
 
 ```bash
-gauge run requirements/
+gauge run specs/
 ```
 
 **Output**:
@@ -72,36 +72,36 @@ Scenarios:      2 executed     2 passed     0 failed     0 skipped
 ### Run Specific Module
 
 ```bash
-gauge run requirements/cli/
-gauge run requirements/vscode/
+gauge run specs/cli/
+gauge run specs/vscode/
 ```
 
 ### Run Specific Feature
 
 ```bash
-gauge run requirements/cli/init_project/
+gauge run specs/cli/init_project/
 ```
 
 ### Run with Tags
 
 ```bash
 # Run only critical tests
-gauge run --tags "critical" requirements/
+gauge run --tags "critical" specs/
 
 # Run only performance tests
-gauge run --tags "performance" requirements/
+gauge run --tags "performance" specs/
 
 # Run critical CLI tests (AND)
-gauge run --tags "cli & critical" requirements/
+gauge run --tags "cli & critical" specs/
 
 # Exclude WIP tests (NOT)
-gauge run --tags "!wip" requirements/
+gauge run --tags "!wip" specs/
 ```
 
 ### Generate HTML Report
 
 ```bash
-gauge run --html-report requirements/
+gauge run --html-report specs/
 ```
 
 **Report location**: `test-results/gauge/html-report/index.html`
@@ -123,20 +123,20 @@ start test-results/gauge/html-report/index.html
 
 ```bash
 # Run with 4 parallel streams
-gauge run -p=4 requirements/
+gauge run -p=4 specs/
 
 # Use all available cores
-gauge run -p requirements/
+gauge run -p specs/
 ```
 
 ### Validate Without Running
 
 ```bash
 # Check specs are valid
-gauge validate requirements/
+gauge validate specs/
 
 # Validate specific feature
-gauge validate requirements/cli/init_project/
+gauge validate specs/cli/init_project/
 ```
 
 ---
@@ -146,7 +146,7 @@ gauge validate requirements/cli/init_project/
 ### Run All Behavior Tests
 
 ```bash
-godog requirements/**/behavior.feature
+godog specs/**/behavior.feature
 ```
 
 **Output**:
@@ -166,46 +166,46 @@ Feature: Initialize project command behavior
 ### Run Specific Module
 
 ```bash
-godog requirements/cli/**/behavior.feature
-godog requirements/vscode/**/behavior.feature
+godog specs/cli/**/behavior.feature
+godog specs/vscode/**/behavior.feature
 ```
 
 ### Run Specific Feature
 
 ```bash
-godog requirements/cli/init_project/behavior.feature
+godog specs/cli/init_project/behavior.feature
 ```
 
 ### Run with Tags
 
 ```bash
 # Run only success scenarios
-godog --tags="@success" requirements/**/behavior.feature
+godog --tags="@success" specs/**/behavior.feature
 
 # Run only error scenarios
-godog --tags="@error" requirements/**/behavior.feature
+godog --tags="@error" specs/**/behavior.feature
 
 # Run critical tests (AND)
-godog --tags="@success && @cli" requirements/**/behavior.feature
+godog --tags="@success && @cli" specs/**/behavior.feature
 
 # Exclude WIP tests (NOT)
-godog --tags="~@wip" requirements/**/behavior.feature
+godog --tags="~@wip" specs/**/behavior.feature
 
 # Run specific acceptance criterion
-godog --tags="@ac1" requirements/**/behavior.feature
+godog --tags="@ac1" specs/**/behavior.feature
 ```
 
 ### Run by Verification Type
 
 ```bash
 # Installation Verification only
-godog --tags="@IV" requirements/**/behavior.feature
+godog --tags="@IV" specs/**/behavior.feature
 
 # Performance Verification only
-godog --tags="@PV" requirements/**/behavior.feature
+godog --tags="@PV" specs/**/behavior.feature
 
 # Operational Verification only (default scenarios)
-godog --tags="~@IV && ~@PV" requirements/**/behavior.feature
+godog --tags="~@IV && ~@PV" specs/**/behavior.feature
 ```
 
 ### Generate Reports
@@ -213,13 +213,13 @@ godog --tags="~@IV && ~@PV" requirements/**/behavior.feature
 #### JUnit XML (for CI/CD)
 
 ```bash
-godog --format=junit:test-results/godog.xml requirements/**/behavior.feature
+godog --format=junit:test-results/godog.xml specs/**/behavior.feature
 ```
 
 #### Cucumber JSON
 
 ```bash
-godog --format=cucumber:test-results/godog.json requirements/**/behavior.feature
+godog --format=cucumber:test-results/godog.json specs/**/behavior.feature
 ```
 
 #### Multiple Formats
@@ -228,27 +228,27 @@ godog --format=cucumber:test-results/godog.json requirements/**/behavior.feature
 godog --format=pretty \
       --format=junit:test-results/godog.xml \
       --format=cucumber:test-results/godog.json \
-      requirements/**/behavior.feature
+      specs/**/behavior.feature
 ```
 
 #### Separate Reports by Verification Type
 
 ```bash
 # Installation Verification report
-godog --tags="@IV" --format=junit:test-results/iv-godog.xml requirements/**/behavior.feature
+godog --tags="@IV" --format=junit:test-results/iv-godog.xml specs/**/behavior.feature
 
 # Performance Verification report
-godog --tags="@PV" --format=junit:test-results/pv-godog.xml requirements/**/behavior.feature
+godog --tags="@PV" --format=junit:test-results/pv-godog.xml specs/**/behavior.feature
 
 # Operational Verification report
-godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml requirements/**/behavior.feature
+godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml specs/**/behavior.feature
 ```
 
 ### Run via Go Test
 
 ```bash
 # Run as Go test
-cd requirements/cli/init_project
+cd specs/cli/init_project
 go test -v
 cd ../../..
 ```
@@ -343,10 +343,10 @@ go test ./src/cli/init/...
 # Run all tests in sequence
 
 echo "Running ATDD acceptance tests..."
-gauge run requirements/
+gauge run specs/
 
 echo "Running BDD behavior tests..."
-godog requirements/**/behavior.feature
+godog specs/**/behavior.feature
 
 echo "Running TDD unit tests..."
 go test ./...
@@ -366,13 +366,13 @@ echo "=== Running All Tests ==="
 echo
 
 echo "=== ATDD: Gauge Acceptance Tests ==="
-gauge run --html-report requirements/
+gauge run --html-report specs/
 echo
 
 echo "=== BDD: Godog Behavior Tests ==="
 godog --format=pretty \
       --format=junit:test-results/godog.xml \
-      requirements/**/behavior.feature
+      specs/**/behavior.feature
 echo
 
 echo "=== TDD: Go Unit Tests ==="
@@ -434,13 +434,13 @@ jobs:
         run: go install github.com/cucumber/godog/cmd/godog@latest
 
       - name: Run ATDD Tests (Gauge)
-        run: gauge run --html-report requirements/
+        run: gauge run --html-report specs/
 
       - name: Run BDD Tests (Godog)
         run: |
           godog --format=pretty \
                 --format=junit:test-results/godog.xml \
-                requirements/**/behavior.feature
+                specs/**/behavior.feature
 
       - name: Run TDD Tests (Go)
         run: go test -v -coverprofile=coverage.out ./...
@@ -490,7 +490,7 @@ gauge install go
 - Run with `--verbose` to see matching details:
 
 ```bash
-godog --verbose requirements/cli/init_project/behavior.feature
+godog --verbose specs/cli/init_project/behavior.feature
 ```
 
 ### Go Test: No tests to run
@@ -526,8 +526,8 @@ Run tests frequently:
 go test ./src/cli/...
 
 # Before committing
-gauge run requirements/cli/feature/
-godog requirements/cli/feature/behavior.feature
+gauge run specs/cli/feature/
+godog specs/cli/feature/behavior.feature
 go test ./...
 ```
 

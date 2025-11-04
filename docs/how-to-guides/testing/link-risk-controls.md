@@ -4,7 +4,7 @@
 
 ## Overview
 
-Risk controls are defined as **Gherkin scenarios** in `requirements/risk-controls/`. User scenarios that implement these controls are tagged with `@risk<ID>` to create traceability.
+Risk controls are defined as **Gherkin scenarios** in `specs/risk-controls/`. User scenarios that implement these controls are tagged with `@risk<ID>` to create traceability.
 
 **Benefits**:
 
@@ -18,9 +18,9 @@ Risk controls are defined as **Gherkin scenarios** in `requirements/risk-control
 
 ### Step 1: Create Risk Control Scenario
 
-Create or update a feature file in `requirements/risk-controls/`:
+Create or update a feature file in `specs/risk-controls/`:
 
-**File**: `requirements/risk-controls/authentication-controls.feature`
+**File**: `specs/risk-controls/authentication-controls.feature`
 
 ```gherkin
 Feature: Authentication Risk Controls
@@ -47,7 +47,7 @@ Feature: Authentication Risk Controls
 
 In your feature implementation, tag scenarios with `@risk<ID>`:
 
-**File**: `requirements/cli/user-authentication/behavior.feature`
+**File**: `specs/cli/user-authentication/behavior.feature`
 
 ```gherkin
 @cli @critical @security
@@ -74,10 +74,10 @@ Check that your scenario correctly links to the risk control:
 
 ```bash
 # Find risk control definition
-grep -A 5 "@risk1" requirements/risk-controls/
+grep -A 5 "@risk1" specs/risk-controls/
 
 # Find all implementations
-grep -r "@risk1" requirements/ --exclude-dir=risk-controls
+grep -r "@risk1" specs/ --exclude-dir=risk-controls
 ```
 
 ---
@@ -144,7 +144,7 @@ Scenario: Commit creates audit entry
 Group related controls in feature files:
 
 ```text
-requirements/risk-controls/
+specs/risk-controls/
 ├── authentication-controls.feature    # @risk1, @risk2, @risk3
 ├── data-protection-controls.feature   # @risk10, @risk11, @risk12
 ├── audit-controls.feature             # @risk5, @risk6, @risk7
@@ -191,10 +191,10 @@ Feature: Authentication Risk Controls
 
 ```bash
 # Find all scenarios implementing risk1
-grep -r "@risk1" requirements/ --exclude-dir=risk-controls
+grep -r "@risk1" specs/ --exclude-dir=risk-controls
 
 # With context (show scenario name)
-grep -B 2 "@risk1" requirements/ --exclude-dir=risk-controls
+grep -B 2 "@risk1" specs/ --exclude-dir=risk-controls
 ```
 
 ### Generate Coverage Report
@@ -204,11 +204,11 @@ grep -B 2 "@risk1" requirements/ --exclude-dir=risk-controls
 echo "Risk Control | Implementation Scenarios"
 echo "-------------|-------------------------"
 
-grep -r "@risk" requirements/risk-controls/ | \
+grep -r "@risk" specs/risk-controls/ | \
   grep -oP '@risk\K[0-9]+' | \
   sort -n | uniq | \
   while read id; do
-    count=$(grep -r "@risk$id" requirements/ --exclude-dir=risk-controls | wc -l)
+    count=$(grep -r "@risk$id" specs/ --exclude-dir=risk-controls | wc -l)
     echo "Risk $id | $count scenarios"
   done
 ```
@@ -217,11 +217,11 @@ grep -r "@risk" requirements/risk-controls/ | \
 
 ```bash
 # List risk controls that have no tagged scenarios
-grep -r "@risk" requirements/risk-controls/ | \
+grep -r "@risk" specs/risk-controls/ | \
   grep -oP '@risk\K[0-9]+' | \
   sort -n | uniq | \
   while read id; do
-    count=$(grep -r "@risk$id" requirements/ --exclude-dir=risk-controls | wc -l)
+    count=$(grep -r "@risk$id" specs/ --exclude-dir=risk-controls | wc -l)
     if [ $count -eq 0 ]; then
       echo "Risk $id: No implementations found"
     fi
@@ -234,13 +234,13 @@ grep -r "@risk" requirements/risk-controls/ | \
 # Create CSV: Risk ID, Control Description, Implementation Count, Feature Files
 echo "Risk ID,Control,Implementations,Features" > risk-traceability.csv
 
-grep -r "@risk" requirements/risk-controls/ | \
+grep -r "@risk" specs/risk-controls/ | \
   while read line; do
     file=$(echo "$line" | cut -d: -f1)
     id=$(echo "$line" | grep -oP '@risk\K[0-9]+')
     desc=$(grep -A 1 "@risk$id" "$file" | grep "Scenario:" | cut -d: -f2- | xargs)
-    count=$(grep -r "@risk$id" requirements/ --exclude-dir=risk-controls | wc -l)
-    features=$(grep -r "@risk$id" requirements/ --exclude-dir=risk-controls | cut -d: -f1 | sort -u | xargs)
+    count=$(grep -r "@risk$id" specs/ --exclude-dir=risk-controls | wc -l)
+    features=$(grep -r "@risk$id" specs/ --exclude-dir=risk-controls | cut -d: -f1 | sort -u | xargs)
     echo "$id,\"$desc\",$count,\"$features\"" >> risk-traceability.csv
   done
 ```
@@ -277,7 +277,7 @@ Control Type: Preventive
 ### 2. Create Risk Control Scenario
 
 ```gherkin
-# requirements/risk-controls/authentication-controls.feature
+# specs/risk-controls/authentication-controls.feature
 
 @risk1
 Scenario: RC-001 - User authentication required (R-023)
@@ -290,7 +290,7 @@ Scenario: RC-001 - User authentication required (R-023)
 ### 3. Implement Feature with Tagged Scenarios
 
 ```gherkin
-# requirements/cli/user-authentication/behavior.feature
+# specs/cli/user-authentication/behavior.feature
 
 @cli @critical @security
 Feature: User Authentication

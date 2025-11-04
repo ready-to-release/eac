@@ -7,7 +7,7 @@ Quick reference for behavior.feature file structure and Gherkin syntax.
 ## File Location
 
 ```text
-requirements/<module>/<feature_name>/behavior.feature
+specs/<module>/<feature_name>/behavior.feature
 ```
 
 ---
@@ -190,7 +190,7 @@ Scenario: [Name]
 
 #### Risk Control Tags
 
-Link scenarios to risk control requirements defined in `requirements/risk-controls/`.
+Link scenarios to risk control requirements defined in `specs/risk-controls/`.
 
 **Format**: `@risk<ID>` (e.g., `@risk1`, `@risk2`, `@risk10`)
 
@@ -208,7 +208,7 @@ Link scenarios to risk control requirements defined in `requirements/risk-contro
 
 **How it works**:
 
-1. **Risk controls are Gherkin scenarios** in `requirements/risk-controls/` that define what the control requires
+1. **Risk controls are Gherkin scenarios** in `specs/risk-controls/` that define what the control requires
 2. **User scenarios are tagged** with `@risk<ID>` to link to risk control definitions
 3. **Traceability** is created through tag matching
 
@@ -217,7 +217,7 @@ Link scenarios to risk control requirements defined in `requirements/risk-contro
 Risk control definition:
 
 ```gherkin
-# requirements/risk-controls/authentication-controls.feature
+# specs/risk-controls/authentication-controls.feature
 
 @risk1
 Scenario: RC-001 - User authentication required
@@ -228,7 +228,7 @@ Scenario: RC-001 - User authentication required
 User scenario implementation:
 
 ```gherkin
-# requirements/cli/user-authentication/behavior.feature
+# specs/cli/user-authentication/behavior.feature
 
 @success @ac1 @risk1
 Scenario: Valid credentials grant access
@@ -239,7 +239,7 @@ Scenario: Valid credentials grant access
 
 **Naming Convention for Risk Control Scenarios**:
 
-Risk control scenarios in `requirements/risk-controls/` follow this pattern:
+Risk control scenarios in `specs/risk-controls/` follow this pattern:
 
 ```gherkin
 @risk<ID>
@@ -271,13 +271,13 @@ Scenario: RC-001 - User authentication required
 
 ```bash
 # Find all scenarios for a specific risk control
-grep -r "@risk1" requirements/
+grep -r "@risk1" specs/
 
 # Find all features with any risk tag
-grep -r "@risk:" requirements/ | grep "Feature:"
+grep -r "@risk:" specs/ | grep "Feature:"
 
 # Count scenarios per risk control
-grep -r "@risk" requirements/ | grep -oP '@risk\K[0-9]+' | sort | uniq -c
+grep -r "@risk" specs/ | grep -oP '@risk\K[0-9]+' | sort | uniq -c
 ```
 
 **See**: [How to Link Risk Controls](../../how-to-guides/testing/link-risk-controls.md) for detailed guide.

@@ -21,9 +21,8 @@ CREATE ALL intermediate files, shell scripts, results etc. in `/out/<my-result-f
 
 ## Testing Specifications
 
-This project uses a **three-layer testing approach** with **separate files for each layer**:
+This project uses a **two-layer testing approach**:
 
-- **ATDD** (acceptance.spec) → Gauge
 - **BDD** (behavior.feature) → Godog
 - **TDD** (unit tests) → Go test
 
@@ -31,22 +30,32 @@ This project uses a **three-layer testing approach** with **separate files for e
 
 ### Quick Reference
 
-| Layer | Tool | Format | File | Location |
-|-------|------|--------|------|----------|
-| **ATDD** | Gauge | Markdown specs | `acceptance.spec` | `requirements/<module>/<feature>/` |
-| **BDD** | Godog | Gherkin scenarios | `behavior.feature` | `requirements/<module>/<feature>/` |
-| **TDD** | Go test | Unit tests | `*_test.go` | `src/**` |
+| Layer    | Tool    | Format            | File               | Location                           |
+| -------- | ------- | ----------------- | ------------------ | ---------------------------------- |
+| **BDD**  | Godog   | Gherkin scenarios | `behavior.feature` | `specs/<module>/<feature>/`        |
+| **TDD**  | Go test | Unit tests        | `*_test.go`        | `src/**`                           |
 
 ### Directory Structure
 
+**Specifications** (in `specs/`) and **Test Implementations** (in `src/`) are **separate**:
+
 ```text
-requirements/<module>/<feature_name>/
-├── acceptance.spec                 # Gauge (ATDD) - business requirements
+specs/<module>/<feature_name>/
 ├── behavior.feature                # Godog (BDD) - executable scenarios
-├── acceptance_test.go              # Gauge step implementations
-├── step_definitions_test.go        # Godog step definitions
 └── issues.md                       # Optional: questions and blockers
+
+src/<module>/
+├── *.go                            # Production code
+├── *_test.go                       # TDD unit tests (co-located with code)
+└── tests/
+    └── steps_test.go               # Godog step definitions (BDD)
 ```
+
+**Key Principles**:
+- **Specifications live in `specs/`** - Gherkin feature files (WHAT to test)
+- **Test implementations live in `src/`** - Go test code (HOW to test)
+- **Unit tests co-locate with production code** - `*_test.go` files alongside the code they test
+- **BDD step definitions in `tests/` subdirectory** - Godog implementations
 
 **Modules**: `cli/`, `vscode/`, `docs/`, `mcp/`
 
@@ -55,67 +64,47 @@ requirements/<module>/<feature_name>/
 **Step 1**: Create feature directory
 
 ```bash
-mkdir -p requirements/<module>/<feature_name>
+mkdir -p specs/<module>/<feature_name>
 ```
 
-**Step 2**: Create acceptance.spec (Gauge ATDD)
+**Step 2**: Create behavior.feature (Godog BDD) with acceptance criteria
 
-**File**: `requirements/<module>/<feature_name>/acceptance.spec`
-
-```markdown
-# [Feature Name]
-
-> **Feature ID**: <module>_<feature_name>
-> **BDD Scenarios**: [behavior.feature](./behavior.feature)
-> **Module**: <Module>
-> **Tags**: <tags>
-
-## User Story
-
-* As a [role]
-* I want [capability]
-* So that [business value]
-
-## Acceptance Criteria
-
-* [Measurable criterion 1]
-* [Measurable criterion 2]
-
-## Acceptance Tests
-
-### AC1: [Criterion 1]
-**Validated by**: behavior.feature -> @ac1 scenarios
-
-* [Gauge step 1]
-* [Gauge step 2]
-* [Verification step]
-```
-
-**Step 3**: Create behavior.feature (Godog BDD)
-
-**File**: `requirements/<module>/<feature_name>/behavior.feature`
+**File**: `specs/<module>/<feature_name>/behavior.feature`
 
 ```gherkin
 # Feature ID: <module>_<feature_name>
-# Acceptance Spec: acceptance.spec
 # Module: <Module>
 
 @<module> @critical @<feature_name>
 Feature: [Feature Name]
 
-  @success @ac1
-  Scenario: [Happy path]
-    Given [precondition]
-    When [action]
-    Then [observable outcome]
-    And [verification]
+  As a [role]
+  I want [capability]
+  So that [business value]
 
-  @error @ac1
-  Scenario: [Error case]
-    Given [precondition]
-    When [invalid action]
-    Then [error behavior]
-    And [error verification]
+  Rule: [Measurable criterion 1]
+
+    @success @ac1
+    Scenario: [Happy path for AC1]
+      Given [precondition]
+      When [action]
+      Then [observable outcome]
+      And [verification]
+
+    @error @ac1
+    Scenario: [Error case for AC1]
+      Given [precondition]
+      When [invalid action]
+      Then [error behavior]
+      And [error verification]
+
+  Rule: [Measurable criterion 2]
+
+    @success @ac2
+    Scenario: [Happy path for AC2]
+      Given [precondition]
+      When [action]
+      Then [observable outcome]
 ```
 
 ### Feature ID Linkage
@@ -126,40 +115,45 @@ Feature: [Feature Name]
 Feature ID: cli_init_project
 
 Used in:
-- acceptance.spec: > **Feature ID**: cli_init_project
-- behavior.feature: # Feature ID: cli_init_project
-- acceptance_test.go: // Feature: cli_init_project
-- step_definitions_test.go: // Feature: cli_init_project
-- Unit tests: // Feature: cli_init_project
+- specs/cli/init_project/behavior.feature: # Feature ID: cli_init_project
+- src/cli/tests/steps_test.go: // Feature: cli_init_project
+- src/cli/*_test.go: // Feature: cli_init_project (unit tests)
 ```
 
 **Example**:
 
-```text
-Go: // Feature: cli_init_project
+```go
+// Feature: cli_init_project
+// Godog step implementations
+package tests
+
+func iRunCommand(command string) error {
+    // implementation
+    return nil
+}
 ```
 
 ### Decision Tree for AI Assistants
 
-| User Request | Action |
-|--------------|--------|
-| "Create a feature spec" | 1. Create feature directory<br>2. Create `acceptance.spec` (Gauge)<br>3. Create `behavior.feature` (Godog)<br>4. Add Feature ID to both files |
-| "Implement feature X" | 1. Read `acceptance.spec` and `behavior.feature`<br>2. Create `acceptance_test.go` (Gauge steps)<br>3. Create `step_definitions_test.go` (Godog steps)<br>4. Write unit tests with Feature ID comment<br>5. Implement feature code<br>6. Run: `gauge run` and `godog run` |
-| "Add acceptance criteria" | Update ATDD layer in `acceptance.spec` only |
-| "Add a scenario" | Update BDD layer in `behavior.feature` only |
-| "Validate feature files" | Check: both files exist, Feature ID matches, @ac tags link scenarios to criteria |
-| "Run tests" | `gauge run requirements/` (ATDD)<br>`godog requirements/**/behavior.feature` (BDD)<br>`go test ./...` (TDD) |
+| User Request              | Action                                                                                                                                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Create a feature spec"   | 1. Create `specs/<module>/<feature>/` directory<br>2. Create `behavior.feature` with Feature ID, user story, and acceptance criteria                                                                                    |
+| "Implement feature X"     | 1. Read `specs/<module>/<feature>/behavior.feature`<br>2. Create `src/<module>/tests/steps_test.go` (Godog steps)<br>3. Write unit tests in `src/<module>/*_test.go`<br>4. Implement feature code<br>5. Run: `godog` |
+| "Add acceptance criteria" | Update acceptance criteria section in `specs/<module>/<feature>/behavior.feature`                                                                                                                                        |
+| "Add a scenario"          | Add scenario to `specs/<module>/<feature>/behavior.feature` with appropriate @ac tag                                                                                                                                     |
+| "Validate feature files"  | Check: Feature ID present, acceptance criteria documented, @ac tags link scenarios to criteria                                                                                                                           |
+| "Run tests"               | `godog specs/**/behavior.feature` (BDD)<br>`go test ./src/...` (TDD)                                                                                                                                                    |
 
 ### Feature File Size Best Practices
 
 **Scenario Count Guidelines per `.feature` file**:
 
-| Scenario Count | Status | Action |
-|----------------|--------|--------|
-| **10-15** | ✅ Ideal | Optimal for maintainability |
-| **15-20** | ✅ Acceptable | Still manageable |
-| **20-30** | ⚠️ Large | Should refactor into multiple files |
-| **30+** | ❌ Too Large | Must refactor |
+| Scenario Count | Status        | Action                              |
+| -------------- | ------------- | ----------------------------------- |
+| **10-15**      | ✅ Ideal      | Optimal for maintainability         |
+| **15-20**      | ✅ Acceptable | Still manageable                    |
+| **20-30**      | ⚠️ Large      | Should refactor into multiple files |
+| **30+**        | ❌ Too Large  | Must refactor                       |
 
 **When to split a feature file**:
 
@@ -169,9 +163,9 @@ Go: // Feature: cli_init_project
 
 **How to split**:
 
-1. Update `acceptance.spec` to list multiple feature files
-2. Create focused `.feature` files (e.g., `format_validation.feature`, `completeness_validation.feature`)
-3. Update "Validated by" links to point to specific files
+1. Create focused `.feature` files (e.g., `format_validation.feature`, `completeness_validation.feature`)
+2. Move related scenarios to appropriate files
+3. Ensure each file has its own Feature ID and acceptance criteria
 4. Delete old monolithic `behavior.feature`
 
 **Example**: Module Detection (40 scenarios) split into:
@@ -186,10 +180,10 @@ Go: // Feature: cli_init_project
 
 ```bash
 # Run all scenarios for a feature
-godog requirements/<module>/<feature>/*.feature
+godog specs/<module>/<feature>/*.feature
 
 # Run specific sub-feature
-godog requirements/<module>/<feature>/sub_feature.feature
+godog specs/<module>/<feature>/sub_feature.feature
 ```
 
 See [BDD Guide - Best Practices](docs/reference/testing/specifications/bdd.md#best-practices-feature-file-size-and-organization) for detailed splitting strategies.
@@ -208,13 +202,13 @@ See [BDD Guide - Best Practices](docs/reference/testing/specifications/bdd.md#be
 
 #### Risk Control Tags
 
-Link user scenarios to risk control requirements defined in `requirements/risk-controls/`.
+Link user scenarios to risk control requirements defined in `specs/risk-controls/`.
 
 **Format**: `@risk<ID>` (e.g., `@risk1`, `@risk2`, `@risk10`)
 
 **How it works**:
 
-1. Risk controls are defined as Gherkin scenarios in `requirements/risk-controls/` that specify what the control requires
+1. Risk controls are defined as Gherkin scenarios in `specs/risk-controls/` that specify what the control requires
 2. Each risk control scenario is tagged with `@risk<ID>`
 3. User scenarios that implement the control are tagged with the same `@risk<ID>`
 
@@ -223,7 +217,7 @@ Link user scenarios to risk control requirements defined in `requirements/risk-c
 Risk control definition:
 
 ```gherkin
-# requirements/risk-controls/authentication-controls.feature
+# specs/risk-controls/authentication-controls.feature
 @risk1
 Scenario: RC-001 - User authentication required
   Given a system with protected resources
@@ -234,7 +228,7 @@ Scenario: RC-001 - User authentication required
 User scenario implementation:
 
 ```gherkin
-# requirements/cli/user-authentication/behavior.feature
+# specs/cli/user-authentication/behavior.feature
 @success @ac1 @risk1
 Scenario: Valid credentials grant access
   Given I have valid credentials
@@ -246,28 +240,40 @@ Scenario: Valid credentials grant access
 
 ### Running Tests
 
+**IMPORTANT**: Use `go test` (not the deprecated `godog` CLI) for full Go tooling support.
+
 ```bash
-# Run ATDD acceptance tests (Gauge)
-gauge run requirements/
+# Run BDD behavior tests (Godog) - recommended approach
+cd src/<module>/tests
+go test -v
 
-# Run BDD behavior tests (Godog)
-godog requirements/**/behavior.feature
+# Run all tests from project root
+go test -v ./src/...
 
-# Run BDD tests by verification type (for implementation reports)
-godog --tags="@IV" requirements/**/behavior.feature       # Installation Verification
-godog --tags="@PV" requirements/**/behavior.feature       # Performance Verification
-godog --tags="~@IV && ~@PV" requirements/**/behavior.feature  # Operational Verification
+# Run with test coverage
+go test -cover ./src/commands/tests
+
+# Run with race detector
+go test -race ./src/commands/tests
+
+# Run specific test function
+go test -v -run TestFeatures ./src/commands/tests
 
 # Run TDD unit tests
-go test ./...
+go test ./src/<module>
 
-# Run specific feature
-gauge run requirements/cli/init_project/
-godog requirements/cli/init_project/behavior.feature
+# Common combined command
+cd src/commands/tests && go test -v
+```
+
+**Advanced options** (passed via test flags):
+```bash
+# Run tests matching tag (requires custom filtering in code)
+# Tags are not directly supported via go test flags
+# Use scenario filtering in your godog.Options instead
 ```
 
 ### Detailed Guides
 
-- [ATDD Guide](docs/reference/testing/specifications/atdd.md) - Gauge specs, Example Mapping, acceptance criteria
-- [BDD Guide](docs/reference/testing/specifications/bdd.md) - Godog scenarios, Gherkin syntax, step definitions
+- [BDD Guide](docs/reference/testing/specifications/bdd.md) - Godog scenarios, Gherkin syntax, step definitions, acceptance criteria
 - [TDD Guide](docs/reference/testing/specifications/tdd.md) - Unit tests with Go

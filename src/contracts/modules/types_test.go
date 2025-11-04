@@ -162,12 +162,12 @@ func TestModuleContract_MatchesFile_RootLevel(t *testing.T) {
 		{"root slash no match", "/", []string{"CLAUDE.md"}, "OTHER.md", false},
 
 		// Edge case: absolute patterns (leading /) should match from repository root
-		{"absolute simple", "src/mcp/vscode", []string{"/requirements/spec.md"}, "requirements/spec.md", true},
-		{"absolute with **", "src/mcp/vscode", []string{"/requirements/**/*.md"}, "requirements/api/spec.md", true},
-		{"absolute with *", "src/mcp/vscode", []string{"/requirements/*"}, "requirements/spec.md", true},
-		{"absolute no match", "src/mcp/vscode", []string{"/requirements/*.md"}, "other/spec.md", false},
-		{"absolute and relative", "src/mcp/vscode", []string{"go.mod", "/requirements/*.md"}, "src/mcp/vscode/go.mod", true},
-		{"absolute and relative 2", "src/mcp/vscode", []string{"go.mod", "/requirements/*.md"}, "requirements/spec.md", true},
+		{"absolute simple", "src/mcp/vscode", []string{"/specs/spec.md"}, "specs/spec.md", true},
+		{"absolute with **", "src/mcp/vscode", []string{"/specs/**/*.md"}, "specs/api/spec.md", true},
+		{"absolute with *", "src/mcp/vscode", []string{"/specs/*"}, "specs/spec.md", true},
+		{"absolute no match", "src/mcp/vscode", []string{"/specs/*.md"}, "other/spec.md", false},
+		{"absolute and relative", "src/mcp/vscode", []string{"go.mod", "/specs/*.md"}, "src/mcp/vscode/go.mod", true},
+		{"absolute and relative 2", "src/mcp/vscode", []string{"go.mod", "/specs/*.md"}, "specs/spec.md", true},
 	}
 
 	for _, tt := range tests {

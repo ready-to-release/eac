@@ -258,7 +258,7 @@ Follow [Create Feature Spec](./create-feature-spec.md) guide to convert:
 
 For each Red Card:
 
-1. Create entry in `requirements/<module>/<feature>/issues.md`
+1. Create entry in `specs/<module>/<feature>/issues.md`
 2. Assign owner
 3. Set deadline
 4. Track resolution

@@ -60,7 +60,7 @@ Feature: Module Detection Edge Cases
       | docs/guide/index.md                                        | docs                 |
       | .claude/agents/commit-gen.md                               | claude-config        |
       | contracts/deployable-units/0.1.0/src-mcp-vscode.yml        | src-mcp-vscode       |
-      | requirements/cli/feature/acceptance.spec                   | cli                  |
+      | specs/cli/feature/acceptance.spec                   | cli                  |
       | containers/postgres/Dockerfile                             | postgres             |
       | README.md                                                  | root                 |
     Then each file is correctly mapped to its expected module

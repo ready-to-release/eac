@@ -52,24 +52,24 @@ These templates help you create comprehensive, testable specifications that brid
 
 ### 1. Set Up Your Project Structure
 
-Create a `requirements/` folder in your project root:
+Create a `specs/` folder in your project root:
 
 ```bash
-mkdir -p requirements/<component>/<feature_name>
+mkdir -p specs/<component>/<feature_name>
 ```
 
 **Examples**:
-- `requirements/api/user_authentication/`
-- `requirements/ui/dashboard_widgets/`
-- `requirements/service/notification_delivery/`
+- `specs/api/user_authentication/`
+- `specs/ui/dashboard_widgets/`
+- `specs/service/notification_delivery/`
 
 ### 2. Copy Templates
 
 Copy the templates to your feature folder:
 
 ```bash
-cp /path/to/templates/acceptance.spec requirements/<component>/<feature_name>/
-cp /path/to/templates/behavior.feature requirements/<component>/<feature_name>/
+cp /path/to/templates/acceptance.spec specs/<component>/<feature_name>/
+cp /path/to/templates/behavior.feature specs/<component>/<feature_name>/
 ```
 
 ### 3. Fill In the Templates
@@ -286,7 +286,7 @@ Before writing specifications, conduct an **Example Mapping** workshop:
 Recommended structure for features:
 
 ```
-requirements/
+specs/
 ├── <component_1>/
 │   ├── <feature_1>/
 │   │   ├── acceptance.spec          # ATDD - business requirements
@@ -366,32 +366,32 @@ Keep feature files manageable:
 
 ```bash
 # Run all acceptance tests
-gauge run requirements/
+gauge run specs/
 
 # Run specific component
-gauge run requirements/api/
+gauge run specs/api/
 
 # Run specific feature
-gauge run requirements/api/user_authentication/
+gauge run specs/api/user_authentication/
 ```
 
 ### Run BDD Tests (Godog)
 
 ```bash
 # Run all behavior tests
-godog requirements/**/behavior.feature
+godog specs/**/behavior.feature
 
 # Run by verification type
-godog --tags="@IV" requirements/**/behavior.feature    # Installation only
-godog --tags="@PV" requirements/**/behavior.feature    # Performance only
-godog --tags="~@IV && ~@PV" requirements/**/behavior.feature  # Operational only
+godog --tags="@IV" specs/**/behavior.feature    # Installation only
+godog --tags="@PV" specs/**/behavior.feature    # Performance only
+godog --tags="~@IV && ~@PV" specs/**/behavior.feature  # Operational only
 
 # Run specific feature
-godog requirements/api/user_authentication/behavior.feature
+godog specs/api/user_authentication/behavior.feature
 
 # Run with tags
-godog --tags="@success" requirements/**/behavior.feature
-godog --tags="@ac1" requirements/**/behavior.feature
+godog --tags="@success" specs/**/behavior.feature
+godog --tags="@ac1" specs/**/behavior.feature
 ```
 
 ### Run BDD Tests (Cucumber - Other Languages)
@@ -413,15 +413,15 @@ mvn test
 # Generate separate reports by verification type
 godog --tags="@IV" \
   --format=junit:test-results/iv-tests.xml \
-  requirements/**/behavior.feature
+  specs/**/behavior.feature
 
 godog --tags="@PV" \
   --format=junit:test-results/pv-tests.xml \
-  requirements/**/behavior.feature
+  specs/**/behavior.feature
 
 godog --tags="~@IV && ~@PV" \
   --format=junit:test-results/ov-tests.xml \
-  requirements/**/behavior.feature
+  specs/**/behavior.feature
 ```
 
 These reports can be used in implementation reports for regulatory/audit documentation.
@@ -518,22 +518,22 @@ Maintain traceability: User Story → Acceptance Criteria → Scenarios → Impl
 ### Go Projects
 - BDD: Use Godog
 - TDD: Use `go test`
-- Example: `requirements/<component>/<feature>/step_definitions_test.go`
+- Example: `specs/<component>/<feature>/step_definitions_test.go`
 
 ### Python Projects
 - BDD: Use behave or pytest-bdd
 - TDD: Use pytest
-- Example: `requirements/<component>/<feature>/steps.py`
+- Example: `specs/<component>/<feature>/steps.py`
 
 ### JavaScript/TypeScript Projects
 - BDD: Use @cucumber/cucumber
 - TDD: Use Jest or Mocha
-- Example: `requirements/<component>/<feature>/steps.ts`
+- Example: `specs/<component>/<feature>/steps.ts`
 
 ### Java Projects
 - BDD: Use Cucumber-JVM
 - TDD: Use JUnit or TestNG
-- Example: `requirements/<component>/<feature>/StepDefinitions.java`
+- Example: `specs/<component>/<feature>/StepDefinitions.java`
 
 ---
 

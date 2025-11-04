@@ -222,26 +222,26 @@ Does the scenario verify installation/setup/configuration/version?
 
 ```bash
 # Run Installation Verification scenarios only
-godog --tags="@IV" requirements/**/behavior.feature
+godog --tags="@IV" specs/**/behavior.feature
 
 # Run Performance Verification scenarios only
-godog --tags="@PV" requirements/**/behavior.feature
+godog --tags="@PV" specs/**/behavior.feature
 
 # Run Operational Verification scenarios only (exclude @IV and @PV)
-godog --tags="~@IV && ~@PV" requirements/**/behavior.feature
+godog --tags="~@IV && ~@PV" specs/**/behavior.feature
 ```
 
 ### Generate Separate Reports
 
 ```bash
 # Generate IV report
-godog --tags="@IV" --format=junit:test-results/iv-godog.xml requirements/**/behavior.feature
+godog --tags="@IV" --format=junit:test-results/iv-godog.xml specs/**/behavior.feature
 
 # Generate PV report
-godog --tags="@PV" --format=junit:test-results/pv-godog.xml requirements/**/behavior.feature
+godog --tags="@PV" --format=junit:test-results/pv-godog.xml specs/**/behavior.feature
 
 # Generate OV report
-godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml requirements/**/behavior.feature
+godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml specs/**/behavior.feature
 ```
 
 ---

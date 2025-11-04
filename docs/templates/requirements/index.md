@@ -41,14 +41,14 @@ Template for BDD (Behavior-Driven Development) scenarios.
 **1. Create feature directory:**
 
 ```bash
-mkdir -p requirements/<module>/<feature_name>
+mkdir -p specs/<module>/<feature_name>
 ```
 
 **2. Copy templates:**
 
 ```bash
-cp docs/templates/requirements/acceptance.spec requirements/<module>/<feature_name>/
-cp docs/templates/requirements/behavior.feature requirements/<module>/<feature_name>/
+cp docs/templates/specs/acceptance.spec specs/<module>/<feature_name>/
+cp docs/templates/specs/behavior.feature specs/<module>/<feature_name>/
 ```
 
 **3. Fill in placeholders:**

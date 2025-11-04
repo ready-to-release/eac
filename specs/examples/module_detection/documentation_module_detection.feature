@@ -55,15 +55,15 @@ Feature: Documentation Module Detection
 
   @success @ac7
   Scenario: Detect requirements module for src-mcp-vscode
-    When I determine module for "requirements/src-mcp-vscode/feature/acceptance.spec"
+    When I determine module for "specs/src-mcp-vscode/feature/acceptance.spec"
     Then the detected module is "src-mcp-vscode"
 
   @success @ac7
   Scenario: Detect requirements module for cli
-    When I determine module for "requirements/cli/testing/behavior.feature"
+    When I determine module for "specs/cli/testing/behavior.feature"
     Then the detected module is "cli"
 
   @success @ac7
   Scenario: Detect deeply nested requirements files
-    When I determine module for "requirements/src-mcp-vscode/semantic-commit/v2/acceptance.spec"
+    When I determine module for "specs/src-mcp-vscode/semantic-commit/v2/acceptance.spec"
     Then the detected module is "src-mcp-vscode"
