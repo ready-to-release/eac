@@ -2,6 +2,7 @@
 # Acceptance Spec: acceptance.spec
 # Component: <Component Name>
 # Description: [Brief description of what this feature does]
+# Risk Control: @risk<ID> (optional - if this feature implements a risk control)
 
 @<component> @critical @<feature_name>
 Feature: [Feature Name - User-Facing Description]
@@ -348,6 +349,9 @@ Feature: [Feature Name - User-Facing Description]
 #    - @PV: Performance, response time, resource usage scenarios
 #    - (no tag): Operational/functional scenarios (most common)
 #    - @ac1, @ac2, @ac3: Link to acceptance criteria in acceptance.spec
+#    - @risk<ID>: Link to risk control requirements (optional, e.g., @risk1, @risk5)
+#      Risk controls are defined in requirements/risk-controls/
+#      See: docs/how-to-guides/testing/link-risk-controls.md
 #
 # 4. Verification type guidelines:
 #    - Installation Verification (@IV): System setup, config, version checks

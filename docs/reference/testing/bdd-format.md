@@ -58,7 +58,7 @@ Feature: [Feature Name]
 
 ## Component Breakdown
 
-### 1. Metadata Header (Comments)
+### Metadata Header (Comments)
 
 **Purpose**: Links this feature to acceptance.spec and provides traceability
 
@@ -78,7 +78,7 @@ Feature: [Feature Name]
 # Module: CLI
 ```
 
-### 2. Feature Tags
+### Feature Tags
 
 **Purpose**: Categorize features by testing level and priority
 
@@ -100,7 +100,7 @@ Feature: Initialize project command behavior
 
 **Common feature tags**: `@cli`, `@vscode`, `@io`, `@integration`, `@critical`
 
-### 3. Feature Line
+### Feature Line
 
 **Format**: `Feature: [Descriptive feature name]`
 
@@ -116,7 +116,7 @@ Feature: Initialize project command behavior
 Feature: Initialize project command behavior
 ```
 
-### 4. Background (Optional)
+### Background (Optional)
 
 **Purpose**: Common setup for all scenarios in the feature
 
@@ -147,7 +147,7 @@ Background:
 - Setup is specific to individual scenarios
 - Background would be longer than scenarios
 
-### 5. Scenarios
+### Scenarios
 
 **Purpose**: Describe one specific user interaction
 
@@ -173,7 +173,7 @@ Scenario: Initialize in empty directory
   And the command should exit with code 0
 ```
 
-### 6. Scenario Tags
+### Scenario Tags
 
 **Purpose**: Categorize individual scenarios by type
 
@@ -187,6 +187,100 @@ Scenario: [Name]
 ```
 
 **Common scenario tags**: `@success`, `@error`, `@flag`, `@ac1`, `@ac2`, `@IV`, `@PV`
+
+#### Risk Control Tags
+
+Link scenarios to risk control requirements defined in `requirements/risk-controls/`.
+
+**Format**: `@risk<ID>` (e.g., `@risk1`, `@risk2`, `@risk10`)
+
+**Purpose**:
+
+- Create traceability between test scenarios and risk controls
+- Support audit requirements
+- Enable risk-based testing prioritization
+- Generate compliance reports
+
+**Placement**:
+
+- **Feature-level**: When entire feature implements a risk control
+- **Scenario-level**: When specific scenarios validate different controls
+
+**How it works**:
+
+1. **Risk controls are Gherkin scenarios** in `requirements/risk-controls/` that define what the control requires
+2. **User scenarios are tagged** with `@risk<ID>` to link to risk control definitions
+3. **Traceability** is created through tag matching
+
+**Example**:
+
+Risk control definition:
+
+```gherkin
+# requirements/risk-controls/authentication-controls.feature
+
+@risk1
+Scenario: RC-001 - User authentication required
+  Given a system with protected resources
+  Then all user access MUST be authenticated
+```
+
+User scenario implementation:
+
+```gherkin
+# requirements/cli/user-authentication/behavior.feature
+
+@success @ac1 @risk1
+Scenario: Valid credentials grant access
+  Given I have valid credentials
+  When I run "simply login"
+  Then I should be authenticated
+```
+
+**Naming Convention for Risk Control Scenarios**:
+
+Risk control scenarios in `requirements/risk-controls/` follow this pattern:
+
+```gherkin
+@risk<ID>
+Scenario: RC-<ID> - <Short description>
+  Given <context>
+  Then <requirement> MUST <condition>
+  And <requirement> MUST <condition>
+```
+
+**Example**:
+
+```gherkin
+@risk1
+Scenario: RC-001 - User authentication required
+  Given a system with protected resources
+  Then all user access MUST be authenticated
+  And authentication MUST occur before granting access
+  And failed attempts MUST be logged
+```
+
+**Key points**:
+
+- Tag: `@risk<ID>` (e.g., @risk1, @risk5, @risk10)
+- Scenario name: `RC-<ID> - <Description>` (e.g., RC-001 - User authentication required)
+- Use "MUST" for mandatory requirements
+- Keep scenarios focused on one control
+
+**Querying Risk Tags**:
+
+```bash
+# Find all scenarios for a specific risk control
+grep -r "@risk1" requirements/
+
+# Find all features with any risk tag
+grep -r "@risk:" requirements/ | grep "Feature:"
+
+# Count scenarios per risk control
+grep -r "@risk" requirements/ | grep -oP '@risk\K[0-9]+' | sort | uniq -c
+```
+
+**See**: [How to Link Risk Controls](../../how-to-guides/testing/link-risk-controls.md) for detailed guide.
 
 ---
 
@@ -470,47 +564,6 @@ Scenario: Initialize creates valid configuration file
   When I run "cc init"
   Then a file named "cc.yaml" should be created
   And the file should contain valid YAML
-```
-
----
-
-## Split Features (Multiple .feature Files)
-
-When a feature has 20+ scenarios, split into multiple focused files.
-
-**Directory structure**:
-
-```text
-requirements/<module>/<feature>/
-├── acceptance.spec
-├── sub_feature_1.feature
-├── sub_feature_2.feature
-└── sub_feature_3.feature
-```
-
-**Each split file includes metadata**:
-
-```gherkin
-# Feature ID: module_feature_name
-# Acceptance Spec: acceptance.spec
-# Module: module-name
-# Part: 1 of 3 - Descriptive Part Name
-
-@module @feature @part1
-Feature: Focused Feature Name
-```
-
-**Running split features**:
-
-```bash
-# Run all scenarios for a feature
-godog requirements/<module>/<feature>/*.feature
-
-# Run specific sub-feature
-godog requirements/<module>/<feature>/sub_feature_1.feature
-
-# Run by tags across all files
-godog --tags="@ac1" requirements/<module>/<feature>/*.feature
 ```
 
 ---
