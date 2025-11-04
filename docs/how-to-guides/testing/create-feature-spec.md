@@ -26,13 +26,13 @@ This guide walks through creating both test specification files for a feature:
 
 Determine the feature module and name, then create the directory:
 
-**Format**: `requirements/<module>/<feature_name>/`
+**Format**: `specs/<module>/<feature_name>/`
 
 **Example**:
 
 ```bash
-mkdir -p requirements/cli/init_project
-cd requirements/cli/init_project
+mkdir -p specs/cli/init_project
+cd specs/cli/init_project
 ```
 
 **Module names**: `cli`, `vscode`, `docs`, `mcp`
@@ -49,7 +49,7 @@ cd requirements/cli/init_project
 
 ### Create File
 
-Create `requirements/<module>/<feature_name>/acceptance.spec`:
+Create `specs/<module>/<feature_name>/acceptance.spec`:
 
 ```bash
 touch acceptance.spec
@@ -105,7 +105,7 @@ Tags: <tags>
 
 ### Complete Example
 
-**File**: `requirements/cli/init_project/acceptance.spec`
+**File**: `specs/cli/init_project/acceptance.spec`
 
 ```markdown
 # Initialize Project
@@ -188,7 +188,7 @@ Ensure Feature ID matches the one in acceptance.spec: `cli_init_project`
 
 ### Create File
 
-Create `requirements/<module>/<feature_name>/behavior.feature`:
+Create `specs/<module>/<feature_name>/behavior.feature`:
 
 ```bash
 touch behavior.feature
@@ -237,7 +237,7 @@ Feature: [Feature Name]
 
 ### Complete Example
 
-**File**: `requirements/cli/init_project/behavior.feature`
+**File**: `specs/cli/init_project/behavior.feature`
 
 ```gherkin
 # Feature ID: cli_init_project
@@ -347,7 +347,7 @@ grep "acceptance.spec" behavior.feature
 
 Create `acceptance_test.go` to implement Gauge steps.
 
-**File**: `requirements/cli/init_project/acceptance_test.go`
+**File**: `specs/cli/init_project/acceptance_test.go`
 
 ```go
 // Feature: cli_init_project
@@ -432,7 +432,7 @@ func assertExecutionTime(seconds string) {
 
 Create `step_definitions_test.go` to implement Godog steps.
 
-**File**: `requirements/cli/init_project/step_definitions_test.go`
+**File**: `specs/cli/init_project/step_definitions_test.go`
 
 ```go
 // Feature: cli_init_project
@@ -532,19 +532,19 @@ func TestFeatures(t *testing.T) {
 ### Run Gauge Tests
 
 ```bash
-gauge run requirements/cli/init_project/
+gauge run specs/cli/init_project/
 ```
 
 ### Run Godog Tests
 
 ```bash
-godog requirements/cli/init_project/behavior.feature
+godog specs/cli/init_project/behavior.feature
 ```
 
 ### Run via Go Test
 
 ```bash
-cd requirements/cli/init_project
+cd specs/cli/init_project
 go test -v
 cd ../../..
 ```
@@ -555,7 +555,7 @@ cd ../../..
 
 If you had Red Cards from Example Mapping, create an issues tracker:
 
-**File**: `requirements/cli/init_project/issues.md`
+**File**: `specs/cli/init_project/issues.md`
 
 ```markdown
 # Open Questions

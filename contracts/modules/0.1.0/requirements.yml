@@ -6,7 +6,7 @@ type: "requirements"
 description: "Repository specific requirements"
 
 source:
-  changelog_path: "requirements/CHANGELOG.md"
+  changelog_path: "specs/CHANGELOG.md"
   root: "requirements"
   includes:
     - "*"

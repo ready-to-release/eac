@@ -57,7 +57,7 @@ Create `godog.yaml` in your project root with default settings:
 cat > godog.yaml << 'EOF'
 default:
   paths:
-    - requirements/**/behavior.feature
+    - specs/**/behavior.feature
   format: pretty,junit:test-results/godog.xml
   tags: ~@wip
   strict: true
@@ -90,8 +90,8 @@ mkdir -p test-results
 Create a simple feature file to verify everything works:
 
 ```bash
-mkdir -p requirements/test
-cat > requirements/test/behavior.feature << 'EOF'
+mkdir -p specs/test
+cat > specs/test/behavior.feature << 'EOF'
 # Feature ID: test_verification
 # Module: Test
 
@@ -110,7 +110,7 @@ EOF
 Create the step definitions:
 
 ```bash
-cat > requirements/test/step_definitions_test.go << 'EOF'
+cat > specs/test/step_definitions_test.go << 'EOF'
 package test
 
 import (
@@ -150,10 +150,10 @@ EOF
 
 ### Initialize Go Module (if needed)
 
-If you don't have a go.mod file in requirements/test/:
+If you don't have a go.mod file in specs/test/:
 
 ```bash
-cd requirements/test
+cd specs/test
 go mod init test
 go get github.com/cucumber/godog
 cd ../..
@@ -164,7 +164,7 @@ cd ../..
 #### Using godog command
 
 ```bash
-godog requirements/test/behavior.feature
+godog specs/test/behavior.feature
 ```
 
 **Expected output**:
@@ -172,7 +172,7 @@ godog requirements/test/behavior.feature
 ```text
 Feature: Godog verification
 
-  Scenario: Verify Godog works          # requirements/test/behavior.feature:6
+  Scenario: Verify Godog works          # specs/test/behavior.feature:6
     Given this is a test step           # step_definitions_test.go:7
     Then godog should be working        # step_definitions_test.go:11
 
@@ -183,7 +183,7 @@ Feature: Godog verification
 #### Using go test
 
 ```bash
-cd requirements/test
+cd specs/test
 go test -v
 cd ../..
 ```
@@ -211,7 +211,7 @@ PASS
 Remove the test files after verification:
 
 ```bash
-rm -rf requirements/test
+rm -rf specs/test
 ```
 
 ---
@@ -242,7 +242,7 @@ jobs:
         run: go install github.com/cucumber/godog/cmd/godog@latest
 
       - name: Run BDD tests
-        run: godog requirements/**/behavior.feature
+        run: godog specs/**/behavior.feature
 
       - name: Upload test results
         if: always()

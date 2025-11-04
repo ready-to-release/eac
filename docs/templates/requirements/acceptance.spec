@@ -17,7 +17,7 @@ If this feature implements a risk control from a risk assessment:
 * **Control Type**: [Preventive | Detective | Corrective]
 * **Risk Control Tag**: `@risk<ID>` (e.g., @risk1, @risk5)
 
-**Traceability**: Risk control defined in [requirements/risk-controls/](../../risk-controls/)
+**Traceability**: Risk control defined in [specs/risk-controls/](../../risk-controls/)
 
 ---
 
@@ -262,7 +262,7 @@ This feature includes the following verification types for implementation report
 6. **Document Example Mapping** results from workshop (Yellow/Blue/Green cards)
 7. **Link to BDD scenarios** using @ac1, @ac2, @ac3 tags in behavior.feature
 8. **Add risk control information** (optional) if feature implements risk requirements:
-   - Reference the risk control scenario in requirements/risk-controls/
+   - Reference the risk control scenario in specs/risk-controls/
    - Tag BDD scenarios with @risk<ID> to create traceability
    - See: docs/how-to-guides/testing/link-risk-controls.md
 9. **Remove unused sections** if not applicable to your feature

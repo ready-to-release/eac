@@ -7,7 +7,7 @@ Quick reference for acceptance.spec file structure and Gauge syntax.
 ## File Location
 
 ```text
-requirements/<module>/<feature_name>/acceptance.spec
+specs/<module>/<feature_name>/acceptance.spec
 ```
 
 ---
@@ -224,7 +224,7 @@ Tags: critical, cli
 
 Reusable step groups:
 
-**File**: `requirements/concepts/setup.cpt`
+**File**: `specs/concepts/setup.cpt`
 
 ```markdown
 # Setup test environment

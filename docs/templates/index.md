@@ -23,7 +23,7 @@ Templates for design documentation and decision records.
 
 ---
 
-### [Requirements Templates](requirements/index.md)
+### [Requirements Templates](specs/index.md)
 
 Templates for test specifications and feature requirements.
 

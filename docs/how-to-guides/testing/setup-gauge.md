@@ -127,8 +127,8 @@ mkdir -p requirements
 Create a simple test spec to verify everything works:
 
 ```bash
-mkdir -p requirements/test
-cat > requirements/test/acceptance.spec << 'EOF'
+mkdir -p specs/test
+cat > specs/test/acceptance.spec << 'EOF'
 # Test Specification
 
 ## Verification Test
@@ -142,7 +142,7 @@ EOF
 Create the step implementation:
 
 ```bash
-cat > requirements/test/acceptance_test.go << 'EOF'
+cat > specs/test/acceptance_test.go << 'EOF'
 package test
 
 import (
@@ -161,10 +161,10 @@ EOF
 
 ### Initialize Go Module (if needed)
 
-If you don't have a go.mod file in requirements/test/:
+If you don't have a go.mod file in specs/test/:
 
 ```bash
-cd requirements/test
+cd specs/test
 go mod init test
 go get github.com/getgauge-contrib/gauge-go
 cd ../..
@@ -173,7 +173,7 @@ cd ../..
 ### Run Verification Test
 
 ```bash
-gauge run requirements/test/
+gauge run specs/test/
 ```
 
 **Expected output**:
@@ -196,7 +196,7 @@ Scenarios:      1 executed     1 passed     0 failed     0 skipped
 Remove the test files after verification:
 
 ```bash
-rm -rf requirements/test
+rm -rf specs/test
 ```
 
 ---

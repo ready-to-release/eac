@@ -8,7 +8,7 @@ Quick reference for running Godog BDD tests.
 
 **Godog** executes BDD scenarios defined in `behavior.feature` files using Gherkin (Given/When/Then) syntax.
 
-**Test Location**: `requirements/<module>/<feature>/behavior.feature`
+**Test Location**: `specs/<module>/<feature>/behavior.feature`
 
 ---
 
@@ -18,35 +18,35 @@ Quick reference for running Godog BDD tests.
 
 ```bash
 # Run all behavior tests
-godog requirements/**/behavior.feature
+godog specs/**/behavior.feature
 ```
 
 ### Run Specific Module
 
 ```bash
 # Run tests for specific module
-godog requirements/cli/**/behavior.feature
-godog requirements/vscode/**/behavior.feature
-godog requirements/docs/**/behavior.feature
+godog specs/cli/**/behavior.feature
+godog specs/vscode/**/behavior.feature
+godog specs/docs/**/behavior.feature
 ```
 
 ### Run Specific Feature
 
 ```bash
 # Run tests for specific feature
-godog requirements/cli/init_project/behavior.feature
-godog requirements/vscode/commit_message/behavior.feature
+godog specs/cli/init_project/behavior.feature
+godog specs/vscode/commit_message/behavior.feature
 ```
 
 ### Run Specific Feature File (Split Features)
 
 ```bash
 # Run specific sub-feature file
-godog requirements/cli/module_detection/automation_module_detection.feature
-godog requirements/cli/module_detection/source_module_detection.feature
+godog specs/cli/module_detection/automation_module_detection.feature
+godog specs/cli/module_detection/source_module_detection.feature
 
 # Run all sub-features for a feature
-godog requirements/cli/module_detection/*.feature
+godog specs/cli/module_detection/*.feature
 ```
 
 ---
@@ -57,40 +57,40 @@ godog requirements/cli/module_detection/*.feature
 
 ```bash
 # Run only critical tests
-godog --tags="@critical" requirements/**/behavior.feature
+godog --tags="@critical" specs/**/behavior.feature
 
 # Run only success scenarios
-godog --tags="@success" requirements/**/behavior.feature
+godog --tags="@success" specs/**/behavior.feature
 
 # Run only error scenarios
-godog --tags="@error" requirements/**/behavior.feature
+godog --tags="@error" specs/**/behavior.feature
 ```
 
 ### Filter by Multiple Tags (AND)
 
 ```bash
 # Run critical CLI tests
-godog --tags="@success && @cli" requirements/**/behavior.feature
+godog --tags="@success && @cli" specs/**/behavior.feature
 
 # Run critical success scenarios
-godog --tags="@critical && @success" requirements/**/behavior.feature
+godog --tags="@critical && @success" specs/**/behavior.feature
 ```
 
 ### Filter by Multiple Tags (OR)
 
 ```bash
 # Run critical OR error tests
-godog --tags="@critical || @error" requirements/**/behavior.feature
+godog --tags="@critical || @error" specs/**/behavior.feature
 ```
 
 ### Exclude Tags (NOT)
 
 ```bash
 # Run all except WIP tests
-godog --tags="~@wip" requirements/**/behavior.feature
+godog --tags="~@wip" specs/**/behavior.feature
 
 # Run all except integration tests
-godog --tags="~@integration" requirements/**/behavior.feature
+godog --tags="~@integration" specs/**/behavior.feature
 ```
 
 ---
@@ -101,30 +101,30 @@ godog --tags="~@integration" requirements/**/behavior.feature
 
 ```bash
 # Run only installation verification scenarios
-godog --tags="@IV" requirements/**/behavior.feature
+godog --tags="@IV" specs/**/behavior.feature
 
 # Generate separate IV report
-godog --tags="@IV" --format=junit:test-results/iv-godog.xml requirements/**/behavior.feature
+godog --tags="@IV" --format=junit:test-results/iv-godog.xml specs/**/behavior.feature
 ```
 
 ### Performance Verification (PV)
 
 ```bash
 # Run only performance verification scenarios
-godog --tags="@PV" requirements/**/behavior.feature
+godog --tags="@PV" specs/**/behavior.feature
 
 # Generate separate PV report
-godog --tags="@PV" --format=junit:test-results/pv-godog.xml requirements/**/behavior.feature
+godog --tags="@PV" --format=junit:test-results/pv-godog.xml specs/**/behavior.feature
 ```
 
 ### Operational Verification (OV - default)
 
 ```bash
 # Run only operational verification scenarios (exclude IV and PV)
-godog --tags="~@IV && ~@PV" requirements/**/behavior.feature
+godog --tags="~@IV && ~@PV" specs/**/behavior.feature
 
 # Generate separate OV report
-godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml requirements/**/behavior.feature
+godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml specs/**/behavior.feature
 ```
 
 ---
@@ -135,13 +135,13 @@ godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml requirement
 
 ```bash
 # Run scenarios for acceptance criterion 1
-godog --tags="@ac1" requirements/**/behavior.feature
+godog --tags="@ac1" specs/**/behavior.feature
 
 # Run scenarios for acceptance criterion 2
-godog --tags="@ac2" requirements/**/behavior.feature
+godog --tags="@ac2" specs/**/behavior.feature
 
 # Run scenarios for multiple criteria
-godog --tags="@ac1 || @ac2" requirements/**/behavior.feature
+godog --tags="@ac1 || @ac2" specs/**/behavior.feature
 ```
 
 ---
@@ -152,50 +152,50 @@ godog --tags="@ac1 || @ac2" requirements/**/behavior.feature
 
 ```bash
 # Default pretty format
-godog --format=pretty requirements/**/behavior.feature
+godog --format=pretty specs/**/behavior.feature
 
 # Pretty format is the default if no format specified
-godog requirements/**/behavior.feature
+godog specs/**/behavior.feature
 ```
 
 ### JUnit XML Format
 
 ```bash
 # Generate JUnit XML report
-godog --format=junit:test-results/godog.xml requirements/**/behavior.feature
+godog --format=junit:test-results/godog.xml specs/**/behavior.feature
 ```
 
 ### Cucumber JSON Format
 
 ```bash
 # Generate Cucumber JSON report
-godog --format=cucumber:test-results/godog.json requirements/**/behavior.feature
+godog --format=cucumber:test-results/godog.json specs/**/behavior.feature
 ```
 
 ### Multiple Formats Simultaneously
 
 ```bash
 # Generate pretty console output + JUnit XML
-godog --format=pretty --format=junit:test-results/godog.xml requirements/**/behavior.feature
+godog --format=pretty --format=junit:test-results/godog.xml specs/**/behavior.feature
 
 # Generate pretty + JUnit + Cucumber JSON
 godog --format=pretty \
       --format=junit:test-results/godog.xml \
       --format=cucumber:test-results/godog.json \
-      requirements/**/behavior.feature
+      specs/**/behavior.feature
 ```
 
 ### Generate Reports by Verification Type
 
 ```bash
 # Installation Verification report
-godog --tags="@IV" --format=junit:test-results/iv-godog.xml requirements/**/behavior.feature
+godog --tags="@IV" --format=junit:test-results/iv-godog.xml specs/**/behavior.feature
 
 # Performance Verification report
-godog --tags="@PV" --format=junit:test-results/pv-godog.xml requirements/**/behavior.feature
+godog --tags="@PV" --format=junit:test-results/pv-godog.xml specs/**/behavior.feature
 
 # Operational Verification report (default scenarios)
-godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml requirements/**/behavior.feature
+godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml specs/**/behavior.feature
 ```
 
 ---
@@ -206,24 +206,24 @@ godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml requirement
 
 ```bash
 # Stop immediately on first failure
-godog --stop-on-failure requirements/**/behavior.feature
+godog --stop-on-failure specs/**/behavior.feature
 ```
 
 ### Strict Mode
 
 ```bash
 # Fail on undefined or pending steps
-godog --strict requirements/**/behavior.feature
+godog --strict specs/**/behavior.feature
 ```
 
 ### Random Execution Order
 
 ```bash
 # Run scenarios in random order
-godog --random requirements/**/behavior.feature
+godog --random specs/**/behavior.feature
 
 # Run with specific random seed (for reproducibility)
-godog --random --seed=12345 requirements/**/behavior.feature
+godog --random --seed=12345 specs/**/behavior.feature
 ```
 
 ---
@@ -234,14 +234,14 @@ godog --random --seed=12345 requirements/**/behavior.feature
 
 ```bash
 # Show step definitions source location
-godog --verbose requirements/**/behavior.feature
+godog --verbose specs/**/behavior.feature
 ```
 
 ### No Colors
 
 ```bash
 # Disable colored output
-godog --no-colors requirements/**/behavior.feature
+godog --no-colors specs/**/behavior.feature
 ```
 
 ---
@@ -251,37 +251,37 @@ godog --no-colors requirements/**/behavior.feature
 ### Run All Critical Tests
 
 ```bash
-godog --tags="@critical" requirements/**/behavior.feature
+godog --tags="@critical" specs/**/behavior.feature
 ```
 
 ### Run Tests for Specific Module
 
 ```bash
-godog requirements/cli/**/behavior.feature
+godog specs/cli/**/behavior.feature
 ```
 
 ### Generate JUnit Report
 
 ```bash
-godog --format=junit:test-results/godog.xml requirements/**/behavior.feature
+godog --format=junit:test-results/godog.xml specs/**/behavior.feature
 ```
 
 ### Run Success Scenarios Only
 
 ```bash
-godog --tags="@success" requirements/**/behavior.feature
+godog --tags="@success" specs/**/behavior.feature
 ```
 
 ### Run Error Scenarios Only
 
 ```bash
-godog --tags="@error" requirements/**/behavior.feature
+godog --tags="@error" specs/**/behavior.feature
 ```
 
 ### Run Tests Excluding WIP
 
 ```bash
-godog --tags="~@wip" requirements/**/behavior.feature
+godog --tags="~@wip" specs/**/behavior.feature
 ```
 
 ### Generate Regulatory Reports (IV/PV/OV)
@@ -290,17 +290,17 @@ godog --tags="~@wip" requirements/**/behavior.feature
 # Installation Verification
 godog --tags="@IV" \
       --format=junit:test-results/iv-godog.xml \
-      requirements/**/behavior.feature
+      specs/**/behavior.feature
 
 # Performance Verification
 godog --tags="@PV" \
       --format=junit:test-results/pv-godog.xml \
-      requirements/**/behavior.feature
+      specs/**/behavior.feature
 
 # Operational Verification (default)
 godog --tags="~@IV && ~@PV" \
       --format=junit:test-results/ov-godog.xml \
-      requirements/**/behavior.feature
+      specs/**/behavior.feature
 ```
 
 ---
@@ -312,14 +312,14 @@ godog --tags="~@IV && ~@PV" \
 ```text
 Feature: Initialize project command behavior
 
-  Scenario: Initialize in empty directory creates structure       # requirements/cli/init_project/behavior.feature:12
+  Scenario: Initialize in empty directory creates structure       # specs/cli/init_project/behavior.feature:12
     Given I am in an empty folder                                 # step_definitions_test.go:15
     When I run "cc init"                                          # step_definitions_test.go:20
     Then a file named "cc.yaml" should be created                 # step_definitions_test.go:25
     And a directory named "src/" should exist                     # step_definitions_test.go:30
     And the command should exit with code 0                       # step_definitions_test.go:35
 
-  Scenario: Initialize in existing project shows error            # requirements/cli/init_project/behavior.feature:19
+  Scenario: Initialize in existing project shows error            # specs/cli/init_project/behavior.feature:19
     Given I am in a directory with "cc.yaml"                      # step_definitions_test.go:40
     When I run "cc init"                                          # step_definitions_test.go:20
     Then the command should fail                                  # step_definitions_test.go:45
@@ -335,7 +335,7 @@ Feature: Initialize project command behavior
 ```text
 Feature: Initialize project command behavior
 
-  Scenario: Initialize in empty directory creates structure       # requirements/cli/init_project/behavior.feature:12
+  Scenario: Initialize in empty directory creates structure       # specs/cli/init_project/behavior.feature:12
     Given I am in an empty folder                                 # step_definitions_test.go:15
     When I run "cc init"                                          # step_definitions_test.go:20
     Then a file named "cc.yaml" should be created                 # step_definitions_test.go:25
@@ -350,8 +350,8 @@ Feature: Initialize project command behavior
 
 --- Failed steps:
 
-  Scenario: Initialize in empty directory creates structure # requirements/cli/init_project/behavior.feature:12
-    Then a file named "cc.yaml" should be created # requirements/cli/init_project/behavior.feature:15
+  Scenario: Initialize in empty directory creates structure # specs/cli/init_project/behavior.feature:12
+    Then a file named "cc.yaml" should be created # specs/cli/init_project/behavior.feature:15
       Error: file "cc.yaml" does not exist
 ```
 
@@ -381,7 +381,7 @@ test-results/
 ```yaml
 default:
   paths:
-    - requirements/**/behavior.feature
+    - specs/**/behavior.feature
   format: pretty,junit:test-results/godog.xml
   tags: ~@wip
   strict: true
@@ -406,13 +406,13 @@ godog --config=godog.yaml
 
 ```bash
 # Run as Go test
-go test -v ./requirements/cli/init_project/
+go test -v ./specs/cli/init_project/
 
 # Run with coverage
-go test -v -coverprofile=coverage.out ./requirements/cli/init_project/
+go test -v -coverprofile=coverage.out ./specs/cli/init_project/
 ```
 
-**Test file**: `requirements/<module>/<feature>/step_definitions_test.go`
+**Test file**: `specs/<module>/<feature>/step_definitions_test.go`
 
 ```go
 package init_project_test

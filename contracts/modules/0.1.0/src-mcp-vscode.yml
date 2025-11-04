@@ -13,8 +13,8 @@ source:
     - "go.sum"    
     - "**.go"
     - "*.go"
-    - "/requirements/src-mcp-vscode/**/*"
-    - "/requirements/src-mcp-vscode/*"
+    - "/specs/src-mcp-vscode/**/*"
+    - "/specs/src-mcp-vscode/*"
     - run.sh
 
 depends_on: ["vscode-client"]

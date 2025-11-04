@@ -8,7 +8,7 @@ Quick reference for running Gauge acceptance tests.
 
 **Gauge** executes acceptance tests defined in `acceptance.spec` files using Markdown-based specifications.
 
-**Test Location**: `requirements/<module>/<feature>/acceptance.spec`
+**Test Location**: `specs/<module>/<feature>/acceptance.spec`
 
 ---
 
@@ -18,24 +18,24 @@ Quick reference for running Gauge acceptance tests.
 
 ```bash
 # Run all acceptance tests
-gauge run requirements/
+gauge run specs/
 ```
 
 ### Run Specific Module
 
 ```bash
 # Run tests for specific module
-gauge run requirements/cli/
-gauge run requirements/vscode/
-gauge run requirements/docs/
+gauge run specs/cli/
+gauge run specs/vscode/
+gauge run specs/docs/
 ```
 
 ### Run Specific Feature
 
 ```bash
 # Run tests for specific feature
-gauge run requirements/cli/init_project/
-gauge run requirements/vscode/commit_message/
+gauge run specs/cli/init_project/
+gauge run specs/vscode/commit_message/
 ```
 
 ---
@@ -46,40 +46,40 @@ gauge run requirements/vscode/commit_message/
 
 ```bash
 # Run only critical tests
-gauge run --tags "critical" requirements/
+gauge run --tags "critical" specs/
 
 # Run only performance tests
-gauge run --tags "performance" requirements/
+gauge run --tags "performance" specs/
 
 # Run only cross-platform tests
-gauge run --tags "cross-platform" requirements/
+gauge run --tags "cross-platform" specs/
 ```
 
 ### Filter by Multiple Tags (AND)
 
 ```bash
 # Run critical CLI tests
-gauge run --tags "cli & critical" requirements/
+gauge run --tags "cli & critical" specs/
 
 # Run critical performance tests
-gauge run --tags "critical & performance" requirements/
+gauge run --tags "critical & performance" specs/
 ```
 
 ### Filter by Multiple Tags (OR)
 
 ```bash
 # Run critical OR performance tests
-gauge run --tags "critical | performance" requirements/
+gauge run --tags "critical | performance" specs/
 ```
 
 ### Exclude Tags (NOT)
 
 ```bash
 # Run all except WIP tests
-gauge run --tags "!wip" requirements/
+gauge run --tags "!wip" specs/
 
 # Run all except integration tests
-gauge run --tags "!integration" requirements/
+gauge run --tags "!integration" specs/
 ```
 
 ---
@@ -90,7 +90,7 @@ gauge run --tags "!integration" requirements/
 
 ```bash
 # Generate HTML report
-gauge run --html-report requirements/
+gauge run --html-report specs/
 
 # HTML report location: test-results/gauge/html-report/index.html
 ```
@@ -99,7 +99,7 @@ gauge run --html-report requirements/
 
 ```bash
 # Generate HTML and XML reports
-gauge run --html-report --xml-report requirements/
+gauge run --html-report --xml-report specs/
 ```
 
 ---
@@ -110,10 +110,10 @@ gauge run --html-report --xml-report requirements/
 
 ```bash
 # Run with 4 parallel streams
-gauge run -p=4 requirements/
+gauge run -p=4 specs/
 
 # Run with maximum available cores
-gauge run -p requirements/
+gauge run -p specs/
 ```
 
 **Note**: Parallel execution requires thread-safe step implementations.
@@ -126,14 +126,14 @@ gauge run -p requirements/
 
 ```bash
 # Show detailed step execution
-gauge run --verbose requirements/
+gauge run --verbose specs/
 ```
 
 ### Simple Console Output
 
 ```bash
 # Minimal console output
-gauge run --simple-console requirements/
+gauge run --simple-console specs/
 ```
 
 ---
@@ -144,20 +144,20 @@ gauge run --simple-console requirements/
 
 ```bash
 # Validate specs without running
-gauge validate requirements/
+gauge validate specs/
 
 # Validate specific feature
-gauge validate requirements/cli/init_project/
+gauge validate specs/cli/init_project/
 ```
 
 ### List Specifications
 
 ```bash
 # List all scenarios
-gauge list requirements/
+gauge list specs/
 
 # List scenarios with tags
-gauge list --tags "critical" requirements/
+gauge list --tags "critical" specs/
 ```
 
 ---
@@ -168,7 +168,7 @@ gauge list --tags "critical" requirements/
 
 ```bash
 # Run with specific environment
-gauge run --env staging requirements/
+gauge run --env staging specs/
 
 # Environment config location: env/staging/default.properties
 ```
@@ -177,7 +177,7 @@ gauge run --env staging requirements/
 
 ```bash
 # Override specific property
-gauge run -e "test_url=http://localhost:8080" requirements/
+gauge run -e "test_url=http://localhost:8080" specs/
 ```
 
 ---
@@ -187,35 +187,35 @@ gauge run -e "test_url=http://localhost:8080" requirements/
 ### Run Critical Tests Only
 
 ```bash
-gauge run --tags "critical" requirements/
+gauge run --tags "critical" specs/
 ```
 
 ### Run Tests for Specific Module
 
 ```bash
-gauge run requirements/cli/
+gauge run specs/cli/
 ```
 
 ### Generate Report and Run in Parallel
 
 ```bash
-gauge run -p=4 --html-report requirements/
+gauge run -p=4 --html-report specs/
 ```
 
 ### Run Tests with Verbose Output
 
 ```bash
-gauge run --verbose requirements/cli/init_project/
+gauge run --verbose specs/cli/init_project/
 ```
 
 ### Validate Before Running
 
 ```bash
 # Validate all specs
-gauge validate requirements/
+gauge validate specs/
 
 # If valid, run tests
-gauge run requirements/
+gauge run specs/
 ```
 
 ---
@@ -256,7 +256,7 @@ Total time taken: 1.234s
 
     Step: Verify YAML contains key "version"
     Error: YAML does not contain key "version"
-    File: requirements/cli/init_project/acceptance_test.go:123
+    File: specs/cli/init_project/acceptance_test.go:123
 
 
 Specifications: 1 executed     0 passed     1 failed     0 skipped

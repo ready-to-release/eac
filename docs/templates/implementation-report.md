@@ -93,7 +93,7 @@ This section shows requirements traceability from features through acceptance cr
 
     **Feature ID**: `api_user_authentication`
     **User Story**: As a user, I want to authenticate securely, so that I can access protected resources
-    **Specification**: [acceptance.spec](requirements/api/user_authentication/acceptance.spec) | [behavior.feature](requirements/api/user_authentication/behavior.feature)
+    **Specification**: [acceptance.spec](specs/api/user_authentication/acceptance.spec) | [behavior.feature](specs/api/user_authentication/behavior.feature)
 
     | Acceptance Criteria                                        | Execution Type | Result    |
     |------------------------------------------------------------|----------------|-----------|

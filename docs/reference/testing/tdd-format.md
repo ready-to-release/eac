@@ -137,7 +137,7 @@ func TestInitProject(t *testing.T) {
 
 **Location**:
 
-- Feature directory: `requirements/cli/init_project/`
+- Feature directory: `specs/cli/init_project/`
 - ATDD spec: `acceptance.spec`
 - BDD scenarios: `behavior.feature`
 - Unit test comment: `Feature: init_project`
@@ -515,7 +515,7 @@ ok      github.com/simply-cli/cli/src/mcp    0.089s  coverage: 92.3% of statemen
 
 ### Example 1: Simple Function Test
 
-**BDD Scenario** (from `requirements/cli/init_project/behavior.feature`):
+**BDD Scenario** (from `specs/cli/init_project/behavior.feature`):
 
 ```gherkin
 Scenario: Initialize creates config file
