@@ -64,7 +64,39 @@ Everything in Git → Single immutable history → Complete traceability
 - Traceability exists in real-time
 - Audit trail always available
 
-### Collaboration Through Shared Language
+### Building Shared Language: Domain-Driven Design
+
+Before teams can collaborate through executable specifications, they need a **shared language**—a common vocabulary that both business stakeholders and developers understand.
+
+**The challenge**: Business and technical teams often speak different languages:
+
+- Business: "The customer's order is fulfilled"
+- Technical: "The transaction state transitions to complete"
+
+This misalignment causes:
+
+- Specifications that don't reflect business intent
+- Rework when teams discover they meant different things
+- Tests that pass but don't validate actual business rules
+
+**The solution**: **Domain-Driven Design (DDD)** provides techniques for building a **Ubiquitous Language**—a rigorous, shared vocabulary based on the domain model.
+
+**How it works**:
+
+1. **Event Storming** - Collaborative domain discovery surfaces shared vocabulary
+2. **Example Mapping** - Uses that vocabulary to define requirements
+3. **Executable Specifications** - Written using the same language, ensuring alignment
+
+When specifications use the Ubiquitous Language:
+
+- Business stakeholders can read and validate them
+- Developers implement exactly what the business means
+- QA tests reflect actual business rules
+- Living documentation uses terms everyone understands
+
+See: [Building Shared Language with DDD](building-shared-language.md)
+
+### Collaboration Through Executable Specifications
 
 #### Traditional Approach: Telephone Game
 
@@ -80,7 +112,7 @@ Business writes requirements → Developers interpret → QA tests interpretatio
 - Ambiguous requirements
 - Test cases don't match intent
 
-#### Everything as Code Approach: Executable Specifications
+#### Everything as Code Approach: Shared Language + Executable Specifications
 
 ```text
 Everyone collaborates on specifications → Specifications execute as tests

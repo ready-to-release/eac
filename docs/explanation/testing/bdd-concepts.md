@@ -4,6 +4,40 @@ Understanding Behavior-Driven Development with Godog.
 
 ---
 
+## Gherkin and the Ubiquitous Language
+
+BDD scenarios are most effective when written using the **Ubiquitous Language** from Domain-Driven Design—the shared vocabulary that both business and technical teams understand.
+
+### Why This Matters
+
+**Using technical language** (harder for business to validate):
+
+```gherkin
+Given the database record exists
+When the API endpoint is called
+Then the response code should be 200
+```
+
+**Using Ubiquitous Language** (clear to all stakeholders):
+
+```gherkin
+Given an order awaiting approval
+When the manager approves the order
+Then the order status should be "Approved"
+```
+
+The second version uses domain terms that:
+
+- Business stakeholders recognize and can validate
+- Developers implement using the domain model
+- QA tests reflect actual business rules
+
+**Best practice**: Before writing BDD scenarios, participate in Event Storming and Example Mapping workshops to establish the shared language.
+
+See: [Building Shared Language with DDD](../../everything-as-code/building-shared-language.md)
+
+---
+
 ## What is BDD?
 
 **Behavior-Driven Development (BDD)** is a specification technique that describes user-facing behavior through concrete examples. BDD focuses on **observable behavior** - what users can see and interact with, not internal implementation details.

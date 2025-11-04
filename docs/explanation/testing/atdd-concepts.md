@@ -88,6 +88,32 @@ Gauge specifications are written in Markdown with executable test steps:
 
 ---
 
+## Building the Shared Language
+
+Before running Example Mapping workshops, teams benefit from understanding the **domain language**—the specific vocabulary of the business domain.
+
+**Domain-Driven Design (DDD)** provides techniques for discovering and formalizing this language:
+
+- **Ubiquitous Language** - A rigorous, shared vocabulary between business and technical teams
+- **Event Storming** - Collaborative workshops that surface domain concepts and vocabulary
+- **Bounded Contexts** - Define where specific terms apply and mean specific things
+
+When Example Mapping workshops use this established vocabulary:
+
+- Blue cards (rules) use precise domain terms
+- Green cards (examples) reflect actual domain scenarios
+- Red cards (questions) often reveal where domain understanding is still unclear
+
+**The flow**:
+
+1. **Event Storming** - Discover domain language (days/weeks before)
+2. **Example Mapping** - Apply that language to specific features (15-25 minutes)
+3. **ATDD Specifications** - Write using the shared language
+
+See: [Building Shared Language with DDD](../../everything-as-code/building-shared-language.md)
+
+---
+
 ## Example Mapping Workshop
 
 **[Example Mapping](https://cucumber.io/blog/bdd/example-mapping-introduction/)** is the primary technique for ATDD requirement discovery. It's a time-boxed collaborative workshop (15-25 minutes) that uses colored index cards.
