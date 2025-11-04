@@ -1,5 +1,5 @@
 @src-commands @modules @inspection
-Feature: src-commands-module-inspection
+Feature: src-commands_module-inspection
 
   As a developer
   I want to inspect module contracts in the repository

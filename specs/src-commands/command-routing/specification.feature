@@ -1,5 +1,5 @@
 @src-commands @critical @command_routing
-Feature: src-commands-command-routing
+Feature: src-commands_command-routing
 
   As a CLI user
   I want commands to be auto-discovered and routed correctly

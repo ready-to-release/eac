@@ -20,17 +20,15 @@ Repository conventions, versioning, and commit message format.
 
 ---
 
-### [Testing](testing/index.md)
+### [Specifications](specifications/index.md)
 
-Quick reference for test formats, commands, and syntax.
+Quick reference for specification formats, commands, and syntax.
 
 **Topics covered:**
 
-- ATDD format (acceptance.spec structure and Gauge syntax)
-- BDD format (behavior.feature structure and Gherkin syntax)
+- Gherkin format (specification.feature with Feature → Rule → Scenario structure)
 - TDD format (unit test structure and Go test conventions)
-- Gauge commands (running acceptance tests)
-- Godog commands (running behavior tests)
+- Godog commands (running specifications)
 - Verification tags (IV/OV/PV classification)
 
 ---
@@ -64,6 +62,19 @@ Technical specifications for the 5-agent commit message generation system.
 - Error messages
 - Configuration options
 - Performance metrics
+
+---
+
+### [Decision Records](decision-records/index.md)
+
+Architectural decisions and their rationale.
+
+**Decisions covered:**
+
+- DR-001: Mono-Repository Layout
+- DR-002: Semantic Versioning with Trunk-Based Development
+- DR-003: Three-Layer Testing Approach (ATDD/BDD/TDD)
+- DR-004: Diataxis Framework for Documentation Organization
 
 ---
 

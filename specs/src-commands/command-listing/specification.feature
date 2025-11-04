@@ -1,5 +1,5 @@
 @src-commands @introspection @command_listing
-Feature: src-commands-command-listing
+Feature: src-commands_command-listing
 
   As a CLI user
   I want to list and describe available commands

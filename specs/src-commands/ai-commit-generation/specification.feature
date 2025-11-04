@@ -1,5 +1,5 @@
 @src-commands @git @ai @commit-message @critical
-Feature: src-commands-ai-commit-generation
+Feature: src-commands_ai-commit-generation
 
   As a developer
   I want AI-powered commit message generation

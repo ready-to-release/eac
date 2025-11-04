@@ -1,5 +1,5 @@
 @src-commands @files @git @modules
-Feature: src-commands-file-tracking
+Feature: src-commands_file-tracking
 
   As a developer
   I want to track files with their module ownership
