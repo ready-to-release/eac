@@ -6,16 +6,18 @@
 
 ## Available Guides
 
-### [Testing](testing/index.md)
+### [Specifications](specifications/index.md)
 
-Step-by-step guides for testing tasks.
+Step-by-step guides for working with executable specifications.
 
 **Guides available:**
 
-- Setup Gauge for ATDD acceptance testing
-- Setup Godog for BDD behavior testing
-- Create feature specifications (acceptance.spec and behavior.feature)
-- Run Example Mapping workshops
+- Setup Godog for BDD specification testing
+- Establish Ubiquitous Language (DDD foundation)
+- Run Event Storming workshops (discover domain vocabulary)
+- Run Example Mapping workshops (discover requirements)
+- Create specifications (specification.feature with Feature → Rule → Scenario structure)
+- Link Risk Controls (@risk tags for traceability)
 - Run tests at all layers (ATDD, BDD, TDD)
 
 ---

@@ -91,20 +91,32 @@ This section shows requirements traceability from features through acceptance cr
 
 !!! note Example
 
-    **Feature ID**: `api_user_authentication`
+    **Feature ID**: `api_user-authentication`
     **User Story**: As a user, I want to authenticate securely, so that I can access protected resources
-    **Specification**: [acceptance.spec](specs/api/user_authentication/acceptance.spec) | [behavior.feature](specs/api/user_authentication/behavior.feature)
+    **Specification**: [specification.feature](specs/api/user-authentication/specification.feature)
 
-    | Acceptance Criteria                                        | Execution Type | Result    |
-    |------------------------------------------------------------|----------------|-----------|
-    | AC1: System validates user credentials correctly           | Automated      | 🟢 Passed |
-    | AC1: System rejects invalid credentials with clear error   | Automated      | 🟢 Passed |
-    | AC1: System handles missing credentials appropriately      | Automated      | 🟢 Passed |
-    | AC2: Authentication system installs with secure defaults   | Automated      | 🟢 Passed |
-    | AC2: Installation verifies certificate configuration       | Automated      | 🟢 Passed |
-    | AC3: Authentication completes within 500ms threshold       | Automated      | 🔴 Failed |
-    | AC3: System handles 100 concurrent authentication requests | Automated      | 🟢 Passed |
-    | AC3: Authentication maintains memory under 100MB           | Automated      | 🟢 Passed |
+    **Rule 1: System validates user credentials correctly** (AC1)
+
+    | Scenario | Tags | Result |
+    |----------|------|--------|
+    | Valid credentials grant access | @success @ac1 @OV | 🟢 Passed |
+    | Invalid credentials deny access with clear error | @error @ac1 @OV | 🟢 Passed |
+    | Missing credentials return 401 Unauthorized | @error @ac1 @OV | 🟢 Passed |
+
+    **Rule 2: Authentication system installs with secure defaults** (AC2)
+
+    | Scenario | Tags | Result |
+    |----------|------|--------|
+    | Installation configures TLS with valid certificate | @success @ac2 @IV | 🟢 Passed |
+    | Installation validates certificate configuration | @success @ac2 @IV | 🟢 Passed |
+
+    **Rule 3: Authentication meets performance requirements** (AC3)
+
+    | Scenario | Tags | Result |
+    |----------|------|--------|
+    | Authentication completes within 500ms | @success @ac3 @PV | 🔴 Failed |
+    | System handles 100 concurrent requests | @success @ac3 @PV | 🟢 Passed |
+    | Authentication maintains memory under 100MB | @success @ac3 @PV | 🟢 Passed |
 
 <!--{% raw %}-->
 {{ dynamic.feature_test_results }}

@@ -76,9 +76,9 @@ Explains what it means to treat everything as code and the three fundamental cha
 
 - **[Trunk-Based Development](../continuous-delivery/trunk-based-development.md)** - Version control as single source of truth is fundamental to Everything as Code
 
-- **[Building Shared Language with DDD](building-shared-language.md)** - How Domain-Driven Design creates the foundation for executable specifications through Ubiquitous Language
+- **[Ubiquitous Language](../specifications/ubiquitous-language.md)** - How Domain-Driven Design creates shared vocabulary that enables executable specifications
 
-- **[Three-Layer Testing (Executable Specifications)](../testing/three-layer-approach.md)** - ATDD/BDD/TDD implements Specifications as Code through executable specifications that make requirements testable
+- **[Specifications](../specifications/three-layer-approach.md)** - ATDD/BDD/TDD implements Specifications as Code through executable specifications that make requirements testable
 
 - **[Measuring and Improving Flow](measuring-and-improving-flow.md)** - How to use DORA metrics and Value Stream Mapping to continuously improve delivery performance
 

@@ -1,0 +1,9 @@
+title: Specifications
+nav:
+  - index.md
+  - three-layer-approach.md
+  - atdd-bdd-with-gherkin.md
+  - ubiquitous-language.md
+  - event-storming.md
+  - example-mapping.md
+  - risk-controls.md

@@ -1,9 +1,0 @@
-title: Testing
-nav:
-  - index.md
-  - setup-gauge.md
-  - setup-godog.md
-  - establish-ubiquitous-language.md
-  - create-feature-spec.md
-  - run-example-mapping.md
-  - run-tests.md

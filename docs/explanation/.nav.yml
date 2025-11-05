@@ -3,7 +3,7 @@ nav:
   - index.md
   - references.md
   - Everything as Code
-  - Testing
+  - Specifications
   - Continuous Delivery
   - commit-agent-pipeline.md
   - vscode-extension-architecture.md

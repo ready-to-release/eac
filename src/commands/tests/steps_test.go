@@ -30,7 +30,7 @@ type testContext struct {
 var ctx *testContext
 
 // ============================================================================
-// Feature: src-commands-command-routing
+// Feature: src-commands_command-routing
 // ============================================================================
 
 func theCLIApplicationIsInitialized() error {
@@ -177,7 +177,7 @@ func iRunInInvalidDirectory(cmdLine string) error {
 }
 
 // ============================================================================
-// Feature: src-commands-command-listing
+// Feature: src-commands_command-listing
 // ============================================================================
 
 func theCLIApplicationHasRegisteredCommands() error {
@@ -287,7 +287,7 @@ func eachCommandInJSONHasField(fieldName string) error {
 }
 
 // ============================================================================
-// Feature: src-commands-module-inspection
+// Feature: src-commands_module-inspection
 // ============================================================================
 
 func theRepositoryHasModuleContractsDefined() error {
@@ -340,7 +340,7 @@ func eachModuleRowContainsMonikerTypeAndRootPath() error {
 }
 
 // ============================================================================
-// Feature: src-commands-file-tracking
+// Feature: src-commands_file-tracking
 // ============================================================================
 
 func iHaveModifiedFilesThatAreNotStaged() error {
@@ -366,7 +366,7 @@ func iHaveStagedFiles() error {
 }
 
 // ============================================================================
-// Feature: src-commands-ai-commit-generation
+// Feature: src-commands_ai-commit-generation
 // ============================================================================
 
 func iHaveStagedChangesInMyGitRepository() error {

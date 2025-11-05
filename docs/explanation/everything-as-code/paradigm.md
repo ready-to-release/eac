@@ -94,7 +94,10 @@ When specifications use the Ubiquitous Language:
 - QA tests reflect actual business rules
 - Living documentation uses terms everyone understands
 
-See: [Building Shared Language with DDD](building-shared-language.md)
+For more on building shared language for specifications, see:
+
+- [Ubiquitous Language](../specifications/ubiquitous-language.md) - DDD foundation
+- [Event Storming](../specifications/event-storming.md) - Domain discovery workshops
 
 ### Collaboration Through Executable Specifications
 
@@ -128,10 +131,13 @@ Everyone collaborates on specifications → Specifications execute as tests
 
 **In this project:**
 
-- Business stakeholders write acceptance criteria in Gauge markdown (`acceptance.spec`)
-- Developers and QA collaborate on Gherkin scenarios (`behavior.feature`)
-- Both files execute as automated tests, ensuring alignment
+- All stakeholders collaborate on a single `specification.feature` file using Gherkin
+- File contains Feature → Rule → Scenario structure
+  - **Rules** define acceptance criteria (ATDD layer)
+  - **Scenarios** under Rules provide concrete examples (BDD layer)
+- Specifications execute as automated tests, ensuring alignment
 - When tests pass, requirements are met by definition
+- Business-readable language bridges stakeholder communication
 
 ### Continuous Automation With Every Change
 
@@ -185,63 +191,6 @@ Commit → Build → Test → Validate → Deploy → Document
 | **Audit Preparation** | Months of evidence compilation | Always audit-ready, evidence exists |
 | **Consistency** | Varies by person, day, pressure | Identical every time |
 | **Scalability** | Limited by human capacity | Scales with compute resources |
-
----
-
-## Bridges to Other Practices
-
-"Everything as Code" isn't isolated. It enables and connects to other modern practices:
-
-### Continuous Delivery
-
-**Connection:** [Continuous Delivery](../continuous-delivery/index.md) requires automated validation to safely deploy frequently.
-
-**How Everything as Code Enables It:**
-
-- Automated tests provide confidence
-- Version control enables safe rollback
-- Complete traceability satisfies compliance
-- Documentation generation keeps evidence current
-
-### Trunk-Based Development
-
-**Connection:** [Trunk-Based Development](../continuous-delivery/trunk-based-development.md) relies on single source of truth.
-
-**How Everything as Code Enables It:**
-
-- All artifacts in Git (single source)
-- Continuous integration validates every commit
-- Small changes reduce integration conflicts
-- Complete history enables safe merging
-
-### Executable Specifications: Three-Layer Testing
-
-**Connection:** [Three-Layer Testing](../testing/three-layer-approach.md) (ATDD/BDD/TDD) implements "Specifications as Code" through executable specifications at multiple levels.
-
-**How Everything as Code Enables It:**
-
-- Requirements written as executable tests (ATDD)
-- Behavior scenarios run automatically (BDD)
-- Unit tests validate implementation (TDD)
-- Single shared language aligns stakeholders
-- Living documentation stays current (tests = specs)
-- All layers version-controlled together in Git
-
-**Key Benefit**: Requirements can't drift from implementation because they ARE the tests. When tests pass, requirements are met by definition.
-
-### Measuring and Improving Flow
-
-**Connection:** [Measuring and Improving Flow](measuring-and-improving-flow.md) shows how to continuously optimize the delivery value stream using DORA metrics and Value Stream Mapping.
-
-**How Everything as Code Enables It:**
-
-- Automated pipelines provide DORA metrics data automatically
-- Reduced manual steps improve flow (less wait time)
-- Smaller batch sizes (continuous deployment) reduce lead time
-- Version control enables measurement and traceability
-- Complete audit trail supports continuous improvement
-
-**Key Benefit**: High performers achieve results through continuous measurement and improvement, enabled by automation.
 
 ---
 
