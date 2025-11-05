@@ -123,7 +123,7 @@ Everyone collaborates on specifications → Specifications execute as tests
 
 **Benefits:**
 
-- Single shared language (Gherkin, Gauge)
+- Single shared language (Gherkin)
 - Readable by all stakeholders
 - Executable by automation
 - Impossible to drift from implementation

@@ -24,14 +24,16 @@ Understanding the problem space in regulated industries and why "Everything as C
 
 ### [Continuous Delivery](continuous-delivery/index.md)
 
-Understanding the mono-repository infrastructure, module organization, and continuous delivery approach.
+Understanding the 12-stage Continuous Delivery Model - a comprehensive framework for delivering software from development through production with built-in quality, traceability, and compliance.
 
 **Topics covered:**
 
-- Mono-repository structure and organization
-- Module detection and versioning
-- Git commit message conventions
-- Continuous delivery pipeline
+- **CD Model**: 12-stage framework with visual notation, stages 1-6 (development/testing), stages 7-12 (release/production)
+- **Implementation Patterns**: Release Approval (RA) for regulated systems, Continuous Deployment (CDE) for fast iteration
+- **Architecture**: Environments (DevBox, Build Agents, PLTE, Demo, Deploy Agents, Production), Repository patterns (monorepo vs polyrepo)
+- **Testing Strategy**: Five test levels (L0-L4), shift-left approach, integration with CD Model stages, ATDD/BDD/TDD alignment
+- **Security**: SAST, DAST, dependency scanning, container security using open-source tools (OWASP ZAP, Trivy, Dependabot)
+- **Workflow**: Trunk-based development practices
 
 ---
 

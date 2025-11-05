@@ -1,4 +1,9 @@
 title: Continuous Delivery
 nav:
   - index.md
-  - trunk-based-development.md
+  - core-concepts/
+  - cd-model/
+  - workflow/
+  - testing/
+  - architecture/
+  - security/
