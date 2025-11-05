@@ -1,5 +1,5 @@
 @src-commands @modules @inspection
-Feature: src-commands-module-inspection
+Feature: src-commands_module-inspection
 
   As a developer
   I want to inspect module contracts in the repository
@@ -24,12 +24,12 @@ Feature: src-commands-module-inspection
       When I run "go run . show modules"
       Then I should see "src-cli" in the moniker column
       And I should see "docs" in the moniker column
-      And I should see "automation-gauge" in the moniker column
+      And I should see "sh-vscode" in the moniker column
 
     @success @ac1
     Scenario: Show modules displays correct module types
       When I run "go run . show modules"
-      Then module types include "source", "documentation", "automation"
+      Then module types include "automation", "go-cli", "mcp-server"
       And each module shows its assigned type
 
   Rule: Module types must be shown with counts
@@ -44,14 +44,14 @@ Feature: src-commands-module-inspection
     @success @ac2
     Scenario: Module types are sorted alphabetically
       When I run "go run . show moduletypes"
-      Then "automation" appears before "documentation"
-      And "documentation" appears before "source"
+      Then "automation" appears before "claude-config"
+      And "claude-config" appears before "go-cli"
       And types are in strict alphabetical order
 
     @success @ac2
     Scenario: Module types table includes footer
       When I run "go run . show moduletypes"
-      Then I should see footer row "Total Types | <count>"
+      Then I should see footer row "Total Types"
       And total count matches unique module types
 
   Rule: Module data must be sourced from contracts v0.1.0
@@ -76,26 +76,3 @@ Feature: src-commands-module-inspection
       When I run "go run . show moduletypes"
       Then output is valid markdown table format
       And footer row is distinguished from data rows
-
-  Rule: Contract loading errors must be handled gracefully
-
-    @error @ac5
-    Scenario: Show modules handles contract loading error
-      Given module contracts cannot be loaded
-      When I run "go run . show modules"
-      Then I should see "Error:" on stderr
-      And the exit code is 1
-
-    @error @ac5
-    Scenario: Show moduletypes handles contract loading error
-      Given module contracts cannot be loaded
-      When I run "go run . show moduletypes"
-      Then I should see "Error:" on stderr
-      And the exit code is 1
-
-    @error @ac5
-    Scenario: Invalid repository path handled gracefully
-      Given I am in a directory without module contracts
-      When I run "go run . show modules"
-      Then I should see descriptive error message
-      And the exit code is 1

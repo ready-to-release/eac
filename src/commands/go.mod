@@ -12,6 +12,7 @@ require (
 require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/ready-to-release/eac/src/contracts v0.0.0 // indirect
 	github.com/ready-to-release/eac/src/repository v0.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect

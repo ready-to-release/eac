@@ -1,0 +1,15 @@
+# Version: 0.1.0
+
+moniker: "src-contracts-reports"
+name: "Report generators for contract analysis"
+type: "go-tool"
+description: "Standalone Go module for generating contract and module reports"
+
+parent: "src-contracts"
+
+source:
+  root: "src/contracts/reports"
+
+depends_on:
+  - "src-contracts"
+used_by: []

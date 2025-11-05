@@ -36,14 +36,31 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(outputChannel);
     outputChannel.appendLine('✓ Commit Message AI extension activated');
 
+    // Write activation log to file immediately
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (workspaceFolder) {
+        const outDir = path.join(workspaceFolder.uri.fsPath, 'out');
+        if (!fs.existsSync(outDir)) {
+            fs.mkdirSync(outDir, { recursive: true });
+        }
+        const debugPath = path.join(outDir, 'git-state-debug.log');
+        const timestamp = new Date().toISOString();
+        fs.writeFileSync(debugPath, `[${timestamp}] Extension activated\n`);
+    }
+
     // Create stable status bar
     stableStatusBar = new StableStatusBar(context);
     context.subscriptions.push(stableStatusBar);
+
+    // Set initial context values (will be updated by git listener)
+    vscode.commands.executeCommand('setContext', 'vscode-ext-commit.hasStagedChanges', false);
+    vscode.commands.executeCommand('setContext', 'vscode-ext-commit.isGenerating', false);
 
     // Initialize git change listener to enable/disable button
     const initializeGitListener = async () => {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
         if (!gitExtension) {
+            outputChannel.appendLine('⚠️ Git extension not found');
             return;
         }
 
@@ -53,33 +70,94 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Function to update button state
         const updateButtonState = () => {
+            const debugInfo: string[] = [];
+
             if (git.repositories.length > 0) {
                 const repo = git.repositories[0];
-                const hasStagedChanges = (repo.state.indexChanges?.length || 0) > 0;
+                const indexChanges = repo.state.indexChanges || [];
+                const hasStagedChanges = indexChanges.length > 0;
+
+                // Debug: Log full state
+                debugInfo.push(`[Git State Debug]`);
+                debugInfo.push(`  Repositories: ${git.repositories.length}`);
+                debugInfo.push(`  Index changes: ${indexChanges.length}`);
+                debugInfo.push(`  Working tree changes: ${repo.state.workingTreeChanges?.length || 0}`);
+                debugInfo.push(`  Has staged changes: ${hasStagedChanges}`);
+
+                if (indexChanges.length > 0) {
+                    debugInfo.push(`  Staged files: ${indexChanges.map((c: any) => c.uri.fsPath).join(', ')}`);
+                }
+
+                // Log to output channel
+                debugInfo.forEach(line => outputChannel.appendLine(line));
+
+                // Also write to debug file
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                if (workspaceFolder) {
+                    const debugPath = path.join(workspaceFolder.uri.fsPath, 'out', 'git-state-debug.log');
+                    const timestamp = new Date().toISOString();
+                    fs.appendFileSync(debugPath, `\n[${timestamp}]\n${debugInfo.join('\n')}\n`);
+                }
+
                 vscode.commands.executeCommand('setContext', 'vscode-ext-commit.hasStagedChanges', hasStagedChanges);
             } else {
+                debugInfo.push('[Git State] No repositories found');
+                outputChannel.appendLine(debugInfo[0]);
+
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                if (workspaceFolder) {
+                    const debugPath = path.join(workspaceFolder.uri.fsPath, 'out', 'git-state-debug.log');
+                    const timestamp = new Date().toISOString();
+                    fs.appendFileSync(debugPath, `\n[${timestamp}]\n${debugInfo[0]}\n`);
+                }
+
                 vscode.commands.executeCommand('setContext', 'vscode-ext-commit.hasStagedChanges', false);
             }
         };
 
-        // Update immediately
-        updateButtonState();
+        // Wait for git to initialize and check state multiple times
+        // Git state might not be ready immediately, so we retry a few times
+        let attempts = 0;
+        const maxAttempts = 5;
+        const checkInterval = 200; // ms
+
+        const tryUpdateState = async () => {
+            attempts++;
+            updateButtonState();
+
+            // If no repositories found and we haven't exceeded attempts, try again
+            if (git.repositories.length === 0 && attempts < maxAttempts) {
+                outputChannel.appendLine(`  Retrying in ${checkInterval}ms... (attempt ${attempts}/${maxAttempts})`);
+                await new Promise(resolve => setTimeout(resolve, checkInterval));
+                return tryUpdateState();
+            }
+        };
+
+        await tryUpdateState();
 
         // Listen for repository changes
         git.repositories.forEach((repo: any) => {
-            repo.state.onDidChange(() => updateButtonState());
+            repo.state.onDidChange(() => {
+                outputChannel.appendLine('[Git State] Change detected, updating button state...');
+                updateButtonState();
+            });
         });
 
         // Listen for new repositories
         git.onDidOpenRepository((repo: any) => {
+            outputChannel.appendLine('[Git State] New repository opened');
             updateButtonState();
-            repo.state.onDidChange(() => updateButtonState());
+            repo.state.onDidChange(() => {
+                outputChannel.appendLine('[Git State] Change detected in new repo, updating button state...');
+                updateButtonState();
+            });
         });
     };
 
     // Initialize git listener asynchronously
     initializeGitListener().catch(err => {
         console.error('Failed to initialize git listener:', err);
+        outputChannel.appendLine(`❌ Failed to initialize git listener: ${err}`);
         // Set to false as fallback
         vscode.commands.executeCommand('setContext', 'vscode-ext-commit.hasStagedChanges', false);
     });
@@ -183,6 +261,30 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
+            // Check if commit input box already has content
+            const existingMessage = repo.inputBox.value?.trim();
+            if (existingMessage && existingMessage.length > 0) {
+                // Stop status bar progress while waiting for user decision
+                stableStatusBar.stopGeneration();
+                vscode.commands.executeCommand('setContext', 'vscode-ext-commit.isGenerating', false);
+
+                const overwrite = await vscode.window.showWarningMessage(
+                    'Generating a new message will overwrite the existing',
+                    { modal: false },
+                    'OK'
+                );
+
+                if (overwrite !== 'OK') {
+                    // User dismissed or cancelled
+                    isGeneratingCommit = false;
+                    return;
+                }
+
+                // User confirmed - restart status bar and continue
+                stableStatusBar.startGeneration();
+                vscode.commands.executeCommand('setContext', 'vscode-ext-commit.isGenerating', true);
+            }
+
             // Only proceed with workspace and agent setup if git state is valid
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
@@ -265,21 +367,29 @@ export function activate(context: vscode.ExtensionContext) {
             // Set the commit message in the repository input box
             repo.inputBox.value = commitMessage;
 
-            // Check if there are validation warnings in the message
-            if (commitMessage.includes('⚠️ **VALIDATION ERRORS**')) {
-                vscode.window.showWarningMessage('⚠️ Commit message generated with validation warnings. Please review and fix before committing.');
+            // Check if there are validation errors/warnings in the message
+            if (commitMessage.includes('❌')) {
+                vscode.window.showErrorMessage('❌ Commit message has validation errors. Please review and fix in the commit box before committing.');
+            } else if (commitMessage.includes('⚠️')) {
+                vscode.window.showWarningMessage('⚠️ Commit message has validation warnings. Please review in the commit box.');
             } else {
                 vscode.window.showInformationMessage('✓ Commit message generated and ready to review!');
             }
 
         } catch (error) {
             vscode.window.showErrorMessage(`Error: ${error}`);
-        } finally {
-            // Always reset the flag and status bar, even if there was an error
+            // Ensure cleanup happens even if error display fails
             isGeneratingCommit = false;
-            clickCount = 0; // Reset click counter
+            clickCount = 0;
             stableStatusBar.stopGeneration();
             vscode.commands.executeCommand('setContext', 'vscode-ext-commit.isGenerating', false);
+        } finally {
+            // Final safety net - always reset the flag and status bar
+            isGeneratingCommit = false;
+            clickCount = 0;
+            stableStatusBar.stopGeneration();
+            vscode.commands.executeCommand('setContext', 'vscode-ext-commit.isGenerating', false);
+            outputChannel.appendLine('[Extension] Generation completed, flag reset');
         }
     });
 
@@ -377,20 +487,18 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         });
 
         childProcess.on('close', (code) => {
-            if (code !== 0) {
-                const errorMsg = errorOutput || 'Command failed with exit code ' + code;
-                reject(new Error(`commit-ai error: ${errorMsg}`));
-                return;
-            }
-
-            // Extract commit message from output
+            // Extract commit message regardless of exit code (validation errors are included in output)
             const commitMessage = extractCommitMessageFromOutput(fullOutput);
 
             if (!commitMessage) {
-                reject(new Error('Failed to extract commit message from output'));
+                // Only fail if we can't extract anything at all
+                const errorMsg = errorOutput || fullOutput || 'Command failed with exit code ' + code;
+                reject(new Error(`commit-ai failed: ${errorMsg}`));
                 return;
             }
 
+            // Exit code 1 means validation errors exist, but we still have a message to show
+            // The validation errors are already included in the extracted message
             resolve(commitMessage);
         });
 
@@ -401,13 +509,50 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
 
 /**
  * Extracts the commit message from commit-ai output
- * New simplified format:
- * 1. Vanity progress messages (🤖, optional 🔧 if auto-fix)
- * 2. THE COMMIT MESSAGE
- * 3. "---"
- * 4. Verification results
+ * Format:
+ * 1. Whimsical progress messages (random order, shown during generation)
+ * 2. ">>>>>>OUTPUT START<<<<<<" marker
+ * 3. THE COMMIT MESSAGE (cleaned and validated)
+ * 4. "\n---\n"
+ * 5. Verification results (errors/warnings) - INCLUDED in output for user to see
  */
 function extractCommitMessageFromOutput(output: string): string | null {
+    const lines = output.split('\n');
+
+    // Find the OUTPUT START marker
+    let outputStartIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim() === '>>>>>>OUTPUT START<<<<<<') {
+            outputStartIndex = i;
+            break;
+        }
+    }
+
+    if (outputStartIndex === -1) {
+        // Fallback: No marker found, try old extraction method
+        log('[WARN] No >>>>>>OUTPUT START<<<<<< marker found, using fallback extraction');
+        return extractCommitMessageFallback(output);
+    }
+
+    // Extract EVERYTHING after the marker (including validation errors)
+    // Start from line after marker, skip any empty lines at the start
+    let messageStartIndex = outputStartIndex + 1;
+    while (messageStartIndex < lines.length && lines[messageStartIndex].trim() === '') {
+        messageStartIndex++;
+    }
+
+    // Get all lines from start to end
+    const messageLines = lines.slice(messageStartIndex);
+    const message = messageLines.join('\n').trim();
+
+    return message.length > 0 ? message : null;
+}
+
+/**
+ * Fallback extraction method when >>>>>>OUTPUT START<<<<<< marker is not found
+ * Uses the old heuristic-based approach
+ */
+function extractCommitMessageFallback(output: string): string | null {
     const lines = output.split('\n');
 
     // Find the separator "---"
@@ -420,22 +565,35 @@ function extractCommitMessageFromOutput(output: string): string | null {
     }
 
     if (separatorIndex === -1) {
-        // No separator found, something went wrong
         return null;
     }
 
-    // Everything before "---" is the commit message (minus vanity lines at start)
+    // Skip vanity progress messages at the start
     let messageStartIndex = 0;
     for (let i = 0; i < separatorIndex; i++) {
         const trimmed = lines[i].trim();
 
-        // Skip vanity progress messages
+        // Skip all known progress message patterns
         if (trimmed.startsWith('🤖') ||
             trimmed.startsWith('🔧') ||
             trimmed.startsWith('Discombobulating') ||
             trimmed.startsWith('Reticulating') ||
+            trimmed.startsWith('Consulting') ||
+            trimmed.startsWith('Parsing semantic') ||
             trimmed.startsWith('Harmonizing') ||
+            trimmed.startsWith('Calibrating') ||
+            trimmed.startsWith('Summoning') ||
+            trimmed.startsWith('Extracting essence') ||
+            trimmed.startsWith('Wrapping lines') ||
+            trimmed.startsWith('Polishing commit') ||
+            trimmed.startsWith('Validating YAML') ||
+            trimmed.startsWith('Generating subject') ||
             trimmed.startsWith('Contemplating') ||
+            trimmed.startsWith('Assembling markdown') ||
+            trimmed.startsWith('Invoking the') ||
+            trimmed.startsWith('Measuring semantic') ||
+            trimmed.startsWith('Calculating commit') ||
+            trimmed.startsWith('Negotiating with') ||
             trimmed.startsWith('Ugh,') ||
             trimmed.startsWith('*Sigh*') ||
             trimmed.startsWith('Fine,') ||

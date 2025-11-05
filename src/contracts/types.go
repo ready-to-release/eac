@@ -17,10 +17,11 @@ type Versioning struct {
 
 // Source represents source file configuration
 type Source struct {
-	Root                       string   `yaml:"root"`                          // Root directory path
-	Includes                   []string `yaml:"includes"`                      // Glob patterns for included files
-	ChangelogPath              string   `yaml:"changelog_path"`                // Path to CHANGELOG.md
+	Root                   string   `yaml:"root"`                       // Root directory path
+	Includes               []string `yaml:"includes"`                   // Glob patterns for included files
+	ChangelogPath          string   `yaml:"changelog_path"`             // Path to CHANGELOG.md
 	ExcludeChildrenOwnedSource *bool    `yaml:"exclude_children_owned_source"` // Defer ownership to children in same source space (default: true)
+	IsCatchAllSingleton    *bool    `yaml:"is_catch_all_singleton"`     // This module catches all unowned files (default: false, only one allowed)
 }
 
 // BaseContract contains common contract fields

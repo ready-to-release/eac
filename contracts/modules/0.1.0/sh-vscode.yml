@@ -6,7 +6,5 @@ type: "automation"
 description: "Shell automation scripts for VSCode extension setup, cleanup, and initialization"
 
 source:
-  changelog_path: "automation/sh/vscode/CHANGELOG.md"
-  root: "automation/sh/vscode"
-  includes:
-    - "automation/sh/vscode/**"
+  changelog_path: "scripts/sh/vscode/CHANGELOG.md"
+  root: "scripts/sh/vscode"

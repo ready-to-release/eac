@@ -1,0 +1,17 @@
+# Version: 0.1.0
+
+moniker: "sh-go-invoker"
+name: "Shell script to invoke Go commands"
+type: "automation"
+description: "Bash wrapper for running Go commands from src/commands/"
+
+source:
+  root: "scripts/sh/go-invoker"
+  includes:
+    - "**/*"
+    - "*"
+    - "/importer.sh"    
+
+depends_on:
+  - "src-commands"
+used_by: []

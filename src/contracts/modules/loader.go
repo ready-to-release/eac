@@ -55,8 +55,17 @@ func LoadFromWorkspace(workspaceRoot, version string) (*Registry, error) {
 				base.Source.ChangelogPath = base.Source.Root + "/CHANGELOG.md"
 			}
 		}
-		if len(base.Source.Includes) == 0 {
+		// Only apply default includes if:
+		// 1. Includes is nil (not set in YAML)
+		// 2. OR it's a catch-all singleton (which needs patterns to work)
+		if base.Source.Includes == nil {
 			base.Source.Includes = []string{"**/*", "*"}
+		} else if len(base.Source.Includes) == 0 {
+			// includes: [] explicitly set - keep it empty (null filter)
+			// UNLESS it's a catch-all singleton which needs patterns
+			if base.Source.IsCatchAllSingleton != nil && *base.Source.IsCatchAllSingleton {
+				base.Source.Includes = []string{"**/*", "*"}
+			}
 		}
 		// ExcludeChildrenOwnedSource defaults to true
 		if base.Source.ExcludeChildrenOwnedSource == nil {
@@ -106,6 +115,22 @@ func LoadFromWorkspace(workspaceRoot, version string) (*Registry, error) {
 	// Validate registry has at least one module
 	if registry.Count() == 0 {
 		return nil, contracts.NewContractError("load", pattern, nil, "no module contracts found")
+	}
+
+	// Validate only one catch-all singleton exists
+	catchAllModules := []*ModuleContract{}
+	for _, module := range registry.All() {
+		if module.Source.IsCatchAllSingleton != nil && *module.Source.IsCatchAllSingleton {
+			catchAllModules = append(catchAllModules, module)
+		}
+	}
+	if len(catchAllModules) > 1 {
+		monikers := []string{}
+		for _, m := range catchAllModules {
+			monikers = append(monikers, m.Moniker)
+		}
+		return nil, contracts.NewContractError("validate", pattern, nil,
+			fmt.Sprintf("multiple catch-all singleton modules found: %v (only one allowed)", monikers))
 	}
 
 	// Validate parent chains for all modules

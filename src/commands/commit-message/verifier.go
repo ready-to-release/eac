@@ -223,8 +223,8 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 			})
 		}
 
-		// RULE 3: No trailing period
-		if strings.HasSuffix(title, ".") {
+		// RULE 3: No trailing period (except ellipsis "...")
+		if strings.HasSuffix(title, ".") && !strings.HasSuffix(title, "...") {
 			errors = append(errors, ValidationError{
 				Code:     "TITLE_TRAILING_PERIOD",
 				Message:  "Title must not end with period",
@@ -390,8 +390,8 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 					})
 				}
 
-				// Check no trailing period
-				if strings.HasSuffix(trimmed, ".") {
+				// Check no trailing period (except ellipsis "...")
+				if strings.HasSuffix(trimmed, ".") && !strings.HasSuffix(trimmed, "...") {
 					errors = append(errors, ValidationError{
 						Code:     "SUBJECT_TRAILING_PERIOD",
 						Message:  "Subject line must not end with period",

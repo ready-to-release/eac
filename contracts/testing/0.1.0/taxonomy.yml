@@ -1,27 +1,85 @@
-# taxonomy testing contract: taxonomy
-# Version: 0.1.0
-
-moniker: "taxonomy"
-name: "Testing taxonomy"
-type: "contract"
-description: "Docker container definitions and configurations for deployable services"
-root: "/contracts/testing/0.1.0"
-root_type: "contracts-directory"
-
-classifications:
-  - l0: Very fast unit tests
-  - l1: fast unit tests
-  - l2: container isolated tests
-  - l3: in-situ hosted isolated tests
-  - l4: In production non-isolated tests
-  - horizonal-e2e: In staged multi-runtime e2e
-
-versioning:
-  version_scheme: "MAJOR.MINOR.PATCH"
-  changelog_path: "/contracts/testing/0.1.0/CHANGELOG.md"
-
-source:
-  includes:
-    - "**/*"
-
-depends_on: []
+testing_taxonomy:
+  version: "0.1.0"
+  description: "Testing taxonomy based on execution environment and scope"
+  
+  test_levels:
+    - level: L0
+      name: "Unit Tests"
+      shift_direction: LEFT
+      execution_environment: "devbox or agent"
+      scope: "Source and binary"
+      external_dependencies: "All replaced with test doubles"
+      determinism: Highest
+      domain_coherency: Lowest
+      time_constraints:
+        preparation: "milliseconds"
+        execution: "milliseconds"
+      
+    - level: L1
+      name: "Unit Tests"
+      shift_direction: LEFT
+      execution_environment: "devbox or agent"
+      scope: "Source and binary"
+      external_dependencies: "All replaced with test doubles"
+      determinism: Highest
+      domain_coherency: Lowest
+      time_constraints:
+        preparation: "seconds"
+        execution: "milliseconds to seconds"
+      
+    - level: L2
+      name: "Emulated System Tests"
+      shift_direction: LEFT
+      execution_environment: "devbox or agent"
+      scope: "Deployable artifacts"
+      external_dependencies: "All replaced with test doubles"
+      determinism: High
+      domain_coherency: High
+      time_constraints:
+        preparation: "seconds to minutes"
+        execution: "seconds to minutes"
+      
+    - level: L3
+      name: "In-Situ Vertical Tests"
+      shift_direction: LEFT
+      execution_environment: "PLTE"
+      scope: "Deployed system"
+      external_dependencies: "All replaced with test doubles"
+      determinism: Moderate
+      domain_coherency: High
+      time_constraints:
+        preparation: "minutes to hours"
+        execution: "seconds to minutes"
+      
+    - level: L4
+      name: "Testing in Production"
+      shift_direction: RIGHT
+      execution_environment: "Production"
+      scope: "Deployed system"
+      external_dependencies: "All production, may use live test doubles"
+      determinism: High
+      domain_coherency: Highest
+      time_constraints:
+        preparation: "minutes to hours"
+        execution: "continuous"
+  
+  out_of_category:
+    - level: "Horizontal E2E"
+      name: "Horizontal End-to-End"
+      shift_direction: "non-shifted"
+      execution_environment: "Shared testing environment"
+      scope: "Deployed system"
+      external_dependencies: "Tied up to non-production 'test' deployments"
+      determinism: Lowest
+      domain_coherency: High
+      time_constraints:
+        preparation: "hours to days to months"
+        execution: "when it is available"
+      notes: "Old-school horizontal pre-production environments where multiple teams' pre-prod services are linked together are highly fragile and non-deterministic. This taxonomy explicitly advocates shifting LEFT (to L0-L3) and RIGHT (to L4) to avoid this pattern."
+  
+  constraints:
+    execution_requirements: "What binaries, tooling, and configuration are needed"
+    test_scope: "Vertical vs horizontal boundaries, and test double usage"
+  
+  tradeoffs:
+    determinism_vs_coherency: "Lower Lx values provide higher determinism but lower domain coherency, while higher Lx values provide lower determinism but higher domain coherency"

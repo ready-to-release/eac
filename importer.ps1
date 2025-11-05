@@ -1,27 +1,30 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Import the CommandRunner module and optionally create 'run' alias
+    Import the CommandRunner module and create top-level command aliases
 
 .DESCRIPTION
-    This script imports the runner.psm1 module with -Force and creates a session-wide 'run' alias.
-    The alias is temporary and only lasts for the current PowerShell session.
+    This script imports the go.psm1 module with -Force and creates session-wide aliases
+    for all top-level commands (show, list, describe, commit-ai, etc.).
+    The aliases are temporary and only last for the current PowerShell session.
 
-    Welcome messages are shown only once per session (tracked via $env:RUN_WELCOME_EMITTED).
+    Welcome messages are shown only once per session (tracked via $env:CMD_ALIASES_EMITTED).
 
 .PARAMETER NoAlias
-    Skip creating the 'run' alias. Use this if you only want the module functions.
+    Skip creating command aliases. Use this if you only want the module functions.
 
 .EXAMPLE
-    . .\importer.ps1
-    run example-show-modules
+    .\importer.ps1
+    show files
+    list commands
 
 .EXAMPLE
-    . .\importer.ps1 -NoAlias
-    Invoke-GoSrcCommand example-show-modules
+    .\importer.ps1 -NoAlias
+    Invoke-GoSrcCommand show files
 
 .NOTES
-    Must be dot-sourced ('. .\importer.ps1') for the alias to work in your session.
+    Can be executed directly (.\importer.ps1) or dot-sourced (. .\importer.ps1).
+    Global scope functions are created, so aliases persist in your session either way.
 #>
 
 [CmdletBinding()]
@@ -31,8 +34,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Check if welcome already shown this session
-$ShowWelcome = -not $env:RUN_WELCOME_EMITTED
+# Clear cache to force refresh
+$env:SRC_COMMANDS_DESCRIBE = $null
 
 # Get the module path
 $ModulePath = Join-Path $PSScriptRoot "scripts\pwsh\go-invoker\go.psm1"
@@ -48,20 +51,15 @@ Import-Module $ModulePath -Force
 
 Write-Host "✅ CommandRunner module imported successfully!" -ForegroundColor Green
 
-# Create alias unless -NoAlias specified
+# Create top-level command aliases unless -NoAlias specified
 if (-not $NoAlias) {
-    New-RunAlias
+    New-TopLevelAliases
 } else {
-    if ($ShowWelcome) {
-        Write-Host ""
-        Write-Host "You can now use:" -ForegroundColor Cyan
-        Write-Host "  Invoke-GoSrcCommand <command-name> [args...]" -ForegroundColor White
-        Write-Host ""
-        Write-Host "To create the 'run' alias, call:" -ForegroundColor Cyan
-        Write-Host "  New-RunAlias" -ForegroundColor Gray
-        Write-Host ""
-    }
+    Write-Host ""
+    Write-Host "You can now use:" -ForegroundColor Cyan
+    Write-Host "  Invoke-GoSrcCommand <command-name> [args...]" -ForegroundColor White
+    Write-Host ""
+    Write-Host "To create command aliases, call:" -ForegroundColor Cyan
+    Write-Host "  New-TopLevelAliases" -ForegroundColor Gray
+    Write-Host ""
 }
-
-# Mark welcome as shown for this session
-$env:RUN_WELCOME_EMITTED = "1"

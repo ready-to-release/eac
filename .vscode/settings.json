@@ -1,4 +1,5 @@
 {
+  // Markdown settings
   "markdown.preview.fontFamily": "Consolas, 'Courier New', monospace",
   "markdown.styles": [
     ".vscode/markdown-preview-dark.css"
@@ -19,5 +20,15 @@
       "other": "on"
     },
     "editor.wordWrap": "on"
-  }
+  },
+
+  // Cucumber/Gherkin settings for Godog (Go BDD testing)
+  "cucumber.features": [
+    "specs/**/*.feature",
+    "requirements/**/*.feature"
+  ],
+  "cucumber.glue": [
+    "src/**/tests/*_test.go",
+    "src/**/*_test.go"
+  ]
 }

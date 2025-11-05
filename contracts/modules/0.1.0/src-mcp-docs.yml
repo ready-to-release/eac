@@ -9,10 +9,11 @@ source:
   changelog_path: "/docs/CHANGELOG.md"
   root: "src/mcp/docs"
   includes:
-    - "go.sum"    
+    - "go.sum"
     - "go.mod"
     - "**.go"
     - "*.go"
-    - run.sh
+    - "README.md"
+    - "run.sh"
 
 depends_on: [container-mkdocs]

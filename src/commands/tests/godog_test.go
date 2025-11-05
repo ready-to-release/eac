@@ -14,6 +14,7 @@ func TestFeatures(t *testing.T) {
 			Format:   "pretty",
 			Paths:    []string{"../../../specs/src-commands"},
 			TestingT: t,
+			Tags:     "~@skip && ~@pending", // Skip scenarios tagged with @skip or @pending
 		},
 	}
 

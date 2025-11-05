@@ -8,10 +8,13 @@ description: "Go library to contain shell scripts"
 source:
   root: "src/commands"
   includes:
-    - "go.sum"    
+    - "go.sum"
     - "go.mod"
     - "**.go"
     - "*.go"
+    - "README.md"
+    - "render/README.md"
+    - "/specs/src-commands/**/*"
 
 depends_on: []
 used_by:

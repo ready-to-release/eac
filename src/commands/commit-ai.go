@@ -252,11 +252,14 @@ func extractContentBlock(agentOutput string) string {
 				strings.HasPrefix(trimmed, "I'll ") ||
 				strings.HasPrefix(trimmed, "I've ") ||
 				strings.HasPrefix(trimmed, "I'm ") ||
+				strings.HasPrefix(trimmed, "I can see ") ||
+				strings.HasPrefix(trimmed, "Looking at ") ||
 				strings.HasPrefix(trimmed, "Now I") ||
 				strings.HasPrefix(trimmed, "You are now") ||
 				strings.HasPrefix(trimmed, "The title ") ||
 				strings.HasPrefix(trimmed, "The corrected ") ||
 				strings.HasPrefix(trimmed, "The generated ") ||
+				strings.HasPrefix(trimmed, "The changes ") ||
 				strings.HasPrefix(trimmed, "After reviewing") ||
 				strings.Contains(trimmed, "ready to assist") || // Skip assistant messages
 				strings.Contains(trimmed, "🚀") || // Skip emoji celebration lines

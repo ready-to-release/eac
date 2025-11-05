@@ -24,30 +24,37 @@ $Script:CommandStructureCacheTime = $null
     Get structured command information from Go
 
 .DESCRIPTION
-    Calls 'go run . describe-commands' to get JSON structure of all commands
-    with caching to avoid repeated calls
+    Calls 'go run . describe commands' to get JSON structure of all commands
+    and caches result in $env:SRC_COMMANDS_DESCRIBE for session persistence
 #>
 function Get-CommandStructure {
     [CmdletBinding()]
     param()
 
-    # Cache for 60 seconds
-    if ($Script:CommandStructureCache -and $Script:CommandStructureCacheTime) {
-        $age = (Get-Date) - $Script:CommandStructureCacheTime
-        if ($age.TotalSeconds -lt 60) {
-            return $Script:CommandStructureCache
+    # Check environment variable cache first (persists across module reloads)
+    if ($env:SRC_COMMANDS_DESCRIBE) {
+        try {
+            $structure = $env:SRC_COMMANDS_DESCRIBE | ConvertFrom-Json -AsHashtable
+            return $structure
+        } catch {
+            Write-Verbose "Failed to parse cached command structure: $_"
+            # Clear invalid cache
+            $env:SRC_COMMANDS_DESCRIBE = $null
         }
     }
 
+    # Cache miss - fetch from Go
     $commandsPath = Join-Path $Script:RepoRoot "src/commands"
 
     Push-Location $commandsPath
     try {
-        $jsonOutput = & go run . describe-commands 2>$null
+        $jsonOutput = & go run . describe commands 2>$null
         if ($LASTEXITCODE -eq 0) {
+            # Store in environment variable as JSON string
+            $env:SRC_COMMANDS_DESCRIBE = $jsonOutput
+
+            # Return as hashtable
             $structure = $jsonOutput | ConvertFrom-Json -AsHashtable
-            $Script:CommandStructureCache = $structure
-            $Script:CommandStructureCacheTime = Get-Date
             return $structure
         }
     } catch {
@@ -107,7 +114,10 @@ function Invoke-GoSrcCommand {
         [ArgumentCompleter({ param($cmd, $param, $word, $ast, $bound)
             Get-GoSrcCommandPart -First $bound.First -Second $bound.Second -Third $bound.Third
         })]
-        [string]$Fourth
+        [string]$Fourth,
+
+        [Parameter(ValueFromRemainingArguments=$true)]
+        [string[]]$RemainingArgs
     )
 
     $ErrorActionPreference = "Stop"
@@ -118,6 +128,7 @@ function Invoke-GoSrcCommand {
     if ($Second) { $CommandParts += $Second }
     if ($Third) { $CommandParts += $Third }
     if ($Fourth) { $CommandParts += $Fourth }
+    if ($RemainingArgs) { $CommandParts += $RemainingArgs }
 
     # Check if command parts provided
     if ($CommandParts.Count -eq 0) {
@@ -222,24 +233,18 @@ function Get-GoSrcCommandPart {
         [string]$Third
     )
 
-    # Inline Get-CommandStructure logic to avoid scoping issues
-    $commandsPath = Join-Path $Script:RepoRoot "src/commands"
-
-    Push-Location $commandsPath
-    try {
-        $jsonOutput = & go run . describe commands 2>$null
-        if ($LASTEXITCODE -ne 0) {
-            return @()
-        }
-        $structure = $jsonOutput | ConvertFrom-Json -AsHashtable
-    } catch {
-        return @()
-    } finally {
-        Pop-Location
+    # Only read from environment variable cache - never make describe call
+    # Cache is populated by importer.ps1 via New-TopLevelAliases
+    if (-not $env:SRC_COMMANDS_DESCRIBE) {
+        # Cache not available - return placeholder
+        return @("no-auto-complete-cache-found")
     }
 
-    if (-not $structure) {
-        return @()
+    try {
+        $structure = $env:SRC_COMMANDS_DESCRIBE | ConvertFrom-Json -AsHashtable
+    } catch {
+        # Invalid cache - return placeholder
+        return @("no-auto-complete-cache-found")
     }
 
     # Build the path from provided parts
@@ -271,51 +276,167 @@ function Get-GoSrcCommandPart {
 
 <#
 .SYNOPSIS
-    Creates a global 'run' alias for the current session
+    Get unique location_0 (top-level) commands
 
 .DESCRIPTION
-    Creates a global alias 'run' that points to Invoke-GoSrcCommand
-    with intelligent tab completion for nested commands.
+    Extracts all unique first-level commands from the command structure
+    (e.g., "show", "list", "commit-ai", "describe")
 
 .EXAMPLE
-    New-RunAlias
-    run show <TAB>  # Suggests: files, modules
+    Get-TopLevelCommands
+    # Returns: @("show", "list", "commit-ai", "describe")
 #>
-function New-RunAlias {
+function Get-TopLevelCommands {
     [CmdletBinding()]
     param()
 
-    # Check if alias already exists
-    if (Get-Alias -Name run -ErrorAction SilentlyContinue) {
-        if (-not $env:RUN_WELCOME_EMITTED) {
-            Write-Host "Alias 'run' already exists" -ForegroundColor Yellow
+    $structure = Get-CommandStructure
+    if (-not $structure) {
+        return @()
+    }
+
+    $topLevel = @{}
+    foreach ($cmd in $structure.commands) {
+        if ($cmd.parts.Count -gt 0) {
+            $first = $cmd.parts[0]
+            $topLevel[$first] = $true
         }
+    }
+
+    return $topLevel.Keys | Sort-Object
+}
+
+<#
+.SYNOPSIS
+    Creates global aliases for all top-level commands
+
+.DESCRIPTION
+    Dynamically creates aliases for each location_0 command (show, list, etc.)
+    Each alias invokes Invoke-GoSrcCommand with the first argument pre-filled.
+    Enables direct usage like: show files, list commands, etc.
+
+.EXAMPLE
+    New-TopLevelAliases
+    show files      # Instead of: run show files
+    list commands   # Instead of: run list commands
+#>
+function New-TopLevelAliases {
+    [CmdletBinding()]
+    param()
+
+    # Measure time to get command structure
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # This function populates cache via Get-TopLevelCommands -> Get-CommandStructure
+    $topLevelCommands = Get-TopLevelCommands
+
+    $stopwatch.Stop()
+    $fetchTimeMs = $stopwatch.ElapsedMilliseconds
+
+    if ($topLevelCommands.Count -eq 0) {
+        Write-Host "⚠️  No commands found" -ForegroundColor Yellow
         return
     }
 
-    # Create the alias
-    Set-Alias -Name run -Value Invoke-GoSrcCommand -Scope Global -Force
-
-    # Show welcome only once per session
-    if (-not $env:RUN_WELCOME_EMITTED) {
-        Write-Host "✅ Created global alias 'run' for this session" -ForegroundColor Green
-        Write-Host ""
-        Write-Host "You can now use:" -ForegroundColor Cyan
-        Write-Host "  run <command> [subcommand] [args...]" -ForegroundColor White
-        Write-Host ""
-        Write-Host "Intelligent tab completion enabled!" -ForegroundColor Gray
-        Write-Host "  run show <TAB>    # Suggests: files, modules" -ForegroundColor Gray
-        Write-Host ""
-        Write-Host "To make this permanent, add this to your " -NoNewline -ForegroundColor Gray
-        Write-Host "`$PROFILE" -NoNewline -ForegroundColor White
-        Write-Host ":" -ForegroundColor Gray
-        Write-Host "  Import-Module ""$($Script:RepoRoot)\scripts\pwsh\go-invoker\go.psm1"" -Force" -ForegroundColor Gray
-        Write-Host "  New-RunAlias" -ForegroundColor Gray
-        Write-Host ""
-
-        $env:RUN_WELCOME_EMITTED = "1"
+    # Verify cache was populated in environment variable
+    if (-not $env:SRC_COMMANDS_DESCRIBE) {
+        Write-Host "⚠️  Warning: Command structure cache not populated - autocomplete may not work" -ForegroundColor Yellow
     }
+
+    $createdAliases = @()
+    $deletedAliases = @()
+    $commandExamples = @{}
+
+    # Get command structure to find examples for each top-level command
+    $structure = $null
+    if ($env:SRC_COMMANDS_DESCRIBE) {
+        try {
+            $structure = $env:SRC_COMMANDS_DESCRIBE | ConvertFrom-Json -AsHashtable
+        } catch {
+            # Ignore parse errors
+        }
+    }
+
+    # Build examples map: find first subcommand for each top-level command
+    if ($structure) {
+        foreach ($cmd in $structure.commands) {
+            if ($cmd.parts.Count -gt 0) {
+                $firstPart = $cmd.parts[0]
+                if (-not $commandExamples.ContainsKey($firstPart)) {
+                    # Use the full command as example
+                    $commandExamples[$firstPart] = $cmd.name
+                }
+            }
+        }
+    }
+
+    foreach ($cmdName in $topLevelCommands) {
+        # IDEMPOTENT: Always delete existing function/alias before creating new one
+        $existingFunction = Get-Command $cmdName -CommandType Function -ErrorAction SilentlyContinue
+        $existingAlias = Get-Alias $cmdName -ErrorAction SilentlyContinue
+
+        if ($existingFunction) {
+            Remove-Item "function:Global:$cmdName" -Force -ErrorAction SilentlyContinue
+            $deletedAliases += $cmdName
+        }
+        if ($existingAlias) {
+            Remove-Item "alias:$cmdName" -Force -ErrorAction SilentlyContinue
+        }
+
+        # Create a script block that calls Invoke-GoSrcCommand with first arg pre-filled
+        $scriptBlock = [scriptblock]::Create(@"
+            param(`$Second, `$Third, `$Fourth, [Parameter(ValueFromRemainingArguments=`$true)]`$RemainingArgs)
+            Invoke-GoSrcCommand -First '$cmdName' -Second `$Second -Third `$Third -Fourth `$Fourth -RemainingArgs `$RemainingArgs
+"@)
+
+        # Create the function
+        Set-Item -Path "function:Global:$cmdName" -Value $scriptBlock -Force
+
+        # Register tab completion for this function
+        Register-ArgumentCompleter -CommandName $cmdName -ParameterName Second -ScriptBlock {
+            param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+            Get-GoSrcCommandPart -First $commandName
+        }
+
+        Register-ArgumentCompleter -CommandName $cmdName -ParameterName Third -ScriptBlock {
+            param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+            Get-GoSrcCommandPart -First $commandName -Second $fakeBoundParameters['Second']
+        }
+
+        Register-ArgumentCompleter -CommandName $cmdName -ParameterName Fourth -ScriptBlock {
+            param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+            Get-GoSrcCommandPart -First $commandName -Second $fakeBoundParameters['Second'] -Third $fakeBoundParameters['Third']
+        }
+
+        $createdAliases += $cmdName
+    }
+
+    Write-Host ""
+    if ($deletedAliases.Count -gt 0) {
+        Write-Host "🔄 Refreshed $($deletedAliases.Count) existing command(s)" -ForegroundColor Yellow
+    }
+    Write-Host "✅ Created $($createdAliases.Count) command aliases (loaded in ${fetchTimeMs}ms)" -ForegroundColor Green
+    Write-Host ""
+
+    if ($createdAliases.Count -gt 0) {
+        Write-Host "Registered commands and examples:" -ForegroundColor Cyan
+        foreach ($alias in $createdAliases | Sort-Object) {
+            $example = $commandExamples[$alias]
+            if ($example) {
+                Write-Host "  $alias" -NoNewline -ForegroundColor White
+                Write-Host " → " -NoNewline -ForegroundColor DarkGray
+                Write-Host "$example" -ForegroundColor Gray
+            } else {
+                Write-Host "  $alias" -ForegroundColor White
+            }
+        }
+    }
+
+    Write-Host ""
+    Write-Host "Tab completion enabled:" -ForegroundColor Cyan
+    Write-Host "  show <TAB>    # Suggests: files, modules, etc." -ForegroundColor Gray
+    Write-Host ""
 }
 
 # Export all functions (including Get-CommandStructure for ArgumentCompleters)
-Export-ModuleMember -Function Invoke-GoSrcCommand, New-RunAlias, Get-GoSrcCommands, Get-GoSrcCommandPart, Get-CommandStructure
+Export-ModuleMember -Function Invoke-GoSrcCommand, New-TopLevelAliases, Get-TopLevelCommands, Get-GoSrcCommands, Get-GoSrcCommandPart, Get-CommandStructure

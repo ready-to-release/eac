@@ -10,9 +10,12 @@
 null
 nul
 *.backup
+*.bak
 test.md
 test-*.md
 test_*.md
+temp_*.txt
+*-example.yml
 
 *.log
 

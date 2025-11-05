@@ -15,11 +15,15 @@ func AutoCleanup(commitMessage string) string {
 	// PHASE 2: Fix content (titles, subject lines, body wrapping)
 	lines = fixContent(lines)
 
-	// PHASE 3: Final cleanup (close code blocks, ensure trailing newline)
+	// PHASE 3: Final cleanup (close code blocks, ensure trailing blank line)
 	result := strings.Join(lines, "\n")
 	result = ensureCodeBlocksClosed(result)
-	if !strings.HasSuffix(result, "\n") {
-		result += "\n"
+
+	// Ensure file ends with exactly one blank line
+	// Trim all trailing newlines first, then add exactly two newlines (content\n\n)
+	result = strings.TrimRight(result, "\n\t ")
+	if result != "" {
+		result += "\n\n"
 	}
 
 	return result
@@ -56,13 +60,36 @@ func fixContent(lines []string) []string {
 	inBodySection := false
 	bodyBuffer := []string{}
 	lastWasModuleHeader := false
+	needBlankLineAfterCodeBlock := false
 
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Track code block state
+		// If we need a blank line after code block and this is non-empty content, add it
+		if needBlankLineAfterCodeBlock && trimmed != "" && !strings.HasPrefix(trimmed, "```") {
+			if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
+				cleaned = append(cleaned, "")
+			}
+			needBlankLineAfterCodeBlock = false
+		}
+
+		// Track code block state and ensure blank lines before/after
 		if strings.HasPrefix(trimmed, "```") {
-			inCodeBlock = !inCodeBlock
+			if !inCodeBlock {
+				// Opening fence - ensure blank line before it
+				if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
+					cleaned = append(cleaned, "")
+				}
+				inCodeBlock = true
+				cleaned = append(cleaned, line)
+				continue
+			} else {
+				// Closing fence - add it, then mark that we need blank line after
+				cleaned = append(cleaned, line)
+				inCodeBlock = false
+				needBlankLineAfterCodeBlock = true
+				continue
+			}
 		}
 
 		// FIX 1: Truncate title to 72 chars with ellipsis if needed
@@ -149,9 +176,19 @@ func fixContent(lines []string) []string {
 			}
 		}
 
+		// FIX 4a: Handle ## Files affected specially (needs spacing but no body wrapping)
+		if trimmed == "## Files affected" {
+			// Ensure exactly one blank line before
+			if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
+				cleaned = append(cleaned, "")
+			}
+			cleaned = append(cleaned, line)
+			continue
+		}
+
 		// FIX 4: Track body sections for line wrapping
 		// Detect start of body sections (Summary or module body text)
-		if trimmed == "## Summary" || (strings.HasPrefix(trimmed, "## ") && trimmed != "## Files affected") {
+		if trimmed == "## Summary" || strings.HasPrefix(trimmed, "## ") {
 			lastWasModuleHeader = true
 			// Flush any buffered body text from previous section
 			if len(bodyBuffer) > 0 {
@@ -159,7 +196,16 @@ func fixContent(lines []string) []string {
 				bodyBuffer = []string{}
 			}
 			inBodySection = true
+
+			// Ensure exactly one blank line before section header (except for first header)
+			if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
+				cleaned = append(cleaned, "")
+			}
+
 			cleaned = append(cleaned, line)
+
+			// Ensure exactly one blank line after section header
+			// (will be added when we process next non-empty line)
 			continue
 		}
 
@@ -181,8 +227,15 @@ func fixContent(lines []string) []string {
 			continue
 		}
 
-		// Buffer body text lines (skip empty lines - markdown will have blank line after header)
+		// Buffer body text lines (ensuring blank line after header)
 		if inBodySection && !inCodeBlock && trimmed != "" && !strings.HasPrefix(trimmed, "|") {
+			// If this is the first body text after a header, ensure blank line separator
+			if lastWasModuleHeader {
+				// Add blank line after header if not already present
+				if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
+					cleaned = append(cleaned, "")
+				}
+			}
 			bodyBuffer = append(bodyBuffer, trimmed)
 			lastWasModuleHeader = false
 			continue

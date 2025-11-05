@@ -9,10 +9,11 @@ source:
   changelog_path: "src/repository/definitions/CHANGELOG.md"
   root: "src/repository/definitions"
   includes:
-    - "go.sum"    
+    - "go.sum"
     - "go.mod"
     - "**.go"
     - "*.go"
+    - "README.md"
 
 depends_on: []
 used_by:

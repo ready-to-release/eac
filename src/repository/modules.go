@@ -42,20 +42,10 @@ func EnrichFilesWithModules(files []FileInfo, workspaceRoot string, version stri
 		// Normalize path to forward slashes
 		normalizedPath := strings.ReplaceAll(file.Path, "\\", "/")
 
-		// Find all modules that match this file
-		matchingModules := []*modules.ModuleContract{}
-
-		for _, moniker := range registry.AllMonikers() {
-			module, exists := registry.Get(moniker)
-			if !exists {
-				continue
-			}
-
-			// Check if this module matches the file
-			if module.MatchesFile(normalizedPath) {
-				matchingModules = append(matchingModules, module)
-			}
-		}
+		// Use registry's FindModulesForFile which handles:
+		// - exclude_children_owned_source filtering
+		// - catch-all module fallback
+		matchingModules := registry.FindModulesForFile(normalizedPath)
 
 		// Filter to only the closest modules in parent chain
 		closestModules := filterClosestModules(matchingModules, registry)

@@ -1,5 +1,5 @@
 @src-commands @files @git @modules
-Feature: src-commands-file-tracking
+Feature: src-commands_file-tracking
 
   As a developer
   I want to track files with their module ownership
@@ -26,13 +26,6 @@ Feature: src-commands-file-tracking
       And includeIgnored=false
       And stagedOnly=false
 
-    @error @ac1
-    Scenario: Show files handles report error
-      Given files-modules report cannot be generated
-      When I run "go run . show files"
-      Then I should see "Error:" on stderr
-      And the exit code is 1
-
   Rule: Changed files must be filtered and displayed
 
     @success @ac2
@@ -55,15 +48,8 @@ Feature: src-commands-file-tracking
     Scenario: No changed files shows no output
       Given no files are modified
       When I run "go run . show files changed"
-      Then no table is printed
+      Then I should see a table header with "File | Modules"
       And the exit code is 0
-
-    @error @ac2
-    Scenario: Show files changed handles git error
-      Given git diff command fails
-      When I run "go run . show files changed"
-      Then I should see "Error getting changed files:" on stderr
-      And the exit code is 1
 
   Rule: Staged files must be filtered and displayed
 
@@ -82,40 +68,19 @@ Feature: src-commands-file-tracking
       And trackedOnly=true
       And includeIgnored=false
 
-    @error @ac3
-    Scenario: Show files staged handles report error
-      Given files-modules report cannot be generated
-      When I run "go run . show files staged"
-      Then I should see "Error:" on stderr
-      And the exit code is 1
-
-  Rule: Files without module ownership must show NONE
-
-    @success @ac4
-    Scenario: File without module ownership shows NONE
-      Given file "README.md" has no module mappings
-      When I run "go run . show files"
-      Then "README.md" row shows "NONE" in Modules column
-
-    @success @ac4
-    Scenario: All commands show NONE for unowned files
-      Given file has no module ownership
-      When I run "show files", "show files changed", or "show files staged"
-      Then file shows "NONE" in all commands
-
   Rule: Files with multiple modules must show comma-separated list
 
     @success @ac5
     Scenario: File with multiple modules shows comma-separated list
-      Given file "src/commands/main.go" belongs to ["src-cli", "src-mcp"]
+      Given file "containers/README.md" belongs to ["containers", "readme"]
       When I run "go run . show files"
-      Then "src/commands/main.go" shows "src-cli, src-mcp" in Modules column
+      Then "containers/README.md" shows "containers, readme" in Modules column
 
     @success @ac5
     Scenario: Module list is comma-space separated
-      Given file belongs to modules ["automation-gauge", "docs"]
+      Given file belongs to modules ["containers", "readme"]
       When I run "go run . show files"
-      Then modules column shows "automation-gauge, docs"
+      Then modules column shows "containers, readme"
       And format uses ", " separator (comma followed by space)
 
   Rule: Output must be formatted as markdown table

@@ -1,0 +1,15 @@
+# Version: 0.1.0
+
+moniker: "src-repository-reports"
+name: "Report generators for repository file analysis"
+type: "go-tool"
+description: "Standalone Go module for generating repository file and module reports"
+
+parent: "src-repository"
+
+source:
+  root: "src/repository/reports"
+
+depends_on:
+  - "src-repository"
+used_by: []

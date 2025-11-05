@@ -3,6 +3,7 @@ package modules
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Registry provides fast access to module contracts
@@ -131,4 +132,90 @@ func (r *Registry) GetReverseDependencyGraph() map[string][]string {
 	}
 
 	return graph
+}
+
+// GetCatchAllModule returns the catch-all singleton module if it exists
+func (r *Registry) GetCatchAllModule() *ModuleContract {
+	for _, module := range r.modules {
+		if module.Source.IsCatchAllSingleton != nil && *module.Source.IsCatchAllSingleton {
+			return module
+		}
+	}
+	return nil
+}
+
+// FindModulesForFile returns all modules that match a given file path
+// Respects exclude_children_owned_source to filter out parent modules when children match
+// If no modules match and a catch-all module exists, returns the catch-all module
+func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
+	var matches []*ModuleContract
+
+	// First, find all modules that explicitly match this file
+	for _, module := range r.modules {
+		// Skip catch-all modules in initial matching
+		if module.Source.IsCatchAllSingleton != nil && *module.Source.IsCatchAllSingleton {
+			continue
+		}
+
+		if module.MatchesFile(filePath) {
+			matches = append(matches, module)
+		}
+	}
+
+	// Apply exclude_children_owned_source filtering
+	// Remove parent modules if they have exclude_children_owned_source=true
+	// and a child module also matches
+	filtered := []*ModuleContract{}
+	for _, candidate := range matches {
+		shouldExclude := false
+
+		// Check if this candidate should be excluded because a child owns it
+		if candidate.Source.ExcludeChildrenOwnedSource != nil && *candidate.Source.ExcludeChildrenOwnedSource {
+			// Check if any other matching module is a child of this candidate
+			for _, other := range matches {
+				if other.Moniker == candidate.Moniker {
+					continue
+				}
+
+				// Check if 'other' is a descendant of 'candidate'
+				// by checking if other's root starts with candidate's root
+				if isDescendantPath(other.Source.Root, candidate.Source.Root) {
+					shouldExclude = true
+					break
+				}
+			}
+		}
+
+		if !shouldExclude {
+			filtered = append(filtered, candidate)
+		}
+	}
+	matches = filtered
+
+	// If no matches found, check if catch-all module exists
+	if len(matches) == 0 {
+		if catchAll := r.GetCatchAllModule(); catchAll != nil {
+			matches = append(matches, catchAll)
+		}
+	}
+
+	return matches
+}
+
+// isDescendantPath checks if childPath is a descendant of parentPath
+func isDescendantPath(childPath, parentPath string) bool {
+	// Normalize paths (use function from types.go)
+	childPath = normalizePathSeparators(childPath)
+	parentPath = normalizePathSeparators(parentPath)
+
+	// Root "/" contains everything except itself
+	if parentPath == "/" {
+		return childPath != "/"
+	}
+
+	// Ensure parent path doesn't have trailing slash
+	parentPath = strings.TrimSuffix(parentPath, "/")
+
+	// Check if child starts with parent + "/"
+	return strings.HasPrefix(childPath, parentPath+"/")
 }

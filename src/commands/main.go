@@ -16,12 +16,45 @@ import (
 // CommandFunc is the signature for all command functions
 type CommandFunc func() int
 
+// CommandRegistration holds command metadata
+type CommandRegistration struct {
+	Func          CommandFunc
+	DisplayName   string // "get files" (with spaces)
+	CanonicalName string // "get-files" (kebab-case)
+}
+
 // commands maps command names to their implementation functions
 var commands = map[string]CommandFunc{}
 
+// commandRegistry maps canonical kebab-case names to registrations
+var commandRegistry = map[string]*CommandRegistration{}
+
 // Register allows command files to register themselves
+// commandName should be in display format with spaces (e.g., "get files")
 func Register(commandName string, fn CommandFunc) {
+	// Store in original commands map for backward compatibility
 	commands[commandName] = fn
+
+	// Derive canonical kebab-case name
+	canonicalName := strings.ReplaceAll(commandName, " ", "-")
+
+	// Store in registry with both forms
+	commandRegistry[canonicalName] = &CommandRegistration{
+		Func:          fn,
+		DisplayName:   commandName,
+		CanonicalName: canonicalName,
+	}
+}
+
+// GetCanonicalName returns the kebab-case canonical name for a command
+// Input can be either "get files" (with spaces) or "get-files" (kebab-case)
+func GetCanonicalName(commandName string) string {
+	return strings.ReplaceAll(commandName, " ", "-")
+}
+
+// GetCommandByCanonical retrieves a command registration by its canonical name
+func GetCommandByCanonical(canonicalName string) *CommandRegistration {
+	return commandRegistry[canonicalName]
 }
 
 

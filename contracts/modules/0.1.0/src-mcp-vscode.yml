@@ -10,11 +10,13 @@ source:
   root: "src/mcp/vscode"
   includes:
     - "go.mod"
-    - "go.sum"    
+    - "go.sum"
     - "**.go"
     - "*.go"
+    - "README.md"
+    - "*.md"
     - "/specs/src-mcp-vscode/**/*"
     - "/specs/src-mcp-vscode/*"
-    - run.sh
+    - "run.sh"
 
 depends_on: ["vscode-client"]

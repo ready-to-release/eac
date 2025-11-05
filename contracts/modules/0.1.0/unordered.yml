@@ -1,0 +1,12 @@
+# Version: 0.1.0
+
+moniker: "unordered"
+description:
+  "The module that files belongs to when they are not owned by anything else.
+  Unordered content will be restricted in the pipeline."
+
+parent: repository
+source:
+  is_catch_all_singleton: true
+
+depends_on: []

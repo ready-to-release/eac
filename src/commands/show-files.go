@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/render"
@@ -23,7 +24,27 @@ func ShowFiles() int {
 		return 1
 	}
 
-	// Build markdown table
+	// Sort by last module in the list (if multiple modules)
+	sort.Slice(report.AllFiles, func(i, j int) bool {
+		// Get last module for each file (or empty string if no modules)
+		lastModuleI := ""
+		if len(report.AllFiles[i].Modules) > 0 {
+			lastModuleI = report.AllFiles[i].Modules[len(report.AllFiles[i].Modules)-1]
+		}
+
+		lastModuleJ := ""
+		if len(report.AllFiles[j].Modules) > 0 {
+			lastModuleJ = report.AllFiles[j].Modules[len(report.AllFiles[j].Modules)-1]
+		}
+
+		// Sort by last module, then by file name if modules are equal
+		if lastModuleI != lastModuleJ {
+			return lastModuleI < lastModuleJ
+		}
+		return report.AllFiles[i].Name < report.AllFiles[j].Name
+	})
+
+	// Build markdown table with File first, then Modules
 	tb := render.NewTableBuilder().
 		WithHeaders("File", "Modules")
 
