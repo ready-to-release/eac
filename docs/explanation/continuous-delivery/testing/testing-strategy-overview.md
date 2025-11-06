@@ -33,7 +33,7 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 Tests are categorized based on **execution environment**, **test scope**, and **external dependency handling**:
 
-**L0-L2: Local/Agent Tests**
+**L0-L2: Local/Agent Tests**:
 
 - **Execution environment**: Developer workstation or CI agent
 - **Test scope**: Unit-under-test only
@@ -41,7 +41,7 @@ Tests are categorized based on **execution environment**, **test scope**, and **
 - **Trade-off**: High determinism, low coherency with domain language
 - **Purpose**: Fast, reliable validation of logic in isolation
 
-**L3: In-Situ Vertical Tests**
+**L3: Vertical Tests in PLTE**:
 
 - **Execution environment**: PLTE (cloud/production-like environment)
 - **Test scope**: Single deployable unit boundaries only (vertical testing)
@@ -49,7 +49,7 @@ Tests are categorized based on **execution environment**, **test scope**, and **
 - **Trade-off**: Moderate determinism, moderate coherency
 - **Purpose**: Validate deployable unit behavior in production-like infrastructure
 
-**L4: Production Horizontal Tests**
+**L4: Production Horizontal Tests**:
 
 - **Execution environment**: Production
 - **Test scope**: Cross-service interactions (horizontal testing)
@@ -278,9 +278,14 @@ func TestUserService_CreateUser(t *testing.T) {
 - Runs on CI agent
 - Suitable for pre-commit and commit stages
 
+**Execution Environment:**
+
+- Developer workstation OR CI agent (same as L0-L1)
+- Does NOT require cloud infrastructure or PLTE
+- Runs in local or agent environments only
+
 **Isolation:**
 
-- Runs on developer workstation or CI agent
 - **All external dependencies replaced with test doubles**
 - In-memory databases or test doubles for persistence
 - No real external service calls
@@ -341,7 +346,7 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 
 ---
 
-## L3: In-Situ Vertical Tests
+## L3: Vertical Tests in PLTE
 
 **Purpose**: Validate a single deployable unit's behavior in a production-like environment (PLTE) with vertical testing boundaries.
 
@@ -522,31 +527,52 @@ L4 also includes human-driven validation:
 
 ---
 
-## Out-of-Category Anti-Pattern
+## Horizontal Pre-Production Testing
 
-**Anti-Pattern**: Old-school horizontal pre-production environments where multiple teams' pre-prod services are linked together.
+Horizontal pre-production environments are where multiple teams deploy pre-production versions of their services to a shared environment, with services interacting horizontally (service A calls service B calls service C).
 
-### Why This Is Problematic
-
-**Characteristics of the anti-pattern:**
+### Characteristics
 
 - Multiple teams deploy pre-production versions of their services to shared environment
-- Services interact horizontally (service A calls service B calls service C)
+- Services interact horizontally across team boundaries
 - Each team controls deployment timing independently
 - Version mismatches are common
 - Difficult to reproduce issues locally
 
-**Problems:**
+### When It's Acceptable
+
+Horizontal pre-production environments serve valid purposes in specific contexts:
+
+**Exploratory Testing:**
+
+- Manual testing to discover unexpected cross-service behaviors
+- Session-based testing by QA teams
+- Investigating integration scenarios before production
+
+**Validation and Demonstration:**
+
+- Stakeholder demos of cross-team features
+- Pre-production validation of complex integrations
+- Manual verification of deployment procedures
+
+**Important**: These environments should be used for **manual, exploratory activities** - not as automated quality gates.
+
+### Anti-Pattern: Using as Automated Quality Gates
+
+**Critical**: Horizontal pre-production environments should **NOT** be used as automated quality gates in the deployment pipeline.
+
+**Problems when used for automated testing:**
 
 - **Highly fragile**: Any team's broken deployment breaks everyone's tests
 - **Non-deterministic**: Test results vary based on other teams' deployments
 - **Slow feedback**: Can't test until all dependencies are deployed
 - **Difficult debugging**: Hard to isolate which service caused failure
 - **Blocking**: One team's issues block other teams
+- **False signals**: Tests fail due to environmental issues, not code defects
 
 ### The Solution: Shift-Left and Shift-Right
 
-Instead of relying on horizontal pre-production environments, **shift testing LEFT (L0-L3) and RIGHT (L4)**:
+Instead of relying on horizontal pre-production environments for automated testing, **shift testing LEFT (L0-L3) and RIGHT (L4)**:
 
 **Shift LEFT (L0-L3):**
 
@@ -560,7 +586,7 @@ Instead of relying on horizontal pre-production environments, **shift testing LE
 - Use feature flags, canary deployments, synthetic monitoring
 - **Result**: Real production validation without pre-prod fragility
 
-**Avoid the middle ground** (horizontal pre-production integration environments) - it combines the worst of both worlds: slow, fragile, and non-deterministic.
+**Avoid the middle ground** (horizontal pre-production integration environments as automated quality gates) - it combines the worst of both worlds: slow, fragile, and non-deterministic.
 
 ---
 
@@ -591,7 +617,7 @@ The CD Model uses a taxonomy based on execution environment and scope:
 - **Dependencies**: All replaced with test doubles
 - **Trade-off**: High determinism, low coherency
 
-**L3 (In-Situ Vertical Tests):**
+**L3 (Vertical Tests in PLTE):**
 
 - **Execution**: PLTE (cloud/production-like environment)
 - **Scope**: Single deployable unit boundaries (vertical testing)
