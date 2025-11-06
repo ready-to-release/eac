@@ -254,8 +254,8 @@ Then the Config struct is populated
 **Good**:
 
 ```gherkin
-When I run "cc init"
-Then a file named "cc.yaml" should be created
+When I run "r2r init"
+Then a file named "r2r.yaml" should be created
 And the configuration should contain default values
 ```
 

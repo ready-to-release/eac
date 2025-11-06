@@ -257,8 +257,7 @@ jobs:
 ## Next Steps
 
 - ✅ Godog is now installed and configured
-- **Previous**: [Setup Gauge](./setup-gauge.md) for ATDD testing
-- **Next**: [Create Feature Spec](./create-specifications.md) to start testing
+- **Next**: [Create Specifications](./create-specifications.md) to start testing
 
 ---
 

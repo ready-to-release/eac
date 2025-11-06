@@ -1,0 +1,5 @@
+title: Workflow Practices
+nav:
+  - index.md
+  - trunk-based-development.md
+  - branching-strategies.md

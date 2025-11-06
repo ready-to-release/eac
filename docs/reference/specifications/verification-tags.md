@@ -46,14 +46,14 @@ Use **@IV** tag for scenarios that verify:
 Scenario: Install CLI on clean system
   Given a clean test environment
   When I run the installation script
-  Then the CLI should be installed at "/usr/local/bin/cc"
+  Then the CLI should be installed at "/usr/local/bin/r2r"
   And the version should be "1.0.0"
   And the configuration file should exist
 
 @success @ac1 @IV
 Scenario: Verify CLI version after installation
   Given the CLI is installed
-  When I run "cc --version"
+  When I run "r2r --version"
   Then the output should show version "1.0.0"
   And the command should exit with code 0
 
@@ -74,14 +74,14 @@ These should NOT be tagged with @IV:
 @success @ac1
 Scenario: Run help command
   Given the CLI is installed
-  When I run "cc --help"
+  When I run "r2r --help"
   Then help text should be displayed
 
 # Error handling - use OV (no tag)
 @error @ac2
 Scenario: Handle invalid command
   Given the CLI is installed
-  When I run "cc invalid-command"
+  When I run "r2r invalid-command"
   Then an error message should be displayed
 ```
 
@@ -111,21 +111,21 @@ Use **@PV** tag for scenarios that verify:
 Scenario: Status command responds within performance threshold
   Given the CLI is installed
   And the project is initialized
-  When I run "cc status"
+  When I run "r2r status"
   Then the command should complete within 2 seconds
   And the command should exit with code 0
 
 @success @ac4 @PV
 Scenario: Handle large file processing within time limit
   Given a file with 10000 lines exists
-  When I run "cc process large-file.txt"
+  When I run "r2r process large-file.txt"
   Then the processing should complete within 5 seconds
   And memory usage should stay below 100MB
 
 @success @ac5 @PV
 Scenario: Concurrent command execution
   Given the CLI is installed
-  When I run 10 concurrent "cc status" commands
+  When I run 10 concurrent "r2r status" commands
   Then all commands should complete successfully
   And total execution time should be less than 5 seconds
 ```
@@ -139,14 +139,14 @@ These should NOT be tagged with @PV:
 @success @ac1
 Scenario: Process file successfully
   Given a file "input.txt" exists
-  When I run "cc process input.txt"
+  When I run "r2r process input.txt"
   Then the file should be processed successfully
 
 # Even if scenario mentions timing, if it's not a performance REQUIREMENT, don't use @PV
 @success @ac2
 Scenario: Command completes quickly
   Given the CLI is installed
-  When I run "cc init"
+  When I run "r2r init"
   Then the command should complete
   # No specific time threshold = not @PV
 ```
@@ -180,22 +180,22 @@ Use OV (no tag) for scenarios that verify:
 @success @ac1
 Scenario: Initialize project in empty directory
   Given I am in an empty folder
-  When I run "cc init"
-  Then a file named "cc.yaml" should be created
+  When I run "r2r init"
+  Then a file named "r2r.yaml" should be created
   And directories "src/", "tests/", "docs/" should exist
   And the command should exit with code 0
 
 @error @ac2
 Scenario: Initialize in existing project shows error
-  Given I am in a directory with "cc.yaml"
-  When I run "cc init"
+  Given I am in a directory with "r2r.yaml"
+  When I run "r2r init"
   Then the command should fail
   And stderr should contain "already initialized"
 
 @success @ac3
 Scenario: Deploy to staging environment
   Given the application is built
-  When I run "cc deploy staging"
+  When I run "r2r deploy staging"
   Then the deployment should succeed
   And the deployment log should be created
 ```

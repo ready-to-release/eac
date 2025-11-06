@@ -156,15 +156,15 @@ Feature: cli_init-project
     @success @ac1
     Scenario: Initialize in empty directory creates structure
       Given I am in an empty folder
-      When I run "cc init my-project"
+      When I run "r2r init my-project"
       Then a directory named "my-project/src/" should exist
       And a directory named "my-project/tests/" should exist
       And a directory named "my-project/docs/" should exist
 
     @error @ac1
     Scenario: Initialize in existing project shows error
-      Given I am in a directory with "cc.yaml"
-      When I run "cc init"
+      Given I am in a directory with "r2r.yaml"
+      When I run "r2r init"
       Then the command should fail
       And stderr should contain "already initialized"
 
@@ -173,8 +173,8 @@ Feature: cli_init-project
     @success @ac2
     Scenario: Generated YAML has default values
       Given I am in an empty folder
-      When I run "cc init my-project"
-      Then a file named "my-project/cc.yaml" should be created
+      When I run "r2r init my-project"
+      Then a file named "my-project/r2r.yaml" should be created
       And the file should contain valid YAML
       And the YAML should have key "project.name"
 ```
@@ -278,7 +278,7 @@ If you had Red Cards from Example Mapping, create an issues tracker:
 ```markdown
 # Open Questions
 
-## RED-1: What if cc.yaml already exists?
+## RED-1: What if r2r.yaml already exists?
 
 **Status**: Open
 **Raised**: 2025-11-03

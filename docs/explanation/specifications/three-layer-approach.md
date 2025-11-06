@@ -151,7 +151,7 @@ Rule: Creates project directory structure
 func TestCreateConfig(t *testing.T) {
     // Arrange
     tmpDir := t.TempDir()
-    configPath := filepath.Join(tmpDir, "cc.yaml")
+    configPath := filepath.Join(tmpDir, "r2r.yaml")
 
     // Act
     err := CreateConfig(configPath)
@@ -255,7 +255,7 @@ specification.feature (in specs/):
     @success @ac1                               ← BDD Layer
     Scenario: Initialize in empty directory
       Given I am in an empty folder
-      When I run "cc init"
+      When I run "r2r init"
       Then...
 
 Implemented by (in src/):

@@ -1,6 +1,6 @@
-site_name: CLI Project Documentation
-site_description: Extensible CLI-in-a-box for managing software delivery flows with integrated MCP servers and VSCode extension
-site_author: CLI Project Team
+site_name: Ready-to-Release Documentation
+site_description: Everything-as-Code (EAC) platform for managing software delivery flows with integrated MCP servers and VSCode extension
+site_author: Ready-to-Release Team
 site_url: https://github.com/ready-to-release
 
 repo_name: cli
@@ -100,4 +100,4 @@ nav:
     - Testing: development/testing.md
     - Release Process: development/releases.md
 
-copyright: Copyright &copy; 2025 Simply CLI Project
+copyright: Copyright &copy; 2025 Ready-to-Release Project

@@ -155,9 +155,9 @@ So that I can quickly start development
 **Examples** (for Blue Card 2):
 
 ```text
-[GREEN-2a] New project → run init → creates cc.yaml with defaults
+[GREEN-2a] New project → run init → creates r2r.yaml with defaults
 
-[GREEN-2b] With --name flag → run init → cc.yaml contains custom name
+[GREEN-2b] With --name flag → run init → r2r.yaml contains custom name
 ```
 
 **Action**: Place Green Cards below their corresponding Blue Card
@@ -198,7 +198,7 @@ So that I can quickly start development
 **Examples**:
 
 ```text
-[RED-1] What if cc.yaml already exists?
+[RED-1] What if r2r.yaml already exists?
 Owner: Product Owner
 
 [RED-2] Should we support a --force flag?
@@ -270,7 +270,7 @@ For each Red Card:
 ```markdown
 # Open Questions
 
-## RED-1: What if cc.yaml already exists?
+## RED-1: What if r2r.yaml already exists?
 
 **Status**: Open
 **Raised**: 2025-11-03
@@ -295,13 +295,13 @@ so that I can quickly start development
   [GREEN-1b] Existing project → init → error "already initialized"
 
 [BLUE-2] Generates valid configuration file
-  [GREEN-2a] New project → init → creates cc.yaml with defaults
-  [GREEN-2b] With --name flag → cc.yaml contains custom name
+  [GREEN-2a] New project → init → creates r2r.yaml with defaults
+  [GREEN-2b] With --name flag → r2r.yaml contains custom name
 
 [BLUE-3] Command completes in under 2 seconds
   [GREEN-3a] Standard project → measure time → <2s
 
-[RED-1] What if cc.yaml already exists? (Owner: Product Owner)
+[RED-1] What if r2r.yaml already exists? (Owner: Product Owner)
 ```
 
 ### Converted to specification.feature
@@ -322,14 +322,14 @@ Feature: cli_init-project
     @success @ac1
     Scenario: Initialize in empty directory creates structure
       Given I am in an empty folder
-      When I run "cc init"
+      When I run "r2r init"
       Then directories "src/", "tests/", "docs/" should exist
 
     # Green Card 1b
     @error @ac1
     Scenario: Initialize in existing project shows error
-      Given I am in a directory with "cc.yaml"
-      When I run "cc init"
+      Given I am in a directory with "r2r.yaml"
+      When I run "r2r init"
       Then the command should fail
       And stderr should contain "already initialized"
 
@@ -339,15 +339,15 @@ Feature: cli_init-project
     @success @ac2
     Scenario: Initialize creates configuration with defaults
       Given I am in an empty folder
-      When I run "cc init"
-      Then a file named "cc.yaml" should be created
+      When I run "r2r init"
+      Then a file named "r2r.yaml" should be created
       And the file should contain valid YAML
 
     # Green Card 2b
     @flag @success @ac2
     Scenario: Initialize with custom name flag
       Given I am in an empty folder
-      When I run "cc init --name my-project"
+      When I run "r2r init --name my-project"
       Then the file should contain "name: my-project"
 
   Rule: Command completes in under 2 seconds
@@ -356,7 +356,7 @@ Feature: cli_init-project
     @success @ac3 @PV
     Scenario: Initialize completes within performance threshold
       Given I am in an empty folder
-      When I run "cc init"
+      When I run "r2r init"
       Then the command should complete within 2 seconds
 ```
 

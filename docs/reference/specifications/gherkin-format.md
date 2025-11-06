@@ -273,8 +273,8 @@ Rule: [Acceptance Criterion]
 | Keyword | Purpose | Example |
 |---------|---------|---------|
 | **Given** | Set up preconditions | `Given I am in an empty folder` |
-| **When** | Perform action | `When I run "cc init"` |
-| **Then** | Assert outcome | `Then a file named "cc.yaml" should be created` |
+| **When** | Perform action | `When I run "r2r init"` |
+| **Then** | Assert outcome | `Then a file named "r2r.yaml" should be created` |
 | **And** | Continue previous keyword | `And the command should exit with code 0` |
 | **But** | Negative continuation | `But the file should not be empty` |
 
@@ -363,7 +363,7 @@ Rule: User authentication must be required
 @success @ac1 @IV
 Scenario: Install creates directory structure
   Given no project exists
-  When I run "cc install"
+  When I run "r2r install"
   Then directories "src/", "tests/", "docs/" are created
 ```
 
@@ -384,7 +384,7 @@ Scenario: Install creates directory structure
 @success @ac2 @PV
 Scenario: Command completes within time limit
   Given a project with 100 files
-  When I run "cc build"
+  When I run "r2r build"
   Then the command completes in under 5 seconds
 ```
 
@@ -406,7 +406,7 @@ Scenario: Command completes within time limit
 @success @ac1
 Scenario: Create new project
   Given I am in an empty directory
-  When I run "cc init my-project"
+  When I run "r2r init my-project"
   Then project "my-project" is created
 ```
 

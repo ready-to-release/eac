@@ -8,46 +8,57 @@ Execute tests at all three layers (ATDD, BDD, TDD).
 
 This guide covers running tests for:
 
-- **ATDD/BDD** - Acceptance criteria (Rules) and behavior scenarios with Godog (unified)
+- **ATDD/BDD** - Acceptance criteria (Rules) and behavior scenarios with Godog (unified in `specification.feature`)
 - **TDD** - Unit tests with Go test
 
 ---
 
 ## Prerequisites
 
-- [Godog configured](./setup-godog.md)
+- Go installed (version 1.21+)
 - Test files created (see [Create Specifications](./create-specifications.md))
-- Step definitions implemented in `src/<module>/tests/`
+- Step definitions implemented in `src/<module>/tests/steps_test.go`
 
 ---
 
 ## Quick Reference
 
 ```bash
-# Run BDD/ATDD tests (from src/)
-cd src/<module>/tests
-go test -v
+# Run ATDD/BDD tests for a module (from project root)
+go test -v ./src/<module>/tests
 
-# Run all tests from project root
-go test -v ./src/...
-
-# Run specific module's tests
-go test -v ./src/commands/tests
-go test -v ./src/cli/tests
+# Run all ATDD/BDD tests
+go test -v ./src/*/tests
 
 # Run with coverage
-cd src/<module>/tests
-go test -v -cover
+go test -v -cover ./src/<module>/tests
 
 # Run TDD unit tests
 go test ./src/<module>
+
+# Run all tests (ATDD/BDD + TDD)
+go test -v ./src/...
 ```
 
 ---
 
 ## ATDD/BDD: Run Godog Tests
 
-**Note**: Godog executes both ATDD (Rule blocks) and BDD (Scenario blocks) from the same specification files.
+**Note**: Godog executes both ATDD (Rule blocks) and BDD (Scenario blocks) from the same `specification.feature` files.
+
+### Understanding the Test Structure
+
+**Specifications** (what to test):
+
+- Located in: `specs/<module>/<feature>/specification.feature`
+- Contains: Feature, Rules (ATDD), and Scenarios (BDD)
+
+**Test Implementations** (how to test):
+
+- Located in: `src/<module>/tests/steps_test.go`
+- Contains: Step definitions that implement the scenarios
+
+**Tests run from**: `src/<module>/tests` directory using `go test`
 
 ### Run All Tests for a Module
 
@@ -66,154 +77,86 @@ go test -v
 **Output**:
 
 ```text
-# Initialize Project
+Feature: AI Commit Message Generation
+  As a developer
+  I want to generate commit messages from staged changes
+  So that I can maintain consistent commit message quality
 
-## Acceptance Tests
+  Rule: Generated commit messages must follow semantic commit format
 
-  ### AC1: Creates project directory structure     ✓
-  ### AC2: Generates valid configuration file     ✓
-
-Specifications: 1 executed     1 passed     0 failed     0 skipped
-Scenarios:      2 executed     2 passed     0 failed     0 skipped
-```
-
-### Run Specific Module
-
-```bash
-gauge run specs/cli/
-gauge run specs/vscode/
-```
-
-### Run Specific Feature
-
-```bash
-gauge run specs/cli/init_project/
-```
-
-### Run with Tags
-
-```bash
-# Run only critical tests
-gauge run --tags "critical" specs/
-
-# Run only performance tests
-gauge run --tags "performance" specs/
-
-# Run critical CLI tests (AND)
-gauge run --tags "cli & critical" specs/
-
-# Exclude WIP tests (NOT)
-gauge run --tags "!wip" specs/
-```
-
-### Generate HTML Report
-
-```bash
-gauge run --html-report specs/
-```
-
-**Report location**: `test-results/gauge/html-report/index.html`
-
-**Open report**:
-
-```bash
-# macOS
-open test-results/gauge/html-report/index.html
-
-# Linux
-xdg-open test-results/gauge/html-report/index.html
-
-# Windows
-start test-results/gauge/html-report/index.html
-```
-
-### Run in Parallel
-
-```bash
-# Run with 4 parallel streams
-gauge run -p=4 specs/
-
-# Use all available cores
-gauge run -p specs/
-```
-
-### Validate Without Running
-
-```bash
-# Check specs are valid
-gauge validate specs/
-
-# Validate specific feature
-gauge validate specs/cli/init_project/
-```
-
----
-
-## BDD: Run Godog Tests
-
-### Run All Behavior Tests
-
-```bash
-godog specs/**/behavior.feature
-```
-
-**Output**:
-
-```text
-Feature: Initialize project command behavior
-
-  Scenario: Initialize in empty directory creates structure
-    Given I am in an empty folder
-    When I run "cc init"
-    Then directories should exist                            ✓
+    Scenario: Generate commit message from staged changes         # specs/src-commands/ai-commit-generation/specification.feature:15
+      Given I have staged changes in the repository
+      When I run the commit generation command
+      Then a commit message should be generated
+      And the message should follow semantic commit format
 
 2 scenarios (2 passed)
-6 steps (6 passed)
+8 steps (8 passed)
 ```
 
-### Run Specific Module
+### Run Tests from Project Root
 
 ```bash
-godog specs/cli/**/behavior.feature
-godog specs/vscode/**/behavior.feature
-```
+# Run specific module's tests
+go test -v ./src/commands/tests
+go test -v ./src/cli/tests
 
-### Run Specific Feature
-
-```bash
-godog specs/cli/init_project/behavior.feature
+# Run all ATDD/BDD tests
+go test -v ./src/*/tests
 ```
 
 ### Run with Tags
+
+Tags in the `specification.feature` files can filter which scenarios run:
 
 ```bash
 # Run only success scenarios
-godog --tags="@success" specs/**/behavior.feature
+cd src/<module>/tests
+go test -v -godog.tags="@success"
 
 # Run only error scenarios
-godog --tags="@error" specs/**/behavior.feature
+go test -v -godog.tags="@error"
 
-# Run critical tests (AND)
-godog --tags="@success && @cli" specs/**/behavior.feature
+# Run critical tests
+go test -v -godog.tags="@critical"
+
+# Run specific acceptance criterion scenarios
+go test -v -godog.tags="@ac1"
+
+# Run by module tag
+go test -v -godog.tags="@cli"
+
+# Combine tags with AND
+go test -v -godog.tags="@success && @cli"
 
 # Exclude WIP tests (NOT)
-godog --tags="~@wip" specs/**/behavior.feature
-
-# Run specific acceptance criterion
-godog --tags="@ac1" specs/**/behavior.feature
+go test -v -godog.tags="~@wip"
 ```
 
 ### Run by Verification Type
 
 ```bash
 # Installation Verification only
-godog --tags="@IV" specs/**/behavior.feature
+go test -v -godog.tags="@IV"
 
 # Performance Verification only
-godog --tags="@PV" specs/**/behavior.feature
+go test -v -godog.tags="@PV"
 
-# Operational Verification only (default scenarios)
-godog --tags="~@IV && ~@PV" specs/**/behavior.feature
+# Operational Verification only (default, no tags)
+go test -v -godog.tags="~@IV && ~@PV"
+```
+
+### Run with Coverage
+
+```bash
+cd src/<module>/tests
+go test -v -cover
+
+# Generate coverage profile
+go test -v -coverprofile=coverage.out
+
+# View coverage in browser
+go tool cover -html=coverage.out
 ```
 
 ### Generate Reports
@@ -221,44 +164,43 @@ godog --tags="~@IV && ~@PV" specs/**/behavior.feature
 #### JUnit XML (for CI/CD)
 
 ```bash
-godog --format=junit:test-results/godog.xml specs/**/behavior.feature
+cd src/<module>/tests
+go test -v -godog.format=junit > test-results/godog.xml
 ```
 
-#### Cucumber JSON
+#### Multiple Output Formats
 
 ```bash
-godog --format=cucumber:test-results/godog.json specs/**/behavior.feature
-```
-
-#### Multiple Formats
-
-```bash
-godog --format=pretty \
-      --format=junit:test-results/godog.xml \
-      --format=cucumber:test-results/godog.json \
-      specs/**/behavior.feature
+cd src/<module>/tests
+go test -v -godog.format=pretty -godog.format=junit:test-results/godog.xml
 ```
 
 #### Separate Reports by Verification Type
 
 ```bash
+cd src/<module>/tests
+
 # Installation Verification report
-godog --tags="@IV" --format=junit:test-results/iv-godog.xml specs/**/behavior.feature
+go test -v -godog.tags="@IV" -godog.format=junit:test-results/iv-godog.xml
 
 # Performance Verification report
-godog --tags="@PV" --format=junit:test-results/pv-godog.xml specs/**/behavior.feature
+go test -v -godog.tags="@PV" -godog.format=junit:test-results/pv-godog.xml
 
 # Operational Verification report
-godog --tags="~@IV && ~@PV" --format=junit:test-results/ov-godog.xml specs/**/behavior.feature
+go test -v -godog.tags="~@IV && ~@PV" -godog.format=junit:test-results/ov-godog.xml
 ```
 
-### Run via Go Test
+### Run Specific Feature
+
+While specifications live in `specs/`, tests run from `src/`:
 
 ```bash
-# Run as Go test
-cd specs/cli/init_project
+# Run tests for a specific module (which reads its specs automatically)
+cd src/commands/tests
 go test -v
-cd ../../..
+
+# The test runner automatically finds specs at:
+# specs/src-commands/*/specification.feature
 ```
 
 ---
@@ -274,8 +216,8 @@ go test ./...
 **Output**:
 
 ```text
-ok      github.com/simply-cli/cli/src/cli    0.123s
-ok      github.com/simply-cli/cli/src/mcp    0.089s
+ok      github.com/ready-to-release/eac/src/cli    0.123s
+ok      github.com/ready-to-release/eac/src/mcp    0.089s
 ```
 
 ### Run with Verbose Output
@@ -320,8 +262,8 @@ go tool cover -func=coverage.out
 **Example coverage output**:
 
 ```text
-ok      github.com/simply-cli/cli/src/cli    0.123s  coverage: 85.7% of statements
-ok      github.com/simply-cli/cli/src/mcp    0.089s  coverage: 92.3% of statements
+ok      github.com/ready-to-release/eac/src/cli    0.123s  coverage: 85.7% of statements
+ok      github.com/ready-to-release/eac/src/mcp    0.089s  coverage: 92.3% of statements
 ```
 
 ### Run with Race Detection
@@ -333,11 +275,11 @@ go test -race ./...
 ### Run Tests by Feature ID
 
 ```bash
-# Find all tests for a feature
-grep -r "Feature: init_project" src/ tests/
+# Find all tests for a feature by Feature ID
+grep -r "Feature: cli_init-project" src/
 
-# Run specific package containing the feature
-go test ./src/cli/init/...
+# Run the tests for that module
+go test -v ./src/cli/tests
 ```
 
 ---
@@ -350,14 +292,11 @@ go test ./src/cli/init/...
 #!/bin/bash
 # Run all tests in sequence
 
-echo "Running ATDD acceptance tests..."
-gauge run specs/
-
-echo "Running BDD behavior tests..."
-godog specs/**/behavior.feature
+echo "Running ATDD/BDD tests (Godog via go test)..."
+go test -v ./src/*/tests
 
 echo "Running TDD unit tests..."
-go test ./...
+go test -v ./src/...
 
 echo "All tests completed!"
 ```
@@ -373,25 +312,18 @@ set -e
 echo "=== Running All Tests ==="
 echo
 
-echo "=== ATDD: Gauge Acceptance Tests ==="
-gauge run --html-report specs/
-echo
-
-echo "=== BDD: Godog Behavior Tests ==="
-godog --format=pretty \
-      --format=junit:test-results/godog.xml \
-      specs/**/behavior.feature
+echo "=== ATDD/BDD: Godog Tests (via go test) ==="
+go test -v ./src/*/tests
 echo
 
 echo "=== TDD: Go Unit Tests ==="
-go test -v -coverprofile=coverage.out ./...
+go test -v -coverprofile=coverage.out ./src/...
 go tool cover -func=coverage.out
 echo
 
 echo "=== Test Summary ==="
-echo "Gauge report: test-results/gauge/html-report/index.html"
-echo "Godog report: test-results/godog.xml"
 echo "Coverage report: coverage.out"
+echo "View coverage: go tool cover -html=coverage.out"
 echo
 echo "✅ All tests completed!"
 ```
@@ -433,30 +365,22 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Install Gauge
-        run: |
-          curl -SsL https://downloads.gauge.org/stable | sh
-          gauge install go
-
-      - name: Install Godog
-        run: go install github.com/cucumber/godog/cmd/godog@latest
-
-      - name: Run ATDD Tests (Gauge)
-        run: gauge run --html-report specs/
-
-      - name: Run BDD Tests (Godog)
-        run: |
-          godog --format=pretty \
-                --format=junit:test-results/godog.xml \
-                specs/**/behavior.feature
+      - name: Run ATDD/BDD Tests (Godog via go test)
+        run: go test -v ./src/*/tests
 
       - name: Run TDD Tests (Go)
-        run: go test -v -coverprofile=coverage.out ./...
+        run: go test -v -coverprofile=coverage.out ./src/...
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v3
         with:
           files: ./coverage.out
+
+      - name: Generate Test Reports
+        if: always()
+        run: |
+          # Generate JUnit reports for ATDD/BDD tests
+          go test -v -godog.format=junit:test-results/atdd-bdd.xml ./src/*/tests
 
       - name: Upload Test Results
         if: always()
@@ -472,6 +396,7 @@ jobs:
 
 ## Related Documentation
 
-- [Godog Commands](../../reference/specifications/godog-commands.md) - Full Godog reference
+- [Create Specifications](./create-specifications.md) - How to write specification files
+- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Feature file syntax
 - [TDD Format](../../reference/specifications/tdd-format.md) - Unit test patterns
-- [Three-Layer Approach](../../explanation/specifications/three-layer-approach.md) - Understanding the approach
+- [Three-Layer Approach](../../explanation/specifications/three-layer-approach.md) - Understanding ATDD/BDD/TDD
