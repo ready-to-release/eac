@@ -2,7 +2,7 @@
 
 moniker: "src-repository-reports"
 name: "Report generators for repository file analysis"
-type: "go-tool"
+type: "go-library"
 description: "Standalone Go module for generating repository file and module reports"
 
 parent: "src-repository"

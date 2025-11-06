@@ -2,7 +2,7 @@
 
 moniker: "src-commands-tests"
 name: "BDD/Godog integration tests for src-commands"
-type: "go-test-module"
+type: "go-tests"
 description: "Godog BDD tests with isolated dependencies"
 
 parent: "src-commands"

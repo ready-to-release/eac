@@ -2,7 +2,7 @@
 
 moniker: "src-contracts-reports"
 name: "Report generators for contract analysis"
-type: "go-tool"
+type: "go-library"
 description: "Standalone Go module for generating contract and module reports"
 
 parent: "src-contracts"

@@ -2,7 +2,7 @@
 
 moniker: "src-mcp-github"
 name: "Go GitHub MCP Server"
-type: "mcp-server"
+type: "go-mcp"
 description: "Internal MCP server for GitHub API integration"
 required_env: ['GITHUB_TOKEN']
 

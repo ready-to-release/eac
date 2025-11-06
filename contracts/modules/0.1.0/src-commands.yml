@@ -2,7 +2,7 @@
 
 moniker: "src-commands"
 name: "Go library to contain .sh and .ps1 -like, directly invocable, go shell scripts"
-type: "go-library"
+type: "go-commands"
 description: "Go library to contain shell scripts"
 
 source:
