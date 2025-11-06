@@ -229,7 +229,7 @@ Scenario: RC-001 - User authentication required
 @success @ac1 @risk1
 Scenario: Login with valid credentials
   Given I have valid credentials
-  When I run "simply login"
+  When I run "r2r login"
   Then I should be authenticated
 ```
 

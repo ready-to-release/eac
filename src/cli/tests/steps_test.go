@@ -1,14 +1,20 @@
-// Godog BDD step definitions for src-commands features
+// Godog BDD step definitions for src-cli features
 //
 // Features:
-// - specs/src-commands/ai-commit-generation/
-// - specs/src-commands/build-module/
+// - specs/src-cli/cli-invocation/
+// - specs/src-cli/verify-configuration/
+//
+// Prerequisites:
+// - Requires pre-built executable from "build module src-cli"
+// - Executable location: out/src-cli/r2r-cli (or r2r-cli.exe on Windows)
 package tests
 
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/cucumber/godog"
@@ -19,6 +25,7 @@ type testContext struct {
 	commandOutput string
 	exitCode      int
 	commandError  error
+	executablePath string
 }
 
 var ctx *testContext
@@ -28,13 +35,24 @@ var ctx *testContext
 // ============================================================================
 
 func iRun(cmdLine string) error {
+	// Parse the command line
 	parts := strings.Fields(cmdLine)
-	if len(parts) < 3 || parts[0] != "go" || parts[1] != "run" {
-		return fmt.Errorf("invalid command format: %s", cmdLine)
+	if len(parts) == 0 {
+		return fmt.Errorf("empty command")
 	}
 
-	args := parts[3:] // Skip "go run ."
-	return runCommandWithArgs(args...)
+	// Check if this is a command that should use the built executable
+	if parts[0] == "simply" || parts[0] == "r2r" {
+		// Verify executable exists
+		if ctx.executablePath == "" {
+			return fmt.Errorf("executable not found - please run 'build module src-cli' first")
+		}
+
+		// Replace command with executable path
+		parts[0] = ctx.executablePath
+	}
+
+	return runCommandWithArgs(parts...)
 }
 
 func theExitCodeIs(expectedCode int) error {
@@ -45,28 +63,11 @@ func theExitCodeIs(expectedCode int) error {
 	return nil
 }
 
-func theExitCodeIsOr(code1, code2 int) error {
-	if ctx.exitCode == code1 || ctx.exitCode == code2 {
-		return nil
-	}
-	return fmt.Errorf("expected exit code %d or %d, got %d. Output:\n%s",
-		code1, code2, ctx.exitCode, ctx.commandOutput)
-}
-
 func iShouldSee(text string) error {
 	if !strings.Contains(ctx.commandOutput, text) {
 		return fmt.Errorf("expected output to contain '%s', got:\n%s", text, ctx.commandOutput)
 	}
 	return nil
-}
-
-func iShouldSeeOr(text1, text2 string) error {
-	if strings.Contains(ctx.commandOutput, text1) ||
-		strings.Contains(ctx.commandOutput, text2) {
-		return nil
-	}
-	return fmt.Errorf("expected output to contain one of '%s' or '%s', got:\n%s",
-		text1, text2, ctx.commandOutput)
 }
 
 func iShouldSeeOrOr(text1, text2, text3 string) error {
@@ -79,34 +80,32 @@ func iShouldSeeOrOr(text1, text2, text3 string) error {
 		text1, text2, text3, ctx.commandOutput)
 }
 
-func iShouldSeeOrOrOr(text1, text2, text3, text4 string) error {
-	if strings.Contains(ctx.commandOutput, text1) ||
-		strings.Contains(ctx.commandOutput, text2) ||
-		strings.Contains(ctx.commandOutput, text3) ||
-		strings.Contains(ctx.commandOutput, text4) {
-		return nil
-	}
-	return fmt.Errorf("expected output to contain one of '%s', '%s', '%s', or '%s', got:\n%s",
-		text1, text2, text3, text4, ctx.commandOutput)
-}
-
-func iShouldSeeOnStderr(text string) error {
-	if !strings.Contains(ctx.commandOutput, text) {
-		return fmt.Errorf("expected '%s' in stderr/output", text)
-	}
-	return nil
-}
-
-func iRunOr(cmd1, cmd2, cmd3 string) error {
-	return iRun("go run . " + cmd1)
-}
-
 // ============================================================================
 // Setup/Initialization
 // ============================================================================
 
 func initializeContext() error {
 	ctx = &testContext{}
+
+	// Find the pre-built executable
+	// Expected location: out/src-cli/r2r-cli (or r2r-cli.exe on Windows)
+	workspaceRoot := filepath.Join("..", "..", "..")
+
+	// Try both with and without .exe extension (works on all platforms)
+	possiblePaths := []string{
+		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli.exe"), // Windows
+		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli"),     // Linux/Mac
+	}
+
+	for _, execPath := range possiblePaths {
+		if _, err := os.Stat(execPath); err == nil {
+			absPath, _ := filepath.Abs(execPath)
+			ctx.executablePath = absPath
+			break
+		}
+	}
+
+	// If executable not found, tests will fail with helpful error message
 	return nil
 }
 
@@ -115,9 +114,8 @@ func initializeContext() error {
 // ============================================================================
 
 func runCommandWithArgs(args ...string) error {
-	cmdArgs := append([]string{"run", "."}, args...)
-	cmd := exec.Command("go", cmdArgs...)
-	cmd.Dir = ".." // src/commands directory
+	cmd := exec.Command(args[0], args[1:]...)
+	// Don't set cmd.Dir - we want to run from current directory
 
 	output, err := cmd.CombinedOutput()
 	ctx.commandOutput = string(output)
@@ -148,15 +146,9 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 
 	// All steps
 	sc.Step(`^I run "([^"]*)"$`, iRun)
-	sc.Step(`^I run "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iRunOr)
-	sc.Step(`^I run "([^"]*)", "([^"]*)", or "([^"]*)"$`, iRunOr)
 	sc.Step(`^the exit code is (\d+)$`, theExitCodeIs)
-	sc.Step(`^the exit code is (\d+) or the exit code is (\d+)$`, theExitCodeIsOr)
 	sc.Step(`^I should see "([^"]*)"$`, iShouldSee)
-	sc.Step(`^I should see "([^"]*)" or "([^"]*)"$`, iShouldSeeOr)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOr)
-	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOrOr)
-	sc.Step(`^I should see "([^"]*)" on stderr$`, iShouldSeeOnStderr)
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {

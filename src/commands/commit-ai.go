@@ -107,7 +107,7 @@ func CommitAI() int {
 	// Output for VSCode extension to detect
 	fmt.Println(">>>>>>OUTPUT START<<<<<<")
 	fmt.Println(cleanedOutput)
-	fmt.Println("\n---\n")
+	fmt.Println("\n---")
 
 	// Print verification results
 	if len(validationErrors) == 0 {

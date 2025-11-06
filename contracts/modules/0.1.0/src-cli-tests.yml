@@ -1,0 +1,21 @@
+moniker: src-cli-tests
+name: BDD/Godog integration tests for src-cli
+type: go-tests
+description: Godog BDD tests with isolated dependencies
+parent: src-cli
+
+versioning:
+  version_scheme: semver
+
+source:
+  root: src/cli/tests
+  includes:
+    - '**/*'
+    - '*'
+  changelog_path: src/cli/tests/CHANGELOG.md
+  exclude_children_owned_source: true
+
+depends_on:
+  - src-cli
+
+used_by: []

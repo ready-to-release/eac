@@ -4,7 +4,9 @@
 
 Environments are the foundation of the Continuous Delivery Model. Each environment serves a specific purpose in the software delivery pipeline, from local development through production deployment. Understanding environment types, their characteristics, and their relationships is essential for implementing an effective CD Model.
 
-Traditional approaches often rely on long-lived, shared environments that create bottlenecks and inconsistencies. The CD Model reimagines environments as purpose-built, often ephemeral resources that enable parallel execution, rapid feedback, and consistent infrastructure.
+Traditional approaches often rely on long-lived, shared environments that created inter-team bottlenecks and inconsistencies. The CD Model reimagines environments as purpose-built, often ephemeral resources that enable parallel execution, rapid feedback, and consistent infrastructure.
+
+Doing this, we are "controlling the variables" of our verification processes, making our verifications more deterministic and thereby trustworthy.
 
 ### Traditional vs Modern Approach
 
@@ -102,7 +104,7 @@ Build Agents are dedicated CI/CD pipeline runners that provide consistent, repro
 
 **Infrastructure:**
 
-- Containerized runners (Docker, Kubernetes)
+- Containerized runners (Docker, Kubernetes or vendor PasS)
 - Ephemeral execution environments
 - Infrastructure as Code for consistency
 
@@ -121,6 +123,7 @@ PLTEs are ephemeral, isolated environments that emulate production characteristi
 - Realistic test data (anonymized if necessary)
 - Isolated per feature branch or release candidate
 - Ephemeral - created on-demand, destroyed after testing
+- Can come as a series of environments with different toggle settings
 
 **Purpose in CD Model:**
 
@@ -137,7 +140,7 @@ PLTEs are ephemeral, isolated environments that emulate production characteristi
 
 **Implementation:**
 
-- Infrastructure as Code (Terraform, CloudFormation)
+- Infrastructure as Code (Terraform, CloudFormation, Bicep etc.)
 - Automated provisioning and teardown
 - Database snapshots or seed data
 - Network isolation for security
@@ -159,7 +162,8 @@ The Demo (or "Trunk Demo") environment provides a stable, production-like enviro
 - Longer-lived than PLTEs (days to weeks)
 - Accessible to non-technical stakeholders
 - Production-like without production data
-- May represent "next release" features
+- Represent "next release" features
+- Can come as a series of demo environments with different toggle settings
 
 **Purpose in CD Model:**
 
@@ -384,14 +388,14 @@ The Production environment is where software serves end users and delivers busin
 
 1. **Infrastructure as Code**: Define environments as code for consistency
 2. **Ephemeral PLTEs**: Implement on-demand PLTE creation and automated testing
-3. **Agent Segregation**: Separate Build and Deploy Agents with network isolation
+3. **Agent Segregation**: Separate Build and Deploy Agents with network isolation, if required
 4. **Production Readiness**: Add deployment strategies, monitoring, and automated rollback
 
 ---
 
 ## Infrastructure as Code Integration
 
-Infrastructure as Code (IaC) ensures all environments are created from the same definitions, providing consistency, version control, and automated provisioning. Use Terraform/CloudFormation for cloud infrastructure, Docker for packaging, and Kubernetes for orchestration.
+Infrastructure as Code (IaC) ensures all environments are created from the same definitions, providing consistency, version control, and automated provisioning. Use Terraform/CloudFormation/Bicep for cloud infrastructure, Docker for packaging, docker compose for emulation and Kubernetes or vendor PaaS for PLTE and production orchestration.
 
 **Ephemeral PLTE Lifecycle:**
 

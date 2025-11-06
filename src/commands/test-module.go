@@ -14,6 +14,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/contracts/modules"
 	"github.com/ready-to-release/eac/src/contracts/reports"
+	"github.com/ready-to-release/eac/src/reports/cucumber"
 )
 
 func init() {
@@ -98,21 +99,23 @@ func TestModule() int {
 		return 1
 	}
 
-	// Purge existing output directory for this module
-	outputDir := filepath.Join(workspaceRoot, "out", moniker)
-	if err := os.RemoveAll(outputDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to purge output directory: %v\n", err)
+	// Create test-run-id directory (timestamp-based)
+	testRunID := time.Now().Format("2006-01-02-150405")
+	testRunDir := filepath.Join(workspaceRoot, "out", "test-results", testRunID)
+	if err := os.MkdirAll(testRunDir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to create test run directory: %v\n", err)
 		return 1
 	}
 
-	// Create fresh output directory
+	// Create module output directory within test run
+	outputDir := filepath.Join(testRunDir, moniker)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
 		return 1
 	}
 
 	// Create test log file
-	logPath := filepath.Join(outputDir, fmt.Sprintf("test-%s.log", time.Now().Format("2006-01-02-150405")))
+	logPath := filepath.Join(outputDir, "test.log")
 	logFile, err := os.Create(logPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to create log file: %v\n", err)
@@ -124,6 +127,7 @@ func TestModule() int {
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 
 	// Print header to both console and log
+	fmt.Fprintf(multiWriter, "Test Run ID: %s\n", testRunID)
 	fmt.Fprintf(multiWriter, "Testing module: %s (type: %s)\n", moniker, module.Type)
 	fmt.Fprintf(multiWriter, "Module root: %s\n", module.Source.Root)
 	fmt.Fprintf(multiWriter, "Output directory: %s\n", outputDir)
@@ -131,7 +135,20 @@ func TestModule() int {
 	fmt.Fprintf(multiWriter, "Report format: %s\n", reportFormat)
 
 	// Execute the test function with output directory, log writer, and report format
-	return testFunc(module, workspaceRoot, outputDir, multiWriter, reportFormat)
+	exitCode := testFunc(module, workspaceRoot, outputDir, multiWriter, reportFormat)
+
+	// Print summary
+	fmt.Println("\n===========================================")
+	fmt.Printf("Test Run Summary (ID: %s)\n", testRunID)
+	fmt.Println("===========================================")
+	if exitCode == 0 {
+		fmt.Printf("✅ Module %s passed\n", moniker)
+	} else {
+		fmt.Printf("❌ Module %s failed with exit code %d\n", moniker, exitCode)
+	}
+	fmt.Printf("Results directory: %s\n", outputDir)
+
+	return exitCode
 }
 
 // testGoCLI tests a Cobra CLI binary (Pattern A)
@@ -204,7 +221,15 @@ func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir
 	}
 
 	// Run go test - Godog will read format from test code via environment
-	return runTestCommandWithEnv(moduleRoot, logWriter, env, "go", "test", "-v")
+	exitCode := runTestCommandWithEnv(moduleRoot, logWriter, env, "go", "test", "-v")
+
+	// Generate summary.md if cucumber.json was created
+	if reportFormat == "cucumber" && exitCode == 0 {
+		fmt.Fprintf(logWriter, "\n=== Generating summary.md ===\n")
+		generateSummaryMarkdown(module.Moniker, workspaceRoot, outputDir, logWriter)
+	}
+
+	return exitCode
 }
 
 // runTestCommand executes a test command in the specified directory
@@ -245,4 +270,34 @@ func runTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]strin
 
 	fmt.Fprintf(logWriter, "\n✅ Tests passed\n")
 	return 0
+}
+
+// generateSummaryMarkdown generates summary.md from cucumber.json
+func generateSummaryMarkdown(moniker string, workspaceRoot string, outputDir string, logWriter io.Writer) {
+	cucumberPath := filepath.Join(outputDir, "cucumber.json")
+	summaryPath := filepath.Join(outputDir, "summary.md")
+
+	// Parse cucumber.json
+	report, err := cucumber.ParseFile(cucumberPath)
+	if err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to parse cucumber.json: %v\n", err)
+		return
+	}
+
+	fmt.Fprintf(logWriter, "Found %d features\n", len(report))
+
+	// Generate summary markdown with Appendix A
+	var summary string
+	summary += "# Test Summary\n\n"
+	summary += cucumber.RenderAllFeatures(report, nil)
+	summary += "\n---\n\n"
+	summary += cucumber.RenderAppendixA(report, workspaceRoot)
+
+	// Write summary.md
+	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to write summary.md: %v\n", err)
+		return
+	}
+
+	fmt.Fprintf(logWriter, "✅ Generated: %s\n", summaryPath)
 }

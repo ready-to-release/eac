@@ -2,13 +2,15 @@
 
 ## Introduction
 
-Trunk-Based Development (TBD) is the branching strategy that enables Continuous Integration and Continuous Delivery. Instead of long-lived feature branches that delay integration, TBD emphasizes frequent integration to a single main branch (trunk), enabling rapid feedback and reducing merge conflicts.
+**Trunk-Based Development (TBD) is the branching strategy that enables Continuous Integration and Continuous Delivery.**
+
+Instead of long-lived feature branches that defers integration, TBD emphasizes frequent integration to a single main branch (trunk), enabling rapid feedback and reducing merge conflicts.
 
 This approach is fundamental to achieving:
 
 - **Continuous Integration**: All developers integrate to trunk at least daily
-- **Continuous Delivery**: Trunk is always in a releasable state
-- **Fast feedback**: Issues detected within hours, not weeks
+- **Continuous Delivery**: Head of Trunk is always in a releasable state
+- **Fast feedback**: Issues detected within seconds to minutes, not weeks to months
 - **Reduced risk**: Small, incremental changes are easier to validate and rollback
 
 ### Integration with CD Model
@@ -16,8 +18,8 @@ This approach is fundamental to achieving:
 Trunk-Based Development directly supports several CD Model stages:
 
 - **Stage 1 (Authoring)**: Work on short-lived topic branches
-- **Stage 3 (Merge Request)**: Squash-merge topic branches to trunk
-- **Stage 4 (Commit)**: Trunk commits trigger full validation
+- **Stage 3 (Merge Request)**: Rebase downstream and Squash-merge topic branches upstream to trunk
+- **Stage 4 (Commit)**: Trunk commits always trigger full validation
 - **Stage 8 (Start Release)**: Create release branches from trunk (RA pattern)
 - **Stage 12 (Release Toggling)**: Feature flags enable trunk-based development for incomplete features
 
@@ -31,13 +33,16 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
 
 **Principle:** _There is only ever one meaningful version of the code: the current one._
 
+`main` is always in a releasable state:
+
 - The `main` branch (trunk) is the only source of truth
+- the `HEAD` of `main` commit is the current development version
+- the `HEAD` of `main` commit is the current next release version, unless there is an active release branch (RA), in which case it is the `HEAD` of that `release-` branch.
 - All changes integrate to `main` frequently (at least daily)
-- `main` is always in a releasable state
 
 **Why this matters:**
 
-- Eliminates confusion about which version is current
+- Eliminates confusion about which version is next release candidate
 - Enables continuous delivery from trunk
 - Reduces integration debt
 - Provides clear traceability
@@ -50,10 +55,11 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
 
 - Topic branches live for hours or at most 1-2 days
 - Changes are kept small and focused
-- Branches are deleted immediately after merging
+- Branches are deleted immediately after squash merging
 
 **Why this matters:**
 
+- Only ever one timeline (+ release branches for RA) to revision.
 - Prevents integration drift
 - Enables continuous integration
 - Reduces merge conflicts
@@ -66,8 +72,9 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
 **Principle:** _Work in small batches that are continuously integrated._
 
 - Each change is a small, logical increment
-- Large features broken into deployable pieces
+- Large features broken into hidden, but deployable, pieces
 - Feature hiding used for incomplete features
+- Feature flagging used to demo or a-b test or release features
 
 **Why this matters:**
 
@@ -95,13 +102,35 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
 
 **Anti-pattern to avoid:** Developers working in isolation for days/weeks before attempting integration.
 
+### 5. Branch by abstraction
+
+**Principle:** _Instead of branching out for a feature, make an abstraction in the production code that can be toggled off (hidden)_
+
+- Developers learn how to branch by abstration, as an alternative to feature branching
+
+**Why this matters:**
+
+- The Branch by abstraction tecnique is a key enabler for the developer to work with continuous integration.
+- Many developers are schooled to always hide new features in branches and see the point of integration as the merging of that big branch
+- Developers will fall back to old learnings, when the delay in CI becomes to big
+
+**Anti-pattern to avoid:** Developers working in isolation for days/weeks before attempting integration.
+
 ---
 
 ## Branch Types and Flow
 
 ![Branching Overview](../../../assets/branching/branching-overview.drawio.png)
 
-**This diagram shows the three active branch types and their relationships:** The **trunk** (center) is the single source of truth. **Topic branches** (left and right) branch from trunk or release branches for short-lived development work. Changes on topic branches are squash-merged back, resulting in one topic branch creating exactly one commit on the destination branch. **Release branches** (bottom) branch from trunk at Stage 8 for the Release Approval pattern. Topic branches can also become spikes (experimental work) that never merge back. All paths to trunk and release branches go through merge requests, never direct commits.
+> Diagram shows the three active branch types and their relationships
+
+1. The **trunk** (center) is the single source of truth, giving us the revisonable timeline.
+1. **Topic branches** (below trunk in illustration) branch from trunk or release branches for short-lived development work.
+   Changes on topic branches are squash-merged back, resulting in one topic branch creating exactly one commit on the destination branch.
+   **Topic branches** also comes in a variant where they branch off of a release branch, in which case we call them **Release Topic branches**
+1. **Release branches** (above trunk in illustration) branch from trunk at [Stage 8 for the Release Approval pattern](../cd-model/cd-model-stages-7-12.md#stage-8-start-release).
+   Topic branches can also become spikes (experimental work) that never merge back.
+   All paths to trunk and release branches go through merge requests, never direct commits.
 
 ### Trunk Branch (Main)
 
@@ -200,14 +229,51 @@ In trunk-based development, a **commit** refers specifically to commits made to 
 
 **Key Principles:**
 
-- Local commits on topic branches are temporary
+- Local commits on topic branches are temporary and have no lasting git history
 - Only squash-merged commits to trunk/release branches are lasting
 - Trunk and release branch history are straight lines
 - Each topic branch integration = one commit
 
 **Commit Format:**
 
-Commits follow semantic commit conventions:
+Commits follow semantic commit conventions.
+
+**Commit format for poly repo**:
+
+```text
+type(scope): short description
+
+Longer description if needed.
+
+Related to #123
+```
+
+**Commit format for mono repo, affecting multiple modules**:
+
+```text
+multi-module: type(scope): short summary
+
+(...)
+
+module_a: type(scope): short description
+
+Longer description if needed.
+
+Related to #123
+
+(...)
+
+module_b: type(scope): short description
+
+Longer description if needed.
+
+Related to #321
+
+```
+
+**Commit format for mono repo, affecting single module**:
+
+> This will just fallback to same format as used for single module repositories (poly).
 
 ```text
 type(scope): short description
@@ -231,24 +297,15 @@ See [Semantic Commits](../../reference/continuous-delivery/semantic-commits.md) 
 
 **Example:**
 
-```mermaid
-flowchart LR
-    subgraph Topic["Topic Branch"]
-        C1["WIP: start"] --> C2["fix typo"]
-        C2 --> C3["review"]
-        C3 --> C4["cleanup"]
-    end
-    subgraph Trunk["Trunk"]
-        C5["feat(api): add auth"]
-    end
-    C4 -->|squash merge| C5
-    style Topic fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    style Trunk fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style C1 fill:#ffccbc
-    style C2 fill:#ffccbc
-    style C3 fill:#ffccbc
-    style C4 fill:#ffccbc
-    style C5 fill:#a5d6a7
+```text
+Topic branch (local):
+  - WIP: start feature
+  - fix typo
+  - address review comments
+  - final cleanup
+
+Trunk (after squash merge):
+  - feat(api): add user authentication endpoint
 ```
 
 ---
@@ -279,7 +336,9 @@ This squash-merges your topic branch to trunk, triggering Stage 4 (Commit) valid
 
 ### The Problem: Incomplete Features in Trunk
 
-When practicing Continuous Integration with small batches, you'll often integrate partial features into trunk. These incomplete features must not affect production behavior.
+When practicing Continuous Integration with small batches, you'll often integrate partial features into trunk.
+
+These incomplete features must not affect production behavior.
 
 **You cannot rely on branches to hide incomplete work** - the work is in trunk, potentially deployed to production.
 
@@ -315,7 +374,7 @@ features:
 **Benefits:** Activation decoupled from deployment
 **Limitation:** Requires redeployment to change config
 
-**Level 3: Feature Flags (Recommended)**:
+**Level 3: Feature Flags**:
 
 Use runtime feature flags for full control:
 
@@ -340,15 +399,15 @@ See [Stages 7-12](../cd-model/cd-model-stages-7-12.md#stage-12-release-toggling)
 
 ### When to Use Each Strategy
 
-| Strategy | Use When | Don't Use When |
-|----------|----------|----------------|
-| Code-Level | Simple internal changes, refactoring | Customer-facing features, high-risk changes |
-| Configuration | Features ready for immediate activation | Need gradual rollout or A/B testing |
+| Strategy      | Use When                                                  | Don't Use When                                  |
+| ------------- | --------------------------------------------------------- | ----------------------------------------------- |
+| Code-Level    | Simple internal changes, refactoring                      | Larger feature sets (complexity not worth it)   |
+| Configuration | Features ready for immediate activation                   | Need gradual rollout or A/B testing             |
 | Feature Flags | Customer-facing features, risky changes, gradual rollouts | Simple internal changes (overhead not worth it) |
 
 ### Branch by Abstraction
 
-For large refactorings, use "branch by abstraction":
+For larger or architectural changes, use "branch by abstraction":
 
 1. Create abstraction layer
 2. Implement new code behind abstraction
@@ -356,7 +415,7 @@ For large refactorings, use "branch by abstraction":
 4. All changes integrated to trunk incrementally
 5. Remove old implementation when migration complete
 
-This avoids long-lived branches for major architectural changes.
+This avoids long-lived branches for these types of changes.
 
 ---
 
@@ -366,12 +425,13 @@ The branching strategy differs based on your release flow.
 
 ### Release Approval (RA) Pattern
 
-**For regulated systems requiring formal approval:**
+**For regulated systems requiring formal change approval:**
 
 1. **Stage 8**: Create release branch from trunk (`release/v1.2.0`)
-2. **Stage 9**: Validate in PLTE, obtain approval
+2. **Stage 9**: Validate in PLTE (automatic) and Demo (exploratively), obtain approval
 3. **Stage 10**: Deploy release branch to production
-4. **Hotfixes**: Create topic branch from release, merge via PR, cherry-pick back to trunk
+4. **Hotfixes**: Fix on main via single commit (via PR) and cherry pick that to release branch via another PR (Recommended).
+   Alternatively: Create release topic branch (from release), merge via PR, cherry-pick back to trunk via another PR (Not recommended, but sometimes neccessary)
 
 **Branch Lifecycle:**
 
@@ -390,7 +450,7 @@ See [Implementation Patterns](../cd-model/implementation-patterns.md#release-app
 3. **Fix-forward or rollback** if issues occur
 4. **Feature flags** provide control instead of branches
 
-**No release branches needed** - trunk IS the release.
+**No release branches needed** - HEAD of trunk IS the release.
 
 See [Implementation Patterns](../cd-model/implementation-patterns.md#continuous-deployment-cde-pattern) for details.
 
@@ -400,7 +460,7 @@ See [Implementation Patterns](../cd-model/implementation-patterns.md#continuous-
 
 ### What is Cherry-Picking?
 
-Cherry-picking copies a commit from one branch to another, creating a new commit with the same changes.
+Cherry-picking copies a commit, or series of commits, from one branch to another, creating a new squashed commit (via PR) with the same changes.
 
 **Primary use case:** Bringing fixes from trunk to release branches.
 
@@ -425,7 +485,7 @@ Cherry-picking copies a commit from one branch to another, creating a new commit
 
 **Only when trunk has diverged significantly and fix is urgent:**
 
-1. Create topic branch from release branch
+1. Create release topic branch from release branch
 2. Implement minimal fix
 3. Merge to release branch
 4. **Immediately cherry-pick to trunk**
@@ -435,7 +495,9 @@ Cherry-picking copies a commit from one branch to another, creating a new commit
 
 ### Emergency Fixes in Production
 
-For critical bugs requiring immediate fixes: Create hotfix topic branch from trunk, make minimal change, test thoroughly, merge to trunk with priority, and cherry-pick to release branch if needed.
+Emergency Fixes in Production follows the exact same procedure as any other change.
+
+This is a fundamental constraint of the model: **The validated path to production is used for all production changes**
 
 ### Git Commands
 
@@ -496,7 +558,8 @@ If these stages take longer than indicated, your changes are too large - break t
 
 ## Conflict Resolution
 
-**Prevention is key:** Pull from trunk frequently (every few hours), keep changes small, and integrate daily. When conflicts occur: pull latest, resolve locally, run tests, commit, and push immediately.
+**Prevention is key:** Pull from trunk frequently (every few hours), keep changes small, and integrate hourly to daily.
+When conflicts occur: pull latest, resolve locally. Remember to rebase main on to your local branch if complex merge.
 
 ---
 

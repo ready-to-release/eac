@@ -2,7 +2,9 @@
 
 ## Introduction
 
-The Unit of Flow is a conceptual framework that divides Continuous Delivery into four discrete, interconnected components. Understanding these components and their relationships is essential for implementing an effective CD Model.
+The Unit of Flow is a conceptual framework that divides Continuous Delivery into four discrete, interconnected components.
+
+Understanding these components and their relationships is essential for implementing an effective CD Model.
 
 ![Unit of Flow Overview](../../../assets/branching/overview-small.drawio.png)
 

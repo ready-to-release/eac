@@ -7,9 +7,15 @@ import (
 	"strings"
 )
 
+// GitContext provides Git repository context for generating GitHub links
+// This is a lightweight interface to avoid circular dependencies
+type GitContext interface {
+	BuildGitHubFileURL(filePath string) string
+}
+
 // RenderTestSummary renders test results in the format shown in implementation-report.md
 // This renders a single feature with its rules and scenarios organized by acceptance criteria
-func RenderTestSummary(feature *Feature) string {
+func RenderTestSummary(feature *Feature, gitCtx GitContext) string {
 	var buf strings.Builder
 
 	// Feature header
@@ -22,8 +28,9 @@ func RenderTestSummary(feature *Feature) string {
 		buf.WriteString(fmt.Sprintf("**User Story**: %s\n", userStory))
 	}
 
-	// Specification link
-	buf.WriteString(fmt.Sprintf("**Specification**: [specification.feature](%s)\n\n", feature.URI))
+	// Specification link - internal link to Appendix A
+	featureName := extractFeatureName(featureID)
+	buf.WriteString(fmt.Sprintf("**Specification**: [specification.feature](#%s)\n\n", featureName))
 
 	// Group scenarios by acceptance criteria
 	scenariosByAC := groupScenariosByAC(feature.Elements)
@@ -66,11 +73,11 @@ func RenderTestSummary(feature *Feature) string {
 }
 
 // RenderAllFeatures renders all features in test summary format
-func RenderAllFeatures(report CucumberReport) string {
+func RenderAllFeatures(report CucumberReport, gitCtx GitContext) string {
 	var buf strings.Builder
 
 	for i, feature := range report {
-		buf.WriteString(RenderTestSummary(&feature))
+		buf.WriteString(RenderTestSummary(&feature, gitCtx))
 
 		// Add separator between features (but not after the last one)
 		if i < len(report)-1 {
@@ -225,4 +232,19 @@ func getStatusIcon(status string) string {
 	default:
 		return "⚫ " + status
 	}
+}
+
+// normalizeFeaturePath normalizes a feature file path from cucumber.json
+// Handles relative paths (e.g., "../../../specs/..." -> "specs/...")
+func normalizeFeaturePath(filePath string) string {
+	// Remove relative path prefixes (../../../ -> "")
+	// Cucumber outputs paths relative to the test directory
+	for strings.HasPrefix(filePath, "../") {
+		filePath = strings.TrimPrefix(filePath, "../")
+	}
+
+	// Normalize path separators to forward slashes
+	filePath = strings.ReplaceAll(filePath, "\\", "/")
+
+	return filePath
 }

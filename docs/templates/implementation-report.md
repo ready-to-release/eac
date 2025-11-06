@@ -89,34 +89,77 @@ Please refer to the Solution Design Documentation document also generated as par
 
 This section shows requirements traceability from features through acceptance criteria to test execution results. Each test scenario is uniquely identifiable, with execution results (automated or manual) linked to the corresponding requirement.
 
-!!! note Example
+<!--{% remove %}-->
+!!! note "Example: Single Module Release"
 
-    **Feature ID**: `api_user-authentication`
-    **User Story**: As a user, I want to authenticate securely, so that I can access protected resources
-    **Specification**: [specification.feature](specs/api/user-authentication/specification.feature)
+    **Feature ID**: `acme-inventory_order-processing`
+    **User Story**: As a warehouse operator, I want to process orders efficiently, so that I can fulfill customer requests on time
+    **Specification**: [specification.feature](specs/acme-inventory/order-processing/specification.feature)
 
-    **Rule 1: System validates user credentials correctly** (AC1)
-
-    | Scenario | Tags | Result |
-    |----------|------|--------|
-    | Valid credentials grant access | @success @ac1 @OV | 🟢 Passed |
-    | Invalid credentials deny access with clear error | @error @ac1 @OV | 🟢 Passed |
-    | Missing credentials return 401 Unauthorized | @error @ac1 @OV | 🟢 Passed |
-
-    **Rule 2: Authentication system installs with secure defaults** (AC2)
+    **Rule 1: System validates order data correctly** (AC1)
 
     | Scenario | Tags | Result |
     |----------|------|--------|
-    | Installation configures TLS with valid certificate | @success @ac2 @IV | 🟢 Passed |
-    | Installation validates certificate configuration | @success @ac2 @IV | 🟢 Passed |
+    | Valid order is accepted | @success @ac1 @OV | 🟢 Passed |
+    | Invalid order is rejected with clear error | @error @ac1 @OV | 🟢 Passed |
+    | Missing product SKU returns 400 Bad Request | @error @ac1 @OV | 🟢 Passed |
 
-    **Rule 3: Authentication meets performance requirements** (AC3)
+    **Rule 2: Order processing system installs with default configuration** (AC2)
 
     | Scenario | Tags | Result |
     |----------|------|--------|
-    | Authentication completes within 500ms | @success @ac3 @PV | 🔴 Failed |
-    | System handles 100 concurrent requests | @success @ac3 @PV | 🟢 Passed |
-    | Authentication maintains memory under 100MB | @success @ac3 @PV | 🟢 Passed |
+    | Installation configures database connection | @success @ac2 @IV | 🟢 Passed |
+    | Installation validates configuration parameters | @success @ac2 @IV | 🟢 Passed |
+
+    **Rule 3: Order processing meets performance requirements** (AC3)
+
+    | Scenario | Tags | Result |
+    |----------|------|--------|
+    | Order processing completes within 2 seconds | @success @ac3 @PV | 🔴 Failed |
+    | System handles 50 concurrent orders | @success @ac3 @PV | 🟢 Passed |
+    | Processing maintains memory under 500MB | @success @ac3 @PV | 🟢 Passed |
+
+!!! note "Example: Multi-Module Release"
+
+    ### Module: acme-api
+
+    **Feature ID**: `acme-api_product-search`
+    **User Story**: As a customer, I want to search for products, so that I can find items to purchase
+    **Specification**: [specification.feature](#product-search)
+
+    **Rule 1** (AC1)
+
+    | Scenario | Tags | Result |
+    |----------|------|--------|
+    | Search returns matching products | @acme-api @success @ac1 | 🟢 Passed |
+    | Empty search returns all products | @acme-api @success @ac1 | 🟢 Passed |
+
+    ---
+
+    **Feature ID**: `acme-api_inventory-check`
+    **User Story**: As a customer, I want to check product availability, so that I know if items are in stock
+    **Specification**: [specification.feature](#inventory-check)
+
+    **Rule 1** (AC1)
+
+    | Scenario | Tags | Result |
+    |----------|------|--------|
+    | Available product shows in-stock status | @acme-api @success @ac1 | 🟢 Passed |
+    | Out-of-stock product shows unavailable | @acme-api @error @ac1 | 🟢 Passed |
+
+    ### Module: acme-reports
+
+    **Feature ID**: `acme-reports_sales-summary`
+    **User Story**: As a manager, I want to view sales summaries, so that I can track business performance
+    **Specification**: [specification.feature](#sales-summary)
+
+    **Rule 1** (AC1)
+
+    | Scenario | Tags | Result |
+    |----------|------|--------|
+    | Daily summary displays total sales | @acme-reports @success @ac1 | 🟢 Passed |
+
+<!--{% endremove %}-->
 
 <!--{% raw %}-->
 {{ dynamic.feature_test_results }}
@@ -160,4 +203,56 @@ Performance verification is conducted in a Production-Like Test Environment (PLT
 
 <!--{% raw %}-->
 {{ dynamic.pv_test_traceability_report }}
+<!--{% endraw %}-->
+
+---
+
+## Appendix A: Specifications and Test Results
+
+<!--{% remove %}-->
+!!! note Example
+
+    ### product-search
+
+    ```gherkin
+    @acme-api @inventory @search @critical
+    Feature: Product Search
+
+    As a customer
+    I want to search for products
+    So that I can find items to purchase
+
+    Rule: Search must handle empty and non-empty queries
+
+        @success @ac1
+        Scenario: Search with keyword returns matching products
+        When I run "acme search widget"
+        Then I should see "Product found" or "No matches"
+
+        @success @ac1
+        Scenario: Empty search returns all products
+        When I run "acme search"
+        Then I should see "All products" or "Product catalog"
+
+    Rule: Search results must be formatted for display
+
+        @success @ac2
+        Scenario: Results contain product details
+        When I run "acme search widget"
+        Then I should see "SKU" or "Price" or "No matches"
+
+        @success @ac2
+        Scenario: Results include availability status
+        When I run "acme search widget"
+        Then I should see "In Stock" or "Out of Stock" or "No matches"
+
+    #### Test result for product-search
+
+    For test results see cucumber.json in release artifact.
+
+    ```
+<!--{% endremove %}-->
+
+<!--{% raw %}-->
+{{ dynamic.specs_and_test_results }}
 <!--{% endraw %}-->
