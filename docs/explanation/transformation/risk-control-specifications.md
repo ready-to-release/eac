@@ -6,9 +6,9 @@ Risk control specifications are the bridge between regulatory requirements and a
 
 This document explains the risk control specification pattern, why Gherkin format is used, and how to create effective specifications that enable automated compliance validation.
 
-**Audience**: Compliance officers, quality assurance teams, engineers, and anyone responsible for implementing or validating compliance requirements.
-
 **What you'll learn**: You'll understand the pattern for expressing compliance requirements as executable specifications, see examples across different regulatory frameworks, and learn how to implement traceability from requirement to evidence.
+
+---
 
 ## The Pattern
 
@@ -28,6 +28,7 @@ Scenario: RC-001 - Authentication required for all access
 ```
 
 **Key characteristics**:
+
 - Uses `@risk<N>` tag for traceability (e.g., @risk1, @risk2)
 - Written in business language, not technical implementation
 - Uses RFC 2119 language (MUST, SHOULD, MAY)
@@ -47,6 +48,7 @@ Scenario: Valid credentials grant access
 ```
 
 **Key characteristics**:
+
 - Links to risk control via `@risk1` tag
 - Written from user perspective
 - Provides concrete, testable example
@@ -60,17 +62,7 @@ The `@risk<N>` tag creates automatic linkage:
 - **Multiple requirements → One implementation**: A single test may satisfy multiple risk controls
 - **Automated matrix generation**: Tools parse tags to generate traceability matrices
 
-**Example traceability**:
-```
-@risk1: Authentication required (RC-001)
-├── Implementation: 3 scenarios
-│   ├── Valid credentials grant access (passing)
-│   ├── Invalid credentials deny access (passing)
-│   └── No credentials block access (passing)
-└── Evidence: test-results/authentication-tests.xml
-    Coverage: 100% (3/3 passing)
-    Status: COMPLIANT
-```
+---
 
 ## Why Gherkin Format?
 
@@ -117,13 +109,15 @@ Gherkin separates specification from implementation:
 
 **Reference**: [Gherkin Format Details](../../reference/specifications/gherkin-format.md)
 
+---
+
 ## Structure of Risk Control Specifications
 
 ### Directory Organization
 
 Risk controls are stored separately from implementation specifications:
 
-```
+```text
 specs/
 └── risk-controls/
     ├── authentication-controls.feature
@@ -133,6 +127,7 @@ specs/
 ```
 
 This separation allows:
+
 - Risk controls to evolve independently from implementations
 - Multiple implementations to reference same controls
 - Clear ownership (compliance office owns risk controls, teams own implementations)
@@ -141,15 +136,14 @@ This separation allows:
 
 ```gherkin
 Feature: Authentication Controls
-
-  Compliance risk controls for user authentication and access management.
-
-  Source:
-    - ISO 27001:2022 A.8.5 (Secure authentication)
-    - GDPR Article 32 (Security of processing)
-
-  Assessment: RISK-ASSESS-2025-01
-  Date: 2025-01-15
+  # Compliance risk controls for user authentication and access management.
+  #
+  # Source:
+  #   - ISO 27001:2022 A.8.5 (Secure authentication)
+  #   - GDPR Article 32 (Security of processing)
+  #
+  # Assessment: RISK-ASSESS-2025-01
+  # Date: 2025-01-15
 
   @risk1
   Scenario: RC-001 - Authentication required for all access
@@ -167,6 +161,7 @@ Feature: Authentication Controls
 ```
 
 **Key elements**:
+
 - **Feature description**: High-level category of controls
 - **Source attribution**: Specific regulatory references
 - **Assessment ID**: Links to risk assessment documentation
@@ -176,11 +171,13 @@ Feature: Authentication Controls
 ### Tagging Convention
 
 **Sequential numbering**: @risk1, @risk2, @risk3...
+
 - Simple and clear
 - Easy to reference in conversation
 - Works well for smaller sets (<100 controls)
 
 **Categorical numbering**: @risk10-19 (authentication), @risk20-29 (data protection)
+
 - Groups related controls
 - Scales to larger control sets
 - Easier to understand control domain from tag
@@ -192,26 +189,32 @@ Feature: Authentication Controls
 Always document where requirements originate:
 
 **ISO 27001 Example**:
-```
+
+```text
 Source: ISO 27001:2022 A.9.2.1 (Access control policy)
 ```
 
 **GDPR Example**:
-```
+
+```text
 Source: GDPR Article 32 (Security of processing)
 ```
 
 **FDA 21 CFR Part 11 Example**:
-```
+
+```text
 Source: FDA 21 CFR Part 11 §11.10(a) (Validation of systems)
 ```
 
 **EMA Annex 11 Example**:
-```
+
+```text
 Source: EMA Annex 11 Section 4.8 (Data)
 ```
 
 **Starting Point**: Use existing SOPs if available, otherwise consult regulations directly. SOPs provide organization-specific context; regulations provide baseline requirements.
+
+---
 
 ## Implementation Specifications
 
@@ -219,7 +222,7 @@ Source: EMA Annex 11 Section 4.8 (Data)
 
 Implementation specifications live with the code they test:
 
-```
+```text
 specs/
 └── [module]/
     └── [feature]/
@@ -227,11 +230,13 @@ specs/
 ```
 
 Example:
-```
+
+```text
 specs/cli/user-authentication/specification.feature
 ```
 
 This co-location ensures:
+
 - Specifications evolve with features
 - Clear ownership by feature teams
 - Easy to find specifications for a feature
@@ -270,106 +275,7 @@ The `@risk1` tag creates the link from this implementation to RC-001 (Authentica
 
 **Reference**: [Link Risk Controls How-to Guide](../../how-to-guides/specifications/link-risk-controls.md)
 
-## Examples by Regulatory Framework
-
-### FDA 21 CFR Part 11 Example
-
-```gherkin
-Feature: FDA 21 CFR Part 11 Electronic Signature Controls
-
-  Source: FDA 21 CFR Part 11 Electronic Records and Signatures
-
-  @risk10
-  Scenario: RC-010 - Electronic signature uniqueness (§11.50)
-    Given a system requiring electronic signatures
-    Then each electronic signature MUST be unique to one individual
-    And electronic signatures MUST NOT be reused or reassigned
-    And the system MUST verify individual identity before signature
-    And signature linkage to record MUST be maintained throughout retention period
-
-  @risk11
-  Scenario: RC-011 - Audit trail for signature events (§11.10(e))
-    Given a system with electronic signature capability
-    Then the system MUST record all signature events
-    And audit trail MUST include date, time, and meaning of signature
-    And audit trail MUST be secure and computer-generated
-    And audit trail entries MUST NOT be modifiable
-```
-
-### EMA Annex 11 Example
-
-```gherkin
-Feature: EMA Annex 11 Computerized System Controls
-
-  Source: EMA EudraLex Volume 4 Annex 11
-
-  @risk20
-  Scenario: RC-020 - Audit trail completeness (Section 9)
-    Given a computerized system processing GxP data
-    Then the system MUST record all data changes in audit trail
-    And audit trail MUST include old and new values
-    And audit trail MUST include user ID and timestamp
-    And audit trail MUST include reason for change when required
-    And audit trail MUST be immutable and independently reviewable
-
-  @risk21
-  Scenario: RC-021 - System validation (Section 4)
-    Given a computerized system used in GxP activities
-    Then the system MUST be validated for its intended use
-    And validation MUST follow a risk-based approach
-    And validation documentation MUST be maintained
-    And system changes MUST trigger revalidation assessment
-```
-
-### ISO 27001:2022 Example
-
-```gherkin
-Feature: ISO 27001 Information Security Controls
-
-  Source: ISO/IEC 27001:2022 Annex A
-
-  @risk30
-  Scenario: RC-030 - Secure authentication (A.8.5)
-    Given a system with classified information
-    Then secure authentication technologies MUST be implemented
-    And authentication strength MUST match information classification
-    And multi-factor authentication SHOULD be used for sensitive resources
-    And authentication credentials MUST be protected in storage and transit
-
-  @risk31
-  Scenario: RC-031 - Logging and monitoring (A.8.15, A.8.16)
-    Given an information system
-    Then event logs MUST be produced and retained
-    And logs MUST include user activities, exceptions, and security events
-    And logs MUST be protected against tampering
-    And logs MUST be regularly reviewed for anomalies
-```
-
-### GDPR Example
-
-```gherkin
-Feature: GDPR Data Protection Controls
-
-  Source: General Data Protection Regulation (EU) 2016/679
-
-  @risk40
-  Scenario: RC-040 - Security of processing (Article 32)
-    Given systems processing personal data
-    Then appropriate technical measures MUST ensure data security
-    And pseudonymization and encryption SHOULD be used where appropriate
-    And confidentiality and integrity MUST be ensured
-    And security measures MUST be regularly tested and evaluated
-
-  @risk41
-  Scenario: RC-041 - Data breach notification (Article 33)
-    Given a personal data breach occurs
-    Then the breach MUST be reported to supervisory authority within 72 hours
-    And notification MUST describe nature of breach
-    And notification MUST include likely consequences
-    And notification MUST describe measures taken or proposed
-```
-
-**Template Reference**: See [Template Catalog](../../reference/templates/index.md) for additional examples.
+---
 
 ## Validation and Coverage
 
@@ -378,69 +284,32 @@ Feature: GDPR Data Protection Controls
 Risk control specifications should be validated for:
 
 **Format**: Proper Gherkin syntax
+
 - Scenarios use Given-When-Then structure
-- Tags follow convention (@risk<N>)
+- Tags follow convention (@risk[N])
 - RFC 2119 language used correctly (MUST/SHOULD/MAY)
 
 **Uniqueness**: No duplicate @risk IDs
+
 - Each control has exactly one tag
 - Tags are sequential or follow naming scheme
 - No conflicts or reuse
 
 **Attribution**: Source standard documented
+
 - Every scenario references specific regulation
 - Section numbers included
 - Assessment ID links to risk assessment
 
 **Coverage**: All requirements have implementations
+
 - Every @risk tag has at least one implementing scenario
 - Traceability matrix shows complete coverage
 - No orphan requirements without tests
 
 **Automation Note**: Validation requires tooling. Ready-to-Release (r2r) CLI tries to help with validation commands.
 
-### Traceability Matrix
-
-Links requirement → test → evidence:
-
-```
-Traceability Report
-Generated: 2025-11-06
-
-@risk1: Authentication required for all access (RC-001)
-  Source: ISO 27001:2022 A.8.5, GDPR Article 32
-
-  Implementation Scenarios: 3
-    ✅ Valid credentials grant access
-       Test: specs/cli/user-authentication/specification.feature:15
-       Result: PASS (test-results/cli-auth.xml:line-45)
-       Evidence: logs/authentication-2025-Q1.log
-       Code: src/cli/auth/authentication.go (commit abc123)
-
-    ✅ Invalid credentials deny access
-       Test: specs/cli/user-authentication/specification.feature:23
-       Result: PASS (test-results/cli-auth.xml:line-67)
-       Evidence: logs/authentication-2025-Q1.log
-
-    ✅ No credentials block access
-       Test: specs/cli/user-authentication/specification.feature:31
-       Result: PASS (test-results/cli-auth.xml:line-89)
-       Evidence: logs/authentication-2025-Q1.log
-
-  Coverage: 100% (3/3 scenarios passing)
-  Evidence Completeness: 100%
-  Status: COMPLIANT
-
-@risk2: Multi-factor authentication for privileged access (RC-002)
-  Source: ISO 27001:2022 A.8.5
-
-  Implementation Scenarios: 2
-    ✅ Admin access requires MFA
-    ✅ MFA failure blocks access
-
-  Coverage: 100% (2/2 scenarios passing)
-  Status: COMPLIANT
-```
+---
 
 ## Best Practices
 
@@ -500,6 +369,8 @@ Generated: 2025-11-06
    - All risk control changes need compliance approval
    - No emergency bypasses
 
+---
+
 ## Integration with Existing Documentation
 
 Risk control specifications integrate with the broader testing approach:
@@ -509,19 +380,21 @@ Risk control specifications integrate with the broader testing approach:
 - **Format Reference**: [Gherkin Format](../../reference/specifications/gherkin-format.md) details syntax and conventions
 - **Testing Strategy**: [Testing Strategy Overview](../continuous-delivery/testing/testing-strategy-overview.md) shows where risk controls fit in overall testing
 
+---
+
 ## Next Steps
 
 To implement risk control specifications:
 
-1. **Understand evidence** - Read [Evidence Automation](evidence-automation.md) to see how test results become audit evidence
-2. **Learn shift-left** - Read [Shift-Left Compliance](shift-left-compliance.md) to understand early validation
-3. **Review templates** - Check [Template Catalog](../../reference/templates/index.md) for example patterns
-4. **Implement** - Follow [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) guide
+1. **Learn shift-left** - Read [Shift-Left Compliance](shift-left-compliance.md) to understand early validation
+2. **Review templates** - Check [Template Catalog](../../reference/templates/index.md) for example patterns
+3. **Implement** - Follow [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) guide
+
+---
 
 ## Related Documentation
 
 - [Compliance as Code](compliance-as-code.md) - Core principles including executable specifications
-- [Evidence Automation](evidence-automation.md) - How test results become evidence
 - [Shift-Left Compliance](shift-left-compliance.md) - When and where to validate
 - [Transformation Framework](transformation-framework.md) - How to implement organization-wide
 - [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - Step-by-step implementation guide
