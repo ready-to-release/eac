@@ -161,7 +161,7 @@ So that I can quickly start development
 **Examples**:
 
 ```text
-[RED-1] What if cc.yaml already exists?
+[RED-1] What if r2r.yaml already exists?
 [RED-2] Should we support a --force flag?
 [RED-3] Do we need Windows compatibility?
 ```
@@ -314,11 +314,11 @@ Example: If you only have "Command works" → Dig deeper, what does "works" mean
 
 ```text
 ✅ Given: Empty directory
-   When: Run "cc init my-project"
+   When: Run "r2r init my-project"
    Then: Creates my-project/src/, my-project/tests/, my-project/docs/
 
-✅ Given: Directory with cc.yaml
-   When: Run "cc init"
+✅ Given: Directory with r2r.yaml
+   When: Run "r2r init"
    Then: Exits with code 1, stderr shows "already initialized"
 ```
 
@@ -347,7 +347,7 @@ Example: If you only have "Command works" → Dig deeper, what does "works" mean
 **Example Red Cards**:
 
 ```text
-[RED-1] What if cc.yaml already exists?
+[RED-1] What if r2r.yaml already exists?
 [RED-2] Should we support a --force flag?
 [RED-3] Do we need Windows compatibility?
 [RED-4] What's the maximum project name length?
@@ -358,7 +358,7 @@ Example: If you only have "Command works" → Dig deeper, what does "works" mean
 Create issues for Red Cards in `specs/<module>/<feature>/issues.md`:
 
 ```markdown
-## RED-1: What if cc.yaml already exists?
+## RED-1: What if r2r.yaml already exists?
 
 **Status**: Open
 **Raised**: 2025-11-04
@@ -505,7 +505,7 @@ So that I can quickly start development
 **Red Cards**:
 
 ```text
-[RED-1] What if cc.yaml already exists?
+[RED-1] What if r2r.yaml already exists?
 [RED-2] Should we support a --force flag?
 ```
 
@@ -529,15 +529,15 @@ Feature: cli_init-project
     @success @ac1
     Scenario: Initialize in empty directory creates structure
       Given I am in an empty folder
-      When I run "cc init my-project"
+      When I run "r2r init my-project"
       Then a directory named "my-project/src/" should exist
       And a directory named "my-project/tests/" should exist
       And a directory named "my-project/docs/" should exist
 
     @error @ac1
     Scenario: Initialize in existing project shows error
-      Given I am in a directory with "cc.yaml"
-      When I run "cc init"
+      Given I am in a directory with "r2r.yaml"
+      When I run "r2r init"
       Then the command should fail
       And stderr should contain "already initialized"
 
@@ -546,14 +546,14 @@ Feature: cli_init-project
     @success @ac2
     Scenario: Generated YAML has default values
       Given I am in an empty folder
-      When I run "cc init my-project"
-      Then a file named "my-project/cc.yaml" should be created
+      When I run "r2r init my-project"
+      Then a file named "my-project/r2r.yaml" should be created
       And the file should contain valid YAML
 
     @success @ac2
     Scenario: YAML contains required keys
       Given I am in an empty folder
-      When I run "cc init my-project"
+      When I run "r2r init my-project"
       Then the YAML should have key "project.name"
       And the YAML should have key "project.version"
 ```
@@ -563,7 +563,7 @@ Feature: cli_init-project
 ```markdown
 # Open Questions
 
-## RED-1: What if cc.yaml already exists?
+## RED-1: What if r2r.yaml already exists?
 
 **Status**: Open
 **Raised**: 2025-11-04
