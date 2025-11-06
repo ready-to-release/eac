@@ -500,4 +500,4 @@ Flags: `--setting-sources ""` and `{"includeCoAuthoredBy":false}`
 - [VS Code Extension Architecture](vscode-extension-architecture.md) - How MCP integration works
 - [Commit Agent Pipeline Reference](../reference/commit-agent-pipeline.md) - Detailed specifications
 - [Customize Commit Agents](../how-to-guides/vscode-extension/customize-commit-agents.md) - Modify agents
-- [DR-004: Model Context Protocol](../reference/decision-records/dr004.md) - MCP decision rationale
+- [DR-004: Model Context Protocol](../reference/design/decision-records/dr004.md) - MCP decision rationale

@@ -77,6 +77,8 @@ Traditional audits create stress and waste. External auditors bill time while te
 
 Periodic assessment provides limited assurance. Passing an audit at one point doesn't guarantee ongoing compliance. Auditors test small samples, not comprehensive coverage. Organizations can pass audits yet still experience compliance violations in production because audits examine past state, not current continuous compliance.
 
+---
+
 ## The Cost of Traditional Compliance
 
 ### Time Overhead
@@ -343,6 +345,8 @@ Transformation may not be appropriate if:
 - No budget for transformation investment
 - Other major organizational changes underway
 
+---
+
 ## Prerequisites
 
 Before starting transformation:
@@ -398,10 +402,9 @@ If you believe transformation is right for your organization:
 
 1. **Understand the modern approach** - Read [Compliance as Code](compliance-as-code.md) to learn the principles
 2. **Learn the framework** - Read [Transformation Framework](transformation-framework.md) to understand the journey
-3. **Assess readiness** - Read [Success Factors](success-factors.md) to evaluate your organization
-4. **Build business case** - Quantify your organization's specific compliance costs and opportunities
-5. **Engage stakeholders** - Present opportunity to executives and compliance office
-6. **Plan Phase 1** - Begin Assessment phase as described in [Transformation Framework](transformation-framework.md)
+3. **Build business case** - Quantify your organization's specific compliance costs and opportunities
+4. **Engage stakeholders** - Present opportunity to executives and compliance office
+5. **Plan Phase 1** - Begin Assessment phase as described in [Transformation Framework](transformation-framework.md)
 
 If prerequisites are missing, focus on building foundational capabilities first. Attempting transformation without essential prerequisites often leads to failure and organizational skepticism about modern compliance practices.
 
@@ -409,6 +412,5 @@ If prerequisites are missing, focus on building foundational capabilities first.
 
 - [Compliance as Code](compliance-as-code.md) - The modern approach explained
 - [Transformation Framework](transformation-framework.md) - How to execute transformation
-- [Success Factors](success-factors.md) - What makes transformation succeed
 - [CD Model Overview](../continuous-delivery/cd-model/cd-model-overview.md) - Delivery pipeline foundation
 - [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing practices foundation

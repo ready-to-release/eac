@@ -21,6 +21,8 @@ This document describes a four-phase framework that guides compliance transforma
 
 **Total**: 12-18 months from start to organization-wide adoption
 
+---
+
 ## Guiding Principles
 
 These principles guide successful transformation:
@@ -34,6 +36,8 @@ These principles guide successful transformation:
 7. **Training is Critical**: Teams cannot adopt what they don't understand
 8. **Long-term View**: This is an 18-month journey, not a 3-month sprint
 
+---
+
 ## Phase 1: Assessment and Planning (4-6 weeks)
 
 ### Objective
@@ -42,44 +46,60 @@ Establish baseline understanding of current state, define target state, and crea
 
 ### Key Activities
 
-**1. Enumerate Compliance Requirements**
+**1. Enumerate Compliance Requirements**:
 
 Inventory all compliance obligations:
+
 - List all applicable standards (ISO 27001, GDPR, SOC 2, HIPAA, GxP, etc.)
 - Extract specific control requirements from each standard
 - Identify overlapping controls across standards
 - Document current evidence collection methods
 
 **Starting Point**:
+
 - **If you have existing SOPs**: Take outset in these documented procedures. They provide organization-specific context for how requirements are currently interpreted.
 - **If you don't have SOPs**: Look directly at the regulations applicable to your domain. For GxP organizations, consult ICH guidelines. For security, reference ISO 27001 control requirements.
 
 **Deliverable**: Compliance Requirements Inventory (spreadsheet or database)
 
-**2. Assess Current State Maturity**
+**2. Assess Current State Maturity**:
 
 Evaluate current practices:
-- Process maturity (using CMM or similar framework)
+
 - Manual vs automated activities breakdown
 - Time overhead measurement (hours per team per week)
 - Technical capability assessment (CI/CD maturity, testing practices)
 - Compliance office capacity and constraints
 
+**Key Metrics to Establish Baseline**:
+
+- Manual compliance work: hours per team per week
+- Audit preparation time: person-hours per audit cycle
+- Evidence collection: % manual vs automated
+- Compliance validation time: days to approve release
+- Audit findings: number per audit cycle
+
+Track these same metrics throughout transformation to demonstrate ROI. Typical improvements: 70-80% reduction in manual work, 95%+ evidence automation, release approval time from days to hours.
+
 **Deliverable**: Current State Assessment Report
 
-**3. Value Stream Mapping**
+**3. Value Stream Mapping**:
 
 Map compliance activities to identify waste:
+
 - Select representative compliance process (e.g., release approval)
 - Map current state with lead time, cycle time, and waste identification
 - Design future state with automation
 - Calculate expected improvements
 
+**Reference**: See [Measuring and Improving Flow](../everything-as-code/measuring-and-improving-flow.md) for detailed guidance on Value Stream Mapping and flow engineering principles.
+
 **Deliverable**: Value Stream Maps (current + future states)
 
-**4. Select Pilot Team**
+**4. Select Pilot Team**:
 
 Choose pilot team carefully:
+
 - **High compliance burden**: Team feels pain of current approach
 - **Technical capability**: Team has CI/CD pipelines and testing practices
 - **Willing to change**: Team enthusiastic about modernization
@@ -88,9 +108,10 @@ Choose pilot team carefully:
 
 **Deliverable**: Pilot Team Selection Document with justification
 
-**5. Define Target State and Roadmap**
+**5. Define Target State and Roadmap**:
 
 Create vision and plan:
+
 - How requirements become executable specifications (Gherkin format)
 - Which CD Model stages validate compliance (see [CD Model](../continuous-delivery/cd-model/cd-model-overview.md))
 - How evidence will be collected automatically
@@ -107,6 +128,8 @@ Create vision and plan:
 - ✅ Roadmap approved by executive sponsor and compliance office
 - ✅ Budget secured for pilot phase
 
+---
+
 ## Phase 2: Pilot Implementation (12-16 weeks)
 
 ### Objective
@@ -115,9 +138,10 @@ Prove the compliance-as-code approach with one team, validate through test audit
 
 ### Key Activities
 
-**1. Create Risk Control Specifications**
+**1. Create Risk Control Specifications**:
 
 Translate requirements to executable format:
+
 - Select subset of requirements for pilot scope
 - Write risk control specifications in Gherkin format
 - Tag with @risk IDs for traceability
@@ -129,20 +153,22 @@ Translate requirements to executable format:
 
 **Deliverable**: Risk control specifications (`specs/risk-controls/*.feature`)
 
-**2. Move Artifacts to Version Control**
+**2. Move Artifacts to Version Control**:
 
 Transition from document management to version control:
-- Convert policies/procedures from Word/SharePoint to Markdown
+
+- Convert policies/procedures from Word to Markdown
 - Store in Git repository with branch protection
-- Establish pull request workflow for policy changes
+- Establish pull request workflow for changes
 - Use [existing template catalog](../../reference/templates/index.md) as starting point
 - Keep external systems unchanged during pilot (reduce complexity)
 
 **Deliverable**: Version-controlled compliance artifacts
 
-**3. Design Compliance Validation Pipeline**
+**3. Design Compliance Validation Pipeline**:
 
 Integrate compliance into CI/CD:
+
 - Map compliance checks to CD Model stages (see [CD Model](../continuous-delivery/cd-model/cd-model-overview.md))
 - Implement validation at Stages 2 (pre-commit), 4 (commit), 5 (acceptance), 11 (production)
 - Design PLTE for L3 testing (see [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md))
@@ -152,10 +178,10 @@ Integrate compliance into CI/CD:
 
 **Deliverable**: Compliance validation pipeline
 
-**4. Implement Automated Tests**
+**4. Implement Automated Tests**:
 
 Write test code for specifications:
-- Write Godog step definitions for risk control scenarios
+
 - Implement L0-L2 tests (local/agent execution, fast feedback)
 - Implement L3 tests (PLTE vertical testing)
 - Implement L4 tests (production monitoring)
@@ -164,26 +190,26 @@ Write test code for specifications:
 
 **Deliverable**: Automated test suite with passing tests
 
-**5. Automate Evidence Collection**
+**5. Automate Evidence Collection**:
 
 Build evidence collection capability:
+
 - Define evidence requirements for pilot scope
 - Implement collection scripts for pipeline artifacts
 - Extract relevant data from Git history
 - Generate traceability matrix automatically
 - Create evidence package generator
 
-**Details**: See [Evidence Automation](evidence-automation.md)
-
 **Automation Note**: This step requires an automation layer. Ready-to-Release (r2r) CLI tries to help with evidence collection and packaging.
 
 **Deliverable**: Evidence collection system
 
-**6. Conduct Test Audit**
+**6. Conduct Test Audit**:
 
 Validate approach with auditors:
+
 - Generate evidence package for pilot scope
-- Present approach to auditors (internal or external)
+- Present approach to internal auditors
 - Demonstrate traceability (requirement → test → evidence)
 - Address findings and document lessons learned
 - Get auditor endorsement of approach
@@ -201,14 +227,7 @@ Validate approach with auditors:
 - ✅ 50%+ reduction in manual overhead demonstrated
 - ✅ Lessons learned documented
 
-### Deliverables
-
-- Risk Control Specifications (`specs/risk-controls/`)
-- Compliance Validation Pipeline (CI/CD configuration)
-- Automated Test Suite (step definitions and tests)
-- Evidence Collection System (scripts and automation)
-- Test Audit Report
-- Pilot Results Report (metrics, lessons, recommendations)
+---
 
 ## Phase 3: Automation and Scaling (8-12 weeks)
 
@@ -218,9 +237,10 @@ Build reusable automation tools to accelerate adoption by other teams.
 
 ### Key Activities
 
-**1. Extract Reusable Patterns**
+**1. Extract Reusable Patterns**:
 
 Identify what's generalizable:
+
 - What's team-specific vs organization-wide?
 - What patterns should all teams follow?
 - What automation is highest value?
@@ -228,24 +248,24 @@ Identify what's generalizable:
 
 **Deliverable**: Automation backlog prioritized by value
 
-**2. Build Automation Layer**
+**2. Build Automation Layer**:
 
 An automation layer is needed to accelerate adoption. This typically includes:
 
 **CLI Tool** with core commands:
+
 - Initialize compliance structure
 - Validate requirements locally
 - Generate evidence packages
 - Create compliance reports
 - Show traceability
 
-*Note: Ready-to-Release (r2r) CLI tries to help with this automation layer*
-
 **Deliverable**: Automation tools (CLI or scripts)
 
-**3. Create Documentation and Training**
+**3. Create Documentation and Training**:
 
 Enable other teams:
+
 - Update existing how-to guides with compliance practices
 - Create training materials (workshop + self-paced)
 - Document lessons learned from pilot
@@ -253,9 +273,10 @@ Enable other teams:
 
 **Deliverable**: Documentation and training materials
 
-**4. Validate with Additional Teams**
+**4. Validate with Additional Teams**:
 
 Test with early adopters:
+
 - Onboard 2-3 additional teams using automation tools
 - Collect feedback on what works and what doesn't
 - Refine tools and documentation based on feedback
@@ -278,6 +299,8 @@ Test with early adopters:
 - Training materials (slides, exercises, recordings)
 - Migration guide
 
+---
+
 ## Phase 4: Organization-Wide Rollout (6-12 months)
 
 ### Objective
@@ -286,9 +309,10 @@ Scale transformation across the organization achieving 80%+ adoption.
 
 ### Key Activities
 
-**1. Plan Phased Rollout**
+**1. Plan Phased Rollout**:
 
 Create systematic rollout plan:
+
 - Prioritize teams by risk, readiness, and impact
 - Create rollout schedule (batches of 3-5 teams every 4-6 weeks)
 - Allocate support resources
@@ -296,9 +320,10 @@ Create systematic rollout plan:
 
 **Deliverable**: Rollout plan and schedule
 
-**2. Execute Team Onboarding**
+**2. Execute Team Onboarding**:
 
 Systematic 6-week onboarding cycle per batch:
+
 - **Week 1**: Assessment - Team readiness, tooling gaps, training needs
 - **Week 2**: Training and setup - Workshop, tool installation, pipeline integration
 - **Weeks 3-4**: Implementation - Teams implement with coaching support
@@ -307,31 +332,28 @@ Systematic 6-week onboarding cycle per batch:
 
 **Deliverable**: Onboarding completion reports per batch
 
-**3. Integrate External Systems**
+**3. Integrate External Systems**:
 
-Connect to organizational systems:
-- **GRC tools**: ServiceNow, Archer, MetricStream (evidence export)
-- **Ticketing**: Jira, ServiceNow (compliance findings tracking)
-- **SIEM**: Splunk, ELK, Datadog (security event correlation)
-- **IAM**: Okta, Azure AD (authentication/authorization evidence)
-- **Secret Management**: Vault, AWS Secrets Manager (credential management)
+Connect to organizational systems.
 
 **Deliverable**: Integration documentation and connectors
 
-**4. Establish Ongoing Operations**
+**4. Establish Ongoing Operations**:
 
 Transition from project to business-as-usual:
+
 - Define operating model (who owns what)
-- Create support team (2-3 FTEs typical for 50-100 teams)
+- Create support [Enabling Team](https://teamtopologies.com/)
 - Establish governance (working group, quarterly reviews)
 - Define SLAs (response times, uptime expectations)
 - Create runbooks for common issues
 
 **Deliverable**: Operations handbook and support team
 
-**5. Communication and Change Management**
+**5. Communication and Change Management**:
 
 Maintain momentum and engagement:
+
 - Executive updates (monthly) on progress and wins
 - All-hands presentations (quarterly) showcasing teams
 - Team newsletters (bi-weekly) with tips and successes
@@ -349,132 +371,104 @@ Maintain momentum and engagement:
 - ✅ Compliance office endorsement and satisfaction
 - ✅ Transformation transitioned to business-as-usual
 
+---
+
 ## Continuous Improvement
 
 After transformation completes, maintain and improve:
 
 **Quarterly Activities**:
+
 - Review metrics and identify improvement opportunities
 - Update tools based on user feedback
 - Refresh training materials
 - Celebrate wins and recognize high-performers
 
 **Annual Activities**:
+
 - Generate evidence packages for annual audits
 - Coordinate with external auditors
 - Review alignment with latest regulations
 - Update roadmap for new requirements
 
 **Ongoing Community**:
+
 - Monthly community of practice meetings
 - Knowledge sharing across teams
 - Tool enhancements and feature requests
 - Continuous documentation maintenance
 
-## Prerequisites for Success
-
-Before starting transformation, ensure these exist:
-
-**Essential**:
-- ✅ Executive sponsorship (VP-level or higher)
-- ✅ Compliance office buy-in and partnership
-- ✅ CI/CD pipelines exist (basic level)
-- ✅ Budget for 12-18 months ($500K - $1M typical)
-- ✅ Pilot team committed and capable
-
-**Recommended**:
-- ✅ Automated testing practices established
-- ✅ Version control maturity (teams use Git)
-- ✅ Infrastructure-as-code adoption
-- ✅ Organizational readiness for change
+---
 
 ## Common Pitfalls
 
 Avoid these common mistakes:
 
 ### 1. Skipping Assessment
+
 **Mistake**: Jumping to implementation without understanding current state
 **Impact**: Build wrong solution, miss key requirements
 **Avoidance**: Invest full 4-6 weeks in Phase 1
 
 ### 2. Boiling the Ocean
+
 **Mistake**: Trying to transform everything at once
 **Impact**: Overwhelm teams, project fails
 **Avoidance**: Start with pilot, scale systematically
 
 ### 3. Building Without User Input
+
 **Mistake**: Automation team builds tools in isolation
 **Impact**: Tools don't match needs, low adoption
 **Avoidance**: Deeply involve pilot team in design
 
 ### 4. Inadequate Training
+
 **Mistake**: Assuming teams will figure it out
 **Impact**: Slow adoption, frustration, workarounds
 **Avoidance**: Invest in comprehensive training
 
 ### 5. Losing Compliance Buy-In
+
 **Mistake**: Proceeding without compliance office endorsement
 **Impact**: Auditors reject approach, transformation fails
 **Avoidance**: Compliance officer as co-sponsor, test audits early
 
 ### 6. No Operations Plan
+
 **Mistake**: Treating transformation as project with end date
 **Impact**: Tools degrade, support vanishes, teams revert
 **Avoidance**: Plan for ongoing operations from start
 
 ### 7. Ignoring Change Management
+
 **Mistake**: Focusing only on technology, ignoring people
 **Impact**: Resistance, slow adoption, partial implementation
 **Avoidance**: Communication, training, recognition throughout
 
-Detailed discussion of pitfalls: See [Success Factors](success-factors.md)
-
-## When to Adapt the Framework
-
-This framework is a starting point, not rigid prescription. Adapt based on context:
-
-**Small Organizations (<10 teams)**:
-- Collapse Phases 1-2 into 8-10 weeks
-- Skip dedicated automation phase, build as you go
-- Faster rollout (all teams in 2-3 months)
-
-**Large Organizations (>100 teams)**:
-- Extend Phase 1 to 8-10 weeks for thorough assessment
-- Multiple pilot teams in different contexts
-- Longer rollout with more granular phases
-
-**High Regulatory Burden**:
-- Longer Phase 2 to validate with multiple audit types
-- More investment in automation and evidence
-- Deeper compliance office partnership
-
-**Low CI/CD Maturity**:
-- Invest 3-6 months building CI/CD foundation first
-- Slower pilot focused on establishing practices
-- More training and coaching needed
+---
 
 ## Next Steps
 
 To understand the transformation in detail:
 
 1. **Understand risk controls** - Read [Risk Control Specifications](risk-control-specifications.md)
-2. **Learn about evidence** - Read [Evidence Automation](evidence-automation.md)
-3. **Study shift-left** - Read [Shift-Left Compliance](shift-left-compliance.md)
-4. **Assess readiness** - Read [Success Factors](success-factors.md)
+2. **Study shift-left** - Read [Shift-Left Compliance](shift-left-compliance.md)
 
 To begin transformation:
+
 1. Build business case using [Why Transformation?](why-transformation.md)
 2. Engage executive sponsor and compliance officer
 3. Identify pilot team
 4. Begin Phase 1: Assessment
+
+---
 
 ## Related Documentation
 
 - [Why Transformation?](why-transformation.md) - Business case and opportunity
 - [Compliance as Code](compliance-as-code.md) - Core principles
 - [Risk Control Specifications](risk-control-specifications.md) - Technical pattern
-- [Evidence Automation](evidence-automation.md) - Evidence architecture
 - [Shift-Left Compliance](shift-left-compliance.md) - Early detection
-- [Success Factors](success-factors.md) - What makes transformation succeed
 - [CD Model](../continuous-delivery/cd-model/cd-model-overview.md) - Pipeline integration points
 - [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing approach

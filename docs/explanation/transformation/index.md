@@ -48,15 +48,10 @@ This section guides you through compliance transformation:
 
 ### Technical Patterns
 
-Three documents explain key technical patterns:
+Two documents explain key technical patterns:
 
 - [Risk Control Specifications](risk-control-specifications.md) - How to express regulatory requirements as executable Gherkin scenarios
-- [Evidence Automation](evidence-automation.md) - Architecture for automatically collecting audit evidence from delivery pipelines
 - [Shift-Left Compliance](shift-left-compliance.md) - Strategy for catching compliance issues early when fixes are cheap
-
-### Success Factors
-
-[Success Factors](success-factors.md) synthesizes lessons learned from successful transformations. You'll understand critical success factors, common pitfalls, and how to assess your organization's readiness.
 
 ---
 
@@ -71,29 +66,6 @@ Compliance transformation requires an automation layer to accelerate adoption. T
 - Automating common compliance operations
 
 While the principles and framework described here are tool-agnostic, having automation support dramatically accelerates adoption and reduces the cost of transformation.
-
----
-
-## Navigation
-
-### Understanding the Problem
-
-- [Why Transformation?](why-transformation.md) - Understand the problem and opportunity
-
-### Core Concepts
-
-- [Compliance as Code](compliance-as-code.md) - Five core principles explained
-- [Transformation Framework](transformation-framework.md) - Four-phase transformation journey
-
-### Technical Patterns
-
-- [Risk Control Specifications](risk-control-specifications.md) - Executable compliance requirements
-- [Evidence Automation](evidence-automation.md) - Automated evidence collection
-- [Shift-Left Compliance](shift-left-compliance.md) - Early issue detection
-
-### Implementation Guidance
-
-- [Success Factors](success-factors.md) - What makes transformations succeed
 
 ---
 
@@ -125,4 +97,3 @@ This transformation approach integrates with existing software delivery practice
 ### Templates
 
 - [Template Catalog](../../reference/templates/index.md) - Reference templates for compliance artifacts
-
