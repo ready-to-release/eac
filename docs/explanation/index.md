@@ -37,7 +37,24 @@ Understanding the 12-stage Continuous Delivery Model - a comprehensive framework
 
 ---
 
-### [Testing](testing/index.md)
+### [Compliance Transformation](transformation/index.md)
+
+Understanding how to transform compliance from a blocking activity into a continuous, automated capability that enables faster, safer software delivery.
+
+**Topics covered:**
+
+- Why traditional compliance fails and the opportunity for transformation
+- Compliance-as-code principles (everything-as-code, continuous validation, shift-left, automated evidence)
+- Four-phase transformation framework (Assessment, Pilot, Automation, Rollout)
+- Risk control specifications in Gherkin format
+- Evidence automation architecture
+- Shift-left compliance strategy
+- Success factors and common pitfalls
+- ROI analysis and readiness assessment
+
+---
+
+### [Specifications Concepts](specifications/index.md)
 
 Understanding the three-layer testing approach and test-driven development practices.
 
@@ -48,6 +65,9 @@ Understanding the three-layer testing approach and test-driven development pract
 - BDD concepts and Gherkin language
 - How the layers interact and when to use each
 - Living documentation and traceability
+- Ubiquitous Language and Domain-Driven Design
+- Event Storming workshops
+- Risk controls for compliance
 
 ---
 
