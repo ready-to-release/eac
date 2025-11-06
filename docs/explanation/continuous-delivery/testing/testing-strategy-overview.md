@@ -31,35 +31,30 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 ### How Tests Are Categorized
 
-Tests are categorized based on **execution environment**, **test scope**, and **external dependency handling**:
+The taxonomy defines test categories based on execution environment and scope:
 
-**L0-L2: Local/Agent Tests**:
+| Level | Name                   | Shift Direction | Execution Environment | Scope                | External Dependencies                     | Determinism | Domain Coherency |
+|-------|------------------------|-----------------|-----------------------|----------------------|-------------------------------------------|-------------|------------------|
+| L0    | Unit Tests             | LEFT            | devbox or agent       | Source and binary    | All replaced with test doubles            | Highest     | Lowest           |
+| L1    | Unit Tests             | LEFT            | devbox or agent       | Source and binary    | All replaced with test doubles            | Highest     | Lowest           |
+| L2    | Emulated System Tests  | LEFT            | devbox or agent       | Deployable artifacts | All replaced with test doubles            | High        | High             |
+| L3    | In-Situ Vertical Tests | LEFT            | PLTE                  | Deployed system      | All replaced with test doubles            | Moderate    | High             |
+| L4    | Testing in Production  | RIGHT           | Production            | Deployed system      | All production, may use live test doubles | High        | Highest          |
 
-- **Execution environment**: Developer workstation or CI agent
-- **Test scope**: Unit-under-test only
-- **External dependencies**: All replaced with test doubles
-- **Trade-off**: High determinism, low coherency with domain language
-- **Purpose**: Fast, reliable validation of logic in isolation
+**Out-of-Category (Anti-Pattern):**
 
-**L3: Vertical Tests in PLTE**:
+| Level          | Name                  | Shift Direction | Execution Environment      | Scope           | External Dependencies                        | Determinism | Domain Coherency |
+|----------------|-----------------------|-----------------|----------------------------|-----------------|----------------------------------------------|-------------|------------------|
+| Horizontal E2E | Horizontal End-to-End | non-shifted     | Shared testing environment | Deployed system | Tied up to non-production "test" deployments | Lowest      | High             |
 
-- **Execution environment**: PLTE (cloud/production-like environment)
-- **Test scope**: Single deployable unit boundaries only (vertical testing)
-- **External dependencies**: All replaced with test doubles
-- **Trade-off**: Moderate determinism, moderate coherency
-- **Purpose**: Validate deployable unit behavior in production-like infrastructure
+Old-school horizontal pre-production environments where multiple teams' pre-prod services are linked together are highly fragile and non-deterministic. This taxonomy explicitly advocates shifting LEFT (to L0-L3) and RIGHT (to L4) to avoid this pattern.
 
-**L4: Production Horizontal Tests**:
+### Determinism vs Domain Coherency Trade-off
 
-- **Execution environment**: Production
-- **Test scope**: Cross-service interactions (horizontal testing)
-- **External dependencies**: May use test doubles (e.g., test-double payment service for routing test payments)
-- **Trade-off**: Lower determinism, high coherency with domain language
-- **Purpose**: Validate real-world cross-service behavior in production
+The taxonomy constrains two key aspects:
 
-### Determinism vs Coherency Trade-off
-
-The taxonomy balances two competing concerns:
+- **Execution requirements**: What binaries, tooling, and configuration are needed
+- **Test scope**: Vertical vs horizontal boundaries, and test double usage
 
 **Determinism** (Lower Lx values):
 
@@ -67,19 +62,21 @@ The taxonomy balances two competing concerns:
 - Fast execution
 - Reliable failure signals
 - Easy to debug
-- **Higher in L0-L2** (controlled environments, test doubles)
+- **Highest in L0-L1** (controlled environments, test doubles)
 
-**Coherency** (Higher Lx values):
+**Domain Coherency** (Higher Lx values):
 
 - Realistic domain language
 - Actual production behavior
 - Real cross-service interactions
 - Business-meaningful validation
-- **Higher in L3-L4** (production-like or production environments)
+- **Highest in L4** (production environment)
+
+Lower Lx values provide higher determinism but lower domain coherency, while higher Lx values provide lower determinism but higher domain coherency.
 
 **The Shift-Left and Shift-Right Strategy:**
 
-Maximize testing at L0-L3 (left) and L4 (right) to avoid the **out-of-category anti-pattern**: old-school horizontal pre-production environments where multiple teams' pre-prod services are linked together. These tests are highly fragile and non-deterministic.
+Maximize testing at L0-L3 (left) and L4 (right) to avoid the **out-of-category anti-pattern** (Horizontal E2E): horizontal pre-production environments where multiple teams' pre-prod services are linked together. These tests are highly fragile and non-deterministic.
 
 Each level builds on the confidence provided by lower levels.
 
@@ -176,9 +173,11 @@ func TestValidateEmail(t *testing.T) {
 
 ---
 
-## L1: Component Integration Tests
+## L1: Unit Tests
 
 **Purpose**: Validate interactions within a component or service, using mocks for external dependencies.
+
+**Note**: L1 shares the same taxonomy classification as L0 (both are "Unit Tests" running on devbox or agent with all external dependencies replaced by test doubles). L1 typically involves testing interactions between internal modules within a component, while L0 focuses on individual functions or methods.
 
 ### Characteristics
 
@@ -266,9 +265,9 @@ func TestUserService_CreateUser(t *testing.T) {
 
 ---
 
-## L2: Integration Tests
+## L2: Emulated System Tests
 
-**Purpose**: Validate interactions between services or components with all external dependencies replaced by test doubles.
+**Purpose**: Validate deployable artifacts in an emulated environment with all external dependencies replaced by test doubles.
 
 ### Characteristics
 
@@ -292,6 +291,7 @@ func TestUserService_CreateUser(t *testing.T) {
 
 **Scope:**
 
+- **Deployable artifacts** tested in emulated environment
 - Component-to-component communication within the unit-under-test
 - API contract validation using test doubles
 - Data flow through multiple components
@@ -346,9 +346,9 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 
 ---
 
-## L3: Vertical Tests in PLTE
+## L3: In-Situ Vertical Tests
 
-**Purpose**: Validate a single deployable unit's behavior in a production-like environment (PLTE) with vertical testing boundaries.
+**Purpose**: Validate a deployed system in-situ in a production-like environment (PLTE) with vertical testing boundaries.
 
 ### Characteristics
 
@@ -362,12 +362,13 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 
 - **Single deployable unit boundaries only** (vertical testing)
 - **All external dependencies replaced with test doubles**
-- Tests the unit in production-like infrastructure
+- Tests the deployed system in production-like infrastructure
 - Validates deployment and configuration
 
 **Scope:**
 
-- Single deployable unit behavior in PLTE
+- **Deployed system** tested in-situ in PLTE
+- Single deployable unit behavior in production-like infrastructure
 - Infrastructure validation (networking, load balancing, DNS)
 - Deployment procedure verification
 - Configuration correctness
@@ -436,7 +437,7 @@ Feature: API Service Deployment Verification
 
 ---
 
-## L4: Production Horizontal Tests
+## L4: Testing in Production
 
 **Purpose**: Validate real-world cross-service interactions in production with horizontal testing.
 
@@ -452,11 +453,12 @@ Feature: API Service Deployment Verification
 
 - **Production environment**
 - **Cross-service interactions** (horizontal testing)
-- **May use test doubles** for specific external dependencies (e.g., test-double payment service)
+- **All production dependencies**, may use live test doubles for specific cases
 - Real production infrastructure and data
 
 **Scope:**
 
+- **Deployed system** tested in production
 - Cross-service workflows in production
 - Real end-to-end user journeys
 - Actual production behavior
@@ -527,9 +529,11 @@ L4 also includes human-driven validation:
 
 ---
 
-## Horizontal Pre-Production Testing
+## Horizontal End-to-End Testing (Out-of-Category Anti-Pattern)
 
-Horizontal pre-production environments are where multiple teams deploy pre-production versions of their services to a shared environment, with services interacting horizontally (service A calls service B calls service C).
+**Taxonomy Classification**: Out-of-Category | Horizontal End-to-End | non-shifted | Shared testing environment | Deployed system | Tied up to non-production "test" deployments | Lowest determinism | High domain coherency
+
+Horizontal End-to-End (Horizontal E2E) testing refers to environments where multiple teams deploy pre-production versions of their services to a shared environment, with services interacting horizontally (service A calls service B calls service C).
 
 ### Characteristics
 
@@ -538,6 +542,8 @@ Horizontal pre-production environments are where multiple teams deploy pre-produ
 - Each team controls deployment timing independently
 - Version mismatches are common
 - Difficult to reproduce issues locally
+- **Lowest determinism** of all test approaches
+- Non-shifted (neither left nor right in the shift strategy)
 
 ### When It's Acceptable
 
@@ -554,39 +560,43 @@ Horizontal pre-production environments serve valid purposes in specific contexts
 - Stakeholder demos of cross-team features
 - Pre-production validation of complex integrations
 - Manual verification of deployment procedures
+- **Recommended**: Call this environment "Demo" for its intended purpose
 
 **Important**: These environments should be used for **manual, exploratory activities** - not as automated quality gates.
 
 ### Anti-Pattern: Using as Automated Quality Gates
 
-**Critical**: Horizontal pre-production environments should **NOT** be used as automated quality gates in the deployment pipeline.
+**Critical**: Horizontal E2E environments should **NOT** be used as automated quality gates in the deployment pipeline.
 
 **Problems when used for automated testing:**
 
 - **Highly fragile**: Any team's broken deployment breaks everyone's tests
-- **Non-deterministic**: Test results vary based on other teams' deployments
+- **Non-deterministic** (Lowest determinism): Test results vary based on other teams' deployments
 - **Slow feedback**: Can't test until all dependencies are deployed
 - **Difficult debugging**: Hard to isolate which service caused failure
 - **Blocking**: One team's issues block other teams
 - **False signals**: Tests fail due to environmental issues, not code defects
 
+**From the taxonomy**: "If you decide to break this fundamental rule, all you need to do is to connect your L3 PLTE to something not a test double and you have automated tests running in L3 with external dependencies. This is not a technical constraint, its an inherent constraint in the nature of Horizontal E2E: No one can control the variables, so you are not performing verification, you are playing games."
+
 ### The Solution: Shift-Left and Shift-Right
 
-Instead of relying on horizontal pre-production environments for automated testing, **shift testing LEFT (L0-L3) and RIGHT (L4)**:
+Instead of relying on Horizontal E2E environments for automated testing, **shift testing LEFT (L0-L3) and RIGHT (L4)**:
 
 **Shift LEFT (L0-L3):**
 
-- L0-L2: Fast, deterministic tests with test doubles on local/CI agents
-- L3: Vertical tests in PLTE with test doubles for external services
+- L0-L1: Unit tests with test doubles on devbox/agent
+- L2: Emulated system tests with test doubles on devbox/agent
+- L3: In-situ vertical tests in PLTE with test doubles for external services
 - **Result**: Fast feedback, high determinism, no cross-team dependencies
 
 **Shift RIGHT (L4):**
 
-- L4: Horizontal tests in production with real services
+- L4: Testing in production with real services
 - Use feature flags, canary deployments, synthetic monitoring
 - **Result**: Real production validation without pre-prod fragility
 
-**Avoid the middle ground** (horizontal pre-production integration environments as automated quality gates) - it combines the worst of both worlds: slow, fragile, and non-deterministic.
+**Avoid the non-shifted middle ground** (Horizontal E2E as automated quality gates) - it combines the worst of both worlds: slow, fragile, and non-deterministic.
 
 ---
 
@@ -610,28 +620,42 @@ Instead of relying on horizontal pre-production environments for automated testi
 
 The CD Model uses a taxonomy based on execution environment and scope:
 
-**L0-L2 (Local/Agent Tests):**
+**L0-L1: Unit Tests (Shift LEFT)**:
 
-- **Execution**: Developer workstation or CI agent
-- **Scope**: Unit-under-test only
+- **Execution**: Devbox or agent
+- **Scope**: Source and binary
 - **Dependencies**: All replaced with test doubles
-- **Trade-off**: High determinism, low coherency
+- **Trade-off**: Highest determinism, lowest domain coherency
 
-**L3 (Vertical Tests in PLTE):**
+**L2: Emulated System Tests (Shift LEFT)**:
 
-- **Execution**: PLTE (cloud/production-like environment)
-- **Scope**: Single deployable unit boundaries (vertical testing)
+- **Execution**: Devbox or agent
+- **Scope**: Deployable artifacts
 - **Dependencies**: All replaced with test doubles
-- **Trade-off**: Moderate determinism, moderate coherency
+- **Trade-off**: High determinism, high domain coherency
 
-**L4 (Production Horizontal Tests):**
+**L3: In-Situ Vertical Tests (Shift LEFT)**:
+
+- **Execution**: PLTE
+- **Scope**: Deployed system (single deployable unit boundaries)
+- **Dependencies**: All replaced with test doubles
+- **Trade-off**: Moderate determinism, high domain coherency
+
+**L4: Testing in Production (Shift RIGHT)**:
 
 - **Execution**: Production
-- **Scope**: Cross-service interactions (horizontal testing)
-- **Dependencies**: May use test doubles for specific cases
-- **Trade-off**: Lower determinism, high coherency
+- **Scope**: Deployed system (cross-service interactions)
+- **Dependencies**: All production, may use live test doubles
+- **Trade-off**: High determinism, highest domain coherency
 
-**The shift-left and shift-right strategy** maximizes testing at L0-L3 (left) and L4 (right) to avoid the out-of-category anti-pattern of fragile horizontal pre-production environments.
+**Out-of-Category: Horizontal End-to-End (Anti-Pattern)**:
+
+- **Execution**: Shared testing environment (non-shifted)
+- **Scope**: Deployed system
+- **Dependencies**: Tied up to non-production "test" deployments
+- **Trade-off**: Lowest determinism, high domain coherency
+
+**The shift-left and shift-right strategy** maximizes testing at L0-L3 (left) and L4 (right) to avoid the out-of-category anti-pattern (Horizontal E2E) of fragile horizontal pre-production environments.
 
 ## Next Steps
 

@@ -12,43 +12,52 @@ Testing is integrated throughout every stage of the CD Model, not treated as a s
 
 **The Test Taxonomy:**
 
-**L0-L2: Local/Agent Tests**:
+**L0-L1: Unit Tests (Shift LEFT)**:
 
-- **Execution environment**: Developer workstation or CI agent
-- **Test scope**: Unit-under-test only
+- **Execution environment**: Devbox or agent
+- **Test scope**: Source and binary
 - **External dependencies**: All replaced with test doubles
-- **Trade-off**: High determinism, low coherency with domain language
+- **Trade-off**: Highest determinism, lowest domain coherency
 - **Stages**: 2, 3, 4
 - **Purpose**: Fast, reliable validation of logic in isolation
 
-**L3: In-Situ Vertical Tests**:
+**L2: Emulated System Tests (Shift LEFT)**:
+
+- **Execution environment**: Devbox or agent
+- **Test scope**: Deployable artifacts
+- **External dependencies**: All replaced with test doubles
+- **Trade-off**: High determinism, high domain coherency
+- **Stages**: 3, 4
+- **Purpose**: Validate deployable artifacts in emulated environment
+
+**L3: In-Situ Vertical Tests (Shift LEFT)**:
 
 - **Execution environment**: PLTE (cloud/production-like environment)
-- **Test scope**: Single deployable unit boundaries only (vertical testing)
+- **Test scope**: Deployed system (single deployable unit boundaries - vertical)
 - **External dependencies**: All replaced with test doubles
-- **Trade-off**: Moderate determinism, moderate coherency
+- **Trade-off**: Moderate determinism, high domain coherency
 - **Stages**: 5, 6
-- **Purpose**: Validate deployable unit behavior in production-like infrastructure
+- **Purpose**: Validate deployed system behavior in-situ in production-like infrastructure
 
-**L4: Production Horizontal Tests**:
+**L4: Testing in Production (Shift RIGHT)**:
 
 - **Execution environment**: Production
-- **Test scope**: Cross-service interactions (horizontal testing)
-- **External dependencies**: May use test doubles (e.g., test-double payment service)
-- **Trade-off**: Lower determinism, high coherency with domain language
+- **Test scope**: Deployed system (cross-service interactions - horizontal)
+- **External dependencies**: All production, may use live test doubles
+- **Trade-off**: High determinism, highest domain coherency
 - **Stages**: 11, 12
 - **Purpose**: Validate real-world cross-service behavior in production
 
 **Topics covered:**
 
 - Test taxonomy based on execution environment and scope
-- Detailed explanation of each category (L0-L2, L3, L4)
-- Determinism vs coherency trade-off
-- Out-of-category anti-pattern (horizontal pre-production environments)
+- Detailed explanation of each category (L0-L1, L2, L3, L4)
+- Determinism vs domain coherency trade-off
+- Out-of-category anti-pattern (Horizontal End-to-End)
 - Shift-left and shift-right strategy
 - Tools and frameworks for each level
 
-**Read this article to understand**: The test taxonomy based on execution constraints and how to avoid the anti-pattern of fragile horizontal pre-production environments.
+**Read this article to understand**: The test taxonomy based on execution constraints and how to avoid the anti-pattern of fragile Horizontal End-to-End environments.
 
 ---
 
@@ -60,25 +69,35 @@ This article maps test levels to specific stages, explains process isolation str
 
 **Test Level Environment Mapping:**
 
-**L0-L2 Tests:**
+**L0-L1: Unit Tests**:
 
 - Execute in DevBox (Stage 2) and Build Agents (Stages 3-4)
-- Unit-under-test only with test doubles for all external dependencies
-- Fast, deterministic feedback (5-30 minutes)
+- Source and binary scope with test doubles for all external dependencies
+- Fast, deterministic feedback (milliseconds to seconds)
+- Highest determinism, lowest domain coherency
 
-**L3 Tests:**
+**L2: Emulated System Tests**:
+
+- Execute in DevBox and Build Agents (Stages 3-4)
+- Deployable artifacts scope with test doubles for all external dependencies
+- Fast, deterministic feedback (seconds)
+- High determinism, high domain coherency
+
+**L3: In-Situ Vertical Tests**:
 
 - Execute in PLTE (Stages 5-6)
-- Single deployable unit boundaries (vertical testing)
+- Deployed system scope (single deployable unit boundaries - vertical testing)
 - Test doubles for all external services
-- Validates infrastructure and deployment
+- Validates infrastructure and deployment in-situ
+- Moderate determinism, high domain coherency
 
-**L4 Tests:**
+**L4: Testing in Production**:
 
 - Execute in Production (Stages 11-12)
-- Cross-service interactions (horizontal testing)
-- Real production behavior with optional test doubles
+- Deployed system scope (cross-service interactions - horizontal testing)
+- All production dependencies, may use live test doubles
 - Synthetic monitoring and exploratory testing
+- High determinism, highest domain coherency
 
 **Topics covered:**
 
@@ -98,16 +117,20 @@ This article maps test levels to specific stages, explains process isolation str
 
 **Traditional Approach (Anti-Pattern):**
 
-- Horizontal pre-production integration environments
-- Multiple teams' pre-prod services linked together
-- Highly fragile and non-deterministic
+- **Horizontal End-to-End (Horizontal E2E)**: Shared testing environments
+- Multiple teams' pre-prod services linked together in non-shifted environments
+- Tied up to non-production "test" deployments
+- Highly fragile and non-deterministic (lowest determinism)
 - Slow feedback, difficult debugging
 
 **Shift-Left and Shift-Right Approach:**
 
-- **Shift LEFT (L0-L3)**: Fast, deterministic tests with test doubles on local/CI/PLTE
-- **Shift RIGHT (L4)**: Real production validation with monitoring and feature flags
-- **Avoid the middle**: Skip horizontal pre-production environments
+- **Shift LEFT (L0-L3)**: Fast, deterministic tests with test doubles on devbox/agent/PLTE
+  - L0-L1: Unit tests (highest determinism)
+  - L2: Emulated system tests (high determinism)
+  - L3: In-situ vertical tests (moderate determinism)
+- **Shift RIGHT (L4)**: Testing in production with real services (high determinism, highest domain coherency)
+- **Avoid the non-shifted middle**: Skip Horizontal E2E environments
 - Fast feedback (L0-L3) + real validation (L4)
 
 **Cost of Finding Defects by Stage:**
@@ -140,13 +163,14 @@ L0 (most) ----------
 
 **Recommended Distribution:**
 
-- **L0-L2**: 95% of tests (hundreds to thousands) - Fast, deterministic validation
-- **L3**: 5% of tests (5-20 critical vertical scenarios) - Infrastructure validation in PLTE
-- **L4**: Continuous (synthetic monitoring + exploratory) - Production horizontal validation
+- **L0-L1**: 70-80% of tests (hundreds to thousands) - Unit tests, highest determinism
+- **L2**: 15-20% of tests (dozens to hundreds) - Emulated system tests, high determinism
+- **L3**: 5% of tests (5-20 critical scenarios) - In-situ vertical tests in PLTE, moderate determinism
+- **L4**: Continuous (synthetic monitoring + exploratory) - Testing in production, high determinism with highest domain coherency
 
 **Why This Shape:**
 
-✅ **Fast Feedback**: Most tests (L0) run fastest (milliseconds)
+✅ **Fast Feedback**: Most tests (L0-L1) run fastest (milliseconds)
 ✅ **Reliability**: Lower levels are more stable (fewer flaky tests)
 ✅ **Cost Efficiency**: Cheaper to write and maintain unit tests
 ✅ **Comprehensive Coverage**: Each level serves a different purpose
@@ -159,21 +183,25 @@ The testing strategy integrates three methodologies:
 
 **TDD (Test-Driven Development) → L0-L2:**
 
-- Focus: Unit and integration tests with test doubles
+- Focus: Unit tests and emulated system tests with test doubles
+- **L0-L1**: Unit tests (source and binary scope)
+- **L2**: Emulated system tests (deployable artifacts scope)
 - Purpose: Drive design and validate logic in isolation
 - Process: Red → Green → Refactor
 - Tools: Go test, Jest, pytest
 
 **BDD (Behavior-Driven Development) → L3:**
 
-- Focus: Vertical tests in PLTE
-- Purpose: Validate deployable unit behavior in cloud infrastructure
+- Focus: In-situ vertical tests in PLTE
+- **L3**: In-situ vertical tests (deployed system scope - vertical)
+- Purpose: Validate deployed system behavior in-situ in cloud infrastructure
 - Process: Gherkin scenarios → Step implementations with test doubles
 - Tools: Godog, Cucumber, SpecFlow
 
 **ATDD (Acceptance Test-Driven Development) → L4:**
 
-- Focus: Production horizontal tests
+- Focus: Testing in production
+- **L4**: Testing in production (deployed system scope - horizontal)
 - Purpose: Validate acceptance criteria in production
 - Process: Define criteria → Implement → Validate in production
 - Tools: Synthetic monitoring, exploratory testing, production observability
@@ -254,9 +282,10 @@ See **[Three-Layer Testing Approach](../../specifications/three-layer-approach.m
 
 **Specific Practices:**
 
-**L0-L2**: Mock all external dependencies, run on local/CI agent in < 10 minutes total
-**L3**: Limit to 5-20 critical vertical scenarios, test doubles for external services, validate infrastructure
-**L4**: Continuous synthetic monitoring, exploratory testing in production, use feature flags for control
+**L0-L1 (Unit Tests)**: Mock all external dependencies, run on devbox/agent in milliseconds to seconds
+**L2 (Emulated System Tests)**: Test doubles for all external dependencies, run on devbox/agent in seconds
+**L3 (In-Situ Vertical Tests)**: Limit to 5-20 critical vertical scenarios, test doubles for external services, validate deployed system infrastructure in-situ
+**L4 (Testing in Production)**: Continuous synthetic monitoring, exploratory testing in production, use feature flags for control
 
 ---
 

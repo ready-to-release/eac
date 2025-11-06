@@ -8,7 +8,7 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 ## Test Level Environment Mapping
 
-### L0-L2 Tests: DevBox and Build Agents
+### L0-L1: Unit Tests (DevBox and Build Agents)
 
 ![L0-L2 Environment](../../../assets/testing/env-l0-l2.drawio.png)
 
@@ -16,54 +16,79 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 ![L0-L1 Legend](../../../assets/testing/legend-L0-L1.drawio.png)
 
-**Legend for L0-L1 unit tests:** Shows the symbol notation used in CD Model diagrams to indicate unit-level tests (L0) and component integration tests (L1).
+**Legend for L0-L1 unit tests:** Shows the symbol notation used in CD Model diagrams to indicate unit-level tests.
+
+**L0-L1 Execution:**
+
+- **Name**: Unit Tests
+- **Shift Direction**: LEFT
+- **Environment**: Devbox or agent (Stage 2, Stages 3-4)
+- **Scope**: Source and binary
+- **Test doubles**: ALL external dependencies replaced
+- **Process**: In-process
+- **Determinism**: Highest
+- **Domain Coherency**: Lowest
+
+### L2: Emulated System Tests (DevBox and Build Agents)
 
 ![L2 Legend](../../../assets/testing/legend-L2.drawio.png)
 
-**Legend for L2 integration tests:** Shows the symbol notation used to indicate integration tests running on agents with test doubles for all external dependencies.
+**Legend for L2 emulated system tests:** Shows the symbol notation used to indicate emulated system tests running on agents with test doubles for all external dependencies.
 
-**L0-L2 Execution:**
+**L2 Execution:**
 
-- **Environment**: DevBox (Stage 2) and Build Agents (Stages 3-4)
+- **Name**: Emulated System Tests
+- **Shift Direction**: LEFT
+- **Environment**: Devbox or agent (Stages 3-4)
+- **Scope**: Deployable artifacts
 - **Test doubles**: ALL external dependencies replaced
-- **Process**: In-process (L0-L1) or cross-process with test doubles (L2)
-- **Speed**: Milliseconds to seconds, highly deterministic
+- **Process**: Cross-process with test doubles
+- **Determinism**: High
+- **Domain Coherency**: High
 
-### L3 Tests: PLTE (Vertical Testing)
+### L3: In-Situ Vertical Tests (PLTE)
 
 ![L3 Environment](../../../assets/testing/env-l3.drawio.png)
 
-**This diagram shows L3 vertical testing in PLTE:** The single deployable unit is deployed to a production-like cloud environment (PLTE) in Stages 5-6. Key distinction: tests validate the unit's behavior in cloud infrastructure (networking, load balancing, deployment) with test doubles for ALL external services. NOT testing cross-service interactions.
+**This diagram shows L3 in-situ vertical testing in PLTE:** The deployed system is tested in-situ in a production-like cloud environment (PLTE) in Stages 5-6. Key distinction: tests validate the system's behavior in cloud infrastructure (networking, load balancing, deployment) with test doubles for ALL external services. NOT testing cross-service interactions.
 
 ![L3 Legend](../../../assets/testing/legend-L3.drawio.png)
 
-**Legend for L3 vertical tests:** Shows the symbol notation indicating vertical end-to-end tests that validate a single deployable unit in PLTE.
+**Legend for L3 in-situ vertical tests:** Shows the symbol notation indicating in-situ vertical tests that validate a deployed system in PLTE.
 
 **L3 Execution:**
 
+- **Name**: In-Situ Vertical Tests
+- **Shift Direction**: LEFT
 - **Environment**: PLTE only (Stages 5-6)
-- **Scope**: Single deployable unit boundaries (vertical)
+- **Scope**: Deployed system (single deployable unit boundaries - vertical)
 - **Test doubles**: ALL external services replaced with test doubles
 - **Purpose**: Validate infrastructure, deployment, and configuration
+- **Determinism**: Moderate
+- **Domain Coherency**: High
 
-### L4 Tests: Production (Horizontal Testing)
+### L4: Testing in Production
 
 ![L4 Environment](../../../assets/testing/env-l4.drawio.png)
 
-**This diagram shows L4 horizontal testing in production:** Tests run in the live production environment (Stages 11-12) to validate real cross-service interactions. May use test doubles for specific cases like test payment processors. Includes synthetic monitoring and exploratory testing.
+**This diagram shows L4 testing in production:** Tests run in the live production environment (Stages 11-12) to validate real cross-service interactions. May use live test doubles for specific cases like test payment processors. Includes synthetic monitoring and exploratory testing.
 
 ![L4 Legend](../../../assets/testing/legend-L4.drawio.png)
 
-**Legend for L4 production tests:** Shows the symbol notation indicating horizontal end-to-end tests in production that validate cross-service interactions.
+**Legend for L4 production tests:** Shows the symbol notation indicating testing in production that validates cross-service interactions.
 
 **L4 Execution:**
 
+- **Name**: Testing in Production
+- **Shift Direction**: RIGHT
 - **Environment**: Production (Stages 11-12)
-- **Scope**: Cross-service interactions (horizontal)
-- **Test doubles**: Optional for specific cases (e.g., test payment service)
+- **Scope**: Deployed system (cross-service interactions - horizontal)
+- **Test doubles**: All production, may use live test doubles
 - **Purpose**: Validate real production behavior with actual services
+- **Determinism**: High
+- **Domain Coherency**: Highest
 
-### Out-of-Category: Horizontal Pre-Production (Anti-Pattern)
+### Out-of-Category: Horizontal End-to-End (Anti-Pattern)
 
 ![Hybrid E2E Environment](../../../assets/testing/env-he2e.drawio.png)
 
@@ -71,7 +96,17 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 ![Hybrid E2E Legend](../../../assets/testing/legend-he2e.drawio.png)
 
-**Legend for out-of-category tests:** Shows notation for horizontal pre-production tests that cross team boundaries - avoid this pattern.
+**Legend for out-of-category tests:** Shows notation for horizontal end-to-end tests that cross team boundaries - avoid this pattern.
+
+**Horizontal E2E Execution (Anti-Pattern):**
+
+- **Name**: Horizontal End-to-End
+- **Shift Direction**: non-shifted
+- **Environment**: Shared testing environment
+- **Scope**: Deployed system
+- **Test doubles**: Tied up to non-production "test" deployments
+- **Determinism**: Lowest
+- **Domain Coherency**: High
 
 ---
 
@@ -210,17 +245,17 @@ func TestOrderService_CreateOrder(t *testing.T) {
 - Use containerized dependencies (Docker)
 - Parallel execution requires careful isolation
 
-### L3 Isolation: Vertical in PLTE with Test Doubles
+### L3 Isolation: In-Situ Vertical in PLTE with Test Doubles
 
 ![L3 Process Isolation](../../../assets/testing/process-isolation-l3.drawio.png)
 
-**This diagram shows vertical testing in PLTE:** The SUT **(C)** is deployed to production-like cloud infrastructure (no longer emulated). Test orchestration **(B)** runs on test agents **(A)**. Production artifacts **(D)** and **(E)** are deployed to their actual PaaS hosts. Critical: mock artifacts **(F)** and **(G)** replace ALL external services and dependencies. Tests validate the deployable unit in cloud infrastructure, not cross-service interactions.
+**This diagram shows in-situ vertical testing in PLTE:** The deployed system **(C)** is tested in production-like cloud infrastructure (no longer emulated). Test orchestration **(B)** runs on test agents **(A)**. Production artifacts **(D)** and **(E)** are deployed to their actual PaaS hosts. Critical: mock artifacts **(F)** and **(G)** replace ALL external services and dependencies. Tests validate the deployed system in cloud infrastructure, not cross-service interactions.
 
-**Vertical Testing in PLTE:**
+**In-Situ Vertical Testing in PLTE:**
 
-L3 validates the single deployable unit in production-like infrastructure:
+L3 validates the deployed system in-situ in production-like infrastructure:
 
-- Deployable unit deployed to actual cloud PaaS hosts
+- Deployed system running on actual cloud PaaS hosts
 - Test doubles for ALL external services (databases, queues, external APIs)
 - Validates infrastructure (networking, load balancing, DNS, deployment)
 - Does NOT test cross-service interactions (that's L4 in production)
@@ -228,7 +263,7 @@ L3 validates the single deployable unit in production-like infrastructure:
 **Example (Godog):**
 
 ```gherkin
-# L3: Vertical test in PLTE with test doubles
+# L3: In-situ vertical test in PLTE with test doubles
 Feature: API Service Deployment
 
   @L3 @IV
@@ -274,18 +309,22 @@ The CD Model integrates three testing methodologies:
 
 **TDD (Test-Driven Development) → L0-L2:**
 
+- **L0-L1**: Unit tests with test doubles (source and binary scope)
+- **L2**: Emulated system tests with test doubles (deployable artifacts scope)
 - Drive design and validate logic with test doubles
 - Process: Red → Green → Refactor
 - All external dependencies mocked
 
 **BDD (Behavior-Driven Development) → L3:**
 
-- Validate deployable unit behavior in PLTE with test doubles
+- **L3**: In-situ vertical tests in PLTE with test doubles (deployed system scope)
+- Validate deployed system behavior in-situ in PLTE
 - Process: Gherkin scenarios → Step implementations
 - Vertical testing boundaries only
 
 **ATDD (Acceptance Test-Driven Development) → L4:**
 
+- **L4**: Testing in production (deployed system scope, horizontal)
 - Validate acceptance criteria in production
 - Process: Define criteria → Validate in production
 - Horizontal testing with real services
@@ -314,26 +353,27 @@ Test levels integrate with CD Model stages based on execution environment and sc
 
 **Environment Mapping:**
 
-- **L0-L2**: DevBox and Build Agents (Stages 2-4) - All external dependencies as test doubles
-- **L3**: PLTE (Stages 5-6) - Vertical testing with test doubles for external services
-- **L4**: Production (Stages 11-12) - Horizontal testing with real services
+- **L0-L1: Unit Tests**: Devbox and agents (Stages 2-4) - Source and binary scope, all external dependencies as test doubles
+- **L2: Emulated System Tests**: Devbox and agents (Stages 3-4) - Deployable artifacts scope, all external dependencies as test doubles
+- **L3: In-Situ Vertical Tests**: PLTE (Stages 5-6) - Deployed system scope (vertical), test doubles for external services
+- **L4: Testing in Production**: Production (Stages 11-12) - Deployed system scope (horizontal), all production dependencies
 
 **Process Isolation:**
 
 - **L0-L1**: In-process, no network, function calls only
 - **L2**: Cross-process with test doubles, emulated environment
-- **L3**: Deployed to PLTE, test doubles for externals, vertical boundaries
+- **L3**: Deployed to PLTE in-situ, test doubles for externals, vertical boundaries
 - **L4**: Production, real cross-service interactions, horizontal testing
 
 **Methodology Integration:**
 
 - **TDD (L0-L2)**: Drive design with test doubles
-- **BDD (L3)**: Validate vertical behavior in PLTE
+- **BDD (L3)**: Validate vertical behavior in-situ in PLTE
 - **ATDD (L4)**: Validate horizontal behavior in production
 
 **Shift-Left and Shift-Right:**
 
-Maximize L0-L3 (deterministic) and L4 (real production) to avoid fragile horizontal pre-production environments.
+Maximize L0-L3 (LEFT - deterministic) and L4 (RIGHT - real production) to avoid fragile Horizontal E2E environments (non-shifted).
 
 ## Next Steps
 
