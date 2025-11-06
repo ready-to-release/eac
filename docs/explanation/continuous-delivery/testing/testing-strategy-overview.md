@@ -336,6 +336,7 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 - **Mock message queues**: In-memory queue implementations
 - **Stubbed external APIs**: Return predetermined responses
 - **Fake services**: Lightweight implementations for testing
+- **Test double runtimes**: Other containers in the composition can be full test databases etc.
 
 ### CD Model Integration
 
@@ -348,7 +349,7 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 
 ## L3: In-Situ Vertical Tests
 
-**Purpose**: Validate a deployed system in-situ in a production-like environment (PLTE) with vertical testing boundaries.
+**Purpose**: Validate a deployable unit in-situ in a production-like environment (PLTE) with vertical testing boundaries.
 
 ### Characteristics
 
@@ -531,7 +532,15 @@ L4 also includes human-driven validation:
 
 ## Horizontal End-to-End Testing (Out-of-Category Anti-Pattern)
 
-**Taxonomy Classification**: Out-of-Category | Horizontal End-to-End | non-shifted | Shared testing environment | Deployed system | Tied up to non-production "test" deployments | Lowest determinism | High domain coherency
+**Taxonomy Classification**:
+
+- Out-of-Category
+- Horizontal End-to-End
+- non-shifted
+- Shared testing environment
+- Tied up to non-production team to team synchronized test deployments
+- Lowest determinism
+- High domain coherency
 
 Horizontal End-to-End (Horizontal E2E) testing refers to environments where multiple teams deploy pre-production versions of their services to a shared environment, with services interacting horizontally (service A calls service B calls service C).
 

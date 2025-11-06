@@ -112,38 +112,45 @@ All evidence is automatically collected and stored in artifact repositories, pro
 
 ### Stage-by-Stage Breakdown for RA
 
-| Stage | Automation Level | Approval Required | Duration |
-|-------|-----------------|-------------------|----------|
-| 1. Authoring | Manual | No | Hours-Days |
-| 2. Pre-commit | Automated | No | 5-10 min |
-| 3. Merge Request | Automated + Manual Review | Yes (Peer) | Hours |
-| 4. Commit | Automated | No | 15-30 min |
-| 5. Acceptance Testing | Automated | No | 1-2 hours |
-| 6. Extended Testing | Automated + Manual | No | 2-8 hours |
-| 7. Exploration | Manual | No | Days |
-| 8. Start Release | Automated | No | Minutes |
-| 9. Release Approval | Manual Review | Yes (Release Manager) | Hours-Days |
-| 10. Production Deployment | Automated | No | 10-30 min |
-| 11. Live | Automated Monitoring | No | Ongoing |
-| 12. Release Toggling | Manual Control | No | As needed |
+| Stage                     | Automation Level          | Approval Required     | Duration          |
+| ------------------------- | ------------------------- | --------------------- | ----------------- |
+| 1. Authoring              | Manual                    | No                    | hours to days     |
+| 2. Pre-commit             | Automated                 | No                    | 5-10 min          |
+| 3. Merge Request          | Automated + Manual Review | Yes (Peer)            | hours             |
+| 4. Commit                 | Automated                 | No                    | 5-10 min          |
+| 5. Acceptance Testing     | Automated                 | No                    | minutes to 1 hour |
+| 6. Extended Testing       | Automated + Manual        | No                    | hours             |
+| 7. Exploration            | Manual                    | No                    | continuous        |
+| 8. Start Release          | Automated                 | No                    | minutes           |
+| 9. Release Approval       | Manual Review             | Yes (Release Manager) | hours to days     |
+| 10. Production Deployment | Automated                 | No                    | minutes           |
+| 11. Live                  | Automated Monitoring      | No                    | Ongoing           |
+| 12. Release Toggling      | Manual Control            | No                    | As needed         |
 
-**Total cycle time**: Typically 1-2 weeks from commit to production for a new feature.
+**Total cycle time**: Typically days to 2 weeks from commit to production for a new feature, with two primary constraints:
+
+- Authoring and Release Approval, which are the implicit constraints of developer task sizing and approval queue.
 
 ---
 
 ## Continuous Deployment (CDE) Pattern
 
-**Best for**: Non-regulated systems, internal tools, teams with mature DevOps practices
+**Best for**: Less-regulated systems, internal tools, teams with mature DevOps practices
 
-The Continuous Deployment pattern emphasizes automation and rapid iteration. Changes flow automatically from commit to production based on automated quality gates, with feature flags providing runtime control.
+The Continuous Deployment pattern emphasizes automation and rapid iteration.
+
+Changes flow automatically from commit to production based on automated quality gates, with feature flags providing runtime control.
+
+Extensive use of versioning lifecycle management tooling provides out-of-the-box management of verifications, roll-backs, deployments etc.
 
 ### When to Use CDE
 
 Use the Continuous Deployment pattern when:
 
-- **Non-regulated**: No regulatory oversight or compliance requirements
+- **Less-regulated**: No compliance requirements for regulatory oversight approval before touching production
+- **Regulated**: Compliance requirements for regulatory oversight approval before going live with features via. feature toggle in production approval is part of CDE.
 - **Internal tools**: Used by internal teams who can tolerate occasional issues
-- **Low risk**: Errors don't impact critical operations
+- **Low risk**: Errors don't impact critical operations, consumers are bound to earlier versions of versioned components etc.
 - **Mature testing**: Comprehensive automated test coverage
 - **Feature flags**: Can control feature exposure at runtime
 - **Fast iteration**: Business value from rapid deployment
@@ -206,20 +213,20 @@ Without feature flags, the CDE pattern has limited control over feature exposure
 
 ### Stage-by-Stage Breakdown for CDE
 
-| Stage | Automation Level | Approval Required | Duration |
-|-------|-----------------|-------------------|----------|
-| 1. Authoring | Manual | No | Hours |
-| 2. Pre-commit | Automated | No | 5-10 min |
-| 3. Merge Request | Automated + Manual Review | Yes (Peer) | Minutes-Hours |
-| 4. Commit | Automated | No | 15-30 min |
-| 5. Acceptance Testing | Automated | No | 1-2 hours |
-| 6. Extended Testing | Automated | No | 1-2 hours |
-| 7. Exploration | Automated (or skipped) | No | Minutes |
-| 8. Start Release | Automated | No | Seconds |
-| 9. Release Approval | Automated | No (Auto-approved) | Seconds |
-| 10. Production Deployment | Automated | No | 10-30 min |
-| 11. Live | Automated Monitoring | No | Ongoing |
-| 12. Release Toggling | Automated Control | No | Real-time |
+| Stage                     | Automation Level          | Approval Required  | Duration          |
+| ------------------------- | ------------------------- | ------------------ | ----------------- |
+| 1. Authoring              | Manual                    | No                 | hours to days     |
+| 2. Pre-commit             | Automated                 | No                 | 5-10 min          |
+| 3. Merge Request          | Automated + Manual Review | Yes (Peer)         | hours             |
+| 4. Commit                 | Automated                 | No                 | 5-10 min          |
+| 5. Acceptance Testing     | Automated                 | No                 | minutes to 1 hour |
+| 6. Extended Testing       | Automated                 | No                 | hours             |
+| 7. Exploration            | Automated (or skipped)    | No                 | continuous        |
+| 8. Start Release          | Automated                 | No                 | seconds           |
+| 9. Release Approval       | Automated                 | No (Auto-approved) | seconds           |
+| 10. Production Deployment | Automated                 | No                 | minutes           |
+| 11. Live                  | Automated Monitoring      | No                 | Ongoing           |
+| 12. Release Toggling      | Automated Control         | No                 | Real-time         |
 
 **Total cycle time**: Typically 2-4 hours from commit to production for a small change.
 
@@ -304,11 +311,10 @@ Use this decision tree to select the appropriate pattern:
 ```mermaid
 flowchart TD
     Start([START])
-    Q1{Regulatory<br/>oversight?}
-    Q2{Impact safety/<br/>critical ops?}
-    Q3{Require audit<br/>trails?}
-    Q4{Test coverage<br/>>80%?}
-    Q5{Feature flags<br/>available?}
+    Q1{Regulated<br/>approval<br/>before prod?}
+    Q2{normal change ops?}
+    Q3{Automated testing<br/>>mid?}
+    Q4{Feature flags<br/>available?}
     RA[Use RA Pattern]
     RANote[Use RA Pattern<br/>until coverage improves]
     CDE[Use CDE Pattern]
@@ -316,13 +322,11 @@ flowchart TD
     Q1 -->|YES| RA
     Q1 -->|NO| Q2
     Q2 -->|YES| RA
-    Q2 -->|NO| Q3
-    Q3 -->|YES| RA
+    Q2 -->|standard change| Q3
+    Q3 -->|NO| RANote
     Q3 -->|NO| Q4
-    Q4 -->|NO| RANote
-    Q4 -->|YES| Q5
-    Q5 -->|NO| RA
-    Q5 -->|YES| CDE
+    Q4 -->|NO| RA
+    Q4 -->|YES| CDE
     style RA fill:#ffcccc
     style RANote fill:#ffcccc
     style CDE fill:#ccffcc

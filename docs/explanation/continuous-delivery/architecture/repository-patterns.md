@@ -2,7 +2,9 @@
 
 ## Introduction
 
-Repository organization is a foundational decision that affects how teams collaborate, how code is versioned, and how the CD Model is implemented. The way you structure your repositories influences build times, dependency management, deployment coordination, and team autonomy.
+Repository organization is a foundational decision that affects how teams collaborate, how code is versioned, and how the CD Model is implemented.
+
+The way you structure your repositories influences build times, dependency management, deployment coordination, and team autonomy.
 
 This article explains the two primary repository patterns - monorepo and polyrepo - and provides guidance on choosing the right approach for your organization and system architecture.
 
@@ -98,10 +100,10 @@ monorepo/
 
 **Build Times:**
 
-- Potentially longer build times
-- Need for selective builds (build only changed modules)
+- Potentially longer build times, if not doing incremental builds etc.
+- Need for selective builds (build only changed modules) locally and in pipelines
 - Caching strategies essential
-- Requires sophisticated build tools
+- Requires sophisticated build tooling
 
 **Access Control:**
 
@@ -127,9 +129,9 @@ monorepo/
 
 **Best for:**
 
-- **Tightly coupled services**: Microservices that frequently change together
+- **Team coupled services**: Services that a team maintains together
 - **Shared libraries**: Heavy code reuse across projects
-- **Small to medium teams**: < 50-100 developers working in same domain
+- **Small to medium teams**: < 50-100 developers working in same domain, however it can scale to google sized orgs.
 - **Rapid iteration**: Fast-moving products requiring frequent cross-cutting changes
 - **Unified ownership**: Single team or organization owns all code
 
@@ -146,25 +148,24 @@ monorepo/
 
 - Use change detection to build only affected modules
 - Run targeted test suites based on changed files
-- Generate single build artifact with all modules
+- Generate individual build artifacts pr. module
 
 **Stage 5 (Acceptance Testing):**
 
-- Single PLTE instance with all services deployed
+- Single PLTE instance with a service vertical deployed
 - Simplified service coordination
-- Integrated end-to-end testing
+- Integrated end-to-end testing in extended testing stage 6
 
 **Stage 8 (Start Release):**
 
-- Create single release tag for all modules
-- Coordinated versioning (all services move together)
-- Unified release notes
+- Create independent release tags for all modules
+- Independent release notes
 
 **Stage 10 (Production Deployment):**
 
-- Deploy all changed services together
-- Or use feature flags to decouple deployment from release
-- Single deployment pipeline
+- Multiple deployment pipelines are affecting production
+- Deployment orchestration when multiple services changed in same change.
+- Should use feature flags to decouple deployment from release
 
 ---
 
@@ -178,7 +179,7 @@ monorepo/
 
 **Multiple Repositories:**
 
-- One repository per service or module
+- One repository per service or versioned component (one repository pr. deployable unit)
 - Independent version history
 - Separate access controls
 - Isolated tooling and configuration
@@ -192,7 +193,7 @@ monorepo/
 
 **Example Structure:**
 
-```
+```text
 organization/
 ├── api-service/
 ├── web-service/
@@ -247,6 +248,9 @@ organization/
 - Multiple pull requests needed
 - Potential for breaking changes
 - Version compatibility challenges
+- Contract testing required
+- Each repository must have standardized (versioned, named etc.) artifacts produced
+- Repository to Repository bindings are NOT allowed ever. Instead formal version dependency menagement must be used
 
 **Dependency Management Complexity:**
 
@@ -277,7 +281,7 @@ organization/
 - **Large organizations**: Multiple teams with separate ownership
 - **Distributed teams**: Teams in different locations or with confidentiality needs
 - **Independent deployment cadences**: Services that release on different schedules
-- **Clear service boundaries**: Well-defined APIs between services
+- **Clear service boundaries**: Well-defined APIs between services (Contracts)
 
 **Example Scenarios:**
 
@@ -324,17 +328,17 @@ organization/
 
 ### Side-by-Side Analysis
 
-| Factor | Monorepo | Polyrepo |
-|--------|----------|----------|
-| **Atomic Changes** | ✅ Excellent - single commit | ❌ Difficult - multiple PRs |
-| **Team Autonomy** | ⚠️ Limited - shared decisions | ✅ Excellent - independent |
-| **Build Times** | ⚠️ Potentially long | ✅ Fast per repository |
-| **Dependency Management** | ✅ Simple - unified | ⚠️ Complex - versioned |
-| **Code Reuse** | ✅ Easy - shared directly | ⚠️ Requires versioning |
-| **Access Control** | ⚠️ Coarse-grained | ✅ Fine-grained |
-| **Discoverability** | ✅ All code in one place | ⚠️ Spread across repos |
-| **Independent Deployment** | ⚠️ Coordinated releases | ✅ Independent cycles |
-| **Tooling** | ✅ Unified | ⚠️ Duplicated |
+| Factor                     | Monorepo                      | Polyrepo                    |
+| -------------------------- | ----------------------------- | --------------------------- |
+| **Atomic Changes**         | ✅ Excellent - single commit  | ❌ Difficult - multiple PRs |
+| **Team Autonomy**          | ⚠️ Limited - shared decisions | ✅ Excellent - independent  |
+| **Build Times**            | ⚠️ Potentially long           | ✅ Fast per repository      |
+| **Dependency Management**  | ✅ Simple - unified           | ⚠️ Complex - versioned      |
+| **Code Reuse**             | ✅ Easy - shared directly     | ⚠️ Requires versioning      |
+| **Access Control**         | ⚠️ Coarse-grained             | ✅ Fine-grained             |
+| **Discoverability**        | ✅ All code in one place      | ⚠️ Spread across repos      |
+| **Independent Deployment** | ⚠️ Coordinated releases       | ✅ Independent cycles       |
+| **Tooling**                | ✅ Unified                    | ⚠️ Duplicated               |
 
 ### Decision Factors
 
@@ -376,14 +380,17 @@ organization/
 **Module Boundaries**: Define explicit boundaries, document dependencies, enforce with tooling (linters, dependency checks)
 
 **Versioning**:
+
 - Monorepo: Unified or independent module versioning
 - Polyrepo: Semantic versioning per repository, dependency manifests specify compatible versions
 
 **Dependency Management**:
+
 - Monorepo: Root-level with lock file for consistency
 - Polyrepo: Per repository with published versioned libraries and contract testing
 
 **Automation Tools**:
+
 - Monorepo: Change detection, selective builds, distributed caching (Nx, Bazel, Turborepo)
 - Polyrepo: Repository templates, shared pipeline definitions, automated updates (Dependabot)
 
@@ -391,13 +398,13 @@ organization/
 
 ## Impact on CD Model Stages
 
-| Stage | Monorepo | Polyrepo |
-|-------|----------|----------|
-| **Stage 3** | Larger PRs, single review | Smaller focused PRs, may need coordination |
-| **Stage 4** | Change detection for selective builds | Independent builds in parallel |
-| **Stage 5** | Single PLTE with all services | Version pinning, contract testing |
-| **Stage 8** | Single release tag | Multiple independent release tags |
-| **Stage 10** | Coordinated deployment or feature flags | Independent deployment schedules |
+| Stage        | Monorepo                                | Polyrepo                                   |
+| ------------ | --------------------------------------- | ------------------------------------------ |
+| **Stage 3**  | Larger PRs, single review               | Smaller focused PRs, may need coordination |
+| **Stage 4**  | Change detection for selective builds   | Independent builds in parallel             |
+| **Stage 5**  | Single PLTE with all services           | Version pinning, contract testing          |
+| **Stage 8**  | Single orchestrated release event possible for RA                      | Multiple independent release tags          |
+| **Stage 10** | Coordinated deployment or feature flags | Independent deployment schedules           |
 
 **Polyrepo Coordination Requirements**: Contract testing for API compatibility, version pinning in PLTE, deployment sequencing for backward compatibility, API versioning for gradual rollout.
 

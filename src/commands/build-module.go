@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/ready-to-release/eac/src/contracts/modules"
@@ -121,7 +122,11 @@ func BuildModule() int {
 // Requires: go generate && go build
 func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
-	binaryPath := filepath.Join(outputDir, "r2r-cli")
+	binaryName := "r2r-cli"
+	if runtime.GOOS == "windows" {
+		binaryName = "r2r-cli.exe"
+	}
+	binaryPath := filepath.Join(outputDir, binaryName)
 
 	fmt.Fprintf(logWriter, "\n=== Building go-cli: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Running: go generate ./...\n")

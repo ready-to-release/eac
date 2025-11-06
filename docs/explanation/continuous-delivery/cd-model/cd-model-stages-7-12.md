@@ -248,7 +248,7 @@ Required documentation for release approval:
 
 ### Environment
 
-Release approval validation occurs in **PLTE or Demo environments** where evidence has been collected throughout Stages 5-7.
+Release approval validation occurs in **PLTE (automated)** and **Demo (exploratively)** environments where evidence has been collected throughout Stages 5-7.
 
 ---
 
@@ -284,14 +284,21 @@ Different deployment strategies balance risk and deployment speed:
 
 **Canary Deploy**:
 
-- Deploy to small subset of production servers (1-5%)
+- Deploy to small subset of production servers and users (1-5%)
 - Monitor key metrics (errors, latency, resource usage)
 - Gradually increase traffic if healthy
 - Roll back if issues detected
 
+**Ring Deployment**:
+
+- Deploy to consecutive rings
+- Monitor key metrics (errors, latency, resource usage)
+- Gradually rollout to new rings
+- Roll back if issues detected
+
 ### Deploy Agents and Segregated Access
 
-Production deployments use **Deploy Agents** - specialized CI/CD runners with:
+Some Production deployments use **Deploy Agents** - specialized CI/CD runners with:
 
 - **Network segregation**: Access to production networks
 - **Credentials**: Production deployment credentials (stored securely)
@@ -409,6 +416,8 @@ Instead of deploying to all users simultaneously, use rings:
 Each ring provides validation before expanding to more users.
 
 ### Incident Response
+
+<!-- TODO: this needs to be an article on its own -->
 
 When issues occur in production:
 

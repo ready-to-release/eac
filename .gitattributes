@@ -1,0 +1,26 @@
+# Linguist Section
+## Detect Markdown as code
+## See: https://github.com/github-linguist/linguist/issues/5951
+*.md linguist-vendored=false
+*.md linguist-generated=false
+*.md linguist-documentation=false
+*.md linguist-detectable=true
+# Export-Ignore Section for GitHub Release Archives
+# This controls what gets included in the auto-generated source archives
+## Exclude everything by default
+/* export-ignore
+## Then selectively include only source code and essential files
+# Go source code
+/src -export-ignore
+/src/** -export-ignore
+# Go module files
+/go.mod -export-ignore
+/go.sum -export-ignore
+# GitHub workflows (for transparency/reproducibility)
+/.github/workflows/nn-cli-*.yml -export-ignore
+# Docs
+/documentation -export-ignore
+# Keep the gitignore and gitattributes for proper repo setup
+/.gitignore -export-ignore
+/.gitattributes -export-ignore
+automation/.external/** filter=lfs diff=lfs merge=lfs -text
