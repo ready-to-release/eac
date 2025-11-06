@@ -150,15 +150,17 @@ This article maps test levels to specific stages, explains process isolation str
 
 The test pyramid guides the quantity of tests at each level:
 
-```text
-        L4 (few)
-      /           \
-    L3 (some)
-   /               \
-  L2 (more)
- /                   \
-L1 (many)
-L0 (most) ----------
+```mermaid
+flowchart TB
+    L4[L4: few] -.-> L3[L3: some]
+    L3 -.-> L2[L2: more]
+    L2 -.-> L1[L1: many]
+    L1 -.-> L0[L0: most]
+    style L4 fill:#ffcccc,stroke:#d32f2f
+    style L3 fill:#ffe6cc,stroke:#f57c00
+    style L2 fill:#ffffcc,stroke:#f9a825
+    style L1 fill:#e6ffcc,stroke:#7cb342
+    style L0 fill:#ccffcc,stroke:#388e3c
 ```
 
 **Recommended Distribution:**

@@ -199,14 +199,15 @@ The pipeline is triggered when changes affect its deployable unit.
 
 The pipeline validates changes and delivers immutable artifacts to the Live environment:
 
-```text
-Trunk (Code)
-    ↓
-Deployable Unit (Scope)
-    ↓
-Deployment Pipeline (Process)
-    ↓
-Live (Runtime)
+```mermaid
+flowchart TD
+    TR[Trunk] --> DU[Deployable Unit]
+    DU --> DP[Deployment Pipeline]
+    DP --> LV[Live]
+    style TR fill:#e1f5fe
+    style DU fill:#fff9c4
+    style DP fill:#f3e5f5
+    style LV fill:#c8e6c9
 ```
 
 ### Live Feedback Influences Trunk
@@ -290,8 +291,15 @@ The Unit of Flow maps directly to CD Model stages:
 
 ### Single Service Pattern (Polyrepo)
 
-```text
-Trunk (one repo) → One Deployable Unit → One Pipeline → One Live Service
+```mermaid
+flowchart LR
+    TR[Trunk] --> DU[One Deployable Unit]
+    DU --> PP[One Pipeline]
+    PP --> LS[One Live Service]
+    style TR fill:#e1f5fe
+    style DU fill:#fff9c4
+    style PP fill:#f3e5f5
+    style LS fill:#c8e6c9
 ```
 
 **Use when:**
@@ -302,8 +310,15 @@ Trunk (one repo) → One Deployable Unit → One Pipeline → One Live Service
 
 ### Multi-Service Platform (Monorepo)
 
-```text
-Trunk (one repo) → Multiple Deployable Units → Multiple Pipelines → Multiple Live Services
+```mermaid
+flowchart LR
+    TR[Trunk] --> DU[Multiple Deployable Units]
+    DU --> PP[Multiple Pipelines]
+    PP --> LS[Multiple Live Services]
+    style TR fill:#e1f5fe
+    style DU fill:#fff9c4
+    style PP fill:#f3e5f5
+    style LS fill:#c8e6c9
 ```
 
 **Use when:**
@@ -314,8 +329,21 @@ Trunk (one repo) → Multiple Deployable Units → Multiple Pipelines → Multip
 
 ### Microservices Architecture (Polyrepo)
 
-```text
-Multiple Trunks → Multiple Deployable Units → Multiple Pipelines → Multiple Live Services
+```mermaid
+flowchart LR
+    TR[Multiple Trunks]
+    DU[Multiple Deployable Units]
+    PP[Multiple Pipelines]
+    LS[Multiple Live Services]
+
+    TR --> DU
+    DU --> PP
+    PP --> LS
+
+    style TR fill:#e1f5fe
+    style DU fill:#fff9c4
+    style PP fill:#f3e5f5
+    style LS fill:#c8e6c9
 ```
 
 **Use when:**

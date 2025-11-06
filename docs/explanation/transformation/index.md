@@ -2,27 +2,33 @@
 
 ## Introduction
 
-Modern organizations face an increasingly complex compliance landscape. Traditional compliance approaches—manual documentation, periodic audits, and late-stage validation—create bottlenecks that slow delivery, increase costs, and provide only point-in-time assurance. This section explores how to transform compliance from a blocking activity into a continuous, automated capability that enables faster, safer software delivery.
+Modern organizations face a complex and fast-changing compliance landscape. Traditional methods - manual documentation, periodic audits, and late validation - slow delivery, increase costs, and offer only point-in-time assurance.
+This section shows how to turn compliance from a bottleneck into a **continuous, automated capability** that enables faster and safer software delivery.
 
-**Who should read this**: Engineering leaders, compliance officers, quality assurance teams, and anyone responsible for regulatory compliance in software development organizations.
-
-**What you'll learn**: This section provides strategic guidance for transforming compliance practices using modern software engineering techniques. You'll understand why transformation is necessary, what compliance-as-code means, and how to execute a successful transformation in your organization.
+**What you’ll learn:** Why transformation is needed, what compliance-as-code means, and how to apply modern engineering practices to compliance.
 
 ## The Challenge
 
-Organizations following traditional approaches often experience compliance as a tax on innovation. It is a necessary burden that slows delivery without providing commensurate value. Audit preparation becomes a scramble, teams dread compliance reviews, and the organization maintains only superficial confidence in its compliance posture.
+Traditional compliance often feels like a tax on innovation — slow, reactive, and low-value. Audit prep becomes a scramble, reviews create friction, and confidence in compliance remains shallow.
 
 ## The Modern Approach
 
-Compliance transformation applies software engineering best practices to compliance activities:
+Compliance transformation applies software engineering best practices:
 
-- **Everything-as-code**: Requirements, policies, and evidence stored in version control
-- **Continuous validation**: Compliance checked on every commit, not quarterly
-- **Shift-left testing**: Issues caught in minutes, not weeks
-- **Automated evidence**: 95%+ of audit evidence generated automatically
-- **Executable specifications**: Requirements expressed as automated tests
+**Everything-as-code:** Requirements, policies, and evidence in version control,
+**Continuous validation:** Compliance checked on every commit,
+**Shift-left testing:** Issues caught early,
+**Automated evidence:** Most audit proof generated automatically,
+**Executable specifications:** Requirements expressed as automated tests.
 
-The result: Organizations reduce compliance overhead by 70-80% while improving compliance quality and achieving continuous audit readiness.
+**The result:** Less overhead, higher quality, and continuous audit readiness.
+
+## Prerequisites for Success
+
+Executive sponsorship, compliance partnership, basic CI/CD pipelines, and readiness for change.
+If these aren’t in place, start small with a proof of concept to build momentum.
+
+---
 
 ## What You'll Learn
 
@@ -52,6 +58,8 @@ Three documents explain key technical patterns:
 
 [Success Factors](success-factors.md) synthesizes lessons learned from successful transformations. You'll understand critical success factors, common pitfalls, and how to assess your organization's readiness.
 
+---
+
 ## Automation Support
 
 Compliance transformation requires an automation layer to accelerate adoption. The Ready-to-Release (r2r) CLI project provides tools for:
@@ -63,6 +71,8 @@ Compliance transformation requires an automation layer to accelerate adoption. T
 - Automating common compliance operations
 
 While the principles and framework described here are tool-agnostic, having automation support dramatically accelerates adoption and reduces the cost of transformation.
+
+---
 
 ## Navigation
 
@@ -116,16 +126,3 @@ This transformation approach integrates with existing software delivery practice
 
 - [Template Catalog](../../reference/templates/index.md) - Reference templates for compliance artifacts
 
----
-
-## Prerequisites for Success
-
-Before starting a transformation initiative:
-
-- Executive sponsorship (VP-level or higher)
-- Compliance office buy-in and partnership
-- Existing CI/CD pipelines (basic level)
-- Budget for 12-18 month transformation
-- Organizational readiness for change
-
-Without these prerequisites, consider building foundational capabilities first or starting with a smaller proof-of-concept to build momentum and support.

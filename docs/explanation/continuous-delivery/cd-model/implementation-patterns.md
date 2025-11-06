@@ -301,28 +301,32 @@ Evidence is automatically linked to the specific build/release for traceability.
 
 Use this decision tree to select the appropriate pattern:
 
-```text
-START
-  ↓
-Is your system subject to regulatory oversight? (FDA, financial regulations, etc.)
-  ├─ YES → Use RA Pattern
-  └─ NO → Continue
-      ↓
-  Could a defect impact safety, health, or critical business operations?
-    ├─ YES → Use RA Pattern
-    └─ NO → Continue
-        ↓
-    Do you require formal audit trails and documented approvals?
-      ├─ YES → Use RA Pattern
-      └─ NO → Continue
-          ↓
-      Do you have comprehensive automated test coverage (>80%)?
-        ├─ NO → Use RA Pattern (until test coverage improves)
-        └─ YES → Continue
-            ↓
-        Can you implement feature flags for runtime control?
-          ├─ NO → Use RA Pattern
-          └─ YES → Use CDE Pattern
+```mermaid
+flowchart TD
+    Start([START])
+    Q1{Regulatory<br/>oversight?}
+    Q2{Impact safety/<br/>critical ops?}
+    Q3{Require audit<br/>trails?}
+    Q4{Test coverage<br/>>80%?}
+    Q5{Feature flags<br/>available?}
+    RA[Use RA Pattern]
+    RANote[Use RA Pattern<br/>until coverage improves]
+    CDE[Use CDE Pattern]
+    Start --> Q1
+    Q1 -->|YES| RA
+    Q1 -->|NO| Q2
+    Q2 -->|YES| RA
+    Q2 -->|NO| Q3
+    Q3 -->|YES| RA
+    Q3 -->|NO| Q4
+    Q4 -->|NO| RANote
+    Q4 -->|YES| Q5
+    Q5 -->|NO| RA
+    Q5 -->|YES| CDE
+    style RA fill:#ffcccc
+    style RANote fill:#ffcccc
+    style CDE fill:#ccffcc
+    style Start fill:#e1f5fe
 ```
 
 ### Factors to Consider

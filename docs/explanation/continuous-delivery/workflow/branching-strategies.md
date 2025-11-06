@@ -50,25 +50,17 @@ The RA pattern uses release branches to isolate releases for validation and appr
 
 **Stages 1-3: Topic Branch Development**:
 
-```text
-┌─────────────┐
-│   Stage 1   │  Developer creates topic branch from trunk
-│  Authoring  │  git checkout -b feature/user-auth
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Stage 2   │  Developer runs L0/L1 tests locally (5-10 min)
-│ Pre-commit  │  All tests pass before push
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Stage 3   │  Push topic branch, create merge request
-│Merge Request│  Automated checks + peer review
-└──────┬──────┘  Approval required to proceed
-       │
-       ▼  (Approved)
+```mermaid
+flowchart TD
+    S1["Stage 1: Authoring<br/>Create topic branch"]
+    S2["Stage 2: Pre-commit<br/>Run L0/L1 tests (5-10 min)"]
+    S3["Stage 3: Merge Request<br/>Automated checks + peer review"]
+    Approved(["Approved"])
+    S1 --> S2 --> S3 --> Approved
+    style S1 fill:#e1f5fe
+    style S2 fill:#e1f5fe
+    style S3 fill:#e1f5fe
+    style Approved fill:#ccffcc
 ```
 
 **Example Commands**:
@@ -92,29 +84,17 @@ gh pr create --title "Add user authentication" \
 
 **Stages 4-7: Trunk Integration and Testing**:
 
-```text
-┌─────────────┐
-│   Stage 4   │  Topic branch squash-merged to trunk
-│   Commit    │  Automated: L0, L1, L2, Hybrid E2E (15-30 min)
-└──────┬──────┘  Build immutable artifacts
-       │
-       ▼
-┌─────────────┐
-│   Stage 5   │  Deploy to PLTE (Production-Like Test Environment)
-│ Acceptance  │  Automated: L0-L3, collect IV/OV/PV evidence (1-2 hrs)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Stage 6   │  Comprehensive testing in PLTE
-│  Extended   │  Automated: Full test suite, performance, security (2-8 hrs)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Stage 7   │  Demo environment for exploratory testing
-│Exploration  │  Manual: L4 tests, UAT, stakeholder validation (days)
-└─────────────┘
+```mermaid
+flowchart TD
+    S4["Stage 4: Commit<br/>Squash merge, L0-L2 tests (15-30 min)"]
+    S5["Stage 5: Acceptance<br/>Deploy to PLTE, L0-L3 (1-2 hrs)"]
+    S6["Stage 6: Extended<br/>Full suite, perf, security (2-8 hrs)"]
+    S7["Stage 7: Exploration<br/>Demo env, manual UAT (days)"]
+    S4 --> S5 --> S6 --> S7
+    style S4 fill:#e1f5fe
+    style S5 fill:#fff9c4
+    style S6 fill:#fff9c4
+    style S7 fill:#f3e5f5
 ```
 
 **Key Characteristics**:
@@ -284,8 +264,15 @@ git push origin main
 
 **Branch Flow**:
 
-```text
-Topic Branch → (Squash Merge) → Trunk → (Branch) → Release Branch → Production
+```mermaid
+flowchart LR
+    TB[Topic Branch] -->|Squash Merge| TR[Trunk]
+    TR -->|Branch| RB[Release Branch]
+    RB -->|Deploy| PROD[Production]
+    style TB fill:#e1f5fe
+    style TR fill:#fff9c4
+    style RB fill:#ffe0b2
+    style PROD fill:#c8e6c9
 ```
 
 **Key Practices**:
@@ -326,54 +313,34 @@ The CDE pattern deploys directly from trunk without release branches. This appro
 
 **Stages 1-3: Topic Branch Development**:
 
-```text
-┌─────────────┐
-│   Stage 1   │  Developer creates topic branch from trunk
-│  Authoring  │  git checkout -b feature/user-dashboard
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Stage 2   │  Developer runs L0/L1 tests locally (5-10 min)
-│ Pre-commit  │  All tests pass before push
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Stage 3   │  Push topic branch, create merge request
-│Merge Request│  Automated checks + peer review
-└──────┬──────┘  Quick approval (minutes to hours)
-       │
-       ▼  (Approved)
+```mermaid
+flowchart TD
+    S1["Stage 1: Authoring<br/>Create topic branch"]
+    S2["Stage 2: Pre-commit<br/>Run L0/L1 tests (5-10 min)"]
+    S3["Stage 3: Merge Request<br/>Automated checks + peer review"]
+    Approved(["Approved"])
+    S1 --> S2 --> S3 --> Approved
+    style S1 fill:#e1f5fe
+    style S2 fill:#e1f5fe
+    style S3 fill:#e1f5fe
+    style Approved fill:#ccffcc
 ```
 
 **Identical to RA pattern** - no differences in topic branch workflow.
 
 **Stages 4-7: Trunk Integration and Testing**:
 
-```text
-┌─────────────┐
-│   Stage 4   │  Topic branch squash-merged to trunk
-│   Commit    │  Automated: L0, L1, L2, Hybrid E2E (15-30 min)
-└──────┬──────┘  Build immutable artifacts
-       │
-       ▼
-┌─────────────┐
-│   Stage 5   │  Deploy to PLTE
-│ Acceptance  │  Automated: L0-L3, collect IV/OV/PV evidence (1-2 hrs)
-└──────┬──────┘  Faster than RA (less comprehensive)
-       │
-       ▼
-┌─────────────┐
-│   Stage 6   │  Extended testing in PLTE
-│  Extended   │  Automated: Critical test suite (1-2 hrs)
-└──────┬──────┘  Faster than RA (focused on critical paths)
-       │
-       ▼
-┌─────────────┐
-│   Stage 7   │  Exploration (often automated or skipped)
-│Exploration  │  Automated: Smoke tests in staging (minutes)
-└─────────────┘  OR skipped entirely
+```mermaid
+flowchart TD
+    S4["Stage 4: Commit<br/>Squash merge, L0-L2 tests (15-30 min)"]
+    S5["Stage 5: Acceptance<br/>Deploy to PLTE, L0-L3 (1-2 hrs)"]
+    S6["Stage 6: Extended<br/>Critical test suite (1-2 hrs)"]
+    S7["Stage 7: Exploration<br/>Smoke tests or skipped (minutes)"]
+    S4 --> S5 --> S6 --> S7
+    style S4 fill:#e1f5fe
+    style S5 fill:#fff9c4
+    style S6 fill:#fff9c4
+    style S7 fill:#f3e5f5
 ```
 
 **Key Differences from RA**:
@@ -384,38 +351,21 @@ The CDE pattern deploys directly from trunk without release branches. This appro
 
 **Stages 8-12: Direct Deployment from Trunk**:
 
-```text
-┌─────────────┐
-│   Stage 8   │  NO release branch created
-│Start Release│  Tag trunk commit for deployment
-└──────┬──────┘  Deployment candidate = trunk HEAD
-       │
-       ▼
-┌─────────────┐
-│   Stage 9   │  Automated approval based on quality gates
-│Release      │  Automated: Check test pass rate, coverage, vulnerabilities
-│Approval     │  If all gates pass → auto-approve
-└──────┬──────┘  If any gate fails → block and notify
-       │
-       ▼  (Auto-approved)
-┌─────────────┐
-│  Stage 10   │  Deploy trunk commit to production
-│Production   │  Automated: Same artifact validated in Stages 5-6
-│Deployment   │  Monitor deployment success (10-30 min)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Stage 11   │  Monitor production behavior
-│    Live     │  Automated: Metrics, alerts, health checks
-└──────┬──────┘  Feature flags provide runtime control
-       │
-       ▼
-┌─────────────┐
-│  Stage 12   │  Feature flag management
-│Release      │  Automated: Gradual rollout (1% → 10% → 100%)
-│Toggling     │  Instant disable if issues arise
-└─────────────┘
+```mermaid
+flowchart TD
+    S8["Stage 8: Start Release<br/>Tag trunk for deployment"]
+    S9["Stage 9: Release Approval<br/>Automated quality gates"]
+    S10["Stage 10: Production Deployment<br/>Deploy to production (10-30 min)"]
+    S11["Stage 11: Live<br/>Monitor production"]
+    S12["Stage 12: Release Toggling<br/>Feature flag management"]
+    Approved(["Auto-approved"])
+    S8 --> S9 --> Approved --> S10 --> S11 --> S12
+    style S8 fill:#ffe0b2
+    style S9 fill:#ffccbc
+    style S10 fill:#c8e6c9
+    style S11 fill:#a5d6a7
+    style S12 fill:#81c784
+    style Approved fill:#ccffcc
 ```
 
 **Example Commands**:

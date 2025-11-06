@@ -231,15 +231,24 @@ See [Semantic Commits](../../reference/continuous-delivery/semantic-commits.md) 
 
 **Example:**
 
-```text
-Topic branch (local):
-  - WIP: start feature
-  - fix typo
-  - address review comments
-  - final cleanup
-
-Trunk (after squash merge):
-  - feat(api): add user authentication endpoint
+```mermaid
+flowchart LR
+    subgraph Topic["Topic Branch"]
+        C1["WIP: start"] --> C2["fix typo"]
+        C2 --> C3["review"]
+        C3 --> C4["cleanup"]
+    end
+    subgraph Trunk["Trunk"]
+        C5["feat(api): add auth"]
+    end
+    C4 -->|squash merge| C5
+    style Topic fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style Trunk fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style C1 fill:#ffccbc
+    style C2 fill:#ffccbc
+    style C3 fill:#ffccbc
+    style C4 fill:#ffccbc
+    style C5 fill:#a5d6a7
 ```
 
 ---

@@ -122,19 +122,22 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 L0 and L1 tests run within the same process as the code under test:
 
-```text
-┌─────────────────────────┐
-│   Test Runner Process   │
-│  ┌──────────────────┐   │
-│  │  Test Code       │   │
-│  └──────────────────┘   │
-│  ┌──────────────────┐   │
-│  │  Code Under Test │   │
-│  └──────────────────┘   │
-│  ┌──────────────────┐   │
-│  │  Mocked Deps     │   │
-│  └──────────────────┘   │
-└─────────────────────────┘
+```mermaid
+graph TB
+    subgraph Process["Test Runner Process"]
+        direction TB
+        TC["Test Code"]
+        CUT["Code Under Test"]
+        MD["Mocked Deps"]
+    end
+
+    TC -.->|function calls| CUT
+    CUT -.->|function calls| MD
+
+    style Process fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style TC fill:#fff9c4
+    style CUT fill:#c8e6c9
+    style MD fill:#ffccbc
 ```
 
 **No Network Calls:**
@@ -186,15 +189,18 @@ func TestUserService_CreateUser(t *testing.T) {
 
 L2 tests involve multiple processes communicating over network:
 
-```text
-┌──────────────────┐       ┌──────────────────┐
-│  Test Process    │──────▶│  Service Process │
-└──────────────────┘   ▲   └──────────────────┘
-                       │
-                       ▼
-                   ┌──────────────────┐
-                   │  Database Process│
-                   └──────────────────┘
+```mermaid
+graph TB
+    TP["Test Process"]
+    SP["Service Process"]
+    DP["Database Process"]
+
+    TP -.->|network calls| SP
+    SP -.->|network calls| DP
+
+    style TP fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style SP fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style DP fill:#ffccbc,stroke:#d84315,stroke-width:2px
 ```
 
 **Network Call Handling:**
