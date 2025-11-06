@@ -2,7 +2,7 @@
 
 moniker: "src-mcp-docs"
 name: "Go Documentation MCP Server"
-type: "mcp-server"
+type: "go-mcp"
 description: "Model Context Protocol server for documentation management and queries"
 
 source:

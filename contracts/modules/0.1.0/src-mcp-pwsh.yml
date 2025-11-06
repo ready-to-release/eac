@@ -2,7 +2,7 @@
 
 moniker: "src-mcp-pwsh"
 name: "Go PowerShell MCP Server"
-type: "mcp-server"
+type: "go-mcp"
 description: "Model Context Protocol server for executing PowerShell commands"
 
 source:
