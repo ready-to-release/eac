@@ -38,11 +38,13 @@ The server is configured in `.mcp.json` as:
 Create a new architecture workspace for a module.
 
 **Parameters**:
+
 - `module` (string, required): Module name (e.g., "cli", "vscode", "docs")
 - `name` (string, required): Workspace name (e.g., "CLI Architecture")
 - `description` (string, required): Workspace description
 
 **Example**:
+
 ```json
 {
   "module": "cli",
@@ -56,6 +58,7 @@ Create a new architecture workspace for a module.
 Add a container to the architecture.
 
 **Parameters**:
+
 - `module` (string, required): Module name
 - `name` (string, required): Container name
 - `technology` (string, required): Technology/platform (e.g., "Go", "React")
@@ -66,6 +69,7 @@ Add a container to the architecture.
 Define a relationship between elements.
 
 **Parameters**:
+
 - `module` (string, required): Module name
 - `source` (string, required): Source element ID (snake_case)
 - `destination` (string, required): Destination element ID (snake_case)
@@ -77,6 +81,7 @@ Define a relationship between elements.
 Export the workspace DSL content.
 
 **Parameters**:
+
 - `module` (string, required): Module name
 
 ## Usage in Claude Code
@@ -86,6 +91,7 @@ Create architecture documentation for the CLI module
 ```
 
 Claude will automatically:
+
 1. Create the workspace at `docs/reference/design/cli/workspace.dsl`
 2. Add containers and relationships based on the code
 3. Generate accompanying documentation
@@ -102,16 +108,18 @@ docker cp workspace.dsl structurizr-<module>:/usr/local/structurizr/workspace.ds
 docker restart structurizr-<module>
 ```
 
-Then open http://localhost:8081
+Then open <http://localhost:8081>
 
 ## Output Location
 
 All workspace DSL files are saved to:
-```
+
+```text
 docs/reference/design/<module>/workspace.dsl
 ```
 
 This location is:
+
 - ✅ Tracked in git
 - ✅ Directly loadable by Structurizr Lite
 - ✅ Follows project conventions
