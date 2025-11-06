@@ -1,6 +1,6 @@
-# CLI Project
+# Ready-to-Release (r2r)
 
-A monorepo encapsulating an OCI based extendable-cli-in-a-box with internal mcp servers, VSCode extensions, and development tooling.
+Everything-as-Code (EAC) platform: A monorepo encapsulating an OCI based extendable CLI with internal MCP servers, VSCode extensions, and development tooling.
 
 ## What's Included
 

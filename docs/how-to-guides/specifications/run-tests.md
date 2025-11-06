@@ -216,8 +216,8 @@ go test ./...
 **Output**:
 
 ```text
-ok      github.com/simply-cli/cli/src/cli    0.123s
-ok      github.com/simply-cli/cli/src/mcp    0.089s
+ok      github.com/ready-to-release/eac/src/cli    0.123s
+ok      github.com/ready-to-release/eac/src/mcp    0.089s
 ```
 
 ### Run with Verbose Output
@@ -262,8 +262,8 @@ go tool cover -func=coverage.out
 **Example coverage output**:
 
 ```text
-ok      github.com/simply-cli/cli/src/cli    0.123s  coverage: 85.7% of statements
-ok      github.com/simply-cli/cli/src/mcp    0.089s  coverage: 92.3% of statements
+ok      github.com/ready-to-release/eac/src/cli    0.123s  coverage: 85.7% of statements
+ok      github.com/ready-to-release/eac/src/mcp    0.089s  coverage: 92.3% of statements
 ```
 
 ### Run with Race Detection

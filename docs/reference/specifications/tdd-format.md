@@ -374,8 +374,8 @@ go test -cover ./src/cli/...
 ### Example Output
 
 ```text
-ok      github.com/simply-cli/cli/src/cli    0.123s  coverage: 85.7% of statements
-ok      github.com/simply-cli/cli/src/mcp    0.089s  coverage: 92.3% of statements
+ok      github.com/ready-to-release/eac/src/cli    0.123s  coverage: 85.7% of statements
+ok      github.com/ready-to-release/eac/src/mcp    0.089s  coverage: 92.3% of statements
 ```
 
 ---
