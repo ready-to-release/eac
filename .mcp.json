@@ -25,6 +25,13 @@
       "env": {
         "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
       }
+    },
+    "structurizr": {
+      "command": "go",
+      "args": ["run", "./src/mcp/structurizr/main.go"],
+      "env": {
+        "STRUCTURIZR_WORKSPACE_ROOT": "docs/reference/design"
+      }
     }
   }
 }

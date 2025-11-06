@@ -19,6 +19,26 @@ CREATE ALL intermediate files, shell scripts, results etc. in `/out/<my-result-f
 
 ---
 
+## Available MCP Tools
+
+### Structurizr Architecture Documentation
+
+**What**: MCP server for creating C4 architecture diagrams programmatically.
+
+**When to use**: User asks to create/update architecture documentation for a module.
+
+**Available tools**:
+- `create_workspace` - Create architecture workspace for a module
+- `add_container` - Add containers to the architecture
+- `add_relationship` - Define relationships between containers
+- `export_workspace` - Save DSL to `docs/reference/design/<module>/workspace.dsl`
+
+**Example**: "Create architecture documentation for the docs module"
+
+**Setup**: See `src/mcp/structurizr-lite/QUICKSTART.md` for Claude Desktop configuration.
+
+---
+
 ## Testing Specifications
 
 This project uses a **three-layer testing approach** unified in Gherkin:
