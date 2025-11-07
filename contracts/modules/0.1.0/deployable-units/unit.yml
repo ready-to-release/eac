@@ -1,4 +1,0 @@
-deplyable_units:
-  - cli: 
-    modules:
-      - src-cli

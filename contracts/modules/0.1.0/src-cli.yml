@@ -4,6 +4,7 @@ moniker: "src-cli"
 name: "The Cli of Cli's cli"
 type: "go-cli"
 description: "The extendable go-based cli tool"
+deployable_unit: true
 
 source:
   changelog_path: "src/cli/CHANGELOG.md"
