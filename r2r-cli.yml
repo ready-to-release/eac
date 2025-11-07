@@ -1,0 +1,3 @@
+extensions:
+  - name: 'pwsh'
+    image: 'ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:latest'

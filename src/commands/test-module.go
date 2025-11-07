@@ -159,7 +159,13 @@ func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir s
 	fmt.Fprintf(logWriter, "\n=== Testing go-cli: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Running: go test ./...\n")
 
-	return runTestCommand(moduleRoot, logWriter, "go", "test", "./...")
+	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
+
+	// Generate summary_unit.md
+	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
+	generateTDDSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
+
+	return exitCode
 }
 
 // testGoCommands tests the runtime command dispatcher (Pattern B)
@@ -170,7 +176,13 @@ func testGoCommands(module *modules.ModuleContract, workspaceRoot string, output
 	fmt.Fprintf(logWriter, "\n=== Testing go-commands: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Running: go test ./...\n")
 
-	return runTestCommand(moduleRoot, logWriter, "go", "test", "./...")
+	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
+
+	// Generate summary_unit.md
+	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
+	generateTDDSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
+
+	return exitCode
 }
 
 // testGoMCP tests an MCP JSON-RPC server (Pattern C)
@@ -181,7 +193,13 @@ func testGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir s
 	fmt.Fprintf(logWriter, "\n=== Testing go-mcp: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Running: go test ./...\n")
 
-	return runTestCommand(moduleRoot, logWriter, "go", "test", "./...")
+	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
+
+	// Generate summary_unit.md
+	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
+	generateTDDSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
+
+	return exitCode
 }
 
 // testGoLibrary tests a Go library module (Pattern D)
@@ -192,7 +210,13 @@ func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputD
 	fmt.Fprintf(logWriter, "\n=== Testing go-library: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Running: go test ./...\n")
 
-	return runTestCommand(moduleRoot, logWriter, "go", "test", "./...")
+	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
+
+	// Generate summary_unit.md
+	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
+	generateTDDSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
+
+	return exitCode
 }
 
 // testGoTests tests a Godog BDD test module (Pattern D variant)
@@ -223,10 +247,10 @@ func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir
 	// Run go test - Godog will read format from test code via environment
 	exitCode := runTestCommandWithEnv(moduleRoot, logWriter, env, "go", "test", "-v")
 
-	// Generate summary.md if cucumber.json was created
+	// Generate summary_acceptance.md if cucumber.json was created
 	if reportFormat == "cucumber" && exitCode == 0 {
-		fmt.Fprintf(logWriter, "\n=== Generating summary.md ===\n")
-		generateSummaryMarkdown(module.Moniker, workspaceRoot, outputDir, logWriter)
+		fmt.Fprintf(logWriter, "\n=== Generating summary_acceptance.md ===\n")
+		generateBDDSummaryMarkdown(module.Moniker, workspaceRoot, outputDir, logWriter)
 	}
 
 	return exitCode
@@ -237,6 +261,39 @@ func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir
 // Returns exit code (0 = success, non-zero = failure)
 func runTestCommand(dir string, logWriter io.Writer, name string, args ...string) int {
 	return runTestCommandWithEnv(dir, logWriter, nil, name, args...)
+}
+
+// runTestCommandWithCapture executes a test command and captures output
+// Output is written to both console and log file, and also captured for summary generation
+// Returns exit code and captured output
+func runTestCommandWithCapture(dir string, logWriter io.Writer, name string, args ...string) (int, string) {
+	var outputBuffer strings.Builder
+
+	// Create multi-writer to capture output while also writing to log
+	captureWriter := io.MultiWriter(logWriter, &outputBuffer)
+
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+
+	// Create multi-writer for stderr to capture errors in log
+	stderrWriter := io.MultiWriter(os.Stderr, captureWriter)
+
+	cmd.Stdout = captureWriter
+	cmd.Stderr = stderrWriter
+
+	exitCode := 0
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			fmt.Fprintf(stderrWriter, "\nError: failed to execute test command: %v\n", err)
+			exitCode = 1
+		}
+	} else {
+		fmt.Fprintf(logWriter, "\n✅ Tests passed\n")
+	}
+
+	return exitCode, outputBuffer.String()
 }
 
 // runTestCommandWithEnv executes a test command with custom environment variables
@@ -272,10 +329,11 @@ func runTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]strin
 	return 0
 }
 
-// generateSummaryMarkdown generates summary.md from cucumber.json
-func generateSummaryMarkdown(moniker string, workspaceRoot string, outputDir string, logWriter io.Writer) {
+// generateBDDSummaryMarkdown generates summary_acceptance.md from cucumber.json
+func generateBDDSummaryMarkdown(moniker string, workspaceRoot string, outputDir string, logWriter io.Writer) {
 	cucumberPath := filepath.Join(outputDir, "cucumber.json")
-	summaryPath := filepath.Join(outputDir, "summary.md")
+	summaryPath := filepath.Join(outputDir, "summary_acceptance.md")
+	appendixPath := filepath.Join(outputDir, "appendix_a.md")
 
 	// Parse cucumber.json
 	report, err := cucumber.ParseFile(cucumberPath)
@@ -286,16 +344,56 @@ func generateSummaryMarkdown(moniker string, workspaceRoot string, outputDir str
 
 	fmt.Fprintf(logWriter, "Found %d features\n", len(report))
 
-	// Generate summary markdown with Appendix A
+	// Generate summary markdown without Appendix A (fragment starting at level 2)
 	var summary string
-	summary += "# Test Summary\n\n"
+	summary += "## Acceptance Test Summary\n\n"
 	summary += cucumber.RenderAllFeatures(report, nil)
-	summary += "\n---\n\n"
-	summary += cucumber.RenderAppendixA(report, workspaceRoot)
 
-	// Write summary.md
+	// Write summary_acceptance.md
 	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to write summary.md: %v\n", err)
+		fmt.Fprintf(logWriter, "Warning: failed to write summary_acceptance.md: %v\n", err)
+		return
+	}
+
+	fmt.Fprintf(logWriter, "✅ Generated: %s\n", summaryPath)
+
+	// Generate Appendix A as separate file (fragment starting at level 2)
+	var appendix string
+	appendix += "## Appendix A: Specifications and Test Results\n\n"
+	appendix += cucumber.RenderAppendixA(report, workspaceRoot)
+
+	// Write appendix_a.md
+	if err := os.WriteFile(appendixPath, []byte(appendix), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to write appendix_a.md: %v\n", err)
+		return
+	}
+
+	fmt.Fprintf(logWriter, "✅ Generated: %s\n", appendixPath)
+}
+
+// generateTDDSummaryMarkdown generates summary_unit.md from go test output
+func generateTDDSummaryMarkdown(moniker string, moduleType string, outputDir string, logWriter io.Writer, testOutput string, exitCode int) {
+	summaryPath := filepath.Join(outputDir, "summary_unit.md")
+
+	var summary string
+	summary += "## Unit Test Summary\n\n"
+	summary += fmt.Sprintf("**Module**: %s\n", moniker)
+	summary += fmt.Sprintf("**Type**: %s\n", moduleType)
+
+	if exitCode == 0 {
+		summary += fmt.Sprintf("**Status**: ✅ Passed\n\n")
+	} else {
+		summary += fmt.Sprintf("**Status**: ❌ Failed\n\n")
+	}
+
+	summary += "### Test Output\n\n"
+	summary += "```\n"
+	summary += testOutput
+	summary += "\n```\n"
+
+	// Write summary_unit.md
+	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to write summary_unit.md: %v\n", err)
 		return
 	}
 

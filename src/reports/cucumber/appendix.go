@@ -25,16 +25,14 @@ import (
 func RenderAppendixA(report CucumberReport, workspaceRoot string) string {
 	var buf strings.Builder
 
-	buf.WriteString("## Appendix A: Specifications and Test Results\n\n")
-
 	for _, feature := range report {
 		featureID := feature.GetFeatureID()
 
 		// Extract feature name from Feature ID (e.g., "src-commands_ai-commit-generation" -> "ai-commit-generation")
 		featureName := extractFeatureName(featureID)
 
-		// Level 3 header with feature name
-		buf.WriteString(fmt.Sprintf("### %s {#%s}\n\n", featureName, featureName))
+		// Level 2 header with feature name (implicit anchor)
+		buf.WriteString(fmt.Sprintf("## %s\n\n", featureName))
 
 		// Read and include the feature file content
 		featureContent := readFeatureFile(feature.URI, workspaceRoot)
@@ -45,7 +43,7 @@ func RenderAppendixA(report CucumberReport, workspaceRoot string) string {
 		}
 
 		// Test results reference
-		buf.WriteString(fmt.Sprintf("#### Test result for %s\n\n", featureName))
+		buf.WriteString(fmt.Sprintf("### Test result for %s\n\n", featureName))
 		buf.WriteString("For test results see cucumber.json in release artifact.\n\n")
 	}
 
