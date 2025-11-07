@@ -160,7 +160,7 @@ Transition from document management to version control:
 - Convert policies/procedures from Word to Markdown
 - Store in Git repository with branch protection
 - Establish pull request workflow for changes
-- Use [existing template catalog](../../reference/templates/index.md) as starting point
+- Use [existing template catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) as starting point
 - Keep external systems unchanged during pilot (reduce complexity)
 
 **Deliverable**: Version-controlled compliance artifacts

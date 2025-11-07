@@ -54,10 +54,6 @@ workspace "R2R CLI Architecture" "Ready to Release CLI - Enterprise-grade automa
                 argBoundaryDetector = component "Argument Boundary Detector" "Detects where CLI args end and container args begin" "Go"
                 flagFilter = component "Flag Filter" "Filters out Viper flags from container arguments" "Go"
             }
-
-            # Documentation
-            !docs docs
-            !decisions decisions
         }
 
         # User interactions

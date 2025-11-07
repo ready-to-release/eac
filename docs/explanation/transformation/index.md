@@ -96,4 +96,4 @@ This transformation approach integrates with existing software delivery practice
 
 ### Templates
 
-- [Template Catalog](../../reference/templates/index.md) - Reference templates for compliance artifacts
+- [Template Catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) - Reference templates for compliance artifacts

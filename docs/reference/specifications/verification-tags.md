@@ -271,7 +271,7 @@ Verification tags control how test results are grouped in implementation reports
 
 ### Report Template
 
-See [Implementation Report Template](../../templates/implementation-report.md) for full structure.
+See [Implementation Report Template](https://github.com/ready-to-release/eac/blob/main/templates/implementation-report.md) for full structure.
 
 ---
 
@@ -300,5 +300,5 @@ See [Implementation Report Template](../../templates/implementation-report.md) f
 
 - [Gherkin Format](./gherkin-format.md) - Specification syntax and tags
 - [Godog Commands](./godog-commands.md) - Running tests
-- [Implementation Report Template](../../templates/implementation-report.md) - Report structure
+- [Implementation Report Template](https://github.com/ready-to-release/eac/blob/main/templates/implementation-report.md) - Report structure
 - [Testing How-to Guides](../../how-to-guides/specifications/index.md) - Task-oriented guides

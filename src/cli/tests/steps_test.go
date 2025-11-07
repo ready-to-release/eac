@@ -149,6 +149,9 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^the exit code is (\d+)$`, theExitCodeIs)
 	sc.Step(`^I should see "([^"]*)"$`, iShouldSee)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOr)
+
+	// Register design command steps
+	InitializeDesignScenario(sc)
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {

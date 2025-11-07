@@ -19,26 +19,6 @@ CREATE ALL intermediate files, shell scripts, results etc. in `/out/<my-result-f
 
 ---
 
-## Available MCP Tools
-
-### Structurizr Architecture Documentation
-
-**What**: MCP server for creating C4 architecture diagrams programmatically.
-
-**When to use**: User asks to create/update architecture documentation for a module.
-
-**Available tools**:
-- `create_workspace` - Create architecture workspace for a module
-- `add_container` - Add containers to the architecture
-- `add_relationship` - Define relationships between containers
-- `export_workspace` - Save DSL to `docs/reference/design/<module>/workspace.dsl`
-
-**Example**: "Create architecture documentation for the docs module"
-
-**Setup**: See `src/mcp/structurizr-lite/QUICKSTART.md` for Claude Desktop configuration.
-
----
-
 ## Testing Specifications
 
 This project uses a **three-layer testing approach** unified in Gherkin:
@@ -48,6 +28,7 @@ This project uses a **three-layer testing approach** unified in Gherkin:
 - **TDD** (Unit tests) → Go test
 
 **Key Principles**:
+
 1. ATDD and BDD are conceptually distinct layers but technically unified in a single `.feature` file using Gherkin's `Rule:` syntax
 2. **Specifications (WHAT) vs Implementation (HOW)**: Specifications live in `specs/`, test implementations live in `src/`
 
@@ -66,6 +47,7 @@ This project uses a **three-layer testing approach** unified in Gherkin:
 **IMPORTANT**: Specifications and test implementations are deliberately separated:
 
 **Specifications (WHAT to test)** - Located in `specs/`:
+
 ```text
 specs/<module>/<feature_name>/
 ├── specification.feature           # Gherkin specs - Rules (ATDD) + Scenarios (BDD)
@@ -73,6 +55,7 @@ specs/<module>/<feature_name>/
 ```
 
 **Test Implementations (HOW to test)** - Located in `src/`:
+
 ```text
 src/<module>/
 ├── *.go                             # Production code
@@ -82,6 +65,7 @@ src/<module>/
 ```
 
 **Key Principles**:
+
 - **Specifications live in `specs/`** - Gherkin feature files describe WHAT the system should do
 - **Test implementations live in `src/`** - Go test code describes HOW to verify the specifications
 - **Separation of concerns** - Business-readable specs separate from technical test code
@@ -102,11 +86,8 @@ mkdir -p specs/<module>/<feature_name>
 **File**: `specs/<module>/<feature_name>/specification.feature`
 
 ```gherkin
-# Feature ID: <module>_<feature_name>
-# Module: <Module>
-
-@<module> @critical @<feature_name>
-Feature: [Feature Name]
+@<module>
+Feature: <module>_<feature_name>
 
   As a [role]
   I want [capability]
@@ -169,6 +150,7 @@ func iDoSomething() error {
 ```
 
 **Directory Structure After Step 3**:
+
 ```
 specs/<module>/<feature_name>/
 └── specification.feature        # Specifications (WHAT to test)
@@ -311,6 +293,7 @@ Scenario: Valid credentials grant access
 ### Running Tests
 
 **IMPORTANT**:
+
 - Use `go test` (not the deprecated `godog` CLI) for full Go tooling support
 - **Tests run from `src/` directory** and read specifications from `specs/` directory
 - Test implementations are in `src/`, not in `specs/`
@@ -338,6 +321,7 @@ go test -v ./src/commands/tests    # Runs against specs/src-commands/*/specifica
 ```
 
 **Architecture Reminder**:
+
 ```
 specs/src-commands/ai-commit-generation/specification.feature  (WHAT to test)
                     ↓

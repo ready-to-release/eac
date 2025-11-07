@@ -1,103 +1,21 @@
 site_name: Ready-to-Release Documentation
 site_description: Everything-as-Code (EAC) platform for managing software delivery flows with integrated MCP servers and VSCode extension
 site_author: Ready-to-Release Team
-site_url: https://github.com/ready-to-release
+site_url: ""
 
-repo_name: cli
+repo_name: eac
 repo_url: https://github.com/ready-to-release/eac
 edit_uri: edit/main/docs/
-
-theme:
-  name: material
-  palette:
-    # Light mode
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    # Dark mode
-    - scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-
-  features:
-    - navigation.instant
-    - navigation.tracking
-    - navigation.tabs
-    - navigation.sections
-    - navigation.expand
-    - navigation.indexes
-    - navigation.top
-    - search.suggest
-    - search.highlight
-    - content.code.copy
-    - content.code.annotate
-
-  icon:
-    repo: fontawesome/brands/github
-
-markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.tasklist:
-      custom_checkbox: true
-  - attr_list
-  - md_in_html
-  - toc:
-      permalink: true
+docs_dir: docs
 
 plugins:
-  - search
-  - git-revision-date-localized:
-      enable_creation_date: true
-
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/ready-to-release
-nav:
-  - Home: index.md
-
-  - Getting Started:
-    - Quick Start: ../QUICKSTART.md
-    - Installation: installation.md
-    - Usage Guide: ../USAGE.md
-
-  - Guides:
-    - VSCode Extension:
-      - Overview: guide/vscode-ext-claude-commit/index.md
-      - Recording Demos: guide/vscode-ext-claude-commit/recording-demos.md
-    - MCP Servers: guide/mcp-servers.md
-    - Automation Scripts: guide/automation.md
-
-  - Tutorials:
-    - Building MCP Tools: tutorials/building-mcp-tools.md
-    - Custom VSCode Commands: tutorials/custom-vscode-commands.md
-    - Extending Automation: tutorials/extending-automation.md
-
-  - Reference:
-    - Project Structure: reference/structure.md
-    - Configuration: reference/configuration.md
-    - MCP Server API: reference/mcp-api.md
-    - Extension API: reference/extension-api.md
-    - Automation Scripts: reference/automation.md
-
-  - Development:
-    - Contributing: development/contributing.md
-    - Architecture: development/architecture.md
-    - Testing: development/testing.md
-    - Release Process: development/releases.md
-
-copyright: Copyright &copy; 2025 Ready-to-Release Project
+  - techdocs-core
+  - awesome-nav
+markdown_extensions:
+  - footnotes
+theme:
+  name: material
+  features:
+    - navigation.indexes
+    - content.footnote.tooltips
+dev_addr: '0.0.0.0:8000'

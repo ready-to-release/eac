@@ -157,6 +157,9 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOr)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOrOr)
 	sc.Step(`^I should see "([^"]*)" on stderr$`, iShouldSeeOnStderr)
+
+	// Design command steps
+	InitializeDesignScenario(sc)
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {

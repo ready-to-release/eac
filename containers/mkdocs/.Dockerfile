@@ -33,12 +33,15 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
     rm /tmp/requirements.txt
 
-# Create non-root user
-RUN useradd -m -u 1000 -s /bin/bash mkdocs && \
+# Create non-root user (Alpine uses adduser instead of useradd)
+RUN adduser -D -u 1000 -s /bin/sh mkdocs && \
     chown -R mkdocs:mkdocs /docs
 
 # Switch to non-root user
 USER mkdocs
+
+# Configure git to allow the /docs directory (fixes "dubious ownership" error)
+RUN git config --global --add safe.directory /docs
 
 # Expose MkDocs development server port
 EXPOSE 8000

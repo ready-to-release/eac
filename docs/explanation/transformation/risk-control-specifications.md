@@ -387,7 +387,7 @@ Risk control specifications integrate with the broader testing approach:
 To implement risk control specifications:
 
 1. **Learn shift-left** - Read [Shift-Left Compliance](shift-left-compliance.md) to understand early validation
-2. **Review templates** - Check [Template Catalog](../../reference/templates/index.md) for example patterns
+2. **Review templates** - Check [Template Catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) for example patterns
 3. **Implement** - Follow [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) guide
 
 ---
@@ -399,4 +399,4 @@ To implement risk control specifications:
 - [Transformation Framework](transformation-framework.md) - How to implement organization-wide
 - [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - Step-by-step implementation guide
 - [Gherkin Format](../../reference/specifications/gherkin-format.md) - Complete syntax reference
-- [Template Catalog](../../reference/templates/index.md) - Example templates
+- [Template Catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) - Example templates
