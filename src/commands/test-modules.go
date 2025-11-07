@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/src/contracts/modules"
@@ -80,6 +81,7 @@ func TestModules() int {
 
 	// Test each module in sequence
 	failedModules := []string{}
+	testedModules := []*modules.ModuleContract{}
 	for i, moniker := range monikers {
 		fmt.Printf("=== [%d/%d] Testing module: %s ===\n", i+1, len(monikers), moniker)
 
@@ -116,6 +118,9 @@ func TestModules() int {
 
 		logFile.Close()
 
+		// Track tested modules
+		testedModules = append(testedModules, module)
+
 		if exitCode != 0 {
 			failedModules = append(failedModules, moniker)
 			fmt.Printf("❌ Module %s failed with exit code %d\n\n", moniker, exitCode)
@@ -139,10 +144,17 @@ func TestModules() int {
 	}
 	fmt.Printf("\nResults directory: %s\n", testRunDir)
 
-	// Generate multi-module summary if all tests passed and using cucumber format
-	if len(failedModules) == 0 && reportFormat == "cucumber" {
-		fmt.Println("\n=== Generating multi-module summary.md ===")
-		generateMultiModuleSummary(testRunID, testRunDir, workspaceRoot)
+	// Generate multi-module summaries if all tests passed
+	if len(failedModules) == 0 {
+		// Generate BDD summary if using cucumber format
+		if reportFormat == "cucumber" {
+			fmt.Println("\n=== Generating multi-module summary_acceptance.md ===")
+			generateMultiModuleBDDSummary(testRunID, testRunDir, workspaceRoot)
+		}
+
+		// Generate TDD summary for all modules
+		fmt.Println("\n=== Generating multi-module summary_unit.md ===")
+		generateMultiModuleTDDSummary(testRunID, testRunDir, workspaceRoot, testedModules)
 	}
 
 	if len(failedModules) > 0 {
@@ -164,9 +176,10 @@ func runModuleTest(module *modules.ModuleContract, workspaceRoot string, outputD
 	return testFunc(module, workspaceRoot, outputDir, logWriter, reportFormat)
 }
 
-// generateMultiModuleSummary generates a consolidated summary for all modules
-func generateMultiModuleSummary(testRunID string, testRunDir string, workspaceRoot string) {
-	summaryPath := filepath.Join(testRunDir, "summary.md")
+// generateMultiModuleBDDSummary generates a consolidated BDD summary for all modules
+func generateMultiModuleBDDSummary(testRunID string, testRunDir string, workspaceRoot string) {
+	summaryPath := filepath.Join(testRunDir, "summary_acceptance.md")
+	appendixPath := filepath.Join(testRunDir, "appendix_a.md")
 
 	// Find all module directories with cucumber.json
 	modules, err := findModulesWithResults(testRunDir)
@@ -182,9 +195,9 @@ func generateMultiModuleSummary(testRunID string, testRunDir string, workspaceRo
 
 	fmt.Printf("Found %d module(s) with test results\n", len(modules))
 
-	// Generate multi-module summary
+	// Generate multi-module summary (fragment starting at level 2)
 	var summary string
-	summary += "# Test Summary\n\n"
+	summary += "## Acceptance Test Summary\n\n"
 	summary += fmt.Sprintf("**Test Run ID**: %s\n\n", testRunID)
 
 	// Render each module as a section
@@ -200,7 +213,7 @@ func generateMultiModuleSummary(testRunID string, testRunDir string, workspaceRo
 		}
 
 		// Add module section header
-		summary += fmt.Sprintf("### Module: %s\n\n", moduleName)
+		summary += fmt.Sprintf("#### Module: %s\n\n", moduleName)
 
 		// Render features for this module
 		summary += cucumber.RenderAllFeatures(report, nil)
@@ -211,9 +224,17 @@ func generateMultiModuleSummary(testRunID string, testRunDir string, workspaceRo
 		}
 	}
 
-	// Add Appendix A with all specifications
-	summary += "\n---\n\n"
-	summary += "## Appendix A: Specifications and Test Results\n\n"
+	// Write summary_acceptance.md
+	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
+		fmt.Printf("Warning: failed to write summary_acceptance.md: %v\n", err)
+		return
+	}
+
+	fmt.Printf("✅ Generated: %s\n", summaryPath)
+
+	// Generate Appendix A with all specifications as separate file (fragment starting at level 2)
+	var appendix string
+	appendix += "## Appendix A: Specifications and Test Results\n\n"
 
 	for _, moduleName := range modules {
 		moduleDir := filepath.Join(testRunDir, moduleName)
@@ -225,12 +246,95 @@ func generateMultiModuleSummary(testRunID string, testRunDir string, workspaceRo
 		}
 
 		// Render appendix for this module
-		summary += cucumber.RenderAppendixA(report, workspaceRoot)
+		appendix += cucumber.RenderAppendixA(report, workspaceRoot)
 	}
 
-	// Write summary.md
+	// Write appendix_a.md
+	if err := os.WriteFile(appendixPath, []byte(appendix), 0644); err != nil {
+		fmt.Printf("Warning: failed to write appendix_a.md: %v\n", err)
+		return
+	}
+
+	fmt.Printf("✅ Generated: %s\n", appendixPath)
+}
+
+// generateMultiModuleTDDSummary generates a consolidated TDD summary for all modules
+func generateMultiModuleTDDSummary(testRunID string, testRunDir string, workspaceRoot string, modules []*modules.ModuleContract) {
+	summaryPath := filepath.Join(testRunDir, "summary_unit.md")
+
+	var summary string
+	summary += "## Unit Test Summary\n\n"
+	summary += fmt.Sprintf("**Test Run ID**: %s\n\n", testRunID)
+
+	// Process each module
+	passedCount := 0
+	failedCount := 0
+
+	for _, module := range modules {
+		moduleOutputDir := filepath.Join(testRunDir, module.Moniker)
+		tddSummaryPath := filepath.Join(moduleOutputDir, "summary_unit.md")
+
+		// Check if this module has a unit test summary (not all modules generate one - only non-BDD tests)
+		if _, err := os.Stat(tddSummaryPath); err != nil {
+			continue // Skip BDD-only modules
+		}
+
+		// Read the individual TDD summary
+		content, err := os.ReadFile(tddSummaryPath)
+		if err != nil {
+			fmt.Printf("Warning: failed to read %s: %v\n", tddSummaryPath, err)
+			continue
+		}
+
+		// Check if module passed or failed
+		contentStr := string(content)
+		if strings.Contains(contentStr, "**Status**: ✅ Passed") {
+			passedCount++
+		} else if strings.Contains(contentStr, "**Status**: ❌ Failed") {
+			failedCount++
+		}
+
+		// Add module section header
+		summary += fmt.Sprintf("#### Module: %s\n\n", module.Moniker)
+		summary += fmt.Sprintf("**Type**: %s\n", module.Type)
+
+		// Extract status and test output from the individual summary
+		lines := strings.Split(contentStr, "\n")
+		inTestOutput := false
+		for _, line := range lines {
+			if strings.HasPrefix(line, "**Status**:") {
+				summary += line + "\n"
+			} else if strings.HasPrefix(line, "### Test Output") {
+				inTestOutput = true
+				summary += "\n" + line + "\n"
+			} else if inTestOutput {
+				summary += line + "\n"
+			}
+		}
+
+		summary += "\n---\n\n"
+	}
+
+	// Add overall summary at the top
+	overallStatus := "✅ Passed"
+	if failedCount > 0 {
+		overallStatus = "❌ Failed"
+	}
+
+	// Prepend overall summary
+	header := "## Unit Test Summary\n\n"
+	header += fmt.Sprintf("**Test Run ID**: %s\n", testRunID)
+	header += fmt.Sprintf("**Overall Status**: %s\n", overallStatus)
+	header += fmt.Sprintf("**Total Modules**: %d\n", passedCount+failedCount)
+	header += fmt.Sprintf("**Passed**: %d\n", passedCount)
+	header += fmt.Sprintf("**Failed**: %d\n\n", failedCount)
+	header += "---\n\n"
+
+	summary = header + strings.TrimPrefix(summary, "## Unit Test Summary\n\n"+fmt.Sprintf("**Test Run ID**: %s\n\n", testRunID))
+
+	// Write summary_unit.md
 	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
-		fmt.Printf("Warning: failed to write summary.md: %v\n", err)
+		fmt.Printf("Warning: failed to write summary_unit.md: %v\n", err)
 		return
 	}
 
