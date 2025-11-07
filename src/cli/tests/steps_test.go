@@ -22,9 +22,9 @@ import (
 
 // Test context holds state between steps
 type testContext struct {
-	commandOutput string
-	exitCode      int
-	commandError  error
+	commandOutput  string
+	exitCode       int
+	commandError   error
 	executablePath string
 }
 
@@ -149,9 +149,6 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^the exit code is (\d+)$`, theExitCodeIs)
 	sc.Step(`^I should see "([^"]*)"$`, iShouldSee)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOr)
-
-	// Register design command steps
-	InitializeDesignScenario(sc)
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {
