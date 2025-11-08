@@ -1,7 +1,7 @@
 ---
 name: commit-message-module
 description: Generate one module section for commit message
-model: sonnet
+model: haiku
 color: green
 ---
 

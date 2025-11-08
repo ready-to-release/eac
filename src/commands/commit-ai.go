@@ -131,48 +131,54 @@ func CommitAI() int {
 	}
 
 	// LEVER 2b: Build module contexts and invoke module agent for each
+	// SPECIAL CASE: For single-module commits, skip module sections entirely
 	var moduleSections []string
 
-	// Group files by module
-	moduleFilesMap := make(map[string][]repository.RepositoryFileWithModule)
-	for _, file := range report.AllFiles {
-		for _, module := range file.Modules {
-			moduleFilesMap[module] = append(moduleFilesMap[module], file)
-		}
-	}
-
-	for i, module := range affectedModules {
-		moduleFiles := moduleFilesMap[module]
-		moduleContext := buildModuleContext(module, moduleFiles, gitDiff)
-
-		if debug {
-			// DEBUG: Save module context
-			debugModuleContext := fmt.Sprintf("../../out/debug-module-%d-%s-context.md", i+1, module)
-			ioutil.WriteFile(debugModuleContext, []byte(moduleContext), 0644)
-			fmt.Fprintf(os.Stderr, "🔍 DEBUG: Module context for %s saved to %s\n", module, debugModuleContext)
+	if len(affectedModules) > 1 {
+		// Multi-module: generate module sections
+		// Group files by module
+		moduleFilesMap := make(map[string][]repository.RepositoryFileWithModule)
+		for _, file := range report.AllFiles {
+			for _, module := range file.Modules {
+				moduleFilesMap[module] = append(moduleFilesMap[module], file)
+			}
 		}
 
-		var moduleOutput string
-		progressMsg := fmt.Sprintf("🤖 Generating section for module %s (%d/%d)...", module, i+1, len(affectedModules))
-		err = commitmessage.WithProgress(progressMsg, func() error {
-			output, err := callClaudeAgentAPIRaw("../../.claude/agents/commit-message-module.md", moduleContext)
-			moduleOutput = output
-			return err
-		})
+		for i, module := range affectedModules {
+			moduleFiles := moduleFilesMap[module]
+			moduleContext := buildModuleContext(module, moduleFiles, gitDiff)
 
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "\n❌ Error running commit-message-module agent for %s: %v\n", module, err)
-			return 1
+			if debug {
+				// DEBUG: Save module context
+				debugModuleContext := fmt.Sprintf("../../out/debug-module-%d-%s-context.md", i+1, module)
+				ioutil.WriteFile(debugModuleContext, []byte(moduleContext), 0644)
+				fmt.Fprintf(os.Stderr, "🔍 DEBUG: Module context for %s saved to %s\n", module, debugModuleContext)
+			}
+
+			var moduleOutput string
+			progressMsg := fmt.Sprintf("🤖 Generating section for module %s (%d/%d)...", module, i+1, len(affectedModules))
+			err = commitmessage.WithProgress(progressMsg, func() error {
+				output, err := callClaudeAgentAPIRaw("../../.claude/agents/commit-message-module.md", moduleContext)
+				moduleOutput = output
+				return err
+			})
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "\n❌ Error running commit-message-module agent for %s: %v\n", module, err)
+				return 1
+			}
+
+			if debug {
+				// DEBUG: Save module output
+				debugModuleOutput := fmt.Sprintf("../../out/debug-module-%d-%s-output.md", i+1, module)
+				ioutil.WriteFile(debugModuleOutput, []byte(moduleOutput), 0644)
+				fmt.Fprintf(os.Stderr, "🔍 DEBUG: Module output for %s saved to %s\n", module, debugModuleOutput)
+			}
+
+			moduleSections = append(moduleSections, moduleOutput)
 		}
-
-		if debug {
-			// DEBUG: Save module output
-			debugModuleOutput := fmt.Sprintf("../../out/debug-module-%d-%s-output.md", i+1, module)
-			ioutil.WriteFile(debugModuleOutput, []byte(moduleOutput), 0644)
-			fmt.Fprintf(os.Stderr, "🔍 DEBUG: Module output for %s saved to %s\n", module, debugModuleOutput)
-		}
-
-		moduleSections = append(moduleSections, moduleOutput)
+	} else if debug {
+		fmt.Fprintf(os.Stderr, "🔍 DEBUG: Single-module commit - skipping module sections\n")
 	}
 
 	// LEVER 3: Combine all sections
@@ -254,7 +260,7 @@ func callClaudeAgentAPI(agentFilePath string, prompt string) (string, error) {
 	// Build command arguments - IMPORTANT: No --continue or --resume flags for session isolation
 	args := []string{
 		"--print",
-		"--settings", `{"includeCoAuthoredBy":false}`,
+		"--settings", `{"includeCoAuthoredBy":false,"disableAllHooks":true}`,
 	}
 
 	// Add model if specified in agent frontmatter
@@ -313,7 +319,7 @@ func callClaudeAgentAPIRaw(agentFilePath string, prompt string) (string, error) 
 	// Build command arguments
 	args := []string{
 		"--print",
-		"--settings", `{"includeCoAuthoredBy":false}`,
+		"--settings", `{"includeCoAuthoredBy":false,"disableAllHooks":true}`,
 	}
 
 	// Add model if specified in agent frontmatter
@@ -352,8 +358,52 @@ func callClaudeAgentAPIRaw(agentFilePath string, prompt string) (string, error) 
 		return "", fmt.Errorf("claude CLI failed: %w\nStderr: %s\nStdout: %s", err, stderrText, stdoutText)
 	}
 
-	// Return raw output (no extraction - these agents output pure content)
-	return strings.TrimSpace(stdout.String()), nil
+	// Return raw output with minimal noise filtering
+	output := strings.TrimSpace(stdout.String())
+
+	// Remove common agent initialization noise that appears even with disableAllHooks
+	output = stripAgentNoise(output)
+
+	return output, nil
+}
+
+// stripAgentNoise removes common initialization/greeting patterns from agent output
+func stripAgentNoise(output string) string {
+	lines := strings.Split(output, "\n")
+	var cleaned []string
+	foundContent := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Skip common noise patterns
+		if strings.Contains(trimmed, "**Initialized and ready") ||
+			strings.Contains(trimmed, "**INITIALIZED") ||
+			strings.Contains(trimmed, "Loading project context") ||
+			strings.Contains(trimmed, "ready to assist") ||
+			(len(trimmed) > 0 && trimmed[0] > 127 && strings.Contains(trimmed, "**")) { // Emoji + bold pattern
+			continue
+		}
+
+		// Skip horizontal rules before content starts
+		if !foundContent && (trimmed == "---" || trimmed == "___" || trimmed == "***") {
+			continue
+		}
+
+		// Skip empty lines before content starts
+		if !foundContent && trimmed == "" {
+			continue
+		}
+
+		// Content has started
+		if trimmed != "" {
+			foundContent = true
+		}
+
+		cleaned = append(cleaned, line)
+	}
+
+	return strings.TrimSpace(strings.Join(cleaned, "\n"))
 }
 
 // extractModelFromAgent parses agent frontmatter and extracts the model field
@@ -596,15 +646,19 @@ func combineCommitSections(topLevel string, moduleSections []string) string {
 
 	// Top-level section
 	result.WriteString(topLevel)
-	result.WriteString("\n\n")
 
-	// Module sections with --- separators
-	for i, section := range moduleSections {
-		result.WriteString(section)
+	// Only add module sections if there are any (multi-module commits only)
+	if len(moduleSections) > 0 {
+		result.WriteString("\n\n")
 
-		// Add separator between modules (but not after the last one)
-		if i < len(moduleSections)-1 {
-			result.WriteString("\n\n---\n\n")
+		// Module sections with --- separators
+		for i, section := range moduleSections {
+			result.WriteString(section)
+
+			// Add separator between modules (but not after the last one)
+			if i < len(moduleSections)-1 {
+				result.WriteString("\n\n---\n\n")
+			}
 		}
 	}
 
