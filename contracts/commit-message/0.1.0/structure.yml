@@ -10,20 +10,24 @@ description: "Formal contract defining commit message structure for multi-module
 structure:
   - section: "top_level_heading"
     required: true
-    format: "# <title>"
+    format: "# <module|multi-module>: <type>: <summary>"
     max_length: 72
+    examples:
+      - "# multi-module: feat: add commit message validation"
+      - "# cli: fix: resolve command parsing error"
 
-  - section: "summary"
+  - section: "top_level_body"
     required: true
-    format: "## Summary"
-
-  - section: "files_affected"
-    required: true
-    format: "## Files affected"
+    description: "Plain text body directly after top-level heading (no section header)"
+    format: "2-4 sentences describing all changes"
+    max_line_length: 72
 
   - section: "module_sections"
     required: true
     format: "## <module-name>"
+    subsections:
+      - "module_subject_line: <module>: <type>: <description> (72 chars max)"
+      - "module_body: Detailed changes (wrapped at 72 chars)"
 
 # SEMANTIC TYPES
 semantic_types:
@@ -48,27 +52,26 @@ constraints:
 
 # LINE WRAPPING RULES
 wrapping:
-  summary_body: 72      # CRITICAL: Every line in ## Summary body MUST be ≤72 chars
+  top_level_body: 72    # CRITICAL: Every line in top-level body MUST be ≤72 chars
   module_body: 72       # CRITICAL: Every line in module body MUST be ≤72 chars
   exceptions:
-    - "Markdown tables (| ... |)"
     - "Code blocks (``` ... ```)"
     - "YAML blocks"
 
 # MARKDOWN RULES
 markdown_rules:
   - rule: "MD041"
-    description: "First line must be top-level heading"
-    check: "First line starts with '# '"
+    description: "First line must be top-level heading with conventional commit format"
+    check: "First line matches '# <module|multi-module>: <type>: <summary>'"
 
   - rule: "MD022"
     description: "Headers should be surrounded by blank lines"
-    check: "Blank line after '## Summary'"
+    check: "Blank line after module headers"
     severity: "warning"
 
   - rule: "MD026"
     description: "Trailing punctuation in heading"
-    check: "Title and subject lines must not end with period"
+    check: "Top-level heading and module subject lines must not end with period"
 
 # ANTI-CORRUPTION LAYER
 # Agents output pure content only - no meta-commentary

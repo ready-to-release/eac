@@ -5,21 +5,11 @@ import (
 )
 
 func TestVerifyCommitMessageContract_ValidMessage(t *testing.T) {
-	validMessage := `# Add commit message verifier
-
-## Summary
+	validMessage := `# src-commands: feat: add commit message verifier
 
 This commit adds a contract verifier to validate commit messages
 against the formal structure defined in the contract. Ensures
 compliance with all formatting and structural requirements.
-
-## Files affected
-
-| Status | File                                 | Module       |
-| ------ | ------------------------------------ | ------------ |
-| added  | src/commands/commit-message/verifier.go | src-commands |
-
----
 
 ## src-commands
 
@@ -80,7 +70,7 @@ Some summary text.
 }
 
 func TestVerifyCommitMessageContract_TitleTooLong(t *testing.T) {
-	longTitle := `# This is a very long title that exceeds the maximum allowed length of 72 characters for commit message titles`
+	longTitle := `# cli: feat: this is a very long title that exceeds the maximum allowed length of 72 characters`
 
 	errors := VerifyCommitMessageContract(longTitle)
 
@@ -98,7 +88,7 @@ func TestVerifyCommitMessageContract_TitleTooLong(t *testing.T) {
 }
 
 func TestVerifyCommitMessageContract_TitleTrailingPeriod(t *testing.T) {
-	invalidMessage := `# Add feature.
+	invalidMessage := `# cli: feat: add feature.
 
 ## Summary
 
@@ -120,41 +110,35 @@ Summary text here.
 	}
 }
 
-func TestVerifyCommitMessageContract_MissingSummary(t *testing.T) {
-	invalidMessage := `# Add feature
+func TestVerifyCommitMessageContract_MissingTopLevelBody(t *testing.T) {
+	invalidMessage := `# cli: feat: add feature
 
-Some text but no Summary section.
+## cli
+
+cli: feat: add some feature
+
+Body text here.
 `
 
 	errors := VerifyCommitMessageContract(invalidMessage)
 
 	foundError := false
 	for _, err := range errors {
-		if err.Code == "MISSING_SUMMARY" {
+		if err.Code == "MISSING_TOP_LEVEL_BODY" {
 			foundError = true
 			break
 		}
 	}
 
 	if !foundError {
-		t.Error("Expected MISSING_SUMMARY error")
+		t.Error("Expected MISSING_TOP_LEVEL_BODY error")
 	}
 }
 
 func TestVerifyCommitMessageContract_InvalidSubjectFormat(t *testing.T) {
-	invalidMessage := `# Add feature
+	invalidMessage := `# src-commands: feat: add feature
 
-## Summary
-
-Summary text.
-
-## Files affected
-
-| Status | File | Module |
-| ------ | ---- | ------ |
-| added  | file.go | mod |
-
----
+Summary text for the overall change.
 
 ## src-commands
 
@@ -182,19 +166,9 @@ Body text here.
 }
 
 func TestVerifyCommitMessageContract_UnclosedCodeBlock(t *testing.T) {
-	invalidMessage := `# Add feature
+	invalidMessage := `# src-commands: feat: add feature
 
-## Summary
-
-Summary text.
-
-## Files affected
-
-| Status | File | Module |
-| ------ | ---- | ------ |
-| added  | file.go | mod |
-
----
+Summary text for the overall change.
 
 ## src-commands
 

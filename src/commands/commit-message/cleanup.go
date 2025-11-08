@@ -109,10 +109,7 @@ func fixContent(lines []string) []string {
 		}
 
 		// FIX 2: Remove trailing periods from module headers (## <module-name>)
-		if strings.HasPrefix(trimmed, "## ") &&
-			trimmed != "## Summary" &&
-			trimmed != "## Files affected" &&
-			strings.HasSuffix(trimmed, ".") {
+		if strings.HasPrefix(trimmed, "## ") && strings.HasSuffix(trimmed, ".") {
 			line = strings.TrimSuffix(line, ".")
 		}
 
@@ -176,19 +173,9 @@ func fixContent(lines []string) []string {
 			}
 		}
 
-		// FIX 4a: Handle ## Files affected specially (needs spacing but no body wrapping)
-		if trimmed == "## Files affected" {
-			// Ensure exactly one blank line before
-			if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
-				cleaned = append(cleaned, "")
-			}
-			cleaned = append(cleaned, line)
-			continue
-		}
-
 		// FIX 4: Track body sections for line wrapping
-		// Detect start of body sections (Summary or module body text)
-		if trimmed == "## Summary" || strings.HasPrefix(trimmed, "## ") {
+		// Detect start of body sections (module body text)
+		if strings.HasPrefix(trimmed, "## ") {
 			lastWasModuleHeader = true
 			// Flush any buffered body text from previous section
 			if len(bodyBuffer) > 0 {
@@ -210,7 +197,7 @@ func fixContent(lines []string) []string {
 		}
 
 		// Detect end of body section
-		if inBodySection && (trimmed == "---" || trimmed == "## Files affected" || strings.HasPrefix(trimmed, "```")) {
+		if inBodySection && (trimmed == "---" || strings.HasPrefix(trimmed, "```")) {
 			// Flush buffered body text
 			if len(bodyBuffer) > 0 {
 				cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)

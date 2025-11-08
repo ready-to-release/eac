@@ -1,7 +1,5 @@
 # multi-module: feat: establish foundational mono-repository infrastructure
 
-## Summary
-
 This commit establishes foundational infrastructure for the
 mono-repository by introducing deployable unit contracts, module
 definitions, and initializing the CLI module with Go workspace
@@ -10,34 +8,16 @@ dependencies, and source paths for all major modules, enabling
 trunk-based development and semantic versioning across the
 repository.
 
-## Files affected
-
-| File                                                  | Modules                           |
-| ----------------------------------------------------- | --------------------------------- |
-| .claude/agents/commit-message-generator.md            | claude-agents                     |
-| .claude/agents/commit-message-title-generator.md      | claude-agents                     |
-| .claude/settings.json                                 | claude-config                     |
-| .vscode/extensions/vscode-ext-commit/README.md        | readme, vscode, vscode-ext-commit |
-| .vscode/extensions/vscode-ext-commit/src/extension.ts | vscode                            |
-| QUICK-START.md                                        | repository                        |
-| build-cli.ps1                                         | src-cli                           |
-| contracts/commit-message/0.1.0/example.md             | contracts                         |
-| contracts/commit-message/0.1.0/structure.yml          | contracts                         |
-| contracts/modules/0.1.0/src-cli.yml                   | contracts-modules                 |
-| contracts/modules/0.1.0/src-commands.yml              | contracts-modules                 |
-| contracts/modules/0.1.0/templates/README.md           | contracts, readme                 |
-| docs/reference/commands/commit-ai.md                  | docs-reference                    |
-| importer.ps1                                          | repository                        |
-| importer.sh                                           | repository                        |
-| scripts/pwsh/go-invoker/go.psm1                       | repository                        |
-| scripts/sh/go-invoker/go.sh                           | repository                        |
-| scripts/sh/vscode/README.md                           | readme                            |
-
----
-
 ## contracts
 
-contracts: chore: changed setting
+contracts: feat: add commit message contract specification
+
+Added structure.yml defining conventional commit format, semantic
+types, line limits, and module-specific summaries. Updated validation
+rules to enforce 72-character line limits and conventional commit
+header format for both top-level and module summaries.
+
+---
 
 ## src-cli
 

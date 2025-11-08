@@ -85,8 +85,7 @@ func VerifyContractImplementation(contractPath string) []ValidationError {
 	// Verify required structure sections
 	requiredSections := map[string]bool{
 		"top_level_heading": false,
-		"summary":           false,
-		"files_affected":    false,
+		"top_level_body":    false,
 		"module_sections":   false,
 	}
 
@@ -202,18 +201,30 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 		return errors
 	}
 
-	// RULE 1: First line must be top-level heading
+	// RULE 1: First line must be top-level heading with conventional commit format
+	conventionalCommitRegex := regexp.MustCompile(`^# ([a-z0-9\-]+|multi-module):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
+
 	if !strings.HasPrefix(lines[0], "# ") {
 		errors = append(errors, ValidationError{
 			Code:     "MISSING_TOP_HEADING",
-			Message:  "First line must be '# <title>'",
+			Message:  "First line must start with '# '",
 			Line:     1,
 			Severity: "error",
 		})
 	} else {
+		// RULE 2: Title must follow conventional commit format
+		if !conventionalCommitRegex.MatchString(lines[0]) {
+			errors = append(errors, ValidationError{
+				Code:     "INVALID_TITLE_FORMAT",
+				Message:  "Title must follow format: # <module|multi-module>: <type>: <summary>",
+				Line:     1,
+				Severity: "error",
+			})
+		}
+
 		title := strings.TrimPrefix(lines[0], "# ")
 
-		// RULE 2: Title max 72 characters
+		// RULE 3: Title max 72 characters
 		if len(lines[0]) > 72 {
 			errors = append(errors, ValidationError{
 				Code:     "TITLE_TOO_LONG",
@@ -223,7 +234,7 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 			})
 		}
 
-		// RULE 3: No trailing period (except ellipsis "...")
+		// RULE 4: No trailing period (except ellipsis "...")
 		if strings.HasSuffix(title, ".") && !strings.HasSuffix(title, "...") {
 			errors = append(errors, ValidationError{
 				Code:     "TITLE_TRAILING_PERIOD",
@@ -234,39 +245,24 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 		}
 	}
 
-	// RULE 4: Must have ## Summary section
-	hasSummary := false
-	hasFilesAffected := false
+	// RULE 5: Check for top-level body (should appear after title, before first ## section)
+	hasTopLevelBody := false
 	hasModuleSection := false
 
 	for i, line := range lines {
 		lineNum := i + 1
 		trimmed := strings.TrimSpace(line)
 
-		if trimmed == "## Summary" {
-			hasSummary = true
-			// Check blank line after header
-			if i+1 < len(lines) && strings.TrimSpace(lines[i+1]) != "" {
-				errors = append(errors, ValidationError{
-					Code:     "MISSING_BLANK_LINE",
-					Message:  "Missing blank line after '## Summary'",
-					Line:     lineNum,
-					Severity: "warning",
-				})
-			}
+		// Check if we have body text before any ## sections
+		if i > 0 && !hasModuleSection && !strings.HasPrefix(trimmed, "##") && trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+			hasTopLevelBody = true
 		}
 
-		if trimmed == "## Files affected" {
-			hasFilesAffected = true
-		}
-
-		// Module sections start with ## but are not Summary or Files affected
-		if strings.HasPrefix(trimmed, "## ") &&
-			trimmed != "## Summary" &&
-			trimmed != "## Files affected" {
+		// Module sections start with ##
+		if strings.HasPrefix(trimmed, "## ") {
 			hasModuleSection = true
 
-			// RULE 5: Module headers must be plain name (no colons)
+			// RULE 6: Module headers must be plain name (no colons)
 			moduleHeader := strings.TrimPrefix(trimmed, "## ")
 			if strings.Contains(moduleHeader, ":") {
 				errors = append(errors, ValidationError{
@@ -278,7 +274,7 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 			}
 		}
 
-		// RULE 6: Line length in body text (skip headers, tables, code blocks, horizontal rules)
+		// RULE 7: Line length in body text (skip headers, tables, code blocks, horizontal rules)
 		if trimmed != "" &&
 			!strings.HasPrefix(trimmed, "#") &&
 			!strings.HasPrefix(trimmed, "|") &&
@@ -296,18 +292,10 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 		}
 	}
 
-	if !hasSummary {
+	if !hasTopLevelBody {
 		errors = append(errors, ValidationError{
-			Code:     "MISSING_SUMMARY",
-			Message:  "Missing '## Summary' section",
-			Severity: "error",
-		})
-	}
-
-	if !hasFilesAffected {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_FILES_TABLE",
-			Message:  "Missing '## Files affected' section",
+			Code:     "MISSING_TOP_LEVEL_BODY",
+			Message:  "Missing top-level body text after title (before module sections)",
 			Severity: "error",
 		})
 	}
@@ -320,10 +308,10 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 		})
 	}
 
-	// RULE 7: Validate module subject lines
+	// RULE 8: Validate module subject lines
 	errors = append(errors, validateModuleSubjectLines(lines)...)
 
-	// RULE 8: Check for unclosed code blocks
+	// RULE 9: Check for unclosed code blocks
 	errors = append(errors, validateCodeBlocks(lines)...)
 
 	return errors
@@ -345,9 +333,7 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 		trimmed := strings.TrimSpace(line)
 
 		// Detect module section header
-		if strings.HasPrefix(trimmed, "## ") &&
-			trimmed != "## Summary" &&
-			trimmed != "## Files affected" {
+		if strings.HasPrefix(trimmed, "## ") {
 
 			// If we were in a module section and didn't find subject line
 			if inModuleSection && !foundSubjectLine {

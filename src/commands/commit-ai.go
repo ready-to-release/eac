@@ -1,5 +1,6 @@
 // Command: commit-ai
-// Description: Show staged changes with their module mappings for AI commit message generation
+// Description: Generate commit message using AI with staged changes and module mappings
+// Flags: --debug (save intermediate outputs and show debug info)
 package main
 
 import (
@@ -12,6 +13,7 @@ import (
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/commit-message"
 	"github.com/ready-to-release/eac/src/commands/render"
+	"github.com/ready-to-release/eac/src/repository"
 	"github.com/ready-to-release/eac/src/repository/reports"
 )
 
@@ -20,6 +22,14 @@ func init() {
 }
 
 func CommitAI() int {
+	// Parse flags
+	debug := false
+	for _, arg := range os.Args[2:] { // Skip program name and "commit-ai"
+		if arg == "--debug" {
+			debug = true
+		}
+	}
+
 	// LEVER 1: Verify contract implementation on startup
 	contractPath := "../../contracts/commit-message/0.1.0/structure.yml"
 	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
@@ -57,6 +67,23 @@ func CommitAI() int {
 
 	stagedFilesTable := tb.Build()
 
+	// Extract unique modules from all files
+	moduleSet := make(map[string]bool)
+	for _, file := range report.AllFiles {
+		for _, module := range file.Modules {
+			moduleSet[module] = true
+		}
+	}
+
+	// Build sorted list of unique modules
+	var affectedModules []string
+	for module := range moduleSet {
+		affectedModules = append(affectedModules, module)
+	}
+	// Sort for consistent output
+	// Note: Using simple sort since we don't have imports for sort yet
+	// The order doesn't matter for the agent, just consistency
+
 	// Get git diff for staged changes (do not print anything yet)
 	diffCmd := exec.Command("git", "diff", "--staged")
 	diffCmd.Dir = "../.."
@@ -67,28 +94,106 @@ func CommitAI() int {
 	}
 	gitDiff := string(diffOutput)
 
-	// Build context for agent
-	contextPrompt := buildAgentContext(stagedFilesTable, gitDiff)
+	if debug {
+		fmt.Fprintf(os.Stderr, "\n🔍 DEBUG: Affected modules count: %d\n", len(affectedModules))
+		for i, mod := range affectedModules {
+			fmt.Fprintf(os.Stderr, "  %d. %s\n", i+1, mod)
+		}
+	}
 
-	// LEVER 2: Invoke commit-message-generator agent
-	var msgOutput string
-	err = commitmessage.WithProgress("🤖 Analyzing changes and generating commit message...", func() error {
-		output, err := callClaudeAgentAPI("../../.claude/agents/commit-message-generator.md", contextPrompt)
-		msgOutput = output
+	// LEVER 2a: Build top-level context and invoke top-level agent
+	topLevelContext := buildTopLevelContext(stagedFilesTable, gitDiff, affectedModules)
+
+	if debug {
+		// DEBUG: Save top-level context
+		debugTopLevelContext := "../../out/debug-top-level-context.md"
+		ioutil.WriteFile(debugTopLevelContext, []byte(topLevelContext), 0644)
+		fmt.Fprintf(os.Stderr, "\n🔍 DEBUG: Top-level context saved to %s\n", debugTopLevelContext)
+	}
+
+	var topLevelOutput string
+	err = commitmessage.WithProgress("🤖 Generating top-level commit summary...", func() error {
+		output, err := callClaudeAgentAPIRaw("../../.claude/agents/commit-message-top-level.md", topLevelContext)
+		topLevelOutput = output
 		return err
 	})
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error running commit-message-generator: %v\n", err)
+		fmt.Fprintf(os.Stderr, "\n❌ Error running commit-message-top-level agent: %v\n", err)
 		return 1
 	}
 
-	// LEVER 3: Inject files table placeholder (before cleanup)
-	rawAgentOutput := msgOutput // Save raw output for debugging
-	msgOutput = strings.Replace(msgOutput, "\\filetable-placeholder", stagedFilesTable, 1)
+	if debug {
+		// DEBUG: Save top-level output
+		debugTopLevelOutput := "../../out/debug-top-level-output.md"
+		ioutil.WriteFile(debugTopLevelOutput, []byte(topLevelOutput), 0644)
+		fmt.Fprintf(os.Stderr, "🔍 DEBUG: Top-level output saved to %s\n", debugTopLevelOutput)
+	}
+
+	// LEVER 2b: Build module contexts and invoke module agent for each
+	var moduleSections []string
+
+	// Group files by module
+	moduleFilesMap := make(map[string][]repository.RepositoryFileWithModule)
+	for _, file := range report.AllFiles {
+		for _, module := range file.Modules {
+			moduleFilesMap[module] = append(moduleFilesMap[module], file)
+		}
+	}
+
+	for i, module := range affectedModules {
+		moduleFiles := moduleFilesMap[module]
+		moduleContext := buildModuleContext(module, moduleFiles, gitDiff)
+
+		if debug {
+			// DEBUG: Save module context
+			debugModuleContext := fmt.Sprintf("../../out/debug-module-%d-%s-context.md", i+1, module)
+			ioutil.WriteFile(debugModuleContext, []byte(moduleContext), 0644)
+			fmt.Fprintf(os.Stderr, "🔍 DEBUG: Module context for %s saved to %s\n", module, debugModuleContext)
+		}
+
+		var moduleOutput string
+		progressMsg := fmt.Sprintf("🤖 Generating section for module %s (%d/%d)...", module, i+1, len(affectedModules))
+		err = commitmessage.WithProgress(progressMsg, func() error {
+			output, err := callClaudeAgentAPIRaw("../../.claude/agents/commit-message-module.md", moduleContext)
+			moduleOutput = output
+			return err
+		})
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "\n❌ Error running commit-message-module agent for %s: %v\n", module, err)
+			return 1
+		}
+
+		if debug {
+			// DEBUG: Save module output
+			debugModuleOutput := fmt.Sprintf("../../out/debug-module-%d-%s-output.md", i+1, module)
+			ioutil.WriteFile(debugModuleOutput, []byte(moduleOutput), 0644)
+			fmt.Fprintf(os.Stderr, "🔍 DEBUG: Module output for %s saved to %s\n", module, debugModuleOutput)
+		}
+
+		moduleSections = append(moduleSections, moduleOutput)
+	}
+
+	// LEVER 3: Combine all sections
+	combinedMessage := combineCommitSections(topLevelOutput, moduleSections)
+
+	if debug {
+		// DEBUG: Save combined message
+		debugCombined := "../../out/debug-combined-message.md"
+		ioutil.WriteFile(debugCombined, []byte(combinedMessage), 0644)
+		fmt.Fprintf(os.Stderr, "\n🔍 DEBUG: Combined message saved to %s\n", debugCombined)
+	}
 
 	// LEVER 4: Auto-cleanup before verification (silent)
-	cleanedOutput := commitmessage.AutoCleanup(msgOutput)
+	cleanedOutput := commitmessage.AutoCleanup(combinedMessage)
+
+	if debug {
+		// DEBUG: Save after cleanup
+		debugFile3 := "../../out/debug-after-cleanup.md"
+		ioutil.WriteFile(debugFile3, []byte(cleanedOutput), 0644)
+		fmt.Fprintf(os.Stderr, "🔍 DEBUG: After cleanup saved to %s\n\n", debugFile3)
+	}
 
 	// LEVER 5: Verify contract compliance (silent)
 	validationErrors := commitmessage.VerifyCommitMessageContract(cleanedOutput)
@@ -101,8 +206,6 @@ func CommitAI() int {
 			warningCount++
 		}
 	}
-
-	_ = rawAgentOutput // Use the variable to avoid unused error
 
 	// Output for VSCode extension to detect
 	fmt.Println(">>>>>>OUTPUT START<<<<<<")
@@ -197,6 +300,62 @@ func callClaudeAgentAPI(agentFilePath string, prompt string) (string, error) {
 	return output, nil
 }
 
+// callClaudeAgentAPIRaw invokes Claude CLI without content extraction (for specialized agents)
+func callClaudeAgentAPIRaw(agentFilePath string, prompt string) (string, error) {
+	// Read agent file to extract model from frontmatter
+	agentContent, err := ioutil.ReadFile(agentFilePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read agent file: %w", err)
+	}
+
+	model := extractModelFromAgent(string(agentContent))
+
+	// Build command arguments
+	args := []string{
+		"--print",
+		"--settings", `{"includeCoAuthoredBy":false}`,
+	}
+
+	// Add model if specified in agent frontmatter
+	if model != "" {
+		args = append(args, "--model", model)
+		if model == "sonnet" {
+			args = append(args, "--fallback-model", "haiku")
+		}
+	}
+
+	// Build full prompt: agent instructions + user input
+	fullPrompt := string(agentContent) + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + prompt
+
+	cmd := exec.Command("claude", args...)
+	cmd.Stdin = strings.NewReader(fullPrompt)
+	cmd.Dir = "../.."
+
+	// Remove ANTHROPIC_API_KEY to use Claude Pro subscription
+	cmd.Env = removeAPIKeyFromEnv(os.Environ())
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		stderrText := stderr.String()
+		stdoutText := stdout.String()
+
+		if len(stderrText) > 0 {
+			fmt.Fprintf(os.Stderr, "Claude stderr:\n%s\n", stderrText)
+		}
+		if len(stdoutText) > 0 {
+			fmt.Fprintf(os.Stderr, "Claude stdout:\n%s\n", stdoutText)
+		}
+
+		return "", fmt.Errorf("claude CLI failed: %w\nStderr: %s\nStdout: %s", err, stderrText, stdoutText)
+	}
+
+	// Return raw output (no extraction - these agents output pure content)
+	return strings.TrimSpace(stdout.String()), nil
+}
+
 // extractModelFromAgent parses agent frontmatter and extracts the model field
 func extractModelFromAgent(agentContent string) string {
 	lines := strings.Split(agentContent, "\n")
@@ -235,6 +394,11 @@ func extractContentBlock(agentOutput string) string {
 
 		// Skip meta-commentary at the start
 		if !inContent {
+			// Skip horizontal rules
+			if trimmed == "---" || trimmed == "___" || trimmed == "***" {
+				continue
+			}
+
 			// Skip any line starting with emoji (check first rune)
 			if len(trimmed) > 0 {
 				firstRune := []rune(trimmed)[0]
@@ -254,7 +418,7 @@ func extractContentBlock(agentOutput string) string {
 				strings.HasPrefix(trimmed, "I'm ") ||
 				strings.HasPrefix(trimmed, "I can see ") ||
 				strings.HasPrefix(trimmed, "Looking at ") ||
-				strings.HasPrefix(trimmed, "Now I") ||
+				strings.HasPrefix(trimmed, "Now ") || // Catch "Now generating..."
 				strings.HasPrefix(trimmed, "You are now") ||
 				strings.HasPrefix(trimmed, "The title ") ||
 				strings.HasPrefix(trimmed, "The corrected ") ||
@@ -262,6 +426,7 @@ func extractContentBlock(agentOutput string) string {
 				strings.HasPrefix(trimmed, "The changes ") ||
 				strings.HasPrefix(trimmed, "After reviewing") ||
 				strings.Contains(trimmed, "ready to assist") || // Skip assistant messages
+				strings.Contains(trimmed, "commit message") || // Skip "generating your commit message"
 				strings.Contains(trimmed, "🚀") || // Skip emoji celebration lines
 				strings.Contains(trimmed, "✅") || // Skip checkmark lines
 				strings.Contains(trimmed, "🤖") || // Skip bot emoji lines
@@ -273,7 +438,7 @@ func extractContentBlock(agentOutput string) string {
 			}
 
 			// Skip opening markdown fence
-			if trimmed == "```" || trimmed == "```markdown" {
+			if trimmed == "```" || trimmed == "```markdown" || strings.HasPrefix(trimmed, "```") {
 				continue
 			}
 
@@ -312,25 +477,137 @@ func removeAPIKeyFromEnv(environ []string) []string {
 	return filtered
 }
 
-// buildAgentContext creates the full context for agents including staged files table and git diff
-func buildAgentContext(stagedFilesTable string, gitDiff string) string {
+// buildTopLevelContext creates context for the top-level commit message agent
+func buildTopLevelContext(stagedFilesTable string, gitDiff string, affectedModules []string) string {
 	var context bytes.Buffer
 
-	context.WriteString("## Staged Files with Module Mappings\n\n")
-	context.WriteString(stagedFilesTable)
-	context.WriteString("\n\n---\n\n")
+	// Module Count and List
+	context.WriteString("## Module Count\n\n")
+	if len(affectedModules) == 1 {
+		context.WriteString("1 (single-module)\n\n")
+	} else {
+		context.WriteString(fmt.Sprintf("%d (multi-module)\n\n", len(affectedModules)))
+	}
 
-	context.WriteString("## Git Diff (Staged Changes)\n\n")
+	// Affected Modules list
+	context.WriteString("## Affected Modules\n\n")
+	for _, module := range affectedModules {
+		context.WriteString(fmt.Sprintf("- %s\n", module))
+	}
+	context.WriteString("\n")
+
+	// Staged Files - shows all file-to-module mappings
+	context.WriteString("## Staged Files\n\n")
+	context.WriteString(stagedFilesTable)
+	context.WriteString("\n\n")
+
+	// Git Diff - shows all code changes
+	context.WriteString("## Git Diff\n\n")
 	context.WriteString("```diff\n")
 	context.WriteString(gitDiff)
-	context.WriteString("```\n\n")
-
-	context.WriteString("---\n\n")
-	context.WriteString("**INSTRUCTIONS:**\n")
-	context.WriteString("- The staged files table shows which files are changed and their module mappings\n")
-	context.WriteString("- The git diff shows the actual code changes\n")
-	context.WriteString("- Extract code snippets from the diff (lines starting with +) for the code extract section\n")
-	context.WriteString("- Focus on the most significant changes (5-15 lines per module)\n\n")
+	context.WriteString("\n```\n")
 
 	return context.String()
 }
+
+// buildModuleContext creates context for a single module section agent
+func buildModuleContext(moduleName string, moduleFiles []repository.RepositoryFileWithModule, fullDiff string) string {
+	var context bytes.Buffer
+
+	// Module Name
+	context.WriteString("## Module Name\n\n")
+	context.WriteString(moduleName)
+	context.WriteString("\n\n")
+
+	// Files for this module
+	context.WriteString("## Files\n\n")
+	tb := render.NewTableBuilder().
+		WithHeaders("File")
+
+	for _, file := range moduleFiles {
+		tb.AddRow(file.Name)
+	}
+	context.WriteString(tb.Build())
+	context.WriteString("\n\n")
+
+	// Git diff filtered to this module's files
+	filteredDiff := filterDiffForModule(fullDiff, moduleFiles)
+	context.WriteString("## Git Diff\n\n")
+	context.WriteString("```diff\n")
+	context.WriteString(filteredDiff)
+	context.WriteString("\n```\n")
+
+	return context.String()
+}
+
+// filterDiffForModule extracts only the diff chunks for files belonging to a specific module
+func filterDiffForModule(fullDiff string, moduleFiles []repository.RepositoryFileWithModule) string {
+	// Create a set of file names for quick lookup
+	fileSet := make(map[string]bool)
+	for _, file := range moduleFiles {
+		fileSet[file.Name] = true
+	}
+
+	var result bytes.Buffer
+	lines := strings.Split(fullDiff, "\n")
+
+	inRelevantFile := false
+	var currentChunk bytes.Buffer
+
+	for _, line := range lines {
+		// Detect diff file header
+		if strings.HasPrefix(line, "diff --git") {
+			// Save previous chunk if it was relevant
+			if inRelevantFile && currentChunk.Len() > 0 {
+				result.WriteString(currentChunk.String())
+			}
+
+			// Reset for new file
+			currentChunk.Reset()
+			inRelevantFile = false
+
+			// Check if this file belongs to the module
+			// Extract filename from "diff --git a/path/to/file b/path/to/file"
+			parts := strings.Fields(line)
+			if len(parts) >= 3 {
+				// Remove "a/" prefix from path
+				filePath := strings.TrimPrefix(parts[2], "a/")
+				if fileSet[filePath] {
+					inRelevantFile = true
+					currentChunk.WriteString(line + "\n")
+				}
+			}
+		} else if inRelevantFile {
+			currentChunk.WriteString(line + "\n")
+		}
+	}
+
+	// Don't forget the last chunk
+	if inRelevantFile && currentChunk.Len() > 0 {
+		result.WriteString(currentChunk.String())
+	}
+
+	return strings.TrimSpace(result.String())
+}
+
+// combineCommitSections combines top-level section and module sections into final commit message
+func combineCommitSections(topLevel string, moduleSections []string) string {
+	var result bytes.Buffer
+
+	// Top-level section
+	result.WriteString(topLevel)
+	result.WriteString("\n\n")
+
+	// Module sections with --- separators
+	for i, section := range moduleSections {
+		result.WriteString(section)
+
+		// Add separator between modules (but not after the last one)
+		if i < len(moduleSections)-1 {
+			result.WriteString("\n\n---\n\n")
+		}
+	}
+
+	return result.String()
+}
+
