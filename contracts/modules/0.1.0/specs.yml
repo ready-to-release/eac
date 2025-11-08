@@ -1,0 +1,13 @@
+moniker: specs
+name: Gherkin and Structurizr (design) specifications for modules
+type: specifications
+description: Structured by specs/<module-name>/<feature-name>, where design is a special feature folder for Structurzr. Within a feature folder is one Gherkin file `specification.feature` pr. folder.
+parent: src-cli
+
+source:
+  root: specs
+  changelog_path: specs/CHANGELOG.md
+  # exclude_children_owned_source: true
+
+depends_on: []
+used_by: []
