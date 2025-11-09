@@ -1,0 +1,16 @@
+# Version: 0.1.0
+
+moniker: "src-mcp-commands"
+name: "Go Commands MCP Server"
+type: "go-mcp"
+description: "Internal MCP server for Commands"
+
+source:
+  changelog_path: "src/mcp/commands/CHANGELOG.md"
+  root: "src/mcp/commands"
+  includes:
+    - "go.sum"
+    - "go.mod"
+    - "**.go"
+    - "*.go"
+    - "README.md"
