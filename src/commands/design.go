@@ -1,6 +1,10 @@
 // Command: design
-// Description: View architecture documentation using Structurizr Lite
-// Usage: design serve <module> [--no-auto-open-link] [--port <port>] [--stop]
+// Description: Architecture documentation tools using Structurizr
+// Usage: design new <module> --name <name> --description <description>
+//        design add container <module> <name> --tech <tech> --desc <desc>
+//        design add relationship <module> <source> <dest> --desc <desc> [--tech <tech>]
+//        design export <module> [--output <file>]
+//        design serve <module> [--no-auto-open-link] [--port <port>] [--stop]
 //        design list
 package main
 
@@ -17,6 +21,11 @@ func init() {
 	Register("design", Design)
 	Register("design serve", DesignServe)
 	Register("design list", DesignList)
+	// New authoring commands are registered in their respective files:
+	// - design-new.go
+	// - design-add-container.go
+	// - design-add-relationship.go
+	// - design-export.go
 }
 
 // Design command entry point
@@ -30,6 +39,9 @@ func Design() int {
 
 	// Check for subcommands
 	switch args[0] {
+	case "new", "add", "export":
+		// Handled by separate registrations in respective files
+		return 0
 	case "serve":
 		// Handled by separate registration
 		return 0
@@ -310,22 +322,39 @@ func handleStop(module string) int {
 }
 
 func printDesignUsage() {
+	fmt.Println("Architecture documentation tools using Structurizr")
+	fmt.Println()
 	fmt.Println("Usage: go run . design <subcommand> [args...]")
 	fmt.Println()
-	fmt.Println("Subcommands:")
-	fmt.Println("  serve <module>  Start or stop Structurizr server for a module")
-	fmt.Println("  list            List available modules with documentation")
+	fmt.Println("Authoring Subcommands:")
+	fmt.Println("  new <module>              Create new architecture workspace")
+	fmt.Println("  add container             Add container to workspace")
+	fmt.Println("  add relationship          Add relationship between containers")
+	fmt.Println("  export <module>           Export workspace DSL content")
 	fmt.Println()
-	fmt.Println("Serve options:")
-	fmt.Println("  --no-auto-open-link    Don't open browser automatically")
-	fmt.Println("  --port, -p <port>      Port for Structurizr Lite (default: 8081)")
-	fmt.Println("  --stop                 Stop the running container")
+	fmt.Println("Viewing Subcommands:")
+	fmt.Println("  serve <module>            Start Structurizr Lite viewer")
+	fmt.Println("  list                      List available modules with documentation")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  go run . design serve cli")
-	fmt.Println("  go run . design serve cli --no-auto-open-link")
-	fmt.Println("  go run . design serve cli --port 8082")
-	fmt.Println("  go run . design serve cli --stop")
-	fmt.Println("  go run . design serve --stop              # Stop all")
+	fmt.Println("  # Create workspace")
+	fmt.Println("  go run . design new src-cli --name \"CLI\" --description \"CLI Architecture\"")
+	fmt.Println()
+	fmt.Println("  # Add containers")
+	fmt.Println("  go run . design add container src-cli parser --tech \"Go\" --desc \"Parses commands\"")
+	fmt.Println()
+	fmt.Println("  # Add relationships")
+	fmt.Println("  go run . design add relationship src-cli parser executor --desc \"sends to\"")
+	fmt.Println()
+	fmt.Println("  # Export workspace")
+	fmt.Println("  go run . design export src-cli")
+	fmt.Println()
+	fmt.Println("  # View in browser")
+	fmt.Println("  go run . design serve src-cli")
+	fmt.Println()
+	fmt.Println("  # List modules")
 	fmt.Println("  go run . design list")
+	fmt.Println()
+	fmt.Println("For detailed help on a subcommand:")
+	fmt.Println("  go run . design <subcommand> --help")
 }

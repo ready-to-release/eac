@@ -19,7 +19,7 @@ Independently built, versioned, and deployed artifacts. Each has a detailed cont
 
 **Current deployable units**:
 
-- `src-mcp-pwsh`, `src-mcp-docs`, `src-mcp-github`, `src-mcp-vscode` (MCP servers)
+- `src-mcp-github`, `src-mcp-commands` (MCP servers)
 - `vscode-extension` (VSCode extension)
 
 ### Supporting Modules
@@ -99,12 +99,10 @@ Versioned contract definitions and schemas.
 
 ### MCP Servers
 
-| Module           | Prefix            | Location          | Description                  |
-| ---------------- | ----------------- | ----------------- | ---------------------------- |
-| `src-mcp-pwsh`   | `src-mcp-pwsh:`   | `src/mcp/pwsh/`   | PowerShell command execution |
-| `src-mcp-docs`   | `src-mcp-docs:`   | `src/mcp/docs/`   | Documentation management     |
-| `src-mcp-github` | `src-mcp-github:` | `src/mcp/github/` | GitHub API integration       |
-| `src-mcp-vscode` | `src-mcp-vscode:` | `src/mcp/vscode/` | VSCode integration           |
+| Module             | Prefix              | Location            | Description                  |
+| ------------------ | ------------------- | ------------------- | ---------------------------- |
+| `src-mcp-github`   | `src-mcp-github:`   | `src/mcp/github/`   | GitHub API integration       |
+| `src-mcp-commands` | `src-mcp-commands:` | `src/mcp/commands/` | Repository command execution |
 
 ### Extensions
 
@@ -156,14 +154,14 @@ Versioned contract definitions and schemas.
 **Single module change**: Use module prefix
 
 ```text
-src-mcp-pwsh: fix: handle empty command output
+src-mcp-github: fix: handle empty API responses
 ```
 
 **Multiple modules (preferred)**: Separate commits per module
 
 ```text
-Commit 1: src-mcp-vscode: feat: add new tool
-Commit 2: vscode-extension: feat: integrate new tool
+Commit 1: src-mcp-commands: feat: add new command
+Commit 2: vscode-extension: feat: integrate new command
 ```
 
 **Multiple modules (alternative)**: Combined prefix
@@ -176,7 +174,7 @@ src-mcp-vscode,vscode-extension: feat: add complete feature
 
 ```text
 vscode-extension
-├── depends on: src-mcp-pwsh, src-mcp-docs, src-mcp-github, src-mcp-vscode
+├── depends on: src-mcp-github, src-mcp-commands
 └── used by: end users
 
 infrastructure
@@ -207,10 +205,8 @@ contracts-repository
 
 ### By Commit Prefix
 
-- `src-mcp-pwsh:` → `src/mcp/pwsh/`
-- `src-mcp-docs:` → `src/mcp/docs/`
 - `src-mcp-github:` → `src/mcp/github/`
-- `src-mcp-vscode:` → `src/mcp/vscode/`
+- `src-mcp-commands:` → `src/mcp/commands/`
 - `vscode-extension:` → `.vscode/extensions/vscode-ext-commit/`
 - `infra:` → `automation/`, `containers/`
 - `docs:` → `docs/`, root `*.md`
@@ -245,7 +241,6 @@ Each deployable unit has a mandatory contract file at `contracts/deployable-unit
 
 ## Example contracts
 
-- [src-mcp-pwsh.yml](../../../contracts/deployable-units/0.1.0/src-mcp-pwsh.yml)
 - [vscode-extension.yml](../../../contracts/deployable-units/0.1.0/vscode-extension.yml)
 
 ## References

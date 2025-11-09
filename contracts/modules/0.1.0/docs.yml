@@ -14,5 +14,4 @@ source:
     - "/mkdocs.yml"
 
 depends_on: []
-used_by:
-  - "src-mcp-docs"
+used_by: []

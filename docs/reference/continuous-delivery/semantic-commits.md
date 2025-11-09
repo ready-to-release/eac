@@ -55,9 +55,9 @@ src-mcp-github: feat: support pull request creation
 **Examples**:
 
 ```text
-src-mcp-pwsh: fix: handle null output from commands
+src-mcp-github: fix: handle null output from API calls
 vscode-extension: fix: prevent duplicate button registration
-src-mcp-docs: fix: correct markdown parsing for code blocks
+src-mcp-commands: fix: correct command argument parsing
 ```
 
 #### `perf:` - Performance Improvement (PATCH bump)
@@ -122,7 +122,7 @@ src-mcp-vscode: docs: improve tool documentation in README
 **Examples**:
 
 ```text
-src-mcp-pwsh: style: format code with gofmt
+src-mcp-github: style: format code with gofmt
 vscode-extension: style: apply prettier formatting
 ```
 
@@ -215,10 +215,8 @@ Based on [repository-layout.md](./repository-layout.md), use these module prefix
 
 | Prefix | Module | Location |
 |--------|--------|----------|
-| `src-mcp-pwsh:` | PowerShell MCP Server | `src/mcp/pwsh/` |
-| `src-mcp-docs:` | Documentation MCP Server | `src/mcp/docs/` |
 | `src-mcp-github:` | GitHub MCP Server | `src/mcp/github/` |
-| `src-mcp-vscode:` | VSCode MCP Server | `src/mcp/vscode/` |
+| `src-mcp-commands:` | Commands MCP Server | `src/mcp/commands/` |
 | `vscode-extension:` | VSCode Extension | `.vscode/extensions/vscode-ext-commit/` |
 | `infra:` | Infrastructure | `automation/`, `containers/` |
 | `docs:` | Documentation | `docs/`, `*.md` files |
@@ -385,9 +383,9 @@ Reviewed-by: John Doe <john@example.com>
 ### Example 1: Simple Feature
 
 ```text
-src-mcp-pwsh: feat: add output formatting options
+src-mcp-github: feat: add repository search capabilities
 
-Allow customization of command output format via new parameters.
+Allow searching repositories by name, topic, and language.
 ```
 
 **Version**: 1.2.0 → 1.3.0 (MINOR)
@@ -477,7 +475,7 @@ Set up `commit-msg` hook to validate format:
 # .git/hooks/commit-msg
 
 commit_msg=$(cat "$1")
-pattern="^(src-mcp-pwsh|src-mcp-docs|src-mcp-github|src-mcp-vscode|vscode-extension|infra|docs|config|contracts): (feat|fix|perf|docs|style|refactor|test|chore|ci|build|revert)(!)?:"
+pattern="^(src-mcp-github|src-mcp-commands|vscode-extension|infra|docs|config|contracts): (feat|fix|perf|docs|style|refactor|test|chore|ci|build|revert)(!)?:"
 
 if ! echo "$commit_msg" | grep -Eq "$pattern"; then
   echo "ERROR: Commit message does not follow semantic commit format"

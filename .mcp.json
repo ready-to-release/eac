@@ -1,17 +1,5 @@
 {
   "mcpServers": {
-    "pwsh": {
-      "command": "go",
-      "args": ["run", "./src/mcp/pwsh/main.go"],
-      "env": {}
-    },
-    "docs": {
-      "command": "go",
-      "args": ["run", "./src/mcp/docs/main.go"],
-      "env": {
-        "DOCS_PATH": "${DOCS_PATH:-.}"
-      }
-    },
     "github": {
       "command": "go",
       "args": ["run", "./src/mcp/github/main.go"],
@@ -23,13 +11,6 @@
       "command": "go",
       "args": ["run", "./src/mcp/commands/main.go"],
       "env": {}
-    },
-    "structurizr": {
-      "command": "go",
-      "args": ["run", "./src/mcp/structurizr/main.go"],
-      "env": {
-        "STRUCTURIZR_WORKSPACE_ROOT": "docs/reference/design"
-      }
     }
   }
 }

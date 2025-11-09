@@ -78,8 +78,8 @@ vscode-extension: feat: add commit history viewer
 **Examples**:
 
 ```text
-src-mcp-pwsh: fix: handle null output from PowerShell commands
-src-mcp-docs: perf: optimize markdown parsing performance
+src-mcp-github: fix: handle null responses from GitHub API
+src-mcp-commands: perf: optimize command execution performance
 ```
 
 ### No Version Change
@@ -101,23 +101,21 @@ Each module maintains its own independent version number:
 
 **Modules**:
 
-- `src-mcp-pwsh`
-- `src-mcp-docs`
 - `src-mcp-github`
-- `src-mcp-vscode`
+- `src-mcp-commands`
 
 **Version Location**:
 
 - Not stored in `go.mod` (Go uses git tags)
-- Version tracked via git tags: `src-mcp-pwsh/v1.2.3`
+- Version tracked via git tags: `src-mcp-github/v1.2.3`
 - Version may be embedded in build using ldflags
 
 **Tagging Convention**:
 
 ```bash
 # Tag format: <module-name>/v<version>
-git tag src-mcp-pwsh/v1.2.0
-git tag src-mcp-github/v2.0.1
+git tag src-mcp-github/v1.2.0
+git tag src-mcp-commands/v2.0.1
 ```
 
 ### VSCode Extension
@@ -266,10 +264,10 @@ When specifying dependencies:
 
 ### Module Compatibility Matrix
 
-| VSCode Extension | src-mcp-vscode | src-mcp-pwsh | src-mcp-github | src-mcp-docs |
-| ---------------- | -------------- | ------------ | -------------- | ------------ |
-| 1.x.x            | ^1.0.0         | ^1.0.0       | ^1.0.0         | ^1.0.0       |
-| 2.x.x            | ^2.0.0         | ^1.0.0       | ^1.0.0         | ^1.0.0       |
+| VSCode Extension | src-mcp-github | src-mcp-commands |
+| ---------------- | -------------- | ---------------- |
+| 1.x.x            | ^1.0.0         | ^1.0.0           |
+| 2.x.x            | ^1.0.0         | ^1.0.0           |
 
 ## Examples
 
@@ -278,10 +276,10 @@ When specifying dependencies:
 ```text
 Current version: 1.2.3
 
-Commit: src-mcp-pwsh: fix: handle empty command output
+Commit: src-mcp-github: fix: handle empty API responses
 
 New version: 1.2.4 (PATCH increment)
-Tag: src-mcp-pwsh/v1.2.4
+Tag: src-mcp-github/v1.2.4
 ```
 
 ### Example 2: New Feature
