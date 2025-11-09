@@ -52,6 +52,7 @@ var workspaceRoot string
 
 func main() {
 	log.SetOutput(os.Stderr)
+	log.SetFlags(0) // Disable timestamps in logs
 
 	// Get workspace root from environment or use default
 	workspaceRoot = os.Getenv("STRUCTURIZR_WORKSPACE_ROOT")
@@ -71,10 +72,13 @@ func main() {
 		log.Fatalf("Failed to create workspace root: %v", err)
 	}
 
-	log.Printf("Structurizr MCP Server starting")
-	log.Printf("Workspace root: %s", workspaceRoot)
+	// Disabled to avoid stderr noise during MCP initialization
+	// log.Printf("Structurizr MCP Server starting")
+	// log.Printf("Workspace root: %s", workspaceRoot)
 
 	scanner := bufio.NewScanner(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
@@ -86,13 +90,10 @@ func main() {
 
 		response := handleRequest(request)
 
-		responseBytes, err := json.Marshal(response)
-		if err != nil {
-			log.Printf("Error marshaling response: %v", err)
+		if err := encoder.Encode(response); err != nil {
+			log.Printf("Error encoding response: %v", err)
 			continue
 		}
-
-		fmt.Println(string(responseBytes))
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -101,7 +102,7 @@ func main() {
 }
 
 func handleRequest(request MCPRequest) MCPResponse {
-	log.Printf("Handling MCP request: %s", request.Method)
+	// log.Printf("Handling MCP request: %s", request.Method) // Disabled for clean MCP output
 
 	switch request.Method {
 	case "initialize":
@@ -208,7 +209,7 @@ func handleToolsCall(request MCPRequest) MCPResponse {
 		return errorResponse(request.ID, -32602, fmt.Sprintf("Invalid params: %v", err))
 	}
 
-	log.Printf("Executing tool: %s with args: %v", params.Name, params.Arguments)
+	// log.Printf("Executing tool: %s with args: %v", params.Name, params.Arguments) // Disabled for clean MCP output
 
 	var result string
 	var err error

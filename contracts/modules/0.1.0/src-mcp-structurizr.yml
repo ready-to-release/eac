@@ -1,0 +1,19 @@
+# Version: 0.1.0
+
+moniker: "src-mcp-structurizr"
+name: "Go structurizr MCP Server"
+type: "go-mcp"
+description: "Model Context Protocol server for executing structurizr commands"
+
+source:
+  changelog_path: "/docs/CHANGELOG.md"
+  root: "src/mcp/structurizr"
+  includes:
+    - "go.sum"
+    - "go.mod"
+    - "**.go"
+    - "*.go"
+    - "README.md"
+    - "run.sh"
+
+depends_on: ['pwsh-shell']
