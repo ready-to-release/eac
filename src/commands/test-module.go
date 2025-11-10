@@ -157,6 +157,13 @@ func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir s
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-cli: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
+
+	// Step 1: go generate (required for embedded files from contracts)
+	if exitCode := runCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
+		return exitCode
+	}
+
 	fmt.Fprintf(logWriter, "Running: go test ./...\n")
 
 	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
