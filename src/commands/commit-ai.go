@@ -13,8 +13,8 @@ import (
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/commit-message"
 	"github.com/ready-to-release/eac/src/commands/render"
-	"github.com/ready-to-release/eac/src/repository"
-	"github.com/ready-to-release/eac/src/repository/reports"
+	"github.com/ready-to-release/eac/src/internal/repository"
+	"github.com/ready-to-release/eac/src/internal/repository/reports"
 )
 
 func init() {

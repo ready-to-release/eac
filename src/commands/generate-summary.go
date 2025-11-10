@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/src/reports/cucumber"
+	"github.com/ready-to-release/eac/src/internal/reports/cucumber"
 )
 
 func init() {

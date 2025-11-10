@@ -18,7 +18,8 @@ source:
     - "r2r-cli.examples.yml"
     - "r2r.example.yml"
 
-depends_on: []
+depends_on:
+  - "src-internal"
 used_by:
   - "claude-config"
   - "src-mcp-vscode"

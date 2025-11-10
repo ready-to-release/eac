@@ -12,6 +12,7 @@ source:
     - "**/*.nav.yml"
     - "assets/**"
     - "/mkdocs.yml"
+    - "LICENSE"
 
 depends_on: []
 used_by: []

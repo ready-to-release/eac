@@ -16,7 +16,8 @@ source:
     - "render/README.md"
     - "/specs/src-commands/**/*"
 
-depends_on: []
+depends_on:
+  - "src-internal"
 used_by:
   - "sh"
   - "bash"

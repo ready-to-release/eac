@@ -2,6 +2,7 @@
 
 moniker: "repository"
 name: "The repository root module"
+type: "repository-root"
 
 source:
   root: "/"

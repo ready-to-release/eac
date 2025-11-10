@@ -2,6 +2,7 @@
 
 moniker: "claude-agents"
 name: "Claude Code Agents"
+type: "claude-agents"
 
 source:
   root: ".claude/agents"

@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/render"
-	"github.com/ready-to-release/eac/src/contracts/reports"
+	"github.com/ready-to-release/eac/src/internal/contracts/reports"
 )
 
 func init() {

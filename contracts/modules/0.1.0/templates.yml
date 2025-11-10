@@ -1,0 +1,18 @@
+# Version: 0.1.0
+
+moniker: "templates"
+name: "Project Templates"
+type: "templates"
+description: "Template files for documentation, specifications, and design records"
+
+source:
+  root: "templates"
+  includes:
+    - "**/*.md"
+    - "**/*.feature"
+
+parent: "."
+
+depends_on: []
+
+used_by: []
