@@ -223,7 +223,7 @@ Deploy Agents are specialized CI/CD runners with segregated access to production
 **Approval Integration:**
 
 - Manual approval gate (RA pattern)
-- Automated approval gate (CDE pattern)
+- Automated approval gate (CDe pattern)
 - Emergency break-glass procedures
 - Rollback triggers
 
@@ -278,29 +278,23 @@ The Production environment is where software serves end users and delivers busin
 
 ## Architecture Visuals Explained
 
-### Complete Environment Landscape
-
-![Environments Overview](../../../assets/environment/environments.drawio.png)
-
-**This diagram shows the complete environment landscape:** The flow progresses from left to right showing DevBox (local development) → Build Agents (CI/CD automation in network zone A) → PLTE instances (isolated ephemeral testing in zone B) → Demo (stakeholder validation in zone B) → Deploy Agents (segregated zone C with production credentials) → Production (zone D with live traffic). Network boundaries show clear isolation between zones, with Deploy Agents as the only automated path to production. Data flows show artifact progression through stages, and access controls enforce principle of least privilege at each boundary.
-
 ### Architectural Layers
 
 ![Architectural Layers](../../../assets/environment/layers.drawio.png)
 
-**This diagram shows the three architectural layers:** From top to bottom: **Application Layer** (services, APIs, business logic), **Data Layer** (databases, caches, message queues), and **Infrastructure Layer** (compute, networking, storage). Each environment (DevBox, PLTE, Production) contains all three layers with consistent structure. Arrows show dependencies flowing downward - applications depend on data layer, which depends on infrastructure. This layered approach enables separation of concerns, independent scaling per layer, and clear failure boundaries for troubleshooting.
+**This diagram shows the architectural organization layers for environment infrastructure:** The diagram illustrates how environments are structured using **categories** (Production vs Dev/Test), **category instances** (individual subscriptions or account structures), **templates** (Infrastructure as Code definitions), and **environment instances** (deployed environments from templates). The layered architecture shows how **shared infrastructure** supports multiple **environment slot groups** (named horizontal environments like DEVELOPMENT, DEMO, PRODUCTION), which in turn contain **environment slots** (individual environment instances). This hierarchical organization enables consistent infrastructure definitions across all environments while allowing for appropriate isolation and access controls at each layer.
 
-### Deployment Slots
+### Environment Slot Groups and Slots
 
-![Deployment Slots](../../../assets/environment/slots.drawio.png)
+![Environment Slots](../../../assets/environment/slots.drawio.png)
 
-**This diagram shows blue-green deployment slots:** The **Blue Slot** (left) receives 100% of production traffic with the current stable release. The **Green Slot** (right) receives the new deployment for validation with test traffic (0%). After validation, the load balancer switches traffic from Blue to Green (arrows show traffic routing). The former Green becomes the new Blue (100% traffic), and the former Blue becomes idle, ready for the next deployment. This enables zero-downtime deployments with instant rollback capability - just switch the load balancer back if issues arise.
+**This diagram shows environment slot groups and slots organization:** The diagram illustrates how environments are organized into **slot groups** and **slots**. An **environment slot group** is a named horizontal environment grouping (e.g., DEVELOPMENT, DEMO, ACCEPTANCE, PRODUCTION) used to organize related environments. Within each slot group, **environment slots** are logical constructs that map to infrastructure templates. Horizontal PLTEs are instantiated within a single slot group and can consist of one to many slots. Vertical isolated PLTEs are also instantiated within slot groups. Slots can be empty or filled with environment instances, and slot groups can be partially or completely filled. This organization enables teams to manage multiple environment instances with clear boundaries for horizontal end-to-end testing and vertical isolated testing.
 
-### Deployable Units Relationship
+### Environment Slot and Slot Group Naming
 
-![Deployable Units](../../../assets/environment/units.drawio.png)
+![Environment Naming](../../../assets/environment/units.drawio.png)
 
-**This diagram shows single vs multiple deployable unit architectures:** The left side shows a **single deployable unit** (monolithic application) where all components deploy together atomically in one environment. The right side shows **multiple deployable units** (microservices) where Unit A, Unit B, and Unit C each have independent deployment cycles and environments. Arrows between units on the right indicate API dependencies requiring backward compatibility, contract testing, and versioning. The diagram illustrates the trade-off: single units have simpler coordination but less flexibility; multiple units enable independent deployment but require coordination strategies (API versioning, feature flags, contract testing).
+**This diagram shows how environment slots and slot groups are identified through naming conventions:** The diagram illustrates how infrastructure components are named to indicate their **slot group** and **slot** membership. In cloud providers like Azure, a **slot** and **slot group** are identified by specific parts of the infrastructure component naming. For example, infrastructure components that exist in slot groups include App Services, Function Apps, Databases, Key Vaults, and Storage Accounts. **Shared infrastructure** (App Plans, Networks, DNS, Gateways, SQL Servers, Container Registries) has different naming patterns as it supports multiple slot groups. The naming convention enables clear identification of which environment instance a resource belongs to, facilitating automated provisioning and lifecycle management through Infrastructure as Code.
 
 ---
 
