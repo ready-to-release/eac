@@ -28,9 +28,7 @@ jobs:
           pip install mkdocs mkdocs-material>=9.4 mkdocs-awesome-nav pymdown-extensions
 
       - name: Build MkDocs site
-        run: |
-          sed -i 's|site_url: ""|site_url: https://ready-to-release.github.io/eac/|' mkdocs.yml
-          mkdocs build
+        run: mkdocs build
 
       - name: Configure Pages
         uses: actions/configure-pages@v4
