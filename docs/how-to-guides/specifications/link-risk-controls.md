@@ -21,8 +21,14 @@ Risk controls are **Gherkin scenarios** in `specs/risk-controls/`. User scenario
 ```gherkin
 Feature: authentication-controls
 
-  Risk controls for user authentication
-  Source: Assessment-2025-001
+  # Compliance risk controls for user authentication and access management.
+  #
+  # Source:
+  #   - Assessment-2025-001
+  #   - ISO 27001:2022 A.8.5 (Secure authentication)
+  #
+  # Assessment: Assessment-2025-001
+  # Date: 2025-01-15
 
   @risk1
   Scenario: RC-001 - User authentication required
@@ -84,10 +90,13 @@ grep -r "@risk1" specs/ --exclude-dir=risk-controls
 ### One Risk Control → Multiple Scenarios
 
 ```gherkin
-# Risk control
-@risk1
-Scenario: RC-001 - User authentication required
-  Then all user access MUST be authenticated
+# Risk control definition (specs/risk-controls/authentication-controls.feature)
+Feature: authentication-controls
+
+  @risk1
+  Scenario: RC-001 - User authentication required
+    Given a system with protected resources
+    Then all user access MUST be authenticated
 
 # Implementation scenarios
 @success @ac1 @risk1
@@ -117,10 +126,13 @@ Scenario: Authenticated action creates audit trail
 ### One Risk Control → Multiple Features
 
 ```gherkin
-# Risk control
-@risk5
-Scenario: RC-005 - Audit trail completeness
-  Then all changes MUST create audit trail entries
+# Risk control definition (specs/risk-controls/audit-trail-controls.feature)
+Feature: audit-trail-controls
+
+  @risk5
+  Scenario: RC-005 - Audit trail completeness
+    Given system operations occur
+    Then all changes MUST create audit trail entries
 
 # Feature 1: CLI
 @success @ac2 @risk5
@@ -153,11 +165,16 @@ specs/risk-controls/
 ### Feature File Format
 
 ```gherkin
-Feature: [Control Category]-[Name]
+Feature: [control-category]-[name]
 
-  [Brief description]
-  Source: <Assessment-ID>
-  Assessment Date: <YYYY-MM-DD>
+  # [Brief description of the risk controls in this file]
+  #
+  # Source:
+  #   - <Assessment-ID> (e.g., Assessment-2025-001)
+  #   - <Standard Reference> (e.g., ISO 27001:2022 A.8.5)
+  #
+  # Assessment: <Assessment-ID>
+  # Date: <YYYY-MM-DD>
 ```
 
 **Examples**:

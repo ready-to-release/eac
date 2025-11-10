@@ -53,12 +53,22 @@ Regulated industries (medical devices, financial services, aerospace, etc.) requ
 **Risk controls as Gherkin scenarios** in version control:
 
 ```gherkin
-@risk1
-Scenario: RC-001 - User authentication required
-  Given a system with protected resources
-  Then all user access MUST be authenticated
-  And authentication MUST occur before granting access
-  And failed authentication attempts MUST be logged
+Feature: authentication-controls
+
+  # Compliance risk controls for user authentication and access management.
+  #
+  # Source:
+  #   - Assessment-2025-001
+  #
+  # Assessment: Assessment-2025-001
+  # Date: 2025-01-15
+
+  @risk1
+  Scenario: RC-001 - User authentication required
+    Given a system with protected resources
+    Then all user access MUST be authenticated
+    And authentication MUST occur before granting access
+    And failed authentication attempts MUST be logged
 ```
 
 **Benefits**:
@@ -170,12 +180,22 @@ specs/risk-controls/
 **To**:
 
 ```gherkin
-@risk1
-Scenario: RC-001 - User authentication required
-  Given a system with protected resources
-  Then all user access MUST be authenticated
-  And authentication MUST occur before granting access
-  And failed authentication attempts MUST be logged
+Feature: authentication-controls
+
+  # Compliance risk controls for user authentication and access management.
+  #
+  # Source:
+  #   - Assessment-2025-001
+  #
+  # Assessment: Assessment-2025-001
+  # Date: 2025-01-15
+
+  @risk1
+  Scenario: RC-001 - User authentication required
+    Given a system with protected resources
+    Then all user access MUST be authenticated
+    And authentication MUST occur before granting access
+    And failed authentication attempts MUST be logged
 ```
 
 **Key characteristics**:
@@ -191,18 +211,20 @@ Scenario: RC-001 - User authentication required
 
 ### From Risk to Evidence
 
-```text
-Risk Assessment
-    ↓
-Risk Control Definition (Gherkin scenario in specs/risk-controls/)
-    ↓
-Feature Implementation (User scenarios tagged with @risk<ID>)
-    ↓
-Test Execution (Automated via Godog)
-    ↓
-Test Evidence (Results linked to control via @risk tag)
-    ↓
-Audit Trail (Git history + test results)
+```mermaid
+flowchart TD
+    A[Risk Assessment] --> B[Risk Control Definition<br/>Gherkin scenario in specs/risk-controls/]
+    B --> C[Feature Implementation<br/>User scenarios tagged with @risk&lt;ID&gt;]
+    C --> D[Test Execution<br/>Automated via Godog]
+    D --> E[Test Evidence<br/>Results linked to control via @risk tag]
+    E --> F[Audit Trail<br/>Git history + test results]
+
+    style A fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    style B fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style C fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style D fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style E fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style F fill:#fce4ec,stroke:#c2185b,stroke-width:2px
 ```
 
 ### Example: Authentication Risk
@@ -217,10 +239,12 @@ Audit Trail (Git history + test results)
 **2. Control defined** (`specs/risk-controls/authentication-controls.feature`):
 
 ```gherkin
-@risk1
-Scenario: RC-001 - User authentication required
-  Given a system with protected resources
-  Then all user access MUST be authenticated
+Feature: authentication-controls
+
+  @risk1
+  Scenario: RC-001 - User authentication required
+    Given a system with protected resources
+    Then all user access MUST be authenticated
 ```
 
 **3. Implementation** (`specs/cli/login/specification.feature`):

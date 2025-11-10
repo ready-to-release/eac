@@ -1,10 +1,15 @@
 # Risk Control Feature Template
 
-Feature: [Control Category]-[Name]
+Feature: [control-category]-[name]
 
-  [Brief description of the risk controls in this file]
-  Source: <Assessment-ID> (e.g., Assessment-2025-001)
-  Assessment Date: <YYYY-MM-DD>
+  # [Brief description of the risk controls in this file]
+  #
+  # Source:
+  #   - <Assessment-ID> (e.g., Assessment-2025-001)
+  #   - <Standard Reference> (e.g., ISO 27001:2022 A.8.5)
+  #
+  # Assessment: <Assessment-ID>
+  # Date: <YYYY-MM-DD>
 
   # ========================================
   # Risk Control Scenario Template
@@ -162,15 +167,16 @@ Feature: [Control Category]-[Name]
 # To use this template:
 #
 # 1. **Create feature file**:
-#    - File location: specs/risk-controls/[Control Category]-[Name].feature
-#    - Naming: Use dashes, no spaces, lowercase (e.g., authentication-controls, data-protection-encryption)
+#    - File location: specs/risk-controls/[control-category]-[name].feature
+#    - Naming: Use dashes, no spaces, lowercase (kebab-case)
 #    - Examples: authentication-controls.feature, data-protection-controls.feature, audit-trail-controls.feature
 #
 # 2. **Define feature header**:
-#    - Feature name: [Control Category]-[Name] (e.g., authentication-controls, data-protection-encryption)
-#    - Description: Brief explanation of what controls are in this file
-#    - Source: Reference to the source assessment document
-#    - Assessment Date: Date of the assessment
+#    - Feature name: [control-category]-[name] (kebab-case, e.g., authentication-controls, data-protection-encryption)
+#    - Description: Brief explanation using # comment format
+#    - Source: Bulleted list of regulatory references and assessment IDs using # comment format
+#    - Assessment: Risk assessment ID
+#    - Date: Assessment or last review date
 #
 # 3. **Create risk control scenarios**:
 #    - Tag: @risk<ID> (e.g., @risk1, @risk5, @risk10)
