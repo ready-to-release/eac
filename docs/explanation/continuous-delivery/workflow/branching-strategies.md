@@ -5,7 +5,7 @@
 Branching strategies define how code flows through the CD Model's 12 stages. While [Trunk-Based Development](trunk-based-development.md) establishes the core principles and branch types, this article provides detailed branching flows for the two primary implementation patterns:
 
 - **Release Approval (RA)**: Uses release branches for validation and approval before production
-- **Continuous Deployment (CDE)**: Deploys directly from trunk without release branches
+- **Continuous Deployment (CDe)**: Deploys directly from trunk without release branches
 
 Understanding these flows is critical for implementing the CD Model effectively and ensuring changes progress through stages correctly.
 
@@ -17,9 +17,9 @@ Both branching strategies support the full 12-stage CD Model:
 **Stages 8-12**: Differ significantly based on pattern:
 
 - **RA Pattern**: Release branches isolate releases for validation
-- **CDE Pattern**: Direct deployment from trunk with feature flag control
+- **CDe Pattern**: Direct deployment from trunk with feature flag control
 
-See [Implementation Patterns](../cd-model/implementation-patterns.md) for guidance on choosing between RA and CDE.
+See [Implementation Patterns](../cd-model/implementation-patterns.md) for guidance on choosing between RA and CDe.
 
 ---
 
@@ -106,38 +106,21 @@ flowchart TD
 
 **Stages 8-12: Release Branch Flow**:
 
-```text
-┌─────────────┐
-│   Stage 8   │  Create release branch from trunk
-│Start Release│  release/v1.2.0 branched from main
-└──────┬──────┘  Deploy release branch to PLTE for validation
-       │
-       ▼
-┌─────────────┐
-│   Stage 9   │  Validate release candidate in PLTE
-│Release      │  Manual: Review quality metrics, evidence, approvals
-│Approval     │  Release manager signs off
-└──────┬──────┘  Formal approval documented
-       │
-       ▼  (Approved)
-┌─────────────┐
-│  Stage 10   │  Deploy release branch to production
-│Production   │  Automated: Same artifact validated in Stage 9
-│Deployment   │  Monitor deployment success (10-30 min)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Stage 11   │  Monitor production behavior
-│    Live     │  Automated: Metrics, alerts, health checks
-└──────┬──────┘  Ongoing monitoring
-       │
-       ▼
-┌─────────────┐
-│  Stage 12   │  Feature flag management
-│Release      │  Control: Enable/disable features at runtime
-│Toggling     │  Gradual rollout (optional)
-└─────────────┘
+```mermaid
+flowchart TD
+    S8["Stage 8: Start Release<br/>Create release branch from trunk<br/>release/10 branched from main"]
+    S9["Stage 9: Release Approval<br/>Validate release candidate in PLTE<br/>Manual: Review quality metrics, evidence, approvals<br/>Release manager signs off<br/>Formal approval documented"]
+    S10["Stage 10: Production Deployment<br/>Deploy release branch to production<br/>Automated: Same artifact validated in Stage 9<br/>Monitor deployment success (10–30 min)"]
+    S11["Stage 11: Live Monitoring<br/>Monitor production behavior<br/>Automated: Metrics, alerts, health checks<br/>Ongoing monitoring"]
+    S12["Stage 12: Release Toggling<br/>Feature flag management<br/>Control: Enable/disable features at runtime<br/>Gradual rollout (optional)"]
+
+    S8 --> S9 --> S10 --> S11 --> S12
+
+    style S8 fill:#e1f5fe
+    style S9 fill:#fff9c4
+    style S10 fill:#e8f5e9
+    style S11 fill:#f3e5f5
+    style S12 fill:#fce4ec
 ```
 
 **Example Commands**:
@@ -146,8 +129,8 @@ flowchart TD
 # Stage 8: Create release branch
 git checkout main
 git pull origin main
-git checkout -b release/v1.2.0
-git push origin release/v1.2.0
+git checkout -b release/10
+git push origin release/10
 
 # Stage 10: Tag production deployment
 git tag v1.2.0
@@ -165,8 +148,8 @@ git push origin v1.2.0
 # Create release branch from trunk
 git checkout main
 git pull origin main
-git checkout -b release/v1.2.0
-git push origin release/v1.2.0
+git checkout -b release/10
+git push origin release/10
 ```
 
 **Validation** (Stage 9):
@@ -211,13 +194,13 @@ gh pr create --title "Fix critical login bug" --body "Resolves #123"
 # ... PR approved and merged ...
 
 # 4. Cherry-pick to release branch
-git checkout release/v1.2.0
-git pull origin release/v1.2.0
+git checkout release/10
+git pull origin release/10
 git cherry-pick <commit-sha-from-main>
-git push origin release/v1.2.0
+git push origin release/10
 
 # 5. Create PR for release branch
-gh pr create --base release/v1.2.0 \
+gh pr create --base release/10 \
   --title "Cherry-pick: Fix critical login bug" \
   --body "Cherry-picked from main: <commit-sha>"
 ```
@@ -235,8 +218,8 @@ Only when trunk has diverged significantly and fix is urgent:
 
 ```bash
 # 1. Create topic branch from release branch
-git checkout release/v1.2.0
-git pull origin release/v1.2.0
+git checkout release/10
+git pull origin release/10
 git checkout -b fix/release-critical-bug
 
 # 2. Implement minimal fix
@@ -244,7 +227,7 @@ git checkout -b fix/release-critical-bug
 
 # 3. Merge to release branch via PR
 git push origin fix/release-critical-bug
-gh pr create --base release/v1.2.0 \
+gh pr create --base release/10 \
   --title "Emergency fix for critical bug" \
   --body "Minimal fix for production issue"
 # ... PR approved and merged ...
@@ -292,15 +275,15 @@ flowchart LR
 
 ---
 
-## Continuous Deployment (CDE) Pattern Flow
+## Continuous Deployment (CDe) Pattern Flow
 
-![CDE Branching Overview](../../../assets/branching/branching-detailed-no-release.drawio.png)
+![CDe Branching Overview](../../../assets/branching/branching-detailed-no-release.drawio.png)
 
-**This diagram shows the simplified branching flow for the Continuous Deployment pattern:** Compare this to the RA pattern diagram above - notice the release branch creation points (**B**, **E**) and release-specific flows (**C**, **D**, **F**, **G**) are completely absent. The flow is much simpler: topic branches (**A**) merge to main, and main is tagged directly for deployment. No release branches exist, so all bug fixes go directly to trunk via topic branches. This streamlined flow enables the rapid 2-4 hour cycle time characteristic of CDE.
+**This diagram shows the simplified branching flow for the Continuous Deployment pattern:** Compare this to the RA pattern diagram above - notice the release branch creation points (**B**, **E**) and release-specific flows (**C**, **D**, **F**, **G**) are completely absent. The flow is much simpler: topic branches (**A**) merge to main, and main is tagged directly for deployment. No release branches exist, so all bug fixes go directly to trunk via topic branches. This streamlined flow enables the rapid 2-4 hour cycle time characteristic of CDe.
 
 ### Pattern Overview
 
-The CDE pattern deploys directly from trunk without release branches. This approach:
+The CDe pattern deploys directly from trunk without release branches. This approach:
 
 - Maximizes deployment speed (hours instead of weeks)
 - Relies on comprehensive automated testing
@@ -309,7 +292,7 @@ The CDE pattern deploys directly from trunk without release branches. This appro
 
 **Best for**: Non-regulated systems, internal tools, teams with mature automation
 
-### Stage Flow for CDE Pattern
+### Stage Flow for CDe Pattern
 
 **Stages 1-3: Topic Branch Development**:
 
@@ -392,7 +375,7 @@ git push origin v1.2.0
 
 ### No Release Branches
 
-The CDE pattern eliminates release branches entirely:
+The CDe pattern eliminates release branches entirely:
 
 **Instead of release branches**:
 
@@ -473,7 +456,7 @@ git checkout -b fix/checkout-bug
 # Deploy fix, then re-enable feature flag gradually
 ```
 
-### CDE Pattern Summary
+### CDe Pattern Summary
 
 **Branch Flow**:
 
@@ -606,9 +589,9 @@ jobs:
 - Release branch triggers Stages 8-10
 - Manual approval required at Stage 9
 
-**CDE Pattern Pipeline**:
+**CDe Pattern Pipeline**:
 
-![CDE Pipeline](../../../assets/branching/generalized-pipeline-cde.drawio.png)
+![CDe Pipeline](../../../assets/branching/generalized-pipeline-cde.drawio.png)
 
 **This diagram shows the streamlined pipeline architecture for Continuous Deployment:** Compare this to the RA pattern - the key difference is that trunk commits trigger Stages 4-10 automatically in one continuous flow without a separate release branch pipeline. Topic branches still trigger Stages 2-3 (identical to RA). But once merged to trunk, the pipeline proceeds directly from testing through to production deployment. Stage 9 has automated approval based on quality gates (test pass rate, coverage, no vulnerabilities) instead of manual sign-off. No release branch pipeline exists, simplifying the architecture significantly and enabling the rapid deployment cycle.
 
@@ -623,7 +606,7 @@ jobs:
 
 ![Pin and Stitch](../../../assets/branching/pin-and-stitch.drawio.png)
 
-**This diagram illustrates the pin and stitch dependency management pattern:** The diagram shows how deployable units declare dependencies on specific versions of shared modules. **Pinning** occurs in the build manifest (e.g., `shared-models: v1.2.3`) where the dependent explicitly declares which version it requires. **Stitching** happens at build time when the pinned version is retrieved from artifact storage and built into the immutable artifact. This ensures deterministic builds - the same commit always produces the same artifact with the same dependencies, regardless of when it's built. The pattern supports independent release cadences for different deployable units while maintaining version compatibility.
+**This diagram illustrates the pin and stitch dependency management pattern:** The diagram shows how deployable units declare dependencies on specific versions of shared modules. **Pinning** occurs in the build manifest (e.g., `shared-models: v1.2.3`) where the dependent explicitly declares which version it requires. **Stitching** happens at build time when the pinned version is retrieved from artifact storage (or local cache) and built into the immutable artifact. This ensures deterministic builds - the same commit always produces the same artifact with the same dependencies, including all transitive dependencies, regardless of when it's built. The pattern supports independent release cadences for different deployable units while maintaining version compatibility.
 
 **Challenge**: When multiple deployable units depend on each other, how do you ensure compatible versions are deployed together?
 
@@ -681,22 +664,22 @@ flowchart LR
         RA_Approval --> RA_Prod[Production]
     end
 
-    subgraph CDE["CDE Pattern (2-4 hours)"]
-        CDE_Topic[Topic] --> CDE_Main[Main]
-        CDE_Main --> CDE_Auto{Auto<br/>approve}
-        CDE_Auto --> CDE_Prod[Production]
-        CDE_Prod --> CDE_Flags[Feature flags]
+    subgraph CDe["CDe Pattern (2-4 hours)"]
+        CDe_Topic[Topic] --> CDe_Main[Main]
+        CDe_Main --> CDe_Auto{Auto<br/>approve}
+        CDe_Auto --> CDe_Prod[Production]
+        CDe_Prod --> CDe_Flags[Feature flags]
     end
 
     style RA_Approval fill:#fff3e0
     style RA_Release fill:#ffebee
-    style CDE_Auto fill:#e8f5e9
-    style CDE_Flags fill:#e3f2fd
+    style CDe_Auto fill:#e8f5e9
+    style CDe_Flags fill:#e3f2fd
 ```
 
 ### Branch Type Usage
 
-| Branch Type | RA Pattern | CDE Pattern |
+| Branch Type | RA Pattern | CDe Pattern |
 |-------------|-----------|-------------|
 | Trunk (main) | ✓ Always | ✓ Always |
 | Topic branches | ✓ Hours to 2 days | ✓ Hours to 1 day |
@@ -704,7 +687,7 @@ flowchart LR
 
 ### Stage Execution
 
-| Stage | RA Pattern | CDE Pattern |
+| Stage | RA Pattern | CDe Pattern |
 |-------|-----------|-------------|
 | 1. Authoring | Manual | Manual |
 | 2. Pre-commit | Automated (5-10 min) | Automated (5-10 min) |
@@ -728,7 +711,7 @@ flowchart LR
 - Release validation: 1-3 days (Stages 8-9)
 - **Total**: 1-2 weeks from commit to production
 
-**CDE Pattern**:
+**CDe Pattern**:
 
 - Topic branch: Hours to 1 day
 - Trunk testing: 2-4 hours (Stages 4-7)
@@ -745,7 +728,7 @@ flowchart LR
 - Needs documented approvals
 - Building confidence in automation
 
-**Use CDE Pattern when**:
+**Use CDe Pattern when**:
 
 - Non-regulated environment
 - Internal tools or low-risk systems
@@ -785,7 +768,7 @@ For general trunk-based development practices (trunk management, topic branch ma
 - Create PR for cherry-picked commits
 - Verify fix works in both branches
 
-### CDE Pattern Specific
+### CDe Pattern Specific
 
 **Feature Flag Management**:
 
@@ -829,7 +812,7 @@ This article focuses on branching flows. For related topics, see:
 
 **Implementation**:
 
-- [Implementation Patterns](../cd-model/implementation-patterns.md) - Choosing between RA and CDE
+- [Implementation Patterns](../cd-model/implementation-patterns.md) - Choosing between RA and CDe
 - [Environments](../architecture/environments.md) - PLTE and production architecture
 - [Security](../security/security.md) - Security integration throughout stages
 
@@ -846,7 +829,7 @@ Branching strategies define how code flows through the CD Model:
 - Suitable for regulated systems
 - Cycle time: 1-2 weeks
 
-**Continuous Deployment (CDE)**:
+**Continuous Deployment (CDe)**:
 
 - Deploys directly from trunk
 - Automated approval at Stage 9
@@ -862,8 +845,8 @@ Branching strategies define how code flows through the CD Model:
 
 **Key Differences**:
 
-- Release branches (RA) vs no release branches (CDE)
-- Manual approval (RA) vs automated approval (CDE)
+- Release branches (RA) vs no release branches (CDe)
+- Manual approval (RA) vs automated approval (CDe)
 - Feature hiding vs feature flags emphasis
 - Cycle time (weeks vs hours)
 
@@ -871,7 +854,7 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 
 ## Next Steps
 
-- [Implementation Patterns](../cd-model/implementation-patterns.md) - Detailed guidance on choosing between RA and CDE
+- [Implementation Patterns](../cd-model/implementation-patterns.md) - Detailed guidance on choosing between RA and CDe
 - [Trunk-Based Development](trunk-based-development.md) - Daily development practices
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Understand release stages in detail
 - [Deployable Units](../core-concepts/deployable-units.md) - What gets versioned and deployed

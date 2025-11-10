@@ -120,41 +120,16 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
 
 ## Branch Types and Flow
 
-```mermaid
-gitGraph
-    commit id: "Initial"
-    branch topic-1
-    commit id: "Work"
-    checkout main
-    merge topic-1 tag: "Squash merge"
-
-    branch release-1.0
-    commit id: "RC1"
-
-    checkout main
-    branch topic-2
-    commit id: "Feature A"
-    checkout main
-    merge topic-2
-
-    checkout main
-    commit id: "Hotfix" type: HIGHLIGHT
-
-    checkout release-1.0
-    cherry-pick id: "Hotfix"
-    commit tag: "v1.0.0"
-```
-
 ![Branching Overview](../../../assets/branching/branching-overview.drawio.png)
 
 > Diagram shows the three active branch types and their relationships
 
-1. The **trunk** (center) is the single source of truth, giving us the revisonable timeline.
+1. The **trunk** (center) is the single source of truth, giving us the revisionable timeline.
 1. **Topic branches** (below trunk in illustration) branch from trunk or release branches for short-lived development work.
    Changes on topic branches are squash-merged back, resulting in one topic branch creating exactly one commit on the destination branch.
-   **Topic branches** also comes in a variant where they branch off of a release branch, in which case we call them **Release Topic branches**
+   **Topic branches** also comes in a variant where they branch off of a release branch, in which case we call them **Release Topic branches**.
+   Topic branches can also become spikes (experimental work) that never progress past the Merge Request stage.
 1. **Release branches** (above trunk in illustration) branch from trunk at [Stage 8 for the Release Approval pattern](../cd-model/cd-model-stages-7-12.md#stage-8-start-release).
-   Topic branches can also become spikes (experimental work) that never merge back.
    All paths to trunk and release branches go through merge requests, never direct commits.
 
 ### Trunk Branch (Main)
@@ -203,6 +178,8 @@ docs/documentation-update
 refactor/improve-component
 ```
 
+**Note**: The authoritative branch naming policy specifies `topic/[user]/[topic-moniker]` (e.g., `topic/ausr/fix-build`), but some teams prefer the semantic prefixes shown above. This project uses semantic prefixes. Only trunk (`main`) and release (`release/[x]`) branch names are strictly enforced.
+
 **Purpose:**
 
 - Isolate work in progress
@@ -227,15 +204,18 @@ refactor/improve-component
 - Short-lived (days to weeks)
 - Only critical fixes allowed
 - Fixes cherry-picked back to trunk
-- Used in Release Approval (RA) pattern, not Continuous Deployment (CDE)
+- Used in Release Approval (RA) pattern, not Continuous Deployment (CDe)
 
 **Naming Convention:**
 
 ```text
-release/1.2.0
-release/v1.2.0
-release/product-name/1.2.0
+release/1         # First release
+release/2         # Second release
+release/10        # Tenth release
+release/product-name/5   # Fifth release of product-name (mono repo)
 ```
+
+**Note**: The `[x]` is an incremental integer release number, NOT a semantic version number. It can be part of a version number (e.g., release 10 might be tagged as v1.2.0), but the branch name uses the release count, not the version.
 
 **Purpose:**
 
@@ -244,7 +224,7 @@ release/product-name/1.2.0
 - Apply critical fixes without trunk changes
 - Maintain stable release candidate
 
-See [Implementation Patterns](../cd-model/implementation-patterns.md) for RA vs CDE details and [Branching Strategies](branching-strategies.md) for detailed flows.
+See [Implementation Patterns](../cd-model/implementation-patterns.md) for RA vs CDe details and [Branching Strategies](branching-strategies.md) for detailed flows.
 
 ---
 
@@ -466,16 +446,17 @@ The branching strategy differs based on your release flow.
 
 See [Implementation Patterns](../cd-model/implementation-patterns.md#release-approval-ra-pattern) and [Branching Strategies](branching-strategies.md) for details.
 
-### Continuous Deployment (CDE) Pattern
+### Continuous Deployment (CDe) Pattern
 
 **For non-regulated systems with high confidence:**
 
 1. **Trunk is always production-ready**
 2. **Deploy directly from trunk** (no release branches)
-3. **Fix-forward or rollback** if issues occur
-4. **Feature flags** provide control instead of branches
+3. **Automated tagging**: Commits enumerated and tagged before production deployment (e.g., via scheduled job)
+4. **Fix-forward or rollback** if issues occur
+5. **Feature flags** provide control instead of branches
 
-**No release branches needed** - HEAD of trunk IS the release.
+**No release branches needed** - HEAD of trunk IS the release candidate. A deployment mechanism (pipeline or scheduled job) enumerates, tags, and deploys trunk commits to production automatically.
 
 See [Implementation Patterns](../cd-model/implementation-patterns.md#continuous-deployment-cde-pattern) for details.
 
@@ -547,7 +528,7 @@ gh pr create --base release/v1.2.0 --title "Cherry-pick: Fix critical bug"
 
 ## Best Practices
 
-### DO
+### ✅ DO
 
 - **Integrate at least daily** - preferably multiple times per day
 - **Keep changes small** - < 400 lines ideal, < 200 excellent
@@ -560,7 +541,7 @@ gh pr create --base release/v1.2.0 --title "Cherry-pick: Fix critical bug"
 - **Cherry-pick from trunk to release** - maintain single source of truth
 - **Fix-forward in production** - prefer fixing over reverting when possible
 
-### DON'T
+### ❌ DON'T
 
 - **Keep topic branches open > 2 days** - violates continuous integration
 - **Make large, sweeping changes in single commit** - breaks reviewability
@@ -588,43 +569,12 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 
 ---
 
-## Summary
-
-Trunk-Based Development enables Continuous Integration and Continuous Delivery:
-
-**Core Principles:**
-
-1. Single source of truth (trunk)
-2. Short-lived topic branches (hours to 2 days max)
-3. Small, incremental changes (< 400 lines)
-4. Continuous integration (at least daily)
-
-**Branch Types:**
-
-- **Trunk**: Single main branch, always releasable
-- **Topic branches**: Temporary workspace, squash-merged
-- **Release branches**: Optional, for RA pattern only
-
-**Key Practices:**
-
-- Feature flags for incomplete features
-- Cherry-pick fixes from trunk to release
-- Squash merge for clean history
-- Daily integration to trunk
-
-**Integration with CD Model:**
-
-- Stages 1-3: Topic branch development
-- Stage 4: Trunk commit validation
-- Stages 5-7: Testing and exploration
-- Stage 8: Release branch creation (RA) or trunk deployment (CDE)
-
 ## Next Steps
 
-- [Branching Strategies](branching-strategies.md) - Detailed flows for RA and CDE patterns
+- [Branching Strategies](branching-strategies.md) - Detailed flows for RA and CDe patterns
 - [Unit of Flow](../core-concepts/unit-of-flow.md) - See how trunk fits into the bigger picture
 - [Deployable Units](../core-concepts/deployable-units.md) - What gets built from trunk
-- [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDE decision guidance
+- [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe decision guidance
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages including feature flags
 
 ## References

@@ -4,7 +4,7 @@
 
 The Continuous Delivery Model can be implemented in different patterns based on your system's regulatory requirements, risk profile, and organizational maturity. Understanding these patterns helps you choose the right approach for your context and implement the CD Model effectively.
 
-This article explains the two primary patterns - Release Approval (RA) and Continuous Deployment (CDE) - and provides guidance on selecting between them.
+This article explains the two primary patterns - Release Approval (RA) and Continuous Deployment (CDe) - and provides guidance on selecting between them.
 
 ### Why Different Patterns Exist
 
@@ -31,6 +31,8 @@ Your choice depends on several factors:
 **Best for**: Regulated environments, high-risk applications, systems requiring audit trails
 
 The Release Approval pattern is the default for regulated systems. It emphasizes comprehensive validation, documented approvals, and clear separation of duties between development and release.
+
+**Terminology Note**: The Release Approval *pattern* is named after its key differentiator - Stage 9 (Release Approval), where manual approval occurs before production deployment. This stage is sometimes called "Stabilization," "Hardening Sprint," or "Release Validation" in other contexts, but we use "Release Approval" to emphasize its purpose: formal sign-off on a frozen release candidate.
 
 ### When to Use RA
 
@@ -127,13 +129,13 @@ All evidence is automatically collected and stored in artifact repositories, pro
 | 11. Live                  | Automated Monitoring      | No                    | Ongoing           |
 | 12. Release Toggling      | Manual Control            | No                    | As needed         |
 
-**Total cycle time**: Typically days to 2 weeks from commit to production for a new feature, with two primary constraints:
+**Typical cycle time**: 1-2 weeks from commit to production (estimated based on manual approval delays), with two primary constraints:
 
 - Authoring and Release Approval, which are the implicit constraints of developer task sizing and approval queue.
 
 ---
 
-## Continuous Deployment (CDE) Pattern
+## Continuous Deployment (CDe) Pattern
 
 **Best for**: Less-regulated systems, internal tools, teams with mature DevOps practices
 
@@ -143,39 +145,41 @@ Changes flow automatically from commit to production based on automated quality 
 
 Extensive use of versioning lifecycle management tooling provides out-of-the-box management of verifications, roll-backs, deployments etc.
 
-### When to Use CDE
+### When to Use CDe
 
 Use the Continuous Deployment pattern when:
 
-- **Less-regulated**: No compliance requirements for regulatory oversight approval before touching production
-- **Regulated**: Compliance requirements for regulatory oversight approval before going live with features via. feature toggle in production approval is part of CDE.
+- **Fully automated verification**: All functional and non-functional requirements automatically verified
+- **Less-regulated**: No compliance requirements for regulatory approval before production deployment
+- **Low risk**: Errors don't impact critical operations; consumers bound to earlier versions
 - **Internal tools**: Used by internal teams who can tolerate occasional issues
-- **Low risk**: Errors don't impact critical operations, consumers are bound to earlier versions of versioned components etc.
 - **Mature testing**: Comprehensive automated test coverage
 - **Feature flags**: Can control feature exposure at runtime
 - **Fast iteration**: Business value from rapid deployment
 
+**Note**: CDe can be used in regulated environments if features are deployed disabled (via feature flags) and a separate Release Toggling approval (Stage 12) controls when features go live. In this model, deployment to production is automated, but feature release to end users remains controlled.
+
 ### Full Workflow Visualization
 
-![CDE Simplified Canvas](../../../assets/cd-model/canvas-simple-cde.drawio.png)
+![CDe Simplified Canvas](../../../assets/cd-model/canvas-simple-cde.drawio.png)
 
 **This diagram highlights automated quality gates that replace manual approvals:** The simplified view shows how automated checks at critical points replace human decisions. Look for automated quality gates showing conditions like "all tests pass," "coverage > 80%," and "no critical vulnerabilities." Unlike RA, there's no manual approval gate at Stage 9 - the pipeline auto-approves based on passing these automated checks.
 
-![CDE Full Canvas](../../../assets/cd-model/canvas-cde-full.drawio.png)
+![CDe Full Canvas](../../../assets/cd-model/canvas-cde-full.drawio.png)
 
-**This diagram shows the complete CDE workflow with all 12 stages and automated gates:** The full canvas displays every stage from Stage 1 (Authoring) through Stage 12 (Release Toggling) with emphasis on automation. Notice Stage 9 (Release Approval) has no manual gate - it automatically proceeds if quality gates pass. The diagram shows rapid progression through stages (hours instead of weeks) and highlights where feature flags provide runtime control instead of manual approvals.
+**This diagram shows the complete CDe workflow with all 12 stages and automated gates:** The full canvas displays every stage from Stage 1 (Authoring) through Stage 12 (Release Toggling) with emphasis on automation. Notice Stage 9 (Release Approval) has no manual gate - it automatically proceeds if quality gates pass. The diagram shows rapid progression through stages (hours instead of weeks) and highlights where feature flags provide runtime control instead of manual approvals.
 
-![CDE Flow Diagram](../../../assets/cd-model/canvas-flow-cde.drawio.png)
+![CDe Flow Diagram](../../../assets/cd-model/canvas-flow-cde.drawio.png)
 
 **This diagram shows continuous automated progression from commit to production:** Follow the straight-through arrows indicating rapid flow without approval delays. Note the automated decision points that can block deployment (failed tests, security issues) versus the RA pattern's manual gates. The diagram emphasizes the speed advantage: changes can reach production in hours instead of days.
 
-![CDE Quality Signals](../../../assets/cd-model/quality-signals-cde.drawio.png)
+![CDe Quality Signals](../../../assets/cd-model/quality-signals-cde.drawio.png)
 
-**This diagram shows automated responses to quality signals:** Quality signals in CDE trigger immediate automated actions rather than human review. Green signals advance the deployment automatically; red signals trigger automated rollback or block deployment. The diagram shows feedback loops where production monitoring (Stage 11) can automatically disable features via flags (Stage 12) without human intervention.
+**This diagram shows automated responses to quality signals:** Quality signals in CDe trigger immediate automated actions rather than human review. Green signals advance the deployment automatically; red signals trigger automated rollback or block deployment. The diagram shows feedback loops where production monitoring (Stage 11) can automatically disable features via flags (Stage 12) without human intervention.
 
 ### Automated Approval
 
-Instead of manual approval at Stage 9, the CDE pattern uses automated approval based on quality gates:
+Instead of manual approval at Stage 9, the CDe pattern uses automated approval based on quality gates:
 
 **Automated Checks**:
 
@@ -194,7 +198,7 @@ This removes human bottlenecks while maintaining quality standards.
 
 ### Feature Flag Importance
 
-Feature flags become critical in the CDE pattern because they provide the control that manual approvals provide in RA:
+Feature flags become critical in the CDe pattern because they provide the control that manual approvals provide in RA:
 
 **Decouple Deployment from Release**:
 
@@ -209,9 +213,9 @@ Feature flags become critical in the CDE pattern because they provide the contro
 - Kill switch for problematic features
 - Gradual rollout (1% → 10% → 50% → 100%)
 
-Without feature flags, the CDE pattern has limited control over feature exposure.
+Without feature flags, the CDe pattern has limited control over feature exposure.
 
-### Stage-by-Stage Breakdown for CDE
+### Stage-by-Stage Breakdown for CDe
 
 | Stage                     | Automation Level          | Approval Required  | Duration          |
 | ------------------------- | ------------------------- | ------------------ | ----------------- |
@@ -228,7 +232,9 @@ Without feature flags, the CDE pattern has limited control over feature exposure
 | 11. Live                  | Automated Monitoring      | No                 | Ongoing           |
 | 12. Release Toggling      | Automated Control         | No                 | Real-time         |
 
-**Total cycle time**: Typically 2-4 hours from commit to production for a small change.
+**Important**: In CDe, Stage 3 (Merge Request) serves as BOTH first-level and second-level sign-off. By approving the merge request, the reviewer is also approving production deployment. This collapses the two-gate RA model into a single gate.
+
+**Typical cycle time**: 2-4 hours from commit to production for a small change (estimated based on automated progression through stages).
 
 ---
 
@@ -236,7 +242,12 @@ Without feature flags, the CDE pattern has limited control over feature exposure
 
 ![Compliance Signoffs](../../../assets/cd-model/canvas-signoffs.drawio.png)
 
-**This diagram shows where compliance artifacts and signoffs occur across both patterns:** The diagram maps stages to specific compliance touchpoints, showing where documentation is generated, evidence is collected, and approvals are obtained. Look for Stage 3 (peer review signoff), Stage 5 (evidence collection for IV/OV/PV), and Stage 9 (release approval signoff). The diagram indicates which signoffs are required for both patterns (peer review) versus RA-only (release approval), and where automated evidence collection supports compliance regardless of pattern.
+**This diagram shows three formal sign-off gates across both patterns:** The diagram identifies five manually initiated stages, with three being formal sign-off gates:
+- **B** - Stage 3 (Merge Request): First-level sign-off - peer review approval
+- **D** - Stage 9 (Release Approval): Second-level sign-off - release manager approval (RA only; auto-approved in CDe)
+- **E** - Stage 12 (Release Toggling): Third-level sign-off - feature toggle approval
+
+The diagram also shows Stage 5 (Acceptance Testing) as the primary evidence collection point for IV/OV/PV verification, supporting all sign-off decisions. Note that in CDe, the Merge Request (B) encompasses both first-level and second-level sign-offs, collapsing two gates into one.
 
 ### Where Signoffs Occur in Both Patterns
 
@@ -253,7 +264,7 @@ Without feature flags, the CDE pattern has limited control over feature exposure
 **Stage 9 (Release Approval)**:
 
 - Manual approval and sign-off (RA pattern)
-- Automated approval based on quality gates (CDE pattern)
+- Automated approval based on quality gates (CDe pattern)
 
 **Stage 11 (Live)**:
 
@@ -271,7 +282,7 @@ Both patterns generate compliance artifacts, but manage them differently:
 - Formal approval documented
 - Audit trail emphasized
 
-**CDE Pattern**:
+**CDe Pattern**:
 
 - Artifacts generated automatically
 - Stored in artifact repositories
@@ -317,7 +328,7 @@ flowchart TD
     Q4{Feature flags<br/>available?}
     RA[Use RA Pattern]
     RANote[Use RA Pattern<br/>until coverage improves]
-    CDE[Use CDE Pattern]
+    CDe[Use CDe Pattern]
     Start --> Q1
     Q1 -->|YES| RA
     Q1 -->|NO| Q2
@@ -326,10 +337,10 @@ flowchart TD
     Q3 -->|NO| RANote
     Q3 -->|NO| Q4
     Q4 -->|NO| RA
-    Q4 -->|YES| CDE
+    Q4 -->|YES| CDe
     style RA fill:#ffcccc
     style RANote fill:#ffcccc
-    style CDE fill:#ccffcc
+    style CDe fill:#ccffcc
     style Start fill:#e1f5fe
 ```
 
@@ -366,14 +377,14 @@ flowchart TD
 Some organizations use different patterns for different systems:
 
 - **Production (RA)**: Customer-facing, critical systems
-- **Staging (CDE)**: Internal preview environments
-- **Internal Tools (CDE)**: Developer tools and dashboards
+- **Staging (CDe)**: Internal preview environments
+- **Internal Tools (CDe)**: Developer tools and dashboards
 
 Or transition between patterns as systems mature:
 
 1. **Start with RA**: Ensure quality with manual oversight
 2. **Build automation**: Increase test coverage, improve monitoring
-3. **Transition to CDE**: Gradually remove manual gates as confidence grows
+3. **Transition to CDe**: Gradually remove manual gates as confidence grows
 
 ---
 
@@ -386,7 +397,7 @@ Or transition between patterns as systems mature:
 - Suitable for regulated, high-risk systems
 - Cycle time: 1-2 weeks
 
-**Continuous Deployment (CDE)**:
+**Continuous Deployment (CDe)**:
 
 - Automated approval based on quality gates
 - Feature flags for runtime control
