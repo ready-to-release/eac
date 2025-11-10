@@ -100,65 +100,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Execute Workflows by Layer
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Execute Workflows Using Command
+        working-directory: ./src/commands
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
-          LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
-
-          echo "================================================"
-          echo "Executing $LAYER_COUNT layers sequentially"
-          echo "================================================"
-
-          # Process each layer
-          for ((layer=0; layer<LAYER_COUNT; layer++)); do
-            echo ""
-            echo "================================================"
-            echo "Layer $layer"
-            echo "================================================"
-
-            # Get modules in this layer
-            MODULES=$(echo "$PLAN" | jq -r ".layers[$layer] | .[]")
-
-            # Start all workflows in this layer (parallel within layer)
-            declare -a RUN_IDS
-            for module in $MODULES; do
-              echo "Triggering workflow: $module.yaml"
-
-              # Trigger the workflow
-              gh workflow run "$module.yaml" --ref "${{ github.ref }}"
-
-              # Wait a bit for workflow to be created
-              sleep 2
-
-              # Get the run ID of the workflow we just started
-              RUN_ID=$(gh run list --workflow="$module.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
-              RUN_IDS+=($RUN_ID)
-
-              echo "  Started run $RUN_ID for $module"
-            done
-
-            echo ""
-            echo "Waiting for layer $layer workflows to complete..."
-
-            # Wait for all workflows in this layer to complete
-            for RUN_ID in "${RUN_IDS[@]}"; do
-              echo "  Watching run $RUN_ID..."
-              gh run watch "$RUN_ID" --exit-status
-              if [ $? -ne 0 ]; then
-                echo "❌ Workflow run $RUN_ID failed!"
-                exit 1
-              fi
-            done
-
-            echo "✅ Layer $layer completed successfully"
-          done
-
-          echo ""
-          echo "================================================"
-          echo "✅ All layers completed successfully!"
-          echo "================================================"
+        run: go run . "workflow run" --changed-only
 
   summary:
     name: Summary
