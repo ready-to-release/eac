@@ -21,6 +21,4 @@ Independently built, versioned, and deployed artifacts. Each has a detailed cont
 
 ## References
 
-- [Versioning Documentation](./versioning.md)
 - [Trunk-Based Development](../../explanation/continuous-delivery/trunk-based-development.md)
-- [Deployable Units Contracts](../../../contracts/deployable-units/0.1.0/)

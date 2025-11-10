@@ -397,6 +397,4 @@ jobs:
 ## Related Documentation
 
 - [Create Specifications](./create-specifications.md) - How to write specification files
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Feature file syntax
-- [TDD Format](../../reference/specifications/tdd-format.md) - Unit test patterns
 - [Three-Layer Approach](../../explanation/specifications/three-layer-approach.md) - Understanding ATDD/BDD/TDD

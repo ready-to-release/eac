@@ -266,4 +266,3 @@ Split when:
 - [Three-Layer Approach](./three-layer-approach.md) - How Example Mapping fits the workflow
 - [Review and Iterate](review-and-iterate.md) - Maintaining living specifications
 - [Create Feature Spec](../../how-to-guides/specifications/create-specifications.md) - Step-by-step conversion guide
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Syntax reference

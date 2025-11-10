@@ -394,25 +394,12 @@ Rule: Valid credentials grant access within rate limits
 
 ---
 
-## See Also
-
-**Understanding**:
+## Related Documentation
 
 - [ATDD and BDD with Gherkin](atdd-bdd-with-gherkin.md) - Unified approach using Rule blocks
 - [Ubiquitous Language](ubiquitous-language.md) - Shared vocabulary foundation
 - [Review and Iterate](review-and-iterate.md) - Continuous improvement
-
-**Discovery**:
-
 - [Event Storming](event-storming.md) - Domain discovery workshops
 - [Example Mapping](example-mapping.md) - Requirements discovery
-
-**Implementation**:
-
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Syntax reference
-- [TDD Guide](../../reference/specifications/tdd-format.md) - Unit testing with Go
-- [Create Feature Spec](../../how-to-guides/specifications/create-specifications.md) - Step-by-step
-
-**Compliance**:
-
+- [Create Specifications](../../how-to-guides/specifications/create-specifications.md) - Step-by-step
 - [Risk Controls](risk-controls.md) - Integrating compliance requirements

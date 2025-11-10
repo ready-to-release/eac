@@ -239,4 +239,3 @@ Code using Ubiquitous Language:
 - [Review and Iterate](review-and-iterate.md) - How specifications evolve with language
 - [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md) - Writing specifications
 - [Three-Layer Approach](./three-layer-approach.md) - How ATDD/BDD/TDD work together
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Specification syntax

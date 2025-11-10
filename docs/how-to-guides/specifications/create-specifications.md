@@ -89,6 +89,7 @@ cd specs/cli/init-project
 **Format**: `[module-name_feature-name]` (kebab-case)
 
 **Naming Convention**:
+
 - **Module**: Use kebab-case (e.g., `src-commands`, `vscode-extension`, `cli`)
 - **Feature**: Use kebab-case (e.g., `design-command`, `commit-workflow`, `init-project`)
 - **Separator**: Single underscore `_` between module and feature
@@ -101,6 +102,7 @@ cd specs/cli/init-project
 - ✅ `mcp-server_github-integration` (kebab-case both)
 
 **Incorrect Examples** (avoid):
+
 - ❌ `src_commands_design_command` (no kebab-case)
 - ❌ `srcCommands_designCommand` (camelCase)
 - ❌ `SrcCommands_DesignCommand` (PascalCase)
@@ -183,6 +185,7 @@ The feature name MUST follow kebab-case format: `[module-name_feature-name]`
 - **Separator**: Single underscore `_`
 
 **Examples**:
+
 - `src-commands_design-command` ✅
 - `vscode-extension_commit-workflow` ✅
 - `cli_init-project` ✅
@@ -206,13 +209,13 @@ The feature name MUST follow kebab-case format: `[module-name_feature-name]`
 **Template Source**:
 
 The canonical template with architectural notes and step-by-step instructions is at:
+
 - **File**: `templates/specs/specification.feature`
 - **Usage**: Copy this template when creating new specifications
 - **Note**: The template includes architectural notes (explaining specs/ vs src/ separation) and inline instructions. These are helpful in the template file but are NOT shown in documentation examples to keep them concise.
 
 **See also**:
-- [Verification Tags Reference](../../reference/specifications/verification-tags.md) - Complete IV/OV/PV guide
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Syntax reference
+
 - [Link Risk Controls](./link-risk-controls.md) - Risk control tagging guide
 
 ---
@@ -392,14 +395,6 @@ Before considering the feature spec complete:
 
 ---
 
-## Next Steps
-
-- ✅ Feature specification created using Ubiquitous Language
-- **Next**: Implement the feature using [TDD](../../reference/specifications/tdd-format.md)
-- **Then**: [Run Tests](./run-tests.md) to validate implementation
-
----
-
 ## Related Documentation
 
 ### Understanding the Approach
@@ -412,8 +407,3 @@ Before considering the feature spec complete:
 
 - [Run Event Storming Workshop](./run-event-storming.md) - Discover domain vocabulary
 - [Run Example Mapping Workshop](./run-example-mapping.md) - Apply vocabulary to features
-
-### Reference
-
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Specification syntax reference
-- [TDD Format](../../reference/specifications/tdd-format.md) - Unit testing guide

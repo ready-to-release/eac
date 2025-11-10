@@ -352,4 +352,3 @@ Maximize testing at L0-L3 (left) and L4 (right) to avoid horizontal pre-producti
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Three-Layer Testing Approach](../specifications/three-layer-approach.md)
-- [Gherkin Format](../../reference/specifications/gherkin-format.md)

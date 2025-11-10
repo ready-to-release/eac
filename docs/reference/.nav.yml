@@ -1,6 +1,5 @@
 title: Reference
 nav:
   - index.md
-  - specifications
-  - continuous-delivery
   - decision-records
+  - repository-layout.md
