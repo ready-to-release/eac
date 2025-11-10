@@ -141,25 +141,15 @@ Feature: [module-name_feature-name]
 Feature names MUST use kebab-case format: `[module-name_feature-name]`
 
 **Rules**:
+
 1. Module name in kebab-case (e.g., `src-commands`, `vscode-extension`, `cli`)
 2. Feature name in kebab-case (e.g., `design-command`, `init-project`)
 3. Single underscore `_` separator between module and feature
 
-**Examples**:
-- `src-commands_design-command` ✅ (multi-word module, kebab-case feature)
-- `vscode-extension_commit-workflow` ✅ (multi-word module and feature)
-- `cli_init-project` ✅ (single-word module, kebab-case feature)
-- `mcp-server_github-integration` ✅ (kebab-case both)
-
-**Invalid formats**:
-- `src_commands_design_command` ❌ (underscores instead of hyphens)
-- `srcCommands_designCommand` ❌ (camelCase)
-- `SrcCommands_DesignCommand` ❌ (PascalCase)
-- `src-commands-design-command` ❌ (no underscore separator)
-
 **Template Source**:
 
 The canonical template is at `templates/specs/specification.feature` and includes:
+
 - Architectural notes explaining specs/ vs src/ separation (lines 1-9)
 - Step-by-step instructions for using the template (lines 11-17)
 - Complete examples with all tag types
@@ -167,6 +157,7 @@ The canonical template is at `templates/specs/specification.feature` and include
 **Note**: Documentation examples do NOT include the architectural notes or instructions to keep them concise. Users should copy the actual template file to get the full context.
 
 **See also**:
+
 - [Verification Tags](./verification-tags.md) - IV/OV/PV tag usage
 - [Create Specifications](../../how-to-guides/specifications/create-specifications.md) - Step-by-step guide
 
@@ -509,77 +500,6 @@ Scenario: Valid credentials grant access
 ```
 
 **See**: [How to Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md)
-
----
-
-## Best Practices
-
-### Feature Organization
-
-✅ **Do**:
-
-- Keep related scenarios together under their Rule
-- Use Background for common setup
-- Maintain 10-20 scenarios per file
-- Split large features into multiple files
-
-❌ **Don't**:
-
-- Mix unrelated scenarios in one feature
-- Duplicate setup across scenarios (use Background)
-- Create features with >30 scenarios
-- Put all scenarios at root (nest under Rules)
-
-### Rule Block Guidelines
-
-✅ **Do**:
-
-- One Rule per acceptance criterion
-- Make Rules measurable
-- Use business language
-- Aim for 2-6 Rules per feature
-
-❌ **Don't**:
-
-- Create Rules for implementation details
-- Use technical jargon in Rules
-- Have >6 Rules (split feature instead)
-- Skip Rules (defeats ATDD purpose)
-
-### Scenario Writing
-
-✅ **Do**:
-
-- Use concrete examples
-- Focus on observable behavior
-- Include both success and error cases
-- Keep scenarios independent
-
-❌ **Don't**:
-
-- Use abstract descriptions
-- Test implementation details
-- Create dependent scenarios
-- Make scenarios too long (>10 steps)
-
-### Naming Conventions
-
-**Feature Names**: Use kebab-case format: `[module-name_feature-name]`
-
-- **Module**: kebab-case (e.g., `src-commands`, `cli`, `vscode-extension`)
-- **Feature**: kebab-case (e.g., `design-command`, `init-project`)
-- **Separator**: Single underscore `_`
-- **Examples**: `cli_init-project`, `src-commands_design-command`, `vscode-extension_commit-workflow`
-
-**Directory Names**: Match feature name using kebab-case
-
-- **Module directories**: `src-commands`, `vscode-extension`, `cli`
-- **Feature directories**: `design-command`, `init-project`, `commit-workflow`
-- **Examples**: `specs/cli/init-project/`, `specs/src-commands/design-command/`
-
-**File Names**: Always `specification.feature`
-
-**Note**: Feature names provide traceability across specs/ and src/ without requiring separate ID comments. See [Naming Convention](./index.md#naming-convention) for complete guide.
 
 ---
 

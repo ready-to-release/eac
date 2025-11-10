@@ -13,10 +13,6 @@ Repository conventions, versioning, and commit message format.
 **Topics covered:**
 
 - Module structure and deployable units
-- Semantic commit message format
-- Semantic versioning (SemVer)
-- Git tagging conventions
-- Version increment rules
 
 ---
 
@@ -36,13 +32,6 @@ Quick reference for specification formats, commands, and syntax.
 ### [Decision Records](decision-records/index.md)
 
 Architectural decisions and their rationale.
-
-**Decisions covered:**
-
-- DR-001: Mono-Repository Layout
-- DR-002: Semantic Versioning with Trunk-Based Development
-- DR-003: Three-Layer Testing Approach (ATDD/BDD/TDD)
-- DR-004: Diataxis Framework for Documentation Organization
 
 ---
 

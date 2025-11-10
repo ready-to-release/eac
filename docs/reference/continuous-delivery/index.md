@@ -10,13 +10,6 @@ Quick reference for repository conventions, versioning, and commit message forma
 
 Module structure, deployable units, and commit prefix mappings.
 
-**Quick lookup:**
-
-- Module types (MCP servers, extensions, infrastructure)
-- Commit prefix to file path mapping
-- Module registry and dependencies
-- Deployable unit contracts
-
 ### [Versioning](versioning.md)
 
 Semantic versioning scheme, tagging conventions, and compatibility.
