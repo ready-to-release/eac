@@ -117,192 +117,99 @@ Repository organization is a critical architectural decision that impacts develo
 
 ---
 
-## How These Articles Work Together
+## Complete Architecture Overview
 
-**Environments** establish:
+The complete architecture flows from code organization through production deployment across multiple layers:
 
-- Where code executes at each stage
-- What infrastructure is needed
-- Security boundaries and access controls
+### Layer 1 - Code Organization
 
-**Repository Patterns** establish:
+**Trunk (Repository)** contains one or more **Deployable Units**:
 
-- How code is organized
-- How deployable units relate to repositories
-- Dependency management approach
+- **Monorepo**: Multiple deployable units in single repository
+- **Polyrepo**: One deployable unit per repository
+- **Path filters** (monorepo) or **repository boundaries** (polyrepo) define unit boundaries
 
-**Together they define:**
+### Layer 2 - Build and Test
 
-- Complete architecture for CD Model implementation
-- How code flows from DevBox to Production
-- Organizational and technical boundaries
+**DevBox** (local development):
 
----
+- Executes Stages 1-2 (Authoring, Pre-commit)
+- L0-L1 tests (unit tests, fast feedback)
+- Developer-controlled environment
 
-## Integration with CD Model Stages
+**Build Agents** (CI/CD automation):
 
-**Environment Mapping by Stage:**
+- Executes Stages 3-4 (Merge Request, Commit)
+- L0-L2 tests (unit, integration tests)
+- Ephemeral, isolated per build
+- No production access (Zone A)
 
-| Stage | Environment | Purpose |
-|-------|------------|---------|
-| 1. Authoring | DevBox | Local development |
-| 2. Pre-commit | DevBox | Local validation (L0/L1) |
-| 3. Merge Request | Build Agents | Automated validation (L0-L2) |
-| 4. Commit | Build Agents | Build artifacts, integration tests |
-| 5. Acceptance | PLTE | End-to-end testing (L3) |
-| 6. Extended | PLTE | Performance, security, compliance |
-| 7. Exploration | Demo | Stakeholder validation (L4) |
-| 8. Start Release | Build Agents | Version tagging |
-| 9. Release Approval | Demo/PLTE | Approval validation |
-| 10. Production Deploy | Deploy Agents | Controlled production access |
-| 11. Live | Production | Real user traffic |
-| 12. Release Toggling | Production | Feature flag control |
+### Layer 3 - Validation
 
-**Repository Pattern Impact:**
+**PLTE** (Production-Like Test Environment):
 
-**Monorepo:**
+- Executes Stages 5-6 (Acceptance, Extended Testing)
+- L3 end-to-end tests (vertical, with test doubles)
+- Production-like infrastructure
+- Ephemeral or short-lived
 
-- Single pipeline configuration
-- Selective testing based on changed files
-- Shared infrastructure across deployable units
-- Single Demo and PLTE instance can host all services
+**Demo** (Stakeholder Environment):
 
-**Polyrepo:**
-
-- Separate pipeline per repository
-- Independent testing and deployment
-- Dedicated infrastructure per deployable unit
-- Multiple Demo/PLTE instances may be needed
-
-See **[CD Model](../cd-model/index.md)** for complete stage details.
-
----
-
-## Integration with Other Sections
-
-**[Core Concepts](../core-concepts/index.md)**:
-
-- Trunk (repository) contains one or more Deployable Units
-- Monorepo vs polyrepo affects Unit of Flow implementation
-- Repository pattern affects versioning strategy
-
-**[Workflow](../workflow/index.md)**:
-
-- Repository pattern affects branching strategy
-- Monorepo requires careful path filtering in pipelines
-- Polyrepo requires cross-repo coordination for dependencies
-
-**[Testing](../testing/index.md)**:
-
-- PLTE required for L3 end-to-end tests
-- Build Agents execute L0-L2 tests
-- Demo environment hosts L4 exploratory tests
-- Repository pattern affects test execution strategy
-
-**[Security](../security/index.md)**:
-
-- Environment boundaries enforce security controls
-- Deploy Agents provide segregated production access
-- Repository pattern affects dependency scanning approach
-
----
-
-## Infrastructure as Code
-
-Both environment and repository architecture should be defined as code:
-
-**Environment Infrastructure:**
-
-```text
-infrastructure/
-├── devbox/           # Local development setup scripts
-├── build-agents/     # CI/CD agent configuration
-├── plte/             # PLTE environment definition
-├── demo/             # Demo environment definition
-├── deploy-agents/    # Production deployment config
-└── production/       # Production infrastructure
-```
-
-**Benefits:**
-
-- Version controlled with application code
-- Reproducible environments
-- Tested in lower environments before production
-- Audit trail for infrastructure changes
-
-See **[Everything as Code](../../everything-as-code/index.md)** for comprehensive approach.
-
----
-
-## Decision Factors
-
-**Choosing Repository Pattern:**
-
-**Use Monorepo when:**
-
-- Services share significant code
-- Need atomic cross-service changes
-- Small to medium team size
-- Want simplified tooling
-
-**Use Polyrepo when:**
-
-- Services are loosely coupled
-- Multiple teams with clear ownership boundaries
-- Independent release cadences desired
-- Different technology stacks
-
-**Environment Decisions:**
-
-**PLTE Investment:**
-
-- Required for L3 end-to-end tests
-- Should mirror production configuration
-- Cost can be optimized with ephemeral environments
-
-**Demo Environment:**
-
+- Executes Stage 7 (Exploration)
+- L4 exploratory tests and UAT
 - Longer-lived for stakeholder access
-- May be optional for mature CDE pattern
-- Valuable for UAT and business validation
 
----
+### Layer 4 - Deployment Gateway
 
-## Best Practices
+**Deploy Agents** (Segregated Production Access):
 
-**Environment Management:**
+- Executes Stage 10 (Production Deployment)
+- Network boundary between development and production
+- Zone C: Access to both artifact repos (Zone A) and production (Zone B)
+- Comprehensive audit logging
+- Production credentials stored in secure vaults
 
-✅ **DO:**
+**Network Segregation:**
 
-- Define all environments as Infrastructure as Code
-- Keep PLTE configuration identical to production
-- Use ephemeral environments when possible (cost optimization)
-- Monitor environment costs and usage
-- Automate environment provisioning
+- **Zone A**: DevBox, Build Agents, PLTE, Demo (no production access)
+- **Zone B**: Production (isolated from development)
+- **Zone C**: Deploy Agents (gateway between A and B)
 
-❌ **DON'T:**
+### Layer 5 - Production
 
-- Manually configure environments (leads to drift)
-- Allow PLTE to diverge from production
-- Share environments between teams (causes conflicts)
-- Skip PLTE (L3 tests require production-like environment)
+**Production** (Live Environment):
 
-**Repository Organization:**
+- Executes Stages 11-12 (Live, Release Toggling)
+- L4 tests (synthetic monitoring, production validation)
+- Real user traffic
+- Deployment strategies (blue-green, canary, rolling)
+- Feature flags for release control
 
-✅ **DO:**
+### Complete Flow
 
-- Choose pattern based on coupling and team structure
-- Keep related code together (avoid artificial boundaries)
-- Version shared dependencies explicitly (polyrepo)
-- Use monorepo tooling for selective testing (monorepo)
-- Document module boundaries clearly
+**Code Flow:**
 
-❌ **DON'T:**
+1. Developer → DevBox (Stage 1-2)
+2. Commit → Build Agents (Stage 3-4) → Artifacts created
+3. Artifacts → PLTE (Stage 5-6) → Validation
+4. Release candidate → Demo (Stage 7) → Stakeholder approval
+5. Approved → Deploy Agents (Stage 10) → Retrieve artifacts
+6. Deploy Agents → Production (Stage 11-12) → Live deployment
 
-- Create monorepo without proper tooling
-- Split repositories too finely (nano-repos)
-- Mix patterns without reason
-- Ignore dependency management strategy
+**Artifact Flow:**
+
+1. Build Agents create immutable artifacts
+2. Artifacts published to artifact repository
+3. Deploy Agents retrieve artifacts
+4. Deploy Agents deploy to Production
+5. Production never pulls from development zones directly
+
+**Network Boundaries:**
+
+- Build Agents (Zone A) **cannot** access Production (Zone B)
+- Deploy Agents (Zone C) **can** access both
+- Production credentials **never** leave Zone C
+- All production deployments audited via Deploy Agents
 
 ---
 

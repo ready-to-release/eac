@@ -234,6 +234,97 @@ Deploy Agents are specialized CI/CD runners with segregated access to production
 - Prevent unauthorized production access
 - Clear audit trail
 
+---
+
+## Network Segregation Architecture
+
+Network segregation enforces security boundaries between environment types through isolated network zones.
+
+**Purpose:**
+
+- Prevent unauthorized production access
+- Limit blast radius of security breaches
+- Enforce principle of least privilege
+- Meet compliance requirements for production isolation
+
+### Zone Architecture
+
+**Zone A - Development/Test:**
+
+- DevBox (developer laptops, not on controlled network)
+- Build Agents (CI/CD runners)
+- PLTE instances
+- Demo environments
+
+**Characteristics:**
+
+- No access to production networks
+- Public internet access for package downloads
+- Can read from artifact repositories
+- Cannot deploy to production
+
+**Zone B - Production (Isolated):**
+
+- Production runtime environments
+- Production databases and services
+- Live user traffic
+
+**Characteristics:**
+
+- Isolated from development/test zones
+- Strict ingress/egress controls
+- No direct access from Build Agents
+
+**Zone C - Deployment Gateway:**
+
+- Deploy Agents (production deployment capability)
+
+**Characteristics:**
+
+- Network access to both Zone A (artifact repos) and Zone B (production)
+- Segregated credentials (production deployment keys)
+- Comprehensive audit logging
+- Multi-factor authentication required
+
+### Traffic Flow
+
+1. Build Agents (Zone A) build artifacts → publish to artifact repository
+2. Deploy Agents (Zone C) retrieve artifacts → deploy to Production (Zone B)
+3. Production (Zone B) never pulls directly from development zones
+
+### Implementation
+
+**Azure**: Hub-and-spoke architecture with VNets and NSGs
+
+**AWS**: VPC with security groups and private subnets
+
+**On-premise**: Network segmentation with firewalls
+
+### Benefits
+
+- Build Agents compromised → Production unaffected
+- Production credentials never leave Zone C
+- Clear audit trail (all production deployments via Deploy Agents)
+- Compliance requirement: separation of duties
+
+### When to Use Network Segregation
+
+**Required for:**
+
+- Regulated industries (finance, healthcare)
+- High-security requirements
+- Compliance mandates (SOC 2, ISO 27001)
+- Large organizations with separate teams
+
+**Optional for:**
+
+- Small teams with full trust
+- Internal tools only
+- Non-regulated domains
+- Startups in early stages
+
+---
+
 ### Production Environment
 
 The Production environment is where software serves end users and delivers business value.
@@ -273,6 +364,147 @@ The Production environment is where software serves end users and delivers busin
 - Manual rollback procedures
 - Database rollback considerations
 - Feature flag kill switches
+
+---
+
+## Deployment Strategies
+
+Production deployments use various strategies to minimize risk and enable rapid rollback.
+
+### Hot Deploy (In-Place Updates)
+
+**Pattern**: Replace running instances with new version directly
+
+**Characteristics:**
+
+- Fastest deployment (seconds)
+- Brief downtime during replacement
+- Simple rollback (redeploy previous version)
+
+**Use when:**
+
+- Downtime acceptable (< 30 seconds)
+- Small deployable units
+- Fast startup times
+
+### Rolling Deployment
+
+**Pattern**: Update instances gradually, one or few at a time
+
+**Characteristics:**
+
+- Zero downtime
+- Mixed versions running during rollout
+- Gradual traffic shift
+- Built-in health checks stop rollout if issues detected
+
+**Use when:**
+
+- Zero downtime required
+- Multiple instances available
+- Backward-compatible changes
+
+### Blue-Green Deployment
+
+**Pattern**: Maintain two identical environments, switch traffic between them
+
+**Blue Environment:**
+
+- Current production version
+- Serving 100% live traffic
+- Stable and verified
+
+**Green Environment:**
+
+- New version deployed
+- Receives test traffic (0%)
+- Validation before traffic switch
+
+**Deployment Flow:**
+
+1. Deploy new version to Green (while Blue serves traffic)
+2. Run smoke tests against Green
+3. Switch traffic from Blue to Green (instant cutover)
+4. Blue becomes idle (ready for next deployment or instant rollback)
+
+**Use when:**
+
+- Instant rollback critical
+- Large deployable units
+- High-risk changes
+- Database migrations need validation
+
+### Canary Deployment
+
+**Pattern**: Route small percentage of traffic to new version, gradually increase
+
+**Deployment Flow:**
+
+1. Deploy new version alongside current version
+2. Route 1-5% traffic to new version (canary)
+3. Monitor metrics (errors, latency, business KPIs)
+4. If healthy: Gradually increase (10% → 25% → 50% → 100%)
+5. If issues: Instant rollback to 0%
+
+**Use when:**
+
+- Need production validation with minimal risk
+- Metrics-driven deployment decisions
+- Gradual rollout preferred
+- A/B testing infrastructure available
+
+### Deployment Rings
+
+**Pattern**: Deploy to progressively larger user groups
+
+**Ring Structure:**
+
+- **Ring 0**: Internal users/developers (hours)
+- **Ring 1**: Early adopters/beta users (1-2 days)
+- **Ring 2**: Standard users (3-7 days)
+- **Ring 3**: All users (complete)
+
+**Use when:**
+
+- Large user base
+- Need production feedback before full rollout
+- Compliance requires phased approach
+- Different user segments exist
+
+### Feature Flags with Deployment
+
+**Pattern**: Deploy code with features disabled, enable via flags
+
+**Decouples:**
+
+- **Deployment** (code to production) from **Release** (feature enabled for users)
+
+**Benefits:**
+
+- Deploy anytime, release when ready
+- Gradual rollout per feature
+- Instant disable if issues arise
+- A/B testing different implementations
+
+**Use in CDe pattern:**
+
+- Deploy to production continuously (flags OFF)
+- Enable features through Stage 12 (Release Toggling)
+- Maintains automated deployment with controlled release
+
+### Strategy Selection
+
+| Strategy | Rollback Speed | Downtime | Complexity | Resource Cost |
+|----------|---------------|----------|------------|---------------|
+| Hot Deploy | Fast (1-2 min) | Brief (< 30s) | Low | Low |
+| Rolling | Fast (< 1 min) | None | Medium | Low |
+| Blue-Green | Instant | None | Medium | High (2x) |
+| Canary | Instant | None | High | Medium |
+| Rings | Gradual | None | High | Medium |
+
+**For RA pattern**: Blue-Green or Rolling recommended (manual approval before full rollout)
+
+**For CDe pattern**: Canary or Feature Flags recommended (automated with gradual validation)
 
 ---
 
@@ -402,26 +634,6 @@ Infrastructure as Code (IaC) ensures all environments are created from the same 
 Benefits: No configuration drift, parallel testing without conflicts, cost-effective (pay only when used).
 
 ---
-
-## Summary
-
-Environments in the CD Model are purpose-built, often ephemeral resources that enable rapid, parallel validation with production-like characteristics:
-
-- **DevBox**: Local development with fast feedback
-- **Build Agents**: Consistent CI/CD automation
-- **PLTE**: Ephemeral, production-like testing
-- **Demo**: Stakeholder validation and exploration
-- **Deploy Agents**: Segregated production access
-- **Production**: Monitored, controlled deployment
-
-The CD Model eliminates traditional environment bottlenecks through:
-
-- Infrastructure as Code for consistency
-- Ephemeral environments to prevent drift
-- Network segregation for security
-- Purpose-built environments for specific validation
-
-This architecture enables fast feedback, high quality, and confident production deployments.
 
 ## Next Steps
 
