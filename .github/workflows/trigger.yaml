@@ -108,7 +108,9 @@ jobs:
         working-directory: ./src/commands
         env:
           GH_TOKEN: ${{ github.token }}
-        run: go run . "workflow run" --changed-only
+        run: |
+          MODULES="${{ needs.detect-changes.outputs.modules }}"
+          go run . workflow run $MODULES
 
   summary:
     name: Summary

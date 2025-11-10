@@ -38,7 +38,7 @@ jobs:
 
       - name: Test Module
         working-directory: ./src/commands
-        run: go run . "test module" src-mcp-github
+        run: go run . test module src-mcp-github
 
       - name: Upload Test Results
         if: always()
@@ -70,7 +70,7 @@ jobs:
 
       - name: Build Module
         working-directory: ./src/commands
-        run: go run . "build module" src-mcp-github
+        run: go run . build module src-mcp-github
 
       - name: Upload Build Artifacts
         if: always()

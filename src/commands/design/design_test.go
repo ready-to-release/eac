@@ -14,7 +14,7 @@ func TestValidateModule(t *testing.T) {
 	}{
 		{
 			name:        "valid module",
-			module:      "cli",
+			module:      "src-cli",
 			expectError: false,
 		},
 		{
@@ -43,20 +43,20 @@ func TestListAvailableModules(t *testing.T) {
 		t.Fatalf("ListAvailableModules failed: %v", err)
 	}
 
-	// Should find at least the cli module
+	// Should find at least the src-cli module
 	found := false
 	for _, m := range modules {
-		if m.Name == "cli" {
+		if m.Name == "src-cli" {
 			found = true
 			if !m.HasWorkspace {
-				t.Error("cli module should have workspace.dsl")
+				t.Error("src-cli module should have workspace.dsl")
 			}
 			break
 		}
 	}
 
 	if !found {
-		t.Error("cli module not found in available modules")
+		t.Error("src-cli module not found in available modules")
 	}
 }
 
@@ -65,7 +65,7 @@ func TestGetContainerName(t *testing.T) {
 		module   string
 		expected string
 	}{
-		{"cli", "structurizr-cli"},
+		{"src-cli", "structurizr-cli"},
 		{"vscode", "structurizr-vscode"},
 		{"mcp", "structurizr-mcp"},
 	}
@@ -84,7 +84,7 @@ func TestGetModulePath(t *testing.T) {
 	tests := []struct {
 		module string
 	}{
-		{"cli"},
+		{"src-cli"},
 		{"vscode"},
 	}
 
@@ -114,7 +114,7 @@ func TestModuleExists(t *testing.T) {
 		module   string
 		expected bool
 	}{
-		{"cli", true},
+		{"src-cli", true},
 		{"nonexistent", false},
 	}
 
