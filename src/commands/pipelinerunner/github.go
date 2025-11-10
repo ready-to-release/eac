@@ -1,6 +1,6 @@
-// Package workflowrunner provides functionality to execute GitHub workflows
+// Package pipelinerunner provides functionality to execute GitHub workflows
 // respecting module dependencies
-package workflowrunner
+package pipelinerunner
 
 import (
 	"fmt"

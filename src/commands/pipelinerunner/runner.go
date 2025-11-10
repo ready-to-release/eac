@@ -1,6 +1,6 @@
-// Package workflowrunner provides functionality to execute GitHub workflows
+// Package pipelinerunner provides functionality to execute GitHub workflows
 // respecting module dependencies
-package workflowrunner
+package pipelinerunner
 
 import (
 	"fmt"
@@ -12,24 +12,24 @@ import (
 	"github.com/ready-to-release/eac/src/internal/repository"
 )
 
-// WorkflowRunner orchestrates execution of module workflows
-type WorkflowRunner struct {
+// PipelineRunner orchestrates execution of module pipelines
+type PipelineRunner struct {
 	repoPath string
 	version  string
 	ghCLI    GitHubCLI
 }
 
-// New creates a new WorkflowRunner
-func New(repoPath string, version string) *WorkflowRunner {
-	return &WorkflowRunner{
+// New creates a new PipelineRunner
+func New(repoPath string, version string) *PipelineRunner {
+	return &PipelineRunner{
 		repoPath: repoPath,
 		version:  version,
 		ghCLI:    NewGitHubCLI(repoPath),
 	}
 }
 
-// RunWorkflow executes a single workflow
-func (r *WorkflowRunner) RunWorkflow(moniker string, ref string) error {
+// RunPipeline executes a single pipeline
+func (r *PipelineRunner) RunPipeline(moniker string, ref string) error {
 	workflowFile := moniker + ".yaml"
 
 	// Check if workflow file exists
@@ -49,15 +49,15 @@ func (r *WorkflowRunner) RunWorkflow(moniker string, ref string) error {
 	fmt.Printf("Waiting for completion...\n")
 
 	if err := r.ghCLI.WatchRun(runID); err != nil {
-		return fmt.Errorf("workflow failed for %s: %w", moniker, err)
+		return fmt.Errorf("pipeline failed for %s: %w", moniker, err)
 	}
 
 	fmt.Printf("✅ %s completed successfully\n", moniker)
 	return nil
 }
 
-// RunWorkflows executes multiple workflows respecting dependencies
-func (r *WorkflowRunner) RunWorkflows(monikers []string, ref string) error {
+// RunPipelines executes multiple pipelines respecting dependencies
+func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 	if len(monikers) == 0 {
 		fmt.Println("No modules specified")
 		return nil
@@ -92,8 +92,8 @@ func (r *WorkflowRunner) RunWorkflows(monikers []string, ref string) error {
 	return r.executeLayers(filteredPlan, ref)
 }
 
-// RunAllWorkflows runs all modules in the repository
-func (r *WorkflowRunner) RunAllWorkflows(ref string) error {
+// RunAllPipelines runs all modules in the repository
+func (r *PipelineRunner) RunAllPipelines(ref string) error {
 	fmt.Println("Running all modules in dependency order...")
 
 	// Pass nil to calculate order for all modules
@@ -123,8 +123,8 @@ func (r *WorkflowRunner) RunAllWorkflows(ref string) error {
 	return r.executeLayers(filteredPlan, ref)
 }
 
-// RunAllChangedWorkflows detects changed modules and runs their workflows
-func (r *WorkflowRunner) RunAllChangedWorkflows(ref string) error {
+// RunAllChangedPipelines detects changed modules and runs their pipelines
+func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	fmt.Println("Detecting changed modules...")
 
 	// Get changed files using git diff
@@ -160,12 +160,12 @@ func (r *WorkflowRunner) RunAllChangedWorkflows(ref string) error {
 
 	fmt.Printf("Changed modules: %v\n\n", modules)
 
-	// Run workflows for changed modules
-	return r.RunWorkflows(modules, ref)
+	// Run pipelines for changed modules
+	return r.RunPipelines(modules, ref)
 }
 
-// executeLayers executes workflow layers sequentially, with parallel execution within each layer
-func (r *WorkflowRunner) executeLayers(plan *repository.ExecutionPlan, ref string) error {
+// executeLayers executes pipeline layers sequentially, with parallel execution within each layer
+func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref string) error {
 	for layerIdx, layer := range plan.Layers {
 		fmt.Printf("================================================\n")
 		fmt.Printf("Executing Layer %d: %v\n", layerIdx, layer)
@@ -194,7 +194,7 @@ func (r *WorkflowRunner) executeLayers(plan *repository.ExecutionPlan, ref strin
 			fmt.Printf("Waiting for %s (run %s)...\n", moniker, runID)
 
 			if err := r.ghCLI.WatchRun(runID); err != nil {
-				return fmt.Errorf("workflow failed: %s: %w", moniker, err)
+				return fmt.Errorf("pipeline failed: %s: %w", moniker, err)
 			}
 
 			fmt.Printf("  ✅ %s completed\n", moniker)
@@ -204,14 +204,14 @@ func (r *WorkflowRunner) executeLayers(plan *repository.ExecutionPlan, ref strin
 	}
 
 	fmt.Println("================================================")
-	fmt.Println("✅ All workflows completed successfully!")
+	fmt.Println("✅ All pipelines completed successfully!")
 	fmt.Println("================================================")
 
 	return nil
 }
 
 // filterModulesWithWorkflows filters the execution plan to only include modules with workflow files
-func (r *WorkflowRunner) filterModulesWithWorkflows(plan *repository.ExecutionPlan) (*repository.ExecutionPlan, error) {
+func (r *PipelineRunner) filterModulesWithWorkflows(plan *repository.ExecutionPlan) (*repository.ExecutionPlan, error) {
 	workflowsDir := filepath.Join(r.repoPath, ".github", "workflows")
 
 	filtered := &repository.ExecutionPlan{
