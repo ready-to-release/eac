@@ -22,32 +22,21 @@ plugins:
   - awesome-nav
 
 markdown_extensions:
-  # Footnotes (you already had this)
   - footnotes
-
-  # Enable attribute syntax like {width=800}
   - attr_list
-
-  # Enable admonitions, tabbed blocks, collapsible sections
   - admonition
   - pymdownx.details
   - pymdownx.tabbed:
       alternate_style: true
-
-  # Syntax highlighting and code fences (needed for Mermaid)
   - pymdownx.highlight
   - pymdownx.superfences
 
-  # Mermaid diagram rendering
-  - pymdownx.markdownmermaid
-
 extra_javascript:
-  # Load Mermaid JS and initialize on page load
   - https://unpkg.com/mermaid@10/dist/mermaid.min.js
   - javascripts/init-mermaid.js
 
-# Optional: custom CSS tweaks (if needed)
 extra_css:
+  - stylesheets/extra.css
   - stylesheets/extra.css
 
 dev_addr: '0.0.0.0:8000'

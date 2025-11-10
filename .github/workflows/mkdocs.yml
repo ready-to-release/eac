@@ -27,7 +27,7 @@ jobs:
       # 📦 Install MkDocs and all plugins you need
       - name: Install dependencies
         run: |
-          pip install mkdocs mkdocs-material mkdocs-techdocs-core mkdocs-awesome-nav
+          pip install mkdocs mkdocs-material mkdocs-techdocs-core mkdocs-awesome-nav pymdown-extensions
 
       # 🏗️ Build the site
       - name: Build MkDocs site
