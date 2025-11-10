@@ -4,22 +4,7 @@
 
 ## Available Tutorials
 
-### [VS Code Extension Quick Start](vscode-extension-quickstart.md)
-
-Get the VSCode extension up and running in 5 minutes with AI-generated commit messages.
-
-**What you'll learn:**
-
-- Set up and run the extension in 5 minutes
-- Use the robot button for Git operations with auto-generated commit messages
-- Make your first commit with AI-generated message
-
-**Time**: 5 minutes
-**Prerequisites**: VSCode 1.80.0+, Git repository, Go 1.21+, Node.js 18+
-
----
-
-## Coming Soon
+### Coming Soon
 
 - **Quick Start Guide** - Get the CLI up and running
 - **Your First Feature Specification** - Write your first ATDD/BDD specs

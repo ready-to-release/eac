@@ -71,35 +71,6 @@ Understanding the three-layer testing approach and test-driven development pract
 
 ---
 
-### [VS Code Extension Architecture](vscode-extension-architecture.md)
-
-Understanding how the VSCode extension integrates with Model Context Protocol (MCP) servers.
-
-**Topics covered:**
-
-- Client-server architecture with MCP
-- JSON-RPC communication protocol
-- Extension lifecycle and components
-- Why MCP? Design benefits and trade-offs
-
----
-
-### [Commit Agent Pipeline Architecture](commit-agent-pipeline.md)
-
-Understanding the 5-agent system that generates semantic commit messages.
-
-**Topics covered:**
-
-- Architecture flow and agent interaction
-- Why 5 agents? Design rationale
-- Model selection (why Haiku)
-- Git state validation
-- Performance characteristics
-- Security considerations
-- Design trade-offs
-
----
-
 ## What is Explanation?
 
 Explanation documentation is **understanding-oriented** content that clarifies and illuminates topics. It provides background, context, and discussion of alternatives.
