@@ -14,6 +14,21 @@ This article provides detailed explanations of each stage, including their purpo
 
 Stage 1 is where all changes begin. Developers work in their local development environment (DevBox) to create new features, fix bugs, update documentation, or modify configurations. This stage emphasizes collaboration and clarity through Requirements as Code.
 
+```mermaid
+flowchart LR
+    Input["Requirements<br/>Specs"] --> DevBox[Developer<br/>DevBox]
+    DevBox --> Code[Code changes]
+    DevBox --> Tests[Unit tests]
+    DevBox --> Docs[Documentation]
+
+    Code --> Topic[Topic branch]
+    Tests --> Topic
+    Docs --> Topic
+
+    style DevBox fill:#e3f2fd
+    style Topic fill:#e8f5e9
+```
+
 ![Topic Branch Workflow](../../../assets/cd-model/branch-topic.drawio.png)
 
 **This diagram shows the topic branch stage flow through CD Model stages:**
@@ -62,6 +77,28 @@ This collaboration produces clear, concise, and actionable specifications that s
 ## Stage 2: Pre-commit
 
 **Purpose**: Validate changes locally before committing to ensure code quality and standards compliance.
+
+```mermaid
+flowchart TD
+    Code[Code changes] --> Format[Format check]
+    Code --> Lint[Linting]
+    Code --> Unit[Unit tests]
+    Code --> Sec[Security scan]
+    Code --> Build[Build verify]
+
+    Format --> Gate{All pass?}
+    Lint --> Gate
+    Unit --> Gate
+    Sec --> Gate
+    Build --> Gate
+
+    Gate -->|YES| Commit[Allow commit]
+    Gate -->|NO| Block[Block commit]
+
+    style Gate fill:#fff3e0
+    style Commit fill:#e8f5e9
+    style Block fill:#ffebee
+```
 
 ### What Gets Validated
 
@@ -135,6 +172,25 @@ Pre-commit runs in two environments:
 
 **Purpose**: Submit changes for peer review and automated validation before integration.
 
+```mermaid
+flowchart LR
+    MR[Merge Request] --> Review[Peer review]
+    MR --> CI[CI checks]
+
+    Review --> Approve{Approved?}
+    CI --> Pass{All pass?}
+
+    Approve -->|YES| Gate{Both OK?}
+    Pass -->|YES| Gate
+
+    Gate -->|YES| Merge[Merge to main]
+    Gate -->|NO| Reject[Request changes]
+
+    style Gate fill:#fff3e0
+    style Merge fill:#e8f5e9
+    style Reject fill:#ffebee
+```
+
 ### Peer Review Process
 
 The merge request (also called pull request) is where code quality improves through collaboration:
@@ -194,6 +250,20 @@ Stage 3 executes on **Build Agents** - dedicated CI/CD pipeline runners that pro
 ## Stage 4: Commit
 
 **Purpose**: Integrate validated changes into the target branch (main or release).
+
+```mermaid
+flowchart LR
+    Merge[Merged PR] --> Build[Auto build]
+    Build --> Test[Full test suite]
+    Test --> Package[Package artifacts]
+    Package --> Store[Artifact store]
+
+    Test --> Next[Trigger Stage 5]
+
+    style Build fill:#e3f2fd
+    style Store fill:#e8f5e9
+    style Next fill:#fff3e0
+```
 
 ### Integration to Main Branch
 
@@ -263,6 +333,23 @@ Commit stage runs on **Build Agents** with access to artifact repositories and t
 ## Stage 5: Acceptance Testing
 
 **Purpose**: Validate that changes meet functional requirements and acceptance criteria.
+
+```mermaid
+flowchart LR
+    Artifact[Build artifact] --> Deploy[Deploy to PLTE]
+    Deploy --> IV[IV tests]
+    Deploy --> OV[OV tests]
+
+    IV --> Gate{All pass?}
+    OV --> Gate
+
+    Gate -->|YES| Pass[Mark ready]
+    Gate -->|NO| Fail[Alert team]
+
+    style Deploy fill:#e3f2fd
+    style Pass fill:#e8f5e9
+    style Fail fill:#ffebee
+```
 
 ### PLTE Environment Explained
 
@@ -359,6 +446,25 @@ Acceptance testing runs in **PLTE** environments, provisioned on-demand using In
 ## Stage 6: Extended Testing
 
 **Purpose**: Perform comprehensive testing including performance, security, and compliance validation.
+
+```mermaid
+flowchart TD
+    Start[Periodic trigger] --> Perf[Performance tests]
+    Start --> Sec[Security tests]
+    Start --> Comp[Compliance tests]
+
+    Perf --> Report[Generate report]
+    Sec --> Report
+    Comp --> Report
+
+    Report --> Gate{Critical<br/>issues?}
+    Gate -->|NO| Pass[Continue]
+    Gate -->|YES| Block[Block release]
+
+    style Report fill:#e3f2fd
+    style Pass fill:#e8f5e9
+    style Block fill:#ffebee
+```
 
 ### Performance Testing
 

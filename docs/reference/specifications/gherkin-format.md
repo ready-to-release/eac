@@ -42,6 +42,48 @@ specs/<module>/<feature_name>/specification.feature
 
 ## Template Structure
 
+```mermaid
+flowchart TD
+    Feature["@module @critical<br/>Feature: Name<br/>As a...I want...So that..."]
+    Background["Background:<br/>Common setup"]
+    Rule1["Rule: AC 1"]
+    Rule2["Rule: AC 2"]
+
+    Scenario1["@success @ac1 @IV<br/>Scenario: Install"]
+    Scenario2["@success @ac1<br/>Scenario: Happy path"]
+    Scenario3["@error @ac1<br/>Scenario: Error"]
+    Scenario4["@success @ac2 @PV<br/>Scenario: Performance"]
+    Scenario5["@success @ac2 @risk1<br/>Scenario: Risk control"]
+
+    Steps1["Given/When/Then<br/>And..."]
+    Steps2["Given/When/Then<br/>And..."]
+    Steps3["Given/When/Then<br/>And..."]
+    Steps4["Given/When/Then<br/>And..."]
+    Steps5["Given/When/Then<br/>And..."]
+
+    Feature --> Background
+    Feature --> Rule1
+    Feature --> Rule2
+
+    Rule1 --> Scenario1
+    Rule1 --> Scenario2
+    Rule1 --> Scenario3
+    Rule2 --> Scenario4
+    Rule2 --> Scenario5
+
+    Scenario1 --> Steps1
+    Scenario2 --> Steps2
+    Scenario3 --> Steps3
+    Scenario4 --> Steps4
+    Scenario5 --> Steps5
+
+    style Feature fill:#e1f5fe
+    style Rule1 fill:#fff3e0
+    style Rule2 fill:#fff3e0
+```
+
+**Template code**:
+
 ```gherkin
 @<module> @critical @<feature-name>
 Feature: [Feature Name]

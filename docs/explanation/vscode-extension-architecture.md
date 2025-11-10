@@ -20,16 +20,22 @@ The extension provides:
 
 The extension uses a client-server architecture where VSCode acts as a client that spawns and communicates with MCP servers via JSON-RPC:
 
-```text
-User clicks button → VSCode Extension
-    ↓ spawns process
-Go MCP Server (src/mcp/vscode/main.go)
-    ↓ JSON-RPC via stdin/stdout
-Tool: vscode-action
-    ↓ executes action
-Result
-    ↓ JSON response
-VSCode Notification
+```mermaid
+sequenceDiagram
+    actor User
+    participant VSCode as VSCode Extension
+    participant MCP as Go MCP Server
+    participant Tool as vscode-action
+
+    User->>VSCode: Click button
+    VSCode->>MCP: Spawn process
+    VSCode->>MCP: JSON-RPC (stdin/stdout)
+    MCP->>Tool: Execute action
+    Tool-->>MCP: Result
+    MCP-->>VSCode: JSON response
+    VSCode->>User: Show notification
+
+    Note over VSCode,MCP: Communication via stdio
 ```
 
 ### Architecture Components

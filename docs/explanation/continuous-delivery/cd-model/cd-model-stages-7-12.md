@@ -10,6 +10,23 @@ This article provides detailed explanations of each stage, including deployment 
 
 **Purpose**: Enable stakeholder validation and exploratory testing in a production-like environment.
 
+```mermaid
+flowchart LR
+    Demo[Deploy to Demo] --> Stake[Stakeholder review]
+    Demo --> Explore[Exploratory testing]
+
+    Stake --> Feedback[Gather feedback]
+    Explore --> Feedback
+
+    Feedback --> Decision{Ready?}
+    Decision -->|YES| Proceed[Proceed to release]
+    Decision -->|NO| Iterate[Update features]
+
+    style Demo fill:#e3f2fd
+    style Proceed fill:#e8f5e9
+    style Iterate fill:#fff3e0
+```
+
 ### Demo Environment Purpose
 
 The exploration stage uses a dedicated demo or "trunk demo" environment that serves as a bridge between automated testing and production deployment. This environment allows:
@@ -78,6 +95,20 @@ Exploration uses a **Demo Environment** or **Trunk Demo Environment** - a stable
 ## Stage 8: Start Release
 
 **Purpose**: Initiate the formal release process and prepare for production deployment.
+
+```mermaid
+flowchart LR
+    Main[Main branch] --> RC[Create release<br/>candidate]
+    RC --> Tag[Tag version]
+    Tag --> Docs[Generate docs]
+    Docs --> Notes[Release notes]
+
+    Notes --> Ready[Ready for approval]
+
+    style RC fill:#e3f2fd
+    style Tag fill:#fff3e0
+    style Ready fill:#e8f5e9
+```
 
 ### Release Candidate Creation
 
@@ -176,6 +207,26 @@ Release preparation happens on **Build Agents**, producing tagged artifacts read
 
 **Purpose**: Obtain formal approval for production deployment based on quality and compliance criteria.
 
+```mermaid
+flowchart TD
+    RC[Release candidate] --> Quality[Check quality metrics]
+    RC --> Compliance[Check compliance]
+
+    Quality --> Gate{All criteria<br/>met?}
+    Compliance --> Gate
+
+    Gate -->|YES - Auto| Deploy[Auto approve]
+    Gate -->|YES - Manual| Review[Manager review]
+    Gate -->|NO| Reject[Reject release]
+
+    Review --> Approve[Approve]
+    Approve --> Deploy
+
+    style Gate fill:#fff3e0
+    style Deploy fill:#e8f5e9
+    style Reject fill:#ffebee
+```
+
 ### Approval Criteria
 
 Before deploying to production, the release must meet defined criteria:
@@ -255,6 +306,25 @@ Release approval validation occurs in **PLTE (automated)** and **Demo (explorati
 ## Stage 10: Production Deployment
 
 **Purpose**: Deploy the approved release to the production environment with appropriate controls.
+
+```mermaid
+flowchart LR
+    Approved[Approved release] --> Strategy{Strategy?}
+
+    Strategy -->|Blue-Green| BG[Deploy to green]
+    Strategy -->|Rolling| Roll[Deploy incrementally]
+    Strategy -->|Canary| Can[Deploy to canary]
+
+    BG --> Verify[Verify health]
+    Roll --> Verify
+    Can --> Verify
+
+    Verify --> Switch[Switch traffic]
+
+    style Strategy fill:#fff3e0
+    style Verify fill:#e3f2fd
+    style Switch fill:#e8f5e9
+```
 
 ### Deployment Strategies
 
@@ -353,6 +423,25 @@ Deployments target the **Production Environment** using **Deploy Agents** with s
 
 **Purpose**: Monitor and validate the release in the production environment.
 
+```mermaid
+flowchart TD
+    Prod[Production] --> Monitor[Continuous monitoring]
+    Monitor --> Metrics[Collect metrics]
+    Monitor --> Logs[Collect logs]
+    Monitor --> Traces[Collect traces]
+
+    Metrics --> Alert{Threshold<br/>exceeded?}
+    Logs --> Alert
+    Traces --> Alert
+
+    Alert -->|NO| Continue[Continue monitoring]
+    Alert -->|YES| Incident[Trigger incident]
+
+    style Monitor fill:#e3f2fd
+    style Continue fill:#e8f5e9
+    style Incident fill:#ffebee
+```
+
 ### Production Monitoring
 
 Once deployed, continuous monitoring ensures the release behaves correctly:
@@ -440,6 +529,25 @@ Live monitoring tracks the **Production Environment** where end users interact w
 ## Stage 12: Release Toggling
 
 **Purpose**: Control feature availability using feature flags (optional).
+
+```mermaid
+flowchart LR
+    Feature[New feature] --> Flag{Feature flag}
+
+    Flag -->|OFF| Old[Old implementation]
+    Flag -->|ON - 10%| Rollout[Gradual rollout]
+    Flag -->|ON - 100%| New[New implementation]
+
+    Rollout --> Monitor[Monitor metrics]
+    Monitor --> Decision{Metrics OK?}
+
+    Decision -->|YES| Increase[Increase %]
+    Decision -->|NO| Disable[Disable flag]
+
+    style Flag fill:#fff3e0
+    style New fill:#e8f5e9
+    style Disable fill:#ffebee
+```
 
 ### Feature Flags Explained
 

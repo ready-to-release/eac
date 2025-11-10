@@ -33,6 +33,30 @@ Non-deployable modules that support the system:
 
 ## Module Types
 
+```mermaid
+flowchart TB
+    subgraph Deployable["Deployable Units"]
+        MCP[MCP Servers<br/>src/mcp/*]
+        Ext[Extensions<br/>.vscode/extensions/*]
+    end
+
+    subgraph Supporting["Supporting Modules"]
+        Infra[Infrastructure<br/>automation/]
+        Docs[Documentation<br/>docs/]
+        Config[Configuration<br/>.claude/, .vscode/]
+        Contract[Contracts<br/>contracts/]
+    end
+
+    Deployable -.->|uses| Supporting
+
+    style MCP fill:#e3f2fd
+    style Ext fill:#e3f2fd
+    style Infra fill:#fff3e0
+    style Docs fill:#e8f5e9
+    style Config fill:#fff3e0
+    style Contract fill:#f3e5f5
+```
+
 ### 1. MCP Server Modules
 
 Go-based Model Context Protocol servers providing integration capabilities.
@@ -171,6 +195,36 @@ src-mcp-vscode,vscode-extension: feat: add complete feature
 ```
 
 ## Module Dependencies
+
+```mermaid
+flowchart TB
+    VSCode[vscode-extension]
+    MCP_GH[src-mcp-github]
+    MCP_Cmd[src-mcp-commands]
+
+    Infrastructure[infrastructure]
+    Config[*-config]
+    Contracts[contracts-repository]
+
+    VSCode --> MCP_GH
+    VSCode --> MCP_Cmd
+
+    Infrastructure -.->|used by| VSCode
+    Infrastructure -.->|used by| MCP_GH
+    Infrastructure -.->|used by| MCP_Cmd
+
+    Config -.->|used by| VSCode
+    Config -.->|used by| MCP_GH
+
+    Contracts -.->|defines| VSCode
+    Contracts -.->|defines| MCP_GH
+
+    style Infrastructure fill:#fff3e0
+    style Config fill:#fff3e0
+    style Contracts fill:#e3f2fd
+```
+
+**Text representation**:
 
 ```text
 vscode-extension

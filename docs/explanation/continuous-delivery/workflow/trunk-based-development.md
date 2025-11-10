@@ -120,6 +120,31 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
 
 ## Branch Types and Flow
 
+```mermaid
+gitGraph
+    commit id: "Initial"
+    branch topic-1
+    commit id: "Work"
+    checkout main
+    merge topic-1 tag: "Squash merge"
+
+    branch release-1.0
+    commit id: "RC1"
+
+    checkout main
+    branch topic-2
+    commit id: "Feature A"
+    checkout main
+    merge topic-2
+
+    checkout main
+    commit id: "Hotfix" type: HIGHLIGHT
+
+    checkout release-1.0
+    cherry-pick id: "Hotfix"
+    commit tag: "v1.0.0"
+```
+
 ![Branching Overview](../../../assets/branching/branching-overview.drawio.png)
 
 > Diagram shows the three active branch types and their relationships

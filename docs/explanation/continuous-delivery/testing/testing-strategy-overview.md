@@ -33,6 +33,29 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 The taxonomy defines test categories based on execution environment and scope:
 
+```mermaid
+flowchart TD
+    L0["L0: Unit Tests<br/>devbox/agent<br/>Highest determinism"]
+    L1["L1: Unit Tests<br/>devbox/agent<br/>Highest determinism"]
+    L2["L2: Emulated System<br/>devbox/agent<br/>High determinism"]
+    L3["L3: In-Situ Vertical<br/>PLTE<br/>Moderate determinism"]
+    L4["L4: Production Testing<br/>Production<br/>Highest coherency"]
+
+    L0 --> L1
+    L1 --> L2
+    L2 --> L3
+    L3 -.-> L4
+
+    Anti["❌ Horizontal E2E<br/>Shared test env<br/>Lowest determinism"]
+
+    style L0 fill:#e8f5e9
+    style L1 fill:#e8f5e9
+    style L2 fill:#fff3e0
+    style L3 fill:#fff3e0
+    style L4 fill:#e3f2fd
+    style Anti fill:#ffebee
+```
+
 | Level | Name                   | Shift Direction | Execution Environment | Scope                | External Dependencies                     | Determinism | Domain Coherency |
 |-------|------------------------|-----------------|-----------------------|----------------------|-------------------------------------------|-------------|------------------|
 | L0    | Unit Tests             | LEFT            | devbox or agent       | Source and binary    | All replaced with test doubles            | Highest     | Lowest           |
@@ -79,6 +102,25 @@ Lower Lx values provide higher determinism but lower domain coherency, while hig
 Maximize testing at L0-L3 (left) and L4 (right) to avoid the **out-of-category anti-pattern** (Horizontal E2E): horizontal pre-production environments where multiple teams' pre-prod services are linked together. These tests are highly fragile and non-deterministic.
 
 Each level builds on the confidence provided by lower levels.
+
+```mermaid
+flowchart TB
+    subgraph Pyramid["Test Distribution Pyramid"]
+        L4_Count["L4: Production<br/>Continuous monitoring"]
+        L3_Count["L3: In-Situ Vertical<br/>Moderate volume"]
+        L2_Count["L2: Emulated System<br/>Higher volume"]
+        L1_L0["L0/L1: Unit Tests<br/>Highest volume"]
+    end
+
+    L4_Count --> L3_Count
+    L3_Count --> L2_Count
+    L2_Count --> L1_L0
+
+    style L4_Count fill:#e3f2fd
+    style L3_Count fill:#fff3e0
+    style L2_Count fill:#fff3e0
+    style L1_L0 fill:#e8f5e9
+```
 
 ---
 

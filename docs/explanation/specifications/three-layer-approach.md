@@ -176,23 +176,24 @@ func TestCreateConfig(t *testing.T) {
 
 ### The Flow: From Requirements to Code
 
-```text
-1. Business Discussion
-   ↓
-2. Example Mapping Workshop
-   ↓ (produces colored cards)
-3. Create specification.feature in specs/
-   ├─ Yellow Card → Feature description
-   ├─ Blue Cards → Rule blocks (ATDD Layer)
-   └─ Green Cards → Scenario blocks under Rules (BDD Layer)
-   ↓
-4. Create step definitions in src/
-   └─ Implement Go functions for scenarios
-   ↓
-5. TDD Layer (unit tests in src/)
-   └─ Implementation testing
-   ↓
-6. Implementation Code (in src/)
+```mermaid
+flowchart TD
+    Biz[Business Discussion] --> Workshop[Example Mapping Workshop]
+    Workshop -->|Yellow Card| Feature[Feature description]
+    Workshop -->|Blue Cards| Rules[Rule blocks - ATDD]
+    Workshop -->|Green Cards| Scenarios[Scenarios - BDD]
+
+    Feature --> Spec[specification.feature]
+    Rules --> Spec
+    Scenarios --> Spec
+
+    Spec --> Steps[Step definitions in src/]
+    Steps --> TDD[Unit tests - TDD]
+    TDD --> Impl[Implementation Code]
+
+    style Workshop fill:#fff4e6
+    style Rules fill:#e3f2fd
+    style Scenarios fill:#e8f5e9
 ```
 
 ### From Discovery to Specification

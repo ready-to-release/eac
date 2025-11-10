@@ -112,6 +112,33 @@ PLTEs are ephemeral, isolated environments that emulate production characteristi
 
 Here's a high-level overview of each stage. For detailed explanations, see the stage-specific articles.
 
+```mermaid
+flowchart LR
+    subgraph Development["Development (1-6)"]
+        S1[1. Authoring] --> S2[2. Pre-commit]
+        S2 --> S3[3. Merge Request]
+        S3 --> S4[4. Commit]
+        S4 --> S5[5. Acceptance Test]
+        S5 --> S6[6. Extended Test]
+    end
+
+    subgraph Release["Release (7-12)"]
+        S7[7. Exploration] --> S8[8. Start Release]
+        S8 --> S9[9. Release Approval]
+        S9 --> S10[10. Prod Deploy]
+        S10 --> S11[11. Live]
+        S11 --> S12[12. Toggling]
+    end
+
+    S6 --> S7
+    S12 -.->|Feedback| S1
+
+    style S1 fill:#e3f2fd
+    style S9 fill:#fff3e0
+    style S10 fill:#ffebee
+    style S11 fill:#e8f5e9
+```
+
 **Stages 1-6: Development Through Testing**:
 
 1. **Authoring Changes**: Create code, config, requirements on local topic branches

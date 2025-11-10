@@ -328,6 +328,32 @@ organization/
 
 ### Side-by-Side Analysis
 
+```mermaid
+flowchart LR
+    subgraph Monorepo["Monorepo"]
+        MR_All[All code<br/>one repo]
+        MR_Atomic[Atomic changes]
+        MR_Shared[Direct sharing]
+
+        MR_All --> MR_Atomic
+        MR_All --> MR_Shared
+    end
+
+    subgraph Polyrepo["Polyrepo"]
+        PR_Many[Multiple repos]
+        PR_Indep[Independent teams]
+        PR_Deploy[Independent deploy]
+
+        PR_Many --> PR_Indep
+        PR_Many --> PR_Deploy
+    end
+
+    style MR_Atomic fill:#e8f5e9
+    style MR_Shared fill:#e8f5e9
+    style PR_Indep fill:#e3f2fd
+    style PR_Deploy fill:#e3f2fd
+```
+
 | Factor                     | Monorepo                      | Polyrepo                    |
 | -------------------------- | ----------------------------- | --------------------------- |
 | **Atomic Changes**         | ✅ Excellent - single commit  | ❌ Difficult - multiple PRs |

@@ -672,6 +672,28 @@ kubectl apply -f worker-deployment.yaml \
 
 ## Comparison Summary
 
+```mermaid
+flowchart LR
+    subgraph RA["RA Pattern (1-2 weeks)"]
+        RA_Topic[Topic] --> RA_Main[Main]
+        RA_Main --> RA_Release[Release branch]
+        RA_Release --> RA_Approval{Manual<br/>approval}
+        RA_Approval --> RA_Prod[Production]
+    end
+
+    subgraph CDE["CDE Pattern (2-4 hours)"]
+        CDE_Topic[Topic] --> CDE_Main[Main]
+        CDE_Main --> CDE_Auto{Auto<br/>approve}
+        CDE_Auto --> CDE_Prod[Production]
+        CDE_Prod --> CDE_Flags[Feature flags]
+    end
+
+    style RA_Approval fill:#fff3e0
+    style RA_Release fill:#ffebee
+    style CDE_Auto fill:#e8f5e9
+    style CDE_Flags fill:#e3f2fd
+```
+
 ### Branch Type Usage
 
 | Branch Type | RA Pattern | CDE Pattern |

@@ -422,27 +422,40 @@ Indicators:
 
 Physical or virtual board layout:
 
-```text
-+---------------------------------------+
-| [YELLOW CARD]                         |
-| As a developer, I want to init        |
-| project, so that I can start quickly  |
-+---------------------------------------+
-          |
-          v
-+-----------------+  +-----------------+  +-----------------+
-| [BLUE CARD 1]   |  | [BLUE CARD 2]   |  | [BLUE CARD 3]   |
-| Creates dirs    |  | Generates config|  | Handles errors  |
-+-----------------+  +-----------------+  +-----------------+
-  |                    |                    |
-  v                    v                    v
-[GREEN 1a]          [GREEN 2a]          [GREEN 3a]
-[GREEN 1b]          [GREEN 2b]          [GREEN 3b]
-[GREEN 1c]
+```mermaid
+flowchart TD
+    Yellow["🟡 User Story<br/>As a developer..."]
 
-[RED CARDS - TO THE SIDE]
-[RED 1] What if config exists?
-[RED 2] Support --force flag?
+    Yellow --> Blue1["🔵 AC 1<br/>Creates dirs"]
+    Yellow --> Blue2["🔵 AC 2<br/>Generates config"]
+    Yellow --> Blue3["🔵 AC 3<br/>Handles errors"]
+
+    Blue1 --> Green1a["🟢 Example 1a"]
+    Blue1 --> Green1b["🟢 Example 1b"]
+    Blue1 --> Green1c["🟢 Example 1c"]
+
+    Blue2 --> Green2a["🟢 Example 2a"]
+    Blue2 --> Green2b["🟢 Example 2b"]
+
+    Blue3 --> Green3a["🟢 Example 3a"]
+    Blue3 --> Green3b["🟢 Example 3b"]
+
+    Red1["🔴 What if config exists?"]
+    Red2["🔴 Support --force flag?"]
+
+    style Yellow fill:#FFD700
+    style Blue1 fill:#4169E1,color:#fff
+    style Blue2 fill:#4169E1,color:#fff
+    style Blue3 fill:#4169E1,color:#fff
+    style Green1a fill:#32CD32
+    style Green1b fill:#32CD32
+    style Green1c fill:#32CD32
+    style Green2a fill:#32CD32
+    style Green2b fill:#32CD32
+    style Green3a fill:#32CD32
+    style Green3b fill:#32CD32
+    style Red1 fill:#DC143C,color:#fff
+    style Red2 fill:#DC143C,color:#fff
 ```
 
 **Tips for Physical Workshops**:
@@ -473,6 +486,36 @@ After the workshop, convert the cards into a specification file.
 | 🔵 Blue Card (Acceptance Criterion) | `Rule:` block | `specs/<module>/<feature>/specification.feature` |
 | 🟢 Green Card (Example) | `Scenario:` block under Rule | `specs/<module>/<feature>/specification.feature` |
 | 🔴 Red Card (Question) | Issue in issues.md | `specs/<module>/<feature>/issues.md` |
+
+```mermaid
+flowchart LR
+    subgraph Workshop["Example Mapping Cards"]
+        Yellow["🟡 Yellow<br/>User Story"]
+        Blue["🔵 Blue<br/>AC"]
+        Green["🟢 Green<br/>Example"]
+        Red["🔴 Red<br/>Question"]
+    end
+
+    subgraph Spec["specification.feature"]
+        Feature["Feature:<br/>description"]
+        Rule["Rule:<br/>AC block"]
+        Scenario["Scenario:<br/>under Rule"]
+    end
+
+    subgraph Issues["issues.md"]
+        Issue["## Questions"]
+    end
+
+    Yellow --> Feature
+    Blue --> Rule
+    Green --> Scenario
+    Red --> Issue
+
+    style Yellow fill:#FFD700
+    style Blue fill:#4169E1,color:#fff
+    style Green fill:#32CD32
+    style Red fill:#DC143C,color:#fff
+```
 
 ### Complete Example
 
