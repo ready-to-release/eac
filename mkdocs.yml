@@ -9,6 +9,7 @@ edit_uri: edit/main/docs/
 docs_dir: docs
 
 plugins:
+  - techdocs-core
   - awesome-nav
 markdown_extensions:
   - footnotes
