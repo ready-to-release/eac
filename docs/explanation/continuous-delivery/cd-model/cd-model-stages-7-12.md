@@ -119,7 +119,7 @@ Starting a release involves creating a release candidate - a specific version of
 **This diagram shows the release branch stage flow and progression through final stages:**
 
 - **A**: All commits to release branch trigger automatic Stage 4 (Commit) and Stage 5 (Acceptance Testing)
-- **B**: After successful Acceptance Testing, software automatically deploys to approval environment
+- **B**: After successful Acceptance Testing, software (in the case of runtime systems) automatically deploys to approval environment
 - **C**: Head of release branch is ready for Stage 9 (Release Approval)
 - **D**: Stage 6 (Extended Testing) periodically picks up current HEAD to inform approval decision
 - **E**: After release approval, enters Stage 10 (Production Deployment)

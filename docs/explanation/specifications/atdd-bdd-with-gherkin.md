@@ -34,14 +34,33 @@ This project maintains the conceptual distinction between ATDD (acceptance crite
 - **Specifications** (in `specs/`): Business-readable Gherkin describing WHAT
 - **Implementations** (in `src/`): Technical Go code describing HOW
 
-```text
-specs/cli/login/specification.feature     ← Business reviews this
-    Rule: User must provide valid credentials
-        Scenario: Valid login succeeds
+```mermaid
+flowchart LR
+    subgraph Specs["specs/ (Business Reviews)"]
+        SpecFile["specification.feature"]
+        Rule["Rule: User must provide<br/>valid credentials"]
+        Scenario["Scenario: Valid login succeeds"]
 
-src/cli/tests/steps_test.go              ← Developers implement this
-    func userProvidesCredentials() { ... }
-    func loginSucceeds() { ... }
+        SpecFile --> Rule
+        Rule --> Scenario
+    end
+
+    subgraph Src["src/ (Developers Implement)"]
+        Steps["steps_test.go"]
+        Func1["func userProvidesCredentials()"]
+        Func2["func loginSucceeds()"]
+
+        Steps --> Func1
+        Steps --> Func2
+    end
+
+    Scenario -.implements.-> Func1
+    Scenario -.implements.-> Func2
+
+    style Specs fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Src fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style SpecFile fill:#bbdefb,stroke:#1976d2
+    style Steps fill:#e1bee7,stroke:#7b1fa2
 ```
 
 ---
@@ -261,6 +280,188 @@ And the configuration should contain default values
 
 ---
 
+## Specifications Evolve with Understanding
+
+Specifications are not static artifacts written once and frozen. They are **living documents** that evolve as your understanding deepens through implementation, usage, and feedback.
+
+### Initial Specification
+
+After Example Mapping, you might write:
+
+```gherkin
+Feature: cli_user-registration
+
+  Rule: Users must provide contact information
+
+    @success @ac1
+    Scenario: User provides email
+      Given I am registering a new account
+      When I provide my email "user@example.com"
+      Then my account should be created
+      And I should see "Registration successful"
+```
+
+**What we knew**: Users need to provide an email to register.
+
+### After Implementation Learning
+
+During implementation, you discover:
+
+- Email validation requirements (TDD reveals format rules)
+- Verification workflow (not just storage)
+- Error cases (what if email already exists?)
+
+Updated specification:
+
+```gherkin
+Feature: cli_user-registration
+
+  Rule: Users must provide verified contact information
+
+    @success @ac1
+    Scenario: User provides valid email format
+      Given I am registering a new account
+      When I provide my email "user@example.com"
+      Then I should receive a verification email
+      And my account should be in "pending verification" status
+      And I should see "Check your email to verify your account"
+
+    @error @ac1
+    Scenario: User provides invalid email format
+      Given I am registering a new account
+      When I provide my email "not-an-email"
+      Then I should see an error "Invalid email format"
+      And my account should not be created
+
+    @error @ac1
+    Scenario: User provides already registered email
+      Given an account exists with email "existing@example.com"
+      When I provide my email "existing@example.com"
+      Then I should see an error "Email already registered"
+      And I should be directed to password reset
+```
+
+**What changed**:
+
+- **Rule refined**: "contact information" → "verified contact information"
+- **Scenario expanded**: Added verification workflow steps
+- **Edge cases added**: Invalid format, duplicate email
+- **Acceptance criteria clarified**: Actual behavior now explicit
+
+### After Production Use
+
+After users interact with the feature, you learn:
+
+- Typos are common (help users correct them)
+- Verification emails go to spam (provide resend option)
+- Users forget which email they used (need lookup)
+
+Further updated specification:
+
+```gherkin
+Feature: cli_user-registration
+
+  Rule: Users must provide verified contact information with error recovery
+
+    @success @ac1
+    Scenario: User provides valid email format
+      Given I am registering a new account
+      When I provide my email "user@example.com"
+      Then I should receive a verification email
+      And my account should be in "pending verification" status
+      And I should see "Check your email to verify your account"
+      And I should see "Didn't receive it? Resend verification email"
+
+    @success @ac1
+    Scenario: User corrects email typo before verification
+      Given I registered with email "user@exampl.com"
+      And I have not yet verified my email
+      When I run "simply account update-email --new user@example.com"
+      Then my verification email should be resent to "user@example.com"
+      And I should see "Verification email sent to updated address"
+
+    @error @ac1
+    Scenario: User provides invalid email format
+      Given I am registering a new account
+      When I provide my email "not-an-email"
+      Then I should see an error "Invalid email format"
+      And I should see a suggestion "Did you mean: not-an-email@gmail.com?"
+      And my account should not be created
+
+    @error @ac1
+    Scenario: User provides already registered email
+      Given an account exists with email "existing@example.com"
+      When I provide my email "existing@example.com"
+      Then I should see "This email is already registered"
+      And I should see "Forgot your password? Reset it here"
+      And I should not create a duplicate account
+```
+
+**What changed**:
+
+- **Rule expanded**: Added "with error recovery" (learned from user behavior)
+- **Scenarios added**: Email correction, typo suggestions
+- **User guidance**: Added helpful error messages and next steps
+- **Real-world refinement**: Specs now match actual user needs
+
+### Evolution Triggers
+
+Update specifications when:
+
+| Trigger | Example | Action |
+|---------|---------|--------|
+| **Implementation reveals** | TDD finds edge case | Add error scenario |
+| **Stakeholder feedback** | "This isn't what I meant" | Refine acceptance criteria |
+| **Production bugs** | Users encounter unexpected behavior | Add regression scenario |
+| **Domain evolution** | Business process changes | Update Rules and scenarios |
+| **Language refinement** | Team adopts clearer terminology | Refactor scenario language |
+| **Requirements change** | New regulatory requirement | Add compliance scenarios |
+
+### Maintaining Specification Quality
+
+As specifications evolve:
+
+✅ **Do**:
+
+- Update specifications **immediately** when you learn something new
+- Refactor for clarity as understanding deepens
+- Keep specifications synchronized with implementation
+- Document why changes were made (commit messages)
+
+❌ **Don't**:
+
+- Leave specifications unchanged while code evolves
+- Accumulate "specification debt" to fix later
+- Let scenarios become outdated documentation
+- Treat specifications as write-once artifacts
+
+### The Evolution Cycle
+
+```mermaid
+flowchart TD
+    Initial["Initial Understanding"] --> SpecV1["Specification v1"]
+    SpecV1 --> Impl1["Implementation"]
+    Impl1 --> Learn1["Discovery & Learning"]
+    Learn1 --> SpecV2["Specification v2<br/>(refined)"]
+    SpecV2 --> Impl2["More Implementation"]
+    Impl2 --> Learn2["More Learning"]
+    Learn2 --> SpecV3["Specification v3<br/>(evolved)"]
+    SpecV3 -.repeat.-> Impl2
+
+    style Initial fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style SpecV1 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style SpecV2 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style SpecV3 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Impl1 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Impl2 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Learn1 fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Learn2 fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+```
+
+**Remember**: Each iteration brings you closer to a specification that accurately captures both the **intended behavior** and the **actual behavior** of your system.
+
+---
+
 ## Related Documentation
 
 - [Three-Layer Testing Approach](./three-layer-approach.md) - How ATDD/BDD/TDD work together
@@ -269,3 +470,4 @@ And the configuration should contain default values
 - [Example Mapping](./example-mapping.md) - Requirements discovery workshops
 - [Gherkin Format Reference](../../reference/specifications/gherkin-format.md) - Detailed syntax guide
 - [Create Feature Spec](../../how-to-guides/specifications/create-specifications.md) - Step-by-step guide
+- [Review and Iterate](review-and-iterate.md) - Detailed evolution practices

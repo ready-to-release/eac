@@ -199,18 +199,7 @@ The pipeline is triggered when changes affect its deployable unit.
 
 ### Deployment Pipeline Delivers to Live
 
-The pipeline validates changes and delivers immutable artifacts to the Live environment:
-
-```mermaid
-flowchart TD
-    TR[Trunk] --> DU[Deployable Unit]
-    DU --> DP[Deployment Pipeline]
-    DP --> LV[Live]
-    style TR fill:#e1f5fe
-    style DU fill:#fff9c4
-    style DP fill:#f3e5f5
-    style LV fill:#c8e6c9
-```
+The pipeline validates changes and delivers immutable artifacts to the Live environment
 
 ### Live Feedback Influences Trunk
 

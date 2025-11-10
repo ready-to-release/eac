@@ -14,32 +14,17 @@ This article provides detailed explanations of each stage, including their purpo
 
 Stage 1 is where all changes begin. Developers work in their local development environment (DevBox) to create new features, fix bugs, update documentation, or modify configurations. This stage emphasizes collaboration and clarity through Requirements as Code.
 
-```mermaid
-flowchart LR
-    Input["Requirements<br/>Specs"] --> DevBox[Developer<br/>DevBox]
-    DevBox --> Code[Code changes]
-    DevBox --> Tests[Unit tests]
-    DevBox --> Docs[Documentation]
-
-    Code --> Topic[Topic branch]
-    Tests --> Topic
-    Docs --> Topic
-
-    style DevBox fill:#e3f2fd
-    style Topic fill:#e8f5e9
-```
-
 ![Topic Branch Workflow](../../../assets/cd-model/branch-topic.drawio.png)
 
 **This diagram shows the topic branch stage flow through CD Model stages:**
 
 - **A**: Developer pushes initial topic commit to central repository
 - **B**: Optional pipeline execution flow (can run pre-integration experiments)
-- **C**: Merge request flow triggers Stage 2 (Pre-commit) and Stage 3 (Merge Request) validation
+- **C**: Merge request flow - the pull request is processed by the automatic Pre-commit stage (Stage 2) and signed off in the Merge Request stage (Stage 3)
 - **D** and **E**: Optional destinations for pre-integration testing (Exploration or Acceptance Testing stages)
 - **F**: Merge request finalized - commit lands on main branch, ending the topic branch flow
 
-Topic branches are created from HEAD of main (for features) or HEAD of release branch (for hotfixes).
+Topic branches are created from HEAD of main (called "topic branches") or HEAD of a release branch (called "release topic branches").
 
 ### Environment: DevBox
 
@@ -271,12 +256,12 @@ Once a merge request passes all quality gates and receives approval, the changes
 
 ![Main Branch Workflow](../../../assets/cd-model/branch-main.drawio.png)
 
-**This diagram shows the main branch stage flow and how commits progress through validation:**
+**This CD Model diagram shows how main branch commits progress through validation stages:**
 
-- **A**: Any change to main triggers automatic Stage 4 (Commit) and Stage 5 (Acceptance Testing)
-- **B**: After successful Acceptance Testing, software automatically deploys to DEMO environment
-- **C**: At this point, Start Release (Stage 8) can be initiated to create a release branch or tag
-- **D**: Extended Testing (Stage 6) periodically picks up current HEAD for comprehensive validation
+- **A**: Any change to main triggers automatic Stage 4 (Commit) and (for runtime systems) subsequent Stage 5 (Acceptance Testing)
+- **B**: After successful Acceptance Testing, software (for runtime systems) automatically deploys to DEMO environment
+- **C**: At this point, Start Release (Stage 8) can be initiated - this commit will become the first commit on the newly created release branch
+- **D**: Extended Testing (Stage 6) periodically picks up current HEAD to further verify its suitability for release
 
 Main receives commits from squash-merged topic branches or cherry-picked commits from release branches.
 
