@@ -2,6 +2,7 @@
 
 moniker: "claude-config"
 name: "Claude Code Configuration"
+type: "claude-config"
 description: "Claude Code CLI configuration including agents, hooks, commands, and settings"
 
 source:

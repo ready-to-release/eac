@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/render"
-	"github.com/ready-to-release/eac/src/repository/reports"
+	"github.com/ready-to-release/eac/src/internal/repository/reports"
 )
 
 func init() {

@@ -9,7 +9,7 @@ package main
 
 import (
 	"github.com/ready-to-release/eac/src/commands/get"
-	"github.com/ready-to-release/eac/src/contracts/reports"
+	"github.com/ready-to-release/eac/src/internal/contracts/reports"
 )
 
 func init() {

@@ -12,8 +12,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/ready-to-release/eac/src/contracts/modules"
-	"github.com/ready-to-release/eac/src/contracts/reports"
+	"github.com/ready-to-release/eac/src/internal/contracts/modules"
+	"github.com/ready-to-release/eac/src/internal/contracts/reports"
 )
 
 func init() {

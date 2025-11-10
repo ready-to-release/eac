@@ -2,6 +2,7 @@
 
 moniker: "claude-commands"
 name: "Claude Code Commands"
+type: "claude-commands"
 
 source:
   root: ".claude/commands"

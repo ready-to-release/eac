@@ -1,0 +1,134 @@
+name: "CI/CD Trigger"
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  detect-changes:
+    name: Detect Changed Modules
+    runs-on: ubuntu-latest
+    outputs:
+      changed-modules: ${{ steps.detect.outputs.modules }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Detect Changed Modules
+        id: detect
+        run: |
+          # Get changed modules using existing command
+          cd src/commands
+          MODULES=$(go run . "get changed modules" --as-json | jq -r '.modules | join(" ")')
+
+          # Filter to only Go modules that have workflows
+          WORKFLOW_MODULES=""
+          for module in $MODULES; do
+            if [ -f ".github/workflows/${module}.yaml" ]; then
+              WORKFLOW_MODULES="$WORKFLOW_MODULES $module"
+            fi
+          done
+          WORKFLOW_MODULES=$(echo $WORKFLOW_MODULES | xargs)
+
+          echo "All changed modules: $MODULES"
+          echo "Modules with workflows: $WORKFLOW_MODULES"
+
+          if [ -n "$WORKFLOW_MODULES" ]; then
+            echo "modules=$WORKFLOW_MODULES" >> $GITHUB_OUTPUT
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "modules=" >> $GITHUB_OUTPUT
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  calculate-order:
+    name: Calculate Execution Order
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      execution-plan: ${{ steps.calculate.outputs.plan }}
+      layer-count: ${{ steps.calculate.outputs.layer-count }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Calculate Execution Order
+        id: calculate
+        run: |
+          cd src/commands
+
+          # Get execution order for changed modules
+          MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
+
+          # Calculate execution order using the new command
+          PLAN=$(go run . "get execution order" $MODULES --as-json)
+
+          echo "Execution plan:"
+          echo "$PLAN" | jq .
+
+          # Save plan
+          echo "plan<<EOF" >> $GITHUB_OUTPUT
+          echo "$PLAN" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Extract layer count
+          LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
+          echo "layer-count=$LAYER_COUNT" >> $GITHUB_OUTPUT
+
+  # Execute module workflows in dependency order
+  execute-workflows:
+    name: Execute Module Workflows
+    needs: calculate-order
+    if: needs.calculate-order.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Execute Workflows Using Command
+        working-directory: ./src/commands
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MODULES="${{ needs.detect-changes.outputs.modules }}"
+          go run . workflow run $MODULES
+
+  summary:
+    name: Summary
+    needs: [detect-changes, calculate-order, execute-workflows]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## CI/CD Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changed Modules" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.detect-changes.outputs.changed-modules }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Execution Plan" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          echo '${{ needs.calculate-order.outputs.execution-plan }}' | jq . >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Workflow Execution" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ needs.execute-workflows.result }}" >> $GITHUB_STEP_SUMMARY

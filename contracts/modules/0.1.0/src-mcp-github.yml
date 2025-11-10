@@ -17,4 +17,4 @@ source:
     - "README.md"
     - "run.sh"
 
-depends_on: ['gh-cli']
+depends_on: []

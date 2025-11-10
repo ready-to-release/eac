@@ -2,7 +2,7 @@ moniker: specs
 name: Gherkin and Structurizr (design) specifications for modules
 type: specifications
 description: Structured by specs/<module-name>/<feature-name>, where design is a special feature folder for Structurzr. Within a feature folder is one Gherkin file `specification.feature` pr. folder.
-parent: src-cli
+parent: "."
 
 source:
   root: specs

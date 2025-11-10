@@ -14,3 +14,7 @@ source:
     - "**.go"
     - "*.go"
     - "README.md"
+
+depends_on: []
+
+used_by: []
