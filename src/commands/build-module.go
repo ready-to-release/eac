@@ -139,7 +139,19 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	fmt.Fprintf(logWriter, "Running: go build -o %s\n", binaryPath)
 
 	// Step 2: go build with output to out/<moniker>/
-	return runCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
+	if exitCode := runCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath); exitCode != 0 {
+		return exitCode
+	}
+
+	// Step 3: Make binary executable (preserves permissions for artifact upload)
+	if runtime.GOOS != "windows" {
+		fmt.Fprintf(logWriter, "Setting executable permissions: chmod +x %s\n", binaryPath)
+		if exitCode := runCommandWithLog(moduleRoot, logWriter, "chmod", "+x", binaryPath); exitCode != 0 {
+			return exitCode
+		}
+	}
+
+	return 0
 }
 
 // buildGoCommands builds the runtime command dispatcher (Pattern B)
