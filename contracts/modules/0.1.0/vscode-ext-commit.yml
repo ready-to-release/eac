@@ -9,4 +9,4 @@ source:
   changelog_path: ".vscode/extensions/vscode-ext-commit/CHANGELOG.md"
   root: ".vscode/extensions/vscode-ext-commit"
 
-depends_on: ["vscode-client"]
+depends_on: []
