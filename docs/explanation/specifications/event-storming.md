@@ -467,28 +467,8 @@ grep -r "OrderPlaced\|OrderShipped" specs/
 
 ## Related Documentation
 
-### For Understanding
-
 - [Ubiquitous Language](./ubiquitous-language.md) - DDD foundation for shared vocabulary
 - [Three-Layer Testing Approach](./three-layer-approach.md) - How Event Storming fits the testing strategy
-
-### For Doing
-
 - [Example Mapping](./example-mapping.md) - Requirements discovery using Event Storming vocabulary
 - [How to Establish Ubiquitous Language](../../how-to-guides/specifications/establish-ubiquitous-language.md) - Step-by-step guide
 
-### For Reference
-
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - How to write specifications using discovered vocabulary
-
----
-
-## Key Takeaways
-
-1. **Event Storming discovers domain vocabulary collaboratively** - Through visual mapping and structured conversation
-2. **Three formats serve different purposes** - Big Picture, Process Modeling, and Software Design
-3. **Sticky note grammar creates visual language** - Colors represent different domain concepts
-4. **Key outputs include events, actors, commands, policies** - But most importantly: Ubiquitous Language
-5. **Vocabulary flows to Example Mapping and specifications** - Same terms used throughout
-6. **Glossaries maintain shared understanding** - Document definitions and context boundaries
-7. **Regular sessions keep understanding current** - Schedule quarterly or when domain changes

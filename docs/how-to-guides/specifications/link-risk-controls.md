@@ -240,5 +240,4 @@ grep -r "@risk" specs/risk-controls/ | \
 ## Related Documentation
 
 - [Risk Controls Explanation](../../explanation/specifications/risk-controls.md) - Understanding risk controls and identifying relevant controls for your domain
-- [Gherkin Format Reference](../../reference/specifications/gherkin-format.md) - Specification syntax and tagging
 - [Create Specifications](./create-specifications.md) - Write specification.feature files

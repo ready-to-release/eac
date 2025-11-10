@@ -260,7 +260,5 @@ jobs:
 
 ## Related Documentation
 
-- [Godog Commands](../../reference/specifications/godog-commands.md) - Command reference
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Specification syntax
 - [ATDD and BDD with Gherkin](../../explanation/specifications/atdd-bdd-with-gherkin.md) - Understanding ATDD and BDD
 - [Official Godog Docs](https://github.com/cucumber/godog) - Godog documentation

@@ -91,7 +91,6 @@ This transformation approach integrates with existing software delivery practice
 ### Specifications
 
 - [Risk Controls](../specifications/risk-controls.md) - Risk control specification pattern
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Specification syntax
 - [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - How to implement risk controls
 
 ### Templates

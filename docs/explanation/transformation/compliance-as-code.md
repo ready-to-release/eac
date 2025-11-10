@@ -396,7 +396,6 @@ For detailed guidance on implementing this principle:
 
 - [Risk Control Specifications](risk-control-specifications.md) - Deep dive on pattern
 - [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - How-to guide
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Syntax reference
 - [Three-Layer Approach](../specifications/three-layer-approach.md) - Testing architecture
 
 ---

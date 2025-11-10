@@ -41,6 +41,20 @@ Understanding how Acceptance Test-Driven Development and Behavior-Driven Develop
 - Key principles and best practices
 - Specs vs Implementation architecture
 
+### [Gherkin File Organization](gherkin-concepts.md)
+
+Understanding how to structure and organize Gherkin specification files effectively.
+
+**Topics covered:**
+
+- File structure philosophy (specs/ vs src/)
+- Organizing Rules and scenarios
+- Feature hierarchy and naming
+- Using Background effectively
+- Tag strategy and conventions
+- Feature sizing and splitting strategies
+- Best practices for maintainability
+
 ### [Ubiquitous Language](ubiquitous-language.md)
 
 Building shared domain vocabulary that bridges business and technical communication.

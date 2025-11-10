@@ -107,8 +107,6 @@ Gherkin separates specification from implementation:
 - **Stable specifications**: Implementation can change without rewriting specifications
 - **Platform independent**: Works across languages and frameworks
 
-**Reference**: [Gherkin Format Details](../../reference/specifications/gherkin-format.md)
-
 ---
 
 ## Structure of Risk Control Specifications
@@ -377,7 +375,6 @@ Risk control specifications integrate with the broader testing approach:
 
 - **Specifications**: [Three-Layer Testing Approach](../specifications/three-layer-approach.md) explains how ATDD/BDD/TDD work together
 - **How-to Guide**: [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) provides step-by-step implementation
-- **Format Reference**: [Gherkin Format](../../reference/specifications/gherkin-format.md) details syntax and conventions
 - **Testing Strategy**: [Testing Strategy Overview](../continuous-delivery/testing/testing-strategy-overview.md) shows where risk controls fit in overall testing
 
 ---
@@ -398,5 +395,4 @@ To implement risk control specifications:
 - [Shift-Left Compliance](shift-left-compliance.md) - When and where to validate
 - [Transformation Framework](transformation-framework.md) - How to implement organization-wide
 - [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - Step-by-step implementation guide
-- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Complete syntax reference
 - [Template Catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) - Example templates

@@ -229,5 +229,4 @@ Feature: [control-category]-[name]
 #
 # For more information:
 # - How-to guide: docs/how-to-guides/specifications/link-risk-controls.md
-# - Gherkin reference: docs/reference/specifications/gherkin-format.md
 # - Examples: Look for @risk tags in specs/<module>/ directories
