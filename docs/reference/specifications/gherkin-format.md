@@ -85,8 +85,8 @@ flowchart TD
 **Template code**:
 
 ```gherkin
-@<module> @critical @<feature-name>
-Feature: [Feature Name]
+@module @critical
+Feature: [module-name_feature-name]
 
   As a [role]
   I want [capability]
@@ -133,31 +133,62 @@ Feature: [Feature Name]
       Given [security precondition]
       When [authenticated action]
       Then [access granted]
+      And [audit logged]
 ```
+
+**Naming Convention**:
+
+Feature names MUST use kebab-case format: `[module-name_feature-name]`
+
+**Rules**:
+1. Module name in kebab-case (e.g., `src-commands`, `vscode-extension`, `cli`)
+2. Feature name in kebab-case (e.g., `design-command`, `init-project`)
+3. Single underscore `_` separator between module and feature
+
+**Examples**:
+- `src-commands_design-command` ✅ (multi-word module, kebab-case feature)
+- `vscode-extension_commit-workflow` ✅ (multi-word module and feature)
+- `cli_init-project` ✅ (single-word module, kebab-case feature)
+- `mcp-server_github-integration` ✅ (kebab-case both)
+
+**Invalid formats**:
+- `src_commands_design_command` ❌ (underscores instead of hyphens)
+- `srcCommands_designCommand` ❌ (camelCase)
+- `SrcCommands_DesignCommand` ❌ (PascalCase)
+- `src-commands-design-command` ❌ (no underscore separator)
+
+**Template Source**:
+
+The canonical template is at `templates/specs/specification.feature` and includes:
+- Architectural notes explaining specs/ vs src/ separation (lines 1-9)
+- Step-by-step instructions for using the template (lines 11-17)
+- Complete examples with all tag types
+
+**Note**: Documentation examples do NOT include the architectural notes or instructions to keep them concise. Users should copy the actual template file to get the full context.
+
+**See also**:
+- [Verification Tags](./verification-tags.md) - IV/OV/PV tag usage
+- [Create Specifications](../../how-to-guides/specifications/create-specifications.md) - Step-by-step guide
 
 ---
 
 ## Component Breakdown
 
-### Metadata Header (Comments)
+### Feature Name (Traceability)
 
-**Purpose**: Provides traceability and module context
+**Purpose**: Provides traceability and module context through the Feature name itself
 
-**Format**:
-
-```gherkin
-# Feature ID: <module>_<feature-name>
-# Module: <Module>
-```
+**Format**: The Feature name follows kebab-case format: `[module-name_feature-name]`
 
 **Example**:
 
 ```gherkin
-# Feature ID: cli_init-project
-# Module: CLI
+Feature: cli_init-project
 ```
 
-**Note**: Use underscores between module and feature, dashes within feature names.
+This replaces the old approach of using comment headers for Feature ID and Module. The Feature name now serves as the primary identifier for traceability.
+
+**Note**: No separate comments are needed - the Feature name provides all necessary context.
 
 ---
 
@@ -533,19 +564,22 @@ Scenario: Valid credentials grant access
 
 ### Naming Conventions
 
-**Feature IDs**: `module_feature-name`
+**Feature Names**: Use kebab-case format: `[module-name_feature-name]`
 
-- Examples: `cli_init-project`, `src-commands_module-inspection`
+- **Module**: kebab-case (e.g., `src-commands`, `cli`, `vscode-extension`)
+- **Feature**: kebab-case (e.g., `design-command`, `init-project`)
+- **Separator**: Single underscore `_`
+- **Examples**: `cli_init-project`, `src-commands_design-command`, `vscode-extension_commit-workflow`
 
-**Feature Names**: Same as Feature ID
+**Directory Names**: Match feature name using kebab-case
 
-- Example: `Feature: cli_init-project`
-
-**Directory Names**: Use dashes
-
-- Examples: `init-project`, `module-inspection`
+- **Module directories**: `src-commands`, `vscode-extension`, `cli`
+- **Feature directories**: `design-command`, `init-project`, `commit-workflow`
+- **Examples**: `specs/cli/init-project/`, `specs/src-commands/design-command/`
 
 **File Names**: Always `specification.feature`
+
+**Note**: Feature names provide traceability across specs/ and src/ without requiring separate ID comments. See [Naming Convention](./index.md#naming-convention) for complete guide.
 
 ---
 

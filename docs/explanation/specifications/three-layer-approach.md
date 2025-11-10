@@ -225,14 +225,14 @@ Requirements are discovered through collaborative workshops that establish share
 
 ### Traceability Across Layers
 
-All layers are linked through **Feature ID**:
+All layers are linked through **Feature Name**:
 
 ```text
-Feature ID: cli_init-project
+Feature Name: cli_init-project
 
 Links across specs/ and src/:
   ├─ specs/cli/init-project/specification.feature
-  │    # Feature ID: cli_init-project
+  │    Feature: cli_init-project
   │    (Contains both ATDD Rules and BDD Scenarios)
   │
   ├─ src/cli/tests/steps_test.go

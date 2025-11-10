@@ -10,6 +10,19 @@ These guides provide task-oriented instructions for working with the three-layer
 
 ---
 
+## Quick Reference
+
+**Naming Convention**: All specification features use kebab-case format: `[module-name_feature-name]`
+
+Examples:
+- `src-commands_design-command` ✅
+- `vscode-extension_commit-workflow` ✅
+- `cli_init-project` ✅
+
+**See**: [Naming Convention](../../reference/specifications/index.md#naming-convention) for complete guide.
+
+---
+
 ## Available Guides
 
 ### [Setup Godog](setup-godog.md)

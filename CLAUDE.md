@@ -85,9 +85,16 @@ mkdir -p specs/<module>/<feature_name>
 
 **File**: `specs/<module>/<feature_name>/specification.feature`
 
+**Naming Convention**:
+- Format: `[module-name_feature-name]` (kebab-case)
+- Module: kebab-case (e.g., `src-commands`, `cli`, `vscode-extension`)
+- Feature: kebab-case (e.g., `design-command`, `init-project`)
+- Separator: Single underscore `_` between module and feature
+- Examples: `src-commands_design-command`, `cli_init-project`
+
 ```gherkin
-@<module>
-Feature: <module>_<feature_name>
+@module @critical
+Feature: [module-name_feature-name]
 
   As a [role]
   I want [capability]
@@ -117,6 +124,17 @@ Feature: <module>_<feature_name>
       When [action]
       Then [observable outcome]
 ```
+
+**Naming Examples**:
+- `src-commands_design-command`
+- `vscode-extension_commit-workflow`
+- `cli_init-project`
+
+**Template**: See `templates/specs/specification.feature` for canonical template with architectural notes and instructions.
+
+**Note**: The template file includes architectural notes and instructions at the top. These are helpful in the template but should NOT be copied into documentation examples to keep examples concise.
+
+**Verification Tags**: Use @IV (Installation), @OV (Operational - default), @PV (Performance). See [Verification Tags](docs/reference/specifications/verification-tags.md).
 
 **Step 3**: Implement step definitions (in `src/` directory)
 
@@ -161,13 +179,13 @@ src/<module>/tests/
 
 ### Feature ID Linkage
 
-**Traceability** is maintained through Feature ID across all files:
+**Traceability** is maintained through the Feature name across all files:
 
 ```text
-Feature ID: cli_init-project
+Feature Name: cli_init-project
 
 Used in:
-- specs/cli/init-project/specification.feature: # Feature ID: cli_init-project
+- specs/cli/init-project/specification.feature: Feature: cli_init-project
 - src/cli/tests/steps_test.go: // Feature: cli_init-project
 - src/cli/*_test.go: // Feature: cli_init-project (unit tests)
 ```

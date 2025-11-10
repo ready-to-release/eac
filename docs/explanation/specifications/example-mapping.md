@@ -557,10 +557,7 @@ So that I can quickly start development
 **File**: `specs/cli/init-project/specification.feature`
 
 ```gherkin
-# Feature ID: cli_init-project
-# Module: CLI
-
-@cli @critical @init
+@cli @critical
 Feature: cli_init-project
 
   As a developer
