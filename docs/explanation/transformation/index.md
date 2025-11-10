@@ -15,11 +15,11 @@ Traditional compliance often feels like a tax on innovation — slow, reactive, 
 
 Compliance transformation applies software engineering best practices:
 
-**Everything-as-code:** Requirements, policies, and evidence in version control,
-**Continuous validation:** Compliance checked on every commit,
-**Shift-left testing:** Issues caught early,
-**Automated evidence:** Most audit proof generated automatically,
-**Executable specifications:** Requirements expressed as automated tests.
+**Everything-as-code:** Requirements, policies, and evidence in version control,  
+**Continuous validation:** Compliance checked on every commit,  
+**Shift-left testing:** Issues caught early,  
+**Automated evidence:** Most audit proof generated automatically,  
+**Executable specifications:** Requirements expressed as automated tests.  
 
 **The result:** Less overhead, higher quality, and continuous audit readiness.
 
