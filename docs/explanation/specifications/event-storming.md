@@ -470,5 +470,4 @@ grep -r "OrderPlaced\|OrderShipped" specs/
 - [Ubiquitous Language](./ubiquitous-language.md) - DDD foundation for shared vocabulary
 - [Three-Layer Testing Approach](./three-layer-approach.md) - How Event Storming fits the testing strategy
 - [Example Mapping](./example-mapping.md) - Requirements discovery using Event Storming vocabulary
-- [How to Establish Ubiquitous Language](../../how-to-guides/specifications/establish-ubiquitous-language.md) - Step-by-step guide
 

@@ -204,7 +204,6 @@ Feature: [control-category]-[name]
 #    - Implementation features tag scenarios with @risk<ID>
 #    - Multiple features can implement the same control
 #    - One feature can implement multiple controls
-#    - See: docs/how-to-guides/specifications/link-risk-controls.md
 #
 # Good Example:
 # @risk1
@@ -227,6 +226,3 @@ Feature: [control-category]-[name]
 # - Implementation features define HOW
 # - Keep controls technology-agnostic when possible
 #
-# For more information:
-# - How-to guide: docs/how-to-guides/specifications/link-risk-controls.md
-# - Examples: Look for @risk tags in specs/<module>/ directories

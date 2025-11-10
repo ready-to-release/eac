@@ -469,5 +469,4 @@ flowchart TD
 - [Event Storming](./event-storming.md) - Domain discovery workshops
 - [Example Mapping](./example-mapping.md) - Requirements discovery workshops
 - [Gherkin Format Reference](../../reference/specifications/gherkin-format.md) - Detailed syntax guide
-- [Create Feature Spec](../../how-to-guides/specifications/create-specifications.md) - Step-by-step guide
 - [Review and Iterate](review-and-iterate.md) - Detailed evolution practices

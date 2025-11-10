@@ -265,4 +265,3 @@ Split when:
 - [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md) - Concepts behind specifications
 - [Three-Layer Approach](./three-layer-approach.md) - How Example Mapping fits the workflow
 - [Review and Iterate](review-and-iterate.md) - Maintaining living specifications
-- [Create Feature Spec](../../how-to-guides/specifications/create-specifications.md) - Step-by-step conversion guide

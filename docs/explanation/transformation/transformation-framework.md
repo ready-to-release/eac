@@ -161,8 +161,6 @@ Translate requirements to executable format:
 
 **Format**: See [Risk Control Specifications](risk-control-specifications.md) for detailed guidance
 
-**Reference**: [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) provides implementation guidance
-
 **Deliverable**: Risk control specifications (`specs/risk-controls/*.feature`)
 
 **2. Move Artifacts to Version Control**:

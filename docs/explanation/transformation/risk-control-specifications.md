@@ -271,8 +271,6 @@ Feature: cli_user-authentication
 
 The `@risk1` tag creates the link from this implementation to RC-001 (Authentication required).
 
-**Reference**: [Link Risk Controls How-to Guide](../../how-to-guides/specifications/link-risk-controls.md)
-
 ---
 
 ## Validation and Coverage
@@ -374,7 +372,6 @@ Risk control specifications should be validated for:
 Risk control specifications integrate with the broader testing approach:
 
 - **Specifications**: [Three-Layer Testing Approach](../specifications/three-layer-approach.md) explains how ATDD/BDD/TDD work together
-- **How-to Guide**: [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) provides step-by-step implementation
 - **Testing Strategy**: [Testing Strategy Overview](../continuous-delivery/testing/testing-strategy-overview.md) shows where risk controls fit in overall testing
 
 ---
@@ -385,7 +382,6 @@ To implement risk control specifications:
 
 1. **Learn shift-left** - Read [Shift-Left Compliance](shift-left-compliance.md) to understand early validation
 2. **Review templates** - Check [Template Catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) for example patterns
-3. **Implement** - Follow [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) guide
 
 ---
 
@@ -394,5 +390,4 @@ To implement risk control specifications:
 - [Compliance as Code](compliance-as-code.md) - Core principles including executable specifications
 - [Shift-Left Compliance](shift-left-compliance.md) - When and where to validate
 - [Transformation Framework](transformation-framework.md) - How to implement organization-wide
-- [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - Step-by-step implementation guide
 - [Template Catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) - Example templates

@@ -94,7 +94,6 @@ Evidence from pipeline runs automatically collected and referenced:
 For details on implementing this principle:
 
 - [Three-Layer Testing Approach](../specifications/three-layer-approach.md) - How specifications work
-- [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - How to implement risk controls
 - [Risk Controls](../specifications/risk-controls.md) - Risk control specification pattern
 
 ---
@@ -395,7 +394,6 @@ Organizations validate:
 For detailed guidance on implementing this principle:
 
 - [Risk Control Specifications](risk-control-specifications.md) - Deep dive on pattern
-- [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - How-to guide
 - [Three-Layer Approach](../specifications/three-layer-approach.md) - Testing architecture
 
 ---
