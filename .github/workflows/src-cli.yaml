@@ -56,6 +56,9 @@ jobs:
           name: build-artifacts-src-cli
           path: out/src-cli
 
+      - name: Make Binary Executable
+        run: chmod +x out/src-cli/r2r-cli
+
       - name: Test Module
         working-directory: ./src/commands
         run: go run . test module src-cli
