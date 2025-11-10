@@ -314,6 +314,4 @@ See [Implementation Patterns](implementation-patterns.md) for detailed guidance 
 
 **Additional Resources:**
 
-- [Repository Layout](../../reference/continuous-delivery/repository-layout.md)
-- [Semantic Commits](../../reference/continuous-delivery/semantic-commits.md)
-- [Versioning](../../reference/continuous-delivery/versioning.md)
+- [Repository Layout](../../../reference/repository-layout.md)

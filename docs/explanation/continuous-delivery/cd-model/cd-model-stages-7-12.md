@@ -672,4 +672,3 @@ These stages emphasize controlled release, comprehensive monitoring, and risk mi
 - [CD Model Overview](cd-model-overview.md)
 - [Stages 1-6](cd-model-stages-1-6.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
-- [Versioning](../../reference/continuous-delivery/versioning.md)

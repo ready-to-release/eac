@@ -132,5 +132,5 @@ Understanding risk-based testing and how to define executable risk controls for 
 
 ## Related Documentation
 
-- **Looking for technical details?** See [Specifications Reference](../../reference/specifications/index.md)
-- **Need to perform tasks?** See [Specifications How-to Guides](../../how-to-guides/specifications/index.md)
+- [Continuous Delivery Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md)
+- [Everything as Code](../everything-as-code/index.md)

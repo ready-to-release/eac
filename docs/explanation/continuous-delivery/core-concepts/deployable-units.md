@@ -565,5 +565,3 @@ Deployable units are the fundamental building blocks of Continuous Delivery:
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Repository Patterns](../architecture/repository-patterns.md)
-- [Versioning](../../reference/continuous-delivery/versioning.md)
-- [Semantic Commits](../../reference/continuous-delivery/semantic-commits.md)

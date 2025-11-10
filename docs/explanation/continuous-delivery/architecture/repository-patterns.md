@@ -456,4 +456,4 @@ flowchart LR
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
-- [Repository Layout](../../reference/continuous-delivery/repository-layout.md)
+- [Repository Layout](../../../reference/repository-layout.md)

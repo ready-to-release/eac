@@ -863,6 +863,5 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Unit of Flow](../core-concepts/unit-of-flow.md)
-- [Semantic Commits](../../reference/continuous-delivery/semantic-commits.md)
-- [Repository Layout](../../reference/continuous-delivery/repository-layout.md)
+- [Repository Layout](../../../reference/repository-layout.md)
 - [Trunk-Based Development (trunkbaseddevelopment.com)](https://trunkbaseddevelopment.com/)
