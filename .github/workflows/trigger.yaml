@@ -104,13 +104,13 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Execute Workflows Using Command
+      - name: Execute Pipelines Using Command
         working-directory: ./src/commands
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           MODULES="${{ needs.detect-changes.outputs.modules }}"
-          go run . workflow run $MODULES
+          go run . pipeline run $MODULES
 
   summary:
     name: Summary

@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
 
       - name: Test Module
         working-directory: ./src/commands
@@ -49,6 +51,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
 
       - name: Build Module
         working-directory: ./src/commands

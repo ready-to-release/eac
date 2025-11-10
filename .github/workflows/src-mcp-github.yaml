@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
 
       - name: Install GitHub CLI
         run: |
@@ -58,6 +60,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
 
       - name: Install GitHub CLI
         run: |
