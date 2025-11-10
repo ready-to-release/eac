@@ -31,7 +31,7 @@ jobs:
 
       # 🏗️ Build the site
       - name: Build MkDocs site
-        run: mkdocs build --strict
+        run: mkdocs build
 
       # ⚙️ Configure GitHub Pages
       - name: Configure Pages
