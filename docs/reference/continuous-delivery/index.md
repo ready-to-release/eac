@@ -17,18 +17,6 @@ Module structure, deployable units, and commit prefix mappings.
 - Module registry and dependencies
 - Deployable unit contracts
 
-### [Semantic Commits](semantic-commits.md)
-
-Conventional commit format, types, and version increment rules.
-
-**Quick lookup:**
-
-- Commit message format and structure
-- All commit types (feat, fix, docs, etc.)
-- Breaking change syntax
-- Module prefix conventions
-- Version increment matrix
-
 ### [Versioning](versioning.md)
 
 Semantic versioning scheme, tagging conventions, and compatibility.
