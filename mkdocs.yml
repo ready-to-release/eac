@@ -12,30 +12,15 @@ theme:
   name: material
   features:
     - navigation.indexes
-    - navigation.tabs
-    - navigation.sections
-    - navigation.top
-    - search.suggest
-    - search.highlight
-    - content.code.copy
     - content.footnote.tooltips
 
 plugins:
-  - search
+  - techdocs-core
   - awesome-nav
 
 markdown_extensions:
   - footnotes
   - attr_list
-  - tables
-  - admonition
-  - pymdownx.details
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.tabbed:
-      alternate_style: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
