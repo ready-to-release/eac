@@ -1,7 +1,6 @@
-title: Documentation
 nav:
   - index.md
-  - Tutorials
-  - How-to Guides
-  - Reference
-  - Explanation
+  - tutorials
+  - how-to-guides
+  - reference
+  - explanation
