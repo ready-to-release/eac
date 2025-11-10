@@ -8,7 +8,7 @@ The Cynefin framework, developed by Dave Snowden, helps us understand different 
 
 ### The Four Domains
 
-<img src="../../../assets/constraints/cynefin.png" alt="Cynefin Framework map" width="800" style="max-width: 100%;">
+![map](../../assets/constraints/cynefin.png)
 
 > Cynefin Framework showing Clear, Complicated, Complex, and Chaotic domains with different response patterns
 > Source: <https://enliveningedge.org/tools-practices/tour-latest-cynefin-iteration-part-1-framework-dealing-challenges/>
