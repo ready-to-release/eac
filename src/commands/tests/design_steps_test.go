@@ -55,10 +55,38 @@ func dockerIsRunning() error {
 
 func moduleHasWorkspaceDslFile(module string) error {
 	// Tests run from src/commands/tests, so we need to go up three directories
-	workspacePath := filepath.Join("..", "..", "..", "docs", "reference", "design", module, "workspace.dsl")
+	// Validation uses specs/<module>/design/workspace.dsl
+	workspacePath := filepath.Join("..", "..", "..", "specs", module, "design", "workspace.dsl")
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		return fmt.Errorf("workspace.dsl not found at %s", workspacePath)
 	}
+	return nil
+}
+
+func multipleModulesHaveWorkspaceDslFiles() error {
+	// Check for at least 2 modules with workspace.dsl files
+	// Tests run from src/commands/tests
+	specsDir := filepath.Join("..", "..", "..", "specs")
+
+	entries, err := os.ReadDir(specsDir)
+	if err != nil {
+		return fmt.Errorf("failed to read specs directory: %w", err)
+	}
+
+	moduleCount := 0
+	for _, entry := range entries {
+		if entry.IsDir() {
+			workspacePath := filepath.Join(specsDir, entry.Name(), "design", "workspace.dsl")
+			if _, err := os.Stat(workspacePath); err == nil {
+				moduleCount++
+			}
+		}
+	}
+
+	if moduleCount < 2 {
+		return fmt.Errorf("expected at least 2 modules with workspace.dsl files, found %d", moduleCount)
+	}
+
 	return nil
 }
 
@@ -171,6 +199,140 @@ func moduleShouldBeInTheList(module string) error {
 	return nil
 }
 
+// Validation-specific Then steps
+
+func theWorkspaceShouldBeValidatedUsingStructurizrCLI() error {
+	// Check if command executed successfully (exit code 0 or 1)
+	// Exit code 1 means validation found errors, but still ran successfully
+	if ctx.exitCode != 0 && ctx.exitCode != 1 {
+		return fmt.Errorf("expected exit code 0 or 1, got %d", ctx.exitCode)
+	}
+
+	// Check for validation indicators in output
+	if !strings.Contains(ctx.commandOutput, "Validating module:") {
+		return fmt.Errorf("output does not indicate validation occurred:\n%s", ctx.commandOutput)
+	}
+
+	return nil
+}
+
+func allWorkspacesShouldBeValidatedUsingStructurizrCLI() error {
+	// Similar to single validation but checks for multiple modules
+	if ctx.exitCode != 0 && ctx.exitCode != 1 {
+		return fmt.Errorf("expected exit code 0 or 1, got %d", ctx.exitCode)
+	}
+
+	// Check for validation indicators
+	if !strings.Contains(ctx.commandOutput, "Validating") {
+		return fmt.Errorf("output does not indicate validation occurred:\n%s", ctx.commandOutput)
+	}
+
+	return nil
+}
+
+func validationResultsShouldBeDisplayedInConsole() error {
+	// Check for key validation output elements
+	expectedElements := []string{
+		"Validating module:",
+		"Workspace:",
+		"Summary:",
+	}
+
+	for _, element := range expectedElements {
+		if !strings.Contains(ctx.commandOutput, element) {
+			return fmt.Errorf("expected output to contain '%s', got:\n%s", element, ctx.commandOutput)
+		}
+	}
+
+	return nil
+}
+
+func validationResultsForEachModuleShouldBeDisplayedInConsole() error {
+	// Check for summary section that aggregates results
+	if !strings.Contains(ctx.commandOutput, "Summary:") {
+		return fmt.Errorf("output does not contain validation summary:\n%s", ctx.commandOutput)
+	}
+
+	// Should show module-level results
+	if !strings.Contains(ctx.commandOutput, "Module:") {
+		return fmt.Errorf("output does not show per-module results:\n%s", ctx.commandOutput)
+	}
+
+	return nil
+}
+
+func validationResultsShouldBeWrittenToJSONFile() error {
+	// Tests run from src/commands/tests, need to go up to project root
+	jsonPath := filepath.Join("..", "..", "..", "out", "design-validation-results.json")
+
+	// Check if JSON file exists
+	if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
+		return fmt.Errorf("validation JSON file not found at %s", jsonPath)
+	}
+
+	// Read and verify it's valid JSON
+	data, err := os.ReadFile(jsonPath)
+	if err != nil {
+		return fmt.Errorf("failed to read JSON file: %w", err)
+	}
+
+	if len(data) == 0 {
+		return fmt.Errorf("JSON file is empty")
+	}
+
+	// Basic JSON validation - should start with { or [
+	trimmed := strings.TrimSpace(string(data))
+	if !strings.HasPrefix(trimmed, "{") && !strings.HasPrefix(trimmed, "[") {
+		return fmt.Errorf("JSON file does not contain valid JSON")
+	}
+
+	return nil
+}
+
+func aggregatedValidationResultsShouldBeWrittenToJSONFile() error {
+	// Same as single validation - both write to same file
+	return validationResultsShouldBeWrittenToJSONFile()
+}
+
+func iShouldSeeValidationSummaryWithErrorsAndWarnings() error {
+	// Check for summary section with counts
+	if !strings.Contains(ctx.commandOutput, "Summary:") {
+		return fmt.Errorf("output does not contain summary section:\n%s", ctx.commandOutput)
+	}
+
+	// Should show errors and warnings counts
+	hasErrors := strings.Contains(ctx.commandOutput, "Errors:")
+	hasWarnings := strings.Contains(ctx.commandOutput, "Warnings:")
+
+	if !hasErrors || !hasWarnings {
+		return fmt.Errorf("summary does not show errors and warnings counts:\n%s", ctx.commandOutput)
+	}
+
+	return nil
+}
+
+func iShouldSeeOverallSummaryWithTotalErrorsAndWarnings() error {
+	// Check for overall summary with aggregated counts
+	if !strings.Contains(ctx.commandOutput, "Summary:") {
+		return fmt.Errorf("output does not contain summary section:\n%s", ctx.commandOutput)
+	}
+
+	// Should show total counts
+	requiredFields := []string{
+		"Total modules:",
+		"Total errors:",
+		"Total warnings:",
+	}
+
+	for _, field := range requiredFields {
+		if !strings.Contains(ctx.commandOutput, field) {
+			return fmt.Errorf("summary does not show '%s':\n%s", field, ctx.commandOutput)
+		}
+	}
+
+	return nil
+}
+
 // ============================================================================
 // Scenario Initialization
 // ============================================================================
@@ -210,11 +372,22 @@ func InitializeDesignScenario(sc *godog.ScenarioContext) {
 	// Given steps
 	sc.Step(`^Docker is running$`, dockerIsRunning)
 	sc.Step(`^module "([^"]*)" has workspace\.dsl file$`, moduleHasWorkspaceDslFile)
+	sc.Step(`^multiple modules have workspace\.dsl files$`, multipleModulesHaveWorkspaceDslFiles)
 
-	// Then steps
+	// Then steps - Structurizr serve
 	sc.Step(`^Structurizr container should start successfully$`, structurizrContainerShouldStartSuccessfully)
 	sc.Step(`^I should see success message with URL$`, iShouldSeeSuccessMessageWithURL)
 	sc.Step(`^documentation should be accessible at the URL$`, documentationShouldBeAccessibleAtTheURL)
 	sc.Step(`^I should see a list of available modules$`, iShouldSeeAListOfAvailableModules)
 	sc.Step(`^"([^"]*)" module should be in the list$`, moduleShouldBeInTheList)
+
+	// Then steps - Validation
+	sc.Step(`^the workspace should be validated using Structurizr CLI$`, theWorkspaceShouldBeValidatedUsingStructurizrCLI)
+	sc.Step(`^all workspaces should be validated using Structurizr CLI$`, allWorkspacesShouldBeValidatedUsingStructurizrCLI)
+	sc.Step(`^validation results should be displayed in console$`, validationResultsShouldBeDisplayedInConsole)
+	sc.Step(`^validation results for each module should be displayed in console$`, validationResultsForEachModuleShouldBeDisplayedInConsole)
+	sc.Step(`^validation results should be written to JSON file$`, validationResultsShouldBeWrittenToJSONFile)
+	sc.Step(`^aggregated validation results should be written to JSON file$`, aggregatedValidationResultsShouldBeWrittenToJSONFile)
+	sc.Step(`^I should see validation summary with errors and warnings$`, iShouldSeeValidationSummaryWithErrorsAndWarnings)
+	sc.Step(`^I should see overall summary with total errors and warnings$`, iShouldSeeOverallSummaryWithTotalErrorsAndWarnings)
 }
