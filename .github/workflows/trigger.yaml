@@ -91,85 +91,78 @@ jobs:
           LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
           echo "layer-count=$LAYER_COUNT" >> $GITHUB_OUTPUT
 
-  # Dynamic job creation for layers is complex in GitHub Actions
-  # Instead, we'll create a job that processes all layers sequentially
-  execute-modules:
-    name: Execute Modules
+  # Execute module workflows in dependency order
+  execute-workflows:
+    name: Execute Module Workflows
     needs: calculate-order
     if: needs.calculate-order.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-
-      - name: Execute Layers Sequentially
+      - name: Execute Workflows by Layer
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          cd src/commands
-
-          # Parse execution plan
           PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
           LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
 
-          echo "Executing $LAYER_COUNT layers sequentially..."
+          echo "================================================"
+          echo "Executing $LAYER_COUNT layers sequentially"
+          echo "================================================"
 
-          # Execute each layer
+          # Process each layer
           for ((layer=0; layer<LAYER_COUNT; layer++)); do
+            echo ""
             echo "================================================"
-            echo "Executing Layer $layer"
+            echo "Layer $layer"
             echo "================================================"
 
             # Get modules in this layer
-            MODULES=$(echo "$PLAN" | jq -r ".layers[$layer] | join(\" \")")
-            echo "Modules in layer $layer: $MODULES"
+            MODULES=$(echo "$PLAN" | jq -r ".layers[$layer] | .[]")
 
-            # Test and build each module in the layer
+            # Start all workflows in this layer (parallel within layer)
+            declare -a RUN_IDS
             for module in $MODULES; do
-              echo ""
-              echo "----------------------------------------"
-              echo "Processing module: $module"
-              echo "----------------------------------------"
+              echo "Triggering workflow: $module.yaml"
 
-              echo "Testing $module..."
-              if go run . "test module" "$module"; then
-                echo "✅ Tests passed for $module"
-              else
-                echo "❌ Tests failed for $module"
-                exit 1
-              fi
+              # Trigger the workflow
+              gh workflow run "$module.yaml" --ref "${{ github.ref }}"
 
-              echo "Building $module..."
-              if go run . "build module" "$module"; then
-                echo "✅ Build succeeded for $module"
-              else
-                echo "❌ Build failed for $module"
+              # Wait a bit for workflow to be created
+              sleep 2
+
+              # Get the run ID of the workflow we just started
+              RUN_ID=$(gh run list --workflow="$module.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+              RUN_IDS+=($RUN_ID)
+
+              echo "  Started run $RUN_ID for $module"
+            done
+
+            echo ""
+            echo "Waiting for layer $layer workflows to complete..."
+
+            # Wait for all workflows in this layer to complete
+            for RUN_ID in "${RUN_IDS[@]}"; do
+              echo "  Watching run $RUN_ID..."
+              gh run watch "$RUN_ID" --exit-status
+              if [ $? -ne 0 ]; then
+                echo "❌ Workflow run $RUN_ID failed!"
                 exit 1
               fi
             done
 
-            echo ""
             echo "✅ Layer $layer completed successfully"
           done
 
           echo ""
           echo "================================================"
-          echo "✅ All layers executed successfully!"
+          echo "✅ All layers completed successfully!"
           echo "================================================"
-
-      - name: Upload All Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-and-test-results
-          path: |
-            out/test-results/**
-            out/*/
 
   summary:
     name: Summary
-    needs: [detect-changes, calculate-order, execute-modules]
+    needs: [detect-changes, calculate-order, execute-workflows]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -184,3 +177,6 @@ jobs:
           echo '```json' >> $GITHUB_STEP_SUMMARY
           echo '${{ needs.calculate-order.outputs.execution-plan }}' | jq . >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Workflow Execution" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ needs.execute-workflows.result }}" >> $GITHUB_STEP_SUMMARY
