@@ -10,13 +10,8 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 ### L0-L1: Unit Tests (DevBox and Build Agents)
 
-![L0-L2 Environment](../../../assets/testing/env-l0-l2.drawio.png)
-
-**This diagram shows where L0-L2 tests execute:** All three levels run on developer workstations (DevBox) or CI agents (Build Agents). The diagram illustrates the execution flow through Stages 2 (Pre-commit), 3 (Merge Request), and 4 (Commit). Key constraint: all external dependencies are replaced with test doubles, keeping tests fast and deterministic.
-
 ![L0-L1 Legend](../../../assets/testing/legend-L0-L1.drawio.png)
 
-**Legend for L0-L1 unit tests:** Shows the symbol notation used in CD Model diagrams to indicate unit-level tests.
 
 **L0-L1 Execution:**
 
@@ -33,8 +28,6 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 ![L2 Legend](../../../assets/testing/legend-L2.drawio.png)
 
-**Legend for L2 emulated system tests:** Shows the symbol notation used to indicate emulated system tests running on agents with test doubles for all external dependencies.
-
 **L2 Execution:**
 
 - **Name**: Emulated System Tests
@@ -48,13 +41,7 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 ### L3: In-Situ Vertical Tests (PLTE)
 
-![L3 Environment](../../../assets/testing/env-l3.drawio.png)
-
-**This diagram shows L3 in-situ vertical testing in PLTE:** The deployed system is tested in-situ in a production-like cloud environment (PLTE) in Stages 5-6. Key distinction: tests validate the system's behavior in cloud infrastructure (networking, load balancing, deployment) with test doubles for ALL external services. NOT testing cross-service interactions.
-
 ![L3 Legend](../../../assets/testing/legend-L3.drawio.png)
-
-**Legend for L3 in-situ vertical tests:** Shows the symbol notation indicating in-situ vertical tests that validate a deployed system in PLTE.
 
 **L3 Execution:**
 
@@ -67,15 +54,14 @@ This article explains how test levels integrate with CD Model stages, the proces
 - **Determinism**: Moderate
 - **Domain Coherency**: High
 
+
+![L3 Environment](../../../assets/testing/env-l3.drawio.png)
+
+**This diagram shows L3 in-situ vertical testing in PLTE:** The deployed system is tested in-situ in a production-like cloud environment (PLTE) in Stages 5-6. Key distinction: tests validate the system's behavior in cloud infrastructure (networking, load balancing, deployment) with test doubles for ALL external services. NOT testing cross-service interactions.
+
 ### L4: Testing in Production
 
-![L4 Environment](../../../assets/testing/env-l4.drawio.png)
-
-**This diagram shows L4 testing in production:** Tests run in the live production environment (Stages 11-12) to validate real cross-service interactions. May use live test doubles for specific cases like test payment processors. Includes synthetic monitoring and exploratory testing.
-
 ![L4 Legend](../../../assets/testing/legend-L4.drawio.png)
-
-**Legend for L4 production tests:** Shows the symbol notation indicating testing in production that validates cross-service interactions.
 
 **L4 Execution:**
 
@@ -88,15 +74,13 @@ This article explains how test levels integrate with CD Model stages, the proces
 - **Determinism**: High
 - **Domain Coherency**: Highest
 
+![L4 Environment](../../../assets/testing/env-l4.drawio.png)
+
+**This diagram shows L4 testing in production:** Tests run in the live production environment (Stages 11-12) to validate real cross-service interactions. May use live test doubles for specific cases like test payment processors. Includes synthetic monitoring and exploratory testing.
+
 ### Out-of-Category: Horizontal End-to-End (Anti-Pattern)
 
-![Hybrid E2E Environment](../../../assets/testing/env-he2e.drawio.png)
-
-**This diagram shows the anti-pattern:** Horizontal end-to-end tests in pre-production environments where multiple teams' services are linked. This is highly fragile and non-deterministic. The taxonomy explicitly advocates shifting LEFT (L0-L3) and RIGHT (L4) to avoid this pattern.
-
 ![Hybrid E2E Legend](../../../assets/testing/legend-he2e.drawio.png)
-
-**Legend for out-of-category tests:** Shows notation for horizontal end-to-end tests that cross team boundaries - avoid this pattern.
 
 **Horizontal E2E Execution (Anti-Pattern):**
 
@@ -108,6 +92,10 @@ This article explains how test levels integrate with CD Model stages, the proces
 - **Determinism**: Lowest
 - **Domain Coherency**: High
 
+![Hybrid E2E Environment](../../../assets/testing/env-he2e.drawio.png)
+
+**This diagram shows the anti-pattern:** Horizontal end-to-end tests in pre-production environments where multiple teams' services are linked. This is highly fragile and non-deterministic. The taxonomy explicitly advocates shifting LEFT (L0-L3) and RIGHT (L4) to avoid this pattern.
+
 ---
 
 ## Process Isolation Explained
@@ -116,7 +104,7 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 ![L0/L1 Process Isolation](../../../assets/testing/process-isolation-l0l1.drawio.png)
 
-**This diagram illustrates in-process isolation:** The test orchestration **(A)** and system under test (SUT) **(B)** run in the same process. All external dependencies are replaced with in-process mocks or stubs. No network calls, no separate processes - everything executes as function calls within a single OS process.
+The test orchestration **(A)** and system under test (SUT) **(B)** run in the same process. All external dependencies are replaced with in-process mocks or stubs. No network calls, no separate processes - everything executes as function calls within a single OS process.
 
 **In-Process Execution:**
 
@@ -183,7 +171,7 @@ func TestUserService_CreateUser(t *testing.T) {
 
 ![L2 Process Isolation](../../../assets/testing/process-isolation-l2.drawio.png)
 
-**This diagram shows cross-process isolation with test doubles:** Tests run in an emulated environment on a single OS **(A)**. Test orchestration **(B)** is separate from the SUT **(C)**. Production artifacts **(D)** and **(E)** are deployed (some in test containers), but all external dependencies use mock artifacts **(F)** like test double services. Network calls occur, but only to test doubles, not real external services.
+Tests run in an emulated environment on a single OS **(A)**. Test orchestration **(B)** is separate from the SUT **(C)**. Production artifacts **(D)** and **(E)** are deployed (some in test containers), but all external dependencies use mock artifacts **(F)** like test double services. Network calls occur, but only to test doubles, not real external services.
 
 **Cross-Process Execution:**
 
@@ -255,7 +243,7 @@ func TestOrderService_CreateOrder(t *testing.T) {
 
 ![L3 Process Isolation](../../../assets/testing/process-isolation-l3.drawio.png)
 
-**This diagram shows in-situ vertical testing in PLTE:** The deployed system **(C)** is tested in production-like cloud infrastructure (no longer emulated). Test orchestration **(B)** runs on test agents **(A)**. Production artifacts **(D)** and **(E)** are deployed to their actual PaaS hosts. Critical: mock artifacts **(F)** and **(G)** replace ALL external services and dependencies. Tests validate the deployed system in cloud infrastructure, not cross-service interactions.
+The deployed system **(C)** is tested in production-like cloud infrastructure (no longer emulated). Test orchestration **(B)** runs on test agents **(A)**. Production artifacts **(D)** and **(E)** are deployed to their actual PaaS hosts. Critical: mock artifacts **(F)** and **(G)** replace ALL external services and dependencies. Tests validate the deployed system in cloud infrastructure, not cross-service interactions.
 
 **In-Situ Vertical Testing in PLTE:**
 
@@ -352,34 +340,6 @@ See **[Three-Layer Testing Approach](../../specifications/three-layer-approach.m
 Maximize testing at L0-L3 (left) and L4 (right) to avoid horizontal pre-production environments. This provides fast deterministic feedback (L0-L3) and real production validation (L4) without the fragility of pre-production integration environments.
 
 ---
-
-## Summary
-
-Test levels integrate with CD Model stages based on execution environment and scope:
-
-**Environment Mapping:**
-
-- **L0-L1: Unit Tests**: Devbox and agents (Stages 2-4) - Source and binary scope, all external dependencies as test doubles
-- **L2: Emulated System Tests**: Devbox and agents (Stages 3-4) - Deployable artifacts scope, all external dependencies as test doubles
-- **L3: In-Situ Vertical Tests**: PLTE (Stages 5-6) - Deployed system scope (vertical), test doubles for external services
-- **L4: Testing in Production**: Production (Stages 11-12) - Deployed system scope (horizontal), all production dependencies
-
-**Process Isolation:**
-
-- **L0-L1**: In-process, no network, function calls only
-- **L2**: Cross-process with test doubles, emulated environment
-- **L3**: Deployed to PLTE in-situ, test doubles for externals, vertical boundaries
-- **L4**: Production, real cross-service interactions, horizontal testing
-
-**Methodology Integration:**
-
-- **TDD (L0-L2)**: Drive design with test doubles
-- **BDD (L3)**: Validate vertical behavior in-situ in PLTE
-- **ATDD (L4)**: Validate horizontal behavior in production
-
-**Shift-Left and Shift-Right:**
-
-Maximize L0-L3 (LEFT - deterministic) and L4 (RIGHT - real production) to avoid fragile Horizontal E2E environments (non-shifted).
 
 ## Next Steps
 

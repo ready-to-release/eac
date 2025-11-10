@@ -26,7 +26,7 @@ Choosing the right pattern aligns repository organization with your system archi
 
 ![Monorepo Structure](../../../assets/repository/single.drawio.png)
 
-**This diagram shows monorepo organization:** A single repository root contains multiple deployable units organized by module type. The structure shows **services/** folder (api, web, worker services), **shared/** folder (models, utils libraries used across services), **infrastructure/** folder (IaC and deployment configs), and **docs/** folder (centralized documentation). All code shares a single version history, unified dependency management at root level, and common tooling configuration. Arrows indicate dependencies between modules, showing how shared libraries are consumed by services.
+**This diagram illustrates the single-repository (mono-repository) pattern:** The diagram shows a single repository containing more than one deployable unit. In this pattern, multiple deployable units share a single version history and repository boundary. Path filters (glob patterns) define the boundaries of each deployable unit within the repository, allowing independent versioning and deployment of each unit despite sharing the same repository. This is also called a **single-repository** to distinguish it from large-scale organizational mono-repositories. The pattern enables atomic cross-cutting changes while maintaining independent deployment pipelines per deployable unit.
 
 ### Characteristics
 
@@ -173,7 +173,7 @@ monorepo/
 
 ![Polyrepo Structure](../../../assets/repository/poly.drawio.png)
 
-**This diagram shows polyrepo organization:** Each deployable unit lives in its own independent repository with separate version control. The structure shows **organization/** containing separate repositories: **api-service/**, **web-service/**, **worker-service/**, **shared-models/**, **shared-utils/**, and **infrastructure/**. Each has independent version history, separate CI/CD pipelines, and isolated dependency management. Arrows between repositories indicate published dependencies - shared-models and shared-utils are versioned libraries consumed by services through package managers. Each service pins specific versions of shared libraries in its dependency manifest.
+**This diagram illustrates the poly-repository pattern:** The diagram shows the pattern where a repository boundary perfectly aligns with a single deployable unit boundary. In this pattern, one repository contains exactly one deployable unit - whether that's a versioned component (library, container, package) or a runtime system (service, application). The version of any commit is directly equal to the version of the deployable unit, making versioning simple and straightforward. This pattern is commonly used in GitHub open-source projects and enforces decoupling through versioned modules, where dependencies between units are managed through published versioned artifacts consumed via package managers rather than direct code references.
 
 ### Characteristics
 
@@ -320,11 +320,11 @@ organization/
 
 ---
 
-## Comparison
+## Repository Types
 
-![Repository Types Comparison](../../../assets/repository/types.drawio.png)
+![Repository Types](../../../assets/repository/types.drawio.png)
 
-**This diagram compares monorepo vs polyrepo characteristics:** Side-by-side comparison showing **Monorepo** (left) with single repository containing all services, unified versioning, shared tooling, and atomic cross-cutting changes vs **Polyrepo** (right) with independent repositories per service, separate versioning, independent pipelines, and team autonomy. Visual indicators show trade-offs: monorepo enables simpler dependency management and easier refactoring but has longer build times; polyrepo enables independent deployment and team autonomy but requires coordination for cross-repository changes. Arrows show the different dependency patterns - direct imports in monorepo vs versioned packages in polyrepo.
+**This diagram shows the repository type taxonomy:** The diagram categorizes repositories by the number of deployable units they contain. **Poly-repository** (left) contains exactly one deployable unit - the repository boundary perfectly aligns with the deployable unit boundary, making versioning simple (any commit = new version of the unit). **Mono-repository** (right) contains more than one deployable unit, with three subtypes: **Team mono-repository** (single-repository) where one team owns multiple deployable units, **Product mono-repository** (single-repository) where multiple teams collaborate on one product's deployable units, and **Organizational mono-repository** used by large organizations like Google/Facebook (not recommended for most teams). The diagram establishes the fundamental distinction: poly = one deployable unit, mono = multiple deployable units.
 
 ### Side-by-Side Analysis
 
@@ -386,18 +386,26 @@ flowchart LR
 
 ---
 
-## Anti-Patterns
+## Poor Repository Design (Anti-Pattern)
 
-![Repository Anti-Patterns](../../../assets/repository/bad.drawio.png)
+![Repository Anti-Pattern](../../../assets/repository/bad.drawio.png)
 
-**This diagram shows four common anti-patterns to avoid:** **1. Modular Monolith in Polyrepo** (top-left) shows tightly coupled services split into separate repositories, creating coordination nightmares with every change requiring multiple PRs. **2. Mega-Monorepo Without Tooling** (top-right) shows everything in one repo without selective build tools, forcing all tests to run for every change. **3. Scattered Shared Libraries** (bottom-left) shows duplicated shared code across multiple repos, causing inconsistency and difficult updates. **4. No Module Boundaries in Monorepo** (bottom-right) shows monorepo with spaghetti dependencies and no clear structure, making it impossible to understand or extract services. Red X marks indicate these are problematic patterns.
+**This diagram shows the anti-pattern of splitting repositories by technical boundary:** The diagram illustrates the problematic pattern of organizing repositories by technology type rather than by deployable unit boundaries. For example, creating separate repositories for **frontend/**, **backend/**, **scripts/**, **documentation/**, and **infrastructure/** - each representing a technical concern rather than a cohesive deployable unit. This creates dependency hell where there is no coherency or frontier of what one specific version consists of. Changes to a single feature require coordinating across multiple repositories (frontend repo, backend repo, scripts repo), with no clear version boundary for the complete system. This violates the principle that repositories should align with either poly-repository (one deployable unit) or single-repository (multiple deployable units owned together) patterns.
 
-### How to Avoid These Anti-Patterns
+### How to Avoid This Anti-Pattern
 
-1. **Modular Monolith in Polyrepo**: Use monorepo for tightly coupled services, or refactor to reduce coupling
-2. **Mega-Monorepo Without Tooling**: Implement change detection, selective builds, and distributed caching
-3. **Scattered Shared Libraries**: Extract to separate versioned repositories
-4. **No Module Boundaries**: Define clear boundaries, enforce dependency rules with tooling
+**✅ DO**:
+
+- Organize repositories around deployable unit boundaries, not technical boundaries
+- Use poly-repository pattern (one deployable unit per repository) OR single-repository pattern (multiple deployable units per repository owned by same team)
+- Keep all code for a deployable unit together (frontend, backend, scripts, docs, infrastructure) in the same repository
+- Version Everything-as-Code (EaC) artifacts together, grouped by deployable unit boundaries
+
+**❌ DO NOT**:
+
+- Create separate repositories for frontend, backend, scripts, documentation, or infrastructure unless each is a distinct deployable unit
+- Create loose gatherings of repositories with cross-repository dependencies
+- Split a single deployable unit across multiple repositories
 
 ---
 
@@ -436,39 +444,12 @@ flowchart LR
 
 ---
 
-## Summary
-
-Repository patterns significantly impact CD Model implementation:
-
-**Monorepo:**
-
-- Best for tightly coupled services and small teams
-- Simplifies atomic changes and dependency management
-- Requires tooling for selective builds
-- Unified CI/CD pipeline
-
-**Polyrepo:**
-
-- Best for loosely coupled services and large organizations
-- Enables team autonomy and independent deployment
-- Requires coordination for cross-repository changes
-- Multiple CI/CD pipelines
-
-Choose based on:
-
-- Service coupling and boundaries
-- Team structure and size
-- Access control requirements
-- Deployment cadence needs
-
-Both patterns can work with the CD Model - the key is aligning repository structure with your system architecture and organizational needs.
-
 ## Next Steps
 
 - [CD Model Overview](../cd-model/cd-model-overview.md) - Understand how repos integrate with stages
 - [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See repository impact on development
 - [Environments](environments.md) - Understand PLTE provisioning strategies
-- [Implementation Patterns](../cd-model/implementation-patterns.md) - Choose RA or CDE pattern
+- [Implementation Patterns](../cd-model/implementation-patterns.md) - Choose RA or CDe pattern
 - [Testing Strategy Integration](../testing/testing-strategy-integration.md) - Test coordination approaches
 
 ## References
