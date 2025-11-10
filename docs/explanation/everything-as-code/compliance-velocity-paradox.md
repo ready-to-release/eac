@@ -75,10 +75,21 @@ Organizations must now navigate an increasingly complex web of regulations:
 
 Consider a typical regulated software release:
 
-```text
-Development complete → Manual testing → Documentation →
-Quality review → Validation testing → Compliance review →
-Audit trail compilation → Approval signatures → Deployment
+```mermaid
+flowchart LR
+    A[Development] --> B[Manual testing] --> C[Documentation]
+    C --> D[Quality review] --> E[Validation testing]
+    E --> F[Compliance review] --> G[Audit trail]
+    G --> H[Approval] --> I[Deployment]
+    style A fill:#fef3c7
+    style B fill:#fef3c7
+    style C fill:#fef3c7
+    style D fill:#fef3c7
+    style E fill:#fef3c7
+    style F fill:#fef3c7
+    style G fill:#fef3c7
+    style H fill:#fef3c7
+    style I fill:#fef3c7
 ```
 
 **Timeline:** 6-12 weeks
@@ -214,10 +225,16 @@ Creating audit trails after the fact:
 
 Manual compliance creates a vicious cycle:
 
-```text
-Slow releases → Large batches → High risk →
-More validation needed → Slower releases →
-Larger batches → Higher risk...
+```mermaid
+flowchart LR
+    A[Slow releases] --> B[Large batches]
+    B --> C[High risk]
+    C --> D[More validation]
+    D --> A
+    style A fill:#fecaca
+    style B fill:#fecaca
+    style C fill:#fecaca
+    style D fill:#fecaca
 ```
 
 Each iteration makes the problem worse:

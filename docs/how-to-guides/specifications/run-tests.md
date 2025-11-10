@@ -272,10 +272,10 @@ ok      github.com/ready-to-release/eac/src/mcp    0.089s  coverage: 92.3% of st
 go test -race ./...
 ```
 
-### Run Tests by Feature ID
+### Run Tests by Feature Name
 
 ```bash
-# Find all tests for a feature by Feature ID
+# Find all tests for a feature by Feature name
 grep -r "Feature: cli_init-project" src/
 
 # Run the tests for that module

@@ -92,11 +92,8 @@ Create a simple feature file to verify everything works:
 ```bash
 mkdir -p specs/test
 cat > specs/test/behavior.feature << 'EOF'
-# Feature ID: test_verification
-# Module: Test
-
-@test
-Feature: Godog verification
+@test @critical
+Feature: test_verification
 
   @success
   Scenario: Verify Godog works

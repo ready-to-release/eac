@@ -399,9 +399,54 @@ Feature: Order Approval Process
 
 **Ongoing**:
 
-1. Reference Event Storming output in Example Mapping
-2. Update glossary as understanding evolves
-3. Schedule follow-up Event Storming sessions (quarterly or when major changes occur)
+Event Storming is not a one-time workshop. The domain evolves, and your understanding must evolve with it.
+
+#### When to Re-run Event Storming
+
+**Scheduled** (Quarterly):
+
+- Revisit domain model with full team
+- Validate current understanding
+- Identify evolution in business processes
+- Discover new domain concepts
+
+**Triggered** (As needed):
+
+- Major feature additions
+- Business process changes
+- New product lines
+- Team onboarding (Big Picture format)
+- Architecture decisions (Software Design format)
+
+#### Propagating Event Storming Insights
+
+When Event Storming reveals new understanding, update affected specifications:
+
+**1. Identify impacted features**:
+
+```bash
+# Find specifications related to discovered domain events
+grep -r "OrderPlaced\|OrderShipped" specs/
+```
+
+**2. Review existing scenarios**:
+
+- Do they reflect the current domain model?
+- Are there new events/commands to test?
+- Has the process flow changed?
+
+**3. Update specifications**:
+
+- Add scenarios for new domain events
+- Refine language to match Event Storming terminology
+- Update Rules to reflect evolved acceptance criteria
+- Remove scenarios for deprecated processes
+
+**4. Refactor implementation**:
+
+- Update step definitions
+- Refactor code to match new domain model
+- Run tests to verify changes
 
 ---
 

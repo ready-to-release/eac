@@ -101,11 +101,11 @@ TestValidateConfig_EmptyName // Another error case
 
 ---
 
-## Feature ID Linkage
+## Feature Name Linkage
 
 **Purpose**: Traceability between specifications and unit tests
 
-**Format**: `module_feature-name` (e.g., `cli_init-project`)
+**Format**: `[module-name_feature-name]` using kebab-case (e.g., `cli_init-project`, `src-commands_design-command`)
 
 **In unit tests**:
 
@@ -119,9 +119,11 @@ func TestInitProject(t *testing.T) {
 
 **Traceability**:
 
-- Specification: `specs/cli/init-project/specification.feature`
+- Specification: `specs/cli/init-project/specification.feature` (Feature: cli_init-project)
 - Unit test: `src/cli/init-project/init_test.go` with `// Feature: cli_init-project` comment
-- Step definitions: `src/cli/tests/steps_test.go`
+- Step definitions: `src/cli/tests/steps_test.go` with `// Feature: cli_init-project` comment
+
+**Note**: The Feature name provides traceability across all layers without requiring separate ID comments in the specification files.
 
 **Find all tests for a feature**:
 

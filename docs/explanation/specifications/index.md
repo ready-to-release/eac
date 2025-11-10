@@ -77,6 +77,20 @@ Collaborative workshop technique for discovering requirements and creating accep
 - Readiness assessment criteria
 - Best practices and common pitfalls
 
+### [Review and Iterate](review-and-iterate.md)
+
+Maintaining living specifications through continuous feedback and refinement.
+
+**Topics covered:**
+
+- When to review specifications
+- What to do after Example Mapping sessions
+- Continuous iteration practices (weekly, monthly, quarterly)
+- Feedback loops from implementation and production
+- Specification refactoring strategies
+- Review ceremonies and health metrics
+- Handling specification changes
+
 ### [Risk Controls](risk-controls.md)
 
 Understanding risk-based testing and how to define executable risk controls for compliance.

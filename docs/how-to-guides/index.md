@@ -22,19 +22,6 @@ Step-by-step guides for working with executable specifications.
 
 ---
 
-### [VSCode Extension](vscode-extension/index.md)
-
-Guides for working with the VSCode extension.
-
-**Guides available:**
-
-- Customize commit message agents
-- Debug the MCP server
-- Build and package the extension
-- Develop the extension
-
----
-
 ## What are How-to Guides?
 
 How-to guides are **problem-oriented** documentation that provides step-by-step instructions for accomplishing specific tasks. They assume some knowledge and focus on getting things done.

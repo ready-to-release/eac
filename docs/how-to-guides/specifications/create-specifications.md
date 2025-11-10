@@ -66,22 +66,44 @@ cd specs/cli/init-project
 
 **Naming Conventions**:
 
-- **Module names**: `cli`, `vscode`, `docs`, `mcp`, `src-commands`
-- **Directory names**: Use dashes (e.g., `init-project`, `ai-commit-generation`)
-- **Feature IDs**: Use underscores between module and feature, dashes within (e.g., `cli_init-project`)
+- **Module names**: Use kebab-case (e.g., `cli`, `vscode`, `src-commands`, `vscode-extension`)
+- **Directory names**: Use kebab-case matching feature names (e.g., `init-project`, `design-command`)
+- **Feature names**: Use kebab-case format `[module-name_feature-name]` (e.g., `cli_init-project`, `src-commands_design-command`)
 
 ---
 
 ## Step 2: Create specification.feature with Rules and Scenarios
 
+**Important**: The canonical template at `templates/specs/specification.feature` includes:
+
+- **Architectural notes** (lines 1-9) - Explains specs/ vs src/ separation
+- **Instructions** (lines 11-17) - Step-by-step guide inline with template
+- **Complete examples** - All tag types and scenarios
+
+**Copy the template file directly to get the full architectural context.** Documentation examples shown here omit the architectural notes and instructions to keep them concise.
+
+---
+
 ### Determine Feature ID
 
-**Format**: `<module>_<feature-name>`
+**Format**: `[module-name_feature-name]` (kebab-case)
+
+**Naming Convention**:
+- **Module**: Use kebab-case (e.g., `src-commands`, `vscode-extension`, `cli`)
+- **Feature**: Use kebab-case (e.g., `design-command`, `commit-workflow`, `init-project`)
+- **Separator**: Single underscore `_` between module and feature
 
 **Examples**:
 
-- `cli_init-project`
-- `src-commands_ai-commit-generation`
+- ✅ `src-commands_design-command` (kebab-case module and feature)
+- ✅ `vscode-extension_commit-workflow` (kebab-case module and feature)
+- ✅ `cli_init-project` (single-word module, kebab-case feature)
+- ✅ `mcp-server_github-integration` (kebab-case both)
+
+**Incorrect Examples** (avoid):
+- ❌ `src_commands_design_command` (no kebab-case)
+- ❌ `srcCommands_designCommand` (camelCase)
+- ❌ `SrcCommands_DesignCommand` (PascalCase)
 
 ### Create File
 
@@ -102,8 +124,8 @@ Use your Example Mapping cards:
 **Template**:
 
 ```gherkin
-@<module> @critical @<feature-name>
-Feature: <module>_<feature-name>
+@module @critical
+Feature: [module-name_feature-name]
 
   As a [role from Yellow Card]
   I want [capability from Yellow Card]
@@ -114,15 +136,22 @@ Feature: <module>_<feature-name>
 
   Rule: [Blue Card 1 - Acceptance Criterion]
 
+    @success @ac1 @IV
+    Scenario: [Green Card 1a - Installation verification]
+      Given [precondition]
+      When [setup action]
+      Then [installation verified]
+      And [configuration verified]
+
     @success @ac1
-    Scenario: [Green Card 1a - Happy path example]
+    Scenario: [Green Card 1b - Happy path example]
       Given [precondition]
       When [action]
       Then [observable outcome]
       And [verification]
 
     @error @ac1
-    Scenario: [Green Card 1b - Error case example]
+    Scenario: [Green Card 1c - Error case example]
       Given [error precondition]
       When [invalid action]
       Then [error behavior]
@@ -130,12 +159,61 @@ Feature: <module>_<feature-name>
 
   Rule: [Blue Card 2 - Acceptance Criterion]
 
-    @success @ac2
-    Scenario: [Green Card 2a - Example]
-      Given [precondition]
-      When [action]
-      Then [outcome]
+    @success @ac2 @PV
+    Scenario: [Green Card 2a - Performance verification]
+      Given [performance precondition]
+      When [action under load]
+      Then [outcome within SLA]
+      And [resource usage within limits]
+
+    @success @ac2 @risk1
+    Scenario: [Green Card 2b - Risk control example]
+      Given [security precondition]
+      When [authenticated action]
+      Then [access granted]
+      And [audit logged]
 ```
+
+**Naming Convention**:
+
+The feature name MUST follow kebab-case format: `[module-name_feature-name]`
+
+- **Module name**: kebab-case (e.g., `src-commands`, `vscode-extension`)
+- **Feature name**: kebab-case (e.g., `design-command`, `init-project`)
+- **Separator**: Single underscore `_`
+
+**Examples**:
+- `src-commands_design-command` ✅
+- `vscode-extension_commit-workflow` ✅
+- `cli_init-project` ✅
+
+**Tags**:
+
+- `@module` - Required, identifies owning module
+- `@critical` - Required, indicates critical functionality
+- `@<feature-name>` - Optional, add if feature has multiple specification files
+
+**Verification Tags**:
+
+- `@IV` - Installation Verification (deployment, setup, configuration tests)
+- `@OV` - Operational Verification (default if no @IV/@PV, standard functional tests)
+- `@PV` - Performance Verification (load tests, SLA compliance)
+
+**Risk Control Tags**:
+
+- `@risk<N>` - Links scenario to risk control requirement (see [Link Risk Controls](./link-risk-controls.md))
+
+**Template Source**:
+
+The canonical template with architectural notes and step-by-step instructions is at:
+- **File**: `templates/specs/specification.feature`
+- **Usage**: Copy this template when creating new specifications
+- **Note**: The template includes architectural notes (explaining specs/ vs src/ separation) and inline instructions. These are helpful in the template file but are NOT shown in documentation examples to keep them concise.
+
+**See also**:
+- [Verification Tags Reference](../../reference/specifications/verification-tags.md) - Complete IV/OV/PV guide
+- [Gherkin Format](../../reference/specifications/gherkin-format.md) - Syntax reference
+- [Link Risk Controls](./link-risk-controls.md) - Risk control tagging guide
 
 ---
 
@@ -144,7 +222,7 @@ Feature: <module>_<feature-name>
 **File**: `specs/cli/init-project/specification.feature`
 
 ```gherkin
-@cli @critical @init
+@cli @critical
 Feature: cli_init-project
 
   As a developer
@@ -178,6 +256,8 @@ Feature: cli_init-project
       And the file should contain valid YAML
       And the YAML should have key "project.name"
 ```
+
+**Note**: This example uses `cli_init-project` - a single-word module (`cli`) with kebab-case feature (`init-project`). For multi-word modules, use kebab-case for both parts (e.g., `src-commands_design-command`).
 
 ---
 

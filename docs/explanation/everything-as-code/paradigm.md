@@ -36,9 +36,15 @@ But "Everything as Code" extends much further:
 
 #### Traditional Approach: Multiple Disconnected Systems
 
-```text
-Requirements (Word) → Design (Visio) → Code (Git) →
-Tests (Excel) → Deployment (Wiki) → Evidence (SharePoint)
+```mermaid
+flowchart LR
+    A[Word] --> B[Visio] --> C[Git] --> D[Excel] --> E[Wiki] --> F[SharePoint]
+    style A fill:#fef3c7
+    style B fill:#fef3c7
+    style C fill:#fef3c7
+    style D fill:#fef3c7
+    style E fill:#fef3c7
+    style F fill:#fef3c7
 ```
 
 **Problems:**
@@ -51,8 +57,12 @@ Tests (Excel) → Deployment (Wiki) → Evidence (SharePoint)
 
 #### Everything as Code Approach: Single Source of Truth
 
-```text
-Everything in Git → Single immutable history → Complete traceability
+```mermaid
+flowchart LR
+    A[Everything in Git] --> B[Single immutable history] --> C[Complete traceability]
+    style A fill:#dcfce7
+    style B fill:#dcfce7
+    style C fill:#dcfce7
 ```
 
 **Benefits:**
@@ -103,8 +113,12 @@ For more on building shared language for specifications, see:
 
 #### Traditional Approach: Telephone Game
 
-```text
-Business writes requirements → Developers interpret → QA tests interpretation
+```mermaid
+flowchart LR
+    A[Business writes requirements] --> B[Developers interpret] --> C[QA tests interpretation]
+    style A fill:#fef3c7
+    style B fill:#fef3c7
+    style C fill:#fef3c7
 ```
 
 **Problems:**
@@ -117,8 +131,11 @@ Business writes requirements → Developers interpret → QA tests interpretatio
 
 #### Everything as Code Approach: Shared Language + Executable Specifications
 
-```text
-Everyone collaborates on specifications → Specifications execute as tests
+```mermaid
+flowchart LR
+    A[Everyone collaborates on specifications] --> B[Specifications execute as tests]
+    style A fill:#dcfce7
+    style B fill:#dcfce7
 ```
 
 **Benefits:**
@@ -143,11 +160,15 @@ Everyone collaborates on specifications → Specifications execute as tests
 
 #### Traditional Approach: Manual Gates
 
-```text
-Build when developer remembers
-Test when QA has time
-Deploy when change control approves
-Document when audit approaches
+```mermaid
+flowchart TD
+    A[Build when developer remembers] --> B[Test when QA has time]
+    B --> C[Deploy when change control approves]
+    C --> D[Document when audit approaches]
+    style A fill:#fef3c7
+    style B fill:#fef3c7
+    style C fill:#fef3c7
+    style D fill:#fef3c7
 ```
 
 **Problems:**
@@ -160,9 +181,15 @@ Document when audit approaches
 
 #### Everything as Code Approach: Automated Pipeline
 
-```text
-Commit → Build → Test → Validate → Deploy → Document
-(All automatic on every change)
+```mermaid
+flowchart LR
+    A[Commit] --> B[Build] --> C[Test] --> D[Validate] --> E[Deploy] --> F[Document]
+    style A fill:#dcfce7
+    style B fill:#dcfce7
+    style C fill:#dcfce7
+    style D fill:#dcfce7
+    style E fill:#dcfce7
+    style F fill:#dcfce7
 ```
 
 **Benefits:**

@@ -1,6 +1,3 @@
-# Feature ID: module_feature-name
-# Module: ModuleName
-#
 # ============================================================================
 # ARCHITECTURAL NOTE:
 # - This file: specs/<module>/<feature>/specification.feature
@@ -20,7 +17,7 @@
 # 6. Implement step definitions separately in src/<module>/tests/steps_test.go
 
 @module @critical
-Feature: [Feature Name]
+Feature: [module-name_feature-name]
 
   As a [role]
   I want [capability]

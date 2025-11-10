@@ -150,18 +150,32 @@ The challenge isn't that they CAN'T be automated it's that organizations haven't
 
 ### Traditional Approach: Treating Complicated as Chaotic
 
-```text
-Requirement exists → Expert interprets → Manual review →
-Human judgment → Approval → Documentation created after fact
+```mermaid
+flowchart LR
+    A[Requirement] --> B[Expert interprets] --> C[Manual review]
+    C --> D[Human judgment] --> E[Approval] --> F[Documentation]
+    style A fill:#fef3c7
+    style B fill:#fef3c7
+    style C fill:#fef3c7
+    style D fill:#fef3c7
+    style E fill:#fef3c7
+    style F fill:#fef3c7
 ```
 
 This treats each instance as novel, requiring fresh interpretation. It's expensive, slow, and inconsistent.
 
 ### Modern Approach: Recognizing Complicated as Automatable
 
-```text
-Requirement defined → Encoded as test → Automated validation →
-Evidence captured → Continuous compliance → Documentation generated
+```mermaid
+flowchart LR
+    A[Requirement defined] --> B[Encoded as test] --> C[Automated validation]
+    C --> D[Evidence captured] --> E[Continuous compliance] --> F[Documentation generated]
+    style A fill:#dcfce7
+    style B fill:#dcfce7
+    style C fill:#dcfce7
+    style D fill:#dcfce7
+    style E fill:#dcfce7
+    style F fill:#dcfce7
 ```
 
 This recognizes the rule is repeatable and codifies it once. It's fast, consistent, and scalable.
@@ -195,9 +209,12 @@ This recognizes the rule is repeatable and codifies it once. It's fast, consiste
 
 Cynefin shows us that domains aren't fixed. We can intentionally move practices between them:
 
-```text
-Chaotic → Complicated → Clear
-(crisis) → (analyze & establish rules) → (best practice)
+```mermaid
+flowchart LR
+    A[Chaotic<br/>crisis] --> B[Complicated<br/>analyze & establish rules] --> C[Clear<br/>best practice]
+    style A fill:#fecaca
+    style B fill:#fef3c7
+    style C fill:#dcfce7
 ```
 
 **For compliance:**

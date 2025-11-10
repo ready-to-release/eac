@@ -33,38 +33,6 @@ Quick reference for specification formats, commands, and syntax.
 
 ---
 
-### [VS Code Extension Reference](vscode-extension.md)
-
-Quick reference for commands, actions, servers, file locations, and packaging.
-
-**Topics covered:**
-
-- Available actions and MCP servers
-- Example workflows
-- Common commands (setup, development, debugging)
-- File locations
-- Packaging and distribution
-- JSON-RPC message examples
-- Extension configuration
-
----
-
-### [Commit Agent Pipeline Reference](commit-agent-pipeline.md)
-
-Technical specifications for the 5-agent commit message generation system.
-
-**Topics covered:**
-
-- Component specifications (VSCode, MCP server, agents)
-- Agent input/output formats
-- Progress notification stages
-- Validation rules
-- Error messages
-- Configuration options
-- Performance metrics
-
----
-
 ### [Decision Records](decision-records/index.md)
 
 Architectural decisions and their rationale.
