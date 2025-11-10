@@ -13,11 +13,6 @@ theme:
   features:
     - navigation.indexes
     - content.footnote.tooltips
-    - content.code.copy
-    - content.tabs.link
-    - content.tooltips
-    - content.code.annotate
-    - toc.integrate
 
 plugins:
   - techdocs-core
@@ -25,12 +20,6 @@ plugins:
 
 markdown_extensions:
   - footnotes
-  - attr_list
-  - admonition
-  - pymdownx.details
-  - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.highlight
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
