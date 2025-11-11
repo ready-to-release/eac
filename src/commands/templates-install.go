@@ -52,7 +52,10 @@ func TemplatesInstall() int {
 
 	// Resolve location path relative to original working directory if it's relative
 	if !filepath.IsAbs(*location) {
-		if originalPwd := os.Getenv("ORIGINAL_PWD"); originalPwd != "" {
+		originalPwd := os.Getenv("ORIGINAL_PWD")
+		fmt.Printf("DEBUG: ORIGINAL_PWD = '%s'\n", originalPwd)
+		fmt.Printf("DEBUG: location before = '%s'\n", *location)
+		if originalPwd != "" {
 			*location = filepath.Join(originalPwd, *location)
 		} else {
 			// Fallback to making it absolute relative to current dir
@@ -61,6 +64,7 @@ func TemplatesInstall() int {
 				*location = absLocation
 			}
 		}
+		fmt.Printf("DEBUG: location after = '%s'\n", *location)
 	}
 
 	// Resolve values file path relative to original working directory if it's relative
