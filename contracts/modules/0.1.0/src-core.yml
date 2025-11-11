@@ -1,9 +1,9 @@
 # Version: 0.1.0
 
-moniker: "src-internal"
-name: "Internal Shared Libraries"
+moniker: "src-core"
+name: "Core Domain Libraries"
 type: "go-library"
-description: "Consolidated workspace library containing contracts, repository operations, and report generation"
+description: "Core library containing contracts and repository operations"
 
 source:
   root: "src/internal"

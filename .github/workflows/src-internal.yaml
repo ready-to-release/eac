@@ -1,4 +1,4 @@
-name: "ci-src-internal (stage 1-6)"
+name: "ci-src-core (stage 1-6)"
 
 on:
   workflow_call:
@@ -28,18 +28,18 @@ jobs:
           go-version: '1.24'
           cache-dependency-path: |
             src/commands/go.sum
-            src/internal/go.sum
+            src/core/go.sum
 
       - name: Test Module
         working-directory: ./src/commands
-        run: go run . test module src-internal
+        run: go run . test module src-core
 
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-src-internal
-          path: out/test-results/**/src-internal/**
+          name: test-results-src-core
+          path: out/test-results/**/src-core/**
 
   build:
     name: Build
@@ -58,11 +58,11 @@ jobs:
 
       - name: Build Module
         working-directory: ./src/commands
-        run: go run . build module src-internal
+        run: go run . build module src-core
 
       - name: Upload Build Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-src-internal
-          path: out/src-internal/**
+          name: build-artifacts-src-core
+          path: out/src-core/**

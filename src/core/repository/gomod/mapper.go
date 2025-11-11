@@ -91,7 +91,7 @@ func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 }
 
 // MapInternalDependenciesToMonikers converts a list of internal module paths to monikers
-// Example: ["github.com/ready-to-release/eac/src/core"] -> ["src-internal"]
+// Example: ["github.com/ready-to-release/eac/src/core"] -> ["src-core"]
 func (m *Mapper) MapInternalDependenciesToMonikers(modulePaths []string) ([]string, []error) {
 	var monikers []string
 	var errors []error

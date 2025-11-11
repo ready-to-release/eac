@@ -217,6 +217,7 @@ run commit-ai
 ```
 
 Output includes:
+
 1. **Summary Table** - All staged files with line counts and module mappings
 2. **Changes by Module** - Grouped view showing which modules are affected
 3. **Unmapped Files** - Files not belonging to any module contract
@@ -232,15 +233,18 @@ All commands output formatted markdown tables for human readability and machine 
 All commands use the `render` package to output clean markdown tables:
 
 **File commands:**
+
 - `show files` - Table with File, Modules columns
 - `show files staged` - Table with File, Modules columns
 - `show files changed` - Table with File, Modules columns
 
 **Module commands:**
+
 - `show modules` - Table with Moniker, Type, Root Path columns
 - `show moduletypes` - Table with Module Type, Count columns (includes footer with total)
 
 **Special commands:**
+
 - `commit-ai` - Multiple tables (summary, by-module breakdown, unmapped files)
 
 ### Piping and Parsing
