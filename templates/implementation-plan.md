@@ -1,4 +1,4 @@
-# Implementation Plan {{project_name}}
+# Implementation Plan {{ .ProjectName }}
 
 !!! tip
 
