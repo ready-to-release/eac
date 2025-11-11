@@ -8,8 +8,8 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/render"
-	"github.com/ready-to-release/eac/src/internal/contracts/reports"
-	"github.com/ready-to-release/eac/src/internal/repository"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {

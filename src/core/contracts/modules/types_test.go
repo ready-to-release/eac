@@ -3,7 +3,7 @@ package modules
 import (
 	"testing"
 
-	"github.com/ready-to-release/eac/src/internal/contracts"
+	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
 func TestNewModuleContract(t *testing.T) {

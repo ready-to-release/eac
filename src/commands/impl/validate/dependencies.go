@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
-	"github.com/ready-to-release/eac/src/internal/contracts/modules"
-	"github.com/ready-to-release/eac/src/internal/repository"
-	"github.com/ready-to-release/eac/src/internal/repository/gomod"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/repository"
+	"github.com/ready-to-release/eac/src/core/repository/gomod"
 )
 
 func init() {

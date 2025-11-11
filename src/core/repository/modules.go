@@ -3,7 +3,7 @@ package repository
 import (
 	"strings"
 
-	"github.com/ready-to-release/eac/src/internal/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
 // EnrichFilesWithModules takes a list of files and determines which module(s) own each file.

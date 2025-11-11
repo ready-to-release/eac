@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/internal/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
 // Mapper handles mapping between go.mod module paths and module contract monikers
@@ -91,7 +91,7 @@ func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 }
 
 // MapInternalDependenciesToMonikers converts a list of internal module paths to monikers
-// Example: ["github.com/ready-to-release/eac/src/internal"] -> ["src-internal"]
+// Example: ["github.com/ready-to-release/eac/src/core"] -> ["src-internal"]
 func (m *Mapper) MapInternalDependenciesToMonikers(modulePaths []string) ([]string, []error) {
 	var monikers []string
 	var errors []error

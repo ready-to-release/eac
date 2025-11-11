@@ -1,7 +1,7 @@
 package reports
 
 import (
-	"github.com/ready-to-release/eac/src/internal/repository"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // FilesModulesReport contains statistics about file-module relationships

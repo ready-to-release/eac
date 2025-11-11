@@ -3,7 +3,7 @@ package gomod
 import (
 	"fmt"
 
-	"github.com/ready-to-release/eac/src/internal/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
 // GraphBuilder builds dependency graphs from go.mod files

@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ready-to-release/eac/src/internal/repository"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func TestContractImplementation(t *testing.T) {

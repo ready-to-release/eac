@@ -14,10 +14,10 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/impl/build"
 	"github.com/ready-to-release/eac/src/commands/registry"
-	"github.com/ready-to-release/eac/src/internal/contracts/modules"
-	"github.com/ready-to-release/eac/src/internal/contracts/reports"
-	"github.com/ready-to-release/eac/src/internal/repository"
-	"github.com/ready-to-release/eac/src/internal/reports/cucumber"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/repository"
+	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
 )
 
 func init() {
@@ -49,19 +49,40 @@ func TestModule() int {
 
 	moniker := os.Args[3]
 
-	// Parse report format flag (default: cucumber)
+	// Parse flags (default: cucumber format, generate summary enabled)
 	reportFormat := "cucumber"
+	generateSummaryEnabled := true
+	generateOnly := false
+
 	for i := 4; i < len(os.Args); i++ {
 		arg := os.Args[i]
 		if arg == "--as-cucumber" {
 			reportFormat = "cucumber"
 		} else if arg == "--as-junit" {
 			reportFormat = "junit"
+		} else if arg == "--no-generate" {
+			generateSummaryEnabled = false
+		} else if arg == "--generate-only" {
+			generateOnly = true
 		} else if strings.HasPrefix(arg, "--as-") {
 			fmt.Fprintf(os.Stderr, "Error: unknown format flag: %s\n", arg)
 			fmt.Fprintf(os.Stderr, "Valid formats: --as-cucumber (default), --as-junit\n")
 			return 1
+		} else if strings.HasPrefix(arg, "--") {
+			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+			fmt.Fprintf(os.Stderr, "Valid flags: --as-cucumber, --as-junit, --no-generate, --generate-only\n")
+			return 1
 		}
+	}
+
+	// Handle --generate-only flag (skip tests, just generate summary)
+	if generateOnly {
+		fmt.Printf("📊 Generating summary for module: %s (skipping tests)\n", moniker)
+		if err := generateSummary(moniker); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
+		}
+		return 0
 	}
 
 	// Get repository root
@@ -150,6 +171,15 @@ func TestModule() int {
 		fmt.Printf("❌ Module %s failed with exit code %d\n", moniker, exitCode)
 	}
 	fmt.Printf("Results directory: %s\n", outputDir)
+
+	// Generate summary if enabled and using cucumber format
+	if generateSummaryEnabled && reportFormat == "cucumber" && exitCode == 0 {
+		fmt.Println("\n📊 Generating test summary...")
+		if err := generateSummaryForOutputDir(outputDir); err != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to generate summary: %v\n", err)
+			// Don't fail the test run, just warn
+		}
+	}
 
 	return exitCode
 }

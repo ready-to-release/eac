@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/src/internal/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
 // ModuleInfo contains information about a module with architecture documentation

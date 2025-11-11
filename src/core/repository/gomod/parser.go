@@ -147,7 +147,7 @@ func extractRequires(file *os.File) ([]Require, error) {
 }
 
 // extractReplaces extracts replace directives from go.mod
-// Example: "replace github.com/ready-to-release/eac/src/internal => ../internal"
+// Example: "replace github.com/ready-to-release/eac/src/core => ../internal"
 func extractReplaces(file *os.File) ([]Replace, error) {
 	scanner := bufio.NewScanner(file)
 	var replaces []Replace

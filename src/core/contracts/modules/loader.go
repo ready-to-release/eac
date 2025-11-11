@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/internal/contracts"
+	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
 // LoadFromWorkspace loads all module contracts for a specific version from the workspace

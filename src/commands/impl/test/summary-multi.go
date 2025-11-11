@@ -1,39 +1,21 @@
-// Command: generate summary multi
-// Description: Generate test summary markdown from multiple module test results
-// Usage: generate summary multi <test-run-id>
-package generate
+// Internal helper: Generate test summary markdown from multiple module test results
+package test
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/src/commands/impl/generate/internal"
-	"github.com/ready-to-release/eac/src/commands/registry"
-	"github.com/ready-to-release/eac/src/internal/repository"
-	"github.com/ready-to-release/eac/src/internal/reports/cucumber"
+	"github.com/ready-to-release/eac/src/core/repository"
+	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
 )
 
-func init() {
-	registry.Register("generate summary multi", GenerateSummaryMulti)
-}
-
-// GenerateSummaryMulti generates a multi-module summary.md from test-run-id directory
-func GenerateSummaryMulti() int {
-	// Parse arguments
-	if len(os.Args) < 5 {
-		fmt.Fprintf(os.Stderr, "Error: missing test-run-id\n")
-		fmt.Fprintf(os.Stderr, "Usage: generate summary multi <test-run-id>\n")
-		return 1
-	}
-
-	testRunID := os.Args[4]
-
+// generateSummaryMulti generates a multi-module summary.md from test-run-id directory
+func generateSummaryMulti(testRunID string) error {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
-		return 1
+		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
 	// Construct paths
@@ -42,20 +24,17 @@ func GenerateSummaryMulti() int {
 
 	// Check if test-run-id directory exists
 	if _, err := os.Stat(testRunDir); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: test run directory not found: %s\n", testRunDir)
-		return 1
+		return fmt.Errorf("test run directory not found: %s", testRunDir)
 	}
 
 	// Find all module directories (subdirectories with cucumber.json)
-	modules, err := generate.FindModulesWithResults(testRunDir)
+	modules, err := FindModulesWithResults(testRunDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find module results: %v\n", err)
-		return 1
+		return fmt.Errorf("failed to find module results: %w", err)
 	}
 
 	if len(modules) == 0 {
-		fmt.Fprintf(os.Stderr, "Error: no module results found in %s\n", testRunDir)
-		return 1
+		return fmt.Errorf("no module results found in %s", testRunDir)
 	}
 
 	fmt.Printf("Found %d module(s) with test results\n", len(modules))
@@ -110,10 +89,9 @@ func GenerateSummaryMulti() int {
 
 	// Write summary.md
 	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to write summary.md: %v\n", err)
-		return 1
+		return fmt.Errorf("failed to write summary.md: %w", err)
 	}
 
 	fmt.Printf("✅ Generated: %s\n", summaryPath)
-	return 0
+	return nil
 }

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/internal/repository"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // PipelineRunner orchestrates execution of module pipelines

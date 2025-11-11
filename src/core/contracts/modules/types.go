@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/gobwas/glob"
-	"github.com/ready-to-release/eac/src/internal/contracts"
+	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
 // ModuleContract represents a module deployable unit contract

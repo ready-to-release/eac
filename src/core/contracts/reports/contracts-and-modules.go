@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/internal/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
 // ModuleContractReport contains information about loaded module contracts

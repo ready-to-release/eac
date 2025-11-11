@@ -1,4 +1,4 @@
-module github.com/ready-to-release/eac/src/internal
+module github.com/ready-to-release/eac/src/core
 
 go 1.24.4
 

@@ -20,7 +20,7 @@ func DesignServe() int {
 	args := os.Args[3:] // Skip "go", "run", ".", and "design" and "serve"
 
 	var module string
-	var noAutoOpenLink bool
+	var noBrowser bool
 	var port int = 8081
 	var stop bool
 
@@ -29,8 +29,8 @@ func DesignServe() int {
 		arg := args[i]
 
 		switch arg {
-		case "--no-auto-open-link":
-			noAutoOpenLink = true
+		case "--no-browser":
+			noBrowser = true
 		case "--stop":
 			stop = true
 		case "--port", "-p":
@@ -97,7 +97,7 @@ func DesignServe() int {
 		fmt.Printf("ℹ️  Structurizr is already running for module: %s\n", module)
 		fmt.Printf("📊 Architecture documentation: %s\n", info.URL)
 
-		if !noAutoOpenLink {
+		if !noBrowser {
 			err = client.OpenBrowser(info.URL)
 			if err != nil {
 				fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)
@@ -151,7 +151,7 @@ func DesignServe() int {
 	}
 
 	// Open browser
-	if !noAutoOpenLink {
+	if !noBrowser {
 		err = client.OpenBrowser(info.URL)
 		if err != nil {
 			fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)

@@ -19,7 +19,7 @@ func init() {
 func DocsServe() int {
 	args := os.Args[3:] // Skip "go", "run", ".", "docs", and "serve"
 
-	var noAutoOpenLink bool
+	var noBrowser bool
 	var port int = 8000
 	var stop bool
 	var debug bool
@@ -29,8 +29,8 @@ func DocsServe() int {
 		arg := args[i]
 
 		switch arg {
-		case "--no-auto-open-link":
-			noAutoOpenLink = true
+		case "--no-browser":
+			noBrowser = true
 		case "--stop":
 			stop = true
 		case "--debug":
@@ -78,7 +78,7 @@ func DocsServe() int {
 		fmt.Printf("ℹ️  MkDocs is already running\n")
 		fmt.Printf("📚 Documentation: %s\n", info.URL)
 
-		if !noAutoOpenLink {
+		if !noBrowser {
 			err = client.OpenBrowser(info.URL)
 			if err != nil {
 				fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)
@@ -107,7 +107,7 @@ func DocsServe() int {
 	fmt.Printf("📚 Documentation: %s\n", info.URL)
 
 	// Open browser
-	if !noAutoOpenLink {
+	if !noBrowser {
 		err = client.OpenBrowser(info.URL)
 		if err != nil {
 			fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)

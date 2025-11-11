@@ -11,7 +11,7 @@ type GoModInfo struct {
 
 // Require represents a require statement in go.mod
 type Require struct {
-	Path     string // Module path (e.g., "github.com/ready-to-release/eac/src/internal")
+	Path     string // Module path (e.g., "github.com/ready-to-release/eac/src/core")
 	Version  string // Version string (e.g., "v0.0.0")
 	Indirect bool   // True if marked with // indirect
 }
