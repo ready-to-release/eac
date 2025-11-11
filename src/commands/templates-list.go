@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/ready-to-release/eac/src/commands/templates"
 )
@@ -46,7 +47,8 @@ func TemplatesList() int {
 			fmt.Fprintf(os.Stderr, "Failed to clone repository: %v\n", err)
 			return 1
 		}
-		templateDir = clonedDir
+		// Point to the templates subdirectory within the cloned repository
+		templateDir = filepath.Join(clonedDir, "templates")
 		cleanup = func() {
 			if err := cloner.Cleanup(); err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: failed to cleanup temp directory: %v\n", err)

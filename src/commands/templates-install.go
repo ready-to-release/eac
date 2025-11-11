@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/ready-to-release/eac/src/commands/templates"
 )
@@ -69,12 +70,15 @@ func TemplatesInstall() int {
 	// Clone repository to temp directory
 	fmt.Printf("Cloning templates from %s...\n", *repoURL)
 	cloner := templates.NewGitCloner(*repoURL)
-	templateDir, err := cloner.CloneToTemp()
+	clonedDir, err := cloner.CloneToTemp()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to clone repository: %v\n", err)
 		return 1
 	}
 	defer cloner.Cleanup() // Clean up temp directory when done
+
+	// Point to the templates subdirectory within the cloned repository
+	templateDir := filepath.Join(clonedDir, "templates")
 
 	fmt.Printf("✓ Templates cloned successfully\n")
 
