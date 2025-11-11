@@ -74,7 +74,7 @@ Explains what it means to treat everything as code and the three fundamental cha
 
 - **[Continuous Delivery](../continuous-delivery/index.md)** - Everything as Code enables the automated validation required for continuous delivery in regulated environments
 
-- **[Trunk-Based Development](../continuous-delivery/trunk-based-development.md)** - Version control as single source of truth is fundamental to Everything as Code
+- **[Trunk-Based Development](../continuous-delivery/workflow/trunk-based-development.md)** - Version control as single source of truth is fundamental to Everything as Code
 
 - **[Ubiquitous Language](../specifications/ubiquitous-language.md)** - How Domain-Driven Design creates shared vocabulary that enables executable specifications
 

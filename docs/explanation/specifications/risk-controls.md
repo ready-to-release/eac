@@ -254,4 +254,3 @@ jobs:
 - [Review and Iterate](review-and-iterate.md) - General specification maintenance
 - [ATDD and BDD with Gherkin](atdd-bdd-with-gherkin.md) - Writing control scenarios
 - [Three-Layer Approach](three-layer-approach.md) - Integrating controls into workflow
-- [Link Risk Controls (How-To)](../../how-to-guides/specifications/link-risk-controls.md) - Step-by-step implementation

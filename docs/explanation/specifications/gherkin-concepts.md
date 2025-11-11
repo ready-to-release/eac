@@ -472,8 +472,6 @@ cp templates/specs/specification.feature specs/cli/new-feature/specification.fea
 
 Convert Blue Cards → Rules, Green Cards → Scenarios
 
-**See**: [Create Feature Spec](../../how-to-guides/specifications/create-specifications.md) for complete step-by-step guide
-
 ---
 
 ## Best Practices Summary
@@ -530,5 +528,3 @@ Convert Blue Cards → Rules, Green Cards → Scenarios
 - [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md) - Understanding ATDD/BDD
 - [Three-Layer Approach](./three-layer-approach.md) - ATDD/BDD/TDD integration
 - [Example Mapping](./example-mapping.md) - Discovery workshops
-- [Create Feature Spec](../../how-to-guides/specifications/create-specifications.md) - Step-by-step guide
-- [Link Risk Controls](../../how-to-guides/specifications/link-risk-controls.md) - Compliance linkage

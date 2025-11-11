@@ -21,4 +21,4 @@ Independently built, versioned, and deployed artifacts. Each has a detailed cont
 
 ## References
 
-- [Trunk-Based Development](../../explanation/continuous-delivery/trunk-based-development.md)
+- [Trunk-Based Development](../explanation/continuous-delivery/workflow/trunk-based-development.md)

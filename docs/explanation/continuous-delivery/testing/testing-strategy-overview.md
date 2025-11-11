@@ -719,4 +719,4 @@ The CD Model uses a taxonomy based on execution environment and scope:
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Stages 1-6](../cd-model/cd-model-stages-1-6.md)
-- [Three-Layer Testing](../specifications/three-layer-approach.md)
+- [Three-Layer Testing](../../specifications/three-layer-approach.md)

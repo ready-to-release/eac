@@ -468,6 +468,5 @@ flowchart TD
 - [Ubiquitous Language](./ubiquitous-language.md) - DDD and shared vocabulary foundation
 - [Event Storming](./event-storming.md) - Domain discovery workshops
 - [Example Mapping](./example-mapping.md) - Requirements discovery workshops
-- [Gherkin Format Reference](../../reference/specifications/gherkin-format.md) - Detailed syntax guide
-- [Create Feature Spec](../../how-to-guides/specifications/create-specifications.md) - Step-by-step guide
+- [Gherkin File Organization](./gherkin-concepts.md) - How to structure and organize specifications
 - [Review and Iterate](review-and-iterate.md) - Detailed evolution practices

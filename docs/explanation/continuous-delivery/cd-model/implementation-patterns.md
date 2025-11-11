@@ -418,4 +418,4 @@ Choose based on regulatory requirements, risk profile, and organizational maturi
 
 - [CD Model Overview](cd-model-overview.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
-- [Repository Layout](../../reference/continuous-delivery/repository-layout.md)
+- [Repository Layout](../../../reference/repository-layout.md)

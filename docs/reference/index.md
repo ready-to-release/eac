@@ -6,29 +6,6 @@
 
 ## Available Reference Documentation
 
-### [Continuous Delivery](continuous-delivery/index.md)
-
-Repository conventions, versioning, and commit message format.
-
-**Topics covered:**
-
-- Module structure and deployable units
-
----
-
-### [Specifications](specifications/index.md)
-
-Quick reference for specification formats, commands, and syntax.
-
-**Topics covered:**
-
-- Gherkin format (specification.feature with Feature → Rule → Scenario structure)
-- TDD format (unit test structure and Go test conventions)
-- Godog commands (running specifications)
-- Verification tags (IV/OV/PV classification)
-
----
-
 ### [Decision Records](decision-records/index.md)
 
 Architectural decisions and their rationale.

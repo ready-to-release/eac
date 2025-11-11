@@ -1,4 +1,4 @@
-# CLI Documentation
+# Documentation
 
 Welcome to the CLI documentation.
 

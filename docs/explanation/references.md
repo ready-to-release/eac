@@ -32,10 +32,10 @@
 
 <img src="../../assets/references/dora-state-of-devops-generic.png" width="150">
 
-- [State of AI-assisted Software Development 2025](../assets/lfs/pdf/2025_state_of_ai_assisted_software_development.pdf)
+- [State of AI-assisted Software Development 2025](../../assets/lfs/pdf/2025_state_of_ai_assisted_software_development.pdf)
 
 ### Trunk based correlated practices
 
 <img src="../../assets/references/correlated-practices.png" width="150">
 
-- [Trunk Correlated Practices](assets/lfs/pdf/Trunk_Correlated_Practices_v2.8.pdf)
+- [Trunk Correlated Practices](../../assets/lfs/pdf/Trunk_Correlated_Practices_v2.8.pdf)

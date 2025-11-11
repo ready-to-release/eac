@@ -290,8 +290,6 @@ Related to #123
 
 **Types:** feat, fix, docs, refactor, test, chore
 
-See [Semantic Commits](../../reference/continuous-delivery/semantic-commits.md) for detailed format.
-
 **Why Squash Merge:**
 
 - Clean, linear history
@@ -580,9 +578,7 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 ## References
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
-- [Semantic Commits](../../reference/continuous-delivery/semantic-commits.md)
-- [Repository Layout](../../reference/continuous-delivery/repository-layout.md)
-- [Versioning](../../reference/continuous-delivery/versioning.md)
+- [Repository Layout](../../../reference/repository-layout.md)
 - [Trunk-Based Development (trunkbaseddevelopment.com)](https://trunkbaseddevelopment.com/)
 - [Feature Branches Considered Evil (YouTube)](https://www.youtube.com/watch?v=h7LeD7VevyI)
 - [Why CI is Better Than Feature Branching (YouTube)](https://www.youtube.com/watch?v=lXQEi1O5IOI)

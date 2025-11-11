@@ -401,5 +401,4 @@ Rule: Valid credentials grant access within rate limits
 - [Review and Iterate](review-and-iterate.md) - Continuous improvement
 - [Event Storming](event-storming.md) - Domain discovery workshops
 - [Example Mapping](example-mapping.md) - Requirements discovery
-- [Create Specifications](../../how-to-guides/specifications/create-specifications.md) - Step-by-step
 - [Risk Controls](risk-controls.md) - Integrating compliance requirements

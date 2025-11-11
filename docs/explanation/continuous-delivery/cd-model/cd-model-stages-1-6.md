@@ -47,7 +47,7 @@ Stage 1 embraces collaborative requirement definition through the "Three Amigos"
 - **Development Team**: Contributes technical feasibility and implementation details
 - **Product Owners**: Provide clarity on business goals and expected outcomes
 
-This collaboration produces clear, concise, and actionable specifications that serve as the single source of truth. Requirements are expressed as [executable specifications (Gherkin scenarios, acceptance criteria)](../specifications/index.md) rather than static documents.
+This collaboration produces clear, concise, and actionable specifications that serve as the single source of truth. Requirements are expressed as [executable specifications (Gherkin scenarios, acceptance criteria)](../../specifications/index.md) rather than static documents.
 
 ### Best Practices
 
@@ -526,4 +526,4 @@ Each stage builds confidence incrementally, with quality gates preventing defect
 - [CD Model Overview](cd-model-overview.md)
 - [Environments Architecture](../architecture/environments.md)
 - [Security](../security/security.md)
-- [Repository Layout](../../reference/continuous-delivery/repository-layout.md)
+- [Repository Layout](../../../reference/repository-layout.md)
