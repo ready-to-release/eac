@@ -23,9 +23,9 @@ You MUST output commit messages following `contracts/commit-message/0.1.0/struct
 <Detailed changes wrapped at 72 chars>
 
 //OPTIONAL SOURCE CODE CHANGE
-\```<language>
+```<language>
 <Code extract showing WHAT changed>
-\```
+```
 
 ---
 
