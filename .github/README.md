@@ -4,7 +4,8 @@
 
 [![Release Status](https://github.com/ready-to-release/eac/actions/workflows/trigger.yml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/trigger.yml)
 [![GitHub Stars](https://img.shields.io/github/stars/ready-to-release/eac?style=social)](https://github.com/ready-to-release/eac/stargazers)
-[![License](https://img.shields.io/github/license/ready-to-release/eac)](https://github.com/ready-to-release/eac/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ready-to-release/eac/blob/main/LICENSE)
+[![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC_BY--SA_4.0-lightgrey.svg)](https://github.com/ready-to-release/eac/blob/main/docs/LICENSE)
 [![Docs](https://img.shields.io/badge/docs-GitHub_Pages-blue)](https://ready-to-release.github.io/eac/)
 [![Latest Release](https://img.shields.io/github/v/release/ready-to-release/eac?include_prereleases)](https://github.com/ready-to-release/eac/releases)
 
