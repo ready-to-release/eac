@@ -1,6 +1,7 @@
 // Command: test modules
 // Description: Test multiple modules in sequence and collect results in a test run directory
-// Usage: test modules <moniker1> <moniker2> ... [--as-cucumber|--as-junit]
+// Usage: test modules [moniker1] [moniker2] ... [--as-cucumber|--as-junit]
+// Default: Tests all modules if no monikers specified
 package test
 
 import (
@@ -11,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
@@ -22,21 +23,15 @@ func init() {
 	registry.Register("test modules", TestModules)
 }
 
-// TestModules tests multiple modules in sequence
+// TestModules tests multiple modules in sequence (defaults to all modules)
 func TestModules() int {
-	// Parse arguments and flags
-	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Error: missing module monikers\n")
-		fmt.Fprintf(os.Stderr, "Usage: test modules <moniker1> <moniker2> ... [--as-cucumber|--as-junit]\n")
-		return 1
-	}
-
 	// Parse module monikers and flags (default: cucumber format, generate summary enabled)
 	var monikers []string
 	reportFormat := "cucumber"
 	generateSummaryEnabled := true
 	generateOnly := false
 
+	// Parse arguments starting from index 3 (skip "binary", "test", "modules")
 	for i := 3; i < len(os.Args); i++ {
 		arg := os.Args[i]
 		if arg == "--as-cucumber" {
@@ -58,11 +53,6 @@ func TestModules() int {
 		} else {
 			monikers = append(monikers, arg)
 		}
-	}
-
-	if len(monikers) == 0 {
-		fmt.Fprintf(os.Stderr, "Error: no module monikers provided\n")
-		return 1
 	}
 
 	// Get repository root
@@ -88,6 +78,21 @@ func TestModules() int {
 		return 0
 	}
 
+	// Load module contracts
+	moduleReport, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
+		return 1
+	}
+
+	// If no monikers provided, default to all modules
+	if len(monikers) == 0 {
+		fmt.Println("ℹ️  No modules specified, testing all modules...")
+		for _, module := range moduleReport.Registry.All() {
+			monikers = append(monikers, module.Moniker)
+		}
+	}
+
 	// Create test-run-id directory
 	testRunID := time.Now().Format("2006-01-02-150405")
 	testRunDir := filepath.Join(workspaceRoot, "out", "test-results", testRunID)
@@ -100,13 +105,6 @@ func TestModules() int {
 	fmt.Printf("Test Run Directory: %s\n", testRunDir)
 	fmt.Printf("Testing %d modules: %v\n\n", len(monikers), monikers)
 
-	// Load module contracts
-	report, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
-		return 1
-	}
-
 	// Test each module in sequence
 	failedModules := []string{}
 	testedModules := []*modules.ModuleContract{}
@@ -114,7 +112,7 @@ func TestModules() int {
 		fmt.Printf("=== [%d/%d] Testing module: %s ===\n", i+1, len(monikers), moniker)
 
 		// Get module from registry
-		module, exists := report.Registry.Get(moniker)
+		module, exists := moduleReport.Registry.Get(moniker)
 		if !exists {
 			fmt.Fprintf(os.Stderr, "Error: module not found: %s\n", moniker)
 			failedModules = append(failedModules, moniker+" (not found)")

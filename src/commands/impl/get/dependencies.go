@@ -10,7 +10,7 @@
 package get
 
 import (
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"fmt"
 	"os"
 	"strings"

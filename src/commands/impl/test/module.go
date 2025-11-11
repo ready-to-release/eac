@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/src/commands/impl/build"
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"

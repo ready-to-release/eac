@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/ready-to-release/eac/src/commands/impl/design/internal"
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 )
 
 func init() {

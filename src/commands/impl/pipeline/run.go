@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	pipelinerunner "github.com/ready-to-release/eac/src/commands/impl/pipeline/internal"
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 

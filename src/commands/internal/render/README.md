@@ -12,7 +12,7 @@ The `render` package provides utilities for rendering data structures as markdow
 ## Installation
 
 ```go
-import "github.com/ready-to-release/eac/src/commands/render"
+import "github.com/ready-to-release/eac/src/commands/internal/render"
 ```
 
 ## Usage

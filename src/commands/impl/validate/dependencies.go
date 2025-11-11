@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/core/repository/gomod"

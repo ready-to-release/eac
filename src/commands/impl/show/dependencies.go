@@ -3,12 +3,12 @@
 package show
 
 import (
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/render"
+	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 

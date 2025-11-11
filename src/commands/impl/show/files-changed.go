@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/registry"
-	"github.com/ready-to-release/eac/src/commands/render"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/core/repository/reports"
 )

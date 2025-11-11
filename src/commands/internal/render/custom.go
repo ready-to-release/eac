@@ -3,7 +3,7 @@ package render
 import (
 	"fmt"
 
-	"github.com/ready-to-release/eac/src/commands/render/custom"
+	"github.com/ready-to-release/eac/src/commands/internal/render/custom"
 	"gopkg.in/yaml.v3"
 )
 

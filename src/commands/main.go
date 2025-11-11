@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 )
 
 // InitialWorkingDir stores the working directory when the program started

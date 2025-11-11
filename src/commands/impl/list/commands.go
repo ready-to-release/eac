@@ -3,10 +3,10 @@
 package list
 
 import (
-	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"fmt"
 
-	"github.com/ready-to-release/eac/src/commands/render"
+	"github.com/ready-to-release/eac/src/commands/internal/render"
 )
 
 func init() {

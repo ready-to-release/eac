@@ -268,7 +268,7 @@ Commands can import:
 
 - `github.com/ready-to-release/eac/src/contracts/*` - Module contracts
 - `github.com/ready-to-release/eac/src/repository/*` - Repository operations
-- `github.com/ready-to-release/eac/src/commands/render` - Markdown table rendering
+- `github.com/ready-to-release/eac/src/commands/internal/render` - Markdown table rendering
 - Standard library packages
 - Any other internal packages
 
