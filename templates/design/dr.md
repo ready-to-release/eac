@@ -1,5 +1,7 @@
 # Decision Record
 
+**Project:** {{ .ProjectName }}
+
 !!! note
 
     This is a template for decision records. Replace all sections with your own content, following the guidance in each section.

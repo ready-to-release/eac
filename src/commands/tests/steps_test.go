@@ -160,6 +160,9 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 
 	// Design command steps
 	InitializeDesignScenario(sc)
+
+	// Templates command steps
+	InitializeTemplatesScenario(sc)
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {

@@ -151,6 +151,10 @@ function Invoke-GoSrcCommand {
 
     $commandsPath = Join-Path $Script:RepoRoot "src/commands"
 
+    # Save the original working directory as an environment variable
+    # so Go commands can resolve relative paths correctly
+    $env:CLI_ORIGINAL_PWD = (Get-Location).Path
+
     # Run the command via dispatcher
     Push-Location $commandsPath
     try {
@@ -162,6 +166,8 @@ function Invoke-GoSrcCommand {
         }
     } finally {
         Pop-Location
+        # Clean up
+        Remove-Item Env:\CLI_ORIGINAL_PWD -ErrorAction SilentlyContinue
     }
 }
 
