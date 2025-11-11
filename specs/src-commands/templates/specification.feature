@@ -16,7 +16,9 @@ Feature: commands_templates
         }
         """
       When I run command "templates install --values values.json --location ./output"
-      Then the command should attempt to clone from "https://github.com/ready-to-release/eac"
+      Then the command should succeed
+      And the file "./output/README.md" should exist
+      And the file "./output/README.md" should contain "test"
 
     @error @ac1
     Scenario: Install fails with non-Git URL template

@@ -162,7 +162,11 @@ function Invoke-GoSrcCommand {
     foreach ($part in $CommandParts) {
         if ($nextIsPath) {
             # This is a path argument, convert to absolute if relative
-            if ($part -notmatch '^[a-zA-Z]:\\' -and $part -notmatch '^https?://') {
+            # Check if it's NOT an absolute path and NOT a URL
+            $isAbsolutePath = [System.IO.Path]::IsPathRooted($part)
+            $isUrl = $part -match '^https?://'
+
+            if (-not $isAbsolutePath -and -not $isUrl) {
                 # It's a relative path, make it absolute
                 $absolutePath = Join-Path $originalPwd.Path $part
                 $processedParts += $absolutePath
