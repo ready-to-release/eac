@@ -19,9 +19,16 @@ func AutoCleanup(commitMessage string) string {
 	result := strings.Join(lines, "\n")
 	result = ensureCodeBlocksClosed(result)
 
-	// Ensure file ends with exactly one blank line
-	// Trim all trailing newlines first, then add exactly two newlines (content\n\n)
+	// Remove trailing separators and blank lines
 	result = strings.TrimRight(result, "\n\t ")
+
+	// Remove trailing --- separator if present
+	for strings.HasSuffix(strings.TrimRight(result, "\n\t "), "---") {
+		result = strings.TrimSuffix(strings.TrimRight(result, "\n\t "), "---")
+		result = strings.TrimRight(result, "\n\t ")
+	}
+
+	// Ensure file ends with exactly one blank line
 	if result != "" {
 		result += "\n\n"
 	}
@@ -106,14 +113,28 @@ func fixContent(lines []string) []string {
 				title = strings.TrimSuffix(title, ".")
 			}
 			line = "# " + title
+			cleaned = append(cleaned, line)
+			// After title, we're in top-level body section
+			inBodySection = true
+			continue
 		}
 
-		// FIX 2: Remove trailing periods from module headers (## <module-name>)
-		if strings.HasPrefix(trimmed, "## ") && strings.HasSuffix(trimmed, ".") {
-			line = strings.TrimSuffix(line, ".")
+		// FIX 2: CUT module headers at 72 chars, remove trailing periods
+		if strings.HasPrefix(trimmed, "## ") {
+			moduleName := strings.TrimPrefix(trimmed, "## ")
+			if len("## "+moduleName) > 72 {
+				// CUT to 69 chars to leave room for "..."
+				moduleName = moduleName[:66]
+				moduleName = strings.TrimRight(moduleName, " .")
+				moduleName = moduleName + "..."
+			} else {
+				// Just remove trailing period
+				moduleName = strings.TrimSuffix(moduleName, ".")
+			}
+			line = "## " + moduleName
 		}
 
-		// FIX 3: Handle subject lines (truncate if too long, remove trailing periods)
+		// FIX 3: Handle subject lines (WRAP if too long, remove trailing periods)
 		// Format: <module>: <type>: <description>
 		subjectRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)`)
 
@@ -143,14 +164,13 @@ func fixContent(lines []string) []string {
 			// Remove trailing period
 			subjectLine = strings.TrimSuffix(subjectLine, ".")
 
-			// Truncate if too long
+			// WRAP if too long (don't truncate semantic commits)
 			if len(subjectLine) > 72 {
-				subjectLine = subjectLine[:69]
-				subjectLine = strings.TrimRight(subjectLine, " .")
-				subjectLine = subjectLine + "..."
+				wrapped := wrapSemanticCommitLine(subjectLine)
+				cleaned = append(cleaned, wrapped...)
+			} else {
+				cleaned = append(cleaned, subjectLine)
 			}
-
-			cleaned = append(cleaned, subjectLine)
 
 			// Skip the continuation lines we just processed
 			for k := i + 1; k < j; k++ {
@@ -165,11 +185,11 @@ func fixContent(lines []string) []string {
 			// Remove trailing period
 			line = strings.TrimSuffix(strings.TrimSpace(line), ".")
 
-			// Truncate if too long
+			// WRAP if too long (don't truncate semantic commits)
 			if len(line) > 72 {
-				line = line[:69]
-				line = strings.TrimRight(line, " .")
-				line = line + "..."
+				wrapped := wrapSemanticCommitLine(line)
+				cleaned = append(cleaned, wrapped...)
+				continue
 			}
 		}
 
@@ -246,6 +266,44 @@ func fixContent(lines []string) []string {
 	}
 
 	return cleaned
+}
+
+// wrapSemanticCommitLine wraps a semantic commit line at 72 characters
+// Preserves the format: <module>: <type>: <description>
+func wrapSemanticCommitLine(line string) []string {
+	if len(line) <= 72 {
+		return []string{line}
+	}
+
+	// Split at 72 chars and wrap the rest with proper indentation
+	var wrapped []string
+	currentLine := ""
+	words := strings.Fields(line)
+
+	for _, word := range words {
+		testLine := currentLine
+		if testLine != "" {
+			testLine += " "
+		}
+		testLine += word
+
+		if len(testLine) <= 72 {
+			currentLine = testLine
+		} else {
+			// Flush current line
+			if currentLine != "" {
+				wrapped = append(wrapped, currentLine)
+			}
+			currentLine = word
+		}
+	}
+
+	// Add remaining line
+	if currentLine != "" {
+		wrapped = append(wrapped, currentLine)
+	}
+
+	return wrapped
 }
 
 // wrapBodyText joins buffered lines and reflows at 72 characters

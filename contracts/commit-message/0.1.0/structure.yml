@@ -20,14 +20,13 @@ structure:
     required: true
     description: "Plain text body directly after top-level heading (no section header)"
     format: "2-4 sentences describing all changes"
-    max_line_length: 72
 
   - section: "module_sections"
     required: true
     format: "## <module-name>"
     subsections:
-      - "module_subject_line: <module>: <type>: <description> (72 chars max)"
-      - "module_body: Detailed changes (wrapped at 72 chars)"
+      - "module_subject_line: <module>: <type>: <description>"
+      - "module_body: Detailed changes"
 
 # SEMANTIC TYPES
 semantic_types:

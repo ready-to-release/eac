@@ -188,7 +188,8 @@ func VerifyContractImplementation(contractPath string) []ValidationError {
 }
 
 // VerifyCommitMessageContract validates a commit message against contracts/commit-message/0.1.0/structure.yml
-func VerifyCommitMessageContract(commitMessage string) []ValidationError {
+// affectedModules is the list of modules that had staged changes
+func VerifyCommitMessageContract(commitMessage string, affectedModules []string) []ValidationError {
 	var errors []ValidationError
 
 	lines := strings.Split(commitMessage, "\n")
@@ -248,6 +249,7 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 	// RULE 5: Check for top-level body (should appear after title, before first ## section)
 	hasTopLevelBody := false
 	hasModuleSection := false
+	foundModules := make(map[string]bool) // Track which modules we found in the commit message
 
 	for i, line := range lines {
 		lineNum := i + 1
@@ -261,9 +263,10 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 		// Module sections start with ##
 		if strings.HasPrefix(trimmed, "## ") {
 			hasModuleSection = true
+			moduleHeader := strings.TrimPrefix(trimmed, "## ")
+			foundModules[moduleHeader] = true
 
 			// RULE 6: Module headers must be plain name (no colons)
-			moduleHeader := strings.TrimPrefix(trimmed, "## ")
 			if strings.Contains(moduleHeader, ":") {
 				errors = append(errors, ValidationError{
 					Code:     "MODULE_HEADER_FORMAT",
@@ -300,13 +303,36 @@ func VerifyCommitMessageContract(commitMessage string) []ValidationError {
 		})
 	}
 
-	if !hasModuleSection {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_MODULE_SECTION",
-			Message:  "Missing module sections (## <module-name>)",
-			Severity: "error",
-		})
+	// Check if we're in a multi-module commit (more than 1 affected module)
+	if len(affectedModules) > 1 {
+		// Multi-module commits MUST have module sections
+		if !hasModuleSection {
+			moduleList := strings.Join(affectedModules, ", ")
+			errors = append(errors, ValidationError{
+				Code:     "MISSING_MODULE_SECTION",
+				Message:  fmt.Sprintf("Multi-module commit missing module sections. Expected: %s", moduleList),
+				Severity: "error",
+			})
+		} else {
+			// Check which specific modules are missing
+			var missingModules []string
+			for _, expectedModule := range affectedModules {
+				if !foundModules[expectedModule] {
+					missingModules = append(missingModules, expectedModule)
+				}
+			}
+
+			if len(missingModules) > 0 {
+				moduleList := strings.Join(missingModules, ", ")
+				errors = append(errors, ValidationError{
+					Code:     "MISSING_MODULE_SECTION",
+					Message:  fmt.Sprintf("Missing module sections for: %s", moduleList),
+					Severity: "error",
+				})
+			}
+		}
 	}
+	// Single-module commits don't require module sections
 
 	// RULE 8: Validate module subject lines
 	errors = append(errors, validateModuleSubjectLines(lines)...)

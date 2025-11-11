@@ -201,8 +201,18 @@ func CommitAI() int {
 		fmt.Fprintf(os.Stderr, "🔍 DEBUG: After cleanup saved to %s\n\n", debugFile3)
 	}
 
+	// LEVER 4.5: Add missing module sections (if any)
+	cleanedOutput = addMissingModules(cleanedOutput, affectedModules, report.AllFiles, gitDiff)
+
+	if debug {
+		// DEBUG: Save after adding missing modules
+		debugFile4 := "../../out/debug-after-missing-modules.md"
+		ioutil.WriteFile(debugFile4, []byte(cleanedOutput), 0644)
+		fmt.Fprintf(os.Stderr, "🔍 DEBUG: After adding missing modules saved to %s\n", debugFile4)
+	}
+
 	// LEVER 5: Verify contract compliance (silent)
-	validationErrors := commitmessage.VerifyCommitMessageContract(cleanedOutput)
+	validationErrors := commitmessage.VerifyCommitMessageContract(cleanedOutput, affectedModules)
 
 	errorCount, warningCount := 0, 0
 	for _, verr := range validationErrors {
@@ -362,48 +372,140 @@ func callClaudeAgentAPIRaw(agentFilePath string, prompt string) (string, error) 
 	output := strings.TrimSpace(stdout.String())
 
 	// Remove common agent initialization noise that appears even with disableAllHooks
-	output = stripAgentNoise(output)
+	// Determine agent type from file path
+	agentType := "unknown"
+	if strings.Contains(agentFilePath, "commit-message-top-level") {
+		agentType = "top-level"
+	} else if strings.Contains(agentFilePath, "commit-message-module") {
+		agentType = "module"
+	}
+	output = stripAgentNoise(output, agentType)
 
 	return output, nil
 }
 
 // stripAgentNoise removes common initialization/greeting patterns from agent output
-func stripAgentNoise(output string) string {
+// by scanning for the first valid commit message line based on agent type
+func stripAgentNoise(output string, agentType string) string {
 	lines := strings.Split(output, "\n")
-	var cleaned []string
-	foundContent := false
 
-	for _, line := range lines {
+	// Scan for first line matching valid commit message patterns
+	firstValidLineIdx := -1
+
+	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Skip common noise patterns
-		if strings.Contains(trimmed, "**Initialized and ready") ||
-			strings.Contains(trimmed, "**INITIALIZED") ||
-			strings.Contains(trimmed, "Loading project context") ||
-			strings.Contains(trimmed, "ready to assist") ||
-			(len(trimmed) > 0 && trimmed[0] > 127 && strings.Contains(trimmed, "**")) { // Emoji + bold pattern
-			continue
+		if agentType == "top-level" {
+			// Top-level agent: look for `# <module|multi-module>: <type>: <description>`
+
+			// Pattern 1: multi-module commit
+			if strings.HasPrefix(trimmed, "# multi-module:") ||
+				strings.HasPrefix(trimmed, "#multi-module:") ||
+				strings.HasPrefix(trimmed, "multi-module:") {
+				firstValidLineIdx = i
+				break
+			}
+
+			// Pattern 2: single-module commit with `# <module>: <type>:`
+			commitTypes := []string{"feat", "fix", "chore", "docs", "test", "refactor", "perf", "style", "build", "ci"}
+			if strings.HasPrefix(trimmed, "# ") {
+				for _, commitType := range commitTypes {
+					// Check for: # <module>: <type>:
+					if strings.Contains(trimmed, ": "+commitType+":") ||
+						strings.Contains(trimmed, ": "+commitType+"(") {
+						firstValidLineIdx = i
+						break
+					}
+				}
+			}
+
+			// Pattern 3: Fallback - ANY markdown heading (# or ##) if nothing else matched yet
+			// This catches cases where agent outputs wrong format
+			if firstValidLineIdx == -1 && (strings.HasPrefix(trimmed, "# ") || strings.HasPrefix(trimmed, "## ")) {
+				// Only accept if it's not common noise headers
+				if !strings.Contains(strings.ToLower(trimmed), "summary") &&
+					!strings.Contains(strings.ToLower(trimmed), "context") &&
+					!strings.Contains(strings.ToLower(trimmed), "changes") {
+					firstValidLineIdx = i
+					break
+				}
+			}
+		} else if agentType == "module" {
+			// Module agent: look for `## <module-name>`
+			if strings.HasPrefix(trimmed, "## ") && len(trimmed) > 3 {
+				// Must have content after "## " and not be a separator
+				moduleNamePart := strings.TrimSpace(trimmed[3:])
+				if moduleNamePart != "" && moduleNamePart != "---" {
+					firstValidLineIdx = i
+					break
+				}
+			}
+		} else {
+			// Unknown agent type - use generic heuristic (original logic)
+			// Pattern 1: multi-module commit
+			if strings.HasPrefix(trimmed, "# multi-module:") ||
+				strings.HasPrefix(trimmed, "#multi-module:") ||
+				strings.HasPrefix(trimmed, "multi-module:") {
+				firstValidLineIdx = i
+				break
+			}
+
+			// Pattern 2: single-module commit
+			commitTypes := []string{"feat", "fix", "chore", "docs", "test", "refactor", "perf", "style", "build", "ci"}
+			for _, commitType := range commitTypes {
+				if strings.Contains(trimmed, ": "+commitType+":") ||
+					strings.Contains(trimmed, ": "+commitType+"(") {
+					firstValidLineIdx = i
+					break
+				}
+			}
 		}
 
-		// Skip horizontal rules before content starts
-		if !foundContent && (trimmed == "---" || trimmed == "___" || trimmed == "***") {
-			continue
+		if firstValidLineIdx != -1 {
+			break
 		}
-
-		// Skip empty lines before content starts
-		if !foundContent && trimmed == "" {
-			continue
-		}
-
-		// Content has started
-		if trimmed != "" {
-			foundContent = true
-		}
-
-		cleaned = append(cleaned, line)
 	}
 
-	return strings.TrimSpace(strings.Join(cleaned, "\n"))
+	// If no valid pattern found, fall back to original heuristic
+	if firstValidLineIdx == -1 {
+		var cleaned []string
+		foundContent := false
+
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+
+			// Skip common noise patterns
+			if strings.Contains(trimmed, "**Initialized and ready") ||
+				strings.Contains(trimmed, "**INITIALIZED") ||
+				strings.Contains(trimmed, "Loading project context") ||
+				strings.Contains(trimmed, "ready to assist") ||
+				(len(trimmed) > 0 && trimmed[0] > 127 && strings.Contains(trimmed, "**")) {
+				continue
+			}
+
+			// Skip horizontal rules before content starts
+			if !foundContent && (trimmed == "---" || trimmed == "___" || trimmed == "***") {
+				continue
+			}
+
+			// Skip empty lines before content starts
+			if !foundContent && trimmed == "" {
+				continue
+			}
+
+			// Content has started
+			if trimmed != "" {
+				foundContent = true
+			}
+
+			cleaned = append(cleaned, line)
+		}
+
+		return strings.TrimSpace(strings.Join(cleaned, "\n"))
+	}
+
+	// Cut everything before the first valid line
+	return strings.TrimSpace(strings.Join(lines[firstValidLineIdx:], "\n"))
 }
 
 // extractModelFromAgent parses agent frontmatter and extracts the model field
@@ -638,6 +740,86 @@ func filterDiffForModule(fullDiff string, moduleFiles []repository.RepositoryFil
 	}
 
 	return strings.TrimSpace(result.String())
+}
+
+// addMissingModules adds stub sections for any modules that are missing from the commit message
+func addMissingModules(commitMessage string, affectedModules []string, allFiles []repository.RepositoryFileWithModule, gitDiff string) string {
+	// Parse existing commit message to find which modules already have sections
+	foundModules := make(map[string]bool)
+	lines := strings.Split(commitMessage, "\n")
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "## ") {
+			moduleName := strings.TrimPrefix(trimmed, "## ")
+			foundModules[moduleName] = true
+		}
+	}
+
+	// Find missing modules
+	var missingModules []string
+	for _, module := range affectedModules {
+		if !foundModules[module] {
+			missingModules = append(missingModules, module)
+		}
+	}
+
+	// If no missing modules, return original
+	if len(missingModules) == 0 {
+		return commitMessage
+	}
+
+	// Build sections for missing modules
+	var result bytes.Buffer
+	result.WriteString(commitMessage)
+
+	for _, module := range missingModules {
+		// Get files for this module
+		var moduleFiles []repository.RepositoryFileWithModule
+		for _, file := range allFiles {
+			for _, fileModule := range file.Modules {
+				if fileModule == module {
+					moduleFiles = append(moduleFiles, file)
+					break
+				}
+			}
+		}
+
+		// Build file list for subject line
+		var fileNames []string
+		for _, file := range moduleFiles {
+			fileNames = append(fileNames, file.Name)
+		}
+		filesStr := "CHANGED FILES"
+		if len(fileNames) > 0 {
+			filesStr = strings.Join(fileNames, ", ")
+			// Truncate if too long
+			if len(filesStr) > 40 {
+				filesStr = filesStr[:37] + "..."
+			}
+		}
+
+		// Filter git diff for this module
+		moduleDiff := filterDiffForModule(gitDiff, moduleFiles)
+
+		// Take top 10 lines of diff
+		diffLines := strings.Split(moduleDiff, "\n")
+		top10Lines := diffLines
+		if len(diffLines) > 10 {
+			top10Lines = diffLines[:10]
+		}
+		top10Diff := strings.Join(top10Lines, "\n")
+
+		// Build section
+		result.WriteString("\n\n---\n\n")
+		result.WriteString(fmt.Sprintf("## %s\n\n", module))
+		result.WriteString(fmt.Sprintf("%s: chore: %s\n\n", module, filesStr))
+		result.WriteString("```diff\n")
+		result.WriteString(top10Diff)
+		result.WriteString("\n```")
+	}
+
+	return result.String()
 }
 
 // combineCommitSections combines top-level section and module sections into final commit message
