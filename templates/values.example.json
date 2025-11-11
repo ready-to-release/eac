@@ -1,0 +1,25 @@
+{
+  "_comment": "Example values for EAC project templates",
+  "_note": "Only ProjectName is required. All other values are optional and can be filled in later by automated processes.",
+
+  "ProjectName": "my-awesome-project",
+
+  "_section_ci_cd": "Values typically filled by CI/CD pipeline",
+  "ChangeType": "Standard",
+  "PipelineID": "12345",
+  "Repository": "github.com/myorg/my-project",
+  "Branch": "main",
+  "BuildDate": "2025-01-15T10:30:00Z",
+  "TriggeredBy": "developer@example.com",
+
+  "_section_automated_delivery": "Values filled by automated delivery processes (implementation reports)",
+  "changed_requirements": "<!-- Populated by delivery automation -->",
+  "req_approval_comments": "<!-- Populated by delivery automation -->",
+  "release_notes": "<!-- Populated by delivery automation -->",
+  "requirements": "<!-- Populated by delivery automation -->",
+  "feature_test_results": "<!-- Populated by delivery automation -->",
+  "iv_test_traceability_report": "<!-- Populated by delivery automation -->",
+  "ov_test_traceability_report": "<!-- Populated by delivery automation -->",
+  "pv_test_traceability_report": "<!-- Populated by delivery automation -->",
+  "specs_and_test_results": "<!-- Populated by delivery automation -->"
+}

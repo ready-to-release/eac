@@ -1,4 +1,61 @@
-# Risk Control Feature Template
+# ========================================
+# Template Instructions
+# ========================================
+#
+# Risk control definitions are REQUIREMENTS from risk assessment documents.
+# They define WHAT must be controlled, not HOW to implement it.
+#
+# Key Principles:
+# 1. Risk controls live ONLY in specs/risk-controls/
+# 2. Each control defines a requirement using "MUST" statements
+# 3. Implementation features reference these controls with @risk<ID> tags
+#
+# To use this template:
+#
+# 1. **Create feature file**:
+#    - File location: specs/risk-controls/[control-category]-[name].feature
+#    - Naming: Use dashes, no spaces, lowercase (kebab-case)
+#    - Examples: authentication-controls.feature, data-protection-controls.feature, audit-trail-controls.feature
+#
+# 2. **Define feature header**:
+#    - Feature name: [control-category]-[name] (kebab-case, e.g., authentication-controls, data-protection-encryption)
+#    - Description: Brief explanation using # comment format
+#    - Source: Bulleted list of regulatory references and assessment IDs using # comment format
+#    - Assessment: Risk assessment ID
+#    - Date: Assessment or last review date
+#
+# 3. **Create risk control scenarios**:
+#    - Tag: @risk<ID> (e.g., @risk1, @risk5, @risk10)
+#    - Name: RC-<ID> - <Description> (e.g., RC-001 - User authentication required)
+#    - Use MUST for mandatory requirements
+#    - Keep focused on one control per scenario
+#
+# 4. **Numbering scheme** (suggested):
+#    - 1-9: Authentication controls
+#    - 10-19: Data protection controls
+#    - 5-9: Audit controls
+#    - 20-29: Access control
+#    - 30-39: Privacy controls
+#    - 40-49: AI/ML controls
+#    - 50+: Other categories
+#
+# 5. **Writing effective risk controls**:
+#    - Start with Given to set context
+#    - Use Then/And with MUST for requirements
+#    - Be specific and measurable
+#    - Focus on WHAT must happen, not HOW
+#    - Avoid implementation details
+#
+# 6. **Linking to implementations**:
+#    - Implementation features tag scenarios with @risk<ID>
+#    - Multiple features can implement the same control
+#    - One feature can implement multiple controls
+#
+# Remember:
+# - Risk controls are REQUIREMENTS, not implementations
+# - They define WHAT must be controlled
+# - Implementation features define HOW
+# - Keep controls technology-agnostic when possible
 
 Feature: [control-category]-[name]
 
@@ -151,78 +208,3 @@ Feature: [control-category]-[name]
     And bias detection MUST run continuously
     And bias findings MUST be reported
     And biased models MUST be retrained or removed
-
-# ========================================
-# Template Instructions
-# ========================================
-#
-# Risk control definitions are REQUIREMENTS from risk assessment documents.
-# They define WHAT must be controlled, not HOW to implement it.
-#
-# Key Principles:
-# 1. Risk controls live ONLY in specs/risk-controls/
-# 2. Each control defines a requirement using "MUST" statements
-# 3. Implementation features reference these controls with @risk<ID> tags
-#
-# To use this template:
-#
-# 1. **Create feature file**:
-#    - File location: specs/risk-controls/[control-category]-[name].feature
-#    - Naming: Use dashes, no spaces, lowercase (kebab-case)
-#    - Examples: authentication-controls.feature, data-protection-controls.feature, audit-trail-controls.feature
-#
-# 2. **Define feature header**:
-#    - Feature name: [control-category]-[name] (kebab-case, e.g., authentication-controls, data-protection-encryption)
-#    - Description: Brief explanation using # comment format
-#    - Source: Bulleted list of regulatory references and assessment IDs using # comment format
-#    - Assessment: Risk assessment ID
-#    - Date: Assessment or last review date
-#
-# 3. **Create risk control scenarios**:
-#    - Tag: @risk<ID> (e.g., @risk1, @risk5, @risk10)
-#    - Name: RC-<ID> - <Description> (e.g., RC-001 - User authentication required)
-#    - Use MUST for mandatory requirements
-#    - Keep focused on one control per scenario
-#
-# 4. **Numbering scheme** (suggested):
-#    - 1-9: Authentication controls
-#    - 10-19: Data protection controls
-#    - 5-9: Audit controls
-#    - 20-29: Access control
-#    - 30-39: Privacy controls
-#    - 40-49: AI/ML controls
-#    - 50+: Other categories
-#
-# 5. **Writing effective risk controls**:
-#    - Start with Given to set context
-#    - Use Then/And with MUST for requirements
-#    - Be specific and measurable
-#    - Focus on WHAT must happen, not HOW
-#    - Avoid implementation details
-#
-# 6. **Linking to implementations**:
-#    - Implementation features tag scenarios with @risk<ID>
-#    - Multiple features can implement the same control
-#    - One feature can implement multiple controls
-#
-# Good Example:
-# @risk1
-# Scenario: RC-001 - User authentication required
-#   Given a system with protected resources
-#   Then all user access MUST be authenticated
-#   And authentication MUST occur before granting access
-#
-# Bad Example (too implementation-specific):
-# @risk1
-# Scenario: RC-001 - Use JWT tokens for auth
-#   Given a user login request
-#   Then the system MUST use JWT tokens
-#   And tokens MUST expire after 30 minutes
-#   # ❌ This specifies HOW (JWT), not WHAT (authentication required)
-#
-# Remember:
-# - Risk controls are REQUIREMENTS, not implementations
-# - They define WHAT must be controlled
-# - Implementation features define HOW
-# - Keep controls technology-agnostic when possible
-#

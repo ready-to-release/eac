@@ -1,17 +1,15 @@
-# Implementation Report {{ cookiecutter.project_name }}
+# Implementation Report {{ .ProjectName }}
 
 !!! note
 
     Decision on overall change type (Normal, Standard or Emergency)
 
-**Change Type:** \[Standard|Normal]
+**Change Type:** {{ .ChangeType }}
 
-<!--{% raw %}-->
-**Pipeline ID / Run Number:** {{ dynamic.pipeline_id }}
-**Repository / Branch:** {{ dynamic.repository_branch }}
-**Build Date/Time:** {{ dynamic.build_date }}
-**Triggered By** {{ dynamic.triggered_by }}
-<!--{% endraw %}-->  
+**Pipeline ID / Run Number:** {{ .PipelineID }}
+**Repository / Branch:** {{ .Repository }}/{{ .Branch }}
+**Build Date/Time:** {{ .BuildDate }}
+**Triggered By** {{ .TriggeredBy }}  
 
 ## Summary
 
@@ -28,7 +26,7 @@
     Add a description of changes since the last deployment includes changes to existing requirements or newly added ones.
 
 <!--{% raw %}-->
-{{ dynamic.changed_requirements }}
+{{ .changed_requirements }}
 <!--{% endraw %}-->  
 
 ### Conclusion on Fitness for Intended Use
@@ -56,7 +54,7 @@
 Changes to requirements from Merge Request approvals, each row should contain name of the approver.
 
 <!--{% raw %}-->
-{{ dynamic.req_approval_comments }}
+{{ .req_approval_comments }}
 <!--{% endraw %}-->
 
 ## Change Log
@@ -66,7 +64,7 @@ Changes to requirements from Merge Request approvals, each row should contain na
 The change log contains changes from all Merge Requests included in the release.
 
 <!--{% raw %}-->
-{{ dynamic.release_notes }}
+{{ .release_notes }}
 <!--{% endraw %}-->
 
 ---
@@ -76,7 +74,7 @@ The change log contains changes from all Merge Requests included in the release.
 This list includes all the requirements for the solution.
 
 <!--{% raw %}-->
-{{ dynamic.requirements }}
+{{ .requirements }}
 <!--{% endraw %}-->
 
 ## Design Documentation
@@ -162,7 +160,7 @@ This section shows requirements traceability from features through acceptance cr
 <!--{% endremove %}-->
 
 <!--{% raw %}-->
-{{ dynamic.feature_test_results }}
+{{ .feature_test_results }}
 <!--{% endraw %}-->
 
 ---
@@ -182,7 +180,7 @@ Installation verification is performed automatically using the following methods
 3. **Version Verification:** Scripts verify that all components are operating on the correct versions.
 
 <!--{% raw %}-->
-{{ dynamic.iv_test_traceability_report }}
+{{ .iv_test_traceability_report }}
 <!--{% endraw %}-->
 
 ---
@@ -192,7 +190,7 @@ Installation verification is performed automatically using the following methods
 The test results below display all scenarios **not** tagged with `@IV` or `@PV`.
 
 <!--{% raw %}-->
-{{ dynamic.ov_test_traceability_report }}
+{{ .ov_test_traceability_report }}
 <!--{% endraw %}-->
 
 ---
@@ -202,7 +200,7 @@ The test results below display all scenarios **not** tagged with `@IV` or `@PV`.
 Performance verification is conducted in a Production-Like Test Environment (PLTE) as well as in the production environment following the release. The test results below display all scenarios tagged with `@PV`.
 
 <!--{% raw %}-->
-{{ dynamic.pv_test_traceability_report }}
+{{ .pv_test_traceability_report }}
 <!--{% endraw %}-->
 
 ---
@@ -254,5 +252,5 @@ Performance verification is conducted in a Production-Like Test Environment (PLT
 <!--{% endremove %}-->
 
 <!--{% raw %}-->
-{{ dynamic.specs_and_test_results }}
+{{ .specs_and_test_results }}
 <!--{% endraw %}-->
