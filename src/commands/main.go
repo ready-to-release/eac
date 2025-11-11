@@ -29,6 +29,9 @@ var commands = map[string]CommandFunc{}
 // commandRegistry maps canonical kebab-case names to registrations
 var commandRegistry = map[string]*CommandRegistration{}
 
+// InitialWorkingDir stores the working directory when the program started
+var InitialWorkingDir string
+
 // Register allows command files to register themselves
 // commandName should be in display format with spaces (e.g., "get files")
 func Register(commandName string, fn CommandFunc) {
@@ -59,6 +62,18 @@ func GetCommandByCanonical(canonicalName string) *CommandRegistration {
 
 
 func main() {
+	// Check if we have an original PWD from the CLI wrapper
+	// If not, use current directory
+	InitialWorkingDir = os.Getenv("CLI_ORIGINAL_PWD")
+	if InitialWorkingDir == "" {
+		var err error
+		InitialWorkingDir, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: could not determine working directory: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
 	if len(os.Args) < 2 {
 		printUsage()
 		os.Exit(1)

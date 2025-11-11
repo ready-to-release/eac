@@ -50,6 +50,14 @@ func TemplatesInstall() int {
 		return 1
 	}
 
+	// Resolve relative paths against the initial working directory
+	if !filepath.IsAbs(*location) {
+		*location = filepath.Join(InitialWorkingDir, *location)
+	}
+	if !filepath.IsAbs(*valuesFile) {
+		*valuesFile = filepath.Join(InitialWorkingDir, *valuesFile)
+	}
+
 	// Validate that template is a Git URL
 	if !templates.IsGitRepository(*repoURL) {
 		fmt.Fprintf(os.Stderr, "Error: --template must be a Git repository URL (e.g., https://github.com/user/repo)\n")

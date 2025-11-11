@@ -151,42 +151,14 @@ function Invoke-GoSrcCommand {
 
     $commandsPath = Join-Path $Script:RepoRoot "src/commands"
 
-    # Save the original working directory
-    $originalPwd = Get-Location
-
-    # Process command arguments to convert relative paths to absolute
-    $processedParts = @()
-    $nextIsPath = $false
-    $pathFlags = @('--location', '--values', '--template')
-
-    foreach ($part in $CommandParts) {
-        if ($nextIsPath) {
-            # This is a path argument, convert to absolute if relative
-            # Check if it's NOT an absolute path and NOT a URL
-            $isAbsolutePath = [System.IO.Path]::IsPathRooted($part)
-            $isUrl = $part -match '^https?://'
-
-            if (-not $isAbsolutePath -and -not $isUrl) {
-                # It's a relative path, make it absolute
-                $absolutePath = Join-Path $originalPwd.Path $part
-                $processedParts += $absolutePath
-            } else {
-                $processedParts += $part
-            }
-            $nextIsPath = $false
-        } elseif ($pathFlags -contains $part) {
-            # This is a path flag, next argument will be a path
-            $processedParts += $part
-            $nextIsPath = $true
-        } else {
-            $processedParts += $part
-        }
-    }
+    # Save the original working directory as an environment variable
+    # so Go commands can resolve relative paths correctly
+    $env:CLI_ORIGINAL_PWD = (Get-Location).Path
 
     # Run the command via dispatcher
     Push-Location $commandsPath
     try {
-        & go run . @processedParts
+        & go run . @CommandParts
 
         # Propagate exit code
         if ($LASTEXITCODE -ne 0) {
@@ -194,6 +166,8 @@ function Invoke-GoSrcCommand {
         }
     } finally {
         Pop-Location
+        # Clean up
+        Remove-Item Env:\CLI_ORIGINAL_PWD -ErrorAction SilentlyContinue
     }
 }
 
