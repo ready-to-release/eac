@@ -1,4 +1,4 @@
-name: "Internal Shared Libraries"
+name: "ci-src-internal (stage 1-6)"
 
 on:
   workflow_call:

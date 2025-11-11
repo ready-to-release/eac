@@ -1,4 +1,4 @@
-name: "MCP Commands Server"
+name: "ci-src-mcp-commands (stage 1-6)"
 
 on:
   workflow_call:

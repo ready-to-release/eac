@@ -1,4 +1,4 @@
-name: "CI/CD Trigger"
+name: "Change Trigger"
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: Deploy MkDocs site to GitHub Pages
+name: "cd-docs (stage 1-12)"
 
 on:
   push:

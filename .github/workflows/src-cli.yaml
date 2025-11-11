@@ -1,4 +1,4 @@
-name: "CLI Tool"
+name: "ci-src-cli (stage 1-6)"
 
 on:
   workflow_call:

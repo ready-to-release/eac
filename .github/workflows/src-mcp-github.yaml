@@ -1,4 +1,4 @@
-name: "MCP GitHub Server"
+name: "src-mcp-github (stage 1-6)"
 
 on:
   workflow_call:

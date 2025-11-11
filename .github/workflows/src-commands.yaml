@@ -1,4 +1,4 @@
-name: "Commands Implementation"
+name: "ci-src-commands (stage 1-6)"
 
 on:
   workflow_call:
