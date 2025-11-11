@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	registry.Register("commit-ai", CommitAI)
+	registry.Register(CommitAI)
 }
 
 func CommitAI() int {

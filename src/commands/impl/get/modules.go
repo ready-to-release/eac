@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	registry.Register("get modules", GetModules)
+	registry.Register(GetModules)
 }
 
 func GetModules() int {

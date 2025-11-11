@@ -18,7 +18,7 @@ import (
 const defaultTemplateListRepo = "https://github.com/ready-to-release/eac"
 
 func init() {
-	registry.Register("templates list", TemplatesList)
+	registry.Register(TemplatesList)
 }
 
 // TemplatesList scans templates and lists all placeholder variables

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	registry.Register("list commands", ListCommands)
+	registry.Register(ListCommands)
 }
 
 func ListCommands() int {

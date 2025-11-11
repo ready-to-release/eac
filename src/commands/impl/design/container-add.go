@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	registry.Register("design add container", DesignAddContainer)
+	registry.Register(DesignAddContainer)
 }
 
 // DesignAddContainer adds a container to an existing workspace

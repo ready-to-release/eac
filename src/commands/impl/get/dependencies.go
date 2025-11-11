@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	registry.Register("get dependencies", GetDependencies)
+	registry.Register(GetDependencies)
 }
 
 func GetDependencies() int {

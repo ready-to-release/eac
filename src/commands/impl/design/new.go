@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	registry.Register("design new", DesignNew)
+	registry.Register(DesignNew)
 }
 
 // DesignNew creates a new Structurizr workspace for a module

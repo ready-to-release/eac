@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	registry.Register("docs", Docs)
+	registry.Register(Docs)
 }
 
 // Docs command entry point

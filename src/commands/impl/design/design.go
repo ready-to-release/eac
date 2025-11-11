@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	registry.Register("design", Design)
+	registry.Register(Design)
 }
 
 // Design command entry point

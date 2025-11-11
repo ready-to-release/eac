@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registry.Register("show modules", ShowModules)
+	registry.Register(ShowModules)
 }
 
 func ShowModules() int {

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	registry.Register("design serve", DesignServe)
+	registry.Register(DesignServe)
 }
 
 // DesignServe starts or stops Structurizr server for a module

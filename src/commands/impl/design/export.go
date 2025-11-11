@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	registry.Register("design export", DesignExport)
+	registry.Register(DesignExport)
 }
 
 // DesignExport exports the workspace DSL content

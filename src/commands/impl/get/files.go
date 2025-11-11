@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	registry.Register("get files", GetFiles)
+	registry.Register(GetFiles)
 }
 
 func GetFiles() int {

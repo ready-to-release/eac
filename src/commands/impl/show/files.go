@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	registry.Register("show files", ShowFiles)
+	registry.Register(ShowFiles)
 }
 
 func ShowFiles() int {

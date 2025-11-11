@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registry.Register("show files staged", ShowFilesStaged)
+	registry.Register(ShowFilesStaged)
 }
 
 func ShowFilesStaged() int {

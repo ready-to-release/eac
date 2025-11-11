@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	registry.Register("get execution order", GetExecutionOrder)
+	registry.Register(GetExecutionOrder)
 }
 
 func GetExecutionOrder() int {

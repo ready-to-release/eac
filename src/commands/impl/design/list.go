@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	registry.Register("design list", DesignList)
+	registry.Register(DesignList)
 }
 
 // DesignList lists available modules with architecture documentation

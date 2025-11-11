@@ -22,7 +22,7 @@ import (
 )
 
 func init() {
-	registry.Register("pipeline run", PipelineRun)
+	registry.Register(PipelineRun)
 }
 
 func PipelineRun() int {

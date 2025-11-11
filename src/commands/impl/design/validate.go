@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	registry.Register("design validate", DesignValidate)
+	registry.Register(DesignValidate)
 }
 
 // DesignValidate validates workspace files using Structurizr CLI

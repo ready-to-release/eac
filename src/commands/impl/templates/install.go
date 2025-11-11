@@ -20,7 +20,7 @@ import (
 const defaultTemplateRepo = "https://github.com/ready-to-release/eac"
 
 func init() {
-	registry.Register("templates install", TemplatesInstall)
+	registry.Register(TemplatesInstall)
 }
 
 // TemplatesInstall installs templates from a Git repository with value replacements

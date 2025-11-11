@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	registry.Register("test module", TestModule)
+	registry.Register(TestModule)
 }
 
 // TestFunc is the signature for module type test functions

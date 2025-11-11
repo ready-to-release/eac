@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	registry.Register("build module", BuildModule)
+	registry.Register(BuildModule)
 }
 
 // BuildFunc is the signature for module type build functions

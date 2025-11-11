@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	registry.Register("get changed modules", GetChangedModules)
+	registry.Register(GetChangedModules)
 }
 
 func GetChangedModules() int {

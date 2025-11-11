@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	registry.Register("build modules", BuildModules)
+	registry.Register(BuildModules)
 }
 
 // BuildModules builds multiple modules in sequence (defaults to all modules)

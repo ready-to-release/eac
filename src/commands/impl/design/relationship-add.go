@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	registry.Register("design add relationship", DesignAddRelationship)
+	registry.Register(DesignAddRelationship)
 }
 
 // DesignAddRelationship adds a relationship to an existing workspace

@@ -2,7 +2,9 @@
 package registry
 
 import (
+	"bufio"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -66,6 +68,8 @@ type CommandRegistration struct {
 	Func          CommandFunc
 	DisplayName   string // "get files" (with spaces)
 	CanonicalName string // "get-files" (kebab-case)
+	Description   string // Command description from file header
+	Usage         string // Command usage from file header
 }
 
 // commands maps command names to their implementation functions
@@ -74,21 +78,83 @@ var commands = map[string]CommandFunc{}
 // commandRegistry maps canonical kebab-case names to registrations
 var commandRegistry = map[string]*CommandRegistration{}
 
-// Register allows command files to register themselves
-// commandName should be in display format with spaces (e.g., "get files")
-func Register(commandName string, fn CommandFunc) {
+// Register allows command files to register themselves by extracting metadata from source comments
+// The function automatically parses the calling file to extract:
+// - Command name from "// Command: <name>"
+// - Description from "// Description: <text>"
+// - Usage from "// Usage: <text>"
+func Register(fn CommandFunc) {
+	// Get the caller's file location
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		panic("registry.Register: could not determine caller")
+	}
+
+	// Extract command metadata from file comments
+	metadata := extractCommandMetadata(file)
+	if metadata.CommandName == "" {
+		panic("registry.Register: no '// Command:' found in " + file)
+	}
+
 	// Store in original commands map for backward compatibility
-	commands[commandName] = fn
+	commands[metadata.CommandName] = fn
 
 	// Derive canonical kebab-case name
-	canonicalName := strings.ReplaceAll(commandName, " ", "-")
+	canonicalName := strings.ReplaceAll(metadata.CommandName, " ", "-")
 
 	// Store in registry with both forms
 	commandRegistry[canonicalName] = &CommandRegistration{
 		Func:          fn,
-		DisplayName:   commandName,
+		DisplayName:   metadata.CommandName,
 		CanonicalName: canonicalName,
+		Description:   metadata.Description,
+		Usage:         metadata.Usage,
 	}
+}
+
+// commandMetadata holds extracted comment data
+type commandMetadata struct {
+	CommandName string
+	Description string
+	Usage       string
+}
+
+// extractCommandMetadata parses a Go source file to extract command metadata from header comments
+func extractCommandMetadata(filePath string) commandMetadata {
+	var metadata commandMetadata
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return metadata
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Stop at package declaration
+		if strings.HasPrefix(line, "package ") {
+			break
+		}
+
+		// Extract Command name
+		if strings.HasPrefix(line, "// Command:") {
+			metadata.CommandName = strings.TrimSpace(strings.TrimPrefix(line, "// Command:"))
+		}
+
+		// Extract Description
+		if strings.HasPrefix(line, "// Description:") {
+			metadata.Description = strings.TrimSpace(strings.TrimPrefix(line, "// Description:"))
+		}
+
+		// Extract Usage
+		if strings.HasPrefix(line, "// Usage:") {
+			metadata.Usage = strings.TrimSpace(strings.TrimPrefix(line, "// Usage:"))
+		}
+	}
+
+	return metadata
 }
 
 // GetCommands returns the commands map

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	registry.Register("docs serve", DocsServe)
+	registry.Register(DocsServe)
 }
 
 // DocsServe starts or stops MkDocs server

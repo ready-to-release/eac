@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	registry.Register("describe commands", DescribeCommands)
+	registry.Register(DescribeCommands)
 }
 
 // CommandInfo represents structured information about a command
@@ -48,14 +48,15 @@ func buildCommandTree() CommandTree {
 	treeMap := make(map[string][]string)
 
 	// Process all registered commands
-	commands := registry.GetCommands()
-	for cmdName := range commands {
+	commandRegistry := registry.GetCommandRegistry()
+	for _, reg := range commandRegistry {
+		cmdName := reg.DisplayName
 		parts := strings.Fields(cmdName)
 
 		info := CommandInfo{
 			Name:        cmdName,
 			Parts:       parts,
-			Description: getCommandDescription(cmdName),
+			Description: reg.Description,
 			IsLeaf:      true,
 		}
 
@@ -84,24 +85,4 @@ func buildCommandTree() CommandTree {
 		Commands: infos,
 		Tree:     treeMap,
 	}
-}
-
-func getCommandDescription(cmdName string) string {
-	// Map command names to descriptions
-	// These come from the command file comments
-	descriptions := map[string]string{
-		"list commands":      "List all available commands",
-		"describe commands":  "Output structured command information",
-		"show modules":       "Show all module contracts in the repository",
-		"show files":         "Show repository files with module ownership",
-		"show files changed": "Show changed (modified, unstaged) files with their module ownership",
-		"show files staged":  "Show staged files with their module ownership",
-		"show moduletypes":   "Show all module types grouped by count",
-		"commit-ai":          "Show staged changes with their module mappings for AI commit message generation",
-	}
-
-	if desc, exists := descriptions[cmdName]; exists {
-		return desc
-	}
-	return ""
 }

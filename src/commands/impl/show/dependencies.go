@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registry.Register("show dependencies", ShowDependencies)
+	registry.Register(ShowDependencies)
 }
 
 func ShowDependencies() int {

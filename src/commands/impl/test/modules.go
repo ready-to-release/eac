@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	registry.Register("test modules", TestModules)
+	registry.Register(TestModules)
 }
 
 // TestModules tests multiple modules in sequence (defaults to all modules)
