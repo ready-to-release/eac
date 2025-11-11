@@ -10,58 +10,40 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
-
-// CommandFunc is the signature for all command functions
-type CommandFunc func() int
-
-// CommandRegistration holds command metadata
-type CommandRegistration struct {
-	Func          CommandFunc
-	DisplayName   string // "get files" (with spaces)
-	CanonicalName string // "get-files" (kebab-case)
-}
-
-// commands maps command names to their implementation functions
-var commands = map[string]CommandFunc{}
-
-// commandRegistry maps canonical kebab-case names to registrations
-var commandRegistry = map[string]*CommandRegistration{}
 
 // InitialWorkingDir stores the working directory when the program started
 var InitialWorkingDir string
 
-// Register allows command files to register themselves
-// commandName should be in display format with spaces (e.g., "get files")
-func Register(commandName string, fn CommandFunc) {
-	// Store in original commands map for backward compatibility
-	commands[commandName] = fn
-
-	// Derive canonical kebab-case name
-	canonicalName := strings.ReplaceAll(commandName, " ", "-")
-
-	// Store in registry with both forms
-	commandRegistry[canonicalName] = &CommandRegistration{
-		Func:          fn,
-		DisplayName:   commandName,
-		CanonicalName: canonicalName,
-	}
-}
-
-// GetCanonicalName returns the kebab-case canonical name for a command
-// Input can be either "get files" (with spaces) or "get-files" (kebab-case)
-func GetCanonicalName(commandName string) string {
-	return strings.ReplaceAll(commandName, " ", "-")
-}
-
-// GetCommandByCanonical retrieves a command registration by its canonical name
-func GetCommandByCanonical(canonicalName string) *CommandRegistration {
-	return commandRegistry[canonicalName]
-}
-
 
 func main() {
+	// Global panic handler with full stack trace
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "\n=== PANIC: Unhandled Exception ===\n")
+			fmt.Fprintf(os.Stderr, "Error: %v\n\n", r)
+			fmt.Fprintf(os.Stderr, "Stack Trace:\n")
+
+			// Print full stack trace
+			buf := make([]byte, 4096)
+			for {
+				n := runtime.Stack(buf, false)
+				if n < len(buf) {
+					fmt.Fprintf(os.Stderr, "%s\n", buf[:n])
+					break
+				}
+				buf = make([]byte, len(buf)*2)
+			}
+
+			fmt.Fprintf(os.Stderr, "\n=== End Stack Trace ===\n")
+			os.Exit(2)
+		}
+	}()
+
 	// Check if we have an original PWD from the CLI wrapper
 	// If not, use current directory
 	InitialWorkingDir = os.Getenv("CLI_ORIGINAL_PWD")
@@ -79,10 +61,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	var cmdFunc CommandFunc
+	var cmdFunc registry.CommandFunc
 	var exists bool
 
 	// Try longest match first for nested commands
+	commands := registry.GetCommands()
 	for argCount := len(os.Args) - 1; argCount >= 1; argCount-- {
 		testPath := strings.Join(os.Args[1:argCount+1], " ")
 		if fn, found := commands[testPath]; found {
@@ -107,7 +90,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	os.Exit(cmdFunc())
+	exitCode := cmdFunc()
+
+	// If command failed (non-zero exit), dump stack trace
+	if exitCode != 0 {
+		fmt.Fprintf(os.Stderr, "\n=== Command Failed: Stack Trace ===\n")
+
+		// Print stack trace
+		buf := make([]byte, 4096)
+		for {
+			n := runtime.Stack(buf, false)
+			if n < len(buf) {
+				fmt.Fprintf(os.Stderr, "%s\n", buf[:n])
+				break
+			}
+			buf = make([]byte, len(buf)*2)
+		}
+
+		fmt.Fprintf(os.Stderr, "=== End Stack Trace ===\n")
+	}
+
+	os.Exit(exitCode)
 }
 
 // getSubcommands returns all commands that start with the given prefix
@@ -118,6 +121,7 @@ func getSubcommands(prefix string) []string {
 		searchPrefix = prefix + " "
 	}
 
+	commands := registry.GetCommands()
 	for cmdName := range commands {
 		if strings.HasPrefix(cmdName, searchPrefix) && cmdName != prefix {
 			// Extract just the next part after the prefix
@@ -175,6 +179,7 @@ func printUsage() {
 	fmt.Println("Available commands:")
 
 	var names []string
+	commands := registry.GetCommands()
 	for name := range commands {
 		names = append(names, name)
 	}

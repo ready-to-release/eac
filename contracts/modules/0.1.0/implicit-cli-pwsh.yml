@@ -1,0 +1,18 @@
+# Version: 0.1.0
+
+moniker: "implicit-cli-pwsh"
+name: "PowerShell module to invoke Go commands"
+type: "automation"
+description: "PowerShell wrapper with tab completion for running Go commands from src/commands/"
+
+parent: src-commands
+source:
+  root: "scripts/pwsh/go-invoker"
+  includes:
+    - "**/*"
+    - "*"
+    - "/importer.ps1"
+
+depends_on:
+  - "src-commands"
+used_by: []
