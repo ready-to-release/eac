@@ -50,6 +50,32 @@ func TemplatesInstall() int {
 		return 1
 	}
 
+	// Resolve location path relative to original working directory if it's relative
+	if !filepath.IsAbs(*location) {
+		if originalPwd := os.Getenv("ORIGINAL_PWD"); originalPwd != "" {
+			*location = filepath.Join(originalPwd, *location)
+		} else {
+			// Fallback to making it absolute relative to current dir
+			absLocation, err := filepath.Abs(*location)
+			if err == nil {
+				*location = absLocation
+			}
+		}
+	}
+
+	// Resolve values file path relative to original working directory if it's relative
+	if !filepath.IsAbs(*valuesFile) {
+		if originalPwd := os.Getenv("ORIGINAL_PWD"); originalPwd != "" {
+			*valuesFile = filepath.Join(originalPwd, *valuesFile)
+		} else {
+			// Fallback to making it absolute relative to current dir
+			absValuesFile, err := filepath.Abs(*valuesFile)
+			if err == nil {
+				*valuesFile = absValuesFile
+			}
+		}
+	}
+
 	// Validate that template is a Git URL
 	if !templates.IsGitRepository(*repoURL) {
 		fmt.Fprintf(os.Stderr, "Error: --template must be a Git repository URL (e.g., https://github.com/user/repo)\n")
