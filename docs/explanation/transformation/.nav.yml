@@ -2,7 +2,5 @@ title: Transformation
 nav:
   - index.md
   - why-transformation.md
-  - transformation-framework.md
-  - shift-left-compliance.md
   - compliance-as-code.md
-  - risk-control-specifications.md
+  - transformation-framework.md

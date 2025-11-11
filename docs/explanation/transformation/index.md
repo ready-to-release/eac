@@ -2,96 +2,142 @@
 
 ## Introduction
 
-Modern organizations face a complex and fast-changing compliance landscape. Traditional methods - manual documentation, periodic audits, and late validation - slow delivery, increase costs, and offer only point-in-time assurance.
-This section shows how to turn compliance from a bottleneck into a **continuous, automated capability** that enables faster and safer software delivery.
+Traditional compliance—manual documentation, periodic audits, late validation—slows delivery, increases costs, and offers only point-in-time assurance.
 
-**What you’ll learn:** Why transformation is needed, what compliance-as-code means, and how to apply modern engineering practices to compliance.
-
-## The Challenge
-
-Traditional compliance often feels like a tax on innovation — slow, reactive, and low-value. Audit prep becomes a scramble, reviews create friction, and confidence in compliance remains shallow.
-
-## The Modern Approach
-
-Compliance transformation applies software engineering best practices:
-
-**Everything-as-code:** Requirements, policies, and evidence in version control,  
-**Continuous validation:** Compliance checked on every commit,  
-**Shift-left testing:** Issues caught early,  
-**Automated evidence:** Most audit proof generated automatically,  
-**Executable specifications:** Requirements expressed as automated tests.  
-
-**The result:** Less overhead, higher quality, and continuous audit readiness.
-
-## Prerequisites for Success
-
-Executive sponsorship, compliance partnership, basic CI/CD pipelines, and readiness for change.
-If these aren’t in place, start small with a proof of concept to build momentum.
+This section shows how to transform compliance from a bottleneck into a **continuous, automated capability** that enables faster and safer software delivery.
 
 ---
 
-## What You'll Learn
+## The Challenge
 
-This section guides you through compliance transformation:
+Traditional compliance often feels like a tax on innovation: slow, reactive, low-value. Audit prep becomes a scramble, reviews create friction, and confidence in compliance remains shallow.
 
-### Understanding the Problem
+---
 
-[Why Transformation?](why-transformation.md) explains the problems with traditional compliance and quantifies the opportunity for improvement. You'll understand the root causes of compliance friction and recognize whether transformation is right for your organization.
+## The Modern Approach
 
-### Core Principles
+Compliance transformation applies software engineering best practices that are already documented in other sections of this guide:
 
-[Compliance as Code](compliance-as-code.md) introduces five principles that underpin modern compliance: everything-as-code, continuous validation, shift-left compliance, automated evidence collection, and executable specifications. Each principle is explained with concrete examples.
+- **[Everything as Code](../everything-as-code/index.md)** - Requirements, policies, and evidence in version control
+- **[Continuous Delivery](../continuous-delivery/index.md)** - Compliance validation integrated into CD pipeline
+- **[Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md)** - Shift-left approach catches issues early
+- **[Executable Specifications](../specifications/index.md)** - Requirements expressed as automated tests
 
-### Transformation Journey
+**The transformation-specific content** explains:
 
-[Transformation Framework](transformation-framework.md) describes a four-phase approach to transformation: Assessment (4-6 weeks), Pilot (12-16 weeks), Automation (8-12 weeks), and Rollout (6-12 months). You'll understand the activities, deliverables, and exit criteria for each phase.
+- **Why** organizations should transform (business case)
+- **What** the five principles are (compliance-as-code)
+- **How** to implement transformation (framework)
 
-### Technical Patterns
+---
 
-Two documents explain key technical patterns:
+## Content in This Section
 
-- [Risk Control Specifications](risk-control-specifications.md) - How to express regulatory requirements as executable Gherkin scenarios
-- [Shift-Left Compliance](shift-left-compliance.md) - Strategy for catching compliance issues early when fixes are cheap
+### [Why Transformation?](why-transformation.md)
+
+The problems with traditional compliance and the quantified opportunity for improvement.
+
+**Topics**:
+
+- Traditional compliance characteristics and problems
+- Cost analysis (time, cycle time, risk)
+- ROI modeling and typical results
+- Readiness assessment
+
+**Read this** to understand the business case and recognize whether transformation is right for your organization.
+
+### [Compliance as Code Principles](compliance-as-code.md)
+
+Five interconnected principles that define modern compliance:
+
+1. **Everything as Code** → References [Everything as Code](../everything-as-code/index.md)
+2. **Continuous Validation** → References [CD Model](../continuous-delivery/cd-model/cd-model-overview.md)
+3. **Shift-Left Compliance** → References [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md)
+4. **Automated Evidence** → Integrated into CD pipeline
+5. **Executable Specifications** → References [Specifications](../specifications/index.md)
+
+**Read this** to understand how the principles connect and where each is detailed in other sections.
+
+### [Transformation Framework](transformation-framework.md)
+
+Four-phase approach from assessment to organization-wide adoption:
+
+- **Phase 1**: Assessment (4-6 weeks)
+- **Phase 2**: Pilot (12-16 weeks)
+- **Phase 3**: Automation (8-12 weeks)
+- **Phase 4**: Rollout (6-12 months)
+
+**Read this** for the detailed implementation roadmap with activities, deliverables, and exit criteria for each phase.
+
+---
+
+## Prerequisites for Success
+
+- **Executive sponsorship** - Transformation requires investment and organizational change
+- **Compliance partnership** - Compliance office must be active participant, not observer
+- **Basic CI/CD pipelines** - Foundation for continuous validation
+- **Readiness for change** - Team openness to new practices
+
+If these aren't in place, start small with a proof of concept to build momentum.
+
+---
+
+## Technical Implementation References
+
+The transformation section focuses on the **organizational journey**. Technical implementation details are documented in specialized sections:
+
+### For Everything as Code
+
+- [Everything as Code Paradigm](../everything-as-code/paradigm.md)
+- [Ubiquitous Language](../specifications/ubiquitous-language.md)
+
+### For Continuous Validation
+
+- [CD Model Overview](../continuous-delivery/cd-model/cd-model-overview.md)
+- [CD Model Stages 1-6](../continuous-delivery/cd-model/cd-model-stages-1-6.md)
+
+### For Shift-Left Testing
+
+- [Testing Strategy Overview](../continuous-delivery/testing/testing-strategy-overview.md)
+- [Testing Strategy Integration](../continuous-delivery/testing/testing-strategy-integration.md)
+
+### For Executable Specifications
+
+- [Three-Layer Testing Approach](../specifications/three-layer-approach.md)
+- [Risk Controls](../specifications/risk-controls.md)
+- [ATDD and BDD with Gherkin](../specifications/atdd-bdd-with-gherkin.md)
+- [Gherkin File Organization](../specifications/gherkin-concepts.md)
+
+### For Architecture
+
+- [Environments](../continuous-delivery/architecture/environments.md)
+- [Repository Patterns](../continuous-delivery/architecture/repository-patterns.md)
+
+---
+
+## Transformation Timeline
+
+**Total Duration**: 12-18 months from start to organization-wide adoption
+
+**Investment**: 2-3 FTE dedicated resources plus team participation
+
+**Expected ROI**:
+
+- 3-10 month payback period
+- 70-80% reduction in manual compliance work
+- 95%+ evidence automation
+- $1.8M - $6.4M annual benefit (typical mid-size organization)
 
 ---
 
 ## Automation Support
 
-Compliance transformation requires an automation layer to accelerate adoption. The Ready-to-Release (r2r) CLI project provides tools for:
+While the principles and framework are tool-agnostic, automation tooling dramatically accelerates adoption. The Ready-to-Release (r2r) CLI provides:
 
-- Initializing compliance structures
-- Validating requirements locally
-- Generating evidence packages
-- Creating traceability reports
-- Automating common compliance operations
+- Compliance structure initialization
+- Local requirements validation
+- Evidence package generation
+- Traceability report creation
+- Common compliance operation automation
 
-While the principles and framework described here are tool-agnostic, having automation support dramatically accelerates adoption and reduces the cost of transformation.
-
----
-
-## Related Documentation
-
-This transformation approach integrates with existing software delivery practices:
-
-### Continuous Delivery
-
-- [CD Model Overview](../continuous-delivery/cd-model/cd-model-overview.md) - Integration points for compliance validation
-- [CD Model Stages 1-6](../continuous-delivery/cd-model/cd-model-stages-1-6.md) - Early-stage compliance checks
-- [CD Model Stages 7-12](../continuous-delivery/cd-model/cd-model-stages-7-12.md) - Production compliance monitoring
-
-### Testing and Validation
-
-- [Testing Strategy Overview](../continuous-delivery/testing/testing-strategy-overview.md) - Shift-left testing approach
-- [Three-Layer Testing](../specifications/three-layer-approach.md) - ATDD/BDD/TDD integration
-
-### Security
-
-- [Security in CD Model](../continuous-delivery/security/index.md) - Security automation and compliance
-
-### Specifications
-
-- [Risk Controls](../specifications/risk-controls.md) - Risk control specification pattern
-
-### Templates
-
-- [Template Catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) - Reference templates for compliance artifacts
+This reduces transformation cost and accelerates team adoption.
