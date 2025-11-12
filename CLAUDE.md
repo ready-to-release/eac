@@ -17,19 +17,23 @@ ONLY do lookups via `git log` etc.
 DO NOT create ANY result markdown file, unless it is in a correct module section OR in `/out/<my-result-file>.md`
 CREATE ALL intermediate files, shell scripts, results etc. in `/out/<my-result-file>.md`
 
----
+## Development Workflow
 
-## Testing Specifications
+**MANDATORY WORKFLOW** - You MUST follow these steps for all development tasks:
 
-This project uses a **three-layer testing approach** unified in Gherkin:
+1. **Specifications First**: ALWAYS write specifications BEFORE writing any code
+   - Follow guidelines from `docs\explanation\specifications\index.md`
+   - Create/update `.feature` files in `specs/` directory
+   - Define acceptance criteria using ATDD Rule blocks
+   - Define behavior scenarios using BDD Scenarios
 
-- **ATDD** (Acceptance Criteria as Rule blocks) → Godog
-- **BDD** (Behavior Scenarios under Rules) → Godog
-- **TDD** (Unit tests) → Go test
+2. **Test-Driven Development (TDD)**: ALWAYS apply TDD
+   - Write tests first (unit tests in `src/`)
+   - Implement code to pass the tests
+   - Refactor as needed
 
-**Key Principles**:
-
-1. ATDD and BDD are conceptually distinct layers but technically unified in a single `.feature` file using Gherkin's `Rule:` syntax
-2. **Specifications (WHAT) vs Implementation (HOW)**: Specifications live in `specs/`, test implementations live in `src/`
-
-**Full documentation**: [Specifications](docs\explanation\specifications\index.md)
+3. **Test Validation**: ALWAYS run tests before reporting completion
+   - Run `go test` for unit tests
+   - Run `godog` for feature/behavior tests
+   - NEVER report "implementation done successfully" without running and passing all tests
+   - If tests fail, fix the implementation until they pass
