@@ -1,210 +1,42 @@
 # ========================================
-# Template Instructions
+# Risk Control Template
 # ========================================
 #
-# Risk control definitions are REQUIREMENTS from risk assessment documents.
-# They define WHAT must be controlled, not HOW to implement it.
+# Controls define WHAT must be controlled (requirements).
+# Implementations define HOW (solutions in src/features/).
 #
-# Key Principles:
-# 1. Risk controls live ONLY in specs/risk-controls/
-# 2. Each control defines a requirement using "MUST" statements
-# 3. Implementation features reference these controls with @risk<ID> tags
+# PROCESS:
+# 1. Conduct risk assessment (MANDATORY FIRST STEP)
+# 2. Select/tailor controls based on YOUR assessment findings
+# 3. Create control feature files (this template)
+# 4. Link to implementations via @risk-control:<name>-<id> tags
 #
-# To use this template:
+# USING THE CATALOG:
+# - catalog/ contains 299 example controls (INSPIRATION ONLY)
+# - DO NOT copy as-is - mappings are INDICATIVE ONLY
+# - Conduct YOUR risk assessment with qualified personnel
+# - Validate regulatory applicability for YOUR context
 #
-# 1. **Create feature file**:
-#    - File location: specs/risk-controls/[control-category]-[name].feature
-#    - Naming: Use dashes, no spaces, lowercase (kebab-case)
-#    - Examples: authentication-controls.feature, data-protection-controls.feature, audit-trail-controls.feature
+# STRUCTURE:
+# - Location: specs/risk-controls/<control-name>.feature
+# - Naming: kebab-case (e.g., auth-mfa.feature)
+# - Tag: @risk-control:<name> (feature), @risk-control:<name>-<id> (scenarios)
+# - Link implementations by tagging them with same @risk-control:<name>-<id>
 #
-# 2. **Define feature header**:
-#    - Feature name: [control-category]-[name] (kebab-case, e.g., authentication-controls, data-protection-encryption)
-#    - Description: Brief explanation using # comment format
-#    - Source: Bulleted list of regulatory references and assessment IDs using # comment format
-#    - Assessment: Risk assessment ID
-#    - Date: Assessment or last review date
-#
-# 3. **Create risk control scenarios**:
-#    - Tag: @risk<ID> (e.g., @risk1, @risk5, @risk10)
-#    - Name: RC-<ID> - <Description> (e.g., RC-001 - User authentication required)
-#    - Use MUST for mandatory requirements
-#    - Keep focused on one control per scenario
-#
-# 4. **Numbering scheme** (suggested):
-#    - 1-9: Authentication controls
-#    - 10-19: Data protection controls
-#    - 5-9: Audit controls
-#    - 20-29: Access control
-#    - 30-39: Privacy controls
-#    - 40-49: AI/ML controls
-#    - 50+: Other categories
-#
-# 5. **Writing effective risk controls**:
-#    - Start with Given to set context
-#    - Use Then/And with MUST for requirements
-#    - Be specific and measurable
-#    - Focus on WHAT must happen, not HOW
-#    - Avoid implementation details
-#
-# 6. **Linking to implementations**:
-#    - Implementation features tag scenarios with @risk<ID>
-#    - Multiple features can implement the same control
-#    - One feature can implement multiple controls
-#
-# Remember:
-# - Risk controls are REQUIREMENTS, not implementations
-# - They define WHAT must be controlled
-# - Implementation features define HOW
-# - Keep controls technology-agnostic when possible
 
-Feature: [control-category]-[name]
+@risk-control:<control-name>
+Feature: [Control Name]
 
-  # [Brief description of the risk controls in this file]
-  #
-  # Source:
-  #   - <Assessment-ID> (e.g., Assessment-2025-001)
-  #   - <Standard Reference> (e.g., ISO 27001:2022 A.8.5)
-  #
-  # Assessment: <Assessment-ID>
-  # Date: <YYYY-MM-DD>
+  # Source: Risk Assessment <ID>, Date: <YYYY-MM-DD>
 
-  # ========================================
-  # Risk Control Scenario Template
-  #
-  # Each risk control defines WHAT must be controlled (the requirement).
-  # Use this pattern for all risk control scenarios.
-  # ========================================
+  Rule: [Control requirement]
 
-  @risk<ID>
-  Scenario: RC-<ID> - [Short description of the control]
-    Given [context describing the system or situation]
-    Then [requirement] MUST [condition or behavior]
-    And [additional requirement] MUST [condition or behavior]
-    And [additional requirement] MUST [condition or behavior]
+    @risk-control:<control-name>-01
+    Scenario: [Specific requirement]
+      Given [context]
+      Then [requirement] MUST [behavior]
 
-  # ========================================
-  # Example Risk Controls by Category
-  # ========================================
-
-  # Authentication Controls
-  @risk1
-  Scenario: RC-001 - User authentication required
-    Given a system with protected resources
-    Then all user access MUST be authenticated
-    And authentication MUST occur before granting access
-    And failed authentication attempts MUST be logged
-
-  @risk2
-  Scenario: RC-002 - Password complexity requirements
-    Given a user registration or password change
-    Then passwords MUST be at least 12 characters
-    And passwords MUST contain uppercase, lowercase, numbers, and symbols
-    And weak passwords MUST be rejected
-
-  @risk3
-  Scenario: RC-003 - Session timeout requirements
-    Given an authenticated user session
-    Then sessions MUST timeout after 30 minutes of inactivity
-    And users MUST re-authenticate after timeout
-    And session expiry MUST be logged
-
-  # Data Protection Controls
-  @risk10
-  Scenario: RC-010 - Data encryption at rest
-    Given sensitive data is stored
-    Then all sensitive data MUST be encrypted at rest
-    And encryption MUST use AES-256 or stronger
-    And encryption keys MUST be stored separately
-    And plaintext sensitive data MUST NOT be stored
-
-  @risk11
-  Scenario: RC-011 - Data encryption in transit
-    Given data is transmitted over network
-    Then all data transmission MUST use TLS 1.3 or higher
-    And certificate validation MUST be enforced
-    And self-signed certificates MUST be rejected in production
-    And encryption failures MUST prevent transmission
-
-  @risk12
-  Scenario: RC-012 - PII data protection
-    Given personal identifiable information (PII) is processed
-    Then PII MUST be encrypted both at rest and in transit
-    And PII access MUST be logged
-    And PII deletion MUST be verifiable
-    And PII export MUST be controlled
-
-  # Audit and Traceability Controls
-  @risk5
-  Scenario: RC-005 - Audit trail completeness
-    Given system operations occur
-    Then all changes MUST create audit trail entries
-    And audit entries MUST include: timestamp, user, action, before/after values
-    And audit entries MUST be immutable
-    And audit trails MUST be retained for required period
-
-  @risk6
-  Scenario: RC-006 - Audit trail integrity
-    Given audit trail entries exist
-    Then audit entries MUST be protected from modification
-    And unauthorized access to audit logs MUST be prevented
-    And audit log tampering MUST be detectable
-    And audit log access MUST be logged
-
-  @risk7
-  Scenario: RC-007 - Change traceability
-    Given system changes are made
-    Then all changes MUST be traceable to requirements
-    And all changes MUST be traceable to authorized users
-    And change history MUST be complete and accurate
-    And unauthorized changes MUST be prevented
-
-  # Access Control
-  @risk20
-  Scenario: RC-020 - Role-based access control
-    Given users with different roles
-    Then access permissions MUST be based on user roles
-    And users MUST NOT access resources beyond their role
-    And role changes MUST require authorization
-    And role assignments MUST be auditable
-
-  @risk21
-  Scenario: RC-021 - Least privilege principle
-    Given user access requirements
-    Then users MUST be granted minimum necessary permissions
-    And default permissions MUST be restrictive
-    And permission escalation MUST require approval
-    And excessive permissions MUST be detected and removed
-
-  # Privacy Controls
-  @risk30
-  Scenario: RC-030 - Right to access personal data
-    Given a data subject request
-    Then users MUST be able to access all their personal data
-    And data export MUST be in machine-readable format
-    And data access MUST be provided within required timeframe
-    And data access MUST be logged
-
-  @risk31
-  Scenario: RC-031 - Right to erasure
-    Given a data subject deletion request
-    Then all personal data MUST be deleted
-    And deletion MUST be verifiable
-    And deletion MUST be logged for audit
-    And exceptions to deletion MUST be documented
-
-  # AI/ML Controls
-  @risk40
-  Scenario: RC-040 - AI model transparency
-    Given an AI/ML model in production
-    Then model decisions MUST be explainable
-    And model training data MUST be documented
-    And model versioning MUST be maintained
-    And model performance MUST be monitored
-
-  @risk41
-  Scenario: RC-041 - AI bias detection
-    Given AI/ML model outputs
-    Then model predictions MUST be tested for bias
-    And bias detection MUST run continuously
-    And bias findings MUST be reported
-    And biased models MUST be retrained or removed
+    @risk-control:<control-name>-02
+    Scenario: [Another requirement]
+      Given [context]
+      Then [requirement] MUST [behavior]
