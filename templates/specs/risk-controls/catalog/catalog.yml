@@ -1,0 +1,179 @@
+# Risk Controls Catalog
+version: "1.0.0"
+last_updated: "2025-11-12"
+total_controls: 299
+total_domains: 30
+
+# DISCLAIMER: This catalog provides example risk controls mapped to common regulations.
+# These mappings are INDICATIVE ONLY and should not be used as-is for compliance.
+# Proper risk assessment and control selection must be performed by qualified personnel
+# based on your specific organizational context, threats, and regulatory requirements.
+
+# Regulatory Mappings Used:
+# - ISO27001: Information Security Management
+# - HIPAA: Healthcare Information Security
+# - PCI-DSS: Payment Card Industry Security
+# - FDA 21 CFR Part 11: Electronic Records/Signatures
+# - GDPR/CCPA/LGPD: Data Privacy
+# - SOX: Financial Controls
+# - EU AI Act/NIST AI RMF/ISO 42001: AI Governance
+# - MDR/IVDR/ISO13485/IEC62304: Medical Devices
+# - CSA CCM/ISO27017/27018: Cloud Security
+# - FIPS-140-2/3: Cryptography
+# - OWASP/MASVS: Application/Mobile Security
+# - NIST-800-53/NIST-SSDF: Federal Security
+# - ALCOA+/GxP/GAMP5: Pharmaceutical Quality
+# - eIDAS: Electronic Identification (EU)
+# - ISO14971/ISO31000: Risk Management
+# - SLSA: Software Supply Chain
+
+domains:
+  - name: authentication
+    tag: "@auth"
+    folder: authentication/
+    count: 9
+
+  - name: data-protection
+    tag: "@data-protection"
+    folder: data-protection/
+    count: 10
+
+  - name: audit-logging
+    tag: "@audit"
+    folder: audit-logging/
+    count: 10
+
+  - name: access-control
+    tag: "@access-control"
+    folder: access-control/
+    count: 10
+
+  - name: privacy
+    tag: "@privacy"
+    folder: privacy/
+    count: 10
+
+  - name: ai-ml
+    tag: "@ai-ml"
+    folder: ai-ml/
+    count: 10
+
+  - name: change-control
+    tag: "@change-control"
+    folder: change-control/
+    count: 10
+
+  - name: validation
+    tag: "@validation"
+    folder: validation/
+    count: 10
+
+  - name: supply-chain
+    tag: "@supply-chain"
+    folder: supply-chain/
+    count: 10
+
+  - name: incident-response
+    tag: "@incident-response"
+    folder: incident-response/
+    count: 10
+
+  - name: network-security
+    tag: "@network-security"
+    folder: network-security/
+    count: 10
+
+  - name: app-security
+    tag: "@app-security"
+    folder: app-security/
+    count: 10
+
+  - name: documents
+    tag: "@documents"
+    folder: documents/
+    count: 10
+
+  - name: training
+    tag: "@training"
+    folder: training/
+    count: 10
+
+  - name: physical-security
+    tag: "@physical-security"
+    folder: physical-security/
+    count: 10
+
+  - name: crypto
+    tag: "@crypto"
+    folder: crypto/
+    count: 10
+
+  - name: backup
+    tag: "@backup"
+    folder: backup/
+    count: 10
+
+  - name: monitoring
+    tag: "@monitoring"
+    folder: monitoring/
+    count: 10
+
+  - name: vulnerability
+    tag: "@vulnerability"
+    folder: vulnerability/
+    count: 10
+
+  - name: risk-management
+    tag: "@risk-mgmt"
+    folder: risk-management/
+    count: 10
+
+  - name: compliance
+    tag: "@compliance"
+    folder: compliance/
+    count: 10
+
+  - name: data-retention
+    tag: "@data-retention"
+    folder: data-retention/
+    count: 10
+
+  - name: secure-sdlc
+    tag: "@secure-sdlc"
+    folder: secure-sdlc/
+    count: 10
+
+  - name: api-security
+    tag: "@api-security"
+    folder: api-security/
+    count: 10
+
+  - name: cloud-security
+    tag: "@cloud-security"
+    folder: cloud-security/
+    count: 10
+
+  - name: mobile-security
+    tag: "@mobile-security"
+    folder: mobile-security/
+    count: 10
+
+  - name: iot-medical
+    tag: "@iot-medical"
+    folder: iot-medical/
+    count: 10
+
+  - name: devsecops
+    tag: "@devsecops"
+    folder: devsecops/
+    count: 10
+
+  - name: threat-intel
+    tag: "@threat-intel"
+    folder: threat-intel/
+    count: 10
+
+  - name: data-quality
+    tag: "@data-quality"
+    folder: data-quality/
+    count: 10
