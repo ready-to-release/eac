@@ -1,0 +1,98 @@
+# Test Tagging System Specification
+# Contract for test classification and dependency management
+# Version: 0.1.0
+
+metadata:
+  version: "0.1.0"
+  description: "Formal specification for test tagging system across all test frameworks"
+  scope: "Applies to Gherkin features, Go tests, and future test frameworks"
+
+tags:
+  - tag: "@dep:docker"
+    description: "Requires Docker daemon to be running"
+    type: system_dependency
+
+  - tag: "@dep:git"
+    description: "Requires Git CLI to be available"
+    type: system_dependency
+
+  - tag: "@dep:go"
+    description: "Requires Go toolchain to be available"
+    type: system_dependency
+
+  - tag: "@dep:claude"
+    description: "Requires Claude API access and credentials"
+    type: system_dependency
+
+  - tag: "@dep:az-cli"
+    description: "Requires Azure CLI to be available"
+    type: system_dependency
+
+  - tag: "@L0"
+    name: "Very Fast Unit Tests with direct access to source files and build artifacts"
+    type: taxonomy-level
+
+  - tag: "@L1"
+    name: "Fast Unit Tests with direct access to source files and build artifacts"
+    type: taxonomy-level
+
+  - tag: "@L2"
+    name: "Emulated System Tests with access to emulator and build artifacts"
+    type: taxonomy-level
+
+  - tag: "@L3"
+    name: "Production-like System Tests with access to in-situ environment and build artifacts deployed to it"
+    type: taxonomy-level
+
+  - tag: "@L4"
+    name: "Production System Tests with access to in-situ environment and build artifacts deployed to it"
+    type: taxonomy-level
+
+  - tag: "@ov"
+    name: "Operational Verification"
+    description: "Functional tests verifying feature behavior"
+    type: verification
+
+  - tag: "@iv"
+    name: "Installation Verification"
+    type: verification
+
+  - tag: "@pv"
+    name: "Performance Verification"
+    description: "Load tests and performance benchmarks"
+    type: verification
+
+  - tag: "@piv"
+    name: "Production Installation Verification"
+    description: "Smoke tests in production post-deployment"
+    type: verification
+
+  - tag: "@ppv"
+    name: "Production Performance Verification"
+    description: "Production monitoring and performance validation"
+    type: verification
+
+  - tag: "@requires_isolation"
+    description: "Test must run in isolation with proper setup/teardown"
+    type: safety
+
+  - tag: "@risk:<risk-id>"
+    description: "Tag specific risks for tracking and mitigation"
+    type: safety
+
+# ============================================================================
+# Tag Type Definitions
+# ============================================================================
+
+types:
+  - type: system_dependency
+    description: "External system dependencies required for test execution (e.g., docker, git, go)"
+
+  - type: taxonomy-level
+    description: "Test environment complexity and isolation level (L0-L4)"
+
+  - type: verification
+    description: "What aspect of the system is being verified (operational, installation, performance)"
+
+  - type: safety
+    description: "Tags related to test isolation, cleanup, and risk tracking"

@@ -51,7 +51,7 @@ func buildCommandTree() CommandTree {
 	// Process all registered commands
 	commandRegistry := registry.GetCommandRegistry()
 	for _, reg := range commandRegistry {
-		cmdName := reg.DisplayName
+		cmdName := reg.ActualCommand
 		parts := strings.Fields(cmdName)
 
 		info := CommandInfo{

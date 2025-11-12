@@ -370,7 +370,8 @@ func InitializeDesignScenario(sc *godog.ScenarioContext) {
 	})
 
 	// Given steps
-	sc.Step(`^Docker is running$`, dockerIsRunning)
+	sc.Step(`^docker service is available$`, dockerIsRunning)
+	sc.Step(`^Docker is running$`, dockerIsRunning) // Keep for backward compatibility
 	sc.Step(`^module "([^"]*)" has workspace\.dsl file$`, moduleHasWorkspaceDslFile)
 	sc.Step(`^multiple modules have workspace\.dsl files$`, multipleModulesHaveWorkspaceDslFiles)
 

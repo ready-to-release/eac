@@ -12,7 +12,6 @@ This article explains how test levels integrate with CD Model stages, the proces
 
 ![L0-L1 Legend](../../../assets/testing/legend-L0-L1.drawio.png)
 
-
 **L0-L1 Execution:**
 
 - **Name**: Unit Tests
@@ -53,7 +52,6 @@ This article explains how test levels integrate with CD Model stages, the proces
 - **Purpose**: Validate infrastructure, deployment, and configuration
 - **Determinism**: Moderate
 - **Domain Coherency**: High
-
 
 ![L3 Environment](../../../assets/testing/env-l3.drawio.png)
 
@@ -275,17 +273,17 @@ Feature: API Service Deployment
 
 ### Detailed Stage Mapping
 
-| Stage | Test Levels | Time Budget | Environment | Quality Gates |
-|-------|-------------|-------------|-------------|---------------|
-| **1. Authoring** | Manual validation | N/A | DevBox | Developer judgment |
-| **2. Pre-commit** | L0-L2 | 5-10 min | DevBox | 100% pass, coverage ≥ threshold |
-| **3. Merge Request** | L0-L2 | 15-30 min | Build Agents | 100% pass, peer approval |
-| **4. Commit** | L0-L2 | 15-30 min | Build Agents | 100% pass, artifacts built |
-| **5. Acceptance** | L3 (vertical) | 1-2 hours | PLTE | IV, OV, PV validated |
-| **6. Extended** | L3 + perf/sec | 2-8 hours | PLTE | Comprehensive validation |
-| **7. Exploration** | Manual prep | Days | Demo | Scenarios defined |
-| **8-10. Release** | Regression subset | Minutes | As appropriate | No critical failures |
-| **11-12. Live** | L4 (horizontal) | Continuous | Production | Synthetic monitoring, SLA |
+| Stage                | Test Levels       | Time Budget | Environment    | Quality Gates                   |
+| -------------------- | ----------------- | ----------- | -------------- | ------------------------------- |
+| **1. Authoring**     | Manual validation | N/A         | DevBox         | Developer judgment              |
+| **2. Pre-commit**    | L0-L2             | 5-10 min    | DevBox         | 100% pass, coverage ≥ threshold |
+| **3. Merge Request** | L0-L2             | 15-30 min   | Build Agents   | 100% pass, peer approval        |
+| **4. Commit**        | L0-L2             | 15-30 min   | Build Agents   | 100% pass, artifacts built      |
+| **5. Acceptance**    | L3 (vertical)     | 1-2 hours   | PLTE           | IV, OV, PV validated            |
+| **6. Extended**      | L3 + perf/sec     | 2-8 hours   | PLTE           | Comprehensive validation        |
+| **7. Exploration**   | Manual prep       | Days        | Demo           | Scenarios defined               |
+| **8-10. Release**    | Regression subset | Minutes     | As appropriate | No critical failures            |
+| **11-12. Live**      | L4 (horizontal)   | Continuous  | Production     | Synthetic monitoring, SLA       |
 
 ### Key Stage Transitions
 

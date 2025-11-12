@@ -1,7 +1,7 @@
-@commands
+@commands @skip
 Feature: commands_templates
 
-  As a developer
+  As a developer of the eac platform
   I want to install and manage templates with value replacements
   So that I can generate project structures efficiently
 

@@ -1,0 +1,81 @@
+@L2 @ov
+Feature: Test Suite Command
+  As a developer
+  I want to run tests by suite
+  So that I can execute appropriate tests for different pipeline stages
+
+  Background:
+    Given the EAC repository is available
+    And test suites are defined (pre-commit, acceptance, production-verification)
+
+  Rule: Must list available test suites
+
+    Scenario: User lists available suites
+      When I run "test list-suites"
+      Then the command succeeds
+      And the output contains "pre-commit"
+      And the output contains "acceptance"
+      And the output contains "production-verification"
+
+  Rule: Must verify system dependencies before running tests
+
+    Scenario: All dependencies available
+      Given all system dependencies are installed
+      When I run "test pre-commit"
+      Then the command checks system dependencies
+      And the command runs the selected tests
+
+    Scenario: Missing dependencies
+      Given Docker is not installed
+      And a test requires "@dep:docker"
+      When I run "test pre-commit"
+      Then the command checks system dependencies
+      And the output warns "Missing dependencies: @dep:docker"
+      And the command asks if I want to continue
+      When I answer "no"
+      Then the command exits with code 1
+
+    Scenario: Skip dependency check
+      Given Docker is not installed
+      When I run "test pre-commit --skip-deps"
+      Then the command does not check system dependencies
+      And the command runs the selected tests
+
+  Rule: Must select and run tests matching suite criteria
+
+    Scenario: Run pre-commit suite
+      When I run "test pre-commit"
+      Then the command discovers all tests
+      And the command applies inference rules
+      And the command selects tests with tags "@L0", "@L1", or "@L2"
+      And the command runs Go unit tests
+      And the command runs Godog features
+
+    Scenario: Run acceptance suite
+      When I run "test acceptance"
+      Then the command selects tests with tags "@iv", "@ov", or "@pv"
+      And the command runs the selected tests
+
+    Scenario: Run production-verification suite
+      When I run "test production-verification"
+      Then the command selects tests with tags "@L4" AND "@piv"
+      And the command runs the selected tests
+
+  Rule: Must generate test reports
+
+    Scenario: Generate test summary
+      When I run "test pre-commit"
+      And tests complete successfully
+      Then a test run directory is created in "out/test-results/<timestamp>"
+      And the summary includes discovered tests count
+      And the summary includes selected tests count
+      And the summary includes dependency verification results
+      And the summary includes test execution results
+
+  Rule: Must handle errors gracefully
+
+    Scenario: Unknown suite
+      When I run "test unknown-suite"
+      Then the command exits with code 1
+      And the error message is "suite not found: unknown-suite"
+      And the output lists available suites

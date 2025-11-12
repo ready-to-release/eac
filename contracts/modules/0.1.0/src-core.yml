@@ -6,7 +6,7 @@ type: "go-library"
 description: "Core library containing contracts and repository operations"
 
 source:
-  root: "src/internal"
+  root: "src/core"
   includes:
     - "go.mod"
     - "go.sum"

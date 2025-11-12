@@ -66,8 +66,8 @@ type CommandFunc func() int
 // CommandRegistration holds command metadata
 type CommandRegistration struct {
 	Func           CommandFunc
-	DisplayName    string // "get files" (with spaces)
-	CanonicalName  string // "get-files" (kebab-case)
+	ActualCommand  string // "get files" - the actual command users type
+	CanonicalName  string // "get-files" - internal moniker (kebab-case)
 	Description    string // Command description from file header
 	Usage          string // Command usage from file header
 	HasSideEffects bool   // Whether command modifies repository files
@@ -124,7 +124,7 @@ func Register(fn CommandFunc) {
 	// Store in registry with both forms
 	commandRegistry[canonicalName] = &CommandRegistration{
 		Func:           fn,
-		DisplayName:    metadata.CommandName,
+		ActualCommand:  metadata.CommandName,
 		CanonicalName:  canonicalName,
 		Description:    metadata.Description,
 		Usage:          metadata.Usage,

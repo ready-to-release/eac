@@ -188,8 +188,18 @@ func buildGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir 
 
 // buildGoLibrary builds a Go library module (Pattern D)
 // Note: Libraries are imported as dependencies, no binary output
+// Runs go generate to prepare any embedded resources or generated code
 func buildGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer) int {
+	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+
 	fmt.Fprintf(logWriter, "\n=== go-library: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
+
+	// Step 1: go generate to prepare embedded resources
+	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
+		return exitCode
+	}
+
 	fmt.Fprintf(logWriter, "ℹ️  This is a library module (no binary to build)\n")
 	fmt.Fprintf(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)\n")
 	return 0
