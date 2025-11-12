@@ -1,3 +1,4 @@
+# version: 0.1.0
 testing_taxonomy:
   version: "0.1.0"
   description: "Testing taxonomy based on execution environment and scope"

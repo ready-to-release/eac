@@ -208,7 +208,7 @@ The testing strategy integrates three methodologies:
 - Process: Define criteria → Implement → Validate in production
 - Tools: Synthetic monitoring, exploratory testing, production observability
 
-See **[Three-Layer Testing Approach](../../../specifications/three-layer-approach.md)** for detailed integration.
+See **[Three-Layer Testing Approach](../../specifications/three-layer-approach.md)** for detailed integration.
 
 ---
 

@@ -159,7 +159,7 @@ Translate requirements to executable format:
 - Tag with @risk IDs for traceability
 - Review with compliance office for approval
 
-**Format**: See [Risk Control Specifications](risk-control-specifications.md) for detailed guidance
+**Format**: Document risk controls as `.feature` files with Gherkin scenarios
 
 **Deliverable**: Risk control specifications (`specs/risk-controls/*.feature`)
 
@@ -462,8 +462,8 @@ Avoid these common mistakes:
 
 To understand the transformation in detail:
 
-1. **Understand risk controls** - Read [Risk Control Specifications](risk-control-specifications.md)
-2. **Study shift-left** - Read [Shift-Left Compliance](shift-left-compliance.md)
+1. **Understand risk controls** - Review pilot team's `.feature` files for patterns
+2. **Study shift-left** - Understand early compliance validation in pipelines
 
 To begin transformation:
 
@@ -478,7 +478,5 @@ To begin transformation:
 
 - [Why Transformation?](why-transformation.md) - Business case and opportunity
 - [Compliance as Code](compliance-as-code.md) - Core principles
-- [Risk Control Specifications](risk-control-specifications.md) - Technical pattern
-- [Shift-Left Compliance](shift-left-compliance.md) - Early detection
 - [CD Model](../continuous-delivery/cd-model/cd-model-overview.md) - Pipeline integration points
 - [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing approach
