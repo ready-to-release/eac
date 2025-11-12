@@ -28,20 +28,10 @@ versioning scheme, and dependencies for the CLI module. Enables
 automated version management and deployment tracking.
 
 ```yaml
-moniker: "cli-cli"
+moniker: "src-cli"
 name: "The Cli of Cli's cli"
 type: "cli"
 root: "src/cli"
-versioning:
-  version_scheme: "MAJOR.MINOR.PATCH"
-used_by:
-  - "claude-config"
-  - "src-mcp-vscode"
-```
-
-```yaml
-paths:
-  - '**/src-cli/**'
 ```
 
 ---

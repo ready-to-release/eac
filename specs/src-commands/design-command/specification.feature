@@ -11,7 +11,7 @@ Feature: src-commands_design-command
     Scenario: Start Structurizr for a module
       Given Docker is running
       And module "src-cli" has workspace.dsl file
-      When I run "go run . design serve src-cli"
+      When I run "go run . design serve src-cli --no-browser"
       Then Structurizr container should start successfully
       And I should see success message with URL
       And documentation should be accessible at the URL

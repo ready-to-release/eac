@@ -19,7 +19,7 @@ source:
     - "r2r.example.yml"
 
 depends_on:
-  - "src-internal"
+  - "src-core"
 used_by:
   - "claude-config"
   - "src-mcp-vscode"

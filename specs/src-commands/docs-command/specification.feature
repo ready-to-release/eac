@@ -10,7 +10,7 @@ Feature: src-commands_docs-command
     @success @ac1
     Scenario: Start MkDocs documentation server
       Given Docker is running
-      When I run "go run . docs serve"
+      When I run "go run . docs serve --no-browser"
       Then MkDocs container should start successfully
       And I should see success message with URL
       And documentation should be accessible at "http://localhost:8000"

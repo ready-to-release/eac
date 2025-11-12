@@ -1,0 +1,23 @@
+# Version: 0.1.0
+
+moniker: "src-core"
+name: "Core Domain Libraries"
+type: "go-library"
+description: "Core library containing contracts and repository operations"
+
+source:
+  root: "src/internal"
+  includes:
+    - "go.mod"
+    - "go.sum"
+    - "**.go"
+
+parent: "."
+
+depends_on: []
+
+used_by:
+  - "src-cli"
+  - "src-commands"
+  - "src-mcp-commands"
+  - "src-mcp-github"

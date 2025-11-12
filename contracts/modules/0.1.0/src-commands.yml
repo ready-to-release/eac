@@ -17,7 +17,7 @@ source:
     - "/specs/src-commands/**/*"
 
 depends_on:
-  - "src-internal"
+  - "src-core"
 used_by:
   - "sh"
   - "bash"

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
-	"github.com/ready-to-release/eac/src/internal/repository/definitions"
+	"github.com/ready-to-release/eac/src/core/repository/definitions"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

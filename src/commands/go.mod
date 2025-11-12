@@ -8,7 +8,7 @@ require (
 	github.com/docker/go-connections v0.6.0
 	github.com/jedib0t/go-pretty/v6 v6.6.9
 	github.com/pelletier/go-toml/v2 v2.2.4
-	github.com/ready-to-release/eac/src/internal v0.0.0
+	github.com/ready-to-release/eac/src/core v0.0.0
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -57,4 +57,4 @@ require (
 	gotest.tools/v3 v3.5.2 // indirect
 )
 
-replace github.com/ready-to-release/eac/src/internal => ../internal
+replace github.com/ready-to-release/eac/src/core => ../core
