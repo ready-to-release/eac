@@ -1,6 +1,7 @@
 // Command: design add container
 // Description: Add a container to a module's architecture
 // Usage: design add container <module> <name> --tech <technology> --desc <description>
+// HasSideEffects: true
 package design
 
 import (

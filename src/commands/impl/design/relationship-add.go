@@ -1,6 +1,7 @@
 // Command: design add relationship
 // Description: Add a relationship between containers in a module's architecture
 // Usage: design add relationship <module> <source> <destination> --desc <description> [--tech <technology>]
+// HasSideEffects: true
 package design
 
 import (

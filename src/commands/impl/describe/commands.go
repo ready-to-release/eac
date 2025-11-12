@@ -1,5 +1,6 @@
 // Command: describe commands
 // Description: Output structured command information for shell integration
+// HasSideEffects: false
 package describe
 
 import (

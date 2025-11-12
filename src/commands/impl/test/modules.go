@@ -2,6 +2,7 @@
 // Description: Test multiple modules in sequence and collect results in a test run directory
 // Usage: test modules [moniker1] [moniker2] ... [--as-cucumber|--as-junit]
 // Default: Tests all modules if no monikers specified
+// HasSideEffects: false
 package test
 
 import (

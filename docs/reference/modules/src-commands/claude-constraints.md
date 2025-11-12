@@ -37,6 +37,7 @@ cmd.Env = removeAPIKeyFromEnv(os.Environ())
 ```
 
 **Why this works:**
+
 - Claude CLI supports both API key AND subscription auth
 - By removing `ANTHROPIC_API_KEY` from environment, it falls back to subscription
 - Provides programmatic access without API credits
@@ -46,46 +47,52 @@ cmd.Env = removeAPIKeyFromEnv(os.Environ())
 **Single unified agent approach:**
 
 1. **Agent**: `.claude/agents/commit-message-generator.md`
+
    - Single agent generates complete commit message
    - Uses `commit-message-format` skill for output compliance
    - Receives unified context (all modules, files, git diff)
 
 2. **Skill**: `.claude/skills/commit-message-format.md`
+
    - Encapsulates `contracts/commit-message/0.1.0/structure.yml` rules
    - Enforces output format, line wrapping, anti-corruption layer
    - Reusable across multiple agents if needed
 
 3. **Flow**:
-   ```
-   commit-ai.go
-     ↓ gathers context
-     ↓ builds unified prompt
-     ↓ shells out to `claude` CLI
-   commit-message-generator agent
-     ↓ activates commit-message-format skill
-     ↓ analyzes git diff and modules
-     ↓ generates complete message
-   commit-ai.go
-     ↓ receives output via stdout
-     ↓ strips noise (anti-corruption)
-     ↓ validates against contract
-     ↓ outputs final message
-   ```
+
+  ```text
+  commit-ai.go
+    ↓ gathers context
+    ↓ builds unified prompt
+    ↓ shells out to `claude` CLI
+  commit-message-generator agent
+    ↓ activates commit-message-format skill
+    ↓ analyzes git diff and modules
+    ↓ generates complete message
+  commit-ai.go
+    ↓ receives output via stdout
+    ↓ strips noise (anti-corruption)
+    ↓ validates against contract
+    ↓ outputs final message
+  ```
 
 ### Key Implementation Details
 
 **Simplified from multi-agent (before):**
+
 - Old: `commit-message-top-level` agent + N × `commit-message-module` agents
 - Old: Complex orchestration, combining sections, multiple Claude invocations
 - Old: ~400 lines of orchestration code
 
 **To single-agent (current):**
+
 - New: Single `commit-message-generator` agent
 - New: Agent uses skill for contract compliance
 - New: One Claude invocation per commit
 - New: ~250 lines (removed 150 lines of complexity)
 
 **Trade-offs accepted:**
+
 - ✅ Works with subscription (no API key needed)
 - ✅ Programmatic from Go binary
 - ✅ Single prompt → structured output
@@ -96,19 +103,25 @@ cmd.Env = removeAPIKeyFromEnv(os.Environ())
 ## Alternative Approaches Considered
 
 ### Option 1: Claude Code Task Tool
+
 **Rejected**: Requires active Claude Code session
+
 - User would need to be IN a `claude` session
 - Would invoke via Task tool to subagent
 - Not suitable for standalone CLI tool usage
 
 ### Option 2: MCP Server
+
 **Rejected**: Still requires Claude Code session
+
 - Would expose `generate_commit_message` tool
 - Claude Code could call during interactive session
 - Not suitable for programmatic invocation from Go
 
 ### Option 3: Direct API
+
 **Blocked**: No API key available
+
 - Would be ideal: simple HTTP requests from Go
 - Much simpler code (~50 lines vs ~250 lines)
 - Better rate limits and control
@@ -132,6 +145,7 @@ response, err := client.Messages.Create(ctx, &anthropic.MessageCreateParams{
 ```
 
 **Benefits:**
+
 - Remove ~150 lines of CLI orchestration
 - No noise filtering needed
 - Better error handling

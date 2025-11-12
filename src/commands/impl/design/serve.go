@@ -1,5 +1,6 @@
 // Command: design serve
 // Description: Start or stop Structurizr server for a module
+// HasSideEffects: false
 package design
 
 import (

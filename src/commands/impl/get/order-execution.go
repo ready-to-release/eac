@@ -5,6 +5,7 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+// HasSideEffects: false
 package get
 
 import (

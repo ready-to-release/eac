@@ -1,6 +1,7 @@
 // Command: design export
 // Description: Export workspace DSL content
 // Usage: design export <module> [--output <file>]
+// HasSideEffects: false
 package design
 
 import (

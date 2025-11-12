@@ -1,5 +1,6 @@
 // Command: validate dependencies
 // Description: Validate module dependencies from go.mod files against contracts
+// HasSideEffects: false
 package validate
 
 import (

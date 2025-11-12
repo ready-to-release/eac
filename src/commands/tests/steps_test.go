@@ -37,6 +37,17 @@ func iRun(cmdLine string) error {
 	return runCommandWithArgs(args...)
 }
 
+func iRunTheCommand(cmdLine string) error {
+	// New step for "When I run the command <command>"
+	// Takes just the command without "go run ."
+	parts := strings.Fields(cmdLine)
+	if len(parts) < 1 {
+		return fmt.Errorf("invalid command format: %s", cmdLine)
+	}
+
+	return runCommandWithArgs(parts...)
+}
+
 func theExitCodeIs(expectedCode int) error {
 	if ctx.exitCode != expectedCode {
 		return fmt.Errorf("expected exit code %d, got %d. Output:\n%s",
@@ -148,6 +159,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 
 	// All steps
 	sc.Step(`^I run "([^"]*)"$`, iRun)
+	sc.Step(`^I run the command "([^"]*)"$`, iRunTheCommand)
 	sc.Step(`^I run "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iRunOr)
 	sc.Step(`^I run "([^"]*)", "([^"]*)", or "([^"]*)"$`, iRunOr)
 	sc.Step(`^the exit code is (\d+)$`, theExitCodeIs)

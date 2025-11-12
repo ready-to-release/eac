@@ -1,5 +1,6 @@
 // Command: show modules
 // Description: Show all module contracts in the repository
+// HasSideEffects: false
 package show
 
 import (

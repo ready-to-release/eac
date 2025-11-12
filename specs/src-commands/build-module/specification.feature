@@ -12,22 +12,22 @@ Feature: Build Module Command
 
     @success @ac1
     Scenario: Build existing module
-      When I run "go run . build-module src-commands"
+      When I run the command "build module src-commands"
       Then I should see "Building" or "Success" or "build"
 
     @error @ac1
     Scenario: Error on non-existent module
-      When I run "go run . build-module non-existent-module-xyz"
+      When I run the command "build module non-existent-module-xyz"
       Then I should see "not found" or "Error" or "unknown"
 
   Rule: Command must be accessible
 
     @success @ac2
     Scenario: Command is registered
-      When I run "go run . build-module"
+      When I run the command "build module"
       Then I should see "build" or "module" or "Error"
 
     @error @ac2
     Scenario: Invalid module shows error
-      When I run "go run . build-module"
+      When I run the command "build module"
       Then I should see "build" or "module" or "usage"

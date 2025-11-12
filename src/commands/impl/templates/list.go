@@ -3,6 +3,7 @@
 // Usage: go run . templates list [--template <git-repo-url|local-path>]
 // Flags:
 //   --template <git-repo-url|local-path>: Git repository URL or local directory to scan (default: https://github.com/ready-to-release/eac)
+// HasSideEffects: false
 package templates
 
 import (

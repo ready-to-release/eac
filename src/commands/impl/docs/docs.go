@@ -1,5 +1,6 @@
 // Command: docs
 // Description: Project documentation tools using MkDocs - Main command
+// HasSideEffects: false
 package docs
 
 import (

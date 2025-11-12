@@ -1,6 +1,7 @@
 // Command: commit-ai
 // Description: Generate commit message using AI with staged changes and module mappings
 // Flags: --debug (save intermediate outputs and show debug info)
+// HasSideEffects: false
 package commit
 
 import (

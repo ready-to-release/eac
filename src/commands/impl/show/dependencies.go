@@ -1,5 +1,6 @@
 // Command: show dependencies
 // Description: Show module dependency graph in a human-readable table format
+// HasSideEffects: false
 package show
 
 import (

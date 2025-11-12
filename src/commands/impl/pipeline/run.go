@@ -8,6 +8,7 @@
 // Flags:
 //   --changed-only: Only run pipelines for changed modules
 //   --ref <ref>: Git ref to use (default: current branch)
+// HasSideEffects: true
 package pipeline
 
 import (

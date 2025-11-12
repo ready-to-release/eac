@@ -65,11 +65,12 @@ type CommandFunc func() int
 
 // CommandRegistration holds command metadata
 type CommandRegistration struct {
-	Func          CommandFunc
-	DisplayName   string // "get files" (with spaces)
-	CanonicalName string // "get-files" (kebab-case)
-	Description   string // Command description from file header
-	Usage         string // Command usage from file header
+	Func           CommandFunc
+	DisplayName    string // "get files" (with spaces)
+	CanonicalName  string // "get-files" (kebab-case)
+	Description    string // Command description from file header
+	Usage          string // Command usage from file header
+	HasSideEffects bool   // Whether command modifies repository files
 }
 
 // commands maps command names to their implementation functions
@@ -96,6 +97,24 @@ func Register(fn CommandFunc) {
 		panic("registry.Register: no '// Command:' found in " + file)
 	}
 
+	// Validate HasSideEffects is declared
+	if metadata.HasSideEffectsStr == "" {
+		panic("registry.Register: no '// HasSideEffects:' declaration found in " + file +
+			"\nPlease add '// HasSideEffects: true' or '// HasSideEffects: false' to the command file header.")
+	}
+
+	// Parse and validate HasSideEffects value
+	var hasSideEffects bool
+	switch metadata.HasSideEffectsStr {
+	case "true":
+		hasSideEffects = true
+	case "false":
+		hasSideEffects = false
+	default:
+		panic("registry.Register: invalid HasSideEffects value '" + metadata.HasSideEffectsStr +
+			"' in " + file + "\nMust be 'true' or 'false'")
+	}
+
 	// Store in original commands map for backward compatibility
 	commands[metadata.CommandName] = fn
 
@@ -104,19 +123,21 @@ func Register(fn CommandFunc) {
 
 	// Store in registry with both forms
 	commandRegistry[canonicalName] = &CommandRegistration{
-		Func:          fn,
-		DisplayName:   metadata.CommandName,
-		CanonicalName: canonicalName,
-		Description:   metadata.Description,
-		Usage:         metadata.Usage,
+		Func:           fn,
+		DisplayName:    metadata.CommandName,
+		CanonicalName:  canonicalName,
+		Description:    metadata.Description,
+		Usage:          metadata.Usage,
+		HasSideEffects: hasSideEffects,
 	}
 }
 
 // commandMetadata holds extracted comment data
 type commandMetadata struct {
-	CommandName string
-	Description string
-	Usage       string
+	CommandName       string
+	Description       string
+	Usage             string
+	HasSideEffectsStr string // Parsed from "// HasSideEffects:" comment
 }
 
 // extractCommandMetadata parses a Go source file to extract command metadata from header comments
@@ -151,6 +172,11 @@ func extractCommandMetadata(filePath string) commandMetadata {
 		// Extract Usage
 		if strings.HasPrefix(line, "// Usage:") {
 			metadata.Usage = strings.TrimSpace(strings.TrimPrefix(line, "// Usage:"))
+		}
+
+		// Extract HasSideEffects
+		if strings.HasPrefix(line, "// HasSideEffects:") {
+			metadata.HasSideEffectsStr = strings.TrimSpace(strings.TrimPrefix(line, "// HasSideEffects:"))
 		}
 	}
 

@@ -11,14 +11,14 @@ Feature: src-commands_design-command
     Scenario: Start Structurizr for a module
       Given Docker is running
       And module "src-cli" has workspace.dsl file
-      When I run "go run . design serve src-cli --no-browser"
+      When I run the command "design serve src-cli --no-browser"
       Then Structurizr container should start successfully
       And I should see success message with URL
       And documentation should be accessible at the URL
 
     @success @ac1
     Scenario: List available modules
-      When I run "go run . design list"
+      When I run the command "design list"
       Then I should see a list of available modules
       And "src-cli" module should be in the list
 
@@ -28,7 +28,7 @@ Feature: src-commands_design-command
     Scenario: Validate one module
       Given Docker is running
       And module "src-cli" has workspace.dsl file
-      When I run "go run . design validate src-cli"
+      When I run the command "design validate src-cli"
       Then the workspace should be validated using Structurizr CLI
       And validation results should be displayed in console
       And validation results should be written to JSON file
@@ -38,7 +38,7 @@ Feature: src-commands_design-command
     Scenario: Validate all modules
       Given Docker is running
       And multiple modules have workspace.dsl files
-      When I run "go run . design validate --all"
+      When I run the command "design validate --all"
       Then all workspaces should be validated using Structurizr CLI
       And validation results for each module should be displayed in console
       And aggregated validation results should be written to JSON file

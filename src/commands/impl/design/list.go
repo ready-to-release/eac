@@ -1,5 +1,6 @@
 // Command: design list
 // Description: List available modules with architecture documentation
+// HasSideEffects: false
 package design
 
 import (

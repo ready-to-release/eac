@@ -1,5 +1,6 @@
 // Command: design validate
 // Description: Validate workspace files using Structurizr CLI
+// HasSideEffects: false
 package design
 
 import (

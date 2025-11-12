@@ -5,6 +5,7 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --as-<name>: Output using custom renderer (e.g., --as-summary)
+// HasSideEffects: false
 package get
 
 import (

@@ -253,7 +253,7 @@ func InitializeTemplatesScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I have a file "([^"]*)" with content:$`, iHaveAFileWithContent)
 
 	// Execution steps
-	sc.Step(`^I run command "([^"]*)"$`, iRunCommand)
+	sc.Step(`^I run the command "([^"]*)"$`, iRunCommand)
 
 	// Verification steps
 	sc.Step(`^the command should succeed$`, theCommandShouldSucceed)

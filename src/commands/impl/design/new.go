@@ -1,6 +1,7 @@
 // Command: design new
 // Description: Create a new architecture workspace for a module
 // Usage: design new <module> --name <name> --description <description> [--force]
+// HasSideEffects: true
 package design
 
 import (

@@ -7,6 +7,7 @@
 //   --as-plantuml: Output as PlantUML diagram
 //   --as-mermaid: Output as Mermaid diagram
 //   --as-execution-order: Output execution order only
+// HasSideEffects: false
 package get
 
 import (

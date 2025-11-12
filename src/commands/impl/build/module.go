@@ -1,6 +1,7 @@
 // Command: build module
 // Description: Build a module by its moniker using type-based dispatch
 // Usage: build module <moniker>
+// HasSideEffects: false
 package build
 
 import (

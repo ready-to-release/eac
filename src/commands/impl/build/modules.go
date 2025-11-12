@@ -2,6 +2,7 @@
 // Description: Build multiple modules in sequence and collect results in a build run directory
 // Usage: build modules [moniker1] [moniker2] ...
 // Default: Builds all modules if no monikers specified
+// HasSideEffects: false
 package build
 
 import (

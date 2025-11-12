@@ -1,6 +1,7 @@
 // Command: test module
 // Description: Test a module by its moniker using type-based dispatch
 // Usage: test module <moniker> [--as-cucumber|--as-junit]
+// HasSideEffects: false
 package test
 
 import (

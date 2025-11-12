@@ -1,5 +1,6 @@
 // Command: design
 // Description: Architecture documentation tools using Structurizr - Main command
+// HasSideEffects: false
 package design
 
 import (
