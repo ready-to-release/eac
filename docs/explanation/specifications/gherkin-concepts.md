@@ -308,21 +308,22 @@ Scenario: Invalid input shows error
 
 **Risk controls** (compliance linkage):
 
-- `@risk1`, `@risk2`, etc. - Links to risk control requirements
+- `@risk-control:auth-mfa-01`, `@risk-control:encrypt-rest-01`, etc. - Links to risk control requirements
+- Format: `@risk-control:<name>-<id>` where name identifies the control and id is the scenario number
 
 **Example with optional tags**:
 
 ```gherkin
 Rule: System must authenticate users before granting access
 
-  @success @ac1 @IV @risk1
+  @success @ac1 @IV @risk-control:auth-mfa-01
   Scenario: Initial user registration and authentication
     Given no user account exists
     When I register with email "user@example.com"
     Then I should receive a verification email
     And my account is created in "pending" status
 
-  @success @ac1 @risk1
+  @success @ac1 @risk-control:auth-mfa-01
   Scenario: Valid credentials grant access
     Given I have a verified account
     When I login with valid credentials
@@ -397,7 +398,7 @@ Feature: mcp-server_tools-registration
 
 ### How to Split Large Features
 
-**Strategy 1: Split by Rule**
+**Strategy 1: Split by Rule**:
 
 If you have 8+ Rules, create separate features:
 
@@ -410,7 +411,7 @@ After:
 └── audit-logging_system-events.feature (10 scenarios, 2 Rules)
 ```
 
-**Strategy 2: Split by Workflow**
+**Strategy 2: Split by Workflow**:
 
 If scenarios cluster around different user workflows:
 
@@ -423,7 +424,7 @@ After:
 └── user-management_profile.feature (8 scenarios, 2 Rules)
 ```
 
-**Strategy 3: Split by Scenario Type**
+**Strategy 3: Split by Scenario Type**:
 
 If you have many error scenarios:
 
@@ -513,7 +514,7 @@ Convert Blue Cards → Rules, Green Cards → Scenarios
 - Tag every feature with module and priority
 - Tag every scenario with outcome and AC link
 - Use verification tags (@IV, @PV) when relevant
-- Link risk controls with @risk tags
+- Link risk controls with @risk-control:[name]-[id] tags
 
 ❌ **Don't**:
 

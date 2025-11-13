@@ -109,34 +109,44 @@ Evidence generated automatically as byproduct of pipeline execution. No manual e
 
 Compliance requirements expressed as Gherkin scenarios that can be executed as automated tests.
 
-**Project Risk Controls** (`specs/risk-controls/authentication-controls.feature`):
+**Project Risk Controls** (`specs/risk-controls/auth-mfa.feature`):
 
 ```gherkin
-Feature: Authentication Risk Controls
+# @industry:HEALTH @industry:PHARMA
+# @severity:critical @risk-type:security @control-type:preventive
+# @iso27001 @hipaa @fda-21cfr11
+# @implementation:required @automation:full
 
-  @risk1
-  Scenario: RC-001 - Authentication required for all access
-    Given a system with protected resources
-    Then all user access MUST be authenticated
-    And authentication MUST occur before granting access
-    And failed authentication attempts MUST be logged
+@risk-control:auth-mfa
+Feature: Multi-Factor Authentication
+
+  # Source: Risk Assessment RA-2025-001
+
+  Rule: Authentication requires multiple factors
+
+    @risk-control:auth-mfa-01
+    Scenario: MFA required for all access
+      Given a system with protected resources
+      Then all user access MUST require at least two factors
+      And authentication MUST occur before granting access
+      And failed authentication attempts MUST be logged
 ```
 
-**User Scenarios** link to risk controls via `@risk` tags:
+**User Scenarios** link to risk controls via `@risk-control:<name>-<id>` tags:
 
 ```gherkin
 Feature: cli_user-login
 
   Rule: Users must authenticate before accessing protected resources
 
-    @success @ac1 @risk1
-    Scenario: Valid credentials grant access
-      Given I have valid credentials
-      When I run "r2r login --user admin"
+    @success @ac1 @risk-control:auth-mfa-01
+    Scenario: Valid credentials with MFA grant access
+      Given I have valid credentials and MFA token
+      When I run "r2r login --user admin --mfa"
       Then I should be authenticated
 ```
 
-**Traceability Chain**: Regulatory requirement → Risk control specification (`@risk1`) → User scenarios (`@risk1` tag) → Step implementations → Production code
+**Traceability Chain**: Regulatory requirement → Risk control specification (`@risk-control:auth-mfa-01`) → User scenarios (`@risk-control:auth-mfa-01` tag) → Step implementations → Production code
 
 **See**:
 

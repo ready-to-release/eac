@@ -223,7 +223,7 @@ Specifications evolve through continuous cycles of review and refinement.
 
 **Event Storming Updates**: Quarterly workshops reveal new domain understanding → Identify changed events → Find affected specs → Update scenarios → Refactor code. See: [Event Storming](event-storming.md)
 
-**Risk Control Reviews**: Risk changes → Update `specs/risk-controls/` → Update user scenarios with `@risk<ID>` → Verify implementation → Generate evidence. See: [Risk Controls](risk-controls.md)
+**Risk Control Reviews**: Risk changes → Update `specs/risk-controls/` → Update user scenarios with `@risk-control:<name>-<id>` → Verify implementation → Generate evidence. See: [Risk Controls](risk-controls.md)
 
 ---
 
@@ -262,7 +262,7 @@ grep -r "Scenario:" specs/ | cut -d: -f1 | uniq -c | sort -rn
 
 - Lint Gherkin for style consistency
 - Verify Feature IDs match across specs/ and src/
-- Check @risk tag integrity
+- Check @risk-control:[name]-[id] tag integrity
 - Validate Rule → Scenario → @ac tag links
 
 ---
