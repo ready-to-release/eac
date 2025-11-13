@@ -1,16 +1,24 @@
 {
   "mcpServers": {
-    "github": {
+    "commands": {
+      "type": "stdio",
       "command": "go",
-      "args": ["run", "./src/mcp/github/main.go"],
+      "args": [
+        "run",
+        "./src/mcp/commands/main.go"
+      ],
+      "env": {}
+    },
+    "github": {
+      "type": "stdio",
+      "command": "go",
+      "args": [
+        "run",
+        "./src/mcp/github/main.go"
+      ],
       "env": {
         "GITHUB_TOKEN": "${GITHUB_TOKEN}"
       }
-    },
-    "commands": {
-      "command": "go",
-      "args": ["run", "./src/mcp/commands/main.go"],
-      "env": {}
     }
   }
 }

@@ -12,10 +12,11 @@ This reference documents the **testing taxonomy tags** that define test levels, 
 
 - **Test Level Tags** - Define execution environment and scope (`@L0`-`@L4`)
 - **Verification Tags** - Categorize validation type (REQUIRED: `@ov`, `@iv`, `@pv`, `@piv`, `@ppv`)
+- **Test Execution Control** - Control test execution behavior (`@ignore`, `@Manual`)
 - **System Dependencies** - Declare required tooling (`@dep:*`)
 - **Risk Controls** - Link to compliance requirements (`@risk-control:<name>-<id>`)
 
-**Note**: For organizational tags (module, priority, acceptance criteria), see [Gherkin File Organization](gherkin-concepts.md#tag-strategy)
+**Note:** Depending on the context you work in, you might need additional tags to support specific regulatory requirements. See [GxP Tagging](gxp-tagging.md) as an example.
 
 ---
 
@@ -228,6 +229,109 @@ Scenario: Production API maintains SLA
 
 ---
 
+## Test Execution Control Tags
+
+### `@ignore` - Exclude from Test Execution
+
+**Purpose**: Exclude features or scenarios from all test suite runs (work-in-progress, temporarily disabled)
+
+**Usage**: Feature level (excludes all scenarios) OR Scenario level (excludes only that scenario)
+
+**Examples**:
+
+```gherkin
+# Feature-level: Entire feature excluded
+@ignore @ov
+Feature: new-feature_experimental-api
+  Scenario: Create resource    # ❌ EXCLUDED
+  Scenario: Delete resource    # ❌ EXCLUDED
+
+# Scenario-level: Only OAuth scenario excluded
+@ov
+Feature: stable-feature_authentication
+  Scenario: Valid login        # ✅ RUNS
+  @ignore
+  Scenario: OAuth (WIP)        # ❌ EXCLUDED
+  Scenario: Session expiry     # ✅ RUNS
+```
+
+**Behavior**: `@ignore` is evaluated before other selectors. Ignored tests are excluded from all test suites regardless of other tags.
+
+### `@Manual` - Manual Test Scenario
+
+**Purpose**: Mark scenarios that must be executed manually (cannot be automated)
+
+**Usage**: Scenario level (general use across all contexts)
+
+**When to Use**:
+
+- Requires human judgment or subjective evaluation
+- Involves physical hardware interaction
+- Depends on external systems not available in test environments
+- Cost/complexity of automation exceeds benefit
+
+**Documentation Requirements**:
+
+- Include detailed test instructions as comments
+- Document expected outcomes clearly
+- Specify verification criteria
+- Record results systematically
+
+**Example - Usability Testing**:
+
+```gherkin
+@Manual @ov
+Scenario: User finds the interface intuitive (usability test)
+  Given I am a new user
+  When I attempt to complete my first task
+  Then I can complete it without consulting documentation
+  # Manual observation by UX researcher
+```
+
+**Example - Performance Testing**:
+
+```gherkin
+@Manual @pv @dep:load-generator
+Scenario: System handles 10,000 concurrent users (load test)
+  Given the production environment is scaled to maximum capacity
+  When 10,000 simulated users access the system simultaneously
+  Then average response time is under 200ms
+  And no errors occur
+  # Manual execution using third-party load testing service
+```
+
+**Example - Hardware Integration**:
+
+```gherkin
+@Manual @ov @dep:hardware
+Scenario: Printer outputs receipt correctly
+  Given a transaction is completed
+  When the receipt is printed
+  Then the receipt contains all transaction details
+  And the receipt is legible
+  # Manual verification of physical printout
+  # Test with: Epson TM-T88V printer
+```
+
+**Pipeline Execution and Evidence Collection**:
+
+When a test suite encounters scenarios tagged with `@Manual`, the pipeline must **pause execution** to allow manual test execution:
+
+1. **Pipeline Pause**: Test runner stops at `@Manual` scenarios and waits for manual completion
+2. **Manual Execution**: Tester executes the scenario following documented instructions
+3. **Evidence Collection**: Tester collects evidence (screenshots, photos, logs, signatures, timestamps)
+4. **Evidence Storage**: Evidence MUST be committed to git repository
+5. **Pipeline Resume**: After evidence is committed, pipeline continues
+
+**Critical Requirement**: Evidence **cannot** be stored in separate systems (Excel spreadsheets, SharePoint, paper logbooks only). All evidence must live in the git repository to maintain:
+
+- Full traceability from requirement → test → evidence
+- Version control of test results
+- Auditability and compliance
+- Single source of truth
+
+---
+
 ## System Dependency Tags
 
 System dependency tags declare required tooling for test execution.
@@ -393,9 +497,12 @@ Feature: Mixed-Level Tests
 
 Test suites select tests by tags for execution at specific CD Model stages.
 
+**Note**: All test suites automatically exclude tests tagged with `@ignore`.
+
 ### pre-commit
 
 **Selects**: `@L0`, `@L1`, `@L2`
+**Excludes**: `@ignore`
 **Time**: 5-10 minutes
 **Purpose**: Fast pre-commit validation
 **Environment**: DevBox or Build Agent
@@ -404,6 +511,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 ### acceptance
 
 **Selects**: `@iv`, `@ov`, `@pv`
+**Excludes**: `@ignore`
 **Infers**: `@L3` from `@iv` and `@pv`
 **Time**: 1-2 hours
 **Purpose**: PLTE deployment validation
@@ -413,6 +521,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 ### production-verification
 
 **Selects**: `@L4` AND `@piv`
+**Excludes**: `@ignore`
 **Time**: Continuous
 **Purpose**: Production smoke tests
 **Environment**: Production
@@ -450,6 +559,43 @@ Test suites select tests by tags for execution at specific CD Model stages.
 - Over-tag (too many tags reduces clarity)
 - Use custom tag schemes without documentation
 - Mix tag naming conventions
+
+### Test Execution Control
+
+✅ **DO**:
+
+- Use `@ignore` temporarily for work-in-progress features
+- Document why tests are ignored (comments or issue links)
+- Review ignored tests regularly (weekly in active development)
+- Remove `@ignore` as soon as tests are stable
+
+❌ **DON'T**:
+
+- Use `@ignore` as permanent solution for broken tests (fix or remove them)
+- Leave ignored tests without tracking (use issue numbers)
+- Ignore tests for extended periods (>1 sprint)
+
+### Manual Tests
+
+✅ **DO**:
+
+- Use `@Manual` for tests that cannot be reasonably automated
+- Include detailed test instructions as comments
+- Document expected outcomes and verification criteria
+- Store manual tests alongside automated tests in feature files
+- **Commit evidence to git** (execution records, screenshots, signatures)
+- Pause pipeline execution when manual tests are encountered
+- Record manual test results systematically in markdown format
+- Periodically review if manual tests can be automated
+
+❌ **DON'T**:
+
+- Use `@Manual` to avoid writing automation (automation-first approach)
+- Leave manual tests without clear step-by-step instructions
+- **Store evidence in separate systems** (Excel, SharePoint, paper only) - breaks traceability
+- Continue pipeline without collecting and committing manual test evidence
+- Forget to document why automation isn't feasible
+- Let manual tests grow without review (aim to automate when possible)
 
 ### Tag Usage Example
 

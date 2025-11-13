@@ -134,6 +134,22 @@ Understanding risk-based testing and how to define executable risk controls for 
 - Common compliance frameworks (FDA, ISO, PCI-DSS, GDPR)
 - Best practices for defining controls
 
+### [GxP Tagging](gxp-tagging.md)
+
+Understanding tagging for regulated software development in pharmaceutical and medical device contexts.
+
+**Topics covered:**
+
+- GxP regulatory contexts (GMP, GCP, GLP, ISO 13485, FDA 21 CFR Part 11)
+- Specification hierarchy: URS → FS → DS
+- Feature naming as URS identifier (`<module>_<feature-name>`)
+- Regulatory classification tags (`@gxp`, `@critical-aspect`)
+- Risk control tags (`@risk-control:gxp-<name>`)
+- GxP-specific requirements for manual tests
+- Tag combinations and usage patterns
+- Integration with testing taxonomy
+- Traceability and reporting for regulatory compliance
+
 ---
 
 ## Quick Comparison

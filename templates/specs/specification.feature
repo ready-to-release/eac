@@ -117,6 +117,16 @@ Feature: [module-name_feature-name]
       Then [response times within SLA]
       And [error rates below threshold]
 
+  Rule: [Acceptance Criterion 5 - Work in Progress]
+
+    # Example: @ignore excludes from all test suites
+    # TODO: Issue #123 - Complete OAuth integration
+    @ignore @ov
+    Scenario: [OAuth authentication (WIP)]
+      Given [OAuth provider configured]
+      When [user authenticates with OAuth]
+      Then [authentication succeeds]
+
 # ============================================================================
 # TAG REFERENCE SUMMARY
 # ============================================================================
@@ -138,6 +148,10 @@ Feature: [module-name_feature-name]
 #   @L3   - In-situ vertical tests in PLTE (auto-inferred from @iv, @pv)
 #   @L4   - Testing in production (auto-inferred from @piv, @ppv)
 #
+# Test Execution Control:
+#   @ignore - Exclude from all test suites (feature or scenario level)
+#             Use temporarily for WIP, document with TODO, review weekly
+#
 # System Dependencies (declare required tooling):
 #   @dep:docker   - Docker engine required
 #   @dep:git      - Git CLI required
@@ -150,6 +164,14 @@ Feature: [module-name_feature-name]
 #   Example: @risk-control:auth-mfa-01
 #   Links to: specs/risk-controls/<control-name>.feature
 #
+# GxP/Regulatory Tags (for pharmaceutical/medical device development):
+#   For complete documentation, see: docs/explanation/specifications/gxp-tagging.md
+#   Feature naming:    <module>_<feature-name> serves as URS identifier
+#   @gxp              - GxP-related requirement (requires @risk-control:gxp-<name>)
+#   @critical-aspect  - GmP Critical Aspect (GmP products only)
+#   @risk-control:gxp-<name> - Link to GxP risk control specification
+#   @Manual           - Manual test scenario (general use, includes GxP contexts)
+#
 # NOTE: This template uses ONLY testing taxonomy tags from tag-reference.md.
 # For organizational tags (@cli, @critical, @ac1, etc.), see:
 # docs/explanation/specifications/gherkin-concepts.md
@@ -160,7 +182,9 @@ Feature: [module-name_feature-name]
 # - Dependencies and verification tags accumulate (additive)
 #
 # TEST SUITES (tag-based selection):
-#   pre-commit:  @L0 + @L1 + @L2 (5-30 min)
-#   acceptance:  @iv + @ov + @pv (1-8 hours, PLTE)
-#   production:  @piv + @ppv (continuous, production)
+#   pre-commit:  @L0 + @L1 + @L2 (5-30 min, excludes @ignore)
+#   acceptance:  @iv + @ov + @pv (1-8 hours, PLTE, excludes @ignore)
+#   production:  @piv + @ppv (continuous, production, excludes @ignore)
+#
+# NOTE: All test suites automatically exclude tests tagged with @ignore
 # ============================================================================
