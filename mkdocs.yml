@@ -20,6 +20,7 @@ theme:
 plugins:
   - search
   - awesome-nav
+  - drawio
 
 markdown_extensions:
   - footnotes
@@ -38,5 +39,8 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra_javascript:
+  - https://viewer.diagrams.net/js/viewer-static.min.js
 
 dev_addr: '0.0.0.0:8000'
