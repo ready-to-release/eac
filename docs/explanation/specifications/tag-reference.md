@@ -16,7 +16,7 @@ This reference documents the **testing taxonomy tags** that define test levels, 
 - **System Dependencies** - Declare required tooling (`@dep:*`)
 - **Risk Controls** - Link to compliance requirements (`@risk-control:<name>-<id>`)
 
-**Note:** Depending on the context you work in, you might need additional tags to support specific regulatory requirements. See [GxP Tagging](gxp-tagging.md) as an example.
+**Note:** Depending on the context you work in, you might need additional tags to support specific regulatory requirements. See [GxP Tagging](gxp-regulatory-tagging.md) as an example.
 
 ---
 

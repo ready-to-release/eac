@@ -289,12 +289,25 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 			// Normalize tags to @dep: format
 			normalizedTags := normalizeTags(allTags)
 
-			refs = append(refs, TestReference{
+			test := TestReference{
 				FilePath: filePath,
 				Type:     "godog",
 				TestName: scenarioName,
 				Tags:     normalizedTags,
-			})
+			}
+
+			// Set execution control fields
+			test.IsIgnored = contains(test.Tags, "@ignore")
+			test.IsManual = contains(test.Tags, "@Manual")
+
+			// Extract risk control references
+			test.RiskControls = extractRiskControlTags(test.Tags)
+
+			// Set GxP regulatory fields
+			test.IsGxP = contains(test.Tags, "@gxp")
+			test.IsCriticalAspect = contains(test.Tags, "@critical-aspect")
+
+			refs = append(refs, test)
 
 			// Reset scenario tags for next scenario
 			scenarioTags = []string{}
@@ -332,4 +345,15 @@ func normalizeTags(tags []string) []string {
 	}
 
 	return normalized
+}
+
+// extractRiskControlTags extracts all @risk-control:* tags
+func extractRiskControlTags(tags []string) []string {
+	controls := []string{}
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, "@risk-control:") {
+			controls = append(controls, tag)
+		}
+	}
+	return controls
 }
