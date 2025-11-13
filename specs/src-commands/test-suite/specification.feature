@@ -1,5 +1,5 @@
 @L2 @ov
-Feature: Test Suite Command
+Feature: src-commands_test-suite
   As a developer
   I want to run tests by suite
   So that I can execute appropriate tests for different pipeline stages

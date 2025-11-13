@@ -124,7 +124,7 @@ Specifications evolve through continuous cycles of review and refinement.
 |-----------|--------|
 | Missing acceptance criteria | Add new `Rule:` block |
 | Ambiguous steps | Refine with concrete examples |
-| Edge cases | Add `@error` scenarios |
+| Edge cases | Add `@ov` scenarios for error cases |
 | Wrong assumptions | Revise preconditions |
 | Incomplete verification | Add `Then`/`And` steps |
 

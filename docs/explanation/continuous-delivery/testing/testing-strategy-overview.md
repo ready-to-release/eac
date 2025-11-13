@@ -124,6 +124,26 @@ flowchart TB
 
 ---
 
+## Tag Taxonomy
+
+The testing taxonomy uses tags to categorize tests by level, verification type, and dependencies. See **[Tag Reference](../../specifications/tag-reference.md)** for complete documentation.
+
+**Key Tag Categories**:
+
+- **Test Level Tags** (`@L0`-`@L4`) - Execution environment and scope
+- **Verification Tags** (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`) - REQUIRED for all Gherkin scenarios
+- **System Dependencies** (`@dep:*`) - Declare required tooling
+- **Test Suites** - Tag-based test selection (pre-commit, acceptance, production-verification)
+
+**Tag Examples by Test Level**:
+
+- **L0-L1**: Go tests (no Gherkin verification tags)
+- **L2**: `@L2 @ov` (operational verification)
+- **L3**: `@L3 @iv` (installation), `@L3 @pv` (performance), `@L3 @ov` (operational)
+- **L4**: `@L4 @piv` (installation), `@L4 @ppv` (performance)
+
+---
+
 ## L0: Unit Tests
 
 **Purpose**: Validate individual functions, methods, and classes in isolation.
@@ -432,14 +452,14 @@ L3 tests require a Production-Like Test Environment (PLTE) because they:
 ```gherkin
 Feature: API Service Deployment Verification
 
-  @L3 @IV
+  @L3 @iv
   Scenario: Service deploys successfully to PLTE
     Given the API service is deployed to PLTE
     When I check the health endpoint
     Then the service should respond with status 200
     And all dependencies should report healthy
 
-  @L3 @OV
+  @L3 @ov
   Scenario: API handles requests in PLTE infrastructure
     Given the API service is running in PLTE
     And external dependencies are test doubles
@@ -531,7 +551,7 @@ L4 may use test doubles for specific cases:
 ```gherkin
 Feature: Production Cross-Service Validation
 
-  @L4 @production
+  @L4 @piv
   Scenario: Complete order fulfillment workflow
     Given I am a test user in production
     When I place an order through the API
@@ -540,7 +560,7 @@ Feature: Production Cross-Service Validation
     And the inventory service should reserve the items
     And the notification service should send a test confirmation email
 
-  @L4 @production @synthetic
+  @L4 @ppv
   Scenario: Synthetic monitoring of critical path
     Given synthetic monitoring is running
     When the synthetic transaction executes every 5 minutes
@@ -676,6 +696,7 @@ The CD Model uses a taxonomy based on execution environment and scope:
 - **Execution**: Devbox or agent
 - **Scope**: Source and binary
 - **Dependencies**: All replaced with test doubles
+- **Tags**: Go tests (no Gherkin verification tags)
 - **Trade-off**: Highest determinism, lowest domain coherency
 
 **L2: Emulated System Tests (Shift LEFT)**:
@@ -683,6 +704,7 @@ The CD Model uses a taxonomy based on execution environment and scope:
 - **Execution**: Devbox or agent
 - **Scope**: Deployable artifacts
 - **Dependencies**: All replaced with test doubles
+- **Tags**: `@L2 @ov` (operational verification)
 - **Trade-off**: High determinism, high domain coherency
 
 **L3: In-Situ Vertical Tests (Shift LEFT)**:
@@ -690,6 +712,7 @@ The CD Model uses a taxonomy based on execution environment and scope:
 - **Execution**: PLTE
 - **Scope**: Deployed system (single deployable unit boundaries)
 - **Dependencies**: All replaced with test doubles
+- **Tags**: `@L3 @iv` (installation), `@L3 @pv` (performance), `@L3 @ov` (operational)
 - **Trade-off**: Moderate determinism, high domain coherency
 
 **L4: Testing in Production (Shift RIGHT)**:
@@ -697,6 +720,7 @@ The CD Model uses a taxonomy based on execution environment and scope:
 - **Execution**: Production
 - **Scope**: Deployed system (cross-service interactions)
 - **Dependencies**: All production, may use live test doubles
+- **Tags**: `@L4 @piv` (installation), `@L4 @ppv` (performance)
 - **Trade-off**: High determinism, highest domain coherency
 
 **Out-of-Category: Horizontal End-to-End (Anti-Pattern)**:
@@ -707,6 +731,10 @@ The CD Model uses a taxonomy based on execution environment and scope:
 - **Trade-off**: Lowest determinism, high domain coherency
 
 **The shift-left and shift-right strategy** maximizes testing at L0-L3 (left) and L4 (right) to avoid the out-of-category anti-pattern (Horizontal E2E) of fragile horizontal pre-production environments.
+
+**Tag Usage**:
+
+See **[Tag Reference](../../specifications/tag-reference.md)** for complete documentation of all tags, verification requirements, test suites, and filtering rules.
 
 ## Next Steps
 

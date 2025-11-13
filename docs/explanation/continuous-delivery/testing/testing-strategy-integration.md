@@ -258,7 +258,7 @@ L3 validates the deployed system in-situ in production-like infrastructure:
 # L3: In-situ vertical test in PLTE with test doubles
 Feature: API Service Deployment
 
-  @L3 @IV
+  @L3 @iv
   Scenario: Service deploys correctly to PLTE
     Given the API service is deployed to PLTE
     And external services are test doubles
@@ -266,6 +266,24 @@ Feature: API Service Deployment
     Then the service should respond successfully
     And infrastructure should be correctly configured
 ```
+
+---
+
+## Tag Usage and Test Suites
+
+The testing strategy uses tags to select tests for execution at specific CD Model stages. See **[Tag Reference](../../specifications/tag-reference.md)** for complete tag documentation.
+
+**Test Level to Stage Mapping**:
+
+- **Stages 2-4**: `@L0`, `@L1`, `@L2` tests (pre-commit suite)
+- **Stages 5-6**: `@L3` tests (acceptance suite with `@iv`, `@ov`, `@pv`)
+- **Stages 11-12**: `@L4` tests (production-verification suite with `@piv`, `@ppv`)
+
+**Tag Requirements**:
+
+- All Gherkin scenarios MUST have verification tag (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`)
+- System dependencies declared with `@dep:*` tags
+- Tags inherit from Feature → Rule → Scenario
 
 ---
 
@@ -279,7 +297,7 @@ Feature: API Service Deployment
 | **2. Pre-commit**    | L0-L2             | 5-10 min    | DevBox         | 100% pass, coverage ≥ threshold |
 | **3. Merge Request** | L0-L2             | 15-30 min   | Build Agents   | 100% pass, peer approval        |
 | **4. Commit**        | L0-L2             | 15-30 min   | Build Agents   | 100% pass, artifacts built      |
-| **5. Acceptance**    | L3 (vertical)     | 1-2 hours   | PLTE           | IV, OV, PV validated            |
+| **5. Acceptance**    | L3 (vertical)     | 1-2 hours   | PLTE           | @iv, @ov, @pv validated         |
 | **6. Extended**      | L3 + perf/sec     | 2-8 hours   | PLTE           | Comprehensive validation        |
 | **7. Exploration**   | Manual prep       | Days        | Demo           | Scenarios defined               |
 | **8-10. Release**    | Regression subset | Minutes     | As appropriate | No critical failures            |

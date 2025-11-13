@@ -170,8 +170,8 @@ Feature: project_security-validation
 
 Each Rule typically needs **2-4 scenarios**:
 
-1. **Happy path** (`@success`) - Primary use case
-2. **Error cases** (`@error`) - How system handles failures
+1. **Happy path** - Primary use case
+2. **Error cases** - How system handles failures
 3. **Edge cases** - Boundary conditions, special states
 
 **Example**:
@@ -179,19 +179,19 @@ Each Rule typically needs **2-4 scenarios**:
 ```gherkin
 Rule: Configuration file must contain valid module definitions
 
-  @success @ac1
+  @ov
   Scenario: Valid configuration with all required fields
     Given I have a configuration with module name and path
     When I validate the configuration
     Then validation should succeed
 
-  @error @ac1
+  @ov
   Scenario: Configuration missing required module name
     Given I have a configuration without a module name
     When I validate the configuration
     Then I should see error "module.name is required"
 
-  @error @ac1
+  @ov
   Scenario: Configuration with invalid module path
     Given I have a configuration with non-existent path
     When I validate the configuration
@@ -237,105 +237,49 @@ Scenario: Build existing project
 
 ## Tag Strategy
 
-### Feature-Level Tags
+Tags enable filtering, categorization, and traceability. This section covers organizational aspects; for complete tag taxonomy see **[Tag Reference](tag-reference.md)**.
 
-Feature tags enable **filtering and reporting** across the entire test suite.
+### Scenario-Level Tags
 
-**Module tags**: Organize by codebase module
+**Required Tags:**
 
-```gherkin
-@cli          # CLI-specific features
-@vscode       # VS Code extension features
-@mcp          # MCP server features
-@src-commands # Commands module features
-```
+Every scenario MUST have:
 
-**Priority tags**: Execution prioritization
-
-```gherkin
-@critical     # Must never break (smoke tests)
-@high         # Important functionality
-@medium       # Standard features
-@low          # Nice-to-have features
-```
-
-**Type tags**: Cross-cutting concerns
-
-```gherkin
-@integration  # Cross-module integration
-@io           # File/network I/O
-@git          # Git operations
-@ai           # AI/LLM features
-```
+1. **Verification tag** (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`) - REQUIRED for testing taxonomy
+2. **Acceptance criteria tag** (`@ac1`, `@ac2`, etc.) - Organizational linkage to Rule
 
 **Example**:
 
 ```gherkin
-@cli @critical @git
-Feature: cli_commit-workflow
+Rule: Creates project directory structure
+
+  @ov @ac1
+  Scenario: Initialize in empty directory
+    Given I am in an empty folder
+    When I run "simply init"
+    Then a file named "simply.yaml" should be created
+
+  @ov @ac1
+  Scenario: Initialize in existing project
+    Given I am in a directory with "simply.yaml"
+    When I run "simply init"
+    Then the command should fail
 ```
 
-**Usage**: Run critical CLI tests only:
+**Tag Categories:**
 
-```bash
-go test -v -tags=@cli,@critical ./src/cli/tests
-```
+**Testing Taxonomy Tags** (see **[Tag Reference](tag-reference.md)**):
 
-### Scenario-Level Tags
+- Test level tags (`@L0`-`@L4`) - Execution environment and scope
+- Verification tags (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`) - REQUIRED
+- System dependencies (`@dep:*`) - Declare required tooling
+- Risk controls (`@risk-control:<name>-<id>`) - Compliance traceability
 
-#### Required Tags
+**Organizational Tags** (this document):
 
-Every scenario MUST have:
-
-1. **Outcome tag**: `@success` or `@error`
-2. **AC link tag**: `@ac1`, `@ac2`, etc. (links to Rule)
-
-```gherkin
-@success @ac1
-Scenario: Valid input succeeds
-
-@error @ac2
-Scenario: Invalid input shows error
-```
-
-#### Optional Tags
-
-**Verification type** (for implementation reports):
-
-- `@IV` - Installation Verification (setup, initial config)
-- `@PV` - Performance Verification (timing, resources)
-- (no tag) - Operational Verification (default - business logic)
-
-**Risk controls** (compliance linkage):
-
-- `@risk-control:auth-mfa-01`, `@risk-control:encrypt-rest-01`, etc. - Links to risk control requirements
-- Format: `@risk-control:<name>-<id>` where name identifies the control and id is the scenario number
-
-**Example with optional tags**:
-
-```gherkin
-Rule: System must authenticate users before granting access
-
-  @success @ac1 @IV @risk-control:auth-mfa-01
-  Scenario: Initial user registration and authentication
-    Given no user account exists
-    When I register with email "user@example.com"
-    Then I should receive a verification email
-    And my account is created in "pending" status
-
-  @success @ac1 @risk-control:auth-mfa-01
-  Scenario: Valid credentials grant access
-    Given I have a verified account
-    When I login with valid credentials
-    Then I should be authenticated
-    And I should have access to protected resources
-
-  @success @ac2 @PV
-  Scenario: Authentication completes within 200ms
-    Given I have valid credentials
-    When I attempt to login
-    Then authentication completes in under 200ms
-```
+- Module tags (`@cli`, `@vscode`, `@mcp`, etc.) - Codebase organization
+- Priority tags (`@critical`, `@high`, `@medium`, `@low`) - Execution priority
+- Acceptance criteria (`@ac1`, `@ac2`, etc.) - Links to Rule blocks
 
 ---
 
@@ -512,15 +456,14 @@ Convert Blue Cards → Rules, Green Cards → Scenarios
 ✅ **Do**:
 
 - Tag every feature with module and priority
-- Tag every scenario with outcome and AC link
-- Use verification tags (@IV, @PV) when relevant
-- Link risk controls with @risk-control:[name]-[id] tags
+- Tag every scenario with verification tag (REQUIRED) and acceptance criteria link
+- See **[Tag Reference](tag-reference.md)** for complete tag documentation
 
 ❌ **Don't**:
 
-- Forget required tags (outcome, AC link)
-- Use custom tag schemes without documenting them
+- Forget required tags (verification tag, acceptance criteria)
 - Over-tag (too many tags reduces their value)
+- Use deprecated tags (see Tag Reference for details)
 
 ---
 

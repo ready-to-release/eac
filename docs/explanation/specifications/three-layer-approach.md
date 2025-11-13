@@ -57,14 +57,14 @@ Feature: cli_init-project
 ```gherkin
 Rule: Creates project directory structure
 
-  @success @ac1
+  @ov
   Scenario: Initialize in empty directory
     Given I am in an empty folder
     When I run "simply init"
     Then a file named "simply.yaml" should be created
     And a directory named "src/" should exist
 
-  @error @ac1
+  @ov
   Scenario: Initialize in existing project
     Given I am in a directory with "simply.yaml"
     When I run "simply init"
@@ -338,7 +338,7 @@ flowchart TD
 ```gherkin
 Rule: Valid credentials grant access
 
-  @success @ac1
+  @ov
   Scenario: User logs in
     When I login
     Then I am authenticated
@@ -349,7 +349,7 @@ Rule: Valid credentials grant access
 ```gherkin
 Rule: Valid credentials grant access
 
-  @success @ac1
+  @ov
   Scenario: User logs in with valid credentials
     Given I have an account with username "admin"
     When I run "simply login --user admin --password secret"
@@ -363,14 +363,14 @@ Rule: Valid credentials grant access
 ```gherkin
 Rule: Valid credentials grant access within rate limits
 
-  @success @ac1
+  @ov
   Scenario: User logs in with valid credentials
     Given I have an account with username "admin"
     When I run "simply login --user admin --password secret"
     Then I should be authenticated
     And my session token should be stored in ~/.simply/session
 
-  @error @ac1
+  @ov
   Scenario: User exceeds login attempt rate limit
     Given I have failed to login 5 times in the last minute
     When I run "simply login --user admin --password secret"
@@ -379,6 +379,34 @@ Rule: Valid credentials grant access within rate limits
 ```
 
 **Evolution drivers**: Implementation discovery, production usage, security requirements
+
+---
+
+## Tag Usage Across Layers
+
+The three layers use different tag types:
+
+**ATDD Layer** (Rules):
+- Uses **organizational tags** for traceability: `@ac1`, `@ac2` (links scenarios to Rules)
+
+**BDD Layer** (Scenarios):
+- Uses **testing taxonomy tags**: `@ov`, `@iv`, `@pv` (verification) + `@L2`, `@L3`, `@L4` (level)
+- See **[Tag Reference](tag-reference.md)** for complete taxonomy
+
+**TDD Layer** (Go tests):
+- Uses **build tags** for test levels: `//go:build L0` for L0, default is L1
+
+**Example**:
+```gherkin
+Rule: Valid credentials grant access
+
+  @ov
+  Scenario: User logs in with valid credentials
+```
+
+For complete tag documentation, see:
+- **Testing taxonomy tags**: [Tag Reference](tag-reference.md)
+- **Organizational tags**: [Gherkin File Organization](gherkin-concepts.md#tag-strategy)
 
 ---
 

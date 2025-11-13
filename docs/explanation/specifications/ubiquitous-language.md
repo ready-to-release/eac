@@ -95,7 +95,7 @@ Feature: Order Approval Process
 
   Rule: Orders over $10,000 must be approved by a manager
 
-    @success @ac1
+    @ov
     Scenario: Manager approves large order
       Given an order with amount $15,000
       And the order status is "Awaiting Approval"

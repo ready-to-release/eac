@@ -139,7 +139,7 @@ Feature: cli_user-login
 
   Rule: Users must authenticate before accessing protected resources
 
-    @success @ac1 @risk-control:auth-mfa-01
+    @ov @risk-control:auth-mfa-01
     Scenario: Valid credentials with MFA grant access
       Given I have valid credentials and MFA token
       When I run "r2r login --user admin --mfa"

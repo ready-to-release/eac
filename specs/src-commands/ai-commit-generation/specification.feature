@@ -1,4 +1,4 @@
-@dep:claude @dep:go
+@dep:claude @dep:go @ov
 Feature: src-commands_ai-commit-generation
 
   As a developer of the eac platform

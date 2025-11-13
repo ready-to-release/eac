@@ -1,5 +1,5 @@
-@commands @skip
-Feature: commands_templates
+@ov
+Feature: src-commands_templates
 
   As a developer of the eac platform
   I want to install and manage templates with value replacements
@@ -7,7 +7,6 @@ Feature: commands_templates
 
   Rule: Template commands require valid inputs and handle errors gracefully
 
-    @success @ac1
     Scenario: Install uses default repository when template not provided
       Given I have a values file "values.json" with:
         """
@@ -20,7 +19,6 @@ Feature: commands_templates
       And the file "./output/README.md" should exist
       And the file "./output/README.md" should contain "test"
 
-    @error @ac1
     Scenario: Install fails with non-Git URL template
       Given I have a values file "values.json" with:
         """
@@ -32,13 +30,11 @@ Feature: commands_templates
       Then the command should fail
       And the error output should contain "must be a Git repository URL"
 
-    @error @ac1
     Scenario: Install fails without values flag
       When I run the command "templates install --template https://github.com/user/repo --location ./output"
       Then the command should fail
       And the error output should contain "--values flag is required"
 
-    @error @ac1
     Scenario: Install fails without location flag
       Given I have a values file "values.json" with:
         """
@@ -50,14 +46,12 @@ Feature: commands_templates
       Then the command should fail
       And the error output should contain "--location flag is required"
 
-    @success @ac1
     Scenario: List uses default repository when template not provided
       When I run the command "templates list"
       Then the command should succeed
       And the command should attempt to clone from "https://github.com/ready-to-release/eac"
       And the output should contain "Template Placeholders in 'https://github.com/ready-to-release/eac':"
 
-    @success @ac1
     Scenario: List scans local directory when path provided
       Given I have a template directory "test-templates/"
       And I have a template file "test-templates/README.md" with content:
@@ -69,7 +63,6 @@ Feature: commands_templates
       And the output should contain "{{ .ProjectName }}"
       And the output should contain "Total: 1 placeholders"
 
-    @error @ac1
     Scenario: List fails with non-existent template directory
       When I run the command "templates list --template non-existent/"
       Then the command should fail
@@ -77,7 +70,6 @@ Feature: commands_templates
 
   Rule: Template scanning discovers placeholders in files
 
-    @success @ac2
     Scenario: List scans files with placeholders in content
       Given I have a template directory "test-templates/"
       And I have a template file "test-templates/config.yaml" with content:
@@ -89,7 +81,6 @@ Feature: commands_templates
       And the output should contain "{{ .ProjectName }}"
       And the output should contain "Total: 1 placeholders"
 
-    @success @ac2
     Scenario: List scans placeholders in filenames
       Given I have a template directory "test-templates/"
       And I have a template file "test-templates/README.md" with content:

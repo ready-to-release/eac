@@ -13,7 +13,7 @@
     "extends": ".markdownlint.yml"
   },
   "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "yzhang.markdown-all-in-one",
     "editor.quickSuggestions": {
       "comments": "on",
       "strings": "on",

@@ -4,6 +4,7 @@ nav:
   - three-layer-approach.md
   - atdd-bdd-with-gherkin.md
   - gherkin-concepts.md
+  - tag-reference.md
   - ubiquitous-language.md
   - event-storming.md
   - example-mapping.md

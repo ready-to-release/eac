@@ -55,6 +55,22 @@ Understanding how to structure and organize Gherkin specification files effectiv
 - Feature sizing and splitting strategies
 - Best practices for maintainability
 
+### [Tag Reference](tag-reference.md)
+
+Complete reference for the **testing taxonomy tags** used across the test suite.
+
+**Topics covered:**
+
+- Test level tags (@L0-@L4) - Execution environment and scope
+- Verification tags (@ov, @iv, @pv, @piv, @ppv) - REQUIRED for all Gherkin scenarios
+- System dependency tags (@dep:*) - Declare required tooling
+- Risk control tags (@risk-control:[name]-[id]) - Compliance traceability
+- Tag inheritance rules - Feature → Rule → Scenario
+- Test suites - Tag-based test selection
+- Best practices and deprecated tags
+
+**Note**: For organizational tags (module, priority, acceptance criteria), see [Gherkin File Organization](gherkin-concepts.md#tag-strategy)
+
 ### [Ubiquitous Language](ubiquitous-language.md)
 
 Building shared domain vocabulary that bridges business and technical communication.

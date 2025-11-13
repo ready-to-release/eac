@@ -1,5 +1,5 @@
 @L1
-Feature: Test Tag Discovery and Inference
+Feature: src-core_test-tagging
 
   As a test framework
   I want to discover and infer test tags

@@ -263,7 +263,7 @@ Feature: Order Approval Process
 
   Rule: Large orders require manager approval
 
-    @success @ac1
+    @ov
     Scenario: Manager approves large order
       Given an order with amount $15,000
       And the order status is "Awaiting Approval"

@@ -103,11 +103,12 @@ Feature: Multi-Factor Authentication
 **Implementation** (`specs/cli/login/specification.feature`):
 
 ```gherkin
-@success @risk-control:auth-mfa-01
+@ov @risk-control:auth-mfa-01
 Scenario: Login with MFA credentials
   Given I have valid credentials and MFA token
   When I run "simply login --mfa"
   Then I should be authenticated
+  # @ov for operational verification (functional test)
 ```
 
 ---

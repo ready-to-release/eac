@@ -163,7 +163,6 @@ flowchart LR
 **Resulting Gherkin** (`specs/cli/init-project/specification.feature`):
 
 ```gherkin
-@cli @critical
 Feature: cli_init-project
 
   As a developer
@@ -172,7 +171,7 @@ Feature: cli_init-project
 
   Rule: Creates project directory structure
 
-    @success @ac1
+    @ov
     Scenario: Initialize in empty directory creates structure
       Given I am in an empty folder
       When I run "r2r init my-project"
@@ -180,7 +179,7 @@ Feature: cli_init-project
       And a directory named "my-project/tests/" should exist
       And a directory named "my-project/docs/" should exist
 
-    @error @ac1
+    @ov
     Scenario: Initialize in existing project shows error
       Given I am in a directory with "r2r.yaml"
       When I run "r2r init"

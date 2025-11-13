@@ -1,4 +1,4 @@
-@src-commands
+@ov
 Feature: src-commands_design-command
 
   As a developer of the eac platform
@@ -7,7 +7,7 @@ Feature: src-commands_design-command
 
   Rule: Command starts Structurizr container and displays documentation
 
-    @success @ac1 @docker
+    @dep:docker
     Scenario: Start Structurizr for a module
       Given docker service is available
       And module "src-cli" has workspace.dsl file
@@ -16,7 +16,6 @@ Feature: src-commands_design-command
       And I should see success message with URL
       And documentation should be accessible at the URL
 
-    @success @ac1
     Scenario: List available modules
       When I run the command "design list"
       Then the exit code is 0
@@ -25,7 +24,7 @@ Feature: src-commands_design-command
 
   Rule: Command validates workspace files using Structurizr CLI
 
-    @success @ac2 @docker
+    @dep:docker
     Scenario: Validate one module
       Given docker service is available
       And module "src-cli" has workspace.dsl file
@@ -35,7 +34,7 @@ Feature: src-commands_design-command
       And validation results should be written to JSON file
       And I should see validation summary with errors and warnings
 
-    @success @ac2 @docker
+    @dep:docker
     Scenario: Validate all modules
       Given docker service is available
       And multiple modules have workspace.dsl files

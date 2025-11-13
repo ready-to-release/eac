@@ -1,8 +1,5 @@
-# Feature ID: src-cli_cli-invocation
-# Module: src-cli
-
-@src-cli @critical
-Feature: CLI Invocation
+@ov
+Feature: src-cli_cli-invocation
 
   As a user
   I want to invoke the CLI
@@ -10,7 +7,6 @@ Feature: CLI Invocation
 
   Rule: CLI shows version when requested
 
-    @success @ac1
     Scenario: Version flag displays version
       When I run "r2r --version"
       Then the exit code is 0

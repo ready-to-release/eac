@@ -1,8 +1,5 @@
-# Feature ID: src-cli_verify-configuration
-# Module: src-cli
-
-@src-cli @critical @verify
-Feature: CLI Configuration Verification
+@ov
+Feature: src-cli_verify-configuration
 
   As a developer
   I want to verify my CLI is configured correctly
@@ -17,7 +14,6 @@ Feature: CLI Configuration Verification
 
   Rule: Verify command detects missing configuration
 
-    @error @ac1
     Scenario: Reports error when config file does not exist
       Given no config file exists in the test folder
       When I run the built CLI with "verify"
@@ -26,14 +22,12 @@ Feature: CLI Configuration Verification
 
   Rule: Verify command validates configuration file
 
-    @success @ac2
     Scenario: Successfully verifies with valid config file
       Given I create a test config file ".r2r.yaml" with valid settings
       When I run the built CLI with "verify"
       Then the exit code is 0
       And I should see "✓" or "success" or "Verifying"
 
-    @error @ac2
     Scenario: Reports error with invalid config file
       Given I create a test config file ".r2r.yaml" with invalid settings
       When I run the built CLI with "verify"
@@ -42,13 +36,11 @@ Feature: CLI Configuration Verification
 
   Rule: Built CLI executable must be functional
 
-    @success @ac3
     Scenario: Built CLI shows version
       When I run the built CLI with "--version"
       Then the exit code is 0
       And I should see version number
 
-    @success @ac3
     Scenario: Built CLI shows help
       When I run the built CLI with "--help"
       Then the exit code is 0

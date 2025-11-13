@@ -1,4 +1,4 @@
-@dep:go
+@dep:go @ov
 Feature: src-commands_build-module
 
   As a developer of the eac platform

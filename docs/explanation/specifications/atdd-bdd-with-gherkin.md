@@ -293,7 +293,7 @@ Feature: cli_user-registration
 
   Rule: Users must provide contact information
 
-    @success @ac1
+    @ov
     Scenario: User provides email
       Given I am registering a new account
       When I provide my email "user@example.com"
@@ -318,7 +318,7 @@ Feature: cli_user-registration
 
   Rule: Users must provide verified contact information
 
-    @success @ac1
+    @ov
     Scenario: User provides valid email format
       Given I am registering a new account
       When I provide my email "user@example.com"
@@ -326,14 +326,14 @@ Feature: cli_user-registration
       And my account should be in "pending verification" status
       And I should see "Check your email to verify your account"
 
-    @error @ac1
+    @ov
     Scenario: User provides invalid email format
       Given I am registering a new account
       When I provide my email "not-an-email"
       Then I should see an error "Invalid email format"
       And my account should not be created
 
-    @error @ac1
+    @ov
     Scenario: User provides already registered email
       Given an account exists with email "existing@example.com"
       When I provide my email "existing@example.com"
@@ -363,7 +363,7 @@ Feature: cli_user-registration
 
   Rule: Users must provide verified contact information with error recovery
 
-    @success @ac1
+    @ov
     Scenario: User provides valid email format
       Given I am registering a new account
       When I provide my email "user@example.com"
@@ -372,7 +372,7 @@ Feature: cli_user-registration
       And I should see "Check your email to verify your account"
       And I should see "Didn't receive it? Resend verification email"
 
-    @success @ac1
+    @ov
     Scenario: User corrects email typo before verification
       Given I registered with email "user@exampl.com"
       And I have not yet verified my email
@@ -380,7 +380,7 @@ Feature: cli_user-registration
       Then my verification email should be resent to "user@example.com"
       And I should see "Verification email sent to updated address"
 
-    @error @ac1
+    @ov
     Scenario: User provides invalid email format
       Given I am registering a new account
       When I provide my email "not-an-email"
@@ -388,7 +388,7 @@ Feature: cli_user-registration
       And I should see a suggestion "Did you mean: not-an-email@gmail.com?"
       And my account should not be created
 
-    @error @ac1
+    @ov
     Scenario: User provides already registered email
       Given an account exists with email "existing@example.com"
       When I provide my email "existing@example.com"
