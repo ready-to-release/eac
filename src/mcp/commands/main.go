@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // MCP Server for EAC Commands integration
@@ -239,28 +241,11 @@ func execCommand(commandName string, additionalArgs string) string {
 
 // findRepoRoot walks up directory tree to find repository root
 func findRepoRoot() string {
-	// Start from current directory
-	dir, err := os.Getwd()
+	root, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		return ""
 	}
-
-	// Walk up until we find src/commands directory
-	for {
-		srcPath := filepath.Join(dir, "src", "commands")
-		if stat, err := os.Stat(srcPath); err == nil && stat.IsDir() {
-			return dir
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached root without finding it
-			break
-		}
-		dir = parent
-	}
-
-	return ""
+	return root
 }
 
 func textResult(text string) ToolResult {

@@ -26,6 +26,7 @@ type designTestContext struct {
 	containerStarted bool
 	containerID      string
 	containerURL     string
+	moduleName       string // Track the module being tested
 }
 
 var designCtx *designTestContext
@@ -60,6 +61,8 @@ func moduleHasWorkspaceDslFile(module string) error {
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		return fmt.Errorf("workspace.dsl not found at %s", workspacePath)
 	}
+	// Store the module name for later use in container verification
+	designCtx.moduleName = module
 	return nil
 }
 
@@ -99,8 +102,14 @@ func structurizrContainerShouldStartSuccessfully() error {
 		return fmt.Errorf("docker is not available")
 	}
 
+	if designCtx.moduleName == "" {
+		return fmt.Errorf("module name not set in test context")
+	}
+
 	// Check if container was created
-	containerName := "structurizr-cli"
+	// Container name format: structurizr-{module-moniker}
+	// For "design serve src-cli", the container name is "structurizr-src-cli"
+	expectedContainerName := fmt.Sprintf("structurizr-%s", designCtx.moduleName)
 	containers, err := designCtx.dockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
@@ -109,7 +118,8 @@ func structurizrContainerShouldStartSuccessfully() error {
 	found := false
 	for _, c := range containers {
 		for _, name := range c.Names {
-			if strings.TrimPrefix(name, "/") == containerName {
+			cleanName := strings.TrimPrefix(name, "/")
+			if cleanName == expectedContainerName {
 				designCtx.containerID = c.ID
 				designCtx.containerStarted = true
 				found = true

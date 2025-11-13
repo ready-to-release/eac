@@ -28,6 +28,10 @@ tags:
     description: "Requires Azure CLI to be available"
     type: system_dependency
 
+  - tag: "@dep:internal-src-cli"
+    description: "Requires built CLI executable (out/src-cli/r2r-cli.exe on Windows, r2r-cli on Unix)"
+    type: system_dependency
+
   - tag: "@L0"
     name: "Very Fast Unit Tests with direct access to source files and build artifacts"
     type: taxonomy-level

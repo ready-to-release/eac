@@ -5,50 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // getRepoRoot returns the repository root directory
 func getRepoRoot() (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	// Walk up the directory tree to find the repository root
-	dir := cwd
-	for {
-		// Check if we're at a directory that has "specs" as a subdirectory
-		specsPath := filepath.Join(dir, "specs")
-		if stat, err := os.Stat(specsPath); err == nil && stat.IsDir() {
-			// Found the root - this directory has a specs subdirectory
-			return dir, nil
-		}
-
-		// Check if we're in a src subdirectory structure
-		base := filepath.Base(dir)
-		parent := filepath.Dir(dir)
-
-		// If we're in src/commands/design, src/commands, or src/cli
-		if base == "design" || base == "commands" || base == "cli" {
-			grandparent := filepath.Dir(parent)
-			if filepath.Base(parent) == "src" {
-				return grandparent, nil
-			}
-		}
-
-		// If we're in src, go up one level
-		if base == "src" {
-			return parent, nil
-		}
-
-		// Move up one directory
-		nextDir := filepath.Dir(dir)
-		if nextDir == dir {
-			// Reached the root of the filesystem
-			return "", fmt.Errorf("could not find repository root (no specs/ directory found)")
-		}
-		dir = nextDir
-	}
+	return repository.GetRepositoryRoot("")
 }
 
 // GetWorkspaceRoot returns the specs directory (workspace root for all modules)

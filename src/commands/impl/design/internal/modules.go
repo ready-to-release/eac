@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // ModuleInfo contains information about a module with architecture documentation
@@ -24,46 +25,7 @@ type ModuleInfo struct {
 // getRepoRoot returns the repository root directory
 // Walks up the directory tree to find the repository root
 func getRepoRoot() (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	// Walk up the directory tree to find the repository root
-	dir := cwd
-	for {
-		// Check if we're at a directory that has "src" as a subdirectory
-		srcPath := filepath.Join(dir, "src")
-		if stat, err := os.Stat(srcPath); err == nil && stat.IsDir() {
-			// Found the root - this directory has a src subdirectory
-			return dir, nil
-		}
-
-		// Check if we're in a src subdirectory structure
-		base := filepath.Base(dir)
-		parent := filepath.Dir(dir)
-
-		// If we're in src/commands/design, src/commands, or src/cli
-		if base == "design" || base == "commands" || base == "cli" {
-			grandparent := filepath.Dir(parent)
-			if filepath.Base(parent) == "src" {
-				return grandparent, nil
-			}
-		}
-
-		// If we're in src, go up one level
-		if base == "src" {
-			return parent, nil
-		}
-
-		// Move up one directory
-		nextDir := filepath.Dir(dir)
-		if nextDir == dir {
-			// Reached the root of the filesystem, assume current dir
-			return cwd, nil
-		}
-		dir = nextDir
-	}
+	return repository.GetRepositoryRoot("")
 }
 
 // ListAvailableModules scans for modules with architecture documentation

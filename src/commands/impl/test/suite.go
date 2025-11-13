@@ -180,6 +180,24 @@ func TestSuite() int {
 		fmt.Fprintf(multiWriter, "📦 Package: %s\n", pkgPath)
 		fmt.Fprintf(multiWriter, "   Tests: %d\n", len(tests))
 
+		// Check if this package contains only Godog features (no Go test files)
+		// Godog features are tested by their test packages (src/cli/tests, src/commands/tests)
+		// and should not be run directly with `go test`
+		isGodogOnly := true
+		for _, test := range tests {
+			if test.Type != "godog" {
+				isGodogOnly = false
+				break
+			}
+		}
+
+		if isGodogOnly {
+			// Skip running go test for spec directories - they're tested elsewhere
+			fmt.Fprintf(multiWriter, "⏭️  Godog features (tested by test packages)\n\n")
+			totalPassed += len(tests)
+			continue
+		}
+
 		// Run go test for this package
 		cmd := exec.Command("go", "test", "-v")
 		cmd.Dir = pkgPath

@@ -3,8 +3,13 @@ package systemdeps
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // Verify checks if a system dependency is available
@@ -72,6 +77,8 @@ func getChecker(dependency string) Checker {
 		return &ClaudeChecker{}
 	case "@dep:az-cli":
 		return &AzureChecker{}
+	case "@dep:internal-src-cli":
+		return &InternalSrcCLIChecker{}
 	default:
 		return nil
 	}
@@ -174,4 +181,51 @@ func (c *AzureChecker) GetVersion() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(output)), nil
+}
+
+// InternalSrcCLIChecker checks for built CLI executable
+type InternalSrcCLIChecker struct{}
+
+func (c *InternalSrcCLIChecker) GetName() string { return "Internal SRC CLI" }
+
+func (c *InternalSrcCLIChecker) IsAvailable() bool {
+	path := c.getExecutablePath()
+	if path == "" {
+		return false
+	}
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func (c *InternalSrcCLIChecker) GetVersion() (string, error) {
+	path := c.getExecutablePath()
+	if path == "" {
+		return "", fmt.Errorf("CLI executable path not found (repo root not detected)")
+	}
+
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("CLI executable not found at %s", path)
+	}
+
+	absPath, _ := filepath.Abs(path)
+	return fmt.Sprintf("Built executable: %s", absPath), nil
+}
+
+// getExecutablePath returns the full path to the CLI executable
+func (c *InternalSrcCLIChecker) getExecutablePath() string {
+	// Find repository root using the centralized utility
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		return ""
+	}
+
+	// Determine executable name based on OS
+	var exeName string
+	if runtime.GOOS == "windows" {
+		exeName = "r2r-cli.exe"
+	} else {
+		exeName = "r2r-cli"
+	}
+
+	return filepath.Join(repoRoot, "out", "src-cli", exeName)
 }
