@@ -140,3 +140,133 @@ func TestGetKnownTags(t *testing.T) {
 	assert.Contains(t, knownTags, "@dep:docker")
 	assert.Contains(t, knownTags, "@requires_isolation")
 }
+
+// Test new execution control tags
+func TestIsValidTag_ExecutionControl(t *testing.T) {
+	assert.True(t, IsValidTag("@ignore"))
+	assert.True(t, IsValidTag("@Manual"))
+}
+
+// Test new GxP tags
+func TestIsValidTag_GxP(t *testing.T) {
+	assert.True(t, IsValidTag("@gxp"))
+	assert.True(t, IsValidTag("@critical-aspect"))
+}
+
+// Test risk control tag patterns
+func TestIsValidTag_RiskControl(t *testing.T) {
+	// Valid standard risk control
+	assert.True(t, IsValidTag("@risk-control:auth-mfa-01"))
+	assert.True(t, IsValidTag("@risk-control:data-backup-99"))
+
+	// Valid GxP risk control
+	assert.True(t, IsValidTag("@risk-control:gxp-account-lockout"))
+	assert.True(t, IsValidTag("@risk-control:gxp-audit"))
+
+	// Invalid formats
+	assert.False(t, IsValidTag("@risk-control:"))
+	assert.False(t, IsValidTag("@risk-control:invalid"))
+	assert.False(t, IsValidTag("@risk-control:no-id"))
+	assert.False(t, IsValidTag("@risk-control:gxp-"))
+}
+
+// Test GxP requirements validation
+func TestValidateGxPRequirements_Valid(t *testing.T) {
+	test := TestReference{
+		FilePath:     "test.feature",
+		Type:         "godog",
+		TestName:     "GxP test",
+		Tags:         []string{"@gxp", "@risk-control:gxp-audit"},
+		IsGxP:        true,
+		RiskControls: []string{"@risk-control:gxp-audit"},
+	}
+
+	errors := ValidateGxPRequirements(test)
+	assert.Empty(t, errors)
+}
+
+func TestValidateGxPRequirements_MissingRiskControl(t *testing.T) {
+	test := TestReference{
+		FilePath:     "test.feature",
+		Type:         "godog",
+		TestName:     "GxP test",
+		Tags:         []string{"@gxp"},
+		IsGxP:        true,
+		RiskControls: []string{},
+	}
+
+	errors := ValidateGxPRequirements(test)
+	assert.Len(t, errors, 1)
+	assert.Contains(t, errors[0], "GxP requirement must have @risk-control:gxp-<name> tag")
+}
+
+func TestValidateGxPRequirements_CriticalAspectWithoutGxP(t *testing.T) {
+	test := TestReference{
+		FilePath:         "test.feature",
+		Type:             "godog",
+		TestName:         "test",
+		Tags:             []string{"@critical-aspect"},
+		IsCriticalAspect: true,
+		IsGxP:            false,
+	}
+
+	errors := ValidateGxPRequirements(test)
+	assert.Len(t, errors, 1)
+	assert.Contains(t, errors[0], "@critical-aspect must be used with @gxp tag")
+}
+
+// Test risk control validation
+func TestValidateRiskControls_Valid(t *testing.T) {
+	test := TestReference{
+		RiskControls: []string{
+			"@risk-control:auth-mfa-01",
+			"@risk-control:gxp-audit",
+		},
+	}
+
+	errors := ValidateRiskControls(test)
+	assert.Empty(t, errors)
+}
+
+func TestValidateRiskControls_Invalid(t *testing.T) {
+	test := TestReference{
+		RiskControls: []string{
+			"@risk-control:invalid",
+			"@risk-control:no-id",
+		},
+	}
+
+	errors := ValidateRiskControls(test)
+	assert.Len(t, errors, 2)
+}
+
+// Test ParseRiskControlTag
+func TestParseRiskControlTag_Standard(t *testing.T) {
+	ref, err := ParseRiskControlTag("@risk-control:auth-mfa-01")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "@risk-control:auth-mfa-01", ref.FullTag)
+	assert.Equal(t, "auth-mfa", ref.ControlName)
+	assert.Equal(t, "01", ref.ScenarioID)
+	assert.False(t, ref.IsGxP)
+}
+
+func TestParseRiskControlTag_GxP(t *testing.T) {
+	ref, err := ParseRiskControlTag("@risk-control:gxp-account-lockout")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "@risk-control:gxp-account-lockout", ref.FullTag)
+	assert.Equal(t, "gxp-account-lockout", ref.ControlName)
+	assert.Equal(t, "", ref.ScenarioID)
+	assert.True(t, ref.IsGxP)
+}
+
+func TestParseRiskControlTag_Invalid(t *testing.T) {
+	_, err := ParseRiskControlTag("@invalid")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not a risk control tag")
+
+	_, err = ParseRiskControlTag("@risk-control:invalid")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid risk control tag format")
+}

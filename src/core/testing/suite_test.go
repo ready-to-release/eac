@@ -157,3 +157,74 @@ func TestGetSystemDependencies_NoDependencies(t *testing.T) {
 
 	assert.Len(t, deps, 0)
 }
+
+// Test @ignore filtering
+func TestSelectTests_IgnoredTestsExcluded(t *testing.T) {
+	suite, _ := GetSuite("pre-commit")
+
+	tests := []TestReference{
+		{TestName: "Test A", Tags: []string{"@L1", "@ov"}, IsIgnored: false},
+		{TestName: "Test B", Tags: []string{"@L1", "@ov"}, IsIgnored: true},
+		{TestName: "Test C", Tags: []string{"@L2", "@ov"}, IsIgnored: false},
+	}
+
+	selected := suite.SelectTests(tests)
+
+	assert.Len(t, selected, 2)
+	names := []string{selected[0].TestName, selected[1].TestName}
+	assert.Contains(t, names, "Test A")
+	assert.Contains(t, names, "Test C")
+	assert.NotContains(t, names, "Test B")
+}
+
+func TestSelectTests_IgnoredBeforeOtherSelection(t *testing.T) {
+	suite, _ := GetSuite("pre-commit")
+
+	tests := []TestReference{
+		// This test matches the suite criteria (@L1) but is ignored
+		{TestName: "Ignored L1", Tags: []string{"@L1", "@ov"}, IsIgnored: true},
+		// This test doesn't match suite criteria (@L3) and is NOT ignored
+		{TestName: "Non-matching L3", Tags: []string{"@L3", "@iv"}, IsIgnored: false},
+		// This test matches suite criteria (@L2) and is NOT ignored
+		{TestName: "Matching L2", Tags: []string{"@L2", "@ov"}, IsIgnored: false},
+	}
+
+	selected := suite.SelectTests(tests)
+
+	// Only "Matching L2" should be selected
+	// "Ignored L1" is filtered out FIRST (even though it matches suite criteria)
+	// "Non-matching L3" doesn't match suite criteria
+	assert.Len(t, selected, 1)
+	assert.Equal(t, "Matching L2", selected[0].TestName)
+}
+
+// Test GetManualTests helper
+func TestGetManualTests_FiltersCorrectly(t *testing.T) {
+	tests := []TestReference{
+		{TestName: "Manual test 1", IsManual: true},
+		{TestName: "Automated test", IsManual: false},
+		{TestName: "Manual test 2", IsManual: true},
+		{TestName: "Another automated", IsManual: false},
+	}
+
+	manualTests := GetManualTests(tests)
+
+	assert.Len(t, manualTests, 2)
+	assert.Equal(t, "Manual test 1", manualTests[0].TestName)
+	assert.Equal(t, "Manual test 2", manualTests[1].TestName)
+}
+
+// Test GetGxPTests helper
+func TestGetGxPTests_FiltersCorrectly(t *testing.T) {
+	tests := []TestReference{
+		{TestName: "GxP test 1", IsGxP: true},
+		{TestName: "Regular test", IsGxP: false},
+		{TestName: "GxP test 2", IsGxP: true},
+	}
+
+	gxpTests := GetGxPTests(tests)
+
+	assert.Len(t, gxpTests, 2)
+	assert.Equal(t, "GxP test 1", gxpTests[0].TestName)
+	assert.Equal(t, "GxP test 2", gxpTests[1].TestName)
+}

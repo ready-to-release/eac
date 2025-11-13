@@ -7,6 +7,17 @@ type TestReference struct {
 	Type     string   // "godog", "gotest"
 	TestName string   // Name of test/scenario
 	Tags     []string // All effective tags (inherited + explicit + inferred)
+
+	// Execution control
+	IsIgnored bool // Has @ignore tag
+	IsManual  bool // Has @Manual tag
+
+	// Risk control linkage
+	RiskControls []string // All @risk-control:<name>-<id> references
+
+	// GxP regulatory classification
+	IsGxP            bool // Has @gxp tag
+	IsCriticalAspect bool // Has @critical-aspect tag
 }
 
 // TestSuite defines a selector for tests based on tags
@@ -31,4 +42,12 @@ type Inference struct {
 	IfTags      []string // Condition: has ALL these tags
 	ThenAddTags []string // Action: add these tags
 	Description string   // Human-readable description
+}
+
+// RiskControlRef represents a parsed risk control reference
+type RiskControlRef struct {
+	FullTag     string // Complete tag (e.g., "@risk-control:auth-mfa-01")
+	ControlName string // Control name (e.g., "auth-mfa")
+	ScenarioID  string // Scenario ID (e.g., "01"), empty for GxP controls
+	IsGxP       bool   // Is this a GxP risk control?
 }

@@ -80,11 +80,23 @@ func ListSuites() []string {
 // SelectTests applies suite selectors to filter tests
 func (suite *TestSuite) SelectTests(allTests []TestReference) []TestReference {
 	selected := []TestReference{}
+	ignoredCount := 0
 
 	for _, test := range allTests {
+		// Filter out ignored tests FIRST (before any other selection)
+		if test.IsIgnored {
+			ignoredCount++
+			continue
+		}
+
 		if suite.Matches(test) {
 			selected = append(selected, test)
 		}
+	}
+
+	// Log ignored tests if any
+	if ignoredCount > 0 {
+		fmt.Printf("INFO: %d tests ignored (tagged with @ignore)\n", ignoredCount)
 	}
 
 	return selected
@@ -154,4 +166,26 @@ func GetSystemDependencies(tests []TestReference) []string {
 	sort.Strings(deps)
 
 	return deps
+}
+
+// GetManualTests returns only manual tests from a list
+func GetManualTests(tests []TestReference) []TestReference {
+	manual := []TestReference{}
+	for _, test := range tests {
+		if test.IsManual {
+			manual = append(manual, test)
+		}
+	}
+	return manual
+}
+
+// GetGxPTests returns only GxP tests from a list
+func GetGxPTests(tests []TestReference) []TestReference {
+	gxp := []TestReference{}
+	for _, test := range tests {
+		if test.IsGxP {
+			gxp = append(gxp, test)
+		}
+	}
+	return gxp
 }
