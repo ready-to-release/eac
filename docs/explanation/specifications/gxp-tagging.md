@@ -284,7 +284,7 @@ Feature: risk-control_account-lockout
 Regulatory tags work alongside standard testing taxonomy tags:
 
 ```gherkin
-@gxp @L2 @dep:ldap
+@gxp @L2 @deps:ldap
 Feature: auth_user-authentication-ldap
 
   Rule: Authentication validates against corporate LDAP
@@ -301,7 +301,7 @@ Feature: auth_user-authentication-ldap
 **Tag Types Present**:
 
 - **Regulatory**: `@gxp`, `@risk-control:gxp-ldap-auth`
-- **Testing Taxonomy**: `@L2`, `@ov`, `@dep:ldap`
+- **Testing Taxonomy**: `@L2`, `@ov`, `@deps:ldap`
 - **Feature Name**: `auth_user-authentication-ldap` (serves as URS identifier)
 
 ---

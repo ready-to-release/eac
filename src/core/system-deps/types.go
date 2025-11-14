@@ -10,7 +10,7 @@ type Checker interface {
 
 // Result contains the result of a dependency check
 type Result struct {
-	Dependency string // e.g., "@dep:docker"
+	Dependency string // e.g., "@deps:docker"
 	Available  bool
 	Version    string
 	Error      error

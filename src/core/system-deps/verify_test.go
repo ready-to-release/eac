@@ -8,17 +8,17 @@ import (
 )
 
 func TestVerify_Docker(t *testing.T) {
-	result := Verify("@dep:docker")
+	result := Verify("@deps:docker")
 
-	assert.Equal(t, "@dep:docker", result.Dependency)
+	assert.Equal(t, "@deps:docker", result.Dependency)
 	// Result depends on whether Docker is installed
 	// Just check it doesn't panic
 }
 
 func TestVerify_Git(t *testing.T) {
-	result := Verify("@dep:git")
+	result := Verify("@deps:git")
 
-	assert.Equal(t, "@dep:git", result.Dependency)
+	assert.Equal(t, "@deps:git", result.Dependency)
 	// Git is likely available in development
 	if result.Available {
 		assert.NotEmpty(t, result.Version)
@@ -26,41 +26,41 @@ func TestVerify_Git(t *testing.T) {
 }
 
 func TestVerify_Go(t *testing.T) {
-	result := Verify("@dep:go")
+	result := Verify("@deps:go")
 
-	assert.Equal(t, "@dep:go", result.Dependency)
+	assert.Equal(t, "@deps:go", result.Dependency)
 	// Go must be available (we're running tests with it!)
 	assert.True(t, result.Available)
 	assert.NotEmpty(t, result.Version)
 }
 
 func TestVerify_Claude(t *testing.T) {
-	result := Verify("@dep:claude")
+	result := Verify("@deps:claude")
 
-	assert.Equal(t, "@dep:claude", result.Dependency)
+	assert.Equal(t, "@deps:claude", result.Dependency)
 	// Claude API key may or may not be configured
 	// Just check it doesn't panic
 }
 
 func TestVerify_AzureCLI(t *testing.T) {
-	result := Verify("@dep:az-cli")
+	result := Verify("@deps:az-cli")
 
-	assert.Equal(t, "@dep:az-cli", result.Dependency)
+	assert.Equal(t, "@deps:az-cli", result.Dependency)
 	// Azure CLI may or may not be installed
 	// Just check it doesn't panic
 }
 
 func TestVerify_UnknownDependency(t *testing.T) {
-	result := Verify("@dep:unknown")
+	result := Verify("@deps:unknown")
 
-	assert.Equal(t, "@dep:unknown", result.Dependency)
+	assert.Equal(t, "@deps:unknown", result.Dependency)
 	assert.False(t, result.Available)
 	assert.Error(t, result.Error)
 	assert.Contains(t, result.Error.Error(), "unknown dependency")
 }
 
 func TestVerifyAll(t *testing.T) {
-	deps := []string{"@dep:go", "@dep:git", "@dep:docker"}
+	deps := []string{"@deps:go", "@deps:git", "@deps:docker"}
 
 	results := VerifyAll(deps)
 
@@ -69,7 +69,7 @@ func TestVerifyAll(t *testing.T) {
 	// Find Go result (must be available)
 	var goResult *Result
 	for _, r := range results {
-		if r.Dependency == "@dep:go" {
+		if r.Dependency == "@deps:go" {
 			goResult = &r
 			break
 		}
@@ -81,18 +81,18 @@ func TestVerifyAll(t *testing.T) {
 
 func TestIsAvailable(t *testing.T) {
 	// Go must be available
-	assert.True(t, IsAvailable("@dep:go"))
+	assert.True(t, IsAvailable("@deps:go"))
 
 	// Unknown dependency is not available
-	assert.False(t, IsAvailable("@dep:unknown"))
+	assert.False(t, IsAvailable("@deps:unknown"))
 }
 
 func TestGetMissingDependencies(t *testing.T) {
-	deps := []string{"@dep:go", "@dep:unknown-xyz"}
+	deps := []string{"@deps:go", "@deps:unknown-xyz"}
 
 	missing := GetMissingDependencies(deps)
 
-	// @dep:go should be available, @dep:unknown-xyz should not
-	assert.Contains(t, missing, "@dep:unknown-xyz")
-	assert.NotContains(t, missing, "@dep:go")
+	// @deps:go should be available, @deps:unknown-xyz should not
+	assert.Contains(t, missing, "@deps:unknown-xyz")
+	assert.NotContains(t, missing, "@deps:go")
 }

@@ -8,16 +8,16 @@ import (
 
 // SuiteRegistry holds all defined test suites
 var SuiteRegistry = map[string]*TestSuite{
-	"pre-commit":             NewPreCommitSuite(),
-	"acceptance":             NewAcceptanceSuite(),
+	"commit":                  NewCommitSuite(),
+	"acceptance":              NewAcceptanceSuite(),
 	"production-verification": NewProductionVerificationSuite(),
 }
 
-// NewPreCommitSuite creates the pre-commit test suite (L0-L2)
-func NewPreCommitSuite() *TestSuite {
+// NewCommitSuite creates the commit test suite (L0-L2)
+func NewCommitSuite() *TestSuite {
 	return &TestSuite{
-		Moniker:     "pre-commit",
-		Name:        "Pre-Commit Tests",
+		Moniker:     "commit",
+		Name:        "Commit Tests",
 		Description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L2",
 		Selectors: []TagSelector{
 			{
@@ -146,13 +146,36 @@ func matchesSelector(tags []string, selector TagSelector) bool {
 	return true
 }
 
-// GetSystemDependencies extracts all @dep:* tags from tests
+// GetSystemDependencies extracts all @deps:* tags from tests (excludes @depm:*)
 func GetSystemDependencies(tests []TestReference) []string {
 	depsMap := make(map[string]bool)
 
 	for _, test := range tests {
 		for _, tag := range test.Tags {
-			if strings.HasPrefix(tag, "@dep:") {
+			// Only include @deps: tags, not @depm: (module dependencies)
+			if strings.HasPrefix(tag, "@deps:") {
+				depsMap[tag] = true
+			}
+		}
+	}
+
+	// Convert map to sorted slice
+	deps := make([]string, 0, len(depsMap))
+	for dep := range depsMap {
+		deps = append(deps, dep)
+	}
+	sort.Strings(deps)
+
+	return deps
+}
+
+// GetModuleDependencies extracts all @depm:* tags from tests
+func GetModuleDependencies(tests []TestReference) []string {
+	depsMap := make(map[string]bool)
+
+	for _, test := range tests {
+		for _, tag := range test.Tags {
+			if strings.HasPrefix(tag, "@depm:") {
 				depsMap[tag] = true
 			}
 		}

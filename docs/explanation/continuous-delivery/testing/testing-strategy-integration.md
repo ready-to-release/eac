@@ -282,7 +282,7 @@ The testing strategy uses tags to select tests for execution at specific CD Mode
 **Tag Requirements**:
 
 - All Gherkin scenarios MUST have verification tag (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`)
-- System dependencies declared with `@dep:*` tags
+- System dependencies declared with `@deps:*` tags
 - Tags inherit from Feature → Rule → Scenario
 
 ---

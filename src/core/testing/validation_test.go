@@ -7,7 +7,7 @@ import (
 )
 
 func TestValidateTags_AllValid(t *testing.T) {
-	tags := []string{"@L1", "@ov", "@dep:go"}
+	tags := []string{"@L1", "@ov", "@deps:go"}
 
 	errors := ValidateTags(tags)
 
@@ -110,12 +110,11 @@ func TestIsValidTag_KnownTags(t *testing.T) {
 	assert.True(t, IsValidTag("@pv"))
 	assert.True(t, IsValidTag("@piv"))
 	assert.True(t, IsValidTag("@ppv"))
-	assert.True(t, IsValidTag("@dep:docker"))
-	assert.True(t, IsValidTag("@dep:git"))
-	assert.True(t, IsValidTag("@dep:go"))
-	assert.True(t, IsValidTag("@dep:claude"))
-	assert.True(t, IsValidTag("@dep:az-cli"))
-	assert.True(t, IsValidTag("@requires_isolation"))
+	assert.True(t, IsValidTag("@deps:docker"))
+	assert.True(t, IsValidTag("@deps:git"))
+	assert.True(t, IsValidTag("@deps:go"))
+	assert.True(t, IsValidTag("@deps:claude"))
+	assert.True(t, IsValidTag("@deps:az-cli"))
 }
 
 func TestIsValidTag_RiskPattern(t *testing.T) {
@@ -127,7 +126,7 @@ func TestIsValidTag_RiskPattern(t *testing.T) {
 func TestIsValidTag_Invalid(t *testing.T) {
 	assert.False(t, IsValidTag("@invalid"))
 	assert.False(t, IsValidTag("@L5"))
-	assert.False(t, IsValidTag("@dep:unknown"))
+	assert.False(t, IsValidTag("@deps:unknown"))
 	assert.False(t, IsValidTag("not-a-tag"))
 }
 
@@ -137,14 +136,14 @@ func TestGetKnownTags(t *testing.T) {
 	assert.Contains(t, knownTags, "@L0")
 	assert.Contains(t, knownTags, "@L1")
 	assert.Contains(t, knownTags, "@ov")
-	assert.Contains(t, knownTags, "@dep:docker")
-	assert.Contains(t, knownTags, "@requires_isolation")
+	assert.Contains(t, knownTags, "@deps:docker")
 }
 
 // Test new execution control tags
 func TestIsValidTag_ExecutionControl(t *testing.T) {
-	assert.True(t, IsValidTag("@ignore"))
 	assert.True(t, IsValidTag("@Manual"))
+	assert.True(t, IsValidTag("@skip:wip"))
+	assert.True(t, IsValidTag("@skip:broken"))
 }
 
 // Test new GxP tags

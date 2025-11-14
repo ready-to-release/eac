@@ -5,6 +5,10 @@ Feature: src-commands_templates
   I want to install and manage templates with value replacements
   So that I can generate project structures efficiently
 
+  # NOTE: All tests use temporary directories (os.MkdirTemp) for full isolation
+  # No git-tracked files are modified during tests
+  # Cleanup is automatic via sc.After() hook
+
   Rule: Template list command scans and displays placeholders
 
     Scenario: List uses default repository when template not provided

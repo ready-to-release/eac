@@ -2,12 +2,14 @@ package tests
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/cucumber/godog"
+	coretesting "github.com/ready-to-release/eac/src/core/testing"
 )
 
 func TestFeatures(t *testing.T) {
@@ -17,11 +19,28 @@ func TestFeatures(t *testing.T) {
 		reportFormat = "cucumber" // Default format
 	}
 
+	// Allow format to be customized via environment variable
+	// Supported formats: pretty, progress, cucumber, junit, events, undefined
+	consoleFormat := os.Getenv("GODOG_FORMAT")
+	if consoleFormat == "" {
+		consoleFormat = "pretty" // Default: verbose output
+	}
+
+	// Load tag contract to get skip reasons
+	contract, err := coretesting.LoadTagContract()
+	if err != nil {
+		log.Fatalf("Failed to load tag contract: %v", err)
+	}
+
+	// Build tag filter from contract skip reasons
+	skipFilter := contract.BuildGodogSkipTagFilter()
+	tagFilter := skipFilter + " && ~@pending"
+
 	opts := &godog.Options{
-		Format:   "pretty",
+		Format:   consoleFormat,
 		Paths:    []string{"../../../specs/src-commands"},
 		TestingT: t,
-		Tags:     "~@skip && ~@pending", // Skip scenarios tagged with @skip or @pending
+		Tags:     tagFilter, // Skip scenarios tagged with @skip:<reason> (from contract) or @pending
 	}
 
 	// If output directory is set, add report formatter
@@ -43,8 +62,8 @@ func TestFeatures(t *testing.T) {
 		// Convert Windows paths to forward slashes for Godog
 		reportFormatted := filepath.ToSlash(reportPath)
 
-		// Construct multi-formatter string: pretty (console) + report file
-		opts.Format = fmt.Sprintf("pretty,%s:%s", formatterName, reportFormatted)
+		// Construct multi-formatter string: console format + report file
+		opts.Format = fmt.Sprintf("%s,%s:%s", consoleFormat, formatterName, reportFormatted)
 
 		fmt.Printf("Registering formatters:\n")
 		fmt.Printf("  - Pretty (console)\n")

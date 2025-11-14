@@ -154,6 +154,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 		return 1
 	}
 
-	// Execute the build function
-	return buildFunc(module, workspaceRoot, outputDir, logWriter)
+	// Execute the build function with default options (build all platforms)
+	opts := BuildOptions{}
+	return buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
 }

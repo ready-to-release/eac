@@ -132,7 +132,7 @@ The testing taxonomy uses tags to categorize tests by level, verification type, 
 
 - **Test Level Tags** (`@L0`-`@L4`) - Execution environment and scope
 - **Verification Tags** (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`) - REQUIRED for all Gherkin scenarios
-- **System Dependencies** (`@dep:*`) - Declare required tooling
+- **System Dependencies** (`@deps:*`) - Declare required tooling
 - **Test Suites** - Tag-based test selection (pre-commit, acceptance, production-verification)
 
 **Tag Examples by Test Level**:

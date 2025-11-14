@@ -67,6 +67,12 @@ func iHaveAFileWithContent(filePath string, content *godog.DocString) error {
 // ============================================================================
 
 func iRunCommand(cmdLine string) error {
+	// If templatesCtx is nil, this step is being called from a non-templates feature
+	// Fall back to the generic command execution (iRunTheCommand from steps_test.go)
+	if templatesCtx == nil {
+		return iRunTheCommand(cmdLine)
+	}
+
 	parts := strings.Fields(cmdLine)
 	if len(parts) < 2 {
 		return fmt.Errorf("invalid command format: %s", cmdLine)
@@ -306,8 +312,9 @@ func InitializeTemplatesScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I have a values file "([^"]*)" with:$`, iHaveAValuesFileWith)
 	sc.Step(`^I have a file "([^"]*)" with content:$`, iHaveAFileWithContent)
 
-	// Execution steps
+	// Execution steps (templates-specific to avoid side-effect blocking)
 	sc.Step(`^I run the command "([^"]*)"$`, iRunCommand)
+	sc.Step(`^I run the templates command "([^"]*)"$`, iRunCommand)
 
 	// Verification steps
 	sc.Step(`^the command should succeed$`, theCommandShouldSucceed)
