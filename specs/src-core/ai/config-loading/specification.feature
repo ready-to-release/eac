@@ -10,7 +10,7 @@ Feature: src-core-ai_config-loading
     The system must read configuration from the standard location
     and parse it correctly.
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Load valid configuration file
       Given a valid .r2r/agent-config.yml file with claude-api provider
       When I load the configuration
@@ -19,14 +19,14 @@ Feature: src-core-ai_config-loading
       And the model is "claude-3-haiku-20240307"
       And the endpoint is "https://api.anthropic.com/v1"
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Configuration file does not exist
       Given no .r2r/agent-config.yml file exists
       When I attempt to load the configuration
       Then an error is returned
       And the error indicates the file was not found
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Configuration file contains malformed YAML
       Given a .r2r/agent-config.yml file with invalid YAML syntax
       When I attempt to load the configuration
@@ -37,21 +37,21 @@ Feature: src-core-ai_config-loading
     The configuration file should use ${VAR_NAME} syntax for secrets,
     and the system must substitute these with actual environment variable values.
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Substitute environment variable in API key
       Given a .r2r/agent-config.yml file with api_key: ${ANTHROPIC_API_KEY}
       And ANTHROPIC_API_KEY environment variable is set to "sk-test-123"
       When I load the configuration
       Then the API key in the loaded config is "sk-test-123"
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Missing environment variable results in empty string
       Given a .r2r/agent-config.yml file with api_key: ${MISSING_VAR}
       And MISSING_VAR environment variable is not set
       When I load the configuration
       Then the API key in the loaded config is empty
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Multiple environment variables are substituted
       Given a .r2r/agent-config.yml file with multiple ${VAR} references
       And all referenced environment variables are set
@@ -62,14 +62,14 @@ Feature: src-core-ai_config-loading
     Configuration validation must happen early and provide
     actionable error messages.
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Missing required provider name
       Given a .r2r/agent-config.yml file without provider name
       When I load the configuration
       Then an error is returned
       And the error indicates "provider name is required"
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Empty configuration file
       Given an empty .r2r/agent-config.yml file
       When I load the configuration

@@ -112,3 +112,44 @@ Feature: src-commands_templates
       And the file should register the template with default configuration
       And the command "templates apply architecture" should automatically work
       Or the command "templates install architecture" should automatically work
+
+  Rule: Template system must prevent path traversal attacks
+
+    # SECURITY: Malicious templates must not write files outside designated output directory
+
+    Scenario: Reject template file with path traversal
+      Given a template directory with file "../../etc/passwd.tmpl"
+      When I render the template to output directory
+      Then the command should fail
+      And the error should contain "security: path traversal detected"
+      And no files should be written outside the output directory
+
+    Scenario: Reject rendered path that escapes after variable substitution
+      Given a template directory with file "{{ .Path }}/file.txt"
+      And template values with Path="../../../etc"
+      When I render the template to output directory
+      Then the command should fail
+      And the error should contain "security"
+      And no files should be written outside the output directory
+
+  Rule: Git repository URLs must be validated to prevent command injection
+
+    # SECURITY: Malicious URLs must not inject shell commands during git clone
+
+    Scenario: Reject URL with command injection characters
+      When I run "templates apply compliance --source https://evil.com/repo.git; rm -rf /"
+      Then the command should fail
+      And the error should contain "security: invalid characters in URL"
+
+    Scenario: Reject local file path as source
+      When I run "templates apply compliance --source /local/path/to/repo"
+      Then the command should fail
+      And the error should contain "invalid git repository URL"
+
+  Rule: Security validations must be applied consistently across all template operations
+
+    Scenario: Security validation errors are clear and actionable
+      When a security violation is detected
+      Then the error message must include "security:" prefix
+      And the error message must describe what was detected
+      And no partial files should be created

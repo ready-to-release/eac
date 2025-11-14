@@ -1,4 +1,4 @@
-@L1
+@L2
 Feature: src-core_test-tagging
 
   As a test framework
@@ -14,7 +14,7 @@ Feature: src-core_test-tagging
 
   Rule: Must discover tags from Godog feature files
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Discover feature-level tag
       Given a Godog feature file:
         """
@@ -29,7 +29,7 @@ Feature: src-core_test-tagging
         | @deps:go |
         | @L2     |
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Feature tags inherited by scenario
       Given a Godog feature file:
         """
@@ -43,7 +43,7 @@ Feature: src-core_test-tagging
         | @deps:go |
         | @L3     |
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Scenario tags override feature level tags
       Given a Godog feature file:
         """
@@ -59,7 +59,7 @@ Feature: src-core_test-tagging
 
   Rule: Must discover tags from Go test files
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Go test without build tag defaults to L1
       Given a Go test file "service_test.go" without build tags:
         """
@@ -73,7 +73,7 @@ Feature: src-core_test-tagging
       Then I should find 1 test
       And test "TestValidateEmail" should have tag "@L1"
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Go test with L0 build tag
       Given a Go test file "service_fast_test.go" with build tag "L0":
         """
@@ -95,7 +95,7 @@ Feature: src-core_test-tagging
 
   Rule: Godog features without level tag default to L2
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Godog feature without level gets L2
       Given a Godog feature file:
         """
@@ -108,7 +108,7 @@ Feature: src-core_test-tagging
 
   Rule: Go tests without level tag default to L1
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Go test without level gets L1
       Given a Go test file without build tags
       And the test has no level tags
@@ -117,7 +117,7 @@ Feature: src-core_test-tagging
 
   Rule: Verification tags infer taxonomy levels
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Installation verification infers L3
       Given a Godog feature file:
         """
@@ -130,7 +130,7 @@ Feature: src-core_test-tagging
         | @iv |
         | @L3 |
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Performance verification infers L3
       Given a Godog feature file:
         """
@@ -143,7 +143,7 @@ Feature: src-core_test-tagging
         | @pv |
         | @L3 |
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Production installation verification infers L4
       Given a Godog feature file:
         """
@@ -156,7 +156,7 @@ Feature: src-core_test-tagging
         | @piv |
         | @L4  |
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Production performance verification infers L4
       Given a Godog feature file:
         """
@@ -171,7 +171,7 @@ Feature: src-core_test-tagging
 
   Rule: Operational verification is derived
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Test without verification tags gets @ov
       Given a Godog feature file:
         """
@@ -181,7 +181,7 @@ Feature: src-core_test-tagging
       When I apply inferences
       Then test "Test feature" should have tag "@ov"
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Test with @iv does not get @ov
       Given a Godog feature file:
         """
@@ -195,7 +195,7 @@ Feature: src-core_test-tagging
 
   Rule: Explicit level tags override inferences
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Explicit L2 overrides Godog default
       Given a Godog feature file:
         """
@@ -207,7 +207,7 @@ Feature: src-core_test-tagging
       Then test "Test" should have tag "@L2"
       And there should be only one level tag
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Explicit L2 with @pv keeps explicit level
       Given a Godog feature file:
         """
@@ -227,7 +227,7 @@ Feature: src-core_test-tagging
 
   Rule: Suite selectors filter tests by tags
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Pre-commit suite selects L0-L2 tests
       Given the following tests:
         | name    | tags          |
@@ -243,7 +243,7 @@ Feature: src-core_test-tagging
       And tests should NOT be selected:
         | Test D |
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Acceptance suite selects by verification type
       Given the following tests:
         | name    | tags          |
@@ -259,7 +259,7 @@ Feature: src-core_test-tagging
       And tests should NOT be selected:
         | Test D |
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Production verification suite requires both L4 and @piv
       Given the following tests:
         | name    | tags          |
@@ -279,7 +279,7 @@ Feature: src-core_test-tagging
 
   Rule: Must extract system dependencies from tests
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Extract dependencies from selected tests
       Given the following tests:
         | name    | tags                  |
@@ -292,7 +292,7 @@ Feature: src-core_test-tagging
         | @deps:docker |
         | @deps:git    |
 
-    @L1 @ov
+    @L2 @ov
     Scenario: No duplicate dependencies
       Given the following tests:
         | name    | tags                          |

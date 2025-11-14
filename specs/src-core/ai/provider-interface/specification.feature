@@ -10,7 +10,7 @@ Feature: src-core-ai_provider-interface
     The Execute() method is the core interface that all providers must implement.
     It takes a string input and returns a string output with optional parameters.
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Claude API provider executes successfully
       Given a valid claude-api provider configuration
       And ANTHROPIC_API_KEY environment variable is set
@@ -18,7 +18,7 @@ Feature: src-core-ai_provider-interface
       Then the provider returns a non-empty response
       And no error is returned
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Claude CLI provider executes successfully
       Given a valid claude-cli provider configuration
       And the claude CLI tool is available
@@ -26,7 +26,7 @@ Feature: src-core-ai_provider-interface
       Then the provider returns a non-empty response
       And no error is returned
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Provider execution with model option
       Given a valid claude-api provider configuration
       When I execute a prompt "Test" with model "claude-3-haiku-20240307"
@@ -37,7 +37,7 @@ Feature: src-core-ai_provider-interface
     Providers must check their configuration and fail fast with clear errors
     if the configuration is invalid or required credentials are missing.
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Provider fails fast when API key is missing
       Given a claude-api provider configuration
       And ANTHROPIC_API_KEY environment variable is not set
@@ -45,7 +45,7 @@ Feature: src-core-ai_provider-interface
       Then an error is returned
       And the error message indicates the missing API key
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Provider fails fast when configuration is invalid
       Given an invalid provider configuration with empty name
       When I attempt to create a provider
@@ -56,7 +56,7 @@ Feature: src-core-ai_provider-interface
     When provider execution fails, errors must be wrapped with context
     to help diagnose the issue.
 
-    @L0 @ov
+    @L2 @ov
     Scenario: Provider wraps API errors with context
       Given a claude-api provider configuration
       And the API endpoint is unreachable
@@ -69,7 +69,7 @@ Feature: src-core-ai_provider-interface
     The system supports multiple AI providers including Claude, OpenAI, and Gemini.
     Each provider implements the same interface for consistent usage.
 
-    @L0 @ov @dep:openai
+    @L2 @ov @dep:openai
     Scenario: OpenAI provider executes successfully
       Given a valid openai provider configuration
       And OPENAI_API_KEY environment variable is set
@@ -77,7 +77,7 @@ Feature: src-core-ai_provider-interface
       Then the provider returns a non-empty response
       And no error is returned
 
-    @L0 @ov @dep:openai
+    @L2 @ov @dep:openai
     Scenario: OpenAI provider fails when API key is missing
       Given an openai provider configuration
       And OPENAI_API_KEY environment variable is not set
@@ -85,7 +85,7 @@ Feature: src-core-ai_provider-interface
       Then an error is returned
       And the error message indicates the missing API key
 
-    @L0 @ov @dep:gemini
+    @L2 @ov @dep:gemini
     Scenario: Gemini provider executes successfully
       Given a valid gemini provider configuration
       And GOOGLE_API_KEY environment variable is set
@@ -93,7 +93,7 @@ Feature: src-core-ai_provider-interface
       Then the provider returns a non-empty response
       And no error is returned
 
-    @L0 @ov @dep:gemini
+    @L2 @ov @dep:gemini
     Scenario: Gemini provider fails when API key is missing
       Given a gemini provider configuration
       And GOOGLE_API_KEY environment variable is not set

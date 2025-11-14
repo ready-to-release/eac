@@ -1,10 +1,3 @@
-# Feature: src-core-ai_executor
-#
-# The AI Executor orchestrates AI provider invocation, including provider selection,
-# configuration loading, fallback behavior, and execution logging.
-#
-# Tags: @L1, @ov
-
 Feature: src-core-ai_executor
   As a CLI command
   I want to execute AI requests through a unified interface
@@ -15,7 +8,7 @@ Feature: src-core-ai_executor
     The executor reads .r2r/agent-config.yml to determine which provider to use.
     If the config exists and is valid, the executor uses the specified provider.
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Execute with claude-api configured
       Given agent config exists with provider "claude-api"
       And environment variable "ANTHROPIC_API_KEY" is set
@@ -23,14 +16,14 @@ Feature: src-core-ai_executor
       Then the executor uses claude-api provider
       And the API key from environment is used
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Execute with claude-cli configured
       Given agent config exists with provider "claude-cli"
       When I execute a prompt "Hello"
       Then the executor uses claude-cli provider
       And no API key is required
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Execute with openai configured
       Given agent config exists with provider "openai"
       And environment variable "OPENAI_API_KEY" is set
@@ -44,14 +37,14 @@ Feature: src-core-ai_executor
     to the claude-cli provider, which uses Claude Pro subscription authentication.
     This provides zero-configuration usage for all users.
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Execute with no config file
       Given no agent config file exists
       When I execute a prompt "Hello"
       Then the executor uses claude-cli provider
       And no API key is required
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Execute with malformed config file
       Given agent config file is malformed
       When I execute a prompt "Hello"
@@ -64,7 +57,7 @@ Feature: src-core-ai_executor
     before attempting execution. If validation fails, it falls back to claude-cli
     or returns a clear error.
 
-    @L1 @ov @negative
+    @L2 @ov @negative
     Scenario: Execute with missing API key for claude-api
       Given agent config exists with provider "claude-api"
       And environment variable "ANTHROPIC_API_KEY" is not set
@@ -72,7 +65,7 @@ Feature: src-core-ai_executor
       Then the executor falls back to claude-cli provider
       And a warning is logged about missing API key
 
-    @L1 @ov @negative
+    @L2 @ov @negative
     Scenario: Execute with invalid provider name
       Given agent config exists with provider "invalid-provider"
       When I execute a prompt "Hello"
@@ -85,7 +78,7 @@ Feature: src-core-ai_executor
     and audit purposes. Each log entry includes timestamp, provider, prompt,
     response, duration, and success/failure status.
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Successful execution is logged
       Given agent config exists with provider "claude-cli"
       When I execute a prompt "Hello"
@@ -95,7 +88,7 @@ Feature: src-core-ai_executor
       And the log entry contains provider "claude-cli"
       And the log entry contains success status
 
-    @L1 @ov @negative
+    @L2 @ov @negative
     Scenario: Failed execution is logged
       Given agent config exists with provider "claude-api"
       And environment variable "ANTHROPIC_API_KEY" is set to invalid value
@@ -110,7 +103,7 @@ Feature: src-core-ai_executor
     The executor accepts functional options to override default behavior,
     such as specifying a different model or temperature.
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Execute with custom model option
       Given agent config exists with provider "claude-api"
       And environment variable "ANTHROPIC_API_KEY" is set
@@ -118,7 +111,7 @@ Feature: src-core-ai_executor
       Then the executor uses the specified model
       And the log entry contains model "claude-3-opus-20240229"
 
-    @L1 @ov
+    @L2 @ov
     Scenario: Execute with custom temperature option
       Given agent config exists with provider "claude-api"
       And environment variable "ANTHROPIC_API_KEY" is set

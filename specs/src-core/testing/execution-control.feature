@@ -1,4 +1,4 @@
-@L1
+@L2
 Feature: src-core_execution-control-tags
 
   As a test framework
@@ -18,7 +18,7 @@ Feature: src-core_execution-control-tags
     Scenario: Ignored test excluded from pre-commit suite
       Given a Godog feature file:
         """
-        @ignore @L1 @ov
+        @ignore @L2 @ov
         Feature: WIP Feature
           Scenario: Test in progress
             When I test something
