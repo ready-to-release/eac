@@ -4,21 +4,32 @@
 
 ---
 
-## What is Everything as Code?
+## What is r2r (Ready to Release)?
 
-Everything as Code is an extensible CLI-in-a-box called r2r (Ready to Release) for managing software delivery flows with integrated MCP servers and VSCode extension. It brings continuous delivery, compliance automation, and executable specifications together into a unified workflow that works from your terminal, IDE, or CI/CD pipeline.
+**r2r** is an extensible CLI that enables Everything-as-Code workflows from your terminal, IDE, or CI/CD pipeline. Built by engineers, for engineers.
+
+The CLI is your primary interface for:
+
+- Writing executable specifications that validate your system
+- Running continuous compliance checks on every commit
+- Generating audit evidence as a byproduct of your pipeline
+- Integrating with MCP servers and VSCode for IDE-native workflows
+- Automating delivery flows with containers and GitHub Actions
+
+**This repository is both the tool and a working example** - it demonstrates CI/CD implementation with the same principles and patterns explained in the documentation. Study the `.github/workflows/`, specs, and build processes to see Everything-as-Code in action.
 
 ## Why Everything as Code?
 
 Traditional compliance creates friction: manual documentation, periodic audits, late validation. Development teams wait for approvals. Compliance teams scramble during audit prep. Quality suffers.
 
-Everything as Code transforms compliance from a bottleneck into an automated capability by:
+**The r2r CLI transforms compliance from a bottleneck into automation:**
 
-- **Everything as Code** - Requirements, policies, and evidence in version control
+- **Terminal-First**: Run validation and evidence generation from `r2r` commands
+- **Shift-Left Compliance** - Catch issues at commit time (5 minutes) vs. production (days)
+- **Executable Specifications** - Requirements and policies as code in version control
 - **Continuous Validation** - Compliance checked on every commit, not quarterly
-- **Shift-Left Compliance** - Issues caught at commit time (5 minutes) vs. production (days)
-- **Automated Evidence** - Evidence generated as a byproduct of your pipeline
-- **Executable Specifications** - Requirements expressed as tests that validate your system
+- **Automated Evidence** - Traceability generated automatically by your pipeline
+- **Reference Implementation** - This repo's own CI/CD demonstrates the patterns
 
 ---
 
