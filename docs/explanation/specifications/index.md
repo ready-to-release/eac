@@ -63,7 +63,7 @@ Complete reference for the **testing taxonomy tags** used across the test suite.
 
 - Test level tags (@L0-@L4) - Execution environment and scope
 - Verification tags (@ov, @iv, @pv, @piv, @ppv) - REQUIRED for all Gherkin scenarios
-- System dependency tags (@dep:*) - Declare required tooling
+- System dependency tags (@deps:*) - Declare required tooling
 - Risk control tags (@risk-control:[name]-[id]) - Compliance traceability
 - Tag inheritance rules - Feature → Rule → Scenario
 - Test suites - Tag-based test selection

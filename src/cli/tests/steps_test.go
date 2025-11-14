@@ -6,7 +6,7 @@
 //
 // Prerequisites:
 // - Requires pre-built executable from "build module src-cli"
-// - Executable location: out/src-cli/r2r-cli (or r2r-cli.exe on Windows)
+// - Executable location: out/src-cli/windows-r2r-cli.exe (or linux-r2r-cli, darwin-r2r-cli)
 package tests
 
 import (
@@ -26,6 +26,8 @@ type testContext struct {
 	exitCode       int
 	commandError   error
 	executablePath string
+	testFolderPath string // For integration tests with temp folders
+	currentDir     string // Track current working directory
 }
 
 var ctx *testContext
@@ -88,13 +90,17 @@ func initializeContext() error {
 	ctx = &testContext{}
 
 	// Find the pre-built executable
-	// Expected location: out/src-cli/r2r-cli (or r2r-cli.exe on Windows)
+	// Expected location: out/src-cli/<platform>-r2r-cli (or <platform>-r2r-cli.exe on Windows)
+	// Platform-specific builds: windows-r2r-cli.exe, linux-r2r-cli, darwin-r2r-cli
 	workspaceRoot := filepath.Join("..", "..", "..")
 
-	// Try both with and without .exe extension (works on all platforms)
+	// Try platform-specific binaries first, then fall back to legacy names
 	possiblePaths := []string{
-		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli.exe"), // Windows
-		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli"),     // Linux/Mac
+		filepath.Join(workspaceRoot, "out", "src-cli", "windows-r2r-cli.exe"), // Windows (new format)
+		filepath.Join(workspaceRoot, "out", "src-cli", "linux-r2r-cli"),       // Linux (new format)
+		filepath.Join(workspaceRoot, "out", "src-cli", "darwin-r2r-cli"),      // macOS (new format)
+		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli.exe"),         // Windows (legacy)
+		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli"),             // Linux/Mac (legacy)
 	}
 
 	for _, execPath := range possiblePaths {
@@ -135,6 +141,186 @@ func runCommandWithArgs(args ...string) error {
 }
 
 // ============================================================================
+// CLI Integration Test Steps (for verify-configuration feature)
+// ============================================================================
+
+func iCreateATestFolder(folderName string) error {
+	// Create temp folder in OS temp directory
+	tempDir := os.TempDir()
+	testPath := filepath.Join(tempDir, folderName)
+
+	// Clean up if it already exists
+	os.RemoveAll(testPath)
+
+	// Create fresh folder
+	if err := os.MkdirAll(testPath, 0755); err != nil {
+		return fmt.Errorf("failed to create test folder: %w", err)
+	}
+
+	ctx.testFolderPath = testPath
+	return nil
+}
+
+func iCreateAFolderInTheTestFolder(folderName string) error {
+	if ctx.testFolderPath == "" {
+		return fmt.Errorf("test folder not created yet")
+	}
+
+	folderPath := filepath.Join(ctx.testFolderPath, folderName)
+	if err := os.MkdirAll(folderPath, 0755); err != nil {
+		return fmt.Errorf("failed to create folder: %w", err)
+	}
+
+	return nil
+}
+
+func iBuildTheCLIWith(buildCommand string) error {
+	// The CLI is already built via @depm:src-cli
+	// This step just verifies it exists
+	if ctx.executablePath == "" {
+		return fmt.Errorf("CLI executable not found - @depm:src-cli should have verified this")
+	}
+	return nil
+}
+
+func theBuildSucceeds() error {
+	// Since we're using pre-built executable, just verify it's accessible
+	if ctx.executablePath == "" {
+		return fmt.Errorf("CLI executable not available")
+	}
+
+	// Verify executable is actually executable
+	info, err := os.Stat(ctx.executablePath)
+	if err != nil {
+		return fmt.Errorf("cannot access executable: %w", err)
+	}
+
+	if info.IsDir() {
+		return fmt.Errorf("executable path is a directory")
+	}
+
+	return nil
+}
+
+func iChangeDirectoryToTheTestFolder() error {
+	if ctx.testFolderPath == "" {
+		return fmt.Errorf("test folder not created yet")
+	}
+
+	// Save current directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+	ctx.currentDir = cwd
+
+	// Change to test folder
+	if err := os.Chdir(ctx.testFolderPath); err != nil {
+		return fmt.Errorf("failed to change directory: %w", err)
+	}
+
+	return nil
+}
+
+func noConfigFileExistsInTheTestFolder() error {
+	if ctx.testFolderPath == "" {
+		return fmt.Errorf("test folder not created yet")
+	}
+
+	// Ensure no config file exists (the CLI looks for "r2r-cli.yml")
+	configPath := filepath.Join(ctx.testFolderPath, "r2r-cli.yml")
+	os.Remove(configPath) // Ignore error - file might not exist
+
+	return nil
+}
+
+func iCreateATestConfigFileWithValidSettings(filename string) error {
+	if ctx.testFolderPath == "" {
+		return fmt.Errorf("test folder not created yet")
+	}
+
+	// Create a minimal valid config
+	// The CLI looks for "r2r-cli.yml", so use that name regardless of parameter
+	configContent := `# Valid R2R CLI configuration
+version: "1.0"
+project:
+  name: "test-project"
+extensions: []
+`
+
+	configPath := filepath.Join(ctx.testFolderPath, "r2r-cli.yml")
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
+func iCreateATestConfigFileWithInvalidSettings(filename string) error {
+	if ctx.testFolderPath == "" {
+		return fmt.Errorf("test folder not created yet")
+	}
+
+	// Create an invalid config (malformed YAML)
+	// The CLI looks for "r2r-cli.yml", so use that name regardless of parameter
+	configContent := `# Invalid R2R CLI configuration
+version: "1.0"
+project:
+  name: [this is invalid yaml syntax
+`
+
+	configPath := filepath.Join(ctx.testFolderPath, "r2r-cli.yml")
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
+func iRunTheBuiltCLIWith(args string) error {
+	if ctx.executablePath == "" {
+		return fmt.Errorf("executable not found")
+	}
+
+	// Parse arguments
+	argsList := strings.Fields(args)
+
+	// Prepend executable path
+	cmdArgs := append([]string{ctx.executablePath}, argsList...)
+
+	return runCommandWithArgs(cmdArgs...)
+}
+
+func iShouldSeeVersionNumber() error {
+	// Look for version pattern like "1.0.0" or "v1.0.0" or "version 1.0.0"
+	output := strings.ToLower(ctx.commandOutput)
+
+	// Check for common version indicators
+	hasVersion := strings.Contains(output, "version") ||
+		strings.Contains(output, "v0.") ||
+		strings.Contains(output, "v1.") ||
+		strings.Contains(output, "v2.") ||
+		strings.Contains(output, "0.0.") ||
+		strings.Contains(output, "1.0.") ||
+		strings.Contains(output, "2.0.")
+
+	if !hasVersion {
+		return fmt.Errorf("expected version number in output, got:\n%s", ctx.commandOutput)
+	}
+
+	return nil
+}
+
+func iShouldSeeOr(text1, text2 string) error {
+	if strings.Contains(ctx.commandOutput, text1) ||
+		strings.Contains(ctx.commandOutput, text2) {
+		return nil
+	}
+	return fmt.Errorf("expected output to contain '%s' or '%s', got:\n%s",
+		text1, text2, ctx.commandOutput)
+}
+
+// ============================================================================
 // Scenario Initialization
 // ============================================================================
 
@@ -144,11 +330,38 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 		return ctx, nil
 	})
 
-	// All steps
+	sc.After(func(context.Context, *godog.Scenario, error) (context.Context, error) {
+		// Cleanup: restore original directory if changed
+		if ctx != nil && ctx.currentDir != "" {
+			os.Chdir(ctx.currentDir)
+		}
+
+		// Cleanup: remove test folder if created
+		if ctx != nil && ctx.testFolderPath != "" {
+			os.RemoveAll(ctx.testFolderPath)
+		}
+
+		return nil, nil
+	})
+
+	// Common steps
 	sc.Step(`^I run "([^"]*)"$`, iRun)
 	sc.Step(`^the exit code is (\d+)$`, theExitCodeIs)
 	sc.Step(`^I should see "([^"]*)"$`, iShouldSee)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOr)
+
+	// CLI integration test steps
+	sc.Step(`^I create a test folder "([^"]*)"$`, iCreateATestFolder)
+	sc.Step(`^I create a "([^"]*)" folder in the test folder$`, iCreateAFolderInTheTestFolder)
+	sc.Step(`^I build the CLI with "([^"]*)"$`, iBuildTheCLIWith)
+	sc.Step(`^the build succeeds$`, theBuildSucceeds)
+	sc.Step(`^I change directory to the test folder$`, iChangeDirectoryToTheTestFolder)
+	sc.Step(`^no config file exists in the test folder$`, noConfigFileExistsInTheTestFolder)
+	sc.Step(`^I create a test config file "([^"]*)" with valid settings$`, iCreateATestConfigFileWithValidSettings)
+	sc.Step(`^I create a test config file "([^"]*)" with invalid settings$`, iCreateATestConfigFileWithInvalidSettings)
+	sc.Step(`^I run the built CLI with "([^"]*)"$`, iRunTheBuiltCLIWith)
+	sc.Step(`^I should see version number$`, iShouldSeeVersionNumber)
+	sc.Step(`^I should see "([^"]*)" or "([^"]*)"$`, iShouldSeeOr)
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {

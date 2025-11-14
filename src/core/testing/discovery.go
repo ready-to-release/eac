@@ -282,11 +282,17 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 			inScenario = true
 			scenarioName = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, "Scenario Outline:"), "Scenario:"))
 
-			// Combine feature tags + scenario tags
-			allTags := append([]string{}, featureTags...)
-			allTags = append(allTags, scenarioTags...)
+			// Combine tags: scenario level tags OVERRIDE feature level tags
+			allTags := mergeFeatureAndScenarioTags(featureTags, scenarioTags)
 
-			// Normalize tags to @dep: format
+			// Infer internal module dependency from file path
+			// Example: specs/src-cli/verify-configuration/... → @deps:src-cli
+			inferredDepTag := inferInternalDependencyFromPath(filePath)
+			if inferredDepTag != "" {
+				allTags = append(allTags, inferredDepTag)
+			}
+
+			// Normalize tags to @deps: format
 			normalizedTags := normalizeTags(allTags)
 
 			test := TestReference{
@@ -297,8 +303,12 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 			}
 
 			// Set execution control fields
-			test.IsIgnored = contains(test.Tags, "@ignore")
+			test.IsIgnored, test.SkipReason = extractSkipReason(test.Tags)
 			test.IsManual = contains(test.Tags, "@Manual")
+
+			// Extract dependencies
+			test.SystemDependencies = extractSystemDependencies(test.Tags)
+			test.ModuleDependencies = extractModuleDependencies(test.Tags)
 
 			// Extract risk control references
 			test.RiskControls = extractRiskControlTags(test.Tags)
@@ -315,6 +325,60 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 	}
 
 	return refs, nil
+}
+
+// mergeFeatureAndScenarioTags combines feature and scenario tags with proper override semantics
+// Rules:
+// - Scenario LEVEL tags (@L0-@L4) OVERRIDE feature level tags
+// - All other scenario tags are ADDED to feature tags
+// - Non-level feature tags are INHERITED unless explicitly overridden
+func mergeFeatureAndScenarioTags(featureTags []string, scenarioTags []string) []string {
+	result := []string{}
+
+	// Get level tags from both
+	featureLevelTags := []string{}
+	scenarioLevelTags := []string{}
+
+	for _, tag := range featureTags {
+		if isLevelTag(tag) {
+			featureLevelTags = append(featureLevelTags, tag)
+		}
+	}
+
+	for _, tag := range scenarioTags {
+		if isLevelTag(tag) {
+			scenarioLevelTags = append(scenarioLevelTags, tag)
+		}
+	}
+
+	// RULE: If scenario has level tag(s), use ONLY scenario level tags (override)
+	// Otherwise, inherit feature level tags
+	if len(scenarioLevelTags) > 0 {
+		result = append(result, scenarioLevelTags...)
+	} else {
+		result = append(result, featureLevelTags...)
+	}
+
+	// Add all NON-LEVEL tags from feature
+	for _, tag := range featureTags {
+		if !isLevelTag(tag) && !contains(result, tag) {
+			result = append(result, tag)
+		}
+	}
+
+	// Add all NON-LEVEL tags from scenario
+	for _, tag := range scenarioTags {
+		if !isLevelTag(tag) && !contains(result, tag) {
+			result = append(result, tag)
+		}
+	}
+
+	return result
+}
+
+// isLevelTag checks if a tag is a level tag (@L0-@L4)
+func isLevelTag(tag string) bool {
+	return tag == "@L0" || tag == "@L1" || tag == "@L2" || tag == "@L3" || tag == "@L4"
 }
 
 // extractTagsFromLine extracts all tags from a line
@@ -336,9 +400,9 @@ func normalizeTags(tags []string) []string {
 	normalized := []string{}
 
 	for _, tag := range tags {
-		// Map @docker -> @dep:docker
+		// Map @docker -> @deps:docker
 		if tag == "@docker" {
-			normalized = append(normalized, "@dep:docker")
+			normalized = append(normalized, "@deps:docker")
 		} else {
 			normalized = append(normalized, tag)
 		}
@@ -356,4 +420,73 @@ func extractRiskControlTags(tags []string) []string {
 		}
 	}
 	return controls
+}
+
+// inferInternalDependencyFromPath infers @depm:<module> from feature file path
+// Example: specs/src-cli/verify-configuration/specification.feature → @depm:src-cli
+// Example: C:\projects\eac\specs\src-commands\docs\specification.feature → @depm:src-commands
+func inferInternalDependencyFromPath(filePath string) string {
+	// Normalize path separators
+	normalized := filepath.ToSlash(filePath)
+
+	// Split by "/"
+	parts := strings.Split(normalized, "/")
+
+	// Find "specs" in the path
+	specsIndex := -1
+	for i, part := range parts {
+		if part == "specs" {
+			specsIndex = i
+			break
+		}
+	}
+
+	// Expected format: specs/<module>/...
+	// Extract module name (the directory right after "specs")
+	if specsIndex >= 0 && len(parts) > specsIndex+1 {
+		moduleName := parts[specsIndex+1]
+		return fmt.Sprintf("@depm:%s", moduleName)
+	}
+
+	return ""
+}
+
+// extractSkipReason extracts skip reason from @skip:<reason> tags
+// Returns (isIgnored, reason) where:
+// - isIgnored: true if test has any @skip:<reason> tag
+// - reason: the reason code (e.g., "wip", "broken"), empty if not skipped
+func extractSkipReason(tags []string) (bool, string) {
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, "@skip:") {
+			reason := strings.TrimPrefix(tag, "@skip:")
+			return true, reason
+		}
+	}
+	return false, ""
+}
+
+// extractSystemDependencies extracts system dependency names from @deps:<name> tags
+// Example: @deps:docker → "docker"
+func extractSystemDependencies(tags []string) []string {
+	deps := []string{}
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, "@deps:") {
+			dep := strings.TrimPrefix(tag, "@deps:")
+			deps = append(deps, dep)
+		}
+	}
+	return deps
+}
+
+// extractModuleDependencies extracts module dependency names from @depm:<module> tags
+// Example: @depm:src-cli → "src-cli"
+func extractModuleDependencies(tags []string) []string {
+	deps := []string{}
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, "@depm:") {
+			dep := strings.TrimPrefix(tag, "@depm:")
+			deps = append(deps, dep)
+		}
+	}
+	return deps
 }

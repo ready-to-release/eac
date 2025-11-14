@@ -3,13 +3,8 @@ package systemdeps
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strings"
-
-	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // Verify checks if a system dependency is available
@@ -64,21 +59,19 @@ func GetMissingDependencies(dependencies []string) []string {
 	return missing
 }
 
-// getChecker returns the appropriate checker for a dependency tag
+// getChecker returns the appropriate checker for a system dependency tag
 func getChecker(dependency string) Checker {
 	switch dependency {
-	case "@dep:docker":
+	case "@deps:docker":
 		return &DockerChecker{}
-	case "@dep:git":
+	case "@deps:git":
 		return &GitChecker{}
-	case "@dep:go":
+	case "@deps:go":
 		return &GoChecker{}
-	case "@dep:claude":
+	case "@deps:claude":
 		return &ClaudeChecker{}
-	case "@dep:az-cli":
+	case "@deps:az-cli":
 		return &AzureChecker{}
-	case "@dep:internal-src-cli":
-		return &InternalSrcCLIChecker{}
 	default:
 		return nil
 	}
@@ -181,51 +174,4 @@ func (c *AzureChecker) GetVersion() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(output)), nil
-}
-
-// InternalSrcCLIChecker checks for built CLI executable
-type InternalSrcCLIChecker struct{}
-
-func (c *InternalSrcCLIChecker) GetName() string { return "Internal SRC CLI" }
-
-func (c *InternalSrcCLIChecker) IsAvailable() bool {
-	path := c.getExecutablePath()
-	if path == "" {
-		return false
-	}
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-func (c *InternalSrcCLIChecker) GetVersion() (string, error) {
-	path := c.getExecutablePath()
-	if path == "" {
-		return "", fmt.Errorf("CLI executable path not found (repo root not detected)")
-	}
-
-	if _, err := os.Stat(path); err != nil {
-		return "", fmt.Errorf("CLI executable not found at %s", path)
-	}
-
-	absPath, _ := filepath.Abs(path)
-	return fmt.Sprintf("Built executable: %s", absPath), nil
-}
-
-// getExecutablePath returns the full path to the CLI executable
-func (c *InternalSrcCLIChecker) getExecutablePath() string {
-	// Find repository root using the centralized utility
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return ""
-	}
-
-	// Determine executable name based on OS
-	var exeName string
-	if runtime.GOOS == "windows" {
-		exeName = "r2r-cli.exe"
-	} else {
-		exeName = "r2r-cli"
-	}
-
-	return filepath.Join(repoRoot, "out", "src-cli", exeName)
 }
