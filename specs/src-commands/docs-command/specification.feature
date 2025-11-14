@@ -1,4 +1,4 @@
-@ov @dep:docker
+@L2 @ov @deps:docker
 Feature: src-commands_docs-command
 
   As a developer of the eac platform

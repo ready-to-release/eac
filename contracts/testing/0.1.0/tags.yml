@@ -8,29 +8,37 @@ metadata:
   scope: "Applies to Gherkin features, Go tests, and future test frameworks"
 
 tags:
-  - tag: "@dep:docker"
+  - tag: "@deps:docker"
     description: "Requires Docker daemon to be running"
     type: system_dependency
 
-  - tag: "@dep:git"
+  - tag: "@deps:git"
     description: "Requires Git CLI to be available"
     type: system_dependency
 
-  - tag: "@dep:go"
+  - tag: "@deps:go"
     description: "Requires Go toolchain to be available"
     type: system_dependency
 
-  - tag: "@dep:claude"
+  - tag: "@deps:claude"
     description: "Requires Claude API access and credentials"
     type: system_dependency
 
-  - tag: "@dep:az-cli"
+  - tag: "@deps:az-cli"
     description: "Requires Azure CLI to be available"
     type: system_dependency
 
-  - tag: "@dep:internal-src-cli"
-    description: "Requires built CLI executable (out/src-cli/r2r-cli.exe on Windows, r2r-cli on Unix)"
-    type: system_dependency
+  - tag: "@depm:src-cli"
+    description: "Requires built CLI module (out/src-cli/r2r-cli.exe on Windows, r2r-cli on Unix)"
+    type: module_dependency
+
+  - tag: "@depm:src-commands"
+    description: "Requires commands module (go run from src/commands)"
+    type: module_dependency
+
+  - tag: "@depm:src-core"
+    description: "Requires core library module (Go library)"
+    type: module_dependency
 
   - tag: "@L0"
     name: "Very Fast Unit Tests with direct access to source files and build artifacts"
@@ -125,6 +133,9 @@ tags:
 types:
   - type: system_dependency
     description: "External system dependencies required for test execution (e.g., docker, git, go)"
+
+  - type: module_dependency
+    description: "Internal module dependencies required for test execution (e.g., src-cli, src-commands, src-core)"
 
   - type: taxonomy-level
     description: "Test environment complexity and isolation level (L0-L4)"

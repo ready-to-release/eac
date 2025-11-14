@@ -6,7 +6,7 @@
 //
 // Prerequisites:
 // - Requires pre-built executable from "build module src-cli"
-// - Executable location: out/src-cli/r2r-cli (or r2r-cli.exe on Windows)
+// - Executable location: out/src-cli/windows-r2r-cli.exe (or linux-r2r-cli, darwin-r2r-cli)
 package tests
 
 import (
@@ -90,13 +90,17 @@ func initializeContext() error {
 	ctx = &testContext{}
 
 	// Find the pre-built executable
-	// Expected location: out/src-cli/r2r-cli (or r2r-cli.exe on Windows)
+	// Expected location: out/src-cli/<platform>-r2r-cli (or <platform>-r2r-cli.exe on Windows)
+	// Platform-specific builds: windows-r2r-cli.exe, linux-r2r-cli, darwin-r2r-cli
 	workspaceRoot := filepath.Join("..", "..", "..")
 
-	// Try both with and without .exe extension (works on all platforms)
+	// Try platform-specific binaries first, then fall back to legacy names
 	possiblePaths := []string{
-		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli.exe"), // Windows
-		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli"),     // Linux/Mac
+		filepath.Join(workspaceRoot, "out", "src-cli", "windows-r2r-cli.exe"), // Windows (new format)
+		filepath.Join(workspaceRoot, "out", "src-cli", "linux-r2r-cli"),       // Linux (new format)
+		filepath.Join(workspaceRoot, "out", "src-cli", "darwin-r2r-cli"),      // macOS (new format)
+		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli.exe"),         // Windows (legacy)
+		filepath.Join(workspaceRoot, "out", "src-cli", "r2r-cli"),             // Linux/Mac (legacy)
 	}
 
 	for _, execPath := range possiblePaths {
@@ -171,10 +175,10 @@ func iCreateAFolderInTheTestFolder(folderName string) error {
 }
 
 func iBuildTheCLIWith(buildCommand string) error {
-	// The CLI is already built via @dep:internal-src-cli
+	// The CLI is already built via @depm:src-cli
 	// This step just verifies it exists
 	if ctx.executablePath == "" {
-		return fmt.Errorf("CLI executable not found - @dep:internal-src-cli should have verified this")
+		return fmt.Errorf("CLI executable not found - @depm:src-cli should have verified this")
 	}
 	return nil
 }

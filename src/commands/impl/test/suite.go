@@ -1,6 +1,6 @@
 // Command: test suite
-// Description: Run tests for a specific test suite
-// Usage: test suite <suite-name> [--skip-deps] [--list-only]
+// Description: Run tests for a specific test suite (parallel by default)
+// Usage: test suite <suite-name> [--skip-deps] [--list-only] [--sequential]
 // HasSideEffects: false
 package test
 
@@ -10,12 +10,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
 	"github.com/ready-to-release/eac/src/core/repository"
-	"github.com/ready-to-release/eac/src/core/system-deps"
+	systemdeps "github.com/ready-to-release/eac/src/core/system-deps"
 	"github.com/ready-to-release/eac/src/core/testing"
 )
 
@@ -28,7 +31,14 @@ func TestSuite() int {
 	// Parse arguments and flags
 	if len(os.Args) < 4 {
 		fmt.Fprintf(os.Stderr, "Error: missing suite name\n")
-		fmt.Fprintf(os.Stderr, "Usage: test suite <suite-name> [--skip-deps] [--list-only]\n")
+		fmt.Fprintf(os.Stderr, "Usage: test suite <suite-name> [flags]\n")
+		fmt.Fprintf(os.Stderr, "\nFlags:\n")
+		fmt.Fprintf(os.Stderr, "  --skip-deps    Skip dependency verification\n")
+		fmt.Fprintf(os.Stderr, "  --list-only    List tests without running them\n")
+		fmt.Fprintf(os.Stderr, "  --sequential   Run tests sequentially (for debugging)\n")
+		fmt.Fprintf(os.Stderr, "  --parallel     Run tests in parallel (DEFAULT, explicit override)\n")
+		fmt.Fprintf(os.Stderr, "\nDefault: Tests run in parallel for optimal performance.\n")
+		fmt.Fprintf(os.Stderr, "Use --sequential if you need deterministic ordering or debugging.\n")
 		fmt.Fprintf(os.Stderr, "\nAvailable suites:\n")
 		for _, suite := range testing.ListSuites() {
 			fmt.Fprintf(os.Stderr, "  - %s\n", suite)
@@ -41,6 +51,7 @@ func TestSuite() int {
 	// Parse flags
 	skipDeps := false
 	listOnly := false
+	parallel := true  // Default to parallel execution for better performance
 
 	for i := 4; i < len(os.Args); i++ {
 		arg := os.Args[i]
@@ -48,9 +59,13 @@ func TestSuite() int {
 			skipDeps = true
 		} else if arg == "--list-only" {
 			listOnly = true
+		} else if arg == "--sequential" {
+			parallel = false  // Opt-out of parallel execution
+		} else if arg == "--parallel" {
+			parallel = true   // Explicit parallel (redundant but allowed)
 		} else if strings.HasPrefix(arg, "--") {
 			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid flags: --skip-deps, --list-only\n")
+			fmt.Fprintf(os.Stderr, "Valid flags: --skip-deps, --list-only, --sequential, --parallel\n")
 			return 1
 		}
 	}
@@ -151,18 +166,38 @@ func TestSuite() int {
 	// Phase 3: Select tests for suite
 	fmt.Fprintf(multiWriter, "=== Phase 3: Suite Selection ===\n")
 	selectedTests := suite.SelectTests(allTests)
-	fmt.Fprintf(multiWriter, "Selected %d tests for suite '%s'\n\n", len(selectedTests), suite.Moniker)
+	fmt.Fprintf(multiWriter, "Selected %d tests for suite '%s'\n", len(selectedTests), suite.Moniker)
+
+	// Phase 3.5: Filter out framework tests (tests about the testing framework itself)
+	productionTests := []testing.TestReference{}
+	frameworkTestCount := 0
+	for _, test := range selectedTests {
+		if testing.ShouldSkipValidation(test) {
+			frameworkTestCount++
+		} else {
+			productionTests = append(productionTests, test)
+		}
+	}
+
+	if frameworkTestCount > 0 {
+		fmt.Fprintf(multiWriter, "INFO: %d framework tests excluded from execution\n", frameworkTestCount)
+	}
+	fmt.Fprintf(multiWriter, "Running %d production tests\n\n", len(productionTests))
 
 	// Update markdown: Phase 3 complete
 	if mdFile != nil {
-		fmt.Fprintf(mdFile, "- ✅ **Phase 3**: Selected %d tests for suite '%s'\n", len(selectedTests), suite.Moniker)
+		fmt.Fprintf(mdFile, "- ✅ **Phase 3**: Selected %d production tests for suite '%s'", len(productionTests), suite.Moniker)
+		if frameworkTestCount > 0 {
+			fmt.Fprintf(mdFile, " (%d framework tests excluded)", frameworkTestCount)
+		}
+		fmt.Fprintf(mdFile, "\n")
 		mdFile.Sync()
 	}
 
 	// If list-only, just show tests and exit
 	if listOnly {
-		fmt.Fprintf(multiWriter, "=== Selected Tests ===\n")
-		for i, test := range selectedTests {
+		fmt.Fprintf(multiWriter, "=== Production Tests ===\n")
+		for i, test := range productionTests {
 			fmt.Fprintf(multiWriter, "%d. %s (%s)\n", i+1, test.TestName, test.Type)
 			fmt.Fprintf(multiWriter, "   File: %s\n", test.FilePath)
 			fmt.Fprintf(multiWriter, "   Tags: %s\n\n", strings.Join(test.Tags, ", "))
@@ -170,23 +205,28 @@ func TestSuite() int {
 		return 0
 	}
 
-	// Phase 4: Extract and verify system dependencies
+	// Phase 4: Extract and verify dependencies (system + module)
 	fmt.Fprintf(multiWriter, "=== Phase 4: Dependency Verification ===\n")
-	dependencies := testing.GetSystemDependencies(selectedTests)
+	systemDeps := testing.GetSystemDependencies(productionTests)
+	moduleDeps := testing.GetModuleDependencies(productionTests)
 
-	if len(dependencies) == 0 {
-		fmt.Fprintf(multiWriter, "No system dependencies required\n\n")
+	allDeps := append(append([]string{}, systemDeps...), moduleDeps...)
+
+	if len(allDeps) == 0 {
+		fmt.Fprintf(multiWriter, "No dependencies required\n\n")
 		// Update markdown: Phase 4 complete (no deps)
 		if mdFile != nil {
 			fmt.Fprintf(mdFile, "- ✅ **Phase 4**: No system dependencies required\n")
 			mdFile.Sync()
 		}
 	} else {
-		fmt.Fprintf(multiWriter, "Required dependencies: %s\n", strings.Join(dependencies, ", "))
+		fmt.Fprintf(multiWriter, "System dependencies: %s\n", strings.Join(systemDeps, ", "))
+		fmt.Fprintf(multiWriter, "Module dependencies: %s\n", strings.Join(moduleDeps, ", "))
 
 		// Update markdown: Start dependencies table
 		if mdFile != nil {
-			fmt.Fprintf(mdFile, "- 🔄 **Phase 4**: Verifying %d dependencies...\n\n", len(dependencies))
+			fmt.Fprintf(mdFile, "- 🔄 **Phase 4**: Verifying %d dependencies (%d system, %d module)...\n\n",
+				len(allDeps), len(systemDeps), len(moduleDeps))
 			fmt.Fprintf(mdFile, "## Dependencies\n\n")
 			fmt.Fprintf(mdFile, "| Dependency | Status | Version |\n")
 			fmt.Fprintf(mdFile, "|------------|--------|----------|\n")
@@ -194,10 +234,11 @@ func TestSuite() int {
 		}
 
 		if !skipDeps {
-			results := systemdeps.VerifyAll(dependencies)
-
 			hasFailures := false
-			for _, result := range results {
+
+			// Verify system dependencies
+			sysResults := systemdeps.VerifyAll(systemDeps)
+			for _, result := range sysResults {
 				if result.Available {
 					fmt.Fprintf(multiWriter, "✅ %s - %s\n", result.Dependency, result.Version)
 					// Update markdown: Add dependency row
@@ -215,6 +256,28 @@ func TestSuite() int {
 					}
 				}
 			}
+
+			// Verify module dependencies
+			modResults := moduledeps.VerifyAll(moduleDeps)
+			for _, result := range modResults {
+				if result.Available {
+					fmt.Fprintf(multiWriter, "✅ %s - %s\n", result.Dependency, result.Version)
+					// Update markdown: Add dependency row
+					if mdFile != nil {
+						fmt.Fprintf(mdFile, "| %s | ✅ Available | %s |\n", result.Dependency, result.Version)
+						mdFile.Sync()
+					}
+				} else {
+					fmt.Fprintf(multiWriter, "❌ %s - not available\n", result.Dependency)
+					hasFailures = true
+					// Update markdown: Add failed dependency row
+					if mdFile != nil {
+						fmt.Fprintf(mdFile, "| %s | ❌ Not Available | - |\n", result.Dependency)
+						mdFile.Sync()
+					}
+				}
+			}
+
 			fmt.Fprintln(multiWriter)
 
 			// Update markdown: Phase 4 status
@@ -246,16 +309,24 @@ func TestSuite() int {
 
 	// Group tests by package
 	testsByPackage := make(map[string][]testing.TestReference)
-	for _, test := range selectedTests {
+	for _, test := range productionTests {
 		pkgPath := filepath.Dir(test.FilePath)
 		testsByPackage[pkgPath] = append(testsByPackage[pkgPath], test)
 	}
 
-	fmt.Fprintf(multiWriter, "Running tests from %d packages\n\n", len(testsByPackage))
+	if parallel {
+		fmt.Fprintf(multiWriter, "Running tests from %d packages in parallel\n\n", len(testsByPackage))
+	} else {
+		fmt.Fprintf(multiWriter, "Running tests from %d packages\n\n", len(testsByPackage))
+	}
 
 	// Update markdown: Phase 5 start
 	if mdFile != nil {
-		fmt.Fprintf(mdFile, "- 🔄 **Phase 5**: Running tests from %d packages...\n\n", len(testsByPackage))
+		if parallel {
+			fmt.Fprintf(mdFile, "- 🔄 **Phase 5**: Running tests from %d packages in parallel...\n\n", len(testsByPackage))
+		} else {
+			fmt.Fprintf(mdFile, "- 🔄 **Phase 5**: Running tests from %d packages...\n\n", len(testsByPackage))
+		}
 		fmt.Fprintf(mdFile, "## Test Results\n\n")
 		mdFile.Sync()
 	}
@@ -263,88 +334,22 @@ func TestSuite() int {
 	totalPassed := 0
 	totalFailed := 0
 
-	packageNum := 0
-	for pkgPath, tests := range testsByPackage {
-		packageNum++
-		fmt.Fprintf(multiWriter, "📦 Package: %s\n", pkgPath)
-		fmt.Fprintf(multiWriter, "   Tests: %d\n", len(tests))
+	// Calculate optimal test-level parallelism
+	numCPU := runtime.NumCPU()
+	var testParallelism int
 
-		// Update markdown: Package starting
-		if mdFile != nil {
-			// Extract package name from path
-			pkgName := filepath.Base(pkgPath)
-			if pkgName == "" {
-				pkgName = pkgPath
-			}
-			fmt.Fprintf(mdFile, "- 🔄 **[%d/%d]** %s (%d tests)...\n", packageNum, len(testsByPackage), pkgName, len(tests))
-			mdFile.Sync()
-		}
-
-		// Check if this package contains only Godog features (no Go test files)
-		// Godog features are tested by their test packages (src/cli/tests, src/commands/tests)
-		// and should not be run directly with `go test`
-		isGodogOnly := true
-		for _, test := range tests {
-			if test.Type != "godog" {
-				isGodogOnly = false
-				break
-			}
-		}
-
-		if isGodogOnly {
-			// Skip running go test for spec directories - they're tested elsewhere
-			fmt.Fprintf(multiWriter, "⏭️  Godog features (tested by test packages)\n\n")
-			totalPassed += len(tests)
-			continue
-		}
-
-		// Check if this is a Godog test package (contains godog_test.go)
-		isGodogTestPackage := fileExists(filepath.Join(pkgPath, "godog_test.go"))
-
-		if isGodogTestPackage {
-			// Display feature file summaries before running Godog tests
-			displayGodogFeatureSummaries(pkgPath, multiWriter)
-		}
-
-		// Run go test for this package
-		cmd := exec.Command("go", "test", "-v")
-		cmd.Dir = pkgPath
-		cmd.Stdout = multiWriter
-		cmd.Stderr = multiWriter
-
-		// For Godog test packages, set GODOG_FORMAT=progress for concise output
-		if isGodogTestPackage {
-			cmd.Env = append(os.Environ(), "GODOG_FORMAT=progress")
-		}
-
-		if err := cmd.Run(); err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				fmt.Fprintf(multiWriter, "❌ Package tests failed (exit code: %d)\n\n", exitErr.ExitCode())
-				totalFailed += len(tests)
-				// Update markdown: Package failed
-				if mdFile != nil {
-					fmt.Fprintf(mdFile, "  - ❌ Failed (exit code: %d)\n", exitErr.ExitCode())
-					mdFile.Sync()
-				}
-			} else {
-				fmt.Fprintf(multiWriter, "❌ Failed to run tests: %v\n\n", err)
-				totalFailed += len(tests)
-				// Update markdown: Package error
-				if mdFile != nil {
-					fmt.Fprintf(mdFile, "  - ❌ Error: %v\n", err)
-					mdFile.Sync()
-				}
-			}
-		} else {
-			fmt.Fprintf(multiWriter, "✅ Package tests passed\n\n")
-			totalPassed += len(tests)
-			// Update markdown: Package passed
-			if mdFile != nil {
-				fmt.Fprintf(mdFile, "  - ✅ Passed\n")
-				mdFile.Sync()
-			}
-		}
+	if parallel {
+		// Package-level parallel: distribute CPU across packages
+		// Each package gets a smaller share of CPU cores
+		testParallelism = max(2, numCPU/4)
+		totalPassed, totalFailed = runTestsParallel(testsByPackage, multiWriter, mdFile, testParallelism)
+	} else {
+		// Sequential packages: each package gets full CPU power
+		testParallelism = numCPU
+		totalPassed, totalFailed = runTestsSequential(testsByPackage, multiWriter, mdFile, testParallelism)
 	}
+
+	fmt.Fprintf(multiWriter, "Parallelism: %d CPUs, %d test workers per package\n\n", numCPU, testParallelism)
 
 	// Phase 6: Generate summary
 	endTime := time.Now()
@@ -354,7 +359,10 @@ func TestSuite() int {
 	fmt.Fprintf(multiWriter, "Suite: %s\n", suite.Name)
 	fmt.Fprintf(multiWriter, "Run ID: %s\n", testRunID)
 	fmt.Fprintf(multiWriter, "Total discovered: %d\n", len(allTests))
-	fmt.Fprintf(multiWriter, "Total selected: %d\n", len(selectedTests))
+	fmt.Fprintf(multiWriter, "Production tests: %d\n", len(productionTests))
+	if frameworkTestCount > 0 {
+		fmt.Fprintf(multiWriter, "Framework tests excluded: %d\n", frameworkTestCount)
+	}
 	fmt.Fprintf(multiWriter, "Total passed: %d\n", totalPassed)
 	fmt.Fprintf(multiWriter, "Total failed: %d\n", totalFailed)
 	fmt.Fprintf(multiWriter, "Results directory: %s\n", testRunDir)
@@ -366,8 +374,8 @@ func TestSuite() int {
 
 		// Calculate pass rate
 		passRate := 0.0
-		if len(selectedTests) > 0 {
-			passRate = float64(totalPassed) / float64(len(selectedTests)) * 100
+		if len(productionTests) > 0 {
+			passRate = float64(totalPassed) / float64(len(productionTests)) * 100
 		}
 
 		// Determine final status
@@ -382,7 +390,10 @@ func TestSuite() int {
 		fmt.Fprintf(mdFile, "| **Status** | **%s** |\n", finalStatus)
 		fmt.Fprintf(mdFile, "| Duration | %.1fs |\n", duration.Seconds())
 		fmt.Fprintf(mdFile, "| Tests Discovered | %d |\n", len(allTests))
-		fmt.Fprintf(mdFile, "| Tests Selected | %d |\n", len(selectedTests))
+		fmt.Fprintf(mdFile, "| Production Tests | %d |\n", len(productionTests))
+		if frameworkTestCount > 0 {
+			fmt.Fprintf(mdFile, "| Framework Tests Excluded | %d |\n", frameworkTestCount)
+		}
 		fmt.Fprintf(mdFile, "| Tests Passed | %d ✅ |\n", totalPassed)
 		fmt.Fprintf(mdFile, "| Tests Failed | %d |\n", totalFailed)
 		fmt.Fprintf(mdFile, "| Pass Rate | %.1f%% |\n", passRate)
@@ -417,7 +428,10 @@ func TestSuite() int {
 		fmt.Fprintf(mdFile, "| **Status** | **%s** |\n", finalStatus)
 		fmt.Fprintf(mdFile, "| Duration | %.1fs |\n", duration.Seconds())
 		fmt.Fprintf(mdFile, "| Tests Discovered | %d |\n", len(allTests))
-		fmt.Fprintf(mdFile, "| Tests Selected | %d |\n", len(selectedTests))
+		fmt.Fprintf(mdFile, "| Production Tests | %d |\n", len(productionTests))
+		if frameworkTestCount > 0 {
+			fmt.Fprintf(mdFile, "| Framework Tests Excluded | %d |\n", frameworkTestCount)
+		}
 		fmt.Fprintf(mdFile, "| Tests Passed | %d ✅ |\n", totalPassed)
 		fmt.Fprintf(mdFile, "| Tests Failed | %d |\n", totalFailed)
 		fmt.Fprintf(mdFile, "| Pass Rate | %.1f%% |\n\n", passRate)
@@ -530,4 +544,168 @@ func displayFeature(feature *testing.FeatureFile, w io.Writer) {
 			fmt.Fprintf(w, "     - %s\n", scenario)
 		}
 	}
+}
+
+// max returns the maximum of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// runTestsSequential runs tests package by package sequentially
+func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int) (int, int) {
+	totalPassed := 0
+	totalFailed := 0
+	packageNum := 0
+
+	for pkgPath, tests := range testsByPackage {
+		packageNum++
+		fmt.Fprintf(multiWriter, "📦 Package: %s\n", pkgPath)
+		fmt.Fprintf(multiWriter, "   Tests: %d\n", len(tests))
+
+		// Update markdown: Package starting
+		if mdFile != nil {
+			pkgName := filepath.Base(pkgPath)
+			if pkgName == "" {
+				pkgName = pkgPath
+			}
+			fmt.Fprintf(mdFile, "- 🔄 **[%d/%d]** %s (%d tests)...\n", packageNum, len(testsByPackage), pkgName, len(tests))
+			mdFile.Sync()
+		}
+
+		passed, failed := runPackageTests(pkgPath, tests, multiWriter, mdFile, testParallelism)
+		totalPassed += passed
+		totalFailed += failed
+	}
+
+	return totalPassed, totalFailed
+}
+
+// runTestsParallel runs tests across packages in parallel using goroutines
+func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int) (int, int) {
+	// Use a mutex to protect shared counters and output
+	var mu sync.Mutex
+	totalPassed := 0
+	totalFailed := 0
+
+	// Create a wait group to track all goroutines
+	var wg sync.WaitGroup
+
+	// Create a channel to limit concurrent package tests (use number of CPU cores)
+	// For now, use a fixed pool size of 4 to avoid overwhelming the system
+	semaphore := make(chan struct{}, 4)
+
+	packageNum := 0
+	numPackages := len(testsByPackage)
+
+	for pkgPath, tests := range testsByPackage {
+		wg.Add(1)
+		packageNum++
+		currentPkgNum := packageNum
+
+		go func(path string, testList []testing.TestReference, pkgNum int) {
+			defer wg.Done()
+
+			// Acquire semaphore
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			// Print package info (thread-safe)
+			mu.Lock()
+			fmt.Fprintf(multiWriter, "📦 Package: %s\n", path)
+			fmt.Fprintf(multiWriter, "   Tests: %d\n", len(testList))
+
+			// Update markdown: Package starting
+			if mdFile != nil {
+				pkgName := filepath.Base(path)
+				if pkgName == "" {
+					pkgName = path
+				}
+				fmt.Fprintf(mdFile, "- 🔄 **[%d/%d]** %s (%d tests)...\n", pkgNum, numPackages, pkgName, len(testList))
+				mdFile.Sync()
+			}
+			mu.Unlock()
+
+			// Run tests for this package
+			passed, failed := runPackageTests(path, testList, multiWriter, mdFile, testParallelism)
+
+			// Update totals (thread-safe)
+			mu.Lock()
+			totalPassed += passed
+			totalFailed += failed
+			mu.Unlock()
+		}(pkgPath, tests, currentPkgNum)
+	}
+
+	// Wait for all packages to complete
+	wg.Wait()
+
+	return totalPassed, totalFailed
+}
+
+// runPackageTests runs tests for a single package and returns (passed, failed) counts
+func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int) (int, int) {
+	// Check if this package contains only Godog features
+	isGodogOnly := true
+	for _, test := range tests {
+		if test.Type != "godog" {
+			isGodogOnly = false
+			break
+		}
+	}
+
+	if isGodogOnly {
+		// Skip running go test for spec directories
+		fmt.Fprintf(multiWriter, "⏭️  Godog features (tested by test packages)\n\n")
+		return len(tests), 0
+	}
+
+	// Check if this is a Godog test package
+	isGodogTestPackage := fileExists(filepath.Join(pkgPath, "godog_test.go"))
+
+	if isGodogTestPackage {
+		// Display feature file summaries before running Godog tests
+		displayGodogFeatureSummaries(pkgPath, multiWriter)
+	}
+
+	// Run go test for this package with test-level parallelism
+	cmd := exec.Command("go", "test", "-v", "-parallel", fmt.Sprintf("%d", testParallelism))
+	cmd.Dir = pkgPath
+	cmd.Stdout = multiWriter
+	cmd.Stderr = multiWriter
+
+	// For Godog test packages, set GODOG_FORMAT=progress
+	if isGodogTestPackage {
+		cmd.Env = append(os.Environ(), "GODOG_FORMAT=progress")
+	}
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			fmt.Fprintf(multiWriter, "❌ Package tests failed (exit code: %d)\n\n", exitErr.ExitCode())
+			// Update markdown: Package failed
+			if mdFile != nil {
+				fmt.Fprintf(mdFile, "  - ❌ Failed (exit code: %d)\n", exitErr.ExitCode())
+				mdFile.Sync()
+			}
+			return 0, len(tests)
+		} else {
+			fmt.Fprintf(multiWriter, "❌ Failed to run tests: %v\n\n", err)
+			// Update markdown: Package error
+			if mdFile != nil {
+				fmt.Fprintf(mdFile, "  - ❌ Error: %v\n", err)
+				mdFile.Sync()
+			}
+			return 0, len(tests)
+		}
+	}
+
+	fmt.Fprintf(multiWriter, "✅ Package tests passed\n\n")
+	// Update markdown: Package passed
+	if mdFile != nil {
+		fmt.Fprintf(mdFile, "  - ✅ Passed\n")
+		mdFile.Sync()
+	}
+	return len(tests), 0
 }

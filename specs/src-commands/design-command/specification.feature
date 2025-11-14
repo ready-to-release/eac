@@ -7,7 +7,7 @@ Feature: src-commands_design-command
 
   Rule: Command starts Structurizr container and displays documentation
 
-    @dep:docker
+    @L2 @deps:docker
     Scenario: Start Structurizr for a module
       Given docker service is available
       And module "src-cli" has workspace.dsl file
@@ -24,7 +24,7 @@ Feature: src-commands_design-command
 
   Rule: Command validates workspace files using Structurizr CLI
 
-    @dep:docker
+    @L2 @deps:docker
     Scenario: Validate one module
       Given docker service is available
       And module "src-cli" has workspace.dsl file
@@ -34,7 +34,7 @@ Feature: src-commands_design-command
       And validation results should be written to JSON file
       And I should see validation summary with errors and warnings
 
-    @dep:docker
+    @L2 @deps:docker
     Scenario: Validate all modules
       Given docker service is available
       And multiple modules have workspace.dsl files

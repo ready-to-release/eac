@@ -8,11 +8,11 @@ import (
 // ValidTags defines all known tags from contracts/testing/0.1.0/tags.yml
 var ValidTags = map[string]bool{
 	// System dependencies
-	"@dep:docker": true,
-	"@dep:git":    true,
-	"@dep:go":     true,
-	"@dep:claude": true,
-	"@dep:az-cli": true,
+	"@deps:docker": true,
+	"@deps:git":    true,
+	"@deps:go":     true,
+	"@deps:claude": true,
+	"@deps:az-cli": true,
 
 	// Taxonomy levels
 	"@L0": true,
@@ -83,6 +83,135 @@ func ValidateTags(tags []string) []string {
 	}
 
 	return errors
+}
+
+// ValidatePostInference validates test tags after inference has been applied
+// This enforces strict rules that must be true after tag enrichment
+func ValidatePostInference(test TestReference) []string {
+	errors := []string{}
+	warnings := []string{}
+
+	// CRITICAL: Must have exactly ONE level tag
+	levelTags := []string{}
+	for _, tag := range test.Tags {
+		if contains(LevelTags, tag) {
+			levelTags = append(levelTags, tag)
+		}
+	}
+
+	if len(levelTags) == 0 {
+		errors = append(errors, fmt.Sprintf("test '%s' has NO level tag (must have exactly one of @L0-@L4)", test.TestName))
+	} else if len(levelTags) > 1 {
+		errors = append(errors, fmt.Sprintf("test '%s' has MULTIPLE level tags %v (must have exactly one)", test.TestName, levelTags))
+	}
+
+	// Must have at least ONE verification tag
+	verificationTags := []string{}
+	for _, tag := range test.Tags {
+		if contains(VerificationTags, tag) {
+			verificationTags = append(verificationTags, tag)
+		}
+	}
+
+	if len(verificationTags) == 0 {
+		errors = append(errors, fmt.Sprintf("test '%s' has NO verification tag (must have one of @ov/@iv/@pv/@piv/@ppv)", test.TestName))
+	}
+
+	// Consistency: @piv or @ppv MUST have @L4
+	hasPIV := contains(test.Tags, "@piv")
+	hasPPV := contains(test.Tags, "@ppv")
+	hasL4 := contains(test.Tags, "@L4")
+
+	if (hasPIV || hasPPV) && !hasL4 {
+		errors = append(errors, fmt.Sprintf("test '%s' has production verification (@piv/@ppv) but is not @L4", test.TestName))
+	}
+
+	// Consistency: @iv or @pv SHOULD have @L3 (warn only)
+	hasIV := contains(test.Tags, "@iv")
+	hasPV := contains(test.Tags, "@pv")
+	hasL3 := contains(test.Tags, "@L3")
+
+	if (hasIV || hasPV) && !hasL3 {
+		warnings = append(warnings, fmt.Sprintf("test '%s' has PLTE verification (@iv/@pv) but is not @L3", test.TestName))
+	}
+
+	// Validate: @L0 should not have external runtime dependencies
+	// Note: @deps:go is allowed since it's the build-time toolchain, not a runtime dependency
+	hasL0 := contains(test.Tags, "@L0")
+	if hasL0 {
+		for _, tag := range test.Tags {
+			if strings.HasPrefix(tag, "@deps:") && tag != "@deps:go" {
+				errors = append(errors, fmt.Sprintf("test '%s' is @L0 (very fast unit test) but has runtime dependency %s", test.TestName, tag))
+			}
+		}
+	}
+
+	// Validate: @Manual tests should not be @L0 or @L1 (manual tests require human interaction)
+	if test.IsManual && (hasL0 || contains(test.Tags, "@L1")) {
+		warnings = append(warnings, fmt.Sprintf("test '%s' is @Manual but tagged as @L0/@L1 (unit tests should be automated)", test.TestName))
+	}
+
+	// Validate: @gxp tests must have risk controls
+	if test.IsGxP && len(test.RiskControls) == 0 {
+		errors = append(errors, fmt.Sprintf("test '%s' has @gxp tag but no @risk-control:* tags", test.TestName))
+	}
+
+	// Validate: @critical-aspect must be used with @gxp
+	if test.IsCriticalAspect && !test.IsGxP {
+		errors = append(errors, fmt.Sprintf("test '%s' has @critical-aspect but no @gxp tag", test.TestName))
+	}
+
+	// Validate: Production tags (@piv/@ppv) should not be in commit suite (these are @L4)
+	// This is covered by the L4 check above
+
+	// Validate: @ignore tests should still have proper tags (for documentation)
+	// No special validation needed - ignored tests still need valid tags for when @ignore is removed
+
+	// Combine errors and warnings
+	allIssues := append(errors, warnings...)
+	return allIssues
+}
+
+// ShouldSkipValidation determines if a test should be excluded from validation
+// Returns true for test framework's own tests that may intentionally have invalid tags
+func ShouldSkipValidation(test TestReference) bool {
+	// Normalize path separators for consistent matching
+	normalizedPath := strings.ReplaceAll(test.FilePath, "\\", "/")
+
+	// Skip validation for test framework's own tests
+	// These tests often contain embedded test data with intentionally invalid tags
+	// to verify that validation logic catches errors
+	if strings.Contains(normalizedPath, "specs/src-core/testing/") {
+		return true
+	}
+
+	// Skip tests explicitly tagged as framework tests
+	if contains(test.Tags, "@test-framework") {
+		return true
+	}
+
+	return false
+}
+
+// ValidateAllPostInference validates all tests after inference
+// Returns map of test name to validation errors
+// Skips test framework's own tests which may have intentionally invalid tags
+func ValidateAllPostInference(tests []TestReference) map[string][]string {
+	validationErrors := make(map[string][]string)
+
+	for _, test := range tests {
+		// Skip validation for framework tests
+		if ShouldSkipValidation(test) {
+			continue
+		}
+
+		issues := ValidatePostInference(test)
+		if len(issues) > 0 {
+			validationErrors[test.TestName] = issues
+		}
+	}
+
+	return validationErrors
 }
 
 // ValidateTestReference validates a complete test reference

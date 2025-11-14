@@ -22,7 +22,7 @@ type TestReference struct {
 
 // TestSuite defines a selector for tests based on tags
 type TestSuite struct {
-	Moniker     string        // Canonical identifier (e.g., "pre-commit")
+	Moniker     string        // Canonical identifier (e.g., "commit")
 	Name        string        // Human-readable name
 	Description string        // What this suite tests
 	Selectors   []TagSelector // Tag selection criteria

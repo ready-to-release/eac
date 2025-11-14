@@ -1,4 +1,4 @@
-@ov @dep:internal-src-cli
+@ov
 Feature: src-cli_verify-configuration
 
   As a developer

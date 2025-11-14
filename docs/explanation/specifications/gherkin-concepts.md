@@ -272,7 +272,7 @@ Rule: Creates project directory structure
 
 - Test level tags (`@L0`-`@L4`) - Execution environment and scope
 - Verification tags (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`) - REQUIRED
-- System dependencies (`@dep:*`) - Declare required tooling
+- System dependencies (`@deps:*`) - Declare required tooling
 - Risk controls (`@risk-control:<name>-<id>`) - Compliance traceability
 
 **Organizational Tags** (this document):

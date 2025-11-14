@@ -46,7 +46,7 @@ func TestApplyInferences_GodogDefaultsToL2(t *testing.T) {
 			FilePath: "feature.feature",
 			Type:     "godog",
 			TestName: "Test scenario",
-			Tags:     []string{"@dep:go"}, // Has tag but no level
+			Tags:     []string{"@deps:go"}, // Has tag but no level
 		},
 	}
 
@@ -54,7 +54,7 @@ func TestApplyInferences_GodogDefaultsToL2(t *testing.T) {
 
 	assert.Len(t, result, 1)
 	assert.Contains(t, result[0].Tags, "@L2")
-	assert.Contains(t, result[0].Tags, "@dep:go")
+	assert.Contains(t, result[0].Tags, "@deps:go")
 }
 
 func TestApplyInferences_IVInfersL3(t *testing.T) {
@@ -205,7 +205,7 @@ func TestApplyInferences_OnlyAppliesToMatchingTestType(t *testing.T) {
 }
 
 func TestDeriveOperationalVerification_NoVerificationTags(t *testing.T) {
-	tags := []string{"@L1", "@dep:go"}
+	tags := []string{"@L1", "@deps:go"}
 
 	result := DeriveOperationalVerification(tags)
 
@@ -264,11 +264,11 @@ func TestDeriveOperationalVerification_AlreadyHasOV(t *testing.T) {
 }
 
 func TestHasAnyLevelTag(t *testing.T) {
-	assert.True(t, hasAnyLevelTag([]string{"@L0", "@dep:go"}))
+	assert.True(t, hasAnyLevelTag([]string{"@L0", "@deps:go"}))
 	assert.True(t, hasAnyLevelTag([]string{"@L1"}))
 	assert.True(t, hasAnyLevelTag([]string{"@L2", "@ov"}))
 	assert.True(t, hasAnyLevelTag([]string{"@L3"}))
 	assert.True(t, hasAnyLevelTag([]string{"@L4"}))
-	assert.False(t, hasAnyLevelTag([]string{"@ov", "@dep:go"}))
+	assert.False(t, hasAnyLevelTag([]string{"@ov", "@deps:go"}))
 	assert.False(t, hasAnyLevelTag([]string{}))
 }

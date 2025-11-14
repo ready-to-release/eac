@@ -18,7 +18,7 @@ Feature: src-core_test-tagging
     Scenario: Discover feature-level tag
       Given a Godog feature file:
         """
-        @dep:go
+        @deps:go
         Feature: Build Module
           Scenario: Build command
             When I run build
@@ -26,21 +26,21 @@ Feature: src-core_test-tagging
       When I discover tests from the feature
       Then I should find 1 test
       And test "Build command" should have tags:
-        | @dep:go |
+        | @deps:go |
         | @L2     |
 
     @L1 @ov
     Scenario: Feature tags inherited by scenario
       Given a Godog feature file:
         """
-        @dep:go @L3
+        @deps:go @L3
         Feature: Deployment Tests
           Scenario: Deploy to PLTE
             When I deploy
         """
       When I discover tests from the feature
       Then test "Deploy to PLTE" should have tags:
-        | @dep:go |
+        | @deps:go |
         | @L3     |
 
     @L1 @ov
@@ -99,7 +99,7 @@ Feature: src-core_test-tagging
     Scenario: Godog feature without level gets L2
       Given a Godog feature file:
         """
-        @dep:go
+        @deps:go
         Feature: Integration Tests
           Scenario: Test integration
         """
@@ -283,23 +283,23 @@ Feature: src-core_test-tagging
     Scenario: Extract dependencies from selected tests
       Given the following tests:
         | name    | tags                  |
-        | Test A  | @L1, @dep:go          |
-        | Test B  | @L2, @dep:docker      |
-        | Test C  | @L3, @dep:git         |
+        | Test A  | @L1, @deps:go          |
+        | Test B  | @L2, @deps:docker      |
+        | Test C  | @L3, @deps:git         |
       When I get system dependencies
       Then I should get dependencies:
-        | @dep:go     |
-        | @dep:docker |
-        | @dep:git    |
+        | @deps:go     |
+        | @deps:docker |
+        | @deps:git    |
 
     @L1 @ov
     Scenario: No duplicate dependencies
       Given the following tests:
         | name    | tags                          |
-        | Test A  | @L1, @dep:go                  |
-        | Test B  | @L1, @dep:go, @dep:docker     |
+        | Test A  | @L1, @deps:go                  |
+        | Test B  | @L1, @deps:go, @deps:docker     |
       When I get system dependencies
       Then I should get dependencies:
-        | @dep:go     |
-        | @dep:docker |
+        | @deps:go     |
+        | @deps:docker |
       And there should be 2 unique dependencies

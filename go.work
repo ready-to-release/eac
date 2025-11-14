@@ -4,6 +4,7 @@ use (
 	./src/cli
 	./src/commands
 	./src/core
+	./src/core/module-deps
 	./src/mcp/commands
 	./src/mcp/github
 )

@@ -8,10 +8,10 @@ import (
 )
 
 func TestGetSuite(t *testing.T) {
-	suite, err := GetSuite("pre-commit")
+	suite, err := GetSuite("commit")
 	require.NoError(t, err)
-	assert.Equal(t, "pre-commit", suite.Moniker)
-	assert.Equal(t, "Pre-Commit Tests", suite.Name)
+	assert.Equal(t, "commit", suite.Moniker)
+	assert.Equal(t, "Commit Tests", suite.Name)
 }
 
 func TestGetSuite_NotFound(t *testing.T) {
@@ -23,14 +23,14 @@ func TestGetSuite_NotFound(t *testing.T) {
 func TestListSuites(t *testing.T) {
 	suites := ListSuites()
 
-	assert.Contains(t, suites, "pre-commit")
+	assert.Contains(t, suites, "commit")
 	assert.Contains(t, suites, "acceptance")
 	assert.Contains(t, suites, "production-verification")
 	assert.Len(t, suites, 3)
 }
 
 func TestSelectTests_PreCommit(t *testing.T) {
-	suite, _ := GetSuite("pre-commit")
+	suite, _ := GetSuite("commit")
 
 	tests := []TestReference{
 		{TestName: "Test A", Tags: []string{"@L0", "@ov"}},
@@ -111,40 +111,40 @@ func TestMatchesSelector_RequireTags(t *testing.T) {
 func TestMatchesSelector_ExcludeTags(t *testing.T) {
 	selector := TagSelector{
 		AnyOfTags:   []string{"@L1"},
-		ExcludeTags: []string{"@dep:docker"},
+		ExcludeTags: []string{"@deps:docker"},
 	}
 
 	assert.True(t, matchesSelector([]string{"@L1", "@ov"}, selector))
-	assert.False(t, matchesSelector([]string{"@L1", "@dep:docker"}, selector))
+	assert.False(t, matchesSelector([]string{"@L1", "@deps:docker"}, selector))
 }
 
 func TestGetSystemDependencies(t *testing.T) {
 	tests := []TestReference{
-		{TestName: "Test A", Tags: []string{"@L1", "@dep:go"}},
-		{TestName: "Test B", Tags: []string{"@L2", "@dep:docker"}},
-		{TestName: "Test C", Tags: []string{"@L3", "@dep:git"}},
+		{TestName: "Test A", Tags: []string{"@L1", "@deps:go"}},
+		{TestName: "Test B", Tags: []string{"@L2", "@deps:docker"}},
+		{TestName: "Test C", Tags: []string{"@L3", "@deps:git"}},
 	}
 
 	deps := GetSystemDependencies(tests)
 
 	assert.Len(t, deps, 3)
-	assert.Contains(t, deps, "@dep:go")
-	assert.Contains(t, deps, "@dep:docker")
-	assert.Contains(t, deps, "@dep:git")
+	assert.Contains(t, deps, "@deps:go")
+	assert.Contains(t, deps, "@deps:docker")
+	assert.Contains(t, deps, "@deps:git")
 }
 
 func TestGetSystemDependencies_NoDuplicates(t *testing.T) {
 	tests := []TestReference{
-		{TestName: "Test A", Tags: []string{"@L1", "@dep:go"}},
-		{TestName: "Test B", Tags: []string{"@L1", "@dep:go", "@dep:docker"}},
-		{TestName: "Test C", Tags: []string{"@L2", "@dep:docker"}},
+		{TestName: "Test A", Tags: []string{"@L1", "@deps:go"}},
+		{TestName: "Test B", Tags: []string{"@L1", "@deps:go", "@deps:docker"}},
+		{TestName: "Test C", Tags: []string{"@L2", "@deps:docker"}},
 	}
 
 	deps := GetSystemDependencies(tests)
 
 	assert.Len(t, deps, 2)
-	assert.Contains(t, deps, "@dep:go")
-	assert.Contains(t, deps, "@dep:docker")
+	assert.Contains(t, deps, "@deps:go")
+	assert.Contains(t, deps, "@deps:docker")
 }
 
 func TestGetSystemDependencies_NoDependencies(t *testing.T) {
@@ -160,7 +160,7 @@ func TestGetSystemDependencies_NoDependencies(t *testing.T) {
 
 // Test @ignore filtering
 func TestSelectTests_IgnoredTestsExcluded(t *testing.T) {
-	suite, _ := GetSuite("pre-commit")
+	suite, _ := GetSuite("commit")
 
 	tests := []TestReference{
 		{TestName: "Test A", Tags: []string{"@L1", "@ov"}, IsIgnored: false},
@@ -178,7 +178,7 @@ func TestSelectTests_IgnoredTestsExcluded(t *testing.T) {
 }
 
 func TestSelectTests_IgnoredBeforeOtherSelection(t *testing.T) {
-	suite, _ := GetSuite("pre-commit")
+	suite, _ := GetSuite("commit")
 
 	tests := []TestReference{
 		// This test matches the suite criteria (@L1) but is ignored

@@ -17,7 +17,7 @@
 #
 # TAG USAGE:
 # - Scenario level: REQUIRED verification tag (@ov, @iv, @pv, @piv, @ppv)
-# - Optional: Test level (@L2, @L3, @L4), dependencies (@dep:docker),
+# - Optional: Test level (@L2, @L3, @L4), dependencies (@deps:docker),
 #   risk controls (@risk-control:<name>-<id>)
 # - See docs/explanation/specifications/tag-reference.md for complete taxonomy
 
@@ -42,7 +42,7 @@ Feature: [module-name_feature-name]
     # - @pv (performance verification) - Use for performance tests in PLTE
     # - @L2 (default) - Emulated system test
     # - @L3 - In-situ vertical test (PLTE) - auto-inferred from @iv/@pv
-    # - @dep:* - Declare system dependencies (docker, git, etc.)
+    # - @deps:* - Declare system dependencies (docker, git, etc.)
 
     # Example: Installation verification test (runs in PLTE, L3)
     @iv
@@ -89,9 +89,9 @@ Feature: [module-name_feature-name]
 
   Rule: [Acceptance Criterion 3 - With System Dependencies]
 
-    # Example: Test requiring Docker (declare with @dep:docker)
+    # Example: Test requiring Docker (declare with @deps:docker)
     # Dependencies checked in CI (fail) and local dev (warn+skip)
-    @L2 @dep:docker @ov
+    @L2 @deps:docker @ov
     Scenario: [Container-based test for AC3]
       Given [container precondition]
       When [docker action]
@@ -153,11 +153,11 @@ Feature: [module-name_feature-name]
 #             Use temporarily for WIP, document with TODO, review weekly
 #
 # System Dependencies (declare required tooling):
-#   @dep:docker   - Docker engine required
-#   @dep:git      - Git CLI required
-#   @dep:go       - Go toolchain required
-#   @dep:claude   - Claude API access required
-#   @dep:az-cli   - Azure CLI required
+#   @deps:docker   - Docker engine required
+#   @deps:git      - Git CLI required
+#   @deps:go       - Go toolchain required
+#   @deps:claude   - Claude API access required
+#   @deps:az-cli   - Azure CLI required
 #
 # Risk Controls (compliance traceability):
 #   @risk-control:<control-name>-<id>

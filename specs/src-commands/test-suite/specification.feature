@@ -30,10 +30,10 @@ Feature: src-commands_test-suite
     @skip # Meta-test: Requires simulating missing dependencies and capturing interactive prompt behavior
     Scenario: Missing dependencies
       Given Docker is not installed
-      And a test requires "@dep:docker"
+      And a test requires "@deps:docker"
       When I run "test pre-commit"
       Then the command checks system dependencies
-      And the output warns "Missing dependencies: @dep:docker"
+      And the output warns "Missing dependencies: @deps:docker"
       And the command asks if I want to continue
       When I answer "no"
       Then the command exits with code 1

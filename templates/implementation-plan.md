@@ -195,7 +195,7 @@ Feature files are plain text files stored in the same repository as the system c
 | Test Level                                | `@L0` - `@L4`                       | Define execution environment and scope |
 | Verification (REQUIRED for all scenarios) | `@ov`, `@iv`, `@pv`, `@piv`, `@ppv` | Categorize validation type             |
 | Test Execution Control                    | `@ignore`, `@Manual`                | Control test execution behavior        |
-| System Dependencies                       | `@dep:docker`, `@dep:git`, etc.     | Declare required tooling               |
+| System Dependencies                       | `@deps:docker`, `@deps:git`, etc.     | Declare required tooling               |
 | Risk Controls                             | `@risk-control:<name>-<id>`         | Link to compliance requirements        |
 
 **Regulatory Tags (for GxP environments):**

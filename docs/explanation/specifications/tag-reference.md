@@ -13,7 +13,7 @@ This reference documents the **testing taxonomy tags** that define test levels, 
 - **Test Level Tags** - Define execution environment and scope (`@L0`-`@L4`)
 - **Verification Tags** - Categorize validation type (REQUIRED: `@ov`, `@iv`, `@pv`, `@piv`, `@ppv`)
 - **Test Execution Control** - Control test execution behavior (`@ignore`, `@Manual`)
-- **System Dependencies** - Declare required tooling (`@dep:*`)
+- **System Dependencies** - Declare required tooling (`@deps:*`)
 - **Risk Controls** - Link to compliance requirements (`@risk-control:<name>-<id>`)
 
 **Note:** Depending on the context you work in, you might need additional tags to support specific regulatory requirements. See [GxP Tagging](gxp-regulatory-tagging.md) as an example.
@@ -77,7 +77,7 @@ func TestUserService_CreateUser(t *testing.T) {
 **Example**:
 
 ```gherkin
-@L2 @dep:docker @ov
+@L2 @deps:docker @ov
 Feature: Container Integration Tests
   Tests requiring Docker for artifact validation
 ```
@@ -291,7 +291,7 @@ Scenario: User finds the interface intuitive (usability test)
 **Example - Performance Testing**:
 
 ```gherkin
-@Manual @pv @dep:load-generator
+@Manual @pv @deps:load-generator
 Scenario: System handles 10,000 concurrent users (load test)
   Given the production environment is scaled to maximum capacity
   When 10,000 simulated users access the system simultaneously
@@ -303,7 +303,7 @@ Scenario: System handles 10,000 concurrent users (load test)
 **Example - Hardware Integration**:
 
 ```gherkin
-@Manual @ov @dep:hardware
+@Manual @ov @deps:hardware
 Scenario: Printer outputs receipt correctly
   Given a transaction is completed
   When the receipt is printed
@@ -338,11 +338,11 @@ System dependency tags declare required tooling for test execution.
 
 ### Available Dependencies
 
-**`@dep:docker`** - Docker engine required
-**`@dep:git`** - Git CLI required
-**`@dep:go`** - Go toolchain required
-**`@dep:claude`** - Claude API access required
-**`@dep:az-cli`** - Azure CLI required
+**`@deps:docker`** - Docker engine required
+**`@deps:git`** - Git CLI required
+**`@deps:go`** - Go toolchain required
+**`@deps:claude`** - Claude API access required
+**`@deps:az-cli`** - Azure CLI required
 
 ### Dependency Checking
 
@@ -361,7 +361,7 @@ System dependency tags declare required tooling for test execution.
 ### Example
 
 ```gherkin
-@L2 @dep:docker @dep:git @ov
+@L2 @deps:docker @deps:git @ov
 Feature: Container Build Pipeline
   Tests requiring Docker and Git for artifact builds
 
@@ -446,14 +446,14 @@ Tags accumulate from Feature → Rule → Scenario levels.
 ### Accumulation Rules
 
 ```gherkin
-@L2 @dep:docker
+@L2 @deps:docker
 Feature: Container Tests
 
   @ov
   Rule: Container operations
 
     Scenario: Start container
-      # Effective tags: @L2, @dep:docker, @ov
+      # Effective tags: @L2, @deps:docker, @ov
 ```
 
 ### Override Rules
@@ -463,7 +463,7 @@ Feature: Container Tests
 - Scenario level overrides feature level
 - Allows mixing test levels within a feature
 
-**Dependencies** (`@dep:*`):
+**Dependencies** (`@deps:*`):
 
 - Accumulate (additive)
 - Scenario inherits all feature dependencies
@@ -537,7 +537,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 
 - Add verification tag to ALL Gherkin scenarios (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`)
 - Use `@ov` for all functional tests
-- Declare system dependencies with `@dep:*` when needed
+- Declare system dependencies with `@deps:*` when needed
 - Link to risk controls with `@risk-control:<name>-<id>` when applicable
 
 ❌ **DON'T**:
@@ -600,7 +600,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 ### Tag Usage Example
 
 ```gherkin
-@L2 @dep:docker
+@L2 @deps:docker
 Feature: cli_container-management
   Manage Docker containers through CLI
 
