@@ -5,9 +5,13 @@ Feature: src-commands_templates
   I want to install and manage templates with value replacements
   So that I can generate project structures efficiently
 
+  # NOTE: All tests use temporary directories (os.MkdirTemp) for full isolation
+  # No git-tracked files are modified during tests
+  # Cleanup is automatic via sc.After() hook
+
   Rule: Template commands require valid inputs and handle errors gracefully
 
-    @skip
+    @skip # Template repository has broken template (function "abbreviations_reference" not defined in implementation-plan.md:24)
     Scenario: Install uses default repository when template not provided
       Given I have a values file "values.json" with:
         """
@@ -20,7 +24,6 @@ Feature: src-commands_templates
       And the file "./output/README.md" should exist
       And the file "./output/README.md" should contain "test"
 
-    @skip
     Scenario: Install fails with non-Git URL template
       Given I have a values file "values.json" with:
         """
@@ -32,13 +35,11 @@ Feature: src-commands_templates
       Then the command should fail
       And the error output should contain "must be a Git repository URL"
 
-    @skip
     Scenario: Install fails without values flag
       When I run the command "templates install --template https://github.com/user/repo --location ./output"
       Then the command should fail
       And the error output should contain "--values flag is required"
 
-    @skip
     Scenario: Install fails without location flag
       Given I have a values file "values.json" with:
         """
@@ -56,7 +57,6 @@ Feature: src-commands_templates
       And the command should attempt to clone from "https://github.com/ready-to-release/eac"
       And the output should contain "Template Placeholders in 'https://github.com/ready-to-release/eac':"
 
-    @skip
     Scenario: List scans local directory when path provided
       Given I have a template directory "test-templates/"
       And I have a template file "test-templates/README.md" with content:
@@ -68,7 +68,6 @@ Feature: src-commands_templates
       And the output should contain "{{ .ProjectName }}"
       And the output should contain "Total: 1 placeholders"
 
-    @skip
     Scenario: List fails with non-existent template directory
       When I run the command "templates list --template non-existent/"
       Then the command should fail
@@ -76,7 +75,6 @@ Feature: src-commands_templates
 
   Rule: Template scanning discovers placeholders in files
 
-    @skip
     Scenario: List scans files with placeholders in content
       Given I have a template directory "test-templates/"
       And I have a template file "test-templates/config.yaml" with content:
@@ -88,7 +86,6 @@ Feature: src-commands_templates
       And the output should contain "{{ .ProjectName }}"
       And the output should contain "Total: 1 placeholders"
 
-    @skip
     Scenario: List scans placeholders in filenames
       Given I have a template directory "test-templates/"
       And I have a template file "test-templates/README.md" with content:

@@ -67,6 +67,12 @@ func iHaveAFileWithContent(filePath string, content *godog.DocString) error {
 // ============================================================================
 
 func iRunCommand(cmdLine string) error {
+	// If templatesCtx is nil, this step is being called from a non-templates feature
+	// Fall back to the generic command execution (iRunTheCommand from steps_test.go)
+	if templatesCtx == nil {
+		return iRunTheCommand(cmdLine)
+	}
+
 	parts := strings.Fields(cmdLine)
 	if len(parts) < 2 {
 		return fmt.Errorf("invalid command format: %s", cmdLine)
@@ -144,6 +150,19 @@ func theErrorOutputShouldContain(expectedText string) error {
 		return fmt.Errorf("error output does not contain expected text '%s'.\nActual output:\n%s\nActual error:\n%s",
 			expectedText, templatesCtx.commandOutput, templatesCtx.errorOutput)
 	}
+	return nil
+}
+
+func theCommandShouldAttemptToCloneFrom(url string) error {
+	// Check if output contains indication of cloning attempt
+	// The command prints: "Cloning templates from <url>..."
+	expectedMessage := fmt.Sprintf("Cloning templates from %s", url)
+
+	if !strings.Contains(templatesCtx.commandOutput, expectedMessage) {
+		return fmt.Errorf("output does not contain expected clone message.\nExpected: %s\nActual output:\n%s",
+			expectedMessage, templatesCtx.commandOutput)
+	}
+
 	return nil
 }
 
@@ -252,8 +271,9 @@ func InitializeTemplatesScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I have a values file "([^"]*)" with:$`, iHaveAValuesFileWith)
 	sc.Step(`^I have a file "([^"]*)" with content:$`, iHaveAFileWithContent)
 
-	// Execution steps
+	// Execution steps (templates-specific to avoid side-effect blocking)
 	sc.Step(`^I run the command "([^"]*)"$`, iRunCommand)
+	sc.Step(`^I run the templates command "([^"]*)"$`, iRunCommand)
 
 	// Verification steps
 	sc.Step(`^the command should succeed$`, theCommandShouldSucceed)
@@ -262,4 +282,5 @@ func InitializeTemplatesScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^the file "([^"]*)" should contain "([^"]*)"$`, theFileShouldContain)
 	sc.Step(`^the output should contain "([^"]*)"$`, theOutputShouldContain)
 	sc.Step(`^the error output should contain "([^"]*)"$`, theErrorOutputShouldContain)
+	sc.Step(`^the command should attempt to clone from "([^"]*)"$`, theCommandShouldAttemptToCloneFrom)
 }

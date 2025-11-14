@@ -1,0 +1,9 @@
+go 1.24.4
+
+use (
+	./src/cli
+	./src/commands
+	./src/core
+	./src/mcp/commands
+	./src/mcp/github
+)

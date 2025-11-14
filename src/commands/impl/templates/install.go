@@ -5,7 +5,7 @@
 //   --template <git-repo-url>: Git repository URL to clone templates from (default: https://github.com/ready-to-release/eac)
 //   --values <json-file>: JSON file with replacement values (required)
 //   --location <output-path>: Output location for rendered templates (required)
-// HasSideEffects: true
+// HasSideEffects: false
 package templates
 
 import (

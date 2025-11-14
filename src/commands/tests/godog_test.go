@@ -17,8 +17,15 @@ func TestFeatures(t *testing.T) {
 		reportFormat = "cucumber" // Default format
 	}
 
+	// Allow format to be customized via environment variable
+	// Supported formats: pretty, progress, cucumber, junit, events, undefined
+	consoleFormat := os.Getenv("GODOG_FORMAT")
+	if consoleFormat == "" {
+		consoleFormat = "pretty" // Default: verbose output
+	}
+
 	opts := &godog.Options{
-		Format:   "pretty",
+		Format:   consoleFormat,
 		Paths:    []string{"../../../specs/src-commands"},
 		TestingT: t,
 		Tags:     "~@skip && ~@pending", // Skip scenarios tagged with @skip or @pending
@@ -43,8 +50,8 @@ func TestFeatures(t *testing.T) {
 		// Convert Windows paths to forward slashes for Godog
 		reportFormatted := filepath.ToSlash(reportPath)
 
-		// Construct multi-formatter string: pretty (console) + report file
-		opts.Format = fmt.Sprintf("pretty,%s:%s", formatterName, reportFormatted)
+		// Construct multi-formatter string: console format + report file
+		opts.Format = fmt.Sprintf("%s,%s:%s", consoleFormat, formatterName, reportFormatted)
 
 		fmt.Printf("Registering formatters:\n")
 		fmt.Printf("  - Pretty (console)\n")

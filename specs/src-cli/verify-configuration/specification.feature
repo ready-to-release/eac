@@ -14,7 +14,6 @@ Feature: src-cli_verify-configuration
 
   Rule: Verify command detects missing configuration
 
-    @skip # Missing steps: test folder creation, CLI building, directory changes, running built CLI, config file operations
     Scenario: Reports error when config file does not exist
       Given no config file exists in the test folder
       When I run the built CLI with "verify"
@@ -23,14 +22,13 @@ Feature: src-cli_verify-configuration
 
   Rule: Verify command validates configuration file
 
-    @skip # Missing steps: test config file creation with specific settings
+    @skip # WIP: This test expects default extension to exist upstream. Currently no extensions configured causes warning and exit 1. Test will pass when default extension is available.
     Scenario: Successfully verifies with valid config file
       Given I create a test config file ".r2r.yaml" with valid settings
       When I run the built CLI with "verify"
       Then the exit code is 0
       And I should see "✓" or "success" or "Verifying"
 
-    @skip # Missing steps: test config file creation with invalid settings
     Scenario: Reports error with invalid config file
       Given I create a test config file ".r2r.yaml" with invalid settings
       When I run the built CLI with "verify"
@@ -39,13 +37,11 @@ Feature: src-cli_verify-configuration
 
   Rule: Built CLI executable must be functional
 
-    @skip # Missing step: "I should see version number" - needs to parse and validate version format
     Scenario: Built CLI shows version
       When I run the built CLI with "--version"
       Then the exit code is 0
       And I should see version number
 
-    @skip # Missing steps: test folder setup and CLI execution infrastructure
     Scenario: Built CLI shows help
       When I run the built CLI with "--help"
       Then the exit code is 0

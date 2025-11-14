@@ -8,6 +8,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -99,7 +100,10 @@ func runReadOnlyCommand(execCtx *commandExecutionContext) error {
 	// - No audit logging
 	// - Safe to retry
 
-	fmt.Printf("[TEST] Executing read-only command: %s\n", execCtx.commandName)
+	// Only print test execution details if GODOG_VERBOSE is set
+	if os.Getenv("GODOG_VERBOSE") != "" {
+		fmt.Printf("[TEST] Executing read-only command: %s\n", execCtx.commandName)
+	}
 
 	return executeCommand(execCtx)
 }
@@ -283,6 +287,15 @@ func runCommandWithArgs(args ...string) error {
 // ============================================================================
 
 func InitializeScenario(sc *godog.ScenarioContext) {
+	// Templates command steps (must be FIRST to override generic "I run the command")
+	InitializeTemplatesScenario(sc)
+
+	// Design command steps
+	InitializeDesignScenario(sc)
+
+	// Docs command steps
+	InitializeDocsScenario(sc)
+
 	sc.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		initializeContext()
 		return ctx, nil
@@ -300,12 +313,6 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOr)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOrOr)
 	sc.Step(`^I should see "([^"]*)" on stderr$`, iShouldSeeOnStderr)
-
-	// Design command steps
-	InitializeDesignScenario(sc)
-
-	// Templates command steps
-	InitializeTemplatesScenario(sc)
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {
