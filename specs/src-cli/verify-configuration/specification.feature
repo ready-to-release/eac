@@ -22,7 +22,7 @@ Feature: src-cli_verify-configuration
 
   Rule: Verify command validates configuration file
 
-    @skip # WIP: This test expects default extension to exist upstream. Currently no extensions configured causes warning and exit 1. Test will pass when default extension is available.
+    @skip:wip # WIP: This test expects default extension to exist upstream. Currently no extensions configured causes warning and exit 1. Test will pass when default extension is available.
     Scenario: Successfully verifies with valid config file
       Given I create a test config file ".r2r.yaml" with valid settings
       When I run the built CLI with "verify"

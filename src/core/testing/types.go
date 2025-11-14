@@ -9,8 +9,13 @@ type TestReference struct {
 	Tags     []string // All effective tags (inherited + explicit + inferred)
 
 	// Execution control
-	IsIgnored bool // Has @ignore tag
-	IsManual  bool // Has @Manual tag
+	IsIgnored  bool   // Has @skip:<reason> tag
+	SkipReason string // Reason code from @skip:<reason> (e.g., "wip", "broken")
+	IsManual   bool   // Has @Manual tag
+
+	// Dependency tracking
+	SystemDependencies []string // System deps extracted from @deps:<name> (e.g., "docker", "git")
+	ModuleDependencies []string // Module deps extracted from @depm:<module> (e.g., "src-cli", "src-commands")
 
 	// Risk control linkage
 	RiskControls []string // All @risk-control:<name>-<id> references

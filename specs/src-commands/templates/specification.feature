@@ -11,7 +11,7 @@ Feature: src-commands_templates
 
   Rule: Template commands require valid inputs and handle errors gracefully
 
-    @skip # Template repository has broken template (function "abbreviations_reference" not defined in implementation-plan.md:24)
+    @skip:broken # Template repository has broken template (function "abbreviations_reference" not defined in implementation-plan.md:24)
     Scenario: Install uses default repository when template not provided
       Given I have a values file "values.json" with:
         """

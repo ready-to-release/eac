@@ -303,8 +303,12 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 			}
 
 			// Set execution control fields
-			test.IsIgnored = contains(test.Tags, "@ignore")
+			test.IsIgnored, test.SkipReason = extractSkipReason(test.Tags)
 			test.IsManual = contains(test.Tags, "@Manual")
+
+			// Extract dependencies
+			test.SystemDependencies = extractSystemDependencies(test.Tags)
+			test.ModuleDependencies = extractModuleDependencies(test.Tags)
 
 			// Extract risk control references
 			test.RiskControls = extractRiskControlTags(test.Tags)
@@ -445,4 +449,44 @@ func inferInternalDependencyFromPath(filePath string) string {
 	}
 
 	return ""
+}
+
+// extractSkipReason extracts skip reason from @skip:<reason> tags
+// Returns (isIgnored, reason) where:
+// - isIgnored: true if test has any @skip:<reason> tag
+// - reason: the reason code (e.g., "wip", "broken"), empty if not skipped
+func extractSkipReason(tags []string) (bool, string) {
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, "@skip:") {
+			reason := strings.TrimPrefix(tag, "@skip:")
+			return true, reason
+		}
+	}
+	return false, ""
+}
+
+// extractSystemDependencies extracts system dependency names from @deps:<name> tags
+// Example: @deps:docker → "docker"
+func extractSystemDependencies(tags []string) []string {
+	deps := []string{}
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, "@deps:") {
+			dep := strings.TrimPrefix(tag, "@deps:")
+			deps = append(deps, dep)
+		}
+	}
+	return deps
+}
+
+// extractModuleDependencies extracts module dependency names from @depm:<module> tags
+// Example: @depm:src-cli → "src-cli"
+func extractModuleDependencies(tags []string) []string {
+	deps := []string{}
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, "@depm:") {
+			dep := strings.TrimPrefix(tag, "@depm:")
+			deps = append(deps, dep)
+		}
+	}
+	return deps
 }

@@ -32,11 +32,19 @@ type TagType struct {
 	Description string `yaml:"description"`
 }
 
+// SkipReason represents a valid skip reason code
+type SkipReason struct {
+	Code        string `yaml:"code"`
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+}
+
 // TagContract represents the complete tagging system contract
 type TagContract struct {
-	Metadata Metadata  `yaml:"metadata"`
-	Tags     []Tag     `yaml:"tags"`
-	Types    []TagType `yaml:"types"`
+	Metadata    Metadata     `yaml:"metadata"`
+	Tags        []Tag        `yaml:"tags"`
+	Types       []TagType    `yaml:"types"`
+	SkipReasons []SkipReason `yaml:"skip_reasons"`
 }
 
 // LoadTagContract reads and parses the tag contract from embedded filesystem
@@ -99,4 +107,20 @@ func (c *TagContract) GetSafetyTags() []Tag {
 func (c *TagContract) ValidateTag(tagString string) bool {
 	_, err := c.GetTag(tagString)
 	return err == nil
+}
+
+// GetSkipReasons returns a map of valid skip reason codes
+func (c *TagContract) GetSkipReasons() map[string]SkipReason {
+	reasons := make(map[string]SkipReason)
+	for _, reason := range c.SkipReasons {
+		reasons[reason.Code] = reason
+	}
+	return reasons
+}
+
+// ValidateSkipReason checks if a skip reason code is valid
+func (c *TagContract) ValidateSkipReason(code string) (SkipReason, bool) {
+	reasons := c.GetSkipReasons()
+	reason, ok := reasons[code]
+	return reason, ok
 }

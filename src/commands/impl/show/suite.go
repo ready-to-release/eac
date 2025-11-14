@@ -95,7 +95,7 @@ func ShowSuite() int {
 	}
 
 	// Phase 4: Validate post-inference tags
-	validationErrors := testing.ValidateAllPostInference(productionTests)
+	validationErrors := testing.ValidateAllPostInference(productionTests, repoRoot)
 
 	if len(validationErrors) > 0 {
 		fmt.Fprintf(os.Stderr, "\n⚠️  WARNING: %d tests have validation errors:\n", len(validationErrors))

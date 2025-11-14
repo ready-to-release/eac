@@ -92,15 +92,18 @@ tags:
     description: "Tag specific risks for tracking and mitigation"
     type: safety
 
-  - tag: "@ignore"
-    description: "Exclude from all test suite runs (work-in-progress features)"
+  - tag: "@skip:<reason>"
+    description: "Exclude from test suite runs with documented reason"
     type: execution_control
     level: feature-or-scenario
+    pattern: "^@skip:[a-z]+$"
+    example: "@skip:wip"
 
   - tag: "@Manual"
-    description: "Manual test requiring human execution and evidence collection"
+    description: "Manual test requiring human execution and evidence collection (cannot have L0-L4 taxonomy tags)"
     type: execution_control
     level: scenario
+    constraint: "mutually_exclusive_with_taxonomy_levels"
 
   - tag: "@risk-control:<name>-<id>"
     description: "Link to risk control specification"
@@ -157,3 +160,40 @@ types:
 
   - type: gxp_regulatory
     description: "GxP regulatory classification and critical aspects"
+
+# ============================================================================
+# Skip Reason Codes
+# ============================================================================
+
+skip_reasons:
+  - code: wip
+    name: "Work In Progress"
+    description: "Test implementation not yet complete"
+
+  - code: broken
+    name: "Broken Test"
+    description: "Test is broken and needs fixing"
+
+  - code: flaky
+    name: "Flaky Test"
+    description: "Test intermittently fails, needs stabilization"
+
+  - code: infra
+    name: "Infrastructure Unavailable"
+    description: "Required infrastructure not available (CLI, services, etc.)"
+
+  - code: platform
+    name: "Platform Specific"
+    description: "Platform-specific limitation (Windows/Linux/Mac only)"
+
+  - code: deprecated
+    name: "Deprecated Feature"
+    description: "Feature deprecated, test kept for reference"
+
+  - code: blocked
+    name: "Blocked"
+    description: "Blocked by external dependency or decision"
+
+  - code: todo
+    name: "To Do"
+    description: "Test definition exists but implementation pending"

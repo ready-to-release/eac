@@ -32,7 +32,6 @@ var ValidTags = map[string]bool{
 	"@requires_isolation": true,
 
 	// Execution control tags
-	"@ignore": true,
 	"@Manual": true,
 
 	// GxP regulatory tags
@@ -87,9 +86,28 @@ func ValidateTags(tags []string) []string {
 
 // ValidatePostInference validates test tags after inference has been applied
 // This enforces strict rules that must be true after tag enrichment
-func ValidatePostInference(test TestReference) []string {
+func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipReason) []string {
 	errors := []string{}
 	warnings := []string{}
+
+	// CRITICAL: Check for undefined tags first
+	for _, tag := range test.Tags {
+		if !IsValidTag(tag) {
+			errors = append(errors, fmt.Sprintf("test '%s' has undefined tag '%s' (not in contracts/testing/0.1.0/tags.yml)", test.TestName, tag))
+		}
+
+		// Validate skip reason codes if contract is loaded
+		if strings.HasPrefix(tag, "@skip:") && validSkipReasons != nil {
+			reasonCode := strings.TrimPrefix(tag, "@skip:")
+			if _, ok := validSkipReasons[reasonCode]; !ok {
+				validCodes := make([]string, 0, len(validSkipReasons))
+				for code := range validSkipReasons {
+					validCodes = append(validCodes, code)
+				}
+				errors = append(errors, fmt.Sprintf("test '%s' has invalid skip reason '%s', valid codes: %v", test.TestName, reasonCode, validCodes))
+			}
+		}
+	}
 
 	// CRITICAL: Must have exactly ONE level tag
 	levelTags := []string{}
@@ -146,9 +164,10 @@ func ValidatePostInference(test TestReference) []string {
 		}
 	}
 
-	// Validate: @Manual tests should not be @L0 or @L1 (manual tests require human interaction)
-	if test.IsManual && (hasL0 || contains(test.Tags, "@L1")) {
-		warnings = append(warnings, fmt.Sprintf("test '%s' is @Manual but tagged as @L0/@L1 (unit tests should be automated)", test.TestName))
+	// Validate: @Manual tests MUST NOT have any taxonomy level tags (L0-L4)
+	// Manual tests are outside the automated taxonomy - they require human execution
+	if test.IsManual && len(levelTags) > 0 {
+		errors = append(errors, fmt.Sprintf("test '%s' is @Manual but has taxonomy level tag %v (@Manual is mutually exclusive with L0-L4)", test.TestName, levelTags))
 	}
 
 	// Validate: @gxp tests must have risk controls
@@ -196,8 +215,19 @@ func ShouldSkipValidation(test TestReference) bool {
 // ValidateAllPostInference validates all tests after inference
 // Returns map of test name to validation errors
 // Skips test framework's own tests which may have intentionally invalid tags
-func ValidateAllPostInference(tests []TestReference) map[string][]string {
+func ValidateAllPostInference(tests []TestReference, repoRoot string) map[string][]string {
 	validationErrors := make(map[string][]string)
+
+	// Load contract for skip reason validation (from embedded filesystem)
+	contract, err := LoadTagContract()
+	var validSkipReasons map[string]SkipReason
+	if err != nil {
+		// If contract loading fails, proceed without skip reason validation
+		// This allows validation to work even if contract is missing
+		validSkipReasons = nil
+	} else {
+		validSkipReasons = contract.GetSkipReasons()
+	}
 
 	for _, test := range tests {
 		// Skip validation for framework tests
@@ -205,7 +235,7 @@ func ValidateAllPostInference(tests []TestReference) map[string][]string {
 			continue
 		}
 
-		issues := ValidatePostInference(test)
+		issues := ValidatePostInference(test, validSkipReasons)
 		if len(issues) > 0 {
 			validationErrors[test.TestName] = issues
 		}
@@ -231,6 +261,8 @@ func ValidateTestReference(test TestReference) []string {
 }
 
 // IsValidTag checks if a tag is valid according to contracts
+// Note: For @skip:<reason>, this only checks format, not if reason code is valid
+// Use ValidateSkipTag() for full validation with contract
 func IsValidTag(tag string) bool {
 	// Check known tags
 	if ValidTags[tag] {
@@ -245,6 +277,16 @@ func IsValidTag(tag string) bool {
 	// Check @risk-control:* pattern
 	if strings.HasPrefix(tag, "@risk-control:") {
 		return validateRiskControlTag(tag)
+	}
+
+	// Check @depm:* pattern (module dependencies)
+	if strings.HasPrefix(tag, "@depm:") {
+		return len(tag) > 6 // Must have at least one character after "@depm:"
+	}
+
+	// Check @skip:<reason> pattern (format only, reason validation done separately)
+	if strings.HasPrefix(tag, "@skip:") {
+		return len(tag) > 6 // Must have at least one character after "@skip:"
 	}
 
 	return false
