@@ -1,6 +1,6 @@
 module github.com/ready-to-release/eac/src/core/module-deps
 
-go 1.24.4
+go 1.25.3
 
 require github.com/ready-to-release/eac/src/core v0.0.0-20251114111645-215eee575c09
 
