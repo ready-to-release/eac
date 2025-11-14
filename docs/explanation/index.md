@@ -4,6 +4,16 @@
 
 ---
 
+## Getting Started
+
+- **New to this approach?** Start with [Everything as Code](#everything-as-code) to understand the foundational principles
+- **Want to understand the practices?** Read [Specifications Concepts](#specifications-concepts) to learn ATDD/BDD/TDD
+- **Need the big picture?** See [Software Development Lifecycle](#software-development-lifecycle) for the complete lifecycle
+- **Looking for delivery details?** Explore [Continuous Delivery](#continuous-delivery) for the 12-stage CD model
+- **In a regulated environment?** Also review [Compliance Transformation](#compliance-transformation) for optimization strategies
+
+---
+
 ## Available Explanations
 
 ### [Everything as Code](everything-as-code/index.md)
@@ -22,9 +32,40 @@ Understanding the problem space in regulated industries and why "Everything as C
 
 ---
 
+### [Specifications Concepts](specifications/index.md)
+
+Understanding the three-layer testing approach and test-driven development practices. These concepts are foundational to how requirements are defined and tested throughout the [Software Development Lifecycle](#software-development-lifecycle) and [Continuous Delivery](#continuous-delivery) model.
+
+**Topics covered:**
+
+- Three-layer testing approach (ATDD, BDD, TDD)
+- ATDD concepts and Example Mapping workshops
+- BDD concepts and Gherkin language
+- How the layers interact and when to use each
+- Living documentation and traceability
+- Ubiquitous Language and Domain-Driven Design
+- Event Storming workshops
+- Risk controls for compliance
+
+---
+
+### [Software Development Lifecycle](lifecycle/index.md)
+
+Understanding the complete software lifecycle from initiation through operations and end-of-life, balancing regulatory compliance with continuous delivery in a DevOps model. The Development phase implements the [Continuous Delivery](#continuous-delivery) model, and all phases use [Specifications](#specifications-concepts) for requirements definition.
+
+**Topics covered:**
+
+- **Lifecycle Overview**: DevOps approach eliminating handovers between development and operations
+- **Initiation**: Feasibility assessment (feasibility, desirability, viability), design documentation (C4 model), decision records, threat modeling, intended use (regulatory)
+- **Development**: Implementation planning, specifications, risk controls, implementation reports, testing strategy, automated documentation
+- **Operations**: Maintenance plans, periodic evaluation, user access reviews, defect and incident management, blameless post-mortems
+- **End of Life**: Decommissioning and knowledge transfer
+
+---
+
 ### [Continuous Delivery](continuous-delivery/index.md)
 
-Understanding the 12-stage Continuous Delivery Model - a comprehensive framework for delivering software from development through production with built-in quality, traceability, and compliance.
+Understanding the 12-stage Continuous Delivery Model - a comprehensive framework for delivering software from development through production with built-in quality, traceability, and compliance. This model is the core implementation mechanism for the Development phase in the [Software Development Lifecycle](#software-development-lifecycle), using [Specifications](#specifications-concepts) for testing.
 
 **Topics covered:**
 
@@ -39,7 +80,7 @@ Understanding the 12-stage Continuous Delivery Model - a comprehensive framework
 
 ### [Compliance Transformation](transformation/index.md)
 
-Understanding how to transform compliance from a blocking activity into a continuous, automated capability that enables faster, safer software delivery.
+Understanding how to transform compliance from a blocking activity into a continuous, automated capability that enables faster, safer software delivery. Builds on [Everything as Code](#everything-as-code) principles and integrates with the [Continuous Delivery](#continuous-delivery) model using [Specifications](#specifications-concepts) for risk controls.
 
 **Topics covered:**
 
@@ -51,23 +92,6 @@ Understanding how to transform compliance from a blocking activity into a contin
 - Shift-left compliance strategy
 - Success factors and common pitfalls
 - ROI analysis and readiness assessment
-
----
-
-### [Specifications Concepts](specifications/index.md)
-
-Understanding the three-layer testing approach and test-driven development practices.
-
-**Topics covered:**
-
-- Three-layer testing approach (ATDD, BDD, TDD)
-- ATDD concepts and Example Mapping workshops
-- BDD concepts and Gherkin language
-- How the layers interact and when to use each
-- Living documentation and traceability
-- Ubiquitous Language and Domain-Driven Design
-- Event Storming workshops
-- Risk controls for compliance
 
 ---
 
