@@ -6,6 +6,7 @@ package commit
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -16,6 +17,8 @@ import (
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
+	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/core/ai/providers"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/core/repository/reports"
 )
@@ -328,7 +331,7 @@ func callClaudeAgentAPI(agentFilePath string, prompt string, workspaceRoot strin
 	return output, nil
 }
 
-// callClaudeAgentAPIRaw invokes Claude CLI without content extraction (for specialized agents)
+// callClaudeAgentAPIRaw invokes AI provider using the executor abstraction
 func callClaudeAgentAPIRaw(agentFilePath string, prompt string, workspaceRoot string) (string, error) {
 	// Read agent file to extract model from frontmatter
 	agentContent, err := ioutil.ReadFile(agentFilePath)
@@ -338,52 +341,34 @@ func callClaudeAgentAPIRaw(agentFilePath string, prompt string, workspaceRoot st
 
 	model := extractModelFromAgent(string(agentContent))
 
-	// Build command arguments
-	args := []string{
-		"--print",
-		"--settings", `{"includeCoAuthoredBy":false,"disableAllHooks":true}`,
-	}
+	// Create executor and register providers
+	executor := ai.NewExecutor(workspaceRoot)
+	providers.RegisterBuiltIn(executor)
 
-	// Add model if specified in agent frontmatter
-	if model != "" {
-		args = append(args, "--model", model)
-		if model == "sonnet" {
-			args = append(args, "--fallback-model", "haiku")
-		}
-	}
+	// Set up logging
+	logger := ai.NewFileLogger(workspaceRoot)
+	executor.SetLogger(logger)
 
 	// Build full prompt: agent instructions + user input
 	fullPrompt := string(agentContent) + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + prompt
 
-	cmd := exec.Command("claude", args...)
-	cmd.Stdin = strings.NewReader(fullPrompt)
-	cmd.Dir = workspaceRoot
-
-	// Remove ANTHROPIC_API_KEY to use Claude Pro subscription
-	cmd.Env = removeAPIKeyFromEnv(os.Environ())
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		stderrText := stderr.String()
-		stdoutText := stdout.String()
-
-		if len(stderrText) > 0 {
-			fmt.Fprintf(os.Stderr, "Claude stderr:\n%s\n", stderrText)
-		}
-		if len(stdoutText) > 0 {
-			fmt.Fprintf(os.Stderr, "Claude stdout:\n%s\n", stdoutText)
-		}
-
-		return "", fmt.Errorf("claude CLI failed: %w\nStderr: %s\nStdout: %s", err, stderrText, stdoutText)
+	// Prepare options
+	var opts []ai.Option
+	if model != "" {
+		opts = append(opts, ai.WithModel(model))
 	}
 
-	// Return raw output with minimal noise filtering
-	output := strings.TrimSpace(stdout.String())
+	// Execute with context
+	ctx := context.Background()
+	output, err := executor.Execute(ctx, fullPrompt, opts...)
+	if err != nil {
+		return "", fmt.Errorf("AI execution failed: %w", err)
+	}
 
-	// Remove common agent initialization noise that appears even with disableAllHooks
+	// Trim output
+	output = strings.TrimSpace(output)
+
+	// Remove common agent initialization noise
 	// Determine agent type from file path
 	agentType := "unknown"
 	if strings.Contains(agentFilePath, "commit-message-top-level") {

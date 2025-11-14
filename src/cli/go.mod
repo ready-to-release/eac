@@ -1,6 +1,6 @@
 module github.com/ready-to-release/eac/src/cli
 
-go 1.24.4
+go 1.25.3
 
 require (
 	github.com/charmbracelet/bubbles v0.21.0
@@ -10,6 +10,7 @@ require (
 	github.com/docker/docker v28.0.0+incompatible
 	github.com/hitoshi44/go-uid64 v0.2.0
 	github.com/ready-to-release/eac/src/core v0.0.0
+	github.com/ready-to-release/eac/src/core/ai v0.0.0-00010101000000-000000000000
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
@@ -40,6 +41,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gofrs/uuid v4.3.1+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
@@ -87,3 +89,5 @@ require (
 )
 
 replace github.com/ready-to-release/eac/src/core => ../core
+
+replace github.com/ready-to-release/eac/src/core/ai => ../core/ai

@@ -9,9 +9,9 @@ import (
 
 // GitCloner handles cloning Git repositories
 type GitCloner struct {
-	repoURL    string
-	targetDir  string
-	branch     string
+	repoURL   string
+	targetDir string
+	branch    string
 }
 
 // NewGitCloner creates a new Git cloner

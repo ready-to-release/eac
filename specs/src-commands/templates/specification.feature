@@ -5,50 +5,7 @@ Feature: src-commands_templates
   I want to install and manage templates with value replacements
   So that I can generate project structures efficiently
 
-  Rule: Template commands require valid inputs and handle errors gracefully
-
-    @skip
-    Scenario: Install uses default repository when template not provided
-      Given I have a values file "values.json" with:
-        """
-        {
-          "ProjectName": "test"
-        }
-        """
-      When I run the command "templates install --values values.json --location ./output"
-      Then the command should succeed
-      And the file "./output/README.md" should exist
-      And the file "./output/README.md" should contain "test"
-
-    @skip
-    Scenario: Install fails with non-Git URL template
-      Given I have a values file "values.json" with:
-        """
-        {
-          "ProjectName": "test"
-        }
-        """
-      When I run the command "templates install --template ./local-path --values values.json --location ./output"
-      Then the command should fail
-      And the error output should contain "must be a Git repository URL"
-
-    @skip
-    Scenario: Install fails without values flag
-      When I run the command "templates install --template https://github.com/user/repo --location ./output"
-      Then the command should fail
-      And the error output should contain "--values flag is required"
-
-    @skip
-    Scenario: Install fails without location flag
-      Given I have a values file "values.json" with:
-        """
-        {
-          "ProjectName": "test"
-        }
-        """
-      When I run the command "templates install --template https://github.com/user/repo --values values.json"
-      Then the command should fail
-      And the error output should contain "--location flag is required"
+  Rule: Template list command scans and displays placeholders
 
     Scenario: List uses default repository when template not provided
       When I run the command "templates list"
@@ -56,46 +13,98 @@ Feature: src-commands_templates
       And the command should attempt to clone from "https://github.com/ready-to-release/eac"
       And the output should contain "Template Placeholders in 'https://github.com/ready-to-release/eac':"
 
-    @skip
-    Scenario: List scans local directory when path provided
-      Given I have a template directory "test-templates/"
-      And I have a template file "test-templates/README.md" with content:
-        """
-        # {{ .ProjectName }}
-        """
-      When I run the command "templates list --template test-templates/"
-      Then the command should succeed
-      And the output should contain "{{ .ProjectName }}"
-      And the output should contain "Total: 1 placeholders"
+  Rule: Templates apply subcommand supports template-specific application with defaults
 
-    @skip
-    Scenario: List fails with non-existent template directory
-      When I run the command "templates list --template non-existent/"
+    Scenario: Apply compliance template with all defaults
+      When I run the command "templates apply compliance"
+      Then the command should succeed
+      And the templates should be cloned from "https://github.com/ready-to-release/eac" at "main" branch
+      And the source path should be "templates/compliance"
+      And the destination should be ".docs/references/compliance"
+      And no value replacement should occur
+
+    Scenario: Apply compliance template with custom source
+      When I run the command "templates apply compliance --source https://github.com/custom/repo"
+      Then the command should succeed
+      And the templates should be cloned from "https://github.com/custom/repo" at "main" branch
+      And the source path should be "templates/compliance"
+      And the destination should be ".docs/references/compliance"
+
+    Scenario: Apply compliance template with custom destination
+      When I run the command "templates apply compliance --destination ./custom/path"
+      Then the command should succeed
+      And the destination should be "./custom/path"
+
+    Scenario: Apply compliance template with value replacements
+      Given I have a values file "values.json" with:
+        """
+        {
+          "ProjectName": "MyProject",
+          "CompanyName": "ACME Corp"
+        }
+        """
+      When I run the command "templates apply compliance --input-json values.json"
+      Then the command should succeed
+      And the rendered files should contain replaced values
+
+    Scenario: Apply compliance template with all custom parameters
+      Given I have a values file "values.json" with:
+        """
+        {
+          "ProjectName": "MyProject"
+        }
+        """
+      When I run the command "templates apply compliance --source https://github.com/custom/repo --destination ./output --input-json values.json"
+      Then the command should succeed
+      And the templates should be cloned from "https://github.com/custom/repo"
+      And the destination should be "./output"
+      And the rendered files should contain replaced values
+
+    Scenario: Apply unknown template should fail gracefully
+      When I run the command "templates apply unknown-template"
       Then the command should fail
-      And the error output should contain "template directory does not exist"
+      And the error output should contain "unknown template: unknown-template"
+      And the error output should contain "Available templates: compliance"
 
-  Rule: Template scanning discovers placeholders in files
+  Rule: Templates install subcommand supports template-specific installation with defaults
 
-    @skip
-    Scenario: List scans files with placeholders in content
-      Given I have a template directory "test-templates/"
-      And I have a template file "test-templates/config.yaml" with content:
-        """
-        name: {{ .ProjectName }}
-        """
-      When I run the command "templates list --template test-templates/"
+    Scenario: Install specs template with all defaults
+      When I run the command "templates install specs"
       Then the command should succeed
-      And the output should contain "{{ .ProjectName }}"
-      And the output should contain "Total: 1 placeholders"
+      And the templates should be cloned from "https://github.com/ready-to-release/eac" at "main" branch
+      And the source path should be "templates/specs"
+      And the destination should be ".r2r/templates/specs"
 
-    @skip
-    Scenario: List scans placeholders in filenames
-      Given I have a template directory "test-templates/"
-      And I have a template file "test-templates/README.md" with content:
-        """
-        # {{ .ProjectName }}
-        """
-      When I run the command "templates list --template test-templates/"
+    Scenario: Install specs template with custom source
+      When I run the command "templates install specs --source https://github.com/custom/repo"
       Then the command should succeed
-      And the output should contain "{{ .ProjectName }}"
-      And the output should contain "Total: 1 placeholders"
+      And the templates should be cloned from "https://github.com/custom/repo" at "main" branch
+      And the source path should be "templates/specs"
+
+    Scenario: Install specs template with custom destination
+      When I run the command "templates install specs --destination ./custom/templates"
+      Then the command should succeed
+      And the destination should be "./custom/templates"
+
+    Scenario: Install specs template with all custom parameters
+      When I run the command "templates install specs --source https://github.com/custom/repo --destination ./output"
+      Then the command should succeed
+      And the templates should be cloned from "https://github.com/custom/repo"
+      And the destination should be "./output"
+
+    Scenario: Install unknown template should fail gracefully
+      When I run the command "templates install unknown-template"
+      Then the command should fail
+      And the error output should contain "unknown template: unknown-template"
+      And the error output should contain "Available templates: specs"
+
+  Rule: Template commands are extensible for new template types
+
+    Scenario: Adding new template requires minimal code changes
+      Given the templates command system is implemented
+      When a developer adds a new template type "architecture"
+      Then they should only need to create a new file "templates/apply/architecture.go"
+      Or they should only need to create a new file "templates/install/architecture.go"
+      And the file should register the template with default configuration
+      And the command "templates apply architecture" should automatically work
+      Or the command "templates install architecture" should automatically work
