@@ -1,6 +1,10 @@
 package testing
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
+)
 
 // ApplyInferences applies inference rules to enrich test tags
 func ApplyInferences(tests []TestReference, inferences []Inference) []TestReference {
@@ -195,4 +199,53 @@ func filterTags(tags []string, pattern string) []string {
 		}
 	}
 	return result
+}
+
+// InferSystemDepsFromModuleDeps infers system dependencies based on module dependencies
+// For example, if a test has @depm:src-commands and src-commands is a go-* module,
+// then @deps:go should be inferred
+func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Registry) []TestReference {
+	if registry == nil {
+		return tests // No registry available, return unchanged
+	}
+
+	enriched := make([]TestReference, len(tests))
+
+	for i, test := range tests {
+		enriched[i] = test
+		enriched[i].Tags = copyTags(test.Tags)
+
+		// Extract module dependencies from tags
+		for _, tag := range test.Tags {
+			if !strings.HasPrefix(tag, "@depm:") {
+				continue
+			}
+
+			// Extract module moniker from @depm:<moniker>
+			moniker := strings.TrimPrefix(tag, "@depm:")
+
+			// Look up module in registry
+			module, exists := registry.Get(moniker)
+			if !exists {
+				continue // Module not found, skip
+			}
+
+			// Check module type and infer system dependencies
+			moduleType := module.Type
+
+			// If module type starts with "go-", infer @deps:go
+			if strings.HasPrefix(moduleType, "go-") {
+				if !contains(enriched[i].Tags, "@deps:go") {
+					enriched[i].Tags = append(enriched[i].Tags, "@deps:go")
+				}
+			}
+
+			// TODO: Add more module type -> system dependency mappings as needed
+			// For example:
+			// - python-* modules -> @deps:python
+			// - docker-* modules -> @deps:docker
+		}
+	}
+
+	return enriched
 }

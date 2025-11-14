@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
 	"github.com/ready-to-release/eac/src/core/repository"
 	systemdeps "github.com/ready-to-release/eac/src/core/system-deps"
@@ -155,7 +156,18 @@ func TestSuite() int {
 	// Phase 2: Apply inference rules
 	fmt.Fprintf(multiWriter, "=== Phase 2: Inference Engine ===\n")
 	allTests = testing.ApplyInferences(allTests, suite.Inferences)
-	fmt.Fprintf(multiWriter, "Applied %d inference rules\n\n", len(suite.Inferences))
+	fmt.Fprintf(multiWriter, "Applied %d inference rules\n", len(suite.Inferences))
+
+	// Load module registry for module-based inference
+	moduleReport, err := contractsreports.GetModuleContracts(workspaceRoot, "0.1.0")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load module contracts: %v\n", err)
+	} else {
+		// Infer system dependencies from module dependencies
+		allTests = testing.InferSystemDepsFromModuleDeps(allTests, moduleReport.Registry)
+		fmt.Fprintf(multiWriter, "Inferred system deps from module types\n")
+	}
+	fmt.Fprintf(multiWriter, "\n")
 
 	// Update markdown: Phase 2 complete
 	if mdFile != nil {

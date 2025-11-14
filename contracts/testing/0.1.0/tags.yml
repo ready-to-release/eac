@@ -84,10 +84,6 @@ tags:
     description: "Production monitoring and performance validation"
     type: verification
 
-  - tag: "@requires_isolation"
-    description: "Test must run in isolation with proper setup/teardown"
-    type: safety
-
   - tag: "@risk:<risk-id>"
     description: "Tag specific risks for tracking and mitigation"
     type: safety

@@ -28,9 +28,6 @@ var ValidTags = map[string]bool{
 	"@piv": true,
 	"@ppv": true,
 
-	// Safety tags
-	"@requires_isolation": true,
-
 	// Execution control tags
 	"@Manual": true,
 

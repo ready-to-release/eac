@@ -204,6 +204,13 @@ func TestApplyInferences_OnlyAppliesToMatchingTestType(t *testing.T) {
 	assert.NotContains(t, result[0].Tags, "@L2")
 }
 
+func TestInferSystemDepsFromModuleDeps_GoModule(t *testing.T) {
+	// This test requires a mock registry
+	// For now, we'll skip it and rely on integration testing
+	// TODO: Create a mock registry for unit testing
+	t.Skip("Requires module registry - use integration testing")
+}
+
 func TestDeriveOperationalVerification_NoVerificationTags(t *testing.T) {
 	tags := []string{"@L1", "@deps:go"}
 

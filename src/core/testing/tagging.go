@@ -124,3 +124,20 @@ func (c *TagContract) ValidateSkipReason(code string) (SkipReason, bool) {
 	reason, ok := reasons[code]
 	return reason, ok
 }
+
+// BuildGodogSkipTagFilter builds a Godog tag filter expression that excludes all @skip:<reason> tags
+// Returns: "~@skip:wip && ~@skip:broken && ~@skip:flaky && ..." based on skip_reasons in contract
+func (c *TagContract) BuildGodogSkipTagFilter() string {
+	if len(c.SkipReasons) == 0 {
+		return ""
+	}
+
+	filter := ""
+	for i, reason := range c.SkipReasons {
+		if i > 0 {
+			filter += " && "
+		}
+		filter += fmt.Sprintf("~@skip:%s", reason.Code)
+	}
+	return filter
+}

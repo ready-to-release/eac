@@ -115,7 +115,6 @@ func TestIsValidTag_KnownTags(t *testing.T) {
 	assert.True(t, IsValidTag("@deps:go"))
 	assert.True(t, IsValidTag("@deps:claude"))
 	assert.True(t, IsValidTag("@deps:az-cli"))
-	assert.True(t, IsValidTag("@requires_isolation"))
 }
 
 func TestIsValidTag_RiskPattern(t *testing.T) {
@@ -138,13 +137,13 @@ func TestGetKnownTags(t *testing.T) {
 	assert.Contains(t, knownTags, "@L1")
 	assert.Contains(t, knownTags, "@ov")
 	assert.Contains(t, knownTags, "@deps:docker")
-	assert.Contains(t, knownTags, "@requires_isolation")
 }
 
 // Test new execution control tags
 func TestIsValidTag_ExecutionControl(t *testing.T) {
-	assert.True(t, IsValidTag("@ignore"))
 	assert.True(t, IsValidTag("@Manual"))
+	assert.True(t, IsValidTag("@skip:wip"))
+	assert.True(t, IsValidTag("@skip:broken"))
 }
 
 // Test new GxP tags

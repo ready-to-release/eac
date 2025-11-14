@@ -10,6 +10,8 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
 	testing "github.com/ready-to-release/eac/src/core/testing"
 )
@@ -70,62 +72,57 @@ func ShowSuite() int {
 		return 1
 	}
 
-	// Phase 1: Discover all tests
-	allTests, err := testing.DiscoverAllTests(repoRoot)
+	// Load module registry
+	moduleReport, err := contractsreports.GetModuleContracts(repoRoot, "0.1.0")
+	var moduleRegistry *modules.Registry
+	if err == nil {
+		moduleRegistry = moduleReport.Registry
+	}
+
+	// Build file-to-module mapping
+	fileModuleMap, err := buildFileModuleMap(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error discovering tests: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Warning: could not load file-module mapping: %v\n", err)
+		fileModuleMap = make(map[string]string)
+	}
+
+	// Generate suite report using canonical data generator
+	report, err := testing.GenerateSuiteReport(suite, repoRoot, moduleRegistry, fileModuleMap)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error generating suite report: %v\n", err)
 		return 1
 	}
 
-	// Phase 2: Apply inferences
-	allTests = testing.ApplyInferences(allTests, suite.Inferences)
-
-	// Phase 3: Select tests for this suite
-	selectedTests := suite.SelectTests(allTests)
-
-	// Phase 3.5: Filter out framework tests (tests about the testing framework itself)
-	productionTests := []testing.TestReference{}
-	frameworkTests := []testing.TestReference{}
-	for _, test := range selectedTests {
-		if testing.ShouldSkipValidation(test) {
-			frameworkTests = append(frameworkTests, test)
-		} else {
-			productionTests = append(productionTests, test)
-		}
-	}
-
-	// Phase 4: Validate post-inference tags
-	validationErrors := testing.ValidateAllPostInference(productionTests, repoRoot)
-
-	if len(validationErrors) > 0 {
-		fmt.Fprintf(os.Stderr, "\n⚠️  WARNING: %d tests have validation errors:\n", len(validationErrors))
-		if len(frameworkTests) > 0 {
-			fmt.Fprintf(os.Stderr, "          (%d framework tests excluded from validation)\n", len(frameworkTests))
+	// Display validation errors if any
+	if len(report.ValidationErrors) > 0 {
+		fmt.Fprintf(os.Stderr, "\n⚠️  WARNING: %d tests have validation errors:\n", len(report.ValidationErrors))
+		if len(report.FrameworkTests) > 0 {
+			fmt.Fprintf(os.Stderr, "          (%d framework tests excluded from validation)\n", len(report.FrameworkTests))
 		}
 		fmt.Fprintf(os.Stderr, "\n")
-		for testName, errors := range validationErrors {
+		for testName, errors := range report.ValidationErrors {
 			fmt.Fprintf(os.Stderr, "  - %s:\n", testName)
 			for _, err := range errors {
 				fmt.Fprintf(os.Stderr, "    • %s\n", err)
 			}
 		}
 		fmt.Fprintf(os.Stderr, "\n")
-	} else if len(frameworkTests) > 0 {
-		fmt.Fprintf(os.Stderr, "\n✓ All tests pass validation (%d framework tests excluded from display)\n\n", len(frameworkTests))
+	} else if len(report.FrameworkTests) > 0 {
+		fmt.Fprintf(os.Stderr, "\n✓ All tests pass validation (%d framework tests excluded from display)\n\n", len(report.FrameworkTests))
 	}
 
 	// Display suite information
-	fmt.Printf("# Test Suite: %s\n\n", suite.Name)
-	fmt.Printf("**Moniker**: `%s`  \n", suite.Moniker)
-	fmt.Printf("**Description**: %s  \n", suite.Description)
-	fmt.Printf("**Production Tests**: %d  \n", len(productionTests))
-	fmt.Printf("**Framework Tests**: %d (excluded from display)  \n", len(frameworkTests))
-	fmt.Printf("**Total Discovered**: %d  \n", len(allTests))
+	fmt.Printf("# Test Suite: %s\n\n", report.SuiteName)
+	fmt.Printf("**Moniker**: `%s`  \n", report.SuiteMoniker)
+	fmt.Printf("**Description**: %s  \n", report.Description)
+	fmt.Printf("**Production Tests**: %d  \n", len(report.ProductionTests))
+	fmt.Printf("**Framework Tests**: %d (excluded from display)  \n", len(report.FrameworkTests))
+	fmt.Printf("**Total Discovered**: %d  \n", report.TotalDiscovered)
 	fmt.Printf("\n")
 
 	// Display selection criteria
 	fmt.Printf("## Selection Criteria\n\n")
-	for i, selector := range suite.Selectors {
+	for i, selector := range report.Selectors {
 		fmt.Printf("**Selector %d**:\n", i+1)
 		if len(selector.AnyOfTags) > 0 {
 			fmt.Printf("  - **AnyOf**: %s\n", strings.Join(selector.AnyOfTags, ", "))
@@ -139,44 +136,30 @@ func ShowSuite() int {
 		fmt.Printf("\n")
 	}
 
-	// Build file-to-module mapping once for efficiency
-	fileModuleMap, err := buildFileModuleMap(repoRoot)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not load file-module mapping: %v\n", err)
-		fileModuleMap = make(map[string]string) // Use empty map
-	}
-
 	// Display tests in markdown table using TableBuilder
 	fmt.Printf("## Production Tests\n\n")
 
 	tb := render.NewTableBuilder().
-		WithHeaders("#", "Test Name", "Type", "Module", "Level", "Verification", "System Deps", "Module Deps")
+		WithHeaders("#", "Test Name", "Type", "Module", "Level", "Verification", "System Deps", "Module Deps", "Module Type")
 
-	for i, test := range productionTests {
-		// Extract module from file path
-		module := extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
-
-		// Separate tags by type
-		levelTags := filterTagsByPrefix(test.Tags, "@L")
-		verificationTags := filterTagsByPatterns(test.Tags, []string{"@ov", "@iv", "@pv", "@piv", "@ppv"})
-		systemDeps := filterTagsByPrefix(test.Tags, "@deps:")
-		moduleDeps := filterTagsByPrefix(test.Tags, "@depm:")
-
+	for i, entry := range report.ProductionTests {
 		// Format tag columns
-		levelStr := strings.Join(levelTags, ", ")
-		verificationStr := strings.Join(verificationTags, ", ")
-		systemDepsStr := strings.Join(systemDeps, ", ")
-		moduleDepsStr := strings.Join(moduleDeps, ", ")
+		levelStr := strings.Join(entry.Level, ", ")
+		verificationStr := strings.Join(entry.Verification, ", ")
+		systemDepsStr := strings.Join(entry.SystemDeps, ", ")
+		moduleDepsStr := strings.Join(entry.ModuleDeps, ", ")
+		moduleTypesStr := strings.Join(entry.ModuleTypes, ", ")
 
 		tb.AddRow(
 			fmt.Sprintf("%d", i+1),
-			test.TestName,
-			test.Type,
-			module,
+			entry.TestName,
+			entry.Type,
+			entry.Module,
 			levelStr,
 			verificationStr,
 			systemDepsStr,
 			moduleDepsStr,
+			moduleTypesStr,
 		)
 	}
 
@@ -188,8 +171,8 @@ func ShowSuite() int {
 
 	// Count by type
 	typeCounts := make(map[string]int)
-	for _, test := range productionTests {
-		typeCounts[test.Type]++
+	for _, entry := range report.ProductionTests {
+		typeCounts[entry.Type]++
 	}
 
 	fmt.Printf("**By Type**:\n")
@@ -200,9 +183,8 @@ func ShowSuite() int {
 
 	// Count by module
 	moduleCounts := make(map[string]int)
-	for _, test := range productionTests {
-		module := extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
-		moduleCounts[module]++
+	for _, entry := range report.ProductionTests {
+		moduleCounts[entry.Module]++
 	}
 
 	fmt.Printf("**By Module**:\n")
@@ -212,8 +194,25 @@ func ShowSuite() int {
 	fmt.Printf("\n")
 
 	// Extract and display dependencies
-	systemDeps := testing.GetSystemDependencies(productionTests)
-	moduleDeps := testing.GetModuleDependencies(productionTests)
+	allSystemDeps := make(map[string]bool)
+	allModuleDeps := make(map[string]bool)
+	for _, entry := range report.ProductionTests {
+		for _, dep := range entry.SystemDeps {
+			allSystemDeps[dep] = true
+		}
+		for _, dep := range entry.ModuleDeps {
+			allModuleDeps[dep] = true
+		}
+	}
+
+	systemDeps := []string{}
+	for dep := range allSystemDeps {
+		systemDeps = append(systemDeps, dep)
+	}
+	moduleDeps := []string{}
+	for dep := range allModuleDeps {
+		moduleDeps = append(moduleDeps, dep)
+	}
 
 	if len(systemDeps) > 0 || len(moduleDeps) > 0 {
 		fmt.Printf("**Dependencies**:\n")
@@ -247,67 +246,4 @@ func buildFileModuleMap(repoRoot string) (map[string]string, error) {
 	}
 
 	return fileMap, nil
-}
-
-// filterTagsByPrefix filters tags that start with the given prefix (deduplicated)
-func filterTagsByPrefix(tags []string, prefix string) []string {
-	seen := make(map[string]bool)
-	filtered := []string{}
-	for _, tag := range tags {
-		if strings.HasPrefix(tag, prefix) && !seen[tag] {
-			filtered = append(filtered, tag)
-			seen[tag] = true
-		}
-	}
-	return filtered
-}
-
-// filterTagsByPatterns filters tags that match any of the given exact patterns (deduplicated)
-func filterTagsByPatterns(tags []string, patterns []string) []string {
-	patternMap := make(map[string]bool)
-	for _, p := range patterns {
-		patternMap[p] = true
-	}
-
-	seen := make(map[string]bool)
-	filtered := []string{}
-	for _, tag := range tags {
-		if patternMap[tag] && !seen[tag] {
-			filtered = append(filtered, tag)
-			seen[tag] = true
-		}
-	}
-	return filtered
-}
-
-// extractModuleFromPath looks up the module for a file path using the file-module mapping
-func extractModuleFromPath(filePath string, fileModuleMap map[string]string, repoRoot string) string {
-	// Normalize separators
-	filePath = strings.ReplaceAll(filePath, "\\", "/")
-	repoRoot = strings.ReplaceAll(repoRoot, "\\", "/")
-
-	// Convert absolute path to relative path from repo root
-	relativePath := filePath
-	if strings.HasPrefix(filePath, repoRoot) {
-		relativePath = strings.TrimPrefix(filePath, repoRoot)
-		relativePath = strings.TrimPrefix(relativePath, "/")
-	}
-
-	// For specs/ files, extract module from path structure (specs/MODULE/...)
-	parts := strings.Split(relativePath, "/")
-	if len(parts) >= 2 && parts[0] == "specs" {
-		return parts[1]
-	}
-
-	// For src/ files, look up in the file-module map
-	if module, found := fileModuleMap[relativePath]; found {
-		return module
-	}
-
-	// Try direct lookup as fallback
-	if module, found := fileModuleMap[filePath]; found {
-		return module
-	}
-
-	return "unknown"
 }
