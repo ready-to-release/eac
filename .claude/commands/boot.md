@@ -1,14 +1,14 @@
 # Boot
 
 ```text
-description: "Initialize session with project context from CLAUDE.md"
+description: "Initialize session with project context from agent.md"
 ```
 
 Initialize the development session by loading project context and MCP server capabilities.
 
 ## Initialization Steps
 
-1. **Read `/CLAUDE.md`** - Load the main project instructions
+1. **Read `/agent.md`** - Load the main project instructions
 2. **Verify MCP servers** - Confirm available `mcp__commands__*` tools
 3. **Internalize constraints and guidelines** - Apply all rules to the session
 4. **Provide initialization report** - Confirm readiness
@@ -17,7 +17,7 @@ Initialize the development session by loading project context and MCP server cap
 
 ### 1. Load Project Context
 
-Read and internalize the `/CLAUDE.md` file, which includes:
+Read and internalize the `/agent.md` file, which includes:
 
 - Project constraints (git operations, file organization)
 - Development workflow (Specs → TDD → Validation)
@@ -44,7 +44,7 @@ After loading all context, provide a structured report:
 ```text
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃  ⚡ SYSTEM INITIALIZED ⚡                                      ┃
-┃  Project context loaded from CLAUDE.md                        ┃
+┃  Project context loaded from agent.md                         ┃
 ┃  MCP servers: [Status]                                        ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
@@ -75,8 +75,8 @@ Ready to assist with project tasks.
 
 Initialization is complete when:
 
-- ✓ CLAUDE.md has been read and internalized
+- ✓ agent.md has been read and internalized
 - ✓ MCP command tools are recognized and available
 - ✓ All constraints and guidelines are active
 - ✓ Initialization report has been provided
-- ✓ Flashy initialization message displayed (per CLAUDE.md requirement)
+- ✓ Flashy initialization message displayed (per agent.md requirement)

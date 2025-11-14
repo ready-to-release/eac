@@ -25,13 +25,18 @@ func NewGitCloner(repoURL string) *GitCloner {
 // CloneToTemp clones the repository to a temporary directory
 // Returns the path to the cloned directory
 func (g *GitCloner) CloneToTemp() (string, error) {
+	// SECURITY: Validate URL before executing git command
+	if err := SanitizeGitURL(g.repoURL); err != nil {
+		return "", fmt.Errorf("invalid repository URL: %w", err)
+	}
+
 	// Create temp directory
 	tmpDir, err := os.MkdirTemp("", "templates-clone-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
 
-	g.targetDir = tmpDir
+	// DON'T set g.targetDir until clone succeeds (prevents cleanup issues)
 
 	// Clone repository with depth=1 for speed (only latest commit)
 	cmd := exec.Command("git", "clone", "--depth", "1", "--branch", g.branch, g.repoURL, tmpDir)
@@ -40,6 +45,9 @@ func (g *GitCloner) CloneToTemp() (string, error) {
 		os.RemoveAll(tmpDir) // Clean up on error
 		return "", fmt.Errorf("failed to clone repository: %w\nOutput: %s", err, string(output))
 	}
+
+	// Only set targetDir after successful clone (prevents cleanup of non-existent dir)
+	g.targetDir = tmpDir
 
 	// Remove .git directory to save space and avoid confusion
 	gitDir := filepath.Join(tmpDir, ".git")

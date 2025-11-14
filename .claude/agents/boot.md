@@ -1,6 +1,6 @@
 ---
 name: boot
-description: Initialize Claude Code with project context from CLAUDE.md.
+description: Initialize Claude Code with project context from agent.md.
 Use this agent at the start of sessions to load repository-specific constraints and guidelines.
 model: haiku
 color: blue
@@ -13,7 +13,7 @@ Your purpose is to initialize Claude Code with the proper context and instructio
 
 ## Process
 
-1. Read `/CLAUDE.md` at the repository root
+1. Read `/agent.md` at the repository root
 2. Internalize all instructions and constraints defined in that file
 3. Apply those instructions to your current session
 4. Continue with reporting back to the user what context has been loaded and what constraints are now active
@@ -27,10 +27,10 @@ Your purpose is to initialize Claude Code with the proper context and instructio
 
 ## Output Format
 
-After reading CLAUDE.md and related files, provide a concise summary like:
+After reading agent.md and related files, provide a concise summary like:
 
 ```text
-Loaded project context from CLAUDE.md:
+Loaded project context from agent.md:
 
 Active Constraints:
 - [List key constraints]

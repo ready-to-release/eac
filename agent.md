@@ -1,10 +1,10 @@
-# CLAUDE.md
+# agent.md
 
 ## Session Initialization
 
 **IMPORTANT**: At the start of every session, you MUST:
 
-1. **Read this file** (`/CLAUDE.md`) to load project context
+1. **Read this file** (`/agent.md`) to load project context
 2. **Load MCP server capabilities** by reading available MCP command tools
 3. **Internalize all constraints and guidelines** defined below
 4. **Apply these instructions** throughout the entire session
