@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="logo/eac-logo.png" width="200" /><br>
-  <h3>Turn every commit into deployable, compliant software you can trust</h3>
+  <span style="font-size: 1.3em;">Turn every commit into deployable, compliant software you can trust</span>
 </p>
 
 
