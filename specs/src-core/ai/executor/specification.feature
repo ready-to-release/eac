@@ -5,16 +5,8 @@ Feature: src-core-ai_executor
 
   Rule: Executor loads provider from configuration
 
-    The executor reads .r2r/agent-config.yml to determine which provider to use.
+    The executor reads agent-config.yml to determine which provider to use.
     If the config exists and is valid, the executor uses the specified provider.
-
-    @L2 @ov
-    Scenario: Execute with claude-api configured
-      Given agent config exists with provider "claude-api"
-      And environment variable "ANTHROPIC_API_KEY" is set
-      When I execute a prompt "Hello"
-      Then the executor uses claude-api provider
-      And the API key from environment is used
 
     @L2 @ov
     Scenario: Execute with claude-cli configured
@@ -23,80 +15,82 @@ Feature: src-core-ai_executor
       Then the executor uses claude-cli provider
       And no API key is required
 
-    @L2 @ov
-    Scenario: Execute with openai configured
-      Given agent config exists with provider "openai"
-      And environment variable "OPENAI_API_KEY" is set
-      When I execute a prompt "Hello"
-      Then the executor uses openai provider
-      And the API key from environment is used
+  Rule: Executor requires valid configuration or fails with clear instructions
 
-  Rule: Executor falls back to claude-cli when no config exists
-
-    When no agent configuration file exists, the executor automatically falls back
-    to the claude-cli provider, which uses Claude Pro subscription authentication.
-    This provides zero-configuration usage for all users.
+    When no agent configuration file exists or configuration is invalid,
+    the executor MUST throw an error with clear instructions to run r2r init.
+    There is NO automatic fallback behavior.
 
     @L2 @ov
     Scenario: Execute with no config file
       Given no agent config file exists
       When I execute a prompt "Hello"
-      Then the executor uses claude-cli provider
-      And no API key is required
+      Then an error is returned
+      And the error message contains "agent-config.yml not found"
+      And the error message contains "run: r2r agent init"
 
     @L2 @ov
     Scenario: Execute with malformed config file
       Given agent config file is malformed
       When I execute a prompt "Hello"
-      Then the executor uses claude-cli provider
-      And a warning is logged about config error
+      Then an error is returned
+      And the error message contains "failed to parse agent-config.yml"
+      And the error message contains "run: r2r agent init"
 
-  Rule: Executor validates provider before execution
-
-    The executor validates that the selected provider is properly configured
-    before attempting execution. If validation fails, it falls back to claude-cli
-    or returns a clear error.
-
-    @L2 @ov @negative
-    Scenario: Execute with missing API key for claude-api
-      Given agent config exists with provider "claude-api"
-      And environment variable "ANTHROPIC_API_KEY" is not set
-      When I execute a prompt "Hello"
-      Then the executor falls back to claude-cli provider
-      And a warning is logged about missing API key
-
-    @L2 @ov @negative
+    @L2 @ov
     Scenario: Execute with invalid provider name
       Given agent config exists with provider "invalid-provider"
       When I execute a prompt "Hello"
-      Then the executor falls back to claude-cli provider
-      And a warning is logged about invalid provider
+      Then an error is returned
+      And the error message contains "unknown provider: invalid-provider"
+      And the error message contains "run: r2r agent init"
 
-  Rule: Executor logs all AI interactions
+  Rule: Executor logs interactions based on debug parameter
 
-    All AI executions are logged to .r2r/logs/ai-executions.jsonl for debugging
-    and audit purposes. Each log entry includes timestamp, provider, prompt,
-    response, duration, and success/failure status.
+    The executor supports a debug parameter that controls logging behavior.
+    When debug is true, logs are included in the prompt output.
+    When debug is false, no logs are recorded or stored anywhere.
+    There is NO logging to .r2r directory.
 
     @L2 @ov
-    Scenario: Successful execution is logged
+    Scenario: Execute with debug enabled
       Given agent config exists with provider "claude-cli"
+      And debug parameter is true
       When I execute a prompt "Hello"
-      And the execution succeeds
-      Then a log entry is written to .r2r/logs/ai-executions.jsonl
-      And the log entry contains timestamp
-      And the log entry contains provider "claude-cli"
-      And the log entry contains success status
+      Then the execution succeeds
+      And debug logs are included in the output
+      And the debug logs contain timestamp
+      And the debug logs contain provider "claude-cli"
+      And the debug logs contain success status
 
-    @L2 @ov @negative
-    Scenario: Failed execution is logged
-      Given agent config exists with provider "claude-api"
-      And environment variable "ANTHROPIC_API_KEY" is set to invalid value
+    @L2 @ov
+    Scenario: Execute with debug disabled
+      Given agent config exists with provider "claude-cli"
+      And debug parameter is false
       When I execute a prompt "Hello"
-      And the execution fails
-      Then a log entry is written to .r2r/logs/ai-executions.jsonl
-      And the log entry contains failure status
-      And the log entry contains error message
+      Then the execution succeeds
+      And no debug logs are included in the output
+      And no log files are created
+
+    @L2 @ov
+    Scenario: Execute with debug disabled by default
+      Given agent config exists with provider "claude-cli"
+      And no debug parameter is specified
+      When I execute a prompt "Hello"
+      Then the execution succeeds
+      And no debug logs are included in the output
+      And no log files are created
+
+    @L2 @ov
+    Scenario: Failed execution with debug enabled
+      Given agent config exists with provider "claude-cli"
+      And debug parameter is true
+      And the provider will fail
+      When I execute a prompt "Hello"
+      Then the execution fails
+      And debug logs are included in the output
+      And the debug logs contain failure status
+      And the debug logs contain error message
 
   Rule: Executor supports functional options
 
@@ -105,16 +99,25 @@ Feature: src-core-ai_executor
 
     @L2 @ov
     Scenario: Execute with custom model option
-      Given agent config exists with provider "claude-api"
-      And environment variable "ANTHROPIC_API_KEY" is set
-      When I execute a prompt "Hello" with model "claude-3-opus-20240229"
+      Given agent config exists with provider "claude-cli"
+      When I execute a prompt "Hello" with model "opus"
       Then the executor uses the specified model
-      And the log entry contains model "claude-3-opus-20240229"
 
     @L2 @ov
     Scenario: Execute with custom temperature option
-      Given agent config exists with provider "claude-api"
-      And environment variable "ANTHROPIC_API_KEY" is set
+      Given agent config exists with provider "claude-cli"
       When I execute a prompt "Hello" with temperature 0.7
       Then the executor uses the specified temperature
-      And the log entry contains temperature 0.7
+
+  Rule: Default configuration is included in repository
+
+    The repository includes a default .r2r/agent-config.yml file
+    with claude-cli as the only configured provider.
+
+    @L1 @ov
+    Scenario: Repository contains default agent-config.yml
+      Given a fresh clone of the repository
+      Then agent-config.yml exists in the .r2r directory
+      And the config specifies provider "claude-cli"
+      And the config does not require API keys
+      And the config is safe to commit to version control

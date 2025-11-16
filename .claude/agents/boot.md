@@ -2,7 +2,7 @@
 name: boot
 description: Initialize Claude Code with project context from agent.md.
 Use this agent at the start of sessions to load repository-specific constraints and guidelines.
-model: haiku
+model: claude-3-haiku-20240307
 color: blue
 ---
 

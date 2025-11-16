@@ -115,7 +115,7 @@ func configureAgentProvider(aiProvider string) (*agentProviderConfig, error) {
 	case "claude-cli":
 		config.providerName = "claude-cli"
 		config.envVarName = ""
-		config.model = "sonnet"
+		config.model = "claude-3-5-sonnet-20241022"
 		config.endpoint = ""
 
 	case "openai":

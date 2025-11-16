@@ -4,6 +4,7 @@ package ai
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -14,7 +15,21 @@ func TestLoadConfig(t *testing.T) {
 		envVars     map[string]string
 		want        *Config
 		wantErr     bool
+		errContains string // Expected error message content
 	}{
+		{
+			name: "valid config with claude-cli provider",
+			configYAML: `provider:
+  name: claude-cli
+  model: sonnet`,
+			envVars: map[string]string{},
+			want: &Config{
+				ProviderName: "claude-cli",
+				Model:        "sonnet",
+				APIKey:       "",
+			},
+			wantErr: false,
+		},
 		{
 			name: "valid config with env var substitution",
 			configYAML: `provider:
@@ -28,19 +43,6 @@ func TestLoadConfig(t *testing.T) {
 				Model:        "claude-3-haiku-20240307",
 				Endpoint:     "https://api.anthropic.com/v1",
 				APIKey:       "sk-ant-test",
-			},
-			wantErr: false,
-		},
-		{
-			name: "claude-cli provider without API key",
-			configYAML: `provider:
-  name: claude-cli
-  model: sonnet`,
-			envVars: map[string]string{},
-			want: &Config{
-				ProviderName: "claude-cli",
-				Model:        "sonnet",
-				APIKey:       "",
 			},
 			wantErr: false,
 		},
@@ -59,20 +61,23 @@ func TestLoadConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:        "malformed YAML returns error",
+			name:        "malformed YAML returns error with init instructions",
 			configYAML:  "invalid: yaml: content:",
 			wantErr:     true,
+			errContains: "run: r2r agent init",
 		},
 		{
-			name: "missing provider name returns error",
+			name: "missing provider name returns error with init instructions",
 			configYAML: `provider:
   model: some-model`,
-			wantErr: true,
+			wantErr:     true,
+			errContains: "provider name is required",
 		},
 		{
-			name: "empty config file returns error",
-			configYAML: "",
-			wantErr: true,
+			name:        "empty config file returns error with init instructions",
+			configYAML:  "",
+			wantErr:     true,
+			errContains: "run: r2r agent init",
 		},
 	}
 
@@ -98,6 +103,10 @@ func TestLoadConfig(t *testing.T) {
 				return
 			}
 			if tt.wantErr {
+				// Verify error message contains expected instructions
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("LoadConfig() error = %v, want error containing %q", err, tt.errContains)
+				}
 				return // Skip comparison if we expected an error
 			}
 
@@ -122,6 +131,44 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 	_, err := LoadConfig(nonExistentPath)
 	if err == nil {
 		t.Error("LoadConfig() expected error for non-existent file, got nil")
+	}
+
+	// Verify error message contains init instructions
+	if !strings.Contains(err.Error(), "agent-config.yml not found") {
+		t.Errorf("LoadConfig() error = %v, want error containing 'agent-config.yml not found'", err)
+	}
+	if !strings.Contains(err.Error(), "run: r2r agent init") {
+		t.Errorf("LoadConfig() error = %v, want error containing 'run: r2r agent init'", err)
+	}
+}
+
+func TestLoadConfigFromRepoRoot(t *testing.T) {
+	// Test that config is loaded from repository root
+	tmpDir := t.TempDir()
+
+	// Create agent-config.yml in repo root (tmpDir simulates repo root)
+	configPath := filepath.Join(tmpDir, "agent-config.yml")
+	configContent := `provider:
+  name: claude-cli
+  model: sonnet`
+
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	// Load config
+	got, err := LoadConfig(configPath)
+	if err != nil {
+		t.Errorf("LoadConfig() error = %v, want nil", err)
+		return
+	}
+
+	// Verify config was loaded correctly
+	if got.ProviderName != "claude-cli" {
+		t.Errorf("ProviderName = %v, want claude-cli", got.ProviderName)
+	}
+	if got.Model != "sonnet" {
+		t.Errorf("Model = %v, want sonnet", got.Model)
 	}
 }
 

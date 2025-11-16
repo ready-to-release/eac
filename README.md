@@ -1,6 +1,8 @@
 # Everything as Code
 
-## Turn every commit into deployable, compliant software you can trust
+<p align="center">
+  <img src="logo/eac-logo-text.png" width="200" />
+</p>
 
 [![Release Status](https://github.com/ready-to-release/eac/actions/workflows/trigger.yml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/trigger.yml)
 [![GitHub Stars](https://img.shields.io/github/stars/ready-to-release/eac?style=social)](https://github.com/ready-to-release/eac/stargazers)

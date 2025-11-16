@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LoadConfig loads and parses agent configuration from .r2r/agent-config.yml
+// LoadConfig loads and parses agent configuration from agent-config.yml
 //
 // Intent: Load AI provider configuration from file with environment variable substitution.
 //
@@ -20,6 +20,7 @@ import (
 //   - Explicit error handling at each step (file read, YAML parse, env var substitution)
 //   - substituteEnvVars() is a pure function - no side effects
 //   - All transformations are visible and traceable
+//   - Clear error messages with recovery instructions
 //
 // Easy to change:
 //   - Config struct is separate from loading logic (can change one without the other)
@@ -31,17 +32,20 @@ import (
 //   - Tests cover all cases: valid config, missing file, malformed YAML, missing env vars
 //   - Early validation: fail fast with clear error if config is invalid
 //   - No global state - function is stateless and testable
-//   - Errors wrapped with context using fmt.Errorf("failed to load config: %w", err)
+//   - Errors include actionable instructions to run r2r agent init
 func LoadConfig(path string) (*Config, error) {
 	// Read file
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("agent-config.yml not found at %s\n\nPlease run: r2r agent init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", path)
+		}
+		return nil, fmt.Errorf("failed to read config file %s: %w\n\nPlease run: r2r agent init --ai <provider>", path, err)
 	}
 
 	// Handle empty file
 	if len(data) == 0 {
-		return nil, fmt.Errorf("config file is empty")
+		return nil, fmt.Errorf("agent-config.yml is empty\n\nPlease run: r2r agent init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
 	}
 
 	// Parse YAML
@@ -49,7 +53,7 @@ func LoadConfig(path string) (*Config, error) {
 		Provider Config `yaml:"provider"`
 	}
 	if err := yaml.Unmarshal(data, &rawConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse config YAML: %w", err)
+		return nil, fmt.Errorf("failed to parse agent-config.yml: %w\n\nPlease run: r2r agent init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", err)
 	}
 
 	// Substitute environment variables
@@ -59,7 +63,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	// Validate required fields
 	if config.ProviderName == "" {
-		return nil, fmt.Errorf("provider name is required")
+		return nil, fmt.Errorf("provider name is required in agent-config.yml\n\nPlease run: r2r agent init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
 	}
 
 	return config, nil
