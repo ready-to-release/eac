@@ -17,6 +17,7 @@ func init() {
 	// Add flags
 	AIAskCmd.Flags().StringP("model", "m", "", "Override model (e.g., opus, sonnet, haiku)")
 	AIAskCmd.Flags().Float64P("temperature", "t", 0.3, "Temperature (0.0-1.0)")
+	AIAskCmd.Flags().BoolP("debug", "d", false, "Include debug information in output")
 }
 
 // AICmd is the parent command for AI operations
@@ -37,14 +38,14 @@ var AIAskCmd = &cobra.Command{
 	Short: "Ask AI a question",
 	Long: `Ask the configured AI provider a question.
 
-This is a demonstration command showing how to use the AI executor.
-The executor will use the provider configured in .r2r/agent-config.yml
-or fall back to claude-cli if no configuration exists.
+This command uses the AI provider configured in agent-config.yml.
+If no configuration exists, you will be prompted to run: r2r agent init
 
 Examples:
   r2r ai ask "What is the capital of France?"
   r2r ai ask "Write a haiku about coding" --model opus
-  r2r ai ask "Explain recursion" --temperature 0.7`,
+  r2r ai ask "Explain recursion" --temperature 0.7
+  r2r ai ask "Analyze this code" --debug`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Get workspace root
@@ -57,10 +58,6 @@ Examples:
 		executor := ai.NewExecutor(workspaceRoot)
 		providers.RegisterBuiltIn(executor)
 
-		// Set up logging
-		logger := ai.NewFileLogger(workspaceRoot)
-		executor.SetLogger(logger)
-
 		// Get prompt from args
 		prompt := args[0]
 
@@ -71,6 +68,9 @@ Examples:
 		}
 		if temp, _ := cmd.Flags().GetFloat64("temperature"); cmd.Flags().Changed("temperature") {
 			opts = append(opts, ai.WithTemperature(temp))
+		}
+		if debug, _ := cmd.Flags().GetBool("debug"); debug {
+			opts = append(opts, ai.WithDebug(true))
 		}
 
 		// Execute

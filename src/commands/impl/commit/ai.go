@@ -345,10 +345,6 @@ func callClaudeAgentAPIRaw(agentFilePath string, prompt string, workspaceRoot st
 	executor := ai.NewExecutor(workspaceRoot)
 	providers.RegisterBuiltIn(executor)
 
-	// Set up logging
-	logger := ai.NewFileLogger(workspaceRoot)
-	executor.SetLogger(logger)
-
 	// Build full prompt: agent instructions + user input
 	fullPrompt := string(agentContent) + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + prompt
 

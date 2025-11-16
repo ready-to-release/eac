@@ -44,6 +44,7 @@ type ExecuteOptions struct {
 	Model       string  // Model to use (e.g., "haiku", "sonnet", "gpt-4")
 	Temperature float64 // Randomness (0.0 - 1.0), default 0.3
 	MaxTokens   int     // Max response length, default 4000
+	Debug       bool    // Include debug logs in output, default false
 }
 
 // WithModel sets the AI model to use for execution
@@ -64,6 +65,15 @@ func WithTemperature(temp float64) Option {
 func WithMaxTokens(max int) Option {
 	return func(opts *ExecuteOptions) {
 		opts.MaxTokens = max
+	}
+}
+
+// WithDebug enables debug logging in the output
+// When enabled, execution logs are included in the prompt output
+// When disabled (default), no logs are recorded or stored
+func WithDebug(debug bool) Option {
+	return func(opts *ExecuteOptions) {
+		opts.Debug = debug
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 // ExecutorRegistry defines the interface for registering providers
 type ExecutorRegistry interface {
 	RegisterProvider(name string, factory ai.ProviderFactory)
-	SetFallbackProvider(factory ai.ProviderFactory)
 }
 
 // RegisterBuiltIn registers all built-in providers with an executor
@@ -42,10 +41,5 @@ func RegisterBuiltIn(executor ExecutorRegistry) {
 			return nil, fmt.Errorf("GOOGLE_API_KEY is required for gemini provider")
 		}
 		return NewGemini(config.APIKey, config.Model)
-	})
-
-	// Set claude-cli as the fallback provider
-	executor.SetFallbackProvider(func(config *ai.Config) (ai.Provider, error) {
-		return NewClaudeCLI(), nil
 	})
 }

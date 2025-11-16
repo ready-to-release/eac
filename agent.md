@@ -1,4 +1,4 @@
-# agent.md
+# Agent
 
 ## Session Initialization
 
