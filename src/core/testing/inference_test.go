@@ -3,6 +3,7 @@ package testing
 import (
 	"testing"
 
+	"github.com/ready-to-release/eac/src/core/environments"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -278,4 +279,118 @@ func TestHasAnyLevelTag(t *testing.T) {
 	assert.True(t, hasAnyLevelTag([]string{"@L4"}))
 	assert.False(t, hasAnyLevelTag([]string{"@ov", "@deps:go"}))
 	assert.False(t, hasAnyLevelTag([]string{}))
+}
+
+func TestInferSystemDepsFromEnv_Local01(t *testing.T) {
+	envContract, err := environments.LoadEnvironmentContract()
+	assert.NoError(t, err)
+
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test using local01 environment",
+			Tags:     []string{"@env:local01"},
+		},
+	}
+
+	result := InferSystemDepsFromEnv(tests, envContract)
+
+	assert.Len(t, result, 1)
+	assert.Contains(t, result[0].Tags, "@env:local01")
+	assert.Contains(t, result[0].Tags, "@deps:docker")
+}
+
+func TestInferSystemDepsFromEnv_Plte01(t *testing.T) {
+	envContract, err := environments.LoadEnvironmentContract()
+	assert.NoError(t, err)
+
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test using plte01 environment",
+			Tags:     []string{"@env:plte01"},
+		},
+	}
+
+	result := InferSystemDepsFromEnv(tests, envContract)
+
+	assert.Len(t, result, 1)
+	assert.Contains(t, result[0].Tags, "@env:plte01")
+	assert.Contains(t, result[0].Tags, "@deps:kubectl")
+	assert.Contains(t, result[0].Tags, "@deps:helm")
+}
+
+func TestInferSystemDepsFromEnv_MultipleEnvironments(t *testing.T) {
+	envContract, err := environments.LoadEnvironmentContract()
+	assert.NoError(t, err)
+
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test using multiple environments",
+			Tags:     []string{"@env:local01", "@env:plte01"},
+		},
+	}
+
+	result := InferSystemDepsFromEnv(tests, envContract)
+
+	assert.Len(t, result, 1)
+	assert.Contains(t, result[0].Tags, "@env:local01")
+	assert.Contains(t, result[0].Tags, "@env:plte01")
+	assert.Contains(t, result[0].Tags, "@deps:docker")
+	assert.Contains(t, result[0].Tags, "@deps:kubectl")
+	assert.Contains(t, result[0].Tags, "@deps:helm")
+}
+
+func TestInferSystemDepsFromEnv_UnknownEnvironment(t *testing.T) {
+	envContract, err := environments.LoadEnvironmentContract()
+	assert.NoError(t, err)
+
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test using unknown environment",
+			Tags:     []string{"@env:unknown"},
+		},
+	}
+
+	result := InferSystemDepsFromEnv(tests, envContract)
+
+	assert.Len(t, result, 1)
+	assert.Contains(t, result[0].Tags, "@env:unknown")
+	// Should not add any deps since environment doesn't exist
+	assert.NotContains(t, result[0].Tags, "@deps:docker")
+}
+
+func TestInferSystemDepsFromEnv_NilContract(t *testing.T) {
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test with nil contract",
+			Tags:     []string{"@env:local01"},
+		},
+	}
+
+	result := InferSystemDepsFromEnv(tests, nil)
+
+	assert.Len(t, result, 1)
+	assert.Equal(t, tests[0].Tags, result[0].Tags)
+}
+
+func TestInferSystemDepsFromEnv_NoEnvironmentTags(t *testing.T) {
+	envContract, err := environments.LoadEnvironmentContract()
+	assert.NoError(t, err)
+
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test without environment tags",
+			Tags:     []string{"@L2", "@ov"},
+		},
+	}
+
+	result := InferSystemDepsFromEnv(tests, envContract)
+
+	assert.Len(t, result, 1)
+	assert.Equal(t, tests[0].Tags, result[0].Tags)
 }
