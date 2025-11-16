@@ -1,4 +1,4 @@
-@L1
+@L2
 Feature: src-core_risk-control-tags
 
   As a test framework

@@ -9,8 +9,8 @@ source:
   exclude_children_owned_source: false
   includes:
     - ".mcp.json"
-    - "CLAUDE.md"
-    - "**/CLAUDE.md"
+    - "agent.md"
+    - "**/agent.md"
     - ".claude/*.json"
     - ".claude/*.md"
     - ".claude/logs/README.md"    

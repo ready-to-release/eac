@@ -7,9 +7,9 @@
 package templates
 
 import (
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"flag"
 	"fmt"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"os"
 	"path/filepath"
 
