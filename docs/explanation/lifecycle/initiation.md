@@ -40,7 +40,7 @@ Document in markdown format:
 
 Document significant architectural and design choices that impact the system. Decision records capture the context, options considered, and rationale behind key design decisions, ensuring knowledge is preserved and can be revisited as the system evolves.
 
-Templates: [Decision Record](../../../templates/design/dr.md)
+Templates: [Decision Record](../../../templates/compliance/design/dr.md)
 
 ---
 
@@ -77,4 +77,4 @@ The **intended use** is a regulatory requirement that formally defines the purpo
 
 **Specifications** then translate the intended use into specific, testable, and compliant requirements that guide development, validation, and regulatory adherence.
 
-Templates: [Intended Use Template](../../../templates/intended-use.md)
+Templates: [Intended Use Template](../../../templates/compliance/intended-use.md)

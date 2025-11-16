@@ -156,10 +156,10 @@ func TestModuleContract_MatchesFile_RootLevel(t *testing.T) {
 		{"empty root nested", "", []string{"**/*.md"}, "docs/README.md", true},
 
 		// Edge case: root="/" should work (repository root)
-		{"root slash simple", "/", []string{"CLAUDE.md"}, "CLAUDE.md", true},
-		{"root slash nested", "/", []string{"**/CLAUDE.md"}, "docs/CLAUDE.md", true},
+		{"root slash simple", "/", []string{"agent.md"}, "agent.md", true},
+		{"root slash nested", "/", []string{"**/agent.md"}, "docs/agent.md", true},
 		{"root slash pattern", "/", []string{".claude/*.json"}, ".claude/mcp.json", true},
-		{"root slash no match", "/", []string{"CLAUDE.md"}, "OTHER.md", false},
+		{"root slash no match", "/", []string{"agent.md"}, "OTHER.md", false},
 
 		// Edge case: absolute patterns (leading /) should match from repository root
 		{"absolute simple", "src/mcp/vscode", []string{"/specs/spec.md"}, "specs/spec.md", true},

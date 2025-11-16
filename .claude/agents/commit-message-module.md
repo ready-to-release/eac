@@ -1,7 +1,7 @@
 ---
 name: commit-message-module
 description: Generate one module section for commit message
-model: haiku
+model: claude-3-5-haiku-20241022
 color: green
 ---
 

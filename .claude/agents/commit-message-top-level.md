@@ -1,7 +1,7 @@
 ---
 name: commit-message-top-level
 description: Generate top-level commit message header and summary
-model: haiku
+model: claude-3-5-haiku-20241022
 color: blue
 ---
 

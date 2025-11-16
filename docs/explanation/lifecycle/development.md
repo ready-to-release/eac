@@ -17,7 +17,7 @@ The implementation plan provides a framework for successful delivery, covering s
 
 **Regulatory note:** Some regulated processes require digital signature.
 
-Templates: [Implementation Plan](../../../templates/implementation-plan.md)
+Templates: [Implementation Plan](../../../templates/compliance/implementation-plan.md)
 
 ---
 
@@ -69,7 +69,7 @@ The solution can be released when the Release Approval stage is approved.
 
 **Regulatory note:** Some regulated processes require digital signature.
 
-Templates: [Implementation Report](../../../templates/implementation-report.md)
+Templates: [Implementation Report](../../../templates/compliance/implementation-report.md)
 
 ---
 

@@ -55,6 +55,11 @@ func (r *Renderer) RenderTemplates() error {
 			return fmt.Errorf("failed to render path %s: %w", relPath, err)
 		}
 
+		// SECURITY: Validate path doesn't escape output directory
+		if err := ValidatePath(r.outputDir, renderedPath); err != nil {
+			return fmt.Errorf("security violation in template path: %w", err)
+		}
+
 		outputPath := filepath.Join(r.outputDir, renderedPath)
 
 		if d.IsDir() {

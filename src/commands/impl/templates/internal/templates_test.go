@@ -195,8 +195,8 @@ func TestRenderer_RenderTemplates(t *testing.T) {
 
 	// Create template files
 	files := map[string]string{
-		"README.md":     "# {{ .ProjectName }}",
-		"src/main.go":   "package main\n// Version: {{ .Version }}",
+		"README.md":       "# {{ .ProjectName }}",
+		"src/main.go":     "package main\n// Version: {{ .Version }}",
 		"{{ .Name }}.txt": "Name is {{ .Name }}",
 	}
 
