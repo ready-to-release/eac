@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/environments"
 )
 
 // ApplyInferences applies inference rules to enrich test tags
@@ -244,6 +245,47 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 			// For example:
 			// - python-* modules -> @deps:python
 			// - docker-* modules -> @deps:docker
+		}
+	}
+
+	return enriched
+}
+
+// InferSystemDepsFromEnv infers system dependencies based on environment tags
+// For example, if a test has @env:local01, look up the local01 environment contract
+// and add all its system dependencies (@deps:docker, etc.)
+func InferSystemDepsFromEnv(tests []TestReference, envContract *environments.EnvironmentContract) []TestReference {
+	if envContract == nil {
+		return tests // No environment contract available, return unchanged
+	}
+
+	enriched := make([]TestReference, len(tests))
+
+	for i, test := range tests {
+		enriched[i] = test
+		enriched[i].Tags = copyTags(test.Tags)
+
+		// Extract environment tags from test tags
+		for _, tag := range test.Tags {
+			if !strings.HasPrefix(tag, "@env:") {
+				continue
+			}
+
+			// Extract environment moniker from @env:<moniker>
+			moniker := strings.TrimPrefix(tag, "@env:")
+
+			// Look up environment in contract
+			env, err := envContract.GetEnvironment(moniker)
+			if err != nil {
+				continue // Environment not found, skip
+			}
+
+			// Add all system dependencies from the environment
+			for _, sysDep := range env.SystemDeps {
+				if !contains(enriched[i].Tags, sysDep) {
+					enriched[i].Tags = append(enriched[i].Tags, sysDep)
+				}
+			}
 		}
 	}
 

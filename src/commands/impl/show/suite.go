@@ -140,26 +140,23 @@ func ShowSuite() int {
 	fmt.Printf("## Production Tests\n\n")
 
 	tb := render.NewTableBuilder().
-		WithHeaders("#", "Test Name", "Type", "Module", "Level", "Verification", "System Deps", "Module Deps", "Module Type")
+		WithHeaders("#", "Moniker", "Test Name", "Type", "Module", "Level", "Verification", "System Deps")
 
 	for i, entry := range report.ProductionTests {
 		// Format tag columns
 		levelStr := strings.Join(entry.Level, ", ")
 		verificationStr := strings.Join(entry.Verification, ", ")
 		systemDepsStr := strings.Join(entry.SystemDeps, ", ")
-		moduleDepsStr := strings.Join(entry.ModuleDeps, ", ")
-		moduleTypesStr := strings.Join(entry.ModuleTypes, ", ")
 
 		tb.AddRow(
 			fmt.Sprintf("%d", i+1),
+			entry.Moniker,
 			entry.TestName,
 			entry.Type,
 			entry.Module,
 			levelStr,
 			verificationStr,
 			systemDepsStr,
-			moduleDepsStr,
-			moduleTypesStr,
 		)
 	}
 
