@@ -21,7 +21,7 @@
 | CD       | Continuous Delivery is the practice of ensuring that the system is always in a deployable state, and that every change could potentially be released to production at any time. Continuous Delivery automates and streamlines the release process. |
 | Tool     | Software used to support development, operation or maintenance of the software product. Tools are not part of the finished software product.                                                                                       |
 
-For general abbreviations, refer to organizational quality system documentation {{abbreviations_reference}}.
+For general abbreviations, refer to organizational quality system documentation.
 
 ## Scope
 
@@ -79,8 +79,8 @@ The generic responsibilities defined in the organizational quality system proced
     If the business application is supporting a GxP regulated process, add a high level statement on software category per GAMP 5 (Category 1-5).
 <!--{% endremove %}-->
 
-**GAMP 5 Category:** {{gamp_category}}
-**Rationale:** {{gamp_rationale}}
+**GAMP 5 Category:** {{ .gamp_category }}
+**Rationale:** {{ .gamp_rationale }}
 
 Relevant risk assessments are performed, and the resulting risk controls are stored as executable specifications in Git, enabling direct traceability to the corresponding requirements. See [Specifications](#specifications) for more details.
 
