@@ -100,19 +100,12 @@ func fixContent(lines []string) []string {
 			}
 		}
 
-		// FIX 1: Truncate header to 72 chars with ellipsis if needed
+		// FIX 1: Clean header (remove trailing period only, don't truncate)
 		// New format: <type>(<scope>): <summary>
 		conventionalHeaderRegex := regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\([^)]+\):\s*(.+)`)
 		if i == 0 && conventionalHeaderRegex.MatchString(trimmed) {
-			if len(trimmed) > 72 {
-				// Truncate to 69 chars to leave room for "..."
-				truncated := trimmed[:69]
-				truncated = strings.TrimRight(truncated, " .")
-				line = truncated + "..."
-			} else {
-				// Only remove trailing period
-				line = strings.TrimSuffix(trimmed, ".")
-			}
+			// Only remove trailing period (validation will warn if too long)
+			line = strings.TrimSuffix(trimmed, ".")
 			cleaned = append(cleaned, line)
 			// After header, we're in top-level body section
 			inBodySection = true
