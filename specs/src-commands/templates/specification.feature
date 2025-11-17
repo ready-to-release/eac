@@ -19,27 +19,26 @@ Feature: src-commands_templates
 
   Rule: Templates apply subcommand supports template-specific application with defaults
 
-    Scenario: Apply compliance template with all defaults
-      When I run the command "templates apply compliance"
+    Scenario: Apply docs template with all defaults
+      When I run the command "templates apply docs"
       Then the command should succeed
-      And the templates should be cloned from "https://github.com/ready-to-release/eac" at "main" branch
-      And the source path should be "templates/compliance"
-      And the destination should be ".docs/references/compliance"
+      And the repository should be cloned from "https://github.com/ready-to-release/eac" at "main" branch
+      And the templates should be read from subdirectory "templates/docs"
+      And the destination should be ".docs/references/docs"
       And no value replacement should occur
 
-    Scenario: Apply compliance template with custom source
-      When I run the command "templates apply compliance --source https://github.com/custom/repo"
+    Scenario: Apply docs template with custom local source
+      When I run the command "templates apply docs --source ./custom/templates/docs"
       Then the command should succeed
-      And the templates should be cloned from "https://github.com/custom/repo" at "main" branch
-      And the source path should be "templates/compliance"
-      And the destination should be ".docs/references/compliance"
+      And the templates should be copied from local path "./custom/templates/docs"
+      And the destination should be ".docs/references/docs"
 
-    Scenario: Apply compliance template with custom destination
-      When I run the command "templates apply compliance --destination ./custom/path"
+    Scenario: Apply docs template with custom destination
+      When I run the command "templates apply docs --destination ./custom/path"
       Then the command should succeed
       And the destination should be "./custom/path"
 
-    Scenario: Apply compliance template with value replacements
+    Scenario: Apply docs template with value replacements
       Given I have a values file "values.json" with:
         """
         {
@@ -47,20 +46,20 @@ Feature: src-commands_templates
           "CompanyName": "ACME Corp"
         }
         """
-      When I run the command "templates apply compliance --input-json values.json"
+      When I run the command "templates apply docs --input-json values.json"
       Then the command should succeed
       And the rendered files should contain replaced values
 
-    Scenario: Apply compliance template with all custom parameters
+    Scenario: Apply docs template with all custom parameters
       Given I have a values file "values.json" with:
         """
         {
           "ProjectName": "MyProject"
         }
         """
-      When I run the command "templates apply compliance --source https://github.com/custom/repo --destination ./output --input-json values.json"
+      When I run the command "templates apply docs --source ./local/templates --destination ./output --input-json values.json"
       Then the command should succeed
-      And the templates should be cloned from "https://github.com/custom/repo"
+      And the templates should be copied from local path "./local/templates"
       And the destination should be "./output"
       And the rendered files should contain replaced values
 
@@ -68,7 +67,7 @@ Feature: src-commands_templates
       When I run the command "templates apply unknown-template"
       Then the command should fail
       And the error output should contain "unknown template: unknown-template"
-      And the error output should contain "Available templates: compliance"
+      And the error output should contain "Available templates: docs"
 
   Rule: Templates install subcommand supports template-specific installation with defaults
 
@@ -131,20 +130,6 @@ Feature: src-commands_templates
       Then the command should fail
       And the error should contain "security"
       And no files should be written outside the output directory
-
-  Rule: Git repository URLs must be validated to prevent command injection
-
-    # SECURITY: Malicious URLs must not inject shell commands during git clone
-
-    Scenario: Reject URL with command injection characters
-      When I run "templates apply compliance --source https://evil.com/repo.git; rm -rf /"
-      Then the command should fail
-      And the error should contain "security: invalid characters in URL"
-
-    Scenario: Reject local file path as source
-      When I run "templates apply compliance --source /local/path/to/repo"
-      Then the command should fail
-      And the error should contain "invalid git repository URL"
 
   Rule: Security validations must be applied consistently across all template operations
 

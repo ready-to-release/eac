@@ -6,74 +6,78 @@ import (
 	"testing"
 )
 
-func TestTemplatesApplyCompliance_DefaultBehavior(t *testing.T) {
+func TestTemplatesApplyDocs_DefaultBehavior(t *testing.T) {
 	tests := []struct {
-		name           string
-		args           []string
-		wantSource     string
-		wantSourcePath string
-		wantDest       string
-		wantErr        bool
+		name        string
+		args        []string
+		wantSource  string
+		wantDest    string
+		wantLocal   bool
+		wantErr     bool
 	}{
 		{
-			name:           "uses defaults when no flags provided",
-			args:           []string{},
-			wantSource:     "https://github.com/ready-to-release/eac",
-			wantSourcePath: "templates/compliance",
-			wantDest:       ".docs/references/compliance",
-			wantErr:        false,
+			name:       "uses defaults when no flags provided",
+			args:       []string{},
+			wantSource: "", // Empty means use default GitHub repo
+			wantDest:   ".docs/references/docs",
+			wantLocal:  false,
+			wantErr:    false,
 		},
 		{
-			name:           "custom source repository",
-			args:           []string{"--source", "https://github.com/custom/repo"},
-			wantSource:     "https://github.com/custom/repo",
-			wantSourcePath: "templates/compliance",
-			wantDest:       ".docs/references/compliance",
-			wantErr:        false,
+			name:       "custom local source path",
+			args:       []string{"--source", "./custom/templates"},
+			wantSource: "./custom/templates",
+			wantDest:   ".docs/references/docs",
+			wantLocal:  true,
+			wantErr:    false,
 		},
 		{
-			name:           "custom destination path",
-			args:           []string{"--destination", "./custom/path"},
-			wantSource:     "https://github.com/ready-to-release/eac",
-			wantSourcePath: "templates/compliance",
-			wantDest:       "./custom/path",
-			wantErr:        false,
+			name:       "custom destination path",
+			args:       []string{"--destination", "./custom/path"},
+			wantSource: "", // Empty means use default GitHub repo
+			wantDest:   "./custom/path",
+			wantLocal:  false,
+			wantErr:    false,
 		},
 		{
-			name:           "custom source and destination",
-			args:           []string{"--source", "https://github.com/custom/repo", "--destination", "./output"},
-			wantSource:     "https://github.com/custom/repo",
-			wantSourcePath: "templates/compliance",
-			wantDest:       "./output",
-			wantErr:        false,
+			name:       "custom local source and destination",
+			args:       []string{"--source", "./local/templates", "--destination", "./output"},
+			wantSource: "./local/templates",
+			wantDest:   "./output",
+			wantLocal:  true,
+			wantErr:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := parseComplianceFlags(tt.args)
+			config, err := parseDocsFlags(tt.args)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseComplianceFlags() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseDocsFlags() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if err != nil {
 				return
 			}
 
-			if config.Source != tt.wantSource {
+			// For default (no custom source), Source should be empty
+			// For local source, we expect the path to be resolved against working directory
+			if config.Source != tt.wantSource && !tt.wantLocal {
 				t.Errorf("Source = %v, want %v", config.Source, tt.wantSource)
 			}
-			if config.SourcePath != tt.wantSourcePath {
-				t.Errorf("SourcePath = %v, want %v", config.SourcePath, tt.wantSourcePath)
-			}
+
 			if config.Destination != tt.wantDest {
 				t.Errorf("Destination = %v, want %v", config.Destination, tt.wantDest)
+			}
+
+			if config.isLocalSrc != tt.wantLocal {
+				t.Errorf("isLocalSrc = %v, want %v", config.isLocalSrc, tt.wantLocal)
 			}
 		})
 	}
 }
 
-func TestTemplatesApplyCompliance_WithValueReplacement(t *testing.T) {
+func TestTemplatesApplyDocs_WithValueReplacement(t *testing.T) {
 	// Create temp directory for test files
 	tmpDir, err := os.MkdirTemp("", "apply-test-*")
 	if err != nil {
@@ -118,9 +122,9 @@ func TestTemplatesApplyCompliance_WithValueReplacement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := parseComplianceFlags(tt.args)
+			config, err := parseDocsFlags(tt.args)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseComplianceFlags() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseDocsFlags() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if err != nil {
@@ -140,7 +144,7 @@ func TestTemplatesApplyCompliance_WithValueReplacement(t *testing.T) {
 	}
 }
 
-func TestTemplatesApplyCompliance_PathResolution(t *testing.T) {
+func TestTemplatesApplyDocs_PathResolution(t *testing.T) {
 	tests := []struct {
 		name         string
 		destination  string
