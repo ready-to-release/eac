@@ -74,15 +74,15 @@ Feature: src-commands_templates
     Scenario: Install specs template with all defaults
       When I run the command "templates install specs"
       Then the command should succeed
-      And the templates should be cloned from "https://github.com/ready-to-release/eac" at "main" branch
-      And the source path should be "templates/specs"
+      And the repository should be cloned from "https://github.com/ready-to-release/eac" at "main" branch
+      And the templates should be read from subdirectory "templates/specs"
       And the destination should be ".r2r/templates/specs"
 
-    Scenario: Install specs template with custom source
-      When I run the command "templates install specs --source https://github.com/custom/repo"
+    Scenario: Install specs template with custom local source
+      When I run the command "templates install specs --source ./custom/templates/specs"
       Then the command should succeed
-      And the templates should be cloned from "https://github.com/custom/repo" at "main" branch
-      And the source path should be "templates/specs"
+      And the templates should be copied from local path "./custom/templates/specs"
+      And the destination should be ".r2r/templates/specs"
 
     Scenario: Install specs template with custom destination
       When I run the command "templates install specs --destination ./custom/templates"
@@ -90,16 +90,34 @@ Feature: src-commands_templates
       And the destination should be "./custom/templates"
 
     Scenario: Install specs template with all custom parameters
-      When I run the command "templates install specs --source https://github.com/custom/repo --destination ./output"
+      When I run the command "templates install specs --source ./local/templates --destination ./output"
       Then the command should succeed
-      And the templates should be cloned from "https://github.com/custom/repo"
+      And the templates should be copied from local path "./local/templates"
       And the destination should be "./output"
+
+    Scenario: Install reports template with all defaults
+      When I run the command "templates install reports"
+      Then the command should succeed
+      And the repository should be cloned from "https://github.com/ready-to-release/eac" at "main" branch
+      And the templates should be read from subdirectory "templates/reports"
+      And the destination should be ".r2r/templates/reports"
+
+    Scenario: Install reports template with custom local source
+      When I run the command "templates install reports --source ./custom/templates/reports"
+      Then the command should succeed
+      And the templates should be copied from local path "./custom/templates/reports"
+      And the destination should be ".r2r/templates/reports"
+
+    Scenario: Install reports template with custom destination
+      When I run the command "templates install reports --destination ./custom/templates"
+      Then the command should succeed
+      And the destination should be "./custom/templates"
 
     Scenario: Install unknown template should fail gracefully
       When I run the command "templates install unknown-template"
       Then the command should fail
       And the error output should contain "unknown template: unknown-template"
-      And the error output should contain "Available templates: specs"
+      And the error output should contain "Available templates: specs, reports"
 
   Rule: Template commands are extensible for new template types
 

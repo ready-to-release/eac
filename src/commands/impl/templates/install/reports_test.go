@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestTemplatesInstallSpecs_DefaultBehavior(t *testing.T) {
+func TestTemplatesInstallReports_DefaultBehavior(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       []string
@@ -19,7 +19,7 @@ func TestTemplatesInstallSpecs_DefaultBehavior(t *testing.T) {
 			name:       "uses defaults when no flags provided",
 			args:       []string{},
 			wantSource: "", // Empty means use default GitHub repo
-			wantDest:   ".r2r/templates/specs",
+			wantDest:   ".r2r/templates/reports",
 			wantLocal:  false,
 			wantErr:    false,
 		},
@@ -27,7 +27,7 @@ func TestTemplatesInstallSpecs_DefaultBehavior(t *testing.T) {
 			name:       "custom local source path",
 			args:       []string{"--source", "./custom/templates"},
 			wantSource: "./custom/templates",
-			wantDest:   ".r2r/templates/specs",
+			wantDest:   ".r2r/templates/reports",
 			wantLocal:  true,
 			wantErr:    false,
 		},
@@ -51,9 +51,9 @@ func TestTemplatesInstallSpecs_DefaultBehavior(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := parseSpecsFlags(tt.args)
+			config, err := parseReportsFlags(tt.args)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseSpecsFlags() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseReportsFlags() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if err != nil {
@@ -77,7 +77,7 @@ func TestTemplatesInstallSpecs_DefaultBehavior(t *testing.T) {
 	}
 }
 
-func TestTemplatesInstallSpecs_PathResolution(t *testing.T) {
+func TestTemplatesInstallReports_PathResolution(t *testing.T) {
 	tests := []struct {
 		name         string
 		destination  string
@@ -85,7 +85,7 @@ func TestTemplatesInstallSpecs_PathResolution(t *testing.T) {
 	}{
 		{
 			name:         "relative path",
-			destination:  ".r2r/templates/specs",
+			destination:  ".r2r/templates/reports",
 			wantAbsolute: false,
 		},
 		{
