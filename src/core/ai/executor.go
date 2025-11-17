@@ -101,13 +101,20 @@ func (e *Executor) GetLastUsedProvider() Provider {
 	return e.lastUsedProvider
 }
 
-// loadConfig loads the agent configuration from .r2r directory
+// loadConfig loads the agent configuration from .r2r directory.
+// If no config file exists, defaults to Claude CLI provider.
 func (e *Executor) loadConfig() (*Config, error) {
 	configPath := filepath.Join(e.workspaceRoot, ".r2r", "agent-config.yml")
 
 	// Check if config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("agent-config.yml not found in .r2r directory\n\nPlease run: r2r agent init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+		// Default to Claude CLI if no config file found
+		return &Config{
+			ProviderName: "claude-cli",
+			Model:        "", // Will use model from agent frontmatter
+			Endpoint:     "",
+			APIKey:       "",
+		}, nil
 	}
 
 	return LoadConfig(configPath)

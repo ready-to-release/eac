@@ -7,8 +7,8 @@ package commit
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,11 +23,119 @@ import (
 	"github.com/ready-to-release/eac/src/core/repository/reports"
 )
 
+// Embedded built-in prompts (compiled into binary)
+//go:embed prompts/top-level.md
+var builtinTopLevelPrompt string
+
+//go:embed prompts/module.md
+var builtinModulePrompt string
+
 func init() {
 	registry.Register(CommitAI)
 }
 
+// executionConfig holds configuration for the commit AI command
+type executionConfig struct {
+	workspaceRoot   string
+	debug           bool
+	stagedFiles     []repository.RepositoryFileWithModule
+	affectedModules []string
+	gitDiff         string
+}
+
+// debugWriter handles debug file output with consistent error handling
+type debugWriter struct {
+	enabled       bool
+	workspaceRoot string
+}
+
+func newDebugWriter(enabled bool, workspaceRoot string) *debugWriter {
+	return &debugWriter{
+		enabled:       enabled,
+		workspaceRoot: workspaceRoot,
+	}
+}
+
+func (d *debugWriter) write(filename string, content string) {
+	if !d.enabled {
+		return
+	}
+
+	debugFile := filepath.Join(d.workspaceRoot, "out", filename)
+	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "⚠️  Failed to write debug file %s: %v\n", debugFile, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "🔍 DEBUG: Saved to %s\n", debugFile)
+	}
+}
+
+func (d *debugWriter) writef(format string, content string, args ...interface{}) {
+	if !d.enabled {
+		return
+	}
+
+	filename := fmt.Sprintf(format, args...)
+	d.write(filename, content)
+}
+
+func (d *debugWriter) log(format string, args ...interface{}) {
+	if !d.enabled {
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, "🔍 DEBUG: "+format+"\n", args...)
+}
+
 func CommitAI() int {
+	// Phase 1: Parse Configuration
+	debug, workspaceRoot, err := parseConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Phase 2: Verify Contract Implementation
+	if err := verifyContractImplementation(workspaceRoot); err != nil {
+		return 1
+	}
+
+	// Create debug writer
+	debugWriter := newDebugWriter(debug, workspaceRoot)
+
+	// Phase 3: Build Execution Context
+	cfg, stagedFilesTable, err := buildExecutionContext(workspaceRoot, debugWriter)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+	if cfg == nil {
+		fmt.Println("No staged changes.")
+		return 0
+	}
+
+	// Phase 4: Generate Top-Level Summary
+	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, debugWriter)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+		return 1
+	}
+
+	// Phase 5: Generate Module Sections
+	moduleSections, err := generateModuleSections(cfg, debugWriter)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+		return 1
+	}
+
+	// Phase 6: Assemble Final Message
+	finalMessage := assembleFinalMessage(cfg, topLevel, moduleSections, debugWriter)
+
+	// Phase 7: Validate and Output
+	return validateAndOutput(cfg, finalMessage)
+}
+
+// Phase 1: Parse Configuration
+func parseConfig() (bool, string, error) {
 	// Parse flags
 	debug := false
 	for _, arg := range os.Args[2:] { // Skip program name and "commit-ai"
@@ -39,11 +147,14 @@ func CommitAI() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
-		return 1
+		return false, "", fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// LEVER 1: Verify contract implementation on startup
+	return debug, workspaceRoot, nil
+}
+
+// Phase 2: Verify Contract Implementation
+func verifyContractImplementation(workspaceRoot string) error {
 	contractPath := filepath.Join(workspaceRoot, "contracts/commit-message/0.1.0/structure.yml")
 	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
 	if len(contractErrors) > 0 {
@@ -51,25 +162,25 @@ func CommitAI() int {
 		for _, err := range contractErrors {
 			fmt.Fprintf(os.Stderr, "  - [%s] %s\n", err.Code, err.Message)
 		}
-		return 1
+		return fmt.Errorf("contract verification failed")
 	}
+	return nil
+}
 
-	// LEVER 1: Get staged files with module mappings
+// Phase 3: Build Execution Context
+func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*executionConfig, string, error) {
+	// Get staged files with module mappings
 	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot, "0.1.0")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting module mappings: %v\n", err)
-		return 1
+		return nil, "", fmt.Errorf("getting module mappings: %w", err)
 	}
 
 	if len(report.AllFiles) == 0 {
-		fmt.Println("No staged changes.")
-		return 0
+		return nil, "", nil // No staged changes (not an error)
 	}
 
-	// Build the staged files table (same format as "show files staged")
-	tb := render.NewTableBuilder().
-		WithHeaders("File", "Modules")
-
+	// Build the staged files table
+	tb := render.NewTableBuilder().WithHeaders("File", "Modules")
 	for _, file := range report.AllFiles {
 		modulesStr := "NONE"
 		if len(file.Modules) > 0 {
@@ -77,10 +188,9 @@ func CommitAI() int {
 		}
 		tb.AddRow(file.Name, modulesStr)
 	}
-
 	stagedFilesTable := tb.Build()
 
-	// Extract unique modules from all files
+	// Extract unique modules
 	moduleSet := make(map[string]bool)
 	for _, file := range report.AllFiles {
 		for _, module := range file.Modules {
@@ -88,146 +198,119 @@ func CommitAI() int {
 		}
 	}
 
-	// Build sorted list of unique modules
 	var affectedModules []string
 	for module := range moduleSet {
 		affectedModules = append(affectedModules, module)
 	}
-	// Sort for consistent output
-	// Note: Using simple sort since we don't have imports for sort yet
-	// The order doesn't matter for the agent, just consistency
 
-	// Get git diff for staged changes (do not print anything yet)
+	// Get git diff
 	diffCmd := exec.Command("git", "diff", "--staged")
 	diffCmd.Dir = workspaceRoot
 	diffOutput, err := diffCmd.Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting git diff: %v\n", err)
-		return 1
-	}
-	gitDiff := string(diffOutput)
-
-	if debug {
-		fmt.Fprintf(os.Stderr, "\n🔍 DEBUG: Affected modules count: %d\n", len(affectedModules))
-		for i, mod := range affectedModules {
-			fmt.Fprintf(os.Stderr, "  %d. %s\n", i+1, mod)
-		}
+		return nil, "", fmt.Errorf("getting git diff: %w", err)
 	}
 
-	// LEVER 2a: Build top-level context and invoke top-level agent
-	topLevelContext := buildTopLevelContext(stagedFilesTable, gitDiff, affectedModules)
-
-	if debug {
-		// DEBUG: Save top-level context
-		debugTopLevelContext := filepath.Join(workspaceRoot, "out/debug-top-level-context.md")
-		ioutil.WriteFile(debugTopLevelContext, []byte(topLevelContext), 0644)
-		fmt.Fprintf(os.Stderr, "\n🔍 DEBUG: Top-level context saved to %s\n", debugTopLevelContext)
+	debugWriter.log("Affected modules count: %d", len(affectedModules))
+	for i, mod := range affectedModules {
+		debugWriter.log("  %d. %s", i+1, mod)
 	}
+
+	cfg := &executionConfig{
+		workspaceRoot:   workspaceRoot,
+		stagedFiles:     report.AllFiles,
+		affectedModules: affectedModules,
+		gitDiff:         string(diffOutput),
+	}
+
+	return cfg, stagedFilesTable, nil
+}
+
+// Phase 4: Generate Top-Level Summary
+func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, debugWriter *debugWriter) (string, error) {
+	topLevelContext := buildTopLevelContext(stagedFilesTable, cfg.gitDiff, cfg.affectedModules)
+
+	debugWriter.write("debug-top-level-context.md", topLevelContext)
 
 	var topLevelOutput string
-	err = commitmessage.WithProgress("🤖 Generating top-level commit summary...", func() error {
-		agentPath := filepath.Join(workspaceRoot, ".claude/agents/commit-message-top-level.md")
-		output, err := callClaudeAgentAPIRaw(agentPath, topLevelContext, workspaceRoot)
+	err := commitmessage.WithProgress("🤖 Generating top-level commit summary...", func() error {
+		output, err := generateWithPrompt("top-level", topLevelContext, cfg.workspaceRoot)
 		topLevelOutput = output
 		return err
 	})
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error running commit-message-top-level agent: %v\n", err)
-		return 1
+		return "", fmt.Errorf("running commit-message-top-level agent: %w", err)
 	}
 
-	if debug {
-		// DEBUG: Save top-level output
-		debugTopLevelOutput := filepath.Join(workspaceRoot, "out/debug-top-level-output.md")
-		ioutil.WriteFile(debugTopLevelOutput, []byte(topLevelOutput), 0644)
-		fmt.Fprintf(os.Stderr, "🔍 DEBUG: Top-level output saved to %s\n", debugTopLevelOutput)
+	debugWriter.write("debug-top-level-output.md", topLevelOutput)
+
+	return topLevelOutput, nil
+}
+
+// Phase 5: Generate Module Sections (multi-module only)
+func generateModuleSections(cfg *executionConfig, debugWriter *debugWriter) ([]string, error) {
+	if len(cfg.affectedModules) <= 1 {
+		debugWriter.log("Single-module commit - skipping module sections")
+		return []string{}, nil
 	}
 
-	// LEVER 2b: Build module contexts and invoke module agent for each
-	// SPECIAL CASE: For single-module commits, skip module sections entirely
+	// Multi-module: generate module sections
+	moduleFilesMap := make(map[string][]repository.RepositoryFileWithModule)
+	for _, file := range cfg.stagedFiles {
+		for _, module := range file.Modules {
+			moduleFilesMap[module] = append(moduleFilesMap[module], file)
+		}
+	}
+
 	var moduleSections []string
+	for i, module := range cfg.affectedModules {
+		moduleFiles := moduleFilesMap[module]
+		moduleContext := buildModuleContext(module, moduleFiles, cfg.gitDiff)
 
-	if len(affectedModules) > 1 {
-		// Multi-module: generate module sections
-		// Group files by module
-		moduleFilesMap := make(map[string][]repository.RepositoryFileWithModule)
-		for _, file := range report.AllFiles {
-			for _, module := range file.Modules {
-				moduleFilesMap[module] = append(moduleFilesMap[module], file)
-			}
+		debugWriter.writef("debug-module-%d-%s-context.md", moduleContext, i+1, module)
+
+		var moduleOutput string
+		progressMsg := fmt.Sprintf("🤖 Generating section for module %s (%d/%d)...", module, i+1, len(cfg.affectedModules))
+		err := commitmessage.WithProgress(progressMsg, func() error {
+			output, err := generateWithPrompt("module", moduleContext, cfg.workspaceRoot)
+			moduleOutput = output
+			return err
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("running commit-message-module agent for %s: %w", module, err)
 		}
 
-		for i, module := range affectedModules {
-			moduleFiles := moduleFilesMap[module]
-			moduleContext := buildModuleContext(module, moduleFiles, gitDiff)
+		debugWriter.writef("debug-module-%d-%s-output.md", moduleOutput, i+1, module)
 
-			if debug {
-				// DEBUG: Save module context
-				debugModuleContext := filepath.Join(workspaceRoot, fmt.Sprintf("out/debug-module-%d-%s-context.md", i+1, module))
-				ioutil.WriteFile(debugModuleContext, []byte(moduleContext), 0644)
-				fmt.Fprintf(os.Stderr, "🔍 DEBUG: Module context for %s saved to %s\n", module, debugModuleContext)
-			}
-
-			var moduleOutput string
-			progressMsg := fmt.Sprintf("🤖 Generating section for module %s (%d/%d)...", module, i+1, len(affectedModules))
-			err = commitmessage.WithProgress(progressMsg, func() error {
-				agentPath := filepath.Join(workspaceRoot, ".claude/agents/commit-message-module.md")
-				output, err := callClaudeAgentAPIRaw(agentPath, moduleContext, workspaceRoot)
-				moduleOutput = output
-				return err
-			})
-
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "\n❌ Error running commit-message-module agent for %s: %v\n", module, err)
-				return 1
-			}
-
-			if debug {
-				// DEBUG: Save module output
-				debugModuleOutput := filepath.Join(workspaceRoot, fmt.Sprintf("out/debug-module-%d-%s-output.md", i+1, module))
-				ioutil.WriteFile(debugModuleOutput, []byte(moduleOutput), 0644)
-				fmt.Fprintf(os.Stderr, "🔍 DEBUG: Module output for %s saved to %s\n", module, debugModuleOutput)
-			}
-
-			moduleSections = append(moduleSections, moduleOutput)
-		}
-	} else if debug {
-		fmt.Fprintf(os.Stderr, "🔍 DEBUG: Single-module commit - skipping module sections\n")
+		moduleSections = append(moduleSections, moduleOutput)
 	}
 
-	// LEVER 3: Combine all sections
-	combinedMessage := combineCommitSections(topLevelOutput, moduleSections)
+	return moduleSections, nil
+}
 
-	if debug {
-		// DEBUG: Save combined message
-		debugCombined := filepath.Join(workspaceRoot, "out/debug-combined-message.md")
-		ioutil.WriteFile(debugCombined, []byte(combinedMessage), 0644)
-		fmt.Fprintf(os.Stderr, "\n🔍 DEBUG: Combined message saved to %s\n", debugCombined)
-	}
+// Phase 6: Assemble Final Message
+func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections []string, debugWriter *debugWriter) string {
+	// Combine sections
+	combinedMessage := combineCommitSections(topLevel, moduleSections)
+	debugWriter.write("debug-combined-message.md", combinedMessage)
 
-	// LEVER 4: Auto-cleanup before verification (silent)
+	// Auto-cleanup
 	cleanedOutput := commitmessage.AutoCleanup(combinedMessage)
+	debugWriter.write("debug-after-cleanup.md", cleanedOutput)
 
-	if debug {
-		// DEBUG: Save after cleanup
-		debugFile3 := filepath.Join(workspaceRoot, "out/debug-after-cleanup.md")
-		ioutil.WriteFile(debugFile3, []byte(cleanedOutput), 0644)
-		fmt.Fprintf(os.Stderr, "🔍 DEBUG: After cleanup saved to %s\n\n", debugFile3)
-	}
+	// Add missing modules
+	cleanedOutput = addMissingModules(cleanedOutput, cfg.affectedModules, cfg.stagedFiles, cfg.gitDiff)
+	debugWriter.write("debug-after-missing-modules.md", cleanedOutput)
 
-	// LEVER 4.5: Add missing module sections (if any)
-	cleanedOutput = addMissingModules(cleanedOutput, affectedModules, report.AllFiles, gitDiff)
+	return cleanedOutput
+}
 
-	if debug {
-		// DEBUG: Save after adding missing modules
-		debugFile4 := filepath.Join(workspaceRoot, "out/debug-after-missing-modules.md")
-		ioutil.WriteFile(debugFile4, []byte(cleanedOutput), 0644)
-		fmt.Fprintf(os.Stderr, "🔍 DEBUG: After adding missing modules saved to %s\n", debugFile4)
-	}
-
-	// LEVER 5: Verify contract compliance (silent)
-	validationErrors := commitmessage.VerifyCommitMessageContract(cleanedOutput, affectedModules)
+// Phase 7: Validate and Output
+func validateAndOutput(cfg *executionConfig, message string) int {
+	// Verify contract compliance
+	validationErrors := commitmessage.VerifyCommitMessageContract(message, cfg.affectedModules)
 
 	errorCount, warningCount := 0, 0
 	for _, verr := range validationErrors {
@@ -240,7 +323,7 @@ func CommitAI() int {
 
 	// Output for VSCode extension to detect
 	fmt.Println(">>>>>>OUTPUT START<<<<<<")
-	fmt.Println(cleanedOutput)
+	fmt.Println(message)
 	fmt.Println("\n---")
 
 	// Print verification results
@@ -272,81 +355,76 @@ func CommitAI() int {
 	return 0
 }
 
-// callClaudeAgentAPI invokes Claude CLI with isolated session (no --continue or --resume)
-func callClaudeAgentAPI(agentFilePath string, prompt string, workspaceRoot string) (string, error) {
-	// Read agent file to extract model from frontmatter
-	agentContent, err := ioutil.ReadFile(agentFilePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read agent file: %w", err)
+// generateWithAgent executes an AI agent prompt using the configured provider.
+//
+// This function orchestrates agent-based text generation by:
+//   1. Loading the agent file and extracting model preferences from frontmatter
+//   2. Combining agent instructions with user-provided context
+//   3. Invoking the AI provider via the executor abstraction layer
+//   4. Stripping agent noise (initialization messages, conversational wrappers)
+//   5. Returning clean output ready for contract validation
+//
+// The agent type is automatically inferred from the file path to apply
+// type-specific noise filtering:
+//   - "commit-message-top-level" → expects "# <module>: <type>: <summary>"
+//   - "commit-message-module" → expects "## <module-name>"
+//
+// Parameters:
+//   - agentFilePath: Path to agent markdown file with frontmatter
+//                    (e.g., ".claude/agents/commit-message-top-level.md")
+//   - userPrompt:    Context and input for the agent
+//                    (e.g., staged files table, git diff, module list)
+//   - workspaceRoot: Repository root directory for executor context
+//
+// Returns:
+//   - Generated output with agent initialization noise removed
+//   - Error if agent file cannot be read or AI execution fails
+//
+// Example:
+//
+//	topLevelContext := buildTopLevelContext(files, diff, modules)
+//	output, err := generateWithAgent(
+//	    ".claude/agents/commit-message-top-level.md",
+//	    topLevelContext,
+//	    "/workspace/root",
+//	)
+// loadPromptWithFallback implements two-tier prompt loading:
+// 1. User override: .r2r/prompts/commit/<name>.md
+// 2. Built-in: embedded prompts/<name>.md
+func loadPromptWithFallback(promptName string, workspaceRoot string) (string, error) {
+	// Tier 1: Check for user override in .r2r/prompts/commit/
+	userOverridePath := filepath.Join(workspaceRoot, ".r2r", "prompts", "commit", promptName+".md")
+	if content, err := os.ReadFile(userOverridePath); err == nil {
+		return string(content), nil
 	}
 
-	model := extractModelFromAgent(string(agentContent))
-
-	// Build command arguments - IMPORTANT: No --continue or --resume flags for session isolation
-	args := []string{
-		"--print",
-		"--settings", `{"includeCoAuthoredBy":false,"disableAllHooks":true}`,
+	// Tier 2: Use built-in embedded prompt
+	switch promptName {
+	case "top-level":
+		return builtinTopLevelPrompt, nil
+	case "module":
+		return builtinModulePrompt, nil
+	default:
+		return "", fmt.Errorf("unknown prompt name: %s", promptName)
 	}
-
-	// Add model if specified in agent frontmatter
-	if model != "" {
-		args = append(args, "--model", model)
-		// Add fallback to haiku if using sonnet (for resilience during high load)
-		if model == "sonnet" {
-			args = append(args, "--fallback-model", "haiku")
-		}
-	}
-
-	// Build full prompt: agent instructions + user input
-	fullPrompt := string(agentContent) + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + prompt
-
-	cmd := exec.Command("claude", args...)
-	cmd.Stdin = strings.NewReader(fullPrompt)
-	cmd.Dir = workspaceRoot // Run from repository root for proper context
-
-	// CRITICAL: Remove ANTHROPIC_API_KEY to use Claude Pro subscription instead
-	cmd.Env = removeAPIKeyFromEnv(os.Environ())
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		stderrText := stderr.String()
-		stdoutText := stdout.String()
-
-		// Print both to help debug
-		if len(stderrText) > 0 {
-			fmt.Fprintf(os.Stderr, "Claude stderr:\n%s\n", stderrText)
-		}
-		if len(stdoutText) > 0 {
-			fmt.Fprintf(os.Stderr, "Claude stdout:\n%s\n", stdoutText)
-		}
-
-		return "", fmt.Errorf("claude CLI failed: %w\nStderr: %s\nStdout: %s", err, stderrText, stdoutText)
-	}
-
-	// Extract pure content (remove any wrapper text)
-	output := extractContentBlock(stdout.String())
-	return output, nil
 }
 
-// callClaudeAgentAPIRaw invokes AI provider using the executor abstraction
-func callClaudeAgentAPIRaw(agentFilePath string, prompt string, workspaceRoot string) (string, error) {
-	// Read agent file to extract model from frontmatter
-	agentContent, err := ioutil.ReadFile(agentFilePath)
+// generateWithPrompt generates output using the two-tier prompt loading system
+func generateWithPrompt(promptName string, userPrompt string, workspaceRoot string) (string, error) {
+	// Load prompt using three-tier system
+	agentContent, err := loadPromptWithFallback(promptName, workspaceRoot)
 	if err != nil {
-		return "", fmt.Errorf("failed to read agent file: %w", err)
+		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
 
-	model := extractModelFromAgent(string(agentContent))
+	model := extractModelFromAgent(agentContent)
 
 	// Create executor and register providers
 	executor := ai.NewExecutor(workspaceRoot)
 	providers.RegisterBuiltIn(executor)
 
 	// Build full prompt: agent instructions + user input
-	fullPrompt := string(agentContent) + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + prompt
+	fullPrompt := agentContent + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
 
 	// Prepare options
 	var opts []ai.Option
@@ -365,140 +443,244 @@ func callClaudeAgentAPIRaw(agentFilePath string, prompt string, workspaceRoot st
 	output = strings.TrimSpace(output)
 
 	// Remove common agent initialization noise
-	// Determine agent type from file path
-	agentType := "unknown"
-	if strings.Contains(agentFilePath, "commit-message-top-level") {
-		agentType = "top-level"
-	} else if strings.Contains(agentFilePath, "commit-message-module") {
-		agentType = "module"
-	}
-	output = stripAgentNoise(output, agentType)
+	output = stripAgentNoise(output, promptName)
 
 	return output, nil
 }
 
-// stripAgentNoise removes common initialization/greeting patterns from agent output
-// by scanning for the first valid commit message line based on agent type
-func stripAgentNoise(output string, agentType string) string {
-	lines := strings.Split(output, "\n")
 
-	// Scan for first line matching valid commit message patterns
-	firstValidLineIdx := -1
+// Standard commit types used for pattern matching
+var standardCommitTypes = []string{
+	"feat", "fix", "chore", "docs", "test",
+	"refactor", "perf", "style", "build", "ci",
+}
 
+// commitPatternMatcher handles pattern matching for different agent types
+type commitPatternMatcher struct {
+	agentType string
+}
+
+func (m *commitPatternMatcher) findFirstValidLine(lines []string) int {
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		if agentType == "top-level" {
-			// Top-level agent: look for `# <module|multi-module>: <type>: <description>`
-
-			// Pattern 1: multi-module commit
-			if strings.HasPrefix(trimmed, "# multi-module:") ||
-				strings.HasPrefix(trimmed, "#multi-module:") ||
-				strings.HasPrefix(trimmed, "multi-module:") {
-				firstValidLineIdx = i
-				break
+		if m.agentType == "top-level" {
+			if m.isValidTopLevelLine(trimmed) {
+				return i
 			}
-
-			// Pattern 2: single-module commit with `# <module>: <type>:`
-			commitTypes := []string{"feat", "fix", "chore", "docs", "test", "refactor", "perf", "style", "build", "ci"}
-			if strings.HasPrefix(trimmed, "# ") {
-				for _, commitType := range commitTypes {
-					// Check for: # <module>: <type>:
-					if strings.Contains(trimmed, ": "+commitType+":") ||
-						strings.Contains(trimmed, ": "+commitType+"(") {
-						firstValidLineIdx = i
-						break
-					}
-				}
-			}
-
-			// Pattern 3: Fallback - ANY markdown heading (# or ##) if nothing else matched yet
-			// This catches cases where agent outputs wrong format
-			if firstValidLineIdx == -1 && (strings.HasPrefix(trimmed, "# ") || strings.HasPrefix(trimmed, "## ")) {
-				// Only accept if it's not common noise headers
-				if !strings.Contains(strings.ToLower(trimmed), "summary") &&
-					!strings.Contains(strings.ToLower(trimmed), "context") &&
-					!strings.Contains(strings.ToLower(trimmed), "changes") {
-					firstValidLineIdx = i
-					break
-				}
-			}
-		} else if agentType == "module" {
-			// Module agent: look for `## <module-name>`
-			if strings.HasPrefix(trimmed, "## ") && len(trimmed) > 3 {
-				// Must have content after "## " and not be a separator
-				moduleNamePart := strings.TrimSpace(trimmed[3:])
-				if moduleNamePart != "" && moduleNamePart != "---" {
-					firstValidLineIdx = i
-					break
-				}
+		} else if m.agentType == "module" {
+			if m.isValidModuleLine(trimmed) {
+				return i
 			}
 		} else {
-			// Unknown agent type - use generic heuristic (original logic)
-			// Pattern 1: multi-module commit
-			if strings.HasPrefix(trimmed, "# multi-module:") ||
-				strings.HasPrefix(trimmed, "#multi-module:") ||
-				strings.HasPrefix(trimmed, "multi-module:") {
-				firstValidLineIdx = i
+			// Unknown agent type - use generic heuristic
+			if m.isValidTopLevelLine(trimmed) {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+func (m *commitPatternMatcher) isValidTopLevelLine(trimmed string) bool {
+	// Pattern 1: multi-module commit
+	if strings.HasPrefix(trimmed, "# multi-module:") ||
+		strings.HasPrefix(trimmed, "#multi-module:") ||
+		strings.HasPrefix(trimmed, "multi-module:") {
+		return true
+	}
+
+	// Pattern 2: single-module commit with `# <module>: <type>:`
+	if strings.HasPrefix(trimmed, "# ") {
+		for _, commitType := range standardCommitTypes {
+			if strings.Contains(trimmed, ": "+commitType+":") ||
+				strings.Contains(trimmed, ": "+commitType+"(") {
+				return true
+			}
+		}
+	}
+
+	// Pattern 3: Fallback - ANY markdown heading (# or ##) if nothing else matched
+	if strings.HasPrefix(trimmed, "# ") || strings.HasPrefix(trimmed, "## ") {
+		lower := strings.ToLower(trimmed)
+		// Only accept if it's not common noise headers
+		if !strings.Contains(lower, "summary") &&
+			!strings.Contains(lower, "context") &&
+			!strings.Contains(lower, "changes") {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (m *commitPatternMatcher) isValidModuleLine(trimmed string) bool {
+	// Module agent: look for `## <module-name>`
+	if strings.HasPrefix(trimmed, "## ") && len(trimmed) > 3 {
+		moduleNamePart := strings.TrimSpace(trimmed[3:])
+		return moduleNamePart != "" && moduleNamePart != "---"
+	}
+	return false
+}
+
+// filterWithAntiCorruptionRules applies anti-corruption rules to filter noise
+func filterWithAntiCorruptionRules(lines []string, rules *commitmessage.AntiCorruptionRules) string {
+	var cleaned []string
+	foundContent := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Skip lines matching forbidden prefixes
+		shouldSkip := false
+		for _, prefix := range rules.ForbiddenPrefixes {
+			if strings.HasPrefix(trimmed, prefix) {
+				shouldSkip = true
 				break
 			}
+		}
+		if shouldSkip {
+			continue
+		}
 
-			// Pattern 2: single-module commit
-			commitTypes := []string{"feat", "fix", "chore", "docs", "test", "refactor", "perf", "style", "build", "ci"}
-			for _, commitType := range commitTypes {
-				if strings.Contains(trimmed, ": "+commitType+":") ||
-					strings.Contains(trimmed, ": "+commitType+"(") {
-					firstValidLineIdx = i
-					break
-				}
+		// Skip lines containing forbidden strings
+		for _, contains := range rules.ForbiddenContains {
+			if strings.Contains(trimmed, contains) {
+				shouldSkip = true
+				break
+			}
+		}
+		if shouldSkip {
+			continue
+		}
+
+		// Skip lines containing forbidden emojis
+		for _, emoji := range rules.ForbiddenEmojis {
+			if strings.Contains(trimmed, emoji) {
+				shouldSkip = true
+				break
+			}
+		}
+		if shouldSkip {
+			continue
+		}
+
+		// Skip agent signatures (end of content markers)
+		for _, signature := range rules.AgentSignatures {
+			if strings.HasPrefix(trimmed, signature) {
+				return strings.TrimSpace(strings.Join(cleaned, "\n"))
 			}
 		}
 
-		if firstValidLineIdx != -1 {
-			break
+		// Skip horizontal rules before content starts
+		if !foundContent && (trimmed == "---" || trimmed == "___" || trimmed == "***") {
+			continue
 		}
+
+		// Skip empty lines before content starts
+		if !foundContent && trimmed == "" {
+			continue
+		}
+
+		// Skip bold announcement lines
+		if strings.HasPrefix(trimmed, "**") && strings.HasSuffix(trimmed, "**") {
+			continue
+		}
+
+		// Content has started
+		if trimmed != "" {
+			foundContent = true
+		}
+
+		cleaned = append(cleaned, line)
 	}
 
-	// If no valid pattern found, fall back to original heuristic
-	if firstValidLineIdx == -1 {
-		var cleaned []string
-		foundContent := false
+	return strings.TrimSpace(strings.Join(cleaned, "\n"))
+}
 
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
+// filterWithHardcodedRules applies hardcoded noise patterns when YAML rules unavailable
+func filterWithHardcodedRules(lines []string) string {
+	var cleaned []string
+	foundContent := false
 
-			// Skip common noise patterns
-			if strings.Contains(trimmed, "**Initialized and ready") ||
-				strings.Contains(trimmed, "**INITIALIZED") ||
-				strings.Contains(trimmed, "Loading project context") ||
-				strings.Contains(trimmed, "ready to assist") ||
-				(len(trimmed) > 0 && trimmed[0] > 127 && strings.Contains(trimmed, "**")) {
-				continue
-			}
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
 
-			// Skip horizontal rules before content starts
-			if !foundContent && (trimmed == "---" || trimmed == "___" || trimmed == "***") {
-				continue
-			}
-
-			// Skip empty lines before content starts
-			if !foundContent && trimmed == "" {
-				continue
-			}
-
-			// Content has started
-			if trimmed != "" {
-				foundContent = true
-			}
-
-			cleaned = append(cleaned, line)
+		// Skip common noise patterns (hardcoded)
+		if strings.Contains(trimmed, "**Initialized and ready") ||
+			strings.Contains(trimmed, "**INITIALIZED") ||
+			strings.Contains(trimmed, "Loading project context") ||
+			strings.Contains(trimmed, "ready to assist") ||
+			(len(trimmed) > 0 && trimmed[0] > 127 && strings.Contains(trimmed, "**")) {
+			continue
 		}
 
-		return strings.TrimSpace(strings.Join(cleaned, "\n"))
+		// Skip horizontal rules before content starts
+		if !foundContent && (trimmed == "---" || trimmed == "___" || trimmed == "***") {
+			continue
+		}
+
+		// Skip empty lines before content starts
+		if !foundContent && trimmed == "" {
+			continue
+		}
+
+		// Content has started
+		if trimmed != "" {
+			foundContent = true
+		}
+
+		cleaned = append(cleaned, line)
 	}
 
-	// Cut everything before the first valid line
-	return strings.TrimSpace(strings.Join(lines[firstValidLineIdx:], "\n"))
+	return strings.TrimSpace(strings.Join(cleaned, "\n"))
+}
+
+// stripAgentNoise removes common initialization/greeting patterns from agent output
+// by scanning for the first valid commit message line based on agent type.
+//
+// This function loads anti-corruption rules from contracts/commit-message/0.1.0/anti-corruption.yml
+// and applies them to filter out conversational wrappers, initialization messages, and other noise.
+func stripAgentNoise(output string, agentType string) string {
+	lines := strings.Split(output, "\n")
+	matcher := &commitPatternMatcher{agentType: agentType}
+
+	// Try to find first valid line using pattern matching
+	firstValidLineIdx := matcher.findFirstValidLine(lines)
+	if firstValidLineIdx != -1 {
+		// Found valid line - cut everything before it
+		return strings.TrimSpace(strings.Join(lines[firstValidLineIdx:], "\n"))
+	}
+
+	// No valid pattern found - use anti-corruption rules
+	workspaceRoot, _ := repository.GetRepositoryRoot("")
+	if workspaceRoot == "" {
+		return filterWithHardcodedRules(lines)
+	}
+
+	rulesPath := filepath.Join(workspaceRoot, "contracts/commit-message/0.1.0/anti-corruption.yml")
+	rules, err := commitmessage.LoadAntiCorruptionRules(rulesPath)
+	if err != nil {
+		return filterWithHardcodedRules(lines)
+	}
+
+	return filterWithAntiCorruptionRules(lines, rules)
+}
+
+// stripAgentNoiseHardcoded is a fallback function when anti-corruption rules can't be loaded
+// This maintains backward compatibility if the YAML file is missing
+func stripAgentNoiseHardcoded(output string, agentType string) string {
+	lines := strings.Split(output, "\n")
+	matcher := &commitPatternMatcher{agentType: agentType}
+
+	// Try to find first valid line using pattern matching
+	firstValidLineIdx := matcher.findFirstValidLine(lines)
+	if firstValidLineIdx != -1 {
+		return strings.TrimSpace(strings.Join(lines[firstValidLineIdx:], "\n"))
+	}
+
+	// No valid pattern - use hardcoded rules
+	return filterWithHardcodedRules(lines)
 }
 
 // extractModelFromAgent parses agent frontmatter and extracts the model field
@@ -526,100 +708,6 @@ func extractModelFromAgent(agentContent string) string {
 	}
 
 	return ""
-}
-
-// extractContentBlock removes conversational wrapper text from agent output
-func extractContentBlock(agentOutput string) string {
-	lines := strings.Split(agentOutput, "\n")
-	var contentLines []string
-	inContent := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Skip meta-commentary at the start
-		if !inContent {
-			// Skip horizontal rules
-			if trimmed == "---" || trimmed == "___" || trimmed == "***" {
-				continue
-			}
-
-			// Skip any line starting with emoji (check first rune)
-			if len(trimmed) > 0 {
-				firstRune := []rune(trimmed)[0]
-				if firstRune > 127 { // Non-ASCII (likely emoji)
-					continue
-				}
-			}
-
-			// Skip conversational wrappers (from contract forbidden patterns)
-			if strings.HasPrefix(trimmed, "Based on ") ||
-				strings.HasPrefix(trimmed, "Let me ") ||
-				strings.HasPrefix(trimmed, "Here is ") ||
-				strings.HasPrefix(trimmed, "Here's ") ||
-				strings.HasPrefix(trimmed, "I will ") ||
-				strings.HasPrefix(trimmed, "I'll ") ||
-				strings.HasPrefix(trimmed, "I've ") ||
-				strings.HasPrefix(trimmed, "I'm ") ||
-				strings.HasPrefix(trimmed, "I can see ") ||
-				strings.HasPrefix(trimmed, "Looking at ") ||
-				strings.HasPrefix(trimmed, "Now ") || // Catch "Now generating..."
-				strings.HasPrefix(trimmed, "You are now") ||
-				strings.HasPrefix(trimmed, "The title ") ||
-				strings.HasPrefix(trimmed, "The corrected ") ||
-				strings.HasPrefix(trimmed, "The generated ") ||
-				strings.HasPrefix(trimmed, "The changes ") ||
-				strings.HasPrefix(trimmed, "After reviewing") ||
-				strings.Contains(trimmed, "ready to assist") || // Skip assistant messages
-				strings.Contains(trimmed, "commit message") || // Skip "generating your commit message"
-				strings.Contains(trimmed, "🚀") || // Skip emoji celebration lines
-				strings.Contains(trimmed, "✅") || // Skip checkmark lines
-				strings.Contains(trimmed, "🤖") || // Skip bot emoji lines
-				strings.Contains(trimmed, "🎉") || // Skip party emoji lines
-				strings.Contains(trimmed, "✨") || // Skip sparkle emoji lines
-				strings.Contains(trimmed, "INITIALIZED") || // Skip initialization messages
-				(strings.HasPrefix(trimmed, "**") && strings.HasSuffix(trimmed, "**")) { // Skip bold announcements
-				continue
-			}
-
-			// Skip opening markdown fence
-			if trimmed == "```" || trimmed == "```markdown" || strings.HasPrefix(trimmed, "```") {
-				continue
-			}
-
-			// Skip empty lines before content
-			if trimmed == "" {
-				continue
-			}
-
-			// Content starts here
-			inContent = true
-		}
-
-		// Stop at agent signature or closing fence
-		if strings.HasPrefix(trimmed, "Agent:") || (trimmed == "```" && inContent) {
-			break
-		}
-
-		if inContent {
-			contentLines = append(contentLines, line)
-		}
-	}
-
-	result := strings.Join(contentLines, "\n")
-	return strings.TrimSpace(result)
-}
-
-// removeAPIKeyFromEnv removes ANTHROPIC_API_KEY from environment variables
-// This forces Claude CLI to use subscription auth instead of API key
-func removeAPIKeyFromEnv(environ []string) []string {
-	var filtered []string
-	for _, env := range environ {
-		if !strings.HasPrefix(env, "ANTHROPIC_API_KEY=") {
-			filtered = append(filtered, env)
-		}
-	}
-	return filtered
 }
 
 // buildTopLevelContext creates context for the top-level commit message agent

@@ -1,8 +1,8 @@
 ---
-name: commit-message-module
 description: Generate one module section for commit message
 model: claude-3-5-haiku-20241022
-color: green
+temperature: 0.3
+max_tokens: 2000
 ---
 
 # Generate Module Commit Section
@@ -67,3 +67,30 @@ types, line limits, and module-specific summaries. Includes validation
 rules to enforce 72-character line wrapping and conventional commit
 header format for both top-level and module summaries.
 ```
+
+---
+
+## Anti-Corruption Layer
+
+**ABSOLUTELY FORBIDDEN** - Do NOT include any of these patterns in your output:
+
+**See**: `contracts/commit-message/0.1.0/anti-corruption.yml` for complete rules.
+
+**Forbidden Prefixes** (lines starting with):
+- "Based on"
+- "Here is" / "Here's"
+- "Let me"
+- "I will" / "I'll" / "I've" / "I'm"
+- "The title" / "The generated" / "The changes"
+- "After reviewing"
+
+**Forbidden Content**:
+- Emojis (🚀 ✅ 🤖 🎉 ✨)
+- Meta-commentary about the task
+- Conversational wrappers
+- Explanations of what you're doing
+
+**Output ONLY**:
+- ✅ The raw commit message content
+- ✅ Start with `##` (module heading)
+- ✅ End with body text

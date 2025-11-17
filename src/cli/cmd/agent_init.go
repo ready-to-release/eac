@@ -61,7 +61,7 @@ Example:
 		fmt.Println("")
 
 		// Create .r2r directory structure
-		if err := createAgentDirectoryStructure(workspaceRoot); err != nil {
+		if err := createAgentDirectoryStructure(workspaceRoot, workspaceRoot); err != nil {
 			return fmt.Errorf("failed to create directory structure: %w", err)
 		}
 
@@ -168,17 +168,58 @@ func displayAgentProviderInfo(config *agentProviderConfig) {
 }
 
 // createAgentDirectoryStructure creates the .r2r directory structure
-func createAgentDirectoryStructure(workspaceRoot string) error {
+func createAgentDirectoryStructure(workspaceRoot string, repoRoot string) error {
 	// Create .r2r directory
 	r2rDir := filepath.Join(workspaceRoot, ".r2r")
 	if err := os.MkdirAll(r2rDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .r2r directory: %w", err)
 	}
 
-	// Create .r2r/logs directory
-	logsDir := filepath.Join(r2rDir, "logs")
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .r2r/logs directory: %w", err)
+	// Create .r2r/prompts/commit directory
+	promptsDir := filepath.Join(r2rDir, "prompts", "commit")
+	if err := os.MkdirAll(promptsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .r2r/prompts/commit directory: %w", err)
+	}
+
+	// Copy built-in prompts to .r2r/prompts/commit/ for user customization
+	if err := copyAgentPromptTemplates(promptsDir, repoRoot); err != nil {
+		return fmt.Errorf("failed to copy prompt templates: %w", err)
+	}
+
+	return nil
+}
+
+// copyAgentPromptTemplates copies built-in prompts from commit package to .r2r/prompts/commit/ for customization
+func copyAgentPromptTemplates(promptsDir string, repoRoot string) error {
+	// Source prompts are at: <repo>/src/commands/impl/commit/prompts/
+	sourceDir := filepath.Join(repoRoot, "src", "commands", "impl", "commit", "prompts")
+
+	// Copy top-level.md
+	topLevelSource := filepath.Join(sourceDir, "top-level.md")
+	topLevelDest := filepath.Join(promptsDir, "top-level.md")
+	if err := copyAgentFile(topLevelSource, topLevelDest); err != nil {
+		return fmt.Errorf("failed to copy top-level.md: %w", err)
+	}
+
+	// Copy module.md
+	moduleSource := filepath.Join(sourceDir, "module.md")
+	moduleDest := filepath.Join(promptsDir, "module.md")
+	if err := copyAgentFile(moduleSource, moduleDest); err != nil {
+		return fmt.Errorf("failed to copy module.md: %w", err)
+	}
+
+	return nil
+}
+
+// copyAgentFile copies a file from src to dst
+func copyAgentFile(src, dst string) error {
+	content, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("failed to read source file %s: %w", src, err)
+	}
+
+	if err := os.WriteFile(dst, content, 0644); err != nil {
+		return fmt.Errorf("failed to write destination file %s: %w", dst, err)
 	}
 
 	return nil

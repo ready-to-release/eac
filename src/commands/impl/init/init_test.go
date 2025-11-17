@@ -22,22 +22,51 @@ func TestCreateDirectoryStructure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 
-			err := createDirectoryStructure(tmpDir)
+			// Create mock source prompts directory
+			mockRepoRoot := filepath.Join(tmpDir, "mock-repo")
+			mockPromptsDir := filepath.Join(mockRepoRoot, "src", "commands", "impl", "commit", "prompts")
+			if err := os.MkdirAll(mockPromptsDir, 0755); err != nil {
+				t.Fatalf("failed to create mock prompts directory: %v", err)
+			}
+
+			// Create mock prompt files
+			topLevelContent := "# Mock top-level prompt"
+			moduleContent := "# Mock module prompt"
+			if err := os.WriteFile(filepath.Join(mockPromptsDir, "top-level.md"), []byte(topLevelContent), 0644); err != nil {
+				t.Fatalf("failed to create mock top-level.md: %v", err)
+			}
+			if err := os.WriteFile(filepath.Join(mockPromptsDir, "module.md"), []byte(moduleContent), 0644); err != nil {
+				t.Fatalf("failed to create mock module.md: %v", err)
+			}
+
+			// Test directory structure creation
+			targetDir := filepath.Join(tmpDir, "target")
+			err := createDirectoryStructure(targetDir, mockRepoRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createDirectoryStructure() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			// Verify .r2r directory was created
-			r2rDir := filepath.Join(tmpDir, ".r2r")
+			r2rDir := filepath.Join(targetDir, ".r2r")
 			if _, err := os.Stat(r2rDir); os.IsNotExist(err) {
 				t.Errorf(".r2r directory was not created")
 			}
 
-			// Verify .r2r/logs directory was created
-			logsDir := filepath.Join(tmpDir, ".r2r", "logs")
-			if _, err := os.Stat(logsDir); os.IsNotExist(err) {
-				t.Errorf(".r2r/logs directory was not created")
+			// Verify .r2r/prompts/commit directory was created
+			promptsDir := filepath.Join(targetDir, ".r2r", "prompts", "commit")
+			if _, err := os.Stat(promptsDir); os.IsNotExist(err) {
+				t.Errorf(".r2r/prompts/commit directory was not created")
+			}
+
+			// Verify prompts were copied
+			copiedTopLevel := filepath.Join(promptsDir, "top-level.md")
+			if _, err := os.Stat(copiedTopLevel); os.IsNotExist(err) {
+				t.Errorf("top-level.md was not copied")
+			}
+			copiedModule := filepath.Join(promptsDir, "module.md")
+			if _, err := os.Stat(copiedModule); os.IsNotExist(err) {
+				t.Errorf("module.md was not copied")
 			}
 		})
 	}
