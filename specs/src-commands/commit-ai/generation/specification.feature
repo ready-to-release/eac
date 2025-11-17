@@ -1,5 +1,5 @@
 @deps:claude @deps:go @ov
-Feature: src-commands_ai-commit-generation
+Feature: src-commands_commit-ai_generation
 
   As a developer of the eac platform
   I want AI-powered commit message generation
