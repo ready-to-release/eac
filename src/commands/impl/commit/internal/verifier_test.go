@@ -5,14 +5,17 @@ import (
 )
 
 func TestVerifyCommitMessageContract_ValidMessage(t *testing.T) {
-	validMessage := `# src-commands: feat: add commit message verifier
+	validMessage := `feat(src-commands): add commit message verifier
+
+Auditor-Summary: Implemented contract verifier to validate commit
+messages against formal structure requirements.
 
 This commit adds a contract verifier to validate commit messages
 against the formal structure defined in the contract. Ensures
 compliance with all formatting and structural requirements.
 
-## src-commands
-
+src-commands
+------------
 src-commands: feat: add commit message contract verifier
 
 Implements validation logic to programmatically verify commit messages
@@ -32,11 +35,9 @@ paths:
   - 'src/commands/**'
 ` + "```" + `
 
----
-
 `
 
-	errors := VerifyCommitMessageContract(validMessage, nil)
+	errors := VerifyCommitMessageContract(validMessage, []string{"src-commands"})
 
 	if len(errors) > 0 {
 		t.Errorf("Expected valid message to have no errors, got %d errors:", len(errors))
@@ -49,7 +50,7 @@ paths:
 func TestVerifyCommitMessageContract_MissingTopHeading(t *testing.T) {
 	invalidMessage := `This is not a heading
 
-## Summary
+Auditor-Summary: Some summary.
 
 Some summary text.
 `
@@ -58,39 +59,39 @@ Some summary text.
 
 	foundError := false
 	for _, err := range errors {
-		if err.Code == "MISSING_TOP_HEADING" {
+		if err.Code == "INVALID_HEADER_FORMAT" {
 			foundError = true
 			break
 		}
 	}
 
 	if !foundError {
-		t.Error("Expected MISSING_TOP_HEADING error")
+		t.Error("Expected INVALID_HEADER_FORMAT error")
 	}
 }
 
 func TestVerifyCommitMessageContract_TitleTooLong(t *testing.T) {
-	longTitle := `# cli: feat: this is a very long title that exceeds the maximum allowed length of 72 characters`
+	longTitle := `feat(cli): this is a very long title that exceeds the maximum allowed length`
 
 	errors := VerifyCommitMessageContract(longTitle, nil)
 
 	foundError := false
 	for _, err := range errors {
-		if err.Code == "TITLE_TOO_LONG" {
+		if err.Code == "HEADER_TOO_LONG" {
 			foundError = true
 			break
 		}
 	}
 
 	if !foundError {
-		t.Error("Expected TITLE_TOO_LONG error")
+		t.Error("Expected HEADER_TOO_LONG error")
 	}
 }
 
 func TestVerifyCommitMessageContract_TitleTrailingPeriod(t *testing.T) {
-	invalidMessage := `# cli: feat: add feature.
+	invalidMessage := `feat(cli): add feature.
 
-## Summary
+Auditor-Summary: Added new feature.
 
 Summary text here.
 `
@@ -99,21 +100,22 @@ Summary text here.
 
 	foundError := false
 	for _, err := range errors {
-		if err.Code == "TITLE_TRAILING_PERIOD" {
+		if err.Code == "HEADER_TRAILING_PERIOD" {
 			foundError = true
 			break
 		}
 	}
 
 	if !foundError {
-		t.Error("Expected TITLE_TRAILING_PERIOD error")
+		t.Error("Expected HEADER_TRAILING_PERIOD error")
 	}
 }
 
 func TestVerifyCommitMessageContract_MissingTopLevelBody(t *testing.T) {
-	invalidMessage := `# cli: feat: add feature
+	invalidMessage := `feat(cli): add feature
 
-## cli
+cli
+---
 
 cli: feat: add some feature
 
@@ -136,21 +138,22 @@ Body text here.
 }
 
 func TestVerifyCommitMessageContract_InvalidSubjectFormat(t *testing.T) {
-	invalidMessage := `# src-commands: feat: add feature
+	invalidMessage := `feat(src-commands): add feature
+
+Auditor-Summary: Summary text for the overall change.
 
 Summary text for the overall change.
 
-## src-commands
+src-commands
+------------
 
 This is not a valid subject line format
 
 Body text here.
 
----
-
 `
 
-	errors := VerifyCommitMessageContract(invalidMessage, nil)
+	errors := VerifyCommitMessageContract(invalidMessage, []string{"src-commands"})
 
 	foundError := false
 	for _, err := range errors {
@@ -166,11 +169,14 @@ Body text here.
 }
 
 func TestVerifyCommitMessageContract_UnclosedCodeBlock(t *testing.T) {
-	invalidMessage := `# src-commands: feat: add feature
+	invalidMessage := `feat(src-commands): add feature
+
+Auditor-Summary: Summary text for the overall change.
 
 Summary text for the overall change.
 
-## src-commands
+src-commands
+------------
 
 src-commands: feat: add feature
 
@@ -179,8 +185,6 @@ Body text.
 ` + "```go" + `
 code here
 // Missing closing fence
-
----
 
 `
 
@@ -199,60 +203,22 @@ code here
 	}
 }
 
+// TestVerifyCommitMessageContract_ModuleHeaderWithColon is no longer applicable
+// With the new plain text format (module-name + dashes), module names cannot
+// contain colons as they're validated to only contain lowercase letters,
+// numbers, dashes, and underscores.
 func TestVerifyCommitMessageContract_ModuleHeaderWithColon(t *testing.T) {
-	invalidMessage := `# Add feature
-
-## Summary
-
-Summary text.
-
-## Files affected
-
-| Status | File | Module |
-| ------ | ---- | ------ |
-| added  | file.go | mod |
-
----
-
-## src-commands: feat: something
-
-src-commands: feat: add feature
-
-Body text.
-
----
-
-`
-
-	errors := VerifyCommitMessageContract(invalidMessage, nil)
-
-	foundError := false
-	for _, err := range errors {
-		if err.Code == "MODULE_HEADER_FORMAT" {
-			foundError = true
-			break
-		}
-	}
-
-	if !foundError {
-		t.Error("Expected MODULE_HEADER_FORMAT error")
-	}
+	t.Skip("This test is no longer applicable with the new plain text module format")
 }
 
 func TestVerifyCommitMessageContract_LineTooLong(t *testing.T) {
-	invalidMessage := `# Add feature
+	invalidMessage := `feat(module): add feature
 
-## Summary
+Auditor-Summary: Adding new feature to module.
 
 This is a very long line that exceeds the maximum allowed length of 72 characters for body text in commit messages.
 
-## Files affected
-
-| Status | File | Module |
-| ------ | ---- | ------ |
-| added  | file.go | mod |
-
----
+Changes: 1 file, +10 insertions, -0 deletions
 
 `
 

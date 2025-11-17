@@ -21,11 +21,11 @@ func TestLoadConfig(t *testing.T) {
 			name: "valid config with claude-cli provider",
 			configYAML: `provider:
   name: claude-cli
-  model: sonnet`,
+  model: claude-3-haiku-20240307`,
 			envVars: map[string]string{},
 			want: &Config{
 				ProviderName: "claude-cli",
-				Model:        "sonnet",
+				Model:        "claude-3-haiku-20240307",
 				APIKey:       "",
 			},
 			wantErr: false,
@@ -150,7 +150,7 @@ func TestLoadConfigFromRepoRoot(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "agent-config.yml")
 	configContent := `provider:
   name: claude-cli
-  model: sonnet`
+  model: claude-3-haiku-20240307`
 
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
@@ -167,8 +167,8 @@ func TestLoadConfigFromRepoRoot(t *testing.T) {
 	if got.ProviderName != "claude-cli" {
 		t.Errorf("ProviderName = %v, want claude-cli", got.ProviderName)
 	}
-	if got.Model != "sonnet" {
-		t.Errorf("Model = %v, want sonnet", got.Model)
+	if got.Model != "claude-3-haiku-20240307" {
+		t.Errorf("Model = %v, want claude-3-haiku-20240307", got.Model)
 	}
 }
 

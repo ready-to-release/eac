@@ -10,7 +10,7 @@ import (
 )
 
 func TestOpenAI_Name(t *testing.T) {
-	provider, _ := NewOpenAI("test-key", "gpt-4")
+	provider, _ := NewOpenAI("test-key", DefaultOpenAIModel)
 	if provider.Name() != "openai" {
 		t.Errorf("Name() = %v, want openai", provider.Name())
 	}
@@ -23,7 +23,7 @@ func TestOpenAI_Execute(t *testing.T) {
 		t.Skip("Skipping OpenAI integration test: OPENAI_API_KEY not set")
 	}
 
-	provider, err := NewOpenAI(apiKey, "gpt-4")
+	provider, err := NewOpenAI(apiKey, DefaultOpenAIModel)
 	if err != nil {
 		t.Fatalf("NewOpenAI() error = %v", err)
 	}
@@ -53,7 +53,7 @@ func TestOpenAI_ValidationError(t *testing.T) {
 		{
 			name:      "empty API key returns error",
 			apiKey:    "",
-			model:     "gpt-4",
+			model:     DefaultOpenAIModel,
 			wantErr:   true,
 			errString: "API key is required",
 		},
@@ -67,7 +67,7 @@ func TestOpenAI_ValidationError(t *testing.T) {
 		{
 			name:    "valid parameters",
 			apiKey:  "test-key",
-			model:   "gpt-4",
+			model:   DefaultOpenAIModel,
 			wantErr: false,
 		},
 	}
@@ -101,7 +101,7 @@ func TestOpenAI_WithOptions(t *testing.T) {
 		t.Skip("Skipping OpenAI integration test: OPENAI_API_KEY not set")
 	}
 
-	provider, err := NewOpenAI(apiKey, "gpt-4")
+	provider, err := NewOpenAI(apiKey, DefaultOpenAIModel)
 	if err != nil {
 		t.Fatalf("NewOpenAI() error = %v", err)
 	}

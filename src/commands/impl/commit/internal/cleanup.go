@@ -68,6 +68,7 @@ func fixContent(lines []string) []string {
 	bodyBuffer := []string{}
 	lastWasModuleHeader := false
 	needBlankLineAfterCodeBlock := false
+	inMultiLineSpecialField := false
 
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -99,87 +100,70 @@ func fixContent(lines []string) []string {
 			}
 		}
 
-		// FIX 1: Truncate title to 72 chars with ellipsis if needed
-		if i == 0 && strings.HasPrefix(trimmed, "# ") {
-			title := strings.TrimPrefix(trimmed, "# ")
-			if len("# "+title) > 72 {
+		// FIX 1: Truncate header to 72 chars with ellipsis if needed
+		// New format: <type>(<scope>): <summary>
+		conventionalHeaderRegex := regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\([^)]+\):\s*(.+)`)
+		if i == 0 && conventionalHeaderRegex.MatchString(trimmed) {
+			if len(trimmed) > 72 {
 				// Truncate to 69 chars to leave room for "..."
-				title = title[:66]
-				// Remove any trailing spaces, periods, or punctuation before adding ellipsis
-				title = strings.TrimRight(title, " .")
-				title = title + "..."
+				truncated := trimmed[:69]
+				truncated = strings.TrimRight(truncated, " .")
+				line = truncated + "..."
 			} else {
-				// Only remove trailing period if NOT truncated (no ellipsis)
-				title = strings.TrimSuffix(title, ".")
+				// Only remove trailing period
+				line = strings.TrimSuffix(trimmed, ".")
 			}
-			line = "# " + title
 			cleaned = append(cleaned, line)
-			// After title, we're in top-level body section
+			// After header, we're in top-level body section
 			inBodySection = true
 			continue
 		}
 
-		// FIX 2: CUT module headers at 72 chars, remove trailing periods
-		if strings.HasPrefix(trimmed, "## ") {
-			moduleName := strings.TrimPrefix(trimmed, "## ")
-			if len("## "+moduleName) > 72 {
-				// CUT to 69 chars to leave room for "..."
-				moduleName = moduleName[:66]
-				moduleName = strings.TrimRight(moduleName, " .")
-				moduleName = moduleName + "..."
-			} else {
-				// Just remove trailing period
-				moduleName = strings.TrimSuffix(moduleName, ".")
+		// FIX 2: Handle module headers
+		// New format: plain text module name (followed by dashes on next line)
+		if i < len(lines)-1 {
+			nextTrimmed := strings.TrimSpace(lines[i+1])
+			if isDashesLine(nextTrimmed) && isModuleName(trimmed) {
+				// This is a module header in new format
+				// Ensure blank line before if needed
+				if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
+					cleaned = append(cleaned, "")
+				}
+				lastWasModuleHeader = true
+				cleaned = append(cleaned, line)
+				// Add the dashes line on next iteration
+				continue
 			}
-			line = "## " + moduleName
 		}
 
-		// FIX 3: Handle subject lines (WRAP if too long, remove trailing periods)
-		// Format: <module>: <type>: <description>
-		subjectRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)`)
+		// FIX 3: Detect separators BEFORE dashes (since "---" is both a separator and dashes)
+		if trimmed == "---" {
+			// Flush buffered body text
+			if inBodySection && len(bodyBuffer) > 0 {
+				cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)
+				bodyBuffer = []string{}
+			}
+			inBodySection = false
 
-		// Special case: if last line was a module header, this might be a wrapped subject line
-		// Join continuation lines until we hit a blank line or code block
-		if lastWasModuleHeader && subjectRegex.MatchString(trimmed) {
-			subjectLine := trimmed
-
-			// Look ahead and join continuation lines
-			j := i + 1
-			for j < len(lines) {
-				nextTrimmed := strings.TrimSpace(lines[j])
-
-				// Stop at blank line, separator, code block, or next header
-				if nextTrimmed == "" ||
-					nextTrimmed == "---" ||
-					strings.HasPrefix(nextTrimmed, "```") ||
-					strings.HasPrefix(nextTrimmed, "## ") ||
-					strings.HasPrefix(nextTrimmed, "| ") {
-					break
-				}
-
-				subjectLine += " " + nextTrimmed
-				j++
+			// Add blank line before separator if needed
+			if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
+				cleaned = append(cleaned, "")
 			}
 
-			// Remove trailing period
-			subjectLine = strings.TrimSuffix(subjectLine, ".")
-
-			// WRAP if too long (don't truncate semantic commits)
-			if len(subjectLine) > 72 {
-				wrapped := wrapSemanticCommitLine(subjectLine)
-				cleaned = append(cleaned, wrapped...)
-			} else {
-				cleaned = append(cleaned, subjectLine)
-			}
-
-			// Skip the continuation lines we just processed
-			for k := i + 1; k < j; k++ {
-				lines[k] = "" // Mark as processed
-			}
-
-			lastWasModuleHeader = false
+			cleaned = append(cleaned, line)
 			continue
 		}
+
+		// Pass through dashes line (part of module header)
+		if isDashesLine(trimmed) {
+			cleaned = append(cleaned, line)
+			inBodySection = true
+			continue
+		}
+
+		// FIX 4: Handle subject lines (WRAP if too long, remove trailing periods)
+		// Format: <module>: <type>: <description>
+		subjectRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)`)
 
 		if subjectRegex.MatchString(trimmed) {
 			// Remove trailing period
@@ -189,48 +173,54 @@ func fixContent(lines []string) []string {
 			if len(line) > 72 {
 				wrapped := wrapSemanticCommitLine(line)
 				cleaned = append(cleaned, wrapped...)
-				continue
+			} else {
+				cleaned = append(cleaned, line)
 			}
-		}
-
-		// FIX 4: Track body sections for line wrapping
-		// Detect start of body sections (module body text)
-		if strings.HasPrefix(trimmed, "## ") {
-			lastWasModuleHeader = true
-			// Flush any buffered body text from previous section
-			if len(bodyBuffer) > 0 {
-				cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)
-				bodyBuffer = []string{}
-			}
-			inBodySection = true
-
-			// Ensure exactly one blank line before section header (except for first header)
-			if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
-				cleaned = append(cleaned, "")
-			}
-
-			cleaned = append(cleaned, line)
-
-			// Ensure exactly one blank line after section header
-			// (will be added when we process next non-empty line)
+			lastWasModuleHeader = false
 			continue
 		}
 
-		// Detect end of body section
-		if inBodySection && (trimmed == "---" || strings.HasPrefix(trimmed, "```")) {
+		// FIX 5: Detect code block end
+		if inBodySection && strings.HasPrefix(trimmed, "```") {
 			// Flush buffered body text
 			if len(bodyBuffer) > 0 {
 				cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)
 				bodyBuffer = []string{}
 			}
 			inBodySection = false
-
-			// Add blank line before divider if needed
-			if trimmed == "---" && len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
-				cleaned = append(cleaned, "")
-			}
-
 			cleaned = append(cleaned, line)
+			continue
+		}
+
+		// Check if this is a special field line (Auditor-Summary, Changes, etc.)
+		isSpecialField := strings.HasPrefix(trimmed, "Auditor-Summary:") ||
+		   strings.HasPrefix(trimmed, "Changes:") ||
+		   strings.HasPrefix(trimmed, "BREAKING CHANGE:") ||
+		   strings.HasPrefix(trimmed, "Refs:") ||
+		   strings.HasPrefix(trimmed, "Closes:") ||
+		   strings.HasPrefix(trimmed, "Co-authored-by:")
+
+		if isSpecialField {
+			// Flush any buffered body text first
+			if len(bodyBuffer) > 0 {
+				cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)
+				bodyBuffer = []string{}
+			}
+			cleaned = append(cleaned, line)
+			inMultiLineSpecialField = true
+			continue
+		}
+
+		// Handle continuation lines of multi-line special fields
+		if inMultiLineSpecialField {
+			if trimmed == "" {
+				// Blank line ends the special field
+				inMultiLineSpecialField = false
+				cleaned = append(cleaned, line)
+			} else {
+				// Continuation line - pass through without buffering
+				cleaned = append(cleaned, line)
+			}
 			continue
 		}
 

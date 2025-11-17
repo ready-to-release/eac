@@ -15,7 +15,7 @@ func TestClaudeAPI_Name(t *testing.T) {
 		apiKey = "test-key" // Use dummy key for name test
 	}
 
-	provider, err := NewClaudeAPI(apiKey, "claude-3-haiku-20240307")
+	provider, err := NewClaudeAPI(apiKey, DefaultClaudeAPIModel)
 	if err != nil {
 		t.Fatalf("NewClaudeAPI() error = %v", err)
 	}
@@ -31,7 +31,7 @@ func TestClaudeAPI_Execute(t *testing.T) {
 		t.Skip("ANTHROPIC_API_KEY not set, skipping integration test")
 	}
 
-	provider, err := NewClaudeAPI(apiKey, "claude-3-haiku-20240307")
+	provider, err := NewClaudeAPI(apiKey, DefaultClaudeAPIModel)
 	if err != nil {
 		t.Fatalf("NewClaudeAPI() error = %v", err)
 	}
@@ -53,7 +53,7 @@ func TestClaudeAPI_Execute(t *testing.T) {
 		{
 			name:    "execution with model option",
 			input:   "Say 'hello'",
-			opts:    []ai.Option{ai.WithModel("claude-3-haiku-20240307")},
+			opts:    []ai.Option{ai.WithModel(DefaultClaudeAPIModel)},
 			wantErr: false,
 		},
 		{
@@ -92,7 +92,7 @@ func TestClaudeAPI_ValidationError(t *testing.T) {
 		{
 			name:    "empty API key returns error",
 			apiKey:  "",
-			model:   "claude-3-haiku-20240307",
+			model:   DefaultClaudeAPIModel,
 			wantErr: true,
 		},
 		{

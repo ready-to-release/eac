@@ -10,23 +10,46 @@ description: "Formal contract defining commit message structure for multi-module
 structure:
   - section: "top_level_heading"
     required: true
-    format: "# <module|multi-module>: <type>: <summary>"
+    format: "<type>(<scope>): <summary>"
     max_length: 72
     examples:
-      - "# multi-module: feat: add commit message validation"
-      - "# cli: fix: resolve command parsing error"
+      - "feat(commit-ai): add commit message validation"
+      - "fix(cli): resolve command parsing error"
+      - "feat(multi-module): add validation across contracts and cli"
+
+  - section: "auditor_summary"
+    required: true
+    description: "Single audit-ready sentence for implementation reports"
+    format: "Auditor-Summary: <One clear sentence describing the change>"
+    examples:
+      - "Auditor-Summary: Implemented contract-based validation system for commit messages with 7-lever enforcement pipeline"
 
   - section: "top_level_body"
     required: true
-    description: "Plain text body directly after top-level heading (no section header)"
+    description: "Plain text body directly after auditor summary"
     format: "2-4 sentences describing all changes"
+
+  - section: "diff_stats"
+    required: false
+    description: "Summary of files changed (generated from git diff --stat)"
+    format: "Changes: N files, +X insertions"
 
   - section: "module_sections"
     required: true
-    format: "## <module-name>"
+    format: "<module-name> (plain text with dashes separator)"
     subsections:
       - "module_subject_line: <module>: <type>: <description>"
       - "module_body: Detailed changes"
+
+  - section: "footer"
+    required: false
+    description: "Optional metadata for breaking changes, references, co-authors"
+    format: "<token>: <value>"
+    tokens:
+      - "BREAKING CHANGE"
+      - "Refs"
+      - "Closes"
+      - "Co-authored-by"
 
 # SEMANTIC TYPES
 semantic_types:
@@ -42,12 +65,16 @@ semantic_types:
 # MODULE SUBJECT LINE FORMAT
 subject_line_format: "<module>: <type>: <description>"
 
+# HEADER FORMAT (with scope)
+header_format: "<type>(<scope>): <summary>"
+
 # CONSTRAINTS
 constraints:
   max_line_length: 72  # HARD LIMIT - applies to Summary and module body text
   no_trailing_periods: true
   code_blocks_closed: true
   module_header_no_colons: true
+  scope_required: true  # Scope is mandatory in header
 
 # LINE WRAPPING RULES
 wrapping:

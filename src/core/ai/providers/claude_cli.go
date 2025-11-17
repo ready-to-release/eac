@@ -12,6 +12,17 @@ import (
 	"github.com/ready-to-release/eac/src/core/ai"
 )
 
+// Claude CLI model names (using full model IDs for consistency across providers)
+const (
+	ClaudeCLIModelHaiku  = "claude-3-haiku-20240307"
+	ClaudeCLIModelSonnet = "claude-3-5-sonnet-20240620"
+	ClaudeCLIModelOpus   = "claude-3-opus-20240229"
+)
+
+// DefaultClaudeCLIModel is the default model for Claude CLI provider
+// Change this constant when upgrading to a newer model version
+const DefaultClaudeCLIModel = ClaudeCLIModelHaiku
+
 // ClaudeCLI provider uses Claude CLI tool with subscription authentication
 //
 // Intent: Invoke Claude via CLI tool using subscription credits (no API costs).
@@ -43,7 +54,7 @@ type ClaudeCLI struct {
 // Uses Claude Pro subscription for authentication (removes API key from environment)
 func NewClaudeCLI() *ClaudeCLI {
 	return &ClaudeCLI{
-		defaultModel: "sonnet", // Default to sonnet for quality
+		defaultModel: DefaultClaudeCLIModel,
 	}
 }
 
@@ -65,6 +76,9 @@ func (p *ClaudeCLI) Execute(ctx context.Context, input string, opts ...ai.Option
 	if options.Model != "" {
 		model = options.Model
 	}
+
+	// Convert full model ID to CLI short name if needed
+	model = mapModelToCLIName(model)
 
 	// Build command arguments
 	args := []string{
@@ -101,6 +115,24 @@ func (p *ClaudeCLI) Execute(ctx context.Context, input string, opts ...ai.Option
 	// Return output (trimmed)
 	output := strings.TrimSpace(stdout.String())
 	return output, nil
+}
+
+// mapModelToCLIName converts full model IDs to CLI short names
+// The Claude CLI tool expects short names like "haiku", "sonnet", "opus"
+// This function maps full model IDs (e.g., "claude-3-haiku-20240307") to short names
+func mapModelToCLIName(model string) string {
+	// Map full model IDs to short names
+	switch model {
+	case "claude-3-haiku-20240307":
+		return "haiku"
+	case "claude-3-5-sonnet-20240620", "claude-3-5-sonnet-20241022":
+		return "sonnet"
+	case "claude-3-opus-20240229":
+		return "opus"
+	default:
+		// If it's already a short name or unknown, return as-is
+		return model
+	}
 }
 
 // removeAPIKeyFromEnv removes ANTHROPIC_API_KEY from environment variables
