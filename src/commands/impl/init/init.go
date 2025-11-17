@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/ai/providers"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -150,25 +151,25 @@ func configureProvider(config *agentConfig, provider string) error {
 	case "claude-api":
 		config.providerName = "claude-api"
 		config.envVarName = "ANTHROPIC_API_KEY"
-		config.model = "claude-3-haiku-20240307"
+		config.model = providers.DefaultClaudeAPIModel
 		config.endpoint = "https://api.anthropic.com/v1"
 
 	case "claude-cli":
 		config.providerName = "claude-cli"
 		config.envVarName = ""
-		config.model = "sonnet"
+		config.model = providers.DefaultClaudeCLIModel
 		config.endpoint = ""
 
 	case "openai":
 		config.providerName = "openai"
 		config.envVarName = "OPENAI_API_KEY"
-		config.model = "gpt-4-turbo"
+		config.model = providers.DefaultOpenAIModel
 		config.endpoint = "https://api.openai.com/v1"
 
 	case "gemini":
 		config.providerName = "gemini"
 		config.envVarName = "GOOGLE_API_KEY"
-		config.model = "gemini-1.5-pro"
+		config.model = providers.DefaultGeminiModel
 		config.endpoint = "https://generativelanguage.googleapis.com"
 
 	default:

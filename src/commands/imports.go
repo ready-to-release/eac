@@ -8,6 +8,7 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/design"
 	_ "github.com/ready-to-release/eac/src/commands/impl/docs"
 	_ "github.com/ready-to-release/eac/src/commands/impl/get"
+	_ "github.com/ready-to-release/eac/src/commands/impl/init"
 	_ "github.com/ready-to-release/eac/src/commands/impl/list"
 	_ "github.com/ready-to-release/eac/src/commands/impl/pipeline"
 	_ "github.com/ready-to-release/eac/src/commands/impl/show"

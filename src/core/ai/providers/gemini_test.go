@@ -10,7 +10,7 @@ import (
 )
 
 func TestGemini_Name(t *testing.T) {
-	provider, _ := NewGemini("test-key", "gemini-pro")
+	provider, _ := NewGemini("test-key", DefaultGeminiModel)
 	if provider.Name() != "gemini" {
 		t.Errorf("Name() = %v, want gemini", provider.Name())
 	}
@@ -23,7 +23,7 @@ func TestGemini_Execute(t *testing.T) {
 		t.Skip("Skipping Gemini integration test: GOOGLE_API_KEY not set")
 	}
 
-	provider, err := NewGemini(apiKey, "gemini-pro")
+	provider, err := NewGemini(apiKey, DefaultGeminiModel)
 	if err != nil {
 		t.Fatalf("NewGemini() error = %v", err)
 	}
@@ -53,7 +53,7 @@ func TestGemini_ValidationError(t *testing.T) {
 		{
 			name:      "empty API key returns error",
 			apiKey:    "",
-			model:     "gemini-pro",
+			model:     DefaultGeminiModel,
 			wantErr:   true,
 			errString: "API key is required",
 		},
@@ -67,7 +67,7 @@ func TestGemini_ValidationError(t *testing.T) {
 		{
 			name:    "valid parameters",
 			apiKey:  "test-key",
-			model:   "gemini-pro",
+			model:   DefaultGeminiModel,
 			wantErr: false,
 		},
 	}
@@ -101,7 +101,7 @@ func TestGemini_WithOptions(t *testing.T) {
 		t.Skip("Skipping Gemini integration test: GOOGLE_API_KEY not set")
 	}
 
-	provider, err := NewGemini(apiKey, "gemini-pro")
+	provider, err := NewGemini(apiKey, DefaultGeminiModel)
 	if err != nil {
 		t.Fatalf("NewGemini() error = %v", err)
 	}

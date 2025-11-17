@@ -20,11 +20,11 @@ func TestStripAgentNoise_TopLevel(t *testing.T) {
 			name: "removes initialization message before multi-module commit",
 			input: `**Initialized and ready to assist**
 
-# multi-module: feat: add new features
+feat(multi-module): add new features
 
 Body text here.`,
 			agentType: "top-level",
-			want: `# multi-module: feat: add new features
+			want: `feat(multi-module): add new features
 
 Body text here.`,
 		},
@@ -32,11 +32,11 @@ Body text here.`,
 			name: "removes INITIALIZED banner before single-module commit",
 			input: `**INITIALIZED** ✓
 
-# src-commands: feat: add commit validation
+feat(src-commands): add commit validation
 
 Body text here.`,
 			agentType: "top-level",
-			want: `# src-commands: feat: add commit validation
+			want: `feat(src-commands): add commit validation
 
 Body text here.`,
 		},
@@ -45,21 +45,21 @@ Body text here.`,
 			input: `Loading project context from agent.md
 System ready to assist with your tasks.
 
-# cli: fix: resolve bug in parsing
+fix(cli): resolve bug in parsing
 
 Body text here.`,
 			agentType: "top-level",
-			want: `# cli: fix: resolve bug in parsing
+			want: `fix(cli): resolve bug in parsing
 
 Body text here.`,
 		},
 		{
 			name: "handles commit with scope in parentheses",
-			input: `# src-core: feat(ai): add new provider
+			input: `feat(src-core): add new provider
 
 Body text here.`,
 			agentType: "top-level",
-			want: `# src-core: feat(ai): add new provider
+			want: `feat(src-core): add new provider
 
 Body text here.`,
 		},
@@ -67,11 +67,11 @@ Body text here.`,
 			name: "removes horizontal rule before content",
 			input: `---
 
-# multi-module: chore: update dependencies
+chore(multi-module): update dependencies
 
 Body text here.`,
 			agentType: "top-level",
-			want: `# multi-module: chore: update dependencies
+			want: `chore(multi-module): update dependencies
 
 Body text here.`,
 		},
@@ -80,42 +80,48 @@ Body text here.`,
 			input: `
 
 
-# src-commands: docs: update documentation
+docs(src-commands): update documentation
 
 Body text here.`,
 			agentType: "top-level",
-			want: `# src-commands: docs: update documentation
+			want: `docs(src-commands): update documentation
 
 Body text here.`,
 		},
 		{
-			name: "handles multi-module format without # prefix",
+			name: "handles multi-module format with scope",
 			input: `Some noise here
-multi-module: refactor: restructure modules
+refactor(multi-module): restructure modules
 
 Body text here.`,
 			agentType: "top-level",
-			want: `multi-module: refactor: restructure modules
+			want: `refactor(multi-module): restructure modules
 
 Body text here.`,
 		},
 		{
 			name: "preserves content after valid heading",
-			input: `# cli: test: add new test cases
+			input: `test(cli): add new test cases
+
+Auditor-Summary: Adding comprehensive test coverage.
 
 This commit adds comprehensive test coverage for the
 new validation logic.
 
-## cli
+cli
+---
 
 cli: test: add validation tests`,
 			agentType: "top-level",
-			want: `# cli: test: add new test cases
+			want: `test(cli): add new test cases
+
+Auditor-Summary: Adding comprehensive test coverage.
 
 This commit adds comprehensive test coverage for the
 new validation logic.
 
-## cli
+cli
+---
 
 cli: test: add validation tests`,
 		},
@@ -125,11 +131,11 @@ cli: test: add validation tests`,
 
 Here's what I did...
 
-# src-commands: feat: add feature
+feat(src-commands): add feature
 
 Body text here.`,
 			agentType: "top-level",
-			want: `# src-commands: feat: add feature
+			want: `feat(src-commands): add feature
 
 Body text here.`,
 		},
@@ -158,13 +164,15 @@ func TestStripAgentNoise_Module(t *testing.T) {
 			name: "removes greeting before module section",
 			input: `I'll generate the module section for you.
 
-## src-commands
+src-commands
+------------
 
 src-commands: feat: add validation
 
 Body text here.`,
 			agentType: "module",
-			want: `## src-commands
+			want: `src-commands
+------------
 
 src-commands: feat: add validation
 
@@ -174,13 +182,15 @@ Body text here.`,
 			name: "removes horizontal rule before module section",
 			input: `---
 
-## cli
+cli
+---
 
 cli: fix: resolve parsing bug
 
 Fixed the issue with argument parsing.`,
 			agentType: "module",
-			want: `## cli
+			want: `cli
+---
 
 cli: fix: resolve parsing bug
 
@@ -188,7 +198,8 @@ Fixed the issue with argument parsing.`,
 		},
 		{
 			name: "preserves module section with code blocks",
-			input: `## src-core
+			input: `src-core
+--------
 
 src-core: refactor: simplify logic
 
@@ -198,7 +209,8 @@ src-core: refactor: simplify logic
 +}
 ` + "```",
 			agentType: "module",
-			want: `## src-core
+			want: `src-core
+--------
 
 src-core: refactor: simplify logic
 
@@ -209,12 +221,14 @@ src-core: refactor: simplify logic
 ` + "```",
 		},
 		{
-			name: "rejects module section with separator after ##",
-			input: `## ---
+			name: "preserves invalid module format",
+			input: `invalid-format
+---
 
 Some content`,
 			agentType: "module",
-			want: `## ---
+			want: `invalid-format
+---
 
 Some content`,
 		},
@@ -223,11 +237,13 @@ Some content`,
 			input: `
 
 
-## src-commands
+src-commands
+------------
 
 src-commands: chore: update deps`,
 			agentType: "module",
-			want: `## src-commands
+			want: `src-commands
+------------
 
 src-commands: chore: update deps`,
 		},
@@ -256,11 +272,11 @@ func TestStripAgentNoiseHardcoded_Fallback(t *testing.T) {
 			name: "fallback handles standard noise patterns",
 			input: `**Initialized and ready to assist**
 
-# cli: feat: add feature
+feat(cli): add feature
 
 Body text.`,
 			agentType: "top-level",
-			want: `# cli: feat: add feature
+			want: `feat(cli): add feature
 
 Body text.`,
 		},
@@ -268,11 +284,13 @@ Body text.`,
 			name: "fallback removes horizontal rules",
 			input: `---
 
-## src-commands
+src-commands
+------------
 
 Module content.`,
 			agentType: "module",
-			want: `## src-commands
+			want: `src-commands
+------------
 
 Module content.`,
 		},
@@ -390,14 +408,14 @@ func TestExtractModelFromAgent(t *testing.T) {
 		{
 			name: "extracts model from valid frontmatter",
 			agentContent: `---
-model: claude-3-5-sonnet-20241022
+model: claude-3-haiku-20240307
 temperature: 0.7
 ---
 
 # Agent Instructions
 
 Generate a commit message.`,
-			want: "claude-3-5-sonnet-20241022",
+			want: "claude-3-haiku-20240307",
 		},
 		{
 			name: "extracts model with extra whitespace",
@@ -477,92 +495,104 @@ func TestCombineCommitSections(t *testing.T) {
 	}{
 		{
 			name: "combines single-module commit (no module sections)",
-			topLevel: `# src-commands: feat: add validation
+			topLevel: `feat(src-commands): add validation
 
 This commit adds validation logic.`,
 			moduleSections: []string{},
-			want: `# src-commands: feat: add validation
+			want: `feat(src-commands): add validation
 
 This commit adds validation logic.`,
 		},
 		{
 			name: "combines multi-module commit with sections",
-			topLevel: `# multi-module: feat: add features
+			topLevel: `feat(multi-module): add features
 
 This affects multiple modules.`,
 			moduleSections: []string{
-				`## src-commands
+				`src-commands
+------------
 
 src-commands: feat: add command validation`,
-				`## src-core
+				`src-core
+--------
 
 src-core: feat: add core validation`,
 			},
-			want: `# multi-module: feat: add features
+			want: `feat(multi-module): add features
 
 This affects multiple modules.
 
-## src-commands
+src-commands
+------------
 
 src-commands: feat: add command validation
 
 ---
 
-## src-core
+src-core
+--------
 
 src-core: feat: add core validation`,
 		},
 		{
 			name: "handles single module section",
-			topLevel: `# multi-module: chore: update
+			topLevel: `chore(multi-module): update
 
 Updates to modules.`,
 			moduleSections: []string{
-				`## src-commands
+				`src-commands
+------------
 
 src-commands: chore: update deps`,
 			},
-			want: `# multi-module: chore: update
+			want: `chore(multi-module): update
 
 Updates to modules.
 
-## src-commands
+src-commands
+------------
 
 src-commands: chore: update deps`,
 		},
 		{
 			name: "combines three module sections with separators",
-			topLevel: `# multi-module: refactor: restructure
+			topLevel: `refactor(multi-module): restructure
 
 Restructuring multiple modules.`,
 			moduleSections: []string{
-				`## module-a
+				`module-a
+--------
 
 module-a: refactor: simplify`,
-				`## module-b
+				`module-b
+--------
 
 module-b: refactor: extract`,
-				`## module-c
+				`module-c
+--------
 
 module-c: refactor: rename`,
 			},
-			want: `# multi-module: refactor: restructure
+			want: `refactor(multi-module): restructure
 
 Restructuring multiple modules.
 
-## module-a
+module-a
+--------
 
 module-a: refactor: simplify
 
 ---
 
-## module-b
+module-b
+--------
 
 module-b: refactor: extract
 
 ---
 
-## module-c
+module-c
+--------
 
 module-c: refactor: rename`,
 		},
@@ -633,7 +663,7 @@ diff --git a/src/core/executor.go b/src/core/executor.go
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := buildTopLevelContext(tt.stagedFilesTable, tt.gitDiff, tt.affectedModules)
+			got := buildTopLevelContext(tt.stagedFilesTable, tt.gitDiff, "", tt.affectedModules)
 
 			for _, want := range tt.wantContains {
 				if !strings.Contains(got, want) {
@@ -653,9 +683,9 @@ diff --git a/src/core/executor.go b/src/core/executor.go
 +func Execute() {}`
 
 	tests := []struct {
-		name        string
-		moduleName  string
-		moduleFiles []repository.RepositoryFileWithModule
+		name         string
+		moduleName   string
+		moduleFiles  []repository.RepositoryFileWithModule
 		wantContains []string
 	}{
 		{
@@ -719,15 +749,17 @@ func TestAddMissingModules(t *testing.T) {
 	}{
 		{
 			name: "returns original when no modules missing",
-			commitMessage: `# multi-module: feat: add features
+			commitMessage: `feat(multi-module): add features
 
 Body text.
 
-## src-commands
+src-commands
+------------
 
 src-commands: feat: add validation
 
-## src-core
+src-core
+--------
 
 src-core: feat: add executor`,
 			affectedModules: []string{"src-commands", "src-core"},
@@ -737,20 +769,21 @@ src-core: feat: add executor`,
 			},
 			gitDiff: "",
 			wantContains: []string{
-				"## src-commands",
-				"## src-core",
+				"src-commands\n------------",
+				"src-core\n--------",
 			},
 			wantNotContains: []string{
-				"---\n\n## src-commands", // Should not add duplicate
+				"---\n\nsrc-commands\n------------", // Should not add duplicate
 			},
 		},
 		{
 			name: "adds missing module section",
-			commitMessage: `# multi-module: feat: add features
+			commitMessage: `feat(multi-module): add features
 
 Body text.
 
-## src-commands
+src-commands
+------------
 
 src-commands: feat: add validation`,
 			affectedModules: []string{"src-commands", "src-core"},
@@ -761,14 +794,14 @@ src-commands: feat: add validation`,
 			gitDiff: `diff --git a/src/core/executor.go b/src/core/executor.go
 +func Execute() {}`,
 			wantContains: []string{
-				"## src-commands",
-				"---\n\n## src-core",
+				"src-commands\n------------",
+				"src-core\n---------",
 				"src-core: chore:",
 			},
 		},
 		{
 			name: "truncates long file list in stub",
-			commitMessage: `# multi-module: feat: add features
+			commitMessage: `feat(multi-module): add features
 
 Body text.`,
 			affectedModules: []string{"src-commands"},
@@ -777,7 +810,7 @@ Body text.`,
 			},
 			gitDiff: "",
 			wantContains: []string{
-				"## src-commands",
+				"src-commands\n------------",
 				"...", // Truncated file name
 			},
 		},

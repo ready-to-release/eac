@@ -1,101 +1,36 @@
----
-description: Generate top-level commit message header and summary
-model: claude-3-5-haiku-20241022
-temperature: 0.3
-max_tokens: 2000
----
+# Generate Commit Message
 
-# Generate Top-Level Commit Message Section
+Write a commit message following this format (do NOT wrap in ```):
 
-**CRITICAL**: Your FIRST line MUST be the `#` header line. No exceptions.
+<type>(<scope>): <one-line summary>
 
-Output ONLY the top-level section. No explanations. No preamble.
+Auditor-Summary: <one audit-ready sentence>
 
-## Output Format (YOU MUST FOLLOW EXACTLY)
+<2-4 sentences describing changes>
 
-Line 1: `# <module|multi-module>: <type>: <summary>` (MAX 72 CHARS)
-Line 2: (blank)
-Line 3-N: Body text (2-4 sentences, wrapped at 72 chars)
+Changes: <N> files, +<X> insertions, -<Y> deletions
 
-## Algorithm
+Rules:
 
-```
-1. Read "Module Count" from input
-2. If count = 1: use module name in header
-   If count > 1: use "multi-module" in header
-3. Write EXACTLY: # <module|multi-module>: <type>: <summary>
-4. Write blank line
-5. Write 2-4 sentence body
-6. STOP
-```
+- Start with `feat(`, `fix(`, `chore(`, `docs(`, `refactor(`, `test(`, or `perf(`
+- If multiple modules: use `feat(multi-module):`
+- If single module: use `feat(module-name):`
+- Max 72 characters per line
+- No trailing periods on header
+- Wrap body text at 72 characters
 
-## Header Rules (LINE 1 - MANDATORY)
+Example:
 
-**Format**: `# <module|multi-module>: <type>: <summary>`
+```text
+feat(multi-module): add validation pipeline
 
-- If Module Count = 1: `# <module-name>: <type>: <summary>`
-- If Module Count > 1: `# multi-module: <type>: <summary>`
-- Max 72 characters TOTAL for the entire line
-- No trailing period
-- Types: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`, `style`
+Auditor-Summary: Implemented contract-based validation for commits.
 
-## Body Rules (AFTER BLANK LINE)
+This commit introduces formal specifications and validation rules
+for commit messages across multiple modules. Changes include contract
+definitions, CLI implementation, and enforcement logic.
 
-- 2-4 sentences describing the overall changes
-- Wrap at 72 characters per line
-- No code snippets, no code blocks
-- STOP after body (do NOT write module sections)
-
-## Example Input
-
-```
-Module Count: 3 (multi-module)
-
-Affected Modules:
-- contracts
-- src-commands
-- claude-agents
-
-Staged Files: [table showing files]
-Git Diff: [code changes]
+Changes: 5 files, +330 insertions, -129 deletions
 ```
 
-## Example Output (EXACT FORMAT YOU MUST PRODUCE)
-
-```
-# multi-module: feat: add commit message validation system
-
-This commit introduces formal contract specifications for commit
-messages and implements a validation pipeline. Changes span contract
-definitions, CLI command implementation, and agent instructions to
-ensure generated messages comply with structure requirements.
-```
-
-**VERIFY BEFORE SENDING**: Does your output start with `#`? If NO, you failed.
-
----
-
-## Anti-Corruption Layer
-
-**ABSOLUTELY FORBIDDEN** - Do NOT include any of these patterns in your output:
-
-**See**: `contracts/commit-message/0.1.0/anti-corruption.yml` for complete rules.
-
-**Forbidden Prefixes** (lines starting with):
-- "Based on"
-- "Here is" / "Here's"
-- "Let me"
-- "I will" / "I'll" / "I've" / "I'm"
-- "The title" / "The generated" / "The changes"
-- "After reviewing"
-
-**Forbidden Content**:
-- Emojis (🚀 ✅ 🤖 🎉 ✨)
-- Meta-commentary about the task
-- Conversational wrappers
-- Explanations of what you're doing
-
-**Output ONLY**:
-- ✅ The raw commit message content
-- ✅ Start with `#` (heading)
-- ✅ End with body text
+Generate the commit message now (output ONLY the commit message, no explanations):

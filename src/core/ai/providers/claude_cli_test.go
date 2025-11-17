@@ -35,7 +35,7 @@ func TestClaudeCLI_Execute(t *testing.T) {
 		{
 			name:    "simple prompt execution",
 			input:   "Say 'test' and nothing else.",
-			opts:    []ai.Option{ai.WithModel("haiku")},
+			opts:    []ai.Option{ai.WithModel(ClaudeCLIModelHaiku)},
 			wantErr: false,
 		},
 	}
@@ -82,7 +82,7 @@ func TestClaudeCLI_WithOptions(t *testing.T) {
 	}
 
 	// Test with different model options
-	output, err := provider.Execute(ctx, "Say hello", ai.WithModel("haiku"))
+	output, err := provider.Execute(ctx, "Say hello", ai.WithModel(ClaudeCLIModelHaiku))
 	if err != nil {
 		t.Errorf("Execute() with model option error = %v", err)
 	}

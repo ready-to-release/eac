@@ -32,6 +32,10 @@ import (
 	"google.golang.org/api/option"
 )
 
+// DefaultGeminiModel is the default model for Gemini provider
+// Change this constant when upgrading to a newer model version
+const DefaultGeminiModel = "gemini-1.5-pro"
+
 // Gemini provider uses Google Gemini API with API key authentication
 type Gemini struct {
 	apiKey string

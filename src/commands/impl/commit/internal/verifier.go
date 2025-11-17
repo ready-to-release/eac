@@ -229,92 +229,122 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 		return errors
 	}
 
-	// RULE 1: First line must be top-level heading with conventional commit format
-	conventionalCommitRegex := regexp.MustCompile(`^# ([a-z0-9\-]+|multi-module):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
+	// RULE 1: First line must be conventional commit header with scope
+	// Format: <type>(<scope>): <summary>
+	conventionalCommitRegex := regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\(([a-z0-9\-]+|multi-module)\):\s*(.+)$`)
 
-	if !strings.HasPrefix(lines[0], "# ") {
+	if !conventionalCommitRegex.MatchString(lines[0]) {
 		errors = append(errors, ValidationError{
-			Code:     "MISSING_TOP_HEADING",
-			Message:  "First line must start with '# '",
+			Code:     "INVALID_HEADER_FORMAT",
+			Message:  "Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
 			Line:     1,
 			Severity: "error",
 		})
-	} else {
-		// RULE 2: Title must follow conventional commit format
-		if !conventionalCommitRegex.MatchString(lines[0]) {
-			errors = append(errors, ValidationError{
-				Code:     "INVALID_TITLE_FORMAT",
-				Message:  "Title must follow format: # <module|multi-module>: <type>: <summary>",
-				Line:     1,
-				Severity: "error",
-			})
-		}
-
-		title := strings.TrimPrefix(lines[0], "# ")
-
-		// RULE 3: Title max 72 characters
-		if len(lines[0]) > 72 {
-			errors = append(errors, ValidationError{
-				Code:     "TITLE_TOO_LONG",
-				Message:  fmt.Sprintf("Title exceeds 72 characters (%d chars)", len(lines[0])),
-				Line:     1,
-				Severity: "error",
-			})
-		}
-
-		// RULE 4: No trailing period (except ellipsis "...")
-		if strings.HasSuffix(title, ".") && !strings.HasSuffix(title, "...") {
-			errors = append(errors, ValidationError{
-				Code:     "TITLE_TRAILING_PERIOD",
-				Message:  "Title must not end with period",
-				Line:     1,
-				Severity: "error",
-			})
-		}
 	}
 
-	// RULE 5: Check for top-level body (should appear after title, before first ## section)
+	// RULE 2: Header max 72 characters
+	if len(lines[0]) > 72 {
+		errors = append(errors, ValidationError{
+			Code:     "HEADER_TOO_LONG",
+			Message:  fmt.Sprintf("Header exceeds 72 characters (%d chars)", len(lines[0])),
+			Line:     1,
+			Severity: "error",
+		})
+	}
+
+	// RULE 3: No trailing period (except ellipsis "...")
+	if strings.HasSuffix(lines[0], ".") && !strings.HasSuffix(lines[0], "...") {
+		errors = append(errors, ValidationError{
+			Code:     "HEADER_TRAILING_PERIOD",
+			Message:  "Header must not end with period",
+			Line:     1,
+			Severity: "error",
+		})
+	}
+
+	// RULE 4: Check for Auditor-Summary field (should appear early, after blank line)
+	hasAuditorSummary := false
+	for i := 1; i < len(lines) && i < 10; i++ { // Check first 10 lines
+		if strings.HasPrefix(lines[i], "Auditor-Summary:") {
+			hasAuditorSummary = true
+			break
+		}
+	}
+	if !hasAuditorSummary {
+		errors = append(errors, ValidationError{
+			Code:     "MISSING_AUDITOR_SUMMARY",
+			Message:  "Missing Auditor-Summary field after header",
+			Severity: "error",
+		})
+	}
+
+	// RULE 5: Check for top-level body (should appear after header and auditor summary, before module sections)
 	hasTopLevelBody := false
 	hasModuleSection := false
 	foundModules := make(map[string]bool) // Track which modules we found in the commit message
+	afterAuditorSummary := false
+	inModuleSection := false
 
 	for i, line := range lines {
 		lineNum := i + 1
 		trimmed := strings.TrimSpace(line)
 
-		// Check if we have body text before any ## sections
-		if i > 0 && !hasModuleSection && !strings.HasPrefix(trimmed, "##") && trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+		// Track when we pass the Auditor-Summary line
+		if strings.HasPrefix(trimmed, "Auditor-Summary:") {
+			afterAuditorSummary = true
+			continue
+		}
+
+		// Check if we have body text after Auditor-Summary and before module sections
+		if afterAuditorSummary && !hasModuleSection && trimmed != "" &&
+			!strings.HasPrefix(trimmed, "Auditor-Summary:") &&
+			!strings.HasPrefix(trimmed, "Changes:") &&
+			trimmed != "---" {
 			hasTopLevelBody = true
 		}
 
-		// Module sections start with ##
-		if strings.HasPrefix(trimmed, "## ") {
-			hasModuleSection = true
-			moduleHeader := strings.TrimPrefix(trimmed, "## ")
-			foundModules[moduleHeader] = true
-
-			// RULE 6: Module headers must be plain name (no colons)
-			if strings.Contains(moduleHeader, ":") {
-				errors = append(errors, ValidationError{
-					Code:     "MODULE_HEADER_FORMAT",
-					Message:  fmt.Sprintf("Module header must be plain name only, found: '%s'", moduleHeader),
-					Line:     lineNum,
-					Severity: "error",
-				})
+		// Module sections: look for plain module name followed by dashes
+		// Pattern: module-name on one line, dashes on next line
+		if i < len(lines)-1 && !inModuleSection {
+			nextLine := strings.TrimSpace(lines[i+1])
+			// Check if current line is a module name and next line is dashes
+			if isModuleName(trimmed) && isDashesLine(nextLine) {
+				hasModuleSection = true
+				inModuleSection = true
+				foundModules[trimmed] = true
 			}
 		}
 
-		// RULE 7: Line length in body text (skip headers, tables, code blocks, horizontal rules)
+		// Exit module section when we hit horizontal rule or blank lines
+		if trimmed == "---" || (inModuleSection && trimmed == "" && i < len(lines)-1) {
+			nextTrimmed := ""
+			if i < len(lines)-1 {
+				nextTrimmed = strings.TrimSpace(lines[i+1])
+			}
+			// If next line is also blank or dashes, we're between sections
+			if nextTrimmed == "" || nextTrimmed == "---" || isDashesLine(nextTrimmed) {
+				inModuleSection = false
+			}
+		}
+
+		// RULE 7: Line length in body text (skip special lines: module headers with dashes,
+		// Auditor-Summary, Changes, tables, code blocks, horizontal rules)
 		if trimmed != "" &&
-			!strings.HasPrefix(trimmed, "#") &&
+			!strings.HasPrefix(trimmed, "Auditor-Summary:") &&
+			!strings.HasPrefix(trimmed, "Changes:") &&
 			!strings.HasPrefix(trimmed, "|") &&
 			!strings.HasPrefix(trimmed, "```") &&
+			!isDashesLine(trimmed) &&
 			trimmed != "---" &&
 			!strings.HasPrefix(trimmed, "Agent:") {
 			if len(trimmed) > 72 {
+				preview := trimmed
+				if len(preview) > 60 {
+					preview = preview[:57] + "..."
+				}
 				errors = append(errors, ValidationError{
 					Code:     "LINE_TOO_LONG",
-					Message:  fmt.Sprintf("Line exceeds 72 characters (%d chars)", len(trimmed)),
+					Message:  fmt.Sprintf("Line exceeds 72 characters (%d chars): %s", len(trimmed), preview),
 					Line:     lineNum,
 					Severity: "warning",
 				})
@@ -364,6 +394,9 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 	// RULE 8: Validate module subject lines
 	errors = append(errors, validateModuleSubjectLines(lines)...)
 
+	// RULE 8b: Validate module section structure (plain text format)
+	errors = append(errors, validateModuleSectionStructure(lines)...)
+
 	// RULE 9: Check for unclosed code blocks
 	errors = append(errors, validateCodeBlocks(lines)...)
 
@@ -385,22 +418,33 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 		lineNum := i + 1
 		trimmed := strings.TrimSpace(line)
 
-		// Detect module section header
-		if strings.HasPrefix(trimmed, "## ") {
-
-			// If we were in a module section and didn't find subject line
-			if inModuleSection && !foundSubjectLine {
-				errors = append(errors, ValidationError{
-					Code:     "MISSING_SUBJECT_LINE",
-					Message:  fmt.Sprintf("Module '%s' missing subject line", currentModule),
-					Severity: "error",
-				})
+		// Detect module section header (new format: module name + dashes)
+		if isDashesLine(trimmed) && i > 0 {
+			// Check if previous non-empty line is a module name
+			prevLine := ""
+			for j := i - 1; j >= 0; j-- {
+				prevTrimmed := strings.TrimSpace(lines[j])
+				if prevTrimmed != "" {
+					prevLine = prevTrimmed
+					break
+				}
 			}
 
-			inModuleSection = true
-			currentModule = strings.TrimPrefix(trimmed, "## ")
-			foundSubjectLine = false
-			continue
+			if isModuleName(prevLine) {
+				// If we were in a module section and didn't find subject line
+				if inModuleSection && !foundSubjectLine {
+					errors = append(errors, ValidationError{
+						Code:     "MISSING_SUBJECT_LINE",
+						Message:  fmt.Sprintf("Module '%s' missing subject line", currentModule),
+						Severity: "error",
+					})
+				}
+
+				inModuleSection = true
+				currentModule = prevLine
+				foundSubjectLine = false
+				continue
+			}
 		}
 
 		// If in module section, look for subject line
@@ -491,4 +535,122 @@ func validateCodeBlocks(lines []string) []ValidationError {
 	}
 
 	return errors
+}
+
+// validateModuleSectionStructure validates that module sections have proper structure
+// Format: <module-name>\n<dashes>\n<module>: <type>: <description>\n<body>
+func validateModuleSectionStructure(lines []string) []ValidationError {
+	var errors []ValidationError
+	subjectRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
+
+	for i := 0; i < len(lines); i++ {
+		trimmed := strings.TrimSpace(lines[i])
+
+		// Check for orphaned dashes line (dashes without module name before it)
+		if isDashesLine(trimmed) {
+			// Look back to see if previous non-empty line was a module name
+			prevNonEmpty := ""
+			for j := i - 1; j >= 0; j-- {
+				if strings.TrimSpace(lines[j]) != "" {
+					prevNonEmpty = strings.TrimSpace(lines[j])
+					break
+				}
+			}
+
+			// If previous line wasn't a valid module name, this is an orphaned dashes line
+			if !isModuleName(prevNonEmpty) {
+				errors = append(errors, ValidationError{
+					Code:     "ORPHANED_DASHES_LINE",
+					Message:  fmt.Sprintf("Orphaned dashes line at line %d - must be preceded by module name", i+1),
+					Line:     i + 1,
+					Severity: "error",
+				})
+			}
+		}
+
+		// Check for module subject line without proper header structure
+		if subjectRegex.MatchString(trimmed) {
+			// This is a subject line - check if it has proper module structure before it
+			moduleName := subjectRegex.FindStringSubmatch(trimmed)[1]
+
+			// Look back for module name + dashes
+			foundModuleName := false
+			foundDashes := false
+
+			for j := i - 1; j >= 0 && j >= i-5; j-- { // Look back up to 5 lines
+				prevTrimmed := strings.TrimSpace(lines[j])
+				if prevTrimmed == "" {
+					continue // Skip blank lines
+				}
+
+				if isDashesLine(prevTrimmed) {
+					foundDashes = true
+				} else if isModuleName(prevTrimmed) && prevTrimmed == moduleName {
+					foundModuleName = true
+				} else {
+					// Hit some other content, stop searching
+					break
+				}
+			}
+
+			// Subject line should have module name and dashes before it
+			if !foundModuleName || !foundDashes {
+				if !foundModuleName && !foundDashes {
+					errors = append(errors, ValidationError{
+						Code:     "MALFORMED_MODULE_SECTION",
+						Message:  fmt.Sprintf("Module section at line %d missing module name and dashes header", i+1),
+						Line:     i + 1,
+						Severity: "error",
+					})
+				} else if !foundModuleName {
+					errors = append(errors, ValidationError{
+						Code:     "MISSING_MODULE_NAME",
+						Message:  fmt.Sprintf("Module section at line %d missing module name (has dashes but no name)", i+1),
+						Line:     i + 1,
+						Severity: "error",
+					})
+				} else if !foundDashes {
+					errors = append(errors, ValidationError{
+						Code:     "MISSING_MODULE_DASHES",
+						Message:  fmt.Sprintf("Module section at line %d missing dashes separator (has name but no dashes)", i+1),
+						Line:     i + 1,
+						Severity: "error",
+					})
+				}
+			}
+		}
+	}
+
+	return errors
+}
+
+// isModuleName checks if a string looks like a module name
+// Module names are lowercase alphanumeric with dashes or underscores
+func isModuleName(s string) bool {
+	if s == "" || len(s) > 50 {
+		return false
+	}
+
+	for _, ch := range s {
+		if !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_') {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isDashesLine checks if a line consists only of dashes
+func isDashesLine(s string) bool {
+	if len(s) < 3 {
+		return false
+	}
+
+	for _, ch := range s {
+		if ch != '-' {
+			return false
+		}
+	}
+
+	return true
 }

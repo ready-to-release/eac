@@ -3,6 +3,7 @@ package ai_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,9 +28,9 @@ func TestExecutor_Execute(t *testing.T) {
 		{
 			name:         "execute with claude-cli configured",
 			createConfig: true,
-			configContent: `provider:
+			configContent: fmt.Sprintf(`provider:
   name: claude-cli
-  model: sonnet`,
+  model: %s`, providers.DefaultClaudeCLIModel),
 			input:        "test prompt",
 			wantProvider: "claude-cli",
 			wantErr:      false,
@@ -95,9 +96,9 @@ func TestExecutor_Execute(t *testing.T) {
 
 			// Create config file if needed
 			if tt.createConfig {
-			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-				t.Fatalf("failed to create .r2r dir: %v", err)
-			}
+				if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+					t.Fatalf("failed to create .r2r dir: %v", err)
+				}
 				if err := os.WriteFile(configPath, []byte(tt.configContent), 0644); err != nil {
 					t.Fatalf("failed to write config file: %v", err)
 				}
@@ -173,9 +174,9 @@ func TestExecutor_ExecuteWithDebug(t *testing.T) {
 
 			// Create config with claude-cli
 			configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
-			configContent := `provider:
+			configContent := fmt.Sprintf(`provider:
   name: claude-cli
-  model: sonnet`
+  model: %s`, providers.DefaultClaudeCLIModel)
 
 			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 				t.Fatalf("failed to create .r2r dir: %v", err)
@@ -196,9 +197,8 @@ func TestExecutor_ExecuteWithDebug(t *testing.T) {
 			}
 
 			// Check if debug info is included in response
-			hasDebugInfo := strings.Contains(response, "provider") ||
-				strings.Contains(response, "timestamp") ||
-				strings.Contains(response, "success")
+			// Look for the actual debug format "DEBUG INFO:" instead of just keywords
+			hasDebugInfo := strings.Contains(response, "DEBUG INFO:")
 
 			if tt.wantDebugInResp && !hasDebugInfo {
 				t.Errorf("Execute() with debug=%v: response should include debug info, got %v", tt.debug, response)
@@ -217,21 +217,23 @@ func TestExecutor_ExecuteWithDebugDefault(t *testing.T) {
 
 	configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
 	configContent := `provider:
-  name: claude-cli
-  model: sonnet`
+  name: mock
+  model: test-model`
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		t.Fatalf("failed to create .r2r dir: %v", err)
 	}
-			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-				t.Fatalf("failed to create .r2r dir: %v", err)
-			}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
 	}
 
 	executor := ai.NewExecutor(tmpDir)
-	providers.RegisterBuiltIn(executor)
+
+	// Register mock provider factory
+	mockResponse := "simple mock response without debug info"
+	executor.RegisterProvider("mock", func(config *ai.Config) (ai.Provider, error) {
+		return providers.NewMockProvider(mockResponse), nil
+	})
 
 	ctx := context.Background()
 	response, err := executor.Execute(ctx, "test prompt")
@@ -242,11 +244,16 @@ func TestExecutor_ExecuteWithDebugDefault(t *testing.T) {
 	}
 
 	// Should not include debug info by default
-	hasDebugInfo := strings.Contains(response, "provider") ||
-		strings.Contains(response, "timestamp")
+	// Check for the actual debug format "DEBUG INFO:" instead of just keywords
+	hasDebugInfo := strings.Contains(response, "DEBUG INFO:")
 
 	if hasDebugInfo {
 		t.Errorf("Execute() without debug option should not include debug info, got %v", response)
+	}
+
+	// Verify we got the expected mock response without debug info
+	if response != mockResponse {
+		t.Errorf("Execute() response = %v, want %v", response, mockResponse)
 	}
 }
 
@@ -255,16 +262,13 @@ func TestExecutor_NoLogFilesCreated(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
-	configContent := `provider:
+	configContent := fmt.Sprintf(`provider:
   name: claude-cli
-  model: sonnet`
+  model: %s`, providers.DefaultClaudeCLIModel)
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		t.Fatalf("failed to create .r2r dir: %v", err)
 	}
-			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-				t.Fatalf("failed to create .r2r dir: %v", err)
-			}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
 	}
@@ -303,16 +307,13 @@ func TestExecutor_ExecuteWithOptions(t *testing.T) {
 
 	// Create config with claude-cli
 	configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
-	configContent := `provider:
+	configContent := fmt.Sprintf(`provider:
   name: claude-cli
-  model: sonnet`
+  model: %s`, providers.DefaultClaudeCLIModel)
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		t.Fatalf("failed to create .r2r dir: %v", err)
 	}
-			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-				t.Fatalf("failed to create .r2r dir: %v", err)
-			}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
 	}
@@ -323,7 +324,7 @@ func TestExecutor_ExecuteWithOptions(t *testing.T) {
 
 	// Test with options
 	response, err := executor.Execute(ctx, "test prompt",
-		ai.WithModel("opus"),
+		ai.WithModel(providers.ClaudeCLIModelSonnet),
 		ai.WithTemperature(0.7),
 		ai.WithMaxTokens(1000),
 	)
@@ -352,7 +353,7 @@ func TestExecutor_LoadProvider(t *testing.T) {
 			name: "load claude-cli provider",
 			config: &ai.Config{
 				ProviderName: "claude-cli",
-				Model:        "sonnet",
+				Model:        providers.DefaultClaudeCLIModel,
 			},
 			wantProvider: "claude-cli",
 			wantErr:      false,
@@ -361,7 +362,7 @@ func TestExecutor_LoadProvider(t *testing.T) {
 			name: "load claude-api provider with API key",
 			config: &ai.Config{
 				ProviderName: "claude-api",
-				Model:        "claude-3-haiku-20240307",
+				Model:        providers.DefaultClaudeAPIModel,
 				Endpoint:     "https://api.anthropic.com/v1",
 				APIKey:       "test-key",
 			},
@@ -372,7 +373,7 @@ func TestExecutor_LoadProvider(t *testing.T) {
 			name: "load claude-api without API key returns error",
 			config: &ai.Config{
 				ProviderName: "claude-api",
-				Model:        "claude-3-haiku-20240307",
+				Model:        providers.DefaultClaudeAPIModel,
 				Endpoint:     "https://api.anthropic.com/v1",
 				APIKey:       "",
 			},
@@ -435,9 +436,6 @@ func TestExecutor_WithMockProvider(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		t.Fatalf("failed to create .r2r dir: %v", err)
 	}
-			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-				t.Fatalf("failed to create .r2r dir: %v", err)
-			}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
 	}

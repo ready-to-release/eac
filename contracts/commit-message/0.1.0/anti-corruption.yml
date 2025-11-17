@@ -33,6 +33,11 @@ forbidden_prefixes:
   - "The generated"
   - "The changes"
   - "After reviewing"
+  - "Would you like"
+  - "Should I"
+  - "Can I"
+  - "Shall I"
+  - "According to"     # Catches "According to the analysis..."
 
 # FORBIDDEN CONTENT PATTERNS
 # Lines containing these strings anywhere are noise and must be removed

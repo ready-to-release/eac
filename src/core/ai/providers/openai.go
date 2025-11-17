@@ -31,6 +31,10 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
+// DefaultOpenAIModel is the default model for OpenAI provider
+// Change this constant when upgrading to a newer model version
+const DefaultOpenAIModel = "gpt-4-turbo"
+
 // OpenAI provider uses OpenAI API with API key authentication
 type OpenAI struct {
 	client *openai.Client

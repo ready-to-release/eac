@@ -1,7 +1,7 @@
 # Everything as Code
 
 <p align="center">
-  <img src="logo/eac-logo.png" width="200" /><br>
+  <img src="docs/assets/logo/eac-logo.png" width="200" /><br>
   <span style="font-size: 1.3em;">Turn every commit into deployable, compliant software you can trust</span>
 </p>
 

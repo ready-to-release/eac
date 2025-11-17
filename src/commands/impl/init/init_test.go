@@ -100,13 +100,13 @@ func TestWriteAgentConfig(t *testing.T) {
 			config: &agentConfig{
 				providerName: "claude-cli",
 				envVarName:   "",
-				model:        "sonnet",
+				model:        "claude-3-haiku-20240307",
 				endpoint:     "",
 			},
 			wantErr: false,
 			wantContains: []string{
 				"name: claude-cli",
-				"model: sonnet",
+				"model: claude-3-haiku-20240307",
 			},
 		},
 		{
@@ -178,7 +178,7 @@ func TestConfigureProvider(t *testing.T) {
 			name:             "configure claude-cli",
 			provider:         "claude-cli",
 			wantProviderName: "claude-cli",
-			wantModel:        "sonnet",
+			wantModel:        "claude-3-haiku-20240307",
 			wantEnvVar:       "",
 			wantErr:          false,
 		},

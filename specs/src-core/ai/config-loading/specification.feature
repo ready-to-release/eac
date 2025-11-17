@@ -17,7 +17,7 @@ Feature: src-core-ai_config-loading
       When I load the configuration
       Then the configuration is loaded successfully
       And the provider name is "claude-cli"
-      And the model is "claude-3-5-sonnet-20241022"
+      And the model is "claude-3-haiku-20240307"
 
     @L2 @ov
     Scenario: Configuration file does not exist

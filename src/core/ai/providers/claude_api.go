@@ -10,6 +10,10 @@ import (
 	"github.com/ready-to-release/eac/src/core/ai"
 )
 
+// DefaultClaudeAPIModel is the default model for Claude API provider
+// Change this constant when upgrading to a newer model version
+const DefaultClaudeAPIModel = "claude-3-haiku-20240307"
+
 // ClaudeAPI provider uses Anthropic API with API key authentication
 //
 // Intent: Call Claude API directly using API key (costs apply, more control).
