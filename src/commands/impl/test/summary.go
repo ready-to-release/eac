@@ -20,8 +20,8 @@ func generateSummary(moniker string) error {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Construct paths (legacy format)
-	outputDir := filepath.Join(workspaceRoot, "out", moniker)
+	// Construct paths
+	outputDir := filepath.Join(workspaceRoot, "out", "test", moniker)
 	return generateSummaryForOutputDir(outputDir)
 }
 

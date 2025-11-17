@@ -1,6 +1,6 @@
 module github.com/ready-to-release/eac/src/commands
 
-go 1.25.3
+go 1.24.4
 
 require (
 	github.com/cucumber/godog v0.15.1
@@ -10,8 +10,10 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/ready-to-release/eac/src/core v0.0.0
 	github.com/ready-to-release/eac/src/core/ai v0.0.0-00010101000000-000000000000
+	github.com/ready-to-release/eac/src/core/markdown v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
+	github.com/yuin/goldmark v1.7.13
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -22,12 +24,12 @@ require (
 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
 	cloud.google.com/go/compute/metadata v0.7.0 // indirect
 	cloud.google.com/go/longrunning v0.5.7 // indirect
-	github.com/Microsoft/go-winio v0.4.21 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/anthropics/anthropic-sdk-go v1.17.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/cucumber/gherkin/go/v26 v26.2.0 // indirect
 	github.com/cucumber/messages/go/v21 v21.0.1 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -54,7 +56,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
@@ -89,3 +91,5 @@ require (
 replace github.com/ready-to-release/eac/src/core => ../core
 
 replace github.com/ready-to-release/eac/src/core/ai => ../core/ai
+
+replace github.com/ready-to-release/eac/src/core/markdown => ../core/markdown

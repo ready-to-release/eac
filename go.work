@@ -1,10 +1,11 @@
-go 1.25.3
+go 1.24.4
 
 use (
 	./src/cli
 	./src/commands
 	./src/core
 	./src/core/ai
+	./src/core/markdown
 	./src/core/module-deps
 	./src/mcp/commands
 	./src/mcp/github
