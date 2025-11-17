@@ -77,10 +77,43 @@ func main() {
 
 	if !exists {
 		// Check if this is a parent command (has subcommands)
-		prefix := strings.Join(os.Args[1:], " ")
+		// We need to find where the command args end and flags/args begin
+		cmdArgCount := 1
+		for i := 1; i < len(os.Args); i++ {
+			if strings.HasPrefix(os.Args[i], "-") {
+				// This is a flag, so previous args were the command
+				break
+			}
+			cmdArgCount = i
+		}
+
+		prefix := strings.Join(os.Args[1:cmdArgCount+1], " ")
 		subcommands := getSubcommands(prefix)
 
 		if len(subcommands) > 0 {
+			// Handle default behaviors for specific verbs
+			if prefix == "build" {
+				// Default: build modules (build all)
+				if fn, found := commands["build modules"]; found {
+					exitCode := fn()
+					os.Exit(exitCode)
+				}
+			} else if prefix == "test" {
+				// Default: test suite commit
+				if fn, found := commands["test suite"]; found {
+					// Inject "suite commit" into os.Args after "test"
+					// Original: ["prog", "test", ...flags]
+					// New: ["prog", "test", "suite", "commit", ...flags]
+					newArgs := []string{os.Args[0], "test", "suite", "commit"}
+					if len(os.Args) > 2 {
+						newArgs = append(newArgs, os.Args[2:]...)
+					}
+					os.Args = newArgs
+					exitCode := fn()
+					os.Exit(exitCode)
+				}
+			}
+
 			printSubcommandHelp(prefix, subcommands)
 			os.Exit(0)
 		}
