@@ -2,7 +2,7 @@
 
 moniker: "implicit-cli-pwsh"
 name: "PowerShell module to invoke Go commands"
-type: "automation"
+type: "scripts-pwsh"
 description: "PowerShell wrapper with tab completion for running Go commands from src/commands/"
 
 parent: src-commands

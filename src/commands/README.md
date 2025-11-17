@@ -212,6 +212,86 @@ The `commit-ai` command is designed to help generate meaningful commit messages 
 # Stage some changes
 git add .
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- CODE -->
+SHOW MODULETYPES
+<!-- CODE END-->
+| Module Type      | Count |
+| ---------------- | ----: |
+| claude-agents    | 1     |
+| claude-commands  | 1     |
+| claude-config    | 2     |
+| claude-hooks     | 1     |
+| config           | 1     |
+| containers       | 1     |
+| contracts        | 2     |
+| definitions-type | 1     |
+| go-cli           | 1     |
+| go-commands      | 1     |
+| go-library       | 1     |
+| go-mcp           | 2     |
+| markdown         | 1     |
+| mkdocs-site      | 1     |
+| mkdocs-subsite   | 1     |
+| no-module-type   | 1     |
+| repository-root  | 1     |
+| scripts-pwsh     | 1     |
+| scripts-sh       | 1     |
+| specifications   | 1     |
+| templates        | 1     |
+| vscode-config    | 1     |
+| vscode-ext       | 1     |
+| Total Types      | 23    |
+<!-- OUTPUT END -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # View changes organized by module
 run commit-ai
 ```
