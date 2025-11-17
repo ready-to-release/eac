@@ -1,9 +1,9 @@
-// Command: templates install specs
-// Description: Install specification templates to local directory
-// Usage: go run . templates install specs [--source <local-path>] [--destination <path>]
+// Command: templates install reports
+// Description: Install report templates to local directory
+// Usage: go run . templates install reports [--source <local-path>] [--destination <path>]
 // Flags:
-//   --source <local-path>: Local template directory path (default: clones from https://github.com/ready-to-release/eac, uses templates/specs subdirectory)
-//   --destination <path>: Destination path (default: .r2r/templates/specs)
+//   --source <local-path>: Local template directory path (default: clones from https://github.com/ready-to-release/eac, uses templates/reports subdirectory)
+//   --destination <path>: Destination path (default: .r2r/templates/reports)
 // HasSideEffects: true
 package install
 
@@ -18,31 +18,31 @@ import (
 )
 
 const (
-	defaultSpecsRepoURL    = "https://github.com/ready-to-release/eac"
-	defaultSpecsSourcePath = "templates/specs"
-	defaultSpecsDest       = ".r2r/templates/specs"
+	defaultReportsRepoURL    = "https://github.com/ready-to-release/eac"
+	defaultReportsSourcePath = "templates/reports"
+	defaultReportsDest       = ".r2r/templates/reports"
 )
 
 func init() {
-	registry.Register(TemplatesInstallSpecs)
+	registry.Register(TemplatesInstallReports)
 }
 
-// specsConfig holds configuration for the specs template install command
-type specsConfig struct {
+// reportsConfig holds configuration for the reports template install command
+type reportsConfig struct {
 	Source      string // Either GitHub URL (default) or local path (custom)
 	Destination string
 	isLocalSrc  bool // true if source is a local path
 }
 
-// TemplatesInstallSpecs installs specification templates
-func TemplatesInstallSpecs() int {
+// TemplatesInstallReports installs report templates
+func TemplatesInstallReports() int {
 	// Parse command-line flags
 	args := []string{}
 	if len(os.Args) > 4 {
-		args = os.Args[4:] // Skip binary, "templates", "install", "specs"
+		args = os.Args[4:] // Skip binary, "templates", "install", "reports"
 	}
 
-	config, err := parseSpecsFlags(args)
+	config, err := parseReportsFlags(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
@@ -69,8 +69,8 @@ func TemplatesInstallSpecs() int {
 		fmt.Printf("Using local templates from %s\n", templateDir)
 	} else {
 		// Default GitHub URL: clone repository and access subdirectory
-		fmt.Printf("Cloning templates from %s...\n", defaultSpecsRepoURL)
-		cloner := templates.NewGitCloner(defaultSpecsRepoURL)
+		fmt.Printf("Cloning templates from %s...\n", defaultReportsRepoURL)
+		cloner := templates.NewGitCloner(defaultReportsRepoURL)
 		clonedDir, err := cloner.CloneToTemp()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to clone repository: %v\n", err)
@@ -80,13 +80,13 @@ func TemplatesInstallSpecs() int {
 			cloner.Cleanup()
 		}
 
-		// Point to the specs templates subdirectory
-		templateDir = filepath.Join(clonedDir, defaultSpecsSourcePath)
+		// Point to the reports templates subdirectory
+		templateDir = filepath.Join(clonedDir, defaultReportsSourcePath)
 
 		// Verify template directory exists in cloned repo
 		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "Error: template directory does not exist: %s\n", defaultSpecsSourcePath)
-			fmt.Fprintf(os.Stderr, "       In repository: %s\n", defaultSpecsRepoURL)
+			fmt.Fprintf(os.Stderr, "Error: template directory does not exist: %s\n", defaultReportsSourcePath)
+			fmt.Fprintf(os.Stderr, "       In repository: %s\n", defaultReportsRepoURL)
 			cleanup()
 			return 1
 		}
@@ -109,23 +109,23 @@ func TemplatesInstallSpecs() int {
 		return 1
 	}
 
-	fmt.Printf("✓ Spec templates installed successfully to %s\n", config.Destination)
+	fmt.Printf("✓ Report templates installed successfully to %s\n", config.Destination)
 	return 0
 }
 
-// parseSpecsFlags parses command-line flags for the specs install command
-func parseSpecsFlags(args []string) (*specsConfig, error) {
-	fs := flag.NewFlagSet("templates install specs", flag.ContinueOnError)
+// parseReportsFlags parses command-line flags for the reports install command
+func parseReportsFlags(args []string) (*reportsConfig, error) {
+	fs := flag.NewFlagSet("templates install reports", flag.ContinueOnError)
 
-	config := &specsConfig{
+	config := &reportsConfig{
 		Source:      "", // Empty means use default GitHub repo
-		Destination: defaultSpecsDest,
+		Destination: defaultReportsDest,
 		isLocalSrc:  false, // Default is GitHub URL
 	}
 
 	var customSource string
 	fs.StringVar(&customSource, "source", "", "Local template directory path (optional)")
-	fs.StringVar(&config.Destination, "destination", defaultSpecsDest, "Destination path")
+	fs.StringVar(&config.Destination, "destination", defaultReportsDest, "Destination path")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
