@@ -10,6 +10,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Precompiled regular expressions for performance
+var (
+	conventionalCommitRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\(([a-z0-9\-]+|multi-module)\):\s*(.+)$`)
+	moduleSubjectLineRegex  = regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
+)
+
 // ValidationError represents a contract violation
 type ValidationError struct {
 	Code     string
@@ -100,11 +106,10 @@ func VerifyContractImplementation(contractPath string) []ValidationError {
 	}
 
 	// Verify version matches
-	expectedVersion := "0.1.0"
-	if contract.Version != expectedVersion {
+	if contract.Version != ContractVersion {
 		errors = append(errors, ValidationError{
 			Code:     "CONTRACT_VERSION_MISMATCH",
-			Message:  fmt.Sprintf("Expected version %s, got %s", expectedVersion, contract.Version),
+			Message:  fmt.Sprintf("Expected version %s, got %s", ContractVersion, contract.Version),
 			Severity: "error",
 		})
 	}
@@ -125,10 +130,10 @@ func VerifyContractImplementation(contractPath string) []ValidationError {
 
 		// Verify top_level_heading max_length
 		if section.Section == "top_level_heading" {
-			if section.MaxLength != 72 {
+			if section.MaxLength != MaxHeaderLength {
 				errors = append(errors, ValidationError{
 					Code:     "CONTRACT_CONSTRAINT_MISMATCH",
-					Message:  fmt.Sprintf("top_level_heading max_length should be 72, got %d", section.MaxLength),
+					Message:  fmt.Sprintf("top_level_heading max_length should be %d, got %d", MaxHeaderLength, section.MaxLength),
 					Severity: "error",
 				})
 			}
@@ -179,7 +184,7 @@ func VerifyContractImplementation(contractPath string) []ValidationError {
 
 	// Verify constraints
 	requiredConstraints := map[string]any{
-		"max_line_length":         72,
+		"max_line_length":         MaxLineLength,
 		"no_trailing_periods":     true,
 		"code_blocks_closed":      true,
 		"module_header_no_colons": true,
@@ -231,8 +236,6 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 
 	// RULE 1: First line must be conventional commit header with scope
 	// Format: <type>(<scope>): <summary>
-	conventionalCommitRegex := regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\(([a-z0-9\-]+|multi-module)\):\s*(.+)$`)
-
 	if !conventionalCommitRegex.MatchString(lines[0]) {
 		errors = append(errors, ValidationError{
 			Code:     "INVALID_HEADER_FORMAT",
@@ -242,11 +245,11 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 		})
 	}
 
-	// RULE 2: Header max 72 characters
-	if len(lines[0]) > 72 {
+	// RULE 2: Header max length
+	if len(lines[0]) > MaxHeaderLength {
 		errors = append(errors, ValidationError{
 			Code:     "HEADER_TOO_LONG",
-			Message:  fmt.Sprintf("Header exceeds 72 characters (%d chars)", len(lines[0])),
+			Message:  fmt.Sprintf("Header exceeds %d characters (%d chars)", MaxHeaderLength, len(lines[0])),
 			Line:     1,
 			Severity: "error",
 		})
@@ -337,14 +340,14 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 			!isDashesLine(trimmed) &&
 			trimmed != "---" &&
 			!strings.HasPrefix(trimmed, "Agent:") {
-			if len(trimmed) > 72 {
+			if len(trimmed) > MaxLineLength {
 				preview := trimmed
 				if len(preview) > 60 {
 					preview = preview[:57] + "..."
 				}
 				errors = append(errors, ValidationError{
 					Code:     "LINE_TOO_LONG",
-					Message:  fmt.Sprintf("Line exceeds 72 characters (%d chars): %s", len(trimmed), preview),
+					Message:  fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
 					Line:     lineNum,
 					Severity: "warning",
 				})
@@ -407,9 +410,6 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 func validateModuleSubjectLines(lines []string) []ValidationError {
 	var errors []ValidationError
 
-	// Regex for semantic subject line: <module>: <type>: <description>
-	subjectRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
-
 	inModuleSection := false
 	currentModule := ""
 	foundSubjectLine := false
@@ -455,7 +455,7 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 			}
 
 			// This should be the subject line
-			if !subjectRegex.MatchString(trimmed) {
+			if !moduleSubjectLineRegex.MatchString(trimmed) {
 				errors = append(errors, ValidationError{
 					Code:     "INVALID_SUBJECT_FORMAT",
 					Message:  fmt.Sprintf("Subject line does not follow '<module>: <type>: <description>' format: %s", trimmed),
@@ -464,10 +464,10 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 				})
 			} else {
 				// Validate subject line length
-				if len(trimmed) > 72 {
+				if len(trimmed) > MaxSubjectLength {
 					errors = append(errors, ValidationError{
 						Code:     "SUBJECT_TOO_LONG",
-						Message:  fmt.Sprintf("Subject line exceeds 72 characters (%d chars)", len(trimmed)),
+						Message:  fmt.Sprintf("Subject line exceeds %d characters (%d chars)", MaxSubjectLength, len(trimmed)),
 						Line:     lineNum,
 						Severity: "error",
 					})
@@ -541,7 +541,6 @@ func validateCodeBlocks(lines []string) []ValidationError {
 // Format: <module-name>\n<dashes>\n<module>: <type>: <description>\n<body>
 func validateModuleSectionStructure(lines []string) []ValidationError {
 	var errors []ValidationError
-	subjectRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
 
 	for i := 0; i < len(lines); i++ {
 		trimmed := strings.TrimSpace(lines[i])
@@ -569,9 +568,9 @@ func validateModuleSectionStructure(lines []string) []ValidationError {
 		}
 
 		// Check for module subject line without proper header structure
-		if subjectRegex.MatchString(trimmed) {
+		if moduleSubjectLineRegex.MatchString(trimmed) {
 			// This is a subject line - check if it has proper module structure before it
-			moduleName := subjectRegex.FindStringSubmatch(trimmed)[1]
+			moduleName := moduleSubjectLineRegex.FindStringSubmatch(trimmed)[1]
 
 			// Look back for module name + dashes
 			foundModuleName := false
@@ -627,7 +626,7 @@ func validateModuleSectionStructure(lines []string) []ValidationError {
 // isModuleName checks if a string looks like a module name
 // Module names are lowercase alphanumeric with dashes or underscores
 func isModuleName(s string) bool {
-	if s == "" || len(s) > 50 {
+	if s == "" || len(s) > MaxModuleNameLength {
 		return false
 	}
 
@@ -642,7 +641,7 @@ func isModuleName(s string) bool {
 
 // isDashesLine checks if a line consists only of dashes
 func isDashesLine(s string) bool {
-	if len(s) < 3 {
+	if len(s) < MinDashesLength {
 		return false
 	}
 

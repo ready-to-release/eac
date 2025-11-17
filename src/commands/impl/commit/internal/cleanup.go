@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+// Precompiled regular expressions for performance
+var (
+	conventionalHeaderRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\([^)]+\):\s*(.+)`)
+	subjectLineRegex        = regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)`)
+	subjectRegexWithPeriod  = regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)\.$`)
+)
+
 // AutoCleanup performs automatic fixes on commit message before validation
 // This catches common issues that can be fixed programmatically without AI
 func AutoCleanup(commitMessage string) string {
@@ -102,7 +109,6 @@ func fixContent(lines []string) []string {
 
 		// FIX 1: Clean header (remove trailing period only, don't truncate)
 		// New format: <type>(<scope>): <summary>
-		conventionalHeaderRegex := regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\([^)]+\):\s*(.+)`)
 		if i == 0 && conventionalHeaderRegex.MatchString(trimmed) {
 			// Only remove trailing period (validation will warn if too long)
 			line = strings.TrimSuffix(trimmed, ".")
@@ -156,14 +162,12 @@ func fixContent(lines []string) []string {
 
 		// FIX 4: Handle subject lines (WRAP if too long, remove trailing periods)
 		// Format: <module>: <type>: <description>
-		subjectRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)`)
-
-		if subjectRegex.MatchString(trimmed) {
+		if subjectLineRegex.MatchString(trimmed) {
 			// Remove trailing period
 			line = strings.TrimSuffix(strings.TrimSpace(line), ".")
 
 			// WRAP if too long (don't truncate semantic commits)
-			if len(line) > 72 {
+			if len(line) > MaxSubjectLength {
 				wrapped := wrapSemanticCommitLine(line)
 				cleaned = append(cleaned, wrapped...)
 			} else {
@@ -251,14 +255,14 @@ func fixContent(lines []string) []string {
 	return cleaned
 }
 
-// wrapSemanticCommitLine wraps a semantic commit line at 72 characters
+// wrapSemanticCommitLine wraps a semantic commit line at MaxSubjectLength characters
 // Preserves the format: <module>: <type>: <description>
 func wrapSemanticCommitLine(line string) []string {
-	if len(line) <= 72 {
+	if len(line) <= MaxSubjectLength {
 		return []string{line}
 	}
 
-	// Split at 72 chars and wrap the rest with proper indentation
+	// Split at MaxSubjectLength chars and wrap the rest with proper indentation
 	var wrapped []string
 	currentLine := ""
 	words := strings.Fields(line)
@@ -270,7 +274,7 @@ func wrapSemanticCommitLine(line string) []string {
 		}
 		testLine += word
 
-		if len(testLine) <= 72 {
+		if len(testLine) <= MaxSubjectLength {
 			currentLine = testLine
 		} else {
 			// Flush current line
@@ -289,12 +293,12 @@ func wrapSemanticCommitLine(line string) []string {
 	return wrapped
 }
 
-// wrapBodyText joins buffered lines and reflows at 72 characters
+// wrapBodyText joins buffered lines and reflows at MaxLineLength characters
 func wrapBodyText(lines []string) []string {
 	// Join all lines into one paragraph
 	paragraph := strings.Join(lines, " ")
 
-	// Split into sentences/phrases and wrap at 72 chars
+	// Split into sentences/phrases and wrap at MaxLineLength chars
 	var wrapped []string
 	var currentLine string
 
@@ -306,7 +310,7 @@ func wrapBodyText(lines []string) []string {
 		}
 		testLine += word
 
-		if len(testLine) <= 72 {
+		if len(testLine) <= MaxLineLength {
 			currentLine = testLine
 		} else {
 			// Current word would exceed limit, flush current line
@@ -386,10 +390,9 @@ func GetCleanupStats(original, cleaned string) []string {
 		}
 
 		// Subject line periods?
-		subjectRegex := regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)\.$`)
 		for i, line := range origLines {
 			trimmed := strings.TrimSpace(line)
-			if subjectRegex.MatchString(trimmed) {
+			if subjectRegexWithPeriod.MatchString(trimmed) {
 				if i < len(cleanLines) && !strings.HasSuffix(strings.TrimSpace(cleanLines[i]), ".") {
 					stats = append(stats, "Removed trailing period from subject line")
 					break
