@@ -211,6 +211,12 @@ func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*exe
 		return nil, "", "", fmt.Errorf("getting git diff: %w", err)
 	}
 
+	// Check diff size to prevent memory issues
+	if len(diffOutput) > commitmessage.MaxDiffSize {
+		return nil, "", "", fmt.Errorf("git diff too large: %d bytes (max %d bytes / %.1f MB). Consider committing in smaller chunks",
+			len(diffOutput), commitmessage.MaxDiffSize, float64(commitmessage.MaxDiffSize)/(1024*1024))
+	}
+
 	// Get git diff stats
 	statsCmd := exec.Command("git", "diff", "--staged", "--stat")
 	statsCmd.Dir = workspaceRoot
@@ -492,11 +498,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 }
 
 
-// Standard commit types used for pattern matching
-var standardCommitTypes = []string{
-	"feat", "fix", "chore", "docs", "test",
-	"refactor", "perf", "style", "build", "ci",
-}
+// Note: standardCommitTypes is now defined in internal/constants.go as StandardCommitTypes
 
 // commitPatternMatcher handles pattern matching for different agent types
 type commitPatternMatcher struct {
@@ -529,7 +531,7 @@ func (m *commitPatternMatcher) isValidTopLevelLine(trimmed string) bool {
 	// Conventional commit with scope
 	// Format: <type>(<scope>): <summary>
 	// Examples: feat(multi-module): add feature, fix(cli): resolve bug
-	for _, commitType := range standardCommitTypes {
+	for _, commitType := range commitmessage.StandardCommitTypes {
 		// Look for <type>(<scope>): pattern
 		pattern := commitType + "("
 		if strings.HasPrefix(trimmed, pattern) {
@@ -1036,7 +1038,7 @@ func combineCommitSections(topLevel string, moduleSections []string) string {
 
 // isModuleNameLine checks if a line looks like a module name
 func isModuleNameLine(s string) bool {
-	if s == "" || len(s) > 50 {
+	if s == "" || len(s) > commitmessage.MaxModuleNameLength {
 		return false
 	}
 
@@ -1051,7 +1053,7 @@ func isModuleNameLine(s string) bool {
 
 // isDashesLine checks if a line consists only of dashes
 func isDashesLine(s string) bool {
-	if len(s) < 3 {
+	if len(s) < commitmessage.MinDashesLength {
 		return false
 	}
 

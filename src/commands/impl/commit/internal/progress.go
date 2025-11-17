@@ -29,9 +29,9 @@ var WhimsicalStatusLines = []string{
 	"Negotiating with git demons...",
 }
 
-// StartProgress begins showing whimsical progress updates
+// startProgressWithLines begins showing progress updates with custom status lines
 // Returns a cancel function to stop the progress ticker
-func StartProgress(initialMessage string) context.CancelFunc {
+func startProgressWithLines(initialMessage string, statusLines []string) context.CancelFunc {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Show initial message immediately
@@ -48,8 +48,8 @@ func StartProgress(initialMessage string) context.CancelFunc {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				// Show next whimsical status
-				fmt.Println(WhimsicalStatusLines[statusIndex%len(WhimsicalStatusLines)])
+				// Show next status
+				fmt.Println(statusLines[statusIndex%len(statusLines)])
 				statusIndex++
 			}
 		}
@@ -76,13 +76,17 @@ var AngryStatusLines = []string{
 
 // WithProgress wraps a function with progress updates
 func WithProgress(stage string, fn func() error) error {
-	// Shuffle status lines for variety
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(WhimsicalStatusLines), func(i, j int) {
-		WhimsicalStatusLines[i], WhimsicalStatusLines[j] = WhimsicalStatusLines[j], WhimsicalStatusLines[i]
+	// Create local copy to avoid mutating global state
+	statusLines := make([]string, len(WhimsicalStatusLines))
+	copy(statusLines, WhimsicalStatusLines)
+
+	// Shuffle local copy for variety
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(statusLines), func(i, j int) {
+		statusLines[i], statusLines[j] = statusLines[j], statusLines[i]
 	})
 
-	stopProgress := StartProgress(stage)
+	stopProgress := startProgressWithLines(stage, statusLines)
 	defer stopProgress()
 
 	return fn()
@@ -90,6 +94,16 @@ func WithProgress(stage string, fn func() error) error {
 
 // WithAngryProgress wraps a function with "angry" progress updates (for auto-fix)
 func WithAngryProgress(stage string, fn func() error) error {
+	// Create local copy to avoid mutating global state
+	statusLines := make([]string, len(AngryStatusLines))
+	copy(statusLines, AngryStatusLines)
+
+	// Shuffle local copy
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(statusLines), func(i, j int) {
+		statusLines[i], statusLines[j] = statusLines[j], statusLines[i]
+	})
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -101,20 +115,14 @@ func WithAngryProgress(stage string, fn func() error) error {
 		ticker := time.NewTicker(8 * time.Second)
 		defer ticker.Stop()
 
-		// Shuffle angry status lines
-		rand.Seed(time.Now().UnixNano())
-		rand.Shuffle(len(AngryStatusLines), func(i, j int) {
-			AngryStatusLines[i], AngryStatusLines[j] = AngryStatusLines[j], AngryStatusLines[i]
-		})
-
 		statusIndex := 0
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				// Show next angry status
-				fmt.Println(AngryStatusLines[statusIndex%len(AngryStatusLines)])
+				// Show next status
+				fmt.Println(statusLines[statusIndex%len(statusLines)])
 				statusIndex++
 			}
 		}
