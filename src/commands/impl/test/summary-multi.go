@@ -19,7 +19,7 @@ func generateSummaryMulti(testRunID string) error {
 	}
 
 	// Construct paths
-	testRunDir := filepath.Join(workspaceRoot, "out", "test-results", testRunID)
+	testRunDir := filepath.Join(workspaceRoot, "out", "test", testRunID)
 	summaryPath := filepath.Join(testRunDir, "summary.md")
 
 	// Check if test-run-id directory exists

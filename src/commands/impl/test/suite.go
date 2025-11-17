@@ -92,9 +92,11 @@ func TestSuite() int {
 	fmt.Printf("🧪 Running test suite: %s\n", suite.Name)
 	fmt.Printf("Description: %s\n\n", suite.Description)
 
-	// Create test-run-id directory (timestamp-based)
-	testRunID := time.Now().Format("2006-01-02-150405")
-	testRunDir := filepath.Join(workspaceRoot, "out", "test-results", testRunID)
+	// Purge and create suite output directory
+	testRunDir := filepath.Join(workspaceRoot, "out", "test", suiteName)
+	if err := os.RemoveAll(testRunDir); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to purge test directory: %v\n", err)
+	}
 	if err := os.MkdirAll(testRunDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to create test run directory: %v\n", err)
 		return 1
@@ -125,7 +127,7 @@ func TestSuite() int {
 	// Write markdown header immediately
 	if mdFile != nil {
 		fmt.Fprintf(mdFile, "# Test Suite Report: %s\n\n", suite.Name)
-		fmt.Fprintf(mdFile, "**Run ID**: %s  \n", testRunID)
+		fmt.Fprintf(mdFile, "**Suite**: %s  \n", suiteName)
 		fmt.Fprintf(mdFile, "**Started**: %s  \n", startTime.Format("2006-01-02 15:04:05"))
 		fmt.Fprintf(mdFile, "**Status**: 🔄 In Progress...\n\n")
 		fmt.Fprintf(mdFile, "---\n\n")
@@ -354,11 +356,11 @@ func TestSuite() int {
 		// Package-level parallel: distribute CPU across packages
 		// Each package gets a smaller share of CPU cores
 		testParallelism = max(2, numCPU/4)
-		totalPassed, totalFailed = runTestsParallel(testsByPackage, multiWriter, mdFile, testParallelism)
+		totalPassed, totalFailed = runTestsParallel(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
 	} else {
 		// Sequential packages: each package gets full CPU power
 		testParallelism = numCPU
-		totalPassed, totalFailed = runTestsSequential(testsByPackage, multiWriter, mdFile, testParallelism)
+		totalPassed, totalFailed = runTestsSequential(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
 	}
 
 	fmt.Fprintf(multiWriter, "Parallelism: %d CPUs, %d test workers per package\n\n", numCPU, testParallelism)
@@ -369,7 +371,6 @@ func TestSuite() int {
 
 	fmt.Fprintf(multiWriter, "=== Test Run Summary ===\n")
 	fmt.Fprintf(multiWriter, "Suite: %s\n", suite.Name)
-	fmt.Fprintf(multiWriter, "Run ID: %s\n", testRunID)
 	fmt.Fprintf(multiWriter, "Total discovered: %d\n", len(allTests))
 	fmt.Fprintf(multiWriter, "Production tests: %d\n", len(productionTests))
 	if frameworkTestCount > 0 {
@@ -424,7 +425,7 @@ func TestSuite() int {
 
 		// Write final markdown with complete status
 		fmt.Fprintf(mdFile, "# Test Suite Report: %s\n\n", suite.Name)
-		fmt.Fprintf(mdFile, "**Run ID**: %s  \n", testRunID)
+		fmt.Fprintf(mdFile, "**Suite**: %s  \n", suiteName)
 		fmt.Fprintf(mdFile, "**Started**: %s  \n", startTime.Format("2006-01-02 15:04:05"))
 		fmt.Fprintf(mdFile, "**Completed**: %s  \n", endTime.Format("2006-01-02 15:04:05"))
 		fmt.Fprintf(mdFile, "**Duration**: %.1fs  \n", duration.Seconds())
@@ -567,7 +568,7 @@ func max(a, b int) int {
 }
 
 // runTestsSequential runs tests package by package sequentially
-func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int) (int, int) {
+func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
 	totalPassed := 0
 	totalFailed := 0
 	packageNum := 0
@@ -587,7 +588,7 @@ func runTestsSequential(testsByPackage map[string][]testing.TestReference, multi
 			mdFile.Sync()
 		}
 
-		passed, failed := runPackageTests(pkgPath, tests, multiWriter, mdFile, testParallelism)
+		passed, failed := runPackageTests(pkgPath, tests, multiWriter, mdFile, testParallelism, testRunDir)
 		totalPassed += passed
 		totalFailed += failed
 	}
@@ -596,7 +597,7 @@ func runTestsSequential(testsByPackage map[string][]testing.TestReference, multi
 }
 
 // runTestsParallel runs tests across packages in parallel using goroutines
-func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int) (int, int) {
+func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
 	// Use a mutex to protect shared counters and output
 	var mu sync.Mutex
 	totalPassed := 0
@@ -641,7 +642,7 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 			mu.Unlock()
 
 			// Run tests for this package
-			passed, failed := runPackageTests(path, testList, multiWriter, mdFile, testParallelism)
+			passed, failed := runPackageTests(path, testList, multiWriter, mdFile, testParallelism, testRunDir)
 
 			// Update totals (thread-safe)
 			mu.Lock()
@@ -658,7 +659,7 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 }
 
 // runPackageTests runs tests for a single package and returns (passed, failed) counts
-func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int) (int, int) {
+func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
 	// Check if this package contains only Godog features
 	isGodogOnly := true
 	for _, test := range tests {
@@ -682,11 +683,22 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		displayGodogFeatureSummaries(pkgPath, multiWriter)
 	}
 
+	// Create log file for package test output
+	logFileName := strings.ReplaceAll(filepath.Base(pkgPath), " ", "_") + ".log"
+	logFilePath := filepath.Join(testRunDir, logFileName)
+	logFile, err := os.Create(logFilePath)
+	if err != nil {
+		fmt.Fprintf(multiWriter, "❌ Failed to create log file: %v\n\n", err)
+		return 0, len(tests)
+	}
+	defer logFile.Close()
+
 	// Run go test for this package with test-level parallelism
 	cmd := exec.Command("go", "test", "-v", "-parallel", fmt.Sprintf("%d", testParallelism))
 	cmd.Dir = pkgPath
-	cmd.Stdout = multiWriter
-	cmd.Stderr = multiWriter
+	// Verbose test output goes to log file only, not console
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 
 	// For Godog test packages, set GODOG_FORMAT=progress
 	if isGodogTestPackage {
@@ -695,7 +707,8 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 
 	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			fmt.Fprintf(multiWriter, "❌ Package tests failed (exit code: %d)\n\n", exitErr.ExitCode())
+			relLogPath := filepath.Join(filepath.Base(testRunDir), logFileName)
+			fmt.Fprintf(multiWriter, "❌ Package tests failed (See %s for details)\n\n", relLogPath)
 			// Update markdown: Package failed
 			if mdFile != nil {
 				fmt.Fprintf(mdFile, "  - ❌ Failed (exit code: %d)\n", exitErr.ExitCode())
@@ -713,7 +726,8 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		}
 	}
 
-	fmt.Fprintf(multiWriter, "✅ Package tests passed\n\n")
+	relLogPath := filepath.Join(filepath.Base(testRunDir), logFileName)
+	fmt.Fprintf(multiWriter, "✅ Package tests passed (See %s for details)\n\n", relLogPath)
 	// Update markdown: Package passed
 	if mdFile != nil {
 		fmt.Fprintf(mdFile, "  - ✅ Passed\n")

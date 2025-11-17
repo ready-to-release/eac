@@ -6,11 +6,13 @@
 package test
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
@@ -26,10 +28,9 @@ func init() {
 
 // TestModules tests multiple modules in sequence (defaults to all modules)
 func TestModules() int {
-	// Parse module monikers and flags (default: cucumber format, generate summary enabled)
+	// Parse module monikers and flags (default: cucumber format)
 	var monikers []string
 	reportFormat := "cucumber"
-	generateSummaryEnabled := true
 	generateOnly := false
 
 	// Parse arguments starting from index 3 (skip "binary", "test", "modules")
@@ -40,7 +41,7 @@ func TestModules() int {
 		} else if arg == "--as-junit" {
 			reportFormat = "junit"
 		} else if arg == "--no-generate" {
-			generateSummaryEnabled = false
+			// Legacy flag - no longer used
 		} else if arg == "--generate-only" {
 			generateOnly = true
 		} else if strings.HasPrefix(arg, "--as-") {
@@ -94,36 +95,53 @@ func TestModules() int {
 		}
 	}
 
-	// Create test-run-id directory
-	testRunID := time.Now().Format("2006-01-02-150405")
-	testRunDir := filepath.Join(workspaceRoot, "out", "test-results", testRunID)
-	if err := os.MkdirAll(testRunDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create test run directory: %v\n", err)
+	// Create orchestrator log file
+	orchestratorLogPath := filepath.Join(workspaceRoot, "out", "test", "orchestrator.log")
+	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to create orchestrator log directory: %v\n", err)
 		return 1
 	}
+	orchestratorLog, err := os.Create(orchestratorLogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to create orchestrator log: %v\n", err)
+		return 1
+	}
+	defer orchestratorLog.Close()
 
-	fmt.Printf("Test Run ID: %s\n", testRunID)
-	fmt.Printf("Test Run Directory: %s\n", testRunDir)
-	fmt.Printf("Testing %d modules: %v\n\n", len(monikers), monikers)
+	// Use buffered writer for orchestrator log
+	orchestratorLogBuf := bufio.NewWriter(orchestratorLog)
+	defer orchestratorLogBuf.Flush()
+
+	// Create multi-writer for orchestrator output (console + log file)
+	orchestratorOut := io.MultiWriter(os.Stdout, orchestratorLogBuf)
+
+	fmt.Fprintf(orchestratorOut, "Testing %d modules: %v\n\n", len(monikers), monikers)
 
 	// Test each module in sequence
+	var mu sync.Mutex
 	failedModules := []string{}
 	testedModules := []*modules.ModuleContract{}
-	for i, moniker := range monikers {
-		fmt.Printf("=== [%d/%d] Testing module: %s ===\n", i+1, len(monikers), moniker)
+	for _, moniker := range monikers {
 
 		// Get module from registry
 		module, exists := moduleReport.Registry.Get(moniker)
 		if !exists {
-			fmt.Fprintf(os.Stderr, "Error: module not found: %s\n", moniker)
+			statusLine := fmt.Sprintf("[testing] %s (Module not found) ........ Failed\r\n", moniker)
+			orchestratorOut.Write([]byte(statusLine))
+			os.Stdout.Sync()
 			failedModules = append(failedModules, moniker+" (not found)")
 			continue
 		}
 
-		// Create module output directory within test run
-		moduleOutputDir := filepath.Join(testRunDir, moniker)
+		// Purge and create module output directory
+		moduleOutputDir := filepath.Join(workspaceRoot, "out", "test", moniker)
+		if err := os.RemoveAll(moduleOutputDir); err != nil {
+			// Silently continue - logged to orchestrator log only
+		}
 		if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to create module output directory: %v\n", err)
+			statusLine := fmt.Sprintf("[testing] %s (Failed to create directory) ........ Failed\r\n", moniker)
+			orchestratorOut.Write([]byte(statusLine))
+			os.Stdout.Sync()
 			failedModules = append(failedModules, moniker+" (dir error)")
 			continue
 		}
@@ -132,66 +150,62 @@ func TestModules() int {
 		logPath := filepath.Join(moduleOutputDir, "test.log")
 		logFile, err := os.Create(logPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to create log file: %v\n", err)
+			statusLine := fmt.Sprintf("[testing] %s (Failed to create log) ........ Failed\r\n", moniker)
+			orchestratorOut.Write([]byte(statusLine))
+			os.Stdout.Sync()
 			failedModules = append(failedModules, moniker+" (log error)")
 			continue
 		}
 
-		// Create multi-writer to log to both console and file
-		multiWriter := io.MultiWriter(os.Stdout, logFile)
+		// Module output goes to file only (not console)
+		multiWriter := io.MultiWriter(logFile)
+
+		// Start progress indicator (dots every 5 seconds)
+		done := make(chan bool)
+		go showProgress(orchestratorOut, &mu, moniker, done)
 
 		// Run tests for this module
 		exitCode := runModuleTest(module, workspaceRoot, moduleOutputDir, multiWriter, reportFormat)
+
+		// Stop progress indicator
+		done <- true
+		close(done)
 
 		logFile.Close()
 
 		// Track tested modules
 		testedModules = append(testedModules, module)
 
+		// Print clean status line (thread-safe)
+		mu.Lock()
+		relLogPath := filepath.Join("out", "test", moniker, "test.log")
+		var statusLine string
 		if exitCode != 0 {
+			statusLine = fmt.Sprintf("[testing] %s (See %s for details) ........ Failed\r\n", moniker, relLogPath)
 			failedModules = append(failedModules, moniker)
-			fmt.Printf("❌ Module %s failed with exit code %d\n\n", moniker, exitCode)
 		} else {
-			fmt.Printf("✅ Module %s passed\n\n", moniker)
+			statusLine = fmt.Sprintf("[testing] %s (See %s for details) ........ Done\r\n", moniker, relLogPath)
 		}
+		orchestratorOut.Write([]byte(statusLine))
+		os.Stdout.Sync()
+		mu.Unlock()
 	}
 
 	// Print summary
-	fmt.Println("===========================================")
-	fmt.Printf("Test Run Summary (ID: %s)\n", testRunID)
-	fmt.Println("===========================================")
-	fmt.Printf("Total modules: %d\n", len(monikers))
-	fmt.Printf("Passed: %d\n", len(monikers)-len(failedModules))
-	fmt.Printf("Failed: %d\n", len(failedModules))
+	fmt.Fprintf(orchestratorOut, "\n===========================================\n")
+	fmt.Fprintf(orchestratorOut, "Test Run Summary\n")
+	fmt.Fprintf(orchestratorOut, "===========================================\n")
+	fmt.Fprintf(orchestratorOut, "Total modules: %d\n", len(monikers))
+	fmt.Fprintf(orchestratorOut, "Passed: %d\n", len(monikers)-len(failedModules))
+	fmt.Fprintf(orchestratorOut, "Failed: %d\n", len(failedModules))
 	if len(failedModules) > 0 {
-		fmt.Println("\nFailed modules:")
+		fmt.Fprintf(orchestratorOut, "\n❌ Failed modules:\n")
 		for _, m := range failedModules {
-			fmt.Printf("  - %s\n", m)
+			fmt.Fprintf(orchestratorOut, "  - %s\n", m)
 		}
 	}
-	fmt.Printf("\nResults directory: %s\n", testRunDir)
-
-	// Generate summary if enabled and using cucumber format
-	if generateSummaryEnabled && reportFormat == "cucumber" && len(failedModules) == 0 {
-		fmt.Println("\n📊 Generating test summary...")
-		if err := generateSummaryMulti(testRunID); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to generate summary: %v\n", err)
-			// Don't fail the test run, just warn
-		}
-	}
-
-	// Also generate individual module summaries (BDD and TDD) if all tests passed
-	if len(failedModules) == 0 {
-		// Generate BDD summary if using cucumber format
-		if reportFormat == "cucumber" {
-			fmt.Println("\n=== Generating multi-module summary_acceptance.md ===")
-			generateMultiModuleBDDSummary(testRunID, testRunDir, workspaceRoot)
-		}
-
-		// Generate TDD summary for all modules
-		fmt.Println("\n=== Generating multi-module summary_unit.md ===")
-		generateMultiModuleTDDSummary(testRunID, testRunDir, workspaceRoot, testedModules)
-	}
+	fmt.Fprintf(orchestratorOut, "\nOrchestrator log: out/test/orchestrator.log\n")
+	fmt.Fprintf(orchestratorOut, "Module logs: out/test/<module>/test.log\n")
 
 	if len(failedModules) > 0 {
 		return 1
@@ -398,4 +412,22 @@ func FindModulesWithResults(testRunDir string) ([]string, error) {
 	}
 
 	return modules, nil
+}
+
+// showProgress displays dots every 5 seconds while a module is being tested
+func showProgress(out io.Writer, mu *sync.Mutex, moniker string, done chan bool) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			mu.Lock()
+			fmt.Fprintf(out, "[testing] %s .......\r\n", moniker)
+			os.Stdout.Sync()
+			mu.Unlock()
+		}
+	}
 }

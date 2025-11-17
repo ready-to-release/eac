@@ -13,4 +13,5 @@ source:
 
 depends_on: []
 used_by:
-  - "automation"
+  - "implicit-cli-sh"
+  - "implicit-cli-pwsh"

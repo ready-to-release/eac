@@ -124,16 +124,14 @@ func TestModule() int {
 		return 1
 	}
 
-	// Create test-run-id directory (timestamp-based)
+	// Create test run ID for logging
 	testRunID := time.Now().Format("2006-01-02-150405")
-	testRunDir := filepath.Join(workspaceRoot, "out", "test-results", testRunID)
-	if err := os.MkdirAll(testRunDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create test run directory: %v\n", err)
-		return 1
-	}
 
-	// Create module output directory within test run
-	outputDir := filepath.Join(testRunDir, moniker)
+	// Purge and create module output directory
+	outputDir := filepath.Join(workspaceRoot, "out", "test", moniker)
+	if err := os.RemoveAll(outputDir); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to purge output directory: %v\n", err)
+	}
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
 		return 1

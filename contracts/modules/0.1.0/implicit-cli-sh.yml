@@ -2,7 +2,7 @@
 
 moniker: "implicit-cli-sh"
 name: "Shell script to invoke Go commands"
-type: "automation"
+type: "scripts-sh"
 description: "Bash wrapper for running Go commands from src/commands/"
 
 source:
