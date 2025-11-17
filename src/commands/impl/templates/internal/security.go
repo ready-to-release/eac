@@ -1,12 +1,12 @@
 // File: src/commands/impl/templates/internal/security.go
-// Security validation functions to prevent path traversal and command injection attacks
+// Security validation functions to prevent path traversal attacks
 //
-// Intent: Protect template system from malicious input by validating paths and URLs.
+// Intent: Protect template system from malicious input by validating paths.
 //
 // Design (Three Rules of Vibe Coding):
 //
 // Easy to understand:
-//   - Clear function names (ValidatePath, SanitizeGitURL)
+//   - Clear function names (ValidatePath, SecureFilePath)
 //   - Explicit error messages with security context
 //   - Simple validation logic with clear intent
 //
@@ -76,50 +76,6 @@ func ValidatePath(basePath, userPath string) error {
 	// If relative path starts with .., it means finalPath is outside basePath
 	if strings.HasPrefix(relToBase, ".."+string(filepath.Separator)) || relToBase == ".." {
 		return fmt.Errorf("security: path escapes base directory: %s", userPath)
-	}
-
-	return nil
-}
-
-// SanitizeGitURL validates and sanitizes a Git repository URL to prevent command injection.
-// Git commands are executed via exec.Command, so we must ensure the URL doesn't contain
-// shell metacharacters that could be exploited.
-//
-// Security Requirements:
-//   - Reject URLs containing shell metacharacters (; | & $ ` etc.)
-//   - Reject URLs containing command substitution patterns ($() ${} ``)
-//   - Reject URLs containing control characters (newline, null byte, etc.)
-//   - Verify URL matches expected Git repository format
-//
-// Returns error if URL is unsafe or invalid, nil if safe.
-func SanitizeGitURL(url string) error {
-	// Validate URL is a Git repository format
-	if !IsGitRepository(url) {
-		return fmt.Errorf("invalid git repository URL: %s", url)
-	}
-
-	// SECURITY CHECK: Detect shell metacharacters and command injection patterns
-	// These could be exploited in exec.Command if not properly escaped
-	dangerous := []struct {
-		char string
-		desc string
-	}{
-		{";", "command separator"},
-		{"|", "pipe operator"},
-		{"&", "background operator"},
-		{"$", "variable expansion"},
-		{"`", "command substitution"},
-		{"\n", "newline"},
-		{"\r", "carriage return"},
-		{"\x00", "null byte"},
-		{"$(", "command substitution"},
-		{"${", "variable expansion"},
-	}
-
-	for _, check := range dangerous {
-		if strings.Contains(url, check.char) {
-			return fmt.Errorf("security: invalid characters in URL (%s): %s", check.desc, url)
-		}
 	}
 
 	return nil

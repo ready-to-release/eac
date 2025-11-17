@@ -25,11 +25,6 @@ func NewGitCloner(repoURL string) *GitCloner {
 // CloneToTemp clones the repository to a temporary directory
 // Returns the path to the cloned directory
 func (g *GitCloner) CloneToTemp() (string, error) {
-	// SECURITY: Validate URL before executing git command
-	if err := SanitizeGitURL(g.repoURL); err != nil {
-		return "", fmt.Errorf("invalid repository URL: %w", err)
-	}
-
 	// Create temp directory
 	tmpDir, err := os.MkdirTemp("", "templates-clone-*")
 	if err != nil {
