@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
@@ -43,10 +44,15 @@ type executionConfig struct {
 	gitDiff         string
 }
 
-// debugWriter handles debug file output with consistent error handling
+// debugWriter handles debug file output with consistent error handling.
+//
+// Thread-safe: All methods use mutex to protect concurrent file operations.
+// This is required for parallel module section generation where multiple
+// goroutines may write debug files simultaneously.
 type debugWriter struct {
 	enabled       bool
 	workspaceRoot string
+	mu            sync.Mutex // Protects file write operations
 }
 
 func newDebugWriter(enabled bool, workspaceRoot string) *debugWriter {
@@ -61,6 +67,9 @@ func (d *debugWriter) write(filename string, content string) {
 		return
 	}
 
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	debugFile := filepath.Join(d.workspaceRoot, "out", filename)
 	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "⚠️  Failed to write debug file %s: %v\n", debugFile, err)
@@ -74,14 +83,25 @@ func (d *debugWriter) writef(format string, content string, args ...interface{})
 		return
 	}
 
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	filename := fmt.Sprintf(format, args...)
-	d.write(filename, content)
+	debugFile := filepath.Join(d.workspaceRoot, "out", filename)
+	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "⚠️  Failed to write debug file %s: %v\n", debugFile, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "🔍 DEBUG: Saved to %s\n", debugFile)
+	}
 }
 
 func (d *debugWriter) log(format string, args ...interface{}) {
 	if !d.enabled {
 		return
 	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	fmt.Fprintf(os.Stderr, "🔍 DEBUG: "+format+"\n", args...)
 }
@@ -298,44 +318,10 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 
 // Phase 5: Generate Module Sections (multi-module only)
 func generateModuleSections(cfg *executionConfig, debugWriter *debugWriter) ([]string, error) {
-	if len(cfg.affectedModules) <= 1 {
-		debugWriter.log("Single-module commit - skipping module sections")
-		return []string{}, nil
-	}
-
-	// Multi-module: generate module sections
-	moduleFilesMap := make(map[string][]repository.RepositoryFileWithModule)
-	for _, file := range cfg.stagedFiles {
-		for _, module := range file.Modules {
-			moduleFilesMap[module] = append(moduleFilesMap[module], file)
-		}
-	}
-
-	var moduleSections []string
-	for i, module := range cfg.affectedModules {
-		moduleFiles := moduleFilesMap[module]
-		moduleContext := buildModuleContext(module, moduleFiles, cfg.gitDiff)
-
-		debugWriter.writef("debug-module-%d-%s-context.md", moduleContext, i+1, module)
-
-		var moduleOutput string
-		progressMsg := fmt.Sprintf("🤖 Generating section for module %s (%d/%d)...", module, i+1, len(cfg.affectedModules))
-		err := commitmessage.WithProgress(progressMsg, func() error {
-			output, err := generateWithPrompt("module", moduleContext, cfg.workspaceRoot)
-			moduleOutput = output
-			return err
-		})
-
-		if err != nil {
-			return nil, fmt.Errorf("running commit-message-module agent for %s: %w", module, err)
-		}
-
-		debugWriter.writef("debug-module-%d-%s-output.md", moduleOutput, i+1, module)
-
-		moduleSections = append(moduleSections, moduleOutput)
-	}
-
-	return moduleSections, nil
+	// Use parallel implementation for performance (60-70% speedup for multi-module commits)
+	// Sequential: N modules × 5s = 15s for 3 modules
+	// Parallel:   max(5s) = 5s for 3 modules
+	return generateModuleSectionsParallel(cfg, debugWriter)
 }
 
 // Phase 6: Assemble Final Message
