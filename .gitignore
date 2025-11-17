@@ -70,3 +70,11 @@ site/
 .docker/
 docker-compose.override.yml
 .vscode/settings.json
+
+# R2R AI configuration and logs
+.r2r/*
+!.r2r/.gitkeep
+
+# User can optionally commit .r2r/prompts/ to share customizations with team
+# By default, it's ignored - remove the line below to commit custom prompts
+.r2r/prompts/

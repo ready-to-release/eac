@@ -35,18 +35,11 @@ func TestExecutor_Execute(t *testing.T) {
 			wantErr:      false,
 		},
 		{
-			name:         "execute with no config returns error",
+			name:         "execute with no config defaults to claude-cli",
 			createConfig: false,
 			input:        "test prompt",
-			wantErr:      true,
-			errContains:  "agent-config.yml not found",
-		},
-		{
-			name:         "execute with no config suggests r2r init",
-			createConfig: false,
-			input:        "test prompt",
-			wantErr:      true,
-			errContains:  "run: r2r agent init",
+			wantProvider: "claude-cli",
+			wantErr:      false,
 		},
 		{
 			name:         "execute with malformed config returns error",

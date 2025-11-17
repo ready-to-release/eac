@@ -1,8 +1,8 @@
 ---
-name: commit-message-top-level
 description: Generate top-level commit message header and summary
 model: claude-3-5-haiku-20241022
-color: blue
+temperature: 0.3
+max_tokens: 2000
 ---
 
 # Generate Top-Level Commit Message Section
@@ -72,3 +72,30 @@ ensure generated messages comply with structure requirements.
 ```
 
 **VERIFY BEFORE SENDING**: Does your output start with `#`? If NO, you failed.
+
+---
+
+## Anti-Corruption Layer
+
+**ABSOLUTELY FORBIDDEN** - Do NOT include any of these patterns in your output:
+
+**See**: `contracts/commit-message/0.1.0/anti-corruption.yml` for complete rules.
+
+**Forbidden Prefixes** (lines starting with):
+- "Based on"
+- "Here is" / "Here's"
+- "Let me"
+- "I will" / "I'll" / "I've" / "I'm"
+- "The title" / "The generated" / "The changes"
+- "After reviewing"
+
+**Forbidden Content**:
+- Emojis (🚀 ✅ 🤖 🎉 ✨)
+- Meta-commentary about the task
+- Conversational wrappers
+- Explanations of what you're doing
+
+**Output ONLY**:
+- ✅ The raw commit message content
+- ✅ Start with `#` (heading)
+- ✅ End with body text

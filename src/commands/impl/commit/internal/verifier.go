@@ -43,6 +43,33 @@ type CommitMessageContract struct {
 	AntiCorruption    map[string]any   `yaml:"anti_corruption"`
 }
 
+// AntiCorruptionRules represents the anti-corruption.yml contract
+type AntiCorruptionRules struct {
+	Version            string   `yaml:"version"`
+	Name               string   `yaml:"name"`
+	Description        string   `yaml:"description"`
+	ForbiddenPrefixes  []string `yaml:"forbidden_prefixes"`
+	ForbiddenContains  []string `yaml:"forbidden_contains"`
+	ForbiddenEmojis    []string `yaml:"forbidden_emojis"`
+	NoiseHeaderKeywords []string `yaml:"noise_header_keywords"`
+	AgentSignatures    []string `yaml:"agent_signatures"`
+}
+
+// LoadAntiCorruptionRules loads and parses the anti-corruption.yml file
+func LoadAntiCorruptionRules(rulesPath string) (*AntiCorruptionRules, error) {
+	data, err := os.ReadFile(rulesPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read anti-corruption rules file: %w", err)
+	}
+
+	var rules AntiCorruptionRules
+	if err := yaml.Unmarshal(data, &rules); err != nil {
+		return nil, fmt.Errorf("failed to parse anti-corruption rules YAML: %w", err)
+	}
+
+	return &rules, nil
+}
+
 // LoadContract loads and parses the structure.yml file
 func LoadContract(contractPath string) (*CommitMessageContract, error) {
 	data, err := os.ReadFile(contractPath)
