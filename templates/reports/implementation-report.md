@@ -1,8 +1,9 @@
 # Implementation Report {{ .ProjectName }}
-
+<!--{% raw %}-->
 !!! note
 
     Decision on overall change type (Normal, Standard or Emergency)
+<!--{% endraw %}-->
 
 **Change Type:** {{ .ChangeType }}
 

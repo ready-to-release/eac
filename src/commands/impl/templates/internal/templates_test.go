@@ -485,3 +485,137 @@ func TestPlaceholderScanner_ExtractPlaceholders(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderer_PreservePlaceholdersWhenNoValues(t *testing.T) {
+	// Create temp directories
+	tmpDir := t.TempDir()
+	templateDir := filepath.Join(tmpDir, "templates")
+	outputDir := filepath.Join(tmpDir, "output")
+
+	require.NoError(t, os.MkdirAll(templateDir, 0755))
+
+	// Create template file with placeholders
+	tmplFile := filepath.Join(templateDir, "README.md")
+	tmplContent := "# {{ .ProjectName }}\n\nVersion: {{ .Version }}\n\nRequirements: {{ .changed_requirements }}"
+	require.NoError(t, os.WriteFile(tmplFile, []byte(tmplContent), 0644))
+
+	// Create renderer with nil values (no JSON file provided)
+	renderer := NewRenderer(templateDir, outputDir, nil)
+
+	// Render templates
+	err := renderer.RenderTemplates()
+	require.NoError(t, err)
+
+	// Verify output preserves placeholders
+	content, err := os.ReadFile(filepath.Join(outputDir, "README.md"))
+	require.NoError(t, err)
+
+	// Placeholders should be preserved exactly as-is
+	assert.Equal(t, tmplContent, string(content), "Placeholders should be preserved when no values provided")
+	assert.Contains(t, string(content), "{{ .ProjectName }}")
+	assert.Contains(t, string(content), "{{ .Version }}")
+	assert.Contains(t, string(content), "{{ .changed_requirements }}")
+	assert.NotContains(t, string(content), "<no value>")
+}
+
+func TestRenderer_PreservePlaceholdersWhenEmptyValues(t *testing.T) {
+	// Create temp directories
+	tmpDir := t.TempDir()
+	templateDir := filepath.Join(tmpDir, "templates")
+	outputDir := filepath.Join(tmpDir, "output")
+
+	require.NoError(t, os.MkdirAll(templateDir, 0755))
+
+	// Create template file with placeholders
+	tmplFile := filepath.Join(templateDir, "config.yaml")
+	tmplContent := "name: {{ .AppName }}\nport: {{ .Port }}"
+	require.NoError(t, os.WriteFile(tmplFile, []byte(tmplContent), 0644))
+
+	// Create renderer with empty values map
+	renderer := NewRenderer(templateDir, outputDir, TemplateValues{})
+
+	// Render templates
+	err := renderer.RenderTemplates()
+	require.NoError(t, err)
+
+	// Verify output preserves placeholders
+	content, err := os.ReadFile(filepath.Join(outputDir, "config.yaml"))
+	require.NoError(t, err)
+
+	// Placeholders should be preserved exactly as-is
+	assert.Equal(t, tmplContent, string(content), "Placeholders should be preserved when empty values provided")
+	assert.Contains(t, string(content), "{{ .AppName }}")
+	assert.Contains(t, string(content), "{{ .Port }}")
+	assert.NotContains(t, string(content), "<no value>")
+}
+
+func TestRenderer_ReplaceValuesWhenProvided(t *testing.T) {
+	// Create temp directories
+	tmpDir := t.TempDir()
+	templateDir := filepath.Join(tmpDir, "templates")
+	outputDir := filepath.Join(tmpDir, "output")
+
+	require.NoError(t, os.MkdirAll(templateDir, 0755))
+
+	// Create template file with placeholders
+	tmplFile := filepath.Join(templateDir, "README.md")
+	tmplContent := "# {{ .ProjectName }}\n\nVersion: {{ .Version }}"
+	require.NoError(t, os.WriteFile(tmplFile, []byte(tmplContent), 0644))
+
+	// Create renderer with actual values
+	values := TemplateValues{
+		"ProjectName": "MyProject",
+		"Version":     "2.0.0",
+	}
+	renderer := NewRenderer(templateDir, outputDir, values)
+
+	// Render templates
+	err := renderer.RenderTemplates()
+	require.NoError(t, err)
+
+	// Verify output has replaced values
+	content, err := os.ReadFile(filepath.Join(outputDir, "README.md"))
+	require.NoError(t, err)
+
+	expected := "# MyProject\n\nVersion: 2.0.0"
+	assert.Equal(t, expected, string(content))
+	assert.Contains(t, string(content), "MyProject")
+	assert.Contains(t, string(content), "2.0.0")
+	assert.NotContains(t, string(content), "{{ .ProjectName }}")
+	assert.NotContains(t, string(content), "{{ .Version }}")
+}
+
+func TestRenderer_PreserveFilePermissionsWhenCopying(t *testing.T) {
+	// Create temp directories
+	tmpDir := t.TempDir()
+	templateDir := filepath.Join(tmpDir, "templates")
+	outputDir := filepath.Join(tmpDir, "output")
+
+	require.NoError(t, os.MkdirAll(templateDir, 0755))
+
+	// Create template file with specific permissions
+	tmplFile := filepath.Join(templateDir, "script.sh")
+	tmplContent := "#!/bin/bash\n# {{ .ScriptName }}"
+	require.NoError(t, os.WriteFile(tmplFile, []byte(tmplContent), 0755))
+
+	// Get original file permissions
+	origInfo, err := os.Stat(tmplFile)
+	require.NoError(t, err)
+
+	// Create renderer with nil values
+	renderer := NewRenderer(templateDir, outputDir, nil)
+
+	// Render templates
+	err = renderer.RenderTemplates()
+	require.NoError(t, err)
+
+	// Verify permissions are preserved (use original permissions for comparison)
+	info, err := os.Stat(filepath.Join(outputDir, "script.sh"))
+	require.NoError(t, err)
+	assert.Equal(t, origInfo.Mode(), info.Mode(), "File permissions should be preserved")
+
+	// Verify content is unchanged
+	content, err := os.ReadFile(filepath.Join(outputDir, "script.sh"))
+	require.NoError(t, err)
+	assert.Equal(t, tmplContent, string(content))
+}
