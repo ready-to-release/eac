@@ -1,0 +1,126 @@
+metadata:
+  version: "0.1.0"
+  description: "Environment contract defining test execution contexts"
+  scope: "Test environment classification and requirements"
+
+environments:
+  # L0 Environments - Very Fast Unit Tests
+  - moniker: l00-01
+    name: "L0 Environment 01 - In-process Unit Tests"
+    description: "Very fast unit tests running in-process with direct access to source"
+    level: "L0"
+    type: "unit"
+    env_tags:
+      - "in-process"
+      - "very-fast"
+    system_deps: []
+
+  - moniker: l00-02
+    name: "L0 Environment 02 - Build Artifact Tests"
+    description: "Very fast tests with direct access to build artifacts"
+    level: "L0"
+    type: "unit"
+    env_tags:
+      - "build-artifacts"
+      - "very-fast"
+    system_deps: []
+
+  # L1 Environments - Fast Unit Tests
+  - moniker: l01-01
+    name: "L1 Environment 01 - Go Unit Tests"
+    description: "Fast Go unit tests with standard Go toolchain"
+    level: "L1"
+    type: "unit"
+    env_tags:
+      - "go"
+      - "fast"
+    system_deps:
+      - "@deps:go"
+
+  - moniker: l01-02
+    name: "L1 Environment 02 - Isolated Unit Tests"
+    description: "Fast isolated unit tests with mocked dependencies"
+    level: "L1"
+    type: "unit"
+    env_tags:
+      - "isolated"
+      - "fast"
+    system_deps:
+      - "@deps:go"
+
+  # L2 Environments - Local
+  - moniker: local01
+    name: "Local Environment 01 - Docker Container"
+    description: "Single Docker container execution environment"
+    level: "L2"
+    type: "docker"
+    env_tags:
+      - "local"
+      - "isolated"
+    system_deps:
+      - "@deps:docker"
+
+  - moniker: local02
+    name: "Local Environment 02 - Docker Compose"
+    description: "Multi-container Docker Compose environment"
+    level: "L2"
+    type: "docker-compose"
+    env_tags:
+      - "local"
+      - "multi-service"
+    system_deps:
+      - "@deps:docker"
+
+  # L3 Environments - PLTE (Production-Like Test Environment)
+  - moniker: plte01
+    name: "PLTE Environment 01 - Kubernetes"
+    description: "Kubernetes-based production-like test environment"
+    level: "L3"
+    type: "plte"
+    env_tags:
+      - "k8s"
+      - "staging"
+      - "plte"
+    system_deps:
+      - "@deps:kubectl"
+      - "@deps:helm"
+
+  - moniker: plte02
+    name: "PLTE Environment 02 - Docker Desktop"
+    description: "Local Kubernetes via Docker Desktop for PLTE testing"
+    level: "L3"
+    type: "plte"
+    env_tags:
+      - "k8s"
+      - "local"
+      - "plte"
+      - "docker-desktop"
+    system_deps:
+      - "@deps:docker"
+      - "@deps:kubectl"
+
+  # L4 Environments - Production
+  - moniker: production
+    name: "Production Environment"
+    description: "Live production environment"
+    level: "L4"
+    type: "production"
+    env_tags:
+      - "production"
+      - "live"
+    system_deps:
+      - "@deps:kubectl"
+      - "@deps:helm"
+
+  - moniker: production-inactive
+    name: "Production Inactive Environment"
+    description: "Production inactive/standby environment"
+    level: "L4"
+    type: "production"
+    env_tags:
+      - "production"
+      - "inactive"
+      - "standby"
+    system_deps:
+      - "@deps:kubectl"
+      - "@deps:helm"

@@ -2,19 +2,21 @@ package testing
 
 import (
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/environments"
 )
 
 // SuiteTestEntry represents a single test in a suite report
 type SuiteTestEntry struct {
+	Moniker          string   `yaml:"moniker" json:"moniker" toml:"moniker"`
 	TestName         string   `yaml:"test_name" json:"test_name" toml:"test_name"`
 	Type             string   `yaml:"type" json:"type" toml:"type"`
 	FilePath         string   `yaml:"file_path" json:"file_path" toml:"file_path"`
 	Module           string   `yaml:"module" json:"module" toml:"module"`
+	ModuleType       string   `yaml:"module_type" json:"module_type" toml:"module_type"`
 	Level            []string `yaml:"level" json:"level" toml:"level"`
 	Verification     []string `yaml:"verification" json:"verification" toml:"verification"`
 	SystemDeps       []string `yaml:"system_deps" json:"system_deps" toml:"system_deps"`
 	ModuleDeps       []string `yaml:"module_deps" json:"module_deps" toml:"module_deps"`
-	ModuleTypes      []string `yaml:"module_types" json:"module_types" toml:"module_types"`
 	IsIgnored        bool     `yaml:"is_ignored" json:"is_ignored" toml:"is_ignored"`
 	SkipReason       string   `yaml:"skip_reason,omitempty" json:"skip_reason,omitempty" toml:"skip_reason,omitempty"`
 	IsManual         bool     `yaml:"is_manual" json:"is_manual" toml:"is_manual"`
@@ -55,6 +57,12 @@ func GenerateSuiteReport(
 	// Phase 2.5: Infer system deps from module deps (if registry available)
 	if moduleRegistry != nil {
 		allTests = InferSystemDepsFromModuleDeps(allTests, moduleRegistry)
+	}
+
+	// Phase 2.6: Infer system deps from environment tags (if environment contract available)
+	envContract, err := environments.LoadEnvironmentContract()
+	if err == nil {
+		allTests = InferSystemDepsFromEnv(allTests, envContract)
 	}
 
 	// Phase 3: Select tests for this suite
@@ -103,12 +111,21 @@ func convertToSuiteEntries(
 
 	for i, test := range tests {
 		// Extract module from file path
-		module := ""
-		if fileModuleMap != nil {
-			if m, exists := fileModuleMap[test.FilePath]; exists {
-				module = m
+		module := extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
+		if module == "unknown" {
+			module = ""
+		}
+
+		// Look up the owning module's type
+		moduleType := ""
+		if module != "" && moduleRegistry != nil {
+			if mod, exists := moduleRegistry.Get(module); exists {
+				moduleType = mod.Type
 			}
 		}
+
+		// Generate test moniker
+		moniker := GenerateTestMoniker(test, module)
 
 		// Extract tag categories
 		levelTags := filterTagsByPrefix(test.Tags, "@L")
@@ -116,27 +133,17 @@ func convertToSuiteEntries(
 		systemDeps := filterTagsByPrefix(test.Tags, "@deps:")
 		moduleDeps := filterTagsByPrefix(test.Tags, "@depm:")
 
-		// Look up module types
-		moduleTypes := []string{}
-		if moduleRegistry != nil {
-			for _, depTag := range moduleDeps {
-				moniker := trimPrefix(depTag, "@depm:")
-				if mod, exists := moduleRegistry.Get(moniker); exists {
-					moduleTypes = append(moduleTypes, mod.Type)
-				}
-			}
-		}
-
 		entries[i] = SuiteTestEntry{
+			Moniker:          moniker,
 			TestName:         test.TestName,
 			Type:             test.Type,
 			FilePath:         test.FilePath,
 			Module:           module,
+			ModuleType:       moduleType,
 			Level:            levelTags,
 			Verification:     verificationTags,
 			SystemDeps:       systemDeps,
 			ModuleDeps:       moduleDeps,
-			ModuleTypes:      moduleTypes,
 			IsIgnored:        test.IsIgnored,
 			SkipReason:       test.SkipReason,
 			IsManual:         test.IsManual,
@@ -178,4 +185,76 @@ func trimPrefix(s, prefix string) string {
 		return s[len(prefix):]
 	}
 	return s
+}
+
+// extractModuleFromPath looks up the module for a file path using the file-module mapping
+func extractModuleFromPath(filePath string, fileModuleMap map[string]string, repoRoot string) string {
+	if fileModuleMap == nil {
+		return "unknown"
+	}
+
+	// Normalize separators
+	filePath = normalizePathSeparators(filePath)
+	repoRoot = normalizePathSeparators(repoRoot)
+
+	// Convert absolute path to relative path from repo root
+	relativePath := filePath
+	if len(filePath) >= len(repoRoot) && filePath[:len(repoRoot)] == repoRoot {
+		relativePath = filePath[len(repoRoot):]
+		// Trim leading slash
+		if len(relativePath) > 0 && relativePath[0] == '/' {
+			relativePath = relativePath[1:]
+		}
+	}
+
+	// For specs/ files, extract module from path structure (specs/MODULE/...)
+	if len(relativePath) >= 6 && relativePath[:6] == "specs/" {
+		parts := splitPath(relativePath)
+		if len(parts) >= 2 {
+			return parts[1]
+		}
+	}
+
+	// For src/ files, look up in the file-module map
+	if module, found := fileModuleMap[relativePath]; found {
+		return module
+	}
+
+	// Try direct lookup as fallback
+	if module, found := fileModuleMap[filePath]; found {
+		return module
+	}
+
+	return "unknown"
+}
+
+// normalizePathSeparators converts backslashes to forward slashes
+func normalizePathSeparators(path string) string {
+	result := make([]byte, len(path))
+	for i := 0; i < len(path); i++ {
+		if path[i] == '\\' {
+			result[i] = '/'
+		} else {
+			result[i] = path[i]
+		}
+	}
+	return string(result)
+}
+
+// splitPath splits a path by forward slashes
+func splitPath(path string) []string {
+	parts := []string{}
+	start := 0
+	for i := 0; i < len(path); i++ {
+		if path[i] == '/' {
+			if i > start {
+				parts = append(parts, path[start:i])
+			}
+			start = i + 1
+		}
+	}
+	if start < len(path) {
+		parts = append(parts, path[start:])
+	}
+	return parts
 }
