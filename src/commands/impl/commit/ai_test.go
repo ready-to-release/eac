@@ -10,6 +10,12 @@ import (
 // TestStripAgentNoise_TopLevel tests noise removal for top-level agent output
 // Linked to spec: specs\src-commands\ai-commit-generation\specification.feature
 func TestStripAgentNoise_TopLevel(t *testing.T) {
+	// Get workspace root for contract loader
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		t.Fatalf("Failed to get repository root: %v", err)
+	}
+
 	tests := []struct {
 		name      string
 		input     string
@@ -143,7 +149,7 @@ Body text here.`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := stripAgentNoise(tt.input, tt.agentType)
+			got := stripAgentNoise(tt.input, tt.agentType, workspaceRoot)
 			if got != tt.want {
 				t.Errorf("stripAgentNoise() failed\nInput:\n%s\n\nGot:\n%s\n\nWant:\n%s", tt.input, got, tt.want)
 			}
@@ -154,6 +160,12 @@ Body text here.`,
 // TestStripAgentNoise_Module tests noise removal for module agent output
 // Linked to spec: specs\src-commands\ai-commit-generation\specification.feature
 func TestStripAgentNoise_Module(t *testing.T) {
+	// Get workspace root for contract loader
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		t.Fatalf("Failed to get repository root: %v", err)
+	}
+
 	tests := []struct {
 		name      string
 		input     string
@@ -251,7 +263,7 @@ src-commands: chore: update deps`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := stripAgentNoise(tt.input, tt.agentType)
+			got := stripAgentNoise(tt.input, tt.agentType, workspaceRoot)
 			if got != tt.want {
 				t.Errorf("stripAgentNoise() failed\nInput:\n%s\n\nGot:\n%s\n\nWant:\n%s", tt.input, got, tt.want)
 			}
@@ -259,9 +271,12 @@ src-commands: chore: update deps`,
 	}
 }
 
-// TestStripAgentNoiseHardcoded_Fallback tests the hardcoded fallback logic
+// TestStripAgentNoise_Fallback tests the hardcoded fallback logic when contract not available
 // Linked to spec: specs\src-commands\ai-commit-generation\specification.feature
-func TestStripAgentNoiseHardcoded_Fallback(t *testing.T) {
+func TestStripAgentNoise_Fallback(t *testing.T) {
+	// Use a non-existent workspace root to trigger fallback behavior
+	nonExistentRoot := "/nonexistent/workspace/root"
+
 	tests := []struct {
 		name      string
 		input     string
@@ -298,9 +313,9 @@ Module content.`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := stripAgentNoiseHardcoded(tt.input, tt.agentType)
+			got := stripAgentNoise(tt.input, tt.agentType, nonExistentRoot)
 			if got != tt.want {
-				t.Errorf("stripAgentNoiseHardcoded() failed\nGot:\n%s\n\nWant:\n%s", got, tt.want)
+				t.Errorf("stripAgentNoise() fallback failed\nGot:\n%s\n\nWant:\n%s", got, tt.want)
 			}
 		})
 	}

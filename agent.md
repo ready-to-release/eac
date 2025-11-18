@@ -45,7 +45,9 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
   - Module directories (as identified by module contracts or `mcp__commands__get-files`)
   - `/out/<my-result-file>.md` for intermediate/temporary files
 - **Intermediate files**: CREATE all intermediate files, shell scripts, analysis results in `/out/` directory
-- **Before modifications**: USE `mcp__commands__get-files` to understand file ownership
+- **Before modifications**: USE `mcp__commands__get-files` **on-demand** to understand file ownership
+  - ⚠️ This command loads ~2690 files (~19k tokens). Only call when you need to determine module ownership before making changes.
+  - Alternative: Use `mcp__commands__show-files-changed` or `show-files-staged` for smaller, targeted queries
 
 ---
 
@@ -144,7 +146,8 @@ Specifications make the intended behavior easy to understand (Rule 1) and provid
 
 - Use `mcp__commands__show-modules` to understand module structure
 - Use `mcp__commands__get-dependencies` to understand module relationships
-- Use `mcp__commands__get-files` to understand file ownership before modifications
+- Use `mcp__commands__get-files` **only when needed** to understand file ownership before modifications (loads ~19k tokens)
+  - Prefer `show-files-changed` or `show-files-staged` for scoped queries
 
 #### Phase 2: Test-Driven Development (TDD)
 
@@ -299,7 +302,8 @@ Prefer several small, well-named functions over one large “god function.”
 ```text
 1. mcp__commands__show-modules (understand structure)
 2. mcp__commands__show-dependencies (understand relationships)
-3. mcp__commands__get-files (understand file ownership)
+3. mcp__commands__get-files (understand file ownership) ⚠️ ONLY if needed - loads ~19k tokens
+   Alternative: mcp__commands__show-files-changed (smaller, scoped to changes)
 ```
 
 #### During Development
@@ -333,6 +337,10 @@ Prefer several small, well-named functions over one large “god function.”
 3. **Validate before modifying** using validation commands
 4. **Check changed modules** before running builds or tests to scope work appropriately
 5. **Use execution order** to respect dependencies when processing multiple modules
+6. **Avoid data-heavy commands during initialization**:
+   - Don't call `get-files` during boot (loads ~19k tokens for ~2690 files)
+   - Use scoped alternatives: `show-files-changed`, `show-files-staged`
+   - Only call `get-files` when you specifically need complete file ownership mapping
 
 ---
 

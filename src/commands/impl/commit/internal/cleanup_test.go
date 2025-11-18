@@ -123,9 +123,9 @@ Module body.`,
 // TestAutoCleanup_ClosesCodeBlocks tests closing of unclosed code blocks
 func TestAutoCleanup_ClosesCodeBlocks(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
-		wantClosed bool  // Should code blocks be balanced?
+		name       string
+		input      string
+		wantClosed bool // Should code blocks be balanced?
 	}{
 		{
 			name: "close unclosed code block at end",
@@ -224,10 +224,10 @@ Body text.
 // TestAutoCleanup_EnsuresBlankLinesAroundCodeBlocks tests blank lines before/after code blocks
 func TestAutoCleanup_EnsuresBlankLinesAroundCodeBlocks(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
-		checkBefore bool  // Check for blank line before code block
-		checkAfter  bool  // Check for blank line after code block
+		name        string
+		input       string
+		checkBefore bool // Check for blank line before code block
+		checkAfter  bool // Check for blank line after code block
 	}{
 		{
 			name: "ensure proper spacing around code blocks",
@@ -243,7 +243,7 @@ func Hello() {}
 
 More text after.`,
 			checkBefore: true,
-			checkAfter: true,
+			checkAfter:  true,
 		},
 	}
 
@@ -425,7 +425,7 @@ func TestGetCleanupStats(t *testing.T) {
 			want:     []string{"Removed trailing period from title"},
 		},
 		{
-			name: "closed unclosed code block",
+			name:     "closed unclosed code block",
 			original: "feat(cli): add feature\n\n```go\nfunc Hello() {}",
 			cleaned:  "feat(cli): add feature\n\n```go\nfunc Hello() {}\n```",
 			want:     []string{"Closed unclosed code block"},
@@ -545,23 +545,23 @@ func TestWrapSemanticCommitLine(t *testing.T) {
 // TestEnsureCodeBlocksClosed tests code block closing logic
 func TestEnsureCodeBlocksClosed(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
+		name         string
+		input        string
 		wantBalanced bool
 	}{
 		{
-			name:  "close unclosed block",
-			input: "```go\nfunc Hello() {}",
+			name:         "close unclosed block",
+			input:        "```go\nfunc Hello() {}",
 			wantBalanced: true,
 		},
 		{
-			name:  "preserve closed block",
-			input: "```go\nfunc Hello() {}\n```",
+			name:         "preserve closed block",
+			input:        "```go\nfunc Hello() {}\n```",
 			wantBalanced: true,
 		},
 		{
-			name:  "handle multiple blocks",
-			input: "```go\nfunc A() {}\n```\n\n```go\nfunc B() {}\n```",
+			name:         "handle multiple blocks",
+			input:        "```go\nfunc A() {}\n```\n\n```go\nfunc B() {}\n```",
 			wantBalanced: true,
 		},
 	}
