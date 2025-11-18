@@ -217,36 +217,52 @@ func createDirectoryStructure(workspaceRoot string, repoRoot string) error {
 	}
 
 	// Create .r2r/prompts/commit directory
-	promptsDir := filepath.Join(r2rDir, "prompts", "commit")
-	if err := os.MkdirAll(promptsDir, 0755); err != nil {
+	commitPromptsDir := filepath.Join(r2rDir, "prompts", "commit")
+	if err := os.MkdirAll(commitPromptsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .r2r/prompts/commit directory: %w", err)
 	}
 
-	// Copy built-in prompts to .r2r/prompts/commit/ for user customization
-	if err := copyPromptTemplates(promptsDir, repoRoot); err != nil {
+	// Create .r2r/prompts/specs directory
+	specsPromptsDir := filepath.Join(r2rDir, "prompts", "specs")
+	if err := os.MkdirAll(specsPromptsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .r2r/prompts/specs directory: %w", err)
+	}
+
+	// Copy built-in prompts to .r2r/prompts/ for user customization
+	if err := copyPromptTemplates(commitPromptsDir, specsPromptsDir, repoRoot); err != nil {
 		return fmt.Errorf("failed to copy prompt templates: %w", err)
 	}
 
 	return nil
 }
 
-// copyPromptTemplates copies built-in prompts from commit package to .r2r/prompts/commit/ for customization
-func copyPromptTemplates(promptsDir string, repoRoot string) error {
+// copyPromptTemplates copies built-in prompts to .r2r/prompts/ for user customization
+func copyPromptTemplates(commitPromptsDir string, specsPromptsDir string, repoRoot string) error {
+	// Copy commit prompts
 	// Source prompts are at: <repo>/src/commands/impl/commit/prompts/
-	sourceDir := filepath.Join(repoRoot, "src", "commands", "impl", "commit", "prompts")
+	commitSourceDir := filepath.Join(repoRoot, "src", "commands", "impl", "commit", "prompts")
 
 	// Copy top-level.md
-	topLevelSource := filepath.Join(sourceDir, "top-level.md")
-	topLevelDest := filepath.Join(promptsDir, "top-level.md")
+	topLevelSource := filepath.Join(commitSourceDir, "top-level.md")
+	topLevelDest := filepath.Join(commitPromptsDir, "top-level.md")
 	if err := copyFile(topLevelSource, topLevelDest); err != nil {
 		return fmt.Errorf("failed to copy top-level.md: %w", err)
 	}
 
 	// Copy module.md
-	moduleSource := filepath.Join(sourceDir, "module.md")
-	moduleDest := filepath.Join(promptsDir, "module.md")
+	moduleSource := filepath.Join(commitSourceDir, "module.md")
+	moduleDest := filepath.Join(commitPromptsDir, "module.md")
 	if err := copyFile(moduleSource, moduleDest); err != nil {
 		return fmt.Errorf("failed to copy module.md: %w", err)
+	}
+
+	// Copy specs prompt
+	// Source: <repo>/src/commands/impl/specs/prompts/specification.md
+	specsSourceDir := filepath.Join(repoRoot, "src", "commands", "impl", "specs", "prompts")
+	specificationSource := filepath.Join(specsSourceDir, "specification.md")
+	specificationDest := filepath.Join(specsPromptsDir, "specification.md")
+	if err := copyFile(specificationSource, specificationDest); err != nil {
+		return fmt.Errorf("failed to copy specification.md: %w", err)
 	}
 
 	return nil
