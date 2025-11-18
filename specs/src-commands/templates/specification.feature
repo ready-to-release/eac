@@ -28,6 +28,11 @@ Feature: src-commands_templates
       And no value replacement should occur
 
     Scenario: Apply docs template with custom local source
+      Given I have a template directory "custom/templates/docs"
+      And I have a template file "custom/templates/docs/README.md" with content:
+        """
+        # Documentation
+        """
       When I run the command "templates apply docs --source ./custom/templates/docs"
       Then the command should succeed
       And the templates should be copied from local path "./custom/templates/docs"
@@ -51,7 +56,12 @@ Feature: src-commands_templates
       And the rendered files should contain replaced values
 
     Scenario: Apply docs template with all custom parameters
-      Given I have a values file "values.json" with:
+      Given I have a template directory "local/templates"
+      And I have a template file "local/templates/doc.md" with content:
+        """
+        Project: {{ .ProjectName }}
+        """
+      And I have a values file "values.json" with:
         """
         {
           "ProjectName": "MyProject"
@@ -79,6 +89,11 @@ Feature: src-commands_templates
       And the destination should be ".r2r/templates/specs"
 
     Scenario: Install specs template with custom local source
+      Given I have a template directory "custom/templates/specs"
+      And I have a template file "custom/templates/specs/spec.feature" with content:
+        """
+        Feature: Example
+        """
       When I run the command "templates install specs --source ./custom/templates/specs"
       Then the command should succeed
       And the templates should be copied from local path "./custom/templates/specs"
@@ -90,6 +105,11 @@ Feature: src-commands_templates
       And the destination should be "./custom/templates"
 
     Scenario: Install specs template with all custom parameters
+      Given I have a template directory "local/templates"
+      And I have a template file "local/templates/spec.feature" with content:
+        """
+        Feature: Test
+        """
       When I run the command "templates install specs --source ./local/templates --destination ./output"
       Then the command should succeed
       And the templates should be copied from local path "./local/templates"
@@ -103,6 +123,11 @@ Feature: src-commands_templates
       And the destination should be ".r2r/templates/reports"
 
     Scenario: Install reports template with custom local source
+      Given I have a template directory "custom/templates/reports"
+      And I have a template file "custom/templates/reports/report.md" with content:
+        """
+        # Report
+        """
       When I run the command "templates install reports --source ./custom/templates/reports"
       Then the command should succeed
       And the templates should be copied from local path "./custom/templates/reports"
@@ -117,18 +142,23 @@ Feature: src-commands_templates
       When I run the command "templates install unknown-template"
       Then the command should fail
       And the error output should contain "unknown template: unknown-template"
-      And the error output should contain "Available templates: specs, reports"
+      And the error output should contain "Available templates: reports, specs"
 
   Rule: Template commands are extensible for new template types
 
-    Scenario: Adding new template requires minimal code changes
+    Scenario: Adding new apply template requires minimal code changes
       Given the templates command system is implemented
-      When a developer adds a new template type "architecture"
+      When a developer adds a new template type "architecture" for apply
       Then they should only need to create a new file "templates/apply/architecture.go"
-      Or they should only need to create a new file "templates/install/architecture.go"
       And the file should register the template with default configuration
       And the command "templates apply architecture" should automatically work
-      Or the command "templates install architecture" should automatically work
+
+    Scenario: Adding new install template requires minimal code changes
+      Given the templates command system is implemented
+      When a developer adds a new template type "architecture" for install
+      Then they should only need to create a new file "templates/install/architecture.go"
+      And the file should register the template with default configuration
+      And the command "templates install architecture" should automatically work
 
   Rule: Template system must prevent path traversal attacks
 
