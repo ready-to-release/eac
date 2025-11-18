@@ -3,7 +3,7 @@
 // Usage: specs create <description>
 // Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --template (custom template file), --prompt (custom system prompt)
 // HasSideEffects: true
-package specs
+package create
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/src/commands/impl/specs"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/ai"
 	"github.com/ready-to-release/eac/src/core/ai/contract"
@@ -210,17 +211,17 @@ func determineAndValidateOutputPath(config *SpecsConfig, content string) (string
 		}
 	} else {
 		// Extract feature name and determine path
-		moduleName, featureName, err := extractFeatureName(content)
+		moduleName, featureName, err := specs.ExtractFeatureName(content)
 		if err != nil {
 			return "", err
 		}
 
 		// Default to specs directory
-		finalOutputPath = determineOutputPath(config.TemplateRoot, moduleName, featureName)
+		finalOutputPath = specs.DetermineOutputPath(config.TemplateRoot, moduleName, featureName)
 	}
 
 	// Security: Validate that output path is within repository
-	if err := validateOutputPath(finalOutputPath, config.TemplateRoot); err != nil {
+	if err := specs.ValidateOutputPath(finalOutputPath, config.TemplateRoot); err != nil {
 		return "", fmt.Errorf("security error: %w", err)
 	}
 
