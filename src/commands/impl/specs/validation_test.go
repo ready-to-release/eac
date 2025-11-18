@@ -64,9 +64,9 @@ func TestValidateGherkinContent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateGherkinContent(tt.content)
+			err := ValidateGherkinContent(tt.content)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateGherkinContent() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateGherkinContent() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -122,9 +122,9 @@ func TestValidateGherkinContent_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateGherkinContent(tt.content)
+			err := ValidateGherkinContent(tt.content)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateGherkinContent() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateGherkinContent() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -187,9 +187,9 @@ Feature: Second
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateGherkinContent(tt.content)
+			err := ValidateGherkinContent(tt.content)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateGherkinContent() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateGherkinContent() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

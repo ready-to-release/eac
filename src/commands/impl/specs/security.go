@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-// extractFeatureName extracts module and feature name from Gherkin content
+// ExtractFeatureName extracts module and feature name from Gherkin content
 // Expected format: "Feature: module_feature-name" or "Feature: feature-name"
 //
 // Security: Validates feature line for path traversal, path separators, and control characters
-func extractFeatureName(gherkin string) (string, string, error) {
+func ExtractFeatureName(gherkin string) (string, string, error) {
 	// Find Feature: line
 	re := regexp.MustCompile(`(?m)^Feature:\s+(.+?)$`)
 	matches := re.FindStringSubmatch(gherkin)
@@ -22,7 +22,7 @@ func extractFeatureName(gherkin string) (string, string, error) {
 	featureLine := strings.TrimSpace(matches[1])
 
 	// Security: Validate feature line before processing
-	if err := validateFeatureLineSecurity(featureLine); err != nil {
+	if err := ValidateFeatureLineSecurity(featureLine); err != nil {
 		return "", "", fmt.Errorf("invalid feature name: %w", err)
 	}
 
@@ -42,26 +42,26 @@ func extractFeatureName(gherkin string) (string, string, error) {
 
 	// Validate module name (if present)
 	if moduleName != "" {
-		if err := validateWindowsReservedName(moduleName); err != nil {
+		if err := ValidateWindowsReservedName(moduleName); err != nil {
 			return "", "", fmt.Errorf("invalid module name: %w", err)
 		}
 	}
 
 	// Validate feature name
-	if err := validateWindowsReservedName(featureName); err != nil {
+	if err := ValidateWindowsReservedName(featureName); err != nil {
 		return "", "", fmt.Errorf("invalid feature name: %w", err)
 	}
 
 	return moduleName, featureName, nil
 }
 
-// validateFeatureLineSecurity validates feature line for security issues
+// ValidateFeatureLineSecurity validates feature line for security issues
 //
 // This function prevents:
 // - Path traversal attacks (../)
 // - Path separators (/ and \)
 // - Control characters (except tab which is trimmed)
-func validateFeatureLineSecurity(featureLine string) error {
+func ValidateFeatureLineSecurity(featureLine string) error {
 	// Reject path traversal attempts first (before checking separators)
 	if strings.Contains(featureLine, "..") {
 		return fmt.Errorf("feature name contains path traversal attempt")
@@ -82,11 +82,11 @@ func validateFeatureLineSecurity(featureLine string) error {
 	return nil
 }
 
-// validateWindowsReservedName checks if a name is a Windows reserved device name
+// ValidateWindowsReservedName checks if a name is a Windows reserved device name
 //
 // Windows reserved names: CON, PRN, AUX, NUL, COM1-9, LPT1-9
 // These names are reserved even with extensions (e.g., CON.txt)
-func validateWindowsReservedName(name string) error {
+func ValidateWindowsReservedName(name string) error {
 	reservedNames := []string{
 		"CON", "PRN", "AUX", "NUL",
 		"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
@@ -109,8 +109,8 @@ func validateWindowsReservedName(name string) error {
 	return nil
 }
 
-// validateOutputPath ensures the output path is within the repository (prevents path traversal attacks)
-func validateOutputPath(outputPath string, templateRoot string) error {
+// ValidateOutputPath ensures the output path is within the repository (prevents path traversal attacks)
+func ValidateOutputPath(outputPath string, templateRoot string) error {
 	// Clean both paths to resolve any .. or . components
 	cleanOutput := filepath.Clean(outputPath)
 	cleanRoot := filepath.Clean(templateRoot)
@@ -146,8 +146,8 @@ func validateOutputPath(outputPath string, templateRoot string) error {
 	return nil
 }
 
-// determineOutputPath constructs the output file path in specs directory
-func determineOutputPath(templateRoot string, moduleName string, featureName string) string {
+// DetermineOutputPath constructs the output file path in specs directory
+func DetermineOutputPath(templateRoot string, moduleName string, featureName string) string {
 	if moduleName != "" {
 		return filepath.Join(templateRoot, "specs", moduleName, featureName, "specification.feature")
 	}

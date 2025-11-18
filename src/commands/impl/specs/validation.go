@@ -5,14 +5,14 @@ import (
 	"strings"
 )
 
-// validateGherkinContent ensures the generated content is valid Gherkin with structural validation
+// ValidateGherkinContent ensures the generated content is valid Gherkin with structural validation
 //
 // This improved validation:
 // - Checks keyword order (Feature before Rule before Scenario)
 // - Ignores keywords in comments
 // - Detects duplicate Feature declarations
 // - Validates basic Gherkin structure
-func validateGherkinContent(content string) error {
+func ValidateGherkinContent(content string) error {
 	if strings.TrimSpace(content) == "" {
 		return fmt.Errorf("content is empty")
 	}
@@ -34,7 +34,7 @@ func validateGherkinContent(content string) error {
 		}
 
 		// Check keyword order and update state
-		if err := validateGherkinLine(trimmed, state, lineNum); err != nil {
+		if err := ValidateGherkinLine(trimmed, state, lineNum); err != nil {
 			return err
 		}
 	}
@@ -60,8 +60,8 @@ type gherkinValidationState struct {
 	seenScenario bool
 }
 
-// validateGherkinLine validates a single line of Gherkin and updates state
-func validateGherkinLine(line string, state *gherkinValidationState, lineNum int) error {
+// ValidateGherkinLine validates a single line of Gherkin and updates state
+func ValidateGherkinLine(line string, state *gherkinValidationState, lineNum int) error {
 	switch {
 	case strings.HasPrefix(line, "Feature:"):
 		if state.seenFeature {

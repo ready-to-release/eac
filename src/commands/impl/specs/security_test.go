@@ -62,9 +62,9 @@ func TestExtractFeatureName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotModule, gotName, err := extractFeatureName(tt.gherkin)
+			gotModule, gotName, err := ExtractFeatureName(tt.gherkin)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("extractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExtractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
@@ -73,10 +73,10 @@ func TestExtractFeatureName(t *testing.T) {
 			}
 
 			if gotModule != tt.wantModule {
-				t.Errorf("extractFeatureName() module = %v, want %v", gotModule, tt.wantModule)
+				t.Errorf("ExtractFeatureName() module = %v, want %v", gotModule, tt.wantModule)
 			}
 			if gotName != tt.wantName {
-				t.Errorf("extractFeatureName() name = %v, want %v", gotName, tt.wantName)
+				t.Errorf("ExtractFeatureName() name = %v, want %v", gotName, tt.wantName)
 			}
 		})
 	}
@@ -106,18 +106,18 @@ func TestDetermineOutputPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
-			got := determineOutputPath(tmpDir, tt.moduleName, tt.featureName)
+			got := DetermineOutputPath(tmpDir, tt.moduleName, tt.featureName)
 
 			// Check that all expected path components are present
 			for _, want := range tt.wantContain {
 				if !strings.Contains(got, want) {
-					t.Errorf("determineOutputPath() = %v, missing component %v", got, want)
+					t.Errorf("DetermineOutputPath() = %v, missing component %v", got, want)
 				}
 			}
 
 			// Verify it ends with specification.feature
 			if !strings.HasSuffix(got, "specification.feature") {
-				t.Errorf("determineOutputPath() = %v, want to end with specification.feature", got)
+				t.Errorf("DetermineOutputPath() = %v, want to end with specification.feature", got)
 			}
 		})
 	}
@@ -174,16 +174,16 @@ func TestValidateOutputPath_PathTraversalPrevention(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateOutputPath(tt.outputPath, tmpRepo)
+			err := ValidateOutputPath(tt.outputPath, tmpRepo)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateOutputPath() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateOutputPath() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if tt.wantErr && err != nil {
 				if !strings.Contains(err.Error(), tt.wantErrContain) {
-					t.Errorf("validateOutputPath() error = %v, want to contain %q", err, tt.wantErrContain)
+					t.Errorf("ValidateOutputPath() error = %v, want to contain %q", err, tt.wantErrContain)
 				}
 			}
 		})
@@ -214,10 +214,10 @@ func TestValidateOutputPath_RealFileSystem(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fullPath := filepath.Join(tmpDir, tt.outputPath)
-			err := validateOutputPath(fullPath, tmpDir)
+			err := ValidateOutputPath(fullPath, tmpDir)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateOutputPath() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateOutputPath() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -276,18 +276,18 @@ func TestExtractFeatureName_SpecialCharactersValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotModule, gotName, err := extractFeatureName(tt.gherkin)
+			gotModule, gotName, err := ExtractFeatureName(tt.gherkin)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("extractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExtractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !tt.wantErr {
 				if gotModule != tt.wantModule {
-					t.Errorf("extractFeatureName() module = %v, want %v", gotModule, tt.wantModule)
+					t.Errorf("ExtractFeatureName() module = %v, want %v", gotModule, tt.wantModule)
 				}
 				if gotName != tt.wantName {
-					t.Errorf("extractFeatureName() name = %v, want %v", gotName, tt.wantName)
+					t.Errorf("ExtractFeatureName() name = %v, want %v", gotName, tt.wantName)
 				}
 
 				// Log warnings for potentially dangerous patterns
@@ -352,18 +352,18 @@ func TestExtractFeatureName_UnicodeNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotModule, gotName, err := extractFeatureName(tt.gherkin)
+			gotModule, gotName, err := ExtractFeatureName(tt.gherkin)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("extractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExtractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !tt.wantErr {
 				if gotModule != tt.wantModule {
-					t.Errorf("extractFeatureName() module = %q, want %q (%s)", gotModule, tt.wantModule, tt.description)
+					t.Errorf("ExtractFeatureName() module = %q, want %q (%s)", gotModule, tt.wantModule, tt.description)
 				}
 				if gotName != tt.wantName {
-					t.Errorf("extractFeatureName() name = %q, want %q (%s)", gotName, tt.wantName, tt.description)
+					t.Errorf("ExtractFeatureName() name = %q, want %q (%s)", gotName, tt.wantName, tt.description)
 				}
 			}
 		})
@@ -411,18 +411,18 @@ func TestExtractFeatureName_WindowsReservedNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotModule, gotName, err := extractFeatureName(tt.gherkin)
+			gotModule, gotName, err := ExtractFeatureName(tt.gherkin)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("extractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExtractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !tt.wantErr {
 				if gotModule != tt.wantModule {
-					t.Errorf("extractFeatureName() module = %q, want %q", gotModule, tt.wantModule)
+					t.Errorf("ExtractFeatureName() module = %q, want %q", gotModule, tt.wantModule)
 				}
 				if gotName != tt.wantName {
-					t.Errorf("extractFeatureName() name = %q, want %q", gotName, tt.wantName)
+					t.Errorf("ExtractFeatureName() name = %q, want %q", gotName, tt.wantName)
 				}
 			}
 		})
@@ -442,7 +442,7 @@ func TestExtractFeatureName_VeryLongNames(t *testing.T) {
 		{
 			name:        "very long feature name",
 			gherkin:     fmt.Sprintf("Feature: %s\n", longName),
-			expectError: false, // extractFeatureName doesn't validate length
+			expectError: false, // ExtractFeatureName doesn't validate length
 			description: "Feature name exceeding 260 chars",
 		},
 		{
@@ -455,9 +455,9 @@ func TestExtractFeatureName_VeryLongNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			module, name, err := extractFeatureName(tt.gherkin)
+			module, name, err := ExtractFeatureName(tt.gherkin)
 			if (err != nil) != tt.expectError {
-				t.Errorf("extractFeatureName() error = %v, expectError %v", err, tt.expectError)
+				t.Errorf("ExtractFeatureName() error = %v, expectError %v", err, tt.expectError)
 				return
 			}
 
@@ -511,18 +511,18 @@ func TestExtractFeatureName_CaseSensitivity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotModule, gotName, err := extractFeatureName(tt.gherkin)
+			gotModule, gotName, err := ExtractFeatureName(tt.gherkin)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("extractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExtractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !tt.wantErr {
 				if gotModule != tt.wantModule {
-					t.Errorf("extractFeatureName() module = %q, want %q", gotModule, tt.wantModule)
+					t.Errorf("ExtractFeatureName() module = %q, want %q", gotModule, tt.wantModule)
 				}
 				if gotName != tt.wantName {
-					t.Errorf("extractFeatureName() name = %q, want %q", gotName, tt.wantName)
+					t.Errorf("ExtractFeatureName() name = %q, want %q", gotName, tt.wantName)
 				}
 			}
 		})
@@ -569,18 +569,18 @@ func TestExtractFeatureName_WhitespaceVariations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotModule, gotName, err := extractFeatureName(tt.gherkin)
+			gotModule, gotName, err := ExtractFeatureName(tt.gherkin)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("extractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExtractFeatureName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !tt.wantErr {
 				if gotModule != tt.wantModule {
-					t.Errorf("extractFeatureName() module = %q, want %q", gotModule, tt.wantModule)
+					t.Errorf("ExtractFeatureName() module = %q, want %q", gotModule, tt.wantModule)
 				}
 				if gotName != tt.wantName {
-					t.Errorf("extractFeatureName() name = %q, want %q", gotName, tt.wantName)
+					t.Errorf("ExtractFeatureName() name = %q, want %q", gotName, tt.wantName)
 				}
 			}
 		})
@@ -625,9 +625,9 @@ func TestValidateOutputPath_SymbolicLinks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateOutputPath(tt.outputPath, tmpDir)
+			err := ValidateOutputPath(tt.outputPath, tmpDir)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateOutputPath() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateOutputPath() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -670,7 +670,7 @@ func TestDetermineOutputPath_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path := determineOutputPath(tmpDir, tt.moduleName, tt.featureName)
+			path := DetermineOutputPath(tmpDir, tt.moduleName, tt.featureName)
 
 			// Verify path is absolute or under tmpDir
 			if !filepath.IsAbs(path) {
@@ -748,9 +748,9 @@ func TestValidateFeatureLineSecurity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateFeatureLineSecurity(tt.featureLine)
+			err := ValidateFeatureLineSecurity(tt.featureLine)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateFeatureLineSecurity() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateFeatureLineSecurity() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
@@ -831,9 +831,9 @@ func TestValidateWindowsReservedNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateWindowsReservedName(tt.featureName)
+			err := ValidateWindowsReservedName(tt.featureName)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateWindowsReservedName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateWindowsReservedName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 

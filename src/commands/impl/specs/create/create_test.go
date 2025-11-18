@@ -1,5 +1,5 @@
-// File: src/commands/impl/specs/create_test.go
-package specs
+// File: src/commands/impl/specs/create/create_test.go
+package create
 
 import (
 	"os"
