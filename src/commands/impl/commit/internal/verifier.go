@@ -538,7 +538,8 @@ func validateModuleSectionStructure(lines []string) []ValidationError {
 		trimmed := strings.TrimSpace(lines[i])
 
 		// Check for orphaned dashes line (dashes without module name before it)
-		if isDashesLine(trimmed) {
+		// Skip section separators (exactly 3 dashes) as they separate modules
+		if isDashesLine(trimmed) && !isSectionSeparator(trimmed) {
 			// Look back to see if previous non-empty line was a module name
 			prevNonEmpty := ""
 			for j := i - 1; j >= 0; j-- {
@@ -644,4 +645,11 @@ func isDashesLine(s string) bool {
 	}
 
 	return true
+}
+
+// isSectionSeparator checks if a line is exactly a section separator (---)
+// Section separators are used to divide module sections and should not be
+// validated as module header underlines
+func isSectionSeparator(s string) bool {
+	return s == "---"
 }
