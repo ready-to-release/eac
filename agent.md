@@ -227,6 +227,49 @@ To align with idiomatic and maintainable Go:
 - Prefer composition over inheritance
 - Avoid global mutable state
 
+## Go Code Structure Guidelines
+
+To keep the codebase clear, maintainable, and aligned with idiomatic Go, follow these structural guidelines:
+
+### File Length
+
+Go does not enforce strict limits, but large files reduce clarity and increase cognitive load.
+
+**Guidelines:**
+
+- Prefer files in the range of **200–400 lines**
+- Review files that grow beyond **600 lines**
+- Avoid files over **1000 lines**, as they usually indicate missing modularity or unclear responsibilities
+
+Files should be organized by **behavior and domain**, not by generic categories (avoid `utils.go`, `helpers.go`, etc.).
+
+### Function Size & Modularity
+
+Functions should be small, intention-revealing, and focused.
+
+**Guidelines:**
+
+- Aim for functions that fit on **one screen (~20–40 lines)**
+- Revisit functions that exceed **50–80 lines**
+- Avoid functions over **100 lines** unless genuinely necessary
+
+Split functions when:
+
+- They mix multiple concerns
+- They require long comments to explain the flow
+- They contain deeply nested logic
+
+Prefer several small, well-named functions over one large “god function.”
+
+### Responsibilities & Composition
+
+- Keep files cohesive: one clear responsibility per file
+- Use interfaces and small helpers to isolate behavior
+- Prefer composition over deep inheritance or nested dependencies
+- Avoid “god files” with many unrelated types or functions
+
+**Goal:** Keep code easy to understand, easy to change, and hard to break—the same core principles that guide this agent’s workflow.
+
 ---
 
 ## MCP Commands Usage Guidelines
