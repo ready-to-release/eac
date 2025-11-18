@@ -1,8 +1,8 @@
-# Three-Layer Testing Approach
+# Three-Layer Testing Structure
 
 This project uses **a three layered approach to bind specifications to tests**:
 
-- **Acceptance Criteria** Business requirements and customer value
+- **Rules** Business requirements, often referred to as Acceptance Criteria, and customer value
 - **Scenario** User-facing behavior specifications
 - **Unit tests** Implementation correctness and code quality
 
@@ -12,13 +12,13 @@ Each layer serves a distinct purpose, uses different tools, and addresses differ
 
 ## The Three Layers
 
-| Layer                  | Question | Stakeholders | Tool | Representation | Location |
-|------------------------|----------|--------------|------|----------------|----------|
-| **Acceptace Criteria** | "What business value?" | Product Owner, Business | Godog | `Rule:` blocks | `specs/` |
-| **Scenario**           | "How does user interact?" | QA, Developers, Product | Godog | `Scenario:` under Rules | `specs/` + `src/tests/` |
-| **Unit test**          | "Does code work?" | Developers | Go test | Unit test functions | `src/*_test.go` |
+| Layer         | Question | Stakeholders | Tool | Representation | Location |
+|---------------|----------|--------------|------|----------------|----------|
+| **Rule**      | "What business value?" | Product Owner, Business | Godog | `Rule:` blocks | `specs/` |
+| **Scenario**  | "How does user interact?" | QA, Developers, Product | Godog | `Scenario:` under Rules | `specs/` + `src/tests/` |
+| **Unit test** | "Does code work?" | Developers | Go test | Unit test functions | `src/*_test.go` |
 
-### Layer 1: Acceptance Criteria
+### Layer 1: Rule
 
 **Purpose**: Define business requirements before development
 
@@ -39,7 +39,7 @@ Feature: Init CLI project
 ```
 
 **Origin**: 🔵 Blue cards from Example Mapping
-**Location**: `specs/<module>/<command or function>/<specification-area>.feature`
+**Location**: `specs/<module>/<feature>/specification.feature`
 
 ### Layer 2: Scenario
 
@@ -66,7 +66,7 @@ Rule: Creates project directory structure
 ```
 
 **Origin**: 🟢 Green cards from Example Mapping
-**Location**: `specs/<module>/<command or function>/<specification-area>.feature`
+**Location**: `specs/<module>/<feature>/specification.feature`
 **Implementation**: `src/<module>/tests/steps_test.go`
 
 ### Layer 3: Unit Tests
