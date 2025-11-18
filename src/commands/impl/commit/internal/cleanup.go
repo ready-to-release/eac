@@ -191,11 +191,11 @@ func fixContent(lines []string) []string {
 
 		// Check if this is a special field line (Auditor-Summary, Changes, etc.)
 		isSpecialField := strings.HasPrefix(trimmed, "Auditor-Summary:") ||
-		   strings.HasPrefix(trimmed, "Changes:") ||
-		   strings.HasPrefix(trimmed, "BREAKING CHANGE:") ||
-		   strings.HasPrefix(trimmed, "Refs:") ||
-		   strings.HasPrefix(trimmed, "Closes:") ||
-		   strings.HasPrefix(trimmed, "Co-authored-by:")
+			strings.HasPrefix(trimmed, "Changes:") ||
+			strings.HasPrefix(trimmed, "BREAKING CHANGE:") ||
+			strings.HasPrefix(trimmed, "Refs:") ||
+			strings.HasPrefix(trimmed, "Closes:") ||
+			strings.HasPrefix(trimmed, "Co-authored-by:")
 
 		if isSpecialField {
 			// Flush any buffered body text first

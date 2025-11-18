@@ -236,3 +236,79 @@ Changes: 1 file, +10 insertions, -0 deletions
 		t.Error("Expected LINE_TOO_LONG warning")
 	}
 }
+
+func TestVerifyCommitMessageContract_SectionSeparatorsNotOrphaned(t *testing.T) {
+	// This test verifies that --- separators between module sections
+	// are not flagged as orphaned dashes lines
+	validMessage := `feat(multi-module): enhance commit generation with validation
+
+Auditor-Summary: Integrated contract-based validation into commit
+message generation with anti-corruption filtering.
+
+This commit enhances the AI-powered commit message generation with a
+comprehensive validation framework.
+
+claude-agents
+---------
+claude-agents: docs: add MCP command usage guidelines during boot
+
+Added documentation clarifying that data-heavy MCP commands should not
+be called during initialization.
+
+---
+
+claude
+---------
+claude: docs: update MCP command usage guidance
+
+Updated agent.md to clarify that get-files should only be called
+on-demand since it loads significant tokens.
+
+---
+
+docs
+---------
+docs: docs: add filtering options to get files command
+
+Expanded documentation for the get files command with comprehensive
+filtering options.
+`
+
+	errors := VerifyCommitMessageContract(validMessage, []string{"claude-agents", "claude", "docs"})
+
+	// Check that we don't have any ORPHANED_DASHES_LINE errors
+	for _, err := range errors {
+		if err.Code == "ORPHANED_DASHES_LINE" {
+			t.Errorf("Section separator (---) incorrectly flagged as orphaned dashes line at line %d: %s", err.Line, err.Message)
+		}
+	}
+}
+
+func TestVerifyCommitMessageContract_OrphanedDashesLineDetected(t *testing.T) {
+	// This test verifies that actual orphaned dashes lines (not ---)
+	// are still detected correctly
+	invalidMessage := `feat(src-commands): add feature
+
+Auditor-Summary: Summary text.
+
+Some body text here.
+
+---------
+
+More text here.
+`
+
+	errors := VerifyCommitMessageContract(invalidMessage, []string{"src-commands"})
+
+	foundError := false
+	for _, err := range errors {
+		if err.Code == "ORPHANED_DASHES_LINE" {
+			foundError = true
+			break
+		}
+	}
+
+	if !foundError {
+		t.Error("Expected ORPHANED_DASHES_LINE error for dashes without module name")
+	}
+}

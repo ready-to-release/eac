@@ -26,7 +26,7 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 - **Build & Test**: `build-module`, `build-modules`, `test-module`, `test-modules`, `pipeline-run`
 - **Documentation**: `docs-serve` (MkDocs integration)
 - **Git Operations**: `commit-ai`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
-- **Templates**: `templates-list`, `templates-install`
+- **Specifications**: `specs create`, `specs validate`
 
 ---
 
@@ -36,22 +36,26 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 
 - **DO NOT** perform git modifying operations (`commit`, `push`, `add`, `stash`) unless explicitly requested
 - **ONLY** use git read operations (`log`, `status`, `diff`) for information gathering
-- **USE** `mcp__commands__commit-ai` when generating commit messages (if explicitly requested)
+- **USE** `commit-ai` when generating commit messages (if explicitly requested)
 
 ### File Organization
 
 - **Modules**: All modules are placed in the `src/` directory
 - **Result files**: DO NOT create result markdown files except in:
-  - Module directories (as identified by module contracts or `mcp__commands__get-files`)
+  - Module directories (as identified by module contracts or `get-files`)
   - `/out/<my-result-file>.md` for intermediate/temporary files
 - **Intermediate files**: CREATE all intermediate files, shell scripts, analysis results in `/out/` directory
-- **Before modifications**: USE `mcp__commands__get-files` to understand file ownership
+- **Before modifications**: USE `get-files` **on-demand** to understand file ownership
+  - ⚠️ This command loads ~2690 files (~19k tokens). Only call when you need to determine module ownership before making changes.
+  - Alternative: Use `show-files-changed` or `show-files-staged` for smaller, targeted queries
 
 ---
 
 ## Development Workflow
 
-You are an AI coding agent contributing Go code to this repository. Your work must follow a **mandatory three-phase workflow** guided by the **Three Rules of Vibe Coding**.
+You are an AI coding agent contributing Go code to this repository.
+
+Your work must follow a **mandatory three-phase workflow** guided by the **Three Rules of Vibe Coding**.
 
 Everything you produce must increase clarity, reduce cognitive load, and enable fast, safe iteration.
 
@@ -134,17 +138,17 @@ Specifications make the intended behavior easy to understand (Rule 1) and provid
 
 **Requirements when writing specifications:**
 
-- Follow guidelines from `docs\explanation\specifications\index.md`
+- **USE** `specs create` to generate new specifications from natural language descriptions
+- **USE** `specs validate` to validate specifications against contracts before proceeding
 - Create/update `.feature` files in `specs/` directory
-- Define acceptance criteria using **ATDD Rule blocks**
-- Define behavior scenarios using **BDD Scenarios**
-- Tag scenarios appropriately (see `docs\explanation\specifications\tag-reference.md`)
 
 **MCP Integration:**
 
-- Use `mcp__commands__show-modules` to understand module structure
-- Use `mcp__commands__get-dependencies` to understand module relationships
-- Use `mcp__commands__get-files` to understand file ownership before modifications
+- Use `show-modules` to understand module structure
+- Use `get-dependencies` to understand module relationships
+- Use `get-files` **only when needed** to understand file ownership before modifications (loads ~19k tokens)
+  - Prefer `show-files-changed` or `show-files-staged` for scoped queries
+- Use `specs validate <path>` to validate individual specifications or entire directories
 
 #### Phase 2: Test-Driven Development (TDD)
 
@@ -189,9 +193,9 @@ Every code implementation must include:
 
 **MCP Integration:**
 
-- Use `mcp__commands__test-module` to run tests for specific modules
-- Use `mcp__commands__get-execution-order` to determine test execution sequence
-- Use `mcp__commands__build-module` to validate compilation
+- Use `test-module` to run tests for specific modules
+- Use `get-execution-order` to determine test execution sequence
+- Use `build-module` to validate compilation
 
 #### Phase 3: Validation
 
@@ -209,10 +213,11 @@ Validation ensures your code actually works and is hard to break (Rule 3).
 
 **MCP Integration:**
 
-- Use `mcp__commands__test-modules` for batch testing
-- Use `mcp__commands__pipeline-run` to execute full module pipelines
-- Use `mcp__commands__get-changed-modules` to scope test execution
-- Use `mcp__commands__validate-dependencies` to check module contracts
+- Use `test-modules` for batch testing
+- Use `pipeline-run` to execute full module pipelines
+- Use `get-changed-modules` to scope test execution
+- Use `validate-dependencies` to check module contracts
+- Use `specs validate` to validate specifications against contracts
 
 ---
 
@@ -226,6 +231,49 @@ To align with idiomatic and maintainable Go:
 - Keep exported APIs minimal and intentional
 - Prefer composition over inheritance
 - Avoid global mutable state
+
+## Go Code Structure Guidelines
+
+To keep the codebase clear, maintainable, and aligned with idiomatic Go, follow these structural guidelines:
+
+### File Length
+
+Go does not enforce strict limits, but large files reduce clarity and increase cognitive load.
+
+**Guidelines:**
+
+- Prefer files in the range of **200–400 lines**
+- Review files that grow beyond **600 lines**
+- Avoid files over **1000 lines**, as they usually indicate missing modularity or unclear responsibilities
+
+Files should be organized by **behavior and domain**, not by generic categories (avoid `utils.go`, `helpers.go`, etc.).
+
+### Function Size & Modularity
+
+Functions should be small, intention-revealing, and focused.
+
+**Guidelines:**
+
+- Aim for functions that fit on **one screen (~20–40 lines)**
+- Revisit functions that exceed **50–80 lines**
+- Avoid functions over **100 lines** unless genuinely necessary
+
+Split functions when:
+
+- They mix multiple concerns
+- They require long comments to explain the flow
+- They contain deeply nested logic
+
+Prefer several small, well-named functions over one large “god function.”
+
+### Responsibilities & Composition
+
+- Keep files cohesive: one clear responsibility per file
+- Use interfaces and small helpers to isolate behavior
+- Prefer composition over deep inheritance or nested dependencies
+- Avoid “god files” with many unrelated types or functions
+
+**Goal:** Keep code easy to understand, easy to change, and hard to break—the same core principles that guide this agent’s workflow.
 
 ---
 
@@ -254,33 +302,34 @@ To align with idiomatic and maintainable Go:
 #### Before Making Changes
 
 ```text
-1. mcp__commands__show-modules (understand structure)
-2. mcp__commands__show-dependencies (understand relationships)
-3. mcp__commands__get-files (understand file ownership)
+1. show-modules (understand structure)
+2. show-dependencies (understand relationships)
+3. get-files (understand file ownership) ⚠️ ONLY if needed - loads ~19k tokens
+   Alternative: show-files-changed (smaller, scoped to changes)
 ```
 
 #### During Development
 
 ```text
-1. mcp__commands__build-module <moniker> (validate changes)
-2. mcp__commands__test-module <moniker> (run tests)
-3. mcp__commands__validate-dependencies (check contracts)
+1. build-module <moniker> (validate changes)
+2. test-module <moniker> (run tests)
+3. validate-dependencies (check contracts)
 ```
 
 #### Before Committing (if explicitly requested)
 
 ```text
-1. mcp__commands__show-files-staged (review changes)
-2. mcp__commands__get-changed-modules (identify affected modules)
-3. mcp__commands__commit-ai (generate commit message)
+1. show-files-staged (review changes)
+2. get-changed-modules (identify affected modules)
+3. commit-ai (generate commit message)
 ```
 
 #### Architecture Documentation
 
 ```text
-1. mcp__commands__design-list (list modules with docs)
-2. mcp__commands__design-validate (validate workspace)
-3. mcp__commands__design-serve (preview documentation)
+1. design-list (list modules with docs)
+2. design-validate (validate workspace)
+3. design-serve (preview documentation)
 ```
 
 ### Best Practices
@@ -290,6 +339,10 @@ To align with idiomatic and maintainable Go:
 3. **Validate before modifying** using validation commands
 4. **Check changed modules** before running builds or tests to scope work appropriately
 5. **Use execution order** to respect dependencies when processing multiple modules
+6. **Avoid data-heavy commands during initialization**:
+   - Don't call `get-files` during boot (loads ~19k tokens for ~2690 files)
+   - Use scoped alternatives: `show-files-changed`, `show-files-staged`
+   - Only call `get-files` when you specifically need complete file ownership mapping
 
 ---
 
@@ -329,7 +382,8 @@ To align with idiomatic and maintainable Go:
 - [ ] Understand module structure (`show-modules`)
 - [ ] Check dependencies (`show-dependencies`)
 - [ ] Check if specifications needed (or ask permission to skip for small changes)
-- [ ] Write specifications (`.feature` files in `specs/`)
+- [ ] Write specifications using `specs create` (generates `.feature` files in `specs/`)
+- [ ] Validate specifications using `specs validate <path>` (ensures contract compliance)
 - [ ] Define ATDD Rules (acceptance criteria)
 - [ ] Define BDD Scenarios (behavior)
 
@@ -344,9 +398,10 @@ To align with idiomatic and maintainable Go:
 
 **Phase 3: Validation**:
 
+- [ ] Validate specifications (`specs validate`)
 - [ ] Run unit tests (`go test`)
 - [ ] Run feature tests (`godog`)
-- [ ] Validate with MCP commands (`validate-dependencies`)
+- [ ] Validate dependencies (`validate-dependencies`)
 - [ ] Ensure all tests pass before completion
 - [ ] Verify code follows Go conventions (`gofmt`, `go vet`)
 
@@ -355,9 +410,3 @@ To align with idiomatic and maintainable Go:
 - **ATDD** (Acceptance): Business requirements → Rule blocks → `.feature` files in `specs/`
 - **BDD** (Behavior): User-facing behavior → Scenarios under Rules → Step definitions in module `tests/`
 - **TDD** (Implementation): Code correctness → Go unit tests → `*_test.go` alongside code
-
-### Key Documentation
-
-- Specifications: `docs\explanation\specifications\index.md`
-- Testing Strategy: `docs\explanation\continuous-delivery\testing\testing-strategy-overview.md`
-- Tag Reference: `docs\explanation\specifications\tag-reference.md`

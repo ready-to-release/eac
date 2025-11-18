@@ -41,7 +41,7 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 			affectedModules: []string{"mod-a", "mod-b", "mod-c", "mod-d", "mod-e"},
 		},
 		{
-			name:            "ten modules maintain order",
+			name: "ten modules maintain order",
 			affectedModules: []string{
 				"mod-1", "mod-2", "mod-3", "mod-4", "mod-5",
 				"mod-6", "mod-7", "mod-8", "mod-9", "mod-10",
