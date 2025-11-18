@@ -117,6 +117,10 @@ func TestModules() int {
 
 	fmt.Fprintf(orchestratorOut, "Testing %d modules: %v\n\n", len(monikers), monikers)
 
+	// Start global progress tracker
+	StartGlobalTracker(orchestratorOut)
+	defer StopGlobalTracker()
+
 	// Test each module in sequence
 	var mu sync.Mutex
 	failedModules := []string{}
@@ -160,16 +164,14 @@ func TestModules() int {
 		// Module output goes to file only (not console)
 		multiWriter := io.MultiWriter(logFile)
 
-		// Start progress indicator (dots every 5 seconds)
-		done := make(chan bool)
-		go showProgress(orchestratorOut, &mu, moniker, done)
+		// Track test start with global progress tracker
+		TrackTestStart(moniker)
 
 		// Run tests for this module
 		exitCode := runModuleTest(module, workspaceRoot, moduleOutputDir, multiWriter, reportFormat)
 
-		// Stop progress indicator
-		done <- true
-		close(done)
+		// Track test completion
+		TrackTestComplete(moniker)
 
 		logFile.Close()
 
@@ -414,20 +416,14 @@ func FindModulesWithResults(testRunDir string) ([]string, error) {
 	return modules, nil
 }
 
-// showProgress displays dots every 5 seconds while a module is being tested
-func showProgress(out io.Writer, mu *sync.Mutex, moniker string, done chan bool) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+// formatDuration formats a duration as "1m 23s" or "45s"
+func formatDuration(d time.Duration) string {
+	d = d.Round(time.Second)
+	minutes := int(d.Minutes())
+	seconds := int(d.Seconds()) % 60
 
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			mu.Lock()
-			fmt.Fprintf(out, "[testing] %s .......\r\n", moniker)
-			os.Stdout.Sync()
-			mu.Unlock()
-		}
+	if minutes > 0 {
+		return fmt.Sprintf("%dm %ds", minutes, seconds)
 	}
+	return fmt.Sprintf("%ds", seconds)
 }

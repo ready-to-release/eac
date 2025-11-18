@@ -1,4 +1,4 @@
-@deps:go @deps:ai @ov
+@deps:go @deps:claude @ov
 Feature: src-commands_commit-ai_parallel-execution
 
   As a developer using commit-ai

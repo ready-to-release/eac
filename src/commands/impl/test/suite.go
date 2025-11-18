@@ -321,6 +321,10 @@ func TestSuite() int {
 	// Phase 5: Run tests
 	fmt.Fprintf(multiWriter, "=== Phase 5: Test Execution ===\n")
 
+	// Start global progress tracker
+	StartGlobalTracker(multiWriter)
+	defer StopGlobalTracker()
+
 	// Group tests by package
 	testsByPackage := make(map[string][]testing.TestReference)
 	for _, test := range productionTests {
@@ -328,11 +332,7 @@ func TestSuite() int {
 		testsByPackage[pkgPath] = append(testsByPackage[pkgPath], test)
 	}
 
-	if parallel {
-		fmt.Fprintf(multiWriter, "Running tests from %d packages in parallel\n\n", len(testsByPackage))
-	} else {
-		fmt.Fprintf(multiWriter, "Running tests from %d packages\n\n", len(testsByPackage))
-	}
+	// Package count removed from console output for cleaner orchestration
 
 	// Update markdown: Phase 5 start
 	if mdFile != nil {
@@ -363,7 +363,7 @@ func TestSuite() int {
 		totalPassed, totalFailed = runTestsSequential(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
 	}
 
-	fmt.Fprintf(multiWriter, "Parallelism: %d CPUs, %d test workers per package\n\n", numCPU, testParallelism)
+	// Parallelism info removed from console for cleaner output
 
 	// Phase 6: Generate summary
 	endTime := time.Now()
@@ -379,6 +379,14 @@ func TestSuite() int {
 	fmt.Fprintf(multiWriter, "Total passed: %d\n", totalPassed)
 	fmt.Fprintf(multiWriter, "Total failed: %d\n", totalFailed)
 	fmt.Fprintf(multiWriter, "Results directory: %s\n", testRunDir)
+
+	// Check for undefined steps in test logs
+	undefinedSteps := extractUndefinedSteps(testRunDir)
+	if len(undefinedSteps) > 0 {
+		fmt.Fprintf(multiWriter, "\n⚠️  WARNING: %d undefined steps found\n", len(undefinedSteps))
+		fmt.Fprintf(multiWriter, "Scenarios with undefined steps need step implementations.\n")
+		fmt.Fprintf(multiWriter, "Run with verbose logging to see full details.\n")
+	}
 
 	// Update markdown: Final summary
 	if mdFile != nil {
@@ -575,8 +583,7 @@ func runTestsSequential(testsByPackage map[string][]testing.TestReference, multi
 
 	for pkgPath, tests := range testsByPackage {
 		packageNum++
-		fmt.Fprintf(multiWriter, "📦 Package: %s\n", pkgPath)
-		fmt.Fprintf(multiWriter, "   Tests: %d\n", len(tests))
+		// Package info removed from console - now only shows results
 
 		// Update markdown: Package starting
 		if mdFile != nil {
@@ -625,10 +632,8 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			// Print package info (thread-safe)
+			// Package info removed from console - now only shows results
 			mu.Lock()
-			fmt.Fprintf(multiWriter, "📦 Package: %s\n", path)
-			fmt.Fprintf(multiWriter, "   Tests: %d\n", len(testList))
 
 			// Update markdown: Package starting
 			if mdFile != nil {
@@ -670,21 +675,31 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	}
 
 	if isGodogOnly {
-		// Skip running go test for spec directories
-		fmt.Fprintf(multiWriter, "⏭️  Godog features (tested by test packages)\n\n")
+		// Skip running go test for spec directories (features only, no test code)
+		// These specs are executed by their corresponding test packages
+		// No console output needed - reduces noise in orchestrator output
 		return len(tests), 0
 	}
 
 	// Check if this is a Godog test package
 	isGodogTestPackage := fileExists(filepath.Join(pkgPath, "godog_test.go"))
 
-	if isGodogTestPackage {
-		// Display feature file summaries before running Godog tests
-		displayGodogFeatureSummaries(pkgPath, multiWriter)
+	// Get workspace root to compute relative package path
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		workspaceRoot = "."
 	}
 
-	// Create log file for package test output
-	logFileName := strings.ReplaceAll(filepath.Base(pkgPath), " ", "_") + ".log"
+	// Compute relative package path from workspace root
+	relPkgPath, err := filepath.Rel(workspaceRoot, pkgPath)
+	if err != nil {
+		relPkgPath = pkgPath
+	}
+	relPkgPath = filepath.ToSlash(relPkgPath) // Normalize to forward slashes
+
+	// Create unique log filename using full relative path (replace / with -)
+	logFileName := strings.ReplaceAll(relPkgPath, "/", "-")
+	logFileName = strings.ReplaceAll(logFileName, " ", "_") + ".log"
 	logFilePath := filepath.Join(testRunDir, logFileName)
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
@@ -692,6 +707,11 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		return 0, len(tests)
 	}
 	defer logFile.Close()
+
+	// For Godog packages, write feature summaries to log file
+	if isGodogTestPackage {
+		displayGodogFeatureSummaries(pkgPath, logFile)
+	}
 
 	// Run go test for this package with test-level parallelism
 	cmd := exec.Command("go", "test", "-v", "-parallel", fmt.Sprintf("%d", testParallelism))
@@ -705,10 +725,19 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		cmd.Env = append(os.Environ(), "GODOG_FORMAT=progress")
 	}
 
-	if err := cmd.Run(); err != nil {
+	// Use relative package path for display
+	pkgName := relPkgPath
+
+	// Track test start/completion with global progress tracker
+	TrackTestStart(pkgName)
+	defer TrackTestComplete(pkgName)
+
+	err = cmd.Run()
+
+	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			relLogPath := filepath.Join(filepath.Base(testRunDir), logFileName)
-			fmt.Fprintf(multiWriter, "❌ Package tests failed (See %s for details)\n\n", relLogPath)
+			fmt.Fprintf(multiWriter, "❌ Package %s failed (See %s for details)\n\n", pkgName, relLogPath)
 			// Update markdown: Package failed
 			if mdFile != nil {
 				fmt.Fprintf(mdFile, "  - ❌ Failed (exit code: %d)\n", exitErr.ExitCode())
@@ -727,7 +756,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	}
 
 	relLogPath := filepath.Join(filepath.Base(testRunDir), logFileName)
-	fmt.Fprintf(multiWriter, "✅ Package tests passed (See %s for details)\n\n", relLogPath)
+	fmt.Fprintf(multiWriter, "✅ Package %s passed (See %s for details)\n\n", pkgName, relLogPath)
 	// Update markdown: Package passed
 	if mdFile != nil {
 		fmt.Fprintf(mdFile, "  - ✅ Passed\n")
@@ -735,3 +764,70 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	}
 	return len(tests), 0
 }
+
+// extractUndefinedSteps scans test logs for undefined step definitions
+func extractUndefinedSteps(testRunDir string) []string {
+	var undefinedSteps []string
+	uniqueSteps := make(map[string]bool)
+
+	// Find all .log files in test run directory
+	entries, err := os.ReadDir(testRunDir)
+	if err != nil {
+		return undefinedSteps
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".log") {
+			continue
+		}
+
+		logPath := filepath.Join(testRunDir, entry.Name())
+		content, err := os.ReadFile(logPath)
+		if err != nil {
+			continue
+		}
+
+		// Parse log for "step is undefined: <step text>" lines
+		lines := strings.Split(string(content), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "step is undefined:") {
+				// Extract step text after "step is undefined: "
+				parts := strings.SplitN(line, "step is undefined:", 2)
+				if len(parts) == 2 {
+					stepText := strings.TrimSpace(parts[1])
+					// Remove ANSI color codes
+					stepText = stripANSI(stepText)
+					if stepText != "" && !uniqueSteps[stepText] {
+						uniqueSteps[stepText] = true
+						undefinedSteps = append(undefinedSteps, stepText)
+					}
+				}
+			}
+		}
+	}
+
+	return undefinedSteps
+}
+
+// stripANSI removes ANSI color codes from a string
+func stripANSI(str string) string {
+	// Remove ANSI escape sequences like [33m, [0m, etc.
+	result := ""
+	inEscape := false
+	for i := 0; i < len(str); i++ {
+		if str[i] == '\x1b' && i+1 < len(str) && str[i+1] == '[' {
+			inEscape = true
+			i++ // Skip the '['
+			continue
+		}
+		if inEscape {
+			if (str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= 'a' && str[i] <= 'z') {
+				inEscape = false
+			}
+			continue
+		}
+		result += string(str[i])
+	}
+	return result
+}
+
