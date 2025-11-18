@@ -53,7 +53,7 @@ package-lock.json
 .env
 
 # Editor/IDE
-# .idea/
+.idea/
 # Keep .vscode/ for extension development but ignore build artifacts above
 
 # Claude Code local settings (personal preferences not shared with team)

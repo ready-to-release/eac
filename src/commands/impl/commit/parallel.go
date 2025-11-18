@@ -127,7 +127,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 			// Generate module section using existing function
 			// WithProgress is goroutine-safe (uses internal synchronization)
 			err := commitmessage.WithProgress(progressMsg, func() error {
-				result, genErr := generateWithPrompt("module", moduleContext, cfg.workspaceRoot)
+				result, genErr := generateWithPrompt("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug)
 				output = result
 				return genErr
 			})

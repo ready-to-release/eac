@@ -9,84 +9,84 @@ import (
 // TestIsModuleName_EdgeCases tests module name validation edge cases
 func TestIsModuleName_EdgeCases(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		input string
-		want bool
+		want  bool
 	}{
 		{
-			name: "single character module name",
+			name:  "single character module name",
 			input: "a",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "max length module name (50 chars)",
+			name:  "max length module name (50 chars)",
 			input: "abcdefghij-klmnopqrst-uvwxyz0123456789-abcdefgh",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "exceeds max length (51 chars)",
+			name:  "exceeds max length (51 chars)",
 			input: "abcdefghij-klmnopqrst-uvwxyz0123456789-abcdefghijkl",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "consecutive dashes",
+			name:  "consecutive dashes",
 			input: "module--name",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "starting with dash",
+			name:  "starting with dash",
 			input: "-module",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "ending with dash",
+			name:  "ending with dash",
 			input: "module-",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "only dashes",
+			name:  "only dashes",
 			input: "---",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "with underscore",
+			name:  "with underscore",
 			input: "module_name",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "with numbers",
+			name:  "with numbers",
 			input: "module123",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "with uppercase (invalid)",
+			name:  "with uppercase (invalid)",
 			input: "Module",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "with space (invalid)",
+			name:  "with space (invalid)",
 			input: "module name",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "with special char (invalid)",
+			name:  "with special char (invalid)",
 			input: "module@name",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "empty string",
+			name:  "empty string",
 			input: "",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "with colon (invalid)",
+			name:  "with colon (invalid)",
 			input: "module:name",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "with period (invalid)",
+			name:  "with period (invalid)",
 			input: "module.name",
-			want: false,
+			want:  false,
 		},
 	}
 
@@ -103,44 +103,44 @@ func TestIsModuleName_EdgeCases(t *testing.T) {
 // TestIsDashesLine_EdgeCases tests dashes line validation edge cases
 func TestIsDashesLine_EdgeCases(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		input string
-		want bool
+		want  bool
 	}{
 		{
-			name: "exactly 3 dashes (minimum)",
+			name:  "exactly 3 dashes (minimum)",
 			input: "---",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "exactly 2 dashes (below minimum)",
+			name:  "exactly 2 dashes (below minimum)",
 			input: "--",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "many dashes",
+			name:  "many dashes",
 			input: "--------------------",
-			want: true,
+			want:  true,
 		},
 		{
-			name: "single dash",
+			name:  "single dash",
 			input: "-",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "dashes with space",
+			name:  "dashes with space",
 			input: "- - -",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "empty string",
+			name:  "empty string",
 			input: "",
-			want: false,
+			want:  false,
 		},
 		{
-			name: "underscores (invalid)",
+			name:  "underscores (invalid)",
 			input: "___",
-			want: false,
+			want:  false,
 		},
 	}
 
@@ -433,7 +433,7 @@ func TestVerifyCommitMessageContract_EmptyAndInvalid(t *testing.T) {
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
 		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-		len(s) > len(substr)+1 && findSubstring(s, substr)))
+			len(s) > len(substr)+1 && findSubstring(s, substr)))
 }
 
 func findSubstring(s, substr string) bool {

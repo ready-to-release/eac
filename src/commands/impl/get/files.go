@@ -5,14 +5,21 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --as-<name>: Output using custom renderer (e.g., --as-summary)
+//   --changed-only: Only show modified/unstaged files
+//   --staged-only: Only show staged files
+//   --module <moniker>: Filter to files owned by specific module
+//   --pattern <glob>: Filter files matching glob pattern
 // HasSideEffects: false
 package get
 
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"sort"
+	"strings"
 
+	"github.com/gobwas/glob"
 	"github.com/ready-to-release/eac/src/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/repository"
@@ -31,34 +38,174 @@ func GetFiles() int {
 		return 1
 	}
 
+	// Parse filter flags
+	filterOpts, err := parseFilterFlags(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	// Use the shared get command helper
 	return get.ExecuteGetCommand(func() (interface{}, error) {
-		// Generate report for all tracked files (tracked only, no ignored, not staged only)
-		report, err := reports.GetFilesModulesReport(true, false, false, workspaceRoot, "0.1.0")
+		// Determine if we need staged-only files
+		stagedOnly := filterOpts.StagedOnly
+
+		// Generate report for files (tracked only, no ignored, staged-only if requested)
+		report, err := reports.GetFilesModulesReport(true, false, stagedOnly, workspaceRoot, "0.1.0")
+		if err != nil {
+			return nil, err
+		}
+
+		// Apply filters
+		filteredFiles, err := applyFilters(report.AllFiles, filterOpts, workspaceRoot)
 		if err != nil {
 			return nil, err
 		}
 
 		// Sort by last module in the list (if multiple modules)
-		sort.Slice(report.AllFiles, func(i, j int) bool {
+		sort.Slice(filteredFiles, func(i, j int) bool {
 			// Get last module for each file (or empty string if no modules)
 			lastModuleI := ""
-			if len(report.AllFiles[i].Modules) > 0 {
-				lastModuleI = report.AllFiles[i].Modules[len(report.AllFiles[i].Modules)-1]
+			if len(filteredFiles[i].Modules) > 0 {
+				lastModuleI = filteredFiles[i].Modules[len(filteredFiles[i].Modules)-1]
 			}
 
 			lastModuleJ := ""
-			if len(report.AllFiles[j].Modules) > 0 {
-				lastModuleJ = report.AllFiles[j].Modules[len(report.AllFiles[j].Modules)-1]
+			if len(filteredFiles[j].Modules) > 0 {
+				lastModuleJ = filteredFiles[j].Modules[len(filteredFiles[j].Modules)-1]
 			}
 
 			// Sort by last module, then by file name if modules are equal
 			if lastModuleI != lastModuleJ {
 				return lastModuleI < lastModuleJ
 			}
-			return report.AllFiles[i].Name < report.AllFiles[j].Name
+			return filteredFiles[i].Name < filteredFiles[j].Name
 		})
 
-		return report.AllFiles, nil
+		return filteredFiles, nil
 	})
+}
+
+// filterOptions holds parsed filter flags
+type filterOptions struct {
+	ChangedOnly bool
+	StagedOnly  bool
+	Module      string
+	Pattern     string
+}
+
+// parseFilterFlags extracts filter flags from command arguments
+func parseFilterFlags(args []string) (*filterOptions, error) {
+	opts := &filterOptions{}
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+
+		switch arg {
+		case "--changed-only":
+			opts.ChangedOnly = true
+		case "--staged-only":
+			opts.StagedOnly = true
+		case "--module":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--module requires a value")
+			}
+			opts.Module = args[i+1]
+			i++ // Skip next arg
+		case "--pattern":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--pattern requires a value")
+			}
+			opts.Pattern = args[i+1]
+			i++ // Skip next arg
+		}
+	}
+
+	// Validate: --changed-only and --staged-only are mutually exclusive
+	if opts.ChangedOnly && opts.StagedOnly {
+		return nil, fmt.Errorf("--changed-only and --staged-only are mutually exclusive")
+	}
+
+	return opts, nil
+}
+
+// applyFilters applies all active filters to the file list
+func applyFilters(files []repository.RepositoryFileWithModule, opts *filterOptions, workspaceRoot string) ([]repository.RepositoryFileWithModule, error) {
+	result := files
+
+	// Filter by changed files
+	if opts.ChangedOnly {
+		changedFiles, err := getChangedFiles(workspaceRoot)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get changed files: %w", err)
+		}
+
+		changedMap := make(map[string]bool)
+		for _, f := range changedFiles {
+			changedMap[f] = true
+		}
+
+		filtered := make([]repository.RepositoryFileWithModule, 0)
+		for _, file := range result {
+			if changedMap[file.Name] {
+				filtered = append(filtered, file)
+			}
+		}
+		result = filtered
+	}
+
+	// Filter by module
+	if opts.Module != "" {
+		filtered := make([]repository.RepositoryFileWithModule, 0)
+		for _, file := range result {
+			for _, module := range file.Modules {
+				if module == opts.Module {
+					filtered = append(filtered, file)
+					break
+				}
+			}
+		}
+		result = filtered
+	}
+
+	// Filter by pattern
+	if opts.Pattern != "" {
+		// Normalize pattern to use forward slashes
+		pattern := strings.ReplaceAll(opts.Pattern, "\\", "/")
+
+		// Compile glob pattern
+		g, err := glob.Compile(pattern, '/')
+		if err != nil {
+			return nil, fmt.Errorf("invalid pattern %q: %w", opts.Pattern, err)
+		}
+
+		filtered := make([]repository.RepositoryFileWithModule, 0)
+		for _, file := range result {
+			// Normalize file path to forward slashes
+			normalizedPath := strings.ReplaceAll(file.Name, "\\", "/")
+			if g.Match(normalizedPath) {
+				filtered = append(filtered, file)
+			}
+		}
+		result = filtered
+	}
+
+	return result, nil
+}
+
+// getChangedFiles returns list of modified/unstaged files from git
+func getChangedFiles(workspaceRoot string) ([]string, error) {
+	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
+	cmd.Dir = workspaceRoot
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	files := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(files) == 1 && files[0] == "" {
+		return []string{}, nil
+	}
+
+	return files, nil
 }

@@ -25,7 +25,14 @@ func NewRenderer(templateDir, outputDir string, values TemplateValues) *Renderer
 	}
 }
 
+// shouldRender returns true if templates should be rendered with value substitution
+// Returns false if no values are provided (templates should be copied as-is)
+func (r *Renderer) shouldRender() bool {
+	return r.values != nil && len(r.values) > 0
+}
+
 // RenderTemplates walks the template directory and renders all templates
+// If no values are provided, files are copied as-is without template processing
 func (r *Renderer) RenderTemplates() error {
 	// Create output directory if it doesn't exist
 	if err := os.MkdirAll(r.outputDir, 0755); err != nil {
@@ -49,26 +56,44 @@ func (r *Renderer) RenderTemplates() error {
 			return err
 		}
 
-		// Render path name (support {{ .ProjectName }} in file/dir names)
-		renderedPath, err := r.renderString(relPath)
-		if err != nil {
-			return fmt.Errorf("failed to render path %s: %w", relPath, err)
-		}
+		// Determine output path
+		// If we should render, process path names as templates
+		// Otherwise, use path as-is
+		var outputPath string
+		if r.shouldRender() {
+			// Render path name (support {{ .ProjectName }} in file/dir names)
+			renderedPath, err := r.renderString(relPath)
+			if err != nil {
+				return fmt.Errorf("failed to render path %s: %w", relPath, err)
+			}
 
-		// SECURITY: Validate path doesn't escape output directory
-		if err := ValidatePath(r.outputDir, renderedPath); err != nil {
-			return fmt.Errorf("security violation in template path: %w", err)
-		}
+			// SECURITY: Validate path doesn't escape output directory
+			if err := ValidatePath(r.outputDir, renderedPath); err != nil {
+				return fmt.Errorf("security violation in template path: %w", err)
+			}
 
-		outputPath := filepath.Join(r.outputDir, renderedPath)
+			outputPath = filepath.Join(r.outputDir, renderedPath)
+		} else {
+			// No rendering - use path as-is
+			// SECURITY: Validate path doesn't escape output directory
+			if err := ValidatePath(r.outputDir, relPath); err != nil {
+				return fmt.Errorf("security violation in template path: %w", err)
+			}
+
+			outputPath = filepath.Join(r.outputDir, relPath)
+		}
 
 		if d.IsDir() {
 			// Create directory
 			return os.MkdirAll(outputPath, 0755)
 		}
 
-		// Render file content
-		return r.renderFile(path, outputPath)
+		// Process file: render with values or copy as-is
+		if r.shouldRender() {
+			return r.renderFile(path, outputPath)
+		} else {
+			return r.copyFile(path, outputPath)
+		}
 	})
 }
 
@@ -128,4 +153,32 @@ func (r *Renderer) renderString(input string) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// copyFile copies a file without template processing, preserving all placeholders
+func (r *Renderer) copyFile(inputPath, outputPath string) error {
+	// Read source file
+	content, err := os.ReadFile(inputPath)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Ensure output directory exists
+	outputDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Write to destination without any modifications
+	if err := os.WriteFile(outputPath, content, 0644); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", outputPath, err)
+	}
+
+	// Copy file permissions
+	info, err := os.Stat(inputPath)
+	if err == nil {
+		os.Chmod(outputPath, info.Mode())
+	}
+
+	return nil
 }
