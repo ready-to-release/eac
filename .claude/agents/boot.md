@@ -25,6 +25,14 @@ Your purpose is to initialize Claude Code with the proper context and instructio
 - Provide a clear summary of active constraints and guidelines
 - Spawn background agent for splash generation BEFORE providing summary
 
+## IMPORTANT: MCP Command Usage During Boot
+
+**DO NOT** call data-heavy MCP commands during initialization:
+- ❌ `get-files` - Loads all ~2690 files (~19k tokens). Use only when needed before modifications.
+- ❌ `get-modules` - Can be large. Use only when needed.
+- ❌ `get-dependencies` - Can be large. Use only when needed.
+- ✓ Only verify that MCP tools are *available*, don't invoke them unless explicitly required
+
 ## Output Format
 
 After reading agent.md and related files, provide a concise summary like:

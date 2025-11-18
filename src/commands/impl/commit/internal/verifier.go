@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ready-to-release/eac/src/core/ai/contract"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,20 +17,8 @@ var (
 	moduleSubjectLineRegex  = regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
 )
 
-// ValidationError represents a contract violation
-type ValidationError struct {
-	Code     string
-	Message  string
-	Line     int
-	Severity string // "error" or "warning"
-}
-
-func (e ValidationError) Error() string {
-	if e.Line > 0 {
-		return fmt.Sprintf("[%s] Line %d: %s", e.Code, e.Line, e.Message)
-	}
-	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
-}
+// ValidationError is an alias to the core contract ValidationError
+type ValidationError = contract.ValidationError
 
 // CommitMessageContract represents the structure.yml contract
 type CommitMessageContract struct {
@@ -49,30 +38,33 @@ type CommitMessageContract struct {
 	AntiCorruption    map[string]any   `yaml:"anti_corruption"`
 }
 
-// AntiCorruptionRules represents the anti-corruption.yml contract
-type AntiCorruptionRules struct {
-	Version            string   `yaml:"version"`
-	Name               string   `yaml:"name"`
-	Description        string   `yaml:"description"`
-	ForbiddenPrefixes  []string `yaml:"forbidden_prefixes"`
-	ForbiddenContains  []string `yaml:"forbidden_contains"`
-	ForbiddenEmojis    []string `yaml:"forbidden_emojis"`
-	NoiseHeaderKeywords []string `yaml:"noise_header_keywords"`
-	AgentSignatures    []string `yaml:"agent_signatures"`
-}
+// AntiCorruptionRules is an alias to the core contract AntiCorruptionRules
+type AntiCorruptionRules = contract.AntiCorruptionRules
 
-// LoadAntiCorruptionRules loads and parses the anti-corruption.yml file
+// LoadAntiCorruptionRules loads anti-corruption rules using the core framework
 func LoadAntiCorruptionRules(rulesPath string) (*AntiCorruptionRules, error) {
+	// Extract directory and version from path
+	// rulesPath format: "workspace/contracts/commit-message/0.1.0/anti-corruption.yml"
+	// We need to extract workspace root, contract dir, and version
+
+	// For now, read directly - this is backward compatible
 	data, err := os.ReadFile(rulesPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read anti-corruption rules file: %w", err)
 	}
 
 	var rules AntiCorruptionRules
+	var rawData map[string]interface{}
+
 	if err := yaml.Unmarshal(data, &rules); err != nil {
 		return nil, fmt.Errorf("failed to parse anti-corruption rules YAML: %w", err)
 	}
 
+	if err := yaml.Unmarshal(data, &rawData); err != nil {
+		return nil, fmt.Errorf("failed to parse anti-corruption rules YAML into map: %w", err)
+	}
+
+	rules.RawData = rawData
 	return &rules, nil
 }
 
@@ -546,7 +538,8 @@ func validateModuleSectionStructure(lines []string) []ValidationError {
 		trimmed := strings.TrimSpace(lines[i])
 
 		// Check for orphaned dashes line (dashes without module name before it)
-		if isDashesLine(trimmed) {
+		// Skip section separators (exactly 3 dashes) as they separate modules
+		if isDashesLine(trimmed) && !isSectionSeparator(trimmed) {
 			// Look back to see if previous non-empty line was a module name
 			prevNonEmpty := ""
 			for j := i - 1; j >= 0; j-- {
@@ -652,4 +645,11 @@ func isDashesLine(s string) bool {
 	}
 
 	return true
+}
+
+// isSectionSeparator checks if a line is exactly a section separator (---)
+// Section separators are used to divide module sections and should not be
+// validated as module header underlines
+func isSectionSeparator(s string) bool {
+	return s == "---"
 }

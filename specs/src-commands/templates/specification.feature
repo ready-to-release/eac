@@ -17,6 +17,19 @@ Feature: src-commands_templates
       And the command should attempt to clone from "https://github.com/ready-to-release/eac"
       And the output should contain "Template Placeholders in 'https://github.com/ready-to-release/eac':"
 
+  Rule: Templates must preserve placeholders when no values file is provided
+
+    # When no --input-json is provided, template files must be copied as-is
+    # Placeholders like {{ .ProjectName }} must remain unchanged in output files
+    # This allows users to apply templates without data and fill values later
+
+    Scenario: Template placeholders are preserved when no JSON file provided
+      Given a template file contains "# {{ .ProjectName }}"
+      When I apply the template without providing --input-json
+      Then the output file should contain "# {{ .ProjectName }}"
+      And the output file should NOT contain "<no value>"
+      And the output file should NOT contain empty string replacement
+
   Rule: Templates apply subcommand supports template-specific application with defaults
 
     Scenario: Apply docs template with all defaults
@@ -26,6 +39,7 @@ Feature: src-commands_templates
       And the templates should be read from subdirectory "templates/docs"
       And the destination should be ".docs/references/docs"
       And no value replacement should occur
+      And template placeholders should remain unchanged
 
     Scenario: Apply docs template with custom local source
       Given I have a template directory "custom/templates/docs"

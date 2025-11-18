@@ -15,9 +15,10 @@ Rules:
 - Start with `feat(`, `fix(`, `chore(`, `docs(`, `refactor(`, `test(`, or `perf(`
 - If multiple modules: use `feat(multi-module):`
 - If single module: use `feat(module-name):`
-- Max 72 characters per line
+- **Header line**: Keep as single line (do NOT wrap, even if > 72 chars)
+- **Body text**: Wrap at 72 characters per line
+- **Auditor-Summary**: Keep as single line (do NOT wrap)
 - No trailing periods on header
-- Wrap body text at 72 characters
 
 Example:
 
