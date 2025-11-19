@@ -1,13 +1,22 @@
 // Command: pipeline run
-// Description: Execute module pipelines respecting dependencies
-// Usage:
-//   pipeline run                    # Run ALL modules
-//   pipeline run --changed-only     # Run only changed modules
-//   pipeline run <moniker>          # Run specific module
-//   pipeline run <m1> <m2> ...      # Run multiple modules
-// Flags:
-//   --changed-only: Only run pipelines for changed modules
-//   --ref <ref>: Git ref to use (default: current branch)
+// Short: Execute module pipelines respecting dependencies
+// Long: Execute module pipelines respecting dependencies.
+// Long:
+// Long: This command runs the full pipeline (build, test, validate) for modules in
+// Long: dependency order. If no modules are specified, all modules are processed.
+// Long:
+// Long: Use --changed-only to run pipelines only for modules with uncommitted changes,
+// Long: which is useful for incremental CI/CD workflows.
+// Long:
+// Long: Use --ref to specify a git reference (branch, tag, commit) to compare against
+// Long: when determining which modules have changed.
+// Long:
+// Long: Example:
+// Long:   pipeline run                    # Run all modules
+// Long:   pipeline run --changed-only     # Run only changed modules
+// Long:   pipeline run src-core src-cli   # Run specific modules
+// Flag.changed-only: type=bool, usage=Only run pipelines for changed modules
+// Flag.ref: type=string, usage=Git ref to compare against (default: current branch)
 // HasSideEffects: true
 package pipeline
 

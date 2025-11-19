@@ -1,7 +1,20 @@
 // Command: init
-// Description: Initialize AI provider configuration for the project
-// Usage: init --ai <provider>
-// Flags: --ai (required) - Provider to configure (claude-api, claude-cli, openai, gemini)
+// Short: Initialize AI provider configuration for the project
+// Long: Initialize AI provider configuration for the project.
+// Long:
+// Long: Creates .r2r/agent-config.yml with the specified AI provider settings.
+// Long: The configuration file is safe to commit as it only contains environment variable references.
+// Long:
+// Long: Available providers:
+// Long:   - claude-api: Claude via Anthropic API (requires ANTHROPIC_API_KEY)
+// Long:   - claude-cli: Claude via CLI subscription (no API key needed)
+// Long:   - openai: OpenAI via API (requires OPENAI_API_KEY)
+// Long:   - gemini: Google Gemini via API (requires GOOGLE_API_KEY)
+// Long:
+// Long: Example:
+// Long:   init --ai claude-cli
+// Long:   init --ai claude-api
+// Flag.ai: type=string, shorthand=a, usage=AI provider to configure, required=true, completion=claude-api,claude-cli,openai,gemini
 // HasSideEffects: true
 package init
 

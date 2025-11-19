@@ -1,6 +1,13 @@
 // Command: test list-suites
-// Description: List all available test suites
-// Usage: test list-suites
+// Short: List all available test suites
+// Long: List all available test suites defined in the repository.
+// Long:
+// Long: Test suites are logical groupings of tests defined in contracts.
+// Long: This command displays all configured suites, making it easy to discover
+// Long: what test suites are available for execution.
+// Long:
+// Long: Example:
+// Long:   test list-suites
 // HasSideEffects: false
 package test
 

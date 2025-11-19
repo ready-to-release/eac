@@ -1,14 +1,28 @@
 // Command: get files
-// Description: Get repository files with their module ownership
-// Flags:
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
-//   --as-<name>: Output using custom renderer (e.g., --as-summary)
-//   --changed-only: Only show modified/unstaged files
-//   --staged-only: Only show staged files
-//   --module <moniker>: Filter to files owned by specific module
-//   --pattern <glob>: Filter files matching glob pattern
+// Short: Get repository files with their module ownership
+// Long: Get repository files with their module ownership in structured format.
+// Long:
+// Long: This command analyzes the repository and maps each file to its owning module
+// Long: based on module contracts. The output can be formatted as YAML, JSON, or TOML
+// Long: for programmatic processing.
+// Long:
+// Long: Use filters to scope the output to specific files or modules:
+// Long:   --changed-only: Only modified/unstaged files
+// Long:   --staged-only: Only staged files
+// Long:   --module: Files owned by a specific module
+// Long:   --pattern: Files matching a glob pattern
+// Long:
+// Long: Example:
+// Long:   get files --as-json
+// Long:   get files --module src-core
+// Long:   get files --changed-only --as-yaml
+// Flag.as-yaml: type=bool, usage=Output as YAML (default format)
+// Flag.as-json: type=bool, usage=Output as JSON
+// Flag.as-toml: type=bool, usage=Output as TOML
+// Flag.changed-only: type=bool, usage=Only show modified/unstaged files
+// Flag.staged-only: type=bool, usage=Only show staged files
+// Flag.module: type=string, usage=Filter to files owned by specific module moniker
+// Flag.pattern: type=string, usage=Filter files matching glob pattern
 // HasSideEffects: false
 package get
 
