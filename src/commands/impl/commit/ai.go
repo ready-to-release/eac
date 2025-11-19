@@ -143,11 +143,16 @@ func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*exe
 	}
 	stagedFilesTable := tb.Build()
 
-	// Extract unique modules
+	// Extract unique modules and validate them
 	moduleSet := make(map[string]bool)
 	for _, file := range report.AllFiles {
 		for _, module := range file.Modules {
-			moduleSet[module] = true
+			// Validate module name: only lowercase letters, numbers, dashes, underscores
+			if isValidModuleName(module) {
+				moduleSet[module] = true
+			} else {
+				debugWriter.log("WARNING: Skipping invalid module name: %s", module)
+			}
 		}
 	}
 
@@ -338,4 +343,20 @@ func stripModuleSectionsFromTopLevel(message string) string {
 	}
 
 	return strings.Join(result, "\n")
+}
+
+// isValidModuleName checks if a module name is valid (lowercase letters, numbers, dashes, underscores only)
+// Rejects paths with slashes or other special characters
+func isValidModuleName(name string) bool {
+	if name == "" || len(name) > 50 {
+		return false
+	}
+
+	for _, ch := range name {
+		if !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_') {
+			return false
+		}
+	}
+
+	return true
 }

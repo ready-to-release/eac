@@ -186,6 +186,33 @@ func showCommandHelp(commandName string, verbose bool) int {
 		fmt.Println()
 	}
 
+	// Display COMMANDS section (subcommands)
+	subcommands := getSubcommands(commandName)
+	if len(subcommands) > 0 {
+		fmt.Printf("COMMANDS\n")
+		for _, subcmd := range subcommands {
+			canonicalName := registry.GetCanonicalName(subcmd)
+			subReg := commandRegistry[canonicalName]
+
+			desc := ""
+			if subReg != nil {
+				if subReg.Short != "" {
+					desc = subReg.Short
+				} else if subReg.Description != "" {
+					desc = subReg.Description
+				}
+			}
+
+			// Extract just the subcommand part (e.g., "create" from "work create")
+			subPart := strings.TrimPrefix(subcmd, commandName+" ")
+
+			// Format with padding
+			padding := strings.Repeat(" ", max(2, 20-len(subPart)))
+			fmt.Printf("    %s%s%s\n", subPart, padding, desc)
+		}
+		fmt.Println()
+	}
+
 	// Display FLAGS section
 	if len(reg.Flags) > 0 {
 		fmt.Printf("FLAGS\n")
@@ -295,6 +322,29 @@ func wrapText(text string, width int) []string {
 	}
 
 	return lines
+}
+
+// getSubcommands returns all subcommands for a given parent command
+func getSubcommands(parentCommand string) []string {
+	commands := registry.GetCommands()
+	var subcommands []string
+
+	prefix := parentCommand + " "
+	for cmdName := range commands {
+		// Check if this is a direct subcommand (no further nesting)
+		if strings.HasPrefix(cmdName, prefix) {
+			// Extract the part after the prefix
+			remainder := strings.TrimPrefix(cmdName, prefix)
+			// Only include if it's a direct child (no more spaces)
+			if !strings.Contains(remainder, " ") {
+				subcommands = append(subcommands, cmdName)
+			}
+		}
+	}
+
+	// Sort alphabetically
+	sort.Strings(subcommands)
+	return subcommands
 }
 
 // max returns the maximum of two integers

@@ -138,7 +138,7 @@ func parseValidateConfig() (*ValidateConfig, error) {
 		Format: "text", // Default format
 	}
 
-	args := os.Args[2:] // Skip program name and "specs validate"
+	args := os.Args[3:] // Skip program name and "specs validate"
 	var path string
 
 	for i := 0; i < len(args); i++ {
