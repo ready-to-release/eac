@@ -1,6 +1,20 @@
 // Command: test module
-// Description: Test a module by its moniker using type-based dispatch
-// Usage: test module <moniker> [--as-cucumber|--as-junit]
+// Short: Test a module by its moniker using type-based dispatch
+// Long: Test a module by its moniker using type-based dispatch.
+// Long:
+// Long: This command identifies the module type from the module contract and dispatches
+// Long: to the appropriate test handler. Supported module types include Go modules with
+// Long: unit tests, BDD specifications, and other testable components.
+// Long:
+// Long: Test output formats can be controlled with flags. The default output shows test
+// Long: results in real-time. Use --as-cucumber for BDD-style JSON output or --as-junit
+// Long: for JUnit XML format suitable for CI/CD systems.
+// Long:
+// Long: Example:
+// Long:   test module src-commands
+// Long:   test module src-core --as-junit
+// Flag.as-cucumber: type=bool, usage=Output test results in Cucumber JSON format
+// Flag.as-junit: type=bool, usage=Output test results in JUnit XML format
 // HasSideEffects: false
 package test
 

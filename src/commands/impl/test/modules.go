@@ -1,7 +1,20 @@
 // Command: test modules
-// Description: Test multiple modules in sequence and collect results in a test run directory
-// Usage: test modules [moniker1] [moniker2] ... [--as-cucumber|--as-junit]
-// Default: Tests all modules if no monikers specified
+// Short: Test multiple modules in sequence and collect results in a test run directory
+// Long: Test multiple modules in sequence and collect results in a test run directory.
+// Long:
+// Long: This command tests multiple modules respecting their dependency order.
+// Long: If no monikers are specified, all modules in the repository are tested.
+// Long:
+// Long: Test results are collected in a timestamped directory under 'out/test-runs/'
+// Long: containing logs, reports, and summary information for each module. Failed tests
+// Long: are clearly marked and do not stop the execution of remaining modules.
+// Long:
+// Long: Example:
+// Long:   test modules                     # Test all modules
+// Long:   test modules src-core src-cli    # Test specific modules
+// Long:   test modules --as-junit          # Generate JUnit XML reports
+// Flag.as-cucumber: type=bool, usage=Output test results in Cucumber JSON format
+// Flag.as-junit: type=bool, usage=Output test results in JUnit XML format
 // HasSideEffects: false
 package test
 

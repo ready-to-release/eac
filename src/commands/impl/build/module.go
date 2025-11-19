@@ -1,6 +1,17 @@
 // Command: build module
-// Description: Build a module by its moniker using type-based dispatch
-// Usage: build module <moniker>
+// Short: Build a module by its moniker using type-based dispatch
+// Long: Build a module by its moniker using type-based dispatch.
+// Long:
+// Long: This command identifies the module type from the module contract and dispatches
+// Long: to the appropriate build handler. Supported module types include Go modules,
+// Long: documentation sites, and other project components.
+// Long:
+// Long: The build output is displayed in real-time, and the command returns the build
+// Long: exit code (0 for success, non-zero for failure).
+// Long:
+// Long: Example:
+// Long:   build module src-commands
+// Long:   build module docs
 // HasSideEffects: false
 package build
 

@@ -1,7 +1,17 @@
 // Command: build modules
-// Description: Build multiple modules in sequence and collect results in a build run directory
-// Usage: build modules [moniker1] [moniker2] ...
-// Default: Builds all modules if no monikers specified
+// Short: Build multiple modules in sequence and collect results in a build run directory
+// Long: Build multiple modules in sequence and collect results in a build run directory.
+// Long:
+// Long: This command builds multiple modules respecting their dependency order.
+// Long: If no monikers are specified, all modules in the repository are built.
+// Long:
+// Long: Build results are collected in a timestamped directory under 'out/build-runs/'
+// Long: containing logs and summary reports for each module. Failed builds are clearly
+// Long: marked and do not stop the execution of remaining modules.
+// Long:
+// Long: Example:
+// Long:   build modules                    # Build all modules
+// Long:   build modules src-core src-cli   # Build specific modules
 // HasSideEffects: false
 package build
 
