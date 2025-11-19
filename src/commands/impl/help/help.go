@@ -25,7 +25,7 @@ func Help() int {
 	args := os.Args[2:] // Skip program name and "help"
 
 	verbose := false
-	var commandName string
+	var commandParts []string
 
 	// Parse arguments
 	for i := 0; i < len(args); i++ {
@@ -33,9 +33,12 @@ func Help() int {
 		if arg == "--verbose" || arg == "-v" {
 			verbose = true
 		} else if !strings.HasPrefix(arg, "-") {
-			commandName = arg
+			commandParts = append(commandParts, arg)
 		}
 	}
+
+	// Build full command name from parts (e.g., "specs create")
+	commandName := strings.Join(commandParts, " ")
 
 	// If command name is provided, show detailed help for that command
 	if commandName != "" {
