@@ -2,14 +2,13 @@ package contracts
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
 
-// Loader provides generic contract loading functionality
+// Loader handles loading contract YAML files
 type Loader struct {
 	workspaceRoot string
 }
@@ -26,50 +25,46 @@ func (l *Loader) GetWorkspaceRoot() string {
 	return l.workspaceRoot
 }
 
-// LoadYAML loads and parses a YAML file into the provided structure
+// LoadYAML loads a YAML file into the target struct
 func (l *Loader) LoadYAML(relativePath string, target interface{}) error {
 	fullPath := filepath.Join(l.workspaceRoot, relativePath)
-
-	// Check if file exists
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		return NewContractError("load", fullPath, err, "contract not found")
-	}
-
-	// Read file
-	data, err := ioutil.ReadFile(fullPath)
+	data, err := os.ReadFile(fullPath)
 	if err != nil {
-		return NewContractError("load", fullPath, err, fmt.Sprintf("failed to read file: %v", err))
+		if os.IsNotExist(err) {
+			return NewContractError("load", fullPath, err, "contract not found")
+		}
+		return fmt.Errorf("failed to read file %s: %w", fullPath, err)
 	}
 
-	// Parse YAML
 	if err := yaml.Unmarshal(data, target); err != nil {
-		return NewContractError("parse", fullPath, err, fmt.Sprintf("failed to parse YAML: %v", err))
+		return fmt.Errorf("failed to parse YAML from %s: %w", fullPath, err)
 	}
 
 	return nil
 }
 
 // LoadYAMLPattern loads all YAML files matching a glob pattern
-func (l *Loader) LoadYAMLPattern(pattern string, loader func(string) error) error {
+// The callback function is called for each matching file with its relative path
+func (l *Loader) LoadYAMLPattern(pattern string, callback func(relPath string) error) error {
+	// Construct full pattern path
 	fullPattern := filepath.Join(l.workspaceRoot, pattern)
 
+	// Find all matching files
 	matches, err := filepath.Glob(fullPattern)
 	if err != nil {
-		return NewContractError("glob", fullPattern, err, fmt.Sprintf("failed to glob pattern: %v", err))
+		return fmt.Errorf("failed to match pattern %s: %w", pattern, err)
 	}
 
-	if len(matches) == 0 {
-		return NewContractError("glob", fullPattern, nil, "no files matched pattern")
-	}
-
+	// Process each match
 	for _, match := range matches {
-		// Convert back to relative path
+		// Get relative path
 		relPath, err := filepath.Rel(l.workspaceRoot, match)
 		if err != nil {
-			return NewContractError("path", match, err, fmt.Sprintf("failed to compute relative path: %v", err))
+			return fmt.Errorf("failed to get relative path for %s: %w", match, err)
 		}
 
-		if err := loader(relPath); err != nil {
+		// Call callback with relative path
+		if err := callback(relPath); err != nil {
 			return err
 		}
 	}

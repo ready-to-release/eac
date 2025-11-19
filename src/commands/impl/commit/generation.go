@@ -9,32 +9,36 @@ import (
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/core/ai"
-	"github.com/ready-to-release/eac/src/core/ai/contract"
+	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/ai/providers"
 )
 
-// loadPromptWithFallback implements two-tier prompt loading:
-// 1. User override: .r2r/prompts/commit/<name>.md
-// 2. Built-in: embedded prompts/<name>.md
+// loadPromptWithFallback implements three-tier prompt loading:
+// 1. Local contract: .r2r/contracts/ai/commit-message/0.1.0/<name>.md
+// 2. Repo contract: contracts/ai/commit-message/0.1.0/<name>.md
+// 3. Built-in: embedded prompts/<name>.md
 func loadPromptWithFallback(promptName string, workspaceRoot string) (string, error) {
-	// Tier 1: Check for user override in .r2r/prompts/commit/
-	userOverridePath := filepath.Join(workspaceRoot, ".r2r", "prompts", "commit", promptName+".md")
-	if content, err := os.ReadFile(userOverridePath); err == nil {
-		return string(content), nil
+	// Create contract loader
+	loader := contracts.NewAIContractLoader(workspaceRoot, "commit-message", "0.1.0")
+
+	// No embedded prompt - load from .r2r/contracts or contracts/ai
+	var embeddedPrompt string
+
+	// Load prompt with fallback chain
+	prompt, source, err := loader.LoadPrompt(promptName+".md", embeddedPrompt)
+	if err != nil {
+		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
 
-	// Tier 2: Use built-in embedded prompt
-	switch promptName {
-	case "top-level":
-		return builtinTopLevelPrompt, nil
-	case "module":
-		return builtinModulePrompt, nil
-	default:
-		return "", fmt.Errorf("unknown prompt name: %s", promptName)
+	// Log source if using override (for transparency)
+	if source != "embedded default" && source != "repository contract" {
+		fmt.Fprintf(os.Stderr, "ℹ️  Using %s prompt\n", source)
 	}
+
+	return prompt, nil
 }
 
-// generateWithPrompt generates output using the two-tier prompt loading system with validation and retry
+// generateWithPrompt generates output using the three-tier prompt loading system with validation and retry
 func generateWithPrompt(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool) (string, error) {
 	// Load prompt using three-tier system
 	agentContent, err := loadPromptWithFallback(promptName, workspaceRoot)
@@ -52,7 +56,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	fullPrompt := agentContent + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
 
 	// Load contract and anti-corruption rules
-	loader := contract.NewSpecContractLoader(workspaceRoot, "contracts/commit-message", "0.1.0")
+	loader := contracts.NewSpecContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
 	if err != nil {
 		// If anti-corruption rules fail, fall back to non-validated generation
@@ -61,7 +65,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	}
 
 	// Load commit message contract data for validation
-	contractPath := filepath.Join(loader.GetContractPath(), "structure.yml")
+	contractPath := filepath.Join(loader.GetContractPath(), "contract.yml")
 	commitContract, err := commitmessage.LoadContract(contractPath)
 	if err != nil {
 		// If commit contract fails, fall back to non-validated generation
@@ -90,10 +94,10 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	}
 
 	// Configure retry behavior
-	retryConfig := &contract.RetryConfig{
+	retryConfig := &contracts.RetryConfig{
 		Executor:       executorAdapter,
 		Validator:      validator,
-		PromptBuilder:  &contract.DefaultRetryPromptBuilder{},
+		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
 		AntiCorruption: antiCorruptionRules,
 		ContentMarker:  "", // Commit messages don't have a specific content marker
 		MaxAttempts:    2,
@@ -106,7 +110,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 
 	// Generate with retry
 	ctx := context.Background()
-	result, err := contract.GenerateWithRetry(ctx, retryConfig, fullPrompt)
+	result, err := contracts.GenerateWithRetry(ctx, retryConfig, fullPrompt)
 	if err != nil {
 		return "", fmt.Errorf("AI generation failed: %w", err)
 	}

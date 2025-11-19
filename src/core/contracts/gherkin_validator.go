@@ -1,4 +1,4 @@
-package contract
+package contracts
 
 import (
 	"fmt"
@@ -21,19 +21,19 @@ import (
 //   - Easy to add new validation rules
 //
 // Hard to break:
-//   - Validates against formal contract (structure.yml)
+//   - Validates against formal contract (contract.yml)
 //   - Returns detailed errors with line numbers
 //   - Comprehensive test coverage
 //   - Self-verification with VerifyImplementation()
 
 // GherkinValidator validates Gherkin specifications against the contract
 type GherkinValidator struct {
-	contract       *SpecContract
+	contract       *Contract
 	antiCorruption *AntiCorruptionRules
 }
 
 // NewGherkinValidator creates a new Gherkin specification validator
-func NewGherkinValidator(contract *SpecContract, antiCorruption *AntiCorruptionRules) *GherkinValidator {
+func NewGherkinValidator(contract *Contract, antiCorruption *AntiCorruptionRules) *GherkinValidator {
 	return &GherkinValidator{
 		contract:       contract,
 		antiCorruption: antiCorruption,
@@ -42,7 +42,7 @@ func NewGherkinValidator(contract *SpecContract, antiCorruption *AntiCorruptionR
 
 // Validate validates Gherkin content against the specification contract
 //
-// This implements the SpecValidator interface and checks:
+// This implements the Validator interface and checks:
 // - Feature declaration exists and follows naming convention
 // - Rule blocks present (ATDD requirement)
 // - Scenarios present under Rules (BDD requirement)

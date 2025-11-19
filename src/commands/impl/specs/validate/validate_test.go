@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/src/core/ai/contract"
+	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
 // Intent: Test specification validation command core functionality
@@ -108,11 +108,11 @@ Feature: src-commands_multi-test
 			}
 
 			// Count critical errors
-			criticalCount := contract.CountCriticalErrors(errors)
+			criticalCount := contracts.CountCriticalErrors(errors)
 			if criticalCount != tt.wantErrs {
 				t.Errorf("validateGherkinFile() got %d critical errors, want %d", criticalCount, tt.wantErrs)
 				if len(errors) > 0 {
-					t.Logf("Errors: %s", contract.FormatValidationErrors(errors))
+					t.Logf("Errors: %s", contracts.FormatValidationErrors(errors))
 				}
 			}
 		})
@@ -244,7 +244,7 @@ Feature: src-commands_test-feature
 
 			if !found {
 				t.Errorf("validateGherkinFile() missing expected error code %q", tt.wantErrorCode)
-				t.Logf("Got errors: %s", contract.FormatValidationErrors(errors))
+				t.Logf("Got errors: %s", contracts.FormatValidationErrors(errors))
 			}
 		})
 	}
@@ -493,7 +493,7 @@ func TestFormatValidationResult_SingleFile(t *testing.T) {
 			result: &ValidationResult{
 				Path:   "specs/test.feature",
 				Valid:  true,
-				Errors: []contract.ValidationError{},
+				Errors: []contracts.ValidationError{},
 			},
 			want: []string{"✅", "Validation passed", "specs/test.feature"},
 		},
@@ -502,7 +502,7 @@ func TestFormatValidationResult_SingleFile(t *testing.T) {
 			result: &ValidationResult{
 				Path:  "specs/test.feature",
 				Valid: false,
-				Errors: []contract.ValidationError{
+				Errors: []contracts.ValidationError{
 					{Code: "MISSING_RULE", Message: "Missing Rule: declaration", Severity: "error", Line: 0},
 				},
 			},
@@ -513,7 +513,7 @@ func TestFormatValidationResult_SingleFile(t *testing.T) {
 			result: &ValidationResult{
 				Path:  "specs/test.feature",
 				Valid: true,
-				Errors: []contract.ValidationError{
+				Errors: []contracts.ValidationError{
 					{Code: "WARN_NAMING", Message: "Naming could be improved", Severity: "warning", Line: 5},
 				},
 			},
@@ -583,13 +583,13 @@ func TestFormatValidationSummary(t *testing.T) {
 func setupContractFiles(t *testing.T, tmpDir string) {
 	t.Helper()
 
-	contractDir := filepath.Join(tmpDir, "contracts", "specifications", "0.1.0")
+	contractDir := filepath.Join(tmpDir, "contracts", "ai", "specifications", "0.1.0")
 	if err := os.MkdirAll(contractDir, 0755); err != nil {
 		t.Fatalf("failed to create contract directory: %v", err)
 	}
 
-	// Create structure.yml
-	structureYAML := `name: Gherkin Specification Structure
+	// Create contract.yml
+	contractYAML := `name: Gherkin Specification Structure
 version: 0.1.0
 description: Contract for Gherkin specification files
 
@@ -613,9 +613,9 @@ structure:
       - "@ppv"
 `
 
-	structureFile := filepath.Join(contractDir, "structure.yml")
-	if err := os.WriteFile(structureFile, []byte(structureYAML), 0644); err != nil {
-		t.Fatalf("failed to write structure.yml: %v", err)
+	contractFile := filepath.Join(contractDir, "contract.yml")
+	if err := os.WriteFile(contractFile, []byte(contractYAML), 0644); err != nil {
+		t.Fatalf("failed to write contract.yml: %v", err)
 	}
 
 	// Create anti-corruption.yml

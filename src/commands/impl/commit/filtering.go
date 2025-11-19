@@ -4,13 +4,13 @@ import (
 	"strings"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
-	"github.com/ready-to-release/eac/src/core/ai/contract"
+	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
 // stripAgentNoise removes common initialization/greeting patterns from agent output
 // using the contract-based anti-corruption framework.
 //
-// This function uses the generalized contract.ApplyWithFallback which loads
+// This function uses the generalized contracts.ApplyWithFallback which loads
 // anti-corruption rules from contracts/commit-message/0.1.0/anti-corruption.yml
 // and applies them to filter out conversational wrappers, initialization messages, and other noise.
 //
@@ -19,7 +19,7 @@ import (
 //   - "module": looks for plain module names
 func stripAgentNoise(output string, agentType string, workspaceRoot string) string {
 	// Load anti-corruption rules using contract loader
-	loader := contract.NewSpecContractLoader(workspaceRoot, "contracts/commit-message", "0.1.0")
+	loader := contracts.NewSpecContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	rules, err := loader.LoadAntiCorruptionRules()
 
 	// Determine content marker based on agent type
@@ -46,7 +46,7 @@ func stripAgentNoise(output string, agentType string, workspaceRoot string) stri
 		return applyHardcodedFiltering(output, contentMarker)
 	}
 
-	return contract.ApplyWithFallback(output, rules, contentMarker)
+	return contracts.ApplyWithFallback(output, rules, contentMarker)
 }
 
 // commitPatternMatcher handles pattern matching for different agent types

@@ -39,11 +39,11 @@ func TestLoadPromptWithFallback(t *testing.T) {
 			wantErr:           false,
 		},
 		{
-			name:              "fallback to embedded when local not found",
+			name:              "error when contracts not found (no embedded fallback)",
 			createLocalPrompt: false,
 			localContent:      "",
 			wantContainsLocal: false,
-			wantErr:           false,
+			wantErr:           true, // No embedded fallback anymore
 		},
 	}
 
@@ -51,14 +51,14 @@ func TestLoadPromptWithFallback(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 
-			// Create local prompt if needed
+			// Create local prompt if needed (in new contract structure)
 			if tt.createLocalPrompt {
-				localPath := filepath.Join(tmpDir, ".r2r", "prompts", "specs", "specification.md")
+				localPath := filepath.Join(tmpDir, ".r2r", "contracts", "ai", "specifications", "0.1.0", "specification.md")
 				if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-					t.Fatalf("failed to create local prompt directory: %v", err)
+					t.Fatalf("failed to create local contract prompt directory: %v", err)
 				}
 				if err := os.WriteFile(localPath, []byte(tt.localContent), 0644); err != nil {
-					t.Fatalf("failed to write local prompt: %v", err)
+					t.Fatalf("failed to write local contract prompt: %v", err)
 				}
 			}
 
@@ -76,12 +76,8 @@ func TestLoadPromptWithFallback(t *testing.T) {
 				if !strings.Contains(got, "Local custom prompt") {
 					t.Errorf("expected local prompt content, got: %s", got)
 				}
-			} else {
-				// Should get embedded prompt with Go template syntax
-				if !strings.Contains(got, "# Generate Gherkin Specification") {
-					t.Errorf("expected embedded prompt content, got: %s", got)
-				}
 			}
+			// No else clause - if not local, test expects an error (wantErr: true)
 		})
 	}
 }

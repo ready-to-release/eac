@@ -103,7 +103,7 @@ markdown_rules:
 # Agents output pure content only - no meta-commentary
 anti_corruption:
   enforcement: "stripAgentNoise() function in src/commands/impl/commit/ai.go"
-  rules_file: "contracts/commit-message/0.1.0/anti-corruption.yml"
+  rules_file: "contracts/ai/commit-message/0.1.0/anti-corruption.yml"
   description: "See anti-corruption.yml for complete list of forbidden patterns"
   summary:
     - "Forbidden prefixes: Based on, Here is, Let me, I will, etc."
@@ -112,3 +112,11 @@ anti_corruption:
     - "Agent signatures: Agent:"
   no_emojis: true
   no_wrapper_text: true
+
+# AI PROMPTS
+# System prompts are stored as separate markdown files in this directory:
+# - top-level.md: Top-level commit message generation
+# - module.md: Module section generation
+prompts:
+  top_level: "top-level.md"
+  module: "module.md"

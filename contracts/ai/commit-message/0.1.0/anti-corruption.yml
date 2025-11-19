@@ -96,7 +96,7 @@ enforcement_locations:
     section: "Anti-Corruption Layer"
     description: "Agent instructions to avoid patterns"
 
-  - location: "contracts/commit-message/0.1.0/structure.yml"
+  - location: "contracts/ai/commit-message/0.1.0/contract.yml"
     field: "anti_corruption"
     description: "Contract specification reference"
 
