@@ -1,4 +1,4 @@
-package contract
+package contracts
 
 import (
 	"context"
@@ -43,7 +43,7 @@ type RetryConfig struct {
 	Executor AIExecutor
 
 	// Validator checks output against contract
-	Validator SpecValidator
+	Validator Validator
 
 	// PromptBuilder creates retry prompts (optional, uses default if nil)
 	PromptBuilder RetryPromptBuilder
@@ -294,18 +294,7 @@ Generate the corrected output now:
 	)
 }
 
-// CountCriticalErrors returns the number of errors with severity == "error"
-func CountCriticalErrors(errors []ValidationError) int {
-	count := 0
-	for _, err := range errors {
-		if err.Severity == "error" {
-			count++
-		}
-	}
-	return count
-}
-
-// countCriticalErrors is the internal version (lowercase for backward compatibility in this file)
+// countCriticalErrors is an internal alias to CountCriticalErrors (now in format.go)
 func countCriticalErrors(errors []ValidationError) int {
 	return CountCriticalErrors(errors)
 }

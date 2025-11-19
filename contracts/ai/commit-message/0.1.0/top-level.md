@@ -19,6 +19,8 @@ Rules:
 - **Body text**: Wrap at 72 characters per line
 - **Auditor-Summary**: Keep as single line (do NOT wrap)
 - No trailing periods on header
+- **STOP after the "Changes:" line** - do NOT add module-specific sections here
+- Module sections will be added separately
 
 Example:
 

@@ -201,3 +201,9 @@ common_patterns:
         When they attempt to login with password only
         Then access is denied
         And MFA prompt is displayed
+
+# AI PROMPTS
+# System prompt stored as separate markdown file in this directory:
+# - specification.md: Gherkin specification generation prompt
+prompts:
+  specification: "specification.md"

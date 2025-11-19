@@ -18,27 +18,45 @@ func combineCommitSections(topLevel string, moduleSections []string) string {
 
 	// Only add module sections if there are any (multi-module commits only)
 	if len(moduleSections) > 0 {
-		// Filter out empty sections first
-		var nonEmptySections []string
+		// Filter out empty sections and deduplicate by module name
+		seenModules := make(map[string]bool)
+		var uniqueSections []string
+
 		for _, section := range moduleSections {
 			trimmed := strings.TrimSpace(section)
-			if trimmed != "" {
-				nonEmptySections = append(nonEmptySections, section)
+			if trimmed == "" {
+				continue
 			}
+
+			// Extract module name from section (first line)
+			moduleName := extractModuleName(trimmed)
+			if moduleName == "" {
+				// Can't extract module name, include it anyway
+				uniqueSections = append(uniqueSections, section)
+				continue
+			}
+
+			// Skip if we've already seen this module
+			if seenModules[moduleName] {
+				continue
+			}
+
+			seenModules[moduleName] = true
+			uniqueSections = append(uniqueSections, section)
 		}
 
-		// Only proceed if we have non-empty sections
-		if len(nonEmptySections) > 0 {
+		// Only proceed if we have unique non-empty sections
+		if len(uniqueSections) > 0 {
 			result.WriteString("\n\n")
 
 			// Module sections with --- separators
-			for i, section := range nonEmptySections {
+			for i, section := range uniqueSections {
 				// Trim trailing whitespace from each section
 				trimmedSection := strings.TrimRight(section, " \t\n")
 				result.WriteString(trimmedSection)
 
 				// Add separator between modules (but not after the last one)
-				if i < len(nonEmptySections)-1 {
+				if i < len(uniqueSections)-1 {
 					result.WriteString("\n\n---\n\n")
 				}
 			}
@@ -46,6 +64,23 @@ func combineCommitSections(topLevel string, moduleSections []string) string {
 	}
 
 	return result.String()
+}
+
+// extractModuleName extracts the module name from a module section (first line)
+func extractModuleName(section string) string {
+	lines := strings.Split(section, "\n")
+	if len(lines) == 0 {
+		return ""
+	}
+
+	firstLine := strings.TrimSpace(lines[0])
+
+	// Check if this looks like a module name (lowercase alphanumeric with dashes/underscores)
+	if isModuleNameLine(firstLine) {
+		return firstLine
+	}
+
+	return ""
 }
 
 // addMissingModules adds stub sections for any modules that are missing from the commit message

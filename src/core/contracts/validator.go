@@ -1,26 +1,26 @@
-package contract
+package contracts
 
-// BaseSpecValidator provides common validation utilities for specification contracts
-type BaseSpecValidator struct {
-	contract       *SpecContract
+// BaseValidator provides common validation utilities for contracts
+type BaseValidator struct {
+	contract       *Contract
 	antiCorruption *AntiCorruptionRules
 }
 
-// NewBaseSpecValidator creates a new base validator
-func NewBaseSpecValidator(contract *SpecContract, antiCorruption *AntiCorruptionRules) *BaseSpecValidator {
-	return &BaseSpecValidator{
+// NewBaseValidator creates a new base validator
+func NewBaseValidator(contract *Contract, antiCorruption *AntiCorruptionRules) *BaseValidator {
+	return &BaseValidator{
 		contract:       contract,
 		antiCorruption: antiCorruption,
 	}
 }
 
 // GetContract returns the contract
-func (v *BaseSpecValidator) GetContract() *SpecContract {
+func (v *BaseValidator) GetContract() *Contract {
 	return v.contract
 }
 
 // GetAntiCorruptionRules returns the anti-corruption rules
-func (v *BaseSpecValidator) GetAntiCorruptionRules() *AntiCorruptionRules {
+func (v *BaseValidator) GetAntiCorruptionRules() *AntiCorruptionRules {
 	return v.antiCorruption
 }
 
