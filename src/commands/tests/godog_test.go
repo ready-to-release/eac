@@ -41,6 +41,7 @@ func TestFeatures(t *testing.T) {
 		Paths:    []string{"../../../specs/src-commands"},
 		TestingT: t,
 		Tags:     tagFilter, // Skip scenarios tagged with @skip:<reason> (from contract) or @pending
+		Strict:   true,      // Fail on undefined or pending steps
 	}
 
 	// If output directory is set, add report formatter
