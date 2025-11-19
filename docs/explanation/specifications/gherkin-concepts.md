@@ -256,13 +256,13 @@ Rule: Creates project directory structure
   @ov @ac1
   Scenario: Initialize in empty directory
     Given I am in an empty folder
-    When I run "simply init"
-    Then a file named "simply.yaml" should be created
+    When I run "r2r init"
+    Then a file named "r2r.yaml" should be created
 
   @ov @ac1
   Scenario: Initialize in existing project
-    Given I am in a directory with "simply.yaml"
-    When I run "simply init"
+    Given I am in a directory with "r2r.yaml"
+    When I run "r2r init"
     Then the command should fail
 ```
 

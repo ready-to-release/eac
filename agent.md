@@ -97,12 +97,6 @@ This repository may be running multiple Claude Code sessions in parallel using *
 4. **User coordinates branches**: The user manages branch switching, merging, and synchronization
 5. **Report your worktree**: When asked about git state, mention which worktree you're operating in
 
-**Example scenarios:**
-
-- User has `main` in `C:\source\simply-cli\cli`
-- User has `feature-1` in `C:\source\simply-cli-feature-1`
-- User has `feature-2` in `C:\source\simply-cli-feature-2`
-
 Each Claude session works independently. The user handles all git coordination.
 
 ### File Organization

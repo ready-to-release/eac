@@ -44,7 +44,7 @@ func iRun(cmdLine string) error {
 	}
 
 	// Check if this is a command that should use the built executable
-	if parts[0] == "simply" || parts[0] == "r2r" {
+	if parts[0] == "r2r" {
 		// Verify executable exists
 		if ctx.executablePath == "" {
 			return fmt.Errorf("executable not found - please run 'build module src-cli' first")
