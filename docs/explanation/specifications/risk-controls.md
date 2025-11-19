@@ -106,7 +106,7 @@ Feature: Multi-Factor Authentication
 @ov @risk-control:auth-mfa-01
 Scenario: Login with MFA credentials
   Given I have valid credentials and MFA token
-  When I run "simply login --mfa"
+  When I run "r2r login --mfa"
   Then I should be authenticated
   # @ov for operational verification (functional test)
 ```

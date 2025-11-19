@@ -60,14 +60,14 @@ Rule: Creates project directory structure
   @ov
   Scenario: Initialize in empty directory
     Given I am in an empty folder
-    When I run "simply init"
-    Then a file named "simply.yaml" should be created
+    When I run "r2r init"
+    Then a file named "r2r.yaml" should be created
     And a directory named "src/" should exist
 
   @ov
   Scenario: Initialize in existing project
-    Given I am in a directory with "simply.yaml"
-    When I run "simply init"
+    Given I am in a directory with "r2r.yaml"
+    When I run "r2r init"
     Then the command should fail
     And stderr should contain "already initialized"
 ```
@@ -117,6 +117,7 @@ flowchart LR
 **Key Principle**: Focus on **interface design** (how behavior is invoked) before **implementation design** (internal mechanics). Tests specify the interface; refactoring improves the implementation.
 
 **Red-Green-Refactor Cycle**:
+
 - 🔴 **Red**: Write failing test (from list)
 - 🟢 **Green**: Implement minimum code to pass
 - 🔵 **Refactor**: Improve design (optional)
@@ -136,7 +137,7 @@ flowchart LR
 // Step 2-5: Test, Pass, Refactor, Repeat for each variant
 func TestCreateConfig(t *testing.T) {
     tmpDir := t.TempDir()
-    configPath := filepath.Join(tmpDir, "simply.yaml")
+    configPath := filepath.Join(tmpDir, "r2r.yaml")
 
     err := CreateConfig(configPath)
 
@@ -147,7 +148,7 @@ func TestCreateConfig(t *testing.T) {
 
 func TestCreateConfigWhenFileExists(t *testing.T) {
     tmpDir := t.TempDir()
-    configPath := filepath.Join(tmpDir, "simply.yaml")
+    configPath := filepath.Join(tmpDir, "r2r.yaml")
 
     // Create existing file
     os.WriteFile(configPath, []byte("existing"), 0644)
@@ -324,8 +325,8 @@ flowchart TD
 | Specification (WHAT) | Implementation (HOW) |
 |---------------------|---------------------|
 | `Given I have an account` | `testDB.CreateUser(username, hash)` |
-| `When I run "simply login"` | `exec.Command("simply", "login").Run()` |
-| `Then I should be authenticated` | `os.ReadFile("~/.simply/session")` |
+| `When I run "r2r login"` | `exec.Command("r2r", "login").Run()` |
+| `Then I should be authenticated` | `os.ReadFile("~/.r2r/session")` |
 
 **Key Insight**: Specification describes user-visible behavior; implementation handles technical details (database, filesystem, process execution).
 
@@ -352,9 +353,9 @@ Rule: Valid credentials grant access
   @ov
   Scenario: User logs in with valid credentials
     Given I have an account with username "admin"
-    When I run "simply login --user admin --password secret"
+    When I run "r2r login --user admin --password secret"
     Then I should be authenticated
-    And my session token should be stored in ~/.simply/session
+    And my session token should be stored in ~/.r2r/session
     And I should see "Login successful"
 ```
 
@@ -366,14 +367,14 @@ Rule: Valid credentials grant access within rate limits
   @ov
   Scenario: User logs in with valid credentials
     Given I have an account with username "admin"
-    When I run "simply login --user admin --password secret"
+    When I run "r2r login --user admin --password secret"
     Then I should be authenticated
-    And my session token should be stored in ~/.simply/session
+    And my session token should be stored in ~/.r2r/session
 
   @ov
   Scenario: User exceeds login attempt rate limit
     Given I have failed to login 5 times in the last minute
-    When I run "simply login --user admin --password secret"
+    When I run "r2r login --user admin --password secret"
     Then I should see "Rate limit exceeded. Try again in 60 seconds"
     And I should not be authenticated
 ```
@@ -387,16 +388,20 @@ Rule: Valid credentials grant access within rate limits
 The three layers use different tag types:
 
 **ATDD Layer** (Rules):
+
 - Uses **organizational tags** for traceability: `@ac1`, `@ac2` (links scenarios to Rules)
 
 **BDD Layer** (Scenarios):
+
 - Uses **testing taxonomy tags**: `@ov`, `@iv`, `@pv` (verification) + `@L2`, `@L3`, `@L4` (level)
 - See **[Tag Reference](tag-reference.md)** for complete taxonomy
 
 **TDD Layer** (Go tests):
+
 - Uses **build tags** for test levels: `//go:build L0` for L0, default is L1
 
 **Example**:
+
 ```gherkin
 Rule: Valid credentials grant access
 
@@ -405,6 +410,7 @@ Rule: Valid credentials grant access
 ```
 
 For complete tag documentation, see:
+
 - **Testing taxonomy tags**: [Tag Reference](tag-reference.md)
 - **Organizational tags**: [Gherkin File Organization](gherkin-concepts.md#tag-strategy)
 
