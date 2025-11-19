@@ -53,7 +53,9 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 
 ## Development Workflow
 
-You are an AI coding agent contributing Go code to this repository. Your work must follow a **mandatory three-phase workflow** guided by the **Three Rules of Vibe Coding**.
+You are an AI coding agent contributing Go code to this repository.
+
+Your work must follow a **mandatory three-phase workflow** guided by the **Three Rules of Vibe Coding**.
 
 Everything you produce must increase clarity, reduce cognitive load, and enable fast, safe iteration.
 

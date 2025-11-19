@@ -74,21 +74,11 @@ func iRunCommand(cmdLine string) error {
 	}
 
 	parts := strings.Fields(cmdLine)
-	if len(parts) < 2 {
+	if len(parts) < 1 {
 		return fmt.Errorf("invalid command format: %s", cmdLine)
 	}
 
-	// Change to work directory before running command
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	defer os.Chdir(originalDir)
-
-	if err := os.Chdir(templatesCtx.workDir); err != nil {
-		return err
-	}
-
+	// runTemplatesCommand handles setting the working directory via cmd.Dir
 	return runTemplatesCommand(parts...)
 }
 
@@ -212,8 +202,18 @@ func theCommandShouldAttemptToCloneFrom(repoURL string) error {
 // ============================================================================
 
 func runTemplatesCommand(args ...string) error {
-	// Get absolute path to src/commands directory using saved testDir
+	// Build the executable in a temp location to run from the isolated test directory
+	// This ensures the command runs with the test directory as its working directory
+	exePath := filepath.Join(templatesCtx.workDir, "eac-test.exe")
+
+	// Build the CLI
 	cliSourceDir := filepath.Join(templatesCtx.testDir, "..")
+	buildCmd := exec.Command("go", "build", "-o", exePath, ".")
+	buildCmd.Dir = cliSourceDir
+	if output, err := buildCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to build CLI: %s\n%s", err, string(output))
+	}
+	defer os.Remove(exePath)
 
 	// Convert relative paths in args to absolute paths based on workDir
 	resolvedArgs := make([]string, len(args))
@@ -232,9 +232,13 @@ func runTemplatesCommand(args ...string) error {
 		}
 	}
 
-	cmdArgs := append([]string{"run", "."}, resolvedArgs...)
-	cmd := exec.Command("go", cmdArgs...)
-	cmd.Dir = cliSourceDir // src/commands directory
+	// Run the built executable from the test work directory
+	cmd := exec.Command(exePath, resolvedArgs...)
+	cmd.Dir = templatesCtx.workDir // Run from isolated test directory with .git
+
+	// Set CLI_ORIGINAL_PWD to the isolated test directory
+	// This ensures registry.InitialWorkingDir resolves to the test directory
+	cmd.Env = append(os.Environ(), "CLI_ORIGINAL_PWD="+templatesCtx.workDir)
 
 	output, err := cmd.CombinedOutput()
 	templatesCtx.commandOutput = string(output)
@@ -266,6 +270,13 @@ func initializeTemplatesContext() error {
 	tmpDir, err := os.MkdirTemp("", "templates-test-*")
 	if err != nil {
 		return err
+	}
+
+	// Create .git directory to make commands think this is a repository
+	// This ensures test isolation - commands won't write to the actual repo
+	gitDir := filepath.Join(tmpDir, ".git")
+	if err := os.MkdirAll(gitDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .git directory: %w", err)
 	}
 
 	templatesCtx = &templatesTestContext{
@@ -312,8 +323,7 @@ func InitializeTemplatesScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I have a values file "([^"]*)" with:$`, iHaveAValuesFileWith)
 	sc.Step(`^I have a file "([^"]*)" with content:$`, iHaveAFileWithContent)
 
-	// Execution steps (templates-specific to avoid side-effect blocking)
-	sc.Step(`^I run the command "([^"]*)"$`, iRunCommand)
+	// Execution steps (templates-specific - use dedicated function name to avoid ambiguity)
 	sc.Step(`^I run the templates command "([^"]*)"$`, iRunCommand)
 
 	// Verification steps
