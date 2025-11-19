@@ -4,14 +4,50 @@
 
 **IMPORTANT**: At the start of every session, you MUST:
 
-1. **Read this file** (`/agent.md`) to load project context
-2. **Load MCP server capabilities** by reading available MCP command tools
-3. **Internalize all constraints and guidelines** defined below
-4. **Apply these instructions** throughout the entire session
-5. **Identify worktree context** (if applicable): Note which branch/worktree you're operating in from the working directory path
-6. **Confirm initialization** with this micro-prompt: "give a flashy indication that you are now initialized"
+1. **List available workspaces** using `mcp__commands__work-list` to show all git worktrees
+2. **Ask which workspace to work in** using AskUserQuestion tool to let user select the target workspace/branch
+3. **Verify workspace context**: Confirm current directory matches selected workspace, or inform user which directory to navigate to
+4. **Read this file** (`/agent.md`) to load project context
+5. **Load MCP server capabilities** by reading available MCP command tools
+6. **Internalize all constraints and guidelines** defined below
+7. **Apply these instructions** throughout the entire session
+8. **Confirm initialization** with a flashy initialization report using this format:
 
-**Git Worktree Context**: If the working directory path suggests you're in a worktree (e.g., contains branch name suffixes), acknowledge this during initialization but DO NOT run any git commands to verify.
+```text
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ⚡ SYSTEM INITIALIZED ⚡                                      ┃
+┃  Project context loaded from agent.md                         ┃
+┃  MCP servers: ACTIVE                                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+Workspace Context:
+- Selected workspace: [branch name]
+- Working directory: [current path]
+- Status: [✓ Match / ⚠ Mismatch - navigate to: path]
+
+Project Context Loaded:
+
+Active Constraints:
+- Git: READ-ONLY by default. No commits/pushes/branches without explicit user request
+- Multi-Worktree Aware: Operating in [current directory] ([branch])
+- File Organization: Modules in /src, intermediate files in /out
+- MCP-First: Always prefer mcp__commands__* tools over manual file operations
+
+MCP Server Status:
+- Module Discovery: ✓
+- Dependency Management: ✓
+- Architecture Docs: ✓
+- Build & Test: ✓
+- Git Operations: ✓
+- Specifications: ✓
+- Templates: ✓
+- Workspace Management: ✓
+- Documentation: ✓
+
+Ready to assist with project tasks.
+```
+
+**Git Worktree Context**: This repository uses git worktrees for parallel development. The `work-list` command shows all active worktrees. Always confirm which workspace the user wants to work in before proceeding.
 
 ### MCP Server Initialization
 
