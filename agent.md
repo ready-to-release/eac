@@ -8,7 +8,10 @@
 2. **Load MCP server capabilities** by reading available MCP command tools
 3. **Internalize all constraints and guidelines** defined below
 4. **Apply these instructions** throughout the entire session
-5. **Confirm initialization** with this micro-prompt: "give a flashy indication that you are now initialized"
+5. **Identify worktree context** (if applicable): Note which branch/worktree you're operating in from the working directory path
+6. **Confirm initialization** with this micro-prompt: "give a flashy indication that you are now initialized"
+
+**Git Worktree Context**: If the working directory path suggests you're in a worktree (e.g., contains branch name suffixes), acknowledge this during initialization but DO NOT run any git commands to verify.
 
 ### MCP Server Initialization
 
@@ -34,9 +37,31 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 
 ### Git Operations
 
-- **DO NOT** perform git modifying operations (`commit`, `push`, `add`, `stash`) unless explicitly requested
-- **ONLY** use git read operations (`log`, `status`, `diff`) for information gathering
-- **USE** `commit-ai` when generating commit messages (if explicitly requested)
+- **DO NOT** perform ANY git operations unless explicitly requested by the user
+- **READ-ONLY git operations** (`log`, `status`, `diff`) are permitted ONLY when explicitly needed for information gathering
+- **NEVER** run git modifying operations (`commit`, `push`, `add`, `stash`, `checkout`, `branch`, `merge`, `rebase`, `worktree`, etc.)
+- **USER CONTROLS GIT**: The user manages all git operations manually, especially in multi-worktree setups
+- **USE** `commit-ai` ONLY when the user explicitly requests commit message generation
+
+#### Git Worktree Awareness
+
+This repository may be running multiple Claude Code sessions in parallel using **git worktrees**. Each worktree is an isolated working directory on a different branch.
+
+**When operating in a worktree environment:**
+
+1. **Identify your location**: Check `git worktree list` (read-only) ONLY if needed to understand context
+2. **Stay in your lane**: Work only on files in your current worktree directory
+3. **No cross-worktree operations**: Never attempt to modify files in other worktrees
+4. **User coordinates branches**: The user manages branch switching, merging, and synchronization
+5. **Report your worktree**: When asked about git state, mention which worktree you're operating in
+
+**Example scenarios:**
+
+- User has `main` in `C:\source\simply-cli\cli`
+- User has `feature-1` in `C:\source\simply-cli-feature-1`
+- User has `feature-2` in `C:\source\simply-cli-feature-2`
+
+Each Claude session works independently. The user handles all git coordination.
 
 ### File Organization
 
