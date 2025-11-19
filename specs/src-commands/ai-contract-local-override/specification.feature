@@ -1,7 +1,7 @@
 @ov
 Feature: src-commands_ai-contract-local-override
 
-  As a developer using the simply-cli tool
+  As a developer using the cli tool
   I want AI contracts to support local customization in .r2r/contracts
   So that I can customize prompts for my project without modifying the tool's source code
 
