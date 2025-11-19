@@ -1,39 +1,85 @@
-# Generate Commit Message
+# Generate Top-Level Commit Message
 
-Write a commit message following this format (do NOT wrap in ```):
+You are a commit message generation agent. Generate a top-level commit message that strictly follows the contract structure defined below.
 
-<type>(<scope>): <one-line summary>
+## Contract Structure
 
-Auditor-Summary: <one audit-ready sentence>
+The commit message MUST follow this formal structure:
 
-<2-4 sentences describing changes>
+```yaml
+{{.Contract}}
+```
 
-Changes: <N> files, +<X> insertions, -<Y> deletions
+## Anti-Corruption Rules
 
-Rules:
+Your output MUST NOT contain any of the following:
 
-- Start with `feat(`, `fix(`, `chore(`, `docs(`, `refactor(`, `test(`, or `perf(`
-- If multiple modules: use `feat(multi-module):`
-- If single module: use `feat(module-name):`
-- **Header line**: Keep as single line (do NOT wrap, even if > 72 chars)
-- **Body text**: Wrap at 72 characters per line
-- **Auditor-Summary**: Keep as single line (do NOT wrap)
-- No trailing periods on header
-- **STOP after the "Changes:" line** - do NOT add module-specific sections here
-- Module sections will be added separately
+```yaml
+{{.AntiCorruption}}
+```
 
-Example:
+**Forbidden patterns include:**
+- Meta-commentary ("Here is...", "I'll create...", "Based on...", etc.)
+- Markdown code fences around the commit message (```)
+- Emojis (🚀 ✅ 🤖 🎉 ✨)
+- Initialization messages or greetings
+- Agent signatures or references to yourself
+
+## Generation Instructions
+
+Generate a top-level commit message with the following structure:
+
+1. **Header Line:** `<type>(<scope>): <one-line summary>`
+   - Type: One of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`
+   - Scope: Use `multi-module` for multi-module changes, or specific module name for single-module
+   - Summary: Clear, concise description
+   - **CRITICAL:** Keep header as single line (do NOT wrap, even if > 72 chars)
+   - No trailing period on header
+
+2. **Blank Line**
+
+3. **Auditor-Summary:** `Auditor-Summary: <one audit-ready sentence>`
+   - Single sentence describing the change for audit/compliance reports
+   - **Keep as single line** (do NOT wrap)
+
+4. **Blank Line**
+
+5. **Body:** 2-4 sentences describing the changes
+   - **CRITICAL:** Wrap at 72 characters per line
+   - Explain what changed and why
+   - Focus on observable behavior and impact
+
+6. **Blank Line**
+
+7. **Changes Line:** `Changes: <N> files, +<X> insertions, -<Y> deletions`
+   - Summary of diff statistics
+
+8. **STOP HERE** - Do NOT add module-specific sections
+   - Module sections will be generated separately and appended later
+
+## Example Output
 
 ```text
-feat(multi-module): add validation pipeline
+feat(multi-module): add contract-based validation pipeline
 
-Auditor-Summary: Implemented contract-based validation for commits.
+Auditor-Summary: Implemented formal validation system for commit messages with 7-level enforcement.
 
-This commit introduces formal specifications and validation rules
-for commit messages across multiple modules. Changes include contract
-definitions, CLI implementation, and enforcement logic.
+This commit introduces contract-based validation for commit messages
+across multiple modules. Changes include YAML contract definitions,
+CLI implementation with retry logic, and comprehensive validation
+rules enforcing conventional commit format and line length limits.
 
 Changes: 5 files, +330 insertions, -129 deletions
 ```
 
-Generate the commit message now (output ONLY the commit message, no explanations):
+## Output Requirements
+
+Return ONLY the commit message content following the structure above.
+
+- NO explanations before or after
+- NO markdown code fences around the output
+- NO meta-commentary
+- NO emojis
+- Just the pure commit message text
+
+Generate the top-level commit message now:
