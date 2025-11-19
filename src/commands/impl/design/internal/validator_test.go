@@ -182,8 +182,8 @@ func TestFormatDockerVolume(t *testing.T) {
 	}{
 		{
 			name:     "Windows absolute path",
-			input:    `C:\source\simply-cli\cli\specs\src-cli\design`,
-			expected: "/c/source/simply-cli/cli/specs/src-cli/design",
+			input:    `C:\source\everything-as-code\eac\specs\src-cli\design`,
+			expected: "/c/source/everything-as-code/eac/specs/src-cli/design",
 		},
 		{
 			name:     "Windows path with different drive",

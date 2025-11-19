@@ -263,7 +263,7 @@ examples:
         @ov
         Scenario: User logs in successfully
           Given I have valid credentials
-          When I run "simply login"
+          When I run "r2r login"
           Then I should be authenticated
     ```
 
@@ -280,7 +280,7 @@ examples:
         @ov
         Scenario: User logs in successfully
           Given I have valid credentials
-          When I run "simply login"
+          When I run "r2r login"
           Then I should be authenticated
 
   explanation:
