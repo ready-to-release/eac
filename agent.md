@@ -29,9 +29,15 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 - **Build & Test**: `build-module`, `build-modules`, `test-module`, `test-modules`, `pipeline-run`
 - **Documentation**: `docs-serve` (MkDocs integration)
 - **Git Operations**: `commit-ai`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
-- **Specifications**: `specs create`, `specs validate`
+- **Specifications**: `specs-create`, `specs-validate`
+- **Templates**: `templates-list`, `templates-install`, `templates-apply`
+- **Workspace Management**: `work-create`, `work-list`, `work-commit`
 
 ---
+
+## MCP-First Execution Policy
+
+**ALWAYS use `mcp__commands__*` tools for project operations.**
 
 ## Project Constraints
 
@@ -71,7 +77,7 @@ Each Claude session works independently. The user handles all git coordination.
   - `/out/<my-result-file>.md` for intermediate/temporary files
 - **Intermediate files**: CREATE all intermediate files, shell scripts, analysis results in `/out/` directory
 - **Before modifications**: USE `get-files` **on-demand** to understand file ownership
-  - ⚠️ This command loads ~2690 files (~19k tokens). Only call when you need to determine module ownership before making changes.
+  - WARNING: This command loads ~2690 files (~19k tokens). Only call when you need to determine module ownership before making changes.
   - Alternative: Use `show-files-changed` or `show-files-staged` for smaller, targeted queries
 
 ---
@@ -163,17 +169,9 @@ Specifications make the intended behavior easy to understand (Rule 1) and provid
 
 **Requirements when writing specifications:**
 
-- **USE** `specs create` to generate new specifications from natural language descriptions
-- **USE** `specs validate` to validate specifications against contracts before proceeding
+- **USE** `mcp__commands__specs-create` to generate new specifications from natural language descriptions
+- **USE** `mcp__commands__specs-validate` to validate specifications against contracts before proceeding
 - Create/update `.feature` files in `specs/` directory
-
-**MCP Integration:**
-
-- Use `show-modules` to understand module structure
-- Use `get-dependencies` to understand module relationships
-- Use `get-files` **only when needed** to understand file ownership before modifications (loads ~19k tokens)
-  - Prefer `show-files-changed` or `show-files-staged` for scoped queries
-- Use `specs validate <path>` to validate individual specifications or entire directories
 
 #### Phase 2: Test-Driven Development (TDD)
 
@@ -216,12 +214,6 @@ Every code implementation must include:
 
 **Every deliverable must be ready to paste into the codebase without modification.**
 
-**MCP Integration:**
-
-- Use `test-module` to run tests for specific modules
-- Use `get-execution-order` to determine test execution sequence
-- Use `build-module` to validate compilation
-
 #### Phase 3: Validation
 
 **ALWAYS run all tests before reporting completion**:
@@ -230,19 +222,13 @@ Validation ensures your code actually works and is hard to break (Rule 3).
 
 **Requirements:**
 
-- Run `go test` for unit tests
-- Run `godog` for feature/behavior tests
+- Use `mcp__commands__test-module` for unit tests
+- Use `mcp__commands__test-suite` for feature/behavior tests
+- Use `mcp__commands__validate-dependencies` to check module contracts
+- Use `mcp__commands__specs-validate` to validate specifications
 - **NEVER** report "implementation done successfully" without running and passing all tests
 - If tests fail, fix the implementation until they pass
 - Verify code follows Go conventions (`gofmt`, `go vet`)
-
-**MCP Integration:**
-
-- Use `test-modules` for batch testing
-- Use `pipeline-run` to execute full module pipelines
-- Use `get-changed-modules` to scope test execution
-- Use `validate-dependencies` to check module contracts
-- Use `specs validate` to validate specifications against contracts
 
 ---
 
@@ -299,139 +285,3 @@ Prefer several small, well-named functions over one large “god function.”
 - Avoid “god files” with many unrelated types or functions
 
 **Goal:** Keep code easy to understand, easy to change, and hard to break—the same core principles that guide this agent’s workflow.
-
----
-
-## MCP Commands Usage Guidelines
-
-### When to Use MCP Commands
-
-**ALWAYS use MCP commands when:**
-
-1. Exploring or querying module information
-2. Checking module dependencies or execution order
-3. Working with architecture documentation (Structurizr)
-4. Building or testing modules
-5. Validating module contracts or dependencies
-6. Understanding which files changed and which modules are affected
-7. Generating commit messages for module changes
-8. Managing project documentation
-
-### Command Selection Strategy
-
-**Use `show-*` commands** for human-readable output and reporting
-**Use `get-*` commands** for structured data to process programmatically
-
-### Typical Workflows
-
-#### Before Making Changes
-
-```text
-1. show-modules (understand structure)
-2. show-dependencies (understand relationships)
-3. get-files (understand file ownership) ⚠️ ONLY if needed - loads ~19k tokens
-   Alternative: show-files-changed (smaller, scoped to changes)
-```
-
-#### During Development
-
-```text
-1. build-module <moniker> (validate changes)
-2. test-module <moniker> (run tests)
-3. validate-dependencies (check contracts)
-```
-
-#### Before Committing (if explicitly requested)
-
-```text
-1. show-files-staged (review changes)
-2. get-changed-modules (identify affected modules)
-3. commit-ai (generate commit message)
-```
-
-#### Architecture Documentation
-
-```text
-1. design-list (list modules with docs)
-2. design-validate (validate workspace)
-3. design-serve (preview documentation)
-```
-
-### Best Practices
-
-1. **Prefer MCP commands over manual file operations** when working with module metadata
-2. **Chain commands** to build comprehensive understanding
-3. **Validate before modifying** using validation commands
-4. **Check changed modules** before running builds or tests to scope work appropriately
-5. **Use execution order** to respect dependencies when processing multiple modules
-6. **Avoid data-heavy commands during initialization**:
-   - Don't call `get-files` during boot (loads ~19k tokens for ~2690 files)
-   - Use scoped alternatives: `show-files-changed`, `show-files-staged`
-   - Only call `get-files` when you specifically need complete file ownership mapping
-
----
-
-## Principles to Optimize for (In Order)
-
-1. **Clarity**
-2. **Changeability**
-3. **Safety**
-4. **Small, incremental flow of value**
-5. **Reducing cognitive load**
-6. **Avoiding negative vibes**
-   - No magic behavior
-   - No fragile tests
-   - No hidden state
-   - No clever hacks
-
----
-
-## Agent Mindset
-
-- You are not writing for yourself — you are writing for the next developer
-- Default to the simplest solution that fully solves the problem
-- Every response should leave the codebase *better than you found it*
-- Your work should increase trust in the system and make future changes easier
-- Use available MCP tools to understand context before making changes
-- Follow the mandatory workflow: **Specs → TDD → Validation**
-
----
-
-## Quick Reference
-
-### Three-Phase Workflow Checklist
-
-**Phase 1: Specifications First**:
-
-- [ ] Load MCP server capabilities
-- [ ] Understand module structure (`show-modules`)
-- [ ] Check dependencies (`show-dependencies`)
-- [ ] Check if specifications needed (or ask permission to skip for small changes)
-- [ ] Write specifications using `specs create` (generates `.feature` files in `specs/`)
-- [ ] Validate specifications using `specs validate <path>` (ensures contract compliance)
-- [ ] Define ATDD Rules (acceptance criteria)
-- [ ] Define BDD Scenarios (behavior)
-
-**Phase 2: Test-Driven Development**:
-
-- [ ] Write TDD tests first (`*_test.go` alongside code in module `src/`)
-- [ ] Write BDD step definitions (`tests/` folder in module)
-- [ ] Implement code to pass tests (following Three Rules of Vibe Coding)
-- [ ] Refactor for clarity and changeability
-- [ ] Build module (`build-module`)
-- [ ] Follow output format: Intent → Design → Implementation → Tests → Run Instructions
-
-**Phase 3: Validation**:
-
-- [ ] Validate specifications (`specs validate`)
-- [ ] Run unit tests (`go test`)
-- [ ] Run feature tests (`godog`)
-- [ ] Validate dependencies (`validate-dependencies`)
-- [ ] Ensure all tests pass before completion
-- [ ] Verify code follows Go conventions (`gofmt`, `go vet`)
-
-### Three-Layer Testing
-
-- **ATDD** (Acceptance): Business requirements → Rule blocks → `.feature` files in `specs/`
-- **BDD** (Behavior): User-facing behavior → Scenarios under Rules → Step definitions in module `tests/`
-- **TDD** (Implementation): Code correctness → Go unit tests → `*_test.go` alongside code

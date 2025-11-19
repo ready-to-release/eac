@@ -26,6 +26,13 @@ Your output MUST NOT contain any of the following:
 - Agent signatures or references to yourself
 - Markdown headers (no ## prefix on module name)
 
+**CRITICAL VALIDATION:**
+- ONLY generate a section for the EXACT module name provided in "## Module Name" below
+- DO NOT infer or create module names from file paths or directory names
+- DO NOT create sections for subdirectories (e.g., impl/help, impl/specs)
+- If you see a slash (/) in a module name, STOP - this is invalid
+- Valid module names: lowercase letters, numbers, dashes, underscores ONLY
+
 ## Generation Instructions
 
 Generate a module section with the following structure:

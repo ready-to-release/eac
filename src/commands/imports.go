@@ -22,4 +22,5 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/templates/install"
 	_ "github.com/ready-to-release/eac/src/commands/impl/test"
 	_ "github.com/ready-to-release/eac/src/commands/impl/validate"
+	_ "github.com/ready-to-release/eac/src/commands/impl/work"
 )

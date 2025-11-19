@@ -1,0 +1,345 @@
+// Command: work pr
+// Short: Create pull request with AI-generated description
+// Long: Creates a pull request for the current workspace branch with an AI-generated
+// Long: title and description based on all commits in the branch.
+// Long:
+// Long: This command:
+// Long:   1. Validates the workspace is ready for PR
+// Long:   2. Pushes the branch to origin if needed
+// Long:   3. Analyzes all commits to generate PR title and description
+// Long:   4. Creates the pull request using GitHub CLI
+// Long:
+// Long: Requires GitHub CLI (gh) to be installed and authenticated.
+// Long:
+// Long: Example:
+// Long:   work pr
+// Long:   work pr --target=develop
+// Long:   work pr --title "Add authentication feature"
+// Long:   work pr --debug
+// Flag.target: type=string, default=main, usage=Target branch for the pull request
+// Flag.title: type=string, usage=Custom PR title (description still AI-generated)
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode for AI generation
+// HasSideEffects: true
+package work
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
+	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/repository"
+)
+
+func init() {
+	registry.Register(PR)
+}
+
+// Intent: Create pull request with AI-generated description
+//
+// Design (Three Rules of Vibe Coding):
+//
+// Easy to understand:
+//   - Clear flow: validate → push → generate description → create PR
+//   - Uses gh CLI for PR creation
+//   - AI generates comprehensive description from all commits
+//
+// Easy to change:
+//   - PR generation logic isolated
+//   - Target branch configurable
+//   - Custom title supported
+//
+// Hard to break:
+//   - Validates uncommitted changes
+//   - Checks gh CLI availability
+//   - Ensures commits exist before creating PR
+//   - Pushes branch automatically if needed
+
+// PR creates a pull request for the current workspace
+func PR() int {
+	// Phase 1: Parse configuration
+	config, err := parsePRConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Phase 2: Validate environment
+	if err := validatePREnvironment(config); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Phase 3: Check for commits
+	fmt.Println("Checking branch status...")
+	commitCount, err := getCommitCount(config.currentBranch, config.targetBranch)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+	if commitCount == 0 {
+		fmt.Fprintf(os.Stderr, "Error: No commits ahead of %s\n", config.targetBranch)
+		fmt.Fprintf(os.Stderr, "Your branch has no new commits to create a PR from\n")
+		return 1
+	}
+
+	// Phase 4: Push branch to origin
+	fmt.Println("Pushing to origin...")
+	if err := pushBranch(config.currentBranch); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Phase 5: Generate PR title and description
+	fmt.Println("\nGenerating PR description...")
+	title, description, err := generatePRContent(config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Use custom title if provided
+	if config.customTitle != "" {
+		title = config.customTitle
+	}
+
+	// Phase 6: Create pull request
+	fmt.Println("Creating pull request...")
+	prURL, err := createPullRequest(title, description, config.currentBranch, config.targetBranch)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Phase 7: Success
+	fmt.Printf("\n✓ Pull request created: %s\n", prURL)
+	return 0
+}
+
+// prConfig holds configuration for the pr command
+type prConfig struct {
+	targetBranch  string
+	customTitle   string
+	debug         bool
+	repoRoot      string
+	currentBranch string
+}
+
+// parsePRConfig parses command line arguments
+func parsePRConfig() (*prConfig, error) {
+	args := os.Args[3:] // Skip program name, "work", "pr"
+
+	config := &prConfig{
+		targetBranch: "main",
+		debug:        false,
+	}
+
+	// Parse flags
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "--target=") {
+			config.targetBranch = strings.TrimPrefix(arg, "--target=")
+		} else if strings.HasPrefix(arg, "--title=") {
+			config.customTitle = strings.TrimPrefix(arg, "--title=")
+		} else if arg == "--title" {
+			if i+1 < len(args) {
+				config.customTitle = args[i+1]
+				i++ // Skip next arg
+			} else {
+				return nil, fmt.Errorf("--title requires a value")
+			}
+		} else if arg == "--debug" || arg == "-d" {
+			config.debug = true
+		}
+	}
+
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to find repository root: %w", err)
+	}
+	config.repoRoot = repoRoot
+
+	// Get current branch
+	currentBranch, err := internal.GetCurrentBranch(config.repoRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current branch: %w", err)
+	}
+	config.currentBranch = currentBranch
+
+	return config, nil
+}
+
+// validatePREnvironment validates the environment before creating PR
+func validatePREnvironment(config *prConfig) error {
+	// Check we're in a git repository
+	if err := internal.EnsureInGitRepo(); err != nil {
+		return err
+	}
+
+	// Prevent creating PR from main
+	if config.currentBranch == "main" || config.currentBranch == "master" {
+		return fmt.Errorf("cannot create PR from main\nYou are on the main branch. Switch to a workspace first.")
+	}
+
+	// Check for uncommitted changes
+	clean, err := internal.IsWorktreeClean(config.repoRoot)
+	if err != nil {
+		return fmt.Errorf("failed to check working tree status: %w", err)
+	}
+	if !clean {
+		return fmt.Errorf("uncommitted changes detected\nCommit your changes first before creating a PR")
+	}
+
+	// Check if gh CLI is available
+	if err := checkGHCLI(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// checkGHCLI checks if GitHub CLI is installed and available
+func checkGHCLI() error {
+	cmd := exec.Command("gh", "--version")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("gh CLI not found\nInstall GitHub CLI: https://cli.github.com/")
+	}
+	return nil
+}
+
+// getCommitCount returns the number of commits ahead of target branch
+func getCommitCount(currentBranch, targetBranch string) (int, error) {
+	cmd := exec.Command("git", "rev-list", "--count", fmt.Sprintf("origin/%s..HEAD", targetBranch))
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("failed to count commits: %w", err)
+	}
+
+	var count int
+	fmt.Sscanf(strings.TrimSpace(string(output)), "%d", &count)
+	return count, nil
+}
+
+// pushBranch pushes the current branch to origin
+func pushBranch(branch string) error {
+	// Check if branch exists on remote
+	cmd := exec.Command("git", "ls-remote", "--heads", "origin", branch)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to check remote branch: %w", err)
+	}
+
+	// Push with -u if branch doesn't exist on remote
+	if strings.TrimSpace(string(output)) == "" {
+		fmt.Printf("Creating branch on remote...\n")
+		cmd = exec.Command("git", "push", "-u", "origin", branch)
+	} else {
+		cmd = exec.Command("git", "push", "origin", branch)
+	}
+
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to push branch: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// generatePRContent generates the PR title and description using AI
+func generatePRContent(config *prConfig) (string, string, error) {
+	// Get all commits from the branch
+	cmd := exec.Command("git", "log", fmt.Sprintf("origin/%s..HEAD", config.targetBranch), "--pretty=format:%s")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get commit messages: %w", err)
+	}
+
+	commits := strings.Split(strings.TrimSpace(string(output)), "\n")
+
+	// Get the diff for the entire branch
+	cmd = exec.Command("git", "diff", fmt.Sprintf("origin/%s...HEAD", config.targetBranch), "--stat")
+	diffOutput, err := cmd.Output()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get diff: %w", err)
+	}
+
+	// Generate title from first commit or branch name
+	title := generatePRTitle(commits, config.currentBranch)
+
+	// Generate description
+	description := generatePRDescription(commits, string(diffOutput))
+
+	return title, description, nil
+}
+
+// generatePRTitle generates a PR title from commits or branch name
+func generatePRTitle(commits []string, branchName string) string {
+	if len(commits) > 0 && commits[0] != "" {
+		// Use first commit message as title
+		return commits[0]
+	}
+
+	// Fall back to formatted branch name
+	// Convert feature/authentication -> Add authentication
+	parts := strings.Split(branchName, "/")
+	if len(parts) > 1 {
+		feature := strings.ReplaceAll(parts[1], "-", " ")
+		feature = strings.Title(feature)
+		return fmt.Sprintf("Add %s", feature)
+	}
+
+	return fmt.Sprintf("Changes from %s", branchName)
+}
+
+// generatePRDescription generates a PR description from commits and diff
+func generatePRDescription(commits []string, diffStat string) string {
+	var sb strings.Builder
+
+	sb.WriteString("## Summary\n\n")
+
+	// List commits
+	if len(commits) > 1 {
+		sb.WriteString(fmt.Sprintf("This PR includes %d commits:\n\n", len(commits)))
+		for _, commit := range commits {
+			if commit != "" {
+				sb.WriteString(fmt.Sprintf("- %s\n", commit))
+			}
+		}
+	} else if len(commits) == 1 {
+		sb.WriteString(fmt.Sprintf("%s\n", commits[0]))
+	}
+
+	sb.WriteString("\n## Changes\n\n")
+	sb.WriteString("```\n")
+	sb.WriteString(diffStat)
+	sb.WriteString("\n```\n")
+
+	sb.WriteString("\n## Test Plan\n\n")
+	sb.WriteString("- [ ] Manual testing completed\n")
+	sb.WriteString("- [ ] Unit tests pass\n")
+	sb.WriteString("- [ ] Integration tests pass\n")
+
+	return sb.String()
+}
+
+// createPullRequest creates a pull request using gh CLI
+func createPullRequest(title, description, head, base string) (string, error) {
+	cmd := exec.Command("gh", "pr", "create",
+		"--title", title,
+		"--body", description,
+		"--base", base,
+		"--head", head,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to create pull request: %w\nOutput: %s", err, string(output))
+	}
+
+	// Extract PR URL from output
+	prURL := strings.TrimSpace(string(output))
+	return prURL, nil
+}
