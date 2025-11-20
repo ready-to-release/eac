@@ -1,5 +1,15 @@
 // Command: show dependencies
-// Description: Show module dependency graph in a human-readable table format
+// Short: Show module dependency graph in a human-readable table format
+// Long: Show module dependency graph in a human-readable table format.
+// Long:
+// Long: This command displays the dependency relationships between modules in the repository.
+// Long: The output shows which modules depend on which other modules, helping you understand
+// Long: the module architecture and plan changes that respect dependencies.
+// Long:
+// Long: The table format makes it easy to see the full dependency graph at a glance.
+// Long:
+// Long: Example:
+// Long:   show dependencies
 // HasSideEffects: false
 package show
 

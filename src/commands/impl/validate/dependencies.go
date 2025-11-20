@@ -1,5 +1,16 @@
 // Command: validate dependencies
-// Description: Validate module dependencies from go.mod files against contracts
+// Short: Validate module dependencies from go.mod files against contracts
+// Long: Validate module dependencies from go.mod files against contracts.
+// Long:
+// Long: This command checks that actual dependencies in go.mod files match the dependencies
+// Long: declared in module contracts. It helps ensure consistency between contract definitions
+// Long: and actual implementation dependencies.
+// Long:
+// Long: Validation failures indicate mismatches that should be resolved by either updating
+// Long: the contract or fixing the go.mod file.
+// Long:
+// Long: Example:
+// Long:   validate dependencies
 // HasSideEffects: false
 package validate
 

@@ -12,8 +12,16 @@ type aiExecutorAdapter struct {
 	model    string
 }
 
-// Execute adapts the ai.Executor.Execute signature to contract.AIExecutor.Execute
-func (a *aiExecutorAdapter) Execute(ctx context.Context, prompt string, opts ...interface{}) (string, error) {
+// Execute adapts the ai.Executor.Execute signature to contracts.AIExecutor.Execute
+func (a *aiExecutorAdapter) Execute(ctx interface{}, prompt string, opts ...interface{}) (string, error) {
+	// Convert interface{} context to context.Context
+	var actualCtx context.Context
+	if c, ok := ctx.(context.Context); ok {
+		actualCtx = c
+	} else {
+		actualCtx = context.Background()
+	}
+
 	// Convert interface{} options to ai.Option
 	var aiOpts []ai.Option
 
@@ -29,5 +37,5 @@ func (a *aiExecutorAdapter) Execute(ctx context.Context, prompt string, opts ...
 		}
 	}
 
-	return a.executor.Execute(ctx, prompt, aiOpts...)
+	return a.executor.Execute(actualCtx, prompt, aiOpts...)
 }

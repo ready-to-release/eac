@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/core/ai/contract"
+	"github.com/ready-to-release/eac/src/core/contracts"
 	"gopkg.in/yaml.v3"
 )
 
@@ -18,7 +18,7 @@ var (
 )
 
 // ValidationError is an alias to the core contract ValidationError
-type ValidationError = contract.ValidationError
+type ValidationError = contracts.ValidationError
 
 // CommitMessageContract represents the structure.yml contract
 type CommitMessageContract struct {
@@ -39,7 +39,7 @@ type CommitMessageContract struct {
 }
 
 // AntiCorruptionRules is an alias to the core contract AntiCorruptionRules
-type AntiCorruptionRules = contract.AntiCorruptionRules
+type AntiCorruptionRules = contracts.AntiCorruptionRules
 
 // LoadAntiCorruptionRules loads anti-corruption rules using the core framework
 func LoadAntiCorruptionRules(rulesPath string) (*AntiCorruptionRules, error) {

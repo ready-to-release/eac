@@ -1,6 +1,17 @@
 // Command: templates apply
-// Description: Apply templates with value replacements
-// Usage: go run . templates apply <template-name> [flags...]
+// Short: Apply templates with value replacements
+// Long: Apply templates with value replacements.
+// Long:
+// Long: This command processes template files and replaces placeholder variables with
+// Long: provided values. Templates use {{VARIABLE}} syntax for placeholders.
+// Long:
+// Long: Values can be provided via command-line flags (--key=value) or automatically
+// Long: discovered from the repository (e.g., module names, git info).
+// Long:
+// Long: The command validates that all required placeholders have values before applying.
+// Long:
+// Long: Example:
+// Long:   templates apply my-template --author="John Doe" --date="2025-01-19"
 // HasSideEffects: true
 package templates
 

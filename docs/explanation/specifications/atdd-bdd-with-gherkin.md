@@ -376,7 +376,7 @@ Feature: cli_user-registration
     Scenario: User corrects email typo before verification
       Given I registered with email "user@exampl.com"
       And I have not yet verified my email
-      When I run "simply account update-email --new user@example.com"
+      When I run "r2r account update-email --new user@example.com"
       Then my verification email should be resent to "user@example.com"
       And I should see "Verification email sent to updated address"
 

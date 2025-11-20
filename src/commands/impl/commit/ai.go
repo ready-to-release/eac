@@ -1,5 +1,12 @@
 // Command: commit-ai
 // Description: Generate commit message using AI with staged changes and module mappings
+// Short: Generate AI-powered commit messages from staged changes
+// Long: The commit-ai command uses AI to analyze your staged git changes and generate a structured,
+// Long: conventional commit message that follows project standards and includes module-specific details.
+// Long: The generated message includes a top-level summary and per-module sections describing changes.
+// Long: All output is validated against the commit message contract to ensure consistency and quality.
+// Long: By default, the command outputs the commit message to stdout. Use --debug to save intermediate outputs.
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
 // Flags: --debug (save intermediate outputs and show debug info)
 // HasSideEffects: false
 package commit
@@ -18,13 +25,6 @@ import (
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/core/repository/reports"
 )
-
-// Embedded built-in prompts (compiled into binary)
-//go:embed prompts/top-level.md
-var builtinTopLevelPrompt string
-
-//go:embed prompts/module.md
-var builtinModulePrompt string
 
 func init() {
 	registry.Register(CommitAI)
@@ -108,7 +108,7 @@ func parseConfig() (bool, string, error) {
 
 // Phase 2: Verify Contract Implementation
 func verifyContractImplementation(workspaceRoot string) error {
-	contractPath := filepath.Join(workspaceRoot, "contracts/commit-message/0.1.0/structure.yml")
+	contractPath := filepath.Join(workspaceRoot, "contracts/ai/commit-message/0.1.0/contract.yml")
 	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
 	if len(contractErrors) > 0 {
 		fmt.Fprintf(os.Stderr, "❌ Contract implementation verification failed:\n")
@@ -143,11 +143,16 @@ func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*exe
 	}
 	stagedFilesTable := tb.Build()
 
-	// Extract unique modules
+	// Extract unique modules and validate them
 	moduleSet := make(map[string]bool)
 	for _, file := range report.AllFiles {
 		for _, module := range file.Modules {
-			moduleSet[module] = true
+			// Validate module name: only lowercase letters, numbers, dashes, underscores
+			if isValidModuleName(module) {
+				moduleSet[module] = true
+			} else {
+				debugWriter.log("WARNING: Skipping invalid module name: %s", module)
+			}
 		}
 	}
 
@@ -212,6 +217,10 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 	if err != nil {
 		return "", fmt.Errorf("running commit-message-top-level agent: %w", err)
 	}
+
+	// Strip out any module sections the AI may have added after "Changes:" line
+	// Module sections will be generated separately and appended later
+	topLevelOutput = stripModuleSectionsFromTopLevel(topLevelOutput)
 
 	debugWriter.write("debug-top-level-output.md", topLevelOutput)
 
@@ -289,4 +298,65 @@ func validateAndOutput(cfg *executionConfig, message string) int {
 	}
 
 	return 0
+}
+
+// stripModuleSectionsFromTopLevel removes any module-like sections that appear
+// after the "Changes:" line in the top-level commit message.
+// The AI sometimes includes module summaries here despite being told not to.
+func stripModuleSectionsFromTopLevel(message string) string {
+	lines := strings.Split(message, "\n")
+	result := make([]string, 0, len(lines))
+	foundChangesLine := false
+
+	for _, line := range lines {
+		// Include all lines up to and including the "Changes:" line
+		result = append(result, line)
+
+		// Once we find "Changes:", stop including further lines if they look like module sections
+		if strings.HasPrefix(strings.TrimSpace(line), "Changes:") {
+			foundChangesLine = true
+			break
+		}
+	}
+
+	// If we found the Changes line and there's content after it, check if it's module sections
+	if foundChangesLine && len(result) < len(lines) {
+		// Look ahead to see if the next non-empty lines are module sections (starting with ---)
+		remainingLines := lines[len(result):]
+		for _, line := range remainingLines {
+			trimmed := strings.TrimSpace(line)
+
+			// Skip empty lines
+			if trimmed == "" {
+				continue
+			}
+
+			// If we hit a line that starts with "---", it's likely the start of module sections
+			// Stop here - don't include it or anything after
+			if strings.HasPrefix(trimmed, "---") {
+				break
+			}
+
+			// If it's not a separator and not empty, include it (could be additional top-level content)
+			result = append(result, line)
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
+
+// isValidModuleName checks if a module name is valid (lowercase letters, numbers, dashes, underscores only)
+// Rejects paths with slashes or other special characters
+func isValidModuleName(name string) bool {
+	if name == "" || len(name) > 50 {
+		return false
+	}
+
+	for _, ch := range name {
+		if !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_') {
+			return false
+		}
+	}
+
+	return true
 }

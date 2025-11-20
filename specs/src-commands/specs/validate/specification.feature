@@ -40,7 +40,7 @@ Feature: src-commands_specs-validate
 
     @L2 @ov
     Scenario: Command validates contracts are available
-      Given contract files are missing from "contracts/specifications"
+      Given contract files are missing from "contracts/ai/specifications"
       When I run "specs validate specs/src-commands/specs/create/specification.feature"
       Then the command exits with code 1
       And stderr contains "failed to load contract"
@@ -119,7 +119,7 @@ Feature: src-commands_specs-validate
       Given a specification file at "specs/test/spec.feature"
       When I run "specs validate specs/test/spec.feature"
       Then the GherkinValidator is used
-      And contract rules from "contracts/specifications/0.1.0/structure.yml" are applied
+      And contract rules from "contracts/ai/specifications/0.1.0/contract.yml" are applied
 
     @L2 @ov
     Scenario: Check feature naming convention

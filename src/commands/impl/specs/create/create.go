@@ -1,5 +1,17 @@
 // Command: specs create
 // Description: Create a new specification using AI from a natural language description
+// Short: Generate Gherkin specifications from natural language descriptions
+// Long: The specs create command uses AI to transform natural language feature descriptions into
+// Long: properly formatted Gherkin specifications following BDD/ATDD patterns. The generated specifications
+// Long: include Feature, Rule, and Scenario blocks with appropriate tags and structure.
+// Long: All specifications are validated against the specification contract to ensure they meet quality standards.
+// Long: The command automatically saves the specification to the specs/ directory, organized by module.
+// Long: Use --debug to inspect intermediate outputs and understand how the AI generates specifications.
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to the 'out' directory for debugging and analysis
+// Flag.module: type=string, shorthand=m, usage=Target module for the specification (e.g., src-commands, src-core). If not provided, the module will be inferred from the description
+// Flag.output: type=string, shorthand=o, usage=Custom output path for the specification file. If not provided, the path is determined from the feature name and module
+// Flag.template: type=string, usage=Path to a custom template file for specification generation. Overrides the built-in template
+// Flag.prompt: type=string, usage=Path to a custom system prompt file. Overrides both user override prompts and built-in prompts
 // Usage: specs create <description>
 // Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --template (custom template file), --prompt (custom system prompt)
 // HasSideEffects: true
@@ -16,15 +28,10 @@ import (
 	"github.com/ready-to-release/eac/src/commands/impl/specs"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/ai"
-	"github.com/ready-to-release/eac/src/core/ai/contract"
+	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/ai/providers"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
-
-// Embedded built-in prompt (compiled into binary)
-//
-//go:embed prompts/specification.md
-var builtinPrompt string
 
 func init() {
 	registry.Register(SpecsCreate)
@@ -115,7 +122,7 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 // - Optionally saves debug outputs
 func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Load contract and anti-corruption rules for validator
-	loader := contract.NewSpecContractLoader(config.TemplateRoot, "contracts/specifications", "0.1.0")
+	loader := contracts.NewSpecContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
@@ -135,7 +142,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	executorAdapter := &aiExecutorAdapter{executor: executor}
 
 	// Create validator
-	validator := contract.NewGherkinValidator(contractData, antiCorruptionRules)
+	validator := contracts.NewGherkinValidator(contractData, antiCorruptionRules)
 
 	// Setup debug directory if needed
 	debugOutputDir := ""
@@ -148,10 +155,10 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	}
 
 	// Configure retry behavior
-	retryConfig := &contract.RetryConfig{
+	retryConfig := &contracts.RetryConfig{
 		Executor:       executorAdapter,
 		Validator:      validator,
-		PromptBuilder:  &contract.DefaultRetryPromptBuilder{},
+		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
 		AntiCorruption: antiCorruptionRules,
 		ContentMarker:  "Feature:",
 		MaxAttempts:    2,
@@ -161,7 +168,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 
 	// Generate with retry
 	ctx := context.Background()
-	result, err := contract.GenerateWithRetry(ctx, retryConfig, prompt)
+	result, err := contracts.GenerateWithRetry(ctx, retryConfig, prompt)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\nTroubleshooting:\n")
 		fmt.Fprintf(os.Stderr, "  1. Ensure AI provider is configured: r2r agent init --ai <provider>\n")
@@ -172,12 +179,12 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 
 	// Handle validation errors
 	if len(result.ValidationErrors) > 0 {
-		criticalErrors := contract.CountCriticalErrors(result.ValidationErrors)
+		criticalErrors := contracts.CountCriticalErrors(result.ValidationErrors)
 
 		if criticalErrors > 0 {
 			fmt.Fprintf(os.Stderr, "\n")
 			fmt.Fprintf(os.Stderr, "⚠️  Generated specification has validation errors:\n\n")
-			fmt.Fprintf(os.Stderr, "%s\n", contract.FormatValidationErrors(result.ValidationErrors))
+			fmt.Fprintf(os.Stderr, "%s\n", contracts.FormatValidationErrors(result.ValidationErrors))
 			fmt.Fprintf(os.Stderr, "\nThe AI attempted %d time(s) but could not generate valid output.\n", result.Attempts)
 			fmt.Fprintf(os.Stderr, "\nTroubleshooting:\n")
 			fmt.Fprintf(os.Stderr, "  1. Try rephrasing your description to be more specific\n")
@@ -188,7 +195,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 
 		// Only warnings - log them but continue
 		fmt.Fprintf(os.Stderr, "\nℹ️  Generated specification has %d warning(s):\n", len(result.ValidationErrors))
-		fmt.Fprintf(os.Stderr, "%s\n", contract.FormatValidationErrors(result.ValidationErrors))
+		fmt.Fprintf(os.Stderr, "%s\n", contracts.FormatValidationErrors(result.ValidationErrors))
 	}
 
 	return result.Output, nil
@@ -318,10 +325,11 @@ func parseConfig() (*SpecsConfig, error) {
 	return config, nil
 }
 
-// loadPromptWithFallback implements three-tier prompt loading:
+// loadPromptWithFallback implements four-tier prompt loading:
 // 1. Custom path (if specified via --prompt flag)
-// 2. User override: .r2r/prompts/specs/specification.md
-// 3. Built-in: embedded prompts/specification.md
+// 2. Local contract: .r2r/contracts/ai/specifications/0.1.0/specification.md
+// 3. Repo contract: contracts/ai/specifications/0.1.0/specification.md
+// 4. Built-in: embedded prompts/specification.md
 func loadPromptWithFallback(templateRoot string, customPath string) (string, error) {
 	// Tier 1: Check for custom path (from --prompt flag)
 	if customPath != "" {
@@ -338,15 +346,19 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 		return string(content), nil
 	}
 
-	// Tier 2: Check for user override in .r2r/prompts/specs/
-	userOverridePath := filepath.Join(templateRoot, ".r2r", "prompts", "specs", "specification.md")
-	if content, err := os.ReadFile(userOverridePath); err == nil {
-		fmt.Fprintf(os.Stderr, "📋 Using user override prompt: %s\n", userOverridePath)
-		return string(content), nil
+	// Load from contract with fallback: .r2r/contracts → contracts/ai
+	loader := contracts.NewAIContractLoader(templateRoot, "specifications", "0.1.0")
+	prompt, source, err := loader.LoadPrompt("specification.md", "")
+	if err != nil {
+		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
 
-	// Tier 3: Use built-in embedded prompt
-	return builtinPrompt, nil
+	// Log source if using override (for transparency)
+	if source != "embedded default" && source != "repository contract" {
+		fmt.Fprintf(os.Stderr, "ℹ️  Using %s prompt\n", source)
+	}
+
+	return prompt, nil
 }
 
 // generateWithAI invokes the AI provider with the prompt
@@ -440,7 +452,7 @@ func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 	}
 
 	// Use generalized contract loader
-	loader := contract.NewSpecContractLoader(config.TemplateRoot, "contracts/specifications", "0.1.0")
+	loader := contracts.NewSpecContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
 
 	// Load contract and anti-corruption rules
 	contractData, err := loader.LoadContract()
@@ -470,7 +482,7 @@ func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 		"TaxonomySpec": string(taxonomyContent),
 	}
 
-	promptTemplate, err := contract.BuildPromptWithTemplate(
+	promptTemplate, err := contracts.BuildPromptWithTemplate(
 		promptContent,
 		contractData,
 		antiCorruption,
@@ -516,7 +528,7 @@ func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 // stripAgentNoiseWithContract applies anti-corruption rules from contract using generalized framework
 func stripAgentNoiseWithContract(output string, templateRoot string) string {
 	// Use generalized contract loader
-	loader := contract.NewSpecContractLoader(templateRoot, "contracts/specifications", "0.1.0")
+	loader := contracts.NewSpecContractLoader(templateRoot, "contracts/specifications", "0.1.0")
 
 	// Try to load anti-corruption rules
 	rules, err := loader.LoadAntiCorruptionRules()
@@ -526,7 +538,7 @@ func stripAgentNoiseWithContract(output string, templateRoot string) string {
 	}
 
 	// Use generalized anti-corruption filter with "Feature:" as content start marker
-	return contract.ApplyWithFallback(output, rules, "Feature:")
+	return contracts.ApplyWithFallback(output, rules, "Feature:")
 }
 
 // aiExecutorAdapter adapts ai.Executor to contract.AIExecutor interface
@@ -534,8 +546,16 @@ type aiExecutorAdapter struct {
 	executor *ai.Executor
 }
 
-// Execute adapts the ai.Executor.Execute signature to contract.AIExecutor.Execute
-func (a *aiExecutorAdapter) Execute(ctx context.Context, prompt string, opts ...interface{}) (string, error) {
+// Execute adapts the ai.Executor.Execute signature to contracts.AIExecutor.Execute
+func (a *aiExecutorAdapter) Execute(ctx interface{}, prompt string, opts ...interface{}) (string, error) {
+	// Convert interface{} context to context.Context
+	var actualCtx context.Context
+	if c, ok := ctx.(context.Context); ok {
+		actualCtx = c
+	} else {
+		actualCtx = context.Background()
+	}
+
 	// Convert interface{} options to ai.Option
 	var aiOpts []ai.Option
 	for _, opt := range opts {
@@ -543,5 +563,5 @@ func (a *aiExecutorAdapter) Execute(ctx context.Context, prompt string, opts ...
 			aiOpts = append(aiOpts, aiOpt)
 		}
 	}
-	return a.executor.Execute(ctx, prompt, aiOpts...)
+	return a.executor.Execute(actualCtx, prompt, aiOpts...)
 }

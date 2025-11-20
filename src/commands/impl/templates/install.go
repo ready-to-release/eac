@@ -1,6 +1,17 @@
 // Command: templates install
-// Description: Install templates to local directory
-// Usage: go run . templates install <template-name> [flags...]
+// Short: Install templates to local directory
+// Long: Install templates to local directory for customization.
+// Long:
+// Long: This command copies built-in template files to your local project directory
+// Long: where they can be customized. Templates are installed to the templates/
+// Long: directory by default.
+// Long:
+// Long: Once installed locally, you can modify templates to match your project's
+// Long: specific needs while keeping the originals as a reference.
+// Long:
+// Long: Example:
+// Long:   templates install docs
+// Long:   templates install specs
 // HasSideEffects: true
 package templates
 

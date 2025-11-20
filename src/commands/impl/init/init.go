@@ -1,7 +1,20 @@
 // Command: init
-// Description: Initialize AI provider configuration for the project
-// Usage: init --ai <provider>
-// Flags: --ai (required) - Provider to configure (claude-api, claude-cli, openai, gemini)
+// Short: Initialize AI provider configuration for the project
+// Long: Initialize AI provider configuration for the project.
+// Long:
+// Long: Creates .r2r/agent-config.yml with the specified AI provider settings.
+// Long: The configuration file is safe to commit as it only contains environment variable references.
+// Long:
+// Long: Available providers:
+// Long:   - claude-api: Claude via Anthropic API (requires ANTHROPIC_API_KEY)
+// Long:   - claude-cli: Claude via CLI subscription (no API key needed)
+// Long:   - openai: OpenAI via API (requires OPENAI_API_KEY)
+// Long:   - gemini: Google Gemini via API (requires GOOGLE_API_KEY)
+// Long:
+// Long: Example:
+// Long:   init --ai claude-cli
+// Long:   init --ai claude-api
+// Flag.ai: type=string, shorthand=a, usage=AI provider to configure, required=true, completion=claude-api,claude-cli,openai,gemini
 // HasSideEffects: true
 package init
 
@@ -216,53 +229,65 @@ func createDirectoryStructure(workspaceRoot string, repoRoot string) error {
 		return fmt.Errorf("failed to create .r2r directory: %w", err)
 	}
 
-	// Create .r2r/prompts/commit directory
-	commitPromptsDir := filepath.Join(r2rDir, "prompts", "commit")
-	if err := os.MkdirAll(commitPromptsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .r2r/prompts/commit directory: %w", err)
-	}
-
-	// Create .r2r/prompts/specs directory
-	specsPromptsDir := filepath.Join(r2rDir, "prompts", "specs")
-	if err := os.MkdirAll(specsPromptsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .r2r/prompts/specs directory: %w", err)
-	}
-
-	// Copy built-in prompts to .r2r/prompts/ for user customization
-	if err := copyPromptTemplates(commitPromptsDir, specsPromptsDir, repoRoot); err != nil {
-		return fmt.Errorf("failed to copy prompt templates: %w", err)
+	// Copy AI contracts to .r2r/contracts for user customization
+	if err := copyAIContracts(r2rDir, repoRoot); err != nil {
+		return fmt.Errorf("failed to copy AI contracts: %w", err)
 	}
 
 	return nil
 }
 
-// copyPromptTemplates copies built-in prompts to .r2r/prompts/ for user customization
-func copyPromptTemplates(commitPromptsDir string, specsPromptsDir string, repoRoot string) error {
-	// Copy commit prompts
-	// Source prompts are at: <repo>/src/commands/impl/commit/prompts/
-	commitSourceDir := filepath.Join(repoRoot, "src", "commands", "impl", "commit", "prompts")
+// copyAIContracts copies AI contracts from contracts/ai to .r2r/contracts for user customization
+func copyAIContracts(r2rDir string, repoRoot string) error {
+	// Source: contracts/ai/
+	sourceAIDir := filepath.Join(repoRoot, "contracts", "ai")
 
-	// Copy top-level.md
-	topLevelSource := filepath.Join(commitSourceDir, "top-level.md")
-	topLevelDest := filepath.Join(commitPromptsDir, "top-level.md")
-	if err := copyFile(topLevelSource, topLevelDest); err != nil {
-		return fmt.Errorf("failed to copy top-level.md: %w", err)
+	// Destination: .r2r/contracts/ai/
+	destAIDir := filepath.Join(r2rDir, "contracts", "ai")
+
+	// Copy entire contracts/ai directory structure
+	if err := copyDir(sourceAIDir, destAIDir); err != nil {
+		return fmt.Errorf("failed to copy contracts/ai directory: %w", err)
 	}
 
-	// Copy module.md
-	moduleSource := filepath.Join(commitSourceDir, "module.md")
-	moduleDest := filepath.Join(commitPromptsDir, "module.md")
-	if err := copyFile(moduleSource, moduleDest); err != nil {
-		return fmt.Errorf("failed to copy module.md: %w", err)
+	return nil
+}
+
+// copyDir recursively copies a directory
+func copyDir(src string, dst string) error {
+	// Get source directory info
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return fmt.Errorf("failed to stat source directory %s: %w", src, err)
 	}
 
-	// Copy specs prompt
-	// Source: <repo>/src/commands/impl/specs/prompts/specification.md
-	specsSourceDir := filepath.Join(repoRoot, "src", "commands", "impl", "specs", "prompts")
-	specificationSource := filepath.Join(specsSourceDir, "specification.md")
-	specificationDest := filepath.Join(specsPromptsDir, "specification.md")
-	if err := copyFile(specificationSource, specificationDest); err != nil {
-		return fmt.Errorf("failed to copy specification.md: %w", err)
+	// Create destination directory
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
+		return fmt.Errorf("failed to create destination directory %s: %w", dst, err)
+	}
+
+	// Read source directory entries
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return fmt.Errorf("failed to read directory %s: %w", src, err)
+	}
+
+	// Copy each entry
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			// Recursively copy subdirectory
+			if err := copyDir(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			// Copy file
+			if err := copyFile(srcPath, dstPath); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

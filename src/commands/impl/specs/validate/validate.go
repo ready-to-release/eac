@@ -1,5 +1,15 @@
 // Command: specs validate
 // Description: Validate existing Gherkin specifications against contracts
+// Short: Validate Gherkin specifications against quality contracts
+// Long: The specs validate command checks existing .feature files against the specification contract,
+// Long: ensuring they follow proper Gherkin syntax, BDD patterns, and project standards.
+// Long: Validation covers structure (Feature/Rule/Scenario hierarchy), tags, step formatting, and content quality.
+// Long: The command can validate a single file or recursively validate all .feature files in a directory.
+// Long: By default, output is in human-readable text format. Use --format json for machine-readable output.
+// Long: Exit code is 0 if all validations pass, 1 if any critical errors are found.
+// Flag.quiet: type=bool, shorthand=q, default=false, usage=Suppress success messages and show only validation errors and warnings
+// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed validation output including metadata and additional context
+// Flag.format: type=string, shorthand=f, default=text, completion=text,json, usage=Output format for validation results (text for human-readable, json for machine-readable)
 // Usage: specs validate <path> [--quiet] [--verbose] [--format json]
 // Flags: --quiet (show only errors), --verbose (detailed output), --format (output format: text|json)
 // HasSideEffects: false
@@ -13,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/ai/contract"
+	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -79,7 +89,7 @@ func SpecsValidate() int {
 			return 1
 		}
 
-		criticalCount := contract.CountCriticalErrors(errors)
+		criticalCount := contracts.CountCriticalErrors(errors)
 		results = []*ValidationResult{
 			{
 				Path:   config.Path,
@@ -119,7 +129,7 @@ type ValidateConfig struct {
 type ValidationResult struct {
 	Path   string                       `json:"path"`
 	Valid  bool                         `json:"valid"`
-	Errors []contract.ValidationError   `json:"errors"`
+	Errors []contracts.ValidationError   `json:"errors"`
 }
 
 // parseValidateConfig parses command line arguments into configuration
@@ -128,7 +138,7 @@ func parseValidateConfig() (*ValidateConfig, error) {
 		Format: "text", // Default format
 	}
 
-	args := os.Args[2:] // Skip program name and "specs validate"
+	args := os.Args[3:] // Skip program name and "specs validate"
 	var path string
 
 	for i := 0; i < len(args); i++ {
@@ -221,7 +231,7 @@ func validatePath(path string, repoRoot string) error {
 }
 
 // validateGherkinFile validates a single Gherkin specification file
-func validateGherkinFile(filePath string, repoRoot string) ([]contract.ValidationError, error) {
+func validateGherkinFile(filePath string, repoRoot string) ([]contracts.ValidationError, error) {
 	// Read file content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -229,7 +239,7 @@ func validateGherkinFile(filePath string, repoRoot string) ([]contract.Validatio
 	}
 
 	// Load contract and validator
-	loader := contract.NewSpecContractLoader(repoRoot, "contracts/specifications", "0.1.0")
+	loader := contracts.NewSpecContractLoader(repoRoot, "ai/specifications", "0.1.0")
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
@@ -242,7 +252,7 @@ func validateGherkinFile(filePath string, repoRoot string) ([]contract.Validatio
 	}
 
 	// Create validator
-	validator := contract.NewGherkinValidator(contractData, antiCorruptionRules)
+	validator := contracts.NewGherkinValidator(contractData, antiCorruptionRules)
 
 	// Validate content
 	errors := validator.Validate(string(content), nil)
@@ -278,7 +288,7 @@ func validateDirectory(dirPath string, repoRoot string, quiet bool) ([]*Validati
 			return nil
 		}
 
-		criticalCount := contract.CountCriticalErrors(errors)
+		criticalCount := contracts.CountCriticalErrors(errors)
 		result := &ValidationResult{
 			Path:   path,
 			Valid:  criticalCount == 0,
@@ -392,7 +402,7 @@ func formatValidationResult(result *ValidationResult) string {
 	}
 
 	// Display each error/warning
-	output.WriteString(contract.FormatValidationErrors(result.Errors))
+	output.WriteString(contracts.FormatValidationErrors(result.Errors))
 
 	return output.String()
 }

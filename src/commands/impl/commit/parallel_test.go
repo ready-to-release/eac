@@ -279,8 +279,15 @@ func createTestConfig(modules []string) *executionConfig {
 		"+added line\n" +
 		" existing line\n"
 
+	// Get actual repo root for contract loading
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		// Fallback to current directory if not in a git repo (shouldn't happen in tests)
+		workspaceRoot = "."
+	}
+
 	return &executionConfig{
-		workspaceRoot:   ".",
+		workspaceRoot:   workspaceRoot,
 		affectedModules: modules,
 		stagedFiles:     files,
 		gitDiff:         gitDiff,

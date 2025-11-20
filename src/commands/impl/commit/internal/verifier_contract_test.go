@@ -13,7 +13,7 @@ func TestContractImplementation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to find repository root: %v", err)
 	}
-	contractPath := filepath.Join(repoRoot, "contracts", "commit-message", "0.1.0", "structure.yml")
+	contractPath := filepath.Join(repoRoot, "contracts", "ai", "commit-message", "0.1.0", "contract.yml")
 
 	errors := VerifyContractImplementation(contractPath)
 
@@ -31,7 +31,7 @@ func TestLoadContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to find repository root: %v", err)
 	}
-	contractPath := filepath.Join(repoRoot, "contracts", "commit-message", "0.1.0", "structure.yml")
+	contractPath := filepath.Join(repoRoot, "contracts", "ai", "commit-message", "0.1.0", "contract.yml")
 
 	contract, err := LoadContract(contractPath)
 	if err != nil {

@@ -419,7 +419,7 @@ Feature: Multi-Factor Authentication
 @ov @risk-control:auth-mfa-01
 Scenario: User logs in with MFA
   Given I have valid credentials and MFA token
-  When I run "simply login --mfa"
+  When I run "r2r login --mfa"
   Then I should be authenticated
   And my session should be established
 ```
@@ -610,14 +610,14 @@ Feature: cli_container-management
     @ov @risk-control:container-isolation-01
     Scenario: Start container with resource limits
       Given I have a container configuration
-      When I run "simply container start --memory 512m"
+      When I run "r2r container start --memory 512m"
       Then the container should start
       And memory limit should be enforced
 
     @pv
     Scenario: Container starts within 5 seconds
       Given I have a container configuration
-      When I run "simply container start"
+      When I run "r2r container start"
       Then the container should start within 5 seconds
 ```
 

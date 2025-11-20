@@ -1,6 +1,21 @@
 // Command: test suite
-// Description: Run tests for a specific test suite (parallel by default)
-// Usage: test suite <suite-name> [--skip-deps] [--list-only] [--sequential]
+// Short: Run tests for a specific test suite (parallel by default)
+// Long: Run tests for a specific test suite (parallel by default).
+// Long:
+// Long: Test suites are defined in contracts and group related tests for execution.
+// Long: By default, tests within a suite run in parallel for faster execution.
+// Long:
+// Long: Use --skip-deps to skip dependency installation before running tests.
+// Long: Use --list-only to see which tests would run without executing them.
+// Long: Use --sequential to run tests one at a time instead of in parallel.
+// Long:
+// Long: Example:
+// Long:   test suite integration
+// Long:   test suite unit --sequential
+// Long:   test suite e2e --list-only
+// Flag.skip-deps: type=bool, usage=Skip dependency installation before running tests
+// Flag.list-only: type=bool, usage=List tests that would run without executing them
+// Flag.sequential: type=bool, usage=Run tests sequentially instead of in parallel
 // HasSideEffects: false
 package test
 
