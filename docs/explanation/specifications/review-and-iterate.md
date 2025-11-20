@@ -16,11 +16,11 @@ flowchart LR
     D --> E[Iterate]
     E -->|Feedback loop| C
 
-    style A fill:#e3f2fd
-    style B fill:#fff3e0
-    style C fill:#f3e5f5
-    style D fill:#e8f5e9
-    style E fill:#fff9c4
+    style A fill:#e3f2fd,color: #000
+    style B fill:#fff3e0,color: #000
+    style C fill:#f3e5f5,color: #000
+    style D fill:#e8f5e9,color: #000
+    style E fill:#fff9c4,color: #000
 ```
 
 Specifications evolve through continuous cycles of review and refinement.
@@ -36,6 +36,7 @@ Specifications evolve through continuous cycles of review and refinement.
 3. **Requirements Change** - New regulations, processes, features
 4. **Regular Cadence** - Weekly (active), Monthly (maintenance), Quarterly (comprehensive)
 5. **Before Extensions** - Refresh understanding, check drift
+6. **Bugs/defects** - Is specification incomplete, did we miss corner cases?
 
 ### Signs of Specification Debt
 
@@ -55,7 +56,7 @@ Specifications evolve through continuous cycles of review and refinement.
 
 - [ ] Write `specification.feature` with Rules and Scenarios
 - [ ] Document Ubiquitous Language terms
-- [ ] Create `issues.md` for red cards
+- [ ] Create `issues.md` for pink cards
 - [ ] Share with stakeholders for review
 
 ### Short-term (1-2 Days)
@@ -63,7 +64,7 @@ Specifications evolve through continuous cycles of review and refinement.
 - [ ] Incorporate stakeholder feedback
 - [ ] Refine ambiguous scenarios
 - [ ] Add missing edge cases
-- [ ] Resolve red card questions
+- [ ] Resolve pink card questions
 
 ### During Implementation (1 Week)
 
@@ -148,6 +149,7 @@ Specifications evolve through continuous cycles of review and refinement.
 - Duplicate logic patterns
 - Language evolved but specs haven't
 - Scenarios test implementation, not behavior
+- Duplicated similar steps that can be combined for reuse
 
 ### How to Refactor
 
