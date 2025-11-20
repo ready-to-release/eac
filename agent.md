@@ -4,14 +4,13 @@
 
 **IMPORTANT**: At the start of every session, you MUST:
 
-1. **List available workspaces** using `mcp__commands__work-list` to show all git worktrees
-2. **Ask which workspace to work in** using AskUserQuestion tool to let user select the target workspace/branch
-3. **Verify workspace context**: Confirm current directory matches selected workspace, or inform user which directory to navigate to
-4. **Read this file** (`/agent.md`) to load project context
-5. **Load MCP server capabilities** by reading available MCP command tools
-6. **Internalize all constraints and guidelines** defined below
-7. **Apply these instructions** throughout the entire session
-8. **Confirm initialization** with a flashy initialization report using this format:
+1. **Detect current workspace** by checking the git branch in the current working directory
+2. **Verify workspace context**: Check if the current directory path matches the detected branch (may be a mismatch in multi-worktree setups)
+3. **Read this file** (`/agent.md`) to load project context
+4. **Load MCP server capabilities** by reading available MCP command tools
+5. **Internalize all constraints and guidelines** defined below
+6. **Apply these instructions** throughout the entire session
+7. **Confirm initialization** with a flashy initialization report using this format:
 
 ```text
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -21,9 +20,9 @@
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 Workspace Context:
-- Selected workspace: [branch name]
+- Current branch: [branch name]
 - Working directory: [current path]
-- Status: [✓ Match / ⚠ Mismatch - navigate to: path]
+- Status: [✓ Match / ⚠ MISMATCH - Expected path: [expected path for this branch]]
 
 Project Context Loaded:
 
@@ -47,7 +46,7 @@ MCP Server Status:
 Ready to assist with project tasks.
 ```
 
-**Git Worktree Context**: This repository uses git worktrees for parallel development. The `work-list` command shows all active worktrees. Always confirm which workspace the user wants to work in before proceeding.
+**Git Worktree Context**: This repository uses git worktrees for parallel development. The initialization process automatically detects the current branch based on the working directory. If there's a mismatch between the expected worktree path and the current directory, it will be highlighted in the initialization report.
 
 ### MCP Server Initialization
 
