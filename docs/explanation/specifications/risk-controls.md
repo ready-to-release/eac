@@ -123,12 +123,12 @@ flowchart TD
     D --> E[Test Evidence<br/>Results linked to control via tag]
     E --> F[Audit Trail<br/>Git history + test results]
 
-    style A fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
-    style B fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    style C fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style D fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    style E fill:#fff9c4,stroke:#f9a825,stroke-width:2px
-    style F fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style A fill:#e1f5ff,stroke:#0288d1,stroke-width:2px,color:#000
+    style B fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    style C fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style D fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    style E fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
+    style F fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
 ```
 
 ---
