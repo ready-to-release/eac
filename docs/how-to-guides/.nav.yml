@@ -1,6 +1,7 @@
 title: How-to Guides
 nav:
   - index.md
-  - claude-mcp-setup.md
+  - Configuration: 
+    - configuration/claude-mcp-setup.md
   - Commands:
     - commands/work-command-workflow.md

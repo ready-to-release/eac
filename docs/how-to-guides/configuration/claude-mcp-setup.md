@@ -1,77 +1,130 @@
 # Claude Code MCP Server Setup
 
-This project includes two MCP servers that give Claude access to CLI commands and GitHub operations.
+This project uses MCP (Model Context Protocol) servers to give Claude access to:
 
-## Quick Setup
+- **Commands Server**: All `r2r` CLI commands (modules, tests, builds, specs, etc.)
+- **GitHub Server**: GitHub operations (repos, issues, PRs, workflows)
 
-To make MCP servers auto-start when you launch Claude Code in this repo, you need:
+## Setup
 
-### 1. Set your GitHub token
+### 1. Configure Your Shell Profile
+
+Add environment variables and source the setup script in your shell profile:
+
+#### PowerShell (Windows)
+
+Edit `$PROFILE` and add:
+
+```powershell
+# Set GitHub token
+$env:GITHUB_TOKEN = "ghp_your_token_here"
+
+# Source setup script (update path to your project location)
+. "C:\path\to\project\scripts\pwsh\claude-env-setup.ps1"
+```
+
+Reload: `. $PROFILE`
+
+#### Bash/Zsh (Linux/macOS)
+
+Edit `~/.bashrc` or `~/.zshrc` and add:
 
 ```bash
-export GITHUB_TOKEN="your-github-token"
+# Set GitHub token
+export GITHUB_TOKEN="ghp_your_token_here"
+
+# Source setup script (update path to your project location)
+source "$HOME/path/to/project/scripts/sh/claude-env-setup.sh"
 ```
 
-Add this to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.) to make it permanent.
+Reload: `source ~/.bashrc` or `source ~/.zshrc`
 
-### 2. Add configuration to your local Claude config
+### 2. Generate GitHub Token
 
-Edit `~/.claude.json` (Linux/Mac) or `C:\Users\<username>\.claude.json` (Windows).
+1. Go to [https://github.com/settings/tokens](https://github.com/settings/tokens)
+2. Create a new token (classic) with scopes: `repo`, `workflow`
+3. Copy the token and set it in your shell profile (step 1)
 
-Add this section for your repo path:
+### 3. Verify Setup
 
-```json
-"C:\\source\\ready-to-release\\eac": {
-  "mcpServers": {
-    "commands": {
-      "type": "stdio",
-      "command": "go",
-      "args": ["run", "./src/mcp/commands/main.go"],
-      "env": {}
-    },
-    "github": {
-      "type": "stdio",
-      "command": "go",
-      "args": ["run", "./src/mcp/github/main.go"],
-      "env": {
-        "GITHUB_TOKEN": "your-token-here"
-      }
-    }
-  },
-  "approvedProjectMcpServers": ["commands", "github"],
-  "hasTrustDialogAccepted": true
-}
+Launch Claude Code in this project and check the initialization message:
+
+```text
+MCP Server Status:
+Commands Server (mcp__commands__*): ✅ CONNECTED
+GitHub Server (mcp__github__*): ✅ CONNECTED
 ```
 
-**Important:**
+## How It Works
 
-- Replace `C:\\source\\ready-to-release\\eac` with your actual repo path
-- On Windows, use double backslashes (`\\`)
-- On Linux/Mac, use forward slashes (`/home/user/ready-to-release/eac`)
-- Replace `your-token-here` with your actual GitHub token
+When you start Claude Code:
 
-### 3. Restart Claude Code
+1. Claude reads `.claude/settings.json` in the project root
+2. Launches MCP servers as child processes:
+   - Commands: `go run ./src/mcp/commands/main.go`
+   - GitHub: `go run ./src/mcp/github/main.go`
+3. Servers inherit environment variables from your shell
+4. Claude can call MCP tools like `mcp__commands__show-modules`
 
-Exit completely and start a fresh session in your repo directory:
+The setup scripts auto-detect the project root based on their location (two directories up from `scripts/pwsh/` or `scripts/sh/`).
+
+## Troubleshooting
+
+### MCP Servers Not Connected
+
+**Check Go version:**
 
 ```bash
-cd /path/to/ready-to-release/eac
-claude
+go version  # Should be ≥ 1.21
 ```
 
-Run `/mcp` to verify both `commands` and `github` servers are loaded.
+**Test servers manually:**
 
----
+```bash
+go run ./src/mcp/commands/main.go < /dev/null
+go run ./src/mcp/github/main.go < /dev/null  # Requires GITHUB_TOKEN
+```
 
-## Prerequisites
+**Verify environment:**
 
-- Claude Code installed
-- Go runtime
-- GitHub CLI (`gh`) authenticated
+```bash
+# PowerShell
+$env:GITHUB_TOKEN
 
----
+# Bash/Zsh
+echo $GITHUB_TOKEN
+```
+
+**Check logs:**
+
+- Session logs: `.claude/logs/session-YYYY-MM-DD.jsonl`
+
+### GitHub Authentication Fails
+
+Test your token:
+
+```bash
+curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+```
+
+If it fails, generate a new token with proper scopes.
+
+### Changes Not Taking Effect
+
+1. Close all terminal windows
+2. Open new terminal
+3. Verify environment variables are set
+4. Launch Claude Code fresh
+
+## Configuration Files
+
+- `.claude/settings.json` - MCP server configuration (managed by Claude Code)
+- `scripts/pwsh/claude-env-setup.ps1` - PowerShell setup script
+- `scripts/sh/claude-env-setup.sh` - Bash/Zsh setup script
+- `.claude-settings-example.json` - Example settings reference (this directory)
 
 ## Resources
 
 - [Claude Code MCP Docs](https://docs.claude.com/en/docs/claude-code/mcp)
 - [MCP Specification](https://spec.modelcontextprotocol.io/)
+- [GitHub Tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)

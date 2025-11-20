@@ -26,28 +26,6 @@ type ContractLoader struct {
 	contractType  ContractType // Inferred from path
 }
 
-// NewAIContractLoader creates a loader for AI contracts
-// contractName: "commit-message", "specifications"
-func NewAIContractLoader(workspaceRoot string, contractName string, version string) *ContractLoader {
-	return &ContractLoader{
-		workspaceRoot: workspaceRoot,
-		contractPath:  fmt.Sprintf("ai/%s", contractName),
-		version:       version,
-		contractType:  ContractTypeAI, // Set automatically
-	}
-}
-
-// NewDomainContractLoader creates a loader for domain contracts
-// contractName: "modules", "environments", "testing", "vscode-commit", etc.
-func NewDomainContractLoader(workspaceRoot string, contractName string, version string) *ContractLoader {
-	return &ContractLoader{
-		workspaceRoot: workspaceRoot,
-		contractPath:  contractName,
-		version:       version,
-		contractType:  ContractTypeDomain, // Set automatically
-	}
-}
-
 // NewContractLoader creates a loader with automatic type inference
 // contractPath: "ai/specifications", "modules", "environments", etc.
 func NewContractLoader(workspaceRoot string, contractPath string, version string) *ContractLoader {
@@ -63,12 +41,6 @@ func NewContractLoader(workspaceRoot string, contractPath string, version string
 		version:       version,
 		contractType:  contractType,
 	}
-}
-
-// NewSpecContractLoader creates a loader for backward compatibility
-// DEPRECATED: Use NewContractLoader, NewAIContractLoader, or NewDomainContractLoader
-func NewSpecContractLoader(workspaceRoot string, contractPath string, version string) *ContractLoader {
-	return NewContractLoader(workspaceRoot, contractPath, version)
 }
 
 // GetType returns the inferred contract type

@@ -4,10 +4,14 @@
 
 **IMPORTANT**: At the start of every session, you MUST:
 
-1. **Detect current workspace** by checking the git branch in the current working directory
+1. **Detect current workspace** from the environment context (current branch and working directory are provided in `<env>` and `gitStatus`)
 2. **Verify workspace context**: Check if the current directory path matches the detected branch (may be a mismatch in multi-worktree setups)
 3. **Read this file** (`/agent.md`) to load project context
-4. **Load MCP server capabilities** by reading available MCP command tools
+4. **Verify MCP server availability**:
+   - Check your available tool list for `mcp__commands__*` tools
+   - Check your available tool list for `mcp__github__*` tools
+   - Determine connection status: CONNECTED, NOT CONNECTED, or PARTIAL
+   - Set execution mode accordingly (MCP-First or CLI Fallback)
 5. **Internalize all constraints and guidelines** defined below
 6. **Apply these instructions** throughout the entire session
 7. **Confirm initialization** with a flashy initialization report using this format:
@@ -16,7 +20,7 @@
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃  ⚡ SYSTEM INITIALIZED ⚡                                      ┃
 ┃  Project context loaded from agent.md                         ┃
-┃  MCP servers: ACTIVE                                          ┃
+┃  MCP servers: [✅ CONNECTED / ⚠️ NOT CONNECTED / ⚠️ PARTIAL]  ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 Workspace Context:
@@ -25,23 +29,32 @@ Workspace Context:
 - Status: [✓ Match / ⚠ MISMATCH - Expected path: [expected path for this branch]]
 
 Project Context Loaded:
+- Go modular monorepo architecture
+- Three Rules of Vibe Coding: Easy to understand, Easy to change, Hard to break
+- Three-Phase Development: Specifications → TDD → Validation
+- Go version: ≥ 1.21
 
 Active Constraints:
 - Git: READ-ONLY by default. No commits/pushes/branches without explicit user request
 - Multi-Worktree Aware: Operating in [current directory] ([branch])
 - File Organization: Modules in /src, intermediate files in /out
-- MCP-First: Always prefer mcp__commands__* tools over manual file operations
+- Execution Mode: [MCP-First / CLI Fallback] based on MCP server availability
 
 MCP Server Status:
-- Module Discovery: ✓
-- Dependency Management: ✓
-- Architecture Docs: ✓
-- Build & Test: ✓
-- Git Operations: ✓
-- Specifications: ✓
-- Templates: ✓
-- Workspace Management: ✓
-- Documentation: ✓
+Commands Server (mcp__commands__*):
+  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: go run ./src/commands]
+
+GitHub Server (mcp__github__*):
+  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED / ⚠️ NOT CONFIGURED]
+
+[If NOT CONNECTED, include this troubleshooting section:]
+⚠️ MCP Troubleshooting:
+- Servers configured in: .mcp.json
+- Commands server: go run ./src/mcp/commands/main.go
+- GitHub server: go run ./src/mcp/github/main.go
+- Verify servers can start: go run ./src/mcp/commands/main.go < /dev/null
+- Check Claude Code MCP server logs for errors
+- Fallback: All operations will use direct CLI commands
 
 Ready to assist with project tasks.
 ```
@@ -50,17 +63,34 @@ Ready to assist with project tasks.
 
 ### MCP Server Initialization
 
-This project uses **MCP (Model Context Protocol) servers** to provide specialized commands for managing the modular monorepo architecture. During initialization, you MUST:
+This project uses **MCP (Model Context Protocol) servers** to provide specialized commands for managing the modular monorepo architecture.
 
-1. Recognize available `mcp__commands__*` tools
-2. Understand their purpose and when to use them
-3. Prefer MCP commands over manual file operations for module-related tasks
+#### Verification Steps
 
-**Available MCP Command Categories:**
+During initialization, you MUST verify MCP server availability:
+
+1. **Check for MCP tools** in your available tool list:
+   - Look for tools prefixed with `mcp__commands__*`
+   - Look for tools prefixed with `mcp__github__*`
+
+2. **Determine MCP status**:
+   - ✅ **CONNECTED**: If `mcp__commands__*` tools are available
+   - ⚠️ **NOT CONNECTED**: If no `mcp__*` tools are found
+   - ⚠️ **PARTIAL**: If some but not all expected servers are available
+
+3. **Report actual status** in initialization report (see below)
+
+4. **Set execution mode**:
+   - If CONNECTED: Use MCP-first approach (prefer `mcp__commands__*` tools)
+   - If NOT CONNECTED: Use fallback CLI approach (`go run ./src/commands`)
+
+#### Expected MCP Servers
+
+**Commands Server** (`mcp__commands__*`):
 
 - **Module Discovery**: `get-modules`, `show-modules`, `show-moduletypes`, `get-files`, `show-files`
 - **Dependency Management**: `get-dependencies`, `show-dependencies`, `validate-dependencies`, `get-execution-order`
-- **Architecture Documentation**: `design-*` (Structurizr integration)
+- **Architecture Documentation**: `design-create*`, `design-validate*`, `design-serve*`
 - **Build & Test**: `build-module`, `build-modules`, `test-module`, `test-modules`, `pipeline-run`
 - **Documentation**: `docs-serve` (MkDocs integration)
 - **Git Operations**: `commit-ai`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
@@ -68,11 +98,38 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 - **Templates**: `templates-list`, `templates-install`, `templates-apply`
 - **Workspace Management**: `work-create`, `work-list`, `work-commit`
 
+**GitHub Server** (`mcp__github__*`):
+
+- Repository operations, issue management, PR operations, workflow execution
+
+#### Fallback Mode
+
+If MCP servers are NOT CONNECTED, use direct CLI commands:
+
+| MCP Tool | Fallback Command |
+|----------|------------------|
+| `mcp__commands__show-modules` | `go run ./src/commands show modules` |
+| `mcp__commands__test-module` | `go run ./src/commands test module <name>` |
+| `mcp__commands__build-module` | `go run ./src/commands build module <name>` |
+| `mcp__commands__specs-create` | `go run ./src/commands specs create <description>` |
+| `mcp__commands__specs-validate` | `go run ./src/commands specs validate` |
+| All other tools | `go run ./src/commands <command> [args]` |
+
 ---
 
-## MCP-First Execution Policy
+## Execution Policy
+
+### When MCP Servers are CONNECTED
 
 **ALWAYS use `mcp__commands__*` tools for project operations.**
+
+Prefer MCP tools over direct CLI commands for all module-related operations.
+
+### When MCP Servers are NOT CONNECTED
+
+**Use CLI fallback commands**: `go run ./src/commands <command> [args]`
+
+Continue working normally using direct CLI commands. All functionality remains available, just accessed differently.
 
 ## Project Constraints
 

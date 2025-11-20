@@ -1,5 +1,5 @@
 // Command: design
-// Description: Architecture documentation tools using Structurizr - Main command
+// Description: Create, validate, and view architecture diagrams using Structurizr DSL
 // HasSideEffects: false
 package design
 
@@ -25,17 +25,14 @@ func Design() int {
 
 	// Check for subcommands
 	switch args[0] {
-	case "new", "add", "export":
-		// Handled by separate registrations in respective files
-		return 0
-	case "serve":
-		// Handled by separate registration
-		return 0
-	case "list":
-		// Handled by separate registration
+	case "create":
+		// Handled by separate registration in create/create.go
 		return 0
 	case "validate":
-		// Handled by separate registration
+		// Handled by separate registration in validate.go
+		return 0
+	case "serve":
+		// Handled by separate registration in serve.go
 		return 0
 	case "--help", "-h":
 		printDesignUsage()
@@ -48,47 +45,52 @@ func Design() int {
 }
 
 func printDesignUsage() {
-	fmt.Println("Architecture documentation tools using Structurizr")
+	fmt.Println("Architecture documentation using Structurizr DSL and C4 model diagrams")
 	fmt.Println()
-	fmt.Println("Usage: go run . design <subcommand> [args...]")
+	fmt.Println("Structurizr Lite is a web-based viewer for architecture diagrams defined in DSL.")
+	fmt.Println("DSL files define System Context, Container, and Component views.")
 	fmt.Println()
-	fmt.Println("Authoring Subcommands:")
-	fmt.Println("  new <module>              Create new architecture workspace")
-	fmt.Println("  add container             Add container to workspace")
-	fmt.Println("  add relationship          Add relationship between containers")
-	fmt.Println("  export <module>           Export workspace DSL content")
+	fmt.Println("Usage:")
+	fmt.Println("  r2r design <subcommand> [args...]")
 	fmt.Println()
-	fmt.Println("Viewing Subcommands:")
-	fmt.Println("  serve <module>            Start Structurizr Lite viewer")
-	fmt.Println("  list                      List available modules with documentation")
+	fmt.Println("Commands:")
+	fmt.Println("  create <module>    Generate workspace.dsl for a module")
+	fmt.Println("  validate <module>  Validate workspace.dsl syntax")
+	fmt.Println("  validate --all     Validate all workspace files")
+	fmt.Println("  serve <module>     View diagrams in browser (http://localhost:8080)")
 	fmt.Println()
-	fmt.Println("Validation Subcommands:")
-	fmt.Println("  validate <module>         Validate workspace file for one module")
-	fmt.Println("  validate --all            Validate workspace files for all modules")
+	fmt.Println("Module Examples:")
+	fmt.Println("  src-cli              → specs/src-cli/design/workspace.dsl")
+	fmt.Println("  contracts            → specs/contracts/design/workspace.dsl")
+	fmt.Println("  docs                 → specs/docs/design/workspace.dsl")
+	fmt.Println("  specs/src-cli/design → specs/src-cli/design/workspace.dsl (auto-cleaned)")
+	fmt.Println()
+	fmt.Println("File Locations:")
+	fmt.Println("  Source:    specs/<module>/design/workspace.dsl   (tracked in git)")
+	fmt.Println("  Generated: specs/<module>/design/workspace.json  (ignored by git)")
+	fmt.Println("  Generated: specs/<module>/design/.structurizr/   (ignored by git)")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  # Create workspace")
-	fmt.Println("  go run . design new src-cli --name \"CLI\" --description \"CLI Architecture\"")
+	fmt.Println("  # Generate architecture for a module")
+	fmt.Println("  r2r design create src-cli")
 	fmt.Println()
-	fmt.Println("  # Add containers")
-	fmt.Println("  go run . design add container src-cli parser --tech \"Go\" --desc \"Parses commands\"")
+	fmt.Println("  # Generate with debug output")
+	fmt.Println("  r2r design create contracts --debug")
 	fmt.Println()
-	fmt.Println("  # Add relationships")
-	fmt.Println("  go run . design add relationship src-cli parser executor --desc \"sends to\"")
+	fmt.Println("  # Validate workspace syntax")
+	fmt.Println("  r2r design validate src-cli")
 	fmt.Println()
-	fmt.Println("  # Export workspace")
-	fmt.Println("  go run . design export src-cli")
+	fmt.Println("  # View diagrams in browser")
+	fmt.Println("  r2r design serve src-cli")
 	fmt.Println()
-	fmt.Println("  # View in browser")
-	fmt.Println("  go run . design serve src-cli")
+	fmt.Println("Flags (create):")
+	fmt.Println("  --debug, -d    Save AI prompts and responses to out/ for debugging")
+	fmt.Println("  --force, -f    Overwrite existing workspace.dsl file")
 	fmt.Println()
-	fmt.Println("  # List modules")
-	fmt.Println("  go run . design list")
+	fmt.Println("Requirements:")
+	fmt.Println("  - Docker (for validate and serve commands)")
+	fmt.Println("  - Anthropic API key (for create command)")
 	fmt.Println()
-	fmt.Println("  # Validate workspace")
-	fmt.Println("  go run . design validate src-cli")
-	fmt.Println("  go run . design validate --all")
-	fmt.Println()
-	fmt.Println("For detailed help on a subcommand:")
-	fmt.Println("  go run . design <subcommand> --help")
+	fmt.Println("Help:")
+	fmt.Println("  r2r design <subcommand> --help")
 }

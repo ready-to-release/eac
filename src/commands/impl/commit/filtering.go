@@ -19,7 +19,7 @@ import (
 //   - "module": looks for plain module names
 func stripAgentNoise(output string, agentType string, workspaceRoot string) string {
 	// Load anti-corruption rules using contract loader
-	loader := contracts.NewSpecContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	rules, err := loader.LoadAntiCorruptionRules()
 
 	// Determine content marker based on agent type

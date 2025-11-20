@@ -7,6 +7,7 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/completion"
 	_ "github.com/ready-to-release/eac/src/commands/impl/describe"
 	_ "github.com/ready-to-release/eac/src/commands/impl/design"
+	_ "github.com/ready-to-release/eac/src/commands/impl/design/create"
 	_ "github.com/ready-to-release/eac/src/commands/impl/docs"
 	_ "github.com/ready-to-release/eac/src/commands/impl/get"
 	_ "github.com/ready-to-release/eac/src/commands/impl/help"

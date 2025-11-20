@@ -74,7 +74,7 @@ func GenerateWithContract(ctx context.Context, cfg *GeneratorConfig, prompt stri
 	}
 
 	// Load contract
-	loader := NewAIContractLoader(cfg.WorkspaceRoot, cfg.ContractName, cfg.ContractVersion)
+	loader := NewContractLoader(cfg.WorkspaceRoot, "ai/"+cfg.ContractName, cfg.ContractVersion)
 	contract, err := loader.LoadContract()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load contract: %w", err)

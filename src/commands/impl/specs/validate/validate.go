@@ -239,7 +239,7 @@ func validateGherkinFile(filePath string, repoRoot string) ([]contracts.Validati
 	}
 
 	// Load contract and validator
-	loader := contracts.NewSpecContractLoader(repoRoot, "ai/specifications", "0.1.0")
+	loader := contracts.NewContractLoader(repoRoot, "ai/specifications", "0.1.0")
 
 	contractData, err := loader.LoadContract()
 	if err != nil {

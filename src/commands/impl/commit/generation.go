@@ -19,7 +19,7 @@ import (
 // 3. Built-in: embedded prompts/<name>.md
 func loadPromptWithFallback(promptName string, workspaceRoot string) (string, error) {
 	// Create contract loader
-	loader := contracts.NewAIContractLoader(workspaceRoot, "commit-message", "0.1.0")
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 
 	// No embedded prompt - load from .r2r/contracts or contracts/ai
 	var embeddedPrompt string
@@ -53,7 +53,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	providers.RegisterBuiltIn(executor)
 
 	// Load contract and anti-corruption rules
-	loader := contracts.NewSpecContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		// If contract fails, fall back to non-validated generation

@@ -76,7 +76,7 @@ func TestPromptContractEmbedding(t *testing.T) {
 	}
 
 	// Load contract and anti-corruption
-	loader := contracts.NewSpecContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		t.Fatalf("Failed to load contract: %v", err)
@@ -137,7 +137,7 @@ func TestTemplateBackwardCompatibility(t *testing.T) {
 	// We can't easily simulate a failure here, so we just verify the code path exists
 	// by checking that the function has proper error handling
 
-	loader := contracts.NewSpecContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	_, err = loader.LoadContract()
 	if err != nil {
 		t.Logf("Contract loading failed (expected in some test scenarios): %v", err)
