@@ -10,8 +10,8 @@
 #
 # INSTRUCTIONS:
 # 1. Replace [placeholders] with actual content
-# 2. Rules represent acceptance criteria (ATDD layer)
-# 3. Scenarios under Rules are executable examples (BDD layer)
+# 2. Rules represent acceptance criteria
+# 3. Scenarios under Rules are executable examples
 # 4. Save this file in specs/<module>/<feature>/
 # 5. Implement step definitions separately in src/<module>/tests/steps_test.go
 #
@@ -33,9 +33,6 @@ Feature: [module-name_feature-name]
 
   Rule: [Acceptance Criterion 1 - Business Rule]
 
-    # ATDD: This Rule defines an acceptance criterion
-    # BDD: Scenarios below provide executable examples
-    #
     # Tag Guidelines (testing taxonomy tags only):
     # - @ov (operational verification) - REQUIRED for all functional tests
     # - @iv (installation verification) - Use for deployment/smoke tests in PLTE

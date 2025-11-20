@@ -42,12 +42,12 @@ flowchart TD
     Story["As a...I want...So that...<br/>(User story - business context)"]
     Background["Background: (optional)<br/>(Common setup for all scenarios)"]
 
-    Rule1["Rule: Acceptance Criterion 1<br/>(Blue Card - ATDD layer)"]
-    Rule2["Rule: Acceptance Criterion 2<br/>(Blue Card - ATDD layer)"]
+    Rule1["Rule: Acceptance Criterion 1<br/>(Blue Card)"]
+    Rule2["Rule: Acceptance Criterion 2<br/>(Blue Card)"]
 
-    Scenario1["Scenario: Happy path<br/>(Green Card - BDD layer)"]
-    Scenario2["Scenario: Error case<br/>(Green Card - BDD layer)"]
-    Scenario3["Scenario: Edge case<br/>(Green Card - BDD layer)"]
+    Scenario1["Scenario: Happy path<br/>(Green Card)"]
+    Scenario2["Scenario: Error case<br/>(Green Card)"]
+    Scenario3["Scenario: Edge case<br/>(Green Card)"]
 
     Feature --> Tags
     Feature --> Story
@@ -59,12 +59,12 @@ flowchart TD
     Rule1 --> Scenario2
     Rule2 --> Scenario3
 
-    style Feature fill:#fff9c4
-    style Rule1 fill:#bbdefb
-    style Rule2 fill:#bbdefb
-    style Scenario1 fill:#c8e6c9
-    style Scenario2 fill:#c8e6c9
-    style Scenario3 fill:#c8e6c9
+    style Feature fill:#F7E55A,color:#000
+    style Rule1 fill:#5BA3F7,color:#000
+    style Rule2 fill:#5BA3F7,color:#000
+    style Scenario1 fill:#7EDC7A,color:#000
+    style Scenario2 fill:#7EDC7A,color:#000
+    style Scenario3 fill:#7EDC7A,color:#000
 ```
 
 **Design principle**: Each level serves a distinct purpose and audience.
@@ -168,7 +168,7 @@ Feature: project_security-validation
 
 ### Scenario Coverage Strategy
 
-Each Rule typically needs **2-4 scenarios**:
+Each Rule needs to be clearly defined by:
 
 1. **Happy path** - Primary use case
 2. **Error cases** - How system handles failures
@@ -208,30 +208,11 @@ Rule: Configuration file must contain valid module definitions
 - Scenario failure doesn't cascade to others
 - Each scenario is self-documenting (complete context visible)
 
-**Bad** (scenarios depend on each other):
+Gherkin is a formal language. It is designed to enable reusability. It is encouraged that the team design each step so it can be reused in many places. This design will allow the team to discover similarities in the domain, extract and make them explicit steps. It deepens the ubiquitous language that the team uses and puts it into an explicit context.
 
-```gherkin
-Scenario: Create project
-  When I run "r2r init myproject"
-  Then project "myproject" is created
+It also means that each such step, when implemented in the glue, gets cleaned up. So that scenarios does not depend on previously executed scenarios, unless the same steps are repeated in both.
 
-Scenario: Build project  # Assumes previous scenario ran!
-  When I run "r2r build"
-  Then build succeeds
-```
-
-**Good** (each scenario is independent):
-
-```gherkin
-Scenario: Create project
-  When I run "r2r init myproject"
-  Then project "myproject" is created
-
-Scenario: Build existing project
-  Given I have a project "myproject"  # Explicit setup
-  When I run "r2r build"
-  Then build succeeds
-```
+To learn more about this, read [Effective Behaviour Driven Development](../references.md#effective-behavior-driven-development) by Gáspár Nagy and Seb Rose.
 
 ---
 
