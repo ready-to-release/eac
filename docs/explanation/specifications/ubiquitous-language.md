@@ -237,5 +237,5 @@ Code using Ubiquitous Language:
 - [Event Storming](./event-storming.md) - Domain discovery workshops
 - [Example Mapping](./example-mapping.md) - Requirements discovery
 - [Review and Iterate](review-and-iterate.md) - How specifications evolve with language
-- [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md) - Writing specifications
+- [Working with specifications](working-with-specifications.md) - Writing specifications
 - [Three-Layer Approach](./three-layer-approach.md) - How ATDD/BDD/TDD work together

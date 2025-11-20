@@ -287,5 +287,5 @@ grep -r "Scenario:" specs/ | cut -d: -f1 | uniq -c | sort -rn
 - [Example Mapping](example-mapping.md) - Where specifications begin
 - [Ubiquitous Language](ubiquitous-language.md) - Language evolution
 - [Event Storming](event-storming.md) - Domain discovery
-- [ATDD and BDD with Gherkin](atdd-bdd-with-gherkin.md) - Writing scenarios
+- [Working with specifications](working-with-specifications.md) - Writing scenarios
 - [Risk Controls](risk-controls.md) - Compliance reviews

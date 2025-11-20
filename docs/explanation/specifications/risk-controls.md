@@ -225,5 +225,5 @@ Risk controls evolve with threats, regulations, and system architecture.
 ## See Also
 
 - [Review and Iterate](review-and-iterate.md) - General specification maintenance
-- [ATDD and BDD with Gherkin](atdd-bdd-with-gherkin.md) - Writing control scenarios
+- [Working with specifications](working-with-specifications.md) - Writing control scenarios
 - [Three-Layer Approach](three-layer-approach.md) - Integrating controls into workflow

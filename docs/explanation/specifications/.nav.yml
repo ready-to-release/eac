@@ -2,7 +2,7 @@ title: Specifications
 nav:
   - index.md
   - three-layer-approach.md
-  - atdd-bdd-with-gherkin.md
+  - working-with-specifications.md
   - gherkin-concepts.md
   - tag-reference.md
   - gxp-tagging.md

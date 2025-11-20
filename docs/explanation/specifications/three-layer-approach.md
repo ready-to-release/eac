@@ -430,7 +430,7 @@ For complete tag documentation, see:
 
 ## Related Documentation
 
-- [ATDD and BDD with Gherkin](atdd-bdd-with-gherkin.md) - Unified approach using Rule blocks
+- [Working with specifications](working-with-specifications.md) - Unified approach using Rule blocks
 - [Ubiquitous Language](ubiquitous-language.md) - Shared vocabulary foundation
 - [Review and Iterate](review-and-iterate.md) - Continuous improvement
 - [Event Storming](event-storming.md) - Domain discovery workshops

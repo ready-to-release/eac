@@ -105,7 +105,7 @@ The transformation section focuses on the **organizational journey**. Technical 
 
 - [Three-Layer Testing Approach](../specifications/three-layer-approach.md)
 - [Risk Controls](../specifications/risk-controls.md)
-- [ATDD and BDD with Gherkin](../specifications/atdd-bdd-with-gherkin.md)
+- [Working with specifications](../specifications/working-with-specifications.md)
 - [Gherkin File Organization](../specifications/gherkin-concepts.md)
 
 ### For Architecture

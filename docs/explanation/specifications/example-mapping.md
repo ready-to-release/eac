@@ -261,6 +261,6 @@ Split when:
 
 ## See Also
 
-- [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md) - Concepts behind specifications
+- [Working with specifications](working-with-specifications.md) - Concepts behind specifications
 - [Three-Layer Approach](./three-layer-approach.md) - How Example Mapping fits the workflow
 - [Review and Iterate](review-and-iterate.md) - Maintaining living specifications

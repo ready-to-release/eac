@@ -6,7 +6,7 @@ Understanding how to structure and organize Gherkin specification files effectiv
 
 ## Purpose
 
-This guide explains **how to organize Gherkin files** for maintainability and clarity. For understanding ATDD/BDD concepts, see [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md).
+This guide explains **how to organize Gherkin files** for maintainability and clarity. For understanding BDD, see [Working with specifications](working-with-specifications.md).
 
 ---
 
@@ -469,6 +469,6 @@ Convert Blue Cards → Rules, Green Cards → Scenarios
 
 ## Related Documentation
 
-- [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md) - Understanding ATDD/BDD
+- [Working with specifications](working-with-specifications.md) - Understanding BDD
 - [Three-Layer Approach](./three-layer-approach.md) - ATDD/BDD/TDD integration
 - [Example Mapping](./example-mapping.md) - Discovery workshops

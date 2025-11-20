@@ -29,7 +29,7 @@ Understanding how ATDD, BDD, and TDD work together to deliver quality software.
 - Traceability across layers
 - Example workflow from requirement to code
 
-### [ATDD and BDD with Gherkin](atdd-bdd-with-gherkin.md)
+### [Working with specifications](working-with-specifications.md)
 
 Understanding how Acceptance Test-Driven Development and Behavior-Driven Development work together using unified Gherkin format.
 
