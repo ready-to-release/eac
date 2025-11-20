@@ -1,4 +1,4 @@
-// Package design provides formatting for validation results
+// Package design provides formatting for Structurizr CLI validation results
 package design
 
 import (
@@ -14,7 +14,7 @@ func FormatValidationResult(result *ValidationResult, verbose bool) string {
 
 	output += fmt.Sprintf("🔍 Validating module: %s\n", result.Module)
 	output += fmt.Sprintf("📄 Workspace: %s\n", result.WorkspacePath)
-	output += "🐳 Using Docker: structurizr/cli\n"
+	output += "🐳 Using Docker: structurizr/cli:latest\n"
 
 	if verbose {
 		output += fmt.Sprintf("⏱️  Started at: %s\n", result.Timestamp.Format("15:04:05"))
@@ -73,14 +73,12 @@ func FormatValidationResult(result *ValidationResult, verbose bool) string {
 			}
 		}
 
-		output += fmt.Sprintf("    docker run \\\n")
-		output += fmt.Sprintf("      --name structurizr-validation-<timestamp> \\\n")
+		output += fmt.Sprintf("    docker run --rm \\\n")
 		output += fmt.Sprintf("      -v \"%s:/workspace\" \\\n", workspaceDir)
-		output += fmt.Sprintf("      structurizr/cli \\\n")
+		output += fmt.Sprintf("      structurizr/cli:latest \\\n")
 		output += fmt.Sprintf("      validate -workspace /workspace/workspace.dsl\n")
-		output += "\n  Note: Container logs are captured via 'docker logs' and container is removed after validation\n"
 
-		output += "\n  Raw Structurizr CLI Output (from stdout/stderr + container logs):\n"
+		output += "\n  Raw Structurizr CLI Output:\n"
 		if result.RawOutput == "" {
 			output += "  (No output captured - this may indicate an issue with Docker execution)\n"
 		} else {
@@ -96,7 +94,7 @@ func FormatValidationSummary(summary *ValidationSummary, verbose bool) string {
 	output := ""
 
 	output += "🔍 Validating all modules...\n"
-	output += "🐳 Using Docker: structurizr/cli\n"
+	output += "🐳 Using Docker: structurizr/cli:latest\n"
 
 	if verbose {
 		output += fmt.Sprintf("⏱️  Started at: %s\n", summary.Timestamp.Format("15:04:05"))

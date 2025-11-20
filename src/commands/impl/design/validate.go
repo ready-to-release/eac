@@ -1,5 +1,14 @@
 // Command: design validate
-// Description: Validate workspace files using Structurizr CLI
+// Description: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
+// Short: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
+// Long: Validates workspace.dsl files for syntax errors and structural issues using the official
+// Long: Structurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,
+// Long: and ensures the workspace can be properly rendered. Validation results are displayed in the
+// Long: console with human-readable output and saved to out/design-validation-results.json for detailed
+// Long: inspection. Use --all to validate all workspace files in specs/*/design/ directories.
+// Usage: design validate <module>
+// Flag.all: type=bool, shorthand=a, default=false, usage=Validate all workspace files in specs/*/design/ directories
+// Flag.verbose: type=bool, shorthand=v, default=false, usage=Show Docker command and raw Structurizr CLI output
 // HasSideEffects: false
 package design
 
@@ -8,7 +17,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/src/commands/impl/design/internal"
+	design "github.com/ready-to-release/eac/src/commands/impl/design/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 )
 
@@ -90,6 +99,15 @@ func DesignValidate() int {
 }
 
 func validateSingleModule(validator design.StructurizrValidator, module string, outputPath string, verbose bool) int {
+	// Clean up module path - remove specs/ prefix and /design suffix if present
+	module = design.CleanModuleName(module)
+
+	// Validate module name
+	if err := design.ValidateModuleName(module); err != nil {
+		fmt.Printf("❌ Invalid module name: %v\n", err)
+		return 2
+	}
+
 	// Validate module
 	result, err := validator.ValidateModule(module)
 	if err != nil {
@@ -146,43 +164,36 @@ func validateAllModules(validator design.StructurizrValidator, outputPath string
 }
 
 func printValidateUsage() {
-	fmt.Println("Validate Structurizr workspace files using Structurizr CLI")
+	fmt.Println("Validate workspace.dsl syntax using Structurizr CLI")
+	fmt.Println()
+	fmt.Println("Checks workspace.dsl files for syntax errors and structural issues.")
+	fmt.Println("Runs validation in Docker using the official Structurizr CLI image.")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  go run . design validate <module>    Validate one module")
-	fmt.Println("  go run . design validate --all       Validate all modules")
+	fmt.Println("  r2r design validate <module>   Validate one module")
+	fmt.Println("  r2r design validate --all      Validate all modules")
 	fmt.Println()
-	fmt.Println("Options:")
-	fmt.Println("  --all, -a        Validate all modules with workspace files")
-	fmt.Println("  --verbose, -v    Show detailed validation output (Docker command, raw CLI output)")
+	fmt.Println("Flags:")
+	fmt.Println("  --all, -a        Validate all workspace files in specs/*/design/")
+	fmt.Println("  --verbose, -v    Show Docker command and raw Structurizr CLI output")
 	fmt.Println("  --help, -h       Show this help message")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  # Validate single module")
-	fmt.Println("  go run . design validate src-cli")
+	fmt.Println("  r2r design validate src-cli")
+	fmt.Println("  r2r design validate contracts --verbose")
+	fmt.Println("  r2r design validate specs/src-cli/design     (auto-cleaned)")
+	fmt.Println("  r2r design validate --all")
 	fmt.Println()
-	fmt.Println("  # Validate with verbose output")
-	fmt.Println("  go run . design validate src-cli --verbose")
-	fmt.Println()
-	fmt.Println("  # Validate all modules")
-	fmt.Println("  go run . design validate --all")
-	fmt.Println()
-	fmt.Println("  # Validate all with verbose output")
-	fmt.Println("  go run . design validate --all --verbose")
+	fmt.Println("Module Locations:")
+	fmt.Println("  src-cli     → specs/src-cli/design/workspace.dsl")
+	fmt.Println("  contracts   → specs/contracts/design/workspace.dsl")
 	fmt.Println()
 	fmt.Println("Output:")
-	fmt.Println("  - Console: Human-readable validation results")
-	fmt.Println("  - JSON file: out/design-validation-results.json (contains raw_output field)")
+	fmt.Println("  Console: Human-readable validation summary")
+	fmt.Println("  File:    out/design-validation-results.json (detailed results)")
 	fmt.Println()
-	fmt.Println("Verbose Mode Details:")
-	fmt.Println("  - Shows Docker command executed")
-	fmt.Println("  - Shows raw Structurizr CLI output")
-	fmt.Println("  - Shows workspace file paths")
-	fmt.Println("  - Shows execution timestamps")
-	fmt.Println()
-	fmt.Println("Requirements:")
-	fmt.Println("  - Docker must be running")
-	fmt.Println("  - Structurizr CLI image will be pulled automatically if not present")
+	fmt.Println("Note:")
+	fmt.Println("  Accepts module name with or without 'specs/' prefix and '/design' suffix.")
 }
 
 // getValidationOutputPath returns the absolute path to the validation output JSON file

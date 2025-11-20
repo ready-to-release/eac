@@ -1,211 +1,726 @@
 {
   "configuration" : { },
-  "description" : "Ready to Release CLI - Enterprise-grade automation framework with containerized extensions",
+  "description" : "CLI application with AI-driven architecture documentation generation",
   "documentation" : { },
   "id" : 1,
   "lastModifiedAgent" : "structurizr-ui",
-  "lastModifiedDate" : "2025-11-06T22:09:59Z",
+  "lastModifiedDate" : "2025-11-20T13:12:09Z",
   "model" : {
+    "people" : [ {
+      "description" : "Uses CLI to generate and validate architecture",
+      "id" : "1",
+      "name" : "Developer",
+      "properties" : {
+        "structurizr.dsl.identifier" : "developer"
+      },
+      "relationships" : [ {
+        "description" : "Executes CLI commands",
+        "destinationId" : "7",
+        "id" : "37",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Executes CLI commands",
+        "destinationId" : "6",
+        "id" : "38",
+        "linkedRelationshipId" : "37",
+        "sourceId" : "1"
+      } ],
+      "tags" : "Element,Person"
+    } ],
     "softwareSystems" : [ {
+      "description" : "Provides LLM for architecture generation",
+      "documentation" : { },
+      "id" : "2",
+      "name" : "Anthropic API",
+      "properties" : {
+        "structurizr.dsl.identifier" : "anthropic_api"
+      },
+      "tags" : "Element,Software System,External"
+    }, {
+      "description" : "Runs validation and viewer containers",
+      "documentation" : { },
+      "id" : "3",
+      "name" : "Docker Engine",
+      "properties" : {
+        "structurizr.dsl.identifier" : "docker_engine"
+      },
+      "tags" : "Element,Software System,External"
+    }, {
+      "description" : "Stores workspace DSL and configuration",
+      "documentation" : { },
+      "id" : "4",
+      "name" : "File System",
+      "properties" : {
+        "structurizr.dsl.identifier" : "file_system"
+      },
+      "tags" : "Element,Software System,External"
+    }, {
+      "description" : "Manages version control and module paths",
+      "documentation" : { },
+      "id" : "5",
+      "name" : "Git Repository",
+      "properties" : {
+        "structurizr.dsl.identifier" : "git_repo"
+      },
+      "tags" : "Element,Software System,External"
+    }, {
       "containers" : [ {
-        "description" : "Command-line interface with argument parsing and command routing",
-        "documentation" : { },
-        "id" : "2",
-        "name" : "CLI Application",
-        "properties" : {
-          "structurizr.dsl.identifier" : "cli_application"
-        },
-        "relationships" : [ {
-          "description" : "Parses command-line arguments",
-          "destinationId" : "10",
-          "id" : "11",
-          "sourceId" : "2",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        }, {
-          "description" : "Loads configuration",
-          "destinationId" : "3",
-          "id" : "12",
-          "sourceId" : "2",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        }, {
-          "description" : "Logs commands and errors",
-          "destinationId" : "8",
-          "id" : "13",
-          "sourceId" : "2",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        }, {
-          "description" : "Executes extensions in containers",
-          "destinationId" : "4",
-          "id" : "14",
-          "sourceId" : "2",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        }, {
-          "description" : "Installs and manages extensions",
-          "destinationId" : "5",
-          "id" : "15",
-          "sourceId" : "2",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        } ],
-        "tags" : "Element,Container",
-        "technology" : "Go (Cobra)"
-      }, {
-        "description" : "Loads, validates, and merges YAML configuration files with extension definitions",
-        "documentation" : { },
-        "id" : "3",
-        "name" : "Configuration Manager",
-        "properties" : {
-          "structurizr.dsl.identifier" : "configuration_manager"
-        },
-        "relationships" : [ {
-          "description" : "Validates configuration schema",
-          "destinationId" : "7",
-          "id" : "16",
-          "sourceId" : "3",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        }, {
-          "description" : "Checks for pinned versions",
-          "destinationId" : "9",
-          "id" : "17",
-          "sourceId" : "3",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        }, {
-          "description" : "Fetches latest extension versions",
-          "destinationId" : "6",
-          "id" : "18",
-          "sourceId" : "3",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        } ],
-        "tags" : "Element,Container",
-        "technology" : "Go (Viper)"
-      }, {
-        "description" : "Manages Docker container lifecycle, volumes, and networking",
-        "documentation" : { },
-        "id" : "4",
-        "name" : "Docker Orchestrator",
-        "properties" : {
-          "structurizr.dsl.identifier" : "docker_orchestrator"
-        },
-        "relationships" : [ {
-          "description" : "Logs container operations",
-          "destinationId" : "8",
-          "id" : "21",
-          "sourceId" : "4",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        } ],
-        "tags" : "Element,Container",
-        "technology" : "Go (Docker SDK)"
-      }, {
-        "description" : "Installs and manages CLI extensions from registries",
-        "documentation" : { },
-        "id" : "5",
-        "name" : "Extension Manager",
-        "properties" : {
-          "structurizr.dsl.identifier" : "extension_manager"
-        },
-        "relationships" : [ {
-          "description" : "Downloads extension images",
-          "destinationId" : "6",
-          "id" : "19",
-          "sourceId" : "5",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        }, {
-          "description" : "Updates cache with extension metadata",
-          "destinationId" : "9",
-          "id" : "20",
-          "sourceId" : "5",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        } ],
-        "tags" : "Element,Container",
-        "technology" : "Go"
-      }, {
-        "description" : "Fetches extension metadata and versions from GitHub Container Registry",
-        "documentation" : { },
-        "id" : "6",
-        "name" : "GitHub Registry Client",
-        "properties" : {
-          "structurizr.dsl.identifier" : "github_registry_client"
-        },
-        "relationships" : [ {
-          "description" : "Logs registry API calls",
-          "destinationId" : "8",
-          "id" : "22",
-          "sourceId" : "6",
-          "tags" : "Relationship",
-          "technology" : "Function calls"
-        } ],
-        "tags" : "Element,Container",
-        "technology" : "Go (HTTP)"
-      }, {
-        "description" : "Validates configuration schema, extension metadata, and command syntax",
+        "description" : "Routes design subcommands",
         "documentation" : { },
         "id" : "7",
-        "name" : "Validation Engine",
+        "name" : "Command Router",
         "properties" : {
-          "structurizr.dsl.identifier" : "validation_engine"
+          "structurizr.dsl.identifier" : "command_router"
         },
+        "relationships" : [ {
+          "description" : "Routes to design create",
+          "destinationId" : "8",
+          "id" : "39",
+          "sourceId" : "7",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Routes to design validate",
+          "destinationId" : "16",
+          "id" : "40",
+          "sourceId" : "7",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Routes to design serve",
+          "destinationId" : "23",
+          "id" : "41",
+          "sourceId" : "7",
+          "tags" : "Relationship"
+        } ],
         "tags" : "Element,Container",
         "technology" : "Go"
       }, {
-        "description" : "Structured logging with context and multiple output formats",
+        "components" : [ {
+          "description" : "Parses CLI arguments into DesignConfig",
+          "documentation" : { },
+          "id" : "9",
+          "name" : "Config Parser",
+          "properties" : {
+            "structurizr.dsl.identifier" : "config_parser"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Verifies module exists in specs directory",
+          "documentation" : { },
+          "id" : "10",
+          "name" : "Module Validator",
+          "properties" : {
+            "structurizr.dsl.identifier" : "module_validator"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Verifies Docker availability",
+          "documentation" : { },
+          "id" : "11",
+          "name" : "Docker Checker",
+          "properties" : {
+            "structurizr.dsl.identifier" : "docker_checker"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Constructs AI prompt with contracts",
+          "documentation" : { },
+          "id" : "12",
+          "name" : "Prompt Builder",
+          "properties" : {
+            "structurizr.dsl.identifier" : "prompt_builder"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Calls Anthropic API for DSL generation",
+          "documentation" : { },
+          "id" : "13",
+          "name" : "AI Generator",
+          "properties" : {
+            "structurizr.dsl.identifier" : "ai_generator"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Runs quick and full validation phases",
+          "documentation" : { },
+          "id" : "14",
+          "name" : "Composite Validator",
+          "properties" : {
+            "structurizr.dsl.identifier" : "composite_validator"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Writes DSL to workspace.dsl file",
+          "documentation" : { },
+          "id" : "15",
+          "name" : "Output Writer",
+          "properties" : {
+            "structurizr.dsl.identifier" : "output_writer"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        } ],
+        "description" : "Generates Structurizr DSL using AI",
         "documentation" : { },
         "id" : "8",
-        "name" : "Logger",
+        "name" : "Design Create",
         "properties" : {
-          "structurizr.dsl.identifier" : "logger"
+          "structurizr.dsl.identifier" : "create_service"
         },
+        "relationships" : [ {
+          "description" : "Loads contracts and builds prompt",
+          "destinationId" : "27",
+          "id" : "42",
+          "sourceId" : "8",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Resolves module paths",
+          "destinationId" : "31",
+          "id" : "43",
+          "sourceId" : "8",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Requests architecture generation",
+          "destinationId" : "34",
+          "id" : "44",
+          "sourceId" : "8",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Validates generated DSL",
+          "destinationId" : "16",
+          "id" : "45",
+          "sourceId" : "8",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Writes workspace.dsl output",
+          "destinationId" : "4",
+          "id" : "46",
+          "sourceId" : "8",
+          "tags" : "Relationship"
+        } ],
         "tags" : "Element,Container",
-        "technology" : "Go (Zerolog)"
+        "technology" : "Go"
       }, {
-        "description" : "Caches extension tags and metadata to reduce registry API calls",
+        "components" : [ {
+          "description" : "Extracts module and command flags",
+          "documentation" : { },
+          "id" : "17",
+          "name" : "Arguments Parser",
+          "properties" : {
+            "structurizr.dsl.identifier" : "args_parser"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Creates StructurizrValidator instance",
+          "documentation" : { },
+          "id" : "18",
+          "name" : "Validator Factory",
+          "properties" : {
+            "structurizr.dsl.identifier" : "validator_factory"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Runs Docker validation command",
+          "documentation" : { },
+          "id" : "19",
+          "name" : "Docker Executor",
+          "properties" : {
+            "structurizr.dsl.identifier" : "docker_executor"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Parses Docker CLI validation results",
+          "documentation" : { },
+          "id" : "20",
+          "name" : "Output Parser",
+          "properties" : {
+            "structurizr.dsl.identifier" : "output_parser"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Formats results for console and JSON",
+          "documentation" : { },
+          "id" : "21",
+          "name" : "Validation Formatter",
+          "properties" : {
+            "structurizr.dsl.identifier" : "formatter"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Writes validation results to file",
+          "documentation" : { },
+          "id" : "22",
+          "name" : "JSON Writer",
+          "properties" : {
+            "structurizr.dsl.identifier" : "json_writer"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        } ],
+        "description" : "Validates workspace DSL files",
         "documentation" : { },
-        "id" : "9",
-        "name" : "Registry Cache",
+        "id" : "16",
+        "name" : "Design Validate",
         "properties" : {
-          "structurizr.dsl.identifier" : "registry_cache"
+          "structurizr.dsl.identifier" : "validate_service"
         },
+        "relationships" : [ {
+          "description" : "Resolves workspace file location",
+          "destinationId" : "31",
+          "id" : "48",
+          "sourceId" : "16",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Runs validation in container",
+          "destinationId" : "3",
+          "id" : "49",
+          "sourceId" : "16",
+          "tags" : "Relationship",
+          "technology" : "Docker API"
+        }, {
+          "description" : "Writes validation results",
+          "destinationId" : "4",
+          "id" : "51",
+          "sourceId" : "16",
+          "tags" : "Relationship"
+        } ],
         "tags" : "Element,Container",
-        "technology" : "Go (JSON file)"
+        "technology" : "Go"
       }, {
-        "description" : "Parses command-line arguments and detects argument boundaries for container execution",
+        "components" : [ {
+          "description" : "Finds workspace DSL file",
+          "documentation" : { },
+          "id" : "24",
+          "name" : "Workspace Locator",
+          "properties" : {
+            "structurizr.dsl.identifier" : "workspace_locator"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Manages Structurizr Lite container lifecycle",
+          "documentation" : { },
+          "id" : "25",
+          "name" : "Container Manager",
+          "properties" : {
+            "structurizr.dsl.identifier" : "container_manager"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Opens browser to viewer URL",
+          "documentation" : { },
+          "id" : "26",
+          "name" : "Browser Launcher",
+          "properties" : {
+            "structurizr.dsl.identifier" : "browser_launcher"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        } ],
+        "description" : "Launches interactive Structurizr Lite viewer",
         "documentation" : { },
-        "id" : "10",
-        "name" : "Command Parser",
+        "id" : "23",
+        "name" : "Design Serve",
         "properties" : {
-          "structurizr.dsl.identifier" : "command_parser"
+          "structurizr.dsl.identifier" : "serve_service"
         },
+        "relationships" : [ {
+          "description" : "Locates workspace directory",
+          "destinationId" : "31",
+          "id" : "52",
+          "sourceId" : "23",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Manages viewer container",
+          "destinationId" : "3",
+          "id" : "53",
+          "sourceId" : "23",
+          "tags" : "Relationship",
+          "technology" : "Docker API"
+        }, {
+          "description" : "Reads workspace.dsl",
+          "destinationId" : "4",
+          "id" : "54",
+          "sourceId" : "23",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "Go"
+      }, {
+        "components" : [ {
+          "description" : "Loads design contracts from disk",
+          "documentation" : { },
+          "id" : "28",
+          "name" : "Contract Loader",
+          "properties" : {
+            "structurizr.dsl.identifier" : "contract_loader"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Validates AI output against rules",
+          "documentation" : { },
+          "id" : "29",
+          "name" : "Anti-Corruption Rules",
+          "properties" : {
+            "structurizr.dsl.identifier" : "anti_corruption"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Manages generation retry logic",
+          "documentation" : { },
+          "id" : "30",
+          "name" : "Retry Handler",
+          "properties" : {
+            "structurizr.dsl.identifier" : "retry_handler"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        } ],
+        "description" : "Manages architectural contracts and prompts",
+        "documentation" : { },
+        "id" : "27",
+        "name" : "Contract System",
+        "properties" : {
+          "structurizr.dsl.identifier" : "contract_system"
+        },
+        "relationships" : [ {
+          "description" : "Reads contract files and templates",
+          "destinationId" : "4",
+          "id" : "55",
+          "sourceId" : "27",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "Go"
+      }, {
+        "components" : [ {
+          "description" : "Locates Git repository root",
+          "documentation" : { },
+          "id" : "32",
+          "name" : "Root Detector",
+          "properties" : {
+            "structurizr.dsl.identifier" : "root_detector"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Maps module names to filesystem paths",
+          "documentation" : { },
+          "id" : "33",
+          "name" : "Path Resolver",
+          "properties" : {
+            "structurizr.dsl.identifier" : "path_resolver"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        } ],
+        "description" : "Detects and resolves module paths",
+        "documentation" : { },
+        "id" : "31",
+        "name" : "Repository System",
+        "properties" : {
+          "structurizr.dsl.identifier" : "repository_system"
+        },
+        "relationships" : [ {
+          "description" : "Detects repository boundaries",
+          "destinationId" : "5",
+          "id" : "56",
+          "sourceId" : "31",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Resolves module paths",
+          "destinationId" : "4",
+          "id" : "58",
+          "sourceId" : "31",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "Go"
+      }, {
+        "components" : [ {
+          "description" : "Communicates with LLM provider",
+          "documentation" : { },
+          "id" : "35",
+          "name" : "AI Executor",
+          "properties" : {
+            "structurizr.dsl.identifier" : "executor"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        }, {
+          "description" : "Manages pluggable AI providers",
+          "documentation" : { },
+          "id" : "36",
+          "name" : "Provider Registry",
+          "properties" : {
+            "structurizr.dsl.identifier" : "provider_registry"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Go"
+        } ],
+        "description" : "Manages LLM provider integration",
+        "documentation" : { },
+        "id" : "34",
+        "name" : "AI System",
+        "properties" : {
+          "structurizr.dsl.identifier" : "ai_system"
+        },
+        "relationships" : [ {
+          "description" : "Sends generation requests",
+          "destinationId" : "2",
+          "id" : "59",
+          "sourceId" : "34",
+          "tags" : "Relationship",
+          "technology" : "HTTPS"
+        } ],
         "tags" : "Element,Container",
         "technology" : "Go"
       } ],
-      "description" : "Main software system",
+      "description" : "CLI tool for architecture design generation and validation",
       "documentation" : { },
-      "id" : "1",
-      "name" : "System",
+      "id" : "6",
+      "name" : "src-cli System",
       "properties" : {
-        "structurizr.dsl.identifier" : "system"
+        "structurizr.dsl.identifier" : "cli"
       },
+      "relationships" : [ {
+        "description" : "Writes workspace.dsl output",
+        "destinationId" : "4",
+        "id" : "47",
+        "linkedRelationshipId" : "46",
+        "sourceId" : "6"
+      }, {
+        "description" : "Runs validation in container",
+        "destinationId" : "3",
+        "id" : "50",
+        "linkedRelationshipId" : "49",
+        "sourceId" : "6",
+        "technology" : "Docker API"
+      }, {
+        "description" : "Detects repository boundaries",
+        "destinationId" : "5",
+        "id" : "57",
+        "linkedRelationshipId" : "56",
+        "sourceId" : "6"
+      }, {
+        "description" : "Sends generation requests",
+        "destinationId" : "2",
+        "id" : "60",
+        "linkedRelationshipId" : "59",
+        "sourceId" : "6",
+        "technology" : "HTTPS"
+      } ],
       "tags" : "Element,Software System"
     } ]
   },
-  "name" : "R2R CLI Architecture",
+  "name" : "src-cli Architecture",
   "properties" : {
     "structurizr.inspection.info" : "0",
     "structurizr.inspection.ignore" : "0",
-    "structurizr.inspection.error" : "4",
+    "structurizr.inspection.error" : "47",
     "structurizr.inspection.warning" : "0",
-    "structurizr.dsl" : "d29ya3NwYWNlICJSMlIgQ0xJIEFyY2hpdGVjdHVyZSIgIlJlYWR5IHRvIFJlbGVhc2UgQ0xJIC0gRW50ZXJwcmlzZS1ncmFkZSBhdXRvbWF0aW9uIGZyYW1ld29yayB3aXRoIGNvbnRhaW5lcml6ZWQgZXh0ZW5zaW9ucyIgewoKICAgIG1vZGVsIHsKICAgICAgICAjIERlZmluZSB5b3VyIHNvZnR3YXJlIHN5c3RlbXMsIGNvbnRhaW5lcnMsIGFuZCBjb21wb25lbnRzIGhlcmUKCiAgICAgICAgc3lzdGVtID0gc29mdHdhcmVTeXN0ZW0gIlN5c3RlbSIgIk1haW4gc29mdHdhcmUgc3lzdGVtIiB7CiAgICAgICAgICAgICMgQ29udGFpbmVycyB3aWxsIGJlIGFkZGVkIGhlcmUKICAgICAgICAKICAgICAgICAgICAgY2xpX2FwcGxpY2F0aW9uID0gY29udGFpbmVyICJDTEkgQXBwbGljYXRpb24iICJDb21tYW5kLWxpbmUgaW50ZXJmYWNlIHdpdGggYXJndW1lbnQgcGFyc2luZyBhbmQgY29tbWFuZCByb3V0aW5nIiAiR28gKENvYnJhKSIKCiAgICAgICAgICAgIGNvbmZpZ3VyYXRpb25fbWFuYWdlciA9IGNvbnRhaW5lciAiQ29uZmlndXJhdGlvbiBNYW5hZ2VyIiAiTG9hZHMsIHZhbGlkYXRlcywgYW5kIG1lcmdlcyBZQU1MIGNvbmZpZ3VyYXRpb24gZmlsZXMgd2l0aCBleHRlbnNpb24gZGVmaW5pdGlvbnMiICJHbyAoVmlwZXIpIgoKICAgICAgICAgICAgZG9ja2VyX29yY2hlc3RyYXRvciA9IGNvbnRhaW5lciAiRG9ja2VyIE9yY2hlc3RyYXRvciIgIk1hbmFnZXMgRG9ja2VyIGNvbnRhaW5lciBsaWZlY3ljbGUsIHZvbHVtZXMsIGFuZCBuZXR3b3JraW5nIiAiR28gKERvY2tlciBTREspIgoKICAgICAgICAgICAgZXh0ZW5zaW9uX21hbmFnZXIgPSBjb250YWluZXIgIkV4dGVuc2lvbiBNYW5hZ2VyIiAiSW5zdGFsbHMgYW5kIG1hbmFnZXMgQ0xJIGV4dGVuc2lvbnMgZnJvbSByZWdpc3RyaWVzIiAiR28iCgogICAgICAgICAgICBnaXRodWJfcmVnaXN0cnlfY2xpZW50ID0gY29udGFpbmVyICJHaXRIdWIgUmVnaXN0cnkgQ2xpZW50IiAiRmV0Y2hlcyBleHRlbnNpb24gbWV0YWRhdGEgYW5kIHZlcnNpb25zIGZyb20gR2l0SHViIENvbnRhaW5lciBSZWdpc3RyeSIgIkdvIChIVFRQKSIKCiAgICAgICAgICAgIHZhbGlkYXRpb25fZW5naW5lID0gY29udGFpbmVyICJWYWxpZGF0aW9uIEVuZ2luZSIgIlZhbGlkYXRlcyBjb25maWd1cmF0aW9uIHNjaGVtYSwgZXh0ZW5zaW9uIG1ldGFkYXRhLCBhbmQgY29tbWFuZCBzeW50YXgiICJHbyIKCiAgICAgICAgICAgIGxvZ2dlciA9IGNvbnRhaW5lciAiTG9nZ2VyIiAiU3RydWN0dXJlZCBsb2dnaW5nIHdpdGggY29udGV4dCBhbmQgbXVsdGlwbGUgb3V0cHV0IGZvcm1hdHMiICJHbyAoWmVyb2xvZykiCgogICAgICAgICAgICByZWdpc3RyeV9jYWNoZSA9IGNvbnRhaW5lciAiUmVnaXN0cnkgQ2FjaGUiICJDYWNoZXMgZXh0ZW5zaW9uIHRhZ3MgYW5kIG1ldGFkYXRhIHRvIHJlZHVjZSByZWdpc3RyeSBBUEkgY2FsbHMiICJHbyAoSlNPTiBmaWxlKSIKCiAgICAgICAgICAgIGNvbW1hbmRfcGFyc2VyID0gY29udGFpbmVyICJDb21tYW5kIFBhcnNlciIgIlBhcnNlcyBjb21tYW5kLWxpbmUgYXJndW1lbnRzIGFuZCBkZXRlY3RzIGFyZ3VtZW50IGJvdW5kYXJpZXMgZm9yIGNvbnRhaW5lciBleGVjdXRpb24iICJHbyIKfQoKICAgICAgICAjIERlZmluZSByZWxhdGlvbnNoaXBzIGhlcmUKCiAgICAgICAgY2xpX2FwcGxpY2F0aW9uIC0+IGNvbW1hbmRfcGFyc2VyICJQYXJzZXMgY29tbWFuZC1saW5lIGFyZ3VtZW50cyIgIkZ1bmN0aW9uIGNhbGxzIgoKICAgICAgICBjbGlfYXBwbGljYXRpb24gLT4gY29uZmlndXJhdGlvbl9tYW5hZ2VyICJMb2FkcyBjb25maWd1cmF0aW9uIiAiRnVuY3Rpb24gY2FsbHMiCgogICAgICAgIGNsaV9hcHBsaWNhdGlvbiAtPiBsb2dnZXIgIkxvZ3MgY29tbWFuZHMgYW5kIGVycm9ycyIgIkZ1bmN0aW9uIGNhbGxzIgoKICAgICAgICBjbGlfYXBwbGljYXRpb24gLT4gZG9ja2VyX29yY2hlc3RyYXRvciAiRXhlY3V0ZXMgZXh0ZW5zaW9ucyBpbiBjb250YWluZXJzIiAiRnVuY3Rpb24gY2FsbHMiCgogICAgICAgIGNsaV9hcHBsaWNhdGlvbiAtPiBleHRlbnNpb25fbWFuYWdlciAiSW5zdGFsbHMgYW5kIG1hbmFnZXMgZXh0ZW5zaW9ucyIgIkZ1bmN0aW9uIGNhbGxzIgoKICAgICAgICBjb25maWd1cmF0aW9uX21hbmFnZXIgLT4gdmFsaWRhdGlvbl9lbmdpbmUgIlZhbGlkYXRlcyBjb25maWd1cmF0aW9uIHNjaGVtYSIgIkZ1bmN0aW9uIGNhbGxzIgoKICAgICAgICBjb25maWd1cmF0aW9uX21hbmFnZXIgLT4gcmVnaXN0cnlfY2FjaGUgIkNoZWNrcyBmb3IgcGlubmVkIHZlcnNpb25zIiAiRnVuY3Rpb24gY2FsbHMiCgogICAgICAgIGNvbmZpZ3VyYXRpb25fbWFuYWdlciAtPiBnaXRodWJfcmVnaXN0cnlfY2xpZW50ICJGZXRjaGVzIGxhdGVzdCBleHRlbnNpb24gdmVyc2lvbnMiICJGdW5jdGlvbiBjYWxscyIKCiAgICAgICAgZXh0ZW5zaW9uX21hbmFnZXIgLT4gZ2l0aHViX3JlZ2lzdHJ5X2NsaWVudCAiRG93bmxvYWRzIGV4dGVuc2lvbiBpbWFnZXMiICJGdW5jdGlvbiBjYWxscyIKCiAgICAgICAgZXh0ZW5zaW9uX21hbmFnZXIgLT4gcmVnaXN0cnlfY2FjaGUgIlVwZGF0ZXMgY2FjaGUgd2l0aCBleHRlbnNpb24gbWV0YWRhdGEiICJGdW5jdGlvbiBjYWxscyIKCiAgICAgICAgZG9ja2VyX29yY2hlc3RyYXRvciAtPiBsb2dnZXIgIkxvZ3MgY29udGFpbmVyIG9wZXJhdGlvbnMiICJGdW5jdGlvbiBjYWxscyIKCiAgICAgICAgZ2l0aHViX3JlZ2lzdHJ5X2NsaWVudCAtPiBsb2dnZXIgIkxvZ3MgcmVnaXN0cnkgQVBJIGNhbGxzIiAiRnVuY3Rpb24gY2FsbHMiCiAgICB9CgogICAgdmlld3MgewogICAgICAgIHN5c3RlbUNvbnRleHQgc3lzdGVtICJTeXN0ZW1Db250ZXh0IiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvTGF5b3V0CiAgICAgICAgfQoKICAgICAgICBjb250YWluZXIgc3lzdGVtICJDb250YWluZXJzIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvTGF5b3V0CiAgICAgICAgfQoKICAgICAgICBzdHlsZXMgewogICAgICAgICAgICBlbGVtZW50ICJTb2Z0d2FyZSBTeXN0ZW0iIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzExNjhiZAogICAgICAgICAgICAgICAgY29sb3IgI2ZmZmZmZgogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIkNvbnRhaW5lciIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjNDM4ZGQ1CiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQ29tcG9uZW50IiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICM4NWJiZjAKICAgICAgICAgICAgICAgIGNvbG9yICMwMDAwMDAKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCn0="
+    "structurizr.dsl" : "d29ya3NwYWNlICJzcmMtY2xpIEFyY2hpdGVjdHVyZSIgIkNMSSBhcHBsaWNhdGlvbiB3aXRoIEFJLWRyaXZlbiBhcmNoaXRlY3R1cmUgZG9jdW1lbnRhdGlvbiBnZW5lcmF0aW9uIiB7CiAgICBtb2RlbCB7CiAgICAgICAgZGV2ZWxvcGVyID0gcGVyc29uICJEZXZlbG9wZXIiICJVc2VzIENMSSB0byBnZW5lcmF0ZSBhbmQgdmFsaWRhdGUgYXJjaGl0ZWN0dXJlIgogICAgICAgIGFudGhyb3BpY19hcGkgPSBzb2Z0d2FyZVN5c3RlbSAiQW50aHJvcGljIEFQSSIgIlByb3ZpZGVzIExMTSBmb3IgYXJjaGl0ZWN0dXJlIGdlbmVyYXRpb24iICJFeHRlcm5hbCIKICAgICAgICBkb2NrZXJfZW5naW5lID0gc29mdHdhcmVTeXN0ZW0gIkRvY2tlciBFbmdpbmUiICJSdW5zIHZhbGlkYXRpb24gYW5kIHZpZXdlciBjb250YWluZXJzIiAiRXh0ZXJuYWwiCiAgICAgICAgZmlsZV9zeXN0ZW0gPSBzb2Z0d2FyZVN5c3RlbSAiRmlsZSBTeXN0ZW0iICJTdG9yZXMgd29ya3NwYWNlIERTTCBhbmQgY29uZmlndXJhdGlvbiIgIkV4dGVybmFsIgogICAgICAgIGdpdF9yZXBvID0gc29mdHdhcmVTeXN0ZW0gIkdpdCBSZXBvc2l0b3J5IiAiTWFuYWdlcyB2ZXJzaW9uIGNvbnRyb2wgYW5kIG1vZHVsZSBwYXRocyIgIkV4dGVybmFsIgoKICAgICAgICBjbGkgPSBzb2Z0d2FyZVN5c3RlbSAic3JjLWNsaSBTeXN0ZW0iICJDTEkgdG9vbCBmb3IgYXJjaGl0ZWN0dXJlIGRlc2lnbiBnZW5lcmF0aW9uIGFuZCB2YWxpZGF0aW9uIiB7CiAgICAgICAgICAgIGNvbW1hbmRfcm91dGVyID0gY29udGFpbmVyICJDb21tYW5kIFJvdXRlciIgIlJvdXRlcyBkZXNpZ24gc3ViY29tbWFuZHMiICJHbyIKICAgICAgICAgICAgCiAgICAgICAgICAgIGNyZWF0ZV9zZXJ2aWNlID0gY29udGFpbmVyICJEZXNpZ24gQ3JlYXRlIiAiR2VuZXJhdGVzIFN0cnVjdHVyaXpyIERTTCB1c2luZyBBSSIgIkdvIiB7CiAgICAgICAgICAgICAgICBjb25maWdfcGFyc2VyID0gY29tcG9uZW50ICJDb25maWcgUGFyc2VyIiAiUGFyc2VzIENMSSBhcmd1bWVudHMgaW50byBEZXNpZ25Db25maWciICJHbyIKICAgICAgICAgICAgICAgIG1vZHVsZV92YWxpZGF0b3IgPSBjb21wb25lbnQgIk1vZHVsZSBWYWxpZGF0b3IiICJWZXJpZmllcyBtb2R1bGUgZXhpc3RzIGluIHNwZWNzIGRpcmVjdG9yeSIgIkdvIgogICAgICAgICAgICAgICAgZG9ja2VyX2NoZWNrZXIgPSBjb21wb25lbnQgIkRvY2tlciBDaGVja2VyIiAiVmVyaWZpZXMgRG9ja2VyIGF2YWlsYWJpbGl0eSIgIkdvIgogICAgICAgICAgICAgICAgcHJvbXB0X2J1aWxkZXIgPSBjb21wb25lbnQgIlByb21wdCBCdWlsZGVyIiAiQ29uc3RydWN0cyBBSSBwcm9tcHQgd2l0aCBjb250cmFjdHMiICJHbyIKICAgICAgICAgICAgICAgIGFpX2dlbmVyYXRvciA9IGNvbXBvbmVudCAiQUkgR2VuZXJhdG9yIiAiQ2FsbHMgQW50aHJvcGljIEFQSSBmb3IgRFNMIGdlbmVyYXRpb24iICJHbyIKICAgICAgICAgICAgICAgIGNvbXBvc2l0ZV92YWxpZGF0b3IgPSBjb21wb25lbnQgIkNvbXBvc2l0ZSBWYWxpZGF0b3IiICJSdW5zIHF1aWNrIGFuZCBmdWxsIHZhbGlkYXRpb24gcGhhc2VzIiAiR28iCiAgICAgICAgICAgICAgICBvdXRwdXRfd3JpdGVyID0gY29tcG9uZW50ICJPdXRwdXQgV3JpdGVyIiAiV3JpdGVzIERTTCB0byB3b3Jrc3BhY2UuZHNsIGZpbGUiICJHbyIKICAgICAgICAgICAgfQogICAgICAgICAgICAKICAgICAgICAgICAgdmFsaWRhdGVfc2VydmljZSA9IGNvbnRhaW5lciAiRGVzaWduIFZhbGlkYXRlIiAiVmFsaWRhdGVzIHdvcmtzcGFjZSBEU0wgZmlsZXMiICJHbyIgewogICAgICAgICAgICAgICAgYXJnc19wYXJzZXIgPSBjb21wb25lbnQgIkFyZ3VtZW50cyBQYXJzZXIiICJFeHRyYWN0cyBtb2R1bGUgYW5kIGNvbW1hbmQgZmxhZ3MiICJHbyIKICAgICAgICAgICAgICAgIHZhbGlkYXRvcl9mYWN0b3J5ID0gY29tcG9uZW50ICJWYWxpZGF0b3IgRmFjdG9yeSIgIkNyZWF0ZXMgU3RydWN0dXJpenJWYWxpZGF0b3IgaW5zdGFuY2UiICJHbyIKICAgICAgICAgICAgICAgIGRvY2tlcl9leGVjdXRvciA9IGNvbXBvbmVudCAiRG9ja2VyIEV4ZWN1dG9yIiAiUnVucyBEb2NrZXIgdmFsaWRhdGlvbiBjb21tYW5kIiAiR28iCiAgICAgICAgICAgICAgICBvdXRwdXRfcGFyc2VyID0gY29tcG9uZW50ICJPdXRwdXQgUGFyc2VyIiAiUGFyc2VzIERvY2tlciBDTEkgdmFsaWRhdGlvbiByZXN1bHRzIiAiR28iCiAgICAgICAgICAgICAgICBmb3JtYXR0ZXIgPSBjb21wb25lbnQgIlZhbGlkYXRpb24gRm9ybWF0dGVyIiAiRm9ybWF0cyByZXN1bHRzIGZvciBjb25zb2xlIGFuZCBKU09OIiAiR28iCiAgICAgICAgICAgICAgICBqc29uX3dyaXRlciA9IGNvbXBvbmVudCAiSlNPTiBXcml0ZXIiICJXcml0ZXMgdmFsaWRhdGlvbiByZXN1bHRzIHRvIGZpbGUiICJHbyIKICAgICAgICAgICAgfQogICAgICAgICAgICAKICAgICAgICAgICAgc2VydmVfc2VydmljZSA9IGNvbnRhaW5lciAiRGVzaWduIFNlcnZlIiAiTGF1bmNoZXMgaW50ZXJhY3RpdmUgU3RydWN0dXJpenIgTGl0ZSB2aWV3ZXIiICJHbyIgewogICAgICAgICAgICAgICAgd29ya3NwYWNlX2xvY2F0b3IgPSBjb21wb25lbnQgIldvcmtzcGFjZSBMb2NhdG9yIiAiRmluZHMgd29ya3NwYWNlIERTTCBmaWxlIiAiR28iCiAgICAgICAgICAgICAgICBjb250YWluZXJfbWFuYWdlciA9IGNvbXBvbmVudCAiQ29udGFpbmVyIE1hbmFnZXIiICJNYW5hZ2VzIFN0cnVjdHVyaXpyIExpdGUgY29udGFpbmVyIGxpZmVjeWNsZSIgIkdvIgogICAgICAgICAgICAgICAgYnJvd3Nlcl9sYXVuY2hlciA9IGNvbXBvbmVudCAiQnJvd3NlciBMYXVuY2hlciIgIk9wZW5zIGJyb3dzZXIgdG8gdmlld2VyIFVSTCIgIkdvIgogICAgICAgICAgICB9CiAgICAgICAgICAgIAogICAgICAgICAgICBjb250cmFjdF9zeXN0ZW0gPSBjb250YWluZXIgIkNvbnRyYWN0IFN5c3RlbSIgIk1hbmFnZXMgYXJjaGl0ZWN0dXJhbCBjb250cmFjdHMgYW5kIHByb21wdHMiICJHbyIgewogICAgICAgICAgICAgICAgY29udHJhY3RfbG9hZGVyID0gY29tcG9uZW50ICJDb250cmFjdCBMb2FkZXIiICJMb2FkcyBkZXNpZ24gY29udHJhY3RzIGZyb20gZGlzayIgIkdvIgogICAgICAgICAgICAgICAgYW50aV9jb3JydXB0aW9uID0gY29tcG9uZW50ICJBbnRpLUNvcnJ1cHRpb24gUnVsZXMiICJWYWxpZGF0ZXMgQUkgb3V0cHV0IGFnYWluc3QgcnVsZXMiICJHbyIKICAgICAgICAgICAgICAgIHJldHJ5X2hhbmRsZXIgPSBjb21wb25lbnQgIlJldHJ5IEhhbmRsZXIiICJNYW5hZ2VzIGdlbmVyYXRpb24gcmV0cnkgbG9naWMiICJHbyIKICAgICAgICAgICAgfQogICAgICAgICAgICAKICAgICAgICAgICAgcmVwb3NpdG9yeV9zeXN0ZW0gPSBjb250YWluZXIgIlJlcG9zaXRvcnkgU3lzdGVtIiAiRGV0ZWN0cyBhbmQgcmVzb2x2ZXMgbW9kdWxlIHBhdGhzIiAiR28iIHsKICAgICAgICAgICAgICAgIHJvb3RfZGV0ZWN0b3IgPSBjb21wb25lbnQgIlJvb3QgRGV0ZWN0b3IiICJMb2NhdGVzIEdpdCByZXBvc2l0b3J5IHJvb3QiICJHbyIKICAgICAgICAgICAgICAgIHBhdGhfcmVzb2x2ZXIgPSBjb21wb25lbnQgIlBhdGggUmVzb2x2ZXIiICJNYXBzIG1vZHVsZSBuYW1lcyB0byBmaWxlc3lzdGVtIHBhdGhzIiAiR28iCiAgICAgICAgICAgIH0KICAgICAgICAgICAgCiAgICAgICAgICAgIGFpX3N5c3RlbSA9IGNvbnRhaW5lciAiQUkgU3lzdGVtIiAiTWFuYWdlcyBMTE0gcHJvdmlkZXIgaW50ZWdyYXRpb24iICJHbyIgewogICAgICAgICAgICAgICAgZXhlY3V0b3IgPSBjb21wb25lbnQgIkFJIEV4ZWN1dG9yIiAiQ29tbXVuaWNhdGVzIHdpdGggTExNIHByb3ZpZGVyIiAiR28iCiAgICAgICAgICAgICAgICBwcm92aWRlcl9yZWdpc3RyeSA9IGNvbXBvbmVudCAiUHJvdmlkZXIgUmVnaXN0cnkiICJNYW5hZ2VzIHBsdWdnYWJsZSBBSSBwcm92aWRlcnMiICJHbyIKICAgICAgICAgICAgfQogICAgICAgIH0KCiAgICAgICAgZGV2ZWxvcGVyIC0+IGNvbW1hbmRfcm91dGVyICJFeGVjdXRlcyBDTEkgY29tbWFuZHMiCiAgICAgICAgCiAgICAgICAgY29tbWFuZF9yb3V0ZXIgLT4gY3JlYXRlX3NlcnZpY2UgIlJvdXRlcyB0byBkZXNpZ24gY3JlYXRlIgogICAgICAgIGNvbW1hbmRfcm91dGVyIC0+IHZhbGlkYXRlX3NlcnZpY2UgIlJvdXRlcyB0byBkZXNpZ24gdmFsaWRhdGUiCiAgICAgICAgY29tbWFuZF9yb3V0ZXIgLT4gc2VydmVfc2VydmljZSAiUm91dGVzIHRvIGRlc2lnbiBzZXJ2ZSIKICAgICAgICAKICAgICAgICBjcmVhdGVfc2VydmljZSAtPiBjb250cmFjdF9zeXN0ZW0gIkxvYWRzIGNvbnRyYWN0cyBhbmQgYnVpbGRzIHByb21wdCIKICAgICAgICBjcmVhdGVfc2VydmljZSAtPiByZXBvc2l0b3J5X3N5c3RlbSAiUmVzb2x2ZXMgbW9kdWxlIHBhdGhzIgogICAgICAgIGNyZWF0ZV9zZXJ2aWNlIC0+IGFpX3N5c3RlbSAiUmVxdWVzdHMgYXJjaGl0ZWN0dXJlIGdlbmVyYXRpb24iCiAgICAgICAgY3JlYXRlX3NlcnZpY2UgLT4gdmFsaWRhdGVfc2VydmljZSAiVmFsaWRhdGVzIGdlbmVyYXRlZCBEU0wiCiAgICAgICAgY3JlYXRlX3NlcnZpY2UgLT4gZmlsZV9zeXN0ZW0gIldyaXRlcyB3b3Jrc3BhY2UuZHNsIG91dHB1dCIKICAgICAgICAKICAgICAgICB2YWxpZGF0ZV9zZXJ2aWNlIC0+IHJlcG9zaXRvcnlfc3lzdGVtICJSZXNvbHZlcyB3b3Jrc3BhY2UgZmlsZSBsb2NhdGlvbiIKICAgICAgICB2YWxpZGF0ZV9zZXJ2aWNlIC0+IGRvY2tlcl9lbmdpbmUgIlJ1bnMgdmFsaWRhdGlvbiBpbiBjb250YWluZXIiICJEb2NrZXIgQVBJIgogICAgICAgIHZhbGlkYXRlX3NlcnZpY2UgLT4gZmlsZV9zeXN0ZW0gIldyaXRlcyB2YWxpZGF0aW9uIHJlc3VsdHMiCiAgICAgICAgCiAgICAgICAgc2VydmVfc2VydmljZSAtPiByZXBvc2l0b3J5X3N5c3RlbSAiTG9jYXRlcyB3b3Jrc3BhY2UgZGlyZWN0b3J5IgogICAgICAgIHNlcnZlX3NlcnZpY2UgLT4gZG9ja2VyX2VuZ2luZSAiTWFuYWdlcyB2aWV3ZXIgY29udGFpbmVyIiAiRG9ja2VyIEFQSSIKICAgICAgICBzZXJ2ZV9zZXJ2aWNlIC0+IGZpbGVfc3lzdGVtICJSZWFkcyB3b3Jrc3BhY2UuZHNsIgogICAgICAgIAogICAgICAgIGNvbnRyYWN0X3N5c3RlbSAtPiBmaWxlX3N5c3RlbSAiUmVhZHMgY29udHJhY3QgZmlsZXMgYW5kIHRlbXBsYXRlcyIKICAgICAgICAKICAgICAgICByZXBvc2l0b3J5X3N5c3RlbSAtPiBnaXRfcmVwbyAiRGV0ZWN0cyByZXBvc2l0b3J5IGJvdW5kYXJpZXMiCiAgICAgICAgcmVwb3NpdG9yeV9zeXN0ZW0gLT4gZmlsZV9zeXN0ZW0gIlJlc29sdmVzIG1vZHVsZSBwYXRocyIKICAgICAgICAKICAgICAgICBhaV9zeXN0ZW0gLT4gYW50aHJvcGljX2FwaSAiU2VuZHMgZ2VuZXJhdGlvbiByZXF1ZXN0cyIgIkhUVFBTIgogICAgfQoKICAgIHZpZXdzIHsKICAgICAgICBzeXN0ZW1Db250ZXh0IGNsaSAiU3lzdGVtQ29udGV4dCIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgYXV0b0xheW91dAogICAgICAgIH0KCiAgICAgICAgY29udGFpbmVyIGNsaSAiQ29udGFpbmVycyIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgYXV0b0xheW91dAogICAgICAgIH0KCiAgICAgICAgY29tcG9uZW50IGNyZWF0ZV9zZXJ2aWNlICJDcmVhdGVTZXJ2aWNlIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvTGF5b3V0CiAgICAgICAgfQoKICAgICAgICBjb21wb25lbnQgdmFsaWRhdGVfc2VydmljZSAiVmFsaWRhdGVTZXJ2aWNlIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvTGF5b3V0CiAgICAgICAgfQoKICAgICAgICBjb21wb25lbnQgc2VydmVfc2VydmljZSAiU2VydmVTZXJ2aWNlIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvTGF5b3V0CiAgICAgICAgfQoKICAgICAgICBjb21wb25lbnQgY29udHJhY3Rfc3lzdGVtICJDb250cmFjdFN5c3RlbSIgewogICAgICAgICAgICBpbmNsdWRlICoKICAgICAgICAgICAgYXV0b0xheW91dAogICAgICAgIH0KCiAgICAgICAgY29tcG9uZW50IGFpX3N5c3RlbSAiQUlTeXN0ZW0iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9MYXlvdXQKICAgICAgICB9CgogICAgICAgIHN0eWxlcyB7CiAgICAgICAgICAgIGVsZW1lbnQgIlNvZnR3YXJlIFN5c3RlbSIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjMTE2OGJkCiAgICAgICAgICAgICAgICBjb2xvciAjZmZmZmZmCiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxlbWVudCAiQ29udGFpbmVyIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICM0MzhkZDUKICAgICAgICAgICAgICAgIGNvbG9yICNmZmZmZmYKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJDb21wb25lbnQiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzg1YmJmMAogICAgICAgICAgICAgICAgY29sb3IgIzAwMDAwMAogICAgICAgICAgICB9CiAgICAgICAgICAgIGVsZW1lbnQgIkV4dGVybmFsIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICM5OTk5OTkKICAgICAgICAgICAgICAgIGNvbG9yICNmZmZmZmYKICAgICAgICAgICAgfQogICAgICAgICAgICBlbGVtZW50ICJQZXJzb24iIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzA4NDI3YgogICAgICAgICAgICAgICAgY29sb3IgI2ZmZmZmZgogICAgICAgICAgICAgICAgc2hhcGUgYm94CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9Cn0="
   },
   "views" : {
+    "componentViews" : [ {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "8",
+      "dimensions" : {
+        "height" : 938,
+        "width" : 5430
+      },
+      "elements" : [ {
+        "id" : "9",
+        "x" : 240,
+        "y" : 199
+      }, {
+        "id" : "10",
+        "x" : 4740,
+        "y" : 199
+      }, {
+        "id" : "11",
+        "x" : 3990,
+        "y" : 199
+      }, {
+        "id" : "12",
+        "x" : 3240,
+        "y" : 199
+      }, {
+        "id" : "13",
+        "x" : 2490,
+        "y" : 199
+      }, {
+        "id" : "14",
+        "x" : 1740,
+        "y" : 199
+      }, {
+        "id" : "15",
+        "x" : 990,
+        "y" : 199
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "CreateService",
+      "name" : "Component View: src-cli System - Design Create",
+      "order" : 3
+    }, {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "16",
+      "dimensions" : {
+        "height" : 938,
+        "width" : 4680
+      },
+      "elements" : [ {
+        "id" : "17",
+        "x" : 3990,
+        "y" : 200
+      }, {
+        "id" : "18",
+        "x" : 3240,
+        "y" : 200
+      }, {
+        "id" : "19",
+        "x" : 2490,
+        "y" : 200
+      }, {
+        "id" : "20",
+        "x" : 1740,
+        "y" : 200
+      }, {
+        "id" : "21",
+        "x" : 990,
+        "y" : 200
+      }, {
+        "id" : "22",
+        "x" : 240,
+        "y" : 200
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ValidateService",
+      "name" : "Component View: src-cli System - Design Validate",
+      "order" : 4
+    }, {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "23",
+      "dimensions" : {
+        "height" : 938,
+        "width" : 2430
+      },
+      "elements" : [ {
+        "id" : "24",
+        "x" : 1740,
+        "y" : 200
+      }, {
+        "id" : "25",
+        "x" : 990,
+        "y" : 200
+      }, {
+        "id" : "26",
+        "x" : 240,
+        "y" : 200
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ServeService",
+      "name" : "Component View: src-cli System - Design Serve",
+      "order" : 5
+    }, {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "27",
+      "dimensions" : {
+        "height" : 938,
+        "width" : 2430
+      },
+      "elements" : [ {
+        "id" : "28",
+        "x" : 1740,
+        "y" : 200
+      }, {
+        "id" : "29",
+        "x" : 990,
+        "y" : 200
+      }, {
+        "id" : "30",
+        "x" : 240,
+        "y" : 200
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "ContractSystem",
+      "name" : "Component View: src-cli System - Contract System",
+      "order" : 6
+    }, {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "34",
+      "dimensions" : {
+        "height" : 938,
+        "width" : 1680
+      },
+      "elements" : [ {
+        "id" : "35",
+        "x" : 990,
+        "y" : 200
+      }, {
+        "id" : "36",
+        "x" : 240,
+        "y" : 200
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "AISystem",
+      "name" : "Component View: src-cli System - AI System",
+      "order" : 7
+    } ],
     "configuration" : {
       "branding" : { },
       "lastSavedView" : "Containers",
@@ -219,6 +734,15 @@
           "background" : "#438dd5",
           "color" : "#ffffff",
           "tag" : "Container"
+        }, {
+          "background" : "#999999",
+          "color" : "#ffffff",
+          "tag" : "External"
+        }, {
+          "background" : "#08427b",
+          "color" : "#ffffff",
+          "shape" : "Box",
+          "tag" : "Person"
         }, {
           "background" : "#1168bd",
           "color" : "#ffffff",
@@ -238,90 +762,159 @@
         "vertices" : false
       },
       "dimensions" : {
-        "height" : 2619,
-        "width" : 3448
+        "height" : 3700,
+        "width" : 6117
       },
       "elements" : [ {
+        "id" : "1",
+        "x" : 1628,
+        "y" : 160
+      }, {
         "id" : "2",
-        "x" : 1278,
-        "y" : 179
+        "x" : 2816,
+        "y" : 2560
       }, {
         "id" : "3",
-        "x" : 1278,
-        "y" : 779
+        "x" : 4782,
+        "y" : 2560
       }, {
         "id" : "4",
-        "x" : 2778,
-        "y" : 1379
+        "x" : 4103,
+        "y" : 3160
       }, {
         "id" : "5",
-        "x" : 2028,
-        "y" : 779
-      }, {
-        "id" : "6",
-        "x" : 2028,
-        "y" : 1379
+        "x" : 1957,
+        "y" : 3160
       }, {
         "id" : "7",
-        "x" : 528,
-        "y" : 1379
+        "x" : 1628,
+        "y" : 760
       }, {
         "id" : "8",
-        "x" : 2028,
-        "y" : 1979
+        "x" : 1099,
+        "y" : 1360
       }, {
-        "id" : "9",
-        "x" : 1278,
-        "y" : 1379
+        "id" : "16",
+        "x" : 1849,
+        "y" : 1960
       }, {
-        "id" : "10",
-        "x" : 220,
-        "y" : 779
+        "id" : "23",
+        "x" : 2157,
+        "y" : 1360
+      }, {
+        "id" : "27",
+        "x" : 1099,
+        "y" : 1960
+      }, {
+        "id" : "31",
+        "x" : 1957,
+        "y" : 2560
+      }, {
+        "id" : "34",
+        "x" : 349,
+        "y" : 1960
       } ],
       "externalSoftwareSystemBoundariesVisible" : false,
       "key" : "Containers",
-      "name" : "Container View: System",
+      "name" : "Container View: src-cli System",
       "order" : 2,
       "relationships" : [ {
-        "id" : "11"
+        "id" : "37"
       }, {
-        "id" : "12"
+        "id" : "39"
       }, {
-        "id" : "13",
+        "id" : "40"
+      }, {
+        "id" : "41"
+      }, {
+        "id" : "42"
+      }, {
+        "id" : "43",
         "vertices" : [ {
-          "x" : 820,
-          "y" : 1079
+          "x" : 199,
+          "y" : 1960
         }, {
-          "x" : 378,
-          "y" : 1379
-        }, {
-          "x" : 378,
-          "y" : 1679
+          "x" : 199,
+          "y" : 2260
         } ]
       }, {
-        "id" : "14",
+        "id" : "44"
+      }, {
+        "id" : "45"
+      }, {
+        "id" : "46",
         "vertices" : [ {
-          "x" : 2628,
-          "y" : 779
+          "x" : 5382,
+          "y" : 2560
+        }, {
+          "x" : 5382,
+          "y" : 2964
         } ]
       }, {
-        "id" : "15"
+        "id" : "48"
       }, {
-        "id" : "16"
+        "id" : "49",
+        "vertices" : [ {
+          "x" : 4557,
+          "y" : 2560
+        } ]
       }, {
-        "id" : "17"
+        "id" : "51",
+        "vertices" : [ {
+          "x" : 3949,
+          "y" : 2560
+        } ]
       }, {
-        "id" : "18"
+        "id" : "52",
+        "vertices" : [ {
+          "x" : 2449,
+          "y" : 1960
+        }, {
+          "x" : 2449,
+          "y" : 2260
+        } ]
       }, {
-        "id" : "19"
+        "id" : "53"
       }, {
-        "id" : "20"
+        "id" : "54",
+        "vertices" : [ {
+          "x" : 3920,
+          "y" : 1960
+        }, {
+          "x" : 5916,
+          "y" : 2560
+        }, {
+          "x" : 5916,
+          "y" : 2964
+        } ]
       }, {
-        "id" : "21"
+        "id" : "55",
+        "vertices" : [ {
+          "x" : 1699,
+          "y" : 2260
+        }, {
+          "x" : 3416,
+          "y" : 2560
+        }, {
+          "x" : 3891,
+          "y" : 2964
+        } ]
       }, {
-        "id" : "22"
+        "id" : "56"
+      }, {
+        "id" : "58",
+        "vertices" : [ {
+          "x" : 2666,
+          "y" : 2964
+        } ]
+      }, {
+        "id" : "59",
+        "vertices" : [ {
+          "x" : 949,
+          "y" : 2260
+        } ]
       } ],
-      "softwareSystemId" : "1"
+      "softwareSystemId" : "6"
     } ],
     "systemContextViews" : [ {
       "automaticLayout" : {
@@ -334,19 +927,50 @@
         "vertices" : false
       },
       "dimensions" : {
-        "height" : 700,
-        "width" : 936
+        "height" : 1900,
+        "width" : 3100
       },
       "elements" : [ {
         "id" : "1",
-        "x" : 243,
+        "x" : 1325,
         "y" : 160
+      }, {
+        "id" : "2",
+        "x" : 200,
+        "y" : 1360
+      }, {
+        "id" : "3",
+        "x" : 950,
+        "y" : 1360
+      }, {
+        "id" : "4",
+        "x" : 1700,
+        "y" : 1360
+      }, {
+        "id" : "5",
+        "x" : 2450,
+        "y" : 1360
+      }, {
+        "id" : "6",
+        "x" : 1325,
+        "y" : 760
       } ],
       "enterpriseBoundaryVisible" : true,
       "key" : "SystemContext",
-      "name" : "System Context View: System",
+      "name" : "System Context View: src-cli System",
       "order" : 1,
-      "softwareSystemId" : "1"
+      "relationships" : [ {
+        "id" : "38"
+      }, {
+        "id" : "47"
+      }, {
+        "id" : "50"
+      }, {
+        "id" : "57"
+      }, {
+        "id" : "60"
+      } ],
+      "softwareSystemId" : "6"
     } ]
   }
 }

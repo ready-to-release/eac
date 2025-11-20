@@ -163,8 +163,13 @@ func parsePullConfig() (*pullConfig, error) {
 	}
 	config.repoRoot = repoRoot
 
-	// Get current branch
-	currentBranch, err := internal.GetCurrentBranch(repoRoot)
+	// Get current branch from current working directory (not repoRoot)
+	// This ensures we get the correct branch in worktree environments
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current directory: %w", err)
+	}
+	currentBranch, err := internal.GetCurrentBranch(cwd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current branch: %w", err)
 	}
