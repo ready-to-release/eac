@@ -38,7 +38,7 @@ Feature: Init CLI project
   Rule: Command completes in under 2 seconds
 ```
 
-**Origin**: 🔵 Blue cards from Example Mapping
+**Origin**: <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#5BA3F7" stroke="#4A89D6"/></svg> Blue cards from Example Mapping
 **Location**: `specs/<module>/<feature>/specification.feature`
 
 ### Layer 2: Scenario
@@ -65,7 +65,7 @@ Rule: Creates project directory structure
     And stderr should contain "already initialized"
 ```
 
-**Origin**: 🟢 Green cards from Example Mapping
+**Origin**: <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> Green cards from Example Mapping
 **Location**: `specs/<module>/<feature>/specification.feature`
 **Implementation**: `src/<module>/tests/steps_test.go`
 
