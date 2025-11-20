@@ -172,6 +172,47 @@ All non-trivial code you generate must include tests.
 
 ---
 
+### Parallel Agent Workflows
+
+For **complex features or large changes**, you can leverage multiple agents working in parallel to maximize efficiency during the setup phase.
+
+**When to use parallel agents:**
+
+- New features requiring architecture design, specifications, and impact analysis
+- Large refactoring efforts affecting multiple modules
+- Cross-cutting changes that need comprehensive analysis
+- Any work where multiple independent preparation tasks can run concurrently
+
+**Feature Development (Parallel Setup Phase):**
+
+When the user requests parallel development or when working on complex features, spawn multiple agents concurrently:
+
+- **Design Agent**: Create architecture documentation and specifications using `mcp__commands__design-*` and `mcp__commands__specs-create`
+- **Test Agent**: Develop test plan, identify test scenarios, and prepare test scaffolding structure
+- **Analysis Agent**: Perform impact analysis, review dependencies using `mcp__commands__get-dependencies`, and identify affected modules with `mcp__commands__get-changed-modules`
+- **Docs Agent**: Prepare documentation structure and identify documentation updates needed
+
+**How to invoke parallel agents:**
+
+The user can request parallel execution with phrases like:
+
+- "Work on this feature using parallel agents"
+- "Run the design, test, analysis, and docs agents in parallel"
+- "Parallelize the setup phase for this feature"
+
+When parallel execution is requested, spawn all agents in a **single message** with multiple Task tool calls.
+
+**Implementation Phase (Sequential):**
+
+After parallel setup agents complete and report their findings:
+
+1. **Synthesize results** from all parallel agents
+2. **Present unified plan** to the user showing how all findings integrate
+3. **Follow the Three-Phase Development Process** (below) for sequential implementation
+4. Use findings from parallel agents to inform each phase
+
+---
+
 ### Three-Phase Development Process
 
 **MANDATORY** - Follow these phases for all development tasks:
