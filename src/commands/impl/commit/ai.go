@@ -41,13 +41,38 @@ type executionConfig struct {
 
 func CommitAI() int {
 	// Retry loop for regenerating commit message if validation fails
-	for {
+	// Limited to prevent infinite loops
+	const maxRetries = 5
+	attempt := 0
+
+	for attempt < maxRetries {
+		attempt++
+
+		// Show warning after multiple retries
+		if attempt > 3 {
+			fmt.Printf("\n⚠️  Retry attempt %d/%d\n", attempt, maxRetries)
+		}
+
 		result, shouldRetry := commitAIAttempt()
 		if !shouldRetry {
 			return result
 		}
-		fmt.Println("\n🔄 Retrying commit message generation...")
+
+		// Check if max retries reached
+		if attempt >= maxRetries {
+			fmt.Println("\n❌ Maximum retry attempts reached.")
+			fmt.Println("   The AI is having difficulty generating a valid commit message.")
+			fmt.Println("   Please try one of the following:")
+			fmt.Println("   - Simplify your staged changes")
+			fmt.Println("   - Split changes across multiple commits")
+			fmt.Println("   - Write commit message manually with: git commit")
+			return 1
+		}
+
+		fmt.Printf("\n🔄 Retrying commit message generation (%d/%d)...\n", attempt+1, maxRetries)
 	}
+
+	return 1
 }
 
 // commitAIAttempt performs a single attempt at generating and committing
@@ -143,14 +168,47 @@ func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*exe
 		return nil, "", "", fmt.Errorf("workspaceRoot does not exist: %s", workspaceRoot)
 	}
 
-	// Get staged files with module mappings
-	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot, "0.1.0")
+	// Get staged files report
+	report, stagedFilesTable, err := getStagedFilesReport(workspaceRoot)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("getting module mappings: %w", err)
+		return nil, "", "", err
 	}
 
 	if len(report.AllFiles) == 0 {
 		return nil, "", "", nil // No staged changes (not an error)
+	}
+
+	// Extract affected modules
+	affectedModules := extractAffectedModules(report, debugWriter)
+
+	// Get git diff and stats
+	gitDiff, diffStats, err := getGitDiffAndStats(workspaceRoot, debugWriter)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	debugWriter.log("Affected modules count: %d", len(affectedModules))
+	for i, mod := range affectedModules {
+		debugWriter.log("  %d. %s", i+1, mod)
+	}
+
+	cfg := &executionConfig{
+		workspaceRoot:   workspaceRoot,
+		debug:           debugWriter.enabled,
+		stagedFiles:     report.AllFiles,
+		affectedModules: affectedModules,
+		gitDiff:         gitDiff,
+	}
+
+	return cfg, stagedFilesTable, diffStats, nil
+}
+
+// getStagedFilesReport retrieves staged files and builds a table representation
+func getStagedFilesReport(workspaceRoot string) (*reports.FilesModulesReport, string, error) {
+	// Get staged files with module mappings
+	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot, "0.1.0")
+	if err != nil {
+		return nil, "", fmt.Errorf("getting module mappings: %w", err)
 	}
 
 	// Build the staged files table
@@ -164,7 +222,11 @@ func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*exe
 	}
 	stagedFilesTable := tb.Build()
 
-	// Extract unique modules and validate them
+	return report, stagedFilesTable, nil
+}
+
+// extractAffectedModules extracts and validates unique module names from file report
+func extractAffectedModules(report *reports.FilesModulesReport, debugWriter *debugWriter) []string {
 	moduleSet := make(map[string]bool)
 	for _, file := range report.AllFiles {
 		for _, module := range file.Modules {
@@ -182,17 +244,22 @@ func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*exe
 		affectedModules = append(affectedModules, module)
 	}
 
+	return affectedModules
+}
+
+// getGitDiffAndStats retrieves git diff and diff stats for staged changes
+func getGitDiffAndStats(workspaceRoot string, debugWriter *debugWriter) (string, string, error) {
 	// Get git diff
 	diffCmd := exec.Command("git", "diff", "--staged")
 	diffCmd.Dir = workspaceRoot
 	diffOutput, err := diffCmd.Output()
 	if err != nil {
-		return nil, "", "", fmt.Errorf("getting git diff: %w", err)
+		return "", "", fmt.Errorf("getting git diff: %w", err)
 	}
 
 	// Check diff size to prevent memory issues
 	if len(diffOutput) > commitmessage.MaxDiffSize {
-		return nil, "", "", fmt.Errorf("git diff too large: %d bytes (max %d bytes / %.1f MB). Consider committing in smaller chunks",
+		return "", "", fmt.Errorf("git diff too large: %d bytes (max %d bytes / %.1f MB). Consider committing in smaller chunks",
 			len(diffOutput), commitmessage.MaxDiffSize, float64(commitmessage.MaxDiffSize)/(1024*1024))
 	}
 
@@ -206,20 +273,7 @@ func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*exe
 	}
 	diffStats := strings.TrimSpace(string(statsOutput))
 
-	debugWriter.log("Affected modules count: %d", len(affectedModules))
-	for i, mod := range affectedModules {
-		debugWriter.log("  %d. %s", i+1, mod)
-	}
-
-	cfg := &executionConfig{
-		workspaceRoot:   workspaceRoot,
-		debug:           debugWriter.enabled,
-		stagedFiles:     report.AllFiles,
-		affectedModules: affectedModules,
-		gitDiff:         string(diffOutput),
-	}
-
-	return cfg, stagedFilesTable, diffStats, nil
+	return string(diffOutput), diffStats, nil
 }
 
 // Phase 4: Generate Top-Level Summary

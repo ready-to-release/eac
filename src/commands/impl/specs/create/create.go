@@ -139,7 +139,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	providers.RegisterBuiltIn(executor)
 
 	// Wrap executor to match contract.AIExecutor interface
-	executorAdapter := &aiExecutorAdapter{executor: executor}
+	executorAdapter := ai.NewExecutorAdapter(executor)
 
 	// Create validator
 	validator := contracts.NewGherkinValidator(contractData, antiCorruptionRules)
@@ -450,6 +450,23 @@ func stripAgentNoise(output string) string {
 
 // buildContractBasedPrompt loads contract files and builds comprehensive AI prompt
 func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
+	// Load prompt templates (contract, anti-corruption, referenced files)
+	promptTemplate, err := loadPromptTemplates(config)
+	if err != nil {
+		return "", err
+	}
+
+	// Build user input section
+	userInput := buildUserInputSection(config)
+
+	// Combine template and user input
+	fullPrompt := promptTemplate + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userInput
+
+	return fullPrompt, nil
+}
+
+// loadPromptTemplates loads all template files and builds the prompt template
+func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	// Load custom or default prompt
 	promptContent, err := loadPromptWithFallback(config.TemplateRoot, config.PromptPath)
 	if err != nil {
@@ -497,10 +514,12 @@ func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 		return "", fmt.Errorf("failed to build prompt template: %w", err)
 	}
 
-	// Build final prompt with user input
+	return promptTemplate, nil
+}
+
+// buildUserInputSection builds the user input section of the prompt
+func buildUserInputSection(config *SpecsConfig) string {
 	var prompt strings.Builder
-	prompt.WriteString(promptTemplate)
-	prompt.WriteString("\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n")
 
 	// User description
 	prompt.WriteString("## Description\n\n")
@@ -527,7 +546,7 @@ func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 	prompt.WriteString("Generate the complete Gherkin specification now.\n")
 	prompt.WriteString("Return ONLY the Gherkin content starting with 'Feature:' - no markdown fences, no explanations.\n")
 
-	return prompt.String(), nil
+	return prompt.String()
 }
 
 // stripAgentNoiseWithContract applies anti-corruption rules from contract using generalized framework
@@ -546,27 +565,3 @@ func stripAgentNoiseWithContract(output string, templateRoot string) string {
 	return contracts.ApplyWithFallback(output, rules, "Feature:")
 }
 
-// aiExecutorAdapter adapts ai.Executor to contract.AIExecutor interface
-type aiExecutorAdapter struct {
-	executor *ai.Executor
-}
-
-// Execute adapts the ai.Executor.Execute signature to contracts.AIExecutor.Execute
-func (a *aiExecutorAdapter) Execute(ctx interface{}, prompt string, opts ...interface{}) (string, error) {
-	// Convert interface{} context to context.Context
-	var actualCtx context.Context
-	if c, ok := ctx.(context.Context); ok {
-		actualCtx = c
-	} else {
-		actualCtx = context.Background()
-	}
-
-	// Convert interface{} options to ai.Option
-	var aiOpts []ai.Option
-	for _, opt := range opts {
-		if aiOpt, ok := opt.(ai.Option); ok {
-			aiOpts = append(aiOpts, aiOpt)
-		}
-	}
-	return a.executor.Execute(actualCtx, prompt, aiOpts...)
-}
