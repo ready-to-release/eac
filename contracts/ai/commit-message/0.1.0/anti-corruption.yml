@@ -24,7 +24,6 @@ forbidden_prefixes:
 
 forbidden_contains:
   - "ready to assist"
-  - "commit message"
   - "**Initialized and ready"
   - "**INITIALIZED"
   - "Loading project context"

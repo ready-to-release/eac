@@ -63,9 +63,8 @@ testing_taxonomy:
       time_constraints:
         preparation: "minutes to hours"
         execution: "continuous"
-  
-  out_of_category:
-    - level: "Horizontal E2E"
+
+    - level: "HE2E"
       name: "Horizontal End-to-End"
       shift_direction: "non-shifted"
       execution_environment: "Shared testing environment"
