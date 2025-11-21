@@ -300,7 +300,8 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 
 		// Module sections: look for plain module name followed by dashes
 		// Pattern: module-name on one line, dashes on next line
-		if i < len(lines)-1 && !inModuleSection {
+		// Check for module sections even if already in one, as a new module name starts a new section
+		if i < len(lines)-1 {
 			nextLine := strings.TrimSpace(lines[i+1])
 			// Check if current line is a module name and next line is dashes
 			if isModuleName(trimmed) && isDashesLine(nextLine) {

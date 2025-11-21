@@ -60,6 +60,10 @@ tags:
     name: "Production System Tests with access to in-situ environment and build artifacts deployed to it"
     type: taxonomy-level
 
+  - tag: "@HE2E"
+    name: "Horizontal end-to-end tests spanning multiple systems and services"
+    type: taxonomy-level
+
   - tag: "@ov"
     name: "Operational Verification"
     description: "Functional tests verifying feature behavior"

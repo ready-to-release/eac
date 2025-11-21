@@ -377,6 +377,12 @@ func promptYNRWithRetries(question string, attempt int) string {
 
 	response = strings.ToLower(strings.TrimSpace(response))
 
+	// If response is empty (stdin exhausted), default to "no"
+	if response == "" {
+		fmt.Printf("\nEmpty input received. Defaulting to 'no'.\n")
+		return "n"
+	}
+
 	switch response {
 	case "y", "yes":
 		return "y"
