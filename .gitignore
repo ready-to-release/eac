@@ -69,7 +69,7 @@ site/
 # Structurizr (architecture diagrams)
 # Generated files when running 'design serve'
 .structurizr/
-**/design/workspace.json
+**/.design/workspace.json
 
 # Docker
 .docker/
