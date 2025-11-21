@@ -56,8 +56,8 @@ func dockerIsRunning() error {
 
 func moduleHasWorkspaceDslFile(module string) error {
 	// Tests run from src/commands/tests, so we need to go up three directories
-	// Validation uses specs/<module>/design/workspace.dsl
-	workspacePath := filepath.Join("..", "..", "..", "specs", module, "design", "workspace.dsl")
+	// Validation uses specs/<module>/.design/workspace.dsl
+	workspacePath := filepath.Join("..", "..", "..", "specs", module, ".design", "workspace.dsl")
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		return fmt.Errorf("workspace.dsl not found at %s", workspacePath)
 	}
@@ -79,7 +79,7 @@ func multipleModulesHaveWorkspaceDslFiles() error {
 	moduleCount := 0
 	for _, entry := range entries {
 		if entry.IsDir() {
-			workspacePath := filepath.Join(specsDir, entry.Name(), "design", "workspace.dsl")
+			workspacePath := filepath.Join(specsDir, entry.Name(), ".design", "workspace.dsl")
 			if _, err := os.Stat(workspacePath); err == nil {
 				moduleCount++
 			}

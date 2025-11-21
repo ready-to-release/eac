@@ -68,7 +68,7 @@ func DesignServe() int {
 		return 1
 	}
 
-	// Clean up module path - remove specs/ prefix and /design suffix if present
+	// Clean up module path - remove specs/ prefix and /.design suffix if present
 	module = design.CleanModuleName(module)
 
 	// Validate module name
@@ -78,7 +78,7 @@ func DesignServe() int {
 	}
 
 	// Check if workspace exists
-	workspacePath := filepath.Join(repoRoot, "specs", module, "design", "workspace.dsl")
+	workspacePath := filepath.Join(repoRoot, "specs", module, ".design", "workspace.dsl")
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		fmt.Printf("❌ Workspace not found: %s\n", workspacePath)
 		fmt.Printf("\n💡 Create one first with:\n")
@@ -114,15 +114,15 @@ func printServeUsage() {
 	fmt.Println("Examples:")
 	fmt.Println("  r2r design serve src-cli")
 	fmt.Println("  r2r design serve contracts --force")
-	fmt.Println("  r2r design serve specs/src-cli/design     (auto-cleaned)")
+	fmt.Println("  r2r design serve specs/src-cli/.design     (auto-cleaned)")
 	fmt.Println()
 	fmt.Println("Module Locations:")
-	fmt.Println("  src-cli     → specs/src-cli/design/workspace.dsl")
-	fmt.Println("  contracts   → specs/contracts/design/workspace.dsl")
-	fmt.Println("  docs        → specs/docs/design/workspace.dsl")
+	fmt.Println("  src-cli     → specs/src-cli/.design/workspace.dsl")
+	fmt.Println("  contracts   → specs/contracts/.design/workspace.dsl")
+	fmt.Println("  docs        → specs/docs/.design/workspace.dsl")
 	fmt.Println()
 	fmt.Println("What It Does:")
-	fmt.Println("  1. Reads specs/<module>/design/workspace.dsl")
+	fmt.Println("  1. Reads specs/<module>/.design/workspace.dsl")
 	fmt.Println("  2. Generates workspace.json and .structurizr/ (ignored by git)")
 	fmt.Println("  3. Checks for port conflicts on 8080")
 	fmt.Println("  4. Starts Docker container with Structurizr Lite on port 8080")
