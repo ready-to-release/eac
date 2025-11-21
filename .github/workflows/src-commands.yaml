@@ -15,32 +15,6 @@ on:
         default: ''
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            src/commands/go.sum
-            src/internal/go.sum
-
-      - name: Test Module
-        working-directory: ./src/commands
-        run: go run . test module src-commands
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-src-commands
-          path: out/test/**/src-commands/**
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -54,7 +28,7 @@ jobs:
           go-version: '1.24'
           cache-dependency-path: |
             src/commands/go.sum
-            src/internal/go.sum
+            src/core/go.sum
 
       - name: Build Module
         working-directory: ./src/commands
@@ -66,3 +40,36 @@ jobs:
         with:
           name: build-artifacts-src-commands
           path: out/src-commands/**
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-src-commands
+          path: out/src-commands
+
+      - name: Test Module
+        working-directory: ./src/commands
+        run: go run . test module src-commands
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-src-commands
+          path: out/test/**/src-commands/**
