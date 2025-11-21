@@ -39,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-src-commands
-          path: out/test-results/**/src-commands/**
+          path: out/test/**/src-commands/**
 
   build:
     name: Build

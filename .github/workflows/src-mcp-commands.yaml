@@ -38,7 +38,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-src-mcp-commands
-          path: out/test-results/**/src-mcp-commands/**
+          path: out/test/**/src-mcp-commands/**
 
   build:
     name: Build
