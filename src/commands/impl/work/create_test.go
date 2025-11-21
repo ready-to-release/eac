@@ -3,6 +3,7 @@ package work
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -124,29 +125,36 @@ func TestGenerateWorktreePath(t *testing.T) {
 // TestGetRepoName tests repository name extraction
 func TestGetRepoName(t *testing.T) {
 	tests := []struct {
-		name     string
-		repoRoot string
-		expected string
+		name        string
+		repoRoot    string
+		expected    string
+		windowsOnly bool // deps:windows - test only runs on Windows
 	}{
 		{
-			name:     "unix path",
-			repoRoot: "/home/user/projects/my-repo",
-			expected: "my-repo",
+			name:        "unix path",
+			repoRoot:    "/home/user/projects/my-repo",
+			expected:    "my-repo",
+			windowsOnly: false,
 		},
 		{
-			name:     "windows path",
-			repoRoot: `C:\source\projects\my-repo`,
-			expected: "my-repo",
+			name:        "windows path",
+			repoRoot:    `C:\source\projects\my-repo`,
+			expected:    "my-repo",
+			windowsOnly: true,
 		},
 		{
-			name:     "current directory",
-			repoRoot: ".",
-			expected: ".",
+			name:        "current directory",
+			repoRoot:    ".",
+			expected:    ".",
+			windowsOnly: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.windowsOnly && runtime.GOOS != "windows" {
+				t.Skip("deps:windows - test only runs on Windows")
+			}
 			result := internal.GetRepoName(tt.repoRoot)
 			if result != tt.expected {
 				t.Errorf("expected '%s', got '%s'", tt.expected, result)

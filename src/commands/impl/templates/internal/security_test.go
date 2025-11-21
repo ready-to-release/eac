@@ -5,6 +5,7 @@ package templates
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,11 +15,12 @@ import (
 // TestValidatePath_PathTraversal ensures path traversal attacks are prevented
 func TestValidatePath_PathTraversal(t *testing.T) {
 	tests := []struct {
-		name      string
-		basePath  string
-		userPath  string
-		shouldErr bool
-		errMsg    string
+		name        string
+		basePath    string
+		userPath    string
+		shouldErr   bool
+		errMsg      string
+		windowsOnly bool // deps:windows - test only runs on Windows
 	}{
 		{
 			name:      "normal relative path",
@@ -61,18 +63,20 @@ func TestValidatePath_PathTraversal(t *testing.T) {
 			errMsg:    "path traversal",
 		},
 		{
-			name:      "Windows absolute path",
-			basePath:  "C:\\base",
-			userPath:  "C:\\Windows\\System32",
-			shouldErr: true,
-			errMsg:    "absolute path",
+			name:        "Windows absolute path",
+			basePath:    "C:\\base",
+			userPath:    "C:\\Windows\\System32",
+			shouldErr:   true,
+			errMsg:      "absolute path",
+			windowsOnly: true,
 		},
 		{
-			name:      "UNC path",
-			basePath:  "/base",
-			userPath:  "\\\\server\\share\\file.txt",
-			shouldErr: true,
-			errMsg:    "absolute path",
+			name:        "UNC path",
+			basePath:    "/base",
+			userPath:    "\\\\server\\share\\file.txt",
+			shouldErr:   true,
+			errMsg:      "absolute path",
+			windowsOnly: true,
 		},
 		{
 			name:      "current directory reference (safe)",
@@ -90,6 +94,9 @@ func TestValidatePath_PathTraversal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.windowsOnly && runtime.GOOS != "windows" {
+				t.Skip("deps:windows - test only runs on Windows")
+			}
 			err := ValidatePath(tt.basePath, tt.userPath)
 			if tt.shouldErr {
 				require.Error(t, err, "Expected error for: %s", tt.userPath)
