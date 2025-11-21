@@ -18,44 +18,53 @@ C4 stands for Context, Containers, Components, and Code. It's a hierarchical way
 ## Structure Requirements
 
 ### Workspace Declaration
-```
+
+```text
 workspace "<Name>" "<Description>" {
     model { ... }
     views { ... }
 }
 ```
+
 - Workspace name: Title case (e.g., "CLI Architecture")
 - Description: Brief system summary
 
 ### Model Section
+
 The model defines all elements and relationships:
 
 **Elements:**
+
 - `person = person "Name" "Description"` - External actors (users)
 - `system = softwareSystem "Name" "Description"` - Major software systems
 - `container = container "Name" "Description" "Technology"` - Major components
 - `component = component "Name" "Description" "Technology"` - Internal parts
 
 **Relationships:**
-```
+
+```text
 elementA -> elementB "Description" "Technology"
 ```
 
 **Hierarchy:**
+
 - Systems can contain containers
 - Containers can contain components
 - Use proper nesting:
-  ```
+
+  ```text
   system = softwareSystem "System" "Description" {
       container = container "Container" "Description" "Tech"
   }
   ```
 
 ### Views Section
+
 Define visual diagrams:
 
 **System Context View** (required):
-```
+
+```text
 systemContext system "SystemContext" {
     include *
     autoLayout
@@ -63,7 +72,8 @@ systemContext system "SystemContext" {
 ```
 
 **Container View** (required if containers defined):
-```
+
+```text
 container system "Containers" {
     include *
     autoLayout
@@ -71,7 +81,8 @@ container system "Containers" {
 ```
 
 **Component View** (recommended for significant containers):
-```
+
+```text
 component container "Components" {
     include *
     autoLayout
@@ -79,7 +90,8 @@ component container "Components" {
 ```
 
 **Styles** (optional but recommended):
-```
+
+```text
 styles {
     element "Software System" {
         background #1168bd
@@ -95,17 +107,20 @@ styles {
 ## Naming Conventions
 
 ### Identifiers (for relationships)
+
 - Pattern: `lowercase_with_underscores`
 - Start with lowercase letter
 - Examples: `cli_app`, `docker_orchestrator`, `github_client`
 
 ### Display Names (what users see)
+
 - Use clear, descriptive names
 - Examples: "CLI Application", "Docker Orchestrator", "GitHub Client"
 
 ## Generation Strategy
 
 ### Always Generate Complete Architecture
+
 1. **Identify actors**: Who uses the system?
 2. **Identify systems**: What are the major systems (internal and external)?
 3. **Break down containers**: What are the major technical components?
@@ -113,11 +128,13 @@ styles {
 5. **Connect with relationships**: How do they interact?
 
 ### Typical Output Structure
+
 - 1 system context view
 - 1 container view
 - 3-8 component views (for significant containers)
 
 ### Relationship Guidelines
+
 - Every element should have at least one relationship
 - Use descriptive text (not just "uses" or "calls")
 - Include technology where relevant (HTTP, gRPC, Function calls)
@@ -127,7 +144,7 @@ styles {
 
 For: "CLI that uses Docker to run extensions from GitHub"
 
-```
+```text
 workspace "CLI System" "CLI application with containerized extensions" {
     model {
         user = person "Developer" "Uses CLI to run extensions"

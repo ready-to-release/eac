@@ -1,6 +1,35 @@
-Generate a module section using this exact format:
+# Generate Module Section
 
+Generate a module section for a multi-module commit message.
+
+## Structure
+
+```text
+<module-name>
+------------
+<module>: <type>: <description>
+
+<body: 2-4 sentences, wrapped at 72 chars>
 ```
+
+## Requirements
+
+**Line 1**: Module name only (e.g., `src-commands`, `contracts`)
+
+**Line 2**: Exactly 12 dashes: `------------`
+
+**Line 3**: `<module>: <type>: <description>`
+
+- Types: feat, fix, refactor, docs, chore, test, perf, style
+- Max 72 chars, no trailing period
+
+**Line 4**: Empty line
+
+**Lines 5+**: Body text (2-4 sentences, wrapped at 72 chars)
+
+## Example
+
+```text
 src-commands
 ------------
 src-commands: refactor: simplify commit message generation
@@ -10,17 +39,11 @@ prompts to use direct format instructions. Simplified assembly code to
 use blank line separators instead of dashes between module sections.
 ```
 
-Your output must:
-- Line 1: Module name only (e.g., `src-commands`, `contracts`, `docs`)
-- Line 2: Exactly 12 dashes: `------------`
-- Line 3: `<module>: <type>: <description>` (max 72 chars, no period)
-- Line 4: Empty
-- Lines 5+: Body text (2-4 sentences, wrapped at 72 chars)
+## Output Rules
 
-CRITICAL: Output ONLY the module section.
-- NO questions like "Which would you like me to generate?"
-- NO clarifications like "I need to understand"
-- NO explanations like "Let me examine"
-- NO markdown fences
-- NO conversational text
-Just the module section content as shown in the example above.
+- Output ONLY the module section
+- No questions, clarifications, or explanations
+- No markdown fences
+- No conversational text
+
+Generate now based on the context below:
