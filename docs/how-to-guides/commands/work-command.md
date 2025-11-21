@@ -258,12 +258,14 @@ r2r eac work commit --debug
 Run multiple AI agents simultaneously in different workspaces without conflicts.
 
 **AI-powered commits** analyze:
+
 - Changed files and module ownership
 - Project commit conventions
 - Semantic commit structure
 
 Example output:
-```
+
+```text
 feat(src-core): implement JWT authentication system
 
 Add secure authentication with JWT tokens:

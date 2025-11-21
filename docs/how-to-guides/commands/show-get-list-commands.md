@@ -217,6 +217,7 @@ r2r eac get-modules
 ```
 
 **Use cases:**
+
 - CI/CD scripts
 - Build automation
 - Module analysis tools
@@ -261,6 +262,7 @@ r2r eac get-files
 **Warning:** This command loads ~2,690 files (~19k tokens). Use only when needed.
 
 **Alternatives for specific queries:**
+
 - `show-files-changed` - Only changed files
 - `show-files-staged` - Only staged files
 
@@ -281,6 +283,7 @@ r2r eac get-changed-modules
 ```
 
 **Use cases:**
+
 - Incremental builds
 - Selective testing
 - CI optimization
@@ -498,12 +501,14 @@ r2r eac get-modules | jq '{module: [.modules[].moniker]}'
 ## Summary
 
 **Show commands** (human-readable):
+
 - `show modules` - Module table
 - `show dependencies` - Dependency graph
 - `show files` - File ownership
 - `show-files-changed` - Changed files only
 
 **Get commands** (JSON):
+
 - `get-modules` - Module data
 - `get-dependencies` - Dependency data
 - `get-changed-modules` - Affected modules

@@ -1,7 +1,12 @@
 title: How-to Guides
 nav:
   - index.md
-  - Configuration: 
+  - Configuration:
     - configuration/claude-mcp-setup.md
   - Commands:
-    - commands/work-command-workflow.md
+    - commands/build-test-commands.md
+    - commands/design-command.md
+    - commands/show-get-list-commands.md
+    - commands/specs-command.md
+    - commands/templates-docs-commands.md
+    - commands/work-command.md

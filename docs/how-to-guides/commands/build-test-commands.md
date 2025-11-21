@@ -49,6 +49,7 @@ r2r eac build module docs
 ```
 
 **Supported module types:**
+
 - `go-cli` - Go CLI applications
 - `go-commands` - Go command packages
 - `go-mcp` - Go MCP servers
@@ -98,6 +99,7 @@ r2r eac test module src-api --generate-only
 ```
 
 **Supported module types:**
+
 - `go-cli` - Run `go test`
 - `go-commands` - Run `go test`
 - `go-mcp` - Run `go test`
@@ -215,11 +217,13 @@ r2r eac work commit --all
 ### Go Modules
 
 **Build:**
+
 - Runs `go build`
 - Outputs to `out/bin/`
 - Platform-specific binaries
 
 **Test:**
+
 - Runs `go test ./...`
 - Table-driven tests
 - Outputs coverage reports
@@ -227,11 +231,13 @@ r2r eac work commit --all
 ### MkDocs Sites
 
 **Build:**
+
 - Runs `mkdocs build`
 - Validates markdown links
 - Generates static site in `out/site/`
 
 **Test:**
+
 - Validates markdown syntax
 - Checks internal links
 - Verifies navigation structure
@@ -239,11 +245,13 @@ r2r eac work commit --all
 ### Specifications
 
 **Build:**
+
 - Validates Gherkin syntax
 - Checks against contracts
 - Reports validation errors
 
 **Test:**
+
 - Runs BDD step definitions
 - Cucumber JSON output
 - Test reports in `out/reports/`
@@ -251,11 +259,13 @@ r2r eac work commit --all
 ### Containers
 
 **Build:**
+
 - Builds Docker images
 - Tags appropriately
 - Pushes to registry (if configured)
 
 **Test:**
+
 - Container smoke tests
 - Health checks
 - Integration tests
@@ -264,7 +274,7 @@ r2r eac work commit --all
 
 ### Standard Output (Default)
 
-```
+```text
 Building module: src-commands
 Module type: go-commands
 Output dir: out
@@ -313,7 +323,7 @@ Execution time: 1.234s
 
 ### Directory Structure
 
-```
+```text
 out/
 ├── bin/                          # Compiled binaries
 │   ├── windows/
@@ -398,19 +408,19 @@ jobs:
 .PHONY: build test clean
 
 build:
-	r2r eac build modules
+ r2r eac build modules
 
 test:
-	r2r eac test modules
+ r2r eac test modules
 
 validate:
-	r2r eac validate
+ r2r eac validate
 
 ci: build test validate
-	@echo "✅ CI pipeline completed"
+ @echo "✅ CI pipeline completed"
 
 clean:
-	rm -rf out/
+ rm -rf out/
 ```
 
 ## Best Practices
@@ -478,11 +488,13 @@ fi
 ## Summary
 
 **Build workflow:**
+
 1. `r2r eac build module <moniker>` - Build single module
 2. `r2r eac build modules` - Build all modules
 3. Check output in `out/bin/` or `out/site/`
 
 **Test workflow:**
+
 1. `r2r eac test module <moniker>` - Test single module
 2. `r2r eac test modules` - Test all modules
 3. Use `--as-junit` for CI/CD integration

@@ -83,6 +83,7 @@ r2r eac specs create "Feature description" --debug
 ```
 
 **What it does:**
+
 1. Analyzes natural language description
 2. Loads specification contract and rules
 3. Generates Gherkin with proper structure
@@ -108,6 +109,7 @@ r2r eac specs validate --format json             # Machine-readable output
 ```
 
 **Validation checks:**
+
 - Gherkin syntax correctness
 - Feature/Rule/Scenario hierarchy
 - Tag formatting (@feature, @rule, @scenario)
@@ -160,7 +162,7 @@ Feature: User Authentication
 
 Specifications are organized by module:
 
-```
+```text
 specs/
 ├── src-auth/
 │   ├── authentication.feature
@@ -173,6 +175,7 @@ specs/
 ```
 
 Module detection:
+
 - **Explicit**: `--module src-auth`
 - **Inferred**: AI analyzes description to determine module
 - **Default**: `specs/` root if unclear
@@ -187,7 +190,7 @@ r2r eac specs create "Feature description" --debug
 
 Creates debug files in `out/`:
 
-```
+```text
 out/
 ├── debug-full-prompt.md           # Complete AI prompt
 ├── debug-raw-ai-response.md       # Unfiltered AI output
@@ -196,6 +199,7 @@ out/
 ```
 
 **Use debug mode when:**
+
 - AI generates unexpected output
 - Validation fails repeatedly
 - Customizing prompts or templates
@@ -244,7 +248,7 @@ r2r eac specs create "New feature"
 
 ### Text Format (Default)
 
-```
+```text
 Validating specifications...
 
 ✓ specs/src-auth/authentication.feature

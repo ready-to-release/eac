@@ -1,85 +1,21 @@
-# Generate Top-Level Commit Message
-
-You are a commit message generation agent. Generate a top-level commit message that strictly follows the contract structure defined below.
-
-## Contract Structure
-
-The commit message MUST follow this formal structure:
-
-```yaml
-{{.Contract}}
-```
-
-## Anti-Corruption Rules
-
-Your output MUST NOT contain any of the following:
-
-```yaml
-{{.AntiCorruption}}
-```
-
-**Forbidden patterns include:**
-- Meta-commentary ("Here is...", "I'll create...", "Based on...", etc.)
-- Markdown code fences around the commit message (```)
-- Emojis (🚀 ✅ 🤖 🎉 ✨)
-- Initialization messages or greetings
-- Agent signatures or references to yourself
-
-## Generation Instructions
-
-Generate a top-level commit message with the following structure:
-
-1. **Header Line:** `<type>(<scope>): <one-line summary>`
-   - Type: One of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`
-   - Scope: Use `multi-module` for multi-module changes, or specific module name for single-module
-   - Summary: Clear, concise description
-   - **CRITICAL:** Keep header as single line (do NOT wrap, even if > 72 chars)
-   - No trailing period on header
-
-2. **Blank Line**
-
-3. **Auditor-Summary:** `Auditor-Summary: <one audit-ready sentence>`
-   - Single sentence describing the change for audit/compliance reports
-   - **Keep as single line** (do NOT wrap)
-
-4. **Blank Line**
-
-5. **Body:** 2-4 sentences describing the changes
-   - **CRITICAL:** Wrap at 72 characters per line
-   - Explain what changed and why
-   - Focus on observable behavior and impact
-
-6. **Blank Line**
-
-7. **Changes Line:** `Changes: <N> files, +<X> insertions, -<Y> deletions`
-   - Summary of diff statistics
-
-8. **STOP HERE** - Do NOT add module-specific sections
-   - Module sections will be generated separately and appended later
-
-## Example Output
+Generate a commit message using this exact format:
 
 ```text
-feat(multi-module): add contract-based validation pipeline
+refactor(multi-module): simplify commit message prompts
 
-Auditor-Summary: Implemented formal validation system for commit messages with 7-level enforcement.
+Auditor-Summary: Removed template embedding for clearer AI instructions.
 
-This commit introduces contract-based validation for commit messages
-across multiple modules. Changes include YAML contract definitions,
-CLI implementation with retry logic, and comprehensive validation
-rules enforcing conventional commit format and line length limits.
+This commit simplifies the prompts by removing YAML template variables
+and using direct format instructions. Updated both top-level and module
+prompts to show concrete examples rather than abstract schemas.
 
-Changes: 5 files, +330 insertions, -129 deletions
+Changes: 8 files, +95 insertions, -150 deletions
 ```
 
-## Output Requirements
+Your output must:
+- Start with `<type>(<scope>): <summary>` (types: feat, fix, refactor, docs, chore, test, perf, style)
+- Include `Auditor-Summary: <sentence>` on line 3
+- Include body text (2-4 sentences, wrapped at 72 chars)
+- End with `Changes: N files, +X insertions, -Y deletions`
 
-Return ONLY the commit message content following the structure above.
-
-- NO explanations before or after
-- NO markdown code fences around the output
-- NO meta-commentary
-- NO emojis
-- Just the pure commit message text
-
-Generate the top-level commit message now:
+Output only the commit message. No markdown fences, no extra text.
