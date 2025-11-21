@@ -206,9 +206,15 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Building go-cli: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
 
-	// Step 1: go generate
+	// Step 1: go mod tidy (ensure clean module state)
+	fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+		return exitCode
+	}
+
+	// Step 2: go generate
+	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
 		return exitCode
 	}
@@ -286,6 +292,14 @@ func buildGoCommands(module *modules.ModuleContract, workspaceRoot string, outpu
 
 	fmt.Fprintf(logWriter, "\n=== go-commands: %s ===\n", module.Moniker)
 
+	// Run go mod tidy to ensure clean module state
+	fmt.Fprintf(logWriter, "🔄 Running go mod tidy...\n")
+	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+		fmt.Fprintf(logWriter, "❌ go mod tidy failed\n")
+		return exitCode
+	}
+	fmt.Fprintf(logWriter, "✅ go mod tidy completed\n")
+
 	// Run go generate to ensure generated code is up to date
 	fmt.Fprintf(logWriter, "🔄 Running go generate...\n")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
@@ -314,8 +328,15 @@ func buildGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	binaryPath := filepath.Join(outputDir, binaryName)
 
 	fmt.Fprintf(logWriter, "\n=== Building go-mcp: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Running: go build -o %s\n", binaryPath)
 
+	// Step 1: go mod tidy (ensure clean module state)
+	fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+		return exitCode
+	}
+
+	// Step 2: go build
+	fmt.Fprintf(logWriter, "Running: go build -o %s\n", binaryPath)
 	return RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
 }
 
@@ -326,9 +347,15 @@ func buildGoLibrary(module *modules.ModuleContract, workspaceRoot string, output
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== go-library: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
 
-	// Step 1: go generate to prepare embedded resources
+	// Step 1: go mod tidy (ensure clean module state)
+	fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+		return exitCode
+	}
+
+	// Step 2: go generate to prepare embedded resources
+	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
 		return exitCode
 	}
