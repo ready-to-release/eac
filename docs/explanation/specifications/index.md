@@ -10,9 +10,9 @@ This project uses a **three-layer testing approach** that separates business req
 
 Each layer serves a specific purpose and uses different tools and formats:
 
-- **ATDD** (Acceptance Test-Driven Development) - Business requirements and acceptance criteria
-- **BDD** (Behavior-Driven Development) - User-facing behavior and observable outcomes
-- **TDD** (Test-Driven Development) - Implementation testing and code correctness
+- **Rules** - Business requirements and acceptance criteria
+- **Scenarios** - User-facing behavior and observable outcomes
+- **Unit Tests** - Implementation testing and code correctness
 
 ---
 
@@ -20,7 +20,7 @@ Each layer serves a specific purpose and uses different tools and formats:
 
 ### [Three-Layer Testing Approach](three-layer-approach.md)
 
-Understanding how ATDD, BDD, and TDD work together to deliver quality software.
+Understanding how Rules, Scenarios, and Unit Tests work together to deliver quality software.
 
 **Topics covered:**
 
@@ -35,7 +35,7 @@ Understanding how Acceptance Test-Driven Development and Behavior-Driven Develop
 
 **Topics covered:**
 
-- What is ATDD and BDD?
+- What is BDD?
 - The unified approach with Rule blocks
 - Gherkin and Ubiquitous Language
 - Key principles and best practices
@@ -154,11 +154,11 @@ Understanding tagging for regulated software development in pharmaceutical and m
 
 ## Quick Comparison
 
-| Layer    | Focus                | Representation         | Tool    | Specification                    | Implementation            |
-| -------- | -------------------- | ---------------------- | ------- | -------------------------------- | ------------------------- |
-| **ATDD** | Business requirements | `Rule:` blocks         | Godog   | `specs/.../specification.feature` | `src/.../steps_test.go`   |
-| **BDD**  | User-facing behavior | `Scenario:` under Rule | Godog   | `specs/.../specification.feature` | `src/.../steps_test.go`   |
-| **TDD**  | Implementation testing | Go test functions      | Go test | N/A                              | `src/.../*_test.go`       |
+| Layer          | Focus                | Representation         | Tool    | Specification                    | Implementation            |
+|----------------| -------------------- | ---------------------- | ------- | -------------------------------- | ------------------------- |
+| **Rules**      | Business requirements | `Rule:` blocks         | Godog   | `specs/.../specification.feature` | `src/.../steps_test.go`   |
+| **Scenarios**  | User-facing behavior | `Scenario:` under Rule | Godog   | `specs/.../specification.feature` | `src/.../steps_test.go`   |
+| **Unit Tests** | Implementation testing | Go test functions      | Go test | N/A                              | `src/.../*_test.go`       |
 
 ---
 

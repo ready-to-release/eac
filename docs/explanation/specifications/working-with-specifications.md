@@ -443,7 +443,7 @@ flowchart TD
 
 ## Related Documentation
 
-- [Three-Layer Testing Approach](./three-layer-approach.md) - How ATDD/BDD/TDD work together
+- [Three-Layer Testing Approach](./three-layer-approach.md) - How Rule/Scenario/Unit Test work together
 - [Ubiquitous Language](./ubiquitous-language.md) - DDD and shared vocabulary foundation
 - [Event Storming](./event-storming.md) - Domain discovery workshops
 - [Example Mapping](./example-mapping.md) - Requirements discovery workshops

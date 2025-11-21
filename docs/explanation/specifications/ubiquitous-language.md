@@ -238,4 +238,4 @@ Code using Ubiquitous Language:
 - [Example Mapping](./example-mapping.md) - Requirements discovery
 - [Review and Iterate](review-and-iterate.md) - How specifications evolve with language
 - [Working with specifications](working-with-specifications.md) - Writing specifications
-- [Three-Layer Approach](./three-layer-approach.md) - How ATDD/BDD/TDD work together
+- [Three-Layer Approach](./three-layer-approach.md) - How Rule/Scenario/Unit Test work together
