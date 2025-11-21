@@ -91,8 +91,8 @@ func TestGenerateModuleSectionsParallel_SingleModule(t *testing.T) {
 	assert.Empty(t, sections, "Single-module commits should skip module sections")
 }
 
-// TestGenerateModuleSectionsParallel_EmptyModules verifies behavior when no modules
-// are affected (edge case that shouldn't occur in practice).
+// TestGenerateModuleSectionsParallel_EmptyModules verifies that empty modules
+// are rejected with an error (edge case that shouldn't occur in practice).
 func TestGenerateModuleSectionsParallel_EmptyModules(t *testing.T) {
 	cfg := createTestConfig([]string{})
 	debugWriter := newDebugWriter(false, t.TempDir())
@@ -100,8 +100,9 @@ func TestGenerateModuleSectionsParallel_EmptyModules(t *testing.T) {
 
 	sections, err := generateModuleSectionsParallel(cfg, debugWriter, mockExecutor)
 
-	require.NoError(t, err)
-	assert.Empty(t, sections, "Zero modules should return empty sections")
+	require.Error(t, err, "Empty modules should return an error")
+	assert.Contains(t, err.Error(), "affectedModules cannot be empty", "Error message should indicate empty modules")
+	assert.Nil(t, sections, "Sections should be nil when error occurs")
 }
 
 // TestDebugWriter_ThreadSafety verifies that debugWriter can handle concurrent

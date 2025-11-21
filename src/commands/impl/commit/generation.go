@@ -95,19 +95,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	}
 
 	// Configure retry behavior
-	retryConfig := &contracts.RetryConfig{
-		Executor:       executorAdapter,
-		Validator:      validator,
-		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
-		AntiCorruption: antiCorruptionRules,
-		ContentMarker:  "", // Commit messages don't have a specific content marker
-		MaxAttempts:    2,
-		Debug:          debugEnabled,
-		DebugOutputDir: debugOutputDir,
-		ValidationContext: map[string]interface{}{
-			"affectedModules": affectedModules,
-		},
-	}
+	retryConfig := buildRetryConfig(executorAdapter, validator, antiCorruptionRules, affectedModules, debugEnabled, debugOutputDir)
 
 	// Generate with retry
 	ctx := context.Background()
@@ -150,6 +138,30 @@ func generateWithoutValidation(executor *ai.Executor, fullPrompt string, model s
 	output = stripAgentNoise(output, promptName, workspaceRoot)
 
 	return output, nil
+}
+
+// buildRetryConfig creates a RetryConfig with standard settings for commit message generation
+func buildRetryConfig(
+	executor contracts.AIExecutor,
+	validator contracts.Validator,
+	antiCorruption *contracts.AntiCorruptionRules,
+	affectedModules []string,
+	debug bool,
+	debugOutputDir string,
+) *contracts.RetryConfig {
+	return &contracts.RetryConfig{
+		Executor:       executor,
+		Validator:      validator,
+		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
+		AntiCorruption: antiCorruption,
+		ContentMarker:  "", // Commit messages don't have a specific content marker
+		MaxAttempts:    2,
+		Debug:          debug,
+		DebugOutputDir: debugOutputDir,
+		ValidationContext: map[string]interface{}{
+			"affectedModules": affectedModules,
+		},
+	}
 }
 
 // extractModelFromAgent parses agent frontmatter and extracts the model field

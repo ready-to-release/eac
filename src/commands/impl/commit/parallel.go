@@ -81,6 +81,14 @@ import (
 //   // sections[1] corresponds to "src-core"
 //   // sections[2] corresponds to "src-commands"
 func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWriter, testExecutor *ai.Executor) ([]string, error) {
+	// Validate inputs
+	if cfg == nil {
+		return nil, fmt.Errorf("executionConfig cannot be nil")
+	}
+	if len(cfg.affectedModules) == 0 {
+		return nil, fmt.Errorf("affectedModules cannot be empty")
+	}
+
 	// Single-module commits skip module sections (existing behavior)
 	if len(cfg.affectedModules) <= 1 {
 		debugWriter.log("Single-module commit - skipping module sections")

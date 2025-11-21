@@ -49,15 +49,15 @@ func combineCommitSections(topLevel string, moduleSections []string) string {
 		if len(uniqueSections) > 0 {
 			result.WriteString("\n\n")
 
-			// Module sections separated by blank lines
+			// Module sections separated by horizontal rules
 			for i, section := range uniqueSections {
 				// Trim trailing whitespace from each section
 				trimmedSection := strings.TrimRight(section, " \t\n")
 				result.WriteString(trimmedSection)
 
-				// Add blank line between modules (but not after the last one)
+				// Add separator between modules (but not after the last one)
 				if i < len(uniqueSections)-1 {
-					result.WriteString("\n\n")
+					result.WriteString("\n\n---\n\n")
 				}
 			}
 		}

@@ -196,10 +196,15 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 // validateFeatureNaming checks if feature name follows the naming convention
 //
 // Expected format: <module>_<feature-name>
-// Pattern: ^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$
+// Pattern is read from contract.feature_naming_pattern
 func (v *GherkinValidator) validateFeatureNaming(featureName string, lineNum int) ValidationError {
-	// Extract naming convention pattern from contract
-	pattern := `^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$`
+	// Get naming pattern from contract
+	pattern := `^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$` // Default fallback
+	if v.contract != nil && v.contract.RawData != nil {
+		if patternVal, ok := v.contract.RawData["feature_naming_pattern"].(string); ok && patternVal != "" {
+			pattern = patternVal
+		}
+	}
 
 	matched, err := regexp.MatchString(pattern, featureName)
 	if err != nil || !matched {
@@ -251,8 +256,8 @@ func (v *GherkinValidator) validateVerificationTags(lines []string) []Validation
 
 		// When we hit a Scenario, check if we have verification tags
 		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
-			// Check if pending tags contain verification tag
-			if !hasVerificationTag(pendingTags) {
+			// Check if pending tags contain verification tag (use contract-based check)
+			if !v.hasVerificationTagFromContract(pendingTags) {
 				errors = append(errors, ValidationError{
 					Code:     "MISSING_VERIFICATION_TAG",
 					Message:  "Scenario missing verification tag (required: @ov, @iv, @pv, @piv, or @ppv)",
@@ -289,6 +294,42 @@ func hasVerificationTag(tags []string) bool {
 
 	for _, tag := range tags {
 		if verificationTags[tag] {
+			return true
+		}
+	}
+
+	return false
+}
+
+// hasVerificationTagFromContract checks if tag list contains at least one verification tag
+// using tags defined in the contract
+func (v *GherkinValidator) hasVerificationTagFromContract(tags []string) bool {
+	// Get verification tags from contract
+	var verificationTags []string
+	if v.contract != nil && v.contract.RawData != nil {
+		if tagsVal, ok := v.contract.RawData["required_verification_tags"].([]interface{}); ok {
+			for _, tag := range tagsVal {
+				if tagStr, ok := tag.(string); ok {
+					verificationTags = append(verificationTags, tagStr)
+				}
+			}
+		}
+	}
+
+	// Fallback to hardcoded tags if contract doesn't define them
+	if len(verificationTags) == 0 {
+		verificationTags = []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
+	}
+
+	// Build lookup map
+	tagMap := make(map[string]bool)
+	for _, vTag := range verificationTags {
+		tagMap[vTag] = true
+	}
+
+	// Check if any tag matches
+	for _, tag := range tags {
+		if tagMap[tag] {
 			return true
 		}
 	}

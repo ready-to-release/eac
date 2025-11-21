@@ -43,8 +43,8 @@ func TestLoadContract(t *testing.T) {
 		t.Errorf("Expected version 0.1.0, got %s", contract.Version)
 	}
 
-	if len(contract.Structure) != 6 {
-		t.Errorf("Expected 6 structure sections (top_level_heading, auditor_summary, top_level_body, diff_stats, module_sections, footer), got %d", len(contract.Structure))
+	if len(contract.Structure) != 4 {
+		t.Errorf("Expected 4 structure sections (top_level_heading, auditor_summary, top_level_body, module_sections), got %d", len(contract.Structure))
 	}
 
 	if len(contract.SemanticTypes) != 8 {
