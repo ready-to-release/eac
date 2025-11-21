@@ -49,12 +49,13 @@ GitHub Server (mcp__github__*):
 
 [If NOT CONNECTED, include this troubleshooting section:]
 ⚠️ MCP Troubleshooting:
-- Servers configured in: .mcp.json
+- Servers configured in: .mcp.json and .claude/settings.json
 - Commands server: go run ./src/mcp/commands/main.go
-- GitHub server: go run ./src/mcp/github/main.go
-- Verify servers can start: go run ./src/mcp/commands/main.go < /dev/null
+- GitHub server: Official GitHub MCP server (requires GITHUB_TOKEN)
+- Verify commands server: go run ./src/mcp/commands/main.go < /dev/null
+- Verify GitHub token: echo $GITHUB_TOKEN (bash) or $env:GITHUB_TOKEN (PowerShell)
 - Check Claude Code MCP server logs for errors
-- Fallback: All operations will use direct CLI commands
+- Fallback: Commands operations will use direct CLI commands (go run ./src/commands)
 
 Ready to assist with project tasks.
 ```
@@ -101,6 +102,8 @@ During initialization, you MUST verify MCP server availability:
 **GitHub Server** (`mcp__github__*`):
 
 - Repository operations, issue management, PR operations, workflow execution
+- **Note**: This project uses the official GitHub MCP server (not a local implementation)
+- Configuration: Requires `GITHUB_TOKEN` environment variable
 
 #### Fallback Mode
 
@@ -114,6 +117,8 @@ If MCP servers are NOT CONNECTED, use direct CLI commands:
 | `mcp__commands__specs-create` | `go run ./src/commands specs create <description>` |
 | `mcp__commands__specs-validate` | `go run ./src/commands specs validate` |
 | All other tools | `go run ./src/commands <command> [args]` |
+
+**Note**: GitHub MCP server has no CLI fallback - it uses the official MCP implementation from GitHub.
 
 ---
 

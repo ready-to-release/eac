@@ -20,4 +20,3 @@ used_by:
   - "src-cli"
   - "src-commands"
   - "src-mcp-commands"
-  - "src-mcp-github"

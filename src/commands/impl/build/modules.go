@@ -45,17 +45,30 @@ type BuildResult struct {
 
 // BuildModules builds multiple modules in sequence (defaults to all modules)
 func BuildModules() int {
-	// Parse module monikers (no flags for build yet)
+	// Detect CI environment
+	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
+
+	// Parse module monikers and flags
 	var monikers []string
+	tidyFirst := !isCI // Default: true for local, false for CI
+	tidyExplicitlySet := false
 
 	// Parse arguments starting from index 3 (skip "binary", "build", "modules")
 	for i := 3; i < len(os.Args); i++ {
 		arg := os.Args[i]
-		if strings.HasPrefix(arg, "--") {
-			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Usage: build modules [moniker1] [moniker2] ...\n")
-			return 1
-		} else {
+		switch arg {
+		case "--tidy-first":
+			tidyFirst = true
+			tidyExplicitlySet = true
+		case "--no-tidy":
+			tidyFirst = false
+			tidyExplicitlySet = true
+		default:
+			if strings.HasPrefix(arg, "--") {
+				fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+				fmt.Fprintf(os.Stderr, "Usage: build modules [moniker1] [moniker2] ... [--tidy-first|--no-tidy]\n")
+				return 1
+			}
 			monikers = append(monikers, arg)
 		}
 	}
@@ -101,6 +114,21 @@ func BuildModules() int {
 
 	// Create multi-writer for orchestrator output (console + log file)
 	orchestratorOut := io.MultiWriter(os.Stdout, orchestratorLogBuf)
+
+	// Log tidy behavior
+	if tidyFirst {
+		if tidyExplicitlySet {
+			fmt.Fprintf(orchestratorOut, "Tidy mode: enabled (explicit flag)\n")
+		} else {
+			fmt.Fprintf(orchestratorOut, "Tidy mode: enabled (default for local builds)\n")
+		}
+	} else {
+		if tidyExplicitlySet {
+			fmt.Fprintf(orchestratorOut, "Tidy mode: disabled (explicit flag)\n")
+		} else {
+			fmt.Fprintf(orchestratorOut, "Tidy mode: disabled (CI environment detected)\n")
+		}
+	}
 
 	fmt.Fprintf(orchestratorOut, "Building %d modules in parallel: %v\n\n", len(monikers), monikers)
 
@@ -190,7 +218,7 @@ func BuildModules() int {
 			go showProgress(orchOut, &mu, mon, done)
 
 			// Run build for this module
-			exitCode := runModuleBuild(module, workspaceRoot, moduleOutputDir, multiWriter)
+			exitCode := runModuleBuild(module, workspaceRoot, moduleOutputDir, multiWriter, tidyFirst)
 
 			// Stop progress indicator
 			done <- true
@@ -304,7 +332,7 @@ func BuildModules() int {
 }
 
 // runModuleBuild runs build for a single module
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool) int {
 	// Get build function for module type
 	buildFunc, hasBuilder := buildFunctions[module.Type]
 	if !hasBuilder {
@@ -312,8 +340,10 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 		return 1
 	}
 
-	// Execute the build function with default options (build all platforms)
-	opts := BuildOptions{}
+	// Execute the build function with options (build all platforms, optionally tidy first)
+	opts := BuildOptions{
+		TidyFirst: tidyFirst,
+	}
 	return buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
 }
 

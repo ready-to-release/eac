@@ -6,12 +6,13 @@ require (
 	github.com/cucumber/godog v0.15.1
 	github.com/docker/docker v28.0.0+incompatible
 	github.com/docker/go-connections v0.6.0
+	github.com/gobwas/glob v0.2.3
 	github.com/jedib0t/go-pretty/v6 v6.6.9
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/ready-to-release/eac/src/core v0.0.0
 	github.com/ready-to-release/eac/src/core/ai v0.0.0-00010101000000-000000000000
 	github.com/ready-to-release/eac/src/core/markdown v0.0.0-00010101000000-000000000000
-	github.com/spf13/cobra v1.10.1
+	github.com/ready-to-release/eac/src/core/module-deps v0.0.0-20251121190659-6cb680d34ae9
 	github.com/stretchr/testify v1.11.1
 	github.com/yuin/goldmark v1.7.13
 	gopkg.in/yaml.v3 v3.0.1
@@ -35,7 +36,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gofrs/uuid v4.3.1+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -48,7 +48,6 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/term v0.5.2 // indirect

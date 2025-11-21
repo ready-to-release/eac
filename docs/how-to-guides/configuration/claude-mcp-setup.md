@@ -2,8 +2,8 @@
 
 This project uses MCP (Model Context Protocol) servers to give Claude access to:
 
-- **Commands Server**: All `r2r` CLI commands (modules, tests, builds, specs, etc.)
-- **GitHub Server**: GitHub operations (repos, issues, PRs, workflows)
+- **Commands Server**: All `r2r` CLI commands (modules, tests, builds, specs, etc.) - Local implementation
+- **GitHub Server**: GitHub operations (repos, issues, PRs, workflows) - Official GitHub MCP server
 
 ## Setup
 
@@ -69,10 +69,10 @@ When you start Claude Code:
 
 1. Claude reads `.claude/settings.json` in the project root
 2. Launches MCP servers as child processes:
-   - Commands: `go run ./src/mcp/commands/main.go`
-   - GitHub: `go run ./src/mcp/github/main.go`
+   - Commands: `go run ./src/mcp/commands/main.go` (local implementation)
+   - GitHub: Official GitHub MCP server (configured via npx or direct installation)
 3. Servers inherit environment variables from your shell
-4. Claude can call MCP tools like `mcp__commands__show-modules`
+4. Claude can call MCP tools like `mcp__commands__show-modules` and `mcp__github__*`
 
 The setup scripts auto-detect the project root based on their location (two directories up from `scripts/pwsh/` or `scripts/sh/`).
 
@@ -89,8 +89,13 @@ go version  # Should be ≥ 1.21
 **Test servers manually:**
 
 ```bash
+# Test commands server (local)
 go run ./src/mcp/commands/main.go < /dev/null
-go run ./src/mcp/github/main.go < /dev/null  # Requires GITHUB_TOKEN
+
+# GitHub server uses official implementation - check .claude/settings.json for configuration
+# Verify GitHub token is set:
+echo $GITHUB_TOKEN  # Bash/Zsh
+$env:GITHUB_TOKEN   # PowerShell
 ```
 
 **Verify environment:**

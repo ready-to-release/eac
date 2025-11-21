@@ -13,10 +13,10 @@
     },
     "github": {
       "type": "stdio",
-      "command": "go",
+      "command": "npx",
       "args": [
-        "run",
-        "./src/mcp/github/main.go"
+        "-y",
+        "@modelcontextprotocol/server-github"
       ],
       "env": {
         "GITHUB_TOKEN": ""
