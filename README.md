@@ -5,8 +5,7 @@
   <span style="font-size: 1.3em;">Turn every commit into deployable, compliant software you can trust</span>
 </p>
 
-
-[![Release Status](https://github.com/ready-to-release/eac/actions/workflows/trigger.yml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/trigger.yml)
+[![Release Status](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml)
 [![GitHub Stars](https://img.shields.io/github/stars/ready-to-release/eac?style=social)](https://github.com/ready-to-release/eac/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ready-to-release/eac/blob/main/LICENSE)
 [![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC_BY--SA_4.0-lightgrey.svg)](https://github.com/ready-to-release/eac/blob/main/docs/LICENSE)
