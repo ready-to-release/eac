@@ -24,11 +24,10 @@ func TestPromptTemplateRendering(t *testing.T) {
 			name:       "top-level prompt template",
 			promptName: "top-level",
 			shouldHave: []string{
-				"EXAMPLE OUTPUT FORMAT",
-				"Conventional commit header",
+				"## Example", // New format uses "## Example" instead of "EXAMPLE OUTPUT FORMAT"
+				"<type>(<scope>): <summary>", // Structure definition still present
 				"Auditor-Summary",
 				"Generate", // Should have generation instructions
-				"<type>(<scope>): <summary>",
 			},
 		},
 		{
@@ -38,7 +37,7 @@ func TestPromptTemplateRendering(t *testing.T) {
 				"Generate a module section",
 				"Module name only",
 				"<module>: <type>: <description>",
-				"CRITICAL",
+				"## Example", // New format uses "## Example" instead of "CRITICAL"
 			},
 		},
 	}
@@ -77,7 +76,7 @@ func TestPromptContractEmbedding(t *testing.T) {
 
 	// Verify prompt contains direct format instructions (not template variables)
 	requiredContent := []string{
-		"EXAMPLE OUTPUT FORMAT", // Direct example instead of template
+		"## Example",             // New format uses "## Example" heading
 		"refactor(multi-module)", // Concrete example
 		"Auditor-Summary:",       // Field name shown directly
 		"Changes:",               // Field name shown directly
