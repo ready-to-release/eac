@@ -629,4 +629,4 @@ Feature: cli_container-management
 - [Testing Strategy Integration](../continuous-delivery/testing/testing-strategy-integration.md) - Test levels by CD Model stage
 - [Gherkin Concepts](gherkin-concepts.md) - Organizing specifications with tags
 - [Risk Controls](risk-controls.md) - Risk control tagging for compliance
-- [Three-Layer Approach](three-layer-approach.md) - ATDD/BDD/TDD integration
+- [Three-Layer Approach](three-layer-approach.md) - Rule/Scenario/Unit Test integration

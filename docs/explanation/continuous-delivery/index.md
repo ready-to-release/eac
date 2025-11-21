@@ -171,7 +171,7 @@ How test levels integrate with CD Model stages.
 - Process isolation strategies (L0/L1, L2, L3)
 - Test levels by CD Model stage
 - Time-boxing per stage
-- Integration with ATDD/BDD/TDD
+- Integration with Rules/Scenarios/Unit Tests
 - Test pyramid in practice
 
 ---

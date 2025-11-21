@@ -44,10 +44,10 @@ func ValidateGherkinContent(content string) error {
 		return fmt.Errorf("missing Feature: declaration")
 	}
 	if !state.seenRule {
-		return fmt.Errorf("missing Rule: declaration (required for ATDD)")
+		return fmt.Errorf("missing Rule: declaration (required)")
 	}
 	if !state.seenScenario {
-		return fmt.Errorf("missing Scenario: declaration (required for BDD)")
+		return fmt.Errorf("missing Scenario: declaration (required)")
 	}
 
 	return nil

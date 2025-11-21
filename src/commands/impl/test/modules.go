@@ -241,8 +241,8 @@ func runModuleTest(module *modules.ModuleContract, workspaceRoot string, outputD
 	return testFunc(module, workspaceRoot, outputDir, logWriter, reportFormat)
 }
 
-// generateMultiModuleBDDSummary generates a consolidated BDD summary for all modules
-func generateMultiModuleBDDSummary(testRunID string, testRunDir string, workspaceRoot string) {
+// generateMultiModuleGherkinSummary generates a consolidated BDD summary for all modules
+func generateMultiModuleGherkinSummary(testRunID string, testRunDir string, workspaceRoot string) {
 	summaryPath := filepath.Join(testRunDir, "summary_acceptance.md")
 	appendixPath := filepath.Join(testRunDir, "appendix_a.md")
 
@@ -323,8 +323,8 @@ func generateMultiModuleBDDSummary(testRunID string, testRunDir string, workspac
 	fmt.Printf("✅ Generated: %s\n", appendixPath)
 }
 
-// generateMultiModuleTDDSummary generates a consolidated TDD summary for all modules
-func generateMultiModuleTDDSummary(testRunID string, testRunDir string, workspaceRoot string, modules []*modules.ModuleContract) {
+// generateMultiModuleUnitTestSummary generates a consolidated test summary for all modules
+func generateMultiModuleUnitTestSummary(testRunID string, testRunDir string, workspaceRoot string, modules []*modules.ModuleContract) {
 	summaryPath := filepath.Join(testRunDir, "summary_unit.md")
 
 	var summary string
@@ -337,17 +337,17 @@ func generateMultiModuleTDDSummary(testRunID string, testRunDir string, workspac
 
 	for _, module := range modules {
 		moduleOutputDir := filepath.Join(testRunDir, module.Moniker)
-		tddSummaryPath := filepath.Join(moduleOutputDir, "summary_unit.md")
+		testSummaryPath := filepath.Join(moduleOutputDir, "summary_unit.md")
 
-		// Check if this module has a unit test summary (not all modules generate one - only non-BDD tests)
-		if _, err := os.Stat(tddSummaryPath); err != nil {
-			continue // Skip BDD-only modules
+		// Check if this module has a unit test summary (not all modules generate one - only unit tests)
+		if _, err := os.Stat(testSummaryPath); err != nil {
+			continue // Skip Gherkin-only modules
 		}
 
-		// Read the individual TDD summary
-		content, err := os.ReadFile(tddSummaryPath)
+		// Read the individual test summary
+		content, err := os.ReadFile(testSummaryPath)
 		if err != nil {
-			fmt.Printf("Warning: failed to read %s: %v\n", tddSummaryPath, err)
+			fmt.Printf("Warning: failed to read %s: %v\n", testSummaryPath, err)
 			continue
 		}
 

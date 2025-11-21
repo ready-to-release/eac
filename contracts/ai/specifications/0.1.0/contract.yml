@@ -4,7 +4,7 @@
 
 version: "0.1.0"
 name: "Gherkin Specification Structure"
-description: "Formal contract defining Gherkin specification requirements for ATDD/BDD"
+description: "Formal contract defining Gherkin specification requirements for Rule/Scenario"
 
 # EXTERNAL REFERENCES
 # These files are loaded by the specs command to provide tag definitions
@@ -17,9 +17,9 @@ external_references:
     path: "contracts/testing/0.1.0/taxonomy.yml"
     description: "Testing taxonomy (L0-L4) for test environment classification"
 
-# ATDD/BDD PRINCIPLES
+# Rule/Scenario PRINCIPLES
 principles:
-  atdd:
+  rule:
     purpose: "Define acceptance criteria BEFORE development begins"
     question: "What does 'done' mean for this feature?"
     representation: "Rule blocks in Gherkin"
@@ -31,7 +31,7 @@ principles:
       - "Rules define business value and success conditions"
       - "Avoid subjective criteria (bad: 'user-friendly', good: 'creates 3 directories')"
 
-  bdd:
+  scenario:
     purpose: "Describe user-facing behavior through concrete examples"
     question: "How does the system behave from the user's perspective?"
     representation: "Scenario blocks under Rules"
@@ -77,7 +77,7 @@ structure:
     required: true
     minimum: 1
     format: "Rule: [Acceptance Criterion]"
-    description: "ATDD acceptance criteria"
+    description: "acceptance criteria"
     guidelines:
       - "Rules should be measurable acceptance criteria"
       - "Avoid subjective statements (bad: 'user-friendly', good: 'creates 3 directories')"
@@ -92,7 +92,7 @@ structure:
         When [action]
         Then [outcome]
         And [additional outcome]
-    description: "BDD scenarios"
+    description: "Gherkin scenarios"
     guidelines:
       - "Use Given/When/Then structure"
       - "Focus on WHAT the system does, not HOW"

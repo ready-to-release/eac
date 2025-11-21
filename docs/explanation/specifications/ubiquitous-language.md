@@ -225,10 +225,10 @@ Code using Ubiquitous Language:
 2. **Ubiquitous Language = rigorous shared vocabulary** - Based on domain model, evolved through conversation
 3. **Event Storming discovers the language** - Collaborative domain exploration
 4. **Example Mapping applies the language** - Features use established vocabulary
-5. **Specifications preserve the language** - ATDD/BDD in domain terms
+5. **Specifications preserve the language** - using domain terms consistently in Gherkin specifications
 6. **Code implements the language** - Classes and methods reflect domain
 7. **Bounded contexts handle divergence** - Different contexts have different languages
-8. **Language evolves continuously** - Understanding deepens, terminology refines
+8. **Language evolves continuously** - Understanding deepens, terminology is refined
 
 ---
 
@@ -237,5 +237,5 @@ Code using Ubiquitous Language:
 - [Event Storming](./event-storming.md) - Domain discovery workshops
 - [Example Mapping](./example-mapping.md) - Requirements discovery
 - [Review and Iterate](review-and-iterate.md) - How specifications evolve with language
-- [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md) - Writing specifications
-- [Three-Layer Approach](./three-layer-approach.md) - How ATDD/BDD/TDD work together
+- [Working with specifications](working-with-specifications.md) - Writing specifications
+- [Three-Layer Approach](./three-layer-approach.md) - How Rule/Scenario/Unit Test work together

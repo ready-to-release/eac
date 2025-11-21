@@ -1,5 +1,5 @@
 // Feature: src-commands_docs-command
-// Godog step implementations for docs command BDD scenarios
+// Godog step implementations for docs command scenarios
 //
 // This file implements steps for the specification at:
 // specs/src-commands/docs-command/specification.feature
