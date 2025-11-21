@@ -54,9 +54,13 @@ func CleanModuleName(module string) string {
 	module = strings.TrimPrefix(module, SpecsDirectory+"/")
 	module = strings.TrimPrefix(module, SpecsDirectory+"\\")
 
-	// Remove /design suffix (both Unix and Windows)
+	// Remove /.design suffix (both Unix and Windows) - new structure
 	module = strings.TrimSuffix(module, "/"+DesignDirectory)
 	module = strings.TrimSuffix(module, "\\"+DesignDirectory)
+
+	// Remove /design suffix (both Unix and Windows) - legacy structure for backward compatibility
+	module = strings.TrimSuffix(module, "/design")
+	module = strings.TrimSuffix(module, "\\design")
 
 	// Remove src/ prefix (both Unix and Windows)
 	module = strings.TrimPrefix(module, SourceDirectory+"/")
