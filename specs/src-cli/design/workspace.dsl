@@ -1,117 +1,268 @@
-workspace "src-cli Architecture" "CLI application with AI-driven architecture documentation generation" {
+workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execution CLI" {
     model {
-        developer = person "Developer" "Uses CLI to generate and validate architecture"
-        anthropic_api = softwareSystem "Anthropic API" "Provides LLM for architecture generation" "External"
-        docker_engine = softwareSystem "Docker Engine" "Runs validation and viewer containers" "External"
-        file_system = softwareSystem "File System" "Stores workspace DSL and configuration" "External"
-        git_repo = softwareSystem "Git Repository" "Manages version control and module paths" "External"
+        developer = person "Developer" "Uses R2R CLI to execute containerized development workflows"
+        cicd_system = person "CI/CD System" "Automated build and test pipelines" "Automation"
 
-        cli = softwareSystem "src-cli System" "CLI tool for architecture design generation and validation" {
-            command_router = container "Command Router" "Routes design subcommands" "Go"
-            
-            create_service = container "Design Create" "Generates Structurizr DSL using AI" "Go" {
-                config_parser = component "Config Parser" "Parses CLI arguments into DesignConfig" "Go"
-                module_validator = component "Module Validator" "Verifies module exists in specs directory" "Go"
-                docker_checker = component "Docker Checker" "Verifies Docker availability" "Go"
-                prompt_builder = component "Prompt Builder" "Constructs AI prompt with contracts" "Go"
-                ai_generator = component "AI Generator" "Calls Anthropic API for DSL generation" "Go"
-                composite_validator = component "Composite Validator" "Runs quick and full validation phases" "Go"
-                output_writer = component "Output Writer" "Writes DSL to workspace.dsl file" "Go"
+        docker_engine = softwareSystem "Docker Engine" "Container runtime and orchestration" "External"
+        github_registry = softwareSystem "GitHub Container Registry" "Docker image registry" "External"
+        git_repo = softwareSystem "Git Repository" "Version control system" "External"
+        ai_providers = softwareSystem "AI Providers" "Claude, OpenAI, Gemini APIs" "External"
+
+        r2r_cli = softwareSystem "R2R CLI" "Command-line interface for containerized workflow execution" {
+
+            // Command Layer - Cobra-based command structure
+            command_layer = container "Command Layer" "Cobra-based command routing and execution" "Go/Cobra" {
+                root_cmd = component "Root Command" "Main entry point with logging, argument filtering, version validation" "Go"
+                run_cmd = component "Run Command" "Executes extensions in containers with TTY/non-TTY support" "Go"
+                interactive_cmd = component "Interactive Command" "Starts extension containers with shell access" "Go"
+                install_cmd = component "Install Command" "Pulls images and manages extension installation" "Go"
+                init_cmd = component "Init Command" "Creates r2r-cli.yml configuration" "Go"
+                agent_cmd = component "Agent Command" "Parent for AI agent configuration" "Go"
+                ai_cmd = component "AI Command" "AI-powered operations (ask subcommand)" "Go"
+                definitions_cmd = component "Definitions Command" "Processes and merges definitions.yml files" "Go"
+                version_cmd = component "Version Command" "Displays version information" "Go"
+                verify_cmd = component "Verify Command" "Validates extension configurations" "Go"
+                validate_cmd = component "Validate Command" "Validates configuration schema" "Go"
+                update_cmd = component "Update Command" "Updates extension image tags" "Go"
+                cleanup_cmd = component "Cleanup Command" "Removes stopped containers" "Go"
+                list_cmd = component "List Command" "Lists available extensions" "Go"
+                metadata_cmd = component "Metadata Command" "Extracts extension metadata" "Go"
             }
-            
-            validate_service = container "Design Validate" "Validates workspace DSL files" "Go" {
-                args_parser = component "Arguments Parser" "Extracts module and command flags" "Go"
-                validator_factory = component "Validator Factory" "Creates StructurizrValidator instance" "Go"
-                docker_executor = component "Docker Executor" "Runs Docker validation command" "Go"
-                output_parser = component "Output Parser" "Parses Docker CLI validation results" "Go"
-                formatter = component "Validation Formatter" "Formats results for console and JSON" "Go"
-                json_writer = component "JSON Writer" "Writes validation results to file" "Go"
+
+            // Configuration Management
+            config_system = container "Configuration System" "Multi-layer configuration management" "Go/Viper" {
+                config_loader = component "Config Loader" "Loads and merges r2r-cli.yml files" "Go"
+                repo_finder = component "Repository Finder" "Locates git repository root" "Go"
+                extension_validator = component "Extension Validator" "Validates pinned SHA tags" "Go"
+                config_merger = component "Config Merger" "Merges base + local + personal + dev configs" "Go"
             }
-            
-            serve_service = container "Design Serve" "Launches interactive Structurizr Lite viewer" "Go" {
-                workspace_locator = component "Workspace Locator" "Finds workspace DSL file" "Go"
-                container_manager = component "Container Manager" "Manages Structurizr Lite container lifecycle" "Go"
-                browser_launcher = component "Browser Launcher" "Opens browser to viewer URL" "Go"
+
+            // Command Parser - EBNF-based parsing
+            parser_system = container "Command Parser" "EBNF-based command-line argument parser" "Go" {
+                ebnf_parser = component "EBNF Parser" "Parses arguments per EBNF grammar" "Go"
+                boundary_detector = component "Boundary Detector" "Identifies Viper vs container arg boundary" "Go"
+                global_flag_parser = component "Global Flag Parser" "Extracts --r2r-debug, --r2r-quiet flags" "Go"
+                extension_resolver = component "Extension Resolver" "Resolves extension names and subcommands" "Go"
             }
-            
-            contract_system = container "Contract System" "Manages architectural contracts and prompts" "Go" {
-                contract_loader = component "Contract Loader" "Loads design contracts from disk" "Go"
-                anti_corruption = component "Anti-Corruption Rules" "Validates AI output against rules" "Go"
-                retry_handler = component "Retry Handler" "Manages generation retry logic" "Go"
+
+            // Docker Orchestration
+            docker_system = container "Docker Orchestration" "Container lifecycle management" "Go/Docker SDK" {
+                container_host = component "Container Host" "Manages container lifecycle operations" "Go"
+                container_creator = component "Container Creator" "Creates container configs with volumes" "Go"
+                container_runner = component "Container Runner" "Starts containers and manages execution" "Go"
+                attach_manager = component "Attach Manager" "Handles stdin/stdout/stderr attachment" "Go"
+                tty_handler = component "TTY Handler" "Manages TTY vs non-TTY modes" "Go"
+                signal_handler = component "Signal Handler" "Handles SIGINT/SIGTERM for graceful shutdown" "Go"
+                cleanup_manager = component "Cleanup Manager" "Cleans up child containers (Docker-in-Docker)" "Go"
+                ansi_filter = component "ANSI Filter" "Filters problematic escape sequences" "Go"
+                image_inspector = component "Image Inspector" "Inspects Docker images for metadata" "Go"
+                volume_mapper = component "Volume Mapper" "Maps repository root to /workspace" "Go"
             }
-            
-            repository_system = container "Repository System" "Detects and resolves module paths" "Go" {
-                root_detector = component "Root Detector" "Locates Git repository root" "Go"
-                path_resolver = component "Path Resolver" "Maps module names to filesystem paths" "Go"
+
+            // Extension Management
+            extension_system = container "Extension Management" "Extension installation and lifecycle" "Go" {
+                installer = component "Extension Installer" "Ensures images exist locally" "Go"
+                pull_policy_handler = component "Pull Policy Handler" "Handles Always/IfNotPresent/Never policies" "Go"
+                registry_client = component "Registry Client" "Interacts with GitHub Container Registry" "Go"
+                sha_resolver = component "SHA Resolver" "Discovers latest SHA tags for pinning" "Go"
+                local_loader = component "Local Loader" "Loads local development images" "Go"
             }
-            
-            ai_system = container "AI System" "Manages LLM provider integration" "Go" {
-                executor = component "AI Executor" "Communicates with LLM provider" "Go"
-                provider_registry = component "Provider Registry" "Manages pluggable AI providers" "Go"
+
+            // Validation System
+            validator_system = container "Validation System" "Configuration and command validation" "Go" {
+                command_validator = component "Command Validator" "Validates commands against EBNF" "Go"
+                schema_validator = component "Schema Validator" "Validates r2r-cli.yml against JSON schema" "Go"
+                contract_validator = component "Contract Validator" "Validates against contracts" "Go"
+            }
+
+            // Logging and Monitoring
+            logging_system = container "Logging System" "Structured logging and monitoring" "Go/Zerolog" {
+                logger = component "Logger" "Structured logging with context" "Go"
+                context_manager = component "Context Manager" "Manages command, component, operation_id context" "Go"
+                level_controller = component "Level Controller" "Controls debug/info/warn/error/fatal levels" "Go"
+                output_formatter = component "Output Formatter" "Formats console and file output" "Go"
+            }
+
+            // Terminal Interface
+            terminal_system = container "Terminal System" "Cross-platform terminal handling" "Go" {
+                terminal_detector = component "Terminal Detector" "Detects terminal capabilities" "Go"
+                unix_handler = component "Unix Handler" "Unix-specific terminal operations" "Go"
+                windows_handler = component "Windows Handler" "Windows-specific terminal operations" "Go"
+                console_api = component "Console API" "Windows console API integration" "Go"
+                spinner = component "Spinner" "Progress indicators for long operations" "Go"
+            }
+
+            // GitHub Integration
+            github_system = container "GitHub Integration" "GitHub Container Registry integration" "Go" {
+                registry_api = component "Registry API Client" "HTTP client for GHCR" "Go"
+                tag_fetcher = component "Tag Fetcher" "Fetches available image tags" "Go"
+                auth_handler = component "Auth Handler" "Handles GITHUB_TOKEN authentication" "Go"
+                cache_manager = component "Cache Manager" "Caches registry responses" "Go"
+            }
+
+            // AI Integration
+            ai_system = container "AI Integration" "AI provider integration for enhanced workflows" "Go" {
+                ai_executor = component "AI Executor" "Executes AI prompts" "Go"
+                provider_registry = component "Provider Registry" "Manages AI provider plugins" "Go"
+                model_selector = component "Model Selector" "Selects model based on flags" "Go"
+                temperature_controller = component "Temperature Controller" "Controls generation temperature" "Go"
+            }
+
+            // Version Management
+            version_system = container "Version Management" "Build version tracking" "Go" {
+                version_info = component "Version Info" "Stores version, commit, timestamp" "Go"
+                version_validator = component "Version Validator" "Validates version constraints" "Go"
             }
         }
 
-        developer -> command_router "Executes CLI commands"
-        
-        command_router -> create_service "Routes to design create"
-        command_router -> validate_service "Routes to design validate"
-        command_router -> serve_service "Routes to design serve"
-        
-        create_service -> contract_system "Loads contracts and builds prompt"
-        create_service -> repository_system "Resolves module paths"
-        create_service -> ai_system "Requests architecture generation"
-        create_service -> validate_service "Validates generated DSL"
-        create_service -> file_system "Writes workspace.dsl output"
-        
-        validate_service -> repository_system "Resolves workspace file location"
-        validate_service -> docker_engine "Runs validation in container" "Docker API"
-        validate_service -> file_system "Writes validation results"
-        
-        serve_service -> repository_system "Locates workspace directory"
-        serve_service -> docker_engine "Manages viewer container" "Docker API"
-        serve_service -> file_system "Reads workspace.dsl"
-        
-        contract_system -> file_system "Reads contract files and templates"
-        
-        repository_system -> git_repo "Detects repository boundaries"
-        repository_system -> file_system "Resolves module paths"
-        
-        ai_system -> anthropic_api "Sends generation requests" "HTTPS"
+        // User Interactions
+        developer -> r2r_cli "Executes commands via CLI"
+        developer -> command_layer "Executes CLI commands"
+        cicd_system -> r2r_cli "Runs automated workflows"
+
+        // Command Layer relationships
+        root_cmd -> run_cmd "Routes to run command"
+        root_cmd -> interactive_cmd "Routes to interactive command"
+        root_cmd -> install_cmd "Routes to install command"
+        root_cmd -> init_cmd "Routes to init command"
+        root_cmd -> agent_cmd "Routes to agent command"
+        root_cmd -> ai_cmd "Routes to AI command"
+        root_cmd -> definitions_cmd "Routes to definitions command"
+        root_cmd -> version_cmd "Routes to version command"
+        root_cmd -> logging_system "Initializes logging"
+        root_cmd -> parser_system "Validates command structure"
+
+        // Run Command Flow
+        run_cmd -> config_system "Loads configuration"
+        run_cmd -> parser_system "Parses arguments"
+        run_cmd -> extension_system "Ensures image exists"
+        run_cmd -> docker_system "Creates and runs container"
+        run_cmd -> logging_system "Logs execution"
+
+        // Interactive Command Flow
+        interactive_cmd -> config_system "Loads configuration"
+        interactive_cmd -> extension_system "Validates extension"
+        interactive_cmd -> docker_system "Starts interactive container"
+
+        // Install Command Flow
+        install_cmd -> config_system "Reads/updates config"
+        install_cmd -> github_system "Queries registry for tags"
+        install_cmd -> extension_system "Installs images"
+
+        // Configuration System relationships
+        config_system -> git_repo "Finds repository root"
+        config_system -> validator_system "Validates schema"
+
+        // Parser System relationships
+        parser_system -> validator_system "Validates against EBNF"
+
+        // Docker System relationships
+        docker_system -> docker_engine "Manages containers" "Docker API"
+        docker_system -> logging_system "Logs operations"
+        docker_system -> terminal_system "Handles terminal I/O"
+
+        // Extension System relationships
+        extension_system -> github_system "Fetches image metadata"
+        extension_system -> docker_engine "Pulls images" "Docker API"
+        extension_system -> config_system "Updates configuration"
+
+        // GitHub System relationships
+        github_system -> github_registry "Queries registry" "HTTPS"
+
+        // AI System relationships
+        ai_system -> ai_providers "Executes AI prompts" "HTTPS"
+        ai_cmd -> ai_system "Delegates AI operations"
+
+        // Cross-cutting concerns
+        command_layer -> logging_system "Logs all operations"
+        docker_system -> terminal_system "Streams I/O"
     }
 
     views {
-        systemContext cli "SystemContext" {
+        systemContext r2r_cli "SystemContext" {
             include *
             autoLayout
         }
 
-        container cli "Containers" {
+        container r2r_cli "Containers" {
+            include *
+            autoLayout lr
+        }
+
+        component command_layer "CommandLayer" {
             include *
             autoLayout
         }
 
-        component create_service "CreateService" {
+        component config_system "ConfigurationSystem" {
             include *
             autoLayout
         }
 
-        component validate_service "ValidateService" {
+        component parser_system "ParserSystem" {
             include *
             autoLayout
         }
 
-        component serve_service "ServeService" {
+        component docker_system "DockerOrchestration" {
             include *
             autoLayout
         }
 
-        component contract_system "ContractSystem" {
+        component extension_system "ExtensionManagement" {
             include *
             autoLayout
         }
 
-        component ai_system "AISystem" {
+        component validator_system "ValidationSystem" {
             include *
+            autoLayout
+        }
+
+        component logging_system "LoggingSystem" {
+            include *
+            autoLayout
+        }
+
+        component terminal_system "TerminalSystem" {
+            include *
+            autoLayout
+        }
+
+        component github_system "GitHubIntegration" {
+            include *
+            autoLayout
+        }
+
+        component ai_system "AIIntegration" {
+            include *
+            autoLayout
+        }
+
+        dynamic r2r_cli "RunWorkflow" "Container execution workflow (r2r run pwsh script.ps1)" {
+            developer -> command_layer "1. Execute: r2r run pwsh script.ps1"
+            command_layer -> parser_system "2. Parse arguments"
+            command_layer -> config_system "3. Load configuration"
+            command_layer -> extension_system "4. Ensure image exists"
+            extension_system -> github_system "5. Check for updates"
+            github_system -> github_registry "6. Query registry"
+            extension_system -> docker_engine "7. Pull image if needed"
+            command_layer -> docker_system "8. Create container"
+            docker_system -> docker_engine "9. Start container"
+            docker_system -> terminal_system "10. Attach I/O"
+            docker_system -> docker_engine "11. Wait for completion"
+            docker_system -> command_layer "12. Return exit code"
+            autoLayout
+        }
+
+        dynamic r2r_cli "InstallWorkflow" "Extension installation workflow (r2r install pwsh)" {
+            developer -> command_layer "1. Execute: r2r install pwsh"
+            command_layer -> github_system "2. Query registry for latest SHA"
+            github_system -> github_registry "3. Fetch available tags"
+            command_layer -> config_system "4. Update config with SHA pin"
+            command_layer -> extension_system "5. Install image"
+            extension_system -> docker_engine "6. Pull image"
+            extension_system -> command_layer "7. Report success"
             autoLayout
         }
 
@@ -119,23 +270,32 @@ workspace "src-cli Architecture" "CLI application with AI-driven architecture do
             element "Software System" {
                 background #1168bd
                 color #ffffff
-            }
-            element "Container" {
-                background #438dd5
-                color #ffffff
-            }
-            element "Component" {
-                background #85bbf0
-                color #000000
+                fontSize 22
             }
             element "External" {
                 background #999999
                 color #ffffff
             }
+            element "Container" {
+                background #438dd5
+                color #ffffff
+                fontSize 16
+            }
+            element "Component" {
+                background #85BBF0
+                color #000000
+                fontSize 12
+            }
             element "Person" {
                 background #08427b
                 color #ffffff
-                shape box
+                shape person
+                fontSize 18
+            }
+            element "Automation" {
+                background #2e7d32
+                color #ffffff
+                shape robot
             }
         }
     }

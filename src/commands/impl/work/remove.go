@@ -5,9 +5,10 @@
 // Long: By default, this command:
 // Long:   1. Validates the workspace can be safely removed
 // Long:   2. Switches to main branch (if in the workspace being removed)
-// Long:   3. Removes the workspace
+// Long:   3. Removes the workspace from git tracking
 // Long:   4. Deletes the local branch
 // Long:   5. Preserves the remote branch
+// Long:   6. Informs you if the workspace folder still exists for manual deletion
 // Long:
 // Long: Example:
 // Long:   work remove                              # Remove current workspace
@@ -36,14 +37,15 @@ func init() {
 	registry.Register(Remove)
 }
 
-// Intent: Remove workspace and clean up associated branches
+// Intent: Remove workspace from git tracking and clean up associated branches
 //
 // Design (Three Rules of Vibe Coding):
 //
 // Easy to understand:
-//   - Clear flow: validate → switch branch → remove workspace → delete branch
+//   - Clear flow: validate → switch branch → remove worktree → delete branch
 //   - Explicit warnings for destructive operations
 //   - Sensible defaults (delete local, keep remote)
+//   - Informs user if manual folder deletion is needed
 //
 // Easy to change:
 //   - Branch deletion is optional
@@ -55,6 +57,7 @@ func init() {
 //   - Prevents removing main workspace
 //   - Confirms workspace exists before removing
 //   - Switches away from workspace before removing it
+//   - Does not force folder deletion to avoid data loss
 
 // Remove removes a workspace and optionally deletes branches
 func Remove() int {
@@ -104,9 +107,15 @@ func Remove() int {
 
 	// Phase 5: Remove workspace
 	fmt.Println("Removing workspace...")
-	if err := removeWorktree(config.worktreePath); err != nil {
+	if err := removeWorktree(config.worktreePath, config.force); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
+	}
+
+	// Check if folder still exists and inform user
+	if _, err := os.Stat(config.worktreePath); err == nil {
+		fmt.Printf("ℹ️  Workspace folder still exists: %s\n", config.worktreePath)
+		fmt.Println("   You can manually delete this folder if needed")
 	}
 
 	// Phase 6: Delete local branch (unless --keep-branch)
@@ -247,9 +256,13 @@ func switchToMain(repoRoot string) error {
 	return nil
 }
 
-// removeWorktree removes the worktree
-func removeWorktree(path string) error {
-	cmd := exec.Command("git", "worktree", "remove", path, "--force")
+// removeWorktree removes the worktree from git tracking
+func removeWorktree(path string, force bool) error {
+	args := []string{"worktree", "remove", path}
+	if force {
+		args = append(args, "--force")
+	}
+	cmd := exec.Command("git", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to remove worktree: %w\nOutput: %s", err, string(output))

@@ -45,9 +45,17 @@ Reload: `source ~/.bashrc` or `source ~/.zshrc`
 2. Create a new token (classic) with scopes: `repo`, `workflow`
 3. Copy the token and set it in your shell profile (step 1)
 
-### 3. Verify Setup
+### 3. Restart Claude Code
 
-Launch Claude Code in this project and check the initialization message:
+**IMPORTANT**: MCP servers load at startup, not during active sessions.
+
+1. Close any open Claude Code sessions
+2. Close and reopen your terminal
+3. Start Claude Code in the project directory
+
+### 4. Verify Setup
+
+Check the initialization message:
 
 ```text
 MCP Server Status:
@@ -111,10 +119,15 @@ If it fails, generate a new token with proper scopes.
 
 ### Changes Not Taking Effect
 
-1. Close all terminal windows
-2. Open new terminal
-3. Verify environment variables are set
-4. Launch Claude Code fresh
+**MCP configuration changes require a full restart:**
+
+1. Close all Claude Code sessions
+2. Close all terminal windows
+3. Open new terminal
+4. Verify environment variables are set: `echo $env:GITHUB_TOKEN` (PowerShell) or `echo $GITHUB_TOKEN` (Bash)
+5. Launch Claude Code fresh
+
+**Note**: Changes to `.mcp.json` or `.claude/settings.json` only take effect at startup.
 
 ## Configuration Files
 
