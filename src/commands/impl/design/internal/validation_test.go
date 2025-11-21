@@ -1,6 +1,7 @@
 package design
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -34,26 +35,30 @@ func TestValidateModuleName_Invalid(t *testing.T) {
 		name        string
 		module      string
 		expectError string
+		windowsOnly bool // deps:windows - test only runs on Windows
 	}{
-		{"empty", "", "cannot be empty"},
-		{"path traversal", "../etc/passwd", "cannot contain '..'"},
-		{"path traversal 2", "foo/../bar", "cannot contain '..'"},
-		{"absolute path unix", "/etc/passwd", "cannot be an absolute path"},
-		{"absolute path windows", "C:\\Windows", "cannot be an absolute path"},
-		{"too long", strings.Repeat("a", 256), "too long"},
-		{"null byte", "foo\x00bar", "invalid character"},
-		{"asterisk", "foo*bar", "invalid character"},
-		{"question mark", "foo?bar", "invalid character"},
-		{"quotes", "foo\"bar", "invalid character"},
-		{"less than", "foo<bar", "invalid character"},
-		{"greater than", "foo>bar", "invalid character"},
-		{"pipe", "foo|bar", "invalid character"},
-		{"reserved windows CON", "CON", "reserved Windows name"},
-		{"reserved windows NUL", "NUL", "reserved Windows name"},
+		{"empty", "", "cannot be empty", false},
+		{"path traversal", "../etc/passwd", "cannot contain '..'", false},
+		{"path traversal 2", "foo/../bar", "cannot contain '..'", false},
+		{"absolute path unix", "/etc/passwd", "cannot be an absolute path", false},
+		{"absolute path windows", "C:\\Windows", "cannot be an absolute path", true},
+		{"too long", strings.Repeat("a", 256), "too long", false},
+		{"null byte", "foo\x00bar", "invalid character", false},
+		{"asterisk", "foo*bar", "invalid character", false},
+		{"question mark", "foo?bar", "invalid character", false},
+		{"quotes", "foo\"bar", "invalid character", false},
+		{"less than", "foo<bar", "invalid character", false},
+		{"greater than", "foo>bar", "invalid character", false},
+		{"pipe", "foo|bar", "invalid character", false},
+		{"reserved windows CON", "CON", "reserved Windows name", true},
+		{"reserved windows NUL", "NUL", "reserved Windows name", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.windowsOnly && runtime.GOOS != "windows" {
+				t.Skip("deps:windows - test only runs on Windows")
+			}
 			err := ValidateModuleName(tt.module)
 			if err == nil {
 				t.Errorf("ValidateModuleName(%q) expected error, got nil", tt.module)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -607,24 +608,30 @@ func TestValidateOutputPath_SymbolicLinks(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		outputPath string
-		wantErr    bool
+		name        string
+		outputPath  string
+		wantErr     bool
+		windowsOnly bool // deps:windows - test only runs on Windows
 	}{
 		{
-			name:       "path inside allowed directory",
-			outputPath: filepath.Join(insideDir, "test.feature"),
-			wantErr:    false,
+			name:        "path inside allowed directory",
+			outputPath:  filepath.Join(insideDir, "test.feature"),
+			wantErr:     false,
+			windowsOnly: false,
 		},
 		{
-			name:       "path through symlink to outside",
-			outputPath: filepath.Join(symlinkPath, "test.feature"),
-			wantErr:    true, // Should detect escape via symlink
+			name:        "path through symlink to outside",
+			outputPath:  filepath.Join(symlinkPath, "test.feature"),
+			wantErr:     true, // Should detect escape via symlink
+			windowsOnly: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.windowsOnly && runtime.GOOS != "windows" {
+				t.Skip("deps:windows - test only runs on Windows")
+			}
 			err := ValidateOutputPath(tt.outputPath, tmpDir)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateOutputPath() error = %v, wantErr %v", err, tt.wantErr)
