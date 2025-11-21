@@ -366,7 +366,7 @@ func generateAndValidate(config *DesignConfig, prompt string) (string, error) {
 	providers.RegisterBuiltIn(executor)
 
 	// Wrap executor to match contract.AIExecutor interface
-	executorAdapter := &aiExecutorAdapter{executor: executor}
+	executorAdapter := ai.NewExecutorAdapter(executor)
 
 	// Create composite validator (quick + full validation)
 	// Skip expensive Docker validation if quick validation finds errors
@@ -437,25 +437,3 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-// aiExecutorAdapter adapts ai.Executor to contracts.AIExecutor interface
-type aiExecutorAdapter struct {
-	executor *ai.Executor
-}
-
-func (a *aiExecutorAdapter) Execute(ctx interface{}, prompt string, opts ...interface{}) (string, error) {
-	// Convert context
-	contextVal, ok := ctx.(context.Context)
-	if !ok {
-		contextVal = context.Background()
-	}
-
-	// Convert options to ai.Option
-	var aiOpts []ai.Option
-	for _, opt := range opts {
-		if aiOpt, ok := opt.(ai.Option); ok {
-			aiOpts = append(aiOpts, aiOpt)
-		}
-	}
-
-	return a.executor.Execute(contextVal, prompt, aiOpts...)
-}
