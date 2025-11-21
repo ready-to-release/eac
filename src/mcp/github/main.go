@@ -217,10 +217,11 @@ func execGH(args ...string) string {
 	}
 
 	cmd := exec.Command(ghPath, args...)
+	cmd.Env = os.Environ()
 
-	// Pass through GITHUB_TOKEN if set
+	// Pass through GITHUB_TOKEN if set (gh CLI prefers GITHUB_TOKEN over GH_TOKEN)
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		cmd.Env = append(os.Environ(), "GH_TOKEN="+token)
+		cmd.Env = append(cmd.Env, "GITHUB_TOKEN="+token)
 	}
 
 	output, err := cmd.CombinedOutput()
