@@ -212,6 +212,6 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 //
 // Testing strategy:
 //   - Unit tests: Order preservation, thread safety
-//   - BDD tests: Real AI calls, performance validation
+//   - Acceptance tests: Real AI calls, performance validation
 //   - Race detector: go test -race (no data races)
 //   - Benchmarks: Measure actual speedup

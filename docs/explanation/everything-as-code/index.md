@@ -60,7 +60,7 @@ Explains what it means to treat everything as code and the three fundamental cha
 
 - Specifications as Code, Documentation as Code, Compliance as Code
 - Single timeline for traceability (Git as single source of truth)
-- Collaboration through shared language (ATDD/BDD as executable specifications)
+- Collaboration through shared language (executable specifications)
 - Continuous automation with every change
 - Value comparison: Manual vs. Automated approaches
 
@@ -78,7 +78,7 @@ Explains what it means to treat everything as code and the three fundamental cha
 
 - **[Ubiquitous Language](../specifications/ubiquitous-language.md)** - How Domain-Driven Design creates shared vocabulary that enables executable specifications
 
-- **[Specifications](../specifications/three-layer-approach.md)** - ATDD/BDD/TDD implements Specifications as Code through executable specifications that make requirements testable
+- **[Specifications](../specifications/three-layer-approach.md)** - Rules/Scenarios/Unit Tests implements Specifications as Code through executable specifications that make requirements testable
 
 - **[Measuring and Improving Flow](measuring-and-improving-flow.md)** - How to use DORA metrics and Value Stream Mapping to continuously improve delivery performance
 
@@ -92,7 +92,7 @@ This CLI automation layer exists to make "Everything as Code" **practical** rath
 2. **Enforcing conventions** - Consistent structure, naming, and tagging
 3. **Guiding workflows** - Step-by-step feature creation with validation
 4. **Generating artifacts** - Specifications, tests, documentation from templates
-5. **Integrating tools** - Coordinate ATDD/BDD/TDD seamlessly
+5. **Integrating tools** - Coordinate practices seamlessly
 
 ---
 

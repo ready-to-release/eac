@@ -1,4 +1,4 @@
-// Godog BDD step definitions for src-commands features
+// Godog step definitions for src-commands features
 //
 // Features:
 // - specs/src-commands/ai-commit-generation/

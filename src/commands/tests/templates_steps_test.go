@@ -1,4 +1,4 @@
-// Godog BDD step definitions for templates command
+// Godog step definitions for templates command
 //
 // Features:
 // - specs/src-commands/templates/

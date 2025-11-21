@@ -327,7 +327,7 @@ func buildGoLibrary(module *modules.ModuleContract, workspaceRoot string, output
 	return 0
 }
 
-// buildGoTests builds a Godog BDD test module (Pattern D variant)
+// buildGoTests builds a Godog test module (Pattern D variant)
 // Note: Tests are run with "go test", not built separately
 func buildGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	fmt.Fprintf(logWriter, "\n=== go-tests: %s ===\n", module.Moniker)

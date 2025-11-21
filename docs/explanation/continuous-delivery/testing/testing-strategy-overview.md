@@ -447,7 +447,7 @@ L3 tests require a Production-Like Test Environment (PLTE) because they:
 - Validate infrastructure configuration (e.g., Kubernetes, load balancers)
 - **Do NOT** test cross-service interactions (use test doubles for other services)
 
-**Example (BDD with Godog):**
+**Example (Godog):**
 
 ```gherkin
 Feature: API Service Deployment Verification

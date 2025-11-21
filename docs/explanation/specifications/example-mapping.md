@@ -205,7 +205,7 @@ Feature: cli_init-project
 
 ### During Implementation (1 Week)
 
-1. **Discover edge cases** - TDD reveals boundary conditions → Add scenarios
+1. **Discover edge cases** - Unit tests reveals boundary conditions → Add scenarios
 2. **Refine language** - Vague steps become precise → Update specification
 3. **Keep synchronized** - Commit spec changes with code changes
 

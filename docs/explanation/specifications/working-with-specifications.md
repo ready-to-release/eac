@@ -284,7 +284,7 @@ Feature: cli_user-registration
 
 During implementation, you discover:
 
-- Email validation requirements (TDD reveals format rules)
+- Email validation requirements (unit testing reveals format rules)
 - Verification workflow (not just storage)
 - Error cases (what if email already exists?)
 
@@ -385,14 +385,14 @@ Feature: cli_user-registration
 
 Update specifications when:
 
-| Trigger | Example | Action |
-|---------|---------|--------|
-| **Implementation reveals** | TDD finds edge case | Add error scenario |
-| **Stakeholder feedback** | "This isn't what I meant" | Refine acceptance criteria |
+| Trigger | Example                             | Action |
+|---------|-------------------------------------|--------|
+| **Implementation reveals** | Unit testing finds edge case        | Add error scenario |
+| **Stakeholder feedback** | "This isn't what I meant"           | Refine acceptance criteria |
 | **Production bugs** | Users encounter unexpected behavior | Add regression scenario |
-| **Domain evolution** | Business process changes | Update Rules and scenarios |
-| **Language refinement** | Team adopts clearer terminology | Refactor scenario language |
-| **Requirements change** | New regulatory requirement | Add compliance scenarios |
+| **Domain evolution** | Business process changes            | Update Rules and scenarios |
+| **Language refinement** | Team adopts clearer terminology     | Refactor scenario language |
+| **Requirements change** | New regulatory requirement          | Add compliance scenarios |
 
 ### Maintaining Specification Quality
 

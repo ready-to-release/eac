@@ -212,7 +212,7 @@ TDD embodies all three rules: tests document behavior (Rule 1), enable safe refa
 **Test file organization:**
 
 - **TDD unit tests**: Place `*_test.go` files alongside the code they test in module `src/` directories
-- **BDD step definitions**: Place step implementation files in a dedicated `tests/` folder within each module
+- **Gherkin step definitions**: Place step implementation files in a dedicated `tests/` folder within each module
 - **Feature files**: Place `.feature` files in the project's `specs/` directory
 
 **Requirements:**

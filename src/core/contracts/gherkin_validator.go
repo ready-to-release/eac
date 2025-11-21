@@ -44,8 +44,8 @@ func NewGherkinValidator(contract *Contract, antiCorruption *AntiCorruptionRules
 //
 // This implements the Validator interface and checks:
 // - Feature declaration exists and follows naming convention
-// - Rule blocks present (ATDD requirement)
-// - Scenarios present under Rules (BDD requirement)
+// - Rule blocks present
+// - Scenarios present under Rules
 // - Proper keyword ordering
 // - Verification tags present on scenarios
 //
@@ -173,7 +173,7 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 	if !state.seenRule {
 		errors = append(errors, ValidationError{
 			Code:     "MISSING_RULE",
-			Message:  "Missing Rule: declaration (required for ATDD acceptance criteria)",
+			Message:  "Missing Rule: declaration (required for acceptance criteria)",
 			Severity: "error",
 		})
 	}
@@ -181,7 +181,7 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 	if !state.seenScenario {
 		errors = append(errors, ValidationError{
 			Code:     "MISSING_SCENARIO",
-			Message:  "Missing Scenario: declaration (required for BDD behavior examples)",
+			Message:  "Missing Scenario: declaration (required for behavior examples)",
 			Severity: "error",
 		})
 	}

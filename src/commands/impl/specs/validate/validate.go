@@ -2,7 +2,7 @@
 // Description: Validate existing Gherkin specifications against contracts
 // Short: Validate Gherkin specifications against quality contracts
 // Long: The specs validate command checks existing .feature files against the specification contract,
-// Long: ensuring they follow proper Gherkin syntax, BDD patterns, and project standards.
+// Long: ensuring they follow proper Gherkin syntax, and project standards.
 // Long: Validation covers structure (Feature/Rule/Scenario hierarchy), tags, step formatting, and content quality.
 // Long: The command can validate a single file or recursively validate all .feature files in a directory.
 // Long: By default, output is in human-readable text format. Use --format json for machine-readable output.

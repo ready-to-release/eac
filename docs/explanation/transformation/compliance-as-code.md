@@ -150,7 +150,7 @@ Feature: cli_user-login
 
 **See**:
 
-- [Three-Layer Testing Approach](../specifications/three-layer-approach.md) - How ATDD/BDD/TDD work together
+- [Three-Layer Testing Approach](../specifications/three-layer-approach.md) - How Rules/Scenarios/Unit Tests work together
 - [Risk Controls](../specifications/risk-controls.md) - Risk control specification pattern
 - [Gherkin File Organization](../specifications/gherkin-concepts.md) - How to structure specifications
 

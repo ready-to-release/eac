@@ -69,7 +69,7 @@ Specifications evolve through continuous cycles of review and refinement.
 ### During Implementation (1 Week)
 
 - [ ] Implement step definitions
-- [ ] Discover edge cases via TDD → Add scenarios
+- [ ] Discover edge cases via unit testing → Add scenarios
 - [ ] Refine vague steps → Update spec
 - [ ] Keep synchronized - commit spec with code
 
