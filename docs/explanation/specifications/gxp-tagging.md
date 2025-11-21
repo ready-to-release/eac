@@ -360,7 +360,7 @@ At release approval, regulatory tags enable automatic generation of:
 **Testing Taxonomy**:
 
 - [Tag Reference](tag-reference.md) - Core testing taxonomy tags
-- [Three-Layer Approach](three-layer-approach.md) - ATDD/BDD/TDD integration
+- [Three-Layer Approach](three-layer-approach.md) - Rule/Scenario/Unit Test integration
 
 **Specifications**:
 

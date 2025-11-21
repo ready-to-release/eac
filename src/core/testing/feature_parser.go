@@ -18,7 +18,7 @@ type FeatureFile struct {
 	Scenarios   []string
 }
 
-// FeatureRule represents a Gherkin Rule block (ATDD)
+// FeatureRule represents a Gherkin Rule block
 type FeatureRule struct {
 	Name        string
 	Description string

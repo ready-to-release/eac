@@ -180,9 +180,9 @@ func TestDebugWriter_DisabledNoSideEffects(t *testing.T) {
 //
 // Note: This test is a placeholder. Full implementation requires mocking
 // generateWithPrompt to inject errors. The actual implementation will be
-// validated by BDD tests with real AI provider failures.
+// validated by acceptance tests with real AI provider failures.
 func TestGenerateModuleSectionsParallel_ErrorPropagation(t *testing.T) {
-	t.Skip("Requires mock infrastructure for generateWithPrompt - validated by BDD tests")
+	t.Skip("Requires mock infrastructure for generateWithPrompt - validated by acceptance tests")
 
 	// TODO: Implement with dependency injection or mock infrastructure
 	// Expected behavior:
@@ -253,9 +253,9 @@ func TestGenerateModuleSectionsParallel_ResultChannelCapacity(t *testing.T) {
 // execution to quantify the performance improvement.
 //
 // Note: This requires mock infrastructure. Real benchmark would measure with actual AI calls
-// but that's too slow and expensive for unit tests. BDD tests validate real performance.
+// but that's too slow and expensive for unit tests. acceptance tests validate real performance.
 func BenchmarkGenerateModuleSectionsParallel_vs_Sequential(b *testing.B) {
-	b.Skip("Requires mock infrastructure - performance validated by BDD tests and manual benchmarks")
+	b.Skip("Requires mock infrastructure - performance validated by acceptance tests and manual benchmarks")
 
 	// TODO: Implement with mocked generateWithPrompt that simulates AI latency
 	// Expected results:

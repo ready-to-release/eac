@@ -16,18 +16,18 @@ Workshop technique for discovering requirements through collaborative conversati
 
 **Prerequisites**: Establish **Ubiquitous Language** through **Event Storming** first. See: [Event Storming](./event-storming.md) and [Ubiquitous Language](./ubiquitous-language.md)
 
-**Why use it?** Discovers requirements early (15-25 min conversation vs days/weeks of coding), produces concrete measurable criteria (not subjective), creates fast feedback loop, builds collaborative understanding.
+**Why use it?** Discovers requirements early (less than 25 min conversation vs days/weeks of coding), produces concrete measurable criteria (not subjective), creates fast feedback loop, builds collaborative understanding.
 
 ---
 
 ## The Four Card Colors
 
-| Color | Purpose | Maps to Gherkin | Quantity |
-|-------|---------|-----------------|----------|
-| 🟡 **Yellow** | User Story: WHO, WHAT, WHY | Feature description | 1 per feature |
-| 🔵 **Blue** | Acceptance Criteria: Success conditions | `Rule:` blocks (ATDD) | 2-6 per story |
-| 🟢 **Green** | Concrete Examples: Specific scenarios | `Scenario:` blocks (BDD) | 2-4 per criterion |
-| 🔴 **Red** | Questions/Unknowns: Blockers | issues.md | 0-N (fewer is better) |
+| Card Color    | Represents | Maps To | Location          |
+|---------------|------------|---------|-------------------|
+| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#F7E55A" stroke="#D6C645"/></svg> **Yellow** | User Story: WHO, WHAT, WHY | Feature description | 1 per feature     |
+| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#5BA3F7" stroke="#4A89D6"/></svg> **Blue**   | Acceptance Criteria: Success conditions | `Rule:` blocks | < 4 per story     |
+| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> **Green**  | Concrete Examples: Specific scenarios | `Scenario:` blocks | < 4 per criterion |
+| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#FF7EBF" stroke="#D66A9F"/></svg> **Pink**   | Questions/Unknowns: Blockers | issues.md | See below         |
 
 ### Card Guidelines
 
@@ -49,7 +49,7 @@ So that [business value]
 - ✅ "Empty folder → init → creates src/, tests/, docs/"
 - ❌ "It creates directories" (too abstract)
 
-**Red** (Questions): Capture without solving during workshop
+**Pink** (Questions): Capture without solving during workshop
 
 - "What if r2r.yaml already exists?"
 - "Should we support a --force flag?"
@@ -58,7 +58,7 @@ So that [business value]
 
 ## Workshop Process
 
-**Participants**: Product Owner + Developer + Tester
+**Participants**: Product Owner + Engineer + Tester
 **Duration**: 15-25 minutes (strictly time-boxed)
 
 ### Steps
@@ -66,14 +66,14 @@ So that [business value]
 1. **Place Yellow Card** (2 min) - Write user story
 2. **Generate Blue Cards** (8-12 min) - Brainstorm 2-6 acceptance criteria
 3. **Create Green Cards** (5-10 min) - Write 2-4 concrete examples per Blue Card
-4. **Capture Red Cards** (ongoing) - Write down questions, don't solve them
+4. **Capture Pink Cards** (ongoing) - Write down questions, don't solve them
 5. **Assess Readiness** (2 min) - Ready to implement, too large, or too uncertain?
 
 ### Readiness Assessment
 
-**✅ Ready**: 2-6 Blue Cards, 2-4 Green Cards each, few Red Cards
-**⚠️ Too Large**: >6 Blue Cards or >25 minutes → Split into multiple features
-**❌ Too Uncertain**: >3 blocking Red Cards → Research spike, then re-run
+**✅ Ready**: <4 Blue Cards, <4 Green Cards each, no Pink cards you can't answer within a day
+**⚠️ Too Large**: >4 Blue Cards or >25 minutes → Split into multiple features
+**❌ Too Uncertain**: Blocking Pink Cards → Research spike, then re-run
 
 ---
 
@@ -81,36 +81,36 @@ So that [business value]
 
 ```mermaid
 flowchart TD
-    Yellow["🟡 User Story<br/>As a developer..."]
+    Story["User Story<br/>As an engineer..."]
 
-    Yellow --> Blue1["🔵 AC 1<br/>Creates dirs"]
-    Yellow --> Blue2["🔵 AC 2<br/>Generates config"]
-    Yellow --> Blue3["🔵 AC 3<br/>Handles errors"]
+    Story --> Rule1["AC 1<br/>Creates dirs"]
+    Story --> Rule2["AC 2<br/>Generates config"]
+    Story --> Rule3["AC 3<br/>Handles errors"]
 
-    Blue1 --> Green1a["🟢 Example 1a"]
-    Blue1 --> Green1b["🟢 Example 1b"]
+    Rule1 --> Example1a["Example 1a"]
+    Rule1 --> Example1b["Example 1b"]
 
-    Blue2 --> Green2a["🟢 Example 2a"]
-    Blue2 --> Green2b["🟢 Example 2b"]
+    Rule2 --> Example2a["Example 2a"]
+    Rule2 --> Example2b["Example 2b"]
 
-    Blue3 --> Green3a["🟢 Example 3a"]
-    Blue3 --> Green3b["🟢 Example 3b"]
+    Rule3 --> Example3a["Example 3a"]
+    Rule3 --> Example3b["Example 3b"]
 
-    Red1["🔴 What if config exists?"]
-    Red2["🔴 Support --force flag?"]
+    Question1["What if config exists?"]
+    Question2["Support --force flag?"]
 
-    style Yellow fill:#FFD700
-    style Blue1 fill:#4169E1,color:#fff
-    style Blue2 fill:#4169E1,color:#fff
-    style Blue3 fill:#4169E1,color:#fff
-    style Green1a fill:#32CD32
-    style Green1b fill:#32CD32
-    style Green2a fill:#32CD32
-    style Green2b fill:#32CD32
-    style Green3a fill:#32CD32
-    style Green3b fill:#32CD32
-    style Red1 fill:#DC143C,color:#fff
-    style Red2 fill:#DC143C,color:#fff
+    style Story fill:#F7E55A,color:#000
+    style Rule1 fill:#5BA3F7,color:#000
+    style Rule2 fill:#5BA3F7,color:#000
+    style Rule3 fill:#5BA3F7,color:#000
+    style Example1a fill:#7EDC7A,color:#000
+    style Example1b fill:#7EDC7A,color:#000
+    style Example2a fill:#7EDC7A,color:#000
+    style Example2b fill:#7EDC7A,color:#000
+    style Example3a fill:#7EDC7A,color:#000
+    style Example3b fill:#7EDC7A,color:#000
+    style Question1 fill:#FF7EBF,color:#000
+    style Question2 fill:#FF7EBF,color:#000
 ```
 
 **Workshop tips**: Use physical cards on table (or Miro/Mural for virtual), everyone can add cards, take photos for documentation.
@@ -122,15 +122,15 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph Workshop["Example Mapping Cards"]
-        Yellow["🟡 Yellow<br/>User Story"]
-        Blue["🔵 Blue<br/>AC"]
-        Green["🟢 Green<br/>Example"]
-        Red["🔴 Red<br/>Question"]
+        Story["Yellow<br/>User Story"]
+        Rule["Blue<br/>AC"]
+        Example["Green<br/>Example"]
+        Question["Pink<br/>Question"]
     end
 
     subgraph Spec["specification.feature"]
         Feature["Feature:<br/>description"]
-        Rule["Rule:<br/>AC block"]
+        RuleBlock["Rule:<br/>AC block"]
         Scenario["Scenario:<br/>under Rule"]
     end
 
@@ -138,15 +138,15 @@ flowchart LR
         Issue["## Questions"]
     end
 
-    Yellow --> Feature
-    Blue --> Rule
-    Green --> Scenario
-    Red --> Issue
+    Story --> Feature
+    Rule --> RuleBlock
+    Example --> Scenario
+    Question --> Issue
 
-    style Yellow fill:#FFD700
-    style Blue fill:#4169E1,color:#fff
-    style Green fill:#32CD32
-    style Red fill:#DC143C,color:#fff
+    style Story fill:#F7E55A,color:#000
+    style Rule fill:#5BA3F7,color:#000
+    style Example fill:#7EDC7A,color:#000
+    style Question fill:#FF7EBF,color:#000
 ```
 
 ### Example Conversion
@@ -154,7 +154,7 @@ flowchart LR
 **Workshop Cards**:
 
 ```text
-🟡 As a developer, I want to initialize a CLI project with one command
+🟡 As an engineer, I want to initialize a CLI project with one command
 🔵 [BLUE-1] Creates project directory structure
 🟢 [GREEN-1a] Empty folder → init → creates src/, tests/, docs/
 🟢 [GREEN-1b] Existing project → init → error "already initialized"
@@ -165,7 +165,7 @@ flowchart LR
 ```gherkin
 Feature: cli_init-project
 
-  As a developer
+  As an engineer
   I want to initialize a CLI project with one command
   So that I can quickly start development
 
@@ -194,18 +194,18 @@ Feature: cli_init-project
 ### Immediate (Same Day)
 
 1. **Write specification.feature** - Convert cards to Gherkin while context is fresh
-2. **Share for review** - Product Owner, Developers, QA validate
-3. **Document Red Cards** - Create `issues.md` with ownership and deadlines
+2. **Share for review** - Product Owner, Engineers, QA validate
+3. **Document Pink Cards** - Create `issues.md` with ownership and deadlines
 
 ### Short-term (1-2 Days)
 
 1. **Incorporate feedback** - Refine ambiguous steps, add missing criteria
-2. **Resolve Red Cards** - Research, mini-sessions, spike implementations
+2. **Resolve Pink Cards** - Research, mini-sessions, spike implementations
 3. **Confirm scope** - All three amigos agree before implementation starts
 
 ### During Implementation (1 Week)
 
-1. **Discover edge cases** - TDD reveals boundary conditions → Add scenarios
+1. **Discover edge cases** - Unit tests reveals boundary conditions → Add scenarios
 2. **Refine language** - Vague steps become precise → Update specification
 3. **Keep synchronized** - Commit spec changes with code changes
 
@@ -227,14 +227,14 @@ Feature: cli_init-project
 - Use domain language from Event Storming
 - Be specific: "Creates 3 directories" not "Creates directories"
 - Include error cases (at least one per Blue Card)
-- Set Red Cards aside (don't solve during workshop)
+- Set Pink Cards aside (don't solve during workshop)
 - Invite all three amigos (Product + Dev + Test)
 
 ### Don'ts ❌
 
 - Don't make Blue Cards subjective → Use measurable criteria
 - Don't use abstract Green Cards → Use specific input/output
-- Don't debate Red Cards → Write down, resolve later
+- Don't debate Pink Cards → Write down, resolve later
 - Don't exceed 6 Blue Cards → Split the feature
 - Don't skip edge cases → Error scenarios matter
 
@@ -261,6 +261,6 @@ Split when:
 
 ## See Also
 
-- [ATDD and BDD with Gherkin](./atdd-bdd-with-gherkin.md) - Concepts behind specifications
+- [Working with specifications](working-with-specifications.md) - Concepts behind specifications
 - [Three-Layer Approach](./three-layer-approach.md) - How Example Mapping fits the workflow
 - [Review and Iterate](review-and-iterate.md) - Maintaining living specifications
