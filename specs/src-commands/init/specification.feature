@@ -1,4 +1,5 @@
-Feature: src-commands_init-ai-provider-configuration
+@env:isolated-test-project
+Feature: src-commands_init
   As a developer
   I want to initialize AI provider configuration with a simple command
   So that I can quickly set up my project to use AI features

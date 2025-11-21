@@ -1,11 +1,13 @@
 package commit
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/ready-to-release/eac/src/core/ai"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -58,7 +60,10 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 			cfg := createTestConfig(tt.affectedModules)
 			debugWriter := newDebugWriter(false, t.TempDir())
 
-			sections, err := generateModuleSectionsParallel(cfg, debugWriter)
+			// Create mock executor with deterministic responses
+			mockExecutor := createMockExecutor(tt.affectedModules)
+
+			sections, err := generateModuleSectionsParallel(cfg, debugWriter, mockExecutor)
 
 			require.NoError(t, err, "generateModuleSectionsParallel should not return error")
 			assert.Len(t, sections, len(tt.affectedModules),
@@ -78,8 +83,9 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 func TestGenerateModuleSectionsParallel_SingleModule(t *testing.T) {
 	cfg := createTestConfig([]string{"src-cli"})
 	debugWriter := newDebugWriter(false, t.TempDir())
+	mockExecutor := createMockExecutor([]string{"src-cli"})
 
-	sections, err := generateModuleSectionsParallel(cfg, debugWriter)
+	sections, err := generateModuleSectionsParallel(cfg, debugWriter, mockExecutor)
 
 	require.NoError(t, err)
 	assert.Empty(t, sections, "Single-module commits should skip module sections")
@@ -90,8 +96,9 @@ func TestGenerateModuleSectionsParallel_SingleModule(t *testing.T) {
 func TestGenerateModuleSectionsParallel_EmptyModules(t *testing.T) {
 	cfg := createTestConfig([]string{})
 	debugWriter := newDebugWriter(false, t.TempDir())
+	mockExecutor := createMockExecutor([]string{})
 
-	sections, err := generateModuleSectionsParallel(cfg, debugWriter)
+	sections, err := generateModuleSectionsParallel(cfg, debugWriter, mockExecutor)
 
 	require.NoError(t, err)
 	assert.Empty(t, sections, "Zero modules should return empty sections")
@@ -293,6 +300,51 @@ func createTestConfig(modules []string) *executionConfig {
 		gitDiff:         gitDiff,
 		debug:           false,
 	}
+}
+
+// Helper: createMockExecutor creates a mock AI executor that returns deterministic responses
+// containing the module name. This ensures tests are fast and don't depend on real AI calls.
+func createMockExecutor(modules []string) *ai.Executor {
+	// Create executor (workspace root doesn't matter for mock)
+	executor := ai.NewExecutor(".")
+
+	// Register mock provider for both "mock" and "claude-cli" names
+	// (claude-cli is the default provider name when no config exists)
+	mockFactory := func(config *ai.Config) (ai.Provider, error) {
+		return &moduleNameExtractorMock{}, nil
+	}
+	executor.RegisterProvider("mock", mockFactory)
+	executor.RegisterProvider("claude-cli", mockFactory)
+
+	return executor
+}
+
+// moduleNameExtractorMock is a test provider that extracts the module name
+// from the input context and returns it in the response
+type moduleNameExtractorMock struct{}
+
+func (m *moduleNameExtractorMock) Name() string {
+	return "mock"
+}
+
+func (m *moduleNameExtractorMock) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
+	// Extract module name from the input context
+	// The context contains "## Module Name" followed by the module name on the next non-empty line
+	lines := strings.Split(input, "\n")
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "## Module Name" {
+			// Module name is on the next non-empty line
+			for j := i + 1; j < len(lines); j++ {
+				moduleName := strings.TrimSpace(lines[j])
+				if moduleName != "" {
+					// Return a section that contains the module name (for test assertions)
+					return fmt.Sprintf("## %s\n\nMock commit section for module %s", moduleName, moduleName), nil
+				}
+			}
+		}
+	}
+	// Fallback if module name not found
+	return "## Unknown Module\n\nMock commit section", nil
 }
 
 // Additional test ideas for future implementation:

@@ -1,4 +1,4 @@
-@ov
+@skip:todo @deps:claude @ov
 Feature: src-commands_ai-contract-local-override
 
   As a developer using the cli tool

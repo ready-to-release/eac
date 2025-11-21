@@ -52,6 +52,12 @@ func NewRepositoryError(op, path string, err error, message string) *RepositoryE
 //   root, err := repository.GetRepositoryRoot("")
 //   root, err := repository.GetRepositoryRoot("/path/to/subdir")
 func GetRepositoryRoot(startPath string) (string, error) {
+	// Check for test override environment variable first
+	// This allows tests to isolate git operations to a temporary repository
+	if testRepoRoot := os.Getenv("R2R_TEST_REPO_ROOT"); testRepoRoot != "" {
+		return filepath.Clean(testRepoRoot), nil
+	}
+
 	// Use current directory if no path provided
 	if startPath == "" {
 		var err error

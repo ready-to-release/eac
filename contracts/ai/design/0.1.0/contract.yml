@@ -1,0 +1,139 @@
+version: "0.1.0"
+name: "Structurizr DSL Architecture"
+description: "Formal contract defining Structurizr workspace requirements"
+
+# EXTERNAL REFERENCES
+external_references:
+  language_reference:
+    url: "https://docs.structurizr.com/dsl/language"
+    description: "Official Structurizr DSL language reference"
+
+# STRUCTURE SPECIFICATION
+structure:
+  - section: "workspace_declaration"
+    required: true
+    format: 'workspace "<name>" "<description>" { ... }'
+    description: "Top-level workspace with name and description"
+
+  - section: "model"
+    required: true
+    subsections:
+      - "person": "External actors (users, administrators)"
+      - "softwareSystem": "Major software applications (internal and external)"
+      - "container": "Major technical components within systems"
+      - "component": "Internal building blocks within containers"
+      - "relationships": "Interactions between elements"
+    description: "C4 model hierarchy: person/system → container → component"
+
+  - section: "views"
+    required: true
+    minimum: 1
+    types:
+      - "systemContext": "System with external dependencies"
+      - "container": "Containers within a system"
+      - "component": "Components within a container"
+      - "filtered": "Focused subsets of other views"
+    description: "Visual diagrams representing different perspectives"
+
+  - section: "styles"
+    required: false
+    description: "Visual styling (colors, shapes, line styles)"
+
+# VALIDATION RULES
+validation:
+  critical_errors:
+    - "Missing workspace declaration"
+    - "Missing model section"
+    - "Missing views section"
+    - "Invalid element nesting (components only in containers, containers only in systems)"
+    - "Relationships reference nonexistent elements"
+    - "Invalid identifier format (must be valid DSL identifier)"
+
+  warnings:
+    - "No relationships defined"
+    - "Empty views section"
+    - "Containers without technology specified"
+    - "Relationships without descriptions"
+
+# NAMING CONVENTIONS
+naming:
+  workspace_name:
+    pattern: "^[A-Z][A-Za-z0-9 -]+$"
+    examples:
+      - "CLI Architecture"
+      - "R2R CLI System"
+      - "Authentication Service"
+
+  identifiers:
+    pattern: "^[a-z][a-z0-9_]*$"
+    examples:
+      - "cli_application"
+      - "docker_orchestrator"
+      - "github_registry_client"
+    rules:
+      - "Start with lowercase letter"
+      - "Use underscores for separation (not hyphens)"
+      - "Alphanumeric only"
+
+# COMMON PATTERNS
+common_patterns:
+  minimal_workspace:
+    example: |
+      workspace "System Name" "Description" {
+          model {
+              user = person "User" "System user"
+              system = softwareSystem "System" "Main system" {
+                  container = container "Container" "Description" "Technology"
+              }
+              user -> system "Uses"
+          }
+          views {
+              systemContext system "SystemContext" {
+                  include *
+                  autoLayout
+              }
+              container system "Containers" {
+                  include *
+                  autoLayout
+              }
+              styles {
+                  element "Software System" {
+                      background #1168bd
+                      color #ffffff
+                  }
+              }
+          }
+      }
+
+  container_with_components:
+    example: |
+      cli = container "CLI" "Command line interface" "Go" {
+          parser = component "Parser" "Parses commands" "Go"
+          executor = component "Executor" "Executes commands" "Go"
+          parser -> executor "Sends parsed commands"
+      }
+
+# AI GUIDANCE
+ai_generation_guidance:
+  generation_strategy:
+    philosophy: "Always generate complete architecture across all C4 levels"
+    levels: "Include systemContext, container, and component views"
+    depth: "AI determines appropriate level of detail based on description"
+    typical_output: "1 system context view, 1 container view, 3-8 component views"
+
+  relationship_guidelines:
+    - "Every element should have at least one relationship"
+    - "Use descriptive relationship text (not just 'uses' or 'calls')"
+    - "Include technology where relevant (HTTP, gRPC, Function calls)"
+    - "Avoid circular dependencies where possible"
+
+  view_recommendations:
+    - "Always include systemContext view"
+    - "Include container view if containers are defined"
+    - "Include component views for significant containers"
+    - "Include filtered views for specific concerns"
+    - "Use autoLayout for automatic positioning"
+
+# PROMPTS
+prompts:
+  design: "design.md"

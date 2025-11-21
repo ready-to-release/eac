@@ -173,25 +173,40 @@ func documentationShouldBeAccessibleAtTheURL() error {
 		return fmt.Errorf("no URL found to check")
 	}
 
-	// Wait a bit for Structurizr to fully start
-	time.Sleep(3 * time.Second)
+	// Retry logic with exponential backoff
+	// Container might need time for HTTP server to fully initialize
+	maxRetries := 10
+	initialDelay := 1 * time.Second
+	maxDelay := 30 * time.Second
 
-	// Try to access the URL
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
 
-	resp, err := client.Get(designCtx.containerURL)
-	if err != nil {
-		return fmt.Errorf("failed to access %s: %w", designCtx.containerURL, err)
-	}
-	defer resp.Body.Close()
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		if i > 0 {
+			// Calculate delay with exponential backoff
+			delay := time.Duration(1<<uint(i-1)) * initialDelay
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+			time.Sleep(delay)
+		}
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusFound {
-		return fmt.Errorf("expected status 200 or 302, got %d", resp.StatusCode)
+		resp, err := client.Get(designCtx.containerURL)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusFound {
+				return nil
+			}
+			lastErr = fmt.Errorf("expected status 200 or 302, got %d", resp.StatusCode)
+			continue
+		}
+		lastErr = err
 	}
 
-	return nil
+	return fmt.Errorf("failed to access %s after %d retries: %w", designCtx.containerURL, maxRetries, lastErr)
 }
 
 func iShouldSeeAListOfAvailableModules() error {

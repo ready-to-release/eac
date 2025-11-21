@@ -238,14 +238,54 @@ func checkBranchUpToDate(config *mergeConfig) error {
 }
 
 // switchToTargetBranch switches to the target branch
+// In multi-worktree setups, it finds and switches to the worktree where the target branch is checked out
 func switchToTargetBranch(targetBranch, repoRoot string) error {
-	cmd := exec.Command("git", "checkout", targetBranch)
-	cmd.Dir = repoRoot
-	output, err := cmd.CombinedOutput()
+	// First, find where the target branch is checked out
+	targetWorktree, err := findWorktreeForBranch(targetBranch)
 	if err != nil {
-		return fmt.Errorf("failed to switch to %s: %w\nOutput: %s", targetBranch, err, string(output))
+		// Branch not checked out anywhere, try normal checkout
+		cmd := exec.Command("git", "checkout", targetBranch)
+		cmd.Dir = repoRoot
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to switch to %s: %w\nOutput: %s", targetBranch, err, string(output))
+		}
+		return nil
 	}
+
+	// Branch is checked out in a worktree - switch to that directory
+	if err := os.Chdir(targetWorktree); err != nil {
+		return fmt.Errorf("failed to switch to worktree at %s: %w", targetWorktree, err)
+	}
+
+	fmt.Printf("📂 Switched to worktree: %s\n", targetWorktree)
 	return nil
+}
+
+// findWorktreeForBranch finds the worktree path where a branch is checked out
+// Returns empty string and error if branch is not checked out in any worktree
+func findWorktreeForBranch(branch string) (string, error) {
+	cmd := exec.Command("git", "worktree", "list", "--porcelain")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to list worktrees: %w", err)
+	}
+
+	lines := strings.Split(string(output), "\n")
+	var currentPath string
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "worktree ") {
+			currentPath = strings.TrimPrefix(line, "worktree ")
+		} else if strings.HasPrefix(line, "branch ") {
+			branchName := strings.TrimPrefix(line, "branch refs/heads/")
+			if branchName == branch {
+				return currentPath, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("branch %s not checked out in any worktree", branch)
 }
 
 // updateTargetBranch updates the target branch from remote

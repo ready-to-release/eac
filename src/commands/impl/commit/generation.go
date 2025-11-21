@@ -19,27 +19,23 @@ import (
 // 3. Built-in: embedded prompts/<name>.md
 func loadPromptWithFallback(promptName string, workspaceRoot string) (string, error) {
 	// Create contract loader
-	loader := contracts.NewAIContractLoader(workspaceRoot, "commit-message", "0.1.0")
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 
 	// No embedded prompt - load from .r2r/contracts or contracts/ai
 	var embeddedPrompt string
 
-	// Load prompt with fallback chain
-	prompt, source, err := loader.LoadPrompt(promptName+".md", embeddedPrompt)
+	// Load prompt using three-tier system
+	agentContent, _, err := loader.LoadPrompt(promptName+".md", embeddedPrompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
 
-	// Log source if using override (for transparency)
-	if source != "embedded default" && source != "repository contract" {
-		fmt.Fprintf(os.Stderr, "ℹ️  Using %s prompt\n", source)
-	}
-
-	return prompt, nil
+	return agentContent, nil
 }
 
 // generateWithPrompt generates output using the three-tier prompt loading system with validation and retry
-func generateWithPrompt(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool) (string, error) {
+// If testExecutor is provided (non-nil), it will be used instead of creating a new executor (for testing)
+func generateWithPrompt(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (string, error) {
 	// Load prompt template using three-tier system
 	promptTemplate, err := loadPromptWithFallback(promptName, workspaceRoot)
 	if err != nil {
@@ -48,12 +44,17 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 
 	model := extractModelFromAgent(promptTemplate)
 
-	// Create executor and register providers
-	executor := ai.NewExecutor(workspaceRoot)
-	providers.RegisterBuiltIn(executor)
+	// Use provided executor or create new one with real providers
+	var executor *ai.Executor
+	if testExecutor != nil {
+		executor = testExecutor
+	} else {
+		executor = ai.NewExecutor(workspaceRoot)
+		providers.RegisterBuiltIn(executor)
+	}
 
 	// Load contract and anti-corruption rules
-	loader := contracts.NewSpecContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		// If contract fails, fall back to non-validated generation

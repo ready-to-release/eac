@@ -87,11 +87,13 @@ func TestSuite() int {
 	}
 
 	// Get repository root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
+	workspaceRootNative, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
+	// Codebase uses Unix-style paths throughout - normalize for path comparisons
+	workspaceRoot := filepath.ToSlash(workspaceRootNative)
 
 	// Get the test suite
 	suite, err := testing.GetSuite(suiteName)
@@ -108,7 +110,7 @@ func TestSuite() int {
 	fmt.Printf("Description: %s\n\n", suite.Description)
 
 	// Purge and create suite output directory
-	testRunDir := filepath.Join(workspaceRoot, "out", "test", suiteName)
+	testRunDir := filepath.Join(workspaceRootNative, "out", "test", suiteName)
 	if err := os.RemoveAll(testRunDir); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to purge test directory: %v\n", err)
 	}
@@ -333,19 +335,81 @@ func TestSuite() int {
 		}
 	}
 
+	// findGodogTestRunner finds the test runner package for a feature file
+	// Feature files are in specs/src-<module>/..., test runners are in src/<module>/tests/
+	findGodogTestRunner := func(featurePath string) string {
+		// Extract module from specs path
+		// Example: specs/src-commands/commit-ai/... -> src/commands/tests
+		//          specs/src-cli/... -> src/cli/tests
+		relPath := strings.TrimPrefix(featurePath, "specs/")
+		relPath = strings.TrimPrefix(relPath, "specs\\")
+
+		// Get first path component (e.g., "src-commands")
+		parts := strings.Split(filepath.ToSlash(relPath), "/")
+		if len(parts) == 0 {
+			return "src/commands/tests" // fallback
+		}
+
+		// Convert "src-commands" -> "src/commands"
+		module := strings.Replace(parts[0], "-", "/", 1)
+		return filepath.Join(module, "tests")
+	}
+
 	// Phase 5: Run tests
 	fmt.Fprintf(multiWriter, "=== Phase 5: Test Execution ===\n")
 
-	// Start global progress tracker
-	StartGlobalTracker(multiWriter)
-	defer StopGlobalTracker()
-
 	// Group tests by package
+	// For Godog tests: need to find their test runner package
+	// For Go tests: group by directory as usual
+	// IMPORTANT: Convert absolute paths to workspace-relative paths for proper cmd.Dir handling
 	testsByPackage := make(map[string][]testing.TestReference)
 	for _, test := range productionTests {
-		pkgPath := filepath.Dir(test.FilePath)
+		var pkgPath string
+		if test.Type == "godog" {
+			// Find the test runner package for this feature file
+			// Feature files are in specs/, test runners are in src/*/tests/
+			// Create synthetic package key: testrunner:featurefile (both relative)
+
+			// Convert absolute feature file path to relative
+			relFeaturePath, err := filepath.Rel(workspaceRoot, test.FilePath)
+			if err != nil {
+				// Skip test if we can't compute relative path
+				fmt.Fprintf(multiWriter, "⚠️  Skipping test %s: unable to compute relative path from %s to %s\n",
+					test.TestName, workspaceRoot, test.FilePath)
+				continue
+			}
+
+			// Find test runner using relative path
+			testRunnerPkg := findGodogTestRunner(relFeaturePath)
+			absTestRunnerPkg := filepath.Join(workspaceRootNative, testRunnerPkg)
+
+			// Check if test runner directory exists (has godog_test.go)
+			if fileExists(filepath.Join(absTestRunnerPkg, "godog_test.go")) {
+				// Has test runner - create synthetic key to run feature through it
+				pkgPath = testRunnerPkg + ":" + relFeaturePath
+			} else {
+				// No test runner - group by feature directory (will be skipped as "Godog-only")
+				pkgPath = filepath.Dir(relFeaturePath)
+			}
+		} else {
+			// Go tests grouped by directory
+			// Convert absolute path to relative
+			absDir := filepath.Dir(test.FilePath)
+			relDir, err := filepath.Rel(workspaceRoot, absDir)
+			if err != nil {
+				// Skip test if we can't compute relative path
+				fmt.Fprintf(multiWriter, "⚠️  Skipping test %s: unable to compute relative path from %s to %s\n",
+					test.TestName, workspaceRoot, absDir)
+				continue
+			}
+			pkgPath = relDir
+		}
 		testsByPackage[pkgPath] = append(testsByPackage[pkgPath], test)
 	}
+
+	// Start global progress tracker with total package count
+	StartGlobalTracker(multiWriter, len(testsByPackage))
+	defer StopGlobalTracker()
 
 	// Package count removed from console output for cleaner orchestration
 
@@ -386,13 +450,14 @@ func TestSuite() int {
 
 	fmt.Fprintf(multiWriter, "=== Test Run Summary ===\n")
 	fmt.Fprintf(multiWriter, "Suite: %s\n", suite.Name)
-	fmt.Fprintf(multiWriter, "Total discovered: %d\n", len(allTests))
+	fmt.Fprintf(multiWriter, "Total packages: %d\n", len(testsByPackage))
+	fmt.Fprintf(multiWriter, "Packages passed: %d\n", totalPassed)
+	fmt.Fprintf(multiWriter, "Packages failed: %d\n", totalFailed)
+	fmt.Fprintf(multiWriter, "Individual tests discovered: %d\n", len(allTests))
 	fmt.Fprintf(multiWriter, "Production tests: %d\n", len(productionTests))
 	if frameworkTestCount > 0 {
 		fmt.Fprintf(multiWriter, "Framework tests excluded: %d\n", frameworkTestCount)
 	}
-	fmt.Fprintf(multiWriter, "Total passed: %d\n", totalPassed)
-	fmt.Fprintf(multiWriter, "Total failed: %d\n", totalFailed)
 	fmt.Fprintf(multiWriter, "Results directory: %s\n", testRunDir)
 
 	// Check for undefined steps in test logs
@@ -592,8 +657,8 @@ func max(a, b int) int {
 
 // runTestsSequential runs tests package by package sequentially
 func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
-	totalPassed := 0
-	totalFailed := 0
+	packagesPassed := 0
+	packagesFailed := 0
 	packageNum := 0
 
 	for pkgPath, tests := range testsByPackage {
@@ -611,19 +676,23 @@ func runTestsSequential(testsByPackage map[string][]testing.TestReference, multi
 		}
 
 		passed, failed := runPackageTests(pkgPath, tests, multiWriter, mdFile, testParallelism, testRunDir)
-		totalPassed += passed
-		totalFailed += failed
+		// Count packages, not individual tests
+		if failed > 0 {
+			packagesFailed++
+		} else if passed > 0 {
+			packagesPassed++
+		}
 	}
 
-	return totalPassed, totalFailed
+	return packagesPassed, packagesFailed
 }
 
 // runTestsParallel runs tests across packages in parallel using goroutines
 func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
 	// Use a mutex to protect shared counters and output
 	var mu sync.Mutex
-	totalPassed := 0
-	totalFailed := 0
+	packagesPassed := 0
+	packagesFailed := 0
 
 	// Create a wait group to track all goroutines
 	var wg sync.WaitGroup
@@ -664,10 +733,13 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 			// Run tests for this package
 			passed, failed := runPackageTests(path, testList, multiWriter, mdFile, testParallelism, testRunDir)
 
-			// Update totals (thread-safe)
+			// Update totals (thread-safe) - count packages, not individual tests
 			mu.Lock()
-			totalPassed += passed
-			totalFailed += failed
+			if failed > 0 {
+				packagesFailed++
+			} else if passed > 0 {
+				packagesPassed++
+			}
 			mu.Unlock()
 		}(pkgPath, tests, currentPkgNum)
 	}
@@ -675,17 +747,51 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 	// Wait for all packages to complete
 	wg.Wait()
 
-	return totalPassed, totalFailed
+	return packagesPassed, packagesFailed
 }
 
 // runPackageTests runs tests for a single package and returns (passed, failed) counts
 func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
+	// pkgPath is already workspace-relative (from test grouping phase)
+	// Check if this is a synthetic Godog package key (testrunner:featurefile)
+	var relPkgPath string      // Relative path for display
+	var relFeatureFile string  // Relative feature file path (if Godog)
+	if strings.Contains(pkgPath, ":") {
+		// Synthetic key for Godog feature file
+		parts := strings.SplitN(pkgPath, ":", 2)
+		relPkgPath = parts[0]       // Test runner package path (relative)
+		relFeatureFile = parts[1]   // Feature file path (relative)
+	} else {
+		relPkgPath = pkgPath
+	}
+
+	// Get workspace root to create absolute paths for cmd.Dir
+	workspaceRootNative, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		workspaceRootNative = "."
+	}
+
+	// Use feature file path for display name if available, otherwise package path
+	var pkgName string
+	if relFeatureFile != "" {
+		pkgName = filepath.ToSlash(relFeatureFile)
+	} else {
+		pkgName = filepath.ToSlash(relPkgPath)
+	}
+
+	// Track test start/completion with global progress tracker (before early returns)
+	TrackTestStart(pkgName)
+	defer TrackTestComplete(pkgName)
+
 	// Check if this package contains only Godog features
-	isGodogOnly := true
-	for _, test := range tests {
-		if test.Type != "godog" {
-			isGodogOnly = false
-			break
+	// BUT: if we have a relFeatureFile, we're explicitly running it through its test runner
+	isGodogOnly := relFeatureFile == "" // If we have a specific feature, not Godog-only
+	if isGodogOnly {
+		for _, test := range tests {
+			if test.Type != "godog" {
+				isGodogOnly = false
+				break
+			}
 		}
 	}
 
@@ -696,26 +802,64 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		return len(tests), 0
 	}
 
+	// Create absolute paths for cmd.Dir by joining relative paths with workspace root
+	absPkgPath := filepath.Join(workspaceRootNative, relPkgPath)
+	var absFeatureFile string
+	if relFeatureFile != "" {
+		absFeatureFile = filepath.Join(workspaceRootNative, relFeatureFile)
+	}
+
+	// Determine actual directory path for running tests
+	// If we have a feature file, use the test runner package directory
+	var actualPkgDir string
+	if relFeatureFile != "" {
+		// Use the test runner package directory (absolute)
+		actualPkgDir = absPkgPath
+	} else if filepath.Ext(absPkgPath) == ".feature" {
+		// pkgPath is a feature file, get its directory
+		actualPkgDir = filepath.Dir(absPkgPath)
+	} else {
+		// pkgPath is already a directory
+		actualPkgDir = absPkgPath
+	}
+
 	// Check if this is a Godog test package
-	isGodogTestPackage := fileExists(filepath.Join(pkgPath, "godog_test.go"))
+	isGodogTestPackage := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
 
-	// Get workspace root to compute relative package path
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		workspaceRoot = "."
+	// Create modular directory structure for test outputs
+	// Convert package path to directory structure (e.g., "src/commands/tests" -> "src/commands/tests/")
+	// Feature files like "specs/foo/bar/spec.feature" -> "foo/" with output "bar.log"
+	var pkgOutputDir string
+	var logFileName string
+
+	if relFeatureFile != "" {
+		// For feature files, strip "specs/" prefix and use parent dir for output
+		// e.g., "specs/src-commands/templates/specification.feature"
+		//    -> output dir: "src-commands/", filename: "templates.log"
+		featureDir := filepath.Dir(relFeatureFile)
+		featureDir = strings.TrimPrefix(featureDir, "specs/")
+		featureDir = strings.TrimPrefix(featureDir, "specs\\") // Windows path separator
+
+		// Use the directory name (last component) as the base filename
+		dirName := filepath.Base(featureDir)
+		// Use the parent directory as the output directory
+		parentDir := filepath.Dir(featureDir)
+
+		pkgOutputDir = filepath.Join(testRunDir, parentDir)
+		logFileName = dirName + ".log"
+	} else {
+		// For Go packages, use the package path directly
+		pkgOutputDir = filepath.Join(testRunDir, relPkgPath)
+		logFileName = "test.log"
 	}
 
-	// Compute relative package path from workspace root
-	relPkgPath, err := filepath.Rel(workspaceRoot, pkgPath)
-	if err != nil {
-		relPkgPath = pkgPath
+	// Create the output directory
+	if err := os.MkdirAll(pkgOutputDir, 0755); err != nil {
+		fmt.Fprintf(multiWriter, "❌ Failed to create output directory: %v\n\n", err)
+		return 0, len(tests)
 	}
-	relPkgPath = filepath.ToSlash(relPkgPath) // Normalize to forward slashes
 
-	// Create unique log filename using full relative path (replace / with -)
-	logFileName := strings.ReplaceAll(relPkgPath, "/", "-")
-	logFileName = strings.ReplaceAll(logFileName, " ", "_") + ".log"
-	logFilePath := filepath.Join(testRunDir, logFileName)
+	logFilePath := filepath.Join(pkgOutputDir, logFileName)
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
 		fmt.Fprintf(multiWriter, "❌ Failed to create log file: %v\n\n", err)
@@ -725,42 +869,107 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 
 	// For Godog packages, write feature summaries to log file
 	if isGodogTestPackage {
-		displayGodogFeatureSummaries(pkgPath, logFile)
+		displayGodogFeatureSummaries(actualPkgDir, logFile)
 	}
 
 	// Run go test for this package with test-level parallelism
-	cmd := exec.Command("go", "test", "-v", "-parallel", fmt.Sprintf("%d", testParallelism))
-	cmd.Dir = pkgPath
+	// If testing a specific feature file, pass it via environment variable (GODOG_PATHS)
+	var cmd *exec.Cmd
+
+	cmd = exec.Command("go", "test", "-v", "-parallel", fmt.Sprintf("%d", testParallelism))
+	cmd.Dir = actualPkgDir
+
 	// Verbose test output goes to log file only, not console
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 
-	// For Godog test packages, set GODOG_FORMAT=progress
+	// For Godog test packages, set GODOG environment variables
 	if isGodogTestPackage {
-		cmd.Env = append(os.Environ(), "GODOG_FORMAT=progress")
+		// Start with base environment
+		cmd.Env = os.Environ()
+
+		// Set format for console output
+		cmd.Env = append(cmd.Env, "GODOG_FORMAT=progress")
+
+		// Only generate cucumber.json reports when testing specific feature files
+		// Test orchestrator packages (src/*/tests) should not generate reports
+		// Reports are only generated for individual feature files in specs/
+		if relFeatureFile != "" {
+			// Set output directory for cucumber.json/junit.xml reports
+			// Use the package-specific output directory for modular structure
+			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", pkgOutputDir))
+
+			// Set report format (default to cucumber for BDD tests)
+			cmd.Env = append(cmd.Env, "GODOG_REPORT_FORMAT=cucumber")
+
+			// Use the directory name for the report (e.g., "templates.cucumber.json")
+			reportName := strings.TrimSuffix(logFileName, ".log") + ".cucumber.json"
+			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_NAME=%s", reportName))
+		}
+
+		// If testing a specific feature file, set GODOG_PATHS environment variable
+		if absFeatureFile != "" {
+			// Get relative path from test runner dir to feature file
+			relFeaturePath, err := filepath.Rel(actualPkgDir, absFeatureFile)
+			if err != nil {
+				relFeaturePath = absFeatureFile
+			}
+			// Convert to forward slashes for godog
+			relFeaturePath = filepath.ToSlash(relFeaturePath)
+			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_PATHS=%s", relFeaturePath))
+			fmt.Fprintf(logFile, "🎯 Testing specific feature: %s\n", relFeaturePath)
+		}
+
+		// Note: Skip tag filtering is now handled inside godog_test.go via tag contract
+		// The godog test loads the tag contract and builds skip filter automatically
+		fmt.Fprintf(logFile, "✨ Skip tags will be loaded from tag contract in godog_test.go\n\n")
+		if relFeatureFile != "" {
+			reportName := strings.TrimSuffix(logFileName, ".log") + ".cucumber.json"
+			fmt.Fprintf(logFile, "📊 Test report will be saved as: %s\n\n", reportName)
+		}
 	}
-
-	// Use relative package path for display
-	pkgName := relPkgPath
-
-	// Track test start/completion with global progress tracker
-	TrackTestStart(pkgName)
-	defer TrackTestComplete(pkgName)
 
 	err = cmd.Run()
 
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			relLogPath := filepath.Join(filepath.Base(testRunDir), logFileName)
-			fmt.Fprintf(multiWriter, "❌ Package %s failed (See %s for details)\n\n", pkgName, relLogPath)
+			// Analyze log to get failure reason
+			failureReason := analyzeTestFailure(logFilePath, isGodogTestPackage)
+
+			testType := "go"
+			testCountInfo := fmt.Sprintf("(0/%d)", len(tests))
+			if isGodogTestPackage {
+				testType = "godog"
+				// For Godog, len(tests) is test files not scenarios, so omit count
+				testCountInfo = ""
+			}
+
+			// Create relative log path from test run directory
+			relLogPath, _ := filepath.Rel(filepath.Dir(testRunDir), logFilePath)
+			if testCountInfo != "" {
+				fmt.Fprintf(multiWriter, "❌ Package %s [%s] %s failed due to %s (See %s for details)\n", pkgName, testType, testCountInfo, failureReason, relLogPath)
+			} else {
+				fmt.Fprintf(multiWriter, "❌ Package %s [%s] failed due to %s (See %s for details)\n", pkgName, testType, failureReason, relLogPath)
+			}
 			// Update markdown: Package failed
 			if mdFile != nil {
-				fmt.Fprintf(mdFile, "  - ❌ Failed (exit code: %d)\n", exitErr.ExitCode())
+				fmt.Fprintf(mdFile, "  - ❌ Failed (exit code: %d) - %s\n", exitErr.ExitCode(), failureReason)
 				mdFile.Sync()
 			}
 			return 0, len(tests)
 		} else {
-			fmt.Fprintf(multiWriter, "❌ Failed to run tests: %v\n\n", err)
+			testType := "go"
+			testCountInfo := fmt.Sprintf("(0/%d)", len(tests))
+			if isGodogTestPackage {
+				testType = "godog"
+				testCountInfo = ""
+			}
+
+			if testCountInfo != "" {
+				fmt.Fprintf(multiWriter, "❌ Package %s [%s] %s failed to run tests: %v\n", pkgName, testType, testCountInfo, err)
+			} else {
+				fmt.Fprintf(multiWriter, "❌ Package %s [%s] failed to run tests: %v\n", pkgName, testType, err)
+			}
 			// Update markdown: Package error
 			if mdFile != nil {
 				fmt.Fprintf(mdFile, "  - ❌ Error: %v\n", err)
@@ -770,14 +979,75 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		}
 	}
 
-	relLogPath := filepath.Join(filepath.Base(testRunDir), logFileName)
-	fmt.Fprintf(multiWriter, "✅ Package %s passed (See %s for details)\n\n", pkgName, relLogPath)
+	testType := "go"
+	testCountInfo := fmt.Sprintf("(%d/%d)", len(tests), len(tests))
+	if isGodogTestPackage {
+		testType = "godog"
+		// Extract scenario counts from godog test output
+		testCountInfo = extractGodogScenarioCounts(logFilePath)
+	}
+
+	// Create relative log path from test run directory
+	relLogPath, _ := filepath.Rel(filepath.Dir(testRunDir), logFilePath)
+	if testCountInfo != "" {
+		fmt.Fprintf(multiWriter, "✅ Package %s [%s] %s passed (See %s for details)\n", pkgName, testType, testCountInfo, relLogPath)
+	} else {
+		fmt.Fprintf(multiWriter, "✅ Package %s [%s] passed (See %s for details)\n", pkgName, testType, relLogPath)
+	}
 	// Update markdown: Package passed
 	if mdFile != nil {
 		fmt.Fprintf(mdFile, "  - ✅ Passed\n")
 		mdFile.Sync()
 	}
 	return len(tests), 0
+}
+
+// extractGodogScenarioCounts parses godog test output to extract scenario counts
+// Returns: "(passed/total)" or empty string if counts not found
+func extractGodogScenarioCounts(logPath string) string {
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		return ""
+	}
+
+	logStr := string(content)
+	lines := strings.Split(logStr, "\n")
+
+	// Look for line like: "60 scenarios (59 passed, 1 failed)"
+	// or "60 scenarios (60 passed)"
+	// or with ANSI codes: "17 scenarios ([32m17 passed[0m)"
+	for _, line := range lines {
+		if strings.Contains(line, " scenarios (") {
+			// Parse the line to extract counts
+			// Format: "N scenarios (X passed)" or "N scenarios (X passed, Y failed)"
+			fields := strings.Fields(line)
+			if len(fields) >= 3 {
+				totalStr := fields[0]
+				// Extract passed count from parentheses
+				for i, field := range fields {
+					// Check for "passed)" with or without ANSI codes
+					// Field can be: "passed)", "passed,", "passed[0m)", etc.
+					if strings.Contains(field, "passed") {
+						if i > 0 {
+							passedStr := fields[i-1]
+							// Remove ANSI color codes and parentheses
+							// Can be: "([32m17" or "[32m17" or "(17" or "17"
+							passedStr = strings.TrimPrefix(passedStr, "(")
+							// Remove all common ANSI codes
+							passedStr = strings.ReplaceAll(passedStr, "\x1b[32m", "")
+							passedStr = strings.ReplaceAll(passedStr, "\x1b[0m", "")
+							passedStr = strings.ReplaceAll(passedStr, "[32m", "")
+							passedStr = strings.ReplaceAll(passedStr, "[0m", "")
+							passedStr = strings.ReplaceAll(passedStr, "\x1b", "")
+							return fmt.Sprintf("(%s/%s)", passedStr, totalStr)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return ""
 }
 
 // extractUndefinedSteps scans test logs for undefined step definitions
@@ -844,5 +1114,68 @@ func stripANSI(str string) string {
 		result += string(str[i])
 	}
 	return result
+}
+
+// analyzeTestFailure analyzes a test log to determine the failure reason
+func analyzeTestFailure(logPath string, isGodog bool) string {
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		return "unknown error"
+	}
+
+	logStr := string(content)
+
+	if isGodog {
+		// Check for undefined steps
+		undefinedCount := strings.Count(logStr, "step is undefined:")
+		if undefinedCount > 0 {
+			return fmt.Sprintf("missing step implementations (%d undefined)", undefinedCount)
+		}
+
+		// Check for ambiguous steps
+		if strings.Contains(logStr, "ambiguous step definition") {
+			ambiguousCount := strings.Count(logStr, "ambiguous step definition")
+			return fmt.Sprintf("ambiguous step definitions (%d)", ambiguousCount)
+		}
+
+		// Parse scenario summary
+		lines := strings.Split(logStr, "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "scenarios") {
+				// Extract failure count from line like "87 scenarios (13 passed, 16 failed, 66 undefined)"
+				if strings.Contains(line, "failed") {
+					// Try to extract the failed count
+					parts := strings.Split(line, ",")
+					for _, part := range parts {
+						part = stripANSI(strings.TrimSpace(part))
+						if strings.Contains(part, "failed") {
+							fields := strings.Fields(part)
+							if len(fields) >= 1 {
+								count := fields[0]
+								return fmt.Sprintf("%s failing scenarios", count)
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return "BDD test failures"
+	}
+
+	// For regular Go tests, count FAIL lines
+	failCount := 0
+	lines := strings.Split(logStr, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "--- FAIL:") {
+			failCount++
+		}
+	}
+
+	if failCount > 0 {
+		return fmt.Sprintf("%d failing tests", failCount)
+	}
+
+	return "test failures"
 }
 

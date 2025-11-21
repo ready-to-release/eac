@@ -1,54 +1,21 @@
-# MkDocs Documentation Container
-# Provides MkDocs with Material theme and all plugins
+# MkDocs Docker Container
+# Environment: mkdocs-docker
+# Purpose: Serve project documentation using MkDocs Material theme
 
-FROM python:3.12-alpine
-
-LABEL maintainer="CLI Project Team"
-LABEL description="MkDocs container with Material theme and plugins"
-LABEL version="2.0"
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /docs
 
-# Environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Install system dependencies
-# Alpine uses apk instead of apt-get
-RUN apk add --no-cache \
-        git \
-        openssh-client \
-        ca-certificates \
-        gcc \
-        musl-dev \
-        libffi-dev
-
 # Copy requirements file
 COPY requirements.txt /tmp/requirements.txt
 
-# Install Python dependencies
+# Install MkDocs and dependencies from requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
     rm /tmp/requirements.txt
 
-# Create non-root user (Alpine uses adduser instead of useradd)
-RUN adduser -D -u 1000 -s /bin/sh mkdocs && \
-    chown -R mkdocs:mkdocs /docs
-
-# Switch to non-root user
-USER mkdocs
-
-# Configure git to allow the /docs directory (fixes "dubious ownership" error)
-RUN git config --global --add safe.directory /docs
-
-# Expose MkDocs development server port
+# Expose port for MkDocs server
 EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import http.client; conn = http.client.HTTPConnection('localhost:8000'); conn.request('GET', '/'); r = conn.getresponse(); exit(0 if r.status == 200 else 1)"
 
 # Default command: serve documentation
 CMD ["mkdocs", "serve", "--dev-addr=0.0.0.0:8000"]

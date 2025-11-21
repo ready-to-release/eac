@@ -40,16 +40,29 @@ type executionConfig struct {
 }
 
 func CommitAI() int {
+	// Retry loop for regenerating commit message if validation fails
+	for {
+		result, shouldRetry := commitAIAttempt()
+		if !shouldRetry {
+			return result
+		}
+		fmt.Println("\n🔄 Retrying commit message generation...")
+	}
+}
+
+// commitAIAttempt performs a single attempt at generating and committing
+// Returns (exit code, should retry)
+func commitAIAttempt() (int, bool) {
 	// Phase 1: Parse Configuration
 	debug, workspaceRoot, err := parseConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
+		return 1, false
 	}
 
 	// Phase 2: Verify Contract Implementation
 	if err := verifyContractImplementation(workspaceRoot); err != nil {
-		return 1
+		return 1, false
 	}
 
 	// Create debug writer
@@ -59,32 +72,32 @@ func CommitAI() int {
 	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, debugWriter)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
+		return 1, false
 	}
 	if cfg == nil {
 		fmt.Println("No staged changes.")
-		return 0
+		return 0, false
 	}
 
 	// Phase 4: Generate Top-Level Summary
 	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, diffStats, debugWriter)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
-		return 1
+		return 1, false
 	}
 
 	// Phase 5: Generate Module Sections
 	moduleSections, err := generateModuleSections(cfg, debugWriter)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
-		return 1
+		return 1, false
 	}
 
 	// Phase 6: Assemble Final Message
 	finalMessage := assembleFinalMessage(cfg, topLevel, moduleSections, debugWriter)
 
-	// Phase 7: Validate and Output
-	return validateAndOutput(cfg, finalMessage)
+	// Phase 7: Validate and Output (with interactive prompt on failure)
+	return validateAndCommit(cfg, finalMessage)
 }
 
 // Phase 1: Parse Configuration
@@ -209,7 +222,7 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 
 	var topLevelOutput string
 	err := commitmessage.WithProgress("🤖 Generating top-level commit summary...", func() error {
-		result, genErr := generateWithPrompt("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug)
+		result, genErr := generateWithPrompt("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
 		topLevelOutput = result
 		return genErr
 	})
@@ -232,7 +245,7 @@ func generateModuleSections(cfg *executionConfig, debugWriter *debugWriter) ([]s
 	// Use parallel implementation for performance (60-70% speedup for multi-module commits)
 	// Sequential: N modules × 5s = 15s for 3 modules
 	// Parallel:   max(5s) = 5s for 3 modules
-	return generateModuleSectionsParallel(cfg, debugWriter)
+	return generateModuleSectionsParallel(cfg, debugWriter, nil)
 }
 
 // Phase 6: Assemble Final Message
@@ -252,8 +265,9 @@ func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections 
 	return cleanedOutput
 }
 
-// Phase 7: Validate and Output
-func validateAndOutput(cfg *executionConfig, message string) int {
+// Phase 7: Validate and Commit (with interactive prompt)
+// Returns (exit code, should retry)
+func validateAndCommit(cfg *executionConfig, message string) (int, bool) {
 	// Verify contract compliance
 	validationErrors := commitmessage.VerifyCommitMessageContract(message, cfg.affectedModules)
 
@@ -266,21 +280,26 @@ func validateAndOutput(cfg *executionConfig, message string) int {
 		}
 	}
 
-	// Output for VSCode extension to detect
-	fmt.Println(">>>>>>OUTPUT START<<<<<<")
+	// Show the generated message
+	fmt.Println("\n📝 Generated commit message:")
+	fmt.Println("---")
 	fmt.Println(message)
-	fmt.Println("\n---")
+	fmt.Println("---")
 
-	// Print verification results
-	if len(validationErrors) == 0 {
-		fmt.Println() // Just a blank line
-		return 0
+	// If valid (no errors, only warnings or clean), proceed with commit
+	if errorCount == 0 {
+		if warningCount > 0 {
+			fmt.Printf("\n⚠️  Found %d warning(s):\n\n", warningCount)
+			for _, verr := range validationErrors {
+				fmt.Printf("⚠️  %s\n", verr.Error())
+			}
+			fmt.Println()
+		}
+		return performCommit(message), false
 	}
 
-	// Show validation errors/warnings
-	if errorCount > 0 {
-		fmt.Printf("❌ Found %d contract violation(s):\n\n", errorCount)
-	}
+	// Show validation errors
+	fmt.Printf("\n❌ Found %d contract violation(s):\n\n", errorCount)
 	if warningCount > 0 {
 		fmt.Printf("⚠️  Found %d warning(s):\n\n", warningCount)
 	}
@@ -293,11 +312,64 @@ func validateAndOutput(cfg *executionConfig, message string) int {
 		fmt.Printf("%s %s\n", icon, verr.Error())
 	}
 
-	if errorCount > 0 {
+	// Prompt user for action
+	fmt.Println()
+	response := promptYNR("Use this message anyway?")
+
+	switch response {
+	case "y":
+		// User wants to use the message despite validation errors
+		fmt.Println("✓ Proceeding with commit (ignoring validation errors)...")
+		return performCommit(message), false
+	case "n":
+		// User wants to abort and write their own message
+		fmt.Println("❌ Commit aborted.")
+		fmt.Println("   Run 'git commit' or 'work commit --message \"your message\"' to write your own.")
+		return 1, false
+	case "r":
+		// User wants to retry AI generation
+		return 0, true
+	default:
+		// Should never happen, but treat as abort
+		return 1, false
+	}
+}
+
+// performCommit executes git commit with the given message
+func performCommit(message string) int {
+	cmd := exec.Command("git", "commit", "-m", message)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "\n❌ Error: failed to create commit: %v\n", err)
 		return 1
 	}
-
+	fmt.Println("\n✓ Commit created successfully")
 	return 0
+}
+
+// promptYNR prompts the user with a yes/no/retry question
+// Returns "y", "n", or "r"
+func promptYNR(question string) string {
+	fmt.Printf("%s (y/n/r): ", question)
+
+	var response string
+	fmt.Scanln(&response)
+
+	response = strings.ToLower(strings.TrimSpace(response))
+
+	switch response {
+	case "y", "yes":
+		return "y"
+	case "n", "no":
+		return "n"
+	case "r", "retry":
+		return "r"
+	default:
+		fmt.Printf("Invalid input '%s'. Please enter y (yes), n (no), or r (retry).\n", response)
+		return promptYNR(question) // Ask again
+	}
 }
 
 // stripModuleSectionsFromTopLevel removes any module-like sections that appear

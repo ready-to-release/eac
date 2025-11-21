@@ -65,6 +65,18 @@ func TestCreateDirectoryStructure(t *testing.T) {
 				t.Fatalf("failed to create specification.md: %v", err)
 			}
 
+			// Create mock source prompts directory for specs (correct path: specs/create/prompts)
+			mockSpecsPromptsDir := filepath.Join(mockRepoRoot, "src", "commands", "impl", "specs", "create", "prompts")
+			if err := os.MkdirAll(mockSpecsPromptsDir, 0755); err != nil {
+				t.Fatalf("failed to create mock specs prompts directory: %v", err)
+			}
+
+			// Create mock specs prompt file
+			specificationContent := "# Mock specification prompt"
+			if err := os.WriteFile(filepath.Join(mockSpecsPromptsDir, "specification.md"), []byte(specificationContent), 0644); err != nil {
+				t.Fatalf("failed to create mock specification.md: %v", err)
+			}
+
 			// Test directory structure creation
 			targetDir := filepath.Join(tmpDir, "target")
 			err := createDirectoryStructure(targetDir, mockRepoRoot)

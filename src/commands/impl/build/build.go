@@ -18,9 +18,11 @@ func init() {
 func Build() int {
 	args := os.Args[2:] // Skip program name and "build"
 
-	if len(args) == 0 {
-		printBuildUsage()
-		return 1
+	// Check if first arg is a flag or no args - default to build modules
+	if len(args) == 0 || (len(args) > 0 && args[0][0] == '-') {
+		// Default: build all modules with any flags passed
+		os.Args = append(os.Args[:2], append([]string{"modules"}, args...)...)
+		return BuildModules()
 	}
 
 	// Check for help flag

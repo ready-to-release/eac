@@ -1,222 +1,142 @@
 // Command: design serve
-// Description: Start or stop Structurizr server for a module
-// HasSideEffects: false
+// Description: View architecture diagrams in browser using Structurizr Lite (Docker on port 8080)
+// Short: View architecture diagrams in browser using Structurizr Lite (Docker on port 8080)
+// Long: Launches a Docker container running Structurizr Lite web viewer and opens your default browser.
+// Long: The viewer provides interactive C4 model diagrams (system context, containers, components) defined
+// Long: in workspace.dsl. When you run this command, it generates workspace.json and .structurizr/ files
+// Long: The viewer runs on http://localhost:8080 and updates automatically when you edit the DSL file.
+// Usage: design serve <module>
+// HasSideEffects: true
 package design
 
 import (
 	"fmt"
 	"os"
-	"strconv"
+	"path/filepath"
+	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/impl/design/internal"
+	design "github.com/ready-to-release/eac/src/commands/impl/design/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
 	registry.Register(DesignServe)
 }
 
-// DesignServe starts or stops Structurizr server for a module
+// DesignServe starts Structurizr Lite viewer for a module
 func DesignServe() int {
-	args := os.Args[3:] // Skip "go", "run", ".", and "design" and "serve"
+	args := os.Args[3:] // Skip "go", "run", ".", "design", and "serve"
 
+	if len(args) == 0 {
+		fmt.Println("❌ Error: module name required")
+		fmt.Println()
+		printServeUsage()
+		return 1
+	}
+
+	// Parse flags and module name
 	var module string
-	var noBrowser bool
-	var port int = 8081
-	var stop bool
+	var autoStop bool
 
-	// Parse arguments
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-
-		switch arg {
-		case "--no-browser":
-			noBrowser = true
-		case "--stop":
-			stop = true
-		case "--port", "-p":
-			if i+1 < len(args) {
-				i++
-				p, err := strconv.Atoi(args[i])
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error: invalid port number: %s\n", args[i])
-					return 1
-				}
-				port = p
-			} else {
-				fmt.Fprintf(os.Stderr, "Error: --port requires a value\n")
-				return 1
-			}
-		default:
-			if arg[0] != '-' {
-				module = arg
-			} else {
-				fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-				return 1
-			}
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			printServeUsage()
+			return 0
+		}
+		if arg == "--force" || arg == "-f" {
+			autoStop = true
+			continue
+		}
+		// First non-flag argument is the module name
+		if !strings.HasPrefix(arg, "-") && module == "" {
+			module = arg
 		}
 	}
 
-	// Handle --stop flag
-	if stop {
-		return handleStop(module)
-	}
-
-	// Require module argument for starting server
 	if module == "" {
 		fmt.Println("❌ Error: module name required")
-		fmt.Println("\nUsage:")
-		fmt.Println("  go run . design serve <module>")
-		fmt.Println("\nRun 'go run . design list' to see available modules")
+		fmt.Println()
+		printServeUsage()
 		return 1
 	}
 
-	// Create client
-	client, err := design.NewClient()
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Printf("❌ Failed to initialize: %v\n", err)
-		return 1
-	}
-	defer client.Close()
-
-	// Validate module
-	err = client.ValidateModule(module)
-	if err != nil {
-		fmt.Printf("❌ %v\n", err)
-		fmt.Println("\n💡 Tip: Run 'go run . design list' to see available modules")
+		fmt.Printf("❌ Failed to find repository root: %v\n", err)
 		return 1
 	}
 
-	// Check if already running
-	running, info, err := client.IsRunning(module)
-	if err != nil {
-		fmt.Printf("❌ Failed to check container status: %v\n", err)
+	// Clean up module path - remove specs/ prefix and /design suffix if present
+	module = design.CleanModuleName(module)
+
+	// Validate module name
+	if err := design.ValidateModuleName(module); err != nil {
+		fmt.Printf("❌ Invalid module name: %v\n", err)
 		return 1
 	}
 
-	if running && info != nil {
-		fmt.Printf("ℹ️  Structurizr is already running for module: %s\n", module)
-		fmt.Printf("📊 Architecture documentation: %s\n", info.URL)
-
-		if !noBrowser {
-			err = client.OpenBrowser(info.URL)
-			if err != nil {
-				fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)
-				fmt.Printf("📖 Please open manually: %s\n", info.URL)
-			}
-		}
-		return 0
+	// Check if workspace exists
+	workspacePath := filepath.Join(repoRoot, "specs", module, "design", "workspace.dsl")
+	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
+		fmt.Printf("❌ Workspace not found: %s\n", workspacePath)
+		fmt.Printf("\n💡 Create one first with:\n")
+		fmt.Printf("   r2r design create %s\n", module)
+		return 1
 	}
 
-	// Start container
+	// Start Structurizr Lite
 	fmt.Printf("🚀 Starting Structurizr Lite for module: %s\n", module)
+	fmt.Printf("📁 Workspace: %s\n", workspacePath)
+	fmt.Println()
 
-	info, err = client.StartContainer(module, port)
-	if err != nil {
-		if info != nil {
-			fmt.Printf("⚠️  %v\n", err)
-			fmt.Printf("📖 Try accessing manually: %s\n", info.URL)
-		} else {
-			fmt.Printf("❌ Failed to start container: %v\n", err)
-			return 1
-		}
+	if err := design.StartStructurizrLite(module, autoStop); err != nil {
+		fmt.Printf("❌ Failed to start Structurizr Lite: %v\n", err)
+		return 1
 	}
-
-	// Get module details
-	moduleInfo, err := client.GetModuleInfo(module)
-	if err != nil {
-		// Ignore errors - not critical
-	}
-
-	// Display success
-	fmt.Printf("\n✅ Structurizr Lite is running for module: %s\n", module)
-	fmt.Printf("📊 Architecture documentation: %s\n", info.URL)
-
-	if moduleInfo != nil {
-		if moduleInfo.ViewCount > 0 {
-			fmt.Printf("\n📈 Available views: %d\n", moduleInfo.ViewCount)
-		}
-		if moduleInfo.HasDocs {
-			fmt.Printf("📚 Documentation sections: %d\n", moduleInfo.DocCount)
-		}
-		if moduleInfo.HasDecisions {
-			fmt.Printf("🎯 Architecture Decisions: %d ADRs\n", moduleInfo.DecisionCount)
-		}
-
-		if !moduleInfo.HasDocs {
-			fmt.Println("\n⚠️  Module has no documentation sections")
-		}
-		if !moduleInfo.HasDecisions {
-			fmt.Println("⚠️  Module has no architecture decisions")
-		}
-	}
-
-	// Open browser
-	if !noBrowser {
-		err = client.OpenBrowser(info.URL)
-		if err != nil {
-			fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)
-			fmt.Printf("📖 Please open manually: %s\n", info.URL)
-		}
-	}
-
-	// Show tips
-	fmt.Println("\n💡 Tips:")
-	fmt.Println("  • Container will keep running until stopped")
-	fmt.Printf("  • Stop with: go run . design serve cli --stop\n")
-	fmt.Printf("  • Or: docker stop %s\n", info.Name)
-	fmt.Printf("  • View logs: docker logs %s\n", info.Name)
 
 	return 0
 }
 
-func handleStop(module string) int {
-	client, err := design.NewClient()
-	if err != nil {
-		fmt.Printf("❌ Failed to initialize: %v\n", err)
-		return 1
-	}
-	defer client.Close()
-
-	// If module specified, stop that container
-	if module != "" {
-		err = client.StopContainer(module)
-		if err != nil {
-			fmt.Printf("❌ Failed to stop container: %v\n", err)
-			return 1
-		}
-		fmt.Printf("✅ Structurizr container stopped for module: %s\n", module)
-		return 0
-	}
-
-	// Otherwise, stop all running containers
-	modules, err := client.ListModules()
-	if err != nil {
-		fmt.Printf("❌ Failed to list modules: %v\n", err)
-		return 1
-	}
-
-	stoppedAny := false
-	for _, mod := range modules {
-		running, _, err := client.IsRunning(mod.Name)
-		if err != nil {
-			continue
-		}
-
-		if running {
-			err = client.StopContainer(mod.Name)
-			if err != nil {
-				fmt.Printf("⚠️  Failed to stop container for %s: %v\n", mod.Name, err)
-			} else {
-				fmt.Printf("✅ Stopped container for module: %s\n", mod.Name)
-				stoppedAny = true
-			}
-		}
-	}
-
-	if !stoppedAny {
-		fmt.Println("ℹ️  No running Structurizr containers found")
-	}
-
-	return 0
+func printServeUsage() {
+	fmt.Println("Start Structurizr Lite viewer to view architecture diagrams in browser")
+	fmt.Println()
+	fmt.Println("Launches a Docker container running Structurizr Lite and opens your browser.")
+	fmt.Println("The viewer displays interactive C4 model diagrams defined in workspace.dsl.")
+	fmt.Println()
+	fmt.Println("Usage:")
+	fmt.Println("  r2r design serve <module> [--force|-f]")
+	fmt.Println()
+	fmt.Println("Flags:")
+	fmt.Println("  --force, -f    Automatically stop any container using port 8080")
+	fmt.Println()
+	fmt.Println("Examples:")
+	fmt.Println("  r2r design serve src-cli")
+	fmt.Println("  r2r design serve contracts --force")
+	fmt.Println("  r2r design serve specs/src-cli/design     (auto-cleaned)")
+	fmt.Println()
+	fmt.Println("Module Locations:")
+	fmt.Println("  src-cli     → specs/src-cli/design/workspace.dsl")
+	fmt.Println("  contracts   → specs/contracts/design/workspace.dsl")
+	fmt.Println("  docs        → specs/docs/design/workspace.dsl")
+	fmt.Println()
+	fmt.Println("What It Does:")
+	fmt.Println("  1. Reads specs/<module>/design/workspace.dsl")
+	fmt.Println("  2. Generates workspace.json and .structurizr/ (ignored by git)")
+	fmt.Println("  3. Checks for port conflicts on 8080")
+	fmt.Println("  4. Starts Docker container with Structurizr Lite on port 8080")
+	fmt.Println("  5. Opens http://localhost:8080 in your default browser")
+	fmt.Println()
+	fmt.Println("Port Conflict Handling:")
+	fmt.Println("  If port 8080 is in use:")
+	fmt.Println("  - Without --force: Interactive prompt to stop/keep existing container")
+	fmt.Println("  - With --force: Automatically stops conflicting container")
+	fmt.Println()
+	fmt.Println("Requirements:")
+	fmt.Println("  - Docker must be running")
+	fmt.Println()
+	fmt.Println("Note:")
+	fmt.Println("  Accepts module name with or without 'specs/' prefix and '/design' suffix.")
+	fmt.Println("  Generated files are automatically ignored by git.")
 }

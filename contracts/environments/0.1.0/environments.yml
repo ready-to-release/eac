@@ -48,7 +48,30 @@ environments:
     system_deps:
       - "@deps:go"
 
+  - moniker: isolated-test-project
+    name: "Isolated Test Project Environment"
+    description: "Isolated temp directory with fake .git root for tests that create files/folders (prevents pollution of real repository)"
+    level: "L1"
+    type: "unit"
+    env_tags:
+      - "isolated"
+      - "temp-repo"
+      - "fast"
+    system_deps:
+      - "@deps:go"
+
   # L2 Environments - Local
+  - moniker: mkdocs-docker
+    name: "MkDocs Docker Environment"
+    description: "Docker container running MkDocs for documentation serving"
+    level: "L2"
+    type: "docker"
+    env_tags:
+      - "local"
+      - "docker"
+      - "mkdocs"
+    system_deps:
+      - "@deps:docker"
   - moniker: local01
     name: "Local Environment 01 - Docker Container"
     description: "Single Docker container execution environment"

@@ -4,64 +4,93 @@
 
 **IMPORTANT**: At the start of every session, you MUST:
 
-1. **List available workspaces** using `mcp__commands__work-list` to show all git worktrees
-2. **Ask which workspace to work in** using AskUserQuestion tool to let user select the target workspace/branch
-3. **Verify workspace context**: Confirm current directory matches selected workspace, or inform user which directory to navigate to
-4. **Read this file** (`/agent.md`) to load project context
-5. **Load MCP server capabilities** by reading available MCP command tools
-6. **Internalize all constraints and guidelines** defined below
-7. **Apply these instructions** throughout the entire session
-8. **Confirm initialization** with a flashy initialization report using this format:
+1. **Detect current workspace** from the environment context (current branch and working directory are provided in `<env>` and `gitStatus`)
+2. **Verify workspace context**: Check if the current directory path matches the detected branch (may be a mismatch in multi-worktree setups)
+3. **Read this file** (`/agent.md`) to load project context
+4. **Verify MCP server availability**:
+   - Check your available tool list for `mcp__commands__*` tools
+   - Check your available tool list for `mcp__github__*` tools
+   - Determine connection status: CONNECTED, NOT CONNECTED, or PARTIAL
+   - Set execution mode accordingly (MCP-First or CLI Fallback)
+5. **Internalize all constraints and guidelines** defined below
+6. **Apply these instructions** throughout the entire session
+7. **Confirm initialization** with a flashy initialization report using this format:
 
 ```text
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃  ⚡ SYSTEM INITIALIZED ⚡                                      ┃
 ┃  Project context loaded from agent.md                         ┃
-┃  MCP servers: ACTIVE                                          ┃
+┃  MCP servers: [✅ CONNECTED / ⚠️ NOT CONNECTED / ⚠️ PARTIAL]  ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 Workspace Context:
-- Selected workspace: [branch name]
+- Current branch: [branch name]
 - Working directory: [current path]
-- Status: [✓ Match / ⚠ Mismatch - navigate to: path]
+- Status: [✓ Match / ⚠ MISMATCH - Expected path: [expected path for this branch]]
 
 Project Context Loaded:
+- Go modular monorepo architecture
+- Three Rules of Vibe Coding: Easy to understand, Easy to change, Hard to break
+- Three-Phase Development: Specifications → TDD → Validation
+- Go version: ≥ 1.21
 
 Active Constraints:
 - Git: READ-ONLY by default. No commits/pushes/branches without explicit user request
 - Multi-Worktree Aware: Operating in [current directory] ([branch])
 - File Organization: Modules in /src, intermediate files in /out
-- MCP-First: Always prefer mcp__commands__* tools over manual file operations
+- Execution Mode: [MCP-First / CLI Fallback] based on MCP server availability
 
 MCP Server Status:
-- Module Discovery: ✓
-- Dependency Management: ✓
-- Architecture Docs: ✓
-- Build & Test: ✓
-- Git Operations: ✓
-- Specifications: ✓
-- Templates: ✓
-- Workspace Management: ✓
-- Documentation: ✓
+Commands Server (mcp__commands__*):
+  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: go run ./src/commands]
+
+GitHub Server (mcp__github__*):
+  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED / ⚠️ NOT CONFIGURED]
+
+[If NOT CONNECTED, include this troubleshooting section:]
+⚠️ MCP Troubleshooting:
+- Servers configured in: .mcp.json
+- Commands server: go run ./src/mcp/commands/main.go
+- GitHub server: go run ./src/mcp/github/main.go
+- Verify servers can start: go run ./src/mcp/commands/main.go < /dev/null
+- Check Claude Code MCP server logs for errors
+- Fallback: All operations will use direct CLI commands
 
 Ready to assist with project tasks.
 ```
 
-**Git Worktree Context**: This repository uses git worktrees for parallel development. The `work-list` command shows all active worktrees. Always confirm which workspace the user wants to work in before proceeding.
+**Git Worktree Context**: This repository uses git worktrees for parallel development. The initialization process automatically detects the current branch based on the working directory. If there's a mismatch between the expected worktree path and the current directory, it will be highlighted in the initialization report.
 
 ### MCP Server Initialization
 
-This project uses **MCP (Model Context Protocol) servers** to provide specialized commands for managing the modular monorepo architecture. During initialization, you MUST:
+This project uses **MCP (Model Context Protocol) servers** to provide specialized commands for managing the modular monorepo architecture.
 
-1. Recognize available `mcp__commands__*` tools
-2. Understand their purpose and when to use them
-3. Prefer MCP commands over manual file operations for module-related tasks
+#### Verification Steps
 
-**Available MCP Command Categories:**
+During initialization, you MUST verify MCP server availability:
+
+1. **Check for MCP tools** in your available tool list:
+   - Look for tools prefixed with `mcp__commands__*`
+   - Look for tools prefixed with `mcp__github__*`
+
+2. **Determine MCP status**:
+   - ✅ **CONNECTED**: If `mcp__commands__*` tools are available
+   - ⚠️ **NOT CONNECTED**: If no `mcp__*` tools are found
+   - ⚠️ **PARTIAL**: If some but not all expected servers are available
+
+3. **Report actual status** in initialization report (see below)
+
+4. **Set execution mode**:
+   - If CONNECTED: Use MCP-first approach (prefer `mcp__commands__*` tools)
+   - If NOT CONNECTED: Use fallback CLI approach (`go run ./src/commands`)
+
+#### Expected MCP Servers
+
+**Commands Server** (`mcp__commands__*`):
 
 - **Module Discovery**: `get-modules`, `show-modules`, `show-moduletypes`, `get-files`, `show-files`
 - **Dependency Management**: `get-dependencies`, `show-dependencies`, `validate-dependencies`, `get-execution-order`
-- **Architecture Documentation**: `design-*` (Structurizr integration)
+- **Architecture Documentation**: `design-create*`, `design-validate*`, `design-serve*`
 - **Build & Test**: `build-module`, `build-modules`, `test-module`, `test-modules`, `pipeline-run`
 - **Documentation**: `docs-serve` (MkDocs integration)
 - **Git Operations**: `commit-ai`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
@@ -69,11 +98,38 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 - **Templates**: `templates-list`, `templates-install`, `templates-apply`
 - **Workspace Management**: `work-create`, `work-list`, `work-commit`
 
+**GitHub Server** (`mcp__github__*`):
+
+- Repository operations, issue management, PR operations, workflow execution
+
+#### Fallback Mode
+
+If MCP servers are NOT CONNECTED, use direct CLI commands:
+
+| MCP Tool | Fallback Command |
+|----------|------------------|
+| `mcp__commands__show-modules` | `go run ./src/commands show modules` |
+| `mcp__commands__test-module` | `go run ./src/commands test module <name>` |
+| `mcp__commands__build-module` | `go run ./src/commands build module <name>` |
+| `mcp__commands__specs-create` | `go run ./src/commands specs create <description>` |
+| `mcp__commands__specs-validate` | `go run ./src/commands specs validate` |
+| All other tools | `go run ./src/commands <command> [args]` |
+
 ---
 
-## MCP-First Execution Policy
+## Execution Policy
+
+### When MCP Servers are CONNECTED
 
 **ALWAYS use `mcp__commands__*` tools for project operations.**
+
+Prefer MCP tools over direct CLI commands for all module-related operations.
+
+### When MCP Servers are NOT CONNECTED
+
+**Use CLI fallback commands**: `go run ./src/commands <command> [args]`
+
+Continue working normally using direct CLI commands. All functionality remains available, just accessed differently.
 
 ## Project Constraints
 
@@ -170,6 +226,47 @@ All non-trivial code you generate must include tests.
 - Avoid concurrency unless needed, and when used, design so races are impossible
 
 **Your code should fail safely and visibly when incorrect.**
+
+---
+
+### Parallel Agent Workflows
+
+For **complex features or large changes**, you can leverage multiple agents working in parallel to maximize efficiency during the setup phase.
+
+**When to use parallel agents:**
+
+- New features requiring architecture design, specifications, and impact analysis
+- Large refactoring efforts affecting multiple modules
+- Cross-cutting changes that need comprehensive analysis
+- Any work where multiple independent preparation tasks can run concurrently
+
+**Feature Development (Parallel Setup Phase):**
+
+When the user requests parallel development or when working on complex features, spawn multiple agents concurrently:
+
+- **Design Agent**: Create architecture documentation and specifications using `mcp__commands__design-*` and `mcp__commands__specs-create`
+- **Test Agent**: Develop test plan, identify test scenarios, and prepare test scaffolding structure
+- **Analysis Agent**: Perform impact analysis, review dependencies using `mcp__commands__get-dependencies`, and identify affected modules with `mcp__commands__get-changed-modules`
+- **Docs Agent**: Prepare documentation structure and identify documentation updates needed
+
+**How to invoke parallel agents:**
+
+The user can request parallel execution with phrases like:
+
+- "Work on this feature using parallel agents"
+- "Run the design, test, analysis, and docs agents in parallel"
+- "Parallelize the setup phase for this feature"
+
+When parallel execution is requested, spawn all agents in a **single message** with multiple Task tool calls.
+
+**Implementation Phase (Sequential):**
+
+After parallel setup agents complete and report their findings:
+
+1. **Synthesize results** from all parallel agents
+2. **Present unified plan** to the user showing how all findings integrate
+3. **Follow the Three-Phase Development Process** (below) for sequential implementation
+4. Use findings from parallel agents to inform each phase
 
 ---
 

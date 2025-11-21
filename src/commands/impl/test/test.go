@@ -18,9 +18,11 @@ func init() {
 func Test() int {
 	args := os.Args[2:] // Skip program name and "test"
 
-	if len(args) == 0 {
-		printTestUsage()
-		return 1
+	// Check if first arg is a flag or no args - default to commit suite
+	if len(args) == 0 || (len(args) > 0 && args[0][0] == '-') {
+		// Default: run commit suite with any flags passed
+		os.Args = append(os.Args[:2], append([]string{"suite", "commit"}, args...)...)
+		return TestSuite()
 	}
 
 	// Check for help flag

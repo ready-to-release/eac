@@ -77,11 +77,32 @@ func Init() int {
 		return 1
 	}
 
-	// Get workspace root
+	// Get workspace root (where to create .r2r)
+	// In tests, this will be the isolated temp directory
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
+	}
+
+	// Get the source repository root (where prompt templates live)
+	// In tests, this should be the REAL repository, not the isolated temp dir
+	// We detect this by temporarily unsetting R2R_TEST_REPO_ROOT
+	sourceRepoRoot := workspaceRoot
+	if testRepoRoot := os.Getenv("R2R_TEST_REPO_ROOT"); testRepoRoot != "" {
+		// We're in a test - find the real repository root for copying templates
+		// Unset the test override temporarily
+		os.Unsetenv("R2R_TEST_REPO_ROOT")
+		realRoot, err := repository.GetRepositoryRoot("")
+		if err != nil {
+			// If we can't find real root, fall back to workspace root
+			// (tests will fail but won't crash)
+			sourceRepoRoot = workspaceRoot
+		} else {
+			sourceRepoRoot = realRoot
+		}
+		// Restore the test override
+		os.Setenv("R2R_TEST_REPO_ROOT", testRepoRoot)
 	}
 
 	r2rDir := filepath.Join(workspaceRoot, ".r2r")
@@ -102,7 +123,7 @@ func Init() int {
 
 	// Create .r2r directory structure
 	fmt.Println("📁 Creating directory structure...")
-	if err := createDirectoryStructure(workspaceRoot, workspaceRoot); err != nil {
+	if err := createDirectoryStructure(workspaceRoot, sourceRepoRoot); err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating directory structure: %v\n", err)
 		return 1
 	}

@@ -1,4 +1,9 @@
 // File: src/core/ai/providers/claude_cli_test.go
+//go:build L2
+
+// Integration tests that require real Claude CLI - excluded from L0-L1 (commit suite)
+// Go tests should only be L0-L1 unit tests with mocks
+// Real provider tests belong in Godog specs (L2+)
 package providers
 
 import (

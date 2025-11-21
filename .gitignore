@@ -66,6 +66,11 @@ package-lock.json
 site/
 .cache/
 
+# Structurizr (architecture diagrams)
+# Generated files when running 'design serve'
+.structurizr/
+**/design/workspace.json
+
 # Docker
 .docker/
 docker-compose.override.yml

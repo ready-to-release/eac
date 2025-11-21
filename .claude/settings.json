@@ -1,5 +1,12 @@
 {
-  "env": {},
+  "env": {
+    "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "commands",
+    "github"
+  ],
   "permissions": {
     "defaultMode": "bypassPermissions",
     "allow": ["Bash(git status:*)", "Bash(git log:*)"],

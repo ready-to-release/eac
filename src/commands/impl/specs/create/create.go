@@ -122,7 +122,7 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 // - Optionally saves debug outputs
 func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Load contract and anti-corruption rules for validator
-	loader := contracts.NewSpecContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
+	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
@@ -271,7 +271,7 @@ func parseConfig() (*SpecsConfig, error) {
 	config := &SpecsConfig{}
 	var description string
 
-	args := os.Args[2:] // Skip program name and "specs create"
+	args := os.Args[3:] // Skip program name, "specs", and "create"
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--debug" {
@@ -347,7 +347,7 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 	}
 
 	// Load from contract with fallback: .r2r/contracts → contracts/ai
-	loader := contracts.NewAIContractLoader(templateRoot, "specifications", "0.1.0")
+	loader := contracts.NewContractLoader(templateRoot, "ai/specifications", "0.1.0")
 	prompt, source, err := loader.LoadPrompt("specification.md", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
@@ -363,6 +363,11 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 
 // generateWithAI invokes the AI provider with the prompt
 func generateWithAI(templateRoot string, prompt string, debug bool) (string, error) {
+	// Check for test double mode
+	if mockResponse := os.Getenv("R2R_TEST_AI_RESPONSE"); mockResponse != "" {
+		return mockResponse, nil
+	}
+
 	// Create executor
 	executor := ai.NewExecutor(templateRoot)
 	providers.RegisterBuiltIn(executor)
@@ -452,7 +457,7 @@ func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 	}
 
 	// Use generalized contract loader
-	loader := contracts.NewSpecContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
+	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
 
 	// Load contract and anti-corruption rules
 	contractData, err := loader.LoadContract()
@@ -528,7 +533,7 @@ func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 // stripAgentNoiseWithContract applies anti-corruption rules from contract using generalized framework
 func stripAgentNoiseWithContract(output string, templateRoot string) string {
 	// Use generalized contract loader
-	loader := contracts.NewSpecContractLoader(templateRoot, "contracts/specifications", "0.1.0")
+	loader := contracts.NewContractLoader(templateRoot, "ai/specifications", "0.1.0")
 
 	// Try to load anti-corruption rules
 	rules, err := loader.LoadAntiCorruptionRules()
