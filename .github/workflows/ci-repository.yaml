@@ -36,8 +36,13 @@ jobs:
         run: |
           cd src/commands
 
-          # Check if trigger-all is enabled
+          # Check if trigger-all is enabled (defaults to true for push/PR, user can override on manual dispatch)
           TRIGGER_ALL="${{ inputs.trigger-all }}"
+
+          # If inputs.trigger-all is empty (push/PR events), default to true
+          if [ -z "$TRIGGER_ALL" ]; then
+            TRIGGER_ALL="true"
+          fi
 
           if [ "$TRIGGER_ALL" = "true" ]; then
             echo "Trigger all mode enabled - running all workflows"
