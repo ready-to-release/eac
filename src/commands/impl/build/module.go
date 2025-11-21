@@ -46,6 +46,7 @@ type BuildOptions struct {
 	WindowsOnly bool
 	LinuxOnly   bool
 	MacOSOnly   bool
+	TidyFirst   bool // Run go mod tidy before building
 }
 
 // BuildFunc is the signature for module type build functions
@@ -87,16 +88,22 @@ func BuildModule() int {
 	// Parse arguments
 	if len(os.Args) < 4 {
 		fmt.Fprintf(os.Stderr, "Error: missing module moniker\n")
-		fmt.Fprintf(os.Stderr, "Usage: build module <moniker> [--windows-only|--linux-only|--macos-only]\n")
+		fmt.Fprintf(os.Stderr, "Usage: build module <moniker> [--windows-only|--linux-only|--macos-only] [--tidy-first|--no-tidy]\n")
 		return 1
 	}
 
 	moniker := os.Args[3]
 
-	// Parse optional flags for architecture-specific builds
+	// Detect CI environment
+	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
+
+	// Parse optional flags for architecture-specific builds and tidy behavior
 	windowsOnly := false
 	linuxOnly := false
 	macosOnly := false
+	tidyFirst := !isCI // Default: true for local, false for CI
+	tidyExplicitlySet := false
+
 	for i := 4; i < len(os.Args); i++ {
 		switch os.Args[i] {
 		case "--windows-only":
@@ -105,6 +112,12 @@ func BuildModule() int {
 			linuxOnly = true
 		case "--macos-only":
 			macosOnly = true
+		case "--tidy-first":
+			tidyFirst = true
+			tidyExplicitlySet = true
+		case "--no-tidy":
+			tidyFirst = false
+			tidyExplicitlySet = true
 		}
 	}
 
@@ -193,6 +206,22 @@ func BuildModule() int {
 		WindowsOnly: windowsOnly,
 		LinuxOnly:   linuxOnly,
 		MacOSOnly:   macosOnly,
+		TidyFirst:   tidyFirst,
+	}
+
+	// Log tidy behavior
+	if tidyFirst {
+		if tidyExplicitlySet {
+			fmt.Fprintf(multiWriter, "Tidy mode: enabled (explicit flag)\n")
+		} else {
+			fmt.Fprintf(multiWriter, "Tidy mode: enabled (default for local builds)\n")
+		}
+	} else {
+		if tidyExplicitlySet {
+			fmt.Fprintf(multiWriter, "Tidy mode: disabled (explicit flag)\n")
+		} else {
+			fmt.Fprintf(multiWriter, "Tidy mode: disabled (CI environment detected)\n")
+		}
 	}
 
 	// Execute the build function with output directory, log writer, and options
@@ -207,10 +236,12 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 
 	fmt.Fprintf(logWriter, "\n=== Building go-cli: %s ===\n", module.Moniker)
 
-	// Step 1: go mod tidy (ensure clean module state)
-	fmt.Fprintf(logWriter, "Running: go mod tidy\n")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-		return exitCode
+	// Step 1: go mod tidy (if enabled)
+	if opts.TidyFirst {
+		fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			return exitCode
+		}
 	}
 
 	// Step 2: go generate
@@ -292,15 +323,17 @@ func buildGoCommands(module *modules.ModuleContract, workspaceRoot string, outpu
 
 	fmt.Fprintf(logWriter, "\n=== go-commands: %s ===\n", module.Moniker)
 
-	// Run go mod tidy to ensure clean module state
-	fmt.Fprintf(logWriter, "🔄 Running go mod tidy...\n")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ go mod tidy failed\n")
-		return exitCode
+	// Step 1: go mod tidy (if enabled)
+	if opts.TidyFirst {
+		fmt.Fprintf(logWriter, "🔄 Running go mod tidy...\n")
+		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			fmt.Fprintf(logWriter, "❌ go mod tidy failed\n")
+			return exitCode
+		}
+		fmt.Fprintf(logWriter, "✅ go mod tidy completed\n")
 	}
-	fmt.Fprintf(logWriter, "✅ go mod tidy completed\n")
 
-	// Run go generate to ensure generated code is up to date
+	// Step 2: go generate to ensure generated code is up to date
 	fmt.Fprintf(logWriter, "🔄 Running go generate...\n")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
 		fmt.Fprintf(logWriter, "❌ go generate failed\n")
@@ -329,10 +362,12 @@ func buildGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir 
 
 	fmt.Fprintf(logWriter, "\n=== Building go-mcp: %s ===\n", module.Moniker)
 
-	// Step 1: go mod tidy (ensure clean module state)
-	fmt.Fprintf(logWriter, "Running: go mod tidy\n")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-		return exitCode
+	// Step 1: go mod tidy (if enabled)
+	if opts.TidyFirst {
+		fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			return exitCode
+		}
 	}
 
 	// Step 2: go build
@@ -348,10 +383,12 @@ func buildGoLibrary(module *modules.ModuleContract, workspaceRoot string, output
 
 	fmt.Fprintf(logWriter, "\n=== go-library: %s ===\n", module.Moniker)
 
-	// Step 1: go mod tidy (ensure clean module state)
-	fmt.Fprintf(logWriter, "Running: go mod tidy\n")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-		return exitCode
+	// Step 1: go mod tidy (if enabled)
+	if opts.TidyFirst {
+		fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			return exitCode
+		}
 	}
 
 	// Step 2: go generate to prepare embedded resources
