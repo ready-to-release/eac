@@ -11,12 +11,21 @@ source:
     - "go.mod"
     - "go.sum"
     - "**.go"
+    - "/src/core/ai/**"
+    - "/src/core/markdown/**"
+    - "/src/core/module-deps/**"
+    - "/src/core/environments/**"
+    - "/src/.template/**"
+  excludes:
+    - "repository/tests/**"
+  exclude_children_owned_source: true
 
 parent: "."
 
 depends_on: []
 
 used_by:
+  - "repository"
   - "src-cli"
   - "src-commands"
   - "src-mcp-commands"

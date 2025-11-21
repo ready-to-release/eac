@@ -47,15 +47,16 @@ type TestFunc func(*modules.ModuleContract, string, string, io.Writer, string, s
 
 // testFunctions maps module types to their test functions
 var testFunctions = map[string]TestFunc{
-	"go-cli":      testGoCLI,
-	"go-commands": testGoCommands,
-	"go-mcp":      testGoMCP,
-	"go-library":  testGoLibrary,
-	"go-tests":    testGoTests,
+	"go-cli":          testGoCLI,
+	"go-commands":     testGoCommands,
+	"go-mcp":          testGoMCP,
+	"go-library":      testGoLibrary,
+	"go-tests":        testGoTests,
+	"repository-root": testRepositoryRoot,
 }
 
 // TestModule tests a module by its moniker
-// This is a convenience wrapper that redirects to TestSuite with module filter
+// Uses type-based dispatch to call appropriate test function for the module type
 func TestModule() int {
 	// Parse arguments - expect: test module <moniker> [flags]
 	if len(os.Args) < 4 {
@@ -66,8 +67,9 @@ func TestModule() int {
 
 	moniker := os.Args[3]
 
-	// Parse flags to extract suite name (default: commit)
+	// Parse flags
 	suiteName := "commit"
+	reportFormat := "cucumber"
 	otherFlags := []string{}
 
 	for i := 4; i < len(os.Args); i++ {
@@ -79,21 +81,49 @@ func TestModule() int {
 			}
 			i++
 			suiteName = os.Args[i]
+		} else if arg == "--as-junit" {
+			reportFormat = "junit"
+		} else if arg == "--as-cucumber" {
+			reportFormat = "cucumber"
 		} else {
 			otherFlags = append(otherFlags, arg)
 		}
 	}
 
-	// Redirect to test suite by reconstructing args
-	// Change: [binary, "test", "module", moniker, --suite <suite>, ...other flags]
-	// To:     [binary, "test", "suite", <suite>, --module moniker, ...other flags]
+	// Get workspace root
+	workspaceRoot, err := registry.GetWorkspaceRoot()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to get workspace root: %v\n", err)
+		return 1
+	}
 
+	// Load module contract (using default version 0.1.0)
+	moduleContract, err := modules.LoadSingleModule(workspaceRoot, moniker, "0.1.0")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load module contract for '%s': %v\n", moniker, err)
+		return 1
+	}
+
+	// Check if module has a type-specific test function
+	testFunc, exists := testFunctions[moduleContract.Type]
+	if exists {
+		// Use type-based dispatch for modules with specific test functions
+		outputDir := filepath.Join(workspaceRoot, "out", "test", suiteName, moniker)
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
+			return 1
+		}
+
+		logWriter := os.Stdout
+		return testFunc(moduleContract, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
+	}
+
+	// For modules without specific test functions, redirect to test suite
 	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }() // Restore original args when done
+	defer func() { os.Args = oldArgs }()
 
-	// Build new args: binary, "test", "suite", suiteName, --module, moniker, ...otherFlags
 	newArgs := []string{
-		os.Args[0],  // binary
+		os.Args[0],
 		"test",
 		"suite",
 		suiteName,
@@ -104,12 +134,11 @@ func TestModule() int {
 
 	os.Args = newArgs
 
-	// Call TestSuite which implements the full 5-phase process
 	return TestSuite()
 }
 
 // testGoCLI tests a Cobra CLI binary (Pattern A)
-// Runs: go test ./...
+// Runs: go test -json ./...
 func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
@@ -122,9 +151,17 @@ func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir s
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "Running: go test ./...\n")
+	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
 
-	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
+	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
+
+	// Save JSON output to file
+	jsonFile := filepath.Join(outputDir, "test-results.json")
+	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
+	} else {
+		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
+	}
 
 	// Generate summary_unit.md
 	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
@@ -134,15 +171,23 @@ func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir s
 }
 
 // testGoCommands tests the runtime command dispatcher (Pattern B)
-// Runs: go test ./...
+// Runs: go test -json ./...
 func testGoCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-commands: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go test ./...\n")
+	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
 
-	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
+	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
+
+	// Save JSON output to file
+	jsonFile := filepath.Join(outputDir, "test-results.json")
+	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
+	} else {
+		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
+	}
 
 	// Generate summary_unit.md
 	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
@@ -152,15 +197,23 @@ func testGoCommands(module *modules.ModuleContract, workspaceRoot string, output
 }
 
 // testGoMCP tests an MCP JSON-RPC server (Pattern C)
-// Runs: go test ./...
+// Runs: go test -json ./...
 func testGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-mcp: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go test ./...\n")
+	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
 
-	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
+	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
+
+	// Save JSON output to file
+	jsonFile := filepath.Join(outputDir, "test-results.json")
+	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
+	} else {
+		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
+	}
 
 	// Generate summary_unit.md
 	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
@@ -170,15 +223,23 @@ func testGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir s
 }
 
 // testGoLibrary tests a Go library module (Pattern D)
-// Runs: go test ./...
+// Runs: go test -json ./...
 func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-library: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go test ./...\n")
+	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
 
-	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
+	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
+
+	// Save JSON output to file
+	jsonFile := filepath.Join(outputDir, "test-results.json")
+	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
+	} else {
+		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
+	}
 
 	// Generate summary_unit.md
 	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
@@ -367,4 +428,38 @@ func generateUnitTestSummaryMarkdown(moniker string, moduleType string, outputDi
 	}
 
 	fmt.Fprintf(logWriter, "✅ Generated: %s\n", summaryPath)
+}
+
+// testRepositoryRoot tests the repository-root module (runs repository validation tests)
+func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	// The repository-root module contains repository-level validation tests
+	// These are typically in src/core/repository/tests
+	testDir := filepath.Join(workspaceRoot, "src", "core", "repository", "tests")
+
+	fmt.Fprintf(logWriter, "\n=== Testing repository-root: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Running repository validation tests from: %s\n", testDir)
+
+	// Check if test directory exists
+	if _, err := os.Stat(testDir); os.IsNotExist(err) {
+		fmt.Fprintf(logWriter, "✅ No repository validation tests found at %s (this is OK)\n", testDir)
+		return 0
+	}
+
+	// Run go test with godog
+	cmd := exec.Command("go", "test", "-v")
+	cmd.Dir = testDir
+	cmd.Stdout = logWriter
+	cmd.Stderr = logWriter
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			fmt.Fprintf(logWriter, "\n❌ Repository validation tests failed with exit code %d\n", exitErr.ExitCode())
+			return exitErr.ExitCode()
+		}
+		fmt.Fprintf(logWriter, "\n❌ Failed to run repository validation tests: %v\n", err)
+		return 1
+	}
+
+	fmt.Fprintf(logWriter, "\n✅ Repository validation tests passed\n")
+	return 0
 }

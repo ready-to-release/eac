@@ -1,0 +1,17 @@
+# Version: 0.1.0
+
+moniker: "github"
+name: "GitHub Configuration"
+type: "configuration"
+description: "GitHub workflows, actions, and CI/CD configuration"
+
+source:
+  root: ".github"
+  changelog_path: ".github/CHANGELOG.md"
+  includes:
+    - "**"
+
+parent: "."
+
+depends_on: []
+used_by: []

@@ -7,7 +7,10 @@ parent: "."
 source:
   root: specs
   changelog_path: specs/CHANGELOG.md
-  # exclude_children_owned_source: true
+  includes:
+    - "**/.gitkeep"
+  excludes:
+    - "**"
 
 depends_on: []
 used_by: []

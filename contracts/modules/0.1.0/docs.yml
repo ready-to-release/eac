@@ -10,6 +10,7 @@ source:
   includes:
     - "**/*.md"
     - "**/*.nav.yml"
+    - "**/*.json"
     - "assets/**"
     - "/mkdocs.yml"
     - "LICENSE"

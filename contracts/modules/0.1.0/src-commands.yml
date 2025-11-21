@@ -15,10 +15,11 @@ source:
     - "README.md"
     - "render/README.md"
     - "/specs/src-commands/**/*"
+    - "/src/commands/tests/**"
+    - "/src/commands/validation-debug-logs.txt"
 
 depends_on:
   - "src-core"
 used_by:
-  - "sh"
-  - "bash"
-  - "pwsh"
+  - "implicit-cli-sh"
+  - "implicit-cli-pwsh"

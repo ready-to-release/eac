@@ -6,6 +6,8 @@ type: "repository-root"
 
 source:
   root: "/"
-  includes: []
+  includes:
+    - "/src/core/repository/tests/**"
 
-depends_on: []
+depends_on:
+  - "src-core"

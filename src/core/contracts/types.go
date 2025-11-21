@@ -17,7 +17,9 @@ type BaseContract struct {
 type Source struct {
 	Root                      string   `yaml:"root"`
 	ChangelogPath             string   `yaml:"changelog_path"`
+	SpecsRoot                 string   `yaml:"specs_root"`                   // Optional: defaults to specs/<module-name>
 	Includes                  []string `yaml:"includes"`
+	Excludes                  []string `yaml:"excludes"`                     // Optional: patterns to exclude from includes
 	IsCatchAllSingleton       *bool    `yaml:"is_catch_all_singleton"`
 	ExcludeChildrenOwnedSource *bool   `yaml:"exclude_children_owned_source"`
 }

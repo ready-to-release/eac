@@ -182,8 +182,18 @@ func parseValidateConfig() (*ValidateConfig, error) {
 	config.RepositoryRoot = repoRoot
 
 	// Make path absolute if relative
+	// Relative paths are interpreted relative to the current working directory,
+	// not the repository root
 	if !filepath.IsAbs(config.Path) {
-		config.Path = filepath.Join(repoRoot, config.Path)
+		// First, resolve relative to current working directory
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current working directory: %w", err)
+		}
+		config.Path = filepath.Clean(filepath.Join(cwd, config.Path))
+	} else {
+		// Even if path is absolute, clean it
+		config.Path = filepath.Clean(config.Path)
 	}
 
 	// Validate format

@@ -124,6 +124,16 @@ func (c *ModuleChecker) IsAvailable() bool {
 		_, err = os.Stat(mainGoPath)
 		return err == nil
 
+	case "repository-root":
+		// Repository root module: check if repository tests directory exists
+		repoRoot, err := repository.GetRepositoryRoot("")
+		if err != nil {
+			return false
+		}
+		testsPath := filepath.Join(repoRoot, "src", "core", "repository", "tests")
+		_, err = os.Stat(testsPath)
+		return err == nil
+
 	default:
 		// Unknown module type
 		return false
@@ -179,6 +189,15 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		}
 		modulePath := filepath.Join(repoRoot, module.Source.Root)
 		return fmt.Sprintf("MCP module: %s", modulePath), nil
+
+	case "repository-root":
+		// Repository root module: return tests path
+		repoRoot, err := repository.GetRepositoryRoot("")
+		if err != nil {
+			return "", err
+		}
+		testsPath := filepath.Join(repoRoot, "src", "core", "repository", "tests")
+		return fmt.Sprintf("Repository validation tests: %s", testsPath), nil
 
 	default:
 		return "", fmt.Errorf("module type '%s' verification not implemented", module.Type)
