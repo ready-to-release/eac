@@ -83,3 +83,4 @@ docker-compose.override.yml
 # User can optionally commit .r2r/prompts/ to share customizations with team
 # By default, it's ignored - remove the line below to commit custom prompts
 .r2r/prompts/
+nul
