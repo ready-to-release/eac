@@ -49,15 +49,15 @@ func combineCommitSections(topLevel string, moduleSections []string) string {
 		if len(uniqueSections) > 0 {
 			result.WriteString("\n\n")
 
-			// Module sections with --- separators
+			// Module sections separated by blank lines
 			for i, section := range uniqueSections {
 				// Trim trailing whitespace from each section
 				trimmedSection := strings.TrimRight(section, " \t\n")
 				result.WriteString(trimmedSection)
 
-				// Add separator between modules (but not after the last one)
+				// Add blank line between modules (but not after the last one)
 				if i < len(uniqueSections)-1 {
-					result.WriteString("\n\n---\n\n")
+					result.WriteString("\n\n")
 				}
 			}
 		}
@@ -118,9 +118,6 @@ func addMissingModules(commitMessage string, affectedModules []string, allFiles 
 	var result bytes.Buffer
 	result.WriteString(commitMessage)
 
-	// Check if commit message already ends with separator
-	endsWithSeparator := strings.HasSuffix(strings.TrimRight(commitMessage, " \t\n"), "---")
-
 	for i, module := range missingModules {
 		// Get files for this module
 		var moduleFiles []repository.RepositoryFileWithModule
@@ -147,17 +144,13 @@ func addMissingModules(commitMessage string, affectedModules []string, allFiles 
 			}
 		}
 
-		// Add separator before stub sections
+		// Add blank lines before stub sections
 		if i == 0 {
-			// First stub: only add separator if commit message doesn't already end with one
-			if !endsWithSeparator {
-				result.WriteString("\n\n---\n\n")
-			} else {
-				result.WriteString("\n\n")
-			}
+			// First stub: add blank lines
+			result.WriteString("\n\n")
 		} else {
-			// Subsequent stubs: always add separator to separate from previous stub
-			result.WriteString("\n\n---\n\n")
+			// Subsequent stubs: add blank lines to separate from previous stub
+			result.WriteString("\n\n")
 		}
 
 		// Module header: plain text with dashes

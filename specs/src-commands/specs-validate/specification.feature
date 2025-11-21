@@ -62,7 +62,7 @@ Feature: src-commands_specs-validate
       Then the command exits with code 1
       And stdout contains "❌ Validation failed"
       And stdout contains "MISSING_RULE"
-      And stdout contains "Missing Rule: declaration (required for ATDD acceptance criteria)"
+      And stdout contains "Missing Rule: declaration (required for specification structure)"
 
     @L2 @ov
     Scenario: Validate specification with multiple errors
@@ -142,18 +142,18 @@ Feature: src-commands_specs-validate
       Then validation fails with "RULE_BEFORE_FEATURE"
 
     @L2 @ov
-    Scenario: Check ATDD requirements
+    Scenario: Check Rule requirements
       Given a specification without Rule blocks
       When I run "specs validate specs/test/spec.feature"
       Then validation fails with "MISSING_RULE"
-      And stderr contains "required for ATDD acceptance criteria"
+      And stderr contains "Rule blocks are required for specification structure"
 
     @L2 @ov
-    Scenario: Check BDD requirements
+    Scenario: Check Scenario requirements
       Given a specification without Scenario blocks
       When I run "specs validate specs/test/spec.feature"
       Then validation fails with "MISSING_SCENARIO"
-      And stderr contains "required for BDD behavior examples"
+      And stderr contains "Scenario blocks are required for behavior examples"
 
   Rule: Output format provides actionable feedback
 

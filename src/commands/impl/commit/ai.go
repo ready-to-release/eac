@@ -352,10 +352,28 @@ func performCommit(message string) int {
 // promptYNR prompts the user with a yes/no/retry question
 // Returns "y", "n", or "r"
 func promptYNR(question string) string {
+	return promptYNRWithRetries(question, 0)
+}
+
+// promptYNRWithRetries prompts with retry limit to prevent infinite recursion
+func promptYNRWithRetries(question string, attempt int) string {
+	const maxAttempts = 3
+
+	if attempt >= maxAttempts {
+		fmt.Printf("\nToo many invalid inputs. Defaulting to 'no'.\n")
+		return "n"
+	}
+
 	fmt.Printf("%s (y/n/r): ", question)
 
 	var response string
-	fmt.Scanln(&response)
+	_, err := fmt.Scanln(&response)
+
+	// If we can't read from stdin (non-interactive), default to "no"
+	if err != nil {
+		fmt.Printf("\nNo input available (non-interactive mode). Defaulting to 'no'.\n")
+		return "n"
+	}
 
 	response = strings.ToLower(strings.TrimSpace(response))
 
@@ -368,7 +386,7 @@ func promptYNR(question string) string {
 		return "r"
 	default:
 		fmt.Printf("Invalid input '%s'. Please enter y (yes), n (no), or r (retry).\n", response)
-		return promptYNR(question) // Ask again
+		return promptYNRWithRetries(question, attempt+1) // Ask again with incremented attempt
 	}
 }
 
