@@ -8,7 +8,7 @@
 
 - AI-powered specification generation from natural language
 - Automatic validation against quality contracts
-- Proper BDD/ATDD structure (Feature, Rule, Scenario)
+- Proper specification structure (Feature, Rule, Scenario)
 - Organized by module in `specs/` directory
 - Ensures team consistency and quality standards
 

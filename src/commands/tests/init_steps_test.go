@@ -23,6 +23,13 @@ func iAmNotInAGitRepository() error {
 	return nil
 }
 
+// noR2RDirectoryExists verifies no .r2r directory exists
+func noR2RDirectoryExists() error {
+	// Precondition - no .r2r directory exists
+	// In isolated tests, this is automatically true since each test creates a fresh temp directory
+	return nil
+}
+
 // noAgentConfigYmlFileExists verifies no existing config
 func noAgentConfigYmlFileExists() error {
 	// Precondition - no .r2r/agent-config.yml exists
@@ -228,6 +235,7 @@ func stderrContainsPermissionErrorDetails() error {
 func InitializeInitScenario(sc *godog.ScenarioContext) {
 	// Setup steps
 	sc.Step(`^I am not in a git repository$`, iAmNotInAGitRepository)
+	sc.Step(`^no \.r2r directory exists$`, noR2RDirectoryExists)
 	sc.Step(`^no \.r2r/agent-config\.yml file exists$`, noAgentConfigYmlFileExists)
 	sc.Step(`^a malformed \.r2r/agent-config\.yml file$`, aMalformedAgentConfigYmlFile)
 	sc.Step(`^a \.r2r directory already exists$`, aR2RDirectoryAlreadyExists)

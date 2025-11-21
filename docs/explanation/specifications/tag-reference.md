@@ -26,12 +26,12 @@ Test level tags define the execution environment and scope based on the [Testing
 
 ### `@L0` - Fast Unit Tests
 
-**Execution**: Devbox or agent
-**Scope**: Source and binary
-**Dependencies**: All replaced with test doubles
-**Speed**: Milliseconds
-**Usage**: Go tests with `//go:build L0` build tag
-**Trade-off**: Highest determinism, lowest domain coherency
+- **Execution**: Devbox or agent
+- **Scope**: Source and binary
+- **Dependencies**: All replaced with test doubles
+- **Speed**: Milliseconds
+- **Usage**: Go tests with `//go:build L0` build tag, Godog features with `@L0` tag
+- **Trade-off**: Highest determinism, lowest domain coherency
 
 **Example**:
 
@@ -48,12 +48,12 @@ func TestValidateEmail(t *testing.T) {
 
 ### `@L1` - Unit Tests
 
-**Execution**: Devbox or agent
-**Scope**: Source and binary
-**Dependencies**: All replaced with test doubles
-**Speed**: Seconds
-**Usage**: Go tests (default, no build tag needed)
-**Trade-off**: Highest determinism, lowest domain coherency
+- **Execution**: Devbox or agent
+- **Scope**: Source and binary
+- **Dependencies**: All replaced with test doubles
+- **Speed**: Seconds
+- **Usage**: Go tests (default, no build tag needed), Godog features with `@L1` tag
+- **Trade-off**: Highest determinism, lowest domain coherency
 
 **Example**:
 
@@ -67,12 +67,12 @@ func TestUserService_CreateUser(t *testing.T) {
 
 ### `@L2` - Emulated System Tests
 
-**Execution**: Devbox or agent
-**Scope**: Deployable artifacts
-**Dependencies**: All replaced with test doubles
-**Speed**: Seconds
-**Usage**: Godog features (default if no level tag specified)
-**Trade-off**: High determinism, high domain coherency
+- **Execution**: Devbox or agent
+- **Scope**: Deployable artifacts
+- **Dependencies**: All replaced with test doubles
+- **Speed**: Seconds
+- **Usage**: Go tests with `//go:build L2` build tag, Godog features (default if no level tag specified)
+- **Trade-off**: High determinism, high domain coherency
 
 **Example**:
 
@@ -84,12 +84,12 @@ Feature: Container Integration Tests
 
 ### `@L3` - In-Situ Vertical Tests
 
-**Execution**: PLTE (Production-Like Test Environment)
-**Scope**: Deployed system (single deployable unit boundaries)
-**Dependencies**: All replaced with test doubles
-**Speed**: Minutes
-**Usage**: Godog features (automatically inferred from `@iv` or `@pv`)
-**Trade-off**: Moderate determinism, high domain coherency
+- **Execution**: PLTE (Production-Like Test Environment)
+- **Scope**: Deployed system (single deployable unit boundaries)
+- **Dependencies**: All replaced with test doubles
+- **Speed**: Minutes
+- **Usage**: Go tests with `//go:build L3` build tag, Godog features with `@L3` tag (automatically inferred from `@iv` or `@pv`)
+- **Trade-off**: Moderate determinism, high domain coherency
 
 **Example**:
 
@@ -101,12 +101,12 @@ Feature: API Service Deployment Verification
 
 ### `@L4` - Testing in Production
 
-**Execution**: Production
-**Scope**: Deployed system (cross-service interactions)
-**Dependencies**: All production, may use live test doubles
-**Speed**: Continuous
-**Usage**: Godog features (automatically inferred from `@piv` or `@ppv`)
-**Trade-off**: High determinism, highest domain coherency
+- **Execution**: Production
+- **Scope**: Deployed system (cross-service interactions)
+- **Dependencies**: All production, may use live test doubles
+- **Speed**: Continuous
+- **Usage**: Go tests with `//go:build L4` build tag, Godog features with `@L4` tag (automatically inferred from `@piv` or `@ppv`)
+- **Trade-off**: High determinism, highest domain coherency
 
 **Example**:
 
@@ -118,11 +118,20 @@ Feature: Production Smoke Tests
 
 **Inference Rules**:
 
-- Go tests without build tag → `@L1`
-- Go tests with `//go:build L0` → `@L0`
-- Godog features without level tag → `@L2`
-- Features with `@iv` or `@pv` → `@L3`
-- Features with `@piv` or `@ppv` → `@L4`
+**Go Tests:**
+
+- No build tag → `@L1`
+- `//go:build L0` → `@L0`
+- `//go:build L2` → `@L2`
+- `//go:build L3` → `@L3`
+- `//go:build L4` → `@L4`
+
+**Godog Features:**
+
+- No level tag → `@L2`
+- Explicit `@L0`, `@L1`, `@L2`, `@L3`, or `@L4` → corresponding level
+- Features with `@iv` or `@pv` → `@L3` (if no explicit level tag)
+- Features with `@piv` or `@ppv` → `@L4` (if no explicit level tag)
 
 ---
 

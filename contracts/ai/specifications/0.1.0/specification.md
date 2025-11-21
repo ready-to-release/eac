@@ -1,6 +1,6 @@
 # Generate Gherkin Specification
 
-You are an expert in ATDD/BDD and Gherkin specification writing.
+You are an expert in BDD and Gherkin specification writing.
 
 Generate a complete, well-structured Gherkin feature specification following the contract requirements provided below.
 
