@@ -31,8 +31,9 @@ import (
 
 // QuickDSLValidator performs fast syntax validation without Docker
 type QuickDSLValidator struct {
-	identifierPattern *regexp.Regexp
+	identifierPattern   *regexp.Regexp
 	relationshipPattern *regexp.Regexp
+	contract            *contracts.Contract
 }
 
 // NewQuickDSLValidator creates a new quick validator
@@ -42,7 +43,25 @@ func NewQuickDSLValidator() *QuickDSLValidator {
 		identifierPattern: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`),
 		// Relationship pattern: identifier -> identifier "description"
 		relationshipPattern: regexp.MustCompile(`(\w+)\s*->\s*(\w+)`),
+		contract:            nil,
 	}
+}
+
+// NewQuickDSLValidatorWithContract creates a new quick validator with contract
+func NewQuickDSLValidatorWithContract(contract *contracts.Contract) *QuickDSLValidator {
+	v := NewQuickDSLValidator()
+	v.contract = contract
+
+	// Update identifier pattern from contract if available
+	if contract != nil && contract.RawData != nil {
+		if patternVal, ok := contract.RawData["identifier_pattern"].(string); ok && patternVal != "" {
+			if compiled, err := regexp.Compile(patternVal); err == nil {
+				v.identifierPattern = compiled
+			}
+		}
+	}
+
+	return v
 }
 
 // Validate performs quick syntax validation

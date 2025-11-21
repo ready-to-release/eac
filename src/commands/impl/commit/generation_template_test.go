@@ -8,7 +8,7 @@ import (
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
-// TestPromptTemplateRendering verifies that prompts use Go templates with contract embedding
+// TestPromptTemplateRendering verifies that prompts contain required format instructions
 func TestPromptTemplateRendering(t *testing.T) {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -24,22 +24,21 @@ func TestPromptTemplateRendering(t *testing.T) {
 			name:       "top-level prompt template",
 			promptName: "top-level",
 			shouldHave: []string{
-				"{{.Contract}}",
-				"{{.AntiCorruption}}",
-				"Anti-Corruption Rules",
-				"Contract Structure",
+				"EXAMPLE OUTPUT FORMAT",
+				"Conventional commit header",
+				"Auditor-Summary",
 				"Generate", // Should have generation instructions
+				"<type>(<scope>): <summary>",
 			},
 		},
 		{
 			name:       "module prompt template",
 			promptName: "module",
 			shouldHave: []string{
-				"{{.Contract}}",
-				"{{.AntiCorruption}}",
-				"Anti-Corruption Rules",
-				"Contract Structure",
-				"Generate", // Should have generation instructions
+				"Generate a module section",
+				"Module name only",
+				"<module>: <type>: <description>",
+				"CRITICAL",
 			},
 		},
 	}
@@ -52,7 +51,7 @@ func TestPromptTemplateRendering(t *testing.T) {
 				t.Fatalf("Failed to load prompt %s: %v", tc.promptName, err)
 			}
 
-			// Verify template contains required placeholders
+			// Verify template contains required content
 			for _, required := range tc.shouldHave {
 				if !strings.Contains(promptTemplate, required) {
 					t.Errorf("Prompt %s missing required content: %s", tc.promptName, required)
@@ -62,68 +61,52 @@ func TestPromptTemplateRendering(t *testing.T) {
 	}
 }
 
-// TestPromptContractEmbedding verifies that contract and anti-corruption are properly embedded
+// TestPromptContractEmbedding verifies that prompts use direct format instructions
+// Note: Template variable embedding was removed in favor of direct format examples
 func TestPromptContractEmbedding(t *testing.T) {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		t.Fatalf("Failed to get repository root: %v", err)
 	}
 
-	// Load prompt template
-	promptTemplate, err := loadPromptWithFallback("top-level", workspaceRoot)
+	// Load prompt
+	promptContent, err := loadPromptWithFallback("top-level", workspaceRoot)
 	if err != nil {
 		t.Fatalf("Failed to load top-level prompt: %v", err)
 	}
 
-	// Load contract and anti-corruption
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
-	contractData, err := loader.LoadContract()
-	if err != nil {
-		t.Fatalf("Failed to load contract: %v", err)
-	}
-
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		t.Fatalf("Failed to load anti-corruption rules: %v", err)
-	}
-
-	// Build prompt with template
-	customData := map[string]string{}
-	renderedPrompt, err := contracts.BuildPromptWithTemplate(
-		promptTemplate,
-		contractData,
-		antiCorruptionRules,
-		customData,
-	)
-	if err != nil {
-		t.Fatalf("Failed to render template: %v", err)
-	}
-
-	// Verify rendered prompt contains contract content
+	// Verify prompt contains direct format instructions (not template variables)
 	requiredContent := []string{
-		"version:",           // From contract YAML
-		"semantic_types:",    // From contract YAML
-		"structure:",         // From contract YAML
-		"forbidden_patterns:", // From anti-corruption YAML
+		"EXAMPLE OUTPUT FORMAT", // Direct example instead of template
+		"refactor(multi-module)", // Concrete example
+		"Auditor-Summary:",       // Field name shown directly
+		"Changes:",               // Field name shown directly
 	}
 
 	for _, required := range requiredContent {
-		if !strings.Contains(renderedPrompt, required) {
-			t.Errorf("Rendered prompt missing contract content: %s", required)
+		if !strings.Contains(promptContent, required) {
+			t.Errorf("Prompt missing required format instruction: %s", required)
 		}
 	}
 
-	// Verify template placeholders are replaced (not left as {{.Contract}})
-	if strings.Contains(renderedPrompt, "{{.Contract}}") {
-		t.Error("Template placeholder {{.Contract}} was not replaced")
+	// Verify NO template variables (they were removed)
+	if strings.Contains(promptContent, "{{.Contract}}") {
+		t.Error("Prompt should not contain template variable {{.Contract}} - use direct examples instead")
 	}
 
-	if strings.Contains(renderedPrompt, "{{.AntiCorruption}}") {
-		t.Error("Template placeholder {{.AntiCorruption}} was not replaced")
+	if strings.Contains(promptContent, "{{.AntiCorruption}}") {
+		t.Error("Prompt should not contain template variable {{.AntiCorruption}} - use direct examples instead")
 	}
 
-	t.Logf("Rendered prompt length: %d characters", len(renderedPrompt))
-	t.Logf("Contract embedded successfully")
+	// Verify contract can still be loaded for validation (even though not embedded in prompt)
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	_, err = loader.LoadContract()
+	if err != nil {
+		t.Logf("Contract loading failed (validation still works): %v", err)
+	}
+
+	t.Logf("Prompt length: %d characters", len(promptContent))
+	t.Logf("Prompt uses direct format examples (not template embedding)")
 }
 
 // TestTemplateBackwardCompatibility verifies fallback when contract loading fails

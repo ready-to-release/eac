@@ -67,192 +67,275 @@ func normalizeSpacing(commitMessage string) []string {
 }
 
 // fixContent handles title truncation, subject line joining/truncation, and body wrapping
+// Refactored into smaller, focused functions for better maintainability
 func fixContent(lines []string) []string {
-	cleaned := make([]string, 0, len(lines))
-
-	inCodeBlock := false
-	inBodySection := false
-	bodyBuffer := []string{}
-	lastWasModuleHeader := false
-	needBlankLineAfterCodeBlock := false
-	inMultiLineSpecialField := false
+	// Create processing context
+	ctx := &contentFixContext{
+		lines:                       lines,
+		cleaned:                     make([]string, 0, len(lines)),
+		inCodeBlock:                 false,
+		inBodySection:               false,
+		bodyBuffer:                  []string{},
+		lastWasModuleHeader:         false,
+		needBlankLineAfterCodeBlock: false,
+		inMultiLineSpecialField:     false,
+	}
 
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
+		ctx.currentIndex = i
+		ctx.currentLine = line
+		ctx.currentTrimmed = trimmed
 
-		// If we need a blank line after code block and this is non-empty content, add it
-		if needBlankLineAfterCodeBlock && trimmed != "" && !strings.HasPrefix(trimmed, "```") {
-			if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
-				cleaned = append(cleaned, "")
-			}
-			needBlankLineAfterCodeBlock = false
+		// Process line through different fixers
+		if ctx.handleCodeBlock() {
+			continue
 		}
-
-		// Track code block state and ensure blank lines before/after
-		if strings.HasPrefix(trimmed, "```") {
-			if !inCodeBlock {
-				// Opening fence - ensure blank line before it
-				if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
-					cleaned = append(cleaned, "")
-				}
-				inCodeBlock = true
-				cleaned = append(cleaned, line)
-				continue
-			} else {
-				// Closing fence - add it, then mark that we need blank line after
-				cleaned = append(cleaned, line)
-				inCodeBlock = false
-				needBlankLineAfterCodeBlock = true
-				continue
-			}
+		if ctx.handleHeader() {
+			continue
 		}
-
-		// FIX 1: Clean header (remove trailing period only, don't truncate)
-		// New format: <type>(<scope>): <summary>
-		if i == 0 && conventionalHeaderRegex.MatchString(trimmed) {
-			// Only remove trailing period (validation will warn if too long)
-			line = strings.TrimSuffix(trimmed, ".")
-			cleaned = append(cleaned, line)
-			// After header, we're in top-level body section
-			inBodySection = true
+		if ctx.handleModuleSection() {
+			continue
+		}
+		if ctx.handleSeparator() {
+			continue
+		}
+		if ctx.handleDashes() {
+			continue
+		}
+		if ctx.handleSubjectLine() {
+			continue
+		}
+		if ctx.handleSpecialField() {
+			continue
+		}
+		if ctx.handleBodyText() {
 			continue
 		}
 
-		// FIX 2: Handle module headers
-		// New format: plain text module name (followed by dashes on next line)
-		if i < len(lines)-1 {
-			nextTrimmed := strings.TrimSpace(lines[i+1])
-			if isDashesLine(nextTrimmed) && isModuleName(trimmed) {
-				// This is a module header in new format
-				// Ensure blank line before if needed
-				if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
-					cleaned = append(cleaned, "")
-				}
-				lastWasModuleHeader = true
-				cleaned = append(cleaned, line)
-				// Add the dashes line on next iteration
-				continue
-			}
-		}
-
-		// FIX 3: Detect separators BEFORE dashes (since "---" is both a separator and dashes)
-		if trimmed == "---" {
-			// Flush buffered body text
-			if inBodySection && len(bodyBuffer) > 0 {
-				cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)
-				bodyBuffer = []string{}
-			}
-			inBodySection = false
-
-			// Add blank line before separator if needed
-			if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
-				cleaned = append(cleaned, "")
-			}
-
-			cleaned = append(cleaned, line)
-			continue
-		}
-
-		// Pass through dashes line (part of module header)
-		if isDashesLine(trimmed) {
-			cleaned = append(cleaned, line)
-			inBodySection = true
-			continue
-		}
-
-		// FIX 4: Handle subject lines (WRAP if too long, remove trailing periods)
-		// Format: <module>: <type>: <description>
-		if subjectLineRegex.MatchString(trimmed) {
-			// Remove trailing period
-			line = strings.TrimSuffix(strings.TrimSpace(line), ".")
-
-			// WRAP if too long (don't truncate semantic commits)
-			if len(line) > MaxSubjectLength {
-				wrapped := wrapSemanticCommitLine(line)
-				cleaned = append(cleaned, wrapped...)
-			} else {
-				cleaned = append(cleaned, line)
-			}
-			lastWasModuleHeader = false
-			continue
-		}
-
-		// FIX 5: Detect code block end
-		if inBodySection && strings.HasPrefix(trimmed, "```") {
-			// Flush buffered body text
-			if len(bodyBuffer) > 0 {
-				cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)
-				bodyBuffer = []string{}
-			}
-			inBodySection = false
-			cleaned = append(cleaned, line)
-			continue
-		}
-
-		// Check if this is a special field line (Auditor-Summary, Changes, etc.)
-		isSpecialField := strings.HasPrefix(trimmed, "Auditor-Summary:") ||
-			strings.HasPrefix(trimmed, "Changes:") ||
-			strings.HasPrefix(trimmed, "BREAKING CHANGE:") ||
-			strings.HasPrefix(trimmed, "Refs:") ||
-			strings.HasPrefix(trimmed, "Closes:") ||
-			strings.HasPrefix(trimmed, "Co-authored-by:")
-
-		if isSpecialField {
-			// Flush any buffered body text first
-			if len(bodyBuffer) > 0 {
-				cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)
-				bodyBuffer = []string{}
-			}
-			cleaned = append(cleaned, line)
-			inMultiLineSpecialField = true
-			continue
-		}
-
-		// Handle continuation lines of multi-line special fields
-		if inMultiLineSpecialField {
-			if trimmed == "" {
-				// Blank line ends the special field
-				inMultiLineSpecialField = false
-				cleaned = append(cleaned, line)
-			} else {
-				// Continuation line - pass through without buffering
-				cleaned = append(cleaned, line)
-			}
-			continue
-		}
-
-		// Buffer body text lines (ensuring blank line after header)
-		if inBodySection && !inCodeBlock && trimmed != "" && !strings.HasPrefix(trimmed, "|") {
-			// If this is the first body text after a header, ensure blank line separator
-			if lastWasModuleHeader {
-				// Add blank line after header if not already present
-				if len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) != "" {
-					cleaned = append(cleaned, "")
-				}
-			}
-			bodyBuffer = append(bodyBuffer, trimmed)
-			lastWasModuleHeader = false
-			continue
-		}
-
-		// Skip duplicate blank lines
-		if trimmed == "" && len(cleaned) > 0 && strings.TrimSpace(cleaned[len(cleaned)-1]) == "" {
-			continue
-		}
-
-		// Don't reset lastWasModuleHeader for blank lines (subject might be after blank line)
-		if trimmed != "" {
-			lastWasModuleHeader = false
-		}
-		cleaned = append(cleaned, line)
+		// Default: pass through
+		ctx.passThrough()
 	}
 
 	// Flush any remaining body text
-	if len(bodyBuffer) > 0 {
-		cleaned = append(cleaned, wrapBodyText(bodyBuffer)...)
+	if len(ctx.bodyBuffer) > 0 {
+		ctx.cleaned = append(ctx.cleaned, wrapBodyText(ctx.bodyBuffer)...)
 	}
 
-	return cleaned
+	return ctx.cleaned
+}
+
+// contentFixContext holds state for content fixing
+type contentFixContext struct {
+	lines                       []string
+	cleaned                     []string
+	currentIndex                int
+	currentLine                 string
+	currentTrimmed              string
+	inCodeBlock                 bool
+	inBodySection               bool
+	bodyBuffer                  []string
+	lastWasModuleHeader         bool
+	needBlankLineAfterCodeBlock bool
+	inMultiLineSpecialField     bool
+}
+
+// handleCodeBlock handles code block state and spacing
+func (ctx *contentFixContext) handleCodeBlock() bool {
+	trimmed := ctx.currentTrimmed
+	line := ctx.currentLine
+
+	// Add blank line after code block if needed
+	if ctx.needBlankLineAfterCodeBlock && trimmed != "" && !strings.HasPrefix(trimmed, "```") {
+		if len(ctx.cleaned) > 0 && strings.TrimSpace(ctx.cleaned[len(ctx.cleaned)-1]) != "" {
+			ctx.cleaned = append(ctx.cleaned, "")
+		}
+		ctx.needBlankLineAfterCodeBlock = false
+	}
+
+	// Track code block state
+	if strings.HasPrefix(trimmed, "```") {
+		if !ctx.inCodeBlock {
+			// Opening fence - ensure blank line before it
+			if len(ctx.cleaned) > 0 && strings.TrimSpace(ctx.cleaned[len(ctx.cleaned)-1]) != "" {
+				ctx.cleaned = append(ctx.cleaned, "")
+			}
+			ctx.inCodeBlock = true
+			ctx.cleaned = append(ctx.cleaned, line)
+			return true
+		} else {
+			// Closing fence
+			ctx.cleaned = append(ctx.cleaned, line)
+			ctx.inCodeBlock = false
+			ctx.needBlankLineAfterCodeBlock = true
+			return true
+		}
+	}
+
+	// Handle code block end in body section
+	if ctx.inBodySection && strings.HasPrefix(trimmed, "```") {
+		if len(ctx.bodyBuffer) > 0 {
+			ctx.cleaned = append(ctx.cleaned, wrapBodyText(ctx.bodyBuffer)...)
+			ctx.bodyBuffer = []string{}
+		}
+		ctx.inBodySection = false
+		ctx.cleaned = append(ctx.cleaned, line)
+		return true
+	}
+
+	return false
+}
+
+// handleHeader handles header cleanup
+func (ctx *contentFixContext) handleHeader() bool {
+	if ctx.currentIndex == 0 && conventionalHeaderRegex.MatchString(ctx.currentTrimmed) {
+		// Only remove trailing period (validation will warn if too long)
+		line := strings.TrimSuffix(ctx.currentTrimmed, ".")
+		ctx.cleaned = append(ctx.cleaned, line)
+		ctx.inBodySection = true
+		return true
+	}
+	return false
+}
+
+// handleModuleSection handles module headers
+func (ctx *contentFixContext) handleModuleSection() bool {
+	if ctx.currentIndex >= len(ctx.lines)-1 {
+		return false
+	}
+
+	nextTrimmed := strings.TrimSpace(ctx.lines[ctx.currentIndex+1])
+	if isDashesLine(nextTrimmed) && isModuleName(ctx.currentTrimmed) {
+		// Ensure blank line before module header
+		if len(ctx.cleaned) > 0 && strings.TrimSpace(ctx.cleaned[len(ctx.cleaned)-1]) != "" {
+			ctx.cleaned = append(ctx.cleaned, "")
+		}
+		ctx.lastWasModuleHeader = true
+		ctx.cleaned = append(ctx.cleaned, ctx.currentLine)
+		return true
+	}
+	return false
+}
+
+// handleSeparator handles horizontal rule separators
+func (ctx *contentFixContext) handleSeparator() bool {
+	if ctx.currentTrimmed == "---" {
+		// Flush buffered body text
+		if ctx.inBodySection && len(ctx.bodyBuffer) > 0 {
+			ctx.cleaned = append(ctx.cleaned, wrapBodyText(ctx.bodyBuffer)...)
+			ctx.bodyBuffer = []string{}
+		}
+		ctx.inBodySection = false
+
+		// Add blank line before separator
+		if len(ctx.cleaned) > 0 && strings.TrimSpace(ctx.cleaned[len(ctx.cleaned)-1]) != "" {
+			ctx.cleaned = append(ctx.cleaned, "")
+		}
+
+		ctx.cleaned = append(ctx.cleaned, ctx.currentLine)
+		return true
+	}
+	return false
+}
+
+// handleDashes handles dashes lines (module header underlines)
+func (ctx *contentFixContext) handleDashes() bool {
+	if isDashesLine(ctx.currentTrimmed) {
+		ctx.cleaned = append(ctx.cleaned, ctx.currentLine)
+		ctx.inBodySection = true
+		return true
+	}
+	return false
+}
+
+// handleSubjectLine handles subject line wrapping
+func (ctx *contentFixContext) handleSubjectLine() bool {
+	if subjectLineRegex.MatchString(ctx.currentTrimmed) {
+		// Remove trailing period
+		line := strings.TrimSuffix(strings.TrimSpace(ctx.currentLine), ".")
+
+		// Wrap if too long
+		if len(line) > MaxSubjectLength {
+			wrapped := wrapSemanticCommitLine(line)
+			ctx.cleaned = append(ctx.cleaned, wrapped...)
+		} else {
+			ctx.cleaned = append(ctx.cleaned, line)
+		}
+		ctx.lastWasModuleHeader = false
+		return true
+	}
+	return false
+}
+
+// handleSpecialField handles special fields like Auditor-Summary, Changes, etc.
+func (ctx *contentFixContext) handleSpecialField() bool {
+	trimmed := ctx.currentTrimmed
+
+	isSpecialField := strings.HasPrefix(trimmed, "Auditor-Summary:") ||
+		strings.HasPrefix(trimmed, "Changes:") ||
+		strings.HasPrefix(trimmed, "BREAKING CHANGE:") ||
+		strings.HasPrefix(trimmed, "Refs:") ||
+		strings.HasPrefix(trimmed, "Closes:") ||
+		strings.HasPrefix(trimmed, "Co-authored-by:")
+
+	if isSpecialField {
+		// Flush buffered body text
+		if len(ctx.bodyBuffer) > 0 {
+			ctx.cleaned = append(ctx.cleaned, wrapBodyText(ctx.bodyBuffer)...)
+			ctx.bodyBuffer = []string{}
+		}
+		ctx.cleaned = append(ctx.cleaned, ctx.currentLine)
+		ctx.inMultiLineSpecialField = true
+		return true
+	}
+
+	// Handle continuation lines
+	if ctx.inMultiLineSpecialField {
+		if trimmed == "" {
+			ctx.inMultiLineSpecialField = false
+			ctx.cleaned = append(ctx.cleaned, ctx.currentLine)
+		} else {
+			ctx.cleaned = append(ctx.cleaned, ctx.currentLine)
+		}
+		return true
+	}
+
+	return false
+}
+
+// handleBodyText handles body text buffering and wrapping
+func (ctx *contentFixContext) handleBodyText() bool {
+	trimmed := ctx.currentTrimmed
+
+	if ctx.inBodySection && !ctx.inCodeBlock && trimmed != "" && !strings.HasPrefix(trimmed, "|") {
+		// Ensure blank line after module header
+		if ctx.lastWasModuleHeader {
+			if len(ctx.cleaned) > 0 && strings.TrimSpace(ctx.cleaned[len(ctx.cleaned)-1]) != "" {
+				ctx.cleaned = append(ctx.cleaned, "")
+			}
+		}
+		ctx.bodyBuffer = append(ctx.bodyBuffer, trimmed)
+		ctx.lastWasModuleHeader = false
+		return true
+	}
+
+	return false
+}
+
+// passThrough passes line through with duplicate blank line removal
+func (ctx *contentFixContext) passThrough() {
+	trimmed := ctx.currentTrimmed
+
+	// Skip duplicate blank lines
+	if trimmed == "" && len(ctx.cleaned) > 0 && strings.TrimSpace(ctx.cleaned[len(ctx.cleaned)-1]) == "" {
+		return
+	}
+
+	// Don't reset lastWasModuleHeader for blank lines
+	if trimmed != "" {
+		ctx.lastWasModuleHeader = false
+	}
+	ctx.cleaned = append(ctx.cleaned, ctx.currentLine)
 }
 
 // wrapSemanticCommitLine wraps a semantic commit line at MaxSubjectLength characters

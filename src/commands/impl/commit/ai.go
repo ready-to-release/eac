@@ -135,6 +135,14 @@ func verifyContractImplementation(workspaceRoot string) error {
 
 // Phase 3: Build Execution Context
 func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*executionConfig, string, string, error) {
+	// Validate inputs
+	if workspaceRoot == "" {
+		return nil, "", "", fmt.Errorf("workspaceRoot cannot be empty")
+	}
+	if _, err := os.Stat(workspaceRoot); os.IsNotExist(err) {
+		return nil, "", "", fmt.Errorf("workspaceRoot does not exist: %s", workspaceRoot)
+	}
+
 	// Get staged files with module mappings
 	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot, "0.1.0")
 	if err != nil {

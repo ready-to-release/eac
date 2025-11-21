@@ -44,15 +44,4 @@ forbidden_emojis:
   - "🎉"
   - "✨"
 
-forbidden_patterns:
-  - pattern: '^\*\*.*\*\*$'
-    description: "Bold announcement lines"
-  - pattern: '^```(markdown)?$'
-    description: "Opening markdown code fences"
-  - pattern: '^(---|___|___|\*\*\*)$'
-    description: "Horizontal rules before content starts"
-
-noise_header_keywords:
-  - "summary"
-  - "context"
-  - "changes"
+agent_signatures: []
