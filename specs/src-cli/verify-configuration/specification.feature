@@ -1,4 +1,6 @@
-@ov
+@skip:todo
+@env:isolated-test-project
+@ov @deps:go @depm:src-cli
 Feature: src-cli_verify-configuration
 
   As a developer

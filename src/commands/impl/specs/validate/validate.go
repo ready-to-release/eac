@@ -138,7 +138,7 @@ func parseValidateConfig() (*ValidateConfig, error) {
 		Format: "text", // Default format
 	}
 
-	args := os.Args[3:] // Skip program name and "specs validate"
+	args := os.Args[3:] // Skip program name, "specs", and "validate"
 	var path string
 
 	for i := 0; i < len(args); i++ {
@@ -375,7 +375,9 @@ func formatValidationResult(result *ValidationResult) string {
 		output.WriteString("❌ Validation failed")
 	}
 
-	output.WriteString(fmt.Sprintf(": %s\n", result.Path))
+	// Normalize path: relative to repo root and Unix-style separators
+	displayPath := normalizePath(result.Path)
+	output.WriteString(fmt.Sprintf(": %s\n", displayPath))
 
 	if len(result.Errors) == 0 {
 		return output.String()
@@ -456,4 +458,24 @@ func relativePath(path string, repoRoot string) string {
 		return path
 	}
 	return rel
+}
+
+// normalizePath converts a path to Unix-style relative path from repository root
+func normalizePath(path string) string {
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		// If we can't get repo root, just normalize slashes
+		return filepath.ToSlash(path)
+	}
+
+	// Make path relative to repo root
+	rel, err := filepath.Rel(repoRoot, path)
+	if err != nil {
+		// If we can't make it relative, just normalize slashes
+		return filepath.ToSlash(path)
+	}
+
+	// Convert to Unix-style path separators
+	return filepath.ToSlash(rel)
 }

@@ -131,7 +131,7 @@ func TestModules() int {
 	fmt.Fprintf(orchestratorOut, "Testing %d modules: %v\n\n", len(monikers), monikers)
 
 	// Start global progress tracker
-	StartGlobalTracker(orchestratorOut)
+	StartGlobalTracker(orchestratorOut, len(monikers))
 	defer StopGlobalTracker()
 
 	// Test each module in sequence

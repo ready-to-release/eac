@@ -271,7 +271,7 @@ func parseConfig() (*SpecsConfig, error) {
 	config := &SpecsConfig{}
 	var description string
 
-	args := os.Args[2:] // Skip program name and "specs create"
+	args := os.Args[3:] // Skip program name, "specs", and "create"
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--debug" {
@@ -363,6 +363,11 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 
 // generateWithAI invokes the AI provider with the prompt
 func generateWithAI(templateRoot string, prompt string, debug bool) (string, error) {
+	// Check for test double mode
+	if mockResponse := os.Getenv("R2R_TEST_AI_RESPONSE"); mockResponse != "" {
+		return mockResponse, nil
+	}
+
 	// Create executor
 	executor := ai.NewExecutor(templateRoot)
 	providers.RegisterBuiltIn(executor)

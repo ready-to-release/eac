@@ -131,16 +131,35 @@ func BuildModules() int {
 
 			// Purge and create module output directory
 			moduleOutputDir := filepath.Join(workspaceRoot, "out", "build", mon)
-			if err := os.RemoveAll(moduleOutputDir); err != nil {
-				// Silently continue - log to orchestrator log only
+
+			// Ensure parent directory exists first (out/build)
+			parentDir := filepath.Dir(moduleOutputDir)
+			if err := os.MkdirAll(parentDir, 0755); err != nil {
+				mu.Lock()
+				fmt.Fprintf(orchOut, "[building] %s (Failed to create parent directory) ........ Failed\n", mon)
+				buildResults = append(buildResults, BuildResult{
+					Moniker:  mon,
+					ExitCode: 1,
+					Errors:   []string{fmt.Sprintf("Failed to create parent directory %s: %v", parentDir, err)},
+				})
+				mu.Unlock()
+				return
 			}
+
+			// Remove existing module output directory
+			if err := os.RemoveAll(moduleOutputDir); err != nil {
+				// Log warning but continue - not fatal if removal fails
+				fmt.Fprintf(orchOut, "[building] %s (Warning: failed to remove existing directory: %v)\n", mon, err)
+			}
+
+			// Create module output directory
 			if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
 				mu.Lock()
 				fmt.Fprintf(orchOut, "[building] %s (Failed to create directory) ........ Failed\n", mon)
 				buildResults = append(buildResults, BuildResult{
 					Moniker:  mon,
 					ExitCode: 1,
-					Errors:   []string{fmt.Sprintf("Failed to create directory: %v", err)},
+					Errors:   []string{fmt.Sprintf("Failed to create directory %s: %v", moduleOutputDir, err)},
 				})
 				mu.Unlock()
 				return
@@ -155,7 +174,7 @@ func BuildModules() int {
 				buildResults = append(buildResults, BuildResult{
 					Moniker:  mon,
 					ExitCode: 1,
-					Errors:   []string{fmt.Sprintf("Failed to create log file: %v", err)},
+					Errors:   []string{fmt.Sprintf("Failed to create log file %s: %v", logPath, err)},
 				})
 				mu.Unlock()
 				return

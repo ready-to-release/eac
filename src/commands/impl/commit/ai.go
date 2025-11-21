@@ -222,7 +222,7 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 
 	var topLevelOutput string
 	err := commitmessage.WithProgress("🤖 Generating top-level commit summary...", func() error {
-		result, genErr := generateWithPrompt("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug)
+		result, genErr := generateWithPrompt("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
 		topLevelOutput = result
 		return genErr
 	})
@@ -245,7 +245,7 @@ func generateModuleSections(cfg *executionConfig, debugWriter *debugWriter) ([]s
 	// Use parallel implementation for performance (60-70% speedup for multi-module commits)
 	// Sequential: N modules × 5s = 15s for 3 modules
 	// Parallel:   max(5s) = 5s for 3 modules
-	return generateModuleSectionsParallel(cfg, debugWriter)
+	return generateModuleSectionsParallel(cfg, debugWriter, nil)
 }
 
 // Phase 6: Assemble Final Message

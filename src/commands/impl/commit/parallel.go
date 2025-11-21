@@ -35,6 +35,7 @@ import (
 	"sync"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
+	"github.com/ready-to-release/eac/src/core/ai"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -64,6 +65,7 @@ import (
 // Parameters:
 //   - cfg: Execution configuration with modules and files
 //   - debugWriter: Thread-safe debug output writer
+//   - testExecutor: Optional executor for testing (nil uses real providers)
 //
 // Returns:
 //   - Slice of module sections in original module order
@@ -74,11 +76,11 @@ import (
 //       affectedModules: []string{"src-cli", "src-core", "src-commands"},
 //       ...
 //   }
-//   sections, err := generateModuleSectionsParallel(cfg, debugWriter)
+//   sections, err := generateModuleSectionsParallel(cfg, debugWriter, nil)
 //   // sections[0] corresponds to "src-cli"
 //   // sections[1] corresponds to "src-core"
 //   // sections[2] corresponds to "src-commands"
-func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWriter) ([]string, error) {
+func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWriter, testExecutor *ai.Executor) ([]string, error) {
 	// Single-module commits skip module sections (existing behavior)
 	if len(cfg.affectedModules) <= 1 {
 		debugWriter.log("Single-module commit - skipping module sections")
@@ -127,7 +129,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 			// Generate module section using existing function
 			// WithProgress is goroutine-safe (uses internal synchronization)
 			err := commitmessage.WithProgress(progressMsg, func() error {
-				result, genErr := generateWithPrompt("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug)
+				result, genErr := generateWithPrompt("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
 				output = result
 				return genErr
 			})
