@@ -408,7 +408,7 @@ Acceptance tests should be:
 - **Comprehensive**: Cover all critical user workflows
 - **Maintainable**: Easy to update as requirements evolve
 
-Use BDD frameworks (Godog, Cucumber, SpecFlow) to express tests in business-readable language that traces back to requirements.
+Use BDD frameworks (Godog, Cucumber, Reqnroll) to express tests in business-readable language that traces back to requirements.
 
 ### Evidence Generation
 

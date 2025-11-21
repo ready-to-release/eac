@@ -7,7 +7,7 @@
 ### Coming Soon
 
 - **Quick Start Guide** - Get the CLI up and running
-- **Your First Feature Specification** - Write your first ATDD/BDD specs
+- **Your First Feature Specification** - Write your first Gherkin specs
 
 ---
 

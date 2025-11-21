@@ -7,7 +7,7 @@
 ## Getting Started
 
 - **New to this approach?** Start with [Everything as Code](#everything-as-code) to understand the foundational principles
-- **Want to understand the practices?** Read [Specifications Concepts](#specifications-concepts) to learn ATDD/BDD/TDD
+- **Want to understand the practices?** Read [Specifications Concepts](#specifications-concepts) to learn How Rules/Scenarios/Unite Tests re-enforce each other to create traceability
 - **Need the big picture?** See [Software Development Lifecycle](#software-development-lifecycle) for the complete lifecycle
 - **Looking for delivery details?** Explore [Continuous Delivery](#continuous-delivery) for the 12-stage CD model
 - **In a regulated environment?** Also review [Compliance Transformation](#compliance-transformation) for optimization strategies
@@ -38,9 +38,8 @@ Understanding the three-layer testing approach and test-driven development pract
 
 **Topics covered:**
 
-- Three-layer testing approach (ATDD, BDD, TDD)
-- ATDD concepts and Example Mapping workshops
-- BDD concepts and Gherkin language
+- Three-layer testing approach (Rules/Scenarios/Unit Tests)
+- BDD concepts such as Example Mapping workshops and Gherkin
 - How the layers interact and when to use each
 - Living documentation and traceability
 - Ubiquitous Language and Domain-Driven Design
@@ -72,7 +71,7 @@ Understanding the 12-stage Continuous Delivery Model - a comprehensive framework
 - **CD Model**: 12-stage framework with visual notation, stages 1-6 (development/testing), stages 7-12 (release/production)
 - **Implementation Patterns**: Release Approval (RA) for regulated systems, Continuous Deployment (CDE) for fast iteration
 - **Architecture**: Environments (DevBox, Build Agents, PLTE, Demo, Deploy Agents, Production), Repository patterns (monorepo vs polyrepo)
-- **Testing Strategy**: Five test levels (L0-L4), shift-left approach, integration with CD Model stages, ATDD/BDD/TDD alignment
+- **Testing Strategy**: Five test levels (L0-L4), shift-left approach, integration with CD Model stages, Rule/Scenario/Unit Test alignment
 - **Security**: SAST, DAST, dependency scanning, container security using open-source tools (OWASP ZAP, Trivy, Dependabot)
 - **Workflow**: Trunk-based development practices
 

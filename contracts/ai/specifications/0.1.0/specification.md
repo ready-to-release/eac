@@ -26,8 +26,8 @@ Use these tags appropriately in your scenarios:
 
 1. **Start with Feature: declaration** in format `<module>_<feature-name>`
 2. **Include user story** (As a.../I want.../So that...)
-3. **Add at least one Rule** (acceptance criterion from ATDD)
-4. **Add at least one Scenario per Rule** (concrete example from BDD)
+3. **Add at least one Rule** (acceptance criterion)
+4. **Add at least one Scenario per Rule** (concrete example)
 5. **Tag ALL scenarios** with at least one verification tag (@ov, @iv, @pv, @piv, @ppv)
 6. **Use Given/When/Then** structure in steps
 7. **Write in domain language** - no technical jargon

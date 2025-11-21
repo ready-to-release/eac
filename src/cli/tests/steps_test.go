@@ -1,4 +1,4 @@
-// Godog BDD step definitions for src-cli features
+// Godog glue for src-cli features
 //
 // Features:
 // - specs/src-cli/cli-invocation/

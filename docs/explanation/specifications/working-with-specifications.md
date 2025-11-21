@@ -1,30 +1,30 @@
-# ATDD and BDD with Gherkin Rule Blocks
+# Working with specifications
 
-Understanding how Acceptance Test-Driven Development and Behavior-Driven Development work together using unified Gherkin format.
+How the three layered test structure support working with executable specifications.
 
 ---
 
 ## The Unified Approach
 
-This project maintains the conceptual distinction between ATDD (acceptance criteria) and BDD (behavior scenarios) while using a single unified format: Gherkin.
+This project maintains the conceptual distinction between Rules (often referred to as acceptance criteria) and Scenarios while using a single unified format: Gherkin.
 
-### ATDD Layer: Rule Blocks
+### Rule Blocks
 
 - **Purpose**: Define acceptance criteria
 - **Format**: `Rule:` blocks in Gherkin
 - **Location**: `specs/<module>/<feature>/specification.feature`
-- **Origin**: Blue cards from Example Mapping
+- **Origin**: Blue cards from Example Mapping, or policies from Event Storming
 - **Audience**: Product owners, stakeholders, QA
 - **Focus**: WHAT the system must do
 
-### BDD Layer: Scenario Blocks
+### Scenario Blocks
 
 - **Purpose**: Executable behavior examples
 - **Format**: `Scenario:` blocks under Rules
 - **Location**: `specs/<module>/<feature>/specification.feature` (same file as Rules)
-- **Implementation**: `src/<module>/tests/steps_test.go` (separate from specification)
-- **Origin**: Green cards from Example Mapping
-- **Audience**: Developers, QA, automation engineers
+- **Glue**: `src/<module>/tests/steps_test.go` (separate from specification)
+- **Origin**: Green cards from Example Mapping, and any further scenarios needed to make the rule complete
+- **Audience**: Product Owners, Developers, QA, automation engineers
 - **Focus**: HOW the system behaves (described in specs/, implemented in src/)
 
 ### Architectural Principle: Specs vs Implementation
@@ -57,42 +57,21 @@ flowchart LR
     Scenario -.implements.-> Func1
     Scenario -.implements.-> Func2
 
-    style Specs fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    style Src fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style SpecFile fill:#bbdefb,stroke:#1976d2
-    style Steps fill:#e1bee7,stroke:#7b1fa2
+    style Specs fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    style Src fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style SpecFile fill:#bbdefb,stroke:#1976d2,color:#000
+    style Steps fill:#e1bee7,stroke:#7b1fa2,color:#000
 ```
 
 ---
 
-## What is ATDD?
+## Executable Specifications
 
-**Acceptance Test-Driven Development (ATDD)** is a collaborative approach where business stakeholders, developers, and testers define acceptance criteria **before** development begins. It focuses on capturing business value and measurable success criteria from the customer's perspective.
+Executable Specifications are specifications written in such a way that automated tests can be executed from them.
 
-### Core Purpose
+Here we have decided to use a formal language called Gherkin. This allows us to express the specification in a natural language whilst creating a structure with keywords that will trigger tests.
 
-ATDD answers the question: **"What does 'done' mean for this feature?"**
-
-By defining acceptance criteria upfront, all stakeholders agree on:
-
-- What business value the feature delivers
-- How success will be measured
-- What conditions must be satisfied for acceptance
-
-### Why Use ATDD?
-
-- **Business Alignment**
-  - **Problem:** Developers build features that don't meet business needs
-  - **Solution:** ATDD ensures everyone agrees on requirements before coding starts
-- **Reduced Rework**
-  - **Problem:** Discovering missing requirements after implementation
-  - **Solution:** ATDD catches misunderstandings early through collaborative discussion
-- **Measurable Success**
-  - **Problem:** Subjective acceptance ("Does this look good?")
-  - **Solution:** ATDD requires measurable criteria (e.g., "Creates 3 directories", "Completes in <2s")
-- **Stakeholder Collaboration**
-  - **Problem:** Product owners can't review technical test code
-  - **Solution:** ATDD uses natural language (Gherkin) that stakeholders can read and validate
+The tests are implemented in what is referred to as glue. This is since it provides the glue between the specification and the code.
 
 ---
 
@@ -164,17 +143,17 @@ Requirements for features are discovered through **Example Mapping**, a collabor
 
 ### Card to Gherkin Mapping
 
-| Card Color | Represents | Maps To | Location |
-|-----------|------------|---------|----------|
-| 🟡 **Yellow** | User Story | Feature description | `specs/` |
-| 🔵 **Blue** | Acceptance Criteria | `Rule:` blocks (ATDD) | `specs/` |
-| 🟢 **Green** | Concrete Examples | `Scenario:` blocks (BDD) | `specs/` |
-| 🔴 **Red** | Questions/Unknowns | issues.md | `specs/` |
-| N/A | Step Implementation | Go functions | `src/` |
+| Card Color    | Represents | Maps To | Location |
+|---------------|------------|---------|----------|
+| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#F7E55A" stroke="#D6C645"/></svg> **Yellow** | User Story | Feature description | `specs/` |
+| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#5BA3F7" stroke="#4A89D6"/></svg> **Blue**   | Acceptance Criteria | `Rule:` blocks | `specs/` |
+| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> **Green**  | Concrete Examples | `Scenario:` blocks | `specs/` |
+| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#FF7EBF" stroke="#D66A9F"/></svg> **Pink**   | Questions/Unknowns | issues.md | `specs/` |
+| N/A           | Step Implementation | Go functions | `src/` |
 
 **Workshop Format**:
 
-- 15-25 minutes, time-boxed
+- < 25 minutes, time-boxed
 - Collaborative: Product Owner + Developer + Tester
 - Produces cards that map directly to Gherkin elements
 - Surfaces questions and risks early
@@ -182,9 +161,9 @@ Requirements for features are discovered through **Example Mapping**, a collabor
 **Result**: A feature is ready to implement when you have:
 
 - 1 Yellow Card (user story)
-- 2-6 Blue Cards (acceptance criteria)
-- 2-4 Green Cards per Blue Card (examples)
-- Few or no Red Cards (questions resolved)
+- < 4 Blue Cards (acceptance criteria)
+- < 4 Green Cards per Blue Card (examples)
+- No questions that can not be quickly resolved
 
 **See**: [Example Mapping Guide](./example-mapping.md) for complete workshop process, best practices, and detailed examples.
 
@@ -195,7 +174,7 @@ Requirements for features are discovered through **Example Mapping**, a collabor
 The complete workflow proceeds through these phases:
 
 1. **Discovery**: Example Mapping workshop → produces colored cards
-2. **Specification**: Convert cards → Gherkin in `specs/`
+2. **Formulation**: Formulate Gherkin specifications from example map in `specs/`
 3. **Implementation**: Write step definitions in `src/` → implement features
 4. **Validation**: All scenarios pass → feature complete
 
@@ -204,8 +183,6 @@ The complete workflow proceeds through these phases:
 - **Before development**: Run Example Mapping, write specifications in `specs/`
 - **During development**: Implement steps in `src/`, write unit tests, implement features
 - **After development**: All scenarios pass = acceptance criteria met
-
-**See**: [Three-Layer Approach](./three-layer-approach.md) for detailed workflow showing how ATDD, BDD, and TDD integrate throughout the development lifecycle.
 
 ---
 
@@ -231,10 +208,10 @@ Rule: Error message contains "already initialized" text
 
 ### Collaboration Before Code
 
-ATDD and BDD are **collaborative** - they require:
+BDD is **collaborative** - it requires:
 
 - Product Owner (business perspective)
-- Developer (technical perspective)
+- Engineer (technical perspective)
 - Tester (quality perspective)
 
 **Don't**: Have developers write specifications alone
@@ -307,7 +284,7 @@ Feature: cli_user-registration
 
 During implementation, you discover:
 
-- Email validation requirements (TDD reveals format rules)
+- Email validation requirements (unit testing reveals format rules)
 - Verification workflow (not just storage)
 - Error cases (what if email already exists?)
 
@@ -408,14 +385,14 @@ Feature: cli_user-registration
 
 Update specifications when:
 
-| Trigger | Example | Action |
-|---------|---------|--------|
-| **Implementation reveals** | TDD finds edge case | Add error scenario |
-| **Stakeholder feedback** | "This isn't what I meant" | Refine acceptance criteria |
+| Trigger | Example                             | Action |
+|---------|-------------------------------------|--------|
+| **Implementation reveals** | Unit testing finds edge case        | Add error scenario |
+| **Stakeholder feedback** | "This isn't what I meant"           | Refine acceptance criteria |
 | **Production bugs** | Users encounter unexpected behavior | Add regression scenario |
-| **Domain evolution** | Business process changes | Update Rules and scenarios |
-| **Language refinement** | Team adopts clearer terminology | Refactor scenario language |
-| **Requirements change** | New regulatory requirement | Add compliance scenarios |
+| **Domain evolution** | Business process changes            | Update Rules and scenarios |
+| **Language refinement** | Team adopts clearer terminology     | Refactor scenario language |
+| **Requirements change** | New regulatory requirement          | Add compliance scenarios |
 
 ### Maintaining Specification Quality
 
@@ -427,6 +404,7 @@ As specifications evolve:
 - Refactor for clarity as understanding deepens
 - Keep specifications synchronized with implementation
 - Document why changes were made (commit messages)
+- **Don't forget the code** - as we evolve the domain language we do not only change specifications, we also change the corresponding language in the code!
 
 ❌ **Don't**:
 
@@ -434,6 +412,7 @@ As specifications evolve:
 - Accumulate "specification debt" to fix later
 - Let scenarios become outdated documentation
 - Treat specifications as write-once artifacts
+- Skip renaming corresponding code elements
 
 ### The Evolution Cycle
 
@@ -448,14 +427,14 @@ flowchart TD
     Learn2 --> SpecV3["Specification v3<br/>(evolved)"]
     SpecV3 -.repeat.-> Impl2
 
-    style Initial fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    style SpecV1 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    style SpecV2 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    style SpecV3 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    style Impl1 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    style Impl2 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    style Learn1 fill:#fff9c4,stroke:#f9a825,stroke-width:2px
-    style Learn2 fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Initial fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    style SpecV1 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    style SpecV2 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    style SpecV3 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    style Impl1 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    style Impl2 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    style Learn1 fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
+    style Learn2 fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
 ```
 
 **Remember**: Each iteration brings you closer to a specification that accurately captures both the **intended behavior** and the **actual behavior** of your system.
@@ -464,7 +443,7 @@ flowchart TD
 
 ## Related Documentation
 
-- [Three-Layer Testing Approach](./three-layer-approach.md) - How ATDD/BDD/TDD work together
+- [Three-Layer Testing Approach](./three-layer-approach.md) - How Rule/Scenario/Unit Test work together
 - [Ubiquitous Language](./ubiquitous-language.md) - DDD and shared vocabulary foundation
 - [Event Storming](./event-storming.md) - Domain discovery workshops
 - [Example Mapping](./example-mapping.md) - Requirements discovery workshops

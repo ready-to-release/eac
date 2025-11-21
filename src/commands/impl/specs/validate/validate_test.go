@@ -600,11 +600,11 @@ structure:
 
   rule:
     required: true
-    description: "ATDD acceptance criteria"
+    description: "acceptance criteria"
 
   scenario:
     required: true
-    description: "BDD behavior examples"
+    description: "behavior examples"
     required_tags:
       - "@ov"
       - "@iv"

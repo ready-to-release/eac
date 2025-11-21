@@ -64,7 +64,7 @@ Detailed multi-paragraph description explaining the command thoroughly. Each `//
 **Example:**
 ```go
 // Long: The specs create command uses AI to transform natural language feature descriptions into
-// Long: properly formatted Gherkin specifications following BDD/ATDD patterns. The generated specifications
+// Long: properly formatted Gherkin specifications following Rule/Scenario patterns. The generated specifications
 // Long: include Feature, Rule, and Scenario blocks with appropriate tags and structure.
 // Long: All specifications are validated against the specification contract to ensure they meet quality standards.
 // Long: The command automatically saves the specification to the specs/ directory, organized by module.

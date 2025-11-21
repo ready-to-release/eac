@@ -25,13 +25,13 @@ The testing strategy uses a taxonomy of test levels (L0-L4) based on execution e
 
 Complete test taxonomy and shift-left/shift-right strategy.
 
-**Topics**: Test levels (L0-L4), determinism vs domain coherency, Horizontal E2E anti-pattern, shift-left/shift-right strategy, test pyramid, ATDD/BDD/TDD integration.
+**Topics**: Test levels (L0-L4), determinism vs domain coherency, Horizontal E2E anti-pattern, shift-left/shift-right strategy, test pyramid, Rules/Scenarios/Unit Tests integration.
 
 ---
 
 ## [Testing Integration with CD Model](testing-strategy-integration.md)
 
-How test levels map to CD Model stages and integrate with ATDD/BDD/TDD.
+How test levels map to CD Model stages and integrate with Rules/Scenarios/Unit Tests.
 
 **Topics**: Test level environment mapping, process isolation (in-process, cross-process, in-situ), stage-by-stage mapping, time-boxing, quality gates.
 
@@ -72,7 +72,7 @@ How test levels map to CD Model stages and integrate with ATDD/BDD/TDD.
 
 **Specifications:**
 
-- [Three-Layer Testing Approach](../../specifications/three-layer-approach.md) - ATDD/BDD/TDD integration
+- [Three-Layer Testing Approach](../../specifications/three-layer-approach.md) - Rules/Scenarios/Unit Tests integration
 - [Gherkin File Organization](../../specifications/gherkin-concepts.md) - Writing specifications
 
 **Architecture:**
