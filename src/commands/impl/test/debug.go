@@ -14,7 +14,6 @@
 package test
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -22,21 +21,12 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
+	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 )
 
 func init() {
 	registry.Register(TestDebug)
-}
-
-// GoTestEvent represents a single event from `go test -json` output
-type GoTestEvent struct {
-	Time    string  `json:"Time"`
-	Action  string  `json:"Action"`  // "run", "output", "pass", "fail", "skip"
-	Package string  `json:"Package"` // Package name
-	Test    string  `json:"Test"`    // Test name (empty for package-level)
-	Output  string  `json:"Output"`  // Test output line
-	Elapsed float64 `json:"Elapsed,omitempty"`
 }
 
 // Failure represents a test failure found in test results
@@ -115,7 +105,9 @@ func TestDebug() int {
 	return 0
 }
 
-// findGoTestJSONFiles finds all test-results.json files
+// findGoTestJSONFiles finds all Go test JSON files
+// Looks for test-results.json (from test module) and *.json (from test suite)
+// Excludes .cucumber.json files
 func findGoTestJSONFiles(dir string) ([]string, error) {
 	var jsonFiles []string
 
@@ -127,8 +119,11 @@ func findGoTestJSONFiles(dir string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && filepath.Base(path) == "test-results.json" {
-			jsonFiles = append(jsonFiles, path)
+		if !info.IsDir() && strings.HasSuffix(path, ".json") {
+			// Exclude Cucumber JSON files
+			if !strings.HasSuffix(path, ".cucumber.json") {
+				jsonFiles = append(jsonFiles, path)
+			}
 		}
 		return nil
 	})
@@ -159,66 +154,49 @@ func findCucumberJSONFiles(dir string) ([]string, error) {
 
 // collectFailuresFromGoTestJSON parses a Go test JSON file
 func collectFailuresFromGoTestJSON(jsonPath string) ([]Failure, error) {
-	file, err := os.Open(jsonPath)
+	events, err := testjson.ParseJSONFile(jsonPath)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
 	var failures []Failure
-	failedTests := make(map[string]*Failure) // key: Package + Test
-	scanner := bufio.NewScanner(file)
+	failedTestOutputs := testjson.ExtractFailedTests(events)
 
-	for scanner.Scan() {
-		var event GoTestEvent
-		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
-			continue // Skip malformed lines
+	for key, outputs := range failedTestOutputs {
+		parts := strings.SplitN(key, "::", 2)
+		if len(parts) != 2 {
+			continue
 		}
 
-		// We're only interested in test failures
-		if event.Action == "fail" && event.Test != "" {
-			key := event.Package + "::" + event.Test
+		pkg := parts[0]
+		test := parts[1]
 
-			// Create or update failure record
-			if _, exists := failedTests[key]; !exists {
-				failedTests[key] = &Failure{
-					TestName:    event.Test,
-					Package:     event.Package,
-					File:        event.Package, // Use package as file for Go tests
-					Source:      "go-test",
-					ErrorOutput: "",
-				}
+		// Collect error output (look for error indicators)
+		var errorLines []string
+		for _, line := range outputs {
+			// Look for error indicators
+			if strings.Contains(line, "Error:") || strings.Contains(line, "error:") ||
+				strings.Contains(line, "FAIL") || strings.Contains(line, "❌") ||
+				strings.Contains(line, "expected") || strings.Contains(line, "actual") {
+				errorLines = append(errorLines, line)
 			}
 		}
 
-		// Collect output for failed tests
-		if event.Action == "output" && event.Test != "" {
-			key := event.Package + "::" + event.Test
-			if failure, exists := failedTests[key]; exists {
-				// Accumulate error output (skip empty lines)
-				if trimmed := strings.TrimSpace(event.Output); trimmed != "" {
-					if failure.ErrorOutput != "" {
-						failure.ErrorOutput += "; "
-					}
-					// Limit length
-					if len(failure.ErrorOutput) < 200 {
-						failure.ErrorOutput += trimmed
-					}
-				}
+		errorOutput := "(no error details)"
+		if len(errorLines) > 0 {
+			errorOutput = strings.Join(errorLines, "; ")
+			if len(errorOutput) > 200 {
+				errorOutput = errorOutput[:197] + "..."
 			}
 		}
-	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	// Convert map to slice
-	for _, failure := range failedTests {
-		if failure.ErrorOutput == "" {
-			failure.ErrorOutput = "(no error details)"
-		}
-		failures = append(failures, *failure)
+		failures = append(failures, Failure{
+			TestName:    test,
+			Package:     pkg,
+			File:        pkg,
+			Source:      "go-test",
+			ErrorOutput: errorOutput,
+		})
 	}
 
 	return failures, nil
@@ -273,26 +251,26 @@ func printFailureTable(failures []Failure) {
 	maxError := len("Error")
 
 	for _, f := range failures {
-		if len(f.TestName) > maxTest && len(f.TestName) <= 40 {
+		if len(f.TestName) > maxTest && len(f.TestName) <= 50 {
 			maxTest = len(f.TestName)
 		}
-		if len(f.Package) > maxPackage && len(f.Package) <= 30 {
+		if len(f.Package) > maxPackage && len(f.Package) <= 50 {
 			maxPackage = len(f.Package)
 		}
-		if len(f.ErrorOutput) > maxError && len(f.ErrorOutput) <= 80 {
+		if len(f.ErrorOutput) > maxError && len(f.ErrorOutput) <= 100 {
 			maxError = len(f.ErrorOutput)
 		}
 	}
 
 	// Cap widths
-	if maxTest > 40 {
-		maxTest = 40
+	if maxTest > 50 {
+		maxTest = 50
 	}
-	if maxPackage > 30 {
-		maxPackage = 30
+	if maxPackage > 50 {
+		maxPackage = 50
 	}
-	if maxError > 80 {
-		maxError = 80
+	if maxError > 100 {
+		maxError = 100
 	}
 
 	// Print header

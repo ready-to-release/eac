@@ -73,6 +73,7 @@ var buildFunctions = map[string]BuildFunc{
 	"scripts-sh":       buildScriptsSh,
 	"scripts-pwsh":     buildScriptsPwsh,
 	"config":           buildConfig,
+	"configuration":    buildConfig,
 	"vscode-config":    buildVSCodeConfig,
 	"claude-config":    buildClaudeConfig,
 	"claude-agents":    buildClaudeAgents,

@@ -16,9 +16,9 @@ func TestPromptTemplateRendering(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name         string
-		promptName   string
-		shouldHave   []string
+		name       string
+		promptName string
+		shouldHave []string
 	}{
 		{
 			name:       "top-level prompt template",
@@ -26,9 +26,10 @@ func TestPromptTemplateRendering(t *testing.T) {
 			shouldHave: []string{
 				"## Example",
 				"## Structure",
+				"## Example",                 // New format uses "## Example" instead of "EXAMPLE OUTPUT FORMAT"
+				"<type>(<scope>): <summary>", // Structure definition still present
 				"Auditor-Summary",
 				"Generate", // Should have generation instructions
-				"<type>(<scope>): <summary>",
 			},
 		},
 		{
@@ -39,6 +40,7 @@ func TestPromptTemplateRendering(t *testing.T) {
 				"Module name only",
 				"<module>: <type>: <description>",
 				"## Requirements",
+				"## Example", // New format uses "## Example" instead of "CRITICAL"
 			},
 		},
 	}
@@ -78,6 +80,7 @@ func TestPromptContractEmbedding(t *testing.T) {
 	// Verify prompt contains direct format instructions (not template variables)
 	requiredContent := []string{
 		"## Example",             // Direct example instead of template
+		"## Example",             // New format uses "## Example" heading
 		"refactor(multi-module)", // Concrete example
 		"Auditor-Summary:",       // Field name shown directly
 		"Changes:",               // Field name shown directly

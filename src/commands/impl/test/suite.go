@@ -30,6 +30,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ready-to-release/eac/src/commands/impl/test/internal/reporter"
+	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
@@ -154,28 +156,8 @@ func TestSuite() int {
 	}
 	defer logFile.Close()
 
-	// Create markdown summary file
-	mdPath := filepath.Join(testRunDir, "test-suite-summary.md")
-	mdFile, err := os.Create(mdPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to create markdown summary: %v\n", err)
-		mdFile = nil // Continue without markdown
-	} else {
-		defer mdFile.Close()
-	}
-
 	// Track start time for duration calculation
 	startTime := time.Now()
-
-	// Write markdown header immediately
-	if mdFile != nil {
-		fmt.Fprintf(mdFile, "# Test Suite Report: %s\n\n", suite.Name)
-		fmt.Fprintf(mdFile, "**Suite**: %s  \n", suiteName)
-		fmt.Fprintf(mdFile, "**Started**: %s  \n", startTime.Format("2006-01-02 15:04:05"))
-		fmt.Fprintf(mdFile, "**Status**: 🔄 In Progress...\n\n")
-		fmt.Fprintf(mdFile, "---\n\n")
-		mdFile.Sync() // Flush to disk immediately
-	}
 
 	// Create multi-writer to log to both console and file
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
@@ -190,13 +172,6 @@ func TestSuite() int {
 	}
 
 	fmt.Fprintf(multiWriter, "Discovered %d tests\n\n", len(allTests))
-
-	// Update markdown: Phase 1 complete
-	if mdFile != nil {
-		fmt.Fprintf(mdFile, "## Progress\n\n")
-		fmt.Fprintf(mdFile, "- ✅ **Phase 1**: Discovered %d tests\n", len(allTests))
-		mdFile.Sync()
-	}
 
 	// Phase 2: Apply inference rules
 	fmt.Fprintf(multiWriter, "=== Phase 2: Inference Engine ===\n")
@@ -213,12 +188,6 @@ func TestSuite() int {
 		fmt.Fprintf(multiWriter, "Inferred system deps from module types\n")
 	}
 	fmt.Fprintf(multiWriter, "\n")
-
-	// Update markdown: Phase 2 complete
-	if mdFile != nil {
-		fmt.Fprintf(mdFile, "- ✅ **Phase 2**: Applied %d inference rules\n", len(suite.Inferences))
-		mdFile.Sync()
-	}
 
 	// Phase 3: Select tests for suite
 	fmt.Fprintf(multiWriter, "=== Phase 3: Suite Selection ===\n")
@@ -293,19 +262,6 @@ func TestSuite() int {
 	}
 	fmt.Fprintf(multiWriter, "Running %d production tests\n\n", len(productionTests))
 
-	// Update markdown: Phase 3 complete
-	if mdFile != nil {
-		fmt.Fprintf(mdFile, "- ✅ **Phase 3**: Selected %d production tests for suite '%s'", len(productionTests), suite.Moniker)
-		if len(moduleFilters) > 0 {
-			fmt.Fprintf(mdFile, " (filtered by modules: %s)", strings.Join(moduleFilters, ", "))
-		}
-		if frameworkTestCount > 0 {
-			fmt.Fprintf(mdFile, " (%d framework tests excluded)", frameworkTestCount)
-		}
-		fmt.Fprintf(mdFile, "\n")
-		mdFile.Sync()
-	}
-
 	// If list-only, just show tests and exit
 	if listOnly {
 		fmt.Fprintf(multiWriter, "=== Production Tests ===\n")
@@ -326,24 +282,9 @@ func TestSuite() int {
 
 	if len(allDeps) == 0 {
 		fmt.Fprintf(multiWriter, "No dependencies required\n\n")
-		// Update markdown: Phase 4 complete (no deps)
-		if mdFile != nil {
-			fmt.Fprintf(mdFile, "- ✅ **Phase 4**: No system dependencies required\n")
-			mdFile.Sync()
-		}
 	} else {
 		fmt.Fprintf(multiWriter, "System dependencies: %s\n", strings.Join(systemDeps, ", "))
 		fmt.Fprintf(multiWriter, "Module dependencies: %s\n", strings.Join(moduleDeps, ", "))
-
-		// Update markdown: Start dependencies table
-		if mdFile != nil {
-			fmt.Fprintf(mdFile, "- 🔄 **Phase 4**: Verifying %d dependencies (%d system, %d module)...\n\n",
-				len(allDeps), len(systemDeps), len(moduleDeps))
-			fmt.Fprintf(mdFile, "## Dependencies\n\n")
-			fmt.Fprintf(mdFile, "| Dependency | Status | Version |\n")
-			fmt.Fprintf(mdFile, "|------------|--------|----------|\n")
-			mdFile.Sync()
-		}
 
 		if !skipDeps {
 			hasFailures := false
@@ -353,19 +294,9 @@ func TestSuite() int {
 			for _, result := range sysResults {
 				if result.Available {
 					fmt.Fprintf(multiWriter, "✅ %s - %s\n", result.Dependency, result.Version)
-					// Update markdown: Add dependency row
-					if mdFile != nil {
-						fmt.Fprintf(mdFile, "| %s | ✅ Available | %s |\n", result.Dependency, result.Version)
-						mdFile.Sync()
-					}
 				} else {
 					fmt.Fprintf(multiWriter, "❌ %s - not available\n", result.Dependency)
 					hasFailures = true
-					// Update markdown: Add failed dependency row
-					if mdFile != nil {
-						fmt.Fprintf(mdFile, "| %s | ❌ Not Available | - |\n", result.Dependency)
-						mdFile.Sync()
-					}
 				}
 			}
 
@@ -374,32 +305,13 @@ func TestSuite() int {
 			for _, result := range modResults {
 				if result.Available {
 					fmt.Fprintf(multiWriter, "✅ %s - %s\n", result.Dependency, result.Version)
-					// Update markdown: Add dependency row
-					if mdFile != nil {
-						fmt.Fprintf(mdFile, "| %s | ✅ Available | %s |\n", result.Dependency, result.Version)
-						mdFile.Sync()
-					}
 				} else {
 					fmt.Fprintf(multiWriter, "❌ %s - not available\n", result.Dependency)
 					hasFailures = true
-					// Update markdown: Add failed dependency row
-					if mdFile != nil {
-						fmt.Fprintf(mdFile, "| %s | ❌ Not Available | - |\n", result.Dependency)
-						mdFile.Sync()
-					}
 				}
 			}
 
 			fmt.Fprintln(multiWriter)
-
-			// Update markdown: Phase 4 status
-			if mdFile != nil {
-				fmt.Fprintf(mdFile, "\n")
-				if hasFailures {
-					fmt.Fprintf(mdFile, "⚠️ **Phase 4 Failed**: Some dependencies are missing\n\n")
-				}
-				mdFile.Sync()
-			}
 
 			if hasFailures {
 				fmt.Fprintf(multiWriter, "❌ Error: Required dependencies are missing\n")
@@ -408,11 +320,6 @@ func TestSuite() int {
 			}
 		} else {
 			fmt.Fprintf(multiWriter, "Dependency check skipped (--skip-deps)\n\n")
-			// Update markdown: Phase 4 skipped
-			if mdFile != nil {
-				fmt.Fprintf(mdFile, "\n⏭️ Dependency check skipped (--skip-deps)\n\n")
-				mdFile.Sync()
-			}
 		}
 	}
 
@@ -494,17 +401,6 @@ func TestSuite() int {
 
 	// Package count removed from console output for cleaner orchestration
 
-	// Update markdown: Phase 5 start
-	if mdFile != nil {
-		if parallel {
-			fmt.Fprintf(mdFile, "- 🔄 **Phase 5**: Running tests from %d packages in parallel...\n\n", len(testsByPackage))
-		} else {
-			fmt.Fprintf(mdFile, "- 🔄 **Phase 5**: Running tests from %d packages...\n\n", len(testsByPackage))
-		}
-		fmt.Fprintf(mdFile, "## Test Results\n\n")
-		mdFile.Sync()
-	}
-
 	// Aggregate results
 	var results []PackageTestResult
 
@@ -516,11 +412,11 @@ func TestSuite() int {
 		// Package-level parallel: distribute CPU across packages
 		// Each package gets a smaller share of CPU cores
 		testParallelism = max(2, numCPU/4)
-		results = runTestsParallel(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
+		results = runTestsParallel(testsByPackage, multiWriter, testParallelism, testRunDir)
 	} else {
 		// Sequential packages: each package gets full CPU power
 		testParallelism = numCPU
-		results = runTestsSequential(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
+		results = runTestsSequential(testsByPackage, multiWriter, testParallelism, testRunDir)
 	}
 
 	// Calculate totals from results
@@ -547,7 +443,6 @@ func TestSuite() int {
 
 	// Phase 6: Generate summary
 	endTime := time.Now()
-	duration := endTime.Sub(startTime)
 
 	fmt.Fprintf(multiWriter, "=== Test Run Summary ===\n")
 	fmt.Fprintf(multiWriter, "Suite: %s\n", suite.Name)
@@ -575,105 +470,30 @@ func TestSuite() int {
 		fmt.Fprintf(multiWriter, "Run with verbose logging to see full details.\n")
 	}
 
-	// Update markdown: Final summary
-	if mdFile != nil {
-		fmt.Fprintf(mdFile, "\n---\n\n")
-		fmt.Fprintf(mdFile, "## Summary\n\n")
+	// Generate markdown report using template
+	modules, err := reporter.CollectModuleReports(testRunDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to collect module reports: %v\n", err)
+		modules = nil // Continue without module breakdown
+	}
 
-		// Calculate rates
-		totalPackages := packagesPassed + packagesFailed
-		packagePassRate := 0.0
-		if totalPackages > 0 {
-			packagePassRate = float64(packagesPassed) / float64(totalPackages) * 100
-		}
+	reportData := reporter.BuildReportData(
+		suite.Name, suite.Moniker,
+		startTime, endTime,
+		len(allTests), len(productionTests), frameworkTestCount,
+		testsTotal, testsPassed, testsFailed, testsSkipped,
+		len(testsByPackage), packagesPassed, packagesFailed,
+		modules,
+		testRunDir,
+	)
 
-		testPassRate := 0.0
-		if testsTotal > 0 {
-			testPassRate = float64(testsPassed) / float64(testsTotal) * 100
-		}
+	// Get repository root to find template
+	templatePath := filepath.Join(workspaceRootNative, "templates", "test-reports", "suite-summary.md")
+	mdPath := filepath.Join(testRunDir, "test-suite-summary.md")
 
-		// Determine final status
-		finalStatus := "✅ PASSED"
-		if packagesFailed > 0 {
-			finalStatus = "❌ FAILED"
-		}
-
-		// Write summary table
-		fmt.Fprintf(mdFile, "| Metric | Value |\n")
-		fmt.Fprintf(mdFile, "|--------|-------|\n")
-		fmt.Fprintf(mdFile, "| **Status** | **%s** |\n", finalStatus)
-		fmt.Fprintf(mdFile, "| Duration | %.1fs |\n", duration.Seconds())
-		fmt.Fprintf(mdFile, "| Tests Discovered | %d |\n", len(allTests))
-		fmt.Fprintf(mdFile, "| Production Tests | %d |\n", len(productionTests))
-		if frameworkTestCount > 0 {
-			fmt.Fprintf(mdFile, "| Framework Tests Excluded | %d |\n", frameworkTestCount)
-		}
-		fmt.Fprintf(mdFile, "| **Tests Total** | **%d** |\n", testsTotal)
-		fmt.Fprintf(mdFile, "| Tests Passed | %d ✅ |\n", testsPassed)
-		fmt.Fprintf(mdFile, "| Tests Failed | %d |\n", testsFailed)
-		if testsSkipped > 0 {
-			fmt.Fprintf(mdFile, "| Tests Skipped | %d |\n", testsSkipped)
-		}
-		fmt.Fprintf(mdFile, "| Test Pass Rate | %.1f%% |\n", testPassRate)
-		fmt.Fprintf(mdFile, "| **Packages Total** | **%d** |\n", totalPackages)
-		fmt.Fprintf(mdFile, "| Packages Passed | %d ✅ |\n", packagesPassed)
-		fmt.Fprintf(mdFile, "| Packages Failed | %d |\n", packagesFailed)
-		fmt.Fprintf(mdFile, "| Package Pass Rate | %.1f%% |\n", packagePassRate)
-		fmt.Fprintf(mdFile, "\n")
-
-		// Add links
-		fmt.Fprintf(mdFile, "## Files\n\n")
-		fmt.Fprintf(mdFile, "- **Full Log**: [`test-suite.log`](./test-suite.log)\n")
-		fmt.Fprintf(mdFile, "- **Results Directory**: `%s`\n", testRunDir)
-		fmt.Fprintf(mdFile, "\n---\n\n")
-		fmt.Fprintf(mdFile, "*Generated by `test suite %s` on %s*\n", suite.Moniker, endTime.Format("2006-01-02 15:04:05"))
-
-		// Update the status line at the top (re-write the file from beginning for final status)
-		mdFile.Seek(0, 0)
-		mdFile.Truncate(0)
-
-		// Write final markdown with complete status
-		fmt.Fprintf(mdFile, "# Test Suite Report: %s\n\n", suite.Name)
-		fmt.Fprintf(mdFile, "**Suite**: %s  \n", suiteName)
-		fmt.Fprintf(mdFile, "**Started**: %s  \n", startTime.Format("2006-01-02 15:04:05"))
-		fmt.Fprintf(mdFile, "**Completed**: %s  \n", endTime.Format("2006-01-02 15:04:05"))
-		fmt.Fprintf(mdFile, "**Duration**: %.1fs  \n", duration.Seconds())
-		fmt.Fprintf(mdFile, "**Status**: %s\n\n", finalStatus)
-		fmt.Fprintf(mdFile, "---\n\n")
-
-		// Re-write all the phase information (this could be optimized by buffering, but simpler for now)
-		// For now, just write the final summary table
-
-		fmt.Fprintf(mdFile, "## Summary\n\n")
-		fmt.Fprintf(mdFile, "| Metric | Value |\n")
-		fmt.Fprintf(mdFile, "|--------|-------|\n")
-		fmt.Fprintf(mdFile, "| **Status** | **%s** |\n", finalStatus)
-		fmt.Fprintf(mdFile, "| Duration | %.1fs |\n", duration.Seconds())
-		fmt.Fprintf(mdFile, "| Tests Discovered | %d |\n", len(allTests))
-		fmt.Fprintf(mdFile, "| Production Tests | %d |\n", len(productionTests))
-		if frameworkTestCount > 0 {
-			fmt.Fprintf(mdFile, "| Framework Tests Excluded | %d |\n", frameworkTestCount)
-		}
-		fmt.Fprintf(mdFile, "| **Tests Total** | **%d** |\n", testsTotal)
-		fmt.Fprintf(mdFile, "| Tests Passed | %d ✅ |\n", testsPassed)
-		fmt.Fprintf(mdFile, "| Tests Failed | %d |\n", testsFailed)
-		if testsSkipped > 0 {
-			fmt.Fprintf(mdFile, "| Tests Skipped | %d |\n", testsSkipped)
-		}
-		fmt.Fprintf(mdFile, "| Test Pass Rate | %.1f%% |\n", testPassRate)
-		fmt.Fprintf(mdFile, "| **Packages Total** | **%d** |\n", totalPackages)
-		fmt.Fprintf(mdFile, "| Packages Passed | %d ✅ |\n", packagesPassed)
-		fmt.Fprintf(mdFile, "| Packages Failed | %d |\n", packagesFailed)
-		fmt.Fprintf(mdFile, "| Package Pass Rate | %.1f%% |\n\n", packagePassRate)
-
-		fmt.Fprintf(mdFile, "## Files\n\n")
-		fmt.Fprintf(mdFile, "- **Full Log**: [`test-suite.log`](./test-suite.log)\n")
-		fmt.Fprintf(mdFile, "- **Summary**: `test-suite-summary.md` (this file)\n")
-		fmt.Fprintf(mdFile, "- **Results Directory**: `%s`\n", testRunDir)
-		fmt.Fprintf(mdFile, "\n---\n\n")
-		fmt.Fprintf(mdFile, "*Generated by `test suite %s` on %s*\n", suite.Moniker, endTime.Format("2006-01-02 15:04:05"))
-
-		mdFile.Sync()
+	renderer := reporter.NewRenderer(templatePath, mdPath, reportData)
+	if err := renderer.Render(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to generate markdown report: %v\n", err)
 	}
 
 	if packagesFailed > 0 {
@@ -785,25 +605,11 @@ func max(a, b int) int {
 }
 
 // runTestsSequential runs tests package by package sequentially
-func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) []PackageTestResult {
+func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string) []PackageTestResult {
 	results := []PackageTestResult{}
-	packageNum := 0
 
 	for pkgPath, tests := range testsByPackage {
-		packageNum++
-		// Package info removed from console - now only shows results
-
-		// Update markdown: Package starting
-		if mdFile != nil {
-			pkgName := filepath.Base(pkgPath)
-			if pkgName == "" {
-				pkgName = pkgPath
-			}
-			fmt.Fprintf(mdFile, "- 🔄 **[%d/%d]** %s (%d tests)...\n", packageNum, len(testsByPackage), pkgName, len(tests))
-			mdFile.Sync()
-		}
-
-		result := runPackageTests(pkgPath, tests, multiWriter, mdFile, testParallelism, testRunDir)
+		result := runPackageTests(pkgPath, tests, multiWriter, testParallelism, testRunDir)
 		results = append(results, result)
 	}
 
@@ -811,7 +617,7 @@ func runTestsSequential(testsByPackage map[string][]testing.TestReference, multi
 }
 
 // runTestsParallel runs tests across packages in parallel using goroutines
-func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) []PackageTestResult {
+func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string) []PackageTestResult {
 	// Use a mutex to protect shared results
 	var mu sync.Mutex
 	results := []PackageTestResult{}
@@ -823,43 +629,24 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 	// For now, use a fixed pool size of 4 to avoid overwhelming the system
 	semaphore := make(chan struct{}, 4)
 
-	packageNum := 0
-	numPackages := len(testsByPackage)
-
 	for pkgPath, tests := range testsByPackage {
 		wg.Add(1)
-		packageNum++
-		currentPkgNum := packageNum
 
-		go func(path string, testList []testing.TestReference, pkgNum int) {
+		go func(path string, testList []testing.TestReference) {
 			defer wg.Done()
 
 			// Acquire semaphore
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			// Package info removed from console - now only shows results
-			mu.Lock()
-
-			// Update markdown: Package starting
-			if mdFile != nil {
-				pkgName := filepath.Base(path)
-				if pkgName == "" {
-					pkgName = path
-				}
-				fmt.Fprintf(mdFile, "- 🔄 **[%d/%d]** %s (%d tests)...\n", pkgNum, numPackages, pkgName, len(testList))
-				mdFile.Sync()
-			}
-			mu.Unlock()
-
 			// Run tests for this package
-			result := runPackageTests(path, testList, multiWriter, mdFile, testParallelism, testRunDir)
+			result := runPackageTests(path, testList, multiWriter, testParallelism, testRunDir)
 
 			// Append result (thread-safe)
 			mu.Lock()
 			results = append(results, result)
 			mu.Unlock()
-		}(pkgPath, tests, currentPkgNum)
+		}(pkgPath, tests)
 	}
 
 	// Wait for all packages to complete
@@ -869,7 +656,7 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 }
 
 // runPackageTests runs tests for a single package and returns detailed test results
-func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) PackageTestResult {
+func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string) PackageTestResult {
 	// pkgPath is already workspace-relative (from test grouping phase)
 	// Check if this is a synthetic Godog package key (testrunner:featurefile)
 	var relPkgPath string      // Relative path for display
@@ -1024,15 +811,19 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		displayGodogFeatureSummaries(actualPkgDir, logFile)
 	}
 
-	// Run go test for this package with test-level parallelism
+	// Run go test for this package with test-level parallelism and JSON output
 	// If testing a specific feature file, pass it via environment variable (GODOG_PATHS)
 	var cmd *exec.Cmd
 
-	cmd = exec.Command("go", "test", "-v", "-parallel", fmt.Sprintf("%d", testParallelism))
+	cmd = exec.Command("go", "test", "-json", "-parallel", fmt.Sprintf("%d", testParallelism))
 	cmd.Dir = actualPkgDir
 
-	// Verbose test output goes to log file only, not console
-	cmd.Stdout = logFile
+	// Create a buffer to capture JSON output
+	var jsonOutput strings.Builder
+	jsonMultiWriter := io.MultiWriter(logFile, &jsonOutput)
+
+	// JSON output goes to both log file and buffer
+	cmd.Stdout = jsonMultiWriter
 	cmd.Stderr = logFile
 
 	// Set test run ID environment variable for all tests
@@ -1090,8 +881,16 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 
 	err = cmd.Run()
 
+	// Save JSON test results to file
+	if jsonOutput.Len() > 0 {
+		jsonFilePath := strings.TrimSuffix(logFilePath, ".log") + ".json"
+		if writeErr := os.WriteFile(jsonFilePath, []byte(jsonOutput.String()), 0644); writeErr != nil {
+			fmt.Fprintf(logFile, "Warning: failed to save JSON results: %v\n", writeErr)
+		}
+	}
+
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		if _, ok := err.(*exec.ExitError); ok {
 			// Analyze log to get failure reason
 			failureReason := analyzeTestFailure(logFilePath, isGodogTestPackage)
 
@@ -1110,11 +909,6 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			} else {
 				fmt.Fprintf(multiWriter, "❌ Package %s [%s] failed due to %s (See %s for details)\n", pkgName, testType, failureReason, relLogPath)
 			}
-			// Update markdown: Package failed
-			if mdFile != nil {
-				fmt.Fprintf(mdFile, "  - ❌ Failed (exit code: %d) - %s\n", exitErr.ExitCode(), failureReason)
-				mdFile.Sync()
-			}
 			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
 		} else {
 			testType := "go"
@@ -1128,11 +922,6 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 				fmt.Fprintf(multiWriter, "❌ Package %s [%s] %s failed to run tests: %v\n", pkgName, testType, testCountInfo, err)
 			} else {
 				fmt.Fprintf(multiWriter, "❌ Package %s [%s] failed to run tests: %v\n", pkgName, testType, err)
-			}
-			// Update markdown: Package error
-			if mdFile != nil {
-				fmt.Fprintf(mdFile, "  - ❌ Error: %v\n", err)
-				mdFile.Sync()
 			}
 			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
 		}
@@ -1153,60 +942,42 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	} else {
 		fmt.Fprintf(multiWriter, "✅ Package %s [%s] passed (See %s for details)\n", pkgName, testType, relLogPath)
 	}
-	// Update markdown: Package passed
-	if mdFile != nil {
-		fmt.Fprintf(mdFile, "  - ✅ Passed\n")
-		mdFile.Sync()
-	}
 	return PackageTestResult{TestsPassed: len(tests), TestsFailed: 0, TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: false}
 }
 
-// extractGodogScenarioCounts parses godog test output to extract scenario counts
+// extractGodogScenarioCounts parses godog JSON test results to extract scenario counts
 // Returns: "(passed/total)" or empty string if counts not found
 func extractGodogScenarioCounts(logPath string) string {
-	content, err := os.ReadFile(logPath)
+	// Replace .log extension with .json to get JSON results file
+	jsonPath := strings.TrimSuffix(logPath, ".log") + ".json"
+
+	events, err := testjson.ParseJSONFile(jsonPath)
 	if err != nil {
+		// Fall back to empty string if JSON file doesn't exist
 		return ""
 	}
 
-	logStr := string(content)
-	lines := strings.Split(logStr, "\n")
+	passedScenarios := 0
+	failedScenarios := 0
 
-	// Look for line like: "60 scenarios (59 passed, 1 failed)"
-	// or "60 scenarios (60 passed)"
-	// or with ANSI codes: "17 scenarios ([32m17 passed[0m)"
-	for _, line := range lines {
-		if strings.Contains(line, " scenarios (") {
-			// Parse the line to extract counts
-			// Format: "N scenarios (X passed)" or "N scenarios (X passed, Y failed)"
-			fields := strings.Fields(line)
-			if len(fields) >= 3 {
-				totalStr := fields[0]
-				// Extract passed count from parentheses
-				for i, field := range fields {
-					// Check for "passed)" with or without ANSI codes
-					// Field can be: "passed)", "passed,", "passed[0m)", etc.
-					if strings.Contains(field, "passed") {
-						if i > 0 {
-							passedStr := fields[i-1]
-							// Remove ANSI color codes and parentheses
-							// Can be: "([32m17" or "[32m17" or "(17" or "17"
-							passedStr = strings.TrimPrefix(passedStr, "(")
-							// Remove all common ANSI codes
-							passedStr = strings.ReplaceAll(passedStr, "\x1b[32m", "")
-							passedStr = strings.ReplaceAll(passedStr, "\x1b[0m", "")
-							passedStr = strings.ReplaceAll(passedStr, "[32m", "")
-							passedStr = strings.ReplaceAll(passedStr, "[0m", "")
-							passedStr = strings.ReplaceAll(passedStr, "\x1b", "")
-							return fmt.Sprintf("(%s/%s)", passedStr, totalStr)
-						}
-					}
-				}
+	// For Godog tests, each test event represents a scenario
+	// Filter out the TestFeatures wrapper function
+	for _, event := range events {
+		if event.Test != "" && event.Test != "TestFeatures" {
+			if event.Action == "pass" {
+				passedScenarios++
+			} else if event.Action == "fail" {
+				failedScenarios++
 			}
 		}
 	}
 
-	return ""
+	total := passedScenarios + failedScenarios
+	if total == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("(%d/%d)", passedScenarios, total)
 }
 
 // extractUndefinedSteps scans test logs for undefined step definitions
