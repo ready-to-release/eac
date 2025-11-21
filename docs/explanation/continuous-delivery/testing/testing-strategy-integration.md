@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This article explains how test levels integrate with CD Model stages, the process isolation strategies for each level, and how testing aligns with the ATDD/BDD/TDD approach. Understanding this integration ensures you execute the right tests at the right stages with appropriate quality gates.
+This article explains how test levels integrate with CD Model stages, the process isolation strategies for each level, and how testing aligns with the Rules/Scenarios/Unit Tests approach. Understanding this integration ensures you execute the right tests at the right stages with appropriate quality gates.
 
 ---
 
@@ -313,11 +313,11 @@ The testing strategy uses tags to select tests for execution at specific CD Mode
 
 ---
 
-## Integration with ATDD/BDD/TDD
+## Integration with Rules/Scenarios/Unit Tests
 
 The CD Model integrates three testing methodologies:
 
-**TDD (Test-Driven Development) → L0-L2:**
+**Unit Tests → L0-L2:**
 
 - **L0-L1**: Unit tests with test doubles (source and binary scope)
 - **L2**: Emulated system tests with test doubles (deployable artifacts scope)
@@ -325,14 +325,14 @@ The CD Model integrates three testing methodologies:
 - Process: Red → Green → Refactor
 - All external dependencies mocked
 
-**BDD (Behavior-Driven Development) → L3:**
+**Vertical End To End → L3:**
 
 - **L3**: In-situ vertical tests in PLTE with test doubles (deployed system scope)
 - Validate deployed system behavior in-situ in PLTE
 - Process: Gherkin scenarios → Step implementations
 - Vertical testing boundaries only
 
-**ATDD (Acceptance Test-Driven Development) → L4:**
+**Continuous Production → L4:**
 
 - **L4**: Testing in production (deployed system scope, horizontal)
 - Validate acceptance criteria in production

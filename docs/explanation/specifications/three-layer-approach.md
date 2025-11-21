@@ -1,6 +1,6 @@
 # Three-Layer Testing Approach
 
-How ATDD, BDD, and TDD work together to deliver quality software.
+How Rules, Scenarios, and unit tests work together to deliver quality software.
 
 ---
 
@@ -8,9 +8,9 @@ How ATDD, BDD, and TDD work together to deliver quality software.
 
 This project uses **three complementary testing methodologies**:
 
-- **ATDD** (Acceptance Test-Driven Development) - Business requirements and customer value
-- **BDD** (Behavior-Driven Development) - User-facing behavior specifications
-- **TDD** (Test-Driven Development) - Implementation correctness and code quality
+- **Rules** - Business Acceptance Criteria, policies, process rules
+- **Scenarios** - Exemplify and shape how rules are applied, creates the acceptance tests
+- **Unit tests** Low level component, function, class, behaviour
 
 Each layer serves a distinct purpose, uses different tools, and addresses different stakeholders' needs.
 
@@ -18,13 +18,13 @@ Each layer serves a distinct purpose, uses different tools, and addresses differ
 
 ## The Three Layers
 
-| Layer | Question | Stakeholders | Tool | Representation | Location |
-|-------|----------|--------------|------|----------------|----------|
-| **ATDD** | "What business value?" | Product Owner, Business | Godog | `Rule:` blocks | `specs/` |
-| **BDD** | "How does user interact?" | QA, Developers, Product | Godog | `Scenario:` under Rules | `specs/` + `src/tests/` |
-| **TDD** | "Does code work?" | Developers | Go test | Unit test functions | `src/*_test.go` |
+| Layer           | Question | Stakeholders | Tool | Representation | Location |
+|-----------------|----------|--------------|------|----------------|----------|
+| **Rules**       | "What business value?" | Product Owner, Business | Godog | `Rule:` blocks | `specs/` |
+| **Scenarios**   | "How does user interact?" | QA, Developers, Product | Godog | `Scenario:` under Rules | `specs/` + `src/tests/` |
+| **Unite tests** | "Does code work?" | Developers | Go test | Unit test functions | `src/*_test.go` |
 
-### Layer 1: ATDD (Acceptance Criteria)
+### Layer 1: Rules (Acceptance Criteria)
 
 **Purpose**: Define business requirements before development
 
@@ -45,10 +45,10 @@ Feature: cli_init-project
   Rule: Command completes in under 2 seconds
 ```
 
-**Origin**: 🔵 Blue cards from Example Mapping
+**Origin**: <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#5BA3F7" stroke="#4A89D6"/></svg> Blue cards from Example Mapping
 **Location**: `specs/<module>/<feature>/specification.feature`
 
-### Layer 2: BDD (Behavior Examples)
+### Layer 2: Scenarios
 
 **Purpose**: Specify observable behavior through concrete examples
 
@@ -72,11 +72,11 @@ Rule: Creates project directory structure
     And stderr should contain "already initialized"
 ```
 
-**Origin**: 🟢 Green cards from Example Mapping
+**Origin**: <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> Green cards from Example Mapping
 **Specification**: `specs/<module>/<feature>/specification.feature`
 **Implementation**: `src/<module>/tests/steps_test.go`
 
-### Layer 3: TDD (Unit Tests)
+### Layer 3: Unit Tests
 
 **Purpose**: Ensure code correctness through systematic test-first development
 
@@ -93,16 +93,17 @@ flowchart LR
     List[1. List<br/>Behavioral variants] --> Test[2. Test<br/>Write one test]
     Test --> Pass[3. Pass<br/>Make it work]
     Pass --> Refactor[4. Refactor<br/>Improve design]
-    Refactor --> Repeat{More tests?}
-    Repeat -->|Yes| Test
-    Repeat -->|No| Done[Complete]
+    Refactor --> Repeat{Test List Empty?}
+    Repeat -->|No| Test
+    Repeat -->|Yes| Done[Complete]
 
-    style List fill:#e3f2fd
-    style Test fill:#ffebee
-    style Pass fill:#e8f5e9
-    style Refactor fill:#fff3e0
-    style Repeat fill:#f3e5f5
+    style List fill:#e3f2fd,color:#000
+    style Test fill:#ffebee,color:#000
+    style Pass fill:#e8f5e9,color:#000
+    style Refactor fill:#fff3e0,color:#000
+    style Repeat fill:#f3e5f5,color:#000
 ```
+*We often discover new tests while we implement a test, add them to the test list.*
 
 *Based on [Canon TDD by Kent Beck](https://tidyfirst.substack.com/p/canon-tdd), flowchart concept by Vic Wu*
 
@@ -114,13 +115,13 @@ flowchart LR
 4. **Refactor** - Optionally improve implementation design after test passes
 5. **Repeat** - Continue until the test list is empty
 
-**Key Principle**: Focus on **interface design** (how behavior is invoked) before **implementation design** (internal mechanics). Tests specify the interface; refactoring improves the implementation.
+**Key Principle**: Red focuses on **interface design** (how behavior is invoked), from the caller. Green focuses on **implementation design** (internal mechanics). Refactoring focuses on finding a design that allows us to continue.
 
 **Red-Green-Refactor Cycle**:
 
 - 🔴 **Red**: Write failing test (from list)
 - 🟢 **Green**: Implement minimum code to pass
-- 🔵 **Refactor**: Improve design (optional)
+- 🔵 **Refactor**: Improve design if needed
 - 🔁 **Repeat**: Next test from list
 
 **Example**:
@@ -135,7 +136,7 @@ flowchart LR
 // - Create config in read-only directory (error)
 
 // Step 2-5: Test, Pass, Refactor, Repeat for each variant
-func TestCreateConfig(t *testing.T) {
+func Test_CreateConfig_InEmptyDirectory_ShouldSucceed(t *testing.T) {
     tmpDir := t.TempDir()
     configPath := filepath.Join(tmpDir, "r2r.yaml")
 
@@ -146,7 +147,7 @@ func TestCreateConfig(t *testing.T) {
     }
 }
 
-func TestCreateConfigWhenFileExists(t *testing.T) {
+func Test_CreateConfig_WhenFileExists_ShouldFail(t *testing.T) {
     tmpDir := t.TempDir()
     configPath := filepath.Join(tmpDir, "r2r.yaml")
 
@@ -172,25 +173,25 @@ func TestCreateConfigWhenFileExists(t *testing.T) {
 ```mermaid
 flowchart TD
     Workshop[Example Mapping Workshop] --> Feature[Yellow: Feature]
-    Workshop --> Rules[Blue: Rules - ATDD]
-    Workshop --> Scenarios[Green: Scenarios - BDD]
+    Workshop --> Rules[Blue: Rules]
+    Workshop --> Scenarios[Green: Scenarios]
 
     Feature --> Spec[specification.feature]
     Rules --> Spec
     Scenarios --> Spec
 
     Spec --> Steps[Step definitions]
-    Steps --> TDD[Unit tests - TDD]
-    TDD --> Code[Implementation]
+    Steps --> UnitTests[Unit Tests]
+    UnitTests --> Code[Production Code]
 
-    style Workshop fill:#fff4e6,stroke:#d6a86a,stroke-width:1px
-    style Feature fill:#fff9c4,stroke:#fbc02d,stroke-width:1px
-    style Rules fill:#e3f2fd,stroke:#64b5f6,stroke-width:1px
-    style Scenarios fill:#e8f5e9,stroke:#81c784,stroke-width:1px
-    style Spec fill:#f0f4c3,stroke:#c0ca33,stroke-width:1px
-    style Steps fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px
-    style TDD fill:#f3e5f5,stroke:#ba68c8,stroke-width:1px
-    style Code fill:#eeeeee,stroke:#616161,stroke-width:1px
+    style Workshop fill:#fff4e6,stroke:#d6a86a,stroke-width:1px,color:#000
+    style Feature fill:#fff9c4,stroke:#fbc02d,stroke-width:1px,color:#000
+    style Rules fill:#e3f2fd,stroke:#64b5f6,stroke-width:1px,color:#000
+    style Scenarios fill:#e8f5e9,stroke:#81c784,stroke-width:1px,color:#000
+    style Spec fill:#f0f4c3,stroke:#c0ca33,stroke-width:1px,color:#000
+    style Steps fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px,color:#000
+    style UnitTests fill:#f3e5f5,stroke:#ba68c8,stroke-width:1px,color:#000
+    style Code fill:#eeeeee,stroke:#616161,stroke-width:1px,color:#000
 ```
 
 ### Traceability Chain
@@ -201,17 +202,17 @@ flowchart TD
     Feature --> Steps[src/cli/tests/<br/>steps_test.go]
     Feature --> Unit[src/cli/<br/>*_test.go]
 
-    Spec -->|ATDD| Rules[Rule blocks]
-    Spec -->|BDD| Scenarios[Scenario blocks]
+    Spec --> Rules[Rule blocks]
+    Spec --> Scenarios[Scenario blocks]
 
     Scenarios --> Steps
     Steps --> Code[Production Code]
     Unit --> Code
 
-    style Feature fill:#fff4e6
-    style Spec fill:#e3f2fd
-    style Steps fill:#e8f5e9
-    style Unit fill:#f3e5f5
+    style Feature fill:#fff4e6,color:#000
+    style Spec fill:#e3f2fd,color:#000
+    style Steps fill:#e8f5e9,color:#000
+    style Unit fill:#f3e5f5,color:#000
 ```
 
 ---
@@ -259,13 +260,13 @@ flowchart LR
     Iterate --> Maintain
     Maintain -->|Feedback| Implementation
 
-    style Discovery fill:#e3f2fd
-    style Specification fill:#fff3e0
-    style Implementation fill:#f3e5f5
-    style Validation fill:#e8f5e9
-    style Review fill:#fff9c4
-    style Iterate fill:#fce4ec
-    style Maintain fill:#e0e7ff
+    style Discovery fill:#e3f2fd,color:#000
+    style Specification fill:#fff3e0,color:#000
+    style Implementation fill:#f3e5f5,color:#000
+    style Validation fill:#e8f5e9,color:#000
+    style Review fill:#fff9c4,color:#000
+    style Iterate fill:#fce4ec,color:#000
+    style Maintain fill:#e0e7ff,color:#000
 ```
 
 **Review Cadence**:
@@ -307,10 +308,10 @@ flowchart TD
     Steps --> Impl
     Unit --> Impl
 
-    style SpecFile fill:#e3f2fd
-    style Steps fill:#e8f5e9
-    style Unit fill:#f3e5f5
-    style Impl fill:#fff3e0
+    style SpecFile fill:#e3f2fd,color:#000
+    style Steps fill:#e8f5e9,color:#000
+    style Unit fill:#f3e5f5,color:#000
+    style Impl fill:#fff3e0,color:#000
 ```
 
 **Why Separate?**:
@@ -387,16 +388,16 @@ Rule: Valid credentials grant access within rate limits
 
 The three layers use different tag types:
 
-**ATDD Layer** (Rules):
+**Rules Layer**:
 
 - Uses **organizational tags** for traceability: `@ac1`, `@ac2` (links scenarios to Rules)
 
-**BDD Layer** (Scenarios):
+**Scenario Layer**:
 
 - Uses **testing taxonomy tags**: `@ov`, `@iv`, `@pv` (verification) + `@L2`, `@L3`, `@L4` (level)
 - See **[Tag Reference](tag-reference.md)** for complete taxonomy
 
-**TDD Layer** (Go tests):
+**Unit Test Layer** (Go tests):
 
 - Uses **build tags** for test levels: `//go:build L0` for L0, default is L1
 
@@ -418,7 +419,7 @@ For complete tag documentation, see:
 
 ## Key Principles
 
-1. **Three layers, one file** - ATDD Rules and BDD Scenarios in `specification.feature`, implementations in `src/`
+1. **Three layers, one file** - Rules and Scenarios in `specification.feature`, implementations in `src/`
 2. **Continuous evolution** - Specs and code evolve together through feedback loops
 3. **Ubiquitous Language** - Same terms across business discussions, specs, and code
 4. **Traceability** - Feature Name links all artifacts across `specs/` and `src/`
@@ -430,7 +431,7 @@ For complete tag documentation, see:
 
 ## Related Documentation
 
-- [ATDD and BDD with Gherkin](atdd-bdd-with-gherkin.md) - Unified approach using Rule blocks
+- [Working with specifications](working-with-specifications.md) - Unified approach using Rule blocks
 - [Ubiquitous Language](ubiquitous-language.md) - Shared vocabulary foundation
 - [Review and Iterate](review-and-iterate.md) - Continuous improvement
 - [Event Storming](event-storming.md) - Domain discovery workshops

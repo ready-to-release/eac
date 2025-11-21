@@ -1,5 +1,5 @@
 // Feature: src-commands_design-command
-// Godog step implementations for design command BDD scenarios
+// Godog step implementations for design command scenarios
 //
 // This file implements steps for the specification at:
 // specs/src-commands/design-command/specification.feature

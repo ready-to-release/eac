@@ -150,8 +150,8 @@ flowchart LR
 
 - All stakeholders collaborate on a single `specification.feature` file using Gherkin
 - File contains Feature → Rule → Scenario structure
-  - **Rules** define acceptance criteria (ATDD layer)
-  - **Scenarios** under Rules provide concrete examples (BDD layer)
+  - **Rules** define acceptance criteria
+  - **Scenarios** under Rules provide concrete examples
 - Specifications execute as automated tests, ensuring alignment
 - When tests pass, requirements are met by definition
 - Business-readable language bridges stakeholder communication

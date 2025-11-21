@@ -4,10 +4,10 @@
 // Long:
 // Long: This command identifies the module type from the module contract and dispatches
 // Long: to the appropriate test handler. Supported module types include Go modules with
-// Long: unit tests, BDD specifications, and other testable components.
+// Long: unit tests, specifications, and other testable components.
 // Long:
 // Long: Test output formats can be controlled with flags. The default output shows test
-// Long: results in real-time. Use --as-cucumber for BDD-style JSON output or --as-junit
+// Long: results in real-time. Use --as-cucumber for cucumber-style JSON output or --as-junit
 // Long: for JUnit XML format suitable for CI/CD systems.
 // Long:
 // Long: Example:
@@ -216,7 +216,7 @@ func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir s
 
 	// Generate summary_unit.md
 	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
-	generateTDDSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
+	generateUnitTestSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
 
 	return exitCode
 }
@@ -233,7 +233,7 @@ func testGoCommands(module *modules.ModuleContract, workspaceRoot string, output
 
 	// Generate summary_unit.md
 	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
-	generateTDDSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
+	generateUnitTestSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
 
 	return exitCode
 }
@@ -250,7 +250,7 @@ func testGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir s
 
 	// Generate summary_unit.md
 	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
-	generateTDDSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
+	generateUnitTestSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
 
 	return exitCode
 }
@@ -267,18 +267,18 @@ func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputD
 
 	// Generate summary_unit.md
 	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
-	generateTDDSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
+	generateUnitTestSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
 
 	return exitCode
 }
 
-// testGoTests tests a Godog BDD test module (Pattern D variant)
+// testGoTests tests a Godog test module (Pattern D variant)
 // Runs: go test with Godog formatters for reports
 func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-tests: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Running: go test (Godog BDD tests)\n")
+	fmt.Fprintf(logWriter, "Running: go test (Godog tests)\n")
 
 	// Generate report file path based on format
 	var reportPath string
@@ -303,7 +303,7 @@ func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir
 	// Generate summary_acceptance.md if cucumber.json was created
 	if reportFormat == "cucumber" && exitCode == 0 {
 		fmt.Fprintf(logWriter, "\n=== Generating summary_acceptance.md ===\n")
-		generateBDDSummaryMarkdown(module.Moniker, workspaceRoot, outputDir, logWriter)
+		generateGherkinSummaryMarkdown(module.Moniker, workspaceRoot, outputDir, logWriter)
 	}
 
 	return exitCode
@@ -382,8 +382,8 @@ func runTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]strin
 	return 0
 }
 
-// generateBDDSummaryMarkdown generates summary_acceptance.md from cucumber.json
-func generateBDDSummaryMarkdown(moniker string, workspaceRoot string, outputDir string, logWriter io.Writer) {
+// generateGherkinSummaryMarkdown generates summary_acceptance.md from cucumber.json
+func generateGherkinSummaryMarkdown(moniker string, workspaceRoot string, outputDir string, logWriter io.Writer) {
 	cucumberPath := filepath.Join(outputDir, "cucumber.json")
 	summaryPath := filepath.Join(outputDir, "summary_acceptance.md")
 	appendixPath := filepath.Join(outputDir, "appendix_a.md")
@@ -424,8 +424,8 @@ func generateBDDSummaryMarkdown(moniker string, workspaceRoot string, outputDir 
 	fmt.Fprintf(logWriter, "✅ Generated: %s\n", appendixPath)
 }
 
-// generateTDDSummaryMarkdown generates summary_unit.md from go test output
-func generateTDDSummaryMarkdown(moniker string, moduleType string, outputDir string, logWriter io.Writer, testOutput string, exitCode int) {
+// generateUnitTestSummaryMarkdown generates summary_unit.md from go test output
+func generateUnitTestSummaryMarkdown(moniker string, moduleType string, outputDir string, logWriter io.Writer, testOutput string, exitCode int) {
 	summaryPath := filepath.Join(outputDir, "summary_unit.md")
 
 	var summary string
