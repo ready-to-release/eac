@@ -77,6 +77,7 @@ func TestSuite() int {
 	skipDeps := false
 	listOnly := false
 	parallel := true  // Default to parallel execution for better performance
+	var moduleFilters []string // Optional module filters (can be comma-separated)
 
 	for i := 4; i < len(os.Args); i++ {
 		arg := os.Args[i]
@@ -88,9 +89,25 @@ func TestSuite() int {
 			parallel = false  // Opt-out of parallel execution
 		} else if arg == "--parallel" {
 			parallel = true   // Explicit parallel (redundant but allowed)
+		} else if arg == "--module" {
+			// Read module names from next argument (comma-separated)
+			if i+1 >= len(os.Args) {
+				fmt.Fprintf(os.Stderr, "Error: --module requires one or more module names\n")
+				fmt.Fprintf(os.Stderr, "Usage: --module <name> or --module <name1>,<name2>\n")
+				return 1
+			}
+			i++
+			// Split by comma and trim spaces
+			modules := strings.Split(os.Args[i], ",")
+			for _, mod := range modules {
+				trimmed := strings.TrimSpace(mod)
+				if trimmed != "" {
+					moduleFilters = append(moduleFilters, trimmed)
+				}
+			}
 		} else if strings.HasPrefix(arg, "--") {
 			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid flags: --skip-deps, --list-only, --sequential, --parallel\n")
+			fmt.Fprintf(os.Stderr, "Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>\n")
 			return 1
 		}
 	}
@@ -208,7 +225,59 @@ func TestSuite() int {
 	selectedTests := suite.SelectTests(allTests)
 	fmt.Fprintf(multiWriter, "Selected %d tests for suite '%s'\n", len(selectedTests), suite.Moniker)
 
-	// Phase 3.5: Filter out framework tests (tests about the testing framework itself)
+	// Phase 3.5: Apply module filter if specified
+	if len(moduleFilters) > 0 {
+		fmt.Fprintf(multiWriter, "Filtering by modules: %s\n", strings.Join(moduleFilters, ", "))
+		filteredTests := []testing.TestReference{}
+
+		// Track unique modules found for debugging
+		foundModules := make(map[string]int)
+
+		for _, test := range selectedTests {
+			// Extract module from file path
+			// Path format: src/<module>/... or specs/src-<module>/...
+			testModule := extractModuleFromPath(test.FilePath)
+
+			// Track modules found
+			foundModules[testModule]++
+
+			// Check if test belongs to any of the specified modules
+			for _, moduleFilter := range moduleFilters {
+				if testModule == moduleFilter {
+					filteredTests = append(filteredTests, test)
+					break
+				}
+			}
+		}
+
+		// Log found modules for debugging
+		if len(filteredTests) == 0 {
+			fmt.Fprintf(multiWriter, "DEBUG: No tests matched. Modules found in selected tests:\n")
+			for mod, count := range foundModules {
+				if mod != "" {
+					fmt.Fprintf(multiWriter, "  - %s (%d tests)\n", mod, count)
+				} else {
+					fmt.Fprintf(multiWriter, "  - [empty module name] (%d tests)\n", count)
+				}
+			}
+			// Show a few sample paths
+			if len(selectedTests) > 0 {
+				fmt.Fprintf(multiWriter, "DEBUG: Sample file paths (first 5):\n")
+				sampleCount := 5
+				if len(selectedTests) < sampleCount {
+					sampleCount = len(selectedTests)
+				}
+				for i := 0; i < sampleCount; i++ {
+					fmt.Fprintf(multiWriter, "  - %s\n", selectedTests[i].FilePath)
+				}
+			}
+		}
+
+		selectedTests = filteredTests
+		fmt.Fprintf(multiWriter, "Selected %d tests after module filtering\n", len(selectedTests))
+	}
+
+	// Phase 3.6: Filter out framework tests (tests about the testing framework itself)
 	productionTests := []testing.TestReference{}
 	frameworkTestCount := 0
 	for _, test := range selectedTests {
@@ -227,6 +296,9 @@ func TestSuite() int {
 	// Update markdown: Phase 3 complete
 	if mdFile != nil {
 		fmt.Fprintf(mdFile, "- ✅ **Phase 3**: Selected %d production tests for suite '%s'", len(productionTests), suite.Moniker)
+		if len(moduleFilters) > 0 {
+			fmt.Fprintf(mdFile, " (filtered by modules: %s)", strings.Join(moduleFilters, ", "))
+		}
 		if frameworkTestCount > 0 {
 			fmt.Fprintf(mdFile, " (%d framework tests excluded)", frameworkTestCount)
 		}
@@ -1264,5 +1336,57 @@ func analyzeTestFailure(logPath string, isGodog bool) string {
 	}
 
 	return "test failures"
+}
+
+// extractModuleFromPath extracts the module moniker from a test file path
+// Handles both src/<module>/... and specs/src-<module>/... formats
+// Supports both absolute and relative paths
+func extractModuleFromPath(filePath string) string {
+	// Normalize path separators to forward slashes
+	normalizedPath := filepath.ToSlash(filePath)
+
+	// Find "src/" in the path (handles both absolute and relative paths)
+	srcIndex := strings.Index(normalizedPath, "/src/")
+	if srcIndex >= 0 {
+		// Extract from "/src/" onwards
+		relativePath := normalizedPath[srcIndex+1:] // Skip the leading "/"
+		// Format: src/<part1>/<part2>/...
+		parts := strings.Split(relativePath, "/")
+		if len(parts) >= 2 {
+			// Return as src-<part1>
+			return "src-" + parts[1]
+		}
+	}
+
+	// Check if path contains "specs/src-"
+	specsIndex := strings.Index(normalizedPath, "/specs/src-")
+	if specsIndex >= 0 {
+		// Extract from "/specs/" onwards
+		relativePath := normalizedPath[specsIndex+1:]
+		// Format: specs/src-<module>/...
+		parts := strings.Split(strings.TrimPrefix(relativePath, "specs/"), "/")
+		if len(parts) >= 1 {
+			// Return the first part (e.g., "src-commands")
+			return parts[0]
+		}
+	}
+
+	// Also check for paths starting with "src/" or "specs/"  (relative paths)
+	if strings.HasPrefix(normalizedPath, "src/") {
+		parts := strings.Split(normalizedPath, "/")
+		if len(parts) >= 2 {
+			return "src-" + parts[1]
+		}
+	}
+
+	if strings.HasPrefix(normalizedPath, "specs/src-") {
+		parts := strings.Split(strings.TrimPrefix(normalizedPath, "specs/"), "/")
+		if len(parts) >= 1 {
+			return parts[0]
+		}
+	}
+
+	// Fallback: return empty string
+	return ""
 }
 

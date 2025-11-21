@@ -10,11 +10,15 @@
 // Long: results in real-time. Use --as-cucumber for cucumber-style JSON output or --as-junit
 // Long: for JUnit XML format suitable for CI/CD systems.
 // Long:
+// Long: Use --suite to filter tests by suite. The default suite is "commit".
+// Long:
 // Long: Example:
 // Long:   test module src-commands
 // Long:   test module src-core --as-junit
+// Long:   test module src-commands --suite integration
 // Flag.as-cucumber: type=bool, usage=Output test results in Cucumber JSON format
 // Flag.as-junit: type=bool, usage=Output test results in JUnit XML format
+// Flag.suite: type=string, usage=Filter tests by suite (default: "commit")
 // HasSideEffects: false
 package test
 
@@ -25,13 +29,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/ready-to-release/eac/src/commands/impl/build"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
-	"github.com/ready-to-release/eac/src/core/contracts/reports"
-	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
 )
 
@@ -40,9 +41,9 @@ func init() {
 }
 
 // TestFunc is the signature for module type test functions
-// Parameters: module contract, workspace root, output directory, log writer, report format
+// Parameters: module contract, workspace root, output directory, log writer, report format, suite name
 // Returns: exit code
-type TestFunc func(*modules.ModuleContract, string, string, io.Writer, string) int
+type TestFunc func(*modules.ModuleContract, string, string, io.Writer, string, string) int
 
 // testFunctions maps module types to their test functions
 var testFunctions = map[string]TestFunc{
@@ -54,155 +55,66 @@ var testFunctions = map[string]TestFunc{
 }
 
 // TestModule tests a module by its moniker
+// This is a convenience wrapper that redirects to TestSuite with module filter
 func TestModule() int {
-	// Parse arguments and flags
+	// Parse arguments - expect: test module <moniker> [flags]
 	if len(os.Args) < 4 {
 		fmt.Fprintf(os.Stderr, "Error: missing module moniker\n")
-		fmt.Fprintf(os.Stderr, "Usage: test module <moniker> [--as-cucumber|--as-junit]\n")
+		fmt.Fprintf(os.Stderr, "Usage: test module <moniker> [--as-cucumber|--as-junit] [--suite <suite-name>]\n")
 		return 1
 	}
 
 	moniker := os.Args[3]
 
-	// Parse flags (default: cucumber format, generate summary enabled)
-	reportFormat := "cucumber"
-	generateSummaryEnabled := true
-	generateOnly := false
+	// Parse flags to extract suite name (default: commit)
+	suiteName := "commit"
+	otherFlags := []string{}
 
 	for i := 4; i < len(os.Args); i++ {
 		arg := os.Args[i]
-		if arg == "--as-cucumber" {
-			reportFormat = "cucumber"
-		} else if arg == "--as-junit" {
-			reportFormat = "junit"
-		} else if arg == "--no-generate" {
-			generateSummaryEnabled = false
-		} else if arg == "--generate-only" {
-			generateOnly = true
-		} else if strings.HasPrefix(arg, "--as-") {
-			fmt.Fprintf(os.Stderr, "Error: unknown format flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid formats: --as-cucumber (default), --as-junit\n")
-			return 1
-		} else if strings.HasPrefix(arg, "--") {
-			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid flags: --as-cucumber, --as-junit, --no-generate, --generate-only\n")
-			return 1
-		}
-	}
-
-	// Handle --generate-only flag (skip tests, just generate summary)
-	if generateOnly {
-		fmt.Printf("📊 Generating summary for module: %s (skipping tests)\n", moniker)
-		if err := generateSummary(moniker); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			return 1
-		}
-		return 0
-	}
-
-	// Get repository root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
-		return 1
-	}
-
-	// Load module contracts
-	report, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
-		return 1
-	}
-
-	// Get the module from registry
-	module, exists := report.Registry.Get(moniker)
-	if !exists {
-		fmt.Fprintf(os.Stderr, "Error: module not found: %s\n", moniker)
-		return 1
-	}
-
-	// Get test function for module type
-	testFunc, hasTester := testFunctions[module.Type]
-	if !hasTester {
-		fmt.Fprintf(os.Stderr, "Error: no test function for type: %s\n", module.Type)
-		fmt.Fprintf(os.Stderr, "Module: %s\n", moniker)
-		fmt.Fprintf(os.Stderr, "Type: %s\n", module.Type)
-		fmt.Fprintf(os.Stderr, "\nAvailable test functions:\n")
-		if len(testFunctions) == 0 {
-			fmt.Fprintf(os.Stderr, "  (none)\n")
-		} else {
-			for moduleType := range testFunctions {
-				fmt.Fprintf(os.Stderr, "  - %s\n", moduleType)
+		if arg == "--suite" {
+			if i+1 >= len(os.Args) {
+				fmt.Fprintf(os.Stderr, "Error: --suite requires a suite name\n")
+				return 1
 			}
-		}
-		return 1
-	}
-
-	// Create test run ID for logging
-	testRunID := time.Now().Format("2006-01-02-150405")
-
-	// Purge and create module output directory
-	outputDir := filepath.Join(workspaceRoot, "out", "test", moniker)
-	if err := os.RemoveAll(outputDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to purge output directory: %v\n", err)
-	}
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
-		return 1
-	}
-
-	// Create test log file
-	logPath := filepath.Join(outputDir, "test.log")
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create log file: %v\n", err)
-		return 1
-	}
-	defer logFile.Close()
-
-	// Create multi-writer to log to both console and file
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-
-	// Print header to both console and log
-	fmt.Fprintf(multiWriter, "Test Run ID: %s\n", testRunID)
-	fmt.Fprintf(multiWriter, "Testing module: %s (type: %s)\n", moniker, module.Type)
-	fmt.Fprintf(multiWriter, "Module root: %s\n", module.Source.Root)
-	fmt.Fprintf(multiWriter, "Output directory: %s\n", outputDir)
-	fmt.Fprintf(multiWriter, "Test log: %s\n", logPath)
-	fmt.Fprintf(multiWriter, "Report format: %s\n", reportFormat)
-
-	// Execute the test function with output directory, log writer, and report format
-	exitCode := testFunc(module, workspaceRoot, outputDir, multiWriter, reportFormat)
-
-	// Print summary
-	fmt.Println("\n===========================================")
-	fmt.Printf("Test Run Summary (ID: %s)\n", testRunID)
-	fmt.Println("===========================================")
-	if exitCode == 0 {
-		fmt.Printf("✅ Module %s passed\n", moniker)
-	} else {
-		fmt.Printf("❌ Module %s failed with exit code %d\n", moniker, exitCode)
-	}
-	fmt.Printf("Results directory: %s\n", outputDir)
-
-	// Generate summary if enabled and using cucumber format
-	if generateSummaryEnabled && reportFormat == "cucumber" && exitCode == 0 {
-		fmt.Println("\n📊 Generating test summary...")
-		if err := generateSummaryForOutputDir(outputDir); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  Warning: failed to generate summary: %v\n", err)
-			// Don't fail the test run, just warn
+			i++
+			suiteName = os.Args[i]
+		} else {
+			otherFlags = append(otherFlags, arg)
 		}
 	}
 
-	return exitCode
+	// Redirect to test suite by reconstructing args
+	// Change: [binary, "test", "module", moniker, --suite <suite>, ...other flags]
+	// To:     [binary, "test", "suite", <suite>, --module moniker, ...other flags]
+
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }() // Restore original args when done
+
+	// Build new args: binary, "test", "suite", suiteName, --module, moniker, ...otherFlags
+	newArgs := []string{
+		os.Args[0],  // binary
+		"test",
+		"suite",
+		suiteName,
+		"--module",
+		moniker,
+	}
+	newArgs = append(newArgs, otherFlags...)
+
+	os.Args = newArgs
+
+	// Call TestSuite which implements the full 5-phase process
+	return TestSuite()
 }
 
 // testGoCLI tests a Cobra CLI binary (Pattern A)
 // Runs: go test ./...
-func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string) int {
+func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-cli: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
 	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
 
 	// Step 1: go generate (required for embedded files from contracts)
@@ -223,10 +135,11 @@ func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir s
 
 // testGoCommands tests the runtime command dispatcher (Pattern B)
 // Runs: go test ./...
-func testGoCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string) int {
+func testGoCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-commands: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
 	fmt.Fprintf(logWriter, "Running: go test ./...\n")
 
 	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
@@ -240,10 +153,11 @@ func testGoCommands(module *modules.ModuleContract, workspaceRoot string, output
 
 // testGoMCP tests an MCP JSON-RPC server (Pattern C)
 // Runs: go test ./...
-func testGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string) int {
+func testGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-mcp: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
 	fmt.Fprintf(logWriter, "Running: go test ./...\n")
 
 	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
@@ -257,10 +171,11 @@ func testGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir s
 
 // testGoLibrary tests a Go library module (Pattern D)
 // Runs: go test ./...
-func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string) int {
+func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-library: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
 	fmt.Fprintf(logWriter, "Running: go test ./...\n")
 
 	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "./...")
@@ -274,10 +189,11 @@ func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputD
 
 // testGoTests tests a Godog test module (Pattern D variant)
 // Runs: go test with Godog formatters for reports
-func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string) int {
+func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-tests: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
 	fmt.Fprintf(logWriter, "Running: go test (Godog tests)\n")
 
 	// Generate report file path based on format
