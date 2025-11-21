@@ -1,20 +1,3 @@
-# Anti-Corruption Layer for Commit Message Generation
-# Version: 0.1.0
-#
-# This file defines patterns that must be filtered from AI-generated commit messages
-# to ensure pure, structured output without conversational wrapper text.
-#
-# Single source of truth for:
-# - Go implementation: stripAgentNoise() in src/commands/impl/commit/ai.go
-# - Agent prompts: src/commands/impl/commit/prompts/*.md
-# - Contract spec: structure.yml
-
-version: "0.1.0"
-name: "Commit Message Anti-Corruption Rules"
-description: "Patterns to strip from AI output to ensure clean, structured commit messages"
-
-# FORBIDDEN PREFIXES
-# Lines starting with these phrases are conversational wrappers and must be removed
 forbidden_prefixes:
   - "Based on"
   - "Here is"
@@ -25,8 +8,9 @@ forbidden_prefixes:
   - "I've"
   - "I'm"
   - "I can see"
+  - "I need to"
   - "Looking at"
-  - "Now"              # Catches "Now generating..."
+  - "Now"
   - "You are now"
   - "The title"
   - "The corrected"
@@ -37,83 +21,27 @@ forbidden_prefixes:
   - "Should I"
   - "Can I"
   - "Shall I"
-  - "According to"     # Catches "According to the analysis..."
+  - "According to"
+  - "However,"
+  - "But the"
 
-# FORBIDDEN CONTENT PATTERNS
-# Lines containing these strings anywhere are noise and must be removed
 forbidden_contains:
   - "ready to assist"
-  - "commit message"   # Catches "generating your commit message"
   - "**Initialized and ready"
   - "**INITIALIZED"
   - "Loading project context"
+  - "I need to understand"
+  - "Let me examine"
+  - "Let me clarify"
+  - "validation errors indicate"
+  - "Which would you like"
+  - "Are you asking me"
 
-# FORBIDDEN EMOJIS
-# Lines containing these emoji characters are celebration/status messages
 forbidden_emojis:
-  - "🚀"   # Rocket
-  - "✅"   # Checkmark
-  - "🤖"   # Robot
-  - "🎉"   # Party
-  - "✨"   # Sparkles
+  - "🚀"
+  - "✅"
+  - "🤖"
+  - "🎉"
+  - "✨"
 
-# FORBIDDEN PATTERNS
-# Regex patterns for more complex filtering
-forbidden_patterns:
-  - pattern: '^\*\*.*\*\*$'
-    description: "Bold announcement lines (e.g., **Title:** ...)"
-
-  - pattern: '^```(markdown)?$'
-    description: "Opening markdown code fences"
-
-  - pattern: '^(---|___|___|\*\*\*)$'
-    description: "Horizontal rules before content starts"
-
-# NOISE HEADER KEYWORDS
-# Markdown headers containing these words (case-insensitive) are noise
-noise_header_keywords:
-  - "summary"
-  - "context"
-  - "changes"
-
-# AGENT-SPECIFIC SIGNATURES
-# Lines starting with these indicate end of content
-agent_signatures:
-  - "Agent:"
-
-# ENFORCEMENT LOCATIONS
-# Where these rules are applied in the codebase
-enforcement_locations:
-  - location: "src/commands/impl/commit/ai.go"
-    function: "stripAgentNoise()"
-    description: "Runtime filtering of AI output"
-
-  - location: "src/commands/impl/commit/prompts/top-level.md"
-    section: "Anti-Corruption Layer"
-    description: "Agent instructions to avoid patterns"
-
-  - location: "src/commands/impl/commit/prompts/module.md"
-    section: "Anti-Corruption Layer"
-    description: "Agent instructions to avoid patterns"
-
-  - location: "contracts/ai/commit-message/0.1.0/contract.yml"
-    field: "anti_corruption"
-    description: "Contract specification reference"
-
-# USAGE GUIDELINES
-guidelines:
-  - "These patterns are applied AFTER AI generation as a safety net"
-  - "Agent prompts should instruct to avoid these patterns proactively"
-  - "stripAgentNoise() scans output and removes lines matching these rules"
-  - "Pattern matching is case-sensitive unless specified otherwise"
-  - "Prefix matching checks start of line (after trimming whitespace)"
-  - "Contains matching checks anywhere in the line"
-
-# VERSION HISTORY
-changelog:
-  - version: "0.1.0"
-    date: "2025-11-16"
-    changes:
-      - "Initial consolidation from multiple sources"
-      - "Combined patterns from structure.yml, agent prompts, and stripAgentNoise()"
-      - "Established single source of truth for anti-corruption rules"
+agent_signatures: []

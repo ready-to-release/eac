@@ -1,6 +1,9 @@
 package commit
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
@@ -18,6 +21,11 @@ import (
 //   - "top-level": looks for conventional commit format (<type>(<scope>): <summary>)
 //   - "module": looks for plain module names
 func stripAgentNoise(output string, agentType string, workspaceRoot string) string {
+	// Debug logging
+	if debugEnabled, _ := os.LookupEnv("DEBUG"); debugEnabled != "" {
+		os.WriteFile(filepath.Join(workspaceRoot, "out", fmt.Sprintf("filter-%s-01-input.txt", agentType)), []byte(output), 0644)
+	}
+
 	// Load anti-corruption rules using contract loader
 	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	rules, err := loader.LoadAntiCorruptionRules()
@@ -41,12 +49,20 @@ func stripAgentNoise(output string, agentType string, workspaceRoot string) stri
 	}
 
 	// Apply anti-corruption with fallback to hardcoded patterns
+	var cleaned string
 	if err != nil {
 		// Fallback: use hardcoded rules if contract not available
-		return applyHardcodedFiltering(output, contentMarker)
+		cleaned = applyHardcodedFiltering(output, contentMarker)
+	} else {
+		cleaned = contracts.ApplyWithFallback(output, rules, contentMarker)
 	}
 
-	return contracts.ApplyWithFallback(output, rules, contentMarker)
+	// Debug logging
+	if debugEnabled, _ := os.LookupEnv("DEBUG"); debugEnabled != "" {
+		os.WriteFile(filepath.Join(workspaceRoot, "out", fmt.Sprintf("filter-%s-02-output.txt", agentType)), []byte(cleaned), 0644)
+	}
+
+	return cleaned
 }
 
 // commitPatternMatcher handles pattern matching for different agent types

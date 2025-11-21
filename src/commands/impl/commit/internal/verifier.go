@@ -6,16 +6,35 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/ready-to-release/eac/src/core/contracts"
 	"gopkg.in/yaml.v3"
 )
 
-// Precompiled regular expressions for performance
+// Lazy-loaded regular expressions for performance (compiled only when needed)
 var (
-	conventionalCommitRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\(([a-z0-9\-]+|multi-module)\):\s*(.+)$`)
-	moduleSubjectLineRegex  = regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
+	conventionalCommitRegex     *regexp.Regexp
+	moduleSubjectLineRegex      *regexp.Regexp
+	conventionalCommitRegexOnce sync.Once
+	moduleSubjectLineRegexOnce  sync.Once
 )
+
+// getConventionalCommitRegex returns the conventional commit regex, compiling it only once
+func getConventionalCommitRegex() *regexp.Regexp {
+	conventionalCommitRegexOnce.Do(func() {
+		conventionalCommitRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\(([a-z0-9\-]+|multi-module)\):\s*(.+)$`)
+	})
+	return conventionalCommitRegex
+}
+
+// getModuleSubjectLineRegex returns the module subject line regex, compiling it only once
+func getModuleSubjectLineRegex() *regexp.Regexp {
+	moduleSubjectLineRegexOnce.Do(func() {
+		moduleSubjectLineRegex = regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
+	})
+	return moduleSubjectLineRegex
+}
 
 // ValidationError is an alias to the core contract ValidationError
 type ValidationError = contracts.ValidationError
@@ -226,9 +245,25 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 		return errors
 	}
 
+	// Validate different aspects
+	errors = append(errors, validateHeader(lines)...)
+	errors = append(errors, validateTopLevelBody(lines)...)
+	errors = append(errors, validateModuleSections(lines, affectedModules)...)
+	errors = append(errors, validateModuleSubjectLines(lines)...)
+	errors = append(errors, validateModuleSectionStructure(lines)...)
+	errors = append(errors, validateCodeBlocks(lines)...)
+	errors = append(errors, validateLineLength(lines)...)
+
+	return errors
+}
+
+// validateHeader validates the commit message header (first line)
+func validateHeader(lines []string) []ValidationError {
+	var errors []ValidationError
+
 	// RULE 1: First line must be conventional commit header with scope
 	// Format: <type>(<scope>): <summary>
-	if !conventionalCommitRegex.MatchString(lines[0]) {
+	if !getConventionalCommitRegex().MatchString(lines[0]) {
 		errors = append(errors, ValidationError{
 			Code:     "INVALID_HEADER_FORMAT",
 			Message:  "Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
@@ -257,6 +292,13 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 		})
 	}
 
+	return errors
+}
+
+// validateTopLevelBody validates the presence of Auditor-Summary and top-level body text
+func validateTopLevelBody(lines []string) []ValidationError {
+	var errors []ValidationError
+
 	// RULE 4: Check for Auditor-Summary field (should appear early, after blank line)
 	hasAuditorSummary := false
 	for i := 1; i < len(lines) && i < 10; i++ { // Check first 10 lines
@@ -273,77 +315,27 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 		})
 	}
 
-	// RULE 5: Check for top-level body (should appear after header and auditor summary, before module sections)
+	// RULE 5: Check for top-level body text
 	hasTopLevelBody := false
-	hasModuleSection := false
-	foundModules := make(map[string]bool) // Track which modules we found in the commit message
 	afterAuditorSummary := false
-	inModuleSection := false
 
-	for i, line := range lines {
-		lineNum := i + 1
+	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Track when we pass the Auditor-Summary line
 		if strings.HasPrefix(trimmed, "Auditor-Summary:") {
 			afterAuditorSummary = true
 			continue
 		}
 
-		// Check if we have body text after Auditor-Summary and before module sections
-		if afterAuditorSummary && !hasModuleSection && trimmed != "" &&
+		// Check for body text after Auditor-Summary and before module sections
+		if afterAuditorSummary && trimmed != "" &&
 			!strings.HasPrefix(trimmed, "Auditor-Summary:") &&
 			!strings.HasPrefix(trimmed, "Changes:") &&
-			trimmed != "---" {
-			hasTopLevelBody = true
-		}
-
-		// Module sections: look for plain module name followed by dashes
-		// Pattern: module-name on one line, dashes on next line
-		if i < len(lines)-1 && !inModuleSection {
-			nextLine := strings.TrimSpace(lines[i+1])
-			// Check if current line is a module name and next line is dashes
-			if isModuleName(trimmed) && isDashesLine(nextLine) {
-				hasModuleSection = true
-				inModuleSection = true
-				foundModules[trimmed] = true
-			}
-		}
-
-		// Exit module section when we hit horizontal rule or blank lines
-		if trimmed == "---" || (inModuleSection && trimmed == "" && i < len(lines)-1) {
-			nextTrimmed := ""
-			if i < len(lines)-1 {
-				nextTrimmed = strings.TrimSpace(lines[i+1])
-			}
-			// If next line is also blank or dashes, we're between sections
-			if nextTrimmed == "" || nextTrimmed == "---" || isDashesLine(nextTrimmed) {
-				inModuleSection = false
-			}
-		}
-
-		// RULE 7: Line length in body text (skip special lines: module headers with dashes,
-		// Auditor-Summary, Changes, tables, code blocks, horizontal rules)
-		if trimmed != "" &&
-			!strings.HasPrefix(trimmed, "Auditor-Summary:") &&
-			!strings.HasPrefix(trimmed, "Changes:") &&
-			!strings.HasPrefix(trimmed, "|") &&
-			!strings.HasPrefix(trimmed, "```") &&
-			!isDashesLine(trimmed) &&
 			trimmed != "---" &&
-			!strings.HasPrefix(trimmed, "Agent:") {
-			if len(trimmed) > MaxLineLength {
-				preview := trimmed
-				if len(preview) > 60 {
-					preview = preview[:57] + "..."
-				}
-				errors = append(errors, ValidationError{
-					Code:     "LINE_TOO_LONG",
-					Message:  fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
-					Line:     lineNum,
-					Severity: "warning",
-				})
-			}
+			!isDashesLine(trimmed) &&
+			!isModuleName(trimmed) {
+			hasTopLevelBody = true
+			break
 		}
 	}
 
@@ -355,45 +347,96 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 		})
 	}
 
-	// Check if we're in a multi-module commit (more than 1 affected module)
-	if len(affectedModules) > 1 {
-		// Multi-module commits MUST have module sections
-		if !hasModuleSection {
-			moduleList := strings.Join(affectedModules, ", ")
-			errors = append(errors, ValidationError{
-				Code:     "MISSING_MODULE_SECTION",
-				Message:  fmt.Sprintf("Multi-module commit missing module sections. Expected: %s", moduleList),
-				Severity: "error",
-			})
-		} else {
-			// Check which specific modules are missing
-			var missingModules []string
-			for _, expectedModule := range affectedModules {
-				if !foundModules[expectedModule] {
-					missingModules = append(missingModules, expectedModule)
-				}
-			}
+	return errors
+}
 
-			if len(missingModules) > 0 {
-				moduleList := strings.Join(missingModules, ", ")
-				errors = append(errors, ValidationError{
-					Code:     "MISSING_MODULE_SECTION",
-					Message:  fmt.Sprintf("Missing module sections for: %s", moduleList),
-					Severity: "error",
-				})
+// validateModuleSections validates that multi-module commits have module sections
+func validateModuleSections(lines []string, affectedModules []string) []ValidationError {
+	var errors []ValidationError
+
+	// Single-module commits don't require module sections
+	if len(affectedModules) <= 1 {
+		return errors
+	}
+
+	// Find which modules have sections
+	foundModules := make(map[string]bool)
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Look for module name followed by dashes
+		if i < len(lines)-1 {
+			nextLine := strings.TrimSpace(lines[i+1])
+			if isModuleName(trimmed) && isDashesLine(nextLine) {
+				foundModules[trimmed] = true
 			}
 		}
 	}
-	// Single-module commits don't require module sections
 
-	// RULE 8: Validate module subject lines
-	errors = append(errors, validateModuleSubjectLines(lines)...)
+	// Multi-module commits MUST have module sections
+	if len(foundModules) == 0 {
+		moduleList := strings.Join(affectedModules, ", ")
+		errors = append(errors, ValidationError{
+			Code:     "MISSING_MODULE_SECTION",
+			Message:  fmt.Sprintf("Multi-module commit missing module sections. Expected: %s", moduleList),
+			Severity: "error",
+		})
+		return errors
+	}
 
-	// RULE 8b: Validate module section structure (plain text format)
-	errors = append(errors, validateModuleSectionStructure(lines)...)
+	// Check which specific modules are missing
+	var missingModules []string
+	for _, expectedModule := range affectedModules {
+		if !foundModules[expectedModule] {
+			missingModules = append(missingModules, expectedModule)
+		}
+	}
 
-	// RULE 9: Check for unclosed code blocks
-	errors = append(errors, validateCodeBlocks(lines)...)
+	if len(missingModules) > 0 {
+		moduleList := strings.Join(missingModules, ", ")
+		errors = append(errors, ValidationError{
+			Code:     "MISSING_MODULE_SECTION",
+			Message:  fmt.Sprintf("Missing module sections for: %s", moduleList),
+			Severity: "error",
+		})
+	}
+
+	return errors
+}
+
+// validateLineLength validates that body text lines don't exceed max length
+func validateLineLength(lines []string) []ValidationError {
+	var errors []ValidationError
+
+	for i, line := range lines {
+		lineNum := i + 1
+		trimmed := strings.TrimSpace(line)
+
+		// Skip special lines that don't count toward line length
+		if trimmed == "" ||
+			strings.HasPrefix(trimmed, "Auditor-Summary:") ||
+			strings.HasPrefix(trimmed, "Changes:") ||
+			strings.HasPrefix(trimmed, "|") ||
+			strings.HasPrefix(trimmed, "```") ||
+			isDashesLine(trimmed) ||
+			trimmed == "---" ||
+			strings.HasPrefix(trimmed, "Agent:") {
+			continue
+		}
+
+		if len(trimmed) > MaxLineLength {
+			preview := trimmed
+			if len(preview) > 60 {
+				preview = preview[:57] + "..."
+			}
+			errors = append(errors, ValidationError{
+				Code:     "LINE_TOO_LONG",
+				Message:  fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
+				Line:     lineNum,
+				Severity: "warning",
+			})
+		}
+	}
 
 	return errors
 }
@@ -447,7 +490,7 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 			}
 
 			// This should be the subject line
-			if !moduleSubjectLineRegex.MatchString(trimmed) {
+			if !getModuleSubjectLineRegex().MatchString(trimmed) {
 				errors = append(errors, ValidationError{
 					Code:     "INVALID_SUBJECT_FORMAT",
 					Message:  fmt.Sprintf("Subject line does not follow '<module>: <type>: <description>' format: %s", trimmed),
@@ -561,9 +604,9 @@ func validateModuleSectionStructure(lines []string) []ValidationError {
 		}
 
 		// Check for module subject line without proper header structure
-		if moduleSubjectLineRegex.MatchString(trimmed) {
+		if getModuleSubjectLineRegex().MatchString(trimmed) {
 			// This is a subject line - check if it has proper module structure before it
-			moduleName := moduleSubjectLineRegex.FindStringSubmatch(trimmed)[1]
+			moduleName := getModuleSubjectLineRegex().FindStringSubmatch(trimmed)[1]
 
 			// Look back for module name + dashes
 			foundModuleName := false

@@ -91,6 +91,7 @@ r2r eac design create src-commands --debug
 ```
 
 **What it does:**
+
 1. Analyzes source code in `src/<module>/`
 2. Uses AI to identify architecture elements
 3. Generates Structurizr DSL with C4 model views
@@ -99,6 +100,7 @@ r2r eac design create src-commands --debug
 6. Saves to `specs/<module>/design/workspace.dsl`
 
 **Requirements:**
+
 - Docker must be installed and running
 - Module must exist in `src/<module>/`
 - AI provider configured (`r2r eac init --ai <provider>`)
@@ -120,13 +122,15 @@ r2r eac design validate --all
 ```
 
 **Validation checks:**
+
 - DSL syntax correctness
 - Element relationships validity
 - View definitions correctness
 - Workspace renderability
 
 **Output:**
-```
+
+```text
 🔍 Validating module: src-auth
 📄 Workspace: specs/src-auth/design/workspace.dsl
 🐳 Using Docker: structurizr/cli:latest
@@ -157,18 +161,21 @@ r2r eac design serve src-api --force
 ```
 
 **What happens:**
+
 1. Starts Structurizr Lite in Docker on port 8080
 2. Mounts `specs/<module>/design/` directory
-3. Opens browser to http://localhost:8080
+3. Opens browser to <http://localhost:8080>
 4. Auto-reloads when workspace.dsl changes
 
 **Viewer features:**
+
 - Interactive C4 diagram navigation
 - Zoom, pan, and explore elements
 - Switch between views (System Context, Container, Component)
 - Export diagrams as PNG/SVG
 
 **Stopping the server:**
+
 ```bash
 docker stop structurizr-lite-<module>
 ```
@@ -237,7 +244,7 @@ workspace "Authentication Module" "User authentication and authorization" {
 
 ### File Organization
 
-```
+```text
 specs/
 └── src-auth/
     └── design/
@@ -252,6 +259,7 @@ specs/
 ### System Context
 
 Shows how the system fits in the world:
+
 - External systems
 - Users/actors
 - High-level relationships
@@ -261,6 +269,7 @@ Shows how the system fits in the world:
 ### Container View
 
 Shows high-level architecture:
+
 - Applications/services
 - Databases
 - Major components
@@ -271,6 +280,7 @@ Shows high-level architecture:
 ### Component View
 
 Shows internal structure:
+
 - Classes/packages
 - Internal components
 - Detailed relationships
@@ -287,7 +297,7 @@ r2r eac design create src-module --debug
 
 Creates debug files in `out/`:
 
-```
+```text
 out/
 ├── debug-full-prompt.md           # AI prompt with source code
 ├── debug-raw-ai-response.dsl      # Unfiltered AI output
@@ -296,6 +306,7 @@ out/
 ```
 
 **When to use:**
+
 - AI generates invalid DSL
 - Missing architecture elements
 - Incorrect relationships
@@ -425,6 +436,7 @@ docker ps
 ### Structurizr Images
 
 The command uses these Docker images:
+
 - `structurizr/cli:latest` - For validation
 - `structurizr/lite:latest` - For viewer
 
@@ -450,7 +462,7 @@ Images are pulled automatically on first use.
 | Port 8080 in use | Stop existing container: `docker stop structurizr-lite-<module>` |
 | AI generates invalid DSL | Use `--debug`, check AI provider setup |
 | Workspace exists | Use `--force` to overwrite |
-| Browser doesn't open | Manually visit http://localhost:8080 |
+| Browser doesn't open | Manually visit <http://localhost:8080> |
 
 ## Advanced Usage
 

@@ -46,17 +46,20 @@ r2r eac templates install-reports       # Install report templates
 **What it installs:**
 
 **Documentation templates** (`templates/docs/`):
+
 - Module documentation structure
 - How-to guides templates
 - Reference documentation templates
 - Tutorial templates
 
 **Specification templates** (`templates/specs/`):
+
 - Gherkin feature templates
 - Scenario templates
 - Step definition templates
 
 **Report templates** (`templates/reports/`):
+
 - Test report templates
 - Build report templates
 - Validation report templates
@@ -111,10 +114,11 @@ r2r eac docs serve      # Defaults to start
 ```
 
 **What it does:**
+
 1. Starts MkDocs dev server
 2. Watches for file changes
 3. Auto-rebuilds on changes
-4. Serves on http://localhost:8000
+4. Serves on <http://localhost:8000>
 5. Provides live reload
 
 ## Typical Workflows
@@ -187,7 +191,7 @@ r2r eac specs validate
 
 ### MkDocs Site
 
-```
+```text
 docs/
 ├── index.md                          # Home page
 ├── getting-started/
@@ -378,15 +382,17 @@ linkchecker http://localhost:8000
 ## Summary
 
 **Templates:**
+
 1. `r2r eac templates install-docs` - Install documentation templates
 2. `r2r eac templates install-specs` - Install specification templates
 3. `r2r eac templates apply-docs --replace "key=value"` - Apply with variables
 4. `r2r eac templates list` - List available variables
 
 **Documentation:**
+
 1. `r2r eac docs serve` - Start documentation server
 2. Edit files in `docs/`
-3. Preview at http://localhost:8000
+3. Preview at <http://localhost:8000>
 4. `r2r eac docs serve stop` - Stop server
 
 Templates and docs commands streamline documentation creation and maintenance.
