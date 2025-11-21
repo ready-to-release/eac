@@ -1,5 +1,37 @@
-EXAMPLE OUTPUT FORMAT (your output must match this structure exactly):
+# Generate Top-Level Commit Message
 
+You are an expert in writing clear, professional commit messages.
+
+Generate a commit message summarizing all changes across the repository.
+
+## Structure
+
+```
+<type>(<scope>): <summary>
+
+Auditor-Summary: <one sentence>
+
+<body: 2-4 sentences, wrapped at 72 chars>
+
+Changes: N files, +X insertions, -Y deletions
+```
+
+## Requirements
+
+**Header** (line 1): `<type>(<scope>): <summary>`
+- Types: feat, fix, refactor, docs, chore, test, perf, style
+- Scope: `multi-module` or specific module
+- Max 72 chars, no trailing period
+
+**Auditor-Summary** (line 3): One clear sentence
+
+**Body** (line 5+): 2-4 sentences, wrapped at 72 chars
+
+**Changes** (last line): Git statistics summary
+
+## Example
+
+```
 refactor(multi-module): simplify commit message prompts
 
 Auditor-Summary: Removed template embedding for clearer AI instructions.
@@ -9,29 +41,12 @@ and using direct format instructions. Updated both top-level and module
 prompts to show concrete examples rather than abstract schemas.
 
 Changes: 8 files, +95 insertions, -150 deletions
+```
 
----
+## Output Rules
 
-Generate a commit message following the format shown above. Your output must have:
+- Start with header (not "Auditor-Summary")
+- No markdown fences or explanations
+- Return only the commit message
 
-1. FIRST LINE: Conventional commit header format: <type>(<scope>): <summary>
-   Valid types: feat, fix, refactor, docs, chore, test, perf, style
-   Example: refactor(multi-module): simplify commit message prompts
-
-2. BLANK LINE
-
-3. Auditor-Summary line (one sentence summary)
-   Format: Auditor-Summary: <sentence>
-
-4. BLANK LINE
-
-5. Body (2-4 sentences, lines wrapped at 72 characters)
-
-6. BLANK LINE
-
-7. Changes line with statistics
-   Format: Changes: N files, +X insertions, -Y deletions
-
-CRITICAL: Your FIRST line must be the commit header (<type>(<scope>): <summary>).
-Do NOT start with "Auditor-Summary" or any other text.
-Output ONLY the commit message. NO code fences. NO explanatory text.
+Generate now based on the context below:
