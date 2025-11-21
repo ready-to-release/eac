@@ -103,12 +103,14 @@ func extractBuildTags(file *ast.File) []string {
 				buildExpr := strings.TrimPrefix(text, "//go:build ")
 				buildExpr = strings.TrimSpace(buildExpr)
 
-				// Simple parsing: look for L0, L1 tags
+				// Simple parsing: look for L0, L1, L2 tags
 				// TODO: Handle complex expressions if needed
 				if strings.Contains(buildExpr, "L0") {
 					tags = append(tags, "@L0")
 				} else if strings.Contains(buildExpr, "L1") {
 					tags = append(tags, "@L1")
+				} else if strings.Contains(buildExpr, "L2") {
+					tags = append(tags, "@L2")
 				}
 			}
 
@@ -121,6 +123,8 @@ func extractBuildTags(file *ast.File) []string {
 					tags = append(tags, "@L0")
 				} else if strings.Contains(buildExpr, "L1") && !contains(tags, "@L1") {
 					tags = append(tags, "@L1")
+				} else if strings.Contains(buildExpr, "L2") && !contains(tags, "@L2") {
+					tags = append(tags, "@L2")
 				}
 			}
 		}

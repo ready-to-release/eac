@@ -146,8 +146,19 @@ func BuildModule() int {
 		return 1
 	}
 
+	// Determine output directory based on test context
+	// When running in test context (e.g., from BDD specs), redirect to test output
+	var outputDir string
+	testRunID := os.Getenv("R2R_TEST_RUN_ID")
+	if testRunID != "" {
+		// Running in test context - use test output directory
+		outputDir = filepath.Join(workspaceRoot, "out", "test", testRunID, "build-artifacts", moniker)
+	} else {
+		// Normal build - use standard output directory
+		outputDir = filepath.Join(workspaceRoot, "out", "build", moniker)
+	}
+
 	// Purge existing output directory for this module
-	outputDir := filepath.Join(workspaceRoot, "out", "build", moniker)
 	if err := os.RemoveAll(outputDir); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to purge output directory: %v\n", err)
 		return 1
