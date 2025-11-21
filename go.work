@@ -8,5 +8,4 @@ use (
 	./src/core/markdown
 	./src/core/module-deps
 	./src/mcp/commands
-	./src/mcp/github
 )

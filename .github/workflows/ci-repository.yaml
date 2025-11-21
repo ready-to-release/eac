@@ -46,7 +46,7 @@ jobs:
 
           if [ "$TRIGGER_ALL" = "true" ]; then
             echo "Trigger all mode enabled - running all workflows"
-            WORKFLOW_MODULES="src-cli src-commands src-core src-mcp-commands src-mcp-github"
+            WORKFLOW_MODULES="src-cli src-commands src-core src-mcp-commands"
           else
             # Get changed modules using existing command
             MODULES=$(go run . "get changed modules" --as-json | jq -r '.modules | join(" ")')
@@ -146,17 +146,9 @@ jobs:
     with:
       ref: ${{ github.ref }}
 
-  trigger-src-mcp-github:
-    name: Trigger src-mcp-github
-    needs: [detect-changes, calculate-order]
-    if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-mcp-github')
-    uses: ./.github/workflows/src-mcp-github.yaml
-    with:
-      ref: ${{ github.ref }}
-
   summary:
     name: Summary
-    needs: [detect-changes, calculate-order, trigger-src-cli, trigger-src-commands, trigger-src-core, trigger-src-mcp-commands, trigger-src-mcp-github]
+    needs: [detect-changes, calculate-order, trigger-src-cli, trigger-src-commands, trigger-src-core, trigger-src-mcp-commands]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -177,4 +169,3 @@ jobs:
           echo "- src-commands: ${{ needs.trigger-src-commands.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- src-core: ${{ needs.trigger-src-core.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- src-mcp-commands: ${{ needs.trigger-src-mcp-commands.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- src-mcp-github: ${{ needs.trigger-src-mcp-github.result }}" >> $GITHUB_STEP_SUMMARY

@@ -1,7 +1,5 @@
 {
-  "env": {
-    "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-  },
+  "env": {},
   "enableAllProjectMcpServers": true,
   "permissions": {
     "defaultMode": "bypassPermissions",
