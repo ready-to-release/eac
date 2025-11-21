@@ -11,6 +11,8 @@ source:
     - "*.json"
     - "*.md"
     - "logs/README.md"
+    - "/scripts/pwsh/claude-env-setup.ps1"
+    - "/scripts/sh/claude-env-setup.sh"
 
 parent: "claude"
 depends_on: []

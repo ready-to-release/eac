@@ -24,8 +24,8 @@ func TestPromptTemplateRendering(t *testing.T) {
 			name:       "top-level prompt template",
 			promptName: "top-level",
 			shouldHave: []string{
-				"EXAMPLE OUTPUT FORMAT",
-				"Conventional commit header",
+				"## Example",
+				"## Structure",
 				"Auditor-Summary",
 				"Generate", // Should have generation instructions
 				"<type>(<scope>): <summary>",
@@ -38,7 +38,7 @@ func TestPromptTemplateRendering(t *testing.T) {
 				"Generate a module section",
 				"Module name only",
 				"<module>: <type>: <description>",
-				"CRITICAL",
+				"## Requirements",
 			},
 		},
 	}
@@ -77,7 +77,7 @@ func TestPromptContractEmbedding(t *testing.T) {
 
 	// Verify prompt contains direct format instructions (not template variables)
 	requiredContent := []string{
-		"EXAMPLE OUTPUT FORMAT", // Direct example instead of template
+		"## Example",             // Direct example instead of template
 		"refactor(multi-module)", // Concrete example
 		"Auditor-Summary:",       // Field name shown directly
 		"Changes:",               // Field name shown directly
@@ -102,11 +102,8 @@ func TestPromptContractEmbedding(t *testing.T) {
 	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	_, err = loader.LoadContract()
 	if err != nil {
-		t.Logf("Contract loading failed (validation still works): %v", err)
+		t.Errorf("Failed to load contract: %v", err)
 	}
-
-	t.Logf("Prompt length: %d characters", len(promptContent))
-	t.Logf("Prompt uses direct format examples (not template embedding)")
 }
 
 // TestTemplateBackwardCompatibility verifies fallback when contract loading fails
@@ -122,14 +119,10 @@ func TestTemplateBackwardCompatibility(t *testing.T) {
 
 	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	_, err = loader.LoadContract()
-	if err != nil {
-		t.Logf("Contract loading failed (expected in some test scenarios): %v", err)
-		// This is okay - the code should fall back to non-validated generation
-	}
+	// Contract loading may fail - that's okay, we fall back gracefully
+	_ = err
 
 	_, err = loader.LoadAntiCorruptionRules()
-	if err != nil {
-		t.Logf("Anti-corruption loading failed (expected in some test scenarios): %v", err)
-		// This is okay - the code should fall back to non-validated generation
-	}
+	// Anti-corruption loading may fail - that's okay, we fall back gracefully
+	_ = err
 }

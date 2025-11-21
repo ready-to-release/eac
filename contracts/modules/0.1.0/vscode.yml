@@ -11,5 +11,6 @@ source:
   includes:
     - "**/*"
     - "*"
+    - "/scripts/sh/vscode/**"
 
 depends_on: []

@@ -13,5 +13,8 @@ source:
     - ".gitattributes"
     - ".markdownlint.yml" #markdown lint rules
     - "cspell.config.yml" #global spelling rules
+    - "go.work"
+    - "go.work.sum"
+    - "r2r-cli.yml"
 
 depends_on: []

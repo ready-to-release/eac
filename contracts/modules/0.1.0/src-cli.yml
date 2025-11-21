@@ -9,16 +9,16 @@ deployable_unit: true
 source:
   changelog_path: "src/cli/CHANGELOG.md"
   root: "src/cli"
+  specs_root: "specs/src-cli"
   includes:
-    - "go.sum"    
+    - "go.sum"
     - "go.mod"
     - "**.go"
     - "*.go"
     - "r2r-cli.examples.yml"
     - "r2r.example.yml"
+    - "/src/cli/r2r-example.yml"
 
 depends_on:
   - "src-core"
-used_by:
-  - "claude-config"
-  - "src-mcp-vscode"
+used_by: []

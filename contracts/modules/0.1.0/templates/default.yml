@@ -27,15 +27,25 @@ versioning:
 source:
   # Root directory for this module (REQUIRED - no default)
   root: "(no-default)"
-  
+
+  # Specs root directory (defaults to specs/{moniker})
+  # All files under specs_root are automatically included
+  # No need to add specs_root/** to includes list
+  specs_root: "(defaults to specs/{moniker})"
+
   # Glob patterns to include (defaults to ["**/*", "*"])
+  # Note: specs_root/** is automatically added, no need to include it here
   includes:
     - "**/*"
     - "*"
-  
+
+  # Glob patterns to exclude from includes (defaults to [])
+  # Excludes are applied after includes - if a file matches both, it's excluded
+  excludes: []
+
   # Path to changelog file (defaults to {root}/CHANGELOG.md or CHANGELOG.md if root=/)
   changelog_path: "(defaults to {root}/CHANGELOG.md or CHANGELOG.md if root=/)"
-  
+
   # Defer ownership to child modules when both match same file (defaults to true)
   exclude_children_owned_source: true
 

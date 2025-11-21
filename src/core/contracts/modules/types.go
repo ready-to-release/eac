@@ -25,13 +25,29 @@ func NewModuleContract(base contracts.BaseContract, workspaceRoot string) *Modul
 	}
 }
 
+// getEffectiveIncludes returns the includes list with specs_root pattern auto-added
+func (m *ModuleContract) getEffectiveIncludes() []string {
+	includes := make([]string, len(m.Source.Includes))
+	copy(includes, m.Source.Includes)
+
+	// Always add specs_root pattern (uses default specs/<moniker> if not explicitly set)
+	specsRoot := m.GetSpecsRoot()
+	specsPattern := "/" + normalizePathSeparators(specsRoot) + "/**"
+	includes = append([]string{specsPattern}, includes...)
+
+	return includes
+}
+
 // GetGlobPatterns returns GitHub Actions compatible glob patterns for this module
 // These patterns can be used in workflow path filters
 func (m *ModuleContract) GetGlobPatterns() []string {
 	var patterns []string
 
-	// Use patterns from contract source includes
-	for _, include := range m.Source.Includes {
+	// Build the effective includes list (original includes + auto-added specs_root)
+	effectiveIncludes := m.getEffectiveIncludes()
+
+	// Use patterns from effective includes
+	for _, include := range effectiveIncludes {
 		// If pattern starts with "/", it's an absolute path from repository root
 		// Strip the leading "/" and use as-is
 		if strings.HasPrefix(include, "/") {
@@ -75,20 +91,27 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 	// Normalize the file path
 	normalizedPath := normalizePathSeparators(filePath)
 
+	// Get effective includes (with specs_root auto-added)
+	effectiveIncludes := m.getEffectiveIncludes()
+
+	matched := false
+
 	// Check each source pattern individually
-	for _, include := range m.Source.Includes {
+	for _, include := range effectiveIncludes {
 		// If pattern starts with "/", it's absolute from repository root
 		// Match against it directly without root prefix check
 		if strings.HasPrefix(include, "/") {
 			absolutePattern := strings.TrimPrefix(include, "/")
 			if matchGlobPattern(normalizedPath, absolutePattern) {
-				return true
+				matched = true
+				break
 			}
 			// Also handle ** patterns for absolute paths
 			if strings.HasPrefix(absolutePattern, "**/") {
 				patternWithoutDoubleStar := strings.TrimPrefix(absolutePattern, "**/")
 				if matchGlobPattern(normalizedPath, patternWithoutDoubleStar) {
-					return true
+					matched = true
+					break
 				}
 			}
 			continue
@@ -96,64 +119,96 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 	}
 
 	// Check if file is under module root (skip check if root is "/" which means repository root)
-	if m.Source.Root != "" && m.Source.Root != "/" && !strings.HasPrefix(normalizedPath, m.Source.Root) {
+	if !matched && m.Source.Root != "" && m.Source.Root != "/" && !strings.HasPrefix(normalizedPath, m.Source.Root) {
 		return false
 	}
 
 	// Check against source includes patterns (non-absolute)
-	for _, pattern := range m.GetGlobPatterns() {
-		if matchGlobPattern(normalizedPath, pattern) {
-			return true
+	if !matched {
+		for _, pattern := range m.GetGlobPatterns() {
+			if matchGlobPattern(normalizedPath, pattern) {
+				matched = true
+				break
+			}
 		}
 	}
 
 	// Handle patterns that start with ** - they don't match root-level files
 	// due to gobwas/glob behavior, so we need to also check without the **/ prefix
-	for _, include := range m.Source.Includes {
-		// Skip absolute patterns (already handled above)
-		if strings.HasPrefix(include, "/") {
-			continue
-		}
-
-		if strings.HasPrefix(include, "**/") {
-			// Try matching without the **/ prefix for root-level files
-			patternWithoutDoubleStar := strings.TrimPrefix(include, "**/")
-
-			// Build the full pattern with module root
-			var fullPattern string
-			if m.Source.Root != "" && m.Source.Root != "/" {
-				// Ensure we don't create double slashes
-				rootNormalized := strings.TrimSuffix(m.Source.Root, "/")
-				fullPattern = rootNormalized + "/" + patternWithoutDoubleStar
-			} else {
-				// Root is empty or "/" - use pattern as-is
-				fullPattern = patternWithoutDoubleStar
+	if !matched {
+		for _, include := range effectiveIncludes {
+			// Skip absolute patterns (already handled above)
+			if strings.HasPrefix(include, "/") {
+				continue
 			}
 
-			if matchGlobPattern(normalizedPath, fullPattern) {
-				return true
-			}
-		} else if strings.HasPrefix(include, "**") && !strings.HasPrefix(include, "**/") {
-			// Handle patterns like "**/*.go" by also checking "*.go"
-			patternWithoutDoubleStar := strings.TrimPrefix(include, "**")
+			if strings.HasPrefix(include, "**/") {
+				// Try matching without the **/ prefix for root-level files
+				patternWithoutDoubleStar := strings.TrimPrefix(include, "**/")
 
-			var fullPattern string
-			if m.Source.Root != "" && m.Source.Root != "/" {
-				// Ensure we don't create double slashes
-				rootNormalized := strings.TrimSuffix(m.Source.Root, "/")
-				fullPattern = rootNormalized + patternWithoutDoubleStar
-			} else {
-				// Root is empty or "/" - use pattern as-is
-				fullPattern = patternWithoutDoubleStar
-			}
+				// Build the full pattern with module root
+				var fullPattern string
+				if m.Source.Root != "" && m.Source.Root != "/" {
+					// Ensure we don't create double slashes
+					rootNormalized := strings.TrimSuffix(m.Source.Root, "/")
+					fullPattern = rootNormalized + "/" + patternWithoutDoubleStar
+				} else {
+					// Root is empty or "/" - use pattern as-is
+					fullPattern = patternWithoutDoubleStar
+				}
 
-			if matchGlobPattern(normalizedPath, fullPattern) {
-				return true
+				if matchGlobPattern(normalizedPath, fullPattern) {
+					matched = true
+					break
+				}
+			} else if strings.HasPrefix(include, "**") && !strings.HasPrefix(include, "**/") {
+				// Handle patterns like "**/*.go" by also checking "*.go"
+				patternWithoutDoubleStar := strings.TrimPrefix(include, "**")
+
+				var fullPattern string
+				if m.Source.Root != "" && m.Source.Root != "/" {
+					// Ensure we don't create double slashes
+					rootNormalized := strings.TrimSuffix(m.Source.Root, "/")
+					fullPattern = rootNormalized + patternWithoutDoubleStar
+				} else {
+					// Root is empty or "/" - use pattern as-is
+					fullPattern = patternWithoutDoubleStar
+				}
+
+				if matchGlobPattern(normalizedPath, fullPattern) {
+					matched = true
+					break
+				}
 			}
 		}
 	}
 
-	return false
+	// If matched by includes, check if excluded by excludes
+	if matched && len(m.Source.Excludes) > 0 {
+		for _, exclude := range m.Source.Excludes {
+			// Handle absolute exclude patterns
+			if strings.HasPrefix(exclude, "/") {
+				absolutePattern := strings.TrimPrefix(exclude, "/")
+				if matchGlobPattern(normalizedPath, absolutePattern) {
+					return false
+				}
+			} else {
+				// Relative exclude pattern - relative to module root
+				var fullPattern string
+				if m.Source.Root != "" && m.Source.Root != "/" {
+					rootNormalized := strings.TrimSuffix(m.Source.Root, "/")
+					fullPattern = rootNormalized + "/" + exclude
+				} else {
+					fullPattern = exclude
+				}
+				if matchGlobPattern(normalizedPath, fullPattern) {
+					return false
+				}
+			}
+		}
+	}
+
+	return matched
 }
 
 // GetDependencies returns the list of module dependencies
@@ -169,6 +224,17 @@ func (m *ModuleContract) GetUsedBy() []string {
 // IsDefinitionsFile returns true if this contract represents a definitions file
 func (m *ModuleContract) IsDefinitionsFile() bool {
 	return m.Moniker == "definitions" || m.Type == "definitions-type"
+}
+
+// GetSpecsRoot returns the specs root directory for this module
+// If specs_root is explicitly set in the contract, it uses that value
+// Otherwise, it defaults to specs/<module-moniker>
+func (m *ModuleContract) GetSpecsRoot() string {
+	if m.Source.SpecsRoot != "" {
+		return m.Source.SpecsRoot
+	}
+	// Default: specs/<module-moniker>
+	return filepath.Join("specs", m.Moniker)
 }
 
 // normalizePathSeparators converts Windows backslashes to forward slashes

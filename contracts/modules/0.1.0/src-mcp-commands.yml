@@ -8,6 +8,7 @@ description: "Internal MCP server for Commands"
 source:
   changelog_path: "src/mcp/commands/CHANGELOG.md"
   root: "src/mcp/commands"
+  specs_root: "specs/src-mcp-commands"
   includes:
     - "go.sum"
     - "go.mod"
@@ -15,6 +16,7 @@ source:
     - "*.go"
     - "README.md"
 
-depends_on: []
+depends_on:
+  - "src-core"
 
 used_by: []
