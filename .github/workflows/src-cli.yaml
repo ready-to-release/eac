@@ -38,7 +38,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-src-cli
-          path: out/src-cli/**
+          path: out/build/src-cli/**
 
   test:
     name: Test
@@ -60,10 +60,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts-src-cli
-          path: out/src-cli
+          path: out/build/src-cli
 
       - name: Restore Executable Permissions
-        run: chmod +x out/src-cli/r2r-cli
+        run: |
+          chmod +x out/build/src-cli/linux-r2r-cli
+          chmod +x out/build/src-cli/darwin-r2r-cli
 
       - name: Test Module
         working-directory: ./src/commands

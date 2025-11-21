@@ -1,6 +1,6 @@
 @skip:todo
 @deps:go @ov
-Feature: src-commands_work_create
+Feature: src-commands_work-create
 
   As a developer using parallel Claude sessions
   I want to create isolated workspaces for different features

@@ -1,6 +1,6 @@
 @skip:todo
 @deps:go @deps:claude @ov
-Feature: src-commands_work_commit
+Feature: src-commands_work-commit
 
   As a developer working in a workspace
   I want to commit changes with AI-generated messages
