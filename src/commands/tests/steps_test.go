@@ -440,9 +440,6 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Specs command steps
 	InitializeSpecsScenario(sc)
 
-	// Commit-AI command steps
-	InitializeCommitAIScenario(sc)
-
 	// Init command steps
 	InitializeInitScenario(sc)
 
@@ -643,19 +640,6 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^a developer adds a new template type "([^"]*)" for apply$`, aDeveloperAddsANewTemplateTypeForApply)
 	sc.Step(`^a developer adds a new template type "([^"]*)" for install$`, aDeveloperAddsANewTemplateTypeForInstall)
 	sc.Step(`^I apply the template without providing --input-json$`, iApplyTheTemplateWithoutProvidingInputJson)
-
-	// Commit-AI - additional steps
-	sc.Step(`^a commit message with header "([^"]*)"$`, aCommitMessageWithHeader)
-	sc.Step(`^a module with specific files$`, aModuleWithSpecificFiles)
-	sc.Step(`^AI output starting with "([^"]*)"$`, aiOutputStartingWith)
-	sc.Step(`^some modules missing from the output$`, someModulesMissingFromTheOutput)
-	sc.Step(`^the context should indicate "([^"]*)"$`, theContextShouldIndicate)
-	sc.Step(`^top-level context is built$`, topLevelContextIsBuilt)
-	sc.Step(`^a multi-module commit message$`, aMultiModuleCommitMessage)
-	sc.Step(`^a git diff for those files$`, aGitDiffForThoseFiles)
-	sc.Step(`^staged files belonging to one module$`, stagedFilesBelongingToOneModule)
-	sc.Step(`^staged files belonging to multiple modules$`, stagedFilesBelongingToMultipleModules)
-	sc.Step(`^the context should indicate the count as "([^"]*)"$`, theContextShouldIndicateTheCountAs)
 
 	// Template - additional template file steps
 	sc.Step(`^a template file contains "([^"]*)"$`, aTemplateFileContains)

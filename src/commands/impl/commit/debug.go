@@ -33,7 +33,13 @@ func (d *debugWriter) write(filename string, content string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	debugFile := filepath.Join(d.workspaceRoot, "out", filename)
+	debugDir := filepath.Join(d.workspaceRoot, "out")
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "⚠️  Failed to create debug directory: %v\n", err)
+		return
+	}
+
+	debugFile := filepath.Join(debugDir, filename)
 	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "⚠️  Failed to write debug file %s: %v\n", debugFile, err)
 	} else {
@@ -49,8 +55,14 @@ func (d *debugWriter) writef(format string, content string, args ...interface{})
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	debugDir := filepath.Join(d.workspaceRoot, "out")
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "⚠️  Failed to create debug directory: %v\n", err)
+		return
+	}
+
 	filename := fmt.Sprintf(format, args...)
-	debugFile := filepath.Join(d.workspaceRoot, "out", filename)
+	debugFile := filepath.Join(debugDir, filename)
 	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "⚠️  Failed to write debug file %s: %v\n", debugFile, err)
 	} else {

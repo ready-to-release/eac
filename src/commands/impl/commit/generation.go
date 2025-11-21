@@ -53,46 +53,17 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 		providers.RegisterBuiltIn(executor)
 	}
 
-	// Load contract and anti-corruption rules
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
-	contractData, err := loader.LoadContract()
-	if err != nil {
-		// If contract fails, fall back to non-validated generation
-		fmt.Fprintf(os.Stderr, "⚠️  Could not load contract, proceeding without validation: %v\n", err)
-		// Build prompt without template processing (backward compatibility)
-		fullPrompt := promptTemplate + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
-		return generateWithoutValidation(executor, fullPrompt, model, promptName, workspaceRoot)
-	}
+	// Build full prompt: prompt template + user input (no template rendering needed)
+	fullPrompt := promptTemplate + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
 
+	// Load contract and anti-corruption rules for validation only
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
 	if err != nil {
 		// If anti-corruption rules fail, fall back to non-validated generation
 		fmt.Fprintf(os.Stderr, "⚠️  Could not load anti-corruption rules, proceeding without validation: %v\n", err)
-		// Build prompt without template processing (backward compatibility)
-		fullPrompt := promptTemplate + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
 		return generateWithoutValidation(executor, fullPrompt, model, promptName, workspaceRoot)
 	}
-
-	// Build prompt with contract using Go templates (like specs command)
-	customData := map[string]string{
-		// No custom data needed for commit messages (contract + anti-corruption is enough)
-	}
-
-	renderedPrompt, err := contracts.BuildPromptWithTemplate(
-		promptTemplate,
-		contractData,
-		antiCorruptionRules,
-		customData,
-	)
-	if err != nil {
-		// If template rendering fails, fall back to simple concatenation
-		fmt.Fprintf(os.Stderr, "⚠️  Template rendering failed, using prompt as-is: %v\n", err)
-		fullPrompt := promptTemplate + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
-		return generateWithoutValidation(executor, fullPrompt, model, promptName, workspaceRoot)
-	}
-
-	// Build full prompt: rendered template + user input
-	fullPrompt := renderedPrompt + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
 
 	// Load commit message contract data for validation
 	contractPath := filepath.Join(loader.GetContractPath(), "contract.yml")
@@ -124,19 +95,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	}
 
 	// Configure retry behavior
-	retryConfig := &contracts.RetryConfig{
-		Executor:       executorAdapter,
-		Validator:      validator,
-		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
-		AntiCorruption: antiCorruptionRules,
-		ContentMarker:  "", // Commit messages don't have a specific content marker
-		MaxAttempts:    2,
-		Debug:          debugEnabled,
-		DebugOutputDir: debugOutputDir,
-		ValidationContext: map[string]interface{}{
-			"affectedModules": affectedModules,
-		},
-	}
+	retryConfig := buildRetryConfig(executorAdapter, validator, antiCorruptionRules, affectedModules, debugEnabled, debugOutputDir)
 
 	// Generate with retry
 	ctx := context.Background()
@@ -179,6 +138,30 @@ func generateWithoutValidation(executor *ai.Executor, fullPrompt string, model s
 	output = stripAgentNoise(output, promptName, workspaceRoot)
 
 	return output, nil
+}
+
+// buildRetryConfig creates a RetryConfig with standard settings for commit message generation
+func buildRetryConfig(
+	executor contracts.AIExecutor,
+	validator contracts.Validator,
+	antiCorruption *contracts.AntiCorruptionRules,
+	affectedModules []string,
+	debug bool,
+	debugOutputDir string,
+) *contracts.RetryConfig {
+	return &contracts.RetryConfig{
+		Executor:       executor,
+		Validator:      validator,
+		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
+		AntiCorruption: antiCorruption,
+		ContentMarker:  "", // Commit messages don't have a specific content marker
+		MaxAttempts:    2,
+		Debug:          debug,
+		DebugOutputDir: debugOutputDir,
+		ValidationContext: map[string]interface{}{
+			"affectedModules": affectedModules,
+		},
+	}
 }
 
 // extractModelFromAgent parses agent frontmatter and extracts the model field

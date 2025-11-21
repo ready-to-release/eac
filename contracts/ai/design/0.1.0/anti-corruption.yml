@@ -2,7 +2,6 @@ version: "0.1.0"
 name: "Structurizr DSL Anti-Corruption Rules"
 description: "Patterns to strip from AI output to ensure clean DSL"
 
-# FORBIDDEN PREFIXES
 forbidden_prefixes:
   - "Here is"
   - "Here's"
@@ -14,7 +13,6 @@ forbidden_prefixes:
   - "This workspace"
   - "Below is"
 
-# FORBIDDEN CONTENT PATTERNS
 forbidden_contains:
   - "ready to assist"
   - "generating"
@@ -23,7 +21,6 @@ forbidden_contains:
   - "**Initialized"
   - "Structurizr DSL"
 
-# FORBIDDEN EMOJIS
 forbidden_emojis:
   - "🚀"
   - "✅"
@@ -33,30 +30,4 @@ forbidden_emojis:
   - "🏗️"
   - "🔧"
 
-# MARKDOWN CODE FENCES
-code_fence_handling:
-  opening_patterns:
-    - "```dsl"
-    - "```structurizr"
-    - "```"
-  closing_pattern: "```"
-  action: "Remove opening and closing fences, keep content"
-
-# CONTENT START DETECTION
-content_start_markers:
-  primary: "workspace"
-  description: "DSL content always starts with 'workspace' keyword"
-  behavior: "Skip all lines before first 'workspace' that match forbidden patterns"
-
-# FILTERING ALGORITHM
-filtering_algorithm:
-  step1:
-    action: "Remove markdown code fences if wrapped"
-  step2:
-    action: "Find first line starting with 'workspace'"
-  step3:
-    action: "Remove all noise before workspace declaration"
-  step4:
-    action: "Keep all content from workspace onwards"
-  step5:
-    action: "Trim trailing whitespace"
+agent_signatures: []

@@ -32,7 +32,18 @@ type CompositeValidator struct {
 
 // NewCompositeValidator creates a validator that combines quick and full validation
 func NewCompositeValidator(module, templateRoot string, skipFullOnQuickErrors bool) (*CompositeValidator, error) {
-	quickValidator := NewQuickDSLValidator()
+	// Load design contract if available
+	loader := contracts.NewContractLoader(templateRoot, "ai/design", "0.1.0")
+	contract, err := loader.LoadContract()
+
+	var quickValidator *QuickDSLValidator
+	if err == nil && contract != nil {
+		// Use contract-aware validator
+		quickValidator = NewQuickDSLValidatorWithContract(contract)
+	} else {
+		// Fallback to default validator
+		quickValidator = NewQuickDSLValidator()
+	}
 
 	fullValidator, err := NewStructurizrDSLValidator(module, templateRoot)
 	if err != nil {

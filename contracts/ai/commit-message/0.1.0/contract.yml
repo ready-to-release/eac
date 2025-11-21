@@ -1,122 +1,48 @@
-# Commit Message Structure Contract
-# Version: 0.1.0
-# Formal specification for semantic commit messages
-
 version: "0.1.0"
-name: "Semantic Commit Message Structure"
-description: "Formal contract defining commit message structure for multi-module mono-repository"
+name: "Commit Message Format"
+description: "Formal contract defining commit message structure and validation rules"
 
-# STRUCTURE SPECIFICATION
 structure:
   - section: "top_level_heading"
     required: true
     format: "<type>(<scope>): <summary>"
     max_length: 72
-    examples:
-      - "feat(commit-ai): add commit message validation"
-      - "fix(cli): resolve command parsing error"
-      - "feat(multi-module): add validation across contracts and cli"
 
   - section: "auditor_summary"
     required: true
-    description: "Single audit-ready sentence for implementation reports"
     format: "Auditor-Summary: <One clear sentence describing the change>"
-    examples:
-      - "Auditor-Summary: Implemented contract-based validation system for commit messages with 7-lever enforcement pipeline"
 
   - section: "top_level_body"
     required: true
-    description: "Plain text body directly after auditor summary"
     format: "2-4 sentences describing all changes"
-
-  - section: "diff_stats"
-    required: false
-    description: "Summary of files changed (generated from git diff --stat)"
-    format: "Changes: N files, +X insertions"
 
   - section: "module_sections"
     required: true
     format: "<module-name> (plain text with dashes separator)"
-    subsections:
-      - "module_subject_line: <module>: <type>: <description>"
-      - "module_body: Detailed changes"
 
-  - section: "footer"
-    required: false
-    description: "Optional metadata for breaking changes, references, co-authors"
-    format: "<token>: <value>"
-    tokens:
-      - "BREAKING CHANGE"
-      - "Refs"
-      - "Closes"
-      - "Co-authored-by"
-
-# SEMANTIC TYPES
 semantic_types:
-  - "feat"      # New feature
-  - "fix"       # Bug fix
-  - "refactor"  # Code restructuring
-  - "docs"      # Documentation
-  - "chore"     # Maintenance
-  - "test"      # Tests
-  - "perf"      # Performance
-  - "style"     # Formatting
+  - "feat"
+  - "fix"
+  - "refactor"
+  - "docs"
+  - "chore"
+  - "test"
+  - "perf"
+  - "style"
 
-# MODULE SUBJECT LINE FORMAT
 subject_line_format: "<module>: <type>: <description>"
 
-# HEADER FORMAT (with scope)
-header_format: "<type>(<scope>): <summary>"
-
-# CONSTRAINTS
 constraints:
-  max_line_length: 72  # HARD LIMIT - applies to Summary and module body text
+  max_line_length: 72
   no_trailing_periods: true
   code_blocks_closed: true
   module_header_no_colons: true
-  scope_required: true  # Scope is mandatory in header
+  scope_required: true
 
-# LINE WRAPPING RULES
-wrapping:
-  top_level_body: 72    # CRITICAL: Every line in top-level body MUST be ≤72 chars
-  module_body: 72       # CRITICAL: Every line in module body MUST be ≤72 chars
-  exceptions:
-    - "Code blocks (``` ... ```)"
-    - "YAML blocks"
-
-# MARKDOWN RULES
 markdown_rules:
   - rule: "MD041"
-    description: "First line must be top-level heading with conventional commit format"
-    check: "First line matches '# <module|multi-module>: <type>: <summary>'"
-
+    description: "First line must be conventional commit format"
   - rule: "MD022"
     description: "Headers should be surrounded by blank lines"
-    check: "Blank line after module headers"
-    severity: "warning"
-
   - rule: "MD026"
-    description: "Trailing punctuation in heading"
-    check: "Top-level heading and module subject lines must not end with period"
-
-# ANTI-CORRUPTION LAYER
-# Agents output pure content only - no meta-commentary
-anti_corruption:
-  enforcement: "stripAgentNoise() function in src/commands/impl/commit/ai.go"
-  rules_file: "contracts/ai/commit-message/0.1.0/anti-corruption.yml"
-  description: "See anti-corruption.yml for complete list of forbidden patterns"
-  summary:
-    - "Forbidden prefixes: Based on, Here is, Let me, I will, etc."
-    - "Forbidden content: ready to assist, commit message, etc."
-    - "Forbidden emojis: 🚀 ✅ 🤖 🎉 ✨"
-    - "Agent signatures: Agent:"
-  no_emojis: true
-  no_wrapper_text: true
-
-# AI PROMPTS
-# System prompts are stored as separate markdown files in this directory:
-# - top-level.md: Top-level commit message generation
-# - module.md: Module section generation
-prompts:
-  top_level: "top-level.md"
-  module: "module.md"
+    description: "No trailing punctuation in headings"
