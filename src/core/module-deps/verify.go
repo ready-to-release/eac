@@ -237,12 +237,12 @@ func (c *ModuleChecker) getExecutablePath(module *modules.ModuleContract) string
 
 	// Try platform-specific binary first (new format: windows-r2r-cli.exe, linux-r2r-cli, darwin-r2r-cli)
 	platformBinary := fmt.Sprintf("%s-%s%s", runtime.GOOS, baseName, ext)
-	platformPath := filepath.Join(repoRoot, "out", c.moniker, platformBinary)
+	platformPath := filepath.Join(repoRoot, "out", "build", c.moniker, platformBinary)
 	if _, err := os.Stat(platformPath); err == nil {
 		return platformPath
 	}
 
 	// Fallback to old format for backward compatibility (r2r-cli.exe, r2r-cli)
 	legacyBinary := baseName + ext
-	return filepath.Join(repoRoot, "out", c.moniker, legacyBinary)
+	return filepath.Join(repoRoot, "out", "build", c.moniker, legacyBinary)
 }

@@ -106,7 +106,14 @@ func TestExecutor_Execute(t *testing.T) {
 
 			// Create executor with test workspace root
 			executor := ai.NewExecutor(tmpDir)
-			providers.RegisterBuiltIn(executor)
+			// Register ONLY mock providers for L0/L1 unit tests
+			// Real providers (claude-cli, etc.) should only be tested in Godog specs (L2+)
+			executor.RegisterProvider("claude-cli", func(config *ai.Config) (ai.Provider, error) {
+				return &namedMockProvider{name: "claude-cli", response: "mock response from claude-cli"}, nil
+			})
+			executor.RegisterProvider("mock", func(config *ai.Config) (ai.Provider, error) {
+				return &namedMockProvider{name: "mock", response: "mock response"}, nil
+			})
 
 			// Execute
 			ctx := context.Background()
@@ -186,7 +193,10 @@ func TestExecutor_ExecuteWithDebug(t *testing.T) {
 			}
 
 			executor := ai.NewExecutor(tmpDir)
-			providers.RegisterBuiltIn(executor)
+			// Register ONLY mock providers for L0/L1 unit tests
+			executor.RegisterProvider("claude-cli", func(config *ai.Config) (ai.Provider, error) {
+				return ai.NewMockProvider("mock response from claude-cli"), nil
+			})
 
 			ctx := context.Background()
 			response, err := executor.Execute(ctx, "test prompt", ai.WithDebug(tt.debug))
@@ -274,7 +284,10 @@ func TestExecutor_NoLogFilesCreated(t *testing.T) {
 	}
 
 	executor := ai.NewExecutor(tmpDir)
-	providers.RegisterBuiltIn(executor)
+	// Register ONLY mock providers for L0/L1 unit tests
+	executor.RegisterProvider("claude-cli", func(config *ai.Config) (ai.Provider, error) {
+		return ai.NewMockProvider("mock response from claude-cli"), nil
+	})
 
 	ctx := context.Background()
 
@@ -319,7 +332,10 @@ func TestExecutor_ExecuteWithOptions(t *testing.T) {
 	}
 
 	executor := ai.NewExecutor(tmpDir)
-	providers.RegisterBuiltIn(executor)
+	// Register ONLY mock providers for L0/L1 unit tests
+	executor.RegisterProvider("claude-cli", func(config *ai.Config) (ai.Provider, error) {
+		return ai.NewMockProvider("mock response from claude-cli"), nil
+	})
 	ctx := context.Background()
 
 	// Test with options
@@ -395,7 +411,21 @@ func TestExecutor_LoadProvider(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			executor := ai.NewExecutor(tmpDir)
-			providers.RegisterBuiltIn(executor)
+			// Register ONLY mock providers for L0/L1 unit tests
+			// Real providers (claude-cli, claude-api, etc.) should only be tested in Godog specs (L2+)
+			executor.RegisterProvider("claude-cli", func(config *ai.Config) (ai.Provider, error) {
+				return &namedMockProvider{name: "claude-cli", response: "mock response from claude-cli"}, nil
+			})
+			executor.RegisterProvider("claude-api", func(config *ai.Config) (ai.Provider, error) {
+				// For claude-api, validate API key is present in config
+				if config.APIKey == "" {
+					return nil, fmt.Errorf("ANTHROPIC_API_KEY is required for claude-api provider")
+				}
+				return &namedMockProvider{name: "claude-api", response: "mock response from claude-api"}, nil
+			})
+			executor.RegisterProvider("mock", func(config *ai.Config) (ai.Provider, error) {
+				return &namedMockProvider{name: "mock", response: "mock response"}, nil
+			})
 
 			provider, err := executor.LoadProvider(tt.config)
 
@@ -458,4 +488,19 @@ func TestExecutor_WithMockProvider(t *testing.T) {
 	if response != mockResponse {
 		t.Errorf("Execute() response = %v, want %v", response, mockResponse)
 	}
+}
+
+// namedMockProvider is a test helper that returns a mock with a specific provider name
+// This allows us to test provider selection logic without calling real providers
+type namedMockProvider struct {
+	name     string
+	response string
+}
+
+func (p *namedMockProvider) Name() string {
+	return p.name
+}
+
+func (p *namedMockProvider) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
+	return p.response, nil
 }

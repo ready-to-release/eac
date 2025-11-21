@@ -1,7 +1,7 @@
 // Package environments provides environment contract management for test execution contexts
 package environments
 
-//go:generate sh -c "mkdir -p contracts/environments/0.1.0 && cp ../../../contracts/environments/0.1.0/*.yml contracts/environments/0.1.0/"
+//go:generate go run generate.go
 
 import (
 	"embed"

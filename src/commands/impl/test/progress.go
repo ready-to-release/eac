@@ -19,12 +19,13 @@ type ProgressTracker struct {
 	startTime   time.Time
 	runningNames map[string]bool // Track names of running tests
 	completed   int
+	total       int // Total number of packages/tests
 	ticker      *time.Ticker
 	done        chan bool
 }
 
 // StartGlobalTracker initializes and starts the global progress tracker
-func StartGlobalTracker(out io.Writer) {
+func StartGlobalTracker(out io.Writer, total int) {
 	trackerMu.Lock()
 	defer trackerMu.Unlock()
 
@@ -37,6 +38,7 @@ func StartGlobalTracker(out io.Writer) {
 		startTime:    time.Now(),
 		runningNames: make(map[string]bool),
 		completed:    0,
+		total:        total,
 		done:         make(chan bool),
 	}
 
@@ -137,11 +139,11 @@ func (pt *ProgressTracker) displayStatus() {
 			nameList += name
 		}
 
-		fmt.Fprintf(pt.out, "Status: %d running, %d completed. %s elapsed (%s)\n",
-			runningCount, pt.completed, formatDuration(elapsed), nameList)
+		fmt.Fprintf(pt.out, "Status: %s elapsed, %d/%d completed. %d running (%s)\n",
+			formatDuration(elapsed), pt.completed, pt.total, runningCount, nameList)
 	} else {
-		fmt.Fprintf(pt.out, "Status: %d running, %d completed. %s elapsed\n",
-			runningCount, pt.completed, formatDuration(elapsed))
+		fmt.Fprintf(pt.out, "Status: %s elapsed, %d/%d completed. %d running\n",
+			formatDuration(elapsed), pt.completed, pt.total, runningCount)
 	}
 	os.Stdout.Sync()
 }

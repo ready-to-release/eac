@@ -43,12 +43,24 @@ func TestFeatures(t *testing.T) {
 		var reportPath string
 		var formatterName string
 
+		// Allow custom report name via environment variable (for parallel execution)
+		// This prevents multiple test packages from overwriting each other's reports
+		reportName := os.Getenv("GODOG_REPORT_NAME")
+		if reportName == "" {
+			// Default names if not specified
+			if reportFormat == "junit" {
+				reportName = "junit.xml"
+			} else {
+				reportName = "cucumber.json"
+			}
+		}
+
 		if reportFormat == "junit" {
-			reportPath = filepath.Join(outputDir, "junit.xml")
+			reportPath = filepath.Join(outputDir, reportName)
 			formatterName = "junit"
 		} else {
 			// Default: cucumber
-			reportPath = filepath.Join(outputDir, "cucumber.json")
+			reportPath = filepath.Join(outputDir, reportName)
 			formatterName = "cucumber"
 		}
 

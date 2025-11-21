@@ -10,9 +10,18 @@ import (
 
 	"github.com/cucumber/godog"
 	coretesting "github.com/ready-to-release/eac/src/core/testing"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func TestFeatures(t *testing.T) {
+	// Initialize the original repository root before any tests change directories
+	// This ensures we can always find the go.mod file for running commands
+	var err error
+	originalRepoRoot, err = repository.GetRepositoryRoot("")
+	if err != nil {
+		t.Fatalf("failed to get repository root: %v", err)
+	}
+
 	outputDir := os.Getenv("GODOG_OUTPUT_DIR")
 	reportFormat := os.Getenv("GODOG_REPORT_FORMAT")
 	if reportFormat == "" {
@@ -36,9 +45,15 @@ func TestFeatures(t *testing.T) {
 	skipFilter := contract.BuildGodogSkipTagFilter()
 	tagFilter := skipFilter + " && ~@pending"
 
+	// Allow paths to be customized via environment variable (for individual feature file execution)
+	paths := os.Getenv("GODOG_PATHS")
+	if paths == "" {
+		paths = "../../../specs/src-commands" // Default: all src-commands specs
+	}
+
 	opts := &godog.Options{
 		Format:   consoleFormat,
-		Paths:    []string{"../../../specs/src-commands"},
+		Paths:    []string{paths},
 		TestingT: t,
 		Tags:     tagFilter, // Skip scenarios tagged with @skip:<reason> (from contract) or @pending
 		Strict:   true,      // Fail on undefined or pending steps
@@ -51,12 +66,24 @@ func TestFeatures(t *testing.T) {
 		var reportPath string
 		var formatterName string
 
+		// Allow custom report name via environment variable (for parallel execution)
+		// This prevents multiple test packages from overwriting each other's reports
+		reportName := os.Getenv("GODOG_REPORT_NAME")
+		if reportName == "" {
+			// Default names if not specified
+			if reportFormat == "junit" {
+				reportName = "junit.xml"
+			} else {
+				reportName = "cucumber.json"
+			}
+		}
+
 		if reportFormat == "junit" {
-			reportPath = filepath.Join(outputDir, "junit.xml")
+			reportPath = filepath.Join(outputDir, reportName)
 			formatterName = "junit"
 		} else {
 			// Default: cucumber
-			reportPath = filepath.Join(outputDir, "cucumber.json")
+			reportPath = filepath.Join(outputDir, reportName)
 			formatterName = "cucumber"
 		}
 
