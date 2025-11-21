@@ -2,14 +2,13 @@
 package testing
 
 import (
-	"embed"
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/ready-to-release/eac/src/core/repository"
 	"gopkg.in/yaml.v3"
 )
-
-//go:embed contracts/testing/0.1.0/tags.yml
-var contractFS embed.FS
 
 // Metadata holds contract version and scope information
 type Metadata struct {
@@ -47,11 +46,19 @@ type TagContract struct {
 	SkipReasons []SkipReason `yaml:"skip_reasons"`
 }
 
-// LoadTagContract reads and parses the tag contract from embedded filesystem
+// LoadTagContract reads and parses the tag contract from the contracts directory
 func LoadTagContract() (*TagContract, error) {
-	data, err := contractFS.ReadFile("contracts/testing/0.1.0/tags.yml")
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read tag contract: %w", err)
+		return nil, fmt.Errorf("failed to find repository root: %w", err)
+	}
+
+	// Read the contract file from contracts/testing/0.1.0/tags.yml
+	contractPath := filepath.Join(repoRoot, "contracts", "testing", "0.1.0", "tags.yml")
+	data, err := os.ReadFile(contractPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read tag contract from %s: %w", contractPath, err)
 	}
 
 	var contract TagContract
