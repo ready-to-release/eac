@@ -42,6 +42,15 @@ func init() {
 	registry.Register(TestSuite)
 }
 
+// PackageTestResult holds detailed test execution results for a single package
+type PackageTestResult struct {
+	TestsPassed  int // Number of individual tests that passed
+	TestsFailed  int // Number of individual tests that failed
+	TestsSkipped int // Number of individual tests that were skipped
+	TestsTotal   int // Total number of tests in this package
+	PackageFailed bool // Whether the package execution itself failed
+}
+
 // TestSuite runs tests for a specific test suite
 func TestSuite() int {
 	// Parse arguments and flags
@@ -424,8 +433,8 @@ func TestSuite() int {
 		mdFile.Sync()
 	}
 
-	totalPassed := 0
-	totalFailed := 0
+	// Aggregate results
+	var results []PackageTestResult
 
 	// Calculate optimal test-level parallelism
 	numCPU := runtime.NumCPU()
@@ -435,11 +444,31 @@ func TestSuite() int {
 		// Package-level parallel: distribute CPU across packages
 		// Each package gets a smaller share of CPU cores
 		testParallelism = max(2, numCPU/4)
-		totalPassed, totalFailed = runTestsParallel(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
+		results = runTestsParallel(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
 	} else {
 		// Sequential packages: each package gets full CPU power
 		testParallelism = numCPU
-		totalPassed, totalFailed = runTestsSequential(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
+		results = runTestsSequential(testsByPackage, multiWriter, mdFile, testParallelism, testRunDir)
+	}
+
+	// Calculate totals from results
+	packagesPassed := 0
+	packagesFailed := 0
+	testsPassed := 0
+	testsFailed := 0
+	testsSkipped := 0
+	testsTotal := 0
+
+	for _, result := range results {
+		if result.PackageFailed {
+			packagesFailed++
+		} else {
+			packagesPassed++
+		}
+		testsPassed += result.TestsPassed
+		testsFailed += result.TestsFailed
+		testsSkipped += result.TestsSkipped
+		testsTotal += result.TestsTotal
 	}
 
 	// Parallelism info removed from console for cleaner output
@@ -451,12 +480,18 @@ func TestSuite() int {
 	fmt.Fprintf(multiWriter, "=== Test Run Summary ===\n")
 	fmt.Fprintf(multiWriter, "Suite: %s\n", suite.Name)
 	fmt.Fprintf(multiWriter, "Total packages: %d\n", len(testsByPackage))
-	fmt.Fprintf(multiWriter, "Packages passed: %d\n", totalPassed)
-	fmt.Fprintf(multiWriter, "Packages failed: %d\n", totalFailed)
+	fmt.Fprintf(multiWriter, "Packages passed: %d\n", packagesPassed)
+	fmt.Fprintf(multiWriter, "Packages failed: %d\n", packagesFailed)
 	fmt.Fprintf(multiWriter, "Individual tests discovered: %d\n", len(allTests))
 	fmt.Fprintf(multiWriter, "Production tests: %d\n", len(productionTests))
 	if frameworkTestCount > 0 {
 		fmt.Fprintf(multiWriter, "Framework tests excluded: %d\n", frameworkTestCount)
+	}
+	fmt.Fprintf(multiWriter, "Tests total: %d\n", testsTotal)
+	fmt.Fprintf(multiWriter, "Tests passed: %d\n", testsPassed)
+	fmt.Fprintf(multiWriter, "Tests failed: %d\n", testsFailed)
+	if testsSkipped > 0 {
+		fmt.Fprintf(multiWriter, "Tests skipped: %d\n", testsSkipped)
 	}
 	fmt.Fprintf(multiWriter, "Results directory: %s\n", testRunDir)
 
@@ -473,15 +508,21 @@ func TestSuite() int {
 		fmt.Fprintf(mdFile, "\n---\n\n")
 		fmt.Fprintf(mdFile, "## Summary\n\n")
 
-		// Calculate pass rate
-		passRate := 0.0
-		if len(productionTests) > 0 {
-			passRate = float64(totalPassed) / float64(len(productionTests)) * 100
+		// Calculate rates
+		totalPackages := packagesPassed + packagesFailed
+		packagePassRate := 0.0
+		if totalPackages > 0 {
+			packagePassRate = float64(packagesPassed) / float64(totalPackages) * 100
+		}
+
+		testPassRate := 0.0
+		if testsTotal > 0 {
+			testPassRate = float64(testsPassed) / float64(testsTotal) * 100
 		}
 
 		// Determine final status
 		finalStatus := "✅ PASSED"
-		if totalFailed > 0 {
+		if packagesFailed > 0 {
 			finalStatus = "❌ FAILED"
 		}
 
@@ -495,9 +536,17 @@ func TestSuite() int {
 		if frameworkTestCount > 0 {
 			fmt.Fprintf(mdFile, "| Framework Tests Excluded | %d |\n", frameworkTestCount)
 		}
-		fmt.Fprintf(mdFile, "| Tests Passed | %d ✅ |\n", totalPassed)
-		fmt.Fprintf(mdFile, "| Tests Failed | %d |\n", totalFailed)
-		fmt.Fprintf(mdFile, "| Pass Rate | %.1f%% |\n", passRate)
+		fmt.Fprintf(mdFile, "| **Tests Total** | **%d** |\n", testsTotal)
+		fmt.Fprintf(mdFile, "| Tests Passed | %d ✅ |\n", testsPassed)
+		fmt.Fprintf(mdFile, "| Tests Failed | %d |\n", testsFailed)
+		if testsSkipped > 0 {
+			fmt.Fprintf(mdFile, "| Tests Skipped | %d |\n", testsSkipped)
+		}
+		fmt.Fprintf(mdFile, "| Test Pass Rate | %.1f%% |\n", testPassRate)
+		fmt.Fprintf(mdFile, "| **Packages Total** | **%d** |\n", totalPackages)
+		fmt.Fprintf(mdFile, "| Packages Passed | %d ✅ |\n", packagesPassed)
+		fmt.Fprintf(mdFile, "| Packages Failed | %d |\n", packagesFailed)
+		fmt.Fprintf(mdFile, "| Package Pass Rate | %.1f%% |\n", packagePassRate)
 		fmt.Fprintf(mdFile, "\n")
 
 		// Add links
@@ -533,9 +582,17 @@ func TestSuite() int {
 		if frameworkTestCount > 0 {
 			fmt.Fprintf(mdFile, "| Framework Tests Excluded | %d |\n", frameworkTestCount)
 		}
-		fmt.Fprintf(mdFile, "| Tests Passed | %d ✅ |\n", totalPassed)
-		fmt.Fprintf(mdFile, "| Tests Failed | %d |\n", totalFailed)
-		fmt.Fprintf(mdFile, "| Pass Rate | %.1f%% |\n\n", passRate)
+		fmt.Fprintf(mdFile, "| **Tests Total** | **%d** |\n", testsTotal)
+		fmt.Fprintf(mdFile, "| Tests Passed | %d ✅ |\n", testsPassed)
+		fmt.Fprintf(mdFile, "| Tests Failed | %d |\n", testsFailed)
+		if testsSkipped > 0 {
+			fmt.Fprintf(mdFile, "| Tests Skipped | %d |\n", testsSkipped)
+		}
+		fmt.Fprintf(mdFile, "| Test Pass Rate | %.1f%% |\n", testPassRate)
+		fmt.Fprintf(mdFile, "| **Packages Total** | **%d** |\n", totalPackages)
+		fmt.Fprintf(mdFile, "| Packages Passed | %d ✅ |\n", packagesPassed)
+		fmt.Fprintf(mdFile, "| Packages Failed | %d |\n", packagesFailed)
+		fmt.Fprintf(mdFile, "| Package Pass Rate | %.1f%% |\n\n", packagePassRate)
 
 		fmt.Fprintf(mdFile, "## Files\n\n")
 		fmt.Fprintf(mdFile, "- **Full Log**: [`test-suite.log`](./test-suite.log)\n")
@@ -547,7 +604,7 @@ func TestSuite() int {
 		mdFile.Sync()
 	}
 
-	if totalFailed > 0 {
+	if packagesFailed > 0 {
 		return 1
 	}
 
@@ -656,9 +713,8 @@ func max(a, b int) int {
 }
 
 // runTestsSequential runs tests package by package sequentially
-func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
-	packagesPassed := 0
-	packagesFailed := 0
+func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) []PackageTestResult {
+	results := []PackageTestResult{}
 	packageNum := 0
 
 	for pkgPath, tests := range testsByPackage {
@@ -675,24 +731,18 @@ func runTestsSequential(testsByPackage map[string][]testing.TestReference, multi
 			mdFile.Sync()
 		}
 
-		passed, failed := runPackageTests(pkgPath, tests, multiWriter, mdFile, testParallelism, testRunDir)
-		// Count packages, not individual tests
-		if failed > 0 {
-			packagesFailed++
-		} else if passed > 0 {
-			packagesPassed++
-		}
+		result := runPackageTests(pkgPath, tests, multiWriter, mdFile, testParallelism, testRunDir)
+		results = append(results, result)
 	}
 
-	return packagesPassed, packagesFailed
+	return results
 }
 
 // runTestsParallel runs tests across packages in parallel using goroutines
-func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
-	// Use a mutex to protect shared counters and output
+func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) []PackageTestResult {
+	// Use a mutex to protect shared results
 	var mu sync.Mutex
-	packagesPassed := 0
-	packagesFailed := 0
+	results := []PackageTestResult{}
 
 	// Create a wait group to track all goroutines
 	var wg sync.WaitGroup
@@ -731,15 +781,11 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 			mu.Unlock()
 
 			// Run tests for this package
-			passed, failed := runPackageTests(path, testList, multiWriter, mdFile, testParallelism, testRunDir)
+			result := runPackageTests(path, testList, multiWriter, mdFile, testParallelism, testRunDir)
 
-			// Update totals (thread-safe) - count packages, not individual tests
+			// Append result (thread-safe)
 			mu.Lock()
-			if failed > 0 {
-				packagesFailed++
-			} else if passed > 0 {
-				packagesPassed++
-			}
+			results = append(results, result)
 			mu.Unlock()
 		}(pkgPath, tests, currentPkgNum)
 	}
@@ -747,11 +793,11 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 	// Wait for all packages to complete
 	wg.Wait()
 
-	return packagesPassed, packagesFailed
+	return results
 }
 
-// runPackageTests runs tests for a single package and returns (passed, failed) counts
-func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) (int, int) {
+// runPackageTests runs tests for a single package and returns detailed test results
+func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, mdFile *os.File, testParallelism int, testRunDir string) PackageTestResult {
 	// pkgPath is already workspace-relative (from test grouping phase)
 	// Check if this is a synthetic Godog package key (testrunner:featurefile)
 	var relPkgPath string      // Relative path for display
@@ -799,7 +845,13 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Skip running go test for spec directories (features only, no test code)
 		// These specs are executed by their corresponding test packages
 		// No console output needed - reduces noise in orchestrator output
-		return len(tests), 0
+		return PackageTestResult{
+			TestsPassed:   len(tests),
+			TestsFailed:   0,
+			TestsSkipped:  0,
+			TestsTotal:    len(tests),
+			PackageFailed: false,
+		}
 	}
 
 	// Create absolute paths for cmd.Dir by joining relative paths with workspace root
@@ -826,16 +878,15 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	// Check if this is a Godog test package
 	isGodogTestPackage := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
 
-	// Create modular directory structure for test outputs
-	// Convert package path to directory structure (e.g., "src/commands/tests" -> "src/commands/tests/")
-	// Feature files like "specs/foo/bar/spec.feature" -> "foo/" with output "bar.log"
-	var pkgOutputDir string
-	var logFileName string
+	// Create output file paths for test results
+	// Go packages: organized by module like "src-cli/internal/conf.log"
+	// Feature files: organized like "src-commands/templates.log"
+	var logFilePath string
 
 	if relFeatureFile != "" {
 		// For feature files, strip "specs/" prefix and use parent dir for output
 		// e.g., "specs/src-commands/templates/specification.feature"
-		//    -> output dir: "src-commands/", filename: "templates.log"
+		//    -> output: "src-commands/templates.log"
 		featureDir := filepath.Dir(relFeatureFile)
 		featureDir = strings.TrimPrefix(featureDir, "specs/")
 		featureDir = strings.TrimPrefix(featureDir, "specs\\") // Windows path separator
@@ -845,25 +896,54 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Use the parent directory as the output directory
 		parentDir := filepath.Dir(featureDir)
 
-		pkgOutputDir = filepath.Join(testRunDir, parentDir)
-		logFileName = dirName + ".log"
+		pkgOutputDir := filepath.Join(testRunDir, parentDir)
+		// Create the output directory for feature files
+		if err := os.MkdirAll(pkgOutputDir, 0755); err != nil {
+			fmt.Fprintf(multiWriter, "❌ Failed to create output directory: %v\n\n", err)
+			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
+		}
+
+		logFilePath = filepath.Join(pkgOutputDir, dirName+".log")
 	} else {
-		// For Go packages, use the package path directly
-		pkgOutputDir = filepath.Join(testRunDir, relPkgPath)
-		logFileName = "test.log"
-	}
+		// For Go packages, organize by module directories with flattened subpaths
+		// e.g., "src/cli/internal/conf" -> "src-cli/internal-conf.log"
+		// Extract first two path components as module name (e.g., "src/cli" -> "src-cli")
+		pathParts := strings.Split(filepath.ToSlash(relPkgPath), "/")
 
-	// Create the output directory
-	if err := os.MkdirAll(pkgOutputDir, 0755); err != nil {
-		fmt.Fprintf(multiWriter, "❌ Failed to create output directory: %v\n\n", err)
-		return 0, len(tests)
-	}
+		var moduleName string
+		var fileName string
 
-	logFilePath := filepath.Join(pkgOutputDir, logFileName)
+		if len(pathParts) >= 2 {
+			// Module is first two components joined with hyphen: "src/cli" -> "src-cli"
+			moduleName = pathParts[0] + "-" + pathParts[1]
+			// Remaining path components become flattened filename
+			if len(pathParts) > 2 {
+				// Join remaining parts with hyphens: "internal/conf" -> "internal-conf"
+				fileName = strings.Join(pathParts[2:], "-") + ".log"
+			} else {
+				// For packages at module root (e.g., "src/commands")
+				fileName = "root.log"
+			}
+		} else {
+			// Fallback for unexpected paths
+			moduleName = strings.Join(pathParts, "-")
+			fileName = "root.log"
+		}
+
+		// Create module directory
+		moduleDir := filepath.Join(testRunDir, moduleName)
+		if err := os.MkdirAll(moduleDir, 0755); err != nil {
+			fmt.Fprintf(multiWriter, "❌ Failed to create output directory: %v\n\n", err)
+			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
+		}
+
+		// Create log file path directly under module directory
+		logFilePath = filepath.Join(moduleDir, fileName)
+	}
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
 		fmt.Fprintf(multiWriter, "❌ Failed to create log file: %v\n\n", err)
-		return 0, len(tests)
+		return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
 	}
 	defer logFile.Close()
 
@@ -883,10 +963,14 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 
+	// Set test run ID environment variable for all tests
+	// This allows commands like "build" to redirect outputs to test directory
+	cmd.Env = os.Environ()
+	testRunID := filepath.Base(testRunDir)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("R2R_TEST_RUN_ID=%s", testRunID))
+
 	// For Godog test packages, set GODOG environment variables
 	if isGodogTestPackage {
-		// Start with base environment
-		cmd.Env = os.Environ()
 
 		// Set format for console output
 		cmd.Env = append(cmd.Env, "GODOG_FORMAT=progress")
@@ -896,14 +980,16 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Reports are only generated for individual feature files in specs/
 		if relFeatureFile != "" {
 			// Set output directory for cucumber.json/junit.xml reports
-			// Use the package-specific output directory for modular structure
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", pkgOutputDir))
+			// For feature files, this is the parent directory (e.g., "out/test/commit/src-commands/")
+			reportOutputDir := filepath.Dir(logFilePath)
+			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", reportOutputDir))
 
 			// Set report format (default to cucumber for BDD tests)
 			cmd.Env = append(cmd.Env, "GODOG_REPORT_FORMAT=cucumber")
 
-			// Use the directory name for the report (e.g., "templates.cucumber.json")
-			reportName := strings.TrimSuffix(logFileName, ".log") + ".cucumber.json"
+			// Extract report name from log file path (e.g., "templates.log" -> "templates.cucumber.json")
+			logBaseName := filepath.Base(logFilePath)
+			reportName := strings.TrimSuffix(logBaseName, ".log") + ".cucumber.json"
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_NAME=%s", reportName))
 		}
 
@@ -924,7 +1010,8 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// The godog test loads the tag contract and builds skip filter automatically
 		fmt.Fprintf(logFile, "✨ Skip tags will be loaded from tag contract in godog_test.go\n\n")
 		if relFeatureFile != "" {
-			reportName := strings.TrimSuffix(logFileName, ".log") + ".cucumber.json"
+			logBaseName := filepath.Base(logFilePath)
+			reportName := strings.TrimSuffix(logBaseName, ".log") + ".cucumber.json"
 			fmt.Fprintf(logFile, "📊 Test report will be saved as: %s\n\n", reportName)
 		}
 	}
@@ -956,7 +1043,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 				fmt.Fprintf(mdFile, "  - ❌ Failed (exit code: %d) - %s\n", exitErr.ExitCode(), failureReason)
 				mdFile.Sync()
 			}
-			return 0, len(tests)
+			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
 		} else {
 			testType := "go"
 			testCountInfo := fmt.Sprintf("(0/%d)", len(tests))
@@ -975,7 +1062,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 				fmt.Fprintf(mdFile, "  - ❌ Error: %v\n", err)
 				mdFile.Sync()
 			}
-			return 0, len(tests)
+			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
 		}
 	}
 
@@ -999,7 +1086,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		fmt.Fprintf(mdFile, "  - ✅ Passed\n")
 		mdFile.Sync()
 	}
-	return len(tests), 0
+	return PackageTestResult{TestsPassed: len(tests), TestsFailed: 0, TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: false}
 }
 
 // extractGodogScenarioCounts parses godog test output to extract scenario counts
