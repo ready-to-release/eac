@@ -8,6 +8,7 @@ forbidden_prefixes:
   - "I've"
   - "I'm"
   - "I can see"
+  - "I need to"
   - "Looking at"
   - "Now"
   - "You are now"
@@ -21,12 +22,20 @@ forbidden_prefixes:
   - "Can I"
   - "Shall I"
   - "According to"
+  - "However,"
+  - "But the"
 
 forbidden_contains:
   - "ready to assist"
   - "**Initialized and ready"
   - "**INITIALIZED"
   - "Loading project context"
+  - "I need to understand"
+  - "Let me examine"
+  - "Let me clarify"
+  - "validation errors indicate"
+  - "Which would you like"
+  - "Are you asking me"
 
 forbidden_emojis:
   - "🚀"
