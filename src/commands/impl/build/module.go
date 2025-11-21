@@ -909,6 +909,19 @@ func buildScriptsSh(module *modules.ModuleContract, workspaceRoot string, output
 
 	fmt.Fprintf(logWriter, "🐚 Found %d shell script(s) to validate\n", len(shellFiles))
 
+	// Check if bash is available
+	checkCmd := exec.Command("bash", "--version")
+	if err := checkCmd.Run(); err != nil {
+		// Bash not available (common on Windows without WSL)
+		if runtime.GOOS == "windows" {
+			fmt.Fprintf(logWriter, "⚠️  Skipping validation: bash not available (WSL not configured)\n")
+			fmt.Fprintf(logWriter, "   Shell scripts found but not validated on Windows\n")
+			return 0
+		}
+		fmt.Fprintf(logWriter, "❌ bash not found: %v\n", err)
+		return 1
+	}
+
 	validationErrors := 0
 	for _, shellFile := range shellFiles {
 		relPath, _ := filepath.Rel(moduleRoot, shellFile)
