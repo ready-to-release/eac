@@ -9,12 +9,16 @@
 // Long: containing logs, reports, and summary information for each module. Failed tests
 // Long: are clearly marked and do not stop the execution of remaining modules.
 // Long:
+// Long: Use --suite to filter tests by suite. The default suite is "commit".
+// Long:
 // Long: Example:
 // Long:   test modules                     # Test all modules
 // Long:   test modules src-core src-cli    # Test specific modules
 // Long:   test modules --as-junit          # Generate JUnit XML reports
+// Long:   test modules --suite integration # Test with integration suite
 // Flag.as-cucumber: type=bool, usage=Output test results in Cucumber JSON format
 // Flag.as-junit: type=bool, usage=Output test results in JUnit XML format
+// Flag.suite: type=string, usage=Filter tests by suite (default: "commit")
 // HasSideEffects: false
 package test
 
@@ -41,10 +45,11 @@ func init() {
 
 // TestModules tests multiple modules in sequence (defaults to all modules)
 func TestModules() int {
-	// Parse module monikers and flags (default: cucumber format)
+	// Parse module monikers and flags (default: cucumber format, commit suite)
 	var monikers []string
 	reportFormat := "cucumber"
 	generateOnly := false
+	suiteName := "commit" // Default suite
 
 	// Parse arguments starting from index 3 (skip "binary", "test", "modules")
 	for i := 3; i < len(os.Args); i++ {
@@ -57,13 +62,21 @@ func TestModules() int {
 			// Legacy flag - no longer used
 		} else if arg == "--generate-only" {
 			generateOnly = true
+		} else if arg == "--suite" {
+			// Read suite name from next argument
+			if i+1 >= len(os.Args) {
+				fmt.Fprintf(os.Stderr, "Error: --suite requires a suite name\n")
+				return 1
+			}
+			i++
+			suiteName = os.Args[i]
 		} else if strings.HasPrefix(arg, "--as-") {
 			fmt.Fprintf(os.Stderr, "Error: unknown format flag: %s\n", arg)
 			fmt.Fprintf(os.Stderr, "Valid formats: --as-cucumber (default), --as-junit\n")
 			return 1
 		} else if strings.HasPrefix(arg, "--") {
 			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid flags: --as-cucumber, --as-junit, --no-generate, --generate-only\n")
+			fmt.Fprintf(os.Stderr, "Valid flags: --as-cucumber, --as-junit, --no-generate, --generate-only, --suite <name>\n")
 			return 1
 		} else {
 			monikers = append(monikers, arg)
@@ -181,7 +194,7 @@ func TestModules() int {
 		TrackTestStart(moniker)
 
 		// Run tests for this module
-		exitCode := runModuleTest(module, workspaceRoot, moduleOutputDir, multiWriter, reportFormat)
+		exitCode := runModuleTest(module, workspaceRoot, moduleOutputDir, multiWriter, reportFormat, suiteName)
 
 		// Track test completion
 		TrackTestComplete(moniker)
@@ -229,7 +242,7 @@ func TestModules() int {
 }
 
 // runModuleTest runs tests for a single module
-func runModuleTest(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string) int {
+func runModuleTest(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	// Get test function for module type
 	testFunc, hasTester := testFunctions[module.Type]
 	if !hasTester {
@@ -238,7 +251,7 @@ func runModuleTest(module *modules.ModuleContract, workspaceRoot string, outputD
 	}
 
 	// Execute the test function
-	return testFunc(module, workspaceRoot, outputDir, logWriter, reportFormat)
+	return testFunc(module, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
 }
 
 // generateMultiModuleGherkinSummary generates a consolidated BDD summary for all modules
