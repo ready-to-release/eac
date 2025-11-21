@@ -8,7 +8,7 @@ const (
 	WorkspaceFileName = "workspace.dsl"
 	WorkspaceJSONFile = "workspace.json"
 	SpecsDirectory    = "specs"
-	DesignDirectory   = "design"
+	DesignDirectory   = ".design"
 	SourceDirectory   = "src"
 	OutputDirectory   = "out"
 

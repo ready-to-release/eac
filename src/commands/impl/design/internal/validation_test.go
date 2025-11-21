@@ -81,11 +81,11 @@ func TestCleanModuleName(t *testing.T) {
 		{"remove specs prefix windows", "specs\\src-cli", "src-cli"},
 		{"remove design suffix", "src-cli/design", "src-cli"},
 		{"remove design suffix windows", "src-cli\\design", "src-cli"},
-		{"remove both", "specs/src-cli/design", "src-cli"},
-		{"remove both windows", "specs\\src-cli\\design", "src-cli"},
+		{"remove both", "specs/src-cli/.design", "src-cli"},
+		{"remove both windows", "specs\\src-cli\\.design", "src-cli"},
 		{"remove src prefix", "src/commands", "commands"},
 		{"remove src prefix windows", "src\\commands", "commands"},
-		{"complex", "specs/src/commands/design", "commands"},
+		{"complex", "specs/src/commands/.design", "commands"},
 	}
 
 	for _, tt := range tests {

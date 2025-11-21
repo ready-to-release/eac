@@ -139,7 +139,7 @@ func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*Validatio
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Construct workspace path: specs/<module>/design/workspace.dsl
+	// Construct workspace path: specs/<module>/.design/workspace.dsl
 	workspacePath := filepath.Join(repoRoot, SpecsDirectory, moduleName, DesignDirectory, WorkspaceFileName)
 
 	// Verify workspace file exists
