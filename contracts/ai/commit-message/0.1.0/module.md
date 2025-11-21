@@ -17,4 +17,10 @@ Your output must:
 - Line 4: Empty
 - Lines 5+: Body text (2-4 sentences, wrapped at 72 chars)
 
-Output only the module section. No markdown fences, no extra text.
+CRITICAL: Output ONLY the module section.
+- NO questions like "Which would you like me to generate?"
+- NO clarifications like "I need to understand"
+- NO explanations like "Let me examine"
+- NO markdown fences
+- NO conversational text
+Just the module section content as shown in the example above.
