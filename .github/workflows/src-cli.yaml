@@ -74,4 +74,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-src-cli
-          path: out/test-results/**/src-cli/**
+          path: out/test/**/src-cli/**

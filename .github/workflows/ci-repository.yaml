@@ -9,6 +9,13 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
+    inputs:
+      trigger-all:
+        description: 'Trigger all workflows regardless of changes'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   detect-changes:
@@ -29,21 +36,30 @@ jobs:
       - name: Detect Changed Modules
         id: detect
         run: |
-          # Get changed modules using existing command
           cd src/commands
-          MODULES=$(go run . "get changed modules" --as-json | jq -r '.modules | join(" ")')
 
-          # Filter to only Go modules that have workflows
-          WORKFLOW_MODULES=""
-          for module in $MODULES; do
-            if [ -f ".github/workflows/${module}.yaml" ]; then
-              WORKFLOW_MODULES="$WORKFLOW_MODULES $module"
-            fi
-          done
-          WORKFLOW_MODULES=$(echo $WORKFLOW_MODULES | xargs)
+          # Check if trigger-all is enabled
+          TRIGGER_ALL="${{ inputs.trigger-all }}"
 
-          echo "All changed modules: $MODULES"
-          echo "Modules with workflows: $WORKFLOW_MODULES"
+          if [ "$TRIGGER_ALL" = "true" ]; then
+            echo "Trigger all mode enabled - running all workflows"
+            WORKFLOW_MODULES="src-cli src-commands src-core src-mcp-commands src-mcp-github"
+          else
+            # Get changed modules using existing command
+            MODULES=$(go run . "get changed modules" --as-json | jq -r '.modules | join(" ")')
+
+            # Filter to only Go modules that have workflows
+            WORKFLOW_MODULES=""
+            for module in $MODULES; do
+              if [ -f ".github/workflows/${module}.yaml" ]; then
+                WORKFLOW_MODULES="$WORKFLOW_MODULES $module"
+              fi
+            done
+            WORKFLOW_MODULES=$(echo $WORKFLOW_MODULES | xargs)
+
+            echo "All changed modules: $MODULES"
+            echo "Modules with workflows: $WORKFLOW_MODULES"
+          fi
 
           if [ -n "$WORKFLOW_MODULES" ]; then
             echo "modules=$WORKFLOW_MODULES" >> $GITHUB_OUTPUT
