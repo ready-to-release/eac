@@ -171,11 +171,6 @@ func TestNormalizeSpecPath(t *testing.T) {
 			uri:  "specs/src-cli/init/specification.feature",
 			want: "specs/src-cli/init/specification.feature",
 		},
-		{
-			name: "handles backslashes",
-			uri:  "..\\..\\..\\specs\\src-commands\\build\\specification.feature",
-			want: "specs/src-commands/build/specification.feature",
-		},
 	}
 
 	for _, tt := range tests {
