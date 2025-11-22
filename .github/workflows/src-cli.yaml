@@ -64,8 +64,9 @@ jobs:
 
       - name: Restore Executable Permissions
         run: |
-          chmod +x out/build/src-cli/linux-r2r-cli
-          chmod +x out/build/src-cli/darwin-r2r-cli
+          chmod +x out/build/src-cli/r2r-linux
+          chmod +x out/build/src-cli/r2r-darwin-amd64
+          chmod +x out/build/src-cli/r2r-darwin-arm64
 
       - name: Test Module
         working-directory: ./src/commands
