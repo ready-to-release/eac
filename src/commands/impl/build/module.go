@@ -46,7 +46,8 @@ type BuildOptions struct {
 	WindowsOnly bool
 	LinuxOnly   bool
 	MacOSOnly   bool
-	TidyFirst   bool // Run go mod tidy before building
+	TidyFirst   bool   // Run go mod tidy before building
+	Version     string // Version to inject via ldflags
 }
 
 // BuildFunc is the signature for module type build functions
@@ -89,7 +90,7 @@ func BuildModule() int {
 	// Parse arguments
 	if len(os.Args) < 4 {
 		fmt.Fprintf(os.Stderr, "Error: missing module moniker\n")
-		fmt.Fprintf(os.Stderr, "Usage: build module <moniker> [--windows-only|--linux-only|--macos-only] [--tidy-first|--no-tidy]\n")
+		fmt.Fprintf(os.Stderr, "Usage: build module <moniker> [--windows-only|--linux-only|--macos-only] [--tidy-first|--no-tidy] [--version <version>]\n")
 		return 1
 	}
 
@@ -104,6 +105,7 @@ func BuildModule() int {
 	macosOnly := false
 	tidyFirst := !isCI // Default: true for local, false for CI
 	tidyExplicitlySet := false
+	version := ""      // Version to inject via ldflags
 
 	for i := 4; i < len(os.Args); i++ {
 		switch os.Args[i] {
@@ -119,6 +121,11 @@ func BuildModule() int {
 		case "--no-tidy":
 			tidyFirst = false
 			tidyExplicitlySet = true
+		case "--version":
+			if i+1 < len(os.Args) {
+				version = os.Args[i+1]
+				i++ // Skip the next arg since it's the version value
+			}
 		}
 	}
 
@@ -208,6 +215,7 @@ func BuildModule() int {
 		LinuxOnly:   linuxOnly,
 		MacOSOnly:   macosOnly,
 		TidyFirst:   tidyFirst,
+		Version:     version,
 	}
 
 	// Log tidy behavior
@@ -262,6 +270,7 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	platforms := []Platform{
 		{GOOS: "windows", GOARCH: "amd64", Ext: ".exe", Name: "Windows x64"},
 		{GOOS: "linux", GOARCH: "amd64", Ext: "", Name: "Linux x64"},
+		{GOOS: "darwin", GOARCH: "amd64", Ext: "", Name: "macOS Intel"},
 		{GOOS: "darwin", GOARCH: "arm64", Ext: "", Name: "macOS ARM64"},
 	}
 
@@ -281,13 +290,24 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	// Build for each target platform
 	for _, platform := range targetPlatforms {
 		binaryName := "r2r-cli" + platform.Ext
-		binaryPath := filepath.Join(outputDir, fmt.Sprintf("%s-%s", platform.GOOS, binaryName))
+		// Include architecture in filename for better clarity (e.g., linux-amd64-r2r-cli)
+		binaryPath := filepath.Join(outputDir, fmt.Sprintf("%s-%s-%s", platform.GOOS, platform.GOARCH, binaryName))
 
 		fmt.Fprintf(logWriter, "\n--- Building for %s (%s/%s) ---\n", platform.Name, platform.GOOS, platform.GOARCH)
 		fmt.Fprintf(logWriter, "Output: %s\n", binaryPath)
 
+		// Prepare build arguments
+		buildArgs := []string{"build", "-o", binaryPath}
+
+		// Add ldflags with version if provided
+		if opts.Version != "" {
+			ldflags := fmt.Sprintf("-X 'github.com/ready-to-release/eac/src/cli/cmd.Version=%s'", opts.Version)
+			buildArgs = append(buildArgs, "-ldflags", ldflags)
+			fmt.Fprintf(logWriter, "Version: %s\n", opts.Version)
+		}
+
 		// Set GOOS and GOARCH environment variables
-		cmd := exec.Command("go", "build", "-o", binaryPath)
+		cmd := exec.Command("go", buildArgs...)
 		cmd.Dir = moduleRoot
 		cmd.Stdout = logWriter
 		cmd.Stderr = logWriter

@@ -14,6 +14,7 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/init"
 	_ "github.com/ready-to-release/eac/src/commands/impl/list"
 	_ "github.com/ready-to-release/eac/src/commands/impl/pipeline"
+	_ "github.com/ready-to-release/eac/src/commands/impl/release"
 	_ "github.com/ready-to-release/eac/src/commands/impl/show"
 	_ "github.com/ready-to-release/eac/src/commands/impl/specs"
 	_ "github.com/ready-to-release/eac/src/commands/impl/specs/create"
