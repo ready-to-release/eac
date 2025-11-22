@@ -289,9 +289,15 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 
 	// Build for each target platform
 	for _, platform := range targetPlatforms {
-		binaryName := "r2r-cli" + platform.Ext
-		// Include architecture in filename for better clarity (e.g., linux-amd64-r2r-cli)
-		binaryPath := filepath.Join(outputDir, fmt.Sprintf("%s-%s-%s", platform.GOOS, platform.GOARCH, binaryName))
+		// For macOS, include architecture to distinguish Intel vs Apple Silicon
+		// For other platforms, just use OS name
+		var binaryName string
+		if platform.GOOS == "darwin" {
+			binaryName = fmt.Sprintf("r2r-%s-%s%s", platform.GOOS, platform.GOARCH, platform.Ext)
+		} else {
+			binaryName = fmt.Sprintf("r2r-%s%s", platform.GOOS, platform.Ext)
+		}
+		binaryPath := filepath.Join(outputDir, binaryName)
 
 		fmt.Fprintf(logWriter, "\n--- Building for %s (%s/%s) ---\n", platform.Name, platform.GOOS, platform.GOARCH)
 		fmt.Fprintf(logWriter, "Output: %s\n", binaryPath)

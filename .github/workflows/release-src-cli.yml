@@ -39,36 +39,27 @@ jobs:
           echo "Building src-cli with version $VERSION using build command..."
           go run ./src/commands build module src-cli --version "$VERSION" --no-tidy
 
-          echo "Copying binaries to release directory..."
-          mkdir -p out
-          cp out/build/src-cli/linux-amd64-r2r-cli out/r2r-linux-amd64
-          cp out/build/src-cli/darwin-amd64-r2r-cli out/r2r-darwin-amd64
-          cp out/build/src-cli/darwin-arm64-r2r-cli out/r2r-darwin-arm64
-          cp out/build/src-cli/windows-amd64-r2r-cli.exe out/r2r-windows-amd64.exe
-
       - name: Verify binaries
         run: |
           echo "Verifying built binaries..."
-          ls -lh out/
+          ls -lh out/build/src-cli/
 
           echo ""
           echo "Testing Linux binary version:"
-          chmod +x out/r2r-linux-amd64
-          ./out/r2r-linux-amd64 version || true
+          chmod +x out/build/src-cli/r2r-linux
+          ./out/build/src-cli/r2r-linux version || true
 
           echo ""
           echo "Testing Darwin AMD64 binary:"
-          chmod +x out/r2r-darwin-amd64
-          file out/r2r-darwin-amd64
+          file out/build/src-cli/r2r-darwin-amd64
 
           echo ""
           echo "Testing Darwin ARM64 binary:"
-          chmod +x out/r2r-darwin-arm64
-          file out/r2r-darwin-arm64
+          file out/build/src-cli/r2r-darwin-arm64
 
           echo ""
           echo "Testing Windows binary:"
-          file out/r2r-windows-amd64.exe
+          file out/build/src-cli/r2r-windows.exe
 
       - name: Create release notes
         id: release_notes
@@ -84,10 +75,10 @@ jobs:
 
           Download the appropriate binary for your platform:
 
-          - **Linux (AMD64)**: \`r2r-linux-amd64\`
+          - **Linux (AMD64)**: \`r2r-linux\`
           - **macOS (Intel)**: \`r2r-darwin-amd64\`
           - **macOS (Apple Silicon)**: \`r2r-darwin-arm64\`
-          - **Windows (AMD64)**: \`r2r-windows-amd64.exe\`
+          - **Windows (AMD64)**: \`r2r-windows.exe\`
 
           Make the binary executable (Linux/macOS):
           \`\`\`bash
@@ -96,7 +87,10 @@ jobs:
 
           Verify the installation:
           \`\`\`bash
-          ./r2r-* version
+          ./r2r-linux version     # Linux
+          ./r2r-darwin-amd64 version  # macOS Intel
+          ./r2r-darwin-arm64 version  # macOS Apple Silicon
+          r2r-windows.exe version     # Windows
           \`\`\`
 
           ## Release Information
@@ -121,10 +115,10 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            out/r2r-linux-amd64
-            out/r2r-darwin-amd64
-            out/r2r-darwin-arm64
-            out/r2r-windows-amd64.exe
+            out/build/src-cli/r2r-linux
+            out/build/src-cli/r2r-darwin-amd64
+            out/build/src-cli/r2r-darwin-arm64
+            out/build/src-cli/r2r-windows.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -135,9 +129,9 @@ jobs:
           echo "✅ Released r2r CLI version **${{ steps.extract_version.outputs.version }}**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-linux-amd64" >> $GITHUB_STEP_SUMMARY
+          echo "- r2r-linux" >> $GITHUB_STEP_SUMMARY
           echo "- r2r-darwin-amd64" >> $GITHUB_STEP_SUMMARY
           echo "- r2r-darwin-arm64" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-windows-amd64.exe" >> $GITHUB_STEP_SUMMARY
+          echo "- r2r-windows.exe" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract_version.outputs.tag_name }})" >> $GITHUB_STEP_SUMMARY
