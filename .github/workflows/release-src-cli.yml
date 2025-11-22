@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'src-cli:*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (semver format: x.y.z)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,14 +24,46 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract version from tag
+      - name: Extract and validate version
         id: extract_version
         run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
-          VERSION="${TAG_NAME#src-cli:}"
+          # Determine version based on trigger type
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            TAG_NAME="src-cli:$VERSION"
+            echo "Manual trigger with version: $VERSION"
+          else
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            VERSION="${TAG_NAME#src-cli:}"
+            echo "Tag trigger with version: $VERSION"
+          fi
+
+          # Validate semver format (x.y.z where x, y, z are non-negative integers)
+          if ! echo "$VERSION" | grep -E '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' > /dev/null; then
+            echo "Error: Invalid semver format: $VERSION"
+            echo "Expected format: x.y.z (e.g., 1.0.0)"
+            exit 1
+          fi
+
+          # Reject versions with 'v' prefix
+          if echo "$VERSION" | grep -E '^v' > /dev/null; then
+            echo "Error: Version should not have 'v' prefix: $VERSION"
+            echo "Use x.y.z format (e.g., 1.0.0 not v1.0.0)"
+            exit 1
+          fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
+          echo "✅ Valid semver: $VERSION"
+
+      - name: Create tag (manual trigger only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.extract_version.outputs.tag_name }}" -m "Release ${{ steps.extract_version.outputs.tag_name }}"
+          git push origin "${{ steps.extract_version.outputs.tag_name }}"
+          echo "✅ Created and pushed tag: ${{ steps.extract_version.outputs.tag_name }}"
 
       - name: Set up Go
         uses: actions/setup-go@v5
