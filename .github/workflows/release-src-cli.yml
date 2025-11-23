@@ -41,7 +41,25 @@ jobs:
 
             # Debug: show all workflow runs for this commit across all workflows
             echo "All workflows for commit $COMMIT_SHA:"
-            gh run list --commit $COMMIT_SHA --limit 5
+            gh run list --commit $COMMIT_SHA --limit 5 --json name,status,conclusion --jq '.[] | "\(.status)\t\(.conclusion // "n/a")\t\(.name)"'
+
+            # Check if ci-repository (Change Trigger) is still running
+            CI_REPO_STATUS=$(gh run list \
+              --commit $COMMIT_SHA \
+              --workflow ci-repository.yaml \
+              --json status \
+              --jq '.[0].status // "not_found"')
+
+            echo ""
+            echo "ci-repository.yaml status: $CI_REPO_STATUS"
+
+            if [ "$CI_REPO_STATUS" = "in_progress" ] || [ "$CI_REPO_STATUS" = "queued" ]; then
+              echo "⏳ CI orchestrator is still running - it will trigger src-cli workflow"
+              echo "Waiting ${CHECK_INTERVAL}s for orchestrator to complete..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
 
             # Get all runs for this commit and analyze them
             RUNS=$(gh run list \
@@ -54,8 +72,6 @@ jobs:
             echo "Debug - src-cli.yaml workflow: API returned $(echo "$RUNS" | jq 'length') runs"
             if [ "$(echo "$RUNS" | jq 'length')" -gt "0" ]; then
               echo "$RUNS" | jq -c '.[] | {status, conclusion, createdAt}'
-            else
-              echo "No runs found - raw response: $RUNS"
             fi
 
             # Count runs by status
