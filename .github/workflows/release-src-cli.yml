@@ -164,22 +164,26 @@ jobs:
           echo "Verifying built binaries..."
           ls -lh out/build/src-cli/
 
+          # Check all required files exist
+          REQUIRED_FILES=(
+            "out/build/src-cli/r2r-linux"
+            "out/build/src-cli/r2r-darwin-amd64"
+            "out/build/src-cli/r2r-darwin-arm64"
+            "out/build/src-cli/r2r-windows.exe"
+          )
+
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Error: Required file missing: $file"
+              exit 1
+            fi
+            echo "✅ Found: $file ($(stat -f%z "$file" 2>/dev/null || stat -c%s "$file") bytes)"
+          done
+
           echo ""
           echo "Testing Linux binary version:"
           chmod +x out/build/src-cli/r2r-linux
           ./out/build/src-cli/r2r-linux version || true
-
-          echo ""
-          echo "Testing Darwin AMD64 binary:"
-          file out/build/src-cli/r2r-darwin-amd64
-
-          echo ""
-          echo "Testing Darwin ARM64 binary:"
-          file out/build/src-cli/r2r-darwin-arm64
-
-          echo ""
-          echo "Testing Windows binary:"
-          file out/build/src-cli/r2r-windows.exe
 
       - name: Create release notes
         id: release_notes
@@ -227,13 +231,15 @@ jobs:
           cat release_notes.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        id: create_release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.extract_version.outputs.tag_name }}
           name: "r2r CLI v${{ steps.extract_version.outputs.version }}"
           body_path: release_notes.md
           draft: false
           prerelease: false
+          fail_on_unmatched_files: true
           files: |
             out/build/src-cli/r2r-linux
             out/build/src-cli/r2r-darwin-amd64
@@ -241,6 +247,13 @@ jobs:
             out/build/src-cli/r2r-windows.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify release assets
+        run: |
+          echo "Checking uploaded assets for release..."
+          gh release view ${{ steps.extract_version.outputs.tag_name }} --json assets --jq '.assets[] | .name'
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Summary
         run: |
