@@ -28,6 +28,15 @@ jobs:
         run: |
           echo "Checking if CI has passed for src-cli module..."
           COMMIT_SHA="${{ github.sha }}"
+          echo "Commit SHA: $COMMIT_SHA"
+          echo "Repository: ${{ github.repository }}"
+
+          # List all runs for this commit to debug
+          echo "All workflow runs for this commit:"
+          gh run list --commit $COMMIT_SHA --limit 10
+
+          echo ""
+          echo "Checking for successful src-cli.yaml runs..."
 
           # Use gh run list - simplest approach
           RUN_COUNT=$(gh run list \
@@ -35,7 +44,7 @@ jobs:
             --workflow src-cli.yaml \
             --status success \
             --json conclusion \
-            --jq 'length')
+            --jq 'length' || echo "0")
 
           echo "Found $RUN_COUNT successful CI run(s) for commit $COMMIT_SHA"
 
