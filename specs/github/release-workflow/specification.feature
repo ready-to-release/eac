@@ -14,7 +14,7 @@ Rule: Workflow triggers on release tags matching pattern
   @skip:todo @L2 @ov @deps:git @depm:src-cli
   Scenario: Workflow triggers when tag matches src-cli pattern
     Given a git repository with src-cli source code
-    When a git tag matching pattern "src-cli:*" is created
+    When a git tag matching pattern "src-cli/*" is created
     And the tag is pushed to origin
     Then the GitHub Actions workflow is triggered
     And the workflow job completes successfully
@@ -36,6 +36,6 @@ Rule: GitHub release is created with built artifacts
     Given the workflow has built binaries for all platforms
     And the version "1.2.3" is extracted from the tag
     When the workflow creates a GitHub release
-    Then a release is created with tag "src-cli:1.2.3"
+    Then a release is created with tag "src-cli/1.2.3"
     And all platform binaries are attached to the release
     And the release includes installation instructions

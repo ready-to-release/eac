@@ -3,7 +3,7 @@ name: "Release src-cli"
 on:
   push:
     tags:
-      - 'src-cli:*'
+      - 'src-cli/*'
   workflow_dispatch:
     inputs:
       version:
@@ -24,17 +24,53 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check CI status
+        run: |
+          echo "Checking if CI has passed for src-cli module..."
+
+          # Get the commit SHA to check
+          COMMIT_SHA="${{ github.sha }}"
+
+          # Check for successful ci-src-cli workflow run on this commit
+          # Using gh CLI to query workflow runs
+          gh api \
+            repos/${{ github.repository }}/actions/workflows/src-cli.yaml/runs \
+            -f status=completed \
+            -f conclusion=success \
+            -f head_sha=$COMMIT_SHA \
+            --jq '.workflow_runs | length' > run_count.txt
+
+          RUN_COUNT=$(cat run_count.txt)
+
+          if [ "$RUN_COUNT" -eq "0" ]; then
+            echo "❌ Error: No successful CI run found for commit $COMMIT_SHA"
+            echo ""
+            echo "The src-cli CI workflow must pass before releasing."
+            echo "Please ensure 'ci-src-cli (stage 1-6)' workflow has completed successfully."
+            echo ""
+            echo "You can:"
+            echo "1. Wait for the CI workflow to complete"
+            echo "2. Check workflow status at: https://github.com/${{ github.repository }}/actions/workflows/src-cli.yaml"
+            echo "3. Re-run this release workflow after CI passes"
+            exit 1
+          fi
+
+          echo "✅ CI has passed for commit $COMMIT_SHA"
+          echo "Found $RUN_COUNT successful CI run(s)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Extract and validate version
         id: extract_version
         run: |
           # Determine version based on trigger type
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
-            TAG_NAME="src-cli:$VERSION"
+            TAG_NAME="src-cli/$VERSION"
             echo "Manual trigger with version: $VERSION"
           else
             TAG_NAME="${GITHUB_REF#refs/tags/}"
-            VERSION="${TAG_NAME#src-cli:}"
+            VERSION="${TAG_NAME#src-cli/}"
             echo "Tag trigger with version: $VERSION"
           fi
 
@@ -56,14 +92,58 @@ jobs:
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "✅ Valid semver: $VERSION"
 
+      - name: Check for existing release
+        run: |
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+
+          # Check if a GitHub release already exists for this tag
+          # gh release view returns exit code 1 if release doesn't exist
+          if gh release view "$TAG_NAME" 2>/dev/null; then
+            echo ""
+            echo "❌ Error: Release already exists for tag $TAG_NAME"
+            echo ""
+            echo "A GitHub release has already been created for this version."
+            echo "If you want to create a new release:"
+            echo "1. Delete the existing release: gh release delete $TAG_NAME"
+            echo "2. Delete the tag: git push --delete origin $TAG_NAME"
+            echo "3. Re-run this workflow"
+            echo ""
+            echo "Or increment the version number for a new release."
+            exit 1
+          fi
+
+          echo "✅ No existing release found for $TAG_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Create tag (manual trigger only)
         if: github.event_name == 'workflow_dispatch'
         run: |
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+
+          echo "Preparing to create tag: $TAG_NAME"
+
+          # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.extract_version.outputs.tag_name }}" -m "Release ${{ steps.extract_version.outputs.tag_name }}"
-          git push origin "${{ steps.extract_version.outputs.tag_name }}"
-          echo "✅ Created and pushed tag: ${{ steps.extract_version.outputs.tag_name }}"
+
+          # Fetch all tags from remote
+          echo "Fetching existing tags..."
+          git fetch --tags --force
+
+          # Check if tag already exists (locally or remote)
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "ℹ️  Tag $TAG_NAME already exists"
+            echo "Using existing tag for release"
+          else
+            echo "Creating new tag: $TAG_NAME"
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+
+            echo "Pushing tag to remote..."
+            git push origin "$TAG_NAME"
+
+            echo "✅ Created and pushed tag: $TAG_NAME"
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v5
