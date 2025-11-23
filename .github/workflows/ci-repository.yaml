@@ -129,7 +129,7 @@ jobs:
       - name: Trigger src-cli workflow
         run: |
           gh workflow run src-cli.yaml \
-            --ref ${{ github.ref }} \
+            --ref ${{ github.ref_name }} \
             -f ref=${{ github.ref }} \
             -f sha=${{ github.sha }}
         env:
@@ -146,7 +146,7 @@ jobs:
       - name: Trigger src-commands workflow
         run: |
           gh workflow run src-commands.yaml \
-            --ref ${{ github.ref }} \
+            --ref ${{ github.ref_name }} \
             -f ref=${{ github.ref }} \
             -f sha=${{ github.sha }}
         env:
@@ -163,7 +163,7 @@ jobs:
       - name: Trigger src-core workflow
         run: |
           gh workflow run src-core.yaml \
-            --ref ${{ github.ref }} \
+            --ref ${{ github.ref_name }} \
             -f ref=${{ github.ref }} \
             -f sha=${{ github.sha }}
         env:
@@ -180,7 +180,7 @@ jobs:
       - name: Trigger src-mcp-commands workflow
         run: |
           gh workflow run src-mcp-commands.yaml \
-            --ref ${{ github.ref }} \
+            --ref ${{ github.ref_name }} \
             -f ref=${{ github.ref }} \
             -f sha=${{ github.sha }}
         env:
