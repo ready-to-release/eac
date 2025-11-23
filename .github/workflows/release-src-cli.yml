@@ -31,15 +31,19 @@ jobs:
           # Get the commit SHA to check
           COMMIT_SHA="${{ github.sha }}"
 
-          # Check for successful src-cli workflow run on this commit
+          # First, get all workflow runs for this commit and filter by workflow name
+          echo "Querying workflow runs for commit: $COMMIT_SHA"
+
           gh api \
-            repos/${{ github.repository }}/actions/workflows/src-cli.yaml/runs \
-            -f status=completed \
-            -f conclusion=success \
+            repos/${{ github.repository }}/actions/runs \
             -f head_sha=$COMMIT_SHA \
-            --jq '.workflow_runs | length' > run_count.txt
+            -f status=completed \
+            -f per_page=100 \
+            --jq '[.workflow_runs[] | select(.name == "ci-src-cli (stage 1-6)" and .conclusion == "success")] | length' > run_count.txt
 
           RUN_COUNT=$(cat run_count.txt)
+
+          echo "Found $RUN_COUNT successful CI run(s) for commit $COMMIT_SHA"
 
           if [ "$RUN_COUNT" -eq "0" ]; then
             echo "❌ Error: No successful CI run found for commit $COMMIT_SHA"
@@ -49,13 +53,13 @@ jobs:
             echo ""
             echo "You can:"
             echo "1. Wait for the CI workflow to complete"
-            echo "2. Check workflow status at: https://github.com/${{ github.repository }}/actions/workflows/src-cli.yaml"
-            echo "3. Re-run this release workflow after CI passes"
+            echo "2. Manually trigger the CI workflow: gh workflow run src-cli.yaml"
+            echo "3. Check workflow status at: https://github.com/${{ github.repository }}/actions/workflows/src-cli.yaml"
+            echo "4. Re-run this release workflow after CI passes"
             exit 1
           fi
 
           echo "✅ CI has passed for commit $COMMIT_SHA"
-          echo "Found $RUN_COUNT successful CI run(s)"
         env:
           GH_TOKEN: ${{ github.token }}
 
