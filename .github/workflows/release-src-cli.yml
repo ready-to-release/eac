@@ -31,34 +31,82 @@ jobs:
           echo "Commit SHA: $COMMIT_SHA"
           echo "Repository: ${{ github.repository }}"
 
-          # List all runs for this commit to debug
-          echo "All workflow runs for this commit:"
-          gh run list --commit $COMMIT_SHA --limit 10
+          MAX_WAIT_TIME=600  # 10 minutes
+          CHECK_INTERVAL=30   # 30 seconds
+          ELAPSED=0
 
-          echo ""
-          echo "Checking for successful src-cli.yaml runs..."
-
-          # Use gh run list - simplest approach
-          RUN_COUNT=$(gh run list \
-            --commit $COMMIT_SHA \
-            --workflow src-cli.yaml \
-            --status success \
-            --json conclusion \
-            --jq 'length' || echo "0")
-
-          echo "Found $RUN_COUNT successful CI run(s) for commit $COMMIT_SHA"
-
-          if [ "$RUN_COUNT" -eq "0" ]; then
-            echo "❌ Error: No successful CI run found for commit $COMMIT_SHA"
+          while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
             echo ""
-            echo "The src-cli CI workflow must pass before releasing."
-            echo ""
-            echo "Manually trigger CI: gh workflow run src-cli.yaml --ref ${{ github.ref_name }}"
-            echo "Then re-run this release workflow after CI passes."
-            exit 1
-          fi
+            echo "Checking CI status (elapsed: ${ELAPSED}s)..."
 
-          echo "✅ CI has passed for commit $COMMIT_SHA"
+            # Check for successful runs
+            SUCCESS_COUNT=$(gh run list \
+              --commit $COMMIT_SHA \
+              --workflow src-cli.yaml \
+              --status success \
+              --json conclusion \
+              --jq 'length' || echo "0")
+
+            if [ "$SUCCESS_COUNT" -gt "0" ]; then
+              echo "✅ CI has passed for commit $COMMIT_SHA"
+              exit 0
+            fi
+
+            # Check for in-progress runs
+            IN_PROGRESS_COUNT=$(gh run list \
+              --commit $COMMIT_SHA \
+              --workflow src-cli.yaml \
+              --status in_progress \
+              --json conclusion \
+              --jq 'length' || echo "0")
+
+            QUEUED_COUNT=$(gh run list \
+              --commit $COMMIT_SHA \
+              --workflow src-cli.yaml \
+              --status queued \
+              --json conclusion \
+              --jq 'length' || echo "0")
+
+            # Check for failed runs
+            FAILED_COUNT=$(gh run list \
+              --commit $COMMIT_SHA \
+              --workflow src-cli.yaml \
+              --status failure \
+              --json conclusion \
+              --jq 'length' || echo "0")
+
+            if [ "$FAILED_COUNT" -gt "0" ]; then
+              echo "❌ Error: CI workflow failed for commit $COMMIT_SHA"
+              echo "Fix the CI failures and re-run this release workflow."
+              exit 1
+            fi
+
+            if [ "$IN_PROGRESS_COUNT" -gt "0" ] || [ "$QUEUED_COUNT" -gt "0" ]; then
+              echo "⏳ CI is running... (in_progress: $IN_PROGRESS_COUNT, queued: $QUEUED_COUNT)"
+              echo "Waiting ${CHECK_INTERVAL}s before next check..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            # No runs found at all
+            if [ $ELAPSED -eq 0 ]; then
+              echo "❌ Error: No CI workflow run found for commit $COMMIT_SHA"
+              echo ""
+              echo "Manually trigger CI: gh workflow run src-cli.yaml --ref ${{ github.ref_name }}"
+              echo "Then re-run this release workflow."
+              exit 1
+            fi
+
+            # Waiting for CI to start
+            echo "⏳ Waiting for CI to start..."
+            sleep $CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+          done
+
+          echo "❌ Error: Timeout waiting for CI to complete (waited ${MAX_WAIT_TIME}s)"
+          echo "The CI is taking too long. Please check the workflow status and re-run when ready."
+          exit 1
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -230,23 +278,22 @@ jobs:
 
           cat release_notes.md
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.extract_version.outputs.tag_name }}
-          name: "r2r CLI v${{ steps.extract_version.outputs.version }}"
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: true
-          files: |
-            out/build/src-cli/r2r-linux
-            out/build/src-cli/r2r-darwin-amd64
-            out/build/src-cli/r2r-darwin-arm64
-            out/build/src-cli/r2r-windows.exe
+      - name: Upload binaries to release
+        run: |
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+
+          echo "Uploading binaries to release: $TAG_NAME"
+
+          gh release upload "$TAG_NAME" \
+            out/build/src-cli/r2r-linux \
+            out/build/src-cli/r2r-darwin-amd64 \
+            out/build/src-cli/r2r-darwin-arm64 \
+            out/build/src-cli/r2r-windows.exe \
+            --clobber
+
+          echo "✅ Binaries uploaded successfully"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Verify release assets
         run: |
