@@ -120,6 +120,8 @@ jobs:
     if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-cli')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Trigger src-cli workflow
         run: |
           gh workflow run src-cli.yaml \
@@ -135,6 +137,8 @@ jobs:
     if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-commands')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Trigger src-commands workflow
         run: |
           gh workflow run src-commands.yaml \
@@ -150,6 +154,8 @@ jobs:
     if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-core')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Trigger src-core workflow
         run: |
           gh workflow run src-core.yaml \
@@ -165,6 +171,8 @@ jobs:
     if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-mcp-commands')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Trigger src-mcp-commands workflow
         run: |
           gh workflow run src-mcp-commands.yaml \
