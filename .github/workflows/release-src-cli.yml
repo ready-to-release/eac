@@ -89,19 +89,19 @@ jobs:
               continue
             fi
 
-            # No runs found at all
-            if [ $ELAPSED -eq 0 ]; then
-              echo "❌ Error: No CI workflow run found for commit $COMMIT_SHA"
-              echo ""
-              echo "Manually trigger CI: gh workflow run src-cli.yaml --ref ${{ github.ref_name }}"
-              echo "Then re-run this release workflow."
-              exit 1
-            fi
-
-            # Waiting for CI to start
-            echo "⏳ Waiting for CI to start..."
-            sleep $CHECK_INTERVAL
-            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+            # No runs found at all - fail immediately
+            echo "❌ Error: No CI workflow run found for commit $COMMIT_SHA"
+            echo ""
+            echo "The commit being released has not been tested by CI."
+            echo "CI must run on this specific commit before releasing."
+            echo ""
+            echo "To fix:"
+            echo "1. Push code changes to trigger CI automatically, OR"
+            echo "2. Manually trigger CI for this commit:"
+            echo "   gh workflow run src-cli.yaml --ref ${{ github.ref_name }} -f sha=$COMMIT_SHA"
+            echo ""
+            echo "Then re-run this release workflow after CI passes."
+            exit 1
           done
 
           echo "❌ Error: Timeout waiting for CI to complete (waited ${MAX_WAIT_TIME}s)"
