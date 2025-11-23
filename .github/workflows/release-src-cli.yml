@@ -39,12 +39,24 @@ jobs:
             echo ""
             echo "Checking CI status (elapsed: ${ELAPSED}s)..."
 
+            # Debug: show all workflow runs for this commit across all workflows
+            echo "All workflows for commit $COMMIT_SHA:"
+            gh run list --commit $COMMIT_SHA --limit 5
+
             # Get all runs for this commit and analyze them
             RUNS=$(gh run list \
               --commit $COMMIT_SHA \
               --workflow src-cli.yaml \
-              --json status,conclusion,databaseId \
+              --json status,conclusion,databaseId,createdAt \
               --limit 10)
+
+            echo ""
+            echo "Debug - src-cli.yaml workflow: API returned $(echo "$RUNS" | jq 'length') runs"
+            if [ "$(echo "$RUNS" | jq 'length')" -gt "0" ]; then
+              echo "$RUNS" | jq -c '.[] | {status, conclusion, createdAt}'
+            else
+              echo "No runs found - raw response: $RUNS"
+            fi
 
             # Count runs by status
             SUCCESS_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
