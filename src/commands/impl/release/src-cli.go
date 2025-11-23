@@ -1,7 +1,7 @@
 // Command: release src-cli
 // Description: Create a release tag for src-cli module
 // Short: Create a git tag for releasing src-cli using semver format
-// Long: Creates a git tag in the format 'src-cli:x.y.z' to trigger the release workflow.
+// Long: Creates a git tag in the format 'src-cli/x.y.z' to trigger the release workflow.
 // Long: The tag follows semantic versioning (semver) and will automatically trigger
 // Long: the GitHub Actions workflow to build and release binaries for multiple platforms.
 // Long: The version must follow semver format (x.y.z) where x, y, z are non-negative integers.
@@ -172,9 +172,9 @@ func validateSemver(version string) error {
 	return nil
 }
 
-// buildTagName constructs a tag name in the format "module:version"
+// buildTagName constructs a tag name in the format "module/version"
 func buildTagName(moduleName, version string) string {
-	return fmt.Sprintf("%s:%s", moduleName, version)
+	return fmt.Sprintf("%s/%s", moduleName, version)
 }
 
 // tagExists checks if a git tag already exists
