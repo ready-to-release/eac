@@ -31,8 +31,7 @@ jobs:
           # Get the commit SHA to check
           COMMIT_SHA="${{ github.sha }}"
 
-          # Check for successful ci-src-cli workflow run on this commit
-          # Using gh CLI to query workflow runs
+          # Check for successful src-cli workflow run on this commit
           gh api \
             repos/${{ github.repository }}/actions/workflows/src-cli.yaml/runs \
             -f status=completed \

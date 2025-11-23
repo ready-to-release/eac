@@ -118,33 +118,61 @@ jobs:
     name: Trigger src-cli
     needs: [detect-changes, calculate-order]
     if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-cli')
-    uses: ./.github/workflows/src-cli.yaml
-    with:
-      ref: ${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger src-cli workflow
+        run: |
+          gh workflow run src-cli.yaml \
+            --ref ${{ github.ref }} \
+            -f ref=${{ github.ref }} \
+            -f sha=${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   trigger-src-commands:
     name: Trigger src-commands
     needs: [detect-changes, calculate-order]
     if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-commands')
-    uses: ./.github/workflows/src-commands.yaml
-    with:
-      ref: ${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger src-commands workflow
+        run: |
+          gh workflow run src-commands.yaml \
+            --ref ${{ github.ref }} \
+            -f ref=${{ github.ref }} \
+            -f sha=${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   trigger-src-core:
     name: Trigger src-core
     needs: [detect-changes, calculate-order]
     if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-core')
-    uses: ./.github/workflows/src-core.yaml
-    with:
-      ref: ${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger src-core workflow
+        run: |
+          gh workflow run src-core.yaml \
+            --ref ${{ github.ref }} \
+            -f ref=${{ github.ref }} \
+            -f sha=${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   trigger-src-mcp-commands:
     name: Trigger src-mcp-commands
     needs: [detect-changes, calculate-order]
     if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-mcp-commands')
-    uses: ./.github/workflows/src-mcp-commands.yaml
-    with:
-      ref: ${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger src-mcp-commands workflow
+        run: |
+          gh workflow run src-mcp-commands.yaml \
+            --ref ${{ github.ref }} \
+            -f ref=${{ github.ref }} \
+            -f sha=${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   summary:
     name: Summary
