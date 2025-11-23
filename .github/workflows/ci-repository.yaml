@@ -128,10 +128,19 @@ jobs:
 
       - name: Trigger src-cli workflow
         run: |
-          gh workflow run src-cli.yaml \
+          echo "Triggering src-cli workflow..."
+          RESPONSE=$(gh workflow run src-cli.yaml \
             --ref ${{ github.ref_name }} \
             -f ref=${{ github.ref }} \
-            -f sha=${{ github.sha }}
+            -f sha=${{ github.sha }} 2>&1)
+          EXIT_CODE=$?
+          echo "Response: $RESPONSE"
+          echo "Exit code: $EXIT_CODE"
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Failed to trigger src-cli workflow: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Successfully triggered src-cli workflow"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -145,10 +154,19 @@ jobs:
 
       - name: Trigger src-commands workflow
         run: |
-          gh workflow run src-commands.yaml \
+          echo "Triggering src-commands workflow..."
+          RESPONSE=$(gh workflow run src-commands.yaml \
             --ref ${{ github.ref_name }} \
             -f ref=${{ github.ref }} \
-            -f sha=${{ github.sha }}
+            -f sha=${{ github.sha }} 2>&1)
+          EXIT_CODE=$?
+          echo "Response: $RESPONSE"
+          echo "Exit code: $EXIT_CODE"
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Failed to trigger src-commands workflow: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Successfully triggered src-commands workflow"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
