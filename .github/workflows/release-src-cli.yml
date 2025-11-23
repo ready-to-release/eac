@@ -299,6 +299,22 @@ jobs:
 
           cat release_notes.md
 
+      - name: Create GitHub Release
+        run: |
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+          VERSION="${{ steps.extract_version.outputs.version }}"
+
+          echo "Creating release for tag: $TAG_NAME"
+
+          gh release create "$TAG_NAME" \
+            --title "r2r CLI v$VERSION" \
+            --notes-file release_notes.md \
+            --verify-tag
+
+          echo "✅ Release created successfully"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Upload binaries to release
         run: |
           TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
