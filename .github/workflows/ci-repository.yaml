@@ -142,7 +142,7 @@ jobs:
           fi
           echo "✅ Successfully triggered src-cli workflow"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
 
   trigger-src-commands:
     name: Trigger src-commands
@@ -168,7 +168,7 @@ jobs:
           fi
           echo "✅ Successfully triggered src-commands workflow"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
 
   trigger-src-core:
     name: Trigger src-core
@@ -185,7 +185,7 @@ jobs:
             -f ref=${{ github.ref }} \
             -f sha=${{ github.sha }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
 
   trigger-src-mcp-commands:
     name: Trigger src-mcp-commands
@@ -202,7 +202,7 @@ jobs:
             -f ref=${{ github.ref }} \
             -f sha=${{ github.sha }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
 
   summary:
     name: Summary
