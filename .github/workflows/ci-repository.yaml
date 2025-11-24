@@ -121,7 +121,7 @@ jobs:
   trigger-layer-1:
     name: Build Layer 1
     needs: [detect-changes, calculate-order]
-    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 1
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= '1'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -133,32 +133,79 @@ jobs:
 
           echo "Layer 1 modules: $LAYER_1"
 
+          # Array to track workflow run IDs
+          declare -a RUN_IDS
+          declare -a MODULES
+
+          # Trigger all workflows in parallel
           for module in $LAYER_1; do
             WORKFLOW_FILE=".github/workflows/${module}.yaml"
             if [ -f "$WORKFLOW_FILE" ]; then
-              echo "Triggering workflow for $module..."
-              RESPONSE=$(gh workflow run "${module}.yaml" \
+              echo "🚀 Triggering workflow for $module..."
+              gh workflow run "${module}.yaml" \
                 --ref ${{ github.ref_name }} \
                 -f ref=${{ github.ref }} \
-                -f sha=${{ github.sha }} 2>&1)
-              EXIT_CODE=$?
-              echo "Response: $RESPONSE"
-              if [ $EXIT_CODE -ne 0 ]; then
-                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                -f sha=${{ github.sha }}
+
+              if [ $? -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow"
                 exit 1
               fi
-              echo "✅ Successfully triggered $module workflow"
+
+              # Wait a moment for the workflow to be created
+              sleep 2
+
+              # Get the most recent run ID for this workflow
+              RUN_ID=$(gh run list --workflow="${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+              if [ -n "$RUN_ID" ]; then
+                echo "📝 Workflow $module started with run ID: $RUN_ID"
+                RUN_IDS+=("$RUN_ID")
+                MODULES+=("$module")
+              else
+                echo "::warning::Could not find run ID for $module workflow"
+              fi
             else
               echo "⚠️ No workflow file found for $module"
             fi
           done
+
+          # Wait for all workflows to complete
+          echo ""
+          echo "⏳ Waiting for all Layer 1 workflows to complete..."
+
+          FAILED=0
+          for i in "${!RUN_IDS[@]}"; do
+            RUN_ID="${RUN_IDS[$i]}"
+            MODULE="${MODULES[$i]}"
+
+            echo "⌛ Waiting for $MODULE (run $RUN_ID)..."
+
+            # Watch the workflow run and wait for completion
+            gh run watch "$RUN_ID" --exit-status
+
+            if [ $? -ne 0 ]; then
+              echo "::error::❌ Workflow $MODULE failed!"
+              FAILED=1
+            else
+              echo "✅ Workflow $MODULE completed successfully"
+            fi
+          done
+
+          if [ $FAILED -eq 1 ]; then
+            echo "::error::One or more Layer 1 workflows failed"
+            exit 1
+          fi
+
+          echo ""
+          echo "🎉 All Layer 1 workflows completed successfully"
         env:
           GH_TOKEN: ${{ github.token }}
 
   trigger-layer-2:
     name: Build Layer 2
     needs: [detect-changes, calculate-order, trigger-layer-1]
-    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 2
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= '2'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -170,32 +217,70 @@ jobs:
 
           echo "Layer 2 modules: $LAYER_2"
 
+          declare -a RUN_IDS
+          declare -a MODULES
+
           for module in $LAYER_2; do
             WORKFLOW_FILE=".github/workflows/${module}.yaml"
             if [ -f "$WORKFLOW_FILE" ]; then
-              echo "Triggering workflow for $module..."
-              RESPONSE=$(gh workflow run "${module}.yaml" \
+              echo "🚀 Triggering workflow for $module..."
+              gh workflow run "${module}.yaml" \
                 --ref ${{ github.ref_name }} \
                 -f ref=${{ github.ref }} \
-                -f sha=${{ github.sha }} 2>&1)
-              EXIT_CODE=$?
-              echo "Response: $RESPONSE"
-              if [ $EXIT_CODE -ne 0 ]; then
-                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                -f sha=${{ github.sha }}
+
+              if [ $? -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow"
                 exit 1
               fi
-              echo "✅ Successfully triggered $module workflow"
+
+              sleep 2
+              RUN_ID=$(gh run list --workflow="${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+              if [ -n "$RUN_ID" ]; then
+                echo "📝 Workflow $module started with run ID: $RUN_ID"
+                RUN_IDS+=("$RUN_ID")
+                MODULES+=("$module")
+              else
+                echo "::warning::Could not find run ID for $module workflow"
+              fi
             else
               echo "⚠️ No workflow file found for $module"
             fi
           done
+
+          echo ""
+          echo "⏳ Waiting for all Layer 2 workflows to complete..."
+
+          FAILED=0
+          for i in "${!RUN_IDS[@]}"; do
+            RUN_ID="${RUN_IDS[$i]}"
+            MODULE="${MODULES[$i]}"
+            echo "⌛ Waiting for $MODULE (run $RUN_ID)..."
+            gh run watch "$RUN_ID" --exit-status
+
+            if [ $? -ne 0 ]; then
+              echo "::error::❌ Workflow $MODULE failed!"
+              FAILED=1
+            else
+              echo "✅ Workflow $MODULE completed successfully"
+            fi
+          done
+
+          if [ $FAILED -eq 1 ]; then
+            echo "::error::One or more Layer 2 workflows failed"
+            exit 1
+          fi
+
+          echo ""
+          echo "🎉 All Layer 2 workflows completed successfully"
         env:
           GH_TOKEN: ${{ github.token }}
 
   trigger-layer-3:
     name: Build Layer 3
     needs: [detect-changes, calculate-order, trigger-layer-2]
-    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 3
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= '3'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -207,32 +292,70 @@ jobs:
 
           echo "Layer 3 modules: $LAYER_3"
 
+          declare -a RUN_IDS
+          declare -a MODULES
+
           for module in $LAYER_3; do
             WORKFLOW_FILE=".github/workflows/${module}.yaml"
             if [ -f "$WORKFLOW_FILE" ]; then
-              echo "Triggering workflow for $module..."
-              RESPONSE=$(gh workflow run "${module}.yaml" \
+              echo "🚀 Triggering workflow for $module..."
+              gh workflow run "${module}.yaml" \
                 --ref ${{ github.ref_name }} \
                 -f ref=${{ github.ref }} \
-                -f sha=${{ github.sha }} 2>&1)
-              EXIT_CODE=$?
-              echo "Response: $RESPONSE"
-              if [ $EXIT_CODE -ne 0 ]; then
-                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                -f sha=${{ github.sha }}
+
+              if [ $? -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow"
                 exit 1
               fi
-              echo "✅ Successfully triggered $module workflow"
+
+              sleep 2
+              RUN_ID=$(gh run list --workflow="${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+              if [ -n "$RUN_ID" ]; then
+                echo "📝 Workflow $module started with run ID: $RUN_ID"
+                RUN_IDS+=("$RUN_ID")
+                MODULES+=("$module")
+              else
+                echo "::warning::Could not find run ID for $module workflow"
+              fi
             else
               echo "⚠️ No workflow file found for $module"
             fi
           done
+
+          echo ""
+          echo "⏳ Waiting for all Layer 3 workflows to complete..."
+
+          FAILED=0
+          for i in "${!RUN_IDS[@]}"; do
+            RUN_ID="${RUN_IDS[$i]}"
+            MODULE="${MODULES[$i]}"
+            echo "⌛ Waiting for $MODULE (run $RUN_ID)..."
+            gh run watch "$RUN_ID" --exit-status
+
+            if [ $? -ne 0 ]; then
+              echo "::error::❌ Workflow $MODULE failed!"
+              FAILED=1
+            else
+              echo "✅ Workflow $MODULE completed successfully"
+            fi
+          done
+
+          if [ $FAILED -eq 1 ]; then
+            echo "::error::One or more Layer 3 workflows failed"
+            exit 1
+          fi
+
+          echo ""
+          echo "🎉 All Layer 3 workflows completed successfully"
         env:
           GH_TOKEN: ${{ github.token }}
 
   trigger-layer-4:
     name: Build Layer 4
     needs: [detect-changes, calculate-order, trigger-layer-3]
-    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 4
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= '4'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -244,32 +367,70 @@ jobs:
 
           echo "Layer 4 modules: $LAYER_4"
 
+          declare -a RUN_IDS
+          declare -a MODULES
+
           for module in $LAYER_4; do
             WORKFLOW_FILE=".github/workflows/${module}.yaml"
             if [ -f "$WORKFLOW_FILE" ]; then
-              echo "Triggering workflow for $module..."
-              RESPONSE=$(gh workflow run "${module}.yaml" \
+              echo "🚀 Triggering workflow for $module..."
+              gh workflow run "${module}.yaml" \
                 --ref ${{ github.ref_name }} \
                 -f ref=${{ github.ref }} \
-                -f sha=${{ github.sha }} 2>&1)
-              EXIT_CODE=$?
-              echo "Response: $RESPONSE"
-              if [ $EXIT_CODE -ne 0 ]; then
-                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                -f sha=${{ github.sha }}
+
+              if [ $? -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow"
                 exit 1
               fi
-              echo "✅ Successfully triggered $module workflow"
+
+              sleep 2
+              RUN_ID=$(gh run list --workflow="${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+              if [ -n "$RUN_ID" ]; then
+                echo "📝 Workflow $module started with run ID: $RUN_ID"
+                RUN_IDS+=("$RUN_ID")
+                MODULES+=("$module")
+              else
+                echo "::warning::Could not find run ID for $module workflow"
+              fi
             else
               echo "⚠️ No workflow file found for $module"
             fi
           done
+
+          echo ""
+          echo "⏳ Waiting for all Layer 4 workflows to complete..."
+
+          FAILED=0
+          for i in "${!RUN_IDS[@]}"; do
+            RUN_ID="${RUN_IDS[$i]}"
+            MODULE="${MODULES[$i]}"
+            echo "⌛ Waiting for $MODULE (run $RUN_ID)..."
+            gh run watch "$RUN_ID" --exit-status
+
+            if [ $? -ne 0 ]; then
+              echo "::error::❌ Workflow $MODULE failed!"
+              FAILED=1
+            else
+              echo "✅ Workflow $MODULE completed successfully"
+            fi
+          done
+
+          if [ $FAILED -eq 1 ]; then
+            echo "::error::One or more Layer 4 workflows failed"
+            exit 1
+          fi
+
+          echo ""
+          echo "🎉 All Layer 4 workflows completed successfully"
         env:
           GH_TOKEN: ${{ github.token }}
 
   trigger-layer-5:
     name: Build Layer 5
     needs: [detect-changes, calculate-order, trigger-layer-4]
-    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 5
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= '5'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -281,25 +442,63 @@ jobs:
 
           echo "Layer 5 modules: $LAYER_5"
 
+          declare -a RUN_IDS
+          declare -a MODULES
+
           for module in $LAYER_5; do
             WORKFLOW_FILE=".github/workflows/${module}.yaml"
             if [ -f "$WORKFLOW_FILE" ]; then
-              echo "Triggering workflow for $module..."
-              RESPONSE=$(gh workflow run "${module}.yaml" \
+              echo "🚀 Triggering workflow for $module..."
+              gh workflow run "${module}.yaml" \
                 --ref ${{ github.ref_name }} \
                 -f ref=${{ github.ref }} \
-                -f sha=${{ github.sha }} 2>&1)
-              EXIT_CODE=$?
-              echo "Response: $RESPONSE"
-              if [ $EXIT_CODE -ne 0 ]; then
-                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                -f sha=${{ github.sha }}
+
+              if [ $? -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow"
                 exit 1
               fi
-              echo "✅ Successfully triggered $module workflow"
+
+              sleep 2
+              RUN_ID=$(gh run list --workflow="${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+              if [ -n "$RUN_ID" ]; then
+                echo "📝 Workflow $module started with run ID: $RUN_ID"
+                RUN_IDS+=("$RUN_ID")
+                MODULES+=("$module")
+              else
+                echo "::warning::Could not find run ID for $module workflow"
+              fi
             else
               echo "⚠️ No workflow file found for $module"
             fi
           done
+
+          echo ""
+          echo "⏳ Waiting for all Layer 5 workflows to complete..."
+
+          FAILED=0
+          for i in "${!RUN_IDS[@]}"; do
+            RUN_ID="${RUN_IDS[$i]}"
+            MODULE="${MODULES[$i]}"
+            echo "⌛ Waiting for $MODULE (run $RUN_ID)..."
+            gh run watch "$RUN_ID" --exit-status
+
+            if [ $? -ne 0 ]; then
+              echo "::error::❌ Workflow $MODULE failed!"
+              FAILED=1
+            else
+              echo "✅ Workflow $MODULE completed successfully"
+            fi
+          done
+
+          if [ $FAILED -eq 1 ]; then
+            echo "::error::One or more Layer 5 workflows failed"
+            exit 1
+          fi
+
+          echo ""
+          echo "🎉 All Layer 5 workflows completed successfully"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -313,6 +512,13 @@ jobs:
         run: |
           echo "## CI/CD Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
+            echo "### No Changes Detected" >> $GITHUB_STEP_SUMMARY
+            echo "No modules were changed in this push." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
           echo "### Changed Modules" >> $GITHUB_STEP_SUMMARY
           echo "${{ needs.detect-changes.outputs.changed-modules }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -322,8 +528,20 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Layer Execution Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Layer 1: ${{ needs.trigger-layer-1.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Layer 2: ${{ needs.trigger-layer-2.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Layer 3: ${{ needs.trigger-layer-3.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Layer 4: ${{ needs.trigger-layer-4.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Layer 5: ${{ needs.trigger-layer-5.result }}" >> $GITHUB_STEP_SUMMARY
+
+          # Only show results for layers that actually ran
+          if [ "${{ needs.trigger-layer-1.result }}" != "" ]; then
+            echo "- Layer 1: ${{ needs.trigger-layer-1.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.trigger-layer-2.result }}" != "" ]; then
+            echo "- Layer 2: ${{ needs.trigger-layer-2.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.trigger-layer-3.result }}" != "" ]; then
+            echo "- Layer 3: ${{ needs.trigger-layer-3.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.trigger-layer-4.result }}" != "" ]; then
+            echo "- Layer 4: ${{ needs.trigger-layer-4.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.trigger-layer-5.result }}" != "" ]; then
+            echo "- Layer 5: ${{ needs.trigger-layer-5.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
