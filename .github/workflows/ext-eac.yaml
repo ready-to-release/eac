@@ -94,8 +94,18 @@ jobs:
           docker images ext-eac:ci-test
 
       - name: Build r2r CLI
-        working-directory: ./src/cli
-        run: go build -o r2r .
+        run: |
+          echo "Building r2r CLI using EAC build system..."
+          go run ./src/commands build module src-cli
+
+          echo ""
+          echo "Copying Linux binary to workspace root..."
+          cp out/build/src-cli/r2r-linux ./r2r
+          chmod +x ./r2r
+
+          echo ""
+          echo "Verifying r2r CLI..."
+          ./r2r --version
 
       - name: Test Extension via r2r CLI
         run: |
@@ -110,15 +120,15 @@ jobs:
 
           echo ""
           echo "Testing 'help' command..."
-          timeout 120 ./src/cli/r2r --config r2r-cli-test.yml run eac help || true
+          timeout 120 ./r2r --config r2r-cli-test.yml run eac help || true
 
           echo ""
           echo "Testing 'show modules' command..."
-          timeout 120 ./src/cli/r2r --config r2r-cli-test.yml run eac show modules
+          timeout 120 ./r2r --config r2r-cli-test.yml run eac show modules
 
           echo ""
           echo "Testing 'extension-meta' command..."
-          timeout 30 ./src/cli/r2r --config r2r-cli-test.yml run eac extension-meta
+          timeout 30 ./r2r --config r2r-cli-test.yml run eac extension-meta
 
           echo ""
           echo "✅ Extension tests passed"
