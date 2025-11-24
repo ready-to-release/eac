@@ -1,0 +1,289 @@
+name: "Release ext-eac"
+
+on:
+  push:
+    tags:
+      - 'ext-eac/*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (semver format: x.y.z)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check CI status
+        run: |
+          echo "Checking if CI has passed for ext-eac module..."
+          COMMIT_SHA="${{ github.sha }}"
+          echo "Commit SHA: $COMMIT_SHA"
+          echo "Repository: ${{ github.repository }}"
+
+          MAX_WAIT_TIME=600  # 10 minutes
+          CHECK_INTERVAL=30   # 30 seconds
+          ELAPSED=0
+
+          while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
+            echo ""
+            echo "Checking CI status (elapsed: ${ELAPSED}s)..."
+
+            # Debug: show all workflow runs for this commit
+            echo "All workflows for commit $COMMIT_SHA:"
+            gh run list --commit $COMMIT_SHA --limit 5 --json name,status,conclusion --jq '.[] | "\(.status)\t\(.conclusion // "n/a")\t\(.name)"'
+
+            # Check if ci-repository (Change Trigger) is still running
+            CI_REPO_STATUS=$(gh run list \
+              --commit $COMMIT_SHA \
+              --workflow ci-repository.yaml \
+              --json status \
+              --jq '.[0].status // "not_found"')
+
+            echo ""
+            echo "ci-repository.yaml status: $CI_REPO_STATUS"
+
+            if [ "$CI_REPO_STATUS" = "in_progress" ] || [ "$CI_REPO_STATUS" = "queued" ]; then
+              echo "⏳ CI orchestrator is still running - it will trigger ext-eac workflow"
+              echo "Waiting ${CHECK_INTERVAL}s for orchestrator to complete..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            # Get all runs for this commit
+            RUNS=$(gh run list \
+              --commit $COMMIT_SHA \
+              --workflow ext-eac.yaml \
+              --json status,conclusion,databaseId,createdAt \
+              --limit 10)
+
+            echo ""
+            echo "Debug - ext-eac.yaml workflow: API returned $(echo "$RUNS" | jq 'length') runs"
+            if [ "$(echo "$RUNS" | jq 'length')" -gt "0" ]; then
+              echo "$RUNS" | jq -c '.[] | {status, conclusion, createdAt}'
+            fi
+
+            # Count runs by status
+            SUCCESS_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
+            IN_PROGRESS_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "in_progress")] | length')
+            QUEUED_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "queued" or .status == "waiting")] | length')
+            FAILED_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "failure")] | length')
+            TOTAL_COUNT=$(echo "$RUNS" | jq 'length')
+
+            echo "CI runs for commit: success=$SUCCESS_COUNT, in_progress=$IN_PROGRESS_COUNT, queued=$QUEUED_COUNT, failed=$FAILED_COUNT, total=$TOTAL_COUNT"
+
+            # If CI passed, we're done
+            if [ "$SUCCESS_COUNT" -gt "0" ]; then
+              echo "✅ CI has passed for commit $COMMIT_SHA"
+              exit 0
+            fi
+
+            # If CI failed, stop immediately
+            if [ "$FAILED_COUNT" -gt "0" ]; then
+              echo "❌ Error: CI workflow failed for commit $COMMIT_SHA"
+              echo "Fix the CI failures and re-run this release workflow."
+              exit 1
+            fi
+
+            # If CI is running or queued, wait
+            if [ "$IN_PROGRESS_COUNT" -gt "0" ] || [ "$QUEUED_COUNT" -gt "0" ]; then
+              echo "⏳ CI is running... waiting ${CHECK_INTERVAL}s before next check..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            # No runs found at all
+            if [ "$TOTAL_COUNT" -eq "0" ]; then
+              echo "❌ Error: No CI workflow run found for commit $COMMIT_SHA"
+              echo ""
+              echo "The commit being released has not been tested by CI."
+              echo "CI must run on this specific commit before releasing."
+              echo ""
+              echo "To fix:"
+              echo "1. Push code changes to trigger CI automatically, OR"
+              echo "2. Manually trigger CI: gh workflow run ext-eac.yaml --ref ${{ github.ref_name }}"
+              echo ""
+              echo "Then re-run this release workflow after CI passes."
+              exit 1
+            fi
+
+            # Unknown state - wait and retry
+            echo "⏳ Waiting for CI state to change..."
+            sleep $CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+          done
+
+          echo "❌ Error: Timeout waiting for CI to complete (waited ${MAX_WAIT_TIME}s)"
+          echo "The CI is taking too long. Please check the workflow status and re-run when ready."
+          exit 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Extract and validate version
+        id: extract_version
+        run: |
+          # Determine version based on trigger type
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            TAG_NAME="ext-eac/$VERSION"
+            echo "Manual trigger with version: $VERSION"
+          else
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            VERSION="${TAG_NAME#ext-eac/}"
+            echo "Tag trigger with version: $VERSION"
+          fi
+
+          # Validate semver format (x.y.z where x, y, z are non-negative integers)
+          if ! echo "$VERSION" | grep -E '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' > /dev/null; then
+            echo "Error: Invalid semver format: $VERSION"
+            echo "Expected format: x.y.z (e.g., 1.0.0)"
+            exit 1
+          fi
+
+          # Reject versions with 'v' prefix
+          if echo "$VERSION" | grep -E '^v' > /dev/null; then
+            echo "Error: Version should not have 'v' prefix: $VERSION"
+            echo "Use x.y.z format (e.g., 1.0.0 not v1.0.0)"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "✅ Valid semver: $VERSION"
+
+      - name: Check for existing container image
+        run: |
+          VERSION="${{ steps.extract_version.outputs.version }}"
+          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
+
+          echo "Checking if container image already exists for version $VERSION..."
+
+          # Try to pull the specific version tag
+          if docker pull "$IMAGE_NAME:$VERSION" 2>/dev/null; then
+            echo ""
+            echo "❌ Error: Container image already exists for version $VERSION"
+            echo ""
+            echo "Image: $IMAGE_NAME:$VERSION"
+            echo ""
+            echo "If you want to release a new version:"
+            echo "1. Increment the version number"
+            echo "2. Re-run this workflow with the new version"
+            exit 1
+          fi
+
+          echo "✅ No existing container image found for version $VERSION"
+
+      - name: Create tag (manual trigger only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+
+          echo "Preparing to create tag: $TAG_NAME"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch all tags from remote
+          echo "Fetching existing tags..."
+          git fetch --tags --force
+
+          # Check if tag already exists
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "ℹ️  Tag $TAG_NAME already exists"
+            echo "Using existing tag for release"
+          else
+            echo "Creating new tag: $TAG_NAME"
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+
+            echo "Pushing tag to remote..."
+            git push origin "$TAG_NAME"
+
+            echo "✅ Created and pushed tag: $TAG_NAME"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/ready-to-release/ext-eac
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.extract_version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.extract_version.outputs.version }}
+            type=semver,pattern={{major}},value=${{ steps.extract_version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./containers/ext-eac/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify container images published
+        run: |
+          VERSION="${{ steps.extract_version.outputs.version }}"
+          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
+
+          echo "Verifying published container images..."
+          echo ""
+          echo "Published tags:"
+          echo "- $IMAGE_NAME:$VERSION"
+          echo "- $IMAGE_NAME:latest"
+          echo ""
+
+          # Wait a moment for registry to be updated
+          sleep 5
+
+          echo "Pulling and verifying version tag..."
+          docker pull "$IMAGE_NAME:$VERSION"
+          docker inspect "$IMAGE_NAME:$VERSION" --format='Version: {{index .Config.Labels "org.opencontainers.image.version"}}'
+
+          echo ""
+          echo "✅ Container images successfully published to GHCR"
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Released EAC Extension version **${{ steps.extract_version.outputs.version }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Docker Images" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "ghcr.io/ready-to-release/ext-eac:${{ steps.extract_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "ghcr.io/ready-to-release/ext-eac:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Platforms" >> $GITHUB_STEP_SUMMARY
+          echo "- linux/amd64" >> $GITHUB_STEP_SUMMARY
+          echo "- linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract_version.outputs.tag_name }})" >> $GITHUB_STEP_SUMMARY

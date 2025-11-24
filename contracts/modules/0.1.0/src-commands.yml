@@ -23,3 +23,4 @@ depends_on:
 used_by:
   - "implicit-cli-sh"
   - "implicit-cli-pwsh"
+  - "ext-eac"

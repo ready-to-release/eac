@@ -207,7 +207,8 @@ func extractCommandMetadata(filePath string) commandMetadata {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		// Handle both LF and CRLF line endings
+		line := strings.TrimSpace(strings.ReplaceAll(scanner.Text(), "\r", ""))
 
 		// Stop at package declaration
 		if strings.HasPrefix(line, "package ") {

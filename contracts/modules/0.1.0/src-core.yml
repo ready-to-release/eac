@@ -29,3 +29,4 @@ used_by:
   - "src-cli"
   - "src-commands"
   - "src-mcp-commands"
+  - "ext-eac"
