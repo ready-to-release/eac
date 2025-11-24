@@ -485,87 +485,38 @@ var RunCmd = &cobra.Command{
 		// Wait for container completion
 		var containerExitCode int64
 
-		// Wait for both container exit and I/O completion
-		// We need to handle both to ensure we get all output
-		containerDone := false
-		ioDone := false
-
-		for !containerDone || !ioDone {
-			select {
-			case status := <-statusCh:
-				if !containerDone {
-					containerDone = true
-					log.Debug().Msg("Received status from container")
-					if shuttingDown {
-						log.WithFields(map[string]interface{}{
-							"container_id": containerID,
-							"status_code":  status.StatusCode,
-						}).Info().Msg("Container stopped by user interrupt")
-						os.Exit(0)
-					}
+		// Wait for container to exit first, then wait for I/O to complete
+		select {
+		case status := <-statusCh:
+			log.WithFields(map[string]interface{}{
+				"container_id": containerID,
+				"status_code":  status.StatusCode,
+			}).Info().Msg("Container finished")
+			containerExitCode = status.StatusCode
+		case err := <-errCh:
+			if err != nil {
+				errStr := err.Error()
+				if !strings.Contains(errStr, "No such container") && errStr != "" {
 					log.WithFields(map[string]interface{}{
 						"container_id": containerID,
-						"status_code":  status.StatusCode,
-					}).Info().Msg("Container finished")
-					containerExitCode = status.StatusCode
-
-					// Close the attach connection to unblock I/O goroutine
-					// This prevents hanging when container exits quickly
-					attachResp.Close()
-				}
-			case err, ok := <-errCh:
-				// Docker's ContainerWait error channel behavior with AutoRemove containers:
-				// When a container with AutoRemove:true exits quickly, Docker removes it immediately.
-				// This creates a race condition where ContainerWait might return:
-				// 1. "No such container" error - container was removed before wait completed
-				// 2. An error object that is not nil but has an empty message - Docker's way of
-				//    signaling "wait is done but container is gone"
-				// 3. nil error - normal completion
-				// We must handle all three cases to avoid spurious failures in CI/CD environments
-				if !containerDone && ok {
-					if err != nil {
-						errStr := err.Error()
-						// Check if this is the "No such container" error from AutoRemove
-						if strings.Contains(errStr, "No such container") {
-							log.WithFields(map[string]interface{}{
-								"container_id": containerID,
-							}).Debug().Msg("Container already removed (AutoRemove)")
-							containerDone = true
-							// Close attach connection to unblock I/O goroutine
-							attachResp.Close()
-						} else if errStr != "" {
-							// Real error with non-empty message - this is an actual failure
-							log.WithFields(map[string]interface{}{
-								"container_id": containerID,
-								"error":        errStr,
-							}).Error().Msg("Error waiting for container")
-							os.Exit(1)
-						} else {
-							// Error with empty message - Docker's signal that wait completed but
-							// can't provide status (container was auto-removed)
-							log.Debug().Msg("Container wait completed (empty error)")
-							containerDone = true
-							// Close attach connection to unblock I/O goroutine
-							attachResp.Close()
-						}
-					} else {
-						// Nil error means the wait completed successfully
-						log.Debug().Msg("Container wait completed (nil error)")
-						containerDone = true
-						// Close attach connection to unblock I/O goroutine
-						attachResp.Close()
-					}
-				}
-			case ioErr := <-done:
-				if !ioDone {
-					ioDone = true
-					if ioErr != nil && ioErr != io.EOF {
-						log.WithField("error", ioErr.Error()).Debug().Msg("I/O error")
-					}
-					log.Debug().Msg("I/O copy completed")
+						"error":        errStr,
+					}).Error().Msg("Error waiting for container")
+					os.Exit(1)
 				}
 			}
 		}
+
+		if shuttingDown {
+			os.Exit(0)
+		}
+
+		// Container has exited - now wait for I/O to complete
+		// The I/O goroutine will receive EOF when Docker closes the stream
+		ioErr := <-done
+		if ioErr != nil && ioErr != io.EOF {
+			log.WithField("error", ioErr.Error()).Debug().Msg("I/O error")
+		}
+		log.Debug().Msg("I/O copy completed")
 
 		// Check for new containers that appeared during execution
 		afterSnapshot, err := host.GetContainerSnapshot()

@@ -19,8 +19,14 @@ ENV GOWORK=off
 
 WORKDIR /app
 
-# Copy only go.mod and go.sum first to leverage Docker layer caching
-# Dependencies will only be re-downloaded when these files change
+# Copy go.mod and go.sum files first to leverage Docker layer caching
+# The ext module has replace directives pointing to parent modules,
+# so we need all related go.mod files for dependency resolution
+COPY src/core/go.mod src/core/go.sum ./src/core/
+COPY src/core/ai/go.mod src/core/ai/go.sum ./src/core/ai/
+COPY src/core/markdown/go.mod src/core/markdown/go.sum ./src/core/markdown/
+COPY src/core/module-deps/go.mod src/core/module-deps/go.sum ./src/core/module-deps/
+COPY src/commands/go.mod src/commands/go.sum ./src/commands/
 COPY src/commands/ext/go.mod src/commands/ext/go.sum ./src/commands/ext/
 
 # Download dependencies (this layer will be cached)
