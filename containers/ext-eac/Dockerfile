@@ -26,10 +26,8 @@ COPY src/core/ ./src/core/
 COPY src/commands/ ./src/commands/
 COPY contracts/ ./contracts/
 
-# Download dependencies and warm up build cache
-RUN cd src/commands/ext && \
-    go mod download && \
-    go build -o /dev/null .
+# Download dependencies into the image (don't use cache mount so deps persist in image)
+RUN cd src/commands/ext && go mod download -x
 
 # Add OCI labels
 LABEL org.opencontainers.image.title="EAC Extension"
