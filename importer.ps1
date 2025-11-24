@@ -51,6 +51,41 @@ Import-Module $ModulePath -Force
 
 Write-Host "✅ CommandRunner module imported successfully!" -ForegroundColor Green
 
+# Create r2r alias pointing to the OS-specific binary
+$R2rBinaryPath = Join-Path $PSScriptRoot "out\build\src-cli"
+if ($IsWindows -or $env:OS -eq "Windows_NT") {
+    $R2rBinary = Join-Path $R2rBinaryPath "r2r-windows.exe"
+} elseif ($IsMacOS) {
+    # Check architecture for macOS
+    $arch = uname -m
+    if ($arch -eq "arm64") {
+        $R2rBinary = Join-Path $R2rBinaryPath "r2r-darwin-arm64"
+    } else {
+        $R2rBinary = Join-Path $R2rBinaryPath "r2r-darwin-amd64"
+    }
+} else {
+    # Linux
+    $R2rBinary = Join-Path $R2rBinaryPath "r2r-linux"
+}
+
+if (Test-Path $R2rBinary) {
+    # Create a function that invokes the binary (more reliable than Set-Alias for exe files)
+    $funcDef = @"
+function global:r2r {
+    & "$R2rBinary" `$args
+}
+function global:rr {
+    & "$R2rBinary" run eac `$args
+}
+"@
+    Invoke-Expression $funcDef
+    Write-Host "✅ r2r alias created -> $R2rBinary" -ForegroundColor Green
+    Write-Host "✅ rr  alias created -> r2r run eac <args>" -ForegroundColor Green
+} else {
+    Write-Host "⚠️  r2r binary not found at: $R2rBinary" -ForegroundColor Yellow
+    Write-Host "   Run 'go run ./src/commands build module src-cli' to build it" -ForegroundColor Gray
+}
+
 # Create top-level command aliases unless -NoAlias specified
 if (-not $NoAlias) {
     New-TopLevelAliases

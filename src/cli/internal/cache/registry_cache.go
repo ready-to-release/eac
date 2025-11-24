@@ -34,12 +34,12 @@ const (
 func GetCachePath() string {
 	// Get session identifier for session-specific cache
 	sessionID := session.GetIdentifier()
-	
+
 	// Use temp directory for cache file
 	cacheDir := filepath.Join(os.TempDir(), "r2r-cli-cache")
 	// Create directory if it doesn't exist
 	os.MkdirAll(cacheDir, 0755)
-	
+
 	// Session-specific cache file name
 	cacheFileName := fmt.Sprintf("r2r-cli-cache-%s.json", sessionID)
 	return filepath.Join(cacheDir, cacheFileName)
