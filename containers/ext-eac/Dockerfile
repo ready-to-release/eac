@@ -19,6 +19,8 @@ RUN apk add --no-cache \
 
 ENV GO111MODULE=on
 ENV GOWORK=off
+# Disable CGO for cross-compilation (Windows/macOS builds from Linux)
+ENV CGO_ENABLED=0
 
 WORKDIR /app
 
