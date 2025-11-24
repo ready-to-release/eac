@@ -12,6 +12,9 @@ RUN apk add --no-cache \
     git \
     tzdata \
     github-cli \
+    bash \
+    npm \
+    docker-cli \
     && rm -rf /var/cache/apk/*
 
 ENV GO111MODULE=on
