@@ -13,6 +13,10 @@ on:
         description: 'Commit SHA to test'
         default: ''
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     name: Build Docker Image
