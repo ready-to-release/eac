@@ -115,124 +115,197 @@ jobs:
           echo "layer-count=$LAYER_COUNT" >> $GITHUB_OUTPUT
 
   # Execute module workflows in dependency order
-  # Note: GitHub Actions doesn't support dynamic job creation,
-  # so we create a job for each potential module and use conditions
+  # Each layer job triggers workflows for all modules in that layer in parallel
+  # Layers execute sequentially to respect dependencies
 
-  trigger-src-cli:
-    name: Trigger src-cli
+  trigger-layer-1:
+    name: Build Layer 1
     needs: [detect-changes, calculate-order]
-    if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-cli')
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 1
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Trigger src-cli workflow
+      - name: Trigger Layer 1 Workflows
         run: |
-          echo "Triggering src-cli workflow..."
-          RESPONSE=$(gh workflow run src-cli.yaml \
-            --ref ${{ github.ref_name }} \
-            -f ref=${{ github.ref }} \
-            -f sha=${{ github.sha }} 2>&1)
-          EXIT_CODE=$?
-          echo "Response: $RESPONSE"
-          echo "Exit code: $EXIT_CODE"
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::Failed to trigger src-cli workflow: $RESPONSE"
-            exit 1
-          fi
-          echo "✅ Successfully triggered src-cli workflow"
+          PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
+          LAYER_1=$(echo "$PLAN" | jq -r '.layers[0][]')
+
+          echo "Layer 1 modules: $LAYER_1"
+
+          for module in $LAYER_1; do
+            WORKFLOW_FILE=".github/workflows/${module}.yaml"
+            if [ -f "$WORKFLOW_FILE" ]; then
+              echo "Triggering workflow for $module..."
+              RESPONSE=$(gh workflow run "${module}.yaml" \
+                --ref ${{ github.ref_name }} \
+                -f ref=${{ github.ref }} \
+                -f sha=${{ github.sha }} 2>&1)
+              EXIT_CODE=$?
+              echo "Response: $RESPONSE"
+              if [ $EXIT_CODE -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                exit 1
+              fi
+              echo "✅ Successfully triggered $module workflow"
+            else
+              echo "⚠️ No workflow file found for $module"
+            fi
+          done
         env:
           GH_TOKEN: ${{ github.token }}
 
-  trigger-src-commands:
-    name: Trigger src-commands
-    needs: [detect-changes, calculate-order]
-    if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-commands')
+  trigger-layer-2:
+    name: Build Layer 2
+    needs: [detect-changes, calculate-order, trigger-layer-1]
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 2
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Trigger src-commands workflow
+      - name: Trigger Layer 2 Workflows
         run: |
-          echo "Triggering src-commands workflow..."
-          RESPONSE=$(gh workflow run src-commands.yaml \
-            --ref ${{ github.ref_name }} \
-            -f ref=${{ github.ref }} \
-            -f sha=${{ github.sha }} 2>&1)
-          EXIT_CODE=$?
-          echo "Response: $RESPONSE"
-          echo "Exit code: $EXIT_CODE"
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::Failed to trigger src-commands workflow: $RESPONSE"
-            exit 1
-          fi
-          echo "✅ Successfully triggered src-commands workflow"
+          PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
+          LAYER_2=$(echo "$PLAN" | jq -r '.layers[1][]')
+
+          echo "Layer 2 modules: $LAYER_2"
+
+          for module in $LAYER_2; do
+            WORKFLOW_FILE=".github/workflows/${module}.yaml"
+            if [ -f "$WORKFLOW_FILE" ]; then
+              echo "Triggering workflow for $module..."
+              RESPONSE=$(gh workflow run "${module}.yaml" \
+                --ref ${{ github.ref_name }} \
+                -f ref=${{ github.ref }} \
+                -f sha=${{ github.sha }} 2>&1)
+              EXIT_CODE=$?
+              echo "Response: $RESPONSE"
+              if [ $EXIT_CODE -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                exit 1
+              fi
+              echo "✅ Successfully triggered $module workflow"
+            else
+              echo "⚠️ No workflow file found for $module"
+            fi
+          done
         env:
           GH_TOKEN: ${{ github.token }}
 
-  trigger-src-core:
-    name: Trigger src-core
-    needs: [detect-changes, calculate-order]
-    if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-core')
+  trigger-layer-3:
+    name: Build Layer 3
+    needs: [detect-changes, calculate-order, trigger-layer-2]
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 3
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Trigger src-core workflow
+      - name: Trigger Layer 3 Workflows
         run: |
-          gh workflow run src-core.yaml \
-            --ref ${{ github.ref_name }} \
-            -f ref=${{ github.ref }} \
-            -f sha=${{ github.sha }}
+          PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
+          LAYER_3=$(echo "$PLAN" | jq -r '.layers[2][]')
+
+          echo "Layer 3 modules: $LAYER_3"
+
+          for module in $LAYER_3; do
+            WORKFLOW_FILE=".github/workflows/${module}.yaml"
+            if [ -f "$WORKFLOW_FILE" ]; then
+              echo "Triggering workflow for $module..."
+              RESPONSE=$(gh workflow run "${module}.yaml" \
+                --ref ${{ github.ref_name }} \
+                -f ref=${{ github.ref }} \
+                -f sha=${{ github.sha }} 2>&1)
+              EXIT_CODE=$?
+              echo "Response: $RESPONSE"
+              if [ $EXIT_CODE -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                exit 1
+              fi
+              echo "✅ Successfully triggered $module workflow"
+            else
+              echo "⚠️ No workflow file found for $module"
+            fi
+          done
         env:
           GH_TOKEN: ${{ github.token }}
 
-  trigger-src-mcp-commands:
-    name: Trigger src-mcp-commands
-    needs: [detect-changes, calculate-order]
-    if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'src-mcp-commands')
+  trigger-layer-4:
+    name: Build Layer 4
+    needs: [detect-changes, calculate-order, trigger-layer-3]
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 4
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Trigger src-mcp-commands workflow
+      - name: Trigger Layer 4 Workflows
         run: |
-          gh workflow run src-mcp-commands.yaml \
-            --ref ${{ github.ref_name }} \
-            -f ref=${{ github.ref }} \
-            -f sha=${{ github.sha }}
+          PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
+          LAYER_4=$(echo "$PLAN" | jq -r '.layers[3][]')
+
+          echo "Layer 4 modules: $LAYER_4"
+
+          for module in $LAYER_4; do
+            WORKFLOW_FILE=".github/workflows/${module}.yaml"
+            if [ -f "$WORKFLOW_FILE" ]; then
+              echo "Triggering workflow for $module..."
+              RESPONSE=$(gh workflow run "${module}.yaml" \
+                --ref ${{ github.ref_name }} \
+                -f ref=${{ github.ref }} \
+                -f sha=${{ github.sha }} 2>&1)
+              EXIT_CODE=$?
+              echo "Response: $RESPONSE"
+              if [ $EXIT_CODE -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                exit 1
+              fi
+              echo "✅ Successfully triggered $module workflow"
+            else
+              echo "⚠️ No workflow file found for $module"
+            fi
+          done
         env:
           GH_TOKEN: ${{ github.token }}
 
-  trigger-ext-eac:
-    name: Trigger ext-eac
-    needs: [detect-changes, calculate-order]
-    if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'ext-eac')
+  trigger-layer-5:
+    name: Build Layer 5
+    needs: [detect-changes, calculate-order, trigger-layer-4]
+    if: needs.detect-changes.outputs.has-changes == 'true' && needs.calculate-order.outputs.layer-count >= 5
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Trigger ext-eac workflow
+      - name: Trigger Layer 5 Workflows
         run: |
-          echo "Triggering ext-eac workflow..."
-          RESPONSE=$(gh workflow run ext-eac.yaml \
-            --ref ${{ github.ref_name }} \
-            -f ref=${{ github.ref }} \
-            -f sha=${{ github.sha }} 2>&1)
-          EXIT_CODE=$?
-          echo "Response: $RESPONSE"
-          echo "Exit code: $EXIT_CODE"
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::Failed to trigger ext-eac workflow: $RESPONSE"
-            exit 1
-          fi
-          echo "✅ Successfully triggered ext-eac workflow"
+          PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
+          LAYER_5=$(echo "$PLAN" | jq -r '.layers[4][]')
+
+          echo "Layer 5 modules: $LAYER_5"
+
+          for module in $LAYER_5; do
+            WORKFLOW_FILE=".github/workflows/${module}.yaml"
+            if [ -f "$WORKFLOW_FILE" ]; then
+              echo "Triggering workflow for $module..."
+              RESPONSE=$(gh workflow run "${module}.yaml" \
+                --ref ${{ github.ref_name }} \
+                -f ref=${{ github.ref }} \
+                -f sha=${{ github.sha }} 2>&1)
+              EXIT_CODE=$?
+              echo "Response: $RESPONSE"
+              if [ $EXIT_CODE -ne 0 ]; then
+                echo "::error::Failed to trigger $module workflow: $RESPONSE"
+                exit 1
+              fi
+              echo "✅ Successfully triggered $module workflow"
+            else
+              echo "⚠️ No workflow file found for $module"
+            fi
+          done
         env:
           GH_TOKEN: ${{ github.token }}
 
   summary:
     name: Summary
-    needs: [detect-changes, calculate-order, trigger-src-cli, trigger-src-commands, trigger-src-core, trigger-src-mcp-commands, trigger-ext-eac]
+    needs: [detect-changes, calculate-order, trigger-layer-1, trigger-layer-2, trigger-layer-3, trigger-layer-4, trigger-layer-5]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -248,9 +321,9 @@ jobs:
           echo '${{ needs.calculate-order.outputs.execution-plan }}' | jq . >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Workflow Execution Results" >> $GITHUB_STEP_SUMMARY
-          echo "- src-cli: ${{ needs.trigger-src-cli.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- src-commands: ${{ needs.trigger-src-commands.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- src-core: ${{ needs.trigger-src-core.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- src-mcp-commands: ${{ needs.trigger-src-mcp-commands.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ext-eac: ${{ needs.trigger-ext-eac.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Layer Execution Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 1: ${{ needs.trigger-layer-1.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 2: ${{ needs.trigger-layer-2.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 3: ${{ needs.trigger-layer-3.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 4: ${{ needs.trigger-layer-4.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 5: ${{ needs.trigger-layer-5.result }}" >> $GITHUB_STEP_SUMMARY

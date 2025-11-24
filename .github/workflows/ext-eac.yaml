@@ -111,24 +111,30 @@ jobs:
         run: |
           echo "Testing eac extension through r2r CLI..."
 
-          # Create temporary config for testing
-          cat > r2r-cli-test.yml << EOF
+          echo ""
+          echo "Creating .git directory for r2r to detect repository root..."
+          mkdir -p .git
+
+          echo ""
+          echo "Creating r2r-cli.yml config with CI test image..."
+          cat > r2r-cli.yml << EOF
           extensions:
             - name: 'eac'
               image: 'ext-eac:ci-test'
+              image_pull_policy: 'Never'
           EOF
 
           echo ""
           echo "Testing 'help' command..."
-          timeout 120 ./r2r --config r2r-cli-test.yml run eac help || true
+          timeout 120 ./r2r run eac help || true
 
           echo ""
           echo "Testing 'show modules' command..."
-          timeout 120 ./r2r --config r2r-cli-test.yml run eac show modules
+          timeout 120 ./r2r run eac show modules
 
           echo ""
           echo "Testing 'extension-meta' command..."
-          timeout 30 ./r2r --config r2r-cli-test.yml run eac extension-meta
+          timeout 30 ./r2r run eac extension-meta
 
           echo ""
           echo "✅ Extension tests passed"
