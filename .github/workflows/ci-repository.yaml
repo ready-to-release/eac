@@ -203,7 +203,7 @@ jobs:
                 echo "⌛ Waiting for $MODULE (run $RUN_ID)..."
 
                 # Watch the workflow run and wait for completion
-                gh run watch "$RUN_ID" --exit-status
+                gh run watch "$RUN_ID" --exit-status --interval 10
 
                 if [ $? -ne 0 ]; then
                   echo "  ::error::❌ Workflow $MODULE failed!"
