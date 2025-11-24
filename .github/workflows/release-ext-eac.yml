@@ -244,12 +244,6 @@ jobs:
           run-id: ${{ steps.get_run_id.outputs.run_id }}
           github-token: ${{ github.token }}
 
-      - name: Extract multi-platform image
-        run: |
-          echo "Extracting multi-platform image from artifact..."
-          gunzip ext-eac-ci-test.tar.gz
-          ls -lh ext-eac-ci-test.tar
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -269,6 +263,10 @@ jobs:
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           MINOR=$(echo "$VERSION" | cut -d. -f2)
 
+          echo "Extracting OCI archive..."
+          gunzip ext-eac-ci-test.tar.gz
+
+          echo ""
           echo "Importing and pushing multi-platform image with all tags..."
           docker buildx imagetools create \
             --tag "$IMAGE_NAME:$VERSION" \
