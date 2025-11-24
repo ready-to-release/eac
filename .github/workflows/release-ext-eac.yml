@@ -215,6 +215,41 @@ jobs:
             echo "✅ Created and pushed tag: $TAG_NAME"
           fi
 
+      - name: Get CI workflow run ID
+        id: get_run_id
+        run: |
+          echo "Finding successful CI run for commit ${{ github.sha }}..."
+
+          RUN_ID=$(gh run list \
+            --commit ${{ github.sha }} \
+            --workflow ext-eac.yaml \
+            --json status,conclusion,databaseId \
+            --jq '.[] | select(.status == "completed" and .conclusion == "success") | .databaseId' \
+            | head -1)
+
+          if [ -z "$RUN_ID" ]; then
+            echo "❌ Error: Could not find successful CI run"
+            exit 1
+          fi
+
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "✅ Found CI run: $RUN_ID"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download Docker image artifact from CI
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-ext-eac
+          run-id: ${{ steps.get_run_id.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Extract multi-platform image
+        run: |
+          echo "Extracting multi-platform image from artifact..."
+          gunzip ext-eac-ci-test.tar.gz
+          ls -lh ext-eac-ci-test.tar
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -225,28 +260,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/ready-to-release/ext-eac
-          tags: |
-            type=semver,pattern={{version}},value=${{ steps.extract_version.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.extract_version.outputs.version }}
-            type=semver,pattern={{major}},value=${{ steps.extract_version.outputs.version }}
-            type=raw,value=latest
+      - name: Push multi-platform image to GHCR
+        run: |
+          VERSION="${{ steps.extract_version.outputs.version }}"
+          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./containers/ext-eac/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Extract major and minor versions for additional tags
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+
+          echo "Importing and pushing multi-platform image with all tags..."
+          docker buildx imagetools create \
+            --tag "$IMAGE_NAME:$VERSION" \
+            --tag "$IMAGE_NAME:$MAJOR.$MINOR" \
+            --tag "$IMAGE_NAME:$MAJOR" \
+            --tag "$IMAGE_NAME:latest" \
+            oci-archive:ext-eac-ci-test.tar
+
+          echo ""
+          echo "✅ Published multi-platform images:"
+          echo "  - $IMAGE_NAME:$VERSION"
+          echo "  - $IMAGE_NAME:$MAJOR.$MINOR"
+          echo "  - $IMAGE_NAME:$MAJOR"
+          echo "  - $IMAGE_NAME:latest"
+          echo ""
+          echo "Platforms: linux/amd64, linux/arm64"
 
       - name: Verify container images published
         run: |

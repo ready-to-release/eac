@@ -22,6 +22,9 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
@@ -29,18 +32,21 @@ jobs:
             src/commands/go.sum
             src/cli/go.sum
 
-      - name: Build Docker Image using EAC builder
+      - name: Build multi-platform Docker images
         run: |
-          echo "Building ext-eac using EAC build system..."
-          go run ./src/commands build module ext-eac
+          echo "Building ext-eac for multiple platforms..."
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -t ext-eac:ci-test \
+            -f ./containers/ext-eac/Dockerfile \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --load \
+            .
 
           echo ""
           echo "Verifying image was built..."
-          docker images ext-eac:latest
-
-          echo ""
-          echo "Re-tagging for CI..."
-          docker tag ext-eac:latest ext-eac:ci-test
+          docker images ext-eac:ci-test
 
       - name: Verify Docker Image
         run: |
@@ -55,9 +61,22 @@ jobs:
           echo "Testing extension metadata..."
           docker run --rm ext-eac:ci-test extension-meta
 
-      - name: Save Docker Image
+      - name: Export multi-platform images
         run: |
-          docker save ext-eac:ci-test | gzip > ext-eac-ci-test.tar.gz
+          echo "Exporting multi-platform images..."
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -t ext-eac:ci-test \
+            -f ./containers/ext-eac/Dockerfile \
+            --cache-from type=gha \
+            -o type=oci,dest=ext-eac-ci-test.tar \
+            .
+
+          echo ""
+          echo "Compressing image archive..."
+          gzip ext-eac-ci-test.tar
+
+          echo ""
           ls -lh ext-eac-ci-test.tar.gz
 
       - name: Upload Docker Image Artifact
