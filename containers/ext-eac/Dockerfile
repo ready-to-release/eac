@@ -1,7 +1,7 @@
 # ============================================================
-# RUNTIME STAGE - Single stage with Go runtime
+# DEPENDENCIES STAGE - Download Go dependencies
 # ============================================================
-FROM golang:1.24-alpine
+FROM golang:1.24-alpine AS deps
 
 # Build arguments for multi-platform support
 ARG TARGETARCH
@@ -14,20 +14,30 @@ RUN apk add --no-cache \
     github-cli \
     && rm -rf /var/cache/apk/*
 
-ENV DOCKER_R2R_MODE=true
-ENV TZ=UTC
 ENV GO111MODULE=on
 ENV GOWORK=off
 
 WORKDIR /app
 
-# Copy source code for all dependencies
+# Copy only go.mod and go.sum first to leverage Docker layer caching
+# Dependencies will only be re-downloaded when these files change
+COPY src/commands/ext/go.mod src/commands/ext/go.sum ./src/commands/ext/
+
+# Download dependencies (this layer will be cached)
+RUN cd src/commands/ext && go mod download -x
+
+# ============================================================
+# RUNTIME STAGE - Final image with source code
+# ============================================================
+FROM deps AS runtime
+
+ENV DOCKER_R2R_MODE=true
+ENV TZ=UTC
+
+# Copy source code (won't invalidate the dependency layer above)
 COPY src/core/ ./src/core/
 COPY src/commands/ ./src/commands/
 COPY contracts/ ./contracts/
-
-# Download dependencies into the image (don't use cache mount so deps persist in image)
-RUN cd src/commands/ext && go mod download -x
 
 # Add OCI labels
 LABEL org.opencontainers.image.title="EAC Extension"
