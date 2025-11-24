@@ -508,6 +508,10 @@ var RunCmd = &cobra.Command{
 						"status_code":  status.StatusCode,
 					}).Info().Msg("Container finished")
 					containerExitCode = status.StatusCode
+
+					// Close the attach connection to unblock I/O goroutine
+					// This prevents hanging when container exits quickly
+					attachResp.Close()
 				}
 			case err, ok := <-errCh:
 				// Docker's ContainerWait error channel behavior with AutoRemove containers:
@@ -527,6 +531,8 @@ var RunCmd = &cobra.Command{
 								"container_id": containerID,
 							}).Debug().Msg("Container already removed (AutoRemove)")
 							containerDone = true
+							// Close attach connection to unblock I/O goroutine
+							attachResp.Close()
 						} else if errStr != "" {
 							// Real error with non-empty message - this is an actual failure
 							log.WithFields(map[string]interface{}{
@@ -539,11 +545,15 @@ var RunCmd = &cobra.Command{
 							// can't provide status (container was auto-removed)
 							log.Debug().Msg("Container wait completed (empty error)")
 							containerDone = true
+							// Close attach connection to unblock I/O goroutine
+							attachResp.Close()
 						}
 					} else {
 						// Nil error means the wait completed successfully
 						log.Debug().Msg("Container wait completed (nil error)")
 						containerDone = true
+						// Close attach connection to unblock I/O goroutine
+						attachResp.Close()
 					}
 				}
 			case ioErr := <-done:
