@@ -331,3 +331,4 @@ func generatePowershellCompletion() int {
 
 	return 0
 }
+

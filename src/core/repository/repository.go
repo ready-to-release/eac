@@ -52,7 +52,13 @@ func NewRepositoryError(op, path string, err error, message string) *RepositoryE
 //   root, err := repository.GetRepositoryRoot("")
 //   root, err := repository.GetRepositoryRoot("/path/to/subdir")
 func GetRepositoryRoot(startPath string) (string, error) {
-	// Check for test override environment variable first
+	// Check for Docker R2R mode - repository is mounted at /var/task
+	if os.Getenv("DOCKER_R2R_MODE") == "true" {
+		// In R2R CLI Docker mode, the repository is always at /var/task
+		return "/var/task", nil
+	}
+
+	// Check for test override environment variable
 	// This allows tests to isolate git operations to a temporary repository
 	if testRepoRoot := os.Getenv("R2R_TEST_REPO_ROOT"); testRepoRoot != "" {
 		return filepath.Clean(testRepoRoot), nil

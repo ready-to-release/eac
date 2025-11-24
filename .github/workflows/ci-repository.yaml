@@ -50,7 +50,7 @@ jobs:
 
           if [ "$TRIGGER_ALL" = "true" ]; then
             echo "Trigger all mode enabled - running all workflows"
-            WORKFLOW_MODULES="src-cli src-commands src-core src-mcp-commands"
+            WORKFLOW_MODULES="src-cli src-commands src-core src-mcp-commands ext-eac"
           else
             # Get changed modules using existing command
             MODULES=$(go run . "get changed modules" --as-json | jq -r '.modules | join(" ")')
@@ -204,9 +204,35 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+  trigger-ext-eac:
+    name: Trigger ext-eac
+    needs: [detect-changes, calculate-order]
+    if: needs.detect-changes.outputs.has-changes == 'true' && contains(needs.detect-changes.outputs.changed-modules, 'ext-eac')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trigger ext-eac workflow
+        run: |
+          echo "Triggering ext-eac workflow..."
+          RESPONSE=$(gh workflow run ext-eac.yaml \
+            --ref ${{ github.ref_name }} \
+            -f ref=${{ github.ref }} \
+            -f sha=${{ github.sha }} 2>&1)
+          EXIT_CODE=$?
+          echo "Response: $RESPONSE"
+          echo "Exit code: $EXIT_CODE"
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Failed to trigger ext-eac workflow: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Successfully triggered ext-eac workflow"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   summary:
     name: Summary
-    needs: [detect-changes, calculate-order, trigger-src-cli, trigger-src-commands, trigger-src-core, trigger-src-mcp-commands]
+    needs: [detect-changes, calculate-order, trigger-src-cli, trigger-src-commands, trigger-src-core, trigger-src-mcp-commands, trigger-ext-eac]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -227,3 +253,4 @@ jobs:
           echo "- src-commands: ${{ needs.trigger-src-commands.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- src-core: ${{ needs.trigger-src-core.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- src-mcp-commands: ${{ needs.trigger-src-mcp-commands.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ext-eac: ${{ needs.trigger-ext-eac.result }}" >> $GITHUB_STEP_SUMMARY

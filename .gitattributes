@@ -24,3 +24,8 @@
 /.gitignore -export-ignore
 /.gitattributes -export-ignore
 automation/.external/** filter=lfs diff=lfs merge=lfs -text
+
+# Line ending normalization for Go source files
+*.go text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf

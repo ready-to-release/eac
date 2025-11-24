@@ -62,6 +62,7 @@ var buildFunctions = map[string]BuildFunc{
 	"go-mcp":           buildGoMCP,
 	"go-library":       buildGoLibrary,
 	"go-tests":         buildGoTests,
+	"r2r-extension":    buildR2RExtension,
 	"containers":       buildContainers,
 	"mkdocs-site":      buildMkDocsSite,
 	"mkdocs-subsite":   buildMkDocsSubsite,
@@ -486,6 +487,58 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 
 	// Build image using docker build
 	exitCode := RunCommandWithLog(moduleRoot, logWriter,
+		"docker", "build",
+		"-t", imageName,
+		"-f", dockerfilePath,
+		".")
+
+	if exitCode != 0 {
+		fmt.Fprintf(logWriter, "❌ Docker build failed\n")
+		return exitCode
+	}
+
+	fmt.Fprintf(logWriter, "✅ Docker image built successfully: %s\n", imageName)
+
+	// Save image name to output directory for reference
+	imageInfoPath := filepath.Join(outputDir, "image-info.txt")
+	imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\n",
+		imageName, dockerfilePath, time.Now().Format(time.RFC3339))
+
+	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
+		fmt.Fprintf(logWriter, "⚠️  Warning: could not save image info: %v\n", err)
+	}
+
+	return 0
+}
+
+// buildR2RExtension builds an R2R CLI extension as a Docker image
+// The Dockerfile is expected to be in containers/{moniker}/Dockerfile
+// Build context is the repository root
+func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	fmt.Fprintf(logWriter, "\n=== Building R2R extension: %s ===\n", module.Moniker)
+
+	// Extract extension name from moniker (e.g., "ext-eac" -> "eac")
+	extensionName := module.Moniker
+	if len(module.Moniker) > 4 && module.Moniker[:4] == "ext-" {
+		extensionName = module.Moniker[4:]
+	}
+
+	// Dockerfile is in containers/{moniker}/Dockerfile
+	dockerfilePath := filepath.Join(workspaceRoot, "containers", module.Moniker, "Dockerfile")
+	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+		fmt.Fprintf(logWriter, "❌ No Dockerfile found at: %s\n", dockerfilePath)
+		return 1
+	}
+
+	// Generate image tag from extension name
+	imageName := fmt.Sprintf("ext-%s:latest", extensionName)
+
+	fmt.Fprintf(logWriter, "📦 Building Docker image: %s\n", imageName)
+	fmt.Fprintf(logWriter, "   Dockerfile: %s\n", dockerfilePath)
+	fmt.Fprintf(logWriter, "   Build context: %s\n", workspaceRoot)
+
+	// Build image using docker build with repository root as context
+	exitCode := RunCommandWithLog(workspaceRoot, logWriter,
 		"docker", "build",
 		"-t", imageName,
 		"-f", dockerfilePath,

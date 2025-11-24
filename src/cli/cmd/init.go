@@ -71,8 +71,8 @@ func createConfigFile(cmd *cobra.Command) {
 	}
 
 	minimalConfig := `extensions:
-  - name: 'pwsh'
-    image: 'ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:latest'
+  - name: 'eac'
+    image: 'ghcr.io/ready-to-release/ext-eac:latest'
 `
 
 	err = os.WriteFile(configFile, []byte(minimalConfig), 0644)
