@@ -124,7 +124,7 @@ func (ch *ContainerHost) FindExtension(name string) (*ExtensionConfig, error) {
 				Name:               ext.Name,
 				Image:              ext.Image,
 				ImagePullPolicy:    imagePullPolicy,
-				LoadLocal:          conf.Global.LoadLocal,  // Use global LoadLocal flag
+				LoadLocal:          ext.LoadLocal || conf.Global.LoadLocal, // Use extension-level or global LoadLocal flag
 				AutoRemoveChildren: ext.AutoRemoveChildren,
 				Env:                ext.Env,
 			}
@@ -530,23 +530,15 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 			tag = imageName[tagIndex+1:]
 		}
 
-		// For development: Check if this is a local build first (no RepoDigests)
-		// Only use local images if loadLocal is true
-		if hasLocalImage && loadLocal && (tag == "latest" || tag == "main" || tag == "master") {
-			// Primary check: Image has no RepoDigests (indicates it was built locally and not pushed)
-			// This is the most reliable indicator of a local build
-			if len(localImageInfo.RepoDigests) == 0 {
-				// Display to user that we're using a local build
-				fmt.Printf("🏠 Using local development image: %s\n", imageName)
-				log.Info().
-					Str("image", imageName).
-					Msg("Using local development image (AutoDetect: no registry digests)")
-				return nil
-			}
-
-			// For dynamic tags, default to pulling for updates
-			pullPolicy = "Always"
-			log.Debug().Str("image", imageName).Str("tag", tag).Msg("Auto-detected pull policy: Always (dynamic tag, local image is stale)")
+		// For development: When loadLocal is true, always prefer local image
+		if hasLocalImage && loadLocal {
+			// loadLocal explicitly requests using the local image (e.g., for development builds)
+			fmt.Printf("🏠 Using local development image: %s\n", imageName)
+			log.Info().
+				Str("image", imageName).
+				Bool("hasRepoDigests", len(localImageInfo.RepoDigests) > 0).
+				Msg("Using local development image (loadLocal: true)")
+			return nil
 		} else if hasLocalImage && (tag == "latest" || tag == "main" || tag == "master") {
 			// For dynamic tags with local image (not loadLocal mode), check cache TTL
 			// This prevents hitting the registry on every command

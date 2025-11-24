@@ -1,3 +1,4 @@
 extensions:
   - name: 'eac'
-    image: 'ghcr.io/ready-to-release/ext-eac:latest'
+    image: 'ext-eac:latest'
+    load_local: true
