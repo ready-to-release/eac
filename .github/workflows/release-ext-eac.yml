@@ -215,35 +215,6 @@ jobs:
             echo "✅ Created and pushed tag: $TAG_NAME"
           fi
 
-      - name: Get CI workflow run ID
-        id: get_run_id
-        run: |
-          echo "Finding successful CI run for commit ${{ github.sha }}..."
-
-          RUN_ID=$(gh run list \
-            --commit ${{ github.sha }} \
-            --workflow ext-eac.yaml \
-            --json status,conclusion,databaseId \
-            --jq '.[] | select(.status == "completed" and .conclusion == "success") | .databaseId' \
-            | head -1)
-
-          if [ -z "$RUN_ID" ]; then
-            echo "❌ Error: Could not find successful CI run"
-            exit 1
-          fi
-
-          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-          echo "✅ Found CI run: $RUN_ID"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Download Docker image artifact from CI
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image-ext-eac
-          run-id: ${{ steps.get_run_id.outputs.run_id }}
-          github-token: ${{ github.token }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -254,34 +225,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push multi-platform image to GHCR
+      - name: Retag and push release versions
         run: |
           VERSION="${{ steps.extract_version.outputs.version }}"
           IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
 
           # Extract major and minor versions for additional tags
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           MINOR=$(echo "$VERSION" | cut -d. -f2)
 
-          echo "Extracting OCI archive..."
-          gunzip ext-eac-ci-test-multi.tar.gz
-
-          echo ""
-          echo "Importing and pushing multi-platform image with all tags..."
+          echo "Retagging CI image sha-$SHORT_SHA with release tags..."
           docker buildx imagetools create \
             --tag "$IMAGE_NAME:$VERSION" \
             --tag "$IMAGE_NAME:$MAJOR.$MINOR" \
             --tag "$IMAGE_NAME:$MAJOR" \
             --tag "$IMAGE_NAME:latest" \
-            oci-archive:ext-eac-ci-test-multi.tar
+            "$IMAGE_NAME:sha-$SHORT_SHA"
 
           echo ""
-          echo "✅ Published multi-platform images:"
+          echo "✅ Published release tags:"
           echo "  - $IMAGE_NAME:$VERSION"
           echo "  - $IMAGE_NAME:$MAJOR.$MINOR"
           echo "  - $IMAGE_NAME:$MAJOR"
           echo "  - $IMAGE_NAME:latest"
           echo ""
+          echo "Source: $IMAGE_NAME:sha-$SHORT_SHA"
           echo "Platforms: linux/amd64, linux/arm64"
 
       - name: Verify container images published
