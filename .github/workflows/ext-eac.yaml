@@ -32,21 +32,18 @@ jobs:
             src/commands/go.sum
             src/cli/go.sum
 
-      - name: Build multi-platform Docker images
+      - name: Build extension using EAC build system
         run: |
-          echo "Building ext-eac for multiple platforms..."
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            -t ext-eac:ci-test \
-            -f ./containers/ext-eac/Dockerfile \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --load \
-            .
+          echo "Building ext-eac using EAC build system..."
+          go run ./src/commands build module ext-eac
 
           echo ""
           echo "Verifying image was built..."
-          docker images ext-eac:ci-test
+          docker images ext-eac:latest
+
+          echo ""
+          echo "Re-tagging for CI tests..."
+          docker tag ext-eac:latest ext-eac:ci-test
 
       - name: Verify Docker Image
         run: |
@@ -61,22 +58,10 @@ jobs:
           echo "Testing extension metadata..."
           docker run --rm ext-eac:ci-test extension-meta
 
-      - name: Export multi-platform images
+      - name: Prepare multi-platform artifact for upload
         run: |
-          echo "Exporting multi-platform images..."
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            -t ext-eac:ci-test \
-            -f ./containers/ext-eac/Dockerfile \
-            --cache-from type=gha \
-            -o type=oci,dest=ext-eac-ci-test.tar \
-            .
-
-          echo ""
-          echo "Compressing image archive..."
-          gzip ext-eac-ci-test.tar
-
-          echo ""
+          echo "Copying multi-platform OCI archive..."
+          cp out/build/ext-eac/ext-eac-ci-test.tar.gz ./ext-eac-ci-test.tar.gz
           ls -lh ext-eac-ci-test.tar.gz
 
       - name: Upload Docker Image Artifact

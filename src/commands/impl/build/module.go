@@ -537,27 +537,88 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 	fmt.Fprintf(logWriter, "   Dockerfile: %s\n", dockerfilePath)
 	fmt.Fprintf(logWriter, "   Build context: %s\n", workspaceRoot)
 
-	// Build image using docker build with repository root as context
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter,
-		"docker", "build",
-		"-t", imageName,
-		"-f", dockerfilePath,
-		".")
+	// Check if we're in CI environment - if so, build for testing and export multi-platform
+	isCI := os.Getenv("CI") == "true"
 
-	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ Docker build failed\n")
-		return exitCode
-	}
+	if isCI {
+		fmt.Fprintf(logWriter, "\n--- CI Mode: Building single-platform for testing ---\n")
+		// Build single platform (amd64) with --load for testing in CI
+		exitCode := RunCommandWithLog(workspaceRoot, logWriter,
+			"docker", "buildx", "build",
+			"--platform", "linux/amd64",
+			"-t", imageName,
+			"-f", dockerfilePath,
+			"--cache-from", "type=gha",
+			"--cache-to", "type=gha,mode=max",
+			"--load",
+			".")
 
-	fmt.Fprintf(logWriter, "✅ Docker image built successfully: %s\n", imageName)
+		if exitCode != 0 {
+			fmt.Fprintf(logWriter, "❌ Docker build failed\n")
+			return exitCode
+		}
 
-	// Save image name to output directory for reference
-	imageInfoPath := filepath.Join(outputDir, "image-info.txt")
-	imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\n",
-		imageName, dockerfilePath, time.Now().Format(time.RFC3339))
+		fmt.Fprintf(logWriter, "✅ Single-platform image built successfully: %s\n", imageName)
 
-	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
-		fmt.Fprintf(logWriter, "⚠️  Warning: could not save image info: %v\n", err)
+		// Export multi-platform for release
+		fmt.Fprintf(logWriter, "\n--- CI Mode: Building multi-platform for release ---\n")
+		ociArchivePath := filepath.Join(outputDir, fmt.Sprintf("ext-%s-ci-test.tar", extensionName))
+
+		exitCode = RunCommandWithLog(workspaceRoot, logWriter,
+			"docker", "buildx", "build",
+			"--platform", "linux/amd64,linux/arm64",
+			"-t", imageName,
+			"-f", dockerfilePath,
+			"--cache-from", "type=gha",
+			"-o", fmt.Sprintf("type=oci,dest=%s", ociArchivePath),
+			".")
+
+		if exitCode != 0 {
+			fmt.Fprintf(logWriter, "❌ Multi-platform build failed\n")
+			return exitCode
+		}
+
+		fmt.Fprintf(logWriter, "✅ Multi-platform image exported: %s\n", ociArchivePath)
+
+		// Compress the OCI archive
+		fmt.Fprintf(logWriter, "Compressing OCI archive...\n")
+		exitCode = RunCommandWithLog(outputDir, logWriter, "gzip", filepath.Base(ociArchivePath))
+		if exitCode != 0 {
+			fmt.Fprintf(logWriter, "⚠️  Warning: failed to compress archive\n")
+		}
+
+		// Save image info
+		imageInfoPath := filepath.Join(outputDir, "image-info.txt")
+		imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\nPlatforms: linux/amd64,linux/arm64\nOCI Archive: %s.gz\n",
+			imageName, dockerfilePath, time.Now().Format(time.RFC3339), ociArchivePath)
+
+		if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
+			fmt.Fprintf(logWriter, "⚠️  Warning: could not save image info: %v\n", err)
+		}
+
+	} else {
+		// Local build - simple docker build for current platform
+		exitCode := RunCommandWithLog(workspaceRoot, logWriter,
+			"docker", "build",
+			"-t", imageName,
+			"-f", dockerfilePath,
+			".")
+
+		if exitCode != 0 {
+			fmt.Fprintf(logWriter, "❌ Docker build failed\n")
+			return exitCode
+		}
+
+		fmt.Fprintf(logWriter, "✅ Docker image built successfully: %s\n", imageName)
+
+		// Save image name to output directory for reference
+		imageInfoPath := filepath.Join(outputDir, "image-info.txt")
+		imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\n",
+			imageName, dockerfilePath, time.Now().Format(time.RFC3339))
+
+		if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
+			fmt.Fprintf(logWriter, "⚠️  Warning: could not save image info: %v\n", err)
+		}
 	}
 
 	return 0
