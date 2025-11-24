@@ -26,9 +26,10 @@ COPY src/core/ ./src/core/
 COPY src/commands/ ./src/commands/
 COPY contracts/ ./contracts/
 
-# Download dependencies - cached unless go.mod/go.sum changes
-RUN --mount=type=cache,target=/go/pkg/mod \
-    cd src/commands/ext && go mod download
+# Download dependencies and warm up build cache
+RUN cd src/commands/ext && \
+    go mod download && \
+    go build -o /dev/null .
 
 # Add OCI labels
 LABEL org.opencontainers.image.title="EAC Extension"
@@ -58,6 +59,5 @@ LABEL r2r-cli.multi-platform.support="true"
 # Set working directory for command execution (r2r CLI mounts repo here)
 WORKDIR /var/task
 
-# Run Go source directly instead of compiled binary
-# Use shell form to support changing directory first
+# Run Go source directly to allow runtime metadata reading
 ENTRYPOINT ["sh", "-c", "cd /app/src/commands/ext && exec go run . \"$@\"", "--"]
