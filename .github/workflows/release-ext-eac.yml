@@ -264,7 +264,7 @@ jobs:
           MINOR=$(echo "$VERSION" | cut -d. -f2)
 
           echo "Extracting OCI archive..."
-          gunzip ext-eac-ci-test.tar.gz
+          gunzip ext-eac-ci-test-multi.tar.gz
 
           echo ""
           echo "Importing and pushing multi-platform image with all tags..."
@@ -273,7 +273,7 @@ jobs:
             --tag "$IMAGE_NAME:$MAJOR.$MINOR" \
             --tag "$IMAGE_NAME:$MAJOR" \
             --tag "$IMAGE_NAME:latest" \
-            oci-archive:ext-eac-ci-test.tar
+            oci-archive:ext-eac-ci-test-multi.tar
 
           echo ""
           echo "✅ Published multi-platform images:"
