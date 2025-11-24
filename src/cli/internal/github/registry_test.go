@@ -16,28 +16,34 @@ func TestNewRegistryClient(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name     string
-		token    string
-		username string
-		wantErr  bool
+		name              string
+		token             string
+		username          string
+		wantAuthenticated bool
 	}{
 		{
-			name:     "Valid credentials",
-			token:    "test-token",
-			username: "test-user",
-			wantErr:  false,
+			name:              "Valid credentials with username",
+			token:             "test-token",
+			username:          "test-user",
+			wantAuthenticated: true,
 		},
 		{
-			name:     "Missing token",
-			token:    "",
-			username: "test-user",
-			wantErr:  true,
+			name:              "Token only (no username)",
+			token:             "test-token",
+			username:          "",
+			wantAuthenticated: true,
 		},
 		{
-			name:     "Missing username",
-			token:    "test-token",
-			username: "",
-			wantErr:  true,
+			name:              "No credentials (public access only)",
+			token:             "",
+			username:          "",
+			wantAuthenticated: false,
+		},
+		{
+			name:              "Username only (no token)",
+			token:             "",
+			username:          "test-user",
+			wantAuthenticated: false,
 		},
 	}
 
@@ -47,17 +53,14 @@ func TestNewRegistryClient(t *testing.T) {
 			os.Setenv("GITHUB_USERNAME", tt.username)
 
 			client, err := NewRegistryClient()
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("Expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-				if client == nil {
-					t.Errorf("Expected client, got nil")
-				}
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if client == nil {
+				t.Errorf("Expected client, got nil")
+			}
+			if client != nil && client.authenticated != tt.wantAuthenticated {
+				t.Errorf("Expected authenticated=%v, got %v", tt.wantAuthenticated, client.authenticated)
 			}
 		})
 	}

@@ -723,13 +723,16 @@ func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 				baseImage = baseImage[:idx]
 			}
 
-			// Extract extension name
+			// Extract extension name from image path
+			// Supports both /extensions/name and /ext-name patterns
 			var extensionName string
-			if strings.Contains(baseImage, "/extensions/") {
-				parts := strings.Split(baseImage, "/")
-				if len(parts) > 0 {
-					extensionName = parts[len(parts)-1]
-				}
+			parts := strings.Split(baseImage, "/")
+			if len(parts) > 0 {
+				lastPart := parts[len(parts)-1]
+				// Use the last path segment as the extension name
+				// For /extensions/pwsh -> pwsh
+				// For /ext-eac -> ext-eac
+				extensionName = lastPart
 			}
 
 			// Get pinned version from cache or fetch if needed

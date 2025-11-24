@@ -18,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
+	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/terminal"
 	"github.com/rs/zerolog/log"
@@ -546,6 +547,27 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 			// For dynamic tags, default to pulling for updates
 			pullPolicy = "Always"
 			log.Debug().Str("image", imageName).Str("tag", tag).Msg("Auto-detected pull policy: Always (dynamic tag, local image is stale)")
+		} else if hasLocalImage && (tag == "latest" || tag == "main" || tag == "master") {
+			// For dynamic tags with local image (not loadLocal mode), check cache TTL
+			// This prevents hitting the registry on every command
+			registryCache, _ := cache.Load()
+			cacheTTL := 300 // default 5 minutes
+			if conf.Global.Registry != nil && conf.Global.Registry.CacheTTL > 0 {
+				cacheTTL = conf.Global.Registry.CacheTTL
+			}
+
+			if registryCache != nil && !registryCache.IsExpired(cacheTTL) {
+				// Cache is still valid, use local image
+				log.Info().
+					Str("image", imageName).
+					Int("cacheTTL", cacheTTL).
+					Msg("Using cached image (cache TTL not expired)")
+				return nil
+			}
+
+			// Cache expired, pull for updates
+			pullPolicy = "Always"
+			log.Debug().Str("image", imageName).Str("tag", tag).Msg("Auto-detected pull policy: Always (dynamic tag, cache expired)")
 		} else if hasLocalImage && tag != "" && tag != "latest" && tag != "main" && tag != "master" {
 			// For specific version tags, check if it's a local build first (only if loadLocal is true)
 			if loadLocal && len(localImageInfo.RepoDigests) == 0 {
