@@ -299,36 +299,23 @@ jobs:
 
           cat release_notes.md
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release with binaries
         run: |
           TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
           VERSION="${{ steps.extract_version.outputs.version }}"
 
-          echo "Creating release for tag: $TAG_NAME"
+          echo "Creating release for tag: $TAG_NAME with binaries"
 
           gh release create "$TAG_NAME" \
             --title "r2r CLI v$VERSION" \
             --notes-file release_notes.md \
-            --verify-tag
-
-          echo "✅ Release created successfully"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Upload binaries to release
-        run: |
-          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
-
-          echo "Uploading binaries to release: $TAG_NAME"
-
-          gh release upload "$TAG_NAME" \
+            --verify-tag \
             out/build/src-cli/r2r-linux \
             out/build/src-cli/r2r-darwin-amd64 \
             out/build/src-cli/r2r-darwin-arm64 \
-            out/build/src-cli/r2r-windows.exe \
-            --clobber
+            out/build/src-cli/r2r-windows.exe
 
-          echo "✅ Binaries uploaded successfully"
+          echo "✅ Release created with binaries successfully"
         env:
           GH_TOKEN: ${{ github.token }}
 
