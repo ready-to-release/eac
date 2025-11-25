@@ -5,8 +5,6 @@ on:
     workflows: ["ci-docs (stage 1-6)"]
     types:
       - completed
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -18,8 +16,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Only run on successful CI completion (or manual trigger)
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Only run on successful CI completion from main branch (or manual trigger)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
 
     environment:
       name: github-pages
