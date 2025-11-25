@@ -51,6 +51,7 @@ func printGetUsage() {
 	fmt.Println("Files and Changes:")
 	fmt.Println("  files                     Get repository files with module mappings")
 	fmt.Println("  changed modules           Get modules affected by changed files")
+	fmt.Println("  changed modules ci        Get modules requiring rebuild since last successful CI")
 	fmt.Println()
 	fmt.Println("Testing:")
 	fmt.Println("  tests                     Get all tests in structured format")
@@ -68,6 +69,9 @@ func printGetUsage() {
 	fmt.Println()
 	fmt.Println("  # Get affected modules")
 	fmt.Println("  r2r get changed modules")
+	fmt.Println()
+	fmt.Println("  # Get modules requiring rebuild in CI (includes cache invalidation)")
+	fmt.Println("  r2r get changed modules ci --as-json")
 	fmt.Println()
 	fmt.Println("Use 'r2r get <subcommand> --help' for more information about a command.")
 }

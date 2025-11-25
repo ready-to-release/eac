@@ -312,6 +312,74 @@ func GetChangedModules(changedFiles []string, rootPath string, version string) (
 	return result, nil
 }
 
+// GetModulesRequiringRebuild returns all modules that need to be rebuilt given a set of changed files.
+// This includes:
+// 1. Modules that directly own the changed files
+// 2. All modules that transitively depend on the changed modules (cache invalidation)
+//
+// For example, if src-core changes, this returns src-core plus all modules that depend on it
+// (directly or transitively), because their cached builds are now invalid.
+func GetModulesRequiringRebuild(changedFiles []string, rootPath string, version string) ([]string, error) {
+	if rootPath == "" {
+		var err error
+		rootPath, err = GetRepositoryRoot("")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Get directly changed modules
+	directlyChanged, err := GetChangedModules(changedFiles, rootPath, version)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(directlyChanged) == 0 {
+		return []string{}, nil
+	}
+
+	// Get the dependency graph to find dependents
+	graph, err := GetModuleDependencyGraph(rootPath, version)
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect all modules requiring rebuild (changed + transitive dependents)
+	requiresRebuild := make(map[string]bool)
+
+	// Add directly changed modules
+	for _, m := range directlyChanged {
+		requiresRebuild[m] = true
+	}
+
+	// For each directly changed module, add all transitive dependents
+	for _, changedModule := range directlyChanged {
+		addTransitiveDependents(changedModule, graph.Dependents, requiresRebuild)
+	}
+
+	// Convert to sorted slice for consistent output
+	result := make([]string, 0, len(requiresRebuild))
+	for moniker := range requiresRebuild {
+		result = append(result, moniker)
+	}
+	sort.Strings(result)
+
+	return result, nil
+}
+
+// addTransitiveDependents recursively adds all modules that depend on the given module
+// (directly or transitively) to the result set.
+func addTransitiveDependents(module string, dependentsGraph map[string][]string, result map[string]bool) {
+	dependents := dependentsGraph[module]
+	for _, dependent := range dependents {
+		if !result[dependent] {
+			result[dependent] = true
+			// Recursively add dependents of this dependent
+			addTransitiveDependents(dependent, dependentsGraph, result)
+		}
+	}
+}
+
 // GetPlantUMLDiagram generates a PlantUML diagram from the dependency graph
 func GetPlantUMLDiagram(graph *ModuleDependencyGraph) string {
 	output := "@startuml\n"
