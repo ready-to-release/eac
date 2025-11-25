@@ -12,6 +12,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -73,8 +74,14 @@ func lookupFilesBelongingToUnorderedModule() error {
 		return nil
 	}
 
+	// Open git repository
+	repo, err := git.Open(noUnorderedFilesCtx.repoRoot)
+	if err != nil {
+		return fmt.Errorf("failed to open git repository: %w", err)
+	}
+
 	// Get all files with module ownership
-	files, err := repository.GetRepositoryFilesWithModules(true, false, false, noUnorderedFilesCtx.repoRoot, "0.1.0")
+	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
 	if err != nil {
 		return fmt.Errorf("failed to get repository files with modules: %w", err)
 	}

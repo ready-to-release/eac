@@ -1,44 +1,40 @@
 package repository
 
 import (
-	"io/ioutil"
+	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/ready-to-release/eac/src/core/git"
 )
 
-// createTestGitRepo creates a temporary git repository for testing
-func createTestGitRepo(t *testing.T) string {
-	tmpDir, err := ioutil.TempDir("", "repo-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
+// testRepos holds git.Repository instances for test helper functions
+var testRepos = make(map[string]*git.Repository)
 
-	// Initialize git repo
-	cmd := exec.Command("git", "init")
-	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+// createTestGitRepo creates a temporary git repository for testing using go-git
+func createTestGitRepo(t *testing.T) (string, git.GitRepository) {
+	tmpDir := t.TempDir()
+
+	// Initialize git repo using go-git
+	repo, err := git.Init(tmpDir)
+	if err != nil {
 		t.Fatalf("Failed to initialize git repo: %v", err)
 	}
 
 	// Configure git user for commits
-	cmd = exec.Command("git", "config", "user.name", "Test User")
-	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+	if err := repo.ConfigSet("user", "name", "Test User"); err != nil {
 		t.Fatalf("Failed to set git user.name: %v", err)
 	}
 
-	cmd = exec.Command("git", "config", "user.email", "test@example.com")
-	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+	if err := repo.ConfigSet("user", "email", "test@example.com"); err != nil {
 		t.Fatalf("Failed to set git user.email: %v", err)
 	}
 
-	return tmpDir
+	// Store repo for helper functions
+	testRepos[tmpDir] = repo
+
+	return tmpDir, repo
 }
 
 // createTestFile creates a test file in the given directory
@@ -52,32 +48,28 @@ func createTestFile(t *testing.T, dir, relativePath, content string) {
 	}
 
 	// Create file
-	if err := ioutil.WriteFile(fullPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
 		t.Fatalf("Failed to create file %s: %v", fullPath, err)
 	}
 }
 
-// gitAdd adds a file to git staging
-func gitAdd(t *testing.T, repoDir, file string) {
-	cmd := exec.Command("git", "add", file)
-	cmd.Dir = repoDir
-	if err := cmd.Run(); err != nil {
+// gitAdd adds a file to git staging using go-git
+func gitAdd(t *testing.T, repo git.GitRepository, file string) {
+	if err := repo.Add(file); err != nil {
 		t.Fatalf("Failed to git add %s: %v", file, err)
 	}
 }
 
-// gitCommit creates a commit
-func gitCommit(t *testing.T, repoDir, message string) {
-	cmd := exec.Command("git", "commit", "-m", message)
-	cmd.Dir = repoDir
-	if err := cmd.Run(); err != nil {
+// gitCommit creates a commit using go-git
+func gitCommit(t *testing.T, repo git.GitRepository, message string) {
+	_, err := repo.Commit(message, "Test User", "test@example.com")
+	if err != nil {
 		t.Fatalf("Failed to git commit: %v", err)
 	}
 }
 
 func TestGetRepositoryRoot_FromRoot(t *testing.T) {
-	repoDir := createTestGitRepo(t)
-	defer os.RemoveAll(repoDir)
+	repoDir, _ := createTestGitRepo(t)
 
 	root, err := GetRepositoryRoot(repoDir)
 	if err != nil {
@@ -94,8 +86,7 @@ func TestGetRepositoryRoot_FromRoot(t *testing.T) {
 }
 
 func TestGetRepositoryRoot_FromSubdirectory(t *testing.T) {
-	repoDir := createTestGitRepo(t)
-	defer os.RemoveAll(repoDir)
+	repoDir, _ := createTestGitRepo(t)
 
 	// Create subdirectories
 	subDir := filepath.Join(repoDir, "src", "test")
@@ -117,14 +108,10 @@ func TestGetRepositoryRoot_FromSubdirectory(t *testing.T) {
 }
 
 func TestGetRepositoryRoot_NotARepository(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "repo-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Don't initialize git
-	_, err = GetRepositoryRoot(tmpDir)
+	_, err := GetRepositoryRoot(tmpDir)
 	if err == nil {
 		t.Error("Expected error for non-repository directory")
 	}
@@ -145,20 +132,19 @@ func TestGetRepositoryRoot_EmptyPath(t *testing.T) {
 }
 
 func TestGetRepositoryFiles_TrackedOnly(t *testing.T) {
-	repoDir := createTestGitRepo(t)
-	defer os.RemoveAll(repoDir)
+	repoDir, repo := createTestGitRepo(t)
 
 	// Create and track files
 	createTestFile(t, repoDir, "file1.txt", "content1")
 	createTestFile(t, repoDir, "file2.txt", "content2")
-	gitAdd(t, repoDir, "file1.txt")
-	gitAdd(t, repoDir, "file2.txt")
-	gitCommit(t, repoDir, "Initial commit")
+	gitAdd(t, repo, "file1.txt")
+	gitAdd(t, repo, "file2.txt")
+	gitCommit(t, repo, "Initial commit")
 
 	// Create untracked file
 	createTestFile(t, repoDir, "untracked.txt", "untracked")
 
-	files, err := GetRepositoryFiles(true, false, false, false, repoDir)
+	files, err := GetRepositoryFiles(repo, true, false, false, false)
 	if err != nil {
 		t.Fatalf("GetRepositoryFiles failed: %v", err)
 	}
@@ -177,18 +163,17 @@ func TestGetRepositoryFiles_TrackedOnly(t *testing.T) {
 }
 
 func TestGetRepositoryFiles_AllFiles(t *testing.T) {
-	repoDir := createTestGitRepo(t)
-	defer os.RemoveAll(repoDir)
+	repoDir, repo := createTestGitRepo(t)
 
 	// Create tracked files
 	createTestFile(t, repoDir, "tracked.txt", "tracked")
-	gitAdd(t, repoDir, "tracked.txt")
-	gitCommit(t, repoDir, "Initial commit")
+	gitAdd(t, repo, "tracked.txt")
+	gitCommit(t, repo, "Initial commit")
 
 	// Create untracked file
 	createTestFile(t, repoDir, "untracked.txt", "untracked")
 
-	files, err := GetRepositoryFiles(false, false, false, false, repoDir)
+	files, err := GetRepositoryFiles(repo, false, false, false, false)
 	if err != nil {
 		t.Fatalf("GetRepositoryFiles failed: %v", err)
 	}
@@ -217,30 +202,29 @@ func TestGetRepositoryFiles_AllFiles(t *testing.T) {
 }
 
 func TestGetRepositoryFiles_WithIgnored(t *testing.T) {
-	repoDir := createTestGitRepo(t)
-	defer os.RemoveAll(repoDir)
+	repoDir, repo := createTestGitRepo(t)
 
 	// Create .gitignore
 	createTestFile(t, repoDir, ".gitignore", "ignored.txt\n")
-	gitAdd(t, repoDir, ".gitignore")
-	gitCommit(t, repoDir, "Add gitignore")
+	gitAdd(t, repo, ".gitignore")
+	gitCommit(t, repo, "Add gitignore")
 
 	// Create ignored file
 	createTestFile(t, repoDir, "ignored.txt", "ignored")
 
 	// Create tracked file
 	createTestFile(t, repoDir, "tracked.txt", "tracked")
-	gitAdd(t, repoDir, "tracked.txt")
-	gitCommit(t, repoDir, "Add tracked")
+	gitAdd(t, repo, "tracked.txt")
+	gitCommit(t, repo, "Add tracked")
 
 	// Get all files excluding ignored
-	filesExcluded, err := GetRepositoryFiles(false, false, false, false, repoDir)
+	filesExcluded, err := GetRepositoryFiles(repo, false, false, false, false)
 	if err != nil {
 		t.Fatalf("GetRepositoryFiles failed: %v", err)
 	}
 
 	// Get all files including ignored
-	filesIncluded, err := GetRepositoryFiles(false, true, false, false, repoDir)
+	filesIncluded, err := GetRepositoryFiles(repo, false, true, false, false)
 	if err != nil {
 		t.Fatalf("GetRepositoryFiles failed: %v", err)
 	}
@@ -267,8 +251,7 @@ func TestGetRepositoryFiles_WithIgnored(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-	repoDir := createTestGitRepo(t)
-	defer os.RemoveAll(repoDir)
+	repoDir, _ := createTestGitRepo(t)
 
 	repo, err := New(repoDir)
 	if err != nil {
@@ -281,16 +264,20 @@ func TestNew(t *testing.T) {
 	if gotRoot != expectedRoot {
 		t.Errorf("Expected root %s, got %s", expectedRoot, gotRoot)
 	}
+
+	// Verify GitRepo() returns a valid interface
+	if repo.GitRepo() == nil {
+		t.Error("GitRepo() returned nil")
+	}
 }
 
 func TestRepository_Files(t *testing.T) {
-	repoDir := createTestGitRepo(t)
-	defer os.RemoveAll(repoDir)
+	repoDir, gitRepo := createTestGitRepo(t)
 
 	// Create tracked file
 	createTestFile(t, repoDir, "file.txt", "content")
-	gitAdd(t, repoDir, "file.txt")
-	gitCommit(t, repoDir, "Initial commit")
+	gitAdd(t, gitRepo, "file.txt")
+	gitCommit(t, gitRepo, "Initial commit")
 
 	repo, err := New(repoDir)
 	if err != nil {
@@ -308,14 +295,8 @@ func TestRepository_Files(t *testing.T) {
 }
 
 func TestIsGitRepository(t *testing.T) {
-	repoDir := createTestGitRepo(t)
-	defer os.RemoveAll(repoDir)
-
-	tmpDir, err := ioutil.TempDir("", "repo-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	repoDir, _ := createTestGitRepo(t)
+	nonRepoDir := t.TempDir()
 
 	tests := []struct {
 		name     string
@@ -323,7 +304,7 @@ func TestIsGitRepository(t *testing.T) {
 		expected bool
 	}{
 		{"git repository", repoDir, true},
-		{"non-git directory", tmpDir, false},
+		{"non-git directory", nonRepoDir, false},
 	}
 
 	for _, tt := range tests {
@@ -390,5 +371,131 @@ func TestRepositoryError_Unwrap(t *testing.T) {
 	unwrapped := err.Unwrap()
 	if unwrapped != underlying {
 		t.Error("Unwrap returned wrong error")
+	}
+}
+
+// ============================================================================
+// Mock-based tests for error paths and edge cases
+// ============================================================================
+
+func TestGetRepositoryFiles_WithMock_TrackedFiles(t *testing.T) {
+	mock := git.NewMockRepository("/test/repo").
+		WithTrackedFiles([]string{"main.go", "go.mod", "README.md"})
+
+	files, err := GetRepositoryFiles(mock, true, false, false, false)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(files) != 3 {
+		t.Errorf("Expected 3 files, got %d", len(files))
+	}
+
+	// All should be tracked
+	for _, f := range files {
+		if !f.IsTracked {
+			t.Errorf("File %s should be tracked", f.Path)
+		}
+	}
+}
+
+func TestGetRepositoryFiles_WithMock_StagedFiles(t *testing.T) {
+	mock := git.NewMockRepository("/test/repo").
+		WithStagedFiles([]string{"new.go", "updated.go"})
+
+	files, err := GetRepositoryFiles(mock, false, false, false, true)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(files) != 2 {
+		t.Errorf("Expected 2 staged files, got %d", len(files))
+	}
+}
+
+func TestGetRepositoryFiles_WithMock_TrackedFilesError(t *testing.T) {
+	expectedErr := errors.New("git index corrupted")
+	mock := git.NewMockRepository("/test/repo").
+		WithError("TrackedFiles", expectedErr)
+
+	_, err := GetRepositoryFiles(mock, true, false, false, false)
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	// Should be wrapped in RepositoryError
+	var repoErr *RepositoryError
+	if !errors.As(err, &repoErr) {
+		t.Errorf("Expected RepositoryError, got %T", err)
+	}
+}
+
+func TestGetRepositoryFiles_WithMock_StagedFilesError(t *testing.T) {
+	expectedErr := errors.New("staging area error")
+	mock := git.NewMockRepository("/test/repo").
+		WithError("StagedFiles", expectedErr)
+
+	_, err := GetRepositoryFiles(mock, false, false, false, true)
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	var repoErr *RepositoryError
+	if !errors.As(err, &repoErr) {
+		t.Errorf("Expected RepositoryError, got %T", err)
+	}
+}
+
+func TestGetRepositoryFiles_WithMock_FiltersGitInternalFiles(t *testing.T) {
+	mock := git.NewMockRepository("/test/repo").
+		WithTrackedFiles([]string{"main.go", ".gitignore", ".gitkeep", "src/.gitkeep"})
+
+	// Without git internal files
+	files, err := GetRepositoryFiles(mock, true, false, false, false)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(files) != 1 {
+		t.Errorf("Expected 1 file (excluding .gitignore/.gitkeep), got %d", len(files))
+	}
+
+	// With git internal files
+	filesWithInternal, err := GetRepositoryFiles(mock, true, false, true, false)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(filesWithInternal) != 4 {
+		t.Errorf("Expected 4 files (including .gitignore/.gitkeep), got %d", len(filesWithInternal))
+	}
+}
+
+func TestGetRepositoryFiles_WithMock_EmptyRepository(t *testing.T) {
+	mock := git.NewMockRepository("/test/repo").
+		WithTrackedFiles([]string{})
+
+	files, err := GetRepositoryFiles(mock, true, false, false, false)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(files) != 0 {
+		t.Errorf("Expected 0 files, got %d", len(files))
+	}
+}
+
+func TestGetRepositoryFiles_WithMock_WhitespaceInFilenames(t *testing.T) {
+	mock := git.NewMockRepository("/test/repo").
+		WithTrackedFiles([]string{"  ", "main.go", "", "test.go"})
+
+	files, err := GetRepositoryFiles(mock, true, false, false, false)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Should filter out empty/whitespace-only entries
+	if len(files) != 2 {
+		t.Errorf("Expected 2 files (filtering whitespace), got %d", len(files))
 	}
 }
