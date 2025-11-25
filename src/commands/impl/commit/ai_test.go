@@ -149,9 +149,9 @@ Body text here.`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := stripAgentNoise(tt.input, tt.agentType, workspaceRoot)
+			got := StripAgentNoise(tt.input, tt.agentType, workspaceRoot)
 			if got != tt.want {
-				t.Errorf("stripAgentNoise() failed\nInput:\n%s\n\nGot:\n%s\n\nWant:\n%s", tt.input, got, tt.want)
+				t.Errorf("StripAgentNoise() failed\nInput:\n%s\n\nGot:\n%s\n\nWant:\n%s", tt.input, got, tt.want)
 			}
 		})
 	}
@@ -263,9 +263,9 @@ src-commands: chore: update deps`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := stripAgentNoise(tt.input, tt.agentType, workspaceRoot)
+			got := StripAgentNoise(tt.input, tt.agentType, workspaceRoot)
 			if got != tt.want {
-				t.Errorf("stripAgentNoise() failed\nInput:\n%s\n\nGot:\n%s\n\nWant:\n%s", tt.input, got, tt.want)
+				t.Errorf("StripAgentNoise() failed\nInput:\n%s\n\nGot:\n%s\n\nWant:\n%s", tt.input, got, tt.want)
 			}
 		})
 	}
@@ -313,9 +313,9 @@ Module content.`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := stripAgentNoise(tt.input, tt.agentType, nonExistentRoot)
+			got := StripAgentNoise(tt.input, tt.agentType, nonExistentRoot)
 			if got != tt.want {
-				t.Errorf("stripAgentNoise() fallback failed\nGot:\n%s\n\nWant:\n%s", got, tt.want)
+				t.Errorf("StripAgentNoise() fallback failed\nGot:\n%s\n\nWant:\n%s", got, tt.want)
 			}
 		})
 	}

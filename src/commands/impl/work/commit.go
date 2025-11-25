@@ -3,7 +3,7 @@
 // Long: Commits changes in the current workspace using AI to generate semantic commit messages.
 // Long:
 // Long: By default, commits only staged changes. Use --all to stage all changes before committing.
-// Long: Uses the commit-ai command internally to generate high-quality commit messages that follow
+// Long: Uses the commit command internally to generate high-quality commit messages that follow
 // Long: project conventions and include module-specific details.
 // Long:
 // Long: Example:
@@ -13,7 +13,7 @@
 // Long:   work commit -m "feat: add new feature"
 // Flag.all: type=bool, shorthand=a, default=false, usage=Stage all changes before committing
 // Flag.message: type=string, shorthand=m, usage=Custom commit message (skips AI generation)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit-ai)
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit)
 // HasSideEffects: true
 package work
 
@@ -38,12 +38,12 @@ func init() {
 //
 // Easy to understand:
 //   - Clear flow: validate → stage (if --all) → generate message → commit
-//   - Reuses existing commit-ai for message generation
+//   - Reuses existing commit for message generation
 //   - Flags mirror git commit conventions (--all, --message)
 //
 // Easy to change:
 //   - Staging logic isolated
-//   - Message generation delegated to commit-ai
+//   - Message generation delegated to commit
 //   - Custom message path separate from AI path
 //
 // Hard to break:
@@ -178,19 +178,19 @@ func commitWithMessage(message string) int {
 	return 0
 }
 
-// commitWithAI calls commit-ai to generate and create commit
+// commitWithAI calls commit to generate and create commit
 func commitWithAI(debug bool) int {
-	// Prepare args for commit-ai
+	// Prepare args for commit
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	// Set args to simulate: r2r commit-ai [--debug]
+	// Set args to simulate: r2r commit [--debug]
 	if debug {
-		os.Args = []string{"r2r", "commit-ai", "--debug"}
+		os.Args = []string{"r2r", "commit", "--debug"}
 	} else {
-		os.Args = []string{"r2r", "commit-ai"}
+		os.Args = []string{"r2r", "commit"}
 	}
 
-	// Call commit-ai
+	// Call commit
 	return commit.CommitAI()
 }

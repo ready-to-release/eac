@@ -35,9 +35,12 @@ import (
 
 // Test context holds state between steps
 type testContext struct {
-	commandOutput string
-	exitCode      int
-	commandError  error
+	commandOutput     string
+	exitCode          int
+	commandError      error
+	testCommitMessage string   // For commit validation testing
+	affectedModules   []string // Modules affected by current changes
+	validationErrors  []string // Validation error codes for assertions
 }
 
 var ctx *testContext
@@ -46,14 +49,6 @@ var ctx *testContext
 // This is set once at test initialization and used for running go commands
 // even when tests change the current working directory for git isolation
 var originalRepoRoot string
-
-// testRepoRoot stores the temporary git repository root for git-isolated tests
-// When set, commands will use this as the repository root via R2R_TEST_REPO_ROOT env var
-var testRepoRoot string
-
-// testAIResponse stores the mock AI response for AI-invoking commands
-// When set, AI commands will return this response instead of calling the real AI
-var testAIResponse string
 
 // ============================================================================
 // Command Execution Context
@@ -178,17 +173,6 @@ func executeCommand(execCtx *commandExecutionContext) error {
 
 	// Build environment with test overrides
 	env := os.Environ()
-
-	// If a test repository root is set (for git isolation), pass it via environment variable
-	// This allows the command to use the test git repo instead of the real one
-	if testRepoRoot != "" {
-		env = append(env, fmt.Sprintf("R2R_TEST_REPO_ROOT=%s", testRepoRoot))
-	}
-
-	// If a test AI response is set, pass it to mock AI invocations
-	if testAIResponse != "" {
-		env = append(env, fmt.Sprintf("R2R_TEST_AI_RESPONSE=%s", testAIResponse))
-	}
 
 	// For isolated tests, set CLI_ORIGINAL_PWD to the isolated directory
 	// This makes the command think it's running from the isolated directory
@@ -349,9 +333,6 @@ func initializeIsolatedTestProject() error {
 	// Store for cleanup
 	isolatedTestProjectDir = tmpDir
 
-	// Set as test repo root so commands use it
-	testRepoRoot = tmpDir
-
 	return nil
 }
 
@@ -365,11 +346,8 @@ func cleanupScenario() error {
 		isolatedTestProjectDir = ""
 	}
 
-	// Reset test repository root
-	testRepoRoot = ""
-
-	// Reset test AI response
-	testAIResponse = ""
+	// Reset commit mocks (git repo and AI response)
+	cleanupCommitMocks()
 
 	// Reset templates context (if it was set by a templates scenario)
 	// This ensures non-template scenarios don't inherit the templates context
@@ -397,14 +375,6 @@ func runCommandWithArgs(args ...string) error {
 
 	// Build environment with test overrides (same as executeCommand)
 	env := os.Environ()
-
-	if testRepoRoot != "" {
-		env = append(env, fmt.Sprintf("R2R_TEST_REPO_ROOT=%s", testRepoRoot))
-	}
-
-	if testAIResponse != "" {
-		env = append(env, fmt.Sprintf("R2R_TEST_AI_RESPONSE=%s", testAIResponse))
-	}
 
 	if isolatedTestProjectDir != "" {
 		env = append(env, fmt.Sprintf("CLI_ORIGINAL_PWD=%s", isolatedTestProjectDir))
@@ -449,6 +419,9 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Docs command steps
 	InitializeDocsScenario(sc)
 
+	// Commit command steps
+	InitializeCommitScenario(sc)
+
 	sc.Before(func(ctx context.Context, scenario *godog.Scenario) (context.Context, error) {
 		initializeContext()
 
@@ -457,6 +430,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 			if tag.Name == "@env:isolated-test-project" {
 				if err := initializeIsolatedTestProject(); err != nil {
 					return ctx, fmt.Errorf("failed to initialize isolated test project: %w", err)
+				}
+				// Set up commit mocks automatically for isolated tests
+				if err := setupCommitMocks(); err != nil {
+					return ctx, fmt.Errorf("failed to setup commit mocks: %w", err)
 				}
 				break
 			}
@@ -533,11 +510,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^missing module stub is added for "([^"]*)"$`, missingModuleStubIsAdded)
 
 	// Additional common steps
-	sc.Step(`^only that file's diff should be included$`, onlyThatFilesDiffShouldBeIncluded)
-	sc.Step(`^other files should be excluded$`, otherFilesShouldBeExcluded)
+	// Note: "only that file's diff should be included", "other files should be excluded",
+	// and "no module sections should be created" are registered in commit_steps_test.go
 	sc.Step(`^only valid Gherkin content should remain$`, onlyValidGherkinContentShouldRemain)
 	sc.Step(`^all sections are in the correct order$`, allSectionsAreInTheCorrectOrder)
-	sc.Step(`^no module sections should be created$`, noModuleSectionsShouldBeCreated)
 
 	// BDD common steps (alternative phrasings from spec features)
 	sc.Step(`^the command is executed$`, theCommandIsExecuted)
@@ -586,7 +562,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^both commands complete successfully$`, bothCommandsCompleteSuccessfully)
 	sc.Step(`^the command is terminated$`, theCommandIsTerminated)
 	sc.Step(`^the command history does not contain the secret value$`, theCommandHistoryDoesNotContainTheSecretValue)
-	sc.Step(`^execution context is built$`, executionContextIsBuilt)
+	// Note: "execution context is built" is registered in commit_steps_test.go
 	sc.Step(`^no data race warnings are reported$`, noDataRaceWarningsAreReported)
 	sc.Step(`^no file corruption occurs$`, noFileCorruptionOccurs)
 	sc.Step(`^metrics include total time$`, metricsIncludeTotalTime)
@@ -613,8 +589,8 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 
 	// Specs - additional steps
 	sc.Step(`^I run the specs create command$`, iRunTheSpecsCreateCommand)
-	sc.Step(`^the contract file does not exist$`, theContractFileDoesNotExist)
-	sc.Step(`^a contract file with invalid YAML$`, aContractFileWithInvalidYAML)
+	// Note: "the contract file does not exist" and "a contract file with invalid YAML"
+	// are registered in commit_steps_test.go
 	sc.Step(`^the specs directory is not writable$`, theSpecsDirectoryIsNotWritable)
 	sc.Step(`^it must contain a "Feature:" declaration$`, itMustContainAFeatureDeclaration)
 	sc.Step(`^the AI generates a feature named "([^"]*)"$`, theAIGeneratesAFeatureNamed)
@@ -628,7 +604,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^the AI provider will fail for module "([^"]*)"$`, theAIProviderWillFailForModule)
 	sc.Step(`^the AI provider will fail for modules:$`, theAIProviderWillFailForModules)
 	sc.Step(`^the AI returns an empty response for module "([^"]*)"$`, theAIReturnsAnEmptyResponseForModule)
-	sc.Step(`^AI output wrapped in triple backticks$`, aiOutputWrappedInTripleBackticks)
+	// Note: "AI output wrapped in triple backticks" is registered in commit_steps_test.go
 
 	// Template - additional steps
 	sc.Step(`^a template directory with file "([^"]*)"$`, aTemplateDirectoryWithFile)

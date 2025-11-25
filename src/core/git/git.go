@@ -4,6 +4,7 @@ package git
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -304,6 +305,266 @@ func (r *Repository) AddRemote(name, url string) error {
 		return fmt.Errorf("failed to add remote %q: %w", name, err)
 	}
 	return nil
+}
+
+// StagedDiff returns the unified diff of all staged changes.
+// Equivalent to `git diff --staged`.
+func (r *Repository) StagedDiff() (string, error) {
+	wt, err := r.repo.Worktree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	status, err := wt.Status()
+	if err != nil {
+		return "", fmt.Errorf("failed to get status: %w", err)
+	}
+
+	// Get HEAD commit tree (for comparison)
+	var headTree *object.Tree
+	head, err := r.repo.Head()
+	if err == nil {
+		commit, err := r.repo.CommitObject(head.Hash())
+		if err == nil {
+			headTree, _ = commit.Tree()
+		}
+	}
+	// If no HEAD (empty repo), headTree will be nil - that's fine
+
+	var diffBuilder strings.Builder
+
+	for path, fileStatus := range status {
+		// Only process staged changes
+		switch fileStatus.Staging {
+		case gogit.Added, gogit.Modified, gogit.Renamed, gogit.Copied, gogit.Deleted:
+			// Get the staged content from the index
+			idx, err := r.repo.Storer.Index()
+			if err != nil {
+				continue
+			}
+
+			// Find the entry in the index
+			var stagedContent string
+			var stagedBlob plumbing.Hash
+			for _, entry := range idx.Entries {
+				if entry.Name == path {
+					stagedBlob = entry.Hash
+					break
+				}
+			}
+
+			if stagedBlob != plumbing.ZeroHash {
+				blob, err := r.repo.BlobObject(stagedBlob)
+				if err == nil {
+					reader, err := blob.Reader()
+					if err == nil {
+						content, _ := io.ReadAll(reader)
+						stagedContent = string(content)
+						reader.Close()
+					}
+				}
+			}
+
+			// Get the original content from HEAD (if exists)
+			var originalContent string
+			if headTree != nil && fileStatus.Staging != gogit.Added {
+				file, err := headTree.File(path)
+				if err == nil {
+					originalContent, _ = file.Contents()
+				}
+			}
+
+			// Generate unified diff
+			diffOutput := generateUnifiedDiff(path, originalContent, stagedContent, fileStatus.Staging)
+			diffBuilder.WriteString(diffOutput)
+		}
+	}
+
+	return diffBuilder.String(), nil
+}
+
+// StagedDiffStats returns the stat summary of staged changes.
+// Equivalent to `git diff --staged --stat`.
+func (r *Repository) StagedDiffStats() (string, error) {
+	wt, err := r.repo.Worktree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	status, err := wt.Status()
+	if err != nil {
+		return "", fmt.Errorf("failed to get status: %w", err)
+	}
+
+	// Get HEAD commit tree (for comparison)
+	var headTree *object.Tree
+	head, err := r.repo.Head()
+	if err == nil {
+		commit, err := r.repo.CommitObject(head.Hash())
+		if err == nil {
+			headTree, _ = commit.Tree()
+		}
+	}
+
+	var stats []string
+	var totalInsertions, totalDeletions int
+	filesChanged := 0
+
+	for path, fileStatus := range status {
+		// Only process staged changes
+		switch fileStatus.Staging {
+		case gogit.Added, gogit.Modified, gogit.Renamed, gogit.Copied, gogit.Deleted:
+			filesChanged++
+
+			// Get the staged content from the index
+			idx, err := r.repo.Storer.Index()
+			if err != nil {
+				continue
+			}
+
+			var stagedContent string
+			var stagedBlob plumbing.Hash
+			for _, entry := range idx.Entries {
+				if entry.Name == path {
+					stagedBlob = entry.Hash
+					break
+				}
+			}
+
+			if stagedBlob != plumbing.ZeroHash {
+				blob, err := r.repo.BlobObject(stagedBlob)
+				if err == nil {
+					reader, err := blob.Reader()
+					if err == nil {
+						content, _ := io.ReadAll(reader)
+						stagedContent = string(content)
+						reader.Close()
+					}
+				}
+			}
+
+			// Get the original content from HEAD (if exists)
+			var originalContent string
+			if headTree != nil && fileStatus.Staging != gogit.Added {
+				file, err := headTree.File(path)
+				if err == nil {
+					originalContent, _ = file.Contents()
+				}
+			}
+
+			// Calculate insertions/deletions
+			originalLines := strings.Split(originalContent, "\n")
+			stagedLines := strings.Split(stagedContent, "\n")
+
+			if originalContent == "" {
+				originalLines = []string{}
+			}
+			if stagedContent == "" {
+				stagedLines = []string{}
+			}
+
+			insertions := 0
+			deletions := 0
+
+			if fileStatus.Staging == gogit.Added {
+				insertions = len(stagedLines)
+			} else if fileStatus.Staging == gogit.Deleted {
+				deletions = len(originalLines)
+			} else {
+				// Simple line count diff (not a true diff algorithm, but good for stats)
+				insertions = max(0, len(stagedLines)-len(originalLines))
+				deletions = max(0, len(originalLines)-len(stagedLines))
+				// For modified files, count actual changes
+				if insertions == 0 && deletions == 0 && originalContent != stagedContent {
+					// Files differ but same line count - count as modifications
+					insertions = 1
+					deletions = 1
+				}
+			}
+
+			totalInsertions += insertions
+			totalDeletions += deletions
+
+			// Format: " path | changes +++ ---"
+			changeIndicator := ""
+			if insertions > 0 {
+				changeIndicator += strings.Repeat("+", min(insertions, 50))
+			}
+			if deletions > 0 {
+				changeIndicator += strings.Repeat("-", min(deletions, 50))
+			}
+
+			stats = append(stats, fmt.Sprintf(" %s | %d %s", path, insertions+deletions, changeIndicator))
+		}
+	}
+
+	if len(stats) == 0 {
+		return "", nil
+	}
+
+	// Build the final stats output
+	var result strings.Builder
+	for _, stat := range stats {
+		result.WriteString(stat)
+		result.WriteString("\n")
+	}
+	result.WriteString(fmt.Sprintf(" %d file(s) changed, %d insertion(s)(+), %d deletion(s)(-)\n",
+		filesChanged, totalInsertions, totalDeletions))
+
+	return result.String(), nil
+}
+
+// generateUnifiedDiff creates a unified diff format for a single file
+func generateUnifiedDiff(path, original, staged string, status gogit.StatusCode) string {
+	var diff strings.Builder
+
+	diff.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", path, path))
+
+	switch status {
+	case gogit.Added:
+		diff.WriteString("new file mode 100644\n")
+		diff.WriteString("--- /dev/null\n")
+		diff.WriteString(fmt.Sprintf("+++ b/%s\n", path))
+
+		lines := strings.Split(staged, "\n")
+		if len(lines) > 0 {
+			diff.WriteString(fmt.Sprintf("@@ -0,0 +1,%d @@\n", len(lines)))
+			for _, line := range lines {
+				diff.WriteString("+" + line + "\n")
+			}
+		}
+
+	case gogit.Deleted:
+		diff.WriteString("deleted file mode 100644\n")
+		diff.WriteString(fmt.Sprintf("--- a/%s\n", path))
+		diff.WriteString("+++ /dev/null\n")
+
+		lines := strings.Split(original, "\n")
+		if len(lines) > 0 {
+			diff.WriteString(fmt.Sprintf("@@ -1,%d +0,0 @@\n", len(lines)))
+			for _, line := range lines {
+				diff.WriteString("-" + line + "\n")
+			}
+		}
+
+	default: // Modified, Renamed, Copied
+		diff.WriteString(fmt.Sprintf("--- a/%s\n", path))
+		diff.WriteString(fmt.Sprintf("+++ b/%s\n", path))
+
+		// Simple diff: show all lines changed
+		origLines := strings.Split(original, "\n")
+		newLines := strings.Split(staged, "\n")
+
+		diff.WriteString(fmt.Sprintf("@@ -1,%d +1,%d @@\n", len(origLines), len(newLines)))
+		for _, line := range origLines {
+			diff.WriteString("-" + line + "\n")
+		}
+		for _, line := range newLines {
+			diff.WriteString("+" + line + "\n")
+		}
+	}
+
+	return diff.String()
 }
 
 // GoGitRepo returns the underlying go-git repository for advanced operations.

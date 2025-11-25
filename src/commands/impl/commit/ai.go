@@ -1,7 +1,7 @@
-// Command: commit-ai
+// Command: commit
 // Description: Generate commit message using AI with staged changes and module mappings
 // Short: Generate AI-powered commit messages from staged changes
-// Long: The commit-ai command uses AI to analyze your staged git changes and generate a structured,
+// Long: The commit command uses AI to analyze your staged git changes and generate a structured,
 // Long: conventional commit message that follows project standards and includes module-specific details.
 // Long: The generated message includes a top-level summary and per-module sections describing changes.
 // Long: All output is validated against the commit message contract to ensure consistency and quality.
@@ -15,16 +15,57 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
+	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/core/repository/reports"
 )
+
+// gitRepo holds the git repository instance for git operations.
+// In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
+var gitRepo git.GitRepository
+
+// getGitRepo returns the git repository, initializing it if needed.
+func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
+	if gitRepo != nil {
+		return gitRepo, nil
+	}
+	repo, err := git.Open(workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open git repository: %w", err)
+	}
+	return repo, nil
+}
+
+// SetGitRepo allows tests to inject a mock repository.
+func SetGitRepo(repo git.GitRepository) {
+	gitRepo = repo
+}
+
+// ResetGitRepo clears the repository for test cleanup.
+func ResetGitRepo() {
+	gitRepo = nil
+}
+
+// ValidationError is an alias for commitmessage.ValidationError for external access
+type ValidationError = commitmessage.ValidationError
+
+// VerifyCommitMessageContract validates a commit message against the contract rules.
+// This is exposed for testing purposes.
+func VerifyCommitMessageContract(commitMessage string, affectedModules []string) []ValidationError {
+	return commitmessage.VerifyCommitMessageContract(commitMessage, affectedModules)
+}
+
+// AutoCleanup performs automatic fixes on commit message before validation.
+// This is exposed for testing purposes.
+func AutoCleanup(commitMessage string) string {
+	return commitmessage.AutoCleanup(commitMessage)
+}
 
 func init() {
 	registry.Register(CommitAI)
@@ -129,7 +170,7 @@ func commitAIAttempt() (int, bool) {
 func parseConfig() (bool, string, error) {
 	// Parse flags
 	debug := false
-	for _, arg := range os.Args[2:] { // Skip program name and "commit-ai"
+	for _, arg := range os.Args[2:] { // Skip program name and "commit"
 		if arg == "--debug" {
 			debug = true
 		}
@@ -249,10 +290,13 @@ func extractAffectedModules(report *reports.FilesModulesReport, debugWriter *deb
 
 // getGitDiffAndStats retrieves git diff and diff stats for staged changes
 func getGitDiffAndStats(workspaceRoot string, debugWriter *debugWriter) (string, string, error) {
+	repo, err := getGitRepo(workspaceRoot)
+	if err != nil {
+		return "", "", err
+	}
+
 	// Get git diff
-	diffCmd := exec.Command("git", "diff", "--staged")
-	diffCmd.Dir = workspaceRoot
-	diffOutput, err := diffCmd.Output()
+	diffOutput, err := repo.StagedDiff()
 	if err != nil {
 		return "", "", fmt.Errorf("getting git diff: %w", err)
 	}
@@ -264,16 +308,13 @@ func getGitDiffAndStats(workspaceRoot string, debugWriter *debugWriter) (string,
 	}
 
 	// Get git diff stats
-	statsCmd := exec.Command("git", "diff", "--staged", "--stat")
-	statsCmd.Dir = workspaceRoot
-	statsOutput, err := statsCmd.Output()
+	diffStats, err := repo.StagedDiffStats()
 	if err != nil {
 		debugWriter.log("Warning: Failed to get diff stats: %v", err)
-		statsOutput = []byte("")
+		diffStats = ""
 	}
-	diffStats := strings.TrimSpace(string(statsOutput))
 
-	return string(diffOutput), diffStats, nil
+	return diffOutput, strings.TrimSpace(diffStats), nil
 }
 
 // Phase 4: Generate Top-Level Summary
@@ -399,14 +440,28 @@ func validateAndCommit(cfg *executionConfig, message string) (int, bool) {
 
 // performCommit executes git commit with the given message
 func performCommit(message string) int {
-	cmd := exec.Command("git", "commit", "-m", message)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	repo, err := getGitRepo("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "\n❌ Error: failed to get git repository: %v\n", err)
+		return 1
+	}
+
+	// Get author info from git config or environment
+	authorName := os.Getenv("GIT_AUTHOR_NAME")
+	authorEmail := os.Getenv("GIT_AUTHOR_EMAIL")
+	if authorName == "" {
+		authorName = "User"
+	}
+	if authorEmail == "" {
+		authorEmail = "user@local"
+	}
+
+	_, err = repo.Commit(message, authorName, authorEmail)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n❌ Error: failed to create commit: %v\n", err)
 		return 1
 	}
+
 	fmt.Println("\n✓ Commit created successfully")
 	return 0
 }

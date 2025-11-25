@@ -9,9 +9,22 @@ import (
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/core/ai"
-	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/ai/providers"
+	"github.com/ready-to-release/eac/src/core/contracts"
 )
+
+// mockAIResponse holds the mock response for testing. When set, AI calls return this.
+var mockAIResponse string
+
+// SetMockAIResponse sets a mock AI response for testing.
+func SetMockAIResponse(response string) {
+	mockAIResponse = response
+}
+
+// ResetMockAIResponse clears the mock AI response.
+func ResetMockAIResponse() {
+	mockAIResponse = ""
+}
 
 // loadPromptWithFallback implements three-tier prompt loading:
 // 1. Local contract: .r2r/contracts/ai/commit-message/0.1.0/<name>.md
@@ -36,6 +49,11 @@ func loadPromptWithFallback(promptName string, workspaceRoot string) (string, er
 // generateWithPrompt generates output using the three-tier prompt loading system with validation and retry
 // If testExecutor is provided (non-nil), it will be used instead of creating a new executor (for testing)
 func generateWithPrompt(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (string, error) {
+	// Check for mock response (test mode)
+	if mockAIResponse != "" {
+		return mockAIResponse, nil
+	}
+
 	// Load prompt template using three-tier system
 	promptTemplate, err := loadPromptWithFallback(promptName, workspaceRoot)
 	if err != nil {
@@ -135,7 +153,7 @@ func generateWithoutValidation(executor *ai.Executor, fullPrompt string, model s
 	output = strings.TrimSpace(output)
 
 	// Remove common agent initialization noise using contract-based filtering
-	output = stripAgentNoise(output, promptName, workspaceRoot)
+	output = StripAgentNoise(output, promptName, workspaceRoot)
 
 	return output, nil
 }

@@ -544,7 +544,7 @@ func InitializeSpecsScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^specification files in nested directories under "([^"]*)"$`, specificationFilesInNestedDirectoriesUnder)
 	sc.Step(`^a directory with \.feature, \.md, and \.txt files$`, aDirectoryWithFeatureMdAndTxtFiles)
 	sc.Step(`^a specification file with no read permissions$`, aSpecificationFileWithNoReadPermissions)
-	sc.Step(`^validation should correctly accept or reject based on rules$`, validationShouldCorrectlyAcceptOrRejectBasedOnRules)
+	// Note: "validation should correctly accept or reject based on rules" is registered in commit_steps_test.go
 	sc.Step(`^the temporary files are cleaned up$`, theTemporaryFilesAreCleanedUp)
 	sc.Step(`^"([^"]*)" contains cleaned output$`, fileContainsCleanedOutput)
 	sc.Step(`^the generated specification includes multiple Rules$`, theGeneratedSpecificationIncludesMultipleRules)
