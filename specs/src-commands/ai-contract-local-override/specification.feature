@@ -91,18 +91,18 @@ Feature: src-commands_ai-contract-local-override
   Rule: AI commands use contract loader with local override support
 
     @ov @deps:git
-    Scenario: commit-ai uses local contract prompt when customized
+    Scenario: commit uses local contract prompt when customized
       Given I have staged changes in git
       And .r2r/contracts/ai/commit-message/0.1.0/contract.yml exists with custom prompt
-      When I run "commit-ai"
+      When I run "commit"
       Then the AI generation uses the custom prompt from .r2r/contracts
       And the commit message follows the custom prompt format
 
     @ov @deps:git
-    Scenario: commit-ai falls back to repo contract prompts when no local override
+    Scenario: commit falls back to repo contract prompts when no local override
       Given I have staged changes in git
       And .r2r/contracts directory does not exist
-      When I run "commit-ai"
+      When I run "commit"
       Then the AI generation uses the prompt from contracts/ai/commit-message
       And the commit message follows the standard format
 

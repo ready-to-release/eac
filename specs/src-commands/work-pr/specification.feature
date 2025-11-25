@@ -25,7 +25,7 @@ Feature: src-commands_work_pr
       And I have 3 commits on my branch
       And I have pushed my branch to origin
       When I run "r2r work pr"
-      Then commit-ai analyzes all commits to generate PR description
+      Then commit analyzes all commits to generate PR description
       And a pull request is created from "feature/authentication" to "main"
       And the PR title is generated from commit messages
       And the PR body includes AI-generated summary
@@ -114,6 +114,6 @@ Feature: src-commands_work_pr
     Scenario: Create PR with debug flag
       Given I am in a workspace
       When I run "r2r work pr --debug"
-      Then commit-ai runs in debug mode
+      Then commit runs in debug mode
       And debug files are created in "out/" directory
       And I see detailed AI reasoning

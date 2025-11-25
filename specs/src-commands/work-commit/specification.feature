@@ -18,13 +18,13 @@ Feature: src-commands_work-commit
       Then the exit code is 0
       And I should see "commit" or "AI" or "message"
 
-  Rule: Commit uses commit-ai for message generation
+  Rule: Commit uses commit for message generation
 
     Scenario: Commit staged changes with AI message
       Given I am in a workspace
       And I have staged changes in "src/auth/handler.go"
       When I run "r2r work commit"
-      Then commit-ai generates a commit message
+      Then commit generates a commit message
       And the commit is created with the AI-generated message
       And the exit code is 0
 
@@ -33,7 +33,7 @@ Feature: src-commands_work-commit
       And I have unstaged changes
       When I run "r2r work commit --all"
       Then all changes are staged
-      And commit-ai generates a message
+      And commit generates a message
       And the commit is created
 
     Scenario: Commit with custom message skips AI
@@ -41,7 +41,7 @@ Feature: src-commands_work-commit
       And I have staged changes
       When I run "r2r work commit --message 'fix: resolve bug'"
       Then the commit uses message "fix: resolve bug"
-      And commit-ai is not called
+      And commit is not called
       And the exit code is 0
 
     Scenario: Commit with -m shorthand
@@ -50,20 +50,20 @@ Feature: src-commands_work-commit
       When I run "r2r work commit -m 'fix: bug'"
       Then the commit uses message "fix: bug"
 
-  Rule: Debug mode passes through to commit-ai
+  Rule: Debug mode passes through to commit
 
     Scenario: Commit with debug flag
       Given I am in a workspace
       And I have staged changes
       When I run "r2r work commit --debug"
-      Then commit-ai runs in debug mode
+      Then commit runs in debug mode
       And debug files are created in "out/" directory
 
     Scenario: Commit with -d shorthand
       Given I am in a workspace
       And I have staged changes
       When I run "r2r work commit -d"
-      Then commit-ai runs in debug mode
+      Then commit runs in debug mode
 
   Rule: Validation prevents invalid commits
 

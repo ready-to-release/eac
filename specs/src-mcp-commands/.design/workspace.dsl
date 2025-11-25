@@ -52,7 +52,7 @@ workspace "MCP Servers Architecture" "Model Context Protocol servers for EAC com
                 templatesApply = component "Template Applicator" "Implements templates-apply tools" "Go MCP tool"
 
                 # Git Operations
-                commitAI = component "AI Commit Generator" "Implements commit-ai tool" "Go MCP tool"
+                commitAI = component "AI Commit Generator" "Implements commit tool" "Go MCP tool"
                 showFilesChanged = component "Changed Files Viewer" "Implements show-files-changed, show-files-staged tools" "Go MCP tool"
                 getChangedModules = component "Changed Modules Analyzer" "Implements get-changed-modules tool" "Go MCP tool"
 
@@ -110,7 +110,7 @@ workspace "MCP Servers Architecture" "Model Context Protocol servers for EAC com
         templatesList -> cliExecutor "Executes: templates list" "CLI call"
         templatesInstall -> cliExecutor "Executes: templates install" "CLI call"
         templatesApply -> cliExecutor "Executes: templates apply" "CLI call"
-        commitAI -> cliExecutor "Executes: commit-ai" "CLI call"
+        commitAI -> cliExecutor "Executes: commit" "CLI call"
         showFilesChanged -> cliExecutor "Executes: show files-changed" "CLI call"
         getChangedModules -> cliExecutor "Executes: get changed-modules" "CLI call"
         workCreate -> cliExecutor "Executes: work create" "CLI call"

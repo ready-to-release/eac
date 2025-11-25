@@ -10,27 +10,31 @@ import (
 // MockRepository implements GitRepository for testing.
 // Use the builder methods to configure behavior.
 type MockRepository struct {
-	rootPath      string
-	remotes       map[string]string
-	currentBranch string
-	headSHA       string
-	trackedFiles  []string
-	stagedFiles   []string
-	ignoredFiles  map[string]bool
-	configs       map[string]map[string]string
-	addedFiles    []string
-	commits       []MockCommit
+	rootPath        string
+	remotes         map[string]string
+	currentBranch   string
+	headSHA         string
+	trackedFiles    []string
+	stagedFiles     []string
+	stagedDiff      string
+	stagedDiffStats string
+	ignoredFiles    map[string]bool
+	configs         map[string]map[string]string
+	addedFiles      []string
+	commits         []MockCommit
 
 	// Error injection for testing failure paths
-	RemoteURLError     error
-	CurrentBranchError error
-	HeadSHAError       error
-	TrackedFilesError  error
-	StagedFilesError   error
-	AddError           error
-	CommitError        error
-	ConfigSetError     error
-	AddRemoteError     error
+	RemoteURLError       error
+	CurrentBranchError   error
+	HeadSHAError         error
+	TrackedFilesError    error
+	StagedFilesError     error
+	StagedDiffError      error
+	StagedDiffStatsError error
+	AddError             error
+	CommitError          error
+	ConfigSetError       error
+	AddRemoteError       error
 }
 
 // MockCommit records commit information for assertions.
@@ -97,6 +101,18 @@ func (m *MockRepository) WithIgnoredFiles(paths []string) *MockRepository {
 	return m
 }
 
+// WithStagedDiff sets the staged diff content.
+func (m *MockRepository) WithStagedDiff(diff string) *MockRepository {
+	m.stagedDiff = diff
+	return m
+}
+
+// WithStagedDiffStats sets the staged diff stats.
+func (m *MockRepository) WithStagedDiffStats(stats string) *MockRepository {
+	m.stagedDiffStats = stats
+	return m
+}
+
 // WithError sets an error for a specific operation.
 func (m *MockRepository) WithError(operation string, err error) *MockRepository {
 	switch operation {
@@ -110,6 +126,10 @@ func (m *MockRepository) WithError(operation string, err error) *MockRepository 
 		m.TrackedFilesError = err
 	case "StagedFiles":
 		m.StagedFilesError = err
+	case "StagedDiff":
+		m.StagedDiffError = err
+	case "StagedDiffStats":
+		m.StagedDiffStatsError = err
 	case "Add":
 		m.AddError = err
 	case "Commit":
@@ -185,6 +205,20 @@ func (m *MockRepository) StagedFiles() ([]string, error) {
 		return nil, m.StagedFilesError
 	}
 	return m.stagedFiles, nil
+}
+
+func (m *MockRepository) StagedDiff() (string, error) {
+	if m.StagedDiffError != nil {
+		return "", m.StagedDiffError
+	}
+	return m.stagedDiff, nil
+}
+
+func (m *MockRepository) StagedDiffStats() (string, error) {
+	if m.StagedDiffStatsError != nil {
+		return "", m.StagedDiffStatsError
+	}
+	return m.stagedDiffStats, nil
 }
 
 func (m *MockRepository) IsFileTracked(relPath string) bool {

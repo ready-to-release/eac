@@ -40,6 +40,14 @@ type GitRepository interface {
 	// Returns the commit hash.
 	Commit(message, authorName, authorEmail string) (string, error)
 
+	// StagedDiff returns the unified diff of all staged changes.
+	// Equivalent to `git diff --staged`.
+	StagedDiff() (string, error)
+
+	// StagedDiffStats returns the stat summary of staged changes.
+	// Equivalent to `git diff --staged --stat`.
+	StagedDiffStats() (string, error)
+
 	// ConfigSet sets a Git configuration value.
 	ConfigSet(section, key, value string) error
 

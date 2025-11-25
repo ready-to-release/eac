@@ -86,7 +86,7 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         # Internal relationships
 
         # Command Registry relationships
-        command_registry -> commit_ai_handler "Routes commit-ai command" "Function calls"
+        command_registry -> commit_ai_handler "Routes commit command" "Function calls"
         command_registry -> file_commands "Routes file commands" "Function calls"
         command_registry -> module_commands "Routes module commands" "Function calls"
         command_registry -> test_commands "Routes test commands" "Function calls"
