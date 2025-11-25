@@ -239,9 +239,10 @@ func runTemplatesCommand(args ...string) error {
 	cmd := exec.Command(exePath, resolvedArgs...)
 	cmd.Dir = templatesCtx.workDir // Run from isolated test directory with .git
 
-	// Set CLI_ORIGINAL_PWD to the isolated test directory
-	// This ensures registry.InitialWorkingDir resolves to the test directory
-	cmd.Env = append(os.Environ(), "CLI_ORIGINAL_PWD="+templatesCtx.workDir)
+	// Set R2R_PWD and R2R_REPO_ROOT to the isolated test directory
+	// R2R_PWD: ensures registry.InitialWorkingDir resolves to the test directory
+	// R2R_REPO_ROOT: ensures repository.GetRepositoryRoot() returns the test directory
+	cmd.Env = append(os.Environ(), "R2R_PWD="+templatesCtx.workDir, "R2R_REPO_ROOT="+templatesCtx.workDir)
 
 	output, err := cmd.CombinedOutput()
 	templatesCtx.commandOutput = string(output)

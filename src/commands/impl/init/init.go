@@ -87,12 +87,12 @@ func Init() int {
 
 	// Get the source repository root (where prompt templates live)
 	// In tests, this should be the REAL repository, not the isolated temp dir
-	// We detect this by temporarily unsetting R2R_TEST_REPO_ROOT
+	// We detect this by temporarily unsetting R2R_REPO_ROOT
 	sourceRepoRoot := workspaceRoot
-	if testRepoRoot := os.Getenv("R2R_TEST_REPO_ROOT"); testRepoRoot != "" {
+	if repoRoot := os.Getenv("R2R_REPO_ROOT"); repoRoot != "" {
 		// We're in a test - find the real repository root for copying templates
-		// Unset the test override temporarily
-		os.Unsetenv("R2R_TEST_REPO_ROOT")
+		// Unset the override temporarily
+		os.Unsetenv("R2R_REPO_ROOT")
 		realRoot, err := repository.GetRepositoryRoot("")
 		if err != nil {
 			// If we can't find real root, fall back to workspace root
@@ -101,8 +101,8 @@ func Init() int {
 		} else {
 			sourceRepoRoot = realRoot
 		}
-		// Restore the test override
-		os.Setenv("R2R_TEST_REPO_ROOT", testRepoRoot)
+		// Restore the override
+		os.Setenv("R2R_REPO_ROOT", repoRoot)
 	}
 
 	r2rDir := filepath.Join(workspaceRoot, ".r2r")
