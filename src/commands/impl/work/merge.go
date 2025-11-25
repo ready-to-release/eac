@@ -7,7 +7,7 @@
 // Long:   1. Validates workspace is clean and up to date
 // Long:   2. Switches to target branch and updates it
 // Long:   3. Squash merges all workspace commits into a single commit
-// Long:   4. Uses commit-ai to generate a comprehensive commit message
+// Long:   4. Uses commit to generate a comprehensive commit message
 // Long:   5. Removes the workspace after successful merge
 // Long:
 // Long: Example:
@@ -18,7 +18,7 @@
 // Flag.target: type=string, default=main, usage=Target branch to merge into
 // Flag.no-squash: type=bool, default=false, usage=Use regular merge instead of squash merge
 // Flag.keep-worktree: type=bool, default=false, usage=Keep workspace after merge (don't remove)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit-ai)
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit)
 // HasSideEffects: true
 package work
 
@@ -45,7 +45,7 @@ func init() {
 // Easy to understand:
 //   - Clear flow: validate → update target → merge → commit → cleanup
 //   - Squash merge is the sensible default for feature branches
-//   - Uses commit-ai for high-quality squash commit messages
+//   - Uses commit for high-quality squash commit messages
 //
 // Easy to change:
 //   - Squash and regular merge paths are separate

@@ -200,7 +200,7 @@ The extension container includes:
 - **AI Providers**: Some commands use AI (OpenAI, Anthropic) via API keys:
   - `specs create` - Generate Gherkin specifications
   - `design create` - Generate Structurizr diagrams
-  - `commit-ai` - Generate commit messages
+  - `commit` - Generate commit messages
 
   Pass API keys via environment variables:
   ```bash

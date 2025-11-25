@@ -287,3 +287,62 @@ func TestMockRepository_BuilderChaining(t *testing.T) {
 		t.Error("IsFileIgnored failed")
 	}
 }
+
+func TestMockRepository_StagedDiff(t *testing.T) {
+	diff := `diff --git a/main.go b/main.go
+new file mode 100644
+--- /dev/null
++++ b/main.go
+@@ -0,0 +1 @@
++package main`
+
+	mock := NewMockRepository("/test").
+		WithStagedDiff(diff)
+
+	result, err := mock.StagedDiff()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if result != diff {
+		t.Errorf("Expected diff content, got %s", result)
+	}
+}
+
+func TestMockRepository_StagedDiff_Error(t *testing.T) {
+	expectedErr := errors.New("diff error")
+	mock := NewMockRepository("/test").
+		WithStagedDiff("some diff").
+		WithError("StagedDiff", expectedErr)
+
+	_, err := mock.StagedDiff()
+	if err != expectedErr {
+		t.Errorf("Expected %v, got %v", expectedErr, err)
+	}
+}
+
+func TestMockRepository_StagedDiffStats(t *testing.T) {
+	stats := " main.go | 1 +\n 1 file changed, 1 insertion(+)"
+
+	mock := NewMockRepository("/test").
+		WithStagedDiffStats(stats)
+
+	result, err := mock.StagedDiffStats()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if result != stats {
+		t.Errorf("Expected stats content, got %s", result)
+	}
+}
+
+func TestMockRepository_StagedDiffStats_Error(t *testing.T) {
+	expectedErr := errors.New("stats error")
+	mock := NewMockRepository("/test").
+		WithStagedDiffStats("some stats").
+		WithError("StagedDiffStats", expectedErr)
+
+	_, err := mock.StagedDiffStats()
+	if err != expectedErr {
+		t.Errorf("Expected %v, got %v", expectedErr, err)
+	}
+}

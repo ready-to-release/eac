@@ -23,7 +23,7 @@ package mypackage
 The command name as users will type it, with spaces separating parent and subcommand.
 
 **Examples:**
-- `commit-ai` - Standalone command
+- `commit` - Standalone command
 - `specs create` - Subcommand under specs
 - `show modules` - Subcommand under show
 
@@ -123,7 +123,7 @@ Indicates whether the command modifies repository files.
 
 **Examples:**
 - `specs create` - `true` (writes .feature files)
-- `commit-ai` - `false` (only outputs commit message to stdout)
+- `commit` - `false` (only outputs commit message to stdout)
 - `show modules` - `false` (read-only display)
 - `build modules` - `true` (compiles code, writes artifacts)
 

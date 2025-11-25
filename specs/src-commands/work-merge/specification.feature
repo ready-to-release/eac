@@ -28,7 +28,7 @@ Feature: src-commands_work_merge
       When I run "r2r work merge"
       Then I am switched to branch "main"
       And main is updated from remote
-      And commit-ai generates a squash message from all 5 commits
+      And commit generates a squash message from all 5 commits
       And a single squash commit is created on main
       And I see "Merged feature/authentication into main (squash)"
       And the workspace is removed

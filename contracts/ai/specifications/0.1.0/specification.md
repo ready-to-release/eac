@@ -35,7 +35,7 @@ Generate a complete, well-structured Gherkin feature specification following the
 
 1. **Feature Declaration**: `Feature: <module>_<feature-name>`
    - Must follow pattern: lowercase module, underscore, lowercase feature name
-   - Examples: `src-commands_commit-ai`, `src-cli_init-command`
+   - Examples: `src-commands_commit`, `src-cli_init-command`
 
 2. **User Story**: As a.../I want.../So that... format
 

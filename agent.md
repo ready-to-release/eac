@@ -94,7 +94,7 @@ During initialization, you MUST verify MCP server availability:
 - **Architecture Documentation**: `design-create*`, `design-validate*`, `design-serve*`
 - **Build & Test**: `build-module`, `build-modules`, `test-module`, `test-modules`, `pipeline-run`
 - **Documentation**: `docs-serve` (MkDocs integration)
-- **Git Operations**: `commit-ai`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
+- **Git Operations**: `commit`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
 - **Specifications**: `specs-create`, `specs-validate`
 - **Templates**: `templates-list`, `templates-install`, `templates-apply`
 - **Workspace Management**: `work-create`, `work-list`, `work-commit`
@@ -144,7 +144,7 @@ Continue working normally using direct CLI commands. All functionality remains a
 - **READ-ONLY git operations** (`log`, `status`, `diff`) are permitted ONLY when explicitly needed for information gathering
 - **NEVER** run git modifying operations (`commit`, `push`, `add`, `stash`, `checkout`, `branch`, `merge`, `rebase`, `worktree`, etc.)
 - **USER CONTROLS GIT**: The user manages all git operations manually, especially in multi-worktree setups
-- **USE** `commit-ai` ONLY when the user explicitly requests commit message generation
+- **USE** `commit` ONLY when the user explicitly requests commit message generation
 
 #### Git Worktree Awareness
 

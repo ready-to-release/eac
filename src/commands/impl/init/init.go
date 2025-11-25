@@ -152,7 +152,7 @@ func Init() int {
 	if config.envVarName != "" {
 		fmt.Printf("   2. Set environment variable: %s\n", config.envVarName)
 	}
-	fmt.Println("   3. Run AI-powered commands (e.g., specs create, commit-ai)")
+	fmt.Println("   3. Run AI-powered commands (e.g., specs create, commit)")
 	fmt.Println("")
 
 	return 0

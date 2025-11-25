@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
-// stripAgentNoise removes common initialization/greeting patterns from agent output
+// StripAgentNoise removes common initialization/greeting patterns from agent output
 // using the contract-based anti-corruption framework.
 //
 // This function uses the generalized contracts.ApplyWithFallback which loads
@@ -20,11 +20,14 @@ import (
 // The agentType parameter determines the content start marker:
 //   - "top-level": looks for conventional commit format (<type>(<scope>): <summary>)
 //   - "module": looks for plain module names
-func stripAgentNoise(output string, agentType string, workspaceRoot string) string {
+func StripAgentNoise(output string, agentType string, workspaceRoot string) string {
 	// Debug logging
 	if debugEnabled, _ := os.LookupEnv("DEBUG"); debugEnabled != "" {
 		os.WriteFile(filepath.Join(workspaceRoot, "out", fmt.Sprintf("filter-%s-01-input.txt", agentType)), []byte(output), 0644)
 	}
+
+	// First, strip wrapping code fences if present (common AI noise pattern)
+	output = stripWrappingCodeFences(output)
 
 	// Load anti-corruption rules using contract loader
 	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
@@ -136,6 +139,32 @@ func (m *commitPatternMatcher) isValidModuleLine(trimmed string) bool {
 	}
 
 	return false
+}
+
+// stripWrappingCodeFences removes code fences that wrap the entire output
+// This is a common AI pattern where the response is wrapped in ```...```
+func stripWrappingCodeFences(output string) string {
+	output = strings.TrimSpace(output)
+
+	// Check if output starts with code fence
+	if !strings.HasPrefix(output, "```") {
+		return output
+	}
+
+	lines := strings.Split(output, "\n")
+	if len(lines) < 2 {
+		return output
+	}
+
+	// Remove opening fence (first line)
+	lines = lines[1:]
+
+	// Check if last line is a closing fence and remove it
+	if len(lines) > 0 && strings.HasPrefix(strings.TrimSpace(lines[len(lines)-1]), "```") {
+		lines = lines[:len(lines)-1]
+	}
+
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
 // applyHardcodedFiltering applies basic hardcoded filtering when contract not available
