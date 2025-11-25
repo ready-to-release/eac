@@ -60,10 +60,3 @@ jobs:
       - name: Test Module
         working-directory: ./src/commands
         run: go run . test docs
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-docs
-          path: out/test/**/docs/**
