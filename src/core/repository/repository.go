@@ -3,14 +3,16 @@ package repository
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/git"
 )
 
 // Repository represents a Git repository
 type Repository struct {
-	root string
+	root    string
+	gitRepo git.GitRepository
 }
 
 // RepositoryError represents a repository-related error
@@ -49,8 +51,9 @@ func NewRepositoryError(op, path string, err error, message string) *RepositoryE
 // or returns an error if no repository is found.
 //
 // Example:
-//   root, err := repository.GetRepositoryRoot("")
-//   root, err := repository.GetRepositoryRoot("/path/to/subdir")
+//
+//	root, err := repository.GetRepositoryRoot("")
+//	root, err := repository.GetRepositoryRoot("/path/to/subdir")
 func GetRepositoryRoot(startPath string) (string, error) {
 	// Check for Docker R2R mode - repository is mounted at /var/task
 	if os.Getenv("DOCKER_R2R_MODE") == "true" {
@@ -79,12 +82,10 @@ func GetRepositoryRoot(startPath string) (string, error) {
 		return "", NewRepositoryError("abs", startPath, err, "failed to get absolute path")
 	}
 
-	// Try using git to find the root (most reliable)
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
-	cmd.Dir = absPath
-	output, err := cmd.Output()
+	// Try using go-git to find the repository root
+	repo, err := git.Open(absPath)
 	if err == nil {
-		root := strings.TrimSpace(string(output))
+		root := repo.RootPath()
 		// Normalize path separators for Windows
 		root = filepath.Clean(root)
 		return root, nil
@@ -127,38 +128,29 @@ type RepositoryFileWithModule struct {
 
 // GetRepositoryFiles returns a list of all files in the repository.
 //
-// Options:
+// Parameters:
+//   - repo: GitRepository interface for git operations
 //   - trackedOnly: if true, only return files tracked by Git
 //   - includeIgnored: if true, include files ignored by .gitignore
 //   - includeGitInternalFiles: if true, include .gitignore and .gitkeep files (default: false)
-//   - stagedOnly: if true, only return files currently staged in Git index (added, removed, or changed)
-//   - rootPath: repository root (if empty, will be detected automatically)
+//   - stagedOnly: if true, only return files currently staged in Git index
 //
 // Example:
-//   files, err := repository.GetRepositoryFiles(true, false, false, false, "")
-func GetRepositoryFiles(trackedOnly bool, includeIgnored bool, includeGitInternalFiles bool, stagedOnly bool, rootPath string) ([]FileInfo, error) {
-	// Get repository root if not provided
-	if rootPath == "" {
-		var err error
-		rootPath, err = GetRepositoryRoot("")
-		if err != nil {
-			return nil, err
-		}
-	}
-
+//
+//	repo, _ := git.Open("/path/to/repo")
+//	files, err := repository.GetRepositoryFiles(repo, true, false, false, false)
+func GetRepositoryFiles(repo git.GitRepository, trackedOnly, includeIgnored, includeGitInternalFiles, stagedOnly bool) ([]FileInfo, error) {
+	rootPath := repo.RootPath()
 	var files []FileInfo
 
 	// If stagedOnly is true, get only staged files
 	if stagedOnly {
-		cmd := exec.Command("git", "diff", "--cached", "--name-only", "--diff-filter=ACMR")
-		cmd.Dir = rootPath
-		output, err := cmd.Output()
+		stagedFiles, err := repo.StagedFiles()
 		if err != nil {
-			return nil, NewRepositoryError("diff --cached", rootPath, err, "failed to list staged files")
+			return nil, NewRepositoryError("staged files", rootPath, err, "failed to list staged files")
 		}
 
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
+		for _, line := range stagedFiles {
 			line = strings.TrimSpace(line)
 			if line == "" {
 				continue
@@ -181,16 +173,13 @@ func GetRepositoryFiles(trackedOnly bool, includeIgnored bool, includeGitInterna
 	}
 
 	if trackedOnly {
-		// Get tracked files from git
-		cmd := exec.Command("git", "ls-files")
-		cmd.Dir = rootPath
-		output, err := cmd.Output()
+		// Get tracked files using the provided repo
+		trackedFiles, err := repo.TrackedFiles()
 		if err != nil {
-			return nil, NewRepositoryError("ls-files", rootPath, err, "failed to list tracked files")
+			return nil, NewRepositoryError("tracked files", rootPath, err, "failed to list tracked files")
 		}
 
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
+		for _, line := range trackedFiles {
 			line = strings.TrimSpace(line)
 			if line == "" {
 				continue
@@ -236,13 +225,13 @@ func GetRepositoryFiles(trackedOnly bool, includeIgnored bool, includeGitInterna
 				return nil
 			}
 
-			// Check if file is tracked
-			isTracked := isFileTracked(rootPath, relPath)
+			// Check if file is tracked (using the provided repo)
+			isTracked := repo.IsFileTracked(relPath)
 
 			// Check if file is ignored
 			isIgnored := false
 			if !isTracked {
-				isIgnored = isFileIgnored(rootPath, relPath)
+				isIgnored = repo.IsFileIgnored(relPath)
 			}
 
 			// Skip ignored files if not requested
@@ -268,26 +257,6 @@ func GetRepositoryFiles(trackedOnly bool, includeIgnored bool, includeGitInterna
 	return files, nil
 }
 
-// isFileTracked checks if a file is tracked by git
-func isFileTracked(repoRoot, relPath string) bool {
-	cmd := exec.Command("git", "ls-files", "--", relPath)
-	cmd.Dir = repoRoot
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return strings.TrimSpace(string(output)) != ""
-}
-
-// isFileIgnored checks if a file is ignored by .gitignore
-func isFileIgnored(repoRoot, relPath string) bool {
-	cmd := exec.Command("git", "check-ignore", "-q", relPath)
-	cmd.Dir = repoRoot
-	err := cmd.Run()
-	// Exit code 0 means file is ignored
-	return err == nil
-}
-
 // isGitInternalFile checks if a file is a Git internal file (.gitignore, .gitkeep)
 // that should be filtered out from repository operations
 func isGitInternalFile(relPath string) bool {
@@ -303,8 +272,14 @@ func New(path string) (*Repository, error) {
 		return nil, err
 	}
 
+	gitRepo, err := git.Open(root)
+	if err != nil {
+		return nil, NewRepositoryError("open", root, err, "failed to open git repository")
+	}
+
 	return &Repository{
-		root: root,
+		root:    root,
+		gitRepo: gitRepo,
 	}, nil
 }
 
@@ -313,15 +288,14 @@ func (r *Repository) Root() string {
 	return r.root
 }
 
-// Files returns all files in the repository with the given options
-func (r *Repository) Files(trackedOnly bool, includeIgnored bool) ([]FileInfo, error) {
-	return GetRepositoryFiles(trackedOnly, includeIgnored, false, false, r.root)
+// GitRepo returns the underlying GitRepository interface
+func (r *Repository) GitRepo() git.GitRepository {
+	return r.gitRepo
 }
 
-// GetRepositoryFilesDefault is a convenience function that calls GetRepositoryFiles
-// with includeGitInternalFiles and stagedOnly defaulted to false
-func GetRepositoryFilesDefault(trackedOnly bool, includeIgnored bool, rootPath string) ([]FileInfo, error) {
-	return GetRepositoryFiles(trackedOnly, includeIgnored, false, false, rootPath)
+// Files returns all files in the repository with the given options
+func (r *Repository) Files(trackedOnly bool, includeIgnored bool) ([]FileInfo, error) {
+	return GetRepositoryFiles(r.gitRepo, trackedOnly, includeIgnored, false, false)
 }
 
 // IsGitRepository checks if the given path is within a git repository

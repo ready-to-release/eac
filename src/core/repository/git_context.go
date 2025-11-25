@@ -2,8 +2,9 @@ package repository
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/git"
 )
 
 // GitContext contains Git repository context information
@@ -13,99 +14,45 @@ type GitContext struct {
 	CurrentBranch string // Current branch name
 }
 
-// GetGitContext retrieves Git context for generating stable GitHub links
+// GetGitContext retrieves Git context for generating stable GitHub links.
 // It finds:
 // - The GitHub repository URL from remote 'origin'
 // - The closest server-known commit (merge-base with origin/main or main)
 // - The current branch name
-func GetGitContext(rootPath string) (*GitContext, error) {
-	if rootPath == "" {
-		var err error
-		rootPath, err = GetRepositoryRoot("")
-		if err != nil {
-			return nil, err
-		}
-	}
-
+//
+// Parameters:
+//   - repo: GitRepository interface for git operations
+func GetGitContext(repo git.GitRepository) (*GitContext, error) {
 	ctx := &GitContext{}
+	rootPath := repo.RootPath()
 
 	// Get remote URL
-	remoteURL, err := getRemoteURL(rootPath)
+	remoteURL, err := repo.RemoteURL("origin")
 	if err != nil {
-		return nil, err
+		return nil, NewRepositoryError("remote get-url", rootPath, err, "failed to get remote URL")
 	}
-	ctx.RepositoryURL = normalizeGitHubURL(remoteURL)
+	ctx.RepositoryURL = normalizeGitHubURL(strings.TrimSpace(remoteURL))
 
 	// Get current branch
-	branch, err := getCurrentBranch(rootPath)
+	branch, err := repo.CurrentBranch()
 	if err != nil {
-		return nil, err
+		return nil, NewRepositoryError("branch", rootPath, err, "failed to get current branch")
 	}
 	ctx.CurrentBranch = branch
 
 	// Get base commit (merge-base with main)
-	baseCommit, err := getBaseCommit(rootPath)
-	if err != nil {
-		return nil, err
-	}
-	ctx.BaseCommit = baseCommit
+	// For pre-commit/pre-push documentation, use "main" branch name instead of SHA
+	// This creates stable links that work once changes are committed and pushed
+	ctx.BaseCommit = "main"
 
 	return ctx, nil
 }
 
-// getRemoteURL gets the remote URL for 'origin'
-func getRemoteURL(rootPath string) (string, error) {
-	cmd := exec.Command("git", "remote", "get-url", "origin")
-	cmd.Dir = rootPath
-	output, err := cmd.Output()
-	if err != nil {
-		return "", NewRepositoryError("remote get-url", rootPath, err, "failed to get remote URL")
-	}
-
-	return strings.TrimSpace(string(output)), nil
-}
-
-// getCurrentBranch gets the current branch name
-func getCurrentBranch(rootPath string) (string, error) {
-	cmd := exec.Command("git", "branch", "--show-current")
-	cmd.Dir = rootPath
-	output, err := cmd.Output()
-	if err != nil {
-		return "", NewRepositoryError("branch --show-current", rootPath, err, "failed to get current branch")
-	}
-
-	branch := strings.TrimSpace(string(output))
-	if branch == "" {
-		// Detached HEAD state - try to get commit SHA
-		cmd = exec.Command("git", "rev-parse", "--short", "HEAD")
-		cmd.Dir = rootPath
-		output, err = cmd.Output()
-		if err != nil {
-			return "", NewRepositoryError("rev-parse HEAD", rootPath, err, "failed to get HEAD commit")
-		}
-		return "detached-" + strings.TrimSpace(string(output)), nil
-	}
-
-	return branch, nil
-}
-
-// getBaseCommit finds the closest server-known commit
-// Strategy:
-// For pre-commit/pre-push documentation, use "main" branch name instead of SHA
-// This creates stable links that work once changes are committed and pushed
-//
-// Note: Using branch name "main" instead of commit SHA ensures links work
-// regardless of local commit state, as long as changes eventually reach main branch
-func getBaseCommit(rootPath string) (string, error) {
-	// Return "main" as the ref - GitHub will resolve this to current main HEAD
-	// This handles uncommitted, committed-but-not-pushed, and pushed states
-	return "main", nil
-}
-
 // normalizeGitHubURL converts various Git URL formats to HTTPS GitHub URL
 // Examples:
-//   git@github.com:owner/repo.git -> https://github.com/owner/repo
-//   https://github.com/owner/repo.git -> https://github.com/owner/repo
+//
+//	git@github.com:owner/repo.git -> https://github.com/owner/repo
+//	https://github.com/owner/repo.git -> https://github.com/owner/repo
 func normalizeGitHubURL(remoteURL string) string {
 	// Remove .git suffix
 	remoteURL = strings.TrimSuffix(remoteURL, ".git")

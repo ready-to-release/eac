@@ -12,6 +12,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/repository"
 	testing "github.com/ready-to-release/eac/src/core/testing"
 )
@@ -229,8 +230,14 @@ func ShowSuite() int {
 func buildFileModuleMap(repoRoot string) (map[string]string, error) {
 	fileMap := make(map[string]string)
 
+	// Open git repository
+	repo, err := git.Open(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
 	// Get all files with module ownership
-	files, err := repository.GetRepositoryFilesWithModules(true, false, false, repoRoot, "0.1.0")
+	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
 	if err != nil {
 		return nil, err
 	}

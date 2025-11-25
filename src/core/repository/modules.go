@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/git"
 )
 
 // EnrichFilesWithModules takes a list of files and determines which module(s) own each file.
@@ -22,7 +23,8 @@ import (
 //
 // Example:
 //
-//	files, _ := repository.GetRepositoryFiles(true, false, "")
+//	repo, _ := git.Open("/workspace")
+//	files, _ := repository.GetRepositoryFiles(repo, true, false, false, false)
 //	enriched, _ := repository.EnrichFilesWithModules(files, "/workspace", "0.1.0")
 //	for _, f := range enriched {
 //	    fmt.Printf("%s -> %v\n", f.Name, f.Modules)
@@ -207,10 +209,10 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 // GetRepositoryFiles and EnrichFilesWithModules in one call.
 //
 // Parameters:
+//   - repo: GitRepository interface for git operations
 //   - trackedOnly: if true, only return files tracked by Git
 //   - includeIgnored: if true, include files ignored by .gitignore
 //   - stagedOnly: if true, only return files currently staged in Git index
-//   - rootPath: repository root (if empty, will be detected automatically)
 //   - version: module contract version (e.g., "0.1.0")
 //
 // Returns:
@@ -219,24 +221,18 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 //
 // Example:
 //
-//	files, err := repository.GetRepositoryFilesWithModules(true, false, false, "", "0.1.0")
+//	repo, _ := git.Open("/workspace")
+//	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
 //	for _, f := range files {
 //	    if len(f.Modules) > 1 {
 //	        fmt.Printf("Multi-ownership: %s -> %v\n", f.Name, f.Modules)
 //	    }
 //	}
-func GetRepositoryFilesWithModules(trackedOnly bool, includeIgnored bool, stagedOnly bool, rootPath string, version string) ([]RepositoryFileWithModule, error) {
-	// Get repository root if not provided
-	if rootPath == "" {
-		var err error
-		rootPath, err = GetRepositoryRoot("")
-		if err != nil {
-			return nil, err
-		}
-	}
+func GetRepositoryFilesWithModules(repo git.GitRepository, trackedOnly, includeIgnored, stagedOnly bool, version string) ([]RepositoryFileWithModule, error) {
+	rootPath := repo.RootPath()
 
 	// Get all repository files (exclude Git internal files by default)
-	files, err := GetRepositoryFiles(trackedOnly, includeIgnored, false, stagedOnly, rootPath)
+	files, err := GetRepositoryFiles(repo, trackedOnly, includeIgnored, false, stagedOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +249,8 @@ func GetRepositoryFilesWithModules(trackedOnly bool, includeIgnored bool, staged
 //
 // Example:
 //
-//	files, _ := repository.GetRepositoryFilesWithModules(true, false, "", "0.1.0")
+//	repo, _ := git.Open("/workspace")
+//	files, _ := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
 //	byModule := repository.GetFilesByModule(files)
 //	for module, paths := range byModule {
 //	    fmt.Printf("%s: %d files\n", module, len(paths))

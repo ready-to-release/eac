@@ -1,6 +1,7 @@
 package reports
 
 import (
+	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -29,8 +30,14 @@ type FilesModulesReport struct {
 //   - FilesModulesReport containing all statistics and data
 //   - Error if repository operations or module loading fails
 func GetFilesModulesReport(trackedOnly bool, includeIgnored bool, stagedOnly bool, rootPath string, version string) (*FilesModulesReport, error) {
+	// Open git repository
+	repo, err := git.Open(rootPath)
+	if err != nil {
+		return nil, err
+	}
+
 	// Get all files with module ownership
-	files, err := repository.GetRepositoryFilesWithModules(trackedOnly, includeIgnored, stagedOnly, rootPath, version)
+	files, err := repository.GetRepositoryFilesWithModules(repo, trackedOnly, includeIgnored, stagedOnly, version)
 	if err != nil {
 		return nil, err
 	}
