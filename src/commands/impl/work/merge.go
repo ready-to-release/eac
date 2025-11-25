@@ -298,7 +298,7 @@ func updateTargetBranch(targetBranch string) error {
 	return nil
 }
 
-// performSquashMerge performs a squash merge and uses commit-ai for the message
+// performSquashMerge performs a squash merge and uses commit message for the message
 func performSquashMerge(config *mergeConfig) error {
 	// Perform squash merge (stages changes but doesn't commit)
 	cmd := exec.Command("git", "merge", "--squash", config.currentBranch)
@@ -307,20 +307,20 @@ func performSquashMerge(config *mergeConfig) error {
 		return fmt.Errorf("failed to squash merge: %w\nOutput: %s", err, string(output))
 	}
 
-	// Use commit-ai to generate commit message and create commit
+	// Use commit message to generate commit message
 	fmt.Println("\nGenerating commit message...")
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
 	if config.debug {
-		os.Args = []string{"r2r", "commit-ai", "--debug"}
+		os.Args = []string{"r2r", "commit", "message", "--debug"}
 	} else {
-		os.Args = []string{"r2r", "commit-ai"}
+		os.Args = []string{"r2r", "commit", "message"}
 	}
 
-	exitCode := commit.CommitAI()
+	exitCode := commit.CommitMessage()
 	if exitCode != 0 {
-		return fmt.Errorf("commit-ai failed with exit code %d", exitCode)
+		return fmt.Errorf("commit message failed with exit code %d", exitCode)
 	}
 
 	return nil

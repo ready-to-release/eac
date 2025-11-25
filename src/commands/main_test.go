@@ -25,7 +25,8 @@ func TestCommandsRegistered(t *testing.T) {
 		"show files changed",
 		"show files staged",
 		"show moduletypes",
-		"commit-ai",
+		"commit",
+		"commit message",
 	}
 
 	for _, cmdName := range expectedCommands {
@@ -61,10 +62,10 @@ func TestGetSubcommands(t *testing.T) {
 
 func TestGetSubcommandsReturnsEmpty(t *testing.T) {
 	// Leaf commands should have no subcommands
-	subcommands := getSubcommands("commit-ai")
+	subcommands := getSubcommands("commit message")
 
 	if len(subcommands) != 0 {
-		t.Errorf("expected 'commit-ai' to have no subcommands, got %d", len(subcommands))
+		t.Errorf("expected 'commit message' to have no subcommands, got %d", len(subcommands))
 	}
 }
 

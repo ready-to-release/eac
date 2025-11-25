@@ -1,7 +1,7 @@
-// Command: commit-ai
+// Command: commit message
 // Description: Generate commit message using AI with staged changes and module mappings
 // Short: Generate AI-powered commit messages from staged changes
-// Long: The commit-ai command uses AI to analyze your staged git changes and generate a structured,
+// Long: The commit message command uses AI to analyze your staged git changes and generate a structured,
 // Long: conventional commit message that follows project standards and includes module-specific details.
 // Long: The generated message includes a top-level summary and per-module sections describing changes.
 // Long: All output is validated against the commit message contract to ensure consistency and quality.
@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	registry.Register(CommitAI)
+	registry.Register(CommitMessage)
 }
 
 // executionConfig holds configuration for the commit AI command
@@ -39,7 +39,7 @@ type executionConfig struct {
 	gitDiff         string
 }
 
-func CommitAI() int {
+func CommitMessage() int {
 	// Retry loop for regenerating commit message if validation fails
 	// Limited to prevent infinite loops
 	const maxRetries = 5
@@ -121,15 +121,15 @@ func commitAIAttempt() (int, bool) {
 	// Phase 6: Assemble Final Message
 	finalMessage := assembleFinalMessage(cfg, topLevel, moduleSections, debugWriter)
 
-	// Phase 7: Validate and Output (with interactive prompt on failure)
-	return validateAndCommit(cfg, finalMessage)
+	// Phase 7: Validate and Output (message only - no git commit)
+	return validateAndOutput(cfg, finalMessage)
 }
 
 // Phase 1: Parse Configuration
 func parseConfig() (bool, string, error) {
 	// Parse flags
 	debug := false
-	for _, arg := range os.Args[2:] { // Skip program name and "commit-ai"
+	for _, arg := range os.Args[3:] { // Skip program name, "commit", and "message"
 		if arg == "--debug" {
 			debug = true
 		}
@@ -327,9 +327,11 @@ func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections 
 	return cleanedOutput
 }
 
-// Phase 7: Validate and Commit (with interactive prompt)
+// Phase 7: Validate and Output
 // Returns (exit code, should retry)
-func validateAndCommit(cfg *executionConfig, message string) (int, bool) {
+// NOTE: This function only outputs the commit message - it does NOT perform git commit.
+// The user is expected to copy/use the message with their preferred commit workflow.
+func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 	// Verify contract compliance
 	validationErrors := commitmessage.VerifyCommitMessageContract(message, cfg.affectedModules)
 
@@ -342,83 +344,20 @@ func validateAndCommit(cfg *executionConfig, message string) (int, bool) {
 		}
 	}
 
-	// Show the generated message
-	fmt.Println("\n📝 Generated commit message:")
-	fmt.Println("---")
-	fmt.Println(message)
-	fmt.Println("---")
+	// Output the generated message (raw, clean output for piping/copying)
+	fmt.Print(message)
 
-	// If valid (no errors, only warnings or clean), proceed with commit
-	if errorCount == 0 {
-		if warningCount > 0 {
-			fmt.Printf("\n⚠️  Found %d warning(s):\n\n", warningCount)
-			for _, verr := range validationErrors {
-				fmt.Printf("⚠️  %s\n", verr.Error())
-			}
-			fmt.Println()
-		}
-		return performCommit(message), false
-	}
-
-	// Show validation errors
-	fmt.Printf("\n❌ Found %d contract violation(s):\n\n", errorCount)
-	if warningCount > 0 {
-		fmt.Printf("⚠️  Found %d warning(s):\n\n", warningCount)
-	}
-
-	for _, verr := range validationErrors {
-		icon := "❌"
-		if verr.Severity == "warning" {
-			icon = "⚠️ "
-		}
-		fmt.Printf("%s %s\n", icon, verr.Error())
-	}
-
-	// Prompt user for action
-	fmt.Println()
-	response := promptYNR("Use this message anyway?")
-
-	switch response {
-	case "y":
-		// User wants to use the message despite validation errors
-		fmt.Println("✓ Proceeding with commit (ignoring validation errors)...")
-		return performCommit(message), false
-	case "n":
-		// User wants to abort and write their own message
-		fmt.Println("❌ Commit aborted.")
-		fmt.Println("   Run 'git commit' or 'work commit --message \"your message\"' to write your own.")
-		return 1, false
-	case "r":
-		// User wants to retry AI generation
-		return 0, true
-	default:
-		// Should never happen, but treat as abort
-		return 1, false
-	}
+	return 0, false
 }
 
-// performCommit executes git commit with the given message
-func performCommit(message string) int {
-	cmd := exec.Command("git", "commit", "-m", message)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error: failed to create commit: %v\n", err)
-		return 1
-	}
-	fmt.Println("\n✓ Commit created successfully")
-	return 0
+// promptYN prompts the user with a yes/no question
+// Returns "y" or "n"
+func promptYN(question string) string {
+	return promptYNWithRetries(question, 0)
 }
 
-// promptYNR prompts the user with a yes/no/retry question
-// Returns "y", "n", or "r"
-func promptYNR(question string) string {
-	return promptYNRWithRetries(question, 0)
-}
-
-// promptYNRWithRetries prompts with retry limit to prevent infinite recursion
-func promptYNRWithRetries(question string, attempt int) string {
+// promptYNWithRetries prompts with retry limit to prevent infinite recursion
+func promptYNWithRetries(question string, attempt int) string {
 	const maxAttempts = 3
 
 	if attempt >= maxAttempts {
@@ -426,7 +365,7 @@ func promptYNRWithRetries(question string, attempt int) string {
 		return "n"
 	}
 
-	fmt.Printf("%s (y/n/r): ", question)
+	fmt.Printf("%s (y/n): ", question)
 
 	var response string
 	_, err := fmt.Scanln(&response)
@@ -450,11 +389,9 @@ func promptYNRWithRetries(question string, attempt int) string {
 		return "y"
 	case "n", "no":
 		return "n"
-	case "r", "retry":
-		return "r"
 	default:
-		fmt.Printf("Invalid input '%s'. Please enter y (yes), n (no), or r (retry).\n", response)
-		return promptYNRWithRetries(question, attempt+1) // Ask again with incremented attempt
+		fmt.Printf("Invalid input '%s'. Please enter y (yes) or n (no).\n", response)
+		return promptYNWithRetries(question, attempt+1)
 	}
 }
 

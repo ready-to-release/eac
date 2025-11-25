@@ -37,6 +37,10 @@ type RetryPromptBuilder interface {
 	BuildRetryPrompt(originalPrompt string, invalidOutput string, errors []ValidationError) string
 }
 
+// OutputFixer is a function that fixes/cleans output before validation
+// This runs after anti-corruption and before validation
+type OutputFixer func(output string) string
+
 // RetryConfig configures the retry behavior
 type RetryConfig struct {
 	// Executor performs AI generation
@@ -50,6 +54,11 @@ type RetryConfig struct {
 
 	// AntiCorruption rules for cleaning AI output
 	AntiCorruption *AntiCorruptionRules
+
+	// Fixer applies automatic fixes before validation (optional)
+	// This runs after anti-corruption filter and before validation
+	// Use for things like line wrapping, trailing period removal, etc.
+	Fixer OutputFixer
 
 	// ContentMarker indicates where actual content starts (e.g., "Feature:")
 	// Used by anti-corruption filter
@@ -155,6 +164,11 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 			cleanedOutput = ApplyWithFallback(rawOutput, cfg.AntiCorruption, cfg.ContentMarker)
 		}
 
+		// Apply fixer (line wrapping, formatting fixes, etc.)
+		if cfg.Fixer != nil {
+			cleanedOutput = cfg.Fixer(cleanedOutput)
+		}
+
 		// Debug: Save cleaned output
 		if cfg.Debug {
 			debugPath := filepath.Join(cfg.DebugOutputDir, fmt.Sprintf("attempt-%d-cleaned.txt", attempt))
@@ -210,7 +224,7 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 
 		// If this is the last attempt, return with errors
 		if attempt >= maxAttempts {
-			fmt.Fprintf(os.Stderr, "⚠️  Output has %d critical error(s) after %d attempt(s)\n", criticalErrors, attempt)
+			fmt.Fprintf(os.Stderr, "⚠️  Structure validation failed (%d issue(s) after %d attempt(s))\n", criticalErrors, attempt)
 			return &RetryResult{
 				Output:            cleanedOutput,
 				ValidationErrors:  validationErrors,
@@ -220,7 +234,7 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 		}
 
 		// Otherwise, show errors and continue to retry
-		fmt.Fprintf(os.Stderr, "⚠️  Found %d critical error(s), preparing retry...\n", criticalErrors)
+		fmt.Fprintf(os.Stderr, "⚠️  Structure validation failed, retrying...\n")
 	}
 
 	// Should not reach here, but return last result

@@ -48,5 +48,18 @@ Changes: 8 files, +95 insertions, -150 deletions
 - Start with header (not "Auditor-Summary")
 - No markdown fences or explanations
 - Return only the commit message
+- STOP after the "Changes:" line - do not add anything else
+
+## CRITICAL: What NOT to include
+
+The following are FORBIDDEN in your output:
+- NO markdown headers (## or ###)
+- NO "Module Changes" sections
+- NO bullet point lists of files or changes
+- NO per-module breakdowns
+- NO file paths
+
+Module-specific details will be generated separately. Your job is ONLY
+the high-level summary (header + auditor-summary + body + changes line).
 
 Generate now based on the context below:

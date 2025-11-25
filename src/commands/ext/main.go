@@ -35,14 +35,23 @@ import (
 
 // Metadata defines the extension metadata structure
 type Metadata struct {
-	Name          string             `yaml:"name"`
-	Version       string             `yaml:"version"`
-	Description   string             `yaml:"description"`
-	SchemaVersion string             `yaml:"schema-version"`
-	Capabilities  []string           `yaml:"capabilities"`
-	Commands      map[string]Command `yaml:"commands"`
-	Requirements  Requirements       `yaml:"requirements"`
-	Metadata      ExtensionMetadata  `yaml:"metadata"`
+	Name               string             `yaml:"name"`
+	Version            string             `yaml:"version"`
+	Description        string             `yaml:"description"`
+	SchemaVersion      string             `yaml:"schema-version"`
+	Capabilities       []string           `yaml:"capabilities"`
+	Commands           map[string]Command `yaml:"commands"`
+	Requirements       Requirements       `yaml:"requirements"`
+	Volumes            []Volume           `yaml:"volumes,omitempty"`
+	ExpectedHostImages []string           `yaml:"expected-host-images,omitempty"`
+	Metadata           ExtensionMetadata  `yaml:"metadata"`
+}
+
+// Volume defines a volume mount request from the extension
+type Volume struct {
+	Name   string `yaml:"name"`   // Logical name for the volume (used in Docker volume naming)
+	Target string `yaml:"target"` // Container path to mount
+	Type   string `yaml:"type"`   // Volume type: "cache" for named volumes, "bind" for bind mounts
 }
 
 // Command defines a single command structure
@@ -186,6 +195,22 @@ func outputMetadata() {
 			ContainerRuntime: "docker",
 			MinimumMemory:    "256Mi",
 			MinimumCPU:       "0.1",
+		},
+		Volumes: []Volume{
+			{
+				Name:   "go-build",
+				Target: "/root/.cache/go-build",
+				Type:   "cache",
+			},
+			{
+				Name:   "go-mod",
+				Target: "/go/pkg/mod",
+				Type:   "cache",
+			},
+		},
+		ExpectedHostImages: []string{
+			"cli-mkdocs:latest",        // docs serve command
+			"structurizr/lite:latest",  // design serve command
 		},
 		Metadata: ExtensionMetadata{
 			Author:        "Ready to Release Team",

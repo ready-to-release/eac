@@ -178,19 +178,19 @@ func commitWithMessage(message string) int {
 	return 0
 }
 
-// commitWithAI calls commit-ai to generate and create commit
+// commitWithAI calls commit message to generate commit message
 func commitWithAI(debug bool) int {
-	// Prepare args for commit-ai
+	// Prepare args for commit message
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	// Set args to simulate: r2r commit-ai [--debug]
+	// Set args to simulate: r2r commit message [--debug]
 	if debug {
-		os.Args = []string{"r2r", "commit-ai", "--debug"}
+		os.Args = []string{"r2r", "commit", "message", "--debug"}
 	} else {
-		os.Args = []string{"r2r", "commit-ai"}
+		os.Args = []string{"r2r", "commit", "message"}
 	}
 
-	// Call commit-ai
-	return commit.CommitAI()
+	// Call commit message
+	return commit.CommitMessage()
 }

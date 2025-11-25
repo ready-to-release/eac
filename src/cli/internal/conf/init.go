@@ -140,6 +140,7 @@ func InitConfig() {
 	// Check for and merge local override configurations
 	// Priority order (highest to lowest): r2r-cli.local.yml, r2r-cli.personal.yml, r2r-cli.dev.yml
 	repoRoot, _ := FindRepositoryRoot()
+	RootDir = repoRoot // Store root directory for cache operations
 	if repoRoot != "" {
 		overrideFiles := []string{
 			"r2r-cli.local.yml",

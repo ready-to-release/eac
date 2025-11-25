@@ -39,12 +39,19 @@ Can optionally show all available tags for each extension.`,
   # Clear cache without listing
   r2r list --clear-cache`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Get repository root for cache operations
+		repoRoot, err := conf.FindRepositoryRoot()
+		if err != nil {
+			fmt.Printf("❌ Failed to find repository root: %v\n", err)
+			os.Exit(1)
+		}
+
 		// Handle clear cache flag - just clear cache and exit
 		if listClearCache {
-			registryCache, _ := cache.Load()
+			registryCache, _ := cache.LoadRegistryCache(repoRoot)
 			if registryCache != nil {
 				registryCache.Clear()
-				err := registryCache.Save()
+				err := registryCache.SaveRegistryCache(repoRoot)
 				if err != nil {
 					fmt.Printf("❌ Failed to clear cache: %v\n", err)
 					os.Exit(1)
@@ -60,7 +67,7 @@ Can optionally show all available tags for each extension.`,
 		log.Debug().Msg("Discovering available extensions from registry...")
 
 		// Try to get extensions from cache first
-		registryCache, _ := cache.Load()
+		registryCache, _ := cache.LoadRegistryCache(repoRoot)
 		var knownExtensions map[string]string
 
 		// Check if we need to discover extensions
@@ -104,7 +111,7 @@ Can optionally show all available tags for each extension.`,
 			// Clear cache to force refresh
 			if registryCache != nil {
 				registryCache.Clear()
-				registryCache.Save()
+				registryCache.SaveRegistryCache(repoRoot)
 			}
 			fmt.Println("ℹ️  Cache cleared, fetching fresh data from registry...")
 		}
@@ -155,7 +162,7 @@ Can optionally show all available tags for each extension.`,
 		}
 
 		// Reload cache to get all tags
-		registryCache, _ = cache.Load()
+		registryCache, _ = cache.LoadRegistryCache(repoRoot)
 
 		// Create a tabwriter for aligned output
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)

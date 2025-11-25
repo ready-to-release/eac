@@ -21,7 +21,7 @@ func DocsServe() int {
 	args := os.Args[3:] // Skip "go", "run", ".", "docs", and "serve"
 
 	var noBrowser bool
-	var port int = 8000
+	var port int = 0 // 0 means auto-allocate from 9000-9999 range
 	var stop bool
 	var debug bool
 
@@ -80,10 +80,12 @@ func DocsServe() int {
 		fmt.Printf("📚 Documentation: %s\n", info.URL)
 
 		if !noBrowser {
-			err = client.OpenBrowser(info.URL)
+			opened, err := client.OpenBrowserWithFallback(info.URL)
 			if err != nil {
 				fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)
 				fmt.Printf("📖 Please open manually: %s\n", info.URL)
+			} else if !opened {
+				fmt.Printf("📖 Open in your browser: %s\n", info.URL)
 			}
 		}
 		return 0
@@ -107,12 +109,14 @@ func DocsServe() int {
 	fmt.Printf("\n✅ MkDocs documentation server is running\n")
 	fmt.Printf("📚 Documentation: %s\n", info.URL)
 
-	// Open browser
+	// Open browser (skipped in DinD mode)
 	if !noBrowser {
-		err = client.OpenBrowser(info.URL)
+		opened, err := client.OpenBrowserWithFallback(info.URL)
 		if err != nil {
 			fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)
 			fmt.Printf("📖 Please open manually: %s\n", info.URL)
+		} else if !opened {
+			fmt.Printf("📖 Open in your browser: %s\n", info.URL)
 		}
 	}
 
