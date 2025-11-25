@@ -102,11 +102,19 @@ func (e *Executor) GetLastUsedProvider() Provider {
 }
 
 // loadConfig loads the agent configuration from .r2r directory.
+// Checks for personal override first (agent-config.personal.yml), then team config (agent-config.yml).
 // If no config file exists, defaults to Claude CLI provider.
 func (e *Executor) loadConfig() (*Config, error) {
-	configPath := filepath.Join(e.workspaceRoot, ".r2r", "agent-config.yml")
+	r2rDir := filepath.Join(e.workspaceRoot, ".r2r")
 
-	// Check if config file exists
+	// Check for personal override first (not committed to git)
+	personalPath := filepath.Join(r2rDir, "agent-config.personal.yml")
+	if _, err := os.Stat(personalPath); err == nil {
+		return LoadConfig(personalPath)
+	}
+
+	// Fall back to team config
+	configPath := filepath.Join(r2rDir, "agent-config.yml")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// Default to Claude CLI if no config file found
 		return &Config{
