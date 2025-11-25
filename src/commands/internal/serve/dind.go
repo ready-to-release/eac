@@ -87,7 +87,20 @@ func TranslatePathForMount(localPath string) (string, error) {
 	}
 
 	// Join with host root
-	// Note: filepath.Join handles path separator conversion
+	// When running on Linux but the host is Windows (DinD on Windows),
+	// filepath.Join uses '/' but we need '\' to match the Windows host path.
+	// Detect Windows paths by checking for drive letter (e.g., "C:\")
+	if len(hostRoot) >= 2 && hostRoot[1] == ':' {
+		// Windows host path: use backslash separator
+		if relPath == "" {
+			return hostRoot, nil
+		}
+		// Convert forward slashes in relPath to backslashes
+		relPath = strings.ReplaceAll(relPath, "/", "\\")
+		return hostRoot + "\\" + relPath, nil
+	}
+
+	// Unix host path: use filepath.Join which handles separators
 	return filepath.Join(hostRoot, relPath), nil
 }
 
