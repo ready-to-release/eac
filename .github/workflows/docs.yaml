@@ -13,6 +13,10 @@ on:
         description: 'Commit SHA to test'
         default: ''
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   build:
     name: Build
@@ -60,3 +64,18 @@ jobs:
       - name: Test Module
         working-directory: ./src/commands
         run: go run . test docs
+
+  trigger-release:
+    name: Trigger Release
+    needs: test
+    runs-on: ubuntu-latest
+    # Only trigger release on main branch
+    if: github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger release workflow
+        run: |
+          gh workflow run release-docs.yml \
+            --repo ${{ github.repository }} \
+            -f ci_run_id=${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
