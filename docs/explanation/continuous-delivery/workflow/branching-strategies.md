@@ -57,10 +57,6 @@ flowchart TD
     S3["Stage 3: Merge Request<br/>Automated checks + peer review"]
     Approved(["Approved"])
     S1 --> S2 --> S3 --> Approved
-    style S1 fill:#e1f5fe
-    style S2 fill:#e1f5fe
-    style S3 fill:#e1f5fe
-    style Approved fill:#ccffcc
 ```
 
 **Example Commands**:
@@ -91,10 +87,6 @@ flowchart TD
     S6["Stage 6: Extended<br/>Full suite, perf, security (2-8 hrs)"]
     S7["Stage 7: Exploration<br/>Demo env, manual UAT (days)"]
     S4 --> S5 --> S6 --> S7
-    style S4 fill:#e1f5fe
-    style S5 fill:#fff9c4
-    style S6 fill:#fff9c4
-    style S7 fill:#f3e5f5
 ```
 
 **Key Characteristics**:
@@ -116,11 +108,6 @@ flowchart TD
 
     S8 --> S9 --> S10 --> S11 --> S12
 
-    style S8 fill:#e1f5fe
-    style S9 fill:#fff9c4
-    style S10 fill:#e8f5e9
-    style S11 fill:#f3e5f5
-    style S12 fill:#fce4ec
 ```
 
 **Example Commands**:
@@ -252,10 +239,6 @@ flowchart LR
     TB[Topic Branch] -->|Squash Merge| TR[Trunk]
     TR -->|Branch| RB[Release Branch]
     RB -->|Deploy| PROD[Production]
-    style TB fill:#e1f5fe
-    style TR fill:#fff9c4
-    style RB fill:#ffe0b2
-    style PROD fill:#c8e6c9
 ```
 
 **Key Practices**:
@@ -303,10 +286,6 @@ flowchart TD
     S3["Stage 3: Merge Request<br/>Automated checks + peer review"]
     Approved(["Approved"])
     S1 --> S2 --> S3 --> Approved
-    style S1 fill:#e1f5fe
-    style S2 fill:#e1f5fe
-    style S3 fill:#e1f5fe
-    style Approved fill:#ccffcc
 ```
 
 **Identical to RA pattern** - no differences in topic branch workflow.
@@ -320,10 +299,6 @@ flowchart TD
     S6["Stage 6: Extended<br/>Critical test suite (1-2 hrs)"]
     S7["Stage 7: Exploration<br/>Smoke tests or skipped (minutes)"]
     S4 --> S5 --> S6 --> S7
-    style S4 fill:#e1f5fe
-    style S5 fill:#fff9c4
-    style S6 fill:#fff9c4
-    style S7 fill:#f3e5f5
 ```
 
 **Key Differences from RA**:
@@ -343,12 +318,6 @@ flowchart TD
     S12["Stage 12: Release Toggling<br/>Feature flag management"]
     Approved(["Auto-approved"])
     S8 --> S9 --> Approved --> S10 --> S11 --> S12
-    style S8 fill:#ffe0b2
-    style S9 fill:#ffccbc
-    style S10 fill:#c8e6c9
-    style S11 fill:#a5d6a7
-    style S12 fill:#81c784
-    style Approved fill:#ccffcc
 ```
 
 **Example Commands**:
@@ -671,10 +640,6 @@ flowchart LR
         CDe_Prod --> CDe_Flags[Feature flags]
     end
 
-    style RA_Approval fill:#fff3e0
-    style RA_Release fill:#ffebee
-    style CDe_Auto fill:#e8f5e9
-    style CDe_Flags fill:#e3f2fd
 ```
 
 ### Branch Type Usage

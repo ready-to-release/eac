@@ -141,9 +141,6 @@ flowchart LR
     A2[remove approvals] -.-> B2[lower wait time] -.-> C2[higher deployment frequency]
     A3[smaller batches] -.-> B3[lower WIP] -.-> C3[lower change fail rate]
 
-    style A fill:#e0e7ff
-    style B fill:#ddd6fe
-    style C fill:#dcfce7
 ```
 
 Don't just measure DORA metrics and hope they improve. **Measure the underlying flow and process metrics that you can actually improve**, then validate that those improvements lead to better DORA outcomes.

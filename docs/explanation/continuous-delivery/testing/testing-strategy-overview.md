@@ -48,12 +48,6 @@ flowchart TD
 
     Anti["❌ Horizontal E2E<br/>Shared test env<br/>Lowest determinism"]
 
-    style L0 fill:#e8f5e9
-    style L1 fill:#e8f5e9
-    style L2 fill:#fff3e0
-    style L3 fill:#fff3e0
-    style L4 fill:#e3f2fd
-    style Anti fill:#ffebee
 ```
 
 | Level | Name                   | Shift Direction | Execution Environment | Scope                | External Dependencies                     | Determinism | Domain Coherency |
@@ -116,10 +110,6 @@ flowchart TB
     L3_Count --> L2_Count
     L2_Count --> L1_L0
 
-    style L4_Count fill:#e3f2fd
-    style L3_Count fill:#fff3e0
-    style L2_Count fill:#fff3e0
-    style L1_L0 fill:#e8f5e9
 ```
 
 ---

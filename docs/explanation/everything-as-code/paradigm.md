@@ -39,12 +39,6 @@ But "Everything as Code" extends much further:
 ```mermaid
 flowchart LR
     A[Word] --> B[Visio] --> C[Git] --> D[Excel] --> E[Wiki] --> F[SharePoint]
-    style A fill:#fef3c7
-    style B fill:#fef3c7
-    style C fill:#fef3c7
-    style D fill:#fef3c7
-    style E fill:#fef3c7
-    style F fill:#fef3c7
 ```
 
 **Problems:**
@@ -60,9 +54,6 @@ flowchart LR
 ```mermaid
 flowchart LR
     A[Everything in Git] --> B[Single immutable history] --> C[Complete traceability]
-    style A fill:#dcfce7
-    style B fill:#dcfce7
-    style C fill:#dcfce7
 ```
 
 **Benefits:**
@@ -116,9 +107,6 @@ For more on building shared language for specifications, see:
 ```mermaid
 flowchart LR
     A[Business writes requirements] --> B[Developers interpret] --> C[QA tests interpretation]
-    style A fill:#fef3c7
-    style B fill:#fef3c7
-    style C fill:#fef3c7
 ```
 
 **Problems:**
@@ -134,8 +122,6 @@ flowchart LR
 ```mermaid
 flowchart LR
     A[Everyone collaborates on specifications] --> B[Specifications execute as tests]
-    style A fill:#dcfce7
-    style B fill:#dcfce7
 ```
 
 **Benefits:**
@@ -165,10 +151,6 @@ flowchart TD
     A[Build when developer remembers] --> B[Test when QA has time]
     B --> C[Deploy when change control approves]
     C --> D[Document when audit approaches]
-    style A fill:#fef3c7
-    style B fill:#fef3c7
-    style C fill:#fef3c7
-    style D fill:#fef3c7
 ```
 
 **Problems:**
@@ -184,12 +166,6 @@ flowchart TD
 ```mermaid
 flowchart LR
     A[Commit] --> B[Build] --> C[Test] --> D[Validate] --> E[Deploy] --> F[Document]
-    style A fill:#dcfce7
-    style B fill:#dcfce7
-    style C fill:#dcfce7
-    style D fill:#dcfce7
-    style E fill:#dcfce7
-    style F fill:#dcfce7
 ```
 
 **Benefits:**
