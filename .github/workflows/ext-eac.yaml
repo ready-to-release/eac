@@ -135,16 +135,26 @@ jobs:
           chmod +x ./r2r
 
           echo ""
-          echo "Verifying r2r CLI..."
-          ./r2r --version
+          echo "Verifying r2r CLI binary..."
+          ls -lh ./r2r
+          file ./r2r
 
       - name: Test Extension via r2r CLI
         run: |
           echo "Testing eac extension through r2r CLI..."
 
           echo ""
-          echo "Creating .git directory for r2r to detect repository root..."
+          echo "Setting up isolated test environment..."
+
+          # Create a temporary test directory isolated from the mono repo
+          mkdir -p /tmp/ext-eac-test
+          cd /tmp/ext-eac-test
+
+          # Create .git directory for r2r to detect repository root
           mkdir -p .git
+
+          # Copy contract files needed for testing
+          cp -r $GITHUB_WORKSPACE/contracts ./contracts
 
           echo ""
           echo "Creating r2r-cli.yml config with CI test image..."
@@ -154,6 +164,16 @@ jobs:
               image: 'ext-eac:ci-test'
               image_pull_policy: 'Never'
           EOF
+
+          # Copy r2r binary to test directory
+          cp $GITHUB_WORKSPACE/r2r ./r2r
+          chmod +x ./r2r
+
+          echo ""
+          echo "Verifying test environment..."
+          pwd
+          ls -la
+          ./r2r --version
 
           echo ""
           echo "Testing 'help' command..."
