@@ -50,7 +50,7 @@ jobs:
 
           if [ "$TRIGGER_ALL" = "true" ]; then
             echo "Trigger all mode enabled - running all workflows"
-            WORKFLOW_MODULES="src-cli src-commands src-core src-mcp-commands ext-eac"
+            WORKFLOW_MODULES="src-cli src-commands src-core src-mcp-commands ext-eac docs"
           else
             # Get changed modules using existing command
             MODULES=$(go run . "get changed modules" --as-json | jq -r '.modules | join(" ")')
