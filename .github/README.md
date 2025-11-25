@@ -1,17 +1,21 @@
 # Everything as Code
 
 <p align="center">
-  <img src="docs/assets/logo/eac-logo.png" width="200" /><br>
+  <img src="../docs/assets/logo/eac-logo.png" width="200" /><br>
   <span style="font-size: 1.3em;">Turn every commit into deployable, compliant software you can trust</span>
 </p>
 
-[![Release Status](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml)
+[![CI Status](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml)
 [![GitHub Stars](https://img.shields.io/github/stars/ready-to-release/eac?style=social)](https://github.com/ready-to-release/eac/stargazers)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ready-to-release/eac/blob/main/LICENSE)
-[![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC_BY--SA_4.0-lightgrey.svg)](https://github.com/ready-to-release/eac/blob/main/docs/LICENSE)
-[![Docs](https://img.shields.io/badge/docs-GitHub_Pages-blue)](https://ready-to-release.github.io/eac/)
-[![Latest Release](https://img.shields.io/github/v/release/ready-to-release/eac?include_prereleases)](https://github.com/ready-to-release/eac/releases)
-[![ext-eac release](https://img.shields.io/github/v/tag/ready-to-release/eac?filter=ext-eac/*&label=ext-eac&logo=docker&color=blue)](https://github.com/ready-to-release/eac/pkgs/container/ext-eac)
+
+[![docs release](https://github.com/ready-to-release/eac/actions/workflows/pages/pages-build-deployment/badge.svg)](https://ready-to-release.github.io/eac/)
+[![docs license](https://img.shields.io/badge/license-CC%20BY--SA%204.0-lightgrey)](https://github.com/ready-to-release/eac/blob/main/docs/LICENSE)
+
+[![src-cli release](https://img.shields.io/github/v/tag/ready-to-release/eac?filter=src-cli/*&label=release&color=green)](https://github.com/ready-to-release/eac/releases?q=src-cli)
+[![src-cli license](https://img.shields.io/badge/license-MIT-yellow)](https://github.com/ready-to-release/eac/blob/main/LICENSE)
+
+[![ext-eac release](https://img.shields.io/github/v/tag/ready-to-release/eac?filter=ext-eac/*&label=release&color=green)](https://github.com/ready-to-release/eac/pkgs/container/ext-eac)
+[![ext-eac license](https://img.shields.io/badge/license-MIT-yellow)](https://github.com/ready-to-release/eac/blob/main/LICENSE)
 
 ---
 
