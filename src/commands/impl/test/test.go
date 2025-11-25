@@ -1,65 +1,334 @@
 // Command: test
-// Description: Run tests for modules and test suites
-// HasSideEffects: true
+// Short: Test one or more modules by moniker
+// Args: modules
+// Long: Test one or more modules by moniker using type-based dispatch.
+// Long:
+// Long: This command identifies the module type from the module contract and dispatches
+// Long: to the appropriate test handler. Supported module types include Go modules with
+// Long: unit tests, specifications, and other testable components.
+// Long:
+// Long: When a single module is specified, output is verbose. When multiple modules
+// Long: are specified, tests run in parallel with orchestrator output.
+// Long:
+// Long: Test output formats can be controlled with flags. The default output shows test
+// Long: results in real-time. Use --as-cucumber for cucumber-style JSON output or --as-junit
+// Long: for JUnit XML format suitable for CI/CD systems.
+// Long:
+// Long: Use --suite to filter tests by suite. The default suite is "commit".
+// Long:
+// Long: Example:
+// Long:   test src-commands                    # Test single module (verbose)
+// Long:   test src-core src-cli                # Test multiple modules (parallel)
+// Long:   test                                 # Test all modules
+// Long:   test src-commands --as-junit         # Test with JUnit output
+// Long:   test src-commands --suite integration
+// Flag.as-cucumber: type=bool, usage=Output test results in Cucumber JSON format
+// Flag.as-junit: type=bool, usage=Output test results in JUnit XML format
+// Flag.suite: type=string, usage=Filter tests by suite (default: "commit")
+// HasSideEffects: false
 package test
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
+	"strings"
+	"sync"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
 	registry.Register(Test)
 }
 
-// Test command entry point
+// Test is the unified entry point for testing modules
 func Test() int {
 	args := os.Args[2:] // Skip program name and "test"
 
-	// Check if first arg is a flag or no args - default to commit suite
-	if len(args) == 0 || (len(args) > 0 && args[0][0] == '-') {
-		// Default: run commit suite with any flags passed
-		os.Args = append(os.Args[:2], append([]string{"suite", "commit"}, args...)...)
-		return TestSuite()
+	// Check for subcommands that should be handled separately
+	if len(args) > 0 {
+		switch args[0] {
+		case "suite", "list-suites", "debug":
+			// These are handled by their own registered commands
+			// This case shouldn't normally be reached due to command registry lookup order
+			return 0
+		case "--help", "-h":
+			printTestUsage()
+			return 0
+		}
 	}
 
-	// Check for help flag
-	switch args[0] {
-	case "--help", "-h":
-		printTestUsage()
-		return 0
-	case "module", "modules", "suite", "list-suites":
-		// Handled by separate registrations in respective files
-		return 0
-	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
-		printTestUsage()
+	// Parse arguments - separate monikers from flags
+	var monikers []string
+	suiteName := "commit"
+	reportFormat := "cucumber"
+	generateOnly := false
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--suite" {
+			if i+1 >= len(args) {
+				fmt.Fprintf(os.Stderr, "Error: --suite requires a suite name\n")
+				return 1
+			}
+			i++
+			suiteName = args[i]
+		} else if arg == "--as-junit" {
+			reportFormat = "junit"
+		} else if arg == "--as-cucumber" {
+			reportFormat = "cucumber"
+		} else if arg == "--no-generate" {
+			// Legacy flag - no longer used
+		} else if arg == "--generate-only" {
+			generateOnly = true
+		} else if strings.HasPrefix(arg, "--as-") {
+			fmt.Fprintf(os.Stderr, "Error: unknown format flag: %s\n", arg)
+			fmt.Fprintf(os.Stderr, "Valid formats: --as-cucumber (default), --as-junit\n")
+			return 1
+		} else if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
+			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+			fmt.Fprintf(os.Stderr, "Valid flags: --as-cucumber, --as-junit, --suite <name>\n")
+			return 1
+		} else {
+			monikers = append(monikers, arg)
+		}
+	}
+
+	// Get workspace root
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
+
+	// Handle --generate-only flag (requires existing test-run-id)
+	if generateOnly {
+		if len(monikers) != 1 {
+			fmt.Fprintf(os.Stderr, "Error: --generate-only requires exactly one test-run-id\n")
+			fmt.Fprintf(os.Stderr, "Usage: test <test-run-id> --generate-only\n")
+			return 1
+		}
+		testRunID := monikers[0]
+		fmt.Printf("📊 Generating summary for test run: %s (skipping tests)\n", testRunID)
+		if err := generateSummaryMulti(testRunID); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
+		}
+		return 0
+	}
+
+	// Load module contracts
+	moduleReport, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
+		return 1
+	}
+
+	// If no monikers provided, default to all modules
+	if len(monikers) == 0 {
+		fmt.Println("ℹ️  No modules specified, testing all modules...")
+		for _, module := range moduleReport.Registry.All() {
+			monikers = append(monikers, module.Moniker)
+		}
+	}
+
+	// If exactly one module specified, run single module test (verbose output)
+	if len(monikers) == 1 {
+		return testSingleModule(monikers[0], workspaceRoot, moduleReport, reportFormat, suiteName)
+	}
+
+	// Multiple modules - run parallel test with orchestrator
+	return testMultipleModules(monikers, workspaceRoot, moduleReport, reportFormat, suiteName)
+}
+
+// testSingleModule tests a single module with verbose output
+func testSingleModule(moniker string, workspaceRoot string, moduleReport *reports.ModuleContractReport, reportFormat string, suiteName string) int {
+	// Load module contract
+	moduleContract, err := modules.LoadSingleModule(workspaceRoot, moniker, "0.1.0")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load module contract for '%s': %v\n", moniker, err)
+		return 1
+	}
+
+	// Check if module has a type-specific test function
+	testFunc, exists := testFunctions[moduleContract.Type]
+	if exists {
+		// Use type-based dispatch for modules with specific test functions
+		outputDir := filepath.Join(workspaceRoot, "out", "test", suiteName, moniker)
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
+			return 1
+		}
+
+		logWriter := os.Stdout
+		return testFunc(moduleContract, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
+	}
+
+	// For modules without specific test functions, redirect to test suite
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	newArgs := []string{
+		os.Args[0],
+		"test",
+		"suite",
+		suiteName,
+		"--module",
+		moniker,
+	}
+
+	os.Args = newArgs
+
+	return TestSuite()
+}
+
+// testMultipleModules tests multiple modules in parallel with orchestrator output
+func testMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, reportFormat string, suiteName string) int {
+	// Create orchestrator log file
+	orchestratorLogPath := filepath.Join(workspaceRoot, "out", "test", "orchestrator.log")
+	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to create orchestrator log directory: %v\n", err)
+		return 1
+	}
+	orchestratorLog, err := os.Create(orchestratorLogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to create orchestrator log: %v\n", err)
+		return 1
+	}
+	defer orchestratorLog.Close()
+
+	// Use buffered writer for orchestrator log
+	orchestratorLogBuf := bufio.NewWriter(orchestratorLog)
+	defer orchestratorLogBuf.Flush()
+
+	// Create multi-writer for orchestrator output (console + log file)
+	orchestratorOut := io.MultiWriter(os.Stdout, orchestratorLogBuf)
+
+	fmt.Fprintf(orchestratorOut, "Testing %d modules: %v\n\n", len(monikers), monikers)
+
+	// Start global progress tracker
+	StartGlobalTracker(orchestratorOut, len(monikers))
+	defer StopGlobalTracker()
+
+	// Test each module in sequence
+	var mu sync.Mutex
+	failedModules := []string{}
+	testedModules := []*modules.ModuleContract{}
+	for _, moniker := range monikers {
+
+		// Get module from registry
+		module, exists := moduleReport.Registry.Get(moniker)
+		if !exists {
+			statusLine := fmt.Sprintf("[testing] %s (Module not found) ........ Failed\r\n", moniker)
+			orchestratorOut.Write([]byte(statusLine))
+			os.Stdout.Sync()
+			failedModules = append(failedModules, moniker+" (not found)")
+			continue
+		}
+
+		// Purge and create module output directory
+		moduleOutputDir := filepath.Join(workspaceRoot, "out", "test", moniker)
+		if err := os.RemoveAll(moduleOutputDir); err != nil {
+			// Silently continue - logged to orchestrator log only
+		}
+		if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
+			statusLine := fmt.Sprintf("[testing] %s (Failed to create directory) ........ Failed\r\n", moniker)
+			orchestratorOut.Write([]byte(statusLine))
+			os.Stdout.Sync()
+			failedModules = append(failedModules, moniker+" (dir error)")
+			continue
+		}
+
+		// Create test log file
+		logPath := filepath.Join(moduleOutputDir, "test.log")
+		logFile, err := os.Create(logPath)
+		if err != nil {
+			statusLine := fmt.Sprintf("[testing] %s (Failed to create log) ........ Failed\r\n", moniker)
+			orchestratorOut.Write([]byte(statusLine))
+			os.Stdout.Sync()
+			failedModules = append(failedModules, moniker+" (log error)")
+			continue
+		}
+
+		// Module output goes to file only (not console)
+		multiWriter := io.MultiWriter(logFile)
+
+		// Track test start with global progress tracker
+		TrackTestStart(moniker)
+
+		// Run tests for this module
+		exitCode := runModuleTest(module, workspaceRoot, moduleOutputDir, multiWriter, reportFormat, suiteName)
+
+		// Track test completion
+		TrackTestComplete(moniker)
+
+		logFile.Close()
+
+		// Track tested modules
+		testedModules = append(testedModules, module)
+
+		// Print clean status line (thread-safe)
+		mu.Lock()
+		relLogPath := filepath.Join("out", "test", moniker, "test.log")
+		var statusLine string
+		if exitCode != 0 {
+			statusLine = fmt.Sprintf("[testing] %s (See %s for details) ........ Failed\r\n", moniker, relLogPath)
+			failedModules = append(failedModules, moniker)
+		} else {
+			statusLine = fmt.Sprintf("[testing] %s (See %s for details) ........ Done\r\n", moniker, relLogPath)
+		}
+		orchestratorOut.Write([]byte(statusLine))
+		os.Stdout.Sync()
+		mu.Unlock()
+	}
+
+	// Print summary
+	fmt.Fprintf(orchestratorOut, "\n===========================================\n")
+	fmt.Fprintf(orchestratorOut, "Test Run Summary\n")
+	fmt.Fprintf(orchestratorOut, "===========================================\n")
+	fmt.Fprintf(orchestratorOut, "Total modules: %d\n", len(monikers))
+	fmt.Fprintf(orchestratorOut, "Passed: %d\n", len(monikers)-len(failedModules))
+	fmt.Fprintf(orchestratorOut, "Failed: %d\n", len(failedModules))
+	if len(failedModules) > 0 {
+		fmt.Fprintf(orchestratorOut, "\n❌ Failed modules:\n")
+		for _, m := range failedModules {
+			fmt.Fprintf(orchestratorOut, "  - %s\n", m)
+		}
+	}
+	fmt.Fprintf(orchestratorOut, "\nOrchestrator log: out/test/orchestrator.log\n")
+	fmt.Fprintf(orchestratorOut, "Module logs: out/test/<module>/test.log\n")
+
+	if len(failedModules) > 0 {
+		return 1
+	}
+	return 0
 }
 
 func printTestUsage() {
-	fmt.Println("Run tests for modules and test suites")
+	fmt.Println("Test one or more modules by moniker")
 	fmt.Println()
-	fmt.Println("Usage: r2r test <subcommand> [args...]")
+	fmt.Println("Usage: r2r eac test [module1] [module2] ... [options]")
 	fmt.Println()
-	fmt.Println("Subcommands:")
-	fmt.Println("  module <name>             Test a specific module")
-	fmt.Println("  modules                   Test multiple modules")
-	fmt.Println("  suite <name>              Run a specific test suite")
-	fmt.Println("  list-suites               List all available test suites")
+	fmt.Println("Options:")
+	fmt.Println("  --as-cucumber          Output in Cucumber JSON format (default)")
+	fmt.Println("  --as-junit             Output in JUnit XML format")
+	fmt.Println("  --suite <name>         Filter tests by suite (default: \"commit\")")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  # Test specific module")
-	fmt.Println("  r2r test module src-commands")
+	fmt.Println("  r2r eac test                          # Test all modules")
+	fmt.Println("  r2r eac test src-commands             # Test single module (verbose)")
+	fmt.Println("  r2r eac test src-cli src-core         # Test multiple modules (parallel)")
+	fmt.Println("  r2r eac test src-commands --as-junit  # Test with JUnit output")
 	fmt.Println()
-	fmt.Println("  # Run specific test suite")
-	fmt.Println("  r2r test suite integration")
+	fmt.Println("Related commands:")
+	fmt.Println("  r2r eac test suite <name>             # Run a specific test suite")
+	fmt.Println("  r2r eac test list-suites              # List all available test suites")
 	fmt.Println()
-	fmt.Println("  # List all test suites")
-	fmt.Println("  r2r test list-suites")
-	fmt.Println()
-	fmt.Println("Use 'r2r test <subcommand> --help' for more information about a command.")
+	fmt.Println("Use 'r2r eac test <subcommand> --help' for more information about a command.")
 }

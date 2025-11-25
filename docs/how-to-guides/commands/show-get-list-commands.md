@@ -350,8 +350,8 @@ r2r eac get-changed-modules
 # Build only affected modules
 MODULES=$(r2r eac get-changed-modules | jq -r '.changed_modules[]')
 for module in $MODULES; do
-  r2r eac build module $module
-  r2r eac test module $module
+  r2r eac build $module
+  r2r eac test $module
 done
 ```
 
@@ -361,7 +361,7 @@ done
 # Get execution order
 r2r eac get-execution-order src-cli | jq -r '.execution_order[]' | while read module; do
   echo "Building $module..."
-  r2r eac build module $module
+  r2r eac build $module
 done
 ```
 
@@ -390,8 +390,8 @@ r2r eac get-files | jq '.files[] | select(.module == "src-auth")'
 - name: Build Changed Modules
   run: |
     for module in ${{ steps.changed.outputs.modules }}; do
-      r2r eac build module $module
-      r2r eac test module $module
+      r2r eac build $module
+      r2r eac test $module
     done
 ```
 

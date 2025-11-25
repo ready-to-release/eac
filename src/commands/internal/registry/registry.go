@@ -84,6 +84,7 @@ type CommandRegistration struct {
 	Short          string // One sentence description
 	Long           string // Detailed multi-paragraph description
 	Flags          []FlagMetadata // Structured flag definitions
+	Args           string // Argument completion type: "modules", "files", etc.
 	HasSideEffects bool   // Whether command modifies repository files
 }
 
@@ -174,6 +175,7 @@ func Register(fn CommandFunc) {
 		Short:          short,
 		Long:           long,
 		Flags:          flags,
+		Args:           metadata.Args,
 		HasSideEffects: hasSideEffects,
 	}
 }
@@ -186,7 +188,8 @@ type commandMetadata struct {
 	Short             string   // One sentence description
 	LongLines         []string // Multi-line long description
 	FlagDefs          []flagDefinition
-	HasSideEffectsStr string // Parsed from "// HasSideEffects:" comment
+	Args              string   // Argument completion type: "modules", "files", etc.
+	HasSideEffectsStr string   // Parsed from "// HasSideEffects:" comment
 }
 
 // flagDefinition holds parsed flag definition from comments
@@ -252,6 +255,11 @@ func extractCommandMetadata(filePath string) commandMetadata {
 		// Extract HasSideEffects
 		if strings.HasPrefix(line, "// HasSideEffects:") {
 			metadata.HasSideEffectsStr = strings.TrimSpace(strings.TrimPrefix(line, "// HasSideEffects:"))
+		}
+
+		// Extract Args (completion type for positional arguments)
+		if strings.HasPrefix(line, "// Args:") {
+			metadata.Args = strings.TrimSpace(strings.TrimPrefix(line, "// Args:"))
 		}
 	}
 

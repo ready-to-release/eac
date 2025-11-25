@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
@@ -40,10 +41,25 @@ func buildTopLevelContext(stagedFilesTable string, gitDiff string, diffStats str
 		context.WriteString("\n\n")
 	}
 
-	// Git Diff - shows all code changes
+	// Git Diff - shows all code changes (truncated if too large for prompt)
 	context.WriteString("## Git Diff\n\n")
 	context.WriteString("```diff\n")
-	context.WriteString(gitDiff)
+	if len(gitDiff) > commitmessage.MaxPromptDiffSize {
+		// Truncate diff to avoid exceeding Claude CLI prompt limits
+		truncatedDiff := gitDiff[:commitmessage.MaxPromptDiffSize]
+		// Find last complete line to avoid cutting mid-line
+		lastNewline := strings.LastIndex(truncatedDiff, "\n")
+		if lastNewline > 0 {
+			truncatedDiff = truncatedDiff[:lastNewline]
+		}
+		context.WriteString(truncatedDiff)
+		context.WriteString("\n\n... [DIFF TRUNCATED - ")
+		context.WriteString(fmt.Sprintf("%d KB of %d KB shown", commitmessage.MaxPromptDiffSize/1024, len(gitDiff)/1024))
+		context.WriteString("] ...\n")
+		context.WriteString("Note: Use diff stats and file list above to understand full scope of changes.\n")
+	} else {
+		context.WriteString(gitDiff)
+	}
 	context.WriteString("\n```\n")
 
 	return context.String()
@@ -69,11 +85,26 @@ func buildModuleContext(moduleName string, moduleFiles []repository.RepositoryFi
 	context.WriteString(tb.Build())
 	context.WriteString("\n\n")
 
-	// Git diff filtered to this module's files
+	// Git diff filtered to this module's files (truncated if too large for prompt)
 	filteredDiff := filterDiffForModule(fullDiff, moduleFiles)
 	context.WriteString("## Git Diff\n\n")
 	context.WriteString("```diff\n")
-	context.WriteString(filteredDiff)
+	if len(filteredDiff) > commitmessage.MaxPromptDiffSize {
+		// Truncate diff to avoid exceeding Claude CLI prompt limits
+		truncatedDiff := filteredDiff[:commitmessage.MaxPromptDiffSize]
+		// Find last complete line to avoid cutting mid-line
+		lastNewline := strings.LastIndex(truncatedDiff, "\n")
+		if lastNewline > 0 {
+			truncatedDiff = truncatedDiff[:lastNewline]
+		}
+		context.WriteString(truncatedDiff)
+		context.WriteString("\n\n... [DIFF TRUNCATED - ")
+		context.WriteString(fmt.Sprintf("%d KB of %d KB shown", commitmessage.MaxPromptDiffSize/1024, len(filteredDiff)/1024))
+		context.WriteString("] ...\n")
+		context.WriteString("Note: Use file list above to understand full scope of changes.\n")
+	} else {
+		context.WriteString(filteredDiff)
+	}
 	context.WriteString("\n```\n")
 
 	return context.String()

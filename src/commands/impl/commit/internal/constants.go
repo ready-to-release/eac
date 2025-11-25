@@ -19,6 +19,10 @@ const (
 
 	// MaxDiffSize is the maximum size for a git diff (10 MB)
 	MaxDiffSize = 10 * 1024 * 1024
+
+	// MaxPromptDiffSize is the maximum size for git diff to include in AI prompt (100 KB)
+	// Larger diffs will be truncated to avoid exceeding Claude CLI prompt limits
+	MaxPromptDiffSize = 100 * 1024
 )
 
 // Contract version constants

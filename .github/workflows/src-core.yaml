@@ -37,7 +37,7 @@ jobs:
 
       - name: Build Module
         working-directory: ./src/commands
-        run: go run . build module src-core
+        run: go run . build src-core
 
       - name: Upload Build Artifacts
         if: always()
@@ -70,7 +70,7 @@ jobs:
 
       - name: Test Module
         working-directory: ./src/commands
-        run: go run . test module src-core
+        run: go run . test src-core
 
       - name: Upload Test Results
         if: always()

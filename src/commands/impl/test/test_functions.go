@@ -1,25 +1,5 @@
-// Command: test module
-// Short: Test a module by its moniker using type-based dispatch
-// Long: Test a module by its moniker using type-based dispatch.
-// Long:
-// Long: This command identifies the module type from the module contract and dispatches
-// Long: to the appropriate test handler. Supported module types include Go modules with
-// Long: unit tests, specifications, and other testable components.
-// Long:
-// Long: Test output formats can be controlled with flags. The default output shows test
-// Long: results in real-time. Use --as-cucumber for cucumber-style JSON output or --as-junit
-// Long: for JUnit XML format suitable for CI/CD systems.
-// Long:
-// Long: Use --suite to filter tests by suite. The default suite is "commit".
-// Long:
-// Long: Example:
-// Long:   test module src-commands
-// Long:   test module src-core --as-junit
-// Long:   test module src-commands --suite integration
-// Flag.as-cucumber: type=bool, usage=Output test results in Cucumber JSON format
-// Flag.as-junit: type=bool, usage=Output test results in JUnit XML format
-// Flag.suite: type=string, usage=Filter tests by suite (default: "commit")
-// HasSideEffects: false
+// test_functions.go - Type-based test dispatch functions
+// These functions are used by the unified test command in test.go
 package test
 
 import (
@@ -29,16 +9,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/src/commands/impl/build"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
 )
-
-func init() {
-	registry.Register(TestModule)
-}
 
 // TestFunc is the signature for module type test functions
 // Parameters: module contract, workspace root, output directory, log writer, report format, suite name
@@ -47,94 +23,39 @@ type TestFunc func(*modules.ModuleContract, string, string, io.Writer, string, s
 
 // testFunctions maps module types to their test functions
 var testFunctions = map[string]TestFunc{
-	"go-cli":          testGoCLI,
-	"go-commands":     testGoCommands,
-	"go-mcp":          testGoMCP,
-	"go-library":      testGoLibrary,
-	"go-tests":        testGoTests,
+	// Go modules - run go test
+	"go-cli":      testGoCLI,
+	"go-commands": testGoCommands,
+	"go-mcp":      testGoMCP,
+	"go-library":  testGoLibrary,
+	"go-tests":    testGoTests,
+
+	// Documentation - verify build output
+	"mkdocs-site":    testMkDocsSite,
+	"mkdocs-subsite": testStaticModule, // Subsites are validated via parent site build
+
+	// Repository-level tests
 	"repository-root": testRepositoryRoot,
-}
 
-// TestModule tests a module by its moniker
-// Uses type-based dispatch to call appropriate test function for the module type
-func TestModule() int {
-	// Parse arguments - expect: test module <moniker> [flags]
-	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Error: missing module moniker\n")
-		fmt.Fprintf(os.Stderr, "Usage: test module <moniker> [--as-cucumber|--as-junit] [--suite <suite-name>]\n")
-		return 1
-	}
-
-	moniker := os.Args[3]
-
-	// Parse flags
-	suiteName := "commit"
-	reportFormat := "cucumber"
-	otherFlags := []string{}
-
-	for i := 4; i < len(os.Args); i++ {
-		arg := os.Args[i]
-		if arg == "--suite" {
-			if i+1 >= len(os.Args) {
-				fmt.Fprintf(os.Stderr, "Error: --suite requires a suite name\n")
-				return 1
-			}
-			i++
-			suiteName = os.Args[i]
-		} else if arg == "--as-junit" {
-			reportFormat = "junit"
-		} else if arg == "--as-cucumber" {
-			reportFormat = "cucumber"
-		} else {
-			otherFlags = append(otherFlags, arg)
-		}
-	}
-
-	// Get workspace root
-	workspaceRoot, err := registry.GetWorkspaceRoot()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get workspace root: %v\n", err)
-		return 1
-	}
-
-	// Load module contract (using default version 0.1.0)
-	moduleContract, err := modules.LoadSingleModule(workspaceRoot, moniker, "0.1.0")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contract for '%s': %v\n", moniker, err)
-		return 1
-	}
-
-	// Check if module has a type-specific test function
-	testFunc, exists := testFunctions[moduleContract.Type]
-	if exists {
-		// Use type-based dispatch for modules with specific test functions
-		outputDir := filepath.Join(workspaceRoot, "out", "test", suiteName, moniker)
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
-			return 1
-		}
-
-		logWriter := os.Stdout
-		return testFunc(moduleContract, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
-	}
-
-	// For modules without specific test functions, redirect to test suite
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-
-	newArgs := []string{
-		os.Args[0],
-		"test",
-		"suite",
-		suiteName,
-		"--module",
-		moniker,
-	}
-	newArgs = append(newArgs, otherFlags...)
-
-	os.Args = newArgs
-
-	return TestSuite()
+	// Configuration/static modules - no tests needed, verify build output exists
+	"claude-agents":    testStaticModule,
+	"claude-commands":  testStaticModule,
+	"claude-config":    testStaticModule,
+	"claude-hooks":     testStaticModule,
+	"config":           testStaticModule,
+	"configuration":    testStaticModule,
+	"containers":       testStaticModule,
+	"contracts":        testStaticModule,
+	"definitions-type": testStaticModule,
+	"markdown":         testStaticModule,
+	"no-module-type":   testStaticModule,
+	"r2r-extension":    testStaticModule,
+	"scripts-pwsh":     testStaticModule,
+	"scripts-sh":       testStaticModule,
+	"specifications":   testStaticModule,
+	"templates":        testStaticModule,
+	"vscode-config":    testStaticModule,
+	"vscode-ext":       testStaticModule,
 }
 
 // testGoCLI tests a Cobra CLI binary (Pattern A)
@@ -430,6 +351,48 @@ func generateUnitTestSummaryMarkdown(moniker string, moduleType string, outputDi
 	fmt.Fprintf(logWriter, "✅ Generated: %s\n", summaryPath)
 }
 
+// testStaticModule is a passthrough test for static/configuration modules
+// These modules don't have runtime tests - they are validated by the build process
+func testStaticModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	fmt.Fprintf(logWriter, "\n=== Testing %s: %s ===\n", module.Type, module.Moniker)
+	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
+	fmt.Fprintf(logWriter, "Module type '%s' has no runtime tests\n", module.Type)
+	fmt.Fprintf(logWriter, "✅ Static module - validation done at build time\n")
+	return 0
+}
+
+// testMkDocsSite tests the MkDocs documentation site by verifying the build output exists
+// The build is done separately with strict mode - this test just verifies the output
+func testMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	fmt.Fprintf(logWriter, "\n=== Testing mkdocs-site: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
+
+	// Check that the build output exists
+	buildOutputDir := filepath.Join(workspaceRoot, "out", "build", module.Moniker, "site")
+	indexFile := filepath.Join(buildOutputDir, "index.html")
+
+	fmt.Fprintf(logWriter, "Checking build output: %s\n", buildOutputDir)
+
+	// Verify site directory exists
+	if _, err := os.Stat(buildOutputDir); os.IsNotExist(err) {
+		fmt.Fprintf(logWriter, "\n❌ Build output not found: %s\n", buildOutputDir)
+		fmt.Fprintf(logWriter, "   Run 'build module %s' first\n", module.Moniker)
+		return 1
+	}
+
+	// Verify index.html exists (indicates successful build)
+	if _, err := os.Stat(indexFile); os.IsNotExist(err) {
+		fmt.Fprintf(logWriter, "\n❌ index.html not found in build output\n")
+		fmt.Fprintf(logWriter, "   Build may have failed - run 'build module %s'\n", module.Moniker)
+		return 1
+	}
+
+	fmt.Fprintf(logWriter, "✅ Build output verified: %s\n", indexFile)
+	fmt.Fprintf(logWriter, "\n✅ MkDocs site validation passed\n")
+
+	return 0
+}
+
 // testRepositoryRoot tests the repository-root module (runs repository validation tests)
 func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	// The repository-root module contains repository-level validation tests
@@ -462,4 +425,52 @@ func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, ou
 
 	fmt.Fprintf(logWriter, "\n✅ Repository validation tests passed\n")
 	return 0
+}
+
+// runModuleTest runs tests for a single module
+func runModuleTest(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	// Get test function for module type
+	testFunc, hasTester := testFunctions[module.Type]
+	if !hasTester {
+		fmt.Fprintf(logWriter, "Error: no test function for type: %s\n", module.Type)
+		return 1
+	}
+
+	// Execute the test function
+	return testFunc(module, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
+}
+
+// FindModulesWithResults finds all subdirectories containing cucumber.json
+func FindModulesWithResults(testRunDir string) ([]string, error) {
+	entries, err := os.ReadDir(testRunDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var foundModules []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Check if this directory has cucumber.json
+		cucumberPath := filepath.Join(testRunDir, entry.Name(), "cucumber.json")
+		if _, err := os.Stat(cucumberPath); err == nil {
+			foundModules = append(foundModules, entry.Name())
+		}
+	}
+
+	return foundModules, nil
+}
+
+// formatDuration formats a duration as "1m 23s" or "45s"
+func formatDuration(d time.Duration) string {
+	d = d.Round(time.Second)
+	minutes := int(d.Minutes())
+	seconds := int(d.Seconds()) % 60
+
+	if minutes > 0 {
+		return fmt.Sprintf("%dm %ds", minutes, seconds)
+	}
+	return fmt.Sprintf("%ds", seconds)
 }

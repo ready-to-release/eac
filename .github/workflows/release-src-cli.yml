@@ -226,7 +226,7 @@ jobs:
           VERSION: ${{ steps.extract_version.outputs.version }}
         run: |
           echo "Building src-cli with version $VERSION using build command..."
-          go run ./src/commands build module src-cli --version "$VERSION" --no-tidy
+          go run ./src/commands build src-cli --version "$VERSION" --no-tidy
 
       - name: Verify binaries
         run: |

@@ -39,7 +39,7 @@ jobs:
       - name: Build extension using EAC build system
         run: |
           echo "Building ext-eac using EAC build system..."
-          go run ./src/commands build module ext-eac
+          go run ./src/commands build ext-eac
 
           echo ""
           echo "Verifying image was built..."
@@ -127,7 +127,7 @@ jobs:
       - name: Build r2r CLI
         run: |
           echo "Building r2r CLI using EAC build system..."
-          go run ./src/commands build module src-cli
+          go run ./src/commands build src-cli
 
           echo ""
           echo "Copying Linux binary to workspace root..."

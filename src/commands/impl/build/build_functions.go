@@ -1,18 +1,5 @@
-// Command: build module
-// Short: Build a module by its moniker using type-based dispatch
-// Long: Build a module by its moniker using type-based dispatch.
-// Long:
-// Long: This command identifies the module type from the module contract and dispatches
-// Long: to the appropriate build handler. Supported module types include Go modules,
-// Long: documentation sites, and other project components.
-// Long:
-// Long: The build output is displayed in real-time, and the command returns the build
-// Long: exit code (0 for success, non-zero for failure).
-// Long:
-// Long: Example:
-// Long:   build module src-commands
-// Long:   build module docs
-// HasSideEffects: false
+// build_functions.go - Build functions for different module types
+// This file contains the type-based build dispatch functions used by the build command.
 package build
 
 import (
@@ -27,19 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
-	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	mdvalidator "github.com/ready-to-release/eac/src/core/markdown"
-	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/parser"
 	"gopkg.in/yaml.v3"
 )
-
-func init() {
-	registry.Register(BuildModule)
-}
 
 // BuildOptions contains flags for controlling the build process
 type BuildOptions struct {
@@ -54,6 +34,20 @@ type BuildOptions struct {
 // Parameters: module contract, workspace root, output directory, log writer, build options
 // Returns: exit code
 type BuildFunc func(*modules.ModuleContract, string, string, io.Writer, BuildOptions) int
+
+// goModuleTypes is the set of module types that use Go tooling (and thus support --tidy-first)
+var goModuleTypes = map[string]bool{
+	"go-cli":      true,
+	"go-commands": true,
+	"go-mcp":      true,
+	"go-library":  true,
+	"go-tests":    true,
+}
+
+// IsGoModuleType returns true if the module type uses Go tooling
+func IsGoModuleType(moduleType string) bool {
+	return goModuleTypes[moduleType]
+}
 
 // buildFunctions maps module types to their build functions
 var buildFunctions = map[string]BuildFunc{
@@ -86,157 +80,6 @@ var buildFunctions = map[string]BuildFunc{
 	"no-module-type":   buildNoModuleType,
 }
 
-// BuildModule builds a module by its moniker
-func BuildModule() int {
-	// Parse arguments
-	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Error: missing module moniker\n")
-		fmt.Fprintf(os.Stderr, "Usage: build module <moniker> [--windows-only|--linux-only|--macos-only] [--tidy-first|--no-tidy] [--version <version>]\n")
-		return 1
-	}
-
-	moniker := os.Args[3]
-
-	// Detect CI environment
-	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
-
-	// Parse optional flags for architecture-specific builds and tidy behavior
-	windowsOnly := false
-	linuxOnly := false
-	macosOnly := false
-	tidyFirst := !isCI // Default: true for local, false for CI
-	tidyExplicitlySet := false
-	version := ""      // Version to inject via ldflags
-
-	for i := 4; i < len(os.Args); i++ {
-		switch os.Args[i] {
-		case "--windows-only":
-			windowsOnly = true
-		case "--linux-only":
-			linuxOnly = true
-		case "--macos-only":
-			macosOnly = true
-		case "--tidy-first":
-			tidyFirst = true
-			tidyExplicitlySet = true
-		case "--no-tidy":
-			tidyFirst = false
-			tidyExplicitlySet = true
-		case "--version":
-			if i+1 < len(os.Args) {
-				version = os.Args[i+1]
-				i++ // Skip the next arg since it's the version value
-			}
-		}
-	}
-
-	// Get repository root using repository package
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
-		return 1
-	}
-
-	// Load module contracts
-	report, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
-		return 1
-	}
-
-	// Get the module from registry
-	module, exists := report.Registry.Get(moniker)
-	if !exists {
-		fmt.Fprintf(os.Stderr, "Error: module not found: %s\n", moniker)
-		return 1
-	}
-
-	// Get build function for module type
-	buildFunc, hasBuilder := buildFunctions[module.Type]
-	if !hasBuilder {
-		fmt.Fprintf(os.Stderr, "Error: no build function for type: %s\n", module.Type)
-		fmt.Fprintf(os.Stderr, "Module: %s\n", moniker)
-		fmt.Fprintf(os.Stderr, "Type: %s\n", module.Type)
-		fmt.Fprintf(os.Stderr, "\nAvailable build functions:\n")
-		if len(buildFunctions) == 0 {
-			fmt.Fprintf(os.Stderr, "  (none - infrastructure only)\n")
-		} else {
-			for moduleType := range buildFunctions {
-				fmt.Fprintf(os.Stderr, "  - %s\n", moduleType)
-			}
-		}
-		return 1
-	}
-
-	// Determine output directory based on test context
-	// When running in test context (e.g., from BDD specs), redirect to test output
-	var outputDir string
-	testRunID := os.Getenv("R2R_TEST_RUN_ID")
-	if testRunID != "" {
-		// Running in test context - use test output directory
-		outputDir = filepath.Join(workspaceRoot, "out", "test", testRunID, "build-artifacts", moniker)
-	} else {
-		// Normal build - use standard output directory
-		outputDir = filepath.Join(workspaceRoot, "out", "build", moniker)
-	}
-
-	// Purge existing output directory for this module
-	if err := os.RemoveAll(outputDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to purge output directory: %v\n", err)
-		return 1
-	}
-
-	// Create fresh output directory
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
-		return 1
-	}
-
-	// Create build log file
-	logPath := filepath.Join(outputDir, "build.log")
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create log file: %v\n", err)
-		return 1
-	}
-	defer logFile.Close()
-
-	// Create multi-writer to log to both console and file
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-
-	// Print header to both console and log
-	fmt.Fprintf(multiWriter, "Building module: %s (type: %s)\n", moniker, module.Type)
-	fmt.Fprintf(multiWriter, "Module root: %s\n", module.Source.Root)
-	fmt.Fprintf(multiWriter, "Output directory: %s\n", outputDir)
-	fmt.Fprintf(multiWriter, "Build log: %s\n", logPath)
-
-	// Create build options
-	buildOpts := BuildOptions{
-		WindowsOnly: windowsOnly,
-		LinuxOnly:   linuxOnly,
-		MacOSOnly:   macosOnly,
-		TidyFirst:   tidyFirst,
-		Version:     version,
-	}
-
-	// Log tidy behavior
-	if tidyFirst {
-		if tidyExplicitlySet {
-			fmt.Fprintf(multiWriter, "Tidy mode: enabled (explicit flag)\n")
-		} else {
-			fmt.Fprintf(multiWriter, "Tidy mode: enabled (default for local builds)\n")
-		}
-	} else {
-		if tidyExplicitlySet {
-			fmt.Fprintf(multiWriter, "Tidy mode: disabled (explicit flag)\n")
-		} else {
-			fmt.Fprintf(multiWriter, "Tidy mode: disabled (CI environment detected)\n")
-		}
-	}
-
-	// Execute the build function with output directory, log writer, and options
-	return buildFunc(module, workspaceRoot, outputDir, multiWriter, buildOpts)
-}
 
 // buildGoCLI builds a Cobra CLI binary (Pattern A)
 // Requires: go generate && go build
@@ -624,30 +467,95 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 	return 0
 }
 
-// buildMkDocsSite builds the main MkDocs documentation site
-// Runs: mkdocs build
+// buildMkDocsSite builds the main MkDocs documentation site using Docker
+// Uses the cli-mkdocs container for consistent builds across local and CI environments
 func buildMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
-
 	fmt.Fprintf(logWriter, "\n=== Building mkdocs-site: %s ===\n", module.Moniker)
 
-	// Check for mkdocs.yml
-	mkdocsConfig := filepath.Join(moduleRoot, "mkdocs.yml")
+	// Check for mkdocs.yml at repository root
+	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
 	if _, err := os.Stat(mkdocsConfig); os.IsNotExist(err) {
 		fmt.Fprintf(logWriter, "⚠️  No mkdocs.yml found at: %s\n", mkdocsConfig)
 		fmt.Fprintf(logWriter, "ℹ️  Skipping MkDocs build\n")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "📚 Building MkDocs site\n")
+	fmt.Fprintf(logWriter, "📚 Building MkDocs site using Docker\n")
 	fmt.Fprintf(logWriter, "   Config: %s\n", mkdocsConfig)
 
-	// Build site to output directory
+	// Ensure the Docker image exists
+	imageName := "cli-mkdocs:latest"
+	dockerfilePath := filepath.Join(workspaceRoot, "containers", "mkdocs", ".Dockerfile")
+	contextPath := filepath.Join(workspaceRoot, "containers", "mkdocs")
+
+	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
+		fmt.Fprintf(logWriter, "❌ Failed to ensure Docker image: %v\n", err)
+		return 1
+	}
+
+	// Calculate the site output directory relative to workspace root
+	// outputDir is typically: <workspaceRoot>/out/build/<moniker>
+	// We want site output at: <outputDir>/site
 	siteDir := filepath.Join(outputDir, "site")
-	exitCode := RunCommandWithLog(moduleRoot, logWriter,
+
+	// Create the output directory
+	if err := os.MkdirAll(siteDir, 0755); err != nil {
+		fmt.Fprintf(logWriter, "❌ Failed to create output directory: %v\n", err)
+		return 1
+	}
+
+	// Calculate relative path from workspace root to site dir for Docker mount
+	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
+	if err != nil {
+		fmt.Fprintf(logWriter, "❌ Failed to calculate relative path: %v\n", err)
+		return 1
+	}
+
+	// Format workspace root for Docker volume mount (handles Windows paths)
+	dockerVolume := formatDockerVolumePath(workspaceRoot)
+
+	// Build the site using Docker
+	// Mount workspace at /docs, output to relative site directory
+	fmt.Fprintf(logWriter, "   Image: %s\n", imageName)
+	fmt.Fprintf(logWriter, "   Output: %s\n", siteDir)
+
+	// Convert Windows path separators to forward slashes for Docker
+	dockerSiteDir := strings.ReplaceAll(relSiteDir, "\\", "/")
+
+	// Check for --accept-warnings flag in build options (passed via command line)
+	acceptWarnings := false
+	for _, arg := range os.Args {
+		if arg == "--accept-warnings" {
+			acceptWarnings = true
+			break
+		}
+	}
+
+	// Build command args - always use --strict to catch warnings
+	buildArgs := []string{
+		"run", "--rm",
+		"-v", dockerVolume + ":/docs",
+		"-w", "/docs",
+		imageName,
 		"mkdocs", "build",
-		"--site-dir", siteDir,
-		"--clean")
+		"--site-dir", dockerSiteDir,
+		"--clean",
+		"--strict",
+	}
+
+	if acceptWarnings {
+		fmt.Fprintf(logWriter, "   Mode: accepting warnings (--accept-warnings)\n")
+	} else {
+		fmt.Fprintf(logWriter, "   Mode: strict (warnings will fail build)\n")
+	}
+
+	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
+
+	// If accepting warnings, treat warning exit code as success
+	if acceptWarnings && exitCode != 0 {
+		fmt.Fprintf(logWriter, "⚠️  Build completed with warnings (accepted)\n")
+		exitCode = 0
+	}
 
 	if exitCode != 0 {
 		fmt.Fprintf(logWriter, "❌ MkDocs build failed\n")
@@ -658,6 +566,52 @@ func buildMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outpu
 	fmt.Fprintf(logWriter, "   Output: %s\n", siteDir)
 
 	return 0
+}
+
+// ensureMkDocsImage ensures the cli-mkdocs Docker image exists, building it if necessary
+func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter io.Writer) error {
+	// Check if image exists using docker images command
+	cmd := exec.Command("docker", "images", "-q", imageName)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to check for Docker image: %w", err)
+	}
+
+	// If output is non-empty, image exists
+	if len(strings.TrimSpace(string(output))) > 0 {
+		fmt.Fprintf(logWriter, "   Using existing image: %s\n", imageName)
+		return nil
+	}
+
+	// Image doesn't exist, build it
+	fmt.Fprintf(logWriter, "   Building Docker image: %s\n", imageName)
+
+	exitCode := RunCommandWithLog(contextPath, logWriter,
+		"docker", "build",
+		"-t", imageName,
+		"-f", dockerfilePath,
+		".")
+
+	if exitCode != 0 {
+		return fmt.Errorf("docker build failed with exit code %d", exitCode)
+	}
+
+	fmt.Fprintf(logWriter, "   Image built successfully: %s\n", imageName)
+	return nil
+}
+
+// formatDockerVolumePath formats a path for use as a Docker volume mount source
+// On Windows, converts C:\path to /c/path for Docker compatibility
+func formatDockerVolumePath(path string) string {
+	// Check if this is a Windows absolute path (e.g., C:\...)
+	if len(path) >= 2 && path[1] == ':' {
+		// Convert C:\path to /c/path
+		driveLetter := strings.ToLower(string(path[0]))
+		rest := strings.ReplaceAll(path[2:], "\\", "/")
+		return "/" + driveLetter + rest
+	}
+	// Already Unix-style or relative path
+	return strings.ReplaceAll(path, "\\", "/")
 }
 
 // buildMkDocsSubsite builds a MkDocs documentation subsite
