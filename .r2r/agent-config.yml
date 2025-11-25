@@ -1,9 +1,0 @@
-# Agent Configuration (Team Default)
-# Personal overrides: create agent-config.personal.yml (gitignored)
-# SAFE TO COMMIT: Contains only environment variable references, not actual secrets
-
-provider:
-  name: openai
-  model: gpt-4-turbo
-  endpoint: https://api.openai.com/v1
-  api_key: ${OPENAI_API_KEY}

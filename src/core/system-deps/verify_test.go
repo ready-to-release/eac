@@ -34,11 +34,11 @@ func TestVerify_Go(t *testing.T) {
 	assert.NotEmpty(t, result.Version)
 }
 
-func TestVerify_Claude(t *testing.T) {
-	result := Verify("@deps:claude")
+func TestVerify_AI(t *testing.T) {
+	result := Verify("@deps:ai")
 
-	assert.Equal(t, "@deps:claude", result.Dependency)
-	// Claude API key may or may not be configured
+	assert.Equal(t, "@deps:ai", result.Dependency)
+	// AI provider may or may not be configured (Claude CLI or API keys)
 	// Just check it doesn't panic
 }
 

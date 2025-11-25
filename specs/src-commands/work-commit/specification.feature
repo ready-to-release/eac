@@ -1,5 +1,5 @@
 @skip:todo
-@deps:go @deps:claude @ov
+@deps:go @deps:ai @ov
 Feature: src-commands_work-commit
 
   As a developer working in a workspace

@@ -3,6 +3,7 @@ package systemdeps
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -71,8 +72,8 @@ func getChecker(dependency string) Checker {
 		return &GitChecker{}
 	case "@deps:go":
 		return &GoChecker{}
-	case "@deps:claude":
-		return &ClaudeChecker{}
+	case "@deps:ai":
+		return &AIChecker{}
 	case "@deps:az-cli":
 		return &AzureChecker{}
 	default:
@@ -140,26 +141,48 @@ func (c *GoChecker) GetVersion() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-// ClaudeChecker checks for Claude CLI access
-type ClaudeChecker struct{}
+// AIChecker checks for ANY available AI provider
+type AIChecker struct{}
 
-func (c *ClaudeChecker) GetName() string { return "Claude CLI" }
+func (c *AIChecker) GetName() string { return "AI Provider" }
 
-func (c *ClaudeChecker) IsAvailable() bool {
-	// Check if claude CLI tool is available
-	// Note: This uses subscription auth, NOT API key
-	// See docs/reference/modules/src-commands/claude-constraints.md
-	cmd := exec.Command("claude", "--version")
-	return cmd.Run() == nil
+func (c *AIChecker) IsAvailable() bool {
+	// Check for Claude CLI
+	if exec.Command("claude", "--version").Run() == nil {
+		return true
+	}
+
+	// Check for API keys (any provider)
+	if os.Getenv("ANTHROPIC_API_KEY") != "" {
+		return true
+	}
+	if os.Getenv("OPENAI_API_KEY") != "" {
+		return true
+	}
+	if os.Getenv("GOOGLE_API_KEY") != "" {
+		return true
+	}
+
+	return false
 }
 
-func (c *ClaudeChecker) GetVersion() (string, error) {
-	cmd := exec.Command("claude", "--version")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
+func (c *AIChecker) GetVersion() (string, error) {
+	// Return info about first available provider
+	if output, err := exec.Command("claude", "--version").Output(); err == nil {
+		return strings.TrimSpace(string(output)), nil
 	}
-	return strings.TrimSpace(string(output)), nil
+
+	if os.Getenv("ANTHROPIC_API_KEY") != "" {
+		return "claude-api (ANTHROPIC_API_KEY)", nil
+	}
+	if os.Getenv("OPENAI_API_KEY") != "" {
+		return "openai (OPENAI_API_KEY)", nil
+	}
+	if os.Getenv("GOOGLE_API_KEY") != "" {
+		return "gemini (GOOGLE_API_KEY)", nil
+	}
+
+	return "", fmt.Errorf("no AI provider available")
 }
 
 // AzureChecker checks for Azure CLI

@@ -1,4 +1,4 @@
-@deps:claude @deps:go @deps:git @env:isolated-test-project @ov
+@deps:ai @deps:go @deps:git @env:isolated-test-project @ov
 Feature: src-commands_commit
 
   As a developer of the eac platform
