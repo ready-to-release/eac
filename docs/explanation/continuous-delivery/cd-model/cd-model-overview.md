@@ -133,10 +133,6 @@ flowchart LR
     S6 --> S7
     S12 -.->|Feedback| S1
 
-    style S1 fill:#e3f2fd
-    style S9 fill:#fff3e0
-    style S10 fill:#ffebee
-    style S11 fill:#e8f5e9
 ```
 
 **Stages 1-6: Development Through Testing**:

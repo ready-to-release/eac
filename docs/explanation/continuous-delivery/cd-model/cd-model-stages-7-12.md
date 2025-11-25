@@ -22,9 +22,6 @@ flowchart LR
     Decision -->|YES| Proceed[Proceed to release]
     Decision -->|NO| Iterate[Update features]
 
-    style Demo fill:#e3f2fd
-    style Proceed fill:#e8f5e9
-    style Iterate fill:#fff3e0
 ```
 
 ### Demo Environment Purpose
@@ -105,9 +102,6 @@ flowchart LR
 
     Notes --> Ready[Ready for approval]
 
-    style RC fill:#e3f2fd
-    style Tag fill:#fff3e0
-    style Ready fill:#e8f5e9
 ```
 
 ### Release Candidate Creation
@@ -222,9 +216,6 @@ flowchart TD
     Review --> Approve[Approve]
     Approve --> Deploy
 
-    style Gate fill:#fff3e0
-    style Deploy fill:#e8f5e9
-    style Reject fill:#ffebee
 ```
 
 ### Approval Criteria
@@ -321,9 +312,6 @@ flowchart LR
 
     Verify --> Switch[Switch traffic]
 
-    style Strategy fill:#fff3e0
-    style Verify fill:#e3f2fd
-    style Switch fill:#e8f5e9
 ```
 
 ### Deployment Strategies
@@ -437,9 +425,6 @@ flowchart TD
     Alert -->|NO| Continue[Continue monitoring]
     Alert -->|YES| Incident[Trigger incident]
 
-    style Monitor fill:#e3f2fd
-    style Continue fill:#e8f5e9
-    style Incident fill:#ffebee
 ```
 
 ### Production Monitoring
@@ -544,9 +529,6 @@ flowchart LR
     Decision -->|YES| Increase[Increase %]
     Decision -->|NO| Disable[Disable flag]
 
-    style Flag fill:#fff3e0
-    style New fill:#e8f5e9
-    style Disable fill:#ffebee
 ```
 
 ### Feature Flags Explained

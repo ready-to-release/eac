@@ -59,12 +59,6 @@ flowchart TD
     Rule1 --> Scenario2
     Rule2 --> Scenario3
 
-    style Feature fill:#F7E55A,color:#000
-    style Rule1 fill:#5BA3F7,color:#000
-    style Rule2 fill:#5BA3F7,color:#000
-    style Scenario1 fill:#7EDC7A,color:#000
-    style Scenario2 fill:#7EDC7A,color:#000
-    style Scenario3 fill:#7EDC7A,color:#000
 ```
 
 **Design principle**: Each level serves a distinct purpose and audience.

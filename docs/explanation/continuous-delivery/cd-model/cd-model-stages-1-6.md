@@ -80,9 +80,6 @@ flowchart TD
     Gate -->|YES| Commit[Allow commit]
     Gate -->|NO| Block[Block commit]
 
-    style Gate fill:#fff3e0
-    style Commit fill:#e8f5e9
-    style Block fill:#ffebee
 ```
 
 ### What Gets Validated
@@ -171,9 +168,6 @@ flowchart LR
     Gate -->|YES| Merge[Merge to main]
     Gate -->|NO| Reject[Request changes]
 
-    style Gate fill:#fff3e0
-    style Merge fill:#e8f5e9
-    style Reject fill:#ffebee
 ```
 
 ### Peer Review Process
@@ -245,9 +239,6 @@ flowchart LR
 
     Test --> Next[Trigger Stage 5]
 
-    style Build fill:#e3f2fd
-    style Store fill:#e8f5e9
-    style Next fill:#fff3e0
 ```
 
 ### Integration to Main Branch
@@ -331,9 +322,6 @@ flowchart LR
     Gate -->|YES| Pass[Mark ready]
     Gate -->|NO| Fail[Alert team]
 
-    style Deploy fill:#e3f2fd
-    style Pass fill:#e8f5e9
-    style Fail fill:#ffebee
 ```
 
 ### PLTE Environment Explained
@@ -446,9 +434,6 @@ flowchart TD
     Gate -->|NO| Pass[Continue]
     Gate -->|YES| Block[Block release]
 
-    style Report fill:#e3f2fd
-    style Pass fill:#e8f5e9
-    style Block fill:#ffebee
 ```
 
 ### Performance Testing

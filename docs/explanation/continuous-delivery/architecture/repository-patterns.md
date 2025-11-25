@@ -348,10 +348,6 @@ flowchart LR
         PR_Many --> PR_Deploy
     end
 
-    style MR_Atomic fill:#e8f5e9
-    style MR_Shared fill:#e8f5e9
-    style PR_Indep fill:#e3f2fd
-    style PR_Deploy fill:#e3f2fd
 ```
 
 | Factor                     | Monorepo                      | Polyrepo                    |

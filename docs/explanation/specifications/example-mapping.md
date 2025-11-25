@@ -99,18 +99,6 @@ flowchart TD
     Question1["What if config exists?"]
     Question2["Support --force flag?"]
 
-    style Story fill:#F7E55A,color:#000
-    style Rule1 fill:#5BA3F7,color:#000
-    style Rule2 fill:#5BA3F7,color:#000
-    style Rule3 fill:#5BA3F7,color:#000
-    style Example1a fill:#7EDC7A,color:#000
-    style Example1b fill:#7EDC7A,color:#000
-    style Example2a fill:#7EDC7A,color:#000
-    style Example2b fill:#7EDC7A,color:#000
-    style Example3a fill:#7EDC7A,color:#000
-    style Example3b fill:#7EDC7A,color:#000
-    style Question1 fill:#FF7EBF,color:#000
-    style Question2 fill:#FF7EBF,color:#000
 ```
 
 **Workshop tips**: Use physical cards on table (or Miro/Mural for virtual), everyone can add cards, take photos for documentation.
@@ -143,10 +131,6 @@ flowchart LR
     Example --> Scenario
     Question --> Issue
 
-    style Story fill:#F7E55A,color:#000
-    style Rule fill:#5BA3F7,color:#000
-    style Example fill:#7EDC7A,color:#000
-    style Question fill:#FF7EBF,color:#000
 ```
 
 ### Example Conversion

@@ -154,12 +154,6 @@ The challenge isn't that they CAN'T be automated it's that organizations haven't
 flowchart LR
     A[Requirement] --> B[Expert interprets] --> C[Manual review]
     C --> D[Human judgment] --> E[Approval] --> F[Documentation]
-    style A fill:#fef3c7
-    style B fill:#fef3c7
-    style C fill:#fef3c7
-    style D fill:#fef3c7
-    style E fill:#fef3c7
-    style F fill:#fef3c7
 ```
 
 This treats each instance as novel, requiring fresh interpretation. It's expensive, slow, and inconsistent.
@@ -170,12 +164,6 @@ This treats each instance as novel, requiring fresh interpretation. It's expensi
 flowchart LR
     A[Requirement defined] --> B[Encoded as test] --> C[Automated validation]
     C --> D[Evidence captured] --> E[Continuous compliance] --> F[Documentation generated]
-    style A fill:#dcfce7
-    style B fill:#dcfce7
-    style C fill:#dcfce7
-    style D fill:#dcfce7
-    style E fill:#dcfce7
-    style F fill:#dcfce7
 ```
 
 This recognizes the rule is repeatable and codifies it once. It's fast, consistent, and scalable.
@@ -212,9 +200,6 @@ Cynefin shows us that domains aren't fixed. We can intentionally move practices 
 ```mermaid
 flowchart LR
     A[Chaotic<br/>crisis] --> B[Complicated<br/>analyze & establish rules] --> C[Clear<br/>best practice]
-    style A fill:#fecaca
-    style B fill:#fef3c7
-    style C fill:#dcfce7
 ```
 
 **For compliance:**

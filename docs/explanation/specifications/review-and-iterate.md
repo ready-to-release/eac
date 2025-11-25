@@ -16,11 +16,6 @@ flowchart LR
     D --> E[Iterate]
     E -->|Feedback loop| C
 
-    style A fill:#e3f2fd,color: #000
-    style B fill:#fff3e0,color: #000
-    style C fill:#f3e5f5,color: #000
-    style D fill:#e8f5e9,color: #000
-    style E fill:#fff9c4,color: #000
 ```
 
 Specifications evolve through continuous cycles of review and refinement.

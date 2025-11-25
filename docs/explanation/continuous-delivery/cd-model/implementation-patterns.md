@@ -338,10 +338,6 @@ flowchart TD
     Q3 -->|NO| Q4
     Q4 -->|NO| RA
     Q4 -->|YES| CDe
-    style RA fill:#ffcccc
-    style RANote fill:#ffcccc
-    style CDe fill:#ccffcc
-    style Start fill:#e1f5fe
 ```
 
 ### Factors to Consider

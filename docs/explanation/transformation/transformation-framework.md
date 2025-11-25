@@ -25,10 +25,6 @@ flowchart LR
     P2 --> P3[Phase 3<br/>Automation<br/>8-12 weeks]
     P3 --> P4[Phase 4<br/>Rollout<br/>6-12 months]
 
-    style P1 fill:#e3f2fd
-    style P2 fill:#fff3e0
-    style P3 fill:#e8f5e9
-    style P4 fill:#f3e5f5
 ```
 
 **Total**: 12-18 months from start to organization-wide adoption

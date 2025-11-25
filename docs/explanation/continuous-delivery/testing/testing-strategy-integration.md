@@ -120,10 +120,6 @@ graph TB
     TC -.->|function calls| CUT
     CUT -.->|function calls| MD
 
-    style Process fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    style TC fill:#fff9c4
-    style CUT fill:#c8e6c9
-    style MD fill:#ffccbc
 ```
 
 **No Network Calls:**
@@ -184,9 +180,6 @@ graph TB
     TP -.->|network calls| SP
     SP -.->|network calls| DP
 
-    style TP fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    style SP fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style DP fill:#ffccbc,stroke:#d84315,stroke-width:2px
 ```
 
 **Network Call Handling:**

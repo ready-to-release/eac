@@ -57,10 +57,6 @@ flowchart LR
     Scenario -.implements.-> Func1
     Scenario -.implements.-> Func2
 
-    style Specs fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
-    style Src fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
-    style SpecFile fill:#bbdefb,stroke:#1976d2,color:#000
-    style Steps fill:#e1bee7,stroke:#7b1fa2,color:#000
 ```
 
 ---
@@ -427,14 +423,6 @@ flowchart TD
     Learn2 --> SpecV3["Specification v3<br/>(evolved)"]
     SpecV3 -.repeat.-> Impl2
 
-    style Initial fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
-    style SpecV1 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
-    style SpecV2 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
-    style SpecV3 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
-    style Impl1 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
-    style Impl2 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
-    style Learn1 fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
-    style Learn2 fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
 ```
 
 **Remember**: Each iteration brings you closer to a specification that accurately captures both the **intended behavior** and the **actual behavior** of your system.

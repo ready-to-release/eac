@@ -287,10 +287,6 @@ flowchart LR
     TR[Trunk] --> DU[One Deployable Unit]
     DU --> PP[One Pipeline]
     PP --> LS[One Live Service]
-    style TR fill:#e1f5fe
-    style DU fill:#fff9c4
-    style PP fill:#f3e5f5
-    style LS fill:#c8e6c9
 ```
 
 **Use when:**
@@ -306,10 +302,6 @@ flowchart LR
     TR[Trunk] --> DU[Multiple Deployable Units]
     DU --> PP[Multiple Pipelines]
     PP --> LS[Multiple Live Services]
-    style TR fill:#e1f5fe
-    style DU fill:#fff9c4
-    style PP fill:#f3e5f5
-    style LS fill:#c8e6c9
 ```
 
 **Use when:**
@@ -331,10 +323,6 @@ flowchart LR
     DU --> PP
     PP --> LS
 
-    style TR fill:#e1f5fe
-    style DU fill:#fff9c4
-    style PP fill:#f3e5f5
-    style LS fill:#c8e6c9
 ```
 
 **Use when:**

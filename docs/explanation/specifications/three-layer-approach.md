@@ -97,11 +97,6 @@ flowchart LR
     Repeat -->|No| Test
     Repeat -->|Yes| Done[Complete]
 
-    style List fill:#e3f2fd,color:#000
-    style Test fill:#ffebee,color:#000
-    style Pass fill:#e8f5e9,color:#000
-    style Refactor fill:#fff3e0,color:#000
-    style Repeat fill:#f3e5f5,color:#000
 ```
 *We often discover new tests while we implement a test, add them to the test list.*
 
@@ -184,14 +179,6 @@ flowchart TD
     Steps --> UnitTests[Unit Tests]
     UnitTests --> Code[Production Code]
 
-    style Workshop fill:#fff4e6,stroke:#d6a86a,stroke-width:1px,color:#000
-    style Feature fill:#fff9c4,stroke:#fbc02d,stroke-width:1px,color:#000
-    style Rules fill:#e3f2fd,stroke:#64b5f6,stroke-width:1px,color:#000
-    style Scenarios fill:#e8f5e9,stroke:#81c784,stroke-width:1px,color:#000
-    style Spec fill:#f0f4c3,stroke:#c0ca33,stroke-width:1px,color:#000
-    style Steps fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px,color:#000
-    style UnitTests fill:#f3e5f5,stroke:#ba68c8,stroke-width:1px,color:#000
-    style Code fill:#eeeeee,stroke:#616161,stroke-width:1px,color:#000
 ```
 
 ### Traceability Chain
@@ -209,10 +196,6 @@ flowchart TD
     Steps --> Code[Production Code]
     Unit --> Code
 
-    style Feature fill:#fff4e6,color:#000
-    style Spec fill:#e3f2fd,color:#000
-    style Steps fill:#e8f5e9,color:#000
-    style Unit fill:#f3e5f5,color:#000
 ```
 
 ---
@@ -260,13 +243,6 @@ flowchart LR
     Iterate --> Maintain
     Maintain -->|Feedback| Implementation
 
-    style Discovery fill:#e3f2fd,color:#000
-    style Specification fill:#fff3e0,color:#000
-    style Implementation fill:#f3e5f5,color:#000
-    style Validation fill:#e8f5e9,color:#000
-    style Review fill:#fff9c4,color:#000
-    style Iterate fill:#fce4ec,color:#000
-    style Maintain fill:#e0e7ff,color:#000
 ```
 
 **Review Cadence**:
@@ -308,10 +284,6 @@ flowchart TD
     Steps --> Impl
     Unit --> Impl
 
-    style SpecFile fill:#e3f2fd,color:#000
-    style Steps fill:#e8f5e9,color:#000
-    style Unit fill:#f3e5f5,color:#000
-    style Impl fill:#fff3e0,color:#000
 ```
 
 **Why Separate?**:
