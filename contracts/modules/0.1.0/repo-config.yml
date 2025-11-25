@@ -16,5 +16,6 @@ source:
     - "go.work"
     - "go.work.sum"
     - "r2r-cli.yml"
+    - ".r2r/agent-config.yml" #AI provider configuration (team default)
 
 depends_on: []

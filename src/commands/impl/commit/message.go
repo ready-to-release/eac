@@ -385,6 +385,10 @@ func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 		}
 	}
 
+	// Output marker for VSCode extension to find the start of commit message
+	// This separates progress/status messages from the actual output
+	fmt.Println(">>>>>>OUTPUT START<<<<<<")
+
 	// Output the generated message (raw, clean output for piping/copying)
 	fmt.Print(message)
 
