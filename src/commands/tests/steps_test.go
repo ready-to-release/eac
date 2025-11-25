@@ -174,10 +174,12 @@ func executeCommand(execCtx *commandExecutionContext) error {
 	// Build environment with test overrides
 	env := os.Environ()
 
-	// For isolated tests, set CLI_ORIGINAL_PWD to the isolated directory
-	// This makes the command think it's running from the isolated directory
+	// For isolated tests, set environment variables to use the isolated directory
 	if isolatedTestProjectDir != "" {
-		env = append(env, fmt.Sprintf("CLI_ORIGINAL_PWD=%s", isolatedTestProjectDir))
+		// R2R_PWD: Where user invoked command (for relative path resolution)
+		env = append(env, fmt.Sprintf("R2R_PWD=%s", isolatedTestProjectDir))
+		// R2R_REPO_ROOT: Repository root override
+		env = append(env, fmt.Sprintf("R2R_REPO_ROOT=%s", isolatedTestProjectDir))
 	}
 
 	cmd.Env = env
@@ -376,8 +378,12 @@ func runCommandWithArgs(args ...string) error {
 	// Build environment with test overrides (same as executeCommand)
 	env := os.Environ()
 
+	// For isolated tests, set environment variables to use the isolated directory
 	if isolatedTestProjectDir != "" {
-		env = append(env, fmt.Sprintf("CLI_ORIGINAL_PWD=%s", isolatedTestProjectDir))
+		// R2R_PWD: Where user invoked command (for relative path resolution)
+		env = append(env, fmt.Sprintf("R2R_PWD=%s", isolatedTestProjectDir))
+		// R2R_REPO_ROOT: Repository root override
+		env = append(env, fmt.Sprintf("R2R_REPO_ROOT=%s", isolatedTestProjectDir))
 	}
 
 	cmd.Env = env

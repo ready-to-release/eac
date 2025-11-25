@@ -61,10 +61,10 @@ func GetRepositoryRoot(startPath string) (string, error) {
 		return "/var/task", nil
 	}
 
-	// Check for test override environment variable
-	// This allows tests to isolate git operations to a temporary repository
-	if testRepoRoot := os.Getenv("R2R_TEST_REPO_ROOT"); testRepoRoot != "" {
-		return filepath.Clean(testRepoRoot), nil
+	// Check for repository root override environment variable
+	// Used by CLI wrapper and tests to specify the repository root
+	if repoRoot := os.Getenv("R2R_REPO_ROOT"); repoRoot != "" {
+		return filepath.Clean(repoRoot), nil
 	}
 
 	// Use current directory if no path provided

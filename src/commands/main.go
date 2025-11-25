@@ -46,7 +46,7 @@ func main() {
 
 	// Check if we have an original PWD from the CLI wrapper
 	// If not, use current directory
-	InitialWorkingDir = os.Getenv("CLI_ORIGINAL_PWD")
+	InitialWorkingDir = os.Getenv("R2R_PWD")
 	if InitialWorkingDir == "" {
 		var err error
 		InitialWorkingDir, err = os.Getwd()
