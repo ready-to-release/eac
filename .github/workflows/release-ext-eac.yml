@@ -1,3 +1,27 @@
+# Release ext-eac - Container Image Release Workflow
+#
+# This workflow releases the EAC extension container image by retagging a CI-built image.
+#
+# CI Verification Strategy:
+# Since we use optimized CI (only changed modules are built), we can't require a direct
+# CI run for every commit. Instead, we verify CI coverage AND find the correct source image:
+#
+# Strategy 1: Check for direct ext-eac.yaml CI run on this exact commit
+#   - If found and successful → use image from THIS commit (sha-<short>)
+#
+# Strategy 2: Use `get changed modules ci` to check if ext-eac needs rebuild
+#   - This uses the repository's dependency graph to determine if ext-eac
+#     or any of its dependencies (src-core, src-commands) have changed
+#   - If ext-eac IS in the list → code changed, need new build → wait/fail
+#   - If ext-eac is NOT in the list → find last successful ext-eac.yaml run
+#     and use THAT commit's image (the code hasn't changed since then)
+#
+# IMPORTANT: Unlike src-cli which builds from source, this workflow RETAGS an existing
+# container image. We must use the image from the commit where ext-eac was actually built,
+# which may be different from the current commit if only non-ext-eac files changed.
+#
+# The `image_sha` output from the CI check step determines which image to retag.
+
 name: "Release ext-eac"
 
 on:
@@ -25,109 +49,164 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check CI status
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
+
+      - name: Check CI status and find source image
+        id: ci_check
         run: |
-          echo "Checking if CI has passed for ext-eac module..."
+          echo "Checking CI coverage for ext-eac module..."
           COMMIT_SHA="${{ github.sha }}"
-          echo "Commit SHA: $COMMIT_SHA"
+          echo "Current commit SHA: $COMMIT_SHA"
           echo "Repository: ${{ github.repository }}"
 
-          MAX_WAIT_TIME=600  # 10 minutes
-          CHECK_INTERVAL=30   # 30 seconds
+          MAX_WAIT_TIME=300  # 5 minutes
+          CHECK_INTERVAL=15
           ELAPSED=0
 
           while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
             echo ""
-            echo "Checking CI status (elapsed: ${ELAPSED}s)..."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Checking CI coverage (elapsed: ${ELAPSED}s)..."
 
-            # Debug: show all workflow runs for this commit
-            echo "All workflows for commit $COMMIT_SHA:"
-            gh run list --commit $COMMIT_SHA --limit 5 --json name,status,conclusion --jq '.[] | "\(.status)\t\(.conclusion // "n/a")\t\(.name)"'
-
-            # Check if ci-repository (Change Trigger) is still running
+            # Check if any CI is currently running for this commit
             CI_REPO_STATUS=$(gh run list \
               --commit $COMMIT_SHA \
               --workflow ci-repository.yaml \
               --json status \
               --jq '.[0].status // "not_found"')
 
-            echo ""
-            echo "ci-repository.yaml status: $CI_REPO_STATUS"
-
             if [ "$CI_REPO_STATUS" = "in_progress" ] || [ "$CI_REPO_STATUS" = "queued" ]; then
-              echo "⏳ CI orchestrator is still running - it will trigger ext-eac workflow"
-              echo "Waiting ${CHECK_INTERVAL}s for orchestrator to complete..."
+              echo "⏳ CI is running for this commit - waiting..."
               sleep $CHECK_INTERVAL
               ELAPSED=$((ELAPSED + CHECK_INTERVAL))
               continue
             fi
 
-            # Get all runs for this commit
-            RUNS=$(gh run list \
+            # Strategy 1: Check for direct CI run on this commit
+            echo ""
+            echo "📋 Strategy 1: Check for ext-eac CI run on this exact commit..."
+            DIRECT_RUNS=$(gh run list \
               --commit $COMMIT_SHA \
               --workflow ext-eac.yaml \
-              --json status,conclusion,databaseId,createdAt \
-              --limit 10)
+              --json status,conclusion,headSha \
+              --limit 5)
 
-            echo ""
-            echo "Debug - ext-eac.yaml workflow: API returned $(echo "$RUNS" | jq 'length') runs"
-            if [ "$(echo "$RUNS" | jq 'length')" -gt "0" ]; then
-              echo "$RUNS" | jq -c '.[] | {status, conclusion, createdAt}'
-            fi
+            DIRECT_SUCCESS=$(echo "$DIRECT_RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
+            DIRECT_FAILED=$(echo "$DIRECT_RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "failure")] | length')
+            DIRECT_RUNNING=$(echo "$DIRECT_RUNS" | jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
 
-            # Count runs by status
-            SUCCESS_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
-            IN_PROGRESS_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "in_progress")] | length')
-            QUEUED_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "queued" or .status == "waiting")] | length')
-            FAILED_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "failure")] | length')
-            TOTAL_COUNT=$(echo "$RUNS" | jq 'length')
-
-            echo "CI runs for commit: success=$SUCCESS_COUNT, in_progress=$IN_PROGRESS_COUNT, queued=$QUEUED_COUNT, failed=$FAILED_COUNT, total=$TOTAL_COUNT"
-
-            # If CI passed, we're done
-            if [ "$SUCCESS_COUNT" -gt "0" ]; then
-              echo "✅ CI has passed for commit $COMMIT_SHA"
+            if [ "$DIRECT_SUCCESS" -gt "0" ]; then
+              echo "✅ Found successful ext-eac CI run for this exact commit"
+              echo "image_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+              echo "Image will be sourced from: sha-${COMMIT_SHA:0:7}"
               exit 0
             fi
 
-            # If CI failed, stop immediately
-            if [ "$FAILED_COUNT" -gt "0" ]; then
-              echo "❌ Error: CI workflow failed for commit $COMMIT_SHA"
-              echo "Fix the CI failures and re-run this release workflow."
+            if [ "$DIRECT_FAILED" -gt "0" ]; then
+              echo "❌ CI failed for this commit - cannot release"
               exit 1
             fi
 
-            # If CI is running or queued, wait
-            if [ "$IN_PROGRESS_COUNT" -gt "0" ] || [ "$QUEUED_COUNT" -gt "0" ]; then
-              echo "⏳ CI is running... waiting ${CHECK_INTERVAL}s before next check..."
+            if [ "$DIRECT_RUNNING" -gt "0" ]; then
+              echo "⏳ ext-eac CI is running for this commit - waiting..."
               sleep $CHECK_INTERVAL
               ELAPSED=$((ELAPSED + CHECK_INTERVAL))
               continue
             fi
 
-            # No runs found at all
-            if [ "$TOTAL_COUNT" -eq "0" ]; then
-              echo "❌ Error: No CI workflow run found for commit $COMMIT_SHA"
+            # Strategy 2: No direct CI run found. Check if ext-eac even needs rebuilding.
+            #
+            # Unlike src-cli (which builds from source), ext-eac RETAGS an existing container
+            # image. This means we need to find which commit's image to use.
+            #
+            # The `get changed modules ci` command tells us if ext-eac needs rebuilding.
+            # If ext-eac is NOT in the list:
+            #   - No files affecting ext-eac have changed since last CI
+            #   - We can use the image from the last ext-eac build (it's still valid)
+            #
+            # If ext-eac IS in the list:
+            #   - Files affecting ext-eac have changed but CI hasn't run
+            #   - Must wait for CI to build a new image
+            echo ""
+            echo "📋 Strategy 2: Check if last successful CI covers this commit..."
+
+            cd src/commands
+            RESULT=$(go run . "get changed modules ci" --as-json 2>/dev/null || echo '{"is_bootstrap": true}')
+            cd ../..
+
+            echo "Change detection result:"
+            echo "$RESULT" | jq . 2>/dev/null || echo "$RESULT"
+
+            IS_BOOTSTRAP=$(echo "$RESULT" | jq -r '.is_bootstrap // true')
+            MODULES=$(echo "$RESULT" | jq -r '.modules // [] | join(" ")')
+
+            if [ "$IS_BOOTSTRAP" = "true" ]; then
+              echo "⚠️  No previous successful CI found - bootstrap scenario"
+              echo "❌ Cannot release without CI verification"
               echo ""
-              echo "The commit being released has not been tested by CI."
-              echo "CI must run on this specific commit before releasing."
-              echo ""
-              echo "To fix:"
-              echo "1. Push code changes to trigger CI automatically, OR"
-              echo "2. Manually trigger CI: gh workflow run ext-eac.yaml --ref ${{ github.ref_name }}"
-              echo ""
-              echo "Then re-run this release workflow after CI passes."
+              echo "Please run CI first:"
+              echo "  gh workflow run ci-repository.yaml"
               exit 1
             fi
 
-            # Unknown state - wait and retry
-            echo "⏳ Waiting for CI state to change..."
-            sleep $CHECK_INTERVAL
-            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+            # If ext-eac is in the modules list, it needs rebuilding (code changed, no image yet)
+            if echo " $MODULES " | grep -q " ext-eac "; then
+              echo ""
+              echo "⚠️  ext-eac requires rebuild based on dependency analysis"
+              echo "Modules requiring rebuild: $MODULES"
+              echo ""
+              echo "The optimized CI should have triggered a build for these changes."
+              echo "If CI hasn't run yet, trigger it manually:"
+              echo "  gh workflow run ci-repository.yaml"
+              echo ""
+              echo "Waiting for CI to complete..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            # ext-eac is NOT in the modules list, meaning nothing affecting it has changed.
+            # Find the last successful ext-eac.yaml run - that image is still valid.
+            # This is the key difference from src-cli: we MUST use the image from when
+            # ext-eac was actually built, not the current commit.
+            echo ""
+            echo "📋 Finding last successful ext-eac build for image source..."
+            LAST_EAC_SHA=$(gh run list \
+              -w ext-eac.yaml \
+              -s success \
+              -L 1 \
+              --json headSha \
+              -q '.[0].headSha // ""')
+
+            if [ -z "$LAST_EAC_SHA" ]; then
+              echo "❌ No successful ext-eac CI run found"
+              echo "Cannot release without a built container image."
+              echo ""
+              echo "Please run CI first:"
+              echo "  gh workflow run ci-repository.yaml"
+              exit 1
+            fi
+
+            echo "✅ ext-eac does not require rebuild - CI coverage valid"
+            echo "Last ext-eac build was at commit: $LAST_EAC_SHA"
+            echo "Image will be sourced from: sha-${LAST_EAC_SHA:0:7}"
+            echo "image_sha=$LAST_EAC_SHA" >> $GITHUB_OUTPUT
+            exit 0
+
           done
 
-          echo "❌ Error: Timeout waiting for CI to complete (waited ${MAX_WAIT_TIME}s)"
-          echo "The CI is taking too long. Please check the workflow status and re-run when ready."
+          echo ""
+          echo "❌ Timeout: Could not verify CI coverage for this release"
+          echo ""
+          echo "Either:"
+          echo "1. Wait for current CI to complete and re-run this release, OR"
+          echo "2. Manually trigger CI: gh workflow run ci-repository.yaml"
           exit 1
         env:
           GH_TOKEN: ${{ github.token }}
@@ -229,12 +308,21 @@ jobs:
         run: |
           VERSION="${{ steps.extract_version.outputs.version }}"
           IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
-          COMMIT_SHA="${{ github.sha }}"
-          SHORT_SHA="${COMMIT_SHA:0:7}"
+
+          # Use the image SHA from CI check (may be different from github.sha if module didn't need rebuild)
+          IMAGE_SHA="${{ steps.ci_check.outputs.image_sha }}"
+          SHORT_SHA="${IMAGE_SHA:0:7}"
 
           # Extract major and minor versions for additional tags
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           MINOR=$(echo "$VERSION" | cut -d. -f2)
+
+          echo "Source image commit: $IMAGE_SHA"
+          echo "Release commit: ${{ github.sha }}"
+          if [ "$IMAGE_SHA" != "${{ github.sha }}" ]; then
+            echo "ℹ️  Note: Source image is from a previous commit (no ext-eac changes since then)"
+          fi
+          echo ""
 
           echo "Retagging CI image sha-$SHORT_SHA with release tags..."
           docker buildx imagetools create \
@@ -251,7 +339,7 @@ jobs:
           echo "  - $IMAGE_NAME:$MAJOR"
           echo "  - $IMAGE_NAME:latest"
           echo ""
-          echo "Source: $IMAGE_NAME:sha-$SHORT_SHA"
+          echo "Source: $IMAGE_NAME:sha-$SHORT_SHA (from commit $IMAGE_SHA)"
           echo "Platforms: linux/amd64, linux/arm64"
 
       - name: Verify container images published
@@ -278,6 +366,9 @@ jobs:
 
       - name: Summary
         run: |
+          IMAGE_SHA="${{ steps.ci_check.outputs.image_sha }}"
+          SHORT_SHA="${IMAGE_SHA:0:7}"
+
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Released EAC Extension version **${{ steps.extract_version.outputs.version }}**" >> $GITHUB_STEP_SUMMARY
@@ -287,6 +378,13 @@ jobs:
           echo "ghcr.io/ready-to-release/ext-eac:${{ steps.extract_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "ghcr.io/ready-to-release/ext-eac:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Source" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Tag**: ${{ steps.extract_version.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source Image**: \`sha-$SHORT_SHA\` (from commit \`$IMAGE_SHA\`)" >> $GITHUB_STEP_SUMMARY
+          if [ "$IMAGE_SHA" != "${{ github.sha }}" ]; then
+            echo "- ℹ️ Image sourced from previous build (no ext-eac changes since)" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Platforms" >> $GITHUB_STEP_SUMMARY
           echo "- linux/amd64" >> $GITHUB_STEP_SUMMARY
