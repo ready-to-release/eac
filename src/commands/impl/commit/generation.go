@@ -65,22 +65,30 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 		return generateWithoutValidation(executor, fullPrompt, model, promptName, workspaceRoot)
 	}
 
-	// Load commit message contract data for validation
-	contractPath := filepath.Join(loader.GetContractPath(), "contract.yml")
-	commitContract, err := commitmessage.LoadContract(contractPath)
-	if err != nil {
-		// If commit contract fails, fall back to non-validated generation
-		fmt.Fprintf(os.Stderr, "⚠️  Could not load commit contract, proceeding without validation: %v\n", err)
-		return generateWithoutValidation(executor, fullPrompt, model, promptName, workspaceRoot)
+	// Create appropriate validator based on prompt type
+	var validator contracts.Validator
+	switch promptName {
+	case "top-level":
+		// Top-level validator checks header, auditor-summary, body (no module sections)
+		validator = commitmessage.NewTopLevelValidator(affectedModules)
+	case "module":
+		// Module validator checks module section format only
+		validator = commitmessage.NewModuleSectionValidator("")
+	default:
+		// Fallback to full commit message validator for final assembly validation
+		contractPath := filepath.Join(loader.GetContractPath(), "contract.yml")
+		commitContract, err := commitmessage.LoadContract(contractPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Could not load commit contract, proceeding without validation: %v\n", err)
+			return generateWithoutValidation(executor, fullPrompt, model, promptName, workspaceRoot)
+		}
+		validator = commitmessage.NewCommitMessageValidator(
+			commitContract,
+			antiCorruptionRules,
+			affectedModules,
+			loader.GetContractPath(),
+		)
 	}
-
-	// Create validator
-	validator := commitmessage.NewCommitMessageValidator(
-		commitContract,
-		antiCorruptionRules,
-		affectedModules,
-		loader.GetContractPath(),
-	)
 
 	// Wrap executor to match contract.AIExecutor interface
 	executorAdapter := &aiExecutorAdapter{executor: executor, model: model}
@@ -154,6 +162,7 @@ func buildRetryConfig(
 		Validator:      validator,
 		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
 		AntiCorruption: antiCorruption,
+		Fixer:          commitmessage.AutoCleanup, // Apply line wrapping and formatting fixes before validation
 		ContentMarker:  "", // Commit messages don't have a specific content marker
 		MaxAttempts:    2,
 		Debug:          debug,

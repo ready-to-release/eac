@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/docker"
 	"github.com/ready-to-release/eac/src/cli/internal/extensions"
@@ -353,9 +354,22 @@ var RunCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// Get extension metadata for volume mounts
+		var volumeRequests []cache.VolumeRequest
+		extMeta, err := host.GetExtensionMetadata(ext)
+		if err != nil {
+			log.Debug().Err(err).Str("extension", ext.Name).Msg("Failed to get extension metadata, continuing without cache volumes")
+		} else if extMeta != nil && len(extMeta.Volumes) > 0 {
+			volumeRequests = extMeta.Volumes
+			log.Debug().
+				Str("extension", ext.Name).
+				Int("volumes", len(volumeRequests)).
+				Msg("Loaded volume requests from extension metadata")
+		}
+
 		// Create container configuration
 		containerConfig := host.CreateContainerConfig(ext, docker.ModeRun, containerArgs, imageInspect)
-		hostConfig := host.CreateHostConfig()
+		hostConfig := host.CreateHostConfig(ext, volumeRequests)
 
 		// Create container
 		log.Debug().Msg("Creating container")
@@ -523,7 +537,12 @@ var RunCmd = &cobra.Command{
 		if err != nil {
 			log.WithField("error", err.Error()).Debug().Msg("Failed to take container snapshot after run")
 		} else {
-			host.WarnAboutNewContainers(beforeSnapshot, afterSnapshot, ext.Image, ext.AutoRemoveChildren)
+			// Get expected host images from extension metadata (for serve commands, etc.)
+			var expectedHostImages []string
+			if extMeta != nil {
+				expectedHostImages = extMeta.ExpectedHostImages
+			}
+			host.WarnAboutNewContainers(beforeSnapshot, afterSnapshot, ext.Image, ext.AutoRemoveChildren, expectedHostImages)
 		}
 
 		// Clean up any child containers if we're in Docker-in-Docker

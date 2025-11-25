@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/docker/docker/client"
+	"github.com/ready-to-release/eac/src/commands/internal/serve"
 )
 
 // Client manages MkDocs container operations
@@ -63,9 +64,16 @@ func (c *Client) StopContainer() error {
 	return stopMkDocsContainer(c.docker, c.ctx)
 }
 
-// OpenBrowser opens the default web browser to the given URL
+// OpenBrowser opens the default web browser to the given URL.
+// In DinD mode, this is a no-op and returns nil.
 func (c *Client) OpenBrowser(url string) error {
-	return openBrowser(url)
+	return serve.OpenBrowser(url)
+}
+
+// OpenBrowserWithFallback opens the browser and returns whether it was opened.
+// In DinD mode, returns (false, nil) to indicate browser was skipped.
+func (c *Client) OpenBrowserWithFallback(url string) (opened bool, err error) {
+	return serve.OpenBrowserWithFallback(url)
 }
 
 // StreamLogs streams container logs to stdout

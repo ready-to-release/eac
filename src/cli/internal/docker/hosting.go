@@ -1,13 +1,12 @@
 package docker
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -18,10 +17,13 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
+	"github.com/ready-to-release/eac/src/cli/internal/github"
 	"github.com/ready-to-release/eac/src/cli/internal/terminal"
 	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 )
 
 // ContainerMode defines how the container should be configured
@@ -282,6 +284,23 @@ func (ch *ContainerHost) InspectImage(image string) (*image.InspectResponse, err
 	return &imageInspect, nil
 }
 
+// GetImageDigest returns the digest of a Docker image for cache invalidation
+// Returns the image ID if no repo digests are available (local images)
+func (ch *ContainerHost) GetImageDigest(imageName string) (string, error) {
+	inspect, err := ch.InspectImage(imageName)
+	if err != nil {
+		return "", err
+	}
+
+	// Prefer RepoDigests (sha256:...) for pulled images
+	if len(inspect.RepoDigests) > 0 {
+		return inspect.RepoDigests[0], nil
+	}
+
+	// Fall back to image ID for local images
+	return inspect.ID, nil
+}
+
 // CreateContainerConfig creates a container configuration based on mode and extension
 func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode ContainerMode, args []string, imageInspect *image.InspectResponse) *container.Config {
 	envVars := ch.BuildEnvironmentVars(ext)
@@ -330,7 +349,8 @@ func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode Contai
 }
 
 // CreateHostConfig creates the host configuration with volume mounts
-func (ch *ContainerHost) CreateHostConfig() *container.HostConfig {
+// volumeRequests are optional cache volumes requested by the extension via metadata
+func (ch *ContainerHost) CreateHostConfig(ext *ExtensionConfig, volumeRequests []cache.VolumeRequest) *container.HostConfig {
 	mounts := []mount.Mount{
 		{
 			Type:   mount.TypeBind,
@@ -343,6 +363,25 @@ func (ch *ContainerHost) CreateHostConfig() *container.HostConfig {
 	dockerMount := ch.getDockerServiceMount()
 	if dockerMount != nil {
 		mounts = append(mounts, *dockerMount)
+	}
+
+	// Add cache volumes requested by the extension
+	for _, vol := range volumeRequests {
+		if vol.Type == "cache" {
+			// Named volume: {extension-name}-{volume-name}
+			volumeName := fmt.Sprintf("%s-%s", ext.Name, vol.Name)
+			mounts = append(mounts, mount.Mount{
+				Type:   mount.TypeVolume,
+				Source: volumeName,
+				Target: vol.Target,
+			})
+			log.Debug().
+				Str("extension", ext.Name).
+				Str("volume", volumeName).
+				Str("target", vol.Target).
+				Msg("Adding cache volume mount")
+		}
+		// Future: handle "bind" type for bind mounts if needed
 	}
 
 	return &container.HostConfig{
@@ -464,11 +503,11 @@ func CreateGitHubAuthConfig() (*registry.AuthConfig, string, error) {
 	// 2. If no token in env, try GitHub CLI authentication
 	if password == "" {
 		log.Debug().Msg("No GITHUB_TOKEN found, trying GitHub CLI authentication")
-		token, ghUsername, err := getGitHubCLIAuth()
-		if err == nil && token != "" {
-			password = token
-			if username == "" && ghUsername != "" {
-				username = ghUsername
+		auth, err := github.GetCLIAuth()
+		if err == nil && auth.Token != "" {
+			password = auth.Token
+			if username == "" && auth.Username != "" {
+				username = auth.Username
 			}
 			log.Info().Msg("Using GitHub CLI authentication for ghcr.io")
 		} else if err != nil {
@@ -542,7 +581,7 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		} else if hasLocalImage && (tag == "latest" || tag == "main" || tag == "master") {
 			// For dynamic tags with local image (not loadLocal mode), check cache TTL
 			// This prevents hitting the registry on every command
-			registryCache, _ := cache.Load()
+			registryCache, _ := cache.LoadRegistryCache(ch.rootDir)
 			cacheTTL := 300 // default 5 minutes
 			if conf.Global.Registry != nil && conf.Global.Registry.CacheTTL > 0 {
 				cacheTTL = conf.Global.Registry.CacheTTL
@@ -682,7 +721,8 @@ func (ch *ContainerHost) ExecuteMetadataCommand(ext *ExtensionConfig) (string, e
 	containerConfig.Tty = false
 	containerConfig.OpenStdin = false
 
-	hostConfig := ch.CreateHostConfig()
+	// No cache volumes for metadata retrieval (avoid chicken-and-egg problem)
+	hostConfig := ch.CreateHostConfig(ext, nil)
 
 	// Create container
 	containerID, err := ch.CreateContainer(containerConfig, hostConfig)
@@ -713,17 +753,21 @@ func (ch *ContainerHost) ExecuteMetadataCommand(ext *ExtensionConfig) (string, e
 	// Wait for container to finish with timeout
 	statusCh, errCh := ch.client.ContainerWait(timeoutCtx, containerID, container.WaitConditionNotRunning)
 
-	// Capture output
+	// Capture output - use stdcopy to demultiplex since TTY=false
 	outputChan := make(chan string, 1)
 	errorChan := make(chan error, 1)
 
 	go func() {
-		output, err := io.ReadAll(attachResp.Reader)
+		// Since TTY is disabled, Docker multiplexes stdout/stderr with headers
+		// We need to use stdcopy.StdCopy to demultiplex
+		var stdout, stderr bytes.Buffer
+		_, err := stdcopy.StdCopy(&stdout, &stderr, attachResp.Reader)
 		if err != nil {
 			errorChan <- fmt.Errorf("error reading output: %w", err)
 			return
 		}
-		outputChan <- string(output)
+		// Return stdout content (stderr is typically empty for metadata command)
+		outputChan <- stdout.String()
 	}()
 
 	// Wait for container completion or timeout
@@ -760,42 +804,66 @@ func (ch *ContainerHost) ExecuteMetadataCommand(ext *ExtensionConfig) (string, e
 	}
 }
 
-// getGitHubCLIAuth attempts to get GitHub authentication from the GitHub CLI
-func getGitHubCLIAuth() (token string, username string, error error) {
-	// Try to get the token from gh CLI
-	cmd := exec.Command("gh", "auth", "token")
-	output, err := cmd.Output()
+// GetExtensionMetadata fetches and caches extension metadata
+// Returns cached metadata if valid, otherwise fetches fresh metadata
+func (ch *ContainerHost) GetExtensionMetadata(ext *ExtensionConfig) (*cache.ExtensionMeta, error) {
+	// Get current image digest for cache validation
+	imageDigest, err := ch.GetImageDigest(ext.Image)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get GitHub CLI token: %w", err)
+		log.Debug().Err(err).Str("image", ext.Image).Msg("Failed to get image digest, will fetch fresh metadata")
+		imageDigest = "" // Continue without digest, metadata will be fetched
 	}
 
-	token = strings.TrimSpace(string(output))
-	if token == "" {
-		return "", "", fmt.Errorf("GitHub CLI returned empty token")
+	// Try to load cached metadata
+	cachedMeta, err := cache.LoadMetadataCache(ch.rootDir, ext.Name)
+	if err != nil {
+		log.Warn().Err(err).Str("extension", ext.Name).Msg("Error loading metadata cache")
 	}
 
-	// Try to get the username from gh CLI status
-	cmd = exec.Command("gh", "auth", "status", "-h", "github.com")
-	output, err = cmd.Output()
-	if err == nil {
-		// Parse the output to find the username
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
-			if strings.Contains(line, "Logged in to github.com account") {
-				// Extract username from line like "✓ Logged in to github.com account USERNAME (GH_TOKEN)"
-				parts := strings.Fields(line)
-				for i, part := range parts {
-					if part == "account" && i+1 < len(parts) {
-						username = strings.TrimSuffix(parts[i+1], "(GH_TOKEN)")
-						username = strings.TrimSpace(username)
-						break
-					}
-				}
-			}
-		}
+	// Check if cache is valid
+	if cache.IsMetadataCacheValid(cachedMeta, imageDigest) {
+		log.Debug().
+			Str("extension", ext.Name).
+			Str("digest", imageDigest).
+			Msg("Using cached extension metadata")
+		return cachedMeta.Metadata, nil
 	}
 
-	return token, username, nil
+	// Fetch fresh metadata
+	log.Debug().Str("extension", ext.Name).Msg("Fetching fresh extension metadata")
+	yamlOutput, err := ch.ExecuteMetadataCommand(ext)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch extension metadata: %w", err)
+	}
+
+	// Parse YAML metadata
+	meta, err := parseExtensionMetadata(yamlOutput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse extension metadata: %w", err)
+	}
+
+	// Save to cache
+	newCache := cache.NewMetadataCache(ext.Name, imageDigest, meta)
+	if err := cache.SaveMetadataCache(ch.rootDir, newCache); err != nil {
+		log.Warn().Err(err).Str("extension", ext.Name).Msg("Failed to save metadata cache")
+		// Continue even if cache save fails
+	}
+
+	return meta, nil
+}
+
+// parseExtensionMetadata parses YAML extension metadata into ExtensionMeta struct
+func parseExtensionMetadata(yamlData string) (*cache.ExtensionMeta, error) {
+	// Import yaml package is needed - using json as intermediate for simplicity
+	// since the YAML structure matches our JSON struct tags
+	var meta cache.ExtensionMeta
+
+	// Use gopkg.in/yaml.v3 to parse
+	if err := yaml.Unmarshal([]byte(yamlData), &meta); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal metadata YAML: %w", err)
+	}
+
+	return &meta, nil
 }
 
 // Close closes the Docker client connection
@@ -819,11 +887,21 @@ func (ch *ContainerHost) GetContainerSnapshot() (map[string]string, error) {
 
 // WarnAboutNewContainers compares before/after snapshots and warns about new containers
 // If autoRemove is true, it will stop and remove the containers instead of just warning
-func (ch *ContainerHost) WarnAboutNewContainers(beforeSnapshot, afterSnapshot map[string]string, extensionImage string, autoRemove bool) {
+// expectedHostImages is a list of images that are expected to be created by the extension (e.g., serve commands)
+func (ch *ContainerHost) WarnAboutNewContainers(beforeSnapshot, afterSnapshot map[string]string, extensionImage string, autoRemove bool, expectedHostImages []string) {
 	for containerID, image := range afterSnapshot {
 		if _, existed := beforeSnapshot[containerID]; !existed {
 			// Skip our own main container
 			if image == extensionImage {
+				continue
+			}
+
+			// Skip expected host containers (e.g., from serve commands)
+			if isExpectedHostImage(image, expectedHostImages) {
+				log.Debug().
+					Str("container_id", containerID[:12]).
+					Str("image", image).
+					Msg("Skipping expected host container")
 				continue
 			}
 
@@ -865,4 +943,14 @@ func (ch *ContainerHost) WarnAboutNewContainers(beforeSnapshot, afterSnapshot ma
 
 func (ch *ContainerHost) Close() error {
 	return ch.client.Close()
+}
+
+// isExpectedHostImage checks if an image is in the list of expected host images
+func isExpectedHostImage(image string, expectedImages []string) bool {
+	for _, expected := range expectedImages {
+		if image == expected {
+			return true
+		}
+	}
+	return false
 }

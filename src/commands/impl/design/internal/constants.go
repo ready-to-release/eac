@@ -16,7 +16,7 @@ const (
 	DockerWorkspaceMount = "/workspace"
 	StructurizrCLIImage  = "structurizr/cli:latest"
 	StructurizrLiteImage = "structurizr/lite:latest"
-	StructurizrLitePort  = "8080"
+	// Note: StructurizrLitePort removed - ports are now dynamically allocated in 9000-9999 range
 
 	// Timeouts
 	DockerValidationTimeout = 30 * time.Second

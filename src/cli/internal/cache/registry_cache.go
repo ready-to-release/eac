@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ready-to-release/eac/src/cli/internal/session"
 	"github.com/rs/zerolog/log"
 )
 
@@ -27,29 +26,24 @@ type ExtensionCache struct {
 }
 
 const (
-	cacheVersion  = "1.0"
+	cacheVersion = "1.0"
 )
 
-// GetCachePath returns the path to the session-specific cache file
-func GetCachePath() string {
-	// Get session identifier for session-specific cache
-	sessionID := session.GetIdentifier()
-
-	// Use temp directory for cache file
-	cacheDir := filepath.Join(os.TempDir(), "r2r-cli-cache")
-	// Create directory if it doesn't exist
-	os.MkdirAll(cacheDir, 0755)
-
-	// Session-specific cache file name
-	cacheFileName := fmt.Sprintf("r2r-cli-cache-%s.json", sessionID)
-	return filepath.Join(cacheDir, cacheFileName)
+// GetCacheDir returns the path to the .r2r/cache directory
+func GetCacheDir(repoRoot string) string {
+	return filepath.Join(repoRoot, ".r2r", "cache")
 }
 
-// Load reads the cache from disk
-func Load() (*RegistryCache, error) {
-	cachePath := GetCachePath()
+// GetRegistryCachePath returns the path to the registry cache file
+func GetRegistryCachePath(repoRoot string) string {
+	return filepath.Join(GetCacheDir(repoRoot), "registry.json")
+}
+
+// LoadRegistryCache reads the registry cache from disk
+func LoadRegistryCache(repoRoot string) (*RegistryCache, error) {
+	cachePath := GetRegistryCachePath(repoRoot)
 	log.Debug().Str("path", cachePath).Msg("Loading registry cache from disk")
-	
+
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -62,7 +56,7 @@ func Load() (*RegistryCache, error) {
 		}
 		return nil, fmt.Errorf("failed to read cache: %w", err)
 	}
-	
+
 	var cache RegistryCache
 	if err := json.Unmarshal(data, &cache); err != nil {
 		log.Warn().Err(err).Msg("Failed to parse cache file, creating new cache")
@@ -73,7 +67,7 @@ func Load() (*RegistryCache, error) {
 			UpdatedAt:  time.Time{},
 		}, nil
 	}
-	
+
 	// Check version compatibility
 	if cache.Version != cacheVersion {
 		log.Debug().
@@ -86,34 +80,48 @@ func Load() (*RegistryCache, error) {
 			UpdatedAt:  time.Time{},
 		}, nil
 	}
-	
+
 	// Initialize map if nil
 	if cache.Extensions == nil {
 		cache.Extensions = make(map[string]*ExtensionCache)
 	}
-	
+
 	return &cache, nil
 }
 
-// Save writes the cache to disk
-func (c *RegistryCache) Save() error {
-	cachePath := GetCachePath()
+// SaveRegistryCache writes the cache to disk
+func (c *RegistryCache) SaveRegistryCache(repoRoot string) error {
+	cacheDir := GetCacheDir(repoRoot)
+
+	// Create cache directory if it doesn't exist
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	cachePath := GetRegistryCachePath(repoRoot)
 	log.Debug().Str("path", cachePath).Msg("Saving registry cache")
-	
+
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal cache: %w", err)
 	}
-	
-	if err := os.WriteFile(cachePath, data, 0644); err != nil {
+
+	// Write atomically by writing to temp file then renaming
+	tmpPath := cachePath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write cache: %w", err)
 	}
-	
+
+	if err := os.Rename(tmpPath, cachePath); err != nil {
+		os.Remove(tmpPath) // Clean up temp file on failure
+		return fmt.Errorf("failed to finalize cache: %w", err)
+	}
+
 	log.Debug().
 		Str("path", cachePath).
 		Int("extensions", len(c.Extensions)).
 		Msg("Saved registry cache")
-	
+
 	return nil
 }
 

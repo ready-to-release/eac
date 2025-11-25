@@ -309,7 +309,7 @@ export function activate(context: vscode.ExtensionContext) {
                         "🚀 Initializing workflow...",
                         "🔍 Preparing generation...",
                         "⚡ Starting analysis...",
-                        "🎯 Launching commit-ai...",
+                        "🎯 Launching commit message...",
                     ];
                     const initialMsg = randomMessages[Math.floor(Math.random() * randomMessages.length)];
                     progress.report({ message: initialMsg });
@@ -318,9 +318,9 @@ export function activate(context: vscode.ExtensionContext) {
                     // Track current stage for SCM display
                     let lastStage = 'Initializing';
 
-                    // Start the actual commit-ai execution with real progress callback
+                    // Start the actual commit message execution with real progress callback
                     const agentPromise = executeAgent(workspacePath, (realProgress) => {
-                        log('[commit-ai Progress] ' + realProgress);
+                        log('[commit message Progress] ' + realProgress);
 
                         // Add to status bar buffer
                         if (realProgress && realProgress.length > 0 && realProgress.length < 200) {
@@ -434,12 +434,12 @@ async function validateGitState(repo: any): Promise<string | null> {
 
 async function executeAgent(workspacePath: string, onProgress?: (message: string) => void): Promise<string> {
     return new Promise((resolve, reject) => {
-        // Execute commit-ai command directly (replaces old MCP server approach)
-        // This leverages the new 7-lever system with auto-cleanup and validation
+        // Execute commit message command directly (replaces old MCP server approach)
+        // This leverages the 7-phase system with auto-cleanup and validation
         const commandsPath = path.join(workspacePath, 'src', 'commands');
 
-        // Call commit-ai which handles everything: generation, cleanup, validation, auto-fix
-        const childProcess = child_process.spawn('go', ['run', '.', 'commit-ai'], {
+        // Call commit message which handles everything: generation, cleanup, validation, auto-fix
+        const childProcess = child_process.spawn('go', ['run', '.', 'commit', 'message'], {
             cwd: commandsPath,
             stdio: ['pipe', 'pipe', 'pipe'],
             env: process.env
@@ -452,7 +452,7 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         childProcess.stdout.on('data', (data) => {
             const text = data.toString();
             fullOutput += text;
-            log('[commit-ai output] ' + text);
+            log('[commit message output] ' + text);
 
             // Extract progress indicators for real-time feedback
             const lines = text.split('\n');
@@ -483,7 +483,7 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         childProcess.stderr.on('data', (data) => {
             const stderrText = data.toString();
             errorOutput += stderrText;
-            log('[commit-ai error] ' + stderrText);
+            log('[commit message error] ' + stderrText);
         });
 
         childProcess.on('close', (code) => {
@@ -493,7 +493,7 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
             if (!commitMessage) {
                 // Only fail if we can't extract anything at all
                 const errorMsg = errorOutput || fullOutput || 'Command failed with exit code ' + code;
-                reject(new Error(`commit-ai failed: ${errorMsg}`));
+                reject(new Error(`commit message failed: ${errorMsg}`));
                 return;
             }
 
@@ -502,13 +502,13 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
             resolve(commitMessage);
         });
 
-        // No input needed for commit-ai (it reads git directly)
+        // No input needed for commit message (it reads git directly)
         childProcess.stdin.end();
     });
 }
 
 /**
- * Extracts the commit message from commit-ai output
+ * Extracts the commit message from commit message command output
  * Format:
  * 1. Whimsical progress messages (random order, shown during generation)
  * 2. ">>>>>>OUTPUT START<<<<<<" marker

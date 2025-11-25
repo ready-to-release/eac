@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/docker"
 	"github.com/ready-to-release/eac/src/cli/internal/logger"
@@ -64,9 +65,16 @@ var InteractiveCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// Get extension metadata for volume mounts
+		var volumeRequests []cache.VolumeRequest
+		extMeta, err := host.GetExtensionMetadata(ext)
+		if err == nil && extMeta != nil && len(extMeta.Volumes) > 0 {
+			volumeRequests = extMeta.Volumes
+		}
+
 		// Create container configuration
 		containerConfig := host.CreateContainerConfig(ext, docker.ModeInteractive, nil, imageInspect)
-		hostConfig := host.CreateHostConfig()
+		hostConfig := host.CreateHostConfig(ext, volumeRequests)
 
 		// Create and start container
 		containerID, err := host.CreateContainer(containerConfig, hostConfig)

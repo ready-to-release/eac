@@ -144,21 +144,21 @@ func addMissingModules(commitMessage string, affectedModules []string, allFiles 
 			}
 		}
 
-		// Add blank lines before stub sections
+		// Add separator between stub sections (--- between modules)
 		if i == 0 {
-			// First stub: add blank lines
+			// First stub: just blank lines
 			result.WriteString("\n\n")
 		} else {
-			// Subsequent stubs: add blank lines to separate from previous stub
-			result.WriteString("\n\n")
+			// Subsequent stubs: add --- separator
+			result.WriteString("\n\n---\n\n")
 		}
 
 		// Module header: plain text with dashes
 		result.WriteString(fmt.Sprintf("%s\n", module))
-		// Add dashes (at least as long as module name)
+		// Add dashes (at least as long as module name, minimum 12 per contract)
 		dashes := strings.Repeat("-", len(module))
-		if len(dashes) < 9 {
-			dashes = "---------"
+		if len(dashes) < 12 {
+			dashes = "------------"
 		}
 		result.WriteString(fmt.Sprintf("%s\n", dashes))
 		result.WriteString(fmt.Sprintf("%s: chore: %s\n\n", module, filesStr))

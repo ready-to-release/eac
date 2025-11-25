@@ -1,10 +1,10 @@
 // Command: design serve
-// Description: View architecture diagrams in browser using Structurizr Lite (Docker on port 8080)
-// Short: View architecture diagrams in browser using Structurizr Lite (Docker on port 8080)
+// Description: View architecture diagrams in browser using Structurizr Lite (Docker)
+// Short: View architecture diagrams in browser using Structurizr Lite (Docker)
 // Long: Launches a Docker container running Structurizr Lite web viewer and opens your default browser.
 // Long: The viewer provides interactive C4 model diagrams (system context, containers, components) defined
 // Long: in workspace.dsl. When you run this command, it generates workspace.json and .structurizr/ files
-// Long: The viewer runs on http://localhost:8080 and updates automatically when you edit the DSL file.
+// Long: The viewer runs on a dynamically allocated port (9000-9999) and updates automatically when you edit the DSL file.
 // Usage: design serve <module>
 // HasSideEffects: true
 package design
@@ -106,14 +106,11 @@ func printServeUsage() {
 	fmt.Println("The viewer displays interactive C4 model diagrams defined in workspace.dsl.")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  r2r design serve <module> [--force|-f]")
-	fmt.Println()
-	fmt.Println("Flags:")
-	fmt.Println("  --force, -f    Automatically stop any container using port 8080")
+	fmt.Println("  r2r design serve <module>")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  r2r design serve src-cli")
-	fmt.Println("  r2r design serve contracts --force")
+	fmt.Println("  r2r design serve contracts")
 	fmt.Println("  r2r design serve specs/src-cli/.design     (auto-cleaned)")
 	fmt.Println()
 	fmt.Println("Module Locations:")
@@ -124,14 +121,13 @@ func printServeUsage() {
 	fmt.Println("What It Does:")
 	fmt.Println("  1. Reads specs/<module>/.design/workspace.dsl")
 	fmt.Println("  2. Generates workspace.json and .structurizr/ (ignored by git)")
-	fmt.Println("  3. Checks for port conflicts on 8080")
-	fmt.Println("  4. Starts Docker container with Structurizr Lite on port 8080")
-	fmt.Println("  5. Opens http://localhost:8080 in your default browser")
+	fmt.Println("  3. Allocates an available port in the 9000-9999 range")
+	fmt.Println("  4. Starts Docker container with Structurizr Lite")
+	fmt.Println("  5. Opens browser at the allocated port")
 	fmt.Println()
-	fmt.Println("Port Conflict Handling:")
-	fmt.Println("  If port 8080 is in use:")
-	fmt.Println("  - Without --force: Interactive prompt to stop/keep existing container")
-	fmt.Println("  - With --force: Automatically stops conflicting container")
+	fmt.Println("Multi-Instance Support:")
+	fmt.Println("  Each module gets its own container with a unique port.")
+	fmt.Println("  You can run multiple viewers simultaneously for different modules.")
 	fmt.Println()
 	fmt.Println("Requirements:")
 	fmt.Println("  - Docker must be running")
