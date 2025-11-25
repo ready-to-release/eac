@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     This script imports the go.psm1 module with -Force and creates session-wide aliases
-    for all top-level commands (show, list, describe, commit-ai, etc.).
+    for all top-level commands (show, list, describe, commit, etc.).
     The aliases are temporary and only last for the current PowerShell session.
 
     Welcome messages are shown only once per session (tracked via $env:CMD_ALIASES_EMITTED).

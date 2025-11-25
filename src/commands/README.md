@@ -17,12 +17,12 @@ This module provides a command dispatcher that automatically discovers and route
 .\importer.ps1
 
 # Use commands with tab completion
-run <TAB>              # Shows: commit-ai, describe, list, show
+run <TAB>              # Shows: commit, describe, list, show
 run show <TAB>         # Shows: files, modules, moduletypes
 run show files <TAB>   # Shows: changed, staged
 run show files         # Executes: show all tracked files (markdown table)
 run show modules       # Executes: show modules (markdown table)
-run commit-ai          # Executes: show staged changes by module (markdown)
+run commit             # Executes: show staged changes by module (markdown)
 run show               # Shows help for 'show' subcommands
 ```
 
@@ -54,7 +54,7 @@ go run . list commands
 
 Current commands include:
 
-- **`commit-ai`** - Show staged changes with their module mappings for AI commit message generation
+- **`commit`** - Show staged changes with their module mappings for AI commit message generation
 - **`describe commands`** - Output structured command information for shell integration
 - **`list commands`** - List all available commands
 - **`show files`** - Show all tracked repository files with module ownership
@@ -204,9 +204,9 @@ Completion data comes from `go run . describe commands` which outputs:
 
 ## Special Commands
 
-### commit-ai
+### commit
 
-The `commit-ai` command is designed to help generate meaningful commit messages by analyzing staged changes grouped by module:
+The `commit` command is designed to help generate meaningful commit messages by analyzing staged changes grouped by module:
 
 ```bash
 # Stage some changes
@@ -293,7 +293,7 @@ SHOW MODULETYPES
 
 
 # View changes organized by module
-run commit-ai
+run commit
 ```
 
 Output includes:
@@ -325,7 +325,7 @@ All commands use the `render` package to output clean markdown tables:
 
 **Special commands:**
 
-- `commit-ai` - Multiple tables (summary, by-module breakdown, unmapped files)
+- `commit` - Multiple tables (summary, by-module breakdown, unmapped files)
 
 ### Piping and Parsing
 

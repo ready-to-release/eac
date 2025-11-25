@@ -286,11 +286,11 @@ function Get-GoSrcCommandPart {
 
 .DESCRIPTION
     Extracts all unique first-level commands from the command structure
-    (e.g., "show", "list", "commit-ai", "describe")
+    (e.g., "show", "list", "commit", "describe")
 
 .EXAMPLE
     Get-TopLevelCommands
-    # Returns: @("show", "list", "commit-ai", "describe")
+    # Returns: @("show", "list", "commit", "describe")
 #>
 function Get-TopLevelCommands {
     [CmdletBinding()]

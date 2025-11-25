@@ -1,11 +1,11 @@
 # Commit Message AI - VSCode Extension
 
-A VSCode extension that generates AI-powered semantic commit messages using the 7-lever commit-ai system.
+A VSCode extension that generates AI-powered semantic commit messages using the 7-lever commit system.
 
 ## Features
 
 - Adds a button to the Git source control view (SCM)
-- Generates commit messages using `commit-ai` command
+- Generates commit messages using `commit` command
 - Automatic validation and cleanup
 - Self-healing via auto-fix
 - Contract-driven quality assurance
@@ -38,8 +38,8 @@ A VSCode extension that generates AI-powered semantic commit messages using the 
 ## Requirements
 
 - VSCode 1.80.0 or higher
-- Go installed (for running commit-ai)
-- The `commit-ai` command must be available at `src/commands/` in your workspace
+- Go installed (for running commit)
+- The `commit` command must be available at `src/commands/` in your workspace
 - Claude Code authentication (subscription)
 
 ## Development
@@ -60,7 +60,7 @@ None at this time.
 
 ## How It Works
 
-The extension calls the `commit-ai` command which orchestrates a 7-lever system:
+The extension calls the `commit` command which orchestrates a 7-lever system:
 
 1. **LEVER 1**: Contract specification (formal rules)
 2. **LEVER 2**: Agent instructions (AI guidance)
@@ -70,13 +70,13 @@ The extension calls the `commit-ai` command which orchestrates a 7-lever system:
 6. **LEVER 5**: Feedback loop (AI auto-fix)
 7. **LEVER 5.1**: Pre-re-verification cleanup
 
-See [commit-ai documentation](../../../docs/reference/commands/commit-ai.md) for details.
+See [commit documentation](../../../docs/reference/commands/commit.md) for details.
 
 ## Release Notes
 
 ### 0.2.0
 
-Simplified architecture - now calls `commit-ai` command directly instead of using MCP server.
+Simplified architecture - now calls `commit` command directly instead of using MCP server.
 
 ### 0.1.0
 

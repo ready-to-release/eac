@@ -15,16 +15,57 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
+	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/core/repository/reports"
 )
+
+// gitRepo holds the git repository instance for git operations.
+// In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
+var gitRepo git.GitRepository
+
+// getGitRepo returns the git repository, initializing it if needed.
+func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
+	if gitRepo != nil {
+		return gitRepo, nil
+	}
+	repo, err := git.Open(workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open git repository: %w", err)
+	}
+	return repo, nil
+}
+
+// SetGitRepo allows tests to inject a mock repository.
+func SetGitRepo(repo git.GitRepository) {
+	gitRepo = repo
+}
+
+// ResetGitRepo clears the repository for test cleanup.
+func ResetGitRepo() {
+	gitRepo = nil
+}
+
+// ValidationError is an alias for commitmessage.ValidationError for external access
+type ValidationError = commitmessage.ValidationError
+
+// VerifyCommitMessageContract validates a commit message against the contract rules.
+// This is exposed for testing purposes.
+func VerifyCommitMessageContract(commitMessage string, affectedModules []string) []ValidationError {
+	return commitmessage.VerifyCommitMessageContract(commitMessage, affectedModules)
+}
+
+// AutoCleanup performs automatic fixes on commit message before validation.
+// This is exposed for testing purposes.
+func AutoCleanup(commitMessage string) string {
+	return commitmessage.AutoCleanup(commitMessage)
+}
 
 func init() {
 	registry.Register(CommitMessage)
@@ -249,10 +290,13 @@ func extractAffectedModules(report *reports.FilesModulesReport, debugWriter *deb
 
 // getGitDiffAndStats retrieves git diff and diff stats for staged changes
 func getGitDiffAndStats(workspaceRoot string, debugWriter *debugWriter) (string, string, error) {
+	repo, err := getGitRepo(workspaceRoot)
+	if err != nil {
+		return "", "", err
+	}
+
 	// Get git diff
-	diffCmd := exec.Command("git", "diff", "--staged")
-	diffCmd.Dir = workspaceRoot
-	diffOutput, err := diffCmd.Output()
+	diffOutput, err := repo.StagedDiff()
 	if err != nil {
 		return "", "", fmt.Errorf("getting git diff: %w", err)
 	}
@@ -264,16 +308,13 @@ func getGitDiffAndStats(workspaceRoot string, debugWriter *debugWriter) (string,
 	}
 
 	// Get git diff stats
-	statsCmd := exec.Command("git", "diff", "--staged", "--stat")
-	statsCmd.Dir = workspaceRoot
-	statsOutput, err := statsCmd.Output()
+	diffStats, err := repo.StagedDiffStats()
 	if err != nil {
 		debugWriter.log("Warning: Failed to get diff stats: %v", err)
-		statsOutput = []byte("")
+		diffStats = ""
 	}
-	diffStats := strings.TrimSpace(string(statsOutput))
 
-	return string(diffOutput), diffStats, nil
+	return diffOutput, strings.TrimSpace(diffStats), nil
 }
 
 // Phase 4: Generate Top-Level Summary

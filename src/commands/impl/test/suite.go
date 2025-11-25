@@ -327,7 +327,7 @@ func TestSuite() int {
 	// Feature files are in specs/src-<module>/..., test runners are in src/<module>/tests/
 	findGodogTestRunner := func(featurePath string) string {
 		// Extract module from specs path
-		// Example: specs/src-commands/commit-ai/... -> src/commands/tests
+		// Example: specs/src-commands/commit/... -> src/commands/tests
 		//          specs/src-cli/... -> src/cli/tests
 		relPath := strings.TrimPrefix(featurePath, "specs/")
 		relPath = strings.TrimPrefix(relPath, "specs\\")
