@@ -11,7 +11,7 @@
 [![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC_BY--SA_4.0-lightgrey.svg)](https://github.com/ready-to-release/eac/blob/main/docs/LICENSE)
 [![Docs](https://img.shields.io/badge/docs-GitHub_Pages-blue)](https://ready-to-release.github.io/eac/)
 [![Latest Release](https://img.shields.io/github/v/release/ready-to-release/eac?include_prereleases)](https://github.com/ready-to-release/eac/releases)
-[![ext-eac](https://img.shields.io/badge/ext--eac-GHCR-blue?logo=docker)](https://github.com/ready-to-release/eac/pkgs/container/ext-eac)
+[![ext-eac release](https://img.shields.io/github/v/tag/ready-to-release/eac?filter=ext-eac/*&label=ext-eac&logo=docker&color=blue)](https://github.com/ready-to-release/eac/pkgs/container/ext-eac)
 
 ---
 
