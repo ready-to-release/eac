@@ -10,7 +10,7 @@ Feature: src-cli_verify-configuration
   Background:
     Given I create a test folder "test-verify-cli"
     And I create a ".git" folder in the test folder
-    And I build the CLI with "build module src-cli"
+    And I build the CLI with "build src-cli"
     And the build succeeds
     And I change directory to the test folder
 

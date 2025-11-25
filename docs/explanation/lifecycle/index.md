@@ -11,7 +11,7 @@ This lifecycle balances regulatory compliance with continuous delivery efficienc
 
 The drawing below is interactive, allowing you to navigate to relevant sections of the documentation by clicking the boxes.
 
-![Software Delivery Lifecycle](../../assets/lifecycle/lifecycle.drawio)
+![](../../assets/lifecycle/lifecycle.drawio)
 
 **Non-regulated environments:** Use this lifecycle but skip regulatory-specific documents (intended use, digital signatures, etc.)
 

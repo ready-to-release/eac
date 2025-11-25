@@ -44,3 +44,15 @@ extra_javascript:
   - https://viewer.diagrams.net/js/viewer-static.min.js
 
 dev_addr: '0.0.0.0:8000'
+
+# Validation settings - treat omitted nav files as warnings (caught by --strict)
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn

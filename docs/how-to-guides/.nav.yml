@@ -5,6 +5,7 @@ nav:
     - configuration/claude-mcp-setup.md
   - Commands:
     - commands/build-test-commands.md
+    - commands/command-template.md
     - commands/design-command.md
     - commands/show-get-list-commands.md
     - commands/specs-command.md

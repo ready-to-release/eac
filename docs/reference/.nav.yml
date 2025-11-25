@@ -2,4 +2,5 @@ title: Reference
 nav:
   - index.md
   - decision-records
+  - specifications
   - repository-layout.md

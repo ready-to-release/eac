@@ -212,7 +212,8 @@ function Get-GoSrcCommands {
     Get next command part for auto-completion
 
 .DESCRIPTION
-    Returns available command parts based on what's already been typed
+    Returns available command parts based on what's already been typed.
+    For commands with Args: modules, returns module monikers.
 
 .PARAMETER First
     First part already entered
@@ -230,6 +231,10 @@ function Get-GoSrcCommands {
 .EXAMPLE
     Get-GoSrcCommandPart -First "show"
     # Returns: @("files", "modules")
+
+.EXAMPLE
+    Get-GoSrcCommandPart -First "build"
+    # Returns: module monikers for completion (since build accepts modules as args)
 #>
 function Get-GoSrcCommandPart {
     [CmdletBinding()]
@@ -261,6 +266,13 @@ function Get-GoSrcCommandPart {
 
     $path = $parts -join " "
 
+    # Check if the current command accepts modules as arguments
+    $currentCmd = $structure.commands | Where-Object { $_.name -eq $path -or ($_.parts.Count -eq 1 -and $_.parts[0] -eq $First -and -not $Second) }
+    if ($currentCmd -and $currentCmd.args -eq "modules" -and $structure.modules) {
+        # Return module monikers for completion
+        return $structure.modules
+    }
+
     # Get suggestions from tree (it's a hashtable now)
     $suggestions = @()
     if ($structure.tree.ContainsKey($path)) {
@@ -274,6 +286,14 @@ function Get-GoSrcCommandPart {
             if ($suggestions -notcontains $firstPart) {
                 $suggestions += $firstPart
             }
+        }
+    }
+
+    # If no subcommands found, check if first-level command accepts modules
+    if ($suggestions.Count -eq 0 -and $First -and -not $Second) {
+        $firstLevelCmd = $structure.commands | Where-Object { $_.parts.Count -eq 1 -and $_.parts[0] -eq $First }
+        if ($firstLevelCmd -and $firstLevelCmd.args -eq "modules" -and $structure.modules) {
+            return $structure.modules
         }
     }
 

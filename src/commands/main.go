@@ -93,22 +93,14 @@ func main() {
 		if len(subcommands) > 0 {
 			// Handle default behaviors for specific verbs
 			if prefix == "build" {
-				// Default: build modules (build all)
-				if fn, found := commands["build modules"]; found {
+				// Default: build (all modules)
+				if fn, found := commands["build"]; found {
 					exitCode := fn()
 					os.Exit(exitCode)
 				}
 			} else if prefix == "test" {
-				// Default: test suite commit
-				if fn, found := commands["test suite"]; found {
-					// Inject "suite commit" into os.Args after "test"
-					// Original: ["prog", "test", ...flags]
-					// New: ["prog", "test", "suite", "commit", ...flags]
-					newArgs := []string{os.Args[0], "test", "suite", "commit"}
-					if len(os.Args) > 2 {
-						newArgs = append(newArgs, os.Args[2:]...)
-					}
-					os.Args = newArgs
+				// Default: test (all modules)
+				if fn, found := commands["test"]; found {
 					exitCode := fn()
 					os.Exit(exitCode)
 				}

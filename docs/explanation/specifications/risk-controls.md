@@ -25,7 +25,7 @@ Risk controls are **mitigation measures** that address identified risks. They an
 3. **Create Control Features** - Document as Gherkin based on YOUR assessment
 4. **Link to Implementation** - Tag implementations with @risk-control:[name]-[id]
 
-The [Control Catalog](templates/specs/risk-controls/catalog/) provides 299 example controls for **INSPIRATION ONLY**. These mappings are **INDICATIVE** and should NOT be used as-is. Always validate with qualified personnel.
+The [Control Catalog](https://github.com/ready-to-release/eac/tree/main/templates/specs/risk-controls/catalog) provides 299 example controls for **INSPIRATION ONLY**. These mappings are **INDICATIVE** and should NOT be used as-is. Always validate with qualified personnel.
 
 ---
 
@@ -65,12 +65,12 @@ Skip for: Low-risk internal tools, prototypes/experiments, simple utilities, ope
 
 ### Template Location
 
-Use the [template](templates/specs/risk-controls/risk-control.feature) as your starting point.
+Use the [template](https://github.com/ready-to-release/eac/blob/main/templates/specs/risk-controls/risk-control.feature) as your starting point.
 
 ### Process
 
 1. **Conduct Risk Assessment** - Use FMEA, Hazard Analysis, Threat Modeling (STRIDE, PASTA), or compliance gap analysis to identify YOUR specific risks
-2. **Review Catalog** - Browse the [Control Catalog](templates/specs/risk-controls/catalog/) for inspiration (DO NOT copy as-is)
+2. **Review Catalog** - Browse the [Control Catalog](https://github.com/ready-to-release/eac/tree/main/templates/specs/risk-controls/catalog) for inspiration (DO NOT copy as-is)
 3. **Select and Tailor Controls** - Choose controls that address YOUR identified risks and customize them
 4. **Define Metadata** - Add industry tags, regulatory references (validated by YOUR team), severity, risk/control types
 5. **Write Control Scenarios** - Use MUST/SHALL, state WHAT (not HOW), reference YOUR assessment

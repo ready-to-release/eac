@@ -4,11 +4,15 @@
 package describe
 
 import (
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
@@ -22,12 +26,14 @@ type CommandInfo struct {
 	Description string   `json:"description"` // Command description
 	Parent      string   `json:"parent"`      // Parent command: "show" (empty for root)
 	IsLeaf      bool     `json:"is_leaf"`     // True if this is an executable command
+	Args        string   `json:"args,omitempty"` // Argument completion type: "modules", "files", etc.
 }
 
 // CommandTree represents the hierarchical structure
 type CommandTree struct {
-	Commands []CommandInfo      `json:"commands"` // All commands
+	Commands []CommandInfo       `json:"commands"` // All commands
 	Tree     map[string][]string `json:"tree"`     // Parent -> children mapping
+	Modules  []string            `json:"modules"`  // Available module monikers for completion
 }
 
 func DescribeCommands() int {
@@ -59,6 +65,7 @@ func buildCommandTree() CommandTree {
 			Parts:       parts,
 			Description: reg.Description,
 			IsLeaf:      true,
+			Args:        reg.Args,
 		}
 
 		// Determine parent
@@ -82,8 +89,35 @@ func buildCommandTree() CommandTree {
 		infos = append(infos, info)
 	}
 
+	// Load module monikers for completion
+	modules := loadModuleMonikers()
+
 	return CommandTree{
 		Commands: infos,
 		Tree:     treeMap,
+		Modules:  modules,
 	}
+}
+
+// loadModuleMonikers loads all module monikers from the contracts
+func loadModuleMonikers() []string {
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		return []string{}
+	}
+
+	moduleReport, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
+	if err != nil {
+		return []string{}
+	}
+
+	var monikers []string
+	for _, module := range moduleReport.Registry.All() {
+		monikers = append(monikers, module.Moniker)
+	}
+
+	// Sort for consistent output
+	sort.Strings(monikers)
+
+	return monikers
 }

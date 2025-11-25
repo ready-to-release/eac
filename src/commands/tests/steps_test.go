@@ -462,6 +462,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I run "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iRunOr)
 	sc.Step(`^I run "([^"]*)", "([^"]*)", or "([^"]*)"$`, iRunOr)
 	sc.Step(`^the exit code is (\d+)$`, theExitCodeIs)
+	sc.Step(`^the exit code is (\d+) or (\d+)$`, theExitCodeIsOr)
 	sc.Step(`^the exit code is (\d+) or the exit code is (\d+)$`, theExitCodeIsOr)
 	sc.Step(`^I should see "([^"]*)"$`, iShouldSee)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)"$`, iShouldSeeOr)
