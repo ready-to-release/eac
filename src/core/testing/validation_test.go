@@ -113,7 +113,7 @@ func TestIsValidTag_KnownTags(t *testing.T) {
 	assert.True(t, IsValidTag("@deps:docker"))
 	assert.True(t, IsValidTag("@deps:git"))
 	assert.True(t, IsValidTag("@deps:go"))
-	assert.True(t, IsValidTag("@deps:claude"))
+	assert.True(t, IsValidTag("@deps:ai"))
 	assert.True(t, IsValidTag("@deps:az-cli"))
 }
 

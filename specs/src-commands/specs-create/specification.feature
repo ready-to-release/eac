@@ -1,4 +1,4 @@
-@skip:todo @deps:claude @deps:go @ov
+@skip:todo @deps:ai @deps:go @ov
 Feature: src-commands_specs-create
 
   As a developer of the eac platform

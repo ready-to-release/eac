@@ -350,7 +350,7 @@ System dependency tags declare required tooling for test execution.
 **`@deps:docker`** - Docker engine required
 **`@deps:git`** - Git CLI required
 **`@deps:go`** - Go toolchain required
-**`@deps:claude`** - Claude API access required
+**`@deps:ai`** - AI provider required (Claude CLI or API keys)
 **`@deps:az-cli`** - Azure CLI required
 
 ### Dependency Checking

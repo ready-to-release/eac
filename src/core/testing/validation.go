@@ -11,7 +11,7 @@ var ValidTags = map[string]bool{
 	"@deps:docker": true,
 	"@deps:git":    true,
 	"@deps:go":     true,
-	"@deps:claude": true,
+	"@deps:ai": true,
 	"@deps:az-cli": true,
 
 	// Taxonomy levels

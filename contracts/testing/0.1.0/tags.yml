@@ -20,8 +20,8 @@ tags:
     description: "Requires Go toolchain to be available"
     type: system_dependency
 
-  - tag: "@deps:claude"
-    description: "Requires Claude API access and credentials"
+  - tag: "@deps:ai"
+    description: "Requires any AI provider (Claude CLI or API keys)"
     type: system_dependency
 
   - tag: "@deps:az-cli"

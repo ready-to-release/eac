@@ -31,7 +31,7 @@ Rule: Go binary is built for multiple platforms
 
 Rule: GitHub release is created with built artifacts
 
-  @skip:todo @L3 @ov @deps:claude @depm:src-cli
+  @skip:todo @L3 @ov @deps:ai @depm:src-cli
   Scenario: GitHub release created with all platform binaries attached
     Given the workflow has built binaries for all platforms
     And the version "1.2.3" is extracted from the tag
