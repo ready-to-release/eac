@@ -1,3 +1,23 @@
+# Release src-cli - CLI Binary Release Workflow
+#
+# This workflow releases the r2r CLI binaries. It verifies CI coverage before releasing.
+#
+# CI Verification Strategy:
+# Since we use optimized CI (only changed modules are built), we can't require a direct
+# CI run for every commit. Instead, we verify that the code has been tested:
+#
+# Strategy 1: Check for direct src-cli.yaml CI run on this exact commit
+#   - If found and successful → code was tested → proceed
+#
+# Strategy 2: Use `get changed modules ci` to check if src-cli needs rebuild
+#   - This uses the repository's dependency graph to determine if src-cli
+#     or any of its dependencies (src-core, src-commands) have changed
+#   - If src-cli IS in the list → code changed but not yet tested → wait/fail
+#   - If src-cli is NOT in the list → code hasn't changed since last test → proceed
+#
+# This workflow BUILDS FROM SOURCE, so it doesn't depend on pre-built artifacts.
+# It only needs verification that the code was tested.
+
 name: "Release src-cli"
 
 on:
@@ -24,109 +44,140 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
+
       - name: Check CI status
         run: |
-          echo "Checking if CI has passed for src-cli module..."
+          echo "Checking CI coverage for src-cli module..."
           COMMIT_SHA="${{ github.sha }}"
-          echo "Commit SHA: $COMMIT_SHA"
+          echo "Current commit SHA: $COMMIT_SHA"
           echo "Repository: ${{ github.repository }}"
 
-          MAX_WAIT_TIME=600  # 10 minutes
-          CHECK_INTERVAL=30   # 30 seconds
+          MAX_WAIT_TIME=300  # 5 minutes
+          CHECK_INTERVAL=15
           ELAPSED=0
 
           while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
             echo ""
-            echo "Checking CI status (elapsed: ${ELAPSED}s)..."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Checking CI coverage (elapsed: ${ELAPSED}s)..."
 
-            # Debug: show all workflow runs for this commit across all workflows
-            echo "All workflows for commit $COMMIT_SHA:"
-            gh run list --commit $COMMIT_SHA --limit 5 --json name,status,conclusion --jq '.[] | "\(.status)\t\(.conclusion // "n/a")\t\(.name)"'
-
-            # Check if ci-repository (Change Trigger) is still running
+            # Check if any CI is currently running for this commit
             CI_REPO_STATUS=$(gh run list \
               --commit $COMMIT_SHA \
               --workflow ci-repository.yaml \
               --json status \
               --jq '.[0].status // "not_found"')
 
-            echo ""
-            echo "ci-repository.yaml status: $CI_REPO_STATUS"
-
             if [ "$CI_REPO_STATUS" = "in_progress" ] || [ "$CI_REPO_STATUS" = "queued" ]; then
-              echo "⏳ CI orchestrator is still running - it will trigger src-cli workflow"
-              echo "Waiting ${CHECK_INTERVAL}s for orchestrator to complete..."
+              echo "⏳ CI is running for this commit - waiting..."
               sleep $CHECK_INTERVAL
               ELAPSED=$((ELAPSED + CHECK_INTERVAL))
               continue
             fi
 
-            # Get all runs for this commit and analyze them
-            RUNS=$(gh run list \
+            # Strategy 1: Check for direct CI run on this commit
+            echo ""
+            echo "📋 Strategy 1: Check for src-cli CI run on this exact commit..."
+            DIRECT_RUNS=$(gh run list \
               --commit $COMMIT_SHA \
               --workflow src-cli.yaml \
-              --json status,conclusion,databaseId,createdAt \
-              --limit 10)
+              --json status,conclusion \
+              --limit 5)
 
-            echo ""
-            echo "Debug - src-cli.yaml workflow: API returned $(echo "$RUNS" | jq 'length') runs"
-            if [ "$(echo "$RUNS" | jq 'length')" -gt "0" ]; then
-              echo "$RUNS" | jq -c '.[] | {status, conclusion, createdAt}'
-            fi
+            DIRECT_SUCCESS=$(echo "$DIRECT_RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
+            DIRECT_FAILED=$(echo "$DIRECT_RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "failure")] | length')
+            DIRECT_RUNNING=$(echo "$DIRECT_RUNS" | jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
 
-            # Count runs by status
-            SUCCESS_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
-            IN_PROGRESS_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "in_progress")] | length')
-            QUEUED_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "queued" or .status == "waiting")] | length')
-            FAILED_COUNT=$(echo "$RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "failure")] | length')
-            TOTAL_COUNT=$(echo "$RUNS" | jq 'length')
-
-            echo "CI runs for commit: success=$SUCCESS_COUNT, in_progress=$IN_PROGRESS_COUNT, queued=$QUEUED_COUNT, failed=$FAILED_COUNT, total=$TOTAL_COUNT"
-
-            # If CI passed, we're done
-            if [ "$SUCCESS_COUNT" -gt "0" ]; then
-              echo "✅ CI has passed for commit $COMMIT_SHA"
+            if [ "$DIRECT_SUCCESS" -gt "0" ]; then
+              echo "✅ Found successful src-cli CI run for this exact commit"
               exit 0
             fi
 
-            # If CI failed, stop immediately
-            if [ "$FAILED_COUNT" -gt "0" ]; then
-              echo "❌ Error: CI workflow failed for commit $COMMIT_SHA"
-              echo "Fix the CI failures and re-run this release workflow."
+            if [ "$DIRECT_FAILED" -gt "0" ]; then
+              echo "❌ CI failed for this commit - cannot release"
               exit 1
             fi
 
-            # If CI is running or queued, wait
-            if [ "$IN_PROGRESS_COUNT" -gt "0" ] || [ "$QUEUED_COUNT" -gt "0" ]; then
-              echo "⏳ CI is running... waiting ${CHECK_INTERVAL}s before next check..."
+            if [ "$DIRECT_RUNNING" -gt "0" ]; then
+              echo "⏳ src-cli CI is running for this commit - waiting..."
               sleep $CHECK_INTERVAL
               ELAPSED=$((ELAPSED + CHECK_INTERVAL))
               continue
             fi
 
-            # No runs found at all
-            if [ "$TOTAL_COUNT" -eq "0" ]; then
-              echo "❌ Error: No CI workflow run found for commit $COMMIT_SHA"
+            # Strategy 2: No direct CI run found. Check if src-cli even needs rebuilding.
+            #
+            # The `get changed modules ci` command compares current commit against the last
+            # successful "Change Trigger" CI run. It returns modules that WOULD need rebuilding
+            # based on changed files and the dependency graph.
+            #
+            # If src-cli is NOT in the list, it means:
+            #   - No files affecting src-cli have changed since last successful CI
+            #   - The code was already tested (at some previous commit)
+            #   - Safe to release (we build from source anyway)
+            #
+            # If src-cli IS in the list, it means:
+            #   - Files affecting src-cli (or its dependencies) have changed
+            #   - But CI hasn't run yet for these changes
+            #   - Must wait for CI before releasing
+            echo ""
+            echo "📋 Strategy 2: Check if last successful CI covers this commit..."
+
+            cd src/commands
+            RESULT=$(go run . "get changed modules ci" --as-json 2>/dev/null || echo '{"is_bootstrap": true}')
+            cd ../..
+
+            echo "Change detection result:"
+            echo "$RESULT" | jq . 2>/dev/null || echo "$RESULT"
+
+            IS_BOOTSTRAP=$(echo "$RESULT" | jq -r '.is_bootstrap // true')
+            MODULES=$(echo "$RESULT" | jq -r '.modules // [] | join(" ")')
+
+            if [ "$IS_BOOTSTRAP" = "true" ]; then
+              echo "⚠️  No previous successful CI found - bootstrap scenario"
+              echo "❌ Cannot release without CI verification"
               echo ""
-              echo "The commit being released has not been tested by CI."
-              echo "CI must run on this specific commit before releasing."
-              echo ""
-              echo "To fix:"
-              echo "1. Push code changes to trigger CI automatically, OR"
-              echo "2. Manually trigger CI: gh workflow run src-cli.yaml --ref ${{ github.ref_name }}"
-              echo ""
-              echo "Then re-run this release workflow after CI passes."
+              echo "Please run CI first:"
+              echo "  gh workflow run ci-repository.yaml"
               exit 1
             fi
 
-            # Unknown state - wait and retry
-            echo "⏳ Waiting for CI state to change..."
-            sleep $CHECK_INTERVAL
-            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+            # If src-cli is in the modules list, it needs rebuilding (code changed but not tested)
+            # If src-cli is NOT in the list, it's covered by previous CI (safe to release)
+            if echo " $MODULES " | grep -q " src-cli "; then
+              echo ""
+              echo "⚠️  src-cli requires rebuild based on dependency analysis"
+              echo "Modules requiring rebuild: $MODULES"
+              echo ""
+              echo "The optimized CI should have triggered a build for these changes."
+              echo "If CI hasn't run yet, trigger it manually:"
+              echo "  gh workflow run ci-repository.yaml"
+              echo ""
+              echo "Waiting for CI to complete..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            echo "✅ src-cli does not require rebuild - CI coverage valid"
+            echo "Modules that would need rebuild (if any): $MODULES"
+            exit 0
+
           done
 
-          echo "❌ Error: Timeout waiting for CI to complete (waited ${MAX_WAIT_TIME}s)"
-          echo "The CI is taking too long. Please check the workflow status and re-run when ready."
+          echo ""
+          echo "❌ Timeout: Could not verify CI coverage for this release"
+          echo ""
+          echo "Either:"
+          echo "1. Wait for current CI to complete and re-run this release, OR"
+          echo "2. Manually trigger CI: gh workflow run ci-repository.yaml"
           exit 1
         env:
           GH_TOKEN: ${{ github.token }}
@@ -215,11 +266,6 @@ jobs:
 
             echo "✅ Created and pushed tag: $TAG_NAME"
           fi
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '>=1.21'
 
       - name: Build binaries for multiple platforms
         env:

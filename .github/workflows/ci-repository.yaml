@@ -1,3 +1,20 @@
+# CI Orchestrator - Optimized Module Build Trigger
+#
+# This workflow implements incremental CI by only building modules that have changed
+# since the last successful CI run. It uses the repository's dependency graph to ensure
+# that when a module changes, all modules that depend on it are also rebuilt (cache invalidation).
+#
+# How it works:
+# 1. Compares current commit against last successful "Change Trigger" run
+# 2. Uses `get changed modules ci` command which:
+#    - Maps changed files to their owning modules (via module contracts)
+#    - Expands to include all transitive dependents (if src-core changes, src-cli rebuilds too)
+# 3. Triggers only the necessary module workflows in dependency order
+#
+# For PRs: Compares against PR base SHA
+# For push: Compares against last successful CI SHA
+# Bootstrap (no previous success): Builds all modules
+
 name: "Change Trigger"
 
 on:
@@ -34,6 +51,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
 
       - name: Detect Changed Modules
         id: detect
@@ -53,10 +73,21 @@ jobs:
             echo "base_sha=N/A" >> $GITHUB_OUTPUT
             echo "is_bootstrap=false" >> $GITHUB_OUTPUT
           else
-            # Use optimized CI change detection with cache invalidation
+            # Optimized CI: Only rebuild modules that have actually changed or whose
+            # dependencies have changed. The `get changed modules ci` command:
+            #   1. Queries GitHub API for the last successful "Change Trigger" run SHA
+            #   2. Computes git diff between that SHA and current HEAD
+            #   3. Maps changed files to modules using repository contracts
+            #   4. Expands with transitive dependents (cache invalidation)
+            #
+            # Example: If only src/core/* files changed:
+            #   - directly_changed: [src-core]
+            #   - invalidated: [src-commands, src-cli, src-mcp-commands, ext-eac] (dependents)
+            #   - modules: [src-core, src-commands, src-cli, src-mcp-commands, ext-eac]
             echo "🔍 Detecting modules requiring rebuild (with dependency invalidation)..."
 
-            # For PRs, pass the base SHA; for push, let the command query last successful CI
+            # For PRs: compare against PR base (what the PR introduces)
+            # For push: compare against last successful CI (incremental since last success)
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo "📋 Pull Request detected - comparing against PR base"
               RESULT=$(go run . "get changed modules ci" --pr-base "${{ github.event.pull_request.base.sha }}" --as-json)
@@ -68,7 +99,10 @@ jobs:
             echo "Raw result:"
             echo "$RESULT" | jq .
 
-            # Extract modules requiring rebuild
+            # Extract the analysis results:
+            # - modules: ALL modules that need rebuilding (changed + dependents)
+            # - directly_changed: modules with actual file changes
+            # - invalidated: modules that need rebuild because their dependencies changed
             MODULES=$(echo "$RESULT" | jq -r '.modules | join(" ")')
             DIRECTLY_CHANGED=$(echo "$RESULT" | jq -r '.directly_changed | join(" ")')
             INVALIDATED=$(echo "$RESULT" | jq -r '.invalidated | join(" ")')
@@ -124,6 +158,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
 
       - name: Calculate Execution Order
         id: calculate
