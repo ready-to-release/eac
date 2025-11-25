@@ -12,11 +12,9 @@ source:
     - "go.mod"
     - "**.go"
     - "*.go"
-    - "README.md"
-    - "render/README.md"
+    - "**/README.md"
+    - "**/assets/**"
     - "/specs/src-commands/**/*"
-    - "/src/commands/tests/**"
-    - "/src/commands/validation-debug-logs.txt"
 
 depends_on:
   - "src-core"
