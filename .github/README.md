@@ -5,6 +5,8 @@
   <span style="font-size: 1.3em;">Turn every commit into deployable, compliant software you can trust</span>
 </p>
 
+---
+
 [![CI Status](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml)
 [![GitHub Stars](https://img.shields.io/github/stars/ready-to-release/eac?style=social)](https://github.com/ready-to-release/eac/stargazers)
 
