@@ -1,0 +1,3 @@
+# Common Go dependencies to pre-cache in CI container
+# These are installed during image build to speed up CI runs
+github.com/cucumber/godog/cmd/godog@latest

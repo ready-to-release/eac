@@ -1,0 +1,96 @@
+name: "ci-go-bvt-image (stage 1-6)"
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/go-bvt-image
+          push: false
+          tags: go-bvt-image:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/go-bvt-image
+          push: false
+          load: true
+          tags: go-bvt-image:test
+          cache-from: type=gha
+
+      - name: Test container - Go version
+        run: docker run --rm go-bvt-image:test go version
+
+      - name: Test container - Git version
+        run: docker run --rm go-bvt-image:test git --version
+
+      - name: Test container - GitHub CLI
+        run: docker run --rm go-bvt-image:test gh --version
+
+      - name: Test container - jq
+        run: docker run --rm go-bvt-image:test jq --version
+
+      - name: Test container - Run Go build
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            go-bvt-image:test \
+            sh -c "cd src/commands && go build ."
+
+  trigger-release:
+    name: Trigger Release
+    needs: test
+    runs-on: ubuntu-latest
+    # Only trigger release on main branch
+    if: github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger release workflow
+        run: |
+          gh workflow run release-go-bvt-image.yml \
+            --repo ${{ github.repository }} \
+            -f ci_run_id=${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}

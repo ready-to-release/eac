@@ -22,7 +22,7 @@
 #
 # The `image_sha` output from the CI check step determines which image to retag.
 
-name: "Release ext-eac"
+name: "release-ext-eac (stage 7+)"
 
 on:
   push:
@@ -206,7 +206,7 @@ jobs:
           echo ""
           echo "Either:"
           echo "1. Wait for current CI to complete and re-run this release, OR"
-          echo "2. Manually trigger CI: gh workflow run ci-repository.yaml"
+          echo "2. Manually trigger CI: gh workflow run change-trigger.yaml"
           exit 1
         env:
           GH_TOKEN: ${{ github.token }}

@@ -17,7 +17,7 @@ source:
     - "/src/core/environments/**"
     - "/src/.template/**"
     # Own the CI workflow file - triggers rebuild when src-core or dependencies change
-    - "/.github/workflows/src-core.yaml"
+    - "/.github/workflows/ci-src-core.yaml"
   excludes:
     - "repository/tests/**"
   exclude_children_owned_source: true

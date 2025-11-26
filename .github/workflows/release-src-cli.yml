@@ -18,7 +18,7 @@
 # This workflow BUILDS FROM SOURCE, so it doesn't depend on pre-built artifacts.
 # It only needs verification that the code was tested.
 
-name: "Release src-cli"
+name: "release-src-cli (stage 7+)"
 
 on:
   push:
