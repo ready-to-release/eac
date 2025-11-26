@@ -18,12 +18,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 )
+
+// ansiRegex matches ANSI escape sequences for color/formatting
+var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func init() {
 	registry.Register(TestDebug)
@@ -171,23 +175,29 @@ func collectFailuresFromGoTestJSON(jsonPath string) ([]Failure, error) {
 		pkg := parts[0]
 		test := parts[1]
 
-		// Collect error output (look for error indicators)
+		// Collect all output lines except RUN/PASS/FAIL markers
 		var errorLines []string
 		for _, line := range outputs {
-			// Look for error indicators
-			if strings.Contains(line, "Error:") || strings.Contains(line, "error:") ||
-				strings.Contains(line, "FAIL") || strings.Contains(line, "❌") ||
-				strings.Contains(line, "expected") || strings.Contains(line, "actual") {
-				errorLines = append(errorLines, line)
+			// Strip ANSI escape codes for clean output
+			line = ansiRegex.ReplaceAllString(line, "")
+			trimmed := strings.TrimSpace(line)
+			// Skip empty lines and test framework markers
+			if trimmed == "" ||
+				strings.HasPrefix(trimmed, "=== RUN") ||
+				strings.HasPrefix(trimmed, "--- PASS") ||
+				strings.HasPrefix(trimmed, "--- FAIL") {
+				continue
 			}
+			// Replace problematic Unicode characters for Windows terminal compatibility
+			line = strings.ReplaceAll(line, "❌", "[X]")
+			line = strings.ReplaceAll(line, "✓", "[OK]")
+			line = strings.ReplaceAll(line, "✗", "[X]")
+			errorLines = append(errorLines, strings.TrimRight(line, "\n\r"))
 		}
 
 		errorOutput := "(no error details)"
 		if len(errorLines) > 0 {
-			errorOutput = strings.Join(errorLines, "; ")
-			if len(errorOutput) > 200 {
-				errorOutput = errorOutput[:197] + "..."
-			}
+			errorOutput = strings.Join(errorLines, "\n")
 		}
 
 		failures = append(failures, Failure{
@@ -240,67 +250,34 @@ func collectFailuresFromCucumberJSON(jsonPath string) ([]Failure, error) {
 	return failures, nil
 }
 
-// printFailureTable prints test failures in a formatted table
+// printFailureTable prints test failures in a readable format
 func printFailureTable(failures []Failure) {
 	fmt.Println("\n=== Test Failures Found ===")
-	fmt.Printf("Total failures: %d\n\n", len(failures))
+	fmt.Printf("Total failures: %d\n", len(failures))
 
-	// Find max widths for table formatting
-	maxTest := len("Test")
-	maxPackage := len("Package")
-	maxError := len("Error")
+	for i, f := range failures {
+		fmt.Println()
+		fmt.Printf("--- Failure %d ---\n", i+1)
+		fmt.Printf("Test:    %s\n", f.TestName)
 
-	for _, f := range failures {
-		if len(f.TestName) > maxTest && len(f.TestName) <= 50 {
-			maxTest = len(f.TestName)
-		}
-		if len(f.Package) > maxPackage && len(f.Package) <= 50 {
-			maxPackage = len(f.Package)
-		}
-		if len(f.ErrorOutput) > maxError && len(f.ErrorOutput) <= 100 {
-			maxError = len(f.ErrorOutput)
-		}
-	}
-
-	// Cap widths
-	if maxTest > 50 {
-		maxTest = 50
-	}
-	if maxPackage > 50 {
-		maxPackage = 50
-	}
-	if maxError > 100 {
-		maxError = 100
-	}
-
-	// Print header
-	fmt.Printf("%-*s  %-*s  %-*s\n",
-		maxTest, "Test",
-		maxPackage, "Package",
-		maxError, "Error")
-	fmt.Println(strings.Repeat("-", maxTest+2+maxPackage+2+maxError))
-
-	// Print failures
-	for _, f := range failures {
-		test := f.TestName
-		if len(test) > maxTest {
-			test = test[:maxTest-3] + "..."
-		}
-
+		// Show short package name for readability
 		pkg := f.Package
-		if len(pkg) > maxPackage {
-			pkg = pkg[:maxPackage-3] + "..."
+		if idx := strings.LastIndex(pkg, "/"); idx != -1 {
+			pkg = ".../" + pkg[idx+1:]
+		}
+		fmt.Printf("Package: %s\n", pkg)
+
+		if f.Source == "cucumber" && f.File != "" {
+			fmt.Printf("File:    %s:%d\n", f.File, f.Line)
 		}
 
-		errorMsg := f.ErrorOutput
-		if len(errorMsg) > maxError {
-			errorMsg = errorMsg[:maxError-3] + "..."
+		fmt.Println("Output:")
+		// Print each line of error output with indentation
+		for _, line := range strings.Split(f.ErrorOutput, "\n") {
+			if strings.TrimSpace(line) != "" {
+				fmt.Printf("  %s\n", line)
+			}
 		}
-
-		fmt.Printf("%-*s  %-*s  %-*s\n",
-			maxTest, test,
-			maxPackage, pkg,
-			maxError, errorMsg)
 	}
 
 	fmt.Println()

@@ -7,7 +7,8 @@ type: "repository-root"
 source:
   root: "/"
   includes:
-    - "/src/core/repository/tests/**"
+    - "src/core/repository/tests/**"
+    - ".github/workflows/change-trigger.yaml"
 
 depends_on:
   - "src-core"
