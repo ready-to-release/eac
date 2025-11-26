@@ -46,18 +46,33 @@ func loadPromptWithFallback(promptName string, workspaceRoot string) (string, er
 	return agentContent, nil
 }
 
+// GenerationResult holds the result of AI generation including metadata
+type GenerationResult struct {
+	Output       string // The generated output
+	ProviderName string // The AI provider used (e.g., "claude-cli", "openai")
+}
+
 // generateWithPrompt generates output using the three-tier prompt loading system with validation and retry
 // If testExecutor is provided (non-nil), it will be used instead of creating a new executor (for testing)
 func generateWithPrompt(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (string, error) {
+	result, err := generateWithPromptResult(promptName, userPrompt, workspaceRoot, affectedModules, debugEnabled, testExecutor)
+	if err != nil {
+		return "", err
+	}
+	return result.Output, nil
+}
+
+// generateWithPromptResult generates output and returns full metadata including provider info
+func generateWithPromptResult(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
 	// Check for mock response (test mode)
 	if mockAIResponse != "" {
-		return mockAIResponse, nil
+		return &GenerationResult{Output: mockAIResponse, ProviderName: "mock"}, nil
 	}
 
 	// Load prompt template using three-tier system
 	promptTemplate, err := loadPromptWithFallback(promptName, workspaceRoot)
 	if err != nil {
-		return "", fmt.Errorf("failed to load prompt template: %w", err)
+		return nil, fmt.Errorf("failed to load prompt template: %w", err)
 	}
 
 	model := extractModelFromAgent(promptTemplate)
@@ -80,7 +95,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	if err != nil {
 		// If anti-corruption rules fail, fall back to non-validated generation
 		fmt.Fprintf(os.Stderr, "⚠️  Could not load anti-corruption rules, proceeding without validation: %v\n", err)
-		return generateWithoutValidation(executor, fullPrompt, model, promptName, workspaceRoot)
+		return generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
 	}
 
 	// Create appropriate validator based on prompt type
@@ -98,7 +113,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 		commitContract, err := commitmessage.LoadContract(contractPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "⚠️  Could not load commit contract, proceeding without validation: %v\n", err)
-			return generateWithoutValidation(executor, fullPrompt, model, promptName, workspaceRoot)
+			return generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
 		}
 		validator = commitmessage.NewCommitMessageValidator(
 			commitContract,
@@ -127,7 +142,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	ctx := context.Background()
 	result, err := contracts.GenerateWithRetry(ctx, retryConfig, fullPrompt)
 	if err != nil {
-		return "", fmt.Errorf("AI generation failed: %w", err)
+		return nil, fmt.Errorf("AI generation failed: %w", err)
 	}
 
 	// Report validation errors if any
@@ -139,11 +154,24 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 
-	return result.Output, nil
+	return &GenerationResult{
+		Output:       result.Output,
+		ProviderName: result.ProviderName,
+	}, nil
 }
 
 // generateWithoutValidation is a fallback when contract/validation cannot be loaded
 func generateWithoutValidation(executor *ai.Executor, fullPrompt string, model string, promptName string, workspaceRoot string) (string, error) {
+	result, err := generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
+	if err != nil {
+		return "", err
+	}
+	return result.Output, nil
+}
+
+// generateWithoutValidationResult is a fallback when contract/validation cannot be loaded.
+// Returns GenerationResult with provider metadata.
+func generateWithoutValidationResult(executor *ai.Executor, fullPrompt string, model string, promptName string, workspaceRoot string) (*GenerationResult, error) {
 	// Prepare options
 	var opts []ai.Option
 	if model != "" {
@@ -154,7 +182,13 @@ func generateWithoutValidation(executor *ai.Executor, fullPrompt string, model s
 	ctx := context.Background()
 	output, err := executor.Execute(ctx, fullPrompt, opts...)
 	if err != nil {
-		return "", fmt.Errorf("AI execution failed: %w", err)
+		return nil, fmt.Errorf("AI execution failed: %w", err)
+	}
+
+	// Get provider name after execution
+	providerName := ""
+	if provider := executor.GetLastUsedProvider(); provider != nil {
+		providerName = provider.Name()
 	}
 
 	// Trim output
@@ -163,7 +197,10 @@ func generateWithoutValidation(executor *ai.Executor, fullPrompt string, model s
 	// Remove common agent initialization noise using contract-based filtering
 	output = StripAgentNoise(output, promptName, workspaceRoot)
 
-	return output, nil
+	return &GenerationResult{
+		Output:       output,
+		ProviderName: providerName,
+	}, nil
 }
 
 // buildRetryConfig creates a RetryConfig with standard settings for commit message generation
