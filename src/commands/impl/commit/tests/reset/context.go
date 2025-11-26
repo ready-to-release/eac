@@ -10,6 +10,7 @@ type Context struct {
 	ExitCode      int
 	CommandError  error
 	ResetTestFile string // File tracked for reset verification
+	WasUsed       bool   // Track if reset context was actually used in this scenario
 }
 
 // Ctx is the reset test context - synchronized with main tests.Ctx
