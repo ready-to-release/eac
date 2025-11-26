@@ -29,11 +29,6 @@ const (
 	cacheVersion = "1.0"
 )
 
-// GetCacheDir returns the path to the .r2r/cache directory
-func GetCacheDir(repoRoot string) string {
-	return filepath.Join(repoRoot, ".r2r", "cache")
-}
-
 // GetRegistryCachePath returns the path to the registry cache file
 func GetRegistryCachePath(repoRoot string) string {
 	return filepath.Join(GetCacheDir(repoRoot), "registry.json")
