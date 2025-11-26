@@ -29,14 +29,13 @@
 package test
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
+	"github.com/ready-to-release/eac/src/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
@@ -188,126 +187,45 @@ func testSingleModule(moniker string, workspaceRoot string, moduleReport *report
 	return TestSuite()
 }
 
-// testMultipleModules tests multiple modules in parallel with orchestrator output
+// testMultipleModules tests multiple modules in parallel using the orchestrator
 func testMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, reportFormat string, suiteName string) int {
-	// Create orchestrator log file
-	orchestratorLogPath := filepath.Join(workspaceRoot, "out", "test", "orchestrator.log")
-	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create orchestrator log directory: %v\n", err)
-		return 1
+	// Configure orchestrator
+	config := orchestrator.Config{
+		WorkspaceRoot:        workspaceRoot,
+		OutputBaseDir:        "out/test",
+		LogFileName:          "test.log",
+		OrchestratorLogName:  "orchestrator.log",
+		ActionVerb:           "testing",
+		MaxConcurrency:       0, // Use default (number of CPUs)
+		StatusUpdateInterval: 2, // Update every 2 seconds
 	}
-	orchestratorLog, err := os.Create(orchestratorLogPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create orchestrator log: %v\n", err)
-		return 1
-	}
-	defer orchestratorLog.Close()
 
-	// Use buffered writer for orchestrator log
-	orchestratorLogBuf := bufio.NewWriter(orchestratorLog)
-	defer orchestratorLogBuf.Flush()
-
-	// Create multi-writer for orchestrator output (console + log file)
-	orchestratorOut := io.MultiWriter(os.Stdout, orchestratorLogBuf)
-
-	fmt.Fprintf(orchestratorOut, "Testing %d modules: %v\n\n", len(monikers), monikers)
-
-	// Start global progress tracker
-	StartGlobalTracker(orchestratorOut, len(monikers))
-	defer StopGlobalTracker()
-
-	// Test each module in sequence
-	var mu sync.Mutex
-	failedModules := []string{}
-	testedModules := []*modules.ModuleContract{}
-	for _, moniker := range monikers {
-
-		// Get module from registry
+	// Create worker function that tests a single module
+	worker := func(moniker string, logWriter io.Writer) int {
 		module, exists := moduleReport.Registry.Get(moniker)
 		if !exists {
-			statusLine := fmt.Sprintf("[testing] %s (Module not found) ........ Failed\r\n", moniker)
-			orchestratorOut.Write([]byte(statusLine))
-			os.Stdout.Sync()
-			failedModules = append(failedModules, moniker+" (not found)")
-			continue
+			fmt.Fprintf(logWriter, "Error: module not found: %s\n", moniker)
+			return 1
 		}
 
-		// Purge and create module output directory
 		moduleOutputDir := filepath.Join(workspaceRoot, "out", "test", moniker)
-		if err := os.RemoveAll(moduleOutputDir); err != nil {
-			// Silently continue - logged to orchestrator log only
-		}
-		if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
-			statusLine := fmt.Sprintf("[testing] %s (Failed to create directory) ........ Failed\r\n", moniker)
-			orchestratorOut.Write([]byte(statusLine))
-			os.Stdout.Sync()
-			failedModules = append(failedModules, moniker+" (dir error)")
-			continue
-		}
-
-		// Create test log file
-		logPath := filepath.Join(moduleOutputDir, "test.log")
-		logFile, err := os.Create(logPath)
-		if err != nil {
-			statusLine := fmt.Sprintf("[testing] %s (Failed to create log) ........ Failed\r\n", moniker)
-			orchestratorOut.Write([]byte(statusLine))
-			os.Stdout.Sync()
-			failedModules = append(failedModules, moniker+" (log error)")
-			continue
-		}
-
-		// Module output goes to file only (not console)
-		multiWriter := io.MultiWriter(logFile)
-
-		// Track test start with global progress tracker
-		TrackTestStart(moniker)
-
-		// Run tests for this module
-		exitCode := runModuleTest(module, workspaceRoot, moduleOutputDir, multiWriter, reportFormat, suiteName)
-
-		// Track test completion
-		TrackTestComplete(moniker)
-
-		logFile.Close()
-
-		// Track tested modules
-		testedModules = append(testedModules, module)
-
-		// Print clean status line (thread-safe)
-		mu.Lock()
-		relLogPath := filepath.Join("out", "test", moniker, "test.log")
-		var statusLine string
-		if exitCode != 0 {
-			statusLine = fmt.Sprintf("[testing] %s (See %s for details) ........ Failed\r\n", moniker, relLogPath)
-			failedModules = append(failedModules, moniker)
-		} else {
-			statusLine = fmt.Sprintf("[testing] %s (See %s for details) ........ Done\r\n", moniker, relLogPath)
-		}
-		orchestratorOut.Write([]byte(statusLine))
-		os.Stdout.Sync()
-		mu.Unlock()
+		return runModuleTest(module, workspaceRoot, moduleOutputDir, logWriter, reportFormat, suiteName)
 	}
 
-	// Print summary
-	fmt.Fprintf(orchestratorOut, "\n===========================================\n")
-	fmt.Fprintf(orchestratorOut, "Test Run Summary\n")
-	fmt.Fprintf(orchestratorOut, "===========================================\n")
-	fmt.Fprintf(orchestratorOut, "Total modules: %d\n", len(monikers))
-	fmt.Fprintf(orchestratorOut, "Passed: %d\n", len(monikers)-len(failedModules))
-	fmt.Fprintf(orchestratorOut, "Failed: %d\n", len(failedModules))
-	if len(failedModules) > 0 {
-		fmt.Fprintf(orchestratorOut, "\n❌ Failed modules:\n")
-		for _, m := range failedModules {
-			fmt.Fprintf(orchestratorOut, "  - %s\n", m)
-		}
-	}
-	fmt.Fprintf(orchestratorOut, "\nOrchestrator log: out/test/orchestrator.log\n")
-	fmt.Fprintf(orchestratorOut, "Module logs: out/test/<module>/test.log\n")
-
-	if len(failedModules) > 0 {
+	// Create and run orchestrator
+	orch := orchestrator.New(config, worker)
+	results, err := orch.Run(monikers)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
-	return 0
+
+	// Print summary and close orchestrator
+	orch.PrintSummary(results)
+	orch.Close()
+
+	// Return exit code based on results
+	return orchestrator.GetExitCode(results)
 }
 
 func printTestUsage() {
