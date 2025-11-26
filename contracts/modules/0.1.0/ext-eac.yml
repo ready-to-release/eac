@@ -21,4 +21,3 @@ source:
 
 depends_on:
   - "src-commands"
-  - "src-core"
