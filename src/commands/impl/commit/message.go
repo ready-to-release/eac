@@ -365,14 +365,23 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 	writeDebugFile(cfg.workspaceRoot, logger, "debug-top-level-context.md", topLevelContext)
 
 	var topLevelOutput string
+	var providerName string
 	err := commitmessage.WithProgress("🤖 Generating top-level commit summary...", func() error {
-		result, genErr := generateWithPrompt("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
-		topLevelOutput = result
+		result, genErr := generateWithPromptResult("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
+		if result != nil {
+			topLevelOutput = result.Output
+			providerName = result.ProviderName
+		}
 		return genErr
 	})
 
 	if err != nil {
 		return "", fmt.Errorf("running commit-message-top-level agent: %w", err)
+	}
+
+	// Log provider info when debug is enabled
+	if providerName != "" {
+		logger.Debug(fmt.Sprintf("AI provider used: %s", providerName))
 	}
 
 	// Strip out any module sections the AI may have added after "Changes:" line

@@ -90,6 +90,9 @@ type RetryResult struct {
 
 	// RetriedWithErrors indicates whether a retry was triggered
 	RetriedWithErrors bool
+
+	// ProviderName is the name of the AI provider used (e.g., "claude-cli", "openai")
+	ProviderName string
 }
 
 // GenerateWithRetry generates AI output with validation and automatic retry
@@ -204,6 +207,9 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 		lastOutput = cleanedOutput
 		lastValidationErrors = validationErrors
 
+		// Capture provider name if available (after first execution)
+		providerName := getProviderName(cfg.Executor)
+
 		// Count critical errors (severity == "error")
 		criticalErrors := countCriticalErrors(validationErrors)
 
@@ -219,6 +225,7 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 				ValidationErrors:  validationErrors, // Return warnings if any
 				Attempts:          attempt,
 				RetriedWithErrors: retriedWithErrors,
+				ProviderName:      providerName,
 			}, nil
 		}
 
@@ -230,6 +237,7 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 				ValidationErrors:  validationErrors,
 				Attempts:          attempt,
 				RetriedWithErrors: retriedWithErrors,
+				ProviderName:      providerName,
 			}, nil
 		}
 
@@ -243,6 +251,7 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 		ValidationErrors:  lastValidationErrors,
 		Attempts:          maxAttempts,
 		RetriedWithErrors: retriedWithErrors,
+		ProviderName:      getProviderName(cfg.Executor),
 	}, nil
 }
 
@@ -311,4 +320,13 @@ Generate the corrected output now:
 // countCriticalErrors is an internal alias to CountCriticalErrors (now in format.go)
 func countCriticalErrors(errors []ValidationError) int {
 	return CountCriticalErrors(errors)
+}
+
+// getProviderName extracts the provider name from an executor if it implements AIExecutorWithProviderInfo.
+// Returns empty string if the executor doesn't support provider info retrieval.
+func getProviderName(executor AIExecutor) string {
+	if withInfo, ok := executor.(AIExecutorWithProviderInfo); ok {
+		return withInfo.GetProviderName()
+	}
+	return ""
 }

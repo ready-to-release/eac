@@ -70,3 +70,13 @@ type Validator interface {
 type AIExecutor interface {
 	Execute(ctx interface{}, prompt string, opts ...interface{}) (string, error)
 }
+
+// AIExecutorWithProviderInfo extends AIExecutor with provider information retrieval.
+// Implementations can optionally implement this interface to provide metadata about
+// the AI provider used for generation.
+type AIExecutorWithProviderInfo interface {
+	AIExecutor
+	// GetProviderName returns the name of the AI provider used for the last execution.
+	// Returns empty string if no execution has occurred or provider info is unavailable.
+	GetProviderName() string
+}

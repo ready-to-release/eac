@@ -106,9 +106,10 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 
 	// Result structure preserves original order via index
 	type moduleResult struct {
-		index  int    // Original position in affectedModules
-		output string // Generated module section
-		err    error  // Error if generation failed
+		index        int    // Original position in affectedModules
+		output       string // Generated module section
+		providerName string // AI provider used
+		err          error  // Error if generation failed
 	}
 
 	// Buffered channel prevents goroutine blocking when sending results
@@ -132,14 +133,18 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 			writeDebugFilef(cfg.workspaceRoot, logger, "debug-module-%d-%s-context.md", moduleContext, idx+1, moduleName)
 
 			var output string
+			var providerName string
 			progressMsg := fmt.Sprintf("🤖 Generating section for module %s (%d/%d)...",
 				moduleName, idx+1, len(cfg.affectedModules))
 
 			// Generate module section using existing function
 			// WithProgress is goroutine-safe (uses internal synchronization)
 			err := commitmessage.WithProgress(progressMsg, func() error {
-				result, genErr := generateWithPrompt("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
-				output = result
+				result, genErr := generateWithPromptResult("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
+				if result != nil {
+					output = result.Output
+					providerName = result.ProviderName
+				}
 				return genErr
 			})
 
@@ -148,9 +153,10 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 			// Send result with original index to preserve order
 			// Buffered channel ensures this never blocks
 			resultsChan <- moduleResult{
-				index:  idx,
-				output: output,
-				err:    err,
+				index:        idx,
+				output:       output,
+				providerName: providerName,
+				err:          err,
 			}
 		}(i, module)
 	}
@@ -166,6 +172,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 	// Pre-size slice to avoid allocations and enable direct indexing
 	moduleSections := make([]string, len(cfg.affectedModules))
 	var firstError error
+	var loggedProvider bool
 
 	// Drain channel until closed
 	// Order is preserved by using result.index to place output
@@ -174,6 +181,12 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 		// This ensures all goroutines complete (no leaks)
 		if result.err != nil && firstError == nil {
 			firstError = result.err
+		}
+
+		// Log provider info once (all modules use the same provider)
+		if !loggedProvider && result.providerName != "" {
+			logger.Debug(fmt.Sprintf("AI provider used for module sections: %s", result.providerName))
+			loggedProvider = true
 		}
 
 		// Place result at correct index to maintain order
