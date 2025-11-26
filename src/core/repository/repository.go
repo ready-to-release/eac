@@ -82,16 +82,7 @@ func GetRepositoryRoot(startPath string) (string, error) {
 		return "", NewRepositoryError("abs", startPath, err, "failed to get absolute path")
 	}
 
-	// Try using go-git to find the repository root
-	repo, err := git.Open(absPath)
-	if err == nil {
-		root := repo.RootPath()
-		// Normalize path separators for Windows
-		root = filepath.Clean(root)
-		return root, nil
-	}
-
-	// Fallback: manually search for .git directory
+	// Search for .git directory by walking up the tree
 	currentPath := absPath
 	for {
 		gitPath := filepath.Join(currentPath, ".git")
