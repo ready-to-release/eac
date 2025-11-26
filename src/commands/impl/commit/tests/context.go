@@ -1,18 +1,25 @@
-// Package tests provides BDD step definitions for the commit command.
+// Package tests provides shared test context for commit subcommands.
 //
-// This file contains shared state and context types used across step definitions.
+// This file contains shared state and context types used across step definitions
+// for all commit subcommands (message, reset, etc.).
 package tests
 
 import "github.com/ready-to-release/eac/src/core/git"
 
-// TestContext holds state between steps - shared with main tests package
+// TestContext holds shared state between steps across all commit subcommands.
 type TestContext struct {
-	CommandOutput     string
-	ExitCode          int
-	CommandError      error
+	// Shared fields
+	CommandOutput string
+	ExitCode      int
+	CommandError  error
+
+	// Message subcommand fields
 	TestCommitMessage string   // For commit validation testing
 	AffectedModules   []string // Modules affected by current changes
 	ValidationErrors  []string // Validation error codes for assertions
+
+	// Reset subcommand fields
+	ResetTestFile string // File tracked for reset verification
 }
 
 // Ctx is the shared test context - set by the main test runner

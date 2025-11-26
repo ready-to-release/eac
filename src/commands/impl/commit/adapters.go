@@ -6,7 +6,8 @@ import (
 	"github.com/ready-to-release/eac/src/core/ai"
 )
 
-// aiExecutorAdapter adapts ai.Executor to contract.AIExecutor interface
+// aiExecutorAdapter adapts ai.Executor to contracts.AIExecutor interface.
+// It also implements contracts.AIExecutorWithProviderInfo to expose provider metadata.
 type aiExecutorAdapter struct {
 	executor *ai.Executor
 	model    string
@@ -38,4 +39,13 @@ func (a *aiExecutorAdapter) Execute(ctx interface{}, prompt string, opts ...inte
 	}
 
 	return a.executor.Execute(actualCtx, prompt, aiOpts...)
+}
+
+// GetProviderName returns the name of the AI provider used for the last execution.
+// Implements contracts.AIExecutorWithProviderInfo interface.
+func (a *aiExecutorAdapter) GetProviderName() string {
+	if provider := a.executor.GetLastUsedProvider(); provider != nil {
+		return provider.Name()
+	}
+	return ""
 }

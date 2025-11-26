@@ -6,15 +6,18 @@
 // Long: The generated message includes a top-level summary and per-module sections describing changes.
 // Long: All output is validated against the commit message contract to ensure consistency and quality.
 // Long: By default, the command outputs the commit message to stdout. Use --debug to save intermediate outputs.
+// Long: Use --commit to automatically create a git commit with the generated message.
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
-// Flags: --debug (save intermediate outputs and show debug info)
-// HasSideEffects: false
+// Flag.commit: type=bool, shorthand=c, default=false, usage=Automatically create git commit with generated message
+// Flags: --debug (save intermediate outputs and show debug info), --commit (auto-commit)
+// HasSideEffects: true
 package commit
 
 import (
 	_ "embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -22,9 +25,40 @@ import (
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/git"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/core/repository/reports"
 )
+
+// writeDebugFile writes content to a debug file when debug mode is enabled.
+// Files are written to out/logs/commit/<filename> in the workspace root.
+func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename string, content string) {
+	if !logger.IsDebugMode() {
+		return
+	}
+
+	debugDir := filepath.Join(workspaceRoot, "out", "logs", "commit")
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
+		return
+	}
+
+	debugFile := filepath.Join(debugDir, filename)
+	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
+		logger.Warn(fmt.Sprintf("Failed to write debug file %s: %v", debugFile, err))
+	} else {
+		logger.Debug(fmt.Sprintf("Saved debug file: %s", debugFile))
+	}
+}
+
+// writeDebugFilef writes content to a debug file with formatted filename.
+func writeDebugFilef(workspaceRoot string, logger *logging.Logger, format string, content string, args ...interface{}) {
+	if !logger.IsDebugMode() {
+		return
+	}
+	filename := fmt.Sprintf(format, args...)
+	writeDebugFile(workspaceRoot, logger, filename, content)
+}
 
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
@@ -75,12 +109,33 @@ func init() {
 type executionConfig struct {
 	workspaceRoot   string
 	debug           bool
+	autoCommit      bool
 	stagedFiles     []repository.RepositoryFileWithModule
 	affectedModules []string
 	gitDiff         string
 }
 
 func CommitMessage() int {
+	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
+	debug, autoCommit, workspaceRoot, err := parseConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Initialize logger early so all code paths can use it
+	var logger *logging.Logger
+	if debug {
+		logger, err = logging.NewWithDebug("commit", workspaceRoot)
+	} else {
+		logger, err = logging.NewDefault("commit", workspaceRoot)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing logger: %v\n", err)
+		return 1
+	}
+	defer logger.Sync()
+
 	// Retry loop for regenerating commit message if validation fails
 	// Limited to prevent infinite loops
 	const maxRetries = 5
@@ -91,26 +146,30 @@ func CommitMessage() int {
 
 		// Show warning after multiple retries
 		if attempt > 3 {
-			fmt.Printf("\n⚠️  Retry attempt %d/%d\n", attempt, maxRetries)
+			logger.Warn(fmt.Sprintf("Retry attempt %d/%d", attempt, maxRetries))
 		}
 
-		result, shouldRetry := commitAIAttempt()
+		result, shouldRetry, generatedMessage := commitAIAttemptWithMessage(logger, workspaceRoot, debug)
 		if !shouldRetry {
+			// If successful and auto-commit is enabled, perform the commit
+			if result == 0 && autoCommit && generatedMessage != "" {
+				return performAutoCommit(workspaceRoot, generatedMessage, logger)
+			}
 			return result
 		}
 
 		// Check if max retries reached
 		if attempt >= maxRetries {
-			fmt.Println("\n❌ Maximum retry attempts reached.")
-			fmt.Println("   The AI is having difficulty generating a valid commit message.")
-			fmt.Println("   Please try one of the following:")
-			fmt.Println("   - Simplify your staged changes")
-			fmt.Println("   - Split changes across multiple commits")
-			fmt.Println("   - Write commit message manually with: git commit")
+			logger.Error("Maximum retry attempts reached")
+			logger.Info("The AI is having difficulty generating a valid commit message.")
+			logger.Info("Please try one of the following:")
+			logger.Info("  - Simplify your staged changes")
+			logger.Info("  - Split changes across multiple commits")
+			logger.Info("  - Write commit message manually with: git commit")
 			return 1
 		}
 
-		fmt.Printf("\n🔄 Retrying commit message generation (%d/%d)...\n", attempt+1, maxRetries)
+		logger.Info(fmt.Sprintf("Retrying commit message generation (%d/%d)...", attempt+1, maxRetries))
 	}
 
 	return 1
@@ -118,81 +177,81 @@ func CommitMessage() int {
 
 // commitAIAttempt performs a single attempt at generating and committing
 // Returns (exit code, should retry)
-func commitAIAttempt() (int, bool) {
-	// Phase 1: Parse Configuration
-	debug, workspaceRoot, err := parseConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1, false
+func commitAIAttempt(logger *logging.Logger, workspaceRoot string, debug bool) (int, bool) {
+	exitCode, shouldRetry, _ := commitAIAttemptWithMessage(logger, workspaceRoot, debug)
+	return exitCode, shouldRetry
+}
+
+// commitAIAttemptWithMessage performs a single attempt at generating commit message
+// Returns (exit code, should retry, generated message)
+func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, debug bool) (int, bool, string) {
+	// Phase 1: Verify Contract Implementation
+	if err := verifyContractImplementation(workspaceRoot, logger); err != nil {
+		return 1, false, ""
 	}
 
-	// Phase 2: Verify Contract Implementation
-	if err := verifyContractImplementation(workspaceRoot); err != nil {
-		return 1, false
-	}
-
-	// Create debug writer
-	debugWriter := newDebugWriter(debug, workspaceRoot)
-
-	// Phase 3: Build Execution Context
-	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, debugWriter)
+	// Phase 2: Build Execution Context
+	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1, false
+		logger.Error(fmt.Sprintf("Build context failed: %v", err))
+		return 1, false, ""
 	}
 	if cfg == nil {
-		fmt.Println("No staged changes.")
-		return 0, false
+		logger.Info("No staged changes.")
+		return 0, false, ""
 	}
 
-	// Phase 4: Generate Top-Level Summary
-	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, diffStats, debugWriter)
+	// Phase 3: Generate Top-Level Summary
+	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, diffStats, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
-		return 1, false
+		logger.Error(fmt.Sprintf("Top-level generation failed: %v", err))
+		return 1, false, ""
 	}
 
-	// Phase 5: Generate Module Sections
-	moduleSections, err := generateModuleSections(cfg, debugWriter)
+	// Phase 4: Generate Module Sections
+	moduleSections, err := generateModuleSections(cfg, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
-		return 1, false
+		logger.Error(fmt.Sprintf("Module section generation failed: %v", err))
+		return 1, false, ""
 	}
 
-	// Phase 6: Assemble Final Message
-	finalMessage := assembleFinalMessage(cfg, topLevel, moduleSections, debugWriter)
+	// Phase 5: Assemble Final Message
+	finalMessage := assembleFinalMessage(cfg, topLevel, moduleSections, logger)
 
-	// Phase 7: Validate and Output (message only - no git commit)
-	return validateAndOutput(cfg, finalMessage)
+	// Phase 6: Validate and Output (message only - no git commit)
+	exitCode, shouldRetry := validateAndOutput(cfg, finalMessage)
+	return exitCode, shouldRetry, finalMessage
 }
 
 // Phase 1: Parse Configuration
-func parseConfig() (bool, string, error) {
+func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error) {
 	// Parse flags
-	debug := false
 	for _, arg := range os.Args[3:] { // Skip program name, "commit", and "message"
-		if arg == "--debug" {
+		switch arg {
+		case "--debug", "-d":
 			debug = true
+		case "--commit", "-c":
+			autoCommit = true
 		}
 	}
 
 	// Get repository root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
+	workspaceRoot, err = repository.GetRepositoryRoot("")
 	if err != nil {
-		return false, "", fmt.Errorf("failed to find repository root: %w", err)
+		return false, false, "", fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	return debug, workspaceRoot, nil
+	return debug, autoCommit, workspaceRoot, nil
 }
 
-// Phase 2: Verify Contract Implementation
-func verifyContractImplementation(workspaceRoot string) error {
+// verifyContractImplementation checks if the contract implementation is valid
+func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) error {
 	contractPath := filepath.Join(workspaceRoot, "contracts/ai/commit-message/0.1.0/contract.yml")
 	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
 	if len(contractErrors) > 0 {
-		fmt.Fprintf(os.Stderr, "❌ Contract implementation verification failed:\n")
+		logger.Error("Contract implementation verification failed")
 		for _, err := range contractErrors {
-			fmt.Fprintf(os.Stderr, "  - [%s] %s\n", err.Code, err.Message)
+			logger.Error(fmt.Sprintf("  [%s] %s", err.Code, err.Message))
 		}
 		return fmt.Errorf("contract verification failed")
 	}
@@ -200,7 +259,7 @@ func verifyContractImplementation(workspaceRoot string) error {
 }
 
 // Phase 3: Build Execution Context
-func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*executionConfig, string, string, error) {
+func buildExecutionContext(workspaceRoot string, logger *logging.Logger) (*executionConfig, string, string, error) {
 	// Validate inputs
 	if workspaceRoot == "" {
 		return nil, "", "", fmt.Errorf("workspaceRoot cannot be empty")
@@ -220,22 +279,22 @@ func buildExecutionContext(workspaceRoot string, debugWriter *debugWriter) (*exe
 	}
 
 	// Extract affected modules
-	affectedModules := extractAffectedModules(report, debugWriter)
+	affectedModules := extractAffectedModules(report, logger)
 
 	// Get git diff and stats
-	gitDiff, diffStats, err := getGitDiffAndStats(workspaceRoot, debugWriter)
+	gitDiff, diffStats, err := getGitDiffAndStats(workspaceRoot, logger)
 	if err != nil {
 		return nil, "", "", err
 	}
 
-	debugWriter.log("Affected modules count: %d", len(affectedModules))
+	logger.Debug(fmt.Sprintf("Affected modules count: %d", len(affectedModules)))
 	for i, mod := range affectedModules {
-		debugWriter.log("  %d. %s", i+1, mod)
+		logger.Debug(fmt.Sprintf("  %d. %s", i+1, mod))
 	}
 
 	cfg := &executionConfig{
 		workspaceRoot:   workspaceRoot,
-		debug:           debugWriter.enabled,
+		debug:           logger.IsDebugMode(),
 		stagedFiles:     report.AllFiles,
 		affectedModules: affectedModules,
 		gitDiff:         gitDiff,
@@ -267,7 +326,7 @@ func getStagedFilesReport(workspaceRoot string) (*reports.FilesModulesReport, st
 }
 
 // extractAffectedModules extracts and validates unique module names from file report
-func extractAffectedModules(report *reports.FilesModulesReport, debugWriter *debugWriter) []string {
+func extractAffectedModules(report *reports.FilesModulesReport, logger *logging.Logger) []string {
 	moduleSet := make(map[string]bool)
 	for _, file := range report.AllFiles {
 		for _, module := range file.Modules {
@@ -275,7 +334,7 @@ func extractAffectedModules(report *reports.FilesModulesReport, debugWriter *deb
 			if isValidModuleName(module) {
 				moduleSet[module] = true
 			} else {
-				debugWriter.log("WARNING: Skipping invalid module name: %s", module)
+				logger.Warn(fmt.Sprintf("Skipping invalid module name: %s", module))
 			}
 		}
 	}
@@ -289,7 +348,7 @@ func extractAffectedModules(report *reports.FilesModulesReport, debugWriter *deb
 }
 
 // getGitDiffAndStats retrieves git diff and diff stats for staged changes
-func getGitDiffAndStats(workspaceRoot string, debugWriter *debugWriter) (string, string, error) {
+func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, string, error) {
 	repo, err := getGitRepo(workspaceRoot)
 	if err != nil {
 		return "", "", err
@@ -310,7 +369,7 @@ func getGitDiffAndStats(workspaceRoot string, debugWriter *debugWriter) (string,
 	// Get git diff stats
 	diffStats, err := repo.StagedDiffStats()
 	if err != nil {
-		debugWriter.log("Warning: Failed to get diff stats: %v", err)
+		logger.Warn(fmt.Sprintf("Failed to get diff stats: %v", err))
 		diffStats = ""
 	}
 
@@ -318,15 +377,19 @@ func getGitDiffAndStats(workspaceRoot string, debugWriter *debugWriter) (string,
 }
 
 // Phase 4: Generate Top-Level Summary
-func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diffStats string, debugWriter *debugWriter) (string, error) {
+func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diffStats string, logger *logging.Logger) (string, error) {
 	topLevelContext := buildTopLevelContext(stagedFilesTable, cfg.gitDiff, diffStats, cfg.affectedModules)
 
-	debugWriter.write("debug-top-level-context.md", topLevelContext)
+	writeDebugFile(cfg.workspaceRoot, logger, "debug-top-level-context.md", topLevelContext)
 
 	var topLevelOutput string
+	var providerName string
 	err := commitmessage.WithProgress("🤖 Generating top-level commit summary...", func() error {
-		result, genErr := generateWithPrompt("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
-		topLevelOutput = result
+		result, genErr := generateWithPromptResult("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
+		if result != nil {
+			topLevelOutput = result.Output
+			providerName = result.ProviderName
+		}
 		return genErr
 	})
 
@@ -334,36 +397,41 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 		return "", fmt.Errorf("running commit-message-top-level agent: %w", err)
 	}
 
+	// Log provider info when debug is enabled
+	if providerName != "" {
+		logger.Debug(fmt.Sprintf("AI provider used: %s", providerName))
+	}
+
 	// Strip out any module sections the AI may have added after "Changes:" line
 	// Module sections will be generated separately and appended later
 	topLevelOutput = stripModuleSectionsFromTopLevel(topLevelOutput)
 
-	debugWriter.write("debug-top-level-output.md", topLevelOutput)
+	writeDebugFile(cfg.workspaceRoot, logger, "debug-top-level-output.md", topLevelOutput)
 
 	return topLevelOutput, nil
 }
 
 // Phase 5: Generate Module Sections (multi-module only)
-func generateModuleSections(cfg *executionConfig, debugWriter *debugWriter) ([]string, error) {
+func generateModuleSections(cfg *executionConfig, logger *logging.Logger) ([]string, error) {
 	// Use parallel implementation for performance (60-70% speedup for multi-module commits)
 	// Sequential: N modules × 5s = 15s for 3 modules
 	// Parallel:   max(5s) = 5s for 3 modules
-	return generateModuleSectionsParallel(cfg, debugWriter, nil)
+	return generateModuleSectionsParallel(cfg, logger, nil)
 }
 
 // Phase 6: Assemble Final Message
-func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections []string, debugWriter *debugWriter) string {
+func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections []string, logger *logging.Logger) string {
 	// Combine sections
 	combinedMessage := combineCommitSections(topLevel, moduleSections)
-	debugWriter.write("debug-combined-message.md", combinedMessage)
+	writeDebugFile(cfg.workspaceRoot, logger, "debug-combined-message.md", combinedMessage)
 
 	// Auto-cleanup
 	cleanedOutput := commitmessage.AutoCleanup(combinedMessage)
-	debugWriter.write("debug-after-cleanup.md", cleanedOutput)
+	writeDebugFile(cfg.workspaceRoot, logger, "debug-after-cleanup.md", cleanedOutput)
 
 	// Add missing modules
 	cleanedOutput = addMissingModules(cleanedOutput, cfg.affectedModules, cfg.stagedFiles, cfg.gitDiff)
-	debugWriter.write("debug-after-missing-modules.md", cleanedOutput)
+	writeDebugFile(cfg.workspaceRoot, logger, "debug-after-missing-modules.md", cleanedOutput)
 
 	return cleanedOutput
 }
@@ -393,6 +461,70 @@ func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 	fmt.Print(message)
 
 	return 0, false
+}
+
+// performAutoCommit creates a git commit with the generated message.
+// This is called when --commit flag is provided and message generation succeeds.
+func performAutoCommit(workspaceRoot string, message string, logger *logging.Logger) int {
+	repo, err := getGitRepo(workspaceRoot)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Auto-commit failed: %v", err))
+		return 1
+	}
+
+	// Get author info from git config (use git command for reliability)
+	authorName, authorEmail := getGitAuthorInfo(workspaceRoot)
+	if authorName == "" || authorEmail == "" {
+		logger.Error("Auto-commit failed: git user.name and user.email must be configured")
+		logger.Info("Run: git config user.name \"Your Name\"")
+		logger.Info("Run: git config user.email \"your@email.com\"")
+		return 1
+	}
+
+	// Perform the commit
+	hash, err := repo.Commit(message, authorName, authorEmail)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Git commit failed: %v", err))
+		return 1
+	}
+
+	// Success message to stderr (so it doesn't interfere with stdout output)
+	fmt.Fprintf(os.Stderr, "\n✓ Committed: %s\n", hash[:7])
+	return 0
+}
+
+// getGitAuthorInfo retrieves git user.name and user.email from git config.
+// Returns empty strings if not configured.
+func getGitAuthorInfo(workspaceRoot string) (name string, email string) {
+	// Try to get from environment first (GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL)
+	name = os.Getenv("GIT_AUTHOR_NAME")
+	email = os.Getenv("GIT_AUTHOR_EMAIL")
+	if name != "" && email != "" {
+		return name, email
+	}
+
+	// Fall back to git config command
+	// Using exec.Command because go-git config reading can be complex
+	nameCmd := execCommand("git", "config", "user.name")
+	nameCmd.Dir = workspaceRoot
+	if nameOut, err := nameCmd.Output(); err == nil {
+		name = strings.TrimSpace(string(nameOut))
+	}
+
+	emailCmd := execCommand("git", "config", "user.email")
+	emailCmd.Dir = workspaceRoot
+	if emailOut, err := emailCmd.Output(); err == nil {
+		email = strings.TrimSpace(string(emailOut))
+	}
+
+	return name, email
+}
+
+// execCommand is a variable to allow mocking in tests
+var execCommand = execCommandReal
+
+func execCommandReal(name string, args ...string) *exec.Cmd {
+	return exec.Command(name, args...)
 }
 
 // promptYN prompts the user with a yes/no question

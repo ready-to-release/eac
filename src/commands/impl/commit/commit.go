@@ -31,6 +31,9 @@ func Commit() int {
 	case "message":
 		// Handled by separate registration in message.go
 		return 0
+	case "reset":
+		// Handled by separate registration in reset.go
+		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
 		printCommitUsage()
@@ -45,6 +48,7 @@ func printCommitUsage() {
 	fmt.Println()
 	fmt.Println("Subcommands:")
 	fmt.Println("  message    Generate AI-powered commit message from staged changes")
+	fmt.Println("  reset      Soft reset the latest commit, preserving changes")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  # Generate commit message for staged changes")
@@ -52,6 +56,9 @@ func printCommitUsage() {
 	fmt.Println()
 	fmt.Println("  # Generate with debug output")
 	fmt.Println("  r2r commit message --debug")
+	fmt.Println()
+	fmt.Println("  # Reset the latest commit (keeps changes staged)")
+	fmt.Println("  r2r commit reset")
 	fmt.Println()
 	fmt.Println("Use 'r2r commit <subcommand> --help' for more information about a command.")
 }
