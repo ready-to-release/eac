@@ -12,10 +12,10 @@ import (
 
 // MetadataCache holds cached extension metadata with image digest for invalidation
 type MetadataCache struct {
-	ExtensionName string           `json:"extension_name"`
-	ImageDigest   string           `json:"image_digest"` // Docker image digest for cache invalidation
-	Metadata      *ExtensionMeta   `json:"metadata"`
-	CachedAt      time.Time        `json:"cached_at"`
+	ExtensionName string         `json:"extension_name"`
+	ImageDigest   string         `json:"image_digest"` // Docker image digest for cache invalidation
+	Metadata      *ExtensionMeta `json:"metadata"`
+	CachedAt      time.Time      `json:"cached_at"`
 }
 
 // ExtensionMeta represents the parsed extension metadata from extension-meta command
@@ -39,7 +39,7 @@ type VolumeRequest struct {
 
 // MetaRequirements represents extension requirements from metadata
 type MetaRequirements struct {
-	CLIVersion       string `json:"cli_version,omitempty" yaml:"nn-cli-version,omitempty"`
+	CLIVersion       string `json:"cli_version,omitempty" yaml:"r2r-version,omitempty"`
 	ContainerRuntime string `json:"container_runtime,omitempty" yaml:"container-runtime,omitempty"`
 	MinimumMemory    string `json:"minimum_memory,omitempty" yaml:"minimum-memory,omitempty"`
 	MinimumCPU       string `json:"minimum_cpu,omitempty" yaml:"minimum-cpu,omitempty"`
