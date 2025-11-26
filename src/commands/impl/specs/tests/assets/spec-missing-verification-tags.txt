@@ -1,0 +1,15 @@
+@deps:go
+Feature: test_missing-tags
+
+  As a developer
+  I want to test tag validation
+
+  Rule: Tags should be validated
+
+    Scenario: Missing verification tag on scenario
+      When I run a command
+      Then the exit code is 0
+
+    Scenario: Another scenario without tag
+      When I do something
+      Then it works

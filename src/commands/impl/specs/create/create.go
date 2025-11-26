@@ -25,17 +25,62 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/ready-to-release/eac/src/commands/impl/specs"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/ai"
-	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/ai/providers"
+	"github.com/ready-to-release/eac/src/core/contracts"
+	"github.com/ready-to-release/eac/src/core/git"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
 	registry.Register(SpecsCreate)
 }
+
+// ============================================================================
+// Mock Support for Testing
+// ============================================================================
+
+// mockAIResponse holds the mock response for testing. When set, AI calls return this.
+var mockAIResponse string
+
+// SetMockAIResponse sets a mock AI response for testing.
+func SetMockAIResponse(response string) {
+	mockAIResponse = response
+}
+
+// ResetMockAIResponse clears the mock AI response.
+func ResetMockAIResponse() {
+	mockAIResponse = ""
+}
+
+// gitRepo holds the git repository instance for git operations.
+// In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
+var gitRepo git.GitRepository
+
+// getGitRepo returns the git repository, creating one if needed
+func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
+	if gitRepo != nil {
+		return gitRepo, nil
+	}
+	return git.Open(workspaceRoot)
+}
+
+// SetGitRepo allows tests to inject a mock repository.
+func SetGitRepo(repo git.GitRepository) {
+	gitRepo = repo
+}
+
+// ResetGitRepo clears the mock git repository.
+func ResetGitRepo() {
+	gitRepo = nil
+}
+
+// ============================================================================
 
 // Intent: Create a Gherkin specification from natural language description using AI
 //
@@ -46,6 +91,21 @@ func SpecsCreate() int {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
+	}
+
+	// Initialize logger (logs to out/logs/specs/)
+	var logger *logging.Logger
+	if config.Debug {
+		logger, err = logging.NewWithDebug("specs", config.TemplateRoot)
+	} else {
+		logger, err = logging.NewDefault("specs", config.TemplateRoot)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize logger: %v\n", err)
+		// Continue without logger - not fatal
+	} else {
+		config.Logger = logger
+		defer logger.Sync()
 	}
 
 	// Load contract and build prompt
@@ -69,8 +129,17 @@ func SpecsCreate() int {
 		return 1
 	}
 
+	// Check if file exists and --force not specified
+	if !config.Force {
+		if _, err := os.Stat(finalOutputPath); err == nil {
+			fmt.Fprintf(os.Stderr, "Error: File already exists: %s\n", finalOutputPath)
+			fmt.Fprintf(os.Stderr, "Use --force to overwrite\n")
+			return 1
+		}
+	}
+
 	// Write output and report success
-	if err := writeOutputAndReportSuccess(finalOutputPath, cleanedOutput); err != nil {
+	if err := writeOutputAndReportSuccess(finalOutputPath, cleanedOutput, config); err != nil {
 		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
 		return 1
 	}
@@ -81,11 +150,14 @@ func SpecsCreate() int {
 // SpecsConfig holds configuration for specs create command
 type SpecsConfig struct {
 	Description  string
-	Debug        bool
-	Module       string
-	OutputPath   string
-	PromptPath   string
+	Debug        bool              // -d, --debug: Save intermediate outputs
+	Force        bool              // -f, --force: Overwrite existing files
+	Module       string            // -m, --module: Target module
+	OutputPath   string            // -o, --output: Custom output path
+	PromptPath   string            // --prompt: Custom system prompt file
+	TemplatePath string            // --template: Custom template file
 	TemplateRoot string
+	Logger       *logging.Logger
 }
 
 // loadAndBuildPrompt loads the contract and builds the AI prompt
@@ -241,10 +313,17 @@ func determineAndValidateOutputPath(config *SpecsConfig, content string) (string
 // - Creates necessary directories
 // - Writes specification content to file
 // - Displays success message with next steps
-func writeOutputAndReportSuccess(outputPath string, content string) error {
+func writeOutputAndReportSuccess(outputPath string, content string, config *SpecsConfig) error {
 	// Create directories
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 		return fmt.Errorf("failed to create directories: %w", err)
+	}
+
+	// Log the write operation
+	if config.Logger != nil {
+		config.Logger.Debug("Writing specification file",
+			zap.String("path", outputPath),
+			zap.Int("size", len(content)))
 	}
 
 	// Write file
@@ -274,23 +353,39 @@ func parseConfig() (*SpecsConfig, error) {
 	args := os.Args[3:] // Skip program name, "specs", and "create"
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if arg == "--debug" {
+		switch arg {
+		case "-d", "--debug":
 			config.Debug = true
-		} else if arg == "--module" && i+1 < len(args) {
-			config.Module = args[i+1]
-			i++
-		} else if arg == "--output" && i+1 < len(args) {
-			config.OutputPath = args[i+1]
-			i++
-		} else if arg == "--prompt" && i+1 < len(args) {
-			config.PromptPath = args[i+1]
-			i++
-		} else if !strings.HasPrefix(arg, "--") {
-			// First non-flag argument is the description
-			if description == "" {
-				description = arg
-			} else {
-				description += " " + arg
+		case "-f", "--force":
+			config.Force = true
+		case "-m", "--module":
+			if i+1 < len(args) {
+				config.Module = args[i+1]
+				i++
+			}
+		case "-o", "--output":
+			if i+1 < len(args) {
+				config.OutputPath = args[i+1]
+				i++
+			}
+		case "--prompt":
+			if i+1 < len(args) {
+				config.PromptPath = args[i+1]
+				i++
+			}
+		case "--template":
+			if i+1 < len(args) {
+				config.TemplatePath = args[i+1]
+				i++
+			}
+		default:
+			if !strings.HasPrefix(arg, "-") {
+				// First non-flag argument is the description
+				if description == "" {
+					description = arg
+				} else {
+					description += " " + arg
+				}
 			}
 		}
 	}
@@ -363,7 +458,12 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 
 // generateWithAI invokes the AI provider with the prompt
 func generateWithAI(templateRoot string, prompt string, debug bool) (string, error) {
-	// Check for test double mode
+	// Check for mock response (test mode) - module-level mock takes precedence
+	if mockAIResponse != "" {
+		return mockAIResponse, nil
+	}
+
+	// Fallback: check for legacy environment variable (for backward compatibility)
 	if mockResponse := os.Getenv("R2R_TEST_AI_RESPONSE"); mockResponse != "" {
 		return mockResponse, nil
 	}

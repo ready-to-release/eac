@@ -1,0 +1,9 @@
+Feature: InvalidNaming
+
+  Scenario: Missing verification tag
+    When I run a command
+    Then the exit code is 0
+
+  Scenario: Another missing tag
+    When I do something
+    Then it works

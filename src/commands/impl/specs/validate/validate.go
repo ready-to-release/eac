@@ -22,14 +22,46 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts"
+	"github.com/ready-to-release/eac/src/core/git"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
 	registry.Register(SpecsValidate)
 }
+
+// ============================================================================
+// Mock Support for Testing
+// ============================================================================
+
+// gitRepo holds the git repository instance for git operations.
+// In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
+var gitRepo git.GitRepository
+
+// getGitRepo returns the git repository, creating one if needed
+func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
+	if gitRepo != nil {
+		return gitRepo, nil
+	}
+	return git.Open(workspaceRoot)
+}
+
+// SetGitRepo allows tests to inject a mock repository.
+func SetGitRepo(repo git.GitRepository) {
+	gitRepo = repo
+}
+
+// ResetGitRepo clears the mock git repository.
+func ResetGitRepo() {
+	gitRepo = nil
+}
+
+// ============================================================================
 
 // Intent: Validate Gherkin specifications against the contract
 //
@@ -60,6 +92,23 @@ func SpecsValidate() int {
 		return 1
 	}
 
+	// Initialize logger (logs to out/logs/specs/)
+	var logger *logging.Logger
+	if config.Verbose {
+		logger, err = logging.NewWithDebug("specs", config.RepositoryRoot)
+	} else {
+		logger, err = logging.NewDefault("specs", config.RepositoryRoot)
+	}
+	if err != nil {
+		// Continue without logger - not fatal
+		if config.Verbose {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to initialize logger: %v\n", err)
+		}
+	} else {
+		config.Logger = logger
+		defer logger.Sync()
+	}
+
 	// Validate path security
 	if err := validatePath(config.Path, config.RepositoryRoot); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -71,6 +120,12 @@ func SpecsValidate() int {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: file or directory not found: %s\n", config.Path)
 		return 1
+	}
+
+	if config.Logger != nil {
+		config.Logger.Debug("Starting validation",
+			zap.String("path", config.Path),
+			zap.Bool("isDir", info.IsDir()))
 	}
 
 	var results []*ValidationResult
@@ -99,6 +154,15 @@ func SpecsValidate() int {
 		}
 	}
 
+	if config.Logger != nil {
+		passed := countPassed(results)
+		failed := countFailed(results)
+		config.Logger.Debug("Validation complete",
+			zap.Int("total", len(results)),
+			zap.Int("passed", passed),
+			zap.Int("failed", failed))
+	}
+
 	// Format and display output
 	if config.Format == "json" {
 		outputJSON(results)
@@ -119,10 +183,14 @@ func SpecsValidate() int {
 // ValidateConfig holds configuration for specs validate command
 type ValidateConfig struct {
 	Path           string
-	Quiet          bool
-	Verbose        bool
-	Format         string
+	Quiet          bool   // -q, --quiet: Show only errors
+	Verbose        bool   // -v, --verbose: Detailed output
+	Format         string // -f, --format: Output format (text, json)
+	CheckTags      bool   // --check-tags: Enable tag validation (default: true)
+	Strict         bool   // --strict: Fail on warnings
+	Fix            bool   // --fix: Auto-fix correctable tag issues
 	RepositoryRoot string
+	Logger         *logging.Logger
 }
 
 // ValidationResult holds the validation result for a single file
@@ -135,7 +203,8 @@ type ValidationResult struct {
 // parseValidateConfig parses command line arguments into configuration
 func parseValidateConfig() (*ValidateConfig, error) {
 	config := &ValidateConfig{
-		Format: "text", // Default format
+		Format:    "text", // Default format
+		CheckTags: true,   // Default: tag validation enabled
 	}
 
 	args := os.Args[3:] // Skip program name, "specs", and "validate"
@@ -144,19 +213,27 @@ func parseValidateConfig() (*ValidateConfig, error) {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "--quiet":
+		case "-q", "--quiet":
 			config.Quiet = true
-		case "--verbose":
+		case "-v", "--verbose":
 			config.Verbose = true
-		case "--format":
+		case "-f", "--format":
 			if i+1 < len(args) {
 				config.Format = args[i+1]
 				i++
 			} else {
 				return nil, fmt.Errorf("--format requires an argument (text|json)")
 			}
+		case "--check-tags":
+			config.CheckTags = true
+		case "--no-check-tags":
+			config.CheckTags = false
+		case "--strict":
+			config.Strict = true
+		case "--fix":
+			config.Fix = true
 		default:
-			if !strings.HasPrefix(arg, "--") {
+			if !strings.HasPrefix(arg, "-") {
 				if path == "" {
 					path = arg
 				} else {
@@ -185,10 +262,16 @@ func parseValidateConfig() (*ValidateConfig, error) {
 	// Relative paths are interpreted relative to the current working directory,
 	// not the repository root
 	if !filepath.IsAbs(config.Path) {
-		// First, resolve relative to current working directory
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get current working directory: %w", err)
+		// First, check for R2R_PWD environment variable (used in isolated tests)
+		// This allows tests to run from a different directory than the command invocation
+		cwd := os.Getenv("R2R_PWD")
+		if cwd == "" {
+			// Fall back to actual working directory
+			var err error
+			cwd, err = os.Getwd()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get current working directory: %w", err)
+			}
 		}
 		config.Path = filepath.Clean(filepath.Join(cwd, config.Path))
 	} else {

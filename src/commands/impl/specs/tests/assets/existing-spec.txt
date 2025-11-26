@@ -1,0 +1,9 @@
+@deps:go @ov
+Feature: src-commands_auth
+
+  Rule: Existing specification
+
+    @L2 @ov
+    Scenario: File exists
+      Given an existing file
+      Then it should not be overwritten
