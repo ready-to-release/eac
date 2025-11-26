@@ -74,6 +74,7 @@ var buildFunctions = map[string]BuildFunc{
 	"specifications":   buildSpecifications,
 	"definitions-type": buildDefinitionsType,
 	"markdown":         buildMarkdown,
+	"docker-image":   buildDockerImage,
 	// Infrastructure module types
 	"scripts":         buildScripts,
 	"scripts-sh":      buildScriptsSh,
@@ -455,6 +456,56 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 	// Generate image tag from moniker
 	// Example: "containers" -> "cli-containers:latest"
 	imageName := fmt.Sprintf("cli-%s:latest", module.Moniker)
+
+	logln(logWriter, "📦 Building Docker image: %s", imageName)
+	logln(logWriter, "   Dockerfile: %s", dockerfilePath)
+	logln(logWriter, "   Build context: %s", moduleRoot)
+
+	// Build image using docker build
+	exitCode := RunCommandWithLog(moduleRoot, logWriter,
+		"docker", "build",
+		"-t", imageName,
+		"-f", dockerfilePath,
+		".")
+
+	if exitCode != 0 {
+		logln(logWriter, "❌ Docker build failed")
+		return exitCode
+	}
+
+	logln(logWriter, "✅ Docker image built successfully: %s", imageName)
+
+	// Save image name to output directory for reference
+	imageInfoPath := filepath.Join(outputDir, "image-info.txt")
+	imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\n",
+		imageName, dockerfilePath, time.Now().Format(time.RFC3339))
+
+	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
+		logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
+	}
+
+	return 0
+}
+
+// buildDockerImage builds a standalone Docker image from a Dockerfile
+// Used for CI/tooling containers like go-bvt-image
+func buildDockerImage(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+
+	logln(logWriter, "\n=== Building docker-image: %s ===", module.Moniker)
+
+	// Find Dockerfile (check for both "Dockerfile" and ".Dockerfile")
+	dockerfilePath := filepath.Join(moduleRoot, "Dockerfile")
+	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+		dockerfilePath = filepath.Join(moduleRoot, ".Dockerfile")
+		if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+			logln(logWriter, "❌ No Dockerfile found in: %s", moduleRoot)
+			return 1
+		}
+	}
+
+	// Generate image tag from moniker
+	imageName := fmt.Sprintf("%s:latest", module.Moniker)
 
 	logln(logWriter, "📦 Building Docker image: %s", imageName)
 	logln(logWriter, "   Dockerfile: %s", dockerfilePath)
