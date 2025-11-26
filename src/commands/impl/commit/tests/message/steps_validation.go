@@ -1,7 +1,7 @@
-// Package tests provides BDD step definitions for the commit command.
+// Package message provides BDD step definitions for the commit message subcommand.
 //
 // This file contains step definitions for message validation and contract verification.
-package tests
+package message
 
 import (
 	"fmt"

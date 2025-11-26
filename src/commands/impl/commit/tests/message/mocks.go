@@ -1,7 +1,7 @@
-// Package tests provides BDD step definitions for the commit command.
+// Package message provides BDD step definitions for the commit message subcommand.
 //
 // This file contains mock setup and cleanup functions for git repository testing.
-package tests
+package message
 
 import (
 	"fmt"
@@ -12,18 +12,29 @@ import (
 	"github.com/ready-to-release/eac/src/core/git"
 )
 
-// SetupCommitMocks sets up git and AI mocks for isolated testing.
+// Package-level variables set by the main test runner (from tests package)
+var (
+	// IsolatedTestProjectDir stores the temp directory for isolated test projects
+	IsolatedTestProjectDir string
+	// OriginalRepoRoot stores the actual repository root
+	OriginalRepoRoot string
+)
+
+// MockRepo holds the mock git repository for message tests
+var MockRepo *git.MockRepository
+
+// SetupMocks sets up git and AI mocks for isolated testing.
 // Called automatically when @env:isolated-test-project tag is present.
-func SetupCommitMocks() error {
+func SetupMocks() error {
 	if IsolatedTestProjectDir == "" {
 		return nil // Not in isolated mode
 	}
 
 	// Set up mock git repository
-	TestMockRepo = git.NewMockRepository(IsolatedTestProjectDir).
+	MockRepo = git.NewMockRepository(IsolatedTestProjectDir).
 		WithCurrentBranch("main").
 		WithHeadSHA("abc1234567890")
-	commit.SetGitRepo(TestMockRepo)
+	commit.SetGitRepo(MockRepo)
 
 	// Load and set mock AI response
 	// Note: filename has typo "reponse" instead of "response" - keeping as-is
@@ -37,31 +48,31 @@ func SetupCommitMocks() error {
 	return nil
 }
 
-// CleanupCommitMocks resets all mocks.
-func CleanupCommitMocks() {
+// CleanupMocks resets all mocks.
+func CleanupMocks() {
 	commit.ResetGitRepo()
 	commit.ResetMockAIResponse()
-	TestMockRepo = nil
+	MockRepo = nil
 }
 
 // setupInMemoryGitRepo creates a mock git repository for testing.
 func setupInMemoryGitRepo() error {
-	if TestMockRepo == nil {
-		return SetupCommitMocks()
+	if MockRepo == nil {
+		return SetupMocks()
 	}
 	return nil
 }
 
 // createModuleStructure sets up mock module files.
 func createModuleStructure(modules []string) error {
-	if TestMockRepo == nil {
+	if MockRepo == nil {
 		return fmt.Errorf("mock repo not initialized")
 	}
 	var trackedFiles []string
 	for _, mod := range modules {
 		trackedFiles = append(trackedFiles, fmt.Sprintf("src/%s/module.yml", mod))
 	}
-	TestMockRepo.WithTrackedFiles(trackedFiles)
+	MockRepo.WithTrackedFiles(trackedFiles)
 	return nil
 }
 
@@ -73,14 +84,14 @@ func commitModuleStructure() error {
 
 // stageFileInModule stages a file in a module.
 func stageFileInModule(module, filename, content string) error {
-	if TestMockRepo == nil {
+	if MockRepo == nil {
 		return fmt.Errorf("mock repo not initialized")
 	}
 	filePath := fmt.Sprintf("src/%s/%s", module, filename)
 
 	// Add to staged files
-	currentStaged, _ := TestMockRepo.StagedFiles()
-	TestMockRepo.WithStagedFiles(append(currentStaged, filePath))
+	currentStaged, _ := MockRepo.StagedFiles()
+	MockRepo.WithStagedFiles(append(currentStaged, filePath))
 
 	// Set up mock diff for this file
 	diff := fmt.Sprintf(`diff --git a/%s b/%s
@@ -90,15 +101,15 @@ new file mode 100644
 @@ -0,0 +1 @@
 +%s`, filePath, filePath, filePath, content)
 
-	currentDiff, _ := TestMockRepo.StagedDiff()
+	currentDiff, _ := MockRepo.StagedDiff()
 	if currentDiff != "" {
 		diff = currentDiff + "\n" + diff
 	}
-	TestMockRepo.WithStagedDiff(diff)
+	MockRepo.WithStagedDiff(diff)
 
 	// Set up mock diff stats
 	stats := fmt.Sprintf(" %s | 1 +\n 1 file changed, 1 insertion(+)", filePath)
-	TestMockRepo.WithStagedDiffStats(stats)
+	MockRepo.WithStagedDiffStats(stats)
 
 	return nil
 }
