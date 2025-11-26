@@ -162,29 +162,57 @@ jobs:
             src/core/go.sum
 
       - name: Run Repository Validation
+        id: validation
         run: |
           cd src/commands
           FAILED=0
+          ERRORS=""
 
           echo "🔍 Validating repository contracts..."
-          go run . test repository || FAILED=1
+          if ! OUTPUT=$(go run . test repository 2>&1); then
+            FAILED=1
+            ERRORS="${ERRORS}### Repository Contract Validation Failed\n\`\`\`\n${OUTPUT}\n\`\`\`\n\n"
+            echo "::error::Repository contract validation failed"
+          fi
+          echo "$OUTPUT"
 
           echo ""
           echo "🔍 Validating module dependencies..."
-          go run . validate dependencies || FAILED=1
+          if ! OUTPUT=$(go run . validate dependencies 2>&1); then
+            FAILED=1
+            ERRORS="${ERRORS}### Module Dependencies Validation Failed\n\`\`\`\n${OUTPUT}\n\`\`\`\n\n"
+            echo "::error::Module dependencies validation failed"
+          fi
+          echo "$OUTPUT"
 
           echo ""
           echo "🔍 Validating static modules (config files)..."
-          go run . build repo-config || FAILED=1
-          go run . build contracts || FAILED=1
+          if ! OUTPUT=$(go run . build repo-config 2>&1); then
+            FAILED=1
+            ERRORS="${ERRORS}### repo-config Build Failed\n\`\`\`\n${OUTPUT}\n\`\`\`\n\n"
+            echo "::error::repo-config build failed"
+          fi
+          echo "$OUTPUT"
+
+          if ! OUTPUT=$(go run . build contracts 2>&1); then
+            FAILED=1
+            ERRORS="${ERRORS}### contracts Build Failed\n\`\`\`\n${OUTPUT}\n\`\`\`\n\n"
+            echo "::error::contracts build failed"
+          fi
+          echo "$OUTPUT"
 
           echo ""
           if [ $FAILED -ne 0 ]; then
-            echo "::error::Validation failed - fix issues before proceeding"
+            # Write errors to step summary for visibility
+            echo "## ❌ Validation Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo -e "$ERRORS" >> $GITHUB_STEP_SUMMARY
+            echo "::error::Validation failed - see job summary for details"
             exit 1
           fi
 
           echo "✅ All validations passed"
+          echo "## ✅ Validation Passed" >> $GITHUB_STEP_SUMMARY
 
   calculate-order:
     name: Calculate Execution Order
