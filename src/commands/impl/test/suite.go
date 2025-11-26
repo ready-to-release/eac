@@ -228,10 +228,39 @@ func TestSuite() int {
 		// Track unique modules found for debugging
 		foundModules := make(map[string]int)
 
+		// Build file-to-module cache for efficient lookup
+		// Uses contract-based ownership (respects excludes, parent-child hierarchy)
+		fileModuleCache := make(map[string]string)
+
 		for _, test := range selectedTests {
-			// Extract module from file path
-			// Path format: src/<module>/... or specs/src-<module>/...
-			testModule := extractModuleFromPath(test.FilePath)
+			// Check cache first
+			testModule, cached := fileModuleCache[test.FilePath]
+			if !cached {
+				// Use contract-based ownership if registry is available
+				if moduleReport != nil && moduleReport.Registry != nil {
+					// Normalize path for contract matching
+					normalizedPath := filepath.ToSlash(test.FilePath)
+					// Make path relative to workspace root
+					if strings.HasPrefix(normalizedPath, filepath.ToSlash(workspaceRoot)) {
+						normalizedPath = strings.TrimPrefix(normalizedPath, filepath.ToSlash(workspaceRoot))
+						normalizedPath = strings.TrimPrefix(normalizedPath, "/")
+					}
+
+					// Find owning modules using contract-based matching
+					matchingModules := moduleReport.Registry.FindModulesForFile(normalizedPath)
+					if len(matchingModules) > 0 {
+						// Use the first matching module (most specific due to filtering)
+						testModule = matchingModules[0].Moniker
+					}
+				}
+
+				// Fallback to path-based extraction if no contract match
+				if testModule == "" {
+					testModule = extractModuleFromPath(test.FilePath)
+				}
+
+				fileModuleCache[test.FilePath] = testModule
+			}
 
 			// Track modules found
 			foundModules[testModule]++
