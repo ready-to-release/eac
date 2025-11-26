@@ -19,15 +19,13 @@
 package build
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
-	"time"
 
+	"github.com/ready-to-release/eac/src/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
@@ -46,6 +44,7 @@ type BuildResult struct {
 	Errors   []string
 }
 
+
 // Build command entry point - builds one or more modules
 func Build() int {
 	args := os.Args[2:] // Skip program name and "build"
@@ -63,8 +62,12 @@ func Build() int {
 	var monikers []string
 	tidyFirst := !isCI // Default: true for local, false for CI
 	tidyExplicitlySet := false
+	compressed := false
+	compressedUPX := false
+	version := ""
 
-	for _, arg := range args {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
 		switch arg {
 		case "--tidy-first":
 			tidyFirst = true
@@ -72,13 +75,29 @@ func Build() int {
 		case "--no-tidy":
 			tidyFirst = false
 			tidyExplicitlySet = true
-		default:
-			if strings.HasPrefix(arg, "--") {
-				fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+		case "--compressed":
+			compressed = true
+		case "--compressed-upx":
+			compressedUPX = true
+			compressed = true // UPX implies stripped
+		case "--version":
+			if i+1 >= len(args) {
+				fmt.Fprintf(os.Stderr, "Error: --version requires a value\n")
 				printBuildUsage()
 				return 1
 			}
-			monikers = append(monikers, arg)
+			i++
+			version = args[i]
+		default:
+			if strings.HasPrefix(arg, "--version=") {
+				version = strings.TrimPrefix(arg, "--version=")
+			} else if strings.HasPrefix(arg, "--") {
+				fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+				printBuildUsage()
+				return 1
+			} else {
+				monikers = append(monikers, arg)
+			}
 		}
 	}
 
@@ -98,7 +117,7 @@ func Build() int {
 
 	// If exactly one module specified, run single module build (verbose output)
 	if len(monikers) == 1 {
-		return buildSingleModule(monikers[0], workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet)
+		return buildSingleModule(monikers[0], workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version)
 	}
 
 	// If no monikers provided, default to all modules
@@ -110,11 +129,11 @@ func Build() int {
 	}
 
 	// Multiple modules - run parallel build with orchestrator
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version)
 }
 
 // buildSingleModule builds a single module with verbose output to console
-func buildSingleModule(moniker string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool) int {
+func buildSingleModule(moniker string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string) int {
 	// Get the module from registry
 	module, exists := moduleReport.Registry.Get(moniker)
 	if !exists {
@@ -191,32 +210,17 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 
 	// Execute build
 	buildOpts := BuildOptions{
-		TidyFirst: tidyFirst,
+		TidyFirst:     tidyFirst,
+		Compressed:    compressed,
+		CompressedUPX: compressedUPX,
+		Version:       version,
 	}
 	return buildFunc(module, workspaceRoot, outputDir, multiWriter, buildOpts)
 }
 
-// buildMultipleModules builds multiple modules in parallel
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool) int {
-	// Create orchestrator log file
-	orchestratorLogPath := filepath.Join(workspaceRoot, "out", "build", "orchestrator.log")
-	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create orchestrator log directory: %v\n", err)
-		return 1
-	}
-	orchestratorLog, err := os.Create(orchestratorLogPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create orchestrator log: %v\n", err)
-		return 1
-	}
-	defer orchestratorLog.Close()
-
-	orchestratorLogBuf := bufio.NewWriter(orchestratorLog)
-	defer orchestratorLogBuf.Flush()
-
-	orchestratorOut := io.MultiWriter(os.Stdout, orchestratorLogBuf)
-
-	// Check if any modules are Go modules (for tidy mode message)
+// buildMultipleModules builds multiple modules in parallel using the orchestrator
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string) int {
+	// Print tidy mode info before starting orchestrator
 	hasGoModules := false
 	for _, mon := range monikers {
 		if module, exists := moduleReport.Registry.Get(mon); exists {
@@ -227,204 +231,63 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		}
 	}
 
-	// Log tidy behavior (only if there are Go modules)
 	if hasGoModules {
 		if tidyFirst {
 			if tidyExplicitlySet {
-				fmt.Fprintf(orchestratorOut, "Tidy mode: enabled (explicit flag)\n")
+				fmt.Println("Tidy mode: enabled (explicit flag)")
 			} else {
-				fmt.Fprintf(orchestratorOut, "Tidy mode: enabled (default for local builds)\n")
+				fmt.Println("Tidy mode: enabled (default for local builds)")
 			}
 		} else {
 			if tidyExplicitlySet {
-				fmt.Fprintf(orchestratorOut, "Tidy mode: disabled (explicit flag)\n")
+				fmt.Println("Tidy mode: disabled (explicit flag)")
 			} else {
-				fmt.Fprintf(orchestratorOut, "Tidy mode: disabled (CI environment detected)\n")
+				fmt.Println("Tidy mode: disabled (CI environment detected)")
 			}
 		}
 	}
 
-	fmt.Fprintf(orchestratorOut, "Building %d modules in parallel: %v\n\n", len(monikers), monikers)
-
-	// Build each module in parallel
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	buildResults := []BuildResult{}
-	builtModules := []*modules.ModuleContract{}
-
-	for i, moniker := range monikers {
-		wg.Add(1)
-		go func(idx int, mon string, orchOut io.Writer) {
-			defer wg.Done()
-
-			module, exists := moduleReport.Registry.Get(mon)
-			if !exists {
-				mu.Lock()
-				fmt.Fprintf(orchOut, "[building] %s (Module not found) ........ Failed\n", mon)
-				buildResults = append(buildResults, BuildResult{
-					Moniker:  mon,
-					ExitCode: 1,
-					Errors:   []string{"Module not found"},
-				})
-				mu.Unlock()
-				return
-			}
-
-			moduleOutputDir := filepath.Join(workspaceRoot, "out", "build", mon)
-			parentDir := filepath.Dir(moduleOutputDir)
-			if err := os.MkdirAll(parentDir, 0755); err != nil {
-				mu.Lock()
-				fmt.Fprintf(orchOut, "[building] %s (Failed to create parent directory) ........ Failed\n", mon)
-				buildResults = append(buildResults, BuildResult{
-					Moniker:  mon,
-					ExitCode: 1,
-					Errors:   []string{fmt.Sprintf("Failed to create parent directory %s: %v", parentDir, err)},
-				})
-				mu.Unlock()
-				return
-			}
-
-			if err := os.RemoveAll(moduleOutputDir); err != nil {
-				fmt.Fprintf(orchOut, "[building] %s (Warning: failed to remove existing directory: %v)\n", mon, err)
-			}
-
-			if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
-				mu.Lock()
-				fmt.Fprintf(orchOut, "[building] %s (Failed to create directory) ........ Failed\n", mon)
-				buildResults = append(buildResults, BuildResult{
-					Moniker:  mon,
-					ExitCode: 1,
-					Errors:   []string{fmt.Sprintf("Failed to create directory %s: %v", moduleOutputDir, err)},
-				})
-				mu.Unlock()
-				return
-			}
-
-			logPath := filepath.Join(moduleOutputDir, "build.log")
-			logFile, err := os.Create(logPath)
-			if err != nil {
-				mu.Lock()
-				fmt.Fprintf(orchOut, "[building] %s (Failed to create log) ........ Failed\n", mon)
-				buildResults = append(buildResults, BuildResult{
-					Moniker:  mon,
-					ExitCode: 1,
-					Errors:   []string{fmt.Sprintf("Failed to create log file %s: %v", logPath, err)},
-				})
-				mu.Unlock()
-				return
-			}
-			defer logFile.Close()
-
-			multiWriter := io.MultiWriter(logFile)
-
-			done := make(chan bool)
-			go showProgress(orchOut, &mu, mon, done)
-
-			exitCode := runModuleBuild(module, workspaceRoot, moduleOutputDir, multiWriter, tidyFirst)
-
-			done <- true
-			close(done)
-
-			logFile.Close()
-
-			warnings, errors := parseLogForIssues(logPath)
-
-			mu.Lock()
-			builtModules = append(builtModules, module)
-			buildResults = append(buildResults, BuildResult{
-				Moniker:  mon,
-				ExitCode: exitCode,
-				Warnings: warnings,
-				Errors:   errors,
-			})
-
-			relLogPath := filepath.Join("out", "build", mon, "build.log")
-			var statusLine string
-			if exitCode != 0 {
-				statusLine = fmt.Sprintf("[building] %s (See %s for details) ........ Failed\r\n", mon, relLogPath)
-			} else if len(warnings) > 0 {
-				statusLine = fmt.Sprintf("[building] %s (See %s for details) ........ Done (with %d warnings)\r\n", mon, relLogPath, len(warnings))
-			} else {
-				statusLine = fmt.Sprintf("[building] %s (See %s for details) ........ Done\r\n", mon, relLogPath)
-			}
-
-			orchOut.Write([]byte(statusLine))
-			os.Stdout.Sync()
-			mu.Unlock()
-		}(i, moniker, orchestratorOut)
+	// Configure orchestrator
+	config := orchestrator.Config{
+		WorkspaceRoot:        workspaceRoot,
+		OutputBaseDir:        "out/build",
+		LogFileName:          "build.log",
+		OrchestratorLogName:  "orchestrator.log",
+		ActionVerb:           "building",
+		MaxConcurrency:       0, // Use default (number of CPUs)
+		StatusUpdateInterval: 2, // Update every 2 seconds
 	}
 
-	wg.Wait()
-
-	// Calculate and print summary
-	totalFailed := 0
-	totalWarnings := 0
-	modulesWithWarnings := []string{}
-	failedModules := []string{}
-
-	for _, result := range buildResults {
-		if result.ExitCode != 0 {
-			totalFailed++
-			failedModules = append(failedModules, result.Moniker)
+	// Create worker function that builds a single module
+	worker := func(moniker string, logWriter io.Writer) int {
+		module, exists := moduleReport.Registry.Get(moniker)
+		if !exists {
+			fmt.Fprintf(logWriter, "Error: module not found: %s\n", moniker)
+			return 1
 		}
-		if len(result.Warnings) > 0 {
-			totalWarnings += len(result.Warnings)
-			modulesWithWarnings = append(modulesWithWarnings, result.Moniker)
-		}
+
+		moduleOutputDir := filepath.Join(workspaceRoot, "out", "build", moniker)
+		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version)
 	}
 
-	fmt.Fprintf(orchestratorOut, "\n===========================================\n")
-	fmt.Fprintf(orchestratorOut, "Build Run Summary\n")
-	fmt.Fprintf(orchestratorOut, "===========================================\n")
-	fmt.Fprintf(orchestratorOut, "Total modules: %d\n", len(monikers))
-	fmt.Fprintf(orchestratorOut, "Passed: %d\n", len(monikers)-totalFailed)
-	fmt.Fprintf(orchestratorOut, "Failed: %d\n", totalFailed)
-	fmt.Fprintf(orchestratorOut, "Warnings: %d (in %d modules)\n", totalWarnings, len(modulesWithWarnings))
-
-	if len(failedModules) > 0 {
-		fmt.Fprintf(orchestratorOut, "\n❌ Failed modules:\n")
-		for _, result := range buildResults {
-			if result.ExitCode != 0 {
-				fmt.Fprintf(orchestratorOut, "  - %s (exit code: %d)\n", result.Moniker, result.ExitCode)
-				if len(result.Errors) > 0 {
-					fmt.Fprintf(orchestratorOut, "    Errors:\n")
-					for _, err := range result.Errors {
-						if len(err) > 80 {
-							err = err[:77] + "..."
-						}
-						fmt.Fprintf(orchestratorOut, "      • %s\n", err)
-					}
-				}
-			}
-		}
-	}
-
-	if len(modulesWithWarnings) > 0 {
-		fmt.Fprintf(orchestratorOut, "\n⚠️  Modules with warnings:\n")
-		for _, result := range buildResults {
-			if len(result.Warnings) > 0 && result.ExitCode == 0 {
-				fmt.Fprintf(orchestratorOut, "  - %s (%d warnings)\n", result.Moniker, len(result.Warnings))
-				for _, warn := range result.Warnings {
-					if len(warn) > 80 {
-						warn = warn[:77] + "..."
-					}
-					fmt.Fprintf(orchestratorOut, "      • %s\n", warn)
-				}
-			}
-		}
-	}
-
-	fmt.Fprintf(orchestratorOut, "\nOrchestrator log: out/build/orchestrator.log\n")
-	fmt.Fprintf(orchestratorOut, "Module logs: out/build/<module>/build.log\n")
-
-	if totalFailed > 0 {
+	// Create and run orchestrator
+	orch := orchestrator.New(config, worker)
+	results, err := orch.Run(monikers)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
-	return 0
+
+	// Print summary and close orchestrator
+	orch.PrintSummary(results)
+	orch.Close()
+
+	// Return exit code based on results
+	return orchestrator.GetExitCode(results)
 }
 
 // runModuleBuild runs build for a single module
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string) int {
 	buildFunc, hasBuilder := buildFunctions[module.Type]
 	if !hasBuilder {
 		fmt.Fprintf(logWriter, "Error: no build function for type: %s\n", module.Type)
@@ -432,53 +295,12 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 	}
 
 	opts := BuildOptions{
-		TidyFirst: tidyFirst,
+		TidyFirst:     tidyFirst,
+		Compressed:    compressed,
+		CompressedUPX: compressedUPX,
+		Version:       version,
 	}
 	return buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
-}
-
-// parseLogForIssues scans a log file for warnings and errors
-func parseLogForIssues(logPath string) (warnings []string, errors []string) {
-	data, err := os.ReadFile(logPath)
-	if err != nil {
-		return nil, nil
-	}
-
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
-		lowerLine := strings.ToLower(line)
-
-		if strings.Contains(lowerLine, "error:") ||
-			strings.Contains(lowerLine, "❌") ||
-			strings.Contains(lowerLine, "failed") ||
-			strings.Contains(lowerLine, "fatal:") {
-			errors = append(errors, strings.TrimSpace(line))
-		}
-
-		if strings.Contains(lowerLine, "warning:") && !strings.Contains(lowerLine, "error:") {
-			warnings = append(warnings, strings.TrimSpace(line))
-		}
-	}
-
-	return warnings, errors
-}
-
-// showProgress displays dots every 5 seconds while a module is building
-func showProgress(out io.Writer, mu *sync.Mutex, moniker string, done chan bool) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			mu.Lock()
-			fmt.Fprintf(out, "[building] %s .......\r\n", moniker)
-			os.Stdout.Sync()
-			mu.Unlock()
-		}
-	}
 }
 
 func printBuildUsage() {
@@ -492,11 +314,21 @@ func printBuildUsage() {
 	fmt.Println("Flags:")
 	fmt.Println("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	fmt.Println("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
+	fmt.Println("  --compressed              Strip debug info for smaller binaries (go-cli only)")
+	fmt.Println("  --compressed-upx          Also apply UPX compression for maximum size reduction")
+	fmt.Println("  --version VERSION         Inject version string into binary (go-cli only)")
 	fmt.Println("  -h, --help                Show this help message")
 	fmt.Println()
+	fmt.Println("Compression (go-cli only):")
+	fmt.Println("  Default (dev):     Full debug info for debugging (~39 MB)")
+	fmt.Println("  --compressed:      Strip debug info with -ldflags \"-s -w\" (~26 MB, ~30% smaller)")
+	fmt.Println("  --compressed-upx:  Also UPX compress (~10 MB, ~70% smaller total)")
+	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  build                     # Build all modules")
-	fmt.Println("  build src-commands        # Build a single module (verbose output)")
-	fmt.Println("  build src-core src-cli    # Build multiple modules in parallel")
-	fmt.Println("  build --tidy-first docs   # Build with go mod tidy first")
+	fmt.Println("  build                                # Build all modules (dev mode)")
+	fmt.Println("  build src-cli                        # Build CLI with debug info")
+	fmt.Println("  build src-cli --compressed           # Build CLI for release")
+	fmt.Println("  build src-cli --compressed-upx       # Build CLI with UPX for minimal size")
+	fmt.Println("  build src-cli --version 1.0.0        # Build with version injection")
+	fmt.Println("  build --tidy-first docs              # Build with go mod tidy first")
 }

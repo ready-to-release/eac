@@ -1,0 +1,21 @@
+# Version: 0.1.0
+
+moniker: "src-cli-installers"
+name: "R2R CLI Installer Scripts"
+type: "scripts"
+description: "Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases"
+
+source:
+  root: "scripts"
+  includes:
+    - "sh/cli/**"
+    - "pwsh/cli/**"
+
+tests:
+  root: "src/cli-installers/tests"
+  includes:
+    - "**/*"
+
+depends_on:
+  - "src-cli"
+used_by: []

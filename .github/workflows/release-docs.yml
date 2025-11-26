@@ -10,13 +10,13 @@ on:
         default: ''
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
   actions: read
 
 jobs:
-  release:
+  deploy:
     runs-on: ubuntu-latest
 
     environment:
@@ -26,8 +26,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Download build artifacts from CI
         if: inputs.ci_run_id != ''
@@ -63,62 +61,6 @@ jobs:
           echo "✅ Build output verified"
           ls -la out/build/docs/site/
 
-      - name: Calculate CalVer version
-        id: version
-        run: |
-          # CalVer format: YYYY.MMDD.BUILDNUMBER
-          YEAR=$(date -u +%Y)
-          MMDD=$(date -u +%m%d)
-
-          # Get the latest tag for docs to calculate build number
-          LATEST_TAG=$(git tag -l "docs/${YEAR}.${MMDD}.*" | sort -V | tail -1)
-
-          if [ -z "$LATEST_TAG" ]; then
-            # No releases today, start at 1
-            BUILD_NUMBER=1
-          else
-            # Extract the build number and increment
-            CURRENT_BUILD=$(echo "$LATEST_TAG" | sed -E 's/docs\/[0-9]+\.[0-9]+\.([0-9]+)/\1/')
-            BUILD_NUMBER=$((CURRENT_BUILD + 1))
-          fi
-
-          VERSION="${YEAR}.${MMDD}.${BUILD_NUMBER}"
-          TAG_NAME="docs/${VERSION}"
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "Calculated version: $VERSION"
-
-      - name: Check for existing release
-        run: |
-          TAG_NAME="${{ steps.version.outputs.tag_name }}"
-
-          if gh release view "$TAG_NAME" 2>/dev/null; then
-            echo "❌ Error: Release already exists for tag $TAG_NAME"
-            exit 1
-          fi
-
-          echo "✅ No existing release found for $TAG_NAME"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Create tag
-        run: |
-          TAG_NAME="${{ steps.version.outputs.tag_name }}"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git fetch --tags --force
-
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Tag $TAG_NAME already exists"
-          else
-            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-            git push origin "$TAG_NAME"
-            echo "✅ Created and pushed tag: $TAG_NAME"
-          fi
-
       - name: Configure Pages
         uses: actions/configure-pages@v4
 
@@ -131,50 +73,11 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Create GitHub Release
-        run: |
-          TAG_NAME="${{ steps.version.outputs.tag_name }}"
-          VERSION="${{ steps.version.outputs.version }}"
-
-          cat << EOF > release_notes.md
-          # Documentation Release $VERSION
-
-          ## What's New
-
-          Documentation release version $VERSION deployed to GitHub Pages.
-
-          ## Links
-
-          - **Live Documentation**: ${{ steps.deployment.outputs.page_url }}
-
-          ## Release Information
-
-          - **Version**: $VERSION (CalVer: YYYY.MMDD.BUILD)
-          - **Commit**: ${{ github.sha }}
-          - **Tag**: $TAG_NAME
-
-          ---
-
-          Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          EOF
-
-          gh release create "$TAG_NAME" \
-            --title "Documentation v$VERSION" \
-            --notes-file release_notes.md
-
-          echo "✅ Release created successfully"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - name: Summary
         run: |
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Released Documentation version **${{ steps.version.outputs.version }}**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation deployed to GitHub Pages" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Deployment" >> $GITHUB_STEP_SUMMARY
           echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag**: ${{ steps.version.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Version Format" >> $GITHUB_STEP_SUMMARY
-          echo "CalVer: YYYY.MMDD.BUILD" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
