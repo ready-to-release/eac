@@ -189,6 +189,17 @@ func stdoutContainsAPIKeyInstructions() error {
 	return fmt.Errorf("stdout does not contain API key instructions")
 }
 
+// stdoutContainsProviderSelectionConfirmation verifies provider selection message
+func stdoutContainsProviderSelectionConfirmation() error {
+	output := ctx.commandOutput
+	// Look for provider-related confirmation in output
+	if strings.Contains(output, "claude") || strings.Contains(output, "openai") ||
+		strings.Contains(output, "provider") || strings.Contains(output, "Initialized") {
+		return nil
+	}
+	return fmt.Errorf("stdout does not contain provider selection confirmation.\nOutput:\n%s", output)
+}
+
 // stderrContainsActionableRecoveryInstructions verifies helpful errors
 func stderrContainsActionableRecoveryInstructions() error {
 	output := ctx.commandOutput
@@ -249,6 +260,7 @@ func InitializeInitScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^the \.r2r/logs directory is created$`, theLogsDirectoryIsCreated)
 	sc.Step(`^a reconfiguration message is shown$`, aReconfigurationMessageIsShown)
 	sc.Step(`^stdout contains link to get API key$`, stdoutContainsLinkToGetAPIKey)
+	sc.Step(`^stdout contains provider selection confirmation$`, stdoutContainsProviderSelectionConfirmation)
 	sc.Step(`^the AI provider is configured$`, theAIProviderIsConfigured)
 	sc.Step(`^a \.r2r/agent-config\.yml file is created$`, aR2RAgentConfigYmlFileIsCreated)
 	sc.Step(`^the \.r2r directory is created$`, theR2RDirectoryIsCreated)

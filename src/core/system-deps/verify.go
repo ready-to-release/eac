@@ -147,6 +147,11 @@ type AIChecker struct{}
 func (c *AIChecker) GetName() string { return "AI Provider" }
 
 func (c *AIChecker) IsAvailable() bool {
+	// Check for test AI mock (for unit/integration tests)
+	if os.Getenv("TEST_AI_MOCK") != "" {
+		return true
+	}
+
 	// Check for Claude CLI
 	if exec.Command("claude", "--version").Run() == nil {
 		return true
@@ -167,6 +172,11 @@ func (c *AIChecker) IsAvailable() bool {
 }
 
 func (c *AIChecker) GetVersion() (string, error) {
+	// Check for test AI mock first
+	if mockValue := os.Getenv("TEST_AI_MOCK"); mockValue != "" {
+		return fmt.Sprintf("test-ai-mock (%s)", mockValue), nil
+	}
+
 	// Return info about first available provider
 	if output, err := exec.Command("claude", "--version").Output(); err == nil {
 		return strings.TrimSpace(string(output)), nil

@@ -1,0 +1,16 @@
+@deps:go @ov
+Feature: test_valid-feature
+
+  As a developer
+  I want to test validation
+  So that I can verify the validator works
+
+  Background:
+    Given the system is initialized
+
+  Rule: The feature must work correctly
+
+    @L2 @ov
+    Scenario: Basic functionality works
+      When I run a command
+      Then the exit code is 0

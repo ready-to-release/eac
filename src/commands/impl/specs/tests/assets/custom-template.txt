@@ -1,0 +1,9 @@
+@deps:go @ov
+Feature: {{.FeatureName}}
+
+  Rule: {{.RuleName}}
+
+    @L2 @ov
+    Scenario: {{.ScenarioName}}
+      When action
+      Then result

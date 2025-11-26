@@ -21,7 +21,7 @@ tags:
     type: system_dependency
 
   - tag: "@deps:ai"
-    description: "Requires any AI provider (Claude CLI or API keys)"
+    description: "Requires any AI provider (TEST_AI_MOCK env var, Claude CLI, or API keys)"
     type: system_dependency
 
   - tag: "@deps:az-cli"
