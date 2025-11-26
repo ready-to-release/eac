@@ -29,6 +29,7 @@ WORKDIR /app
 # so we need all related go.mod files for dependency resolution
 COPY src/core/go.mod src/core/go.sum ./src/core/
 COPY src/core/ai/go.mod src/core/ai/go.sum ./src/core/ai/
+COPY src/core/logging/go.mod src/core/logging/go.sum ./src/core/logging/
 COPY src/core/markdown/go.mod src/core/markdown/go.sum ./src/core/markdown/
 COPY src/core/module-deps/go.mod src/core/module-deps/go.sum ./src/core/module-deps/
 COPY src/commands/go.mod src/commands/go.sum ./src/commands/
