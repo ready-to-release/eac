@@ -7,6 +7,10 @@ on:
         required: false
         type: string
         default: ''
+      ci_image:
+        required: true
+        type: string
+        description: 'Full CI container image reference'
   workflow_dispatch:
     inputs:
       ref:
@@ -18,22 +22,24 @@ on:
         type: string
         description: 'Commit SHA to test'
         default: ''
+      ci_image:
+        required: true
+        type: string
+        description: 'Full CI container image reference (e.g. ghcr.io/ready-to-release/go-bvt-image:2025.11.27)'
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.ci_image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
 
       - name: Build Module
         working-directory: ./src/commands
@@ -50,17 +56,15 @@ jobs:
     name: Test
     needs: build
     runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.ci_image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4

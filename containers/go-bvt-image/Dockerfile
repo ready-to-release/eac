@@ -45,7 +45,15 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 # This speeds up first build in CI by having base modules cached
 WORKDIR /tmp/cache-warm
 COPY go-cache-warm.txt .
-RUN go install github.com/cucumber/godog/cmd/godog@latest \
+RUN while IFS= read -r line; do \
+      # Skip comments and empty lines
+      case "$line" in \
+        "#"*|"") continue ;; \
+      esac; \
+      echo "Downloading: $line"; \
+      go get "$line" || true; \
+    done < go-cache-warm.txt \
+    && go install github.com/cucumber/godog/cmd/godog@latest \
     && rm -rf /tmp/cache-warm
 
 # Set working directory for CI

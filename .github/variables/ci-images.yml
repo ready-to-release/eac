@@ -1,0 +1,21 @@
+# CI Container Image Versions
+#
+# This file defines the container image versions used by CI workflows.
+# Update these versions when releasing new CI images.
+#
+# Usage in workflows:
+#   1. Read this file in a setup job
+#   2. Parse the version and pass to subsequent jobs
+#
+# Example workflow step:
+#   - name: Read CI image version
+#     id: ci-images
+#     run: |
+#       VERSION=$(yq '.go-bvt-image.version' .github/variables/ci-images.yml)
+#       echo "go-bvt-image=$VERSION" >> $GITHUB_OUTPUT
+
+go-bvt-image:
+  registry: ghcr.io
+  repository: ready-to-release/go-bvt-image
+  version: "2025.11.27"
+  # Full image reference: ghcr.io/ready-to-release/go-bvt-image:2025.11.27
