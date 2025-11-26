@@ -20,7 +20,7 @@
 //   - Collects all errors, returns first one (no error loss)
 //   - Channel closed after all goroutines complete (no leaks)
 //   - Compatible with existing error handling patterns
-//   - Thread-safe via mutex in debugWriter
+//   - Thread-safe via logging module
 //   - Buffered channel prevents goroutine blocking
 //
 // Performance:
@@ -36,6 +36,7 @@ import (
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -48,7 +49,7 @@ import (
 //
 // Thread Safety:
 //   - Each goroutine operates on independent data (no shared mutable state)
-//   - debugWriter is thread-safe (uses mutex internally)
+//   - logger is thread-safe (uses mutex internally)
 //   - Channel is buffered to module count (prevents blocking)
 //   - WaitGroup ensures clean goroutine lifecycle
 //
@@ -64,7 +65,7 @@ import (
 //
 // Parameters:
 //   - cfg: Execution configuration with modules and files
-//   - debugWriter: Thread-safe debug output writer
+//   - logger: Thread-safe logger for debug output
 //   - testExecutor: Optional executor for testing (nil uses real providers)
 //
 // Returns:
@@ -76,11 +77,11 @@ import (
 //       affectedModules: []string{"src-cli", "src-core", "src-commands"},
 //       ...
 //   }
-//   sections, err := generateModuleSectionsParallel(cfg, debugWriter, nil)
+//   sections, err := generateModuleSectionsParallel(cfg, logger, nil)
 //   // sections[0] corresponds to "src-cli"
 //   // sections[1] corresponds to "src-core"
 //   // sections[2] corresponds to "src-commands"
-func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWriter, testExecutor *ai.Executor) ([]string, error) {
+func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger, testExecutor *ai.Executor) ([]string, error) {
 	// Validate inputs
 	if cfg == nil {
 		return nil, fmt.Errorf("executionConfig cannot be nil")
@@ -91,7 +92,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 
 	// Single-module commits skip module sections (existing behavior)
 	if len(cfg.affectedModules) <= 1 {
-		debugWriter.log("Single-module commit - skipping module sections")
+		logger.Debug("Single-module commit - skipping module sections")
 		return []string{}, nil
 	}
 
@@ -105,9 +106,10 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 
 	// Result structure preserves original order via index
 	type moduleResult struct {
-		index  int    // Original position in affectedModules
-		output string // Generated module section
-		err    error  // Error if generation failed
+		index        int    // Original position in affectedModules
+		output       string // Generated module section
+		providerName string // AI provider used
+		err          error  // Error if generation failed
 	}
 
 	// Buffered channel prevents goroutine blocking when sending results
@@ -127,29 +129,34 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 			moduleFiles := moduleFilesMap[moduleName]
 			moduleContext := buildModuleContext(moduleName, moduleFiles, cfg.gitDiff)
 
-			// Debug output (thread-safe via mutex in debugWriter)
-			debugWriter.writef("debug-module-%d-%s-context.md", moduleContext, idx+1, moduleName)
+			// Debug output (thread-safe via logging module)
+			writeDebugFilef(cfg.workspaceRoot, logger, "debug-module-%d-%s-context.md", moduleContext, idx+1, moduleName)
 
 			var output string
+			var providerName string
 			progressMsg := fmt.Sprintf("🤖 Generating section for module %s (%d/%d)...",
 				moduleName, idx+1, len(cfg.affectedModules))
 
 			// Generate module section using existing function
 			// WithProgress is goroutine-safe (uses internal synchronization)
 			err := commitmessage.WithProgress(progressMsg, func() error {
-				result, genErr := generateWithPrompt("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
-				output = result
+				result, genErr := generateWithPromptResult("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
+				if result != nil {
+					output = result.Output
+					providerName = result.ProviderName
+				}
 				return genErr
 			})
 
-			debugWriter.writef("debug-module-%d-%s-output.md", output, idx+1, moduleName)
+			writeDebugFilef(cfg.workspaceRoot, logger, "debug-module-%d-%s-output.md", output, idx+1, moduleName)
 
 			// Send result with original index to preserve order
 			// Buffered channel ensures this never blocks
 			resultsChan <- moduleResult{
-				index:  idx,
-				output: output,
-				err:    err,
+				index:        idx,
+				output:       output,
+				providerName: providerName,
+				err:          err,
 			}
 		}(i, module)
 	}
@@ -165,6 +172,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 	// Pre-size slice to avoid allocations and enable direct indexing
 	moduleSections := make([]string, len(cfg.affectedModules))
 	var firstError error
+	var loggedProvider bool
 
 	// Drain channel until closed
 	// Order is preserved by using result.index to place output
@@ -173,6 +181,12 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 		// This ensures all goroutines complete (no leaks)
 		if result.err != nil && firstError == nil {
 			firstError = result.err
+		}
+
+		// Log provider info once (all modules use the same provider)
+		if !loggedProvider && result.providerName != "" {
+			logger.Debug(fmt.Sprintf("AI provider used for module sections: %s", result.providerName))
+			loggedProvider = true
 		}
 
 		// Place result at correct index to maintain order
@@ -210,7 +224,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, debugWriter *debugWrit
 //   - cfg: Read-only (safe)
 //   - moduleContext: Local to goroutine (safe)
 //   - output: Local to goroutine (safe)
-//   - debugWriter: Mutex-protected (safe)
+//   - logger: Thread-safe (safe)
 //   - resultsChan: Channel synchronization (safe)
 //   - moduleSections: Write to different indices (safe)
 //

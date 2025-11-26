@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -58,12 +59,13 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := createTestConfig(tt.affectedModules)
-			debugWriter := newDebugWriter(false, t.TempDir())
+			logger, _ := logging.NewDefault("test", t.TempDir())
+			defer logger.Sync()
 
 			// Create mock executor with deterministic responses
 			mockExecutor := createMockExecutor(tt.affectedModules)
 
-			sections, err := generateModuleSectionsParallel(cfg, debugWriter, mockExecutor)
+			sections, err := generateModuleSectionsParallel(cfg, logger, mockExecutor)
 
 			require.NoError(t, err, "generateModuleSectionsParallel should not return error")
 			assert.Len(t, sections, len(tt.affectedModules),
@@ -82,10 +84,11 @@ func TestGenerateModuleSectionsParallel_PreservesOrder(t *testing.T) {
 // commits skip module section generation (returning empty slice).
 func TestGenerateModuleSectionsParallel_SingleModule(t *testing.T) {
 	cfg := createTestConfig([]string{"src-cli"})
-	debugWriter := newDebugWriter(false, t.TempDir())
+	logger, _ := logging.NewDefault("test", t.TempDir())
+	defer logger.Sync()
 	mockExecutor := createMockExecutor([]string{"src-cli"})
 
-	sections, err := generateModuleSectionsParallel(cfg, debugWriter, mockExecutor)
+	sections, err := generateModuleSectionsParallel(cfg, logger, mockExecutor)
 
 	require.NoError(t, err)
 	assert.Empty(t, sections, "Single-module commits should skip module sections")
@@ -95,85 +98,15 @@ func TestGenerateModuleSectionsParallel_SingleModule(t *testing.T) {
 // are rejected with an error (edge case that shouldn't occur in practice).
 func TestGenerateModuleSectionsParallel_EmptyModules(t *testing.T) {
 	cfg := createTestConfig([]string{})
-	debugWriter := newDebugWriter(false, t.TempDir())
+	logger, _ := logging.NewDefault("test", t.TempDir())
+	defer logger.Sync()
 	mockExecutor := createMockExecutor([]string{})
 
-	sections, err := generateModuleSectionsParallel(cfg, debugWriter, mockExecutor)
+	sections, err := generateModuleSectionsParallel(cfg, logger, mockExecutor)
 
 	require.Error(t, err, "Empty modules should return an error")
 	assert.Contains(t, err.Error(), "affectedModules cannot be empty", "Error message should indicate empty modules")
 	assert.Nil(t, sections, "Sections should be nil when error occurs")
-}
-
-// TestDebugWriter_ThreadSafety verifies that debugWriter can handle concurrent
-// writes from multiple goroutines without data races or corruption.
-//
-// This test MUST be run with the race detector: go test -race
-//
-// Rule: Hard to break
-//   - High concurrency (20 goroutines, 100 writes each)
-//   - Multiple write methods tested (write, writef, log)
-//   - Large content strings to increase chance of detecting races
-//   - WaitGroup ensures all goroutines complete
-func TestDebugWriter_ThreadSafety(t *testing.T) {
-	debugWriter := newDebugWriter(true, t.TempDir())
-
-	var wg sync.WaitGroup
-	numGoroutines := 20
-	writesPerGoroutine := 100
-
-	// Launch concurrent writers
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			for j := 0; j < writesPerGoroutine; j++ {
-				// Test write()
-				debugWriter.write(
-					fmt.Sprintf("test-write-%d-%d.md", id, j),
-					strings.Repeat("content ", 50),
-				)
-
-				// Test writef()
-				debugWriter.writef(
-					"test-writef-%d-%d.md",
-					strings.Repeat("formatted ", 50),
-					id, j,
-				)
-
-				// Test log()
-				debugWriter.log("Log entry %d-%d", id, j)
-			}
-		}(i)
-	}
-
-	wg.Wait()
-
-	// If we reach here without panic or race detector errors, test passes
-	// Note: Race detector must be enabled: go test -race
-}
-
-// TestDebugWriter_DisabledNoSideEffects verifies that when debug is disabled,
-// no files are written and no errors occur.
-func TestDebugWriter_DisabledNoSideEffects(t *testing.T) {
-	tempDir := t.TempDir()
-	debugWriter := newDebugWriter(false, tempDir) // disabled
-
-	// Multiple concurrent writes
-	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			debugWriter.write(fmt.Sprintf("test-%d.md", id), "content")
-			debugWriter.writef("testf-%d.md", "content", id)
-			debugWriter.log("Log %d", id)
-		}(i)
-	}
-	wg.Wait()
-
-	// No files should be created when debug is disabled
-	// (Note: This assumes TempDir is initially empty, which it is)
 }
 
 // TestGenerateModuleSectionsParallel_ErrorPropagation verifies that errors

@@ -20,6 +20,7 @@ source:
 
 depends_on:
   - "src-core"
+  - "src-core-logging"
 used_by:
   - "implicit-cli-sh"
   - "implicit-cli-pwsh"

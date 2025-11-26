@@ -5,6 +5,7 @@ use (
 	./src/commands
 	./src/core
 	./src/core/ai
+	./src/core/logging
 	./src/core/markdown
 	./src/core/module-deps
 	./src/mcp/commands
