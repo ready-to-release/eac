@@ -10,7 +10,7 @@ on:
         default: ''
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
   actions: read
@@ -26,8 +26,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Download build artifacts from CI
         if: inputs.ci_run_id != ''
@@ -63,41 +61,6 @@ jobs:
           echo "✅ Build output verified"
           ls -la out/build/docs/site/
 
-      - name: Calculate version and create tag
-        id: version
-        run: |
-          # CalVer format: YYYY.MMDD.BUILDNUMBER
-          YEAR=$(date -u +%Y)
-          MMDD=$(date -u +%m%d)
-
-          # Get the latest tag for docs to calculate build number
-          LATEST_TAG=$(git tag -l "docs/${YEAR}.${MMDD}.*" | sort -V | tail -1)
-
-          if [ -z "$LATEST_TAG" ]; then
-            BUILD_NUMBER=1
-          else
-            CURRENT_BUILD=$(echo "$LATEST_TAG" | sed -E 's/docs\/[0-9]+\.[0-9]+\.([0-9]+)/\1/')
-            BUILD_NUMBER=$((CURRENT_BUILD + 1))
-          fi
-
-          VERSION="${YEAR}.${MMDD}.${BUILD_NUMBER}"
-          TAG_NAME="docs/${VERSION}"
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-
-          # Create and push tag
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Tag $TAG_NAME already exists"
-          else
-            git tag -a "$TAG_NAME" -m "Deploy docs $VERSION"
-            git push origin "$TAG_NAME"
-            echo "✅ Created tag: $TAG_NAME"
-          fi
-
       - name: Configure Pages
         uses: actions/configure-pages@v4
 
@@ -117,5 +80,4 @@ jobs:
           echo "✅ Documentation deployed to GitHub Pages" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag**: \`${{ steps.version.outputs.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

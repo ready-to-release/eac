@@ -232,6 +232,7 @@ func runTestCommandWithCapture(dir string, logWriter io.Writer, name string, arg
 	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
+			fmt.Fprintf(logWriter, "\n❌ Tests exited with code %d (error: %v)\n", exitCode, err)
 		} else {
 			fmt.Fprintf(stderrWriter, "\nError: failed to execute test command: %v\n", err)
 			exitCode = 1
