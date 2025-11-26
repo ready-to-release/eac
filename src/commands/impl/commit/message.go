@@ -6,15 +6,18 @@
 // Long: The generated message includes a top-level summary and per-module sections describing changes.
 // Long: All output is validated against the commit message contract to ensure consistency and quality.
 // Long: By default, the command outputs the commit message to stdout. Use --debug to save intermediate outputs.
+// Long: Use --commit to automatically create a git commit with the generated message.
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
-// Flags: --debug (save intermediate outputs and show debug info)
-// HasSideEffects: false
+// Flag.commit: type=bool, shorthand=c, default=false, usage=Automatically create git commit with generated message
+// Flags: --debug (save intermediate outputs and show debug info), --commit (auto-commit)
+// HasSideEffects: true
 package commit
 
 import (
 	_ "embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -106,14 +109,15 @@ func init() {
 type executionConfig struct {
 	workspaceRoot   string
 	debug           bool
+	autoCommit      bool
 	stagedFiles     []repository.RepositoryFileWithModule
 	affectedModules []string
 	gitDiff         string
 }
 
 func CommitMessage() int {
-	// Parse configuration early to get debug mode and workspace root
-	debug, workspaceRoot, err := parseConfig()
+	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
+	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
@@ -145,8 +149,12 @@ func CommitMessage() int {
 			logger.Warn(fmt.Sprintf("Retry attempt %d/%d", attempt, maxRetries))
 		}
 
-		result, shouldRetry := commitAIAttempt(logger, workspaceRoot, debug)
+		result, shouldRetry, generatedMessage := commitAIAttemptWithMessage(logger, workspaceRoot, debug)
 		if !shouldRetry {
+			// If successful and auto-commit is enabled, perform the commit
+			if result == 0 && autoCommit && generatedMessage != "" {
+				return performAutoCommit(workspaceRoot, generatedMessage, logger)
+			}
 			return result
 		}
 
@@ -170,60 +178,70 @@ func CommitMessage() int {
 // commitAIAttempt performs a single attempt at generating and committing
 // Returns (exit code, should retry)
 func commitAIAttempt(logger *logging.Logger, workspaceRoot string, debug bool) (int, bool) {
+	exitCode, shouldRetry, _ := commitAIAttemptWithMessage(logger, workspaceRoot, debug)
+	return exitCode, shouldRetry
+}
+
+// commitAIAttemptWithMessage performs a single attempt at generating commit message
+// Returns (exit code, should retry, generated message)
+func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, debug bool) (int, bool, string) {
 	// Phase 1: Verify Contract Implementation
 	if err := verifyContractImplementation(workspaceRoot, logger); err != nil {
-		return 1, false
+		return 1, false, ""
 	}
 
 	// Phase 2: Build Execution Context
 	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, logger)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Build context failed: %v", err))
-		return 1, false
+		return 1, false, ""
 	}
 	if cfg == nil {
 		logger.Info("No staged changes.")
-		return 0, false
+		return 0, false, ""
 	}
 
 	// Phase 3: Generate Top-Level Summary
 	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, diffStats, logger)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Top-level generation failed: %v", err))
-		return 1, false
+		return 1, false, ""
 	}
 
 	// Phase 4: Generate Module Sections
 	moduleSections, err := generateModuleSections(cfg, logger)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Module section generation failed: %v", err))
-		return 1, false
+		return 1, false, ""
 	}
 
 	// Phase 5: Assemble Final Message
 	finalMessage := assembleFinalMessage(cfg, topLevel, moduleSections, logger)
 
 	// Phase 6: Validate and Output (message only - no git commit)
-	return validateAndOutput(cfg, finalMessage)
+	exitCode, shouldRetry := validateAndOutput(cfg, finalMessage)
+	return exitCode, shouldRetry, finalMessage
 }
 
 // Phase 1: Parse Configuration
-func parseConfig() (bool, string, error) {
+func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error) {
 	// Parse flags
-	debug := false
 	for _, arg := range os.Args[3:] { // Skip program name, "commit", and "message"
-		if arg == "--debug" {
+		switch arg {
+		case "--debug", "-d":
 			debug = true
+		case "--commit", "-c":
+			autoCommit = true
 		}
 	}
 
 	// Get repository root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
+	workspaceRoot, err = repository.GetRepositoryRoot("")
 	if err != nil {
-		return false, "", fmt.Errorf("failed to find repository root: %w", err)
+		return false, false, "", fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	return debug, workspaceRoot, nil
+	return debug, autoCommit, workspaceRoot, nil
 }
 
 // verifyContractImplementation checks if the contract implementation is valid
@@ -443,6 +461,70 @@ func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 	fmt.Print(message)
 
 	return 0, false
+}
+
+// performAutoCommit creates a git commit with the generated message.
+// This is called when --commit flag is provided and message generation succeeds.
+func performAutoCommit(workspaceRoot string, message string, logger *logging.Logger) int {
+	repo, err := getGitRepo(workspaceRoot)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Auto-commit failed: %v", err))
+		return 1
+	}
+
+	// Get author info from git config (use git command for reliability)
+	authorName, authorEmail := getGitAuthorInfo(workspaceRoot)
+	if authorName == "" || authorEmail == "" {
+		logger.Error("Auto-commit failed: git user.name and user.email must be configured")
+		logger.Info("Run: git config user.name \"Your Name\"")
+		logger.Info("Run: git config user.email \"your@email.com\"")
+		return 1
+	}
+
+	// Perform the commit
+	hash, err := repo.Commit(message, authorName, authorEmail)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Git commit failed: %v", err))
+		return 1
+	}
+
+	// Success message to stderr (so it doesn't interfere with stdout output)
+	fmt.Fprintf(os.Stderr, "\n✓ Committed: %s\n", hash[:7])
+	return 0
+}
+
+// getGitAuthorInfo retrieves git user.name and user.email from git config.
+// Returns empty strings if not configured.
+func getGitAuthorInfo(workspaceRoot string) (name string, email string) {
+	// Try to get from environment first (GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL)
+	name = os.Getenv("GIT_AUTHOR_NAME")
+	email = os.Getenv("GIT_AUTHOR_EMAIL")
+	if name != "" && email != "" {
+		return name, email
+	}
+
+	// Fall back to git config command
+	// Using exec.Command because go-git config reading can be complex
+	nameCmd := execCommand("git", "config", "user.name")
+	nameCmd.Dir = workspaceRoot
+	if nameOut, err := nameCmd.Output(); err == nil {
+		name = strings.TrimSpace(string(nameOut))
+	}
+
+	emailCmd := execCommand("git", "config", "user.email")
+	emailCmd.Dir = workspaceRoot
+	if emailOut, err := emailCmd.Output(); err == nil {
+		email = strings.TrimSpace(string(emailOut))
+	}
+
+	return name, email
+}
+
+// execCommand is a variable to allow mocking in tests
+var execCommand = execCommandReal
+
+func execCommandReal(name string, args ...string) *exec.Cmd {
+	return exec.Command(name, args...)
 }
 
 // promptYN prompts the user with a yes/no question
