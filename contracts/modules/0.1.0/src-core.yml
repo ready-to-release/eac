@@ -29,6 +29,6 @@ depends_on: []
 used_by:
   - "repository"
   - "src-cli"
+  - "src-cli-installers"
   - "src-commands"
   - "src-mcp-commands"
-  - "ext-eac"

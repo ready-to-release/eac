@@ -24,5 +24,4 @@ source:
 
 depends_on:
   - "src-core"
-used_by:
-  - "src-cli-installers"
+used_by: []
