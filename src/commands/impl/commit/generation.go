@@ -114,7 +114,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	// Setup debug directory if needed
 	debugOutputDir := ""
 	if debugEnabled {
-		debugOutputDir = filepath.Join(workspaceRoot, "out")
+		debugOutputDir = filepath.Join(workspaceRoot, "out", "logs", "commit")
 		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
 			fmt.Fprintf(os.Stderr, "⚠️  Failed to create debug directory: %v\n", err)
 		}
