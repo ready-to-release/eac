@@ -61,7 +61,9 @@ func CountTestResults(events []GoTestEvent) (passed, failed, skipped int) {
 	return
 }
 
-// ExtractFailedTests returns a map of failed tests with their output
+// ExtractFailedTests returns a map of failed tests with their output.
+// Parent tests are excluded when their subtests are already included,
+// since the parent failure is just a consequence of the subtest failure.
 func ExtractFailedTests(events []GoTestEvent) map[string][]string {
 	testOutputs := make(map[string][]string)
 	failedTests := make(map[string]bool)
@@ -85,6 +87,18 @@ func ExtractFailedTests(events []GoTestEvent) map[string][]string {
 				if !strings.HasPrefix(trimmed, "===") && !strings.HasPrefix(trimmed, "---") {
 					testOutputs[key] = append(testOutputs[key], trimmed)
 				}
+			}
+		}
+	}
+
+	// Filter out parent tests when subtests exist
+	// e.g., if "TestFoo/subtest" failed, don't also report "TestFoo"
+	for key := range failedTests {
+		for otherKey := range failedTests {
+			if otherKey != key && strings.HasPrefix(otherKey, key+"/") {
+				// key is a parent of otherKey, remove the parent
+				delete(failedTests, key)
+				break
 			}
 		}
 	}

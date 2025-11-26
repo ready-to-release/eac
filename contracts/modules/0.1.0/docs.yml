@@ -16,6 +16,7 @@ source:
     - "LICENSE"
     # Own the CI workflow file - triggers rebuild when docs changes
     - "/.github/workflows/docs.yaml"
+    - "/.github/workflows/release-docs.yml"
 
 depends_on: []
 used_by: []
