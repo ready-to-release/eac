@@ -1,7 +1,7 @@
-// Package tests provides BDD step definitions for the commit command.
+// Package message provides BDD step definitions for the commit message subcommand.
 //
 // This file contains Given step implementations for setting up test scenarios.
-package tests
+package message
 
 import (
 	"fmt"
@@ -9,6 +9,9 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/impl/commit"
 )
+
+// tests is a local alias to access package-level variables
+// This avoids import cycles while maintaining test context
 
 // ============================================================================
 // Commit Message Setup Steps
@@ -310,21 +313,21 @@ func theCommitAiCommandIsRun() error {
 // No-op Setup Steps (placeholder for feature steps)
 // ============================================================================
 
-func aTopLevelBodySection() error                               { return nil }
-func moduleSectionsForEachAffectedModule() error                { return nil }
-func autoCleanupIsApplied() error                               { return nil }
-func aBodyTextLineLongerThan72Characters() error                { return nil }
-func aCodeBlockWithoutBlankLinesBeforeAndAfter() error          { return nil }
-func aCommitMessageContract() error                             { return nil }
-func aCommitMessageContractWithVersion(version string) error    { return nil }
-func aCommitMessageHeaderEndingWithAPeriod() error              { return nil }
+func aTopLevelBodySection() error                                  { return nil }
+func moduleSectionsForEachAffectedModule() error                   { return nil }
+func autoCleanupIsApplied() error                                  { return nil }
+func aBodyTextLineLongerThan72Characters() error                   { return nil }
+func aCodeBlockWithoutBlankLinesBeforeAndAfter() error             { return nil }
+func aCommitMessageContract() error                                { return nil }
+func aCommitMessageContractWithVersion(version string) error       { return nil }
+func aCommitMessageHeaderEndingWithAPeriod() error                 { return nil }
 func aCommitMessageWithAnOpeningCodeFenceButNoClosingFence() error { return nil }
-func aCommitMessageWithMultipleConsecutiveBlankLines() error    { return nil }
-func aCommitMessageWithUnicodeCharacters() error                { return nil }
-func aModuleWithFilesNotInTheDiff() error                       { return nil }
-func aModuleWithOneFile() error                                 { return nil }
-func anAuditorSummaryField() error                              { return nil }
-func moduleContextIsBuilt() error                               { return nil }
-func moduleNamesAreValidated() error                            { return nil }
-func topLevelContextIsBuilt() error                             { return nil }
-func aGitDiffForThoseFiles() error                              { return nil }
+func aCommitMessageWithMultipleConsecutiveBlankLines() error       { return nil }
+func aCommitMessageWithUnicodeCharacters() error                   { return nil }
+func aModuleWithFilesNotInTheDiff() error                          { return nil }
+func aModuleWithOneFile() error                                    { return nil }
+func anAuditorSummaryField() error                                 { return nil }
+func moduleContextIsBuilt() error                                  { return nil }
+func moduleNamesAreValidated() error                               { return nil }
+func topLevelContextIsBuilt() error                                { return nil }
+func aGitDiffForThoseFiles() error                                 { return nil }
