@@ -1,0 +1,11 @@
+@deps:go @ov
+Feature: test_invalid-no-rule
+
+  As a developer
+  I want to test validation
+  So that validation catches missing Rule
+
+  @L2 @ov
+  Scenario: This scenario has no Rule parent
+    When I run a command
+    Then the exit code is 0

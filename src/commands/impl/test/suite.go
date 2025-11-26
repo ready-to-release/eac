@@ -319,6 +319,14 @@ func TestSuite() int {
 
 	allDeps := append(append([]string{}, systemDeps...), moduleDeps...)
 
+	// Set TEST_AI_MOCK for tests that use @deps:ai - they use mock AI providers
+	for _, dep := range systemDeps {
+		if dep == "@deps:ai" {
+			os.Setenv("TEST_AI_MOCK", "true")
+			break
+		}
+	}
+
 	if len(allDeps) == 0 {
 		writeln(multiWriter, "No dependencies required")
 		writeln(multiWriter, "")
@@ -1274,7 +1282,7 @@ func analyzeTestFailure(logPath string, isGodog bool) string {
 }
 
 // extractModuleFromPath extracts the module moniker from a test file path
-// Handles both src/<module>/... and specs/src-<module>/... formats
+// Handles both src/<module>/... and specs/<module>/... formats
 // Supports both absolute and relative paths
 func extractModuleFromPath(filePath string) string {
 	// Normalize path separators to forward slashes
@@ -1293,20 +1301,20 @@ func extractModuleFromPath(filePath string) string {
 		}
 	}
 
-	// Check if path contains "specs/src-"
-	specsIndex := strings.Index(normalizedPath, "/specs/src-")
+	// Check if path contains "/specs/" (handles specs/src-*, specs/github, specs/repository, etc.)
+	specsIndex := strings.Index(normalizedPath, "/specs/")
 	if specsIndex >= 0 {
 		// Extract from "/specs/" onwards
 		relativePath := normalizedPath[specsIndex+1:]
-		// Format: specs/src-<module>/...
+		// Format: specs/<module>/...
 		parts := strings.Split(strings.TrimPrefix(relativePath, "specs/"), "/")
-		if len(parts) >= 1 {
-			// Return the first part (e.g., "src-commands")
+		if len(parts) >= 1 && parts[0] != "" {
+			// Return the first part (e.g., "src-commands", "github", "repository")
 			return parts[0]
 		}
 	}
 
-	// Also check for paths starting with "src/" or "specs/"  (relative paths)
+	// Also check for paths starting with "src/" or "specs/" (relative paths)
 	if strings.HasPrefix(normalizedPath, "src/") {
 		parts := strings.Split(normalizedPath, "/")
 		if len(parts) >= 2 {
@@ -1314,9 +1322,9 @@ func extractModuleFromPath(filePath string) string {
 		}
 	}
 
-	if strings.HasPrefix(normalizedPath, "specs/src-") {
+	if strings.HasPrefix(normalizedPath, "specs/") {
 		parts := strings.Split(strings.TrimPrefix(normalizedPath, "specs/"), "/")
-		if len(parts) >= 1 {
+		if len(parts) >= 1 && parts[0] != "" {
 			return parts[0]
 		}
 	}

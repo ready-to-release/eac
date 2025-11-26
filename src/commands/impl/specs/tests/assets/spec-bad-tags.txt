@@ -1,0 +1,7 @@
+Feature: test_bad-tags
+
+  Rule: Invalid tags
+
+    Scenario: Bad tags
+      When I run a command
+      Then it works

@@ -1,0 +1,11 @@
+@deps:go
+Feature: test_no-scenarios
+
+  As a developer
+  I want to test
+  So that validation catches missing scenarios
+
+  Background:
+    Given the system is initialized
+
+  Rule: This rule has no scenarios

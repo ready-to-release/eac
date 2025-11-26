@@ -1,0 +1,6 @@
+@test-framework
+Rule: This is wrong
+
+Feature: test_wrong-order
+  Scenario: Invalid
+    Then it fails

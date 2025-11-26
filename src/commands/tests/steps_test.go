@@ -351,6 +351,9 @@ func cleanupScenario() error {
 	// Reset commit mocks (git repo and AI response)
 	cleanupCommitMocks()
 
+	// Reset specs mocks (git repo and AI response)
+	cleanupSpecsMocks()
+
 	// Reset templates context (if it was set by a templates scenario)
 	// This ensures non-template scenarios don't inherit the templates context
 	// resetTemplatesContext is implemented in templates_steps_test.go
@@ -441,6 +444,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 				if err := setupCommitMocks(); err != nil {
 					return ctx, fmt.Errorf("failed to setup commit mocks: %w", err)
 				}
+				// Set up specs mocks automatically for isolated tests
+				if err := setupSpecsMocks(); err != nil {
+					return ctx, fmt.Errorf("failed to setup specs mocks: %w", err)
+				}
 				break
 			}
 		}
@@ -519,7 +526,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Additional common steps
 	// Note: "only that file's diff should be included", "other files should be excluded",
 	// and "no module sections should be created" are registered in commit_steps_test.go
-	sc.Step(`^only valid Gherkin content should remain$`, onlyValidGherkinContentShouldRemain)
+	// Note: "only valid Gherkin content should remain" is registered in specs_bridge_test.go
 	sc.Step(`^all sections are in the correct order$`, allSectionsAreInTheCorrectOrder)
 
 	// BDD common steps (alternative phrasings from spec features)
@@ -594,24 +601,8 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^a command that requires authentication$`, aCommandThatRequiresAuthentication)
 	sc.Step(`^the standard output contains a usage message$`, theStandardOutputContainsAUsageMessage)
 
-	// Specs - additional steps
-	sc.Step(`^I run the specs create command$`, iRunTheSpecsCreateCommand)
-	// Note: "the contract file does not exist" and "a contract file with invalid YAML"
-	// are registered in commit_steps_test.go
-	sc.Step(`^the specs directory is not writable$`, theSpecsDirectoryIsNotWritable)
-	sc.Step(`^it must contain a "Feature:" declaration$`, itMustContainAFeatureDeclaration)
-	sc.Step(`^the AI generates a feature named "([^"]*)"$`, theAIGeneratesAFeatureNamed)
-	sc.Step(`^the AI generates a feature that would create the same path$`, theAIGeneratesAFeatureThatWouldCreateTheSamePath)
-	sc.Step(`^the AI provider returns output with initialization messages$`, theAIProviderReturnsOutputWithInitializationMessages)
-	sc.Step(`^stdout contains provider selection confirmation$`, stdoutContainsProviderSelectionConfirmation)
-	sc.Step(`^"([^"]*)" contains raw AI output$`, outDebugRawOutputFeatureContainsRawAIOutput)
-
-	// AI provider steps
-	sc.Step(`^the AI agent is invoked with the description$`, theAIAgentIsInvokedWithTheDescription)
-	sc.Step(`^the AI provider will fail for module "([^"]*)"$`, theAIProviderWillFailForModule)
-	sc.Step(`^the AI provider will fail for modules:$`, theAIProviderWillFailForModules)
-	sc.Step(`^the AI returns an empty response for module "([^"]*)"$`, theAIReturnsAnEmptyResponseForModule)
-	// Note: "AI output wrapped in triple backticks" is registered in commit_steps_test.go
+	// Specs steps are registered via InitializeSpecsScenario() in specs_bridge_test.go
+	// which delegates to src/commands/impl/specs/tests/
 
 	// Template - additional steps
 	sc.Step(`^a template directory with file "([^"]*)"$`, aTemplateDirectoryWithFile)
