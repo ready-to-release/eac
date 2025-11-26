@@ -98,6 +98,7 @@ func iRunCommitResetDirectly() error {
 		Ctx = &Context{}
 	}
 	Ctx.ExitCode = exitCode
+	Ctx.WasUsed = true // Mark that reset context was actually used
 	if exitCode == 0 {
 		Ctx.CommandOutput = "Successfully reset latest commit. Changes are now staged."
 	} else {

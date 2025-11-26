@@ -47,4 +47,8 @@ func SetupMocks() error {
 func CleanupMocks() {
 	commit.ResetResetGitOps()
 	MockOps = nil
+	// Reset the context's WasUsed flag for next scenario
+	if Ctx != nil {
+		Ctx.WasUsed = false
+	}
 }

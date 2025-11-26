@@ -80,8 +80,9 @@ func SyncContextFromChildren() {
 	}
 	TestAIOutput = message.TestAIOutput
 
-	// Sync from reset package
-	if reset.Ctx != nil {
+	// Sync from reset package - only if reset context was actually used
+	// This prevents reset's default zero values from overwriting message context
+	if reset.Ctx != nil && reset.Ctx.WasUsed {
 		Ctx.CommandOutput = reset.Ctx.CommandOutput
 		Ctx.ExitCode = reset.Ctx.ExitCode
 		Ctx.CommandError = reset.Ctx.CommandError

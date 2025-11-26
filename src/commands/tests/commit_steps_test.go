@@ -89,7 +89,10 @@ var commitStepPatterns = []string{
 	"AI output", "code fence", "blank lines", "git diff", "staged files",
 	"contract", "validation", "module with", "affected module", "error should occur",
 	"message is validated", "closing fence", "period should be", "wrapped at word",
-	"output should start with", "body section", "semantic types",
+	"output should start with", "body section", "semantic types", "module-specific",
+	"git command", "large diff", "missing contract", "malformed YAML",
+	"error should be returned", "parsing error", "execution context", "git failure",
+	"diff size limit",
 	// Reset command patterns - use specific phrases to avoid matching generic "I should see" steps
 	"latest commit should be", "commit reset directly", "soft reset", "in the staging area",
 	"in the working directory", "uncommitted changes should be", "detached HEAD state",
