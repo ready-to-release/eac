@@ -14,6 +14,8 @@ source:
     - "assets/**"
     - "/mkdocs.yml"
     - "LICENSE"
+    # Own the CI workflow file - triggers rebuild when docs changes
+    - "/.github/workflows/docs.yaml"
 
 depends_on: []
 used_by: []
