@@ -127,28 +127,6 @@ func main() {
 	}
 
 	exitCode := cmdFunc()
-
-	// If command failed (non-zero exit), dump stack trace
-	if exitCode != 0 {
-		newline := nl()
-		fmt.Fprintf(os.Stderr, "%s=== Command Failed: Stack Trace ===%s", newline, newline)
-
-		// Print stack trace
-		buf := make([]byte, 4096)
-		for {
-			n := runtime.Stack(buf, false)
-			if n < len(buf) {
-				// Replace \n with platform-appropriate line ending in stack trace
-				stackStr := strings.ReplaceAll(string(buf[:n]), "\n", newline)
-				fmt.Fprintf(os.Stderr, "%s%s", stackStr, newline)
-				break
-			}
-			buf = make([]byte, len(buf)*2)
-		}
-
-		fmt.Fprintf(os.Stderr, "=== End Stack Trace ===%s", newline)
-	}
-
 	os.Exit(exitCode)
 }
 
