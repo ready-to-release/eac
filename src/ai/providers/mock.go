@@ -4,7 +4,7 @@ package providers
 import (
 	"context"
 
-	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/ai"
 )
 
 // MockProvider is a test provider that returns a configured response

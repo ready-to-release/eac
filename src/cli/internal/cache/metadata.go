@@ -28,6 +28,14 @@ type ExtensionMeta struct {
 	Volumes            []VolumeRequest   `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	Requirements       *MetaRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 	ExpectedHostImages []string          `json:"expected_host_images,omitempty" yaml:"expected-host-images,omitempty"`
+	Env                []MetaEnvVar      `json:"env,omitempty" yaml:"env,omitempty"`
+}
+
+// MetaEnvVar represents an environment variable in extension metadata
+type MetaEnvVar struct {
+	Name     string `json:"name" yaml:"name"`
+	Value    string `json:"value,omitempty" yaml:"value,omitempty"`       // If empty, pass through from host
+	Required bool   `json:"required,omitempty" yaml:"required,omitempty"` // If true, fail at runtime when not set
 }
 
 // VolumeRequest represents a volume mount requested by an extension

@@ -20,12 +20,15 @@
 package test
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -35,6 +38,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
+	"github.com/ready-to-release/eac/src/core/platform"
 	"github.com/ready-to-release/eac/src/core/repository"
 	systemdeps "github.com/ready-to-release/eac/src/core/system-deps"
 	"github.com/ready-to-release/eac/src/core/testing"
@@ -44,13 +48,19 @@ func init() {
 	registry.Register(TestSuite)
 }
 
+// writeln writes a formatted string with platform-specific line ending to the writer
+func writeln(w io.Writer, format string, args ...interface{}) {
+	fmt.Fprintf(w, format+platform.LineEnding, args...)
+}
+
 // PackageTestResult holds detailed test execution results for a single package
 type PackageTestResult struct {
-	TestsPassed  int // Number of individual tests that passed
-	TestsFailed  int // Number of individual tests that failed
-	TestsSkipped int // Number of individual tests that were skipped
-	TestsTotal   int // Total number of tests in this package
-	PackageFailed bool // Whether the package execution itself failed
+	TestsPassed   int      // Number of individual tests that passed
+	TestsFailed   int      // Number of individual tests that failed
+	TestsSkipped  int      // Number of individual tests that were skipped
+	TestsTotal    int      // Total number of tests in this package
+	PackageFailed bool     // Whether the package execution itself failed
+	ExpectedFiles []string // Files that should have been created by this test run
 }
 
 // TestSuite runs tests for a specific test suite
@@ -64,6 +74,9 @@ func TestSuite() int {
 		fmt.Fprintf(os.Stderr, "  --list-only    List tests without running them\n")
 		fmt.Fprintf(os.Stderr, "  --sequential   Run tests sequentially (for debugging)\n")
 		fmt.Fprintf(os.Stderr, "  --parallel     Run tests in parallel (DEFAULT, explicit override)\n")
+		fmt.Fprintf(os.Stderr, "  --as-cucumber  Generate Cucumber JSON reports (DEFAULT)\n")
+		fmt.Fprintf(os.Stderr, "  --as-junit     Generate JUnit XML reports\n")
+		fmt.Fprintf(os.Stderr, "  --coverage     Generate coverage reports (coverage.out, coverage.json)\n")
 		fmt.Fprintf(os.Stderr, "\nDefault: Tests run in parallel for optimal performance.\n")
 		fmt.Fprintf(os.Stderr, "Use --sequential if you need deterministic ordering or debugging.\n")
 		fmt.Fprintf(os.Stderr, "\nAvailable suites:\n")
@@ -79,6 +92,8 @@ func TestSuite() int {
 	skipDeps := false
 	listOnly := false
 	parallel := true  // Default to parallel execution for better performance
+	reportFormat := "cucumber" // Default report format for BDD tests
+	coverage := false // Generate coverage reports
 	var moduleFilters []string // Optional module filters (can be comma-separated)
 
 	for i := 4; i < len(os.Args); i++ {
@@ -91,6 +106,12 @@ func TestSuite() int {
 			parallel = false  // Opt-out of parallel execution
 		} else if arg == "--parallel" {
 			parallel = true   // Explicit parallel (redundant but allowed)
+		} else if arg == "--as-junit" {
+			reportFormat = "junit"
+		} else if arg == "--as-cucumber" {
+			reportFormat = "cucumber"
+		} else if arg == "--coverage" {
+			coverage = true
 		} else if arg == "--module" {
 			// Read module names from next argument (comma-separated)
 			if i+1 >= len(os.Args) {
@@ -109,7 +130,7 @@ func TestSuite() int {
 			}
 		} else if strings.HasPrefix(arg, "--") {
 			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>\n")
+			fmt.Fprintf(os.Stderr, "Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>, --as-junit, --as-cucumber, --coverage\n")
 			return 1
 		}
 	}
@@ -163,7 +184,7 @@ func TestSuite() int {
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 
 	// Phase 1: Discover all tests (Go + Godog)
-	fmt.Fprintf(multiWriter, "=== Phase 1: Test Discovery ===\n")
+	writeln(multiWriter, "=== Phase 1: Test Discovery ===")
 
 	allTests, err := testing.DiscoverAllTests(workspaceRoot)
 	if err != nil {
@@ -171,12 +192,13 @@ func TestSuite() int {
 		return 1
 	}
 
-	fmt.Fprintf(multiWriter, "Discovered %d tests\n\n", len(allTests))
+	writeln(multiWriter, "Discovered %d tests", len(allTests))
+	writeln(multiWriter, "")
 
 	// Phase 2: Apply inference rules
-	fmt.Fprintf(multiWriter, "=== Phase 2: Inference Engine ===\n")
+	writeln(multiWriter, "=== Phase 2: Inference Engine ===")
 	allTests = testing.ApplyInferences(allTests, suite.Inferences)
-	fmt.Fprintf(multiWriter, "Applied %d inference rules\n", len(suite.Inferences))
+	writeln(multiWriter, "Applied %d inference rules", len(suite.Inferences))
 
 	// Load module registry for module-based inference
 	moduleReport, err := contractsreports.GetModuleContracts(workspaceRoot, "0.1.0")
@@ -185,18 +207,22 @@ func TestSuite() int {
 	} else {
 		// Infer system dependencies from module dependencies
 		allTests = testing.InferSystemDepsFromModuleDeps(allTests, moduleReport.Registry)
-		fmt.Fprintf(multiWriter, "Inferred system deps from module types\n")
+		writeln(multiWriter, "Inferred system deps from module types")
 	}
-	fmt.Fprintf(multiWriter, "\n")
+
+	// Infer OS platform: add @deps:os-agnostic to tests without OS-specific deps
+	allTests = testing.InferOSPlatform(allTests)
+	writeln(multiWriter, "Inferred OS platform dependencies")
+	writeln(multiWriter, "")
 
 	// Phase 3: Select tests for suite
-	fmt.Fprintf(multiWriter, "=== Phase 3: Suite Selection ===\n")
+	writeln(multiWriter, "=== Phase 3: Suite Selection ===")
 	selectedTests := suite.SelectTests(allTests)
-	fmt.Fprintf(multiWriter, "Selected %d tests for suite '%s'\n", len(selectedTests), suite.Moniker)
+	writeln(multiWriter, "Selected %d tests for suite '%s'", len(selectedTests), suite.Moniker)
 
 	// Phase 3.5: Apply module filter if specified
 	if len(moduleFilters) > 0 {
-		fmt.Fprintf(multiWriter, "Filtering by modules: %s\n", strings.Join(moduleFilters, ", "))
+		writeln(multiWriter, "Filtering by modules: %s", strings.Join(moduleFilters, ", "))
 		filteredTests := []testing.TestReference{}
 
 		// Track unique modules found for debugging
@@ -221,29 +247,29 @@ func TestSuite() int {
 
 		// Log found modules for debugging
 		if len(filteredTests) == 0 {
-			fmt.Fprintf(multiWriter, "DEBUG: No tests matched. Modules found in selected tests:\n")
+			writeln(multiWriter, "DEBUG: No tests matched. Modules found in selected tests:")
 			for mod, count := range foundModules {
 				if mod != "" {
-					fmt.Fprintf(multiWriter, "  - %s (%d tests)\n", mod, count)
+					writeln(multiWriter, "  - %s (%d tests)", mod, count)
 				} else {
-					fmt.Fprintf(multiWriter, "  - [empty module name] (%d tests)\n", count)
+					writeln(multiWriter, "  - [empty module name] (%d tests)", count)
 				}
 			}
 			// Show a few sample paths
 			if len(selectedTests) > 0 {
-				fmt.Fprintf(multiWriter, "DEBUG: Sample file paths (first 5):\n")
+				writeln(multiWriter, "DEBUG: Sample file paths (first 5):")
 				sampleCount := 5
 				if len(selectedTests) < sampleCount {
 					sampleCount = len(selectedTests)
 				}
 				for i := 0; i < sampleCount; i++ {
-					fmt.Fprintf(multiWriter, "  - %s\n", selectedTests[i].FilePath)
+					writeln(multiWriter, "  - %s", selectedTests[i].FilePath)
 				}
 			}
 		}
 
 		selectedTests = filteredTests
-		fmt.Fprintf(multiWriter, "Selected %d tests after module filtering\n", len(selectedTests))
+		writeln(multiWriter, "Selected %d tests after module filtering", len(selectedTests))
 	}
 
 	// Phase 3.6: Filter out framework tests (tests about the testing framework itself)
@@ -258,33 +284,47 @@ func TestSuite() int {
 	}
 
 	if frameworkTestCount > 0 {
-		fmt.Fprintf(multiWriter, "INFO: %d framework tests excluded from execution\n", frameworkTestCount)
+		writeln(multiWriter, "INFO: %d framework tests excluded from execution", frameworkTestCount)
 	}
-	fmt.Fprintf(multiWriter, "Running %d production tests\n\n", len(productionTests))
+
+	// Phase 3.7: Filter by OS compatibility
+	// Tests with deps:linux, deps:macos, deps:windows are OS-specific
+	// Tests without any of these are OS-agnostic and run everywhere
+	osCompatibleTests := filterByOSCompatibility(productionTests, multiWriter)
+	osFilteredCount := len(productionTests) - len(osCompatibleTests)
+	if osFilteredCount > 0 {
+		writeln(multiWriter, "INFO: %d tests excluded (incompatible with %s)", osFilteredCount, runtime.GOOS)
+	}
+	productionTests = osCompatibleTests
+
+	writeln(multiWriter, "Running %d production tests", len(productionTests))
+	writeln(multiWriter, "")
 
 	// If list-only, just show tests and exit
 	if listOnly {
-		fmt.Fprintf(multiWriter, "=== Production Tests ===\n")
+		writeln(multiWriter, "=== Production Tests ===")
 		for i, test := range productionTests {
-			fmt.Fprintf(multiWriter, "%d. %s (%s)\n", i+1, test.TestName, test.Type)
-			fmt.Fprintf(multiWriter, "   File: %s\n", test.FilePath)
-			fmt.Fprintf(multiWriter, "   Tags: %s\n\n", strings.Join(test.Tags, ", "))
+			writeln(multiWriter, "%d. %s (%s)", i+1, test.TestName, test.Type)
+			writeln(multiWriter, "   File: %s", test.FilePath)
+			writeln(multiWriter, "   Tags: %s", strings.Join(test.Tags, ", "))
+			writeln(multiWriter, "")
 		}
 		return 0
 	}
 
 	// Phase 4: Extract and verify dependencies (system + module)
-	fmt.Fprintf(multiWriter, "=== Phase 4: Dependency Verification ===\n")
+	writeln(multiWriter, "=== Phase 4: Dependency Verification ===")
 	systemDeps := testing.GetSystemDependencies(productionTests)
 	moduleDeps := testing.GetModuleDependencies(productionTests)
 
 	allDeps := append(append([]string{}, systemDeps...), moduleDeps...)
 
 	if len(allDeps) == 0 {
-		fmt.Fprintf(multiWriter, "No dependencies required\n\n")
+		writeln(multiWriter, "No dependencies required")
+		writeln(multiWriter, "")
 	} else {
-		fmt.Fprintf(multiWriter, "System dependencies: %s\n", strings.Join(systemDeps, ", "))
-		fmt.Fprintf(multiWriter, "Module dependencies: %s\n", strings.Join(moduleDeps, ", "))
+		writeln(multiWriter, "System dependencies: %s", strings.Join(systemDeps, ", "))
+		writeln(multiWriter, "Module dependencies: %s", strings.Join(moduleDeps, ", "))
 
 		if !skipDeps {
 			hasFailures := false
@@ -293,9 +333,9 @@ func TestSuite() int {
 			sysResults := systemdeps.VerifyAll(systemDeps)
 			for _, result := range sysResults {
 				if result.Available {
-					fmt.Fprintf(multiWriter, "✅ %s - %s\n", result.Dependency, result.Version)
+					writeln(multiWriter, "✅ %s - %s", result.Dependency, result.Version)
 				} else {
-					fmt.Fprintf(multiWriter, "❌ %s - not available\n", result.Dependency)
+					writeln(multiWriter, "❌ %s - not available", result.Dependency)
 					hasFailures = true
 				}
 			}
@@ -304,9 +344,9 @@ func TestSuite() int {
 			modResults := moduledeps.VerifyAll(moduleDeps)
 			for _, result := range modResults {
 				if result.Available {
-					fmt.Fprintf(multiWriter, "✅ %s - %s\n", result.Dependency, result.Version)
+					writeln(multiWriter, "✅ %s - %s", result.Dependency, result.Version)
 				} else {
-					fmt.Fprintf(multiWriter, "❌ %s - not available\n", result.Dependency)
+					writeln(multiWriter, "❌ %s - not available", result.Dependency)
 					hasFailures = true
 				}
 			}
@@ -314,12 +354,13 @@ func TestSuite() int {
 			fmt.Fprintln(multiWriter)
 
 			if hasFailures {
-				fmt.Fprintf(multiWriter, "❌ Error: Required dependencies are missing\n")
-				fmt.Fprintf(multiWriter, "Use --skip-deps to run tests anyway\n")
+				writeln(multiWriter, "❌ Error: Required dependencies are missing")
+				writeln(multiWriter, "Use --skip-deps to run tests anyway")
 				return 1
 			}
 		} else {
-			fmt.Fprintf(multiWriter, "Dependency check skipped (--skip-deps)\n\n")
+			writeln(multiWriter, "Dependency check skipped (--skip-deps)")
+			writeln(multiWriter, "")
 		}
 	}
 
@@ -344,7 +385,7 @@ func TestSuite() int {
 	}
 
 	// Phase 5: Run tests
-	fmt.Fprintf(multiWriter, "=== Phase 5: Test Execution ===\n")
+	writeln(multiWriter, "=== Phase 5: Test Execution ===")
 
 	// Group tests by package
 	// For Godog tests: need to find their test runner package
@@ -362,7 +403,7 @@ func TestSuite() int {
 			relFeaturePath, err := filepath.Rel(workspaceRoot, test.FilePath)
 			if err != nil {
 				// Skip test if we can't compute relative path
-				fmt.Fprintf(multiWriter, "⚠️  Skipping test %s: unable to compute relative path from %s to %s\n",
+				writeln(multiWriter, "⚠️  Skipping test %s: unable to compute relative path from %s to %s",
 					test.TestName, workspaceRoot, test.FilePath)
 				continue
 			}
@@ -386,7 +427,7 @@ func TestSuite() int {
 			relDir, err := filepath.Rel(workspaceRoot, absDir)
 			if err != nil {
 				// Skip test if we can't compute relative path
-				fmt.Fprintf(multiWriter, "⚠️  Skipping test %s: unable to compute relative path from %s to %s\n",
+				writeln(multiWriter, "⚠️  Skipping test %s: unable to compute relative path from %s to %s",
 					test.TestName, workspaceRoot, absDir)
 				continue
 			}
@@ -402,15 +443,18 @@ func TestSuite() int {
 	numCPU := runtime.NumCPU()
 	var testParallelism int
 
+	// Build godog tag filter for suite (e.g., "@L0 || @L1 || @L2" for commit suite)
+	suiteTagFilter := suite.BuildGodogTagFilter()
+
 	if parallel {
 		// Package-level parallel: distribute CPU across packages
 		// Each package gets a smaller share of CPU cores
 		testParallelism = max(2, numCPU/4)
-		results = runTestsParallel(testsByPackage, multiWriter, testParallelism, testRunDir)
+		results = runTestsParallel(testsByPackage, multiWriter, testParallelism, testRunDir, reportFormat, coverage, suiteTagFilter)
 	} else {
 		// Sequential packages: each package gets full CPU power
 		testParallelism = numCPU
-		results = runTestsSequential(testsByPackage, multiWriter, testParallelism, testRunDir)
+		results = runTestsSequential(testsByPackage, multiWriter, testParallelism, testRunDir, reportFormat, coverage, suiteTagFilter)
 	}
 
 	// Calculate totals from results
@@ -438,30 +482,43 @@ func TestSuite() int {
 	// Phase 6: Generate summary
 	endTime := time.Now()
 
-	fmt.Fprintf(multiWriter, "=== Test Run Summary ===\n")
-	fmt.Fprintf(multiWriter, "Suite: %s\n", suite.Name)
-	fmt.Fprintf(multiWriter, "Total packages: %d\n", len(testsByPackage))
-	fmt.Fprintf(multiWriter, "Packages passed: %d\n", packagesPassed)
-	fmt.Fprintf(multiWriter, "Packages failed: %d\n", packagesFailed)
-	fmt.Fprintf(multiWriter, "Individual tests discovered: %d\n", len(allTests))
-	fmt.Fprintf(multiWriter, "Production tests: %d\n", len(productionTests))
+	writeln(multiWriter, "=== Test Run Summary ===")
+	writeln(multiWriter, "Suite: %s", suite.Name)
+	writeln(multiWriter, "Total packages: %d", len(testsByPackage))
+	writeln(multiWriter, "Packages passed: %d", packagesPassed)
+	writeln(multiWriter, "Packages failed: %d", packagesFailed)
+	writeln(multiWriter, "Individual tests discovered: %d", len(allTests))
+	writeln(multiWriter, "Production tests: %d", len(productionTests))
 	if frameworkTestCount > 0 {
-		fmt.Fprintf(multiWriter, "Framework tests excluded: %d\n", frameworkTestCount)
+		writeln(multiWriter, "Framework tests excluded: %d", frameworkTestCount)
 	}
-	fmt.Fprintf(multiWriter, "Tests total: %d\n", testsTotal)
-	fmt.Fprintf(multiWriter, "Tests passed: %d\n", testsPassed)
-	fmt.Fprintf(multiWriter, "Tests failed: %d\n", testsFailed)
+	writeln(multiWriter, "Tests total: %d", testsTotal)
+	writeln(multiWriter, "Tests passed: %d", testsPassed)
+	writeln(multiWriter, "Tests failed: %d", testsFailed)
 	if testsSkipped > 0 {
-		fmt.Fprintf(multiWriter, "Tests skipped: %d\n", testsSkipped)
+		writeln(multiWriter, "Tests skipped: %d", testsSkipped)
 	}
-	fmt.Fprintf(multiWriter, "Results directory: %s\n", testRunDir)
+	writeln(multiWriter, "Results directory: %s", testRunDir)
 
 	// Check for undefined steps in test logs
 	undefinedSteps := extractUndefinedSteps(testRunDir)
 	if len(undefinedSteps) > 0 {
-		fmt.Fprintf(multiWriter, "\n⚠️  WARNING: %d undefined steps found\n", len(undefinedSteps))
-		fmt.Fprintf(multiWriter, "Scenarios with undefined steps need step implementations.\n")
-		fmt.Fprintf(multiWriter, "Run with verbose logging to see full details.\n")
+		writeln(multiWriter, "")
+		writeln(multiWriter, "⚠️  WARNING: %d undefined steps found", len(undefinedSteps))
+		writeln(multiWriter, "Scenarios with undefined steps need step implementations.")
+		writeln(multiWriter, "Run with verbose logging to see full details.")
+	}
+
+	// Validate expected output files
+	writeln(multiWriter, "")
+	writeln(multiWriter, "=== Output File Validation ===")
+	fileValidationErrors := validateOutputFiles(results, multiWriter)
+	if len(fileValidationErrors) > 0 {
+		writeln(multiWriter, "")
+		writeln(multiWriter, "❌ %d output file validation errors found", len(fileValidationErrors))
+		// Don't fail the build for missing files, just warn
+	} else {
+		writeln(multiWriter, "✅ All expected output files exist and are non-empty")
 	}
 
 	// Generate markdown report using template
@@ -501,6 +558,65 @@ func TestSuite() int {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// OutputFileError represents a validation error for an expected output file
+type OutputFileError struct {
+	FilePath string
+	Issue    string // "missing" or "empty"
+}
+
+// validateOutputFiles checks that all expected output files exist and are non-empty
+// Returns a list of validation errors
+func validateOutputFiles(results []PackageTestResult, w io.Writer) []OutputFileError {
+	var errors []OutputFileError
+	var checkedCount, passedCount int
+
+	for _, result := range results {
+		for _, expectedFile := range result.ExpectedFiles {
+			checkedCount++
+
+			// Check if file exists
+			info, err := os.Stat(expectedFile)
+			if os.IsNotExist(err) {
+				errors = append(errors, OutputFileError{
+					FilePath: expectedFile,
+					Issue:    "missing",
+				})
+				writeln(w, "  ❌ Missing: %s", expectedFile)
+				continue
+			}
+
+			if err != nil {
+				errors = append(errors, OutputFileError{
+					FilePath: expectedFile,
+					Issue:    fmt.Sprintf("error: %v", err),
+				})
+				writeln(w, "  ❌ Error checking %s: %v", expectedFile, err)
+				continue
+			}
+
+			// Check if file is empty
+			if info.Size() == 0 {
+				errors = append(errors, OutputFileError{
+					FilePath: expectedFile,
+					Issue:    "empty",
+				})
+				writeln(w, "  ❌ Empty: %s", expectedFile)
+				continue
+			}
+
+			passedCount++
+		}
+	}
+
+	if checkedCount > 0 {
+		writeln(w, "Checked %d files: %d passed, %d failed", checkedCount, passedCount, len(errors))
+	} else {
+		writeln(w, "No output files to validate")
+	}
+
+	return errors
 }
 
 // displayGodogFeatureSummaries parses and displays feature file summaries for a Godog test package
@@ -599,11 +715,11 @@ func max(a, b int) int {
 }
 
 // runTestsSequential runs tests package by package sequentially
-func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string) []PackageTestResult {
+func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) []PackageTestResult {
 	results := []PackageTestResult{}
 
 	for pkgPath, tests := range testsByPackage {
-		result := runPackageTests(pkgPath, tests, multiWriter, testParallelism, testRunDir)
+		result := runPackageTests(pkgPath, tests, multiWriter, testParallelism, testRunDir, reportFormat, coverage, suiteTagFilter)
 		results = append(results, result)
 	}
 
@@ -611,7 +727,7 @@ func runTestsSequential(testsByPackage map[string][]testing.TestReference, multi
 }
 
 // runTestsParallel runs tests across packages in parallel using goroutines
-func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string) []PackageTestResult {
+func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) []PackageTestResult {
 	// Use a mutex to protect shared results
 	var mu sync.Mutex
 	results := []PackageTestResult{}
@@ -634,7 +750,7 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 			defer func() { <-semaphore }()
 
 			// Run tests for this package
-			result := runPackageTests(path, testList, multiWriter, testParallelism, testRunDir)
+			result := runPackageTests(path, testList, multiWriter, testParallelism, testRunDir, reportFormat, coverage, suiteTagFilter)
 
 			// Append result (thread-safe)
 			mu.Lock()
@@ -650,7 +766,7 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 }
 
 // runPackageTests runs tests for a single package and returns detailed test results
-func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string) PackageTestResult {
+func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) PackageTestResult {
 	// pkgPath is already workspace-relative (from test grouping phase)
 	// Check if this is a synthetic Godog package key (testrunner:featurefile)
 	var relPkgPath string      // Relative path for display
@@ -700,6 +816,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			TestsSkipped:  0,
 			TestsTotal:    len(tests),
 			PackageFailed: false,
+			ExpectedFiles: []string{}, // No files expected for godog-only packages
 		}
 	}
 
@@ -748,8 +865,9 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		pkgOutputDir := filepath.Join(testRunDir, parentDir)
 		// Create the output directory for feature files
 		if err := os.MkdirAll(pkgOutputDir, 0755); err != nil {
-			fmt.Fprintf(multiWriter, "❌ Failed to create output directory: %v\n\n", err)
-			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
+			writeln(multiWriter, "❌ Failed to create output directory: %v", err)
+			writeln(multiWriter, "")
+			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 		}
 
 		logFilePath = filepath.Join(pkgOutputDir, dirName+".log")
@@ -782,8 +900,9 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Create module directory
 		moduleDir := filepath.Join(testRunDir, moduleName)
 		if err := os.MkdirAll(moduleDir, 0755); err != nil {
-			fmt.Fprintf(multiWriter, "❌ Failed to create output directory: %v\n\n", err)
-			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
+			writeln(multiWriter, "❌ Failed to create output directory: %v", err)
+			writeln(multiWriter, "")
+			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 		}
 
 		// Create log file path directly under module directory
@@ -791,10 +910,18 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	}
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
-		fmt.Fprintf(multiWriter, "❌ Failed to create log file: %v\n\n", err)
-		return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
+		writeln(multiWriter, "❌ Failed to create log file: %v", err)
+		writeln(multiWriter, "")
+		return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 	}
 	defer logFile.Close()
+
+	// Track expected output files for validation
+	expectedFiles := []string{logFilePath}
+
+	// JSON test results file (always created)
+	jsonFilePath := strings.TrimSuffix(logFilePath, ".log") + ".json"
+	expectedFiles = append(expectedFiles, jsonFilePath)
 
 	// For Godog packages, write feature summaries to log file
 	if isGodogTestPackage {
@@ -805,7 +932,22 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	// If testing a specific feature file, pass it via environment variable (GODOG_PATHS)
 	var cmd *exec.Cmd
 
-	cmd = exec.Command("go", "test", "-json", "-parallel", fmt.Sprintf("%d", testParallelism))
+	// Build go test arguments
+	goTestArgs := []string{"test", "-json", "-parallel", fmt.Sprintf("%d", testParallelism)}
+
+	// Add coverage flags if enabled
+	var coverageFile string
+	if coverage {
+		// Generate coverage file alongside the log file
+		coverageFile = strings.TrimSuffix(logFilePath, ".log") + ".coverage.out"
+		goTestArgs = append(goTestArgs, "-cover", "-coverprofile="+coverageFile)
+		expectedFiles = append(expectedFiles, coverageFile)
+		// Also expect JSON coverage file
+		coverageJSONFile := strings.TrimSuffix(coverageFile, ".out") + ".json"
+		expectedFiles = append(expectedFiles, coverageJSONFile)
+	}
+
+	cmd = exec.Command("go", goTestArgs...)
 	cmd.Dir = actualPkgDir
 
 	// Create a buffer to capture JSON output
@@ -828,7 +970,14 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Set format for console output
 		cmd.Env = append(cmd.Env, "GODOG_FORMAT=progress")
 
-		// Only generate cucumber.json reports when testing specific feature files
+		// Set suite tag filter (e.g., "@L0 || @L1 || @L2" for commit suite)
+		// This ensures godog only runs scenarios matching the suite
+		if suiteTagFilter != "" {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_SUITE_TAGS=%s", suiteTagFilter))
+			fmt.Fprintf(logFile, "🏷️  Suite tag filter: %s\n", suiteTagFilter)
+		}
+
+		// Only generate reports when testing specific feature files
 		// Test orchestrator packages (src/*/tests) should not generate reports
 		// Reports are only generated for individual feature files in specs/
 		if relFeatureFile != "" {
@@ -837,13 +986,23 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			reportOutputDir := filepath.Dir(logFilePath)
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", reportOutputDir))
 
-			// Set report format (default to cucumber for BDD tests)
-			cmd.Env = append(cmd.Env, "GODOG_REPORT_FORMAT=cucumber")
+			// Set report format (cucumber or junit)
+			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_FORMAT=%s", reportFormat))
 
-			// Extract report name from log file path (e.g., "templates.log" -> "templates.cucumber.json")
+			// Extract report name from log file path with appropriate extension
+			// cucumber -> "templates.cucumber.json", junit -> "templates.junit.xml"
 			logBaseName := filepath.Base(logFilePath)
-			reportName := strings.TrimSuffix(logBaseName, ".log") + ".cucumber.json"
+			var reportName string
+			if reportFormat == "junit" {
+				reportName = strings.TrimSuffix(logBaseName, ".log") + ".junit.xml"
+			} else {
+				reportName = strings.TrimSuffix(logBaseName, ".log") + ".cucumber.json"
+			}
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_NAME=%s", reportName))
+
+			// Add report file to expected files
+			reportFilePath := filepath.Join(reportOutputDir, reportName)
+			expectedFiles = append(expectedFiles, reportFilePath)
 		}
 
 		// If testing a specific feature file, set GODOG_PATHS environment variable
@@ -864,7 +1023,12 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		fmt.Fprintf(logFile, "✨ Skip tags will be loaded from tag contract in godog_test.go\n\n")
 		if relFeatureFile != "" {
 			logBaseName := filepath.Base(logFilePath)
-			reportName := strings.TrimSuffix(logBaseName, ".log") + ".cucumber.json"
+			var reportName string
+			if reportFormat == "junit" {
+				reportName = strings.TrimSuffix(logBaseName, ".log") + ".junit.xml"
+			} else {
+				reportName = strings.TrimSuffix(logBaseName, ".log") + ".cucumber.json"
+			}
 			fmt.Fprintf(logFile, "📊 Test report will be saved as: %s\n\n", reportName)
 		}
 	}
@@ -876,6 +1040,16 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		jsonFilePath := strings.TrimSuffix(logFilePath, ".log") + ".json"
 		if writeErr := os.WriteFile(jsonFilePath, []byte(jsonOutput.String()), 0644); writeErr != nil {
 			fmt.Fprintf(logFile, "Warning: failed to save JSON results: %v\n", writeErr)
+		}
+	}
+
+	// Convert coverage profile to JSON if coverage was enabled
+	if coverage && coverageFile != "" {
+		if _, statErr := os.Stat(coverageFile); statErr == nil {
+			coverageJSONFile := strings.TrimSuffix(coverageFile, ".out") + ".json"
+			if convertErr := convertCoverageToJSON(coverageFile, coverageJSONFile); convertErr != nil {
+				fmt.Fprintf(logFile, "Warning: failed to convert coverage to JSON: %v\n", convertErr)
+			}
 		}
 	}
 
@@ -895,11 +1069,11 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			// Create relative log path from test run directory
 			relLogPath, _ := filepath.Rel(filepath.Dir(testRunDir), logFilePath)
 			if testCountInfo != "" {
-				fmt.Fprintf(multiWriter, "❌ Package %s [%s] %s failed due to %s (See %s for details)\n", pkgName, testType, testCountInfo, failureReason, relLogPath)
+				writeln(multiWriter, "❌ Package %s [%s] %s failed due to %s (See %s for details)", pkgName, testType, testCountInfo, failureReason, relLogPath)
 			} else {
-				fmt.Fprintf(multiWriter, "❌ Package %s [%s] failed due to %s (See %s for details)\n", pkgName, testType, failureReason, relLogPath)
+				writeln(multiWriter, "❌ Package %s [%s] failed due to %s (See %s for details)", pkgName, testType, failureReason, relLogPath)
 			}
-			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
+			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
 		} else {
 			testType := "go"
 			testCountInfo := fmt.Sprintf("(0/%d)", len(tests))
@@ -909,11 +1083,11 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			}
 
 			if testCountInfo != "" {
-				fmt.Fprintf(multiWriter, "❌ Package %s [%s] %s failed to run tests: %v\n", pkgName, testType, testCountInfo, err)
+				writeln(multiWriter, "❌ Package %s [%s] %s failed to run tests: %v", pkgName, testType, testCountInfo, err)
 			} else {
-				fmt.Fprintf(multiWriter, "❌ Package %s [%s] failed to run tests: %v\n", pkgName, testType, err)
+				writeln(multiWriter, "❌ Package %s [%s] failed to run tests: %v", pkgName, testType, err)
 			}
-			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true}
+			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
 		}
 	}
 
@@ -928,11 +1102,11 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	// Create relative log path from test run directory
 	relLogPath, _ := filepath.Rel(filepath.Dir(testRunDir), logFilePath)
 	if testCountInfo != "" {
-		fmt.Fprintf(multiWriter, "✅ Package %s [%s] %s passed (See %s for details)\n", pkgName, testType, testCountInfo, relLogPath)
+		writeln(multiWriter, "✅ Package %s [%s] %s passed (See %s for details)", pkgName, testType, testCountInfo, relLogPath)
 	} else {
-		fmt.Fprintf(multiWriter, "✅ Package %s [%s] passed (See %s for details)\n", pkgName, testType, relLogPath)
+		writeln(multiWriter, "✅ Package %s [%s] passed (See %s for details)", pkgName, testType, relLogPath)
 	}
-	return PackageTestResult{TestsPassed: len(tests), TestsFailed: 0, TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: false}
+	return PackageTestResult{TestsPassed: len(tests), TestsFailed: 0, TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: false, ExpectedFiles: expectedFiles}
 }
 
 // extractGodogScenarioCounts parses godog JSON test results to extract scenario counts
@@ -1149,5 +1323,213 @@ func extractModuleFromPath(filePath string) string {
 
 	// Fallback: return empty string
 	return ""
+}
+
+// mapGOOSToDepTag maps runtime.GOOS values to dependency tag names
+func mapGOOSToDepTag(goos string) string {
+	switch goos {
+	case "linux":
+		return "linux"
+	case "darwin":
+		return "macos"
+	case "windows":
+		return "windows"
+	default:
+		return goos
+	}
+}
+
+// filterByOSCompatibility filters tests based on OS-specific dependencies
+// Tests with deps:linux only run on Linux, deps:macos only on macOS, deps:windows only on Windows
+// Tests without any OS-specific deps are considered OS-agnostic and run everywhere
+// Tests with multiple OS deps (e.g., deps:linux AND deps:macos) run on any of those OSes
+func filterByOSCompatibility(tests []testing.TestReference, w io.Writer) []testing.TestReference {
+	currentOS := mapGOOSToDepTag(runtime.GOOS)
+	compatible := []testing.TestReference{}
+
+	for _, test := range tests {
+		// Check if test has any OS-specific dependencies
+		hasOSDep := false
+		matchesCurrentOS := false
+
+		for _, dep := range test.SystemDependencies {
+			// Check if this is an OS dependency (uses exported list from testing package)
+			for _, osDep := range testing.OsPlatformTags {
+				if dep == osDep {
+					hasOSDep = true
+					if dep == currentOS {
+						matchesCurrentOS = true
+					}
+					break
+				}
+			}
+		}
+
+		// Include test if:
+		// 1. It has no OS-specific deps (OS-agnostic), OR
+		// 2. It has an OS dep that matches the current OS
+		if !hasOSDep || matchesCurrentOS {
+			compatible = append(compatible, test)
+		}
+	}
+
+	return compatible
+}
+
+// CoverageReport represents the JSON structure for coverage data
+type CoverageReport struct {
+	Mode     string           `json:"mode"`
+	Files    []FileCoverage   `json:"files"`
+	Summary  CoverageSummary  `json:"summary"`
+}
+
+// FileCoverage represents coverage data for a single file
+type FileCoverage struct {
+	FileName    string   `json:"fileName"`
+	Blocks      []Block  `json:"blocks"`
+	TotalLines  int      `json:"totalLines"`
+	CoveredLines int     `json:"coveredLines"`
+	Coverage    float64  `json:"coverage"`
+}
+
+// Block represents a coverage block (start line, end line, statement count, hit count)
+type Block struct {
+	StartLine int `json:"startLine"`
+	StartCol  int `json:"startCol"`
+	EndLine   int `json:"endLine"`
+	EndCol    int `json:"endCol"`
+	NumStmt   int `json:"numStmt"`
+	Count     int `json:"count"`
+}
+
+// CoverageSummary provides overall coverage statistics
+type CoverageSummary struct {
+	TotalFiles    int     `json:"totalFiles"`
+	TotalLines    int     `json:"totalLines"`
+	CoveredLines  int     `json:"coveredLines"`
+	TotalCoverage float64 `json:"totalCoverage"`
+}
+
+// convertCoverageToJSON converts a Go coverage profile to JSON format
+func convertCoverageToJSON(coverageFile, jsonFile string) error {
+	file, err := os.Open(coverageFile)
+	if err != nil {
+		return fmt.Errorf("failed to open coverage file: %w", err)
+	}
+	defer file.Close()
+
+	report := CoverageReport{
+		Files: []FileCoverage{},
+	}
+
+	fileMap := make(map[string]*FileCoverage)
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// First line is the mode
+		if strings.HasPrefix(line, "mode:") {
+			report.Mode = strings.TrimSpace(strings.TrimPrefix(line, "mode:"))
+			continue
+		}
+
+		// Parse coverage line: filename:startLine.startCol,endLine.endCol numStmt count
+		// Example: github.com/user/pkg/file.go:10.2,15.5 3 1
+		parts := strings.Fields(line)
+		if len(parts) != 3 {
+			continue
+		}
+
+		// Parse file:positions
+		colonIdx := strings.LastIndex(parts[0], ":")
+		if colonIdx == -1 {
+			continue
+		}
+
+		fileName := parts[0][:colonIdx]
+		positions := parts[0][colonIdx+1:]
+
+		// Parse positions: startLine.startCol,endLine.endCol
+		positionParts := strings.Split(positions, ",")
+		if len(positionParts) != 2 {
+			continue
+		}
+
+		startParts := strings.Split(positionParts[0], ".")
+		endParts := strings.Split(positionParts[1], ".")
+		if len(startParts) != 2 || len(endParts) != 2 {
+			continue
+		}
+
+		startLine, _ := strconv.Atoi(startParts[0])
+		startCol, _ := strconv.Atoi(startParts[1])
+		endLine, _ := strconv.Atoi(endParts[0])
+		endCol, _ := strconv.Atoi(endParts[1])
+		numStmt, _ := strconv.Atoi(parts[1])
+		count, _ := strconv.Atoi(parts[2])
+
+		block := Block{
+			StartLine: startLine,
+			StartCol:  startCol,
+			EndLine:   endLine,
+			EndCol:    endCol,
+			NumStmt:   numStmt,
+			Count:     count,
+		}
+
+		// Get or create file coverage entry
+		fileCov, exists := fileMap[fileName]
+		if !exists {
+			fileCov = &FileCoverage{
+				FileName: fileName,
+				Blocks:   []Block{},
+			}
+			fileMap[fileName] = fileCov
+		}
+
+		fileCov.Blocks = append(fileCov.Blocks, block)
+		fileCov.TotalLines += (endLine - startLine + 1)
+		if count > 0 {
+			fileCov.CoveredLines += (endLine - startLine + 1)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to read coverage file: %w", err)
+	}
+
+	// Calculate per-file coverage and add to report
+	var totalLines, coveredLines int
+	for _, fileCov := range fileMap {
+		if fileCov.TotalLines > 0 {
+			fileCov.Coverage = float64(fileCov.CoveredLines) / float64(fileCov.TotalLines) * 100
+		}
+		report.Files = append(report.Files, *fileCov)
+		totalLines += fileCov.TotalLines
+		coveredLines += fileCov.CoveredLines
+	}
+
+	// Calculate summary
+	report.Summary = CoverageSummary{
+		TotalFiles:   len(report.Files),
+		TotalLines:   totalLines,
+		CoveredLines: coveredLines,
+	}
+	if totalLines > 0 {
+		report.Summary.TotalCoverage = float64(coveredLines) / float64(totalLines) * 100
+	}
+
+	// Write JSON file
+	jsonData, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal coverage to JSON: %w", err)
+	}
+
+	if err := os.WriteFile(jsonFile, jsonData, 0644); err != nil {
+		return fmt.Errorf("failed to write coverage JSON: %w", err)
+	}
+
+	return nil
 }
 

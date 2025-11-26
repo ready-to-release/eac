@@ -65,11 +65,15 @@ var InteractiveCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Get extension metadata for volume mounts
+		// Get extension metadata for volume mounts and env vars
 		var volumeRequests []cache.VolumeRequest
 		extMeta, err := host.GetExtensionMetadata(ext)
-		if err == nil && extMeta != nil && len(extMeta.Volumes) > 0 {
-			volumeRequests = extMeta.Volumes
+		if err == nil && extMeta != nil {
+			if len(extMeta.Volumes) > 0 {
+				volumeRequests = extMeta.Volumes
+			}
+			// Merge env vars from metadata into extension config
+			docker.MergeMetadataEnv(ext, extMeta)
 		}
 
 		// Create container configuration

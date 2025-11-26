@@ -202,7 +202,18 @@ func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
 
 	// 5. Add extension-specific env vars (these can override defaults)
 	for _, env := range ext.Env {
-		envVars = append(envVars, env.Name+"="+env.Value)
+		if env.Value != "" {
+			// Static value
+			envVars = append(envVars, env.Name+"="+env.Value)
+		} else {
+			// Passthrough from host (value omitted)
+			if hostValue := os.Getenv(env.Name); hostValue != "" {
+				envVars = append(envVars, env.Name+"="+hostValue)
+				log.Debug().Str("env", env.Name).Msg("Passing through environment variable from host")
+			} else if env.Required {
+				log.Error().Str("env", env.Name).Msg("Required environment variable not set on host")
+			}
+		}
 	}
 
 	return envVars
@@ -864,6 +875,35 @@ func parseExtensionMetadata(yamlData string) (*cache.ExtensionMeta, error) {
 	}
 
 	return &meta, nil
+}
+
+// MergeMetadataEnv merges environment variables from extension metadata into config
+// Metadata env vars are added first, then config env vars override them
+func MergeMetadataEnv(ext *ExtensionConfig, meta *cache.ExtensionMeta) {
+	if meta == nil || len(meta.Env) == 0 {
+		return
+	}
+
+	// Build a map of existing config env vars for deduplication
+	existingEnv := make(map[string]bool)
+	for _, env := range ext.Env {
+		existingEnv[env.Name] = true
+	}
+
+	// Add metadata env vars that aren't already in config
+	for _, metaEnv := range meta.Env {
+		if !existingEnv[metaEnv.Name] {
+			ext.Env = append(ext.Env, conf.EnvVar{
+				Name:     metaEnv.Name,
+				Value:    metaEnv.Value,
+				Required: metaEnv.Required,
+			})
+			log.Debug().
+				Str("env", metaEnv.Name).
+				Bool("required", metaEnv.Required).
+				Msg("Added environment variable from extension metadata")
+		}
+	}
 }
 
 // Close closes the Docker client connection

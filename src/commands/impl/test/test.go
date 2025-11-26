@@ -1,43 +1,29 @@
 // Command: test
 // Short: Test one or more modules by moniker
 // Args: modules
-// Long: Test one or more modules by moniker using type-based dispatch.
+// Long: Test one or more modules by moniker using suite-based filtering.
 // Long:
-// Long: This command identifies the module type from the module contract and dispatches
-// Long: to the appropriate test handler. Supported module types include Go modules with
-// Long: unit tests, specifications, and other testable components.
+// Long: This command discovers tests, applies inference rules (e.g., Go tests default to @L1),
+// Long: filters by suite tags, and runs matching tests with consistent summary output.
 // Long:
-// Long: When a single module is specified, output is verbose. When multiple modules
-// Long: are specified, tests run in parallel with orchestrator output.
-// Long:
-// Long: Test output formats can be controlled with flags. The default output shows test
-// Long: results in real-time. Use --as-cucumber for cucumber-style JSON output or --as-junit
-// Long: for JUnit XML format suitable for CI/CD systems.
-// Long:
-// Long: Use --suite to filter tests by suite. The default suite is "commit".
+// Long: Use --suite to select which tests to run. The default suite is "commit" which
+// Long: includes L0, L1, and L2 tests (fast tests for pre-commit/MR validation).
 // Long:
 // Long: Example:
-// Long:   test src-commands                    # Test single module (verbose)
-// Long:   test src-core src-cli                # Test multiple modules (parallel)
+// Long:   test src-commands                    # Test single module
+// Long:   test src-core src-cli                # Test multiple modules
 // Long:   test                                 # Test all modules
-// Long:   test src-commands --as-junit         # Test with JUnit output
-// Long:   test src-commands --suite integration
-// Flag.as-cucumber: type=bool, usage=Output test results in Cucumber JSON format
-// Flag.as-junit: type=bool, usage=Output test results in JUnit XML format
+// Long:   test src-commands --suite acceptance # Run acceptance tests only
 // Flag.suite: type=string, usage=Filter tests by suite (default: "commit")
 // HasSideEffects: false
 package test
 
 import (
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
@@ -66,8 +52,10 @@ func Test() int {
 	// Parse arguments - separate monikers from flags
 	var monikers []string
 	suiteName := "commit"
-	reportFormat := "cucumber"
-	generateOnly := false
+	reportFormat := "cucumber" // Default report format
+	coverage := false          // Generate coverage reports
+	skipDeps := false          // Skip dependency verification
+	listOnly := false          // List tests without running
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -82,17 +70,15 @@ func Test() int {
 			reportFormat = "junit"
 		} else if arg == "--as-cucumber" {
 			reportFormat = "cucumber"
-		} else if arg == "--no-generate" {
-			// Legacy flag - no longer used
-		} else if arg == "--generate-only" {
-			generateOnly = true
-		} else if strings.HasPrefix(arg, "--as-") {
-			fmt.Fprintf(os.Stderr, "Error: unknown format flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid formats: --as-cucumber (default), --as-junit\n")
-			return 1
+		} else if arg == "--coverage" {
+			coverage = true
+		} else if arg == "--skip-deps" {
+			skipDeps = true
+		} else if arg == "--list-only" {
+			listOnly = true
 		} else if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
 			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid flags: --as-cucumber, --as-junit, --suite <name>\n")
+			fmt.Fprintf(os.Stderr, "Valid flags: --suite <name>, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only\n")
 			return 1
 		} else {
 			monikers = append(monikers, arg)
@@ -104,22 +90,6 @@ func Test() int {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
-	}
-
-	// Handle --generate-only flag (requires existing test-run-id)
-	if generateOnly {
-		if len(monikers) != 1 {
-			fmt.Fprintf(os.Stderr, "Error: --generate-only requires exactly one test-run-id\n")
-			fmt.Fprintf(os.Stderr, "Usage: test <test-run-id> --generate-only\n")
-			return 1
-		}
-		testRunID := monikers[0]
-		fmt.Printf("📊 Generating summary for test run: %s (skipping tests)\n", testRunID)
-		if err := generateSummaryMulti(testRunID); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			return 1
-		}
-		return 0
 	}
 
 	// Load module contracts
@@ -137,95 +107,56 @@ func Test() int {
 		}
 	}
 
-	// If exactly one module specified, run single module test (verbose output)
-	if len(monikers) == 1 {
-		return testSingleModule(monikers[0], workspaceRoot, moduleReport, reportFormat, suiteName)
-	}
-
-	// Multiple modules - run parallel test with orchestrator
-	return testMultipleModules(monikers, workspaceRoot, moduleReport, reportFormat, suiteName)
+	// Run test suite with module filter(s)
+	// This provides consistent output format whether testing 1 or N modules
+	return testModulesViaSuite(monikers, suiteName, reportFormat, coverage, skipDeps, listOnly)
 }
 
-// testSingleModule tests a single module with verbose output
-func testSingleModule(moniker string, workspaceRoot string, moduleReport *reports.ModuleContractReport, reportFormat string, suiteName string) int {
-	// Load module contract
-	moduleContract, err := modules.LoadSingleModule(workspaceRoot, moniker, "0.1.0")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contract for '%s': %v\n", moniker, err)
-		return 1
-	}
+// testModulesViaSuite runs tests for one or more modules using the test suite infrastructure
+// This provides consistent output format with summary, whether testing 1 or N modules
+func testModulesViaSuite(monikers []string, suiteName string, reportFormat string, coverage bool, skipDeps bool, listOnly bool) int {
+	// Build module filter argument (comma-separated)
+	moduleFilter := strings.Join(monikers, ",")
 
-	// Check if module has a type-specific test function
-	testFunc, exists := testFunctions[moduleContract.Type]
-	if exists {
-		// Use type-based dispatch for modules with specific test functions
-		outputDir := filepath.Join(workspaceRoot, "out", "test", suiteName, moniker)
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
-			return 1
-		}
-
-		logWriter := os.Stdout
-		return testFunc(moduleContract, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
-	}
-
-	// For modules without specific test functions, redirect to test suite
+	// Redirect to test suite with module filter
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	newArgs := []string{
-		os.Args[0],
+	// Build args with format flag
+	args := []string{
+		oldArgs[0],
 		"test",
 		"suite",
 		suiteName,
 		"--module",
-		moniker,
+		moduleFilter,
 	}
 
-	os.Args = newArgs
+	// Add format flag
+	if reportFormat == "junit" {
+		args = append(args, "--as-junit")
+	} else {
+		args = append(args, "--as-cucumber")
+	}
+
+	// Add coverage flag
+	if coverage {
+		args = append(args, "--coverage")
+	}
+
+	// Add skip-deps flag
+	if skipDeps {
+		args = append(args, "--skip-deps")
+	}
+
+	// Add list-only flag
+	if listOnly {
+		args = append(args, "--list-only")
+	}
+
+	os.Args = args
 
 	return TestSuite()
-}
-
-// testMultipleModules tests multiple modules in parallel using the orchestrator
-func testMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, reportFormat string, suiteName string) int {
-	// Configure orchestrator
-	config := orchestrator.Config{
-		WorkspaceRoot:        workspaceRoot,
-		OutputBaseDir:        "out/test",
-		LogFileName:          "test.log",
-		OrchestratorLogName:  "orchestrator.log",
-		ActionVerb:           "testing",
-		MaxConcurrency:       0, // Use default (number of CPUs)
-		StatusUpdateInterval: 2, // Update every 2 seconds
-	}
-
-	// Create worker function that tests a single module
-	worker := func(moniker string, logWriter io.Writer) int {
-		module, exists := moduleReport.Registry.Get(moniker)
-		if !exists {
-			fmt.Fprintf(logWriter, "Error: module not found: %s\n", moniker)
-			return 1
-		}
-
-		moduleOutputDir := filepath.Join(workspaceRoot, "out", "test", moniker)
-		return runModuleTest(module, workspaceRoot, moduleOutputDir, logWriter, reportFormat, suiteName)
-	}
-
-	// Create and run orchestrator
-	orch := orchestrator.New(config, worker)
-	results, err := orch.Run(monikers)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
-
-	// Print summary and close orchestrator
-	orch.PrintSummary(results)
-	orch.Close()
-
-	// Return exit code based on results
-	return orchestrator.GetExitCode(results)
 }
 
 func printTestUsage() {
@@ -234,19 +165,27 @@ func printTestUsage() {
 	fmt.Println("Usage: r2r eac test [module1] [module2] ... [options]")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  --as-cucumber          Output in Cucumber JSON format (default)")
-	fmt.Println("  --as-junit             Output in JUnit XML format")
 	fmt.Println("  --suite <name>         Filter tests by suite (default: \"commit\")")
+	fmt.Println("  --as-cucumber          Generate Cucumber JSON reports (default)")
+	fmt.Println("  --as-junit             Generate JUnit XML reports")
+	fmt.Println("  --coverage             Generate coverage reports (coverage.out, coverage.json)")
+	fmt.Println("  --skip-deps            Skip dependency verification before running tests")
+	fmt.Println("  --list-only            List tests that would run without executing them")
+	fmt.Println()
+	fmt.Println("Available suites:")
+	fmt.Println("  commit                 L0-L2 tests (fast, pre-commit)")
+	fmt.Println("  acceptance             IV/OV/PV tests (PLTE acceptance)")
+	fmt.Println("  production-verification  L4+PIV tests (production smoke)")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  r2r eac test                          # Test all modules")
-	fmt.Println("  r2r eac test src-commands             # Test single module (verbose)")
-	fmt.Println("  r2r eac test src-cli src-core         # Test multiple modules (parallel)")
-	fmt.Println("  r2r eac test src-commands --as-junit  # Test with JUnit output")
+	fmt.Println("  r2r eac test src-commands             # Test single module")
+	fmt.Println("  r2r eac test src-cli src-core         # Test multiple modules")
+	fmt.Println("  r2r eac test src-commands --suite acceptance")
+	fmt.Println("  r2r eac test src-commands --as-junit  # Generate JUnit XML")
+	fmt.Println("  r2r eac test src-commands --coverage  # Generate coverage reports")
 	fmt.Println()
 	fmt.Println("Related commands:")
 	fmt.Println("  r2r eac test suite <name>             # Run a specific test suite")
 	fmt.Println("  r2r eac test list-suites              # List all available test suites")
-	fmt.Println()
-	fmt.Println("Use 'r2r eac test <subcommand> --help' for more information about a command.")
 }

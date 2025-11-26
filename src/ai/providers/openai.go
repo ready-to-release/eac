@@ -27,7 +27,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/ai"
 	openai "github.com/sashabaranov/go-openai"
 )
 

@@ -251,6 +251,55 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 	return enriched
 }
 
+// OsPlatformTags lists OS-specific dependency tag values (without @deps: prefix)
+var OsPlatformTags = []string{"linux", "macos", "windows"}
+
+// OsPlatformTagsFull lists OS-specific dependency tags (with @deps: prefix) for filtering
+var OsPlatformTagsFull = map[string]bool{
+	"@deps:linux":       true,
+	"@deps:macos":       true,
+	"@deps:windows":     true,
+	"@deps:os-agnostic": true,
+}
+
+// InferOSPlatform adds @deps:os-agnostic to tests that don't have any OS-specific deps
+// This runs after other inference phases to ensure all explicit OS deps are already set
+func InferOSPlatform(tests []TestReference) []TestReference {
+	enriched := make([]TestReference, len(tests))
+
+	for i, test := range tests {
+		enriched[i] = test
+		enriched[i].Tags = copyTags(test.Tags)
+
+		// Check if test has any OS-specific dependency
+		hasOSDep := false
+		for _, dep := range test.SystemDependencies {
+			for _, osDep := range OsPlatformTags {
+				if dep == osDep {
+					hasOSDep = true
+					break
+				}
+			}
+			if hasOSDep {
+				break
+			}
+		}
+
+		// If no OS-specific dep, add os-agnostic
+		if !hasOSDep {
+			if !contains(enriched[i].Tags, "@deps:os-agnostic") {
+				enriched[i].Tags = append(enriched[i].Tags, "@deps:os-agnostic")
+			}
+			// Also add to SystemDependencies for consistency
+			if !contains(enriched[i].SystemDependencies, "os-agnostic") {
+				enriched[i].SystemDependencies = append(enriched[i].SystemDependencies, "os-agnostic")
+			}
+		}
+	}
+
+	return enriched
+}
+
 // InferSystemDepsFromEnv infers system dependencies based on environment tags
 // For example, if a test has @env:local01, look up the local01 environment contract
 // and add all its system dependencies (@deps:docker, etc.)

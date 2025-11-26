@@ -27,9 +27,9 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/impl/specs"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/core/contracts"
-	"github.com/ready-to-release/eac/src/core/ai/providers"
+	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 

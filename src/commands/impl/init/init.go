@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/ai/providers"
+	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 

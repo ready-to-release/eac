@@ -1,0 +1,20 @@
+# Version: 0.1.0
+
+moniker: "src-ai"
+name: "AI Provider Libraries"
+type: "go-library"
+description: "AI/LLM provider integrations (Claude, OpenAI, Gemini) for code generation and analysis"
+
+source:
+  root: "src/ai"
+  includes:
+    - "go.mod"
+    - "go.sum"
+    - "**.go"
+
+parent: "."
+
+depends_on: []
+
+used_by:
+  - "src-commands"

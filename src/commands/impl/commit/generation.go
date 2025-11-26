@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
-	"github.com/ready-to-release/eac/src/core/ai"
-	"github.com/ready-to-release/eac/src/core/ai/providers"
+	"github.com/ready-to-release/eac/src/ai"
+	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/core/contracts"
 )
 

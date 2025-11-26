@@ -125,7 +125,7 @@
   "definitions": {
     "envvar": {
       "type": "object",
-      "required": ["name", "value"],
+      "required": ["name"],
       "properties": {
         "name": {
           "type": "string",
@@ -134,7 +134,12 @@
         },
         "value": {
           "type": "string",
-          "description": "Environment variable value"
+          "description": "Environment variable value. If omitted, pass through from host env var with same name"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "If true, fail at runtime when passthrough env var is not set on host",
+          "default": false
         }
       }
     },

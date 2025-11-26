@@ -77,6 +77,47 @@ func ListSuites() []string {
 	return monikers
 }
 
+// BuildGodogTagFilter generates a godog-compatible tag expression for the suite
+// For example, commit suite with AnyOfTags: ["@L0", "@L1", "@L2"] returns "@L0 || @L1 || @L2"
+func (suite *TestSuite) BuildGodogTagFilter() string {
+	var parts []string
+
+	for _, selector := range suite.Selectors {
+		var selectorParts []string
+
+		// AnyOfTags becomes OR expression
+		if len(selector.AnyOfTags) > 0 {
+			orParts := make([]string, len(selector.AnyOfTags))
+			for i, tag := range selector.AnyOfTags {
+				orParts[i] = tag
+			}
+			selectorParts = append(selectorParts, "("+strings.Join(orParts, " || ")+")")
+		}
+
+		// RequireTags becomes AND expression
+		for _, tag := range selector.RequireTags {
+			selectorParts = append(selectorParts, tag)
+		}
+
+		// ExcludeTags becomes NOT expression
+		for _, tag := range selector.ExcludeTags {
+			selectorParts = append(selectorParts, "~"+tag)
+		}
+
+		if len(selectorParts) > 0 {
+			parts = append(parts, strings.Join(selectorParts, " && "))
+		}
+	}
+
+	// Multiple selectors are OR'd together
+	if len(parts) > 1 {
+		return "(" + strings.Join(parts, ") || (") + ")"
+	} else if len(parts) == 1 {
+		return parts[0]
+	}
+	return ""
+}
+
 // SelectTests applies suite selectors to filter tests
 func (suite *TestSuite) SelectTests(allTests []TestReference) []TestReference {
 	selected := []TestReference{}
@@ -146,14 +187,15 @@ func matchesSelector(tags []string, selector TagSelector) bool {
 	return true
 }
 
-// GetSystemDependencies extracts all @deps:* tags from tests (excludes @depm:*)
+// GetSystemDependencies extracts all @deps:* tags from tests (excludes @depm:* and OS platform tags)
 func GetSystemDependencies(tests []TestReference) []string {
 	depsMap := make(map[string]bool)
 
 	for _, test := range tests {
 		for _, tag := range test.Tags {
 			// Only include @deps: tags, not @depm: (module dependencies)
-			if strings.HasPrefix(tag, "@deps:") {
+			// Also exclude OS platform tags (handled by OS filtering)
+			if strings.HasPrefix(tag, "@deps:") && !OsPlatformTagsFull[tag] {
 				depsMap[tag] = true
 			}
 		}

@@ -144,9 +144,51 @@ jobs:
             echo "has-changes=false" >> $GITHUB_OUTPUT
           fi
 
+  # Validate repository contracts before running any module builds
+  # This catches configuration errors early (unordered files, overlapping ownership)
+  validate-repository:
+    name: Validate Repository Contracts
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
+
+      - name: Run Repository Validation
+        run: |
+          cd src/commands
+          FAILED=0
+
+          echo "🔍 Validating repository contracts..."
+          go run . test repository || FAILED=1
+
+          echo ""
+          echo "🔍 Validating module dependencies..."
+          go run . validate dependencies || FAILED=1
+
+          echo ""
+          echo "🔍 Validating static modules (config files)..."
+          go run . build repo-config || FAILED=1
+          go run . build contracts || FAILED=1
+
+          echo ""
+          if [ $FAILED -ne 0 ]; then
+            echo "::error::Validation failed - fix issues before proceeding"
+            exit 1
+          fi
+
+          echo "✅ All validations passed"
+
   calculate-order:
     name: Calculate Execution Order
-    needs: detect-changes
+    needs: [detect-changes, validate-repository]
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     outputs:
@@ -307,7 +349,7 @@ jobs:
 
   summary:
     name: Summary
-    needs: [detect-changes, calculate-order, execute-layers]
+    needs: [detect-changes, validate-repository, calculate-order, execute-layers]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -346,6 +388,19 @@ jobs:
           echo '```json' >> $GITHUB_STEP_SUMMARY
           echo '${{ needs.calculate-order.outputs.execution-plan }}' | jq . >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### 🔍 Validation Result" >> $GITHUB_STEP_SUMMARY
+          VALIDATION="${{ needs.validate-repository.result }}"
+          if [ "$VALIDATION" = "success" ]; then
+            echo "✅ **Repository Contracts**: Valid" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATION" = "failure" ]; then
+            echo "❌ **Repository Contracts**: Invalid - fix contract issues" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATION" = "skipped" ]; then
+            echo "⏭️ **Repository Contracts**: Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Repository Contracts**: $VALIDATION" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 🏁 Execution Result" >> $GITHUB_STEP_SUMMARY

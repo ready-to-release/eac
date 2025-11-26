@@ -44,7 +44,15 @@ type Metadata struct {
 	Requirements       Requirements       `yaml:"requirements"`
 	Volumes            []Volume           `yaml:"volumes,omitempty"`
 	ExpectedHostImages []string           `yaml:"expected-host-images,omitempty"`
+	Env                []EnvVar           `yaml:"env,omitempty"`
 	Metadata           ExtensionMetadata  `yaml:"metadata"`
+}
+
+// EnvVar defines an environment variable request from the extension
+type EnvVar struct {
+	Name     string `yaml:"name"`                        // Environment variable name
+	Value    string `yaml:"value,omitempty"`             // If empty, pass through from host
+	Required bool   `yaml:"required,omitempty"`          // If true, fail at runtime when not set
 }
 
 // Volume defines a volume mount request from the extension
@@ -211,6 +219,15 @@ func outputMetadata() {
 		ExpectedHostImages: []string{
 			"cli-mkdocs:latest",       // docs serve command
 			"structurizr/lite:latest", // design serve command
+		},
+		Env: []EnvVar{
+			{Name: "GODOG_SUITE_TAGS"},    // Test suite tag filter for godog scenarios
+			{Name: "GODOG_FORMAT"},        // Godog output format
+			{Name: "GODOG_OUTPUT_DIR"},    // Godog report output directory
+			{Name: "GODOG_REPORT_FORMAT"}, // Godog report format (cucumber/junit)
+			{Name: "GODOG_REPORT_NAME"},   // Godog report file name
+			{Name: "GODOG_PATHS"},         // Godog feature file paths
+			{Name: "R2R_TEST_RUN_ID"},     // Test run identifier
 		},
 		Metadata: ExtensionMetadata{
 			Author:        "Ready to Release Team",

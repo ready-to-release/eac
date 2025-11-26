@@ -19,8 +19,8 @@ source:
     - "/.github/workflows/src-commands.yaml"
 
 depends_on:
+  - "src-ai"
   - "src-core"
-  - "src-core-logging"
 used_by:
   - "implicit-cli-sh"
   - "implicit-cli-pwsh"

@@ -5,7 +5,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/ai"
 )
 
 func TestMockProvider_Execute(t *testing.T) {

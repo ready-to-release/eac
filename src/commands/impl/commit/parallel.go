@@ -35,7 +35,7 @@ import (
 	"sync"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
-	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

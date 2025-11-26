@@ -51,11 +51,39 @@ func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 	// Try to find by extracting relative path
 	relPath := strings.TrimPrefix(modulePath, m.baseModulePath+"/")
 
-	// Look for module with matching source root
+	// Look for module with matching source root (exact match first)
 	for _, module := range m.registry.All() {
 		if module.Source.Root == relPath {
 			return module.Moniker, nil
 		}
+	}
+
+	// Check tests root
+	for _, module := range m.registry.All() {
+		if module.Tests != nil && module.Tests.Root == relPath {
+			return module.Moniker, nil
+		}
+	}
+
+	// Check if path is under a module's source root (for nested go.mod files)
+	var bestMatch *modules.ModuleContract
+	bestMatchLen := 0
+
+	for _, module := range m.registry.All() {
+		root := module.Source.Root
+		if root == "" || root == "." {
+			continue
+		}
+		if strings.HasPrefix(relPath, root+"/") || relPath == root {
+			if len(root) > bestMatchLen {
+				bestMatch = module
+				bestMatchLen = len(root)
+			}
+		}
+	}
+
+	if bestMatch != nil {
+		return bestMatch.Moniker, nil
 	}
 
 	return "", fmt.Errorf("no module contract found for path: %s", modulePath)
@@ -79,12 +107,46 @@ func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 
 // GetMonikerFromModuleDir converts a module directory to a moniker
 // Example: "src/cli" -> "src-cli"
+// Also handles subdirectories: "src/core/ai" -> "src-core"
 func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
-	// Look for module with matching source root
+	// Normalize path separators
+	normalizedDir := strings.ReplaceAll(moduleDir, "\\", "/")
+
+	// First, look for exact match on source root
 	for _, module := range m.registry.All() {
-		if module.Source.Root == moduleDir {
+		if module.Source.Root == normalizedDir {
 			return module.Moniker, nil
 		}
+	}
+
+	// Check tests root - test directories belong to their parent module
+	for _, module := range m.registry.All() {
+		if module.Tests != nil && module.Tests.Root == normalizedDir {
+			return module.Moniker, nil
+		}
+	}
+
+	// Check if directory is under a module's source root (for nested go.mod files)
+	// Find the most specific (deepest) matching module
+	var bestMatch *modules.ModuleContract
+	bestMatchLen := 0
+
+	for _, module := range m.registry.All() {
+		root := module.Source.Root
+		if root == "" || root == "." {
+			continue
+		}
+		// Check if moduleDir is under this root
+		if strings.HasPrefix(normalizedDir, root+"/") || normalizedDir == root {
+			if len(root) > bestMatchLen {
+				bestMatch = module
+				bestMatchLen = len(root)
+			}
+		}
+	}
+
+	if bestMatch != nil {
+		return bestMatch.Moniker, nil
 	}
 
 	return "", fmt.Errorf("no module contract found for directory: %s", moduleDir)

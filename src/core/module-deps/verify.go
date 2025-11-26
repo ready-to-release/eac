@@ -134,6 +134,16 @@ func (c *ModuleChecker) IsAvailable() bool {
 		_, err = os.Stat(testsPath)
 		return err == nil
 
+	case "scripts":
+		// Scripts modules: check if source root directory exists
+		repoRoot, err := repository.GetRepositoryRoot("")
+		if err != nil {
+			return false
+		}
+		scriptsPath := filepath.Join(repoRoot, module.Source.Root)
+		_, err = os.Stat(scriptsPath)
+		return err == nil
+
 	default:
 		// Unknown module type
 		return false
@@ -198,6 +208,15 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		}
 		testsPath := filepath.Join(repoRoot, "src", "core", "repository", "tests")
 		return fmt.Sprintf("Repository validation tests: %s", testsPath), nil
+
+	case "scripts":
+		// Scripts modules: return scripts path
+		repoRoot, err := repository.GetRepositoryRoot("")
+		if err != nil {
+			return "", err
+		}
+		scriptsPath := filepath.Join(repoRoot, module.Source.Root)
+		return fmt.Sprintf("Scripts: %s", scriptsPath), nil
 
 	default:
 		return "", fmt.Errorf("module type '%s' verification not implemented", module.Type)
