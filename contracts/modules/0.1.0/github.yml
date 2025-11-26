@@ -3,13 +3,19 @@
 moniker: "github"
 name: "GitHub Configuration"
 type: "configuration"
-description: "GitHub workflows, actions, and CI/CD configuration"
+description: "GitHub workflows, actions, and CI/CD configuration - owns change-trigger orchestration only"
 
 source:
   root: ".github"
   changelog_path: ".github/CHANGELOG.md"
   includes:
-    - "**"
+    # Only the change-trigger.yaml orchestration workflow
+    # Individual modules own their respective workflow files
+    - "workflows/change-trigger.yaml"
+  excludes:
+    # All other workflows are owned by their respective modules
+    - "workflows/*.yaml"
+    - "workflows/*.yml"
 
 parent: "."
 

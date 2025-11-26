@@ -77,7 +77,7 @@ jobs:
             # Check if any CI is currently running for this commit
             CI_REPO_STATUS=$(gh run list \
               --commit $COMMIT_SHA \
-              --workflow ci-repository.yaml \
+              --workflow change-trigger.yaml \
               --json status \
               --jq '.[0].status // "not_found"')
 
@@ -151,7 +151,7 @@ jobs:
               echo "❌ Cannot release without CI verification"
               echo ""
               echo "Please run CI first:"
-              echo "  gh workflow run ci-repository.yaml"
+              echo "  gh workflow run change-trigger.yaml"
               exit 1
             fi
 
@@ -163,7 +163,7 @@ jobs:
               echo ""
               echo "The optimized CI should have triggered a build for these changes."
               echo "If CI hasn't run yet, trigger it manually:"
-              echo "  gh workflow run ci-repository.yaml"
+              echo "  gh workflow run change-trigger.yaml"
               echo ""
               echo "Waiting for CI to complete..."
               sleep $CHECK_INTERVAL
@@ -189,7 +189,7 @@ jobs:
               echo "Cannot release without a built container image."
               echo ""
               echo "Please run CI first:"
-              echo "  gh workflow run ci-repository.yaml"
+              echo "  gh workflow run change-trigger.yaml"
               exit 1
             fi
 

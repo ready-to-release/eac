@@ -7,7 +7,7 @@
 
 ---
 
-[![CI Status](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/ci-repository.yaml)
+[![CI Status](https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml)
 [![GitHub Stars](https://img.shields.io/github/stars/ready-to-release/eac?style=social)](https://github.com/ready-to-release/eac/stargazers)
 
 [![docs release](https://github.com/ready-to-release/eac/actions/workflows/pages/pages-build-deployment/badge.svg)](https://ready-to-release.github.io/eac/)

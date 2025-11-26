@@ -18,6 +18,8 @@ source:
     - "r2r-cli.examples.yml"
     - "r2r.example.yml"
     - "/src/cli/r2r-example.yml"
+    # Own the CI workflow file - triggers rebuild when src-cli or dependencies change
+    - "/.github/workflows/src-cli.yaml"
 
 depends_on:
   - "src-core"
