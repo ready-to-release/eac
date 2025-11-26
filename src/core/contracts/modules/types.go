@@ -25,7 +25,7 @@ func NewModuleContract(base contracts.BaseContract, workspaceRoot string) *Modul
 	}
 }
 
-// getEffectiveIncludes returns the includes list with specs_root pattern auto-added
+// getEffectiveIncludes returns the includes list with specs_root and tests patterns auto-added
 func (m *ModuleContract) getEffectiveIncludes() []string {
 	includes := make([]string, len(m.Source.Includes))
 	copy(includes, m.Source.Includes)
@@ -34,6 +34,27 @@ func (m *ModuleContract) getEffectiveIncludes() []string {
 	specsRoot := m.GetSpecsRoot()
 	specsPattern := "/" + normalizePathSeparators(specsRoot) + "/**"
 	includes = append([]string{specsPattern}, includes...)
+
+	// Add tests patterns if tests section is defined
+	if m.Tests != nil && m.Tests.Root != "" {
+		testsRoot := normalizePathSeparators(m.Tests.Root)
+		// Add patterns for each include, or default to all files
+		if len(m.Tests.Includes) > 0 {
+			for _, pattern := range m.Tests.Includes {
+				normalizedPattern := normalizePathSeparators(pattern)
+				// Handle **/* pattern - gobwas/glob requires ** for root level files
+				if normalizedPattern == "**/*" {
+					normalizedPattern = "**"
+				}
+				testPattern := "/" + testsRoot + "/" + normalizedPattern
+				includes = append(includes, testPattern)
+			}
+		} else {
+			// Default: include all files under tests root
+			testPattern := "/" + testsRoot + "/**"
+			includes = append(includes, testPattern)
+		}
+	}
 
 	return includes
 }

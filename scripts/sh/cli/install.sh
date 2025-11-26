@@ -160,8 +160,8 @@ install_binary() {
     tmp_dir=$(mktemp -d)
     trap "rm -rf $tmp_dir" EXIT
 
-    # Download binary
-    if ! curl -fsSL "$download_url" -o "$tmp_dir/$BINARY_NAME"; then
+    # Download binary (show progress bar)
+    if ! curl -fL --progress-bar "$download_url" -o "$tmp_dir/$BINARY_NAME"; then
         echo -e "${RED}Failed to download binary${NC}"
         echo -e "${YELLOW}Please check if the release exists: https://github.com/${REPO}/releases/tag/${version}${NC}"
         exit 1
