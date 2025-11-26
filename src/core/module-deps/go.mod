@@ -7,5 +7,6 @@ require github.com/ready-to-release/eac/src/core v0.0.0-20251114111645-215eee575
 require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
