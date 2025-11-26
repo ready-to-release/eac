@@ -45,15 +45,15 @@ type MetaRequirements struct {
 	MinimumCPU       string `json:"minimum_cpu,omitempty" yaml:"minimum-cpu,omitempty"`
 }
 
-// GetMetadataCacheDir returns the path to the metadata cache directory (.r2r/metadata/)
-func GetMetadataCacheDir(repoRoot string) string {
-	return filepath.Join(repoRoot, ".r2r", "metadata")
+// GetCacheDir returns the path to the cache directory (.r2r/cache/)
+func GetCacheDir(repoRoot string) string {
+	return filepath.Join(repoRoot, ".r2r", "cache")
 }
 
 // GetMetadataCachePath returns the path to a specific extension's metadata cache file
 func GetMetadataCachePath(repoRoot, extensionName string) string {
-	cacheDir := GetMetadataCacheDir(repoRoot)
-	return filepath.Join(cacheDir, fmt.Sprintf("%s.json", extensionName))
+	cacheDir := GetCacheDir(repoRoot)
+	return filepath.Join(cacheDir, fmt.Sprintf("%s-metadata.json", extensionName))
 }
 
 // LoadMetadataCache loads cached metadata for an extension from disk
@@ -95,7 +95,7 @@ func LoadMetadataCache(repoRoot, extensionName string) (*MetadataCache, error) {
 
 // SaveMetadataCache saves extension metadata to the cache
 func SaveMetadataCache(repoRoot string, cache *MetadataCache) error {
-	cacheDir := GetMetadataCacheDir(repoRoot)
+	cacheDir := GetCacheDir(repoRoot)
 
 	// Create cache directory if it doesn't exist
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
