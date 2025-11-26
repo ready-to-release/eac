@@ -1,17 +1,17 @@
-# EAC CI Container
+# Go BVT (Build Verification Test) Image
 # Optimized container for running CI workflows with pre-installed tools
 #
 # Usage in GitHub Actions:
 #   container:
-#     image: ghcr.io/ready-to-release/eac-ci:latest
+#     image: ghcr.io/ready-to-release/go-bvt-image:latest
 #
 # Build locally:
-#   docker build -t eac-ci:local containers/eac-ci/
+#   docker build -t go-bvt-image:local containers/go-bvt-image/
 
 FROM golang:1.24-bookworm
 
 LABEL org.opencontainers.image.source="https://github.com/ready-to-release/eac"
-LABEL org.opencontainers.image.description="CI container for EAC repository with Go toolchain and common tools"
+LABEL org.opencontainers.image.description="Go BVT container with Go toolchain, Docker, and CI tools"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Install common CI tools
@@ -20,6 +20,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     curl \
     ca-certificates \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Docker CLI and Docker Buildx
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+    docker-ce-cli \
+    docker-buildx-plugin \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI
@@ -41,4 +52,4 @@ RUN go install github.com/cucumber/godog/cmd/godog@latest \
 WORKDIR /workspace
 
 # Verify installations
-RUN go version && git --version && jq --version && gh --version
+RUN go version && git --version && jq --version && gh --version && docker --version
