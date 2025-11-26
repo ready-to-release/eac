@@ -395,12 +395,6 @@ func TestSuite() int {
 		testsByPackage[pkgPath] = append(testsByPackage[pkgPath], test)
 	}
 
-	// Start global progress tracker with total package count
-	StartGlobalTracker(multiWriter, len(testsByPackage))
-	defer StopGlobalTracker()
-
-	// Package count removed from console output for cleaner orchestration
-
 	// Aggregate results
 	var results []PackageTestResult
 
@@ -683,10 +677,6 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	} else {
 		pkgName = filepath.ToSlash(relPkgPath)
 	}
-
-	// Track test start/completion with global progress tracker (before early returns)
-	TrackTestStart(pkgName)
-	defer TrackTestComplete(pkgName)
 
 	// Check if this package contains only Godog features
 	// BUT: if we have a relFeatureFile, we're explicitly running it through its test runner

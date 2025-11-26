@@ -2,6 +2,7 @@ go 1.24.4
 
 use (
 	./src/cli
+	./src/cli-installers/tests
 	./src/commands
 	./src/core
 	./src/core/ai

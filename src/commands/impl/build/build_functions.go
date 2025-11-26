@@ -23,11 +23,13 @@ import (
 
 // BuildOptions contains flags for controlling the build process
 type BuildOptions struct {
-	WindowsOnly bool
-	LinuxOnly   bool
-	MacOSOnly   bool
-	TidyFirst   bool   // Run go mod tidy before building
-	Version     string // Version to inject via ldflags
+	WindowsOnly   bool
+	LinuxOnly     bool
+	MacOSOnly     bool
+	TidyFirst     bool   // Run go mod tidy before building
+	Version       string // Version to inject via ldflags
+	Compressed    bool   // Strip debug info with -ldflags "-s -w" (for releases)
+	CompressedUPX bool   // Also apply UPX compression after build
 }
 
 // BuildFunc is the signature for module type build functions
@@ -67,6 +69,7 @@ var buildFunctions = map[string]BuildFunc{
 	"definitions-type": buildDefinitionsType,
 	"markdown":         buildMarkdown,
 	// Infrastructure module types
+	"scripts":         buildScripts,
 	"scripts-sh":      buildScriptsSh,
 	"scripts-pwsh":    buildScriptsPwsh,
 	"config":          buildConfig,
@@ -84,10 +87,24 @@ var buildFunctions = map[string]BuildFunc{
 // buildGoCLI builds a Cobra CLI binary (Pattern A)
 // Requires: go generate && go build
 // By default, builds for Windows, Linux, and macOS/ARM
+//
+// Compression modes:
+//   - Default (dev): Full debug info for debugging
+//   - --compressed: Strip debug info with -ldflags "-s -w" (~30% smaller)
+//   - --compressed-upx: Also apply UPX compression (~70% smaller total)
 func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Building go-cli: %s ===\n", module.Moniker)
+
+	// Log compression mode
+	if opts.CompressedUPX {
+		fmt.Fprintf(logWriter, "Compression: UPX (--compressed-upx)\n")
+	} else if opts.Compressed {
+		fmt.Fprintf(logWriter, "Compression: stripped (--compressed)\n")
+	} else {
+		fmt.Fprintf(logWriter, "Compression: none (dev build with debug info)\n")
+	}
 
 	// Step 1: go mod tidy (if enabled)
 	if opts.TidyFirst {
@@ -101,6 +118,15 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
 		return exitCode
+	}
+
+	// Check for UPX if needed
+	if opts.CompressedUPX {
+		if _, err := exec.LookPath("upx"); err != nil {
+			fmt.Fprintf(logWriter, "❌ UPX not found in PATH. Install UPX for --compressed-upx support.\n")
+			fmt.Fprintf(logWriter, "   See: https://upx.github.io/\n")
+			return 1
+		}
 	}
 
 	// Define target platforms
@@ -131,6 +157,9 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 		targetPlatforms = platforms
 	}
 
+	// Track built binaries for UPX compression
+	var builtBinaries []string
+
 	// Build for each target platform
 	for _, platform := range targetPlatforms {
 		// For macOS, include architecture to distinguish Intel vs Apple Silicon
@@ -149,11 +178,21 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 		// Prepare build arguments
 		buildArgs := []string{"build", "-o", binaryPath}
 
-		// Add ldflags with version if provided
+		// Build ldflags based on compression mode
+		var ldflags string
+		if opts.Compressed || opts.CompressedUPX {
+			// Strip debug info (-s) and symbol table (-w) for smaller binaries
+			ldflags = "-s -w"
+		}
 		if opts.Version != "" {
-			ldflags := fmt.Sprintf("-X 'github.com/ready-to-release/eac/src/cli/cmd.Version=%s'", opts.Version)
-			buildArgs = append(buildArgs, "-ldflags", ldflags)
+			if ldflags != "" {
+				ldflags += " "
+			}
+			ldflags += fmt.Sprintf("-X 'github.com/ready-to-release/eac/src/cli/cmd.Version=%s'", opts.Version)
 			fmt.Fprintf(logWriter, "Version: %s\n", opts.Version)
+		}
+		if ldflags != "" {
+			buildArgs = append(buildArgs, "-ldflags", ldflags)
 		}
 
 		// Set GOOS and GOARCH environment variables
@@ -181,10 +220,96 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 				fmt.Fprintf(logWriter, "⚠️  Warning: could not set executable permissions\n")
 			}
 		}
+
+		builtBinaries = append(builtBinaries, binaryPath)
+	}
+
+	// Apply UPX compression if requested
+	if opts.CompressedUPX {
+		fmt.Fprintf(logWriter, "\n--- Applying UPX compression ---\n")
+
+		for _, binaryPath := range builtBinaries {
+			// Get original size
+			originalInfo, err := os.Stat(binaryPath)
+			if err != nil {
+				fmt.Fprintf(logWriter, "⚠️  Warning: could not stat %s: %v\n", binaryPath, err)
+				continue
+			}
+			originalSize := originalInfo.Size()
+
+			// Create UPX-compressed version with -upx suffix
+			baseName := filepath.Base(binaryPath)
+			ext := filepath.Ext(baseName)
+			nameWithoutExt := strings.TrimSuffix(baseName, ext)
+			upxName := nameWithoutExt + "-upx" + ext
+			upxPath := filepath.Join(outputDir, upxName)
+
+			// Copy original to UPX path first
+			if err := copyFile(binaryPath, upxPath); err != nil {
+				fmt.Fprintf(logWriter, "❌ Failed to copy %s for UPX: %v\n", baseName, err)
+				return 1
+			}
+
+			fmt.Fprintf(logWriter, "Compressing: %s -> %s\n", baseName, upxName)
+
+			// Run UPX on the copy (--best for maximum compression, -q for quiet)
+			cmd := exec.Command("upx", "--best", "-q", upxPath)
+			cmd.Stdout = logWriter
+			cmd.Stderr = logWriter
+
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintf(logWriter, "⚠️  UPX compression failed for %s: %v\n", upxName, err)
+				// Remove failed UPX file
+				os.Remove(upxPath)
+				continue
+			}
+
+			// Get compressed size
+			compressedInfo, err := os.Stat(upxPath)
+			if err != nil {
+				fmt.Fprintf(logWriter, "⚠️  Warning: could not stat compressed file: %v\n", err)
+				continue
+			}
+			compressedSize := compressedInfo.Size()
+
+			ratio := float64(compressedSize) / float64(originalSize) * 100
+			fmt.Fprintf(logWriter, "✅ %s: %.1f MB -> %.1f MB (%.0f%%)\n",
+				upxName,
+				float64(originalSize)/1024/1024,
+				float64(compressedSize)/1024/1024,
+				ratio)
+		}
 	}
 
 	fmt.Fprintf(logWriter, "\n✅ All builds completed successfully\n")
 	return 0
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	// Preserve executable permissions
+	sourceInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	return os.Chmod(dst, sourceInfo.Mode())
 }
 
 // buildGoCommands builds the runtime command dispatcher (Pattern B)
@@ -1043,6 +1168,138 @@ func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputD
 }
 
 // Infrastructure Module Build Functions
+
+// buildScripts validates both shell and PowerShell scripts
+func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+
+	fmt.Fprintf(logWriter, "\n=== Validating scripts: %s ===\n", module.Moniker)
+
+	// Find all script files
+	var shellFiles []string
+	var psFiles []string
+
+	err := filepath.Walk(moduleRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			// Skip excluded directories
+			name := info.Name()
+			if name == "node_modules" || name == ".git" || name == "out" || name == "dist" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		ext := filepath.Ext(path)
+		if ext == ".sh" {
+			shellFiles = append(shellFiles, path)
+		} else if ext == ".ps1" || ext == ".psm1" || ext == ".psd1" {
+			psFiles = append(psFiles, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		fmt.Fprintf(logWriter, "❌ Failed to scan directory: %v\n", err)
+		return 1
+	}
+
+	totalFiles := len(shellFiles) + len(psFiles)
+	if totalFiles == 0 {
+		fmt.Fprintf(logWriter, "⚠️  No scripts found\n")
+		return 0
+	}
+
+	fmt.Fprintf(logWriter, "📜 Found %d script(s) to validate (%d shell, %d PowerShell)\n", totalFiles, len(shellFiles), len(psFiles))
+
+	validationErrors := 0
+
+	// Validate shell scripts
+	if len(shellFiles) > 0 {
+		fmt.Fprintf(logWriter, "\n--- Shell Scripts ---\n")
+
+		// Check if bash is available
+		checkCmd := exec.Command("bash", "--version")
+		bashAvailable := checkCmd.Run() == nil
+
+		if !bashAvailable {
+			if runtime.GOOS == "windows" {
+				fmt.Fprintf(logWriter, "⚠️  Skipping shell validation: bash not available (WSL not configured)\n")
+			} else {
+				fmt.Fprintf(logWriter, "❌ bash not found\n")
+				validationErrors++
+			}
+		} else {
+			for _, shellFile := range shellFiles {
+				relPath, _ := filepath.Rel(moduleRoot, shellFile)
+				fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+
+				content, err := os.ReadFile(shellFile)
+				if err != nil {
+					fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+					validationErrors++
+					continue
+				}
+
+				cmd := exec.Command("bash", "-n")
+				cmd.Stdin = bytes.NewReader(content)
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Fprintf(logWriter, "      ❌ Syntax error: %s\n", strings.TrimSpace(string(output)))
+					validationErrors++
+					continue
+				}
+
+				fmt.Fprintf(logWriter, "      ✅ Valid syntax\n")
+			}
+		}
+	}
+
+	// Validate PowerShell scripts
+	if len(psFiles) > 0 {
+		fmt.Fprintf(logWriter, "\n--- PowerShell Scripts ---\n")
+
+		// Check if pwsh is available
+		checkCmd := exec.Command("pwsh", "--version")
+		pwshAvailable := checkCmd.Run() == nil
+
+		if !pwshAvailable {
+			fmt.Fprintf(logWriter, "⚠️  Skipping PowerShell validation: pwsh not available\n")
+		} else {
+			for _, psFile := range psFiles {
+				relPath, _ := filepath.Rel(moduleRoot, psFile)
+				fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+
+				content, err := os.ReadFile(psFile)
+				if err != nil {
+					fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+					validationErrors++
+					continue
+				}
+
+				cmd := exec.Command("pwsh", "-NoProfile", "-NonInteractive", "-Command", "-")
+				cmd.Stdin = bytes.NewReader([]byte(fmt.Sprintf("$null = [System.Management.Automation.PSParser]::Tokenize(@'\n%s\n'@, [ref]$null)", string(content))))
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Fprintf(logWriter, "      ❌ Syntax error: %s\n", strings.TrimSpace(string(output)))
+					validationErrors++
+					continue
+				}
+
+				fmt.Fprintf(logWriter, "      ✅ Valid syntax\n")
+			}
+		}
+	}
+
+	if validationErrors > 0 {
+		fmt.Fprintf(logWriter, "\n❌ Validation failed with %d error(s)\n", validationErrors)
+		return 1
+	}
+
+	fmt.Fprintf(logWriter, "\n✅ All scripts validated successfully\n")
+	return 0
+}
 
 // buildScriptsSh validates shell scripts using bash -n
 func buildScriptsSh(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {

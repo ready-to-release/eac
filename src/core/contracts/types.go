@@ -8,9 +8,16 @@ type BaseContract struct {
 	Description string     `yaml:"description"`
 	Parent      string     `yaml:"parent"`
 	Source      Source     `yaml:"source"`
+	Tests       *Tests     `yaml:"tests,omitempty"` // Optional: test directory and patterns
 	Versioning  Versioning `yaml:"versioning"`
 	DependsOn   []string   `yaml:"depends_on"`
 	UsedBy      []string   `yaml:"used_by"`
+}
+
+// Tests represents the test configuration for a module
+type Tests struct {
+	Root     string   `yaml:"root"`     // Test directory root
+	Includes []string `yaml:"includes"` // Test file patterns
 }
 
 // Source represents the source configuration for a module

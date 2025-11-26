@@ -226,7 +226,7 @@ func iRunTheCommand(cmdLine string) error {
 	execCtx, err := parseAndLookupCommand(cmdLine)
 	if err != nil {
 		// Fallback: use legacy path if registry lookup fails
-		fmt.Printf("[TEST] Warning: Could not lookup command in registry, using legacy path: %v\n", err)
+		fmt.Printf("[TEST] Note: Could not lookup command in registry, using legacy path: %v\n", err)
 		parts := strings.Fields(cmdLine)
 		return runCommandWithArgs(parts...)
 	}
