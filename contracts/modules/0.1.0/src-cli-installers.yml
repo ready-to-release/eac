@@ -17,5 +17,5 @@ tests:
     - "**/*"
 
 depends_on:
-  - "src-cli"
+  - "src-core"
 used_by: []
