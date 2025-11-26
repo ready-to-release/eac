@@ -11,7 +11,7 @@ require (
 	github.com/cucumber/godog v0.15.1
 	github.com/docker/docker v28.0.0+incompatible
 	github.com/hitoshi44/go-uid64 v0.2.0
-	github.com/ready-to-release/eac/src/core v0.0.0
+	github.com/ready-to-release/eac/src/core v0.0.0-20251126220125-ee6ade139ee0
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
@@ -106,5 +106,3 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
 )
-
-replace github.com/ready-to-release/eac/src/core => ../core
