@@ -1,0 +1,16 @@
+@deps:go @ov
+Feature: test_feature-with-warnings
+
+  As a developer
+  I want warnings
+  So that I can test warning display
+
+  Background:
+    Given the system is initialized
+
+  Rule: Warnings should be shown
+
+    @L2 @ov
+    Scenario: Valid scenario
+      When I run a command
+      Then the exit code is 0

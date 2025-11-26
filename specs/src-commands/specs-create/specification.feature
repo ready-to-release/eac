@@ -1,4 +1,4 @@
-@skip:todo @deps:ai @deps:go @ov
+@skip:todo @deps:ai @deps:go @env:isolated-test-project @ov
 Feature: src-commands_specs-create
 
   As a developer of the eac platform
@@ -7,219 +7,169 @@ Feature: src-commands_specs-create
 
   Background:
     Given I am in a git repository
-    And the AI provider is configured
 
+  @iv
   Rule: Command must be registered and accessible
 
-    @L2 @iv
+    @iv
     Scenario: Command is listed in available commands
       When I run the command "list commands"
       Then the exit code is 0
-      And I should see "specs-create"
+      And I should see "specs create"
 
-    @L2 @iv
+    @iv
     Scenario: Command has proper description
-      When I run the command "describe commands specs-create"
+      When I run the command "describe commands specs create"
       Then the exit code is 0
       And I should see "specs" or "specification" or "create"
 
-  Rule: Command validates input and configuration
+  Rule: Command validates input
 
-    @L2 @ov
+    @ov
     Scenario: Command requires description argument
       When I run "specs create" without arguments
       Then the command exits with code 1
-      And stderr contains "Error: description is required"
-      And stderr contains "Usage: specs create <description>"
+      And stderr contains "description is required"
 
-    @L2 @ov
-    Scenario: Command validates AI configuration exists
-      Given no .r2r/agent-config.yml file exists
-      When I run "specs create Add user authentication"
-      Then the command exits with code 1
-      And stderr contains "agent-config.yml not found"
-      And stderr contains "Please run: r2r agent init --ai <provider>"
+    @ov
+    Scenario: Long descriptions are truncated with warning
+      Given a description longer than 1000 characters
+      And the mock AI is configured to return a valid specification
+      When I run the specs create command
+      Then stderr contains "truncated"
 
-    @L2 @ov
-    Scenario: Command handles malformed AI configuration
-      Given a malformed .r2r/agent-config.yml file
-      When I run "specs create Add user authentication"
-      Then the command exits with code 1
-      And stderr contains "failed to parse agent-config.yml"
+  Rule: AI generates valid Gherkin specifications
 
-  Rule: Template resolution follows fallback hierarchy
+    @ov
+    Scenario: AI generates specification from description
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create 'Add user authentication with email and password'"
+      Then the exit code is 0
+      And stdout contains "Specification created"
+      And a specification file is created
 
-    @L2 @ov
-    Scenario: Use local template when available
-      Given a template exists at ".r2r/templates/specs/specification.feature"
-      When I run "specs create Add user login"
-      Then the local template should be loaded
-      And the template from "templates/specs/specification.feature" should not be used
-
-    @L2 @ov
-    Scenario: Fallback to built-in template when local not found
-      Given no template exists at ".r2r/templates/specs/specification.feature"
-      When I run "specs create Add user login"
-      Then the template at "templates/specs/specification.feature" should be loaded
-
-    @L2 @ov
-    Scenario: Error when no template exists
-      Given no template exists at ".r2r/templates/specs/specification.feature"
-      And no template exists at "templates/specs/specification.feature"
-      When I run "specs create Add user login"
-      Then the command exits with code 1
-      And stderr contains "template not found"
-
-  Rule: AI agent generates specification from description
-
-    @L2 @ov
-    Scenario: Generate specification from simple description
-      Given a valid specification template
-      When I run "specs create Add user authentication with email and password"
-      Then the AI agent is invoked with the description
-      And the agent receives the template content
-      And the agent generates a valid Gherkin feature file
-
-    @L2 @ov
-    Scenario: Generate specification from complex description
-      Given a valid specification template
-      When I run "specs create Implement multi-factor authentication supporting TOTP and SMS with rate limiting"
-      Then the AI agent is invoked with the description
-      And the generated specification includes multiple Rules
-      And the generated specification includes multiple Scenarios
-
-    @L2 @ov
-    Scenario: AI agent output is cleaned of noise
+    @ov
+    Scenario: AI output noise is filtered
       Given the AI provider returns output with initialization messages
       When the output is processed
       Then initialization noise should be removed
       And only valid Gherkin content should remain
 
-  Rule: Output file naming and location
-
-    @L2 @ov
-    Scenario: Output file is created in specs directory
-      Given I run "specs create Add user authentication"
-      When the generation succeeds
-      Then a file is created at "specs/<module>/specification.feature"
-      And the file contains valid Gherkin syntax
-
-    @L2 @ov
-    Scenario: Module name is extracted from feature
-      Given the AI generates a feature named "src-commands_user-authentication"
-      When the output file is created
-      Then the file is saved at "specs/src-commands/user-authentication/specification.feature"
-      And the parent directories are created if they don't exist
-
-    @L2 @ov
-    Scenario: Handle feature name without module prefix
-      Given the AI generates a feature named "user-authentication"
-      When the output file is created
-      Then the file is saved at "specs/user-authentication/specification.feature"
-
-    @L2 @ov
-    Scenario: Prevent overwriting existing specification
-      Given a file exists at "specs/src-commands/auth/specification.feature"
-      And the AI generates a feature that would create the same path
-      When the output file is created
-      Then the command exits with code 1
-      And stderr contains "specification already exists"
-      And the existing file is not modified
-
-    @L2 @ov
-    Scenario: Allow overwriting with --force flag
-      Given a file exists at "specs/src-commands/auth/specification.feature"
-      When I run "specs create Add authentication --force"
-      Then the existing file is overwritten
-      And the command exits with code 0
-      And stdout contains "overwritten"
-
-  Rule: Output validation and feedback
-
-    @L2 @ov
-    Scenario: Validate generated Gherkin syntax
-      Given the AI generates specification content
-      When the content is validated
-      Then it must contain a "Feature:" declaration
+    @ov
+    Scenario: Generated specification must contain required Gherkin elements
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create 'Test feature generation'"
+      Then the exit code is 0
+      And it must contain a "Feature:" declaration
       And it must contain at least one "Rule:" declaration
       And it must contain at least one "Scenario:" declaration
 
-    @L2 @ov
-    Scenario: Show success message with file path
-      When I run "specs create Add user authentication"
-      And the generation succeeds
-      Then stdout contains "✅ Specification created"
-      And stdout contains the file path
-      And the command exits with code 0
+  Rule: Output path is determined from feature name
 
-    @L2 @ov
-    Scenario: Show helpful error for AI failures
+    @ov
+    Scenario: Feature name determines output path
+      Given the AI generates a feature named "src-commands_user-auth"
+      When I run the command "specs create 'Add user authentication'"
+      Then the exit code is 0
+      And the file is saved at "specs/src-commands/user-auth/specification.feature"
+
+    @ov
+    Scenario: Parent directories are created if needed
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create 'New module feature'"
+      Then the exit code is 0
+      And the parent directories are created if they don't exist
+
+  Rule: Existing files are protected by default
+
+    @ov
+    Scenario: Command refuses to overwrite existing files
+      Given a specification file exists at "specs/src-commands/auth/specification.feature"
+      And the mock AI generates a feature that would create the same path
+      When I run the command "specs create 'Add authentication'"
+      Then the exit code is 1
+      And stderr contains "File already exists"
+      And stderr contains "--force"
+
+    @ov
+    Scenario: Force flag allows overwriting existing files
+      Given a specification file exists at "specs/src-commands/auth/specification.feature"
+      And the mock AI generates a feature that would create the same path
+      When I run the command "specs create --force 'Add authentication'"
+      Then the exit code is 0
+      And the existing file is overwritten
+
+  Rule: Custom output path can be specified
+
+    @ov
+    Scenario: Output flag overrides default path
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create -o 'custom/path/spec.feature' 'Test feature'"
+      Then the exit code is 0
+      And the file is saved at "custom/path/spec.feature"
+
+    @ov
+    Scenario: Module flag sets target module
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create -m src-core 'Add validation helper'"
+      Then the exit code is 0
+      And the AI receives module context "src-core"
+
+  Rule: Debug mode saves intermediate outputs
+
+    @ov
+    Scenario: Debug flag saves intermediate files
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create --debug 'Test debug mode'"
+      Then the exit code is 0
+      And intermediate files are saved to "out" directory
+
+    @ov
+    Scenario: Debug mode saves full AI prompt
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create -d 'Test prompt capture'"
+      Then the exit code is 0
+      And "out/debug-full-prompt.md" contains the full AI prompt
+
+  Rule: Custom prompts and templates can be used
+
+    @ov
+    Scenario: Custom prompt file overrides default
+      Given a custom prompt file exists at "custom/prompt.md"
+      And the mock AI is configured to return a valid specification
+      When I run the command "specs create --prompt custom/prompt.md 'Test custom prompt'"
+      Then the exit code is 0
+      And the custom prompt is used
+
+    @ov
+    Scenario: Custom template file can be specified
+      Given a custom template file exists at "custom/template.feature"
+      And the mock AI is configured to return a valid specification
+      When I run the command "specs create --template custom/template.feature 'Test custom template'"
+      Then the exit code is 0
+      And the custom template is used
+
+  Rule: Contract-based validation ensures quality
+
+    @ov
+    Scenario: Generated specification is validated against contract
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create 'Test validation'"
+      Then the exit code is 0
+      And the content is validated
+
+    @ov
+    Scenario: Validation errors prevent file creation
       Given the AI provider fails to generate content
-      When the command is run
-      Then the command exits with code 1
-      And stderr contains "AI execution failed"
-      And stderr contains actionable recovery instructions
+      When I run the command "specs create 'Test failure handling'"
+      Then the exit code is 1
+      And no specification file is created
 
-  Rule: Debug mode provides visibility
+  Rule: Security prevents path traversal
 
-    @L2 @ov
-    Scenario: Debug flag saves intermediate outputs
-      When I run "specs create Add authentication --debug"
-      Then intermediate files are saved to "out/" directory
-      And "out/debug-template.feature" contains the loaded template
-      And "out/debug-prompt.md" contains the full AI prompt
-      And "out/debug-raw-output.feature" contains raw AI output
-      And "out/debug-cleaned-output.feature" contains cleaned output
-      And debug messages are shown on stderr
-
-    @L2 @ov
-    Scenario: Debug mode shows AI execution details
-      When I run "specs create Add authentication --debug"
-      Then stderr contains "🔍 DEBUG: Loading template"
-      And stderr contains "🔍 DEBUG: Invoking AI provider"
-      And stderr contains "🔍 DEBUG: Processing output"
-      And stderr contains execution timing information
-
-  Rule: Edge cases must be handled gracefully
-
-    @L2 @ov
-    Scenario: Handle empty description
-      When I run "specs create ''"
-      Then the command exits with code 1
-      And stderr contains "description cannot be empty"
-
-    @L2 @ov
-    Scenario: Handle very long description
-      Given a description longer than 1000 characters
-      When I run the specs create command
-      Then the description is truncated with warning
-      And the truncated description is used for generation
-
-    @L2 @ov
-    Scenario: Handle special characters in description
-      When I run "specs create Add API endpoint /v1/users/{id} with rate-limiting"
-      Then the description is properly escaped
-      And the AI receives the full unmodified description
-
-    @L2 @ov
-    Scenario: Handle repository root not found
-      Given I am not in a git repository
-      When I run "specs create Add feature"
-      Then the command exits with code 1
-      And stderr contains "failed to find repository root"
-
-    @L2 @ov
-    Scenario: Handle file system permissions error
-      Given the specs directory is not writable
-      When I run "specs create Add feature"
-      Then the command exits with code 1
-      And stderr contains "failed to write specification"
-      And stderr contains permission error details
-
-    @L2 @ov
-    Scenario: Handle AI provider timeout
-      Given the AI provider takes longer than the timeout
-      When the command is run
-      Then the command exits with code 1
-      And stderr contains "timeout"
-      And stderr suggests retry or configuration adjustment
+    @ov
+    Scenario: Path traversal attempts are rejected
+      Given the mock AI is configured to return a valid specification
+      When I run the command "specs create -o '../../../etc/passwd' 'Test security'"
+      Then the exit code is 1
+      And stderr contains "security error"

@@ -1,0 +1,8 @@
+@deps:go
+Feature: test_fixable-tags
+
+  Rule: Tags can be fixed
+
+    Scenario: Missing verification tag
+      When I run a command
+      Then it works

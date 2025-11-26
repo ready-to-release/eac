@@ -1,0 +1,16 @@
+**Initializing AI assistant...**
+I'll help you create a specification.
+
+@deps:go @ov
+Feature: src-commands_test-feature
+
+  As a developer
+  I want to test AI noise filtering
+  So that clean Gherkin is generated
+
+  Rule: AI output must be cleaned
+
+    @L2 @ov
+    Scenario: Noise is removed
+      When the AI generates output
+      Then initialization messages are stripped
