@@ -267,24 +267,35 @@ jobs:
             echo "✅ Created and pushed tag: $TAG_NAME"
           fi
 
+      - name: Install UPX
+        run: |
+          echo "Installing UPX for binary compression..."
+          sudo apt-get update && sudo apt-get install -y upx-ucl
+          upx --version
+
       - name: Build binaries for multiple platforms
         env:
           VERSION: ${{ steps.extract_version.outputs.version }}
         run: |
           echo "Building src-cli with version $VERSION using build command..."
-          go run ./src/commands build src-cli --version "$VERSION" --no-tidy
+          echo "Using --compressed-upx for release builds (stripped + UPX compressed)"
+          go run ./src/commands build src-cli --version "$VERSION" --no-tidy --compressed-upx
 
       - name: Verify binaries
         run: |
           echo "Verifying built binaries..."
           ls -lh out/build/src-cli/
 
-          # Check all required files exist
+          # Check all required files exist (both standard and UPX-compressed)
           REQUIRED_FILES=(
             "out/build/src-cli/r2r-linux"
+            "out/build/src-cli/r2r-linux-upx"
             "out/build/src-cli/r2r-darwin-amd64"
+            "out/build/src-cli/r2r-darwin-amd64-upx"
             "out/build/src-cli/r2r-darwin-arm64"
+            "out/build/src-cli/r2r-darwin-arm64-upx"
             "out/build/src-cli/r2r-windows.exe"
+            "out/build/src-cli/r2r-windows-upx.exe"
           )
 
           for file in "${REQUIRED_FILES[@]}"; do
@@ -292,13 +303,20 @@ jobs:
               echo "❌ Error: Required file missing: $file"
               exit 1
             fi
-            echo "✅ Found: $file ($(stat -f%z "$file" 2>/dev/null || stat -c%s "$file") bytes)"
+            size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+            size_mb=$(echo "scale=1; $size / 1048576" | bc)
+            echo "✅ Found: $file (${size_mb} MB)"
           done
 
           echo ""
-          echo "Testing Linux binary version:"
+          echo "Testing Linux binary version (standard):"
           chmod +x out/build/src-cli/r2r-linux
           ./out/build/src-cli/r2r-linux version || true
+
+          echo ""
+          echo "Testing Linux binary version (UPX):"
+          chmod +x out/build/src-cli/r2r-linux-upx
+          ./out/build/src-cli/r2r-linux-upx version || true
 
       - name: Create release notes
         id: release_notes
@@ -312,24 +330,41 @@ jobs:
 
           ## Installation
 
-          Download the appropriate binary for your platform:
+          Download the appropriate binary for your platform. Two versions are available:
 
-          - **Linux (AMD64)**: \`r2r-linux\`
-          - **macOS (Intel)**: \`r2r-darwin-amd64\`
-          - **macOS (Apple Silicon)**: \`r2r-darwin-arm64\`
-          - **Windows (AMD64)**: \`r2r-windows.exe\`
+          ### Standard Binaries (Recommended)
+          Smaller than debug builds (~26 MB), best compatibility:
 
-          Make the binary executable (Linux/macOS):
+          | Platform | Binary |
+          |----------|--------|
+          | Linux (AMD64) | \`r2r-linux\` |
+          | macOS (Intel) | \`r2r-darwin-amd64\` |
+          | macOS (Apple Silicon) | \`r2r-darwin-arm64\` |
+          | Windows (AMD64) | \`r2r-windows.exe\` |
+
+          ### UPX-Compressed Binaries (Minimal Size)
+          Maximum compression (~10 MB), slightly slower startup:
+
+          | Platform | Binary |
+          |----------|--------|
+          | Linux (AMD64) | \`r2r-linux-upx\` |
+          | macOS (Intel) | \`r2r-darwin-amd64-upx\` |
+          | macOS (Apple Silicon) | \`r2r-darwin-arm64-upx\` |
+          | Windows (AMD64) | \`r2r-windows-upx.exe\` |
+
+          > **Note**: UPX binaries may trigger antivirus false positives on Windows. Use standard binaries if you encounter issues.
+
+          ### Quick Start
+
           \`\`\`bash
+          # Make executable (Linux/macOS)
           chmod +x r2r-*
-          \`\`\`
 
-          Verify the installation:
-          \`\`\`bash
-          ./r2r-linux version     # Linux
-          ./r2r-darwin-amd64 version  # macOS Intel
-          ./r2r-darwin-arm64 version  # macOS Apple Silicon
-          r2r-windows.exe version     # Windows
+          # Verify installation
+          ./r2r-linux version           # Linux
+          ./r2r-darwin-amd64 version    # macOS Intel
+          ./r2r-darwin-arm64 version    # macOS Apple Silicon
+          r2r-windows.exe version       # Windows
           \`\`\`
 
           ## Release Information
@@ -357,9 +392,13 @@ jobs:
             --notes-file release_notes.md \
             --verify-tag \
             out/build/src-cli/r2r-linux \
+            out/build/src-cli/r2r-linux-upx \
             out/build/src-cli/r2r-darwin-amd64 \
+            out/build/src-cli/r2r-darwin-amd64-upx \
             out/build/src-cli/r2r-darwin-arm64 \
-            out/build/src-cli/r2r-windows.exe
+            out/build/src-cli/r2r-darwin-arm64-upx \
+            out/build/src-cli/r2r-windows.exe \
+            out/build/src-cli/r2r-windows-upx.exe
 
           echo "✅ Release created with binaries successfully"
         env:
@@ -378,10 +417,16 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Released r2r CLI version **${{ steps.extract_version.outputs.version }}**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "### Standard Binaries" >> $GITHUB_STEP_SUMMARY
           echo "- r2r-linux" >> $GITHUB_STEP_SUMMARY
           echo "- r2r-darwin-amd64" >> $GITHUB_STEP_SUMMARY
           echo "- r2r-darwin-arm64" >> $GITHUB_STEP_SUMMARY
           echo "- r2r-windows.exe" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### UPX-Compressed Binaries" >> $GITHUB_STEP_SUMMARY
+          echo "- r2r-linux-upx" >> $GITHUB_STEP_SUMMARY
+          echo "- r2r-darwin-amd64-upx" >> $GITHUB_STEP_SUMMARY
+          echo "- r2r-darwin-arm64-upx" >> $GITHUB_STEP_SUMMARY
+          echo "- r2r-windows-upx.exe" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract_version.outputs.tag_name }})" >> $GITHUB_STEP_SUMMARY

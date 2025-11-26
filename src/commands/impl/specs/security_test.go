@@ -291,9 +291,9 @@ func TestExtractFeatureName_SpecialCharactersValidation(t *testing.T) {
 					t.Errorf("ExtractFeatureName() name = %v, want %v", gotName, tt.wantName)
 				}
 
-				// Log warnings for potentially dangerous patterns
+				// Log info for potentially dangerous patterns (these are expected in security tests)
 				if strings.Contains(gotName, "/") || strings.Contains(gotName, "\\") || strings.Contains(gotName, "..") {
-					t.Logf("WARNING: %s - Feature name: %q", tt.description, gotName)
+					t.Logf("[INFO] %s - Feature name: %q", tt.description, gotName)
 				}
 			}
 		})
@@ -465,7 +465,7 @@ func TestExtractFeatureName_VeryLongNames(t *testing.T) {
 			if !tt.expectError {
 				totalLen := len(module) + len(name)
 				if totalLen > 200 {
-					t.Logf("WARNING: %s - Total length: %d characters", tt.description, totalLen)
+					t.Logf("[INFO] %s - Total length: %d characters", tt.description, totalLen)
 				}
 			}
 		})

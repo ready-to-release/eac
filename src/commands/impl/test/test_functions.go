@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/src/commands/impl/build"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
@@ -37,6 +36,11 @@ var testFunctions = map[string]TestFunc{
 	// Repository-level tests
 	"repository-root": testRepositoryRoot,
 
+	// Script modules - run syntax validation
+	"scripts":      testScripts,
+	"scripts-sh":   testScriptsSh,
+	"scripts-pwsh": testScriptsPwsh,
+
 	// Configuration/static modules - no tests needed, verify build output exists
 	"claude-agents":    testStaticModule,
 	"claude-commands":  testStaticModule,
@@ -50,8 +54,6 @@ var testFunctions = map[string]TestFunc{
 	"markdown":         testStaticModule,
 	"no-module-type":   testStaticModule,
 	"go-r2r-extension": testStaticModule,
-	"scripts-pwsh":     testStaticModule,
-	"scripts-sh":       testStaticModule,
 	"specifications":   testStaticModule,
 	"templates":        testStaticModule,
 	"vscode-config":    testStaticModule,
@@ -60,18 +62,12 @@ var testFunctions = map[string]TestFunc{
 
 // testGoCLI tests a Cobra CLI binary (Pattern A)
 // Runs: go test -json ./...
+// Note: go generate must be run by build first - tests assume generated files exist
 func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
 	fmt.Fprintf(logWriter, "\n=== Testing go-cli: %s ===\n", module.Moniker)
 	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
-
-	// Step 1: go generate (required for embedded files from contracts)
-	if exitCode := build.RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
-		return exitCode
-	}
-
 	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
 
 	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
@@ -408,23 +404,79 @@ func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, ou
 		return 0
 	}
 
-	// Run go test with godog
-	cmd := exec.Command("go", "test", "-v")
-	cmd.Dir = testDir
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
+	// Run go test with JSON output for test debug command compatibility
+	exitCode, output := runTestCommandWithCapture(testDir, logWriter, "go", "test", "-json", "-v")
 
-	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			fmt.Fprintf(logWriter, "\n❌ Repository validation tests failed with exit code %d\n", exitErr.ExitCode())
-			return exitErr.ExitCode()
-		}
-		fmt.Fprintf(logWriter, "\n❌ Failed to run repository validation tests: %v\n", err)
-		return 1
+	// Save JSON output to file so test debug can find failures
+	jsonFile := filepath.Join(outputDir, "test-results.json")
+	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
+	} else {
+		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ Repository validation tests passed\n")
-	return 0
+	if exitCode != 0 {
+		fmt.Fprintf(logWriter, "\n❌ Repository validation tests failed with exit code %d\n", exitCode)
+	} else {
+		fmt.Fprintf(logWriter, "\n✅ Repository validation tests passed\n")
+	}
+
+	return exitCode
+}
+
+// testScripts tests script modules by running Godog tests if a tests directory exists
+func testScripts(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	fmt.Fprintf(logWriter, "\n=== Testing scripts: %s ===\n", module.Moniker)
+	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
+
+	// Check if module has a tests section
+	if module.Tests == nil || module.Tests.Root == "" {
+		fmt.Fprintf(logWriter, "No tests defined for this module\n")
+		fmt.Fprintf(logWriter, "✅ Scripts module - no tests to run\n")
+		return 0
+	}
+
+	testDir := filepath.Join(workspaceRoot, module.Tests.Root)
+
+	// Check if test directory exists
+	if _, err := os.Stat(testDir); os.IsNotExist(err) {
+		fmt.Fprintf(logWriter, "Test directory not found: %s\n", testDir)
+		fmt.Fprintf(logWriter, "✅ Scripts module - no tests to run\n")
+		return 0
+	}
+
+	fmt.Fprintf(logWriter, "Running tests from: %s\n", testDir)
+
+	// Run go test with JSON output
+	exitCode, output := runTestCommandWithCapture(testDir, logWriter, "go", "test", "-json", "-v")
+
+	// Save JSON output to file
+	jsonFile := filepath.Join(outputDir, "test-results.json")
+	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
+		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
+	} else {
+		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
+	}
+
+	if exitCode != 0 {
+		fmt.Fprintf(logWriter, "\n❌ Script tests failed with exit code %d\n", exitCode)
+	} else {
+		fmt.Fprintf(logWriter, "\n✅ Script tests passed\n")
+	}
+
+	return exitCode
+}
+
+// testScriptsSh tests shell script modules - runs Godog tests if defined
+func testScriptsSh(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	// Delegate to testScripts - same logic applies
+	return testScripts(module, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
+}
+
+// testScriptsPwsh tests PowerShell script modules - runs Godog tests if defined
+func testScriptsPwsh(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	// Delegate to testScripts - same logic applies
+	return testScripts(module, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
 }
 
 // runModuleTest runs tests for a single module
