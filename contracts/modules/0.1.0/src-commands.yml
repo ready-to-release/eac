@@ -16,7 +16,7 @@ source:
     - "**/assets/**"
     - "/specs/src-commands/**/*"
     # Own the CI workflow file - triggers rebuild when src-commands or dependencies change
-    - "/.github/workflows/src-commands.yaml"
+    - "/.github/workflows/ci-src-commands.yaml"
 
 depends_on:
   - "src-ai"

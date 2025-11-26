@@ -43,6 +43,10 @@ jobs:
     outputs:
       changed-modules: ${{ steps.detect.outputs.modules }}
       has-changes: ${{ steps.detect.outputs.has-changes }}
+      directly_changed: ${{ steps.detect.outputs.directly_changed }}
+      invalidated: ${{ steps.detect.outputs.invalidated }}
+      base_sha: ${{ steps.detect.outputs.base_sha }}
+      is_bootstrap: ${{ steps.detect.outputs.is_bootstrap }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -120,7 +124,7 @@ jobs:
             # Filter to only modules that have workflows
             WORKFLOW_MODULES=""
             for module in $MODULES; do
-              if [ -f "../../.github/workflows/${module}.yaml" ]; then
+              if [ -f "../../.github/workflows/ci-${module}.yaml" ]; then
                 WORKFLOW_MODULES="$WORKFLOW_MODULES $module"
               fi
             done
@@ -299,10 +303,10 @@ jobs:
 
             # Trigger all workflows in this layer in parallel
             for module in $LAYER_MODULES; do
-              WORKFLOW_FILE=".github/workflows/${module}.yaml"
+              WORKFLOW_FILE=".github/workflows/ci-${module}.yaml"
               if [ -f "$WORKFLOW_FILE" ]; then
                 echo "🚀 Triggering workflow for $module..."
-                gh workflow run "${module}.yaml" \
+                gh workflow run "ci-${module}.yaml" \
                   --ref ${{ github.ref_name }} \
                   -f ref=${{ github.ref }} \
                   -f sha=${{ github.sha }}
@@ -316,7 +320,7 @@ jobs:
                 sleep 2
 
                 # Get the most recent run ID for this workflow
-                RUN_ID=$(gh run list --workflow="${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+                RUN_ID=$(gh run list --workflow="ci-${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
 
                 if [ -n "$RUN_ID" ]; then
                   echo "  📝 Workflow $module started with run ID: $RUN_ID"

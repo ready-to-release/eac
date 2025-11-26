@@ -1,4 +1,4 @@
-name: "Release docs"
+name: "release-docs (stage 7+)"
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
         default: ''
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
   actions: read
@@ -26,6 +26,36 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create calver tag
+        id: tag
+        run: |
+          # Generate calver tag: docs/YYYY.MM.DD or docs/YYYY.MM.DD.N for multiple releases per day
+          BASE_TAG="docs/$(date -u +%Y.%m.%d)"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch all tags
+          git fetch --tags --force
+
+          # Check if base tag exists, if so append incrementing suffix
+          TAG="$BASE_TAG"
+          SUFFIX=1
+          while git rev-parse "$TAG" >/dev/null 2>&1; do
+            TAG="${BASE_TAG}.${SUFFIX}"
+            SUFFIX=$((SUFFIX + 1))
+          done
+
+          echo "Creating tag: $TAG"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "✅ Created tag: $TAG"
 
       - name: Download build artifacts from CI
         if: inputs.ci_run_id != ''
@@ -79,5 +109,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Documentation deployed to GitHub Pages" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

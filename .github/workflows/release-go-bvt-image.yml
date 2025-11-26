@@ -1,0 +1,99 @@
+name: "release-go-bvt-image (stage 7+)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'CI workflow run ID that triggered this release'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/go-bvt-image
+
+jobs:
+  release:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create calver tag
+        id: tag
+        run: |
+          # Generate calver tag: go-bvt-image/YYYY.MM.DD or go-bvt-image/YYYY.MM.DD.N for multiple releases per day
+          BASE_TAG="go-bvt-image/$(date -u +%Y.%m.%d)"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch all tags
+          git fetch --tags --force
+
+          # Check if base tag exists, if so append incrementing suffix
+          TAG="$BASE_TAG"
+          SUFFIX=1
+          while git rev-parse "$TAG" >/dev/null 2>&1; do
+            TAG="${BASE_TAG}.${SUFFIX}"
+            SUFFIX=$((SUFFIX + 1))
+          done
+
+          # Extract version from tag (everything after the module prefix)
+          VERSION="${TAG#go-bvt-image/}"
+
+          echo "Creating tag: $TAG"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Created tag: $TAG (version: $VERSION)"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/go-bvt-image
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Generate summary
+        run: |
+          echo "## Go BVT Image Released" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag**: \`${{ steps.tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ inputs.ci_run_id }}" ]; then
+            echo "**Triggered by**: [CI Run #${{ inputs.ci_run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ inputs.ci_run_id }})" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Usage in workflows:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`yaml" >> $GITHUB_STEP_SUMMARY
+          echo "jobs:" >> $GITHUB_STEP_SUMMARY
+          echo "  build:" >> $GITHUB_STEP_SUMMARY
+          echo "    runs-on: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
+          echo "    container:" >> $GITHUB_STEP_SUMMARY
+          echo "      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

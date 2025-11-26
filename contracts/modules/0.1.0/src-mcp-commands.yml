@@ -16,7 +16,7 @@ source:
     - "*.go"
     - "README.md"
     # Own the CI workflow file - triggers rebuild when src-mcp-commands or dependencies change
-    - "/.github/workflows/src-mcp-commands.yaml"
+    - "/.github/workflows/ci-src-mcp-commands.yaml"
 
 depends_on:
   - "src-core"

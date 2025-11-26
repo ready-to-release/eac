@@ -16,7 +16,7 @@ source:
     - "README.md"
     - "/containers/ext-eac/Dockerfile"
     # Own the CI workflow file - triggers rebuild when ext-eac or dependencies change
-    - "/.github/workflows/ext-eac.yaml"
+    - "/.github/workflows/ci-ext-eac.yaml"
     - "/.github/workflows/release-ext-eac.yml"
 
 depends_on:

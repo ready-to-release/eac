@@ -1,4 +1,4 @@
-name: "ci-ext-eac (Docker Extension)"
+name: "ci-ext-eac (stage 1-6)"
 
 on:
   workflow_dispatch:
