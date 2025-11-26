@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to build'
+        default: ''
 
 permissions:
   actions: write
