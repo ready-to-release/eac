@@ -37,11 +37,12 @@ type BuildFunc func(*modules.ModuleContract, string, string, io.Writer, BuildOpt
 
 // goModuleTypes is the set of module types that use Go tooling (and thus support --tidy-first)
 var goModuleTypes = map[string]bool{
-	"go-cli":      true,
-	"go-commands": true,
-	"go-mcp":      true,
-	"go-library":  true,
-	"go-tests":    true,
+	"go-cli":           true,
+	"go-commands":      true,
+	"go-mcp":           true,
+	"go-library":       true,
+	"go-tests":         true,
+	"go-r2r-extension": true,
 }
 
 // IsGoModuleType returns true if the module type uses Go tooling
@@ -56,7 +57,7 @@ var buildFunctions = map[string]BuildFunc{
 	"go-mcp":           buildGoMCP,
 	"go-library":       buildGoLibrary,
 	"go-tests":         buildGoTests,
-	"r2r-extension":    buildR2RExtension,
+	"go-r2r-extension": buildR2RExtension,
 	"containers":       buildContainers,
 	"mkdocs-site":      buildMkDocsSite,
 	"mkdocs-subsite":   buildMkDocsSubsite,
@@ -66,20 +67,19 @@ var buildFunctions = map[string]BuildFunc{
 	"definitions-type": buildDefinitionsType,
 	"markdown":         buildMarkdown,
 	// Infrastructure module types
-	"scripts-sh":       buildScriptsSh,
-	"scripts-pwsh":     buildScriptsPwsh,
-	"config":           buildConfig,
-	"configuration":    buildConfig,
-	"vscode-config":    buildVSCodeConfig,
-	"claude-config":    buildClaudeConfig,
-	"claude-agents":    buildClaudeAgents,
-	"claude-commands":  buildClaudeCommands,
-	"claude-hooks":     buildClaudeHooks,
-	"templates":        buildTemplates,
-	"repository-root":  buildRepositoryRoot,
-	"no-module-type":   buildNoModuleType,
+	"scripts-sh":      buildScriptsSh,
+	"scripts-pwsh":    buildScriptsPwsh,
+	"config":          buildConfig,
+	"configuration":   buildConfig,
+	"vscode-config":   buildVSCodeConfig,
+	"claude-config":   buildClaudeConfig,
+	"claude-agents":   buildClaudeAgents,
+	"claude-commands": buildClaudeCommands,
+	"claude-hooks":    buildClaudeHooks,
+	"templates":       buildTemplates,
+	"repository-root": buildRepositoryRoot,
+	"no-module-type":  buildNoModuleType,
 }
-
 
 // buildGoCLI builds a Cobra CLI binary (Pattern A)
 // Requires: go generate && go build
@@ -359,6 +359,21 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 // Build context is the repository root
 func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	fmt.Fprintf(logWriter, "\n=== Building R2R extension: %s ===\n", module.Moniker)
+
+	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+
+	// Step 1: go mod tidy (if enabled) - extension modules have their own go.mod
+	if opts.TidyFirst {
+		// Check if this module has a go.mod file
+		goModPath := filepath.Join(moduleRoot, "go.mod")
+		if _, err := os.Stat(goModPath); err == nil {
+			fmt.Fprintf(logWriter, "Running: go mod tidy (in %s)\n", module.Source.Root)
+			if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+				fmt.Fprintf(logWriter, "❌ go mod tidy failed\n")
+				return exitCode
+			}
+		}
+	}
 
 	// Extract extension name from moniker (e.g., "ext-eac" -> "eac")
 	extensionName := module.Moniker

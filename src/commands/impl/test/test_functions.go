@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/src/commands/impl/build"
-	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
 // TestFunc is the signature for module type test functions
@@ -49,7 +49,7 @@ var testFunctions = map[string]TestFunc{
 	"definitions-type": testStaticModule,
 	"markdown":         testStaticModule,
 	"no-module-type":   testStaticModule,
-	"r2r-extension":    testStaticModule,
+	"go-r2r-extension": testStaticModule,
 	"scripts-pwsh":     testStaticModule,
 	"scripts-sh":       testStaticModule,
 	"specifications":   testStaticModule,

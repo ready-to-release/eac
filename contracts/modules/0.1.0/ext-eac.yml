@@ -2,7 +2,7 @@
 
 moniker: "ext-eac"
 name: "EAC Extension for R2R CLI"
-type: "r2r-extension"
+type: "go-r2r-extension"
 description: "Docker-based extension providing EAC (Everything as Code) for R2R CLI integration"
 
 parent: "."

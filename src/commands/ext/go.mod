@@ -55,6 +55,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/ready-to-release/eac/src/core v0.0.0 // indirect
 	github.com/ready-to-release/eac/src/core/ai v0.0.0-00010101000000-000000000000 // indirect
+	github.com/ready-to-release/eac/src/core/logging v0.0.0-00010101000000-000000000000 // indirect
 	github.com/ready-to-release/eac/src/core/markdown v0.0.0-00010101000000-000000000000 // indirect
 	github.com/ready-to-release/eac/src/core/module-deps v0.0.0-20251121190659-6cb680d34ae9 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
@@ -75,6 +76,8 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
@@ -99,3 +102,5 @@ replace github.com/ready-to-release/eac/src/core/ai => ../../core/ai
 replace github.com/ready-to-release/eac/src/core/markdown => ../../core/markdown
 
 replace github.com/ready-to-release/eac/src/core/module-deps => ../../core/module-deps
+
+replace github.com/ready-to-release/eac/src/core/logging => ../../core/logging
