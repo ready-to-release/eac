@@ -51,5 +51,8 @@ RUN go install github.com/cucumber/godog/cmd/godog@latest \
 # Set working directory for CI
 WORKDIR /workspace
 
+# Configure git to trust the workspace directory (fixes VCS status errors in mounted volumes)
+RUN git config --global --add safe.directory /workspace
+
 # Verify installations
 RUN go version && git --version && jq --version && gh --version && docker --version
