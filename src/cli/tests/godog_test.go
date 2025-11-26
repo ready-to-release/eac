@@ -29,6 +29,12 @@ func TestFeatures(t *testing.T) {
 	skipFilter := contract.BuildGodogSkipTagFilter()
 	tagFilter := skipFilter + " && ~@pending"
 
+	// Add suite tag filter if provided (e.g., "@L0 || @L1 || @L2" for commit suite)
+	suiteTagFilter := os.Getenv("GODOG_SUITE_TAGS")
+	if suiteTagFilter != "" {
+		tagFilter = tagFilter + " && (" + suiteTagFilter + ")"
+	}
+
 	opts := &godog.Options{
 		Format:   "pretty",
 		Paths:    []string{"../../../specs/src-cli"},

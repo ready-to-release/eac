@@ -1,13 +1,10 @@
 go 1.24.4
 
 use (
+	./src/ai
 	./src/cli
 	./src/cli-installers/tests
 	./src/commands
 	./src/core
-	./src/core/ai
-	./src/core/logging
-	./src/core/markdown
-	./src/core/module-deps
 	./src/mcp/commands
 )

@@ -29,8 +29,14 @@ import (
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/platform"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
+
+// writeln writes a formatted string with platform-specific line ending to the writer
+func writeln(w io.Writer, format string, args ...interface{}) {
+	fmt.Fprintf(w, format+platform.LineEnding, args...)
+}
 
 func init() {
 	registry.Register(Build)
@@ -186,24 +192,24 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 
 	// Print header
-	fmt.Fprintf(multiWriter, "Building module: %s (type: %s)\n", moniker, module.Type)
-	fmt.Fprintf(multiWriter, "Module root: %s\n", module.Source.Root)
-	fmt.Fprintf(multiWriter, "Output directory: %s\n", outputDir)
-	fmt.Fprintf(multiWriter, "Build log: %s\n", logPath)
+	writeln(multiWriter, "Building module: %s (type: %s)", moniker, module.Type)
+	writeln(multiWriter, "Module root: %s", module.Source.Root)
+	writeln(multiWriter, "Output directory: %s", outputDir)
+	writeln(multiWriter, "Build log: %s", logPath)
 
 	// Log tidy behavior (only relevant for Go modules)
 	if IsGoModuleType(module.Type) {
 		if tidyFirst {
 			if tidyExplicitlySet {
-				fmt.Fprintf(multiWriter, "Tidy mode: enabled (explicit flag)\n")
+				writeln(multiWriter, "Tidy mode: enabled (explicit flag)")
 			} else {
-				fmt.Fprintf(multiWriter, "Tidy mode: enabled (default for local builds)\n")
+				writeln(multiWriter, "Tidy mode: enabled (default for local builds)")
 			}
 		} else {
 			if tidyExplicitlySet {
-				fmt.Fprintf(multiWriter, "Tidy mode: disabled (explicit flag)\n")
+				writeln(multiWriter, "Tidy mode: disabled (explicit flag)")
 			} else {
-				fmt.Fprintf(multiWriter, "Tidy mode: disabled (CI environment detected)\n")
+				writeln(multiWriter, "Tidy mode: disabled (CI environment detected)")
 			}
 		}
 	}

@@ -27,11 +27,8 @@ WORKDIR /app
 # Copy go.mod and go.sum files first to leverage Docker layer caching
 # The ext module has replace directives pointing to parent modules,
 # so we need all related go.mod files for dependency resolution
+COPY src/ai/go.mod src/ai/go.sum ./src/ai/
 COPY src/core/go.mod src/core/go.sum ./src/core/
-COPY src/core/ai/go.mod src/core/ai/go.sum ./src/core/ai/
-COPY src/core/logging/go.mod src/core/logging/go.sum ./src/core/logging/
-COPY src/core/markdown/go.mod src/core/markdown/go.sum ./src/core/markdown/
-COPY src/core/module-deps/go.mod src/core/module-deps/go.sum ./src/core/module-deps/
 COPY src/commands/go.mod src/commands/go.sum ./src/commands/
 COPY src/commands/ext/go.mod src/commands/ext/go.sum ./src/commands/ext/
 
@@ -47,6 +44,7 @@ ENV DOCKER_R2R_MODE=true
 ENV TZ=UTC
 
 # Copy source code (won't invalidate the dependency layer above)
+COPY src/ai/ ./src/ai/
 COPY src/core/ ./src/core/
 COPY src/commands/ ./src/commands/
 COPY contracts/ ./contracts/

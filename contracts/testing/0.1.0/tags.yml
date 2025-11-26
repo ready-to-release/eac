@@ -28,6 +28,24 @@ tags:
     description: "Requires Azure CLI to be available"
     type: system_dependency
 
+  # OS Platform Dependencies
+  - tag: "@deps:linux"
+    description: "Test requires Linux operating system"
+    type: os_platform
+
+  - tag: "@deps:macos"
+    description: "Test requires macOS operating system"
+    type: os_platform
+
+  - tag: "@deps:windows"
+    description: "Test requires Windows operating system"
+    type: os_platform
+
+  - tag: "@deps:os-agnostic"
+    description: "Test runs on any operating system (inferred when no OS-specific deps)"
+    type: os_platform
+    inferred: true
+
   - tag: "@depm:src-cli"
     description: "Requires built CLI module (out/src-cli/r2r-cli.exe on Windows, r2r-cli on Unix)"
     type: module_dependency
@@ -136,6 +154,9 @@ tags:
 types:
   - type: system_dependency
     description: "External system dependencies required for test execution (e.g., docker, git, go)"
+
+  - type: os_platform
+    description: "Operating system platform requirements (linux, macos, windows, os-agnostic)"
 
   - type: module_dependency
     description: "Internal module dependencies required for test execution (e.g., src-cli, src-commands, src-core)"

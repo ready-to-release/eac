@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 )
 
@@ -418,6 +419,266 @@ func TestGetDefaultColorSettings(t *testing.T) {
 			}
 			if !found {
 				t.Errorf("Expected to find %s in defaults %v", expectedTermSetting, defaults)
+			}
+		})
+	}
+}
+
+func TestMergeMetadataEnv(t *testing.T) {
+	testCases := []struct {
+		name           string
+		extEnv         []conf.EnvVar
+		metaEnv        []cache.MetaEnvVar
+		expectedEnv    []conf.EnvVar
+		expectedLength int
+	}{
+		{
+			name:   "nil metadata",
+			extEnv: []conf.EnvVar{{Name: "EXISTING", Value: "value"}},
+			// metaEnv is nil (no metadata)
+			expectedEnv:    []conf.EnvVar{{Name: "EXISTING", Value: "value"}},
+			expectedLength: 1,
+		},
+		{
+			name:           "empty metadata env",
+			extEnv:         []conf.EnvVar{{Name: "EXISTING", Value: "value"}},
+			metaEnv:        []cache.MetaEnvVar{},
+			expectedEnv:    []conf.EnvVar{{Name: "EXISTING", Value: "value"}},
+			expectedLength: 1,
+		},
+		{
+			name:   "metadata adds new env vars",
+			extEnv: []conf.EnvVar{},
+			metaEnv: []cache.MetaEnvVar{
+				{Name: "META_VAR1"},
+				{Name: "META_VAR2", Value: "static"},
+			},
+			expectedLength: 2,
+		},
+		{
+			name:   "config env takes precedence over metadata",
+			extEnv: []conf.EnvVar{{Name: "SHARED_VAR", Value: "config_value"}},
+			metaEnv: []cache.MetaEnvVar{
+				{Name: "SHARED_VAR", Value: "meta_value"},
+			},
+			expectedEnv:    []conf.EnvVar{{Name: "SHARED_VAR", Value: "config_value"}},
+			expectedLength: 1,
+		},
+		{
+			name:   "merge config and metadata env vars",
+			extEnv: []conf.EnvVar{{Name: "CONFIG_VAR", Value: "config_value"}},
+			metaEnv: []cache.MetaEnvVar{
+				{Name: "META_VAR"},
+			},
+			expectedLength: 2,
+		},
+		{
+			name:   "required flag is preserved from metadata",
+			extEnv: []conf.EnvVar{},
+			metaEnv: []cache.MetaEnvVar{
+				{Name: "REQUIRED_VAR", Required: true},
+			},
+			expectedLength: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ext := &ExtensionConfig{
+				Name:  "test-ext",
+				Image: "test:latest",
+				Env:   tc.extEnv,
+			}
+
+			var meta *cache.ExtensionMeta
+			if tc.metaEnv != nil {
+				meta = &cache.ExtensionMeta{
+					Name: "test-ext",
+					Env:  tc.metaEnv,
+				}
+			}
+
+			MergeMetadataEnv(ext, meta)
+
+			if len(ext.Env) != tc.expectedLength {
+				t.Errorf("Expected %d env vars, got %d: %v", tc.expectedLength, len(ext.Env), ext.Env)
+			}
+
+			// Check expected env vars if specified
+			for _, expected := range tc.expectedEnv {
+				found := false
+				for _, actual := range ext.Env {
+					if actual.Name == expected.Name && actual.Value == expected.Value {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected to find env var %s=%s in %v", expected.Name, expected.Value, ext.Env)
+				}
+			}
+
+			// Check required flag for required test case
+			if tc.name == "required flag is preserved from metadata" {
+				for _, env := range ext.Env {
+					if env.Name == "REQUIRED_VAR" && !env.Required {
+						t.Error("Expected REQUIRED_VAR to have Required=true")
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestBuildEnvironmentVars_Passthrough(t *testing.T) {
+	testCases := []struct {
+		name             string
+		hostEnvVars      map[string]string
+		extension        *ExtensionConfig
+		shouldContain    []string
+		shouldNotContain []string
+	}{
+		{
+			name: "passthrough env var with value on host",
+			hostEnvVars: map[string]string{
+				"MY_PASSTHROUGH_VAR": "host_value",
+			},
+			extension: &ExtensionConfig{
+				Name:  "test-ext",
+				Image: "test:latest",
+				Env: []conf.EnvVar{
+					{Name: "MY_PASSTHROUGH_VAR"}, // No value = passthrough
+				},
+			},
+			shouldContain: []string{
+				"MY_PASSTHROUGH_VAR=host_value",
+			},
+		},
+		{
+			name:        "passthrough env var not set on host",
+			hostEnvVars: map[string]string{},
+			extension: &ExtensionConfig{
+				Name:  "test-ext",
+				Image: "test:latest",
+				Env: []conf.EnvVar{
+					{Name: "MISSING_VAR"}, // No value = passthrough, but not set on host
+				},
+			},
+			shouldNotContain: []string{
+				"MISSING_VAR=",
+			},
+		},
+		{
+			name: "static value takes precedence",
+			hostEnvVars: map[string]string{
+				"MY_VAR": "host_value",
+			},
+			extension: &ExtensionConfig{
+				Name:  "test-ext",
+				Image: "test:latest",
+				Env: []conf.EnvVar{
+					{Name: "MY_VAR", Value: "static_value"},
+				},
+			},
+			shouldContain: []string{
+				"MY_VAR=static_value",
+			},
+			shouldNotContain: []string{
+				"MY_VAR=host_value",
+			},
+		},
+		{
+			name: "mixed static and passthrough",
+			hostEnvVars: map[string]string{
+				"PASSTHROUGH_VAR": "from_host",
+			},
+			extension: &ExtensionConfig{
+				Name:  "test-ext",
+				Image: "test:latest",
+				Env: []conf.EnvVar{
+					{Name: "STATIC_VAR", Value: "static"},
+					{Name: "PASSTHROUGH_VAR"}, // passthrough
+				},
+			},
+			shouldContain: []string{
+				"STATIC_VAR=static",
+				"PASSTHROUGH_VAR=from_host",
+			},
+		},
+		{
+			name:        "required passthrough not set on host (logs error but continues)",
+			hostEnvVars: map[string]string{},
+			extension: &ExtensionConfig{
+				Name:  "test-ext",
+				Image: "test:latest",
+				Env: []conf.EnvVar{
+					{Name: "REQUIRED_VAR", Required: true},
+				},
+			},
+			shouldNotContain: []string{
+				"REQUIRED_VAR=",
+			},
+		},
+		{
+			name: "required passthrough set on host",
+			hostEnvVars: map[string]string{
+				"REQUIRED_VAR": "required_value",
+			},
+			extension: &ExtensionConfig{
+				Name:  "test-ext",
+				Image: "test:latest",
+				Env: []conf.EnvVar{
+					{Name: "REQUIRED_VAR", Required: true},
+				},
+			},
+			shouldContain: []string{
+				"REQUIRED_VAR=required_value",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Clear test environment variables
+			testEnvVars := []string{"MY_PASSTHROUGH_VAR", "MISSING_VAR", "MY_VAR", "PASSTHROUGH_VAR", "STATIC_VAR", "REQUIRED_VAR"}
+			cleanup := clearEnvVars(t, testEnvVars)
+			defer cleanup()
+
+			// Also clear CI vars to avoid interference
+			ciVars := []string{"CI", "GITHUB_ACTIONS", "GITLAB_CI"}
+			ciCleanup := clearEnvVars(t, ciVars)
+			defer ciCleanup()
+
+			// Set host environment variables
+			for key, value := range tc.hostEnvVars {
+				os.Setenv(key, value)
+			}
+
+			host := createMockContainerHost()
+			envVars := host.BuildEnvironmentVars(tc.extension)
+
+			// Check required environment variables are present
+			for _, required := range tc.shouldContain {
+				found := false
+				for _, envVar := range envVars {
+					if envVar == required {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected to find %s in environment variables %v", required, envVars)
+				}
+			}
+
+			// Check forbidden environment variables are not present
+			for _, forbidden := range tc.shouldNotContain {
+				for _, envVar := range envVars {
+					// Check if the env var starts with the forbidden prefix
+					if len(envVar) >= len(forbidden) && envVar[:len(forbidden)] == forbidden {
+						t.Errorf("Did not expect to find env var starting with %s in environment variables %v", forbidden, envVars)
+					}
+				}
 			}
 		})
 	}

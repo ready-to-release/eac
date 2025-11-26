@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/stretchr/testify/assert"

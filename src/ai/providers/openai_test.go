@@ -1,4 +1,4 @@
-// File: src/core/ai/providers/gemini_test.go
+// File: src/core/ai/providers/openai_test.go
 package providers
 
 import (
@@ -6,26 +6,26 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/ai"
 )
 
-func TestGemini_Name(t *testing.T) {
-	provider, _ := NewGemini("test-key", DefaultGeminiModel)
-	if provider.Name() != "gemini" {
-		t.Errorf("Name() = %v, want gemini", provider.Name())
+func TestOpenAI_Name(t *testing.T) {
+	provider, _ := NewOpenAI("test-key", DefaultOpenAIModel)
+	if provider.Name() != "openai" {
+		t.Errorf("Name() = %v, want openai", provider.Name())
 	}
 }
 
-func TestGemini_Execute(t *testing.T) {
+func TestOpenAI_Execute(t *testing.T) {
 	// Skip if no API key (integration test)
-	apiKey := os.Getenv("GOOGLE_API_KEY")
+	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
-		t.Skip("Skipping Gemini integration test: GOOGLE_API_KEY not set")
+		t.Skip("Skipping OpenAI integration test: OPENAI_API_KEY not set")
 	}
 
-	provider, err := NewGemini(apiKey, DefaultGeminiModel)
+	provider, err := NewOpenAI(apiKey, DefaultOpenAIModel)
 	if err != nil {
-		t.Fatalf("NewGemini() error = %v", err)
+		t.Fatalf("NewOpenAI() error = %v", err)
 	}
 
 	ctx := context.Background()
@@ -39,10 +39,10 @@ func TestGemini_Execute(t *testing.T) {
 		t.Errorf("Execute() returned empty response")
 	}
 
-	t.Logf("Gemini response: %s", response)
+	t.Logf("OpenAI response: %s", response)
 }
 
-func TestGemini_ValidationError(t *testing.T) {
+func TestOpenAI_ValidationError(t *testing.T) {
 	tests := []struct {
 		name      string
 		apiKey    string
@@ -53,7 +53,7 @@ func TestGemini_ValidationError(t *testing.T) {
 		{
 			name:      "empty API key returns error",
 			apiKey:    "",
-			model:     DefaultGeminiModel,
+			model:     DefaultOpenAIModel,
 			wantErr:   true,
 			errString: "API key is required",
 		},
@@ -67,50 +67,50 @@ func TestGemini_ValidationError(t *testing.T) {
 		{
 			name:    "valid parameters",
 			apiKey:  "test-key",
-			model:   DefaultGeminiModel,
+			model:   DefaultOpenAIModel,
 			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider, err := NewGemini(tt.apiKey, tt.model)
+			provider, err := NewOpenAI(tt.apiKey, tt.model)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewGemini() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewOpenAI() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if tt.wantErr && err != nil {
-				if tt.errString != "" && !containsSubstr(err.Error(), tt.errString) {
-					t.Errorf("NewGemini() error = %v, want error containing %v", err, tt.errString)
+				if tt.errString != "" && !contains(err.Error(), tt.errString) {
+					t.Errorf("NewOpenAI() error = %v, want error containing %v", err, tt.errString)
 				}
 			}
 
 			if !tt.wantErr && provider == nil {
-				t.Errorf("NewGemini() returned nil provider for valid input")
+				t.Errorf("NewOpenAI() returned nil provider for valid input")
 			}
 		})
 	}
 }
 
-func TestGemini_WithOptions(t *testing.T) {
+func TestOpenAI_WithOptions(t *testing.T) {
 	// Skip if no API key
-	apiKey := os.Getenv("GOOGLE_API_KEY")
+	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
-		t.Skip("Skipping Gemini integration test: GOOGLE_API_KEY not set")
+		t.Skip("Skipping OpenAI integration test: OPENAI_API_KEY not set")
 	}
 
-	provider, err := NewGemini(apiKey, DefaultGeminiModel)
+	provider, err := NewOpenAI(apiKey, DefaultOpenAIModel)
 	if err != nil {
-		t.Fatalf("NewGemini() error = %v", err)
+		t.Fatalf("NewOpenAI() error = %v", err)
 	}
 
 	ctx := context.Background()
 
 	// Test with custom options
 	response, err := provider.Execute(ctx, "Say 'options test'",
-		ai.WithModel("gemini-1.5-pro"),
+		ai.WithModel("gpt-3.5-turbo"),
 		ai.WithTemperature(0.5),
 		ai.WithMaxTokens(100),
 	)
@@ -125,7 +125,7 @@ func TestGemini_WithOptions(t *testing.T) {
 }
 
 // Helper function to check if a string contains a substring
-func containsSubstr(s, substr string) bool {
+func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
-		(s[:len(substr)] == substr || containsSubstr(s[1:], substr)))
+		(s[:len(substr)] == substr || contains(s[1:], substr)))
 }

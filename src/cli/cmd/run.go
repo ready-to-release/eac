@@ -354,17 +354,21 @@ var RunCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Get extension metadata for volume mounts
+		// Get extension metadata for volume mounts and env vars
 		var volumeRequests []cache.VolumeRequest
 		extMeta, err := host.GetExtensionMetadata(ext)
 		if err != nil {
-			log.Debug().Err(err).Str("extension", ext.Name).Msg("Failed to get extension metadata, continuing without cache volumes")
-		} else if extMeta != nil && len(extMeta.Volumes) > 0 {
-			volumeRequests = extMeta.Volumes
-			log.Debug().
-				Str("extension", ext.Name).
-				Int("volumes", len(volumeRequests)).
-				Msg("Loaded volume requests from extension metadata")
+			log.Debug().Err(err).Str("extension", ext.Name).Msg("Failed to get extension metadata, continuing without metadata")
+		} else if extMeta != nil {
+			if len(extMeta.Volumes) > 0 {
+				volumeRequests = extMeta.Volumes
+				log.Debug().
+					Str("extension", ext.Name).
+					Int("volumes", len(volumeRequests)).
+					Msg("Loaded volume requests from extension metadata")
+			}
+			// Merge env vars from metadata into extension config
+			docker.MergeMetadataEnv(ext, extMeta)
 		}
 
 		// Create container configuration

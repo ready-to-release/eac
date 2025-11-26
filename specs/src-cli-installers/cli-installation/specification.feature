@@ -1,5 +1,5 @@
 @env:isolated-test-project
-@ov @deps:network @depm:src-cli-installers
+@ov @depm:src-cli-installers
 Feature: src-cli-installers_cli-installation
 
   As a user
@@ -11,7 +11,7 @@ Feature: src-cli-installers_cli-installation
 
   Rule: Installer downloads and installs CLI binary
 
-    @ov @deps:windows @depm:src-cli-installers
+    @ov @deps:windows @depm:src-cli-installers @L3
     Scenario: Install latest version on Windows
       Given I am on Windows with PowerShell 5.1 or later
       When I run the PowerShell installer
@@ -19,7 +19,7 @@ Feature: src-cli-installers_cli-installation
       And the binary is installed to "%LOCALAPPDATA%\r2r\r2r.exe"
       And the installation is verified by running "r2r --version"
 
-    @ov @deps:linux @depm:src-cli-installers
+    @ov @deps:linux @depm:src-cli-installers @L3
     Scenario: Install latest version on Linux
       Given I am on Linux with bash and curl available
       When I run the bash installer

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/src/core/ai"
-	"github.com/ready-to-release/eac/src/core/ai/providers"
+	"github.com/ready-to-release/eac/src/ai"
+	"github.com/ready-to-release/eac/src/ai/providers"
 )
 
 func TestExecutor_Execute(t *testing.T) {

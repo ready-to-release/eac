@@ -28,7 +28,7 @@ import (
 	"fmt"
 
 	"github.com/google/generative-ai-go/genai"
-	"github.com/ready-to-release/eac/src/core/ai"
+	"github.com/ready-to-release/eac/src/ai"
 	"google.golang.org/api/option"
 )
 

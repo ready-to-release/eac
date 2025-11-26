@@ -19,8 +19,9 @@ import (
 )
 
 type EnvVar struct {
-	Name  string `mapstructure:"name"`
-	Value string `mapstructure:"value"`
+	Name     string `mapstructure:"name"`
+	Value    string `mapstructure:"value"`    // If empty, pass through value from host env var with same name
+	Required bool   `mapstructure:"required"` // If true, fail at runtime when passthrough env var is not set on host
 }
 
 type SecretVar struct {

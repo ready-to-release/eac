@@ -61,108 +61,35 @@ var testFunctions = map[string]TestFunc{
 }
 
 // testGoCLI tests a Cobra CLI binary (Pattern A)
-// Runs: go test -json ./...
-// Note: go generate must be run by build first - tests assume generated files exist
+// Delegates to test suite with module filter for proper tag-based filtering
 func testGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
-
-	fmt.Fprintf(logWriter, "\n=== Testing go-cli: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
-
-	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
-
-	// Save JSON output to file
-	jsonFile := filepath.Join(outputDir, "test-results.json")
-	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
-	} else {
-		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
-	}
-
-	// Generate summary_unit.md
-	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
-	generateUnitTestSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
-
-	return exitCode
+	writeln(logWriter, "\n=== Testing go-cli: %s ===", module.Moniker)
+	writeln(logWriter, "Suite: %s", suiteName)
+	return runTestSuiteForModule(module.Moniker, suiteName)
 }
 
 // testGoCommands tests the runtime command dispatcher (Pattern B)
-// Runs: go test -json ./...
+// Delegates to test suite with module filter for proper tag-based filtering
 func testGoCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
-
-	fmt.Fprintf(logWriter, "\n=== Testing go-commands: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
-
-	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
-
-	// Save JSON output to file
-	jsonFile := filepath.Join(outputDir, "test-results.json")
-	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
-	} else {
-		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
-	}
-
-	// Generate summary_unit.md
-	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
-	generateUnitTestSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
-
-	return exitCode
+	writeln(logWriter, "\n=== Testing go-commands: %s ===", module.Moniker)
+	writeln(logWriter, "Suite: %s", suiteName)
+	return runTestSuiteForModule(module.Moniker, suiteName)
 }
 
 // testGoMCP tests an MCP JSON-RPC server (Pattern C)
-// Runs: go test -json ./...
+// Delegates to test suite with module filter for proper tag-based filtering
 func testGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
-
-	fmt.Fprintf(logWriter, "\n=== Testing go-mcp: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
-
-	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
-
-	// Save JSON output to file
-	jsonFile := filepath.Join(outputDir, "test-results.json")
-	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
-	} else {
-		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
-	}
-
-	// Generate summary_unit.md
-	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
-	generateUnitTestSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
-
-	return exitCode
+	writeln(logWriter, "\n=== Testing go-mcp: %s ===", module.Moniker)
+	writeln(logWriter, "Suite: %s", suiteName)
+	return runTestSuiteForModule(module.Moniker, suiteName)
 }
 
 // testGoLibrary tests a Go library module (Pattern D)
-// Runs: go test -json ./...
+// Delegates to test suite with module filter for proper tag-based filtering
 func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
-
-	fmt.Fprintf(logWriter, "\n=== Testing go-library: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go test -json ./...\n")
-
-	exitCode, output := runTestCommandWithCapture(moduleRoot, logWriter, "go", "test", "-json", "./...")
-
-	// Save JSON output to file
-	jsonFile := filepath.Join(outputDir, "test-results.json")
-	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
-	} else {
-		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
-	}
-
-	// Generate summary_unit.md
-	fmt.Fprintf(logWriter, "\n=== Generating summary_unit.md ===\n")
-	generateUnitTestSummaryMarkdown(module.Moniker, module.Type, outputDir, logWriter, output, exitCode)
-
-	return exitCode
+	writeln(logWriter, "\n=== Testing go-library: %s ===", module.Moniker)
+	writeln(logWriter, "Suite: %s", suiteName)
+	return runTestSuiteForModule(module.Moniker, suiteName)
 }
 
 // testGoTests tests a Godog test module (Pattern D variant)
@@ -170,20 +97,20 @@ func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputD
 func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Testing go-tests: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Running: go test (Godog tests)\n")
+	writeln(logWriter, "\n=== Testing go-tests: %s ===", module.Moniker)
+	writeln(logWriter, "Suite: %s", suiteName)
+	writeln(logWriter, "Running: go test (Godog tests)")
 
 	// Generate report file path based on format
 	var reportPath string
 
 	if reportFormat == "junit" {
 		reportPath = filepath.Join(outputDir, "junit.xml")
-		fmt.Fprintf(logWriter, "Report: JUnit XML - %s\n", reportPath)
+		writeln(logWriter, "Report: JUnit XML - %s", reportPath)
 	} else {
 		// Default: cucumber
 		reportPath = filepath.Join(outputDir, "cucumber.json")
-		fmt.Fprintf(logWriter, "Report: Cucumber JSON - %s\n", reportPath)
+		writeln(logWriter, "Report: Cucumber JSON - %s", reportPath)
 	}
 
 	env := map[string]string{
@@ -196,7 +123,7 @@ func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir
 
 	// Generate summary_acceptance.md if cucumber.json was created
 	if reportFormat == "cucumber" && exitCode == 0 {
-		fmt.Fprintf(logWriter, "\n=== Generating summary_acceptance.md ===\n")
+		writeln(logWriter, "\n=== Generating summary_acceptance.md ===")
 		generateGherkinSummaryMarkdown(module.Moniker, workspaceRoot, outputDir, logWriter)
 	}
 
@@ -232,13 +159,13 @@ func runTestCommandWithCapture(dir string, logWriter io.Writer, name string, arg
 	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
-			fmt.Fprintf(logWriter, "\n❌ Tests exited with code %d (error: %v)\n", exitCode, err)
+			writeln(logWriter, "\n❌ Tests exited with code %d (error: %v)", exitCode, err)
 		} else {
-			fmt.Fprintf(stderrWriter, "\nError: failed to execute test command: %v\n", err)
+			writeln(stderrWriter, "\nError: failed to execute test command: %v", err)
 			exitCode = 1
 		}
 	} else {
-		fmt.Fprintf(logWriter, "\n✅ Tests passed\n")
+		writeln(logWriter, "\n✅ Tests passed")
 	}
 
 	return exitCode, outputBuffer.String()
@@ -269,11 +196,11 @@ func runTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]strin
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return exitErr.ExitCode()
 		}
-		fmt.Fprintf(stderrWriter, "\nError: failed to execute test command: %v\n", err)
+		writeln(stderrWriter, "\nError: failed to execute test command: %v", err)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ Tests passed\n")
+	writeln(logWriter, "\n✅ Tests passed")
 	return 0
 }
 
@@ -286,11 +213,11 @@ func generateGherkinSummaryMarkdown(moniker string, workspaceRoot string, output
 	// Parse cucumber.json
 	report, err := cucumber.ParseFile(cucumberPath)
 	if err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to parse cucumber.json: %v\n", err)
+		writeln(logWriter, "Warning: failed to parse cucumber.json: %v", err)
 		return
 	}
 
-	fmt.Fprintf(logWriter, "Found %d features\n", len(report))
+	writeln(logWriter, "Found %d features", len(report))
 
 	// Generate summary markdown without Appendix A (fragment starting at level 2)
 	var summary string
@@ -299,11 +226,11 @@ func generateGherkinSummaryMarkdown(moniker string, workspaceRoot string, output
 
 	// Write summary_acceptance.md
 	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to write summary_acceptance.md: %v\n", err)
+		writeln(logWriter, "Warning: failed to write summary_acceptance.md: %v", err)
 		return
 	}
 
-	fmt.Fprintf(logWriter, "✅ Generated: %s\n", summaryPath)
+	writeln(logWriter, "✅ Generated: %s", summaryPath)
 
 	// Generate Appendix A as separate file (fragment starting at level 2)
 	var appendix string
@@ -312,11 +239,11 @@ func generateGherkinSummaryMarkdown(moniker string, workspaceRoot string, output
 
 	// Write appendix_a.md
 	if err := os.WriteFile(appendixPath, []byte(appendix), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to write appendix_a.md: %v\n", err)
+		writeln(logWriter, "Warning: failed to write appendix_a.md: %v", err)
 		return
 	}
 
-	fmt.Fprintf(logWriter, "✅ Generated: %s\n", appendixPath)
+	writeln(logWriter, "✅ Generated: %s", appendixPath)
 }
 
 // generateUnitTestSummaryMarkdown generates summary_unit.md from go test output
@@ -341,51 +268,51 @@ func generateUnitTestSummaryMarkdown(moniker string, moduleType string, outputDi
 
 	// Write summary_unit.md
 	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to write summary_unit.md: %v\n", err)
+		writeln(logWriter, "Warning: failed to write summary_unit.md: %v", err)
 		return
 	}
 
-	fmt.Fprintf(logWriter, "✅ Generated: %s\n", summaryPath)
+	writeln(logWriter, "✅ Generated: %s", summaryPath)
 }
 
 // testStaticModule is a passthrough test for static/configuration modules
 // These modules don't have runtime tests - they are validated by the build process
 func testStaticModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	fmt.Fprintf(logWriter, "\n=== Testing %s: %s ===\n", module.Type, module.Moniker)
-	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
-	fmt.Fprintf(logWriter, "Module type '%s' has no runtime tests\n", module.Type)
-	fmt.Fprintf(logWriter, "✅ Static module - validation done at build time\n")
+	writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
+	writeln(logWriter, "Suite: %s", suiteName)
+	writeln(logWriter, "Module type '%s' has no runtime tests", module.Type)
+	writeln(logWriter, "✅ Static module - validation done at build time")
 	return 0
 }
 
 // testMkDocsSite tests the MkDocs documentation site by verifying the build output exists
 // The build is done separately with strict mode - this test just verifies the output
 func testMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	fmt.Fprintf(logWriter, "\n=== Testing mkdocs-site: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
+	writeln(logWriter, "\n=== Testing mkdocs-site: %s ===", module.Moniker)
+	writeln(logWriter, "Suite: %s", suiteName)
 
 	// Check that the build output exists
 	buildOutputDir := filepath.Join(workspaceRoot, "out", "build", module.Moniker, "site")
 	indexFile := filepath.Join(buildOutputDir, "index.html")
 
-	fmt.Fprintf(logWriter, "Checking build output: %s\n", buildOutputDir)
+	writeln(logWriter, "Checking build output: %s", buildOutputDir)
 
 	// Verify site directory exists
 	if _, err := os.Stat(buildOutputDir); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "\n❌ Build output not found: %s\n", buildOutputDir)
-		fmt.Fprintf(logWriter, "   Run 'build module %s' first\n", module.Moniker)
+		writeln(logWriter, "\n❌ Build output not found: %s", buildOutputDir)
+		writeln(logWriter, "   Run 'build module %s' first", module.Moniker)
 		return 1
 	}
 
 	// Verify index.html exists (indicates successful build)
 	if _, err := os.Stat(indexFile); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "\n❌ index.html not found in build output\n")
-		fmt.Fprintf(logWriter, "   Build may have failed - run 'build module %s'\n", module.Moniker)
+		writeln(logWriter, "\n❌ index.html not found in build output")
+		writeln(logWriter, "   Build may have failed - run 'build module %s'", module.Moniker)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "✅ Build output verified: %s\n", indexFile)
-	fmt.Fprintf(logWriter, "\n✅ MkDocs site validation passed\n")
+	writeln(logWriter, "✅ Build output verified: %s", indexFile)
+	writeln(logWriter, "\n✅ MkDocs site validation passed")
 
 	return 0
 }
@@ -396,12 +323,12 @@ func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, ou
 	// These are typically in src/core/repository/tests
 	testDir := filepath.Join(workspaceRoot, "src", "core", "repository", "tests")
 
-	fmt.Fprintf(logWriter, "\n=== Testing repository-root: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Running repository validation tests from: %s\n", testDir)
+	writeln(logWriter, "\n=== Testing repository-root: %s ===", module.Moniker)
+	writeln(logWriter, "Running repository validation tests from: %s", testDir)
 
 	// Check if test directory exists
 	if _, err := os.Stat(testDir); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "✅ No repository validation tests found at %s (this is OK)\n", testDir)
+		writeln(logWriter, "✅ No repository validation tests found at %s (this is OK)", testDir)
 		return 0
 	}
 
@@ -411,15 +338,15 @@ func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, ou
 	// Save JSON output to file so test debug can find failures
 	jsonFile := filepath.Join(outputDir, "test-results.json")
 	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
+		writeln(logWriter, "Warning: failed to save JSON results: %v", err)
 	} else {
-		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
+		writeln(logWriter, "✅ Saved JSON results: %s", jsonFile)
 	}
 
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "\n❌ Repository validation tests failed with exit code %d\n", exitCode)
+		writeln(logWriter, "\n❌ Repository validation tests failed with exit code %d", exitCode)
 	} else {
-		fmt.Fprintf(logWriter, "\n✅ Repository validation tests passed\n")
+		writeln(logWriter, "\n✅ Repository validation tests passed")
 	}
 
 	return exitCode
@@ -427,13 +354,13 @@ func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, ou
 
 // testScripts tests script modules by running Godog tests if a tests directory exists
 func testScripts(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	fmt.Fprintf(logWriter, "\n=== Testing scripts: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "Suite: %s\n", suiteName)
+	writeln(logWriter, "\n=== Testing scripts: %s ===", module.Moniker)
+	writeln(logWriter, "Suite: %s", suiteName)
 
 	// Check if module has a tests section
 	if module.Tests == nil || module.Tests.Root == "" {
-		fmt.Fprintf(logWriter, "No tests defined for this module\n")
-		fmt.Fprintf(logWriter, "✅ Scripts module - no tests to run\n")
+		writeln(logWriter, "No tests defined for this module")
+		writeln(logWriter, "✅ Scripts module - no tests to run")
 		return 0
 	}
 
@@ -441,12 +368,12 @@ func testScripts(module *modules.ModuleContract, workspaceRoot string, outputDir
 
 	// Check if test directory exists
 	if _, err := os.Stat(testDir); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "Test directory not found: %s\n", testDir)
-		fmt.Fprintf(logWriter, "✅ Scripts module - no tests to run\n")
+		writeln(logWriter, "Test directory not found: %s", testDir)
+		writeln(logWriter, "✅ Scripts module - no tests to run")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "Running tests from: %s\n", testDir)
+	writeln(logWriter, "Running tests from: %s", testDir)
 
 	// Run go test with JSON output
 	exitCode, output := runTestCommandWithCapture(testDir, logWriter, "go", "test", "-json", "-v")
@@ -454,15 +381,15 @@ func testScripts(module *modules.ModuleContract, workspaceRoot string, outputDir
 	// Save JSON output to file
 	jsonFile := filepath.Join(outputDir, "test-results.json")
 	if err := os.WriteFile(jsonFile, []byte(output), 0644); err != nil {
-		fmt.Fprintf(logWriter, "Warning: failed to save JSON results: %v\n", err)
+		writeln(logWriter, "Warning: failed to save JSON results: %v", err)
 	} else {
-		fmt.Fprintf(logWriter, "✅ Saved JSON results: %s\n", jsonFile)
+		writeln(logWriter, "✅ Saved JSON results: %s", jsonFile)
 	}
 
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "\n❌ Script tests failed with exit code %d\n", exitCode)
+		writeln(logWriter, "\n❌ Script tests failed with exit code %d", exitCode)
 	} else {
-		fmt.Fprintf(logWriter, "\n✅ Script tests passed\n")
+		writeln(logWriter, "\n✅ Script tests passed")
 	}
 
 	return exitCode
@@ -485,12 +412,31 @@ func runModuleTest(module *modules.ModuleContract, workspaceRoot string, outputD
 	// Get test function for module type
 	testFunc, hasTester := testFunctions[module.Type]
 	if !hasTester {
-		fmt.Fprintf(logWriter, "Error: no test function for type: %s\n", module.Type)
+		writeln(logWriter, "Error: no test function for type: %s", module.Type)
 		return 1
 	}
 
 	// Execute the test function
 	return testFunc(module, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)
+}
+
+// runTestSuiteForModule runs the test suite command with a module filter
+// This ensures proper test discovery, inference, and suite-based filtering
+func runTestSuiteForModule(moniker string, suiteName string) int {
+	// Redirect to test suite with module filter
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	os.Args = []string{
+		oldArgs[0],
+		"test",
+		"suite",
+		suiteName,
+		"--module",
+		moniker,
+	}
+
+	return TestSuite()
 }
 
 // FindModulesWithResults finds all subdirectories containing cucumber.json

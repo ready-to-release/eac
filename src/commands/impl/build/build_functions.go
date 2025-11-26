@@ -16,10 +16,16 @@ import (
 
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	mdvalidator "github.com/ready-to-release/eac/src/core/markdown"
+	"github.com/ready-to-release/eac/src/core/platform"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/parser"
 	"gopkg.in/yaml.v3"
 )
+
+// logln writes a formatted string with platform-specific line ending to the writer
+func logln(w io.Writer, format string, args ...interface{}) {
+	fmt.Fprintf(w, format+platform.LineEnding, args...)
+}
 
 // BuildOptions contains flags for controlling the build process
 type BuildOptions struct {
@@ -95,27 +101,27 @@ var buildFunctions = map[string]BuildFunc{
 func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Building go-cli: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Building go-cli: %s ===", module.Moniker)
 
 	// Log compression mode
 	if opts.CompressedUPX {
-		fmt.Fprintf(logWriter, "Compression: UPX (--compressed-upx)\n")
+		logln(logWriter, "Compression: UPX (--compressed-upx)")
 	} else if opts.Compressed {
-		fmt.Fprintf(logWriter, "Compression: stripped (--compressed)\n")
+		logln(logWriter, "Compression: stripped (--compressed)")
 	} else {
-		fmt.Fprintf(logWriter, "Compression: none (dev build with debug info)\n")
+		logln(logWriter, "Compression: none (dev build with debug info)")
 	}
 
 	// Step 1: go mod tidy (if enabled)
 	if opts.TidyFirst {
-		fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+		logln(logWriter, "Running: go mod tidy")
 		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
 			return exitCode
 		}
 	}
 
 	// Step 2: go generate
-	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
+	logln(logWriter, "Running: go generate ./...")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
 		return exitCode
 	}
@@ -123,8 +129,8 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	// Check for UPX if needed
 	if opts.CompressedUPX {
 		if _, err := exec.LookPath("upx"); err != nil {
-			fmt.Fprintf(logWriter, "❌ UPX not found in PATH. Install UPX for --compressed-upx support.\n")
-			fmt.Fprintf(logWriter, "   See: https://upx.github.io/\n")
+			logln(logWriter, "❌ UPX not found in PATH. Install UPX for --compressed-upx support.")
+			logln(logWriter, "   See: https://upx.github.io/")
 			return 1
 		}
 	}
@@ -172,8 +178,8 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 		}
 		binaryPath := filepath.Join(outputDir, binaryName)
 
-		fmt.Fprintf(logWriter, "\n--- Building for %s (%s/%s) ---\n", platform.Name, platform.GOOS, platform.GOARCH)
-		fmt.Fprintf(logWriter, "Output: %s\n", binaryPath)
+		logln(logWriter, "\n--- Building for %s (%s/%s) ---", platform.Name, platform.GOOS, platform.GOARCH)
+		logln(logWriter, "Output: %s", binaryPath)
 
 		// Prepare build arguments
 		buildArgs := []string{"build", "-o", binaryPath}
@@ -189,7 +195,7 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 				ldflags += " "
 			}
 			ldflags += fmt.Sprintf("-X 'github.com/ready-to-release/eac/src/cli/cmd.Version=%s'", opts.Version)
-			fmt.Fprintf(logWriter, "Version: %s\n", opts.Version)
+			logln(logWriter, "Version: %s", opts.Version)
 		}
 		if ldflags != "" {
 			buildArgs = append(buildArgs, "-ldflags", ldflags)
@@ -206,18 +212,18 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 		)
 
 		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(logWriter, "❌ Build failed for %s: %v\n", platform.Name, err)
+			logln(logWriter, "❌ Build failed for %s: %v", platform.Name, err)
 			return 1
 		}
 
-		fmt.Fprintf(logWriter, "✅ Built successfully: %s\n", binaryPath)
+		logln(logWriter, "✅ Built successfully: %s", binaryPath)
 
 		// Make binary executable on Unix platforms (only if building ON Unix)
 		// Note: We check runtime.GOOS (build host) not platform.GOOS (target)
 		// because chmod only works on Unix hosts
 		if runtime.GOOS != "windows" && platform.GOOS != "windows" {
 			if exitCode := RunCommandWithLog(moduleRoot, logWriter, "chmod", "+x", binaryPath); exitCode != 0 {
-				fmt.Fprintf(logWriter, "⚠️  Warning: could not set executable permissions\n")
+				logln(logWriter, "⚠️  Warning: could not set executable permissions")
 			}
 		}
 
@@ -226,13 +232,13 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 
 	// Apply UPX compression if requested
 	if opts.CompressedUPX {
-		fmt.Fprintf(logWriter, "\n--- Applying UPX compression ---\n")
+		logln(logWriter, "\n--- Applying UPX compression ---")
 
 		for _, binaryPath := range builtBinaries {
 			// Get original size
 			originalInfo, err := os.Stat(binaryPath)
 			if err != nil {
-				fmt.Fprintf(logWriter, "⚠️  Warning: could not stat %s: %v\n", binaryPath, err)
+				logln(logWriter, "⚠️  Warning: could not stat %s: %v", binaryPath, err)
 				continue
 			}
 			originalSize := originalInfo.Size()
@@ -246,11 +252,11 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 
 			// Copy original to UPX path first
 			if err := copyFile(binaryPath, upxPath); err != nil {
-				fmt.Fprintf(logWriter, "❌ Failed to copy %s for UPX: %v\n", baseName, err)
+				logln(logWriter, "❌ Failed to copy %s for UPX: %v", baseName, err)
 				return 1
 			}
 
-			fmt.Fprintf(logWriter, "Compressing: %s -> %s\n", baseName, upxName)
+			logln(logWriter, "Compressing: %s -> %s", baseName, upxName)
 
 			// Run UPX on the copy (--best for maximum compression, -q for quiet)
 			cmd := exec.Command("upx", "--best", "-q", upxPath)
@@ -258,7 +264,7 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 			cmd.Stderr = logWriter
 
 			if err := cmd.Run(); err != nil {
-				fmt.Fprintf(logWriter, "⚠️  UPX compression failed for %s: %v\n", upxName, err)
+				logln(logWriter, "⚠️  UPX compression failed for %s: %v", upxName, err)
 				// Remove failed UPX file
 				os.Remove(upxPath)
 				continue
@@ -267,13 +273,13 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 			// Get compressed size
 			compressedInfo, err := os.Stat(upxPath)
 			if err != nil {
-				fmt.Fprintf(logWriter, "⚠️  Warning: could not stat compressed file: %v\n", err)
+				logln(logWriter, "⚠️  Warning: could not stat compressed file: %v", err)
 				continue
 			}
 			compressedSize := compressedInfo.Size()
 
 			ratio := float64(compressedSize) / float64(originalSize) * 100
-			fmt.Fprintf(logWriter, "✅ %s: %.1f MB -> %.1f MB (%.0f%%)\n",
+			logln(logWriter, "✅ %s: %.1f MB -> %.1f MB (%.0f%%)",
 				upxName,
 				float64(originalSize)/1024/1024,
 				float64(compressedSize)/1024/1024,
@@ -281,7 +287,7 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 		}
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ All builds completed successfully\n")
+	logln(logWriter, "\n✅ All builds completed successfully")
 	return 0
 }
 
@@ -317,28 +323,28 @@ func copyFile(src, dst string) error {
 func buildGoCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== go-commands: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== go-commands: %s ===", module.Moniker)
 
 	// Step 1: go mod tidy (if enabled)
 	if opts.TidyFirst {
-		fmt.Fprintf(logWriter, "🔄 Running go mod tidy...\n")
+		logln(logWriter, "🔄 Running go mod tidy...")
 		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-			fmt.Fprintf(logWriter, "❌ go mod tidy failed\n")
+			logln(logWriter, "❌ go mod tidy failed")
 			return exitCode
 		}
-		fmt.Fprintf(logWriter, "✅ go mod tidy completed\n")
+		logln(logWriter, "✅ go mod tidy completed")
 	}
 
 	// Step 2: go generate to ensure generated code is up to date
-	fmt.Fprintf(logWriter, "🔄 Running go generate...\n")
+	logln(logWriter, "🔄 Running go generate...")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ go generate failed\n")
+		logln(logWriter, "❌ go generate failed")
 		return exitCode
 	}
-	fmt.Fprintf(logWriter, "✅ go generate completed\n")
+	logln(logWriter, "✅ go generate completed")
 
-	fmt.Fprintf(logWriter, "\nℹ️  This module uses 'go run .' and is never compiled to a binary\n")
-	fmt.Fprintf(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)\n")
+	logln(logWriter, "\nℹ️  This module uses 'go run .' and is never compiled to a binary")
+	logln(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)")
 	return 0
 }
 
@@ -356,18 +362,18 @@ func buildGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	binaryName := fmt.Sprintf("mcp-server-%s", serverName)
 	binaryPath := filepath.Join(outputDir, binaryName)
 
-	fmt.Fprintf(logWriter, "\n=== Building go-mcp: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Building go-mcp: %s ===", module.Moniker)
 
 	// Step 1: go mod tidy (if enabled)
 	if opts.TidyFirst {
-		fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+		logln(logWriter, "Running: go mod tidy")
 		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
 			return exitCode
 		}
 	}
 
 	// Step 2: go build
-	fmt.Fprintf(logWriter, "Running: go build -o %s\n", binaryPath)
+	logln(logWriter, "Running: go build -o %s", binaryPath)
 	return RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
 }
 
@@ -377,33 +383,33 @@ func buildGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir 
 func buildGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== go-library: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== go-library: %s ===", module.Moniker)
 
 	// Step 1: go mod tidy (if enabled)
 	if opts.TidyFirst {
-		fmt.Fprintf(logWriter, "Running: go mod tidy\n")
+		logln(logWriter, "Running: go mod tidy")
 		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
 			return exitCode
 		}
 	}
 
 	// Step 2: go generate to prepare embedded resources
-	fmt.Fprintf(logWriter, "Running: go generate ./...\n")
+	logln(logWriter, "Running: go generate ./...")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "ℹ️  This is a library module (no binary to build)\n")
-	fmt.Fprintf(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)\n")
+	logln(logWriter, "ℹ️  This is a library module (no binary to build)")
+	logln(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)")
 	return 0
 }
 
 // buildGoTests builds a Godog test module (Pattern D variant)
 // Note: Tests are run with "go test", not built separately
 func buildGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	fmt.Fprintf(logWriter, "\n=== go-tests: %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "ℹ️  This is a test module (use 'test module' command to run tests)\n")
-	fmt.Fprintf(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)\n")
+	logln(logWriter, "\n=== go-tests: %s ===", module.Moniker)
+	logln(logWriter, "ℹ️  This is a test module (use 'test module' command to run tests)")
+	logln(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)")
 	return 0
 }
 
@@ -423,25 +429,26 @@ func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...str
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return exitErr.ExitCode()
 		}
-		fmt.Fprintf(logWriter, "\nError: failed to execute command: %v\n", err)
+		logln(logWriter, "\nError: failed to execute command: %v", err)
 		return 1
 	}
 
 	return 0
 }
 
+
 // buildContainers builds Docker images from Dockerfiles
 // Expects .Dockerfile in module root
 func buildContainers(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Building containers: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Building containers: %s ===", module.Moniker)
 
 	// Find Dockerfile
 	dockerfilePath := filepath.Join(moduleRoot, ".Dockerfile")
 	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "⚠️  No .Dockerfile found at: %s\n", dockerfilePath)
-		fmt.Fprintf(logWriter, "ℹ️  Skipping Docker build\n")
+		logln(logWriter, "⚠️  No .Dockerfile found at: %s", dockerfilePath)
+		logln(logWriter, "ℹ️  Skipping Docker build")
 		return 0
 	}
 
@@ -449,9 +456,9 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 	// Example: "containers" -> "cli-containers:latest"
 	imageName := fmt.Sprintf("cli-%s:latest", module.Moniker)
 
-	fmt.Fprintf(logWriter, "📦 Building Docker image: %s\n", imageName)
-	fmt.Fprintf(logWriter, "   Dockerfile: %s\n", dockerfilePath)
-	fmt.Fprintf(logWriter, "   Build context: %s\n", moduleRoot)
+	logln(logWriter, "📦 Building Docker image: %s", imageName)
+	logln(logWriter, "   Dockerfile: %s", dockerfilePath)
+	logln(logWriter, "   Build context: %s", moduleRoot)
 
 	// Build image using docker build
 	exitCode := RunCommandWithLog(moduleRoot, logWriter,
@@ -461,11 +468,11 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 		".")
 
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ Docker build failed\n")
+		logln(logWriter, "❌ Docker build failed")
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "✅ Docker image built successfully: %s\n", imageName)
+	logln(logWriter, "✅ Docker image built successfully: %s", imageName)
 
 	// Save image name to output directory for reference
 	imageInfoPath := filepath.Join(outputDir, "image-info.txt")
@@ -473,7 +480,7 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 		imageName, dockerfilePath, time.Now().Format(time.RFC3339))
 
 	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
-		fmt.Fprintf(logWriter, "⚠️  Warning: could not save image info: %v\n", err)
+		logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
 	}
 
 	return 0
@@ -483,7 +490,7 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 // The Dockerfile is expected to be in containers/{moniker}/Dockerfile
 // Build context is the repository root
 func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	fmt.Fprintf(logWriter, "\n=== Building R2R extension: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Building R2R extension: %s ===", module.Moniker)
 
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
@@ -492,9 +499,9 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 		// Check if this module has a go.mod file
 		goModPath := filepath.Join(moduleRoot, "go.mod")
 		if _, err := os.Stat(goModPath); err == nil {
-			fmt.Fprintf(logWriter, "Running: go mod tidy (in %s)\n", module.Source.Root)
+			logln(logWriter, "Running: go mod tidy (in %s)", module.Source.Root)
 			if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-				fmt.Fprintf(logWriter, "❌ go mod tidy failed\n")
+				logln(logWriter, "❌ go mod tidy failed")
 				return exitCode
 			}
 		}
@@ -509,22 +516,22 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 	// Dockerfile is in containers/{moniker}/Dockerfile
 	dockerfilePath := filepath.Join(workspaceRoot, "containers", module.Moniker, "Dockerfile")
 	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "❌ No Dockerfile found at: %s\n", dockerfilePath)
+		logln(logWriter, "❌ No Dockerfile found at: %s", dockerfilePath)
 		return 1
 	}
 
 	// Generate image tag from extension name
 	imageName := fmt.Sprintf("ext-%s:latest", extensionName)
 
-	fmt.Fprintf(logWriter, "📦 Building Docker image: %s\n", imageName)
-	fmt.Fprintf(logWriter, "   Dockerfile: %s\n", dockerfilePath)
-	fmt.Fprintf(logWriter, "   Build context: %s\n", workspaceRoot)
+	logln(logWriter, "📦 Building Docker image: %s", imageName)
+	logln(logWriter, "   Dockerfile: %s", dockerfilePath)
+	logln(logWriter, "   Build context: %s", workspaceRoot)
 
 	// Check if we're in CI environment - if so, build for testing and export multi-platform
 	isCI := os.Getenv("CI") == "true"
 
 	if isCI {
-		fmt.Fprintf(logWriter, "\n--- CI Mode: Building single-platform for testing ---\n")
+		logln(logWriter, "\n--- CI Mode: Building single-platform for testing ---")
 		// Build single platform (amd64) with --load for testing in CI
 		exitCode := RunCommandWithLog(workspaceRoot, logWriter,
 			"docker", "buildx", "build",
@@ -537,14 +544,13 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 			".")
 
 		if exitCode != 0 {
-			fmt.Fprintf(logWriter, "❌ Docker build failed\n")
+			logln(logWriter, "\n❌ Docker build failed (see errors above)")
 			return exitCode
 		}
-
-		fmt.Fprintf(logWriter, "✅ Single-platform image built successfully: %s\n", imageName)
+		logln(logWriter, "✅ Single-platform image built successfully: %s", imageName)
 
 		// Export multi-platform for release
-		fmt.Fprintf(logWriter, "\n--- CI Mode: Building multi-platform for release ---\n")
+		logln(logWriter, "\n--- CI Mode: Building multi-platform for release ---")
 		ociArchivePath := filepath.Join(outputDir, fmt.Sprintf("ext-%s-ci-test.tar", extensionName))
 
 		exitCode = RunCommandWithLog(workspaceRoot, logWriter,
@@ -557,17 +563,17 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 			".")
 
 		if exitCode != 0 {
-			fmt.Fprintf(logWriter, "❌ Multi-platform build failed\n")
+			logln(logWriter, "\n❌ Multi-platform build failed (see errors above)")
 			return exitCode
 		}
 
-		fmt.Fprintf(logWriter, "✅ Multi-platform image exported: %s\n", ociArchivePath)
+		logln(logWriter, "✅ Multi-platform image exported: %s", ociArchivePath)
 
 		// Compress the OCI archive
-		fmt.Fprintf(logWriter, "Compressing OCI archive...\n")
+		logln(logWriter, "Compressing OCI archive...")
 		exitCode = RunCommandWithLog(outputDir, logWriter, "gzip", filepath.Base(ociArchivePath))
 		if exitCode != 0 {
-			fmt.Fprintf(logWriter, "⚠️  Warning: failed to compress archive\n")
+			logln(logWriter, "⚠️  Warning: failed to compress archive")
 		}
 
 		// Save image info
@@ -576,7 +582,7 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 			imageName, dockerfilePath, time.Now().Format(time.RFC3339), ociArchivePath)
 
 		if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
-			fmt.Fprintf(logWriter, "⚠️  Warning: could not save image info: %v\n", err)
+			logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
 		}
 
 	} else {
@@ -588,11 +594,11 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 			".")
 
 		if exitCode != 0 {
-			fmt.Fprintf(logWriter, "❌ Docker build failed\n")
+			logln(logWriter, "\n❌ Docker build failed (see errors above)")
 			return exitCode
 		}
 
-		fmt.Fprintf(logWriter, "✅ Docker image built successfully: %s\n", imageName)
+		logln(logWriter, "✅ Docker image built successfully: %s", imageName)
 
 		// Save image name to output directory for reference
 		imageInfoPath := filepath.Join(outputDir, "image-info.txt")
@@ -600,7 +606,7 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 			imageName, dockerfilePath, time.Now().Format(time.RFC3339))
 
 		if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
-			fmt.Fprintf(logWriter, "⚠️  Warning: could not save image info: %v\n", err)
+			logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
 		}
 	}
 
@@ -610,18 +616,18 @@ func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 // buildMkDocsSite builds the main MkDocs documentation site using Docker
 // Uses the cli-mkdocs container for consistent builds across local and CI environments
 func buildMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	fmt.Fprintf(logWriter, "\n=== Building mkdocs-site: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Building mkdocs-site: %s ===", module.Moniker)
 
 	// Check for mkdocs.yml at repository root
 	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
 	if _, err := os.Stat(mkdocsConfig); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "⚠️  No mkdocs.yml found at: %s\n", mkdocsConfig)
-		fmt.Fprintf(logWriter, "ℹ️  Skipping MkDocs build\n")
+		logln(logWriter, "⚠️  No mkdocs.yml found at: %s", mkdocsConfig)
+		logln(logWriter, "ℹ️  Skipping MkDocs build")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "📚 Building MkDocs site using Docker\n")
-	fmt.Fprintf(logWriter, "   Config: %s\n", mkdocsConfig)
+	logln(logWriter, "📚 Building MkDocs site using Docker")
+	logln(logWriter, "   Config: %s", mkdocsConfig)
 
 	// Ensure the Docker image exists
 	imageName := "cli-mkdocs:latest"
@@ -629,7 +635,7 @@ func buildMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outpu
 	contextPath := filepath.Join(workspaceRoot, "containers", "mkdocs")
 
 	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to ensure Docker image: %v\n", err)
+		logln(logWriter, "❌ Failed to ensure Docker image: %v", err)
 		return 1
 	}
 
@@ -640,14 +646,14 @@ func buildMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outpu
 
 	// Create the output directory
 	if err := os.MkdirAll(siteDir, 0755); err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to create output directory: %v\n", err)
+		logln(logWriter, "❌ Failed to create output directory: %v", err)
 		return 1
 	}
 
 	// Calculate relative path from workspace root to site dir for Docker mount
 	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to calculate relative path: %v\n", err)
+		logln(logWriter, "❌ Failed to calculate relative path: %v", err)
 		return 1
 	}
 
@@ -656,8 +662,8 @@ func buildMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outpu
 
 	// Build the site using Docker
 	// Mount workspace at /docs, output to relative site directory
-	fmt.Fprintf(logWriter, "   Image: %s\n", imageName)
-	fmt.Fprintf(logWriter, "   Output: %s\n", siteDir)
+	logln(logWriter, "   Image: %s", imageName)
+	logln(logWriter, "   Output: %s", siteDir)
 
 	// Convert Windows path separators to forward slashes for Docker
 	dockerSiteDir := strings.ReplaceAll(relSiteDir, "\\", "/")
@@ -684,26 +690,26 @@ func buildMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outpu
 	}
 
 	if acceptWarnings {
-		fmt.Fprintf(logWriter, "   Mode: accepting warnings (--accept-warnings)\n")
+		logln(logWriter, "   Mode: accepting warnings (--accept-warnings)")
 	} else {
-		fmt.Fprintf(logWriter, "   Mode: strict (warnings will fail build)\n")
+		logln(logWriter, "   Mode: strict (warnings will fail build)")
 	}
 
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
 
 	// If accepting warnings, treat warning exit code as success
 	if acceptWarnings && exitCode != 0 {
-		fmt.Fprintf(logWriter, "⚠️  Build completed with warnings (accepted)\n")
+		logln(logWriter, "⚠️  Build completed with warnings (accepted)")
 		exitCode = 0
 	}
 
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ MkDocs build failed\n")
+		logln(logWriter, "❌ MkDocs build failed")
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "✅ MkDocs site built successfully\n")
-	fmt.Fprintf(logWriter, "   Output: %s\n", siteDir)
+	logln(logWriter, "✅ MkDocs site built successfully")
+	logln(logWriter, "   Output: %s", siteDir)
 
 	return 0
 }
@@ -719,12 +725,12 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 
 	// If output is non-empty, image exists
 	if len(strings.TrimSpace(string(output))) > 0 {
-		fmt.Fprintf(logWriter, "   Using existing image: %s\n", imageName)
+		logln(logWriter, "   Using existing image: %s", imageName)
 		return nil
 	}
 
 	// Image doesn't exist, build it
-	fmt.Fprintf(logWriter, "   Building Docker image: %s\n", imageName)
+	logln(logWriter, "   Building Docker image: %s", imageName)
 
 	exitCode := RunCommandWithLog(contextPath, logWriter,
 		"docker", "build",
@@ -736,7 +742,7 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 		return fmt.Errorf("docker build failed with exit code %d", exitCode)
 	}
 
-	fmt.Fprintf(logWriter, "   Image built successfully: %s\n", imageName)
+	logln(logWriter, "   Image built successfully: %s", imageName)
 	return nil
 }
 
@@ -759,18 +765,18 @@ func formatDockerVolumePath(path string) string {
 func buildMkDocsSubsite(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Building mkdocs-subsite: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Building mkdocs-subsite: %s ===", module.Moniker)
 
 	// Check for mkdocs.yml
 	mkdocsConfig := filepath.Join(moduleRoot, "mkdocs.yml")
 	if _, err := os.Stat(mkdocsConfig); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "⚠️  No mkdocs.yml found at: %s\n", mkdocsConfig)
-		fmt.Fprintf(logWriter, "ℹ️  Skipping MkDocs subsite build\n")
+		logln(logWriter, "⚠️  No mkdocs.yml found at: %s", mkdocsConfig)
+		logln(logWriter, "ℹ️  Skipping MkDocs subsite build")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "📚 Building MkDocs subsite\n")
-	fmt.Fprintf(logWriter, "   Config: %s\n", mkdocsConfig)
+	logln(logWriter, "📚 Building MkDocs subsite")
+	logln(logWriter, "   Config: %s", mkdocsConfig)
 
 	// Build subsite to output directory
 	siteDir := filepath.Join(outputDir, "site")
@@ -780,12 +786,12 @@ func buildMkDocsSubsite(module *modules.ModuleContract, workspaceRoot string, ou
 		"--clean")
 
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ MkDocs subsite build failed\n")
+		logln(logWriter, "❌ MkDocs subsite build failed")
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "✅ MkDocs subsite built successfully\n")
-	fmt.Fprintf(logWriter, "   Output: %s\n", siteDir)
+	logln(logWriter, "✅ MkDocs subsite built successfully")
+	logln(logWriter, "   Output: %s", siteDir)
 
 	return 0
 }
@@ -795,37 +801,37 @@ func buildMkDocsSubsite(module *modules.ModuleContract, workspaceRoot string, ou
 func buildVSCodeExtension(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Building vscode-ext: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Building vscode-ext: %s ===", module.Moniker)
 
 	// Check for package.json
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "⚠️  No package.json found at: %s\n", packageJSON)
-		fmt.Fprintf(logWriter, "ℹ️  Skipping VS Code extension build\n")
+		logln(logWriter, "⚠️  No package.json found at: %s", packageJSON)
+		logln(logWriter, "ℹ️  Skipping VS Code extension build")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "📦 Installing dependencies\n")
-	fmt.Fprintf(logWriter, "Running: npm install\n")
+	logln(logWriter, "📦 Installing dependencies")
+	logln(logWriter, "Running: npm install")
 
 	// Step 1: npm install
 	exitCode := RunCommandWithLog(moduleRoot, logWriter, "npm", "install")
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ npm install failed\n")
+		logln(logWriter, "❌ npm install failed")
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "🔨 Compiling TypeScript\n")
-	fmt.Fprintf(logWriter, "Running: npm run compile\n")
+	logln(logWriter, "🔨 Compiling TypeScript")
+	logln(logWriter, "Running: npm run compile")
 
 	// Step 2: npm run compile
 	exitCode = RunCommandWithLog(moduleRoot, logWriter, "npm", "run", "compile")
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ npm run compile failed\n")
+		logln(logWriter, "❌ npm run compile failed")
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "✅ VS Code extension built successfully\n")
+	logln(logWriter, "✅ VS Code extension built successfully")
 
 	return 0
 }
@@ -835,7 +841,7 @@ func buildVSCodeExtension(module *modules.ModuleContract, workspaceRoot string, 
 func buildContracts(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating contracts: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating contracts: %s ===", module.Moniker)
 
 	// Find all YAML files
 	var yamlFiles []string
@@ -850,28 +856,28 @@ func buildContracts(module *modules.ModuleContract, workspaceRoot string, output
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan for YAML files: %v\n", err)
+		logln(logWriter, "❌ Failed to scan for YAML files: %v", err)
 		return 1
 	}
 
 	if len(yamlFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No YAML files found in: %s\n", moduleRoot)
-		fmt.Fprintf(logWriter, "ℹ️  Skipping validation\n")
+		logln(logWriter, "⚠️  No YAML files found in: %s", moduleRoot)
+		logln(logWriter, "ℹ️  Skipping validation")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "📋 Found %d YAML file(s) to validate\n", len(yamlFiles))
+	logln(logWriter, "📋 Found %d YAML file(s) to validate", len(yamlFiles))
 
 	// Validate each YAML file
 	validationErrors := 0
 	for _, yamlFile := range yamlFiles {
 		relPath, _ := filepath.Rel(moduleRoot, yamlFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		// Read YAML file
 		content, err := os.ReadFile(yamlFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
@@ -879,20 +885,20 @@ func buildContracts(module *modules.ModuleContract, workspaceRoot string, output
 		// Validate YAML syntax using yaml.v3
 		var data interface{}
 		if err := yaml.Unmarshal(content, &data); err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Invalid YAML: %v\n", err)
+			logln(logWriter, "      ❌ Invalid YAML: %v", err)
 			validationErrors++
 			continue
 		}
 
-		fmt.Fprintf(logWriter, "      ✅ Valid YAML (%d bytes)\n", len(content))
+		logln(logWriter, "      ✅ Valid YAML (%d bytes)", len(content))
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "❌ %d file(s) failed validation\n", validationErrors)
+		logln(logWriter, "❌ %d file(s) failed validation", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "✅ All contracts validated successfully\n")
+	logln(logWriter, "✅ All contracts validated successfully")
 	return 0
 }
 
@@ -901,7 +907,7 @@ func buildContracts(module *modules.ModuleContract, workspaceRoot string, output
 func buildSpecifications(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating specifications: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating specifications: %s ===", module.Moniker)
 
 	// Find all .feature files
 	var featureFiles []string
@@ -916,28 +922,28 @@ func buildSpecifications(module *modules.ModuleContract, workspaceRoot string, o
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan for feature files: %v\n", err)
+		logln(logWriter, "❌ Failed to scan for feature files: %v", err)
 		return 1
 	}
 
 	if len(featureFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No .feature files found in: %s\n", moduleRoot)
-		fmt.Fprintf(logWriter, "ℹ️  Skipping validation\n")
+		logln(logWriter, "⚠️  No .feature files found in: %s", moduleRoot)
+		logln(logWriter, "ℹ️  Skipping validation")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "🥒 Found %d feature file(s) to validate\n", len(featureFiles))
+	logln(logWriter, "🥒 Found %d feature file(s) to validate", len(featureFiles))
 
 	// Validate each feature file
 	validationErrors := 0
 	for _, featureFile := range featureFiles {
 		relPath, _ := filepath.Rel(moduleRoot, featureFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		// Read file to check it exists and is readable
 		content, err := os.ReadFile(featureFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
@@ -945,26 +951,26 @@ func buildSpecifications(module *modules.ModuleContract, workspaceRoot string, o
 		// Basic validation: check for "Feature:" keyword
 		contentStr := string(content)
 		if len(contentStr) == 0 {
-			fmt.Fprintf(logWriter, "      ❌ Empty file\n")
+			logln(logWriter, "      ❌ Empty file")
 			validationErrors++
 			continue
 		}
 
 		// Simple validation: just check it's readable and non-empty
 		if len(contentStr) > 0 {
-			fmt.Fprintf(logWriter, "      ✅ Valid Gherkin\n")
+			logln(logWriter, "      ✅ Valid Gherkin")
 		} else {
-			fmt.Fprintf(logWriter, "      ⚠️  Empty file\n")
+			logln(logWriter, "      ⚠️  Empty file")
 			validationErrors++
 		}
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "❌ %d file(s) failed validation\n", validationErrors)
+		logln(logWriter, "❌ %d file(s) failed validation", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "✅ All specifications validated successfully\n")
+	logln(logWriter, "✅ All specifications validated successfully")
 	return 0
 }
 
@@ -973,12 +979,12 @@ func buildSpecifications(module *modules.ModuleContract, workspaceRoot string, o
 func buildDefinitionsType(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Building definitions-type: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Building definitions-type: %s ===", module.Moniker)
 
 	// Check for package.json
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "ℹ️  No package.json found - checking for JSON schemas\n")
+		logln(logWriter, "ℹ️  No package.json found - checking for JSON schemas")
 
 		// Look for JSON schema files
 		var schemaFiles []string
@@ -993,32 +999,32 @@ func buildDefinitionsType(module *modules.ModuleContract, workspaceRoot string, 
 		})
 
 		if len(schemaFiles) == 0 {
-			fmt.Fprintf(logWriter, "⚠️  No JSON files found\n")
-			fmt.Fprintf(logWriter, "ℹ️  Skipping validation\n")
+			logln(logWriter, "⚠️  No JSON files found")
+			logln(logWriter, "ℹ️  Skipping validation")
 			return 0
 		}
 
-		fmt.Fprintf(logWriter, "📋 Found %d JSON schema file(s)\n", len(schemaFiles))
-		fmt.Fprintf(logWriter, "✅ Schema files present (no build needed)\n")
+		logln(logWriter, "📋 Found %d JSON schema file(s)", len(schemaFiles))
+		logln(logWriter, "✅ Schema files present (no build needed)")
 		return 0
 	}
 
 	// Has package.json - build with npm
-	fmt.Fprintf(logWriter, "📦 Installing dependencies\n")
+	logln(logWriter, "📦 Installing dependencies")
 	exitCode := RunCommandWithLog(moduleRoot, logWriter, "npm", "install")
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ npm install failed\n")
+		logln(logWriter, "❌ npm install failed")
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "🔨 Building definitions\n")
+	logln(logWriter, "🔨 Building definitions")
 	exitCode = RunCommandWithLog(moduleRoot, logWriter, "npm", "run", "build")
 	if exitCode != 0 {
-		fmt.Fprintf(logWriter, "❌ npm run build failed\n")
+		logln(logWriter, "❌ npm run build failed")
 		return exitCode
 	}
 
-	fmt.Fprintf(logWriter, "✅ Definitions built successfully\n")
+	logln(logWriter, "✅ Definitions built successfully")
 	return 0
 }
 
@@ -1027,7 +1033,7 @@ func buildDefinitionsType(module *modules.ModuleContract, workspaceRoot string, 
 func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating markdown: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating markdown: %s ===", module.Moniker)
 
 	// Find all markdown files (exclude node_modules, .git, out/)
 	var markdownFiles []string
@@ -1054,29 +1060,29 @@ func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputD
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan for markdown files: %v\n", err)
+		logln(logWriter, "❌ Failed to scan for markdown files: %v", err)
 		return 1
 	}
 
 	if len(markdownFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No markdown files found in: %s\n", moduleRoot)
-		fmt.Fprintf(logWriter, "ℹ️  Skipping validation\n")
+		logln(logWriter, "⚠️  No markdown files found in: %s", moduleRoot)
+		logln(logWriter, "ℹ️  Skipping validation")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "📝 Found %d markdown file(s) to validate\n", len(markdownFiles))
-	fmt.Fprintf(logWriter, "🔍 Using goldmark parser for validation\n")
+	logln(logWriter, "📝 Found %d markdown file(s) to validate", len(markdownFiles))
+	logln(logWriter, "🔍 Using goldmark parser for validation")
 
 	// Try markdownlint-cli if available for additional linting
 	hasMarkdownlint := false
 	if _, err := exec.LookPath("markdownlint"); err == nil {
 		hasMarkdownlint = true
-		fmt.Fprintf(logWriter, "💡 markdownlint-cli detected (will use for additional linting)\n")
+		logln(logWriter, "💡 markdownlint-cli detected (will use for additional linting)")
 
 		// Check for .markdownlint.yml config file
 		configFile := filepath.Join(moduleRoot, ".markdownlint.yml")
 		if _, err := os.Stat(configFile); err == nil {
-			fmt.Fprintf(logWriter, "   Config: %s\n", configFile)
+			logln(logWriter, "   Config: %s", configFile)
 		}
 	}
 
@@ -1094,19 +1100,19 @@ func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputD
 
 	for _, mdFile := range markdownFiles {
 		relPath, _ := filepath.Rel(moduleRoot, mdFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		// Read file
 		content, err := os.ReadFile(mdFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
 
 		// Check for empty files
 		if len(content) == 0 {
-			fmt.Fprintf(logWriter, "      ❌ Empty file\n")
+			logln(logWriter, "      ❌ Empty file")
 			emptyFiles++
 			validationErrors++
 			continue
@@ -1115,7 +1121,7 @@ func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputD
 		// Parse with goldmark
 		var buf bytes.Buffer
 		if err := md.Convert(content, &buf); err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Parse error: %v\n", err)
+			logln(logWriter, "      ❌ Parse error: %v", err)
 			parseErrors++
 			validationErrors++
 			continue
@@ -1132,38 +1138,38 @@ func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputD
 		}
 
 		if nonEmptyLines == 0 {
-			fmt.Fprintf(logWriter, "      ❌ No content (only whitespace)\n")
+			logln(logWriter, "      ❌ No content (only whitespace)")
 			validationErrors++
 			continue
 		}
 
-		fmt.Fprintf(logWriter, "      ✅ Valid markdown (%d lines, %d bytes)\n", len(lines), len(content))
+		logln(logWriter, "      ✅ Valid markdown (%d lines, %d bytes)", len(lines), len(content))
 	}
 
 	// Run markdownlint if available
 	if hasMarkdownlint && validationErrors == 0 {
-		fmt.Fprintf(logWriter, "\n🔍 Running markdownlint for style checks...\n")
+		logln(logWriter, "\n🔍 Running markdownlint for style checks...")
 		exitCode := RunCommandWithLog(moduleRoot, logWriter, "markdownlint", markdownFiles...)
 
 		if exitCode != 0 {
-			fmt.Fprintf(logWriter, "⚠️  markdownlint found style issues (not blocking build)\n")
+			logln(logWriter, "⚠️  markdownlint found style issues (not blocking build)")
 		}
 	}
 
 	// Summary
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Validation failed:\n")
+		logln(logWriter, "\n❌ Validation failed:")
 		if emptyFiles > 0 {
-			fmt.Fprintf(logWriter, "   - Empty files: %d\n", emptyFiles)
+			logln(logWriter, "   - Empty files: %d", emptyFiles)
 		}
 		if parseErrors > 0 {
-			fmt.Fprintf(logWriter, "   - Parse errors: %d\n", parseErrors)
+			logln(logWriter, "   - Parse errors: %d", parseErrors)
 		}
-		fmt.Fprintf(logWriter, "   - Total errors: %d\n", validationErrors)
+		logln(logWriter, "   - Total errors: %d", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "✅ All markdown files validated successfully\n")
+	logln(logWriter, "✅ All markdown files validated successfully")
 	return 0
 }
 
@@ -1173,7 +1179,7 @@ func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputD
 func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating scripts: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating scripts: %s ===", module.Moniker)
 
 	// Find all script files
 	var shellFiles []string
@@ -1201,23 +1207,23 @@ func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDi
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan directory: %v\n", err)
+		logln(logWriter, "❌ Failed to scan directory: %v", err)
 		return 1
 	}
 
 	totalFiles := len(shellFiles) + len(psFiles)
 	if totalFiles == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No scripts found\n")
+		logln(logWriter, "⚠️  No scripts found")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "📜 Found %d script(s) to validate (%d shell, %d PowerShell)\n", totalFiles, len(shellFiles), len(psFiles))
+	logln(logWriter, "📜 Found %d script(s) to validate (%d shell, %d PowerShell)", totalFiles, len(shellFiles), len(psFiles))
 
 	validationErrors := 0
 
 	// Validate shell scripts
 	if len(shellFiles) > 0 {
-		fmt.Fprintf(logWriter, "\n--- Shell Scripts ---\n")
+		logln(logWriter, "\n--- Shell Scripts ---")
 
 		// Check if bash is available
 		checkCmd := exec.Command("bash", "--version")
@@ -1225,19 +1231,19 @@ func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDi
 
 		if !bashAvailable {
 			if runtime.GOOS == "windows" {
-				fmt.Fprintf(logWriter, "⚠️  Skipping shell validation: bash not available (WSL not configured)\n")
+				logln(logWriter, "⚠️  Skipping shell validation: bash not available (WSL not configured)")
 			} else {
-				fmt.Fprintf(logWriter, "❌ bash not found\n")
+				logln(logWriter, "❌ bash not found")
 				validationErrors++
 			}
 		} else {
 			for _, shellFile := range shellFiles {
 				relPath, _ := filepath.Rel(moduleRoot, shellFile)
-				fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+				logln(logWriter, "   Validating: %s", relPath)
 
 				content, err := os.ReadFile(shellFile)
 				if err != nil {
-					fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+					logln(logWriter, "      ❌ Failed to read: %v", err)
 					validationErrors++
 					continue
 				}
@@ -1246,34 +1252,34 @@ func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDi
 				cmd.Stdin = bytes.NewReader(content)
 				output, err := cmd.CombinedOutput()
 				if err != nil {
-					fmt.Fprintf(logWriter, "      ❌ Syntax error: %s\n", strings.TrimSpace(string(output)))
+					logln(logWriter, "      ❌ Syntax error: %s", strings.TrimSpace(string(output)))
 					validationErrors++
 					continue
 				}
 
-				fmt.Fprintf(logWriter, "      ✅ Valid syntax\n")
+				logln(logWriter, "      ✅ Valid syntax")
 			}
 		}
 	}
 
 	// Validate PowerShell scripts
 	if len(psFiles) > 0 {
-		fmt.Fprintf(logWriter, "\n--- PowerShell Scripts ---\n")
+		logln(logWriter, "\n--- PowerShell Scripts ---")
 
 		// Check if pwsh is available
 		checkCmd := exec.Command("pwsh", "--version")
 		pwshAvailable := checkCmd.Run() == nil
 
 		if !pwshAvailable {
-			fmt.Fprintf(logWriter, "⚠️  Skipping PowerShell validation: pwsh not available\n")
+			logln(logWriter, "⚠️  Skipping PowerShell validation: pwsh not available")
 		} else {
 			for _, psFile := range psFiles {
 				relPath, _ := filepath.Rel(moduleRoot, psFile)
-				fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+				logln(logWriter, "   Validating: %s", relPath)
 
 				content, err := os.ReadFile(psFile)
 				if err != nil {
-					fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+					logln(logWriter, "      ❌ Failed to read: %v", err)
 					validationErrors++
 					continue
 				}
@@ -1282,22 +1288,22 @@ func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDi
 				cmd.Stdin = bytes.NewReader([]byte(fmt.Sprintf("$null = [System.Management.Automation.PSParser]::Tokenize(@'\n%s\n'@, [ref]$null)", string(content))))
 				output, err := cmd.CombinedOutput()
 				if err != nil {
-					fmt.Fprintf(logWriter, "      ❌ Syntax error: %s\n", strings.TrimSpace(string(output)))
+					logln(logWriter, "      ❌ Syntax error: %s", strings.TrimSpace(string(output)))
 					validationErrors++
 					continue
 				}
 
-				fmt.Fprintf(logWriter, "      ✅ Valid syntax\n")
+				logln(logWriter, "      ✅ Valid syntax")
 			}
 		}
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Validation failed with %d error(s)\n", validationErrors)
+		logln(logWriter, "\n❌ Validation failed with %d error(s)", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ All scripts validated successfully\n")
+	logln(logWriter, "\n✅ All scripts validated successfully")
 	return 0
 }
 
@@ -1305,7 +1311,7 @@ func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDi
 func buildScriptsSh(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating shell scripts: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating shell scripts: %s ===", module.Moniker)
 
 	// Find all shell scripts
 	var shellFiles []string
@@ -1329,39 +1335,39 @@ func buildScriptsSh(module *modules.ModuleContract, workspaceRoot string, output
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan directory: %v\n", err)
+		logln(logWriter, "❌ Failed to scan directory: %v", err)
 		return 1
 	}
 
 	if len(shellFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No shell scripts found\n")
+		logln(logWriter, "⚠️  No shell scripts found")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "🐚 Found %d shell script(s) to validate\n", len(shellFiles))
+	logln(logWriter, "🐚 Found %d shell script(s) to validate", len(shellFiles))
 
 	// Check if bash is available
 	checkCmd := exec.Command("bash", "--version")
 	if err := checkCmd.Run(); err != nil {
 		// Bash not available (common on Windows without WSL)
 		if runtime.GOOS == "windows" {
-			fmt.Fprintf(logWriter, "⚠️  Skipping validation: bash not available (WSL not configured)\n")
-			fmt.Fprintf(logWriter, "   Shell scripts found but not validated on Windows\n")
+			logln(logWriter, "⚠️  Skipping validation: bash not available (WSL not configured)")
+			logln(logWriter, "   Shell scripts found but not validated on Windows")
 			return 0
 		}
-		fmt.Fprintf(logWriter, "❌ bash not found: %v\n", err)
+		logln(logWriter, "❌ bash not found: %v", err)
 		return 1
 	}
 
 	validationErrors := 0
 	for _, shellFile := range shellFiles {
 		relPath, _ := filepath.Rel(moduleRoot, shellFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		// Read file content and validate via stdin to avoid Windows path issues
 		content, err := os.ReadFile(shellFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
@@ -1371,20 +1377,20 @@ func buildScriptsSh(module *modules.ModuleContract, workspaceRoot string, output
 		cmd.Stdin = bytes.NewReader(content)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Syntax error: %s\n", strings.TrimSpace(string(output)))
+			logln(logWriter, "      ❌ Syntax error: %s", strings.TrimSpace(string(output)))
 			validationErrors++
 			continue
 		}
 
-		fmt.Fprintf(logWriter, "      ✅ Valid syntax\n")
+		logln(logWriter, "      ✅ Valid syntax")
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Validation failed with %d error(s)\n", validationErrors)
+		logln(logWriter, "\n❌ Validation failed with %d error(s)", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ All shell scripts validated successfully\n")
+	logln(logWriter, "\n✅ All shell scripts validated successfully")
 	return 0
 }
 
@@ -1392,7 +1398,7 @@ func buildScriptsSh(module *modules.ModuleContract, workspaceRoot string, output
 func buildScriptsPwsh(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating PowerShell scripts: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating PowerShell scripts: %s ===", module.Moniker)
 
 	// Find all PowerShell scripts
 	var psFiles []string
@@ -1416,26 +1422,26 @@ func buildScriptsPwsh(module *modules.ModuleContract, workspaceRoot string, outp
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan directory: %v\n", err)
+		logln(logWriter, "❌ Failed to scan directory: %v", err)
 		return 1
 	}
 
 	if len(psFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No PowerShell scripts found\n")
+		logln(logWriter, "⚠️  No PowerShell scripts found")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "⚡ Found %d PowerShell script(s) to validate\n", len(psFiles))
+	logln(logWriter, "⚡ Found %d PowerShell script(s) to validate", len(psFiles))
 
 	validationErrors := 0
 	for _, psFile := range psFiles {
 		relPath, _ := filepath.Rel(moduleRoot, psFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		// Read file content and validate via stdin for cross-platform compatibility
 		content, err := os.ReadFile(psFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
@@ -1445,20 +1451,20 @@ func buildScriptsPwsh(module *modules.ModuleContract, workspaceRoot string, outp
 		cmd.Stdin = bytes.NewReader([]byte(fmt.Sprintf("$null = [System.Management.Automation.PSParser]::Tokenize(@'\n%s\n'@, [ref]$null)", string(content))))
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Syntax error: %s\n", strings.TrimSpace(string(output)))
+			logln(logWriter, "      ❌ Syntax error: %s", strings.TrimSpace(string(output)))
 			validationErrors++
 			continue
 		}
 
-		fmt.Fprintf(logWriter, "      ✅ Valid syntax\n")
+		logln(logWriter, "      ✅ Valid syntax")
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Validation failed with %d error(s)\n", validationErrors)
+		logln(logWriter, "\n❌ Validation failed with %d error(s)", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ All PowerShell scripts validated successfully\n")
+	logln(logWriter, "\n✅ All PowerShell scripts validated successfully")
 	return 0
 }
 
@@ -1466,7 +1472,7 @@ func buildScriptsPwsh(module *modules.ModuleContract, workspaceRoot string, outp
 func buildConfig(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating config files: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating config files: %s ===", module.Moniker)
 
 	// Find all config files
 	var configFiles []string
@@ -1490,26 +1496,26 @@ func buildConfig(module *modules.ModuleContract, workspaceRoot string, outputDir
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan directory: %v\n", err)
+		logln(logWriter, "❌ Failed to scan directory: %v", err)
 		return 1
 	}
 
 	if len(configFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No config files found\n")
+		logln(logWriter, "⚠️  No config files found")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "⚙️  Found %d config file(s) to validate\n", len(configFiles))
+	logln(logWriter, "⚙️  Found %d config file(s) to validate", len(configFiles))
 
 	validationErrors := 0
 	for _, configFile := range configFiles {
 		relPath, _ := filepath.Rel(moduleRoot, configFile)
 		ext := filepath.Ext(configFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		content, err := os.ReadFile(configFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
@@ -1519,14 +1525,14 @@ func buildConfig(module *modules.ModuleContract, workspaceRoot string, outputDir
 		case ".json":
 			var data interface{}
 			if err := json.Unmarshal(content, &data); err != nil {
-				fmt.Fprintf(logWriter, "      ❌ Invalid JSON: %v\n", err)
+				logln(logWriter, "      ❌ Invalid JSON: %v", err)
 				validationErrors++
 				continue
 			}
 		case ".yaml", ".yml":
 			var data interface{}
 			if err := yaml.Unmarshal(content, &data); err != nil {
-				fmt.Fprintf(logWriter, "      ❌ Invalid YAML: %v\n", err)
+				logln(logWriter, "      ❌ Invalid YAML: %v", err)
 				validationErrors++
 				continue
 			}
@@ -1534,21 +1540,21 @@ func buildConfig(module *modules.ModuleContract, workspaceRoot string, outputDir
 			// TOML validation would require a TOML library
 			// For now, just check file readability
 			if len(content) == 0 {
-				fmt.Fprintf(logWriter, "      ❌ Empty file\n")
+				logln(logWriter, "      ❌ Empty file")
 				validationErrors++
 				continue
 			}
 		}
 
-		fmt.Fprintf(logWriter, "      ✅ Valid %s\n", strings.TrimPrefix(ext, "."))
+		logln(logWriter, "      ✅ Valid %s", strings.TrimPrefix(ext, "."))
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Validation failed with %d error(s)\n", validationErrors)
+		logln(logWriter, "\n❌ Validation failed with %d error(s)", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ All config files validated successfully\n")
+	logln(logWriter, "\n✅ All config files validated successfully")
 	return 0
 }
 
@@ -1556,12 +1562,12 @@ func buildConfig(module *modules.ModuleContract, workspaceRoot string, outputDir
 func buildVSCodeConfig(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating VS Code config: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating VS Code config: %s ===", module.Moniker)
 
 	// Find JSON files in .vscode
 	vscodeDir := filepath.Join(moduleRoot, ".vscode")
 	if _, err := os.Stat(vscodeDir); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "⚠️  No .vscode directory found\n")
+		logln(logWriter, "⚠️  No .vscode directory found")
 		return 0
 	}
 
@@ -1586,25 +1592,25 @@ func buildVSCodeConfig(module *modules.ModuleContract, workspaceRoot string, out
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan .vscode: %v\n", err)
+		logln(logWriter, "❌ Failed to scan .vscode: %v", err)
 		return 1
 	}
 
 	if len(configFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No JSON config files found\n")
+		logln(logWriter, "⚠️  No JSON config files found")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "🔧 Found %d config file(s) to validate\n", len(configFiles))
+	logln(logWriter, "🔧 Found %d config file(s) to validate", len(configFiles))
 
 	validationErrors := 0
 	for _, configFile := range configFiles {
 		relPath, _ := filepath.Rel(moduleRoot, configFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		content, err := os.ReadFile(configFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
@@ -1622,20 +1628,20 @@ func buildVSCodeConfig(module *modules.ModuleContract, workspaceRoot string, out
 
 		var data interface{}
 		if err := json.Unmarshal([]byte(cleanedContent), &data); err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Invalid JSON: %v\n", err)
+			logln(logWriter, "      ❌ Invalid JSON: %v", err)
 			validationErrors++
 			continue
 		}
 
-		fmt.Fprintf(logWriter, "      ✅ Valid JSON\n")
+		logln(logWriter, "      ✅ Valid JSON")
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Validation failed with %d error(s)\n", validationErrors)
+		logln(logWriter, "\n❌ Validation failed with %d error(s)", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ All VS Code config files validated successfully\n")
+	logln(logWriter, "\n✅ All VS Code config files validated successfully")
 	return 0
 }
 
@@ -1643,12 +1649,12 @@ func buildVSCodeConfig(module *modules.ModuleContract, workspaceRoot string, out
 func buildClaudeConfig(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating Claude config: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating Claude config: %s ===", module.Moniker)
 
 	// Find YAML files in .claude
 	claudeDir := filepath.Join(moduleRoot, ".claude")
 	if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "⚠️  No .claude directory found\n")
+		logln(logWriter, "⚠️  No .claude directory found")
 		return 0
 	}
 
@@ -1673,45 +1679,45 @@ func buildClaudeConfig(module *modules.ModuleContract, workspaceRoot string, out
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan .claude: %v\n", err)
+		logln(logWriter, "❌ Failed to scan .claude: %v", err)
 		return 1
 	}
 
 	if len(configFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No YAML config files found\n")
+		logln(logWriter, "⚠️  No YAML config files found")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "🤖 Found %d config file(s) to validate\n", len(configFiles))
+	logln(logWriter, "🤖 Found %d config file(s) to validate", len(configFiles))
 
 	validationErrors := 0
 	for _, configFile := range configFiles {
 		relPath, _ := filepath.Rel(moduleRoot, configFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		content, err := os.ReadFile(configFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
 
 		var data interface{}
 		if err := yaml.Unmarshal(content, &data); err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Invalid YAML: %v\n", err)
+			logln(logWriter, "      ❌ Invalid YAML: %v", err)
 			validationErrors++
 			continue
 		}
 
-		fmt.Fprintf(logWriter, "      ✅ Valid YAML\n")
+		logln(logWriter, "      ✅ Valid YAML")
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Validation failed with %d error(s)\n", validationErrors)
+		logln(logWriter, "\n❌ Validation failed with %d error(s)", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ All Claude config files validated successfully\n")
+	logln(logWriter, "\n✅ All Claude config files validated successfully")
 	return 0
 }
 
@@ -1719,7 +1725,7 @@ func buildClaudeConfig(module *modules.ModuleContract, workspaceRoot string, out
 func buildClaudeAgents(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating Claude agents: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating Claude agents: %s ===", module.Moniker)
 
 	// Use markdown validator with required sections
 	validatorOpts := mdvalidator.DefaultValidatorOptions()
@@ -1730,7 +1736,7 @@ func buildClaudeAgents(module *modules.ModuleContract, workspaceRoot string, out
 	validator := mdvalidator.NewValidator(validatorOpts, logWriter)
 	results, err := validator.ValidateDirectory(moduleRoot)
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Validation failed: %v\n", err)
+		logln(logWriter, "❌ Validation failed: %v", err)
 		return 1
 	}
 
@@ -1741,7 +1747,7 @@ func buildClaudeAgents(module *modules.ModuleContract, workspaceRoot string, out
 func buildClaudeCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating Claude commands: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating Claude commands: %s ===", module.Moniker)
 
 	// Use markdown validator with required sections
 	validatorOpts := mdvalidator.DefaultValidatorOptions()
@@ -1752,7 +1758,7 @@ func buildClaudeCommands(module *modules.ModuleContract, workspaceRoot string, o
 	validator := mdvalidator.NewValidator(validatorOpts, logWriter)
 	results, err := validator.ValidateDirectory(moduleRoot)
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Validation failed: %v\n", err)
+		logln(logWriter, "❌ Validation failed: %v", err)
 		return 1
 	}
 
@@ -1763,12 +1769,12 @@ func buildClaudeCommands(module *modules.ModuleContract, workspaceRoot string, o
 func buildClaudeHooks(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating Claude hooks: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating Claude hooks: %s ===", module.Moniker)
 
 	// Find hook scripts in .claude/hooks
 	hooksDir := filepath.Join(moduleRoot, ".claude", "hooks")
 	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
-		fmt.Fprintf(logWriter, "⚠️  No .claude/hooks directory found\n")
+		logln(logWriter, "⚠️  No .claude/hooks directory found")
 		return 0
 	}
 
@@ -1793,27 +1799,27 @@ func buildClaudeHooks(module *modules.ModuleContract, workspaceRoot string, outp
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan hooks: %v\n", err)
+		logln(logWriter, "❌ Failed to scan hooks: %v", err)
 		return 1
 	}
 
 	if len(hookFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No hook scripts found\n")
+		logln(logWriter, "⚠️  No hook scripts found")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "🪝 Found %d hook script(s) to validate\n", len(hookFiles))
+	logln(logWriter, "🪝 Found %d hook script(s) to validate", len(hookFiles))
 
 	validationErrors := 0
 	for _, hookFile := range hookFiles {
 		relPath, _ := filepath.Rel(moduleRoot, hookFile)
 		ext := filepath.Ext(hookFile)
-		fmt.Fprintf(logWriter, "   Validating: %s\n", relPath)
+		logln(logWriter, "   Validating: %s", relPath)
 
 		// Read file content
 		content, err := os.ReadFile(hookFile)
 		if err != nil {
-			fmt.Fprintf(logWriter, "      ❌ Failed to read: %v\n", err)
+			logln(logWriter, "      ❌ Failed to read: %v", err)
 			validationErrors++
 			continue
 		}
@@ -1824,7 +1830,7 @@ func buildClaudeHooks(module *modules.ModuleContract, workspaceRoot string, outp
 			cmd := exec.Command("bash", "-n")
 			cmd.Stdin = bytes.NewReader(content)
 			if output, err := cmd.CombinedOutput(); err != nil {
-				fmt.Fprintf(logWriter, "      ❌ Syntax error: %s\n", strings.TrimSpace(string(output)))
+				logln(logWriter, "      ❌ Syntax error: %s", strings.TrimSpace(string(output)))
 				validationErrors++
 				continue
 			}
@@ -1833,21 +1839,21 @@ func buildClaudeHooks(module *modules.ModuleContract, workspaceRoot string, outp
 			cmd := exec.Command("pwsh", "-NoProfile", "-NonInteractive", "-Command", "-")
 			cmd.Stdin = bytes.NewReader([]byte(fmt.Sprintf("$null = [System.Management.Automation.PSParser]::Tokenize(@'\n%s\n'@, [ref]$null)", string(content))))
 			if output, err := cmd.CombinedOutput(); err != nil {
-				fmt.Fprintf(logWriter, "      ❌ Syntax error: %s\n", strings.TrimSpace(string(output)))
+				logln(logWriter, "      ❌ Syntax error: %s", strings.TrimSpace(string(output)))
 				validationErrors++
 				continue
 			}
 		}
 
-		fmt.Fprintf(logWriter, "      ✅ Valid syntax\n")
+		logln(logWriter, "      ✅ Valid syntax")
 	}
 
 	if validationErrors > 0 {
-		fmt.Fprintf(logWriter, "\n❌ Validation failed with %d error(s)\n", validationErrors)
+		logln(logWriter, "\n❌ Validation failed with %d error(s)", validationErrors)
 		return 1
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ All hook scripts validated successfully\n")
+	logln(logWriter, "\n✅ All hook scripts validated successfully")
 	return 0
 }
 
@@ -1855,7 +1861,7 @@ func buildClaudeHooks(module *modules.ModuleContract, workspaceRoot string, outp
 func buildTemplates(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating templates: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating templates: %s ===", module.Moniker)
 
 	// Find all template files
 	var templateFiles []string
@@ -1879,16 +1885,16 @@ func buildTemplates(module *modules.ModuleContract, workspaceRoot string, output
 	})
 
 	if err != nil {
-		fmt.Fprintf(logWriter, "❌ Failed to scan directory: %v\n", err)
+		logln(logWriter, "❌ Failed to scan directory: %v", err)
 		return 1
 	}
 
 	if len(templateFiles) == 0 {
-		fmt.Fprintf(logWriter, "⚠️  No template files found\n")
+		logln(logWriter, "⚠️  No template files found")
 		return 0
 	}
 
-	fmt.Fprintf(logWriter, "📄 Found %d template file(s) to analyze\n", len(templateFiles))
+	logln(logWriter, "📄 Found %d template file(s) to analyze", len(templateFiles))
 
 	// Detect placeholders: {{VAR}}, ${VAR}, %VAR%
 	for _, templateFile := range templateFiles {
@@ -1904,18 +1910,18 @@ func buildTemplates(module *modules.ModuleContract, workspaceRoot string, output
 		}
 	}
 
-	fmt.Fprintf(logWriter, "\n📊 Template Analysis:\n")
-	fmt.Fprintf(logWriter, "   Total files: %d\n", len(templateFiles))
-	fmt.Fprintf(logWriter, "   Files with placeholders: %d\n", len(placeholders))
+	logln(logWriter, "\n📊 Template Analysis:")
+	logln(logWriter, "   Total files: %d", len(templateFiles))
+	logln(logWriter, "   Files with placeholders: %d", len(placeholders))
 
 	if len(placeholders) > 0 {
-		fmt.Fprintf(logWriter, "\n📝 Files with detected placeholders:\n")
+		logln(logWriter, "\n📝 Files with detected placeholders:")
 		for file := range placeholders {
-			fmt.Fprintf(logWriter, "   - %s\n", file)
+			logln(logWriter, "   - %s", file)
 		}
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ Template validation complete\n")
+	logln(logWriter, "\n✅ Template validation complete")
 	return 0
 }
 
@@ -1923,7 +1929,7 @@ func buildTemplates(module *modules.ModuleContract, workspaceRoot string, output
 func buildRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 
-	fmt.Fprintf(logWriter, "\n=== Validating repository root: %s ===\n", module.Moniker)
+	logln(logWriter, "\n=== Validating repository root: %s ===", module.Moniker)
 
 	// Check for essential repository files
 	essentialFiles := []string{
@@ -1941,19 +1947,19 @@ func buildRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, o
 	}
 
 	if len(missing) > 0 {
-		fmt.Fprintf(logWriter, "⚠️  Missing essential files:\n")
+		logln(logWriter, "⚠️  Missing essential files:")
 		for _, file := range missing {
-			fmt.Fprintf(logWriter, "   - %s\n", file)
+			logln(logWriter, "   - %s", file)
 		}
 	}
 
-	fmt.Fprintf(logWriter, "\n✅ Repository root validation complete\n")
+	logln(logWriter, "\n✅ Repository root validation complete")
 	return 0
 }
 
 // buildNoModuleType is a no-op build for files without a specific module type
 func buildNoModuleType(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	fmt.Fprintf(logWriter, "\n=== Skipping build (no-module-type): %s ===\n", module.Moniker)
-	fmt.Fprintf(logWriter, "ℹ️  This module has no specific type and requires no build\n")
+	logln(logWriter, "\n=== Skipping build (no-module-type): %s ===", module.Moniker)
+	logln(logWriter, "ℹ️  This module has no specific type and requires no build")
 	return 0
 }

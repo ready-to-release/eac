@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	gogit "github.com/go-git/go-git/v5"
@@ -120,35 +121,63 @@ func (r *Repository) HeadShortSHA() (string, error) {
 }
 
 // TrackedFiles returns all files tracked by Git (in the index).
+// This reflects the current index state: HEAD files + staged additions - staged deletions.
+// This is what will be committed, enabling pre-commit validation.
 func (r *Repository) TrackedFiles() ([]string, error) {
+	tracked := make(map[string]bool)
+
+	// Start with files from HEAD commit
 	head, err := r.repo.Head()
-	if err != nil {
-		// Empty repository - no tracked files
-		if err == plumbing.ErrReferenceNotFound {
-			return []string{}, nil
-		}
+	if err != nil && err != plumbing.ErrReferenceNotFound {
 		return nil, fmt.Errorf("failed to get HEAD: %w", err)
 	}
 
-	commit, err := r.repo.CommitObject(head.Hash())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get commit: %w", err)
+	if err == nil {
+		commit, err := r.repo.CommitObject(head.Hash())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get commit: %w", err)
+		}
+
+		tree, err := commit.Tree()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get tree: %w", err)
+		}
+
+		err = tree.Files().ForEach(func(f *object.File) error {
+			tracked[f.Name] = true
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate files: %w", err)
+		}
 	}
 
-	tree, err := commit.Tree()
+	// Adjust based on staging status
+	wt, err := r.repo.Worktree()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get tree: %w", err)
+		return nil, fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	var files []string
-	err = tree.Files().ForEach(func(f *object.File) error {
-		files = append(files, f.Name)
-		return nil
-	})
+	status, err := wt.Status()
 	if err != nil {
-		return nil, fmt.Errorf("failed to iterate files: %w", err)
+		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
+	for path, fileStatus := range status {
+		switch fileStatus.Staging {
+		case gogit.Added:
+			tracked[path] = true
+		case gogit.Deleted:
+			delete(tracked, path)
+		}
+	}
+
+	// Convert to sorted slice
+	files := make([]string, 0, len(tracked))
+	for f := range tracked {
+		files = append(files, f)
+	}
+	sort.Strings(files)
 	return files, nil
 }
 
@@ -178,28 +207,47 @@ func (r *Repository) StagedFiles() ([]string, error) {
 	return files, nil
 }
 
-// IsFileTracked checks if a specific file is tracked by Git.
+// IsFileTracked checks if a specific file is tracked by Git (in the index).
+// This reflects the current index state, accounting for staged additions and deletions.
 func (r *Repository) IsFileTracked(relPath string) bool {
 	// Normalize path separators
 	relPath = filepath.ToSlash(relPath)
 
+	// Check if in HEAD
+	inHead := false
 	head, err := r.repo.Head()
-	if err != nil {
-		return false
+	if err == nil {
+		commit, err := r.repo.CommitObject(head.Hash())
+		if err == nil {
+			tree, err := commit.Tree()
+			if err == nil {
+				_, err = tree.File(relPath)
+				inHead = (err == nil)
+			}
+		}
 	}
 
-	commit, err := r.repo.CommitObject(head.Hash())
+	// Check staging status
+	wt, err := r.repo.Worktree()
 	if err != nil {
-		return false
+		return inHead
 	}
 
-	tree, err := commit.Tree()
+	status, err := wt.Status()
 	if err != nil {
-		return false
+		return inHead
 	}
 
-	_, err = tree.File(relPath)
-	return err == nil
+	if fileStatus, exists := status[relPath]; exists {
+		switch fileStatus.Staging {
+		case gogit.Added:
+			return true
+		case gogit.Deleted:
+			return false
+		}
+	}
+
+	return inHead
 }
 
 // IsFileIgnored checks if a file matches .gitignore patterns.

@@ -1,4 +1,4 @@
-module github.com/ready-to-release/eac/src/core/ai
+module github.com/ready-to-release/eac/src/ai
 
 go 1.24.0
 
