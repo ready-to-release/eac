@@ -12,6 +12,8 @@ source:
     # Only the change-trigger.yaml orchestration workflow
     # Individual modules own their respective workflow files
     - "workflows/change-trigger.yaml"
+    # CI configuration variables (image versions, etc.)
+    - "variables/**"
   excludes:
     # All other workflows are owned by their respective modules
     - "workflows/*.yaml"
