@@ -17,7 +17,7 @@
 /go.mod -export-ignore
 /go.sum -export-ignore
 # GitHub workflows (for transparency/reproducibility)
-/.github/workflows/nn-cli-*.yml -export-ignore
+/.github/workflows/*src-cli*.yml -export-ignore
 # Docs
 /documentation -export-ignore
 # Keep the gitignore and gitattributes for proper repo setup

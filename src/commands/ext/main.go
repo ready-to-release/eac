@@ -62,7 +62,7 @@ type Command struct {
 
 // Requirements defines extension requirements
 type Requirements struct {
-	NNCLIVersion     string `yaml:"nn-cli-version"`
+	R2RCLIVersion    string `yaml:"r2r-version"`
 	ContainerRuntime string `yaml:"container-runtime"`
 	MinimumMemory    string `yaml:"minimum-memory"`
 	MinimumCPU       string `yaml:"minimum-cpu"`
@@ -191,7 +191,7 @@ func outputMetadata() {
 		},
 		Commands: commands,
 		Requirements: Requirements{
-			NNCLIVersion:     ">=1.0.0",
+			R2RCLIVersion:    ">=1.0.0",
 			ContainerRuntime: "docker",
 			MinimumMemory:    "256Mi",
 			MinimumCPU:       "0.1",
@@ -209,8 +209,8 @@ func outputMetadata() {
 			},
 		},
 		ExpectedHostImages: []string{
-			"cli-mkdocs:latest",        // docs serve command
-			"structurizr/lite:latest",  // design serve command
+			"cli-mkdocs:latest",       // docs serve command
+			"structurizr/lite:latest", // design serve command
 		},
 		Metadata: ExtensionMetadata{
 			Author:        "Ready to Release Team",
