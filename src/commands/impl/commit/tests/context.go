@@ -4,9 +4,13 @@
 // for all commit subcommands (message, reset, etc.).
 package tests
 
-import "github.com/ready-to-release/eac/src/core/git"
+import (
+	"github.com/ready-to-release/eac/src/core/git"
+	coretesting "github.com/ready-to-release/eac/src/core/testing"
+)
 
 // TestContext holds shared state between steps across all commit subcommands.
+// This is kept for backward compatibility with existing step definitions.
 type TestContext struct {
 	// Shared fields
 	CommandOutput string
@@ -23,7 +27,13 @@ type TestContext struct {
 }
 
 // Ctx is the shared test context - set by the main test runner
+// Deprecated: Use SharedCtx for new code
 var Ctx *TestContext
+
+// SharedCtx is the new shared context from core/testing.
+// This is a pointer to the same context used by the main test runner,
+// so changes made here are immediately visible everywhere.
+var SharedCtx *coretesting.SharedTestContext
 
 // OriginalRepoRoot stores the actual eac repository root - set by the main test runner
 var OriginalRepoRoot string

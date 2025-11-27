@@ -15,6 +15,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	coretesting "github.com/ready-to-release/eac/src/core/testing"
 
 	// Import all command packages to trigger their init() and Register() calls
 	_ "github.com/ready-to-release/eac/src/commands/impl/build"
@@ -33,7 +34,15 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/test"
 )
 
-// Test context holds state between steps
+// sharedCtx is the shared test context used by child test packages.
+// Child packages (commit/tests, specs/tests, etc.) receive this pointer directly,
+// so changes are immediately visible without manual synchronization.
+// This replaces the old BeforeStep/AfterStep sync pattern.
+var sharedCtx *coretesting.SharedTestContext
+
+// testContext holds state between steps for the main test runner.
+// This is kept for backward compatibility with existing step definitions.
+// On each step, we sync between ctx and sharedCtx to keep them in sync.
 type testContext struct {
 	commandOutput     string
 	exitCode          int
@@ -49,6 +58,34 @@ var ctx *testContext
 // This is set once at test initialization and used for running go commands
 // even when tests change the current working directory for git isolation
 var originalRepoRoot string
+
+// syncCtxToShared copies state from ctx to sharedCtx.
+// Called before steps that child packages might use.
+func syncCtxToShared() {
+	if sharedCtx == nil || ctx == nil {
+		return
+	}
+	sharedCtx.CommandOutput = ctx.commandOutput
+	sharedCtx.ExitCode = ctx.exitCode
+	sharedCtx.CommandError = ctx.commandError
+	sharedCtx.TestCommitMessage = ctx.testCommitMessage
+	sharedCtx.AffectedModules = ctx.affectedModules
+	sharedCtx.ValidationErrors = ctx.validationErrors
+}
+
+// syncSharedToCtx copies state from sharedCtx to ctx.
+// Called after steps that child packages might have modified.
+func syncSharedToCtx() {
+	if sharedCtx == nil || ctx == nil {
+		return
+	}
+	ctx.commandOutput = sharedCtx.CommandOutput
+	ctx.exitCode = sharedCtx.ExitCode
+	ctx.commandError = sharedCtx.CommandError
+	ctx.testCommitMessage = sharedCtx.TestCommitMessage
+	ctx.affectedModules = sharedCtx.AffectedModules
+	ctx.validationErrors = sharedCtx.ValidationErrors
+}
 
 // ============================================================================
 // Command Execution Context
@@ -309,6 +346,10 @@ func iRunOr(cmd1, cmd2, cmd3 string) error {
 
 func initializeContext() error {
 	ctx = &testContext{}
+	// Initialize shared context for child packages
+	sharedCtx = coretesting.NewSharedTestContext()
+	sharedCtx.OriginalRepoRoot = originalRepoRoot
+	sharedCtx.RunCommand = iRunTheCommand
 	return nil
 }
 
@@ -316,36 +357,45 @@ func initializeContext() error {
 // Created when @env:isolated-test-project tag is present
 var isolatedTestProjectDir string
 
-// initializeIsolatedTestProject creates a temp directory with .git for isolated testing
-// This prevents tests from polluting the real repository with .r2r, custom, .docs folders
+// testIsolation holds the current test isolation instance for cleanup
+var testIsolation *coretesting.TestIsolation
+
+// initializeIsolatedTestProject creates an isolated test environment.
+// This prevents tests from polluting the real repository with .r2r, custom, .docs folders.
+//
+// Note: No .git directory is created - the R2R_REPO_ROOT environment variable
+// is used instead to tell GetRepositoryRoot() where the repo root is.
 func initializeIsolatedTestProject() error {
-	// Create temp directory
-	tmpDir, err := os.MkdirTemp("", "isolated-test-*")
-	if err != nil {
-		return fmt.Errorf("failed to create temp directory: %w", err)
+	testIsolation = coretesting.NewTestIsolation().
+		WithOriginalRepoRoot(originalRepoRoot).
+		WithCopyContracts(true)
+
+	if err := testIsolation.Setup(); err != nil {
+		return fmt.Errorf("failed to setup test isolation: %w", err)
 	}
 
-	// Create .git directory to make it look like a git repository
-	gitDir := filepath.Join(tmpDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
-		os.RemoveAll(tmpDir)
-		return fmt.Errorf("failed to create .git directory: %w", err)
-	}
+	isolatedTestProjectDir = testIsolation.IsolatedDir()
 
-	// Store for cleanup
-	isolatedTestProjectDir = tmpDir
+	// Update shared context with isolation info
+	if sharedCtx != nil {
+		sharedCtx.SetIsolation(originalRepoRoot, isolatedTestProjectDir)
+	}
 
 	return nil
 }
 
 // cleanupScenario cleans up resources created during scenario execution
 func cleanupScenario() error {
-	// Clean up isolated test project directory if created
-	if isolatedTestProjectDir != "" {
-		if err := os.RemoveAll(isolatedTestProjectDir); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to cleanup isolated test project: %v\n", err)
-		}
+	// Clean up test isolation (handles temp directory removal)
+	if testIsolation != nil {
+		testIsolation.Cleanup()
+		testIsolation = nil
 		isolatedTestProjectDir = ""
+	}
+
+	// Clear isolation from shared context
+	if sharedCtx != nil {
+		sharedCtx.ClearIsolation()
 	}
 
 	// Reset commit mocks (git repo and AI response)
@@ -413,6 +463,12 @@ func runCommandWithArgs(args ...string) error {
 // ============================================================================
 
 func InitializeScenario(sc *godog.ScenarioContext) {
+	// Initialize shared context FIRST, before any child initializers run.
+	// This ensures sharedCtx is available when child packages set up their state.
+	sharedCtx = coretesting.NewSharedTestContext()
+	sharedCtx.OriginalRepoRoot = originalRepoRoot
+	sharedCtx.RunCommand = iRunTheCommand
+
 	// Templates command steps (must be FIRST to override generic "I run the command")
 	InitializeTemplatesScenario(sc)
 
@@ -433,6 +489,8 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 
 	sc.Before(func(ctx context.Context, scenario *godog.Scenario) (context.Context, error) {
 		initializeContext()
+		// Re-sync shared context after initializeContext() resets ctx
+		syncCtxToShared()
 
 		// Check for @env:isolated-test-project tag
 		for _, tag := range scenario.Tags {
@@ -447,6 +505,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 				// Set up specs mocks automatically for isolated tests
 				if err := setupSpecsMocks(); err != nil {
 					return ctx, fmt.Errorf("failed to setup specs mocks: %w", err)
+				}
+				// Set up docs mocks automatically for isolated tests
+				if err := setupDocsMocks(); err != nil {
+					return ctx, fmt.Errorf("failed to setup docs mocks: %w", err)
 				}
 				break
 			}

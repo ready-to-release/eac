@@ -222,3 +222,7 @@ skip_reasons:
   - code: redundant
     name: "Redundant Test"
     description: "Test is redundant with other tests (e.g., library Go tests cover the same functionality)"
+
+  - code: broken-after-merge
+    name: "Broken After Merge"
+    description: "Test broken after merge conflict resolution, needs investigation"

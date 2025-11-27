@@ -7,10 +7,10 @@
 //   src/commands/impl/commit/tests/
 //
 // State Synchronization Strategy:
-// We sync context at the start of every step to ensure commit subpackages
-// have access to the latest state, and sync back after every step to
-// capture any changes they made. This is simpler and more reliable than
-// trying to detect "commit-specific" steps via pattern matching.
+// We use a shared context pointer (sharedCtx) that is passed to child packages.
+// Changes made by child packages are immediately visible to the main test runner
+// because they all reference the same context object. This eliminates the need
+// for BeforeStep/AfterStep synchronization.
 package tests
 
 import (
@@ -18,7 +18,9 @@ import (
 	committests "github.com/ready-to-release/eac/src/commands/impl/commit/tests"
 )
 
-// syncToCommitCtx copies state from main ctx to committests.Ctx
+// syncToCommitCtx copies state from main ctx to committests for backward compatibility.
+// With the new shared context, this is mainly used to initialize committests.Ctx
+// for legacy code paths that still use it.
 func syncToCommitCtx() {
 	if committests.Ctx == nil {
 		committests.Ctx = &committests.TestContext{}
@@ -31,35 +33,29 @@ func syncToCommitCtx() {
 		committests.Ctx.AffectedModules = ctx.affectedModules
 		committests.Ctx.ValidationErrors = ctx.validationErrors
 	}
-	// Also sync to child packages
+	// Pass shared context to commit tests
+	committests.SharedCtx = sharedCtx
 	committests.SyncContextToChildren()
 }
 
-// syncFromCommitCtx copies state back from committests.Ctx to main ctx
-// Only syncs if commit tests actually modified something (non-empty output or non-zero exit)
+// syncFromCommitCtx copies state back from child packages to main ctx.
+// We sync ctx TO sharedCtx first (to capture any changes from non-commit steps),
+// then sync from children to pick up commit-specific changes.
 func syncFromCommitCtx() {
-	// First sync from child packages (message, reset) to committests.Ctx
+	// First sync ctx TO sharedCtx to preserve any changes from main test runner
+	syncCtxToShared()
+
+	// Then sync from child packages
 	committests.SyncContextFromChildren()
 
-	// Only sync back if commit context has meaningful data
-	// This prevents overwriting main context with empty commit context values
-	// when running non-commit tests
-	if committests.Ctx != nil && ctx != nil {
-		// Only sync if commit tests actually produced output or set state
-		hasCommitOutput := committests.Ctx.CommandOutput != "" ||
-			committests.Ctx.ExitCode != 0 ||
-			committests.Ctx.TestCommitMessage != "" ||
-			len(committests.Ctx.AffectedModules) > 0 ||
-			len(committests.Ctx.ValidationErrors) > 0
-
-		if hasCommitOutput {
-			ctx.commandOutput = committests.Ctx.CommandOutput
-			ctx.exitCode = committests.Ctx.ExitCode
-			ctx.commandError = committests.Ctx.CommandError
-			ctx.testCommitMessage = committests.Ctx.TestCommitMessage
-			ctx.affectedModules = committests.Ctx.AffectedModules
-			ctx.validationErrors = committests.Ctx.ValidationErrors
-		}
+	// Finally sync back from sharedCtx to ctx if children made changes
+	if sharedCtx != nil && ctx != nil && sharedCtx.HasOutput() {
+		ctx.commandOutput = sharedCtx.CommandOutput
+		ctx.exitCode = sharedCtx.ExitCode
+		ctx.commandError = sharedCtx.CommandError
+		ctx.testCommitMessage = sharedCtx.TestCommitMessage
+		ctx.affectedModules = sharedCtx.AffectedModules
+		ctx.validationErrors = sharedCtx.ValidationErrors
 	}
 }
 
@@ -70,6 +66,7 @@ func setupCommitMocks() error {
 	committests.OriginalRepoRoot = originalRepoRoot
 	committests.IsolatedTestProjectDir = isolatedTestProjectDir
 	committests.RunCommand = iRunTheCommand
+	committests.SharedCtx = sharedCtx
 	if err := committests.SetupCommitMocks(); err != nil {
 		return err
 	}
@@ -86,14 +83,15 @@ func cleanupCommitMocks() {
 
 // InitializeCommitScenario registers commit-specific step definitions
 func InitializeCommitScenario(sc *godog.ScenarioContext) {
-	// Set up shared state
+	// Set up shared state - pass the shared context pointer
 	committests.OriginalRepoRoot = originalRepoRoot
 	committests.IsolatedTestProjectDir = isolatedTestProjectDir
 	committests.RunCommand = iRunTheCommand
+	committests.SharedCtx = sharedCtx
 
-	// Sync context before and after every step
-	// This ensures commit subpackages always have access to the latest state
-	// and any changes they make are propagated back to the main context
+	// Sync context before and after every step for backward compatibility
+	// With shared context, changes are automatically visible, but we sync
+	// to keep the old ctx fields up to date for legacy step definitions
 	sc.BeforeStep(func(st *godog.Step) {
 		syncToCommitCtx()
 	})

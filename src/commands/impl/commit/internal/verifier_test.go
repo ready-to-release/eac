@@ -206,14 +206,6 @@ code here
 	}
 }
 
-// TestVerifyCommitMessageContract_ModuleHeaderWithColon is no longer applicable
-// With the new plain text format (module-name + dashes), module names cannot
-// contain colons as they're validated to only contain lowercase letters,
-// numbers, dashes, and underscores.
-func TestVerifyCommitMessageContract_ModuleHeaderWithColon(t *testing.T) {
-	t.Skip("This test is no longer applicable with the new plain text module format")
-}
-
 func TestVerifyCommitMessageContract_LineTooLong(t *testing.T) {
 	invalidMessage := `feat(module): add feature
 
