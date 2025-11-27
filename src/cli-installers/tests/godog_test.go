@@ -33,7 +33,6 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	coretesting "github.com/ready-to-release/eac/src/core/testing"
 )
 
 // scenarioCount tracks scenarios executed for validation.
@@ -47,23 +46,11 @@ func TestFeatures(t *testing.T) {
 		reportFormat = "cucumber"
 	}
 
-	// Load tag contract for skip reasons (@skip:wip, @skip:broken, etc.)
-	contract, err := coretesting.LoadTagContract()
-	if err != nil {
-		log.Fatalf("Failed to load tag contract: %v", err)
-	}
-
-	// Build base tag filter: exclude all @skip:<reason> tags and @pending
-	// Example: "~@skip:wip && ~@skip:broken && ~@skip:flaky && ... && ~@pending"
-	skipFilter := contract.BuildGodogSkipTagFilter()
-	tagFilter := skipFilter + " && ~@pending"
-
-	// Append suite tag filter if provided by test orchestrator.
-	// CRITICAL: Do NOT wrap in parentheses - godog's parser breaks silently!
-	// Example: "@L0,@L1,@L2" for commit suite, "@iv,@ov,@pv && ~@L0 && ~@L1 && ~@L2" for acceptance
-	suiteTagFilter := os.Getenv("GODOG_SUITE_TAGS")
-	if suiteTagFilter != "" {
-		tagFilter = tagFilter + " && " + suiteTagFilter
+	// Get suite tag filter from test orchestrator
+	// The orchestrator builds the filter with skip tags integrated into each selector
+	tagFilter := os.Getenv("GODOG_SUITE_TAGS")
+	if tagFilter == "" {
+		log.Fatalf("GODOG_SUITE_TAGS environment variable not set - test orchestrator should set this")
 	}
 
 	opts := &godog.Options{

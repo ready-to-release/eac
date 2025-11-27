@@ -11,14 +11,14 @@ Feature: src-commands_init
     The init command must require the --ai flag to specify which provider to configure.
     This makes the choice explicit and prevents accidental misconfiguration.
 
-    @L2 @iv
+    @L3 @iv
     Scenario: Init without --ai flag shows error
       When I run "init" without any flags
       Then the command exits with code 1
       And stderr contains "Error: --ai flag is required"
       And stderr contains "Available providers: claude-api, claude-cli, openai, gemini"
 
-    @L2 @iv
+    @L3 @iv
     Scenario: Init with invalid provider shows error
       When I run "init --ai invalid-provider"
       Then the command exits with code 1
@@ -29,14 +29,14 @@ Feature: src-commands_init
     The init command must create the necessary directory structure
     for storing configuration at .r2r/eac/agent-config.yml.
 
-    @L2 @iv
-    Scenario: Init creates .r2r/eac directory
+    @L3 @iv
+    Scenario: Init creates .r2r directory
       Given no .r2r directory exists
       When I run "init --ai claude-api"
       Then the .r2r/eac directory is created
       And the command exits with code 0
 
-    @L2 @iv
+    @L3 @iv
     Scenario: Init works when .r2r directory already exists
       Given a .r2r directory already exists
       When I run "init --ai claude-api"
@@ -48,7 +48,7 @@ Feature: src-commands_init
     environment variable references (not actual secrets).
     Config is stored at .r2r/eac/agent-config.yml.
 
-    @L2 @iv
+    @L3 @iv
     Scenario: Init creates valid config for claude-api
       Given no .r2r directory exists
       When I run "init --ai claude-api"
@@ -57,7 +57,7 @@ Feature: src-commands_init
       And the .r2r/eac/agent-config.yml file contains "model: claude-3-haiku-20240307"
       And the .r2r/eac/agent-config.yml file contains "api_key: ${ANTHROPIC_API_KEY}"
 
-    @L2 @iv
+    @L3 @iv
     Scenario: Init creates valid config for claude-cli
       Given no .r2r directory exists
       When I run "init --ai claude-cli"
@@ -65,7 +65,7 @@ Feature: src-commands_init
       And the .r2r/eac/agent-config.yml file contains "name: claude-cli"
       And the .r2r/eac/agent-config.yml file contains "model: claude-3-haiku-20240307"
 
-    @L2 @iv
+    @L3 @iv
     Scenario: Init creates valid config for openai
       Given no .r2r directory exists
       When I run "init --ai openai"
@@ -74,7 +74,7 @@ Feature: src-commands_init
       And the .r2r/eac/agent-config.yml file contains "model: gpt-4-turbo"
       And the .r2r/eac/agent-config.yml file contains "api_key: ${OPENAI_API_KEY}"
 
-    @L2 @iv
+    @L3 @iv
     Scenario: Init shows helpful provider information
       When I run "init --ai claude-api"
       Then stdout contains provider selection confirmation
@@ -82,7 +82,7 @@ Feature: src-commands_init
       And stdout contains link to get API key
       And the command exits with code 0
 
-    @L2 @iv
+    @L3 @iv
     Scenario: Reinitializing overwrites existing config
       Given a .r2r/eac/agent-config.yml file exists with claude-api
       When I run "init --ai openai"

@@ -1,5 +1,5 @@
-//go:build L2
-// +build L2
+//go:build L2 && ov
+// +build L2,ov
 
 package cmd
 

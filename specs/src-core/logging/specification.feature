@@ -1,4 +1,4 @@
-@deps:go @ov
+@deps:go @L2 @ov
 Feature: src-core_logging
   As a developer
   I want logs routed to console and/or file based on debug mode

@@ -1,3 +1,6 @@
+//go:build L1 && ov
+// +build L1,ov
+
 // Feature: src-commands_design-command
 // Unit tests for Structurizr validator with Docker
 package design
