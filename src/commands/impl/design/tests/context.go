@@ -73,6 +73,14 @@ func registerContext(sc *godog.ScenarioContext) {
 func beforeScenario() {
 	ctx := GetContext()
 
+	// Initialize test isolation with temporary directory
+	// This prevents tests from creating files in the real specs/ directory
+	ctx.Isolation = coretesting.NewTestIsolation()
+	if err := ctx.Isolation.Setup(); err != nil {
+		// Log error but don't fail - some tests may not need isolation
+		fmt.Printf("Warning: Failed to setup test isolation: %v\n", err)
+	}
+
 	// Reset design-specific state
 	ctx.generatedWorkspace = ""
 	ctx.validationResult = nil
@@ -94,6 +102,12 @@ func afterScenario() {
 	if ctx.containerID != "" {
 		// TODO: Stop and remove container
 		ctx.containerID = ""
+	}
+
+	// Clean up test isolation (removes temporary directory)
+	if ctx.Isolation != nil {
+		ctx.Isolation.Cleanup()
+		ctx.Isolation = nil
 	}
 
 	// Reset mocks
