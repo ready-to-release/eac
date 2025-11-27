@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/reporter"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
@@ -53,16 +54,60 @@ func writeln(w io.Writer, format string, args ...interface{}) {
 	fmt.Fprintf(w, format+platform.LineEnding, args...)
 }
 
+// acquireSuiteLock attempts to acquire an exclusive lock for the test suite.
+// Returns the lock handle and nil error on success.
+// Returns nil and error if lock is already held (suite is running).
+func acquireSuiteLock(suiteName, workspaceRoot string) (*flock.Flock, error) {
+	// Ensure out/test directory exists (parent directory for lock files)
+	testDir := filepath.Join(workspaceRoot, "out", "test")
+	if err := os.MkdirAll(testDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create test directory: %w", err)
+	}
+
+	// Create lock file path in parent directory (so it survives directory purge)
+	// Use suite name as the mutex identifier
+	lockPath := filepath.Join(testDir, fmt.Sprintf(".lock-%s", suiteName))
+
+	// Create flock instance
+	lock := flock.New(lockPath)
+
+	// Try to acquire lock (non-blocking)
+	locked, err := lock.TryLock()
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	if !locked {
+		return nil, fmt.Errorf("test suite '%s' is already running", suiteName)
+	}
+
+	return lock, nil
+}
+
+// releaseSuiteLock releases the lock and removes the lock file
+func releaseSuiteLock(lock *flock.Flock) {
+	if lock == nil {
+		return
+	}
+
+	lockPath := lock.Path()
+	lock.Unlock()
+
+	// Clean up the lock file
+	os.Remove(lockPath)
+}
+
 // PackageTestResult holds detailed test execution results for a single package
 type PackageTestResult struct {
-	PackageName   string   // Package name/path for display
-	LogFilePath   string   // Path to the test log file
-	TestsPassed   int      // Number of individual tests that passed
-	TestsFailed   int      // Number of individual tests that failed
-	TestsSkipped  int      // Number of individual tests that were skipped
-	TestsTotal    int      // Total number of tests in this package
-	PackageFailed bool     // Whether the package execution itself failed
-	ExpectedFiles []string // Files that should have been created by this test run
+	PackageName   string        // Package name/path for display
+	LogFilePath   string        // Path to the test log file
+	TestsPassed   int           // Number of individual tests that passed
+	TestsFailed   int           // Number of individual tests that failed
+	TestsSkipped  int           // Number of individual tests that were skipped
+	TestsTotal    int           // Total number of tests in this package
+	PackageFailed bool          // Whether the package execution itself failed
+	ExpectedFiles []string      // Files that should have been created by this test run
+	Duration      time.Duration // Time taken to run the package tests
 }
 
 // TestSuite runs tests for a specific test suite
@@ -157,10 +202,19 @@ func TestSuite() int {
 		return 1
 	}
 
+	// Acquire exclusive lock for this test suite FIRST (before any directory operations)
+	lockFile, err := acquireSuiteLock(suiteName, workspaceRootNative)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: test suite '%s' is already running\n", suiteName)
+		fmt.Fprintf(os.Stderr, "Details: %v\n", err)
+		return 1
+	}
+	defer releaseSuiteLock(lockFile)
+
 	fmt.Printf("🧪 Running test suite: %s\n", suite.Name)
 	fmt.Printf("Description: %s\n\n", suite.Description)
 
-	// Purge and create suite output directory
+	// Purge and recreate test output directory (now protected by lock)
 	testRunDir := filepath.Join(workspaceRootNative, "out", "test", suiteName)
 	if err := os.RemoveAll(testRunDir); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to purge test directory: %v\n", err)
@@ -562,6 +616,159 @@ func TestSuite() int {
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Results directory: %s", testRunDir)
 
+	// Show timing summary table
+	writeln(multiWriter, "")
+	writeln(multiWriter, "=== Timing Summary ===")
+	var totalDuration time.Duration
+
+	// Build timing data for JSON export
+	type TimingEntry struct {
+		PackageName   string  `json:"package_name"`
+		DisplayName   string  `json:"display_name"`
+		FeaturePath   string  `json:"feature_path,omitempty"`
+		TestType      string  `json:"test_type"`
+		DurationSecs  float64 `json:"duration_seconds"`
+		CurrentLevel  string  `json:"current_level,omitempty"`
+		ProposedLevel string  `json:"proposed_level"`
+		NeedsRetag    bool    `json:"needs_retag"`
+	}
+	timingEntries := []TimingEntry{}
+
+	// Build a lookup map from package/feature path to L-level tag from discovered tests
+	testLevelMap := make(map[string]string)
+	for _, test := range allTests {
+		// Extract L-level from tags
+		level := ""
+		for _, tag := range test.Tags {
+			if tag == "@L0" || tag == "L0" {
+				level = "L0"
+				break
+			} else if tag == "@L1" || tag == "L1" {
+				level = "L1"
+				break
+			} else if tag == "@L2" || tag == "L2" {
+				level = "L2"
+				break
+			}
+		}
+
+		// Store in map by package dir (for go tests) or feature path (for godog)
+		if level != "" {
+			if test.Type == "godog" {
+				// For godog, use feature file path as key
+				testLevelMap[test.FilePath] = level
+			} else {
+				// For go tests, use package directory as key
+				// FilePath is like "src/commands/impl/commit/assembly_test.go"
+				// We want "src/commands/impl/commit"
+				packageDir := filepath.Dir(test.FilePath)
+				testLevelMap[packageDir] = level
+			}
+		}
+	}
+
+	// Helper to get current level from the lookup map
+	getCurrentLevel := func(packagePath string, featurePath string) string {
+		if featurePath != "" {
+			// Godog test - lookup by feature path
+			if level, ok := testLevelMap[featurePath]; ok {
+				return level
+			}
+		} else if packagePath != "" {
+			// Go test - lookup by package path
+			if level, ok := testLevelMap[packagePath]; ok {
+				return level
+			}
+		}
+		return ""
+	}
+
+	for _, result := range results {
+		totalDuration += result.Duration
+		seconds := result.Duration.Seconds()
+
+		// Normalize path separators to forward slashes
+		displayName := strings.ReplaceAll(result.PackageName, "\\", "/")
+
+		// Determine test type and feature path
+		testType := "go"
+		featurePath := ""
+		if strings.Contains(displayName, ":specs/") {
+			testType = "godog"
+			// Extract feature path from package name
+			// Example: src/commands/tests:specs/src-commands/build-module/specification.feature
+			parts := strings.Split(displayName, ":")
+			if len(parts) == 2 {
+				featurePath = parts[1]
+			}
+			// Shorten display name
+			displayName = strings.ReplaceAll(displayName, ":specs/", ":")
+			displayName = strings.TrimSuffix(displayName, "/specification.feature")
+		}
+
+		// Determine proposed level based on timing
+		var proposedLevel string
+		if seconds <= 0.5 {
+			proposedLevel = "L0"
+		} else if seconds <= 2.0 {
+			proposedLevel = "L1"
+		} else {
+			proposedLevel = "L2"
+		}
+
+		// Get current level from discovered tests (works for both go and godog)
+		// For go tests, use package path; for godog, use feature path
+		packagePath := ""
+		if testType == "go" {
+			// Extract package path from PackageName
+			// Example: "src\\commands\\impl\\commit" -> "src/commands/impl/commit"
+			packagePath = filepath.ToSlash(result.PackageName)
+		}
+		currentLevel := getCurrentLevel(packagePath, featurePath)
+
+		// Determine if retagging is needed (only for L0-L2 tests)
+		needsRetag := false
+		if currentLevel != "" {
+			// Only retag tests that have L0-L2 tags
+			// (currentLevel == "" means no L0-L2 tags found, likely L3+)
+			if currentLevel != proposedLevel {
+				// Tag present but wrong level
+				needsRetag = true
+			}
+		}
+
+		// Add to timing entries for JSON export
+		timingEntries = append(timingEntries, TimingEntry{
+			PackageName:   result.PackageName,
+			DisplayName:   displayName,
+			FeaturePath:   featurePath,
+			TestType:      testType,
+			DurationSecs:  seconds,
+			CurrentLevel:  currentLevel,
+			ProposedLevel: proposedLevel,
+			NeedsRetag:    needsRetag,
+		})
+
+		writeln(multiWriter, "%06.1f  %s", seconds, displayName)
+	}
+	totalSeconds := totalDuration.Seconds()
+	writeln(multiWriter, "%06.1f  %s", totalSeconds, "TOTAL")
+
+	// Write timing data to JSON file
+	timingsJSONPath := filepath.Join(testRunDir, "timings.json")
+	timingsData := map[string]interface{}{
+		"suite":         suiteName,
+		"total_seconds": totalSeconds,
+		"entries":       timingEntries,
+		"timestamp":     time.Now().Format(time.RFC3339),
+	}
+	timingsJSON, err := json.MarshalIndent(timingsData, "", "  ")
+	if err == nil {
+		if writeErr := os.WriteFile(timingsJSONPath, timingsJSON, 0644); writeErr != nil {
+			writeln(multiWriter, "⚠️  Warning: Failed to write timings.json: %v", writeErr)
+		}
+	}
+
 	// Show failed test outputs (top 5)
 	if packagesFailed > 0 {
 		writeln(multiWriter, "")
@@ -917,7 +1124,13 @@ func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWr
 }
 
 // runPackageTests runs tests for a single package and returns detailed test results
-func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) PackageTestResult {
+func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) (result PackageTestResult) {
+	// Track timing for this package - use defer to calculate at end
+	start := time.Now()
+	defer func() {
+		result.Duration = time.Since(start)
+	}()
+
 	// pkgPath is already workspace-relative (from test grouping phase)
 	// Check if this is a synthetic Godog package key (testrunner:featurefile)
 	var relPkgPath string      // Relative path for display
@@ -1070,9 +1283,10 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	defer logFile.Close()
 
 	// Track expected output files for validation
+	// Note: We always expect log and JSON files because go test always creates them
 	expectedFiles := []string{logFilePath}
 
-	// JSON test results file (always created)
+	// JSON test results file (always created by go test)
 	jsonFilePath := strings.TrimSuffix(logFilePath, ".log") + ".json"
 	expectedFiles = append(expectedFiles, jsonFilePath)
 
@@ -1094,10 +1308,9 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Generate coverage file alongside the log file
 		coverageFile = strings.TrimSuffix(logFilePath, ".log") + ".coverage.out"
 		goTestArgs = append(goTestArgs, "-cover", "-coverprofile="+coverageFile)
-		expectedFiles = append(expectedFiles, coverageFile)
-		// Also expect JSON coverage file
-		coverageJSONFile := strings.TrimSuffix(coverageFile, ".out") + ".json"
-		expectedFiles = append(expectedFiles, coverageJSONFile)
+		// Note: Coverage files are added to expectedFiles AFTER test execution
+		// when we confirm they were actually created (see post-execution logic below)
+		// This prevents validation errors when no tests run or all are skipped
 	}
 
 	cmd = exec.Command("go", goTestArgs...)
@@ -1154,9 +1367,9 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			}
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_NAME=%s", reportName))
 
-			// Add report file to expected files
-			reportFilePath := filepath.Join(reportOutputDir, reportName)
-			expectedFiles = append(expectedFiles, reportFilePath)
+			// Note: Report file is added to expectedFiles AFTER test execution
+			// when we confirm tests actually ran (see post-execution logic below)
+			// This prevents validation errors when all scenarios are skipped
 		}
 
 		// If testing a specific feature file, set GODOG_PATHS environment variable
@@ -1200,11 +1413,18 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	// Convert coverage profile to JSON if coverage was enabled
 	if coverage && coverageFile != "" {
 		if _, statErr := os.Stat(coverageFile); statErr == nil {
+			// Coverage file exists - add it to expected files for validation
+			expectedFiles = append(expectedFiles, coverageFile)
+
 			coverageJSONFile := strings.TrimSuffix(coverageFile, ".out") + ".json"
 			if convertErr := convertCoverageToJSON(coverageFile, coverageJSONFile); convertErr != nil {
 				fmt.Fprintf(logFile, "Warning: failed to convert coverage to JSON: %v\n", convertErr)
+			} else {
+				// Conversion succeeded - also expect the JSON file
+				expectedFiles = append(expectedFiles, coverageJSONFile)
 			}
 		}
+		// If coverage file doesn't exist, tests didn't run - don't add to expectedFiles
 	}
 
 	if err != nil {
@@ -1258,6 +1478,22 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 
 		if testsTotal > 0 {
 			testCountInfo = fmt.Sprintf("(%d/%d)", passedScenarios, testsTotal)
+
+			// Only expect report files if tests actually executed
+			// If all scenarios were skipped (testsTotal = 0), report files won't be created
+			if relFeatureFile != "" {
+				// Add report file to expected files now that we know tests ran
+				reportOutputDir := filepath.Dir(logFilePath)
+				logBaseName := filepath.Base(logFilePath)
+				var reportName string
+				if reportFormat == "junit" {
+					reportName = strings.TrimSuffix(logBaseName, ".log") + ".junit.xml"
+				} else {
+					reportName = strings.TrimSuffix(logBaseName, ".log") + ".cucumber.json"
+				}
+				reportFilePath := filepath.Join(reportOutputDir, reportName)
+				expectedFiles = append(expectedFiles, reportFilePath)
+			}
 		} else {
 			testCountInfo = ""
 		}

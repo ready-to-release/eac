@@ -146,11 +146,6 @@ tags:
     level: scenario
     constraint: "mutually_exclusive_with_taxonomy_levels"
 
-  - tag: "@ignore"
-    description: "Permanently exclude from test runs (for deprecated/obsolete tests)"
-    type: execution_control
-    level: feature-or-scenario
-
   - tag: "@unisolated"
     description: "Test runs without isolation and may share state with other tests"
     type: test_behavior

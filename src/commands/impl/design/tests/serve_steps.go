@@ -18,7 +18,8 @@ func registerServeSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^module "([^"]*)" has a workspace$`, moduleHasWorkspace)
 
 	// When steps
-	sc.Step(`^I run "design serve ([^"]*)"$`, iRunDesignServe)
+	// Note: We don't register "I run design serve" here because it would be ambiguous
+	// with the generic "I run" step. The generic step handles all "I run" commands.
 
 	// Then steps
 	sc.Step(`^Structurizr container should start successfully$`, structurizrContainerShouldStart)

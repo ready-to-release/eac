@@ -20,10 +20,8 @@ func registerCreateSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^Docker is running$`, dockerIsRunning)
 
 	// When steps - execute actions
-	sc.Step(`^I run "design create ([^"]*)"$`, iRunDesignCreate)
-	sc.Step(`^I run "design create ([^"]*)" with flag "([^"]*)"$`, iRunDesignCreateWithFlag)
-	sc.Step(`^I run "design create ([^"]*)" with flags "([^"]*)"$`, iRunDesignCreateWithFlags)
-	sc.Step(`^I run "design create ([^"]*)" with custom prompt "([^"]*)"$`, iRunDesignCreateWithCustomPrompt)
+	// Note: We don't register "I run design create" steps here because they would be ambiguous
+	// with the generic "I run" step. The generic step handles all "I run" commands.
 
 	// Then steps - verify outcomes
 	sc.Step(`^workspace should be created at "([^"]*)"$`, workspaceShouldBeCreatedAt)

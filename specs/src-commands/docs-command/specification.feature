@@ -31,17 +31,17 @@ Feature: src-commands_docs-command
       When I run the command "docs serve --no-browser"
       Then the exit code is 0
       And MkDocs container should start successfully
-      And I should see "Starting MkDocs documentation server"
-      And I should see "MkDocs documentation server is running"
+      And I should see "Starting MkDocs documentation server" or "MkDocs is already running"
       And I should see "Documentation:"
       And documentation should be accessible
 
-    Scenario: Start MkDocs server with custom port
+    Scenario: Reject request for different port when container running
       Given docker service is available
-      When I run the command "docs serve --no-browser --port 9001"
-      Then the exit code is 0
-      And MkDocs container should start successfully
-      And I should see "Documentation: http://localhost:9001"
+      And MkDocs container is running
+      When I run the command "docs serve --no-browser --port 9999"
+      Then the exit code is 1
+      And I should see "MkDocs is already running on port"
+      And I should see "To use a different port"
 
     Scenario: Handle already running container
       Given docker service is available

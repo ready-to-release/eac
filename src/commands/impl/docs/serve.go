@@ -137,6 +137,20 @@ func DocsServe() int {
 	}
 
 	if running && info != nil {
+		// If user requested a specific port and it's different from running container, error
+		if port != 0 && info.Port != port {
+			logger.Error("MkDocs container already running on different port",
+				zap.Int("runningPort", info.Port),
+				zap.Int("requestedPort", port))
+			fmt.Printf("❌ MkDocs is already running on port %d\n", info.Port)
+			fmt.Printf("📚 Running at: %s\n", info.URL)
+			fmt.Printf("\n💡 To use a different port:\n")
+			fmt.Printf("  1. Stop the running container: go run . docs serve --stop\n")
+			fmt.Printf("  2. Start with new port: go run . docs serve --port %d\n", port)
+			return 1
+		}
+
+		// Container is running on the expected port (or port was auto-allocated)
 		logger.Info("MkDocs container already running",
 			zap.String("url", info.URL),
 			zap.Int("port", info.Port))

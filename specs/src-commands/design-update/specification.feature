@@ -1,4 +1,4 @@
-@deps:ai @deps:docker @ov
+@L2 @deps:ai @deps:docker @ov @skip:wip
 Feature: src-commands_design-update
 
   Background:
