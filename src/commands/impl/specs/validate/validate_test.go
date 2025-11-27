@@ -102,7 +102,7 @@ Feature: src-commands_multi-test
 			}
 
 			// Run validation
-			errors, err := validateGherkinFile(testFile, tmpDir)
+			errors, err := validateGherkinFile(testFile, tmpDir, true)
 			if err != nil {
 				t.Fatalf("validateGherkinFile() unexpected error: %v", err)
 			}
@@ -183,7 +183,7 @@ Feature: InvalidName
 		},
 		{
 			name: "missing verification tag",
-			content: `@deps:go @ov
+			content: `@deps:go
 Feature: src-commands_test-feature
 
   As a developer
@@ -228,7 +228,7 @@ Feature: src-commands_test-feature
 			}
 
 			// Run validation
-			errors, err := validateGherkinFile(testFile, tmpDir)
+			errors, err := validateGherkinFile(testFile, tmpDir, true)
 			if err != nil {
 				t.Fatalf("validateGherkinFile() unexpected error: %v", err)
 			}
@@ -289,7 +289,7 @@ Feature: src-commands_test-feature
 	}
 
 	// Run validation
-	results, err := validateDirectory(specsDir, tmpDir, false)
+	results, err := validateDirectory(specsDir, tmpDir, false, true)
 	if err != nil {
 		t.Fatalf("validateDirectory() error = %v", err)
 	}
@@ -359,7 +359,7 @@ Feature: src-commands_invalid-test
 	}
 
 	// Run validation
-	results, err := validateDirectory(specsDir, tmpDir, false)
+	results, err := validateDirectory(specsDir, tmpDir, false, true)
 	if err != nil {
 		t.Fatalf("validateDirectory() error = %v", err)
 	}
@@ -428,7 +428,7 @@ Feature: src-commands_test-feature
 	}
 
 	// Run validation
-	results, err := validateDirectory(specsDir, tmpDir, false)
+	results, err := validateDirectory(specsDir, tmpDir, false, true)
 	if err != nil {
 		t.Fatalf("validateDirectory() error = %v", err)
 	}
@@ -622,7 +622,6 @@ func TestParseValidateConfig_Flags(t *testing.T) {
 		wantQuiet   bool
 		wantVerbose bool
 		wantFormat  string
-		wantStrict  bool
 		wantFix     bool
 		wantErr     bool
 		errContains string
@@ -674,13 +673,6 @@ func TestParseValidateConfig_Flags(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:       "strict flag",
-			args:       []string{"r2r", "specs", "validate", "--strict", "specs/test.feature"},
-			wantStrict: true,
-			wantFormat: "text",
-			wantErr:    false,
-		},
-		{
 			name:       "fix flag",
 			args:       []string{"r2r", "specs", "validate", "--fix", "specs/test.feature"},
 			wantFix:    true,
@@ -689,11 +681,11 @@ func TestParseValidateConfig_Flags(t *testing.T) {
 		},
 		{
 			name:        "multiple flags combined",
-			args:        []string{"r2r", "specs", "validate", "-q", "-v", "-f", "json", "--strict", "specs/test.feature"},
+			args:        []string{"r2r", "specs", "validate", "-q", "-v", "-f", "json", "--fix", "specs/test.feature"},
 			wantQuiet:   true,
 			wantVerbose: true,
 			wantFormat:  "json",
-			wantStrict:  true,
+			wantFix:     true,
 			wantErr:     false,
 		},
 		{
@@ -747,9 +739,6 @@ func TestParseValidateConfig_Flags(t *testing.T) {
 			}
 			if config.Format != tt.wantFormat {
 				t.Errorf("parseValidateConfig() Format = %q, want %q", config.Format, tt.wantFormat)
-			}
-			if config.Strict != tt.wantStrict {
-				t.Errorf("parseValidateConfig() Strict = %v, want %v", config.Strict, tt.wantStrict)
 			}
 			if config.Fix != tt.wantFix {
 				t.Errorf("parseValidateConfig() Fix = %v, want %v", config.Fix, tt.wantFix)

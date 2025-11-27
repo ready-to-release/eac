@@ -15,6 +15,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	coretesting "github.com/ready-to-release/eac/src/core/testing"
 
 	// Import all command packages to trigger their init() and Register() calls
 	_ "github.com/ready-to-release/eac/src/commands/impl/build"
@@ -316,35 +317,33 @@ func initializeContext() error {
 // Created when @env:isolated-test-project tag is present
 var isolatedTestProjectDir string
 
-// initializeIsolatedTestProject creates a temp directory with .git for isolated testing
-// This prevents tests from polluting the real repository with .r2r, custom, .docs folders
+// testIsolation holds the current test isolation instance for cleanup
+var testIsolation *coretesting.TestIsolation
+
+// initializeIsolatedTestProject creates an isolated test environment.
+// This prevents tests from polluting the real repository with .r2r, custom, .docs folders.
+//
+// Note: No .git directory is created - the R2R_REPO_ROOT environment variable
+// is used instead to tell GetRepositoryRoot() where the repo root is.
 func initializeIsolatedTestProject() error {
-	// Create temp directory
-	tmpDir, err := os.MkdirTemp("", "isolated-test-*")
-	if err != nil {
-		return fmt.Errorf("failed to create temp directory: %w", err)
+	testIsolation = coretesting.NewTestIsolation().
+		WithOriginalRepoRoot(originalRepoRoot).
+		WithCopyContracts(true)
+
+	if err := testIsolation.Setup(); err != nil {
+		return fmt.Errorf("failed to setup test isolation: %w", err)
 	}
 
-	// Create .git directory to make it look like a git repository
-	gitDir := filepath.Join(tmpDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
-		os.RemoveAll(tmpDir)
-		return fmt.Errorf("failed to create .git directory: %w", err)
-	}
-
-	// Store for cleanup
-	isolatedTestProjectDir = tmpDir
-
+	isolatedTestProjectDir = testIsolation.IsolatedDir()
 	return nil
 }
 
 // cleanupScenario cleans up resources created during scenario execution
 func cleanupScenario() error {
-	// Clean up isolated test project directory if created
-	if isolatedTestProjectDir != "" {
-		if err := os.RemoveAll(isolatedTestProjectDir); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to cleanup isolated test project: %v\n", err)
-		}
+	// Clean up test isolation (handles temp directory removal)
+	if testIsolation != nil {
+		testIsolation.Cleanup()
+		testIsolation = nil
 		isolatedTestProjectDir = ""
 	}
 

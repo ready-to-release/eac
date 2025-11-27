@@ -237,7 +237,7 @@ func runTemplatesCommand(args ...string) error {
 
 	// Run the built executable from the test work directory
 	cmd := exec.Command(exePath, resolvedArgs...)
-	cmd.Dir = templatesCtx.workDir // Run from isolated test directory with .git
+	cmd.Dir = templatesCtx.workDir // Run from isolated test directory
 
 	// Set R2R_PWD and R2R_REPO_ROOT to the isolated test directory
 	// R2R_PWD: ensures registry.InitialWorkingDir resolves to the test directory
@@ -271,16 +271,11 @@ func initializeTemplatesContext() error {
 	}
 
 	// Create a temporary working directory for the test
+	// Note: No .git directory is created - the R2R_REPO_ROOT environment variable
+	// is used instead (set in runTemplatesCommand) to tell GetRepositoryRoot() where the repo root is.
 	tmpDir, err := os.MkdirTemp("", "templates-test-*")
 	if err != nil {
 		return err
-	}
-
-	// Create .git directory to make commands think this is a repository
-	// This ensures test isolation - commands won't write to the actual repo
-	gitDir := filepath.Join(tmpDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .git directory: %w", err)
 	}
 
 	templatesCtx = &templatesTestContext{
