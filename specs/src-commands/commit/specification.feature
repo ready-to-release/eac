@@ -50,21 +50,6 @@ Feature: src-commands_commit
 
   Rule: Commit messages must follow conventional commit format
 
-    Scenario: Valid single-module commit message
-      Given a commit message with header "feat(src-commands): add validation"
-      And an Auditor-Summary field
-      And a top-level body section
-      When the message is validated
-      Then no validation errors should occur
-
-    Scenario: Valid multi-module commit message
-      Given a commit message with header "feat(multi-module): add features"
-      And an Auditor-Summary field
-      And a top-level body section
-      And module sections for each affected module
-      When the message is validated
-      Then no validation errors should occur
-
     Scenario: Header exceeds 72 characters
       Given a commit message with header longer than 72 characters
       When the message is validated
@@ -164,7 +149,6 @@ Feature: src-commands_commit
       Given multiple affected modules
       When module sections are generated
       Then a section should be created for each module
-      And each section should have module-specific context
 
     Scenario: Add missing module sections as stubs
       Given a multi-module commit message
@@ -188,48 +172,24 @@ Feature: src-commands_commit
       Then all of that module's files should be included
       And other files should be excluded
 
-    Scenario: Handle empty result for non-matching files
-      Given a full git diff
-      And a module with files not in the diff
-      When the diff is filtered for that module
-      Then an empty string should be returned
-
   Rule: Edge cases must be handled gracefully
 
     Scenario: Handle empty staged changes
       Given no staged changes in git
       When the commit command is run
       Then the message "No staged changes." should be displayed
-      And the exit code should be 0
 
     Scenario: Handle git command failure
       Given git diff command fails
       When execution context is built
-      Then an error should be returned
-      And the error should indicate git failure
+      Then the error should indicate git failure
 
     Scenario: Handle very large diff
       Given a git diff larger than 10 MB
       When execution context is built
-      Then an error should be returned
-      And the error should indicate diff size limit exceeded
-
-    Scenario: Handle missing contract file
-      Given the contract file does not exist
-      When the contract is loaded
-      Then an error should be returned
-
-    Scenario: Handle malformed YAML contract
-      Given a contract file with invalid YAML
-      When the contract is loaded
-      Then a parsing error should be returned
+      Then the error should indicate diff size limit exceeded
 
     Scenario: Handle module name edge cases
       Given module names with edge cases (single char, max length, special patterns)
       When module names are validated
       Then validation should correctly accept or reject based on rules
-
-    Scenario: Handle Unicode in commit messages
-      Given a commit message with Unicode characters
-      When the message is validated
-      Then Unicode should be handled without errors

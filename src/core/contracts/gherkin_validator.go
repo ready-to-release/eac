@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Intent: Validate Gherkin specifications against the contract
+// Intent: Validate Gherkin specifications against structure and tag contracts
 //
 // Design (Three Rules of Vibe Coding):
 //
@@ -17,18 +17,19 @@ import (
 //
 // Easy to change:
 //   - Validation rules are separate functions
-//   - Contract structure is loaded externally
+//   - Structure contract (contract.yml) and tag contract (tags.yml) loaded externally
 //   - Easy to add new validation rules
 //
 // Hard to break:
-//   - Validates against formal contract (contract.yml)
+//   - Validates against formal contracts
 //   - Returns detailed errors with line numbers
 //   - Comprehensive test coverage
 //   - Self-verification with VerifyImplementation()
 
-// GherkinValidator validates Gherkin specifications against the contract
+// GherkinValidator validates Gherkin specifications against structure and tag contracts
 type GherkinValidator struct {
 	contract       *Contract
+	tagContract    *TagContract
 	antiCorruption *AntiCorruptionRules
 }
 
@@ -40,6 +41,20 @@ func NewGherkinValidator(contract *Contract, antiCorruption *AntiCorruptionRules
 	}
 }
 
+// NewGherkinValidatorWithTags creates a validator with both structure and tag contracts
+func NewGherkinValidatorWithTags(contract *Contract, tagContract *TagContract, antiCorruption *AntiCorruptionRules) *GherkinValidator {
+	return &GherkinValidator{
+		contract:       contract,
+		tagContract:    tagContract,
+		antiCorruption: antiCorruption,
+	}
+}
+
+// SetTagContract sets the tag contract for tag validation
+func (v *GherkinValidator) SetTagContract(tagContract *TagContract) {
+	v.tagContract = tagContract
+}
+
 // Validate validates Gherkin content against the specification contract
 //
 // This implements the Validator interface and checks:
@@ -48,6 +63,11 @@ func NewGherkinValidator(contract *Contract, antiCorruption *AntiCorruptionRules
 // - Scenarios present under Rules
 // - Proper keyword ordering
 // - Verification tags present on scenarios
+// - Tag format validation (patterns from tags.yml)
+// - Skip reason validation
+// - Mutual exclusion constraints (@Manual vs @L0-L4)
+// - GxP tag requirements
+// - Unknown tag warnings
 //
 // Returns a list of validation errors (empty if valid)
 func (v *GherkinValidator) Validate(output string, context map[string]interface{}) []ValidationError {
@@ -186,8 +206,8 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 		})
 	}
 
-	// Validate verification tags on scenarios
-	tagErrors := v.validateVerificationTags(lines)
+	// Validate tags on scenarios (verification, format, constraints)
+	tagErrors := v.validateScenarioTags(lines)
 	errors = append(errors, tagErrors...)
 
 	return errors
@@ -222,16 +242,18 @@ func (v *GherkinValidator) validateFeatureNaming(featureName string, lineNum int
 	return ValidationError{} // No error (empty struct)
 }
 
-// validateVerificationTags checks that scenarios have required verification tags
-//
-// According to contract, every scenario MUST have at least one verification tag:
-// @ov, @iv, @pv, @piv, @ppv
-//
-// Tags appear BEFORE the Scenario line in Gherkin
-func (v *GherkinValidator) validateVerificationTags(lines []string) []ValidationError {
+// validateScenarioTags validates all tag-related rules on scenarios:
+// - Verification tags present
+// - Tag format validation
+// - Skip reason validation
+// - Mutual exclusion constraints
+// - GxP tag requirements
+// - Unknown tag warnings
+func (v *GherkinValidator) validateScenarioTags(lines []string) []ValidationError {
 	var errors []ValidationError
 
-	var pendingTags []string // Tags collected before a scenario
+	var pendingTags []string  // Tags collected before a scenario
+	var pendingTagLines []int // Line numbers for pending tags
 
 	for i, line := range lines {
 		lineNum := i + 1
@@ -249,24 +271,20 @@ func (v *GherkinValidator) validateVerificationTags(lines []string) []Validation
 			for _, tag := range tags {
 				if strings.HasPrefix(tag, "@") {
 					pendingTags = append(pendingTags, tag)
+					pendingTagLines = append(pendingTagLines, lineNum)
 				}
 			}
 			continue
 		}
 
-		// When we hit a Scenario, check if we have verification tags
+		// When we hit a Scenario, validate all pending tags
 		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
-			// Check if pending tags contain verification tag (use contract-based check)
-			if !v.hasVerificationTagFromContract(pendingTags) {
-				errors = append(errors, ValidationError{
-					Code:     "MISSING_VERIFICATION_TAG",
-					Message:  "Scenario missing verification tag (required: @ov, @iv, @pv, @piv, or @ppv)",
-					Line:     lineNum,
-					Severity: "error",
-				})
-			}
+			scenarioErrors := v.validateTagsForScenario(pendingTags, pendingTagLines, lineNum)
+			errors = append(errors, scenarioErrors...)
+
 			// Reset pending tags for next scenario
 			pendingTags = []string{}
+			pendingTagLines = []int{}
 			continue
 		}
 
@@ -275,6 +293,7 @@ func (v *GherkinValidator) validateVerificationTags(lines []string) []Validation
 			strings.HasPrefix(trimmed, "Rule:") ||
 			strings.HasPrefix(trimmed, "Background:") {
 			pendingTags = []string{}
+			pendingTagLines = []int{}
 			continue
 		}
 	}
@@ -282,58 +301,162 @@ func (v *GherkinValidator) validateVerificationTags(lines []string) []Validation
 	return errors
 }
 
-// hasVerificationTag checks if tag list contains at least one verification tag
-func hasVerificationTag(tags []string) bool {
-	verificationTags := map[string]bool{
-		"@ov":  true,
-		"@iv":  true,
-		"@pv":  true,
-		"@piv": true,
-		"@ppv": true,
+// validateTagsForScenario validates all tags for a single scenario
+func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int, scenarioLine int) []ValidationError {
+	var errors []ValidationError
+
+	// 1. Check verification tags (required)
+	if !v.hasVerificationTag(tags) {
+		verificationTags := v.getVerificationTags()
+		errors = append(errors, ValidationError{
+			Code:     "MISSING_VERIFICATION_TAG",
+			Message:  fmt.Sprintf("Scenario missing verification tag (required: %s)", strings.Join(verificationTags, ", ")),
+			Line:     scenarioLine,
+			Severity: "error",
+		})
 	}
 
-	for _, tag := range tags {
-		if verificationTags[tag] {
-			return true
+	// Only perform advanced tag validation if tagContract is available
+	if v.tagContract == nil {
+		return errors
+	}
+
+	// 2. Validate tag formats and collect metadata
+	hasManual := false
+	hasTaxonomyLevel := false
+	hasGxP := false
+	hasGxPRiskControl := false
+	taxonomyLevelTags := v.tagContract.GetTaxonomyLevelTags()
+
+	for i, tag := range tags {
+		lineNum := scenarioLine
+		if i < len(tagLines) {
+			lineNum = tagLines[i]
+		}
+
+		// Validate tag format
+		formatErr := v.tagContract.ValidateTag(tag, lineNum)
+		if formatErr != nil {
+			errors = append(errors, *formatErr)
+		}
+
+		// Track special tags for constraint validation
+		if tag == "@Manual" {
+			hasManual = true
+		}
+		if v.isInTagList(tag, taxonomyLevelTags) {
+			hasTaxonomyLevel = true
+		}
+		if tag == "@gxp" {
+			hasGxP = true
+		}
+		if strings.HasPrefix(tag, "@risk-control:gxp-") {
+			hasGxPRiskControl = true
+		}
+
+		// 7. Check for unknown tags (warning only)
+		if !v.tagContract.IsKnownTag(tag) {
+			errors = append(errors, ValidationError{
+				Code:     "UNKNOWN_TAG",
+				Message:  fmt.Sprintf("Unknown tag '%s' - possible typo? Check contracts/testing/0.1.0/tags.yml for valid tags", tag),
+				Line:     lineNum,
+				Severity: "warning",
+			})
 		}
 	}
 
-	return false
+	// 5. Enforce mutual exclusion: @Manual cannot be used with @L0-@L4
+	if hasManual && hasTaxonomyLevel {
+		errors = append(errors, ValidationError{
+			Code:     "MUTUAL_EXCLUSION_VIOLATION",
+			Message:  "@Manual tag cannot be used with taxonomy level tags (@L0-@L4, @HE2E) - manual tests are not automated",
+			Line:     scenarioLine,
+			Severity: "error",
+		})
+	}
+
+	// 6. Validate GxP requirements: @gxp requires @risk-control:gxp-*
+	if hasGxP && !hasGxPRiskControl {
+		errors = append(errors, ValidationError{
+			Code:     "GXP_MISSING_RISK_CONTROL",
+			Message:  "@gxp tag requires a corresponding @risk-control:gxp-<name> tag",
+			Line:     scenarioLine,
+			Severity: "error",
+		})
+	}
+
+	// Check @critical-aspect requires @gxp
+	for i, tag := range tags {
+		if tag == "@critical-aspect" && !hasGxP {
+			lineNum := scenarioLine
+			if i < len(tagLines) {
+				lineNum = tagLines[i]
+			}
+			errors = append(errors, ValidationError{
+				Code:     "CRITICAL_ASPECT_REQUIRES_GXP",
+				Message:  "@critical-aspect tag requires @gxp tag to be present",
+				Line:     lineNum,
+				Severity: "error",
+			})
+			break
+		}
+	}
+
+	return errors
 }
 
-// hasVerificationTagFromContract checks if tag list contains at least one verification tag
-// using tags defined in the contract
-func (v *GherkinValidator) hasVerificationTagFromContract(tags []string) bool {
-	// Get verification tags from contract
-	var verificationTags []string
-	if v.contract != nil && v.contract.RawData != nil {
-		if tagsVal, ok := v.contract.RawData["required_verification_tags"].([]interface{}); ok {
-			for _, tag := range tagsVal {
-				if tagStr, ok := tag.(string); ok {
-					verificationTags = append(verificationTags, tagStr)
-				}
-			}
-		}
-	}
-
-	// Fallback to hardcoded tags if contract doesn't define them
-	if len(verificationTags) == 0 {
-		verificationTags = []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
-	}
-
-	// Build lookup map
+// hasVerificationTag checks if tag list contains at least one verification tag
+func (v *GherkinValidator) hasVerificationTag(tags []string) bool {
+	verificationTags := v.getVerificationTags()
 	tagMap := make(map[string]bool)
 	for _, vTag := range verificationTags {
 		tagMap[vTag] = true
 	}
 
-	// Check if any tag matches
 	for _, tag := range tags {
 		if tagMap[tag] {
 			return true
 		}
 	}
+	return false
+}
 
+// getVerificationTags returns verification tags from contract or defaults
+func (v *GherkinValidator) getVerificationTags() []string {
+	// Try tag contract first
+	if v.tagContract != nil {
+		tags := v.tagContract.GetVerificationTags()
+		if len(tags) > 0 {
+			return tags
+		}
+	}
+
+	// Try structure contract
+	if v.contract != nil && v.contract.RawData != nil {
+		if tagsVal, ok := v.contract.RawData["required_verification_tags"].([]interface{}); ok {
+			var tags []string
+			for _, tag := range tagsVal {
+				if tagStr, ok := tag.(string); ok {
+					tags = append(tags, tagStr)
+				}
+			}
+			if len(tags) > 0 {
+				return tags
+			}
+		}
+	}
+
+	// Fallback to hardcoded defaults
+	return []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
+}
+
+// isInTagList checks if a tag is in the given list
+func (v *GherkinValidator) isInTagList(tag string, list []string) bool {
+	for _, t := range list {
+		if t == tag {
+			return true
+		}
+	}
 	return false
 }
 
@@ -368,6 +491,15 @@ func (v *GherkinValidator) VerifyImplementation() []ValidationError {
 		errors = append(errors, ValidationError{
 			Code:     "CONTRACT_NAME_MISMATCH",
 			Message:  fmt.Sprintf("Expected contract name 'Gherkin Specification Structure', got '%s'", v.contract.Name),
+			Severity: "warning",
+		})
+	}
+
+	// Verify tag contract is loaded (warning only, not required)
+	if v.tagContract == nil {
+		errors = append(errors, ValidationError{
+			Code:     "NO_TAG_CONTRACT",
+			Message:  "Tag contract not loaded - advanced tag validation disabled",
 			Severity: "warning",
 		})
 	}

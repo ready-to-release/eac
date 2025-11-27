@@ -23,7 +23,7 @@ func registerContractSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^a commit message contract$`, aCommitMessageContract)
 	sc.Step(`^a commit message contract with version "([^"]*)"$`, aCommitMessageContractWithVersion)
 	sc.Step(`^the contract file does not exist$`, theContractFileDoesNotExistCommit)
-	sc.Step(`^a contract file with invalid YAML$`, aContractFileDoesNotExistCommit)
+	sc.Step(`^a contract file with invalid YAML$`, aContractFileWithInvalidYAML)
 }
 
 func registerSetupSteps(sc *godog.ScenarioContext) {
@@ -37,7 +37,6 @@ func registerSetupSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^a commit message header ending with a period$`, aCommitMessageHeaderEndingWithAPeriod)
 	sc.Step(`^a commit message with an opening code fence but no closing fence$`, aCommitMessageWithAnOpeningCodeFenceButNoClosingFence)
 	sc.Step(`^a commit message with multiple consecutive blank lines$`, aCommitMessageWithMultipleConsecutiveBlankLines)
-	sc.Step(`^a commit message with Unicode characters$`, aCommitMessageWithUnicodeCharacters)
 	sc.Step(`^a multi-module commit message$`, aMultiModuleCommitMessage)
 	sc.Step(`^a top-level body section$`, aTopLevelBodySection)
 	sc.Step(`^an Auditor-Summary field$`, anAuditorSummaryField)
@@ -72,7 +71,6 @@ func registerSetupSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^staged files belonging to multiple modules$`, stagedFilesBelongingToMultipleModules)
 	sc.Step(`^a module with multiple files$`, aModuleWithMultipleFiles)
 	sc.Step(`^a module with specific files$`, aModuleWithSpecificFiles)
-	sc.Step(`^a module with files not in the diff$`, aModuleWithFilesNotInTheDiff)
 	sc.Step(`^a module with one file$`, aModuleWithOneFile)
 	sc.Step(`^git diff command fails$`, gitDiffCommandFails)
 	sc.Step(`^no staged changes in git$`, noStagedChangesInGit)

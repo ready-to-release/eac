@@ -111,18 +111,26 @@ func TestGenerateModuleSectionsParallel_EmptyModules(t *testing.T) {
 
 // TestGenerateModuleSectionsParallel_ErrorPropagation verifies that errors
 // from individual module generation are properly captured and returned.
-//
-// Note: This test is a placeholder. Full implementation requires mocking
-// generateWithPrompt to inject errors. The actual implementation will be
-// validated by acceptance tests with real AI provider failures.
 func TestGenerateModuleSectionsParallel_ErrorPropagation(t *testing.T) {
-	t.Skip("Requires mock infrastructure for generateWithPrompt - validated by acceptance tests")
+	modules := []string{"mod-success", "mod-fail", "mod-success2"}
+	cfg := createTestConfig(modules)
+	logger, _ := logging.NewDefault("test", t.TempDir())
+	defer logger.Sync()
 
-	// TODO: Implement with dependency injection or mock infrastructure
-	// Expected behavior:
-	//   - If any module fails, first error should be returned
-	//   - All goroutines should complete (no goroutine leaks)
-	//   - Error message should mention the failed module
+	// Create mock executor that fails for specific module
+	executor := ai.NewExecutor(".")
+	mockFactory := func(config *ai.Config) (ai.Provider, error) {
+		return &errorInjectingMock{failOnModule: "mod-fail"}, nil
+	}
+	executor.RegisterProvider("mock", mockFactory)
+	executor.RegisterProvider("claude-cli", mockFactory)
+
+	sections, err := generateModuleSectionsParallel(cfg, logger, executor)
+
+	// Should return error from the failed module
+	require.Error(t, err, "Should return error when module generation fails")
+	assert.Contains(t, err.Error(), "mod-fail", "Error should mention the failed module")
+	assert.Nil(t, sections, "Sections should be nil when error occurs")
 }
 
 // TestGenerateModuleSectionsParallel_ConcurrentContextBuilding verifies that
@@ -181,21 +189,6 @@ func TestGenerateModuleSectionsParallel_ResultChannelCapacity(t *testing.T) {
 
 	assert.Equal(t, moduleCount, len(cfg.affectedModules),
 		"Test setup should create correct number of modules")
-}
-
-// BenchmarkGenerateModuleSectionsParallel_vs_Sequential benchmarks parallel vs sequential
-// execution to quantify the performance improvement.
-//
-// Note: This requires mock infrastructure. Real benchmark would measure with actual AI calls
-// but that's too slow and expensive for unit tests. acceptance tests validate real performance.
-func BenchmarkGenerateModuleSectionsParallel_vs_Sequential(b *testing.B) {
-	b.Skip("Requires mock infrastructure - performance validated by acceptance tests and manual benchmarks")
-
-	// TODO: Implement with mocked generateWithPrompt that simulates AI latency
-	// Expected results:
-	//   - Sequential: ~5s per module (linearly scales)
-	//   - Parallel: ~5s total (all modules simultaneously)
-	//   - Speedup: ~N/1 where N is number of modules
 }
 
 // Helper: createTestConfig creates a test configuration with specified modules.
@@ -278,6 +271,36 @@ func (m *moduleNameExtractorMock) Execute(ctx context.Context, input string, opt
 		}
 	}
 	// Fallback if module name not found
+	return "## Unknown Module\n\nMock commit section", nil
+}
+
+// errorInjectingMock is a test provider that returns an error for a specific module
+type errorInjectingMock struct {
+	failOnModule string
+}
+
+func (m *errorInjectingMock) Name() string {
+	return "mock"
+}
+
+func (m *errorInjectingMock) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
+	// Extract module name from the input context
+	lines := strings.Split(input, "\n")
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "## Module Name" {
+			for j := i + 1; j < len(lines); j++ {
+				moduleName := strings.TrimSpace(lines[j])
+				if moduleName != "" {
+					// If this is the module we should fail on, return an error
+					if moduleName == m.failOnModule {
+						return "", fmt.Errorf("simulated AI error for module %s", moduleName)
+					}
+					// Otherwise return success
+					return fmt.Sprintf("## %s\n\nMock commit section for module %s", moduleName, moduleName), nil
+				}
+			}
+		}
+	}
 	return "## Unknown Module\n\nMock commit section", nil
 }
 

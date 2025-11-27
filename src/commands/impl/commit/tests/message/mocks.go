@@ -37,9 +37,8 @@ func SetupMocks() error {
 	commit.SetGitRepo(MockRepo)
 
 	// Load and set mock AI response
-	// Note: filename has typo "reponse" instead of "response" - keeping as-is
 	mockResponsePath := filepath.Join(OriginalRepoRoot,
-		"src/commands/impl/commit/tests/assets/mock-reponse.txt")
+		"src/commands/impl/commit/tests/assets/mock-response.txt")
 	mockResponse, err := os.ReadFile(mockResponsePath)
 	if err == nil {
 		commit.SetMockAIResponse(string(mockResponse))

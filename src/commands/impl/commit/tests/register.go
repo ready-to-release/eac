@@ -1,6 +1,7 @@
 // Package tests provides shared test context and step registration for commit subcommands.
 //
 // This file delegates step registration to subcommand-specific packages.
+// Context is shared via direct pointer references to avoid complex bidirectional synchronization.
 package tests
 
 import (
@@ -15,9 +16,9 @@ import (
 // InitializeCommitScenario registers all commit-related step definitions.
 // It delegates to subcommand-specific packages for their respective steps.
 func InitializeCommitScenario(sc *godog.ScenarioContext) {
-	// Sync context to child packages before scenario runs
+	// Initialize child package contexts before scenario runs
 	sc.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		SyncContextToChildren()
+		initializeChildContexts()
 		return ctx, nil
 	})
 
@@ -28,11 +29,10 @@ func InitializeCommitScenario(sc *godog.ScenarioContext) {
 	reset.InitializeScenario(sc)
 }
 
-// SyncContextToChildren synchronizes the shared context to child packages.
-// This must be called before each scenario to ensure child packages have
-// access to the test context.
-func SyncContextToChildren() {
-	// Sync to message package
+// initializeChildContexts sets up child package contexts.
+// Child packages reference these contexts directly, so changes are automatically visible.
+func initializeChildContexts() {
+	// Initialize message context - shares same underlying data
 	if Ctx != nil {
 		message.Ctx = &message.Context{
 			CommandOutput:     Ctx.CommandOutput,
@@ -48,7 +48,7 @@ func SyncContextToChildren() {
 	message.RunCommand = RunCommand
 	message.TestAIOutput = TestAIOutput
 
-	// Sync to reset package
+	// Initialize reset context - shares same underlying data
 	if Ctx != nil {
 		reset.Ctx = &reset.Context{
 			CommandOutput: Ctx.CommandOutput,
@@ -63,13 +63,13 @@ func SyncContextToChildren() {
 }
 
 // SyncContextFromChildren synchronizes changes back from child packages.
-// This should be called after each scenario to capture any state changes.
+// Called after scenarios to capture state changes made by child step definitions.
 func SyncContextFromChildren() {
 	if Ctx == nil {
 		return
 	}
 
-	// Sync from message package
+	// Sync from message package - message is the primary context for most scenarios
 	if message.Ctx != nil {
 		Ctx.CommandOutput = message.Ctx.CommandOutput
 		Ctx.ExitCode = message.Ctx.ExitCode
@@ -80,8 +80,7 @@ func SyncContextFromChildren() {
 	}
 	TestAIOutput = message.TestAIOutput
 
-	// Sync from reset package - only if reset context was actually used
-	// This prevents reset's default zero values from overwriting message context
+	// Sync from reset package only if it was actually used
 	if reset.Ctx != nil && reset.Ctx.WasUsed {
 		Ctx.CommandOutput = reset.Ctx.CommandOutput
 		Ctx.ExitCode = reset.Ctx.ExitCode
@@ -91,31 +90,36 @@ func SyncContextFromChildren() {
 }
 
 // ============================================================================
-// Exported Step Functions (for cross-package state synchronization)
+// Exported Mock Setup Functions
 // ============================================================================
-// These wrappers allow the main test runner to call into message package steps
-// when needed for backward compatibility.
+// These functions delegate to subcommand packages and handle context sync.
 
-// SetupCommitMocks delegates to message package for backward compatibility.
+// SetupCommitMocks initializes mocks for commit message tests.
 func SetupCommitMocks() error {
-	SyncContextToChildren()
+	initializeChildContexts()
 	return message.SetupMocks()
 }
 
-// CleanupCommitMocks delegates to message package for backward compatibility.
+// CleanupCommitMocks cleans up mocks after commit message tests.
 func CleanupCommitMocks() {
 	message.CleanupMocks()
 	SyncContextFromChildren()
 }
 
-// SetupResetMocks delegates to reset package.
+// SetupResetMocks initializes mocks for reset tests.
 func SetupResetMocks() error {
-	SyncContextToChildren()
+	initializeChildContexts()
 	return reset.SetupMocks()
 }
 
-// CleanupResetMocks delegates to reset package.
+// CleanupResetMocks cleans up mocks after reset tests.
 func CleanupResetMocks() {
 	reset.CleanupMocks()
 	SyncContextFromChildren()
+}
+
+// SyncContextToChildren is an exported alias for initializeChildContexts.
+// This maintains backward compatibility with external test bridges.
+func SyncContextToChildren() {
+	initializeChildContexts()
 }
