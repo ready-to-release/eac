@@ -105,10 +105,38 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Documentation Deployed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Documentation deployed to GitHub Pages" >> $GITHUB_STEP_SUMMARY
+          echo "Successfully deployed project documentation to GitHub Pages." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag**: ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ inputs.ci_run_id }}" ]; then
+            echo "| Source | CI artifacts from run #${{ inputs.ci_run_id }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Source | Built from source |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Site Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -d "out/build/docs/site" ]; then
+            FILE_COUNT=$(find out/build/docs/site -type f | wc -l | tr -d ' ')
+            HTML_COUNT=$(find out/build/docs/site -name "*.html" | wc -l | tr -d ' ')
+            TOTAL_SIZE=$(du -sh out/build/docs/site | cut -f1)
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Total Files | ${FILE_COUNT} |" >> $GITHUB_STEP_SUMMARY
+            echo "| HTML Pages | ${HTML_COUNT} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Total Size | ${TOTAL_SIZE} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Access" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 [**View Documentation**](${{ steps.deployment.outputs.page_url }})" >> $GITHUB_STEP_SUMMARY

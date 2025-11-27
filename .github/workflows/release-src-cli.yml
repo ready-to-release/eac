@@ -413,20 +413,72 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          VERSION="${{ steps.extract_version.outputs.version }}"
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+
+          echo "## ✅ r2r CLI Released" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Released r2r CLI version **${{ steps.extract_version.outputs.version }}**" >> $GITHUB_STEP_SUMMARY
+          echo "Successfully built and published **r2r CLI v${VERSION}** to GitHub Releases." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Standard Binaries" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-linux" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-darwin-amd64" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-darwin-arm64" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-windows.exe" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Release Details" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### UPX-Compressed Binaries" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-linux-upx" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-darwin-amd64-upx" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-darwin-arm64-upx" >> $GITHUB_STEP_SUMMARY
-          echo "- r2r-windows-upx.exe" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | \`${TAG_NAME}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract_version.outputs.tag_name }})" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Published Binaries (8 files)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Standard Binaries" >> $GITHUB_STEP_SUMMARY
+          echo "Stripped symbols, best compatibility:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Binary | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|------|" >> $GITHUB_STEP_SUMMARY
+
+          for file in out/build/src-cli/r2r-linux out/build/src-cli/r2r-darwin-amd64 out/build/src-cli/r2r-darwin-arm64 out/build/src-cli/r2r-windows.exe; do
+            if [ -f "$file" ]; then
+              name=$(basename "$file")
+              size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+              size_mb=$(echo "scale=1; $size / 1048576" | bc)
+              platform=""
+              case "$name" in
+                r2r-linux) platform="Linux AMD64" ;;
+                r2r-darwin-amd64) platform="macOS Intel" ;;
+                r2r-darwin-arm64) platform="macOS Apple Silicon" ;;
+                r2r-windows.exe) platform="Windows AMD64" ;;
+              esac
+              echo "| ${platform} | \`${name}\` | ${size_mb} MB |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### UPX-Compressed Binaries" >> $GITHUB_STEP_SUMMARY
+          echo "Maximum compression, slightly slower startup:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Binary | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|------|" >> $GITHUB_STEP_SUMMARY
+
+          for file in out/build/src-cli/r2r-linux-upx out/build/src-cli/r2r-darwin-amd64-upx out/build/src-cli/r2r-darwin-arm64-upx out/build/src-cli/r2r-windows-upx.exe; do
+            if [ -f "$file" ]; then
+              name=$(basename "$file")
+              size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+              size_mb=$(echo "scale=1; $size / 1048576" | bc)
+              platform=""
+              case "$name" in
+                r2r-linux-upx) platform="Linux AMD64" ;;
+                r2r-darwin-amd64-upx) platform="macOS Intel" ;;
+                r2r-darwin-arm64-upx) platform="macOS Apple Silicon" ;;
+                r2r-windows-upx.exe) platform="Windows AMD64" ;;
+              esac
+              echo "| ${platform} | \`${name}\` | ${size_mb} MB |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Download" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 [**View Release & Download Binaries**](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY

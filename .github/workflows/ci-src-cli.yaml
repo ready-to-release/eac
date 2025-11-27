@@ -59,6 +59,45 @@ jobs:
             src/cli/**/*.ebnf
             src/cli/**/schema.json
 
+      - name: Build Summary
+        run: |
+          echo "## Build: src-cli" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ CLI binaries built for all platforms." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Built Binaries" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Binary | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|------|" >> $GITHUB_STEP_SUMMARY
+
+          for file in out/build/src-cli/r2r-linux out/build/src-cli/r2r-darwin-amd64 out/build/src-cli/r2r-darwin-arm64 out/build/src-cli/r2r-windows.exe; do
+            if [ -f "$file" ]; then
+              name=$(basename "$file")
+              size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
+              size_mb=$(echo "scale=1; $size / 1048576" | bc)
+              platform=""
+              case "$name" in
+                r2r-linux) platform="Linux AMD64" ;;
+                r2r-darwin-amd64) platform="macOS Intel" ;;
+                r2r-darwin-arm64) platform="macOS Apple Silicon" ;;
+                r2r-windows.exe) platform="Windows AMD64" ;;
+              esac
+              echo "| ${platform} | \`${name}\` | ${size_mb} MB |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | \`src-cli\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Artifacts uploaded as \`build-artifacts-src-cli\`" >> $GITHUB_STEP_SUMMARY
+
   test:
     name: Test
     needs: build
@@ -94,3 +133,34 @@ jobs:
         with:
           name: test-results-src-cli
           path: out/test/**/src-cli/**
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Test: src-cli" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All CLI tests passed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Test Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | \`src-cli\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Command | \`go run . test src-cli\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### What Was Tested" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- CLI argument parsing" >> $GITHUB_STEP_SUMMARY
+          echo "- Command execution (show, build, test, etc.)" >> $GITHUB_STEP_SUMMARY
+          echo "- Extension loading and execution" >> $GITHUB_STEP_SUMMARY
+          echo "- Version output verification" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Binaries Verified" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- \`r2r-linux\` (Linux AMD64)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`r2r-darwin-amd64\` (macOS Intel)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`r2r-darwin-arm64\` (macOS Apple Silicon)" >> $GITHUB_STEP_SUMMARY

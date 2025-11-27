@@ -41,6 +41,28 @@ jobs:
           name: build-artifacts-docs
           path: out/build/docs/**
 
+      - name: Build Summary
+        run: |
+          echo "## Build: docs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation site built successfully with MkDocs." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Build Output" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -d "out/build/docs/site" ]; then
+            FILE_COUNT=$(find out/build/docs/site -type f | wc -l | tr -d ' ')
+            HTML_COUNT=$(find out/build/docs/site -name "*.html" | wc -l | tr -d ' ')
+            TOTAL_SIZE=$(du -sh out/build/docs/site | cut -f1)
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Total Files | ${FILE_COUNT} |" >> $GITHUB_STEP_SUMMARY
+            echo "| HTML Pages | ${HTML_COUNT} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Total Size | ${TOTAL_SIZE} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Artifacts uploaded as \`build-artifacts-docs\`" >> $GITHUB_STEP_SUMMARY
+
   test:
     name: Test
     needs: build
@@ -65,6 +87,18 @@ jobs:
         working-directory: ./src/commands
         run: go run . test docs
 
+      - name: Test Summary
+        run: |
+          echo "## Test: docs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation validation tests passed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Checks Performed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Site structure validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Required pages present" >> $GITHUB_STEP_SUMMARY
+          echo "- Build artifacts integrity" >> $GITHUB_STEP_SUMMARY
+
   trigger-release:
     name: Trigger Release
     needs: test
@@ -79,3 +113,15 @@ jobs:
             -f ci_run_id=${{ github.run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Release Trigger Summary
+        run: |
+          echo "## Release Triggered: docs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Triggered \`release-docs.yml\` workflow to deploy documentation." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CI Run ID | \`${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY

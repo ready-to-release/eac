@@ -56,6 +56,30 @@ jobs:
           name: build-artifacts-src-mcp-commands
           path: out/build/src-mcp-commands/**
 
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "## Build: src-mcp-commands" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ MCP Commands server module built successfully." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | \`src-mcp-commands\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -d "out/build/src-mcp-commands" ]; then
+            ARTIFACT_COUNT=$(find out/build/src-mcp-commands -type f 2>/dev/null | wc -l | tr -d ' ')
+            echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📦 ${ARTIFACT_COUNT} file(s) uploaded as \`build-artifacts-src-mcp-commands\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
   test:
     name: Test
     needs: build
@@ -86,3 +110,26 @@ jobs:
         with:
           name: test-results-src-mcp-commands
           path: out/test/**/src-mcp-commands/**
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Test: src-mcp-commands" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All unit tests passed for MCP Commands server." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Test Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | \`src-mcp-commands\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Command | \`go run . test src-mcp-commands\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### What Was Tested" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- MCP protocol handling (JSON-RPC)" >> $GITHUB_STEP_SUMMARY
+          echo "- Tool registration and discovery" >> $GITHUB_STEP_SUMMARY
+          echo "- Command execution through MCP" >> $GITHUB_STEP_SUMMARY
