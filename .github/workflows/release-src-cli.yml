@@ -23,6 +23,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write      # Required for Sigstore signing (artifact attestations)
+  attestations: write  # Required to persist attestations
 
 jobs:
   release:
@@ -218,6 +220,17 @@ jobs:
           chmod +x out/build/src-cli/r2r-linux-upx
           ./out/build/src-cli/r2r-linux-upx version || true
 
+      - name: Generate build attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            out/build/src-cli/r2r-linux
+            out/build/src-cli/r2r-linux-upx
+            out/build/src-cli/r2r-darwin-amd64
+            out/build/src-cli/r2r-darwin-arm64
+            out/build/src-cli/r2r-windows.exe
+            out/build/src-cli/r2r-windows-upx.exe
+
       - name: Create release notes
         id: release_notes
         run: |
@@ -263,6 +276,14 @@ jobs:
           ./r2r-darwin-amd64 version    # macOS Intel
           ./r2r-darwin-arm64 version    # macOS Apple Silicon
           r2r-windows.exe version       # Windows
+          \`\`\`
+
+          ## Supply Chain Security
+
+          All binaries include [build attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) for supply chain security. Verify any binary with:
+
+          \`\`\`bash
+          gh attestation verify <binary-file> --repo ${{ github.repository }}
           \`\`\`
 
           ## Release Information
