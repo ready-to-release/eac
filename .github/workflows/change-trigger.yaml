@@ -389,112 +389,61 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Execute All Layers Sequentially
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
+
+      - name: Execute All Layers
         run: |
           PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
           LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
 
-          echo "📊 Execution plan has $LAYER_COUNT layer(s)"
-          echo ""
+          echo "Executing $LAYER_COUNT layer(s)"
 
-          # Process each layer sequentially
           for ((layer_idx=0; layer_idx<LAYER_COUNT; layer_idx++)); do
             LAYER_NUM=$((layer_idx + 1))
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "🔨 Processing Layer $LAYER_NUM"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-            # Get modules for this layer
             LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$layer_idx][]")
 
             if [ -z "$LAYER_MODULES" ]; then
-              echo "⚠️  No modules in layer $LAYER_NUM"
               continue
             fi
 
-            echo "📦 Modules in Layer $LAYER_NUM: $LAYER_MODULES"
             echo ""
+            echo "Layer $LAYER_NUM: $LAYER_MODULES"
 
-            # Arrays to track workflow run IDs
-            declare -a RUN_IDS=()
-            declare -a MODULES=()
-
-            # Trigger all workflows in this layer in parallel
+            # Trigger all workflows in this layer
+            RUN_IDS=""
             for module in $LAYER_MODULES; do
-              WORKFLOW_FILE=".github/workflows/ci-${module}.yaml"
-              if [ -f "$WORKFLOW_FILE" ]; then
-                echo "🚀 Triggering workflow for $module..."
-
+              if [ -f ".github/workflows/ci-${module}.yaml" ]; then
                 gh workflow run "ci-${module}.yaml" \
                   --ref ${{ github.ref_name }} \
                   -f ref=${{ github.ref }} \
                   -f sha=${{ github.sha }}
-
-                if [ $? -ne 0 ]; then
-                  echo "::error::Failed to trigger $module workflow"
-                  exit 1
-                fi
-
-                # Wait a moment for the workflow to be created
                 sleep 2
 
-                # Get the most recent run ID for this workflow
                 RUN_ID=$(gh run list --workflow="ci-${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
-
                 if [ -n "$RUN_ID" ]; then
-                  echo "  📝 Workflow $module started with run ID: $RUN_ID"
-                  RUN_IDS+=("$RUN_ID")
-                  MODULES+=("$module")
-                else
-                  echo "  ::warning::Could not find run ID for $module workflow"
+                  RUN_IDS="$RUN_IDS $RUN_ID"
                 fi
-              else
-                echo "  ⚠️  No workflow file found for $module"
               fi
             done
 
-            # Wait for all workflows in this layer to complete
-            if [ ${#RUN_IDS[@]} -gt 0 ]; then
-              echo ""
-              echo "⏳ Waiting for all Layer $LAYER_NUM workflows to complete..."
-              echo ""
-
-              FAILED=0
-              for i in "${!RUN_IDS[@]}"; do
-                RUN_ID="${RUN_IDS[$i]}"
-                MODULE="${MODULES[$i]}"
-
-                echo "⌛ Waiting for $MODULE (run $RUN_ID)..."
-
-                # Watch the workflow run and wait for completion
-                gh run watch "$RUN_ID" --exit-status --interval 10
-
-                if [ $? -ne 0 ]; then
-                  echo "  ::error::❌ Workflow $MODULE failed!"
-                  FAILED=1
-                else
-                  echo "  ✅ Workflow $MODULE completed successfully"
-                fi
-              done
-
-              if [ $FAILED -eq 1 ]; then
-                echo ""
-                echo "::error::❌ One or more workflows in Layer $LAYER_NUM failed"
+            # Wait for all workflows in this layer using pipeline wait
+            if [ -n "$RUN_IDS" ]; then
+              cd src/commands
+              if ! go run . pipeline wait $RUN_IDS --timeout 1800; then
+                echo "::error::Layer $LAYER_NUM failed"
                 exit 1
               fi
-
-              echo ""
-              echo "🎉 All Layer $LAYER_NUM workflows completed successfully"
-            else
-              echo "⚠️  No workflows were triggered in Layer $LAYER_NUM"
+              cd ../..
             fi
-
-            echo ""
           done
 
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ All layers completed successfully!"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "✓ All layers completed"
         env:
           GH_TOKEN: ${{ github.token }}
 
