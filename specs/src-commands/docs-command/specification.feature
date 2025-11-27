@@ -1,4 +1,4 @@
-@L2 @ov @deps:docker @env:isolated-test-project
+@L2 @ov @deps:docker
 Feature: src-commands_docs-command
 
   As a developer of the eac platform
@@ -26,7 +26,6 @@ Feature: src-commands_docs-command
 
   Rule: MkDocs server lifecycle management
 
-    @skip:broken-after-merge
     Scenario: Start MkDocs server with --no-browser flag
       Given docker service is available
       When I run the command "docs serve --no-browser"
@@ -37,7 +36,6 @@ Feature: src-commands_docs-command
       And I should see "Documentation:"
       And documentation should be accessible
 
-    @skip:broken-after-merge
     Scenario: Start MkDocs server with custom port
       Given docker service is available
       When I run the command "docs serve --no-browser --port 9001"
