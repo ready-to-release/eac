@@ -506,6 +506,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 				if err := setupSpecsMocks(); err != nil {
 					return ctx, fmt.Errorf("failed to setup specs mocks: %w", err)
 				}
+				// Set up docs mocks automatically for isolated tests
+				if err := setupDocsMocks(); err != nil {
+					return ctx, fmt.Errorf("failed to setup docs mocks: %w", err)
+				}
 				break
 			}
 		}
