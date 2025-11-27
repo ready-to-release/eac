@@ -90,6 +90,33 @@ jobs:
           echo "  - $IMAGE_NAME:ci"
           echo "  - $IMAGE_NAME:sha-$SHORT_SHA"
 
+      - name: Build Summary
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
+
+          echo "## Build: ext-eac" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Built and pushed multi-platform container image to GitHub Container Registry." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Published Images" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | Image |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| CI | \`${IMAGE_NAME}:ci\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| SHA | \`${IMAGE_NAME}:sha-${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Platforms | \`linux/amd64\`, \`linux/arm64\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dockerfile | \`containers/ext-eac/Dockerfile\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+
   test:
     name: Test Extension
     needs: build
@@ -204,3 +231,28 @@ jobs:
 
           echo ""
           echo "✅ Direct Docker tests passed"
+
+      - name: Test Summary
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+
+          echo "## Test: ext-eac" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All extension tests passed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Method | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Extension metadata | r2r CLI | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Help command | r2r CLI | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Show modules | r2r CLI | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Direct Docker help | Docker run | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Direct Docker meta | Docker run | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Tested Image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}\`" >> $GITHUB_STEP_SUMMARY

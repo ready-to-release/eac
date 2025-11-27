@@ -133,23 +133,53 @@ jobs:
 
       - name: Generate summary
         run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          TAG="${{ steps.tag.outputs.tag }}"
           IMAGE_SHA="${{ steps.ci_check.outputs.image_sha }}"
           SHORT_SHA="${IMAGE_SHA:0:7}"
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
 
-          echo "## Go BVT Image Released" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Go BVT Image Released" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Tag**: \`${{ steps.tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Source**: \`sha-$SHORT_SHA\` (from commit \`$IMAGE_SHA\`)" >> $GITHUB_STEP_SUMMARY
+          echo "Successfully promoted CI-tested image to release tags in GitHub Container Registry." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Release Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Git Tag | \`${TAG}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Image | \`sha-${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Commit | \`${IMAGE_SHA}\` |" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ inputs.ci_run_id }}" ]; then
-            echo "**Triggered by**: [CI Run #${{ inputs.ci_run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ inputs.ci_run_id }})" >> $GITHUB_STEP_SUMMARY
+            echo "| Triggered By | [CI Run #${{ inputs.ci_run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ inputs.ci_run_id }}) |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Usage in workflows:" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Published Container Images" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | Full Image Reference |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|---------------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`${VERSION}\` | \`${IMAGE_REF}:${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`latest\` | \`${IMAGE_REF}:latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Image Contents" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Lightweight Alpine-based image for Go CI (~500MB):" >> $GITHUB_STEP_SUMMARY
+          echo "- Go 1.24 toolchain" >> $GITHUB_STEP_SUMMARY
+          echo "- Git for repository operations" >> $GITHUB_STEP_SUMMARY
+          echo "- jq for JSON processing" >> $GITHUB_STEP_SUMMARY
+          echo "- Build essentials (gcc, make) for CGO" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Usage in GitHub Actions" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`yaml" >> $GITHUB_STEP_SUMMARY
           echo "jobs:" >> $GITHUB_STEP_SUMMARY
           echo "  build:" >> $GITHUB_STEP_SUMMARY
           echo "    runs-on: ubuntu-latest" >> $GITHUB_STEP_SUMMARY
           echo "    container:" >> $GITHUB_STEP_SUMMARY
-          echo "      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "      image: ${IMAGE_REF}:${VERSION}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

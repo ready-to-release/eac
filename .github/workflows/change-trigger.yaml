@@ -223,13 +223,24 @@ jobs:
             # Write errors to step summary for visibility
             echo "## ❌ Validation Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
+            echo "One or more validation checks did not pass. See details below." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo -e "$ERRORS" >> $GITHUB_STEP_SUMMARY
             echo "::error::Validation failed - see job summary for details"
             exit 1
           fi
 
           echo "✅ All validations passed"
-          echo "## ✅ Validation Passed" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Repository Validation Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All structural checks completed successfully before module builds." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Repository Contracts | ✅ Pass | File ownership rules are valid and non-overlapping |" >> $GITHUB_STEP_SUMMARY
+          echo "| Module Dependencies | ✅ Pass | Dependency graph is acyclic and all references resolve |" >> $GITHUB_STEP_SUMMARY
+          echo "| repo-config Build | ✅ Pass | Repository configuration files are valid |" >> $GITHUB_STEP_SUMMARY
+          echo "| contracts Build | ✅ Pass | Module contract definitions compile correctly |" >> $GITHUB_STEP_SUMMARY
 
   calculate-order:
     name: Calculate Execution Order
@@ -414,62 +425,100 @@ jobs:
     steps:
       - name: Generate Summary
         run: |
-          echo "## CI/CD Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## CI/CD Orchestration Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: \`${{ github.event_name }}\` on \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
             echo "### ✅ No Changes Detected" >> $GITHUB_STEP_SUMMARY
-            echo "No modules require rebuilding since last successful CI." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Base SHA**: \`${{ needs.detect-changes.outputs.base_sha }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "No modules require rebuilding since last successful CI run." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Compared Against | \`${{ needs.detect-changes.outputs.base_sha }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Files Changed | 0 affecting tracked modules |" >> $GITHUB_STEP_SUMMARY
+            echo "| Workflows Triggered | None |" >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
-          echo "### 📊 Change Detection" >> $GITHUB_STEP_SUMMARY
+          # Determine overall status
+          VALIDATION="${{ needs.validate-repository.result }}"
+          EXECUTION="${{ needs.execute-layers.result }}"
+          if [ "$VALIDATION" = "success" ] && [ "$EXECUTION" = "success" ]; then
+            echo "### ✅ All Module Builds Passed" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATION" = "failure" ]; then
+            echo "### ❌ Validation Failed" >> $GITHUB_STEP_SUMMARY
+          elif [ "$EXECUTION" = "failure" ]; then
+            echo "### ❌ Module Build(s) Failed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ Partial Execution" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### 📊 Change Analysis" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           IS_BOOTSTRAP="${{ needs.detect-changes.outputs.is_bootstrap }}"
           if [ "$IS_BOOTSTRAP" = "true" ]; then
-            echo "**Mode**: Bootstrap (no previous successful CI found)" >> $GITHUB_STEP_SUMMARY
+            echo "> **Bootstrap Mode**: No previous successful CI found - building all modules" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Base SHA**: \`${{ needs.detect-changes.outputs.base_sha }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "Incremental build comparing against last successful CI." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Base SHA**: [\`${{ needs.detect-changes.outputs.base_sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.detect-changes.outputs.base_sha }})" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "| Category | Modules |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|---------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Directly Changed | ${{ needs.detect-changes.outputs.directly_changed }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Invalidated (dependents) | ${{ needs.detect-changes.outputs.invalidated }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Total to Rebuild** | ${{ needs.detect-changes.outputs.changed-modules }} |" >> $GITHUB_STEP_SUMMARY
+          # Count modules
+          DIRECTLY_CHANGED="${{ needs.detect-changes.outputs.directly_changed }}"
+          INVALIDATED="${{ needs.detect-changes.outputs.invalidated }}"
+          TOTAL_MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
+
+          DIRECT_COUNT=$(echo "$DIRECTLY_CHANGED" | wc -w | tr -d ' ')
+          INVALID_COUNT=$(echo "$INVALIDATED" | wc -w | tr -d ' ')
+          TOTAL_COUNT=$(echo "$TOTAL_MODULES" | wc -w | tr -d ' ')
+
+          echo "| Category | Count | Modules |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Directly Changed | $DIRECT_COUNT | \`$DIRECTLY_CHANGED\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cache Invalidated | $INVALID_COUNT | \`$INVALIDATED\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total Rebuilt** | **$TOTAL_COUNT** | \`$TOTAL_MODULES\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 📦 Execution Plan" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Modules were built in dependency order across ${{ needs.calculate-order.outputs.layer-count }} layer(s):" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo '```json' >> $GITHUB_STEP_SUMMARY
           echo '${{ needs.calculate-order.outputs.execution-plan }}' | jq . >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### 🔍 Validation Result" >> $GITHUB_STEP_SUMMARY
-          VALIDATION="${{ needs.validate-repository.result }}"
-          if [ "$VALIDATION" = "success" ]; then
-            echo "✅ **Repository Contracts**: Valid" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATION" = "failure" ]; then
-            echo "❌ **Repository Contracts**: Invalid - fix contract issues" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATION" = "skipped" ]; then
-            echo "⏭️ **Repository Contracts**: Skipped" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**Repository Contracts**: $VALIDATION" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "### 🔍 Pipeline Stages" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
 
-          echo "### 🏁 Execution Result" >> $GITHUB_STEP_SUMMARY
-          RESULT="${{ needs.execute-layers.result }}"
-          if [ "$RESULT" = "success" ]; then
-            echo "✅ **Status**: Success" >> $GITHUB_STEP_SUMMARY
-          elif [ "$RESULT" = "failure" ]; then
-            echo "❌ **Status**: Failed" >> $GITHUB_STEP_SUMMARY
-          elif [ "$RESULT" = "skipped" ]; then
-            echo "⏭️ **Status**: Skipped" >> $GITHUB_STEP_SUMMARY
+          # Validation stage
+          if [ "$VALIDATION" = "success" ]; then
+            echo "| Repository Validation | ✅ Pass | Contracts, dependencies, and configs verified |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATION" = "failure" ]; then
+            echo "| Repository Validation | ❌ Fail | Contract or dependency errors found |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATION" = "skipped" ]; then
+            echo "| Repository Validation | ⏭️ Skip | No changes to validate |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Status**: $RESULT" >> $GITHUB_STEP_SUMMARY
+            echo "| Repository Validation | ⚠️ $VALIDATION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Execution stage
+          if [ "$EXECUTION" = "success" ]; then
+            echo "| Module Builds | ✅ Pass | All $TOTAL_COUNT module workflow(s) succeeded |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$EXECUTION" = "failure" ]; then
+            echo "| Module Builds | ❌ Fail | One or more module builds failed |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$EXECUTION" = "skipped" ]; then
+            echo "| Module Builds | ⏭️ Skip | Skipped due to earlier failure |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Module Builds | ⚠️ $EXECUTION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
