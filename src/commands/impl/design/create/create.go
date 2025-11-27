@@ -24,12 +24,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	design "github.com/ready-to-release/eac/src/commands/impl/design/internal"
+	design "github.com/ready-to-release/eac/src/commands/impl/design"
+	designInternal "github.com/ready-to-release/eac/src/commands/impl/design/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -47,20 +49,36 @@ func DesignCreate() int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+
+	// Initialize logger
+	var logger *logging.Logger
+	if config.Debug {
+		logger, err = logging.NewWithDebug("design", config.TemplateRoot)
+	} else {
+		logger, err = logging.NewDefault("design", config.TemplateRoot)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to initialize logger: %v\n", err)
+		// Continue without logger - output will still work
+	}
+
+	// Create output handler
+	out := design.NewOutput(logger)
+
 	// Validate module exists
-	if err := validateModuleExists(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if err := validateModuleExists(config, out); err != nil {
+		out.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Check Docker availability early (before expensive AI generation) unless skipped
 	if !config.SkipValidation {
-		if err := checkDockerAvailability(config); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if err := checkDockerAvailability(config, out); err != nil {
+			out.Errorf("Error: %v", err)
 			return 1
 		}
 	} else {
-		fmt.Println("⚠️  Skipping Docker validation")
+		out.Progress("⚠️  Skipping Docker validation")
 	}
 
 	// Determine output path
@@ -71,28 +89,28 @@ func DesignCreate() int {
 
 	// Check if output exists (unless --force)
 	if !config.Force && fileExists(outputPath) {
-		fmt.Fprintf(os.Stderr, "Error: workspace already exists at %s\n", outputPath)
-		fmt.Fprintf(os.Stderr, "Use --force to overwrite\n")
+		out.Errorf("Error: workspace already exists at %s", outputPath)
+		out.Error("Use --force to overwrite")
 		return 1
 	}
 
 	// Load contract and build prompt
-	fullPrompt, err := loadAndBuildPrompt(config)
+	fullPrompt, err := loadAndBuildPrompt(config, out, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		out.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Generate and validate with retry
-	cleanedOutput, err := generateAndValidate(config, fullPrompt)
+	cleanedOutput, err := generateAndValidate(config, fullPrompt, out, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+		out.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
 	// Write output and report success
-	if err := writeOutputAndReportSuccess(config, outputPath, cleanedOutput); err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+	if err := writeOutputAndReportSuccess(config, outputPath, cleanedOutput, out); err != nil {
+		out.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
@@ -139,7 +157,7 @@ func parseConfig() (*DesignConfig, error) {
 	config.Module = modulePath
 
 	// Validate module name for security
-	if err := design.ValidateModuleName(config.Module); err != nil {
+	if err := designInternal.ValidateModuleName(config.Module); err != nil {
 		return nil, fmt.Errorf("invalid module name: %w", err)
 	}
 
@@ -235,8 +253,8 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 }
 
 // validateModuleExists checks if the source code exists for the specified module
-func validateModuleExists(config *DesignConfig) error {
-	fmt.Printf("🔍 Validating source code for module '%s'...\n", config.Module)
+func validateModuleExists(config *DesignConfig, out *design.Output) error {
+	out.Progressf("🔍 Validating source code for module '%s'...", config.Module)
 
 	// Check if source directory exists
 	if _, err := os.Stat(config.SourcePath); os.IsNotExist(err) {
@@ -244,13 +262,13 @@ func validateModuleExists(config *DesignConfig) error {
 			config.Module, config.SourcePath)
 	}
 
-	fmt.Printf("✅ Source code found at: %s\n", config.SourcePath)
+	out.Progressf("✅ Source code found at: %s", config.SourcePath)
 	return nil
 }
 
 // checkDockerAvailability checks if Docker is running before starting expensive operations
-func checkDockerAvailability(config *DesignConfig) error {
-	fmt.Println("🐳 Checking Docker availability...")
+func checkDockerAvailability(config *DesignConfig, out *design.Output) error {
+	out.Progress("🐳 Checking Docker availability...")
 
 	// Create a temporary validator to check Docker
 	validator, err := NewCompositeValidator("", "", true)
@@ -264,13 +282,13 @@ func checkDockerAvailability(config *DesignConfig) error {
 		return fmt.Errorf("Docker is not running\n\nStructurizr validation requires Docker to be running.\nPlease start Docker and try again.")
 	}
 
-	fmt.Println("✅ Docker is available")
+	out.Progress("✅ Docker is available")
 	return nil
 }
 
 // loadAndBuildPrompt loads the contract and builds the AI prompt
-func loadAndBuildPrompt(config *DesignConfig) (string, error) {
-	fmt.Println("📋 Loading design contract...")
+func loadAndBuildPrompt(config *DesignConfig, out *design.Output, logger *logging.Logger) (string, error) {
+	out.Progress("📋 Loading design contract...")
 
 	fullPrompt, err := buildContractBasedPrompt(config)
 	if err != nil {
@@ -278,21 +296,10 @@ func loadAndBuildPrompt(config *DesignConfig) (string, error) {
 	}
 
 	if config.Debug {
-		writeDebugFile(config.TemplateRoot, "design-debug-full-prompt.md", fullPrompt)
+		design.WriteDebugFile(config.TemplateRoot, logger, "design-debug-full-prompt.md", fullPrompt)
 	}
 
 	return fullPrompt, nil
-}
-
-// writeDebugFile writes content to a debug file when debug mode is enabled.
-func writeDebugFile(workspaceRoot string, filename string, content string) {
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "design")
-	if err := os.MkdirAll(debugDir, 0755); err != nil {
-		return
-	}
-
-	debugFile := filepath.Join(debugDir, filename)
-	os.WriteFile(debugFile, []byte(content), 0644)
 }
 
 // buildContractBasedPrompt builds the AI prompt with contract context
@@ -391,10 +398,10 @@ func loadPrompt(config *DesignConfig) (string, error) {
 }
 
 // generateAndValidate generates AI output with retry and validates with Structurizr CLI
-func generateAndValidate(config *DesignConfig, prompt string) (string, error) {
+func generateAndValidate(config *DesignConfig, prompt string, out *design.Output, logger *logging.Logger) (string, error) {
 	// Check for mock AI response (for testing)
 	if mockResponse := GetMockAIResponse(); mockResponse != "" {
-		fmt.Println("🤖 Using mock AI response (test mode)...")
+		out.Progress("🤖 Using mock AI response (test mode)...")
 		return mockResponse, nil
 	}
 
@@ -422,7 +429,7 @@ func generateAndValidate(config *DesignConfig, prompt string) (string, error) {
 	defer validator.Cleanup()
 
 	// Generate with retry and validation
-	fmt.Println("🤖 Generating architecture design with AI...")
+	out.Progress("🤖 Generating architecture design with AI...")
 
 	retryConfig := &contracts.RetryConfig{
 		Executor:       executorAdapter,
@@ -451,7 +458,7 @@ func generateAndValidate(config *DesignConfig, prompt string) (string, error) {
 }
 
 // writeOutputAndReportSuccess writes the workspace file and reports success
-func writeOutputAndReportSuccess(config *DesignConfig, outputPath, content string) error {
+func writeOutputAndReportSuccess(config *DesignConfig, outputPath, content string, out *design.Output) error {
 	// Ensure directory exists
 	dir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -464,18 +471,18 @@ func writeOutputAndReportSuccess(config *DesignConfig, outputPath, content strin
 	}
 
 	// Report success
-	fmt.Println("\n✅ Architecture design created")
-	fmt.Printf("   File: %s\n", outputPath)
+	out.Progress("\n✅ Architecture design created")
+	out.Progressf("   File: %s", outputPath)
 	if !config.SkipValidation {
-		fmt.Printf("   Valid: ✅ Passed Structurizr validation\n\n")
+		out.Progress("   Valid: ✅ Passed Structurizr validation\n")
 	} else {
-		fmt.Printf("   Valid: ⚠️  Validation skipped\n\n")
+		out.Progress("   Valid: ⚠️  Validation skipped\n")
 	}
-	fmt.Println("ℹ️  Next steps:")
-	fmt.Println("   1. Review the generated workspace")
-	fmt.Println("   2. Refine containers and relationships as needed")
-	fmt.Printf("   3. View in browser: design serve %s\n", config.Module)
-	fmt.Printf("   4. Validate anytime: design validate %s\n", config.Module)
+	out.Progress("ℹ️  Next steps:")
+	out.Progress("   1. Review the generated workspace")
+	out.Progress("   2. Refine containers and relationships as needed")
+	out.Progressf("   3. View in browser: design serve %s", config.Module)
+	out.Progressf("   4. Validate anytime: design validate %s", config.Module)
 
 	return nil
 }

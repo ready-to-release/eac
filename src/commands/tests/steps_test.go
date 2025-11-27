@@ -404,6 +404,9 @@ func cleanupScenario() error {
 	// Reset specs mocks (git repo and AI response)
 	cleanupSpecsMocks()
 
+	// Reset init mocks (git repo)
+	cleanupInitMocks()
+
 	// Reset templates context (if it was set by a templates scenario)
 	// This ensures non-template scenarios don't inherit the templates context
 	// resetTemplatesContext is implemented in templates_steps_test.go
@@ -509,6 +512,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 				// Set up docs mocks automatically for isolated tests
 				if err := setupDocsMocks(); err != nil {
 					return ctx, fmt.Errorf("failed to setup docs mocks: %w", err)
+				}
+				// Set up init mocks automatically for isolated tests
+				if err := setupInitMocks(); err != nil {
+					return ctx, fmt.Errorf("failed to setup init mocks: %w", err)
 				}
 				break
 			}
