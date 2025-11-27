@@ -1,9 +1,14 @@
 package testing
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateTags_AllValid(t *testing.T) {
@@ -268,4 +273,62 @@ func TestParseRiskControlTag_Invalid(t *testing.T) {
 	_, err = ParseRiskControlTag("@risk-control:invalid")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid risk control tag format")
+}
+
+// TestAllRepositoryTestsHaveValidTags validates that all tests in the repository
+// have proper tags according to the tagging contract.
+//
+// This is a critical test that ensures:
+// - All tests have exactly one L-level tag (@L0-@L4)
+// - All tests have at least one verification tag (@ov, @iv, @pv, @piv, @ppv)
+// - @iv/@pv tests are tagged @L3 (PLTE level)
+// - @piv/@ppv tests are tagged @L4 (production level)
+// - @Manual tests don't have L-level tags (outside automated taxonomy)
+// - @gxp tests have risk control tags
+//
+// Tests in specs/src-core/testing/ are excluded as they contain intentionally
+// invalid tags for testing the validation logic itself.
+func TestAllRepositoryTestsHaveValidTags(t *testing.T) {
+	// Skip if not running in repository context
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		t.Skip("Not running in repository context")
+	}
+
+	// Verify we're in the right repository by checking for key files
+	if _, err := os.Stat(filepath.Join(repoRoot, "src")); os.IsNotExist(err) {
+		t.Skip("Not in expected repository structure")
+	}
+	if _, err := os.Stat(filepath.Join(repoRoot, "specs")); os.IsNotExist(err) {
+		t.Skip("Not in expected repository structure")
+	}
+
+	// Discover all tests
+	allTests, err := DiscoverAllTests(repoRoot)
+	require.NoError(t, err, "Failed to discover tests")
+	require.NotEmpty(t, allTests, "No tests discovered")
+
+	// Apply inferences
+	inferences := GetGlobalInferences()
+	allTests = ApplyInferences(allTests, inferences)
+
+	// Validate all tests
+	validationErrors := ValidateAllPostInference(allTests, repoRoot)
+
+	// Report errors in a readable format
+	if len(validationErrors) > 0 {
+		var errorMessages []string
+		for testName, errors := range validationErrors {
+			for _, errMsg := range errors {
+				errorMessages = append(errorMessages, testName+": "+errMsg)
+			}
+		}
+
+		// Sort for consistent output
+		// (errors are already deterministic from map iteration in Go 1.12+)
+
+		t.Errorf("Found %d tests with validation errors:\n%s",
+			len(validationErrors),
+			strings.Join(errorMessages, "\n"))
+	}
 }

@@ -9,6 +9,7 @@ source:
   includes:
     - "src/core/repository/tests/**"
     - ".github/workflows/change-trigger.yaml"
+    - ".github/workflows/cron-full-trigger.yaml"
 
 depends_on:
   - "src-core"

@@ -10,7 +10,7 @@ Feature: repository_markdown-syntax
 
   Rule: All Markdown files must have valid syntax
 
-    @ov
+    @L2 @ov
     Scenario: All Markdown files in repository have valid syntax
       Given I discover all Markdown files in the repository
       When I validate each Markdown file for syntax errors

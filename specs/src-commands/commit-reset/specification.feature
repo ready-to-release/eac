@@ -1,4 +1,4 @@
-@deps:git @deps:go @env:isolated-test-project @ov
+@deps:git @deps:go @env:isolated-test-project @L2 @ov
 Feature: src-commands_commit-reset
 
   As a developer using the r2r CLI

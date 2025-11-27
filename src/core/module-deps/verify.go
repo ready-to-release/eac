@@ -260,7 +260,7 @@ func (c *ModuleChecker) getExecutablePath(module *modules.ModuleContract) string
 
 	switch c.moniker {
 	case "src-cli":
-		baseName = "r2r-cli"
+		baseName = "r2r"
 	case "src-commands":
 		baseName = "eac"
 	default:
@@ -273,14 +273,37 @@ func (c *ModuleChecker) getExecutablePath(module *modules.ModuleContract) string
 		ext = ".exe"
 	}
 
-	// Try platform-specific binary first (new format: windows-r2r-cli.exe, linux-r2r-cli, darwin-r2r-cli)
-	platformBinary := fmt.Sprintf("%s-%s%s", runtime.GOOS, baseName, ext)
+	// Try platform-specific binary first (format: r2r-windows.exe, r2r-linux, r2r-darwin-amd64)
+	platformBinary := fmt.Sprintf("%s-%s%s", baseName, runtime.GOOS, ext)
 	platformPath := filepath.Join(repoRoot, "out", "build", c.moniker, platformBinary)
 	if _, err := os.Stat(platformPath); err == nil {
 		return platformPath
 	}
 
-	// Fallback to old format for backward compatibility (r2r-cli.exe, r2r-cli)
+	// Try architecture-specific variants for darwin (darwin-amd64, darwin-arm64)
+	if runtime.GOOS == "darwin" {
+		archBinary := fmt.Sprintf("%s-%s-%s", baseName, runtime.GOOS, runtime.GOARCH)
+		archPath := filepath.Join(repoRoot, "out", "build", c.moniker, archBinary)
+		if _, err := os.Stat(archPath); err == nil {
+			return archPath
+		}
+	}
+
+	// Fallback to legacy format for backward compatibility (r2r-cli.exe, r2r-cli)
+	// Also try old platform-specific format: windows-r2r-cli.exe, linux-r2r-cli
 	legacyBinary := baseName + ext
-	return filepath.Join(repoRoot, "out", "build", c.moniker, legacyBinary)
+	legacyPath := filepath.Join(repoRoot, "out", "build", c.moniker, legacyBinary)
+	if _, err := os.Stat(legacyPath); err == nil {
+		return legacyPath
+	}
+
+	// Try old platform-prefix format (windows-r2r-cli.exe, linux-r2r-cli, darwin-r2r-cli)
+	oldPlatformBinary := fmt.Sprintf("%s-%s%s", runtime.GOOS, baseName, ext)
+	oldPlatformPath := filepath.Join(repoRoot, "out", "build", c.moniker, oldPlatformBinary)
+	if _, err := os.Stat(oldPlatformPath); err == nil {
+		return oldPlatformPath
+	}
+
+	// Return the primary expected path (even if it doesn't exist, for error messages)
+	return platformPath
 }

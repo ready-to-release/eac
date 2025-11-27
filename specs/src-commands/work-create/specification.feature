@@ -1,5 +1,5 @@
 @skip:todo
-@deps:go @ov
+@deps:go @L2 @ov
 Feature: src-commands_work-create
 
   As a developer using parallel Claude sessions

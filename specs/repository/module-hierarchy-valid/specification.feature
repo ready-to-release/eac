@@ -7,14 +7,14 @@ Feature: Module Hierarchy Validation
   Background:
     Given the repository root exists
 
-  @ov
+  @L2 @ov
   Scenario: Module dependencies and reverse dependencies are consistent
     Given I load all module contracts from the repository
     When I validate that all depends_on and used_by relationships are bidirectional
     Then all modules should have consistent dependency relationships
     And no module should reference a non-existent module
 
-  @ov
+  @L2 @ov
   Scenario: Module dependency graph forms a valid directed acyclic graph (DAG)
     Given I load all module contracts from the repository
     When I build the complete dependency graph
@@ -22,21 +22,21 @@ Feature: Module Hierarchy Validation
     And the graph should have no circular dependencies
     And all modules should be reachable from the root
 
-  @ov
+  @L2 @ov
   Scenario: Every module in depends_on exists
     Given I load all module contracts from the repository
     When I check all depends_on references
     Then every referenced module should exist in the registry
     And I should see details of any missing modules
 
-  @ov
+  @L2 @ov
   Scenario: Every module in used_by exists
     Given I load all module contracts from the repository
     When I check all used_by references
     Then every referenced module should exist in the registry
     And I should see details of any missing modules
 
-  @ov
+  @L2 @ov
   Scenario: Bidirectional consistency between depends_on and used_by
     Given I load all module contracts from the repository
     When I validate bidirectional relationships

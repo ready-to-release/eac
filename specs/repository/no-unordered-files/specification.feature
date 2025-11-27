@@ -10,7 +10,7 @@ Feature: repository_no-unordered-files
 
   Rule: All files must be organized into proper modules
 
-    @ov
+    @L2 @ov
     Scenario: No files belong to the unordered catch-all module
       Given the module contracts are loaded
       When I lookup files belonging to the "unordered" module

@@ -9,14 +9,14 @@ Feature: src-cli_user-login
 
   Rule: User successfully logs in with valid credentials
 
-    @ov
+    @L2 @ov
     Scenario: User logs in with correct username and password
       Given the login interface is available
       When the user provides a valid username and password
       Then access is granted
       And the user is authenticated
 
-    @ov
+    @L2 @ov
     Scenario: User is presented with login failure on incorrect credentials
       Given the login interface is available
       When the user provides an incorrect password
@@ -25,14 +25,14 @@ Feature: src-cli_user-login
 
   Rule: Login process handles invalid input gracefully
 
-    @ov
+    @L2 @ov
     Scenario: User attempts login with empty username
       Given the login interface is available
       When the user submits the form with an empty username
       Then the login fails
       And a validation error is shown
 
-    @ov
+    @L2 @ov
     Scenario: User attempts login with empty password
       Given the login interface is available
       When the user submits the form with an empty password
@@ -41,14 +41,14 @@ Feature: src-cli_user-login
 
   Rule: Login session is established upon successful authentication
 
-    @ov
+    @L2 @ov
     Scenario: User session is created after login
       Given the user has provided valid credentials
       When authentication succeeds
       Then a session token is issued
       And subsequent requests use this session
 
-    @iv
+    @iv @L3
     Scenario: Login deploys and runs successfully
       Given the login service is deployed
       When a user authenticates successfully

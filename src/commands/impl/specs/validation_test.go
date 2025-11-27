@@ -1,3 +1,6 @@
+//go:build L1 && ov
+// +build L1,ov
+
 // File: src/commands/impl/specs/validation_test.go
 package specs
 

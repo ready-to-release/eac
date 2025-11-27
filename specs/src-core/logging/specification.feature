@@ -1,4 +1,4 @@
-@deps:go @ov
+@deps:go @L2 @ov
 Feature: Dual-output logging with configurable routing
   As a developer
   I want logs routed to console and/or file based on debug mode
