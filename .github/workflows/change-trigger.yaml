@@ -264,24 +264,66 @@ jobs:
           cd src/commands
 
           echo "🔍 Running repository validation test suite..."
-          if ! go run . test repository 2>&1; then
+
+          # Capture output for both success and failure cases
+          OUTPUT_FILE=$(mktemp)
+          EXIT_CODE=0
+          go run . test repository 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
+
+          if [ $EXIT_CODE -ne 0 ]; then
             echo "::error::Repository validation test suite failed"
             echo "## ❌ Repository Validation Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "One or more validation checks did not pass. See test output above for details." >> $GITHUB_STEP_SUMMARY
+
+            # Extract failed scenarios from output
+            FAILED_SCENARIOS=$(grep -E "--- FAIL:|FAIL\s+" "$OUTPUT_FILE" | head -20 || true)
+            ERROR_MESSAGES=$(grep -E "Error:|error:|❌|FAIL" "$OUTPUT_FILE" | grep -v "^go: downloading" | head -30 || true)
+
+            if [ -n "$FAILED_SCENARIOS" ]; then
+              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "$FAILED_SCENARIOS" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            if [ -n "$ERROR_MESSAGES" ]; then
+              echo "### Error Details" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "$ERROR_MESSAGES" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            echo "See the full test output in the job logs above for complete details." >> $GITHUB_STEP_SUMMARY
+            rm -f "$OUTPUT_FILE"
             exit 1
           fi
+
+          rm -f "$OUTPUT_FILE"
 
           echo ""
           echo "✅ All repository validations passed"
           echo "## ✅ Repository Validation Passed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Extract test statistics from output
+          TEST_SUMMARY=$(grep -E "scenarios.*passed|steps.*passed" "$OUTPUT_FILE" | tail -2 || echo "All tests passed")
+
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "$TEST_SUMMARY" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "All repository validation tests passed successfully before module builds." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Validated checks include:" >> $GITHUB_STEP_SUMMARY
-          echo "- Repository contract validation (file ownership, module hierarchy)" >> $GITHUB_STEP_SUMMARY
-          echo "- Module dependency validation (dependency graph integrity)" >> $GITHUB_STEP_SUMMARY
-          echo "- Static module builds (repo-config, contracts)" >> $GITHUB_STEP_SUMMARY
+          echo "### Validated Checks" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Repository contract validation (file ownership, module hierarchy)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Module dependency validation (dependency graph integrity)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Go module tidiness (go.mod/go.sum consistency)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Markdown syntax validation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Test tag contract compliance" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Static module builds (repo-config, contracts)" >> $GITHUB_STEP_SUMMARY
 
   calculate-order:
     name: Calculate Execution Order
