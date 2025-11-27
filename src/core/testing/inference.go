@@ -115,52 +115,18 @@ func isDependencyInference(tags []string) bool {
 }
 
 // GetGlobalInferences returns the standard inference rules
+//
+// NOTE: L-level tags are NOT inferred. All tests must have explicit L-tags.
+// This ensures godog can filter scenarios correctly without needing inference logic.
+// Validation enforces that all tests have proper L-tags and verification tags.
 func GetGlobalInferences() []Inference {
 	return []Inference{
-		// Type-based: Go tests default to L1
-		{
-			TestTypes:   []string{"gotest"},
-			IfTags:      []string{},
-			ThenAddTags: []string{"@L1"},
-			Description: "Go tests default to L1",
-		},
 		// Type-based: Go tests require Go toolchain
 		{
 			TestTypes:   []string{"gotest"},
 			IfTags:      []string{},
 			ThenAddTags: []string{"@deps:go"},
 			Description: "Go tests require Go toolchain",
-		},
-		// Type-based: Godog features default to L2
-		{
-			TestTypes:   []string{"godog"},
-			IfTags:      []string{},
-			ThenAddTags: []string{"@L2"},
-			Description: "Godog features default to L2",
-		},
-		// Verification-based: IV implies L3
-		{
-			IfTags:      []string{"@iv"},
-			ThenAddTags: []string{"@L3"},
-			Description: "Installation verification at L3 (PLTE)",
-		},
-		// Verification-based: PV implies L3
-		{
-			IfTags:      []string{"@pv"},
-			ThenAddTags: []string{"@L3"},
-			Description: "Performance verification at L3 (PLTE)",
-		},
-		// Production: PIV implies L4
-		{
-			IfTags:      []string{"@piv"},
-			ThenAddTags: []string{"@L4"},
-			Description: "Production installation verification at L4",
-		},
-		// Production: PPV implies L4
-		{
-			IfTags:      []string{"@ppv"},
-			ThenAddTags: []string{"@L4"},
-			Description: "Production performance verification at L4",
 		},
 	}
 }

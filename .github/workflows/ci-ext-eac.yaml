@@ -94,6 +94,7 @@ jobs:
           echo "  - $IMAGE_NAME:sha-$SHORT_SHA"
 
       - name: Build Summary
+        if: always()
         run: |
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
@@ -101,7 +102,19 @@ jobs:
 
           echo "## Build: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Built and pushed multi-platform container image to GitHub Container Registry." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Built and pushed multi-platform container image to GitHub Container Registry." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Container image build failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
+            echo "- Dockerfile syntax error" >> $GITHUB_STEP_SUMMARY
+            echo "- Base image pull failed" >> $GITHUB_STEP_SUMMARY
+            echo "- Go compilation error" >> $GITHUB_STEP_SUMMARY
+            echo "- Registry authentication failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Published Images" >> $GITHUB_STEP_SUMMARY
@@ -237,13 +250,25 @@ jobs:
           echo "✅ Direct Docker tests passed"
 
       - name: Test Summary
+        if: always()
         run: |
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
 
           echo "## Test: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All extension tests passed." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ All extension tests passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Extension tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
+            echo "- Container image failed to pull from GHCR" >> $GITHUB_STEP_SUMMARY
+            echo "- Extension command returned non-zero exit code" >> $GITHUB_STEP_SUMMARY
+            echo "- Test timeout exceeded" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY

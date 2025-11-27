@@ -3,6 +3,7 @@ package main
 
 import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/build"
+	_ "github.com/ready-to-release/eac/src/commands/impl/ci"
 	_ "github.com/ready-to-release/eac/src/commands/impl/commit"
 	_ "github.com/ready-to-release/eac/src/commands/impl/completion"
 	_ "github.com/ready-to-release/eac/src/commands/impl/describe"

@@ -79,41 +79,72 @@ func ListSuites() []string {
 	return monikers
 }
 
-// BuildGodogTagFilter generates a godog-compatible tag expression for the suite
-// For example, commit suite with AnyOfTags: ["@L0", "@L1", "@L2"] returns "@L0 || @L1 || @L2"
+// BuildGodogTagFilter generates a godog-compatible tag expression for the suite.
+//
+// # CRITICAL: Godog Tag Expression Syntax
+//
+// Godog's tag parser has specific syntax requirements. Using incorrect syntax
+// (like parentheses or "||") causes godog to SILENTLY return zero scenarios
+// without any error, which can cause CI to falsely pass.
+//
+// Correct syntax:
+//   - @tag1,@tag2    → OR  (comma, no space)
+//   - @tag1 && @tag2 → AND (double ampersand with spaces)
+//   - ~@tag          → NOT (tilde prefix)
+//
+// WRONG syntax (causes silent failure):
+//   - (@tag1 || @tag2)  ← parentheses break the parser
+//   - @tag1 || @tag2    ← "||" is not recognized
+//   - @tag1 or @tag2    ← "or" keyword not supported
+//
+// # Examples
+//
+// Commit suite (L0-L2 tests):
+//
+//	AnyOfTags: ["@L0", "@L1", "@L2"]
+//	Output:    "@L0,@L1,@L2"
+//
+// Acceptance suite (verification tests, excluding L0-L2):
+//
+//	AnyOfTags:   ["@iv", "@ov", "@pv"]
+//	ExcludeTags: ["@L0", "@L1", "@L2"]
+//	Output:      "@iv,@ov,@pv && ~@L0 && ~@L1 && ~@L2"
+//
 func (suite *TestSuite) BuildGodogTagFilter() string {
 	var parts []string
 
 	for _, selector := range suite.Selectors {
 		var selectorParts []string
 
-		// AnyOfTags becomes OR expression
+		// AnyOfTags: join with comma (no space) for OR semantics
+		// Example: ["@L0", "@L1", "@L2"] → "@L0,@L1,@L2"
 		if len(selector.AnyOfTags) > 0 {
-			orParts := make([]string, len(selector.AnyOfTags))
-			for i, tag := range selector.AnyOfTags {
-				orParts[i] = tag
-			}
-			selectorParts = append(selectorParts, "("+strings.Join(orParts, " || ")+")")
+			orExpr := strings.Join(selector.AnyOfTags, ",")
+			selectorParts = append(selectorParts, orExpr)
 		}
 
-		// RequireTags becomes AND expression
+		// RequireTags: each tag becomes an AND condition
+		// Example: ["@smoke", "@critical"] → added as separate "&& @smoke && @critical"
 		for _, tag := range selector.RequireTags {
 			selectorParts = append(selectorParts, tag)
 		}
 
-		// ExcludeTags becomes NOT expression
+		// ExcludeTags: each tag becomes a NOT condition with tilde prefix
+		// Example: ["@L0", "@L1"] → "&& ~@L0 && ~@L1"
 		for _, tag := range selector.ExcludeTags {
 			selectorParts = append(selectorParts, "~"+tag)
 		}
 
+		// Combine all parts with AND (&&)
 		if len(selectorParts) > 0 {
 			parts = append(parts, strings.Join(selectorParts, " && "))
 		}
 	}
 
-	// Multiple selectors are OR'd together
+	// Multiple selectors are OR'd together using comma
+	// This handles suites with multiple TagSelector entries
 	if len(parts) > 1 {
-		return "(" + strings.Join(parts, ") || (") + ")"
+		return strings.Join(parts, ",")
 	} else if len(parts) == 1 {
 		return parts[0]
 	}

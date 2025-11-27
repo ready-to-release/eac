@@ -96,7 +96,35 @@ jobs:
 
           echo "✅ Created and pushed tag: $TAG"
 
-      - name: Summary
+      - name: Summary (failure)
+        if: failure()
+        run: |
+          echo "## ❌ Documentation Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Common Failure Causes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Possible Cause | Fix |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----------------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Download artifacts | Invalid ci_run_id or artifacts expired | Re-run CI or omit ci_run_id to build from source |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build docs | MkDocs configuration error | Check mkdocs.yml syntax |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build docs | Missing dependencies | Verify docs/requirements.txt |" >> $GITHUB_STEP_SUMMARY
+          echo "| Verify build | No index.html generated | Check MkDocs build output |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy to Pages | GitHub Pages not enabled | Enable Pages in repository settings |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy to Pages | Permissions error | Check workflow has pages:write permission |" >> $GITHUB_STEP_SUMMARY
+          echo "| Create tag | Tag already exists | Tag will be incremented automatically |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Debug Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| CI Run ID | \`${{ inputs.ci_run_id || 'none (building from source)' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Planned Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go run ./src/commands ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
+
+      - name: Summary (success)
+        if: success()
         run: |
           echo "## ✅ Documentation Deployed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

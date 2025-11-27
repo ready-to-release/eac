@@ -52,10 +52,17 @@ jobs:
             src/cli/**/schema.json
 
       - name: Build Summary
+        if: always()
         run: |
           echo "## Build: src-cli" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ CLI binaries built for all platforms." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ CLI binaries built for all platforms." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ CLI binary build failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Built Binaries" >> $GITHUB_STEP_SUMMARY
@@ -130,7 +137,13 @@ jobs:
         run: |
           echo "## Test: src-cli" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All CLI tests passed." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ All CLI tests passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ CLI tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-src-cli >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Test Details" >> $GITHUB_STEP_SUMMARY

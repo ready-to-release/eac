@@ -1,0 +1,208 @@
+# Scheduled Full CI Rebuild
+#
+# Runs every 2 hours (even hours) to ensure the full codebase is tested regularly.
+# Only triggers if there are changes since the last successful full CI run.
+#
+# This catches issues that incremental CI might miss:
+# - Integration problems between modules
+# - Flaky tests that pass individually but fail together
+# - Environment drift or dependency updates
+#
+# IMPORTANT: If this workflow fails after triggering a full rebuild, it indicates
+# a deviation - the incremental CI passed but the full rebuild failed. This suggests
+# a problem in the change detection logic or a flaky test.
+
+name: "Scheduled Full CI"
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'  # Every 2 hours: 00:00, 02:00, 04:00, etc. UTC
+  workflow_dispatch:       # Manual trigger to test the change-detection logic
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  check-and-trigger:
+    name: Check for Changes & Trigger Full Rebuild
+    runs-on: ubuntu-latest
+    outputs:
+      skipped: ${{ steps.check.outputs.skip }}
+      run_id: ${{ steps.trigger.outputs.run_id }}
+      result: ${{ steps.wait.outputs.result }}
+    steps:
+      - name: Check if full rebuild needed
+        id: check
+        run: |
+          echo "Checking for recent successful full rebuild..."
+          echo "Current HEAD: ${{ github.sha }}"
+          echo ""
+
+          # Check for successful Scheduled Full CI runs in the last 2 hours
+          # This workflow only triggers full rebuilds, so any success means HEAD was fully tested
+          TWO_HOURS_AGO=$(date -u -d '2 hours ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -v-2H '+%Y-%m-%dT%H:%M:%SZ')
+
+          echo "Looking for successful runs since: $TWO_HOURS_AGO"
+
+          RECENT_SUCCESS=$(gh run list \
+            --repo ${{ github.repository }} \
+            --workflow "cron-full-trigger.yaml" \
+            --branch main \
+            --status success \
+            --json headSha,createdAt \
+            --jq --arg cutoff "$TWO_HOURS_AGO" \
+              '[.[] | select(.createdAt > $cutoff and .headSha == "${{ github.sha }}")] | length')
+
+          echo "Recent successful full rebuilds for this HEAD: ${RECENT_SUCCESS:-0}"
+
+          if [ "${RECENT_SUCCESS:-0}" -gt 0 ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo ""
+            echo "HEAD already has successful full rebuild within last 2 hours - skipping"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo ""
+            echo "No recent full rebuild found - will trigger full rebuild"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Trigger full rebuild
+        id: trigger
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          echo "Triggering full CI rebuild..."
+          gh workflow run change-trigger.yaml \
+            --repo ${{ github.repository }} \
+            --ref main \
+            -f trigger-all=true
+
+          # Wait for the run to be created (may take a few seconds)
+          echo "Waiting for workflow run to be created..."
+          sleep 10
+
+          # Get the run ID of the triggered workflow (retry a few times)
+          for i in 1 2 3 4 5; do
+            RUN_ID=$(gh run list \
+              --repo ${{ github.repository }} \
+              --workflow "change-trigger.yaml" \
+              --branch main \
+              --limit 1 \
+              --json databaseId,status,createdAt \
+              --jq '.[0].databaseId')
+
+            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+              echo "Triggered run ID: $RUN_ID"
+              echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            echo "Attempt $i: Run not found yet, waiting..."
+            sleep 5
+          done
+
+          echo "::error::Failed to get triggered workflow run ID"
+          exit 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Wait for full rebuild to complete
+        id: wait
+        if: steps.check.outputs.skip != 'true' && steps.trigger.outputs.run_id != ''
+        run: |
+          RUN_ID="${{ steps.trigger.outputs.run_id }}"
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::error::No valid run ID to wait for"
+            echo "result=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "Waiting for run $RUN_ID to complete..."
+          echo "View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/$RUN_ID"
+          echo ""
+
+          # Wait for the workflow to complete (timeout 2 hours)
+          if gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status; then
+            echo "result=success" >> $GITHUB_OUTPUT
+            echo ""
+            echo "Full rebuild completed successfully"
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+            echo ""
+            echo "::error::Full rebuild FAILED - this indicates a deviation from incremental CI"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+        timeout-minutes: 120
+
+  summary:
+    name: Summary
+    needs: check-and-trigger
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## Scheduled Full CI" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          SKIPPED="${{ needs.check-and-trigger.outputs.skipped }}"
+          RESULT="${{ needs.check-and-trigger.outputs.result }}"
+          RUN_ID="${{ needs.check-and-trigger.outputs.run_id }}"
+
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Current HEAD | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$SKIPPED" = "true" ]; then
+            echo "| Result | Skipped (recent full rebuild exists) |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No action needed - current HEAD already has a successful full rebuild within the last 2 hours." >> $GITHUB_STEP_SUMMARY
+          elif [ "$RESULT" = "success" ]; then
+            echo "| Result | Full rebuild passed |" >> $GITHUB_STEP_SUMMARY
+            echo "| Run | [#${RUN_ID}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${RUN_ID}) |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Full rebuild completed successfully." >> $GITHUB_STEP_SUMMARY
+          elif [ "$RESULT" = "failure" ]; then
+            echo "| Result | **DEVIATION DETECTED** |" >> $GITHUB_STEP_SUMMARY
+            echo "| Run | [#${RUN_ID}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${RUN_ID}) |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### :warning: Deviation Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The full rebuild **failed** even though incremental CI passed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This indicates a potential problem:" >> $GITHUB_STEP_SUMMARY
+            echo "- **Change detection issue**: Incremental CI may have missed rebuilding affected modules" >> $GITHUB_STEP_SUMMARY
+            echo "- **Flaky test**: A test that passes in isolation but fails in full builds" >> $GITHUB_STEP_SUMMARY
+            echo "- **Integration issue**: Modules work individually but fail together" >> $GITHUB_STEP_SUMMARY
+            echo "- **Environment drift**: CI environment changed between runs" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Diagnose Locally" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "# View the failed full rebuild run" >> $GITHUB_STEP_SUMMARY
+            echo "gh run view ${RUN_ID} --repo ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# View failed step logs from the full rebuild" >> $GITHUB_STEP_SUMMARY
+            echo "gh run view ${RUN_ID} --repo ${{ github.repository }} --log-failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Compare with recent incremental CI runs" >> $GITHUB_STEP_SUMMARY
+            echo "gh run list --repo ${{ github.repository }} --workflow change-trigger.yaml --branch main --limit 5" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Check which modules failed in full rebuild" >> $GITHUB_STEP_SUMMARY
+            echo "gh run view ${RUN_ID} --repo ${{ github.repository }} --json jobs --jq '.jobs[] | select(.conclusion != \"success\") | {name, conclusion}'" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Result | Unknown |" >> $GITHUB_STEP_SUMMARY
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Fail on deviation
+        if: needs.check-and-trigger.outputs.result == 'failure'
+        run: |
+          echo "::error::Scheduled full CI detected a deviation - full rebuild failed"
+          exit 1

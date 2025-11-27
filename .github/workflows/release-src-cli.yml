@@ -289,7 +289,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Summary
+      - name: Summary (failure)
+        if: failure()
+        run: |
+          echo "## ❌ Release Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Common Failure Causes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Possible Cause | Fix |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----------------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Check CI status | No successful CI run for this commit | Run CI first: \`gh workflow run ci-src-cli.yaml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Extract version | Invalid semver format | Use format: x.y.z (e.g., 1.0.0) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Check existing release | Release already exists | Delete existing release or bump version |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build binaries | Go compilation error | Check build logs for specific error |" >> $GITHUB_STEP_SUMMARY
+          echo "| Verify binaries | Missing binary file | Check build step completed successfully |" >> $GITHUB_STEP_SUMMARY
+          echo "| Create release | GitHub API error / tag conflict | Check if tag already exists |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Debug Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Input | \`${{ github.event.inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go run ./src/commands ci summary-link ${{ github.run_id }} --type release --workflow ci-src-cli.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Summary (success)
+        if: success()
         run: |
           VERSION="${{ steps.extract_version.outputs.version }}"
           TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
