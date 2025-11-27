@@ -47,23 +47,10 @@ jobs:
       invalidated: ${{ steps.detect.outputs.invalidated }}
       base_sha: ${{ steps.detect.outputs.base_sha }}
       is_bootstrap: ${{ steps.detect.outputs.is_bootstrap }}
-      ci_image: ${{ steps.ci-image.outputs.image }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Read CI image version
-        id: ci-image
-        run: |
-          # Read CI image version from config file
-          VERSION=$(grep 'version:' .github/variables/ci-images.yml | head -1 | awk '{print $2}' | tr -d '"')
-          REGISTRY=$(grep 'registry:' .github/variables/ci-images.yml | head -1 | awk '{print $2}' | tr -d '"')
-          REPOSITORY=$(grep 'repository:' .github/variables/ci-images.yml | head -1 | awk '{print $2}' | tr -d '"')
-
-          IMAGE="${REGISTRY}/${REPOSITORY}:${VERSION}"
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
-          echo "📦 CI Image: $IMAGE"
 
       - uses: actions/setup-go@v5
         with:
@@ -324,9 +311,6 @@ jobs:
             # Arrays to track workflow run IDs
             declare -a RUN_IDS=()
             declare -a MODULES=()
-
-            # Get CI image from detect-changes output
-            CI_IMAGE="${{ needs.detect-changes.outputs.ci_image }}"
 
             # Trigger all workflows in this layer in parallel
             for module in $LAYER_MODULES; do
