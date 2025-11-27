@@ -1,4 +1,4 @@
-@L2 @skip:wip
+@L2
 Feature: repository_markdown-syntax
 
   As a repository maintainer

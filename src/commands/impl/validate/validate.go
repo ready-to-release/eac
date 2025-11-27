@@ -34,6 +34,18 @@ func Validate() int {
 	case "test-tags":
 		// Handled by separate registrations in respective files
 		return 0
+	case "module-hierarchy":
+		// Handled by separate registrations in respective files
+		return 0
+	case "module-files":
+		// Handled by separate registrations in respective files
+		return 0
+	case "markdown":
+		// Handled by separate registrations in respective files
+		return 0
+	case "go-tidy":
+		// Handled by separate registrations in respective files
+		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
 		printValidateUsage()
@@ -49,6 +61,10 @@ func printValidateUsage() {
 	fmt.Println("Subcommands:")
 	fmt.Println("  dependencies              Validate module dependency contracts")
 	fmt.Println("  test-tags                 Validate that all test tags are defined in the tag contract")
+	fmt.Println("  module-hierarchy          Validate module dependency graph structure")
+	fmt.Println("  module-files              Validate module file ownership")
+	fmt.Println("  markdown                  Validate markdown file syntax")
+	fmt.Println("  go-tidy                   Validate Go module dependencies are tidy")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  # Validate all dependencies")
@@ -56,6 +72,18 @@ func printValidateUsage() {
 	fmt.Println()
 	fmt.Println("  # Validate test tags")
 	fmt.Println("  r2r validate test-tags")
+	fmt.Println()
+	fmt.Println("  # Validate module hierarchy")
+	fmt.Println("  r2r validate module-hierarchy")
+	fmt.Println()
+	fmt.Println("  # Validate module file ownership")
+	fmt.Println("  r2r validate module-files")
+	fmt.Println()
+	fmt.Println("  # Validate markdown files")
+	fmt.Println("  r2r validate markdown")
+	fmt.Println()
+	fmt.Println("  # Validate Go module tidiness")
+	fmt.Println("  r2r validate go-tidy")
 	fmt.Println()
 	fmt.Println("Use 'r2r validate <subcommand> --help' for more information about a command.")
 }

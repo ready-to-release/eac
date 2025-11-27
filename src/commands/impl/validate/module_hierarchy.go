@@ -1,0 +1,343 @@
+// Command: validate module-hierarchy
+// Description: Validate module dependency graph structure
+// HasSideEffects: false
+package validate
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/repository"
+)
+
+func init() {
+	registry.Register(ValidateModuleHierarchy)
+}
+
+// ValidateModuleHierarchy validates the module dependency graph
+func ValidateModuleHierarchy() int {
+	args := os.Args[2:] // Skip program name and "validate"
+
+	// Check if this is being called as a subcommand
+	if len(args) > 0 && args[0] == "module-hierarchy" {
+		args = args[1:] // Skip the subcommand name
+	}
+
+	// Check for help flag
+	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
+		printModuleHierarchyUsage()
+		return 0
+	}
+
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to get repository root: %v\n", err)
+		return 1
+	}
+
+	// Load module registry
+	moduleRegistry, err := modules.LoadFromWorkspaceLatest(repoRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load module registry: %v\n", err)
+		return 1
+	}
+
+	// Run validations
+	report := validateModuleHierarchy(moduleRegistry)
+
+	// Print report
+	printModuleHierarchyReport(report)
+
+	// Return exit code based on results
+	if report.HasErrors() {
+		return 1
+	}
+	return 0
+}
+
+type moduleHierarchyReport struct {
+	inconsistencies      []string
+	nonExistentModules   []string
+	circularDependencies []string
+	unreachableModules   []string
+}
+
+func (r *moduleHierarchyReport) HasErrors() bool {
+	return len(r.inconsistencies) > 0 ||
+		len(r.nonExistentModules) > 0 ||
+		len(r.circularDependencies) > 0 ||
+		len(r.unreachableModules) > 0
+}
+
+func validateModuleHierarchy(reg *modules.Registry) *moduleHierarchyReport {
+	report := &moduleHierarchyReport{
+		inconsistencies:      []string{},
+		nonExistentModules:   []string{},
+		circularDependencies: []string{},
+		unreachableModules:   []string{},
+	}
+
+	// Check bidirectional relationships
+	validateBidirectionalRelationships(reg, report)
+
+	// Check for circular dependencies
+	validateNoCircularDependencies(reg, report)
+
+	// Check all modules are reachable
+	validateAllModulesReachable(reg, report)
+
+	return report
+}
+
+func validateBidirectionalRelationships(reg *modules.Registry, report *moduleHierarchyReport) {
+	for _, module := range reg.All() {
+		// Check depends_on -> used_by consistency
+		for _, depMoniker := range module.DependsOn {
+			dep, found := reg.Get(depMoniker)
+			if !found {
+				report.nonExistentModules = append(report.nonExistentModules,
+					fmt.Sprintf("Module '%s' depends on '%s', but '%s' does not exist",
+						module.Moniker, depMoniker, depMoniker))
+				continue
+			}
+
+			// Check if dep has module in its used_by list
+			hasUsedBy := false
+			for _, user := range dep.UsedBy {
+				if user == module.Moniker {
+					hasUsedBy = true
+					break
+				}
+			}
+
+			if !hasUsedBy {
+				report.inconsistencies = append(report.inconsistencies,
+					fmt.Sprintf("Module '%s' depends_on '%s', but '%s' does not have '%s' in used_by",
+						module.Moniker, depMoniker, depMoniker, module.Moniker))
+			}
+		}
+
+		// Check used_by -> depends_on consistency
+		for _, userMoniker := range module.UsedBy {
+			user, found := reg.Get(userMoniker)
+			if !found {
+				report.nonExistentModules = append(report.nonExistentModules,
+					fmt.Sprintf("Module '%s' has used_by '%s', but '%s' does not exist",
+						module.Moniker, userMoniker, userMoniker))
+				continue
+			}
+
+			// Check if user has module in its depends_on list
+			hasDependsOn := false
+			for _, dep := range user.DependsOn {
+				if dep == module.Moniker {
+					hasDependsOn = true
+					break
+				}
+			}
+
+			if !hasDependsOn {
+				report.inconsistencies = append(report.inconsistencies,
+					fmt.Sprintf("Module '%s' has used_by '%s', but '%s' does not have '%s' in depends_on",
+						module.Moniker, userMoniker, userMoniker, module.Moniker))
+			}
+		}
+	}
+}
+
+func validateNoCircularDependencies(reg *modules.Registry, report *moduleHierarchyReport) {
+	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
+
+	var detectCycle func(moniker string, path []string) bool
+	detectCycle = func(moniker string, path []string) bool {
+		visited[moniker] = true
+		recStack[moniker] = true
+		currentPath := append(path, moniker)
+
+		module, found := reg.Get(moniker)
+		if !found {
+			return false
+		}
+
+		for _, depMoniker := range module.DependsOn {
+			if !visited[depMoniker] {
+				if detectCycle(depMoniker, currentPath) {
+					return true
+				}
+			} else if recStack[depMoniker] {
+				// Found a cycle
+				cycleStart := -1
+				for i, m := range currentPath {
+					if m == depMoniker {
+						cycleStart = i
+						break
+					}
+				}
+				if cycleStart >= 0 {
+					cycle := append(currentPath[cycleStart:], depMoniker)
+					report.circularDependencies = append(report.circularDependencies,
+						fmt.Sprintf("Circular dependency: %s", strings.Join(cycle, " -> ")))
+				}
+				return true
+			}
+		}
+
+		recStack[moniker] = false
+		return false
+	}
+
+	// Check all modules for cycles
+	for _, module := range reg.All() {
+		if !visited[module.Moniker] {
+			detectCycle(module.Moniker, []string{})
+		}
+	}
+}
+
+func validateAllModulesReachable(reg *modules.Registry, report *moduleHierarchyReport) {
+	// Find root modules (modules with parent "." or no parent)
+	rootModules := []*modules.ModuleContract{}
+	for _, module := range reg.All() {
+		if module.Parent == "." || module.Parent == "" {
+			rootModules = append(rootModules, module)
+		}
+	}
+
+	if len(rootModules) == 0 {
+		// No root modules - this might be okay for some repos
+		return
+	}
+
+	// BFS to find all reachable modules
+	reachable := make(map[string]bool)
+	queue := []string{}
+
+	for _, root := range rootModules {
+		queue = append(queue, root.Moniker)
+		reachable[root.Moniker] = true
+	}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		module, found := reg.Get(current)
+		if !found {
+			continue
+		}
+
+		// Add all modules that depend on current (reverse direction)
+		for _, other := range reg.All() {
+			for _, dep := range other.DependsOn {
+				if dep == current && !reachable[other.Moniker] {
+					reachable[other.Moniker] = true
+					queue = append(queue, other.Moniker)
+				}
+			}
+		}
+
+		// Also follow used_by relationships
+		for _, user := range module.UsedBy {
+			if !reachable[user] {
+				reachable[user] = true
+				queue = append(queue, user)
+			}
+		}
+
+		// Follow parent relationships (children should be reachable)
+		for _, other := range reg.All() {
+			if other.Parent == current && !reachable[other.Moniker] {
+				reachable[other.Moniker] = true
+				queue = append(queue, other.Moniker)
+			}
+		}
+	}
+
+	// Check for unreachable modules
+	// Skip catch-all modules as they don't participate in the dependency graph
+	for _, module := range reg.All() {
+		if !reachable[module.Moniker] {
+			// Skip catch-all modules
+			if module.Source.IsCatchAllSingleton != nil && *module.Source.IsCatchAllSingleton {
+				continue
+			}
+
+			report.unreachableModules = append(report.unreachableModules,
+				fmt.Sprintf("Module '%s' (parent: '%s') is not reachable from root modules",
+					module.Moniker, module.Parent))
+		}
+	}
+}
+
+func printModuleHierarchyReport(report *moduleHierarchyReport) {
+	fmt.Println("=== Module Hierarchy Validation Report ===")
+	fmt.Println()
+
+	hasIssues := false
+
+	// Non-existent modules
+	if len(report.nonExistentModules) > 0 {
+		hasIssues = true
+		fmt.Printf("❌ References to Non-Existent Modules (%d):\n", len(report.nonExistentModules))
+		for _, issue := range report.nonExistentModules {
+			fmt.Printf("  • %s\n", issue)
+		}
+		fmt.Println()
+	}
+
+	// Bidirectional inconsistencies
+	if len(report.inconsistencies) > 0 {
+		hasIssues = true
+		fmt.Printf("❌ Bidirectional Relationship Inconsistencies (%d):\n", len(report.inconsistencies))
+		for _, issue := range report.inconsistencies {
+			fmt.Printf("  • %s\n", issue)
+		}
+		fmt.Println()
+	}
+
+	// Circular dependencies
+	if len(report.circularDependencies) > 0 {
+		hasIssues = true
+		fmt.Printf("❌ Circular Dependencies (%d):\n", len(report.circularDependencies))
+		for _, issue := range report.circularDependencies {
+			fmt.Printf("  • %s\n", issue)
+		}
+		fmt.Println()
+	}
+
+	// Unreachable modules
+	if len(report.unreachableModules) > 0 {
+		hasIssues = true
+		fmt.Printf("⚠️  Unreachable Modules (%d):\n", len(report.unreachableModules))
+		for _, issue := range report.unreachableModules {
+			fmt.Printf("  • %s\n", issue)
+		}
+		fmt.Println()
+	}
+
+	if !hasIssues {
+		fmt.Println("✅ All module hierarchy checks passed!")
+		fmt.Println()
+	}
+}
+
+func printModuleHierarchyUsage() {
+	fmt.Println("Validate module dependency graph structure")
+	fmt.Println()
+	fmt.Println("Usage: r2r validate module-hierarchy")
+	fmt.Println()
+	fmt.Println("Checks:")
+	fmt.Println("  - Bidirectional consistency (depends_on <-> used_by)")
+	fmt.Println("  - No references to non-existent modules")
+	fmt.Println("  - No circular dependencies")
+	fmt.Println("  - All modules reachable from root")
+	fmt.Println()
+	fmt.Println("Examples:")
+	fmt.Println("  # Validate module hierarchy")
+	fmt.Println("  r2r validate module-hierarchy")
+}
