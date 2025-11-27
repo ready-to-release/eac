@@ -109,8 +109,22 @@ func SpecsValidate() int {
 		defer logger.Sync()
 	}
 
+	// Log command start
+	if config.Logger != nil {
+		config.Logger.Info("Starting specs validate",
+			zap.String("path", config.Path),
+			zap.String("format", config.Format),
+			zap.Bool("quiet", config.Quiet),
+			zap.Bool("verbose", config.Verbose))
+	}
+
 	// Validate path security
 	if err := validatePath(config.Path, config.RepositoryRoot); err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Path security validation failed",
+				zap.String("path", config.Path),
+				zap.Error(err))
+		}
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
@@ -118,6 +132,11 @@ func SpecsValidate() int {
 	// Determine if path is file or directory
 	info, err := os.Stat(config.Path)
 	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("File or directory not found",
+				zap.String("path", config.Path),
+				zap.Error(err))
+		}
 		fmt.Fprintf(os.Stderr, "Error: file or directory not found: %s\n", config.Path)
 		return 1
 	}
@@ -131,8 +150,11 @@ func SpecsValidate() int {
 	var results []*ValidationResult
 	if info.IsDir() {
 		// Validate directory (recursive)
-		results, err = validateDirectory(config.Path, config.RepositoryRoot, config.Quiet)
+		results, err = validateDirectoryWithLogger(config.Path, config.RepositoryRoot, config.Quiet, config.Logger)
 		if err != nil {
+			if config.Logger != nil {
+				config.Logger.Error("Directory validation failed", zap.Error(err))
+			}
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			return 1
 		}
@@ -140,6 +162,11 @@ func SpecsValidate() int {
 		// Validate single file
 		errors, err := validateGherkinFile(config.Path, config.RepositoryRoot)
 		if err != nil {
+			if config.Logger != nil {
+				config.Logger.Error("File validation failed",
+					zap.String("path", config.Path),
+					zap.Error(err))
+			}
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			return 1
 		}
@@ -152,12 +179,20 @@ func SpecsValidate() int {
 				Errors: errors,
 			},
 		}
+
+		if config.Logger != nil {
+			config.Logger.Debug("Single file validation complete",
+				zap.String("path", config.Path),
+				zap.Bool("valid", criticalCount == 0),
+				zap.Int("errorCount", len(errors)))
+		}
 	}
 
+	passed := countPassed(results)
+	failed := countFailed(results)
+
 	if config.Logger != nil {
-		passed := countPassed(results)
-		failed := countFailed(results)
-		config.Logger.Debug("Validation complete",
+		config.Logger.Info("Validation complete",
 			zap.Int("total", len(results)),
 			zap.Int("passed", passed),
 			zap.Int("failed", failed))
@@ -171,10 +206,8 @@ func SpecsValidate() int {
 	}
 
 	// Return exit code based on validation results
-	for _, result := range results {
-		if !result.Valid {
-			return 1
-		}
+	if failed > 0 {
+		return 1
 	}
 
 	return 0
@@ -344,8 +377,16 @@ func validateGherkinFile(filePath string, repoRoot string) ([]contracts.Validati
 		return nil, fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
-	// Create validator
-	validator := contracts.NewGherkinValidator(contractData, antiCorruptionRules)
+	// Load tag contract for advanced tag validation
+	tagLoader := contracts.NewLoader(repoRoot)
+	tagContract, tagErr := contracts.LoadTagContract(tagLoader)
+	if tagErr != nil {
+		// Tag contract is optional - continue without it but log warning
+		// Advanced tag validation will be disabled
+	}
+
+	// Create validator with tag contract support
+	validator := contracts.NewGherkinValidatorWithTags(contractData, tagContract, antiCorruptionRules)
 
 	// Validate content
 	errors := validator.Validate(string(content), nil)
@@ -354,12 +395,25 @@ func validateGherkinFile(filePath string, repoRoot string) ([]contracts.Validati
 }
 
 // validateDirectory validates all .feature files in a directory (recursive)
+// Deprecated: Use validateDirectoryWithLogger for better logging support
 func validateDirectory(dirPath string, repoRoot string, quiet bool) ([]*ValidationResult, error) {
+	return validateDirectoryWithLogger(dirPath, repoRoot, quiet, nil)
+}
+
+// validateDirectoryWithLogger validates all .feature files in a directory with logging support
+func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, logger *logging.Logger) ([]*ValidationResult, error) {
 	var results []*ValidationResult
+
+	if logger != nil {
+		logger.Debug("Walking directory for .feature files", zap.String("dir", dirPath))
+	}
 
 	// Walk directory tree
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			if logger != nil {
+				logger.Warn("Error accessing path", zap.String("path", path), zap.Error(err))
+			}
 			return err
 		}
 
@@ -373,10 +427,19 @@ func validateDirectory(dirPath string, repoRoot string, quiet bool) ([]*Validati
 			return nil
 		}
 
+		if logger != nil {
+			logger.Debug("Validating file", zap.String("path", relativePath(path, repoRoot)))
+		}
+
 		// Validate file
 		errors, validateErr := validateGherkinFile(path, repoRoot)
 		if validateErr != nil {
 			// Log error but continue processing other files
+			if logger != nil {
+				logger.Warn("Failed to validate file",
+					zap.String("path", path),
+					zap.Error(validateErr))
+			}
 			fmt.Fprintf(os.Stderr, "Warning: failed to validate %s: %v\n", path, validateErr)
 			return nil
 		}
@@ -389,6 +452,14 @@ func validateDirectory(dirPath string, repoRoot string, quiet bool) ([]*Validati
 		}
 
 		results = append(results, result)
+
+		if logger != nil {
+			logger.Debug("File validation result",
+				zap.String("path", relativePath(path, repoRoot)),
+				zap.Bool("valid", result.Valid),
+				zap.Int("criticalErrors", criticalCount),
+				zap.Int("totalErrors", len(errors)))
+		}
 
 		// In quiet mode, only show progress for invalid files
 		if !quiet || !result.Valid {
@@ -405,7 +476,15 @@ func validateDirectory(dirPath string, repoRoot string, quiet bool) ([]*Validati
 	})
 
 	if err != nil {
+		if logger != nil {
+			logger.Error("Directory walk failed", zap.Error(err))
+		}
 		return nil, fmt.Errorf("error walking directory: %w", err)
+	}
+
+	if logger != nil {
+		logger.Debug("Directory walk complete",
+			zap.Int("filesProcessed", len(results)))
 	}
 
 	return results, nil

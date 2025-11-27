@@ -243,17 +243,24 @@ func (v *GherkinValidator) validateFeatureNaming(featureName string, lineNum int
 }
 
 // validateScenarioTags validates all tag-related rules on scenarios:
-// - Verification tags present
+// - Verification tags present (with inheritance from Feature and Rule)
 // - Tag format validation
 // - Skip reason validation
 // - Mutual exclusion constraints
 // - GxP tag requirements
 // - Unknown tag warnings
+//
+// Tag inheritance follows Gherkin semantics:
+// - Feature tags are inherited by all Rules and Scenarios
+// - Rule tags are inherited by all Scenarios within that Rule
 func (v *GherkinValidator) validateScenarioTags(lines []string) []ValidationError {
 	var errors []ValidationError
 
-	var pendingTags []string  // Tags collected before a scenario
-	var pendingTagLines []int // Line numbers for pending tags
+	// Inherited tags from Feature and Rule levels
+	var featureTags []string      // Tags on the Feature (inherited by all)
+	var currentRuleTags []string  // Tags on current Rule (inherited by scenarios in that rule)
+	var pendingTags []string      // Tags collected immediately before a scenario
+	var pendingTagLines []int     // Line numbers for pending tags
 
 	for i, line := range lines {
 		lineNum := i + 1
@@ -277,21 +284,37 @@ func (v *GherkinValidator) validateScenarioTags(lines []string) []ValidationErro
 			continue
 		}
 
-		// When we hit a Scenario, validate all pending tags
-		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
-			scenarioErrors := v.validateTagsForScenario(pendingTags, pendingTagLines, lineNum)
-			errors = append(errors, scenarioErrors...)
-
-			// Reset pending tags for next scenario
+		// When we hit Feature, capture pending tags as feature-level tags
+		if strings.HasPrefix(trimmed, "Feature:") {
+			featureTags = append([]string{}, pendingTags...)
 			pendingTags = []string{}
 			pendingTagLines = []int{}
 			continue
 		}
 
-		// When we hit other keywords (Feature, Rule, Background), clear pending tags
-		if strings.HasPrefix(trimmed, "Feature:") ||
-			strings.HasPrefix(trimmed, "Rule:") ||
-			strings.HasPrefix(trimmed, "Background:") {
+		// When we hit Rule, capture pending tags as rule-level tags
+		if strings.HasPrefix(trimmed, "Rule:") {
+			currentRuleTags = append([]string{}, pendingTags...)
+			pendingTags = []string{}
+			pendingTagLines = []int{}
+			continue
+		}
+
+		// When we hit a Scenario, validate with inherited tags
+		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
+			// Combine inherited tags: Feature + Rule + Scenario
+			allTags := v.combineInheritedTags(featureTags, currentRuleTags, pendingTags)
+			scenarioErrors := v.validateTagsForScenario(allTags, pendingTagLines, lineNum)
+			errors = append(errors, scenarioErrors...)
+
+			// Reset only scenario-level pending tags (keep inherited)
+			pendingTags = []string{}
+			pendingTagLines = []int{}
+			continue
+		}
+
+		// Background clears pending tags but doesn't affect inheritance
+		if strings.HasPrefix(trimmed, "Background:") {
 			pendingTags = []string{}
 			pendingTagLines = []int{}
 			continue
@@ -299,6 +322,35 @@ func (v *GherkinValidator) validateScenarioTags(lines []string) []ValidationErro
 	}
 
 	return errors
+}
+
+// combineInheritedTags merges tags from Feature, Rule, and Scenario levels
+// Returns a deduplicated list of all applicable tags
+func (v *GherkinValidator) combineInheritedTags(featureTags, ruleTags, scenarioTags []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+
+	// Add in order: Feature, Rule, Scenario (scenario tags take precedence visually)
+	for _, tag := range featureTags {
+		if !seen[tag] {
+			seen[tag] = true
+			result = append(result, tag)
+		}
+	}
+	for _, tag := range ruleTags {
+		if !seen[tag] {
+			seen[tag] = true
+			result = append(result, tag)
+		}
+	}
+	for _, tag := range scenarioTags {
+		if !seen[tag] {
+			seen[tag] = true
+			result = append(result, tag)
+		}
+	}
+
+	return result
 }
 
 // validateTagsForScenario validates all tags for a single scenario

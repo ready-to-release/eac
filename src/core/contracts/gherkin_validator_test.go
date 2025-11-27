@@ -622,6 +622,121 @@ func TestGherkinValidator_MultipleScenarios(t *testing.T) {
 	}
 }
 
+func TestGherkinValidator_TagInheritance(t *testing.T) {
+	contract := createTestContract()
+	tagContract := createTestTagContract()
+	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+
+	tests := []struct {
+		name                   string
+		input                  string
+		expectMissingTagErrors int
+	}{
+		{
+			name: "feature-level @ov inherited by all scenarios",
+			input: `@ov
+Feature: src-core_test
+
+  Rule: Test rule
+
+    Scenario: First scenario
+      Given something
+
+    Scenario: Second scenario
+      Given something else`,
+			expectMissingTagErrors: 0,
+		},
+		{
+			name: "rule-level @ov inherited by scenarios in that rule",
+			input: `Feature: src-core_test
+
+  @ov
+  Rule: Test rule with tag
+
+    Scenario: Inherits from rule
+      Given something
+
+  Rule: Another rule without tag
+
+    Scenario: No inheritance here
+      Given something`,
+			expectMissingTagErrors: 1, // Second scenario has no verification tag
+		},
+		{
+			name: "feature + rule + scenario tags all combine",
+			input: `@deps:docker
+Feature: src-core_test
+
+  @L1
+  Rule: Test rule
+
+    @ov
+    Scenario: Has all three levels of tags
+      Given something`,
+			expectMissingTagErrors: 0,
+		},
+		{
+			name: "feature-level verification applies to multiple rules",
+			input: `@ov
+Feature: src-core_test
+
+  Rule: First rule
+
+    Scenario: Inherits @ov
+      Given something
+
+  Rule: Second rule
+
+    Scenario: Also inherits @ov
+      Given something`,
+			expectMissingTagErrors: 0,
+		},
+		{
+			name: "scenario can override with additional tags",
+			input: `@ov
+Feature: src-core_test
+
+  Rule: Test rule
+
+    @L1 @deps:docker
+    Scenario: Has feature @ov plus own tags
+      Given something`,
+			expectMissingTagErrors: 0,
+		},
+		{
+			name: "no inheritance without feature or rule tags",
+			input: `Feature: src-core_test
+
+  Rule: Test rule
+
+    Scenario: No tags at all
+      Given something
+
+    Scenario: Another without tags
+      Given something`,
+			expectMissingTagErrors: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errors := validator.Validate(tt.input, nil)
+
+			missingTagErrors := 0
+			for _, err := range errors {
+				if err.Code == "MISSING_VERIFICATION_TAG" {
+					missingTagErrors++
+				}
+			}
+
+			if missingTagErrors != tt.expectMissingTagErrors {
+				t.Errorf("expected %d MISSING_VERIFICATION_TAG errors, got %d. Errors: %v",
+					tt.expectMissingTagErrors, missingTagErrors, errors)
+			}
+		})
+	}
+}
+
 func TestGherkinValidator_VerifyImplementation(t *testing.T) {
 	t.Run("with both contracts", func(t *testing.T) {
 		contract := createTestContract()
