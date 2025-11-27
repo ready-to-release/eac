@@ -42,15 +42,7 @@ func NewAcceptanceSuite() *TestSuite {
 		Description: "Stage 5-6 - L3 Installation, Operational, and Performance Verification",
 		Selectors: []TagSelector{
 			{
-				RequireTags: []string{"@iv"},
-				ExcludeTags: []string{"@L0", "@L1", "@L2"},
-			},
-			{
-				RequireTags: []string{"@ov"},
-				ExcludeTags: []string{"@L0", "@L1", "@L2"},
-			},
-			{
-				RequireTags: []string{"@pv"},
+				AnyOfTags:   []string{"@iv", "@ov", "@pv"},
 				ExcludeTags: []string{"@L0", "@L1", "@L2"},
 			},
 		},
