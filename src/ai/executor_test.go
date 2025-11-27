@@ -36,11 +36,11 @@ func TestExecutor_Execute(t *testing.T) {
 			wantErr:      false,
 		},
 		{
-			name:         "execute with no config defaults to claude-cli",
+			name:         "execute with no config returns error",
 			createConfig: false,
 			input:        "test prompt",
-			wantProvider: "claude-cli",
-			wantErr:      false,
+			wantErr:      true,
+			errContains:  ".r2r/eac/agent-config.yml not found",
 		},
 		{
 			name:         "execute with malformed config returns error",
@@ -49,7 +49,7 @@ func TestExecutor_Execute(t *testing.T) {
   - broken`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "failed to parse agent-config.yml",
+			errContains: "failed to parse .r2r/eac/agent-config.yml",
 		},
 		{
 			name:         "execute with malformed config suggests r2r init",
@@ -58,7 +58,7 @@ func TestExecutor_Execute(t *testing.T) {
   - broken`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "run: r2r agent init",
+			errContains: "run: r2r init",
 		},
 		{
 			name:         "execute with invalid provider returns error",
@@ -78,7 +78,7 @@ func TestExecutor_Execute(t *testing.T) {
   model: some-model`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "run: r2r agent init",
+			errContains: "run: r2r init",
 		},
 	}
 
@@ -92,7 +92,7 @@ func TestExecutor_Execute(t *testing.T) {
 
 			// Create temporary directory for config
 			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
+			configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
 
 			// Create config file if needed
 			if tt.createConfig {
@@ -180,7 +180,7 @@ func TestExecutor_ExecuteWithDebug(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			// Create config with claude-cli
-			configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
+			configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
 			configContent := fmt.Sprintf(`provider:
   name: claude-cli
   model: %s`, providers.DefaultClaudeCLIModel)
@@ -225,7 +225,7 @@ func TestExecutor_ExecuteWithDebugDefault(t *testing.T) {
 	// Verify debug is false by default
 	tmpDir := t.TempDir()
 
-	configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
 	configContent := `provider:
   name: mock
   model: test-model`
@@ -271,7 +271,7 @@ func TestExecutor_NoLogFilesCreated(t *testing.T) {
 	// Verify that NO log files are created in .r2r directory
 	tmpDir := t.TempDir()
 
-	configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
 	configContent := fmt.Sprintf(`provider:
   name: claude-cli
   model: %s`, providers.DefaultClaudeCLIModel)
@@ -319,7 +319,7 @@ func TestExecutor_ExecuteWithOptions(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config with claude-cli
-	configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
 	configContent := fmt.Sprintf(`provider:
   name: claude-cli
   model: %s`, providers.DefaultClaudeCLIModel)
@@ -458,7 +458,7 @@ func TestExecutor_WithMockProvider(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config with mock provider
-	configPath := filepath.Join(tmpDir, ".r2r", "agent-config.yml")
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
 	configContent := `provider:
   name: mock
   model: test-model`

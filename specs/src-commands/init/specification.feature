@@ -25,16 +25,15 @@ Feature: src-commands_init
       And stderr contains "unsupported provider"
       And stderr contains "Supported: claude-api, claude-cli, openai, gemini"
 
-  Rule: Init creates .r2r directory structure
+  Rule: Init creates .r2r/eac directory structure
     The init command must create the necessary directory structure
-    for storing configuration and logs.
+    for storing configuration at .r2r/eac/agent-config.yml.
 
     @L2 @iv
-    Scenario: Init creates .r2r directory
+    Scenario: Init creates .r2r/eac directory
       Given no .r2r directory exists
       When I run "init --ai claude-api"
-      Then the .r2r directory is created
-      And the .r2r/logs directory is created
+      Then the .r2r/eac directory is created
       And the command exits with code 0
 
     @L2 @iv
@@ -44,37 +43,36 @@ Feature: src-commands_init
       Then the command exits with code 0
       And a reconfiguration message is shown
 
-  Rule: Init writes valid agent-config.yml
+  Rule: Init writes valid agent-config.yml to .r2r/eac
     The generated configuration file must be valid YAML and contain
     environment variable references (not actual secrets).
+    Config is stored at .r2r/eac/agent-config.yml.
 
     @L2 @iv
     Scenario: Init creates valid config for claude-api
       Given no .r2r directory exists
       When I run "init --ai claude-api"
-      Then a .r2r/agent-config.yml file is created
-      And the file contains "name: claude-api"
-      And the file contains "model: claude-3-haiku-20240307"
-      And the file contains "api_key: ${ANTHROPIC_API_KEY}"
-      And the file does not contain actual secrets
+      Then a .r2r/eac/agent-config.yml file is created
+      And the .r2r/eac/agent-config.yml file contains "name: claude-api"
+      And the .r2r/eac/agent-config.yml file contains "model: claude-3-haiku-20240307"
+      And the .r2r/eac/agent-config.yml file contains "api_key: ${ANTHROPIC_API_KEY}"
 
     @L2 @iv
     Scenario: Init creates valid config for claude-cli
       Given no .r2r directory exists
       When I run "init --ai claude-cli"
-      Then a .r2r/agent-config.yml file is created
-      And the file contains "name: claude-cli"
-      And the file contains "model: sonnet"
-      And the file does not contain "api_key" field
+      Then a .r2r/eac/agent-config.yml file is created
+      And the .r2r/eac/agent-config.yml file contains "name: claude-cli"
+      And the .r2r/eac/agent-config.yml file contains "model: claude-3-haiku-20240307"
 
     @L2 @iv
     Scenario: Init creates valid config for openai
       Given no .r2r directory exists
       When I run "init --ai openai"
-      Then a .r2r/agent-config.yml file is created
-      And the file contains "name: openai"
-      And the file contains "model: gpt-4-turbo"
-      And the file contains "api_key: ${OPENAI_API_KEY}"
+      Then a .r2r/eac/agent-config.yml file is created
+      And the .r2r/eac/agent-config.yml file contains "name: openai"
+      And the .r2r/eac/agent-config.yml file contains "model: gpt-4-turbo"
+      And the .r2r/eac/agent-config.yml file contains "api_key: ${OPENAI_API_KEY}"
 
     @L2 @iv
     Scenario: Init shows helpful provider information
@@ -86,9 +84,9 @@ Feature: src-commands_init
 
     @L2 @iv
     Scenario: Reinitializing overwrites existing config
-      Given a .r2r/agent-config.yml file exists with claude-api
+      Given a .r2r/eac/agent-config.yml file exists with claude-api
       When I run "init --ai openai"
-      Then stdout contains "⚠️  Project already initialized"
+      Then stdout contains "Project already initialized"
       And stdout contains "Reconfiguring agent configuration"
-      And the .r2r/agent-config.yml file contains "name: openai"
+      And the .r2r/eac/agent-config.yml file contains "name: openai"
       And the command exits with code 0

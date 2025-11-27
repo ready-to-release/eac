@@ -64,7 +64,7 @@ func TestLoadConfig(t *testing.T) {
 			name:        "malformed YAML returns error with init instructions",
 			configYAML:  "invalid: yaml: content:",
 			wantErr:     true,
-			errContains: "run: r2r agent init",
+			errContains: "run: r2r init",
 		},
 		{
 			name: "missing provider name returns error with init instructions",
@@ -77,7 +77,7 @@ func TestLoadConfig(t *testing.T) {
 			name:        "empty config file returns error with init instructions",
 			configYAML:  "",
 			wantErr:     true,
-			errContains: "run: r2r agent init",
+			errContains: "run: r2r init",
 		},
 	}
 
@@ -134,11 +134,11 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 	}
 
 	// Verify error message contains init instructions
-	if !strings.Contains(err.Error(), "agent-config.yml not found") {
-		t.Errorf("LoadConfig() error = %v, want error containing 'agent-config.yml not found'", err)
+	if !strings.Contains(err.Error(), ".r2r/eac/agent-config.yml not found") {
+		t.Errorf("LoadConfig() error = %v, want error containing '.r2r/eac/agent-config.yml not found'", err)
 	}
-	if !strings.Contains(err.Error(), "run: r2r agent init") {
-		t.Errorf("LoadConfig() error = %v, want error containing 'run: r2r agent init'", err)
+	if !strings.Contains(err.Error(), "run: r2r init") {
+		t.Errorf("LoadConfig() error = %v, want error containing 'run: r2r init'", err)
 	}
 }
 
