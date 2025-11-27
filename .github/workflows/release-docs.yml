@@ -29,27 +29,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: src/commands/go.sum
+
       - name: Generate calver tag name
         id: tag
         run: |
-          # Generate calver tag: docs/YYYY.MM.DD or docs/YYYY.MM.DD.N for multiple releases per day
-          BASE_TAG="docs/$(date -u +%Y.%m.%d)"
-
-          # Configure git
+          # Configure git for tag operations
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Fetch all tags
           git fetch --tags --force
 
-          # Check if base tag exists, if so append incrementing suffix
-          TAG="$BASE_TAG"
-          SUFFIX=1
-          while git rev-parse "$TAG" >/dev/null 2>&1; do
-            TAG="${BASE_TAG}.${SUFFIX}"
-            SUFFIX=$((SUFFIX + 1))
-          done
-
+          # Generate calver tag (docs/YYYY.MM.DD or docs/YYYY.MM.DD.N)
+          TAG=$(go run ./src/commands release calver docs)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "✅ Will create tag after successful deployment: $TAG"
 
@@ -63,15 +57,6 @@ jobs:
           path: out/build/docs
           run-id: ${{ inputs.ci_run_id }}
           github-token: ${{ github.token }}
-
-      - name: Set up Go (no CI artifacts)
-        if: inputs.ci_run_id == ''
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
 
       - name: Build docs (no CI artifacts)
         if: inputs.ci_run_id == ''

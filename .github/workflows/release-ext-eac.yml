@@ -34,72 +34,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
+
       - name: Check CI status and find source image
         id: ci_check
         run: |
-          echo "Checking CI coverage for ext-eac module..."
-          COMMIT_SHA="${{ github.sha }}"
-          echo "Current commit SHA: $COMMIT_SHA"
-          echo "Repository: ${{ github.repository }}"
+          cd src/commands
+          go run . release check-ci \
+            --workflow ci-ext-eac.yaml \
+            --commit ${{ github.sha }} \
+            --timeout 300
 
-          MAX_WAIT_TIME=300  # 5 minutes
-          CHECK_INTERVAL=15
-          ELAPSED=0
-
-          while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
-            echo ""
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "Checking CI coverage (elapsed: ${ELAPSED}s)..."
-
-            # Check for ci-ext-eac.yaml run on this exact commit
-            CI_RUNS=$(gh run list \
-              --commit $COMMIT_SHA \
-              --workflow ci-ext-eac.yaml \
-              --json status,conclusion \
-              --limit 5)
-
-            CI_SUCCESS=$(echo "$CI_RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
-            CI_FAILED=$(echo "$CI_RUNS" | jq '[.[] | select(.status == "completed" and .conclusion == "failure")] | length')
-            CI_RUNNING=$(echo "$CI_RUNS" | jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
-
-            if [ "$CI_SUCCESS" -gt "0" ]; then
-              echo "✅ Found successful ci-ext-eac.yaml run for this exact commit"
-              echo "image_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
-              echo "Image will be sourced from: sha-${COMMIT_SHA:0:7}"
-              exit 0
-            fi
-
-            if [ "$CI_FAILED" -gt "0" ]; then
-              echo "❌ CI failed for this commit - cannot release"
-              exit 1
-            fi
-
-            if [ "$CI_RUNNING" -gt "0" ]; then
-              echo "⏳ ci-ext-eac.yaml is running for this commit - waiting..."
-              sleep $CHECK_INTERVAL
-              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-              continue
-            fi
-
-            # No CI run found for this commit
-            echo "⚠️  No ci-ext-eac.yaml run found for this commit"
-            echo ""
-            echo "A successful CI run is required before releasing."
-            echo "Please trigger CI first:"
-            echo "  gh workflow run ci-ext-eac.yaml --ref ${{ github.ref }}"
-            echo ""
-            echo "Waiting for CI to be triggered..."
-            sleep $CHECK_INTERVAL
-            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-
-          done
-
-          echo ""
-          echo "❌ Timeout: No successful ci-ext-eac.yaml run found for this commit"
-          echo ""
-          echo "Please trigger CI and wait for it to complete:"
-          echo "  gh workflow run ci-ext-eac.yaml --ref ${{ github.ref }}"
-          exit 1
+          # Set output for image source
+          echo "image_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ github.token }}
 
