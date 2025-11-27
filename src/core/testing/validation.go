@@ -141,13 +141,14 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 		errors = append(errors, fmt.Sprintf("test '%s' has production verification (@piv/@ppv) but is not @L4", test.TestName))
 	}
 
-	// Consistency: @iv or @pv SHOULD have @L3 (warn only)
+	// Consistency: @iv or @pv MUST have @L3
+	// Installation and Performance verification are PLTE-level tests (L3)
 	hasIV := contains(test.Tags, "@iv")
 	hasPV := contains(test.Tags, "@pv")
 	hasL3 := contains(test.Tags, "@L3")
 
 	if (hasIV || hasPV) && !hasL3 {
-		warnings = append(warnings, fmt.Sprintf("test '%s' has PLTE verification (@iv/@pv) but is not @L3", test.TestName))
+		errors = append(errors, fmt.Sprintf("test '%s' has PLTE verification (@iv/@pv) but is not @L3", test.TestName))
 	}
 
 	// Validate: @L0 should not have external runtime dependencies

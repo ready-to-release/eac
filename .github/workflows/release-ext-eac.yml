@@ -203,7 +203,38 @@ jobs:
             echo "✅ Created and pushed tag: $TAG_NAME"
           fi
 
-      - name: Summary
+      - name: Summary (failure)
+        if: failure()
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          echo "## ❌ Release Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Common Failure Causes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Possible Cause | Fix |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----------------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Check CI status | No successful CI run for this commit | Run CI first: \`gh workflow run ci-ext-eac.yaml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Extract version | Invalid semver format | Use format: x.y.z (e.g., 1.0.0) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Check existing image | Image version already exists | Bump version number |" >> $GITHUB_STEP_SUMMARY
+          echo "| Retag and push | Source image not found | Verify CI built image: \`sha-<commit>\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Retag and push | Registry authentication failed | Check GITHUB_TOKEN permissions |" >> $GITHUB_STEP_SUMMARY
+          echo "| Verify images | Image not accessible | Check GHCR package visibility settings |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Debug Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Input | \`${{ github.event.inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Expected Source | \`ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go run ./src/commands ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Summary (success)
+        if: success()
         run: |
           VERSION="${{ steps.extract_version.outputs.version }}"
           TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"

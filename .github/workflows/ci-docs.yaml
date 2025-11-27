@@ -42,10 +42,22 @@ jobs:
           path: out/build/docs/**
 
       - name: Build Summary
+        if: always()
         run: |
           echo "## Build: docs" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Documentation site built successfully with MkDocs." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Documentation site built successfully with MkDocs." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Documentation build failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
+            echo "- Invalid mkdocs.yml configuration" >> $GITHUB_STEP_SUMMARY
+            echo "- Missing markdown files referenced in nav" >> $GITHUB_STEP_SUMMARY
+            echo "- Broken internal links" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Build Output" >> $GITHUB_STEP_SUMMARY
@@ -88,10 +100,17 @@ jobs:
         run: go run . test docs
 
       - name: Test Summary
+        if: always()
         run: |
           echo "## Test: docs" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Documentation validation tests passed." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Documentation validation tests passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Documentation validation tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Checks Performed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

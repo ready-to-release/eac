@@ -53,7 +53,13 @@ jobs:
         run: |
           echo "## Build: src-cli-installers" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Installer scripts validated successfully." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Installer scripts validated successfully." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Installer script validation failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Scripts Validated" >> $GITHUB_STEP_SUMMARY
@@ -113,7 +119,13 @@ jobs:
         run: |
           echo "## Test: src-cli-installers (Linux)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Bash installer tests passed on Linux." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Bash installer tests passed on Linux." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Bash installer tests failed on Linux." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-src-cli-installers-linux >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
@@ -170,10 +182,17 @@ jobs:
 
       - name: Test Summary
         if: always()
+        shell: pwsh
         run: |
           echo "## Test: src-cli-installers (Windows)" >> $env:GITHUB_STEP_SUMMARY
           echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "✅ PowerShell installer tests passed on Windows." >> $env:GITHUB_STEP_SUMMARY
+          if ("${{ job.status }}" -eq "success") {
+            echo "✅ PowerShell installer tests passed on Windows." >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            echo "❌ PowerShell installer tests failed on Windows." >> $env:GITHUB_STEP_SUMMARY
+            echo "" >> $env:GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-src-cli-installers-windows >> $env:GITHUB_STEP_SUMMARY
+          }
           echo "" >> $env:GITHUB_STEP_SUMMARY
 
           echo "### Tests Executed" >> $env:GITHUB_STEP_SUMMARY

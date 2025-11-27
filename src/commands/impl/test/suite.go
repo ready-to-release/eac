@@ -480,7 +480,9 @@ func TestSuite() int {
 	numCPU := runtime.NumCPU()
 	var testParallelism int
 
-	// Build godog tag filter for suite (e.g., "@L0 || @L1 || @L2" for commit suite)
+	// Build godog tag filter for suite
+	// All tests must have explicit L-tags, so we can use simple tag matching
+	// e.g., commit suite: "@L0,@L1,@L2"
 	suiteTagFilter := suite.BuildGodogTagFilter()
 
 	if parallel {
@@ -1007,8 +1009,9 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Set format for console output
 		cmd.Env = append(cmd.Env, "GODOG_FORMAT=progress")
 
-		// Set suite tag filter (e.g., "@L0 || @L1 || @L2" for commit suite)
-		// This ensures godog only runs scenarios matching the suite
+		// Pass suite tag filter to godog for scenario filtering
+		// The filter uses exclusion-based logic that accounts for inference rules,
+		// so it works correctly even when scenarios lack explicit L-level tags
 		if suiteTagFilter != "" {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_SUITE_TAGS=%s", suiteTagFilter))
 			fmt.Fprintf(logFile, "🏷️  Suite tag filter: %s\n", suiteTagFilter)
