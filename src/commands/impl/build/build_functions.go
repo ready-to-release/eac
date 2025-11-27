@@ -74,7 +74,7 @@ var buildFunctions = map[string]BuildFunc{
 	"specifications":   buildSpecifications,
 	"definitions-type": buildDefinitionsType,
 	"markdown":         buildMarkdown,
-	"docker-image":   buildDockerImage,
+	"docker-image":     buildDockerImage,
 	// Infrastructure module types
 	"scripts":         buildScripts,
 	"scripts-sh":      buildScriptsSh,
@@ -437,7 +437,6 @@ func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...str
 	return 0
 }
 
-
 // buildContainers builds Docker images from Dockerfiles
 // Expects .Dockerfile in module root
 func buildContainers(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
@@ -488,7 +487,6 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 }
 
 // buildDockerImage builds a standalone Docker image from a Dockerfile
-// Used for CI/tooling containers like go-bvt-image
 func buildDockerImage(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
 

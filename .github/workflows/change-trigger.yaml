@@ -334,20 +334,10 @@ jobs:
               if [ -f "$WORKFLOW_FILE" ]; then
                 echo "🚀 Triggering workflow for $module..."
 
-                # Check if this is a src-* module that uses container image
-                if [[ "$module" == src-* ]]; then
-                  gh workflow run "ci-${module}.yaml" \
-                    --ref ${{ github.ref_name }} \
-                    -f ref=${{ github.ref }} \
-                    -f sha=${{ github.sha }} \
-                    -f ci_image="$CI_IMAGE"
-                else
-                  # Non-src modules (ext-eac, docs, go-bvt-image) don't use ci_image
-                  gh workflow run "ci-${module}.yaml" \
-                    --ref ${{ github.ref_name }} \
-                    -f ref=${{ github.ref }} \
-                    -f sha=${{ github.sha }}
-                fi
+                gh workflow run "ci-${module}.yaml" \
+                  --ref ${{ github.ref_name }} \
+                  -f ref=${{ github.ref }} \
+                  -f sha=${{ github.sha }}
 
                 if [ $? -ne 0 ]; then
                   echo "::error::Failed to trigger $module workflow"
