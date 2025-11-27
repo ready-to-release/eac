@@ -1,4 +1,4 @@
-@L1 @verification @unisolated
+@verification @unisolated
 Feature: repository_one-module-per-file
 
   As a repository maintainer

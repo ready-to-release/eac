@@ -31,6 +31,10 @@ func NewCommitSuite() *TestSuite {
 
 // NewAcceptanceSuite creates the acceptance test suite (L3 IV, OV, PV)
 // Only includes L3+ tests to avoid overlap with commit suite (L0-L2)
+//
+// NOTE: We use separate selectors for each verification type because godog doesn't
+// support mixing comma (OR) with && (AND) operators in a single expression.
+// The selectors are combined with comma (OR) at the top level.
 func NewAcceptanceSuite() *TestSuite {
 	return &TestSuite{
 		Moniker:     "acceptance",
@@ -38,7 +42,15 @@ func NewAcceptanceSuite() *TestSuite {
 		Description: "Stage 5-6 - L3 Installation, Operational, and Performance Verification",
 		Selectors: []TagSelector{
 			{
-				AnyOfTags:   []string{"@iv", "@ov", "@pv"},
+				RequireTags: []string{"@iv"},
+				ExcludeTags: []string{"@L0", "@L1", "@L2"},
+			},
+			{
+				RequireTags: []string{"@ov"},
+				ExcludeTags: []string{"@L0", "@L1", "@L2"},
+			},
+			{
+				RequireTags: []string{"@pv"},
 				ExcludeTags: []string{"@L0", "@L1", "@L2"},
 			},
 		},
@@ -111,21 +123,33 @@ func ListSuites() []string {
 //	ExcludeTags: ["@L0", "@L1", "@L2"]
 //	Output:      "@iv,@ov,@pv && ~@L0 && ~@L1 && ~@L2"
 //
+// BuildGodogTagFilterWithSkipTags builds a godog tag filter that includes skip tag exclusions.
+// This is the primary method that should be used instead of BuildGodogTagFilter.
+func (suite *TestSuite) BuildGodogTagFilterWithSkipTags(skipTags []string) string {
+	// Add skip tags to each selector's ExcludeTags
+	for i := range suite.Selectors {
+		suite.Selectors[i].ExcludeTags = append(suite.Selectors[i].ExcludeTags, skipTags...)
+	}
+
+	filter := suite.BuildGodogTagFilter()
+
+	// Remove skip tags from selectors to avoid mutation
+	for i := range suite.Selectors {
+		suite.Selectors[i].ExcludeTags = suite.Selectors[i].ExcludeTags[:len(suite.Selectors[i].ExcludeTags)-len(skipTags)]
+	}
+
+	return filter
+}
+
 func (suite *TestSuite) BuildGodogTagFilter() string {
 	var parts []string
 
 	for _, selector := range suite.Selectors {
 		var selectorParts []string
 
-		// AnyOfTags: join with comma (no space) for OR semantics
-		// Example: ["@L0", "@L1", "@L2"] → "@L0,@L1,@L2"
-		if len(selector.AnyOfTags) > 0 {
-			orExpr := strings.Join(selector.AnyOfTags, ",")
-			selectorParts = append(selectorParts, orExpr)
-		}
-
 		// RequireTags: each tag becomes an AND condition
 		// Example: ["@smoke", "@critical"] → added as separate "&& @smoke && @critical"
+		// NOTE: RequireTags are added FIRST to ensure they come before AnyOfTags
 		for _, tag := range selector.RequireTags {
 			selectorParts = append(selectorParts, tag)
 		}
@@ -134,6 +158,14 @@ func (suite *TestSuite) BuildGodogTagFilter() string {
 		// Example: ["@L0", "@L1"] → "&& ~@L0 && ~@L1"
 		for _, tag := range selector.ExcludeTags {
 			selectorParts = append(selectorParts, "~"+tag)
+		}
+
+		// AnyOfTags: join with comma (no space) for OR semantics
+		// Example: ["@L0", "@L1", "@L2"] → "@L0,@L1,@L2"
+		// NOTE: AnyOfTags is added LAST to avoid operator precedence issues
+		if len(selector.AnyOfTags) > 0 {
+			orExpr := strings.Join(selector.AnyOfTags, ",")
+			selectorParts = append(selectorParts, orExpr)
 		}
 
 		// Combine all parts with AND (&&)

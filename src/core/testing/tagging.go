@@ -193,3 +193,14 @@ func (c *TagContract) BuildGodogSkipTagFilter() string {
 	}
 	return filter
 }
+
+// GetSkipTagsForSuite returns skip tags as a slice suitable for adding to TestSuite selectors
+// Returns: []string{"@skip:wip", "@skip:broken", ...} plus "@pending"
+func (c *TagContract) GetSkipTagsForSuite() []string {
+	tags := make([]string, 0, len(c.SkipReasons)+1)
+	for _, reason := range c.SkipReasons {
+		tags = append(tags, fmt.Sprintf("@skip:%s", reason.Code))
+	}
+	tags = append(tags, "@pending")
+	return tags
+}

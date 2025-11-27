@@ -1,4 +1,4 @@
-@L1 @ov
+@ov
 Feature: src-cli_module-isolation
 
   As a repository maintainer

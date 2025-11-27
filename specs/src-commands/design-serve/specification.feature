@@ -1,4 +1,4 @@
-@deps:docker @env:isolated-test-project @ov
+@deps:docker @ov
 Feature: src-commands_design-serve
 
   Background:
