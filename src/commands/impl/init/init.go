@@ -2,7 +2,7 @@
 // Short: Initialize AI provider configuration for the project
 // Long: Initialize AI provider configuration for the project.
 // Long:
-// Long: Creates .r2r/agent-config.yml with the specified AI provider settings.
+// Long: Creates .r2r/eac/agent-config.yml with the specified AI provider settings.
 // Long: The configuration file is safe to commit as it only contains environment variable references.
 // Long:
 // Long: Available providers:
@@ -14,7 +14,9 @@
 // Long: Example:
 // Long:   init --ai claude-cli
 // Long:   init --ai claude-api
+// Long:   init --ai claude-cli --debug
 // Flag.ai: type=string, shorthand=a, usage=AI provider to configure, required=true, completion=claude-api,claude-cli,openai,gemini
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs to the 'out' directory for troubleshooting and analysis
 // HasSideEffects: true
 package init
 
@@ -24,13 +26,41 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/ai/providers"
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/git"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
 	registry.Register(Init)
+}
+
+// gitRepo holds the git repository instance for git operations.
+// In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
+var gitRepo git.GitRepository
+
+// getGitRepo returns the git repository, initializing it if needed.
+func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
+	if gitRepo != nil {
+		return gitRepo, nil
+	}
+	repo, err := git.Open(workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open git repository: %w", err)
+	}
+	return repo, nil
+}
+
+// SetGitRepo allows tests to inject a mock repository.
+func SetGitRepo(repo git.GitRepository) {
+	gitRepo = repo
+}
+
+// ResetGitRepo clears the repository for test cleanup.
+func ResetGitRepo() {
+	gitRepo = nil
 }
 
 // Intent: Initialize AI provider configuration for a project
@@ -40,7 +70,7 @@ func init() {
 // Easy to understand:
 //   - Clear sequential flow: parse args → validate → create dirs → write config
 //   - Helper functions with single responsibility (configureProvider, writeAgentConfig, etc.)
-//   - User feedback at each step
+//   - User feedback at each step via logger
 //   - Error messages indicate what went wrong and how to fix it
 //
 // Easy to change:
@@ -54,15 +84,19 @@ func init() {
 //   - Validation happens early (--ai flag required, provider supported)
 //   - Creates directories safely (no errors if already exist)
 //   - Config file is YAML - human readable and safe to commit
+//   - Logger integration for consistent output and debugging
 
 // Init initializes AI provider configuration
 func Init() int {
-	// Parse --ai flag
+	// Parse flags early to get debug mode and AI provider
 	aiProvider := ""
+	debug := false
 	for i := 2; i < len(os.Args); i++ {
 		if os.Args[i] == "--ai" && i+1 < len(os.Args) {
 			aiProvider = os.Args[i+1]
-			break
+			i++ // Skip the value
+		} else if os.Args[i] == "--debug" || os.Args[i] == "-d" {
+			debug = true
 		}
 	}
 
@@ -74,86 +108,80 @@ func Init() int {
 		fmt.Fprintf(os.Stderr, "\nExample:\n")
 		fmt.Fprintf(os.Stderr, "  init --ai claude-api\n")
 		fmt.Fprintf(os.Stderr, "  init --ai claude-cli   # Subscription access (no API costs)\n")
+		fmt.Fprintf(os.Stderr, "  init --ai claude-api --debug   # With debug logging\n")
 		return 1
 	}
 
-	// Get workspace root (where to create .r2r)
-	// In tests, this will be the isolated temp directory
+	// Get workspace root via repository API
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
-	// Get the source repository root (where prompt templates live)
-	// In tests, this should be the REAL repository, not the isolated temp dir
-	// We detect this by temporarily unsetting R2R_REPO_ROOT
-	sourceRepoRoot := workspaceRoot
-	if repoRoot := os.Getenv("R2R_REPO_ROOT"); repoRoot != "" {
-		// We're in a test - find the real repository root for copying templates
-		// Unset the override temporarily
-		os.Unsetenv("R2R_REPO_ROOT")
-		realRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			// If we can't find real root, fall back to workspace root
-			// (tests will fail but won't crash)
-			sourceRepoRoot = workspaceRoot
-		} else {
-			sourceRepoRoot = realRoot
-		}
-		// Restore the override
-		os.Setenv("R2R_REPO_ROOT", repoRoot)
+	// Initialize logger early so all code paths can use it
+	var logger *logging.Logger
+	if debug {
+		logger, err = logging.NewWithDebug("init", workspaceRoot)
+	} else {
+		logger, err = logging.NewDefault("init", workspaceRoot)
 	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing logger: %v\n", err)
+		return 1
+	}
+	defer logger.Sync()
 
-	r2rDir := filepath.Join(workspaceRoot, ".r2r")
-	configPath := filepath.Join(r2rDir, "agent-config.yml")
+	// Define paths
+	eacDir := filepath.Join(workspaceRoot, ".r2r", "eac")
+	configPath := filepath.Join(eacDir, "agent-config.yml")
 
 	// Check if already initialized
 	if _, err := os.Stat(configPath); err == nil {
-		fmt.Println("⚠️  Project already initialized")
-		fmt.Printf("   Config exists: %s\n", configPath)
-		fmt.Println("")
-		fmt.Println("🔄 Reconfiguring agent configuration...")
-		fmt.Println("")
+		logger.Warn("Project already initialized")
+		logger.Info(fmt.Sprintf("Config exists: %s", configPath))
+		logger.Info("")
+		logger.Info("Reconfiguring agent configuration...")
+		logger.Info("")
 	}
 
-	fmt.Println("🤖 Initialize Agent Configuration")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("")
+	logger.Info("🤖 Initialize Agent Configuration")
+	logger.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	logger.Info("")
 
-	// Create .r2r directory structure
-	fmt.Println("📁 Creating directory structure...")
-	if err := createDirectoryStructure(workspaceRoot, sourceRepoRoot); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating directory structure: %v\n", err)
+	// Create .r2r/eac directory structure
+	logger.Info("📁 Creating directory structure...")
+	if err := createDirectoryStructure(workspaceRoot); err != nil {
+		logger.Error(fmt.Sprintf("Error creating directory structure: %v", err))
 		return 1
 	}
-	fmt.Println("✅ Directory structure created")
+	logger.Info("✅ Directory structure created")
 
 	// Configure agent using --ai flag
-	config, err := configureAgent(aiProvider)
+	config, err := configureAgent(aiProvider, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error during configuration: %v\n", err)
+		logger.Error(fmt.Sprintf("Error during configuration: %v", err))
 		return 1
 	}
 
 	// Write configuration
 	if err := writeAgentConfig(configPath, config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing configuration: %v\n", err)
+		logger.Error(fmt.Sprintf("Error writing configuration: %v", err))
 		return 1
 	}
 
 	// Success message
-	fmt.Println("")
-	fmt.Println("✅ Configuration saved")
-	fmt.Printf("   File: %s\n", configPath)
-	fmt.Println("")
-	fmt.Println("ℹ️  Next steps:")
-	fmt.Println("   1. Commit the config file (safe - contains no secrets)")
+	logger.Info("")
+	logger.Info("✅ Configuration saved")
+	logger.Info(fmt.Sprintf("   File: %s", configPath))
+	logger.Info("")
+	logger.Info("ℹ️  Next steps:")
+	logger.Info("   1. Commit the config file (safe - contains no secrets)")
 	if config.envVarName != "" {
-		fmt.Printf("   2. Set environment variable: %s\n", config.envVarName)
+		logger.Info(fmt.Sprintf("   2. Set environment variable: %s", config.envVarName))
 	}
-	fmt.Println("   3. Run AI-powered commands (e.g., specs create, commit)")
-	fmt.Println("")
+	logger.Info("   3. Run AI-powered commands (e.g., specs create, commit)")
+	logger.Info("")
 
 	return 0
 }
@@ -167,7 +195,7 @@ type agentConfig struct {
 }
 
 // configureAgent configures the AI provider based on user input
-func configureAgent(aiProvider string) (*agentConfig, error) {
+func configureAgent(aiProvider string, logger *logging.Logger) (*agentConfig, error) {
 	config := &agentConfig{}
 
 	// Configure provider based on --ai flag
@@ -175,7 +203,7 @@ func configureAgent(aiProvider string) (*agentConfig, error) {
 		return nil, err
 	}
 
-	displayProviderInfo(config)
+	displayProviderInfo(config, logger)
 	return config, nil
 }
 
@@ -214,121 +242,46 @@ func configureProvider(config *agentConfig, provider string) error {
 }
 
 // displayProviderInfo shows information about the selected provider
-func displayProviderInfo(config *agentConfig) {
-	fmt.Println("")
-	fmt.Printf("✓ %s selected\n", config.providerName)
+func displayProviderInfo(config *agentConfig, logger *logging.Logger) {
+	logger.Info("")
+	logger.Info(fmt.Sprintf("✓ %s selected", config.providerName))
 	if config.envVarName != "" {
-		fmt.Printf("  Environment variable: %s\n", config.envVarName)
+		logger.Info(fmt.Sprintf("  Environment variable: %s", config.envVarName))
 	}
 
 	// Provider-specific API key instructions
 	switch config.providerName {
 	case "claude-api":
-		fmt.Println("  Get your API key at: https://claude.ai/settings/api")
-		fmt.Println("  Note: Personal or workspace-owned API keys both work")
-		fmt.Println("  Requires: ANTHROPIC_API_KEY environment variable")
+		logger.Info("  Get your API key at: https://claude.ai/settings/api")
+		logger.Info("  Note: Personal or workspace-owned API keys both work")
+		logger.Info("  Requires: ANTHROPIC_API_KEY environment variable")
 	case "claude-cli":
-		fmt.Println("  Uses Claude Pro subscription (no API key needed)")
-		fmt.Println("  Requires: `claude` CLI tool installed")
-		fmt.Println("  No API costs - uses subscription credits")
+		logger.Info("  Uses Claude Pro subscription (no API key needed)")
+		logger.Info("  Requires: `claude` CLI tool installed")
+		logger.Info("  No API costs - uses subscription credits")
 	case "openai":
-		fmt.Println("  Get your API key at: https://platform.openai.com/api-keys")
+		logger.Info("  Get your API key at: https://platform.openai.com/api-keys")
 	case "gemini":
-		fmt.Println("  Get your API key at: https://makersuite.google.com/app/apikey")
+		logger.Info("  Get your API key at: https://makersuite.google.com/app/apikey")
 	}
 
-	fmt.Println("")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("")
+	logger.Info("")
+	logger.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	logger.Info("")
 }
 
-// createDirectoryStructure creates the .r2r directory structure
-func createDirectoryStructure(workspaceRoot string, repoRoot string) error {
-	// Create .r2r directory
-	r2rDir := filepath.Join(workspaceRoot, ".r2r")
-	if err := os.MkdirAll(r2rDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .r2r directory: %w", err)
-	}
-
-	// Copy AI contracts to .r2r/contracts for user customization
-	if err := copyAIContracts(r2rDir, repoRoot); err != nil {
-		return fmt.Errorf("failed to copy AI contracts: %w", err)
+// createDirectoryStructure creates the .r2r/eac directory structure
+func createDirectoryStructure(workspaceRoot string) error {
+	// Create .r2r/eac directory
+	eacDir := filepath.Join(workspaceRoot, ".r2r", "eac")
+	if err := os.MkdirAll(eacDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
 	}
 
 	return nil
 }
 
-// copyAIContracts copies AI contracts from contracts/ai to .r2r/contracts for user customization
-func copyAIContracts(r2rDir string, repoRoot string) error {
-	// Source: contracts/ai/
-	sourceAIDir := filepath.Join(repoRoot, "contracts", "ai")
-
-	// Destination: .r2r/contracts/ai/
-	destAIDir := filepath.Join(r2rDir, "contracts", "ai")
-
-	// Copy entire contracts/ai directory structure
-	if err := copyDir(sourceAIDir, destAIDir); err != nil {
-		return fmt.Errorf("failed to copy contracts/ai directory: %w", err)
-	}
-
-	return nil
-}
-
-// copyDir recursively copies a directory
-func copyDir(src string, dst string) error {
-	// Get source directory info
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return fmt.Errorf("failed to stat source directory %s: %w", src, err)
-	}
-
-	// Create destination directory
-	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
-		return fmt.Errorf("failed to create destination directory %s: %w", dst, err)
-	}
-
-	// Read source directory entries
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return fmt.Errorf("failed to read directory %s: %w", src, err)
-	}
-
-	// Copy each entry
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			// Recursively copy subdirectory
-			if err := copyDir(srcPath, dstPath); err != nil {
-				return err
-			}
-		} else {
-			// Copy file
-			if err := copyFile(srcPath, dstPath); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	content, err := os.ReadFile(src)
-	if err != nil {
-		return fmt.Errorf("failed to read source file %s: %w", src, err)
-	}
-
-	if err := os.WriteFile(dst, content, 0644); err != nil {
-		return fmt.Errorf("failed to write destination file %s: %w", dst, err)
-	}
-
-	return nil
-}
-
-// writeAgentConfig writes the agent configuration to .r2r/agent-config.yml
+// writeAgentConfig writes the agent configuration to .r2r/eac/agent-config.yml
 func writeAgentConfig(configPath string, config *agentConfig) error {
 	var content strings.Builder
 

@@ -28,7 +28,6 @@ package ai
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 )
@@ -101,30 +100,14 @@ func (e *Executor) GetLastUsedProvider() Provider {
 	return e.lastUsedProvider
 }
 
-// loadConfig loads the agent configuration from .r2r directory.
-// Checks for personal override first (agent-config.personal.yml), then team config (agent-config.yml).
-// If no config file exists, defaults to Claude CLI provider.
+// loadConfig loads the agent configuration from .r2r/eac directory.
+// Only loads from agent-config.yml (no personal override support).
 func (e *Executor) loadConfig() (*Config, error) {
-	r2rDir := filepath.Join(e.workspaceRoot, ".r2r")
+	// Get the .r2r/eac directory
+	eacDir := filepath.Join(e.workspaceRoot, ".r2r", "eac")
 
-	// Check for personal override first (not committed to git)
-	personalPath := filepath.Join(r2rDir, "agent-config.personal.yml")
-	if _, err := os.Stat(personalPath); err == nil {
-		return LoadConfig(personalPath)
-	}
-
-	// Fall back to team config
-	configPath := filepath.Join(r2rDir, "agent-config.yml")
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Default to Claude CLI if no config file found
-		return &Config{
-			ProviderName: "claude-cli",
-			Model:        "", // Will use model from agent frontmatter
-			Endpoint:     "",
-			APIKey:       "",
-		}, nil
-	}
-
+	// Load config from .r2r/eac/agent-config.yml
+	configPath := filepath.Join(eacDir, "agent-config.yml")
 	return LoadConfig(configPath)
 }
 
@@ -133,19 +116,19 @@ func (e *Executor) loadConfig() (*Config, error) {
 func (e *Executor) LoadProvider(config *Config) (Provider, error) {
 	// Config is required
 	if config == nil {
-		return nil, fmt.Errorf("configuration is required\n\nPlease run: r2r agent init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+		return nil, fmt.Errorf("configuration is required\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
 	}
 
 	// Check if provider factory exists
 	factory, exists := e.providerFactories[config.ProviderName]
 	if !exists {
-		return nil, fmt.Errorf("unknown provider: %s\n\nPlease run: r2r agent init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", config.ProviderName)
+		return nil, fmt.Errorf("unknown provider: %s\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", config.ProviderName)
 	}
 
 	// Try to create provider
 	provider, err := factory(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create %s provider: %w\n\nPlease run: r2r agent init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", config.ProviderName, err)
+		return nil, fmt.Errorf("failed to create %s provider: %w\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", config.ProviderName, err)
 	}
 
 	return provider, nil

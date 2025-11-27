@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	design "github.com/ready-to-release/eac/src/commands/impl/design"
 )
 
 // Intent: Test design create command core functionality
@@ -159,62 +161,6 @@ func TestParseConfig(t *testing.T) {
 	}
 }
 
-func TestDetermineSourcePath(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	tests := []struct {
-		name       string
-		module     string
-		modulePath string
-		setupFunc  func(string) error
-		want       string
-	}{
-		{
-			name:       "standard location exists",
-			module:     "src-cli",
-			modulePath: "src-cli",
-			setupFunc: func(root string) error {
-				return os.MkdirAll(filepath.Join(root, "src", "src-cli"), 0755)
-			},
-			want: "src/src-cli",
-		},
-		{
-			name:       "custom location exists",
-			module:     "custom-module",
-			modulePath: "custom/path",
-			setupFunc: func(root string) error {
-				return os.MkdirAll(filepath.Join(root, "custom", "path"), 0755)
-			},
-			want: "custom/path",
-		},
-		{
-			name:       "neither exists - returns standard",
-			module:     "nonexistent",
-			modulePath: "nonexistent",
-			setupFunc:  func(root string) error { return nil },
-			want:       "src/nonexistent",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup directories
-			if err := tt.setupFunc(tmpDir); err != nil {
-				t.Fatal(err)
-			}
-
-			// Run function
-			got := determineSourcePath(tmpDir, tt.module, tt.modulePath)
-
-			// Normalize paths for comparison
-			want := filepath.Join(tmpDir, tt.want)
-			if got != want {
-				t.Errorf("determineSourcePath() = %q, want %q", got, want)
-			}
-		})
-	}
-}
-
 func TestValidateModuleExists(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -258,7 +204,8 @@ func TestValidateModuleExists(t *testing.T) {
 			}
 
 			// Run validation
-			err := validateModuleExists(config)
+			out := design.NewOutput(nil)
+			err := validateModuleExists(config, out)
 
 			// Check error
 			if (err != nil) != tt.wantErr {
