@@ -4,11 +4,19 @@
 package docker
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestExecuteMetadataCommand_Success(t *testing.T) {
@@ -818,4 +826,737 @@ func TestBuildEnvironmentVars(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ========== Unit Tests with MockDockerClient ==========
+
+func setupTestHostWithMock(t *testing.T) (*ContainerHost, *MockDockerClient) {
+	mockClient := new(MockDockerClient)
+	host := &ContainerHost{
+		client:  mockClient,
+		ctx:     context.Background(),
+		rootDir: "/test/root",
+	}
+	return host, mockClient
+}
+
+func TestValidateExtensions_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Save original extensions
+	origExtensions := conf.Global.Extensions
+	defer func() { conf.Global.Extensions = origExtensions }()
+
+	// Test with no extensions
+	conf.Global.Extensions = []conf.Extension{}
+	err := host.ValidateExtensions()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "does not contain any extensions")
+
+	// Test with extensions
+	conf.Global.Extensions = []conf.Extension{
+		{Name: "test-ext", Image: "test:latest"},
+	}
+	err = host.ValidateExtensions()
+	assert.NoError(t, err)
+}
+
+func TestFindExtension_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Save original extensions
+	origExtensions := conf.Global.Extensions
+	defer func() { conf.Global.Extensions = origExtensions }()
+
+	conf.Global.Extensions = []conf.Extension{
+		{Name: "ext1", Image: "img1:v1", ImagePullPolicy: "Always"},
+		{Name: "ext2", Image: "img2:v2", LoadLocal: true},
+	}
+
+	// Test finding existing extension
+	ext, err := host.FindExtension("ext1")
+	assert.NoError(t, err)
+	assert.NotNil(t, ext)
+	assert.Equal(t, "ext1", ext.Name)
+	assert.Equal(t, "img1:v1", ext.Image)
+	assert.Equal(t, "Always", ext.ImagePullPolicy)
+
+	// Test finding extension with default policy
+	ext, err = host.FindExtension("ext2")
+	assert.NoError(t, err)
+	assert.NotNil(t, ext)
+	assert.Equal(t, "ext2", ext.Name)
+	assert.True(t, ext.LoadLocal)
+	assert.Equal(t, "AutoDetect", ext.ImagePullPolicy) // Default
+
+	// Test not finding extension
+	ext, err = host.FindExtension("nonexistent")
+	assert.Error(t, err)
+	assert.Nil(t, ext)
+	assert.Contains(t, err.Error(), "not found in config")
+}
+
+func TestInspectImage_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test successful inspection
+	expectedInspect := image.InspectResponse{
+		ID:          "sha256:abc123",
+		RepoDigests: []string{"test@sha256:def456"},
+	}
+	mockClient.On("ImageInspect", mock.Anything, "test:latest").
+		Return(expectedInspect, nil).Once()
+
+	result, err := host.InspectImage("test:latest")
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "sha256:abc123", result.ID)
+
+	// Test inspection failure
+	mockClient.On("ImageInspect", mock.Anything, "nonexistent:latest").
+		Return(image.InspectResponse{}, fmt.Errorf("not found")).Once()
+
+	result, err = host.InspectImage("nonexistent:latest")
+	assert.Error(t, err)
+	assert.Nil(t, result)
+}
+
+func TestGetImageDigest_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test with RepoDigests available (pulled image)
+	mockClient.On("ImageInspect", mock.Anything, "pulled:latest").
+		Return(image.InspectResponse{
+			ID:          "sha256:abc123",
+			RepoDigests: []string{"pulled@sha256:def456"},
+		}, nil).Once()
+
+	digest, err := host.GetImageDigest("pulled:latest")
+	assert.NoError(t, err)
+	assert.Equal(t, "pulled@sha256:def456", digest)
+
+	// Test with no RepoDigests (local build)
+	mockClient.On("ImageInspect", mock.Anything, "local:latest").
+		Return(image.InspectResponse{
+			ID:          "sha256:local123",
+			RepoDigests: []string{},
+		}, nil).Once()
+
+	digest, err = host.GetImageDigest("local:latest")
+	assert.NoError(t, err)
+	assert.Equal(t, "sha256:local123", digest)
+
+	// Test inspection error
+	mockClient.On("ImageInspect", mock.Anything, "error:latest").
+		Return(image.InspectResponse{}, fmt.Errorf("not found")).Once()
+
+	digest, err = host.GetImageDigest("error:latest")
+	assert.Error(t, err)
+	assert.Empty(t, digest)
+}
+
+func TestCreateContainerConfig_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	ext := &ExtensionConfig{
+		Name:  "test-ext",
+		Image: "test:latest",
+	}
+
+	imageInspect := &image.InspectResponse{
+		Config: &container.Config{
+			Entrypoint: []string{},
+		},
+	}
+
+	// Test ModeInteractive
+	config := host.CreateContainerConfig(ext, ModeInteractive, []string{}, imageInspect)
+	assert.True(t, config.Tty)
+	assert.True(t, config.OpenStdin)
+	assert.Equal(t, 1, len(config.Cmd))
+	assert.Equal(t, "/bin/sh", config.Cmd[0])
+
+	// Test ModeRun with no args (interactive)
+	config = host.CreateContainerConfig(ext, ModeRun, []string{}, imageInspect)
+	assert.True(t, config.Tty)
+	assert.True(t, config.OpenStdin)
+	assert.Empty(t, config.Cmd)
+
+	// Test ModeRun with args (command mode)
+	config = host.CreateContainerConfig(ext, ModeRun, []string{"echo", "hello"}, imageInspect)
+	assert.True(t, config.Tty)
+	assert.False(t, config.OpenStdin)
+	assert.Len(t, config.Cmd, 2)
+	assert.Equal(t, "echo", config.Cmd[0])
+	assert.Equal(t, "hello", config.Cmd[1])
+	assert.Equal(t, "/var/task", config.WorkingDir)
+
+	// Test with entrypoint (should not set WorkingDir)
+	imageInspectWithEntrypoint := &image.InspectResponse{
+		Config: &container.Config{
+			Entrypoint: []string{"/app/entrypoint.sh"},
+		},
+	}
+	config = host.CreateContainerConfig(ext, ModeRun, []string{}, imageInspectWithEntrypoint)
+	assert.Empty(t, config.WorkingDir)
+}
+
+func TestCreateHostConfig_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	ext := &ExtensionConfig{
+		Name:  "test-ext",
+		Image: "test:latest",
+	}
+
+	// Test without cache volumes
+	hostConfig := host.CreateHostConfig(ext, nil)
+	assert.True(t, hostConfig.AutoRemove)
+	assert.Len(t, hostConfig.Mounts, 2) // Root dir + Docker socket
+
+	// Test with cache volumes
+	volumeRequests := []cache.VolumeRequest{
+		{Type: "cache", Name: "npm-cache", Target: "/root/.npm"},
+		{Type: "cache", Name: "go-cache", Target: "/go/pkg"},
+	}
+	hostConfig = host.CreateHostConfig(ext, volumeRequests)
+	assert.Len(t, hostConfig.Mounts, 4) // Root dir + Docker socket + 2 cache volumes
+}
+
+func TestCreateContainer_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	containerConfig := &container.Config{
+		Image: "test:latest",
+	}
+	hostConfig := &container.HostConfig{
+		AutoRemove: true,
+	}
+
+	// Test successful creation
+	mockClient.On("ContainerCreate", mock.Anything, containerConfig, hostConfig, mock.Anything, mock.Anything, "").
+		Return(container.CreateResponse{ID: "container123"}, nil).Once()
+
+	containerID, err := host.CreateContainer(containerConfig, hostConfig)
+	assert.NoError(t, err)
+	assert.Equal(t, "container123", containerID)
+
+	// Test creation failure
+	mockClient.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, "").
+		Return(container.CreateResponse{}, fmt.Errorf("creation failed")).Once()
+
+	containerID, err = host.CreateContainer(containerConfig, hostConfig)
+	assert.Error(t, err)
+	assert.Empty(t, containerID)
+}
+
+func TestStartContainer_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test successful start with TTY resize
+	mockClient.On("ContainerStart", mock.Anything, "container123", mock.Anything).
+		Return(nil).Once()
+	mockClient.On("ContainerInspect", mock.Anything, "container123").
+		Return(types.ContainerJSON{
+			Config: &container.Config{Tty: true},
+		}, nil).Once()
+	mockClient.On("ContainerResize", mock.Anything, "container123", mock.Anything).
+		Return(nil).Once()
+
+	err := host.StartContainer("container123")
+	assert.NoError(t, err)
+
+	// Test start failure
+	mockClient.On("ContainerStart", mock.Anything, "container456", mock.Anything).
+		Return(fmt.Errorf("start failed")).Once()
+
+	err = host.StartContainer("container456")
+	assert.Error(t, err)
+}
+
+func TestAttachToContainer_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test with OpenStdin=true
+	mockClient.On("ContainerInspect", mock.Anything, "container123").
+		Return(types.ContainerJSON{
+			Config: &container.Config{OpenStdin: true},
+		}, nil).Once()
+	mockClient.On("ContainerAttach", mock.Anything, "container123", mock.MatchedBy(func(opts container.AttachOptions) bool {
+		return opts.Stdin == true
+	})).Return(types.HijackedResponse{}, nil).Once()
+
+	resp, err := host.AttachToContainer("container123")
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	// Test with OpenStdin=false
+	mockClient.On("ContainerInspect", mock.Anything, "container456").
+		Return(types.ContainerJSON{
+			Config: &container.Config{OpenStdin: false},
+		}, nil).Once()
+	mockClient.On("ContainerAttach", mock.Anything, "container456", mock.MatchedBy(func(opts container.AttachOptions) bool {
+		return opts.Stdin == false
+	})).Return(types.HijackedResponse{}, nil).Once()
+
+	resp, err = host.AttachToContainer("container456")
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	// Test inspection error
+	mockClient.On("ContainerInspect", mock.Anything, "error").
+		Return(types.ContainerJSON{}, fmt.Errorf("inspect failed")).Once()
+
+	resp, err = host.AttachToContainer("error")
+	assert.Error(t, err)
+}
+
+func TestWaitForContainer_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	waitCh := make(chan container.WaitResponse, 1)
+	errCh := make(chan error, 1)
+	waitCh <- container.WaitResponse{StatusCode: 0}
+
+	mockClient.On("ContainerWait", mock.Anything, "container123", container.WaitConditionNotRunning).
+		Return((<-chan container.WaitResponse)(waitCh), (<-chan error)(errCh))
+
+	statusCh, errorCh := host.WaitForContainer("container123")
+	assert.NotNil(t, statusCh)
+	assert.NotNil(t, errorCh)
+}
+
+func TestStopContainer_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test successful stop
+	mockClient.On("ContainerStop", mock.Anything, "container123", mock.Anything).
+		Return(nil).Once()
+
+	err := host.StopContainer("container123")
+	assert.NoError(t, err)
+
+	// Test stop failure
+	mockClient.On("ContainerStop", mock.Anything, "container456", mock.Anything).
+		Return(fmt.Errorf("stop failed")).Once()
+
+	err = host.StopContainer("container456")
+	assert.Error(t, err)
+}
+
+func TestStopContainerWithContext_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	ctx := context.Background()
+
+	// Test successful stop
+	mockClient.On("ContainerStop", ctx, "container123", mock.Anything).
+		Return(nil).Once()
+
+	err := host.StopContainerWithContext(ctx, "container123")
+	assert.NoError(t, err)
+
+	// Test stop failure
+	mockClient.On("ContainerStop", ctx, "container456", mock.Anything).
+		Return(fmt.Errorf("stop failed")).Once()
+
+	err = host.StopContainerWithContext(ctx, "container456")
+	assert.Error(t, err)
+}
+
+func TestGetContainerSnapshot_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test successful listing
+	mockClient.On("ContainerList", mock.Anything, mock.Anything).
+		Return([]types.Container{
+			{ID: "container1", Image: "image1:latest"},
+			{ID: "container2", Image: "image2:latest"},
+		}, nil).Once()
+
+	snapshot, err := host.GetContainerSnapshot()
+	assert.NoError(t, err)
+	assert.Len(t, snapshot, 2)
+	assert.Equal(t, "image1:latest", snapshot["container1"])
+	assert.Equal(t, "image2:latest", snapshot["container2"])
+
+	// Test listing error
+	mockClient.On("ContainerList", mock.Anything, mock.Anything).
+		Return(nil, fmt.Errorf("list failed")).Once()
+
+	snapshot, err = host.GetContainerSnapshot()
+	assert.Error(t, err)
+	assert.Nil(t, snapshot)
+}
+
+func TestWarnAboutNewContainers_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	beforeSnapshot := map[string]string{
+		"existing1234567890ab": "image1:latest",
+	}
+
+	afterSnapshot := map[string]string{
+		"existing1234567890ab": "image1:latest",
+		"new1234567890abcdef": "child:latest",
+		"new2234567890abcdef": "extension:latest", // Should be skipped (extension image)
+		"new3234567890abcdef": "expected:latest",   // Should be skipped (expected)
+	}
+
+	// Test without auto-remove (just warnings, no mock expectations needed)
+	host.WarnAboutNewContainers(beforeSnapshot, afterSnapshot, "extension:latest", false, []string{"expected:latest"})
+
+	// Test with auto-remove
+	mockClient.On("ContainerStop", mock.Anything, "new1234567890abcdef", mock.Anything).
+		Return(nil).Once()
+	mockClient.On("ContainerRemove", mock.Anything, "new1234567890abcdef", mock.Anything).
+		Return(nil).Once()
+
+	host.WarnAboutNewContainers(beforeSnapshot, afterSnapshot, "extension:latest", true, []string{"expected:latest"})
+}
+
+func TestEnsureImageExists_Never_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test with local image
+	mockClient.On("ImageInspect", mock.Anything, "test:latest").
+		Return(image.InspectResponse{ID: "sha256:abc123"}, nil).Once()
+
+	err := host.EnsureImageExists("test:latest", "Never", false)
+	assert.NoError(t, err)
+
+	// Test without local image
+	mockClient.On("ImageInspect", mock.Anything, "missing:latest").
+		Return(image.InspectResponse{}, fmt.Errorf("not found")).Once()
+
+	err = host.EnsureImageExists("missing:latest", "Never", false)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found locally")
+}
+
+func TestEnsureImageExists_IfNotPresent_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test with local image (should not pull)
+	mockClient.On("ImageInspect", mock.Anything, "test:latest").
+		Return(image.InspectResponse{ID: "sha256:abc123"}, nil).Once()
+
+	err := host.EnsureImageExists("test:latest", "IfNotPresent", false)
+	assert.NoError(t, err)
+}
+
+func TestEnsureImageExists_AutoDetect_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Test with loadLocal=true (should use local image)
+	mockClient.On("ImageInspect", mock.Anything, "test:latest").
+		Return(image.InspectResponse{
+			ID:          "sha256:abc123",
+			RepoDigests: []string{},
+		}, nil).Once()
+
+	err := host.EnsureImageExists("test:latest", "AutoDetect", true)
+	assert.NoError(t, err)
+
+	// Test with version tag (should use local if present)
+	mockClient.On("ImageInspect", mock.Anything, "test:v1.0.0").
+		Return(image.InspectResponse{
+			ID:          "sha256:def456",
+			RepoDigests: []string{"test@sha256:def456"},
+		}, nil).Once()
+
+	err = host.EnsureImageExists("test:v1.0.0", "AutoDetect", false)
+	assert.NoError(t, err)
+}
+
+func TestClose_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	mockClient.On("Close").Return(nil).Once()
+
+	err := host.Close()
+	assert.NoError(t, err)
+}
+
+func TestGetRootDir_Unit(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	assert.Equal(t, "/test/root", host.GetRootDir())
+}
+
+func TestCleanupContainers_StoppedOnly(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Mock container list with mix of running and stopped
+	mockClient.On("ContainerList", mock.Anything, mock.MatchedBy(func(opts container.ListOptions) bool {
+		return opts.All == true
+	})).Return([]types.Container{
+		{
+			ID:      "stopped123456789",
+			Names:   []string{"/stopped-container"},
+			State:   "exited",
+			Image:   "test:latest",
+			Created: time.Now().Add(-1 * time.Hour).Unix(),
+		},
+		{
+			ID:      "running123456789",
+			Names:   []string{"/running-container"},
+			State:   "running",
+			Image:   "test:latest",
+			Created: time.Now().Add(-1 * time.Hour).Unix(),
+		},
+	}, nil).Once()
+
+	// Mock inspect and remove for stopped container only
+	mockClient.On("ContainerInspect", mock.Anything, "stopped123456789").
+		Return(types.ContainerJSON{
+			ContainerJSONBase: &types.ContainerJSONBase{
+				SizeRw: func() *int64 { s := int64(1024); return &s }(),
+			},
+		}, nil).Once()
+
+	mockClient.On("ContainerRemove", mock.Anything, "stopped123456789", mock.MatchedBy(func(opts container.RemoveOptions) bool {
+		return opts.RemoveVolumes == true && opts.Force == false
+	})).Return(nil).Once()
+
+	opts := ContainerCleanupOptions{
+		OnlyExtensions: false,
+		IncludeRunning: false,
+		DryRun:         false,
+	}
+
+	result, err := host.CleanupContainers(opts)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, result.ContainersRemoved)
+	assert.Equal(t, int64(1024), result.SpaceReclaimed)
+	assert.Empty(t, result.Errors)
+}
+
+func TestCleanupContainers_ExtensionsOnly(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Mock container list with extension and non-extension containers
+	mockClient.On("ContainerList", mock.Anything, mock.MatchedBy(func(opts container.ListOptions) bool {
+		return opts.All == true
+	})).Return([]types.Container{
+		{
+			ID:      "ext123456789abcd",
+			Names:   []string{"/r2r-extension-pwsh"},
+			State:   "exited",
+			Image:   "extension:latest",
+			Created: time.Now().Add(-1 * time.Hour).Unix(),
+		},
+		{
+			ID:      "other12345678abc",
+			Names:   []string{"/other-container"},
+			State:   "exited",
+			Image:   "other:latest",
+			Created: time.Now().Add(-1 * time.Hour).Unix(),
+		},
+	}, nil).Once()
+
+	// Mock inspect and remove for extension container only
+	mockClient.On("ContainerInspect", mock.Anything, "ext123456789abcd").
+		Return(types.ContainerJSON{
+			ContainerJSONBase: &types.ContainerJSONBase{
+				SizeRw: func() *int64 { s := int64(2048); return &s }(),
+			},
+		}, nil).Once()
+
+	mockClient.On("ContainerRemove", mock.Anything, "ext123456789abcd", mock.Anything).
+		Return(nil).Once()
+
+	opts := ContainerCleanupOptions{
+		OnlyExtensions: true,
+		IncludeRunning: false,
+		DryRun:         false,
+	}
+
+	result, err := host.CleanupContainers(opts)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, result.ContainersRemoved)
+	assert.Equal(t, int64(2048), result.SpaceReclaimed)
+	assert.Empty(t, result.Errors)
+}
+
+func TestCleanupContainers_OlderThan(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	now := time.Now()
+
+	// Mock container list with containers of different ages
+	mockClient.On("ContainerList", mock.Anything, mock.MatchedBy(func(opts container.ListOptions) bool {
+		return opts.All == true
+	})).Return([]types.Container{
+		{
+			ID:      "old123456789abcd",
+			Names:   []string{"/old-container"},
+			State:   "exited",
+			Image:   "test:latest",
+			Created: now.Add(-48 * time.Hour).Unix(), // 2 days old
+		},
+		{
+			ID:      "new123456789abcd",
+			Names:   []string{"/new-container"},
+			State:   "exited",
+			Image:   "test:latest",
+			Created: now.Add(-12 * time.Hour).Unix(), // 12 hours old
+		},
+	}, nil).Once()
+
+	// Mock inspect and remove for old container only
+	mockClient.On("ContainerInspect", mock.Anything, "old123456789abcd").
+		Return(types.ContainerJSON{
+			ContainerJSONBase: &types.ContainerJSONBase{
+				SizeRw: func() *int64 { s := int64(4096); return &s }(),
+			},
+		}, nil).Once()
+
+	mockClient.On("ContainerRemove", mock.Anything, "old123456789abcd", mock.Anything).
+		Return(nil).Once()
+
+	opts := ContainerCleanupOptions{
+		OnlyExtensions: false,
+		IncludeRunning: false,
+		OlderThan:      24 * time.Hour, // Only containers older than 1 day
+		DryRun:         false,
+	}
+
+	result, err := host.CleanupContainers(opts)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, result.ContainersRemoved)
+	assert.Equal(t, int64(4096), result.SpaceReclaimed)
+	assert.Empty(t, result.Errors)
+}
+
+func TestCleanupContainers_DryRun(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Mock container list
+	mockClient.On("ContainerList", mock.Anything, mock.MatchedBy(func(opts container.ListOptions) bool {
+		return opts.All == true
+	})).Return([]types.Container{
+		{
+			ID:      "stopped123456789",
+			Names:   []string{"/stopped-container"},
+			State:   "exited",
+			Image:   "test:latest",
+			Created: time.Now().Add(-1 * time.Hour).Unix(),
+		},
+	}, nil).Once()
+
+	// Should not call inspect or remove in dry run mode
+
+	opts := ContainerCleanupOptions{
+		OnlyExtensions: false,
+		IncludeRunning: false,
+		DryRun:         true,
+	}
+
+	result, err := host.CleanupContainers(opts)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, result.ContainersRemoved)
+	assert.Equal(t, int64(0), result.SpaceReclaimed) // No space reclaimed in dry run
+	assert.Empty(t, result.Errors)
+}
+
+func TestCleanupContainers_WithErrors(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	// Mock container list
+	mockClient.On("ContainerList", mock.Anything, mock.MatchedBy(func(opts container.ListOptions) bool {
+		return opts.All == true
+	})).Return([]types.Container{
+		{
+			ID:      "failed123456789a",
+			Names:   []string{"/failed-container"},
+			State:   "exited",
+			Image:   "test:latest",
+			Created: time.Now().Add(-1 * time.Hour).Unix(),
+		},
+	}, nil).Once()
+
+	// Mock inspect success but remove failure
+	mockClient.On("ContainerInspect", mock.Anything, "failed123456789a").
+		Return(types.ContainerJSON{
+			ContainerJSONBase: &types.ContainerJSONBase{
+				SizeRw: func() *int64 { s := int64(512); return &s }(),
+			},
+		}, nil).Once()
+
+	mockClient.On("ContainerRemove", mock.Anything, "failed123456789a", mock.Anything).
+		Return(fmt.Errorf("removal failed")).Once()
+
+	opts := ContainerCleanupOptions{
+		OnlyExtensions: false,
+		IncludeRunning: false,
+		DryRun:         false,
+	}
+
+	result, err := host.CleanupContainers(opts)
+	assert.NoError(t, err) // Function itself should not error
+	assert.Equal(t, 0, result.ContainersRemoved)
+	assert.Equal(t, int64(0), result.SpaceReclaimed)
+	assert.Len(t, result.Errors, 1)
+	assert.Contains(t, result.Errors[0].Error(), "removal failed")
+}
+
+func TestCleanupStoppedContainers_Convenience(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	mockClient.On("ContainerList", mock.Anything, mock.Anything).
+		Return([]types.Container{}, nil).Once()
+
+	result, err := host.CleanupStoppedContainers(false)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, result.ContainersRemoved)
+}
+
+func TestCleanupExtensionContainers_Convenience(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	mockClient.On("ContainerList", mock.Anything, mock.Anything).
+		Return([]types.Container{}, nil).Once()
+
+	result, err := host.CleanupExtensionContainers(false, false)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, result.ContainersRemoved)
+}
+
+func TestCleanupOldContainers_Convenience(t *testing.T) {
+	host, mockClient := setupTestHostWithMock(t)
+	defer mockClient.AssertExpectations(t)
+
+	mockClient.On("ContainerList", mock.Anything, mock.Anything).
+		Return([]types.Container{}, nil).Once()
+
+	result, err := host.CleanupOldContainers(24*time.Hour, false)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, result.ContainersRemoved)
 }

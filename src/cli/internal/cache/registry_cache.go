@@ -19,10 +19,11 @@ type RegistryCache struct {
 
 // ExtensionCache holds cached data for a single extension
 type ExtensionCache struct {
-	Name      string    `json:"name"`
-	LatestSHA string    `json:"latest_sha"`  // e.g., "sha-84f1a65"
-	Tags      []string  `json:"tags"`        // All available tags
-	UpdatedAt time.Time `json:"updated_at"`
+	Name         string            `json:"name"`
+	LatestSHA    string            `json:"latest_sha"`  // e.g., "sha-84f1a65"
+	Tags         []string          `json:"tags"`        // All available tags
+	ImageDigests map[string]string `json:"image_digests,omitempty"` // tag -> digest mapping for fast lookup
+	UpdatedAt    time.Time         `json:"updated_at"`
 }
 
 const (
@@ -163,4 +164,50 @@ func (c *RegistryCache) GetLatestSHA(extensionName string) (string, bool) {
 func (c *RegistryCache) Clear() {
 	c.Extensions = make(map[string]*ExtensionCache)
 	c.UpdatedAt = time.Time{}
+}
+
+// GetImageDigest returns the cached digest for a specific image tag
+func (c *RegistryCache) GetImageDigest(extensionName, imageTag string) (string, bool) {
+	if ext, ok := c.Extensions[extensionName]; ok && ext.ImageDigests != nil {
+		digest, found := ext.ImageDigests[imageTag]
+		return digest, found
+	}
+	return "", false
+}
+
+// SetImageDigest updates the cached digest for a specific image tag
+func (c *RegistryCache) SetImageDigest(extensionName, imageTag, digest string) {
+	if c.Extensions == nil {
+		c.Extensions = make(map[string]*ExtensionCache)
+	}
+
+	ext, ok := c.Extensions[extensionName]
+	if !ok {
+		ext = &ExtensionCache{
+			Name:         extensionName,
+			ImageDigests: make(map[string]string),
+			UpdatedAt:    time.Now(),
+		}
+		c.Extensions[extensionName] = ext
+	}
+
+	if ext.ImageDigests == nil {
+		ext.ImageDigests = make(map[string]string)
+	}
+
+	ext.ImageDigests[imageTag] = digest
+	ext.UpdatedAt = time.Now()
+	c.UpdatedAt = time.Now()
+}
+
+// DigestChanged checks if the cached digest differs from the current digest
+func (c *RegistryCache) DigestChanged(extensionName, imageTag, currentDigest string) bool {
+	cachedDigest, found := c.GetImageDigest(extensionName, imageTag)
+	if !found {
+		// No cached digest, consider it changed (needs pull)
+		return true
+	}
+
+	// Digests are different if they don't match
+	return cachedDigest != currentDigest
 }
