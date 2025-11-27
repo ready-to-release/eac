@@ -171,6 +171,76 @@ jobs:
             echo "has-changes=false" >> $GITHUB_OUTPUT
           fi
 
+          # Generate step summary
+          echo "## 🔍 Change Detection Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$TRIGGER_ALL" = "true" ]; then
+            echo "**Mode**: Manual trigger-all override" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All CI workflows will be triggered:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$WORKFLOW_MODULES" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          elif [ -z "$WORKFLOW_MODULES" ]; then
+            echo "**Result**: No modules require rebuilding" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Base SHA | \`$BASE_SHA\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Files Changed | $CHANGED_FILE_COUNT |" >> $GITHUB_STEP_SUMMARY
+            echo "| Modules Affected | None with CI workflows |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            if [ "$IS_BOOTSTRAP" = "true" ]; then
+              echo "| Mode | Bootstrap (no previous CI) |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Base SHA | \`$BASE_SHA\` |" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "| Files Changed | $CHANGED_FILE_COUNT |" >> $GITHUB_STEP_SUMMARY
+            echo "| Directly Changed | \`$DIRECTLY_CHANGED\` |" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$INVALIDATED" ]; then
+              echo "| Cache Invalidated | \`$INVALIDATED\` |" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "| **CI Workflows to Run** | \`$WORKFLOW_MODULES\` |" >> $GITHUB_STEP_SUMMARY
+
+            # Show detailed reasoning per module (why each module was triggered)
+            if [ "$IS_BOOTSTRAP" != "true" ] && [ -n "$FILES_BY_MODULE" ] && [ "$FILES_BY_MODULE" != "null" ] && [ "$FILES_BY_MODULE" != "{}" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Why each module was triggered" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+
+              # Process directly changed modules
+              for module in $DIRECTLY_CHANGED; do
+                FILE_COUNT=$(echo "$FILES_BY_MODULE" | jq -r --arg m "$module" '.[$m] | length // 0')
+
+                echo "<details>" >> $GITHUB_STEP_SUMMARY
+                echo "<summary><strong>$module</strong> - $FILE_COUNT file(s) changed</summary>" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+                echo "$FILES_BY_MODULE" | jq -r --arg m "$module" '.[$m] // [] | .[]' >> $GITHUB_STEP_SUMMARY
+                echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+                echo "</details>" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+              done
+
+              # Process invalidated modules (triggered due to dependency changes)
+              for module in $INVALIDATED; do
+                echo "<details>" >> $GITHUB_STEP_SUMMARY
+                echo "<summary><strong>$module</strong> - dependency changed</summary>" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "Triggered because a dependency was modified:" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                for dep in $DIRECTLY_CHANGED; do
+                  echo "- \`$dep\`" >> $GITHUB_STEP_SUMMARY
+                done
+                echo "</details>" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+              done
+            fi
+          fi
+
   # Validate repository contracts before running any module builds
   # This catches configuration errors early (unordered files, overlapping ownership)
   validate-repository:
@@ -292,6 +362,20 @@ jobs:
           # Extract layer count
           LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
           echo "layer-count=$LAYER_COUNT" >> $GITHUB_OUTPUT
+
+          # Generate step summary
+          echo "## 📦 Execution Order" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Modules will be built in **$LAYER_COUNT layer(s)** based on dependency order:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          for ((i=0; i<LAYER_COUNT; i++)); do
+            LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$i] | join(\", \")")
+            echo "**Layer $((i+1))**: \`$LAYER_MODULES\`" >> $GITHUB_STEP_SUMMARY
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Modules in the same layer run in parallel. Layers run sequentially." >> $GITHUB_STEP_SUMMARY
 
   # Execute module workflows in dependency order
   # Single job that processes all layers sequentially
@@ -463,6 +547,9 @@ jobs:
           # Determine overall status
           VALIDATION="${{ needs.validate-repository.result }}"
           EXECUTION="${{ needs.execute-layers.result }}"
+          TOTAL_MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
+          TOTAL_COUNT=$(echo "$TOTAL_MODULES" | wc -w | tr -d ' ')
+
           if [ "$VALIDATION" = "success" ] && [ "$EXECUTION" = "success" ]; then
             echo "### ✅ All Module Builds Passed" >> $GITHUB_STEP_SUMMARY
           elif [ "$VALIDATION" = "failure" ]; then
@@ -472,90 +559,6 @@ jobs:
           else
             echo "### ⚠️ Partial Execution" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### 📊 Change Analysis" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          IS_BOOTSTRAP="${{ needs.detect-changes.outputs.is_bootstrap }}"
-          CHANGED_FILE_COUNT="${{ needs.detect-changes.outputs.changed_file_count }}"
-          FILES_BY_MODULE='${{ needs.detect-changes.outputs.files_by_module }}'
-
-          if [ "$IS_BOOTSTRAP" = "true" ]; then
-            echo "> **Bootstrap Mode**: No previous successful CI found - building all modules" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Incremental build comparing against last successful CI." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Base SHA | [\`${{ needs.detect-changes.outputs.base_sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.detect-changes.outputs.base_sha }}) |" >> $GITHUB_STEP_SUMMARY
-            echo "| Head SHA | [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) |" >> $GITHUB_STEP_SUMMARY
-            echo "| Files Changed | $CHANGED_FILE_COUNT |" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Count modules
-          DIRECTLY_CHANGED="${{ needs.detect-changes.outputs.directly_changed }}"
-          INVALIDATED="${{ needs.detect-changes.outputs.invalidated }}"
-          TOTAL_MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
-
-          DIRECT_COUNT=$(echo "$DIRECTLY_CHANGED" | wc -w | tr -d ' ')
-          INVALID_COUNT=$(echo "$INVALIDATED" | wc -w | tr -d ' ')
-          TOTAL_COUNT=$(echo "$TOTAL_MODULES" | wc -w | tr -d ' ')
-
-          echo "| Category | Count | Modules |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|---------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Directly Changed | $DIRECT_COUNT | \`$DIRECTLY_CHANGED\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Cache Invalidated | $INVALID_COUNT | \`$INVALIDATED\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Total Rebuilt** | **$TOTAL_COUNT** | \`$TOTAL_MODULES\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Show detailed reasoning per module (why each module was triggered)
-          if [ "$IS_BOOTSTRAP" != "true" ] && [ -n "$FILES_BY_MODULE" ] && [ "$FILES_BY_MODULE" != "null" ] && [ "$FILES_BY_MODULE" != "{}" ]; then
-            echo "### 📝 CI Trigger Reasoning" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Why each module CI was triggered:" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-
-            # Process directly changed modules
-            for module in $DIRECTLY_CHANGED; do
-              FILE_COUNT=$(echo "$FILES_BY_MODULE" | jq -r --arg m "$module" '.[$m] | length // 0')
-              FILES=$(echo "$FILES_BY_MODULE" | jq -r --arg m "$module" '.[$m] // [] | .[:5] | join(", ")' | sed 's/,/, /g')
-              REMAINING=$(echo "$FILES_BY_MODULE" | jq -r --arg m "$module" '(.[$m] | length // 0) - 5 | if . > 0 then " (+\(.) more)" else "" end')
-
-              echo "<details>" >> $GITHUB_STEP_SUMMARY
-              echo "<summary><strong>$module</strong> - $FILE_COUNT file(s) changed (directly triggered)</summary>" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "$FILES_BY_MODULE" | jq -r --arg m "$module" '.[$m] // [] | .[]' >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "</details>" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-            done
-
-            # Process invalidated modules (triggered due to dependency changes)
-            for module in $INVALIDATED; do
-              echo "<details>" >> $GITHUB_STEP_SUMMARY
-              echo "<summary><strong>$module</strong> - cache invalidated (dependency changed)</summary>" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "This module was triggered because one of its dependencies changed:" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              # Find which of its dependencies are in the directly changed list
-              for dep in $DIRECTLY_CHANGED; do
-                echo "- \`$dep\` was modified" >> $GITHUB_STEP_SUMMARY
-              done
-              echo "</details>" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-            done
-          fi
-
-          echo "### 📦 Execution Plan" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Modules were built in dependency order across ${{ needs.calculate-order.outputs.layer-count }} layer(s):" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```json' >> $GITHUB_STEP_SUMMARY
-          echo '${{ needs.calculate-order.outputs.execution-plan }}' | jq . >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 🔍 Pipeline Stages" >> $GITHUB_STEP_SUMMARY
