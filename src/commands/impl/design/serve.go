@@ -17,6 +17,7 @@ import (
 
 	design "github.com/ready-to-release/eac/src/commands/impl/design/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -68,14 +69,28 @@ func DesignServe() int {
 		return 1
 	}
 
-	// Clean up module path - remove specs/ prefix and /.design suffix if present
-	module = design.CleanModuleName(module)
-
-	// Validate module name
+	// Validate module name for security
 	if err := design.ValidateModuleName(module); err != nil {
 		fmt.Printf("❌ Invalid module name: %v\n", err)
 		return 1
 	}
+
+	// Load module contracts and validate moniker exists (same as build command)
+	moduleReport, err := reports.GetModuleContracts(repoRoot, "0.1.0")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ Failed to load module contracts: %v\n", err)
+		return 1
+	}
+
+	mod, exists := moduleReport.Registry.Get(module)
+	if !exists {
+		fmt.Fprintf(os.Stderr, "❌ Module not found: %s\n\nAvailable modules:\n%s\n",
+			module, formatModuleList(moduleReport))
+		return 1
+	}
+
+	// Use validated moniker
+	module = mod.Moniker
 
 	// Check if workspace exists
 	workspacePath := filepath.Join(repoRoot, "specs", module, ".design", "workspace.dsl")
@@ -99,6 +114,15 @@ func DesignServe() int {
 	return 0
 }
 
+// formatModuleList returns a formatted list of available modules
+func formatModuleList(moduleReport *reports.ModuleContractReport) string {
+	var sb strings.Builder
+	for _, mod := range moduleReport.Registry.All() {
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Source.Root))
+	}
+	return sb.String()
+}
+
 func printServeUsage() {
 	fmt.Println("Start Structurizr Lite viewer to view architecture diagrams in browser")
 	fmt.Println()
@@ -110,13 +134,11 @@ func printServeUsage() {
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  r2r design serve src-cli")
-	fmt.Println("  r2r design serve contracts")
-	fmt.Println("  r2r design serve specs/src-cli/.design     (auto-cleaned)")
+	fmt.Println("  r2r design serve src-commands")
 	fmt.Println()
 	fmt.Println("Module Locations:")
-	fmt.Println("  src-cli     → specs/src-cli/.design/workspace.dsl")
-	fmt.Println("  contracts   → specs/contracts/.design/workspace.dsl")
-	fmt.Println("  docs        → specs/docs/.design/workspace.dsl")
+	fmt.Println("  src-cli        → specs/src-cli/.design/workspace.dsl")
+	fmt.Println("  src-commands   → specs/src-commands/.design/workspace.dsl")
 	fmt.Println()
 	fmt.Println("What It Does:")
 	fmt.Println("  1. Reads specs/<module>/.design/workspace.dsl")

@@ -7,9 +7,11 @@
 // Long: (major components), and component views (internal structure). All generated workspaces are
 // Long: automatically validated against Structurizr CLI to ensure correct syntax before saving to
 // Long: specs/<module>/design/workspace.dsl (or custom path via --output). Use --debug to save AI
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/ for debugging
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/logs/design/ for debugging
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing workspace.dsl file if it exists
 // Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/design/workspace.dsl)
+// Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
+// Flag.skip-validation: type=bool, shorthand=, default=false, usage=Skip Docker validation (useful when Docker is unavailable)
 // Usage: design create <module>
 // HasSideEffects: true
 package create
@@ -27,6 +29,7 @@ import (
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/core/contracts"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -44,17 +47,20 @@ func DesignCreate() int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
-
 	// Validate module exists
 	if err := validateModuleExists(config); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
-	// Check Docker availability early (before expensive AI generation)
-	if err := checkDockerAvailability(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
+	// Check Docker availability early (before expensive AI generation) unless skipped
+	if !config.SkipValidation {
+		if err := checkDockerAvailability(config); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
+		}
+	} else {
+		fmt.Println("⚠️  Skipping Docker validation")
 	}
 
 	// Determine output path
@@ -85,7 +91,7 @@ func DesignCreate() int {
 	}
 
 	// Write output and report success
-	if err := writeOutputAndReportSuccess(outputPath, cleanedOutput, config.Module); err != nil {
+	if err := writeOutputAndReportSuccess(config, outputPath, cleanedOutput); err != nil {
 		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
 		return 1
 	}
@@ -95,12 +101,14 @@ func DesignCreate() int {
 
 // DesignConfig holds configuration for design create command
 type DesignConfig struct {
-	Module       string // Module name (e.g., "src-cli", "commands")
-	SourcePath   string // Path to source code (e.g., "src/commands")
-	OutputPath   string // Custom output path (empty = default to specs/<module>/design/workspace.dsl)
-	Debug        bool
-	Force        bool
-	TemplateRoot string
+	Module         string // Module name (e.g., "src-cli", "commands")
+	SourcePath     string // Path to source code (e.g., "src/commands")
+	OutputPath     string // Custom output path (empty = default to specs/<module>/design/workspace.dsl)
+	PromptPath     string // Custom AI prompt file path (empty = default prompt)
+	Debug          bool
+	Force          bool
+	SkipValidation bool
+	TemplateRoot   string
 }
 
 // parseConfig parses command line arguments into DesignConfig
@@ -119,30 +127,48 @@ func parseConfig() (*DesignConfig, error) {
 
 	// Create config with parsed flags
 	config := &DesignConfig{
-		Debug:        flags.debug,
-		Force:        flags.force,
-		OutputPath:   flags.outputPath,
-		TemplateRoot: repoRoot,
+		Debug:          flags.debug,
+		Force:          flags.force,
+		OutputPath:     flags.outputPath,
+		PromptPath:     flags.promptPath,
+		SkipValidation: flags.skipValidation,
+		TemplateRoot:   repoRoot,
 	}
 
-	// Clean module name and determine paths
-	config.Module = design.CleanModuleName(modulePath)
+	// Use input as-is (moniker)
+	config.Module = modulePath
 
-	// Validate module name
+	// Validate module name for security
 	if err := design.ValidateModuleName(config.Module); err != nil {
 		return nil, fmt.Errorf("invalid module name: %w", err)
 	}
 
-	config.SourcePath = determineSourcePath(repoRoot, config.Module, modulePath)
+	// Load module contracts and validate moniker exists (same as build command)
+	moduleReport, err := reports.GetModuleContracts(repoRoot, "0.1.0")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load module contracts: %w", err)
+	}
+
+	module, exists := moduleReport.Registry.Get(config.Module)
+	if !exists {
+		return nil, fmt.Errorf("module not found: %s\n\nAvailable modules:\n%s",
+			config.Module, formatModuleList(moduleReport))
+	}
+
+	// Store validated moniker and source path from contract
+	config.Module = module.Moniker
+	config.SourcePath = filepath.Join(repoRoot, module.Source.Root)
 
 	return config, nil
 }
 
 // createFlags holds parsed command-line flags
 type createFlags struct {
-	debug      bool
-	force      bool
-	outputPath string
+	debug          bool
+	force          bool
+	outputPath     string
+	promptPath     string
+	skipValidation bool
 }
 
 // parseCreateCommandArgs parses args for the create subcommand
@@ -172,10 +198,18 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 			flags.debug = true
 		} else if arg == "--force" || arg == "-f" {
 			flags.force = true
+		} else if arg == "--skip-validation" {
+			flags.skipValidation = true
 		} else if arg == "--output" || arg == "-o" {
 			// Next argument is the output path
 			if i+1 < len(args) {
 				flags.outputPath = args[i+1]
+				i++ // Skip next arg
+			}
+		} else if arg == "--prompt" {
+			// Next argument is the prompt path
+			if i+1 < len(args) {
+				flags.promptPath = args[i+1]
 				i++ // Skip next arg
 			}
 		} else if !strings.HasPrefix(arg, "-") {
@@ -191,24 +225,13 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 	return positionalArgs[0], flags, nil
 }
 
-// determineSourcePath finds the source code directory for a module
-// Tries src/<module> first, then falls back to <modulePath> if it exists
-func determineSourcePath(repoRoot, module, modulePath string) string {
-	// Try src/<module> first (standard location)
-	sourcePath := filepath.Join(repoRoot, "src", module)
-	if _, err := os.Stat(sourcePath); err == nil {
-		return sourcePath
+// formatModuleList returns a formatted list of available modules
+func formatModuleList(moduleReport *reports.ModuleContractReport) string {
+	var sb strings.Builder
+	for _, mod := range moduleReport.Registry.All() {
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Source.Root))
 	}
-
-	// Try the original module path (in case it's a custom location)
-	altPath := filepath.Join(repoRoot, modulePath)
-	if _, err := os.Stat(altPath); err == nil {
-		return altPath
-	}
-
-	// Return the standard path even if it doesn't exist
-	// (validation will catch this later)
-	return sourcePath
+	return sb.String()
 }
 
 // validateModuleExists checks if the source code exists for the specified module
@@ -226,7 +249,7 @@ func validateModuleExists(config *DesignConfig) error {
 }
 
 // checkDockerAvailability checks if Docker is running before starting expensive operations
-func checkDockerAvailability() error {
+func checkDockerAvailability(config *DesignConfig) error {
 	fmt.Println("🐳 Checking Docker availability...")
 
 	// Create a temporary validator to check Docker
@@ -248,21 +271,28 @@ func checkDockerAvailability() error {
 // loadAndBuildPrompt loads the contract and builds the AI prompt
 func loadAndBuildPrompt(config *DesignConfig) (string, error) {
 	fmt.Println("📋 Loading design contract...")
+
 	fullPrompt, err := buildContractBasedPrompt(config)
 	if err != nil {
 		return "", err
 	}
 
 	if config.Debug {
-		debugPath := filepath.Join(config.TemplateRoot, "out", "design-debug-full-prompt.md")
-		if err := os.WriteFile(debugPath, []byte(fullPrompt), 0644); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  DEBUG: Failed to save prompt to %s: %v\n", debugPath, err)
-		} else {
-			fmt.Fprintf(os.Stderr, "🔍 DEBUG: Saved full prompt to %s\n", debugPath)
-		}
+		writeDebugFile(config.TemplateRoot, "design-debug-full-prompt.md", fullPrompt)
 	}
 
 	return fullPrompt, nil
+}
+
+// writeDebugFile writes content to a debug file when debug mode is enabled.
+func writeDebugFile(workspaceRoot string, filename string, content string) {
+	debugDir := filepath.Join(workspaceRoot, "out", "logs", "design")
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		return
+	}
+
+	debugFile := filepath.Join(debugDir, filename)
+	os.WriteFile(debugFile, []byte(content), 0644)
 }
 
 // buildContractBasedPrompt builds the AI prompt with contract context
@@ -280,8 +310,8 @@ func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
-	// Load default prompt
-	promptContent, err := loadPrompt(config.TemplateRoot)
+	// Load prompt (default or custom)
+	promptContent, err := loadPrompt(config)
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
@@ -339,10 +369,19 @@ func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 	return prompt.String(), nil
 }
 
-// loadPrompt loads the default AI prompt for design generation
-func loadPrompt(templateRoot string) (string, error) {
-	// Load from repo path
-	repoPath := filepath.Join(templateRoot, "contracts", "ai", "design", "0.1.0", "design.md")
+// loadPrompt loads the AI prompt for design generation
+func loadPrompt(config *DesignConfig) (string, error) {
+	// If custom prompt specified, load that
+	if config.PromptPath != "" {
+		content, err := os.ReadFile(config.PromptPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read custom prompt from %s: %w", config.PromptPath, err)
+		}
+		return string(content), nil
+	}
+
+	// Load default prompt from repo path
+	repoPath := filepath.Join(config.TemplateRoot, "contracts", "ai", "design", "0.1.0", "design.md")
 	content, err := os.ReadFile(repoPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read prompt from %s: %w", repoPath, err)
@@ -353,6 +392,12 @@ func loadPrompt(templateRoot string) (string, error) {
 
 // generateAndValidate generates AI output with retry and validates with Structurizr CLI
 func generateAndValidate(config *DesignConfig, prompt string) (string, error) {
+	// Check for mock AI response (for testing)
+	if mockResponse := GetMockAIResponse(); mockResponse != "" {
+		fmt.Println("🤖 Using mock AI response (test mode)...")
+		return mockResponse, nil
+	}
+
 	// Load contract and anti-corruption rules for validator
 	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "0.1.0")
 
@@ -369,8 +414,8 @@ func generateAndValidate(config *DesignConfig, prompt string) (string, error) {
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
 	// Create composite validator (quick + full validation)
-	// Skip expensive Docker validation if quick validation finds errors
-	validator, err := NewCompositeValidator(config.Module, config.TemplateRoot, true)
+	// Skip expensive Docker validation if quick validation finds errors or if --skip-validation
+	validator, err := NewCompositeValidator(config.Module, config.TemplateRoot, !config.SkipValidation)
 	if err != nil {
 		return "", fmt.Errorf("failed to create validator: %w", err)
 	}
@@ -389,7 +434,7 @@ func generateAndValidate(config *DesignConfig, prompt string) (string, error) {
 	}
 
 	if config.Debug {
-		retryConfig.DebugOutputDir = filepath.Join(config.TemplateRoot, "out")
+		retryConfig.DebugOutputDir = filepath.Join(config.TemplateRoot, "out", "logs", "design")
 	}
 
 	result, err := contracts.GenerateWithRetry(
@@ -406,7 +451,7 @@ func generateAndValidate(config *DesignConfig, prompt string) (string, error) {
 }
 
 // writeOutputAndReportSuccess writes the workspace file and reports success
-func writeOutputAndReportSuccess(outputPath, content, module string) error {
+func writeOutputAndReportSuccess(config *DesignConfig, outputPath, content string) error {
 	// Ensure directory exists
 	dir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -421,12 +466,16 @@ func writeOutputAndReportSuccess(outputPath, content, module string) error {
 	// Report success
 	fmt.Println("\n✅ Architecture design created")
 	fmt.Printf("   File: %s\n", outputPath)
-	fmt.Printf("   Valid: ✅ Passed Structurizr validation\n\n")
+	if !config.SkipValidation {
+		fmt.Printf("   Valid: ✅ Passed Structurizr validation\n\n")
+	} else {
+		fmt.Printf("   Valid: ⚠️  Validation skipped\n\n")
+	}
 	fmt.Println("ℹ️  Next steps:")
 	fmt.Println("   1. Review the generated workspace")
 	fmt.Println("   2. Refine containers and relationships as needed")
-	fmt.Printf("   3. View in browser: design serve %s\n", module)
-	fmt.Printf("   4. Validate anytime: design validate %s\n", module)
+	fmt.Printf("   3. View in browser: design serve %s\n", config.Module)
+	fmt.Printf("   4. Validate anytime: design validate %s\n", config.Module)
 
 	return nil
 }

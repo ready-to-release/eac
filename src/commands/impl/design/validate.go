@@ -4,10 +4,11 @@
 // Long: Validates workspace.dsl files for syntax errors and structural issues using the official
 // Long: Structurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,
 // Long: and ensures the workspace can be properly rendered. Validation results are displayed in the
-// Long: console with human-readable output and saved to out/design-validation-results.json for detailed
-// Long: inspection. Use --all to validate all workspace files in specs/*/.design/ directories.
+// Long: console with human-readable output and saved to out/logs/design/validation-results.json for
+// Long: detailed inspection. Use --all to validate all workspace files in specs/*/.design/ directories.
 // Usage: design validate <module>
 // Flag.all: type=bool, shorthand=a, default=false, usage=Validate all workspace files in specs/*/.design/ directories
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs and detailed logs to out/logs/design/ for debugging
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show Docker command and raw Structurizr CLI output
 // HasSideEffects: false
 package design
@@ -19,6 +20,8 @@ import (
 
 	design "github.com/ready-to-release/eac/src/commands/impl/design/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
@@ -40,6 +43,8 @@ func DesignValidate() int {
 		switch arg {
 		case "--all", "-a":
 			all = true
+		case "--debug", "-d":
+			// debug flag accepted but ignored (no logger)
 		case "--verbose", "-v":
 			verbose = true
 		case "--help", "-h":
@@ -55,6 +60,14 @@ func DesignValidate() int {
 			}
 		}
 	}
+
+	// Initialize logger
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		return 2
+	}
+
 
 	// Create validator
 	validator, err := design.NewValidator()
@@ -77,8 +90,8 @@ func DesignValidate() int {
 		return 2
 	}
 
-	// Determine output path (use root /out directory)
-	outputPath, err := getValidationOutputPath()
+	// Determine output path (use /out/logs/design directory)
+	outputPath, err := getValidationOutputPath(repoRoot)
 	if err != nil {
 		fmt.Printf("❌ Failed to determine output path: %v\n", err)
 		return 2
@@ -99,14 +112,35 @@ func DesignValidate() int {
 }
 
 func validateSingleModule(validator design.StructurizrValidator, module string, outputPath string, verbose bool) int {
-	// Clean up module path - remove specs/ prefix and /.design suffix if present
-	module = design.CleanModuleName(module)
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ Failed to find repository root: %v\n", err)
+		return 2
+	}
 
-	// Validate module name
+	// Validate module name for security
 	if err := design.ValidateModuleName(module); err != nil {
 		fmt.Printf("❌ Invalid module name: %v\n", err)
 		return 2
 	}
+
+	// Load module contracts and validate moniker exists (same as build command)
+	moduleReport, err := reports.GetModuleContracts(repoRoot, "0.1.0")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ Failed to load module contracts: %v\n", err)
+		return 2
+	}
+
+	mod, exists := moduleReport.Registry.Get(module)
+	if !exists {
+		fmt.Fprintf(os.Stderr, "❌ Module not found: %s\n\nAvailable modules:\n%s\n",
+			module, formatModuleList(moduleReport))
+		return 2
+	}
+
+	// Use validated moniker
+	module = mod.Moniker
 
 	// Validate module
 	result, err := validator.ValidateModule(module)
@@ -114,6 +148,7 @@ func validateSingleModule(validator design.StructurizrValidator, module string, 
 		fmt.Printf("❌ Validation failed: %v\n", err)
 		return 2
 	}
+
 
 	// Display console output
 	fmt.Print(design.FormatValidationResult(result, verbose))
@@ -175,84 +210,38 @@ func printValidateUsage() {
 	fmt.Println()
 	fmt.Println("Flags:")
 	fmt.Println("  --all, -a        Validate all workspace files in specs/*/.design/")
+	fmt.Println("  --debug, -d      Save intermediate outputs and detailed logs to out/logs/design/")
 	fmt.Println("  --verbose, -v    Show Docker command and raw Structurizr CLI output")
 	fmt.Println("  --help, -h       Show this help message")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  r2r design validate src-cli")
-	fmt.Println("  r2r design validate contracts --verbose")
-	fmt.Println("  r2r design validate specs/src-cli/.design     (auto-cleaned)")
-	fmt.Println("  r2r design validate --all")
+	fmt.Println("  r2r design validate src-commands --verbose")
+	fmt.Println("  r2r design validate --all --debug")
 	fmt.Println()
 	fmt.Println("Module Locations:")
-	fmt.Println("  src-cli     → specs/src-cli/.design/workspace.dsl")
-	fmt.Println("  contracts   → specs/contracts/.design/workspace.dsl")
+	fmt.Println("  src-cli        → specs/src-cli/.design/workspace.dsl")
+	fmt.Println("  src-commands   → specs/src-commands/.design/workspace.dsl")
 	fmt.Println()
 	fmt.Println("Output:")
 	fmt.Println("  Console: Human-readable validation summary")
-	fmt.Println("  File:    out/design-validation-results.json (detailed results)")
+	fmt.Println("  File:    out/logs/design/validation-results.json (detailed results)")
+	fmt.Println("  Logs:    out/logs/design/design.log (when --debug is set)")
 	fmt.Println()
 	fmt.Println("Note:")
-	fmt.Println("  Accepts module name with or without 'specs/' prefix and '/.design' suffix.")
+	fmt.Println("  Module argument must be a valid module moniker (e.g., src-commands).")
+	fmt.Println("  Use 'show modules' to see all available modules.")
 }
 
 // getValidationOutputPath returns the absolute path to the validation output JSON file
-func getValidationOutputPath() (string, error) {
-	// Get current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
+func getValidationOutputPath(repoRoot string) (string, error) {
+	// Use out/logs/design directory
+	outDir := filepath.Join(repoRoot, "out", "logs", "design")
+
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Walk up to find repository root (directory containing "src")
-	dir := cwd
-	for {
-		srcPath := filepath.Join(dir, "src")
-		if stat, err := os.Stat(srcPath); err == nil && stat.IsDir() {
-			// Found repository root
-			outDir := filepath.Join(dir, "out")
-
-			// Create out directory if it doesn't exist
-			if err := os.MkdirAll(outDir, 0755); err != nil {
-				return "", fmt.Errorf("failed to create output directory: %w", err)
-			}
-
-			return filepath.Join(outDir, "design-validation-results.json"), nil
-		}
-
-		// Check if we're in a src subdirectory
-		base := filepath.Base(dir)
-		parent := filepath.Dir(dir)
-
-		if base == "design" || base == "commands" || base == "cli" {
-			grandparent := filepath.Dir(parent)
-			if filepath.Base(parent) == "src" {
-				outDir := filepath.Join(grandparent, "out")
-				if err := os.MkdirAll(outDir, 0755); err != nil {
-					return "", fmt.Errorf("failed to create output directory: %w", err)
-				}
-				return filepath.Join(outDir, "design-validation-results.json"), nil
-			}
-		}
-
-		if base == "src" {
-			outDir := filepath.Join(parent, "out")
-			if err := os.MkdirAll(outDir, 0755); err != nil {
-				return "", fmt.Errorf("failed to create output directory: %w", err)
-			}
-			return filepath.Join(outDir, "design-validation-results.json"), nil
-		}
-
-		// Move up one directory
-		nextDir := filepath.Dir(dir)
-		if nextDir == dir {
-			// Reached filesystem root, use current directory
-			outDir := filepath.Join(cwd, "out")
-			if err := os.MkdirAll(outDir, 0755); err != nil {
-				return "", fmt.Errorf("failed to create output directory: %w", err)
-			}
-			return filepath.Join(outDir, "design-validation-results.json"), nil
-		}
-		dir = nextDir
-	}
+	return filepath.Join(outDir, "validation-results.json"), nil
 }
