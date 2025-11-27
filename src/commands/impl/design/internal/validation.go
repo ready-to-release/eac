@@ -50,21 +50,23 @@ func ValidateModuleName(module string) error {
 
 // CleanModuleName removes common prefixes and suffixes from module names
 func CleanModuleName(module string) string {
-	// Remove specs/ prefix (both Unix and Windows)
+	// Normalize path separators to forward slashes for consistent processing
+	module = strings.ReplaceAll(module, "\\", "/")
+
+	// Remove workspace.dsl filename if present
+	module = strings.TrimSuffix(module, "/workspace.dsl")
+
+	// Remove specs/ prefix
 	module = strings.TrimPrefix(module, SpecsDirectory+"/")
-	module = strings.TrimPrefix(module, SpecsDirectory+"\\")
 
-	// Remove /.design suffix (both Unix and Windows) - new structure
+	// Remove /.design suffix (new structure)
 	module = strings.TrimSuffix(module, "/"+DesignDirectory)
-	module = strings.TrimSuffix(module, "\\"+DesignDirectory)
 
-	// Remove /design suffix (both Unix and Windows) - legacy structure for backward compatibility
+	// Remove /design suffix (legacy structure for backward compatibility)
 	module = strings.TrimSuffix(module, "/design")
-	module = strings.TrimSuffix(module, "\\design")
 
-	// Remove src/ prefix (both Unix and Windows)
+	// Remove src/ prefix
 	module = strings.TrimPrefix(module, SourceDirectory+"/")
-	module = strings.TrimPrefix(module, SourceDirectory+"\\")
 
 	return module
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/impl/specs"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
@@ -533,7 +534,32 @@ func parseConfig() (*SpecsConfig, error) {
 
 	config.TemplateRoot = templateRoot
 
+	// Validate module if specified
+	if config.Module != "" {
+		moduleReport, err := reports.GetModuleContracts(templateRoot, "0.1.0")
+		if err != nil {
+			return nil, fmt.Errorf("failed to load module contracts: %w", err)
+		}
+
+		mod, exists := moduleReport.Registry.Get(config.Module)
+		if !exists {
+			return nil, fmt.Errorf("module not found: %s\n\nAvailable modules:\n%s",
+				config.Module, formatModuleList(moduleReport))
+		}
+
+		config.Module = mod.Moniker // Store validated moniker
+	}
+
 	return config, nil
+}
+
+// formatModuleList returns a formatted list of available modules
+func formatModuleList(moduleReport *reports.ModuleContractReport) string {
+	var sb strings.Builder
+	for _, mod := range moduleReport.Registry.All() {
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Source.Root))
+	}
+	return sb.String()
 }
 
 // loadPromptWithFallback implements four-tier prompt loading:

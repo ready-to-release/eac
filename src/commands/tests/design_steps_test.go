@@ -1,8 +1,13 @@
-// Feature: src-commands_design-command
+// Feature: src-commands_design-*
 // Godog step implementations for design command scenarios
 //
-// This file implements steps for the specification at:
-// specs/src-commands/design-command/specification.feature
+// This file implements steps for the specifications at:
+// - specs/src-commands/design-create/specification.feature
+// - specs/src-commands/design-update/specification.feature
+// - specs/src-commands/design-validate/specification.feature
+// - specs/src-commands/design-serve/specification.feature
+//
+// Step definitions are organized in src/commands/impl/design/tests/
 package tests
 
 import (
@@ -17,6 +22,7 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	designtests "github.com/ready-to-release/eac/src/commands/impl/design/tests"
 )
 
 // designTestContext holds state specific to design command tests
@@ -363,6 +369,7 @@ func iShouldSeeOverallSummaryWithTotalErrorsAndWarnings() error {
 // ============================================================================
 
 func InitializeDesignScenario(sc *godog.ScenarioContext) {
+	// Initialize design context for backward compatibility with existing tests
 	sc.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		designCtx = &designTestContext{
 			dockerAvailable:  false,
@@ -394,9 +401,15 @@ func InitializeDesignScenario(sc *godog.ScenarioContext) {
 		return ctx, nil
 	})
 
+	// Register new design test steps (organized by subcommand)
+	designtests.RegisterDesignSteps(sc)
+
+	// Keep legacy step definitions for backward compatibility with existing specs
+	// These can be removed once all specs are updated to use the new structure
+
 	// Given steps
 	sc.Step(`^docker service is available$`, dockerIsRunning)
-	sc.Step(`^Docker is running$`, dockerIsRunning) // Keep for backward compatibility
+	sc.Step(`^Docker is running$`, dockerIsRunning)
 	sc.Step(`^module "([^"]*)" has workspace\.dsl file$`, moduleHasWorkspaceDslFile)
 	sc.Step(`^multiple modules have workspace\.dsl files$`, multipleModulesHaveWorkspaceDslFiles)
 
