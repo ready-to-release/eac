@@ -18,6 +18,7 @@ import (
 
 	get "github.com/ready-to-release/eac/src/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -33,6 +34,10 @@ type CIChangedModulesResult struct {
 	BaseSHA         string   `json:"base_sha" yaml:"base_sha" toml:"base_sha"`
 	HeadSHA         string   `json:"head_sha" yaml:"head_sha" toml:"head_sha"`
 	IsBootstrap     bool     `json:"is_bootstrap" yaml:"is_bootstrap" toml:"is_bootstrap"`
+	// Additional context for CI reasoning
+	ChangedFiles      []string          `json:"changed_files" yaml:"changed_files" toml:"changed_files"`
+	ChangedFileCount  int               `json:"changed_file_count" yaml:"changed_file_count" toml:"changed_file_count"`
+	FilesByModule     map[string][]string `json:"files_by_module" yaml:"files_by_module" toml:"files_by_module"`
 }
 
 func GetChangedModulesCI() int {
@@ -88,12 +93,15 @@ func GetChangedModulesCI() int {
 				return nil, err
 			}
 			return CIChangedModulesResult{
-				Modules:         allModules,
-				DirectlyChanged: allModules,
-				Invalidated:     []string{},
-				BaseSHA:         "",
-				HeadSHA:         headSHA,
-				IsBootstrap:     true,
+				Modules:          allModules,
+				DirectlyChanged:  allModules,
+				Invalidated:      []string{},
+				BaseSHA:          "",
+				HeadSHA:          headSHA,
+				IsBootstrap:      true,
+				ChangedFiles:     []string{},
+				ChangedFileCount: 0,
+				FilesByModule:    map[string][]string{},
 			}, nil
 		}
 
@@ -105,12 +113,15 @@ func GetChangedModulesCI() int {
 
 		if len(changedFiles) == 0 {
 			return CIChangedModulesResult{
-				Modules:         []string{},
-				DirectlyChanged: []string{},
-				Invalidated:     []string{},
-				BaseSHA:         baseSHA,
-				HeadSHA:         headSHA,
-				IsBootstrap:     false,
+				Modules:          []string{},
+				DirectlyChanged:  []string{},
+				Invalidated:      []string{},
+				BaseSHA:          baseSHA,
+				HeadSHA:          headSHA,
+				IsBootstrap:      false,
+				ChangedFiles:     []string{},
+				ChangedFileCount: 0,
+				FilesByModule:    map[string][]string{},
 			}, nil
 		}
 
@@ -139,13 +150,23 @@ func GetChangedModulesCI() int {
 			}
 		}
 
+		// Build files-by-module map for detailed reasoning
+		filesByModule, err := getFilesByModule(changedFiles, workspaceRoot)
+		if err != nil {
+			// Non-fatal: just use empty map if we can't build it
+			filesByModule = map[string][]string{}
+		}
+
 		return CIChangedModulesResult{
-			Modules:         allRequiringRebuild,
-			DirectlyChanged: directlyChanged,
-			Invalidated:     invalidated,
-			BaseSHA:         baseSHA,
-			HeadSHA:         headSHA,
-			IsBootstrap:     false,
+			Modules:          allRequiringRebuild,
+			DirectlyChanged:  directlyChanged,
+			Invalidated:      invalidated,
+			BaseSHA:          baseSHA,
+			HeadSHA:          headSHA,
+			IsBootstrap:      false,
+			ChangedFiles:     changedFiles,
+			ChangedFileCount: len(changedFiles),
+			FilesByModule:    filesByModule,
 		}, nil
 	})
 }
@@ -232,4 +253,31 @@ func getAllModuleMonikers(workspaceRoot string) ([]string, error) {
 		return nil, err
 	}
 	return graph.Modules, nil
+}
+
+// getFilesByModule maps changed files to their owning modules
+func getFilesByModule(changedFiles []string, workspaceRoot string) (map[string][]string, error) {
+	registry, err := modules.LoadFromWorkspace(workspaceRoot, "0.1.0")
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]string)
+
+	for _, filePath := range changedFiles {
+		if filePath == "" {
+			continue
+		}
+		matchingModules := registry.FindModulesForFile(filePath)
+		if len(matchingModules) == 0 {
+			// File doesn't belong to any module - track as "unowned"
+			result["(unowned)"] = append(result["(unowned)"], filePath)
+		} else {
+			for _, module := range matchingModules {
+				result[module.Moniker] = append(result[module.Moniker], filePath)
+			}
+		}
+	}
+
+	return result, nil
 }

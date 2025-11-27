@@ -164,34 +164,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Create tag (manual trigger only)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
-
-          echo "Preparing to create tag: $TAG_NAME"
-
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Fetch all tags from remote
-          echo "Fetching existing tags..."
-          git fetch --tags --force
-
-          # Check if tag already exists (locally or remote)
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "ℹ️  Tag $TAG_NAME already exists"
-            echo "Using existing tag for release"
-          else
-            echo "Creating new tag: $TAG_NAME"
-            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-
-            echo "Pushing tag to remote..."
-            git push origin "$TAG_NAME"
-
-            echo "✅ Created and pushed tag: $TAG_NAME"
-          fi
+      # Note: Tag creation moved to release step - gh release create --target creates tag atomically
+      # This prevents orphaned tags if the build/release fails
 
       - name: Install UPX
         run: |
@@ -212,14 +186,14 @@ jobs:
           echo "Verifying built binaries..."
           ls -lh out/build/src-cli/
 
-          # Check all required files exist (both standard and UPX-compressed)
+          # Check all required files exist
+          # Note: UPX compression only works for Linux/Windows when cross-compiling from Linux
+          # Darwin binaries cannot be UPX-compressed without native macOS tooling
           REQUIRED_FILES=(
             "out/build/src-cli/r2r-linux"
             "out/build/src-cli/r2r-linux-upx"
             "out/build/src-cli/r2r-darwin-amd64"
-            "out/build/src-cli/r2r-darwin-amd64-upx"
             "out/build/src-cli/r2r-darwin-arm64"
-            "out/build/src-cli/r2r-darwin-arm64-upx"
             "out/build/src-cli/r2r-windows.exe"
             "out/build/src-cli/r2r-windows-upx.exe"
           )
@@ -269,16 +243,14 @@ jobs:
           | Windows (AMD64) | \`r2r-windows.exe\` |
 
           ### UPX-Compressed Binaries (Minimal Size)
-          Maximum compression (~10 MB), slightly slower startup:
+          Maximum compression (~10 MB), slightly slower startup. Available for Linux and Windows only:
 
           | Platform | Binary |
           |----------|--------|
           | Linux (AMD64) | \`r2r-linux-upx\` |
-          | macOS (Intel) | \`r2r-darwin-amd64-upx\` |
-          | macOS (Apple Silicon) | \`r2r-darwin-arm64-upx\` |
           | Windows (AMD64) | \`r2r-windows-upx.exe\` |
 
-          > **Note**: UPX binaries may trigger antivirus false positives on Windows. Use standard binaries if you encounter issues.
+          > **Note**: UPX compression is not available for macOS binaries when cross-compiling. UPX binaries may trigger antivirus false positives on Windows.
 
           ### Quick Start
 
@@ -313,18 +285,33 @@ jobs:
 
           echo "Creating release for tag: $TAG_NAME with binaries"
 
-          gh release create "$TAG_NAME" \
-            --title "r2r CLI v$VERSION" \
-            --notes-file release_notes.md \
-            --verify-tag \
-            out/build/src-cli/r2r-linux \
-            out/build/src-cli/r2r-linux-upx \
-            out/build/src-cli/r2r-darwin-amd64 \
-            out/build/src-cli/r2r-darwin-amd64-upx \
-            out/build/src-cli/r2r-darwin-arm64 \
-            out/build/src-cli/r2r-darwin-arm64-upx \
-            out/build/src-cli/r2r-windows.exe \
-            out/build/src-cli/r2r-windows-upx.exe
+          # For manual triggers, use --target to create tag atomically with release
+          # For tag triggers, use --verify-tag to ensure tag exists
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger: creating tag and release together"
+            gh release create "$TAG_NAME" \
+              --title "r2r CLI v$VERSION" \
+              --notes-file release_notes.md \
+              --target "${{ github.sha }}" \
+              out/build/src-cli/r2r-linux \
+              out/build/src-cli/r2r-linux-upx \
+              out/build/src-cli/r2r-darwin-amd64 \
+              out/build/src-cli/r2r-darwin-arm64 \
+              out/build/src-cli/r2r-windows.exe \
+              out/build/src-cli/r2r-windows-upx.exe
+          else
+            echo "Tag trigger: using existing tag"
+            gh release create "$TAG_NAME" \
+              --title "r2r CLI v$VERSION" \
+              --notes-file release_notes.md \
+              --verify-tag \
+              out/build/src-cli/r2r-linux \
+              out/build/src-cli/r2r-linux-upx \
+              out/build/src-cli/r2r-darwin-amd64 \
+              out/build/src-cli/r2r-darwin-arm64 \
+              out/build/src-cli/r2r-windows.exe \
+              out/build/src-cli/r2r-windows-upx.exe
+          fi
 
           echo "✅ Release created with binaries successfully"
         env:
@@ -357,7 +344,7 @@ jobs:
           echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### Published Binaries (8 files)" >> $GITHUB_STEP_SUMMARY
+          echo "### Published Binaries (6 files)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Standard Binaries" >> $GITHUB_STEP_SUMMARY
           echo "Stripped symbols, best compatibility:" >> $GITHUB_STEP_SUMMARY
@@ -382,13 +369,13 @@ jobs:
           done
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### UPX-Compressed Binaries" >> $GITHUB_STEP_SUMMARY
+          echo "#### UPX-Compressed Binaries (Linux/Windows only)" >> $GITHUB_STEP_SUMMARY
           echo "Maximum compression, slightly slower startup:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Platform | Binary | Size |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|------|" >> $GITHUB_STEP_SUMMARY
 
-          for file in out/build/src-cli/r2r-linux-upx out/build/src-cli/r2r-darwin-amd64-upx out/build/src-cli/r2r-darwin-arm64-upx out/build/src-cli/r2r-windows-upx.exe; do
+          for file in out/build/src-cli/r2r-linux-upx out/build/src-cli/r2r-windows-upx.exe; do
             if [ -f "$file" ]; then
               name=$(basename "$file")
               size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
@@ -396,8 +383,6 @@ jobs:
               platform=""
               case "$name" in
                 r2r-linux-upx) platform="Linux AMD64" ;;
-                r2r-darwin-amd64-upx) platform="macOS Intel" ;;
-                r2r-darwin-arm64-upx) platform="macOS Apple Silicon" ;;
                 r2r-windows-upx.exe) platform="Windows AMD64" ;;
               esac
               echo "| ${platform} | \`${name}\` | ${size_mb} MB |" >> $GITHUB_STEP_SUMMARY
