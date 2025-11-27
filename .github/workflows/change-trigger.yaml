@@ -8,7 +8,7 @@
 # 1. Compares current commit against last successful "Change Trigger" run
 # 2. Uses `get changed modules ci` command which:
 #    - Maps changed files to their owning modules (via module contracts)
-#    - Expands to include all transitive dependents (if src-core changes, src-cli rebuilds too)
+#    - Expands to include all transitive dependents (if src-commands changes, ext-eac rebuilds too)
 # 3. Triggers only the necessary module workflows in dependency order
 #
 # For PRs: Compares against PR base SHA
@@ -73,11 +73,25 @@ jobs:
 
           if [ "$TRIGGER_ALL" = "true" ]; then
             echo "🔄 Trigger-all override enabled - building all modules"
-            WORKFLOW_MODULES="src-cli src-commands src-core src-mcp-commands ext-eac docs"
+
+            # Dynamically discover all CI workflows by scanning for ci-*.yaml files
+            WORKFLOW_MODULES=""
+            for workflow in ../../.github/workflows/ci-*.yaml; do
+              if [ -f "$workflow" ]; then
+                # Extract module name from ci-<module>.yaml
+                module=$(basename "$workflow" .yaml | sed 's/^ci-//')
+                WORKFLOW_MODULES="$WORKFLOW_MODULES $module"
+              fi
+            done
+            WORKFLOW_MODULES=$(echo $WORKFLOW_MODULES | xargs)
+
+            echo "📦 Discovered CI workflows: $WORKFLOW_MODULES"
             echo "directly_changed=all" >> $GITHUB_OUTPUT
             echo "invalidated=none" >> $GITHUB_OUTPUT
             echo "base_sha=N/A" >> $GITHUB_OUTPUT
             echo "is_bootstrap=false" >> $GITHUB_OUTPUT
+            echo "changed_file_count=N/A" >> $GITHUB_OUTPUT
+            echo "files_by_module={}" >> $GITHUB_OUTPUT
           else
             # Optimized CI: Only rebuild modules that have actually changed or whose
             # dependencies have changed. The `get changed modules ci` command:
@@ -86,10 +100,10 @@ jobs:
             #   3. Maps changed files to modules using repository contracts
             #   4. Expands with transitive dependents (cache invalidation)
             #
-            # Example: If only src/core/* files changed:
-            #   - directly_changed: [src-core]
-            #   - invalidated: [src-commands, src-cli, src-mcp-commands, ext-eac] (dependents)
-            #   - modules: [src-core, src-commands, src-cli, src-mcp-commands, ext-eac]
+            # Example: If only src/commands/* files changed:
+            #   - directly_changed: [src-commands]
+            #   - invalidated: [ext-eac] (ext-eac depends on src-commands)
+            #   - modules: [src-commands, ext-eac]
             echo "🔍 Detecting modules requiring rebuild (with dependency invalidation)..."
 
             # For PRs: compare against PR base (what the PR introduces)
