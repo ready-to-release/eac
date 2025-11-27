@@ -1,3 +1,6 @@
+//go:build L1 && ov
+// +build L1,ov
+
 // Feature: cli_command_routing
 // Unit tests for command routing and registration
 package main

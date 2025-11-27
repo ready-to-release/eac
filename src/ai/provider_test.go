@@ -1,3 +1,6 @@
+//go:build L1 && ov
+// +build L1,ov
+
 // File: src/core/ai/provider_test.go
 package ai
 

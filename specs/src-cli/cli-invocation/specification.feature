@@ -1,6 +1,6 @@
 @skip:todo
 @env:isolated-test-project
-@ov @deps:go @depm:src-cli
+@L2 @ov @deps:go @depm:src-cli
 Feature: src-cli_cli-invocation
 
   As a user

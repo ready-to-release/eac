@@ -217,7 +217,7 @@ func TestSuite() int {
 
 	// Phase 3: Select tests for suite
 	writeln(multiWriter, "=== Phase 3: Suite Selection ===")
-	selectedTests := suite.SelectTests(allTests)
+	selectedTests, selectionStats := suite.SelectTestsWithStats(allTests)
 	writeln(multiWriter, "Selected %d tests for suite '%s'", len(selectedTests), suite.Moniker)
 
 	// Phase 3.5: Apply module filter if specified
@@ -480,10 +480,16 @@ func TestSuite() int {
 	numCPU := runtime.NumCPU()
 	var testParallelism int
 
-	// Build godog tag filter for suite
-	// All tests must have explicit L-tags, so we can use simple tag matching
-	// e.g., commit suite: "@L0,@L1,@L2"
-	suiteTagFilter := suite.BuildGodogTagFilter()
+	// Build godog tag filter for suite with skip tags integrated
+	// Load tag contract to get skip reasons
+	tagContract, err := testing.LoadTagContract()
+	if err != nil {
+		fmt.Fprintf(multiWriter, "❌ Failed to load tag contract: %v\n", err)
+		return 1
+	}
+
+	skipTags := tagContract.GetSkipTagsForSuite()
+	suiteTagFilter := suite.BuildGodogTagFilterWithSkipTags(skipTags)
 
 	if parallel {
 		// Package-level parallel: distribute CPU across packages
@@ -523,20 +529,29 @@ func TestSuite() int {
 
 	writeln(multiWriter, "=== Test Run Summary ===")
 	writeln(multiWriter, "Suite: %s", suite.Name)
-	writeln(multiWriter, "Total packages: %d", len(testsByPackage))
-	writeln(multiWriter, "Packages passed: %d", packagesPassed)
-	writeln(multiWriter, "Packages failed: %d", packagesFailed)
-	writeln(multiWriter, "Individual tests discovered: %d", len(allTests))
-	writeln(multiWriter, "Production tests: %d", len(productionTests))
+	writeln(multiWriter, "")
+	writeln(multiWriter, "Test Selection Breakdown:")
+	writeln(multiWriter, "  Tests discovered:        %d", selectionStats.TotalDiscovered)
+	writeln(multiWriter, "  - Ignored (@ignore):     %d", selectionStats.Ignored)
+	writeln(multiWriter, "  - Not matching suite:    %d", selectionStats.NotMatchingSuite)
+	writeln(multiWriter, "  = Selected for suite:    %d", selectionStats.Selected)
 	if frameworkTestCount > 0 {
-		writeln(multiWriter, "Framework tests excluded: %d", frameworkTestCount)
+		writeln(multiWriter, "  - Framework tests:       %d", frameworkTestCount)
 	}
-	writeln(multiWriter, "Tests total: %d", testsTotal)
-	writeln(multiWriter, "Tests passed: %d", testsPassed)
-	writeln(multiWriter, "Tests failed: %d", testsFailed)
+	writeln(multiWriter, "  - OS incompatible:       %d", osFilteredCount)
+	writeln(multiWriter, "  = Production tests:      %d", len(productionTests))
+	writeln(multiWriter, "")
+	writeln(multiWriter, "Test Execution:")
+	writeln(multiWriter, "  Total packages: %d", len(testsByPackage))
+	writeln(multiWriter, "  Packages passed: %d", packagesPassed)
+	writeln(multiWriter, "  Packages failed: %d", packagesFailed)
+	writeln(multiWriter, "  Tests total: %d", testsTotal)
+	writeln(multiWriter, "  Tests passed: %d", testsPassed)
+	writeln(multiWriter, "  Tests failed: %d", testsFailed)
 	if testsSkipped > 0 {
-		writeln(multiWriter, "Tests skipped: %d", testsSkipped)
+		writeln(multiWriter, "  Tests skipped: %d", testsSkipped)
 	}
+	writeln(multiWriter, "")
 	writeln(multiWriter, "Results directory: %s", testRunDir)
 
 	// Check for undefined steps in test logs

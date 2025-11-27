@@ -1,3 +1,6 @@
+//go:build L1 && ov
+// +build L1,ov
+
 // File: src/commands/impl/templates/internal/security_test.go
 // Tests for security validation functions
 package templates

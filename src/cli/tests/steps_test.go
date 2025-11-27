@@ -362,6 +362,9 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I run the built CLI with "([^"]*)"$`, iRunTheBuiltCLIWith)
 	sc.Step(`^I should see version number$`, iShouldSeeVersionNumber)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)"$`, iShouldSeeOr)
+
+	// Module isolation steps
+	initializeModuleIsolationScenario(sc)
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {

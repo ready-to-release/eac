@@ -9,7 +9,7 @@ Feature: src-cli_user-authentication
 
   Rule: User can authenticate with valid credentials
 
-    @ov
+    @L2 @ov
     Scenario: Successful login with valid credentials
       Given a user with username and password registered
       When the user provides valid credentials
@@ -17,7 +17,7 @@ Feature: src-cli_user-authentication
       And the user session is created
       And access to protected resources is granted
 
-    @ov
+    @L2 @ov
     Scenario: User receives feedback on failed authentication
       Given a user attempting to login
       When the user provides invalid credentials
@@ -27,14 +27,14 @@ Feature: src-cli_user-authentication
 
   Rule: User passwords are securely handled
 
-    @ov
+    @L2 @ov
     Scenario: Password is not displayed during input
       Given a login form is presented
       When the user enters a password
       Then the password characters are masked
       And the password is not visible on screen
 
-    @ov
+    @L2 @ov
     Scenario: Session expires after inactivity
       Given a user with an active session
       When no activity occurs for the configured timeout period
@@ -43,14 +43,14 @@ Feature: src-cli_user-authentication
 
   Rule: Authentication credentials are validated
 
-    @ov
+    @L2 @ov
     Scenario: Empty credentials are rejected
       Given a login form is presented
       When the user submits without entering credentials
       Then validation fails
       And an appropriate error message is shown
 
-    @ov
+    @L2 @ov
     Scenario: Malformed credentials are rejected
       Given a login form is presented
       When the user submits credentials in incorrect format

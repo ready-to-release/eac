@@ -2,6 +2,7 @@ package testing
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -11,8 +12,16 @@ var ValidTags = map[string]bool{
 	"@deps:docker": true,
 	"@deps:git":    true,
 	"@deps:go":     true,
-	"@deps:ai": true,
+	"@deps:ai":     true,
 	"@deps:az-cli": true,
+	"@deps:openai": true,
+	"@deps:gemini": true,
+
+	// OS platform dependencies (for platform-specific tests)
+	"@deps:windows":    true,
+	"@deps:linux":      true,
+	"@deps:darwin":     true,
+	"@deps:os-agnostic": true,
 
 	// Taxonomy levels
 	"@L0": true,
@@ -30,6 +39,16 @@ var ValidTags = map[string]bool{
 
 	// Execution control tags
 	"@Manual": true,
+	"@ignore": true,
+
+	// Environment tags (test isolation)
+	"@env:isolated-test-project": true,
+	"@env:requires-git-repo":     true,
+	"@env:mkdocs-docker":         true,
+
+	// Test behavior tags
+	"@unisolated":   true, // Test runs without isolation (shares state)
+	"@verification": true, // Meta-verification test
 
 	// GxP regulatory tags
 	"@gxp":             true,
@@ -106,7 +125,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 		}
 	}
 
-	// CRITICAL: Must have exactly ONE level tag
+	// CRITICAL: Must have exactly ONE level tag (except @Manual tests)
 	levelTags := []string{}
 	for _, tag := range test.Tags {
 		if contains(LevelTags, tag) {
@@ -114,10 +133,13 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 		}
 	}
 
-	if len(levelTags) == 0 {
-		errors = append(errors, fmt.Sprintf("test '%s' has NO level tag (must have exactly one of @L0-@L4)", test.TestName))
-	} else if len(levelTags) > 1 {
-		errors = append(errors, fmt.Sprintf("test '%s' has MULTIPLE level tags %v (must have exactly one)", test.TestName, levelTags))
+	// @Manual tests are exempt from L-tag requirements
+	if !test.IsManual {
+		if len(levelTags) == 0 {
+			errors = append(errors, fmt.Sprintf("test '%s' has NO level tag (must have exactly one of @L0-@L4)", test.TestName))
+		} else if len(levelTags) > 1 {
+			errors = append(errors, fmt.Sprintf("test '%s' has MULTIPLE level tags %v (must have exactly one)", test.TestName, levelTags))
+		}
 	}
 
 	// Must have at least ONE verification tag
@@ -192,21 +214,9 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 // ShouldSkipValidation determines if a test should be excluded from validation
 // Returns true for test framework's own tests that may intentionally have invalid tags
 func ShouldSkipValidation(test TestReference) bool {
-	// Normalize path separators for consistent matching
-	normalizedPath := strings.ReplaceAll(test.FilePath, "\\", "/")
-
-	// Skip validation for test framework's own tests
-	// These tests often contain embedded test data with intentionally invalid tags
-	// to verify that validation logic catches errors
-	if strings.Contains(normalizedPath, "specs/src-core/testing/") {
-		return true
-	}
-
-	// Skip tests explicitly tagged as framework tests
-	if contains(test.Tags, "@test-framework") {
-		return true
-	}
-
+	// All meta tests (testing framework tests) have been moved to .go.txt files
+	// and are tested via specs/src-core/testing-framework/specification.feature
+	// No tests should be skipped from validation anymore
 	return false
 }
 
@@ -409,4 +419,127 @@ func ParseRiskControlTag(tag string) (*RiskControlRef, error) {
 	ref.IsGxP = false
 
 	return ref, nil
+}
+
+// ValidateFeatureLevelTags validates that Feature-level tags don't conflict with Scenario tags.
+// In Gherkin, scenarios INHERIT all tags from the Feature level. This causes problems when:
+//   - Feature has @L2 tag and Scenario has @L3 tag → Scenario gets BOTH @L2 AND @L3 (invalid)
+//   - Feature has @ov tag and Scenario has @iv tag → Scenario gets BOTH @ov AND @iv (invalid)
+//
+// This function detects conflicts for:
+//   - L-level tags (@L0-@L4) - must have exactly one
+//   - Verification tags (@ov/@iv/@pv/@piv/@ppv) - validation checks for multiple
+//
+// This function detects these anti-patterns and returns validation errors.
+func ValidateFeatureLevelTags(featureFilePath string) ([]string, error) {
+	errors := []string{}
+
+	content, err := os.ReadFile(featureFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read feature file: %w", err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	var featureLevelTags []string
+	var inFeature bool
+	lineNum := 0
+
+	for _, line := range lines {
+		lineNum++
+		trimmed := strings.TrimSpace(line)
+
+		// Detect Feature: keyword first
+		if strings.HasPrefix(trimmed, "Feature:") {
+			inFeature = true
+			continue
+		}
+
+		// Extract feature-level tags (before Feature:)
+		if strings.HasPrefix(trimmed, "@") && !inFeature {
+			tags := extractTagsFromLine(trimmed)
+			featureLevelTags = append(featureLevelTags, tags...)
+			continue
+		}
+
+		// Check for Scenario or Scenario Outline with tags
+		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
+			// Look back at previous lines for scenario-level tags
+			scenarioTags := []string{}
+			checkLine := lineNum - 2 // Start checking from line before scenario
+
+			for checkLine >= 0 && checkLine < len(lines) {
+				checkTrimmed := strings.TrimSpace(lines[checkLine])
+				if strings.HasPrefix(checkTrimmed, "@") {
+					tags := extractTagsFromLine(checkTrimmed)
+					// Prepend tags (we're walking backwards)
+					scenarioTags = append(tags, scenarioTags...)
+					checkLine--
+				} else if checkTrimmed == "" {
+					// Empty line, keep looking
+					checkLine--
+				} else {
+					// Non-tag, non-empty line - stop looking
+					break
+				}
+			}
+
+			// Check if Feature has L-level tag AND Scenario has L-level tag
+			featureLevelTag := ""
+			for _, tag := range featureLevelTags {
+				if isLevelTag(tag) {
+					featureLevelTag = tag
+					break
+				}
+			}
+
+			scenarioLevelTag := ""
+			for _, tag := range scenarioTags {
+				if isLevelTag(tag) {
+					scenarioLevelTag = tag
+					break
+				}
+			}
+
+			// ANTI-PATTERN: Feature AND Scenario have DIFFERENT L-level tags
+			// (Same L-tag is redundant but not invalid - it just results in duplicate tags)
+			if featureLevelTag != "" && scenarioLevelTag != "" && featureLevelTag != scenarioLevelTag {
+				scenarioName := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, "Scenario Outline:"), "Scenario:"))
+				errors = append(errors, fmt.Sprintf(
+					"Feature has L-tag %s and Scenario '%s' (line %d) has L-tag %s. "+
+						"Scenarios inherit Feature tags, resulting in BOTH tags on the scenario. "+
+						"Remove the L-tag from either the Feature or all Scenarios.",
+					featureLevelTag, scenarioName, lineNum, scenarioLevelTag))
+			}
+
+			// Check if Feature has verification tag AND Scenario has DIFFERENT verification tag
+			featureVerificationTag := ""
+			for _, tag := range featureLevelTags {
+				if isVerificationTag(tag) {
+					featureVerificationTag = tag
+					break
+				}
+			}
+
+			scenarioVerificationTag := ""
+			for _, tag := range scenarioTags {
+				if isVerificationTag(tag) {
+					scenarioVerificationTag = tag
+					break
+				}
+			}
+
+			// ANTI-PATTERN: Feature AND Scenario have DIFFERENT verification tags
+			if featureVerificationTag != "" && scenarioVerificationTag != "" && featureVerificationTag != scenarioVerificationTag {
+				scenarioName := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, "Scenario Outline:"), "Scenario:"))
+				errors = append(errors, fmt.Sprintf(
+					"Feature has verification tag %s and Scenario '%s' (line %d) has verification tag %s. "+
+						"Scenarios inherit Feature tags, resulting in BOTH tags on the scenario. "+
+						"Remove the verification tag from either the Feature or all Scenarios.",
+					featureVerificationTag, scenarioName, lineNum, scenarioVerificationTag))
+			}
+		}
+	}
+
+	return errors, nil
 }

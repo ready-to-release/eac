@@ -7,7 +7,7 @@ Feature: src-commands_work-merge-multi-worktree-support
 
   Rule: Main is checked out in another worktree
 
-    @ov
+    @L2 @ov
     Scenario: Merge detects main in another worktree and navigates there
       Given a repository has multiple worktrees
       And the main branch is checked out in worktree-2
@@ -18,7 +18,7 @@ Feature: src-commands_work-merge-multi-worktree-support
       And the merge is performed in worktree-2
       And the operation completes successfully
 
-    @ov
+    @L2 @ov
     Scenario: User sees confirmation of worktree navigation during merge
       Given a repository has multiple worktrees
       And the main branch is checked out in worktree-2
@@ -28,7 +28,7 @@ Feature: src-commands_work-merge-multi-worktree-support
       And a message confirms the merge will proceed in worktree-2
       And the current worktree remains unchanged after the operation
 
-    @ov
+    @L2 @ov
     Scenario: Merge fails safely when main is checked out elsewhere and merge conflicts
       Given a repository has multiple worktrees
       And the main branch is checked out in worktree-2
@@ -41,7 +41,7 @@ Feature: src-commands_work-merge-multi-worktree-support
 
   Rule: Main is not currently checked out in any worktree
 
-    @ov
+    @L2 @ov
     Scenario: Merge checks out main in current worktree when not checked out elsewhere
       Given a repository has multiple worktrees
       And the main branch is not checked out in any worktree
@@ -51,7 +51,7 @@ Feature: src-commands_work-merge-multi-worktree-support
       And the merge is performed in the current worktree
       And the operation completes successfully
 
-    @ov
+    @L2 @ov
     Scenario: Merge restores original branch after completing merge
       Given a repository has multiple worktrees
       And the main branch is not checked out anywhere
@@ -61,7 +61,7 @@ Feature: src-commands_work-merge-multi-worktree-support
       And the merge completes successfully
       And the original feature branch is restored in the current worktree
 
-    @ov
+    @L2 @ov
     Scenario: User is informed when merge checks out main locally
       Given a repository has multiple worktrees
       And the main branch is not checked out in any worktree
@@ -73,14 +73,14 @@ Feature: src-commands_work-merge-multi-worktree-support
 
   Rule: Multi-worktree detection works correctly
 
-    @ov
+    @L2 @ov
     Scenario: System correctly identifies all worktrees in repository
       Given a repository has three worktrees
       When I execute the merge command
       Then the system identifies all active worktrees
       And the system correctly determines which branch is checked out in each
 
-    @ov
+    @L2 @ov
     Scenario: Merge handles missing worktree gracefully
       Given a repository previously had a worktree that was removed
       And the main branch was last seen in the removed worktree

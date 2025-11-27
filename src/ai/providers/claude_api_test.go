@@ -1,5 +1,6 @@
+
 // File: src/core/ai/providers/claude_api_test.go
-//go:build L2
+//go:build L2 && ov
 
 // Integration tests that require real Claude API - excluded from L0-L1 (commit suite)
 // Go tests should only be L0-L1 unit tests with mocks

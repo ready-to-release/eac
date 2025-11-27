@@ -11,6 +11,7 @@ source:
     - "go.mod"
     - "go.sum"
     - "**.go"
+    - "**.go.txt"  # Include meta test files in testdata
     - "/src/core/ai/**"
     - "/src/core/markdown/**"
     - "/src/core/module-deps/**"

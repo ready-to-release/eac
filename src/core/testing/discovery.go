@@ -20,6 +20,11 @@ func DiscoverGoTestTags(pkgPath string) ([]TestReference, error) {
 			return err
 		}
 
+		// Skip testdata directories (Go convention for test fixtures)
+		if info.IsDir() && info.Name() == "testdata" {
+			return filepath.SkipDir
+		}
+
 		// Skip directories
 		if info.IsDir() {
 			return nil
@@ -219,6 +224,11 @@ func DiscoverGodogFeatureTags(specsPath string) ([]TestReference, error) {
 			return err
 		}
 
+		// Skip testdata directories (Go convention for test fixtures)
+		if info.IsDir() && info.Name() == "testdata" {
+			return filepath.SkipDir
+		}
+
 		// Skip directories
 		if info.IsDir() {
 			return nil
@@ -258,20 +268,24 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 
 	var featureTags []string
 	var scenarioTags []string
-	var inScenario bool
+	var inFeature bool
 	var scenarioName string
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Extract feature-level tags (before Feature:)
-		if strings.HasPrefix(trimmed, "@") && !inScenario && len(featureTags) == 0 {
-			tags := extractTagsFromLine(trimmed)
-			featureTags = append(featureTags, tags...)
+		// Detect Feature: keyword first to know when we're done collecting feature tags
+		if strings.HasPrefix(trimmed, "Feature:") {
+			// We've hit the Feature line, no more feature tags after this
+			inFeature = true
+			continue
 		}
 
-		// Detect Feature: keyword
-		if strings.HasPrefix(trimmed, "Feature:") {
+		// Extract feature-level tags (before Feature:)
+		// Allow multiple lines of tags before Feature:
+		if strings.HasPrefix(trimmed, "@") && !inFeature && len(featureTags) >= 0 {
+			tags := extractTagsFromLine(trimmed)
+			featureTags = append(featureTags, tags...)
 			continue
 		}
 
@@ -283,7 +297,6 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 
 		// Detect Scenario: or Scenario Outline:
 		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
-			inScenario = true
 			scenarioName = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, "Scenario Outline:"), "Scenario:"))
 
 			// Combine tags: scenario level tags OVERRIDE feature level tags
@@ -334,8 +347,12 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 // mergeFeatureAndScenarioTags combines feature and scenario tags with proper override semantics
 // Rules:
 // - Scenario LEVEL tags (@L0-@L4) OVERRIDE feature level tags
+// - Scenario VERIFICATION tags (@ov/@iv/@pv/@piv/@ppv) OVERRIDE feature verification tags
 // - All other scenario tags are ADDED to feature tags
-// - Non-level feature tags are INHERITED unless explicitly overridden
+// - Non-overridden feature tags are INHERITED
+//
+// This prevents scenarios from inheriting conflicting tags that would violate
+// "exactly one" constraints in our validation rules.
 func mergeFeatureAndScenarioTags(featureTags []string, scenarioTags []string) []string {
 	result := []string{}
 
@@ -363,16 +380,40 @@ func mergeFeatureAndScenarioTags(featureTags []string, scenarioTags []string) []
 		result = append(result, featureLevelTags...)
 	}
 
-	// Add all NON-LEVEL tags from feature
+	// Get verification tags from both
+	featureVerificationTags := []string{}
+	scenarioVerificationTags := []string{}
+
 	for _, tag := range featureTags {
-		if !isLevelTag(tag) && !contains(result, tag) {
+		if isVerificationTag(tag) {
+			featureVerificationTags = append(featureVerificationTags, tag)
+		}
+	}
+
+	for _, tag := range scenarioTags {
+		if isVerificationTag(tag) {
+			scenarioVerificationTags = append(scenarioVerificationTags, tag)
+		}
+	}
+
+	// RULE: If scenario has verification tag(s), use ONLY scenario verification tags (override)
+	// Otherwise, inherit feature verification tags
+	if len(scenarioVerificationTags) > 0 {
+		result = append(result, scenarioVerificationTags...)
+	} else {
+		result = append(result, featureVerificationTags...)
+	}
+
+	// Add all OTHER tags from feature (not level, not verification)
+	for _, tag := range featureTags {
+		if !isLevelTag(tag) && !isVerificationTag(tag) && !contains(result, tag) {
 			result = append(result, tag)
 		}
 	}
 
-	// Add all NON-LEVEL tags from scenario
+	// Add all OTHER tags from scenario (not level, not verification)
 	for _, tag := range scenarioTags {
-		if !isLevelTag(tag) && !contains(result, tag) {
+		if !isLevelTag(tag) && !isVerificationTag(tag) && !contains(result, tag) {
 			result = append(result, tag)
 		}
 	}
@@ -383,6 +424,11 @@ func mergeFeatureAndScenarioTags(featureTags []string, scenarioTags []string) []
 // isLevelTag checks if a tag is a level tag (@L0-@L4)
 func isLevelTag(tag string) bool {
 	return tag == "@L0" || tag == "@L1" || tag == "@L2" || tag == "@L3" || tag == "@L4"
+}
+
+// isVerificationTag checks if a tag is a verification tag (@ov/@iv/@pv/@piv/@ppv)
+func isVerificationTag(tag string) bool {
+	return tag == "@ov" || tag == "@iv" || tag == "@pv" || tag == "@piv" || tag == "@ppv"
 }
 
 // extractTagsFromLine extracts all tags from a line

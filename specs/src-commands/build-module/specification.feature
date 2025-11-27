@@ -1,4 +1,4 @@
-@deps:go @ov
+@deps:go @L2 @ov
 Feature: src-commands_build
 
   As a developer of the eac platform

@@ -1,5 +1,5 @@
 @skip:todo
-@deps:go @ov
+@deps:go @L2 @ov
 Feature: src-commands_work_pull
 
   As a developer working in a workspace

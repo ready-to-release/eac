@@ -1,4 +1,4 @@
-@L1 @verification @unisolated
+@verification @unisolated
 Feature: repository_one-module-per-file
 
   As a repository maintainer
@@ -10,7 +10,7 @@ Feature: repository_one-module-per-file
 
   Rule: Each file must belong to exactly one module
 
-    @ov
+    @L2 @ov
     Scenario: No files have multi-module ownership
       Given the module contracts are loaded
       When I check for files with multi-module ownership
