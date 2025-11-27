@@ -28,6 +28,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -100,13 +101,19 @@ func (e *Executor) GetLastUsedProvider() Provider {
 	return e.lastUsedProvider
 }
 
-// loadConfig loads the agent configuration from .r2r/eac directory.
-// Only loads from agent-config.yml (no personal override support).
+// loadConfig loads the agent configuration from .r2r directory.
+// Checks .r2r/agent-config.personal.yml first (gitignored), then falls back to .r2r/eac/agent-config.yml.
 func (e *Executor) loadConfig() (*Config, error) {
-	// Get the .r2r/eac directory
-	eacDir := filepath.Join(e.workspaceRoot, ".r2r", "eac")
+	r2rDir := filepath.Join(e.workspaceRoot, ".r2r")
 
-	// Load config from .r2r/eac/agent-config.yml
+	// Try personal config first (gitignored, user-specific)
+	personalConfigPath := filepath.Join(r2rDir, "agent-config.personal.yml")
+	if _, err := os.Stat(personalConfigPath); err == nil {
+		return LoadConfig(personalConfigPath)
+	}
+
+	// Fall back to team config in .r2r/eac/
+	eacDir := filepath.Join(r2rDir, "eac")
 	configPath := filepath.Join(eacDir, "agent-config.yml")
 	return LoadConfig(configPath)
 }

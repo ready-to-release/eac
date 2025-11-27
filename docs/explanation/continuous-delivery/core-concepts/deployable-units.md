@@ -346,9 +346,11 @@ dependencies:
 **Pin to Specific Versions (Recommended for Production):**
 
 ```json
-"dependencies": {
-  "express": "4.18.2",        // Exact version
-  "@company/auth": "1.2.3"
+{
+  "dependencies": {
+    "express": "4.18.2",
+    "@company/auth": "1.2.3"
+  }
 }
 ```
 
@@ -358,9 +360,11 @@ dependencies:
 **Use Version Ranges (Caution):**
 
 ```json
-"dependencies": {
-  "express": "^4.18.0",       // Compatible with 4.x.x
-  "@company/auth": "~1.2.0"   // Compatible with 1.2.x
+{
+  "dependencies": {
+    "express": "^4.18.0",
+    "@company/auth": "~1.2.0"
+  }
 }
 ```
 

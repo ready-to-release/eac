@@ -592,7 +592,9 @@ jobs:
 dependencies:
   shared-models: v1.2.3
   shared-auth: v2.1.0
+```
 
+```yaml
 # deployable-unit-worker/dependencies.yaml
 dependencies:
   shared-models: v1.2.3
