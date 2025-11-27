@@ -1,15 +1,19 @@
 package serve
 
 import (
+	"archive/tar"
 	"context"
 	"fmt"
-	"os/exec"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
 )
 
@@ -71,12 +75,20 @@ type ServeResult struct {
 
 // StartServe starts a container serving web content.
 // It handles port allocation, DinD path translation, image building, and container creation.
+// Port reservation prevents race conditions when starting multiple containers simultaneously.
 func StartServe(ctx context.Context, config *ServeConfig) (*ServeResult, error) {
-	// Allocate port
-	hostPort, err := FindAvailablePortOrUse(config.PreferredPort)
+	// Allocate and reserve port atomically
+	hostPort, err := FindAndReservePortOrUse(config.PreferredPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to allocate port: %w", err)
 	}
+	// Ensure port is released on error
+	var portReleased bool
+	defer func() {
+		if !portReleased {
+			ReleasePort(hostPort)
+		}
+	}()
 
 	// Generate container name with port for multi-instance support
 	containerName := fmt.Sprintf("%s-%d", config.Name, hostPort)
@@ -94,6 +106,8 @@ func StartServe(ctx context.Context, config *ServeConfig) (*ServeResult, error) 
 		return nil, fmt.Errorf("failed to check container status: %w", err)
 	}
 	if running {
+		// Container already running, keep the port reservation
+		portReleased = true
 		return existingResult, nil
 	}
 
@@ -124,6 +138,9 @@ func StartServe(ctx context.Context, config *ServeConfig) (*ServeResult, error) 
 	if err := cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 		return nil, fmt.Errorf("failed to start container: %w", err)
 	}
+
+	// Container started successfully, keep the port reservation
+	portReleased = true
 
 	// Wait for server to start
 	time.Sleep(2 * time.Second)
@@ -254,16 +271,14 @@ func ListServing(ctx context.Context, namePattern string) ([]*ServeResult, error
 	return results, nil
 }
 
-// createDockerClient creates a new Docker client with appropriate options.
-func createDockerClient() (*client.Client, error) {
-	return client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
+// createDockerClient is a variable holding the Docker client factory function.
+// This can be overridden in tests to inject mock clients.
+var createDockerClient = func() (DockerClient, error) {
+	return NewDockerClient()
 }
 
 // isContainerRunning checks if a specific container is running.
-func isContainerRunning(ctx context.Context, cli *client.Client, containerName string) (bool, *ServeResult, error) {
+func isContainerRunning(ctx context.Context, cli DockerClient, containerName string) (bool, *ServeResult, error) {
 	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
 		return false, nil, err
@@ -296,8 +311,72 @@ func isContainerRunning(ctx context.Context, cli *client.Client, containerName s
 	return false, nil, nil
 }
 
+// createBuildContext creates a tar archive of the build context
+func createBuildContext(contextPath, dockerfilePath string) (io.ReadCloser, error) {
+	// Create a pipe for the tar stream
+	pr, pw := io.Pipe()
+
+	go func() {
+		defer pw.Close()
+
+		tw := tar.NewWriter(pw)
+		defer tw.Close()
+
+		// Walk the context directory
+		err := filepath.Walk(contextPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			// Get relative path
+			relPath, err := filepath.Rel(contextPath, path)
+			if err != nil {
+				return err
+			}
+
+			// Skip the context root itself
+			if relPath == "." {
+				return nil
+			}
+
+			// Create tar header
+			header, err := tar.FileInfoHeader(info, "")
+			if err != nil {
+				return err
+			}
+			header.Name = filepath.ToSlash(relPath)
+
+			// Write header
+			if err := tw.WriteHeader(header); err != nil {
+				return err
+			}
+
+			// Write file content if it's a regular file
+			if info.Mode().IsRegular() {
+				file, err := os.Open(path)
+				if err != nil {
+					return err
+				}
+				defer file.Close()
+
+				if _, err := io.Copy(tw, file); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			pw.CloseWithError(err)
+		}
+	}()
+
+	return pr, nil
+}
+
 // ensureImage ensures the Docker image exists, building it if necessary.
-func ensureImage(ctx context.Context, cli *client.Client, config *ServeConfig) error {
+func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) error {
 	// Check if image exists
 	images, err := cli.ImageList(ctx, image.ListOptions{})
 	if err != nil {
@@ -314,34 +393,68 @@ func ensureImage(ctx context.Context, cli *client.Client, config *ServeConfig) e
 
 	// Image doesn't exist
 	if config.BuildInfo != nil {
-		// Build locally
+		// Build locally using Docker SDK
 		fmt.Printf("Building image %s...\n", config.Image)
-		cmd := exec.CommandContext(ctx, "docker", "build",
-			"-t", config.Image,
-			"-f", config.BuildInfo.Dockerfile,
-			config.BuildInfo.ContextPath,
-		)
-		output, err := cmd.CombinedOutput()
+
+		// Create build context tar
+		buildContext, err := createBuildContext(config.BuildInfo.ContextPath, config.BuildInfo.Dockerfile)
 		if err != nil {
-			return fmt.Errorf("failed to build image: %w\nOutput: %s", err, string(output))
+			return fmt.Errorf("failed to create build context: %w", err)
 		}
-		fmt.Printf("Image %s built successfully\n", config.Image)
+		defer buildContext.Close()
+
+		// Get relative dockerfile path
+		dockerfileRel, err := filepath.Rel(config.BuildInfo.ContextPath, config.BuildInfo.Dockerfile)
+		if err != nil {
+			return fmt.Errorf("failed to get relative dockerfile path: %w", err)
+		}
+
+		// Build image
+		buildOptions := types.ImageBuildOptions{
+			Tags:       []string{config.Image},
+			Dockerfile: dockerfileRel,
+			Remove:     true,
+			ForceRemove: true,
+		}
+
+		resp, err := cli.ImageBuild(ctx, buildContext, buildOptions)
+		if err != nil {
+			return fmt.Errorf("failed to build image: %w", err)
+		}
+		defer resp.Body.Close()
+
+		// Stream build progress
+		err = jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stdout, os.Stdout.Fd(), true, nil)
+		if err != nil {
+			return fmt.Errorf("error during image build: %w", err)
+		}
+
+		fmt.Printf("\nImage %s built successfully\n", config.Image)
 	} else {
-		// Pull from registry
+		// Pull from registry using Docker SDK
 		fmt.Printf("Pulling image %s...\n", config.Image)
-		cmd := exec.CommandContext(ctx, "docker", "pull", config.Image)
-		output, err := cmd.CombinedOutput()
+
+		pullOptions := image.PullOptions{}
+		reader, err := cli.ImagePull(ctx, config.Image, pullOptions)
 		if err != nil {
-			return fmt.Errorf("failed to pull image: %w\nOutput: %s", err, string(output))
+			return fmt.Errorf("failed to pull image: %w", err)
 		}
-		fmt.Printf("Image %s pulled successfully\n", config.Image)
+		defer reader.Close()
+
+		// Stream pull progress
+		err = jsonmessage.DisplayJSONMessagesStream(reader, os.Stdout, os.Stdout.Fd(), true, nil)
+		if err != nil {
+			return fmt.Errorf("error during image pull: %w", err)
+		}
+
+		fmt.Printf("\nImage %s pulled successfully\n", config.Image)
 	}
 
 	return nil
 }
 
 // removeExistingContainer removes an existing container if it exists.
-func removeExistingContainer(ctx context.Context, cli *client.Client, containerName string) {
+func removeExistingContainer(ctx context.Context, cli DockerClient, containerName string) {
 	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
 		return
@@ -358,7 +471,7 @@ func removeExistingContainer(ctx context.Context, cli *client.Client, containerN
 }
 
 // createContainer creates a new Docker container with the specified configuration.
-func createContainer(ctx context.Context, cli *client.Client, config *ServeConfig, containerName string, hostPort int, mountSource string) (string, error) {
+func createContainer(ctx context.Context, cli DockerClient, config *ServeConfig, containerName string, hostPort int, mountSource string) (string, error) {
 	containerPortStr := fmt.Sprintf("%d", config.ContainerPort)
 	hostPortStr := fmt.Sprintf("%d", hostPort)
 
