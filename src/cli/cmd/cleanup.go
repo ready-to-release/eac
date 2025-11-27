@@ -5,15 +5,20 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
+	"github.com/ready-to-release/eac/src/cli/internal/docker"
 	"github.com/spf13/cobra"
 )
 
 var (
-	cleanupAll     bool
-	cleanupDryRun  bool
-	keepVersions   int
+	cleanupAll        bool
+	cleanupDryRun     bool
+	keepVersions      int
+	cleanupContainers bool
+	cleanupExtensions bool
+	cleanupOlderThan  string
 )
 
 func init() {
@@ -21,20 +26,33 @@ func init() {
 	CleanupCmd.Flags().BoolVarP(&cleanupAll, "all", "a", false, "Remove all unused images, not just r2r-cli extensions")
 	CleanupCmd.Flags().BoolVarP(&cleanupDryRun, "dry-run", "n", false, "Show what would be removed without actually removing")
 	CleanupCmd.Flags().IntVarP(&keepVersions, "keep", "k", 1, "Number of versions to keep per extension (default: 1)")
+	CleanupCmd.Flags().BoolVarP(&cleanupContainers, "containers", "c", false, "Also clean up stopped containers")
+	CleanupCmd.Flags().BoolVarP(&cleanupExtensions, "extensions-only", "e", false, "Only clean up extension containers (use with --containers)")
+	CleanupCmd.Flags().StringVarP(&cleanupOlderThan, "older-than", "o", "", "Only clean containers older than duration (e.g., '24h', '7d')")
 }
 
 var CleanupCmd = &cobra.Command{
 	Use:   "cleanup",
-	Short: "Clean up old extension images to free disk space",
-	Long: `Remove old versions of extension Docker images to reclaim disk space.
+	Short: "Clean up old extension images and containers to free disk space",
+	Long: `Remove old versions of extension Docker images and stopped containers to reclaim disk space.
 
-By default, keeps only the most recent version of each extension.
-Use --keep to retain more versions, or --all to also clean non-extension images.`,
+By default, keeps only the most recent version of each extension image.
+Use --keep to retain more versions, or --all to also clean non-extension images.
+Use --containers to also clean up stopped containers.`,
 	Example: `  # Remove all but the latest version of each extension
   r2r cleanup
 
   # Keep 3 versions of each extension
   r2r cleanup --keep 3
+
+  # Also clean up stopped containers
+  r2r cleanup --containers
+
+  # Clean only extension containers
+  r2r cleanup --containers --extensions-only
+
+  # Clean containers older than 24 hours
+  r2r cleanup --containers --older-than 24h
 
   # Show what would be removed without actually removing
   r2r cleanup --dry-run
@@ -44,6 +62,13 @@ Use --keep to retain more versions, or --all to also clean non-extension images.
 	Run: func(cmd *cobra.Command, args []string) {
 		conf.InitConfig()
 
+		// Handle container cleanup if requested
+		if cleanupContainers {
+			cleanupDockerContainers()
+			fmt.Println() // Add spacing between sections
+		}
+
+		// Handle image cleanup
 		if cleanupAll {
 			cleanAllDockerImages()
 		} else {
@@ -193,4 +218,84 @@ func cleanAllDockerImages() {
 			fmt.Print(string(output))
 		}
 	}
+}
+
+func cleanupDockerContainers() {
+	fmt.Println("🧹 Cleaning up Docker containers...")
+
+	// Create container host
+	host, err := docker.NewContainerHost()
+	if err != nil {
+		fmt.Printf("Error: Failed to connect to Docker: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Parse older-than duration if specified
+	var olderThan time.Duration
+	if cleanupOlderThan != "" {
+		// Support simplified format: "7d" -> 7 days
+		durStr := cleanupOlderThan
+		if strings.HasSuffix(durStr, "d") && !strings.Contains(durStr, "h") {
+			days := strings.TrimSuffix(durStr, "d")
+			durStr = days + "h" // Convert to hours for parsing
+			if parsed, parseErr := time.ParseDuration(durStr); parseErr == nil {
+				olderThan = parsed * 24 // Convert hours to days
+			} else {
+				fmt.Printf("Error: Invalid duration format '%s'. Use format like '24h' or '7d'\n", cleanupOlderThan)
+				os.Exit(1)
+			}
+		} else {
+			olderThan, err = time.ParseDuration(durStr)
+			if err != nil {
+				fmt.Printf("Error: Invalid duration format '%s'. Use format like '24h' or '7d'\n", cleanupOlderThan)
+				os.Exit(1)
+			}
+		}
+	}
+
+	// Build cleanup options
+	opts := docker.ContainerCleanupOptions{
+		OnlyExtensions: cleanupExtensions,
+		IncludeRunning: false,
+		OlderThan:      olderThan,
+		DryRun:         cleanupDryRun,
+	}
+
+	// Execute cleanup
+	result, err := host.CleanupContainers(opts)
+	if err != nil {
+		fmt.Printf("Error during cleanup: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Display results
+	if cleanupDryRun {
+		fmt.Printf("  [DRY RUN] Would remove %d container(s)\n", result.ContainersRemoved)
+	} else {
+		fmt.Printf("  ✅ Removed %d container(s)\n", result.ContainersRemoved)
+		if result.SpaceReclaimed > 0 {
+			fmt.Printf("  💾 Space reclaimed: %s\n", formatBytes(result.SpaceReclaimed))
+		}
+	}
+
+	// Display any errors
+	if len(result.Errors) > 0 {
+		fmt.Printf("  ⚠️  %d error(s) occurred:\n", len(result.Errors))
+		for _, cleanupErr := range result.Errors {
+			fmt.Printf("     - %v\n", cleanupErr)
+		}
+	}
+}
+
+func formatBytes(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }

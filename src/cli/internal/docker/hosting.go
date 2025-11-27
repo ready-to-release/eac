@@ -46,7 +46,7 @@ type ExtensionConfig struct {
 
 // ContainerHost manages Docker container operations for extensions
 type ContainerHost struct {
-	client  *client.Client
+	client  DockerClient
 	ctx     context.Context
 	rootDir string
 }
@@ -68,7 +68,7 @@ func NewContainerHost() (*ContainerHost, error) {
 		log.Debug().Str("docker_host", dockerHost).Msg("Using custom Docker host from R2R_DOCKER_HOST")
 	}
 
-	cli, err := client.NewClientWithOpts(clientOpts...)
+	cli, err := NewRealDockerClient(clientOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating Docker client: %w", err)
 	}
@@ -588,6 +588,9 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 				Str("image", imageName).
 				Bool("hasRepoDigests", len(localImageInfo.RepoDigests) > 0).
 				Msg("Using local development image (loadLocal: true)")
+
+			// Cache the local digest for future checks
+			ch.cacheImageDigest(imageName, tag, localImageInfo)
 			return nil
 		} else if hasLocalImage && (tag == "latest" || tag == "main" || tag == "master") {
 			// For dynamic tags with local image (not loadLocal mode), check cache TTL
@@ -708,6 +711,13 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 	}
 
 	log.Info().Str("image", imageName).Msg("Successfully pulled image")
+
+	// Cache the pulled image digest
+	tag := ch.extractTag(imageName)
+	if pulledImageInfo, err := ch.client.ImageInspect(ch.ctx, imageName); err == nil {
+		ch.cacheImageDigest(imageName, tag, pulledImageInfo)
+	}
+
 	return nil
 }
 
@@ -993,4 +1003,206 @@ func isExpectedHostImage(image string, expectedImages []string) bool {
 		}
 	}
 	return false
+}
+
+// extractTag extracts the tag from an image name (format: registry/repo:tag)
+func (ch *ContainerHost) extractTag(imageName string) string {
+	tagIndex := strings.LastIndex(imageName, ":")
+	if tagIndex > 0 && tagIndex < len(imageName)-1 {
+		return imageName[tagIndex+1:]
+	}
+	return "latest" // Default tag
+}
+
+// extractExtensionName extracts the extension name from an image name
+// For ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:0.0.2 -> "pwsh"
+func (ch *ContainerHost) extractExtensionName(imageName string) string {
+	// Remove tag first
+	imageWithoutTag := imageName
+	if idx := strings.LastIndex(imageName, ":"); idx > 0 {
+		imageWithoutTag = imageName[:idx]
+	}
+
+	// Extract last path component as extension name
+	parts := strings.Split(imageWithoutTag, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return "unknown"
+}
+
+// cacheImageDigest saves the image digest to the registry cache for future lookups
+func (ch *ContainerHost) cacheImageDigest(imageName, tag string, imageInfo image.InspectResponse) {
+	// Get or create the digest to cache
+	var digest string
+	if len(imageInfo.RepoDigests) > 0 {
+		digest = imageInfo.RepoDigests[0]
+	} else {
+		digest = imageInfo.ID
+	}
+
+	// Extract extension name from image
+	extensionName := ch.extractExtensionName(imageName)
+
+	// Load registry cache
+	registryCache, err := cache.LoadRegistryCache(ch.rootDir)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to load registry cache for digest update")
+		return
+	}
+
+	// Update the digest in cache
+	registryCache.SetImageDigest(extensionName, tag, digest)
+
+	// Save cache
+	if err := registryCache.SaveRegistryCache(ch.rootDir); err != nil {
+		log.Warn().Err(err).Msg("Failed to save registry cache after digest update")
+	} else {
+		log.Debug().
+			Str("extension", extensionName).
+			Str("tag", tag).
+			Str("digest", digest).
+			Msg("Cached image digest")
+	}
+}
+
+// ContainerCleanupOptions configures container cleanup behavior
+type ContainerCleanupOptions struct {
+	OnlyExtensions bool          // Only clean extension containers
+	IncludeRunning bool          // Also remove running containers (default: false)
+	OlderThan      time.Duration // Only remove containers older than this duration
+	DryRun         bool          // Show what would be removed without removing
+}
+
+// CleanupResult represents the result of a cleanup operation
+type CleanupResult struct {
+	ContainersRemoved int
+	SpaceReclaimed    int64
+	Errors            []error
+}
+
+// CleanupContainers removes containers based on the provided options
+func (ch *ContainerHost) CleanupContainers(opts ContainerCleanupOptions) (*CleanupResult, error) {
+	result := &CleanupResult{}
+
+	// List all containers (including stopped)
+	containers, err := ch.client.ContainerList(ch.ctx, container.ListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	log.Debug().Int("total_containers", len(containers)).Msg("Scanning containers for cleanup")
+
+	for _, ctr := range containers {
+		// Skip if container is running and we don't want to include running containers
+		if ctr.State == "running" && !opts.IncludeRunning {
+			continue
+		}
+
+		// Filter by extension containers if requested
+		if opts.OnlyExtensions {
+			// Check if container name or labels indicate it's an extension container
+			isExtension := false
+			for _, name := range ctr.Names {
+				if strings.Contains(name, "r2r-") || strings.Contains(name, "extension-") {
+					isExtension = true
+					break
+				}
+			}
+			if !isExtension {
+				continue
+			}
+		}
+
+		// Filter by age if specified
+		if opts.OlderThan > 0 {
+			createdTime := time.Unix(ctr.Created, 0)
+			age := time.Since(createdTime)
+			if age < opts.OlderThan {
+				continue
+			}
+		}
+
+		// Container matches criteria, remove it
+		containerName := ctr.Names[0]
+		if len(containerName) > 0 && containerName[0] == '/' {
+			containerName = containerName[1:] // Remove leading slash
+		}
+
+		if opts.DryRun {
+			log.Info().
+				Str("container", containerName).
+				Str("state", ctr.State).
+				Str("image", ctr.Image).
+				Msg("[DRY RUN] Would remove container")
+			result.ContainersRemoved++
+		} else {
+			log.Info().
+				Str("container", containerName).
+				Str("state", ctr.State).
+				Str("image", ctr.Image).
+				Msg("Removing container")
+
+			// Get container size before removal
+			var containerSize int64
+			inspectData, inspectErr := ch.client.ContainerInspect(ch.ctx, ctr.ID)
+			if inspectErr == nil && inspectData.SizeRw != nil {
+				containerSize = *inspectData.SizeRw
+			}
+
+			// Remove the container
+			removeOpts := container.RemoveOptions{
+				Force:         opts.IncludeRunning, // Force remove if including running containers
+				RemoveVolumes: true,                // Also remove associated volumes
+			}
+
+			if err := ch.client.ContainerRemove(ch.ctx, ctr.ID, removeOpts); err != nil {
+				log.Warn().
+					Err(err).
+					Str("container", containerName).
+					Msg("Failed to remove container")
+				result.Errors = append(result.Errors, fmt.Errorf("failed to remove %s: %w", containerName, err))
+			} else {
+				result.ContainersRemoved++
+				result.SpaceReclaimed += containerSize // Only count space for successful removals
+			}
+		}
+	}
+
+	log.Info().
+		Int("removed", result.ContainersRemoved).
+		Int64("space_reclaimed_bytes", result.SpaceReclaimed).
+		Int("errors", len(result.Errors)).
+		Bool("dry_run", opts.DryRun).
+		Msg("Container cleanup completed")
+
+	return result, nil
+}
+
+// CleanupStoppedContainers is a convenience wrapper for cleaning up all stopped containers
+func (ch *ContainerHost) CleanupStoppedContainers(dryRun bool) (*CleanupResult, error) {
+	return ch.CleanupContainers(ContainerCleanupOptions{
+		OnlyExtensions: false,
+		IncludeRunning: false,
+		DryRun:         dryRun,
+	})
+}
+
+// CleanupExtensionContainers is a convenience wrapper for cleaning up extension containers
+func (ch *ContainerHost) CleanupExtensionContainers(includeRunning, dryRun bool) (*CleanupResult, error) {
+	return ch.CleanupContainers(ContainerCleanupOptions{
+		OnlyExtensions: true,
+		IncludeRunning: includeRunning,
+		DryRun:         dryRun,
+	})
+}
+
+// CleanupOldContainers removes containers older than the specified duration
+func (ch *ContainerHost) CleanupOldContainers(olderThan time.Duration, dryRun bool) (*CleanupResult, error) {
+	return ch.CleanupContainers(ContainerCleanupOptions{
+		OnlyExtensions: false,
+		IncludeRunning: false,
+		OlderThan:      olderThan,
+		DryRun:         dryRun,
+	})
 }
