@@ -408,8 +408,8 @@ func InitializeDesignScenario(sc *godog.ScenarioContext) {
 	// These can be removed once all specs are updated to use the new structure
 
 	// Given steps
-	sc.Step(`^docker service is available$`, dockerIsRunning)
-	sc.Step(`^Docker is running$`, dockerIsRunning)
+	// Note: "docker service is available" and "Docker is running" are now registered
+	// in design/tests/serve_steps.go to avoid ambiguity with docs module
 	sc.Step(`^module "([^"]*)" has workspace\.dsl file$`, moduleHasWorkspaceDslFile)
 	sc.Step(`^multiple modules have workspace\.dsl files$`, multipleModulesHaveWorkspaceDslFiles)
 

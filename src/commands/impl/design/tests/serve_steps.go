@@ -11,7 +11,8 @@ import (
 // RegisterServeSteps registers all step definitions for design serve command.
 func registerServeSteps(sc *godog.ScenarioContext) {
 	// Given steps
-	sc.Step(`^docker service is available$`, dockerServiceIsAvailable)
+	// Note: "docker service is available" is registered in docs/tests/steps_setup.go
+	// and is shared across all modules to avoid ambiguity
 	sc.Step(`^module "([^"]*)" has a workspace at "([^"]*)"$`, moduleHasWorkspaceAt)
 	sc.Step(`^no workspace exists for "([^"]*)"$`, noWorkspaceExistsFor)
 	sc.Step(`^module "([^"]*)" has a workspace$`, moduleHasWorkspace)
