@@ -10,10 +10,9 @@
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to the 'out' directory for debugging and analysis
 // Flag.module: type=string, shorthand=m, usage=Target module for the specification (e.g., src-commands, src-core). If not provided, the module will be inferred from the description
 // Flag.output: type=string, shorthand=o, usage=Custom output path for the specification file. If not provided, the path is determined from the feature name and module
-// Flag.template: type=string, usage=Path to a custom template file for specification generation. Overrides the built-in template
 // Flag.prompt: type=string, usage=Path to a custom system prompt file. Overrides both user override prompts and built-in prompts
 // Usage: specs create <description>
-// Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --template (custom template file), --prompt (custom system prompt)
+// Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --prompt (custom system prompt)
 // HasSideEffects: true
 package create
 
@@ -195,7 +194,6 @@ type SpecsConfig struct {
 	Module       string // -m, --module: Target module
 	OutputPath   string // -o, --output: Custom output path
 	PromptPath   string // --prompt: Custom system prompt file
-	TemplatePath string // --template: Custom template file
 	TemplateRoot string
 	Logger       *logging.Logger
 }
@@ -494,11 +492,6 @@ func parseConfig() (*SpecsConfig, error) {
 		case "--prompt":
 			if i+1 < len(args) {
 				config.PromptPath = args[i+1]
-				i++
-			}
-		case "--template":
-			if i+1 < len(args) {
-				config.TemplatePath = args[i+1]
 				i++
 			}
 		default:

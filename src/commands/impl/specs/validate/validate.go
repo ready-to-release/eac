@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"go.uber.org/zap"
@@ -150,7 +151,7 @@ func SpecsValidate() int {
 	var results []*ValidationResult
 	if info.IsDir() {
 		// Validate directory (recursive)
-		results, err = validateDirectoryWithLogger(config.Path, config.RepositoryRoot, config.Quiet, config.Logger)
+		results, err = validateDirectoryWithLogger(config.Path, config.RepositoryRoot, config.Quiet, config.CheckTags, config.Logger)
 		if err != nil {
 			if config.Logger != nil {
 				config.Logger.Error("Directory validation failed", zap.Error(err))
@@ -160,7 +161,7 @@ func SpecsValidate() int {
 		}
 	} else {
 		// Validate single file
-		errors, err := validateGherkinFile(config.Path, config.RepositoryRoot)
+		errors, err := validateGherkinFile(config.Path, config.RepositoryRoot, config.CheckTags)
 		if err != nil {
 			if config.Logger != nil {
 				config.Logger.Error("File validation failed",
@@ -169,6 +170,40 @@ func SpecsValidate() int {
 			}
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			return 1
+		}
+
+		// Apply fixes if --fix flag is set
+		if config.Fix && len(errors) > 0 {
+			fixResult, fixErr := fixGherkinFile(config.Path, errors)
+			if fixErr != nil {
+				if config.Logger != nil {
+					config.Logger.Error("Failed to fix file",
+						zap.String("path", config.Path),
+						zap.Error(fixErr))
+				}
+				fmt.Fprintf(os.Stderr, "Error fixing file: %v\n", fixErr)
+			} else if fixResult.FixCount() > 0 {
+				// Display fix results
+				fmt.Print(formatFixResult(fixResult, config.RepositoryRoot))
+
+				if config.Logger != nil {
+					config.Logger.Info("Applied fixes",
+						zap.String("path", config.Path),
+						zap.Int("fixCount", fixResult.FixCount()))
+				}
+
+				// Re-validate after fixes
+				errors, err = validateGherkinFile(config.Path, config.RepositoryRoot, config.CheckTags)
+				if err != nil {
+					if config.Logger != nil {
+						config.Logger.Error("Re-validation failed after fixes",
+							zap.String("path", config.Path),
+							zap.Error(err))
+					}
+					fmt.Fprintf(os.Stderr, "Error re-validating after fixes: %v\n", err)
+					return 1
+				}
+			}
 		}
 
 		criticalCount := contracts.CountCriticalErrors(errors)
@@ -220,7 +255,6 @@ type ValidateConfig struct {
 	Verbose        bool   // -v, --verbose: Detailed output
 	Format         string // -f, --format: Output format (text, json)
 	CheckTags      bool   // --check-tags: Enable tag validation (default: true)
-	Strict         bool   // --strict: Fail on warnings
 	Fix            bool   // --fix: Auto-fix correctable tag issues
 	RepositoryRoot string
 	Logger         *logging.Logger
@@ -261,8 +295,6 @@ func parseValidateConfig() (*ValidateConfig, error) {
 			config.CheckTags = true
 		case "--no-check-tags":
 			config.CheckTags = false
-		case "--strict":
-			config.Strict = true
 		case "--fix":
 			config.Fix = true
 		default:
@@ -357,7 +389,7 @@ func validatePath(path string, repoRoot string) error {
 }
 
 // validateGherkinFile validates a single Gherkin specification file
-func validateGherkinFile(filePath string, repoRoot string) ([]contracts.ValidationError, error) {
+func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]contracts.ValidationError, error) {
 	// Read file content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -377,12 +409,12 @@ func validateGherkinFile(filePath string, repoRoot string) ([]contracts.Validati
 		return nil, fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
-	// Load tag contract for advanced tag validation
-	tagLoader := contracts.NewLoader(repoRoot)
-	tagContract, tagErr := contracts.LoadTagContract(tagLoader)
-	if tagErr != nil {
-		// Tag contract is optional - continue without it but log warning
-		// Advanced tag validation will be disabled
+	// Load tag contract for advanced tag validation (only when checkTags is enabled)
+	var tagContract *contracts.TagContract
+	if checkTags {
+		tagLoader := contracts.NewLoader(repoRoot)
+		tagContract, _ = contracts.LoadTagContract(tagLoader)
+		// Tag contract load errors are ignored - validation continues without advanced tag checks
 	}
 
 	// Create validator with tag contract support
@@ -396,12 +428,12 @@ func validateGherkinFile(filePath string, repoRoot string) ([]contracts.Validati
 
 // validateDirectory validates all .feature files in a directory (recursive)
 // Deprecated: Use validateDirectoryWithLogger for better logging support
-func validateDirectory(dirPath string, repoRoot string, quiet bool) ([]*ValidationResult, error) {
-	return validateDirectoryWithLogger(dirPath, repoRoot, quiet, nil)
+func validateDirectory(dirPath string, repoRoot string, quiet bool, checkTags bool) ([]*ValidationResult, error) {
+	return validateDirectoryWithLogger(dirPath, repoRoot, quiet, checkTags, nil)
 }
 
 // validateDirectoryWithLogger validates all .feature files in a directory with logging support
-func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, logger *logging.Logger) ([]*ValidationResult, error) {
+func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, checkTags bool, logger *logging.Logger) ([]*ValidationResult, error) {
 	var results []*ValidationResult
 
 	if logger != nil {
@@ -432,7 +464,7 @@ func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, lo
 		}
 
 		// Validate file
-		errors, validateErr := validateGherkinFile(path, repoRoot)
+		errors, validateErr := validateGherkinFile(path, repoRoot, checkTags)
 		if validateErr != nil {
 			// Log error but continue processing other files
 			if logger != nil {
@@ -650,4 +682,230 @@ func normalizePath(path string) string {
 
 	// Convert to Unix-style path separators
 	return filepath.ToSlash(rel)
+}
+
+// ============================================================================
+// Fix functionality for --fix flag
+// ============================================================================
+
+// FixResult holds the result of fixing a single file
+type FixResult struct {
+	Path    string
+	Fixes   []FixedIssue
+	Error   error
+}
+
+// FixedIssue represents a single fix applied
+type FixedIssue struct {
+	Line        int
+	Code        string
+	Description string
+}
+
+// FixCount returns the number of fixes applied
+func (r *FixResult) FixCount() int {
+	return len(r.Fixes)
+}
+
+// fixGherkinFile attempts to fix issues in a feature file
+// Supports fixing:
+// - MISSING_VERIFICATION_TAG: adds @ov tag before scenario
+// - INVALID_FEATURE_NAMING: renames feature to <module>_<kebab-name> format
+func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixResult, error) {
+	result := &FixResult{
+		Path:  filePath,
+		Fixes: []FixedIssue{},
+	}
+
+	// Read file
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		result.Error = fmt.Errorf("failed to read file: %w", err)
+		return result, result.Error
+	}
+
+	lines := strings.Split(string(content), "\n")
+	modified := false
+
+	// First pass: fix feature naming (do this first as it doesn't change line numbers)
+	for _, e := range errors {
+		if e.Code == "INVALID_FEATURE_NAMING" && e.Line > 0 {
+			idx := e.Line - 1
+			if idx >= 0 && idx < len(lines) {
+				newFeatureName := generateFeatureName(filePath, lines[idx])
+				if newFeatureName != "" {
+					oldLine := lines[idx]
+					lines[idx] = "Feature: " + newFeatureName
+					result.Fixes = append(result.Fixes, FixedIssue{
+						Line:        e.Line,
+						Code:        "INVALID_FEATURE_NAMING",
+						Description: fmt.Sprintf("Renamed feature to '%s'", newFeatureName),
+					})
+					modified = true
+					_ = oldLine // suppress unused warning
+				}
+			}
+		}
+	}
+
+	// Second pass: collect lines needing @ov insertion
+	linesToFix := []int{}
+	for _, e := range errors {
+		if e.Code == "MISSING_VERIFICATION_TAG" && e.Line > 0 {
+			linesToFix = append(linesToFix, e.Line)
+		}
+	}
+
+	// Sort descending to insert from bottom up (preserves line numbers)
+	if len(linesToFix) > 0 {
+		sort.Sort(sort.Reverse(sort.IntSlice(linesToFix)))
+
+		for _, lineNum := range linesToFix {
+			idx := lineNum - 1 // 0-based index
+			if idx >= 0 && idx < len(lines) {
+				// Get indentation from scenario line
+				indent := getIndentation(lines[idx])
+				// Insert @ov tag before scenario
+				newLine := indent + "@ov"
+				lines = insertLine(lines, idx, newLine)
+				result.Fixes = append(result.Fixes, FixedIssue{
+					Line:        lineNum,
+					Code:        "MISSING_VERIFICATION_TAG",
+					Description: "Added @ov tag before Scenario",
+				})
+				modified = true
+			}
+		}
+	}
+
+	// Write back if modified
+	if modified {
+		err = os.WriteFile(filePath, []byte(strings.Join(lines, "\n")), 0644)
+		if err != nil {
+			result.Error = fmt.Errorf("failed to write file: %w", err)
+			return result, result.Error
+		}
+	}
+
+	return result, nil
+}
+
+// generateFeatureName creates a valid feature name from file path and current feature line
+// Format: <module>_<kebab-case-description>
+func generateFeatureName(filePath string, featureLine string) string {
+	// Extract module from file path (e.g., specs/src-core/logging/spec.feature -> src-core)
+	module := extractModuleFromPath(filePath)
+	if module == "" {
+		return ""
+	}
+
+	// Extract current feature name/description
+	currentName := strings.TrimPrefix(strings.TrimSpace(featureLine), "Feature:")
+	currentName = strings.TrimSpace(currentName)
+
+	// Convert to kebab-case
+	kebabName := toKebabCase(currentName)
+	if kebabName == "" {
+		return ""
+	}
+
+	return module + "_" + kebabName
+}
+
+// extractModuleFromPath extracts the module name from a spec file path
+// e.g., specs/src-core/logging/specification.feature -> src-core
+// e.g., specs/src-commands/commit/specification.feature -> src-commands
+func extractModuleFromPath(filePath string) string {
+	// Normalize path separators
+	normalized := filepath.ToSlash(filePath)
+
+	// Find "specs/" in the path
+	specsIdx := strings.Index(normalized, "specs/")
+	if specsIdx == -1 {
+		return ""
+	}
+
+	// Get the part after "specs/"
+	afterSpecs := normalized[specsIdx+6:]
+
+	// Split by "/" and get the first component (module name)
+	parts := strings.Split(afterSpecs, "/")
+	if len(parts) < 1 {
+		return ""
+	}
+
+	return parts[0]
+}
+
+// toKebabCase converts a string to kebab-case
+// e.g., "Dual-output logging with configurable routing" -> "dual-output-logging-with-configurable-routing"
+func toKebabCase(s string) string {
+	// Convert to lowercase
+	s = strings.ToLower(s)
+
+	// Replace spaces and underscores with hyphens
+	s = strings.ReplaceAll(s, " ", "-")
+	s = strings.ReplaceAll(s, "_", "-")
+
+	// Remove any characters that aren't alphanumeric or hyphens
+	var result strings.Builder
+	prevHyphen := false
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			result.WriteRune(r)
+			prevHyphen = false
+		} else if r == '-' && !prevHyphen && result.Len() > 0 {
+			result.WriteRune('-')
+			prevHyphen = true
+		}
+	}
+
+	// Remove trailing hyphen
+	resultStr := result.String()
+	resultStr = strings.TrimSuffix(resultStr, "-")
+
+	return resultStr
+}
+
+// getIndentation returns the leading whitespace from a line
+func getIndentation(line string) string {
+	trimmed := strings.TrimLeft(line, " \t")
+	return line[:len(line)-len(trimmed)]
+}
+
+// insertLine inserts a new line at the given index
+func insertLine(lines []string, idx int, newLine string) []string {
+	lines = append(lines, "")
+	copy(lines[idx+1:], lines[idx:])
+	lines[idx] = newLine
+	return lines
+}
+
+// formatFixResult formats a fix result for display
+func formatFixResult(result *FixResult, repoRoot string) string {
+	if result.FixCount() == 0 {
+		return ""
+	}
+
+	var output strings.Builder
+	relPath := relativePath(result.Path, repoRoot)
+	output.WriteString(fmt.Sprintf("🔧 Fixed %d issue(s) in %s:\n", result.FixCount(), relPath))
+
+	// Show fixes in order (feature naming first, then tags in ascending line order)
+	// First show non-tag fixes
+	for _, fix := range result.Fixes {
+		if fix.Code != "MISSING_VERIFICATION_TAG" {
+			output.WriteString(fmt.Sprintf("   - Line %d: %s\n", fix.Line, fix.Description))
+		}
+	}
+
+	// Then show tag fixes in reverse order (they were added bottom-up)
+	for i := len(result.Fixes) - 1; i >= 0; i-- {
+		fix := result.Fixes[i]
+		if fix.Code == "MISSING_VERIFICATION_TAG" {
+			output.WriteString(fmt.Sprintf("   - Line %d: %s\n", fix.Line, fix.Description))
+		}
+	}
+
+	return output.String()
 }

@@ -1,5 +1,5 @@
 @deps:go @ov
-Feature: Dual-output logging with configurable routing
+Feature: src-core_logging
   As a developer
   I want logs routed to console and/or file based on debug mode
   So that I can see important messages on console and persist all logs when debugging
