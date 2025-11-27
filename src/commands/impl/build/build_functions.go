@@ -232,10 +232,20 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	}
 
 	// Apply UPX compression if requested
+	// Note: UPX cannot compress Darwin (macOS) binaries when cross-compiling from Linux
 	if opts.CompressedUPX {
 		logln(logWriter, "\n--- Applying UPX compression ---")
+		logln(logWriter, "Note: UPX compression skipped for Darwin binaries (not supported when cross-compiling)")
 
 		for _, binaryPath := range builtBinaries {
+			baseName := filepath.Base(binaryPath)
+
+			// Skip Darwin binaries - UPX cannot compress them when cross-compiling
+			if strings.Contains(baseName, "darwin") {
+				logln(logWriter, "⏭️  Skipping %s (Darwin binaries not supported by UPX cross-compile)", baseName)
+				continue
+			}
+
 			// Get original size
 			originalInfo, err := os.Stat(binaryPath)
 			if err != nil {
@@ -245,7 +255,6 @@ func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 			originalSize := originalInfo.Size()
 
 			// Create UPX-compressed version with -upx suffix
-			baseName := filepath.Base(binaryPath)
 			ext := filepath.Ext(baseName)
 			nameWithoutExt := strings.TrimSuffix(baseName, ext)
 			upxName := nameWithoutExt + "-upx" + ext
