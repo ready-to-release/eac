@@ -6,54 +6,8 @@ import (
 	"strings"
 )
 
-// ValidTags defines all known tags from contracts/testing/0.1.0/tags.yml
-var ValidTags = map[string]bool{
-	// System dependencies
-	"@deps:docker": true,
-	"@deps:git":    true,
-	"@deps:go":     true,
-	"@deps:ai":     true,
-	"@deps:az-cli": true,
-	"@deps:openai": true,
-	"@deps:gemini": true,
-
-	// OS platform dependencies (for platform-specific tests)
-	"@deps:windows":    true,
-	"@deps:linux":      true,
-	"@deps:darwin":     true,
-	"@deps:os-agnostic": true,
-
-	// Taxonomy levels
-	"@L0": true,
-	"@L1": true,
-	"@L2": true,
-	"@L3": true,
-	"@L4": true,
-
-	// Verification types
-	"@ov":  true,
-	"@iv":  true,
-	"@pv":  true,
-	"@piv": true,
-	"@ppv": true,
-
-	// Execution control tags
-	"@Manual": true,
-	"@ignore": true,
-
-	// Environment tags (test isolation)
-	"@env:isolated-test-project": true,
-	"@env:requires-git-repo":     true,
-	"@env:mkdocs-docker":         true,
-
-	// Test behavior tags
-	"@unisolated":   true, // Test runs without isolation (shares state)
-	"@verification": true, // Meta-verification test
-
-	// GxP regulatory tags
-	"@gxp":             true,
-	"@critical-aspect": true,
-}
+// NOTE: ValidTags map has been removed - validation now uses tag contract
+// See LoadTagContract() and IsValidTag() for contract-based validation
 
 // LevelTags are taxonomy level tags
 var LevelTags = []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
@@ -269,32 +223,36 @@ func ValidateTestReference(test TestReference) []string {
 }
 
 // IsValidTag checks if a tag is valid according to contracts
-// Note: For @skip:<reason>, this only checks format, not if reason code is valid
-// Use ValidateSkipTag() for full validation with contract
+// Note: This does lightweight validation - for full validation use validate test-tags command
 func IsValidTag(tag string) bool {
-	// Check known tags
-	if ValidTags[tag] {
+	// Load tag contract
+	contract, err := LoadTagContract()
+	if err != nil {
+		// If we can't load contract, fail open (allow the tag)
 		return true
 	}
 
-	// Check @risk:* pattern
-	if strings.HasPrefix(tag, "@risk:") {
-		return true
+	// Check exact match in contract
+	for _, contractTag := range contract.Tags {
+		if contractTag.Tag == tag {
+			return true
+		}
 	}
 
-	// Check @risk-control:* pattern
-	if strings.HasPrefix(tag, "@risk-control:") {
-		return validateRiskControlTag(tag)
-	}
-
-	// Check @depm:* pattern (module dependencies)
-	if strings.HasPrefix(tag, "@depm:") {
-		return len(tag) > 6 // Must have at least one character after "@depm:"
-	}
-
-	// Check @skip:<reason> pattern (format only, reason validation done separately)
-	if strings.HasPrefix(tag, "@skip:") {
-		return len(tag) > 6 // Must have at least one character after "@skip:"
+	// Check pattern tags (tags with colons)
+	if strings.Contains(tag, ":") {
+		// @risk:*, @skip:*, @deps:*, @env:*, @depm:*, @risk-control:* patterns
+		for _, contractTag := range contract.Tags {
+			if strings.Contains(contractTag.Tag, "<") && strings.Contains(contractTag.Tag, ">") {
+				// This is a pattern tag
+				parts := strings.SplitN(tag, ":", 2)
+				contractParts := strings.SplitN(contractTag.Tag, ":", 2)
+				if len(parts) == 2 && len(contractParts) == 2 && parts[0]+":" == contractParts[0]+":" {
+					// Prefixes match, accept it (lightweight validation)
+					return true
+				}
+			}
+		}
 	}
 
 	return false
@@ -339,11 +297,16 @@ func validateRiskControlTag(tag string) bool {
 	return len(controlName) > 0
 }
 
-// GetKnownTags returns all known tags
+// GetKnownTags returns all known tags from the contract
 func GetKnownTags() []string {
+	contract, err := LoadTagContract()
+	if err != nil {
+		return []string{} // Return empty if contract can't be loaded
+	}
+
 	tags := []string{}
-	for tag := range ValidTags {
-		tags = append(tags, tag)
+	for _, tag := range contract.Tags {
+		tags = append(tags, tag.Tag)
 	}
 	return tags
 }

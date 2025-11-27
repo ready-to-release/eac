@@ -31,6 +31,9 @@ func Validate() int {
 	case "dependencies":
 		// Handled by separate registrations in respective files
 		return 0
+	case "test-tags":
+		// Handled by separate registrations in respective files
+		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
 		printValidateUsage()
@@ -45,10 +48,14 @@ func printValidateUsage() {
 	fmt.Println()
 	fmt.Println("Subcommands:")
 	fmt.Println("  dependencies              Validate module dependency contracts")
+	fmt.Println("  test-tags                 Validate that all test tags are defined in the tag contract")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  # Validate all dependencies")
 	fmt.Println("  r2r validate dependencies")
+	fmt.Println()
+	fmt.Println("  # Validate test tags")
+	fmt.Println("  r2r validate test-tags")
 	fmt.Println()
 	fmt.Println("Use 'r2r validate <subcommand> --help' for more information about a command.")
 }

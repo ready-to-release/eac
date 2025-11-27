@@ -1,4 +1,4 @@
-@skip:todo @deps:go
+@skip:wip @deps:go
 Feature: src-commands_specs-validate
 
   As a developer of the eac platform

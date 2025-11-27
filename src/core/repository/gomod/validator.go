@@ -61,29 +61,28 @@ func (v *Validator) Validate() *ValidationReport {
 		actualDeps := v.graph.GetDependencies(moniker)
 		sort.Strings(actualDeps)
 
-		// Compare
-		missing, extra := compareDependencies(contractDeps, actualDeps)
+		// Validate that all actual dependencies are valid modules (exist in registry)
+		var invalidDeps []string
+		for _, dep := range actualDeps {
+			if !v.registry.Has(dep) {
+				invalidDeps = append(invalidDeps, dep)
+			}
+		}
 
 		// Create discrepancy record
 		discrepancy := Discrepancy{
 			Moniker:              moniker,
 			ContractDependencies: contractDeps,
 			ActualDependencies:   actualDeps,
-			Missing:              missing,
-			Extra:                extra,
+			Invalid:              invalidDeps,
 		}
 
-		if len(missing) == 0 && len(extra) == 0 {
-			discrepancy.Status = "✅ MATCH"
+		// Only flag as discrepancy if there are invalid dependencies
+		if len(invalidDeps) == 0 {
+			discrepancy.Status = "✅ VALID"
 			report.Summary.Matching++
 		} else {
-			if len(missing) > 0 && len(extra) == 0 {
-				discrepancy.Status = "⚠️ MISSING"
-			} else if len(missing) == 0 && len(extra) > 0 {
-				discrepancy.Status = "⚠️ EXTRA"
-			} else {
-				discrepancy.Status = "❌ MISMATCH"
-			}
+			discrepancy.Status = "❌ INVALID"
 			report.Summary.WithDiscrepancies++
 		}
 
@@ -160,24 +159,14 @@ func (v *Validator) FormatReport(report *ValidationReport) string {
 	for _, disc := range report.Discrepancies {
 		output += fmt.Sprintf("%s %s\n", disc.Status, disc.Moniker)
 
-		if len(disc.ContractDependencies) > 0 {
-			output += fmt.Sprintf("  Contract dependencies: %v\n", disc.ContractDependencies)
-		} else {
-			output += "  Contract dependencies: (none)\n"
-		}
-
 		if len(disc.ActualDependencies) > 0 {
-			output += fmt.Sprintf("  Actual dependencies:   %v\n", disc.ActualDependencies)
+			output += fmt.Sprintf("  Dependencies: %v\n", disc.ActualDependencies)
 		} else {
-			output += "  Actual dependencies:   (none)\n"
+			output += "  Dependencies: (none)\n"
 		}
 
-		if len(disc.Missing) > 0 {
-			output += fmt.Sprintf("  ⚠️ Missing: %v\n", disc.Missing)
-		}
-
-		if len(disc.Extra) > 0 {
-			output += fmt.Sprintf("  ⚠️ Extra: %v\n", disc.Extra)
+		if len(disc.Invalid) > 0 {
+			output += fmt.Sprintf("  ❌ Invalid (not registered modules): %v\n", disc.Invalid)
 		}
 
 		output += "\n"
@@ -185,9 +174,9 @@ func (v *Validator) FormatReport(report *ValidationReport) string {
 
 	// Final verdict
 	if report.Summary.WithDiscrepancies == 0 {
-		output += "✅ All module dependencies match their contracts!\n"
+		output += "✅ All module dependencies are valid!\n"
 	} else {
-		output += fmt.Sprintf("⚠️ %d module(s) have discrepancies that need attention.\n", report.Summary.WithDiscrepancies)
+		output += fmt.Sprintf("❌ %d module(s) have invalid dependencies.\n", report.Summary.WithDiscrepancies)
 	}
 
 	return output

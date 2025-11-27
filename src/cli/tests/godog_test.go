@@ -29,10 +29,11 @@ func TestFeatures(t *testing.T) {
 	skipFilter := contract.BuildGodogSkipTagFilter()
 	tagFilter := skipFilter + " && ~@pending"
 
-	// Add suite tag filter if provided (e.g., "@L0 || @L1 || @L2" for commit suite)
+	// Add suite tag filter if provided (e.g., "@L0,@L1,@L2" for commit suite)
+	// CRITICAL: Do NOT wrap in parentheses - godog's parser breaks silently!
 	suiteTagFilter := os.Getenv("GODOG_SUITE_TAGS")
 	if suiteTagFilter != "" {
-		tagFilter = tagFilter + " && (" + suiteTagFilter + ")"
+		tagFilter = tagFilter + " && " + suiteTagFilter
 	}
 
 	opts := &godog.Options{

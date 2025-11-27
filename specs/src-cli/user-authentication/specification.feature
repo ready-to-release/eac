@@ -1,4 +1,4 @@
-@skip:todo
+@skip:wip
 @env:isolated-test-project
 @deps:go @depm:src-cli
 Feature: src-cli_user-authentication

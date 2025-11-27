@@ -1,4 +1,4 @@
-@skip:redundant
+@skip:deprecated
 Feature: src-core_ai-provider-interface
   As a developer
   I want a consistent interface for all AI providers
@@ -73,7 +73,7 @@ Feature: src-core_ai-provider-interface
     The system supports multiple AI providers including Claude, OpenAI, and Gemini.
     Each provider implements the same interface for consistent usage.
 
-    @L2 @ov @deps:openai
+    @L2 @ov @deps:ai
     Scenario: OpenAI provider executes successfully
       Given a valid openai provider configuration
       And OPENAI_API_KEY environment variable is set
@@ -81,7 +81,7 @@ Feature: src-core_ai-provider-interface
       Then the provider returns a non-empty response
       And no error is returned
 
-    @L2 @ov @deps:openai
+    @L2 @ov @deps:ai
     Scenario: OpenAI provider fails when API key is missing
       Given an openai provider configuration
       And OPENAI_API_KEY environment variable is not set
@@ -89,7 +89,7 @@ Feature: src-core_ai-provider-interface
       Then an error is returned
       And the error message indicates the missing API key
 
-    @L2 @ov @deps:gemini
+    @L2 @ov @deps:ai
     Scenario: Gemini provider executes successfully
       Given a valid gemini provider configuration
       And GOOGLE_API_KEY environment variable is set
@@ -97,7 +97,7 @@ Feature: src-core_ai-provider-interface
       Then the provider returns a non-empty response
       And no error is returned
 
-    @L2 @ov @deps:gemini
+    @L2 @ov @deps:ai
     Scenario: Gemini provider fails when API key is missing
       Given a gemini provider configuration
       And GOOGLE_API_KEY environment variable is not set

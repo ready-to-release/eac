@@ -1,4 +1,4 @@
-@skip:todo
+@skip:wip
 @deps:go @deps:ai @L2 @ov
 Feature: src-commands_work_pr
 

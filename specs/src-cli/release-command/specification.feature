@@ -10,7 +10,7 @@ Feature: src-cli_release-command
 
   Rule: Module validation ensures only valid modules can be released
 
-    @skip:todo
+    @skip:wip
     Scenario: Release command rejects non-existent module
       Given the src-cli module exists in the repository
       When I run the release command with module name "invalid-module"
@@ -19,7 +19,7 @@ Feature: src-cli_release-command
 
   Rule: Semver validation ensures correct version format
 
-    @skip:todo
+    @skip:wip
     Scenario: Release command rejects invalid semver format
       Given the src-cli module exists in the repository
       When I run the release command with module "src-cli" and version "1.0"
@@ -28,7 +28,7 @@ Feature: src-cli_release-command
 
   Rule: Git tag creation follows module/version naming convention
 
-    @skip:todo
+    @skip:wip
     Scenario: Release command creates and pushes git tag with correct format
       Given the src-cli module exists in the repository
       And no tag "src-cli/1.0.0" exists

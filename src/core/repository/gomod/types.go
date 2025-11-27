@@ -44,13 +44,12 @@ type ValidationReport struct {
 	Summary       ValidationSummary
 }
 
-// Discrepancy represents a mismatch between contract and actual dependencies
+// Discrepancy represents invalid dependencies for a module
 type Discrepancy struct {
 	Moniker              string
 	ContractDependencies []string
 	ActualDependencies   []string
-	Missing              []string // In contract but not in go.mod
-	Extra                []string // In go.mod but not in contract
+	Invalid              []string // Dependencies that don't exist as valid modules
 	Status               string
 }
 

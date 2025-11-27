@@ -1,4 +1,4 @@
-@deps:go @L2 @ov @skip:todo
+@deps:go @L2 @ov @skip:wip
 Feature: src-commands_test-debug
 
   As a developer of the eac platform

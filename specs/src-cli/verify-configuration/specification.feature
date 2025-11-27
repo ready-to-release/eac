@@ -1,4 +1,4 @@
-@skip:todo
+@skip:wip
 @env:isolated-test-project
 @L2 @ov @deps:go @depm:src-cli
 Feature: src-cli_verify-configuration

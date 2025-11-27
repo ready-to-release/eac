@@ -1,4 +1,4 @@
-@skip:redundant
+@skip:deprecated
 Feature: src-core_ai-config-loading
   As a developer
   I want to load AI provider configuration from agent-config.yml

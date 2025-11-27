@@ -1,4 +1,4 @@
-@deps:go @verification @unisolated
+@deps:go
 Feature: repository_go-modules-tidy
 
   As a repository maintainer

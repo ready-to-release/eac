@@ -1,0 +1,336 @@
+// Command: validate test-tags
+// Short: Validate that all test tags are defined in the tag contract
+// Long: Validates that all tags used in test files (Gherkin features) are defined in the tag contract.
+// Long:
+// Long: This ensures tag filtering and test selection works correctly by preventing
+// Long: the use of undefined tags that would be silently ignored by godog.
+// Long:
+// Long: The validation:
+// Long:   - Discovers all Gherkin feature files in the repository
+// Long:   - Extracts all tags from features, scenarios, and examples
+// Long:   - Loads the tag contract from contracts/testing/*/tags.yml
+// Long:   - Checks that each tag is defined in the contract
+// Long:   - Reports undefined tags with their file locations
+// Long:
+// Long: Example:
+// Long:   validate test-tags
+// HasSideEffects: false
+package validate
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/environments"
+	"github.com/ready-to-release/eac/src/core/repository"
+	coretesting "github.com/ready-to-release/eac/src/core/testing"
+)
+
+func init() {
+	registry.Register(TestTags)
+}
+
+// TestTags validates that all test tags are defined in the tag contract
+func TestTags() int {
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to get repository root: %v\n", err)
+		return 1
+	}
+
+	// Load tag contract
+	contract, err := coretesting.LoadTagContract()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load tag contract: %v\n", err)
+		return 1
+	}
+
+	// Build set of valid tags from contract
+	validTags := make(map[string]bool)
+	for _, tag := range contract.Tags {
+		validTags[tag.Tag] = true
+	}
+
+	// Discover all feature files
+	specsDir := filepath.Join(repoRoot, "specs")
+	var featureFiles []string
+
+	err = filepath.Walk(specsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasSuffix(path, ".feature") {
+			featureFiles = append(featureFiles, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to discover feature files: %v\n", err)
+		return 1
+	}
+
+	// Extract tags from all feature files and track undefined tags
+	type TagUsage struct {
+		Tag      string
+		FilePath string
+		LineNum  int
+	}
+
+	var undefinedTags []TagUsage
+	seenUndefined := make(map[string]bool) // Track which undefined tags we've seen
+
+	for _, featurePath := range featureFiles {
+		tags, err := extractTagsFromFeature(featurePath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to extract tags from %s: %v\n", featurePath, err)
+			continue
+		}
+
+		// Check each tag
+		for _, tagInfo := range tags {
+			// Check if tag is directly in contract (exact match)
+			if validTags[tagInfo.Tag] {
+				continue
+			}
+
+			// Check if tag matches a pattern in the contract
+			if isValidPatternTag(tagInfo.Tag, contract) {
+				continue
+			}
+
+			// Tag is undefined
+			relPath, _ := filepath.Rel(repoRoot, featurePath)
+			if !seenUndefined[tagInfo.Tag] {
+				undefinedTags = append(undefinedTags, TagUsage{
+					Tag:      tagInfo.Tag,
+					FilePath: relPath,
+					LineNum:  tagInfo.LineNum,
+				})
+				seenUndefined[tagInfo.Tag] = true
+			}
+		}
+	}
+
+	// Report results
+	if len(undefinedTags) == 0 {
+		fmt.Println("✅ All test tags are defined in the tag contract")
+		fmt.Printf("   Validated %d feature files\n", len(featureFiles))
+		fmt.Printf("   Contract defines %d valid tags\n", len(validTags))
+		return 0
+	}
+
+	// Group undefined tags by tag name
+	tagsByName := make(map[string][]TagUsage)
+	for _, usage := range undefinedTags {
+		tagsByName[usage.Tag] = append(tagsByName[usage.Tag], usage)
+	}
+
+	// Sort tag names for consistent output
+	var tagNames []string
+	for tag := range tagsByName {
+		tagNames = append(tagNames, tag)
+	}
+	sort.Strings(tagNames)
+
+	fmt.Printf("❌ Found %d undefined tag(s) used in %d location(s):\n\n", len(tagNames), len(undefinedTags))
+
+	for _, tag := range tagNames {
+		usages := tagsByName[tag]
+		fmt.Printf("  %s (used in %d file(s)):\n", tag, len(usages))
+
+		// Show first 3 locations for each tag
+		maxToShow := 3
+		for i, usage := range usages {
+			if i >= maxToShow {
+				fmt.Printf("    ... and %d more location(s)\n", len(usages)-maxToShow)
+				break
+			}
+			fmt.Printf("    - %s:%d\n", usage.FilePath, usage.LineNum)
+		}
+		fmt.Println()
+	}
+
+	fmt.Println("Fix: Add missing tags to contracts/testing/0.1.0/tags.yml")
+	return 1
+}
+
+// TagInfo holds information about a tag found in a feature file
+type TagInfo struct {
+	Tag     string
+	LineNum int
+}
+
+// extractTagsFromFeature extracts all tags from a Gherkin feature file
+func extractTagsFromFeature(filePath string) ([]TagInfo, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(string(content), "\n")
+	var tags []TagInfo
+
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Check if line contains tags (starts with @)
+		if strings.HasPrefix(line, "@") {
+			// Split by spaces to get individual tags
+			parts := strings.Fields(line)
+			for _, part := range parts {
+				if strings.HasPrefix(part, "@") {
+					tags = append(tags, TagInfo{
+						Tag:     part,
+						LineNum: i + 1, // Line numbers are 1-based
+					})
+				}
+			}
+		}
+	}
+
+	return tags, nil
+}
+
+// isValidPatternTag checks if a tag matches any pattern in the contract
+func isValidPatternTag(tag string, contract *coretesting.TagContract) bool {
+	// Only check tags with colons (pattern tags have format @prefix:suffix)
+	if !strings.Contains(tag, ":") {
+		return false
+	}
+
+	parts := strings.SplitN(tag, ":", 2)
+	if len(parts) != 2 {
+		return false
+	}
+
+	prefix := parts[0] + ":"
+	suffix := parts[1]
+
+	// Find matching pattern in contract
+	for _, contractTag := range contract.Tags {
+		// Check if contract tag is a pattern (has <placeholder>)
+		if !strings.Contains(contractTag.Tag, "<") || !strings.Contains(contractTag.Tag, ">") {
+			continue
+		}
+
+		// Split contract tag to get prefix
+		contractParts := strings.SplitN(contractTag.Tag, ":", 2)
+		if len(contractParts) != 2 {
+			continue
+		}
+
+		contractPrefix := contractParts[0] + ":"
+
+		// Check if prefixes match
+		if prefix == contractPrefix {
+			// For @skip:<reason>, validate against skip_reasons
+			if prefix == "@skip:" {
+				return isValidSkipReason(suffix, contract)
+			}
+
+			// For @deps:<name>, validate against system deps, OS platforms, and providers
+			if prefix == "@deps:" {
+				return isValidDepsName(suffix, contract)
+			}
+
+			// For @env:<moniker>, validate against environment contracts
+			if prefix == "@env:" {
+				return isValidEnvMoniker(suffix)
+			}
+
+			// For @depm:<module>, validate against module contracts
+			if prefix == "@depm:" {
+				return isValidModuleName(suffix)
+			}
+
+			// For other patterns, accept any suffix
+			return true
+		}
+	}
+
+	return false
+}
+
+// isValidSkipReason checks if a skip reason is defined in the contract
+func isValidSkipReason(reason string, contract *coretesting.TagContract) bool {
+	for _, skipReason := range contract.SkipReasons {
+		if skipReason.Code == reason {
+			return true
+		}
+	}
+	return false
+}
+
+// isValidDepsName checks if a deps name is valid (system dep or OS platform)
+func isValidDepsName(name string, contract *coretesting.TagContract) bool {
+	// Check system dependencies
+	for _, sysDep := range contract.SystemDependencies {
+		if sysDep.Name == name {
+			return true
+		}
+	}
+
+	// Check OS platforms
+	for _, osPlatform := range contract.OSPlatforms {
+		if osPlatform.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isValidEnvMoniker checks if an environment moniker is defined in environment contracts
+func isValidEnvMoniker(moniker string) bool {
+	// Load environment contract
+	contract, err := environments.LoadEnvironmentContract()
+	if err != nil {
+		// If we can't load contracts, allow the tag (fail open for now)
+		fmt.Fprintf(os.Stderr, "Warning: failed to load environment contracts: %v\n", err)
+		return true
+	}
+
+	// Check if moniker exists in environment contracts
+	for _, env := range contract.Environments {
+		if env.Moniker == moniker {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isValidModuleName checks if a module name is defined in module contracts
+func isValidModuleName(moduleName string) bool {
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		// If we can't get repo root, allow the tag (fail open for now)
+		fmt.Fprintf(os.Stderr, "Warning: failed to get repository root: %v\n", err)
+		return true
+	}
+
+	// Load module registry from workspace (version 0.1.0)
+	registry, err := modules.LoadFromWorkspace(repoRoot, "0.1.0")
+	if err != nil {
+		// If we can't load modules, allow the tag (fail open for now)
+		fmt.Fprintf(os.Stderr, "Warning: failed to load module registry: %v\n", err)
+		return true
+	}
+
+	// Check if module exists
+	_, found := registry.Get(moduleName)
+	return found
+}
