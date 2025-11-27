@@ -11,6 +11,7 @@ source:
     - ".github/workflows/change-trigger.yaml"
     - ".github/workflows/cron-full-trigger.yaml"
     - ".github/workflows/codeql.yml"
+    - "test-repository-validations.sh"
 
 depends_on:
   - "src-core"

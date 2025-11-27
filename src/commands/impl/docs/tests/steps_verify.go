@@ -119,11 +119,14 @@ func documentationShouldBeAccessible() error {
 	var url string
 	for _, line := range lines {
 		if strings.Contains(line, "Documentation:") {
-			parts := strings.Split(line, ":")
-			if len(parts) >= 3 {
-				// Reconstruct URL (http://host:port)
-				url = strings.TrimSpace(parts[1] + ":" + parts[2])
-				break
+			// Find the URL after "Documentation: "
+			idx := strings.Index(line, "Documentation:")
+			if idx != -1 {
+				urlPart := strings.TrimSpace(line[idx+len("Documentation:"):])
+				if urlPart != "" {
+					url = urlPart
+					break
+				}
 			}
 		}
 	}
