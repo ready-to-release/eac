@@ -1,4 +1,4 @@
-@L2 @verification @unisolated
+@L2
 Feature: repository_feature-level-tags
 
   As a repository maintainer

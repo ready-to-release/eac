@@ -22,6 +22,7 @@ type Tag struct {
 	Name        string `yaml:"name,omitempty"`
 	Description string `yaml:"description"`
 	Type        string `yaml:"type"`
+	Pattern     string `yaml:"pattern,omitempty"` // Optional regex pattern for validation
 }
 
 // TagType defines a category of tags
@@ -37,12 +38,27 @@ type SkipReason struct {
 	Description string `yaml:"description"`
 }
 
+// SystemDependency represents a system dependency name
+type SystemDependency struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+}
+
+// OSPlatform represents an OS platform name
+type OSPlatform struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+	Inferred    bool   `yaml:"inferred,omitempty"`
+}
+
 // TagContract represents the complete tagging system contract
 type TagContract struct {
-	Metadata    Metadata     `yaml:"metadata"`
-	Tags        []Tag        `yaml:"tags"`
-	Types       []TagType    `yaml:"types"`
-	SkipReasons []SkipReason `yaml:"skip_reasons"`
+	Metadata           Metadata           `yaml:"metadata"`
+	SystemDependencies []SystemDependency `yaml:"system_dependency_names"`
+	OSPlatforms        []OSPlatform       `yaml:"os_platform_names"`
+	Tags               []Tag              `yaml:"tags"`
+	Types              []TagType          `yaml:"types"`
+	SkipReasons        []SkipReason       `yaml:"skip_reasons"`
 }
 
 // findRepositoryRoot finds the git repository root by walking up directories

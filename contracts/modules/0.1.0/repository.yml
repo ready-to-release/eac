@@ -10,6 +10,7 @@ source:
     - "src/core/repository/tests/**"
     - ".github/workflows/change-trigger.yaml"
     - ".github/workflows/cron-full-trigger.yaml"
+    - ".github/workflows/codeql.yml"
 
 depends_on:
   - "src-core"

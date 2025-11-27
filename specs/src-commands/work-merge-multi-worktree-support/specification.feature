@@ -1,4 +1,4 @@
-@skip:todo
+@skip:wip
 Feature: src-commands_work-merge-multi-worktree-support
 
   As a developer

@@ -35,10 +35,11 @@ func TestRepositoryFeatures(t *testing.T) {
 	skipFilter := contract.BuildGodogSkipTagFilter()
 	tagFilter := skipFilter + " && ~@pending"
 
-	// Add suite tag filter if provided (e.g., "@L0 || @L1 || @L2" for commit suite)
+	// Add suite tag filter if provided (e.g., "@L0,@L1,@L2" for commit suite)
+	// CRITICAL: Do NOT wrap in parentheses - godog's parser breaks silently!
 	suiteTagFilter := os.Getenv("GODOG_SUITE_TAGS")
 	if suiteTagFilter != "" {
-		tagFilter = tagFilter + " && (" + suiteTagFilter + ")"
+		tagFilter = tagFilter + " && " + suiteTagFilter
 	}
 
 	// Allow paths to be customized via environment variable (for individual feature file execution)
@@ -57,11 +58,14 @@ func TestRepositoryFeatures(t *testing.T) {
 
 	// If output directory is set, add report formatter
 	if outputDir != "" {
-		var reportName string
-		if reportFormat == "junit" {
-			reportName = "junit-repository.xml"
-		} else {
-			reportName = "cucumber-repository.json"
+		// Use report name from environment variable if set, otherwise use default
+		reportName := os.Getenv("GODOG_REPORT_NAME")
+		if reportName == "" {
+			if reportFormat == "junit" {
+				reportName = "junit-repository.xml"
+			} else {
+				reportName = "cucumber-repository.json"
+			}
 		}
 
 		reportPath := fmt.Sprintf("%s/%s", outputDir, reportName)
@@ -89,6 +93,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	InitializeRepositoryOneModulePerFileScenario(sc)
 	InitializeModuleHierarchyScenario(sc)
 	InitializeFeatureLevelTagsScenario(sc)
+	InitializeValidateDependenciesScenario(sc)
+	InitializeBuildRepoConfigScenario(sc)
+	InitializeBuildContractsScenario(sc)
+	InitializeTestTagsContractedScenario(sc)
 
 	// Cleanup after each scenario
 	sc.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
@@ -96,6 +104,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 		resetNoUnorderedFilesContext()
 		resetOneModulePerFileContext()
 		resetFeatureLevelTagsContext()
+		resetValidateDependenciesContext()
+		resetBuildRepoConfigContext()
+		resetBuildContractsContext()
+		resetTestTagsContractedContext()
 		return ctx, nil
 	})
 }

@@ -1,4 +1,4 @@
-@L2 @verification @unisolated @skip:todo
+@L2 @skip:wip
 Feature: repository_markdown-syntax
 
   As a repository maintainer

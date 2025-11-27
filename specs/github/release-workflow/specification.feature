@@ -12,7 +12,7 @@ Background:
 
 Rule: Workflow triggers on release tags matching pattern
 
-  @skip:todo @L3 @iv @deps:git @depm:src-cli
+  @skip:wip @L3 @iv @deps:git @depm:src-cli
   Scenario: Workflow triggers when tag matches src-cli pattern
     Given a git repository with src-cli source code
     When a git tag matching pattern "src-cli/*" is created
@@ -22,7 +22,7 @@ Rule: Workflow triggers on release tags matching pattern
 
 Rule: Go binary is built for multiple platforms
 
-  @skip:todo @L3 @iv @deps:go @depm:src-cli
+  @skip:wip @L3 @iv @deps:go @depm:src-cli
   Scenario: Binaries compiled for all target platforms
     Given the workflow environment is configured
     And the Go source code is available
@@ -32,7 +32,7 @@ Rule: Go binary is built for multiple platforms
 
 Rule: GitHub release is created with built artifacts
 
-  @skip:todo @L3 @ov @deps:ai @depm:src-cli
+  @skip:wip @L3 @ov @deps:ai @depm:src-cli
   Scenario: GitHub release created with all platform binaries attached
     Given the workflow has built binaries for all platforms
     And the version "1.2.3" is extracted from the tag

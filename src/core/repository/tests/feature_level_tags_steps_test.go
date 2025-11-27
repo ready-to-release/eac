@@ -31,6 +31,7 @@ func InitializeFeatureLevelTagsScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I discover all Gherkin feature files in the repository$`, iDiscoverAllGherkinFeatureFiles)
 	sc.Step(`^I validate each feature file for conflicting L-level tags$`, iValidateEachFeatureFileForConflictingLLevelTags)
 	sc.Step(`^no feature should have an L-tag when its scenarios have different L-tags$`, noFeatureShouldHaveAnLTagWhenItsScenariosHaveDifferentLTags)
+	sc.Step(`^no feature should have a verification tag when its scenarios have different verification tags$`, noFeatureShouldHaveAVerificationTagWhenItsScenariosHaveDifferentVerificationTags)
 	sc.Step(`^if any conflicts are found, I should see the file path, scenario name, and conflicting tags$`, ifAnyConflictsAreFoundIShouldSeeTheFilePathScenarioNameAndConflictingTags)
 }
 
@@ -107,6 +108,13 @@ func noFeatureShouldHaveAnLTagWhenItsScenariosHaveDifferentLTags() error {
 	}
 
 	return nil
+}
+
+func noFeatureShouldHaveAVerificationTagWhenItsScenariosHaveDifferentVerificationTags() error {
+	// This check is already performed by ValidateFeatureLevelTags() which checks both L-tags and verification tags
+	// The validation errors are already collected in validationErrors map
+	// This step is effectively the same as the L-tag check since they share the same validation logic
+	return noFeatureShouldHaveAnLTagWhenItsScenariosHaveDifferentLTags()
 }
 
 func ifAnyConflictsAreFoundIShouldSeeTheFilePathScenarioNameAndConflictingTags() error {

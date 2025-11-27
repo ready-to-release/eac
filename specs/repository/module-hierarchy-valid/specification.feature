@@ -1,4 +1,4 @@
-@L2 @verification @unisolated
+@L2
 Feature: Module Hierarchy Validation
   As a repository maintainer
   I want to ensure the module dependency graph is valid

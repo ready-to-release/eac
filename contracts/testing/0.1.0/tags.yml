@@ -7,56 +7,77 @@ metadata:
   description: "Formal specification for test tagging system across all test frameworks"
   scope: "Applies to Gherkin features, Go tests, and future test frameworks"
 
+# ============================================================================
+# Allowed Monikers for Pattern Tags
+# ============================================================================
+
+module_monikers:
+  # NOTE: Module monikers are dynamically loaded from module contracts at runtime
+  # This list is for documentation only - validation uses actual module registry
+  examples:
+    - src-cli
+    - src-commands
+    - src-core
+    - src-cli-installers
+
+environment_monikers:
+  # NOTE: Environment monikers are dynamically loaded from environment contracts at runtime
+  # This list is for documentation only - validation uses actual environment registry
+  examples:
+    - isolated-test-project
+    - xyz-myproj-web-ws
+    - mkdocs-docker
+
+system_dependency_names:
+  - name: docker
+    description: "Docker daemon"
+  - name: git
+    description: "Git CLI"
+  - name: go
+    description: "Go toolchain"
+  - name: ai
+    description: "AI test mock (TEST_AI_MOCK env var)"
+  - name: az-cli
+    description: "Azure CLI"
+  - name: gh-cli
+    description: "GitHub CLI"
+
+os_platform_names:
+  - name: linux
+    description: "Linux operating system"
+  - name: macos
+    description: "macOS operating system"
+  - name: windows
+    description: "Windows operating system"
+  - name: os-agnostic
+    description: "Any operating system"
+
+# ============================================================================
+# Tag Definitions
+# ============================================================================
+
 tags:
-  - tag: "@deps:docker"
-    description: "Requires Docker daemon to be running"
+  # System Dependency Pattern
+  - tag: "@deps:<system-dependency>"
+    description: "Requires specific system dependency"
     type: system_dependency
+    pattern: "^@deps:(?P<system_dependency>[a-z0-9-]+)$"
+    example: "@deps:docker"
+    note: "Valid system dependency names are defined in system_dependency_names and os_platform_names sections"
 
-  - tag: "@deps:git"
-    description: "Requires Git CLI to be available"
-    type: system_dependency
-
-  - tag: "@deps:go"
-    description: "Requires Go toolchain to be available"
-    type: system_dependency
-
-  - tag: "@deps:ai"
-    description: "Requires any AI provider (TEST_AI_MOCK env var, Claude CLI, or API keys)"
-    type: system_dependency
-
-  - tag: "@deps:az-cli"
-    description: "Requires Azure CLI to be available"
-    type: system_dependency
-
-  # OS Platform Dependencies
-  - tag: "@deps:linux"
-    description: "Test requires Linux operating system"
-    type: os_platform
-
-  - tag: "@deps:macos"
-    description: "Test requires macOS operating system"
-    type: os_platform
-
-  - tag: "@deps:windows"
-    description: "Test requires Windows operating system"
-    type: os_platform
-
-  - tag: "@deps:os-agnostic"
-    description: "Test runs on any operating system (inferred when no OS-specific deps)"
-    type: os_platform
-    inferred: true
-
-  - tag: "@depm:src-cli"
-    description: "Requires built CLI module (out/src-cli/r2r-cli.exe on Windows, r2r-cli on Unix)"
+  - tag: "@depm:<module-name>"
+    description: "Requires specific module dependency from module contracts"
     type: module_dependency
+    pattern: "^@depm:(?P<module_name>[a-z0-9-]+)$"
+    example: "@depm:src-cli"
+    note: "Valid module names are loaded from module contracts at runtime"
 
-  - tag: "@depm:src-commands"
-    description: "Requires commands module (go run from src/commands)"
-    type: module_dependency
-
-  - tag: "@depm:src-core"
-    description: "Requires core library module (Go library)"
-    type: module_dependency
+  - tag: "@env:<env-moniker>"
+    description: "Requires specific test environment"
+    type: environment
+    pattern: "^@env:(?P<env_moniker>[a-z0-9-]+)$"
+    example: "@env:isolated-test-project"
+    note: "Valid environment monikers are defined in environment_monikers section"
 
   - tag: "@L0"
     name: "Very Fast Unit Tests with direct access to source files and build artifacts"
@@ -109,12 +130,14 @@ tags:
   - tag: "@risk:<risk-id>"
     description: "Tag specific risks for tracking and mitigation"
     type: safety
+    pattern: "^@risk:(?P<risk_id>[a-z0-9-]+)$"
+    example: "@risk:data-loss"
 
   - tag: "@skip:<reason>"
     description: "Exclude from test suite runs with documented reason"
     type: execution_control
     level: feature-or-scenario
-    pattern: "^@skip:[a-z]+$"
+    pattern: "^@skip:(?P<reason>[a-z]+)$"
     example: "@skip:wip"
 
   - tag: "@Manual"
@@ -123,18 +146,28 @@ tags:
     level: scenario
     constraint: "mutually_exclusive_with_taxonomy_levels"
 
+  - tag: "@ignore"
+    description: "Permanently exclude from test runs (for deprecated/obsolete tests)"
+    type: execution_control
+    level: feature-or-scenario
+
+  - tag: "@unisolated"
+    description: "Test runs without isolation and may share state with other tests"
+    type: test_behavior
+    level: scenario
+
   - tag: "@risk-control:<name>-<id>"
     description: "Link to risk control specification"
     type: risk_control
     level: scenario
-    pattern: "^@risk-control:[a-z0-9-]+-[0-9]{2}$"
+    pattern: "^@risk-control:(?P<name>[a-z0-9-]+)-(?P<id>[0-9]{2})$"
     example: "@risk-control:auth-mfa-01"
 
   - tag: "@risk-control:gxp-<name>"
     description: "Link to GxP risk control specification"
     type: risk_control_gxp
     level: scenario
-    pattern: "^@risk-control:gxp-[a-z0-9-]+$"
+    pattern: "^@risk-control:gxp-(?P<name>[a-z0-9-]+)$"
     example: "@risk-control:gxp-account-lockout"
 
   - tag: "@gxp"
@@ -161,6 +194,9 @@ types:
   - type: module_dependency
     description: "Internal module dependencies required for test execution (e.g., src-cli, src-commands, src-core)"
 
+  - type: environment
+    description: "Test environment requirements (e.g., isolated test projects, specific configurations)"
+
   - type: taxonomy-level
     description: "Test environment complexity and isolation level (L0-L4)"
 
@@ -171,7 +207,10 @@ types:
     description: "Tags related to test isolation, cleanup, and risk tracking"
 
   - type: execution_control
-    description: "Control test execution behavior (ignore, manual)"
+    description: "Control test execution behavior (ignore, manual, skip)"
+
+  - type: test_behavior
+    description: "Test behavior and isolation characteristics"
 
   - type: risk_control
     description: "Link scenarios to risk control specifications"
@@ -199,14 +238,6 @@ skip_reasons:
     name: "Flaky Test"
     description: "Test intermittently fails, needs stabilization"
 
-  - code: infra
-    name: "Infrastructure Unavailable"
-    description: "Required infrastructure not available (CLI, services, etc.)"
-
-  - code: platform
-    name: "Platform Specific"
-    description: "Platform-specific limitation (Windows/Linux/Mac only)"
-
   - code: deprecated
     name: "Deprecated Feature"
     description: "Feature deprecated, test kept for reference"
@@ -214,15 +245,3 @@ skip_reasons:
   - code: blocked
     name: "Blocked"
     description: "Blocked by external dependency or decision"
-
-  - code: todo
-    name: "To Do"
-    description: "Test definition exists but implementation pending"
-
-  - code: redundant
-    name: "Redundant Test"
-    description: "Test is redundant with other tests (e.g., library Go tests cover the same functionality)"
-
-  - code: broken-after-merge
-    name: "Broken After Merge"
-    description: "Test broken after merge conflict resolution, needs investigation"

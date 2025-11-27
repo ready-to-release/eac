@@ -32,8 +32,8 @@ func NewCommitSuite() *TestSuite {
 // NewAcceptanceSuite creates the acceptance test suite (L3 IV, OV, PV)
 // Only includes L3+ tests to avoid overlap with commit suite (L0-L2)
 //
-// NOTE: We use separate selectors for each verification type because godog doesn't
-// support mixing comma (OR) with && (AND) operators in a single expression.
+// NOTE: We use separate selectors for each verification type to maintain clarity
+// and allow different exclusion rules per verification type if needed in the future.
 // The selectors are combined with comma (OR) at the top level.
 func NewAcceptanceSuite() *TestSuite {
 	return &TestSuite{

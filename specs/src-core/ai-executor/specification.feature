@@ -1,4 +1,4 @@
-@skip:redundant
+@skip:deprecated
 Feature: src-core_ai-executor
   As a CLI command
   I want to execute AI requests through a unified interface

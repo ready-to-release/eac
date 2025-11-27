@@ -262,65 +262,26 @@ jobs:
         id: validation
         run: |
           cd src/commands
-          FAILED=0
-          ERRORS=""
 
-          echo "🔍 Validating repository contracts..."
-          if ! OUTPUT=$(go run . test repository 2>&1); then
-            FAILED=1
-            ERRORS="${ERRORS}### Repository Contract Validation Failed\n\`\`\`\n${OUTPUT}\n\`\`\`\n\n"
-            echo "::error::Repository contract validation failed"
-          fi
-          echo "$OUTPUT"
-
-          echo ""
-          echo "🔍 Validating module dependencies..."
-          if ! OUTPUT=$(go run . validate dependencies 2>&1); then
-            FAILED=1
-            ERRORS="${ERRORS}### Module Dependencies Validation Failed\n\`\`\`\n${OUTPUT}\n\`\`\`\n\n"
-            echo "::error::Module dependencies validation failed"
-          fi
-          echo "$OUTPUT"
-
-          echo ""
-          echo "🔍 Validating static modules (config files)..."
-          if ! OUTPUT=$(go run . build repo-config 2>&1); then
-            FAILED=1
-            ERRORS="${ERRORS}### repo-config Build Failed\n\`\`\`\n${OUTPUT}\n\`\`\`\n\n"
-            echo "::error::repo-config build failed"
-          fi
-          echo "$OUTPUT"
-
-          if ! OUTPUT=$(go run . build contracts 2>&1); then
-            FAILED=1
-            ERRORS="${ERRORS}### contracts Build Failed\n\`\`\`\n${OUTPUT}\n\`\`\`\n\n"
-            echo "::error::contracts build failed"
-          fi
-          echo "$OUTPUT"
-
-          echo ""
-          if [ $FAILED -ne 0 ]; then
-            # Write errors to step summary for visibility
-            echo "## ❌ Validation Failed" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 Running repository validation test suite..."
+          if ! go run . test repository 2>&1; then
+            echo "::error::Repository validation test suite failed"
+            echo "## ❌ Repository Validation Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "One or more validation checks did not pass. See details below." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo -e "$ERRORS" >> $GITHUB_STEP_SUMMARY
-            echo "::error::Validation failed - see job summary for details"
+            echo "One or more validation checks did not pass. See test output above for details." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
-          echo "✅ All validations passed"
+          echo ""
+          echo "✅ All repository validations passed"
           echo "## ✅ Repository Validation Passed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All structural checks completed successfully before module builds." >> $GITHUB_STEP_SUMMARY
+          echo "All repository validation tests passed successfully before module builds." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status | Description |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Repository Contracts | ✅ Pass | File ownership rules are valid and non-overlapping |" >> $GITHUB_STEP_SUMMARY
-          echo "| Module Dependencies | ✅ Pass | Dependency graph is acyclic and all references resolve |" >> $GITHUB_STEP_SUMMARY
-          echo "| repo-config Build | ✅ Pass | Repository configuration files are valid |" >> $GITHUB_STEP_SUMMARY
-          echo "| contracts Build | ✅ Pass | Module contract definitions compile correctly |" >> $GITHUB_STEP_SUMMARY
+          echo "Validated checks include:" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository contract validation (file ownership, module hierarchy)" >> $GITHUB_STEP_SUMMARY
+          echo "- Module dependency validation (dependency graph integrity)" >> $GITHUB_STEP_SUMMARY
+          echo "- Static module builds (repo-config, contracts)" >> $GITHUB_STEP_SUMMARY
 
   calculate-order:
     name: Calculate Execution Order

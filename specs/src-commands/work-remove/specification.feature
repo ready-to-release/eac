@@ -1,4 +1,4 @@
-@skip:todo
+@skip:wip
 @deps:go @L2 @ov
 Feature: src-commands_work_remove
 

@@ -55,6 +55,8 @@ func writeln(w io.Writer, format string, args ...interface{}) {
 
 // PackageTestResult holds detailed test execution results for a single package
 type PackageTestResult struct {
+	PackageName   string   // Package name/path for display
+	LogFilePath   string   // Path to the test log file
 	TestsPassed   int      // Number of individual tests that passed
 	TestsFailed   int      // Number of individual tests that failed
 	TestsSkipped  int      // Number of individual tests that were skipped
@@ -276,7 +278,7 @@ func TestSuite() int {
 
 		// Log found modules for debugging
 		if len(filteredTests) == 0 {
-			writeln(multiWriter, "DEBUG: No tests matched. Modules found in selected tests:")
+			writeln(multiWriter, "No tests matched. Modules found in selected tests:")
 			for mod, count := range foundModules {
 				if mod != "" {
 					writeln(multiWriter, "  - %s (%d tests)", mod, count)
@@ -286,7 +288,7 @@ func TestSuite() int {
 			}
 			// Show a few sample paths
 			if len(selectedTests) > 0 {
-				writeln(multiWriter, "DEBUG: Sample file paths (first 5):")
+				writeln(multiWriter, "Sample file paths (first 5):")
 				sampleCount := 5
 				if len(selectedTests) < sampleCount {
 					sampleCount = len(selectedTests)
@@ -407,13 +409,19 @@ func TestSuite() int {
 		// Extract module from specs path
 		// Example: specs/src-commands/commit/... -> src/commands/tests
 		//          specs/src-cli/... -> src/cli/tests
+		//          specs/repository/... -> src/core/repository/tests
 		relPath := strings.TrimPrefix(featurePath, "specs/")
 		relPath = strings.TrimPrefix(relPath, "specs\\")
 
-		// Get first path component (e.g., "src-commands")
+		// Get first path component (e.g., "src-commands" or "repository")
 		parts := strings.Split(filepath.ToSlash(relPath), "/")
 		if len(parts) == 0 {
 			return "src/commands/tests" // fallback
+		}
+
+		// Special case: repository specs are in specs/repository but tests are in src/core/repository/tests
+		if parts[0] == "repository" {
+			return "src/core/repository/tests"
 		}
 
 		// Convert "src-commands" -> "src/commands"
@@ -554,6 +562,46 @@ func TestSuite() int {
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Results directory: %s", testRunDir)
 
+	// Show failed test outputs (top 5)
+	if packagesFailed > 0 {
+		writeln(multiWriter, "")
+		writeln(multiWriter, "=== Failed Test Outputs ===")
+
+		failedResults := []PackageTestResult{}
+		for _, result := range results {
+			if result.PackageFailed {
+				failedResults = append(failedResults, result)
+			}
+		}
+
+		// Show top 5 failed tests
+		maxToShow := 5
+		if len(failedResults) < maxToShow {
+			maxToShow = len(failedResults)
+		}
+
+		for i := 0; i < maxToShow; i++ {
+			result := failedResults[i]
+			writeln(multiWriter, "")
+			writeln(multiWriter, "❌ %s", result.PackageName)
+
+			// Read last 15 lines from log file
+			if result.LogFilePath != "" && fileExists(result.LogFilePath) {
+				lines := readLastLines(result.LogFilePath, 15)
+				for _, line := range lines {
+					writeln(multiWriter, "  %s", line)
+				}
+			} else {
+				writeln(multiWriter, "  (log file not available)")
+			}
+		}
+
+		if len(failedResults) > maxToShow {
+			writeln(multiWriter, "")
+			writeln(multiWriter, "... and %d more failed tests", len(failedResults)-maxToShow)
+		}
+	}
+
 	// Check for undefined steps in test logs
 	undefinedSteps := extractUndefinedSteps(testRunDir)
 	if len(undefinedSteps) > 0 {
@@ -612,6 +660,55 @@ func TestSuite() int {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// readLastLines reads the last N lines from a file, parsing JSON test output
+func readLastLines(filePath string, n int) []string {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return []string{"Error reading file: " + err.Error()}
+	}
+	defer file.Close()
+
+	var outputLines []string
+	scanner := bufio.NewScanner(file)
+
+	// Parse JSON test output and extract "Output" fields
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Try to parse as JSON test event
+		var event struct {
+			Action string `json:"Action"`
+			Output string `json:"Output"`
+		}
+
+		if err := json.Unmarshal([]byte(line), &event); err == nil {
+			// Successfully parsed JSON - extract Output field if it's an output event
+			if event.Action == "output" && event.Output != "" {
+				// Strip ANSI color codes for cleaner display
+				cleaned := stripANSI(event.Output)
+				// Trim trailing newlines but keep the content
+				cleaned = strings.TrimRight(cleaned, "\n")
+				if cleaned != "" {
+					outputLines = append(outputLines, cleaned)
+				}
+			}
+		} else {
+			// Not JSON - include raw line
+			outputLines = append(outputLines, line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return []string{"Error scanning file: " + err.Error()}
+	}
+
+	// Return last n lines
+	if len(outputLines) <= n {
+		return outputLines
+	}
+	return outputLines[len(outputLines)-n:]
 }
 
 // OutputFileError represents a validation error for an expected output file
@@ -865,6 +962,8 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// These specs are executed by their corresponding test packages
 		// No console output needed - reduces noise in orchestrator output
 		return PackageTestResult{
+			PackageName:   pkgPath,
+			LogFilePath:   "",
 			TestsPassed:   len(tests),
 			TestsFailed:   0,
 			TestsSkipped:  0,
@@ -921,7 +1020,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		if err := os.MkdirAll(pkgOutputDir, 0755); err != nil {
 			writeln(multiWriter, "❌ Failed to create output directory: %v", err)
 			writeln(multiWriter, "")
-			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
+			return PackageTestResult{PackageName: pkgPath, LogFilePath: "", TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 		}
 
 		logFilePath = filepath.Join(pkgOutputDir, dirName+".log")
@@ -956,7 +1055,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		if err := os.MkdirAll(moduleDir, 0755); err != nil {
 			writeln(multiWriter, "❌ Failed to create output directory: %v", err)
 			writeln(multiWriter, "")
-			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
+			return PackageTestResult{PackageName: pkgPath, LogFilePath: "", TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 		}
 
 		// Create log file path directly under module directory
@@ -966,7 +1065,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	if err != nil {
 		writeln(multiWriter, "❌ Failed to create log file: %v", err)
 		writeln(multiWriter, "")
-		return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
+		return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 	}
 	defer logFile.Close()
 
@@ -1110,9 +1209,6 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
-			// Analyze log to get failure reason
-			failureReason := analyzeTestFailure(logFilePath, isGodogTestPackage)
-
 			testType := "go"
 			testCountInfo := fmt.Sprintf("(0/%d)", len(tests))
 			if isGodogTestPackage {
@@ -1124,11 +1220,11 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			// Create relative log path from test run directory
 			relLogPath, _ := filepath.Rel(filepath.Dir(testRunDir), logFilePath)
 			if testCountInfo != "" {
-				writeln(multiWriter, "❌ Package %s [%s] %s failed due to %s (See %s for details)", pkgName, testType, testCountInfo, failureReason, relLogPath)
+				writeln(multiWriter, "❌ Package %s [%s] %s failed (See %s for details)", pkgName, testType, testCountInfo, relLogPath)
 			} else {
-				writeln(multiWriter, "❌ Package %s [%s] failed due to %s (See %s for details)", pkgName, testType, failureReason, relLogPath)
+				writeln(multiWriter, "❌ Package %s [%s] failed (See %s for details)", pkgName, testType, relLogPath)
 			}
-			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
+			return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
 		} else {
 			testType := "go"
 			testCountInfo := fmt.Sprintf("(0/%d)", len(tests))
@@ -1142,16 +1238,29 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			} else {
 				writeln(multiWriter, "❌ Package %s [%s] failed to run tests: %v", pkgName, testType, err)
 			}
-			return PackageTestResult{TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
+			return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
 		}
 	}
 
 	testType := "go"
 	testCountInfo := fmt.Sprintf("(%d/%d)", len(tests), len(tests))
+	testsPassed := len(tests)
+	testsFailed := 0
+	testsTotal := len(tests)
+
 	if isGodogTestPackage {
 		testType = "godog"
 		// Extract scenario counts from godog test output
-		testCountInfo = extractGodogScenarioCounts(logFilePath)
+		passedScenarios, failedScenarios := extractGodogScenarioCountsDetailed(logFilePath)
+		testsPassed = passedScenarios
+		testsFailed = failedScenarios
+		testsTotal = passedScenarios + failedScenarios
+
+		if testsTotal > 0 {
+			testCountInfo = fmt.Sprintf("(%d/%d)", passedScenarios, testsTotal)
+		} else {
+			testCountInfo = ""
+		}
 	}
 
 	// Create relative log path from test run directory
@@ -1161,28 +1270,41 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	} else {
 		writeln(multiWriter, "✅ Package %s [%s] passed (See %s for details)", pkgName, testType, relLogPath)
 	}
-	return PackageTestResult{TestsPassed: len(tests), TestsFailed: 0, TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: false, ExpectedFiles: expectedFiles}
+	return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: testsPassed, TestsFailed: testsFailed, TestsSkipped: 0, TestsTotal: testsTotal, PackageFailed: false, ExpectedFiles: expectedFiles}
 }
 
 // extractGodogScenarioCounts parses godog JSON test results to extract scenario counts
 // Returns: "(passed/total)" or empty string if counts not found
 func extractGodogScenarioCounts(logPath string) string {
-	// Replace .log extension with .json to get JSON results file
-	jsonPath := strings.TrimSuffix(logPath, ".log") + ".json"
-
-	events, err := testjson.ParseJSONFile(jsonPath)
-	if err != nil {
-		// Fall back to empty string if JSON file doesn't exist
+	passed, failed := extractGodogScenarioCountsDetailed(logPath)
+	total := passed + failed
+	if total == 0 {
 		return ""
+	}
+	return fmt.Sprintf("(%d/%d)", passed, total)
+}
+
+// extractGodogScenarioCountsDetailed parses godog test results from go test JSON output
+// to extract scenario counts.
+// Returns: (passedScenarios, failedScenarios)
+func extractGodogScenarioCountsDetailed(logPath string) (int, int) {
+	// The log file contains `go test -json` output
+	// Parse it to count passed/failed scenarios
+	events, err := testjson.ParseJSONFile(logPath)
+	if err != nil {
+		// Fall back to zero if we can't parse the log
+		return 0, 0
 	}
 
 	passedScenarios := 0
 	failedScenarios := 0
 
 	// For Godog tests, each test event represents a scenario
-	// Filter out the TestFeatures wrapper function
+	// Filter out the top-level test function (e.g., "TestRepositoryFeatures")
+	// Scenario names are like "TestRepositoryFeatures/All_module_dependencies_in_repository_are_valid"
 	for _, event := range events {
-		if event.Test != "" && event.Test != "TestFeatures" {
+		// Only count sub-tests (scenarios), not the top-level test function
+		if event.Test != "" && strings.Contains(event.Test, "/") {
 			if event.Action == "pass" {
 				passedScenarios++
 			} else if event.Action == "fail" {
@@ -1191,12 +1313,7 @@ func extractGodogScenarioCounts(logPath string) string {
 		}
 	}
 
-	total := passedScenarios + failedScenarios
-	if total == 0 {
-		return ""
-	}
-
-	return fmt.Sprintf("(%d/%d)", passedScenarios, total)
+	return passedScenarios, failedScenarios
 }
 
 // extractUndefinedSteps scans test logs for undefined step definitions
