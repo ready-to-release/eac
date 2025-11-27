@@ -10,6 +10,7 @@ source:
   includes:
     - "sh/cli/**"
     - "pwsh/cli/**"
+    - "/.github/workflows/ci-src-cli-installers.yaml"
 
 tests:
   root: "src/cli-installers/tests"
