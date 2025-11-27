@@ -88,12 +88,14 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	InitializeRepositoryNoUnorderedFilesScenario(sc)
 	InitializeRepositoryOneModulePerFileScenario(sc)
 	InitializeModuleHierarchyScenario(sc)
+	InitializeFeatureLevelTagsScenario(sc)
 
 	// Cleanup after each scenario
 	sc.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
 		resetGoModuleTidyContext()
 		resetNoUnorderedFilesContext()
 		resetOneModulePerFileContext()
+		resetFeatureLevelTagsContext()
 		return ctx, nil
 	})
 }

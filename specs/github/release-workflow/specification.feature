@@ -1,4 +1,4 @@
-@L3 @iv
+@L3
 Feature: github_release-workflow
 
 As a developer

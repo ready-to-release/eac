@@ -1,4 +1,4 @@
-@skip:todo @deps:go @env:isolated-test-project @L2 @ov
+@skip:todo @deps:go
 Feature: src-commands_specs-validate
 
   As a developer of the eac platform

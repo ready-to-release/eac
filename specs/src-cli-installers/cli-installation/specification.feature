@@ -1,5 +1,5 @@
 @env:isolated-test-project
-@L2 @ov @depm:src-cli-installers
+@ov @depm:src-cli-installers
 Feature: src-cli-installers_cli-installation
 
   As a user

@@ -1,4 +1,4 @@
-@L1 @verification @unisolated
+@verification @unisolated
 Feature: repository_no-unordered-files
 
   As a repository maintainer

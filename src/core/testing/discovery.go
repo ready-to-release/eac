@@ -347,8 +347,12 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 // mergeFeatureAndScenarioTags combines feature and scenario tags with proper override semantics
 // Rules:
 // - Scenario LEVEL tags (@L0-@L4) OVERRIDE feature level tags
+// - Scenario VERIFICATION tags (@ov/@iv/@pv/@piv/@ppv) OVERRIDE feature verification tags
 // - All other scenario tags are ADDED to feature tags
-// - Non-level feature tags are INHERITED unless explicitly overridden
+// - Non-overridden feature tags are INHERITED
+//
+// This prevents scenarios from inheriting conflicting tags that would violate
+// "exactly one" constraints in our validation rules.
 func mergeFeatureAndScenarioTags(featureTags []string, scenarioTags []string) []string {
 	result := []string{}
 
@@ -376,16 +380,40 @@ func mergeFeatureAndScenarioTags(featureTags []string, scenarioTags []string) []
 		result = append(result, featureLevelTags...)
 	}
 
-	// Add all NON-LEVEL tags from feature
+	// Get verification tags from both
+	featureVerificationTags := []string{}
+	scenarioVerificationTags := []string{}
+
 	for _, tag := range featureTags {
-		if !isLevelTag(tag) && !contains(result, tag) {
+		if isVerificationTag(tag) {
+			featureVerificationTags = append(featureVerificationTags, tag)
+		}
+	}
+
+	for _, tag := range scenarioTags {
+		if isVerificationTag(tag) {
+			scenarioVerificationTags = append(scenarioVerificationTags, tag)
+		}
+	}
+
+	// RULE: If scenario has verification tag(s), use ONLY scenario verification tags (override)
+	// Otherwise, inherit feature verification tags
+	if len(scenarioVerificationTags) > 0 {
+		result = append(result, scenarioVerificationTags...)
+	} else {
+		result = append(result, featureVerificationTags...)
+	}
+
+	// Add all OTHER tags from feature (not level, not verification)
+	for _, tag := range featureTags {
+		if !isLevelTag(tag) && !isVerificationTag(tag) && !contains(result, tag) {
 			result = append(result, tag)
 		}
 	}
 
-	// Add all NON-LEVEL tags from scenario
+	// Add all OTHER tags from scenario (not level, not verification)
 	for _, tag := range scenarioTags {
-		if !isLevelTag(tag) && !contains(result, tag) {
+		if !isLevelTag(tag) && !isVerificationTag(tag) && !contains(result, tag) {
 			result = append(result, tag)
 		}
 	}
@@ -396,6 +424,11 @@ func mergeFeatureAndScenarioTags(featureTags []string, scenarioTags []string) []
 // isLevelTag checks if a tag is a level tag (@L0-@L4)
 func isLevelTag(tag string) bool {
 	return tag == "@L0" || tag == "@L1" || tag == "@L2" || tag == "@L3" || tag == "@L4"
+}
+
+// isVerificationTag checks if a tag is a verification tag (@ov/@iv/@pv/@piv/@ppv)
+func isVerificationTag(tag string) bool {
+	return tag == "@ov" || tag == "@iv" || tag == "@pv" || tag == "@piv" || tag == "@ppv"
 }
 
 // extractTagsFromLine extracts all tags from a line

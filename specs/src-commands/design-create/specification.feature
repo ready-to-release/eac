@@ -1,4 +1,4 @@
-@deps:ai @deps:docker @env:isolated-test-project @ov
+@deps:ai @deps:docker @ov
 Feature: src-commands_design-create
 
   Background:

@@ -480,10 +480,16 @@ func TestSuite() int {
 	numCPU := runtime.NumCPU()
 	var testParallelism int
 
-	// Build godog tag filter for suite
-	// All tests must have explicit L-tags, so we can use simple tag matching
-	// e.g., commit suite: "@L0,@L1,@L2"
-	suiteTagFilter := suite.BuildGodogTagFilter()
+	// Build godog tag filter for suite with skip tags integrated
+	// Load tag contract to get skip reasons
+	tagContract, err := testing.LoadTagContract()
+	if err != nil {
+		fmt.Fprintf(multiWriter, "❌ Failed to load tag contract: %v\n", err)
+		return 1
+	}
+
+	skipTags := tagContract.GetSkipTagsForSuite()
+	suiteTagFilter := suite.BuildGodogTagFilterWithSkipTags(skipTags)
 
 	if parallel {
 		// Package-level parallel: distribute CPU across packages

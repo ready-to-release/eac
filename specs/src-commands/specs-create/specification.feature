@@ -1,4 +1,4 @@
-@skip:todo @deps:ai @deps:go @env:isolated-test-project @L2 @ov
+@skip:todo @deps:ai @deps:go
 Feature: src-commands_specs-create
 
   As a developer of the eac platform

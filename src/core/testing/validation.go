@@ -2,6 +2,7 @@ package testing
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -418,4 +419,127 @@ func ParseRiskControlTag(tag string) (*RiskControlRef, error) {
 	ref.IsGxP = false
 
 	return ref, nil
+}
+
+// ValidateFeatureLevelTags validates that Feature-level tags don't conflict with Scenario tags.
+// In Gherkin, scenarios INHERIT all tags from the Feature level. This causes problems when:
+//   - Feature has @L2 tag and Scenario has @L3 tag → Scenario gets BOTH @L2 AND @L3 (invalid)
+//   - Feature has @ov tag and Scenario has @iv tag → Scenario gets BOTH @ov AND @iv (invalid)
+//
+// This function detects conflicts for:
+//   - L-level tags (@L0-@L4) - must have exactly one
+//   - Verification tags (@ov/@iv/@pv/@piv/@ppv) - validation checks for multiple
+//
+// This function detects these anti-patterns and returns validation errors.
+func ValidateFeatureLevelTags(featureFilePath string) ([]string, error) {
+	errors := []string{}
+
+	content, err := os.ReadFile(featureFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read feature file: %w", err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	var featureLevelTags []string
+	var inFeature bool
+	lineNum := 0
+
+	for _, line := range lines {
+		lineNum++
+		trimmed := strings.TrimSpace(line)
+
+		// Detect Feature: keyword first
+		if strings.HasPrefix(trimmed, "Feature:") {
+			inFeature = true
+			continue
+		}
+
+		// Extract feature-level tags (before Feature:)
+		if strings.HasPrefix(trimmed, "@") && !inFeature {
+			tags := extractTagsFromLine(trimmed)
+			featureLevelTags = append(featureLevelTags, tags...)
+			continue
+		}
+
+		// Check for Scenario or Scenario Outline with tags
+		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
+			// Look back at previous lines for scenario-level tags
+			scenarioTags := []string{}
+			checkLine := lineNum - 2 // Start checking from line before scenario
+
+			for checkLine >= 0 && checkLine < len(lines) {
+				checkTrimmed := strings.TrimSpace(lines[checkLine])
+				if strings.HasPrefix(checkTrimmed, "@") {
+					tags := extractTagsFromLine(checkTrimmed)
+					// Prepend tags (we're walking backwards)
+					scenarioTags = append(tags, scenarioTags...)
+					checkLine--
+				} else if checkTrimmed == "" {
+					// Empty line, keep looking
+					checkLine--
+				} else {
+					// Non-tag, non-empty line - stop looking
+					break
+				}
+			}
+
+			// Check if Feature has L-level tag AND Scenario has L-level tag
+			featureLevelTag := ""
+			for _, tag := range featureLevelTags {
+				if isLevelTag(tag) {
+					featureLevelTag = tag
+					break
+				}
+			}
+
+			scenarioLevelTag := ""
+			for _, tag := range scenarioTags {
+				if isLevelTag(tag) {
+					scenarioLevelTag = tag
+					break
+				}
+			}
+
+			// ANTI-PATTERN: Feature AND Scenario have DIFFERENT L-level tags
+			// (Same L-tag is redundant but not invalid - it just results in duplicate tags)
+			if featureLevelTag != "" && scenarioLevelTag != "" && featureLevelTag != scenarioLevelTag {
+				scenarioName := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, "Scenario Outline:"), "Scenario:"))
+				errors = append(errors, fmt.Sprintf(
+					"Feature has L-tag %s and Scenario '%s' (line %d) has L-tag %s. "+
+						"Scenarios inherit Feature tags, resulting in BOTH tags on the scenario. "+
+						"Remove the L-tag from either the Feature or all Scenarios.",
+					featureLevelTag, scenarioName, lineNum, scenarioLevelTag))
+			}
+
+			// Check if Feature has verification tag AND Scenario has DIFFERENT verification tag
+			featureVerificationTag := ""
+			for _, tag := range featureLevelTags {
+				if isVerificationTag(tag) {
+					featureVerificationTag = tag
+					break
+				}
+			}
+
+			scenarioVerificationTag := ""
+			for _, tag := range scenarioTags {
+				if isVerificationTag(tag) {
+					scenarioVerificationTag = tag
+					break
+				}
+			}
+
+			// ANTI-PATTERN: Feature AND Scenario have DIFFERENT verification tags
+			if featureVerificationTag != "" && scenarioVerificationTag != "" && featureVerificationTag != scenarioVerificationTag {
+				scenarioName := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, "Scenario Outline:"), "Scenario:"))
+				errors = append(errors, fmt.Sprintf(
+					"Feature has verification tag %s and Scenario '%s' (line %d) has verification tag %s. "+
+						"Scenarios inherit Feature tags, resulting in BOTH tags on the scenario. "+
+						"Remove the verification tag from either the Feature or all Scenarios.",
+					featureVerificationTag, scenarioName, lineNum, scenarioVerificationTag))
+			}
+		}
+	}
+
+	return errors, nil
 }
