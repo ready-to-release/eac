@@ -62,7 +62,6 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`src-commands\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -119,11 +118,4 @@ jobs:
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`src-commands\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Test Command | \`go run . test src-commands\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### What Was Tested" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- CLI command parsing and execution" >> $GITHUB_STEP_SUMMARY
-          echo "- Build system operations" >> $GITHUB_STEP_SUMMARY
-          echo "- Module management commands" >> $GITHUB_STEP_SUMMARY

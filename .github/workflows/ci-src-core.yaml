@@ -63,7 +63,6 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`src-core\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -120,11 +119,4 @@ jobs:
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`src-core\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Test Command | \`go run . test src-core\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### What Was Tested" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Core repository contracts parsing" >> $GITHUB_STEP_SUMMARY
-          echo "- Module dependency graph operations" >> $GITHUB_STEP_SUMMARY
-          echo "- File ownership resolution" >> $GITHUB_STEP_SUMMARY

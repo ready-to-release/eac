@@ -85,7 +85,6 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`src-cli\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📦 Artifacts uploaded as \`build-artifacts-src-cli\`" >> $GITHUB_STEP_SUMMARY
@@ -140,15 +139,6 @@ jobs:
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`src-cli\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Test Command | \`go run . test src-cli\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| CI Image | \`${{ inputs.ci_image }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### What Was Tested" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- CLI argument parsing" >> $GITHUB_STEP_SUMMARY
-          echo "- Command execution (show, build, test, etc.)" >> $GITHUB_STEP_SUMMARY
-          echo "- Extension loading and execution" >> $GITHUB_STEP_SUMMARY
-          echo "- Version output verification" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Binaries Verified" >> $GITHUB_STEP_SUMMARY
