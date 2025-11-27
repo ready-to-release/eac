@@ -20,6 +20,11 @@ func DiscoverGoTestTags(pkgPath string) ([]TestReference, error) {
 			return err
 		}
 
+		// Skip testdata directories (Go convention for test fixtures)
+		if info.IsDir() && info.Name() == "testdata" {
+			return filepath.SkipDir
+		}
+
 		// Skip directories
 		if info.IsDir() {
 			return nil
@@ -219,6 +224,11 @@ func DiscoverGodogFeatureTags(specsPath string) ([]TestReference, error) {
 			return err
 		}
 
+		// Skip testdata directories (Go convention for test fixtures)
+		if info.IsDir() && info.Name() == "testdata" {
+			return filepath.SkipDir
+		}
+
 		// Skip directories
 		if info.IsDir() {
 			return nil
@@ -258,20 +268,24 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 
 	var featureTags []string
 	var scenarioTags []string
-	var inScenario bool
+	var inFeature bool
 	var scenarioName string
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Extract feature-level tags (before Feature:)
-		if strings.HasPrefix(trimmed, "@") && !inScenario && len(featureTags) == 0 {
-			tags := extractTagsFromLine(trimmed)
-			featureTags = append(featureTags, tags...)
+		// Detect Feature: keyword first to know when we're done collecting feature tags
+		if strings.HasPrefix(trimmed, "Feature:") {
+			// We've hit the Feature line, no more feature tags after this
+			inFeature = true
+			continue
 		}
 
-		// Detect Feature: keyword
-		if strings.HasPrefix(trimmed, "Feature:") {
+		// Extract feature-level tags (before Feature:)
+		// Allow multiple lines of tags before Feature:
+		if strings.HasPrefix(trimmed, "@") && !inFeature && len(featureTags) >= 0 {
+			tags := extractTagsFromLine(trimmed)
+			featureTags = append(featureTags, tags...)
 			continue
 		}
 
@@ -283,7 +297,6 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 
 		// Detect Scenario: or Scenario Outline:
 		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
-			inScenario = true
 			scenarioName = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, "Scenario Outline:"), "Scenario:"))
 
 			// Combine tags: scenario level tags OVERRIDE feature level tags

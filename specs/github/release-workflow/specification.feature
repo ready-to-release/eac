@@ -1,3 +1,4 @@
+@L3 @iv
 Feature: github_release-workflow
 
 As a developer
@@ -11,7 +12,7 @@ Background:
 
 Rule: Workflow triggers on release tags matching pattern
 
-  @skip:todo @L2 @ov @deps:git @depm:src-cli
+  @skip:todo @L3 @iv @deps:git @depm:src-cli
   Scenario: Workflow triggers when tag matches src-cli pattern
     Given a git repository with src-cli source code
     When a git tag matching pattern "src-cli/*" is created
@@ -21,7 +22,7 @@ Rule: Workflow triggers on release tags matching pattern
 
 Rule: Go binary is built for multiple platforms
 
-  @skip:todo @L2 @ov @deps:go @depm:src-cli
+  @skip:todo @L3 @iv @deps:go @depm:src-cli
   Scenario: Binaries compiled for all target platforms
     Given the workflow environment is configured
     And the Go source code is available

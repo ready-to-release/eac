@@ -1,5 +1,5 @@
 @skip:todo
-@deps:go @deps:ai @ov
+@deps:go @deps:ai @L2 @ov
 Feature: src-commands_work_merge
 
   As a developer who has completed work in a workspace

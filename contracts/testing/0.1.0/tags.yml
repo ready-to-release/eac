@@ -218,3 +218,7 @@ skip_reasons:
   - code: todo
     name: "To Do"
     description: "Test definition exists but implementation pending"
+
+  - code: redundant
+    name: "Redundant Test"
+    description: "Test is redundant with other tests (e.g., library Go tests cover the same functionality)"

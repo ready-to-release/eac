@@ -122,6 +122,7 @@
       }
     }
   },
+  "required": ["extensions"],
   "definitions": {
     "envvar": {
       "type": "object",
@@ -165,11 +166,13 @@
       "properties": {
         "host": {
           "type": "string",
-          "description": "Host path to mount"
+          "description": "Host path to mount",
+          "minLength": 1
         },
         "container": {
           "type": "string",
-          "description": "Container path to mount to"
+          "description": "Container path to mount to",
+          "minLength": 1
         },
         "readonly": {
           "type": "boolean",
@@ -203,7 +206,7 @@
         "name": {
           "type": "string",
           "description": "Extension name (used as command)",
-          "pattern": "^[a-z][a-z0-9-]*$",
+          "pattern": "^[a-z]([a-z0-9]+(-[a-z0-9]+)*)?$",
           "minLength": 1,
           "maxLength": 64
         },
@@ -218,8 +221,8 @@
         },
         "image": {
           "type": "string",
-          "description": "Container image reference",
-          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]*:[a-zA-Z0-9._-]+$|^[a-zA-Z0-9][a-zA-Z0-9._/-]*$"
+          "description": "Container image reference (with tag or digest)",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]*(:[a-zA-Z0-9._+-]+|@sha256:[a-f0-9]{64})?$"
         },
         "image_pull_policy": {
           "type": "string",
@@ -279,13 +282,13 @@
         },
         "memory_limit": {
           "type": "string",
-          "description": "Memory limit (e.g., '512MB', '2GB')",
-          "pattern": "^(\\d+(\\.\\d+)?)\\s*([bBkKmMgG][bB]?)$"
+          "description": "Memory limit (e.g., '512MB', '2GB', '512m', '134217728')",
+          "pattern": "^(\\d+(\\.\\d+)?)\\s*([bBkKmMgG][bB]?)?$"
         },
         "cpu_limit": {
           "type": "string",
-          "description": "CPU limit (e.g., '0.5', '2')",
-          "pattern": "^\\d+(\\.\\d+)?$"
+          "description": "CPU limit (e.g., '0.5', '2', '1500m')",
+          "pattern": "^\\d+(\\.\\d+)?m?$"
         },
         "repo_url": {
           "type": "string",

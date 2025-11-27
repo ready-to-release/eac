@@ -1,5 +1,5 @@
 @env:isolated-test-project
-@ov @depm:src-cli-installers
+@L2 @ov @depm:src-cli-installers
 Feature: src-cli-installers_cli-installation
 
   As a user
@@ -29,14 +29,14 @@ Feature: src-cli-installers_cli-installation
 
   Rule: Installer handles errors gracefully
 
-    @ov @deps:windows @depm:src-cli-installers
+    @L2 @ov @deps:windows @depm:src-cli-installers
     Scenario: Windows installer fails when release does not exist
       Given I am on Windows
       When I run the PowerShell installer with "-Version v999.999.999"
       Then the installer displays an error about the failed download
       And exits with a non-zero exit code
 
-    @ov @deps:linux @depm:src-cli-installers
+    @L2 @ov @deps:linux @depm:src-cli-installers
     Scenario: Linux installer fails when release does not exist
       Given I am on Linux
       When I run the bash installer with "--version v999.999.999"

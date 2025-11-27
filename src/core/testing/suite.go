@@ -21,7 +21,8 @@ func NewCommitSuite() *TestSuite {
 		Description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L2",
 		Selectors: []TagSelector{
 			{
-				AnyOfTags: []string{"@L0", "@L1", "@L2"},
+				AnyOfTags:   []string{"@L0", "@L1", "@L2"},
+				ExcludeTags: []string{"@L3", "@L4"},
 			},
 		},
 		Inferences: GetGlobalInferences(),
@@ -151,28 +152,48 @@ func (suite *TestSuite) BuildGodogTagFilter() string {
 	return ""
 }
 
-// SelectTests applies suite selectors to filter tests
-func (suite *TestSuite) SelectTests(allTests []TestReference) []TestReference {
+// SelectionStats contains statistics about test selection
+type SelectionStats struct {
+	TotalDiscovered  int // Total tests discovered
+	Ignored          int // Tests tagged with @ignore
+	NotMatchingSuite int // Tests that don't match suite selectors
+	Selected         int // Tests selected for the suite
+}
+
+// SelectTestsWithStats applies suite selectors to filter tests and returns statistics
+func (suite *TestSuite) SelectTestsWithStats(allTests []TestReference) ([]TestReference, SelectionStats) {
 	selected := []TestReference{}
-	ignoredCount := 0
+	stats := SelectionStats{
+		TotalDiscovered: len(allTests),
+	}
 
 	for _, test := range allTests {
 		// Filter out ignored tests FIRST (before any other selection)
 		if test.IsIgnored {
-			ignoredCount++
+			stats.Ignored++
 			continue
 		}
 
 		if suite.Matches(test) {
 			selected = append(selected, test)
+		} else {
+			stats.NotMatchingSuite++
 		}
 	}
 
+	stats.Selected = len(selected)
+
 	// Log ignored tests if any
-	if ignoredCount > 0 {
-		fmt.Printf("INFO: %d tests ignored (tagged with @ignore)\n", ignoredCount)
+	if stats.Ignored > 0 {
+		fmt.Printf("INFO: %d tests ignored (tagged with @ignore)\n", stats.Ignored)
 	}
 
+	return selected, stats
+}
+
+// SelectTests applies suite selectors to filter tests (legacy version for compatibility)
+func (suite *TestSuite) SelectTests(allTests []TestReference) []TestReference {
+	selected, _ := suite.SelectTestsWithStats(allTests)
 	return selected
 }
 

@@ -9,13 +9,10 @@ source:
   root: ".github"
   changelog_path: ".github/CHANGELOG.md"
   includes:
-    # Only the change-trigger.yaml orchestration workflow
-    # Individual modules own their respective workflow files
-    - "workflows/change-trigger.yaml"
     # CI configuration variables (image versions, etc.)
     - "variables/**"
   excludes:
-    # All other workflows are owned by their respective modules
+    # All workflows are owned by their respective modules or repository module
     - "workflows/*.yaml"
     - "workflows/*.yml"
 

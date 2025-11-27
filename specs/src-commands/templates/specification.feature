@@ -1,4 +1,4 @@
-@ov @env:isolated-test-project
+@L2 @ov @env:isolated-test-project
 Feature: src-commands_templates
 
   As a developer of the eac platform

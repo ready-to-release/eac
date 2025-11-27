@@ -11,8 +11,16 @@ var ValidTags = map[string]bool{
 	"@deps:docker": true,
 	"@deps:git":    true,
 	"@deps:go":     true,
-	"@deps:ai": true,
+	"@deps:ai":     true,
 	"@deps:az-cli": true,
+	"@deps:openai": true,
+	"@deps:gemini": true,
+
+	// OS platform dependencies (for platform-specific tests)
+	"@deps:windows":    true,
+	"@deps:linux":      true,
+	"@deps:darwin":     true,
+	"@deps:os-agnostic": true,
 
 	// Taxonomy levels
 	"@L0": true,
@@ -30,6 +38,16 @@ var ValidTags = map[string]bool{
 
 	// Execution control tags
 	"@Manual": true,
+	"@ignore": true,
+
+	// Environment tags (test isolation)
+	"@env:isolated-test-project": true,
+	"@env:requires-git-repo":     true,
+	"@env:mkdocs-docker":         true,
+
+	// Test behavior tags
+	"@unisolated":   true, // Test runs without isolation (shares state)
+	"@verification": true, // Meta-verification test
 
 	// GxP regulatory tags
 	"@gxp":             true,
@@ -106,7 +124,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 		}
 	}
 
-	// CRITICAL: Must have exactly ONE level tag
+	// CRITICAL: Must have exactly ONE level tag (except @Manual tests)
 	levelTags := []string{}
 	for _, tag := range test.Tags {
 		if contains(LevelTags, tag) {
@@ -114,10 +132,13 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 		}
 	}
 
-	if len(levelTags) == 0 {
-		errors = append(errors, fmt.Sprintf("test '%s' has NO level tag (must have exactly one of @L0-@L4)", test.TestName))
-	} else if len(levelTags) > 1 {
-		errors = append(errors, fmt.Sprintf("test '%s' has MULTIPLE level tags %v (must have exactly one)", test.TestName, levelTags))
+	// @Manual tests are exempt from L-tag requirements
+	if !test.IsManual {
+		if len(levelTags) == 0 {
+			errors = append(errors, fmt.Sprintf("test '%s' has NO level tag (must have exactly one of @L0-@L4)", test.TestName))
+		} else if len(levelTags) > 1 {
+			errors = append(errors, fmt.Sprintf("test '%s' has MULTIPLE level tags %v (must have exactly one)", test.TestName, levelTags))
+		}
 	}
 
 	// Must have at least ONE verification tag
@@ -192,21 +213,9 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 // ShouldSkipValidation determines if a test should be excluded from validation
 // Returns true for test framework's own tests that may intentionally have invalid tags
 func ShouldSkipValidation(test TestReference) bool {
-	// Normalize path separators for consistent matching
-	normalizedPath := strings.ReplaceAll(test.FilePath, "\\", "/")
-
-	// Skip validation for test framework's own tests
-	// These tests often contain embedded test data with intentionally invalid tags
-	// to verify that validation logic catches errors
-	if strings.Contains(normalizedPath, "specs/src-core/testing/") {
-		return true
-	}
-
-	// Skip tests explicitly tagged as framework tests
-	if contains(test.Tags, "@test-framework") {
-		return true
-	}
-
+	// All meta tests (testing framework tests) have been moved to .go.txt files
+	// and are tested via specs/src-core/testing-framework/specification.feature
+	// No tests should be skipped from validation anymore
 	return false
 }
 

@@ -1,3 +1,6 @@
+//go:build L1 && ov
+// +build L1,ov
+
 // File: src/core/ai/providers/openai_test.go
 package providers
 

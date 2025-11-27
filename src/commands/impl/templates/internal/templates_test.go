@@ -1,3 +1,6 @@
+//go:build L1 && ov
+// +build L1,ov
+
 // Feature: commands_templates
 // Unit tests for templates command
 package templates
