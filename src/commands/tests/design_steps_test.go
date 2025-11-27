@@ -407,26 +407,9 @@ func InitializeDesignScenario(sc *godog.ScenarioContext) {
 	// Keep legacy step definitions for backward compatibility with existing specs
 	// These can be removed once all specs are updated to use the new structure
 
-	// Given steps
-	// Note: "docker service is available" and "Docker is running" are now registered
-	// in design/tests/serve_steps.go to avoid ambiguity with docs module
-	sc.Step(`^module "([^"]*)" has workspace\.dsl file$`, moduleHasWorkspaceDslFile)
-	sc.Step(`^multiple modules have workspace\.dsl files$`, multipleModulesHaveWorkspaceDslFiles)
-
-	// Then steps - Structurizr serve
-	sc.Step(`^Structurizr container should start successfully$`, structurizrContainerShouldStartSuccessfully)
-	sc.Step(`^I should see success message with URL$`, iShouldSeeSuccessMessageWithURL)
-	sc.Step(`^documentation should be accessible at the URL$`, documentationShouldBeAccessibleAtTheURL)
-	sc.Step(`^I should see a list of available modules$`, iShouldSeeAListOfAvailableModules)
-	sc.Step(`^"([^"]*)" module should be in the list$`, moduleShouldBeInTheList)
-
-	// Then steps - Validation
-	sc.Step(`^the workspace should be validated using Structurizr CLI$`, theWorkspaceShouldBeValidatedUsingStructurizrCLI)
-	sc.Step(`^all workspaces should be validated using Structurizr CLI$`, allWorkspacesShouldBeValidatedUsingStructurizrCLI)
-	sc.Step(`^validation results should be displayed in console$`, validationResultsShouldBeDisplayedInConsole)
-	sc.Step(`^validation results for each module should be displayed in console$`, validationResultsForEachModuleShouldBeDisplayedInConsole)
-	sc.Step(`^validation results should be written to JSON file$`, validationResultsShouldBeWrittenToJSONFile)
-	sc.Step(`^aggregated validation results should be written to JSON file$`, aggregatedValidationResultsShouldBeWrittenToJSONFile)
-	sc.Step(`^I should see validation summary with errors and warnings$`, iShouldSeeValidationSummaryWithErrorsAndWarnings)
-	sc.Step(`^I should see overall summary with total errors and warnings$`, iShouldSeeOverallSummaryWithTotalErrorsAndWarnings)
+	// NOTE: Legacy design steps are no longer registered here.
+	// All design command step definitions have been moved to src/commands/impl/design/tests/
+	// and are registered via designtests.RegisterDesignSteps(sc) in this file.
+	//
+	// This prevents duplicate/ambiguous step definitions.
 }

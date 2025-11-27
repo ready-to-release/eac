@@ -8,6 +8,8 @@ import (
 )
 
 // ApplyInferences applies inference rules to enrich test tags
+// NOTE: L-level tags (@L0-@L4) and verification tags (@ov/@iv/@pv/@piv/@ppv) are NEVER inferred.
+// Tests MUST have these tags explicitly present for the executor to find them.
 func ApplyInferences(tests []TestReference, inferences []Inference) []TestReference {
 	enriched := make([]TestReference, len(tests))
 
@@ -22,8 +24,8 @@ func ApplyInferences(tests []TestReference, inferences []Inference) []TestRefere
 				continue
 			}
 
-			// Skip level inferences if test already has explicit level
-			if isLevelInference(inference) && hasAnyLevelTag(test.Tags) {
+			// NEVER infer L-level tags or verification tags - they must be explicit
+			if isLevelInference(inference) || isVerificationInference(inference) {
 				continue
 			}
 
@@ -38,26 +40,18 @@ func ApplyInferences(tests []TestReference, inferences []Inference) []TestRefere
 			}
 		}
 
-		// Derive @ov if applicable
-		enriched[i].Tags = DeriveOperationalVerification(enriched[i].Tags)
+		// NOTE: Verification tags (@ov etc.) are NO LONGER derived/inferred
+		// They MUST be explicitly present in the test
 	}
 
 	return enriched
 }
 
-// DeriveOperationalVerification adds @ov tag if no other verification tags present
+// DeriveOperationalVerification is DEPRECATED and no longer used
+// Verification tags MUST be explicitly present in tests
+// This function is kept for backwards compatibility but does nothing
 func DeriveOperationalVerification(tags []string) []string {
-	hasIV := contains(tags, "@iv")
-	hasPV := contains(tags, "@pv")
-	hasPIV := contains(tags, "@piv")
-	hasPPV := contains(tags, "@ppv")
-	hasOV := contains(tags, "@ov")
-
-	// @ov = no IV/PV/PIV/PPV
-	if !hasIV && !hasPV && !hasPIV && !hasPPV && !hasOV {
-		return append(tags, "@ov")
-	}
-
+	// NO-OP: Verification tags are never derived anymore
 	return tags
 }
 
@@ -77,6 +71,17 @@ func isLevelInference(inference Inference) bool {
 	levelTags := []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
 	for _, tag := range inference.ThenAddTags {
 		if contains(levelTags, tag) {
+			return true
+		}
+	}
+	return false
+}
+
+// isVerificationInference checks if inference adds verification tags
+func isVerificationInference(inference Inference) bool {
+	verificationTags := []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
+	for _, tag := range inference.ThenAddTags {
+		if contains(verificationTags, tag) {
 			return true
 		}
 	}

@@ -13,24 +13,24 @@ var SuiteRegistry = map[string]*TestSuite{
 	"production-verification": NewProductionVerificationSuite(),
 }
 
-// NewCommitSuite creates the commit test suite (L0-L2)
+// NewCommitSuite creates the commit test suite (L0-L1)
 func NewCommitSuite() *TestSuite {
 	return &TestSuite{
 		Moniker:     "commit",
 		Name:        "Commit Tests",
-		Description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L2",
+		Description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L1",
 		Selectors: []TagSelector{
 			{
-				AnyOfTags:   []string{"@L0", "@L1", "@L2"},
-				ExcludeTags: []string{"@L3", "@L4"},
+				AnyOfTags:   []string{"@L0", "@L1"},
+				ExcludeTags: []string{"@L2", "@L3", "@L4"},
 			},
 		},
 		Inferences: GetGlobalInferences(),
 	}
 }
 
-// NewAcceptanceSuite creates the acceptance test suite (L3 IV, OV, PV)
-// Only includes L3+ tests to avoid overlap with commit suite (L0-L2)
+// NewAcceptanceSuite creates the acceptance test suite (L2+ IV, OV, PV)
+// Only includes L2+ tests to avoid overlap with commit suite (L0-L1)
 //
 // NOTE: We use separate selectors for each verification type to maintain clarity
 // and allow different exclusion rules per verification type if needed in the future.
@@ -39,11 +39,11 @@ func NewAcceptanceSuite() *TestSuite {
 	return &TestSuite{
 		Moniker:     "acceptance",
 		Name:        "PLTE Acceptance Tests",
-		Description: "Stage 5-6 - L3 Installation, Operational, and Performance Verification",
+		Description: "Stage 5-6 - L2+ Installation, Operational, and Performance Verification",
 		Selectors: []TagSelector{
 			{
 				AnyOfTags:   []string{"@iv", "@ov", "@pv"},
-				ExcludeTags: []string{"@L0", "@L1", "@L2"},
+				ExcludeTags: []string{"@L0", "@L1"},
 			},
 		},
 		Inferences: GetGlobalInferences(),
@@ -104,16 +104,17 @@ func ListSuites() []string {
 //
 // # Examples
 //
-// Commit suite (L0-L2 tests):
+// Commit suite (L0-L1 tests):
 //
-//	AnyOfTags: ["@L0", "@L1", "@L2"]
-//	Output:    "@L0,@L1,@L2"
+//	AnyOfTags:   ["@L0", "@L1"]
+//	ExcludeTags: ["@L2", "@L3", "@L4"]
+//	Output:      "@L0,@L1 && ~@L2 && ~@L3 && ~@L4"
 //
-// Acceptance suite (verification tests, excluding L0-L2):
+// Acceptance suite (verification tests, excluding L0-L1):
 //
 //	AnyOfTags:   ["@iv", "@ov", "@pv"]
-//	ExcludeTags: ["@L0", "@L1", "@L2"]
-//	Output:      "@iv,@ov,@pv && ~@L0 && ~@L1 && ~@L2"
+//	ExcludeTags: ["@L0", "@L1"]
+//	Output:      "@iv,@ov,@pv && ~@L0 && ~@L1"
 //
 // BuildGodogTagFilterWithSkipTags builds a godog tag filter that includes skip tag exclusions.
 // This is the primary method that should be used instead of BuildGodogTagFilter.
@@ -179,7 +180,7 @@ func (suite *TestSuite) BuildGodogTagFilter() string {
 // SelectionStats contains statistics about test selection
 type SelectionStats struct {
 	TotalDiscovered  int // Total tests discovered
-	Ignored          int // Tests tagged with @ignore
+	Ignored          int // Tests tagged with @skip:<reason>
 	NotMatchingSuite int // Tests that don't match suite selectors
 	Selected         int // Tests selected for the suite
 }
@@ -207,9 +208,9 @@ func (suite *TestSuite) SelectTestsWithStats(allTests []TestReference) ([]TestRe
 
 	stats.Selected = len(selected)
 
-	// Log ignored tests if any
+	// Log skipped tests if any
 	if stats.Ignored > 0 {
-		fmt.Printf("INFO: %d tests ignored (tagged with @ignore)\n", stats.Ignored)
+		fmt.Printf("INFO: %d tests skipped (tagged with @skip:<reason>)\n", stats.Ignored)
 	}
 
 	return selected, stats

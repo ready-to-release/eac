@@ -157,8 +157,8 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 	// Validate: Production tags (@piv/@ppv) should not be in commit suite (these are @L4)
 	// This is covered by the L4 check above
 
-	// Validate: @ignore tests should still have proper tags (for documentation)
-	// No special validation needed - ignored tests still need valid tags for when @ignore is removed
+	// Validate: @skip tests should still have proper tags (for documentation)
+	// No special validation needed - skipped tests still need valid tags for when @skip tag is removed
 
 	// Combine errors and warnings
 	allIssues := append(errors, warnings...)
