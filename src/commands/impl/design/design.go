@@ -28,6 +28,9 @@ func Design() int {
 	case "create":
 		// Handled by separate registration in create/create.go
 		return 0
+	case "update":
+		// Handled by separate registration in update/update.go
+		return 0
 	case "validate":
 		// Handled by separate registration in validate.go
 		return 0
@@ -55,6 +58,7 @@ func printDesignUsage() {
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  create <module>    Generate workspace.dsl for a module")
+	fmt.Println("  update <module>    Update existing workspace.dsl by re-analyzing source code")
 	fmt.Println("  validate <module>  Validate workspace.dsl syntax")
 	fmt.Println("  validate --all     Validate all workspace files")
 	fmt.Println("  serve <module>     View diagrams in browser (http://localhost:8080)")
@@ -74,6 +78,9 @@ func printDesignUsage() {
 	fmt.Println("  # Generate architecture for a module")
 	fmt.Println("  r2r design create src-cli")
 	fmt.Println()
+	fmt.Println("  # Update existing workspace with code changes")
+	fmt.Println("  r2r design update src-cli")
+	fmt.Println()
 	fmt.Println("  # Generate with debug output")
 	fmt.Println("  r2r design create contracts --debug")
 	fmt.Println()
@@ -83,9 +90,11 @@ func printDesignUsage() {
 	fmt.Println("  # View diagrams in browser")
 	fmt.Println("  r2r design serve src-cli")
 	fmt.Println()
-	fmt.Println("Flags (create):")
-	fmt.Println("  --debug, -d    Save AI prompts and responses to out/ for debugging")
-	fmt.Println("  --force, -f    Overwrite existing workspace.dsl file")
+	fmt.Println("Flags (create/update):")
+	fmt.Println("  --debug, -d      Save AI prompts and responses to out/ for debugging")
+	fmt.Println("  --force, -f      Overwrite workspace.dsl even if validation fails")
+	fmt.Println("  --output, -o     Custom output path for workspace.dsl")
+	fmt.Println("  --prompt         Custom AI prompt file path")
 	fmt.Println()
 	fmt.Println("Requirements:")
 	fmt.Println("  - Docker (for validate and serve commands)")

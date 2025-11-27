@@ -10,10 +10,9 @@
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to the 'out' directory for debugging and analysis
 // Flag.module: type=string, shorthand=m, usage=Target module for the specification (e.g., src-commands, src-core). If not provided, the module will be inferred from the description
 // Flag.output: type=string, shorthand=o, usage=Custom output path for the specification file. If not provided, the path is determined from the feature name and module
-// Flag.template: type=string, usage=Path to a custom template file for specification generation. Overrides the built-in template
 // Flag.prompt: type=string, usage=Path to a custom system prompt file. Overrides both user override prompts and built-in prompts
 // Usage: specs create <description>
-// Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --template (custom template file), --prompt (custom system prompt)
+// Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --prompt (custom system prompt)
 // HasSideEffects: true
 package create
 
@@ -32,6 +31,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/impl/specs"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts"
+	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
@@ -108,9 +108,20 @@ func SpecsCreate() int {
 		defer logger.Sync()
 	}
 
+	// Log command start
+	if config.Logger != nil {
+		config.Logger.Info("Starting specs create",
+			zap.String("description", truncateForLog(config.Description, 100)),
+			zap.String("module", config.Module),
+			zap.Bool("debug", config.Debug))
+	}
+
 	// Load contract and build prompt
 	fullPrompt, err := loadAndBuildPrompt(config)
 	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Failed to build prompt", zap.Error(err))
+		}
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
@@ -118,6 +129,9 @@ func SpecsCreate() int {
 	// Generate and clean output
 	cleanedOutput, err := generateAndClean(config, fullPrompt)
 	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("AI generation failed", zap.Error(err))
+		}
 		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
 		return 1
 	}
@@ -125,6 +139,9 @@ func SpecsCreate() int {
 	// Determine and validate output path
 	finalOutputPath, err := determineAndValidateOutputPath(config, cleanedOutput)
 	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Output path validation failed", zap.Error(err))
+		}
 		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
 		return 1
 	}
@@ -132,6 +149,11 @@ func SpecsCreate() int {
 	// Check if file exists and --force not specified
 	if !config.Force {
 		if _, err := os.Stat(finalOutputPath); err == nil {
+			if config.Logger != nil {
+				config.Logger.Warn("File already exists",
+					zap.String("path", finalOutputPath),
+					zap.Bool("force", config.Force))
+			}
 			fmt.Fprintf(os.Stderr, "Error: File already exists: %s\n", finalOutputPath)
 			fmt.Fprintf(os.Stderr, "Use --force to overwrite\n")
 			return 1
@@ -140,11 +162,29 @@ func SpecsCreate() int {
 
 	// Write output and report success
 	if err := writeOutputAndReportSuccess(finalOutputPath, cleanedOutput, config); err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Failed to write output", zap.Error(err))
+		}
 		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
 		return 1
 	}
 
+	// Log successful completion
+	if config.Logger != nil {
+		config.Logger.Info("Specification created successfully",
+			zap.String("path", finalOutputPath),
+			zap.Int("size", len(cleanedOutput)))
+	}
+
 	return 0
+}
+
+// truncateForLog truncates a string for logging purposes
+func truncateForLog(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 // SpecsConfig holds configuration for specs create command
@@ -155,7 +195,6 @@ type SpecsConfig struct {
 	Module       string // -m, --module: Target module
 	OutputPath   string // -o, --output: Custom output path
 	PromptPath   string // --prompt: Custom system prompt file
-	TemplatePath string // --template: Custom template file
 	TemplateRoot string
 	Logger       *logging.Logger
 }
@@ -167,17 +206,41 @@ type SpecsConfig struct {
 // - Builds the full AI prompt with contract context
 // - Optionally saves debug output
 func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
+	if config.Logger != nil {
+		config.Logger.Debug("Loading specification contract")
+	}
 	fmt.Println("📋 Loading specification contract...")
+
 	fullPrompt, err := buildContractBasedPrompt(config)
 	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Failed to build contract-based prompt", zap.Error(err))
+		}
 		return "", err
 	}
 
+	if config.Logger != nil {
+		config.Logger.Debug("Prompt built successfully", zap.Int("promptLength", len(fullPrompt)))
+	}
+
 	if config.Debug {
-		debugPath := filepath.Join(config.TemplateRoot, "out", "debug-full-prompt.md")
+		// Write debug output to out/logs/specs/ for consistency
+		debugDir := filepath.Join(config.TemplateRoot, "out", "logs", "specs")
+		if err := os.MkdirAll(debugDir, 0755); err != nil {
+			if config.Logger != nil {
+				config.Logger.Warn("Failed to create debug directory", zap.Error(err))
+			}
+		}
+		debugPath := filepath.Join(debugDir, "debug-full-prompt.md")
 		if err := os.WriteFile(debugPath, []byte(fullPrompt), 0644); err != nil {
+			if config.Logger != nil {
+				config.Logger.Warn("Failed to save debug prompt", zap.String("path", debugPath), zap.Error(err))
+			}
 			fmt.Fprintf(os.Stderr, "⚠️  DEBUG: Failed to save prompt to %s: %v\n", debugPath, err)
 		} else {
+			if config.Logger != nil {
+				config.Logger.Debug("Saved full prompt to file", zap.String("path", debugPath))
+			}
 			fmt.Fprintf(os.Stderr, "🔍 DEBUG: Saved full prompt to %s\n", debugPath)
 		}
 	}
@@ -193,16 +256,26 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 // - Validates Gherkin structure with automatic retry on errors
 // - Optionally saves debug outputs
 func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
+	if config.Logger != nil {
+		config.Logger.Debug("Starting AI generation with retry")
+	}
+
 	// Load contract and anti-corruption rules for validator
 	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Failed to load contract", zap.Error(err))
+		}
 		return "", fmt.Errorf("failed to load contract: %w", err)
 	}
 
 	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
 	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Failed to load anti-corruption rules", zap.Error(err))
+		}
 		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
@@ -216,12 +289,15 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Create validator
 	validator := contracts.NewGherkinValidator(contractData, antiCorruptionRules)
 
-	// Setup debug directory if needed
+	// Setup debug directory if needed - use out/logs/specs/ for consistency
 	debugOutputDir := ""
 	if config.Debug {
-		debugOutputDir = filepath.Join(config.TemplateRoot, "out")
+		debugOutputDir = filepath.Join(config.TemplateRoot, "out", "logs", "specs")
 		// Ensure debug directory exists
 		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
+			if config.Logger != nil {
+				config.Logger.Warn("Failed to create debug directory", zap.Error(err))
+			}
 			fmt.Fprintf(os.Stderr, "⚠️  Failed to create debug directory: %v\n", err)
 		}
 	}
@@ -238,10 +314,19 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		DebugOutputDir: debugOutputDir,
 	}
 
+	if config.Logger != nil {
+		config.Logger.Debug("Configured retry behavior",
+			zap.Int("maxAttempts", retryConfig.MaxAttempts),
+			zap.Bool("debug", config.Debug))
+	}
+
 	// Generate with retry
 	ctx := context.Background()
 	result, err := contracts.GenerateWithRetry(ctx, retryConfig, prompt)
 	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("AI generation failed after retries", zap.Error(err))
+		}
 		fmt.Fprintf(os.Stderr, "\nTroubleshooting:\n")
 		fmt.Fprintf(os.Stderr, "  1. Ensure AI provider is configured: r2r agent init --ai <provider>\n")
 		fmt.Fprintf(os.Stderr, "  2. Check API key environment variable is set\n")
@@ -249,11 +334,23 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		return "", fmt.Errorf("AI generation failed: %w", err)
 	}
 
+	if config.Logger != nil {
+		config.Logger.Debug("AI generation completed",
+			zap.Int("attempts", result.Attempts),
+			zap.Int("outputLength", len(result.Output)),
+			zap.Int("validationErrors", len(result.ValidationErrors)))
+	}
+
 	// Handle validation errors
 	if len(result.ValidationErrors) > 0 {
 		criticalErrors := contracts.CountCriticalErrors(result.ValidationErrors)
 
 		if criticalErrors > 0 {
+			if config.Logger != nil {
+				config.Logger.Error("Generated specification has critical validation errors",
+					zap.Int("criticalErrors", criticalErrors),
+					zap.Int("attempts", result.Attempts))
+			}
 			fmt.Fprintf(os.Stderr, "\n")
 			fmt.Fprintf(os.Stderr, "⚠️  Generated specification has validation errors:\n\n")
 			fmt.Fprintf(os.Stderr, "%s\n", contracts.FormatValidationErrors(result.ValidationErrors))
@@ -266,6 +363,10 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		}
 
 		// Only warnings - log them but continue
+		if config.Logger != nil {
+			config.Logger.Warn("Generated specification has warnings",
+				zap.Int("warnings", len(result.ValidationErrors)))
+		}
 		fmt.Fprintf(os.Stderr, "\nℹ️  Generated specification has %d warning(s):\n", len(result.ValidationErrors))
 		fmt.Fprintf(os.Stderr, "%s\n", contracts.FormatValidationErrors(result.ValidationErrors))
 	}
@@ -288,11 +389,23 @@ func determineAndValidateOutputPath(config *SpecsConfig, content string) (string
 		if !filepath.IsAbs(finalOutputPath) {
 			finalOutputPath = filepath.Join(config.TemplateRoot, config.OutputPath)
 		}
+		if config.Logger != nil {
+			config.Logger.Debug("Using user-specified output path", zap.String("path", finalOutputPath))
+		}
 	} else {
 		// Extract feature name and determine path
 		moduleName, featureName, err := specs.ExtractFeatureName(content)
 		if err != nil {
+			if config.Logger != nil {
+				config.Logger.Error("Failed to extract feature name", zap.Error(err))
+			}
 			return "", err
+		}
+
+		if config.Logger != nil {
+			config.Logger.Debug("Extracted feature info",
+				zap.String("module", moduleName),
+				zap.String("feature", featureName))
 		}
 
 		// Default to specs directory
@@ -301,7 +414,16 @@ func determineAndValidateOutputPath(config *SpecsConfig, content string) (string
 
 	// Security: Validate that output path is within repository
 	if err := specs.ValidateOutputPath(finalOutputPath, config.TemplateRoot); err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Output path security validation failed",
+				zap.String("path", finalOutputPath),
+				zap.Error(err))
+		}
 		return "", fmt.Errorf("security error: %w", err)
+	}
+
+	if config.Logger != nil {
+		config.Logger.Debug("Output path validated", zap.String("path", finalOutputPath))
 	}
 
 	return finalOutputPath, nil
@@ -373,11 +495,6 @@ func parseConfig() (*SpecsConfig, error) {
 				config.PromptPath = args[i+1]
 				i++
 			}
-		case "--template":
-			if i+1 < len(args) {
-				config.TemplatePath = args[i+1]
-				i++
-			}
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				// First non-flag argument is the description
@@ -417,7 +534,32 @@ func parseConfig() (*SpecsConfig, error) {
 
 	config.TemplateRoot = templateRoot
 
+	// Validate module if specified
+	if config.Module != "" {
+		moduleReport, err := reports.GetModuleContracts(templateRoot, "0.1.0")
+		if err != nil {
+			return nil, fmt.Errorf("failed to load module contracts: %w", err)
+		}
+
+		mod, exists := moduleReport.Registry.Get(config.Module)
+		if !exists {
+			return nil, fmt.Errorf("module not found: %s\n\nAvailable modules:\n%s",
+				config.Module, formatModuleList(moduleReport))
+		}
+
+		config.Module = mod.Moniker // Store validated moniker
+	}
+
 	return config, nil
+}
+
+// formatModuleList returns a formatted list of available modules
+func formatModuleList(moduleReport *reports.ModuleContractReport) string {
+	var sb strings.Builder
+	for _, mod := range moduleReport.Registry.All() {
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Source.Root))
+	}
+	return sb.String()
 }
 
 // loadPromptWithFallback implements four-tier prompt loading:

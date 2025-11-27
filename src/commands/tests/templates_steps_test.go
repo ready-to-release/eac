@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
+	coretesting "github.com/ready-to-release/eac/src/core/testing"
 )
 
 // templatesTestContext holds state for templates tests
@@ -22,6 +23,7 @@ type templatesTestContext struct {
 	commandOutput string
 	errorOutput   string
 	exitCode      int
+	isolation     *coretesting.TestIsolation // Test isolation instance
 }
 
 var templatesCtx *templatesTestContext
@@ -237,12 +239,16 @@ func runTemplatesCommand(args ...string) error {
 
 	// Run the built executable from the test work directory
 	cmd := exec.Command(exePath, resolvedArgs...)
-	cmd.Dir = templatesCtx.workDir // Run from isolated test directory with .git
+	cmd.Dir = templatesCtx.workDir // Run from isolated test directory
 
 	// Set R2R_PWD and R2R_REPO_ROOT to the isolated test directory
 	// R2R_PWD: ensures registry.InitialWorkingDir resolves to the test directory
 	// R2R_REPO_ROOT: ensures repository.GetRepositoryRoot() returns the test directory
-	cmd.Env = append(os.Environ(), "R2R_PWD="+templatesCtx.workDir, "R2R_REPO_ROOT="+templatesCtx.workDir)
+	if templatesCtx.isolation != nil {
+		cmd.Env = templatesCtx.isolation.AppendToEnvironment(os.Environ())
+	} else {
+		cmd.Env = append(os.Environ(), "R2R_PWD="+templatesCtx.workDir, "R2R_REPO_ROOT="+templatesCtx.workDir)
+	}
 
 	output, err := cmd.CombinedOutput()
 	templatesCtx.commandOutput = string(output)
@@ -270,29 +276,25 @@ func initializeTemplatesContext() error {
 		return err
 	}
 
-	// Create a temporary working directory for the test
-	tmpDir, err := os.MkdirTemp("", "templates-test-*")
-	if err != nil {
-		return err
-	}
-
-	// Create .git directory to make commands think this is a repository
-	// This ensures test isolation - commands won't write to the actual repo
-	gitDir := filepath.Join(tmpDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .git directory: %w", err)
+	// Use TestIsolation for consistent test isolation
+	isolation := coretesting.NewTestIsolation()
+	if err := isolation.Setup(); err != nil {
+		return fmt.Errorf("failed to setup templates test isolation: %w", err)
 	}
 
 	templatesCtx = &templatesTestContext{
-		workDir: tmpDir,
-		testDir: testDir,
+		workDir:   isolation.IsolatedDir(),
+		testDir:   testDir,
+		isolation: isolation,
 	}
 	return nil
 }
 
 func cleanupTemplatesContext() error {
-	if templatesCtx != nil && templatesCtx.workDir != "" {
-		return os.RemoveAll(templatesCtx.workDir)
+	if templatesCtx != nil {
+		if templatesCtx.isolation != nil {
+			templatesCtx.isolation.Cleanup()
+		}
 	}
 	return nil
 }

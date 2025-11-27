@@ -232,3 +232,265 @@ func TestStripAgentNoise_EdgeCases(t *testing.T) {
 		})
 	}
 }
+
+// ==============================================================================
+// parseConfig Tests
+// ==============================================================================
+
+// withArgs temporarily sets os.Args for testing and restores it after
+func withArgs(args []string, fn func()) {
+	oldArgs := os.Args
+	os.Args = args
+	defer func() { os.Args = oldArgs }()
+	fn()
+}
+
+func TestParseConfig_Flags(t *testing.T) {
+	// Create a temp directory to act as a git repository
+	tmpDir := t.TempDir()
+
+	// Create .git directory to simulate a git repo
+	gitDir := filepath.Join(tmpDir, ".git")
+	if err := os.MkdirAll(gitDir, 0755); err != nil {
+		t.Fatalf("failed to create .git directory: %v", err)
+	}
+
+	// Change to temp directory so repository.GetRepositoryRoot works
+	oldWd, _ := os.Getwd()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("failed to change directory: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
+
+	tests := []struct {
+		name        string
+		args        []string
+		wantDebug   bool
+		wantForce   bool
+		wantModule  string
+		wantOutput  string
+		wantPrompt  string
+		wantDesc    string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:     "simple description",
+			args:     []string{"r2r", "specs", "create", "Add user authentication"},
+			wantDesc: "Add user authentication",
+			wantErr:  false,
+		},
+		{
+			name:      "debug flag short",
+			args:      []string{"r2r", "specs", "create", "-d", "Test description"},
+			wantDebug: true,
+			wantDesc:  "Test description",
+			wantErr:   false,
+		},
+		{
+			name:      "debug flag long",
+			args:      []string{"r2r", "specs", "create", "--debug", "Test description"},
+			wantDebug: true,
+			wantDesc:  "Test description",
+			wantErr:   false,
+		},
+		{
+			name:      "force flag short",
+			args:      []string{"r2r", "specs", "create", "-f", "Test description"},
+			wantForce: true,
+			wantDesc:  "Test description",
+			wantErr:   false,
+		},
+		{
+			name:      "force flag long",
+			args:      []string{"r2r", "specs", "create", "--force", "Test description"},
+			wantForce: true,
+			wantDesc:  "Test description",
+			wantErr:   false,
+		},
+		{
+			name:       "module flag short",
+			args:       []string{"r2r", "specs", "create", "-m", "src-commands", "Test description"},
+			wantModule: "src-commands",
+			wantDesc:   "Test description",
+			wantErr:    false,
+		},
+		{
+			name:       "module flag long",
+			args:       []string{"r2r", "specs", "create", "--module", "src-core", "Test description"},
+			wantModule: "src-core",
+			wantDesc:   "Test description",
+			wantErr:    false,
+		},
+		{
+			name:       "output flag short",
+			args:       []string{"r2r", "specs", "create", "-o", "custom/path.feature", "Test description"},
+			wantOutput: "custom/path.feature",
+			wantDesc:   "Test description",
+			wantErr:    false,
+		},
+		{
+			name:       "output flag long",
+			args:       []string{"r2r", "specs", "create", "--output", "specs/out.feature", "Test description"},
+			wantOutput: "specs/out.feature",
+			wantDesc:   "Test description",
+			wantErr:    false,
+		},
+		{
+			name:       "prompt flag",
+			args:       []string{"r2r", "specs", "create", "--prompt", "custom-prompt.md", "Test description"},
+			wantPrompt: "custom-prompt.md",
+			wantDesc:   "Test description",
+			wantErr:    false,
+		},
+		{
+			name:       "multiple flags combined",
+			args:       []string{"r2r", "specs", "create", "-d", "-f", "-m", "src-cli", "Complex feature description"},
+			wantDebug:  true,
+			wantForce:  true,
+			wantModule: "src-cli",
+			wantDesc:   "Complex feature description",
+			wantErr:    false,
+		},
+		{
+			name:     "multi-word description",
+			args:     []string{"r2r", "specs", "create", "Add", "user", "authentication", "with", "email"},
+			wantDesc: "Add user authentication with email",
+			wantErr:  false,
+		},
+		{
+			name:        "missing description",
+			args:        []string{"r2r", "specs", "create"},
+			wantErr:     true,
+			errContains: "description is required",
+		},
+		{
+			name:        "empty description after flags",
+			args:        []string{"r2r", "specs", "create", "-d"},
+			wantErr:     true,
+			errContains: "description is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var config *SpecsConfig
+			var err error
+
+			withArgs(tt.args, func() {
+				config, err = parseConfig()
+			})
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseConfig() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				if tt.errContains != "" && err != nil {
+					if !strings.Contains(err.Error(), tt.errContains) {
+						t.Errorf("parseConfig() error = %v, want error containing %q", err, tt.errContains)
+					}
+				}
+				return
+			}
+
+			if config.Debug != tt.wantDebug {
+				t.Errorf("parseConfig() Debug = %v, want %v", config.Debug, tt.wantDebug)
+			}
+			if config.Force != tt.wantForce {
+				t.Errorf("parseConfig() Force = %v, want %v", config.Force, tt.wantForce)
+			}
+			if config.Module != tt.wantModule {
+				t.Errorf("parseConfig() Module = %q, want %q", config.Module, tt.wantModule)
+			}
+			if config.OutputPath != tt.wantOutput {
+				t.Errorf("parseConfig() OutputPath = %q, want %q", config.OutputPath, tt.wantOutput)
+			}
+			if config.PromptPath != tt.wantPrompt {
+				t.Errorf("parseConfig() PromptPath = %q, want %q", config.PromptPath, tt.wantPrompt)
+			}
+			if config.Description != tt.wantDesc {
+				t.Errorf("parseConfig() Description = %q, want %q", config.Description, tt.wantDesc)
+			}
+		})
+	}
+}
+
+func TestParseConfig_DescriptionTruncation(t *testing.T) {
+	// Create a temp directory to act as a git repository
+	tmpDir := t.TempDir()
+	gitDir := filepath.Join(tmpDir, ".git")
+	if err := os.MkdirAll(gitDir, 0755); err != nil {
+		t.Fatalf("failed to create .git directory: %v", err)
+	}
+
+	oldWd, _ := os.Getwd()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("failed to change directory: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
+
+	// Create a very long description (> 1000 chars)
+	longDesc := strings.Repeat("a", 1500)
+	args := []string{"r2r", "specs", "create", longDesc}
+
+	var config *SpecsConfig
+	var err error
+
+	withArgs(args, func() {
+		config, err = parseConfig()
+	})
+
+	if err != nil {
+		t.Fatalf("parseConfig() unexpected error: %v", err)
+	}
+
+	// Description should be truncated to 1000 chars
+	if len(config.Description) != 1000 {
+		t.Errorf("parseConfig() Description length = %d, want 1000", len(config.Description))
+	}
+}
+
+func TestTruncateForLog(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		maxLen int
+		want   string
+	}{
+		{
+			name:   "short string unchanged",
+			input:  "hello",
+			maxLen: 10,
+			want:   "hello",
+		},
+		{
+			name:   "exact length unchanged",
+			input:  "hello",
+			maxLen: 5,
+			want:   "hello",
+		},
+		{
+			name:   "long string truncated",
+			input:  "hello world",
+			maxLen: 5,
+			want:   "hello...",
+		},
+		{
+			name:   "empty string",
+			input:  "",
+			maxLen: 10,
+			want:   "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := truncateForLog(tt.input, tt.maxLen)
+			if got != tt.want {
+				t.Errorf("truncateForLog() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
