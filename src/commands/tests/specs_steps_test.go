@@ -7,9 +7,8 @@
 //   src/commands/impl/specs/tests/
 //
 // State Synchronization Strategy:
-// We sync context at the start of every step to ensure specs subpackages
-// have access to the latest state, and sync back after every step to
-// capture any changes they made.
+// We use a shared context pointer (sharedCtx) that is passed to child packages.
+// Changes made by child packages are immediately visible to the main test runner.
 package tests
 
 import (
@@ -20,7 +19,7 @@ import (
 	specstests "github.com/ready-to-release/eac/src/commands/impl/specs/tests"
 )
 
-// syncToSpecsCtx copies state from main ctx to specstests.Ctx
+// syncToSpecsCtx copies state from main ctx to specstests.Ctx for backward compatibility.
 func syncToSpecsCtx() {
 	if specstests.Ctx == nil {
 		specstests.Ctx = &specstests.TestContext{}
@@ -31,25 +30,23 @@ func syncToSpecsCtx() {
 		specstests.Ctx.CommandError = ctx.commandError
 		specstests.Ctx.ValidationErrors = ctx.validationErrors
 	}
+	// Pass shared context to specs tests
+	specstests.SharedCtx = sharedCtx
 }
 
-// syncFromSpecsCtx copies state back from specstests.Ctx to main ctx
-// Only syncs command results if specs tests actually ran a command
+// syncFromSpecsCtx copies state back from child packages to main ctx.
+// We sync ctx TO sharedCtx first (to capture any changes from non-specs steps),
+// then sync back if children made changes.
 func syncFromSpecsCtx() {
-	if specstests.Ctx != nil && ctx != nil {
-		// Only sync command output if specs tests actually ran a command
-		// (indicated by non-empty output or non-zero exit code)
-		// Don't sync just because files were created - that doesn't mean
-		// a command was run through specs context
-		hasCommandOutput := specstests.Ctx.CommandOutput != "" ||
-			specstests.Ctx.ExitCode != 0
+	// First sync ctx TO sharedCtx to preserve any changes from main test runner
+	syncCtxToShared()
 
-		if hasCommandOutput {
-			ctx.commandOutput = specstests.Ctx.CommandOutput
-			ctx.exitCode = specstests.Ctx.ExitCode
-			ctx.commandError = specstests.Ctx.CommandError
-			ctx.validationErrors = specstests.Ctx.ValidationErrors
-		}
+	// Sync back from sharedCtx to ctx only if there are actual changes
+	if sharedCtx != nil && ctx != nil && sharedCtx.HasOutput() {
+		ctx.commandOutput = sharedCtx.CommandOutput
+		ctx.exitCode = sharedCtx.ExitCode
+		ctx.commandError = sharedCtx.CommandError
+		ctx.validationErrors = sharedCtx.ValidationErrors
 	}
 }
 
@@ -61,6 +58,7 @@ func setupSpecsMocks() error {
 	specstests.OriginalRepoRoot = originalRepoRoot
 	specstests.IsolatedTestProjectDir = isolatedTestProjectDir
 	specstests.RunCommand = iRunTheCommand
+	specstests.SharedCtx = sharedCtx
 
 	// Set up test directory for file creation
 	if specstests.Ctx != nil {
@@ -79,25 +77,26 @@ func cleanupSpecsMocks() {
 	syncFromSpecsCtx()
 	specstests.CleanupSpecsMocks()
 
-	// Clean up any test files created
-	if specstests.Ctx != nil {
-		for _, file := range specstests.Ctx.CreatedFiles {
+	// Clean up any test files created (using shared context)
+	if sharedCtx != nil {
+		for _, file := range sharedCtx.CreatedFiles {
 			os.Remove(file)
 			dir := filepath.Dir(file)
 			os.Remove(dir) // Remove empty directories
 		}
-		specstests.Ctx.CreatedFiles = nil
+		sharedCtx.CreatedFiles = nil
 	}
 }
 
 // InitializeSpecsScenario registers specs-specific step definitions
 func InitializeSpecsScenario(sc *godog.ScenarioContext) {
-	// Set up shared state
+	// Set up shared state - pass the shared context pointer
 	specstests.OriginalRepoRoot = originalRepoRoot
 	specstests.IsolatedTestProjectDir = isolatedTestProjectDir
 	specstests.RunCommand = iRunTheCommand
+	specstests.SharedCtx = sharedCtx
 
-	// Sync context before and after every step
+	// Sync context before and after every step for backward compatibility
 	sc.BeforeStep(func(st *godog.Step) {
 		syncToSpecsCtx()
 	})
