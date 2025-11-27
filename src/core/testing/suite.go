@@ -28,15 +28,17 @@ func NewCommitSuite() *TestSuite {
 	}
 }
 
-// NewAcceptanceSuite creates the acceptance test suite (IV, OV, PV)
+// NewAcceptanceSuite creates the acceptance test suite (L3 IV, OV, PV)
+// Only includes L3+ tests to avoid overlap with commit suite (L0-L2)
 func NewAcceptanceSuite() *TestSuite {
 	return &TestSuite{
 		Moniker:     "acceptance",
 		Name:        "PLTE Acceptance Tests",
-		Description: "Stage 5-6 - Installation, Operational, and Performance Verification",
+		Description: "Stage 5-6 - L3 Installation, Operational, and Performance Verification",
 		Selectors: []TagSelector{
 			{
-				AnyOfTags: []string{"@iv", "@ov", "@pv"},
+				AnyOfTags:   []string{"@iv", "@ov", "@pv"},
+				ExcludeTags: []string{"@L0", "@L1", "@L2"},
 			},
 		},
 		Inferences: GetGlobalInferences(),

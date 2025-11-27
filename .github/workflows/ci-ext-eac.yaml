@@ -76,12 +76,15 @@ jobs:
           SHORT_SHA="${COMMIT_SHA:0:7}"
 
           echo "Building and pushing multi-platform image with CI tags..."
+          echo "Including SLSA provenance and SBOM attestations for supply chain security"
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag "$IMAGE_NAME:ci" \
             --tag "$IMAGE_NAME:sha-$SHORT_SHA" \
             --file ./containers/ext-eac/Dockerfile \
             --cache-from type=gha \
+            --provenance=true \
+            --sbom=true \
             --push \
             .
 
@@ -116,6 +119,7 @@ jobs:
           echo "| Platforms | \`linux/amd64\`, \`linux/arm64\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Dockerfile | \`containers/ext-eac/Dockerfile\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Attestations | SLSA Provenance, SBOM |" >> $GITHUB_STEP_SUMMARY
 
   test:
     name: Test Extension
