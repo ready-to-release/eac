@@ -23,13 +23,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	design "github.com/ready-to-release/eac/src/commands/impl/design/internal"
+	design "github.com/ready-to-release/eac/src/commands/impl/design"
+	designInternal "github.com/ready-to-release/eac/src/commands/impl/design/internal"
 	"github.com/ready-to-release/eac/src/commands/impl/design/create"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -48,9 +50,24 @@ func DesignUpdate() int {
 		return 1
 	}
 
+	// Initialize logger
+	var logger *logging.Logger
+	if config.Debug {
+		logger, err = logging.NewWithDebug("design", config.TemplateRoot)
+	} else {
+		logger, err = logging.NewDefault("design", config.TemplateRoot)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to initialize logger: %v\n", err)
+		// Continue without logger - output will still work
+	}
+
+	// Create output handler
+	out := design.NewOutput(logger)
+
 	// Validate module and existing workspace
-	if err := validateModuleAndWorkspace(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if err := validateModuleAndWorkspace(config, out); err != nil {
+		out.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -61,29 +78,29 @@ func DesignUpdate() int {
 	}
 
 	// Load existing workspace
-	existingWorkspace, err := loadExistingWorkspace(config, workspacePath)
+	existingWorkspace, err := loadExistingWorkspace(config, out, workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		out.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Build update prompt with existing workspace context
-	fullPrompt, err := buildUpdatePrompt(config, existingWorkspace)
+	fullPrompt, err := buildUpdatePrompt(config, out, logger, existingWorkspace)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		out.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Generate updated workspace
-	updatedWorkspace, err := generateUpdatedWorkspace(config, fullPrompt)
+	updatedWorkspace, err := generateUpdatedWorkspace(config, out, fullPrompt)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+		out.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
 	// Write output and report success
-	if err := writeUpdatedWorkspace(config, workspacePath, updatedWorkspace); err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+	if err := writeUpdatedWorkspace(config, out, workspacePath, updatedWorkspace); err != nil {
+		out.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
@@ -128,7 +145,7 @@ func parseConfig() (*UpdateConfig, error) {
 	config.Module = modulePath
 
 	// Validate module name for security
-	if err := design.ValidateModuleName(config.Module); err != nil {
+	if err := designInternal.ValidateModuleName(config.Module); err != nil {
 		return nil, fmt.Errorf("invalid module name: %w", err)
 	}
 
@@ -221,8 +238,8 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 }
 
 // validateModuleAndWorkspace checks if the source code and existing workspace exist
-func validateModuleAndWorkspace(config *UpdateConfig) error {
-	fmt.Printf("🔍 Validating module '%s'...\n", config.Module)
+func validateModuleAndWorkspace(config *UpdateConfig, out *design.Output) error {
+	out.Progressf("🔍 Validating module '%s'...", config.Module)
 
 	// Check if source directory exists
 	if _, err := os.Stat(config.SourcePath); os.IsNotExist(err) {
@@ -241,14 +258,14 @@ func validateModuleAndWorkspace(config *UpdateConfig) error {
 			config.Module, workspacePath, config.Module)
 	}
 
-	fmt.Printf("✅ Source code found at: %s\n", config.SourcePath)
-	fmt.Printf("✅ Existing workspace found at: %s\n", workspacePath)
+	out.Progressf("✅ Source code found at: %s", config.SourcePath)
+	out.Progressf("✅ Existing workspace found at: %s", workspacePath)
 	return nil
 }
 
 // loadExistingWorkspace loads the current workspace content
-func loadExistingWorkspace(config *UpdateConfig, workspacePath string) (string, error) {
-	fmt.Println("📄 Loading existing workspace...")
+func loadExistingWorkspace(config *UpdateConfig, out *design.Output, workspacePath string) (string, error) {
+	out.Progress("📄 Loading existing workspace...")
 
 	content, err := os.ReadFile(workspacePath)
 	if err != nil {
@@ -259,8 +276,8 @@ func loadExistingWorkspace(config *UpdateConfig, workspacePath string) (string, 
 }
 
 // buildUpdatePrompt builds the AI prompt for updating the workspace
-func buildUpdatePrompt(config *UpdateConfig, existingWorkspace string) (string, error) {
-	fmt.Println("📋 Building update prompt...")
+func buildUpdatePrompt(config *UpdateConfig, out *design.Output, logger *logging.Logger, existingWorkspace string) (string, error) {
+	out.Progress("📋 Building update prompt...")
 
 	// Load contract using generalized loader
 	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "0.1.0")
@@ -336,7 +353,7 @@ func buildUpdatePrompt(config *UpdateConfig, existingWorkspace string) (string, 
 	fullPrompt := prompt.String()
 
 	if config.Debug {
-		writeDebugFile(config.TemplateRoot, "update-debug-full-prompt.md", fullPrompt)
+		design.WriteDebugFile(config.TemplateRoot, logger, "update-debug-full-prompt.md", fullPrompt)
 	}
 
 	return fullPrompt, nil
@@ -364,10 +381,10 @@ func loadPrompt(config *UpdateConfig) (string, error) {
 }
 
 // generateUpdatedWorkspace generates the updated workspace using AI
-func generateUpdatedWorkspace(config *UpdateConfig, prompt string) (string, error) {
+func generateUpdatedWorkspace(config *UpdateConfig, out *design.Output, prompt string) (string, error) {
 	// Check for mock AI response (for testing)
 	if mockResponse := create.GetMockAIResponse(); mockResponse != "" {
-		fmt.Println("🤖 Using mock AI response (test mode)...")
+		out.Progress("🤖 Using mock AI response (test mode)...")
 		return mockResponse, nil
 	}
 
@@ -394,7 +411,7 @@ func generateUpdatedWorkspace(config *UpdateConfig, prompt string) (string, erro
 	defer validator.Cleanup()
 
 	// Generate with retry and validation
-	fmt.Println("🤖 Generating updated architecture design with AI...")
+	out.Progress("🤖 Generating updated architecture design with AI...")
 
 	retryConfig := &contracts.RetryConfig{
 		Executor:       executorAdapter,
@@ -423,7 +440,7 @@ func generateUpdatedWorkspace(config *UpdateConfig, prompt string) (string, erro
 }
 
 // writeUpdatedWorkspace writes the updated workspace file
-func writeUpdatedWorkspace(config *UpdateConfig, workspacePath, content string) error {
+func writeUpdatedWorkspace(config *UpdateConfig, out *design.Output, workspacePath, content string) error {
 	// Ensure directory exists
 	dir := filepath.Dir(workspacePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -436,24 +453,14 @@ func writeUpdatedWorkspace(config *UpdateConfig, workspacePath, content string) 
 	}
 
 	// Report success
-	fmt.Println("\n✅ Architecture design updated")
-	fmt.Printf("   File: %s\n", workspacePath)
-	fmt.Printf("   Valid: ✅ Passed Structurizr validation\n\n")
-	fmt.Println("ℹ️  Next steps:")
-	fmt.Println("   1. Review the updated workspace")
-	fmt.Println("   2. Check for any breaking changes")
-	fmt.Printf("   3. View in browser: design serve %s\n", config.Module)
-	fmt.Printf("   4. Validate anytime: design validate %s\n", config.Module)
+	out.Progress("\n✅ Architecture design updated")
+	out.Progressf("   File: %s", workspacePath)
+	out.Progress("   Valid: ✅ Passed Structurizr validation\n")
+	out.Progress("ℹ️  Next steps:")
+	out.Progress("   1. Review the updated workspace")
+	out.Progress("   2. Check for any breaking changes")
+	out.Progressf("   3. View in browser: design serve %s", config.Module)
+	out.Progressf("   4. Validate anytime: design validate %s", config.Module)
 
 	return nil
-}
-
-// writeDebugFile writes content to a debug file when debug mode is enabled.
-func writeDebugFile(workspaceRoot string, filename string, content string) {
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "design")
-	if err := os.MkdirAll(debugDir, 0755); err != nil {
-		return
-	}
-	debugFile := filepath.Join(debugDir, filename)
-	os.WriteFile(debugFile, []byte(content), 0644)
 }
