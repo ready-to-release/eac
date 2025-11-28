@@ -51,8 +51,8 @@ jobs:
             --branch main \
             --status success \
             --json headSha,createdAt \
-            --jq --arg cutoff "$TWO_HOURS_AGO" \
-              '[.[] | select(.createdAt > $cutoff and .headSha == "${{ github.sha }}")] | length')
+            | jq --arg cutoff "$TWO_HOURS_AGO" --arg sha "${{ github.sha }}" \
+              '[.[] | select(.createdAt > $cutoff and .headSha == $sha)] | length')
 
           echo "Recent successful full rebuilds for this HEAD: ${RECENT_SUCCESS:-0}"
 
