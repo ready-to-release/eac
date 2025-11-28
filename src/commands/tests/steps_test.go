@@ -36,6 +36,7 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/templates/install/reports"
 	_ "github.com/ready-to-release/eac/src/commands/impl/test"
 	_ "github.com/ready-to-release/eac/src/commands/impl/work"
+	_ "github.com/ready-to-release/eac/src/commands/impl/risks"
 
 	// Import templates test packages
 	listtests "github.com/ready-to-release/eac/src/commands/impl/templates/list/tests"
@@ -414,6 +415,9 @@ func cleanupScenario() error {
 	// Reset init mocks (git repo)
 	cleanupInitMocks()
 
+	// Reset risks mocks (git repo and AI response)
+	cleanupRisksMocks()
+
 	// Templates context cleanup is handled by the individual test packages
 	// (list/tests, apply/tests, install/tests) via their own Before/After hooks
 
@@ -499,6 +503,9 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Work command steps
 	InitializeWorkScenario(sc)
 
+	// Risks command steps
+	InitializeRisksScenario(sc)
+
 	sc.Before(func(ctx context.Context, scenario *godog.Scenario) (context.Context, error) {
 		initializeContext()
 		// Re-sync shared context after initializeContext() resets ctx
@@ -525,6 +532,10 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 				// Set up init mocks automatically for isolated tests
 				if err := setupInitMocks(); err != nil {
 					return ctx, fmt.Errorf("failed to setup init mocks: %w", err)
+				}
+				// Set up risks mocks automatically for isolated tests
+				if err := setupRisksMocks(); err != nil {
+					return ctx, fmt.Errorf("failed to setup risks mocks: %w", err)
 				}
 				break
 			}
