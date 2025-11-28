@@ -115,7 +115,7 @@ func Build() int {
 	}
 
 	// Load module contracts
-	moduleReport, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
 		return 1
@@ -126,11 +126,14 @@ func Build() int {
 		return buildSingleModule(monikers[0], workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version)
 	}
 
-	// If no monikers provided, default to all modules
+	// If no monikers provided, default to all buildable modules
 	if len(monikers) == 0 {
 		fmt.Println("ℹ️  No modules specified, building all modules...")
 		for _, module := range moduleReport.Registry.All() {
-			monikers = append(monikers, module.Moniker)
+			// Skip modules without build functions (e.g., catch-all)
+			if _, hasBuildFunc := buildFunctions[module.Type]; hasBuildFunc {
+				monikers = append(monikers, module.Moniker)
+			}
 		}
 	}
 
@@ -193,7 +196,7 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 
 	// Print header
 	writeln(multiWriter, "Building module: %s (type: %s)", moniker, module.Type)
-	writeln(multiWriter, "Module root: %s", module.Source.Root)
+	writeln(multiWriter, "Module root: %s", module.Files.Root)
 	writeln(multiWriter, "Output directory: %s", outputDir)
 	writeln(multiWriter, "Build log: %s", logPath)
 

@@ -41,7 +41,7 @@ func (ctx *moduleHierarchyContext) iValidateThatAllDependsOnAndUsedByRelationshi
 	for _, module := range ctx.registry.All() {
 		// Check depends_on -> used_by consistency
 		for _, depMoniker := range module.DependsOn {
-			dep, found := ctx.registry.Get(depMoniker)
+			_, found := ctx.registry.Get(depMoniker)
 			if !found {
 				ctx.inconsistencies = append(ctx.inconsistencies,
 					fmt.Sprintf("Module '%s' depends on '%s', but '%s' does not exist",
@@ -49,9 +49,9 @@ func (ctx *moduleHierarchyContext) iValidateThatAllDependsOnAndUsedByRelationshi
 				continue
 			}
 
-			// Check if dep has module in its used_by list
+			// Check if dep has module in its used_by list (computed from registry)
 			hasUsedBy := false
-			for _, user := range dep.UsedBy {
+			for _, user := range ctx.registry.GetUsedBy(depMoniker) {
 				if user == module.Moniker {
 					hasUsedBy = true
 					break
@@ -65,8 +65,8 @@ func (ctx *moduleHierarchyContext) iValidateThatAllDependsOnAndUsedByRelationshi
 			}
 		}
 
-		// Check used_by -> depends_on consistency
-		for _, userMoniker := range module.UsedBy {
+		// Check used_by -> depends_on consistency (used_by is computed from registry)
+		for _, userMoniker := range ctx.registry.GetUsedBy(module.Moniker) {
 			user, found := ctx.registry.Get(userMoniker)
 			if !found {
 				ctx.inconsistencies = append(ctx.inconsistencies,
@@ -220,7 +220,7 @@ func (ctx *moduleHierarchyContext) allModulesShouldBeReachableFromTheRoot() erro
 		current := queue[0]
 		queue = queue[1:]
 
-		module, found := ctx.registry.Get(current)
+		_, found := ctx.registry.Get(current)
 		if !found {
 			continue
 		}
@@ -235,8 +235,8 @@ func (ctx *moduleHierarchyContext) allModulesShouldBeReachableFromTheRoot() erro
 			}
 		}
 
-		// Also follow used_by relationships
-		for _, user := range module.UsedBy {
+		// Also follow used_by relationships (computed from registry)
+		for _, user := range ctx.registry.GetUsedBy(current) {
 			if !reachable[user] {
 				reachable[user] = true
 				queue = append(queue, user)
@@ -257,7 +257,7 @@ func (ctx *moduleHierarchyContext) allModulesShouldBeReachableFromTheRoot() erro
 	for _, module := range ctx.registry.All() {
 		if !reachable[module.Moniker] {
 			// Skip catch-all modules
-			if module.Source.IsCatchAllSingleton != nil && *module.Source.IsCatchAllSingleton {
+			if module.Flags.CatchAll {
 				continue
 			}
 
@@ -295,7 +295,8 @@ func (ctx *moduleHierarchyContext) iCheckAllUsedByReferences() error {
 	ctx.missingModules = []string{}
 
 	for _, module := range ctx.registry.All() {
-		for _, userMoniker := range module.UsedBy {
+		// used_by is computed from registry
+		for _, userMoniker := range ctx.registry.GetUsedBy(module.Moniker) {
 			if _, found := ctx.registry.Get(userMoniker); !found {
 				ctx.missingModules = append(ctx.missingModules,
 					fmt.Sprintf("Module '%s' has used_by '%s', but '%s' does not exist",

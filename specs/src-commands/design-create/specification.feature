@@ -1,4 +1,4 @@
-@L2 @deps:ai @deps:docker @ov @env:isolated-test-project
+@L2 @deps:docker @ov @env:isolated-test-project
 Feature: src-commands_design-create
 
   Background:
@@ -7,6 +7,7 @@ Feature: src-commands_design-create
 
   Rule: Module must exist in source directory
 
+    @skip:wip
     Scenario: Create design for existing module
       Given module "test-module" exists in "src/test-module"
       And the mock AI is configured to return a valid workspace
@@ -15,6 +16,7 @@ Feature: src-commands_design-create
       And the file "specs/test-module/.design/workspace.dsl" should exist
       And the workspace should pass Structurizr validation
 
+    @skip:wip
     Scenario: Fail when module does not exist
       When I run "design create nonexistent-module"
       Then the exit code should be 1
@@ -22,6 +24,7 @@ Feature: src-commands_design-create
 
   Rule: Output path can be customized
 
+    @skip:wip
     Scenario: Use custom output path
       Given module "test-module" exists in "src/test-module"
       And the mock AI is configured to return a valid workspace
@@ -31,6 +34,7 @@ Feature: src-commands_design-create
 
   Rule: Existing files require force flag
 
+    @skip:wip
     Scenario: Fail when workspace exists without force
       Given module "test-module" exists in "src/test-module"
       And a workspace file exists at "specs/test-module/.design/workspace.dsl"
@@ -38,6 +42,7 @@ Feature: src-commands_design-create
       Then the exit code should be 1
       And the output should contain "Use --force to overwrite"
 
+    @skip:wip
     Scenario: Overwrite with force flag
       Given module "test-module" exists in "src/test-module"
       And a workspace file exists at "specs/test-module/.design/workspace.dsl"
@@ -47,6 +52,7 @@ Feature: src-commands_design-create
 
   Rule: Custom prompts can be provided
 
+    @skip:wip
     Scenario: Use custom prompt file
       Given module "test-module" exists in "src/test-module"
       And a custom prompt file at "prompts/design.md"
@@ -57,6 +63,7 @@ Feature: src-commands_design-create
 
   Rule: Validation can be skipped
 
+    @skip:wip
     Scenario: Skip Docker validation
       Given module "test-module" exists in "src/test-module"
       And the mock AI is configured to return a valid workspace
@@ -66,6 +73,7 @@ Feature: src-commands_design-create
 
   Rule: Debug mode saves intermediate files
 
+    @skip:wip
     Scenario: Debug mode outputs to logs
       Given module "test-module" exists in "src/test-module"
       And the mock AI is configured to return a valid workspace

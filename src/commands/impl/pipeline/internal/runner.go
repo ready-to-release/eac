@@ -15,15 +15,13 @@ import (
 // PipelineRunner orchestrates execution of module pipelines
 type PipelineRunner struct {
 	repoPath string
-	version  string
 	ghCLI    GitHubCLI
 }
 
 // New creates a new PipelineRunner
-func New(repoPath string, version string) *PipelineRunner {
+func New(repoPath string) *PipelineRunner {
 	return &PipelineRunner{
 		repoPath: repoPath,
-		version:  version,
 		ghCLI:    NewGitHubCLI(repoPath),
 	}
 }
@@ -66,7 +64,7 @@ func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 	fmt.Printf("Calculating execution order for: %v\n", monikers)
 
 	// Calculate execution order
-	plan, err := repository.CalculateExecutionOrder(monikers, r.repoPath, r.version)
+	plan, err := repository.CalculateExecutionOrder(monikers, r.repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to calculate execution order: %w", err)
 	}
@@ -97,7 +95,7 @@ func (r *PipelineRunner) RunAllPipelines(ref string) error {
 	fmt.Println("Running all modules in dependency order...")
 
 	// Pass nil to calculate order for all modules
-	plan, err := repository.CalculateExecutionOrder(nil, r.repoPath, r.version)
+	plan, err := repository.CalculateExecutionOrder(nil, r.repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to calculate execution order: %w", err)
 	}
@@ -148,7 +146,7 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	fmt.Println()
 
 	// Map to modules
-	modules, err := repository.GetChangedModules(changedFiles, r.repoPath, r.version)
+	modules, err := repository.GetChangedModules(changedFiles, r.repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to get changed modules: %w", err)
 	}

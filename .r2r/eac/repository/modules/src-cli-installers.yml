@@ -1,0 +1,31 @@
+# Version: 0.2.0
+
+moniker: src-cli-installers
+name: R2R CLI Installer Scripts
+type: scripts
+description: Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases
+
+parent: "."
+depends_on:
+  - src-core
+
+files:
+  root: scripts
+  source:
+    - sh/cli/**
+    - pwsh/cli/**
+  config: []
+  assets: []
+  tests: []
+  exclude: []
+  changelog: ""
+  repo:
+    specs:
+      - specs/src-cli-installers/**
+    other:
+      - .github/workflows/ci-src-cli-installers.yaml
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

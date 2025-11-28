@@ -100,7 +100,7 @@ var buildFunctions = map[string]BuildFunc{
 //   - --compressed: Strip debug info with -ldflags "-s -w" (~30% smaller)
 //   - --compressed-upx: Also apply UPX compression (~70% smaller total)
 func buildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Building go-cli: %s ===", module.Moniker)
 
@@ -331,7 +331,7 @@ func copyFile(src, dst string) error {
 // buildGoCommands builds the runtime command dispatcher (Pattern B)
 // Note: This is a development tool that's always run with "go run ."
 func buildGoCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== go-commands: %s ===", module.Moniker)
 
@@ -361,7 +361,7 @@ func buildGoCommands(module *modules.ModuleContract, workspaceRoot string, outpu
 // buildGoMCP builds an MCP JSON-RPC server binary (Pattern C)
 // Requires: go build -o mcp-server-<name>
 func buildGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	// Extract server name from moniker (e.g., "src-mcp-docs" -> "docs")
 	serverName := module.Moniker
@@ -391,7 +391,7 @@ func buildGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir 
 // Note: Libraries are imported as dependencies, no binary output
 // Runs go generate to prepare any embedded resources or generated code
 func buildGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== go-library: %s ===", module.Moniker)
 
@@ -449,7 +449,7 @@ func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...str
 // buildContainers builds Docker images from Dockerfiles
 // Expects .Dockerfile in module root
 func buildContainers(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Building containers: %s ===", module.Moniker)
 
@@ -497,7 +497,7 @@ func buildContainers(module *modules.ModuleContract, workspaceRoot string, outpu
 
 // buildDockerImage builds a standalone Docker image from a Dockerfile
 func buildDockerImage(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Building docker-image: %s ===", module.Moniker)
 
@@ -550,14 +550,14 @@ func buildDockerImage(module *modules.ModuleContract, workspaceRoot string, outp
 func buildR2RExtension(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	logln(logWriter, "\n=== Building R2R extension: %s ===", module.Moniker)
 
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	// Step 1: go mod tidy (if enabled) - extension modules have their own go.mod
 	if opts.TidyFirst {
 		// Check if this module has a go.mod file
 		goModPath := filepath.Join(moduleRoot, "go.mod")
 		if _, err := os.Stat(goModPath); err == nil {
-			logln(logWriter, "Running: go mod tidy (in %s)", module.Source.Root)
+			logln(logWriter, "Running: go mod tidy (in %s)", module.Files.Root)
 			if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
 				logln(logWriter, "❌ go mod tidy failed")
 				return exitCode
@@ -821,7 +821,7 @@ func formatDockerVolumePath(path string) string {
 // buildMkDocsSubsite builds a MkDocs documentation subsite
 // Runs: mkdocs build (same as main site, but for subsites)
 func buildMkDocsSubsite(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Building mkdocs-subsite: %s ===", module.Moniker)
 
@@ -857,7 +857,7 @@ func buildMkDocsSubsite(module *modules.ModuleContract, workspaceRoot string, ou
 // buildVSCodeExtension builds a VS Code extension
 // Runs: npm install && npm run compile
 func buildVSCodeExtension(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Building vscode-ext: %s ===", module.Moniker)
 
@@ -897,7 +897,7 @@ func buildVSCodeExtension(module *modules.ModuleContract, workspaceRoot string, 
 // buildContracts validates YAML contract files
 // Validates all .yml files in module
 func buildContracts(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating contracts: %s ===", module.Moniker)
 
@@ -963,7 +963,7 @@ func buildContracts(module *modules.ModuleContract, workspaceRoot string, output
 // buildSpecifications validates Gherkin .feature files
 // Validates all .feature files in module
 func buildSpecifications(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating specifications: %s ===", module.Moniker)
 
@@ -1035,7 +1035,7 @@ func buildSpecifications(module *modules.ModuleContract, workspaceRoot string, o
 // buildDefinitionsType validates TypeScript/JSON Schema definitions
 // Runs: npm install && npm run build (if package.json exists)
 func buildDefinitionsType(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Building definitions-type: %s ===", module.Moniker)
 
@@ -1089,7 +1089,7 @@ func buildDefinitionsType(module *modules.ModuleContract, workspaceRoot string, 
 // buildMarkdown validates markdown files using goldmark parser
 // Performs proper markdown syntax validation
 func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating markdown: %s ===", module.Moniker)
 
@@ -1235,7 +1235,7 @@ func buildMarkdown(module *modules.ModuleContract, workspaceRoot string, outputD
 
 // buildScripts validates both shell and PowerShell scripts
 func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating scripts: %s ===", module.Moniker)
 
@@ -1367,7 +1367,7 @@ func buildScripts(module *modules.ModuleContract, workspaceRoot string, outputDi
 
 // buildScriptsSh validates shell scripts using bash -n
 func buildScriptsSh(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating shell scripts: %s ===", module.Moniker)
 
@@ -1454,7 +1454,7 @@ func buildScriptsSh(module *modules.ModuleContract, workspaceRoot string, output
 
 // buildScriptsPwsh validates PowerShell scripts using pwsh syntax checking
 func buildScriptsPwsh(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating PowerShell scripts: %s ===", module.Moniker)
 
@@ -1528,7 +1528,7 @@ func buildScriptsPwsh(module *modules.ModuleContract, workspaceRoot string, outp
 
 // buildConfig validates configuration files (JSON, YAML, TOML)
 func buildConfig(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating config files: %s ===", module.Moniker)
 
@@ -1618,7 +1618,7 @@ func buildConfig(module *modules.ModuleContract, workspaceRoot string, outputDir
 
 // buildVSCodeConfig validates VS Code configuration files (JSON/JSONC)
 func buildVSCodeConfig(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating VS Code config: %s ===", module.Moniker)
 
@@ -1705,7 +1705,7 @@ func buildVSCodeConfig(module *modules.ModuleContract, workspaceRoot string, out
 
 // buildClaudeConfig validates Claude configuration YAML files
 func buildClaudeConfig(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating Claude config: %s ===", module.Moniker)
 
@@ -1781,7 +1781,7 @@ func buildClaudeConfig(module *modules.ModuleContract, workspaceRoot string, out
 
 // buildClaudeAgents validates Claude agent markdown files
 func buildClaudeAgents(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating Claude agents: %s ===", module.Moniker)
 
@@ -1803,7 +1803,7 @@ func buildClaudeAgents(module *modules.ModuleContract, workspaceRoot string, out
 
 // buildClaudeCommands validates Claude command markdown files
 func buildClaudeCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating Claude commands: %s ===", module.Moniker)
 
@@ -1825,7 +1825,7 @@ func buildClaudeCommands(module *modules.ModuleContract, workspaceRoot string, o
 
 // buildClaudeHooks validates Claude hook shell scripts
 func buildClaudeHooks(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating Claude hooks: %s ===", module.Moniker)
 
@@ -1917,7 +1917,7 @@ func buildClaudeHooks(module *modules.ModuleContract, workspaceRoot string, outp
 
 // buildTemplates validates template files and detects placeholders
 func buildTemplates(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating templates: %s ===", module.Moniker)
 
@@ -1985,7 +1985,7 @@ func buildTemplates(module *modules.ModuleContract, workspaceRoot string, output
 
 // buildRepositoryRoot validates repository root structure
 func buildRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	logln(logWriter, "\n=== Validating repository root: %s ===", module.Moniker)
 

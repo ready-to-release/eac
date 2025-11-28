@@ -410,7 +410,7 @@ func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int
 		if !v.tagContract.IsKnownTag(tag) {
 			errors = append(errors, ValidationError{
 				Code:     "UNKNOWN_TAG",
-				Message:  fmt.Sprintf("Unknown tag '%s' - possible typo? Check contracts/testing/0.1.0/tags.yml for valid tags", tag),
+				Message:  fmt.Sprintf("Unknown tag '%s' - possible typo? Check %s/testing/tags.yml for valid tags", tag, EACConfigRelPath),
 				Line:     lineNum,
 				Severity: "warning",
 			})

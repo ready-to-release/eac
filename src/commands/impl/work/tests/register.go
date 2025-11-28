@@ -27,18 +27,15 @@ func RegisterWorkSteps(sc *godog.ScenarioContext, sharedCtx *SharedContext) {
 		return ctx, nil
 	})
 
-	// Common steps
-	sc.Step(`^I am in a git repository$`, func() error { return common.IAmInAGitRepository(testCtx) })
-	sc.Step(`^I am not in a git repository$`, func() error { return common.IAmNotInAGitRepository(testCtx) })
-	sc.Step(`^I run the command "([^"]*)"$`, func(cmd string) error { return common.IRunTheCommand(testCtx, cmd) })
-	sc.Step(`^I run "([^"]*)"$`, func(cmd string) error { return common.IRunCommand(testCtx, cmd) })
-	sc.Step(`^the exit code is (\d+)$`, func(code int) error { return common.TheExitCodeIs(testCtx, code) })
-	sc.Step(`^I should see "([^"]*)"$`, func(text string) error { return common.IShouldSee(testCtx, text) })
+	// NOTE: Steps like "I run", "I am in a git repository", "I should see" are registered
+	// in the main steps_test.go - do NOT register them here to avoid ambiguity.
+	// However, work-specific steps with different patterns are registered below.
+
+	// Work-specific output steps (different patterns from main steps_test.go)
 	sc.Step(`^I see "([^"]*)"$`, func(text string) error { return common.ISee(testCtx, text) })
 	sc.Step(`^I see error "([^"]*)"$`, func(text string) error { return common.ISeeError(testCtx, text) })
 	sc.Step(`^I see warning "([^"]*)"$`, func(text string) error { return common.ISeeWarning(testCtx, text) })
 	sc.Step(`^I see suggestion "([^"]*)"$`, func(text string) error { return common.ISeeSuggestion(testCtx, text) })
-	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, func(o1, o2, o3 string) error { return common.IShouldSeeOneOf(testCtx, o1, o2, o3) })
 
 	// Workspace state steps
 	sc.Step(`^I am in the main workspace$`, func() error { return common.IAmInTheMainWorkspace(testCtx) })

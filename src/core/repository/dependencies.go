@@ -40,7 +40,7 @@ type ExecutionPlan struct {
 }
 
 // GetModuleDependencyGraph builds a complete dependency graph for all modules
-func GetModuleDependencyGraph(rootPath string, version string) (*ModuleDependencyGraph, error) {
+func GetModuleDependencyGraph(rootPath string) (*ModuleDependencyGraph, error) {
 	if rootPath == "" {
 		var err error
 		rootPath, err = GetRepositoryRoot("")
@@ -49,7 +49,7 @@ func GetModuleDependencyGraph(rootPath string, version string) (*ModuleDependenc
 		}
 	}
 
-	registry, err := modules.LoadFromWorkspace(rootPath, version)
+	registry, err := modules.LoadFromWorkspace(rootPath)
 	if err != nil {
 		return nil, NewRepositoryError("dependencies", rootPath, err, "failed to load module contracts")
 	}
@@ -131,7 +131,7 @@ func calculateGraphStats(monikers []string, dependencies, dependents map[string]
 //
 // If monikers is empty or nil, calculates order for all modules
 // Returns error if circular dependencies detected
-func CalculateExecutionOrder(monikers []string, rootPath string, version string) (*ExecutionPlan, error) {
+func CalculateExecutionOrder(monikers []string, rootPath string) (*ExecutionPlan, error) {
 	if rootPath == "" {
 		var err error
 		rootPath, err = GetRepositoryRoot("")
@@ -140,7 +140,7 @@ func CalculateExecutionOrder(monikers []string, rootPath string, version string)
 		}
 	}
 
-	registry, err := modules.LoadFromWorkspace(rootPath, version)
+	registry, err := modules.LoadFromWorkspace(rootPath)
 	if err != nil {
 		return nil, NewRepositoryError("execution-order", rootPath, err, "failed to load module contracts")
 	}
@@ -276,7 +276,7 @@ func addDependenciesRecursive(moniker string, registry *modules.Registry, result
 }
 
 // GetChangedModules returns modules that own the given changed files
-func GetChangedModules(changedFiles []string, rootPath string, version string) ([]string, error) {
+func GetChangedModules(changedFiles []string, rootPath string) ([]string, error) {
 	if rootPath == "" {
 		var err error
 		rootPath, err = GetRepositoryRoot("")
@@ -285,7 +285,7 @@ func GetChangedModules(changedFiles []string, rootPath string, version string) (
 		}
 	}
 
-	registry, err := modules.LoadFromWorkspace(rootPath, version)
+	registry, err := modules.LoadFromWorkspace(rootPath)
 	if err != nil {
 		return nil, NewRepositoryError("changed-modules", rootPath, err, "failed to load module contracts")
 	}
@@ -319,7 +319,7 @@ func GetChangedModules(changedFiles []string, rootPath string, version string) (
 //
 // For example, if src-core changes, this returns src-core plus all modules that depend on it
 // (directly or transitively), because their cached builds are now invalid.
-func GetModulesRequiringRebuild(changedFiles []string, rootPath string, version string) ([]string, error) {
+func GetModulesRequiringRebuild(changedFiles []string, rootPath string) ([]string, error) {
 	if rootPath == "" {
 		var err error
 		rootPath, err = GetRepositoryRoot("")
@@ -329,7 +329,7 @@ func GetModulesRequiringRebuild(changedFiles []string, rootPath string, version 
 	}
 
 	// Get directly changed modules
-	directlyChanged, err := GetChangedModules(changedFiles, rootPath, version)
+	directlyChanged, err := GetChangedModules(changedFiles, rootPath)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +339,7 @@ func GetModulesRequiringRebuild(changedFiles []string, rootPath string, version 
 	}
 
 	// Get the dependency graph to find dependents
-	graph, err := GetModuleDependencyGraph(rootPath, version)
+	graph, err := GetModuleDependencyGraph(rootPath)
 	if err != nil {
 		return nil, err
 	}

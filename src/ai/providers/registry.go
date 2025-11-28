@@ -42,4 +42,10 @@ func RegisterBuiltIn(executor ExecutorRegistry) {
 		}
 		return NewGemini(config.APIKey, config.Model)
 	})
+
+	// Register test provider for acceptance tests
+	// Reads mock response from .r2r/test/ai-mock.txt or R2R_TEST_AI_RESPONSE env var
+	executor.RegisterProvider("test", func(config *ai.Config) (ai.Provider, error) {
+		return NewTestProvider(), nil
+	})
 }

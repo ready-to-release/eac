@@ -47,34 +47,43 @@ func mkdocsContainerShouldStartSuccessfully() error {
 	}
 
 	// Check if container was created and is running
+	// Use retry logic to handle transient states like "restarting"
 	containerName := "cli-mkdocs"
-	containers, err := Ctx.DockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
-	if err != nil {
-		return fmt.Errorf("failed to list containers: %w", err)
-	}
+	maxRetries := 10
+	retryDelay := 1 * time.Second
 
-	found := false
-	for _, c := range containers {
-		for _, name := range c.Names {
-			if strings.TrimPrefix(name, "/") == containerName || strings.Contains(name, containerName) {
-				if c.State != "running" {
-					return fmt.Errorf("container %s exists but is not running (state: %s)", containerName, c.State)
+	var lastState string
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		containers, err := Ctx.DockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
+		if err != nil {
+			return fmt.Errorf("failed to list containers: %w", err)
+		}
+
+		for _, c := range containers {
+			for _, name := range c.Names {
+				if strings.TrimPrefix(name, "/") == containerName || strings.Contains(name, containerName) {
+					lastState = c.State
+					if c.State == "running" {
+						Ctx.ContainerStarted = true
+						return nil
+					}
+					// Container exists but not running yet - wait and retry
+					break
 				}
-				found = true
-				Ctx.ContainerStarted = true
-				break
 			}
 		}
-		if found {
-			break
+
+		// Wait before retry (except on last iteration)
+		if attempt < maxRetries-1 {
+			time.Sleep(retryDelay)
 		}
 	}
 
-	if !found {
-		return fmt.Errorf("MkDocs container was not created")
+	if lastState != "" {
+		return fmt.Errorf("container %s exists but is not running after %d seconds (state: %s)", containerName, maxRetries, lastState)
 	}
 
-	return nil
+	return fmt.Errorf("MkDocs container was not created")
 }
 
 func mkdocsContainerShouldBeStopped() error {

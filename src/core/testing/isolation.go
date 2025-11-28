@@ -33,6 +33,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
 // TestIsolation provides an isolated test environment for BDD tests.
@@ -40,9 +42,12 @@ import (
 // repository discovery returns the isolated directory instead of the real repo.
 type TestIsolation struct {
 	// Configuration (set before Setup)
-	originalRepoRoot string
-	copyContracts    bool
-	copySpecs        bool
+	originalRepoRoot   string
+	copyContracts      bool
+	copySpecs          bool
+	copyAIContracts    bool
+	createMockAIConfig bool
+	mockAIResponse     string // AI response to write to mock file
 
 	// State (set by Setup)
 	isolatedDir string
@@ -61,8 +66,8 @@ func (t *TestIsolation) WithOriginalRepoRoot(root string) *TestIsolation {
 	return t
 }
 
-// WithCopyContracts enables copying the contracts directory to the isolated dir.
-// This is needed for commands that validate against contracts.
+// WithCopyContracts enables copying the repository config to the isolated dir.
+// This is needed for commands that validate against module contracts, tags, etc.
 func (t *TestIsolation) WithCopyContracts(copy bool) *TestIsolation {
 	t.copyContracts = copy
 	return t
@@ -71,6 +76,28 @@ func (t *TestIsolation) WithCopyContracts(copy bool) *TestIsolation {
 // WithCopySpecs enables copying the specs directory to the isolated dir.
 func (t *TestIsolation) WithCopySpecs(copy bool) *TestIsolation {
 	t.copySpecs = copy
+	return t
+}
+
+// WithCopyAIContracts enables copying the contracts/ directory (AI contracts, prompts) to the isolated dir.
+// This is needed for commands that use AI prompts from contracts/ai/.
+func (t *TestIsolation) WithCopyAIContracts(copy bool) *TestIsolation {
+	t.copyAIContracts = copy
+	return t
+}
+
+// WithMockAIConfig creates a test agent-config.yml in the isolated environment.
+// This configures the "test" provider which reads mock responses from files.
+func (t *TestIsolation) WithMockAIConfig(create bool) *TestIsolation {
+	t.createMockAIConfig = create
+	return t
+}
+
+// WithMockAIResponse sets the mock AI response that will be written to .r2r/test/ai-mock.txt.
+// The "test" provider reads this file to return predictable responses in acceptance tests.
+// Must be called before Setup().
+func (t *TestIsolation) WithMockAIResponse(response string) *TestIsolation {
+	t.mockAIResponse = response
 	return t
 }
 
@@ -84,13 +111,13 @@ func (t *TestIsolation) Setup() error {
 	}
 	t.isolatedDir = tmpDir
 
-	// Copy contracts if requested
+	// Copy repository config if requested
 	if t.copyContracts && t.originalRepoRoot != "" {
-		srcContracts := filepath.Join(t.originalRepoRoot, "contracts")
-		dstContracts := filepath.Join(t.isolatedDir, "contracts")
+		srcContracts := filepath.Join(t.originalRepoRoot, contracts.EACConfigRelPath)
+		dstContracts := filepath.Join(t.isolatedDir, contracts.EACConfigRelPath)
 		if err := copyDir(srcContracts, dstContracts); err != nil {
 			t.Cleanup()
-			return fmt.Errorf("failed to copy contracts: %w", err)
+			return fmt.Errorf("failed to copy repository config: %w", err)
 		}
 	}
 
@@ -101,6 +128,51 @@ func (t *TestIsolation) Setup() error {
 		if err := copyDir(srcSpecs, dstSpecs); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to copy specs: %w", err)
+		}
+	}
+
+	// Copy AI contracts if requested
+	if t.copyAIContracts && t.originalRepoRoot != "" {
+		srcContracts := filepath.Join(t.originalRepoRoot, "contracts")
+		dstContracts := filepath.Join(t.isolatedDir, "contracts")
+		if err := copyDir(srcContracts, dstContracts); err != nil {
+			t.Cleanup()
+			return fmt.Errorf("failed to copy AI contracts: %w", err)
+		}
+	}
+
+	// Create test AI config if requested
+	if t.createMockAIConfig {
+		// Use "test" provider which reads mock responses from .r2r/test/ai-mock.txt
+		testConfig := `# Test AI configuration for acceptance testing
+# Uses the "test" provider which reads responses from .r2r/test/ai-mock.txt
+provider:
+  name: test
+  model: test-model
+`
+		configDir := filepath.Join(t.isolatedDir, ".r2r", "eac")
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			t.Cleanup()
+			return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
+		}
+		configPath := filepath.Join(configDir, "agent-config.yml")
+		if err := os.WriteFile(configPath, []byte(testConfig), 0644); err != nil {
+			t.Cleanup()
+			return fmt.Errorf("failed to create test agent-config.yml: %w", err)
+		}
+	}
+
+	// Write mock AI response file if provided
+	if t.mockAIResponse != "" {
+		mockDir := filepath.Join(t.isolatedDir, ".r2r", "test")
+		if err := os.MkdirAll(mockDir, 0755); err != nil {
+			t.Cleanup()
+			return fmt.Errorf("failed to create .r2r/test directory: %w", err)
+		}
+		mockPath := filepath.Join(mockDir, "ai-mock.txt")
+		if err := os.WriteFile(mockPath, []byte(t.mockAIResponse), 0644); err != nil {
+			t.Cleanup()
+			return fmt.Errorf("failed to create ai-mock.txt: %w", err)
 		}
 	}
 
@@ -143,6 +215,28 @@ func (t *TestIsolation) AppendToEnvironment(env []string) []string {
 		return env
 	}
 	return append(env, t.Environment()...)
+}
+
+// SetMockAIResponse writes a mock AI response file after Setup() has been called.
+// This is useful for step definitions that need to configure mock responses
+// between scenario setup and command execution.
+// Returns error if isolation is not set up.
+func (t *TestIsolation) SetMockAIResponse(response string) error {
+	if t.isolatedDir == "" {
+		return fmt.Errorf("cannot set mock AI response: isolation not set up")
+	}
+
+	mockDir := filepath.Join(t.isolatedDir, ".r2r", "test")
+	if err := os.MkdirAll(mockDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .r2r/test directory: %w", err)
+	}
+
+	mockPath := filepath.Join(mockDir, "ai-mock.txt")
+	if err := os.WriteFile(mockPath, []byte(response), 0644); err != nil {
+		return fmt.Errorf("failed to write ai-mock.txt: %w", err)
+	}
+
+	return nil
 }
 
 // copyDir recursively copies a directory.

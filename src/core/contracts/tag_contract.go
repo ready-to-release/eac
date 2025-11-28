@@ -265,7 +265,7 @@ func (tc *TagContract) HasConstraint(tag, constraint string) bool {
 func LoadTagContract(loader *Loader) (*TagContract, error) {
 	contract := &TagContract{}
 
-	err := loader.LoadYAML("contracts/testing/0.1.0/tags.yml", contract)
+	err := loader.LoadYAML(EACConfigRelPath+"/testing/tags.yml", contract)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tag contract: %w", err)
 	}

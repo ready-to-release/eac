@@ -5,6 +5,7 @@ package tests
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/cucumber/godog"
@@ -72,9 +73,32 @@ func theFileIsSavedAt(expectedPath string) error {
 		return fmt.Errorf("test context not initialized")
 	}
 	output := Ctx.CommandOutput
-	if strings.Contains(output, expectedPath) {
+
+	// Normalize path separators for cross-platform comparison
+	normalizedExpected := strings.ReplaceAll(expectedPath, "/", string(filepath.Separator))
+	normalizedExpected = strings.ReplaceAll(normalizedExpected, "\\", string(filepath.Separator))
+
+	// Check if the output contains the expected path (as relative or absolute)
+	if strings.Contains(output, expectedPath) || strings.Contains(output, normalizedExpected) {
 		return nil
 	}
+
+	// Also check if the expected path appears at the end of a full path in the output
+	// This handles cases where we expect "specs/module/file.feature" but output has
+	// "/tmp/isolated-test-123/specs/module/file.feature"
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "File:") {
+			// Normalize the line for comparison
+			normalizedLine := strings.ReplaceAll(line, "/", string(filepath.Separator))
+			normalizedLine = strings.ReplaceAll(normalizedLine, "\\", string(filepath.Separator))
+			if strings.HasSuffix(normalizedLine, normalizedExpected) ||
+				strings.Contains(normalizedLine, normalizedExpected) {
+				return nil
+			}
+		}
+	}
+
 	return fmt.Errorf("file not saved at expected path '%s'.\nOutput:\n%s", expectedPath, output)
 }
 
@@ -131,46 +155,70 @@ func theGeneratedSpecificationIncludesMultipleRules() error {
 	if Ctx == nil {
 		return fmt.Errorf("test context not initialized")
 	}
-	output := Ctx.CommandOutput
-	ruleCount := strings.Count(output, "Rule:")
+
+	// Read the generated file content (not stdout which has status messages)
+	fileContent, err := getLastCreatedFileContent()
+	if err != nil {
+		return err
+	}
+
+	ruleCount := strings.Count(fileContent, "Rule:")
 	if ruleCount > 1 {
 		return nil
 	}
-	return fmt.Errorf("generated specification does not include multiple Rules")
+	return fmt.Errorf("generated specification does not include multiple Rules (found %d).\nContent:\n%s", ruleCount, fileContent)
 }
 
 func theGeneratedSpecificationIncludesMultipleScenarios() error {
 	if Ctx == nil {
 		return fmt.Errorf("test context not initialized")
 	}
-	output := Ctx.CommandOutput
-	scenarioCount := strings.Count(output, "Scenario:")
+
+	// Read the generated file content (not stdout which has status messages)
+	fileContent, err := getLastCreatedFileContent()
+	if err != nil {
+		return err
+	}
+
+	scenarioCount := strings.Count(fileContent, "Scenario:")
 	if scenarioCount > 1 {
 		return nil
 	}
-	return fmt.Errorf("generated specification does not include multiple Scenarios")
+	return fmt.Errorf("generated specification does not include multiple Scenarios (found %d).\nContent:\n%s", scenarioCount, fileContent)
 }
 
 func itMustContainAtLeastOneRuleDeclaration() error {
 	if Ctx == nil {
 		return fmt.Errorf("test context not initialized")
 	}
-	output := Ctx.CommandOutput
-	if strings.Contains(output, "Rule:") {
+
+	// Read the generated file content (not stdout which has status messages)
+	fileContent, err := getLastCreatedFileContent()
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(fileContent, "Rule:") {
 		return nil
 	}
-	return fmt.Errorf("output does not contain at least one 'Rule:' declaration")
+	return fmt.Errorf("generated file does not contain at least one 'Rule:' declaration.\nContent:\n%s", fileContent)
 }
 
 func itMustContainAtLeastOneScenarioDeclaration() error {
 	if Ctx == nil {
 		return fmt.Errorf("test context not initialized")
 	}
-	output := Ctx.CommandOutput
-	if strings.Contains(output, "Scenario:") {
+
+	// Read the generated file content (not stdout which has status messages)
+	fileContent, err := getLastCreatedFileContent()
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(fileContent, "Scenario:") {
 		return nil
 	}
-	return fmt.Errorf("output does not contain at least one 'Scenario:' declaration")
+	return fmt.Errorf("generated file does not contain at least one 'Scenario:' declaration.\nContent:\n%s", fileContent)
 }
 
 // ============================================================================

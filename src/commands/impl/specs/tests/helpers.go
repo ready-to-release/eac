@@ -126,3 +126,72 @@ func specFixableTagsContent() string {
 func specBadTagsContent() string {
 	return specBadTagsAsset
 }
+
+// getLastCreatedFileContent reads the content of the last file mentioned in stdout.
+// The specs create command outputs "   File: <path>" when a file is created.
+// This helper parses that output and reads the actual file content.
+func getLastCreatedFileContent() (string, error) {
+	if Ctx == nil {
+		return "", fmt.Errorf("test context not initialized")
+	}
+
+	// Parse the file path from command output
+	// Format: "   File: <path>"
+	output := Ctx.CommandOutput
+	lines := splitLines(output)
+	var filePath string
+
+	for _, line := range lines {
+		if trimmed := trimPrefix(line, "   File: "); trimmed != line {
+			filePath = trimmed
+		}
+	}
+
+	if filePath == "" {
+		// Fall back to checking CreatedFiles list
+		if len(Ctx.CreatedFiles) > 0 {
+			filePath = Ctx.CreatedFiles[len(Ctx.CreatedFiles)-1]
+		}
+	}
+
+	if filePath == "" {
+		return "", fmt.Errorf("no file path found in output:\n%s", output)
+	}
+
+	// Read the file content
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file %s: %w", filePath, err)
+	}
+
+	return string(content), nil
+}
+
+// splitLines splits a string into lines
+func splitLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			line := s[start:i]
+			if len(line) > 0 && line[len(line)-1] == '\r' {
+				line = line[:len(line)-1]
+			}
+			lines = append(lines, line)
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
+}
+
+// trimPrefix returns s without the provided leading prefix string.
+// If s doesn't start with prefix, s is returned unchanged.
+func trimPrefix(s, prefix string) string {
+	if len(s) >= len(prefix) && s[:len(prefix)] == prefix {
+		return s[len(prefix):]
+	}
+	return s
+}

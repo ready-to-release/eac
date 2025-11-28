@@ -97,7 +97,7 @@ func (r *Registry) FilterByType(contractType string) []*ModuleContract {
 func (r *Registry) FindByRoot(rootPath string) []*ModuleContract {
 	var matches []*ModuleContract
 	for _, module := range r.modules {
-		if module.Source.Root == rootPath {
+		if module.Files.Root == rootPath {
 			matches = append(matches, module)
 		}
 	}
@@ -137,15 +137,22 @@ func (r *Registry) GetReverseDependencyGraph() map[string][]string {
 // GetCatchAllModule returns the catch-all singleton module if it exists
 func (r *Registry) GetCatchAllModule() *ModuleContract {
 	for _, module := range r.modules {
-		if module.Source.IsCatchAllSingleton != nil && *module.Source.IsCatchAllSingleton {
+		if module.Flags.CatchAll {
 			return module
 		}
 	}
 	return nil
 }
 
+// GetUsedBy returns all modules that depend on the given module
+// This is computed from depends_on relationships (no longer stored in config)
+func (r *Registry) GetUsedBy(moniker string) []string {
+	reverseGraph := r.GetReverseDependencyGraph()
+	return reverseGraph[moniker]
+}
+
 // FindModulesForFile returns all modules that match a given file path
-// Respects exclude_children_owned_source to filter out parent modules when children match
+// Respects own_children_files flag to filter parent modules when children match
 // If no modules match and a catch-all module exists, returns the catch-all module
 func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 	var matches []*ModuleContract
@@ -153,7 +160,7 @@ func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 	// First, find all modules that explicitly match this file
 	for _, module := range r.modules {
 		// Skip catch-all modules in initial matching
-		if module.Source.IsCatchAllSingleton != nil && *module.Source.IsCatchAllSingleton {
+		if module.Flags.CatchAll {
 			continue
 		}
 
@@ -162,15 +169,16 @@ func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 		}
 	}
 
-	// Apply exclude_children_owned_source filtering
-	// Remove parent modules if they have exclude_children_owned_source=true
-	// and a child module also matches
+	// Apply own_children_files filtering
+	// Remove parent modules unless they have own_children_files=true
+	// when a child module also matches
 	filtered := []*ModuleContract{}
 	for _, candidate := range matches {
 		shouldExclude := false
 
 		// Check if this candidate should be excluded because a child owns it
-		if candidate.Source.ExcludeChildrenOwnedSource != nil && *candidate.Source.ExcludeChildrenOwnedSource {
+		// (unless own_children_files is true)
+		if !candidate.Flags.OwnChildrenFiles {
 			// Check if any other matching module is a child of this candidate
 			for _, other := range matches {
 				if other.Moniker == candidate.Moniker {
@@ -179,7 +187,7 @@ func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 
 				// Check if 'other' is a descendant of 'candidate'
 				// by checking if other's root starts with candidate's root
-				if isDescendantPath(other.Source.Root, candidate.Source.Root) {
+				if isDescendantPath(other.Files.Root, candidate.Files.Root) {
 					shouldExclude = true
 					break
 				}

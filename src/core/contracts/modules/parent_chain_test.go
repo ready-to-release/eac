@@ -313,9 +313,9 @@ func createTestModuleWithParent(moniker, parent, root string) *ModuleContract {
 		Name:    moniker,
 		Type:    "test",
 		Parent:  parent,
-		Source: contracts.Source{
-			Root:     root,
-			Includes: []string{"**/*"},
+		Files: contracts.Files{
+			Root:   root,
+			Source: []string{"**/*"},
 		},
 	}
 	return NewModuleContract(base, "/test")

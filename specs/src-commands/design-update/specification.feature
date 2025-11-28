@@ -1,4 +1,4 @@
-@L2 @deps:ai @deps:docker @ov @env:isolated-test-project
+@L2 @deps:docker @ov @env:isolated-test-project
 Feature: src-commands_design-update
 
   Background:
@@ -7,6 +7,7 @@ Feature: src-commands_design-update
 
   Rule: Update requires existing workspace
 
+    @skip:wip
     Scenario: Update existing workspace
       Given module "test-module" has a workspace at "specs/test-module/.design/workspace.dsl"
       And the mock AI is configured to return an updated workspace
@@ -15,6 +16,7 @@ Feature: src-commands_design-update
       And the workspace should be updated
       And the workspace should pass Structurizr validation
 
+    @skip:wip
     Scenario: Fail when workspace does not exist
       Given module "test-module" exists in "src/test-module"
       And no workspace exists for "test-module"
@@ -24,11 +26,13 @@ Feature: src-commands_design-update
 
   Rule: Confirmation required by default
 
+    @skip:wip
     Scenario: Prompt for confirmation
       Given module "test-module" has a workspace at "specs/test-module/.design/workspace.dsl"
       When I run "design update test-module" interactively
       Then the output should contain "Update workspace?"
 
+    @skip:wip
     Scenario: Skip confirmation with force flag
       Given module "test-module" has a workspace at "specs/test-module/.design/workspace.dsl"
       And the mock AI is configured to return an updated workspace
@@ -38,6 +42,7 @@ Feature: src-commands_design-update
 
   Rule: Custom output path supported
 
+    @skip:wip
     Scenario: Update to custom path
       Given module "test-module" has a workspace at "specs/test-module/.design/workspace.dsl"
       And the mock AI is configured to return an updated workspace

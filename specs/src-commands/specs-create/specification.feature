@@ -1,4 +1,4 @@
-@deps:ai @deps:go @env:isolated-test-project
+@deps:go @env:isolated-test-project
 Feature: src-commands_specs-create
 
   As a developer of the eac platform

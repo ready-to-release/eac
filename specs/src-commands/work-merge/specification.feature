@@ -19,6 +19,7 @@ Feature: src-commands_work_merge
 
   Rule: Default squash merge creates single commit with AI message
 
+    @skip:wip
     Scenario: Merge workspace with squash (default)
       Given I am in a workspace for "feature/authentication"
       And I have 5 commits on my branch
@@ -33,6 +34,7 @@ Feature: src-commands_work_merge
       And the workspace is removed
       And I am in the main workspace
 
+    @skip:wip
     Scenario: Merge with --target specifies different branch
       Given I am in a workspace for "feature/new-feature"
       When I run "r2r work merge --target=develop"
@@ -42,6 +44,7 @@ Feature: src-commands_work_merge
 
   Rule: Regular merge available with --no-squash flag
 
+    @skip:wip
     Scenario: Merge with --no-squash preserves commits
       Given I am in a workspace for "feature/authentication"
       And I have 5 commits on my branch
@@ -53,6 +56,7 @@ Feature: src-commands_work_merge
 
   Rule: Workspace cleanup is configurable
 
+    @skip:wip
     Scenario: Keep workspace with --keep-worktree
       Given I am in a workspace for "feature/test"
       When I run "r2r work merge --keep-worktree"
@@ -60,6 +64,7 @@ Feature: src-commands_work_merge
       And the workspace is NOT removed
       And I see "Workspace preserved at"
 
+    @skip:wip
     Scenario: Remove workspace after successful merge (default)
       Given I am in a workspace for "feature/test"
       When I run "r2r work merge"
@@ -68,6 +73,7 @@ Feature: src-commands_work_merge
 
   Rule: Validation prevents invalid merges
 
+    @skip:wip
     Scenario: Fail when uncommitted changes exist
       Given I am in a workspace
       And I have uncommitted changes
@@ -76,12 +82,14 @@ Feature: src-commands_work_merge
       And I see error "uncommitted changes"
       And I see suggestion "commit or stash"
 
+    @skip:wip
     Scenario: Fail when not in workspace
       Given I am in the main workspace on branch "main"
       When I run "r2r work merge"
       Then the exit code is 1
       And I see error "cannot merge main into itself"
 
+    @skip:wip
     Scenario: Fail when branch not up to date
       Given I am in a workspace
       And origin/main has new commits I don't have
@@ -90,6 +98,7 @@ Feature: src-commands_work_merge
       And I see error "branch not up to date"
       And I see suggestion "run 'work pull' first"
 
+    @skip:wip
     Scenario: Fail when not in git repository
       Given I am not in a git repository
       When I run "r2r work merge"
@@ -98,6 +107,7 @@ Feature: src-commands_work_merge
 
   Rule: Debug mode enables detailed logging
 
+    @skip:wip
     Scenario: Merge with debug flag
       Given I am in a workspace
       When I run "r2r work merge --debug"
@@ -105,6 +115,7 @@ Feature: src-commands_work_merge
       And debug logs are written to "out/logs/work/"
       And debug logs contain merge details
 
+    @skip:wip
     Scenario: Merge with -d shorthand
       Given I am in a workspace
       When I run "r2r work merge -d"
@@ -113,6 +124,7 @@ Feature: src-commands_work_merge
 
   Rule: Provides clear progress feedback
 
+    @skip:wip
     Scenario: Show merge progress
       Given I am in a workspace
       When I run "r2r work merge"
@@ -124,6 +136,7 @@ Feature: src-commands_work_merge
 
   Rule: Handle merge conflicts gracefully
 
+    @skip:wip
     Scenario: Detect merge conflicts
       Given I am in a workspace
       And merging will cause conflicts

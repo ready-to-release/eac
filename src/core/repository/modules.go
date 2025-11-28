@@ -15,7 +15,7 @@ import (
 // Parameters:
 //   - files: List of FileInfo from GetRepositoryFiles
 //   - workspaceRoot: Root directory of the workspace
-//   - version: Module contract version (e.g., "0.1.0")
+//   (no version - repository config is unversioned)
 //
 // Returns:
 //   - List of RepositoryFileWithModule with normalized paths and module ownership
@@ -25,13 +25,13 @@ import (
 //
 //	repo, _ := git.Open("/workspace")
 //	files, _ := repository.GetRepositoryFiles(repo, true, false, false, false)
-//	enriched, _ := repository.EnrichFilesWithModules(files, "/workspace", "0.1.0")
+//	enriched, _ := repository.EnrichFilesWithModules(files, "/workspace")
 //	for _, f := range enriched {
 //	    fmt.Printf("%s -> %v\n", f.Name, f.Modules)
 //	}
-func EnrichFilesWithModules(files []FileInfo, workspaceRoot string, version string) ([]RepositoryFileWithModule, error) {
+func EnrichFilesWithModules(files []FileInfo, workspaceRoot string) ([]RepositoryFileWithModule, error) {
 	// Load module contracts
-	registry, err := modules.LoadFromWorkspace(workspaceRoot, version)
+	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		return nil, NewRepositoryError("enrich", workspaceRoot, err, "failed to load module contracts")
 	}
@@ -138,13 +138,13 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 		return matchingModules
 	}
 
-	// Filter modules based on exclude_children_owned_source
-	// If a parent has this set to true and any of its children match, exclude the parent
+	// Filter modules based on own_children_files flag
+	// If a parent does NOT have own_children_files=true and any of its children match, exclude the parent
 	modulesToExclude := make(map[string]bool)
 
 	for _, parent := range matchingModules {
-		// Check if this module should exclude children
-		if parent.Source.ExcludeChildrenOwnedSource != nil && *parent.Source.ExcludeChildrenOwnedSource {
+		// Check if this module should NOT own files that children match
+		if !parent.Flags.OwnChildrenFiles {
 			// Check if any child modules are in the matching list
 			for _, candidate := range matchingModules {
 				if candidate.Moniker == parent.Moniker {
@@ -213,7 +213,7 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 //   - trackedOnly: if true, only return files tracked by Git
 //   - includeIgnored: if true, include files ignored by .gitignore
 //   - stagedOnly: if true, only return files currently staged in Git index
-//   - version: module contract version (e.g., "0.1.0")
+//   (no version - repository config is unversioned)
 //
 // Returns:
 //   - List of files with module ownership information
@@ -222,13 +222,13 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 // Example:
 //
 //	repo, _ := git.Open("/workspace")
-//	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
+//	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false)
 //	for _, f := range files {
 //	    if len(f.Modules) > 1 {
 //	        fmt.Printf("Multi-ownership: %s -> %v\n", f.Name, f.Modules)
 //	    }
 //	}
-func GetRepositoryFilesWithModules(repo git.GitRepository, trackedOnly, includeIgnored, stagedOnly bool, version string) ([]RepositoryFileWithModule, error) {
+func GetRepositoryFilesWithModules(repo git.GitRepository, trackedOnly, includeIgnored, stagedOnly bool) ([]RepositoryFileWithModule, error) {
 	rootPath := repo.RootPath()
 
 	// Get all repository files (exclude Git internal files by default)
@@ -238,7 +238,7 @@ func GetRepositoryFilesWithModules(repo git.GitRepository, trackedOnly, includeI
 	}
 
 	// Enrich with module ownership
-	return EnrichFilesWithModules(files, rootPath, version)
+	return EnrichFilesWithModules(files, rootPath)
 }
 
 // GetFilesByModule groups files by their owning module(s).
@@ -272,7 +272,7 @@ func GetFilesByModule(files []RepositoryFileWithModule) map[string][]string {
 //
 // Example:
 //
-//	files, _ := repository.GetRepositoryFilesWithModules(true, false, "", "0.1.0")
+//	files, _ := repository.GetRepositoryFilesWithModules(true, false, "")
 //	multiOwned := repository.GetMultiOwnershipFiles(files)
 //	fmt.Printf("Found %d files with multiple owners\n", len(multiOwned))
 //	for _, f := range multiOwned {
@@ -295,7 +295,7 @@ func GetMultiOwnershipFiles(files []RepositoryFileWithModule) []RepositoryFileWi
 //
 // Example:
 //
-//	files, _ := repository.GetRepositoryFilesWithModules(true, false, "", "0.1.0")
+//	files, _ := repository.GetRepositoryFilesWithModules(true, false, "")
 //	orphans := repository.GetOrphanFiles(files)
 //	fmt.Printf("Found %d orphan files\n", len(orphans))
 //	for _, f := range orphans {

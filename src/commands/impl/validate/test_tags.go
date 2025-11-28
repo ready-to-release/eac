@@ -8,7 +8,7 @@
 // Long: The validation:
 // Long:   - Discovers all Gherkin feature files in the repository
 // Long:   - Extracts all tags from features, scenarios, and examples
-// Long:   - Loads the tag contract from contracts/testing/*/tags.yml
+// Long:   - Loads the tag contract from .r2r/eac/repository/testing/tags.yml
 // Long:   - Checks that each tag is defined in the contract
 // Long:   - Reports undefined tags with their file locations
 // Long:
@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/environments"
 	"github.com/ready-to-release/eac/src/core/repository"
@@ -157,7 +158,7 @@ func TestTags() int {
 		fmt.Println()
 	}
 
-	fmt.Println("Fix: Add missing tags to contracts/testing/0.1.0/tags.yml")
+	fmt.Printf("Fix: Add missing tags to %s/testing/tags.yml\n", contracts.EACConfigRelPath)
 	return 1
 }
 
@@ -323,7 +324,7 @@ func isValidModuleName(moduleName string) bool {
 	}
 
 	// Load module registry from workspace (version 0.1.0)
-	registry, err := modules.LoadFromWorkspace(repoRoot, "0.1.0")
+	registry, err := modules.LoadFromWorkspace(repoRoot)
 	if err != nil {
 		// If we can't load modules, allow the tag (fail open for now)
 		fmt.Fprintf(os.Stderr, "Warning: failed to load module registry: %v\n", err)

@@ -1,0 +1,29 @@
+# Version: 0.2.0
+
+moniker: implicit-cli-sh
+name: Shell script to invoke Go commands
+type: scripts-sh
+description: Bash wrapper for running Go commands from src/commands/
+
+parent: "."
+depends_on:
+  - src-commands
+
+files:
+  root: scripts/sh/go-invoker
+  source:
+    - "**/*"
+  config: []
+  assets: []
+  tests: []
+  exclude: []
+  changelog: ""
+  repo:
+    specs: []
+    other:
+      - importer.sh
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

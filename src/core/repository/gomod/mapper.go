@@ -31,9 +31,9 @@ func NewMapper(registry *modules.Registry, baseModulePath string) *Mapper {
 // buildMappings builds bidirectional lookup maps between module paths and monikers
 func (m *Mapper) buildMappings() {
 	for _, module := range m.registry.All() {
-		// Build expected module path from source root
-		// Example: source.root = "src/cli" -> module path = "github.com/ready-to-release/eac/src/cli"
-		modulePath := m.baseModulePath + "/" + module.Source.Root
+		// Build expected module path from files root
+		// Example: files.root = "src/cli" -> module path = "github.com/ready-to-release/eac/src/cli"
+		modulePath := m.baseModulePath + "/" + module.Files.Root
 
 		// Store mappings
 		m.pathToMoniker[modulePath] = module.Moniker
@@ -51,26 +51,19 @@ func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 	// Try to find by extracting relative path
 	relPath := strings.TrimPrefix(modulePath, m.baseModulePath+"/")
 
-	// Look for module with matching source root (exact match first)
+	// Look for module with matching files root (exact match first)
 	for _, module := range m.registry.All() {
-		if module.Source.Root == relPath {
+		if module.Files.Root == relPath {
 			return module.Moniker, nil
 		}
 	}
 
-	// Check tests root
-	for _, module := range m.registry.All() {
-		if module.Tests != nil && module.Tests.Root == relPath {
-			return module.Moniker, nil
-		}
-	}
-
-	// Check if path is under a module's source root (for nested go.mod files)
+	// Check if path is under a module's files root (for nested go.mod files)
 	var bestMatch *modules.ModuleContract
 	bestMatchLen := 0
 
 	for _, module := range m.registry.All() {
-		root := module.Source.Root
+		root := module.Files.Root
 		if root == "" || root == "." {
 			continue
 		}
@@ -102,7 +95,7 @@ func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 		return "", fmt.Errorf("module not found: %s", moniker)
 	}
 
-	return m.baseModulePath + "/" + module.Source.Root, nil
+	return m.baseModulePath + "/" + module.Files.Root, nil
 }
 
 // GetMonikerFromModuleDir converts a module directory to a moniker
@@ -112,27 +105,20 @@ func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 	// Normalize path separators
 	normalizedDir := strings.ReplaceAll(moduleDir, "\\", "/")
 
-	// First, look for exact match on source root
+	// First, look for exact match on files root
 	for _, module := range m.registry.All() {
-		if module.Source.Root == normalizedDir {
+		if module.Files.Root == normalizedDir {
 			return module.Moniker, nil
 		}
 	}
 
-	// Check tests root - test directories belong to their parent module
-	for _, module := range m.registry.All() {
-		if module.Tests != nil && module.Tests.Root == normalizedDir {
-			return module.Moniker, nil
-		}
-	}
-
-	// Check if directory is under a module's source root (for nested go.mod files)
+	// Check if directory is under a module's files root (for nested go.mod files)
 	// Find the most specific (deepest) matching module
 	var bestMatch *modules.ModuleContract
 	bestMatchLen := 0
 
 	for _, module := range m.registry.All() {
-		root := module.Source.Root
+		root := module.Files.Root
 		if root == "" || root == "." {
 			continue
 		}

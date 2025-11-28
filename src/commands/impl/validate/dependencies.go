@@ -36,11 +36,10 @@ func ValidateDependencies() int {
 		return 1
 	}
 
-	contractVersion := "0.1.0"
 	baseModulePath := "github.com/ready-to-release/eac"
 
 	// Load module contracts
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot, contractVersion)
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading contracts: %v\n", err)
 		return 1

@@ -257,7 +257,7 @@ func TestSuite() int {
 	writeln(multiWriter, "Applied %d inference rules", len(suite.Inferences))
 
 	// Load module registry for module-based inference
-	moduleReport, err := contractsreports.GetModuleContracts(workspaceRoot, "0.1.0")
+	moduleReport, err := contractsreports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to load module contracts: %v\n", err)
 	} else {
@@ -403,14 +403,6 @@ func TestSuite() int {
 	moduleDeps := testing.GetModuleDependencies(productionTests)
 
 	allDeps := append(append([]string{}, systemDeps...), moduleDeps...)
-
-	// Set TEST_AI_MOCK for tests that use @deps:ai - they use mock AI providers
-	for _, dep := range systemDeps {
-		if dep == "@deps:ai" {
-			os.Setenv("TEST_AI_MOCK", "true")
-			break
-		}
-	}
 
 	if len(allDeps) == 0 {
 		writeln(multiWriter, "No dependencies required")

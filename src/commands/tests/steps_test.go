@@ -375,7 +375,9 @@ var testIsolation *coretesting.TestIsolation
 func initializeIsolatedTestProject() error {
 	testIsolation = coretesting.NewTestIsolation().
 		WithOriginalRepoRoot(originalRepoRoot).
-		WithCopyContracts(true)
+		WithCopyContracts(true).
+		WithCopyAIContracts(true).
+		WithMockAIConfig(true)
 
 	if err := testIsolation.Setup(); err != nil {
 		return fmt.Errorf("failed to setup test isolation: %w", err)
@@ -386,6 +388,7 @@ func initializeIsolatedTestProject() error {
 	// Update shared context with isolation info
 	if sharedCtx != nil {
 		sharedCtx.SetIsolation(originalRepoRoot, isolatedTestProjectDir)
+		sharedCtx.Isolation = testIsolation
 	}
 
 	return nil

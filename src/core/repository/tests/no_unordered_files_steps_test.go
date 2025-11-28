@@ -48,7 +48,7 @@ func moduleContractsAreLoaded() error {
 	}
 
 	// Load module contracts
-	moduleReport, err := reports.GetModuleContracts(repoRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -81,7 +81,7 @@ func lookupFilesBelongingToUnorderedModule() error {
 	}
 
 	// Get all files with module ownership
-	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
+	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false)
 	if err != nil {
 		return fmt.Errorf("failed to get repository files with modules: %w", err)
 	}

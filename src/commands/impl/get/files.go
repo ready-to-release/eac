@@ -65,7 +65,7 @@ func GetFiles() int {
 		stagedOnly := filterOpts.StagedOnly
 
 		// Generate report for files (tracked only, no ignored, staged-only if requested)
-		report, err := reports.GetFilesModulesReport(true, false, stagedOnly, workspaceRoot, "0.1.0")
+		report, err := reports.GetFilesModulesReport(true, false, stagedOnly, workspaceRoot)
 		if err != nil {
 			return nil, err
 		}

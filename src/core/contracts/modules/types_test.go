@@ -14,9 +14,9 @@ func TestNewModuleContract(t *testing.T) {
 		Moniker: "test-module",
 		Name:    "Test Module",
 		Type:    "test-type",
-		Source: contracts.Source{
-			Root:     "test/root",
-			Includes: []string{"**/*.go"},
+		Files: contracts.Files{
+			Root:   "test/root",
+			Source: []string{"**/*.go"},
 		},
 	}
 
@@ -33,41 +33,36 @@ func TestNewModuleContract(t *testing.T) {
 
 func TestModuleContract_GetGlobPatterns(t *testing.T) {
 	tests := []struct {
-		name      string
-		moniker   string
-		root      string
-		specsRoot string
-		includes  []string
-		expected  []string
+		name     string
+		moniker  string
+		root     string
+		source   []string
+		specs    []string
+		expected []string
 	}{
 		{
 			name:     "simple pattern",
 			moniker:  "src-test",
 			root:     "src/test",
-			includes: []string{"**/*.go"},
-			expected: []string{"specs/src-test/**", "src/test/**/*.go"},
+			source:   []string{"**/*.go"},
+			specs:    []string{"specs/src-test/**"},
+			expected: []string{"src/test/**/*.go", "specs/src-test/**"},
 		},
 		{
 			name:     "multiple patterns",
 			moniker:  "src-mcp-vscode",
 			root:     "src/mcp/vscode",
-			includes: []string{"go.mod", "**.go"},
-			expected: []string{"specs/src-mcp-vscode/**", "src/mcp/vscode/go.mod", "src/mcp/vscode/**.go"},
+			source:   []string{"go.mod", "**.go"},
+			specs:    []string{"specs/src-mcp-vscode/**"},
+			expected: []string{"src/mcp/vscode/go.mod", "src/mcp/vscode/**.go", "specs/src-mcp-vscode/**"},
 		},
 		{
-			name:     "pattern with root prefix",
-			moniker:  "src-test",
-			root:     "src/test",
-			includes: []string{"src/test/*.go"},
-			expected: []string{"specs/src-test/**", "src/test/*.go"},
-		},
-		{
-			name:      "specs_root auto-includes everything",
-			moniker:   "src-cli",
-			root:      "src/cli",
-			specsRoot: "specs/src-cli",
-			includes:  []string{"go.mod", "**.go"},
-			expected:  []string{"specs/src-cli/**", "src/cli/go.mod", "src/cli/**.go"},
+			name:     "specs patterns are repo-root relative",
+			moniker:  "src-cli",
+			root:     "src/cli",
+			source:   []string{"go.mod", "**.go"},
+			specs:    []string{"specs/src-cli/**"},
+			expected: []string{"src/cli/go.mod", "src/cli/**.go", "specs/src-cli/**"},
 		},
 	}
 
@@ -75,10 +70,12 @@ func TestModuleContract_GetGlobPatterns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			base := contracts.BaseContract{
 				Moniker: tt.moniker,
-				Source: contracts.Source{
-					Root:      tt.root,
-					SpecsRoot: tt.specsRoot,
-					Includes:  tt.includes,
+				Files: contracts.Files{
+					Root:   tt.root,
+					Source: tt.source,
+					Repo: contracts.RepoPatterns{
+						Specs: tt.specs,
+					},
 				},
 			}
 			module := NewModuleContract(base, "")
@@ -100,9 +97,9 @@ func TestModuleContract_GetGlobPatterns(t *testing.T) {
 
 func TestModuleContract_MatchesFile(t *testing.T) {
 	base := contracts.BaseContract{
-		Source: contracts.Source{
-			Root:     "src/mcp/vscode",
-			Includes: []string{"go.mod", "**.go"},
+		Files: contracts.Files{
+			Root:   "src/mcp/vscode",
+			Source: []string{"go.mod", "**.go"},
 		},
 	}
 	module := NewModuleContract(base, "")
@@ -190,10 +187,24 @@ func TestModuleContract_MatchesFile_RootLevel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Separate absolute patterns (starting with /) from relative patterns
+			var source []string
+			var repoOther []string
+			for _, pattern := range tt.includes {
+				if len(pattern) > 0 && pattern[0] == '/' {
+					repoOther = append(repoOther, pattern[1:]) // Remove leading /
+				} else {
+					source = append(source, pattern)
+				}
+			}
+
 			base := contracts.BaseContract{
-				Source: contracts.Source{
-					Root:     tt.root,
-					Includes: tt.includes,
+				Files: contracts.Files{
+					Root:   tt.root,
+					Source: source,
+					Repo: contracts.RepoPatterns{
+						Other: repoOther,
+					},
 				},
 			}
 			module := NewModuleContract(base, "")
@@ -206,37 +217,39 @@ func TestModuleContract_MatchesFile_RootLevel(t *testing.T) {
 	}
 }
 
-// TestModuleContract_MatchesFile_SpecsRoot tests that specs_root automatically includes all files
-func TestModuleContract_MatchesFile_SpecsRoot(t *testing.T) {
+// TestModuleContract_MatchesFile_RepoSpecs tests that Repo.Specs patterns match spec files
+func TestModuleContract_MatchesFile_RepoSpecs(t *testing.T) {
 	tests := []struct {
-		name      string
-		root      string
-		specsRoot string
-		includes  []string
-		filePath  string
-		expected  bool
+		name     string
+		root     string
+		specs    []string
+		source   []string
+		filePath string
+		expected bool
 	}{
-		{"specs_root matches file", "src/cli", "specs/src-cli", []string{"go.mod"}, "specs/src-cli/test.feature", true},
-		{"specs_root matches nested", "src/cli", "specs/src-cli", []string{"go.mod"}, "specs/src-cli/design/workspace.dsl", true},
-		{"specs_root doesn't match other specs", "src/cli", "specs/src-cli", []string{"go.mod"}, "specs/src-core/test.feature", false},
-		{"specs_root with regular pattern", "src/cli", "specs/src-cli", []string{"go.mod"}, "src/cli/go.mod", true},
+		{"specs matches file", "src/cli", []string{"specs/src-cli/**"}, []string{"go.mod"}, "specs/src-cli/test.feature", true},
+		{"specs matches nested", "src/cli", []string{"specs/src-cli/**"}, []string{"go.mod"}, "specs/src-cli/design/workspace.dsl", true},
+		{"specs doesn't match other specs", "src/cli", []string{"specs/src-cli/**"}, []string{"go.mod"}, "specs/src-core/test.feature", false},
+		{"source pattern with specs", "src/cli", []string{"specs/src-cli/**"}, []string{"go.mod"}, "src/cli/go.mod", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			base := contracts.BaseContract{
-				Source: contracts.Source{
-					Root:      tt.root,
-					SpecsRoot: tt.specsRoot,
-					Includes:  tt.includes,
+				Files: contracts.Files{
+					Root:   tt.root,
+					Source: tt.source,
+					Repo: contracts.RepoPatterns{
+						Specs: tt.specs,
+					},
 				},
 			}
 			module := NewModuleContract(base, "")
 
 			got := module.MatchesFile(tt.filePath)
 			if got != tt.expected {
-				t.Errorf("MatchesFile(%s) with root=%q specsRoot=%q includes=%v = %v, expected %v",
-					tt.filePath, tt.root, tt.specsRoot, tt.includes, got, tt.expected)
+				t.Errorf("MatchesFile(%s) with root=%q specs=%v source=%v = %v, expected %v",
+					tt.filePath, tt.root, tt.specs, tt.source, got, tt.expected)
 			}
 		})
 	}
@@ -259,22 +272,9 @@ func TestModuleContract_GetDependencies(t *testing.T) {
 	}
 }
 
-func TestModuleContract_GetUsedBy(t *testing.T) {
-	base := contracts.BaseContract{
-		UsedBy: []string{"user1", "user2"},
-	}
-	module := NewModuleContract(base, "")
-
-	users := module.GetUsedBy()
-
-	if len(users) != 2 {
-		t.Fatalf("Expected 2 users, got %d", len(users))
-	}
-
-	if users[0] != "user1" || users[1] != "user2" {
-		t.Error("UsedBy does not match expected values")
-	}
-}
+// Note: UsedBy is no longer stored on ModuleContract.
+// It is computed dynamically via Registry.GetUsedBy() from the reverse dependency graph.
+// See registry.go GetUsedBy() and GetReverseDependencyGraph() methods.
 
 func TestModuleContract_IsDefinitionsFile(t *testing.T) {
 	tests := []struct {

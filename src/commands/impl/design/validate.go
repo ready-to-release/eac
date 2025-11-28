@@ -126,7 +126,7 @@ func validateSingleModule(validator design.StructurizrValidator, module string, 
 	}
 
 	// Load module contracts and validate moniker exists (same as build command)
-	moduleReport, err := reports.GetModuleContracts(repoRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "❌ Failed to load module contracts: %v\n", err)
 		return 2

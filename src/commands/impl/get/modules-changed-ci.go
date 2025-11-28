@@ -126,13 +126,13 @@ func GetChangedModulesCI() int {
 		}
 
 		// Get directly changed modules
-		directlyChanged, err := repository.GetChangedModules(changedFiles, workspaceRoot, "0.1.0")
+		directlyChanged, err := repository.GetChangedModules(changedFiles, workspaceRoot)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get changed modules: %w", err)
 		}
 
 		// Get all modules requiring rebuild (includes transitive dependents)
-		allRequiringRebuild, err := repository.GetModulesRequiringRebuild(changedFiles, workspaceRoot, "0.1.0")
+		allRequiringRebuild, err := repository.GetModulesRequiringRebuild(changedFiles, workspaceRoot)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get modules requiring rebuild: %w", err)
 		}
@@ -248,7 +248,7 @@ func getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot string) ([]strin
 
 // getAllModuleMonikers returns all module monikers (for bootstrap case)
 func getAllModuleMonikers(workspaceRoot string) ([]string, error) {
-	graph, err := repository.GetModuleDependencyGraph(workspaceRoot, "0.1.0")
+	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func getAllModuleMonikers(workspaceRoot string) ([]string, error) {
 
 // getFilesByModule maps changed files to their owning modules
 func getFilesByModule(changedFiles []string, workspaceRoot string) (map[string][]string, error) {
-	registry, err := modules.LoadFromWorkspace(workspaceRoot, "0.1.0")
+	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}

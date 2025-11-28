@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/src/core/contracts"
 	"gopkg.in/yaml.v3"
 )
 
@@ -115,8 +116,7 @@ func LoadTagContract() (*TagContract, error) {
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Read the contract file from contracts/testing/0.1.0/tags.yml
-	contractPath := filepath.Join(repoRoot, "contracts", "testing", "0.1.0", "tags.yml")
+	contractPath := filepath.Join(repoRoot, contracts.EACConfigRelPath, "testing", "tags.yml")
 	data, err := os.ReadFile(contractPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read tag contract from %s: %w", contractPath, err)

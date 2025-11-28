@@ -1,0 +1,34 @@
+# Version: 0.2.0
+
+moniker: ext-eac
+name: EAC Extension for R2R CLI
+type: go-r2r-extension
+description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
+
+parent: "."
+depends_on:
+  - src-commands
+
+files:
+  root: src/commands/ext
+  source:
+    - "*.go"
+  config:
+    - go.mod
+    - go.sum
+  assets:
+    - README.md
+  tests: []
+  exclude: []
+  changelog: ""
+  repo:
+    specs: []
+    other:
+      - containers/ext-eac/Dockerfile
+      - .github/workflows/ci-ext-eac.yaml
+      - .github/workflows/release-ext-eac.yml
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

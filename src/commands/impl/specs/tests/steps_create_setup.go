@@ -105,12 +105,25 @@ func iRunTheSpecsCreateCommand() error {
 // ============================================================================
 
 func theMockAIIsConfiguredToReturnAValidSpecification() error {
+	// Use the new file-based mock system for subprocess tests
+	if SharedCtx != nil && SharedCtx.Isolation != nil {
+		if err := SharedCtx.SetMockAIResponse(mockResponseAsset); err != nil {
+			return err
+		}
+	}
+	// Also set via legacy mechanism for backward compatibility
 	create.SetMockAIResponse(mockResponseAsset)
 	TestAIOutput = mockResponseAsset
 	return nil
 }
 
 func theAIProviderReturnsOutputWithInitializationMessages() error {
+	// Use the new file-based mock system for subprocess tests
+	if SharedCtx != nil && SharedCtx.Isolation != nil {
+		if err := SharedCtx.SetMockAIResponse(mockResponseWithNoiseAsset); err != nil {
+			return err
+		}
+	}
 	create.SetMockAIResponse(mockResponseWithNoiseAsset)
 	TestAIOutput = mockResponseWithNoiseAsset
 	return nil
@@ -128,6 +141,11 @@ func theOutputIsProcessed() error {
 
 func theAIProviderFailsToGenerateContent() error {
 	// Configure mock to return empty/error response
+	if SharedCtx != nil && SharedCtx.Isolation != nil {
+		if err := SharedCtx.SetMockAIResponse(""); err != nil {
+			return err
+		}
+	}
 	create.SetMockAIResponse("")
 	return nil
 }
@@ -136,6 +154,11 @@ func theAIGeneratesAFeatureNamed(featureName string) error {
 	// Configure mock to generate a feature with the specified name
 	// Replace the feature name in the mock response asset
 	mockOutput := strings.Replace(mockResponseAsset, "src-commands_mock-feature", featureName, 1)
+	if SharedCtx != nil && SharedCtx.Isolation != nil {
+		if err := SharedCtx.SetMockAIResponse(mockOutput); err != nil {
+			return err
+		}
+	}
 	create.SetMockAIResponse(mockOutput)
 	return nil
 }
@@ -143,6 +166,11 @@ func theAIGeneratesAFeatureNamed(featureName string) error {
 func theAIGeneratesAFeatureThatWouldCreateTheSamePath() error {
 	// Configure mock to generate a feature that would conflict with existing file
 	if Ctx != nil && len(Ctx.CreatedFiles) > 0 {
+		if SharedCtx != nil && SharedCtx.Isolation != nil {
+			if err := SharedCtx.SetMockAIResponse(mockResponseConflictAsset); err != nil {
+				return err
+			}
+		}
 		create.SetMockAIResponse(mockResponseConflictAsset)
 	}
 	return nil
@@ -159,6 +187,11 @@ func theAIAgentIsInvokedWithTheDescription() error {
 
 func theAIProviderTakesLongerThanTheTimeout() error {
 	// Configure mock to simulate timeout (mock returns error)
+	if SharedCtx != nil && SharedCtx.Isolation != nil {
+		if err := SharedCtx.SetMockAIResponse("TIMEOUT_ERROR"); err != nil {
+			return err
+		}
+	}
 	create.SetMockAIResponse("TIMEOUT_ERROR")
 	return nil
 }
@@ -178,6 +211,11 @@ func aValidSpecificationTemplate() error {
 
 func theAIGeneratesSpecificationContent() error {
 	// Configure mock with valid specification content from asset
+	if SharedCtx != nil && SharedCtx.Isolation != nil {
+		if err := SharedCtx.SetMockAIResponse(mockResponseAsset); err != nil {
+			return err
+		}
+	}
 	create.SetMockAIResponse(mockResponseAsset)
 	return nil
 }
@@ -186,8 +224,14 @@ func onlyValidGherkinContentShouldRemain() error {
 	if Ctx == nil {
 		return fmt.Errorf("test context not initialized")
 	}
-	output := Ctx.CommandOutput
-	// Verify no noise patterns remain
+
+	// Read the generated file content (not stdout which has status messages)
+	fileContent, err := getLastCreatedFileContent()
+	if err != nil {
+		return err
+	}
+
+	// Verify no noise patterns remain in generated file
 	noisePatterns := []string{
 		"**Initialized",
 		"I'll help",
@@ -196,13 +240,13 @@ func onlyValidGherkinContentShouldRemain() error {
 		"```",
 	}
 	for _, pattern := range noisePatterns {
-		if strings.Contains(output, pattern) {
-			return fmt.Errorf("noise pattern '%s' found in output - should have been removed", pattern)
+		if strings.Contains(fileContent, pattern) {
+			return fmt.Errorf("noise pattern '%s' found in generated file - should have been removed", pattern)
 		}
 	}
 	// Verify Gherkin content is present
-	if !strings.Contains(output, "Feature:") {
-		return fmt.Errorf("output missing 'Feature:' declaration - Gherkin content not present")
+	if !strings.Contains(fileContent, "Feature:") {
+		return fmt.Errorf("generated file missing 'Feature:' declaration - Gherkin content not present")
 	}
 	return nil
 }
@@ -277,9 +321,15 @@ func itMustContainAFeatureDeclaration() error {
 	if Ctx == nil {
 		return fmt.Errorf("test context not initialized")
 	}
-	output := Ctx.CommandOutput
-	if !strings.Contains(output, "Feature:") {
-		return fmt.Errorf("output does not contain 'Feature:' declaration.\nOutput:\n%s", output)
+
+	// Read the generated file content (not stdout which has status messages)
+	fileContent, err := getLastCreatedFileContent()
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(fileContent, "Feature:") {
+		return fmt.Errorf("generated file does not contain 'Feature:' declaration.\nContent:\n%s", fileContent)
 	}
 	return nil
 }
@@ -399,6 +449,11 @@ func intermediateFilesAreSavedToDirectory(dirPath string) error {
 
 func theMockAIGeneratesAFeatureThatWouldCreateTheSamePath() error {
 	// Configure mock to generate a feature that would conflict with existing file
+	if SharedCtx != nil && SharedCtx.Isolation != nil {
+		if err := SharedCtx.SetMockAIResponse(mockResponseConflictAsset); err != nil {
+			return err
+		}
+	}
 	create.SetMockAIResponse(mockResponseConflictAsset)
 	return nil
 }

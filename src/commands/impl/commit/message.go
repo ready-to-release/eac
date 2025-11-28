@@ -306,7 +306,7 @@ func buildExecutionContext(workspaceRoot string, logger *logging.Logger) (*execu
 // getStagedFilesReport retrieves staged files and builds a table representation
 func getStagedFilesReport(workspaceRoot string) (*reports.FilesModulesReport, string, error) {
 	// Get staged files with module mappings
-	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot, "0.1.0")
+	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot)
 	if err != nil {
 		return nil, "", fmt.Errorf("getting module mappings: %w", err)
 	}

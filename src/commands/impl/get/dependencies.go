@@ -45,7 +45,7 @@ func GetDependencies() int {
 
 	// Use the shared get command helper for standard formats (YAML, JSON, TOML)
 	return get.ExecuteGetCommand(func() (interface{}, error) {
-		graph, err := repository.GetModuleDependencyGraph(workspaceRoot, "0.1.0")
+		graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +55,7 @@ func GetDependencies() int {
 
 // outputPlantUML generates PlantUML diagram format
 func outputPlantUML(workspaceRoot string) int {
-	graph, err := repository.GetModuleDependencyGraph(workspaceRoot, "0.1.0")
+	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
@@ -68,7 +68,7 @@ func outputPlantUML(workspaceRoot string) int {
 
 // outputMermaid generates Mermaid diagram format
 func outputMermaid(workspaceRoot string) int {
-	graph, err := repository.GetModuleDependencyGraph(workspaceRoot, "0.1.0")
+	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
@@ -81,7 +81,7 @@ func outputMermaid(workspaceRoot string) int {
 
 // outputExecutionOrder generates execution order only
 func outputExecutionOrder(workspaceRoot string) int {
-	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot, "0.1.0")
+	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1

@@ -1,0 +1,235 @@
+# Test Tagging System Specification
+# Contract for test classification and dependency management
+# Version: 0.1.0
+
+metadata:
+  version: "0.1.0"
+  description: "Formal specification for test tagging system across all test frameworks"
+  scope: "Applies to Gherkin features, Go tests, and future test frameworks"
+
+# ============================================================================
+# Allowed Monikers for Pattern Tags
+# ============================================================================
+
+module_monikers:
+  # NOTE: Module monikers are dynamically loaded from module contracts at runtime
+  # This list is for documentation only - validation uses actual module registry
+  examples:
+    - src-cli
+    - src-commands
+    - src-core
+    - src-cli-installers
+
+environment_monikers:
+  # NOTE: Environment monikers are dynamically loaded from environment contracts at runtime
+  # This list is for documentation only - validation uses actual environment registry
+  examples:
+    - isolated-test-project
+    - xyz-myproj-web-ws
+    - mkdocs-docker
+
+system_dependency_names:
+  - name: docker
+    description: "Docker daemon"
+  - name: git
+    description: "Git CLI"
+  - name: go
+    description: "Go toolchain"
+  - name: az-cli
+    description: "Azure CLI"
+  - name: gh-cli
+    description: "GitHub CLI"
+
+os_platform_names:
+  - name: linux
+    description: "Linux operating system"
+  - name: macos
+    description: "macOS operating system"
+  - name: windows
+    description: "Windows operating system"
+  - name: os-agnostic
+    description: "Any operating system"
+
+# ============================================================================
+# Tag Definitions
+# ============================================================================
+
+tags:
+  # System Dependency Pattern
+  - tag: "@deps:<system-dependency>"
+    description: "Requires specific system dependency"
+    type: system_dependency
+    pattern: "^@deps:(?P<system_dependency>[a-z0-9-]+)$"
+    example: "@deps:docker"
+    note: "Valid system dependency names are defined in system_dependency_names and os_platform_names sections"
+
+  - tag: "@depm:<module-name>"
+    description: "Requires specific module dependency from module contracts"
+    type: module_dependency
+    pattern: "^@depm:(?P<module_name>[a-z0-9-]+)$"
+    example: "@depm:src-cli"
+    note: "Valid module names are loaded from module contracts at runtime"
+
+  - tag: "@env:<env-moniker>"
+    description: "Requires specific test environment"
+    type: environment
+    pattern: "^@env:(?P<env_moniker>[a-z0-9-]+)$"
+    example: "@env:isolated-test-project"
+    note: "Valid environment monikers are defined in environment_monikers section"
+
+  - tag: "@L0"
+    name: "Very Fast Unit Tests with direct access to source files and build artifacts"
+    type: taxonomy-level
+
+  - tag: "@L1"
+    name: "Fast Unit Tests with direct access to source files and build artifacts"
+    type: taxonomy-level
+
+  - tag: "@L2"
+    name: "Emulated System Tests with access to emulator and build artifacts"
+    type: taxonomy-level
+
+  - tag: "@L3"
+    name: "Production-like System Tests with access to in-situ environment and build artifacts deployed to it"
+    type: taxonomy-level
+
+  - tag: "@L4"
+    name: "Production System Tests with access to in-situ environment and build artifacts deployed to it"
+    type: taxonomy-level
+
+  - tag: "@HE2E"
+    name: "Horizontal end-to-end tests spanning multiple systems and services"
+    type: taxonomy-level
+
+  - tag: "@ov"
+    name: "Operational Verification"
+    description: "Functional tests verifying feature behavior"
+    type: verification
+
+  - tag: "@iv"
+    name: "Installation Verification"
+    type: verification
+
+  - tag: "@pv"
+    name: "Performance Verification"
+    description: "Load tests and performance benchmarks"
+    type: verification
+
+  - tag: "@piv"
+    name: "Production Installation Verification"
+    description: "Smoke tests in production post-deployment"
+    type: verification
+
+  - tag: "@ppv"
+    name: "Production Performance Verification"
+    description: "Production monitoring and performance validation"
+    type: verification
+
+  - tag: "@risk:<risk-id>"
+    description: "Tag specific risks for tracking and mitigation"
+    type: safety
+    pattern: "^@risk:(?P<risk_id>[a-z0-9-]+)$"
+    example: "@risk:data-loss"
+
+  - tag: "@skip:<reason>"
+    description: "Exclude from test suite runs with documented reason"
+    type: execution_control
+    level: feature-or-scenario
+    pattern: "^@skip:(?P<reason>[a-z]+)$"
+    example: "@skip:wip"
+
+  - tag: "@Manual"
+    description: "Manual test requiring human execution and evidence collection (cannot have L0-L4 taxonomy tags)"
+    type: execution_control
+    level: scenario
+    constraint: "mutually_exclusive_with_taxonomy_levels"
+
+  - tag: "@risk-control:<name>-<id>"
+    description: "Link to risk control specification"
+    type: risk_control
+    level: scenario
+    pattern: "^@risk-control:(?P<name>[a-z0-9-]+)-(?P<id>[0-9]{2})$"
+    example: "@risk-control:auth-mfa-01"
+
+  - tag: "@risk-control:gxp-<name>"
+    description: "Link to GxP risk control specification"
+    type: risk_control_gxp
+    level: scenario
+    pattern: "^@risk-control:gxp-(?P<name>[a-z0-9-]+)$"
+    example: "@risk-control:gxp-account-lockout"
+
+  - tag: "@gxp"
+    description: "GxP-related requirement (must have @risk-control:gxp-<name>)"
+    type: gxp_regulatory
+    level: feature-or-scenario
+
+  - tag: "@critical-aspect"
+    description: "GmP Critical Aspect (GmP products only, must be used with @gxp)"
+    type: gxp_regulatory
+    level: scenario
+
+# ============================================================================
+# Tag Type Definitions
+# ============================================================================
+
+types:
+  - type: system_dependency
+    description: "External system dependencies required for test execution (e.g., docker, git, go)"
+
+  - type: os_platform
+    description: "Operating system platform requirements (linux, macos, windows, os-agnostic)"
+
+  - type: module_dependency
+    description: "Internal module dependencies required for test execution (e.g., src-cli, src-commands, src-core)"
+
+  - type: environment
+    description: "Test environment requirements (e.g., isolated test projects, specific configurations)"
+
+  - type: taxonomy-level
+    description: "Test environment complexity and isolation level (L0-L4)"
+
+  - type: verification
+    description: "What aspect of the system is being verified (operational, installation, performance)"
+
+  - type: safety
+    description: "Tags related to test isolation, cleanup, and risk tracking"
+
+  - type: execution_control
+    description: "Control test execution behavior (ignore, manual, skip)"
+
+  - type: test_behavior
+    description: "Test behavior and isolation characteristics"
+
+  - type: risk_control
+    description: "Link scenarios to risk control specifications"
+
+  - type: risk_control_gxp
+    description: "Link GxP scenarios to GxP-specific risk controls"
+
+  - type: gxp_regulatory
+    description: "GxP regulatory classification and critical aspects"
+
+# ============================================================================
+# Skip Reason Codes
+# ============================================================================
+
+skip_reasons:
+  - code: wip
+    name: "Work In Progress"
+    description: "Test implementation not yet complete"
+
+  - code: broken
+    name: "Broken Test"
+    description: "Test is broken and needs fixing"
+
+  - code: flaky
+    name: "Flaky Test"
+    description: "Test intermittently fails, needs stabilization"
+
+  - code: deprecated
+    name: "Deprecated Feature"
+    description: "Feature deprecated, test kept for reference"
+
+  - code: blocked
+    name: "Blocked"
+    description: "Blocked by external dependency or decision"

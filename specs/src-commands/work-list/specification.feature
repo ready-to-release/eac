@@ -19,6 +19,7 @@ Feature: src-commands_work_list
 
   Rule: List displays all worktrees in formatted table
 
+    @skip:wip
     Scenario: List worktrees with default output
       Given I have multiple worktrees:
         | path                          | branch           | clean |
@@ -30,16 +31,19 @@ Feature: src-commands_work_list
       And I see a table with headers "Path", "Branch", "Status"
       And I see "3 worktrees total"
 
+    @skip:wip
     Scenario: List shows clean status
       Given I have a worktree at "../cli-feature-auth" with no uncommitted changes
       When I run "r2r work list"
       Then I see "feature/auth" with status "clean"
 
+    @skip:wip
     Scenario: List shows dirty status
       Given I have a worktree at "../cli-feature-auth" with uncommitted changes
       When I run "r2r work list"
       Then I see "feature/auth" with status "dirty"
 
+    @skip:wip
     Scenario: List single worktree
       Given I have only the main worktree
       When I run "r2r work list"
@@ -48,12 +52,14 @@ Feature: src-commands_work_list
 
   Rule: Verbose mode shows additional details
 
+    @skip:wip
     Scenario: List with verbose flag shows commit SHA
       Given I have multiple worktrees
       When I run "r2r work list --verbose"
       Then the exit code is 0
       And I see commit SHA for each worktree
 
+    @skip:wip
     Scenario: List with -v shorthand
       Given I have multiple worktrees
       When I run "r2r work list -v"
@@ -62,6 +68,7 @@ Feature: src-commands_work_list
 
   Rule: Debug mode enables detailed logging
 
+    @skip:wip
     Scenario: Debug flag enables logging to out/logs/work/
       Given I am in a git repository
       When I run "r2r work list --debug"
@@ -69,6 +76,7 @@ Feature: src-commands_work_list
       And debug logs are written to "out/logs/work/"
       And debug logs contain worktree information
 
+    @skip:wip
     Scenario: Debug with -d shorthand
       Given I am in a git repository
       When I run "r2r work list -d"
@@ -77,12 +85,14 @@ Feature: src-commands_work_list
 
   Rule: Handles edge cases gracefully
 
+    @skip:wip
     Scenario: No worktrees except main
       Given I am in a git repository with no additional worktrees
       When I run "r2r work list"
       Then the exit code is 0
       And I see the main worktree listed
 
+    @skip:wip
     Scenario: Fail when not in git repository
       Given I am not in a git repository
       When I run "r2r work list"

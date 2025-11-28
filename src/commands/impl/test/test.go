@@ -93,7 +93,7 @@ func Test() int {
 	}
 
 	// Load module contracts
-	moduleReport, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
 		return 1

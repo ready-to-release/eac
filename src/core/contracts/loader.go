@@ -8,6 +8,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// EACConfigRelPath is the relative path from repo root to EAC repository configuration.
+// This is where repository-specific EAC contracts are stored (modules, tags, environments).
+const EACConfigRelPath = ".r2r/eac/repository"
+
 // Loader handles loading contract YAML files
 type Loader struct {
 	workspaceRoot string

@@ -1,0 +1,38 @@
+# Version: 0.2.0
+
+moniker: src-core
+name: Core Domain Libraries
+type: go-library
+description: Core library containing contracts and repository operations
+
+parent: "."
+depends_on: []
+
+files:
+  root: src/core
+  source:
+    - "**.go"
+    - "**.go.txt"
+  config:
+    - go.mod
+    - go.sum
+  assets: []
+  tests: []
+  exclude:
+    - repository/tests/**
+  changelog: CHANGELOG.md
+  repo:
+    specs:
+      - specs/src-core/**
+    other:
+      - .github/workflows/ci-src-core.yaml
+      - src/core/ai/**
+      - src/core/markdown/**
+      - src/core/module-deps/**
+      - src/core/environments/**
+      - src/.template/**
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

@@ -42,7 +42,7 @@ func ShowFilesChanged() int {
 	}
 
 	// Get full report for all tracked files
-	report, err := reports.GetFilesModulesReport(true, false, false, workspaceRoot, "0.1.0")
+	report, err := reports.GetFilesModulesReport(true, false, false, workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1

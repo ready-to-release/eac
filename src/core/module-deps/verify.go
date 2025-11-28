@@ -100,7 +100,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 		if err != nil {
 			return false
 		}
-		mainGoPath := filepath.Join(repoRoot, module.Source.Root, "main.go")
+		mainGoPath := filepath.Join(repoRoot, module.Files.Root, "main.go")
 		_, err = os.Stat(mainGoPath)
 		return err == nil
 
@@ -110,7 +110,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 		if err != nil {
 			return false
 		}
-		goModPath := filepath.Join(repoRoot, module.Source.Root, "go.mod")
+		goModPath := filepath.Join(repoRoot, module.Files.Root, "go.mod")
 		_, err = os.Stat(goModPath)
 		return err == nil
 
@@ -120,7 +120,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 		if err != nil {
 			return false
 		}
-		mainGoPath := filepath.Join(repoRoot, module.Source.Root, "main.go")
+		mainGoPath := filepath.Join(repoRoot, module.Files.Root, "main.go")
 		_, err = os.Stat(mainGoPath)
 		return err == nil
 
@@ -140,7 +140,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 		if err != nil {
 			return false
 		}
-		scriptsPath := filepath.Join(repoRoot, module.Source.Root)
+		scriptsPath := filepath.Join(repoRoot, module.Files.Root)
 		_, err = os.Stat(scriptsPath)
 		return err == nil
 
@@ -179,7 +179,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		modulePath := filepath.Join(repoRoot, module.Source.Root)
+		modulePath := filepath.Join(repoRoot, module.Files.Root)
 		return fmt.Sprintf("Commands module (go run): %s", modulePath), nil
 
 	case "go-library":
@@ -188,7 +188,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		modulePath := filepath.Join(repoRoot, module.Source.Root)
+		modulePath := filepath.Join(repoRoot, module.Files.Root)
 		return fmt.Sprintf("Go library: %s", modulePath), nil
 
 	case "go-mcp":
@@ -197,7 +197,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		modulePath := filepath.Join(repoRoot, module.Source.Root)
+		modulePath := filepath.Join(repoRoot, module.Files.Root)
 		return fmt.Sprintf("MCP module: %s", modulePath), nil
 
 	case "repository-root":
@@ -215,7 +215,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		scriptsPath := filepath.Join(repoRoot, module.Source.Root)
+		scriptsPath := filepath.Join(repoRoot, module.Files.Root)
 		return fmt.Sprintf("Scripts: %s", scriptsPath), nil
 
 	default:
