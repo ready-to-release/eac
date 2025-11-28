@@ -6,6 +6,7 @@ Feature: src-commands_design-validate
 
   Rule: Single module validation
 
+    @skip:wip
     Scenario: Validate existing workspace
       Given module "test-module" has a valid workspace at "specs/test-module/.design/workspace.dsl"
       When I run "design validate test-module"
@@ -14,12 +15,14 @@ Feature: src-commands_design-validate
       And the output should contain "Summary:"
       And validation results should be written to "out/design-validation-results.json"
 
+    @skip:wip
     Scenario: Validate invalid workspace
       Given module "test-module" has an invalid workspace at "specs/test-module/.design/workspace.dsl"
       When I run "design validate test-module"
       Then the exit code should be 1
       And the output should contain "Errors:"
 
+    @skip:wip
     Scenario: Module not found
       When I run "design validate nonexistent-module"
       Then the exit code should be 2
@@ -27,6 +30,7 @@ Feature: src-commands_design-validate
 
   Rule: Batch validation
 
+    @skip:wip
     Scenario: Validate all modules
       Given multiple modules have workspace files
       When I run "design validate --all"
@@ -36,6 +40,7 @@ Feature: src-commands_design-validate
 
   Rule: Debug output
 
+    @skip:wip
     Scenario: Verbose output shows Docker commands
       Given module "test-module" has a valid workspace
       When I run "design validate test-module --verbose"

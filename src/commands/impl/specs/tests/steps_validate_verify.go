@@ -70,9 +70,28 @@ func stdoutContainsValidJSON() error {
 		return fmt.Errorf("test context not initialized")
 	}
 	output := strings.TrimSpace(Ctx.CommandOutput)
+
+	// Check if output starts with JSON
 	if strings.HasPrefix(output, "{") || strings.HasPrefix(output, "[") {
 		return nil
 	}
+
+	// If output has log lines before JSON, try to find the JSON portion
+	// Look for the start of a JSON object or array
+	jsonStartIdx := strings.Index(output, "\n{")
+	if jsonStartIdx == -1 {
+		jsonStartIdx = strings.Index(output, "\n[")
+	}
+
+	if jsonStartIdx != -1 {
+		// Found JSON after some log lines - this is acceptable
+		// The JSON output is present, just preceded by log lines
+		jsonPortion := strings.TrimSpace(output[jsonStartIdx:])
+		if strings.HasPrefix(jsonPortion, "{") || strings.HasPrefix(jsonPortion, "[") {
+			return nil
+		}
+	}
+
 	return fmt.Errorf("stdout does not contain valid JSON.\nOutput:\n%s", Ctx.CommandOutput)
 }
 

@@ -10,11 +10,13 @@ import (
 )
 
 func main() {
-	// Source: ../../../contracts/environments/0.1.0/*.yml
-	// Destination: contracts/environments/0.1.0/
+	// This generator copies environment contracts from the repo config directory
+	// to be embedded in the binary. The path is relative because this runs as
+	// a standalone script via go:generate from this file's location.
+	// See contracts.EACConfigRelPath for the canonical path constant.
 
-	src := filepath.Join("..", "..", "..", "contracts", "environments", "0.1.0")
-	dst := filepath.Join("contracts", "environments", "0.1.0")
+	src := filepath.Join("..", "..", "..", ".r2r", "eac", "repository", "environments")
+	dst := filepath.Join("repository", "environments")
 
 	// Create destination directory
 	if err := os.MkdirAll(dst, 0755); err != nil {

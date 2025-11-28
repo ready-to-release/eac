@@ -1,0 +1,27 @@
+# Version: 0.2.0
+
+moniker: contracts
+name: EAC Tool Contracts
+type: contracts
+description: AI prompts, CLI schema, and other tool definitions
+
+parent: "."
+depends_on: []
+
+files:
+  root: contracts
+  source: []
+  config:
+    - "**/*"
+  assets: []
+  tests: []
+  exclude: []
+  changelog: CHANGELOG.md
+  repo:
+    specs: []
+    other: []
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

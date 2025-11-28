@@ -1,0 +1,30 @@
+# Version: 0.2.0
+
+moniker: templates
+name: Project Templates
+type: templates
+description: Template files for documentation, specifications, and design records
+
+parent: "."
+depends_on: []
+
+files:
+  root: templates
+  source: []
+  config:
+    - "**/*.yml"
+    - "**/*.yaml"
+  assets:
+    - "**/*.md"
+    - "**/*.feature"
+  tests: []
+  exclude: []
+  changelog: ""
+  repo:
+    specs: []
+    other: []
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

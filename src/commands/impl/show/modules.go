@@ -32,7 +32,7 @@ func ShowModules() int {
 	}
 
 	// Generate module contracts report
-	report, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
+	report, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
@@ -43,7 +43,7 @@ func ShowModules() int {
 		WithHeaders("Moniker", "Type", "Root Path")
 
 	for _, mod := range report.Modules {
-		tb.AddRow(mod.Moniker, mod.Type, mod.Source.Root)
+		tb.AddRow(mod.Moniker, mod.Type, mod.Files.Root)
 	}
 
 	fmt.Println(tb.Build())

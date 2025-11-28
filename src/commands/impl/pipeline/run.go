@@ -62,7 +62,7 @@ func PipelineRun() int {
 		return 1
 	}
 
-	runner := pipelinerunner.New(workspaceRoot, "0.1.0")
+	runner := pipelinerunner.New(workspaceRoot)
 
 	var pipelineErr error
 	if changedOnly {

@@ -1,0 +1,30 @@
+# Version: 0.2.0
+
+moniker: src-cli-installers-tests
+name: CLI Installers BDD Tests
+type: go-tests
+description: BDD acceptance tests for CLI installer scripts using Godog
+
+parent: src-cli-installers
+depends_on:
+  - src-core
+
+files:
+  root: src/cli-installers/tests
+  source:
+    - "**.go"
+  config:
+    - go.mod
+    - go.sum
+  assets: []
+  tests: []
+  exclude: []
+  changelog: ""
+  repo:
+    specs: []
+    other: []
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

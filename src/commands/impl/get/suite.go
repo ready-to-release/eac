@@ -85,7 +85,7 @@ func GetSuite() int {
 	// Use the shared get command helper
 	return get.ExecuteGetCommand(func() (interface{}, error) {
 		// Load module registry
-		moduleReport, err := contractsreports.GetModuleContracts(repoRoot, "0.1.0")
+		moduleReport, err := contractsreports.GetModuleContracts(repoRoot)
 		if err != nil {
 			// Non-fatal: continue without module registry
 			moduleReport = nil
@@ -122,7 +122,7 @@ func buildFileModuleMap(repoRoot string) (map[string]string, error) {
 		return nil, err
 	}
 
-	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
+	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false)
 	if err != nil {
 		return nil, err
 	}

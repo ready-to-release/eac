@@ -43,7 +43,7 @@ func ValidateGoTidy() int {
 	}
 
 	// Load module contracts
-	moduleReport, err := reports.GetModuleContracts(repoRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
 		return 1
@@ -53,7 +53,7 @@ func ValidateGoTidy() int {
 	var goModules []string
 	for _, module := range moduleReport.Registry.All() {
 		if isGoModuleType(module.Type) {
-			modulePath := filepath.Join(repoRoot, module.Source.Root)
+			modulePath := filepath.Join(repoRoot, module.Files.Root)
 			goModules = append(goModules, modulePath)
 		}
 	}

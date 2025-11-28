@@ -27,14 +27,14 @@ type ModuleContractReport struct {
 //
 // Example:
 //
-//	report, err := reports.GetModuleContracts("", "0.1.0")
+//	report, err := reports.GetModuleContracts("")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	fmt.Printf("Total modules: %d\n", report.TotalModules)
-func GetModuleContracts(workspaceRoot string, version string) (*ModuleContractReport, error) {
+func GetModuleContracts(workspaceRoot string) (*ModuleContractReport, error) {
 	// Load all module contracts
-	registry, err := modules.LoadFromWorkspace(workspaceRoot, version)
+	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -67,13 +67,13 @@ func (r *ModuleContractReport) FormatReport() string {
 		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, module.Moniker))
 		sb.WriteString(fmt.Sprintf("   Name: %s\n", module.Name))
 		sb.WriteString(fmt.Sprintf("   Type: %s\n", module.Type))
-		sb.WriteString(fmt.Sprintf("   Root: %s\n", module.Source.Root))
+		sb.WriteString(fmt.Sprintf("   Root: %s\n", module.Files.Root))
 		sb.WriteString(fmt.Sprintf("   Description: %s\n", module.Description))
 
 		// Source patterns
-		if len(module.Source.Includes) > 0 {
-			sb.WriteString("   Source includes:\n")
-			for _, pattern := range module.Source.Includes {
+		if len(module.Files.Source) > 0 {
+			sb.WriteString("   Source patterns:\n")
+			for _, pattern := range module.Files.Source {
 				sb.WriteString(fmt.Sprintf("     - %s\n", pattern))
 			}
 		}
@@ -83,14 +83,10 @@ func (r *ModuleContractReport) FormatReport() string {
 			sb.WriteString(fmt.Sprintf("   Depends on: %v\n", module.DependsOn))
 		}
 
-		// Used by
-		if len(module.UsedBy) > 0 {
-			sb.WriteString(fmt.Sprintf("   Used by: %v\n", module.UsedBy))
-		}
-
-		// Versioning
-		if module.Versioning.VersionScheme != "" {
-			sb.WriteString(fmt.Sprintf("   Version scheme: %s\n", module.Versioning.VersionScheme))
+		// Used by (computed from registry)
+		usedBy := r.Registry.GetUsedBy(module.Moniker)
+		if len(usedBy) > 0 {
+			sb.WriteString(fmt.Sprintf("   Used by: %v\n", usedBy))
 		}
 
 		sb.WriteString("\n")
@@ -106,7 +102,7 @@ func (r *ModuleContractReport) FormatCompact() string {
 	sb.WriteString(fmt.Sprintf("=== Module Contracts (%d modules) ===\n\n", r.TotalModules))
 
 	for _, module := range r.Modules {
-		sb.WriteString(fmt.Sprintf("%-30s %-20s %s\n", module.Moniker, module.Type, module.Source.Root))
+		sb.WriteString(fmt.Sprintf("%-30s %-20s %s\n", module.Moniker, module.Type, module.Files.Root))
 	}
 
 	return sb.String()
@@ -126,7 +122,7 @@ func (r *ModuleContractReport) GetModulesByType(moduleType string) []*modules.Mo
 func (r *ModuleContractReport) GetModulesByRoot(root string) []*modules.ModuleContract {
 	var result []*modules.ModuleContract
 	for _, module := range r.Modules {
-		if module.Source.Root == root {
+		if module.Files.Root == root {
 			result = append(result, module)
 		}
 	}
@@ -147,8 +143,12 @@ func (r *ModuleContractReport) GetReverseDependencyGraph() map[string][]string {
 func (r *ModuleContractReport) GetModulesWithPattern(pattern string) []*modules.ModuleContract {
 	var result []*modules.ModuleContract
 	for _, module := range r.Modules {
-		for _, include := range module.Source.Includes {
-			if include == pattern {
+		// Check all pattern categories
+		allPatterns := append(module.Files.Source, module.Files.Config...)
+		allPatterns = append(allPatterns, module.Files.Assets...)
+		allPatterns = append(allPatterns, module.Files.Tests...)
+		for _, p := range allPatterns {
+			if p == pattern {
 				result = append(result, module)
 				break
 			}

@@ -27,7 +27,7 @@ func ShowFilesStaged() int {
 	}
 
 	// Generate report for staged files only
-	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot, "0.1.0")
+	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1

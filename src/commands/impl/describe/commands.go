@@ -106,7 +106,7 @@ func loadModuleMonikers() []string {
 		return []string{}
 	}
 
-	moduleReport, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		return []string{}
 	}

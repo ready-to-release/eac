@@ -74,7 +74,7 @@ func ShowSuite() int {
 	}
 
 	// Load module registry
-	moduleReport, err := contractsreports.GetModuleContracts(repoRoot, "0.1.0")
+	moduleReport, err := contractsreports.GetModuleContracts(repoRoot)
 	var moduleRegistry *modules.Registry
 	if err == nil {
 		moduleRegistry = moduleReport.Registry
@@ -237,7 +237,7 @@ func buildFileModuleMap(repoRoot string) (map[string]string, error) {
 	}
 
 	// Get all files with module ownership
-	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
+	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false)
 	if err != nil {
 		return nil, err
 	}

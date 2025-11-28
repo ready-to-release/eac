@@ -36,7 +36,7 @@ func ShowDependencies() int {
 	}
 
 	// Get dependency graph
-	graph, err := repository.GetModuleDependencyGraph(workspaceRoot, "0.1.0")
+	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
@@ -90,7 +90,7 @@ func ShowDependencies() int {
 	fmt.Println()
 
 	// Calculate and show execution order
-	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot, "0.1.0")
+	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not calculate execution order: %v\n", err)
 	} else {

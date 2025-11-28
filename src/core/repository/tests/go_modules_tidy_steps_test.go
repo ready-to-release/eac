@@ -71,7 +71,7 @@ func discoverAllGoModulesUsingContracts() error {
 	}
 
 	// Load module contracts
-	moduleReport, err := reports.GetModuleContracts(goModTidyCtx.repoRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(goModTidyCtx.repoRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -79,7 +79,7 @@ func discoverAllGoModulesUsingContracts() error {
 	// Filter for Go modules (go-cli, go-commands, go-library, go-mcp, etc.)
 	for _, module := range moduleReport.Registry.All() {
 		if isGoModule(module.Type) {
-			modulePath := filepath.Join(goModTidyCtx.repoRoot, module.Source.Root)
+			modulePath := filepath.Join(goModTidyCtx.repoRoot, module.Files.Root)
 			goModTidyCtx.discoveredModules = append(goModTidyCtx.discoveredModules, modulePath)
 		}
 	}

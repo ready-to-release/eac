@@ -1,0 +1,27 @@
+# Version: 0.2.0
+
+moniker: docs-reference
+name: Reference documentation
+type: mkdocs-subsite
+description: mkdocs base files for reference documentation
+
+parent: docs
+depends_on: []
+
+files:
+  root: docs/reference
+  source: []
+  config: []
+  assets:
+    - "**/*"
+  tests: []
+  exclude: []
+  changelog: CHANGELOG.md
+  repo:
+    specs: []
+    other: []
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

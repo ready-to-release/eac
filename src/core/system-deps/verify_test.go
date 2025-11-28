@@ -4,7 +4,6 @@
 package systemdeps
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,35 +35,6 @@ func TestVerify_Go(t *testing.T) {
 	// Go must be available (we're running tests with it!)
 	assert.True(t, result.Available)
 	assert.NotEmpty(t, result.Version)
-}
-
-func TestVerify_AI(t *testing.T) {
-	result := Verify("@deps:ai")
-
-	assert.Equal(t, "@deps:ai", result.Dependency)
-	// AI provider may or may not be configured (Claude CLI or API keys)
-	// Just check it doesn't panic
-}
-
-func TestVerify_AI_MockEnabled(t *testing.T) {
-	// Save original value and restore after test
-	originalValue := os.Getenv("TEST_AI_MOCK")
-	defer func() {
-		if originalValue != "" {
-			os.Setenv("TEST_AI_MOCK", originalValue)
-		} else {
-			os.Unsetenv("TEST_AI_MOCK")
-		}
-	}()
-
-	// Set the mock environment variable
-	os.Setenv("TEST_AI_MOCK", "true")
-
-	result := Verify("@deps:ai")
-
-	assert.Equal(t, "@deps:ai", result.Dependency)
-	assert.True(t, result.Available, "AI should be available when TEST_AI_MOCK is set")
-	assert.Contains(t, result.Version, "test-ai-mock")
 }
 
 func TestVerify_AzureCLI(t *testing.T) {

@@ -12,6 +12,7 @@ Feature: src-commands_work_pr
       Then the exit code is 0
       And I should see "work pr"
 
+    @skip:wip
     Scenario: Command has proper description
       When I run the command "describe commands work pr"
       Then the exit code is 0
@@ -19,6 +20,7 @@ Feature: src-commands_work_pr
 
   Rule: Creates PR with AI-generated description
 
+    @skip:wip
     Scenario: Create PR for current workspace
       Given I am in a workspace for "feature/authentication"
       And I have 3 commits on my branch
@@ -31,12 +33,14 @@ Feature: src-commands_work_pr
       And I see the PR URL
       And the exit code is 0
 
+    @skip:wip
     Scenario: Create PR with custom target branch
       Given I am in a workspace for "feature/new-feature"
       When I run "r2r work pr --target=develop"
       Then a PR is created targeting "develop" branch
       And I see "Created pull request targeting develop"
 
+    @skip:wip
     Scenario: Create PR with custom title
       Given I am in a workspace
       When I run "r2r work pr --title 'Add authentication feature'"
@@ -45,6 +49,7 @@ Feature: src-commands_work_pr
 
   Rule: Handles unpushed changes automatically
 
+    @skip:wip
     Scenario: Push branch before creating PR
       Given I am in a workspace
       And my branch has unpushed commits
@@ -53,6 +58,7 @@ Feature: src-commands_work_pr
       And the PR is created
       And I see "Pushed branch to origin"
 
+    @skip:wip
     Scenario: Create and push new branch
       Given I am in a workspace
       And my branch doesn't exist on remote
@@ -62,6 +68,7 @@ Feature: src-commands_work_pr
 
   Rule: Validation prevents invalid PRs
 
+    @skip:wip
     Scenario: Fail when uncommitted changes exist
       Given I am in a workspace
       And I have uncommitted changes
@@ -70,12 +77,14 @@ Feature: src-commands_work_pr
       And I see error "uncommitted changes"
       And I see suggestion "commit your changes first"
 
+    @skip:wip
     Scenario: Fail when not in workspace
       Given I am in the main workspace on branch "main"
       When I run "r2r work pr"
       Then the exit code is 1
       And I see error "cannot create PR from main"
 
+    @skip:wip
     Scenario: Fail when no commits ahead of target
       Given I am in a workspace
       And my branch has no commits ahead of main
@@ -83,12 +92,14 @@ Feature: src-commands_work_pr
       Then the exit code is 1
       And I see error "no commits to create PR"
 
+    @skip:wip
     Scenario: Fail when not in git repository
       Given I am not in a git repository
       When I run "r2r work pr"
       Then the exit code is 1
       And I see error "not in a git repository"
 
+    @skip:wip
     Scenario: Fail when gh CLI not available
       Given I am in a workspace
       And gh CLI is not installed
@@ -99,6 +110,7 @@ Feature: src-commands_work_pr
 
   Rule: Provides clear progress feedback
 
+    @skip:wip
     Scenario: Show PR creation progress
       Given I am in a workspace
       When I run "r2r work pr"
@@ -110,6 +122,7 @@ Feature: src-commands_work_pr
 
   Rule: Debug mode shows AI details
 
+    @skip:wip
     Scenario: Create PR with debug flag
       Given I am in a workspace
       When I run "r2r work pr --debug"

@@ -95,56 +95,14 @@ func validateModuleHierarchy(reg *modules.Registry) *moduleHierarchyReport {
 
 func validateBidirectionalRelationships(reg *modules.Registry, report *moduleHierarchyReport) {
 	for _, module := range reg.All() {
-		// Check depends_on -> used_by consistency
+		// Check that all dependencies exist
 		for _, depMoniker := range module.DependsOn {
-			dep, found := reg.Get(depMoniker)
-			if !found {
+			if !reg.Has(depMoniker) {
 				report.nonExistentModules = append(report.nonExistentModules,
 					fmt.Sprintf("Module '%s' depends on '%s', but '%s' does not exist",
 						module.Moniker, depMoniker, depMoniker))
-				continue
 			}
-
-			// Check if dep has module in its used_by list
-			hasUsedBy := false
-			for _, user := range dep.UsedBy {
-				if user == module.Moniker {
-					hasUsedBy = true
-					break
-				}
-			}
-
-			if !hasUsedBy {
-				report.inconsistencies = append(report.inconsistencies,
-					fmt.Sprintf("Module '%s' depends_on '%s', but '%s' does not have '%s' in used_by",
-						module.Moniker, depMoniker, depMoniker, module.Moniker))
-			}
-		}
-
-		// Check used_by -> depends_on consistency
-		for _, userMoniker := range module.UsedBy {
-			user, found := reg.Get(userMoniker)
-			if !found {
-				report.nonExistentModules = append(report.nonExistentModules,
-					fmt.Sprintf("Module '%s' has used_by '%s', but '%s' does not exist",
-						module.Moniker, userMoniker, userMoniker))
-				continue
-			}
-
-			// Check if user has module in its depends_on list
-			hasDependsOn := false
-			for _, dep := range user.DependsOn {
-				if dep == module.Moniker {
-					hasDependsOn = true
-					break
-				}
-			}
-
-			if !hasDependsOn {
-				report.inconsistencies = append(report.inconsistencies,
-					fmt.Sprintf("Module '%s' has used_by '%s', but '%s' does not have '%s' in depends_on",
-						module.Moniker, userMoniker, userMoniker, module.Moniker))
-			}
+			// Note: used_by is now computed from depends_on, so no need to check consistency
 		}
 	}
 }
@@ -226,8 +184,7 @@ func validateAllModulesReachable(reg *modules.Registry, report *moduleHierarchyR
 		current := queue[0]
 		queue = queue[1:]
 
-		module, found := reg.Get(current)
-		if !found {
+		if !reg.Has(current) {
 			continue
 		}
 
@@ -241,8 +198,9 @@ func validateAllModulesReachable(reg *modules.Registry, report *moduleHierarchyR
 			}
 		}
 
-		// Also follow used_by relationships
-		for _, user := range module.UsedBy {
+		// Also follow used_by relationships (computed from depends_on)
+		usedBy := reg.GetUsedBy(current)
+		for _, user := range usedBy {
 			if !reachable[user] {
 				reachable[user] = true
 				queue = append(queue, user)
@@ -263,7 +221,7 @@ func validateAllModulesReachable(reg *modules.Registry, report *moduleHierarchyR
 	for _, module := range reg.All() {
 		if !reachable[module.Moniker] {
 			// Skip catch-all modules
-			if module.Source.IsCatchAllSingleton != nil && *module.Source.IsCatchAllSingleton {
+			if module.Flags.CatchAll {
 				continue
 			}
 

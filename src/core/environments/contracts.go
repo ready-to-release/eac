@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed contracts/environments/0.1.0/*.yml
+//go:embed repository/environments/*.yml
 var contractFS embed.FS
 
 // Metadata holds contract version and scope information
@@ -44,7 +44,7 @@ type EnvironmentContract struct {
 
 // LoadEnvironmentContract reads and parses the environment contract from embedded filesystem
 func LoadEnvironmentContract() (*EnvironmentContract, error) {
-	data, err := contractFS.ReadFile("contracts/environments/0.1.0/environments.yml")
+	data, err := contractFS.ReadFile("repository/environments/environments.yml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read environment contract: %w", err)
 	}

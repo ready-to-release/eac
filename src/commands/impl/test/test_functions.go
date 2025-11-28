@@ -95,7 +95,7 @@ func testGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputD
 // testGoTests tests a Godog test module (Pattern D variant)
 // Runs: go test with Godog formatters for reports
 func testGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Source.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	writeln(logWriter, "\n=== Testing go-tests: %s ===", module.Moniker)
 	writeln(logWriter, "Suite: %s", suiteName)
@@ -357,14 +357,15 @@ func testScripts(module *modules.ModuleContract, workspaceRoot string, outputDir
 	writeln(logWriter, "\n=== Testing scripts: %s ===", module.Moniker)
 	writeln(logWriter, "Suite: %s", suiteName)
 
-	// Check if module has a tests section
-	if module.Tests == nil || module.Tests.Root == "" {
+	// Check if module has test patterns
+	if len(module.Files.Tests) == 0 {
 		writeln(logWriter, "No tests defined for this module")
 		writeln(logWriter, "✅ Scripts module - no tests to run")
 		return 0
 	}
 
-	testDir := filepath.Join(workspaceRoot, module.Tests.Root)
+	// Use the module root for tests (tests are patterns relative to root)
+	testDir := filepath.Join(workspaceRoot, module.Files.Root)
 
 	// Check if test directory exists
 	if _, err := os.Stat(testDir); os.IsNotExist(err) {

@@ -28,7 +28,7 @@ func ShowFiles() int {
 	}
 
 	// Generate report for all tracked files (tracked only, no ignored, not staged only)
-	report, err := reports.GetFilesModulesReport(true, false, false, workspaceRoot, "0.1.0")
+	report, err := reports.GetFilesModulesReport(true, false, false, workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1

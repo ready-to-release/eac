@@ -1,0 +1,27 @@
+# Version: 0.2.0
+
+moniker: vscode-ext-commit
+name: VSCode Extension - Git Commit
+type: vscode-ext
+description: VSCode extension providing Git toolbar and Claude MCP integration UI
+
+parent: "."
+depends_on: []
+
+files:
+  root: .vscode/extensions/vscode-ext-commit
+  source: []
+  config:
+    - "**/*"
+  assets: []
+  tests: []
+  exclude: []
+  changelog: CHANGELOG.md
+  repo:
+    specs: []
+    other: []
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

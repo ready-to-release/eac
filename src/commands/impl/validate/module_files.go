@@ -47,7 +47,7 @@ func ValidateModuleFiles() int {
 	}
 
 	// Get all files with module ownership
-	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false, "0.1.0")
+	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to get repository files with modules: %v\n", err)
 		return 1

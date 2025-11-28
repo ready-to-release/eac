@@ -122,7 +122,7 @@ func ReleaseSrcCli() int {
 // validateModule checks if a module exists in the repository
 func validateModule(moduleName string) error {
 	// Try to load the module contracts
-	registry, err := modules.LoadFromWorkspace("", "0.1.0")
+	registry, err := modules.LoadFromWorkspace("")
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}

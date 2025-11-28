@@ -24,12 +24,12 @@ type FilesModulesReport struct {
 //   - includeIgnored: if true, include files ignored by .gitignore
 //   - stagedOnly: if true, only return files currently staged in Git index
 //   - rootPath: repository root (if empty, will be detected automatically)
-//   - version: module contract version (e.g., "0.1.0")
+//   (no version - repository config is unversioned)
 //
 // Returns:
 //   - FilesModulesReport containing all statistics and data
 //   - Error if repository operations or module loading fails
-func GetFilesModulesReport(trackedOnly bool, includeIgnored bool, stagedOnly bool, rootPath string, version string) (*FilesModulesReport, error) {
+func GetFilesModulesReport(trackedOnly bool, includeIgnored bool, stagedOnly bool, rootPath string) (*FilesModulesReport, error) {
 	// Open git repository
 	repo, err := git.Open(rootPath)
 	if err != nil {
@@ -37,7 +37,7 @@ func GetFilesModulesReport(trackedOnly bool, includeIgnored bool, stagedOnly boo
 	}
 
 	// Get all files with module ownership
-	files, err := repository.GetRepositoryFilesWithModules(repo, trackedOnly, includeIgnored, stagedOnly, version)
+	files, err := repository.GetRepositoryFilesWithModules(repo, trackedOnly, includeIgnored, stagedOnly)
 	if err != nil {
 		return nil, err
 	}

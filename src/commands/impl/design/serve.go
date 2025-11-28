@@ -76,7 +76,7 @@ func DesignServe() int {
 	}
 
 	// Load module contracts and validate moniker exists (same as build command)
-	moduleReport, err := reports.GetModuleContracts(repoRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "❌ Failed to load module contracts: %v\n", err)
 		return 1
@@ -118,7 +118,7 @@ func DesignServe() int {
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Source.Root))
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
 	}
 	return sb.String()
 }

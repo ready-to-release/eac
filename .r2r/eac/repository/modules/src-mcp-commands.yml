@@ -1,0 +1,33 @@
+# Version: 0.2.0
+
+moniker: src-mcp-commands
+name: Go Commands MCP Server
+type: go-mcp
+description: Internal MCP server for Commands
+
+parent: "."
+depends_on:
+  - src-core
+
+files:
+  root: src/mcp/commands
+  source:
+    - "**.go"
+  config:
+    - go.mod
+    - go.sum
+  assets:
+    - README.md
+  tests: []
+  exclude: []
+  changelog: CHANGELOG.md
+  repo:
+    specs:
+      - specs/src-mcp-commands/**
+    other:
+      - .github/workflows/ci-src-mcp-commands.yaml
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

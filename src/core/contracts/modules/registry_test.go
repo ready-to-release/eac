@@ -14,7 +14,7 @@ func createTestModule(moniker, typ string) *ModuleContract {
 		Moniker: moniker,
 		Name:    "Test " + moniker,
 		Type:    typ,
-		Source: contracts.Source{
+		Files: contracts.Files{
 			Root: "test/" + moniker,
 		},
 	}
@@ -182,19 +182,19 @@ func TestRegistry_FindByRoot(t *testing.T) {
 
 	base1 := contracts.BaseContract{
 		Moniker: "module1",
-		Source: contracts.Source{
+		Files: contracts.Files{
 			Root: "src/test",
 		},
 	}
 	base2 := contracts.BaseContract{
 		Moniker: "module2",
-		Source: contracts.Source{
+		Files: contracts.Files{
 			Root: "src/test",
 		},
 	}
 	base3 := contracts.BaseContract{
 		Moniker: "module3",
-		Source: contracts.Source{
+		Files: contracts.Files{
 			Root: "src/other",
 		},
 	}

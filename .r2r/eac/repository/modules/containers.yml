@@ -1,0 +1,28 @@
+# Version: 0.2.0
+
+moniker: containers
+name: Container Definitions
+type: containers
+description: Docker container definitions and configurations for deployable services
+
+parent: "."
+depends_on: []
+
+files:
+  root: containers
+  source: []
+  config:
+    - "**/*"
+  assets: []
+  tests: []
+  exclude:
+    - ext-eac/**
+  changelog: ""
+  repo:
+    specs: []
+    other: []
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

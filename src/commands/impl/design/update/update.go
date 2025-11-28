@@ -150,7 +150,7 @@ func parseConfig() (*UpdateConfig, error) {
 	}
 
 	// Load module contracts and validate moniker exists (same as build command)
-	moduleReport, err := reports.GetModuleContracts(repoRoot, "0.1.0")
+	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -163,7 +163,7 @@ func parseConfig() (*UpdateConfig, error) {
 
 	// Store validated moniker and source path from contract
 	config.Module = module.Moniker
-	config.SourcePath = filepath.Join(repoRoot, module.Source.Root)
+	config.SourcePath = filepath.Join(repoRoot, module.Files.Root)
 
 	return config, nil
 }
@@ -232,7 +232,7 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Source.Root))
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
 	}
 	return sb.String()
 }

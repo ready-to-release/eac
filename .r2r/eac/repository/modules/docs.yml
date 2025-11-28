@@ -1,0 +1,34 @@
+# Version: 0.2.0
+
+moniker: docs
+name: Documentation
+type: mkdocs-site
+description: mkdocs base docs source files, used to target one singular docs rendered site
+
+parent: "."
+depends_on: []
+
+files:
+  root: docs
+  source: []
+  config:
+    - "**/*.nav.yml"
+    - "**/*.json"
+  assets:
+    - "**/*.md"
+    - assets/**
+    - LICENSE
+  tests: []
+  exclude: []
+  changelog: ""
+  repo:
+    specs: []
+    other:
+      - mkdocs.yml
+      - .github/workflows/ci-docs.yaml
+      - .github/workflows/release-docs.yml
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: false

@@ -26,7 +26,7 @@ func ShowModuleTypes() int {
 	}
 
 	// Generate module contracts report
-	report, err := reports.GetModuleContracts(workspaceRoot, "0.1.0")
+	report, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1

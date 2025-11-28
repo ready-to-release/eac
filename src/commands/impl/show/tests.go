@@ -43,7 +43,7 @@ func ShowTests() int {
 	}
 
 	// Load module registry for inference
-	moduleReport, err := contractsreports.GetModuleContracts(repoRoot, "0.1.0")
+	moduleReport, err := contractsreports.GetModuleContracts(repoRoot)
 	var moduleRegistry *modules.Registry
 	if err == nil && moduleReport != nil {
 		moduleRegistry = moduleReport.Registry

@@ -3,7 +3,6 @@ package systemdeps
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -69,8 +68,6 @@ func getChecker(dependency string) Checker {
 		return &GitChecker{}
 	case "@deps:go":
 		return &GoChecker{}
-	case "@deps:ai":
-		return &AIChecker{}
 	case "@deps:az-cli":
 		return &AzureChecker{}
 	default:
@@ -134,60 +131,6 @@ func (c *GoChecker) GetVersion() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(output)), nil
-}
-
-// AIChecker checks for ANY available AI provider
-type AIChecker struct{}
-
-func (c *AIChecker) GetName() string { return "AI Provider" }
-
-func (c *AIChecker) IsAvailable() bool {
-	// Check for test AI mock (for unit/integration tests)
-	if os.Getenv("TEST_AI_MOCK") != "" {
-		return true
-	}
-
-	// Check for Claude CLI
-	if exec.Command("claude", "--version").Run() == nil {
-		return true
-	}
-
-	// Check for API keys (any provider)
-	if os.Getenv("ANTHROPIC_API_KEY") != "" {
-		return true
-	}
-	if os.Getenv("OPENAI_API_KEY") != "" {
-		return true
-	}
-	if os.Getenv("GOOGLE_API_KEY") != "" {
-		return true
-	}
-
-	return false
-}
-
-func (c *AIChecker) GetVersion() (string, error) {
-	// Check for test AI mock first
-	if mockValue := os.Getenv("TEST_AI_MOCK"); mockValue != "" {
-		return fmt.Sprintf("test-ai-mock (%s)", mockValue), nil
-	}
-
-	// Return info about first available provider
-	if output, err := exec.Command("claude", "--version").Output(); err == nil {
-		return strings.TrimSpace(string(output)), nil
-	}
-
-	if os.Getenv("ANTHROPIC_API_KEY") != "" {
-		return "claude-api (ANTHROPIC_API_KEY)", nil
-	}
-	if os.Getenv("OPENAI_API_KEY") != "" {
-		return "openai (OPENAI_API_KEY)", nil
-	}
-	if os.Getenv("GOOGLE_API_KEY") != "" {
-		return "gemini (GOOGLE_API_KEY)", nil
-	}
-
-	return "", fmt.Errorf("no AI provider available")
 }
 
 // AzureChecker checks for Azure CLI

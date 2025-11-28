@@ -2,38 +2,43 @@ package contracts
 
 // BaseContract represents the base structure for module contracts
 type BaseContract struct {
-	Moniker     string     `yaml:"moniker"`
-	Name        string     `yaml:"name"`
-	Type        string     `yaml:"type"`
-	Description string     `yaml:"description"`
-	Parent      string     `yaml:"parent"`
-	Source      Source     `yaml:"source"`
-	Tests       *Tests     `yaml:"tests,omitempty"` // Optional: test directory and patterns
-	Versioning  Versioning `yaml:"versioning"`
-	DependsOn   []string   `yaml:"depends_on"`
-	UsedBy      []string   `yaml:"used_by"`
+	Moniker     string   `yaml:"moniker"`
+	Name        string   `yaml:"name"`
+	Type        string   `yaml:"type"`
+	Description string   `yaml:"description"`
+	Parent      string   `yaml:"parent"`
+	DependsOn   []string `yaml:"depends_on"`
+	Files       Files    `yaml:"files"`
+	Flags       Flags    `yaml:"flags"`
 }
 
-// Tests represents the test configuration for a module
-type Tests struct {
-	Root     string   `yaml:"root"`     // Test directory root
-	Includes []string `yaml:"includes"` // Test file patterns
+// Files represents all file ownership patterns for a module
+type Files struct {
+	Root string `yaml:"root"` // Base directory for this module
+
+	// Patterns relative to Root
+	Source    []string `yaml:"source"`    // Primary source code files
+	Config    []string `yaml:"config"`    // Configuration/build files
+	Assets    []string `yaml:"assets"`    // Static assets, templates, docs
+	Tests     []string `yaml:"tests"`     // Test files
+	Exclude   []string `yaml:"exclude"`   // Patterns to exclude
+	Changelog string   `yaml:"changelog"` // Changelog file path
+
+	// Patterns relative to repo root
+	Repo RepoPatterns `yaml:"repo"`
 }
 
-// Source represents the source configuration for a module
-type Source struct {
-	Root                      string   `yaml:"root"`
-	ChangelogPath             string   `yaml:"changelog_path"`
-	SpecsRoot                 string   `yaml:"specs_root"`                   // Optional: defaults to specs/<module-name>
-	Includes                  []string `yaml:"includes"`
-	Excludes                  []string `yaml:"excludes"`                     // Optional: patterns to exclude from includes
-	IsCatchAllSingleton       *bool    `yaml:"is_catch_all_singleton"`
-	ExcludeChildrenOwnedSource *bool   `yaml:"exclude_children_owned_source"`
+// RepoPatterns represents patterns relative to repository root
+type RepoPatterns struct {
+	Specs   []string `yaml:"specs"`   // Specification files
+	Other   []string `yaml:"other"`   // Other files outside module root
+	Exclude []string `yaml:"exclude"` // Exclusions relative to repo root
 }
 
-// Versioning represents the versioning configuration for a module
-type Versioning struct {
-	VersionScheme string `yaml:"version_scheme"`
+// Flags represents behavioral flags for a module
+type Flags struct {
+	CatchAll          bool `yaml:"catch_all"`           // Is this the catch-all for unowned files?
+	OwnChildrenFiles  bool `yaml:"own_children_files"`  // If true, also own files that children match
 }
 
 // Getter methods for BaseContract
@@ -59,9 +64,5 @@ func (b *BaseContract) GetParent() string {
 }
 
 func (b *BaseContract) GetRoot() string {
-	return b.Source.Root
-}
-
-func (b *BaseContract) GetVersion() string {
-	return b.Versioning.VersionScheme
+	return b.Files.Root
 }

@@ -18,6 +18,8 @@
 //	fmt.Println(ctx.CommandOutput) // sees the change
 package testing
 
+import "fmt"
+
 // SharedTestContext holds state shared between all test step definitions.
 // This is a pointer-based shared context - all packages that receive
 // a pointer to this context will see changes made by any other package.
@@ -49,6 +51,10 @@ type SharedTestContext struct {
 	// Test isolation
 	OriginalRepoRoot       string
 	IsolatedTestProjectDir string
+
+	// TestIsolation provides access to the isolation infrastructure
+	// for setting mock AI responses and other test configuration
+	Isolation *TestIsolation
 
 	// Command runner function (for child packages to execute commands)
 	RunCommand func(cmdLine string) error
@@ -93,6 +99,7 @@ func (c *SharedTestContext) SetIsolation(originalRepoRoot, isolatedDir string) {
 func (c *SharedTestContext) ClearIsolation() {
 	c.IsolatedTestProjectDir = ""
 	c.TestDir = ""
+	c.Isolation = nil
 }
 
 // HasOutput returns true if the context has command output or non-zero exit code.
@@ -113,4 +120,14 @@ func (c *SharedTestContext) AddCreatedFile(path string) {
 // AddAffectedModule adds a module to the affected modules list.
 func (c *SharedTestContext) AddAffectedModule(module string) {
 	c.AffectedModules = append(c.AffectedModules, module)
+}
+
+// SetMockAIResponse writes a mock AI response file for the test provider.
+// This is used by step definitions to configure AI responses for acceptance tests.
+// Returns error if isolation is not set up.
+func (c *SharedTestContext) SetMockAIResponse(response string) error {
+	if c.Isolation == nil {
+		return fmt.Errorf("cannot set mock AI response: isolation not configured")
+	}
+	return c.Isolation.SetMockAIResponse(response)
 }

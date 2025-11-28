@@ -1,0 +1,32 @@
+# Version: 0.2.0
+
+moniker: claude
+name: Claude Code configuration
+type: claude-config
+description: Claude Code configuration
+
+parent: "."
+depends_on: []
+
+files:
+  root: /
+  source: []
+  config:
+    - .mcp.json
+    - agent.md
+    - "**/agent.md"
+    - .claude/*.json
+    - .claude/*.md
+    - .claude/logs/README.md
+  assets: []
+  tests: []
+  exclude: []
+  changelog: ""
+  repo:
+    specs: []
+    other: []
+    exclude: []
+
+flags:
+  catch_all: false
+  own_children_files: true

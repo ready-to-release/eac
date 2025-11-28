@@ -536,7 +536,7 @@ func parseConfig() (*SpecsConfig, error) {
 
 	// Validate module if specified
 	if config.Module != "" {
-		moduleReport, err := reports.GetModuleContracts(templateRoot, "0.1.0")
+		moduleReport, err := reports.GetModuleContracts(templateRoot)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load module contracts: %w", err)
 		}
@@ -557,7 +557,7 @@ func parseConfig() (*SpecsConfig, error) {
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Source.Root))
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
 	}
 	return sb.String()
 }
@@ -729,13 +729,15 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
-	// Load referenced files (tags and taxonomy)
-	tagsContent, err := loader.LoadReferencedFile("contracts/testing/0.1.0/tags.yml")
+	// Load referenced files (tags and taxonomy) from repository config
+	tagsPath := filepath.Join(contracts.EACConfigRelPath, "testing", "tags.yml")
+	tagsContent, err := loader.LoadReferencedFile(tagsPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load tags: %w", err)
 	}
 
-	taxonomyContent, err := loader.LoadReferencedFile("contracts/testing/0.1.0/taxonomy.yml")
+	taxonomyPath := filepath.Join(contracts.EACConfigRelPath, "testing", "taxonomy.yml")
+	taxonomyContent, err := loader.LoadReferencedFile(taxonomyPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load taxonomy: %w", err)
 	}

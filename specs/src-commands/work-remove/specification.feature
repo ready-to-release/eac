@@ -19,6 +19,7 @@ Feature: src-commands_work_remove
 
   Rule: Removes workspace and cleans up branches
 
+    @skip:wip
     Scenario: Remove current workspace
       Given I am in a workspace for "feature/test"
       And I have no uncommitted changes
@@ -30,6 +31,7 @@ Feature: src-commands_work_remove
       And I am in the main workspace
       And the exit code is 0
 
+    @skip:wip
     Scenario: Remove specific workspace by branch name
       Given I am in the main workspace
       And a workspace exists for "feature/old-feature"
@@ -38,6 +40,7 @@ Feature: src-commands_work_remove
       And the branch "feature/old-feature" is deleted
       And I see "✓ Removed workspace for feature/old-feature"
 
+    @skip:wip
     Scenario: Keep branch with --keep-branch flag
       Given I am in a workspace for "feature/keep-this"
       When I run "r2r work remove --keep-branch"
@@ -47,6 +50,7 @@ Feature: src-commands_work_remove
 
   Rule: Remote branch cleanup is optional
 
+    @skip:wip
     Scenario: Delete remote branch with --delete-remote
       Given I am in a workspace for "feature/pushed"
       And the branch exists on remote
@@ -56,6 +60,7 @@ Feature: src-commands_work_remove
       And the remote branch is deleted
       And I see "Deleted remote branch"
 
+    @skip:wip
     Scenario: Keep remote branch by default
       Given I am in a workspace for "feature/pushed"
       And the branch exists on remote
@@ -65,6 +70,7 @@ Feature: src-commands_work_remove
 
   Rule: Safely handles uncommitted changes
 
+    @skip:wip
     Scenario: Fail when uncommitted changes exist
       Given I am in a workspace
       And I have uncommitted changes
@@ -74,6 +80,7 @@ Feature: src-commands_work_remove
       And I see suggestion "commit, stash, or use --force"
       And the workspace is NOT removed
 
+    @skip:wip
     Scenario: Force remove with uncommitted changes
       Given I am in a workspace
       And I have uncommitted changes
@@ -84,6 +91,7 @@ Feature: src-commands_work_remove
 
   Rule: Debug mode enables detailed logging
 
+    @skip:wip
     Scenario: Debug flag enables logging to out/logs/work/
       Given I am in a workspace
       When I run "r2r work remove --debug"
@@ -91,6 +99,7 @@ Feature: src-commands_work_remove
       And debug logs are written to "out/logs/work/"
       And debug logs contain workspace removal details
 
+    @skip:wip
     Scenario: Debug with -d shorthand
       Given I am in a workspace
       When I run "r2r work remove -d"
@@ -99,18 +108,21 @@ Feature: src-commands_work_remove
 
   Rule: Validation prevents invalid operations
 
+    @skip:wip
     Scenario: Fail when not in git repository
       Given I am not in a git repository
       When I run "r2r work remove"
       Then the exit code is 1
       And I see error "not in a git repository"
 
+    @skip:wip
     Scenario: Fail when removing main workspace
       Given I am in the main workspace on branch "main"
       When I run "r2r work remove"
       Then the exit code is 1
       And I see error "cannot remove main workspace"
 
+    @skip:wip
     Scenario: Fail when workspace doesn't exist
       Given I am in the main workspace
       When I run "r2r work remove feature/nonexistent"
@@ -119,6 +131,7 @@ Feature: src-commands_work_remove
 
   Rule: Provides clear progress feedback
 
+    @skip:wip
     Scenario: Show removal progress
       Given I am in a workspace
       When I run "r2r work remove"

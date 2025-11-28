@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
 // NOTE: ValidTags map has been removed - validation now uses tag contract
@@ -25,7 +27,7 @@ func ValidateTags(tags []string) []string {
 	// Check for invalid tags
 	for _, tag := range tags {
 		if !IsValidTag(tag) {
-			errors = append(errors, fmt.Sprintf("tag %s is not defined in contracts/testing/0.1.0/tags.yml", tag))
+			errors = append(errors, fmt.Sprintf("tag %s is not defined in %s/testing/tags.yml", tag, contracts.EACConfigRelPath))
 		}
 	}
 
@@ -63,7 +65,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipR
 	// CRITICAL: Check for undefined tags first
 	for _, tag := range test.Tags {
 		if !IsValidTag(tag) {
-			errors = append(errors, fmt.Sprintf("test '%s' has undefined tag '%s' (not in contracts/testing/0.1.0/tags.yml)", test.TestName, tag))
+			errors = append(errors, fmt.Sprintf("test '%s' has undefined tag '%s' (not in %s/testing/tags.yml)", test.TestName, tag, contracts.EACConfigRelPath))
 		}
 
 		// Validate skip reason codes if contract is loaded
