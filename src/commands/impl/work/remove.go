@@ -10,15 +10,19 @@
 // Long:   5. Preserves the remote branch
 // Long:   6. Informs you if the workspace folder still exists for manual deletion
 // Long:
+// Long: Use --debug to enable detailed logging to out/logs/work/.
+// Long:
 // Long: Example:
 // Long:   work remove                              # Remove current workspace
 // Long:   work remove feature/old-feature          # Remove specific workspace
 // Long:   work remove --keep-branch                # Keep local branch
 // Long:   work remove --delete-remote              # Delete remote branch too
 // Long:   work remove --force                      # Remove even with uncommitted changes
+// Long:   work remove --debug                      # Enable debug logging
 // Flag.keep-branch: type=bool, default=false, usage=Keep local branch after removing workspace
 // Flag.delete-remote: type=bool, default=false, usage=Delete remote branch as well
 // Flag.force: type=bool, shorthand=f, default=false, usage=Force remove even with uncommitted changes
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 // HasSideEffects: true
 package work
 
@@ -30,7 +34,6 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
@@ -67,94 +70,102 @@ func Remove() int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	defer config.base.Logger.Sync()
+
+	config.base.Logger.Debug("Starting work remove command")
+	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "remove-config.txt",
+		fmt.Sprintf("Branch: %s\nKeepBranch: %v\nDeleteRemote: %v\nForce: %v\nPath: %s\n",
+			config.branchName, config.keepBranch, config.deleteRemote, config.force, config.worktreePath))
 
 	// Phase 2: Validate environment
-	fmt.Println("Checking workspace status...")
+	config.base.Logger.Info("Checking workspace status...")
 	if err := validateRemoveEnvironment(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
 
 	// Phase 3: Check for uncommitted changes
 	if !config.force {
-		clean, err := internal.IsWorktreeClean(config.worktreePath)
+		clean, err := config.base.GitOps.IsWorktreeClean(config.worktreePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to check workspace status: %v\n", err)
+			config.base.Logger.Error(fmt.Sprintf("Failed to check workspace status: %v", err))
 			return 1
 		}
 		if !clean {
-			fmt.Fprintf(os.Stderr, "Error: Uncommitted changes detected\n")
-			fmt.Fprintf(os.Stderr, "Commit, stash, or use --force to discard changes\n")
+			config.base.Logger.Error("Uncommitted changes detected")
+			config.base.Logger.Error("Commit, stash, or use --force to discard changes")
 			return 1
 		}
 	} else {
 		// Warn about force flag
-		clean, _ := internal.IsWorktreeClean(config.worktreePath)
+		clean, _ := config.base.GitOps.IsWorktreeClean(config.worktreePath)
 		if !clean {
-			fmt.Fprintf(os.Stderr, "⚠️  Warning: Uncommitted changes will be lost\n")
+			config.base.Logger.Warn("⚠️  Warning: Uncommitted changes will be lost")
 		}
 	}
 
 	// Phase 4: Switch to main if we're in the workspace being removed
-	inWorkspace := isInWorkspace(config.worktreePath, config.repoRoot)
+	inWorkspace := isInWorkspace(config.worktreePath, config.base.RepoRoot)
 	if inWorkspace {
-		fmt.Println("Switching to main...")
-		if err := switchToMain(config.repoRoot); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Info("Switching to main...")
+		if err := switchToMain(config.base.RepoRoot); err != nil {
+			config.base.Logger.Error(fmt.Sprintf("Failed to switch to main: %v", err))
 			return 1
 		}
 	}
 
 	// Phase 5: Remove workspace
-	fmt.Println("Removing workspace...")
-	if err := removeWorktree(config.worktreePath, config.force); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	config.base.Logger.Info("Removing workspace...")
+	if err := config.base.GitOps.RemoveWorktree(config.worktreePath); err != nil {
+		config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v", err))
 		return 1
 	}
 
 	// Check if folder still exists and inform user
 	if _, err := os.Stat(config.worktreePath); err == nil {
-		fmt.Printf("ℹ️  Workspace folder still exists: %s\n", config.worktreePath)
-		fmt.Println("   You can manually delete this folder if needed")
+		config.base.Logger.Info(fmt.Sprintf("ℹ️  Workspace folder still exists: %s", config.worktreePath))
+		config.base.Logger.Info("   You can manually delete this folder if needed")
 	}
 
 	// Phase 6: Delete local branch (unless --keep-branch)
 	if !config.keepBranch {
-		fmt.Printf("Deleting local branch %s...\n", config.branchName)
-		if err := deleteBranch(config.branchName, config.force); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+		config.base.Logger.Info(fmt.Sprintf("Deleting local branch %s...", config.branchName))
+		if err := config.base.GitOps.DeleteBranch(config.branchName, config.force); err != nil {
+			config.base.Logger.Warn(fmt.Sprintf("Failed to delete branch: %v", err))
 		}
 	} else {
-		fmt.Printf("Branch %s preserved\n", config.branchName)
+		config.base.Logger.Info(fmt.Sprintf("Branch %s preserved", config.branchName))
 	}
 
 	// Phase 7: Delete remote branch (if --delete-remote)
 	if config.deleteRemote {
-		fmt.Printf("Deleting remote branch %s...\n", config.branchName)
-		if err := deleteRemoteBranch(config.branchName); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+		config.base.Logger.Info(fmt.Sprintf("Deleting remote branch %s...", config.branchName))
+		if err := deleteRemoteBranch(config.base.RepoRoot, config.branchName); err != nil {
+			config.base.Logger.Warn(fmt.Sprintf("Failed to delete remote branch: %v", err))
 		} else {
-			fmt.Println("Deleted remote branch")
+			config.base.Logger.Info("Deleted remote branch")
 		}
 	} else {
 		// Check if remote branch exists
-		if remoteExists(config.branchName) {
-			fmt.Printf("Remote branch origin/%s preserved\n", config.branchName)
+		if remoteExists(config.base.RepoRoot, config.branchName) {
+			config.base.Logger.Info(fmt.Sprintf("Remote branch origin/%s preserved", config.branchName))
 		}
 	}
 
 	// Phase 8: Success
-	fmt.Printf("\n✓ Removed workspace for %s\n", config.branchName)
+	config.base.Logger.Info("")
+	config.base.Logger.Info(fmt.Sprintf("✓ Removed workspace for %s", config.branchName))
+	config.base.Logger.Debug("Work remove command completed successfully")
 	return 0
 }
 
 // removeConfig holds configuration for the remove command
 type removeConfig struct {
+	base         *internal.BaseConfig
 	branchName   string // Branch to remove (from args or current branch)
 	keepBranch   bool
 	deleteRemote bool
 	force        bool
-	repoRoot     string
 	worktreePath string
 }
 
@@ -162,47 +173,43 @@ type removeConfig struct {
 func parseRemoveConfig() (*removeConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "remove"
 
+	// Parse base config (debug flag, repo root, logger, git ops)
+	baseConfig, err := internal.ParseBaseConfig(args)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &removeConfig{
+		base:         baseConfig,
 		keepBranch:   false,
 		deleteRemote: false,
 		force:        false,
 	}
 
-	// Parse flags and branch name
-	var branchArg string
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if arg == "--keep-branch" {
-			config.keepBranch = true
-		} else if arg == "--delete-remote" {
-			config.deleteRemote = true
-		} else if arg == "--force" || arg == "-f" {
-			config.force = true
-		} else if !strings.HasPrefix(arg, "--") && !strings.HasPrefix(arg, "-") {
-			// This is the branch name argument
-			branchArg = arg
-		}
-	}
+	// Parse flags
+	config.keepBranch = internal.HasFlag(args, "--keep-branch", "")
+	config.deleteRemote = internal.HasFlag(args, "--delete-remote", "")
+	config.force = internal.HasFlag(args, "--force", "-f")
 
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find repository root: %w", err)
+	// Get positional arguments
+	positionalArgs := internal.GetPositionalArgs(args)
+	var branchArg string
+	if len(positionalArgs) > 0 {
+		branchArg = positionalArgs[0]
 	}
-	config.repoRoot = repoRoot
 
 	// Determine which branch to remove
 	if branchArg != "" {
 		// Remove specific workspace by branch name
 		config.branchName = branchArg
-		worktree, err := internal.FindWorktreeByBranch(branchArg, repoRoot)
+		worktree, err := internal.FindWorktreeByBranch(branchArg, config.base.RepoRoot)
 		if err != nil {
 			return nil, fmt.Errorf("workspace not found for branch %s: %w", branchArg, err)
 		}
 		config.worktreePath = worktree.Path
 	} else {
 		// Remove current workspace
-		currentBranch, err := internal.GetCurrentBranch(repoRoot)
+		currentBranch, err := config.base.GitOps.GetCurrentBranch(config.base.RepoRoot)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get current branch: %w", err)
 		}
@@ -256,39 +263,10 @@ func switchToMain(repoRoot string) error {
 	return nil
 }
 
-// removeWorktree removes the worktree from git tracking
-func removeWorktree(path string, force bool) error {
-	args := []string{"worktree", "remove", path}
-	if force {
-		args = append(args, "--force")
-	}
-	cmd := exec.Command("git", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to remove worktree: %w\nOutput: %s", err, string(output))
-	}
-	return nil
-}
-
-// deleteBranch deletes the local branch
-func deleteBranch(branch string, force bool) error {
-	var cmd *exec.Cmd
-	if force {
-		cmd = exec.Command("git", "branch", "-D", branch)
-	} else {
-		cmd = exec.Command("git", "branch", "-d", branch)
-	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to delete branch: %w\nOutput: %s", err, string(output))
-	}
-	return nil
-}
-
 // deleteRemoteBranch deletes the remote branch
-func deleteRemoteBranch(branch string) error {
+func deleteRemoteBranch(repoRoot, branch string) error {
 	cmd := exec.Command("git", "push", "origin", "--delete", branch)
+	cmd.Dir = repoRoot
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to delete remote branch: %w\nOutput: %s", err, string(output))
@@ -297,8 +275,9 @@ func deleteRemoteBranch(branch string) error {
 }
 
 // remoteExists checks if a branch exists on the remote
-func remoteExists(branch string) bool {
+func remoteExists(repoRoot, branch string) bool {
 	cmd := exec.Command("git", "ls-remote", "--heads", "origin", branch)
+	cmd.Dir = repoRoot
 	output, err := cmd.Output()
 	if err != nil {
 		return false

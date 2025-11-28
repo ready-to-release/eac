@@ -1,5 +1,4 @@
-@skip:wip
-@deps:go @deps:ai @L2 @ov
+@deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work_merge
 
   As a developer who has completed work in a workspace
@@ -96,6 +95,21 @@ Feature: src-commands_work_merge
       When I run "r2r work merge"
       Then the exit code is 1
       And I see error "not in a git repository"
+
+  Rule: Debug mode enables detailed logging
+
+    Scenario: Merge with debug flag
+      Given I am in a workspace
+      When I run "r2r work merge --debug"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
+      And debug logs contain merge details
+
+    Scenario: Merge with -d shorthand
+      Given I am in a workspace
+      When I run "r2r work merge -d"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
 
   Rule: Provides clear progress feedback
 

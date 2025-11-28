@@ -1,5 +1,4 @@
-@skip:wip
-@deps:go @L2 @ov
+@deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work_list
 
   As a developer managing multiple workspaces
@@ -60,6 +59,21 @@ Feature: src-commands_work_list
       When I run "r2r work list -v"
       Then the exit code is 0
       And I see commit SHA for each worktree
+
+  Rule: Debug mode enables detailed logging
+
+    Scenario: Debug flag enables logging to out/logs/work/
+      Given I am in a git repository
+      When I run "r2r work list --debug"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
+      And debug logs contain worktree information
+
+    Scenario: Debug with -d shorthand
+      Given I am in a git repository
+      When I run "r2r work list -d"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
 
   Rule: Handles edge cases gracefully
 

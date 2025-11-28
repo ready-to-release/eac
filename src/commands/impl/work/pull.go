@@ -9,26 +9,27 @@
 // Long:   3. Handles conflicts with clear instructions
 // Long:
 // Long: Use --autostash to automatically stash uncommitted changes before rebasing.
+// Long: Use --debug to enable detailed logging to out/logs/work/.
 // Long:
 // Long: Example:
 // Long:   work pull
 // Long:   work pull --target=develop
 // Long:   work pull --autostash
+// Long:   work pull --debug
 // Flag.target: type=string, default=main, usage=Target branch to rebase onto
 // Flag.autostash: type=bool, default=false, usage=Automatically stash and unstash uncommitted changes
 // Flag.no-fetch: type=bool, default=false, usage=Skip fetching from remote (use local target branch)
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 // HasSideEffects: true
 package work
 
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/repository"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
 
 func init() {
@@ -63,67 +64,83 @@ func Pull() int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	defer config.base.Logger.Sync()
+
+	config.base.Logger.Debug("Starting work pull command")
+	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "pull-config.txt",
+		fmt.Sprintf("CurrentBranch: %s\nTarget: %s\nAutostash: %v\nNoFetch: %v\n",
+			config.currentBranch, config.targetBranch, config.autostash, config.noFetch))
 
 	// Phase 2: Validate environment
 	if err := validatePullEnvironment(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
 
 	// Phase 3: Handle uncommitted changes
 	if config.autostash {
-		if err := stashChanges(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if err := config.base.GitOps.Stash("work-pull autostash"); err != nil {
+			config.base.Logger.Error(fmt.Sprintf("Failed to stash changes: %v", err))
 			return 1
 		}
-		defer unstashChanges() // Unstash after rebase
+		config.base.Logger.Info("Stashed uncommitted changes")
+		defer func() {
+			if err := config.base.GitOps.StashPop(); err != nil {
+				config.base.Logger.Warn(fmt.Sprintf("Failed to reapply stashed changes: %v", err))
+				config.base.Logger.Warn("You can manually apply with: git stash pop")
+			} else {
+				config.base.Logger.Info("Reapplied stashed changes")
+			}
+		}()
 	}
 
 	// Phase 4: Fetch target branch
 	if !config.noFetch {
-		fmt.Printf("Fetching origin/%s...\n", config.targetBranch)
-		if err := fetchTargetBranch(config.targetBranch); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Info(fmt.Sprintf("Fetching origin/%s...", config.targetBranch))
+		if err := config.base.GitOps.FetchBranch(config.targetBranch); err != nil {
+			config.base.Logger.Error(fmt.Sprintf("Failed to fetch: %v", err))
 			return 1
 		}
 	}
 
 	// Phase 5: Get rebase info
-	info, err := getRebaseInfo(config.currentBranch, config.targetBranch)
+	info, err := getRebaseInfo(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Failed to get rebase info: %v", err))
 		return 1
 	}
 
 	// Phase 6: Check if already up to date
 	if info.upToDate {
-		fmt.Println("Already up to date")
+		config.base.Logger.Info("Already up to date")
 		return 0
 	}
 
 	// Phase 7: Show rebase preview
-	showRebasePreview(config.currentBranch, config.targetBranch, info)
+	showRebasePreview(config.base.Logger, config.currentBranch, config.targetBranch, info)
 
 	// Phase 8: Perform rebase
-	fmt.Printf("\nRebasing %s onto origin/%s...\n", config.currentBranch, config.targetBranch)
-	if err := performRebase(config.targetBranch); err != nil {
-		handleRebaseError(err)
+	config.base.Logger.Info(fmt.Sprintf("\nRebasing %s onto origin/%s...", config.currentBranch, config.targetBranch))
+	if err := config.base.GitOps.Rebase(config.targetBranch); err != nil {
+		handleRebaseError(config, err)
 		return 1
 	}
 
 	// Phase 9: Success
-	fmt.Printf("\n✓ Rebased %s onto origin/%s\n", config.currentBranch, config.targetBranch)
-	fmt.Printf("  Your commits: %d\n", info.currentCommits)
-	fmt.Printf("  New commits from %s: %d\n", config.targetBranch, info.newCommits)
+	config.base.Logger.Info("")
+	config.base.Logger.Info(fmt.Sprintf("✓ Rebased %s onto origin/%s", config.currentBranch, config.targetBranch))
+	config.base.Logger.Info(fmt.Sprintf("  Your commits: %d", info.currentCommits))
+	config.base.Logger.Info(fmt.Sprintf("  New commits from %s: %d", config.targetBranch, info.newCommits))
+	config.base.Logger.Debug("Work pull command completed successfully")
 	return 0
 }
 
 // pullConfig holds configuration for the pull command
 type pullConfig struct {
+	base          *internal.BaseConfig
 	targetBranch  string
 	autostash     bool
 	noFetch       bool
-	repoRoot      string
 	currentBranch string
 }
 
@@ -138,30 +155,25 @@ type rebaseInfo struct {
 func parsePullConfig() (*pullConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "pull"
 
+	// Parse base config (debug flag, repo root, logger, git ops)
+	baseConfig, err := internal.ParseBaseConfig(args)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &pullConfig{
+		base:         baseConfig,
 		targetBranch: "main",
 		autostash:    false,
 		noFetch:      false,
 	}
 
 	// Parse flags
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if strings.HasPrefix(arg, "--target=") {
-			config.targetBranch = strings.TrimPrefix(arg, "--target=")
-		} else if arg == "--autostash" {
-			config.autostash = true
-		} else if arg == "--no-fetch" {
-			config.noFetch = true
-		}
+	if targetValue := internal.GetFlagValue(args, "--target"); targetValue != "" {
+		config.targetBranch = targetValue
 	}
-
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find repository root: %w", err)
-	}
-	config.repoRoot = repoRoot
+	config.autostash = internal.HasFlag(args, "--autostash", "")
+	config.noFetch = internal.HasFlag(args, "--no-fetch", "")
 
 	// Get current branch from current working directory (not repoRoot)
 	// This ensures we get the correct branch in worktree environments
@@ -169,7 +181,7 @@ func parsePullConfig() (*pullConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current directory: %w", err)
 	}
-	currentBranch, err := internal.GetCurrentBranch(cwd)
+	currentBranch, err := config.base.GitOps.GetCurrentBranch(cwd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current branch: %w", err)
 	}
@@ -192,7 +204,11 @@ func validatePullEnvironment(config *pullConfig) error {
 
 	// Check for uncommitted changes if not using autostash
 	if !config.autostash {
-		clean, err := internal.IsWorktreeClean(config.repoRoot)
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current directory: %w", err)
+		}
+		clean, err := config.base.GitOps.IsWorktreeClean(cwd)
 		if err != nil {
 			return fmt.Errorf("failed to check working tree status: %w", err)
 		}
@@ -204,58 +220,23 @@ func validatePullEnvironment(config *pullConfig) error {
 	return nil
 }
 
-// stashChanges stashes uncommitted changes
-func stashChanges() error {
-	cmd := exec.Command("git", "stash", "push", "-m", "work-pull autostash")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to stash changes: %w\nOutput: %s", err, string(output))
-	}
-	fmt.Println("Stashed uncommitted changes")
-	return nil
-}
-
-// unstashChanges unstashes previously stashed changes
-func unstashChanges() {
-	cmd := exec.Command("git", "stash", "pop")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to reapply stashed changes: %v\nOutput: %s\n", err, string(output))
-		fmt.Fprintf(os.Stderr, "You can manually apply with: git stash pop\n")
-		return
-	}
-	fmt.Println("Reapplied stashed changes")
-}
-
-// fetchTargetBranch fetches the target branch from origin
-func fetchTargetBranch(targetBranch string) error {
-	cmd := exec.Command("git", "fetch", "origin", targetBranch)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to fetch origin/%s: %w\nOutput: %s", targetBranch, err, string(output))
-	}
-	return nil
-}
-
 // getRebaseInfo gets information about the rebase operation
-func getRebaseInfo(currentBranch, targetBranch string) (*rebaseInfo, error) {
+func getRebaseInfo(config *pullConfig) (*rebaseInfo, error) {
 	info := &rebaseInfo{}
 
 	// Count commits on current branch ahead of target
-	cmd := exec.Command("git", "rev-list", "--count", fmt.Sprintf("origin/%s..HEAD", targetBranch))
-	output, err := cmd.Output()
+	currentCommits, err := config.base.GitOps.GetCommitCount(fmt.Sprintf("origin/%s", config.targetBranch), "HEAD")
 	if err != nil {
 		return nil, fmt.Errorf("failed to count current commits: %w", err)
 	}
-	fmt.Sscanf(strings.TrimSpace(string(output)), "%d", &info.currentCommits)
+	info.currentCommits = currentCommits
 
 	// Count new commits on target
-	cmd = exec.Command("git", "rev-list", "--count", fmt.Sprintf("HEAD..origin/%s", targetBranch))
-	output, err = cmd.Output()
+	newCommits, err := config.base.GitOps.GetCommitCount("HEAD", fmt.Sprintf("origin/%s", config.targetBranch))
 	if err != nil {
 		return nil, fmt.Errorf("failed to count new commits: %w", err)
 	}
-	fmt.Sscanf(strings.TrimSpace(string(output)), "%d", &info.newCommits)
+	info.newCommits = newCommits
 
 	// Check if already up to date
 	info.upToDate = info.newCommits == 0
@@ -264,44 +245,33 @@ func getRebaseInfo(currentBranch, targetBranch string) (*rebaseInfo, error) {
 }
 
 // showRebasePreview shows what will be rebased
-func showRebasePreview(currentBranch, targetBranch string, info *rebaseInfo) {
-	fmt.Printf("\nRebasing %s onto origin/%s\n", currentBranch, targetBranch)
-	fmt.Printf("  Current branch: %d commits ahead of %s\n", info.currentCommits, targetBranch)
-	fmt.Printf("  %s branch: %d new commits\n", targetBranch, info.newCommits)
+func showRebasePreview(logger *logging.Logger, currentBranch, targetBranch string, info *rebaseInfo) {
+	logger.Info(fmt.Sprintf("\nRebasing %s onto origin/%s", currentBranch, targetBranch))
+	logger.Info(fmt.Sprintf("  Current branch: %d commits ahead of %s", info.currentCommits, targetBranch))
+	logger.Info(fmt.Sprintf("  %s branch: %d new commits", targetBranch, info.newCommits))
 	if info.currentCommits > 0 && info.newCommits > 0 {
-		fmt.Printf("  Rebase will replay your %d commits on top of %d new commits\n", info.currentCommits, info.newCommits)
+		logger.Info(fmt.Sprintf("  Rebase will replay your %d commits on top of %d new commits", info.currentCommits, info.newCommits))
 	}
-}
-
-// performRebase performs the git rebase operation
-func performRebase(targetBranch string) error {
-	cmd := exec.Command("git", "rebase", fmt.Sprintf("origin/%s", targetBranch))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }
 
 // handleRebaseError handles rebase errors and provides guidance
-func handleRebaseError(err error) {
-	fmt.Fprintf(os.Stderr, "\n⚠️  Rebase conflict detected\n\n")
+func handleRebaseError(config *pullConfig, err error) {
+	config.base.Logger.Error("\n⚠️  Rebase conflict detected\n")
 
 	// Get conflicting files
-	cmd := exec.Command("git", "diff", "--name-only", "--diff-filter=U")
-	output, _ := cmd.Output()
-	conflicts := strings.Split(strings.TrimSpace(string(output)), "\n")
-
-	if len(conflicts) > 0 && conflicts[0] != "" {
-		fmt.Fprintf(os.Stderr, "Conflicting files:\n")
+	conflicts, _ := config.base.GitOps.GetConflictingFiles()
+	if len(conflicts) > 0 {
+		config.base.Logger.Error("Conflicting files:")
 		for _, file := range conflicts {
-			fmt.Fprintf(os.Stderr, "  - %s\n", file)
+			config.base.Logger.Error(fmt.Sprintf("  - %s", file))
 		}
-		fmt.Fprintln(os.Stderr)
+		config.base.Logger.Error("")
 	}
 
-	fmt.Fprintf(os.Stderr, "Resolve conflicts then:\n")
-	fmt.Fprintf(os.Stderr, "  git add <files>\n")
-	fmt.Fprintf(os.Stderr, "  git rebase --continue\n")
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintf(os.Stderr, "Or abort:\n")
-	fmt.Fprintf(os.Stderr, "  git rebase --abort\n")
+	config.base.Logger.Error("Resolve conflicts then:")
+	config.base.Logger.Error("  git add <files>")
+	config.base.Logger.Error("  git rebase --continue")
+	config.base.Logger.Error("")
+	config.base.Logger.Error("Or abort:")
+	config.base.Logger.Error("  git rebase --abort")
 }

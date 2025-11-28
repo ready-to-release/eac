@@ -6,6 +6,8 @@ package work
 import (
 	"os"
 	"testing"
+
+	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 )
 
 // TestParseMergeConfig tests the configuration parsing
@@ -28,7 +30,7 @@ func TestParseMergeConfig(t *testing.T) {
 				if config.keepWorktree {
 					t.Error("expected keepWorktree=false, got true")
 				}
-				if config.debug {
+				if config.base.Debug {
 					t.Error("expected debug=false, got true")
 				}
 			},
@@ -64,7 +66,7 @@ func TestParseMergeConfig(t *testing.T) {
 			name: "with --debug flag",
 			args: []string{"--debug"},
 			validate: func(t *testing.T, config *mergeConfig) {
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 			},
@@ -73,7 +75,7 @@ func TestParseMergeConfig(t *testing.T) {
 			name: "with -d shorthand",
 			args: []string{"-d"},
 			validate: func(t *testing.T, config *mergeConfig) {
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 			},
@@ -91,7 +93,7 @@ func TestParseMergeConfig(t *testing.T) {
 				if !config.keepWorktree {
 					t.Error("expected keepWorktree=true, got false")
 				}
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 			},
@@ -154,11 +156,11 @@ func TestMergeConfigDefaults(t *testing.T) {
 		t.Error("expected default keepWorktree=false, got true")
 	}
 
-	if config.debug {
+	if config.base.Debug {
 		t.Error("expected default debug=false, got true")
 	}
 
-	if config.repoRoot == "" {
+	if config.base.RepoRoot == "" {
 		t.Error("expected repoRoot to be set")
 	}
 
@@ -196,7 +198,14 @@ func TestValidateMergeEnvironment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create a base config with default git ops
+			baseConfig := &internal.BaseConfig{
+				GitOps:   internal.GetGitOps("."),
+				RepoRoot: ".",
+			}
+
 			config := &mergeConfig{
+				base:          baseConfig,
 				currentBranch: tt.currentBranch,
 				targetBranch:  "main",
 			}

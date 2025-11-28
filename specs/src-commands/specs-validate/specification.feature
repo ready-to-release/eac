@@ -1,4 +1,4 @@
-@skip:wip @deps:go
+@deps:go @env:isolated-test-project
 Feature: src-commands_specs-validate
 
   As a developer of the eac platform

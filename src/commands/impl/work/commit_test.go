@@ -22,7 +22,7 @@ func TestParseCommitConfig(t *testing.T) {
 				if config.stageAll {
 					t.Error("expected stageAll=false, got true")
 				}
-				if config.debug {
+				if config.base.Debug {
 					t.Error("expected debug=false, got true")
 				}
 				if config.customMessage != "" {
@@ -52,7 +52,7 @@ func TestParseCommitConfig(t *testing.T) {
 			name: "with --debug flag",
 			args: []string{"--debug"},
 			validate: func(t *testing.T, config *commitConfig) {
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 			},
@@ -61,7 +61,7 @@ func TestParseCommitConfig(t *testing.T) {
 			name: "with -d shorthand",
 			args: []string{"-d"},
 			validate: func(t *testing.T, config *commitConfig) {
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 			},
@@ -91,7 +91,7 @@ func TestParseCommitConfig(t *testing.T) {
 				if !config.stageAll {
 					t.Error("expected stageAll=true, got false")
 				}
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 				if config.customMessage != "test commit" {
@@ -193,7 +193,7 @@ func TestCommitConfigDefaults(t *testing.T) {
 		t.Error("expected default stageAll=false, got true")
 	}
 
-	if config.debug {
+	if config.base.Debug {
 		t.Error("expected default debug=false, got true")
 	}
 
@@ -201,7 +201,7 @@ func TestCommitConfigDefaults(t *testing.T) {
 		t.Errorf("expected default customMessage='', got '%s'", config.customMessage)
 	}
 
-	if config.repoRoot == "" {
+	if config.base.RepoRoot == "" {
 		t.Error("expected repoRoot to be set")
 	}
 }

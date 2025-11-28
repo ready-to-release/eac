@@ -35,6 +35,7 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/templates/apply/docs"
 	_ "github.com/ready-to-release/eac/src/commands/impl/templates/install/reports"
 	_ "github.com/ready-to-release/eac/src/commands/impl/test"
+	_ "github.com/ready-to-release/eac/src/commands/impl/work"
 
 	// Import templates test packages
 	listtests "github.com/ready-to-release/eac/src/commands/impl/templates/list/tests"
@@ -494,6 +495,9 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 
 	// Commit command steps
 	InitializeCommitScenario(sc)
+
+	// Work command steps
+	InitializeWorkScenario(sc)
 
 	sc.Before(func(ctx context.Context, scenario *godog.Scenario) (context.Context, error) {
 		initializeContext()
