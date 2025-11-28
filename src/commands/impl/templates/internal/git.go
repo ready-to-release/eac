@@ -1,10 +1,16 @@
-package templates
+package internal
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+)
+
+// Git mocking support for testing
+var (
+	mockGitEnabled   bool
+	mockTemplatesDir string
 )
 
 // GitCloner handles cloning Git repositories
@@ -25,6 +31,16 @@ func NewGitCloner(repoURL string) *GitCloner {
 // CloneToTemp clones the repository to a temporary directory
 // Returns the path to the cloned directory
 func (g *GitCloner) CloneToTemp() (string, error) {
+	// If mocking is enabled, return mock directory
+	if mockGitEnabled {
+		// Create mock templates directory if it doesn't exist
+		if err := os.MkdirAll(mockTemplatesDir, 0755); err != nil {
+			return "", fmt.Errorf("failed to create mock templates directory: %w", err)
+		}
+		g.targetDir = mockTemplatesDir
+		return mockTemplatesDir, nil
+	}
+
 	// Create temp directory
 	tmpDir, err := os.MkdirTemp("", "templates-clone-*")
 	if err != nil {
@@ -85,4 +101,17 @@ func IsGitRepository(path string) bool {
 	}
 
 	return false
+}
+
+// EnableMockGit enables git mocking for tests
+// When enabled, CloneToTemp will return the mock directory instead of cloning
+func EnableMockGit(mockDir string) {
+	mockGitEnabled = true
+	mockTemplatesDir = mockDir
+}
+
+// DisableMockGit disables git mocking and restores normal behavior
+func DisableMockGit() {
+	mockGitEnabled = false
+	mockTemplatesDir = ""
 }

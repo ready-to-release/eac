@@ -3,7 +3,7 @@
 
 // File: src/commands/impl/templates/internal/security_test.go
 // Tests for security validation functions
-package templates
+package internal
 
 import (
 	"os"

@@ -3,7 +3,7 @@
 
 // Feature: commands_templates
 // Unit tests for templates command
-package templates
+package internal
 
 import (
 	"os"

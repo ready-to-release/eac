@@ -20,7 +20,7 @@
 //   - Defense in depth (multiple checks)
 //   - Clear error messages for debugging
 //   - Table-driven tests cover all cases
-package templates
+package internal
 
 import (
 	"fmt"
