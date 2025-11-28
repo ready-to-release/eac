@@ -1,0 +1,22 @@
+[
+  {
+    "risk_id": "RISK-001",
+    "control_name": "SQL Injection Prevention",
+    "domain": "data-protection",
+    "severity": "HIGH",
+    "description": "Prevent SQL injection attacks through parameterized queries and input validation",
+    "affected_files": ["src/db/query.go", "src/db/repository.go"],
+    "related_specs": ["specs/database/queries.feature"],
+    "impact": "Database compromise, data theft, unauthorized access"
+  },
+  {
+    "risk_id": "RISK-002",
+    "control_name": "Authentication Security",
+    "domain": "authentication",
+    "severity": "CRITICAL",
+    "description": "Prevent authentication bypass through proper session management and credential validation",
+    "affected_files": ["src/auth/login.go", "src/auth/session.go"],
+    "related_specs": ["specs/auth/login.feature", "specs/auth/session.feature"],
+    "impact": "Unauthorized access, account takeover, privilege escalation"
+  }
+]

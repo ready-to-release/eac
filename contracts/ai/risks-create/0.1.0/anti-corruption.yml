@@ -1,0 +1,26 @@
+version: "0.1.0"
+name: "Risk Control Creation Anti-Corruption Rules"
+
+rules:
+  noise_patterns:
+    - pattern: "\\*\\*Initialized"
+      description: "Agent initialization messages"
+
+    - pattern: "I'll help|I'll create|I'll parse"
+      description: "Agent response preamble"
+
+    - pattern: "```json"
+      description: "JSON code fences"
+
+    - pattern: "```"
+      description: "Generic code fences"
+
+  content_start_marker: "["
+
+  preserve_structure:
+    - "{"
+    - "}"
+    - "["
+    - "]"
+    - ":"
+    - ","
