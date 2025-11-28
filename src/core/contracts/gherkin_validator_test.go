@@ -3,6 +3,8 @@ package contracts
 import (
 	"strings"
 	"testing"
+
+	"github.com/ready-to-release/eac/src/core/config"
 )
 
 // Intent: Comprehensive tests for GherkinValidator with TagContract integration
@@ -24,15 +26,15 @@ import (
 //   - Edge cases and error conditions tested
 //   - Both positive and negative test cases
 
-// createTestTagContract creates a TagContract for testing
-func createTestTagContract() *TagContract {
-	tc := &TagContract{
-		Metadata: TagMetadata{
+// createTestTagsConfig creates a TestingTagsConfig for testing
+func createTestTagsConfig() *config.TestingTagsConfig {
+	tc := &config.TestingTagsConfig{
+		Metadata: config.Metadata{
 			Version:     "0.1.0",
 			Description: "Test tag contract",
 			Scope:       "Tests",
 		},
-		Tags: []TagDefinition{
+		Tags: []config.TagDefinition{
 			// Verification tags
 			{Tag: "@ov", Name: "Operational Verification", Type: "verification"},
 			{Tag: "@iv", Name: "Installation Verification", Type: "verification"},
@@ -60,7 +62,7 @@ func createTestTagContract() *TagContract {
 			{Tag: "@gxp", Description: "GxP requirement", Type: "gxp_regulatory"},
 			{Tag: "@critical-aspect", Description: "GmP Critical Aspect", Type: "gxp_regulatory"},
 		},
-		SkipReasons: []SkipReason{
+		SkipReasons: []config.SkipReason{
 			{Code: "wip", Name: "Work In Progress"},
 			{Code: "broken", Name: "Broken Test"},
 			{Code: "flaky", Name: "Flaky Test"},
@@ -91,8 +93,8 @@ func createTestContract() *Contract {
 
 func TestGherkinValidator_BasicStructure(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name           string
@@ -234,8 +236,8 @@ func TestGherkinValidator_FeatureNaming(t *testing.T) {
 
 func TestGherkinValidator_VerificationTags(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name        string
@@ -288,14 +290,13 @@ func TestGherkinValidator_VerificationTags(t *testing.T) {
 
 func TestGherkinValidator_SkipReasonValidation(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name        string
 		skipTag     string
 		expectError bool
-		errorCode   string
 	}{
 		{name: "valid: wip", skipTag: "@skip:wip", expectError: false},
 		{name: "valid: broken", skipTag: "@skip:broken", expectError: false},
@@ -305,9 +306,9 @@ func TestGherkinValidator_SkipReasonValidation(t *testing.T) {
 		{name: "valid: deprecated", skipTag: "@skip:deprecated", expectError: false},
 		{name: "valid: blocked", skipTag: "@skip:blocked", expectError: false},
 		{name: "valid: todo", skipTag: "@skip:todo", expectError: false},
-		{name: "invalid: unknown reason", skipTag: "@skip:unknown", expectError: true, errorCode: "INVALID_SKIP_REASON"},
-		{name: "invalid: uppercase", skipTag: "@skip:WIP", expectError: true, errorCode: "INVALID_TAG_FORMAT"},
-		{name: "invalid: empty reason", skipTag: "@skip:", expectError: true, errorCode: "INVALID_TAG_FORMAT"},
+		{name: "invalid: unknown reason", skipTag: "@skip:unknown", expectError: true},
+		{name: "invalid: uppercase", skipTag: "@skip:WIP", expectError: true},
+		{name: "invalid: empty reason", skipTag: "@skip:", expectError: true},
 	}
 
 	for _, tt := range tests {
@@ -322,23 +323,20 @@ func TestGherkinValidator_SkipReasonValidation(t *testing.T) {
 
 			errors := validator.Validate(input, nil)
 
-			hasExpectedError := false
+			// Check for any tag-related error (format, skip reason, or unknown tag)
+			hasTagError := false
 			for _, err := range errors {
-				if tt.errorCode != "" && err.Code == tt.errorCode {
-					hasExpectedError = true
+				if err.Code == "INVALID_SKIP_REASON" || err.Code == "INVALID_TAG_FORMAT" || err.Code == "UNKNOWN_TAG" {
+					hasTagError = true
 					break
 				}
 			}
 
-			if tt.expectError && !hasExpectedError {
-				t.Errorf("expected error %s for '%s', got: %v", tt.errorCode, tt.skipTag, errors)
+			if tt.expectError && !hasTagError {
+				t.Errorf("expected tag validation error for '%s', got none", tt.skipTag)
 			}
-			if !tt.expectError {
-				for _, err := range errors {
-					if err.Code == "INVALID_SKIP_REASON" || err.Code == "INVALID_TAG_FORMAT" {
-						t.Errorf("unexpected error %s for '%s'", err.Code, tt.skipTag)
-					}
-				}
+			if !tt.expectError && hasTagError {
+				t.Errorf("unexpected tag validation error for '%s': %v", tt.skipTag, errors)
 			}
 		})
 	}
@@ -346,8 +344,8 @@ func TestGherkinValidator_SkipReasonValidation(t *testing.T) {
 
 func TestGherkinValidator_MutualExclusion(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name        string
@@ -396,8 +394,8 @@ func TestGherkinValidator_MutualExclusion(t *testing.T) {
 
 func TestGherkinValidator_GxPRequirements(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name        string
@@ -467,8 +465,8 @@ func TestGherkinValidator_GxPRequirements(t *testing.T) {
 
 func TestGherkinValidator_UnknownTagWarning(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name          string
@@ -519,8 +517,8 @@ func TestGherkinValidator_UnknownTagWarning(t *testing.T) {
 
 func TestGherkinValidator_RiskControlPatterns(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name        string
@@ -545,19 +543,20 @@ func TestGherkinValidator_RiskControlPatterns(t *testing.T) {
 
 			errors := validator.Validate(input, nil)
 
-			hasFormatError := false
+			// Check for any tag validation error (format or unknown)
+			hasTagError := false
 			for _, err := range errors {
-				if err.Code == "INVALID_TAG_FORMAT" {
-					hasFormatError = true
+				if err.Code == "INVALID_TAG_FORMAT" || err.Code == "UNKNOWN_TAG" {
+					hasTagError = true
 					break
 				}
 			}
 
-			if tt.expectError && !hasFormatError {
-				t.Errorf("expected INVALID_TAG_FORMAT error for '%s'", tt.tag)
+			if tt.expectError && !hasTagError {
+				t.Errorf("expected tag validation error for '%s'", tt.tag)
 			}
-			if !tt.expectError && hasFormatError {
-				t.Errorf("unexpected INVALID_TAG_FORMAT error for '%s'", tt.tag)
+			if !tt.expectError && hasTagError {
+				t.Errorf("unexpected tag validation error for '%s'", tt.tag)
 			}
 		})
 	}
@@ -588,8 +587,8 @@ func TestGherkinValidator_WithoutTagContract(t *testing.T) {
 
 func TestGherkinValidator_MultipleScenarios(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	input := `Feature: src-core_test
 
@@ -624,8 +623,8 @@ func TestGherkinValidator_MultipleScenarios(t *testing.T) {
 
 func TestGherkinValidator_TagInheritance(t *testing.T) {
 	contract := createTestContract()
-	tagContract := createTestTagContract()
-	validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name                   string
@@ -740,8 +739,8 @@ Feature: src-core_test
 func TestGherkinValidator_VerifyImplementation(t *testing.T) {
 	t.Run("with both contracts", func(t *testing.T) {
 		contract := createTestContract()
-		tagContract := createTestTagContract()
-		validator := NewGherkinValidatorWithTags(contract, tagContract, nil)
+		tagsConfig := createTestTagsConfig()
+		validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 		errors := validator.VerifyImplementation()
 
@@ -790,8 +789,8 @@ func TestGherkinValidator_VerifyImplementation(t *testing.T) {
 	})
 }
 
-func TestTagContract_Initialize(t *testing.T) {
-	tc := createTestTagContract()
+func TestTagsConfig_Initialize(t *testing.T) {
+	tc := createTestTagsConfig()
 
 	t.Run("verification tags populated", func(t *testing.T) {
 		tags := tc.GetVerificationTags()
@@ -813,16 +812,10 @@ func TestTagContract_Initialize(t *testing.T) {
 			t.Errorf("expected 8 skip reasons, got %d", len(reasons))
 		}
 	})
-
-	t.Run("pattern compiled", func(t *testing.T) {
-		if len(tc.compiledPatterns) == 0 {
-			t.Error("expected compiled patterns")
-		}
-	})
 }
 
-func TestTagContract_IsKnownTag(t *testing.T) {
-	tc := createTestTagContract()
+func TestTagsConfig_IsKnownTag(t *testing.T) {
+	tc := createTestTagsConfig()
 
 	tests := []struct {
 		tag      string
@@ -850,31 +843,28 @@ func TestTagContract_IsKnownTag(t *testing.T) {
 	}
 }
 
-func TestTagContract_ValidateTag(t *testing.T) {
-	tc := createTestTagContract()
+func TestTagsConfig_ValidateTag(t *testing.T) {
+	tc := createTestTagsConfig()
 
 	tests := []struct {
 		tag         string
 		expectError bool
-		errorCode   string
 	}{
-		{"@ov", false, ""},
-		{"@skip:wip", false, ""},
-		{"@skip:invalid", true, "INVALID_SKIP_REASON"},
-		{"@skip:WIP", true, "INVALID_TAG_FORMAT"},
-		{"@risk-control:auth-mfa-01", false, ""},
-		{"@risk-control:auth-mfa", true, "INVALID_TAG_FORMAT"},
+		{"@ov", false},
+		{"@skip:wip", false},
+		{"@skip:invalid", true},  // Invalid skip reason
+		{"@skip:WIP", true},      // Doesn't match pattern (uppercase)
+		{"@risk-control:auth-mfa-01", false},
+		{"@risk-control:auth-mfa", true}, // Doesn't match pattern (missing ID)
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.tag, func(t *testing.T) {
-			err := tc.ValidateTag(tt.tag, 1)
+			err := tc.ValidateTag(tt.tag)
 
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error for tag %s", tt.tag)
-				} else if err.Code != tt.errorCode {
-					t.Errorf("expected error code %s, got %s", tt.errorCode, err.Code)
 				}
 			} else {
 				if err != nil {

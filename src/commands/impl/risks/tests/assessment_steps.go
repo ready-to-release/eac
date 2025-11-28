@@ -28,7 +28,9 @@ func registerAssessmentSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^the report lists "([^"]*)"$`, reportLists)
 	sc.Step(`^specifications are loaded from "([^"]*)"$`, specificationsLoadedFrom)
 	sc.Step(`^no specs directory argument is required$`, noSpecsDirectoryArgumentRequired)
-	sc.Step(`^the custom prompt is used$`, customPromptUsed)
+	// NOTE: "the custom prompt is used" step is registered in specs module.
+	// Risks uses a different step pattern to avoid conflicts.
+	sc.Step(`^the risk assessment custom prompt is used$`, customPromptUsed)
 	sc.Step(`^intermediate outputs are saved to "([^"]*)"$`, intermediateOutputsSavedTo)
 	sc.Step(`^the AI is invoked with file changes$`, aiInvokedWithFileChanges)
 	sc.Step(`^the AI receives specification context$`, aiReceivesSpecContext)

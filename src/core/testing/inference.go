@@ -3,8 +3,8 @@ package testing
 import (
 	"strings"
 
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
-	"github.com/ready-to-release/eac/src/core/environments"
 )
 
 // ApplyInferences applies inference rules to enrich test tags
@@ -274,9 +274,9 @@ func InferOSPlatform(tests []TestReference) []TestReference {
 // InferSystemDepsFromEnv infers system dependencies based on environment tags
 // For example, if a test has @env:local01, look up the local01 environment contract
 // and add all its system dependencies (@deps:docker, etc.)
-func InferSystemDepsFromEnv(tests []TestReference, envContract *environments.EnvironmentContract) []TestReference {
-	if envContract == nil {
-		return tests // No environment contract available, return unchanged
+func InferSystemDepsFromEnv(tests []TestReference, envConfig *config.EnvironmentsConfig) []TestReference {
+	if envConfig == nil {
+		return tests // No environment config available, return unchanged
 	}
 
 	enriched := make([]TestReference, len(tests))
@@ -294,9 +294,9 @@ func InferSystemDepsFromEnv(tests []TestReference, envContract *environments.Env
 			// Extract environment moniker from @env:<moniker>
 			moniker := strings.TrimPrefix(tag, "@env:")
 
-			// Look up environment in contract
-			env, err := envContract.GetEnvironment(moniker)
-			if err != nil {
+			// Look up environment in config
+			env, found := envConfig.GetEnvironment(moniker)
+			if !found {
 				continue // Environment not found, skip
 			}
 

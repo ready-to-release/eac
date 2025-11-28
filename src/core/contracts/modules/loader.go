@@ -3,72 +3,71 @@ package modules
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
 // LoadFromWorkspace loads all module contracts from the workspace.
 // This is the main entry point for loading module contracts.
+// Uses the central config package for loading and schema validation.
 func LoadFromWorkspace(workspaceRoot string) (*Registry, error) {
-	// Create base loader
-	loader := contracts.NewLoader(workspaceRoot)
+	// Load using central config (includes schema validation)
+	opts := config.LoadOptions{
+		RepoRoot:        workspaceRoot,
+		ValidateSchemas: true,
+		LazyLoad:        true, // We only need modules
+	}
+
+	cfg, err := config.Load(opts)
+	if err != nil {
+		return nil, contracts.NewContractError("load", "config", err, "failed to initialize config loader")
+	}
+
+	// Load modules with schema validation
+	if err := cfg.LoadModules(true); err != nil {
+		modulesPath := filepath.Join(config.EACConfigRelPath, config.ModulesFileName)
+		return nil, contracts.NewContractError("load", modulesPath, err, "failed to load modules.yml")
+	}
 
 	// Create registry (version kept for internal compatibility)
 	registry := NewRegistry("0.1.0", workspaceRoot)
 
-	// Construct pattern for module contracts
-	pattern := filepath.Join(contracts.EACConfigRelPath, "modules", "*.yml")
-
-	// Load all matching YAML files
-	err := loader.LoadYAMLPattern(pattern, func(relPath string) error {
-		// Skip definitions.yml as it's metadata, not a module contract
-		if strings.HasSuffix(relPath, "definitions.yml") {
-			// Actually, based on the contract, definitions IS a module
-			// Let's load it but we can check IsDefinitionsFile() later if needed
+	// Convert config.Module to contracts.BaseContract and process
+	for _, m := range cfg.Modules.Modules {
+		// Convert to BaseContract for ModuleContract creation
+		base := contracts.BaseContract{
+			Moniker:     m.Moniker,
+			Name:        m.Name,
+			Type:        m.Type,
+			Description: m.Description,
+			Parent:      m.Parent,
+			DependsOn:   m.DependsOn,
+			Files: contracts.Files{
+				Root:      m.Files.Root,
+				Source:    m.Files.Source,
+				Config:    m.Files.Config,
+				Assets:    m.Files.Assets,
+				Tests:     m.Files.Tests,
+				Exclude:   m.Files.Exclude,
+				Changelog: m.Files.Changelog,
+				Repo: contracts.RepoPatterns{
+					Specs:   m.Files.Repo.Specs,
+					Other:   m.Files.Repo.Other,
+					Exclude: m.Files.Repo.Exclude,
+				},
+			},
+			Flags: contracts.Flags{
+				CatchAll:         m.Flags.CatchAll,
+				OwnChildrenFiles: m.Flags.OwnChildrenFiles,
+			},
 		}
-
-		// Parse the module contract
-		var base contracts.BaseContract
-		if err := loader.LoadYAML(relPath, &base); err != nil {
-			return err
-		}
-
-		// Apply defaults
-		if base.Type == "" {
-			base.Type = "no-module-type"
-		}
-		if base.Parent == "" {
-			base.Parent = "."
-		}
-		if base.Description == "" {
-			base.Description = base.Name
-		}
-		// DependsOn defaults to empty list
-		if base.DependsOn == nil {
-			base.DependsOn = []string{}
-		}
-		// Files.Changelog default
-		if base.Files.Changelog == "" {
-			base.Files.Changelog = "CHANGELOG.md"
-		}
-		// Files.Repo.Specs default: specs/<moniker>/**
-		if base.Files.Repo.Specs == nil {
-			base.Files.Repo.Specs = []string{fmt.Sprintf("specs/%s/**", base.Moniker)}
-		}
+		// Note: Defaults are already applied by config.ModulesConfig.applyDefaults()
 
 		// Validate required fields
 		if base.Moniker == "" {
-			return contracts.NewContractError("validate", relPath, nil, "moniker field is required")
-		}
-
-		// Validate that filename matches moniker
-		filename := filepath.Base(relPath)
-		expectedFilename := base.Moniker + ".yml"
-		if filename != expectedFilename {
-			return contracts.NewContractError("validate", relPath, nil,
-				fmt.Sprintf("filename mismatch: expected '%s', got '%s' (moniker: '%s')",
-					expectedFilename, filename, base.Moniker))
+			modulesPath := filepath.Join(config.EACConfigRelPath, config.ModulesFileName)
+			return nil, contracts.NewContractError("validate", modulesPath, nil, "moniker field is required")
 		}
 
 		// Create module contract
@@ -76,19 +75,14 @@ func LoadFromWorkspace(workspaceRoot string) (*Registry, error) {
 
 		// Add to registry
 		if err := registry.Add(module); err != nil {
-			return contracts.NewContractError("add", relPath, err, fmt.Sprintf("failed to add module to registry: %v", err))
+			return nil, contracts.NewContractError("add", config.ModulesFileName, err,
+				fmt.Sprintf("failed to add module '%s' to registry: %v", base.Moniker, err))
 		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
 	}
 
 	// Validate registry has at least one module
 	if registry.Count() == 0 {
-		return nil, contracts.NewContractError("load", pattern, nil, "no module contracts found")
+		return nil, contracts.NewContractError("load", config.ModulesFileName, nil, "no module contracts found")
 	}
 
 	// Validate only one catch-all singleton exists
@@ -103,7 +97,7 @@ func LoadFromWorkspace(workspaceRoot string) (*Registry, error) {
 		for _, m := range catchAllModules {
 			monikers = append(monikers, m.Moniker)
 		}
-		return nil, contracts.NewContractError("validate", pattern, nil,
+		return nil, contracts.NewContractError("validate", config.ModulesFileName, nil,
 			fmt.Sprintf("multiple catch-all singleton modules found: %v (only one allowed)", monikers))
 	}
 

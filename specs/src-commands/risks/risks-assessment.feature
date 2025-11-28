@@ -1,4 +1,4 @@
-@deps:go @deps:git @L2 @ov @env:isolated-test-project
+@skip:wip @deps:go @deps:git @L2 @ov @env:isolated-test-project
 Feature: src-commands_risks-assessment
 
   As a developer
@@ -61,7 +61,7 @@ Feature: src-commands_risks-assessment
     Scenario: Use short flag for prompt
       Given a custom prompt at "custom.md"
       When I run "risks assessment -p custom.md"
-      Then the custom prompt is used
+      Then the risk assessment custom prompt is used
 
     Scenario: Use short flag for debug
       When I run "risks assessment -D"

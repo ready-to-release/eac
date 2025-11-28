@@ -225,8 +225,8 @@ func copyFile(src, dest string) error {
 }
 
 func copyDependentPackages(coreDir, tempRoot string) error {
-	// Copy contracts, environments, etc. packages
-	packages := []string{"contracts", "environments", "git", "markdown", "repository", "system-deps"}
+	// Copy contracts, environments, config, etc. packages
+	packages := []string{"config", "contracts", "environments", "git", "markdown", "repository", "system-deps"}
 
 	for _, pkg := range packages {
 		srcPkgDir := filepath.Join(coreDir, pkg)
@@ -274,10 +274,11 @@ func copyPackageRecursive(src, dest string) error {
 			return os.MkdirAll(destPath, 0755)
 		}
 
-		// Only copy .go and .yml/.yaml files
+		// Only copy .go, .yml/.yaml, and .json files (json needed for embedded schemas)
 		if strings.HasSuffix(info.Name(), ".go") ||
-		   strings.HasSuffix(info.Name(), ".yml") ||
-		   strings.HasSuffix(info.Name(), ".yaml") {
+			strings.HasSuffix(info.Name(), ".yml") ||
+			strings.HasSuffix(info.Name(), ".yaml") ||
+			strings.HasSuffix(info.Name(), ".json") {
 			return copyFile(path, destPath)
 		}
 

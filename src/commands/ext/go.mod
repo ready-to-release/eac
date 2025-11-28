@@ -61,6 +61,7 @@ require (
 	github.com/ready-to-release/eac/src/ai v0.0.0 // indirect
 	github.com/ready-to-release/eac/src/core v0.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect

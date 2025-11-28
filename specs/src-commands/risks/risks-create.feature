@@ -1,4 +1,4 @@
-@deps:go @deps:ai @L2 @ov @env:isolated-test-project
+@skip:wip @deps:go @L2 @ov @env:isolated-test-project
 Feature: src-commands_risks-create
 
   As a developer

@@ -1,8 +1,8 @@
 package testing
 
 import (
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
-	"github.com/ready-to-release/eac/src/core/environments"
 )
 
 // SuiteTestEntry represents a single test in a suite report
@@ -59,10 +59,10 @@ func GenerateSuiteReport(
 		allTests = InferSystemDepsFromModuleDeps(allTests, moduleRegistry)
 	}
 
-	// Phase 2.6: Infer system deps from environment tags (if environment contract available)
-	envContract, err := environments.LoadEnvironmentContract()
+	// Phase 2.6: Infer system deps from environment tags (if environment config available)
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err == nil {
-		allTests = InferSystemDepsFromEnv(allTests, envContract)
+		allTests = InferSystemDepsFromEnv(allTests, cfg.Environments)
 	}
 
 	// Phase 3: Select tests for this suite

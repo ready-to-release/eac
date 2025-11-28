@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/config"
 )
 
 // Intent: Validate Gherkin specifications against structure and tag contracts
@@ -29,7 +31,7 @@ import (
 // GherkinValidator validates Gherkin specifications against structure and tag contracts
 type GherkinValidator struct {
 	contract       *Contract
-	tagContract    *TagContract
+	tagsConfig     *config.TestingTagsConfig
 	antiCorruption *AntiCorruptionRules
 }
 
@@ -41,18 +43,18 @@ func NewGherkinValidator(contract *Contract, antiCorruption *AntiCorruptionRules
 	}
 }
 
-// NewGherkinValidatorWithTags creates a validator with both structure and tag contracts
-func NewGherkinValidatorWithTags(contract *Contract, tagContract *TagContract, antiCorruption *AntiCorruptionRules) *GherkinValidator {
+// NewGherkinValidatorWithTags creates a validator with both structure and tag configs
+func NewGherkinValidatorWithTags(contract *Contract, tagsConfig *config.TestingTagsConfig, antiCorruption *AntiCorruptionRules) *GherkinValidator {
 	return &GherkinValidator{
 		contract:       contract,
-		tagContract:    tagContract,
+		tagsConfig:     tagsConfig,
 		antiCorruption: antiCorruption,
 	}
 }
 
-// SetTagContract sets the tag contract for tag validation
-func (v *GherkinValidator) SetTagContract(tagContract *TagContract) {
-	v.tagContract = tagContract
+// SetTagsConfig sets the tags config for tag validation
+func (v *GherkinValidator) SetTagsConfig(tagsConfig *config.TestingTagsConfig) {
+	v.tagsConfig = tagsConfig
 }
 
 // Validate validates Gherkin content against the specification contract
@@ -369,7 +371,7 @@ func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int
 	}
 
 	// Only perform advanced tag validation if tagContract is available
-	if v.tagContract == nil {
+	if v.tagsConfig == nil {
 		return errors
 	}
 
@@ -378,7 +380,7 @@ func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int
 	hasTaxonomyLevel := false
 	hasGxP := false
 	hasGxPRiskControl := false
-	taxonomyLevelTags := v.tagContract.GetTaxonomyLevelTags()
+	taxonomyLevelTags := v.tagsConfig.GetTaxonomyLevelTags()
 
 	for i, tag := range tags {
 		lineNum := scenarioLine
@@ -387,9 +389,13 @@ func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int
 		}
 
 		// Validate tag format
-		formatErr := v.tagContract.ValidateTag(tag, lineNum)
-		if formatErr != nil {
-			errors = append(errors, *formatErr)
+		if formatErr := v.tagsConfig.ValidateTag(tag); formatErr != nil {
+			errors = append(errors, ValidationError{
+				Code:     "INVALID_TAG_FORMAT",
+				Message:  formatErr.Error(),
+				Line:     lineNum,
+				Severity: "error",
+			})
 		}
 
 		// Track special tags for constraint validation
@@ -407,10 +413,10 @@ func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int
 		}
 
 		// 7. Check for unknown tags (warning only)
-		if !v.tagContract.IsKnownTag(tag) {
+		if !v.tagsConfig.IsKnownTag(tag) {
 			errors = append(errors, ValidationError{
 				Code:     "UNKNOWN_TAG",
-				Message:  fmt.Sprintf("Unknown tag '%s' - possible typo? Check %s/testing/tags.yml for valid tags", tag, EACConfigRelPath),
+				Message:  fmt.Sprintf("Unknown tag '%s' - possible typo? Check %s/testing-tags.yml for valid tags", tag, EACConfigRelPath),
 				Line:     lineNum,
 				Severity: "warning",
 			})
@@ -476,8 +482,8 @@ func (v *GherkinValidator) hasVerificationTag(tags []string) bool {
 // getVerificationTags returns verification tags from contract or defaults
 func (v *GherkinValidator) getVerificationTags() []string {
 	// Try tag contract first
-	if v.tagContract != nil {
-		tags := v.tagContract.GetVerificationTags()
+	if v.tagsConfig != nil {
+		tags := v.tagsConfig.GetVerificationTags()
 		if len(tags) > 0 {
 			return tags
 		}
@@ -548,7 +554,7 @@ func (v *GherkinValidator) VerifyImplementation() []ValidationError {
 	}
 
 	// Verify tag contract is loaded (warning only, not required)
-	if v.tagContract == nil {
+	if v.tagsConfig == nil {
 		errors = append(errors, ValidationError{
 			Code:     "NO_TAG_CONTRACT",
 			Message:  "Tag contract not loaded - advanced tag validation disabled",

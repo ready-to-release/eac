@@ -730,13 +730,13 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	}
 
 	// Load referenced files (tags and taxonomy) from repository config
-	tagsPath := filepath.Join(contracts.EACConfigRelPath, "testing", "tags.yml")
+	tagsPath := filepath.Join(contracts.EACConfigRelPath, "testing-tags.yml")
 	tagsContent, err := loader.LoadReferencedFile(tagsPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load tags: %w", err)
 	}
 
-	taxonomyPath := filepath.Join(contracts.EACConfigRelPath, "testing", "taxonomy.yml")
+	taxonomyPath := filepath.Join(contracts.EACConfigRelPath, "testing-taxonomy.yml")
 	taxonomyContent, err := loader.LoadReferencedFile(taxonomyPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load taxonomy: %w", err)

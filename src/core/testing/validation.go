@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts"
 )
 
@@ -27,7 +28,7 @@ func ValidateTags(tags []string) []string {
 	// Check for invalid tags
 	for _, tag := range tags {
 		if !IsValidTag(tag) {
-			errors = append(errors, fmt.Sprintf("tag %s is not defined in %s/testing/tags.yml", tag, contracts.EACConfigRelPath))
+			errors = append(errors, fmt.Sprintf("tag %s is not defined in %s/testing-tags.yml", tag, contracts.EACConfigRelPath))
 		}
 	}
 
@@ -58,14 +59,14 @@ func ValidateTags(tags []string) []string {
 
 // ValidatePostInference validates test tags after inference has been applied
 // This enforces strict rules that must be true after tag enrichment
-func ValidatePostInference(test TestReference, validSkipReasons map[string]SkipReason) []string {
+func ValidatePostInference(test TestReference, validSkipReasons map[string]config.SkipReason) []string {
 	errors := []string{}
 	warnings := []string{}
 
 	// CRITICAL: Check for undefined tags first
 	for _, tag := range test.Tags {
 		if !IsValidTag(tag) {
-			errors = append(errors, fmt.Sprintf("test '%s' has undefined tag '%s' (not in %s/testing/tags.yml)", test.TestName, tag, contracts.EACConfigRelPath))
+			errors = append(errors, fmt.Sprintf("test '%s' has undefined tag '%s' (not in %s/testing-tags.yml)", test.TestName, tag, contracts.EACConfigRelPath))
 		}
 
 		// Validate skip reason codes if contract is loaded
@@ -182,15 +183,15 @@ func ShouldSkipValidation(test TestReference) bool {
 func ValidateAllPostInference(tests []TestReference, repoRoot string) map[string][]string {
 	validationErrors := make(map[string][]string)
 
-	// Load contract for skip reason validation (from embedded filesystem)
-	contract, err := LoadTagContract()
-	var validSkipReasons map[string]SkipReason
+	// Load config for skip reason validation
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	var validSkipReasons map[string]config.SkipReason
 	if err != nil {
-		// If contract loading fails, proceed without skip reason validation
-		// This allows validation to work even if contract is missing
+		// If config loading fails, proceed without skip reason validation
+		// This allows validation to work even if config is missing
 		validSkipReasons = nil
 	} else {
-		validSkipReasons = contract.GetSkipReasons()
+		validSkipReasons = cfg.TestingTags.GetSkipReasons()
 	}
 
 	for _, test := range tests {
@@ -227,37 +228,15 @@ func ValidateTestReference(test TestReference) []string {
 // IsValidTag checks if a tag is valid according to contracts
 // Note: This does lightweight validation - for full validation use validate test-tags command
 func IsValidTag(tag string) bool {
-	// Load tag contract
-	contract, err := LoadTagContract()
+	// Load config
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		// If we can't load contract, fail open (allow the tag)
+		// If we can't load config, fail open (allow the tag)
 		return true
 	}
 
-	// Check exact match in contract
-	for _, contractTag := range contract.Tags {
-		if contractTag.Tag == tag {
-			return true
-		}
-	}
-
-	// Check pattern tags (tags with colons)
-	if strings.Contains(tag, ":") {
-		// @risk:*, @skip:*, @deps:*, @env:*, @depm:*, @risk-control:* patterns
-		for _, contractTag := range contract.Tags {
-			if strings.Contains(contractTag.Tag, "<") && strings.Contains(contractTag.Tag, ">") {
-				// This is a pattern tag
-				parts := strings.SplitN(tag, ":", 2)
-				contractParts := strings.SplitN(contractTag.Tag, ":", 2)
-				if len(parts) == 2 && len(contractParts) == 2 && parts[0]+":" == contractParts[0]+":" {
-					// Prefixes match, accept it (lightweight validation)
-					return true
-				}
-			}
-		}
-	}
-
-	return false
+	// Use the config's IsKnownTag method which handles both exact and pattern matches
+	return cfg.TestingTags.IsKnownTag(tag)
 }
 
 // validateRiskControlTag validates @risk-control:<name>-<id> format
@@ -299,15 +278,15 @@ func validateRiskControlTag(tag string) bool {
 	return len(controlName) > 0
 }
 
-// GetKnownTags returns all known tags from the contract
+// GetKnownTags returns all known tags from the config
 func GetKnownTags() []string {
-	contract, err := LoadTagContract()
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		return []string{} // Return empty if contract can't be loaded
+		return []string{} // Return empty if config can't be loaded
 	}
 
 	tags := []string{}
-	for _, tag := range contract.Tags {
+	for _, tag := range cfg.TestingTags.Tags {
 		tags = append(tags, tag.Tag)
 	}
 	return tags

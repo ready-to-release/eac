@@ -130,7 +130,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 		if err != nil {
 			return false
 		}
-		testsPath := filepath.Join(repoRoot, "src", "core", "repository", "tests")
+		testsPath := filepath.Join(repoRoot, "src", "specs", "impl", "repository")
 		_, err = os.Stat(testsPath)
 		return err == nil
 
@@ -206,7 +206,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		testsPath := filepath.Join(repoRoot, "src", "core", "repository", "tests")
+		testsPath := filepath.Join(repoRoot, "src", "specs", "impl", "repository")
 		return fmt.Sprintf("Repository validation tests: %s", testsPath), nil
 
 	case "scripts":

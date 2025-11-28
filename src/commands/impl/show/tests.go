@@ -11,9 +11,9 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
-	"github.com/ready-to-release/eac/src/core/environments"
 	"github.com/ready-to-release/eac/src/core/testing"
 )
 
@@ -58,9 +58,9 @@ func ShowTests() int {
 	}
 
 	// Infer system deps from environment tags
-	envContract, err := environments.LoadEnvironmentContract()
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err == nil {
-		allTests = testing.InferSystemDepsFromEnv(allTests, envContract)
+		allTests = testing.InferSystemDepsFromEnv(allTests, cfg.Environments)
 	}
 
 	// Build file-module map

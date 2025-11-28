@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/src-core/modules/0.1.0",
+  "title": "Repository Module Contracts Schema",
+  "description": "Schema for repository module contracts defining module boundaries and file ownership",
+  "type": "object",
+  "properties": {
+    "modules": {
+      "type": "array",
+      "description": "List of module definitions",
+      "items": {
+        "$ref": "#/definitions/module"
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["modules"],
+  "definitions": {
+    "module": {
+      "type": "object",
+      "description": "A module contract definition",
+      "properties": {
+        "moniker": {
+          "type": "string",
+          "description": "Unique module identifier",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable module name",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Module type classification (defaults to 'no-module-type')",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "default": "no-module-type"
+        },
+        "description": {
+          "type": "string",
+          "description": "Module description (defaults to name if not specified)"
+        },
+        "parent": {
+          "type": "string",
+          "description": "Parent module moniker or '.' for root (defaults to '.')",
+          "default": "."
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "List of module monikers this module depends on (defaults to [])",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": []
+        },
+        "files": {
+          "$ref": "#/definitions/files"
+        },
+        "flags": {
+          "$ref": "#/definitions/flags"
+        }
+      },
+      "required": ["moniker", "name"]
+    },
+    "files": {
+      "type": "object",
+      "description": "File ownership configuration",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Root directory for the module (relative to repo root, use '/' for repo root)"
+        },
+        "source": {
+          "type": "array",
+          "description": "Source file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "config": {
+          "type": "array",
+          "description": "Configuration file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "assets": {
+          "type": "array",
+          "description": "Asset file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "tests": {
+          "type": "array",
+          "description": "Test file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "exclude": {
+          "type": "array",
+          "description": "File patterns to exclude from ownership",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Changelog file path relative to module root (defaults to 'CHANGELOG.md')",
+          "default": "CHANGELOG.md"
+        },
+        "repo": {
+          "$ref": "#/definitions/repo_files"
+        }
+      }
+    },
+    "repo_files": {
+      "type": "object",
+      "description": "Repository-level file ownership (files outside module root)",
+      "properties": {
+        "specs": {
+          "type": "array",
+          "description": "Specification file patterns (defaults to ['specs/<moniker>/**'])",
+          "items": {
+            "type": "string"
+          }
+        },
+        "other": {
+          "type": "array",
+          "description": "Other repository files owned by this module",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "exclude": {
+          "type": "array",
+          "description": "Repository file patterns to exclude",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "flags": {
+      "type": "object",
+      "description": "Module behavior flags",
+      "properties": {
+        "catch_all": {
+          "type": "boolean",
+          "description": "If true, this module catches unowned files (only one module should have this)",
+          "default": false
+        },
+        "own_children_files": {
+          "type": "boolean",
+          "description": "If true, owns files in child module directories",
+          "default": false
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "modules": [
+        {
+          "moniker": "src-core",
+          "name": "Core Domain Libraries",
+          "type": "go-library",
+          "description": "Core library containing contracts and repository operations",
+          "parent": ".",
+          "depends_on": [],
+          "files": {
+            "root": "src/core",
+            "source": ["**.go"],
+            "config": ["go.mod", "go.sum"],
+            "assets": [],
+            "tests": [],
+            "exclude": [],
+            "changelog": "CHANGELOG.md",
+            "repo": {
+              "specs": ["specs/src-core/**"],
+              "other": [".github/workflows/ci-src-core.yaml"],
+              "exclude": []
+            }
+          },
+          "flags": {
+            "catch_all": false,
+            "own_children_files": false
+          }
+        },
+        {
+          "moniker": "unordered",
+          "name": "Unordered Files",
+          "type": "catch-all",
+          "description": "Module for files not owned by anything else",
+          "parent": "repository",
+          "depends_on": [],
+          "files": {
+            "root": "/",
+            "source": [],
+            "config": [],
+            "assets": [],
+            "tests": [],
+            "exclude": [],
+            "changelog": "",
+            "repo": {
+              "specs": [],
+              "other": [],
+              "exclude": []
+            }
+          },
+          "flags": {
+            "catch_all": true,
+            "own_children_files": false
+          }
+        }
+      ]
+    }
+  ]
+}

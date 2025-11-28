@@ -10,6 +10,7 @@ require (
 	github.com/cucumber/godog v0.15.1
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/gobwas/glob v0.2.3
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
 	github.com/yuin/goldmark v1.7.13
 	go.uber.org/zap v1.27.1
@@ -44,5 +45,6 @@ require (
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )

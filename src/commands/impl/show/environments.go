@@ -10,7 +10,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
-	"github.com/ready-to-release/eac/src/core/environments"
+	"github.com/ready-to-release/eac/src/core/config"
 )
 
 func init() {
@@ -18,29 +18,31 @@ func init() {
 }
 
 func ShowEnvironments() int {
-	// Load environment contract
-	contract, err := environments.LoadEnvironmentContract()
+	// Load environment contract using central config
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load environment contract: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
 		return 1
 	}
 
+	envConfig := cfg.Environments
+
 	// Validate contract
-	if err := contract.ValidateContract(); err != nil {
+	if err := envConfig.Validate(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: environment contract validation failed: %v\n", err)
 	}
 
 	// Display contract metadata
 	fmt.Printf("# Environment Contracts\n\n")
-	fmt.Printf("**Version**: %s  \n", contract.Metadata.Version)
-	fmt.Printf("**Description**: %s  \n", contract.Metadata.Description)
-	fmt.Printf("**Total Environments**: %d  \n\n", len(contract.Environments))
+	fmt.Printf("**Version**: %s  \n", envConfig.Metadata.Version)
+	fmt.Printf("**Description**: %s  \n", envConfig.Metadata.Description)
+	fmt.Printf("**Total Environments**: %d  \n\n", len(envConfig.Environments))
 
 	// Build markdown table
 	tb := render.NewTableBuilder().
 		WithHeaders("Moniker", "Name", "Level", "Type", "System Dependencies", "Env Tags")
 
-	for _, env := range contract.Environments {
+	for _, env := range envConfig.Environments {
 		systemDepsStr := strings.Join(env.SystemDeps, ", ")
 		envTagsStr := strings.Join(env.EnvTags, ", ")
 
@@ -59,11 +61,11 @@ func ShowEnvironments() int {
 
 	// Display summary by level
 	fmt.Printf("## Summary by Level\n\n")
-	l0Envs := contract.GetEnvironmentsByLevel("L0")
-	l1Envs := contract.GetEnvironmentsByLevel("L1")
-	l2Envs := contract.GetEnvironmentsByLevel("L2")
-	l3Envs := contract.GetEnvironmentsByLevel("L3")
-	l4Envs := contract.GetEnvironmentsByLevel("L4")
+	l0Envs := envConfig.GetEnvironmentsByLevel("L0")
+	l1Envs := envConfig.GetEnvironmentsByLevel("L1")
+	l2Envs := envConfig.GetEnvironmentsByLevel("L2")
+	l3Envs := envConfig.GetEnvironmentsByLevel("L3")
+	l4Envs := envConfig.GetEnvironmentsByLevel("L4")
 
 	fmt.Printf("- **L0 (Very Fast Unit)**: %d environments\n", len(l0Envs))
 	fmt.Printf("- **L1 (Fast Unit)**: %d environments\n", len(l1Envs))
@@ -75,7 +77,7 @@ func ShowEnvironments() int {
 	// Display summary by type
 	fmt.Printf("## Summary by Type\n\n")
 	typeCounts := make(map[string]int)
-	for _, env := range contract.Environments {
+	for _, env := range envConfig.Environments {
 		typeCounts[env.Type]++
 	}
 
