@@ -1,0 +1,41 @@
+version: "0.1.0"
+name: "Risk Assessment Report Format"
+description: "Contract defining risk assessment report structure"
+
+# Repository configuration
+repository:
+  specs_directory: "specs"
+  source_directory: "src"
+
+structure:
+  - section: "metadata"
+    required: true
+    format: "Generated timestamp, scope, file counts"
+
+  - section: "executive_summary"
+    required: true
+    format: "2-3 sentences summarizing findings"
+
+  - section: "scope"
+    required: true
+    format: "Description of what was analyzed"
+
+  - section: "findings"
+    required: true
+    format: "Risks grouped by severity"
+
+  - section: "recommendations"
+    required: true
+    format: "Actionable recommendations"
+
+severity_levels:
+  - "critical"
+  - "high"
+  - "medium"
+  - "low"
+  - "info"
+
+output:
+  format: "markdown"
+  filename_pattern: "risk-assessment-{timestamp}.md"
+  default_destination: ".docs/reference/"

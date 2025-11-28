@@ -1,0 +1,31 @@
+version: "0.1.0"
+name: "Risk Control Creation from Assessment"
+description: "Contract for creating risk controls from assessment reports"
+
+# Repository configuration
+repository:
+  output_directory: "specs/risk-controls"
+  default_domain: "general"
+
+parsing:
+  risk_id_pattern: "RISK-\\d{3}"
+  severity_pattern: "(Critical|High|Medium|Low)"
+
+structure:
+  - section: "metadata"
+    required: true
+    fields:
+      - risk_id
+      - description
+      - severity
+      - affected_files
+      - related_specs
+
+  - section: "control_spec"
+    required: true
+    format: "Gherkin feature file"
+
+output:
+  format: "gherkin"
+  filename_pattern: "{domain}/{risk-id-slug}.feature"
+  use_specs_create: true
