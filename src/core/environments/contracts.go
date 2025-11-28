@@ -1,17 +1,14 @@
 // Package environments provides environment contract management for test execution contexts
 package environments
 
-//go:generate go run generate.go
-
 import (
-	"embed"
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/ready-to-release/eac/src/core/repository"
 	"gopkg.in/yaml.v3"
 )
-
-//go:embed repository/environments/*.yml
-var contractFS embed.FS
 
 // Metadata holds contract version and scope information
 type Metadata struct {
@@ -42,11 +39,18 @@ type EnvironmentContract struct {
 	Environments []Environment `yaml:"environments"`
 }
 
-// LoadEnvironmentContract reads and parses the environment contract from embedded filesystem
+// LoadEnvironmentContract reads and parses the environment contract from the repository.
+// It reads directly from .r2r/eac/repository/environments/environments.yml
 func LoadEnvironmentContract() (*EnvironmentContract, error) {
-	data, err := contractFS.ReadFile("repository/environments/environments.yml")
+	eacRoot, err := repository.GetRepoEACConfigRoot("")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read environment contract: %w", err)
+		return nil, fmt.Errorf("failed to get EAC config root: %w", err)
+	}
+
+	envPath := filepath.Join(eacRoot, "environments", "environments.yml")
+	data, err := os.ReadFile(envPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read environment contract from %s: %w", envPath, err)
 	}
 
 	var contract EnvironmentContract
