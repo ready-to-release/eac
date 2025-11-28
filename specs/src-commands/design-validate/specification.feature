@@ -1,4 +1,4 @@
-@L2 @deps:docker @ov @skip:wip
+@L2 @deps:docker @ov @env:isolated-test-project
 Feature: src-commands_design-validate
 
   Background:

@@ -7,12 +7,15 @@
 // Long:   - dirty: Has uncommitted changes
 // Long:
 // Long: Use --verbose to see additional information including commit SHA.
+// Long: Use --debug to enable detailed logging to out/logs/work/.
 // Long:
 // Long: Example:
 // Long:   work list
 // Long:   work list --verbose
 // Long:   work list -v
+// Long:   work list --debug
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed information including commit SHA
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 // HasSideEffects: false
 package work
 
@@ -24,7 +27,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
-	"github.com/ready-to-release/eac/src/core/repository"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
 
 func init() {
@@ -58,73 +61,79 @@ func List() int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	defer config.base.Logger.Sync()
+
+	config.base.Logger.Debug("Starting work list command")
+	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "list-config.txt",
+		fmt.Sprintf("Verbose: %v\nDebug: %v\nRepoRoot: %s\n",
+			config.verbose, config.base.Debug, config.base.RepoRoot))
 
 	// Phase 2: Validate environment
 	if err := internal.EnsureInGitRepo(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Not in a git repository: %v", err))
 		return 1
 	}
 
 	// Phase 3: Get worktrees
-	worktrees, err := internal.GetWorktrees(config.repoRoot)
+	worktrees, err := internal.GetWorktrees(config.base.RepoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get worktrees: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Failed to get worktrees: %v", err))
 		return 1
 	}
 
+	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "list-worktrees.txt",
+		fmt.Sprintf("Found %d worktrees:\n%+v\n", len(worktrees), worktrees))
+
 	// Phase 4: Display worktrees
-	displayWorktrees(worktrees, config.verbose)
+	displayWorktrees(config.base.Logger, worktrees, config.verbose)
+	config.base.Logger.Debug("Work list command completed successfully")
 	return 0
 }
 
 // listConfig holds configuration for the list command
 type listConfig struct {
-	verbose  bool
-	repoRoot string
+	base    *internal.BaseConfig
+	verbose bool
 }
 
 // parseListConfig parses command line arguments
 func parseListConfig() (*listConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "list"
 
+	// Parse base config (debug flag, repo root, logger, git ops)
+	baseConfig, err := internal.ParseBaseConfig(args)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &listConfig{
+		base:    baseConfig,
 		verbose: false,
 	}
 
-	// Parse flags
-	for _, arg := range args {
-		if arg == "--verbose" || arg == "-v" {
-			config.verbose = true
-		}
-	}
-
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find repository root: %w", err)
-	}
-	config.repoRoot = repoRoot
+	// Parse verbose flag
+	config.verbose = internal.HasFlag(args, "--verbose", "-v")
 
 	return config, nil
 }
 
 // displayWorktrees formats and displays worktrees in a table
-func displayWorktrees(worktrees []internal.Worktree, verbose bool) {
+func displayWorktrees(logger *logging.Logger, worktrees []internal.Worktree, verbose bool) {
 	if len(worktrees) == 0 {
-		fmt.Println("No worktrees found")
+		logger.Info("No worktrees found")
 		return
 	}
 
 	// Build table
 	table := buildWorktreeTable(worktrees, verbose)
-	fmt.Println(table)
-	fmt.Println()
+	logger.Info(table)
+	logger.Info("")
 
 	// Display summary
 	if len(worktrees) == 1 {
-		fmt.Println("1 worktree total")
+		logger.Info("1 worktree total")
 	} else {
-		fmt.Printf("%d worktrees total\n", len(worktrees))
+		logger.Info(fmt.Sprintf("%d worktrees total", len(worktrees)))
 	}
 }
 

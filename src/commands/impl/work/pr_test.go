@@ -6,6 +6,8 @@ package work
 import (
 	"os"
 	"testing"
+
+	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 )
 
 // TestParsePRConfig tests the configuration parsing
@@ -25,7 +27,7 @@ func TestParsePRConfig(t *testing.T) {
 				if config.customTitle != "" {
 					t.Errorf("expected customTitle='', got '%s'", config.customTitle)
 				}
-				if config.debug {
+				if config.base.Debug {
 					t.Error("expected debug=false, got true")
 				}
 			},
@@ -61,7 +63,7 @@ func TestParsePRConfig(t *testing.T) {
 			name: "with --debug flag",
 			args: []string{"--debug"},
 			validate: func(t *testing.T, config *prConfig) {
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 			},
@@ -70,7 +72,7 @@ func TestParsePRConfig(t *testing.T) {
 			name: "with -d shorthand",
 			args: []string{"-d"},
 			validate: func(t *testing.T, config *prConfig) {
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 			},
@@ -85,7 +87,7 @@ func TestParsePRConfig(t *testing.T) {
 				if config.customTitle != "My PR" {
 					t.Errorf("expected customTitle='My PR', got '%s'", config.customTitle)
 				}
-				if !config.debug {
+				if !config.base.Debug {
 					t.Error("expected debug=true, got false")
 				}
 			},
@@ -164,11 +166,11 @@ func TestPRConfigDefaults(t *testing.T) {
 		t.Errorf("expected default customTitle='', got '%s'", config.customTitle)
 	}
 
-	if config.debug {
+	if config.base.Debug {
 		t.Error("expected default debug=false, got true")
 	}
 
-	if config.repoRoot == "" {
+	if config.base.RepoRoot == "" {
 		t.Error("expected repoRoot to be set")
 	}
 
@@ -206,7 +208,14 @@ func TestValidatePREnvironment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create a base config with default git ops
+			baseConfig := &internal.BaseConfig{
+				GitOps:   internal.GetGitOps("."),
+				RepoRoot: ".",
+			}
+
 			config := &prConfig{
+				base:          baseConfig,
 				currentBranch: tt.currentBranch,
 				targetBranch:  "main",
 			}

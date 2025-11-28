@@ -1,5 +1,4 @@
-@skip:wip
-@deps:go @L2 @ov
+@deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work-create
 
   As a developer using parallel Claude sessions
@@ -72,6 +71,21 @@ Feature: src-commands_work-create
       When I run "r2r work create"
       Then the exit code is 1
       And I see error "branch name is required"
+
+  Rule: Debug mode enables detailed logging
+
+    Scenario: Debug flag enables logging to out/logs/work/
+      Given I am in a git repository
+      When I run "r2r work create feature/test --debug"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
+      And debug logs contain workspace creation details
+
+    Scenario: Debug with -d shorthand
+      Given I am in a git repository
+      When I run "r2r work create feature/test -d"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
 
   Rule: Workspace path generation is consistent and predictable
 

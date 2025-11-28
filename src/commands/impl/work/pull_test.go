@@ -6,6 +6,8 @@ package work
 import (
 	"os"
 	"testing"
+
+	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 )
 
 // TestParsePullConfig tests the configuration parsing
@@ -130,7 +132,7 @@ func TestPullConfigDefaults(t *testing.T) {
 		t.Error("expected default noFetch=false, got true")
 	}
 
-	if config.repoRoot == "" {
+	if config.base.RepoRoot == "" {
 		t.Error("expected repoRoot to be set")
 	}
 
@@ -168,7 +170,14 @@ func TestValidatePullEnvironment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create a base config with default git ops
+			baseConfig := &internal.BaseConfig{
+				GitOps:   internal.GetGitOps("."),
+				RepoRoot: ".",
+			}
+
 			config := &pullConfig{
+				base:          baseConfig,
 				currentBranch: tt.currentBranch,
 				targetBranch:  "main",
 				autostash:     true, // Set to true to skip worktree check

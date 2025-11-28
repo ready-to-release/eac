@@ -1,5 +1,4 @@
-@skip:wip
-@deps:go @deps:ai @L2 @ov
+@deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work_pr
 
   As a developer who has completed work in a workspace

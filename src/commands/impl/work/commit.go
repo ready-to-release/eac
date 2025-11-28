@@ -25,7 +25,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/impl/commit"
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/repository"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
 
 func init() {
@@ -59,17 +59,23 @@ func Commit() int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	defer config.base.Logger.Sync()
+
+	config.base.Logger.Debug("Starting work commit command")
+	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "commit-config.txt",
+		fmt.Sprintf("StageAll: %v\nCustomMessage: %s\nDebug: %v\n",
+			config.stageAll, config.customMessage, config.base.Debug))
 
 	// Phase 2: Validate environment
 	if err := internal.EnsureInGitRepo(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Not in git repository: %v", err))
 		return 1
 	}
 
 	// Phase 3: Stage changes if --all
 	if config.stageAll {
-		if err := stageAllChanges(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if err := stageAllChanges(config.base.Logger); err != nil {
+			config.base.Logger.Error(fmt.Sprintf("Failed to stage changes: %v", err))
 			return 1
 		}
 	}
@@ -77,74 +83,74 @@ func Commit() int {
 	// Phase 4: Check for staged changes
 	hasStagedChanges, err := checkStagedChanges()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Failed to check staged changes: %v", err))
 		return 1
 	}
 	if !hasStagedChanges {
-		fmt.Fprintf(os.Stderr, "Error: No staged changes\n")
-		fmt.Fprintf(os.Stderr, "Use 'work commit --all' to stage and commit all changes\n")
+		config.base.Logger.Error("No staged changes")
+		config.base.Logger.Error("Use 'work commit --all' to stage and commit all changes")
 		return 1
 	}
 
 	// Phase 5: Commit
 	if config.customMessage != "" {
 		// Use custom message
-		return commitWithMessage(config.customMessage)
+		return commitWithMessage(config.base.Logger, config.customMessage)
 	}
 
 	// Use AI to generate message
-	return commitWithAI(config.debug)
+	config.base.Logger.Debug("Delegating to commit message for AI generation")
+	return commitWithAI(config.base.Debug)
 }
 
 // commitConfig holds configuration for the commit command
 type commitConfig struct {
+	base          *internal.BaseConfig
 	stageAll      bool
 	customMessage string
-	debug         bool
-	repoRoot      string
 }
 
 // parseCommitConfig parses command line arguments
 func parseCommitConfig() (*commitConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "commit"
 
-	config := &commitConfig{}
+	// Parse base config (debug flag, repo root, logger, git ops)
+	baseConfig, err := internal.ParseBaseConfig(args)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &commitConfig{
+		base: baseConfig,
+	}
 
 	// Parse flags
+	config.stageAll = internal.HasFlag(args, "--all", "-a")
+
+	// Parse --message/-m flag
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		switch arg {
-		case "--all", "-a":
-			config.stageAll = true
-		case "--debug", "-d":
-			config.debug = true
-		case "--message", "-m":
+		if arg == "--message" || arg == "-m" {
 			if i+1 < len(args) {
 				config.customMessage = args[i+1]
-				i++ // Skip next arg
+				break
 			} else {
 				return nil, fmt.Errorf("--message requires a value")
 			}
 		}
 	}
 
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find repository root: %w", err)
-	}
-	config.repoRoot = repoRoot
-
 	return config, nil
 }
 
 // stageAllChanges stages all changes in the working directory
-func stageAllChanges() error {
+func stageAllChanges(logger *logging.Logger) error {
 	cmd := exec.Command("git", "add", ".")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to stage changes: %w\nOutput: %s", err, string(output))
 	}
+	logger.Debug("Staged all changes")
 	return nil
 }
 
@@ -166,15 +172,16 @@ func checkStagedChanges() (bool, error) {
 }
 
 // commitWithMessage creates a commit with a custom message
-func commitWithMessage(message string) int {
+func commitWithMessage(logger *logging.Logger, message string) int {
 	cmd := exec.Command("git", "commit", "-m", message)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create commit: %v\n", err)
+		logger.Error(fmt.Sprintf("Failed to create commit: %v", err))
 		return 1
 	}
+	logger.Debug("Created commit with custom message")
 	return 0
 }
 

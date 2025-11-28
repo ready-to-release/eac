@@ -6,26 +6,27 @@
 // Long:   <repo-name>-<branch-name>
 // Long:
 // Long: This allows you to work on multiple features simultaneously with separate Claude Code sessions.
+// Long: Use --debug to enable detailed logging to out/logs/work/.
 // Long:
 // Long: Example:
 // Long:   work create feature/authentication
 // Long:   work create bugfix/issue-123 --from=develop
 // Long:   work create feature/api --path=../custom-path
+// Long:   work create feature/test --debug
 // Flag.from: type=string, default=main, usage=Base branch to create from
 // Flag.path: type=string, usage=Custom path for workspace (default: ../<repo>-<branch>)
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 // HasSideEffects: true
 package work
 
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/repository"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
 
 func init() {
@@ -60,31 +61,38 @@ func Create() int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	defer config.base.Logger.Sync()
+
+	config.base.Logger.Debug("Starting work create command")
+	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "create-config.txt",
+		fmt.Sprintf("Branch: %s\nBase: %s\nPath: %s\nDebug: %v\n",
+			config.branchName, config.baseBranch, config.worktreePath, config.base.Debug))
 
 	// Phase 2: Validate environment
 	if err := validateCreateEnvironment(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
 
 	// Phase 3: Create worktree
 	worktreePath, err := createWorktree(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Failed to create worktree: %v", err))
 		return 1
 	}
 
 	// Phase 4: Output success
-	outputCreateSuccess(worktreePath, config.branchName)
+	outputCreateSuccess(config.base.Logger, worktreePath, config.branchName)
+	config.base.Logger.Debug("Work create command completed successfully")
 	return 0
 }
 
 // createConfig holds configuration for the create command
 type createConfig struct {
+	base         *internal.BaseConfig
 	branchName   string
 	baseBranch   string
 	customPath   string
-	repoRoot     string
 	repoName     string
 	worktreePath string
 }
@@ -93,32 +101,33 @@ type createConfig struct {
 func parseCreateConfig() (*createConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "create"
 
-	if len(args) == 0 {
-		return nil, fmt.Errorf("branch name is required\nUsage: work create <branch-name> [--from=main] [--path=<path>]")
+	// Parse base config (debug flag, repo root, logger, git ops)
+	baseConfig, err := internal.ParseBaseConfig(args)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get positional arguments (non-flags)
+	positionalArgs := internal.GetPositionalArgs(args)
+	if len(positionalArgs) == 0 {
+		return nil, fmt.Errorf("branch name is required\nUsage: work create <branch-name> [--from=main] [--path=<path>] [--debug]")
 	}
 
 	config := &createConfig{
-		branchName: args[0],
+		base:       baseConfig,
+		branchName: positionalArgs[0],
 		baseBranch: "main",
 	}
 
-	// Parse flags
-	for i := 1; i < len(args); i++ {
-		arg := args[i]
-		if strings.HasPrefix(arg, "--from=") {
-			config.baseBranch = strings.TrimPrefix(arg, "--from=")
-		} else if strings.HasPrefix(arg, "--path=") {
-			config.customPath = strings.TrimPrefix(arg, "--path=")
-		}
+	// Parse custom flags
+	if fromValue := internal.GetFlagValue(args, "--from"); fromValue != "" {
+		config.baseBranch = fromValue
+	}
+	if pathValue := internal.GetFlagValue(args, "--path"); pathValue != "" {
+		config.customPath = pathValue
 	}
 
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find repository root: %w", err)
-	}
-	config.repoRoot = repoRoot
-	config.repoName = internal.GetRepoName(repoRoot)
+	config.repoName = internal.GetRepoName(config.base.RepoRoot)
 
 	// Determine worktree path
 	if config.customPath != "" {
@@ -142,7 +151,7 @@ func validateCreateEnvironment(config *createConfig) error {
 	}
 
 	// Check if branch already exists
-	exists, err := internal.BranchExists(config.branchName, config.repoRoot)
+	exists, err := config.base.GitOps.BranchExists(config.branchName)
 	if err != nil {
 		return fmt.Errorf("failed to check branch: %w", err)
 	}
@@ -151,7 +160,7 @@ func validateCreateEnvironment(config *createConfig) error {
 	}
 
 	// Check if worktree already exists for this branch
-	wtExists, err := internal.WorktreeExists(config.branchName, config.repoRoot)
+	wtExists, err := config.base.GitOps.WorktreeExists(config.branchName)
 	if err != nil {
 		return fmt.Errorf("failed to check worktree: %w", err)
 	}
@@ -160,7 +169,7 @@ func validateCreateEnvironment(config *createConfig) error {
 	}
 
 	// Check if base branch exists
-	baseExists, err := internal.BranchExists(config.baseBranch, config.repoRoot)
+	baseExists, err := config.base.GitOps.BranchExists(config.baseBranch)
 	if err != nil {
 		return fmt.Errorf("failed to check base branch: %w", err)
 	}
@@ -179,25 +188,23 @@ func createWorktree(config *createConfig) (string, error) {
 		return "", fmt.Errorf("failed to resolve worktree path: %w", err)
 	}
 
-	// Create worktree
-	cmd := exec.Command("git", "worktree", "add", config.worktreePath, "-b", config.branchName, config.baseBranch)
-	cmd.Dir = config.repoRoot
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("failed to create worktree: %w\nOutput: %s", err, string(output))
+	// Create worktree using GitOps
+	if err := config.base.GitOps.CreateWorktree(config.worktreePath, config.branchName, config.baseBranch); err != nil {
+		return "", err
 	}
 
+	config.base.Logger.Debug(fmt.Sprintf("Created worktree at %s for branch %s", absWorktreePath, config.branchName))
 	return absWorktreePath, nil
 }
 
 // outputCreateSuccess outputs success message with next steps
-func outputCreateSuccess(worktreePath, branchName string) {
-	fmt.Printf("✓ Created worktree at: %s\n", worktreePath)
-	fmt.Printf("  Branch: %s\n", branchName)
-	fmt.Println()
-	fmt.Println("Start Claude:")
+func outputCreateSuccess(logger *logging.Logger, worktreePath, branchName string) {
+	logger.Info(fmt.Sprintf("✓ Created worktree at: %s", worktreePath))
+	logger.Info(fmt.Sprintf("  Branch: %s", branchName))
+	logger.Info("")
+	logger.Info("Start Claude:")
 
 	// Convert to forward slashes for cross-platform compatibility
 	displayPath := filepath.ToSlash(worktreePath)
-	fmt.Printf("  cd %s && claude-code\n", displayPath)
+	logger.Info(fmt.Sprintf("  cd %s && claude-code", displayPath))
 }

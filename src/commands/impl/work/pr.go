@@ -30,7 +30,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/repository"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
 
 func init() {
@@ -65,38 +65,44 @@ func PR() int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	defer config.base.Logger.Sync()
+
+	config.base.Logger.Debug("Starting work pr command")
+	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "pr-config.txt",
+		fmt.Sprintf("CurrentBranch: %s\nTarget: %s\nCustomTitle: %s\n",
+			config.currentBranch, config.targetBranch, config.customTitle))
 
 	// Phase 2: Validate environment
 	if err := validatePREnvironment(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
 
 	// Phase 3: Check for commits
-	fmt.Println("Checking branch status...")
-	commitCount, err := getCommitCount(config.currentBranch, config.targetBranch)
+	config.base.Logger.Info("Checking branch status...")
+	commitCount, err := getCommitCount(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Failed to count commits: %v", err))
 		return 1
 	}
 	if commitCount == 0 {
-		fmt.Fprintf(os.Stderr, "Error: No commits ahead of %s\n", config.targetBranch)
-		fmt.Fprintf(os.Stderr, "Your branch has no new commits to create a PR from\n")
+		config.base.Logger.Error(fmt.Sprintf("No commits ahead of %s", config.targetBranch))
+		config.base.Logger.Error("Your branch has no new commits to create a PR from")
 		return 1
 	}
 
 	// Phase 4: Push branch to origin
-	fmt.Println("Pushing to origin...")
-	if err := pushBranch(config.currentBranch); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	config.base.Logger.Info("Pushing to origin...")
+	if err := pushBranch(config); err != nil {
+		config.base.Logger.Error(fmt.Sprintf("Failed to push: %v", err))
 		return 1
 	}
 
 	// Phase 5: Generate PR title and description
-	fmt.Println("\nGenerating PR description...")
+	config.base.Logger.Info("\nGenerating PR description...")
 	title, description, err := generatePRContent(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Failed to generate PR content: %v", err))
 		return 1
 	}
 
@@ -106,24 +112,25 @@ func PR() int {
 	}
 
 	// Phase 6: Create pull request
-	fmt.Println("Creating pull request...")
-	prURL, err := createPullRequest(title, description, config.currentBranch, config.targetBranch)
+	config.base.Logger.Info("Creating pull request...")
+	prURL, err := createPullRequest(config.base.Logger, title, description, config.currentBranch, config.targetBranch)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		config.base.Logger.Error(fmt.Sprintf("Failed to create PR: %v", err))
 		return 1
 	}
 
 	// Phase 7: Success
-	fmt.Printf("\n✓ Pull request created: %s\n", prURL)
+	config.base.Logger.Info("")
+	config.base.Logger.Info(fmt.Sprintf("✓ Pull request created: %s", prURL))
+	config.base.Logger.Debug("Work pr command completed successfully")
 	return 0
 }
 
 // prConfig holds configuration for the pr command
 type prConfig struct {
+	base          *internal.BaseConfig
 	targetBranch  string
 	customTitle   string
-	debug         bool
-	repoRoot      string
 	currentBranch string
 }
 
@@ -131,39 +138,39 @@ type prConfig struct {
 func parsePRConfig() (*prConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "pr"
 
+	// Parse base config (debug flag, repo root, logger, git ops)
+	baseConfig, err := internal.ParseBaseConfig(args)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &prConfig{
+		base:         baseConfig,
 		targetBranch: "main",
-		debug:        false,
 	}
 
 	// Parse flags
+	if targetValue := internal.GetFlagValue(args, "--target"); targetValue != "" {
+		config.targetBranch = targetValue
+	}
+	if titleValue := internal.GetFlagValue(args, "--title"); titleValue != "" {
+		config.customTitle = titleValue
+	}
+
+	// Also check for --title with space
 	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if strings.HasPrefix(arg, "--target=") {
-			config.targetBranch = strings.TrimPrefix(arg, "--target=")
-		} else if strings.HasPrefix(arg, "--title=") {
-			config.customTitle = strings.TrimPrefix(arg, "--title=")
-		} else if arg == "--title" {
+		if args[i] == "--title" {
 			if i+1 < len(args) {
 				config.customTitle = args[i+1]
-				i++ // Skip next arg
+				break
 			} else {
 				return nil, fmt.Errorf("--title requires a value")
 			}
-		} else if arg == "--debug" || arg == "-d" {
-			config.debug = true
 		}
 	}
 
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find repository root: %w", err)
-	}
-	config.repoRoot = repoRoot
-
 	// Get current branch
-	currentBranch, err := internal.GetCurrentBranch(config.repoRoot)
+	currentBranch, err := config.base.GitOps.GetCurrentBranch(config.base.RepoRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current branch: %w", err)
 	}
@@ -185,7 +192,8 @@ func validatePREnvironment(config *prConfig) error {
 	}
 
 	// Check for uncommitted changes
-	clean, err := internal.IsWorktreeClean(config.repoRoot)
+	cwd, _ := os.Getwd()
+	clean, err := config.base.GitOps.IsWorktreeClean(cwd)
 	if err != nil {
 		return fmt.Errorf("failed to check working tree status: %w", err)
 	}
@@ -211,40 +219,20 @@ func checkGHCLI() error {
 }
 
 // getCommitCount returns the number of commits ahead of target branch
-func getCommitCount(currentBranch, targetBranch string) (int, error) {
-	cmd := exec.Command("git", "rev-list", "--count", fmt.Sprintf("origin/%s..HEAD", targetBranch))
-	output, err := cmd.Output()
+func getCommitCount(config *prConfig) (int, error) {
+	count, err := config.base.GitOps.GetCommitCount(fmt.Sprintf("origin/%s", config.targetBranch), "HEAD")
 	if err != nil {
 		return 0, fmt.Errorf("failed to count commits: %w", err)
 	}
-
-	var count int
-	fmt.Sscanf(strings.TrimSpace(string(output)), "%d", &count)
 	return count, nil
 }
 
 // pushBranch pushes the current branch to origin
-func pushBranch(branch string) error {
-	// Check if branch exists on remote
-	cmd := exec.Command("git", "ls-remote", "--heads", "origin", branch)
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to check remote branch: %w", err)
+func pushBranch(config *prConfig) error {
+	config.base.Logger.Debug(fmt.Sprintf("Pushing branch %s to origin", config.currentBranch))
+	if err := config.base.GitOps.PushBranch(config.currentBranch, false); err != nil {
+		return err
 	}
-
-	// Push with -u if branch doesn't exist on remote
-	if strings.TrimSpace(string(output)) == "" {
-		fmt.Printf("Creating branch on remote...\n")
-		cmd = exec.Command("git", "push", "-u", "origin", branch)
-	} else {
-		cmd = exec.Command("git", "push", "origin", branch)
-	}
-
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to push branch: %w\nOutput: %s", err, string(output))
-	}
-
 	return nil
 }
 
@@ -326,7 +314,7 @@ func generatePRDescription(commits []string, diffStat string) string {
 }
 
 // createPullRequest creates a pull request using gh CLI
-func createPullRequest(title, description, head, base string) (string, error) {
+func createPullRequest(logger *logging.Logger, title, description, head, base string) (string, error) {
 	cmd := exec.Command("gh", "pr", "create",
 		"--title", title,
 		"--body", description,
@@ -341,5 +329,6 @@ func createPullRequest(title, description, head, base string) (string, error) {
 
 	// Extract PR URL from output
 	prURL := strings.TrimSpace(string(output))
+	logger.Debug(fmt.Sprintf("Created PR: %s", prURL))
 	return prURL, nil
 }

@@ -1,5 +1,4 @@
-@skip:wip
-@deps:go @L2 @ov
+@deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work_pull
 
   As a developer working in a workspace
@@ -86,6 +85,21 @@ Feature: src-commands_work_pull
       And I see "git add <files>"
       And I see "git rebase --continue"
       And I see "Or abort: git rebase --abort"
+
+  Rule: Debug mode enables detailed logging
+
+    Scenario: Debug flag enables logging to out/logs/work/
+      Given I am in a workspace
+      When I run "r2r work pull --debug"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
+      And debug logs contain rebase details
+
+    Scenario: Debug with -d shorthand
+      Given I am in a workspace
+      When I run "r2r work pull -d"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
 
   Rule: Validation prevents invalid operations
 

@@ -19,14 +19,7 @@ type Worktree struct {
 
 // GetWorktrees returns all worktrees in the repository
 func GetWorktrees(repoRoot string) ([]Worktree, error) {
-	cmd := exec.Command("git", "worktree", "list", "--porcelain")
-	cmd.Dir = repoRoot
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list worktrees: %w", err)
-	}
-
-	return parseWorktreeList(string(output))
+	return GetGitOps(repoRoot).ListWorktrees()
 }
 
 // parseWorktreeList parses the output of `git worktree list --porcelain`
@@ -124,15 +117,9 @@ func GenerateWorktreePath(repoName, branchName string) string {
 
 // IsWorktreeClean checks if a worktree has uncommitted changes
 func IsWorktreeClean(path string) (bool, error) {
-	cmd := exec.Command("git", "status", "--porcelain")
-	cmd.Dir = path
-	output, err := cmd.Output()
-	if err != nil {
-		return false, fmt.Errorf("failed to check worktree status: %w", err)
-	}
-
-	// If output is empty, working tree is clean
-	return len(strings.TrimSpace(string(output))) == 0, nil
+	// Note: GetGitOps requires repoRoot, but IsWorktreeClean in GitOps
+	// uses the path parameter as the directory, so we pass path as repoRoot
+	return GetGitOps(path).IsWorktreeClean(path)
 }
 
 // GetRepoName extracts the repository name from the repo root path
@@ -154,28 +141,12 @@ func WorktreeExists(branch string, repoRoot string) (bool, error) {
 
 // BranchExists checks if a branch exists in the repository
 func BranchExists(branch string, repoRoot string) (bool, error) {
-	cmd := exec.Command("git", "rev-parse", "--verify", fmt.Sprintf("refs/heads/%s", branch))
-	cmd.Dir = repoRoot
-	err := cmd.Run()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 128 {
-			// Branch doesn't exist
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to check branch: %w", err)
-	}
-	return true, nil
+	return GetGitOps(repoRoot).BranchExists(branch)
 }
 
 // GetCurrentBranch returns the current branch name
 func GetCurrentBranch(path string) (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	cmd.Dir = path
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to get current branch: %w", err)
-	}
-	return strings.TrimSpace(string(output)), nil
+	return GetGitOps(path).GetCurrentBranch(path)
 }
 
 // EnsureInGitRepo checks if we're in a git repository

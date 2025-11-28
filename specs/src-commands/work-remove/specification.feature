@@ -1,5 +1,4 @@
-@skip:wip
-@deps:go @L2 @ov
+@deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work_remove
 
   As a developer who is done with a workspace
@@ -82,6 +81,21 @@ Feature: src-commands_work_remove
       Then I see warning "Uncommitted changes will be lost"
       And the workspace is removed
       And uncommitted changes are discarded
+
+  Rule: Debug mode enables detailed logging
+
+    Scenario: Debug flag enables logging to out/logs/work/
+      Given I am in a workspace
+      When I run "r2r work remove --debug"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
+      And debug logs contain workspace removal details
+
+    Scenario: Debug with -d shorthand
+      Given I am in a workspace
+      When I run "r2r work remove -d"
+      Then the exit code is 0
+      And debug logs are written to "out/logs/work/"
 
   Rule: Validation prevents invalid operations
 

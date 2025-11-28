@@ -1,5 +1,4 @@
-@skip:wip
-@deps:go @deps:ai @L2 @ov
+@deps:go @deps:ai @L2 @ov @env:isolated-test-project
 Feature: src-commands_work-commit
 
   As a developer working in a workspace
