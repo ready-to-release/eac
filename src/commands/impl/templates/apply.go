@@ -1,17 +1,25 @@
 // Command: templates apply
 // Short: Apply templates with value replacements
-// Long: Apply templates with value replacements.
+// Long: Apply templates by processing files and replacing {{ .Variable }} placeholders with values.
 // Long:
-// Long: This command processes template files and replaces placeholder variables with
-// Long: provided values. Templates use {{VARIABLE}} syntax for placeholders.
+// Long: This command renders template files by substituting variables with actual values.
+// Long: Use this when you want to generate documentation, reports, or other files from templates.
 // Long:
-// Long: Values can be provided via command-line flags (--key=value) or automatically
-// Long: discovered from the repository (e.g., module names, git info).
+// Long: Available template types:
+// Long:   docs     - Documentation templates (outputs to .docs/reference)
 // Long:
-// Long: The command validates that all required placeholders have values before applying.
+// Long: How it works:
+// Long:   1. Fetches template files (from local directory or GitHub)
+// Long:   2. Reads replacement values from JSON file (optional)
+// Long:   3. Renders templates by replacing {{ .Variable }} with values
+// Long:   4. Writes rendered files to destination directory
 // Long:
-// Long: Example:
-// Long:   templates apply my-template --author="John Doe" --date="2025-01-19"
+// Long: Examples:
+// Long:   templates apply docs
+// Long:   templates apply docs --source ./my-templates
+// Long:   templates apply docs --input-json values.json
+// Long:
+// Long: Use "help templates apply <template-type>" for detailed information.
 // HasSideEffects: true
 package templates
 

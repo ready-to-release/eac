@@ -31,7 +31,13 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/specs/create"
 	_ "github.com/ready-to-release/eac/src/commands/impl/specs/validate"
 	_ "github.com/ready-to-release/eac/src/commands/impl/templates"
+	_ "github.com/ready-to-release/eac/src/commands/impl/templates/list"
+	_ "github.com/ready-to-release/eac/src/commands/impl/templates/apply/docs"
+	_ "github.com/ready-to-release/eac/src/commands/impl/templates/install/reports"
 	_ "github.com/ready-to-release/eac/src/commands/impl/test"
+
+	// Import templates test packages
+	listtests "github.com/ready-to-release/eac/src/commands/impl/templates/list/tests"
 )
 
 // sharedCtx is the shared test context used by child test packages.
@@ -407,10 +413,8 @@ func cleanupScenario() error {
 	// Reset init mocks (git repo)
 	cleanupInitMocks()
 
-	// Reset templates context (if it was set by a templates scenario)
-	// This ensures non-template scenarios don't inherit the templates context
-	// resetTemplatesContext is implemented in templates_steps_test.go
-	resetTemplatesContext()
+	// Templates context cleanup is handled by the individual test packages
+	// (list/tests, apply/tests, install/tests) via their own Before/After hooks
 
 	return nil
 }
@@ -473,7 +477,8 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sharedCtx.RunCommand = iRunTheCommand
 
 	// Templates command steps (must be FIRST to override generic "I run the command")
-	InitializeTemplatesScenario(sc)
+	// All templates scenarios (list, apply, install) are handled by InitializeListScenario
+	listtests.InitializeListScenario(sc)
 
 	// Specs command steps
 	InitializeSpecsScenario(sc)
@@ -673,20 +678,8 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Specs steps are registered via InitializeSpecsScenario() in specs_bridge_test.go
 	// which delegates to src/commands/impl/specs/tests/
 
-	// Template - additional steps
-	sc.Step(`^a template directory with file "([^"]*)"$`, aTemplateDirectoryWithFile)
-	sc.Step(`^a template exists at "([^"]*)"$`, aTemplateExistsAt)
-	sc.Step(`^template values with Path="([^"]*)"$`, templateValuesWithPath)
-	sc.Step(`^a security violation is detected$`, aSecurityViolationIsDetected)
-	sc.Step(`^the output file should contain "([^"]*)"$`, theOutputFileShouldContain)
-	sc.Step(`^they should only need to create a new file "([^"]*)"$`, theyShouldOnlyNeedToCreateANewFile)
-	sc.Step(`^a developer adds a new template type "([^"]*)" for apply$`, aDeveloperAddsANewTemplateTypeForApply)
-	sc.Step(`^a developer adds a new template type "([^"]*)" for install$`, aDeveloperAddsANewTemplateTypeForInstall)
-	sc.Step(`^I apply the template without providing --input-json$`, iApplyTheTemplateWithoutProvidingInputJson)
-
-	// Template - additional template file steps
-	sc.Step(`^a template file contains "([^"]*)"$`, aTemplateFileContains)
-	sc.Step(`^the templates command system is implemented$`, theTemplatesCommandSystemIsImplemented)
+	// Templates steps are registered via InitializeListScenario(), InitializeApplyScenario(),
+	// and InitializeInstallScenario() which delegate to src/commands/impl/templates/*/tests/
 }
 
 func InitializeTestSuite(sc *godog.TestSuiteContext) {

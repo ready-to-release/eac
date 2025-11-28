@@ -1,5 +1,5 @@
-// Package templates provides helper functions for the templates command
-package templates
+// Package internal provides helper functions for the templates command
+package internal
 
 import (
 	"encoding/json"
