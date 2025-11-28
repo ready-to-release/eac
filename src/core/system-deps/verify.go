@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
-
-	"github.com/go-git/go-git/v5"
 )
 
 // Verify checks if a system dependency is available
@@ -101,26 +98,24 @@ func (c *DockerChecker) GetVersion() (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-// GitChecker checks for Git functionality via go-git library
+// GitChecker checks for Git command-line tool
 type GitChecker struct{}
 
-func (c *GitChecker) GetName() string { return "Git (go-git)" }
+func (c *GitChecker) GetName() string { return "Git" }
 
 func (c *GitChecker) IsAvailable() bool {
-	// go-git is always available as it's a pure Go implementation
-	// We verify by checking that the library is importable and functional
-	// This is effectively always true since we compiled successfully
-	return true
+	cmd := exec.Command("git", "version")
+	return cmd.Run() == nil
 }
 
 func (c *GitChecker) GetVersion() (string, error) {
-	// Return go-git version info
-	// go-git doesn't expose its version directly, so we return a descriptive string
-	return fmt.Sprintf("go-git/v5 (pure Go, %s/%s)", runtime.GOOS, runtime.GOARCH), nil
+	cmd := exec.Command("git", "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
 }
-
-// Ensure go-git is used (prevents unused import error)
-var _ = git.ErrRepositoryNotExists
 
 // GoChecker checks for Go
 type GoChecker struct{}
