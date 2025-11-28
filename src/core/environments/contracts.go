@@ -22,10 +22,10 @@ type Environment struct {
 	Moniker     string   `yaml:"moniker"`
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description"`
-	Level       string   `yaml:"level"`        // L2, L3, L4
-	Type        string   `yaml:"type"`         // docker, docker-compose, plte, production
-	EnvTags     []string `yaml:"env_tags"`     // Environment classification tags (e.g., "local", "k8s", "staging")
-	SystemDeps  []string `yaml:"system_deps"`  // Required system dependencies (@deps:docker, @deps:kubectl, etc.)
+	Level       string   `yaml:"level"`       // L2, L3, L4
+	Type        string   `yaml:"type"`        // docker, docker-compose, plte, production
+	EnvTags     []string `yaml:"env_tags"`    // Environment classification tags (e.g., "local", "k8s", "staging")
+	SystemDeps  []string `yaml:"system_deps"` // Required system dependencies (@deps:docker, @deps:kubectl, etc.)
 }
 
 // GetTestTag returns the test tag for this environment (@env:<moniker>)
