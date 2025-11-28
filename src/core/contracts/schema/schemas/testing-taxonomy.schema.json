@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/src-core/testing-taxonomy/0.1.0",
+  "title": "Testing Taxonomy Schema",
+  "description": "Schema for the testing taxonomy based on execution environment and scope",
+  "type": "object",
+  "properties": {
+    "testing_taxonomy": {
+      "type": "object",
+      "description": "Testing taxonomy definition",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Taxonomy version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Taxonomy description"
+        },
+        "test_levels": {
+          "type": "array",
+          "description": "Test level definitions (L0-L4, HE2E)",
+          "items": {
+            "$ref": "#/definitions/test_level"
+          }
+        },
+        "constraints": {
+          "$ref": "#/definitions/constraints"
+        },
+        "tradeoffs": {
+          "$ref": "#/definitions/tradeoffs"
+        }
+      },
+      "required": ["version", "description", "test_levels"]
+    }
+  },
+  "required": ["testing_taxonomy"],
+  "definitions": {
+    "test_level": {
+      "type": "object",
+      "description": "A single test level definition",
+      "properties": {
+        "level": {
+          "type": "string",
+          "description": "Level identifier",
+          "enum": ["L0", "L1", "L2", "L3", "L4", "HE2E"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable level name"
+        },
+        "shift_direction": {
+          "type": "string",
+          "description": "Whether tests shift left or right",
+          "enum": ["LEFT", "RIGHT", "non-shifted"]
+        },
+        "execution_environment": {
+          "type": "string",
+          "description": "Where tests execute"
+        },
+        "scope": {
+          "type": "string",
+          "description": "What the tests have access to"
+        },
+        "external_dependencies": {
+          "type": "string",
+          "description": "How external dependencies are handled"
+        },
+        "determinism": {
+          "type": "string",
+          "description": "Level of test determinism",
+          "enum": ["Highest", "High", "Moderate", "Lowest"]
+        },
+        "domain_coherency": {
+          "type": "string",
+          "description": "Level of domain coherency",
+          "enum": ["Highest", "High", "Moderate", "Lowest", "Low"]
+        },
+        "time_constraints": {
+          "$ref": "#/definitions/time_constraints"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about this level"
+        }
+      },
+      "required": ["level", "name", "shift_direction", "execution_environment", "scope", "external_dependencies", "determinism", "domain_coherency", "time_constraints"]
+    },
+    "time_constraints": {
+      "type": "object",
+      "description": "Time constraints for test preparation and execution",
+      "properties": {
+        "preparation": {
+          "type": "string",
+          "description": "Time required for test preparation"
+        },
+        "execution": {
+          "type": "string",
+          "description": "Time required for test execution"
+        }
+      },
+      "required": ["preparation", "execution"]
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Taxonomy constraints",
+      "properties": {
+        "execution_requirements": {
+          "type": "string",
+          "description": "Requirements for execution"
+        },
+        "test_scope": {
+          "type": "string",
+          "description": "Scope boundaries"
+        }
+      }
+    },
+    "tradeoffs": {
+      "type": "object",
+      "description": "Taxonomy tradeoffs",
+      "properties": {
+        "determinism_vs_coherency": {
+          "type": "string",
+          "description": "Tradeoff between determinism and domain coherency"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "testing_taxonomy": {
+        "version": "0.1.0",
+        "description": "Testing taxonomy based on execution environment and scope",
+        "test_levels": [
+          {
+            "level": "L0",
+            "name": "Unit Tests",
+            "shift_direction": "LEFT",
+            "execution_environment": "devbox or agent",
+            "scope": "Source and binary",
+            "external_dependencies": "All replaced with test doubles",
+            "determinism": "Highest",
+            "domain_coherency": "Lowest",
+            "time_constraints": {
+              "preparation": "milliseconds",
+              "execution": "milliseconds"
+            }
+          }
+        ],
+        "constraints": {
+          "execution_requirements": "What binaries, tooling, and configuration are needed",
+          "test_scope": "Vertical vs horizontal boundaries"
+        },
+        "tradeoffs": {
+          "determinism_vs_coherency": "Lower Lx values provide higher determinism but lower domain coherency"
+        }
+      }
+    }
+  ]
+}

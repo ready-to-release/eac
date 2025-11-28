@@ -8,7 +8,7 @@
 // Long: The validation:
 // Long:   - Discovers all Gherkin feature files in the repository
 // Long:   - Extracts all tags from features, scenarios, and examples
-// Long:   - Loads the tag contract from .r2r/eac/repository/testing/tags.yml
+// Long:   - Loads the tag contract from .r2r/eac/repository/testing-tags.yml
 // Long:   - Checks that each tag is defined in the contract
 // Long:   - Reports undefined tags with their file locations
 // Long:
@@ -25,36 +25,32 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/contracts"
-	"github.com/ready-to-release/eac/src/core/contracts/modules"
-	"github.com/ready-to-release/eac/src/core/environments"
-	"github.com/ready-to-release/eac/src/core/repository"
-	coretesting "github.com/ready-to-release/eac/src/core/testing"
+	"github.com/ready-to-release/eac/src/core/config"
 )
 
 func init() {
 	registry.Register(TestTags)
 }
 
+// package-level config for use by helper functions
+var eacConfig *config.EACConfig
+
 // TestTags validates that all test tags are defined in the tag contract
 func TestTags() int {
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
+	// Load central config
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get repository root: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
 		return 1
 	}
+	eacConfig = cfg // Store for helper functions
+	repoRoot := cfg.RepoRoot
 
-	// Load tag contract
-	contract, err := coretesting.LoadTagContract()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load tag contract: %v\n", err)
-		return 1
-	}
+	tagsConfig := cfg.TestingTags
 
 	// Build set of valid tags from contract
 	validTags := make(map[string]bool)
-	for _, tag := range contract.Tags {
+	for _, tag := range tagsConfig.Tags {
 		validTags[tag.Tag] = true
 	}
 
@@ -102,7 +98,7 @@ func TestTags() int {
 			}
 
 			// Check if tag matches a pattern in the contract
-			if isValidPatternTag(tagInfo.Tag, contract) {
+			if isValidPatternTag(tagInfo.Tag, tagsConfig) {
 				continue
 			}
 
@@ -158,7 +154,7 @@ func TestTags() int {
 		fmt.Println()
 	}
 
-	fmt.Printf("Fix: Add missing tags to %s/testing/tags.yml\n", contracts.EACConfigRelPath)
+	fmt.Printf("Fix: Add missing tags to %s/%s\n", config.EACConfigRelPath, config.TestingTagsFileName)
 	return 1
 }
 
@@ -205,7 +201,7 @@ func extractTagsFromFeature(filePath string) ([]TagInfo, error) {
 }
 
 // isValidPatternTag checks if a tag matches any pattern in the contract
-func isValidPatternTag(tag string, contract *coretesting.TagContract) bool {
+func isValidPatternTag(tag string, tagsConfig *config.TestingTagsConfig) bool {
 	// Only check tags with colons (pattern tags have format @prefix:suffix)
 	if !strings.Contains(tag, ":") {
 		return false
@@ -220,7 +216,7 @@ func isValidPatternTag(tag string, contract *coretesting.TagContract) bool {
 	suffix := parts[1]
 
 	// Find matching pattern in contract
-	for _, contractTag := range contract.Tags {
+	for _, contractTag := range tagsConfig.Tags {
 		// Check if contract tag is a pattern (has <placeholder>)
 		if !strings.Contains(contractTag.Tag, "<") || !strings.Contains(contractTag.Tag, ">") {
 			continue
@@ -238,12 +234,12 @@ func isValidPatternTag(tag string, contract *coretesting.TagContract) bool {
 		if prefix == contractPrefix {
 			// For @skip:<reason>, validate against skip_reasons
 			if prefix == "@skip:" {
-				return isValidSkipReason(suffix, contract)
+				return isValidSkipReason(suffix, tagsConfig)
 			}
 
 			// For @deps:<name>, validate against system deps, OS platforms, and providers
 			if prefix == "@deps:" {
-				return isValidDepsName(suffix, contract)
+				return isValidDepsName(suffix, tagsConfig)
 			}
 
 			// For @env:<moniker>, validate against environment contracts
@@ -265,8 +261,8 @@ func isValidPatternTag(tag string, contract *coretesting.TagContract) bool {
 }
 
 // isValidSkipReason checks if a skip reason is defined in the contract
-func isValidSkipReason(reason string, contract *coretesting.TagContract) bool {
-	for _, skipReason := range contract.SkipReasons {
+func isValidSkipReason(reason string, tagsConfig *config.TestingTagsConfig) bool {
+	for _, skipReason := range tagsConfig.SkipReasons {
 		if skipReason.Code == reason {
 			return true
 		}
@@ -275,16 +271,16 @@ func isValidSkipReason(reason string, contract *coretesting.TagContract) bool {
 }
 
 // isValidDepsName checks if a deps name is valid (system dep or OS platform)
-func isValidDepsName(name string, contract *coretesting.TagContract) bool {
+func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
 	// Check system dependencies
-	for _, sysDep := range contract.SystemDependencies {
+	for _, sysDep := range tagsConfig.SystemDependencies {
 		if sysDep.Name == name {
 			return true
 		}
 	}
 
 	// Check OS platforms
-	for _, osPlatform := range contract.OSPlatforms {
+	for _, osPlatform := range tagsConfig.OSPlatforms {
 		if osPlatform.Name == name {
 			return true
 		}
@@ -295,16 +291,14 @@ func isValidDepsName(name string, contract *coretesting.TagContract) bool {
 
 // isValidEnvMoniker checks if an environment moniker is defined in environment contracts
 func isValidEnvMoniker(moniker string) bool {
-	// Load environment contract
-	contract, err := environments.LoadEnvironmentContract()
-	if err != nil {
-		// If we can't load contracts, allow the tag (fail open for now)
-		fmt.Fprintf(os.Stderr, "Warning: failed to load environment contracts: %v\n", err)
+	// Use the already-loaded config
+	if eacConfig == nil || eacConfig.Environments == nil {
+		fmt.Fprintf(os.Stderr, "Warning: environments config not loaded\n")
 		return true
 	}
 
 	// Check if moniker exists in environment contracts
-	for _, env := range contract.Environments {
+	for _, env := range eacConfig.Environments.Environments {
 		if env.Moniker == moniker {
 			return true
 		}
@@ -315,23 +309,13 @@ func isValidEnvMoniker(moniker string) bool {
 
 // isValidModuleName checks if a module name is defined in module contracts
 func isValidModuleName(moduleName string) bool {
-	// Get repository root
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		// If we can't get repo root, allow the tag (fail open for now)
-		fmt.Fprintf(os.Stderr, "Warning: failed to get repository root: %v\n", err)
-		return true
-	}
-
-	// Load module registry from workspace (version 0.1.0)
-	registry, err := modules.LoadFromWorkspace(repoRoot)
-	if err != nil {
-		// If we can't load modules, allow the tag (fail open for now)
-		fmt.Fprintf(os.Stderr, "Warning: failed to load module registry: %v\n", err)
+	// Use the already-loaded config
+	if eacConfig == nil || eacConfig.Modules == nil {
+		fmt.Fprintf(os.Stderr, "Warning: modules config not loaded\n")
 		return true
 	}
 
 	// Check if module exists
-	_, found := registry.Get(moduleName)
+	_, found := eacConfig.Modules.GetModule(moduleName)
 	return found
 }

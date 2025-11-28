@@ -28,6 +28,9 @@ func Validate() int {
 	case "--help", "-h":
 		printValidateUsage()
 		return 0
+	case "contracts":
+		// Handled by separate registrations in respective files
+		return 0
 	case "dependencies":
 		// Handled by separate registrations in respective files
 		return 0
@@ -59,6 +62,7 @@ func printValidateUsage() {
 	fmt.Println("Usage: r2r validate <subcommand> [args...]")
 	fmt.Println()
 	fmt.Println("Subcommands:")
+	fmt.Println("  contracts                 Validate repository contracts against JSON schemas")
 	fmt.Println("  dependencies              Validate module dependency contracts")
 	fmt.Println("  test-tags                 Validate that all test tags are defined in the tag contract")
 	fmt.Println("  module-hierarchy          Validate module dependency graph structure")
@@ -67,6 +71,9 @@ func printValidateUsage() {
 	fmt.Println("  go-tidy                   Validate Go module dependencies are tidy")
 	fmt.Println()
 	fmt.Println("Examples:")
+	fmt.Println("  # Validate all contracts against schemas")
+	fmt.Println("  r2r validate contracts")
+	fmt.Println()
 	fmt.Println("  # Validate all dependencies")
 	fmt.Println("  r2r validate dependencies")
 	fmt.Println()

@@ -37,6 +37,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/reporter"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/config"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
 	"github.com/ready-to-release/eac/src/core/platform"
@@ -465,9 +466,9 @@ func TestSuite() int {
 			return "src/commands/tests" // fallback
 		}
 
-		// Special case: repository specs are in specs/repository but tests are in src/core/repository/tests
+		// Special case: repository specs are in specs/repository but tests are in src/specs/impl/repository
 		if parts[0] == "repository" {
-			return "src/core/repository/tests"
+			return "src/specs/impl/repository"
 		}
 
 		// Convert "src-commands" -> "src/commands"
@@ -535,14 +536,14 @@ func TestSuite() int {
 	var testParallelism int
 
 	// Build godog tag filter for suite with skip tags integrated
-	// Load tag contract to get skip reasons
-	tagContract, err := testing.LoadTagContract()
+	// Load config to get skip reasons
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		fmt.Fprintf(multiWriter, "❌ Failed to load tag contract: %v\n", err)
+		fmt.Fprintf(multiWriter, "❌ Failed to load config: %v\n", err)
 		return 1
 	}
 
-	skipTags := tagContract.GetSkipTagsForSuite()
+	skipTags := cfg.TestingTags.GetSkipTagsForSuite()
 	suiteTagFilter := suite.BuildGodogTagFilterWithSkipTags(skipTags)
 
 	if parallel {

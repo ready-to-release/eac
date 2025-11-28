@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	coretesting "github.com/ready-to-release/eac/src/core/testing"
+	"github.com/ready-to-release/eac/src/core/config"
 )
 
 func TestFeatures(t *testing.T) {
@@ -19,14 +19,14 @@ func TestFeatures(t *testing.T) {
 		reportFormat = "cucumber" // Default format
 	}
 
-	// Load tag contract to get skip reasons
-	contract, err := coretesting.LoadTagContract()
+	// Load config to get skip reasons
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Fatalf("Failed to load tag contract: %v", err)
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Build tag filter from contract skip reasons
-	skipFilter := contract.BuildGodogSkipTagFilter()
+	// Build tag filter from config skip reasons
+	skipFilter := cfg.TestingTags.BuildGodogSkipTagFilter()
 	tagFilter := skipFilter + " && ~@pending"
 
 	// Add suite tag filter if provided (e.g., "@L0,@L1,@L2" for commit suite)

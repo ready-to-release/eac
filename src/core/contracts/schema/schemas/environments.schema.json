@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/src-core/environments/0.1.0",
+  "title": "Environments Contract Schema",
+  "description": "Schema for the environment contract defining test execution contexts",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "$ref": "#/definitions/metadata"
+    },
+    "environments": {
+      "type": "array",
+      "description": "List of test execution environments",
+      "items": {
+        "$ref": "#/definitions/environment"
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["metadata", "environments"],
+  "definitions": {
+    "metadata": {
+      "type": "object",
+      "description": "Contract metadata",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Contract version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Contract description"
+        },
+        "scope": {
+          "type": "string",
+          "description": "Scope of the contract"
+        }
+      },
+      "required": ["version", "description"]
+    },
+    "environment": {
+      "type": "object",
+      "description": "A test execution environment definition",
+      "properties": {
+        "moniker": {
+          "type": "string",
+          "description": "Unique environment identifier",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable environment name",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the environment"
+        },
+        "level": {
+          "type": "string",
+          "description": "Test level classification",
+          "enum": ["L0", "L1", "L2", "L3", "L4"]
+        },
+        "type": {
+          "type": "string",
+          "description": "Environment type",
+          "enum": ["unit", "docker", "docker-compose", "plte", "production"]
+        },
+        "env_tags": {
+          "type": "array",
+          "description": "Environment classification tags",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        },
+        "system_deps": {
+          "type": "array",
+          "description": "Required system dependencies (e.g., @deps:docker)",
+          "items": {
+            "type": "string",
+            "pattern": "^@deps:[a-z][a-z0-9-]*$"
+          }
+        }
+      },
+      "required": ["moniker", "name", "level", "type"]
+    }
+  },
+  "examples": [
+    {
+      "metadata": {
+        "version": "0.1.0",
+        "description": "Environment contract defining test execution contexts",
+        "scope": "Test environment classification and requirements"
+      },
+      "environments": [
+        {
+          "moniker": "l00-01",
+          "name": "L0 Environment 01 - In-process Unit Tests",
+          "description": "Very fast unit tests running in-process with direct access to source",
+          "level": "L0",
+          "type": "unit",
+          "env_tags": ["in-process", "very-fast"],
+          "system_deps": []
+        },
+        {
+          "moniker": "local01",
+          "name": "Local Environment 01 - Docker Container",
+          "description": "Single Docker container execution environment",
+          "level": "L2",
+          "type": "docker",
+          "env_tags": ["local", "isolated"],
+          "system_deps": ["@deps:docker"]
+        }
+      ]
+    }
+  ]
+}

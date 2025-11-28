@@ -35,7 +35,7 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	coretesting "github.com/ready-to-release/eac/src/core/testing"
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -64,15 +64,15 @@ func TestFeatures(t *testing.T) {
 		consoleFormat = "pretty"
 	}
 
-	// Load tag contract for skip reasons (@skip:wip, @skip:broken, etc.)
-	contract, err := coretesting.LoadTagContract()
+	// Load config for skip reasons (@skip:wip, @skip:broken, etc.)
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Fatalf("Failed to load tag contract: %v", err)
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
 	// Build base tag filter: exclude all @skip:<reason> tags and @pending
 	// Example: "~@skip:wip && ~@skip:broken && ~@skip:flaky && ... && ~@pending"
-	skipFilter := contract.BuildGodogSkipTagFilter()
+	skipFilter := cfg.TestingTags.BuildGodogSkipTagFilter()
 	tagFilter := skipFilter + " && ~@pending"
 
 	// Append suite tag filter if provided by test orchestrator.

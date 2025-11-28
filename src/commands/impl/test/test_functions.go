@@ -320,8 +320,8 @@ func testMkDocsSite(module *modules.ModuleContract, workspaceRoot string, output
 // testRepositoryRoot tests the repository-root module (runs repository validation tests)
 func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	// The repository-root module contains repository-level validation tests
-	// These are typically in src/core/repository/tests
-	testDir := filepath.Join(workspaceRoot, "src", "core", "repository", "tests")
+	// These are in src/specs/impl/repository
+	testDir := filepath.Join(workspaceRoot, "src", "specs", "impl", "repository")
 
 	writeln(logWriter, "\n=== Testing repository-root: %s ===", module.Moniker)
 	writeln(logWriter, "Running repository validation tests from: %s", testDir)

@@ -26,6 +26,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/logging"
@@ -409,16 +410,18 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 		return nil, fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
-	// Load tag contract for advanced tag validation (only when checkTags is enabled)
-	var tagContract *contracts.TagContract
+	// Load tags config for advanced tag validation (only when checkTags is enabled)
+	var tagsConfig *config.TestingTagsConfig
 	if checkTags {
-		tagLoader := contracts.NewLoader(repoRoot)
-		tagContract, _ = contracts.LoadTagContract(tagLoader)
-		// Tag contract load errors are ignored - validation continues without advanced tag checks
+		cfg, cfgErr := config.Load(config.DefaultLoadOptions())
+		if cfgErr == nil {
+			tagsConfig = cfg.TestingTags
+		}
+		// Config load errors are ignored - validation continues without advanced tag checks
 	}
 
-	// Create validator with tag contract support
-	validator := contracts.NewGherkinValidatorWithTags(contractData, tagContract, antiCorruptionRules)
+	// Create validator with tags config support
+	validator := contracts.NewGherkinValidatorWithTags(contractData, tagsConfig, antiCorruptionRules)
 
 	// Validate content
 	errors := validator.Validate(string(content), nil)
