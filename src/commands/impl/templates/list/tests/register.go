@@ -73,7 +73,6 @@ func InitializeListScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I have a values file "([^"]*)" with:$`, applytests.IHaveAValuesFileWith)
 
 	// Execution steps
-	sc.Step(`^I run the command "([^"]*)"$`, iRunCommand)
 	sc.Step(`^I run the templates command "([^"]*)"$`, iRunCommand)
 
 	// Verification steps
