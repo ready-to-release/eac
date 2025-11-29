@@ -21,6 +21,7 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/show"
 	_ "github.com/ready-to-release/eac/src/commands/impl/specs"
 	_ "github.com/ready-to-release/eac/src/commands/impl/specs/create"
+	_ "github.com/ready-to-release/eac/src/commands/impl/specs/unused"
 	_ "github.com/ready-to-release/eac/src/commands/impl/specs/validate"
 	_ "github.com/ready-to-release/eac/src/commands/impl/templates"
 	_ "github.com/ready-to-release/eac/src/commands/impl/templates/list"

@@ -18,9 +18,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	sc.Step(`^I run the command "([^"]*)"$`, func(cmdLine string) error {
 		return ctx.RunCommand(cmdLine)
 	})
-	sc.Step(`^I run the command "([^"]*)" without arguments$`, func(cmdLine string) error {
-		return ctx.RunCommand(cmdLine)
-	})
 
 	// Exit code steps - using helpers
 	sc.Step(`^the exit code is (\d+)$`, func(expectedCode int) error {
@@ -31,9 +28,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	})
 	sc.Step(`^the command should succeed$`, func() error {
 		return CommandSucceeded(ctx)
-	})
-	sc.Step(`^the command should fail$`, func() error {
-		return CommandFailed(ctx)
 	})
 	sc.Step(`^the command exits with code (\d+)$`, func(expectedCode int) error {
 		return ExitCodeIs(ctx, expectedCode)
@@ -60,15 +54,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	})
 	sc.Step(`^stderr contains "([^"]*)"$`, func(text string) error {
 		return OutputContains(ctx, text)
-	})
-	sc.Step(`^the standard output contains "([^"]*)"$`, func(text string) error {
-		return OutputContains(ctx, text)
-	})
-	sc.Step(`^the standard output does not contain "([^"]*)"$`, func(text string) error {
-		return OutputDoesNotContain(ctx, text)
-	})
-	sc.Step(`^the standard output matches the pattern "([^"]*)"$`, func(pattern string) error {
-		return OutputMatches(ctx, pattern)
 	})
 
 	// File verification steps - using helpers
