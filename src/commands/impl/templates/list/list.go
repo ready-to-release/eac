@@ -244,6 +244,10 @@ func parseConfig() (*Config, error) {
 
 	// Set template source if provided
 	if templateSource != "" {
+		// Resolve relative paths against workspace root
+		if !internal.IsGitRepository(templateSource) && !filepath.IsAbs(templateSource) {
+			templateSource = filepath.Join(workspaceRoot, templateSource)
+		}
 		config.TemplateSource = templateSource
 	}
 

@@ -84,9 +84,30 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	sc.Step(`^debug files should exist in "([^"]*)"$`, func(dir string) error {
 		return DirectoryHasFiles(ctx, dir)
 	})
+	sc.Step(`^"([^"]*)" should exist in the working directory$`, func(path string) error {
+		return FileExists(ctx, path)
+	})
 
-	// NOTE: "the custom prompt is used" is NOT registered here.
-	// Each verb that uses custom prompts should register its own step
-	// with a verb-specific pattern, calling the CustomPromptWasUsed helper.
-	// This avoids step conflicts between specs and risks.
+	// Git repository setup steps
+	sc.Step(`^I am in a git repository$`, func() error {
+		return IsGitRepository(ctx)
+	})
+	sc.Step(`^I am not in a git repository$`, func() error {
+		return EnsureNotGitRepository(ctx)
+	})
+	sc.Step(`^the repository root exists$`, func() error {
+		// This is typically satisfied by test setup
+		return nil
+	})
+
+	// Directory setup steps
+	sc.Step(`^no \.r2r directory exists$`, func() error {
+		return RemoveAll(ctx, ".r2r")
+	})
+	sc.Step(`^a \.r2r directory already exists$`, func() error {
+		return CreateDirectory(ctx, ".r2r/eac")
+	})
+
+	// NOTE: Feature-specific steps (work, risks, specs, etc.) are registered
+	// in their respective step files in impl/src-commands/
 }

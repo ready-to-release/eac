@@ -10,7 +10,7 @@ Feature: repository_build-repo-config
 
   Rule: The repo-config module must build without errors
 
-    @L2 @ov
+    @L1 @ov
     Scenario: repo-config module builds successfully
       When I run the command "build repo-config"
       Then the exit code is 0

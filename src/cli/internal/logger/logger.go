@@ -103,7 +103,8 @@ func New(cfg Config) (*Logger, error) {
 	zerolog.SetGlobalLevel(level)
 
 	// Configure time format based on environment
-	if cfg.Environment == "production" || cfg.JSON {
+	// CI/production uses unix timestamps for machine parsing, development uses human-readable RFC3339
+	if cfg.Environment == "ci" || cfg.Environment == "production" || cfg.JSON {
 		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	} else {
 		zerolog.TimeFieldFormat = time.RFC3339

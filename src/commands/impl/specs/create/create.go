@@ -29,6 +29,7 @@ import (
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/commands/impl/specs"
+	aimock "github.com/ready-to-release/eac/src/core/ai"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
@@ -600,6 +601,11 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 
 // generateWithAI invokes the AI provider with the prompt
 func generateWithAI(templateRoot string, prompt string, debug bool) (string, error) {
+	// Check for mock response from file-based mock system (subprocess testing)
+	if mock, ok := aimock.GetMockResponse("specs"); ok {
+		return mock, nil
+	}
+
 	// Check for mock response (test mode) - module-level mock takes precedence
 	if mockAIResponse != "" {
 		return mockAIResponse, nil

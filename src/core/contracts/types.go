@@ -2,14 +2,15 @@ package contracts
 
 // BaseContract represents the base structure for module contracts
 type BaseContract struct {
-	Moniker     string   `yaml:"moniker"`
-	Name        string   `yaml:"name"`
-	Type        string   `yaml:"type"`
-	Description string   `yaml:"description"`
-	Parent      string   `yaml:"parent"`
-	DependsOn   []string `yaml:"depends_on"`
-	Files       Files    `yaml:"files"`
-	Flags       Flags    `yaml:"flags"`
+	Moniker     string            `yaml:"moniker"`
+	Name        string            `yaml:"name"`
+	Type        string            `yaml:"type"`
+	Description string            `yaml:"description"`
+	Parent      string            `yaml:"parent"`
+	DependsOn   []string          `yaml:"depends_on"`
+	Files       Files             `yaml:"files"`
+	Flags       Flags             `yaml:"flags"`
+	Metadata    map[string]string `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
 }
 
 // Files represents all file ownership patterns for a module
@@ -30,9 +31,11 @@ type Files struct {
 
 // RepoPatterns represents patterns relative to repository root
 type RepoPatterns struct {
-	Specs   []string `yaml:"specs"`   // Specification files
-	Other   []string `yaml:"other"`   // Other files outside module root
-	Exclude []string `yaml:"exclude"` // Exclusions relative to repo root
+	Specs    []string `yaml:"specs"`     // Specification files
+	TestImpl string   `yaml:"test_impl"` // Test implementation directory path
+	Design   string   `yaml:"design"`    // Design workspace directory path
+	Other    []string `yaml:"other"`     // Other files outside module root
+	Exclude  []string `yaml:"exclude"`   // Exclusions relative to repo root
 }
 
 // Flags represents behavioral flags for a module

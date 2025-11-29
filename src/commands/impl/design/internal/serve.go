@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/ready-to-release/eac/src/commands/internal/serve"
 	"github.com/ready-to-release/eac/src/core/repository"
@@ -24,10 +23,10 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 	}
 
 	// Get workspace directory (contains workspace.dsl)
-	workspaceDir := filepath.Join(repoRoot, SpecsDirectory, moduleName, DesignDirectory)
+	workspaceDir := repository.DesignPath(repoRoot, moduleName)
 
 	// Verify workspace exists
-	workspacePath := filepath.Join(workspaceDir, WorkspaceFileName)
+	workspacePath := repository.WorkspaceDSLPath(repoRoot, moduleName)
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		return fmt.Errorf("workspace file not found: %s", workspacePath)
 	}

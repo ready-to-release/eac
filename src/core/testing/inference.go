@@ -57,7 +57,7 @@ func DeriveOperationalVerification(tags []string) []string {
 
 // hasAnyLevelTag checks if tags contain any level tag (@L0-@L4)
 func hasAnyLevelTag(tags []string) bool {
-	levelTags := []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
+	levelTags := GetLevelTags()
 	for _, tag := range tags {
 		if contains(levelTags, tag) {
 			return true
@@ -68,7 +68,7 @@ func hasAnyLevelTag(tags []string) bool {
 
 // isLevelInference checks if inference adds level tags
 func isLevelInference(inference Inference) bool {
-	levelTags := []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
+	levelTags := GetLevelTags()
 	for _, tag := range inference.ThenAddTags {
 		if contains(levelTags, tag) {
 			return true
@@ -79,7 +79,7 @@ func isLevelInference(inference Inference) bool {
 
 // isVerificationInference checks if inference adds verification tags
 func isVerificationInference(inference Inference) bool {
-	verificationTags := []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
+	verificationTags := GetVerificationTags()
 	for _, tag := range inference.ThenAddTags {
 		if contains(verificationTags, tag) {
 			return true
@@ -222,21 +222,39 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 	return enriched
 }
 
-// OsPlatformTags lists OS-specific dependency tag values (without @deps: prefix)
-var OsPlatformTags = []string{"linux", "macos", "windows"}
+// Fallback OS platform tags when config is unavailable
+var osPlatformTagsFallback = []string{"linux", "macos", "windows"}
 
-// OsPlatformTagsFull lists OS-specific dependency tags (with @deps: prefix) for filtering
-var OsPlatformTagsFull = map[string]bool{
-	"@deps:linux":       true,
-	"@deps:macos":       true,
-	"@deps:windows":     true,
-	"@deps:os-agnostic": true,
+// GetOSPlatformTags returns OS platform names from config, with fallback
+func GetOSPlatformTags() []string {
+	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
+		platforms := make([]string, len(cfg.TestingTags.OSPlatforms))
+		for i, p := range cfg.TestingTags.OSPlatforms {
+			platforms[i] = p.Name
+		}
+		if len(platforms) > 0 {
+			return platforms
+		}
+	}
+	return osPlatformTagsFallback
+}
+
+// GetOSPlatformTagsFull returns OS platform tags with @deps: prefix as a map
+func GetOSPlatformTagsFull() map[string]bool {
+	platforms := GetOSPlatformTags()
+	result := make(map[string]bool, len(platforms)+1)
+	for _, p := range platforms {
+		result["@deps:"+p] = true
+	}
+	result["@deps:os-agnostic"] = true
+	return result
 }
 
 // InferOSPlatform adds @deps:os-agnostic to tests that don't have any OS-specific deps
 // This runs after other inference phases to ensure all explicit OS deps are already set
 func InferOSPlatform(tests []TestReference) []TestReference {
 	enriched := make([]TestReference, len(tests))
+	osPlatformTags := GetOSPlatformTags()
 
 	for i, test := range tests {
 		enriched[i] = test
@@ -245,7 +263,7 @@ func InferOSPlatform(tests []TestReference) []TestReference {
 		// Check if test has any OS-specific dependency
 		hasOSDep := false
 		for _, dep := range test.SystemDependencies {
-			for _, osDep := range OsPlatformTags {
+			for _, osDep := range osPlatformTags {
 				if dep == osDep {
 					hasOSDep = true
 					break

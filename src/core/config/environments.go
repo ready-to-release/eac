@@ -1,6 +1,8 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // EnvironmentsConfig represents the environments.yml configuration
 type EnvironmentsConfig struct {
@@ -103,3 +105,4 @@ func (c *EnvironmentsConfig) Validate() error {
 
 	return nil
 }
+

@@ -1,5 +1,3 @@
-//go:build L0 && ov
-
 // Package repository contains godog step implementations for specs/repository.
 package repository
 

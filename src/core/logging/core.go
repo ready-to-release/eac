@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/src/core/repository"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -36,7 +37,7 @@ func buildConsoleCore(cfg Config) zapcore.Core {
 // Returns the core and the file that needs to be closed.
 func buildFileCore(cfg Config) (zapcore.Core, *os.File, error) {
 	// Create log directory: out/logs/<module>/
-	logDir := filepath.Join(cfg.WorkspaceRoot, "out", "logs", cfg.Module)
+	logDir := filepath.Join(repository.LogsPath(cfg.WorkspaceRoot), cfg.Module)
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, nil, err
 	}

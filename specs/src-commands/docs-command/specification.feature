@@ -1,4 +1,4 @@
-@L2 @ov @deps:docker @env:isolated-test-project
+@L2 @ov @deps:docker
 Feature: src-commands_docs-command
 
   As a developer of the eac platform

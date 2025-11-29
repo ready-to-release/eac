@@ -1,6 +1,8 @@
 package config
 
-import "fmt"
+import (
+	"github.com/ready-to-release/eac/src/core/defaults"
+)
 
 // ModulesConfig represents the modules.yml configuration
 type ModulesConfig struct {
@@ -9,14 +11,15 @@ type ModulesConfig struct {
 
 // Module represents a single module definition
 type Module struct {
-	Moniker     string   `yaml:"moniker"`
-	Name        string   `yaml:"name"`
-	Type        string   `yaml:"type"`
-	Description string   `yaml:"description"`
-	Parent      string   `yaml:"parent"`
-	DependsOn   []string `yaml:"depends_on"`
-	Files       Files    `yaml:"files"`
-	Flags       Flags    `yaml:"flags"`
+	Moniker     string            `yaml:"moniker"`
+	Name        string            `yaml:"name"`
+	Type        string            `yaml:"type"`
+	Description string            `yaml:"description"`
+	Parent      string            `yaml:"parent"`
+	DependsOn   []string          `yaml:"depends_on"`
+	Files       Files             `yaml:"files"`
+	Flags       Flags             `yaml:"flags"`
+	Metadata    map[string]string `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
 }
 
 // Files defines file ownership patterns for a module
@@ -33,9 +36,11 @@ type Files struct {
 
 // RepoFiles defines repository-level file ownership
 type RepoFiles struct {
-	Specs   []string `yaml:"specs"`
-	Other   []string `yaml:"other"`
-	Exclude []string `yaml:"exclude"`
+	Specs    []string `yaml:"specs"`
+	TestImpl string   `yaml:"test_impl"` // Test implementation directory path
+	Design   string   `yaml:"design"`    // Design workspace directory path
+	Other    []string `yaml:"other"`
+	Exclude  []string `yaml:"exclude"`
 }
 
 // Flags defines module behavior flags
@@ -44,16 +49,17 @@ type Flags struct {
 	OwnChildrenFiles bool `yaml:"own_children_files"`
 }
 
-// applyDefaults applies default values to all modules
+// applyDefaults applies default values to all modules (generic defaults only).
+// Call ApplyTypeDefaults after loading ModuleTypes for type-specific defaults.
 func (c *ModulesConfig) applyDefaults() {
 	for i := range c.Modules {
 		m := &c.Modules[i]
 
 		if m.Type == "" {
-			m.Type = "no-module-type"
+			m.Type = defaults.ModuleType
 		}
 		if m.Parent == "" {
-			m.Parent = "."
+			m.Parent = defaults.Parent
 		}
 		if m.Description == "" {
 			m.Description = m.Name
@@ -61,13 +67,112 @@ func (c *ModulesConfig) applyDefaults() {
 		if m.DependsOn == nil {
 			m.DependsOn = []string{}
 		}
+		// Note: Other defaults (Source, Config, Changelog, Specs, etc.) are now
+		// applied by ApplyTypeDefaults using type-specific defaults with fallback.
+	}
+}
+
+// ApplyTypeDefaults applies type-specific defaults to all modules.
+// This should be called after both Modules and ModuleTypes are loaded.
+func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
+	for i := range c.Modules {
+		m := &c.Modules[i]
+
+		// Get type definition
+		var typeDef *defaults.TypeDefaults
+		if types != nil {
+			if td := types.Get(m.Type); td != nil && td.Defaults != nil {
+				typeDef = convertTypeDefaults(td.Defaults)
+			}
+		}
+
+		// Resolve defaults using type-specific + generic fallback
+		resolved := defaults.ResolveDefaults(
+			typeDef,
+			m.Moniker, m.Files.Root, m.Type,
+			m.Files.Source, m.Files.Config, m.Files.Assets, m.Files.Tests,
+			m.Files.Changelog,
+			m.Files.Repo.Specs,
+			m.Files.Repo.TestImpl, m.Files.Repo.Design,
+			boolPtr(m.Flags.CatchAll), boolPtr(m.Flags.OwnChildrenFiles),
+		)
+
+		// Apply resolved values (only if not already set)
+		if m.Files.Source == nil {
+			m.Files.Source = resolved.Source
+		}
+		if m.Files.Config == nil {
+			m.Files.Config = resolved.Config
+		}
+		if m.Files.Assets == nil {
+			m.Files.Assets = resolved.Assets
+		}
+		if m.Files.Tests == nil {
+			m.Files.Tests = resolved.Tests
+		}
 		if m.Files.Changelog == "" {
-			m.Files.Changelog = "CHANGELOG.md"
+			m.Files.Changelog = resolved.Changelog
 		}
 		if m.Files.Repo.Specs == nil {
-			m.Files.Repo.Specs = []string{fmt.Sprintf("specs/%s/**", m.Moniker)}
+			m.Files.Repo.Specs = resolved.Specs
+		}
+		if m.Files.Repo.TestImpl == "" {
+			m.Files.Repo.TestImpl = resolved.TestImpl
+		}
+		if m.Files.Repo.Design == "" {
+			m.Files.Repo.Design = resolved.Design
+		}
+		// Flags are always applied since bool has zero value
+		m.Flags.CatchAll = resolved.CatchAll
+		m.Flags.OwnChildrenFiles = resolved.OwnChildren
+	}
+}
+
+// convertTypeDefaults converts config.TypeDefaults to defaults.TypeDefaults
+func convertTypeDefaults(td *TypeDefaults) *defaults.TypeDefaults {
+	if td == nil {
+		return nil
+	}
+
+	result := &defaults.TypeDefaults{}
+
+	if td.Files != nil {
+		result.Files = &defaults.FilesDefaults{
+			Source:    td.Files.Source,
+			Config:    td.Files.Config,
+			Assets:    td.Files.Assets,
+			Tests:     td.Files.Tests,
+			Changelog: td.Files.Changelog,
 		}
 	}
+
+	if td.Repo != nil {
+		result.Repo = &defaults.RepoDefaults{
+			Specs:    td.Repo.Specs,
+			TestImpl: td.Repo.TestImpl,
+			Design:   td.Repo.Design,
+		}
+	}
+
+	if td.Flags != nil {
+		result.Flags = &defaults.FlagsDefaults{
+			CatchAll:         td.Flags.CatchAll,
+			OwnChildrenFiles: td.Flags.OwnChildrenFiles,
+		}
+	}
+
+	return result
+}
+
+// boolPtr returns a pointer to the bool value, or nil if it's the default (false)
+// This is used to distinguish "not set" from "explicitly set to false"
+func boolPtr(v bool) *bool {
+	// Note: We can't distinguish between explicit false and unset in YAML
+	// For now, we treat false as "not set" which may need refinement
+	if !v {
+		return nil
+	}
+	return &v
 }
 
 // GetModule returns a module by moniker

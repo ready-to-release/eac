@@ -9,7 +9,7 @@
 // Long: Use --debug to save intermediate outputs to out/logs/design/ for debugging.
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/logs/design/ for debugging
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite workspace.dsl even if validation fails
-// Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/design/workspace.dsl)
+// Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)
 // Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
 // Usage: design update <module>
 // HasSideEffects: true
@@ -74,7 +74,7 @@ func DesignUpdate() int {
 	// Determine workspace path
 	workspacePath := config.OutputPath
 	if workspacePath == "" {
-		workspacePath = filepath.Join(config.TemplateRoot, "specs", config.Module, ".design", "workspace.dsl")
+		workspacePath = repository.WorkspaceDSLPath(config.TemplateRoot, config.Module)
 	}
 
 	// Load existing workspace
@@ -111,7 +111,7 @@ func DesignUpdate() int {
 type UpdateConfig struct {
 	Module       string // Module name (e.g., "src-cli", "commands")
 	SourcePath   string // Path to source code (e.g., "src/commands")
-	OutputPath   string // Custom output path (empty = default to specs/<module>/design/workspace.dsl)
+	OutputPath   string // Custom output path (empty = default to specs/<module>/.design/workspace.dsl)
 	PromptPath   string // Custom AI prompt file path (empty = default prompt)
 	Debug        bool
 	Force        bool
@@ -250,7 +250,7 @@ func validateModuleAndWorkspace(config *UpdateConfig, out *design.Output) error 
 	// Check if workspace exists
 	workspacePath := config.OutputPath
 	if workspacePath == "" {
-		workspacePath = filepath.Join(config.TemplateRoot, "specs", config.Module, ".design", "workspace.dsl")
+		workspacePath = repository.WorkspaceDSLPath(config.TemplateRoot, config.Module)
 	}
 
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {

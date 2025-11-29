@@ -1,0 +1,235 @@
+metadata:
+  version: "0.1.0"
+  description: "Module type definitions mapping types to build systems and capabilities"
+
+build_systems:
+  go:
+    description: "Go modules built with go build/test"
+  mkdocs:
+    description: "Documentation sites built with MkDocs"
+  docker:
+    description: "Container images built with docker build"
+  vscode:
+    description: "VS Code extensions built with vsce"
+  none:
+    description: "No build step required (config, scripts, static files)"
+
+capabilities:
+  go_module:
+    description: "Has go.mod file, responds to go build/test/tidy"
+  executable:
+    description: "Produces a standalone executable binary"
+  cross_compile:
+    description: "Builds for multiple OS/architecture combinations"
+  container:
+    description: "Produces a container image"
+  documentation:
+    description: "Produces documentation output"
+  serveable:
+    description: "Can be served locally for preview"
+
+types:
+  # Go family
+  - name: go-cli
+    description: "Go CLI application with cross-platform builds"
+    build_system: go
+    capabilities: [go_module, executable, cross_compile]
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+        test_impl: "{root}/tests"
+        design: "specs/{moniker}/.design"
+
+  - name: go-library
+    description: "Go library package (no executable)"
+    build_system: go
+    capabilities: [go_module]
+    defaults:
+      files:
+        source: ["**/*.go", "**/*.go.txt"]
+        config: ["go.mod", "go.sum"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+        test_impl: "{root}/tests"
+        design: "specs/{moniker}/.design"
+
+  - name: go-commands
+    description: "Go library with CLI invoke wrapper"
+    build_system: go
+    capabilities: [go_module]
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        assets: ["**/README.md", "**/assets/**"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+        test_impl: "{root}/tests"
+        design: "specs/{moniker}/.design"
+
+  - name: go-mcp
+    description: "Go MCP server module"
+    build_system: go
+    capabilities: [go_module]
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        assets: ["README.md"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+        design: "specs/{moniker}/.design"
+
+  - name: go-tests
+    description: "Go test-only module"
+    build_system: go
+    capabilities: [go_module]
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+      repo:
+        specs: []
+
+  - name: go-r2r-extension
+    description: "R2R extension packaged as container image"
+    build_system: docker
+    capabilities: [go_module, container]
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        assets: ["README.md"]
+      repo:
+        specs: []
+
+  # Documentation family
+  - name: mkdocs-site
+    description: "Primary MkDocs documentation site"
+    build_system: mkdocs
+    capabilities: [documentation, serveable]
+    defaults:
+      files:
+        config: ["**/*.nav.yml", "**/*.json"]
+        assets: ["**/*.md", "assets/**", "LICENSE"]
+      repo:
+        specs: []
+
+  # VS Code family
+  - name: vscode-ext
+    description: "VS Code extension"
+    build_system: vscode
+    capabilities: [executable]
+    defaults:
+      files:
+        config: ["**/*"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: []
+
+  - name: vscode-config
+    description: "VS Code configuration files"
+    build_system: none
+    capabilities: []
+    defaults:
+      files:
+        config: ["**/*"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: []
+
+  # Scripts family
+  - name: scripts
+    description: "Generic scripts (shell agnostic)"
+    build_system: none
+    capabilities: []
+    defaults:
+      repo:
+        specs: ["specs/{moniker}/**"]
+
+  - name: scripts-sh
+    description: "Bash/shell scripts"
+    build_system: none
+    capabilities: []
+    defaults:
+      files:
+        source: ["**/*.sh"]
+      repo:
+        specs: []
+
+  - name: scripts-pwsh
+    description: "PowerShell scripts"
+    build_system: none
+    capabilities: []
+    defaults:
+      files:
+        source: ["**/*.ps1"]
+      repo:
+        specs: []
+
+  # Config family
+  - name: config
+    description: "Configuration files"
+    build_system: none
+    capabilities: []
+    defaults:
+      repo:
+        specs: []
+
+  - name: configuration
+    description: "Configuration files (alias)"
+    build_system: none
+    capabilities: []
+    defaults:
+      files:
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+
+  - name: claude-config
+    description: "Claude Code configuration"
+    build_system: none
+    capabilities: []
+    defaults:
+      files:
+        config: ["*.json", "*.md"]
+      repo:
+        specs: []
+
+  # Repository structure
+  - name: repository-root
+    description: "Repository root module (catch-all parent)"
+    build_system: none
+    capabilities: []
+    defaults:
+      repo:
+        specs: ["specs/{moniker}/**"]
+
+  - name: catch-all
+    description: "Catch-all for unowned files"
+    build_system: none
+    capabilities: []
+    defaults:
+      repo:
+        specs: []
+      flags:
+        catch_all: true
+
+  - name: templates
+    description: "Template files"
+    build_system: none
+    capabilities: []
+    defaults:
+      files:
+        config: ["**/*.yml", "**/*.yaml"]
+        assets: ["**/*.md", "**/*.feature"]
+      repo:
+        specs: []
+

@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/src-core/module-types/0.1.0",
+  "title": "Module Type Registry Schema",
+  "description": "Schema for module type definitions mapping types to build systems, capabilities, and default values",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Schema metadata",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Schema version"
+        },
+        "description": {
+          "type": "string",
+          "description": "Schema description"
+        }
+      },
+      "required": ["version"]
+    },
+    "build_systems": {
+      "type": "object",
+      "description": "Available build systems and their descriptions",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Build system description"
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Available capabilities and their descriptions",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Capability description"
+          }
+        }
+      }
+    },
+    "types": {
+      "type": "array",
+      "description": "Module type definitions",
+      "items": {
+        "$ref": "#/definitions/module_type"
+      }
+    }
+  },
+  "required": ["metadata", "types"],
+  "definitions": {
+    "module_type": {
+      "type": "object",
+      "description": "A module type definition",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Module type name (e.g., go-cli, mkdocs-site)",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this type"
+        },
+        "build_system": {
+          "type": "string",
+          "description": "Build system used for this type (e.g., go, mkdocs, docker, none)",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "capabilities": {
+          "type": "array",
+          "description": "List of capabilities this type has",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "default": []
+        },
+        "defaults": {
+          "$ref": "#/definitions/type_defaults",
+          "description": "Default values applied to modules of this type"
+        }
+      },
+      "required": ["name", "build_system"]
+    },
+    "type_defaults": {
+      "type": "object",
+      "description": "Default values for modules of this type. Supports variable substitution: {moniker}, {root}, {type}",
+      "properties": {
+        "files": {
+          "$ref": "#/definitions/files_defaults"
+        },
+        "repo": {
+          "$ref": "#/definitions/repo_defaults"
+        },
+        "flags": {
+          "$ref": "#/definitions/flags_defaults"
+        }
+      }
+    },
+    "files_defaults": {
+      "type": "object",
+      "description": "Default file pattern configurations",
+      "properties": {
+        "source": {
+          "type": "array",
+          "description": "Default source file patterns (glob)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "config": {
+          "type": "array",
+          "description": "Default configuration file patterns (glob)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assets": {
+          "type": "array",
+          "description": "Default asset file patterns (glob)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tests": {
+          "type": "array",
+          "description": "Default test file patterns (glob)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Default changelog filename"
+        }
+      }
+    },
+    "repo_defaults": {
+      "type": "object",
+      "description": "Default repository-level file configurations",
+      "properties": {
+        "specs": {
+          "type": "array",
+          "description": "Default spec file patterns. Use {moniker} for module name substitution.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test_impl": {
+          "type": "string",
+          "description": "Default test implementation path. Use {root} or {moniker} for substitution."
+        },
+        "design": {
+          "type": "string",
+          "description": "Default design workspace path. Use {moniker} for substitution."
+        }
+      }
+    },
+    "flags_defaults": {
+      "type": "object",
+      "description": "Default flag values",
+      "properties": {
+        "catch_all": {
+          "type": "boolean",
+          "description": "Default catch_all flag value"
+        },
+        "own_children_files": {
+          "type": "boolean",
+          "description": "Default own_children_files flag value"
+        }
+      }
+    }
+  }
+}

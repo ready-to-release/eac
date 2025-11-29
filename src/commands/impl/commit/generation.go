@@ -10,7 +10,9 @@ import (
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
+	aimock "github.com/ready-to-release/eac/src/core/ai"
 	"github.com/ready-to-release/eac/src/core/contracts"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -64,7 +66,12 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 
 // generateWithPromptResult generates output and returns full metadata including provider info
 func generateWithPromptResult(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
-	// Check for mock response (test mode)
+	// Check for mock response from file-based mock system (subprocess testing)
+	if mock, ok := aimock.GetMockResponse("commit"); ok {
+		return &GenerationResult{Output: mock, ProviderName: "mock-file"}, nil
+	}
+
+	// Check for mock response (test mode - in-process testing)
 	if mockAIResponse != "" {
 		return &GenerationResult{Output: mockAIResponse, ProviderName: "mock"}, nil
 	}
@@ -129,7 +136,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	// Setup debug directory if needed
 	debugOutputDir := ""
 	if debugEnabled {
-		debugOutputDir = filepath.Join(workspaceRoot, "out", "logs", "commit")
+		debugOutputDir = filepath.Join(repository.LogsPath(workspaceRoot), "commit")
 		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
 			fmt.Fprintf(os.Stderr, "⚠️  Failed to create debug directory: %v\n", err)
 		}

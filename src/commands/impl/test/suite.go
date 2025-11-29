@@ -451,29 +451,24 @@ func TestSuite() int {
 	}
 
 	// findGodogTestRunner finds the test runner package for a feature file
-	// Feature files are in specs/src-<module>/..., test runners are in src/<module>/tests/
+	// Feature files are in specs/<module>/..., test runners are in src/specs/impl/<module>/
 	findGodogTestRunner := func(featurePath string) string {
 		// Extract module from specs path
-		// Example: specs/src-commands/commit/... -> src/commands/tests
-		//          specs/src-cli/... -> src/cli/tests
-		//          specs/repository/... -> src/core/repository/tests
+		// Example: specs/src-commands/commit/... -> src/specs/impl/src-commands
+		//          specs/src-cli/... -> src/specs/impl/src-cli
+		//          specs/repository/... -> src/specs/impl/repository
 		relPath := strings.TrimPrefix(featurePath, "specs/")
 		relPath = strings.TrimPrefix(relPath, "specs\\")
 
 		// Get first path component (e.g., "src-commands" or "repository")
 		parts := strings.Split(filepath.ToSlash(relPath), "/")
 		if len(parts) == 0 {
-			return "src/commands/tests" // fallback
+			return "src/specs/impl/src-commands" // fallback
 		}
 
-		// Special case: repository specs are in specs/repository but tests are in src/specs/impl/repository
-		if parts[0] == "repository" {
-			return "src/specs/impl/repository"
-		}
-
-		// Convert "src-commands" -> "src/commands"
-		module := strings.Replace(parts[0], "-", "/", 1)
-		return filepath.Join(module, "tests")
+		// All spec test runners are now in src/specs/impl/<module>/
+		moniker := parts[0]
+		return "src/specs/impl/" + moniker
 	}
 
 	// Phase 5: Run tests
@@ -587,7 +582,7 @@ func TestSuite() int {
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Test Selection Breakdown:")
 	writeln(multiWriter, "  Tests discovered:        %d", selectionStats.TotalDiscovered)
-	writeln(multiWriter, "  - Ignored (@ignore):     %d", selectionStats.Ignored)
+	writeln(multiWriter, "  - Skipped (@skip:*):     %d", selectionStats.Skipped)
 	writeln(multiWriter, "  - Not matching suite:    %d", selectionStats.NotMatchingSuite)
 	writeln(multiWriter, "  = Selected for suite:    %d", selectionStats.Selected)
 	if frameworkTestCount > 0 {
@@ -1748,14 +1743,26 @@ func filterByOSCompatibility(tests []testing.TestReference, w io.Writer) []testi
 	currentOS := mapGOOSToDepTag(runtime.GOOS)
 	compatible := []testing.TestReference{}
 
+	osPlatformTags := testing.GetOSPlatformTags()
 	for _, test := range tests {
 		// Check if test has any OS-specific dependencies
 		hasOSDep := false
 		matchesCurrentOS := false
+		hasOSAgnostic := false
 
 		for _, dep := range test.SystemDependencies {
+			// os-agnostic means "runs on any OS" - not an OS-specific dependency
+			if dep == "os-agnostic" {
+				hasOSAgnostic = true
+				continue
+			}
+
 			// Check if this is an OS dependency (uses exported list from testing package)
-			for _, osDep := range testing.OsPlatformTags {
+			for _, osDep := range osPlatformTags {
+				// Skip os-agnostic in platform list - it's handled separately above
+				if osDep == "os-agnostic" {
+					continue
+				}
 				if dep == osDep {
 					hasOSDep = true
 					if dep == currentOS {
@@ -1767,9 +1774,10 @@ func filterByOSCompatibility(tests []testing.TestReference, w io.Writer) []testi
 		}
 
 		// Include test if:
-		// 1. It has no OS-specific deps (OS-agnostic), OR
-		// 2. It has an OS dep that matches the current OS
-		if !hasOSDep || matchesCurrentOS {
+		// 1. It has os-agnostic dep (runs on any OS), OR
+		// 2. It has no OS-specific deps, OR
+		// 3. It has an OS dep that matches the current OS
+		if hasOSAgnostic || !hasOSDep || matchesCurrentOS {
 			compatible = append(compatible, test)
 		}
 	}

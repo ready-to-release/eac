@@ -1,16 +1,20 @@
 // Package design provides constants for the design command
 package design
 
-import "time"
+import (
+	"time"
+
+	"github.com/ready-to-release/eac/src/core/repository"
+)
 
 const (
-	// File and directory names
-	WorkspaceFileName = "workspace.dsl"
+	// File and directory names - use repository package for canonical paths
+	WorkspaceFileName = repository.WorkspaceDSL
 	WorkspaceJSONFile = "workspace.json"
-	SpecsDirectory    = "specs"
-	DesignDirectory   = ".design"
-	SourceDirectory   = "src"
-	OutputDirectory   = "out"
+	SpecsDirectory    = repository.SpecsDir
+	DesignDirectory   = repository.DesignDir
+	SourceDirectory   = repository.SrcDir
+	OutputDirectory   = repository.OutDir
 
 	// Docker configuration
 	DockerWorkspaceMount = "/workspace"

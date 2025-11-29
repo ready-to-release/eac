@@ -1,235 +1,43 @@
 # Repository Module Contracts
-# Version: 0.2.0
-
 modules:
+  # ============================================================================
+  # Claude Code Configuration
+  # ============================================================================
   - moniker: claude
-    name: Claude Code configuration
-    type: claude-config
-    description: Claude Code configuration
-    parent: "."
-    depends_on: []
-    files:
-      root: /
-      source: []
-      config:
-        - .mcp.json
-        - agent.md
-        - "**/agent.md"
-        - .claude/*.json
-        - .claude/*.md
-        - .claude/logs/README.md
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: true
-
-  - moniker: claude-agents
-    name: Claude Code Agents
-    type: claude-agents
-    description: Claude Code Agents
-    parent: claude
-    depends_on: []
-    files:
-      root: .claude/agents
-      source: []
-      config:
-        - "*.md"
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
-  - moniker: claude-commands
-    name: Claude Code Commands
-    type: claude-commands
-    description: Claude Code Commands
-    parent: claude
-    depends_on: []
-    files:
-      root: .claude/commands
-      source: []
-      config:
-        - "*.md"
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
-  - moniker: claude-config
     name: Claude Code Configuration
     type: claude-config
     description: Claude Code CLI configuration including agents, hooks, commands, and settings
-    parent: claude
-    depends_on: []
     files:
       root: .claude
-      source: []
+      source:
+        - hooks/*.sh
+        - hooks/*.ps1
       config:
         - "*.json"
         - "*.md"
+        - agents/*.md
+        - commands/*.md
         - logs/README.md
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
       repo:
         specs: []
         other:
+          - .mcp.json
+          - agent.md
+          - "**/agent.md"
           - scripts/pwsh/claude-env-setup.ps1
           - scripts/sh/claude-env-setup.sh
-        exclude: []
     flags:
-      catch_all: false
-      own_children_files: false
+      own_children_files: true
 
-  - moniker: claude-hooks
-    name: Claude Code Hooks
-    type: claude-hooks
-    description: Claude Code Hooks
-    parent: claude
-    depends_on: []
-    files:
-      root: .claude/hooks
-      source:
-        - "*.sh"
-        - "*.ps1"
-      config: []
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
-  - moniker: containers
-    name: Container Definitions
-    type: containers
-    description: Docker container definitions and configurations for deployable services
-    parent: "."
-    depends_on: []
-    files:
-      root: containers
-      source: []
-      config:
-        - "**/*"
-      assets: []
-      tests: []
-      exclude:
-        - ext-eac/**
-      changelog: ""
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
-  - moniker: contracts
-    name: EAC Tool Contracts
-    type: contracts
-    description: AI prompts, CLI schema, and other tool definitions
-    parent: "."
-    depends_on: []
-    files:
-      root: contracts
-      source: []
-      config:
-        - "**/*"
-      assets: []
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
-  - moniker: contracts-modules
-    name: Repository Module Contracts
-    type: contracts
-    description: Repository specific module boundaries
-    parent: repo-config
-    depends_on: []
-    files:
-      root: .r2r/eac/repository
-      source: []
-      config:
-        - modules.yml
-      assets: []
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
-  - moniker: definitions
-    name: Repository location based configurations
-    type: definitions-type
-    description: Foldable yaml file constructs that define repository configurations
-    parent: "."
-    depends_on: []
-    files:
-      root: /
-      source: []
-      config:
-        - definitions.yml
-        - "**/definitions.yml"
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
+  # ============================================================================
+  # Documentation
+  # ============================================================================
   - moniker: docs
     name: Documentation
     type: mkdocs-site
-    description: mkdocs base docs source files, used to target one singular docs rendered site
-    parent: "."
-    depends_on: []
+    description: MkDocs documentation site including reference documentation
     files:
       root: docs
-      source: []
       config:
         - "**/*.nav.yml"
         - "**/*.json"
@@ -237,48 +45,21 @@ modules:
         - "**/*.md"
         - assets/**
         - LICENSE
-      tests: []
-      exclude: []
-      changelog: ""
+        - reference/**
       repo:
         specs: []
         other:
           - mkdocs.yml
           - .github/workflows/ci-docs.yaml
           - .github/workflows/release-docs.yml
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
-  - moniker: docs-reference
-    name: Reference documentation
-    type: mkdocs-subsite
-    description: mkdocs base files for reference documentation
-    parent: docs
-    depends_on: []
-    files:
-      root: docs/reference
-      source: []
-      config: []
-      assets:
-        - "**/*"
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
+  # ============================================================================
+  # EAC Extension
+  # ============================================================================
   - moniker: ext-eac
     name: EAC Extension for R2R CLI
     type: go-r2r-extension
     description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
-    parent: "."
     depends_on:
       - src-commands
     files:
@@ -290,47 +71,36 @@ modules:
         - go.sum
       assets:
         - README.md
-      tests: []
-      exclude: []
-      changelog: ""
       repo:
         specs: []
         other:
-          - containers/ext-eac/Dockerfile
+          - containers/**
           - .github/workflows/ci-ext-eac.yaml
           - .github/workflows/release-ext-eac.yml
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # GitHub Configuration
+  # ============================================================================
   - moniker: github
     name: GitHub Configuration
     type: configuration
-    description: GitHub workflows, actions, and CI/CD configuration - owns change-trigger orchestration only
-    parent: "."
-    depends_on: []
+    description: GitHub workflows, actions, and CI/CD configuration
     files:
       root: .github
-      source: []
       config:
         - variables/**
       assets:
         - README.md
-      tests: []
       exclude:
         - workflows/*.yaml
         - workflows/*.yml
-      changelog: CHANGELOG.md
       repo:
         specs:
           - specs/github/**
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # Script Invokers
+  # ============================================================================
   - moniker: implicit-cli-pwsh
     name: PowerShell module to invoke Go commands
     type: scripts-pwsh
@@ -342,54 +112,35 @@ modules:
       root: scripts/pwsh/go-invoker
       source:
         - "**/*"
-      config: []
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
       repo:
         specs: []
         other:
           - importer.ps1
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
   - moniker: implicit-cli-sh
     name: Shell script to invoke Go commands
     type: scripts-sh
     description: Bash wrapper for running Go commands from src/commands/
-    parent: "."
     depends_on:
       - src-commands
     files:
       root: scripts/sh/go-invoker
       source:
         - "**/*"
-      config: []
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
       repo:
         specs: []
         other:
           - importer.sh
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # Repository Configuration
+  # ============================================================================
   - moniker: repo-config
     name: Repository Configuration
     type: config
     description: Root-level repository configuration files including package management, build tools, and git settings
-    parent: "."
-    depends_on: []
     files:
       root: /
-      source: []
       config:
         - LICENSE
         - .gitignore
@@ -399,79 +150,42 @@ modules:
         - go.work
         - go.work.sum
         - r2r-cli.yml
-        - .r2r/agent-config.yml
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
+        - .r2r/**
+        - definitions.yml
+        - "**/definitions.yml"
       repo:
         specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # Repository Root
+  # ============================================================================
   - moniker: repository
     name: Repository Root Module
     type: repository-root
     description: The repository root module
-    parent: "."
     depends_on:
       - src-core
     files:
       root: /
-      source: []
       config:
         - test-repository-validations.sh
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
       repo:
         specs:
           - specs/repository/**
+        test_impl: src/specs/impl/repository
+        design: ""
         other:
-          - src/specs/impl/repository/**
           - .github/workflows/change-trigger.yaml
           - .github/workflows/cron-full-trigger.yaml
           - .github/workflows/codeql.yml
-          - .r2r/eac/repository/**
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
-  - moniker: specs
-    name: Gherkin and Structurizr specifications
-    type: specifications
-    description: Structured by specs/<module-name>/<feature-name>, where design is a special feature folder for Structurizr. Within a feature folder is one Gherkin file specification.feature per folder.
-    parent: "."
-    depends_on: []
-    files:
-      root: specs
-      source: []
-      config: []
-      assets:
-        - "**/.gitkeep"
-      tests: []
-      exclude:
-        - "**"
-      changelog: CHANGELOG.md
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
+  # ============================================================================
+  # Source: AI Provider Libraries
+  # ============================================================================
   - moniker: src-ai
     name: AI Provider Libraries
     type: go-library
     description: AI/LLM provider integrations (Claude, OpenAI, Gemini) for code generation and analysis
-    parent: "."
-    depends_on: []
     files:
       root: src/ai
       source:
@@ -479,24 +193,19 @@ modules:
       config:
         - go.mod
         - go.sum
-      assets: []
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
       repo:
         specs:
           - specs/src-ai/**
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
+        other:
+          - contracts/ai/**
 
+  # ============================================================================
+  # Source: CLI
+  # ============================================================================
   - moniker: src-cli
     name: The CLI of CLIs
     type: go-cli
-    description: The extendable go-based cli tool
-    parent: "."
+    description: The extendable go-based CLI tool
     depends_on:
       - src-core
     files:
@@ -509,26 +218,28 @@ modules:
         - r2r-cli.examples.yml
         - r2r.example.yml
         - r2r-example.yml
-      assets: []
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
       repo:
         specs:
           - specs/src-cli/**
+        test_impl: src/specs/impl/src-cli
+        design: specs/src-cli/.design
         other:
+          - contracts/cli/**
           - .github/workflows/ci-src-cli.yaml
           - .github/workflows/release-src-cli.yml
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
+    metadata:
+      exe-linux: r2r-linux
+      exe-darwin-amd64: r2r-darwin-amd64
+      exe-darwin-arm64: r2r-darwin-arm64
+      exe-windows: r2r-windows.exe
 
+  # ============================================================================
+  # Source: CLI Installers
+  # ============================================================================
   - moniker: src-cli-installers
     name: R2R CLI Installer Scripts
     type: scripts
     description: Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases
-    parent: "."
     depends_on:
       - src-core
     files:
@@ -536,52 +247,20 @@ modules:
       source:
         - sh/cli/**
         - pwsh/cli/**
-      config: []
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
       repo:
         specs:
           - specs/src-cli-installers/**
+        test_impl: src/specs/impl/src-cli-installers
         other:
           - .github/workflows/ci-src-cli-installers.yaml
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
-  - moniker: src-cli-installers-tests
-    name: CLI Installers BDD Tests
-    type: go-tests
-    description: BDD acceptance tests for CLI installer scripts using Godog
-    parent: src-cli-installers
-    depends_on:
-      - src-core
-    files:
-      root: src/cli-installers/tests
-      source:
-        - "**.go"
-      config:
-        - go.mod
-        - go.sum
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
-      repo:
-        specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
-
+  # ============================================================================
+  # Source: Commands Library
+  # ============================================================================
   - moniker: src-commands
     name: Go Commands Library
     type: go-commands
-    description: Go library to contain shell scripts
-    parent: "."
+    description: Go library containing CLI command implementations
     depends_on:
       - src-ai
       - src-core
@@ -595,25 +274,23 @@ modules:
       assets:
         - "**/README.md"
         - "**/assets/**"
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
+      exclude:
+        - ext/**
       repo:
         specs:
           - specs/src-commands/**
+        test_impl: src/specs/impl/src-commands
+        design: specs/src-commands/.design
         other:
           - .github/workflows/ci-src-commands.yaml
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # Source: Core Domain Libraries
+  # ============================================================================
   - moniker: src-core
     name: Core Domain Libraries
     type: go-library
     description: Core library containing contracts and repository operations
-    parent: "."
-    depends_on: []
     files:
       root: src/core
       source:
@@ -623,30 +300,25 @@ modules:
         - go.mod
         - go.sum
         - contracts/schema/schemas/*.json
-      assets: []
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
       repo:
         specs:
           - specs/src-core/**
         other:
+          - contracts/src-core/**
           - .github/workflows/ci-src-core.yaml
           - src/core/ai/**
           - src/core/markdown/**
           - src/core/module-deps/**
           - src/core/environments/**
           - src/.template/**
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # Source: MCP Commands Server
+  # ============================================================================
   - moniker: src-mcp-commands
     name: Go Commands MCP Server
     type: go-mcp
     description: Internal MCP server for Commands
-    parent: "."
     depends_on:
       - src-core
     files:
@@ -658,136 +330,95 @@ modules:
         - go.sum
       assets:
         - README.md
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
       repo:
         specs:
           - specs/src-mcp-commands/**
+        test_impl: ""
+        design: specs/src-mcp-commands/.design
         other:
           - .github/workflows/ci-src-mcp-commands.yaml
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # Source: Specs Shared Infrastructure
+  # ============================================================================
   - moniker: src-specs
-    name: Specification Test Implementations
+    name: Specs Shared Infrastructure
     type: go-tests
-    description: Godog BDD test implementations for all specification feature files
-    parent: "."
+    description: Shared godog test runner, context, and common steps for BDD specs
     depends_on:
       - src-core
     files:
       root: src/specs
       source:
-        - "**.go"
+        - "internal/**/*.go"
       config:
         - go.mod
         - go.sum
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
+      exclude:
+        - impl/**
       repo:
         specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # Templates
+  # ============================================================================
   - moniker: templates
     name: Project Templates
     type: templates
     description: Template files for documentation, specifications, and design records
-    parent: "."
-    depends_on: []
     files:
       root: templates
-      source: []
       config:
         - "**/*.yml"
         - "**/*.yaml"
       assets:
         - "**/*.md"
         - "**/*.feature"
-      tests: []
-      exclude: []
-      changelog: ""
       repo:
         specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
+  # ============================================================================
+  # Catch-all for Unordered Files
+  # ============================================================================
   - moniker: unordered
     name: Unordered Files
     type: catch-all
-    description: The module that files belong to when they are not owned by anything else. Unordered content will be restricted in the pipeline.
+    description: The module that files belong to when they are not owned by anything else
     parent: repository
-    depends_on: []
     files:
       root: /
-      source: []
-      config: []
-      assets: []
-      tests: []
-      exclude: []
-      changelog: ""
       repo:
         specs: []
-        other: []
-        exclude: []
     flags:
       catch_all: true
-      own_children_files: false
 
+  # ============================================================================
+  # VSCode Configuration
+  # ============================================================================
   - moniker: vscode
     name: VSCode Repository Configuration
     type: vscode-config
     description: VSCode repository configuration
-    parent: "."
-    depends_on: []
     files:
       root: .vscode
-      source: []
       config:
         - "**/*"
-      assets: []
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
+      exclude:
+        - extensions/**
       repo:
         specs: []
         other:
           - scripts/sh/vscode/**
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
 
   - moniker: vscode-ext-commit
     name: VSCode Extension - Git Commit
     type: vscode-ext
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
-    parent: "."
-    depends_on: []
     files:
       root: .vscode/extensions/vscode-ext-commit
-      source: []
       config:
         - "**/*"
-      assets: []
-      tests: []
-      exclude: []
-      changelog: CHANGELOG.md
       repo:
         specs: []
-        other: []
-        exclude: []
-    flags:
-      catch_all: false
-      own_children_files: false
+        other:
+          - contracts/vscode-commit/**

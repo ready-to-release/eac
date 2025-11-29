@@ -6,7 +6,7 @@ Generate a commit message summarizing all changes across the repository.
 
 ## Structure
 
-```
+```text
 <type>(<scope>): <summary>
 
 Auditor-Summary: <one sentence>
@@ -19,6 +19,7 @@ Changes: N files, +X insertions, -Y deletions
 ## Requirements
 
 **Header** (line 1): `<type>(<scope>): <summary>`
+
 - Types: feat, fix, refactor, docs, chore, test, perf, style
 - Scope: `multi-module` or specific module
 - Max 72 chars, no trailing period
@@ -31,7 +32,7 @@ Changes: N files, +X insertions, -Y deletions
 
 ## Example
 
-```
+```text
 refactor(multi-module): simplify commit message prompts
 
 Auditor-Summary: Removed template embedding for clearer AI instructions.
@@ -53,6 +54,7 @@ Changes: 8 files, +95 insertions, -150 deletions
 ## CRITICAL: What NOT to include
 
 The following are FORBIDDEN in your output:
+
 - NO markdown headers (## or ###)
 - NO "Module Changes" sections
 - NO bullet point lists of files or changes

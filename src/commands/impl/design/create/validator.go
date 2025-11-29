@@ -42,7 +42,7 @@ func (v *StructurizrDSLValidator) Validate(output string, context map[string]int
 	var errors []contracts.ValidationError
 
 	// Create module design directory in temp
-	moduleDesignDir := filepath.Join(v.tempDir, "specs", v.module, "design")
+	moduleDesignDir := filepath.Join(v.tempDir, "specs", v.module, ".design")
 	if err := os.MkdirAll(moduleDesignDir, 0755); err != nil {
 		errors = append(errors, contracts.ValidationError{
 			Code:     "setup_error",

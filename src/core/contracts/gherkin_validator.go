@@ -504,7 +504,15 @@ func (v *GherkinValidator) getVerificationTags() []string {
 		}
 	}
 
-	// Fallback to hardcoded defaults
+	// Try global config as last resort
+	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
+		tags := cfg.TestingTags.GetVerificationTags()
+		if len(tags) > 0 {
+			return tags
+		}
+	}
+
+	// Fallback to hardcoded defaults (should rarely be reached)
 	return []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
 }
 
