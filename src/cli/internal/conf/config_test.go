@@ -38,9 +38,11 @@ func TestLoadExamplesFile(t *testing.T) {
 	_, err = os.Stat(examplesPath)
 	require.NoError(t, err, "r2r-cli.examples.yml not found at repository root")
 
-	// Create a temporary r2r-cli.yml with empty extensions
+	// Create a temporary .r2r/r2r-cli.yml with empty extensions
 	tempDir := t.TempDir()
-	tempConfigPath := filepath.Join(tempDir, "r2r-cli.yml")
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	os.MkdirAll(r2rDir, 0755)
+	tempConfigPath := filepath.Join(r2rDir, "r2r-cli.yml")
 
 	// Write minimal valid config with empty values
 	configContent := `extensions:
@@ -108,7 +110,7 @@ func TestExamplesFileSchema(t *testing.T) {
 		"env:",
 		"Configuration Hierarchy:",
 		"Environment variables",
-		"Values in r2r-cli.yml",
+		"Values in .r2r/r2r-cli.yml",
 		"Sensible defaults",
 		"R2R_CONTAINER_REPOROOT",
 		"R2R_HOST_REPOROOT",

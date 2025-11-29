@@ -213,7 +213,7 @@ func noConfigFileExistsInTheTestFolder() error {
 		return fmt.Errorf("test folder not created yet")
 	}
 
-	configPath := filepath.Join(cliCtx.testFolderPath, "r2r-cli.yml")
+	configPath := filepath.Join(cliCtx.testFolderPath, ".r2r", "r2r-cli.yml")
 	os.Remove(configPath)
 
 	return nil
@@ -231,7 +231,13 @@ project:
 extensions: []
 `
 
-	configPath := filepath.Join(cliCtx.testFolderPath, "r2r-cli.yml")
+	// Ensure .r2r directory exists
+	r2rDir := filepath.Join(cliCtx.testFolderPath, ".r2r")
+	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .r2r directory: %w", err)
+	}
+
+	configPath := filepath.Join(r2rDir, "r2r-cli.yml")
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
@@ -250,7 +256,13 @@ project:
   name: [this is invalid yaml syntax
 `
 
-	configPath := filepath.Join(cliCtx.testFolderPath, "r2r-cli.yml")
+	// Ensure .r2r directory exists
+	r2rDir := filepath.Join(cliCtx.testFolderPath, ".r2r")
+	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .r2r directory: %w", err)
+	}
+
+	configPath := filepath.Join(r2rDir, "r2r-cli.yml")
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
