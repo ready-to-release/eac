@@ -35,6 +35,8 @@ system_dependency_names:
     description: "Git CLI"
   - name: go
     description: "Go toolchain"
+  - name: npm
+    description: "Node.js package manager"
   - name: az-cli
     description: "Azure CLI"
   - name: gh-cli

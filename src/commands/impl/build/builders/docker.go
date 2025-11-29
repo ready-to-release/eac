@@ -1,4 +1,4 @@
-// docker.go - Build functions for Docker module types
+// docker.go - Build handler for Docker build system
 package builders
 
 import (
@@ -8,27 +8,33 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
-// BuildDockerDefault is the default build handler for Docker modules.
-func BuildDockerDefault(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== Building Docker module: %s (type: %s) ===", module.Moniker, module.Type)
-	Logln(logWriter, "ℹ️  Docker modules are built via docker build command")
-	return 0
+func init() {
+	// Register handler for "docker" build system
+	RegisterSystem("docker", BuildDockerModule)
 }
 
-// BuildR2RExtension builds an R2R CLI extension as a Docker image
-func BuildR2RExtension(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== Building R2R extension: %s ===", module.Moniker)
+// BuildDockerModule builds a Docker container image.
+// Behavior is determined by capabilities:
+// - go_module → run go mod tidy first
+// - container → build Docker image
+func BuildDockerModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
-	// Step 1: go mod tidy (if enabled)
-	if opts.TidyFirst {
+	// Get capabilities from contract
+	cfg := config.Global()
+	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+
+	// Step 1: go mod tidy (if Go module and enabled)
+	if hasGoModule && opts.TidyFirst {
 		goModPath := filepath.Join(moduleRoot, "go.mod")
 		if _, err := os.Stat(goModPath); err == nil {
-			Logln(logWriter, "Running: go mod tidy (in %s)", module.Files.Root)
+			Logln(logWriter, "Running: go mod tidy")
 			if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
 				Logln(logWriter, "❌ go mod tidy failed")
 				return exitCode
@@ -36,20 +42,17 @@ func BuildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 		}
 	}
 
-	// Extract extension name from moniker
-	extensionName := module.Moniker
-	if len(module.Moniker) > 4 && module.Moniker[:4] == "ext-" {
-		extensionName = module.Moniker[4:]
-	}
-
-	// Dockerfile is in containers/{moniker}/Dockerfile
+	// Find Dockerfile - check containers/{moniker}/ first, then module root
 	dockerfilePath := filepath.Join(workspaceRoot, "containers", module.Moniker, "Dockerfile")
 	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
-		Logln(logWriter, "❌ No Dockerfile found at: %s", dockerfilePath)
-		return 1
+		dockerfilePath = filepath.Join(moduleRoot, "Dockerfile")
+		if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+			Logln(logWriter, "❌ No Dockerfile found")
+			return 1
+		}
 	}
 
-	imageName := fmt.Sprintf("ext-%s:latest", extensionName)
+	imageName := fmt.Sprintf("%s:latest", module.Moniker)
 
 	Logln(logWriter, "📦 Building Docker image: %s", imageName)
 	Logln(logWriter, "   Dockerfile: %s", dockerfilePath)
@@ -58,80 +61,91 @@ func BuildR2RExtension(module *modules.ModuleContract, workspaceRoot string, out
 	isCI := os.Getenv("CI") == "true"
 
 	if isCI {
-		Logln(logWriter, "\n--- CI Mode: Building single-platform for testing ---")
-		exitCode := RunCommandWithLog(workspaceRoot, logWriter,
-			"docker", "buildx", "build",
-			"--platform", "linux/amd64",
-			"-t", imageName,
-			"-f", dockerfilePath,
-			"--cache-from", "type=gha",
-			"--cache-to", "type=gha,mode=max",
-			"--load",
-			".")
+		return buildDockerCI(module, workspaceRoot, outputDir, dockerfilePath, imageName, logWriter)
+	}
+	return buildDockerLocal(workspaceRoot, outputDir, dockerfilePath, imageName, logWriter)
+}
 
-		if exitCode != 0 {
-			Logln(logWriter, "\n❌ Docker build failed (see errors above)")
-			return exitCode
-		}
-		Logln(logWriter, "✅ Single-platform image built successfully: %s", imageName)
+// buildDockerLocal builds a Docker image locally
+func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath string, imageName string, logWriter io.Writer) int {
+	exitCode := RunCommandWithLog(workspaceRoot, logWriter,
+		"docker", "build",
+		"-t", imageName,
+		"-f", dockerfilePath,
+		".")
 
-		// Export multi-platform for release
-		Logln(logWriter, "\n--- CI Mode: Building multi-platform for release ---")
-		ociArchivePath := filepath.Join(outputDir, fmt.Sprintf("ext-%s-ci-test.tar", extensionName))
+	if exitCode != 0 {
+		Logln(logWriter, "\n❌ Docker build failed")
+		return exitCode
+	}
 
-		exitCode = RunCommandWithLog(workspaceRoot, logWriter,
-			"docker", "buildx", "build",
-			"--platform", "linux/amd64,linux/arm64",
-			"-t", imageName,
-			"-f", dockerfilePath,
-			"--cache-from", "type=gha",
-			"-o", fmt.Sprintf("type=oci,dest=%s", ociArchivePath),
-			".")
+	Logln(logWriter, "✅ Docker image built successfully: %s", imageName)
 
-		if exitCode != 0 {
-			Logln(logWriter, "\n❌ Multi-platform build failed (see errors above)")
-			return exitCode
-		}
+	// Save image info
+	imageInfoPath := filepath.Join(outputDir, "image-info.txt")
+	imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\n",
+		imageName, dockerfilePath, time.Now().Format(time.RFC3339))
 
-		Logln(logWriter, "✅ Multi-platform image exported: %s", ociArchivePath)
+	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
+		Logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
+	}
 
-		// Compress the OCI archive
-		Logln(logWriter, "Compressing OCI archive...")
-		exitCode = RunCommandWithLog(outputDir, logWriter, "gzip", filepath.Base(ociArchivePath))
-		if exitCode != 0 {
-			Logln(logWriter, "⚠️  Warning: failed to compress archive")
-		}
+	return 0
+}
 
-		// Save image info
-		imageInfoPath := filepath.Join(outputDir, "image-info.txt")
-		imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\nPlatforms: linux/amd64,linux/arm64\nOCI Archive: %s.gz\n",
-			imageName, dockerfilePath, time.Now().Format(time.RFC3339), ociArchivePath)
+// buildDockerCI builds a Docker image in CI with multi-platform support
+func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputDir string, dockerfilePath string, imageName string, logWriter io.Writer) int {
+	Logln(logWriter, "\n--- CI Mode: Building single-platform for testing ---")
+	exitCode := RunCommandWithLog(workspaceRoot, logWriter,
+		"docker", "buildx", "build",
+		"--platform", "linux/amd64",
+		"-t", imageName,
+		"-f", dockerfilePath,
+		"--cache-from", "type=gha",
+		"--cache-to", "type=gha,mode=max",
+		"--load",
+		".")
 
-		if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
-			Logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
-		}
-	} else {
-		// Local build
-		exitCode := RunCommandWithLog(workspaceRoot, logWriter,
-			"docker", "build",
-			"-t", imageName,
-			"-f", dockerfilePath,
-			".")
+	if exitCode != 0 {
+		Logln(logWriter, "\n❌ Docker build failed")
+		return exitCode
+	}
+	Logln(logWriter, "✅ Single-platform image built successfully: %s", imageName)
 
-		if exitCode != 0 {
-			Logln(logWriter, "\n❌ Docker build failed (see errors above)")
-			return exitCode
-		}
+	// Export multi-platform for release
+	Logln(logWriter, "\n--- CI Mode: Building multi-platform for release ---")
+	ociArchivePath := filepath.Join(outputDir, fmt.Sprintf("%s-ci-test.tar", module.Moniker))
 
-		Logln(logWriter, "✅ Docker image built successfully: %s", imageName)
+	exitCode = RunCommandWithLog(workspaceRoot, logWriter,
+		"docker", "buildx", "build",
+		"--platform", "linux/amd64,linux/arm64",
+		"-t", imageName,
+		"-f", dockerfilePath,
+		"--cache-from", "type=gha",
+		"-o", fmt.Sprintf("type=oci,dest=%s", ociArchivePath),
+		".")
 
-		imageInfoPath := filepath.Join(outputDir, "image-info.txt")
-		imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\n",
-			imageName, dockerfilePath, time.Now().Format(time.RFC3339))
+	if exitCode != 0 {
+		Logln(logWriter, "\n❌ Multi-platform build failed")
+		return exitCode
+	}
 
-		if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
-			Logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
-		}
+	Logln(logWriter, "✅ Multi-platform image exported: %s", ociArchivePath)
+
+	// Compress the OCI archive
+	Logln(logWriter, "Compressing OCI archive...")
+	exitCode = RunCommandWithLog(outputDir, logWriter, "gzip", filepath.Base(ociArchivePath))
+	if exitCode != 0 {
+		Logln(logWriter, "⚠️  Warning: failed to compress archive")
+	}
+
+	// Save image info
+	imageInfoPath := filepath.Join(outputDir, "image-info.txt")
+	imageInfo := fmt.Sprintf("Image: %s\nDockerfile: %s\nBuild Date: %s\nPlatforms: linux/amd64,linux/arm64\nOCI Archive: %s.gz\n",
+		imageName, dockerfilePath, time.Now().Format(time.RFC3339), ociArchivePath)
+
+	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
+		Logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
 	}
 
 	return 0

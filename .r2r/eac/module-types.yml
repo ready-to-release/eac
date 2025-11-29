@@ -9,14 +9,18 @@ build_systems:
     description: "Documentation sites built with MkDocs"
   docker:
     description: "Container images built with docker build"
-  vscode:
-    description: "VS Code extensions built with vsce"
+  npm:
+    description: "npm packages built with npm install/build"
   none:
     description: "No build step required (config, scripts, static files)"
 
 capabilities:
   go_module:
     description: "Has go.mod file, responds to go build/test/tidy"
+  npm_package:
+    description: "Has package.json, responds to npm install/test"
+  typescript:
+    description: "TypeScript project, compile with tsc"
   executable:
     description: "Produces a standalone executable binary"
   cross_compile:
@@ -128,8 +132,8 @@ types:
   # VS Code family
   - name: vscode-ext
     description: "VS Code extension"
-    build_system: vscode
-    capabilities: [executable]
+    build_system: npm
+    capabilities: [npm_package, typescript]
     defaults:
       files:
         config: ["**/*"]

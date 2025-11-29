@@ -25,6 +25,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gofrs/flock"
+	"github.com/ready-to-release/eac/src/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/src/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
@@ -50,6 +52,48 @@ type BuildResult struct {
 	Errors   []string
 }
 
+// acquireModuleBuildLock attempts to acquire an exclusive lock for building a module.
+// Returns the lock handle and nil error on success.
+// Returns nil and error if lock is already held (module is being built).
+func acquireModuleBuildLock(moniker, workspaceRoot string) (*flock.Flock, error) {
+	// Ensure out/build directory exists (parent directory for lock files)
+	buildDir := filepath.Join(workspaceRoot, "out", "build")
+	if err := os.MkdirAll(buildDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create build directory: %w", err)
+	}
+
+	// Create lock file path in parent directory (so it survives directory purge)
+	// Use module moniker as the mutex identifier
+	lockPath := filepath.Join(buildDir, fmt.Sprintf(".lock-%s", moniker))
+
+	// Create flock instance
+	lock := flock.New(lockPath)
+
+	// Try to acquire lock (non-blocking)
+	locked, err := lock.TryLock()
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	if !locked {
+		return nil, fmt.Errorf("module '%s' is already being built", moniker)
+	}
+
+	return lock, nil
+}
+
+// releaseModuleBuildLock releases the lock and removes the lock file
+func releaseModuleBuildLock(lock *flock.Flock) {
+	if lock == nil {
+		return
+	}
+
+	lockPath := lock.Path()
+	lock.Unlock()
+
+	// Clean up the lock file
+	os.Remove(lockPath)
+}
 
 // Build command entry point - builds one or more modules
 func Build() int {
@@ -148,8 +192,17 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 		return 1
 	}
 
-	// Get build function for module type using the dispatch helper
-	buildFunc := GetBuildFunc(module.Type)
+	// Acquire exclusive lock for this module FIRST (before any directory operations)
+	lockFile, err := acquireModuleBuildLock(moniker, workspaceRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: module '%s' is already being built\n", moniker)
+		fmt.Fprintf(os.Stderr, "Details: %v\n", err)
+		return 1
+	}
+	defer releaseModuleBuildLock(lockFile)
+
+	// Get build function for module type
+	buildFunc := builders.GetBuildFunc(module.Type)
 
 	// Determine output directory
 	var outputDir string
@@ -160,7 +213,7 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 		outputDir = repository.BuildOutputPath(workspaceRoot, moniker)
 	}
 
-	// Purge and create output directory
+	// Purge and create output directory (now protected by lock)
 	if err := os.RemoveAll(outputDir); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to purge output directory: %v\n", err)
 		return 1
@@ -189,7 +242,7 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 	writeln(multiWriter, "Build log: %s", logPath)
 
 	// Log tidy behavior (only relevant for Go modules)
-	if IsGoModuleType(module.Type) {
+	if builders.IsGoModuleType(module.Type) {
 		if tidyFirst {
 			if tidyExplicitlySet {
 				writeln(multiWriter, "Tidy mode: enabled (explicit flag)")
@@ -206,7 +259,7 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 	}
 
 	// Execute build
-	buildOpts := BuildOptions{
+	buildOpts := builders.BuildOptions{
 		TidyFirst:     tidyFirst,
 		Compressed:    compressed,
 		CompressedUPX: compressedUPX,
@@ -221,7 +274,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	hasGoModules := false
 	for _, mon := range monikers {
 		if module, exists := moduleReport.Registry.Get(mon); exists {
-			if IsGoModuleType(module.Type) {
+			if builders.IsGoModuleType(module.Type) {
 				hasGoModules = true
 				break
 			}
@@ -263,6 +316,15 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			return 1
 		}
 
+		// Acquire exclusive lock for this module FIRST (before any directory operations)
+		lockFile, err := acquireModuleBuildLock(moniker, workspaceRoot)
+		if err != nil {
+			fmt.Fprintf(logWriter, "Error: module '%s' is already being built\n", moniker)
+			fmt.Fprintf(logWriter, "Details: %v\n", err)
+			return 1
+		}
+		defer releaseModuleBuildLock(lockFile)
+
 		moduleOutputDir := repository.BuildOutputPath(workspaceRoot, moniker)
 		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version)
 	}
@@ -285,10 +347,10 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 
 // runModuleBuild runs build for a single module
 func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string) int {
-	// Get build function for module type using the dispatch helper
-	buildFunc := GetBuildFunc(module.Type)
+	// Get build function for module type
+	buildFunc := builders.GetBuildFunc(module.Type)
 
-	opts := BuildOptions{
+	opts := builders.BuildOptions{
 		TidyFirst:     tidyFirst,
 		Compressed:    compressed,
 		CompressedUPX: compressedUPX,

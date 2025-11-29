@@ -1,4 +1,4 @@
-// static.go - Test functions for static/config module types
+// static.go - Test handlers for non-Go build systems
 package testers
 
 import (
@@ -9,8 +9,16 @@ import (
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
-// TestStaticModule is a passthrough test for static/configuration modules.
-// These modules don't have runtime tests - they are validated by the build process.
+func init() {
+	// Build system handlers - contracts define which types use which build system
+	RegisterSystem("mkdocs", TestMkDocsModule)
+	RegisterSystem("npm", TestNpmModule)
+	RegisterSystem("docker", TestStaticModule)
+	RegisterSystem("none", TestStaticModule)
+}
+
+// TestStaticModule is a passthrough for modules without runtime tests.
+// These modules are validated by the build process.
 func TestStaticModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	Writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
 	Writeln(logWriter, "Suite: %s", suiteName)
@@ -19,10 +27,27 @@ func TestStaticModule(module *modules.ModuleContract, workspaceRoot string, outp
 	return 0
 }
 
-// TestMkDocsSite tests the MkDocs documentation site by verifying the build output exists.
-// The build is done separately with strict mode - this test just verifies the output.
-func TestMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	Writeln(logWriter, "\n=== Testing mkdocs-site: %s ===", module.Moniker)
+// TestNpmModule runs npm test for npm-based modules.
+func TestNpmModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+
+	Writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
+	Writeln(logWriter, "Suite: %s", suiteName)
+
+	// Check for package.json
+	packageJSON := filepath.Join(moduleRoot, "package.json")
+	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
+		Writeln(logWriter, "⚠️  No package.json found, skipping tests")
+		return 0
+	}
+
+	Writeln(logWriter, "Running: npm test")
+	return RunTestCommand(moduleRoot, logWriter, "npm", "test")
+}
+
+// TestMkDocsModule tests MkDocs sites by verifying the build output exists.
+func TestMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	Writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
 	Writeln(logWriter, "Suite: %s", suiteName)
 
 	// Check that the build output exists
@@ -34,14 +59,14 @@ func TestMkDocsSite(module *modules.ModuleContract, workspaceRoot string, output
 	// Verify site directory exists
 	if _, err := os.Stat(buildOutputDir); os.IsNotExist(err) {
 		Writeln(logWriter, "\n❌ Build output not found: %s", buildOutputDir)
-		Writeln(logWriter, "   Run 'build module %s' first", module.Moniker)
+		Writeln(logWriter, "   Run 'build %s' first", module.Moniker)
 		return 1
 	}
 
 	// Verify index.html exists (indicates successful build)
 	if _, err := os.Stat(indexFile); os.IsNotExist(err) {
 		Writeln(logWriter, "\n❌ index.html not found in build output")
-		Writeln(logWriter, "   Build may have failed - run 'build module %s'", module.Moniker)
+		Writeln(logWriter, "   Build may have failed - run 'build %s'", module.Moniker)
 		return 1
 	}
 
