@@ -28,7 +28,7 @@ func Specs() int {
 	case "--help", "-h":
 		printSpecsUsage()
 		return 0
-	case "create", "validate":
+	case "create", "validate", "unused-steps":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -46,6 +46,7 @@ func printSpecsUsage() {
 	fmt.Println("Subcommands:")
 	fmt.Println("  create                    Create specifications using AI from natural language")
 	fmt.Println("  validate                  Validate Gherkin specifications against contracts")
+	fmt.Println("  unused-steps              Find step definitions not used by any feature file")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  # Create specification from description")

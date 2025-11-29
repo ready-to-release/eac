@@ -48,7 +48,6 @@ func registerModuleIsolationSteps(sc *godog.ScenarioContext, ctx *internal.TestC
 
 	// Then steps - allowed imports
 	sc.Step(`^files may import "([^"]*)"$`, filesMayImport)
-	sc.Step(`^But no files should import "([^"]*)"$`, noFilesShouldImport)
 
 	// Then steps - graph validation
 	// Note: "the graph should have no circular dependencies" is registered in steps.go

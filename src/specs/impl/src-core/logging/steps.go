@@ -59,7 +59,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Given steps
 	sc.Step(`^debug mode is disabled$`, debugModeIsDisabled)
 	sc.Step(`^debug mode is enabled$`, debugModeIsEnabled)
-	sc.Step(`^a logger configured for dual output$`, aLoggerConfiguredForDualOutput)
 	sc.Step(`^a logger configured for module "([^"]*)"$`, aLoggerConfiguredForModule)
 
 	// When steps
@@ -76,7 +75,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the message does not appear on console$`, theMessageDoesNotAppearOnConsole)
 	sc.Step(`^the message appears in file "([^"]*)"$`, theMessageAppearsInFile)
 	sc.Step(`^all messages appear in file "([^"]*)"$`, allMessagesAppearInSpecificFile)
-	sc.Step(`^the message does not appear in the log file$`, theMessageDoesNotAppearInLogFile)
 	sc.Step(`^no log file is created$`, noLogFileIsCreated)
 	sc.Step(`^only one Zap logger instance exists$`, onlyOneZapLoggerInstanceExists)
 	sc.Step(`^both console and file receive the message$`, bothConsoleAndFileReceiveTheMessage)
@@ -129,11 +127,6 @@ func debugModeIsEnabled() error {
 	logCtx.logger = logger
 	logCtx.loggers[logCtx.module] = logger
 	return nil
-}
-
-func aLoggerConfiguredForDualOutput() error {
-	logCtx.debugMode = true
-	return debugModeIsEnabled()
 }
 
 func aLoggerConfiguredForModule(module string) error {
@@ -251,22 +244,6 @@ func allMessagesAppearInSpecificFile(filePath string) error {
 		if !strings.Contains(contentStr, msg) {
 			return fmt.Errorf("log file does not contain message: %s", msg)
 		}
-	}
-	return nil
-}
-
-func theMessageDoesNotAppearInLogFile() error {
-	logPath := filepath.Join(logCtx.workspaceRoot, "out", "logs", logCtx.module, "debug.log")
-	content, err := os.ReadFile(logPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	if strings.Contains(string(content), logCtx.lastMessage) {
-		return fmt.Errorf("log file should not contain message: %s", logCtx.lastMessage)
 	}
 	return nil
 }
