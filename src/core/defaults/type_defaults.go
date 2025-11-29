@@ -48,11 +48,13 @@ type TypeDefaults struct {
 
 // FilesDefaults contains default file patterns for a module type.
 type FilesDefaults struct {
-	Source    []string
-	Config    []string
-	Assets    []string
-	Tests     []string
-	Changelog string
+	Source          []string
+	Config          []string
+	Assets          []string
+	Tests           []string
+	Changelog       string
+	WorkflowCI      string
+	WorkflowRelease string
 }
 
 // RepoDefaults contains default repo-level configurations.
@@ -72,16 +74,18 @@ type FlagsDefaults struct {
 // Only applies defaults to fields that are nil/empty (doesn't override explicit values).
 // Returns the applied values.
 type ModuleDefaults struct {
-	Source    []string
-	Config    []string
-	Assets    []string
-	Tests     []string
-	Changelog string
-	Specs     []string
-	TestImpl  string
-	Design    string
-	CatchAll  bool
-	OwnChildren bool
+	Source          []string
+	Config          []string
+	Assets          []string
+	Tests           []string
+	Changelog       string
+	WorkflowCI      string
+	WorkflowRelease string
+	Specs           []string
+	TestImpl        string
+	Design          string
+	CatchAll        bool
+	OwnChildren     bool
 }
 
 // ResolveDefaults resolves all defaults for a module, combining type-specific
@@ -97,6 +101,7 @@ func ResolveDefaults(
 	// Current values (nil means not set)
 	source, config, assets, tests []string,
 	changelog string,
+	workflowCI, workflowRelease string,
 	specs []string,
 	testImpl, design string,
 	catchAll, ownChildren *bool,
@@ -138,6 +143,24 @@ func ResolveDefaults(
 		result.Changelog = typeDef.Files.Changelog
 	} else {
 		result.Changelog = Changelog // Generic default
+	}
+
+	// WorkflowCI - type default, then generic default
+	if workflowCI != "" {
+		result.WorkflowCI = workflowCI
+	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.WorkflowCI != "" {
+		result.WorkflowCI = SubstituteVariables(typeDef.Files.WorkflowCI, moniker, root, moduleType)
+	} else {
+		result.WorkflowCI = WorkflowCIPath(moniker) // Generic default
+	}
+
+	// WorkflowRelease - type default, then generic default
+	if workflowRelease != "" {
+		result.WorkflowRelease = workflowRelease
+	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.WorkflowRelease != "" {
+		result.WorkflowRelease = SubstituteVariables(typeDef.Files.WorkflowRelease, moniker, root, moduleType)
+	} else {
+		result.WorkflowRelease = WorkflowReleasePath(moniker) // Generic default
 	}
 
 	// Specs - type default, then generic default

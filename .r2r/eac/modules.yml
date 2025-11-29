@@ -46,12 +46,13 @@ modules:
         - assets/**
         - LICENSE
         - reference/**
+      workflows:
+        ci: .github/workflows/ci-docs.yaml
+        release: .github/workflows/release-docs.yml
       repo:
         specs: []
         other:
           - mkdocs.yml
-          - .github/workflows/ci-docs.yaml
-          - .github/workflows/release-docs.yml
 
   # ============================================================================
   # EAC Extension
@@ -71,12 +72,13 @@ modules:
         - go.sum
       assets:
         - README.md
+      workflows:
+        ci: .github/workflows/ci-ext-eac.yaml
+        release: .github/workflows/release-ext-eac.yml
       repo:
         specs: []
         other:
           - containers/**
-          - .github/workflows/ci-ext-eac.yaml
-          - .github/workflows/release-ext-eac.yml
 
   # ============================================================================
   # GitHub Configuration
@@ -99,46 +101,34 @@ modules:
           - specs/github/**
 
   # ============================================================================
-  # Script Invokers
+  # Scripts: Go Command Invoker
   # ============================================================================
-  - moniker: implicit-cli-pwsh
-    name: PowerShell module to invoke Go commands
-    type: scripts-pwsh
-    description: PowerShell wrapper with tab completion for running Go commands from src/commands/
+  - moniker: scripts-implicit-cli
+    name: Go Command Invoker Scripts
+    type: scripts-package
+    description: Cross-shell wrappers with tab completion for running Go commands from src/commands/
     parent: src-commands
     depends_on:
       - src-commands
     files:
-      root: scripts/pwsh/go-invoker
+      root: scripts
       source:
-        - "**/*"
+        - "*/go-invoker/**"
       repo:
         specs: []
         other:
           - importer.ps1
-
-  - moniker: implicit-cli-sh
-    name: Shell script to invoke Go commands
-    type: scripts-sh
-    description: Bash wrapper for running Go commands from src/commands/
-    depends_on:
-      - src-commands
-    files:
-      root: scripts/sh/go-invoker
-      source:
-        - "**/*"
-      repo:
-        specs: []
-        other:
           - importer.sh
 
   # ============================================================================
-  # Repository Configuration
+  # Repository Root
   # ============================================================================
-  - moniker: repo-config
-    name: Repository Configuration
-    type: config
-    description: Root-level repository configuration files including package management, build tools, and git settings
+  - moniker: repository
+    name: Repository Root Module
+    type: repository-root
+    description: Repository root module including configuration files, build tools, and git settings
+    depends_on:
+      - src-core
     files:
       root: /
       config:
@@ -153,21 +143,6 @@ modules:
         - .r2r/**
         - definitions.yml
         - "**/definitions.yml"
-      repo:
-        specs: []
-
-  # ============================================================================
-  # Repository Root
-  # ============================================================================
-  - moniker: repository
-    name: Repository Root Module
-    type: repository-root
-    description: The repository root module
-    depends_on:
-      - src-core
-    files:
-      root: /
-      config:
         - test-repository-validations.sh
       repo:
         specs:
@@ -218,6 +193,9 @@ modules:
         - r2r-cli.examples.yml
         - r2r.example.yml
         - r2r-example.yml
+      workflows:
+        ci: .github/workflows/ci-src-cli.yaml
+        release: .github/workflows/release-src-cli.yml
       repo:
         specs:
           - specs/src-cli/**
@@ -225,8 +203,6 @@ modules:
         design: specs/src-cli/.design
         other:
           - contracts/cli/**
-          - .github/workflows/ci-src-cli.yaml
-          - .github/workflows/release-src-cli.yml
     metadata:
       exe-linux: r2r-linux
       exe-darwin-amd64: r2r-darwin-amd64
@@ -234,25 +210,22 @@ modules:
       exe-windows: r2r-windows.exe
 
   # ============================================================================
-  # Source: CLI Installers
+  # Scripts: CLI Installer
   # ============================================================================
-  - moniker: src-cli-installers
+  - moniker: scripts-cli-installer
     name: R2R CLI Installer Scripts
-    type: scripts
+    type: scripts-package
     description: Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases
     depends_on:
       - src-core
     files:
       root: scripts
       source:
-        - sh/cli/**
-        - pwsh/cli/**
+        - "*/cli/**"
       repo:
         specs:
-          - specs/src-cli-installers/**
-        test_impl: src/specs/impl/src-cli-installers
-        other:
-          - .github/workflows/ci-src-cli-installers.yaml
+          - specs/scripts-cli-installer/**
+        test_impl: src/specs/impl/scripts-cli-installer
 
   # ============================================================================
   # Source: Commands Library
@@ -276,13 +249,14 @@ modules:
         - "**/assets/**"
       exclude:
         - ext/**
+      workflows:
+        ci: .github/workflows/ci-src-commands.yaml
+        release: ""
       repo:
         specs:
           - specs/src-commands/**
         test_impl: src/specs/impl/src-commands
         design: specs/src-commands/.design
-        other:
-          - .github/workflows/ci-src-commands.yaml
 
   # ============================================================================
   # Source: Core Domain Libraries
@@ -300,12 +274,14 @@ modules:
         - go.mod
         - go.sum
         - contracts/schema/schemas/*.json
+      workflows:
+        ci: .github/workflows/ci-src-core.yaml
+        release: ""
       repo:
         specs:
           - specs/src-core/**
         other:
           - contracts/src-core/**
-          - .github/workflows/ci-src-core.yaml
           - src/core/ai/**
           - src/core/markdown/**
           - src/core/module-deps/**
@@ -330,13 +306,14 @@ modules:
         - go.sum
       assets:
         - README.md
+      workflows:
+        ci: .github/workflows/ci-src-mcp-commands.yaml
+        release: ""
       repo:
         specs:
           - specs/src-mcp-commands/**
         test_impl: ""
         design: specs/src-mcp-commands/.design
-        other:
-          - .github/workflows/ci-src-mcp-commands.yaml
 
   # ============================================================================
   # Source: Specs Shared Infrastructure

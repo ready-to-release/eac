@@ -124,8 +124,25 @@
           "description": "Changelog file path relative to module root (defaults to 'CHANGELOG.md')",
           "default": "CHANGELOG.md"
         },
+        "workflows": {
+          "$ref": "#/definitions/workflows"
+        },
         "repo": {
           "$ref": "#/definitions/repo_files"
+        }
+      }
+    },
+    "workflows": {
+      "type": "object",
+      "description": "GitHub Actions workflow file ownership",
+      "properties": {
+        "ci": {
+          "type": "string",
+          "description": "CI workflow file path (e.g., '.github/workflows/ci-{moniker}.yaml')"
+        },
+        "release": {
+          "type": "string",
+          "description": "Release workflow file path (e.g., '.github/workflows/release-{moniker}.yml')"
         }
       }
     },

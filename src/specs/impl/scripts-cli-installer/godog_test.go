@@ -1,11 +1,11 @@
-// Package srccliinstallers contains godog step implementations for specs/src-cli-installers.
+// Package scriptsinstaller contains godog step implementations for specs/scripts-cli-installer.
 //
-// This package tests src-cli-installers features (CLI installation scripts)
+// This package tests scripts-cli-installer features (CLI installation scripts)
 // via subprocess execution of PowerShell/Bash installer scripts.
 //
 // These tests invoke the installer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.
-package srccliinstallers
+package scriptscliinstaller
 
 import (
 	"os"
@@ -15,10 +15,10 @@ import (
 	"github.com/ready-to-release/eac/src/specs/internal"
 )
 
-func TestSrcCliInstallersFeatures(t *testing.T) {
+func TestScriptsInstallerFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../specs/src-cli-installers",
-		DefaultReportName: "cucumber-src-cli-installers",
+		SpecsPath:         "../../../../specs/scripts-cli-installer",
+		DefaultReportName: "cucumber-scripts-cli-installer",
 		RegisterSteps:     RegisterSteps,
 	}
 

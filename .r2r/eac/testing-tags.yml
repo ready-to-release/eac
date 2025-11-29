@@ -18,7 +18,7 @@ module_monikers:
     - src-cli
     - src-commands
     - src-core
-    - src-cli-installers
+    - scripts-cli-installer
 
 environment_monikers:
   # NOTE: Environment monikers are dynamically loaded from environment contracts at runtime

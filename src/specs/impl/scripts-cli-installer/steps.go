@@ -1,11 +1,11 @@
-// Package srccliinstallers contains godog step implementations for specs/src-cli-installers.
+// Package scriptsinstaller contains godog step implementations for specs/scripts-cli-installer.
 //
 // Features:
-// - specs/src-cli-installers/cli-installation/
+// - specs/scripts-cli-installer/cli-installation/
 //
 // These tests invoke the installer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.
-package srccliinstallers
+package scriptscliinstaller
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ type installerContext struct {
 
 var instCtx *installerContext
 
-// RegisterSteps registers all src-cli-installers specific step definitions.
+// RegisterSteps registers all scripts-cli-installer specific step definitions.
 func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	instCtx = &installerContext{sharedCtx: ctx}
 

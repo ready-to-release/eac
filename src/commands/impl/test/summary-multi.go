@@ -6,8 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
+	"github.com/ready-to-release/eac/src/commands/impl/test/testers"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // generateSummaryMulti generates a multi-module summary.md from test-run-id directory
@@ -28,7 +29,7 @@ func generateSummaryMulti(testRunID string) error {
 	}
 
 	// Find all module directories (subdirectories with cucumber.json)
-	modules, err := FindModulesWithResults(testRunDir)
+	modules, err := testers.FindModulesWithResults(testRunDir)
 	if err != nil {
 		return fmt.Errorf("failed to find module results: %w", err)
 	}

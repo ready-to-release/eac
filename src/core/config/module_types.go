@@ -46,11 +46,18 @@ type TypeDefaults struct {
 
 // FilesDefaults contains default file patterns for a module type
 type FilesDefaults struct {
-	Source    []string `yaml:"source,omitempty"`
-	Config    []string `yaml:"config,omitempty"`
-	Assets    []string `yaml:"assets,omitempty"`
-	Tests     []string `yaml:"tests,omitempty"`
-	Changelog string   `yaml:"changelog,omitempty"`
+	Source    []string          `yaml:"source,omitempty"`
+	Config    []string          `yaml:"config,omitempty"`
+	Assets    []string          `yaml:"assets,omitempty"`
+	Tests     []string          `yaml:"tests,omitempty"`
+	Changelog string            `yaml:"changelog,omitempty"`
+	Workflows *WorkflowDefaults `yaml:"workflows,omitempty"`
+}
+
+// WorkflowDefaults contains default workflow file paths
+type WorkflowDefaults struct {
+	CI      string `yaml:"ci,omitempty"`
+	Release string `yaml:"release,omitempty"`
 }
 
 // RepoDefaults contains default repo-level configurations
