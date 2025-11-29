@@ -29,9 +29,6 @@ const (
 	// EACDir is the EAC configuration subdirectory under R2RDir
 	EACDir = "eac"
 
-	// RepositoryConfigDir is the repository configuration subdirectory under EACDir
-	RepositoryConfigDir = "repository"
-
 	// DesignDir is the design workspace subdirectory under a module's specs
 	DesignDir = ".design"
 
@@ -41,8 +38,8 @@ const (
 
 // Relative path constants (combinations of directory names)
 const (
-	// EACConfigRelPath is the relative path from repo root to EAC repository configuration
-	EACConfigRelPath = R2RDir + "/" + EACDir + "/" + RepositoryConfigDir
+	// EACConfigRelPath is the relative path from repo root to EAC configuration
+	EACConfigRelPath = R2RDir + "/" + EACDir
 
 	// OutBuildRelPath is the relative path from repo root to build output
 	OutBuildRelPath = OutDir + "/" + BuildDir
@@ -77,10 +74,10 @@ func WorkspaceDSLPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, SpecsDir, moniker, DesignDir, WorkspaceDSL)
 }
 
-// EACConfigPath returns the path to the EAC repository configuration directory
-// Example: .r2r/eac/repository
+// EACConfigPath returns the path to the EAC configuration directory
+// Example: .r2r/eac
 func EACConfigPath(repoRoot string) string {
-	return filepath.Join(repoRoot, R2RDir, EACDir, RepositoryConfigDir)
+	return filepath.Join(repoRoot, R2RDir, EACDir)
 }
 
 // R2RPath returns the path to the .r2r directory
