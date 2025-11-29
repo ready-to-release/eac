@@ -139,7 +139,6 @@ modules:
         - cspell.config.yml
         - go.work
         - go.work.sum
-        - r2r-cli.yml
         - .r2r/**
         - definitions.yml
         - "**/definitions.yml"

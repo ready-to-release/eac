@@ -3,14 +3,15 @@
 # This file demonstrates the complete configuration schema for r2r-cli.yml
 # with all possible fields and their default values documented in comments.
 #
+# Configuration Location: .r2r/r2r-cli.yml
+#
 # Configuration Hierarchy:
 # 1. Environment variables (highest priority)
-# 2. Values in r2r-cli.yml
+# 2. Values in .r2r/r2r-cli.yml
 # 3. Sensible defaults programmed into the Go system
-# 4. Actual value used inside Go
 #
 # To use this file:
-# 1. Copy it to r2r-cli.yml
+# 1. Copy it to .r2r/r2r-cli.yml (create .r2r directory if needed)
 # 2. Uncomment and modify the values you need
 # 3. Leave commented values to use the built-in defaults
 

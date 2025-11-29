@@ -65,12 +65,10 @@ func InitializeExtensionAliases() {
 	// This is best-effort - if it fails, we just won't have aliases
 	configFile := os.Getenv("R2R_CONFIG")
 	if configFile == "" {
-		// Try to find config in default locations
+		// Config location: .r2r/r2r-cli.yml
 		possibleConfigs := []string{
-			"r2r-cli.yml",
-			"r2r-cli.yaml",
-			".r2r-cli.yml",
-			".r2r-cli.yaml",
+			".r2r/r2r-cli.yml",
+			".r2r/r2r-cli.yaml",
 		}
 
 		for _, cfg := range possibleConfigs {

@@ -26,8 +26,8 @@ func TestInstallCommand_CreateConfigFile(t *testing.T) {
 		t.Fatalf("Failed to create .git directory: %v", err)
 	}
 
-	// Verify config file doesn't exist
-	configPath := filepath.Join(tempDir, "r2r-cli.yml")
+	// Verify config file doesn't exist in preferred location
+	configPath := filepath.Join(tempDir, ".r2r", "r2r-cli.yml")
 	if _, err := os.Stat(configPath); err == nil {
 		t.Fatal("Config file should not exist initially")
 	}
@@ -38,9 +38,9 @@ func TestInstallCommand_CreateConfigFile(t *testing.T) {
 		t.Fatalf("addExtensionToConfig should create config file, got error: %v", err)
 	}
 
-	// Verify config file was created
+	// Verify config file was created in .r2r directory
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Fatal("Config file should have been created")
+		t.Fatal("Config file should have been created at .r2r/r2r-cli.yml")
 	}
 
 	// Read and verify config content
@@ -97,8 +97,12 @@ func TestInstallCommand_AddToExistingConfig(t *testing.T) {
 		t.Fatalf("Failed to create .git directory: %v", err)
 	}
 
-	// Create existing config file
-	configPath := filepath.Join(tempDir, "r2r-cli.yml")
+	// Create existing config file in .r2r directory
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+		t.Fatalf("Failed to create .r2r directory: %v", err)
+	}
+	configPath := filepath.Join(r2rDir, "r2r-cli.yml")
 	existingConfig := `version: "1.0"
 extensions:
   - name: "python"
@@ -173,8 +177,12 @@ func TestInstallCommand_PreventDuplicates(t *testing.T) {
 		t.Fatalf("Failed to create .git directory: %v", err)
 	}
 
-	// Create existing config with pwsh
-	configPath := filepath.Join(tempDir, "r2r-cli.yml")
+	// Create existing config with pwsh in .r2r directory
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+		t.Fatalf("Failed to create .r2r directory: %v", err)
+	}
+	configPath := filepath.Join(r2rDir, "r2r-cli.yml")
 	existingConfig := `version: "1.0"
 extensions:
   - name: "pwsh"
@@ -330,8 +338,8 @@ func TestInstallCommand_ConfigFilePermissions(t *testing.T) {
 		t.Fatalf("addExtensionToConfig failed: %v", err)
 	}
 
-	// Check file permissions
-	configPath := filepath.Join(tempDir, "r2r-cli.yml")
+	// Check file permissions - config is created in .r2r directory
+	configPath := filepath.Join(tempDir, ".r2r", "r2r-cli.yml")
 	stat, err := os.Stat(configPath)
 	if err != nil {
 		t.Fatalf("Failed to stat config file: %v", err)
@@ -362,13 +370,13 @@ func TestInstallCommand_ConfigInitialization(t *testing.T) {
 		t.Fatalf("Failed to create .git directory: %v", err)
 	}
 
-	// Verify no config exists initially
-	configPath := filepath.Join(tempDir, "r2r-cli.yml")
+	// Verify no config exists initially in .r2r directory
+	configPath := filepath.Join(tempDir, ".r2r", "r2r-cli.yml")
 	if _, err := os.Stat(configPath); err == nil {
 		t.Fatal("Config file should not exist initially")
 	}
 
-	// Add extension (should create config)
+	// Add extension (should create config in .r2r directory)
 	err := addExtensionToConfig("pwsh")
 	if err != nil {
 		if strings.Contains(err.Error(), "registry") || strings.Contains(err.Error(), "SHA") {
@@ -378,9 +386,9 @@ func TestInstallCommand_ConfigInitialization(t *testing.T) {
 		t.Fatalf("addExtensionToConfig failed: %v", err)
 	}
 
-	// Verify config file was created and has proper content
+	// Verify config file was created in .r2r directory
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Fatal("Config file should have been created")
+		t.Fatal("Config file should have been created at .r2r/r2r-cli.yml")
 	}
 
 	// Read and verify the created config

@@ -201,8 +201,9 @@ jobs:
           cp -r $GITHUB_WORKSPACE/contracts ./contracts
 
           echo ""
-          echo "Creating r2r-cli.yml config with CI test image..."
-          cat > r2r-cli.yml << EOF
+          echo "Creating .r2r/r2r-cli.yml config with CI test image..."
+          mkdir -p .r2r
+          cat > .r2r/r2r-cli.yml << EOF
           extensions:
             - name: 'eac'
               image: 'ext-eac:ci-test'

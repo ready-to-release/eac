@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/ready-to-release/eac/src/core/config"
@@ -152,14 +151,49 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outpu
 		successCount++
 
 		// Apply UPX compression if requested and available
-		if opts.CompressedUPX && (target.goos == runtime.GOOS || target.goos == "linux") {
+		// Creates a separate -upx suffixed binary, keeping the original intact
+		if opts.CompressedUPX && (target.goos == "linux" || target.goos == "windows") {
 			if upxPath, err := exec.LookPath("upx"); err == nil {
-				Logln(logWriter, "Compressing with UPX: %s", outputName)
-				upxCmd := exec.Command(upxPath, "--best", "--lzma", outputPath)
-				upxCmd.Stdout = logWriter
-				upxCmd.Stderr = logWriter
-				if err := upxCmd.Run(); err != nil {
-					Logln(logWriter, "⚠️  UPX compression failed: %v", err)
+				// Create UPX output name by inserting -upx before the extension
+				var upxOutputName string
+				if target.suffix == ".exe" {
+					upxOutputName = strings.TrimSuffix(outputName, ".exe") + "-upx.exe"
+				} else {
+					upxOutputName = outputName + "-upx"
+				}
+				upxOutputPath := filepath.Join(outputDir, upxOutputName)
+
+				// Copy the binary to the UPX target
+				Logln(logWriter, "Creating UPX copy: %s", upxOutputName)
+				srcFile, err := os.Open(outputPath)
+				if err != nil {
+					Logln(logWriter, "⚠️  Failed to open source for UPX: %v", err)
+				} else {
+					dstFile, err := os.Create(upxOutputPath)
+					if err != nil {
+						srcFile.Close()
+						Logln(logWriter, "⚠️  Failed to create UPX target: %v", err)
+					} else {
+						_, copyErr := io.Copy(dstFile, srcFile)
+						srcFile.Close()
+						dstFile.Close()
+						if copyErr != nil {
+							Logln(logWriter, "⚠️  Failed to copy for UPX: %v", copyErr)
+						} else {
+							// Make executable
+							os.Chmod(upxOutputPath, 0755)
+
+							// Compress the copy
+							Logln(logWriter, "Compressing with UPX: %s", upxOutputName)
+							upxCmd := exec.Command(upxPath, "--best", "--lzma", upxOutputPath)
+							upxCmd.Stdout = logWriter
+							upxCmd.Stderr = logWriter
+							if err := upxCmd.Run(); err != nil {
+								Logln(logWriter, "⚠️  UPX compression failed: %v", err)
+								os.Remove(upxOutputPath) // Clean up failed UPX file
+							}
+						}
+					}
 				}
 			}
 		}
@@ -179,6 +213,8 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outpu
 }
 
 // generateChecksums creates SHA256 checksums for all built binaries
+// It checksums all files that look like executables (no extension or .exe)
+// excluding known non-binary files like .txt and .log
 func generateChecksums(outputDir string, binaryName string, logWriter io.Writer) {
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
@@ -194,17 +230,27 @@ func generateChecksums(outputDir string, binaryName string, logWriter io.Writer)
 	defer f.Close()
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasPrefix(entry.Name(), binaryName+"-") {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		// Skip known non-binary files
+		if strings.HasSuffix(name, ".txt") || strings.HasSuffix(name, ".log") {
+			continue
+		}
+		// Include executables (no extension for Unix, .exe for Windows)
+		ext := filepath.Ext(name)
+		if ext != "" && ext != ".exe" {
 			continue
 		}
 
-		filePath := filepath.Join(outputDir, entry.Name())
+		filePath := filepath.Join(outputDir, name)
 		hash, err := computeSHA256(filePath)
 		if err != nil {
 			continue
 		}
 
-		fmt.Fprintf(f, "%s  %s\n", hash, entry.Name())
+		fmt.Fprintf(f, "%s  %s\n", hash, name)
 	}
 
 	Logln(logWriter, "✅ Generated checksums.txt")
