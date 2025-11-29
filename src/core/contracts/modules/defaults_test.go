@@ -1,6 +1,6 @@
 //go:build L0 && ov
 
-// Tests default values applied when loading contracts from .r2r/eac/repository
+// Tests default values applied when loading contracts from .r2r/eac
 package modules_test
 
 import (
@@ -24,8 +24,8 @@ func createTestRepo(t *testing.T, modulesContent string) string {
 
 	tmpDir := t.TempDir()
 
-	// Create .r2r/eac/repository directory
-	eacDir := filepath.Join(tmpDir, ".r2r", "eac", "repository")
+	// Create .r2r/eac directory
+	eacDir := filepath.Join(tmpDir, ".r2r", "eac")
 	if err := os.MkdirAll(eacDir, 0755); err != nil {
 		t.Fatalf("failed to create EAC directory: %v", err)
 	}

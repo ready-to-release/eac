@@ -15,13 +15,12 @@ import (
 
 // EAC configuration path constants (local to avoid import cycle with repository)
 const (
-	r2rDir              = ".r2r"
-	eacDir              = "eac"
-	repositoryConfigDir = "repository"
+	r2rDir = ".r2r"
+	eacDir = "eac"
 
-	// EACConfigRelPath is the relative path from repo root to EAC repository configuration.
+	// EACConfigRelPath is the relative path from repo root to EAC configuration.
 	// Note: Duplicated here to avoid import cycle with repository package.
-	EACConfigRelPath = r2rDir + "/" + eacDir + "/" + repositoryConfigDir
+	EACConfigRelPath = r2rDir + "/" + eacDir
 )
 
 // Config file names
@@ -86,7 +85,7 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		}
 	}
 
-	configRoot := filepath.Join(repoRoot, r2rDir, eacDir, repositoryConfigDir)
+	configRoot := filepath.Join(repoRoot, r2rDir, eacDir)
 
 	cfg := &EACConfig{
 		RepoRoot:   repoRoot,

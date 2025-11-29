@@ -8,7 +8,7 @@
 // Long: The validation:
 // Long:   - Discovers all Gherkin feature files in the repository
 // Long:   - Extracts all tags from features, scenarios, and examples
-// Long:   - Loads the tag contract from .r2r/eac/repository/testing-tags.yml
+// Long:   - Loads the tag contract from .r2r/eac/testing-tags.yml
 // Long:   - Checks that each tag is defined in the contract
 // Long:   - Reports undefined tags with their file locations
 // Long:
