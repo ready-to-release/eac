@@ -95,6 +95,9 @@ types:
       files:
         source: ["**/*.go"]
         config: ["go.mod", "go.sum"]
+        workflows:
+          ci: ""
+          release: ""
       repo:
         specs: []
 
@@ -131,6 +134,9 @@ types:
       files:
         config: ["**/*"]
         changelog: CHANGELOG.md
+        workflows:
+          ci: ""
+          release: ""
       repo:
         specs: []
 
@@ -142,54 +148,38 @@ types:
       files:
         config: ["**/*"]
         changelog: CHANGELOG.md
+        workflows:
+          ci: ""
+          release: ""
       repo:
         specs: []
 
   # Scripts family
-  - name: scripts
-    description: "Generic scripts (shell agnostic)"
+  - name: scripts-package
+    description: "Cross-shell script package encapsulating pwsh and sh variants for the same purpose"
     build_system: none
     capabilities: []
     defaults:
+      files:
+        source: ["**/*.ps1", "**/*.psm1", "**/*.sh", "**/*.bash"]
+        config: []
+        workflows:
+          ci: ".github/workflows/ci-{moniker}.yaml"
+          release: ""
       repo:
         specs: ["specs/{moniker}/**"]
 
-  - name: scripts-sh
-    description: "Bash/shell scripts"
-    build_system: none
-    capabilities: []
-    defaults:
-      files:
-        source: ["**/*.sh"]
-      repo:
-        specs: []
-
-  - name: scripts-pwsh
-    description: "PowerShell scripts"
-    build_system: none
-    capabilities: []
-    defaults:
-      files:
-        source: ["**/*.ps1"]
-      repo:
-        specs: []
-
   # Config family
-  - name: config
-    description: "Configuration files"
-    build_system: none
-    capabilities: []
-    defaults:
-      repo:
-        specs: []
-
   - name: configuration
-    description: "Configuration files (alias)"
+    description: "Configuration files"
     build_system: none
     capabilities: []
     defaults:
       files:
         changelog: CHANGELOG.md
+        workflows:
+          ci: ""
+          release: ""
       repo:
         specs: ["specs/{moniker}/**"]
 
@@ -200,6 +190,9 @@ types:
     defaults:
       files:
         config: ["*.json", "*.md"]
+        workflows:
+          ci: ""
+          release: ""
       repo:
         specs: []
 
@@ -209,6 +202,10 @@ types:
     build_system: none
     capabilities: []
     defaults:
+      files:
+        workflows:
+          ci: ""
+          release: ""
       repo:
         specs: ["specs/{moniker}/**"]
 
@@ -217,6 +214,10 @@ types:
     build_system: none
     capabilities: []
     defaults:
+      files:
+        workflows:
+          ci: ""
+          release: ""
       repo:
         specs: []
       flags:
@@ -230,6 +231,9 @@ types:
       files:
         config: ["**/*.yml", "**/*.yaml"]
         assets: ["**/*.md", "**/*.feature"]
+        workflows:
+          ci: ""
+          release: ""
       repo:
         specs: []
 

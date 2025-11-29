@@ -138,7 +138,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 		_, err = os.Stat(testsPath)
 		return err == nil
 
-	case "scripts":
+	case "scripts-package":
 		// Scripts modules: check if source root directory exists
 		repoRoot, err := repository.GetRepositoryRoot("")
 		if err != nil {
@@ -217,7 +217,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		testsPath := filepath.Join(repoRoot, testImplPath)
 		return fmt.Sprintf("Repository validation tests: %s", testsPath), nil
 
-	case "scripts":
+	case "scripts-package":
 		// Scripts modules: return scripts path
 		repoRoot, err := repository.GetRepositoryRoot("")
 		if err != nil {

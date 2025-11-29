@@ -24,14 +24,21 @@ type Module struct {
 
 // Files defines file ownership patterns for a module
 type Files struct {
-	Root      string   `yaml:"root"`
-	Source    []string `yaml:"source"`
-	Config    []string `yaml:"config"`
-	Assets    []string `yaml:"assets"`
-	Tests     []string `yaml:"tests"`
-	Exclude   []string `yaml:"exclude"`
-	Changelog string   `yaml:"changelog"`
+	Root      string    `yaml:"root"`
+	Source    []string  `yaml:"source"`
+	Config    []string  `yaml:"config"`
+	Assets    []string  `yaml:"assets"`
+	Tests     []string  `yaml:"tests"`
+	Exclude   []string  `yaml:"exclude"`
+	Changelog string    `yaml:"changelog"`
+	Workflows Workflows `yaml:"workflows"`
 	Repo      RepoFiles `yaml:"repo"`
+}
+
+// Workflows defines GitHub Actions workflow file ownership
+type Workflows struct {
+	CI      string `yaml:"ci"`      // CI workflow file path
+	Release string `yaml:"release"` // Release workflow file path
 }
 
 // RepoFiles defines repository-level file ownership
@@ -92,6 +99,7 @@ func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
 			m.Moniker, m.Files.Root, m.Type,
 			m.Files.Source, m.Files.Config, m.Files.Assets, m.Files.Tests,
 			m.Files.Changelog,
+			m.Files.Workflows.CI, m.Files.Workflows.Release,
 			m.Files.Repo.Specs,
 			m.Files.Repo.TestImpl, m.Files.Repo.Design,
 			boolPtr(m.Flags.CatchAll), boolPtr(m.Flags.OwnChildrenFiles),
@@ -112,6 +120,12 @@ func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
 		}
 		if m.Files.Changelog == "" {
 			m.Files.Changelog = resolved.Changelog
+		}
+		if m.Files.Workflows.CI == "" {
+			m.Files.Workflows.CI = resolved.WorkflowCI
+		}
+		if m.Files.Workflows.Release == "" {
+			m.Files.Workflows.Release = resolved.WorkflowRelease
 		}
 		if m.Files.Repo.Specs == nil {
 			m.Files.Repo.Specs = resolved.Specs
@@ -143,6 +157,10 @@ func convertTypeDefaults(td *TypeDefaults) *defaults.TypeDefaults {
 			Assets:    td.Files.Assets,
 			Tests:     td.Files.Tests,
 			Changelog: td.Files.Changelog,
+		}
+		if td.Files.Workflows != nil {
+			result.Files.WorkflowCI = td.Files.Workflows.CI
+			result.Files.WorkflowRelease = td.Files.Workflows.Release
 		}
 	}
 

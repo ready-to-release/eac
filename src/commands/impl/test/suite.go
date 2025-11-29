@@ -1949,3 +1949,27 @@ func convertCoverageToJSON(coverageFile, jsonFile string) error {
 	return nil
 }
 
+// runTestSuiteForModuleInternal runs the test suite command with a module filter.
+// This is the internal implementation used by the testers package.
+func runTestSuiteForModuleInternal(moniker string, suiteName string) int {
+	// Redirect to test suite with module filter
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	os.Args = []string{
+		oldArgs[0],
+		"test",
+		"suite",
+		suiteName,
+		"--module",
+		moniker,
+	}
+
+	return TestSuite()
+}
+
+func init() {
+	// Set up the dispatch function for testers package
+	RunTestSuiteForModuleImpl = runTestSuiteForModuleInternal
+}
+

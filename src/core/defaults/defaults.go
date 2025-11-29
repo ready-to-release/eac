@@ -70,3 +70,15 @@ func FeaturePath(moniker, feature string) string {
 func FeatureDir(moniker, feature string) string {
 	return "specs/" + moniker + "/" + feature
 }
+
+// WorkflowCIPath returns the default CI workflow path for a moniker.
+// Pattern: .github/workflows/ci-{moniker}.yaml
+func WorkflowCIPath(moniker string) string {
+	return ".github/workflows/ci-" + moniker + ".yaml"
+}
+
+// WorkflowReleasePath returns the default release workflow path for a moniker.
+// Pattern: .github/workflows/release-{moniker}.yml
+func WorkflowReleasePath(moniker string) string {
+	return ".github/workflows/release-" + moniker + ".yml"
+}

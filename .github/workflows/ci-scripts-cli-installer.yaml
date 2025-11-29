@@ -1,4 +1,4 @@
-name: "ci-src-cli-installers (stage 1-6)"
+name: "ci-scripts-cli-installer (stage 1-6)"
 
 on:
   workflow_call:
@@ -39,19 +39,19 @@ jobs:
 
       - name: Build Module
         working-directory: ./src/commands
-        run: go run . build src-cli-installers
+        run: go run . build scripts-cli-installer
 
       - name: Upload Build Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-src-cli-installers
-          path: out/build/src-cli-installers/**
+          name: build-artifacts-scripts-cli-installer
+          path: out/build/scripts-cli-installer/**
 
       - name: Build Summary
         if: always()
         run: |
-          echo "## Build: src-cli-installers" >> $GITHUB_STEP_SUMMARY
+          echo "## Build: scripts-cli-installer" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
             echo "✅ Installer scripts validated successfully." >> $GITHUB_STEP_SUMMARY
@@ -74,7 +74,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Module | \`src-cli-installers\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | \`scripts-cli-installer\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
 
   test-linux:
@@ -96,35 +96,35 @@ jobs:
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: build-artifacts-src-cli-installers
-          path: out/build/src-cli-installers
+          name: build-artifacts-scripts-cli-installer
+          path: out/build/scripts-cli-installer
 
       - name: Test Module (Commit Suite - L0-L2)
         working-directory: ./src/commands
-        run: go run . test src-cli-installers --suite commit
+        run: go run . test scripts-cli-installer --suite commit
 
       - name: Test Module (Acceptance Suite - L3)
         working-directory: ./src/commands
-        run: go run . test src-cli-installers --suite acceptance
+        run: go run . test scripts-cli-installer --suite acceptance
 
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-src-cli-installers-linux
+          name: test-results-scripts-cli-installer-linux
           path: out/test/**
 
       - name: Test Summary
         if: always()
         run: |
-          echo "## Test: src-cli-installers (Linux)" >> $GITHUB_STEP_SUMMARY
+          echo "## Test: scripts-cli-installer (Linux)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
             echo "✅ Bash installer tests passed on Linux." >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Bash installer tests failed on Linux." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-src-cli-installers-linux >> $GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-scripts-cli-installer-linux >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -162,36 +162,36 @@ jobs:
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: build-artifacts-src-cli-installers
-          path: out/build/src-cli-installers
+          name: build-artifacts-scripts-cli-installer
+          path: out/build/scripts-cli-installer
 
       - name: Test Module (Commit Suite - L0-L2)
         working-directory: ./src/commands
-        run: go run . test src-cli-installers --suite commit
+        run: go run . test scripts-cli-installer --suite commit
 
       - name: Test Module (Acceptance Suite - L3)
         working-directory: ./src/commands
-        run: go run . test src-cli-installers --suite acceptance
+        run: go run . test scripts-cli-installer --suite acceptance
 
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-src-cli-installers-windows
+          name: test-results-scripts-cli-installer-windows
           path: out/test/**
 
       - name: Test Summary
         if: always()
         shell: pwsh
         run: |
-          echo "## Test: src-cli-installers (Windows)" >> $env:GITHUB_STEP_SUMMARY
+          echo "## Test: scripts-cli-installer (Windows)" >> $env:GITHUB_STEP_SUMMARY
           echo "" >> $env:GITHUB_STEP_SUMMARY
           if ("${{ job.status }}" -eq "success") {
             echo "✅ PowerShell installer tests passed on Windows." >> $env:GITHUB_STEP_SUMMARY
           } else {
             echo "❌ PowerShell installer tests failed on Windows." >> $env:GITHUB_STEP_SUMMARY
             echo "" >> $env:GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-src-cli-installers-windows >> $env:GITHUB_STEP_SUMMARY
+            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-scripts-cli-installer-windows >> $env:GITHUB_STEP_SUMMARY
           }
           echo "" >> $env:GITHUB_STEP_SUMMARY
 
