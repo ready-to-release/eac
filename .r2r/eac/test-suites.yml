@@ -1,7 +1,3 @@
-metadata:
-  version: "0.1.0"
-  description: "Test suite definitions for tag-based test selection"
-
 suites:
   # ============================================================================
   # Commit Suite - Fast unit and integration tests for pre-commit stages

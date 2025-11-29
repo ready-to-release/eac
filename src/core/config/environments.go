@@ -6,7 +6,6 @@ import (
 
 // EnvironmentsConfig represents the environments.yml configuration
 type EnvironmentsConfig struct {
-	Metadata     Metadata      `yaml:"metadata"`
 	Environments []Environment `yaml:"environments"`
 }
 
@@ -17,8 +16,7 @@ type Environment struct {
 	Description string   `yaml:"description"`
 	Level       string   `yaml:"level"`       // L0, L1, L2, L3, L4
 	Type        string   `yaml:"type"`        // unit, docker, docker-compose, plte, production
-	EnvTags     []string `yaml:"env_tags"`    // Environment classification tags
-	SystemDeps  []string `yaml:"system_deps"` // Required system dependencies (@deps:docker, etc.)
+	SystemDeps  []string `yaml:"system_deps"` // Required system dependencies (docker, go, etc.)
 }
 
 // GetTestTag returns the test tag for this environment (@env:<moniker>)
@@ -69,10 +67,6 @@ func (c *EnvironmentsConfig) AllMonikers() []string {
 
 // Validate validates the environment configuration
 func (c *EnvironmentsConfig) Validate() error {
-	if c.Metadata.Version == "" {
-		return fmt.Errorf("metadata missing version")
-	}
-
 	if len(c.Environments) == 0 {
 		return fmt.Errorf("no environments defined")
 	}

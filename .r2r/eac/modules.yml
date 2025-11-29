@@ -24,8 +24,8 @@ modules:
           - .mcp.json
           - agent.md
           - "**/agent.md"
-          - scripts/pwsh/claude-env-setup.ps1
-          - scripts/sh/claude-env-setup.sh
+          - scripts/pwsh/claude/env-setup.ps1
+          - scripts/sh/claude/env-setup.sh
     flags:
       own_children_files: true
 
@@ -172,7 +172,7 @@ modules:
         specs:
           - specs/src-ai/**
         other:
-          - contracts/ai/**
+          - .r2r/eac/ai/**
 
   # ============================================================================
   # Source: CLI
@@ -202,7 +202,7 @@ modules:
         test_impl: src/specs/impl/src-cli
         design: specs/src-cli/.design
         other:
-          - contracts/cli/**
+          - contracts/src-cli/**
     metadata:
       exe-linux: r2r-linux
       exe-darwin-amd64: r2r-darwin-amd64

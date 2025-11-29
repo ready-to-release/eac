@@ -101,19 +101,18 @@ func (e *Executor) GetLastUsedProvider() Provider {
 	return e.lastUsedProvider
 }
 
-// loadConfig loads the agent configuration from .r2r directory.
-// Checks .r2r/agent-config.personal.yml first (gitignored), then falls back to .r2r/eac/agent-config.yml.
+// loadConfig loads the agent configuration from .r2r/eac directory.
+// Checks .r2r/eac/agent-config.personal.yml first (gitignored), then falls back to .r2r/eac/agent-config.yml.
 func (e *Executor) loadConfig() (*Config, error) {
-	r2rDir := filepath.Join(e.workspaceRoot, ".r2r")
+	eacDir := filepath.Join(e.workspaceRoot, ".r2r", "eac")
 
 	// Try personal config first (gitignored, user-specific)
-	personalConfigPath := filepath.Join(r2rDir, "agent-config.personal.yml")
+	personalConfigPath := filepath.Join(eacDir, "agent-config.personal.yml")
 	if _, err := os.Stat(personalConfigPath); err == nil {
 		return LoadConfig(personalConfigPath)
 	}
 
-	// Fall back to team config in .r2r/eac/
-	eacDir := filepath.Join(r2rDir, "eac")
+	// Fall back to team config
 	configPath := filepath.Join(eacDir, "agent-config.yml")
 	return LoadConfig(configPath)
 }

@@ -11,8 +11,8 @@ import (
 
 func main() {
 	repoRoot := findRepoRoot()
-	modulesPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "modules.yml")
-	typesPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "module-types.yml")
+	modulesPath := filepath.Join(repoRoot, ".r2r", "eac", "modules.yml")
+	typesPath := filepath.Join(repoRoot, ".r2r", "eac", "module-types.yml")
 
 	// Load module types
 	typesData, err := os.ReadFile(typesPath)

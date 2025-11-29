@@ -31,11 +31,6 @@ import (
 // createTestTagsConfig creates a TestingTagsConfig for testing
 func createTestTagsConfig() *config.TestingTagsConfig {
 	tc := &config.TestingTagsConfig{
-		Metadata: config.Metadata{
-			Version:     "0.1.0",
-			Description: "Test tag contract",
-			Scope:       "Tests",
-		},
 		Tags: []config.TagDefinition{
 			// Verification tags
 			{Tag: "@ov", Name: "Operational Verification", Type: "verification"},
@@ -62,7 +57,7 @@ func createTestTagsConfig() *config.TestingTagsConfig {
 			{Tag: "@risk-control:gxp-<name>", Description: "GxP risk control", Type: "risk_control_gxp", Pattern: "^@risk-control:gxp-[a-z0-9-]+$", Example: "@risk-control:gxp-account-lockout"},
 			// GxP
 			{Tag: "@gxp", Description: "GxP requirement", Type: "gxp_regulatory"},
-			{Tag: "@critical-aspect", Description: "GmP Critical Aspect", Type: "gxp_regulatory"},
+			{Tag: "@gmp-critical-aspect", Description: "GmP Critical Aspect", Type: "gxp_regulatory"},
 		},
 		SkipReasons: []config.SkipReason{
 			{Code: "wip", Name: "Work In Progress"},
@@ -415,13 +410,13 @@ func TestGherkinValidator_GxPRequirements(t *testing.T) {
 			expectError: "",
 		},
 		{
-			name:        "@critical-aspect without @gxp",
-			tags:        "@ov @critical-aspect",
+			name:        "@gmp-critical-aspect without @gxp",
+			tags:        "@ov @gmp-critical-aspect",
 			expectError: "CRITICAL_ASPECT_REQUIRES_GXP",
 		},
 		{
-			name:        "@critical-aspect with @gxp and risk control",
-			tags:        "@ov @gxp @critical-aspect @risk-control:gxp-data-integrity",
+			name:        "@gmp-critical-aspect with @gxp and risk control",
+			tags:        "@ov @gxp @gmp-critical-aspect @risk-control:gxp-data-integrity",
 			expectError: "",
 		},
 		{
@@ -854,8 +849,8 @@ func TestTagsConfig_ValidateTag(t *testing.T) {
 	}{
 		{"@ov", false},
 		{"@skip:wip", false},
-		{"@skip:invalid", true},  // Invalid skip reason
-		{"@skip:WIP", true},      // Doesn't match pattern (uppercase)
+		{"@skip:invalid", true}, // Invalid skip reason
+		{"@skip:WIP", true},     // Doesn't match pattern (uppercase)
 		{"@risk-control:auth-mfa-01", false},
 		{"@risk-control:auth-mfa", true}, // Doesn't match pattern (missing ID)
 	}

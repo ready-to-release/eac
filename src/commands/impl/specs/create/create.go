@@ -563,11 +563,10 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	return sb.String()
 }
 
-// loadPromptWithFallback implements four-tier prompt loading:
+// loadPromptWithFallback implements prompt loading:
 // 1. Custom path (if specified via --prompt flag)
-// 2. Local contract: .r2r/contracts/ai/specifications/0.1.0/specification.md
-// 3. Repo contract: contracts/ai/specifications/0.1.0/specification.md
-// 4. Built-in: embedded prompts/specification.md
+// 2. AI config: .r2r/eac/ai/specifications/specification.md
+// 3. Built-in: embedded prompts/specification.md
 func loadPromptWithFallback(templateRoot string, customPath string) (string, error) {
 	// Tier 1: Check for custom path (from --prompt flag)
 	if customPath != "" {
@@ -584,15 +583,15 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 		return string(content), nil
 	}
 
-	// Load from contract with fallback: .r2r/contracts → contracts/ai
-	loader := contracts.NewContractLoader(templateRoot, "ai/specifications", "0.1.0")
+	// Load from AI config: .r2r/eac/ai/specifications/
+	loader := contracts.NewContractLoader(templateRoot, "ai/specifications", "")
 	prompt, source, err := loader.LoadPrompt("specification.md", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
 
-	// Log source if using override (for transparency)
-	if source != "embedded default" && source != "repository contract" {
+	// Log source if not default
+	if source != "embedded default" {
 		fmt.Fprintf(os.Stderr, "ℹ️  Using %s prompt\n", source)
 	}
 
@@ -735,14 +734,15 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
-	// Load referenced files (tags and taxonomy) from repository config
+	// Load referenced files (tags and taxonomy)
 	tagsPath := filepath.Join(contracts.EACConfigRelPath, "testing-tags.yml")
 	tagsContent, err := loader.LoadReferencedFile(tagsPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load tags: %w", err)
 	}
 
-	taxonomyPath := filepath.Join(contracts.EACConfigRelPath, "testing-taxonomy.yml")
+	// Taxonomy is co-located with the specifications AI config (unversioned)
+	taxonomyPath := ".r2r/eac/ai/specifications/testing-taxonomy.yml"
 	taxonomyContent, err := loader.LoadReferencedFile(taxonomyPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load taxonomy: %w", err)

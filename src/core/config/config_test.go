@@ -19,7 +19,7 @@ func TestLoad_DefaultOptions(t *testing.T) {
 	assert.NotNil(t, cfg.Modules)
 	assert.NotNil(t, cfg.Environments)
 	assert.NotNil(t, cfg.TestingTags)
-	assert.NotNil(t, cfg.TestingTaxonomy)
+	assert.NotNil(t, cfg.TestSuites)
 }
 
 func TestLoad_WithExplicitRepoRoot(t *testing.T) {
@@ -50,7 +50,7 @@ func TestLoad_LazyLoad(t *testing.T) {
 	assert.Nil(t, cfg.Modules)
 	assert.Nil(t, cfg.Environments)
 	assert.Nil(t, cfg.TestingTags)
-	assert.Nil(t, cfg.TestingTaxonomy)
+	assert.Nil(t, cfg.TestSuites)
 
 	// Load on demand
 	err = cfg.LoadModules(true)
@@ -199,29 +199,6 @@ func TestTestingTagsConfig_BuildGodogSkipTagFilter(t *testing.T) {
 	filter := cfg.TestingTags.BuildGodogSkipTagFilter()
 	assert.Contains(t, filter, "~@skip:wip")
 	assert.Contains(t, filter, "&&")
-}
-
-func TestTestingTaxonomyConfig_GetTestLevel(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	level, ok := cfg.TestingTaxonomy.GetTestLevel("L0")
-	assert.True(t, ok)
-	assert.Equal(t, "Unit Tests", level.Name)
-	assert.Equal(t, "LEFT", level.ShiftDirection)
-
-	_, ok = cfg.TestingTaxonomy.GetTestLevel("L99")
-	assert.False(t, ok)
-}
-
-func TestTestingTaxonomyConfig_GetAllLevels(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	levels := cfg.TestingTaxonomy.GetAllLevels()
-	assert.Contains(t, levels, "L0")
-	assert.Contains(t, levels, "L4")
-	assert.Contains(t, levels, "HE2E")
 }
 
 func TestValidateAll(t *testing.T) {

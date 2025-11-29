@@ -8,7 +8,6 @@ import (
 
 // TestingTagsConfig represents the testing-tags.yml configuration
 type TestingTagsConfig struct {
-	Metadata             Metadata           `yaml:"metadata"`
 	ModuleMonikers       MonikerExamples    `yaml:"module_monikers"`
 	EnvironmentMonikers  MonikerExamples    `yaml:"environment_monikers"`
 	SystemDependencies   []SystemDependency `yaml:"system_dependency_names"`

@@ -149,14 +149,14 @@ func TestValidateGxPRequirements_CriticalAspectWithoutGxP(t *testing.T) {
 		FilePath:         "test.feature",
 		Type:             "godog",
 		TestName:         "test",
-		Tags:             []string{"@critical-aspect"},
+		Tags:             []string{"@gmp-critical-aspect"},
 		IsCriticalAspect: true,
 		IsGxP:            false,
 	}
 
 	errors := ValidateGxPRequirements(test)
 	assert.Len(t, errors, 1)
-	assert.Contains(t, errors[0], "@critical-aspect must be used with @gxp tag")
+	assert.Contains(t, errors[0], "@gmp-critical-aspect must be used with @gxp tag")
 }
 
 // Test risk control validation

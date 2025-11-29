@@ -200,9 +200,9 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 		errors = append(errors, fmt.Sprintf("test '%s' has @gxp tag but no @risk-control:* tags", test.TestName))
 	}
 
-	// Validate: @critical-aspect must be used with @gxp
+	// Validate: @gmp-critical-aspect must be used with @gxp
 	if test.IsCriticalAspect && !test.IsGxP {
-		errors = append(errors, fmt.Sprintf("test '%s' has @critical-aspect but no @gxp tag", test.TestName))
+		errors = append(errors, fmt.Sprintf("test '%s' has @gmp-critical-aspect but no @gxp tag", test.TestName))
 	}
 
 	// Validate: Production tags (@piv/@ppv) should not be in commit suite (these are @L4)
@@ -369,9 +369,9 @@ func ValidateGxPRequirements(test TestReference) []string {
 		}
 	}
 
-	// @critical-aspect must be used with @gxp
+	// @gmp-critical-aspect must be used with @gxp
 	if test.IsCriticalAspect && !test.IsGxP {
-		errors = append(errors, "@critical-aspect must be used with @gxp tag")
+		errors = append(errors, "@gmp-critical-aspect must be used with @gxp tag")
 	}
 
 	return errors

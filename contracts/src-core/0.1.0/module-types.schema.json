@@ -5,47 +5,6 @@
   "description": "Schema for module type definitions mapping types to build systems, capabilities, and default values",
   "type": "object",
   "properties": {
-    "metadata": {
-      "type": "object",
-      "description": "Schema metadata",
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "Schema version"
-        },
-        "description": {
-          "type": "string",
-          "description": "Schema description"
-        }
-      },
-      "required": ["version"]
-    },
-    "build_systems": {
-      "type": "object",
-      "description": "Available build systems and their descriptions",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string",
-            "description": "Build system description"
-          }
-        }
-      }
-    },
-    "capabilities": {
-      "type": "object",
-      "description": "Available capabilities and their descriptions",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string",
-            "description": "Capability description"
-          }
-        }
-      }
-    },
     "types": {
       "type": "array",
       "description": "Module type definitions",
@@ -54,7 +13,7 @@
       }
     }
   },
-  "required": ["metadata", "types"],
+  "required": ["types"],
   "definitions": {
     "module_type": {
       "type": "object",
@@ -140,6 +99,23 @@
         "changelog": {
           "type": "string",
           "description": "Default changelog filename"
+        },
+        "workflows": {
+          "$ref": "#/definitions/workflows_defaults"
+        }
+      }
+    },
+    "workflows_defaults": {
+      "type": "object",
+      "description": "Default workflow file paths",
+      "properties": {
+        "ci": {
+          "type": "string",
+          "description": "CI workflow file path"
+        },
+        "release": {
+          "type": "string",
+          "description": "Release workflow file path"
         }
       }
     },

@@ -79,8 +79,8 @@ func (t *TestIsolation) WithCopySpecs(copy bool) *TestIsolation {
 	return t
 }
 
-// WithCopyAIContracts enables copying the contracts/ directory (AI contracts, prompts) to the isolated dir.
-// This is needed for commands that use AI prompts from contracts/ai/.
+// WithCopyAIContracts enables copying the .r2r/eac/ai/ directory (AI configs, prompts) to the isolated dir.
+// This is needed for commands that use AI prompts from .r2r/eac/ai/.
 func (t *TestIsolation) WithCopyAIContracts(copy bool) *TestIsolation {
 	t.copyAIContracts = copy
 	return t

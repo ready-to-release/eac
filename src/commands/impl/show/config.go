@@ -3,7 +3,7 @@
 // Short: Display all loaded configurations with defaults applied
 // Long: The show config command displays all EAC repository configurations
 // Long: loaded with their defaults applied. This includes modules, module types,
-// Long: environments, testing tags, testing taxonomy, and test suites.
+// Long: environments, testing tags, and test suites.
 // HasSideEffects: false
 package show
 
@@ -69,13 +69,6 @@ func ShowConfig() int {
 		summaryTb.AddRow("testing_tags", "✓ loaded", len(cfg.TestingTags.Tags))
 	} else {
 		summaryTb.AddRow("testing_tags", "✗ not loaded", "-")
-	}
-
-	// Testing Taxonomy
-	if cfg.TestingTaxonomy != nil {
-		summaryTb.AddRow("testing_taxonomy", "✓ loaded", len(cfg.TestingTaxonomy.TestingTaxonomy.TestLevels))
-	} else {
-		summaryTb.AddRow("testing_taxonomy", "✗ not loaded", "-")
 	}
 
 	// Test Suites
@@ -171,19 +164,6 @@ func ShowConfig() int {
 		}
 	}
 
-	// Testing Taxonomy
-	if cfg.TestingTaxonomy != nil && len(cfg.TestingTaxonomy.TestingTaxonomy.TestLevels) > 0 {
-		fmt.Println("## Testing Taxonomy")
-		fmt.Println()
-		taxTb := render.NewTableBuilder().
-			WithHeaders("Level", "Name", "Scope")
-		for _, level := range cfg.TestingTaxonomy.TestingTaxonomy.TestLevels {
-			taxTb.AddRow(level.Level, level.Name, level.Scope)
-		}
-		fmt.Println(taxTb.Build())
-		fmt.Println()
-	}
-
 	// Test Suites
 	if cfg.TestSuites != nil && len(cfg.TestSuites.Suites) > 0 {
 		fmt.Println("## Test Suites")
@@ -216,7 +196,6 @@ func printShowConfigUsage() {
 	fmt.Println("  - module_types: Module type definitions")
 	fmt.Println("  - environments: Environment contracts")
 	fmt.Println("  - testing_tags: Testing tag definitions")
-	fmt.Println("  - testing_taxonomy: Testing taxonomy levels")
 	fmt.Println("  - test_suites: Test suite configurations")
 	fmt.Println()
 	fmt.Println("For full structured output, use 'r2r get config'.")

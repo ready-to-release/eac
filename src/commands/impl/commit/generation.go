@@ -28,18 +28,17 @@ func ResetMockAIResponse() {
 	mockAIResponse = ""
 }
 
-// loadPromptWithFallback implements three-tier prompt loading:
-// 1. Local contract: .r2r/contracts/ai/commit-message/0.1.0/<name>.md
-// 2. Repo contract: contracts/ai/commit-message/0.1.0/<name>.md
-// 3. Built-in: embedded prompts/<name>.md
+// loadPromptWithFallback implements prompt loading from AI configs:
+// 1. AI config: .r2r/eac/ai/commit-message/<name>.md
+// 2. Built-in: embedded prompts/<name>.md
 func loadPromptWithFallback(promptName string, workspaceRoot string) (string, error) {
-	// Create contract loader
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	// Create contract loader for AI config
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
 
-	// No embedded prompt - load from .r2r/contracts or contracts/ai
+	// No embedded prompt - load from .r2r/eac/ai/
 	var embeddedPrompt string
 
-	// Load prompt using three-tier system
+	// Load prompt from AI config
 	agentContent, _, err := loader.LoadPrompt(promptName+".md", embeddedPrompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)

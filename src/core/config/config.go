@@ -1,5 +1,5 @@
 // Package config provides a central configuration loader for all EAC repository configs.
-// It consolidates loading of modules, environments, testing-tags, and testing-taxonomy
+// It consolidates loading of modules, environments, testing-tags, and test-suites
 // with integrated JSON Schema validation.
 package config
 
@@ -25,12 +25,11 @@ const (
 
 // Config file names
 const (
-	ModulesFileName         = "modules.yml"
-	ModuleTypesFileName     = "module-types.yml"
-	EnvironmentsFileName    = "environments.yml"
-	TestingTagsFileName     = "testing-tags.yml"
-	TestingTaxonomyFileName = "testing-taxonomy.yml"
-	TestSuitesFileName      = "test-suites.yml"
+	ModulesFileName      = "modules.yml"
+	ModuleTypesFileName  = "module-types.yml"
+	EnvironmentsFileName = "environments.yml"
+	TestingTagsFileName  = "testing-tags.yml"
+	TestSuitesFileName   = "test-suites.yml"
 )
 
 // EACConfig holds all loaded EAC repository configuration.
@@ -41,12 +40,11 @@ type EACConfig struct {
 	ConfigRoot string
 
 	// Loaded configurations
-	Modules         *ModulesConfig
-	ModuleTypes     *ModuleTypesConfig
-	Environments    *EnvironmentsConfig
-	TestingTags     *TestingTagsConfig
-	TestingTaxonomy *TestingTaxonomyConfig
-	TestSuites      *TestSuitesConfig
+	Modules      *ModulesConfig
+	ModuleTypes  *ModuleTypesConfig
+	Environments *EnvironmentsConfig
+	TestingTags  *TestingTagsConfig
+	TestSuites   *TestSuitesConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -127,10 +125,6 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 
 	if err := c.LoadTestingTags(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("testing-tags: %w", err))
-	}
-
-	if err := c.LoadTestingTaxonomy(validateSchemas); err != nil {
-		errs = append(errs, fmt.Errorf("testing-taxonomy: %w", err))
 	}
 
 	if err := c.LoadTestSuites(validateSchemas); err != nil {
@@ -238,28 +232,6 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 	return nil
 }
 
-// LoadTestingTaxonomy loads the testing-taxonomy configuration
-func (c *EACConfig) LoadTestingTaxonomy(validateSchema bool) error {
-	data, err := c.readConfigFile(TestingTaxonomyFileName)
-	if err != nil {
-		return err
-	}
-
-	if validateSchema {
-		if err := c.validateSchema(schema.SchemaTestingTaxonomy, data); err != nil {
-			return err
-		}
-	}
-
-	var cfg TestingTaxonomyConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", TestingTaxonomyFileName, err)
-	}
-
-	c.TestingTaxonomy = &cfg
-	return nil
-}
-
 // LoadTestSuites loads the test-suites configuration
 func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 	data, err := c.readConfigFile(TestSuitesFileName)
@@ -338,13 +310,6 @@ func (c *EACConfig) ValidateAll() error {
 		data, _ := c.readConfigFile(TestingTagsFileName)
 		if err := c.validateSchema(schema.SchemaTestingTags, data); err != nil {
 			errs = append(errs, fmt.Errorf("testing-tags: %w", err))
-		}
-	}
-
-	if c.TestingTaxonomy != nil {
-		data, _ := c.readConfigFile(TestingTaxonomyFileName)
-		if err := c.validateSchema(schema.SchemaTestingTaxonomy, data); err != nil {
-			errs = append(errs, fmt.Errorf("testing-taxonomy: %w", err))
 		}
 	}
 
