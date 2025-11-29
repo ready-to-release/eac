@@ -12,16 +12,15 @@ import (
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
-// BuildMkDocsDefault is the default build handler for MkDocs modules.
-func BuildMkDocsDefault(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== Building MkDocs module: %s (type: %s) ===", module.Moniker, module.Type)
-	Logln(logWriter, "ℹ️  MkDocs modules are built via mkdocs build command")
-	return 0
+func init() {
+	// Register handler for "mkdocs" build system
+	RegisterSystem("mkdocs", BuildMkDocsModule)
 }
 
-// BuildMkDocsSite builds the main MkDocs documentation site using Docker
-func BuildMkDocsSite(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== Building mkdocs-site: %s ===", module.Moniker)
+// BuildMkDocsModule builds MkDocs documentation sites using Docker.
+// All MkDocs modules use this handler - behavior is the same for all.
+func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	// Check for mkdocs.yml at repository root
 	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")

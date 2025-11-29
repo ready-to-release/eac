@@ -1,7 +1,8 @@
-// go.go - Build functions for Go module types
+// go.go - Build handler for Go build system
 package builders
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
@@ -10,50 +11,43 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
-// BuildGoDefault is the default build handler for Go modules without specific handlers.
-// Runs go generate and validates the module compiles.
-func BuildGoDefault(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
-	Logln(logWriter, "\n=== Building Go module: %s (type: %s) ===", module.Moniker, module.Type)
-
-	if opts.TidyFirst {
-		Logln(logWriter, "Running: go mod tidy")
-		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-			return exitCode
-		}
-	}
-
-	Logln(logWriter, "Running: go generate ./...")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
-		return exitCode
-	}
-
-	Logln(logWriter, "Running: go build ./...")
-	return RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./...")
+func init() {
+	// Register handler for "go" build system
+	// All go-* types use this via their build_system contract
+	// Behavior is determined by capabilities, not type names
+	RegisterSystem("go", BuildGoModule)
 }
 
-// BuildGoCLI builds a CLI binary with cross-platform support
-func BuildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+// BuildGoModule builds any Go module based on its capabilities from the contract.
+// - executable + cross_compile → cross-compiled binaries for multiple platforms
+// - executable → single binary for current platform
+// - no executable → library, just validate it compiles
+func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
-	Logln(logWriter, "\n=== Building go-cli: %s ===", module.Moniker)
+	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
-	// Log compression mode
-	if opts.CompressedUPX {
-		Logln(logWriter, "Compression: UPX (--compressed-upx)")
-	} else if opts.Compressed {
-		Logln(logWriter, "Compression: stripped (--compressed)")
-	} else {
-		Logln(logWriter, "Compression: none (dev build with debug info)")
+	// Get capabilities from contract
+	cfg := config.Global()
+	hasExecutable := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "executable")
+	hasCrossCompile := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "cross_compile")
+	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+
+	// Skip if not a go_module (shouldn't happen if build_system is correct, but defensive)
+	if !hasGoModule {
+		Logln(logWriter, "⚠️  Module type '%s' doesn't have go_module capability", module.Type)
+		return 0
 	}
 
 	// Step 1: go mod tidy (if enabled)
 	if opts.TidyFirst {
 		Logln(logWriter, "Running: go mod tidy")
 		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			Logln(logWriter, "❌ go mod tidy failed")
 			return exitCode
 		}
 	}
@@ -61,228 +55,162 @@ func BuildGoCLI(module *modules.ModuleContract, workspaceRoot string, outputDir 
 	// Step 2: go generate
 	Logln(logWriter, "Running: go generate ./...")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
-		return exitCode
-	}
-
-	// Check for UPX if needed
-	if opts.CompressedUPX {
-		if _, err := exec.LookPath("upx"); err != nil {
-			Logln(logWriter, "❌ UPX not found in PATH. Install UPX for --compressed-upx support.")
-			Logln(logWriter, "   See: https://upx.github.io/")
-			return 1
-		}
-	}
-
-	// Define target platforms
-	type Platform struct {
-		GOOS   string
-		GOARCH string
-		Ext    string
-		Name   string
-	}
-
-	platforms := []Platform{
-		{GOOS: "windows", GOARCH: "amd64", Ext: ".exe", Name: "Windows x64"},
-		{GOOS: "linux", GOARCH: "amd64", Ext: "", Name: "Linux x64"},
-		{GOOS: "darwin", GOARCH: "amd64", Ext: "", Name: "macOS Intel"},
-		{GOOS: "darwin", GOARCH: "arm64", Ext: "", Name: "macOS ARM64"},
-	}
-
-	var builtBinaries []string
-
-	// Build for each target platform
-	for _, platform := range platforms {
-		var binaryName string
-		if platform.GOOS == "darwin" {
-			binaryName = fmt.Sprintf("r2r-%s-%s%s", platform.GOOS, platform.GOARCH, platform.Ext)
-		} else {
-			binaryName = fmt.Sprintf("r2r-%s%s", platform.GOOS, platform.Ext)
-		}
-		binaryPath := filepath.Join(outputDir, binaryName)
-
-		Logln(logWriter, "\n--- Building for %s (%s/%s) ---", platform.Name, platform.GOOS, platform.GOARCH)
-		Logln(logWriter, "Output: %s", binaryPath)
-
-		buildArgs := []string{"build", "-o", binaryPath}
-
-		// Build ldflags
-		var ldflags string
-		if opts.Compressed || opts.CompressedUPX {
-			ldflags = "-s -w"
-		}
-		if opts.Version != "" {
-			if ldflags != "" {
-				ldflags += " "
-			}
-			ldflags += fmt.Sprintf("-X 'github.com/ready-to-release/eac/src/cli/cmd.Version=%s'", opts.Version)
-			Logln(logWriter, "Version: %s", opts.Version)
-		}
-		if ldflags != "" {
-			buildArgs = append(buildArgs, "-ldflags", ldflags)
-		}
-
-		env := []string{
-			fmt.Sprintf("GOOS=%s", platform.GOOS),
-			fmt.Sprintf("GOARCH=%s", platform.GOARCH),
-		}
-
-		if exitCode := RunCommandWithEnv(moduleRoot, logWriter, env, "go", buildArgs...); exitCode != 0 {
-			Logln(logWriter, "❌ Build failed for %s", platform.Name)
-			return 1
-		}
-
-		Logln(logWriter, "✅ Built successfully: %s", binaryPath)
-
-		if runtime.GOOS != "windows" && platform.GOOS != "windows" {
-			if exitCode := RunCommandWithLog(moduleRoot, logWriter, "chmod", "+x", binaryPath); exitCode != 0 {
-				Logln(logWriter, "⚠️  Warning: could not set executable permissions")
-			}
-		}
-
-		builtBinaries = append(builtBinaries, binaryPath)
-	}
-
-	// Apply UPX compression if requested
-	if opts.CompressedUPX {
-		Logln(logWriter, "\n--- Applying UPX compression ---")
-		Logln(logWriter, "Note: UPX compression skipped for Darwin binaries (not supported when cross-compiling)")
-
-		for _, binaryPath := range builtBinaries {
-			baseName := filepath.Base(binaryPath)
-
-			if strings.Contains(baseName, "darwin") {
-				Logln(logWriter, "⏭️  Skipping %s (Darwin binaries not supported by UPX cross-compile)", baseName)
-				continue
-			}
-
-			originalInfo, err := os.Stat(binaryPath)
-			if err != nil {
-				Logln(logWriter, "⚠️  Warning: could not stat %s: %v", binaryPath, err)
-				continue
-			}
-			originalSize := originalInfo.Size()
-
-			ext := filepath.Ext(baseName)
-			nameWithoutExt := strings.TrimSuffix(baseName, ext)
-			upxName := nameWithoutExt + "-upx" + ext
-			upxPath := filepath.Join(outputDir, upxName)
-
-			if err := CopyFile(binaryPath, upxPath); err != nil {
-				Logln(logWriter, "❌ Failed to copy %s for UPX: %v", baseName, err)
-				return 1
-			}
-
-			Logln(logWriter, "Compressing: %s -> %s", baseName, upxName)
-
-			cmd := exec.Command("upx", "--best", "-q", upxPath)
-			cmd.Stdout = logWriter
-			cmd.Stderr = logWriter
-
-			if err := cmd.Run(); err != nil {
-				Logln(logWriter, "⚠️  UPX compression failed for %s: %v", upxName, err)
-				os.Remove(upxPath)
-				continue
-			}
-
-			compressedInfo, err := os.Stat(upxPath)
-			if err != nil {
-				Logln(logWriter, "⚠️  Warning: could not stat compressed file: %v", err)
-				continue
-			}
-			compressedSize := compressedInfo.Size()
-
-			ratio := float64(compressedSize) / float64(originalSize) * 100
-			Logln(logWriter, "✅ %s: %.1f MB -> %.1f MB (%.0f%%)",
-				upxName,
-				float64(originalSize)/1024/1024,
-				float64(compressedSize)/1024/1024,
-				ratio)
-		}
-	}
-
-	Logln(logWriter, "\n✅ All builds completed successfully")
-	return 0
-}
-
-// BuildGoCommands builds the runtime command dispatcher
-func BuildGoCommands(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
-
-	Logln(logWriter, "\n=== go-commands: %s ===", module.Moniker)
-
-	if opts.TidyFirst {
-		Logln(logWriter, "🔄 Running go mod tidy...")
-		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-			Logln(logWriter, "❌ go mod tidy failed")
-			return exitCode
-		}
-		Logln(logWriter, "✅ go mod tidy completed")
-	}
-
-	Logln(logWriter, "🔄 Running go generate...")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
 		Logln(logWriter, "❌ go generate failed")
 		return exitCode
 	}
-	Logln(logWriter, "✅ go generate completed")
 
-	Logln(logWriter, "\nℹ️  This module uses 'go run .' and is never compiled to a binary")
-	Logln(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)")
-	return 0
-}
-
-// BuildGoMCP builds an MCP JSON-RPC server binary
-func BuildGoMCP(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
-
-	serverName := module.Moniker
-	if len(serverName) > 8 && serverName[:8] == "src-mcp-" {
-		serverName = serverName[8:]
-	}
-
-	binaryName := fmt.Sprintf("mcp-server-%s", serverName)
-	binaryPath := filepath.Join(outputDir, binaryName)
-
-	Logln(logWriter, "\n=== Building go-mcp: %s ===", module.Moniker)
-
-	if opts.TidyFirst {
-		Logln(logWriter, "Running: go mod tidy")
-		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+	// Step 3: Build based on capabilities
+	if hasExecutable && hasCrossCompile {
+		return buildCrossCompiled(module, moduleRoot, outputDir, logWriter, opts)
+	} else if hasExecutable {
+		return buildSingleBinary(module, moduleRoot, outputDir, logWriter, opts)
+	} else {
+		// Library - just validate it compiles
+		Logln(logWriter, "Running: go build ./...")
+		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./..."); exitCode != 0 {
+			Logln(logWriter, "❌ go build failed")
 			return exitCode
 		}
+		Logln(logWriter, "ℹ️  This is a library module (no binary to build)")
+		return 0
 	}
+}
+
+// buildSingleBinary builds a single binary for the current platform
+func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	binaryName := module.Moniker
+	binaryPath := filepath.Join(outputDir, binaryName)
 
 	Logln(logWriter, "Running: go build -o %s", binaryPath)
 	return RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
 }
 
-// BuildGoLibrary builds a Go library module
-func BuildGoLibrary(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+// buildCrossCompiled builds binaries for multiple platforms
+func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	binaryName := module.Moniker
 
-	Logln(logWriter, "\n=== go-library: %s ===", module.Moniker)
+	// Define target platforms
+	targets := []struct {
+		goos   string
+		goarch string
+		suffix string
+	}{
+		{"linux", "amd64", ""},
+		{"linux", "arm64", ""},
+		{"darwin", "amd64", ""},
+		{"darwin", "arm64", ""},
+		{"windows", "amd64", ".exe"},
+	}
 
-	if opts.TidyFirst {
-		Logln(logWriter, "Running: go mod tidy")
-		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
-			return exitCode
+	// Build ldflags
+	ldflags := ""
+	if opts.Compressed {
+		ldflags = "-s -w"
+	}
+	if opts.Version != "" {
+		versionFlag := fmt.Sprintf("-X main.version=%s", opts.Version)
+		if ldflags != "" {
+			ldflags += " " + versionFlag
+		} else {
+			ldflags = versionFlag
 		}
 	}
 
-	Logln(logWriter, "Running: go generate ./...")
-	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
-		return exitCode
+	successCount := 0
+	for _, target := range targets {
+		outputName := fmt.Sprintf("%s-%s-%s%s", binaryName, target.goos, target.goarch, target.suffix)
+		outputPath := filepath.Join(outputDir, outputName)
+
+		Logln(logWriter, "Building: %s/%s → %s", target.goos, target.goarch, outputName)
+
+		args := []string{"build", "-o", outputPath}
+		if ldflags != "" {
+			args = append(args, "-ldflags", ldflags)
+		}
+
+		cmd := exec.Command("go", args...)
+		cmd.Dir = moduleRoot
+		cmd.Env = append(os.Environ(),
+			fmt.Sprintf("GOOS=%s", target.goos),
+			fmt.Sprintf("GOARCH=%s", target.goarch),
+			"CGO_ENABLED=0",
+		)
+		cmd.Stdout = logWriter
+		cmd.Stderr = logWriter
+
+		if err := cmd.Run(); err != nil {
+			Logln(logWriter, "❌ Failed to build %s/%s: %v", target.goos, target.goarch, err)
+			continue
+		}
+
+		successCount++
+
+		// Apply UPX compression if requested and available
+		if opts.CompressedUPX && (target.goos == runtime.GOOS || target.goos == "linux") {
+			if upxPath, err := exec.LookPath("upx"); err == nil {
+				Logln(logWriter, "Compressing with UPX: %s", outputName)
+				upxCmd := exec.Command(upxPath, "--best", "--lzma", outputPath)
+				upxCmd.Stdout = logWriter
+				upxCmd.Stderr = logWriter
+				if err := upxCmd.Run(); err != nil {
+					Logln(logWriter, "⚠️  UPX compression failed: %v", err)
+				}
+			}
+		}
 	}
 
-	Logln(logWriter, "ℹ️  This is a library module (no binary to build)")
-	Logln(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)")
+	if successCount == 0 {
+		Logln(logWriter, "❌ All builds failed")
+		return 1
+	}
+
+	Logln(logWriter, "✅ Built %d/%d targets successfully", successCount, len(targets))
+
+	// Generate checksums
+	generateChecksums(outputDir, binaryName, logWriter)
+
 	return 0
 }
 
-// BuildGoTests builds a Go test module
-func BuildGoTests(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== go-tests: %s ===", module.Moniker)
-	Logln(logWriter, "ℹ️  This is a test module (use 'test module' command to run tests)")
-	Logln(logWriter, "ℹ️  Auto-built during testing (no explicit build needed)")
-	return 0
+// generateChecksums creates SHA256 checksums for all built binaries
+func generateChecksums(outputDir string, binaryName string, logWriter io.Writer) {
+	entries, err := os.ReadDir(outputDir)
+	if err != nil {
+		return
+	}
+
+	checksumFile := filepath.Join(outputDir, "checksums.txt")
+	f, err := os.Create(checksumFile)
+	if err != nil {
+		Logln(logWriter, "⚠️  Could not create checksums file: %v", err)
+		return
+	}
+	defer f.Close()
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasPrefix(entry.Name(), binaryName+"-") {
+			continue
+		}
+
+		filePath := filepath.Join(outputDir, entry.Name())
+		hash, err := computeSHA256(filePath)
+		if err != nil {
+			continue
+		}
+
+		fmt.Fprintf(f, "%s  %s\n", hash, entry.Name())
+	}
+
+	Logln(logWriter, "✅ Generated checksums.txt")
+}
+
+// computeSHA256 computes the SHA256 hash of a file
+func computeSHA256(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	h := sha256.Sum256(data)
+	return fmt.Sprintf("%x", h), nil
 }

@@ -36,6 +36,7 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/reporter"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
+	"github.com/ready-to-release/eac/src/commands/impl/test/testers"
 	"github.com/ready-to-release/eac/src/commands/internal/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
@@ -1969,7 +1970,7 @@ func runTestSuiteForModuleInternal(moniker string, suiteName string) int {
 }
 
 func init() {
-	// Set up the dispatch function for testers package
-	RunTestSuiteForModuleImpl = runTestSuiteForModuleInternal
+	// Set up the callback for testers package to run test suites
+	testers.RunTestSuiteForModule = runTestSuiteForModuleInternal
 }
 
