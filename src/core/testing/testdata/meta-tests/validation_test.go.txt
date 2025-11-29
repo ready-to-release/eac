@@ -21,8 +21,8 @@ func TestValidateTags_AllValid(t *testing.T) {
 
 func TestValidateTags_InvalidTag(t *testing.T) {
 	// NOTE: This test cannot properly validate invalid tags in the isolated meta-test
-	// environment because config.Load() fails (not a git repo), causing IsValidTag()
-	// to return true (fail open). This is tested via integration tests in the main suite.
+	// environment because config.Load() fails (not a git repo). With fail-closed behavior,
+	// ValidateTags returns a config error. This is tested via integration tests.
 	t.Skip("Requires git repository and config files - covered by integration tests")
 }
 
@@ -102,8 +102,9 @@ func TestValidateTestReference_InvalidTags(t *testing.T) {
 }
 
 // NOTE: IsValidTag tests are skipped in the isolated meta-test environment
-// because config.Load() fails (not a git repo), causing IsValidTag() to
-// return true (fail open). These functions are tested via integration tests.
+// because config.Load() fails (not a git repo). With fail-closed behavior,
+// IsValidTag() returns false when config is unavailable. These functions
+// are tested via integration tests.
 
 func TestIsValidTag_RequiresConfigLoad(t *testing.T) {
 	t.Skip("Requires git repository and config files - covered by integration tests")

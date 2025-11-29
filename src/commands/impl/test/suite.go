@@ -1744,6 +1744,13 @@ func filterByOSCompatibility(tests []testing.TestReference, w io.Writer) []testi
 	compatible := []testing.TestReference{}
 
 	osPlatformTags := testing.GetOSPlatformTags()
+	if osPlatformTags == nil {
+		// Config unavailable - cannot determine OS platform tags
+		// Fail closed: return empty list (no tests can be validated for OS compatibility)
+		fmt.Fprintf(w, "ERROR: Cannot filter by OS compatibility - config unavailable\n")
+		return []testing.TestReference{}
+	}
+
 	for _, test := range tests {
 		// Check if test has any OS-specific dependencies
 		hasOSDep := false

@@ -31,6 +31,7 @@ const (
 	EnvironmentsFileName    = "environments.yml"
 	TestingTagsFileName     = "testing-tags.yml"
 	TestingTaxonomyFileName = "testing-taxonomy.yml"
+	TestSuitesFileName      = "test-suites.yml"
 )
 
 // EACConfig holds all loaded EAC repository configuration.
@@ -46,6 +47,7 @@ type EACConfig struct {
 	Environments    *EnvironmentsConfig
 	TestingTags     *TestingTagsConfig
 	TestingTaxonomy *TestingTaxonomyConfig
+	TestSuites      *TestSuitesConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -130,6 +132,10 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 
 	if err := c.LoadTestingTaxonomy(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("testing-taxonomy: %w", err))
+	}
+
+	if err := c.LoadTestSuites(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("test-suites: %w", err))
 	}
 
 	if len(errs) > 0 {
@@ -255,6 +261,29 @@ func (c *EACConfig) LoadTestingTaxonomy(validateSchema bool) error {
 	return nil
 }
 
+// LoadTestSuites loads the test-suites configuration
+func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
+	data, err := c.readConfigFile(TestSuitesFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaTestSuites, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg TestSuitesConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", TestSuitesFileName, err)
+	}
+
+	cfg.buildSuiteMap()
+	c.TestSuites = &cfg
+	return nil
+}
+
 // readConfigFile reads a config file from the config root
 func (c *EACConfig) readConfigFile(filename string) ([]byte, error) {
 	path := filepath.Join(c.ConfigRoot, filename)
@@ -317,6 +346,13 @@ func (c *EACConfig) ValidateAll() error {
 		data, _ := c.readConfigFile(TestingTaxonomyFileName)
 		if err := c.validateSchema(schema.SchemaTestingTaxonomy, data); err != nil {
 			errs = append(errs, fmt.Errorf("testing-taxonomy: %w", err))
+		}
+	}
+
+	if c.TestSuites != nil {
+		data, _ := c.readConfigFile(TestSuitesFileName)
+		if err := c.validateSchema(schema.SchemaTestSuites, data); err != nil {
+			errs = append(errs, fmt.Errorf("test-suites: %w", err))
 		}
 	}
 

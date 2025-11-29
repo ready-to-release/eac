@@ -161,12 +161,6 @@ func outputMetadata() {
 	commands := make(map[string]Command)
 
 	for _, reg := range cmdRegistry {
-		// Use Short description if available, fall back to Description
-		description := reg.Short
-		if description == "" {
-			description = reg.Description
-		}
-
 		// Extract parameter names from flags
 		params := make([]string, 0, len(reg.Flags))
 		for _, flag := range reg.Flags {
@@ -174,7 +168,7 @@ func outputMetadata() {
 		}
 
 		commands[reg.ActualCommand] = Command{
-			Description: description,
+			Description: reg.Short,
 			Parameters:  params,
 		}
 	}
