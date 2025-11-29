@@ -8,6 +8,7 @@
 // Long:   - environments.yml
 // Long:   - testing-tags.yml
 // Long:   - testing-taxonomy.yml
+// Long:   - test-suites.yml
 // Long:
 // Long: Schema validation ensures configuration files are well-formed and contain
 // Long: valid values according to the contract specifications.
@@ -101,10 +102,21 @@ func ValidateContracts() int {
 		validated++
 	}
 
+	// Validate test-suites.yml
+	fmt.Printf("  %-25s ", "test-suites.yml")
+	if err := cfg.LoadTestSuites(true); err != nil {
+		fmt.Printf("FAILED\n")
+		fmt.Fprintf(os.Stderr, "    %v\n", err)
+		hasErrors = true
+	} else {
+		fmt.Printf("OK (%d suites)\n", len(cfg.TestSuites.Suites))
+		validated++
+	}
+
 	fmt.Println()
 
 	if hasErrors {
-		fmt.Printf("Validation failed: %d/4 contracts valid\n", validated)
+		fmt.Printf("Validation failed: %d/5 contracts valid\n", validated)
 		return 1
 	}
 

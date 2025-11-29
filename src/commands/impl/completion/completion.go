@@ -114,8 +114,7 @@ func generateBashCompletion() int {
 	fmt.Println("    case \"$cmd\" in")
 
 	for _, cmdName := range cmdNames {
-		canonicalName := registry.GetCanonicalName(cmdName)
-		reg := commandRegistry[canonicalName]
+		reg := commandRegistry[cmdName]
 		if reg == nil || len(reg.Flags) == 0 {
 			continue
 		}
@@ -181,8 +180,7 @@ func generateZshCompletion() int {
 	fmt.Println("            commands=(")
 
 	for _, cmdName := range cmdNames {
-		canonicalName := registry.GetCanonicalName(cmdName)
-		reg := commandRegistry[canonicalName]
+		reg := commandRegistry[cmdName]
 		desc := ""
 		if reg != nil {
 			desc = reg.Short
@@ -198,8 +196,7 @@ func generateZshCompletion() int {
 
 	// Generate flag completions for each command
 	for _, cmdName := range cmdNames {
-		canonicalName := registry.GetCanonicalName(cmdName)
-		reg := commandRegistry[canonicalName]
+		reg := commandRegistry[cmdName]
 		if reg == nil || len(reg.Flags) == 0 {
 			continue
 		}
@@ -252,8 +249,7 @@ func generateFishCompletion() int {
 
 	// Generate completions for each command
 	for _, cmdName := range cmdNames {
-		canonicalName := registry.GetCanonicalName(cmdName)
-		reg := commandRegistry[canonicalName]
+		reg := commandRegistry[cmdName]
 
 		// Command completion
 		desc := ""
@@ -305,8 +301,7 @@ func generatePowershellCompletion() int {
 
 	fmt.Println("    $commands = @(")
 	for _, cmdName := range cmdNames {
-		canonicalName := registry.GetCanonicalName(cmdName)
-		reg := commandRegistry[canonicalName]
+		reg := commandRegistry[cmdName]
 		desc := ""
 		if reg != nil {
 			desc = reg.Short

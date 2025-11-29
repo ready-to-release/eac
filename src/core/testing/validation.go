@@ -15,65 +15,82 @@ import (
 // ValidTestTypes are the allowed test types
 var ValidTestTypes = []string{"gotest", "godog"}
 
-// Hardcoded fallbacks used when config cannot be loaded
-var levelTagsFallback = []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
-var verificationTagsFallback = []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
-
-// GetLevelTags returns taxonomy level tags from config, with fallback
+// GetLevelTags returns taxonomy level tags from config.
+// Returns nil if config is unavailable - callers must handle this.
 func GetLevelTags() []string {
-	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
-		tags := cfg.TestingTags.GetTaxonomyLevelTags()
-		if len(tags) > 0 {
-			return tags
-		}
+	cfg := config.Global()
+	if cfg == nil || cfg.TestingTags == nil {
+		return nil
 	}
-	return levelTagsFallback
+	return cfg.TestingTags.GetTaxonomyLevelTags()
 }
 
-// GetVerificationTags returns verification type tags from config, with fallback
-func GetVerificationTags() []string {
-	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
-		tags := cfg.TestingTags.GetVerificationTags()
-		if len(tags) > 0 {
-			return tags
-		}
+// GetLevelTagsFromConfig returns taxonomy level tags from a pre-loaded config.
+func GetLevelTagsFromConfig(cfg *config.EACConfig) []string {
+	if cfg == nil || cfg.TestingTags == nil {
+		return nil
 	}
-	return verificationTagsFallback
+	return cfg.TestingTags.GetTaxonomyLevelTags()
+}
+
+// GetVerificationTags returns verification type tags from config.
+// Returns nil if config is unavailable - callers must handle this.
+func GetVerificationTags() []string {
+	cfg := config.Global()
+	if cfg == nil || cfg.TestingTags == nil {
+		return nil
+	}
+	return cfg.TestingTags.GetVerificationTags()
+}
+
+// GetVerificationTagsFromConfig returns verification type tags from a pre-loaded config.
+func GetVerificationTagsFromConfig(cfg *config.EACConfig) []string {
+	if cfg == nil || cfg.TestingTags == nil {
+		return nil
+	}
+	return cfg.TestingTags.GetVerificationTags()
 }
 
 // ValidateTags checks if tags are valid and don't conflict
 func ValidateTags(tags []string) []string {
 	errors := []string{}
 
+	// Load config once for all tag validation
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		errors = append(errors, fmt.Sprintf("cannot validate tags: failed to load config (%v)", err))
+		return errors
+	}
+
 	// Check for invalid tags
 	for _, tag := range tags {
-		if !IsValidTag(tag) {
+		if !IsValidTagWithConfig(tag, cfg) {
 			errors = append(errors, fmt.Sprintf("tag %s is not defined in %s/testing-tags.yml", tag, contracts.EACConfigRelPath))
 		}
 	}
 
 	// Check for multiple level tags
 	levelCount := 0
-	levelTags := GetLevelTags()
+	levelTags := GetLevelTagsFromConfig(cfg)
 	for _, tag := range tags {
 		if contains(levelTags, tag) {
 			levelCount++
 		}
 	}
 	if levelCount > 1 {
-		errors = append(errors, "test has multiple level tags (only one of @L0-@L4 allowed)")
+		errors = append(errors, "test has multiple level tags (only one allowed)")
 	}
 
 	// Check for multiple verification tags
 	verificationCount := 0
-	verificationTags := GetVerificationTags()
+	verificationTags := GetVerificationTagsFromConfig(cfg)
 	for _, tag := range tags {
 		if contains(verificationTags, tag) {
 			verificationCount++
 		}
 	}
 	if verificationCount > 1 {
-		errors = append(errors, "test has multiple verification tags (only one of @ov/@iv/@pv/@piv/@ppv allowed)")
+		errors = append(errors, "test has multiple verification tags (only one allowed)")
 	}
 
 	return errors
@@ -85,9 +102,16 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 	errors := []string{}
 	warnings := []string{}
 
+	// Load config once for tag validation
+	cfg, cfgErr := config.Load(config.DefaultLoadOptions())
+	if cfgErr != nil {
+		errors = append(errors, fmt.Sprintf("cannot validate test '%s': failed to load config (%v)", test.TestName, cfgErr))
+		return errors
+	}
+
 	// CRITICAL: Check for undefined tags first
 	for _, tag := range test.Tags {
-		if !IsValidTag(tag) {
+		if !IsValidTagWithConfig(tag, cfg) {
 			errors = append(errors, fmt.Sprintf("test '%s' has undefined tag '%s' (not in %s/testing-tags.yml)", test.TestName, tag, contracts.EACConfigRelPath))
 		}
 
@@ -106,7 +130,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 
 	// CRITICAL: Must have exactly ONE level tag (except @Manual tests)
 	foundLevelTags := []string{}
-	allLevelTags := GetLevelTags()
+	allLevelTags := GetLevelTagsFromConfig(cfg)
 	for _, tag := range test.Tags {
 		if contains(allLevelTags, tag) {
 			foundLevelTags = append(foundLevelTags, tag)
@@ -116,7 +140,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 	// @Manual tests are exempt from L-tag requirements
 	if !test.IsManual {
 		if len(foundLevelTags) == 0 {
-			errors = append(errors, fmt.Sprintf("test '%s' has NO level tag (must have exactly one of @L0-@L4)", test.TestName))
+			errors = append(errors, fmt.Sprintf("test '%s' has NO level tag (must have exactly one)", test.TestName))
 		} else if len(foundLevelTags) > 1 {
 			errors = append(errors, fmt.Sprintf("test '%s' has MULTIPLE level tags %v (must have exactly one)", test.TestName, foundLevelTags))
 		}
@@ -124,7 +148,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 
 	// Must have at least ONE verification tag
 	foundVerificationTags := []string{}
-	allVerificationTags := GetVerificationTags()
+	allVerificationTags := GetVerificationTagsFromConfig(cfg)
 	for _, tag := range test.Tags {
 		if contains(allVerificationTags, tag) {
 			foundVerificationTags = append(foundVerificationTags, tag)
@@ -132,7 +156,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 	}
 
 	if len(foundVerificationTags) == 0 {
-		errors = append(errors, fmt.Sprintf("test '%s' has NO verification tag (must have one of @ov/@iv/@pv/@piv/@ppv)", test.TestName))
+		errors = append(errors, fmt.Sprintf("test '%s' has NO verification tag (must have one)", test.TestName))
 	}
 
 	// Consistency: @piv or @ppv MUST have @L4
@@ -249,17 +273,27 @@ func ValidateTestReference(test TestReference) []string {
 	return errors
 }
 
-// IsValidTag checks if a tag is valid according to contracts
+// IsValidTag checks if a tag is valid according to contracts.
+// Returns false if config cannot be loaded (fail-closed behavior).
 // Note: This does lightweight validation - for full validation use validate test-tags command
 func IsValidTag(tag string) bool {
-	// Load config
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		// If we can't load config, fail open (allow the tag)
-		return true
+		// Fail closed: if we can't load config, the tag is invalid
+		// This ensures contract-based validation is enforced
+		return false
 	}
 
 	// Use the config's IsKnownTag method which handles both exact and pattern matches
+	return cfg.TestingTags.IsKnownTag(tag)
+}
+
+// IsValidTagWithConfig checks if a tag is valid using a pre-loaded config.
+// Use this in loops to avoid repeated config loading.
+func IsValidTagWithConfig(tag string, cfg *config.EACConfig) bool {
+	if cfg == nil || cfg.TestingTags == nil {
+		return false
+	}
 	return cfg.TestingTags.IsKnownTag(tag)
 }
 

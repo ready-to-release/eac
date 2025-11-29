@@ -77,21 +77,16 @@ type FlagMetadata struct {
 // CommandRegistration holds command metadata
 type CommandRegistration struct {
 	Func           CommandFunc
-	ActualCommand  string // "get files" - the actual command users type
-	CanonicalName  string // "get-files" - internal moniker (kebab-case)
-	Description    string // Command description from file header (legacy, use Short instead)
-	Usage          string // Command usage from file header (legacy)
-	Short          string // One sentence description
-	Long           string // Detailed multi-paragraph description
+	ActualCommand  string         // "get files" - the actual command users type
+	CanonicalName  string         // "get-files" - internal moniker (kebab-case)
+	Short          string         // One sentence description
+	Long           string         // Detailed multi-paragraph description
 	Flags          []FlagMetadata // Structured flag definitions
-	Args           string // Argument completion type: "modules", "files", etc.
-	HasSideEffects bool   // Whether command modifies repository files
+	Args           string         // Argument completion type: "modules", "files", etc.
+	HasSideEffects bool           // Whether command modifies repository files
 }
 
-// commands maps command names to their implementation functions
-var commands = map[string]CommandFunc{}
-
-// commandRegistry maps canonical kebab-case names to registrations
+// commandRegistry maps command names (space-separated, e.g., "get files") to registrations
 var commandRegistry = map[string]*CommandRegistration{}
 
 // Register allows command files to register themselves by extracting metadata from source comments
@@ -130,10 +125,7 @@ func Register(fn CommandFunc) {
 			"' in " + file + "\nMust be 'true' or 'false'")
 	}
 
-	// Store in original commands map for backward compatibility
-	commands[metadata.CommandName] = fn
-
-	// Derive canonical kebab-case name
+	// Derive canonical kebab-case name for internal use
 	canonicalName := strings.ReplaceAll(metadata.CommandName, " ", "-")
 
 	// Build Long description from lines
@@ -159,19 +151,17 @@ func Register(fn CommandFunc) {
 		flags = append(flags, flag)
 	}
 
-	// Use Short if available, fall back to Description for backward compatibility
+	// Use Short if available, fall back to Description during transition
 	short := metadata.Short
 	if short == "" {
 		short = metadata.Description
 	}
 
-	// Store in registry with both forms
-	commandRegistry[canonicalName] = &CommandRegistration{
+	// Store in registry (keyed by ActualCommand for dispatch)
+	commandRegistry[metadata.CommandName] = &CommandRegistration{
 		Func:           fn,
 		ActualCommand:  metadata.CommandName,
 		CanonicalName:  canonicalName,
-		Description:    metadata.Description, // Legacy
-		Usage:          metadata.Usage,       // Legacy
 		Short:          short,
 		Long:           long,
 		Flags:          flags,
@@ -183,12 +173,11 @@ func Register(fn CommandFunc) {
 // commandMetadata holds extracted comment data
 type commandMetadata struct {
 	CommandName       string
-	Description       string   // Legacy
-	Usage             string   // Legacy
-	Short             string   // One sentence description
-	LongLines         []string // Multi-line long description
+	Description       string   // Parsed from "// Description:" (used as fallback for Short)
+	Short             string   // Parsed from "// Short:"
+	LongLines         []string // Multi-line long description from "// Long:"
 	FlagDefs          []flagDefinition
-	Args              string   // Argument completion type: "modules", "files", etc.
+	Args              string // Argument completion type: "modules", "files", etc.
 	HasSideEffectsStr string   // Parsed from "// HasSideEffects:" comment
 }
 
@@ -223,14 +212,9 @@ func extractCommandMetadata(filePath string) commandMetadata {
 			metadata.CommandName = strings.TrimSpace(strings.TrimPrefix(line, "// Command:"))
 		}
 
-		// Extract Description (legacy)
+		// Extract Description (fallback for Short)
 		if strings.HasPrefix(line, "// Description:") {
 			metadata.Description = strings.TrimSpace(strings.TrimPrefix(line, "// Description:"))
-		}
-
-		// Extract Usage (legacy)
-		if strings.HasPrefix(line, "// Usage:") {
-			metadata.Usage = strings.TrimSpace(strings.TrimPrefix(line, "// Usage:"))
 		}
 
 		// Extract Short description
@@ -382,9 +366,13 @@ func isValidAttributeKey(s string) bool {
 	return false
 }
 
-// GetCommands returns the commands map
+// GetCommands returns a map of command names to their functions (for dispatch)
 func GetCommands() map[string]CommandFunc {
-	return commands
+	result := make(map[string]CommandFunc, len(commandRegistry))
+	for name, reg := range commandRegistry {
+		result[name] = reg.Func
+	}
+	return result
 }
 
 // GetCommandRegistry returns the command registry
@@ -397,7 +385,14 @@ func GetCanonicalName(commandName string) string {
 	return strings.ReplaceAll(commandName, " ", "-")
 }
 
-// GetCommandByCanonical retrieves a command registration by its canonical name
+// GetCommand retrieves a command registration by its command name (space-separated)
+func GetCommand(commandName string) *CommandRegistration {
+	return commandRegistry[commandName]
+}
+
+// GetCommandByCanonical retrieves a command registration by its canonical name (kebab-case)
 func GetCommandByCanonical(canonicalName string) *CommandRegistration {
-	return commandRegistry[canonicalName]
+	// Convert kebab-case to space-separated for lookup
+	actualName := strings.ReplaceAll(canonicalName, "-", " ")
+	return commandRegistry[actualName]
 }

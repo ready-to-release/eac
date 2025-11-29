@@ -1,4 +1,4 @@
-@deps:git @deps:go @ov @env:isolated-test-project
+@L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work-create
 
   As a developer using parallel Claude sessions

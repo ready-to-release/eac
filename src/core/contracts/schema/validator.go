@@ -20,6 +20,7 @@ const (
 	SchemaEnvironments    SchemaType = "environments"
 	SchemaTestingTags     SchemaType = "testing-tags"
 	SchemaTestingTaxonomy SchemaType = "testing-taxonomy"
+	SchemaTestSuites      SchemaType = "test-suites"
 )
 
 // schemaFileNames maps schema types to their file names (without path)
@@ -29,6 +30,7 @@ var schemaFileNames = map[SchemaType]string{
 	SchemaEnvironments:    "environments.schema.json",
 	SchemaTestingTags:     "testing-tags.schema.json",
 	SchemaTestingTaxonomy: "testing-taxonomy.schema.json",
+	SchemaTestSuites:      "test-suites.schema.json",
 }
 
 // ContractVersion is the schema contract version
@@ -209,6 +211,7 @@ func GetSchemaTypes() []SchemaType {
 		SchemaEnvironments,
 		SchemaTestingTags,
 		SchemaTestingTaxonomy,
+		SchemaTestSuites,
 	}
 }
 

@@ -35,6 +35,12 @@ func DiscoverGoTestTags(pkgPath string) ([]TestReference, error) {
 			return nil
 		}
 
+		// Skip godog_test.go files - these are godog runners, not Go unit tests
+		// The actual tests are in .feature files and discovered separately
+		if info.Name() == "godog_test.go" {
+			return nil
+		}
+
 		// Parse the file
 		fileRefs, err := parseGoTestFile(path)
 		if err != nil {

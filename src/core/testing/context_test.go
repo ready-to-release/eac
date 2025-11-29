@@ -1,3 +1,5 @@
+//go:build L1
+
 package testing
 
 import "testing"

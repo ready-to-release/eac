@@ -24,11 +24,10 @@
 
   // Cucumber/Gherkin settings for Godog (Go BDD testing)
   "cucumber.features": [
-    "specs/**/*.feature",
-    "requirements/**/*.feature"
+    "specs/**/*.feature"
   ],
   "cucumber.glue": [
-    "src/**/tests/*_test.go",
-    "src/**/*_test.go"
+    "src/specs/impl/**/steps*.go",
+    "src/specs/internal/steps.go"
   ]
 }

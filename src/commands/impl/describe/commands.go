@@ -63,7 +63,7 @@ func buildCommandTree() CommandTree {
 		info := CommandInfo{
 			Name:        cmdName,
 			Parts:       parts,
-			Description: reg.Description,
+			Description: reg.Short,
 			IsLeaf:      true,
 			Args:        reg.Args,
 		}

@@ -1,0 +1,45 @@
+metadata:
+  version: "0.1.0"
+  description: "Test suite definitions for tag-based test selection"
+
+suites:
+  # ============================================================================
+  # Commit Suite - Fast unit and integration tests for pre-commit stages
+  # ============================================================================
+  - moniker: commit
+    name: Commit Tests
+    description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L1"
+    selectors:
+      - any_of_tags:
+          - "@L0"
+          - "@L1"
+        exclude_tags:
+          - "@L2"
+          - "@L3"
+          - "@L4"
+
+  # ============================================================================
+  # Acceptance Suite - PLTE-level verification tests
+  # ============================================================================
+  - moniker: acceptance
+    name: PLTE Acceptance Tests
+    description: "Stage 5-6 - L2+ Installation, Operational, and Performance Verification"
+    selectors:
+      - any_of_tags:
+          - "@iv"
+          - "@ov"
+          - "@pv"
+        exclude_tags:
+          - "@L0"
+          - "@L1"
+
+  # ============================================================================
+  # Production Verification Suite - Production smoke tests
+  # ============================================================================
+  - moniker: production-verification
+    name: Production Installation Verification
+    description: "Stage 11-12 - Production smoke tests"
+    selectors:
+      - require_tags:
+          - "@L4"
+          - "@piv"

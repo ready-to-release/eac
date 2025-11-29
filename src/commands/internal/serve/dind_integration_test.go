@@ -1,5 +1,4 @@
-//go:build integration || dind
-// +build integration dind
+//go:build L2 && (integration || dind)
 
 package serve
 
