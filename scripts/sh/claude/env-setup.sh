@@ -6,17 +6,17 @@
 #
 # Installation:
 # 1. Add this line to your ~/.bashrc, ~/.zshrc, or ~/.profile:
-#    source "/path/to/this/script/scripts/sh/claude-env-setup.sh"
+#    source "/path/to/this/script/scripts/sh/claude/env-setup.sh"
 # 2. Set your GITHUB_TOKEN in your shell profile
 # 3. Reload your shell or run: source ~/.bashrc (or ~/.zshrc)
 
 echo "Setting up Claude Code environment..."
 
 # Auto-detect project root directory
-# This script is located at: scripts/sh/claude-env-setup.sh
-# Project root is two directories up from this script
+# This script is located at: scripts/sh/claude/env-setup.sh
+# Project root is three directories up from this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 if [ -d "$PROJECT_ROOT" ]; then
     cd "$PROJECT_ROOT" || {
@@ -25,7 +25,7 @@ if [ -d "$PROJECT_ROOT" ]; then
     echo "Changed to project directory: $PROJECT_ROOT"
 else
     echo "Warning: Project directory not found: $PROJECT_ROOT"
-    echo "Script location detection failed. Please verify script is in scripts/sh/"
+    echo "Script location detection failed. Please verify script is in scripts/sh/claude/"
 fi
 
 # Configure GitHub Token for the GitHub MCP server

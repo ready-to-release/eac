@@ -1,8 +1,6 @@
-# version: 0.1.0
 testing_taxonomy:
-  version: "0.1.0"
   description: "Testing taxonomy based on execution environment and scope"
-  
+
   test_levels:
     - level: L0
       name: "Unit Tests"
@@ -15,7 +13,7 @@ testing_taxonomy:
       time_constraints:
         preparation: "milliseconds"
         execution: "milliseconds"
-      
+
     - level: L1
       name: "Unit Tests"
       shift_direction: LEFT
@@ -27,7 +25,7 @@ testing_taxonomy:
       time_constraints:
         preparation: "seconds"
         execution: "milliseconds to seconds"
-      
+
     - level: L2
       name: "Emulated System Tests"
       shift_direction: LEFT
@@ -39,7 +37,7 @@ testing_taxonomy:
       time_constraints:
         preparation: "seconds to minutes"
         execution: "seconds to minutes"
-      
+
     - level: L3
       name: "In-Situ Vertical Tests"
       shift_direction: LEFT
@@ -51,7 +49,7 @@ testing_taxonomy:
       time_constraints:
         preparation: "minutes to hours"
         execution: "seconds to minutes"
-      
+
     - level: L4
       name: "Testing in Production"
       shift_direction: RIGHT
@@ -76,10 +74,10 @@ testing_taxonomy:
         preparation: "hours to days to months"
         execution: "when it is available"
       notes: "Old-school horizontal pre-production environments where multiple teams' pre-prod services are linked together are highly fragile and non-deterministic. This taxonomy explicitly advocates shifting LEFT (to L0-L3) and RIGHT (to L4) to avoid this pattern."
-  
+
   constraints:
     execution_requirements: "What binaries, tooling, and configuration are needed"
     test_scope: "Vertical vs horizontal boundaries, and test double usage"
-  
+
   tradeoffs:
     determinism_vs_coherency: "Lower Lx values provide higher determinism but lower domain coherency, while higher Lx values provide lower determinism but higher domain coherency"

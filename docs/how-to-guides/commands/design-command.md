@@ -320,7 +320,7 @@ Override default AI behavior:
 
 ```bash
 # Edit system prompt
-nano .r2r/contracts/ai/design-create/system-prompt.md
+nano .r2r/eac/ai/design/design.md
 
 # Changes apply to all future generation
 r2r eac design create src-module

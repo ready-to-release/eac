@@ -20,7 +20,7 @@ Edit `$PROFILE` and add:
 $env:GITHUB_TOKEN = "ghp_your_token_here"
 
 # Source setup script (update path to your project location)
-. "C:\path\to\project\scripts\pwsh\claude-env-setup.ps1"
+. "C:\path\to\project\scripts\pwsh\claude\env-setup.ps1"
 ```
 
 Reload: `. $PROFILE`
@@ -34,7 +34,7 @@ Edit `~/.bashrc` or `~/.zshrc` and add:
 export GITHUB_TOKEN="ghp_your_token_here"
 
 # Source setup script (update path to your project location)
-source "$HOME/path/to/project/scripts/sh/claude-env-setup.sh"
+source "$HOME/path/to/project/scripts/sh/claude/env-setup.sh"
 ```
 
 Reload: `source ~/.bashrc` or `source ~/.zshrc`
@@ -137,8 +137,8 @@ If it fails, generate a new token with proper scopes.
 ## Configuration Files
 
 - `.claude/settings.json` - MCP server configuration (managed by Claude Code)
-- `scripts/pwsh/claude-env-setup.ps1` - PowerShell setup script
-- `scripts/sh/claude-env-setup.sh` - Bash/Zsh setup script
+- `scripts/pwsh/claude/env-setup.ps1` - PowerShell setup script
+- `scripts/sh/claude/env-setup.sh` - Bash/Zsh setup script
 - `.claude-settings-example.json` - Example settings reference (this directory)
 
 ## Resources

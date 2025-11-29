@@ -246,7 +246,7 @@ func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error
 
 // verifyContractImplementation checks if the contract implementation is valid
 func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) error {
-	contractPath := filepath.Join(workspaceRoot, "contracts/ai/commit-message/0.1.0/contract.yml")
+	contractPath := filepath.Join(workspaceRoot, ".r2r", "eac", "ai", "commit-message", "contract.yml")
 	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
 	if len(contractErrors) > 0 {
 		logger.Error("Contract implementation verification failed")

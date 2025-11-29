@@ -35,7 +35,7 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 
 	// Given steps - repository/module setup
-	sc.Step(`^a repository with contracts at "([^"]*)"$`, func(path string) error {
+	sc.Step(`^a repository with AI configs at "([^"]*)"$`, func(path string) error {
 		return internal.CreateDirectory(ctx, path)
 	})
 	sc.Step(`^module "([^"]*)" exists in "([^"]*)"$`, func(name, path string) error {

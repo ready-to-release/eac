@@ -2,17 +2,10 @@ package config
 
 // TestSuitesConfig represents the test-suites.yml configuration
 type TestSuitesConfig struct {
-	Metadata TestSuitesMetadata `yaml:"metadata"`
-	Suites   []TestSuiteDef     `yaml:"suites"`
+	Suites []TestSuiteDef `yaml:"suites"`
 
 	// Internal lookup map (built after load)
 	suiteMap map[string]*TestSuiteDef
-}
-
-// TestSuitesMetadata contains schema metadata
-type TestSuitesMetadata struct {
-	Version     string `yaml:"version"`
-	Description string `yaml:"description"`
 }
 
 // TestSuiteDef defines a single test suite

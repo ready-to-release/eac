@@ -338,7 +338,7 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 
 			// Set GxP regulatory fields
 			test.IsGxP = contains(test.Tags, "@gxp")
-			test.IsCriticalAspect = contains(test.Tags, "@critical-aspect")
+			test.IsCriticalAspect = contains(test.Tags, "@gmp-critical-aspect")
 
 			refs = append(refs, test)
 

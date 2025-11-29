@@ -2,7 +2,7 @@
 Feature: src-commands_design-update
 
   Background:
-    Given a repository with contracts at "contracts/ai/design/0.1.0"
+    Given a repository with AI configs at ".r2r/eac/ai/design"
     And docker service is available
 
   Rule: Update requires existing workspace

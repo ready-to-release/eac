@@ -5,9 +5,6 @@
   "description": "Schema for the test tagging system specification defining test classification and dependency management",
   "type": "object",
   "properties": {
-    "metadata": {
-      "$ref": "#/definitions/metadata"
-    },
     "module_monikers": {
       "type": "object",
       "description": "Module moniker documentation (dynamically validated at runtime)",
@@ -70,28 +67,8 @@
       }
     }
   },
-  "required": ["metadata", "tags", "types", "skip_reasons"],
+  "required": ["tags", "types", "skip_reasons"],
   "definitions": {
-    "metadata": {
-      "type": "object",
-      "description": "Contract metadata",
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "Contract version",
-          "pattern": "^\\d+\\.\\d+\\.\\d+$"
-        },
-        "description": {
-          "type": "string",
-          "description": "Contract description"
-        },
-        "scope": {
-          "type": "string",
-          "description": "Scope of the contract"
-        }
-      },
-      "required": ["version", "description"]
-    },
     "system_dependency": {
       "type": "object",
       "properties": {
@@ -220,11 +197,6 @@
   },
   "examples": [
     {
-      "metadata": {
-        "version": "0.1.0",
-        "description": "Test tagging system specification",
-        "scope": "All test frameworks"
-      },
       "tags": [
         {
           "tag": "@L0",

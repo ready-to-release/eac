@@ -2,29 +2,10 @@ package config
 
 // ModuleTypesConfig represents the module-types.yml configuration
 type ModuleTypesConfig struct {
-	Metadata     ModuleTypesMetadata       `yaml:"metadata"`
-	BuildSystems map[string]BuildSystemDef `yaml:"build_systems"`
-	Capabilities map[string]CapabilityDef  `yaml:"capabilities"`
-	Types        []ModuleTypeDef           `yaml:"types"`
+	Types []ModuleTypeDef `yaml:"types"`
 
 	// Internal lookup map (built after load)
 	typeMap map[string]*ModuleTypeDef
-}
-
-// ModuleTypesMetadata contains schema metadata
-type ModuleTypesMetadata struct {
-	Version     string `yaml:"version"`
-	Description string `yaml:"description"`
-}
-
-// BuildSystemDef defines a build system
-type BuildSystemDef struct {
-	Description string `yaml:"description"`
-}
-
-// CapabilityDef defines a capability
-type CapabilityDef struct {
-	Description string `yaml:"description"`
 }
 
 // ModuleTypeDef defines a module type

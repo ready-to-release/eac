@@ -21,23 +21,27 @@ import (
 // Type is inferred from the contract path automatically
 type ContractLoader struct {
 	workspaceRoot string
-	contractPath  string       // e.g., "ai/specifications" or "modules"
-	version       string
-	contractType  ContractType // Inferred from path
+	contractPath  string       // e.g., "commit-message" (AI) or "src-core" (domain)
+	version       string       // Only used for domain contracts
+	contractType  ContractType // Inferred from path prefix
 }
 
 // NewContractLoader creates a loader with automatic type inference
-// contractPath: "ai/specifications", "modules", "environments", etc.
+// For AI configs: contractPath is command name (e.g., "commit-message", "specifications")
+// For domain contracts: contractPath is module name (e.g., "src-core")
+// Version is only used for domain contracts; AI configs are unversioned
 func NewContractLoader(workspaceRoot string, contractPath string, version string) *ContractLoader {
-	// Infer type from path
+	// Infer type from path prefix
 	contractType := ContractTypeDomain
+	aiPath := contractPath
 	if strings.HasPrefix(contractPath, "ai/") {
 		contractType = ContractTypeAI
+		aiPath = strings.TrimPrefix(contractPath, "ai/")
 	}
 
 	return &ContractLoader{
 		workspaceRoot: workspaceRoot,
-		contractPath:  contractPath,
+		contractPath:  aiPath,
 		version:       version,
 		contractType:  contractType,
 	}
@@ -55,7 +59,7 @@ func (cl *ContractLoader) IsAI() bool {
 
 // LoadContract loads contract.yml and sets the type
 func (cl *ContractLoader) LoadContract() (*Contract, error) {
-	contractPath := filepath.Join(cl.workspaceRoot, "contracts", cl.contractPath, cl.version, "contract.yml")
+	contractPath := filepath.Join(cl.workspaceRoot, cl.getConfigDir(), "contract.yml")
 	data, err := os.ReadFile(contractPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read contract file %s: %w", contractPath, err)
@@ -93,7 +97,7 @@ func (cl *ContractLoader) LoadAntiCorruptionRules() (*AntiCorruptionRules, error
 		return nil, fmt.Errorf("anti-corruption rules are only for AI contracts (path: %s)", cl.contractPath)
 	}
 
-	rulesPath := filepath.Join(cl.workspaceRoot, "contracts", cl.contractPath, cl.version, "anti-corruption.yml")
+	rulesPath := filepath.Join(cl.workspaceRoot, cl.getConfigDir(), "anti-corruption.yml")
 	data, err := os.ReadFile(rulesPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read anti-corruption rules file %s: %w", rulesPath, err)
@@ -126,36 +130,40 @@ func (cl *ContractLoader) LoadReferencedFile(relativePath string) ([]byte, error
 	return data, nil
 }
 
-// LoadPrompt loads a prompt file with fallback chain (only for AI contracts)
-// Priority: .r2r/contracts → contracts → embedded
+// LoadPrompt loads a prompt file with fallback chain (only for AI configs)
+// Priority: AI config → embedded
 func (cl *ContractLoader) LoadPrompt(promptName string, embeddedPrompt string) (string, string, error) {
 	if !cl.IsAI() {
-		return "", "", fmt.Errorf("prompts are only for AI contracts (path: %s)", cl.contractPath)
+		return "", "", fmt.Errorf("prompts are only for AI configs (path: %s)", cl.contractPath)
 	}
 
-	// Try 1: .r2r/contracts/ai/<command>/<version>/<prompt>.md
-	localContractPrompt := filepath.Join(cl.workspaceRoot, ".r2r", "contracts", cl.contractPath, cl.version, promptName)
-	if data, err := os.ReadFile(localContractPrompt); err == nil {
-		return string(data), "local contract override", nil
+	// Try 1: AI config file in .r2r/eac/ai/<command>/<prompt>.md
+	aiConfigPrompt := filepath.Join(cl.workspaceRoot, cl.getConfigDir(), promptName)
+	if data, err := os.ReadFile(aiConfigPrompt); err == nil {
+		return string(data), "AI config", nil
 	}
 
-	// Try 2: contracts/ai/<command>/<version>/<prompt>.md (built-in)
-	repoContractPrompt := filepath.Join(cl.workspaceRoot, "contracts", cl.contractPath, cl.version, promptName)
-	if data, err := os.ReadFile(repoContractPrompt); err == nil {
-		return string(data), "repository contract", nil
-	}
-
-	// Try 3: Embedded prompt (fallback)
+	// Try 2: Embedded prompt (fallback)
 	if embeddedPrompt != "" {
 		return embeddedPrompt, "embedded default", nil
 	}
 
-	return "", "", fmt.Errorf("prompt not found: %s (tried .r2r/contracts, contracts, and embedded)", promptName)
+	return "", "", fmt.Errorf("prompt not found: %s (tried %s and embedded)", promptName, aiConfigPrompt)
 }
 
-// GetContractPath returns the full path to the contract directory
+// GetContractPath returns the full path to the config directory
 func (cl *ContractLoader) GetContractPath() string {
-	return filepath.Join(cl.workspaceRoot, "contracts", cl.contractPath, cl.version)
+	return filepath.Join(cl.workspaceRoot, cl.getConfigDir())
+}
+
+// getConfigDir returns the full config directory path
+// AI configs: .r2r/eac/ai/<command> (unversioned)
+// Domain contracts: contracts/<module>/<version> (versioned)
+func (cl *ContractLoader) getConfigDir() string {
+	if cl.IsAI() {
+		return filepath.Join(".r2r", "eac", "ai", cl.contractPath)
+	}
+	return filepath.Join("contracts", cl.contractPath, cl.version)
 }
 
 // ExtractStringList is a helper to extract string arrays from YAML data

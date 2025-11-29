@@ -5,21 +5,6 @@
   "description": "Schema for test suite definitions and tag-based test selection rules",
   "type": "object",
   "properties": {
-    "metadata": {
-      "type": "object",
-      "description": "Schema metadata",
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "Schema version"
-        },
-        "description": {
-          "type": "string",
-          "description": "Schema description"
-        }
-      },
-      "required": ["version"]
-    },
     "suites": {
       "type": "array",
       "description": "List of test suite definitions",
@@ -29,7 +14,7 @@
       "minItems": 1
     }
   },
-  "required": ["metadata", "suites"],
+  "required": ["suites"],
   "definitions": {
     "suite": {
       "type": "object",
@@ -97,10 +82,6 @@
   },
   "examples": [
     {
-      "metadata": {
-        "version": "0.1.0",
-        "description": "Test suite definitions"
-      },
       "suites": [
         {
           "moniker": "commit",

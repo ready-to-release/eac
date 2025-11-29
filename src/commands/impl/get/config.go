@@ -22,12 +22,11 @@ func init() {
 
 // ConfigOutput represents the structured output of all configs
 type ConfigOutput struct {
-	Modules         interface{} `yaml:"modules" json:"modules"`
-	ModuleTypes     interface{} `yaml:"module_types" json:"module_types"`
-	Environments    interface{} `yaml:"environments" json:"environments"`
-	TestingTags     interface{} `yaml:"testing_tags" json:"testing_tags"`
-	TestingTaxonomy interface{} `yaml:"testing_taxonomy" json:"testing_taxonomy"`
-	TestSuites      interface{} `yaml:"test_suites" json:"test_suites"`
+	Modules      interface{} `yaml:"modules" json:"modules"`
+	ModuleTypes  interface{} `yaml:"module_types" json:"module_types"`
+	Environments interface{} `yaml:"environments" json:"environments"`
+	TestingTags  interface{} `yaml:"testing_tags" json:"testing_tags"`
+	TestSuites   interface{} `yaml:"test_suites" json:"test_suites"`
 }
 
 func GetConfig() int {
@@ -58,10 +57,6 @@ func GetConfig() int {
 			output.TestingTags = cfg.TestingTags
 		}
 
-		if cfg.TestingTaxonomy != nil {
-			output.TestingTaxonomy = cfg.TestingTaxonomy
-		}
-
 		if cfg.TestSuites != nil {
 			output.TestSuites = cfg.TestSuites
 		}
@@ -82,12 +77,11 @@ func printConfigUsage() {
 	fmt.Println("  --as-toml    Output as TOML")
 	fmt.Println("  -h, --help   Show this help message")
 	fmt.Println()
-	fmt.Println("Output includes all 6 loaded configurations with defaults applied:")
+	fmt.Println("Output includes all loaded configurations with defaults applied:")
 	fmt.Println("  - modules: Module contracts")
 	fmt.Println("  - module_types: Module type definitions")
 	fmt.Println("  - environments: Environment contracts")
 	fmt.Println("  - testing_tags: Testing tag definitions")
-	fmt.Println("  - testing_taxonomy: Testing taxonomy")
 	fmt.Println("  - test_suites: Test suite configurations")
 }
 

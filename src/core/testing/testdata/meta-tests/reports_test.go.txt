@@ -61,7 +61,7 @@ func TestGenerateGxPReport(t *testing.T) {
 		{
 			FilePath:         "auth.feature",
 			TestName:         "Account lockout",
-			Tags:             []string{"@gxp", "@critical-aspect", "@L2"},
+			Tags:             []string{"@gxp", "@gmp-critical-aspect", "@L2"},
 			IsGxP:            true,
 			IsCriticalAspect: true,
 			IsManual:         true,

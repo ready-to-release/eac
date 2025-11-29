@@ -1,11 +1,5 @@
 # Test Tagging System Specification
 # Contract for test classification and dependency management
-# Version: 0.1.0
-
-metadata:
-  version: "0.1.0"
-  description: "Formal specification for test tagging system across all test frameworks"
-  scope: "Applies to Gherkin features, Go tests, and future test frameworks"
 
 # ============================================================================
 # Allowed Monikers for Pattern Tags
@@ -167,7 +161,7 @@ tags:
     type: gxp_regulatory
     level: feature-or-scenario
 
-  - tag: "@critical-aspect"
+  - tag: "@gmp-critical-aspect"
     description: "GmP Critical Aspect (GmP products only, must be used with @gxp)"
     type: gxp_regulatory
     level: scenario

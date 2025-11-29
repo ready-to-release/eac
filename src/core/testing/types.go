@@ -22,7 +22,7 @@ type TestReference struct {
 
 	// GxP regulatory classification
 	IsGxP            bool // Has @gxp tag
-	IsCriticalAspect bool // Has @critical-aspect tag
+	IsCriticalAspect bool // Has @gmp-critical-aspect tag
 }
 
 // TestSuite defines a selector for tests based on tags

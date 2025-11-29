@@ -34,7 +34,7 @@ func TestValidator_ValidateModulesYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load the actual modules.yml from the repository
-	modulesPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "modules.yml")
+	modulesPath := filepath.Join(repoRoot, ".r2r", "eac", "modules.yml")
 	data, err := os.ReadFile(modulesPath)
 	require.NoError(t, err)
 
@@ -48,7 +48,7 @@ func TestValidator_ValidateEnvironmentsYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load the actual environments.yml from the repository
-	envPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "environments.yml")
+	envPath := filepath.Join(repoRoot, ".r2r", "eac", "environments.yml")
 	data, err := os.ReadFile(envPath)
 	require.NoError(t, err)
 
@@ -62,26 +62,12 @@ func TestValidator_ValidateTestingTagsYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load the actual testing-tags.yml from the repository
-	tagsPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "testing-tags.yml")
+	tagsPath := filepath.Join(repoRoot, ".r2r", "eac", "testing-tags.yml")
 	data, err := os.ReadFile(tagsPath)
 	require.NoError(t, err)
 
 	err = v.ValidateYAML(schema.SchemaTestingTags, data)
 	assert.NoError(t, err, "testing-tags.yml should be valid against schema")
-}
-
-func TestValidator_ValidateTestingTaxonomyYAML(t *testing.T) {
-	repoRoot := getRepoRoot(t)
-	v, err := schema.NewValidator(repoRoot)
-	require.NoError(t, err)
-
-	// Load the actual testing-taxonomy.yml from the repository
-	taxonomyPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "testing-taxonomy.yml")
-	data, err := os.ReadFile(taxonomyPath)
-	require.NoError(t, err)
-
-	err = v.ValidateYAML(schema.SchemaTestingTaxonomy, data)
-	assert.NoError(t, err, "testing-taxonomy.yml should be valid against schema")
 }
 
 func TestValidator_InvalidModulesYAML(t *testing.T) {
@@ -108,17 +94,14 @@ func TestValidator_InvalidEnvironmentsYAML(t *testing.T) {
 	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
-	// Missing required 'metadata' field
+	// Missing required 'environments' field
 	invalidYAML := []byte(`
-environments:
+something_else:
   - moniker: test
-    name: Test Environment
-    level: L0
-    type: unit
 `)
 
 	err = v.ValidateYAML(schema.SchemaEnvironments, invalidYAML)
-	assert.Error(t, err, "should fail validation for missing 'metadata' field")
+	assert.Error(t, err, "should fail validation for missing 'environments' field")
 
 	var validErr *schema.ValidationError
 	assert.ErrorAs(t, err, &validErr)
@@ -132,9 +115,6 @@ func TestValidator_InvalidEnvironmentLevel(t *testing.T) {
 
 	// Invalid level value
 	invalidYAML := []byte(`
-metadata:
-  version: "0.1.0"
-  description: Test
 environments:
   - moniker: test
     name: Test Environment
@@ -183,11 +163,8 @@ func TestValidator_ValidMinimalEnvironmentsYAML(t *testing.T) {
 	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
-	// Minimal valid environments config
+	// Minimal valid environments config (metadata is optional)
 	validYAML := []byte(`
-metadata:
-  version: "0.1.0"
-  description: Test environments
 environments:
   - moniker: test-env
     name: Test Environment
@@ -263,7 +240,7 @@ func TestGetSchemaTypes(t *testing.T) {
 	assert.Contains(t, types, schema.SchemaModuleTypes)
 	assert.Contains(t, types, schema.SchemaEnvironments)
 	assert.Contains(t, types, schema.SchemaTestingTags)
-	assert.Contains(t, types, schema.SchemaTestingTaxonomy)
+	assert.Contains(t, types, schema.SchemaTestSuites)
 }
 
 func TestValidator_GetSchemaPath(t *testing.T) {
