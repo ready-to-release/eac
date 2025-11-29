@@ -54,7 +54,7 @@ Write-Host "✅ CommandRunner module imported successfully!" -ForegroundColor Gr
 # Create r2r alias pointing to the OS-specific binary
 $R2rBinaryPath = Join-Path $PSScriptRoot "out\build\src-cli"
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
-    $R2rBinary = Join-Path $R2rBinaryPath "r2r-windows.exe"
+    $R2rBinary = Join-Path $R2rBinaryPath "r2r-windows-amd64.exe"
 } elseif ($IsMacOS) {
     # Check architecture for macOS
     $arch = uname -m
@@ -64,8 +64,13 @@ if ($IsWindows -or $env:OS -eq "Windows_NT") {
         $R2rBinary = Join-Path $R2rBinaryPath "r2r-darwin-amd64"
     }
 } else {
-    # Linux
-    $R2rBinary = Join-Path $R2rBinaryPath "r2r-linux"
+    # Linux - check architecture
+    $arch = uname -m
+    if ($arch -eq "aarch64" -or $arch -eq "arm64") {
+        $R2rBinary = Join-Path $R2rBinaryPath "r2r-linux-arm64"
+    } else {
+        $R2rBinary = Join-Path $R2rBinaryPath "r2r-linux-amd64"
+    }
 }
 
 if (Test-Path $R2rBinary) {

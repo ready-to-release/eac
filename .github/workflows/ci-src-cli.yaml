@@ -70,17 +70,18 @@ jobs:
           echo "| Platform | Binary | Size |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|------|" >> $GITHUB_STEP_SUMMARY
 
-          for file in out/build/src-cli/r2r-linux out/build/src-cli/r2r-darwin-amd64 out/build/src-cli/r2r-darwin-arm64 out/build/src-cli/r2r-windows.exe; do
+          for file in out/build/src-cli/r2r-linux-amd64 out/build/src-cli/r2r-linux-arm64 out/build/src-cli/r2r-darwin-amd64 out/build/src-cli/r2r-darwin-arm64 out/build/src-cli/r2r-windows-amd64.exe; do
             if [ -f "$file" ]; then
               name=$(basename "$file")
               size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
               size_mb=$(echo "scale=1; $size / 1048576" | bc)
               platform=""
               case "$name" in
-                r2r-linux) platform="Linux AMD64" ;;
+                r2r-linux-amd64) platform="Linux AMD64" ;;
+                r2r-linux-arm64) platform="Linux ARM64" ;;
                 r2r-darwin-amd64) platform="macOS Intel" ;;
                 r2r-darwin-arm64) platform="macOS Apple Silicon" ;;
-                r2r-windows.exe) platform="Windows AMD64" ;;
+                r2r-windows-amd64.exe) platform="Windows AMD64" ;;
               esac
               echo "| ${platform} | \`${name}\` | ${size_mb} MB |" >> $GITHUB_STEP_SUMMARY
             fi
@@ -117,7 +118,8 @@ jobs:
 
       - name: Restore Executable Permissions
         run: |
-          chmod +x out/build/src-cli/r2r-linux
+          chmod +x out/build/src-cli/r2r-linux-amd64
+          chmod +x out/build/src-cli/r2r-linux-arm64
           chmod +x out/build/src-cli/r2r-darwin-amd64
           chmod +x out/build/src-cli/r2r-darwin-arm64
 
@@ -156,6 +158,7 @@ jobs:
 
           echo "### Binaries Verified" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- \`r2r-linux\` (Linux AMD64)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`r2r-linux-amd64\` (Linux AMD64)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`r2r-linux-arm64\` (Linux ARM64)" >> $GITHUB_STEP_SUMMARY
           echo "- \`r2r-darwin-amd64\` (macOS Intel)" >> $GITHUB_STEP_SUMMARY
           echo "- \`r2r-darwin-arm64\` (macOS Apple Silicon)" >> $GITHUB_STEP_SUMMARY

@@ -136,12 +136,13 @@ jobs:
           # Note: UPX compression only works for Linux/Windows when cross-compiling from Linux
           # Darwin binaries cannot be UPX-compressed without native macOS tooling
           REQUIRED_FILES=(
-            "out/build/src-cli/r2r-linux"
-            "out/build/src-cli/r2r-linux-upx"
+            "out/build/src-cli/r2r-linux-amd64"
+            "out/build/src-cli/r2r-linux-amd64-upx"
+            "out/build/src-cli/r2r-linux-arm64"
             "out/build/src-cli/r2r-darwin-amd64"
             "out/build/src-cli/r2r-darwin-arm64"
-            "out/build/src-cli/r2r-windows.exe"
-            "out/build/src-cli/r2r-windows-upx.exe"
+            "out/build/src-cli/r2r-windows-amd64.exe"
+            "out/build/src-cli/r2r-windows-amd64-upx.exe"
           )
 
           for file in "${REQUIRED_FILES[@]}"; do
@@ -156,24 +157,25 @@ jobs:
 
           echo ""
           echo "Testing Linux binary version (standard):"
-          chmod +x out/build/src-cli/r2r-linux
-          ./out/build/src-cli/r2r-linux version || true
+          chmod +x out/build/src-cli/r2r-linux-amd64
+          ./out/build/src-cli/r2r-linux-amd64 version || true
 
           echo ""
           echo "Testing Linux binary version (UPX):"
-          chmod +x out/build/src-cli/r2r-linux-upx
-          ./out/build/src-cli/r2r-linux-upx version || true
+          chmod +x out/build/src-cli/r2r-linux-amd64-upx
+          ./out/build/src-cli/r2r-linux-amd64-upx version || true
 
       - name: Generate build attestations
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
-            out/build/src-cli/r2r-linux
-            out/build/src-cli/r2r-linux-upx
+            out/build/src-cli/r2r-linux-amd64
+            out/build/src-cli/r2r-linux-amd64-upx
+            out/build/src-cli/r2r-linux-arm64
             out/build/src-cli/r2r-darwin-amd64
             out/build/src-cli/r2r-darwin-arm64
-            out/build/src-cli/r2r-windows.exe
-            out/build/src-cli/r2r-windows-upx.exe
+            out/build/src-cli/r2r-windows-amd64.exe
+            out/build/src-cli/r2r-windows-amd64-upx.exe
 
       - name: Create release notes
         id: release_notes
@@ -194,18 +196,19 @@ jobs:
 
           | Platform | Binary |
           |----------|--------|
-          | Linux (AMD64) | \`r2r-linux\` |
+          | Linux (AMD64) | \`r2r-linux-amd64\` |
+          | Linux (ARM64) | \`r2r-linux-arm64\` |
           | macOS (Intel) | \`r2r-darwin-amd64\` |
           | macOS (Apple Silicon) | \`r2r-darwin-arm64\` |
-          | Windows (AMD64) | \`r2r-windows.exe\` |
+          | Windows (AMD64) | \`r2r-windows-amd64.exe\` |
 
           ### UPX-Compressed Binaries (Minimal Size)
           Maximum compression (~10 MB), slightly slower startup. Available for Linux and Windows only:
 
           | Platform | Binary |
           |----------|--------|
-          | Linux (AMD64) | \`r2r-linux-upx\` |
-          | Windows (AMD64) | \`r2r-windows-upx.exe\` |
+          | Linux (AMD64) | \`r2r-linux-amd64-upx\` |
+          | Windows (AMD64) | \`r2r-windows-amd64-upx.exe\` |
 
           > **Note**: UPX compression is not available for macOS binaries when cross-compiling. UPX binaries may trigger antivirus false positives on Windows.
 
@@ -216,10 +219,11 @@ jobs:
           chmod +x r2r-*
 
           # Verify installation
-          ./r2r-linux version           # Linux
+          ./r2r-linux-amd64 version     # Linux AMD64
+          ./r2r-linux-arm64 version     # Linux ARM64
           ./r2r-darwin-amd64 version    # macOS Intel
           ./r2r-darwin-arm64 version    # macOS Apple Silicon
-          r2r-windows.exe version       # Windows
+          r2r-windows-amd64.exe version # Windows
           \`\`\`
 
           ## Supply Chain Security
@@ -258,24 +262,26 @@ jobs:
               --title "r2r CLI v$VERSION" \
               --notes-file release_notes.md \
               --target "${{ github.sha }}" \
-              out/build/src-cli/r2r-linux \
-              out/build/src-cli/r2r-linux-upx \
+              out/build/src-cli/r2r-linux-amd64 \
+              out/build/src-cli/r2r-linux-amd64-upx \
+              out/build/src-cli/r2r-linux-arm64 \
               out/build/src-cli/r2r-darwin-amd64 \
               out/build/src-cli/r2r-darwin-arm64 \
-              out/build/src-cli/r2r-windows.exe \
-              out/build/src-cli/r2r-windows-upx.exe
+              out/build/src-cli/r2r-windows-amd64.exe \
+              out/build/src-cli/r2r-windows-amd64-upx.exe
           else
             echo "Tag trigger: using existing tag"
             gh release create "$TAG_NAME" \
               --title "r2r CLI v$VERSION" \
               --notes-file release_notes.md \
               --verify-tag \
-              out/build/src-cli/r2r-linux \
-              out/build/src-cli/r2r-linux-upx \
+              out/build/src-cli/r2r-linux-amd64 \
+              out/build/src-cli/r2r-linux-amd64-upx \
+              out/build/src-cli/r2r-linux-arm64 \
               out/build/src-cli/r2r-darwin-amd64 \
               out/build/src-cli/r2r-darwin-arm64 \
-              out/build/src-cli/r2r-windows.exe \
-              out/build/src-cli/r2r-windows-upx.exe
+              out/build/src-cli/r2r-windows-amd64.exe \
+              out/build/src-cli/r2r-windows-amd64-upx.exe
           fi
 
           echo "✅ Release created with binaries successfully"
@@ -346,17 +352,18 @@ jobs:
           echo "| Platform | Binary | Size |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|------|" >> $GITHUB_STEP_SUMMARY
 
-          for file in out/build/src-cli/r2r-linux out/build/src-cli/r2r-darwin-amd64 out/build/src-cli/r2r-darwin-arm64 out/build/src-cli/r2r-windows.exe; do
+          for file in out/build/src-cli/r2r-linux-amd64 out/build/src-cli/r2r-linux-arm64 out/build/src-cli/r2r-darwin-amd64 out/build/src-cli/r2r-darwin-arm64 out/build/src-cli/r2r-windows-amd64.exe; do
             if [ -f "$file" ]; then
               name=$(basename "$file")
               size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
               size_mb=$(echo "scale=1; $size / 1048576" | bc)
               platform=""
               case "$name" in
-                r2r-linux) platform="Linux AMD64" ;;
+                r2r-linux-amd64) platform="Linux AMD64" ;;
+                r2r-linux-arm64) platform="Linux ARM64" ;;
                 r2r-darwin-amd64) platform="macOS Intel" ;;
                 r2r-darwin-arm64) platform="macOS Apple Silicon" ;;
-                r2r-windows.exe) platform="Windows AMD64" ;;
+                r2r-windows-amd64.exe) platform="Windows AMD64" ;;
               esac
               echo "| ${platform} | \`${name}\` | ${size_mb} MB |" >> $GITHUB_STEP_SUMMARY
             fi
@@ -369,15 +376,15 @@ jobs:
           echo "| Platform | Binary | Size |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|------|" >> $GITHUB_STEP_SUMMARY
 
-          for file in out/build/src-cli/r2r-linux-upx out/build/src-cli/r2r-windows-upx.exe; do
+          for file in out/build/src-cli/r2r-linux-amd64-upx out/build/src-cli/r2r-windows-amd64-upx.exe; do
             if [ -f "$file" ]; then
               name=$(basename "$file")
               size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
               size_mb=$(echo "scale=1; $size / 1048576" | bc)
               platform=""
               case "$name" in
-                r2r-linux-upx) platform="Linux AMD64" ;;
-                r2r-windows-upx.exe) platform="Windows AMD64" ;;
+                r2r-linux-amd64-upx) platform="Linux AMD64" ;;
+                r2r-windows-amd64-upx.exe) platform="Windows AMD64" ;;
               esac
               echo "| ${platform} | \`${name}\` | ${size_mb} MB |" >> $GITHUB_STEP_SUMMARY
             fi

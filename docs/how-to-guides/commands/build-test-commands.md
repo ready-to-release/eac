@@ -298,8 +298,9 @@ out/
 ├── build/                        # Build outputs per module
 │   ├── src-cli/
 │   │   ├── build.log
-│   │   ├── r2r-linux
-│   │   ├── r2r-windows.exe
+│   │   ├── r2r-linux-amd64
+│   │   ├── r2r-linux-arm64
+│   │   ├── r2r-windows-amd64.exe
 │   │   ├── r2r-darwin-amd64
 │   │   └── r2r-darwin-arm64
 │   ├── docs/

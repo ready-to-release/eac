@@ -89,17 +89,19 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, output
 func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	binaryName := module.Moniker
 
-	// Define target platforms
+	// Define target platforms with metadata keys for custom names
+	// Metadata key pattern: exe-{goos}-{goarch}
 	targets := []struct {
-		goos   string
-		goarch string
-		suffix string
+		goos        string
+		goarch      string
+		suffix      string
+		metadataKey string // Key in module.Metadata for custom output name
 	}{
-		{"linux", "amd64", ""},
-		{"linux", "arm64", ""},
-		{"darwin", "amd64", ""},
-		{"darwin", "arm64", ""},
-		{"windows", "amd64", ".exe"},
+		{"linux", "amd64", "", "exe-linux-amd64"},
+		{"linux", "arm64", "", "exe-linux-arm64"},
+		{"darwin", "amd64", "", "exe-darwin-amd64"},
+		{"darwin", "arm64", "", "exe-darwin-arm64"},
+		{"windows", "amd64", ".exe", "exe-windows-amd64"},
 	}
 
 	// Build ldflags
@@ -118,7 +120,11 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outpu
 
 	successCount := 0
 	for _, target := range targets {
+		// Use custom name from metadata if available, otherwise use default pattern
 		outputName := fmt.Sprintf("%s-%s-%s%s", binaryName, target.goos, target.goarch, target.suffix)
+		if customName, ok := module.Metadata[target.metadataKey]; ok && customName != "" {
+			outputName = customName
+		}
 		outputPath := filepath.Join(outputDir, outputName)
 
 		Logln(logWriter, "Building: %s/%s → %s", target.goos, target.goarch, outputName)
