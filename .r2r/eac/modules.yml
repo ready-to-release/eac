@@ -204,10 +204,11 @@ modules:
         other:
           - contracts/src-cli/**
     metadata:
-      exe-linux: r2r-linux
+      exe-linux-amd64: r2r-linux-amd64
+      exe-linux-arm64: r2r-linux-arm64
       exe-darwin-amd64: r2r-darwin-amd64
       exe-darwin-arm64: r2r-darwin-arm64
-      exe-windows: r2r-windows.exe
+      exe-windows-amd64: r2r-windows-amd64.exe
 
   # ============================================================================
   # Scripts: CLI Installer

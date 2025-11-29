@@ -155,6 +155,11 @@ provider:
 			t.Cleanup()
 			return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
 		}
+
+		// Remove any personal config that may have been copied (it takes precedence)
+		personalConfigPath := filepath.Join(configDir, "agent-config.personal.yml")
+		os.Remove(personalConfigPath) // Ignore error - file may not exist
+
 		configPath := filepath.Join(configDir, "agent-config.yml")
 		if err := os.WriteFile(configPath, []byte(testConfig), 0644); err != nil {
 			t.Cleanup()

@@ -128,20 +128,15 @@ install_binary() {
     local tmp_dir
 
     # Construct binary name based on platform
-    # Format: r2r-{os} for linux, r2r-{os}-{arch} for darwin
-    # Add -upx suffix if UPX version requested
+    # Format: r2r-{os}-{arch} for all platforms
+    # Add -upx suffix if UPX version requested (only available for linux-amd64)
     local binary_filename
-    if [[ "$OS" == "darwin" ]]; then
-        if $USE_UPX; then
-            binary_filename="r2r-${OS}-${ARCH}-upx"
-        else
-            binary_filename="r2r-${OS}-${ARCH}"
-        fi
+    if $USE_UPX && [[ "$OS" == "linux" ]] && [[ "$ARCH" == "amd64" ]]; then
+        binary_filename="r2r-${OS}-${ARCH}-upx"
     else
-        if $USE_UPX; then
-            binary_filename="r2r-${OS}-upx"
-        else
-            binary_filename="r2r-${OS}"
+        binary_filename="r2r-${OS}-${ARCH}"
+        if $USE_UPX && [[ "$OS" != "linux" || "$ARCH" != "amd64" ]]; then
+            echo -e "${YELLOW}Note: UPX binaries only available for linux-amd64, using standard binary${NC}"
         fi
     fi
 

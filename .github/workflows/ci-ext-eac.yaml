@@ -175,7 +175,7 @@ jobs:
 
           echo ""
           echo "Copying Linux binary to workspace root..."
-          cp out/build/src-cli/r2r-linux ./r2r
+          cp out/build/src-cli/r2r-linux-amd64 ./r2r
           chmod +x ./r2r
 
           echo ""
