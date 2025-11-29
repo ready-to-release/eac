@@ -10,7 +10,7 @@ Feature: repository_validate-dependencies
 
   Rule: All module dependencies must be valid
 
-    @L2 @ov
+    @L1 @ov
     Scenario: All module dependencies in repository are valid
       When I run the command "validate dependencies"
       Then the exit code is 0

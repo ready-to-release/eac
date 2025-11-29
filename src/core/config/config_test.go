@@ -231,3 +231,224 @@ func TestValidateAll(t *testing.T) {
 	err = cfg.ValidateAll()
 	assert.NoError(t, err)
 }
+
+// TestLoad_ModuleTypesLoaded verifies ModuleTypes is populated after Load
+func TestLoad_ModuleTypesLoaded(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	// ModuleTypes should be loaded
+	assert.NotNil(t, cfg.ModuleTypes, "ModuleTypes should be loaded")
+	assert.NotEmpty(t, cfg.ModuleTypes.Types, "ModuleTypes should have types")
+
+	// Type lookup should work
+	goLib := cfg.ModuleTypes.Get("go-library")
+	assert.NotNil(t, goLib, "should find go-library type")
+	assert.Equal(t, "go", goLib.BuildSystem)
+}
+
+// TestLoad_TypeDefaultsApplied verifies type defaults are applied after Load
+func TestLoad_TypeDefaultsApplied(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	// Find a go-library module (src-core)
+	srcCore, ok := cfg.Modules.GetModule("src-core")
+	require.True(t, ok, "src-core module should exist")
+	assert.Equal(t, "go-library", srcCore.Type)
+
+	// Go-library type defaults should be applied
+	goLibType := cfg.ModuleTypes.Get("go-library")
+	require.NotNil(t, goLibType)
+
+	if goLibType.Defaults != nil && goLibType.Defaults.Files != nil {
+		// If type has source defaults, they should be applied (unless explicit in modules.yml)
+		if goLibType.Defaults.Files.Source != nil {
+			// src-core has explicit source in modules.yml, so check that format
+			assert.NotEmpty(t, srcCore.Files.Source)
+		}
+	}
+}
+
+// TestModulesConfig_ApplyTypeDefaults tests direct ApplyTypeDefaults call
+func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
+	t.Run("applies type defaults", func(t *testing.T) {
+		modules := &ModulesConfig{
+			Modules: []Module{
+				{
+					Moniker: "test-mod",
+					Name:    "Test Module",
+					Type:    "go-library",
+					Files: Files{
+						Root: "src/test",
+					},
+				},
+			},
+		}
+
+		types := &ModuleTypesConfig{
+			Types: []ModuleTypeDef{
+				{
+					Name:        "go-library",
+					BuildSystem: "go",
+					Defaults: &TypeDefaults{
+						Files: &FilesDefaults{
+							Source: []string{"**/*.go"},
+							Config: []string{"go.mod"},
+						},
+						Repo: &RepoDefaults{
+							Specs:    []string{"specs/{moniker}/**"},
+							TestImpl: "{root}/tests",
+						},
+					},
+				},
+			},
+		}
+
+		modules.ApplyTypeDefaults(types)
+
+		m := modules.Modules[0]
+		assert.Equal(t, []string{"**/*.go"}, m.Files.Source)
+		assert.Equal(t, []string{"go.mod"}, m.Files.Config)
+		assert.Equal(t, []string{"specs/test-mod/**"}, m.Files.Repo.Specs)
+		assert.Equal(t, "src/test/tests", m.Files.Repo.TestImpl)
+	})
+
+	t.Run("preserves explicit values", func(t *testing.T) {
+		modules := &ModulesConfig{
+			Modules: []Module{
+				{
+					Moniker: "explicit-mod",
+					Name:    "Explicit Module",
+					Type:    "go-library",
+					Files: Files{
+						Root:   "src/explicit",
+						Source: []string{"custom/*.go"},
+						Config: []string{"custom.mod"},
+						Repo: RepoFiles{
+							Specs:    []string{"my/specs/**"},
+							TestImpl: "my/tests",
+						},
+					},
+				},
+			},
+		}
+
+		types := &ModuleTypesConfig{
+			Types: []ModuleTypeDef{
+				{
+					Name: "go-library",
+					Defaults: &TypeDefaults{
+						Files: &FilesDefaults{
+							Source: []string{"**/*.go"},
+							Config: []string{"go.mod"},
+						},
+						Repo: &RepoDefaults{
+							Specs:    []string{"specs/{moniker}/**"},
+							TestImpl: "{root}/tests",
+						},
+					},
+				},
+			},
+		}
+
+		modules.ApplyTypeDefaults(types)
+
+		m := modules.Modules[0]
+		// Explicit values should be preserved
+		assert.Equal(t, []string{"custom/*.go"}, m.Files.Source)
+		assert.Equal(t, []string{"custom.mod"}, m.Files.Config)
+		assert.Equal(t, []string{"my/specs/**"}, m.Files.Repo.Specs)
+		assert.Equal(t, "my/tests", m.Files.Repo.TestImpl)
+	})
+
+	t.Run("handles nil types", func(t *testing.T) {
+		modules := &ModulesConfig{
+			Modules: []Module{
+				{
+					Moniker: "test-mod",
+					Name:    "Test Module",
+					Type:    "go-library",
+					Files: Files{
+						Root: "src/test",
+					},
+				},
+			},
+		}
+
+		// Should not panic with nil types
+		modules.ApplyTypeDefaults(nil)
+
+		m := modules.Modules[0]
+		// Generic defaults should be applied
+		assert.Equal(t, "CHANGELOG.md", m.Files.Changelog)
+		assert.Equal(t, []string{"specs/test-mod/**"}, m.Files.Repo.Specs)
+	})
+
+	t.Run("preserves explicit empty specs", func(t *testing.T) {
+		modules := &ModulesConfig{
+			Modules: []Module{
+				{
+					Moniker: "no-specs-mod",
+					Name:    "No Specs Module",
+					Type:    "go-library",
+					Files: Files{
+						Root: "src/nospecs",
+						Repo: RepoFiles{
+							Specs: []string{}, // Explicit empty
+						},
+					},
+				},
+			},
+		}
+
+		types := &ModuleTypesConfig{
+			Types: []ModuleTypeDef{
+				{
+					Name: "go-library",
+					Defaults: &TypeDefaults{
+						Repo: &RepoDefaults{
+							Specs: []string{"specs/{moniker}/**"},
+						},
+					},
+				},
+			},
+		}
+
+		modules.ApplyTypeDefaults(types)
+
+		m := modules.Modules[0]
+		// Explicit empty should be preserved
+		assert.NotNil(t, m.Files.Repo.Specs)
+		assert.Empty(t, m.Files.Repo.Specs)
+	})
+}
+
+// TestModuleTypesConfig_Integration tests type config methods with real data
+func TestModuleTypesConfig_Integration(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+	require.NotNil(t, cfg.ModuleTypes)
+
+	t.Run("Get returns type definition", func(t *testing.T) {
+		goLib := cfg.ModuleTypes.Get("go-library")
+		require.NotNil(t, goLib)
+		assert.Equal(t, "go", goLib.BuildSystem)
+	})
+
+	t.Run("Get returns nil for unknown type", func(t *testing.T) {
+		unknown := cfg.ModuleTypes.Get("unknown-xyz")
+		assert.Nil(t, unknown)
+	})
+
+	t.Run("GetBuildSystem returns correct system", func(t *testing.T) {
+		buildSys := cfg.ModuleTypes.GetBuildSystem("go-library")
+		assert.Equal(t, "go", buildSys)
+	})
+
+	t.Run("GetTypesByBuildSystem finds go types", func(t *testing.T) {
+		goTypes := cfg.ModuleTypes.GetTypesByBuildSystem("go")
+		assert.NotEmpty(t, goTypes)
+		assert.Contains(t, goTypes, "go-library")
+	})
+}

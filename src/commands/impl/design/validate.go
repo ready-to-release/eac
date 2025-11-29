@@ -236,7 +236,7 @@ func printValidateUsage() {
 // getValidationOutputPath returns the absolute path to the validation output JSON file
 func getValidationOutputPath(repoRoot string) (string, error) {
 	// Use out/logs/design directory
-	outDir := filepath.Join(repoRoot, "out", "logs", "design")
+	outDir := filepath.Join(repository.LogsPath(repoRoot), "design")
 
 	// Create directory if it doesn't exist
 	if err := os.MkdirAll(outDir, 0755); err != nil {

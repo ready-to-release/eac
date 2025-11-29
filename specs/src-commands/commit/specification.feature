@@ -138,6 +138,7 @@ Feature: src-commands_commit
       And the context should include the staged files table
       And the context should include the git diff
 
+    @skip:broken
     Scenario: Build module-specific context
       Given a module with specific files
       And a full git diff

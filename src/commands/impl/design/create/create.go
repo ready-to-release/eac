@@ -6,10 +6,10 @@
 // Long: documentation including system context views (external systems and actors), container views
 // Long: (major components), and component views (internal structure). All generated workspaces are
 // Long: automatically validated against Structurizr CLI to ensure correct syntax before saving to
-// Long: specs/<module>/design/workspace.dsl (or custom path via --output). Use --debug to save AI
+// Long: specs/<module>/.design/workspace.dsl (or custom path via --output). Use --debug to save AI
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/logs/design/ for debugging
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing workspace.dsl file if it exists
-// Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/design/workspace.dsl)
+// Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)
 // Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
 // Flag.skip-validation: type=bool, shorthand=, default=false, usage=Skip Docker validation (useful when Docker is unavailable)
 // Usage: design create <module>
@@ -84,7 +84,7 @@ func DesignCreate() int {
 	// Determine output path
 	outputPath := config.OutputPath
 	if outputPath == "" {
-		outputPath = filepath.Join(config.TemplateRoot, "specs", config.Module, "design", "workspace.dsl")
+		outputPath = repository.WorkspaceDSLPath(config.TemplateRoot, config.Module)
 	}
 
 	// Check if output exists (unless --force)
@@ -121,7 +121,7 @@ func DesignCreate() int {
 type DesignConfig struct {
 	Module         string // Module name (e.g., "src-cli", "commands")
 	SourcePath     string // Path to source code (e.g., "src/commands")
-	OutputPath     string // Custom output path (empty = default to specs/<module>/design/workspace.dsl)
+	OutputPath     string // Custom output path (empty = default to specs/<module>/.design/workspace.dsl)
 	PromptPath     string // Custom AI prompt file path (empty = default prompt)
 	Debug          bool
 	Force          bool

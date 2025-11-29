@@ -7,6 +7,7 @@ Generate a comprehensive risk assessment report that identifies potential securi
 ## Your Task
 
 Analyze code changes against existing specifications to identify:
+
 - Security vulnerabilities and weaknesses
 - Compliance gaps and regulatory concerns
 - Operational risks and reliability issues
@@ -16,6 +17,7 @@ Analyze code changes against existing specifications to identify:
 ## Input Information
 
 ### Analysis Scope
+
 - **Scope:** {{.Scope}}
 - **Files Analyzed:** {{.FileCount}} files
 - **Specifications Reviewed:** {{.SpecCount}} specifications
@@ -30,6 +32,7 @@ The changed files and existing specifications are provided in the context below.
 For each code change, evaluate:
 
 1. **Security Impact**
+
    - Authentication/authorization changes
    - Input validation and sanitization
    - Cryptography and data protection
@@ -37,12 +40,14 @@ For each code change, evaluate:
    - API security
 
 2. **Compliance Impact**
+
    - Data privacy requirements (GDPR, CCPA, etc.)
    - Industry standards (PCI-DSS, HIPAA, SOC 2, etc.)
    - Security frameworks (NIST, ISO 27001, etc.)
    - Audit trail and logging requirements
 
 3. **Operational Impact**
+
    - Availability and reliability
    - Performance and scalability
    - Error handling and recovery
@@ -59,18 +64,22 @@ For each code change, evaluate:
 Use these severity levels consistently:
 
 - **Critical**: Immediate security threat or compliance violation
+
   - Example: Hardcoded credentials, SQL injection vulnerability
   - Action: Must fix before deployment
 
 - **High**: Significant security weakness or compliance gap
+
   - Example: Missing authentication, insufficient encryption
   - Action: Fix within current sprint
 
 - **Medium**: Potential security issue or incomplete control
+
   - Example: Weak password policy, missing input validation
   - Action: Address in upcoming sprint
 
 - **Low**: Minor security improvement or best practice
+
   - Example: Outdated dependency, missing security header
   - Action: Address as time permits
 
@@ -212,11 +221,13 @@ Map risks to these common domains:
 ## Analysis Guidelines
 
 1. **Compare Against Specifications**
+
    - Look for deviations from specified behavior
    - Identify missing security requirements
    - Check for incomplete implementations
 
 2. **OWASP Top 10 Awareness**
+
    - Injection flaws (SQL, Command, LDAP, etc.)
    - Broken authentication
    - Sensitive data exposure
@@ -229,6 +240,7 @@ Map risks to these common domains:
    - Insufficient logging and monitoring
 
 3. **Compliance Considerations**
+
    - Data privacy (personal data handling)
    - Audit requirements (logging, traceability)
    - Access controls (least privilege)

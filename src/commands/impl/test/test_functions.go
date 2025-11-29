@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
@@ -20,7 +21,10 @@ import (
 // Returns: exit code
 type TestFunc func(*modules.ModuleContract, string, string, io.Writer, string, string) int
 
-// testFunctions maps module types to their test functions
+// testFunctions maps module types to their test functions.
+// This map is used as a fallback when a type-specific handler exists.
+// For new types, prefer adding capabilities in module-types.yml and using
+// test system handlers instead of adding entries here.
 var testFunctions = map[string]TestFunc{
 	// Go modules - run go test
 	"go-cli":      testGoCLI,
@@ -58,6 +62,45 @@ var testFunctions = map[string]TestFunc{
 	"templates":        testStaticModule,
 	"vscode-config":    testStaticModule,
 	"vscode-ext":       testStaticModule,
+}
+
+// testSystemHandlers maps build systems to default test functions.
+// Used when no type-specific handler exists in testFunctions.
+var testSystemHandlers = map[string]TestFunc{
+	"go":     testGoDefault,
+	"mkdocs": testStaticModule,
+	"docker": testStaticModule,
+	"vscode": testStaticModule,
+	"none":   testStaticModule,
+}
+
+// GetTestFunc returns the appropriate test function for a module type.
+// It first checks for a type-specific handler, then falls back to build system handlers.
+func GetTestFunc(moduleType string) TestFunc {
+	// First, check for type-specific handler
+	if fn, exists := testFunctions[moduleType]; exists {
+		return fn
+	}
+
+	// Fall back to build system handler from type registry
+	cfg := config.Global()
+	if cfg != nil && cfg.ModuleTypes != nil {
+		buildSystem := cfg.ModuleTypes.GetBuildSystem(moduleType)
+		if fn, exists := testSystemHandlers[buildSystem]; exists {
+			return fn
+		}
+	}
+
+	// Ultimate fallback: static module test (no-op)
+	return testStaticModule
+}
+
+// testGoDefault is the default test handler for Go modules without specific handlers.
+// Delegates to test suite with module filter.
+func testGoDefault(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+	writeln(logWriter, "\n=== Testing Go module: %s (type: %s) ===", module.Moniker, module.Type)
+	writeln(logWriter, "Suite: %s", suiteName)
+	return runTestSuiteForModule(module.Moniker, suiteName)
 }
 
 // testGoCLI tests a Cobra CLI binary (Pattern A)
@@ -320,8 +363,14 @@ func testMkDocsSite(module *modules.ModuleContract, workspaceRoot string, output
 // testRepositoryRoot tests the repository-root module (runs repository validation tests)
 func testRepositoryRoot(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
 	// The repository-root module contains repository-level validation tests
-	// These are in src/specs/impl/repository
-	testDir := filepath.Join(workspaceRoot, "src", "specs", "impl", "repository")
+	// Location is defined in the module contract's test_impl field or derived from type
+	testImplPath := module.GetTestImplementationPath()
+	if testImplPath == "" {
+		writeln(logWriter, "\n=== Testing repository-root: %s ===", module.Moniker)
+		writeln(logWriter, "⚠️ No test_impl path defined in module contract")
+		return 0
+	}
+	testDir := filepath.Join(workspaceRoot, testImplPath)
 
 	writeln(logWriter, "\n=== Testing repository-root: %s ===", module.Moniker)
 	writeln(logWriter, "Running repository validation tests from: %s", testDir)
@@ -410,12 +459,8 @@ func testScriptsPwsh(module *modules.ModuleContract, workspaceRoot string, outpu
 
 // runModuleTest runs tests for a single module
 func runModuleTest(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	// Get test function for module type
-	testFunc, hasTester := testFunctions[module.Type]
-	if !hasTester {
-		writeln(logWriter, "Error: no test function for type: %s", module.Type)
-		return 1
-	}
+	// Get test function for module type using the dispatch helper
+	testFunc := GetTestFunc(module.Type)
 
 	// Execute the test function
 	return testFunc(module, workspaceRoot, outputDir, logWriter, reportFormat, suiteName)

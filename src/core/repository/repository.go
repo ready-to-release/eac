@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/git"
 )
 
@@ -298,7 +297,7 @@ func IsGitRepository(path string) bool {
 
 // GetRepoEACConfigRoot returns the path to the EAC repository configuration directory.
 // This is where repository-specific EAC contracts are stored (modules, tags, environments).
-// The relative path is defined by contracts.EACConfigRelPath.
+// The relative path is defined by EACConfigRelPath constant in paths.go.
 //
 // This is distinct from tool contracts (AI prompts, CLI schema) which remain in contracts/.
 func GetRepoEACConfigRoot(startPath string) (string, error) {
@@ -306,5 +305,5 @@ func GetRepoEACConfigRoot(startPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(repoRoot, contracts.EACConfigRelPath), nil
+	return EACConfigPath(repoRoot), nil
 }

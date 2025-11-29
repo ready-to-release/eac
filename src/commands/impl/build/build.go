@@ -130,10 +130,8 @@ func Build() int {
 	if len(monikers) == 0 {
 		fmt.Println("ℹ️  No modules specified, building all modules...")
 		for _, module := range moduleReport.Registry.All() {
-			// Skip modules without build functions (e.g., catch-all)
-			if _, hasBuildFunc := buildFunctions[module.Type]; hasBuildFunc {
-				monikers = append(monikers, module.Moniker)
-			}
+			// Include all modules - GetBuildFunc will return a handler for any type
+			monikers = append(monikers, module.Moniker)
 		}
 	}
 
@@ -150,26 +148,16 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 		return 1
 	}
 
-	// Get build function for module type
-	buildFunc, hasBuilder := buildFunctions[module.Type]
-	if !hasBuilder {
-		fmt.Fprintf(os.Stderr, "Error: no build function for type: %s\n", module.Type)
-		fmt.Fprintf(os.Stderr, "Module: %s\n", moniker)
-		fmt.Fprintf(os.Stderr, "Type: %s\n", module.Type)
-		fmt.Fprintf(os.Stderr, "\nAvailable build functions:\n")
-		for moduleType := range buildFunctions {
-			fmt.Fprintf(os.Stderr, "  - %s\n", moduleType)
-		}
-		return 1
-	}
+	// Get build function for module type using the dispatch helper
+	buildFunc := GetBuildFunc(module.Type)
 
 	// Determine output directory
 	var outputDir string
 	testRunID := os.Getenv("R2R_TEST_RUN_ID")
 	if testRunID != "" {
-		outputDir = filepath.Join(workspaceRoot, "out", "test", testRunID, "build-artifacts", moniker)
+		outputDir = filepath.Join(workspaceRoot, repository.OutDir, "test", testRunID, "build-artifacts", moniker)
 	} else {
-		outputDir = filepath.Join(workspaceRoot, "out", "build", moniker)
+		outputDir = repository.BuildOutputPath(workspaceRoot, moniker)
 	}
 
 	// Purge and create output directory
@@ -275,7 +263,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			return 1
 		}
 
-		moduleOutputDir := filepath.Join(workspaceRoot, "out", "build", moniker)
+		moduleOutputDir := repository.BuildOutputPath(workspaceRoot, moniker)
 		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version)
 	}
 
@@ -297,11 +285,8 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 
 // runModuleBuild runs build for a single module
 func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string) int {
-	buildFunc, hasBuilder := buildFunctions[module.Type]
-	if !hasBuilder {
-		fmt.Fprintf(logWriter, "Error: no build function for type: %s\n", module.Type)
-		return 1
-	}
+	// Get build function for module type using the dispatch helper
+	buildFunc := GetBuildFunc(module.Type)
 
 	opts := BuildOptions{
 		TidyFirst:     tidyFirst,

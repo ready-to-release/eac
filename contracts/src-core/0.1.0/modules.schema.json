@@ -60,6 +60,13 @@
         },
         "flags": {
           "$ref": "#/definitions/flags"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Generic key-value store for module-specific data (e.g., executable names, custom properties)",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "required": ["moniker", "name"]
@@ -132,6 +139,14 @@
           "items": {
             "type": "string"
           }
+        },
+        "test_impl": {
+          "type": "string",
+          "description": "Path to test implementation directory (e.g., 'src/specs/impl/repository' for godog step definitions)"
+        },
+        "design": {
+          "type": "string",
+          "description": "Path to design workspace directory (e.g., 'specs/<moniker>/.design' for Structurizr DSL files)"
         },
         "other": {
           "type": "array",

@@ -12,11 +12,23 @@ import (
 // This is the main entry point for loading module contracts.
 // Uses the central config package for loading and schema validation.
 func LoadFromWorkspace(workspaceRoot string) (*Registry, error) {
-	// Load using central config (includes schema validation)
+	return loadModules(workspaceRoot, false)
+}
+
+// LoadFromWorkspaceNoValidation loads module contracts without schema validation.
+// Use this for testing or when schemas are not available.
+func LoadFromWorkspaceNoValidation(workspaceRoot string) (*Registry, error) {
+	return loadModules(workspaceRoot, true)
+}
+
+func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
+	validate := !noValidation
+
+	// Load using central config
 	opts := config.LoadOptions{
 		RepoRoot:        workspaceRoot,
-		ValidateSchemas: true,
-		LazyLoad:        true, // We only need modules
+		ValidateSchemas: validate,
+		LazyLoad:        true, // We only need modules and module-types
 	}
 
 	cfg, err := config.Load(opts)
@@ -24,11 +36,20 @@ func LoadFromWorkspace(workspaceRoot string) (*Registry, error) {
 		return nil, contracts.NewContractError("load", "config", err, "failed to initialize config loader")
 	}
 
-	// Load modules with schema validation
-	if err := cfg.LoadModules(true); err != nil {
+	// Load modules
+	if err := cfg.LoadModules(validate); err != nil {
 		modulesPath := filepath.Join(config.EACConfigRelPath, config.ModulesFileName)
 		return nil, contracts.NewContractError("load", modulesPath, err, "failed to load modules.yml")
 	}
+
+	// Load module types for type-specific defaults
+	if err := cfg.LoadModuleTypes(validate); err != nil {
+		// Module types are optional - log warning but continue
+		// This allows backward compatibility when module-types.yml doesn't exist
+	}
+
+	// Apply type-specific defaults
+	cfg.Modules.ApplyTypeDefaults(cfg.ModuleTypes)
 
 	// Create registry (version kept for internal compatibility)
 	registry := NewRegistry("0.1.0", workspaceRoot)
@@ -52,17 +73,20 @@ func LoadFromWorkspace(workspaceRoot string) (*Registry, error) {
 				Exclude:   m.Files.Exclude,
 				Changelog: m.Files.Changelog,
 				Repo: contracts.RepoPatterns{
-					Specs:   m.Files.Repo.Specs,
-					Other:   m.Files.Repo.Other,
-					Exclude: m.Files.Repo.Exclude,
+					Specs:    m.Files.Repo.Specs,
+					TestImpl: m.Files.Repo.TestImpl,
+					Design:   m.Files.Repo.Design,
+					Other:    m.Files.Repo.Other,
+					Exclude:  m.Files.Repo.Exclude,
 				},
 			},
 			Flags: contracts.Flags{
 				CatchAll:         m.Flags.CatchAll,
 				OwnChildrenFiles: m.Flags.OwnChildrenFiles,
 			},
+			Metadata: m.Metadata,
 		}
-		// Note: Defaults are already applied by config.ModulesConfig.applyDefaults()
+		// Note: Defaults are already applied by config.ModulesConfig.applyDefaults() and ApplyTypeDefaults()
 
 		// Validate required fields
 		if base.Moniker == "" {

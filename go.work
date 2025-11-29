@@ -3,7 +3,6 @@ go 1.24.4
 use (
 	./src/ai
 	./src/cli
-	./src/cli-installers/tests
 	./src/commands
 	./src/core
 	./src/mcp/commands

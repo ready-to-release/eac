@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	mdvalidator "github.com/ready-to-release/eac/src/core/markdown"
 	"github.com/ready-to-release/eac/src/core/platform"
@@ -43,22 +44,20 @@ type BuildOptions struct {
 // Returns: exit code
 type BuildFunc func(*modules.ModuleContract, string, string, io.Writer, BuildOptions) int
 
-// goModuleTypes is the set of module types that use Go tooling (and thus support --tidy-first)
-var goModuleTypes = map[string]bool{
-	"go-cli":           true,
-	"go-commands":      true,
-	"go-mcp":           true,
-	"go-library":       true,
-	"go-tests":         true,
-	"go-r2r-extension": true,
-}
-
-// IsGoModuleType returns true if the module type uses Go tooling
+// IsGoModuleType returns true if the module type uses Go tooling (has go_module capability)
 func IsGoModuleType(moduleType string) bool {
-	return goModuleTypes[moduleType]
+	cfg := config.Global()
+	if cfg != nil && cfg.ModuleTypes != nil {
+		return cfg.ModuleTypes.HasCapability(moduleType, "go_module")
+	}
+	// Fallback: use naming convention if config unavailable
+	return strings.HasPrefix(moduleType, "go-")
 }
 
-// buildFunctions maps module types to their build functions
+// buildFunctions maps module types to their build functions.
+// This map is used as a fallback when a type-specific handler exists.
+// For new types, prefer adding capabilities in module-types.yml and using
+// build system handlers instead of adding entries here.
 var buildFunctions = map[string]BuildFunc{
 	"go-cli":           buildGoCLI,
 	"go-commands":      buildGoCommands,
@@ -89,6 +88,87 @@ var buildFunctions = map[string]BuildFunc{
 	"templates":       buildTemplates,
 	"repository-root": buildRepositoryRoot,
 	"no-module-type":  buildNoModuleType,
+}
+
+// buildSystemHandlers maps build systems to default build functions.
+// Used when no type-specific handler exists in buildFunctions.
+var buildSystemHandlers = map[string]BuildFunc{
+	"go":     buildGoDefault,
+	"mkdocs": buildMkDocsDefault,
+	"docker": buildDockerDefault,
+	"vscode": buildVSCodeDefault,
+	"none":   buildNoop,
+}
+
+// GetBuildFunc returns the appropriate build function for a module type.
+// It first checks for a type-specific handler, then falls back to build system handlers.
+func GetBuildFunc(moduleType string) BuildFunc {
+	// First, check for type-specific handler
+	if fn, exists := buildFunctions[moduleType]; exists {
+		return fn
+	}
+
+	// Fall back to build system handler from type registry
+	cfg := config.Global()
+	if cfg != nil && cfg.ModuleTypes != nil {
+		buildSystem := cfg.ModuleTypes.GetBuildSystem(moduleType)
+		if fn, exists := buildSystemHandlers[buildSystem]; exists {
+			return fn
+		}
+	}
+
+	// Ultimate fallback: no-op build
+	return buildNoop
+}
+
+// buildGoDefault is the default build handler for Go modules without specific handlers.
+// Runs go generate and validates the module compiles.
+func buildGoDefault(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	logln(logWriter, "\n=== Building Go module: %s (type: %s) ===", module.Moniker, module.Type)
+
+	if opts.TidyFirst {
+		logln(logWriter, "Running: go mod tidy")
+		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			return exitCode
+		}
+	}
+
+	logln(logWriter, "Running: go generate ./...")
+	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "generate", "./..."); exitCode != 0 {
+		return exitCode
+	}
+
+	logln(logWriter, "Running: go build ./...")
+	return RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./...")
+}
+
+// buildMkDocsDefault is the default build handler for MkDocs modules.
+func buildMkDocsDefault(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	logln(logWriter, "\n=== Building MkDocs module: %s (type: %s) ===", module.Moniker, module.Type)
+	logln(logWriter, "ℹ️  MkDocs modules are built via mkdocs build command")
+	return 0
+}
+
+// buildDockerDefault is the default build handler for Docker modules.
+func buildDockerDefault(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	logln(logWriter, "\n=== Building Docker module: %s (type: %s) ===", module.Moniker, module.Type)
+	logln(logWriter, "ℹ️  Docker modules are built via docker build command")
+	return 0
+}
+
+// buildVSCodeDefault is the default build handler for VS Code modules.
+func buildVSCodeDefault(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	logln(logWriter, "\n=== Building VS Code module: %s (type: %s) ===", module.Moniker, module.Type)
+	logln(logWriter, "ℹ️  VS Code extensions are built via vsce package command")
+	return 0
+}
+
+// buildNoop is a no-op build function for modules that don't require building.
+func buildNoop(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	logln(logWriter, "\n=== %s (type: %s) ===", module.Moniker, module.Type)
+	logln(logWriter, "ℹ️  No build step required for this module type")
+	return 0
 }
 
 // buildGoCLI builds a Cobra CLI binary (Pattern A)

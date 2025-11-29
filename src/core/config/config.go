@@ -13,12 +13,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// EACConfigRelPath is the relative path from repo root to EAC repository configuration.
-const EACConfigRelPath = ".r2r/eac/repository"
+// EAC configuration path constants (local to avoid import cycle with repository)
+const (
+	r2rDir              = ".r2r"
+	eacDir              = "eac"
+	repositoryConfigDir = "repository"
+
+	// EACConfigRelPath is the relative path from repo root to EAC repository configuration.
+	// Note: Duplicated here to avoid import cycle with repository package.
+	EACConfigRelPath = r2rDir + "/" + eacDir + "/" + repositoryConfigDir
+)
 
 // Config file names
 const (
 	ModulesFileName         = "modules.yml"
+	ModuleTypesFileName     = "module-types.yml"
 	EnvironmentsFileName    = "environments.yml"
 	TestingTagsFileName     = "testing-tags.yml"
 	TestingTaxonomyFileName = "testing-taxonomy.yml"
@@ -33,6 +42,7 @@ type EACConfig struct {
 
 	// Loaded configurations
 	Modules         *ModulesConfig
+	ModuleTypes     *ModuleTypesConfig
 	Environments    *EnvironmentsConfig
 	TestingTags     *TestingTagsConfig
 	TestingTaxonomy *TestingTaxonomyConfig
@@ -74,7 +84,7 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		}
 	}
 
-	configRoot := filepath.Join(repoRoot, EACConfigRelPath)
+	configRoot := filepath.Join(repoRoot, r2rDir, eacDir, repositoryConfigDir)
 
 	cfg := &EACConfig{
 		RepoRoot:   repoRoot,
@@ -99,6 +109,15 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 
 	if err := c.LoadModules(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("modules: %w", err))
+	}
+
+	if err := c.LoadModuleTypes(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("module-types: %w", err))
+	}
+
+	// Apply type-specific defaults after both modules and types are loaded
+	if c.Modules != nil {
+		c.Modules.ApplyTypeDefaults(c.ModuleTypes)
 	}
 
 	if err := c.LoadEnvironments(validateSchemas); err != nil {
@@ -140,6 +159,29 @@ func (c *EACConfig) LoadModules(validateSchema bool) error {
 
 	cfg.applyDefaults()
 	c.Modules = &cfg
+	return nil
+}
+
+// LoadModuleTypes loads the module-types configuration
+func (c *EACConfig) LoadModuleTypes(validateSchema bool) error {
+	data, err := c.readConfigFile(ModuleTypesFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaModuleTypes, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg ModuleTypesConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", ModuleTypesFileName, err)
+	}
+
+	cfg.buildTypeMap()
+	c.ModuleTypes = &cfg
 	return nil
 }
 
@@ -229,7 +271,7 @@ func (c *EACConfig) readConfigFile(filename string) ([]byte, error) {
 // validateSchema validates data against a JSON schema
 func (c *EACConfig) validateSchema(schemaType schema.SchemaType, data []byte) error {
 	c.validatorOnce.Do(func() {
-		c.validator, c.validatorErr = schema.NewValidator()
+		c.validator, c.validatorErr = schema.NewValidator(c.RepoRoot)
 	})
 
 	if c.validatorErr != nil {
@@ -247,6 +289,13 @@ func (c *EACConfig) ValidateAll() error {
 		data, _ := c.readConfigFile(ModulesFileName)
 		if err := c.validateSchema(schema.SchemaModules, data); err != nil {
 			errs = append(errs, fmt.Errorf("modules: %w", err))
+		}
+	}
+
+	if c.ModuleTypes != nil {
+		data, _ := c.readConfigFile(ModuleTypesFileName)
+		if err := c.validateSchema(schema.SchemaModuleTypes, data); err != nil {
+			errs = append(errs, fmt.Errorf("module-types: %w", err))
 		}
 	}
 

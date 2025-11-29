@@ -85,7 +85,7 @@ func listAvailableModules() ([]moduleInfo, error) {
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	specsDir := filepath.Join(repoRoot, SpecsDirectory)
+	specsDir := repository.SpecsPath(repoRoot, "")
 
 	// Check if specs directory exists
 	if _, err := os.Stat(specsDir); os.IsNotExist(err) {
@@ -105,13 +105,13 @@ func listAvailableModules() ([]moduleInfo, error) {
 		}
 
 		moduleName := entry.Name()
-		workspacePath := filepath.Join(specsDir, moduleName, DesignDirectory, WorkspaceFileName)
+		workspacePath := repository.WorkspaceDSLPath(repoRoot, moduleName)
 
 		// Check if workspace.dsl exists
 		if _, err := os.Stat(workspacePath); err == nil {
 			modules = append(modules, moduleInfo{
 				Name: moduleName,
-				Path: filepath.Join(specsDir, moduleName, DesignDirectory),
+				Path: repository.DesignPath(repoRoot, moduleName),
 			})
 		}
 	}
@@ -140,7 +140,7 @@ func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*Validatio
 	}
 
 	// Construct workspace path: specs/<module>/.design/workspace.dsl
-	workspacePath := filepath.Join(repoRoot, SpecsDirectory, moduleName, DesignDirectory, WorkspaceFileName)
+	workspacePath := repository.WorkspaceDSLPath(repoRoot, moduleName)
 
 	// Verify workspace file exists
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {

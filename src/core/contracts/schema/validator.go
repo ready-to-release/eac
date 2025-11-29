@@ -2,39 +2,43 @@
 package schema
 
 import (
-	"embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 )
-
-//go:embed schemas/*.json
-var schemasFS embed.FS
 
 // SchemaType represents the type of schema to validate against
 type SchemaType string
 
 const (
 	SchemaModules         SchemaType = "modules"
+	SchemaModuleTypes     SchemaType = "module-types"
 	SchemaEnvironments    SchemaType = "environments"
 	SchemaTestingTags     SchemaType = "testing-tags"
 	SchemaTestingTaxonomy SchemaType = "testing-taxonomy"
 )
 
-// schemaFiles maps schema types to their embedded file paths
-var schemaFiles = map[SchemaType]string{
-	SchemaModules:         "schemas/modules.schema.json",
-	SchemaEnvironments:    "schemas/environments.schema.json",
-	SchemaTestingTags:     "schemas/testing-tags.schema.json",
-	SchemaTestingTaxonomy: "schemas/testing-taxonomy.schema.json",
+// schemaFileNames maps schema types to their file names (without path)
+var schemaFileNames = map[SchemaType]string{
+	SchemaModules:         "modules.schema.json",
+	SchemaModuleTypes:     "module-types.schema.json",
+	SchemaEnvironments:    "environments.schema.json",
+	SchemaTestingTags:     "testing-tags.schema.json",
+	SchemaTestingTaxonomy: "testing-taxonomy.schema.json",
 }
+
+// ContractVersion is the schema contract version
+const ContractVersion = "0.1.0"
 
 // Validator provides JSON Schema validation for repository configs
 type Validator struct {
-	compiler *jsonschema.Compiler
-	schemas  map[SchemaType]*jsonschema.Schema
+	compiler      *jsonschema.Compiler
+	schemas       map[SchemaType]*jsonschema.Schema
+	workspaceRoot string
 }
 
 // ValidationError represents a schema validation error
@@ -52,20 +56,27 @@ func (e *ValidationError) Error() string {
 	return fmt.Sprintf("schema validation failed for %s at %s: %s", e.SchemaType, e.Path, e.Message)
 }
 
-// NewValidator creates a new schema validator with all schemas pre-compiled
-func NewValidator() (*Validator, error) {
+// NewValidator creates a new schema validator with all schemas loaded from the repository
+// workspaceRoot should be the repository root directory
+func NewValidator(workspaceRoot string) (*Validator, error) {
 	c := jsonschema.NewCompiler()
 
 	v := &Validator{
-		compiler: c,
-		schemas:  make(map[SchemaType]*jsonschema.Schema),
+		compiler:      c,
+		schemas:       make(map[SchemaType]*jsonschema.Schema),
+		workspaceRoot: workspaceRoot,
 	}
 
-	// Load and compile all schemas
-	for schemaType, filePath := range schemaFiles {
-		data, err := schemasFS.ReadFile(filePath)
+	// Build the schema directory path: contracts/src-core/<version>/
+	schemaDir := filepath.Join(workspaceRoot, "contracts", "src-core", ContractVersion)
+
+	// Load and compile all schemas from the repository
+	for schemaType, fileName := range schemaFileNames {
+		filePath := filepath.Join(schemaDir, fileName)
+
+		data, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read embedded schema %s: %w", filePath, err)
+			return nil, fmt.Errorf("failed to read schema %s: %w", filePath, err)
 		}
 
 		// Parse the schema JSON
@@ -75,7 +86,7 @@ func NewValidator() (*Validator, error) {
 		}
 
 		// Add schema to compiler
-		schemaURL := fmt.Sprintf("file:///%s", filePath)
+		schemaURL := fmt.Sprintf("file:///%s", fileName)
 		if err := c.AddResource(schemaURL, schemaDoc); err != nil {
 			return nil, fmt.Errorf("failed to add schema resource %s: %w", filePath, err)
 		}
@@ -194,8 +205,14 @@ func extractValidationDetails(err error) []string {
 func GetSchemaTypes() []SchemaType {
 	return []SchemaType{
 		SchemaModules,
+		SchemaModuleTypes,
 		SchemaEnvironments,
 		SchemaTestingTags,
 		SchemaTestingTaxonomy,
 	}
+}
+
+// GetSchemaPath returns the path to the schema directory
+func (v *Validator) GetSchemaPath() string {
+	return filepath.Join(v.workspaceRoot, "contracts", "src-core", ContractVersion)
 }

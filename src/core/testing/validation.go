@@ -12,14 +12,34 @@ import (
 // NOTE: ValidTags map has been removed - validation now uses tag contract
 // See LoadTagContract() and IsValidTag() for contract-based validation
 
-// LevelTags are taxonomy level tags
-var LevelTags = []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
-
-// VerificationTags are verification type tags
-var VerificationTags = []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
-
 // ValidTestTypes are the allowed test types
 var ValidTestTypes = []string{"gotest", "godog"}
+
+// Hardcoded fallbacks used when config cannot be loaded
+var levelTagsFallback = []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
+var verificationTagsFallback = []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
+
+// GetLevelTags returns taxonomy level tags from config, with fallback
+func GetLevelTags() []string {
+	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
+		tags := cfg.TestingTags.GetTaxonomyLevelTags()
+		if len(tags) > 0 {
+			return tags
+		}
+	}
+	return levelTagsFallback
+}
+
+// GetVerificationTags returns verification type tags from config, with fallback
+func GetVerificationTags() []string {
+	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
+		tags := cfg.TestingTags.GetVerificationTags()
+		if len(tags) > 0 {
+			return tags
+		}
+	}
+	return verificationTagsFallback
+}
 
 // ValidateTags checks if tags are valid and don't conflict
 func ValidateTags(tags []string) []string {
@@ -34,8 +54,9 @@ func ValidateTags(tags []string) []string {
 
 	// Check for multiple level tags
 	levelCount := 0
+	levelTags := GetLevelTags()
 	for _, tag := range tags {
-		if contains(LevelTags, tag) {
+		if contains(levelTags, tag) {
 			levelCount++
 		}
 	}
@@ -45,8 +66,9 @@ func ValidateTags(tags []string) []string {
 
 	// Check for multiple verification tags
 	verificationCount := 0
+	verificationTags := GetVerificationTags()
 	for _, tag := range tags {
-		if contains(VerificationTags, tag) {
+		if contains(verificationTags, tag) {
 			verificationCount++
 		}
 	}
@@ -83,31 +105,33 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 	}
 
 	// CRITICAL: Must have exactly ONE level tag (except @Manual tests)
-	levelTags := []string{}
+	foundLevelTags := []string{}
+	allLevelTags := GetLevelTags()
 	for _, tag := range test.Tags {
-		if contains(LevelTags, tag) {
-			levelTags = append(levelTags, tag)
+		if contains(allLevelTags, tag) {
+			foundLevelTags = append(foundLevelTags, tag)
 		}
 	}
 
 	// @Manual tests are exempt from L-tag requirements
 	if !test.IsManual {
-		if len(levelTags) == 0 {
+		if len(foundLevelTags) == 0 {
 			errors = append(errors, fmt.Sprintf("test '%s' has NO level tag (must have exactly one of @L0-@L4)", test.TestName))
-		} else if len(levelTags) > 1 {
-			errors = append(errors, fmt.Sprintf("test '%s' has MULTIPLE level tags %v (must have exactly one)", test.TestName, levelTags))
+		} else if len(foundLevelTags) > 1 {
+			errors = append(errors, fmt.Sprintf("test '%s' has MULTIPLE level tags %v (must have exactly one)", test.TestName, foundLevelTags))
 		}
 	}
 
 	// Must have at least ONE verification tag
-	verificationTags := []string{}
+	foundVerificationTags := []string{}
+	allVerificationTags := GetVerificationTags()
 	for _, tag := range test.Tags {
-		if contains(VerificationTags, tag) {
-			verificationTags = append(verificationTags, tag)
+		if contains(allVerificationTags, tag) {
+			foundVerificationTags = append(foundVerificationTags, tag)
 		}
 	}
 
-	if len(verificationTags) == 0 {
+	if len(foundVerificationTags) == 0 {
 		errors = append(errors, fmt.Sprintf("test '%s' has NO verification tag (must have one of @ov/@iv/@pv/@piv/@ppv)", test.TestName))
 	}
 
@@ -143,8 +167,8 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 
 	// Validate: @Manual tests MUST NOT have any taxonomy level tags (L0-L4)
 	// Manual tests are outside the automated taxonomy - they require human execution
-	if test.IsManual && len(levelTags) > 0 {
-		errors = append(errors, fmt.Sprintf("test '%s' is @Manual but has taxonomy level tag %v (@Manual is mutually exclusive with L0-L4)", test.TestName, levelTags))
+	if test.IsManual && len(foundLevelTags) > 0 {
+		errors = append(errors, fmt.Sprintf("test '%s' is @Manual but has taxonomy level tag %v (@Manual is mutually exclusive with L0-L4)", test.TestName, foundLevelTags))
 	}
 
 	// Validate: @gxp tests must have risk controls

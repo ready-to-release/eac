@@ -10,6 +10,8 @@ import (
 
 // EACConfigRelPath is the relative path from repo root to EAC repository configuration.
 // This is where repository-specific EAC contracts are stored (modules, tags, environments).
+// Note: This constant is duplicated here to avoid import cycle with repository package.
+// The canonical definition is in repository.EACConfigRelPath.
 const EACConfigRelPath = ".r2r/eac/repository"
 
 // Loader handles loading contract YAML files

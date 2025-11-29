@@ -126,11 +126,15 @@ func (c *ModuleChecker) IsAvailable() bool {
 
 	case "repository-root":
 		// Repository root module: check if repository tests directory exists
+		testImplPath := module.GetTestImplementationPath()
+		if testImplPath == "" {
+			return false
+		}
 		repoRoot, err := repository.GetRepositoryRoot("")
 		if err != nil {
 			return false
 		}
-		testsPath := filepath.Join(repoRoot, "src", "specs", "impl", "repository")
+		testsPath := filepath.Join(repoRoot, testImplPath)
 		_, err = os.Stat(testsPath)
 		return err == nil
 
@@ -202,11 +206,15 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 
 	case "repository-root":
 		// Repository root module: return tests path
+		testImplPath := module.GetTestImplementationPath()
+		if testImplPath == "" {
+			return "", fmt.Errorf("module '%s' has no test_impl path defined", module.Moniker)
+		}
 		repoRoot, err := repository.GetRepositoryRoot("")
 		if err != nil {
 			return "", err
 		}
-		testsPath := filepath.Join(repoRoot, "src", "specs", "impl", "repository")
+		testsPath := filepath.Join(repoRoot, testImplPath)
 		return fmt.Sprintf("Repository validation tests: %s", testsPath), nil
 
 	case "scripts":
@@ -246,7 +254,8 @@ func (c *ModuleChecker) loadModuleContract() (*modules.ModuleContract, error) {
 }
 
 // getExecutablePath returns the full path to the module's executable
-// For multi-platform builds, looks for platform-specific binaries (e.g., windows-r2r-cli.exe)
+// For multi-platform builds, looks for platform-specific binaries using metadata from module contract.
+// Metadata keys: exe-linux, exe-windows, exe-darwin-amd64, exe-darwin-arm64
 func (c *ModuleChecker) getExecutablePath(module *modules.ModuleContract) string {
 	// Find repository root using the centralized utility
 	repoRoot, err := repository.GetRepositoryRoot("")
@@ -254,56 +263,64 @@ func (c *ModuleChecker) getExecutablePath(module *modules.ModuleContract) string
 		return ""
 	}
 
-	// Determine executable name based on module moniker and current OS
-	var baseName string
-	var ext string
+	// Try to get executable name from module metadata
+	exeName := c.getExecutableNameFromMetadata(module)
+	buildDir := repository.BuildOutputPath(repoRoot, c.moniker)
 
-	switch c.moniker {
-	case "src-cli":
-		baseName = "r2r"
-	case "src-commands":
-		baseName = "eac"
-	default:
-		// For other modules, assume executable name matches moniker
-		baseName = c.moniker
+	if exeName != "" {
+		// Use metadata-defined executable name
+		exePath := filepath.Join(buildDir, exeName)
+		if _, err := os.Stat(exePath); err == nil {
+			return exePath
+		}
 	}
 
-	// Add OS-specific extension
+	// Fallback: derive executable name from moniker
+	var ext string
 	if runtime.GOOS == "windows" {
 		ext = ".exe"
 	}
 
-	// Try platform-specific binary first (format: r2r-windows.exe, r2r-linux, r2r-darwin-amd64)
-	platformBinary := fmt.Sprintf("%s-%s%s", baseName, runtime.GOOS, ext)
-	platformPath := filepath.Join(repoRoot, "out", "build", c.moniker, platformBinary)
+	// Try platform-specific binary (format: {moniker}-{os}{ext})
+	platformBinary := fmt.Sprintf("%s-%s%s", c.moniker, runtime.GOOS, ext)
+	platformPath := filepath.Join(buildDir, platformBinary)
 	if _, err := os.Stat(platformPath); err == nil {
 		return platformPath
 	}
 
 	// Try architecture-specific variants for darwin (darwin-amd64, darwin-arm64)
 	if runtime.GOOS == "darwin" {
-		archBinary := fmt.Sprintf("%s-%s-%s", baseName, runtime.GOOS, runtime.GOARCH)
-		archPath := filepath.Join(repoRoot, "out", "build", c.moniker, archBinary)
+		archBinary := fmt.Sprintf("%s-%s-%s", c.moniker, runtime.GOOS, runtime.GOARCH)
+		archPath := filepath.Join(buildDir, archBinary)
 		if _, err := os.Stat(archPath); err == nil {
 			return archPath
 		}
 	}
 
-	// Fallback to legacy format for backward compatibility (r2r-cli.exe, r2r-cli)
-	// Also try old platform-specific format: windows-r2r-cli.exe, linux-r2r-cli
-	legacyBinary := baseName + ext
-	legacyPath := filepath.Join(repoRoot, "out", "build", c.moniker, legacyBinary)
-	if _, err := os.Stat(legacyPath); err == nil {
-		return legacyPath
-	}
-
-	// Try old platform-prefix format (windows-r2r-cli.exe, linux-r2r-cli, darwin-r2r-cli)
-	oldPlatformBinary := fmt.Sprintf("%s-%s%s", runtime.GOOS, baseName, ext)
-	oldPlatformPath := filepath.Join(repoRoot, "out", "build", c.moniker, oldPlatformBinary)
-	if _, err := os.Stat(oldPlatformPath); err == nil {
-		return oldPlatformPath
-	}
-
 	// Return the primary expected path (even if it doesn't exist, for error messages)
 	return platformPath
+}
+
+// getExecutableNameFromMetadata looks up the executable name from module metadata.
+// Uses keys like exe-linux, exe-windows, exe-darwin-amd64, exe-darwin-arm64.
+func (c *ModuleChecker) getExecutableNameFromMetadata(module *modules.ModuleContract) string {
+	if module.Metadata == nil {
+		return ""
+	}
+
+	// For darwin, try architecture-specific key first (exe-darwin-amd64, exe-darwin-arm64)
+	if runtime.GOOS == "darwin" {
+		archKey := fmt.Sprintf("exe-%s-%s", runtime.GOOS, runtime.GOARCH)
+		if name, ok := module.Metadata[archKey]; ok {
+			return name
+		}
+	}
+
+	// Try OS-specific key (exe-linux, exe-windows, exe-darwin)
+	osKey := fmt.Sprintf("exe-%s", runtime.GOOS)
+	if name, ok := module.Metadata[osKey]; ok {
+		return name
+	}
+
+	return ""
 }

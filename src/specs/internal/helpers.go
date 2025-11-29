@@ -20,6 +20,30 @@ import (
 )
 
 // ============================================================================
+// Asset Loading Helpers
+// ============================================================================
+
+// LoadAsset loads content from an asset file in src/specs/impl/src-commands/assets/.
+// The assetPath is relative to the assets directory (e.g., "specs/valid-spec.txt").
+func LoadAsset(ctx *TestContext, assetPath string) (string, error) {
+	fullPath := filepath.Join(ctx.OriginalRepoRoot, "src", "specs", "impl", "src-commands", "assets", assetPath)
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load asset %s: %w", assetPath, err)
+	}
+	return string(data), nil
+}
+
+// MustLoadAsset loads an asset and panics on failure (for use in test setup).
+func MustLoadAsset(ctx *TestContext, assetPath string) string {
+	content, err := LoadAsset(ctx, assetPath)
+	if err != nil {
+		panic(err)
+	}
+	return content
+}
+
+// ============================================================================
 // Output Verification Helpers
 // ============================================================================
 
@@ -160,9 +184,26 @@ func CreateDirectory(ctx *TestContext, dir string) error {
 	return os.MkdirAll(fullPath, 0755)
 }
 
-// RemoveAll removes a file or directory, respecting isolation context.
+// RemoveAll removes a file or directory.
+// SAFETY: This ONLY works in isolated test directories to prevent accidental data loss.
 func RemoveAll(ctx *TestContext, path string) error {
+	// CRITICAL: Only allow this in isolated test environments
+	if ctx.IsolatedDir == "" {
+		return fmt.Errorf("SAFETY: RemoveAll can only be used in isolated test environments")
+	}
+
 	fullPath := ResolvePath(ctx, path)
+
+	// Verify the path is within the isolated directory
+	if !strings.HasPrefix(fullPath, ctx.IsolatedDir) {
+		return fmt.Errorf("SAFETY: path %q is not within isolated dir %q", fullPath, ctx.IsolatedDir)
+	}
+
+	// Don't allow removing the isolated dir itself
+	if fullPath == ctx.IsolatedDir {
+		return fmt.Errorf("SAFETY: cannot remove the isolated directory itself")
+	}
+
 	return os.RemoveAll(fullPath)
 }
 
@@ -201,11 +242,89 @@ func CustomPromptWasUsed(ctx *TestContext, debugSubdir string) error {
 // Git Helpers
 // ============================================================================
 
-// IsGitRepository checks if the current directory is a git repository.
+// IsGitRepository ensures we're operating in a git repository context.
+// When in isolation, this creates a minimal .git directory to satisfy commands
+// that check for git repository presence.
+// When not in isolation, checks OriginalRepoRoot (the actual repo).
 func IsGitRepository(ctx *TestContext) error {
-	gitDir := filepath.Join(ResolvePath(ctx, "."), ".git")
-	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
-		return fmt.Errorf("not a git repository: .git directory not found")
+	var gitDir string
+	if ctx.IsolatedDir != "" {
+		// In isolation - create .git if it doesn't exist
+		gitDir = filepath.Join(ctx.IsolatedDir, ".git")
+		if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+			// Create minimal .git directory for isolated tests
+			if err := os.MkdirAll(gitDir, 0755); err != nil {
+				return fmt.Errorf("failed to create .git directory in isolation: %w", err)
+			}
+			// Create minimal git config file
+			configPath := filepath.Join(gitDir, "config")
+			configContent := "[core]\n\trepositoryformatversion = 0\n\tbare = false\n"
+			if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+				return fmt.Errorf("failed to create .git/config: %w", err)
+			}
+			// Create HEAD file pointing to main
+			headPath := filepath.Join(gitDir, "HEAD")
+			if err := os.WriteFile(headPath, []byte("ref: refs/heads/main\n"), 0644); err != nil {
+				return fmt.Errorf("failed to create .git/HEAD: %w", err)
+			}
+		}
+	} else {
+		// Not in isolation - check the original repo root
+		gitDir = filepath.Join(ctx.OriginalRepoRoot, ".git")
+		if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+			return fmt.Errorf("not a git repository: .git directory not found")
+		}
 	}
 	return nil
+}
+
+// EnsureNotGitRepository ensures we're not in a git repository.
+// SAFETY: This ONLY works in isolated test directories and only removes
+// minimal .git dirs created by IsGitRepository (with only config/HEAD).
+func EnsureNotGitRepository(ctx *TestContext) error {
+	// CRITICAL: Only allow this in isolated test environments
+	if ctx.IsolatedDir == "" {
+		return fmt.Errorf("SAFETY: EnsureNotGitRepository can only be used in isolated test environments")
+	}
+
+	// Double-check we're actually in the isolated directory
+	resolvedPath := ResolvePath(ctx, ".")
+	if resolvedPath != ctx.IsolatedDir {
+		return fmt.Errorf("SAFETY: resolved path %q does not match isolated dir %q", resolvedPath, ctx.IsolatedDir)
+	}
+
+	gitDir := filepath.Join(ctx.IsolatedDir, ".git")
+	info, err := os.Stat(gitDir)
+	if os.IsNotExist(err) {
+		return nil // Already not a git repo
+	}
+	if err != nil {
+		return err
+	}
+
+	// Only remove if it's a minimal test .git directory
+	if info.IsDir() {
+		entries, err := os.ReadDir(gitDir)
+		if err != nil {
+			return err
+		}
+		// Allow removal if empty OR only has config/HEAD (test-created minimal .git)
+		if len(entries) == 0 {
+			return os.Remove(gitDir)
+		}
+		// Check if only config and HEAD exist (test-created)
+		isTestGit := len(entries) <= 2
+		for _, e := range entries {
+			if e.Name() != "config" && e.Name() != "HEAD" {
+				isTestGit = false
+				break
+			}
+		}
+		if isTestGit {
+			return os.RemoveAll(gitDir) // Safe to remove test-created .git
+		}
+		return fmt.Errorf("SAFETY: .git directory has %d entries and appears to be a real git repo - refusing to remove", len(entries))
+	}
+
+	return fmt.Errorf("SAFETY: .git is not a directory")
 }

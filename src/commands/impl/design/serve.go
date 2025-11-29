@@ -12,7 +12,6 @@ package design
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	design "github.com/ready-to-release/eac/src/commands/impl/design/internal"
@@ -93,7 +92,7 @@ func DesignServe() int {
 	module = mod.Moniker
 
 	// Check if workspace exists
-	workspacePath := filepath.Join(repoRoot, "specs", module, ".design", "workspace.dsl")
+	workspacePath := repository.WorkspaceDSLPath(repoRoot, module)
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		fmt.Printf("❌ Workspace not found: %s\n", workspacePath)
 		fmt.Printf("\n💡 Create one first with:\n")

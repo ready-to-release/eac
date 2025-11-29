@@ -180,7 +180,7 @@ func (suite *TestSuite) BuildGodogTagFilter() string {
 // SelectionStats contains statistics about test selection
 type SelectionStats struct {
 	TotalDiscovered  int // Total tests discovered
-	Ignored          int // Tests tagged with @skip:<reason>
+	Skipped          int // Tests tagged with @skip:<reason>
 	NotMatchingSuite int // Tests that don't match suite selectors
 	Selected         int // Tests selected for the suite
 }
@@ -193,9 +193,9 @@ func (suite *TestSuite) SelectTestsWithStats(allTests []TestReference) ([]TestRe
 	}
 
 	for _, test := range allTests {
-		// Filter out ignored tests FIRST (before any other selection)
+		// Filter out skipped tests FIRST (before any other selection)
 		if test.IsIgnored {
-			stats.Ignored++
+			stats.Skipped++
 			continue
 		}
 
@@ -209,8 +209,8 @@ func (suite *TestSuite) SelectTestsWithStats(allTests []TestReference) ([]TestRe
 	stats.Selected = len(selected)
 
 	// Log skipped tests if any
-	if stats.Ignored > 0 {
-		fmt.Printf("INFO: %d tests skipped (tagged with @skip:<reason>)\n", stats.Ignored)
+	if stats.Skipped > 0 {
+		fmt.Printf("INFO: %d tests skipped (tagged with @skip:<reason>)\n", stats.Skipped)
 	}
 
 	return selected, stats
@@ -269,12 +269,13 @@ func matchesSelector(tags []string, selector TagSelector) bool {
 // GetSystemDependencies extracts all @deps:* tags from tests (excludes @depm:* and OS platform tags)
 func GetSystemDependencies(tests []TestReference) []string {
 	depsMap := make(map[string]bool)
+	osPlatformTagsFull := GetOSPlatformTagsFull()
 
 	for _, test := range tests {
 		for _, tag := range test.Tags {
 			// Only include @deps: tags, not @depm: (module dependencies)
 			// Also exclude OS platform tags (handled by OS filtering)
-			if strings.HasPrefix(tag, "@deps:") && !OsPlatformTagsFull[tag] {
+			if strings.HasPrefix(tag, "@deps:") && !osPlatformTagsFull[tag] {
 				depsMap[tag] = true
 			}
 		}

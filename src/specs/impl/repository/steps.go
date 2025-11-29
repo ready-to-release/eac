@@ -20,10 +20,12 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Create repository-specific context that also updates the shared context
 	repoCtx := &repositoryContext{sharedCtx: ctx}
 
+	// Register module isolation steps
+	registerModuleIsolationSteps(sc, ctx)
+
 	// Given steps
-	sc.Step(`^the repository root exists$`, func() error {
-		return repoCtx.repositoryRootExists()
-	})
+	// Note: "the repository root exists" is registered in common steps (internal/steps.go)
+	// Repository context is initialized lazily via ensureRepoRoot() when needed
 	sc.Step(`^I discover all Go modules in the repository using module contracts$`, func() error {
 		return repoCtx.discoverAllGoModulesUsingContracts()
 	})
@@ -173,6 +175,20 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^I should not see any undefined tag errors$`, func() error {
 		return repoCtx.shouldNotSeeBuildErrors() // Reuses build error check
 	})
+
+	// Build tags in step files validation
+	sc.Step(`^I discover all godog_test\.go files in "([^"]*)"$`, func(dir string) error {
+		return repoCtx.discoverGodogTestFiles(dir)
+	})
+	sc.Step(`^I check each file for Go build tags$`, func() error {
+		return repoCtx.checkFilesForBuildTags()
+	})
+	sc.Step(`^no files should have "([^"]*)" directives$`, func(directive string) error {
+		return repoCtx.noFilesShouldHaveDirective(directive)
+	})
+	sc.Step(`^if any files have build tags, I should see the file path and the tag$`, func() error {
+		return repoCtx.ifBuildTagsFoundShowDetails()
+	})
 }
 
 // repositoryContext holds state for repository validation scenarios.
@@ -203,6 +219,10 @@ type repositoryContext struct {
 	// File ownership validation
 	moduleFiles       []string
 	multiOwnershipMap map[string][]string // file -> list of owning modules
+
+	// Build tags validation
+	godogTestFiles   []string
+	filesWithBuildTags map[string]string // file -> build tag found
 }
 
 func (c *repositoryContext) ensureRepoRoot() error {
@@ -212,6 +232,14 @@ func (c *repositoryContext) ensureRepoRoot() error {
 			return fmt.Errorf("failed to get repository root: %w", err)
 		}
 		c.repoRoot = repoRoot
+		// Initialize collections
+		c.discoveredModules = []string{}
+		c.tidyResults = make(map[string]string)
+		c.failedModules = []string{}
+		c.markdownFiles = []string{}
+		c.markdownErrors = make(map[string][]string)
+		c.featureFiles = []string{}
+		c.tagConflicts = []string{}
 	}
 	return nil
 }
@@ -767,6 +795,82 @@ func (c *repositoryContext) noFilesShouldBelongToMultipleModules() error {
 
 func (c *repositoryContext) ifMultiOwnershipShowPathsAndModules() error {
 	// Passive assertion - error in noFilesShouldBelongToMultipleModules provides details
+	return nil
+}
+
+// ============================================================================
+// Build Tags Validation Steps
+// ============================================================================
+
+func (c *repositoryContext) discoverGodogTestFiles(dir string) error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	c.godogTestFiles = []string{}
+	c.filesWithBuildTags = make(map[string]string)
+
+	searchDir := filepath.Join(c.repoRoot, dir)
+	return filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if info.Name() == "godog_test.go" {
+			relPath, _ := filepath.Rel(c.repoRoot, path)
+			c.godogTestFiles = append(c.godogTestFiles, relPath)
+		}
+		return nil
+	})
+}
+
+func (c *repositoryContext) checkFilesForBuildTags() error {
+	for _, relPath := range c.godogTestFiles {
+		fullPath := filepath.Join(c.repoRoot, relPath)
+		content, err := os.ReadFile(fullPath)
+		if err != nil {
+			continue
+		}
+
+		lines := strings.Split(string(content), "\n")
+		// Check first 10 lines for build tags (they must appear before package declaration)
+		for i := 0; i < len(lines) && i < 10; i++ {
+			line := strings.TrimSpace(lines[i])
+			if strings.HasPrefix(line, "//go:build ") {
+				c.filesWithBuildTags[relPath] = line
+				break
+			}
+			if strings.HasPrefix(line, "// +build ") {
+				c.filesWithBuildTags[relPath] = line
+				break
+			}
+			// Stop if we hit the package declaration
+			if strings.HasPrefix(line, "package ") {
+				break
+			}
+		}
+	}
+	return nil
+}
+
+func (c *repositoryContext) noFilesShouldHaveDirective(directive string) error {
+	var violations []string
+	for file, tag := range c.filesWithBuildTags {
+		if strings.Contains(tag, directive) {
+			violations = append(violations, fmt.Sprintf("  %s: %s", file, tag))
+		}
+	}
+	if len(violations) > 0 {
+		return fmt.Errorf("found %d file(s) with %s directives:\n%s",
+			len(violations), directive, strings.Join(violations, "\n"))
+	}
+	return nil
+}
+
+func (c *repositoryContext) ifBuildTagsFoundShowDetails() error {
+	// Passive assertion - errors from noFilesShouldHaveDirective provide details
 	return nil
 }
 

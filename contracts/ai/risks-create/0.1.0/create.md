@@ -9,6 +9,7 @@ Your task is to parse a risk assessment report and extract structured data for c
 **Assessment File Path:** {{.AssessmentPath}}
 
 The assessment file contains:
+
 - Risk Assessment Report in markdown format
 - Identified risks with IDs (RISK-001, RISK-002, etc.)
 - Risk metadata (severity, impact, affected files, related specs)
@@ -42,11 +43,13 @@ Return a JSON array containing one object per risk. Each object must include:
 ## Field Specifications
 
 ### risk_id
+
 - **Format**: Exactly as appears in assessment (RISK-XXX)
 - **Required**: Yes
 - **Example**: "RISK-001"
 
 ### control_name
+
 - **Format**: kebab-case, descriptive, unique
 - **Required**: Yes
 - **Derivation**: Convert risk description to kebab-case
@@ -61,6 +64,7 @@ Return a JSON array containing one object per risk. Each object must include:
   - "session-timeout-control"
 
 ### domain
+
 - **Format**: Single domain name from approved list
 - **Required**: Yes
 - **Approved Domains**:
@@ -79,12 +83,14 @@ Return a JSON array containing one object per risk. Each object must include:
   4. Default to "application" if unclear
 
 ### severity
+
 - **Format**: Lowercase string
 - **Required**: Yes
 - **Valid Values**: "critical", "high", "medium", "low", "info"
 - **Source**: Extract from assessment risk entry
 
 ### description
+
 - **Format**: Clear, concise sentence describing the control requirement
 - **Required**: Yes
 - **Rules**:
@@ -95,30 +101,35 @@ Return a JSON array containing one object per risk. Each object must include:
 - **Example**: "Multi-factor authentication required for all privileged accounts"
 
 ### affected_files
+
 - **Format**: Array of file path strings
 - **Required**: Yes (can be empty array if not specified)
 - **Source**: Extract from "Affected Files" in assessment
 - **Example**: ["src/auth/handler.go", "src/auth/middleware.go"]
 
 ### related_specs
+
 - **Format**: Array of specification file path strings
 - **Required**: Yes (can be empty array if not specified)
 - **Source**: Extract from "Related Specs" in assessment
 - **Example**: ["specs/auth/authentication.feature"]
 
 ### impact
+
 - **Format**: String describing the potential impact
 - **Required**: Yes
 - **Source**: Extract from "Impact" in assessment
 - **Example**: "Unauthorized access to privileged operations"
 
 ### likelihood
+
 - **Format**: Lowercase string
 - **Required**: No (omit if not in assessment)
 - **Valid Values**: "high", "medium", "low"
 - **Source**: Extract from "Likelihood" in assessment
 
 ### recommendation
+
 - **Format**: String describing mitigation action
 - **Required**: No (omit if not in assessment)
 - **Source**: Extract from "Recommendation" in assessment
@@ -133,11 +144,12 @@ Find the "## Findings" section in the assessment report.
 ### Step 2: Extract Risks by Severity
 
 Process each severity subsection:
-- ### Critical Risks
-- ### High Risks
-- ### Medium Risks
-- ### Low Risks
-- ### Informational (optional)
+
+- \### Critical Risks
+- \### High Risks
+- \### Medium Risks
+- \### Low Risks
+- \### Informational (optional)
 
 ### Step 3: Parse Risk Entries
 
@@ -160,10 +172,12 @@ Extract all fields.
 Use this logic to select the domain:
 
 1. **Check Assessment Recommendation**
+
    - Look in "## Risk Controls Needed" section
    - If domain is suggested, use it
 
 2. **Keyword Mapping**
+
    - "auth", "login", "mfa", "session" → authentication
    - "permission", "rbac", "access control" → authorization
    - "api", "rate limit", "input validation" → api-security
@@ -174,6 +188,7 @@ Use this logic to select the domain:
    - "log", "monitor", "alert" → monitoring
 
 3. **File Path Analysis**
+
    - Files in auth/ → authentication
    - Files in api/ → api-security
    - Files in data/ → data-protection
@@ -193,6 +208,7 @@ Convert description to kebab-case:
 6. Validate uniqueness
 
 Examples:
+
 - "Multi-factor authentication required" → "multi-factor-authentication-control"
 - "API rate limiting enforcement" → "api-rate-limiting-control"
 - "Encrypt sensitive data at rest" → "encrypt-sensitive-data-at-rest-control"
@@ -200,6 +216,7 @@ Examples:
 ### Step 6: Validate and Return
 
 Ensure:
+
 - All required fields present
 - Domain from approved list
 - Severity in valid values
@@ -313,11 +330,13 @@ Return:
 ## Error Handling
 
 If assessment file cannot be parsed:
+
 - Return empty array: `[]`
 - Do not generate error messages
 - Do not include partial data
 
 If a risk is missing required fields:
+
 - Skip that risk
 - Continue processing remaining risks
 - Include only complete risk objects in output
