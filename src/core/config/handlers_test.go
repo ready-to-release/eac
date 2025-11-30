@@ -792,3 +792,435 @@ func TestHandlersConfig_Integration_AllHandlersValid(t *testing.T) {
 		})
 	}
 }
+
+// =============================================================================
+// Handler Flag Tests
+// =============================================================================
+
+func TestHandlersConfig_GetBuildFlags(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	t.Run("go handler has build flags", func(t *testing.T) {
+		flags := cfg.Handlers.GetBuildFlags("go")
+		assert.NotEmpty(t, flags, "go handler should have build flags")
+	})
+
+	t.Run("tidy flag exists", func(t *testing.T) {
+		flags := cfg.Handlers.GetBuildFlags("go")
+		var found bool
+		for _, f := range flags {
+			if f.Name == "tidy" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "should find tidy flag")
+	})
+
+	t.Run("compressed flag exists", func(t *testing.T) {
+		flags := cfg.Handlers.GetBuildFlags("go")
+		var found bool
+		for _, f := range flags {
+			if f.Name == "compressed" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "should find compressed flag")
+	})
+
+	t.Run("version flag exists", func(t *testing.T) {
+		flags := cfg.Handlers.GetBuildFlags("go")
+		var found bool
+		for _, f := range flags {
+			if f.Name == "version" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "should find version flag")
+	})
+
+	t.Run("unknown handler returns nil", func(t *testing.T) {
+		flags := cfg.Handlers.GetBuildFlags("nonexistent")
+		assert.Nil(t, flags)
+	})
+
+	t.Run("handler without flags returns empty", func(t *testing.T) {
+		flags := cfg.Handlers.GetBuildFlags("docker")
+		assert.Empty(t, flags)
+	})
+}
+
+func TestHandlersConfig_GetBuildFlags_NilConfig(t *testing.T) {
+	var cfg *HandlersConfig
+	flags := cfg.GetBuildFlags("go")
+	assert.Nil(t, flags)
+}
+
+func TestHandlersConfig_GetTestFlags(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	t.Run("go handler test has no flags", func(t *testing.T) {
+		flags := cfg.Handlers.GetTestFlags("go")
+		assert.Empty(t, flags, "go handler test should have no flags")
+	})
+}
+
+func TestHandlersConfig_GetTestFlags_NilConfig(t *testing.T) {
+	var cfg *HandlersConfig
+	flags := cfg.GetTestFlags("go")
+	assert.Nil(t, flags)
+}
+
+func TestHandlersConfig_GetBuildFlagByName(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	t.Run("find tidy flag", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByName("go", "tidy")
+		require.NotNil(t, flag)
+		assert.Equal(t, "tidy", flag.Name)
+		assert.Equal(t, "bool", flag.Type)
+		assert.Equal(t, "--tidy-first", flag.CLIPositive)
+		assert.Equal(t, "--no-tidy", flag.CLINegative)
+	})
+
+	t.Run("find version flag", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByName("go", "version")
+		require.NotNil(t, flag)
+		assert.Equal(t, "version", flag.Name)
+		assert.Equal(t, "string", flag.Type)
+		assert.Equal(t, "--version", flag.ValueFlag)
+	})
+
+	t.Run("unknown flag returns nil", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByName("go", "nonexistent")
+		assert.Nil(t, flag)
+	})
+
+	t.Run("unknown handler returns nil", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByName("nonexistent", "tidy")
+		assert.Nil(t, flag)
+	})
+}
+
+func TestHandlersConfig_GetBuildFlagByCLI(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	t.Run("find by positive flag", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByCLI("go", "--tidy-first")
+		require.NotNil(t, flag)
+		assert.Equal(t, "tidy", flag.Name)
+	})
+
+	t.Run("find by negative flag", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByCLI("go", "--no-tidy")
+		require.NotNil(t, flag)
+		assert.Equal(t, "tidy", flag.Name)
+	})
+
+	t.Run("find by value flag", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByCLI("go", "--version")
+		require.NotNil(t, flag)
+		assert.Equal(t, "version", flag.Name)
+	})
+
+	t.Run("unknown cli flag returns nil", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByCLI("go", "--unknown")
+		assert.Nil(t, flag)
+	})
+}
+
+func TestHandlerFlag_GetDefault(t *testing.T) {
+	t.Run("simple default", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "test",
+			Type:    "bool",
+			Default: true,
+		}
+		assert.Equal(t, true, flag.GetDefault(false))
+		assert.Equal(t, true, flag.GetDefault(true))
+	})
+
+	t.Run("CI-specific default", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "tidy",
+			Type:    "bool",
+			Default: true,
+			DefaultEnv: map[string]interface{}{
+				"CI": false,
+			},
+		}
+		assert.Equal(t, true, flag.GetDefault(false))  // local
+		assert.Equal(t, false, flag.GetDefault(true))  // CI
+	})
+
+	t.Run("local-specific default", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "verbose",
+			Type:    "bool",
+			Default: false,
+			DefaultEnv: map[string]interface{}{
+				"local": true,
+			},
+		}
+		assert.Equal(t, true, flag.GetDefault(false))  // local
+		assert.Equal(t, false, flag.GetDefault(true))  // CI (falls back to default)
+	})
+
+	t.Run("nil flag returns nil", func(t *testing.T) {
+		var flag *HandlerFlag
+		assert.Nil(t, flag.GetDefault(false))
+	})
+
+	t.Run("nil default returns nil", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name: "test",
+			Type: "bool",
+		}
+		assert.Nil(t, flag.GetDefault(false))
+	})
+}
+
+func TestHandlerFlag_GetBoolDefault(t *testing.T) {
+	t.Run("true default", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "test",
+			Type:    "bool",
+			Default: true,
+		}
+		assert.True(t, flag.GetBoolDefault(false))
+	})
+
+	t.Run("false default", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "test",
+			Type:    "bool",
+			Default: false,
+		}
+		assert.False(t, flag.GetBoolDefault(false))
+	})
+
+	t.Run("nil default returns false", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name: "test",
+			Type: "bool",
+		}
+		assert.False(t, flag.GetBoolDefault(false))
+	})
+
+	t.Run("non-bool default returns false", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "test",
+			Type:    "bool",
+			Default: "not-a-bool",
+		}
+		assert.False(t, flag.GetBoolDefault(false))
+	})
+
+	t.Run("with CI default", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "tidy",
+			Type:    "bool",
+			Default: true,
+			DefaultEnv: map[string]interface{}{
+				"CI": false,
+			},
+		}
+		assert.True(t, flag.GetBoolDefault(false))   // local
+		assert.False(t, flag.GetBoolDefault(true))   // CI
+	})
+}
+
+func TestHandlerFlag_GetStringDefault(t *testing.T) {
+	t.Run("string default", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "version",
+			Type:    "string",
+			Default: "1.0.0",
+		}
+		assert.Equal(t, "1.0.0", flag.GetStringDefault(false))
+	})
+
+	t.Run("empty string default", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "version",
+			Type:    "string",
+			Default: "",
+		}
+		assert.Equal(t, "", flag.GetStringDefault(false))
+	})
+
+	t.Run("nil default returns empty", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name: "version",
+			Type: "string",
+		}
+		assert.Equal(t, "", flag.GetStringDefault(false))
+	})
+
+	t.Run("non-string default returns empty", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:    "version",
+			Type:    "string",
+			Default: 123,
+		}
+		assert.Equal(t, "", flag.GetStringDefault(false))
+	})
+}
+
+func TestHandlersConfig_GetAllBuildCLIFlags(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	t.Run("go handler has multiple cli flags", func(t *testing.T) {
+		flags := cfg.Handlers.GetAllBuildCLIFlags("go")
+		assert.NotEmpty(t, flags)
+
+		// Should include positive, negative, and value flags
+		assert.Contains(t, flags, "--tidy-first")
+		assert.Contains(t, flags, "--no-tidy")
+		assert.Contains(t, flags, "--compressed")
+		assert.Contains(t, flags, "--compressed-upx")
+		assert.Contains(t, flags, "--version")
+	})
+
+	t.Run("unknown handler returns empty map", func(t *testing.T) {
+		flags := cfg.Handlers.GetAllBuildCLIFlags("nonexistent")
+		assert.Empty(t, flags)
+	})
+
+	t.Run("handler without flags returns empty map", func(t *testing.T) {
+		flags := cfg.Handlers.GetAllBuildCLIFlags("docker")
+		assert.Empty(t, flags)
+	})
+}
+
+func TestHandlerFlag_Validate(t *testing.T) {
+	t.Run("valid bool flag with positive and negative", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:        "tidy",
+			Type:        "bool",
+			CLIPositive: "--tidy-first",
+			CLINegative: "--no-tidy",
+		}
+		err := flag.Validate()
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid bool flag with only positive", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:        "compressed",
+			Type:        "bool",
+			CLIPositive: "--compressed",
+		}
+		err := flag.Validate()
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid string flag with value_flag", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:      "version",
+			Type:      "string",
+			ValueFlag: "--version",
+		}
+		err := flag.Validate()
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid string flag with cli_positive", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:        "output",
+			Type:        "string",
+			CLIPositive: "--output",
+		}
+		err := flag.Validate()
+		assert.NoError(t, err)
+	})
+
+	t.Run("missing name", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:        "",
+			Type:        "bool",
+			CLIPositive: "--test",
+		}
+		err := flag.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "name")
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:        "test",
+			Type:        "invalid",
+			CLIPositive: "--test",
+		}
+		err := flag.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid type")
+	})
+
+	t.Run("bool flag without cli_positive", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name: "test",
+			Type: "bool",
+		}
+		err := flag.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cli_positive")
+	})
+
+	t.Run("string flag without value_flag or cli_positive", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name: "test",
+			Type: "string",
+		}
+		err := flag.Validate()
+		assert.Error(t, err)
+	})
+
+	t.Run("int flag type is valid", func(t *testing.T) {
+		flag := &HandlerFlag{
+			Name:      "count",
+			Type:      "int",
+			ValueFlag: "--count",
+		}
+		err := flag.Validate()
+		assert.NoError(t, err)
+	})
+}
+
+func TestHandlersConfig_Integration_GoFlagsFromYAML(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	t.Run("tidy flag has correct defaults", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByName("go", "tidy")
+		require.NotNil(t, flag)
+
+		// Default is true for local builds
+		assert.True(t, flag.GetBoolDefault(false), "tidy should default to true for local")
+		// Default is false for CI
+		assert.False(t, flag.GetBoolDefault(true), "tidy should default to false for CI")
+	})
+
+	t.Run("compressed flag defaults to false", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByName("go", "compressed")
+		require.NotNil(t, flag)
+
+		assert.False(t, flag.GetBoolDefault(false))
+		assert.False(t, flag.GetBoolDefault(true))
+	})
+
+	t.Run("version flag defaults to empty", func(t *testing.T) {
+		flag := cfg.Handlers.GetBuildFlagByName("go", "version")
+		require.NotNil(t, flag)
+
+		assert.Equal(t, "", flag.GetStringDefault(false))
+		assert.Equal(t, "", flag.GetStringDefault(true))
+	})
+}

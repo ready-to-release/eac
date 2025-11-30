@@ -38,6 +38,30 @@ handlers:
         upx_platforms: [linux, windows]
         # CGO disabled for cross-compilation
         cgo_enabled: false
+      flags:
+        - name: tidy
+          type: bool
+          cli_positive: "--tidy-first"
+          cli_negative: "--no-tidy"
+          default: true
+          default_env:
+            CI: false
+          description: "Run 'go mod tidy' before building"
+        - name: compressed
+          type: bool
+          cli_positive: "--compressed"
+          default: false
+          description: "Strip debug info for smaller binaries (-ldflags '-s -w')"
+        - name: compressed_upx
+          type: bool
+          cli_positive: "--compressed-upx"
+          default: false
+          description: "Apply UPX compression for maximum size reduction"
+        - name: version
+          type: string
+          value_flag: "--version"
+          default: ""
+          description: "Inject version string into binary via ldflags"
     test:
       handler: go
       config:

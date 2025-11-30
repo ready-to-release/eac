@@ -44,6 +44,13 @@ type testContext struct {
 
 	// Custom YAML state
 	customYAML string
+
+	// Handler flags state
+	buildFlags       []config.HandlerFlag
+	currentFlag      *config.HandlerFlag
+	flagDefault      interface{}
+	cliFlagsMap      map[string]*config.HandlerFlag
+	flagValidateErr  error
 }
 
 var hcCtx *testContext
@@ -161,6 +168,40 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^I parse the handlers configuration$`, iParseTheHandlersConfiguration)
 	sc.Step(`^the "([^"]*)" handler should exist$`, theCustomHandlerShouldExist)
 	sc.Step(`^the "([^"]*)" handler should have build steps$`, theCustomHandlerShouldHaveBuildSteps)
+
+	// Handler flag steps
+	sc.Step(`^I get the build flags for handler "([^"]*)"$`, iGetTheBuildFlagsForHandler)
+	sc.Step(`^I should have at least (\d+) build flags$`, iShouldHaveAtLeastBuildFlags)
+	sc.Step(`^I should have no build flags$`, iShouldHaveNoBuildFlags)
+	sc.Step(`^I get the build flag "([^"]*)" for handler "([^"]*)"$`, iGetTheBuildFlagForHandler)
+	sc.Step(`^I get the build flag by CLI "([^"]*)" for handler "([^"]*)"$`, iGetTheBuildFlagByCLIForHandler)
+	sc.Step(`^the flag should exist$`, theFlagShouldExist)
+	sc.Step(`^the flag should not exist$`, theFlagShouldNotExist)
+	sc.Step(`^the flag name should be "([^"]*)"$`, theFlagNameShouldBe)
+	sc.Step(`^the flag type should be "([^"]*)"$`, theFlagTypeShouldBe)
+	sc.Step(`^the flag CLI positive should be "([^"]*)"$`, theFlagCLIPositiveShouldBe)
+	sc.Step(`^the flag CLI negative should be "([^"]*)"$`, theFlagCLINegativeShouldBe)
+	sc.Step(`^the flag bool default for local should be (true|false)$`, theFlagBoolDefaultForLocalShouldBe)
+	sc.Step(`^the flag bool default for CI should be (true|false)$`, theFlagBoolDefaultForCIShouldBe)
+	sc.Step(`^the flag string default should be "([^"]*)"$`, theFlagStringDefaultShouldBe)
+	sc.Step(`^I get all build CLI flags for handler "([^"]*)"$`, iGetAllBuildCLIFlagsForHandler)
+	sc.Step(`^the CLI flags map should contain "([^"]*)"$`, theCLIFlagsMapShouldContain)
+	sc.Step(`^the CLI flags map should be empty$`, theCLIFlagsMapShouldBeEmpty)
+	sc.Step(`^a handler flag with name "([^"]*)", type "([^"]*)", cli_positive "([^"]*)", cli_negative "([^"]*)"$`,
+		aHandlerFlagWithNameTypeCLIPositiveCLINegative)
+	sc.Step(`^a handler flag with name "([^"]*)", type "([^"]*)", cli_positive "([^"]*)"$`,
+		aHandlerFlagWithNameTypeCLIPositive)
+	sc.Step(`^a handler flag with name "([^"]*)", type "([^"]*)", value_flag "([^"]*)"$`,
+		aHandlerFlagWithNameTypeValueFlag)
+	sc.Step(`^a handler flag with name "([^"]*)", type "([^"]*)"$`, aHandlerFlagWithNameType)
+	sc.Step(`^a handler flag with type "([^"]*)", cli_positive "([^"]*)"$`, aHandlerFlagWithTypeCLIPositive)
+	sc.Step(`^I validate the flag$`, iValidateTheFlag)
+	sc.Step(`^the flag validation should succeed$`, theFlagValidationShouldSucceed)
+	sc.Step(`^the flag validation should fail$`, theFlagValidationShouldFail)
+	sc.Step(`^the flag error should mention "([^"]*)"$`, theFlagErrorShouldMention)
+	sc.Step(`^a nil handler flag$`, aNilHandlerFlag)
+	sc.Step(`^I get the flag default for local$`, iGetTheFlagDefaultForLocal)
+	sc.Step(`^the result should be nil$`, theResultShouldBeNil)
 }
 
 func cleanupTestContext() {
@@ -916,6 +957,260 @@ func theCustomHandlerShouldHaveBuildSteps(name string) error {
 	}
 	if handler.Build == nil || len(handler.Build.Steps) == 0 {
 		return fmt.Errorf("handler %s does not have build steps", name)
+	}
+	return nil
+}
+
+// =============================================================================
+// Handler Flag Steps
+// =============================================================================
+
+func iGetTheBuildFlagsForHandler(handlerName string) error {
+	handlers := hcCtx.handlers
+	if handlers == nil {
+		handlers = hcCtx.customHandlers
+	}
+	hcCtx.buildFlags = handlers.GetBuildFlags(handlerName)
+	return nil
+}
+
+func iShouldHaveAtLeastBuildFlags(count int) error {
+	if len(hcCtx.buildFlags) < count {
+		return fmt.Errorf("expected at least %d build flags, got %d", count, len(hcCtx.buildFlags))
+	}
+	return nil
+}
+
+func iShouldHaveNoBuildFlags() error {
+	if hcCtx.buildFlags != nil && len(hcCtx.buildFlags) > 0 {
+		return fmt.Errorf("expected no build flags, got %d", len(hcCtx.buildFlags))
+	}
+	return nil
+}
+
+func iGetTheBuildFlagForHandler(flagName, handlerName string) error {
+	handlers := hcCtx.handlers
+	if handlers == nil {
+		handlers = hcCtx.customHandlers
+	}
+	hcCtx.currentFlag = handlers.GetBuildFlagByName(handlerName, flagName)
+	return nil
+}
+
+func iGetTheBuildFlagByCLIForHandler(cliFlag, handlerName string) error {
+	handlers := hcCtx.handlers
+	if handlers == nil {
+		handlers = hcCtx.customHandlers
+	}
+	hcCtx.currentFlag = handlers.GetBuildFlagByCLI(handlerName, cliFlag)
+	return nil
+}
+
+func theFlagShouldExist() error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag should exist but it is nil")
+	}
+	return nil
+}
+
+func theFlagShouldNotExist() error {
+	if hcCtx.currentFlag != nil {
+		return fmt.Errorf("flag should not exist but found: %s", hcCtx.currentFlag.Name)
+	}
+	return nil
+}
+
+func theFlagNameShouldBe(expected string) error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag is nil")
+	}
+	if hcCtx.currentFlag.Name != expected {
+		return fmt.Errorf("expected flag name %q, got %q", expected, hcCtx.currentFlag.Name)
+	}
+	return nil
+}
+
+func theFlagTypeShouldBe(expected string) error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag is nil")
+	}
+	if hcCtx.currentFlag.Type != expected {
+		return fmt.Errorf("expected flag type %q, got %q", expected, hcCtx.currentFlag.Type)
+	}
+	return nil
+}
+
+func theFlagCLIPositiveShouldBe(expected string) error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag is nil")
+	}
+	if hcCtx.currentFlag.CLIPositive != expected {
+		return fmt.Errorf("expected CLI positive %q, got %q", expected, hcCtx.currentFlag.CLIPositive)
+	}
+	return nil
+}
+
+func theFlagCLINegativeShouldBe(expected string) error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag is nil")
+	}
+	if hcCtx.currentFlag.CLINegative != expected {
+		return fmt.Errorf("expected CLI negative %q, got %q", expected, hcCtx.currentFlag.CLINegative)
+	}
+	return nil
+}
+
+func theFlagBoolDefaultForLocalShouldBe(expected string) error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag is nil")
+	}
+	actual := hcCtx.currentFlag.GetBoolDefault(false) // false = local (not CI)
+	expectedBool := expected == "true"
+	if actual != expectedBool {
+		return fmt.Errorf("expected bool default for local to be %v, got %v", expectedBool, actual)
+	}
+	return nil
+}
+
+func theFlagBoolDefaultForCIShouldBe(expected string) error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag is nil")
+	}
+	actual := hcCtx.currentFlag.GetBoolDefault(true) // true = CI
+	expectedBool := expected == "true"
+	if actual != expectedBool {
+		return fmt.Errorf("expected bool default for CI to be %v, got %v", expectedBool, actual)
+	}
+	return nil
+}
+
+func theFlagStringDefaultShouldBe(expected string) error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag is nil")
+	}
+	actual := hcCtx.currentFlag.GetStringDefault(false)
+	if actual != expected {
+		return fmt.Errorf("expected string default %q, got %q", expected, actual)
+	}
+	return nil
+}
+
+func iGetAllBuildCLIFlagsForHandler(handlerName string) error {
+	handlers := hcCtx.handlers
+	if handlers == nil {
+		handlers = hcCtx.customHandlers
+	}
+	hcCtx.cliFlagsMap = handlers.GetAllBuildCLIFlags(handlerName)
+	return nil
+}
+
+func theCLIFlagsMapShouldContain(cliFlag string) error {
+	if hcCtx.cliFlagsMap == nil {
+		return fmt.Errorf("CLI flags map is nil")
+	}
+	if _, ok := hcCtx.cliFlagsMap[cliFlag]; !ok {
+		return fmt.Errorf("CLI flag %q not found in map", cliFlag)
+	}
+	return nil
+}
+
+func theCLIFlagsMapShouldBeEmpty() error {
+	if hcCtx.cliFlagsMap != nil && len(hcCtx.cliFlagsMap) > 0 {
+		return fmt.Errorf("expected CLI flags map to be empty, got %d entries", len(hcCtx.cliFlagsMap))
+	}
+	return nil
+}
+
+func aHandlerFlagWithNameTypeCLIPositiveCLINegative(name, flagType, cliPositive, cliNegative string) error {
+	hcCtx.currentFlag = &config.HandlerFlag{
+		Name:        name,
+		Type:        flagType,
+		CLIPositive: cliPositive,
+		CLINegative: cliNegative,
+	}
+	return nil
+}
+
+func aHandlerFlagWithNameTypeCLIPositive(name, flagType, cliPositive string) error {
+	hcCtx.currentFlag = &config.HandlerFlag{
+		Name:        name,
+		Type:        flagType,
+		CLIPositive: cliPositive,
+	}
+	return nil
+}
+
+func aHandlerFlagWithNameTypeValueFlag(name, flagType, valueFlag string) error {
+	hcCtx.currentFlag = &config.HandlerFlag{
+		Name:      name,
+		Type:      flagType,
+		ValueFlag: valueFlag,
+	}
+	return nil
+}
+
+func aHandlerFlagWithNameType(name, flagType string) error {
+	hcCtx.currentFlag = &config.HandlerFlag{
+		Name: name,
+		Type: flagType,
+	}
+	return nil
+}
+
+func aHandlerFlagWithTypeCLIPositive(flagType, cliPositive string) error {
+	hcCtx.currentFlag = &config.HandlerFlag{
+		Name:        "", // Missing name
+		Type:        flagType,
+		CLIPositive: cliPositive,
+	}
+	return nil
+}
+
+func iValidateTheFlag() error {
+	if hcCtx.currentFlag == nil {
+		return fmt.Errorf("flag is nil")
+	}
+	hcCtx.flagValidateErr = hcCtx.currentFlag.Validate()
+	return nil
+}
+
+func theFlagValidationShouldSucceed() error {
+	if hcCtx.flagValidateErr != nil {
+		return fmt.Errorf("expected flag validation to succeed, got error: %v", hcCtx.flagValidateErr)
+	}
+	return nil
+}
+
+func theFlagValidationShouldFail() error {
+	if hcCtx.flagValidateErr == nil {
+		return fmt.Errorf("expected flag validation to fail, but it succeeded")
+	}
+	return nil
+}
+
+func theFlagErrorShouldMention(text string) error {
+	if hcCtx.flagValidateErr == nil {
+		return fmt.Errorf("no flag error to check")
+	}
+	if !strings.Contains(hcCtx.flagValidateErr.Error(), text) {
+		return fmt.Errorf("expected flag error to mention %q, got: %v", text, hcCtx.flagValidateErr)
+	}
+	return nil
+}
+
+func aNilHandlerFlag() error {
+	hcCtx.currentFlag = nil
+	return nil
+}
+
+func iGetTheFlagDefaultForLocal() error {
+	hcCtx.flagDefault = hcCtx.currentFlag.GetDefault(false)
+	return nil
+}
+
+func theResultShouldBeNil() error {
+	if hcCtx.flagDefault != nil {
+		return fmt.Errorf("expected result to be nil, got %v", hcCtx.flagDefault)
 	}
 	return nil
 }

@@ -32,6 +32,9 @@ type HandlerSpec struct {
 	Handler string                 `yaml:"handler,omitempty"`
 	Config  map[string]interface{} `yaml:"config,omitempty"`
 
+	// Handler-specific flags (available for all handler types)
+	Flags []HandlerFlag `yaml:"flags,omitempty"`
+
 	// For command handlers
 	Steps []CommandStep `yaml:"steps,omitempty"`
 
@@ -85,6 +88,18 @@ type CrossCompileTarget struct {
 	OS     string `yaml:"os"`
 	Arch   string `yaml:"arch"`
 	Suffix string `yaml:"suffix,omitempty"`
+}
+
+// HandlerFlag defines a flag that can be passed to a handler
+type HandlerFlag struct {
+	Name        string            `yaml:"name"`                  // Flag name (used in code)
+	Type        string            `yaml:"type"`                  // bool, string, int
+	CLIPositive string            `yaml:"cli_positive,omitempty"` // e.g., "--tidy-first"
+	CLINegative string            `yaml:"cli_negative,omitempty"` // e.g., "--no-tidy" (for bool flags)
+	Default     interface{}       `yaml:"default,omitempty"`     // Default value
+	DefaultEnv  map[string]interface{} `yaml:"default_env,omitempty"` // Default by environment (CI: false)
+	Description string            `yaml:"description,omitempty"` // Help text
+	ValueFlag   string            `yaml:"value_flag,omitempty"`  // For string flags: "--version VALUE"
 }
 
 // BuildHandlerMap creates a lookup map for handlers
@@ -385,6 +400,168 @@ func (h *Handler) Validate() error {
 	validTypes := map[string]bool{"builtin": true, "command": true, "script": true, "docker": true}
 	if !validTypes[h.Type] {
 		return fmt.Errorf("handler %s has invalid type: %s", h.Name, h.Type)
+	}
+
+	return nil
+}
+
+// GetBuildFlags returns the flags defined for a handler's build operation
+func (c *HandlersConfig) GetBuildFlags(handlerName string) []HandlerFlag {
+	if c == nil {
+		return nil
+	}
+	handler := c.Get(handlerName)
+	if handler == nil || handler.Build == nil {
+		return nil
+	}
+	return handler.Build.Flags
+}
+
+// GetTestFlags returns the flags defined for a handler's test operation
+func (c *HandlersConfig) GetTestFlags(handlerName string) []HandlerFlag {
+	if c == nil {
+		return nil
+	}
+	handler := c.Get(handlerName)
+	if handler == nil || handler.Test == nil {
+		return nil
+	}
+	return handler.Test.Flags
+}
+
+// GetFlagByName returns a specific flag definition by name from build flags
+func (c *HandlersConfig) GetBuildFlagByName(handlerName, flagName string) *HandlerFlag {
+	flags := c.GetBuildFlags(handlerName)
+	for i := range flags {
+		if flags[i].Name == flagName {
+			return &flags[i]
+		}
+	}
+	return nil
+}
+
+// GetFlagByCLI returns a flag definition matching a CLI flag (positive or negative)
+func (c *HandlersConfig) GetBuildFlagByCLI(handlerName, cliFlag string) *HandlerFlag {
+	flags := c.GetBuildFlags(handlerName)
+	for i := range flags {
+		if flags[i].CLIPositive == cliFlag || flags[i].CLINegative == cliFlag {
+			return &flags[i]
+		}
+		if flags[i].ValueFlag == cliFlag {
+			return &flags[i]
+		}
+	}
+	return nil
+}
+
+// GetFlagDefault returns the effective default value for a flag, considering environment
+func (f *HandlerFlag) GetDefault(isCI bool) interface{} {
+	if f == nil {
+		return nil
+	}
+
+	// Check environment-specific defaults
+	if f.DefaultEnv != nil {
+		if isCI {
+			if ciVal, ok := f.DefaultEnv["CI"]; ok {
+				return ciVal
+			}
+		} else {
+			if localVal, ok := f.DefaultEnv["local"]; ok {
+				return localVal
+			}
+		}
+	}
+
+	return f.Default
+}
+
+// GetBoolDefault returns the default value as a bool
+func (f *HandlerFlag) GetBoolDefault(isCI bool) bool {
+	val := f.GetDefault(isCI)
+	if val == nil {
+		return false
+	}
+	if b, ok := val.(bool); ok {
+		return b
+	}
+	return false
+}
+
+// GetStringDefault returns the default value as a string
+func (f *HandlerFlag) GetStringDefault(isCI bool) string {
+	val := f.GetDefault(isCI)
+	if val == nil {
+		return ""
+	}
+	if s, ok := val.(string); ok {
+		return s
+	}
+	return ""
+}
+
+// GetAllBuildCLIFlags returns all CLI flags for a handler's build operation
+// Returns a map of cli-flag -> HandlerFlag for easy lookup
+func (c *HandlersConfig) GetAllBuildCLIFlags(handlerName string) map[string]*HandlerFlag {
+	result := make(map[string]*HandlerFlag)
+	flags := c.GetBuildFlags(handlerName)
+	for i := range flags {
+		flag := &flags[i]
+		if flag.CLIPositive != "" {
+			result[flag.CLIPositive] = flag
+		}
+		if flag.CLINegative != "" {
+			result[flag.CLINegative] = flag
+		}
+		if flag.ValueFlag != "" {
+			result[flag.ValueFlag] = flag
+		}
+	}
+	return result
+}
+
+// GetAllTestCLIFlags returns all CLI flags for a handler's test operation
+func (c *HandlersConfig) GetAllTestCLIFlags(handlerName string) map[string]*HandlerFlag {
+	result := make(map[string]*HandlerFlag)
+	flags := c.GetTestFlags(handlerName)
+	for i := range flags {
+		flag := &flags[i]
+		if flag.CLIPositive != "" {
+			result[flag.CLIPositive] = flag
+		}
+		if flag.CLINegative != "" {
+			result[flag.CLINegative] = flag
+		}
+		if flag.ValueFlag != "" {
+			result[flag.ValueFlag] = flag
+		}
+	}
+	return result
+}
+
+// ValidateFlag validates that a flag is properly defined
+func (f *HandlerFlag) Validate() error {
+	if f.Name == "" {
+		return fmt.Errorf("flag name is required")
+	}
+
+	validTypes := map[string]bool{"bool": true, "string": true, "int": true}
+	if !validTypes[f.Type] {
+		return fmt.Errorf("flag %s has invalid type: %s (must be bool, string, or int)", f.Name, f.Type)
+	}
+
+	// Bool flags should have CLIPositive and optionally CLINegative
+	if f.Type == "bool" {
+		if f.CLIPositive == "" {
+			return fmt.Errorf("flag %s (bool) must have cli_positive defined", f.Name)
+		}
+	}
+
+	// String/int flags should have ValueFlag
+	if f.Type == "string" || f.Type == "int" {
+		if f.ValueFlag == "" && f.CLIPositive == "" {
+			return fmt.Errorf("flag %s (%s) must have value_flag or cli_positive defined", f.Name, f.Type)
+		}
 	}
 
 	return nil
