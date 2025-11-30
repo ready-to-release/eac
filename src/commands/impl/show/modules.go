@@ -6,7 +6,6 @@
 // Long: This information helps understand the modular structure of the repository and identify available modules.
 // Long: The output is formatted as a Markdown table for easy reading.
 // Long: Use this command before making changes to understand which modules exist and their locations.
-// HasSideEffects: false
 package show
 
 import (

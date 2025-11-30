@@ -1,6 +1,5 @@
 // Command: work
 // Description: Workspace management for parallel development using git worktrees
-// HasSideEffects: false
 package work
 
 import (

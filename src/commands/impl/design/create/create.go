@@ -13,7 +13,6 @@
 // Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
 // Flag.skip-validation: type=bool, shorthand=, default=false, usage=Skip Docker validation (useful when Docker is unavailable)
 // Usage: design create <module>
-// HasSideEffects: true
 package create
 
 import (

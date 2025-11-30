@@ -8,7 +8,6 @@
 // Flag.template: type=string, usage=Git repository URL or local directory to scan (default: https://github.com/ready-to-release/eac)
 // Usage: templates list [--template <git-repo-url|local-path>] [--debug]
 // Flags: --template (source location), --debug (save debug outputs)
-// HasSideEffects: false
 package list
 
 import (

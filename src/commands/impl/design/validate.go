@@ -10,7 +10,6 @@
 // Flag.all: type=bool, shorthand=a, default=false, usage=Validate all workspace files in specs/*/.design/ directories
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs and detailed logs to out/logs/design/ for debugging
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show Docker command and raw Structurizr CLI output
-// HasSideEffects: false
 package design
 
 import (

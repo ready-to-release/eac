@@ -9,7 +9,6 @@
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed output including all scanned files
 // Flag.module: type=string, shorthand=m, default=, usage=Only analyze a specific module (e.g., src-commands)
 // Usage: specs unused-steps [--verbose] [--module=<name>]
-// HasSideEffects: false
 package unused
 
 import (

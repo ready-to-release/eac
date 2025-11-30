@@ -1,6 +1,5 @@
 // Command: show suite
 // Description: Display detailed information about a test suite
-// HasSideEffects: false
 package show
 
 import (

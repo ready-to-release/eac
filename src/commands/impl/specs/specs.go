@@ -1,6 +1,5 @@
 // Command: specs
 // Description: Specification management using AI and Gherkin
-// HasSideEffects: false
 package specs
 
 import (

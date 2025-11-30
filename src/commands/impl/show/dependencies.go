@@ -10,7 +10,6 @@
 // Long:
 // Long: Example:
 // Long:   show dependencies
-// HasSideEffects: false
 package show
 
 import (

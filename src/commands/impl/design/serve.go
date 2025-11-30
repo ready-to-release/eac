@@ -6,7 +6,6 @@
 // Long: in workspace.dsl. When you run this command, it generates workspace.json and .structurizr/ files
 // Long: The viewer runs on a dynamically allocated port (9000-9999) and updates automatically when you edit the DSL file.
 // Usage: design serve <module>
-// HasSideEffects: true
 package design
 
 import (

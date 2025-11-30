@@ -1,6 +1,5 @@
 // Command: show files
 // Description: Show repository files with their module ownership
-// HasSideEffects: false
 package show
 
 import (

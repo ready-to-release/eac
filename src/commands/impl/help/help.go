@@ -4,7 +4,6 @@
 // Long: When called without arguments, it lists all commands with their short descriptions.
 // Long: When called with a command name, it displays detailed help including description, flags, and usage.
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed information including all subcommands and advanced options
-// HasSideEffects: false
 package help
 
 import (
@@ -210,10 +209,6 @@ func showCommandHelp(commandName string, verbose bool) int {
 	if verbose {
 		fmt.Printf("ADDITIONAL INFORMATION\n")
 		fmt.Printf("    Canonical name: %s\n", reg.CanonicalName)
-		fmt.Printf("    Has side effects: %t\n", reg.HasSideEffects)
-		if reg.HasSideEffects {
-			fmt.Printf("    (This command modifies repository files)\n")
-		}
 		fmt.Println()
 	}
 

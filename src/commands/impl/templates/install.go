@@ -22,7 +22,6 @@
 // Long:   templates install reports --source ./my-templates
 // Long:
 // Long: Use "help templates install <template-type>" for detailed information.
-// HasSideEffects: true
 package templates
 
 import (

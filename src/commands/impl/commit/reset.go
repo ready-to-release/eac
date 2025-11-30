@@ -8,7 +8,6 @@
 // Long:
 // Long: Example:
 // Long:   r2r commit reset
-// HasSideEffects: true
 package commit
 
 import (

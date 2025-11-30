@@ -4,7 +4,6 @@
 // Long: The show config command displays all EAC repository configurations
 // Long: loaded with their defaults applied. This includes modules, module types,
 // Long: environments, testing tags, and test suites.
-// HasSideEffects: false
 package show
 
 import (

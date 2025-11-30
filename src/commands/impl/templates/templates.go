@@ -1,6 +1,5 @@
 // Command: templates
 // Description: Manage project templates for documentation and specifications
-// HasSideEffects: true
 package templates
 
 import (

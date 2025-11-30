@@ -4,6 +4,16 @@ types:
     description: "Go CLI application with cross-platform builds"
     build_deps: [go]
     capabilities: [go_module, executable, cross_compile]
+    build:
+      artifacts:
+        - type: executable
+          pattern: "{moniker}-{os}-amd64{ext}"
+          platforms: [linux, windows, darwin]
+          verify: current_platform
+        - type: executable
+          pattern: "{moniker}-{os}-arm64{ext}"
+          platforms: [linux, darwin]
+          verify: current_platform
     defaults:
       files:
         source: ["**/*.go"]
@@ -18,6 +28,10 @@ types:
     description: "Go library package (no executable)"
     build_deps: [go]
     capabilities: [go_module]
+    build:
+      artifacts:
+        - type: marker
+          pattern: ".build-complete"
     defaults:
       files:
         source: ["**/*.go", "**/*.go.txt"]
@@ -32,6 +46,10 @@ types:
     description: "Go library with CLI invoke wrapper"
     build_deps: [go]
     capabilities: [go_module]
+    build:
+      artifacts:
+        - type: marker
+          pattern: ".build-complete"
     defaults:
       files:
         source: ["**/*.go"]
@@ -47,6 +65,10 @@ types:
     description: "Go MCP server module"
     build_deps: [go]
     capabilities: [go_module]
+    build:
+      artifacts:
+        - type: marker
+          pattern: ".build-complete"
     defaults:
       files:
         source: ["**/*.go"]
@@ -61,6 +83,8 @@ types:
     description: "Go test-only module"
     build_deps: [go]
     capabilities: [go_module]
+    build:
+      artifacts: []
     defaults:
       files:
         source: ["**/*.go"]
@@ -75,6 +99,10 @@ types:
     description: "R2R extension packaged as container image"
     build_deps: [docker]
     capabilities: [go_module, container]
+    build:
+      artifacts:
+        - type: image
+          pattern: "{moniker}:latest"
     defaults:
       files:
         source: ["**/*.go"]
@@ -88,6 +116,10 @@ types:
     description: "Primary MkDocs documentation site (builds via Docker)"
     build_deps: [docker]
     capabilities: [documentation, serveable, container]
+    build:
+      artifacts:
+        - type: directory
+          pattern: "site"
     defaults:
       files:
         config: ["**/*.nav.yml", "**/*.json"]
@@ -100,6 +132,10 @@ types:
     description: "VS Code extension"
     build_deps: [npm]
     capabilities: [npm_package, typescript]
+    build:
+      artifacts:
+        - type: directory
+          pattern: "out"
     defaults:
       files:
         config: ["**/*"]
@@ -114,6 +150,8 @@ types:
     description: "VS Code configuration files"
     build_deps: []
     capabilities: []
+    build:
+      artifacts: []
     defaults:
       files:
         config: ["**/*"]
@@ -129,6 +167,8 @@ types:
     description: "Cross-shell script package encapsulating pwsh and sh variants for the same purpose"
     build_deps: []
     capabilities: []
+    build:
+      artifacts: []
     defaults:
       files:
         source: ["**/*.ps1", "**/*.psm1", "**/*.sh", "**/*.bash"]
@@ -144,6 +184,8 @@ types:
     description: "Configuration files"
     build_deps: []
     capabilities: []
+    build:
+      artifacts: []
     defaults:
       files:
         changelog: CHANGELOG.md
@@ -157,6 +199,8 @@ types:
     description: "Claude Code configuration"
     build_deps: []
     capabilities: []
+    build:
+      artifacts: []
     defaults:
       files:
         config: ["*.json", "*.md"]
@@ -171,6 +215,8 @@ types:
     description: "Repository root module (catch-all parent)"
     build_deps: []
     capabilities: []
+    build:
+      artifacts: []
     defaults:
       files:
         workflows:
@@ -183,6 +229,8 @@ types:
     description: "Template files"
     build_deps: []
     capabilities: []
+    build:
+      artifacts: []
     defaults:
       files:
         config: ["**/*.yml", "**/*.yaml"]

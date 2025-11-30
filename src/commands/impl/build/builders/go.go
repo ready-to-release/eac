@@ -64,13 +64,19 @@ func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputD
 	} else if hasExecutable {
 		return buildSingleBinary(module, moduleRoot, outputDir, logWriter, opts)
 	} else {
-		// Library - just validate it compiles
+		// Library - validate it compiles and write marker
 		Logln(logWriter, "Running: go build ./...")
 		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./..."); exitCode != 0 {
 			Logln(logWriter, "❌ go build failed")
 			return exitCode
 		}
-		Logln(logWriter, "ℹ️  This is a library module (no binary to build)")
+
+		// Write build-complete marker for dependency verification
+		if err := WriteBuildMarker(outputDir); err != nil {
+			Logln(logWriter, "⚠️  Could not write build marker: %v", err)
+		}
+
+		Logln(logWriter, "✅ Library module built successfully")
 		return 0
 	}
 }

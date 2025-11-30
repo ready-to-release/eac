@@ -1,6 +1,5 @@
 // Command: show files staged
 // Description: Show staged files with their module ownership
-// HasSideEffects: false
 package show
 
 import (

@@ -16,7 +16,6 @@
 // Flag.skip-deps: type=bool, usage=Skip dependency installation before running tests
 // Flag.list-only: type=bool, usage=List tests that would run without executing them
 // Flag.sequential: type=bool, usage=Run tests sequentially instead of in parallel
-// HasSideEffects: false
 package test
 
 import (

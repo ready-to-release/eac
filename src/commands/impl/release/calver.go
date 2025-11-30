@@ -14,7 +14,6 @@
 // Flag.create: type=bool, usage=Create the git tag (default: false, just output tag name)
 // Flag.push: type=bool, usage=Push the tag to remote after creation (requires --create)
 // Flag.dry-run: type=bool, usage=Show what would be done without creating/pushing
-// HasSideEffects: true
 package release
 
 import (

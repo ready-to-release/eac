@@ -1,6 +1,5 @@
 // Command: show
 // Description: Display repository information in human-readable format
-// HasSideEffects: false
 package show
 
 import (

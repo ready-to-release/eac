@@ -13,7 +13,6 @@
 // Flag.prompt: type=string, usage=Path to a custom system prompt file. Overrides both user override prompts and built-in prompts
 // Usage: specs create <description>
 // Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --prompt (custom system prompt)
-// HasSideEffects: true
 package create
 
 import (

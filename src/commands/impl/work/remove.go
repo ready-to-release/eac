@@ -23,7 +23,6 @@
 // Flag.delete-remote: type=bool, default=false, usage=Delete remote branch as well
 // Flag.force: type=bool, shorthand=f, default=false, usage=Force remove even with uncommitted changes
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
-// HasSideEffects: true
 package work
 
 import (

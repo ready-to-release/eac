@@ -1,6 +1,5 @@
 // Command: docs serve
 // Description: Start or stop MkDocs server
-// HasSideEffects: false
 package docs
 
 import (
