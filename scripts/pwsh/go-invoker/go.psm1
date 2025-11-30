@@ -24,7 +24,7 @@ $Script:CommandStructureCacheTime = $null
     Get structured command information from Go
 
 .DESCRIPTION
-    Calls 'go run . describe commands' to get JSON structure of all commands
+    Calls 'go run . get commands' to get JSON structure of all commands
     and caches result in $env:SRC_COMMANDS_DESCRIBE for session persistence
 #>
 function Get-CommandStructure {
@@ -48,7 +48,7 @@ function Get-CommandStructure {
 
     Push-Location $commandsPath
     try {
-        $jsonOutput = & go run . describe commands 2>$null
+        $jsonOutput = & go run . get commands 2>$null
         if ($LASTEXITCODE -eq 0) {
             # Store in environment variable as JSON string
             $env:SRC_COMMANDS_DESCRIBE = $jsonOutput
@@ -89,7 +89,7 @@ function Get-CommandStructure {
     Invoke-GoSrcCommand show modules
 
 .EXAMPLE
-    Invoke-GoSrcCommand describe-commands
+    Invoke-GoSrcCommand get commands
 #>
 function Invoke-GoSrcCommand {
     [CmdletBinding()]
@@ -176,7 +176,7 @@ function Invoke-GoSrcCommand {
     Get available Go commands from src/commands/
 
 .DESCRIPTION
-    Returns command information using the structured describe-commands output
+    Returns command information using the structured get commands output
 
 .PARAMETER Simple
     Return only command names as strings instead of full objects
@@ -187,7 +187,7 @@ function Invoke-GoSrcCommand {
 
 .EXAMPLE
     Get-GoSrcCommands -Simple
-    # Returns: @("list-commands", "show files", "show modules")
+    # Returns: @("show help", "show files", "show modules")
 #>
 function Get-GoSrcCommands {
     [CmdletBinding()]
@@ -226,7 +226,7 @@ function Get-GoSrcCommands {
 
 .EXAMPLE
     Get-GoSrcCommandPart
-    # Returns: @("describe-commands", "list-commands", "show")
+    # Returns: @("get", "show", "build")
 
 .EXAMPLE
     Get-GoSrcCommandPart -First "show"
@@ -339,12 +339,12 @@ function Get-TopLevelCommands {
 .DESCRIPTION
     Dynamically creates aliases for each location_0 command (show, list, etc.)
     Each alias invokes Invoke-GoSrcCommand with the first argument pre-filled.
-    Enables direct usage like: show files, list commands, etc.
+    Enables direct usage like: show files, show modules, etc.
 
 .EXAMPLE
     New-TopLevelAliases
     show files      # Instead of: run show files
-    list commands   # Instead of: run list commands
+    show modules    # Instead of: run show modules
 #>
 function New-TopLevelAliases {
     [CmdletBinding()]

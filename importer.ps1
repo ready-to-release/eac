@@ -79,13 +79,13 @@ if (Test-Path $R2rBinary) {
 function global:r2r {
     & "$R2rBinary" `$args
 }
-function global:rr {
+function global:eac {
     & "$R2rBinary" run eac `$args
 }
 "@
     Invoke-Expression $funcDef
-    Write-Host "✅ r2r alias created -> $R2rBinary" -ForegroundColor Green
-    Write-Host "✅ rr  alias created -> r2r run eac <args>" -ForegroundColor Green
+    Write-Host "✅ r2r alias created -> $R2rBinary <args>" -ForegroundColor Green
+    Write-Host "✅ eac alias created -> r2r eac <args>" -ForegroundColor Green
 } else {
     Write-Host "⚠️  r2r binary not found at: $R2rBinary" -ForegroundColor Yellow
     Write-Host "   Run 'go run ./src/commands build module src-cli' to build it" -ForegroundColor Gray

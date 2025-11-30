@@ -153,7 +153,7 @@ func registerCommitSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 
 	// Git state setup steps for reset tests
-	sc.Step(`^I have uncommitted changes in the working directory$`, func() error {
+	sc.Step(`^I have uncommitted changes$`, func() error {
 		// Create uncommitted changes in isolated test env
 		return internal.CreateFile(ctx, "uncommitted.txt", "uncommitted content")
 	})

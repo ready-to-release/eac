@@ -1,4 +1,4 @@
-// Command: describe commands
+// Command: get commands
 // Description: Output structured command information for shell integration
 package describe
 
@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	registry.Register(DescribeCommands)
+	registry.Register(GetCommands)
 }
 
 // CommandInfo represents structured information about a command
@@ -35,7 +35,7 @@ type CommandTree struct {
 	Modules  []string            `json:"modules"`  // Available module monikers for completion
 }
 
-func DescribeCommands() int {
+func GetCommands() int {
 	tree := buildCommandTree()
 
 	// Output as JSON

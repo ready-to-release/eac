@@ -19,41 +19,50 @@ package mypackage
 ### Header Field Descriptions
 
 #### `Command:` (Required)
+
 The command name as users will type it, with spaces separating parent and subcommand.
 
 **Examples:**
-- `commit` - Standalone command
-- `specs create` - Subcommand under specs
+
+- `build` - Standalone command
+- `create spec` - Subcommand under create
 - `show modules` - Subcommand under show
 
 #### `Short:` (Required)
+
 A single sentence (50-80 characters) that concisely describes what the command does. This appears in command listings.
 
 **Best Practices:**
+
 - Start with a verb (e.g., "Generate", "Display", "Validate")
 - Be specific about what the command operates on
 - Avoid generic phrases like "Manages things" - be concrete
 
 **Good Examples:**
+
 - `Generate AI-powered commit messages from staged changes`
 - `Display all module contracts in a human-readable table`
 - `Validate Gherkin specifications against quality contracts`
 
 **Bad Examples:**
+
 - ❌ `Handles commits` (too vague)
 - ❌ `A command for creating specifications` (unnecessary words)
 - ❌ `This command validates files` (don't say "this command")
 
 #### `Long:` (Required, Multiple Lines)
+
 Detailed multi-paragraph description explaining the command thoroughly. Each `// Long:` line becomes a paragraph in the help output.
 
 **Structure:**
+
 1. **First paragraph**: What does this command do? What problem does it solve?
 2. **Second paragraph**: How does it work? What's the behavior?
 3. **Third paragraph**: What inputs does it accept? What outputs does it produce?
 4. **Additional paragraphs** (optional): Default behaviors, validation requirements, special notes
 
 **Best Practices:**
+
 - Write in present tense
 - Be specific about formats, locations, and behaviors
 - Mention default behaviors explicitly
@@ -61,8 +70,9 @@ Detailed multi-paragraph description explaining the command thoroughly. Each `//
 - Reference related commands if relevant
 
 **Example:**
+
 ```go
-// Long: The specs create command uses AI to transform natural language feature descriptions into
+// Long: The create spec command uses AI to transform natural language feature descriptions into
 // Long: properly formatted Gherkin specifications following Rule/Scenario patterns. The generated specifications
 // Long: include Feature, Rule, and Scenario blocks with appropriate tags and structure.
 // Long: All specifications are validated against the specification contract to ensure they meet quality standards.
@@ -71,14 +81,17 @@ Detailed multi-paragraph description explaining the command thoroughly. Each `//
 ```
 
 #### `Flag.<name>:` (Optional, One per Flag)
+
 Structured flag definition with key=value attributes.
 
 **Format:**
+
 ```go
 // Flag.<flagname>: type=<type>, default=<value>, shorthand=<letter>, usage=<description>, required=<true|false>, completion=<values>
 ```
 
 **Attributes:**
+
 - `type` (required): `bool`, `string`, `int`, `float`
 - `default` (optional): Default value as string (e.g., `false`, `text`, `0`)
 - `shorthand` (optional): Single letter for short flag (e.g., `d` for `-d`)
@@ -88,6 +101,7 @@ Structured flag definition with key=value attributes.
 
 **Usage Field Guidelines:**
 The usage field is the most important part - make it educational and specific:
+
 - Explain WHAT the flag does
 - Explain WHEN to use it
 - Explain WHY it's useful
@@ -95,6 +109,7 @@ The usage field is the most important part - make it educational and specific:
 - Provide examples of valid values if applicable
 
 **Good Flag Examples:**
+
 ```go
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
 // Flag.module: type=string, shorthand=m, usage=Target module for the specification (e.g., src-commands, src-core). If not provided, the module will be inferred from the description
@@ -103,6 +118,7 @@ The usage field is the most important part - make it educational and specific:
 ```
 
 **Bad Flag Examples:**
+
 ```go
 // ❌ Flag.debug: type=bool, usage=Debug mode
 // (Too vague - what does debug mode do?)
@@ -130,83 +146,83 @@ Here's a complete template with placeholder explanations:
 package mypackage
 
 import (
-	"fmt"
-	"os"
-	"strings"
+    "fmt"
+    "os"
+    "strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
-	"github.com/ready-to-release/eac/src/core/repository"
+    "github.com/ready-to-release/eac/src/commands/internal/registry"
+    "github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
-	registry.Register(MyCommand)
+    registry.Register(MyCommand)
 }
 
 // Config holds configuration for this command
 type Config struct {
-	// Add fields for each flag
-	FlagName1 bool
-	FlagName2 string
-	// Add other configuration fields
+    // Add fields for each flag
+    FlagName1 bool
+    FlagName2 string
+    // Add other configuration fields
 }
 
 // MyCommand is the main entry point for the command
 func MyCommand() int {
-	// Parse configuration
-	config, err := parseConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
+    // Parse configuration
+    config, err := parseConfig()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+        return 1
+    }
 
-	// Get repository root if needed
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
-		return 1
-	}
+    // Get repository root if needed
+    workspaceRoot, err := repository.GetRepositoryRoot("")
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+        return 1
+    }
 
-	// Implement command logic here
-	// ...
+    // Implement command logic here
+    // ...
 
-	return 0
+    return 0
 }
 
 // parseConfig parses command line arguments into configuration
 func parseConfig() (*Config, error) {
-	config := &Config{}
+    config := &Config{}
 
-	args := os.Args[2:] // Skip program name and command name
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
+    args := os.Args[2:] // Skip program name and command name
+    for i := 0; i < len(args); i++ {
+        arg := args[i]
 
-		switch arg {
-		case "--flagname1", "-f":
-			config.FlagName1 = true
+        switch arg {
+        case "--flagname1", "-f":
+            config.FlagName1 = true
 
-		case "--flagname2", "-s":
-			if i+1 < len(args) {
-				config.FlagName2 = args[i+1]
-				i++
-			} else {
-				return nil, fmt.Errorf("--flagname2 requires a value")
-			}
+        case "--flagname2", "-s":
+            if i+1 < len(args) {
+                config.FlagName2 = args[i+1]
+                i++
+            } else {
+                return nil, fmt.Errorf("--flagname2 requires a value")
+            }
 
-		default:
-			if !strings.HasPrefix(arg, "-") {
-				// Handle positional arguments
-			} else {
-				return nil, fmt.Errorf("unknown flag: %s", arg)
-			}
-		}
-	}
+        default:
+            if !strings.HasPrefix(arg, "-") {
+                // Handle positional arguments
+            } else {
+                return nil, fmt.Errorf("unknown flag: %s", arg)
+            }
+        }
+    }
 
-	// Validation
-	if config.FlagName2 == "" {
-		return nil, fmt.Errorf("--flagname2 is required\n\nUsage: mycommand [--flagname1] --flagname2 <value>")
-	}
+    // Validation
+    if config.FlagName2 == "" {
+        return nil, fmt.Errorf("--flagname2 is required\n\nUsage: mycommand [--flagname1] --flagname2 <value>")
+    }
 
-	return config, nil
+    return config, nil
 }
 ```
 
@@ -256,9 +272,9 @@ go run . completion bash
 ## Examples to Reference
 
 See these well-documented commands for examples:
-- `src/commands/impl/commit/ai.go` - Complex command with AI integration
-- `src/commands/impl/specs/create/create.go` - Multiple flags with completion
-- `src/commands/impl/specs/validate/validate.go` - Format flag with completion
+
+- `src/commands/impl/commit/message.go` - Complex command with AI integration
+- `src/commands/impl/create/spec/create.go` - Multiple flags with completion
+- `src/commands/impl/validate/specs.go` - Format flag with completion
 - `src/commands/impl/show/modules.go` - Simple read-only command
 - `src/commands/impl/help/help.go` - Command with verbose flag
-- `src/commands/impl/completion/completion.go` - Command with required flag

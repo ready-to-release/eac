@@ -21,12 +21,42 @@ Guides for configuring the Everything as Code system.
 
 Guides for using EAC commands.
 
-- [Build & Test Commands](commands/build-test-commands.md)
-- [Show, Get & List Commands](commands/show-get-list-commands.md)
-- [Specs Command](commands/specs-command.md)
-- [Design Command](commands/design-command.md)
-- [Work Command](commands/work-command.md)
-- [Templates & Docs Commands](commands/templates-docs-commands.md)
+### Core Commands
+
+- [Help Command](commands/help-command.md) - Get help for any command
+- [Init Command](commands/init-command.md) - Initialize AI provider configuration
+- [Completion Command](commands/completion-command.md) - Generate shell completion scripts
+
+### Build & Test
+
+- [Build & Test Commands](commands/build-test-commands.md) - Build and test modules
+- [Validate Command](commands/validate-command.md) - Validate contracts and dependencies
+- [CI Command](commands/ci-command.md) - Continuous integration workflows
+
+### Development Workflow
+
+- [Work Command](commands/work-command.md) - Workspace management
+- [Commit Command](commands/commit-command.md) - AI-powered commit messages
+- [Describe Command](commands/describe-command.md) - Describe changes
+
+### Architecture & Design
+
+- [Design Command](commands/design-command.md) - Architecture diagrams
+- [Specs Command](commands/specs-command.md) - Specification generation
+
+### Data & Info
+
+- [Show, Get & List Commands](commands/show-get-list-commands.md) - Query repository data
+
+### CI/CD & Release
+
+- [Pipeline Command](commands/pipeline-command.md) - Pipeline operations
+- [Release Command](commands/release-command.md) - Release management
+- [Risks Command](commands/risks-command.md) - Risk assessment
+
+### Other
+
+- [Templates & Docs Commands](commands/templates-docs-commands.md) - Templates and documentation
 
 ## Configuration
 

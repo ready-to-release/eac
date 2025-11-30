@@ -8,24 +8,24 @@ Feature: src-commands_commit
   Rule: Command must be registered and accessible
 
     Scenario: Command is listed in available commands
-      When I run the command "list commands"
+      When I run the command "show help"
       Then the exit code is 0
       And I should see "commit"
 
     Scenario: Command has proper description
-      When I run the command "describe commands commit"
+      When I run the command "show help commit"
       Then the exit code is 0
       And I should see "commit" or "AI" or "commit"
 
   Rule: Command validates contract implementation before execution
 
     Scenario: Command can be described
-      When I run the command "describe commands commit"
+      When I run the command "show help commit"
       Then the exit code is 0
       And I should see "commit"
 
     Scenario: Command handles all execution paths
-      When I run the command "list commands"
+      When I run the command "show help"
       Then I should see "commit"
       And the exit code is 0
 

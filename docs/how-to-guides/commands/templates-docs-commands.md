@@ -1,190 +1,301 @@
-# Templates and Docs Commands
+# Templates and Serve Docs Commands
 
 **Problem**: Setting up documentation and maintaining consistent project structure requires manual file creation and configuration.
 
-**Solution**: Use `templates` to install project templates and `docs` to serve documentation sites.
+**Solution**: Use `templates` to manage project templates with variable substitution and `serve docs` to serve documentation sites.
 
 ## Key Benefits
 
 - Quick project setup with templates
 - Consistent documentation structure
-- Live documentation preview
-- MkDocs integration
-- Customizable templates for specs and docs
+- Live documentation preview with MkDocs
+- Variable substitution using JSON input files
+- Automated report template installation
+- Template variable discovery
 
 ## Quick Start
 
 ```bash
-# Install documentation templates
-r2r eac templates install-docs
+# Apply documentation templates with variables
+r2r eac templates apply docs --input-json values.json
 
-# Install specification templates
-r2r eac templates install-specs
+# Install report templates
+r2r eac templates install reports
+
+# List available template variables
+r2r eac templates list --template path/to/template.md
 
 # Serve documentation site
-r2r eac docs serve
+r2r eac serve docs
 
-# Apply templates with variable replacement
-r2r eac templates apply-docs --replace "project=MyProject"
+# Stop documentation server
+r2r eac serve docs --stop
 ```
 
 ## Templates Command
 
-### templates install
+The `templates` command provides template management with three main subcommands: `apply docs`, `install reports`, and `list`.
 
-Install templates to local directory.
+### templates apply docs
+
+Apply documentation templates with variable substitution.
 
 ```bash
-r2r eac templates install [options]
+r2r eac templates apply docs [options]
 
-# Subcommands:
-r2r eac templates install-docs          # Install doc templates
-r2r eac templates install-specs         # Install spec templates
-r2r eac templates install-reports       # Install report templates
+# Options:
+--source <path>              # Source template directory
+--destination <path>         # Destination directory (default: .docs/reference)
+--input-json <file>          # JSON file containing key-value pairs for substitution
+--debug, -d                  # Enable debug output
+```
+
+**How it works:**
+
+1. Reads templates from source directory
+2. Loads variable values from JSON input file
+3. Replaces `{{VARIABLE}}` placeholders with values from JSON
+4. Writes processed files to destination directory
+
+**JSON input file format:**
+
+```json
+{
+  "PROJECT_NAME": "MyProject",
+  "MODULE_NAME": "src-auth",
+  "AUTHOR": "John Doe",
+  "VERSION": "1.0.0",
+  "DESCRIPTION": "Authentication module",
+  "DATE": "2025-11-30"
+}
+```
+
+**Examples:**
+
+```bash
+# Apply docs templates with values from JSON file
+r2r eac templates apply docs --input-json project-values.json
+
+# Specify custom source and destination
+r2r eac templates apply docs \
+  --source ./custom-templates \
+  --destination ./docs/modules \
+  --input-json values.json
+
+# Enable debug output
+r2r eac templates apply docs --input-json values.json --debug
+```
+
+### templates install reports
+
+Install report templates without variable substitution.
+
+```bash
+r2r eac templates install reports [options]
+
+# Options:
+--source <path>              # Source template directory
+--destination <path>         # Destination directory (default: .r2r/templates/reports)
+--debug, -d                  # Enable debug output
 ```
 
 **What it installs:**
 
-**Documentation templates** (`templates/docs/`):
-
-- Module documentation structure
-- How-to guides templates
-- Reference documentation templates
-- Tutorial templates
-
-**Specification templates** (`templates/specs/`):
-
-- Gherkin feature templates
-- Scenario templates
-- Step definition templates
-
-**Report templates** (`templates/reports/`):
+Report templates are installed to `.r2r/templates/reports/` by default and include:
 
 - Test report templates
 - Build report templates
 - Validation report templates
+- CI/CD summary templates
+
+**Examples:**
+
+```bash
+# Install report templates to default location
+r2r eac templates install reports
+
+# Install to custom destination
+r2r eac templates install reports --destination ./templates/reports
+
+# Install with debug output
+r2r eac templates install reports --debug
+```
 
 ### templates list
 
-List placeholder variables in templates.
+List all placeholder variables found in template files.
 
 ```bash
-r2r eac templates list
-
-# Output:
-# Available template variables:
-# - {{PROJECT_NAME}}
-# - {{MODULE_NAME}}
-# - {{AUTHOR}}
-# - {{VERSION}}
-# - {{DESCRIPTION}}
-```
-
-### templates apply
-
-Apply templates with variable replacement.
-
-```bash
-r2r eac templates apply-docs [options]
+r2r eac templates list [options]
 
 # Options:
---replace "key=value"      # Replace {{KEY}} with value
-
-# Examples:
-r2r eac templates apply-docs --replace "project=MyApp" --replace "author=John Doe"
-```
-
-## Docs Command
-
-### docs serve
-
-Start MkDocs documentation server.
-
-```bash
-r2r eac docs serve [options]
-
-# Options:
-start                  # Start documentation server (default)
-stop                   # Stop documentation server
-
-# Examples:
-r2r eac docs serve start
-r2r eac docs serve stop
-r2r eac docs serve      # Defaults to start
+--template <path>            # Path to template file or directory
+--debug, -d                  # Enable debug output
 ```
 
 **What it does:**
 
-1. Starts MkDocs dev server
+1. Scans template file(s) for `{{VARIABLE}}` patterns
+2. Extracts unique variable names
+3. Displays list of all placeholders found
+
+**Output example:**
+
+```
+Available template variables:
+- {{PROJECT_NAME}}
+- {{MODULE_NAME}}
+- {{AUTHOR}}
+- {{VERSION}}
+- {{DESCRIPTION}}
+- {{DATE}}
+```
+
+**Examples:**
+
+```bash
+# List variables in a single template
+r2r eac templates list --template ./templates/module-doc.md
+
+# List variables in all templates in a directory
+r2r eac templates list --template ./templates/
+
+# List with debug output
+r2r eac templates list --template ./templates/ --debug
+```
+
+## Serve Docs Command
+
+The `serve docs` command manages the MkDocs documentation server.
+
+### serve docs
+
+Start or stop the MkDocs documentation server.
+
+```bash
+r2r eac serve docs [options]
+
+# Options:
+--no-browser                 # Don't automatically open browser
+--port, -p <number>          # Port number (default: 8000)
+--debug                      # Enable debug output
+--stop                       # Stop the documentation server
+```
+
+**Default behavior (start server):**
+
+1. Starts MkDocs development server
 2. Watches for file changes
 3. Auto-rebuilds on changes
-4. Serves on <http://localhost:8000>
+4. Opens browser to http://localhost:8000
 5. Provides live reload
+
+**Examples:**
+
+```bash
+# Start server (opens browser automatically)
+r2r eac serve docs
+
+# Start without opening browser
+r2r eac serve docs --no-browser
+
+# Start on custom port
+r2r eac serve docs --port 8080
+r2r eac serve docs -p 8080
+
+# Start with debug output
+r2r eac serve docs --debug
+
+# Stop the server
+r2r eac serve docs --stop
+```
 
 ## Typical Workflows
 
 ### Initial Project Setup
 
 ```bash
-# 1. Install all templates
-r2r eac templates install-docs
-r2r eac templates install-specs
-r2r eac templates install-reports
+# 1. Create JSON file with project variables
+cat > project-values.json << 'EOF'
+{
+  "PROJECT_NAME": "MyProject",
+  "AUTHOR": "TeamName",
+  "VERSION": "1.0.0",
+  "DESCRIPTION": "My awesome project",
+  "DATE": "2025-11-30"
+}
+EOF
 
-# 2. Apply with project variables
-r2r eac templates apply-docs \
-  --replace "project=MyProject" \
-  --replace "author=TeamName" \
-  --replace "version=1.0.0"
+# 2. Apply documentation templates
+r2r eac templates apply docs --input-json project-values.json
 
-# 3. Serve documentation
-r2r eac docs serve
+# 3. Install report templates
+r2r eac templates install reports
 
-# Opens http://localhost:8000
+# 4. Serve documentation
+r2r eac serve docs
 ```
 
 ### Documentation Development
 
 ```bash
 # Start docs server
-r2r eac docs serve
+r2r eac serve docs
 
 # Edit docs in docs/
 nano docs/how-to-guides/my-guide.md
 
 # Browser auto-refreshes with changes
 
-# When done
-r2r eac docs serve stop
+# When done, stop server
+r2r eac serve docs --stop
 ```
 
-### Adding New Module Documentation
+### Creating Module Documentation from Template
 
 ```bash
-# Create module docs from template
-cp templates/docs/module-template.md docs/modules/my-module.md
+# 1. Create module-specific values file
+cat > module-values.json << 'EOF'
+{
+  "MODULE_NAME": "src-payments",
+  "DESCRIPTION": "Payment processing module",
+  "AUTHOR": "Payments Team",
+  "DATE": "2025-11-30"
+}
+EOF
 
-# Edit with module details
-nano docs/modules/my-module.md
+# 2. Apply template with module values
+r2r eac templates apply docs \
+  --source ./templates/module-template \
+  --destination ./docs/modules \
+  --input-json module-values.json
 
-# Preview
-r2r eac docs serve
+# 3. Preview in documentation
+r2r eac serve docs
 ```
 
-### Specification Workflow
+### Discovering Template Variables
 
 ```bash
-# Install spec templates
-r2r eac templates install-specs
+# Check what variables a template needs
+r2r eac templates list --template ./templates/new-template.md
 
-# Create spec from template
-cp templates/specs/feature-template.feature specs/src-auth/login.feature
+# Output shows required variables:
+# - {{PROJECT_NAME}}
+# - {{MODULE_NAME}}
+# - {{FEATURE_NAME}}
 
-# Edit specification
-nano specs/src-auth/login.feature
+# Create JSON file with those values
+cat > values.json << 'EOF'
+{
+  "PROJECT_NAME": "MyApp",
+  "MODULE_NAME": "src-core",
+  "FEATURE_NAME": "authentication"
+}
+EOF
 
-# Validate
-r2r eac specs validate
+# Apply template
+r2r eac templates apply docs --input-json values.json
 ```
 
 ## Documentation Structure
@@ -217,14 +328,15 @@ mkdocs.yml                            # MkDocs configuration
 
 Common template placeholders:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{{PROJECT_NAME}}` | Project name | "MyApp" |
-| `{{MODULE_NAME}}` | Module name | "src-auth" |
-| `{{AUTHOR}}` | Author name | "John Doe" |
-| `{{VERSION}}` | Version | "1.0.0" |
-| `{{DESCRIPTION}}` | Description | "Authentication module" |
-| `{{DATE}}` | Current date | "2025-01-21" |
+| Variable           | Description  | Example                 |
+| ------------------ | ------------ | ----------------------- |
+| `{{PROJECT_NAME}}` | Project name | "MyApp"                 |
+| `{{MODULE_NAME}}`  | Module name  | "src-auth"              |
+| `{{AUTHOR}}`       | Author name  | "John Doe"              |
+| `{{VERSION}}`      | Version      | "1.0.0"                 |
+| `{{DESCRIPTION}}`  | Description  | "Authentication module" |
+| `{{DATE}}`         | Current date | "2025-11-30"            |
+| `{{FEATURE_NAME}}` | Feature name | "login"                 |
 
 ## Integration Patterns
 
@@ -257,26 +369,40 @@ if git diff --cached --name-only | grep -q '^docs/'; then
 fi
 ```
 
-### Template Automation
+### Template Automation Script
 
 ```bash
+#!/bin/bash
 # Script to create new module with docs
+
 create_module() {
   MODULE=$1
+  DESCRIPTION=$2
 
   # Create module structure
   mkdir -p src/$MODULE
 
-  # Apply doc template
-  r2r eac templates apply-docs \
-    --replace "module=$MODULE" \
-    --replace "date=$(date +%Y-%m-%d)"
+  # Create values file
+  cat > /tmp/${MODULE}-values.json << EOF
+{
+  "MODULE_NAME": "$MODULE",
+  "DESCRIPTION": "$DESCRIPTION",
+  "AUTHOR": "$(git config user.name)",
+  "DATE": "$(date +%Y-%m-%d)",
+  "VERSION": "0.1.0"
+}
+EOF
 
-  # Create spec from template
-  cp templates/specs/module-spec.feature specs/$MODULE/
+  # Apply doc template
+  r2r eac templates apply docs \
+    --source ./templates/module \
+    --destination ./docs/modules \
+    --input-json /tmp/${MODULE}-values.json
+
+  echo "Module $MODULE documentation created"
 }
 
-create_module "src-payments"
+create_module "src-payments" "Payment processing module"
 ```
 
 ## MkDocs Configuration
@@ -319,52 +445,117 @@ markdown_extensions:
 
 ## Best Practices
 
-- **Use templates**: Don't create docs from scratch
-- **Consistent structure**: Follow established patterns
-- **Live preview**: Use `docs serve` while writing
-- **Version control**: Commit templates and generated docs
-- **Update templates**: Keep templates current with best practices
-- **Variable replacement**: Use templates for repeated structures
-- **Link checking**: Validate internal links regularly
+- **Use JSON files**: Store template values in version-controlled JSON files
+- **Discover variables first**: Use `templates list` to find required variables before applying
+- **Consistent structure**: Follow established documentation patterns
+- **Live preview**: Use `serve docs` while writing documentation
+- **Version control templates**: Keep templates and JSON value files in git
+- **Port management**: Use `--port` flag if default port 8000 is occupied
+- **Debug mode**: Enable `--debug` flag when troubleshooting template issues
+- **Custom destinations**: Use `--destination` to organize generated docs
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| MkDocs not found | Install: `pip install mkdocs mkdocs-material` |
-| Port 8000 in use | Stop existing server or use different port |
-| Template not found | Run `templates install` first |
-| Variables not replaced | Check `--replace` syntax: `key=value` |
-| Docs not updating | Check file watch, restart server |
-| Build fails | Check `mkdocs.yml` syntax |
+| Problem                | Solution                                                  |
+| ---------------------- | --------------------------------------------------------- |
+| MkDocs not found       | Install: `pip install mkdocs mkdocs-material`             |
+| Port 8000 in use       | Use `--port` flag: `serve docs --port 8080`               |
+| Template not found     | Check `--source` path is correct                          |
+| Variables not replaced | Verify JSON file format and use `--input-json` flag       |
+| Missing variables      | Use `templates list` to discover required variables       |
+| Docs not updating      | Restart server with `serve docs --stop` then `serve docs` |
+| Build fails            | Check `mkdocs.yml` syntax with `mkdocs build --strict`    |
+| Server won't stop      | Use `--stop` flag: `serve docs --stop`                    |
 
 ## Advanced Usage
 
-### Custom Templates
+### Custom Template with Variable Discovery
 
 ```bash
-# Create custom template
+# 1. Create custom template
 mkdir -p templates/custom/
-cat > templates/custom/my-template.md << 'EOF'
-# {{TITLE}}
+cat > templates/custom/api-doc.md << 'EOF'
+# {{API_NAME}} API Documentation
 
-By {{AUTHOR}} - {{DATE}}
+**Version**: {{VERSION}}
+**Author**: {{AUTHOR}}
+**Last Updated**: {{DATE}}
 
-{{CONTENT}}
+## Overview
+
+{{DESCRIPTION}}
+
+## Endpoints
+
+{{ENDPOINTS}}
+
+## Authentication
+
+{{AUTH_METHOD}}
 EOF
 
-# Use custom template
-cp templates/custom/my-template.md docs/custom-page.md
+# 2. Discover what variables are needed
+r2r eac templates list --template templates/custom/api-doc.md
+
+# Output:
+# - {{API_NAME}}
+# - {{VERSION}}
+# - {{AUTHOR}}
+# - {{DATE}}
+# - {{DESCRIPTION}}
+# - {{ENDPOINTS}}
+# - {{AUTH_METHOD}}
+
+# 3. Create corresponding JSON file
+cat > api-values.json << 'EOF'
+{
+  "API_NAME": "User Service",
+  "VERSION": "2.0.0",
+  "AUTHOR": "API Team",
+  "DATE": "2025-11-30",
+  "DESCRIPTION": "User management API",
+  "ENDPOINTS": "See endpoints section below",
+  "AUTH_METHOD": "Bearer token (JWT)"
+}
+EOF
+
+# 4. Apply template
+r2r eac templates apply docs \
+  --source templates/custom \
+  --destination docs/api \
+  --input-json api-values.json
 ```
 
-### Batch Template Application
+### Multiple Environment Configurations
 
 ```bash
-# Apply to multiple files
-for file in docs/**/*.md; do
-  sed -i "s/{{PROJECT_NAME}}/MyProject/g" $file
-  sed -i "s/{{VERSION}}/1.0.0/g" $file
-done
+# Create environment-specific values
+cat > values-dev.json << 'EOF'
+{
+  "ENVIRONMENT": "Development",
+  "API_URL": "https://dev.example.com",
+  "DEBUG_MODE": "enabled"
+}
+EOF
+
+cat > values-prod.json << 'EOF'
+{
+  "ENVIRONMENT": "Production",
+  "API_URL": "https://api.example.com",
+  "DEBUG_MODE": "disabled"
+}
+EOF
+
+# Apply for different environments
+r2r eac templates apply docs \
+  --source templates/config \
+  --destination docs/environments/dev \
+  --input-json values-dev.json
+
+r2r eac templates apply docs \
+  --source templates/config \
+  --destination docs/environments/prod \
+  --input-json values-prod.json
 ```
 
 ### Documentation Validation
@@ -375,24 +566,59 @@ mkdocs build --strict
 
 # Check links
 pip install linkchecker
-mkdocs serve &
+r2r eac serve docs --no-browser &
+sleep 5
 linkchecker http://localhost:8000
+r2r eac serve docs --stop
 ```
+
+### Serve on Custom Port for Parallel Development
+
+```bash
+# Terminal 1: Main docs on default port
+r2r eac serve docs
+
+# Terminal 2: Feature branch docs on different port
+cd /path/to/feature-branch
+r2r eac serve docs --port 8001
+```
+
+## Command Reference
+
+### Templates Commands
+
+| Command                     | Description                                              | Key Flags                                              |
+| --------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| `templates apply docs`      | Apply documentation templates with variable substitution | `--source`, `--destination`, `--input-json`, `--debug` |
+| `templates install reports` | Install report templates without substitution            | `--source`, `--destination`, `--debug`                 |
+| `templates list`            | List placeholder variables in templates                  | `--template`, `--debug`                                |
+
+### Serve Commands
+
+| Command      | Description         | Key Flags                                     |
+| ------------ | ------------------- | --------------------------------------------- |
+| `serve docs` | Start MkDocs server | `--no-browser`, `--port`, `--debug`, `--stop` |
 
 ## Summary
 
 **Templates:**
 
-1. `r2r eac templates install-docs` - Install documentation templates
-2. `r2r eac templates install-specs` - Install specification templates
-3. `r2r eac templates apply-docs --replace "key=value"` - Apply with variables
-4. `r2r eac templates list` - List available variables
+1. `r2r eac templates apply docs --input-json values.json` - Apply templates with JSON values
+2. `r2r eac templates install reports` - Install report templates
+3. `r2r eac templates list --template <path>` - Discover template variables
 
 **Documentation:**
 
-1. `r2r eac docs serve` - Start documentation server
+1. `r2r eac serve docs` - Start documentation server (opens browser)
 2. Edit files in `docs/`
-3. Preview at <http://localhost:8000>
-4. `r2r eac docs serve stop` - Stop server
+3. Preview at http://localhost:8000 (auto-reloads)
+4. `r2r eac serve docs --stop` - Stop server
 
-Templates and docs commands streamline documentation creation and maintenance.
+**Key Differences from Legacy Approach:**
+
+- Use `--input-json <file>` instead of multiple `--replace "key=value"` flags
+- Use `serve docs --stop` instead of `docs serve stop` subcommand
+- Use `templates list` to discover required variables before applying
+- Default destinations: `.docs/reference` for docs, `.r2r/templates/reports` for reports
+
+The templates and serve docs commands streamline documentation creation with variable substitution from JSON files and provide integrated MkDocs server management.

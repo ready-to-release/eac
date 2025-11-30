@@ -24,18 +24,18 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	state := &specsTestState{}
 
 	// Command execution steps - specs-specific patterns
-	sc.Step(`^I run "specs create" without arguments$`, func() error {
-		return ctx.RunCommand("specs create")
+	sc.Step(`^I run "create spec" without arguments$`, func() error {
+		return ctx.RunCommand("create spec")
 	})
-	sc.Step(`^I run "specs validate" without arguments$`, func() error {
-		return ctx.RunCommand("specs validate")
+	sc.Step(`^I run "validate specs" without arguments$`, func() error {
+		return ctx.RunCommand("validate specs")
 	})
-	sc.Step(`^I run the specs create command$`, func() error {
+	sc.Step(`^I run the create spec command$`, func() error {
 		// Use long description if set (for truncation test), otherwise use default
 		if state.longDescription != "" {
-			return ctx.RunCommand("specs create \"" + state.longDescription + "\"")
+			return ctx.RunCommand("create spec \"" + state.longDescription + "\"")
 		}
-		return ctx.RunCommand("specs create \"test specification\"")
+		return ctx.RunCommand("create spec \"test specification\"")
 	})
 	sc.Step(`^the output is processed$`, func() error {
 		// Output is already captured by RunCommand

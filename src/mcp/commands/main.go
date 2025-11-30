@@ -133,9 +133,9 @@ func handleRequest(encoder *json.Encoder, req *MCPRequest) {
 	}
 }
 
-// getCommandTools discovers commands by calling "describe commands"
+// getCommandTools discovers commands by calling "get commands"
 func getCommandTools() []Tool {
-	tree := describeCommands()
+	tree := getCommands()
 	var tools []Tool
 
 	for _, cmd := range tree.Commands {
@@ -143,7 +143,7 @@ func getCommandTools() []Tool {
 		toolName := strings.ReplaceAll(cmd.Name, " ", "-")
 
 		// Skip meta commands
-		if toolName == "list-commands" || toolName == "describe-commands" {
+		if toolName == "get-commands" {
 			continue
 		}
 
@@ -170,20 +170,20 @@ func getCommandTools() []Tool {
 	return tools
 }
 
-// describeCommands calls "go run ./src/commands describe commands" to get command info
-func describeCommands() CommandTree {
+// getCommands calls "go run ./src/commands get commands" to get command info
+func getCommands() CommandTree {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
 		return CommandTree{Commands: []CommandInfo{}}
 	}
 
 	cmdPath := filepath.Join(repoRoot, "src", "commands")
-	cmd := exec.Command("go", "run", ".", "describe", "commands")
+	cmd := exec.Command("go", "run", ".", "get", "commands")
 	cmd.Dir = cmdPath
 
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error describing commands: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting commands: %v\n", err)
 		return CommandTree{Commands: []CommandInfo{}}
 	}
 

@@ -19,4 +19,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	registerDesignSteps(sc, ctx)
 	registerSpecsSteps(sc, ctx)
 	registerRisksSteps(sc, ctx)
+	registerHelpSteps(sc, ctx)
+	registerGitSetupSteps(sc, ctx)
 }

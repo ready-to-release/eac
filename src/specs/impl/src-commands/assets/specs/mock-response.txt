@@ -12,7 +12,7 @@ Feature: src-commands_mock-feature
 
     @L2 @ov
     Scenario: Basic specification generation works
-      When I run the specs create command
+      When I run the create spec command
       Then the specification is generated successfully
       And the file contains valid Gherkin syntax
 

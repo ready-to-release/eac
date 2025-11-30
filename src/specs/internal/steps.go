@@ -69,9 +69,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	sc.Step(`^debug files should exist in "([^"]*)"$`, func(dir string) error {
 		return DirectoryHasFiles(ctx, dir)
 	})
-	sc.Step(`^"([^"]*)" should exist in the working directory$`, func(path string) error {
-		return FileExists(ctx, path)
-	})
 
 	// Git repository setup steps
 	sc.Step(`^I am in a git repository$`, func() error {

@@ -1,7 +1,7 @@
-// Command: commit message
+// Command: create commit-message
 // Description: Generate commit message using AI with staged changes and module mappings
 // Short: Generate AI-powered commit messages from staged changes
-// Long: The commit message command uses AI to analyze your staged git changes and generate a structured,
+// Long: The create commit-message command uses AI to analyze your staged git changes and generate a structured,
 // Long: conventional commit message that follows project standards and includes module-specific details.
 // Long: The generated message includes a top-level summary and per-module sections describing changes.
 // Long: All output is validated against the commit message contract to ensure consistency and quality.
@@ -101,7 +101,7 @@ func AutoCleanup(commitMessage string) string {
 }
 
 func init() {
-	registry.Register(CommitMessage)
+	registry.Register(CreateCommitMessage)
 }
 
 // executionConfig holds configuration for the commit AI command
@@ -114,7 +114,7 @@ type executionConfig struct {
 	gitDiff         string
 }
 
-func CommitMessage() int {
+func CreateCommitMessage() int {
 	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
 	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {

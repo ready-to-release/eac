@@ -1,4 +1,4 @@
-// Command: risks create
+// Command: create risk-controls
 // Short: Create risk control specifications from assessment reports
 // Args: files
 // Flag.force: type=bool, default=false, shorthand=f, usage=Overwrite existing risk control files
@@ -17,11 +17,11 @@ import (
 )
 
 func init() {
-	registry.Register(RisksCreate)
+	registry.Register(CreateRiskControls)
 }
 
-// RisksCreate is the entry point for the risks create command
-func RisksCreate() int {
+// CreateRiskControls is the entry point for the create risk-controls command
+func CreateRiskControls() int {
 	return Run()
 }
 

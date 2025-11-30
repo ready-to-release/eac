@@ -35,16 +35,16 @@ workspace "MCP Servers Architecture" "Model Context Protocol servers for EAC com
                 showTests = component "Test Lister" "Implements show-tests, get-tests, show-suite tools" "Go MCP tool"
 
                 # Design & Architecture
-                designCreate = component "Design Generator" "Implements design-create tool" "Go MCP tool"
-                designValidate = component "Design Validator" "Implements design-validate tool" "Go MCP tool"
-                designServe = component "Design Server" "Implements design-serve tool" "Go MCP tool"
+                designCreate = component "Design Generator" "Implements create-design tool" "Go MCP tool"
+                designValidate = component "Design Validator" "Implements validate-design tool" "Go MCP tool"
+                designServe = component "Design Server" "Implements serve-design tool" "Go MCP tool"
 
                 # Specifications
-                specsCreate = component "Spec Generator" "Implements specs-create tool" "Go MCP tool"
-                specsValidate = component "Spec Validator" "Implements specs-validate tool" "Go MCP tool"
+                specsCreate = component "Spec Generator" "Implements create-spec tool" "Go MCP tool"
+                specsValidate = component "Spec Validator" "Implements validate-specs tool" "Go MCP tool"
 
                 # Documentation
-                docsServe = component "Docs Server" "Implements docs-serve tool" "Go MCP tool"
+                docsServe = component "Docs Server" "Implements serve-docs tool" "Go MCP tool"
 
                 # Templates
                 templatesList = component "Template Lister" "Implements templates-list tool" "Go MCP tool"
@@ -101,12 +101,12 @@ workspace "MCP Servers Architecture" "Model Context Protocol servers for EAC com
         buildModule -> cliExecutor "Executes: build module" "CLI call"
         testModule -> cliExecutor "Executes: test module, test suite" "CLI call"
         showTests -> cliExecutor "Executes: show tests, get tests" "CLI call"
-        designCreate -> cliExecutor "Executes: design create" "CLI call"
-        designValidate -> cliExecutor "Executes: design validate" "CLI call"
-        designServe -> cliExecutor "Executes: design serve" "CLI call"
-        specsCreate -> cliExecutor "Executes: specs create" "CLI call"
-        specsValidate -> cliExecutor "Executes: specs validate" "CLI call"
-        docsServe -> cliExecutor "Executes: docs serve" "CLI call"
+        designCreate -> cliExecutor "Executes: create design" "CLI call"
+        designValidate -> cliExecutor "Executes: validate design" "CLI call"
+        designServe -> cliExecutor "Executes: serve design" "CLI call"
+        specsCreate -> cliExecutor "Executes: create spec" "CLI call"
+        specsValidate -> cliExecutor "Executes: validate specs" "CLI call"
+        docsServe -> cliExecutor "Executes: serve docs" "CLI call"
         templatesList -> cliExecutor "Executes: templates list" "CLI call"
         templatesInstall -> cliExecutor "Executes: templates install" "CLI call"
         templatesApply -> cliExecutor "Executes: templates apply" "CLI call"
