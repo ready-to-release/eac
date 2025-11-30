@@ -29,20 +29,40 @@ func RegisterSystem(buildDep string, fn TestFunc) {
 }
 
 // GetTestFunc returns the appropriate test function for a module type.
-// It looks up the primary build_dep from the module-types contract and returns
-// the registered handler for that build dependency.
+// It uses dispatch rules from handlers.yml to determine which handler to use,
+// falling back to the primary build_dep from module-types.yml.
 func GetTestFunc(moduleType string) TestFunc {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	// Look up primary build dep from contracts
 	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
-		if primaryDep != "" {
-			if fn, ok := systemHandlers[primaryDep]; ok {
-				return fn
-			}
+	if cfg == nil || cfg.ModuleTypes == nil {
+		// No config available, use static handler
+		if fn, ok := systemHandlers[""]; ok {
+			return fn
+		}
+		return func(*modules.ModuleContract, string, string, io.Writer, string, string) int {
+			return 0
+		}
+	}
+
+	// Get module capabilities and primary build dep
+	capabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
+	primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
+
+	// Use handlers config dispatch rules if available
+	var handlerName string
+	if cfg.Handlers != nil {
+		handlerName = cfg.Handlers.GetTestHandler(moduleType, capabilities, primaryDep)
+	} else {
+		// Legacy fallback: use primary build dep
+		handlerName = primaryDep
+	}
+
+	// Look up the handler
+	if handlerName != "" {
+		if fn, ok := systemHandlers[handlerName]; ok {
+			return fn
 		}
 	}
 

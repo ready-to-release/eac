@@ -77,6 +77,15 @@ func (c *ModuleTypesConfig) HasCapability(typeName, capability string) bool {
 	return false
 }
 
+// GetCapabilities returns all capabilities for a module type
+func (c *ModuleTypesConfig) GetCapabilities(typeName string) []string {
+	typeDef := c.Get(typeName)
+	if typeDef == nil {
+		return nil
+	}
+	return typeDef.Capabilities
+}
+
 // GetBuildDeps returns the build dependencies for a module type
 func (c *ModuleTypesConfig) GetBuildDeps(typeName string) []string {
 	typeDef := c.Get(typeName)

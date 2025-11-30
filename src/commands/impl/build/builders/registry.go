@@ -35,29 +35,45 @@ func RegisterSystem(buildDep string, fn BuildFunc) {
 }
 
 // GetBuildFunc returns the appropriate build function for a module type.
-// It looks up the primary build_dep from the module-types contract and returns
-// the registered handler for that build dependency.
-// Special case: documentation + container capability uses mkdocs handler.
+// It uses dispatch rules from handlers.yml to determine which handler to use,
+// falling back to the primary build_dep from module-types.yml.
 func GetBuildFunc(moduleType string) BuildFunc {
 	mu.RLock()
 	defer mu.RUnlock()
 
 	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		// Special case: documentation sites with container capability use mkdocs builder
+	if cfg == nil || cfg.ModuleTypes == nil {
+		// No config available, use no-op handler
+		if fn, ok := systemHandlers[""]; ok {
+			return fn
+		}
+		return func(*modules.ModuleContract, string, string, io.Writer, BuildOptions) int {
+			return 0
+		}
+	}
+
+	// Get module capabilities and primary build dep
+	capabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
+	primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
+
+	// Use handlers config dispatch rules if available
+	var handlerName string
+	if cfg.Handlers != nil {
+		handlerName = cfg.Handlers.GetBuildHandler(moduleType, capabilities, primaryDep)
+	} else {
+		// Legacy fallback: special case for documentation + container
 		if cfg.ModuleTypes.HasCapability(moduleType, "documentation") &&
 			cfg.ModuleTypes.HasCapability(moduleType, "container") {
-			if fn, ok := systemHandlers["mkdocs"]; ok {
-				return fn
-			}
+			handlerName = "mkdocs"
+		} else {
+			handlerName = primaryDep
 		}
+	}
 
-		// Standard case: look up primary build dep from contracts
-		primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
-		if primaryDep != "" {
-			if fn, ok := systemHandlers[primaryDep]; ok {
-				return fn
-			}
+	// Look up the handler
+	if handlerName != "" {
+		if fn, ok := systemHandlers[handlerName]; ok {
+			return fn
 		}
 	}
 

@@ -47,6 +47,7 @@ type EACConfig struct {
 	TestingTags        *TestingTagsConfig
 	TestSuites         *TestSuitesConfig
 	SystemDependencies *SystemDependenciesConfig
+	Handlers           *HandlersConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -135,6 +136,10 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 
 	if err := c.LoadSystemDependencies(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
+	}
+
+	if err := c.LoadHandlers(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("handlers: %w", err))
 	}
 
 	if len(errs) > 0 {
@@ -284,6 +289,38 @@ func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
 	return nil
 }
 
+// LoadHandlers loads the handlers configuration
+func (c *EACConfig) LoadHandlers(validateSchema bool) error {
+	// Check if handlers file exists - it's optional
+	handlersPath := filepath.Join(c.ConfigRoot, HandlersFileName)
+	if _, err := os.Stat(handlersPath); os.IsNotExist(err) {
+		// Handlers config is optional - use empty config
+		c.Handlers = &HandlersConfig{}
+		c.Handlers.buildHandlerMap()
+		return nil
+	}
+
+	data, err := c.readConfigFile(HandlersFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaHandlers, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg HandlersConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", HandlersFileName, err)
+	}
+
+	cfg.buildHandlerMap()
+	c.Handlers = &cfg
+	return nil
+}
+
 // readConfigFile reads a config file from the config root
 func (c *EACConfig) readConfigFile(filename string) ([]byte, error) {
 	path := filepath.Join(c.ConfigRoot, filename)
@@ -353,6 +390,16 @@ func (c *EACConfig) ValidateAll() error {
 		data, _ := c.readConfigFile(SystemDependenciesFileName)
 		if err := c.validateSchema(schema.SchemaSystemDependencies, data); err != nil {
 			errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
+		}
+	}
+
+	if c.Handlers != nil {
+		data, err := c.readConfigFile(HandlersFileName)
+		// Only validate if file exists (handlers are optional)
+		if err == nil {
+			if err := c.validateSchema(schema.SchemaHandlers, data); err != nil {
+				errs = append(errs, fmt.Errorf("handlers: %w", err))
+			}
 		}
 	}
 
