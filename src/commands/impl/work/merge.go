@@ -309,7 +309,7 @@ func performSquashMerge(config *mergeConfig) error {
 		os.Args = []string{"r2r", "commit", "message"}
 	}
 
-	exitCode := commit.CommitMessage()
+	exitCode := commit.CreateCommitMessage()
 	if exitCode != 0 {
 		return fmt.Errorf("commit message failed with exit code %d", exitCode)
 	}

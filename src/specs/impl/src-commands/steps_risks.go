@@ -84,27 +84,8 @@ func registerRisksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 
 	// Given steps - controls setup
-	sc.Step(`^(\d+) risk controls exist$`, func(count int) error {
-		state.controlsCount = count
-		for i := 1; i <= count; i++ {
-			path := fmt.Sprintf("specs/risk-controls/control%d.feature", i)
-			if err := internal.CreateFile(ctx, path, riskControlContent(fmt.Sprintf("ctrl-%03d", i))); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	sc.Step(`^risk controls exist in "([^"]*)"$`, func(dir string) error {
-		return internal.CreateFile(ctx, filepath.Join(dir, "auth-mfa.feature"), riskControlContent("auth-mfa-01"))
-	})
-	sc.Step(`^a control "([^"]*)"$`, func(path string) error {
-		return internal.CreateFile(ctx, path, riskControlContent("auth-mfa-01"))
-	})
 	sc.Step(`^a control exists at "([^"]*)"$`, func(path string) error {
 		return internal.CreateFile(ctx, path, riskControlContent("auth-mfa-01"))
-	})
-	sc.Step(`^a control exists with no references$`, func() error {
-		return internal.CreateFile(ctx, "specs/risk-controls/orphaned.feature", riskControlContent("orphaned-01"))
 	})
 	sc.Step(`^a control exists with tag "([^"]*)"$`, func(tag string) error {
 		tagID := strings.TrimPrefix(tag, "@risk-control:")
@@ -119,29 +100,11 @@ func registerRisksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^specifications exist in "([^"]*)"$`, func(dir string) error {
 		return internal.CreateFile(ctx, filepath.Join(dir, "auth.feature"), specWithRiskTag("auth-mfa-01"))
 	})
-	sc.Step(`^specs exist that should reference risk controls$`, func() error {
-		return internal.CreateFile(ctx, "specs/auth/login.feature", specWithRiskTag("auth-mfa-01"))
-	})
-	sc.Step(`^some specs are missing risk control tags$`, func() error {
-		content, err := internal.LoadAsset(ctx, "specs/valid-spec.txt")
-		if err != nil {
-			return err
-		}
-		return internal.CreateFile(ctx, "specs/auth/missing.feature", content)
-	})
 	sc.Step(`^other specs reference "([^"]*)"$`, func(tag string) error {
 		tagID := strings.TrimPrefix(tag, "@risk-control:")
 		return internal.CreateFile(ctx, "specs/auth/session.feature", specWithRiskTag(tagID))
 	})
 	sc.Step(`^other specs reference these tags$`, func() error {
-		return nil
-	})
-	sc.Step(`^"([^"]*)" references the tag at line (\d+)$`, func(file string, line int) error {
-		// Reference tracking
-		return nil
-	})
-	sc.Step(`^(\d+) specifications exist$`, func(count int) error {
-		// Large spec count for performance testing
 		return nil
 	})
 
@@ -219,59 +182,8 @@ func registerRisksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 
 	// Then steps - output verification
-	sc.Step(`^the output shows (\d+) controls$`, func(count int) error {
-		return nil
-	})
-	sc.Step(`^the output shows only linked controls$`, func() error {
-		return internal.OutputContains(ctx, "Linked")
-	})
-	sc.Step(`^the output shows only orphaned controls$`, func() error {
-		return internal.OutputContains(ctx, "Orphaned")
-	})
-	sc.Step(`^the output shows specs missing risk control links$`, func() error {
-		return internal.OutputContains(ctx, "missing")
-	})
-	sc.Step(`^the output shows specs without risk control links$`, func() error {
-		return internal.OutputContains(ctx, "missing")
-	})
-	sc.Step(`^the output shows the control$`, func() error {
-		return nil
-	})
-	sc.Step(`^the output shows "([^"]*)"$`, func(text string) error {
-		return internal.OutputContains(ctx, text)
-	})
-	sc.Step(`^the output is valid JSON$`, func() error {
-		return internal.OutputContains(ctx, "{")
-	})
-	sc.Step(`^JSON contains "([^"]*)" array$`, func(field string) error {
-		return internal.OutputContains(ctx, fmt.Sprintf(`"%s"`, field))
-	})
-	sc.Step(`^JSON contains "([^"]*)" object$`, func(field string) error {
-		return internal.OutputContains(ctx, fmt.Sprintf(`"%s"`, field))
-	})
-	sc.Step(`^JSON output is generated$`, func() error {
-		return internal.OutputContains(ctx, "{")
-	})
-	sc.Step(`^all shown controls have status "([^"]*)"$`, func(status string) error {
-		return internal.OutputContains(ctx, status)
-	})
-	sc.Step(`^each control shows its reference count$`, func() error {
-		return nil
-	})
-	sc.Step(`^each control shows its tags$`, func() error {
-		return nil
-	})
-	sc.Step(`^all controls are analyzed$`, func() error {
-		return nil
-	})
 	sc.Step(`^a summary report is displayed$`, func() error {
 		return nil
-	})
-	sc.Step(`^the summary shows "([^"]*)"$`, func(text string) error {
-		return internal.OutputContains(ctx, text)
-	})
-	sc.Step(`^the summary counts it as orphaned$`, func() error {
-		return internal.OutputContains(ctx, "Orphaned")
 	})
 	sc.Step(`^a warning is displayed about orphaned tags$`, func() error {
 		return internal.OutputContainsAny(ctx, "warning", "orphan", "Warning")
@@ -316,22 +228,19 @@ func registerRisksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^force mode is enabled$`, func() error {
 		return nil
 	})
-	sc.Step(`^debug logs show specs create invocations$`, func() error {
+	sc.Step(`^debug logs show create spec invocations$`, func() error {
 		return nil
 	})
 	sc.Step(`^each call includes risk description$`, func() error {
 		return nil
 	})
-	sc.Step(`^specs create is called (\d+) times$`, func(count int) error {
+	sc.Step(`^create spec is called (\d+) times$`, func(count int) error {
 		return nil
 	})
 	sc.Step(`^all assessments are processed$`, func() error {
 		return nil
 	})
 	sc.Step(`^all flags are processed correctly$`, func() error {
-		return nil
-	})
-	sc.Step(`^orphaned filter is applied$`, func() error {
 		return nil
 	})
 	sc.Step(`^no specs directory argument is required$`, func() error {
@@ -341,9 +250,6 @@ func registerRisksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return nil
 	})
 	sc.Step(`^the command analyzes tag usage across all specs$`, func() error {
-		return nil
-	})
-	sc.Step(`^the command completes in reasonable time$`, func() error {
 		return nil
 	})
 
@@ -368,9 +274,6 @@ func registerRisksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the generated control includes severity metadata$`, func() error {
 		return nil
 	})
-	sc.Step(`^each spec shows suggested controls$`, func() error {
-		return nil
-	})
 	sc.Step(`^no orphaned tags are created$`, func() error {
 		return nil
 	})
@@ -378,19 +281,6 @@ func registerRisksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return nil
 	})
 
-	// Then steps - error handling
-	sc.Step(`^the control is marked as "([^"]*)"$`, func(status string) error {
-		return internal.OutputContains(ctx, status)
-	})
-	sc.Step(`^(\d+) controls are orphaned$`, func(count int) error {
-		return nil
-	})
-	sc.Step(`^(\d+) controls are referenced$`, func(count int) error {
-		return nil
-	})
-	sc.Step(`^(\d+) controls are referenced by specs$`, func(count int) error {
-		return nil
-	})
 }
 
 // riskAssessmentContent returns a risk assessment markdown document.

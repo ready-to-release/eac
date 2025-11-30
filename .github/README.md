@@ -131,7 +131,7 @@ r2r eac init
 
 ```bash
 r2r eac show modules              # Discover module structure
-r2r eac specs create "..."        # Generate executable specifications
+r2r eac create spec "..."         # Generate executable specifications
 r2r eac validate contracts        # Validate compliance continuously
 ```
 

@@ -4,13 +4,23 @@ nav:
   - Configuration:
     - configuration/claude-mcp-setup.md
   - Commands:
+    - commands/help-command.md
+    - commands/init-command.md
+    - commands/completion-command.md
     - commands/build-test-commands.md
-    - commands/command-template.md
-    - commands/design-command.md
-    - commands/show-get-list-commands.md
-    - commands/specs-command.md
-    - commands/templates-docs-commands.md
+    - commands/validate-command.md
+    - commands/ci-command.md
     - commands/work-command.md
+    - commands/commit-command.md
+    - commands/describe-command.md
+    - commands/design-command.md
+    - commands/specs-command.md
+    - commands/show-get-list-commands.md
+    - commands/pipeline-command.md
+    - commands/release-command.md
+    - commands/risks-command.md
+    - commands/templates-docs-commands.md
+    - commands/command-template.md
   - EAC:
     - eac/index.md
     - eac/creating-module-types.md

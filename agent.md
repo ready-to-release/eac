@@ -114,8 +114,8 @@ If MCP servers are NOT CONNECTED, use direct CLI commands:
 | `mcp__commands__show-modules` | `go run ./src/commands show modules` |
 | `mcp__commands__test-module` | `go run ./src/commands test module <name>` |
 | `mcp__commands__build-module` | `go run ./src/commands build module <name>` |
-| `mcp__commands__specs-create` | `go run ./src/commands specs create <description>` |
-| `mcp__commands__specs-validate` | `go run ./src/commands specs validate` |
+| `mcp__commands__specs-create` | `go run ./src/commands create spec <description>` |
+| `mcp__commands__specs-validate` | `go run ./src/commands validate specs` |
 | All other tools | `go run ./src/commands <command> [args]` |
 
 **Note**: GitHub MCP server has no CLI fallback - it uses the official MCP implementation from GitHub.

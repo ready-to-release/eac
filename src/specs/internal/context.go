@@ -149,7 +149,7 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 // Handles both single quotes and double quotes.
 // Examples:
 //
-//	"specs create -o 'custom/path' 'Test feature'" -> ["specs", "create", "-o", "custom/path", "Test feature"]
+//	"create spec -o 'custom/path' 'Test feature'" -> ["create", "spec", "-o", "custom/path", "Test feature"]
 //	'hello "world test"' -> ["hello", "world test"]
 func parseCommandLine(cmdLine string) []string {
 	var parts []string

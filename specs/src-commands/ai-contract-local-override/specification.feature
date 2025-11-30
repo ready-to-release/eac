@@ -60,9 +60,9 @@ Feature: src-commands_ai-contract-local-override
       And the commit message follows the configured format
 
     @L2 @ov
-    Scenario: specs create uses AI config prompt
+    Scenario: create spec uses AI config prompt
       Given .r2r/eac/ai/specifications/contract.yml exists
-      When I run "specs create 'Add user authentication'"
+      When I run "create spec 'Add user authentication'"
       Then the AI generation uses the prompt from .r2r/eac/ai/specifications
       And the specification follows the configured format
 

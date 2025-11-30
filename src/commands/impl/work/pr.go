@@ -1,4 +1,4 @@
-// Command: work pr
+// Command: create pr
 // Short: Create pull request with AI-generated description
 // Long: Creates a pull request for the current workspace branch with an AI-generated
 // Long: title and description based on all commits in the branch.
@@ -12,10 +12,10 @@
 // Long: Requires GitHub CLI (gh) to be installed and authenticated.
 // Long:
 // Long: Example:
-// Long:   work pr
-// Long:   work pr --target=develop
-// Long:   work pr --title "Add authentication feature"
-// Long:   work pr --debug
+// Long:   create pr
+// Long:   create pr --target=develop
+// Long:   create pr --title "Add authentication feature"
+// Long:   create pr --debug
 // Flag.target: type=string, default=main, usage=Target branch for the pull request
 // Flag.title: type=string, usage=Custom PR title (description still AI-generated)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode for AI generation
@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	registry.Register(PR)
+	registry.Register(CreatePR)
 }
 
 // Intent: Create pull request with AI-generated description
@@ -56,8 +56,8 @@ func init() {
 //   - Ensures commits exist before creating PR
 //   - Pushes branch automatically if needed
 
-// PR creates a pull request for the current workspace
-func PR() int {
+// CreatePR creates a pull request for the current workspace
+func CreatePR() int {
 	// Phase 1: Parse configuration
 	config, err := parsePRConfig()
 	if err != nil {

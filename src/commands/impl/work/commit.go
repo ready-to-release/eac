@@ -198,5 +198,5 @@ func commitWithAI(debug bool) int {
 	}
 
 	// Call commit message
-	return commit.CommitMessage()
+	return commit.CreateCommitMessage()
 }

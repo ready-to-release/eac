@@ -44,7 +44,7 @@ r2r run cmd test module src-core
 r2r run cmd get dependencies
 
 # Create specifications using AI
-r2r run cmd specs create "User authentication flow"
+r2r run cmd create spec "User authentication flow"
 
 # Build multiple modules
 r2r run cmd build modules src-core src-commands
@@ -79,19 +79,19 @@ docker run --rm -v $(pwd):/workspace -w /workspace \
 
 ### Docker-in-Docker Commands
 
-Some commands require Docker access (e.g., `design serve`, `docs serve`). Mount the Docker socket:
+Some commands require Docker access (e.g., `serve design`, `serve docs`). Mount the Docker socket:
 
 ```bash
 # Commands that need Docker
-r2r run cmd design serve
-r2r run cmd docs serve
+r2r run cmd serve design
+r2r run cmd serve docs
 
 # Manual invocation with Docker socket
 docker run --rm \
   -v $(pwd):/workspace \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -w /workspace \
-  ghcr.io/ready-to-release/eac/extensions/eac design serve
+  ghcr.io/ready-to-release/eac/extensions/eac serve design
 ```
 
 ## Extension Capabilities
@@ -190,7 +190,7 @@ The extension container includes:
 - **Git**: Required for `work` commands, file tracking, and repository operations
 - **Go**: Required for Go-based commands and tooling
 - **GitHub CLI (gh)**: Required for GitHub operations (`work pr`, pipeline GitHub integration)
-- **Docker**: Required for `design serve`, `docs serve` (via socket mount)
+- **Docker**: Required for `serve design`, `serve docs` (via socket mount)
 - **CA Certificates**: For HTTPS operations
 - **Timezone Data**: For timestamp operations
 - **curl**: For downloading additional tools during build
@@ -199,8 +199,8 @@ The extension container includes:
 
 - **AI Providers**: Some commands use AI (OpenAI, Anthropic) via API keys:
 
-  - `specs create` - Generate Gherkin specifications
-  - `design create` - Generate Structurizr diagrams
+  - `create spec` - Generate Gherkin specifications
+  - `create design` - Generate Structurizr diagrams
   - `commit` - Generate commit messages
 
   Pass API keys via environment variables:
@@ -208,7 +208,7 @@ The extension container includes:
   ```bash
   docker run --rm -v $(pwd):/workspace -w /workspace \
     -e OPENAI_API_KEY=$OPENAI_API_KEY \
-    ext-eac specs create "Feature description"
+    ext-eac create spec "Feature description"
   ```
 
 ## Module Contract
@@ -301,16 +301,16 @@ r2r run cmd work pr
 
 ```bash
 # Create Gherkin specification
-r2r run cmd specs create "User can reset password via email"
+r2r run cmd create spec "User can reset password via email"
 
 # Validate specifications
-r2r run cmd specs validate
+r2r run cmd validate specs
 
 # Generate architecture diagram
-r2r run cmd design create src-core
+r2r run cmd create design src-core
 
 # Serve diagrams in browser
-r2r run cmd design serve
+r2r run cmd serve design
 ```
 
 ## Troubleshooting
@@ -333,7 +333,7 @@ If encountering permission errors:
 
 ### Docker-in-Docker Issues
 
-If `design serve` or `docs serve` fail:
+If `serve design` or `serve docs` fail:
 
 1. Verify Docker socket is mounted: `-v /var/run/docker.sock:/var/run/docker.sock`
 2. Check Docker daemon is running on host
