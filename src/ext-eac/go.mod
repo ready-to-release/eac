@@ -1,4 +1,4 @@
-module github.com/ready-to-release/eac/src/commands/ext
+module github.com/ready-to-release/eac/src/ext-eac
 
 go 1.24.4
 
@@ -98,8 +98,8 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
 
-replace github.com/ready-to-release/eac/src/commands => ..
+replace github.com/ready-to-release/eac/src/commands => ../commands
 
-replace github.com/ready-to-release/eac/src/ai => ../../ai
+replace github.com/ready-to-release/eac/src/ai => ../ai
 
-replace github.com/ready-to-release/eac/src/core => ../../core
+replace github.com/ready-to-release/eac/src/core => ../core

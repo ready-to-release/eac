@@ -59,7 +59,7 @@ Examples:
 			if err != nil {
 				return fmt.Errorf("no configuration file specified and could not find repository root: %w", err)
 			}
-			configFile = filepath.Join(repoRoot, "r2r-cli.yml")
+			configFile = filepath.Join(repoRoot, ".r2r", "r2r-cli.yml")
 		}
 
 		// Check if file exists

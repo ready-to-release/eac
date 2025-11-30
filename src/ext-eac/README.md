@@ -1,10 +1,10 @@
-# containers/ext-cmd
+# src/ext-eac
 
-Command Extension for R2R CLI - Repository management tooling wrapped as a Docker extension.
+EAC Extension for R2R CLI - Repository management tooling wrapped as a Docker extension.
 
 ## Overview
 
-The `cmd` extension wraps the entire `src-commands` module suite (67 commands) into a containerized extension for R2R CLI. This enables portable, versioned access to repository management commands across any Docker-enabled environment.
+The `eac` extension wraps the entire `src-commands` module suite (67 commands) into a containerized extension for R2R CLI. This enables portable, versioned access to repository management commands across any Docker-enabled environment.
 
 ## Features
 
@@ -15,19 +15,19 @@ The `cmd` extension wraps the entire `src-commands` module suite (67 commands) i
 
 ## Command Categories
 
-| Category | Commands | Description |
-|----------|----------|-------------|
-| `build` | 3 | Build modules and collect results |
-| `design` | 4 | Architecture diagrams using Structurizr DSL |
-| `docs` | 2 | MkDocs documentation server integration |
-| `get` | 9 | Structured data retrieval (modules, files, tests, dependencies) |
-| `show` | 10 | Human-readable data display |
-| `specs` | 3 | Gherkin specification management with AI |
-| `templates` | 7 | Template management for docs, specs, reports |
-| `test` | 6 | Module and suite testing |
-| `validate` | 2 | Contract and dependency validation |
-| `work` | 7 | Git worktree management for parallel development |
-| Other | 14 | Pipeline, release, completion, help, etc. |
+| Category    | Commands | Description                                                     |
+| ----------- | -------- | --------------------------------------------------------------- |
+| `build`     | 3        | Build modules and collect results                               |
+| `design`    | 4        | Architecture diagrams using Structurizr DSL                     |
+| `docs`      | 2        | MkDocs documentation server integration                         |
+| `get`       | 9        | Structured data retrieval (modules, files, tests, dependencies) |
+| `show`      | 10       | Human-readable data display                                     |
+| `specs`     | 3        | Gherkin specification management with AI                        |
+| `templates` | 7        | Template management for docs, specs, reports                    |
+| `test`      | 6        | Module and suite testing                                        |
+| `validate`  | 2        | Contract and dependency validation                              |
+| `work`      | 7        | Git worktree management for parallel development                |
+| Other       | 14       | Pipeline, release, completion, help, etc.                       |
 
 ## Usage
 
@@ -74,7 +74,7 @@ r2r run cmd show modules
 
 # Manual Docker invocation (if needed)
 docker run --rm -v $(pwd):/workspace -w /workspace \
-  ghcr.io/ready-to-release/eac/extensions/cmd show modules
+  ghcr.io/ready-to-release/eac/extensions/eac show modules
 ```
 
 ### Docker-in-Docker Commands
@@ -91,7 +91,7 @@ docker run --rm \
   -v $(pwd):/workspace \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -w /workspace \
-  ghcr.io/ready-to-release/eac/extensions/cmd design serve
+  ghcr.io/ready-to-release/eac/extensions/eac design serve
 ```
 
 ## Extension Capabilities
@@ -115,14 +115,14 @@ docker run --rm \
 # Build multi-platform image
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -f containers/ext-cmd/.Dockerfile \
-  -t ghcr.io/ready-to-release/eac/extensions/cmd:latest \
+  -f containers/ext-eac/Dockerfile \
+  -t ghcr.io/ready-to-release/eac/extensions/eac:latest \
   .
 
 # Build for local platform only
 docker build \
-  -f containers/ext-cmd/.Dockerfile \
-  -t ext-cmd:local \
+  -f containers/ext-eac/Dockerfile \
+  -t ext-eac:local \
   .
 ```
 
@@ -130,16 +130,16 @@ docker build \
 
 ```bash
 # Build local image
-docker build -f containers/ext-cmd/.Dockerfile -t ext-cmd:test .
+docker build -f containers/ext-eac/Dockerfile -t ext-eac:test .
 
 # Test extension metadata
-docker run --rm ext-cmd:test extension-meta
+docker run --rm ext-eac:test extension-meta
 
 # Test command execution
-docker run --rm -v $(pwd):/workspace -w /workspace ext-cmd:test show modules
+docker run --rm -v $(pwd):/workspace -w /workspace ext-eac:test show modules
 
 # Test help
-docker run --rm ext-cmd:test help
+docker run --rm ext-eac:test help
 ```
 
 ## Technical Details
@@ -165,7 +165,7 @@ The extension uses direct pass-through to src-commands:
 
 The `extension-meta` command dynamically generates YAML metadata by:
 
-1. Querying `src-commands/internal/registry`
+1. Querying `src-commands/registry`
 2. Extracting command names, descriptions, and parameters
 3. Marshaling to R2R CLI extension metadata format
 4. Output: Complete, accurate command catalog
@@ -198,37 +198,40 @@ The extension container includes:
 ### External Integrations
 
 - **AI Providers**: Some commands use AI (OpenAI, Anthropic) via API keys:
+
   - `specs create` - Generate Gherkin specifications
   - `design create` - Generate Structurizr diagrams
   - `commit` - Generate commit messages
 
   Pass API keys via environment variables:
+
   ```bash
   docker run --rm -v $(pwd):/workspace -w /workspace \
     -e OPENAI_API_KEY=$OPENAI_API_KEY \
-    ext-cmd specs create "Feature description"
+    ext-eac specs create "Feature description"
   ```
 
 ## Module Contract
 
-- **Moniker**: `ext-cmd`
-- **Type**: `container-extension`
-- **Parent**: `containers`
-- **Dependencies**: `src-commands`, `src-core`
-- **Contract**: `contracts/modules/0.1.0/ext-cmd.yml`
+- **Moniker**: `ext-eac`
+- **Type**: `go-r2r-extension`
+- **Dependencies**: `src-commands`
+- **Dockerfile**: `containers/ext-eac/Dockerfile`
 
 ## Labels
 
 The container image includes comprehensive OCI and R2R CLI labels:
 
 **OCI Labels**:
+
 - `org.opencontainers.image.title`: "Command Extension"
 - `org.opencontainers.image.description`: "Repository command tooling for R2R CLI"
 - `org.opencontainers.image.version`: "1.0.0"
 - `org.opencontainers.image.source`: Repository URL
 
 **R2R CLI Labels**:
-- `r2r-cli.extension.name`: "cmd"
+
+- `r2r-cli.extension.name`: "eac"
 - `r2r-cli.extension.category`: "tools"
 - `r2r-cli.capabilities`: Comma-separated capability list
 - `r2r-cli.multi-arch`: "true"
@@ -351,7 +354,7 @@ This extension is auto-generated from `src-commands`. To add new commands:
 1. Add command implementation to `src/commands/impl/`
 2. Follow src-commands conventions (see `src/commands/README.md`)
 3. Rebuild extension image
-4. Test with `docker run ext-cmd:test extension-meta`
+4. Test with `docker run ext-eac:test extension-meta`
 
 ## License
 
@@ -361,5 +364,4 @@ MIT License - See repository LICENSE file
 
 - **Repository**: https://github.com/ready-to-release/eac
 - **src-commands**: `src/commands/` - Source command implementations
-- **Contract**: `contracts/modules/0.1.0/ext-cmd.yml`
-- **Dockerfile**: `containers/ext-cmd/.Dockerfile`
+- **Dockerfile**: `containers/ext-eac/Dockerfile`

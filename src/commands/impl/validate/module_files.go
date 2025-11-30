@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

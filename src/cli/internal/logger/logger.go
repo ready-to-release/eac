@@ -89,8 +89,14 @@ func New(cfg Config) (*Logger, error) {
 	if cfg.Level == "" {
 		cfg.Level = "info"
 	}
+	// Handle file logging configuration:
+	// - "disabled" = no file logging (default)
+	// - "" = auto-detect path (.r2r/r2r-cli.log)
+	// - any other value = use that path
 	if cfg.File == "" {
 		cfg.File = getLogFilePath()
+	} else if cfg.File == "disabled" {
+		cfg.File = "" // Clear to disable file logging
 	}
 
 	// Parse log level
@@ -368,7 +374,7 @@ func getLogFilePath() string {
 	// Try to find repository root by looking for .git directory first
 	currentDir, err := os.Getwd()
 	if err != nil {
-		return "r2r.log" // fallback to current directory
+		return "" // empty means logging disabled
 	}
 
 	// First pass: look for .git directory (most reliable indicator of repo root)
@@ -376,7 +382,12 @@ func getLogFilePath() string {
 	for {
 		gitPath := filepath.Join(dir, ".git")
 		if _, err := os.Stat(gitPath); err == nil {
-			return filepath.Join(dir, "r2r.log")
+			// Found repo root, use .r2r/r2r-cli.log
+			r2rDir := filepath.Join(dir, ".r2r")
+			if err := os.MkdirAll(r2rDir, 0755); err != nil {
+				return "" // can't create .r2r, disable logging
+			}
+			return filepath.Join(r2rDir, "r2r-cli.log")
 		}
 
 		parent := filepath.Dir(dir)
@@ -387,12 +398,17 @@ func getLogFilePath() string {
 		dir = parent
 	}
 
-	// Second pass: look for go.mod if no .git found (fallback)
+	// Second pass: look for go.mod if no .git found
 	dir = currentDir
 	for {
 		goModPath := filepath.Join(dir, "go.mod")
 		if _, err := os.Stat(goModPath); err == nil {
-			return filepath.Join(dir, "r2r.log")
+			// Found repo root, use .r2r/r2r-cli.log
+			r2rDir := filepath.Join(dir, ".r2r")
+			if err := os.MkdirAll(r2rDir, 0755); err != nil {
+				return "" // can't create .r2r, disable logging
+			}
+			return filepath.Join(r2rDir, "r2r-cli.log")
 		}
 
 		parent := filepath.Dir(dir)
@@ -403,8 +419,8 @@ func getLogFilePath() string {
 		dir = parent
 	}
 
-	// Fallback to current directory
-	return "r2r.log"
+	// No repo root found, disable logging
+	return ""
 }
 
 // Context helper functions

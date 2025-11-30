@@ -1,4 +1,4 @@
-// static.go - Test handlers for non-Go build systems
+// static.go - Test handlers for non-Go build dependencies
 package testers
 
 import (
@@ -10,11 +10,11 @@ import (
 )
 
 func init() {
-	// Build system handlers - contracts define which types use which build system
+	// Build dependency handlers - contracts define which types use which build deps
 	RegisterSystem("mkdocs", TestMkDocsModule)
 	RegisterSystem("npm", TestNpmModule)
 	RegisterSystem("docker", TestStaticModule)
-	RegisterSystem("none", TestStaticModule)
+	RegisterSystem("", TestStaticModule) // Modules with no build deps
 }
 
 // TestStaticModule is a passthrough for modules without runtime tests.

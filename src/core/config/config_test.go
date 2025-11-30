@@ -221,7 +221,7 @@ func TestLoad_ModuleTypesLoaded(t *testing.T) {
 	// Type lookup should work
 	goLib := cfg.ModuleTypes.Get("go-library")
 	assert.NotNil(t, goLib, "should find go-library type")
-	assert.Equal(t, "go", goLib.BuildSystem)
+	assert.Equal(t, []string{"go"}, goLib.BuildDeps)
 }
 
 // TestLoad_TypeDefaultsApplied verifies type defaults are applied after Load
@@ -266,8 +266,8 @@ func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
 		types := &ModuleTypesConfig{
 			Types: []ModuleTypeDef{
 				{
-					Name:        "go-library",
-					BuildSystem: "go",
+					Name:      "go-library",
+					BuildDeps: []string{"go"},
 					Defaults: &TypeDefaults{
 						Files: &FilesDefaults{
 							Source: []string{"**/*.go"},
@@ -410,7 +410,7 @@ func TestModuleTypesConfig_Integration(t *testing.T) {
 	t.Run("Get returns type definition", func(t *testing.T) {
 		goLib := cfg.ModuleTypes.Get("go-library")
 		require.NotNil(t, goLib)
-		assert.Equal(t, "go", goLib.BuildSystem)
+		assert.Equal(t, []string{"go"}, goLib.BuildDeps)
 	})
 
 	t.Run("Get returns nil for unknown type", func(t *testing.T) {
@@ -418,13 +418,13 @@ func TestModuleTypesConfig_Integration(t *testing.T) {
 		assert.Nil(t, unknown)
 	})
 
-	t.Run("GetBuildSystem returns correct system", func(t *testing.T) {
-		buildSys := cfg.ModuleTypes.GetBuildSystem("go-library")
-		assert.Equal(t, "go", buildSys)
+	t.Run("GetPrimaryBuildDep returns correct dep", func(t *testing.T) {
+		buildDep := cfg.ModuleTypes.GetPrimaryBuildDep("go-library")
+		assert.Equal(t, "go", buildDep)
 	})
 
-	t.Run("GetTypesByBuildSystem finds go types", func(t *testing.T) {
-		goTypes := cfg.ModuleTypes.GetTypesByBuildSystem("go")
+	t.Run("GetTypesWithBuildDep finds go types", func(t *testing.T) {
+		goTypes := cfg.ModuleTypes.GetTypesWithBuildDep("go")
 		assert.NotEmpty(t, goTypes)
 		assert.Contains(t, goTypes, "go-library")
 	})

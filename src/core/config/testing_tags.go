@@ -8,13 +8,9 @@ import (
 
 // TestingTagsConfig represents the testing-tags.yml configuration
 type TestingTagsConfig struct {
-	ModuleMonikers       MonikerExamples    `yaml:"module_monikers"`
-	EnvironmentMonikers  MonikerExamples    `yaml:"environment_monikers"`
-	SystemDependencies   []SystemDependency `yaml:"system_dependency_names"`
-	OSPlatforms          []OSPlatform       `yaml:"os_platform_names"`
-	Tags                 []TagDefinition    `yaml:"tags"`
-	Types                []TagType          `yaml:"types"`
-	SkipReasons          []SkipReason       `yaml:"skip_reasons"`
+	Tags        []TagDefinition `yaml:"tags"`
+	Types       []TagType       `yaml:"types"`
+	SkipReasons []SkipReason    `yaml:"skip_reasons"`
 
 	// Compiled patterns for efficient validation (populated by Initialize)
 	compiledPatterns map[string]*regexp.Regexp
@@ -22,23 +18,6 @@ type TestingTagsConfig struct {
 	tagLookup map[string]*TagDefinition
 	// Tags grouped by type
 	tagsByType map[string][]*TagDefinition
-}
-
-// MonikerExamples holds example monikers for documentation
-type MonikerExamples struct {
-	Examples []string `yaml:"examples"`
-}
-
-// SystemDependency represents a system dependency
-type SystemDependency struct {
-	Name        string `yaml:"name"`
-	Description string `yaml:"description"`
-}
-
-// OSPlatform represents an OS platform
-type OSPlatform struct {
-	Name        string `yaml:"name"`
-	Description string `yaml:"description"`
 }
 
 // TagDefinition represents a single tag definition

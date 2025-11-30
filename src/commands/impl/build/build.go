@@ -23,16 +23,19 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/src/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/src/commands/internal/orchestrator"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/platform"
 	"github.com/ready-to-release/eac/src/core/repository"
+	systemdeps "github.com/ready-to-release/eac/src/core/system-deps"
 )
 
 // writeln writes a formatted string with platform-specific line ending to the writer
@@ -114,6 +117,7 @@ func Build() int {
 	tidyExplicitlySet := false
 	compressed := false
 	compressedUPX := false
+	skipDeps := false
 	version := ""
 
 	for i := 0; i < len(args); i++ {
@@ -130,6 +134,8 @@ func Build() int {
 		case "--compressed-upx":
 			compressedUPX = true
 			compressed = true // UPX implies stripped
+		case "--skip-deps":
+			skipDeps = true
 		case "--version":
 			if i+1 >= len(args) {
 				fmt.Fprintf(os.Stderr, "Error: --version requires a value\n")
@@ -165,18 +171,23 @@ func Build() int {
 		return 1
 	}
 
+	// If no monikers provided, default to all buildable modules (before dependency check)
+	if len(monikers) == 0 {
+		for _, module := range moduleReport.Registry.All() {
+			monikers = append(monikers, module.Moniker)
+		}
+	}
+
+	// Phase 0: Verify build dependencies
+	if !skipDeps {
+		if exitCode := verifyBuildDependencies(monikers, moduleReport); exitCode != 0 {
+			return exitCode
+		}
+	}
+
 	// If exactly one module specified, run single module build (verbose output)
 	if len(monikers) == 1 {
 		return buildSingleModule(monikers[0], workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version)
-	}
-
-	// If no monikers provided, default to all buildable modules
-	if len(monikers) == 0 {
-		fmt.Println("ℹ️  No modules specified, building all modules...")
-		for _, module := range moduleReport.Registry.All() {
-			// Include all modules - GetBuildFunc will return a handler for any type
-			monikers = append(monikers, module.Moniker)
-		}
 	}
 
 	// Multiple modules - run parallel build with orchestrator
@@ -359,6 +370,75 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 	return buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
 }
 
+// verifyBuildDependencies checks that all required build dependencies are available
+func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleContractReport) int {
+	cfg := config.Global()
+	if cfg == nil || cfg.ModuleTypes == nil {
+		// Config not loaded, skip verification
+		return 0
+	}
+
+	// Collect unique build dependencies from all modules
+	depsMap := make(map[string]bool)
+	for _, moniker := range monikers {
+		module, exists := moduleReport.Registry.Get(moniker)
+		if !exists {
+			continue
+		}
+
+		deps := cfg.ModuleTypes.GetBuildDeps(module.Type)
+		for _, dep := range deps {
+			if dep != "" {
+				depsMap[dep] = true
+			}
+		}
+	}
+
+	// No dependencies to verify
+	if len(depsMap) == 0 {
+		return 0
+	}
+
+	// Convert to sorted slice for consistent output
+	deps := make([]string, 0, len(depsMap))
+	for dep := range depsMap {
+		deps = append(deps, dep)
+	}
+	sort.Strings(deps)
+
+	// Print phase header
+	fmt.Println("=== Build Dependency Verification ===")
+	fmt.Printf("Required: %s\n", strings.Join(deps, ", "))
+	fmt.Println()
+
+	// Verify all dependencies
+	results := systemdeps.VerifyAll(deps)
+	var missing []string
+
+	for _, result := range results {
+		if result.Available {
+			if result.Version != "" {
+				fmt.Printf("  ✅ %s (%s)\n", result.Name, result.Version)
+			} else {
+				fmt.Printf("  ✅ %s\n", result.Name)
+			}
+		} else {
+			fmt.Printf("  ❌ %s - not available\n", result.Name)
+			missing = append(missing, result.Moniker)
+		}
+	}
+
+	fmt.Println()
+
+	if len(missing) > 0 {
+		fmt.Fprintf(os.Stderr, "❌ Error: Required build dependencies are missing: %s\n", strings.Join(missing, ", "))
+		fmt.Fprintf(os.Stderr, "   Use --skip-deps to bypass this check\n")
+		return 1
+	}
+
+	return 0
+}
+
 func printBuildUsage() {
 	fmt.Println("Build one or more modules by moniker")
 	fmt.Println()
@@ -370,6 +450,7 @@ func printBuildUsage() {
 	fmt.Println("Flags:")
 	fmt.Println("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	fmt.Println("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
+	fmt.Println("  --skip-deps               Skip build dependency verification")
 	fmt.Println("  --compressed              Strip debug info for smaller binaries (go-cli only)")
 	fmt.Println("  --compressed-upx          Also apply UPX compression for maximum size reduction")
 	fmt.Println("  --version VERSION         Inject version string into binary (go-cli only)")

@@ -12,7 +12,7 @@ Feature: repository_module-isolation
       | src/ai           | src/ai           | AI provider integrations      |
       | src/cli          | src/cli          | CLI binary (isolated)         |
       | src/commands     | src/commands     | Command implementations       |
-      | src/commands/ext | src/commands/ext | Command extensions            |
+      | src/ext-eac      | src/ext-eac      | R2R CLI extension             |
       | src/mcp/commands | src/mcp/commands | MCP server                    |
       | src/specs        | src/specs        | BDD test implementations      |
 
@@ -120,4 +120,4 @@ Feature: repository_module-isolation
         | 0     | src/core                             |
         | 1     | src/ai, src/cli, src/mcp/commands, src/specs |
         | 2     | src/commands                         |
-        | 3     | src/commands/ext                     |
+        | 3     | src/ext-eac                          |

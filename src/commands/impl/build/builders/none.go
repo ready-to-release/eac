@@ -1,4 +1,4 @@
-// none.go - Build handler for modules with no build step (build_system: none)
+// none.go - Build handler for modules with no build step (empty build_deps)
 package builders
 
 import (
@@ -8,13 +8,13 @@ import (
 )
 
 func init() {
-	// Register handler for "none" build system
+	// Register handler for modules with no build dependencies
 	// These modules have no build step - validation is done separately
-	RegisterSystem("none", BuildNoneModule)
+	RegisterSystem("", BuildNoneModule)
 }
 
 // BuildNoneModule is a no-op build function for modules that don't require building.
-// Module types with build_system: none include config files, scripts, templates, etc.
+// Module types with empty build_deps include config files, scripts, templates, etc.
 // If validation is needed, it should be handled by the validate command, not build.
 func BuildNoneModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	Logln(logWriter, "\n=== %s: %s ===", module.Type, module.Moniker)

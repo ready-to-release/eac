@@ -64,7 +64,7 @@ modules:
     depends_on:
       - src-commands
     files:
-      root: src/commands/ext
+      root: src/ext-eac
       source:
         - "*.go"
       config:

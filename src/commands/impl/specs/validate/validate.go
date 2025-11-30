@@ -25,7 +25,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/git"

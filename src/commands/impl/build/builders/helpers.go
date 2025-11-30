@@ -20,7 +20,9 @@ func Logln(w io.Writer, format string, args ...interface{}) {
 // Output is written to the provided writer
 // Returns exit code (0 = success, non-zero = failure)
 func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...string) int {
-	cmd := exec.Command(name, args...)
+	// Use platform-aware command wrapper (handles .cmd files on Windows)
+	wrappedName, wrappedArgs := platform.WrapCommand(name, args...)
+	cmd := exec.Command(wrappedName, wrappedArgs...)
 	cmd.Dir = dir
 	cmd.Stdout = logWriter
 	cmd.Stderr = logWriter
@@ -38,7 +40,9 @@ func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...str
 
 // RunCommandWithEnv executes a command with custom environment variables
 func RunCommandWithEnv(dir string, logWriter io.Writer, env []string, name string, args ...string) int {
-	cmd := exec.Command(name, args...)
+	// Use platform-aware command wrapper (handles .cmd files on Windows)
+	wrappedName, wrappedArgs := platform.WrapCommand(name, args...)
+	cmd := exec.Command(wrappedName, wrappedArgs...)
 	cmd.Dir = dir
 	cmd.Stdout = logWriter
 	cmd.Stderr = logWriter

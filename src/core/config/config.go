@@ -25,11 +25,12 @@ const (
 
 // Config file names
 const (
-	ModulesFileName      = "modules.yml"
-	ModuleTypesFileName  = "module-types.yml"
-	EnvironmentsFileName = "environments.yml"
-	TestingTagsFileName  = "testing-tags.yml"
-	TestSuitesFileName   = "test-suites.yml"
+	ModulesFileName            = "modules.yml"
+	ModuleTypesFileName        = "module-types.yml"
+	EnvironmentsFileName       = "environments.yml"
+	TestingTagsFileName        = "testing-tags.yml"
+	TestSuitesFileName         = "test-suites.yml"
+	SystemDependenciesFileName = "system-dependencies.yml"
 )
 
 // EACConfig holds all loaded EAC repository configuration.
@@ -40,11 +41,12 @@ type EACConfig struct {
 	ConfigRoot string
 
 	// Loaded configurations
-	Modules      *ModulesConfig
-	ModuleTypes  *ModuleTypesConfig
-	Environments *EnvironmentsConfig
-	TestingTags  *TestingTagsConfig
-	TestSuites   *TestSuitesConfig
+	Modules            *ModulesConfig
+	ModuleTypes        *ModuleTypesConfig
+	Environments       *EnvironmentsConfig
+	TestingTags        *TestingTagsConfig
+	TestSuites         *TestSuitesConfig
+	SystemDependencies *SystemDependenciesConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -129,6 +131,10 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 
 	if err := c.LoadTestSuites(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("test-suites: %w", err))
+	}
+
+	if err := c.LoadSystemDependencies(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
 	}
 
 	if len(errs) > 0 {
@@ -255,6 +261,29 @@ func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 	return nil
 }
 
+// LoadSystemDependencies loads the system-dependencies configuration
+func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
+	data, err := c.readConfigFile(SystemDependenciesFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaSystemDependencies, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg SystemDependenciesConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", SystemDependenciesFileName, err)
+	}
+
+	cfg.buildDepMap()
+	c.SystemDependencies = &cfg
+	return nil
+}
+
 // readConfigFile reads a config file from the config root
 func (c *EACConfig) readConfigFile(filename string) ([]byte, error) {
 	path := filepath.Join(c.ConfigRoot, filename)
@@ -317,6 +346,13 @@ func (c *EACConfig) ValidateAll() error {
 		data, _ := c.readConfigFile(TestSuitesFileName)
 		if err := c.validateSchema(schema.SchemaTestSuites, data); err != nil {
 			errs = append(errs, fmt.Errorf("test-suites: %w", err))
+		}
+	}
+
+	if c.SystemDependencies != nil {
+		data, _ := c.readConfigFile(SystemDependenciesFileName)
+		if err := c.validateSchema(schema.SchemaSystemDependencies, data); err != nil {
+			errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
 		}
 	}
 

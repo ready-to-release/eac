@@ -1,7 +1,7 @@
 // File: src/core/ai/config.go
 package ai
 
-// Config represents AI provider configuration loaded from .r2r/agent-config.yml
+// Config represents AI provider configuration loaded from .r2r/eac/agent-config.yml
 //
 // Intent: Hold provider configuration with environment variable references.
 //

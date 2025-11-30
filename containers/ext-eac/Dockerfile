@@ -25,15 +25,15 @@ ENV CGO_ENABLED=0
 WORKDIR /app
 
 # Copy go.mod and go.sum files first to leverage Docker layer caching
-# The ext module has replace directives pointing to parent modules,
+# The ext-eac module has replace directives pointing to sibling modules,
 # so we need all related go.mod files for dependency resolution
 COPY src/ai/go.mod src/ai/go.sum ./src/ai/
 COPY src/core/go.mod src/core/go.sum ./src/core/
 COPY src/commands/go.mod src/commands/go.sum ./src/commands/
-COPY src/commands/ext/go.mod src/commands/ext/go.sum ./src/commands/ext/
+COPY src/ext-eac/go.mod src/ext-eac/go.sum ./src/ext-eac/
 
 # Download dependencies (this layer will be cached)
-RUN cd src/commands/ext && go mod download -x
+RUN cd src/ext-eac && go mod download -x
 
 # ============================================================
 # RUNTIME STAGE - Final image with source code
@@ -47,6 +47,7 @@ ENV TZ=UTC
 COPY src/ai/ ./src/ai/
 COPY src/core/ ./src/core/
 COPY src/commands/ ./src/commands/
+COPY src/ext-eac/ ./src/ext-eac/
 COPY contracts/ ./contracts/
 
 # Add OCI labels
@@ -78,4 +79,4 @@ LABEL r2r-cli.multi-platform.support="true"
 WORKDIR /var/task
 
 # Run Go source directly to allow runtime metadata reading
-ENTRYPOINT ["sh", "-c", "cd /app/src/commands/ext && exec go run . \"$@\"", "--"]
+ENTRYPOINT ["sh", "-c", "cd /app/src/ext-eac && exec go run . \"$@\"", "--"]

@@ -145,6 +145,12 @@ function Add-ToPath {
         [string]$Directory
     )
 
+    # Skip PATH modification during tests to avoid polluting system PATH
+    if ($env:__R2R_TEST_NO_PATH_UPDATE -eq "1") {
+        Write-ColorOutput "Skipping PATH modification (test mode)" "Gray"
+        return
+    }
+
     $scope = if ($System) { "Machine" } else { "User" }
     $currentPath = [Environment]::GetEnvironmentVariable("Path", $scope)
 

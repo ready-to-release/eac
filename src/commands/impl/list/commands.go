@@ -4,7 +4,7 @@
 package list
 
 import (
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"fmt"
 
 	"github.com/ready-to-release/eac/src/commands/internal/render"

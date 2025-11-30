@@ -5,46 +5,6 @@
   "description": "Schema for the test tagging system specification defining test classification and dependency management",
   "type": "object",
   "properties": {
-    "module_monikers": {
-      "type": "object",
-      "description": "Module moniker documentation (dynamically validated at runtime)",
-      "properties": {
-        "examples": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Example module monikers for documentation"
-        }
-      }
-    },
-    "environment_monikers": {
-      "type": "object",
-      "description": "Environment moniker documentation (dynamically validated at runtime)",
-      "properties": {
-        "examples": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Example environment monikers for documentation"
-        }
-      }
-    },
-    "system_dependency_names": {
-      "type": "array",
-      "description": "Valid system dependency names for @deps tags",
-      "items": {
-        "$ref": "#/definitions/system_dependency"
-      }
-    },
-    "os_platform_names": {
-      "type": "array",
-      "description": "Valid OS platform names",
-      "items": {
-        "$ref": "#/definitions/os_platform"
-      }
-    },
     "tags": {
       "type": "array",
       "description": "Tag definitions for test classification",
@@ -69,36 +29,6 @@
   },
   "required": ["tags", "types", "skip_reasons"],
   "definitions": {
-    "system_dependency": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "System dependency identifier",
-          "pattern": "^[a-z][a-z0-9-]*$"
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the dependency"
-        }
-      },
-      "required": ["name", "description"]
-    },
-    "os_platform": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "OS platform identifier",
-          "enum": ["linux", "macos", "windows", "os-agnostic"]
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the platform"
-        }
-      },
-      "required": ["name", "description"]
-    },
     "tag_definition": {
       "type": "object",
       "description": "A single tag definition",
@@ -121,7 +51,6 @@
           "description": "Tag type category",
           "enum": [
             "system_dependency",
-            "os_platform",
             "module_dependency",
             "environment",
             "taxonomy-level",

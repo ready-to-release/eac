@@ -722,13 +722,9 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 }
 
 // ExecuteMetadataCommand executes the "extension-meta" command in an extension container
-// and returns the raw YAML output string or an error
+// and returns the raw YAML output string or an error.
+// Note: Callers must ensure the image exists before calling this function.
 func (ch *ContainerHost) ExecuteMetadataCommand(ext *ExtensionConfig) (string, error) {
-	// Ensure image exists locally (pull if necessary)
-	if err := ch.EnsureImageExists(ext.Image, ext.ImagePullPolicy, ext.LoadLocal); err != nil {
-		return "", fmt.Errorf("error ensuring image exists: %w", err)
-	}
-
 	// Inspect image to get configuration
 	imageInspect, err := ch.InspectImage(ext.Image)
 	if err != nil {

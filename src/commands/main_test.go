@@ -8,7 +8,7 @@ package main
 import (
 	"testing"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func TestCommandsMapExists(t *testing.T) {

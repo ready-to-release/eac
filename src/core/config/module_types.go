@@ -10,11 +10,11 @@ type ModuleTypesConfig struct {
 
 // ModuleTypeDef defines a module type
 type ModuleTypeDef struct {
-	Name         string            `yaml:"name"`
-	Description  string            `yaml:"description"`
-	BuildSystem  string            `yaml:"build_system"`
-	Capabilities []string          `yaml:"capabilities"`
-	Defaults     *TypeDefaults     `yaml:"defaults,omitempty"`
+	Name         string        `yaml:"name"`
+	Description  string        `yaml:"description"`
+	BuildDeps    []string      `yaml:"build_deps"` // System dependencies required for building
+	Capabilities []string      `yaml:"capabilities"`
+	Defaults     *TypeDefaults `yaml:"defaults,omitempty"`
 }
 
 // TypeDefaults contains default values for modules of this type.
@@ -84,13 +84,22 @@ func (c *ModuleTypesConfig) HasCapability(typeName, capability string) bool {
 	return false
 }
 
-// GetBuildSystem returns the build system for a module type
-func (c *ModuleTypesConfig) GetBuildSystem(typeName string) string {
+// GetBuildDeps returns the build dependencies for a module type
+func (c *ModuleTypesConfig) GetBuildDeps(typeName string) []string {
 	typeDef := c.Get(typeName)
 	if typeDef == nil {
-		return "none"
+		return nil
 	}
-	return typeDef.BuildSystem
+	return typeDef.BuildDeps
+}
+
+// GetPrimaryBuildDep returns the first build dependency (used for build dispatch)
+func (c *ModuleTypesConfig) GetPrimaryBuildDep(typeName string) string {
+	deps := c.GetBuildDeps(typeName)
+	if len(deps) == 0 {
+		return ""
+	}
+	return deps[0]
 }
 
 // GetTypesWithCapability returns all type names that have the given capability
@@ -107,12 +116,15 @@ func (c *ModuleTypesConfig) GetTypesWithCapability(capability string) []string {
 	return result
 }
 
-// GetTypesByBuildSystem returns all type names that use the given build system
-func (c *ModuleTypesConfig) GetTypesByBuildSystem(buildSystem string) []string {
+// GetTypesWithBuildDep returns all type names that require the given build dependency
+func (c *ModuleTypesConfig) GetTypesWithBuildDep(dep string) []string {
 	var result []string
 	for _, t := range c.Types {
-		if t.BuildSystem == buildSystem {
-			result = append(result, t.Name)
+		for _, d := range t.BuildDeps {
+			if d == dep {
+				result = append(result, t.Name)
+				break
+			}
 		}
 	}
 	return result

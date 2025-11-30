@@ -8,8 +8,8 @@ import (
 )
 
 func init() {
-	// Register handler for "go" build system
-	// All go-* types (go-cli, go-library, go-commands, etc.) use this via their build_system contract
+	// Register handler for "go" build dependency
+	// All go-* types (go-cli, go-library, go-commands, etc.) use this via their build_deps contract
 	RegisterSystem("go", TestGoModule)
 }
 

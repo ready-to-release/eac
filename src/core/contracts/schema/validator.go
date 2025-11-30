@@ -15,20 +15,22 @@ import (
 type SchemaType string
 
 const (
-	SchemaModules      SchemaType = "modules"
-	SchemaModuleTypes  SchemaType = "module-types"
-	SchemaEnvironments SchemaType = "environments"
-	SchemaTestingTags  SchemaType = "testing-tags"
-	SchemaTestSuites   SchemaType = "test-suites"
+	SchemaModules            SchemaType = "modules"
+	SchemaModuleTypes        SchemaType = "module-types"
+	SchemaEnvironments       SchemaType = "environments"
+	SchemaTestingTags        SchemaType = "testing-tags"
+	SchemaTestSuites         SchemaType = "test-suites"
+	SchemaSystemDependencies SchemaType = "system-dependencies"
 )
 
 // schemaFileNames maps schema types to their file names (without path)
 var schemaFileNames = map[SchemaType]string{
-	SchemaModules:      "modules.schema.json",
-	SchemaModuleTypes:  "module-types.schema.json",
-	SchemaEnvironments: "environments.schema.json",
-	SchemaTestingTags:  "testing-tags.schema.json",
-	SchemaTestSuites:   "test-suites.schema.json",
+	SchemaModules:            "modules.schema.json",
+	SchemaModuleTypes:        "module-types.schema.json",
+	SchemaEnvironments:       "environments.schema.json",
+	SchemaTestingTags:        "testing-tags.schema.json",
+	SchemaTestSuites:         "test-suites.schema.json",
+	SchemaSystemDependencies: "system-dependencies.schema.json",
 }
 
 // ContractVersion is the schema contract version
@@ -209,6 +211,7 @@ func GetSchemaTypes() []SchemaType {
 		SchemaEnvironments,
 		SchemaTestingTags,
 		SchemaTestSuites,
+		SchemaSystemDependencies,
 	}
 }
 

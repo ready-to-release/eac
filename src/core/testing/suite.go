@@ -242,14 +242,12 @@ func matchesSelector(tags []string, selector TagSelector) bool {
 func GetSystemDependencies(tests []TestReference) []string {
 	depsMap := make(map[string]bool)
 	osPlatformTagsFull := GetOSPlatformTagsFull()
-	// If config unavailable, osPlatformTagsFull is nil - OS deps won't be excluded
-	// This is acceptable as it only affects display, not test execution
 
 	for _, test := range tests {
 		for _, tag := range test.Tags {
 			// Only include @deps: tags, not @depm: (module dependencies)
-			// Also exclude OS platform tags (handled by OS filtering) if config available
-			if strings.HasPrefix(tag, "@deps:") && (osPlatformTagsFull == nil || !osPlatformTagsFull[tag]) {
+			// Exclude OS platform tags (handled by OS filtering)
+			if strings.HasPrefix(tag, "@deps:") && !osPlatformTagsFull[tag] {
 				depsMap[tag] = true
 			}
 		}

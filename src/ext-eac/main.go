@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"gopkg.in/yaml.v3"
 
 	// Import all command packages to register them via init()

@@ -33,7 +33,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

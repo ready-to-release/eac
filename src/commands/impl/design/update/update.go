@@ -26,7 +26,7 @@ import (
 	design "github.com/ready-to-release/eac/src/commands/impl/design"
 	designInternal "github.com/ready-to-release/eac/src/commands/impl/design/internal"
 	"github.com/ready-to-release/eac/src/commands/impl/design/create"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/core/contracts"
