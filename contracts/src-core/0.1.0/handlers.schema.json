@@ -68,9 +68,68 @@
           "type": "object",
           "description": "Handler-specific configuration",
           "additionalProperties": true
+        },
+        "flags": {
+          "type": "array",
+          "description": "Handler-specific CLI flags",
+          "items": {
+            "$ref": "#/definitions/handler_flag"
+          }
         }
       },
       "required": ["handler"]
+    },
+    "handler_flag": {
+      "type": "object",
+      "description": "A CLI flag definition for a handler",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Internal flag name (used in code)",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Flag value type",
+          "enum": ["bool", "string", "int"]
+        },
+        "cli_positive": {
+          "type": "string",
+          "description": "Positive CLI flag (e.g., '--tidy-first')",
+          "pattern": "^--[a-z][a-z0-9-]*$"
+        },
+        "cli_negative": {
+          "type": "string",
+          "description": "Negative CLI flag for bool types (e.g., '--no-tidy')",
+          "pattern": "^--[a-z][a-z0-9-]*$"
+        },
+        "value_flag": {
+          "type": "string",
+          "description": "CLI flag that takes a value (e.g., '--version')",
+          "pattern": "^--[a-z][a-z0-9-]*$"
+        },
+        "default": {
+          "description": "Default value when flag is not specified"
+        },
+        "default_env": {
+          "type": "object",
+          "description": "Environment-specific defaults (CI, local)",
+          "properties": {
+            "CI": {
+              "description": "Default value in CI environment"
+            },
+            "local": {
+              "description": "Default value in local environment"
+            }
+          },
+          "additionalProperties": false
+        },
+        "description": {
+          "type": "string",
+          "description": "Help text for the flag"
+        }
+      },
+      "required": ["name", "type"]
     },
     "command_handler": {
       "type": "object",
@@ -81,6 +140,13 @@
           "description": "Ordered list of command steps",
           "items": {
             "$ref": "#/definitions/command_step"
+          }
+        },
+        "flags": {
+          "type": "array",
+          "description": "Handler-specific CLI flags",
+          "items": {
+            "$ref": "#/definitions/handler_flag"
           }
         }
       },
@@ -146,6 +212,13 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "flags": {
+          "type": "array",
+          "description": "Handler-specific CLI flags",
+          "items": {
+            "$ref": "#/definitions/handler_flag"
+          }
         }
       },
       "required": ["script"]
@@ -195,6 +268,13 @@
           "type": "object",
           "description": "Additional configuration",
           "additionalProperties": true
+        },
+        "flags": {
+          "type": "array",
+          "description": "Handler-specific CLI flags",
+          "items": {
+            "$ref": "#/definitions/handler_flag"
+          }
         }
       },
       "required": ["image"]

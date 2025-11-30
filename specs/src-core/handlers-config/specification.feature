@@ -435,3 +435,158 @@ Feature: src-core_handlers-config
       When I parse the handlers configuration
       And I get the build handler for module type "any" with capabilities "custom_capability,other" and build dep "go"
       Then the resolved handler should be "special-handler"
+
+  # =============================================================================
+  # Rule: Handler Flags Configuration
+  # =============================================================================
+
+  Rule: Handler flags must be configurable and retrievable
+
+    Scenario: Go handler has build flags defined
+      Given the handlers are loaded
+      When I get the build flags for handler "go"
+      Then I should have at least 3 build flags
+
+    Scenario: Get specific flag by name
+      Given the handlers are loaded
+      When I get the build flag "tidy" for handler "go"
+      Then the flag should exist
+      And the flag type should be "bool"
+      And the flag CLI positive should be "--tidy-first"
+      And the flag CLI negative should be "--no-tidy"
+
+    Scenario: Get flag by CLI positive form
+      Given the handlers are loaded
+      When I get the build flag by CLI "--tidy-first" for handler "go"
+      Then the flag should exist
+      And the flag name should be "tidy"
+
+    Scenario: Get flag by CLI negative form
+      Given the handlers are loaded
+      When I get the build flag by CLI "--no-tidy" for handler "go"
+      Then the flag should exist
+      And the flag name should be "tidy"
+
+    Scenario: Get flag by value flag form
+      Given the handlers are loaded
+      When I get the build flag by CLI "--version" for handler "go"
+      Then the flag should exist
+      And the flag name should be "version"
+      And the flag type should be "string"
+
+    Scenario: Unknown flag by name returns nil
+      Given the handlers are loaded
+      When I get the build flag "unknown-flag" for handler "go"
+      Then the flag should not exist
+
+    Scenario: Unknown handler for flag returns nil
+      Given the handlers are loaded
+      When I get the build flag "tidy" for handler "unknown-handler"
+      Then the flag should not exist
+
+  # =============================================================================
+  # Rule: Handler Flag Defaults
+  # =============================================================================
+
+  Rule: Handler flags must have appropriate defaults
+
+    Scenario: Tidy flag defaults to true for local builds
+      Given the handlers are loaded
+      When I get the build flag "tidy" for handler "go"
+      Then the flag bool default for local should be true
+
+    Scenario: Tidy flag defaults to false for CI
+      Given the handlers are loaded
+      When I get the build flag "tidy" for handler "go"
+      Then the flag bool default for CI should be false
+
+    Scenario: Compressed flag defaults to false
+      Given the handlers are loaded
+      When I get the build flag "compressed" for handler "go"
+      Then the flag bool default for local should be false
+      And the flag bool default for CI should be false
+
+    Scenario: Version flag defaults to empty string
+      Given the handlers are loaded
+      When I get the build flag "version" for handler "go"
+      Then the flag string default should be ""
+
+  # =============================================================================
+  # Rule: Get All CLI Flags
+  # =============================================================================
+
+  Rule: All CLI flags must be retrievable as a map
+
+    Scenario: Get all CLI flags for go handler
+      Given the handlers are loaded
+      When I get all build CLI flags for handler "go"
+      Then the CLI flags map should contain "--tidy-first"
+      And the CLI flags map should contain "--no-tidy"
+      And the CLI flags map should contain "--compressed"
+      And the CLI flags map should contain "--compressed-upx"
+      And the CLI flags map should contain "--version"
+
+    Scenario: Get all CLI flags for handler without flags
+      Given the handlers are loaded
+      When I get all build CLI flags for handler "docker"
+      Then the CLI flags map should be empty
+
+  # =============================================================================
+  # Rule: Handler Flag Validation
+  # =============================================================================
+
+  Rule: Handler flags must validate correctly
+
+    Scenario: Valid bool flag with positive and negative
+      Given a handler flag with name "test", type "bool", cli_positive "--test", cli_negative "--no-test"
+      When I validate the flag
+      Then the flag validation should succeed
+
+    Scenario: Valid bool flag with only positive
+      Given a handler flag with name "test", type "bool", cli_positive "--test"
+      When I validate the flag
+      Then the flag validation should succeed
+
+    Scenario: Valid string flag with value_flag
+      Given a handler flag with name "version", type "string", value_flag "--version"
+      When I validate the flag
+      Then the flag validation should succeed
+
+    Scenario: Bool flag without cli_positive fails
+      Given a handler flag with name "test", type "bool"
+      When I validate the flag
+      Then the flag validation should fail
+      And the flag error should mention "cli_positive"
+
+    Scenario: String flag without value_flag or cli_positive fails
+      Given a handler flag with name "test", type "string"
+      When I validate the flag
+      Then the flag validation should fail
+
+    Scenario: Flag with missing name fails
+      Given a handler flag with type "bool", cli_positive "--test"
+      When I validate the flag
+      Then the flag validation should fail
+      And the flag error should mention "name"
+
+    Scenario: Flag with invalid type fails
+      Given a handler flag with name "test", type "invalid", cli_positive "--test"
+      When I validate the flag
+      Then the flag validation should fail
+      And the flag error should mention "invalid type"
+
+  # =============================================================================
+  # Rule: Handler Flags Nil Safety
+  # =============================================================================
+
+  Rule: Handler flags methods must be nil-safe
+
+    Scenario: Get build flags from nil config
+      Given a nil handlers configuration
+      When I get the build flags for handler "go"
+      Then I should have no build flags
+
+    Scenario: Get flag default from nil flag
+      Given a nil handler flag
+      When I get the flag default for local
+      Then the result should be nil

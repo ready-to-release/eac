@@ -4,17 +4,35 @@
 
 ---
 
-## What are How-to Guides?
+## r2r CLI
 
-How-to guides are **problem-oriented** documentation that provides step-by-step instructions for accomplishing specific tasks. They assume some knowledge and focus on getting things done.
+Guides for working with the r2r (Ready to Release) command-line interface.
 
-**Characteristics:**
+- [Creating Extensions](r2r/creating-extensions.md) - Build custom CLI extensions
 
-- Task-oriented and practical
-- Step-by-step instructions
-- Assumes basic familiarity
-- Focused on solving problems
-- Clear outcomes
+## EAC Configuration
+
+Guides for configuring the Everything as Code system.
+
+- [Creating Modules](eac/creating-modules.md) - Add modules to your repository
+- [Creating Module Types](eac/creating-module-types.md) - Define module type templates
+
+## Commands
+
+Guides for using EAC commands.
+
+- [Build & Test Commands](commands/build-test-commands.md)
+- [Show, Get & List Commands](commands/show-get-list-commands.md)
+- [Specs Command](commands/specs-command.md)
+- [Design Command](commands/design-command.md)
+- [Work Command](commands/work-command.md)
+- [Templates & Docs Commands](commands/templates-docs-commands.md)
+
+## Configuration
+
+- [Claude MCP Setup](configuration/claude-mcp-setup.md)
+
+---
 
 **Not finding what you need?**
 
