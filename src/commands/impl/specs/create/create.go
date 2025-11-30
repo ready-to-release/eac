@@ -30,7 +30,7 @@ import (
 	"github.com/ready-to-release/eac/src/ai/providers"
 	"github.com/ready-to-release/eac/src/commands/impl/specs"
 	aimock "github.com/ready-to-release/eac/src/core/ai"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/git"

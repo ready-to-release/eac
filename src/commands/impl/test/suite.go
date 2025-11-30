@@ -37,7 +37,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/reporter"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/src/commands/impl/test/testers"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
@@ -268,9 +268,6 @@ func TestSuite() int {
 		writeln(multiWriter, "Inferred system deps from module types")
 	}
 
-	// Infer OS platform: add @deps:os-agnostic to tests without OS-specific deps
-	allTests = testing.InferOSPlatform(allTests)
-	writeln(multiWriter, "Inferred OS platform dependencies")
 	writeln(multiWriter, "")
 
 	// Phase 3: Select tests for suite
@@ -1738,54 +1735,31 @@ func mapGOOSToDepTag(goos string) string {
 
 // filterByOSCompatibility filters tests based on OS-specific dependencies
 // Tests with deps:linux only run on Linux, deps:macos only on macOS, deps:windows only on Windows
-// Tests without any OS-specific deps are considered OS-agnostic and run everywhere
+// Tests without any OS-specific deps run everywhere (OS-agnostic by default)
 // Tests with multiple OS deps (e.g., deps:linux AND deps:macos) run on any of those OSes
-func filterByOSCompatibility(tests []testing.TestReference, w io.Writer) []testing.TestReference {
+func filterByOSCompatibility(tests []testing.TestReference, _ io.Writer) []testing.TestReference {
 	currentOS := mapGOOSToDepTag(runtime.GOOS)
 	compatible := []testing.TestReference{}
-
-	osPlatformTags := testing.GetOSPlatformTags()
-	if osPlatformTags == nil {
-		// Config unavailable - cannot determine OS platform tags
-		// Fail closed: return empty list (no tests can be validated for OS compatibility)
-		fmt.Fprintf(w, "ERROR: Cannot filter by OS compatibility - config unavailable\n")
-		return []testing.TestReference{}
-	}
 
 	for _, test := range tests {
 		// Check if test has any OS-specific dependencies
 		hasOSDep := false
 		matchesCurrentOS := false
-		hasOSAgnostic := false
 
 		for _, dep := range test.SystemDependencies {
-			// os-agnostic means "runs on any OS" - not an OS-specific dependency
-			if dep == "os-agnostic" {
-				hasOSAgnostic = true
-				continue
-			}
-
-			// Check if this is an OS dependency (uses exported list from testing package)
-			for _, osDep := range osPlatformTags {
-				// Skip os-agnostic in platform list - it's handled separately above
-				if osDep == "os-agnostic" {
-					continue
-				}
-				if dep == osDep {
-					hasOSDep = true
-					if dep == currentOS {
-						matchesCurrentOS = true
-					}
-					break
+			// Check if this is an OS dependency
+			if testing.IsOSPlatformDep(dep) {
+				hasOSDep = true
+				if dep == currentOS {
+					matchesCurrentOS = true
 				}
 			}
 		}
 
 		// Include test if:
-		// 1. It has os-agnostic dep (runs on any OS), OR
-		// 2. It has no OS-specific deps, OR
-		// 3. It has an OS dep that matches the current OS
-		if hasOSAgnostic || !hasOSDep || matchesCurrentOS {
+		// 1. It has no OS-specific deps (runs on any OS), OR
+		// 2. It has an OS dep that matches the current OS
+		if !hasOSDep || matchesCurrentOS {
 			compatible = append(compatible, test)
 		}
 	}

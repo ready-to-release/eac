@@ -23,7 +23,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 // ansiRegex matches ANSI escape sequences for color/formatting

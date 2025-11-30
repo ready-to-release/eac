@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	get "github.com/ready-to-release/eac/src/commands/impl/get/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

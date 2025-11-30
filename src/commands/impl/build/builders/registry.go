@@ -25,33 +25,44 @@ var (
 	systemHandlers = make(map[string]BuildFunc)
 )
 
-// RegisterSystem registers a handler for a build system.
+// RegisterSystem registers a handler for a build dependency.
 // Call this from init() in your builder file.
-// The build_system is looked up from module-types.yml contract.
-func RegisterSystem(buildSystem string, fn BuildFunc) {
+// The primary build_dep is looked up from module-types.yml contract.
+func RegisterSystem(buildDep string, fn BuildFunc) {
 	mu.Lock()
 	defer mu.Unlock()
-	systemHandlers[buildSystem] = fn
+	systemHandlers[buildDep] = fn
 }
 
 // GetBuildFunc returns the appropriate build function for a module type.
-// It looks up the build_system from the module-types contract and returns
-// the registered handler for that build system.
+// It looks up the primary build_dep from the module-types contract and returns
+// the registered handler for that build dependency.
+// Special case: documentation + container capability uses mkdocs handler.
 func GetBuildFunc(moduleType string) BuildFunc {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	// Look up build system from contracts
 	cfg := config.Global()
 	if cfg != nil && cfg.ModuleTypes != nil {
-		buildSystem := cfg.ModuleTypes.GetBuildSystem(moduleType)
-		if fn, ok := systemHandlers[buildSystem]; ok {
-			return fn
+		// Special case: documentation sites with container capability use mkdocs builder
+		if cfg.ModuleTypes.HasCapability(moduleType, "documentation") &&
+			cfg.ModuleTypes.HasCapability(moduleType, "container") {
+			if fn, ok := systemHandlers["mkdocs"]; ok {
+				return fn
+			}
+		}
+
+		// Standard case: look up primary build dep from contracts
+		primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
+		if primaryDep != "" {
+			if fn, ok := systemHandlers[primaryDep]; ok {
+				return fn
+			}
 		}
 	}
 
-	// Fallback: no-op (for unknown types)
-	if fn, ok := systemHandlers["none"]; ok {
+	// Fallback: no-op (for types with no build deps)
+	if fn, ok := systemHandlers[""]; ok {
 		return fn
 	}
 

@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/config"
 )
@@ -105,13 +105,17 @@ func ShowConfig() int {
 		fmt.Println("## Module Types")
 		fmt.Println()
 		typeTb := render.NewTableBuilder().
-			WithHeaders("Type", "Build System", "Capabilities")
+			WithHeaders("Type", "Build Deps", "Capabilities")
 		for _, t := range cfg.ModuleTypes.Types {
+			deps := "-"
+			if len(t.BuildDeps) > 0 {
+				deps = fmt.Sprintf("%v", t.BuildDeps)
+			}
 			caps := "-"
 			if len(t.Capabilities) > 0 {
 				caps = fmt.Sprintf("%v", t.Capabilities)
 			}
-			typeTb.AddRow(t.Name, t.BuildSystem, caps)
+			typeTb.AddRow(t.Name, deps, caps)
 		}
 		fmt.Println(typeTb.Build())
 		fmt.Println()

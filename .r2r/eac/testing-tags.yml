@@ -2,64 +2,17 @@
 # Contract for test classification and dependency management
 
 # ============================================================================
-# Allowed Monikers for Pattern Tags
-# ============================================================================
-
-module_monikers:
-  # NOTE: Module monikers are dynamically loaded from module contracts at runtime
-  # This list is for documentation only - validation uses actual module registry
-  examples:
-    - src-cli
-    - src-commands
-    - src-core
-    - scripts-cli-installer
-
-environment_monikers:
-  # NOTE: Environment monikers are dynamically loaded from environment contracts at runtime
-  # This list is for documentation only - validation uses actual environment registry
-  examples:
-    - isolated-test-project
-    - xyz-myproj-web-ws
-    - mkdocs-docker
-
-system_dependency_names:
-  - name: docker
-    description: "Docker daemon"
-  - name: git
-    description: "Git CLI"
-  - name: go
-    description: "Go toolchain"
-  - name: npm
-    description: "Node.js package manager"
-  - name: az-cli
-    description: "Azure CLI"
-  - name: gh-cli
-    description: "GitHub CLI"
-  - name: ai
-    description: "AI provider (requires API key)"
-
-os_platform_names:
-  - name: linux
-    description: "Linux operating system"
-  - name: macos
-    description: "macOS operating system"
-  - name: windows
-    description: "Windows operating system"
-  - name: os-agnostic
-    description: "Any operating system"
-
-# ============================================================================
 # Tag Definitions
 # ============================================================================
 
 tags:
   # System Dependency Pattern
   - tag: "@deps:<system-dependency>"
-    description: "Requires specific system dependency"
+    description: "Requires specific system dependency or OS platform"
     type: system_dependency
     pattern: "^@deps:(?P<system_dependency>[a-z0-9-]+)$"
     example: "@deps:docker"
-    note: "Valid system dependency names are defined in system_dependency_names and os_platform_names sections"
+    note: "Valid names: system-dependencies.yml entries or OS platforms (linux, macos, windows)"
 
   - tag: "@depm:<module-name>"
     description: "Requires specific module dependency from module contracts"
@@ -172,10 +125,7 @@ tags:
 
 types:
   - type: system_dependency
-    description: "External system dependencies required for test execution (e.g., docker, git, go)"
-
-  - type: os_platform
-    description: "Operating system platform requirements (linux, macos, windows, os-agnostic)"
+    description: "External system dependencies required for test execution (e.g., docker, git, go, linux, macos, windows)"
 
   - type: module_dependency
     description: "Internal module dependencies required for test execution (e.g., src-cli, src-commands, src-core)"

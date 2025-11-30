@@ -29,7 +29,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/src/commands/impl/templates/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

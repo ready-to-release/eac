@@ -15,8 +15,8 @@ import (
 )
 
 func init() {
-	// Register handler for "go" build system
-	// All go-* types use this via their build_system contract
+	// Register handler for "go" build dependency
+	// All go-* types use this via their build_deps contract
 	// Behavior is determined by capabilities, not type names
 	RegisterSystem("go", BuildGoModule)
 }
@@ -36,7 +36,7 @@ func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputD
 	hasCrossCompile := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "cross_compile")
 	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
 
-	// Skip if not a go_module (shouldn't happen if build_system is correct, but defensive)
+	// Skip if not a go_module (shouldn't happen if build_deps is correct, but defensive)
 	if !hasGoModule {
 		Logln(logWriter, "⚠️  Module type '%s' doesn't have go_module capability", module.Type)
 		return 0

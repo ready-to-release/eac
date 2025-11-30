@@ -19,33 +19,35 @@ var (
 	systemHandlers = make(map[string]TestFunc)
 )
 
-// RegisterSystem registers a handler for a build system.
+// RegisterSystem registers a handler for a build dependency.
 // Call this from init() in your tester file.
-// The build_system is looked up from module-types.yml contract.
-func RegisterSystem(buildSystem string, fn TestFunc) {
+// The primary build_dep is looked up from module-types.yml contract.
+func RegisterSystem(buildDep string, fn TestFunc) {
 	mu.Lock()
 	defer mu.Unlock()
-	systemHandlers[buildSystem] = fn
+	systemHandlers[buildDep] = fn
 }
 
 // GetTestFunc returns the appropriate test function for a module type.
-// It looks up the build_system from the module-types contract and returns
-// the registered handler for that build system.
+// It looks up the primary build_dep from the module-types contract and returns
+// the registered handler for that build dependency.
 func GetTestFunc(moduleType string) TestFunc {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	// Look up build system from contracts
+	// Look up primary build dep from contracts
 	cfg := config.Global()
 	if cfg != nil && cfg.ModuleTypes != nil {
-		buildSystem := cfg.ModuleTypes.GetBuildSystem(moduleType)
-		if fn, ok := systemHandlers[buildSystem]; ok {
-			return fn
+		primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
+		if primaryDep != "" {
+			if fn, ok := systemHandlers[primaryDep]; ok {
+				return fn
+			}
 		}
 	}
 
-	// Fallback: static module test (no-op for unknown types)
-	if fn, ok := systemHandlers["none"]; ok {
+	// Fallback: static module test (no-op for types with no build deps)
+	if fn, ok := systemHandlers[""]; ok {
 		return fn
 	}
 

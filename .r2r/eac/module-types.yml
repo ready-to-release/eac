@@ -2,7 +2,7 @@ types:
   # Go family
   - name: go-cli
     description: "Go CLI application with cross-platform builds"
-    build_system: go
+    build_deps: [go]
     capabilities: [go_module, executable, cross_compile]
     defaults:
       files:
@@ -16,7 +16,7 @@ types:
 
   - name: go-library
     description: "Go library package (no executable)"
-    build_system: go
+    build_deps: [go]
     capabilities: [go_module]
     defaults:
       files:
@@ -30,7 +30,7 @@ types:
 
   - name: go-commands
     description: "Go library with CLI invoke wrapper"
-    build_system: go
+    build_deps: [go]
     capabilities: [go_module]
     defaults:
       files:
@@ -45,7 +45,7 @@ types:
 
   - name: go-mcp
     description: "Go MCP server module"
-    build_system: go
+    build_deps: [go]
     capabilities: [go_module]
     defaults:
       files:
@@ -59,7 +59,7 @@ types:
 
   - name: go-tests
     description: "Go test-only module"
-    build_system: go
+    build_deps: [go]
     capabilities: [go_module]
     defaults:
       files:
@@ -73,7 +73,7 @@ types:
 
   - name: go-r2r-extension
     description: "R2R extension packaged as container image"
-    build_system: docker
+    build_deps: [go, docker]
     capabilities: [go_module, container]
     defaults:
       files:
@@ -85,9 +85,9 @@ types:
 
   # Documentation family
   - name: mkdocs-site
-    description: "Primary MkDocs documentation site"
-    build_system: mkdocs
-    capabilities: [documentation, serveable]
+    description: "Primary MkDocs documentation site (builds via Docker)"
+    build_deps: [docker]
+    capabilities: [documentation, serveable, container]
     defaults:
       files:
         config: ["**/*.nav.yml", "**/*.json"]
@@ -98,7 +98,7 @@ types:
   # VS Code family
   - name: vscode-ext
     description: "VS Code extension"
-    build_system: npm
+    build_deps: [npm]
     capabilities: [npm_package, typescript]
     defaults:
       files:
@@ -112,7 +112,7 @@ types:
 
   - name: vscode-config
     description: "VS Code configuration files"
-    build_system: none
+    build_deps: []
     capabilities: []
     defaults:
       files:
@@ -127,7 +127,7 @@ types:
   # Scripts family
   - name: scripts-package
     description: "Cross-shell script package encapsulating pwsh and sh variants for the same purpose"
-    build_system: none
+    build_deps: []
     capabilities: []
     defaults:
       files:
@@ -142,7 +142,7 @@ types:
   # Config family
   - name: configuration
     description: "Configuration files"
-    build_system: none
+    build_deps: []
     capabilities: []
     defaults:
       files:
@@ -155,7 +155,7 @@ types:
 
   - name: claude-config
     description: "Claude Code configuration"
-    build_system: none
+    build_deps: []
     capabilities: []
     defaults:
       files:
@@ -169,7 +169,7 @@ types:
   # Repository structure
   - name: repository-root
     description: "Repository root module (catch-all parent)"
-    build_system: none
+    build_deps: []
     capabilities: []
     defaults:
       files:
@@ -181,7 +181,7 @@ types:
 
   - name: catch-all
     description: "Catch-all for unowned files"
-    build_system: none
+    build_deps: []
     capabilities: []
     defaults:
       files:
@@ -195,7 +195,7 @@ types:
 
   - name: templates
     description: "Template files"
-    build_system: none
+    build_deps: []
     capabilities: []
     defaults:
       files:

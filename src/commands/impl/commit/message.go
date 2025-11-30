@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/logging"

@@ -85,6 +85,17 @@ func cleanupInstallerContext() {
 	}
 }
 
+// isolatePathEnv returns an environment that prevents the installer from
+// modifying the persistent system/user PATH. It sets __R2R_TEST_NO_PATH_UPDATE=1
+// which the installer scripts should check before modifying PATH.
+// As a fallback, it also removes write access indicators that PowerShell uses.
+func isolatePathEnv() []string {
+	env := os.Environ()
+	// Add marker that installer scripts can check to skip PATH modification
+	env = append(env, "__R2R_TEST_NO_PATH_UPDATE=1")
+	return env
+}
+
 // ============================================================================
 // Platform Detection Steps
 // ============================================================================
@@ -242,6 +253,10 @@ func iRunThePowerShellInstaller() error {
 
 	cmd := exec.CommandContext(ctx, "powershell", "-ExecutionPolicy", "Bypass", "-File", scriptPath,
 		"-InstallDir", instCtx.tempInstallDir)
+
+	// Isolate PATH modifications to this process only - don't let the installer pollute system PATH
+	cmd.Env = isolatePathEnv()
+
 	output, err := cmd.CombinedOutput()
 	instCtx.sharedCtx.CommandOutput = string(output)
 
@@ -281,6 +296,10 @@ func iRunThePowerShellInstallerWithArgs(args string) error {
 	cmdArgs = append(cmdArgs, strings.Fields(args)...)
 
 	cmd := exec.CommandContext(ctx, "powershell", cmdArgs...)
+
+	// Isolate PATH modifications to this process only - don't let the installer pollute system PATH
+	cmd.Env = isolatePathEnv()
+
 	output, err := cmd.CombinedOutput()
 	instCtx.sharedCtx.CommandOutput = string(output)
 

@@ -49,21 +49,9 @@ func createTestRepoWithTypes(t *testing.T, modulesContent, typesContent string) 
 
 // Standard fixture for module-types.yml
 const standardModuleTypesYAML = `
-metadata:
-  version: "0.1.0"
-  description: Test module types
-
-build_systems:
-  go:
-    description: Go build system
-  none:
-    description: No build
-
-capabilities: {}
-
 types:
   - name: go-library
-    build_system: go
+    build_deps: [go]
     defaults:
       files:
         source: ["**/*.go", "**/*.go.txt"]
@@ -75,13 +63,13 @@ types:
         design: "specs/{moniker}/.design"
 
   - name: no-specs-type
-    build_system: none
+    build_deps: []
     defaults:
       repo:
         specs: []
 
   - name: custom-type
-    build_system: none
+    build_deps: []
     defaults:
       files:
         source: ["**/*.custom"]
@@ -91,7 +79,7 @@ types:
         specs: ["custom/{moniker}/**"]
 
   - name: flags-type
-    build_system: none
+    build_deps: []
     defaults:
       flags:
         catch_all: true
@@ -296,19 +284,9 @@ modules:
 func TestTypeDefaults_VariableSubstitution(t *testing.T) {
 	// Create a type that uses all three variables
 	typesContent := `
-metadata:
-  version: "0.1.0"
-  description: Test
-
-build_systems:
-  none:
-    description: No build
-
-capabilities: {}
-
 types:
   - name: all-vars-type
-    build_system: none
+    build_deps: []
     defaults:
       files:
         source: ["types/{type}/**"]
@@ -369,19 +347,9 @@ modules:
 func TestTypeDefaults_ExplicitTrueFlagsOverrideType(t *testing.T) {
 	// Type with catch_all=false as default
 	typesContent := `
-metadata:
-  version: "0.1.0"
-  description: Test
-
-build_systems:
-  none:
-    description: No build
-
-capabilities: {}
-
 types:
   - name: no-flags-type
-    build_system: none
+    build_deps: []
     defaults:
       flags:
         catch_all: false
@@ -414,19 +382,9 @@ modules:
 // TestTypeDefaults_PartialTypeDefaults tests when type has only some defaults
 func TestTypeDefaults_PartialTypeDefaults(t *testing.T) {
 	typesContent := `
-metadata:
-  version: "0.1.0"
-  description: Test
-
-build_systems:
-  none:
-    description: No build
-
-capabilities: {}
-
 types:
   - name: partial-type
-    build_system: none
+    build_deps: []
     defaults:
       files:
         source: ["**/*.partial"]

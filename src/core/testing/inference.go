@@ -247,78 +247,32 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 	return enriched
 }
 
-// GetOSPlatformTags returns OS platform names from config.
-// Returns nil if config is unavailable - callers must handle this.
+// osPlatforms is the hardcoded list of OS platform names.
+// These are intrinsic to the test system, not configurable.
+var osPlatforms = []string{"linux", "macos", "windows"}
+
+// GetOSPlatformTags returns the hardcoded OS platform names.
 func GetOSPlatformTags() []string {
-	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
-		platforms := make([]string, len(cfg.TestingTags.OSPlatforms))
-		for i, p := range cfg.TestingTags.OSPlatforms {
-			platforms[i] = p.Name
-		}
-		if len(platforms) > 0 {
-			return platforms
-		}
-	}
-	return nil
+	return osPlatforms
 }
 
-// GetOSPlatformTagsFull returns OS platform tags with @deps: prefix as a map
-// Returns nil if config is unavailable - callers must handle this.
+// GetOSPlatformTagsFull returns OS platform tags with @deps: prefix as a map.
 func GetOSPlatformTagsFull() map[string]bool {
-	platforms := GetOSPlatformTags()
-	if platforms == nil {
-		return nil
-	}
-	result := make(map[string]bool, len(platforms)+1)
-	for _, p := range platforms {
+	result := make(map[string]bool, len(osPlatforms))
+	for _, p := range osPlatforms {
 		result["@deps:"+p] = true
 	}
-	result["@deps:os-agnostic"] = true
 	return result
 }
 
-// InferOSPlatform adds @deps:os-agnostic to tests that don't have any OS-specific deps
-// This runs after other inference phases to ensure all explicit OS deps are already set
-func InferOSPlatform(tests []TestReference) []TestReference {
-	osPlatformTags := GetOSPlatformTags()
-	if osPlatformTags == nil {
-		// Config unavailable - cannot determine which deps are OS-specific
-		// Return tests unchanged (don't infer os-agnostic without config)
-		return tests
-	}
-
-	enriched := make([]TestReference, len(tests))
-	for i, test := range tests {
-		enriched[i] = test
-		enriched[i].Tags = copyTags(test.Tags)
-
-		// Check if test has any OS-specific dependency
-		hasOSDep := false
-		for _, dep := range test.SystemDependencies {
-			for _, osDep := range osPlatformTags {
-				if dep == osDep {
-					hasOSDep = true
-					break
-				}
-			}
-			if hasOSDep {
-				break
-			}
-		}
-
-		// If no OS-specific dep, add os-agnostic
-		if !hasOSDep {
-			if !contains(enriched[i].Tags, "@deps:os-agnostic") {
-				enriched[i].Tags = append(enriched[i].Tags, "@deps:os-agnostic")
-			}
-			// Also add to SystemDependencies for consistency
-			if !contains(enriched[i].SystemDependencies, "os-agnostic") {
-				enriched[i].SystemDependencies = append(enriched[i].SystemDependencies, "os-agnostic")
-			}
+// IsOSPlatformDep checks if a dependency name is an OS platform.
+func IsOSPlatformDep(dep string) bool {
+	for _, p := range osPlatforms {
+		if dep == p {
+			return true
 		}
 	}
-
-	return enriched
+	return false
 }
 
 // InferSystemDepsFromEnv infers system dependencies based on environment tags

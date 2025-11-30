@@ -5,6 +5,7 @@ use (
 	./src/cli
 	./src/commands
 	./src/core
+	./src/ext-eac
 	./src/mcp/commands
 	./src/specs
 )
