@@ -16,7 +16,6 @@
 // Long:   work list --debug
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed information including commit SHA
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
-// HasSideEffects: false
 package work
 
 import (

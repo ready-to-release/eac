@@ -23,7 +23,6 @@
 // Flag.staged-only: type=bool, usage=Only show staged files
 // Flag.module: type=string, usage=Filter to files owned by specific module moniker
 // Flag.pattern: type=string, usage=Filter files matching glob pattern
-// HasSideEffects: false
 package get
 
 import (

@@ -10,7 +10,6 @@
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
 // Flag.commit: type=bool, shorthand=c, default=false, usage=Automatically create git commit with generated message
 // Flags: --debug (save intermediate outputs and show debug info), --commit (auto-commit)
-// HasSideEffects: true
 package commit
 
 import (

@@ -1,6 +1,5 @@
 // Command: risks assessment
 // Short: Generate risk assessment from code changes
-// HasSideEffects: true
 // Flag.scope: type=string, default=staged, shorthand=s, usage=File scope: staged, changed, or all, completion=staged,changed,all
 // Flag.destination: type=string, shorthand=d, usage=Output file path (default: .docs/reference/risk-assessment-{timestamp}.md)
 // Flag.prompt: type=string, shorthand=p, usage=Custom AI prompt file

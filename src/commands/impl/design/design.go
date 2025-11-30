@@ -1,6 +1,5 @@
 // Command: design
 // Description: Create, validate, and view architecture diagrams using Structurizr DSL
-// HasSideEffects: false
 package design
 
 import (

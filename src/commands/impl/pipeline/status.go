@@ -12,7 +12,6 @@
 // Long:   pipeline status --commit abc # Show status for specific commit
 // Flag.ref: type=string, usage=Git ref to check (default: main)
 // Flag.commit: type=string, usage=Specific commit SHA to check
-// HasSideEffects: false
 package pipeline
 
 import (

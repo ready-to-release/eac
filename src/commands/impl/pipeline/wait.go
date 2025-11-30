@@ -12,7 +12,6 @@
 // Long:   pipeline wait --interval 5         # Poll every 5 seconds (default: 10)
 // Flag.timeout: type=int, usage=Maximum wait time in seconds (default: 1800)
 // Flag.interval: type=int, usage=Poll interval in seconds (default: 10)
-// HasSideEffects: false
 package pipeline
 
 import (

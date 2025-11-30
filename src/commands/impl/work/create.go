@@ -16,7 +16,6 @@
 // Flag.from: type=string, default=main, usage=Base branch to create from
 // Flag.path: type=string, usage=Custom path for workspace (default: ../<repo>-<branch>)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
-// HasSideEffects: true
 package work
 
 import (

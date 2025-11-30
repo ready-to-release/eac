@@ -95,3 +95,26 @@ func FormatDockerVolumePath(path string) string {
 	}
 	return strings.ReplaceAll(path, "\\", "/")
 }
+
+// BuildMarkerFilename is the standard name for build completion markers
+const BuildMarkerFilename = ".build-complete"
+
+// WriteBuildMarker writes a build completion marker file to the output directory.
+// This marker is used by module dependency verification to confirm a module was built.
+func WriteBuildMarker(outputDir string) error {
+	// Ensure output directory exists
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	markerPath := fmt.Sprintf("%s/%s", outputDir, BuildMarkerFilename)
+	f, err := os.Create(markerPath)
+	if err != nil {
+		return fmt.Errorf("failed to create build marker: %w", err)
+	}
+	defer f.Close()
+
+	// Write timestamp for debugging purposes
+	fmt.Fprintf(f, "Build completed successfully\n")
+	return nil
+}

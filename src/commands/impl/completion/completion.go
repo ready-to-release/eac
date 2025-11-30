@@ -5,7 +5,6 @@
 // Long: These scripts enable tab-completion for command names, flags, and flag values.
 // Long: To install completions, source the generated script in your shell configuration file.
 // Flag.shell: type=string, required=true, completion=bash,zsh,fish,powershell, usage=Shell type for which to generate completions (bash, zsh, fish, or powershell)
-// HasSideEffects: false
 package completion
 
 import (

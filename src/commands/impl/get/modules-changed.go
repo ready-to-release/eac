@@ -5,7 +5,6 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --base <ref>: Base ref to compare against (default: HEAD)
-// HasSideEffects: false
 package get
 
 import (

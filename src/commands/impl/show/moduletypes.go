@@ -1,6 +1,5 @@
 // Command: show moduletypes
 // Description: Show all module types grouped by count
-// HasSideEffects: false
 package show
 
 import (

@@ -19,7 +19,6 @@
 // Flag.destination: type=string, usage=Output directory (default: .docs/reference)
 // Flag.input-json: type=string, usage=JSON file with replacement values {"Key": "Value"}
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/logs/templates/apply/
-// HasSideEffects: true
 package docs
 
 import (

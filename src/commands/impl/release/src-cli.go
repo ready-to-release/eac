@@ -6,7 +6,6 @@
 // Long: the GitHub Actions workflow to build and release binaries for multiple platforms.
 // Long: The version must follow semver format (x.y.z) where x, y, z are non-negative integers.
 // Long: Example: release src-cli 1.0.0
-// HasSideEffects: true
 package release
 
 import (

@@ -13,7 +13,6 @@ Every command file must include structured comment headers that define help meta
 // Long: <Second paragraph describing the behavior and how it works>
 // Long: <Third paragraph describing inputs, outputs, and important details>
 // Flag.<flagname>: type=<type>, default=<value>, shorthand=<letter>, usage=<Educational description of what this flag does, when to use it, and why>, required=<true|false>, completion=<val1,val2,...>
-// HasSideEffects: <true|false>
 package mypackage
 ```
 
@@ -115,18 +114,6 @@ The usage field is the most important part - make it educational and specific:
 // (Not educational - more output of what? When would I use this?)
 ```
 
-#### `HasSideEffects:` (Required)
-Indicates whether the command modifies repository files.
-
-- `true`: Command writes files, modifies git state, or changes system state
-- `false`: Command is read-only (queries, displays, generates output to stdout)
-
-**Examples:**
-- `specs create` - `true` (writes .feature files)
-- `commit` - `false` (only outputs commit message to stdout)
-- `show modules` - `false` (read-only display)
-- `build modules` - `true` (compiles code, writes artifacts)
-
 ## Complete File Template
 
 Here's a complete template with placeholder explanations:
@@ -140,7 +127,6 @@ Here's a complete template with placeholder explanations:
 // Long: <Details: Default behaviors, validation, special notes>
 // Flag.flagname1: type=bool, shorthand=f, default=false, usage=<Educational description: what, when, why>
 // Flag.flagname2: type=string, shorthand=s, usage=<Educational description with details and examples>, required=true, completion=option1,option2
-// HasSideEffects: <true|false>
 package mypackage
 
 import (

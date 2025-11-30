@@ -1,6 +1,5 @@
 // Command: show environments
 // Description: Show all environment contracts in a human-readable table
-// HasSideEffects: false
 package show
 
 import (

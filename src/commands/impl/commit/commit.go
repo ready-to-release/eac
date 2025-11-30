@@ -1,6 +1,5 @@
 // Command: commit
 // Description: Commit utilities for generating messages and managing commits
-// HasSideEffects: false
 package commit
 
 import (

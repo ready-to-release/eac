@@ -11,7 +11,6 @@
 // Long:
 // Long: Example:
 // Long:   validate dependencies
-// HasSideEffects: false
 package validate
 
 import (

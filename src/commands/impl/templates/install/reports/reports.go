@@ -18,7 +18,6 @@
 // Flag.source: type=string, usage=Local template directory (default: clones from GitHub)
 // Flag.destination: type=string, usage=Output directory (default: .r2r/templates/reports)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/logs/templates/install/
-// HasSideEffects: true
 package reports
 
 import (

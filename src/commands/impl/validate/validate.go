@@ -1,6 +1,5 @@
 // Command: validate
 // Description: Validate repository contracts and dependencies
-// HasSideEffects: false
 package validate
 
 import (

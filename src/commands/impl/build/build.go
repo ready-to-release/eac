@@ -14,7 +14,6 @@
 // Long:   build src-commands              # Build a single module
 // Long:   build src-core src-cli          # Build specific modules
 // Long:   build --tidy-first src-commands # Build with go mod tidy first
-// HasSideEffects: true
 // Args: modules
 package build
 
@@ -409,7 +408,6 @@ func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleCont
 	// Print phase header
 	fmt.Println("=== Build Dependency Verification ===")
 	fmt.Printf("Required: %s\n", strings.Join(deps, ", "))
-	fmt.Println()
 
 	// Verify all dependencies
 	results := systemdeps.VerifyAll(deps)

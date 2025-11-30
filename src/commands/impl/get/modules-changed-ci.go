@@ -7,7 +7,6 @@
 //   --pr-base <sha>: For PRs, the base SHA to compare against
 //   --workflow <name>: Workflow name to find last success (default: "Change Trigger")
 //   --branch <name>: Branch to check for last success (default: main)
-// HasSideEffects: false
 package get
 
 import (

@@ -1,6 +1,5 @@
 // Command: list commands
 // Description: List all available commands
-// HasSideEffects: false
 package list
 
 import (

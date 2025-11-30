@@ -1,6 +1,5 @@
 // Command: risks create
 // Short: Create risk control specifications from assessment reports
-// HasSideEffects: true
 // Args: files
 // Flag.force: type=bool, default=false, shorthand=f, usage=Overwrite existing risk control files
 // Flag.allow-orphans: type=bool, default=false, usage=Allow overwrite even if it creates orphaned tags (requires --force)

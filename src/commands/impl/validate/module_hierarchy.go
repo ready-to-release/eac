@@ -1,6 +1,5 @@
 // Command: validate module-hierarchy
 // Description: Validate module dependency graph structure
-// HasSideEffects: false
 package validate
 
 import (

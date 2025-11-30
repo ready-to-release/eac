@@ -15,7 +15,6 @@
 // Long:   test                                 # Test all modules
 // Long:   test src-commands --suite acceptance # Run acceptance tests only
 // Flag.suite: type=string, usage=Filter tests by suite (default: "commit")
-// HasSideEffects: false
 package test
 
 import (

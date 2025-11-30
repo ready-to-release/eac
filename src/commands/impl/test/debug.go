@@ -10,7 +10,6 @@
 // Long:
 // Long: Example:
 // Long:   test debug
-// HasSideEffects: false
 package test
 
 import (

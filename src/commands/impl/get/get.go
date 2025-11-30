@@ -1,6 +1,5 @@
 // Command: get
 // Description: Retrieve repository data in structured format
-// HasSideEffects: false
 package get
 
 import (

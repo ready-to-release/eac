@@ -14,8 +14,39 @@ type ModuleTypeDef struct {
 	Description  string        `yaml:"description"`
 	BuildDeps    []string      `yaml:"build_deps"` // System dependencies required for building
 	Capabilities []string      `yaml:"capabilities"`
+	Build        *BuildConfig  `yaml:"build,omitempty"`
 	Defaults     *TypeDefaults `yaml:"defaults,omitempty"`
 }
+
+// BuildConfig contains build output configuration for a module type
+type BuildConfig struct {
+	Artifacts []Artifact `yaml:"artifacts"`
+}
+
+// Artifact defines an expected build artifact
+type Artifact struct {
+	Type      string   `yaml:"type"`               // executable, file, directory, marker, image, glob
+	Pattern   string   `yaml:"pattern"`            // Path pattern with variables: {moniker}, {os}, {arch}, {ext}
+	Platforms []string `yaml:"platforms,omitempty"` // For executables: linux, windows, darwin
+	Verify    string   `yaml:"verify,omitempty"`   // Verification mode: current_platform (default), all, any
+}
+
+// ArtifactType constants
+const (
+	ArtifactTypeExecutable = "executable"
+	ArtifactTypeFile       = "file"
+	ArtifactTypeDirectory  = "directory"
+	ArtifactTypeMarker     = "marker"
+	ArtifactTypeImage      = "image"
+	ArtifactTypeGlob       = "glob"
+)
+
+// VerifyMode constants
+const (
+	VerifyCurrentPlatform = "current_platform"
+	VerifyAll             = "all"
+	VerifyAny             = "any"
+)
 
 // TypeDefaults contains default values for modules of this type.
 // Supports variable substitution: {moniker}, {root}, {type}
@@ -140,4 +171,49 @@ func (t *ModuleTypeDef) HasCapability(capability string) bool {
 		}
 	}
 	return false
+}
+
+// GetArtifacts returns the build artifacts for this module type
+func (t *ModuleTypeDef) GetArtifacts() []Artifact {
+	if t.Build == nil {
+		return nil
+	}
+	return t.Build.Artifacts
+}
+
+// HasArtifacts returns true if this module type defines build artifacts
+func (t *ModuleTypeDef) HasArtifacts() bool {
+	return t.Build != nil && len(t.Build.Artifacts) > 0
+}
+
+// GetArtifactsByType returns artifacts of a specific type
+func (t *ModuleTypeDef) GetArtifactsByType(artifactType string) []Artifact {
+	if t.Build == nil {
+		return nil
+	}
+	var result []Artifact
+	for _, a := range t.Build.Artifacts {
+		if a.Type == artifactType {
+			result = append(result, a)
+		}
+	}
+	return result
+}
+
+// GetVerifyMode returns the verification mode, defaulting to current_platform
+func (a *Artifact) GetVerifyMode() string {
+	if a.Verify == "" {
+		return VerifyCurrentPlatform
+	}
+	return a.Verify
+}
+
+// IsExecutable returns true if this is an executable artifact
+func (a *Artifact) IsExecutable() bool {
+	return a.Type == ArtifactTypeExecutable
+}
+
+// IsMarker returns true if this is a marker artifact
+func (a *Artifact) IsMarker() bool {
+	return a.Type == ArtifactTypeMarker
 }

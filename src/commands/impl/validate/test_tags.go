@@ -14,7 +14,6 @@
 // Long:
 // Long: Example:
 // Long:   validate test-tags
-// HasSideEffects: false
 package validate
 
 import (

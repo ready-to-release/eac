@@ -17,7 +17,6 @@
 // Long:   pipeline run src-core src-cli   # Run specific modules
 // Flag.changed-only: type=bool, usage=Only run pipelines for changed modules
 // Flag.ref: type=string, usage=Git ref to compare against (default: current branch)
-// HasSideEffects: true
 package pipeline
 
 import (

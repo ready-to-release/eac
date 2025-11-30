@@ -19,7 +19,6 @@
 // Flag.target: type=string, default=main, usage=Target branch for the pull request
 // Flag.title: type=string, usage=Custom PR title (description still AI-generated)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode for AI generation
-// HasSideEffects: true
 package work
 
 import (

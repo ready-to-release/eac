@@ -1,6 +1,5 @@
 // Command: show files changed
 // Description: Show changed (modified, unstaged) files with their module ownership
-// HasSideEffects: false
 package show
 
 import (

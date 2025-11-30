@@ -20,7 +20,6 @@
 // Long:   templates apply docs --input-json values.json
 // Long:
 // Long: Use "help templates apply <template-type>" for detailed information.
-// HasSideEffects: true
 package templates
 
 import (

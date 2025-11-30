@@ -14,7 +14,6 @@
 // Long:
 // Long: Example:
 // Long:   validate contracts
-// HasSideEffects: false
 package validate
 
 import (

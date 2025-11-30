@@ -8,7 +8,6 @@
 // Long:
 // Long: Example:
 // Long:   test list-suites
-// HasSideEffects: false
 package test
 
 import (

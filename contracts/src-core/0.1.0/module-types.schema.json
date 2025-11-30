@@ -46,6 +46,10 @@
           },
           "default": []
         },
+        "build": {
+          "$ref": "#/definitions/build_config",
+          "description": "Build output configuration for this module type"
+        },
         "defaults": {
           "$ref": "#/definitions/type_defaults",
           "description": "Default values applied to modules of this type"
@@ -148,6 +152,50 @@
       "type": "object",
       "description": "Default flag values (reserved for future use)",
       "properties": {}
+    },
+    "build_config": {
+      "type": "object",
+      "description": "Build output configuration",
+      "properties": {
+        "artifacts": {
+          "type": "array",
+          "description": "Expected build artifacts for this module type",
+          "items": {
+            "$ref": "#/definitions/artifact"
+          },
+          "default": []
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "description": "A build artifact definition",
+      "required": ["type", "pattern"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Artifact type",
+          "enum": ["executable", "file", "directory", "marker", "image", "glob"]
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Path pattern relative to build output. Variables: {moniker}, {os}, {arch}, {ext}"
+        },
+        "platforms": {
+          "type": "array",
+          "description": "Platforms this artifact is built for (for executables)",
+          "items": {
+            "type": "string",
+            "enum": ["linux", "windows", "darwin"]
+          }
+        },
+        "verify": {
+          "type": "string",
+          "description": "Verification mode: current_platform (default), all, any",
+          "enum": ["current_platform", "all", "any"],
+          "default": "current_platform"
+        }
+      }
     }
   }
 }

@@ -1,6 +1,5 @@
 // Command: show tests
 // Description: Show all tests in the repository in a human-readable table
-// HasSideEffects: false
 package show
 
 import (

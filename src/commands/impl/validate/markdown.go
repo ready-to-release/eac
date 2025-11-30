@@ -1,6 +1,5 @@
 // Command: validate markdown
 // Description: Validate markdown file syntax
-// HasSideEffects: false
 package validate
 
 import (

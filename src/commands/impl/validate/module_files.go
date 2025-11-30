@@ -1,6 +1,5 @@
 // Command: validate module-files
 // Description: Validate module file ownership
-// HasSideEffects: false
 package validate
 
 import (

@@ -19,7 +19,6 @@
 // Flag.no-squash: type=bool, default=false, usage=Use regular merge instead of squash merge
 // Flag.keep-worktree: type=bool, default=false, usage=Keep workspace after merge (don't remove)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit)
-// HasSideEffects: true
 package work
 
 import (

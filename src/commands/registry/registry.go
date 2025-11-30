@@ -76,14 +76,13 @@ type FlagMetadata struct {
 
 // CommandRegistration holds command metadata
 type CommandRegistration struct {
-	Func           CommandFunc
-	ActualCommand  string         // "get files" - the actual command users type
-	CanonicalName  string         // "get-files" - internal moniker (kebab-case)
-	Short          string         // One sentence description
-	Long           string         // Detailed multi-paragraph description
-	Flags          []FlagMetadata // Structured flag definitions
-	Args           string         // Argument completion type: "modules", "files", etc.
-	HasSideEffects bool           // Whether command modifies repository files
+	Func          CommandFunc
+	ActualCommand string         // "get files" - the actual command users type
+	CanonicalName string         // "get-files" - internal moniker (kebab-case)
+	Short         string         // One sentence description
+	Long          string         // Detailed multi-paragraph description
+	Flags         []FlagMetadata // Structured flag definitions
+	Args          string         // Argument completion type: "modules", "files", etc.
 }
 
 // commandRegistry maps command names (space-separated, e.g., "get files") to registrations
@@ -105,24 +104,6 @@ func Register(fn CommandFunc) {
 	metadata := extractCommandMetadata(file)
 	if metadata.CommandName == "" {
 		panic("registry.Register: no '// Command:' found in " + file)
-	}
-
-	// Validate HasSideEffects is declared
-	if metadata.HasSideEffectsStr == "" {
-		panic("registry.Register: no '// HasSideEffects:' declaration found in " + file +
-			"\nPlease add '// HasSideEffects: true' or '// HasSideEffects: false' to the command file header.")
-	}
-
-	// Parse and validate HasSideEffects value
-	var hasSideEffects bool
-	switch metadata.HasSideEffectsStr {
-	case "true":
-		hasSideEffects = true
-	case "false":
-		hasSideEffects = false
-	default:
-		panic("registry.Register: invalid HasSideEffects value '" + metadata.HasSideEffectsStr +
-			"' in " + file + "\nMust be 'true' or 'false'")
 	}
 
 	// Derive canonical kebab-case name for internal use
@@ -159,26 +140,24 @@ func Register(fn CommandFunc) {
 
 	// Store in registry (keyed by ActualCommand for dispatch)
 	commandRegistry[metadata.CommandName] = &CommandRegistration{
-		Func:           fn,
-		ActualCommand:  metadata.CommandName,
-		CanonicalName:  canonicalName,
-		Short:          short,
-		Long:           long,
-		Flags:          flags,
-		Args:           metadata.Args,
-		HasSideEffects: hasSideEffects,
+		Func:          fn,
+		ActualCommand: metadata.CommandName,
+		CanonicalName: canonicalName,
+		Short:         short,
+		Long:          long,
+		Flags:         flags,
+		Args:          metadata.Args,
 	}
 }
 
 // commandMetadata holds extracted comment data
 type commandMetadata struct {
-	CommandName       string
-	Description       string   // Parsed from "// Description:" (used as fallback for Short)
-	Short             string   // Parsed from "// Short:"
-	LongLines         []string // Multi-line long description from "// Long:"
-	FlagDefs          []flagDefinition
-	Args              string // Argument completion type: "modules", "files", etc.
-	HasSideEffectsStr string   // Parsed from "// HasSideEffects:" comment
+	CommandName string
+	Description string   // Parsed from "// Description:" (used as fallback for Short)
+	Short       string   // Parsed from "// Short:"
+	LongLines   []string // Multi-line long description from "// Long:"
+	FlagDefs    []flagDefinition
+	Args        string // Argument completion type: "modules", "files", etc.
 }
 
 // flagDefinition holds parsed flag definition from comments
@@ -234,11 +213,6 @@ func extractCommandMetadata(filePath string) commandMetadata {
 			if flagDef.Name != "" {
 				metadata.FlagDefs = append(metadata.FlagDefs, flagDef)
 			}
-		}
-
-		// Extract HasSideEffects
-		if strings.HasPrefix(line, "// HasSideEffects:") {
-			metadata.HasSideEffectsStr = strings.TrimSpace(strings.TrimPrefix(line, "// HasSideEffects:"))
 		}
 
 		// Extract Args (completion type for positional arguments)

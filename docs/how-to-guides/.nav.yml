@@ -11,3 +11,10 @@ nav:
     - commands/specs-command.md
     - commands/templates-docs-commands.md
     - commands/work-command.md
+  - EAC:
+    - eac/index.md
+    - eac/creating-module-types.md
+    - eac/creating-modules.md
+  - R2R:
+    - r2r/index.md
+    - r2r/creating-extensions.md

@@ -12,7 +12,6 @@
 // Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)
 // Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
 // Usage: design update <module>
-// HasSideEffects: true
 package update
 
 import (

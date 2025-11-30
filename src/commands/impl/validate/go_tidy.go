@@ -1,6 +1,5 @@
 // Command: validate go-tidy
 // Description: Validate Go module dependencies are tidy
-// HasSideEffects: false
 package validate
 
 import (
