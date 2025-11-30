@@ -3,7 +3,6 @@ package modules
 import (
 	"fmt"
 	"sort"
-	"strings"
 )
 
 // Registry provides fast access to module contracts
@@ -134,16 +133,6 @@ func (r *Registry) GetReverseDependencyGraph() map[string][]string {
 	return graph
 }
 
-// GetCatchAllModule returns the catch-all singleton module if it exists
-func (r *Registry) GetCatchAllModule() *ModuleContract {
-	for _, module := range r.modules {
-		if module.Flags.CatchAll {
-			return module
-		}
-	}
-	return nil
-}
-
 // GetUsedBy returns all modules that depend on the given module
 // This is computed from depends_on relationships (no longer stored in config)
 func (r *Registry) GetUsedBy(moniker string) []string {
@@ -151,79 +140,17 @@ func (r *Registry) GetUsedBy(moniker string) []string {
 	return reverseGraph[moniker]
 }
 
-// FindModulesForFile returns all modules that match a given file path
-// Respects own_children_files flag to filter parent modules when children match
-// If no modules match and a catch-all module exists, returns the catch-all module
+// FindModulesForFile returns all modules that match a given file path.
+// Returns empty slice if no modules match (orphan file).
 func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 	var matches []*ModuleContract
 
-	// First, find all modules that explicitly match this file
+	// Find all modules that explicitly match this file
 	for _, module := range r.modules {
-		// Skip catch-all modules in initial matching
-		if module.Flags.CatchAll {
-			continue
-		}
-
 		if module.MatchesFile(filePath) {
 			matches = append(matches, module)
 		}
 	}
 
-	// Apply own_children_files filtering
-	// Remove parent modules unless they have own_children_files=true
-	// when a child module also matches
-	filtered := []*ModuleContract{}
-	for _, candidate := range matches {
-		shouldExclude := false
-
-		// Check if this candidate should be excluded because a child owns it
-		// (unless own_children_files is true)
-		if !candidate.Flags.OwnChildrenFiles {
-			// Check if any other matching module is a child of this candidate
-			for _, other := range matches {
-				if other.Moniker == candidate.Moniker {
-					continue
-				}
-
-				// Check if 'other' is a descendant of 'candidate'
-				// by checking if other's root starts with candidate's root
-				if isDescendantPath(other.Files.Root, candidate.Files.Root) {
-					shouldExclude = true
-					break
-				}
-			}
-		}
-
-		if !shouldExclude {
-			filtered = append(filtered, candidate)
-		}
-	}
-	matches = filtered
-
-	// If no matches found, check if catch-all module exists
-	if len(matches) == 0 {
-		if catchAll := r.GetCatchAllModule(); catchAll != nil {
-			matches = append(matches, catchAll)
-		}
-	}
-
 	return matches
-}
-
-// isDescendantPath checks if childPath is a descendant of parentPath
-func isDescendantPath(childPath, parentPath string) bool {
-	// Normalize paths (use function from types.go)
-	childPath = normalizePathSeparators(childPath)
-	parentPath = normalizePathSeparators(parentPath)
-
-	// Root "/" contains everything except itself
-	if parentPath == "/" {
-		return childPath != "/"
-	}
-
-	// Ensure parent path doesn't have trailing slash
-	parentPath = strings.TrimSuffix(parentPath, "/")
-
-	// Check if child starts with parent + "/"
-	return strings.HasPrefix(childPath, parentPath+"/")
 }

@@ -179,20 +179,6 @@ types:
       repo:
         specs: ["specs/{moniker}/**"]
 
-  - name: catch-all
-    description: "Catch-all for unowned files"
-    build_deps: []
-    capabilities: []
-    defaults:
-      files:
-        workflows:
-          ci: ""
-          release: ""
-      repo:
-        specs: []
-      flags:
-        catch_all: true
-
   - name: templates
     description: "Template files"
     build_deps: []

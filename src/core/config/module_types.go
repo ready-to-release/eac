@@ -22,7 +22,6 @@ type ModuleTypeDef struct {
 type TypeDefaults struct {
 	Files *FilesDefaults `yaml:"files,omitempty"`
 	Repo  *RepoDefaults  `yaml:"repo,omitempty"`
-	Flags *FlagsDefaults `yaml:"flags,omitempty"`
 }
 
 // FilesDefaults contains default file patterns for a module type
@@ -46,12 +45,6 @@ type RepoDefaults struct {
 	Specs    []string `yaml:"specs,omitempty"`
 	TestImpl string   `yaml:"test_impl,omitempty"`
 	Design   string   `yaml:"design,omitempty"`
-}
-
-// FlagsDefaults contains default flag values
-type FlagsDefaults struct {
-	CatchAll         *bool `yaml:"catch_all,omitempty"`
-	OwnChildrenFiles *bool `yaml:"own_children_files,omitempty"`
 }
 
 // buildTypeMap builds the internal lookup map

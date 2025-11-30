@@ -88,13 +88,9 @@ func ShowConfig() int {
 		fmt.Println("## Modules")
 		fmt.Println()
 		modTb := render.NewTableBuilder().
-			WithHeaders("Moniker", "Type", "Root", "Parent")
+			WithHeaders("Moniker", "Type", "Root")
 		for _, mod := range cfg.Modules.Modules {
-			parent := mod.Parent
-			if parent == "" || parent == "." {
-				parent = "-"
-			}
-			modTb.AddRow(mod.Moniker, mod.Type, mod.Files.Root, parent)
+			modTb.AddRow(mod.Moniker, mod.Type, mod.Files.Root)
 		}
 		fmt.Println(modTb.Build())
 		fmt.Println()

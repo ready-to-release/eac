@@ -43,7 +43,6 @@ type TypeDefaultsApplier interface {
 type TypeDefaults struct {
 	Files *FilesDefaults
 	Repo  *RepoDefaults
-	Flags *FlagsDefaults
 }
 
 // FilesDefaults contains default file patterns for a module type.
@@ -64,12 +63,6 @@ type RepoDefaults struct {
 	Design   string
 }
 
-// FlagsDefaults contains default flag values.
-type FlagsDefaults struct {
-	CatchAll         *bool
-	OwnChildrenFiles *bool
-}
-
 // ApplyTypeDefaults applies type-specific defaults to module fields.
 // Only applies defaults to fields that are nil/empty (doesn't override explicit values).
 // Returns the applied values.
@@ -84,8 +77,6 @@ type ModuleDefaults struct {
 	Specs           []string
 	TestImpl        string
 	Design          string
-	CatchAll        bool
-	OwnChildren     bool
 }
 
 // ResolveDefaults resolves all defaults for a module, combining type-specific
@@ -104,7 +95,6 @@ func ResolveDefaults(
 	workflowCI, workflowRelease string,
 	specs []string,
 	testImpl, design string,
-	catchAll, ownChildren *bool,
 ) ModuleDefaults {
 	result := ModuleDefaults{}
 
@@ -188,23 +178,6 @@ func ResolveDefaults(
 		result.Design = SubstituteVariables(typeDef.Repo.Design, moniker, root, moduleType)
 	} else {
 		result.Design = DesignPath(moniker) // Generic default
-	}
-
-	// Flags - type default, then generic default
-	if catchAll != nil {
-		result.CatchAll = *catchAll
-	} else if typeDef != nil && typeDef.Flags != nil && typeDef.Flags.CatchAll != nil {
-		result.CatchAll = *typeDef.Flags.CatchAll
-	} else {
-		result.CatchAll = FlagCatchAll
-	}
-
-	if ownChildren != nil {
-		result.OwnChildren = *ownChildren
-	} else if typeDef != nil && typeDef.Flags != nil && typeDef.Flags.OwnChildrenFiles != nil {
-		result.OwnChildren = *typeDef.Flags.OwnChildrenFiles
-	} else {
-		result.OwnChildren = FlagOwnChildrenFiles
 	}
 
 	return result

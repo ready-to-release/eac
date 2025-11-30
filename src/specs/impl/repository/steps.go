@@ -10,8 +10,9 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
+	repositoryreports "github.com/ready-to-release/eac/src/core/repository/reports"
 	"github.com/ready-to-release/eac/src/specs/internal"
 )
 
@@ -143,18 +144,18 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return repoCtx.shouldSeeDetailsOfInconsistencies()
 	})
 
-	// No-unordered-files steps
+	// No-unordered-files steps (orphan file detection)
 	sc.Step(`^the module contracts are loaded$`, func() error {
 		return repoCtx.loadAllModuleContracts()
 	})
-	sc.Step(`^I lookup files belonging to the "([^"]*)" module$`, func(moduleName string) error {
-		return repoCtx.lookupFilesBelongingToModule(moduleName)
+	sc.Step(`^I check for orphan files$`, func() error {
+		return repoCtx.checkForOrphanFiles()
 	})
-	sc.Step(`^the file list should be empty$`, func() error {
-		return repoCtx.fileListShouldBeEmpty()
+	sc.Step(`^no files should be orphaned$`, func() error {
+		return repoCtx.noFilesShouldBeOrphaned()
 	})
-	sc.Step(`^if any files are found, I should see their paths with counts$`, func() error {
-		return repoCtx.ifAnyFilesFoundShowPathsWithCounts()
+	sc.Step(`^if any orphan files are found, I should see their paths with counts$`, func() error {
+		return repoCtx.ifOrphanFilesFoundShowPathsWithCounts()
 	})
 
 	// One-module-per-file steps
@@ -251,7 +252,7 @@ type repositoryContext struct {
 	tagConflicts []string
 
 	// Module hierarchy validation
-	moduleReport          *reports.ModuleContractReport
+	moduleReport          *contractsreports.ModuleContractReport
 	dependencyErrors      []string
 	circularDependencies  []string
 	missingModules        []string
@@ -259,7 +260,8 @@ type repositoryContext struct {
 
 	// File ownership validation
 	moduleFiles       []string
-	multiOwnershipMap map[string][]string // file -> list of owning modules
+	orphanFiles       []repository.RepositoryFileWithModule // files with no owner
+	multiOwnershipMap map[string][]string                   // file -> list of owning modules
 
 	// Build tags validation
 	godogTestFiles   []string
@@ -318,7 +320,7 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 		return err
 	}
 
-	moduleReport, err := reports.GetModuleContracts(c.repoRoot)
+	moduleReport, err := contractsreports.GetModuleContracts(c.repoRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -565,7 +567,7 @@ func (c *repositoryContext) loadAllModuleContracts() error {
 		return err
 	}
 
-	moduleReport, err := reports.GetModuleContracts(c.repoRoot)
+	moduleReport, err := contractsreports.GetModuleContracts(c.repoRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -734,55 +736,38 @@ func (c *repositoryContext) shouldSeeDetailsOfInconsistencies() error {
 // File Ownership Validation Steps
 // ============================================================================
 
-func (c *repositoryContext) lookupFilesBelongingToModule(moduleName string) error {
+func (c *repositoryContext) checkForOrphanFiles() error {
 	if c.moduleReport == nil {
 		return fmt.Errorf("module contracts not loaded")
 	}
 
-	c.moduleFiles = []string{}
+	c.orphanFiles = []repository.RepositoryFileWithModule{}
 
-	m, exists := c.moduleReport.Registry.Get(moduleName)
-	if !exists {
-		// Module doesn't exist, so no files belong to it
-		return nil
+	// Get all files with module ownership using the repository package
+	filesReport, err := repositoryreports.GetFilesModulesReport(true, false, false, c.repoRoot)
+	if err != nil {
+		return fmt.Errorf("failed to get files report: %w", err)
 	}
 
-	// Walk the repository and find files that match this module
-	err := filepath.Walk(c.repoRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			name := info.Name()
-			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		// Get relative path
-		relPath, err := filepath.Rel(c.repoRoot, path)
-		if err != nil {
-			return nil
-		}
-		relPath = strings.ReplaceAll(relPath, "\\", "/")
-		if m.MatchesFile(relPath) {
-			c.moduleFiles = append(c.moduleFiles, relPath)
-		}
-		return nil
-	})
-	return err
+	// GetOrphanFiles returns files with no module ownership
+	c.orphanFiles = filesReport.OrphanFiles
+	return nil
 }
 
-func (c *repositoryContext) fileListShouldBeEmpty() error {
-	if len(c.moduleFiles) > 0 {
-		return fmt.Errorf("found %d file(s) in module:\n%s",
-			len(c.moduleFiles), strings.Join(c.moduleFiles, "\n"))
+func (c *repositoryContext) noFilesShouldBeOrphaned() error {
+	if len(c.orphanFiles) > 0 {
+		paths := make([]string, len(c.orphanFiles))
+		for i, f := range c.orphanFiles {
+			paths[i] = f.Name
+		}
+		return fmt.Errorf("found %d orphan file(s) without module ownership:\n%s",
+			len(c.orphanFiles), strings.Join(paths, "\n"))
 	}
 	return nil
 }
 
-func (c *repositoryContext) ifAnyFilesFoundShowPathsWithCounts() error {
-	// Passive assertion - error in fileListShouldBeEmpty provides details
+func (c *repositoryContext) ifOrphanFilesFoundShowPathsWithCounts() error {
+	// Passive assertion - error in noFilesShouldBeOrphaned provides details
 	return nil
 }
 

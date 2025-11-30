@@ -15,7 +15,6 @@ type Module struct {
 	Name        string            `yaml:"name"`
 	Type        string            `yaml:"type"`
 	Description string            `yaml:"description"`
-	Parent      string            `yaml:"parent"`
 	DependsOn   []string          `yaml:"depends_on"`
 	Files       Files             `yaml:"files"`
 	Flags       Flags             `yaml:"flags"`
@@ -50,10 +49,8 @@ type RepoFiles struct {
 	Exclude  []string `yaml:"exclude"`
 }
 
-// Flags defines module behavior flags
+// Flags defines module behavior flags (reserved for future use)
 type Flags struct {
-	CatchAll         bool `yaml:"catch_all"`
-	OwnChildrenFiles bool `yaml:"own_children_files"`
 }
 
 // applyDefaults applies default values to all modules (generic defaults only).
@@ -64,9 +61,6 @@ func (c *ModulesConfig) applyDefaults() {
 
 		if m.Type == "" {
 			m.Type = defaults.ModuleType
-		}
-		if m.Parent == "" {
-			m.Parent = defaults.Parent
 		}
 		if m.Description == "" {
 			m.Description = m.Name
@@ -102,7 +96,6 @@ func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
 			m.Files.Workflows.CI, m.Files.Workflows.Release,
 			m.Files.Repo.Specs,
 			m.Files.Repo.TestImpl, m.Files.Repo.Design,
-			boolPtr(m.Flags.CatchAll), boolPtr(m.Flags.OwnChildrenFiles),
 		)
 
 		// Apply resolved values (only if not already set)
@@ -136,9 +129,6 @@ func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
 		if m.Files.Repo.Design == "" {
 			m.Files.Repo.Design = resolved.Design
 		}
-		// Flags are always applied since bool has zero value
-		m.Flags.CatchAll = resolved.CatchAll
-		m.Flags.OwnChildrenFiles = resolved.OwnChildren
 	}
 }
 
@@ -172,25 +162,7 @@ func convertTypeDefaults(td *TypeDefaults) *defaults.TypeDefaults {
 		}
 	}
 
-	if td.Flags != nil {
-		result.Flags = &defaults.FlagsDefaults{
-			CatchAll:         td.Flags.CatchAll,
-			OwnChildrenFiles: td.Flags.OwnChildrenFiles,
-		}
-	}
-
 	return result
-}
-
-// boolPtr returns a pointer to the bool value, or nil if it's the default (false)
-// This is used to distinguish "not set" from "explicitly set to false"
-func boolPtr(v bool) *bool {
-	// Note: We can't distinguish between explicit false and unset in YAML
-	// For now, we treat false as "not set" which may need refinement
-	if !v {
-		return nil
-	}
-	return &v
 }
 
 // GetModule returns a module by moniker
@@ -212,27 +184,6 @@ func (c *ModulesConfig) GetModulesByType(moduleType string) []Module {
 		}
 	}
 	return result
-}
-
-// GetModulesByParent returns all modules with a specific parent
-func (c *ModulesConfig) GetModulesByParent(parent string) []Module {
-	var result []Module
-	for _, m := range c.Modules {
-		if m.Parent == parent {
-			result = append(result, m)
-		}
-	}
-	return result
-}
-
-// GetCatchAllModule returns the catch-all module if one exists
-func (c *ModulesConfig) GetCatchAllModule() (*Module, bool) {
-	for i := range c.Modules {
-		if c.Modules[i].Flags.CatchAll {
-			return &c.Modules[i], true
-		}
-	}
-	return nil, false
 }
 
 // AllMonikers returns a list of all module monikers

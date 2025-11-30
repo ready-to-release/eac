@@ -41,11 +41,6 @@
           "type": "string",
           "description": "Module description (defaults to name if not specified)"
         },
-        "parent": {
-          "type": "string",
-          "description": "Parent module moniker or '.' for root (defaults to '.')",
-          "default": "."
-        },
         "depends_on": {
           "type": "array",
           "description": "List of module monikers this module depends on (defaults to [])",
@@ -185,19 +180,8 @@
     },
     "flags": {
       "type": "object",
-      "description": "Module behavior flags",
-      "properties": {
-        "catch_all": {
-          "type": "boolean",
-          "description": "If true, this module catches unowned files (only one module should have this)",
-          "default": false
-        },
-        "own_children_files": {
-          "type": "boolean",
-          "description": "If true, owns files in child module directories",
-          "default": false
-        }
-      }
+      "description": "Module behavior flags (reserved for future use)",
+      "properties": {}
     }
   },
   "examples": [
@@ -208,7 +192,6 @@
           "name": "Core Domain Libraries",
           "type": "go-library",
           "description": "Core library containing contracts and repository operations",
-          "parent": ".",
           "depends_on": [],
           "files": {
             "root": "src/core",
@@ -224,36 +207,7 @@
               "exclude": []
             }
           },
-          "flags": {
-            "catch_all": false,
-            "own_children_files": false
-          }
-        },
-        {
-          "moniker": "unordered",
-          "name": "Unordered Files",
-          "type": "catch-all",
-          "description": "Module for files not owned by anything else",
-          "parent": "repository",
-          "depends_on": [],
-          "files": {
-            "root": "/",
-            "source": [],
-            "config": [],
-            "assets": [],
-            "tests": [],
-            "exclude": [],
-            "changelog": "",
-            "repo": {
-              "specs": [],
-              "other": [],
-              "exclude": []
-            }
-          },
-          "flags": {
-            "catch_all": true,
-            "own_children_files": false
-          }
+          "flags": {}
         }
       ]
     }

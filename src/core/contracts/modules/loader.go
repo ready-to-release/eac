@@ -62,7 +62,6 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 			Name:        m.Name,
 			Type:        m.Type,
 			Description: m.Description,
-			Parent:      m.Parent,
 			DependsOn:   m.DependsOn,
 			Files: contracts.Files{
 				Root:      m.Files.Root,
@@ -80,10 +79,7 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 					Exclude:  m.Files.Repo.Exclude,
 				},
 			},
-			Flags: contracts.Flags{
-				CatchAll:         m.Flags.CatchAll,
-				OwnChildrenFiles: m.Flags.OwnChildrenFiles,
-			},
+			Flags: contracts.Flags{},
 			Metadata: m.Metadata,
 		}
 		// Note: Defaults are already applied by config.ModulesConfig.applyDefaults() and ApplyTypeDefaults()
@@ -107,30 +103,6 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	// Validate registry has at least one module
 	if registry.Count() == 0 {
 		return nil, contracts.NewContractError("load", config.ModulesFileName, nil, "no module contracts found")
-	}
-
-	// Validate only one catch-all singleton exists
-	catchAllModules := []*ModuleContract{}
-	for _, module := range registry.All() {
-		if module.Flags.CatchAll {
-			catchAllModules = append(catchAllModules, module)
-		}
-	}
-	if len(catchAllModules) > 1 {
-		monikers := []string{}
-		for _, m := range catchAllModules {
-			monikers = append(monikers, m.Moniker)
-		}
-		return nil, contracts.NewContractError("validate", config.ModulesFileName, nil,
-			fmt.Sprintf("multiple catch-all singleton modules found: %v (only one allowed)", monikers))
-	}
-
-	// Validate parent chains for all modules
-	for _, module := range registry.All() {
-		if err := ValidateParentChain(module, registry); err != nil {
-			return nil, contracts.NewContractError("validate", "", err,
-				fmt.Sprintf("invalid parent chain for module '%s': %v", module.Moniker, err))
-		}
 	}
 
 	return registry, nil

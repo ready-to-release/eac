@@ -256,26 +256,6 @@ func TestModuleTypeDef_Defaults(t *testing.T) {
 		assert.Equal(t, "specs/{moniker}/.design", typeDef.Defaults.Repo.Design)
 	})
 
-	t.Run("can access Flags defaults", func(t *testing.T) {
-		catchAll := true
-		ownChildren := false
-		typeDef := &ModuleTypeDef{
-			Name: "catch-all-type",
-			Defaults: &TypeDefaults{
-				Flags: &FlagsDefaults{
-					CatchAll:         &catchAll,
-					OwnChildrenFiles: &ownChildren,
-				},
-			},
-		}
-
-		assert.NotNil(t, typeDef.Defaults.Flags)
-		assert.NotNil(t, typeDef.Defaults.Flags.CatchAll)
-		assert.True(t, *typeDef.Defaults.Flags.CatchAll)
-		assert.NotNil(t, typeDef.Defaults.Flags.OwnChildrenFiles)
-		assert.False(t, *typeDef.Defaults.Flags.OwnChildrenFiles)
-	})
-
 	t.Run("handles nil Defaults gracefully", func(t *testing.T) {
 		typeDef := &ModuleTypeDef{
 			Name:     "basic-type",
@@ -292,20 +272,18 @@ func TestModuleTypeDef_Defaults(t *testing.T) {
 				Files: &FilesDefaults{
 					Source: []string{"**/*.txt"},
 				},
-				// Repo and Flags are nil
+				// Repo is nil
 			},
 		}
 
 		assert.NotNil(t, typeDef.Defaults.Files)
 		assert.Nil(t, typeDef.Defaults.Repo)
-		assert.Nil(t, typeDef.Defaults.Flags)
 	})
 }
 
 // TestTypeDefaults_Structure tests the structure hierarchy
 func TestTypeDefaults_Structure(t *testing.T) {
 	t.Run("all fields accessible", func(t *testing.T) {
-		catchAll := true
 		defaults := &TypeDefaults{
 			Files: &FilesDefaults{
 				Source:    []string{"**/*.go"},
@@ -318,10 +296,6 @@ func TestTypeDefaults_Structure(t *testing.T) {
 				Specs:    []string{"specs/{moniker}/**"},
 				TestImpl: "{root}/tests",
 				Design:   "specs/{moniker}/.design",
-			},
-			Flags: &FlagsDefaults{
-				CatchAll:         &catchAll,
-				OwnChildrenFiles: nil,
 			},
 		}
 
@@ -336,9 +310,5 @@ func TestTypeDefaults_Structure(t *testing.T) {
 		assert.Equal(t, []string{"specs/{moniker}/**"}, defaults.Repo.Specs)
 		assert.Equal(t, "{root}/tests", defaults.Repo.TestImpl)
 		assert.Equal(t, "specs/{moniker}/.design", defaults.Repo.Design)
-
-		// Flags
-		assert.True(t, *defaults.Flags.CatchAll)
-		assert.Nil(t, defaults.Flags.OwnChildrenFiles)
 	})
 }
