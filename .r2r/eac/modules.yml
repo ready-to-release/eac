@@ -19,15 +19,12 @@ modules:
         - commands/*.md
         - logs/README.md
       repo:
-        specs: []
         other:
           - .mcp.json
           - agent.md
           - "**/agent.md"
           - scripts/pwsh/claude/env-setup.ps1
           - scripts/sh/claude/env-setup.sh
-    flags:
-      own_children_files: true
 
   # ============================================================================
   # Documentation
@@ -38,9 +35,6 @@ modules:
     description: MkDocs documentation site including reference documentation
     files:
       root: docs
-      config:
-        - "**/*.nav.yml"
-        - "**/*.json"
       assets:
         - "**/*.md"
         - assets/**
@@ -50,9 +44,10 @@ modules:
         ci: .github/workflows/ci-docs.yaml
         release: .github/workflows/release-docs.yml
       repo:
-        specs: []
         other:
           - mkdocs.yml
+          - .github/workflows/ci-docs.yaml
+          - .github/workflows/release-docs.yml
 
   # ============================================================================
   # EAC Extension
@@ -67,18 +62,14 @@ modules:
       root: src/ext-eac
       source:
         - "*.go"
-      config:
-        - go.mod
-        - go.sum
-      assets:
-        - README.md
       workflows:
         ci: .github/workflows/ci-ext-eac.yaml
         release: .github/workflows/release-ext-eac.yml
       repo:
-        specs: []
         other:
           - containers/**
+          - .github/workflows/ci-ext-eac.yaml
+          - .github/workflows/release-ext-eac.yml
 
   # ============================================================================
   # GitHub Configuration
@@ -96,9 +87,6 @@ modules:
       exclude:
         - workflows/*.yaml
         - workflows/*.yml
-      repo:
-        specs:
-          - specs/github/**
 
   # ============================================================================
   # Scripts: Go Command Invoker
@@ -107,7 +95,6 @@ modules:
     name: Go Command Invoker Scripts
     type: scripts-package
     description: Cross-shell wrappers with tab completion for running Go commands from src/commands/
-    parent: src-commands
     depends_on:
       - src-commands
     files:
@@ -144,8 +131,6 @@ modules:
         - "**/definitions.yml"
         - test-repository-validations.sh
       repo:
-        specs:
-          - specs/repository/**
         test_impl: src/specs/impl/repository
         design: ""
         other:
@@ -164,12 +149,7 @@ modules:
       root: src/ai
       source:
         - "**.go"
-      config:
-        - go.mod
-        - go.sum
       repo:
-        specs:
-          - specs/src-ai/**
         other:
           - .r2r/eac/ai/**
 
@@ -184,8 +164,6 @@ modules:
       - src-core
     files:
       root: src/cli
-      source:
-        - "**.go"
       config:
         - go.mod
         - go.sum
@@ -196,12 +174,11 @@ modules:
         ci: .github/workflows/ci-src-cli.yaml
         release: .github/workflows/release-src-cli.yml
       repo:
-        specs:
-          - specs/src-cli/**
         test_impl: src/specs/impl/src-cli
-        design: specs/src-cli/.design
         other:
           - contracts/src-cli/**
+          - .github/workflows/ci-src-cli.yaml
+          - .github/workflows/release-src-cli.yml
     metadata:
       exe-linux-amd64: r2r-linux-amd64
       exe-linux-arm64: r2r-linux-arm64
@@ -222,10 +199,13 @@ modules:
       root: scripts
       source:
         - "*/cli/**"
+      workflows:
+        ci: .github/workflows/ci-scripts-cli-installer.yaml
+        release: ""
       repo:
-        specs:
-          - specs/scripts-cli-installer/**
         test_impl: src/specs/impl/scripts-cli-installer
+        other:
+          - .github/workflows/ci-scripts-cli-installer.yaml
 
   # ============================================================================
   # Source: Commands Library
@@ -239,24 +219,15 @@ modules:
       - src-core
     files:
       root: src/commands
-      source:
-        - "**.go"
-      config:
-        - go.mod
-        - go.sum
-      assets:
-        - "**/README.md"
-        - "**/assets/**"
       exclude:
         - ext/**
       workflows:
         ci: .github/workflows/ci-src-commands.yaml
         release: ""
       repo:
-        specs:
-          - specs/src-commands/**
         test_impl: src/specs/impl/src-commands
-        design: specs/src-commands/.design
+        other:
+          - .github/workflows/ci-src-commands.yaml
 
   # ============================================================================
   # Source: Core Domain Libraries
@@ -267,9 +238,6 @@ modules:
     description: Core library containing contracts and repository operations
     files:
       root: src/core
-      source:
-        - "**.go"
-        - "**.go.txt"
       config:
         - go.mod
         - go.sum
@@ -278,8 +246,7 @@ modules:
         ci: .github/workflows/ci-src-core.yaml
         release: ""
       repo:
-        specs:
-          - specs/src-core/**
+        test_impl: src/specs/impl/src-core
         other:
           - contracts/src-core/**
           - src/core/ai/**
@@ -287,6 +254,7 @@ modules:
           - src/core/module-deps/**
           - src/core/environments/**
           - src/.template/**
+          - .github/workflows/ci-src-core.yaml
 
   # ============================================================================
   # Source: MCP Commands Server
@@ -299,21 +267,13 @@ modules:
       - src-core
     files:
       root: src/mcp/commands
-      source:
-        - "**.go"
-      config:
-        - go.mod
-        - go.sum
-      assets:
-        - README.md
       workflows:
         ci: .github/workflows/ci-src-mcp-commands.yaml
         release: ""
       repo:
-        specs:
-          - specs/src-mcp-commands/**
         test_impl: ""
-        design: specs/src-mcp-commands/.design
+        other:
+          - .github/workflows/ci-src-mcp-commands.yaml
 
   # ============================================================================
   # Source: Specs Shared Infrastructure
@@ -328,13 +288,8 @@ modules:
       root: src/specs
       source:
         - "internal/**/*.go"
-      config:
-        - go.mod
-        - go.sum
       exclude:
         - impl/**
-      repo:
-        specs: []
 
   # ============================================================================
   # Templates
@@ -345,29 +300,6 @@ modules:
     description: Template files for documentation, specifications, and design records
     files:
       root: templates
-      config:
-        - "**/*.yml"
-        - "**/*.yaml"
-      assets:
-        - "**/*.md"
-        - "**/*.feature"
-      repo:
-        specs: []
-
-  # ============================================================================
-  # Catch-all for Unordered Files
-  # ============================================================================
-  - moniker: unordered
-    name: Unordered Files
-    type: catch-all
-    description: The module that files belong to when they are not owned by anything else
-    parent: repository
-    files:
-      root: /
-      repo:
-        specs: []
-    flags:
-      catch_all: true
 
   # ============================================================================
   # VSCode Configuration
@@ -378,12 +310,9 @@ modules:
     description: VSCode repository configuration
     files:
       root: .vscode
-      config:
-        - "**/*"
       exclude:
         - extensions/**
       repo:
-        specs: []
         other:
           - scripts/sh/vscode/**
 
@@ -393,9 +322,6 @@ modules:
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
     files:
       root: .vscode/extensions/vscode-ext-commit
-      config:
-        - "**/*"
       repo:
-        specs: []
         other:
           - contracts/vscode-commit/**

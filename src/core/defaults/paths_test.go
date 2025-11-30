@@ -137,16 +137,7 @@ func TestConstants(t *testing.T) {
 	if ModuleType != "no-module-type" {
 		t.Errorf("ModuleType = %q, want %q", ModuleType, "no-module-type")
 	}
-	if Parent != "." {
-		t.Errorf("Parent = %q, want %q", Parent, ".")
-	}
 	if Changelog != "CHANGELOG.md" {
 		t.Errorf("Changelog = %q, want %q", Changelog, "CHANGELOG.md")
-	}
-	if FlagCatchAll != false {
-		t.Errorf("FlagCatchAll = %v, want %v", FlagCatchAll, false)
-	}
-	if FlagOwnChildrenFiles != false {
-		t.Errorf("FlagOwnChildrenFiles = %v, want %v", FlagOwnChildrenFiles, false)
 	}
 }

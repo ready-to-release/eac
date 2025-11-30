@@ -146,17 +146,8 @@
     },
     "flags_defaults": {
       "type": "object",
-      "description": "Default flag values",
-      "properties": {
-        "catch_all": {
-          "type": "boolean",
-          "description": "Default catch_all flag value"
-        },
-        "own_children_files": {
-          "type": "boolean",
-          "description": "Default own_children_files flag value"
-        }
-      }
+      "description": "Default flag values (reserved for future use)",
+      "properties": {}
     }
   }
 }

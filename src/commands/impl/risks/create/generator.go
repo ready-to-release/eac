@@ -49,7 +49,7 @@ func generateControl(config *Config, risk RiskData) error {
 		if len(analysis.OrphanedTags) > 0 {
 			if !config.AllowOrphans {
 				// Prevent overwrite
-				return fmt.Errorf(formatOrphanedTagsError(analysis, fullPath))
+				return fmt.Errorf("%s", formatOrphanedTagsError(analysis, fullPath))
 			} else {
 				// Warn but allow
 				fmt.Fprintf(os.Stderr, "⚠️  Warning: Overwriting with orphaned tags:\n")

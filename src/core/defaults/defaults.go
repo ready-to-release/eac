@@ -16,20 +16,8 @@ const (
 	// ModuleType is the default type when not specified in module contract.
 	ModuleType = "no-module-type"
 
-	// Parent is the default parent when not specified (root level).
-	Parent = "."
-
 	// Changelog is the default changelog filename.
 	Changelog = "CHANGELOG.md"
-)
-
-// Flag defaults
-const (
-	// FlagCatchAll is the default for flags.catch_all.
-	FlagCatchAll = false
-
-	// FlagOwnChildrenFiles is the default for flags.own_children_files.
-	FlagOwnChildrenFiles = false
 )
 
 // Path derivation functions - use these to derive default paths from moniker.

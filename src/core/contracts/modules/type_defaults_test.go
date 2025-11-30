@@ -77,13 +77,6 @@ types:
         assets: ["**/*.txt"]
       repo:
         specs: ["custom/{moniker}/**"]
-
-  - name: flags-type
-    build_deps: []
-    defaults:
-      flags:
-        catch_all: true
-        own_children_files: true
 `
 
 // TestTypeDefaults_GoLibrary tests Go library type defaults application
@@ -316,67 +309,6 @@ modules:
 	assert.Equal(t, []string{"specs/test-mod/all-vars-type/**"}, module.Files.Repo.Specs, "{moniker} and {type} should be replaced")
 	assert.Equal(t, "src/test/all-vars-type/tests", module.Files.Repo.TestImpl, "{root} and {type} should be replaced")
 	assert.Equal(t, "designs/test-mod/all-vars-type", module.Files.Repo.Design, "{moniker} and {type} should be replaced")
-}
-
-// TestTypeDefaults_FlagDefaults tests that flag defaults from type are applied
-func TestTypeDefaults_FlagDefaults(t *testing.T) {
-	modulesContent := `
-modules:
-  - moniker: flags-module
-    name: Flags Module
-    type: flags-type
-    files:
-      root: src/flags
-`
-	repoRoot := createTestRepoWithTypes(t, modulesContent, standardModuleTypesYAML)
-
-	registry, err := loadTestModules(repoRoot)
-	require.NoError(t, err, "failed to load modules")
-
-	module, found := registry.Get("flags-module")
-	require.True(t, found, "module not found")
-
-	// Flag defaults from type should be applied
-	assert.True(t, module.Flags.CatchAll, "catch_all should be true from type default")
-	assert.True(t, module.Flags.OwnChildrenFiles, "own_children_files should be true from type default")
-}
-
-// TestTypeDefaults_ExplicitTrueFlagsOverrideType tests that explicit true flags override type defaults
-// Note: Due to Go's bool zero value, explicit false cannot override type default true.
-// This is a known limitation - flags use bool (not *bool), so false == not-set == default.
-func TestTypeDefaults_ExplicitTrueFlagsOverrideType(t *testing.T) {
-	// Type with catch_all=false as default
-	typesContent := `
-types:
-  - name: no-flags-type
-    build_deps: []
-    defaults:
-      flags:
-        catch_all: false
-        own_children_files: false
-`
-	modulesContent := `
-modules:
-  - moniker: explicit-flags-module
-    name: Explicit Flags Module
-    type: no-flags-type
-    files:
-      root: src/explicitflags
-    flags:
-      catch_all: true
-      own_children_files: true
-`
-	repoRoot := createTestRepoWithTypes(t, modulesContent, typesContent)
-
-	registry, err := loadTestModules(repoRoot)
-	require.NoError(t, err, "failed to load modules")
-
-	module, found := registry.Get("explicit-flags-module")
-	require.True(t, found, "module not found")
-
-	// Explicit true flags should override type defaults (false)
-	assert.True(t, module.Flags.CatchAll, "explicit catch_all=true should override type default false")
-	assert.True(t, module.Flags.OwnChildrenFiles, "explicit own_children_files=true should override type default false")
 }
 
 // TestTypeDefaults_PartialTypeDefaults tests when type has only some defaults

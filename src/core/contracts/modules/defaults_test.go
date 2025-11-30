@@ -72,34 +72,6 @@ modules:
 	}
 }
 
-// TestModuleDefaults_Parent tests that parent defaults to "." when not specified
-func TestModuleDefaults_Parent(t *testing.T) {
-	content := `
-modules:
-  - moniker: test-module
-    name: Test Module
-    type: test-type
-    files:
-      root: src/test
-`
-	repoRoot := createTestRepo(t, content)
-
-	registry, err := loadTestModules(repoRoot)
-	if err != nil {
-		t.Fatalf("failed to load modules: %v", err)
-	}
-
-	module, found := registry.Get("test-module")
-	if !found {
-		t.Fatal("module not found")
-	}
-
-	expected := "."
-	if module.Parent != expected {
-		t.Errorf("Parent default: expected %q, got %q", expected, module.Parent)
-	}
-}
-
 // TestModuleDefaults_Description tests that description defaults to name when not specified
 func TestModuleDefaults_Description(t *testing.T) {
 	content := `
@@ -218,60 +190,6 @@ modules:
 	expected := "specs/test-module/**"
 	if module.Files.Repo.Specs[0] != expected {
 		t.Errorf("Files.Repo.Specs default: expected %q, got %q", expected, module.Files.Repo.Specs[0])
-	}
-}
-
-// TestModuleDefaults_FlagsCatchAll tests that flags.catch_all defaults to false
-func TestModuleDefaults_FlagsCatchAll(t *testing.T) {
-	content := `
-modules:
-  - moniker: test-module
-    name: Test Module
-    type: test-type
-    files:
-      root: src/test
-`
-	repoRoot := createTestRepo(t, content)
-
-	registry, err := loadTestModules(repoRoot)
-	if err != nil {
-		t.Fatalf("failed to load modules: %v", err)
-	}
-
-	module, found := registry.Get("test-module")
-	if !found {
-		t.Fatal("module not found")
-	}
-
-	if module.Flags.CatchAll != false {
-		t.Errorf("Flags.CatchAll default: expected false, got %v", module.Flags.CatchAll)
-	}
-}
-
-// TestModuleDefaults_FlagsOwnChildrenFiles tests that flags.own_children_files defaults to false
-func TestModuleDefaults_FlagsOwnChildrenFiles(t *testing.T) {
-	content := `
-modules:
-  - moniker: test-module
-    name: Test Module
-    type: test-type
-    files:
-      root: src/test
-`
-	repoRoot := createTestRepo(t, content)
-
-	registry, err := loadTestModules(repoRoot)
-	if err != nil {
-		t.Fatalf("failed to load modules: %v", err)
-	}
-
-	module, found := registry.Get("test-module")
-	if !found {
-		t.Fatal("module not found")
-	}
-
-	if module.Flags.OwnChildrenFiles != false {
-		t.Errorf("Flags.OwnChildrenFiles default: expected false, got %v", module.Flags.OwnChildrenFiles)
 	}
 }
 
@@ -497,11 +415,8 @@ modules:
 		{"Name", module.Name, "Minimal Module"},
 		{"Type", module.Type, "no-module-type"},
 		{"Description", module.Description, "Minimal Module"},
-		{"Parent", module.Parent, "."},
 		{"Files.Root", module.Files.Root, "src/minimal"},
 		{"Files.Changelog", module.Files.Changelog, "CHANGELOG.md"},
-		{"Flags.CatchAll", module.Flags.CatchAll, false},
-		{"Flags.OwnChildrenFiles", module.Flags.OwnChildrenFiles, false},
 	}
 
 	for _, tt := range tests {
@@ -531,7 +446,6 @@ modules:
     name: Explicit Module
     type: custom-type
     description: Custom description
-    parent: parent-module
     depends_on:
       - dep1
       - dep2
@@ -545,14 +459,16 @@ modules:
       repo:
         specs:
           - custom/specs/**
-    flags:
-      catch_all: false
-      own_children_files: true
-  - moniker: parent-module
-    name: Parent Module
-    type: parent-type
+  - moniker: dep1
+    name: Dependency One
+    type: dep-type
     files:
-      root: src/parent
+      root: src/dep1
+  - moniker: dep2
+    name: Dependency Two
+    type: dep-type
+    files:
+      root: src/dep2
 `
 	repoRoot := createTestRepo(t, content)
 
@@ -574,9 +490,7 @@ modules:
 	}{
 		{"Type", module.Type, "custom-type"},
 		{"Description", module.Description, "Custom description"},
-		{"Parent", module.Parent, "parent-module"},
 		{"Files.Changelog", module.Files.Changelog, "HISTORY.md"},
-		{"Flags.OwnChildrenFiles", module.Flags.OwnChildrenFiles, true},
 	}
 
 	for _, tt := range tests {

@@ -1,7 +1,7 @@
 Feature: repository_no-unordered-files
 
   As a repository maintainer
-  I want to ensure no files are left in unordered state
+  I want to ensure no files are left without module ownership
   So that the codebase remains organized and maintainable
 
   Background:
@@ -10,8 +10,8 @@ Feature: repository_no-unordered-files
   Rule: All files must be organized into proper modules
 
     @L1 @ov
-    Scenario: No files belong to the unordered catch-all module
+    Scenario: No files are orphaned without module ownership
       Given the module contracts are loaded
-      When I lookup files belonging to the "unordered" module
-      Then the file list should be empty
-      And if any files are found, I should see their paths with counts
+      When I check for orphan files
+      Then no files should be orphaned
+      And if any orphan files are found, I should see their paths with counts

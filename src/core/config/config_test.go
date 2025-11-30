@@ -75,7 +75,6 @@ func TestModulesConfig_Defaults(t *testing.T) {
 	// Check that defaults are applied
 	for _, m := range cfg.Modules.Modules {
 		assert.NotEmpty(t, m.Type, "module %s should have type", m.Moniker)
-		assert.NotEmpty(t, m.Parent, "module %s should have parent", m.Moniker)
 		assert.NotEmpty(t, m.Description, "module %s should have description", m.Moniker)
 		assert.NotNil(t, m.DependsOn, "module %s should have depends_on", m.Moniker)
 	}
@@ -91,16 +90,6 @@ func TestModulesConfig_GetModule(t *testing.T) {
 
 	_, ok = cfg.Modules.GetModule("nonexistent")
 	assert.False(t, ok)
-}
-
-func TestModulesConfig_GetCatchAllModule(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	m, ok := cfg.Modules.GetCatchAllModule()
-	assert.True(t, ok)
-	assert.Equal(t, "unordered", m.Moniker)
-	assert.True(t, m.Flags.CatchAll)
 }
 
 func TestEnvironmentsConfig_GetEnvironment(t *testing.T) {

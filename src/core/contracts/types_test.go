@@ -11,7 +11,6 @@ func TestBaseContract_Getters(t *testing.T) {
 		Name:        "Test Name",
 		Type:        "test-type",
 		Description: "Test description",
-		Parent:      "parent-module",
 		Files: Files{
 			Root:      "test/root",
 			Changelog: "CHANGELOG.md",
@@ -27,7 +26,6 @@ func TestBaseContract_Getters(t *testing.T) {
 		{"GetName", contract.GetName(), "Test Name"},
 		{"GetType", contract.GetType(), "test-type"},
 		{"GetDescription", contract.GetDescription(), "Test description"},
-		{"GetParent", contract.GetParent(), "parent-module"},
 		{"GetRoot", contract.GetRoot(), "test/root"},
 	}
 

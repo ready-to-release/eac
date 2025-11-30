@@ -124,10 +124,10 @@ func TestResolveDefaults_NoTypeDefaults(t *testing.T) {
 		nil, // no type defaults
 		"test-module", "src/test", "unknown-type",
 		nil, nil, nil, nil, // source, config, assets, tests
-		"",  // changelog
-		nil, // specs
+		"",     // changelog
+		"", "", // workflowCI, workflowRelease
+		nil,    // specs
 		"", "", // test_impl, design
-		nil, nil, // flags
 	)
 
 	// Generic defaults should be applied
@@ -135,8 +135,6 @@ func TestResolveDefaults_NoTypeDefaults(t *testing.T) {
 	assert.Equal(t, []string{"specs/test-module/**"}, result.Specs)
 	assert.Equal(t, "src/test-module/tests", result.TestImpl)
 	assert.Equal(t, "specs/test-module/.design", result.Design)
-	assert.False(t, result.CatchAll)
-	assert.False(t, result.OwnChildren)
 
 	// No generic defaults for source/config/assets/tests
 	assert.Nil(t, result.Source)
@@ -166,9 +164,9 @@ func TestResolveDefaults_WithTypeDefaults(t *testing.T) {
 		"my-lib", "src/lib", "go-library",
 		nil, nil, nil, nil,
 		"",
+		"", "",
 		nil,
 		"", "",
-		nil, nil,
 	)
 
 	// Type defaults with substitution
@@ -205,9 +203,9 @@ func TestResolveDefaults_ExplicitOverridesType(t *testing.T) {
 		"my-lib", "src/lib", "go-library",
 		explicitSource, explicitConfig, nil, nil,
 		"CUSTOM.md", // explicit changelog
+		"", "",
 		explicitSpecs,
 		"custom/tests", "custom/design",
-		nil, nil,
 	)
 
 	// Explicit values preserved
@@ -235,72 +233,14 @@ func TestResolveDefaults_EmptySlicePreserved(t *testing.T) {
 		"my-lib", "src/lib", "go-library",
 		nil, nil, nil, nil,
 		"",
+		"", "",
 		emptySpecs, // explicit empty
 		"", "",
-		nil, nil,
 	)
 
 	// Empty slice should be preserved, not replaced with type default
 	assert.NotNil(t, result.Specs)
 	assert.Empty(t, result.Specs)
-}
-
-// TestResolveDefaults_FlagHandling tests boolean flag resolution
-func TestResolveDefaults_FlagHandling(t *testing.T) {
-	t.Run("nil flags use generic defaults", func(t *testing.T) {
-		result := ResolveDefaults(
-			nil,
-			"test", "src", "type",
-			nil, nil, nil, nil,
-			"", nil, "", "",
-			nil, nil, // nil flags
-		)
-
-		assert.False(t, result.CatchAll)
-		assert.False(t, result.OwnChildren)
-	})
-
-	t.Run("type defaults for flags", func(t *testing.T) {
-		catchAll := true
-		ownChildren := true
-		typeDef := &TypeDefaults{
-			Flags: &FlagsDefaults{
-				CatchAll:         &catchAll,
-				OwnChildrenFiles: &ownChildren,
-			},
-		}
-
-		result := ResolveDefaults(
-			typeDef,
-			"test", "src", "type",
-			nil, nil, nil, nil,
-			"", nil, "", "",
-			nil, nil,
-		)
-
-		assert.True(t, result.CatchAll)
-		assert.True(t, result.OwnChildren)
-	})
-
-	t.Run("explicit flags override type defaults", func(t *testing.T) {
-		catchAll := true
-		typeDef := &TypeDefaults{
-			Flags: &FlagsDefaults{
-				CatchAll: &catchAll,
-			},
-		}
-
-		explicitCatchAll := false
-		result := ResolveDefaults(
-			typeDef,
-			"test", "src", "type",
-			nil, nil, nil, nil,
-			"", nil, "", "",
-			&explicitCatchAll, nil,
-		)
-
-		assert.False(t, result.CatchAll)
-	})
 }
 
 // TestResolveDefaults_PartialTypeDefaults tests when type has only some defaults
@@ -317,9 +257,9 @@ func TestResolveDefaults_PartialTypeDefaults(t *testing.T) {
 		"my-module", "src/mod", "custom-type",
 		nil, nil, nil, nil,
 		"",
+		"", "",
 		nil,
 		"", "",
-		nil, nil,
 	)
 
 	// Type default for source
@@ -338,7 +278,6 @@ func TestResolveDefaults_TypeDefaultsWithNilFields(t *testing.T) {
 	typeDef := &TypeDefaults{
 		Files: nil,
 		Repo:  nil,
-		Flags: nil,
 	}
 
 	result := ResolveDefaults(
@@ -346,9 +285,9 @@ func TestResolveDefaults_TypeDefaultsWithNilFields(t *testing.T) {
 		"my-module", "src/mod", "custom-type",
 		nil, nil, nil, nil,
 		"",
+		"", "",
 		nil,
 		"", "",
-		nil, nil,
 	)
 
 	// Should use generic defaults

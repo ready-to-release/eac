@@ -6,7 +6,6 @@ type BaseContract struct {
 	Name        string            `yaml:"name"`
 	Type        string            `yaml:"type"`
 	Description string            `yaml:"description"`
-	Parent      string            `yaml:"parent"`
 	DependsOn   []string          `yaml:"depends_on"`
 	Files       Files             `yaml:"files"`
 	Flags       Flags             `yaml:"flags"`
@@ -38,10 +37,8 @@ type RepoPatterns struct {
 	Exclude  []string `yaml:"exclude"`   // Exclusions relative to repo root
 }
 
-// Flags represents behavioral flags for a module
+// Flags represents behavioral flags for a module (reserved for future use)
 type Flags struct {
-	CatchAll          bool `yaml:"catch_all"`           // Is this the catch-all for unowned files?
-	OwnChildrenFiles  bool `yaml:"own_children_files"`  // If true, also own files that children match
 }
 
 // Getter methods for BaseContract
@@ -60,10 +57,6 @@ func (b *BaseContract) GetType() string {
 
 func (b *BaseContract) GetDescription() string {
 	return b.Description
-}
-
-func (b *BaseContract) GetParent() string {
-	return b.Parent
 }
 
 func (b *BaseContract) GetRoot() string {

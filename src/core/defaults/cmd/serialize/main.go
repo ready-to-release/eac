@@ -50,19 +50,13 @@ func main() {
 		Changelog string    `yaml:"changelog"`
 		Repo      RepoFiles `yaml:"repo"`
 	}
-	type Flags struct {
-		CatchAll         bool `yaml:"catch_all"`
-		OwnChildrenFiles bool `yaml:"own_children_files"`
-	}
 	type ModuleOutput struct {
 		Moniker     string   `yaml:"moniker"`
 		Name        string   `yaml:"name"`
 		Type        string   `yaml:"type"`
 		Description string   `yaml:"description"`
-		Parent      string   `yaml:"parent"`
 		DependsOn   []string `yaml:"depends_on"`
 		Files       Files    `yaml:"files"`
-		Flags       Flags    `yaml:"flags"`
 	}
 
 	output := make([]ModuleOutput, 0, len(allModules))
@@ -72,7 +66,6 @@ func main() {
 			Name:        m.Name,
 			Type:        m.Type,
 			Description: m.Description,
-			Parent:      m.Parent,
 			DependsOn:   m.DependsOn,
 			Files: Files{
 				Root:      m.Files.Root,
@@ -89,10 +82,6 @@ func main() {
 					Other:    m.Files.Repo.Other,
 					Exclude:  m.Files.Repo.Exclude,
 				},
-			},
-			Flags: Flags{
-				CatchAll:         m.Flags.CatchAll,
-				OwnChildrenFiles: m.Flags.OwnChildrenFiles,
 			},
 		}
 		output = append(output, out)
