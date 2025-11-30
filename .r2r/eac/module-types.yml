@@ -73,7 +73,7 @@ types:
 
   - name: go-r2r-extension
     description: "R2R extension packaged as container image"
-    build_deps: [go, docker]
+    build_deps: [docker]
     capabilities: [go_module, container]
     defaults:
       files:
