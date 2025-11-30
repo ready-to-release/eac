@@ -42,14 +42,25 @@ func BuildDockerModule(module *modules.ModuleContract, workspaceRoot string, out
 		}
 	}
 
-	// Find Dockerfile - check containers/{moniker}/ first, then module root
-	dockerfilePath := filepath.Join(workspaceRoot, "containers", module.Moniker, "Dockerfile")
-	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
-		dockerfilePath = filepath.Join(moduleRoot, "Dockerfile")
-		if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
-			Logln(logWriter, "❌ No Dockerfile found")
-			return 1
+	// Find Dockerfile using configured search paths
+	var dockerfilePath string
+	searchPaths := []string{"containers/{moniker}/Dockerfile", "{root}/Dockerfile"}
+	if cfg != nil && cfg.Handlers != nil {
+		searchPaths = cfg.Handlers.GetDockerfilePaths()
+	}
+
+	for _, pathTemplate := range searchPaths {
+		resolvedPath := config.ResolveDockerfilePath(pathTemplate, module.Moniker, module.Files.Root)
+		fullPath := filepath.Join(workspaceRoot, resolvedPath)
+		if _, err := os.Stat(fullPath); err == nil {
+			dockerfilePath = fullPath
+			break
 		}
+	}
+
+	if dockerfilePath == "" {
+		Logln(logWriter, "❌ No Dockerfile found")
+		return 1
 	}
 
 	imageName := fmt.Sprintf("%s:latest", module.Moniker)
@@ -95,6 +106,13 @@ func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath str
 
 // buildDockerCI builds a Docker image in CI with multi-platform support
 func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputDir string, dockerfilePath string, imageName string, logWriter io.Writer) int {
+	// Get CI platforms from handlers config
+	cfg := config.Global()
+	ciPlatforms := "linux/amd64,linux/arm64"
+	if cfg != nil && cfg.Handlers != nil {
+		ciPlatforms = cfg.Handlers.GetCIPlatformsString()
+	}
+
 	Logln(logWriter, "\n--- CI Mode: Building single-platform for testing ---")
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter,
 		"docker", "buildx", "build",
@@ -118,7 +136,7 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 
 	exitCode = RunCommandWithLog(workspaceRoot, logWriter,
 		"docker", "buildx", "build",
-		"--platform", "linux/amd64,linux/arm64",
+		"--platform", ciPlatforms,
 		"-t", imageName,
 		"-f", dockerfilePath,
 		"--cache-from", "type=gha",

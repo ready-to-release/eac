@@ -88,19 +88,41 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, output
 func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	binaryName := module.Moniker
 
-	// Define target platforms with metadata keys for custom names
-	// Metadata key pattern: exe-{goos}-{goarch}
-	targets := []struct {
+	// Get target platforms from handlers config
+	cfg := config.Global()
+	var configTargets []config.CrossCompileTarget
+	if cfg != nil && cfg.Handlers != nil {
+		configTargets = cfg.Handlers.GetCrossCompileTargets()
+	} else {
+		// Fallback to defaults
+		configTargets = []config.CrossCompileTarget{
+			{OS: "linux", Arch: "amd64", Suffix: ""},
+			{OS: "linux", Arch: "arm64", Suffix: ""},
+			{OS: "darwin", Arch: "amd64", Suffix: ""},
+			{OS: "darwin", Arch: "arm64", Suffix: ""},
+			{OS: "windows", Arch: "amd64", Suffix: ".exe"},
+		}
+	}
+
+	// Convert to internal structure with metadata keys
+	targets := make([]struct {
 		goos        string
 		goarch      string
 		suffix      string
-		metadataKey string // Key in module.Metadata for custom output name
-	}{
-		{"linux", "amd64", "", "exe-linux-amd64"},
-		{"linux", "arm64", "", "exe-linux-arm64"},
-		{"darwin", "amd64", "", "exe-darwin-amd64"},
-		{"darwin", "arm64", "", "exe-darwin-arm64"},
-		{"windows", "amd64", ".exe", "exe-windows-amd64"},
+		metadataKey string
+	}, len(configTargets))
+	for i, t := range configTargets {
+		targets[i] = struct {
+			goos        string
+			goarch      string
+			suffix      string
+			metadataKey string
+		}{
+			goos:        t.OS,
+			goarch:      t.Arch,
+			suffix:      t.Suffix,
+			metadataKey: fmt.Sprintf("exe-%s-%s", t.OS, t.Arch),
+		}
 	}
 
 	// Build ldflags
@@ -152,7 +174,15 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outpu
 
 		// Apply UPX compression if requested and available
 		// Creates a separate -upx suffixed binary, keeping the original intact
-		if opts.CompressedUPX && (target.goos == "linux" || target.goos == "windows") {
+		// Check if platform supports UPX from handlers config
+		upxSupported := false
+		if cfg != nil && cfg.Handlers != nil {
+			upxSupported = cfg.Handlers.IsUPXSupported(target.goos)
+		} else {
+			// Default: linux and windows support UPX
+			upxSupported = target.goos == "linux" || target.goos == "windows"
+		}
+		if opts.CompressedUPX && upxSupported {
 			if upxPath, err := exec.LookPath("upx"); err == nil {
 				// Create UPX output name by inserting -upx before the extension
 				var upxOutputName string
