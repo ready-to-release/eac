@@ -1,0 +1,119 @@
+// Package logging provides a simple logging system for the r2r CLI.
+// It provides hardcoded defaults (raw output) that can be overridden by config files.
+package logging
+
+import (
+	"os"
+	"path/filepath"
+
+	"gopkg.in/yaml.v3"
+)
+
+// FormatterType defines the output format for log messages
+type FormatterType string
+
+const (
+	// FormatterRaw outputs only the message (clean CLI output)
+	FormatterRaw FormatterType = "raw"
+	// FormatterTimestamped outputs "HH:MM:SS.mmm  LEVEL  message"
+	FormatterTimestamped FormatterType = "timestamped"
+	// FormatterJSON outputs structured JSON
+	FormatterJSON FormatterType = "json"
+)
+
+// SinkConfig holds configuration for a single logging sink (console or file)
+type SinkConfig struct {
+	// Levels to output: debug, info, warn, error
+	Levels []string `yaml:"levels"`
+	// Formatter type: raw, timestamped, json
+	Formatter FormatterType `yaml:"formatter"`
+	// Enabled controls whether this sink is active (file only)
+	Enabled *bool `yaml:"enabled,omitempty"`
+}
+
+// LoggingConfig holds the complete logging configuration
+type LoggingConfig struct {
+	Console SinkConfig `yaml:"console"`
+	File    SinkConfig `yaml:"file"`
+}
+
+// DefaultConfig returns the default logging configuration for r2r CLI.
+// Defaults to raw formatter (clean output) with info, warn, error on console.
+// File logging is disabled by default.
+func DefaultConfig() LoggingConfig {
+	disabled := false
+	return LoggingConfig{
+		Console: SinkConfig{
+			Levels:    []string{"info", "warn", "error"},
+			Formatter: FormatterRaw,
+		},
+		File: SinkConfig{
+			Levels:    []string{"debug", "info", "warn", "error"},
+			Formatter: FormatterJSON,
+			Enabled:   &disabled, // File logging disabled by default for CLI
+		},
+	}
+}
+
+// LoadConfig loads logging configuration from a config file.
+// It looks for logging config in the following order:
+// 1. .r2r/r2r-cli-logging.yml in workspace root
+// 2. logging section in .r2r/r2r-cli.yml
+// Falls back to defaults if no config found.
+func LoadConfig(workspaceRoot string) LoggingConfig {
+	// Try dedicated logging config first
+	loggingConfigPath := filepath.Join(workspaceRoot, ".r2r", "r2r-cli-logging.yml")
+	if data, err := os.ReadFile(loggingConfigPath); err == nil {
+		var cfg LoggingConfig
+		if err := yaml.Unmarshal(data, &cfg); err == nil {
+			return applyDefaults(cfg)
+		}
+	}
+
+	// Fall back to defaults
+	return DefaultConfig()
+}
+
+// applyDefaults fills in missing configuration with defaults
+func applyDefaults(cfg LoggingConfig) LoggingConfig {
+	defaults := DefaultConfig()
+
+	// Console defaults
+	if len(cfg.Console.Levels) == 0 {
+		cfg.Console.Levels = defaults.Console.Levels
+	}
+	if cfg.Console.Formatter == "" {
+		cfg.Console.Formatter = defaults.Console.Formatter
+	}
+
+	// File defaults
+	if len(cfg.File.Levels) == 0 {
+		cfg.File.Levels = defaults.File.Levels
+	}
+	if cfg.File.Formatter == "" {
+		cfg.File.Formatter = defaults.File.Formatter
+	}
+	if cfg.File.Enabled == nil {
+		cfg.File.Enabled = defaults.File.Enabled
+	}
+
+	return cfg
+}
+
+// HasLevel checks if a sink config includes a specific level
+func (s *SinkConfig) HasLevel(level string) bool {
+	for _, l := range s.Levels {
+		if l == level {
+			return true
+		}
+	}
+	return false
+}
+
+// IsEnabled returns whether the sink is enabled (defaults to true for console)
+func (s *SinkConfig) IsEnabled() bool {
+	if s.Enabled == nil {
+		return true
+	}
+	return *s.Enabled
+}

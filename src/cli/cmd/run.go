@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"io"
 	"os"
 	"os/signal"
@@ -14,7 +13,8 @@ import (
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/docker"
 	"github.com/ready-to-release/eac/src/cli/internal/extensions"
-	"github.com/ready-to-release/eac/src/cli/internal/logger"
+	"context"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -39,9 +39,9 @@ func init() {
 		}()
 
 		// Temporarily suppress logger output during help to avoid warning pollution
-		originalLevel := log.GetLevel()
-		log.SetLevel("error") // Only show errors, suppress warnings
-		defer log.SetLevel(originalLevel.String())
+		originalLevel := logging.GetLevel()
+		logging.SetLevel("error") // Only show errors, suppress warnings
+		defer logging.SetLevel(originalLevel)
 
 		// Try to load config
 		conf.InitConfig()
@@ -246,13 +246,7 @@ var RunCmd = &cobra.Command{
 			return
 		}
 
-		// Create context with command info
-		ctx := context.Background()
-		ctx = logger.ContextWithCommand(ctx, "run")
-		ctx = logger.ContextWithComponent(ctx, "docker")
 
-		// Get logger instance
-		log := logger.WithContext(ctx)
 
 		// Get parsed command for proper argument boundary detection
 		parsedCmd, _ := GetParsedCommand()
@@ -273,16 +267,12 @@ var RunCmd = &cobra.Command{
 			}
 		}
 
-		log.WithFields(map[string]interface{}{
-			"extension":      extensionName,
-			"args":           containerArgs,
-			"parsed_boundary": parsedCmd.ArgumentBoundary,
-		}).Info().Msg("Running extension")
+		logging.Debugf("Running extension: extension=%s args=%v parsed_boundary=%d", extensionName, containerArgs, parsedCmd.ArgumentBoundary)
 
 		// If no arguments are provided, switch to interactive mode
 		// This makes "r2r pwsh" behave like "r2r interactive pwsh"
 		if len(containerArgs) == 0 {
-			log.Info().Msg("No arguments provided, switching to interactive mode")
+			logging.Debug("No arguments provided, switching to interactive mode")
 			// Call the interactive command directly
 			InteractiveCmd.Run(cmd, []string{extensionName})
 			return
@@ -291,10 +281,10 @@ var RunCmd = &cobra.Command{
 		conf.InitConfig()
 
 		// Create extension installer
-		log.Debug().Msg("Creating extension installer")
+		logging.Debug("Creating extension installer")
 		installer, err := extensions.NewInstaller()
 		if err != nil {
-			log.Error().Msgf("Failed to create extension installer: %v", err)
+			logging.Errorf("Failed to create extension installer: %v", err)
 			os.Exit(1)
 		}
 		defer installer.Close()
@@ -303,54 +293,51 @@ var RunCmd = &cobra.Command{
 		host := installer.GetContainerHost()
 
 		// Validate extensions
-		log.Debug().Msg("Validating extensions")
+		logging.Debug("Validating extensions")
 		if err := host.ValidateExtensions(); err != nil {
-			log.Error().Msgf("Extension validation failed: %v", err)
+			logging.Errorf("Extension validation failed: %v", err)
 			os.Exit(1)
 		}
 
-		log.WithField("root_dir", host.GetRootDir()).Debug().Msg("Root directory found")
+		logging.Debugf("Root directory found: root_dir=%s", host.GetRootDir())
 
 		// Debug: List all available extensions before searching
-		log.Debug().Int("extension_count", len(conf.Global.Extensions)).Msg("Available extensions in config")
+		logging.Debugf("Available extensions in config: extension_count=%d", len(conf.Global.Extensions))
 		for _, ext := range conf.Global.Extensions {
-			log.Debug().Str("name", ext.Name).Str("image", ext.Image).Msg("Extension found in config")
+			logging.Debugf("Extension found in config: name=%s image=%s", ext.Name, ext.Image)
 		}
 
 		// Find extension
-		log.WithField("extension", extensionName).Debug().Msg("Finding extension")
+		logging.Debugf("Finding extension: extension=%v", extensionName)
 		ext, err := host.FindExtension(extensionName)
 		if err != nil {
-			log.Error().Msgf("Extension '%s' not found", extensionName)
+			logging.Errorf("Extension '%s' not found", extensionName)
 			// Ensure output is flushed before exit
 			os.Stdout.Sync()
 			os.Stderr.Sync()
 			os.Exit(1)
 		}
-		log.WithField("image", ext.Image).Info().Msg("Loading extension image")
+		logging.Debugf("Loading extension image: image=%s", ext.Image)
 
 		// Take snapshot of running containers before starting
 		beforeSnapshot, err := host.GetContainerSnapshot()
 		if err != nil {
-			log.WithField("error", err.Error()).Debug().Msg("Failed to take container snapshot before run")
+			logging.Debugf("Failed to take container snapshot before run: error=%v", err)
 			beforeSnapshot = make(map[string]string) // Continue with empty snapshot
 		}
 
 		// Ensure image exists locally using installer
-		log.WithFields(map[string]interface{}{
-			"image":       ext.Image,
-			"pull_policy": ext.ImagePullPolicy,
-		}).Debug().Msg("Ensuring image exists")
+		logging.Debugf("Ensuring image exists: image=%s pull_policy=%s", ext.Image, ext.ImagePullPolicy)
 		if _, err := installer.EnsureExtensionImage(extensionName); err != nil {
-			log.Error().Msgf("Error ensuring image exists: %v", err)
+			logging.Errorf("Error ensuring image exists: %v", err)
 			os.Exit(1)
 		}
 
 		// Inspect image
-		log.WithField("image", ext.Image).Debug().Msg("Inspecting image")
+		logging.Debugf("Inspecting image: image=%v", ext.Image)
 		imageInspect, err := host.InspectImage(ext.Image)
 		if err != nil {
-			log.Error().Msgf("Failed to inspect image '%s': %v", ext.Image, err)
+			logging.Errorf("Failed to inspect image '%s': %v", ext.Image, err)
 			os.Exit(1)
 		}
 
@@ -358,14 +345,11 @@ var RunCmd = &cobra.Command{
 		var volumeRequests []cache.VolumeRequest
 		extMeta, err := host.GetExtensionMetadata(ext)
 		if err != nil {
-			log.Debug().Err(err).Str("extension", ext.Name).Msg("Failed to get extension metadata, continuing without metadata")
+			logging.Debugf("Failed to get extension metadata, continuing without metadata")
 		} else if extMeta != nil {
 			if len(extMeta.Volumes) > 0 {
 				volumeRequests = extMeta.Volumes
-				log.Debug().
-					Str("extension", ext.Name).
-					Int("volumes", len(volumeRequests)).
-					Msg("Loaded volume requests from extension metadata")
+				logging.Debugf("Loaded volume requests from extension metadata: extension=%s volumes=%d", ext.Name, len(volumeRequests))
 			}
 			// Merge env vars from metadata into extension config
 			docker.MergeMetadataEnv(ext, extMeta)
@@ -376,31 +360,31 @@ var RunCmd = &cobra.Command{
 		hostConfig := host.CreateHostConfig(ext, volumeRequests)
 
 		// Create container
-		log.Debug().Msg("Creating container")
+		logging.Debug("Creating container")
 		containerID, err := host.CreateContainer(containerConfig, hostConfig)
 		if err != nil {
-			log.Error().Msgf("Failed to create container: %v", err)
+			logging.Errorf("Failed to create container: %v", err)
 			os.Exit(1)
 		}
-		log.WithField("container_id", containerID).Debug().Msg("Container created")
+		logging.Debugf("Container created: container_id=%v", containerID)
 
 		// Attach to container for input/output FIRST
-		log.WithField("container_id", containerID).Debug().Msg("Attaching to container")
+		logging.Debugf("Attaching to container: container_id=%v", containerID)
 		attachResp, err := host.AttachToContainer(containerID)
 		if err != nil {
-			log.Error().Msgf("Failed to attach to container %s: %v", containerID, err)
+			logging.Errorf("Failed to attach to container %s: %v", containerID, err)
 			os.Exit(1)
 		}
 		defer attachResp.Close()
 
 		// Set up wait for container AFTER attach but BEFORE starting it
-		log.WithField("container_id", containerID).Debug().Msg("Setting up container wait")
+		logging.Debugf("Setting up container wait: container_id=%v", containerID)
 		statusCh, errCh := host.WaitForContainer(containerID)
 
 		// Start container
-		log.WithField("container_id", containerID).Debug().Msg("Starting container")
+		logging.Debugf("Starting container: container_id=%v", containerID)
 		if err := host.StartContainer(containerID); err != nil {
-			log.Error().Msgf("Failed to start container %s: %v", containerID, err)
+			logging.Errorf("Failed to start container %s: %v", containerID, err)
 			os.Exit(1)
 		}
 
@@ -415,18 +399,15 @@ var RunCmd = &cobra.Command{
 			sig := <-signalChan
 			shuttingDown = true
 
-			log.WithFields(map[string]interface{}{
-				"signal":       sig.String(),
-				"container_id": containerID,
-			}).Info().Msg("Received interrupt signal, stopping container gracefully")
+			logging.Debugf("Received interrupt signal, stopping container gracefully: signal=%s container_id=%s", sig.String(), containerID)
 
 			// Start cleanup in a separate goroutine to avoid blocking
 			go func() {
 				// If we're running in Docker (Docker-in-Docker), clean up child containers first
 				if docker.IsRunningInContainer() {
-					log.Info().Msg("Detected Docker-in-Docker, cleaning up child containers")
+					logging.Debug("Detected Docker-in-Docker, cleaning up child containers")
 					if err := host.CleanupChildContainers(); err != nil {
-						log.WithField("error", err.Error()).Warn().Msg("Failed to clean up some child containers")
+						logging.Warnf("Failed to clean up some child containers: error=%v", err)
 					}
 				}
 
@@ -435,17 +416,14 @@ var RunCmd = &cobra.Command{
 				defer cancel()
 
 				if err := host.StopContainerWithContext(stopCtx, containerID); err != nil {
-					log.WithFields(map[string]interface{}{
-						"container_id": containerID,
-						"error":        err.Error(),
-					}).Warn().Msg("Failed to stop container gracefully, forcing termination")
+					logging.Warnf("Failed to stop container gracefully, forcing termination: container_id=%s error=%v", containerID, err)
 
 					// Force stop if graceful stop failed
 					if err := host.StopContainer(containerID); err != nil {
-						log.Error().Msgf("Failed to force stop container: %v", err)
+						logging.Errorf("Failed to force stop container: %v", err)
 					}
 				} else {
-					log.WithField("container_id", containerID).Info().Msg("Container stopped gracefully")
+					logging.Debugf("Container stopped gracefully: container_id=%s", containerID)
 				}
 			}()
 
@@ -492,13 +470,13 @@ var RunCmd = &cobra.Command{
 				// Copy stdin to the connection
 				_, err := io.Copy(attachResp.Conn, os.Stdin)
 				if err != nil && err != io.EOF {
-					log.Debug().Err(err).Msg("stdin copy error")
+					logging.Debugf("stdin copy error: %v", err)
 				}
 			}()
 		}
 
 		// Wait for container to finish (wait channels already set up before start)
-		log.WithField("container_id", containerID).Debug().Msg("Waiting for container to finish")
+		logging.Debugf("Waiting for container to finish: container_id=%v", containerID)
 
 		// Wait for container completion
 		var containerExitCode int64
@@ -506,19 +484,13 @@ var RunCmd = &cobra.Command{
 		// Wait for container to exit first, then wait for I/O to complete
 		select {
 		case status := <-statusCh:
-			log.WithFields(map[string]interface{}{
-				"container_id": containerID,
-				"status_code":  status.StatusCode,
-			}).Info().Msg("Container finished")
+			logging.Debugf("Container finished: container_id=%s status_code=%d", containerID, status.StatusCode)
 			containerExitCode = status.StatusCode
 		case err := <-errCh:
 			if err != nil {
 				errStr := err.Error()
 				if !strings.Contains(errStr, "No such container") && errStr != "" {
-					log.WithFields(map[string]interface{}{
-						"container_id": containerID,
-						"error":        errStr,
-					}).Error().Msg("Error waiting for container")
+					logging.Errorf("Error waiting for container: container_id=%s error=%s", containerID, errStr)
 					os.Exit(1)
 				}
 			}
@@ -532,14 +504,14 @@ var RunCmd = &cobra.Command{
 		// The I/O goroutine will receive EOF when Docker closes the stream
 		ioErr := <-done
 		if ioErr != nil && ioErr != io.EOF {
-			log.WithField("error", ioErr.Error()).Debug().Msg("I/O error")
+			logging.Debugf("I/O error: error=%v", ioErr)
 		}
-		log.Debug().Msg("I/O copy completed")
+		logging.Debug("I/O copy completed")
 
 		// Check for new containers that appeared during execution
 		afterSnapshot, err := host.GetContainerSnapshot()
 		if err != nil {
-			log.WithField("error", err.Error()).Debug().Msg("Failed to take container snapshot after run")
+			logging.Debugf("Failed to take container snapshot after run: error=%v", err)
 		} else {
 			// Get expected host images from extension metadata (for serve commands, etc.)
 			var expectedHostImages []string
@@ -551,9 +523,9 @@ var RunCmd = &cobra.Command{
 
 		// Clean up any child containers if we're in Docker-in-Docker
 		if docker.IsRunningInContainer() {
-			log.Debug().Msg("Cleaning up any remaining child containers before exit")
+			logging.Debug("Cleaning up any remaining child containers before exit")
 			if err := host.CleanupChildContainers(); err != nil {
-				log.WithField("error", err.Error()).Warn().Msg("Failed to clean up some child containers")
+				logging.Warnf("Failed to clean up some child containers: error=%v", err)
 			}
 		}
 

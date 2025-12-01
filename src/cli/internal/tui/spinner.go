@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,6 +12,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/docker"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 type errMsg error
@@ -34,7 +34,7 @@ func Auth() string {
 	// Use centralized authentication function from docker package
 	_, authStr, err := docker.CreateGitHubAuthConfig()
 	if err != nil {
-		log.Fatal(err)
+		logging.Fatalf("Failed to create GitHub auth config: %v", err)
 	}
 	return authStr
 }

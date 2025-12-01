@@ -3,7 +3,7 @@ package docker
 import (
 	"sync"
 
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 // ImagePullRequest represents a single image pull operation
@@ -40,10 +40,7 @@ func (ch *ContainerHost) ParallelEnsureImages(requests []ImagePullRequest, opts 
 		maxConcurrency = opts.MaxConcurrency
 	}
 
-	log.Debug().
-		Int("image_count", len(requests)).
-		Int("max_concurrency", maxConcurrency).
-		Msg("Starting parallel image pulls")
+	logging.Debugf("Starting parallel image pulls: image_count=%d max_concurrency=%d", len(requests), maxConcurrency)
 
 	// Create semaphore for concurrency control
 	semaphore := make(chan struct{}, maxConcurrency)
@@ -62,11 +59,7 @@ func (ch *ContainerHost) ParallelEnsureImages(requests []ImagePullRequest, opts 
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			log.Debug().
-				Str("image", request.ImageName).
-				Str("policy", request.PullPolicy).
-				Int("index", idx).
-				Msg("Processing image pull")
+			logging.Debugf("Processing image pull: image=%s policy=%s index=%d", request.ImageName, request.PullPolicy, idx)
 
 			// Execute the image pull
 			err := ch.EnsureImageExists(request.ImageName, request.PullPolicy, request.LoadLocal)
@@ -80,14 +73,9 @@ func (ch *ContainerHost) ParallelEnsureImages(requests []ImagePullRequest, opts 
 			}
 
 			if err != nil {
-				log.Warn().
-					Err(err).
-					Str("image", request.ImageName).
-					Msg("Image pull failed")
+				logging.Warnf("Image pull failed: image=%s err=%v", request.ImageName, err)
 			} else {
-				log.Debug().
-					Str("image", request.ImageName).
-					Msg("Image pull succeeded")
+				logging.Debugf("Image pull succeeded: image=%s", request.ImageName)
 			}
 		}(i, req)
 	}
@@ -106,11 +94,7 @@ func (ch *ContainerHost) ParallelEnsureImages(requests []ImagePullRequest, opts 
 		}
 	}
 
-	log.Info().
-		Int("total", len(results)).
-		Int("successes", successes).
-		Int("failures", failures).
-		Msg("Parallel image pulls completed")
+	logging.Debugf("Parallel image pulls completed: total=%d successes=%d failures=%d", len(results), successes, failures)
 
 	return results
 }

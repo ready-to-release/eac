@@ -11,7 +11,7 @@ import (
 	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/docker"
-	"github.com/ready-to-release/eac/src/cli/internal/logger"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -102,27 +102,18 @@ var InteractiveCmd = &cobra.Command{
 		go func() {
 			sig := <-signalChan
 
-			// Create context for logging
-			ctx := context.Background()
-			ctx = logger.ContextWithCommand(ctx, "interactive")
-			ctx = logger.ContextWithComponent(ctx, "docker")
-			log := logger.WithContext(ctx)
-
-			log.WithFields(map[string]interface{}{
-				"signal":       sig.String(),
-				"container_id": containerID,
-			}).Info().Msg("Received interrupt signal, stopping container gracefully")
+			logging.Debugf("Received interrupt signal, stopping container gracefully: signal=%s container_id=%s", sig.String(), containerID)
 
 			// Try to stop the container gracefully with a timeout
 			stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			if err := host.StopContainerWithContext(stopCtx, containerID); err != nil {
-				log.Warn().Msgf("Failed to stop container gracefully: %v, forcing termination", err)
+				logging.Warnf("Failed to stop container gracefully: %v, forcing termination", err)
 				// Force stop if graceful stop failed
 				host.StopContainer(containerID)
 			} else {
-				log.Info().Msg("Container stopped gracefully")
+				logging.Debug("Container stopped gracefully")
 			}
 			os.Exit(0)
 		}()

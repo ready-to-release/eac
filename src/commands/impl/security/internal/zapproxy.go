@@ -50,9 +50,16 @@ func getDefaultMockZAPOutput() map[string]interface{} {
 // RunZAPScan executes OWASP ZAP dynamic security scan via Docker
 func RunZAPScan(targetURL, scanType, workspaceRoot string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
+	// Priority: in-process mock > environment variable mock
 	if mockZAPOutput != nil {
-		logger.Debug("Using mocked ZAP output")
+		logger.Debug("Using mocked ZAP output (in-process)")
 		return mockZAPOutput, nil
+	}
+
+	// Check for environment-based mocking (for subprocess tests)
+	if os.Getenv("R2R_MOCK_SECURITY") != "" {
+		logger.Debug("Using mocked ZAP output (environment)")
+		return getDefaultMockZAPOutput(), nil
 	}
 
 	// Create Docker runner
@@ -80,11 +87,12 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, logger *logging.Logge
 
 	reportPath := filepath.Join(outputDir, "zap-report.json")
 
-	// Get absolute path for volume mount
+	// Get absolute path and convert to Docker-compatible format for volume mount
 	absOutputDir, err := filepath.Abs(outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
+	dockerOutputDir := ToDockerPath(absOutputDir)
 
 	// Build ZAP scan command based on scan type
 	var zapScript string
@@ -111,7 +119,7 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, logger *logging.Logge
 	}
 
 	hostConfig := &container.HostConfig{
-		Binds: []string{fmt.Sprintf("%s:/zap/wrk:rw", absOutputDir)},
+		Binds: []string{fmt.Sprintf("%s:/zap/wrk:rw", dockerOutputDir)},
 	}
 
 	// Run container and capture output

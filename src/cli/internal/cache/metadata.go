@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 // MetadataCache holds cached extension metadata with image digest for invalidation
@@ -67,17 +67,12 @@ func GetMetadataCachePath(repoRoot, extensionName string) string {
 // LoadMetadataCache loads cached metadata for an extension from disk
 func LoadMetadataCache(repoRoot, extensionName string) (*MetadataCache, error) {
 	cachePath := GetMetadataCachePath(repoRoot, extensionName)
-	log.Debug().
-		Str("extension", extensionName).
-		Str("path", cachePath).
-		Msg("Loading metadata cache")
+	logging.Debugf("Loading metadata cache: extension=%s path=%s", extensionName, cachePath)
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Debug().
-				Str("extension", extensionName).
-				Msg("Metadata cache not found")
+			logging.Debugf("Metadata cache not found: extension=%s", extensionName)
 			return nil, nil // Cache miss, not an error
 		}
 		return nil, fmt.Errorf("failed to read metadata cache: %w", err)
@@ -85,18 +80,11 @@ func LoadMetadataCache(repoRoot, extensionName string) (*MetadataCache, error) {
 
 	var cache MetadataCache
 	if err := json.Unmarshal(data, &cache); err != nil {
-		log.Warn().
-			Err(err).
-			Str("extension", extensionName).
-			Msg("Failed to parse metadata cache, will refresh")
+		logging.Warnf("Failed to parse metadata cache, will refresh: extension=%s error=%v", extensionName, err)
 		return nil, nil // Treat parse errors as cache miss
 	}
 
-	log.Debug().
-		Str("extension", extensionName).
-		Str("digest", cache.ImageDigest).
-		Time("cached_at", cache.CachedAt).
-		Msg("Loaded metadata cache")
+	logging.Debugf("Loaded metadata cache: extension=%s digest=%s cached_at=%v", extensionName, cache.ImageDigest, cache.CachedAt)
 
 	return &cache, nil
 }
@@ -128,11 +116,7 @@ func SaveMetadataCache(repoRoot string, cache *MetadataCache) error {
 		return fmt.Errorf("failed to finalize metadata cache: %w", err)
 	}
 
-	log.Debug().
-		Str("extension", cache.ExtensionName).
-		Str("path", cachePath).
-		Str("digest", cache.ImageDigest).
-		Msg("Saved metadata cache")
+	logging.Debugf("Saved metadata cache: extension=%s path=%s digest=%s", cache.ExtensionName, cachePath, cache.ImageDigest)
 
 	return nil
 }
@@ -145,11 +129,7 @@ func IsMetadataCacheValid(cache *MetadataCache, currentDigest string) bool {
 
 	// Cache is valid if the image digest matches
 	if cache.ImageDigest != currentDigest {
-		log.Debug().
-			Str("extension", cache.ExtensionName).
-			Str("cached_digest", cache.ImageDigest).
-			Str("current_digest", currentDigest).
-			Msg("Metadata cache invalidated: image digest changed")
+		logging.Debugf("Metadata cache invalidated: image digest changed: extension=%s cached_digest=%s current_digest=%s", cache.ExtensionName, cache.ImageDigest, currentDigest)
 		return false
 	}
 

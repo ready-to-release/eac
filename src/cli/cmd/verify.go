@@ -7,6 +7,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/docker"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/ready-to-release/eac/src/cli/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -50,10 +51,10 @@ func verifySystem(cmd *cobra.Command) {
 
 	if allChecksPass {
 		cmd.Println("✅ All checks passed! System is ready.")
-		log.Debug().Msg("System verification completed successfully")
+		logging.Debug("System verification completed successfully")
 	} else {
 		cmd.PrintErrln("❌ Some checks failed. Please fix the issues above.")
-		log.Error().Msg("System verification failed")
+		logging.Error("System verification failed")
 		os.Exit(1)
 	}
 }

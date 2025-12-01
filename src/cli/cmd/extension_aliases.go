@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +26,7 @@ func CreateExtensionAliases() {
 		existingCmd, _, _ := RootCmd.Find([]string{extension.Name})
 		if existingCmd != nil && existingCmd != RootCmd {
 			// Command already exists, skip creating alias
-			log.Debug().Str("extension", extension.Name).Msg("Skipping alias - command already exists")
+			logging.Debugf("Skipping alias - command already exists: extension=%s", extension.Name)
 			continue
 		}
 
@@ -55,7 +56,7 @@ Examples:
 		// Add the alias command to root
 		RootCmd.AddCommand(aliasCmd)
 
-		log.Debug().Str("extension", extension.Name).Msg("Created extension alias command")
+		logging.Debugf("Created extension alias command: extension=%s", extension.Name)
 	}
 }
 
@@ -85,7 +86,7 @@ func InitializeExtensionAliases() {
 			// Config loaded successfully, create aliases
 			CreateExtensionAliases()
 		} else {
-			log.Debug().Err(err).Str("config", configFile).Msg("Failed to load config for aliases")
+			logging.Debugf("Failed to load config for aliases: config=%s error=%v", configFile, err)
 		}
 	}
 }

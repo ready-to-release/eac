@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 var (
@@ -166,19 +166,19 @@ func Validate(forceUpdate bool) error {
 
 	// Skip validation for undefined or development versions
 	if Version == "" || Version == "undefined" || Version == "dev" {
-		log.Debug().Str("version", Version).Msg("Undefined or development version detected, skipping validation")
+		logging.Debugf("Undefined or development version detected, skipping validation: version=%s", Version)
 		return nil
 	}
 
 	// Check R2R_NO_UPDATE_CHECK environment variable
 	if os.Getenv("R2R_NO_UPDATE_CHECK") == "true" {
-		log.Debug().Msg("Update checks disabled by R2R_NO_UPDATE_CHECK environment variable")
+		logging.Debug("Update checks disabled by R2R_NO_UPDATE_CHECK environment variable")
 		return nil
 	}
 
 	// Check if force-update flag is used
 	if forceUpdate {
-		log.Warn().Msg("Force update flag used - bypassing version validation")
+		logging.Warn("Force update flag used - bypassing version validation")
 		return nil
 	}
 
@@ -196,7 +196,7 @@ func Validate(forceUpdate bool) error {
 		return fmt.Errorf("version %q is outside allowed range (%s - %s)", Version, minVersion, maxVersion)
 	}
 
-	log.Debug().Str("version", Version).Msg("Version validation passed")
+	logging.Debugf("Version validation passed: version=%s", Version)
 	return nil
 }
 

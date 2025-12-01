@@ -99,7 +99,7 @@ modules:
     files:
       root: .github
       config:
-        - variables/**
+        - "**/*"
       assets:
         - README.md
       exclude:

@@ -4,6 +4,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
@@ -44,9 +45,14 @@ func getDefaultMockSemgrepOutput() map[string]interface{} {
 // RunSemgrepSAST executes Semgrep static analysis via Docker
 func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
+	// Priority: in-process mock > environment variable mock
 	if mockSemgrepOutput != nil {
-		logger.Debug("Using mocked Semgrep output")
+		logger.Debug("Using mocked Semgrep output (in-process)")
 		return mockSemgrepOutput, nil
+	}
+	if os.Getenv("R2R_MOCK_SECURITY") != "" {
+		logger.Debug("Using mocked Semgrep output (environment)")
+		return getDefaultMockSemgrepOutput(), nil
 	}
 
 	// Create Docker runner

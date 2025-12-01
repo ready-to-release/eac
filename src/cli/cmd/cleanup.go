@@ -9,6 +9,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/docker"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +66,7 @@ Use --containers to also clean up stopped containers.`,
 		// Handle container cleanup if requested
 		if cleanupContainers {
 			cleanupDockerContainers()
-			fmt.Println() // Add spacing between sections
+			logging.Info("") // Add spacing between sections
 		}
 
 		// Handle image cleanup
@@ -78,12 +79,12 @@ Use --containers to also clean up stopped containers.`,
 }
 
 func cleanExtensionImages() {
-	fmt.Println("🧹 Cleaning up old extension images...")
+	logging.Info("🧹 Cleaning up old extension images...")
 
 	// Get list of configured extensions
 	extensions := conf.Global.Extensions
 	if len(extensions) == 0 {
-		fmt.Println("No extensions configured")
+		logging.Info("No extensions configured")
 		return
 	}
 
@@ -103,7 +104,7 @@ func cleanExtensionImages() {
 
 		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 		if len(lines) <= keepVersions {
-			fmt.Printf("  %s: %d version(s) found, keeping all\n", ext.Name, len(lines))
+			logging.Infof("  %s: %d version(s) found, keeping all", ext.Name, len(lines))
 			continue
 		}
 
@@ -136,15 +137,15 @@ func cleanExtensionImages() {
 
 		// Remove old versions (keep the first N)
 		toRemove := images[keepVersions:]
-		fmt.Printf("  %s: Removing %d old version(s)\n", ext.Name, len(toRemove))
+		logging.Infof("  %s: Removing %d old version(s)", ext.Name, len(toRemove))
 
 		for i, img := range toRemove {
 			imageRef := fmt.Sprintf("%s:%s", baseImage, img.tag)
 
 			if cleanupDryRun {
-				fmt.Printf("    [DRY RUN] Would remove: %s (%s)\n", imageRef, img.size)
+				logging.Infof("    [DRY RUN] Would remove: %s (%s)", imageRef, img.size)
 			} else {
-				fmt.Printf("    [%d/%d] Removing: %s (%s)...\n", i+1, len(toRemove), imageRef, img.size)
+				logging.Infof("    [%d/%d] Removing: %s (%s)...", i+1, len(toRemove), imageRef, img.size)
 				cmd := exec.Command("docker", "rmi", imageRef)
 				if err := cmd.Run(); err != nil {
 					// Try removing by ID if tag removal fails
@@ -157,76 +158,76 @@ func cleanExtensionImages() {
 
 	// Run docker system prune to clean up dangling images
 	if !cleanupDryRun {
-		fmt.Println("\n🔧 Cleaning up dangling images and build cache...")
-		fmt.Println("   ⏳ Removing dangling images (this may take a moment)...")
+		logging.Info("\n🔧 Cleaning up dangling images and build cache...")
+		logging.Info("   ⏳ Removing dangling images (this may take a moment)...")
 		cmd := exec.Command("docker", "image", "prune", "-f")
 		if output, err := cmd.Output(); err == nil {
-			fmt.Print(string(output))
+			logging.Info(strings.TrimSpace(string(output)))
 		}
 
 		// Also prune build cache
-		fmt.Println("   ⏳ Pruning build cache (this may take several seconds)...")
+		logging.Info("   ⏳ Pruning build cache (this may take several seconds)...")
 		cmd = exec.Command("docker", "builder", "prune", "-f")
 		if output, err := cmd.Output(); err == nil {
-			fmt.Print(string(output))
+			logging.Info(strings.TrimSpace(string(output)))
 		}
 	}
 
 	// Show disk usage after cleanup
-	fmt.Println("\n📊 Calculating Docker disk usage (please wait)...")
+	logging.Info("\n📊 Calculating Docker disk usage (please wait)...")
 	cmd := exec.Command("docker", "system", "df")
 	if output, err := cmd.Output(); err == nil {
-		fmt.Print(string(output))
+		logging.Info(strings.TrimSpace(string(output)))
 	}
 }
 
 func cleanAllDockerImages() {
-	fmt.Println("🧹 Cleaning all Docker resources...")
+	logging.Info("🧹 Cleaning all Docker resources...")
 
 	if cleanupDryRun {
-		fmt.Println("[DRY RUN] Would run: docker system prune -a --volumes")
+		logging.Info("[DRY RUN] Would run: docker system prune -a --volumes")
 
 		// Show what would be cleaned
 		cmd := exec.Command("docker", "system", "df")
 		if output, err := cmd.Output(); err == nil {
-			fmt.Println("\nCurrent usage:")
-			fmt.Print(string(output))
+			logging.Info("\nCurrent usage:")
+			logging.Info(strings.TrimSpace(string(output)))
 		}
 	} else {
 		// Run aggressive cleanup
-		fmt.Println("Running: docker system prune -a --volumes -f")
-		fmt.Println("This will remove:")
-		fmt.Println("  - All stopped containers")
-		fmt.Println("  - All networks not used by containers")
-		fmt.Println("  - All images without containers")
-		fmt.Println("  - All build cache")
-		fmt.Println("  - All anonymous volumes")
-		fmt.Println("\n⏳ Starting cleanup (this may take 30-60 seconds)...")
+		logging.Info("Running: docker system prune -a --volumes -f")
+		logging.Info("This will remove:")
+		logging.Info("  - All stopped containers")
+		logging.Info("  - All networks not used by containers")
+		logging.Info("  - All images without containers")
+		logging.Info("  - All build cache")
+		logging.Info("  - All anonymous volumes")
+		logging.Info("\n⏳ Starting cleanup (this may take 30-60 seconds)...")
 
 		cmd := exec.Command("docker", "system", "prune", "-a", "--volumes", "-f")
 		if output, err := cmd.Output(); err == nil {
-			fmt.Print(string(output))
+			logging.Info(strings.TrimSpace(string(output)))
 		} else {
-			fmt.Printf("Error: %v\n", err)
+			logging.Errorf("Error: %v", err)
 			os.Exit(1)
 		}
 
 		// Show disk usage after cleanup
-		fmt.Println("\n📊 Calculating final disk usage (please wait)...")
+		logging.Info("\n📊 Calculating final disk usage (please wait)...")
 		cmd = exec.Command("docker", "system", "df")
 		if output, err := cmd.Output(); err == nil {
-			fmt.Print(string(output))
+			logging.Info(strings.TrimSpace(string(output)))
 		}
 	}
 }
 
 func cleanupDockerContainers() {
-	fmt.Println("🧹 Cleaning up Docker containers...")
+	logging.Info("🧹 Cleaning up Docker containers...")
 
 	// Create container host
 	host, err := docker.NewContainerHost()
 	if err != nil {
-		fmt.Printf("Error: Failed to connect to Docker: %v\n", err)
+		logging.Errorf("Error: Failed to connect to Docker: %v", err)
 		os.Exit(1)
 	}
 
@@ -241,13 +242,13 @@ func cleanupDockerContainers() {
 			if parsed, parseErr := time.ParseDuration(durStr); parseErr == nil {
 				olderThan = parsed * 24 // Convert hours to days
 			} else {
-				fmt.Printf("Error: Invalid duration format '%s'. Use format like '24h' or '7d'\n", cleanupOlderThan)
+				logging.Errorf("Error: Invalid duration format '%s'. Use format like '24h' or '7d'", cleanupOlderThan)
 				os.Exit(1)
 			}
 		} else {
 			olderThan, err = time.ParseDuration(durStr)
 			if err != nil {
-				fmt.Printf("Error: Invalid duration format '%s'. Use format like '24h' or '7d'\n", cleanupOlderThan)
+				logging.Errorf("Error: Invalid duration format '%s'. Use format like '24h' or '7d'", cleanupOlderThan)
 				os.Exit(1)
 			}
 		}
@@ -264,25 +265,25 @@ func cleanupDockerContainers() {
 	// Execute cleanup
 	result, err := host.CleanupContainers(opts)
 	if err != nil {
-		fmt.Printf("Error during cleanup: %v\n", err)
+		logging.Errorf("Error during cleanup: %v", err)
 		os.Exit(1)
 	}
 
 	// Display results
 	if cleanupDryRun {
-		fmt.Printf("  [DRY RUN] Would remove %d container(s)\n", result.ContainersRemoved)
+		logging.Infof("  [DRY RUN] Would remove %d container(s)", result.ContainersRemoved)
 	} else {
-		fmt.Printf("  ✅ Removed %d container(s)\n", result.ContainersRemoved)
+		logging.Infof("  ✅ Removed %d container(s)", result.ContainersRemoved)
 		if result.SpaceReclaimed > 0 {
-			fmt.Printf("  💾 Space reclaimed: %s\n", formatBytes(result.SpaceReclaimed))
+			logging.Infof("  💾 Space reclaimed: %s", formatBytes(result.SpaceReclaimed))
 		}
 	}
 
 	// Display any errors
 	if len(result.Errors) > 0 {
-		fmt.Printf("  ⚠️  %d error(s) occurred:\n", len(result.Errors))
+		logging.Warnf("  ⚠️  %d error(s) occurred:", len(result.Errors))
 		for _, cleanupErr := range result.Errors {
-			fmt.Printf("     - %v\n", cleanupErr)
+			logging.Warnf("     - %v", cleanupErr)
 		}
 	}
 }

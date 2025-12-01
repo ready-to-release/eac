@@ -83,11 +83,26 @@ func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputD
 
 // buildSingleBinary builds a single binary for the current platform
 func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	// Use "commands" as the base name for go-commands type, otherwise use moniker
 	binaryName := module.Moniker
+	if module.Type == "go-commands" {
+		binaryName = "commands"
+	}
+
+	// Add platform-specific extension
+	if strings.Contains(strings.ToLower(os.Getenv("GOOS")), "windows") ||
+		(os.Getenv("GOOS") == "" && filepath.Separator == '\\') {
+		binaryName += ".exe"
+	}
+
 	binaryPath := filepath.Join(outputDir, binaryName)
 
 	Logln(logWriter, "Running: go build -o %s", binaryPath)
-	return RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
+	exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
+	if exitCode == 0 {
+		Logln(logWriter, "✅ Built executable: %s", binaryName)
+	}
+	return exitCode
 }
 
 // buildCrossCompiled builds binaries for multiple platforms

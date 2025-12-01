@@ -9,9 +9,12 @@ import (
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/extensions"
 	"github.com/ready-to-release/eac/src/cli/internal/github"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
+
+// Note: fmt is still imported for fmt.Sprintf and fmt.Errorf
 
 func init() {
 	RootCmd.AddCommand(InstallCmd)
@@ -46,15 +49,15 @@ Examples:
 
 			// Add extension to config (will create config file if needed)
 			if err := addExtensionToConfig(extensionName); err != nil {
-				log.Error().Err(err).Msg("Failed to add extension to config")
+				logging.Errorf("Failed to add extension to config: %v", err)
 				os.Exit(1)
 			}
-			fmt.Printf("✅ Added %s to configuration\n", extensionName)
+			logging.Infof("✅ Added %s to configuration", extensionName)
 		} else {
 			// No extension name provided - need to check if config exists
 			repoRoot, err := conf.FindRepositoryRoot()
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to find repository root")
+				logging.Errorf("Failed to find repository root: %v", err)
 				os.Exit(1)
 			}
 
@@ -72,14 +75,14 @@ Examples:
 			}
 			if !configFound {
 				configPath := filepath.Join(repoRoot, ".r2r", "r2r-cli.yml")
-				fmt.Println("❌ No configuration file found.")
-				fmt.Printf("To install all configured extensions, you need a configuration file at: %s\n", configPath)
-				fmt.Println("\nTo get started:")
-				fmt.Println("  • Run 'r2r init' to create a configuration file")
-				fmt.Println("  • Or install a specific extension: 'r2r install <extension-name>'")
-				fmt.Println("\nExamples:")
-				fmt.Println("  r2r install pwsh")
-				fmt.Println("  r2r install python")
+				logging.Error("❌ No configuration file found.")
+				logging.Infof("To install all configured extensions, you need a configuration file at: %s", configPath)
+				logging.Info("\nTo get started:")
+				logging.Info("  • Run 'r2r init' to create a configuration file")
+				logging.Info("  • Or install a specific extension: 'r2r install <extension-name>'")
+				logging.Info("\nExamples:")
+				logging.Info("  r2r install pwsh")
+				logging.Info("  r2r install python")
 				os.Exit(1)
 			}
 		}
@@ -93,19 +96,19 @@ Examples:
 		if loadLocal {
 			originalLoadLocal = conf.Global.LoadLocal
 			conf.Global.LoadLocal = true
-			log.Debug().Bool("load_local", true).Msg("Temporarily overriding load_local setting from --load-local flag")
+			logging.Debugf("Temporarily overriding load_local setting from --load-local flag: load_local=%v", true)
 		}
 		defer func() {
 			if loadLocal {
 				conf.Global.LoadLocal = originalLoadLocal
-				log.Debug().Bool("load_local", originalLoadLocal).Msg("Restored original load_local setting")
+				logging.Debugf("Restored original load_local setting: load_local=%v", originalLoadLocal)
 			}
 		}()
 
 		// Create extension installer
 		installer, err := extensions.NewInstaller()
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to create extension installer")
+			logging.Errorf("Failed to create extension installer: %v", err)
 			os.Exit(1)
 		}
 		defer installer.Close()
@@ -127,47 +130,47 @@ Examples:
 			}
 
 			if !found {
-				fmt.Printf("❌ Extension %s not found in configuration\n", extensionName)
+				logging.Errorf("❌ Extension %s not found in configuration", extensionName)
 				os.Exit(1)
 			}
 		} else {
 			// Install all configured extensions
 			extsToInstall = conf.Global.Extensions
 			if len(extsToInstall) == 0 {
-				fmt.Println("❌ No extensions configured. Add an extension with:")
-				fmt.Println("  r2r install <extension-name>")
-				fmt.Println("\nExamples:")
-				fmt.Println("  r2r install pwsh")
-				fmt.Println("  r2r install python")
+				logging.Error("❌ No extensions configured. Add an extension with:")
+				logging.Info("  r2r install <extension-name>")
+				logging.Info("\nExamples:")
+				logging.Info("  r2r install pwsh")
+				logging.Info("  r2r install python")
 				os.Exit(1)
 			}
 		}
 
 		// Install the extensions
-		fmt.Printf("📦 Installing %d extension(s)...\n", len(extsToInstall))
+		logging.Infof("📦 Installing %d extension(s)...", len(extsToInstall))
 
 		successCount := 0
 		for _, ext := range extsToInstall {
-			fmt.Printf("\n🔧 Installing %s...\n", ext.Name)
+			logging.Infof("\n🔧 Installing %s...", ext.Name)
 
 			pulled, err := installer.EnsureExtensionImage(ext.Name)
 			if err != nil {
-				log.Error().Err(err).Str("extension", ext.Name).Msg("Failed to install extension")
-				fmt.Printf("❌ Failed to install %s: %v\n", ext.Name, err)
+				logging.Errorf("Failed to install extension: extension=%s error=%v", ext.Name, err)
+				logging.Errorf("❌ Failed to install %s: %v", ext.Name, err)
 			} else {
 				if pulled {
-					fmt.Printf("✅ %s installed (new image pulled)\n", ext.Name)
+					logging.Infof("✅ %s installed (new image pulled)", ext.Name)
 				} else {
-					fmt.Printf("✅ %s already up to date\n", ext.Name)
+					logging.Infof("✅ %s already up to date", ext.Name)
 				}
 				successCount++
 			}
 		}
 
 		if successCount == len(extsToInstall) {
-			fmt.Println("\n✅ All extensions installed successfully")
+			logging.Info("\n✅ All extensions installed successfully")
 		} else {
-			fmt.Printf("\n⚠️  %d of %d extensions installed successfully\n", successCount, len(extsToInstall))
+			logging.Warnf("\n⚠️  %d of %d extensions installed successfully", successCount, len(extsToInstall))
 			os.Exit(1)
 		}
 	},
@@ -212,7 +215,7 @@ func addExtensionToConfig(extensionName string) error {
 			return fmt.Errorf("failed to create .r2r directory: %w", err)
 		}
 
-		fmt.Printf("📝 Creating %s\n", configPath)
+		logging.Infof("📝 Creating %s", configPath)
 		configMap = map[string]interface{}{
 			"version":    "1.0",
 			"extensions": []interface{}{},
@@ -280,7 +283,7 @@ func addExtensionToConfig(extensionName string) error {
 	}
 
 	// Update the extension with the latest SHA tag
-	fmt.Printf("📌 Getting latest SHA tag for %s...\n", extensionName)
+	logging.Infof("📌 Getting latest SHA tag for %s...", extensionName)
 
 	// Create a minimal config to use the existing logic from conf package
 	tempConfig := &conf.Config{
@@ -344,7 +347,7 @@ func addExtensionToConfig(extensionName string) error {
 
 		// Skip if already pinned (has sha- tag)
 		if strings.Contains(image, ":sha-") {
-			fmt.Printf("✅ %s already pinned\n", name)
+			logging.Infof("✅ %s already pinned", name)
 			return nil
 		}
 
@@ -366,7 +369,7 @@ func addExtensionToConfig(extensionName string) error {
 		extensions[i] = extMap
 		updated = true
 
-		fmt.Printf("📌 %s configured with %s\n", name, latestSHA)
+		logging.Infof("📌 %s configured with %s", name, latestSHA)
 		break
 	}
 
@@ -397,7 +400,7 @@ func addExtensionToConfig(extensionName string) error {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	fmt.Printf("✅ Configuration updated in %s\n", configPath)
+	logging.Infof("✅ Configuration updated in %s", configPath)
 
 	return nil
 }

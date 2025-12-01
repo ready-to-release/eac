@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 // findConfigFile finds the config file by first locating the repository root
@@ -29,7 +29,7 @@ func findConfigFile(fileName string) (string, error) {
 		// Check each candidate file in priority order
 		for _, candidate := range candidates {
 			if _, err := os.Stat(candidate); err == nil {
-				log.Debug().Str("config", candidate).Msg("Using configuration file")
+				logging.Debugf("Using configuration file: config=%s", candidate)
 				return candidate, nil
 			} else if os.IsPermission(err) {
 				return "", NewConfigFilePermissionError(candidate, err)
@@ -124,22 +124,22 @@ func FindRepositoryRoot() (string, error) {
 func InitConfig() {
 	// CRITICAL: Block configuration access in test environment
 	if os.Getenv("R2R_TESTING") == "true" {
-		log.Fatal().Msg("CRITICAL: InitConfig() called in test environment. Tests must use isolated configurations.")
+		logging.Fatal("CRITICAL: InitConfig() called in test environment. Tests must use isolated configurations.")
 	}
 
 	// Additional check for test binaries
 	if strings.Contains(os.Args[0], ".test") || strings.Contains(os.Args[0], "_test") {
-		log.Fatal().Msg("CRITICAL: Production configuration access blocked in test binary. Use test-specific configuration.")
+		logging.Fatal("CRITICAL: Production configuration access blocked in test binary. Use test-specific configuration.")
 	}
 
 	// Load base configuration file
 	configFile, err := findConfigFile("r2r-cli.yml")
 	if err != nil {
-		log.Fatal().Err(err).Msg("Error finding config file. Please run 'r2r init' from the root of your project.")
+		logging.Fatalf("Error finding config file. Please run 'r2r init' from the root of your project.: %v", err)
 	}
 	err = LoadConfig(configFile)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Error parsing config file")
+		logging.Fatalf("Error parsing config file: %v", err)
 	}
 
 	// Check for and merge local override configurations
@@ -158,11 +158,11 @@ func InitConfig() {
 		for _, overrideFile := range overrideFiles {
 			overridePath := filepath.Join(r2rDir, overrideFile)
 			if _, err := os.Stat(overridePath); err == nil {
-				log.Debug().Str("override", overridePath).Msg("Loading configuration override")
+				logging.Debugf("Loading configuration override: override=%s", overridePath)
 				if err := MergeConfigFile(overridePath); err != nil {
-					log.Warn().Err(err).Str("file", overridePath).Msg("Failed to load override configuration")
+					logging.Warnf("Failed to load override configuration: file=%s err=%v", overridePath, err)
 				} else {
-					log.Info().Str("file", overrideFile).Msg("Applied configuration override")
+					logging.Debugf("Applied configuration override: file=%s", overrideFile)
 				}
 			}
 		}
