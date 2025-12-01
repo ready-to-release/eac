@@ -24,7 +24,9 @@ The configuration controls how containerized extensions are discovered, pulled, 
 
 ## Overview
 
-The R2R CLI uses a YAML configuration file to define containerized extensions that extend the CLI's capabilities. Each extension runs in an isolated Docker container, providing consistent, reproducible tooling across development environments and CI/CD pipelines.
+The R2R CLI uses a YAML configuration file to define containerized extensions that extend the CLI's capabilities.
+
+Each extension runs in an isolated Docker container, providing consistent, reproducible tooling across development environments and CI/CD pipelines.
 
 **Key Concepts:**
 

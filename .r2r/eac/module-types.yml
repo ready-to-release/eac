@@ -210,6 +210,23 @@ types:
       repo:
         specs: []
 
+  - name: r2r-config
+    description: "R2R CLI repository configuration (.r2r directory)"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        config: ["**/*.yml", "**/*.yaml"]
+        assets: ["**/*.md"]
+        exclude: ["cache/**", "*.log"]
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []
+
   # Repository structure
   - name: repository-root
     description: "Repository root module (catch-all parent)"
