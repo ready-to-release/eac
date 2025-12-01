@@ -54,7 +54,7 @@ func ValidateDesign() int {
 			if arg[0] != '-' {
 				module = arg
 			} else {
-				fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+				log.Errorf("unknown flag: %s", arg)
 				printDesignValidateUsage()
 				return 1
 			}
@@ -64,7 +64,7 @@ func ValidateDesign() int {
 	// Initialize logger
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 2
 	}
 
@@ -72,28 +72,28 @@ func ValidateDesign() int {
 	// Create validator
 	validator, err := designInternal.NewValidator()
 	if err != nil {
-		fmt.Printf("❌ Failed to initialize validator: %v\n", err)
+		log.Infof("❌ Failed to initialize validator: %v", err)
 		return 1
 	}
 
 	// Check Docker running
 	validatorImpl, ok := validator.(*designInternal.StructurizrValidatorImpl)
 	if ok && !validatorImpl.IsDockerRunning() {
-		fmt.Println("❌ Error: Docker is not running")
-		fmt.Println()
-		fmt.Println("Docker is required to run validation. Please:")
-		fmt.Println("  1. Start Docker Desktop (Windows/Mac)")
-		fmt.Println("  2. Or start Docker daemon: sudo systemctl start docker (Linux)")
-		fmt.Println("  3. Verify with: docker ps")
-		fmt.Println()
-		fmt.Println("Note: Docker is also required for 'design serve' command.")
+		log.Info("❌ Error: Docker is not running")
+		log.Info("")
+		log.Info("Docker is required to run validation. Please:")
+		log.Info("  1. Start Docker Desktop (Windows/Mac)")
+		log.Info("  2. Or start Docker daemon: sudo systemctl start docker (Linux)")
+		log.Info("  3. Verify with: docker ps")
+		log.Info("")
+		log.Info("Note: Docker is also required for 'design serve' command.")
 		return 2
 	}
 
 	// Determine output path (use /out/logs/design directory)
 	outputPath, err := getValidationOutputPath(repoRoot)
 	if err != nil {
-		fmt.Printf("❌ Failed to determine output path: %v\n", err)
+		log.Infof("❌ Failed to determine output path: %v", err)
 		return 2
 	}
 
@@ -104,8 +104,8 @@ func ValidateDesign() int {
 		// Validate single module
 		return validateSingleModule(validator, module, outputPath, verbose)
 	} else {
-		fmt.Println("❌ Error: module name required or use --all flag")
-		fmt.Println()
+		log.Info("❌ Error: module name required or use --all flag")
+		log.Info("")
 		printDesignValidateUsage()
 		return 2
 	}
@@ -115,26 +115,26 @@ func validateSingleModule(validator designInternal.StructurizrValidator, module 
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Failed to find repository root: %v\n", err)
+		log.Errorf("❌ Failed to find repository root: %v", err)
 		return 2
 	}
 
 	// Validate module name for security
 	if err := designInternal.ValidateModuleName(module); err != nil {
-		fmt.Printf("❌ Invalid module name: %v\n", err)
+		log.Infof("❌ Invalid module name: %v", err)
 		return 2
 	}
 
 	// Load module contracts and validate moniker exists (same as build command)
 	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Failed to load module contracts: %v\n", err)
+		log.Errorf("❌ Failed to load module contracts: %v", err)
 		return 2
 	}
 
 	mod, exists := moduleReport.Registry.Get(module)
 	if !exists {
-		fmt.Fprintf(os.Stderr, "❌ Module not found: %s\n\nAvailable modules:\n%s\n",
+		log.Errorf("❌ Module not found: %s\n\nAvailable modules:\n%s",
 			module, formatDesignModuleList(moduleReport))
 		return 2
 	}
@@ -145,21 +145,21 @@ func validateSingleModule(validator designInternal.StructurizrValidator, module 
 	// Validate module
 	result, err := validator.ValidateModule(module)
 	if err != nil {
-		fmt.Printf("❌ Validation failed: %v\n", err)
+		log.Infof("❌ Validation failed: %v", err)
 		return 2
 	}
 
 
 	// Display console output
-	fmt.Print(designInternal.FormatValidationResult(result, verbose))
+	log.Info(designInternal.FormatValidationResult(result, verbose))
 
 	// Write JSON file
 	if err := designInternal.WriteValidationResultJSON(result, outputPath); err != nil {
-		fmt.Printf("\n⚠️  Failed to write JSON file: %v\n", err)
+		log.Infof("\n⚠️  Failed to write JSON file: %v", err)
 	} else {
-		fmt.Printf("\n📝 Results written to: %s\n", outputPath)
+		log.Infof("\n📝 Results written to: %s", outputPath)
 		if verbose {
-			fmt.Printf("💡 View detailed output in JSON: %s\n", outputPath)
+			log.Infof("💡 View detailed output in JSON: %s", outputPath)
 		}
 	}
 
@@ -174,20 +174,20 @@ func validateAllModules(validator designInternal.StructurizrValidator, outputPat
 	// Validate all modules
 	summary, err := validator.ValidateAll()
 	if err != nil {
-		fmt.Printf("❌ Validation failed: %v\n", err)
+		log.Infof("❌ Validation failed: %v", err)
 		return 2
 	}
 
 	// Display console output
-	fmt.Print(designInternal.FormatValidationSummary(summary, verbose))
+	log.Info(designInternal.FormatValidationSummary(summary, verbose))
 
 	// Write JSON file
 	if err := designInternal.WriteValidationSummaryJSON(summary, outputPath); err != nil {
-		fmt.Printf("\n⚠️  Failed to write JSON file: %v\n", err)
+		log.Infof("\n⚠️  Failed to write JSON file: %v", err)
 	} else {
-		fmt.Printf("\n📝 Results written to: %s\n", outputPath)
+		log.Infof("\n📝 Results written to: %s", outputPath)
 		if verbose {
-			fmt.Printf("💡 View detailed output in JSON: %s\n", outputPath)
+			log.Infof("💡 View detailed output in JSON: %s", outputPath)
 		}
 	}
 
@@ -199,38 +199,38 @@ func validateAllModules(validator designInternal.StructurizrValidator, outputPat
 }
 
 func printDesignValidateUsage() {
-	fmt.Println("Validate workspace.dsl syntax using Structurizr CLI")
-	fmt.Println()
-	fmt.Println("Checks workspace.dsl files for syntax errors and structural issues.")
-	fmt.Println("Runs validation in Docker using the official Structurizr CLI image.")
-	fmt.Println()
-	fmt.Println("Usage:")
-	fmt.Println("  r2r design validate <module>   Validate one module")
-	fmt.Println("  r2r design validate --all      Validate all modules")
-	fmt.Println()
-	fmt.Println("Flags:")
-	fmt.Println("  --all, -a        Validate all workspace files in specs/*/.design/")
-	fmt.Println("  --debug, -d      Save intermediate outputs and detailed logs to out/logs/design/")
-	fmt.Println("  --verbose, -v    Show Docker command and raw Structurizr CLI output")
-	fmt.Println("  --help, -h       Show this help message")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  r2r design validate src-cli")
-	fmt.Println("  r2r design validate src-commands --verbose")
-	fmt.Println("  r2r design validate --all --debug")
-	fmt.Println()
-	fmt.Println("Module Locations:")
-	fmt.Println("  src-cli        → specs/src-cli/.design/workspace.dsl")
-	fmt.Println("  src-commands   → specs/src-commands/.design/workspace.dsl")
-	fmt.Println()
-	fmt.Println("Output:")
-	fmt.Println("  Console: Human-readable validation summary")
-	fmt.Println("  File:    out/logs/design/validation-results.json (detailed results)")
-	fmt.Println("  Logs:    out/logs/design/designInternal.log (when --debug is set)")
-	fmt.Println()
-	fmt.Println("Note:")
-	fmt.Println("  Module argument must be a valid module moniker (e.g., src-commands).")
-	fmt.Println("  Use 'show modules' to see all available modules.")
+	log.Info("Validate workspace.dsl syntax using Structurizr CLI")
+	log.Info("")
+	log.Info("Checks workspace.dsl files for syntax errors and structural issues.")
+	log.Info("Runs validation in Docker using the official Structurizr CLI image.")
+	log.Info("")
+	log.Info("Usage:")
+	log.Info("  r2r design validate <module>   Validate one module")
+	log.Info("  r2r design validate --all      Validate all modules")
+	log.Info("")
+	log.Info("Flags:")
+	log.Info("  --all, -a        Validate all workspace files in specs/*/.design/")
+	log.Info("  --debug, -d      Save intermediate outputs and detailed logs to out/logs/design/")
+	log.Info("  --verbose, -v    Show Docker command and raw Structurizr CLI output")
+	log.Info("  --help, -h       Show this help message")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  r2r design validate src-cli")
+	log.Info("  r2r design validate src-commands --verbose")
+	log.Info("  r2r design validate --all --debug")
+	log.Info("")
+	log.Info("Module Locations:")
+	log.Info("  src-cli        → specs/src-cli/.design/workspace.dsl")
+	log.Info("  src-commands   → specs/src-commands/.design/workspace.dsl")
+	log.Info("")
+	log.Info("Output:")
+	log.Info("  Console: Human-readable validation summary")
+	log.Info("  File:    out/logs/design/validation-results.json (detailed results)")
+	log.Info("  Logs:    out/logs/design/designInternal.log (when --debug is set)")
+	log.Info("")
+	log.Info("Note:")
+	log.Info("  Module argument must be a valid module moniker (e.g., src-commands).")
+	log.Info("  Use 'show modules' to see all available modules.")
 }
 
 // getValidationOutputPath returns the absolute path to the validation output JSON file

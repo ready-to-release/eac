@@ -3,11 +3,13 @@
 package commit
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(Commit)
@@ -34,30 +36,30 @@ func Commit() int {
 		// Handled by separate registration in reset.go
 		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
+		log.Errorf("Error: unknown subcommand: %s\n", args[0])
 		printCommitUsage()
 		return 1
 	}
 }
 
 func printCommitUsage() {
-	fmt.Println("Commit utilities for generating messages and managing commits")
-	fmt.Println()
-	fmt.Println("Usage: r2r commit <subcommand> [args...]")
-	fmt.Println()
-	fmt.Println("Subcommands:")
-	fmt.Println("  message    Generate AI-powered commit message from staged changes")
-	fmt.Println("  reset      Soft reset the latest commit, preserving changes")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # Generate commit message for staged changes")
-	fmt.Println("  r2r commit message")
-	fmt.Println()
-	fmt.Println("  # Generate with debug output")
-	fmt.Println("  r2r commit message --debug")
-	fmt.Println()
-	fmt.Println("  # Reset the latest commit (keeps changes staged)")
-	fmt.Println("  r2r commit reset")
-	fmt.Println()
-	fmt.Println("Use 'r2r commit <subcommand> --help' for more information about a command.")
+	log.Info("Commit utilities for generating messages and managing commits")
+	log.Info("")
+	log.Info("Usage: r2r commit <subcommand> [args...]")
+	log.Info("")
+	log.Info("Subcommands:")
+	log.Info("  message    Generate AI-powered commit message from staged changes")
+	log.Info("  reset      Soft reset the latest commit, preserving changes")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # Generate commit message for staged changes")
+	log.Info("  r2r commit message")
+	log.Info("")
+	log.Info("  # Generate with debug output")
+	log.Info("  r2r commit message --debug")
+	log.Info("")
+	log.Info("  # Reset the latest commit (keeps changes staged)")
+	log.Info("  r2r commit reset")
+	log.Info("")
+	log.Info("Use 'r2r commit <subcommand> --help' for more information about a command.")
 }

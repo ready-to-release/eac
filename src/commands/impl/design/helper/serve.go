@@ -6,8 +6,11 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/internal/serve"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
+
+var log = logging.C()
 
 // containerNamePrefix is the base name for structurizr-lite containers
 // Actual containers will have module name and port suffix, e.g., structurizr-lite-mymodule-9001
@@ -48,7 +51,7 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 	}
 
 	// Start Structurizr Lite container
-	fmt.Println("Starting Structurizr Lite Docker container...")
+	log.Info("Starting Structurizr Lite Docker container...")
 
 	ctx := context.Background()
 	result, err := serve.StartServe(ctx, config)
@@ -56,22 +59,22 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 		return fmt.Errorf("failed to start Docker container: %w", err)
 	}
 
-	fmt.Println("Structurizr Lite started successfully")
-	fmt.Println()
-	fmt.Printf("Opening browser at %s\n", result.URL)
-	fmt.Println()
-	fmt.Println("To stop the server:")
-	fmt.Printf("   docker stop %s\n", result.ContainerName)
-	fmt.Println()
+	log.Info("Structurizr Lite started successfully")
+	log.Info("")
+	log.Infof("Opening browser at %s", result.URL)
+	log.Info("")
+	log.Info("To stop the server:")
+	log.Infof("   docker stop %s", result.ContainerName)
+	log.Info("")
 
 	// Open browser (skipped in DinD mode)
 	opened, err := serve.OpenBrowserWithFallback(result.URL)
 	if err != nil {
-		fmt.Printf("Could not open browser automatically: %v\n", err)
-		fmt.Printf("   Please open manually: %s\n", result.URL)
+		log.Infof("Could not open browser automatically: %v", err)
+		log.Infof("   Please open manually: %s", result.URL)
 	} else if !opened {
 		// DinD mode - browser not available
-		fmt.Printf("Open in your browser: %s\n", result.URL)
+		log.Infof("Open in your browser: %s", result.URL)
 	}
 
 	return nil

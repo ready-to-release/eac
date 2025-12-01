@@ -34,14 +34,14 @@ func ValidateModuleHierarchy() int {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get repository root: %v\n", err)
+		log.Errorf("Error: failed to get repository root: %v", err)
 		return 1
 	}
 
 	// Load module registry
 	moduleRegistry, err := modules.LoadFromWorkspaceLatest(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module registry: %v\n", err)
+		log.Errorf("Error: failed to load module registry: %v", err)
 		return 1
 	}
 
@@ -170,69 +170,69 @@ func validateAllModulesReachable(reg *modules.Registry, report *moduleHierarchyR
 }
 
 func printModuleHierarchyReport(report *moduleHierarchyReport) {
-	fmt.Println("=== Module Hierarchy Validation Report ===")
-	fmt.Println()
+	log.Info("=== Module Hierarchy Validation Report ===")
+	log.Info("")
 
 	hasIssues := false
 
 	// Non-existent modules
 	if len(report.nonExistentModules) > 0 {
 		hasIssues = true
-		fmt.Printf("❌ References to Non-Existent Modules (%d):\n", len(report.nonExistentModules))
+		log.Infof("❌ References to Non-Existent Modules (%d):", len(report.nonExistentModules))
 		for _, issue := range report.nonExistentModules {
-			fmt.Printf("  • %s\n", issue)
+			log.Infof("  • %s", issue)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Bidirectional inconsistencies
 	if len(report.inconsistencies) > 0 {
 		hasIssues = true
-		fmt.Printf("❌ Bidirectional Relationship Inconsistencies (%d):\n", len(report.inconsistencies))
+		log.Infof("❌ Bidirectional Relationship Inconsistencies (%d):", len(report.inconsistencies))
 		for _, issue := range report.inconsistencies {
-			fmt.Printf("  • %s\n", issue)
+			log.Infof("  • %s", issue)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Circular dependencies
 	if len(report.circularDependencies) > 0 {
 		hasIssues = true
-		fmt.Printf("❌ Circular Dependencies (%d):\n", len(report.circularDependencies))
+		log.Infof("❌ Circular Dependencies (%d):", len(report.circularDependencies))
 		for _, issue := range report.circularDependencies {
-			fmt.Printf("  • %s\n", issue)
+			log.Infof("  • %s", issue)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Unreachable modules
 	if len(report.unreachableModules) > 0 {
 		hasIssues = true
-		fmt.Printf("⚠️  Unreachable Modules (%d):\n", len(report.unreachableModules))
+		log.Infof("⚠️  Unreachable Modules (%d):", len(report.unreachableModules))
 		for _, issue := range report.unreachableModules {
-			fmt.Printf("  • %s\n", issue)
+			log.Infof("  • %s", issue)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	if !hasIssues {
-		fmt.Println("✅ All module hierarchy checks passed!")
-		fmt.Println()
+		log.Info("✅ All module hierarchy checks passed!")
+		log.Info("")
 	}
 }
 
 func printModuleHierarchyUsage() {
-	fmt.Println("Validate module dependency graph structure")
-	fmt.Println()
-	fmt.Println("Usage: r2r validate module-hierarchy")
-	fmt.Println()
-	fmt.Println("Checks:")
-	fmt.Println("  - Bidirectional consistency (depends_on <-> used_by)")
-	fmt.Println("  - No references to non-existent modules")
-	fmt.Println("  - No circular dependencies")
-	fmt.Println("  - All modules reachable from root")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # Validate module hierarchy")
-	fmt.Println("  r2r validate module-hierarchy")
+	log.Info("Validate module dependency graph structure")
+	log.Info("")
+	log.Info("Usage: r2r validate module-hierarchy")
+	log.Info("")
+	log.Info("Checks:")
+	log.Info("  - Bidirectional consistency (depends_on <-> used_by)")
+	log.Info("  - No references to non-existent modules")
+	log.Info("  - No circular dependencies")
+	log.Info("  - All modules reachable from root")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # Validate module hierarchy")
+	log.Info("  r2r validate module-hierarchy")
 }

@@ -57,8 +57,8 @@ func ReleaseCalver() int {
 	}
 
 	if prefix == "" {
-		fmt.Fprintln(os.Stderr, "Error: prefix required (e.g., 'docs')")
-		fmt.Fprintln(os.Stderr, "Usage: release calver <prefix> [--create] [--push] [--dry-run]")
+		log.Errorf("Error: prefix required (e.g., 'docs')")
+		log.Errorf("Usage: release calver <prefix> [--create] [--push] [--dry-run]")
 		return 1
 	}
 
@@ -70,33 +70,33 @@ func ReleaseCalver() int {
 
 	// If not creating, just output the tag name
 	if !create {
-		fmt.Println(tag)
+		log.Info(tag)
 		return 0
 	}
 
 	// Creating the tag
 	if dryRun {
-		fmt.Printf("[DRY RUN] Would create tag: %s\n", tag)
+		log.Infof("[DRY RUN] Would create tag: %s", tag)
 		if push {
-			fmt.Printf("[DRY RUN] Would push tag to remote\n")
+			log.Infof("[DRY RUN] Would push tag to remote")
 		}
 		return 0
 	}
 
 	// Create the git tag
 	if err := createGitTag(tag); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create tag: %v\n", err)
+		log.Errorf("Error: failed to create tag: %v", err)
 		return 1
 	}
-	fmt.Printf("Created tag: %s\n", tag)
+	log.Infof("Created tag: %s", tag)
 
 	// Push if requested
 	if push {
 		if err := pushGitTag(tag); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to push tag: %v\n", err)
+			log.Errorf("Error: failed to push tag: %v", err)
 			return 1
 		}
-		fmt.Printf("Pushed tag: %s\n", tag)
+		log.Infof("Pushed tag: %s", tag)
 	}
 
 	return 0

@@ -25,8 +25,11 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
+
+var log = logging.C()
 
 func init() {
 	// Register this command with the registry
@@ -50,7 +53,7 @@ func TemplateCommand() int {
 	// Phase 1: Parse configuration from command line arguments
 	config, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -58,13 +61,13 @@ func TemplateCommand() int {
 	// Example: Check if required files/directories exist
 	// Example: Validate configuration values
 	if err := validatePrerequisites(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Phase 3: Execute command logic
 	if err := executeCommand(config); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -159,11 +162,11 @@ func executeCommand(config *Config) error {
 	// REPLACE THIS SECTION with your command implementation
 
 	// Example: Display a message
-	fmt.Println("Template command executed successfully!")
+	log.Info("Template command executed successfully!")
 
 	if config.Debug {
-		fmt.Fprintf(os.Stderr, "Debug: Example value = %s\n", config.Example)
-		fmt.Fprintf(os.Stderr, "Debug: Workspace root = %s\n", config.WorkspaceRoot)
+		log.Debugf("Debug: Example value = %s", config.Example)
+		log.Debugf("Debug: Workspace root = %s", config.WorkspaceRoot)
 	}
 
 	// Example: Read a file

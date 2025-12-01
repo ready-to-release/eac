@@ -10,12 +10,11 @@
 package get
 
 import (
-	"github.com/ready-to-release/eac/src/commands/registry"
-	"fmt"
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/impl/get/internal"
+	getInternal "github.com/ready-to-release/eac/src/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -27,7 +26,7 @@ func GetDependencies() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -43,7 +42,7 @@ func GetDependencies() int {
 	}
 
 	// Use the shared get command helper for standard formats (YAML, JSON, TOML)
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return getInternal.ExecuteGetCommand(func() (interface{}, error) {
 		graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 		if err != nil {
 			return nil, err
@@ -56,12 +55,12 @@ func GetDependencies() int {
 func outputPlantUML(workspaceRoot string) int {
 	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	diagram := repository.GetPlantUMLDiagram(graph)
-	fmt.Print(diagram)
+	log.Info(diagram)
 	return 0
 }
 
@@ -69,12 +68,12 @@ func outputPlantUML(workspaceRoot string) int {
 func outputMermaid(workspaceRoot string) int {
 	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	diagram := repository.GetMermaidDiagram(graph)
-	fmt.Print(diagram)
+	log.Info(diagram)
 	return 0
 }
 
@@ -82,7 +81,7 @@ func outputMermaid(workspaceRoot string) int {
 func outputExecutionOrder(workspaceRoot string) int {
 	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -99,12 +98,12 @@ func outputExecutionOrder(workspaceRoot string) int {
 
 	if hasJSON {
 		// Output as JSON (handled by get command helper)
-		return get.ExecuteGetCommand(func() (interface{}, error) {
+		return getInternal.ExecuteGetCommand(func() (interface{}, error) {
 			return plan, nil
 		})
 	} else if hasYAML || !hasJSON {
 		// Default: output as YAML
-		return get.ExecuteGetCommand(func() (interface{}, error) {
+		return getInternal.ExecuteGetCommand(func() (interface{}, error) {
 			return plan, nil
 		})
 	}

@@ -13,7 +13,10 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(Help)
@@ -54,7 +57,7 @@ func showAllCommands(verbose bool) int {
 	commandRegistry := registry.GetCommandRegistry()
 
 	if len(commands) == 0 {
-		fmt.Println("No commands available.")
+		log.Info("No commands available.")
 		return 0
 	}
 
@@ -81,8 +84,8 @@ func showAllCommands(verbose bool) int {
 	}
 
 	// Display header
-	fmt.Println("Available commands:")
-	fmt.Println()
+	log.Info("Available commands:")
+	log.Info("")
 
 	// Display commands by category
 	for _, category := range categoryOrder {
@@ -93,7 +96,7 @@ func showAllCommands(verbose bool) int {
 			continue
 		}
 
-		fmt.Printf("%s:\n", category)
+		log.Infof("%s:", category)
 		for _, cmdName := range cmds {
 			reg := commandRegistry[cmdName]
 
@@ -105,9 +108,9 @@ func showAllCommands(verbose bool) int {
 
 			// Format: "  command-name    description"
 			padding := strings.Repeat(" ", max(2, 30-len(cmdName)))
-			fmt.Printf("  %s%s%s\n", cmdName, padding, desc)
+			log.Infof("  %s%s%s", cmdName, padding, desc)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Show standalone commands (no category)
@@ -120,7 +123,7 @@ func showAllCommands(verbose bool) int {
 	}
 
 	if len(standaloneCommands) > 0 {
-		fmt.Println("Other commands:")
+		log.Info("Other commands:")
 		for _, cmdName := range standaloneCommands {
 			reg := commandRegistry[cmdName]
 
@@ -130,12 +133,12 @@ func showAllCommands(verbose bool) int {
 			}
 
 			padding := strings.Repeat(" ", max(2, 30-len(cmdName)))
-			fmt.Printf("  %s%s%s\n", cmdName, padding, desc)
+			log.Infof("  %s%s%s", cmdName, padding, desc)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
-	fmt.Println("Use 'help <command>' for detailed information about a specific command.")
+	log.Info("Use 'help <command>' for detailed information about a specific command.")
 	return 0
 }
 
@@ -145,39 +148,39 @@ func showCommandHelp(commandName string, verbose bool) int {
 
 	reg := commandRegistry[commandName]
 	if reg == nil {
-		fmt.Fprintf(os.Stderr, "Error: Command '%s' not found.\n", commandName)
-		fmt.Fprintf(os.Stderr, "\nUse 'help' to see all available commands.\n")
+		log.Errorf("Error: Command '%s' not found.", commandName)
+		log.Error("\nUse 'help' to see all available commands.")
 		return 1
 	}
 
 	// Display NAME section
-	fmt.Printf("NAME\n")
-	fmt.Printf("    %s - %s\n\n", reg.ActualCommand, reg.Short)
+	log.Info("NAME")
+	log.Infof("    %s - %s\n", reg.ActualCommand, reg.Short)
 
 	// Display SYNOPSIS section
-	fmt.Printf("SYNOPSIS\n")
+	log.Info("SYNOPSIS")
 	synopsis := buildSynopsis(reg)
-	fmt.Printf("    %s\n\n", synopsis)
+	log.Infof("    %s\n", synopsis)
 
 	// Display DESCRIPTION section
 	if reg.Long != "" {
-		fmt.Printf("DESCRIPTION\n")
+		log.Info("DESCRIPTION")
 		// Wrap long description with indentation
 		lines := strings.Split(reg.Long, "\n")
 		for _, line := range lines {
 			if line == "" {
-				fmt.Println()
+				log.Info("")
 			} else {
-				fmt.Printf("    %s\n", line)
+				log.Infof("    %s", line)
 			}
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Display COMMANDS section (subcommands)
 	subcommands := getSubcommands(commandName)
 	if len(subcommands) > 0 {
-		fmt.Printf("COMMANDS\n")
+		log.Info("COMMANDS")
 		for _, subcmd := range subcommands {
 			subReg := commandRegistry[subcmd]
 
@@ -191,25 +194,25 @@ func showCommandHelp(commandName string, verbose bool) int {
 
 			// Format with padding
 			padding := strings.Repeat(" ", max(2, 20-len(subPart)))
-			fmt.Printf("    %s%s%s\n", subPart, padding, desc)
+			log.Infof("    %s%s%s", subPart, padding, desc)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Display FLAGS section
 	if len(reg.Flags) > 0 {
-		fmt.Printf("FLAGS\n")
+		log.Info("FLAGS")
 		for _, flag := range reg.Flags {
 			displayFlag(flag)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Display additional info
 	if verbose {
-		fmt.Printf("ADDITIONAL INFORMATION\n")
-		fmt.Printf("    Canonical name: %s\n", reg.CanonicalName)
-		fmt.Println()
+		log.Info("ADDITIONAL INFORMATION")
+		log.Infof("    Canonical name: %s", reg.CanonicalName)
+		log.Info("")
 	}
 
 	return 0
@@ -258,23 +261,23 @@ func displayFlag(flag registry.FlagMetadata) {
 	reqInfo := strings.Join(requirements, ", ")
 
 	// Display flag header
-	fmt.Printf("    %s %s (%s)\n", flagName, typeInfo, reqInfo)
+	log.Infof("    %s %s (%s)", flagName, typeInfo, reqInfo)
 
 	// Display usage with indentation
 	if flag.Usage != "" {
 		// Wrap usage text at reasonable width
 		wrapped := wrapText(flag.Usage, 76) // 80 - 8 chars indent
 		for _, line := range wrapped {
-			fmt.Printf("        %s\n", line)
+			log.Infof("        %s", line)
 		}
 	}
 
 	// Display completion values if available
 	if len(flag.Completion) > 0 && flag.Type != "bool" {
-		fmt.Printf("        Valid values: %s\n", strings.Join(flag.Completion, ", "))
+		log.Infof("        Valid values: %s", strings.Join(flag.Completion, ", "))
 	}
 
-	fmt.Println()
+	log.Info("")
 }
 
 // wrapText wraps text to specified width preserving words

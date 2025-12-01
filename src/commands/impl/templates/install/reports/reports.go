@@ -39,6 +39,8 @@ const (
 	defaultReportsDest       = ".r2r/templates/reports"
 )
 
+var log = logging.C()
+
 func init() {
 	registry.Register(TemplatesInstallReports)
 }
@@ -58,7 +60,7 @@ func TemplatesInstallReports() int {
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 	defer config.Logger.Sync()
@@ -72,7 +74,7 @@ func TemplatesInstallReports() int {
 	templateDir, cleanup, err := resolveTemplateDirectory(config)
 	if err != nil {
 		config.Logger.Error("Failed to resolve template directory", zap.Error(err))
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 	defer cleanup()
@@ -80,13 +82,13 @@ func TemplatesInstallReports() int {
 	// Install templates (copy without value replacement)
 	if err := installTemplates(config, templateDir); err != nil {
 		config.Logger.Error("Failed to install templates", zap.Error(err))
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
 	config.Logger.Info("Report templates installed successfully",
 		zap.String("destination", config.Destination))
-	fmt.Printf("✓ Report templates installed successfully to %s\n", config.Destination)
+	log.Infof("✓ Report templates installed successfully to %s", config.Destination)
 
 	return 0
 }
@@ -109,13 +111,13 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 
 		config.Logger.Debug("Local templates validated",
 			zap.String("dir", templateDir))
-		fmt.Printf("Using local templates from %s\n", templateDir)
+		log.Infof("Using local templates from %s", templateDir)
 		cleanup = func() {}
 	} else {
 		// Clone from Git repository
 		config.Logger.Info("Cloning templates from Git",
 			zap.String("url", defaultReportsRepoURL))
-		fmt.Printf("Cloning templates from %s...\n", defaultReportsRepoURL)
+		log.Infof("Cloning templates from %s...", defaultReportsRepoURL)
 
 		cloner := internal.NewGitCloner(defaultReportsRepoURL)
 		clonedDir, err := cloner.CloneToTemp()
@@ -142,7 +144,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 		config.Logger.Debug("Templates cloned successfully",
 			zap.String("clonedDir", clonedDir),
 			zap.String("templateDir", templateDir))
-		fmt.Printf("✓ Templates cloned successfully\n")
+		log.Info("✓ Templates cloned successfully")
 
 		// Save debug info if enabled
 		if config.Debug {
@@ -160,7 +162,7 @@ func installTemplates(config *Config, templateDir string) error {
 	config.Logger.Info("Installing templates",
 		zap.String("source", templateDir),
 		zap.String("destination", config.Destination))
-	fmt.Printf("Installing templates to %s...\n", config.Destination)
+	log.Infof("Installing templates to %s...", config.Destination)
 
 	// Create renderer with no values (will just copy files)
 	renderer := internal.NewRenderer(templateDir, config.Destination, nil)

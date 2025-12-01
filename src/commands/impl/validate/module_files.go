@@ -3,7 +3,6 @@
 package validate
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -34,21 +33,21 @@ func ValidateModuleFiles() int {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get repository root: %v\n", err)
+		log.Errorf("Error: failed to get repository root: %v", err)
 		return 1
 	}
 
 	// Open git repository
 	repo, err := git.Open(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to open git repository: %v\n", err)
+		log.Errorf("Error: failed to open git repository: %v", err)
 		return 1
 	}
 
 	// Get all files with module ownership
 	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get repository files with modules: %v\n", err)
+		log.Errorf("Error: failed to get repository files with modules: %v", err)
 		return 1
 	}
 
@@ -99,54 +98,54 @@ func validateModuleFiles(files []repository.RepositoryFileWithModule) *moduleFil
 }
 
 func printModuleFilesReport(report *moduleFilesReport) {
-	fmt.Println("=== Module File Ownership Validation Report ===")
-	fmt.Println()
+	log.Info("=== Module File Ownership Validation Report ===")
+	log.Info("")
 
 	hasIssues := false
 
 	// Unordered files
 	if len(report.unorderedFiles) > 0 {
 		hasIssues = true
-		fmt.Printf("❌ Files in Unordered Module (%d):\n", len(report.unorderedFiles))
-		fmt.Println("   These files should be claimed by a proper module:")
+		log.Infof("❌ Files in Unordered Module (%d):", len(report.unorderedFiles))
+		log.Info("   These files should be claimed by a proper module:")
 		for _, filePath := range report.unorderedFiles {
-			fmt.Printf("  • %s\n", filePath)
+			log.Infof("  • %s", filePath)
 		}
-		fmt.Println()
-		fmt.Println("   Fix: Create or update module contracts to claim these files.")
-		fmt.Println()
+		log.Info("")
+		log.Info("   Fix: Create or update module contracts to claim these files.")
+		log.Info("")
 	}
 
 	// Multi-ownership files
 	if len(report.multiOwnershipFiles) > 0 {
 		hasIssues = true
-		fmt.Printf("❌ Files with Multi-Module Ownership (%d):\n", len(report.multiOwnershipFiles))
-		fmt.Println("   Each file should belong to exactly one module:")
+		log.Infof("❌ Files with Multi-Module Ownership (%d):", len(report.multiOwnershipFiles))
+		log.Info("   Each file should belong to exactly one module:")
 		for filePath, modules := range report.multiOwnershipFiles {
-			fmt.Printf("  • %s\n", filePath)
-			fmt.Printf("    Claimed by: %s\n", strings.Join(modules, ", "))
+			log.Infof("  • %s", filePath)
+			log.Infof("    Claimed by: %s", strings.Join(modules, ", "))
 		}
-		fmt.Println()
-		fmt.Println("   Fix: Adjust module contract glob patterns to prevent overlap.")
-		fmt.Println()
+		log.Info("")
+		log.Info("   Fix: Adjust module contract glob patterns to prevent overlap.")
+		log.Info("")
 	}
 
 	if !hasIssues {
-		fmt.Println("✅ All module file ownership checks passed!")
-		fmt.Println()
+		log.Info("✅ All module file ownership checks passed!")
+		log.Info("")
 	}
 }
 
 func printModuleFilesUsage() {
-	fmt.Println("Validate module file ownership")
-	fmt.Println()
-	fmt.Println("Usage: r2r validate module-files")
-	fmt.Println()
-	fmt.Println("Checks:")
-	fmt.Println("  - No files belong to the 'unordered' catch-all module")
-	fmt.Println("  - Each file belongs to exactly one module")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # Validate module file ownership")
-	fmt.Println("  r2r validate module-files")
+	log.Info("Validate module file ownership")
+	log.Info("")
+	log.Info("Usage: r2r validate module-files")
+	log.Info("")
+	log.Info("Checks:")
+	log.Info("  - No files belong to the 'unordered' catch-all module")
+	log.Info("  - Each file belongs to exactly one module")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # Validate module file ownership")
+	log.Info("  r2r validate module-files")
 }

@@ -18,14 +18,16 @@
 package test
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(Test)
@@ -60,7 +62,7 @@ func Test() int {
 		arg := args[i]
 		if arg == "--suite" {
 			if i+1 >= len(args) {
-				fmt.Fprintf(os.Stderr, "Error: --suite requires a suite name\n")
+				log.Errorf("--suite requires a suite name")
 				return 1
 			}
 			i++
@@ -76,8 +78,8 @@ func Test() int {
 		} else if arg == "--list-only" {
 			listOnly = true
 		} else if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
-			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid flags: --suite <name>, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only\n")
+			log.Errorf("unknown flag: %s", arg)
+			log.Errorf("Valid flags: --suite <name>, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only")
 			return 1
 		} else {
 			monikers = append(monikers, arg)
@@ -87,20 +89,20 @@ func Test() int {
 	// Get workspace root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
 	// Load module contracts
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
+		log.Errorf("failed to load module contracts: %v", err)
 		return 1
 	}
 
 	// If no monikers provided, default to all modules
 	if len(monikers) == 0 {
-		fmt.Println("ℹ️  No modules specified, testing all modules...")
+		log.Info("No modules specified, testing all modules...")
 		for _, module := range moduleReport.Registry.All() {
 			monikers = append(monikers, module.Moniker)
 		}
@@ -159,32 +161,32 @@ func testModulesViaSuite(monikers []string, suiteName string, reportFormat strin
 }
 
 func printTestUsage() {
-	fmt.Println("Test one or more modules by moniker")
-	fmt.Println()
-	fmt.Println("Usage: r2r eac test [module1] [module2] ... [options]")
-	fmt.Println()
-	fmt.Println("Options:")
-	fmt.Println("  --suite <name>         Filter tests by suite (default: \"commit\")")
-	fmt.Println("  --as-cucumber          Generate Cucumber JSON reports (default)")
-	fmt.Println("  --as-junit             Generate JUnit XML reports")
-	fmt.Println("  --coverage             Generate coverage reports (coverage.out, coverage.json)")
-	fmt.Println("  --skip-deps            Skip dependency verification before running tests")
-	fmt.Println("  --list-only            List tests that would run without executing them")
-	fmt.Println()
-	fmt.Println("Available suites:")
-	fmt.Println("  commit                 L0-L2 tests (fast, pre-commit)")
-	fmt.Println("  acceptance             IV/OV/PV tests (PLTE acceptance)")
-	fmt.Println("  production-verification  L4+PIV tests (production smoke)")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  r2r eac test                          # Test all modules")
-	fmt.Println("  r2r eac test src-commands             # Test single module")
-	fmt.Println("  r2r eac test src-cli src-core         # Test multiple modules")
-	fmt.Println("  r2r eac test src-commands --suite acceptance")
-	fmt.Println("  r2r eac test src-commands --as-junit  # Generate JUnit XML")
-	fmt.Println("  r2r eac test src-commands --coverage  # Generate coverage reports")
-	fmt.Println()
-	fmt.Println("Related commands:")
-	fmt.Println("  r2r eac test suite <name>             # Run a specific test suite")
-	fmt.Println("  r2r eac test list-suites              # List all available test suites")
+	log.Info("Test one or more modules by moniker")
+	log.Info("")
+	log.Info("Usage: r2r eac test [module1] [module2] ... [options]")
+	log.Info("")
+	log.Info("Options:")
+	log.Info("  --suite <name>         Filter tests by suite (default: \"commit\")")
+	log.Info("  --as-cucumber          Generate Cucumber JSON reports (default)")
+	log.Info("  --as-junit             Generate JUnit XML reports")
+	log.Info("  --coverage             Generate coverage reports (coverage.out, coverage.json)")
+	log.Info("  --skip-deps            Skip dependency verification before running tests")
+	log.Info("  --list-only            List tests that would run without executing them")
+	log.Info("")
+	log.Info("Available suites:")
+	log.Info("  commit                 L0-L2 tests (fast, pre-commit)")
+	log.Info("  acceptance             IV/OV/PV tests (PLTE acceptance)")
+	log.Info("  production-verification  L4+PIV tests (production smoke)")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  r2r eac test                          # Test all modules")
+	log.Info("  r2r eac test src-commands             # Test single module")
+	log.Info("  r2r eac test src-cli src-core         # Test multiple modules")
+	log.Info("  r2r eac test src-commands --suite acceptance")
+	log.Info("  r2r eac test src-commands --as-junit  # Generate JUnit XML")
+	log.Info("  r2r eac test src-commands --coverage  # Generate coverage reports")
+	log.Info("")
+	log.Info("Related commands:")
+	log.Info("  r2r eac test suite <name>             # Run a specific test suite")
+	log.Info("  r2r eac test list-suites              # List all available test suites")
 }

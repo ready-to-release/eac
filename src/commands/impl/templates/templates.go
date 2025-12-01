@@ -3,11 +3,13 @@
 package templates
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(Templates)
@@ -31,31 +33,31 @@ func Templates() int {
 		// Handled by separate registrations in respective files
 		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
+		log.Errorf("unknown subcommand: %s\n", args[0])
 		printTemplatesUsage()
 		return 1
 	}
 }
 
 func printTemplatesUsage() {
-	fmt.Println("Manage project templates for documentation and specifications")
-	fmt.Println()
-	fmt.Println("Usage: r2r templates <subcommand> [args...]")
-	fmt.Println()
-	fmt.Println("Subcommands:")
-	fmt.Println("  apply                     Apply templates with variable substitution")
-	fmt.Println("  install                   Install template files to local directory")
-	fmt.Println("  list                      List all placeholder variables in templates")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # List all template variables")
-	fmt.Println("  r2r templates list")
-	fmt.Println()
-	fmt.Println("  # Install specification templates")
-	fmt.Println("  r2r templates install specs")
-	fmt.Println()
-	fmt.Println("  # Apply documentation templates")
-	fmt.Println("  r2r templates apply docs")
-	fmt.Println()
-	fmt.Println("Use 'r2r templates <subcommand> --help' for more information about a command.")
+	log.Info("Manage project templates for documentation and specifications")
+	log.Info("")
+	log.Info("Usage: r2r templates <subcommand> [args...]")
+	log.Info("")
+	log.Info("Subcommands:")
+	log.Info("  apply                     Apply templates with variable substitution")
+	log.Info("  install                   Install template files to local directory")
+	log.Info("  list                      List all placeholder variables in templates")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # List all template variables")
+	log.Info("  r2r templates list")
+	log.Info("")
+	log.Info("  # Install specification templates")
+	log.Info("  r2r templates install specs")
+	log.Info("")
+	log.Info("  # Apply documentation templates")
+	log.Info("  r2r templates apply docs")
+	log.Info("")
+	log.Info("Use 'r2r templates <subcommand> --help' for more information about a command.")
 }

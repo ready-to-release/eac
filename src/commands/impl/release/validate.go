@@ -30,7 +30,10 @@ import (
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/changelog"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var validateLog = logging.C("release")
 
 func init() {
 	registry.Register(ReleaseValidate)
@@ -74,23 +77,23 @@ func ReleaseValidate() int {
 	}
 
 	if !checkAll && module == "" {
-		fmt.Fprintln(os.Stderr, "Error: module moniker required (or use --all)")
-		fmt.Fprintln(os.Stderr, "Usage: release validate <module> [--json]")
-		fmt.Fprintln(os.Stderr, "       release validate --all [--json]")
+		validateLog.Error("module moniker required (or use --all)")
+		validateLog.Info("Usage: release validate <module> [--json]")
+		validateLog.Info("       release validate --all [--json]")
 		return 1
 	}
 
 	// Load workspace root
 	workspaceRoot, err := registry.GetWorkspaceRoot()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get workspace root: %v\n", err)
+		validateLog.Errorf("failed to get workspace root: %v", err)
 		return 1
 	}
 
 	// Load module contracts
 	moduleRegistry, err := modules.LoadFromWorkspace("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load modules: %v\n", err)
+		validateLog.Errorf("failed to load modules: %v", err)
 		return 1
 	}
 
@@ -111,7 +114,7 @@ func ReleaseValidate() int {
 	for _, mod := range modulesToValidate {
 		moduleContract, exists := moduleRegistry.Get(mod)
 		if !exists {
-			fmt.Fprintf(os.Stderr, "Warning: module '%s' not found\n", mod)
+			validateLog.Warnf("module '%s' not found", mod)
 			continue
 		}
 		result := validateChangelog(mod, moduleContract, workspaceRoot)
@@ -132,31 +135,31 @@ func ReleaseValidate() int {
 
 		jsonBytes, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+			validateLog.Errorf("failed to marshal JSON: %v", err)
 			return 1
 		}
-		fmt.Println(string(jsonBytes))
+		validateLog.Info(string(jsonBytes))
 	} else {
 		for _, result := range report.Results {
 			if result.Valid {
-				fmt.Printf("✅ %s: valid\n", result.Module)
+				validateLog.Infof("✅ %s: valid", result.Module)
 			} else {
-				fmt.Printf("❌ %s: invalid\n", result.Module)
+				validateLog.Infof("❌ %s: invalid", result.Module)
 				for _, e := range result.Errors {
-					fmt.Printf("   - %s\n", e)
+					validateLog.Infof("   - %s", e)
 				}
 			}
 			for _, w := range result.Warnings {
-				fmt.Printf("   ⚠️  %s\n", w)
+				validateLog.Infof("   ⚠️  %s", w)
 			}
 		}
 
 		if len(report.Results) > 1 {
-			fmt.Println()
+			validateLog.Info("")
 			if report.AllValid {
-				fmt.Println("All changelogs valid.")
+				validateLog.Info("All changelogs valid.")
 			} else {
-				fmt.Println("Some changelogs have errors.")
+				validateLog.Info("Some changelogs have errors.")
 			}
 		}
 	}

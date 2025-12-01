@@ -8,13 +8,12 @@
 package get
 
 import (
-	"github.com/ready-to-release/eac/src/commands/registry"
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
@@ -26,7 +25,7 @@ func GetChangedModules() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -44,7 +43,7 @@ func GetChangedModules() int {
 	cmd.Dir = workspaceRoot
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting changed files: %v\n", err)
+		log.Errorf("getting changed files: %v", err)
 		return 1
 	}
 

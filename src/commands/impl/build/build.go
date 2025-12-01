@@ -28,14 +28,18 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/src/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/src/commands/internal/orchestrator"
+	"github.com/ready-to-release/eac/src/commands/internal/output"
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/platform"
 	"github.com/ready-to-release/eac/src/core/repository"
 	systemdeps "github.com/ready-to-release/eac/src/core/system-deps"
 )
+
+var log = logging.C()
 
 // writeln writes a formatted string with platform-specific line ending to the writer
 func writeln(w io.Writer, format string, args ...interface{}) {
@@ -137,7 +141,7 @@ func Build() int {
 			skipDeps = true
 		case "--version":
 			if i+1 >= len(args) {
-				fmt.Fprintf(os.Stderr, "Error: --version requires a value\n")
+				log.Errorf("Error: --version requires a value")
 				printBuildUsage()
 				return 1
 			}
@@ -147,7 +151,7 @@ func Build() int {
 			if strings.HasPrefix(arg, "--version=") {
 				version = strings.TrimPrefix(arg, "--version=")
 			} else if strings.HasPrefix(arg, "--") {
-				fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+				log.Errorf("Error: unknown flag: %s", arg)
 				printBuildUsage()
 				return 1
 			} else {
@@ -159,14 +163,14 @@ func Build() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
 	}
 
 	// Load module contracts
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
+		log.Errorf("Error: failed to load module contracts: %v", err)
 		return 1
 	}
 
@@ -177,116 +181,25 @@ func Build() int {
 		}
 	}
 
-	// Phase 0: Verify build dependencies
-	if !skipDeps {
-		if exitCode := verifyBuildDependencies(monikers, moduleReport); exitCode != 0 {
-			return exitCode
-		}
-	}
-
-	// If exactly one module specified, run single module build (verbose output)
-	if len(monikers) == 1 {
-		return buildSingleModule(monikers[0], workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version)
-	}
-
-	// Multiple modules - run parallel build with orchestrator
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version)
+	// Run build (single or multiple modules) - phases are handled inside
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipDeps)
 }
 
-// buildSingleModule builds a single module with verbose output to console
-func buildSingleModule(moniker string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string) int {
-	// Get the module from registry
-	module, exists := moduleReport.Registry.Get(moniker)
-	if !exists {
-		fmt.Fprintf(os.Stderr, "Error: module not found: %s\n", moniker)
-		return 1
-	}
-
-	// Acquire exclusive lock for this module FIRST (before any directory operations)
-	lockFile, err := acquireModuleBuildLock(moniker, workspaceRoot)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: module '%s' is already being built\n", moniker)
-		fmt.Fprintf(os.Stderr, "Details: %v\n", err)
-		return 1
-	}
-	defer releaseModuleBuildLock(lockFile)
-
-	// Get build function for module type
-	buildFunc := builders.GetBuildFunc(module.Type)
-
-	// Determine output directory
-	var outputDir string
-	testRunID := os.Getenv("R2R_TEST_RUN_ID")
-	if testRunID != "" {
-		outputDir = filepath.Join(workspaceRoot, repository.OutDir, "test", testRunID, "build-artifacts", moniker)
-	} else {
-		outputDir = repository.BuildOutputPath(workspaceRoot, moniker)
-	}
-
-	// Purge and create output directory (now protected by lock)
-	if err := os.RemoveAll(outputDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to purge output directory: %v\n", err)
-		return 1
-	}
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create output directory: %v\n", err)
-		return 1
-	}
-
-	// Create build log file
-	logPath := filepath.Join(outputDir, "build.log")
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create log file: %v\n", err)
-		return 1
-	}
-	defer logFile.Close()
-
-	// Create multi-writer to log to both console and file
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-
-	// Print header
-	writeln(multiWriter, "Building module: %s (type: %s)", moniker, module.Type)
-	writeln(multiWriter, "Module root: %s", module.Files.Root)
-	writeln(multiWriter, "Output directory: %s", outputDir)
-	writeln(multiWriter, "Build log: %s", logPath)
-
-	// Log tidy behavior (only relevant for Go modules)
-	if builders.IsGoModuleType(module.Type) {
-		if tidyFirst {
-			if tidyExplicitlySet {
-				writeln(multiWriter, "Tidy mode: enabled (explicit flag)")
-			} else {
-				writeln(multiWriter, "Tidy mode: enabled (default for local builds)")
-			}
-		} else {
-			if tidyExplicitlySet {
-				writeln(multiWriter, "Tidy mode: disabled (explicit flag)")
-			} else {
-				writeln(multiWriter, "Tidy mode: disabled (CI environment detected)")
-			}
-		}
-	}
-
-	// Execute build
-	buildOpts := builders.BuildOptions{
-		TidyFirst:     tidyFirst,
-		Compressed:    compressed,
-		CompressedUPX: compressedUPX,
-		Version:       version,
-	}
-	return buildFunc(module, workspaceRoot, outputDir, multiWriter, buildOpts)
-}
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string) int {
-	// Print tidy mode info before starting orchestrator
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipDeps bool) int {
+	// Phase 1: Module Discovery
+	log.Info(output.PhaseHeader(1, "Module Discovery"))
+	log.Infof("Resolving %d modules: %s", len(monikers), strings.Join(monikers, ", "))
+
+	// Build module type lookup for worker
+	moduleTypes := make(map[string]string)
 	hasGoModules := false
 	for _, mon := range monikers {
 		if module, exists := moduleReport.Registry.Get(mon); exists {
+			moduleTypes[mon] = module.Type
 			if builders.IsGoModuleType(module.Type) {
 				hasGoModules = true
-				break
 			}
 		}
 	}
@@ -294,21 +207,34 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	if hasGoModules {
 		if tidyFirst {
 			if tidyExplicitlySet {
-				fmt.Println("Tidy mode: enabled (explicit flag)")
+				log.Info("Tidy mode: enabled (explicit flag)")
 			} else {
-				fmt.Println("Tidy mode: enabled (default for local builds)")
+				log.Info("Tidy mode: enabled (default for local builds)")
 			}
 		} else {
 			if tidyExplicitlySet {
-				fmt.Println("Tidy mode: disabled (explicit flag)")
+				log.Info("Tidy mode: disabled (explicit flag)")
 			} else {
-				fmt.Println("Tidy mode: disabled (CI environment detected)")
+				log.Info("Tidy mode: disabled (CI environment detected)")
 			}
 		}
 	}
+	log.Info("")
+
+	// Phase 2: Dependency Verification
+	if !skipDeps {
+		if exitCode := verifyBuildDependencies(monikers, moduleReport); exitCode != 0 {
+			return exitCode
+		}
+	}
+
+	// Phase 3: Build Execution
+	log.Info(output.PhaseHeader(3, "Build Execution"))
+	log.Info(output.OutputDir("out/build/"))
+	log.Info("")
 
 	// Configure orchestrator
-	config := orchestrator.Config{
+	orchConfig := orchestrator.Config{
 		WorkspaceRoot:        workspaceRoot,
 		OutputBaseDir:        "out/build",
 		LogFileName:          "build.log",
@@ -318,7 +244,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		StatusUpdateInterval: 2, // Update every 2 seconds
 	}
 
-	// Create worker function that builds a single module
+	// Create worker function that builds a single module and returns type info
 	worker := func(moniker string, logWriter io.Writer) int {
 		module, exists := moduleReport.Registry.Get(moniker)
 		if !exists {
@@ -340,11 +266,18 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	}
 
 	// Create and run orchestrator
-	orch := orchestrator.New(config, worker)
+	orch := orchestrator.New(orchConfig, worker)
 	results, err := orch.Run(monikers)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
+	}
+
+	// Set module types on results for display
+	for i := range results {
+		if t, ok := moduleTypes[results[i].Moniker]; ok {
+			results[i].Type = t
+		}
 	}
 
 	// Print summary and close orchestrator
@@ -406,31 +339,25 @@ func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleCont
 	sort.Strings(deps)
 
 	// Print phase header
-	fmt.Println("=== Build Dependency Verification ===")
-	fmt.Printf("Required: %s\n", strings.Join(deps, ", "))
+	log.Info(output.PhaseHeader(2, "Dependency Verification"))
+	log.Infof("Required: %s", strings.Join(deps, ", "))
 
 	// Verify all dependencies
 	results := systemdeps.VerifyAll(deps)
 	var missing []string
 
 	for _, result := range results {
-		if result.Available {
-			if result.Version != "" {
-				fmt.Printf("  ✅ %s (%s)\n", result.Name, result.Version)
-			} else {
-				fmt.Printf("  ✅ %s\n", result.Name)
-			}
-		} else {
-			fmt.Printf("  ❌ %s - not available\n", result.Name)
+		log.Info(output.DependencyLine(result.Available, result.Name, result.Version))
+		if !result.Available {
 			missing = append(missing, result.Moniker)
 		}
 	}
 
-	fmt.Println()
+	log.Info("")
 
 	if len(missing) > 0 {
-		fmt.Fprintf(os.Stderr, "❌ Error: Required build dependencies are missing: %s\n", strings.Join(missing, ", "))
-		fmt.Fprintf(os.Stderr, "   Use --skip-deps to bypass this check\n")
+		log.Errorf("❌ Error: Required build dependencies are missing: %s", strings.Join(missing, ", "))
+		log.Errorf("   Use --skip-deps to bypass this check")
 		return 1
 	}
 
@@ -438,32 +365,32 @@ func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleCont
 }
 
 func printBuildUsage() {
-	fmt.Println("Build one or more modules by moniker")
-	fmt.Println()
-	fmt.Println("Usage: build [flags] [module1] [module2] ...")
-	fmt.Println()
-	fmt.Println("Arguments:")
-	fmt.Println("  module1, module2, ...     Module monikers to build (builds all if none specified)")
-	fmt.Println()
-	fmt.Println("Flags:")
-	fmt.Println("  --tidy-first              Run 'go mod tidy' before building (default for local)")
-	fmt.Println("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
-	fmt.Println("  --skip-deps               Skip build dependency verification")
-	fmt.Println("  --compressed              Strip debug info for smaller binaries (go-cli only)")
-	fmt.Println("  --compressed-upx          Also apply UPX compression for maximum size reduction")
-	fmt.Println("  --version VERSION         Inject version string into binary (go-cli only)")
-	fmt.Println("  -h, --help                Show this help message")
-	fmt.Println()
-	fmt.Println("Compression (go-cli only):")
-	fmt.Println("  Default (dev):     Full debug info for debugging (~39 MB)")
-	fmt.Println("  --compressed:      Strip debug info with -ldflags \"-s -w\" (~26 MB, ~30% smaller)")
-	fmt.Println("  --compressed-upx:  Also UPX compress (~10 MB, ~70% smaller total)")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  build                                # Build all modules (dev mode)")
-	fmt.Println("  build src-cli                        # Build CLI with debug info")
-	fmt.Println("  build src-cli --compressed           # Build CLI for release")
-	fmt.Println("  build src-cli --compressed-upx       # Build CLI with UPX for minimal size")
-	fmt.Println("  build src-cli --version 1.0.0        # Build with version injection")
-	fmt.Println("  build --tidy-first docs              # Build with go mod tidy first")
+	log.Info("Build one or more modules by moniker")
+	log.Info("")
+	log.Info("Usage: build [flags] [module1] [module2] ...")
+	log.Info("")
+	log.Info("Arguments:")
+	log.Info("  module1, module2, ...     Module monikers to build (builds all if none specified)")
+	log.Info("")
+	log.Info("Flags:")
+	log.Info("  --tidy-first              Run 'go mod tidy' before building (default for local)")
+	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
+	log.Info("  --skip-deps               Skip build dependency verification")
+	log.Info("  --compressed              Strip debug info for smaller binaries (go-cli only)")
+	log.Info("  --compressed-upx          Also apply UPX compression for maximum size reduction")
+	log.Info("  --version VERSION         Inject version string into binary (go-cli only)")
+	log.Info("  -h, --help                Show this help message")
+	log.Info("")
+	log.Info("Compression (go-cli only):")
+	log.Info("  Default (dev):     Full debug info for debugging (~39 MB)")
+	log.Info("  --compressed:      Strip debug info with -ldflags \"-s -w\" (~26 MB, ~30% smaller)")
+	log.Info("  --compressed-upx:  Also UPX compress (~10 MB, ~70% smaller total)")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  build                                # Build all modules (dev mode)")
+	log.Info("  build src-cli                        # Build CLI with debug info")
+	log.Info("  build src-cli --compressed           # Build CLI for release")
+	log.Info("  build src-cli --compressed-upx       # Build CLI with UPX for minimal size")
+	log.Info("  build src-cli --version 1.0.0        # Build with version injection")
+	log.Info("  build --tidy-first docs              # Build with go mod tidy first")
 }

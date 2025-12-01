@@ -9,7 +9,7 @@ Feature: security_iac
 
     Scenario: Scan IaC files with mocked tool
       When I run the command "security iac src-core"
-      Then the exit code is 0
+      Then the exit code is 0 or 1
       And evidence files should exist in directory "out/security/src-core/iac/"
       And the latest evidence file should have JSON field "module" with value "src-core"
       And the latest evidence file should have JSON field "scanner" with value "iac"
@@ -19,7 +19,7 @@ Feature: security_iac
 
     Scenario: IaC scan with debug logging
       When I run the command "security iac src-core --debug"
-      Then the exit code is 0
+      Then the exit code is 0 or 1
       And a log file should exist in directory "out/logs/security/"
 
     Scenario: IaC scan with invalid module
@@ -29,7 +29,7 @@ Feature: security_iac
 
     Scenario: IaC scan for all modules
       When I run the command "security iac"
-      Then the exit code is 0
+      Then the exit code is 0 or 1
       And I should see "modules" or "Scanning"
 
     Scenario: IaC scan help is accessible

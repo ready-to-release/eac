@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"gopkg.in/yaml.v3"
 
 	// Import all command packages to register them via init()
@@ -98,14 +99,16 @@ type ExtensionMetadata struct {
 }
 
 func main() {
-	// Check for --debug flag and set EAC_DEBUG environment variable
-	// This enables debug logging in lower-level packages that don't have logger access
+	// Initialize logging early - check for --debug flag or EAC_DEBUG env var
+	// This must happen before any logging calls
 	for _, arg := range os.Args {
 		if arg == "--debug" || arg == "-d" {
-			os.Setenv("EAC_DEBUG", "1")
+			logging.EnableDebug()
 			break
 		}
 	}
+	// Also check environment variable (for cases where flag isn't passed)
+	logging.InitFromEnv()
 
 	// Handle special commands
 	if len(os.Args) < 2 {

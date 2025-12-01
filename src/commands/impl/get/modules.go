@@ -8,9 +8,6 @@
 package get
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/ready-to-release/eac/src/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
@@ -25,7 +22,7 @@ func GetModules() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 

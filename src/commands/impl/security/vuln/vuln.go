@@ -21,7 +21,6 @@
 package vuln
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -32,6 +31,8 @@ import (
 	"github.com/ready-to-release/eac/src/core/repository"
 	"go.uber.org/zap"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(Vuln)
@@ -57,7 +58,7 @@ func Vuln() int {
 		switch arg {
 		case "--severity":
 			if i+1 >= len(args) {
-				fmt.Fprintf(os.Stderr, "Error: --severity requires a value\n")
+				log.Errorf( "Error: --severity requires a value\n")
 				printVulnUsage()
 				return 1
 			}
@@ -68,7 +69,7 @@ func Vuln() int {
 				sev = strings.TrimSpace(strings.ToUpper(sev))
 				severity, valid := internal.ParseSeverity(sev)
 				if !valid {
-					fmt.Fprintf(os.Stderr, "Error: invalid severity: %s\n", sev)
+					log.Errorf( "Error: invalid severity: %s\n", sev)
 					printVulnUsage()
 					return 1
 				}
@@ -83,14 +84,14 @@ func Vuln() int {
 					sev = strings.TrimSpace(strings.ToUpper(sev))
 					severity, valid := internal.ParseSeverity(sev)
 					if !valid {
-						fmt.Fprintf(os.Stderr, "Error: invalid severity: %s\n", sev)
+						log.Errorf( "Error: invalid severity: %s\n", sev)
 						printVulnUsage()
 						return 1
 					}
 					severityFilter = append(severityFilter, severity)
 				}
 			} else if strings.HasPrefix(arg, "--") {
-				fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+				log.Errorf( "Error: unknown flag: %s\n", arg)
 				printVulnUsage()
 				return 1
 			} else {
@@ -103,7 +104,7 @@ func Vuln() int {
 	var logger *logging.Logger
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf( "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
@@ -113,7 +114,7 @@ func Vuln() int {
 		logger, err = logging.NewDefault("security", workspaceRoot)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to initialize logger: %v\n", err)
+		log.Errorf( "Error: failed to initialize logger: %v\n", err)
 		return 1
 	}
 	defer logger.Sync()
@@ -127,13 +128,13 @@ func Vuln() int {
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		logger.Error("Failed to load module contracts", zap.Error(err))
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
+		log.Errorf( "Error: failed to load module contracts: %v\n", err)
 		return 1
 	}
 
 	// If no monikers provided, default to all modules
 	if len(monikers) == 0 {
-		fmt.Println("ℹ️  No modules specified, scanning all modules...")
+		log.Info("ℹ️  No modules specified, scanning all modules...")
 		logger.Info("No modules specified, using all modules")
 		for _, module := range moduleReport.Registry.All() {
 			monikers = append(monikers, module.Moniker)
@@ -150,20 +151,20 @@ func Vuln() int {
 		module, exists := moduleReport.Registry.Get(moniker)
 		if !exists {
 			logger.Error("Module not found", zap.String("moniker", moniker))
-			fmt.Fprintf(os.Stderr, "Error: module not found: %s\n", moniker)
+			log.Errorf( "Error: module not found: %s\n", moniker)
 			failureCount++
 			exitCode = 1
 			continue
 		}
 
 		logger.Info("Scanning module", zap.String("moniker", moniker), zap.String("root", module.Files.Root))
-		fmt.Printf("🔍 Scanning %s...\n", moniker)
+		log.Infof("🔍 Scanning %s...\n", moniker)
 
 		// Run Trivy vulnerability scan
 		findings, err := internal.RunTrivyVuln(module.Files.Root, severityFilter, logger)
 		if err != nil {
 			logger.Error("Vulnerability scan failed", zap.String("moniker", moniker), zap.Error(err))
-			fmt.Fprintf(os.Stderr, "  ❌ Failed: %v\n", err)
+			log.Errorf( "  ❌ Failed: %v\n", err)
 
 			// Write error evidence
 			outputPath, writeErr := internal.WriteErrorEvidence(workspaceRoot, moniker, internal.ScannerVuln, err.Error())
@@ -171,7 +172,7 @@ func Vuln() int {
 				logger.Error("Failed to write error evidence", zap.Error(writeErr))
 			} else {
 				logger.Info("Error evidence written", zap.String("path", outputPath))
-				fmt.Printf("  📄 Error evidence: %s\n", outputPath)
+				log.Infof("  📄 Error evidence: %s\n", outputPath)
 			}
 
 			failureCount++
@@ -183,56 +184,56 @@ func Vuln() int {
 		outputPath, err := internal.WriteEvidence(workspaceRoot, moniker, internal.ScannerVuln, findings)
 		if err != nil {
 			logger.Error("Failed to write evidence", zap.String("moniker", moniker), zap.Error(err))
-			fmt.Fprintf(os.Stderr, "  ❌ Failed to write evidence: %v\n", err)
+			log.Errorf( "  ❌ Failed to write evidence: %v\n", err)
 			failureCount++
 			exitCode = 1
 			continue
 		}
 
 		logger.Info("Vulnerability scan completed", zap.String("moniker", moniker), zap.String("evidence", outputPath))
-		fmt.Printf("  ✅ Success: %s\n", outputPath)
+		log.Infof("  ✅ Success: %s\n", outputPath)
 		successCount++
 	}
 
 	// Print summary
-	fmt.Println()
+	log.Info("")
 	logger.Info("Vulnerability scan summary",
 		zap.Int("success", successCount),
 		zap.Int("failed", failureCount),
 		zap.Int("total", len(monikers)))
 
-	fmt.Printf("Summary: %d succeeded, %d failed, %d total\n", successCount, failureCount, len(monikers))
+	log.Infof("Summary: %d succeeded, %d failed, %d total\n", successCount, failureCount, len(monikers))
 
 	return exitCode
 }
 
 func printVulnUsage() {
-	fmt.Println("Scan for vulnerabilities using Trivy")
-	fmt.Println()
-	fmt.Println("Usage: security vuln [modules...] [flags]")
-	fmt.Println()
-	fmt.Println("Arguments:")
-	fmt.Println("  [modules...]          One or more module monikers to scan")
-	fmt.Println("                        If no modules specified, scans all modules")
-	fmt.Println()
-	fmt.Println("Flags:")
-	fmt.Println("  --severity <levels>   Filter by severity (comma-separated)")
-	fmt.Println("                        Options: LOW, MEDIUM, HIGH, CRITICAL")
-	fmt.Println("                        Example: --severity HIGH,CRITICAL")
-	fmt.Println("  --debug, -d           Enable debug logging")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  security vuln                              # All modules")
-	fmt.Println("  security vuln src-core                     # Single module")
-	fmt.Println("  security vuln src-core src-cli             # Multiple modules")
-	fmt.Println("  security vuln src-core --severity HIGH     # High severity only")
-	fmt.Println("  security vuln src-core --severity CRITICAL,HIGH  # Multiple severities")
-	fmt.Println("  security vuln src-core --debug             # Debug logging")
-	fmt.Println()
-	fmt.Println("Output:")
-	fmt.Println("  out/security/<module>/vuln/<timestamp>.json")
-	fmt.Println()
-	fmt.Println("External tool:")
-	fmt.Println("  This command uses Trivy (Apache 2.0). See the NOTICE file in the")
-	fmt.Println("  repository root for full attribution and licensing information.")
+	log.Info("Scan for vulnerabilities using Trivy")
+	log.Info("")
+	log.Info("Usage: security vuln [modules...] [flags]")
+	log.Info("")
+	log.Info("Arguments:")
+	log.Info("  [modules...]          One or more module monikers to scan")
+	log.Info("                        If no modules specified, scans all modules")
+	log.Info("")
+	log.Info("Flags:")
+	log.Info("  --severity <levels>   Filter by severity (comma-separated)")
+	log.Info("                        Options: LOW, MEDIUM, HIGH, CRITICAL")
+	log.Info("                        Example: --severity HIGH,CRITICAL")
+	log.Info("  --debug, -d           Enable debug logging")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  security vuln                              # All modules")
+	log.Info("  security vuln src-core                     # Single module")
+	log.Info("  security vuln src-core src-cli             # Multiple modules")
+	log.Info("  security vuln src-core --severity HIGH     # High severity only")
+	log.Info("  security vuln src-core --severity CRITICAL,HIGH  # Multiple severities")
+	log.Info("  security vuln src-core --debug             # Debug logging")
+	log.Info("")
+	log.Info("Output:")
+	log.Info("  out/security/<module>/vuln/<timestamp>.json")
+	log.Info("")
+	log.Info("External tool:")
+	log.Info("  This command uses Trivy (Apache 2.0). See the NOTICE file in the")
+	log.Info("  repository root for full attribution and licensing information.")
 }

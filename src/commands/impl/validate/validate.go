@@ -3,7 +3,6 @@
 package validate
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
@@ -49,47 +48,47 @@ func Validate() int {
 		// Handled by separate registrations in respective files
 		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
+		log.Errorf("Error: unknown subcommand: %s\n", args[0])
 		printValidateUsage()
 		return 1
 	}
 }
 
 func printValidateUsage() {
-	fmt.Println("Validate repository contracts and dependencies")
-	fmt.Println()
-	fmt.Println("Usage: r2r validate <subcommand> [args...]")
-	fmt.Println()
-	fmt.Println("Subcommands:")
-	fmt.Println("  contracts                 Validate repository contracts against JSON schemas")
-	fmt.Println("  dependencies              Validate module dependency contracts")
-	fmt.Println("  test-tags                 Validate that all test tags are defined in the tag contract")
-	fmt.Println("  module-hierarchy          Validate module dependency graph structure")
-	fmt.Println("  module-files              Validate module file ownership")
-	fmt.Println("  markdown                  Validate markdown file syntax")
-	fmt.Println("  go-tidy                   Validate Go module dependencies are tidy")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # Validate all contracts against schemas")
-	fmt.Println("  r2r validate contracts")
-	fmt.Println()
-	fmt.Println("  # Validate all dependencies")
-	fmt.Println("  r2r validate dependencies")
-	fmt.Println()
-	fmt.Println("  # Validate test tags")
-	fmt.Println("  r2r validate test-tags")
-	fmt.Println()
-	fmt.Println("  # Validate module hierarchy")
-	fmt.Println("  r2r validate module-hierarchy")
-	fmt.Println()
-	fmt.Println("  # Validate module file ownership")
-	fmt.Println("  r2r validate module-files")
-	fmt.Println()
-	fmt.Println("  # Validate markdown files")
-	fmt.Println("  r2r validate markdown")
-	fmt.Println()
-	fmt.Println("  # Validate Go module tidiness")
-	fmt.Println("  r2r validate go-tidy")
-	fmt.Println()
-	fmt.Println("Use 'r2r validate <subcommand> --help' for more information about a command.")
+	log.Info("Validate repository contracts and dependencies")
+	log.Info("")
+	log.Info("Usage: r2r validate <subcommand> [args...]")
+	log.Info("")
+	log.Info("Subcommands:")
+	log.Info("  contracts                 Validate repository contracts against JSON schemas")
+	log.Info("  dependencies              Validate module dependency contracts")
+	log.Info("  test-tags                 Validate that all test tags are defined in the tag contract")
+	log.Info("  module-hierarchy          Validate module dependency graph structure")
+	log.Info("  module-files              Validate module file ownership")
+	log.Info("  markdown                  Validate markdown file syntax")
+	log.Info("  go-tidy                   Validate Go module dependencies are tidy")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # Validate all contracts against schemas")
+	log.Info("  r2r validate contracts")
+	log.Info("")
+	log.Info("  # Validate all dependencies")
+	log.Info("  r2r validate dependencies")
+	log.Info("")
+	log.Info("  # Validate test tags")
+	log.Info("  r2r validate test-tags")
+	log.Info("")
+	log.Info("  # Validate module hierarchy")
+	log.Info("  r2r validate module-hierarchy")
+	log.Info("")
+	log.Info("  # Validate module file ownership")
+	log.Info("  r2r validate module-files")
+	log.Info("")
+	log.Info("  # Validate markdown files")
+	log.Info("  r2r validate markdown")
+	log.Info("")
+	log.Info("  # Validate Go module tidiness")
+	log.Info("  r2r validate go-tidy")
+	log.Info("")
+	log.Info("Use 'r2r validate <subcommand> --help' for more information about a command.")
 }

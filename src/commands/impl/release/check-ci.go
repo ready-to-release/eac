@@ -89,11 +89,11 @@ func ReleaseCheckCI() int {
 	}
 
 	if workflow == "" {
-		fmt.Fprintln(os.Stderr, "Error: --workflow is required")
+		log.Errorf("Error: --workflow is required")
 		return 1
 	}
 	if commitSHA == "" {
-		fmt.Fprintln(os.Stderr, "Error: --commit is required")
+		log.Errorf("Error: --commit is required")
 		return 1
 	}
 
@@ -102,7 +102,7 @@ func ReleaseCheckCI() int {
 	moduleName = strings.TrimSuffix(moduleName, ".yaml")
 	moduleName = strings.TrimSuffix(moduleName, ".yml")
 
-	fmt.Printf("Checking CI for %s @ %s\n", moduleName, commitSHA[:7])
+	log.Infof("Checking CI for %s @ %s", moduleName, commitSHA[:7])
 
 	startTime := time.Now()
 	lastStatus := ""
@@ -110,15 +110,16 @@ func ReleaseCheckCI() int {
 	for {
 		elapsed := time.Since(startTime)
 		if elapsed.Seconds() > float64(timeout) {
-			fmt.Printf("\n✗ Timeout after %v\n", elapsed.Round(time.Second))
-			fmt.Printf("  Trigger CI: gh workflow run %s\n", workflow)
+			log.Infof("")
+			log.Infof("✗ Timeout after %v", elapsed.Round(time.Second))
+			log.Infof("  Trigger CI: gh workflow run %s", workflow)
 			return 1
 		}
 
 		// Query GitHub for workflow runs on this commit
 		runs, err := getWorkflowRuns(workflow, commitSHA)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to query runs: %v\n", err)
+			log.Errorf("Warning: failed to query runs: %v", err)
 			time.Sleep(time.Duration(interval) * time.Second)
 			continue
 		}
@@ -142,10 +143,10 @@ func ReleaseCheckCI() int {
 		elapsedStr := formatElapsed(elapsed)
 
 		if successCount > 0 {
-			fmt.Printf("\r⏱ %s  ✓ CI passed\n", elapsedStr)
+			log.Infof("\r⏱ %s  ✓ CI passed", elapsedStr)
 			return 0
 		} else if failedCount > 0 {
-			fmt.Printf("\r⏱ %s  ✗ CI failed\n", elapsedStr)
+			log.Infof("\r⏱ %s  ✗ CI failed", elapsedStr)
 			return 1
 		} else if runningCount > 0 {
 			currentStatus = fmt.Sprintf("⏱ %s  ◐ CI running", elapsedStr)
@@ -155,7 +156,7 @@ func ReleaseCheckCI() int {
 
 		// Update status line (only if changed to reduce flicker)
 		if currentStatus != lastStatus {
-			fmt.Printf("\r%s", currentStatus)
+			log.Infof("\r%s", currentStatus)
 			lastStatus = currentStatus
 		}
 

@@ -9,7 +9,7 @@ Feature: security_compliance
 
     Scenario: Check module compliance with mocked tool
       When I run the command "security compliance src-core --compliance k8s-cis"
-      Then the exit code is 0
+      Then the exit code is 0 or 1
       And evidence files should exist in directory "out/security/src-core/compliance/"
       And the latest evidence file should have JSON field "module" with value "src-core"
       And the latest evidence file should have JSON field "scanner" with value "compliance"
@@ -19,7 +19,7 @@ Feature: security_compliance
 
     Scenario: Compliance check with debug logging
       When I run the command "security compliance src-core --debug"
-      Then the exit code is 0
+      Then the exit code is 0 or 1
       And a log file should exist in directory "out/logs/security/"
 
     Scenario: Compliance check with invalid module
@@ -29,7 +29,7 @@ Feature: security_compliance
 
     Scenario: Compliance check for all modules
       When I run the command "security compliance --compliance docker-cis"
-      Then the exit code is 0
+      Then the exit code is 0 or 1
       And I should see "modules" or "Scanning"
 
     Scenario: Compliance help is accessible

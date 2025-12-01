@@ -23,7 +23,10 @@ import (
 	"github.com/ready-to-release/eac/src/core/changelog"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/git"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var tagPendingLog = logging.C("release")
 
 func init() {
 	registry.Register(ReleaseTagPending)
@@ -63,30 +66,30 @@ func ReleaseTagPending() int {
 	}
 
 	if !checkAll && module == "" {
-		fmt.Fprintln(os.Stderr, "Error: module moniker required (or use --all)")
-		fmt.Fprintln(os.Stderr, "Usage: release tag-pending <module>")
-		fmt.Fprintln(os.Stderr, "       release tag-pending --all")
+		tagPendingLog.Error("module moniker required (or use --all)")
+		tagPendingLog.Info("Usage: release tag-pending <module>")
+		tagPendingLog.Info("       release tag-pending --all")
 		return 1
 	}
 
 	// Load workspace root
 	workspaceRoot, err := registry.GetWorkspaceRoot()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get workspace root: %v\n", err)
+		tagPendingLog.Errorf("failed to get workspace root: %v", err)
 		return 1
 	}
 
 	// Open git repository
 	repo, err := git.Open("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to open git repository: %v\n", err)
+		tagPendingLog.Errorf("failed to open git repository: %v", err)
 		return 1
 	}
 
 	// Load module contracts
 	moduleRegistry, err := modules.LoadFromWorkspace("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load modules: %v\n", err)
+		tagPendingLog.Errorf("failed to load modules: %v", err)
 		return 1
 	}
 
@@ -103,12 +106,12 @@ func ReleaseTagPending() int {
 	for _, mod := range modulesToCheck {
 		moduleContract, exists := moduleRegistry.Get(mod)
 		if !exists {
-			fmt.Fprintf(os.Stderr, "Warning: module '%s' not found\n", mod)
+			tagPendingLog.Warnf("module '%s' not found", mod)
 			continue
 		}
 		result, err := checkTagPending(mod, moduleContract, repo, workspaceRoot)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to check module '%s': %v\n", mod, err)
+			tagPendingLog.Warnf("failed to check module '%s': %v", mod, err)
 			continue
 		}
 		allResults = append(allResults, result)
@@ -136,10 +139,10 @@ func ReleaseTagPending() int {
 
 	jsonBytes, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+		tagPendingLog.Errorf("failed to marshal JSON: %v", err)
 		return 1
 	}
-	fmt.Println(string(jsonBytes))
+	tagPendingLog.Info(string(jsonBytes))
 
 	return 0
 }

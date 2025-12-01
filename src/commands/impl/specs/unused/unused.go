@@ -12,14 +12,16 @@
 package unused
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(SpecsUnusedSteps)
@@ -50,7 +52,7 @@ func SpecsUnusedSteps() int {
 	// Find repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -63,12 +65,12 @@ func runAnalysis(repoRoot string, verbose bool, moduleFilter string) int {
 	// Discover all impl↔specs pairs
 	pairs, err := DiscoverPairs(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to discover pairs: %v\n", err)
+		log.Errorf("Error: failed to discover pairs: %v", err)
 		return 1
 	}
 
 	if len(pairs) == 0 {
-		fmt.Println("No impl↔specs pairs found in src/specs/impl/")
+		log.Info("No impl↔specs pairs found in src/specs/impl/")
 		return 0
 	}
 
@@ -81,7 +83,7 @@ func runAnalysis(repoRoot string, verbose bool, moduleFilter string) int {
 			}
 		}
 		if len(filtered) == 0 {
-			fmt.Fprintf(os.Stderr, "Error: no pairs found matching module filter '%s'\n", moduleFilter)
+			log.Errorf("Error: no pairs found matching module filter '%s'", moduleFilter)
 			return 1
 		}
 		pairs = filtered
@@ -96,7 +98,7 @@ func runAnalysis(repoRoot string, verbose bool, moduleFilter string) int {
 	// Analyze for unused steps
 	result, err := FindUnusedSteps(pairs, sharedStepsFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: analysis failed: %v\n", err)
+		log.Errorf("Error: analysis failed: %v", err)
 		return 1
 	}
 
@@ -111,10 +113,10 @@ func runAnalysis(repoRoot string, verbose bool, moduleFilter string) int {
 
 func printResults(result *AnalysisResult, repoRoot string, verbose bool) {
 	if verbose {
-		fmt.Printf("Scanned %d impl↔specs pairs\n", len(result.Pairs))
-		fmt.Printf("Total step definitions: %d\n", result.TotalSteps)
-		fmt.Printf("Total feature files: %d\n", result.TotalFeatures)
-		fmt.Println()
+		log.Infof("Scanned %d impl↔specs pairs", len(result.Pairs))
+		log.Infof("Total step definitions: %d", result.TotalSteps)
+		log.Infof("Total feature files: %d", result.TotalFeatures)
+		log.Info("")
 	}
 
 	hasUnused := false
@@ -127,7 +129,7 @@ func printResults(result *AnalysisResult, repoRoot string, verbose bool) {
 
 		hasUnused = true
 		relImplDir := relativePath(repoRoot, pairResult.Pair.ImplDir)
-		fmt.Printf("\n%s:\n", relImplDir)
+		log.Infof("\n%s:", relImplDir)
 
 		// Group by file
 		byFile := make(map[string][]UnusedStep)
@@ -137,9 +139,9 @@ func printResults(result *AnalysisResult, repoRoot string, verbose bool) {
 
 		for file, steps := range byFile {
 			relFile := relativePath(repoRoot, file)
-			fmt.Printf("  %s:\n", filepath.Base(relFile))
+			log.Infof("  %s:", filepath.Base(relFile))
 			for _, step := range steps {
-				fmt.Printf("    Line %d: %s\n", step.Line, truncatePattern(step.Pattern, 60))
+				log.Infof("    Line %d: %s", step.Line, truncatePattern(step.Pattern, 60))
 			}
 		}
 	}
@@ -147,35 +149,35 @@ func printResults(result *AnalysisResult, repoRoot string, verbose bool) {
 	// Print globally unused shared steps
 	if len(result.UnusedShared) > 0 {
 		hasUnused = true
-		fmt.Printf("\nShared steps (src/specs/internal/steps.go) - unused by ALL pairs:\n")
+		log.Info("\nShared steps (src/specs/internal/steps.go) - unused by ALL pairs:")
 		for _, step := range result.UnusedShared {
-			fmt.Printf("  Line %d: %s\n", step.Line, truncatePattern(step.Pattern, 60))
+			log.Infof("  Line %d: %s", step.Line, truncatePattern(step.Pattern, 60))
 		}
 	}
 
 	// Print summary
-	fmt.Println()
+	log.Info("")
 	if hasUnused {
-		fmt.Printf("Summary: %d unused step(s) found\n", result.TotalUnused)
+		log.Infof("Summary: %d unused step(s) found", result.TotalUnused)
 	} else {
-		fmt.Println("No unused step definitions found.")
+		log.Info("No unused step definitions found.")
 	}
 }
 
 func printUsage() {
-	fmt.Println("Find step definitions not used by any feature file")
-	fmt.Println()
-	fmt.Println("Usage: r2r specs unused-steps [--verbose] [--module=<name>]")
-	fmt.Println()
-	fmt.Println("Flags:")
-	fmt.Println("  -v, --verbose        Show detailed output including all scanned files")
-	fmt.Println("  -m, --module=<name>  Only analyze a specific module (e.g., src-commands)")
-	fmt.Println("  -h, --help           Show this help message")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  r2r specs unused-steps")
-	fmt.Println("  r2r specs unused-steps --verbose")
-	fmt.Println("  r2r specs unused-steps --module=src-commands")
+	log.Info("Find step definitions not used by any feature file")
+	log.Info("")
+	log.Info("Usage: r2r specs unused-steps [--verbose] [--module=<name>]")
+	log.Info("")
+	log.Info("Flags:")
+	log.Info("  -v, --verbose        Show detailed output including all scanned files")
+	log.Info("  -m, --module=<name>  Only analyze a specific module (e.g., src-commands)")
+	log.Info("  -h, --help           Show this help message")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  r2r specs unused-steps")
+	log.Info("  r2r specs unused-steps --verbose")
+	log.Info("  r2r specs unused-steps --module=src-commands")
 }
 
 func relativePath(base, target string) string {

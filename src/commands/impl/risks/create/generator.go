@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// Note: log is already declared in create.go as var log = logging.C()
+
 // generateControl generates a risk control specification using specs create
 func generateControl(config *Config, risk RiskData) error {
 	// Determine output path
@@ -26,7 +28,7 @@ func generateControl(config *Config, risk RiskData) error {
 
 	// If file exists and force is not set, skip
 	if fileExists && !config.Force {
-		fmt.Printf("  Skipped: %s (already exists, use --force to overwrite)\n", outputPath)
+		log.Infof("  Skipped: %s (already exists, use --force to overwrite)", outputPath)
 		return nil
 	}
 
@@ -52,11 +54,11 @@ func generateControl(config *Config, risk RiskData) error {
 				return fmt.Errorf("%s", formatOrphanedTagsError(analysis, fullPath))
 			} else {
 				// Warn but allow
-				fmt.Fprintf(os.Stderr, "⚠️  Warning: Overwriting with orphaned tags:\n")
+				log.Errorf("⚠️  Warning: Overwriting with orphaned tags:")
 				for _, tag := range analysis.OrphanedTags {
-					fmt.Fprintf(os.Stderr, "  - %s\n", tag)
+					log.Errorf("  - %s", tag)
 				}
-				fmt.Fprintf(os.Stderr, "\n")
+				log.Errorf("")
 			}
 		}
 	}
@@ -67,9 +69,9 @@ func generateControl(config *Config, risk RiskData) error {
 	}
 
 	if fileExists {
-		fmt.Printf("  Overwritten: %s\n", outputPath)
+		log.Infof("  Overwritten: %s", outputPath)
 	} else {
-		fmt.Printf("  Created: %s\n", outputPath)
+		log.Infof("  Created: %s", outputPath)
 	}
 
 	return nil

@@ -15,7 +15,7 @@ Feature: src-commands_init
     Scenario: Init without --ai flag shows error
       When I run "init" without any flags
       Then the command exits with code 1
-      And stderr contains "Error: --ai flag is required"
+      And stderr contains "--ai flag is required"
       And stderr contains "Available providers: claude-api, claude-cli, openai, gemini"
 
     @L3 @iv

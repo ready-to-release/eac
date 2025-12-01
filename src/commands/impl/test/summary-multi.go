@@ -38,7 +38,7 @@ func generateSummaryMulti(testRunID string) error {
 		return fmt.Errorf("no module results found in %s", testRunDir)
 	}
 
-	fmt.Printf("Found %d module(s) with test results\n", len(modules))
+	log.Infof("Found %d module(s) with test results", len(modules))
 
 	// Generate multi-module summary
 	var summary string
@@ -47,7 +47,7 @@ func generateSummaryMulti(testRunID string) error {
 
 	// Render each module as a section
 	for i, moduleName := range modules {
-		fmt.Printf("Processing module: %s\n", moduleName)
+		log.Infof("Processing module: %s", moduleName)
 
 		moduleDir := filepath.Join(testRunDir, moduleName)
 		cucumberPath := filepath.Join(moduleDir, "cucumber.json")
@@ -55,7 +55,7 @@ func generateSummaryMulti(testRunID string) error {
 		// Parse cucumber.json
 		report, err := cucumber.ParseFile(cucumberPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to parse %s: %v\n", cucumberPath, err)
+			log.Errorf("Warning: failed to parse %s: %v", cucumberPath, err)
 			continue
 		}
 
@@ -93,6 +93,6 @@ func generateSummaryMulti(testRunID string) error {
 		return fmt.Errorf("failed to write summary.md: %w", err)
 	}
 
-	fmt.Printf("✅ Generated: %s\n", summaryPath)
+	log.Infof("Generated: %s", summaryPath)
 	return nil
 }

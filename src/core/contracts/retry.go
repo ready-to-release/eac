@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 // Intent: Provide generic retry framework for AI generation with validation feedback
 //
@@ -133,9 +137,9 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		// Log attempt
 		if attempt == 1 {
-			fmt.Fprintf(os.Stderr, "🤖 Generating output (attempt %d/%d)...\n", attempt, maxAttempts)
+			log.Infof("Generating output (attempt %d/%d)...", attempt, maxAttempts)
 		} else {
-			fmt.Fprintf(os.Stderr, "🔄 Retrying with error feedback (attempt %d/%d)...\n", attempt, maxAttempts)
+			log.Infof("Retrying with error feedback (attempt %d/%d)...", attempt, maxAttempts)
 		}
 
 		// Use retry prompt on subsequent attempts
@@ -155,9 +159,9 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 		if cfg.Debug {
 			debugPath := filepath.Join(cfg.DebugOutputDir, fmt.Sprintf("attempt-%d-raw.txt", attempt))
 			if err := os.WriteFile(debugPath, []byte(rawOutput), 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "⚠️  DEBUG: Failed to save raw output: %v\n", err)
+				log.Warnf("DEBUG: Failed to save raw output: %v", err)
 			} else {
-				fmt.Fprintf(os.Stderr, "🔍 DEBUG: Saved raw output to %s\n", debugPath)
+				log.Infof("DEBUG: Saved raw output to %s", debugPath)
 			}
 		}
 
@@ -176,9 +180,9 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 		if cfg.Debug {
 			debugPath := filepath.Join(cfg.DebugOutputDir, fmt.Sprintf("attempt-%d-cleaned.txt", attempt))
 			if err := os.WriteFile(debugPath, []byte(cleanedOutput), 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "⚠️  DEBUG: Failed to save cleaned output: %v\n", err)
+				log.Warnf("DEBUG: Failed to save cleaned output: %v", err)
 			} else {
-				fmt.Fprintf(os.Stderr, "🔍 DEBUG: Saved cleaned output to %s\n", debugPath)
+				log.Infof("DEBUG: Saved cleaned output to %s", debugPath)
 			}
 		}
 
@@ -197,9 +201,9 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 			debugPath := filepath.Join(cfg.DebugOutputDir, fmt.Sprintf("attempt-%d-errors.txt", attempt))
 			errorText := FormatValidationErrors(validationErrors)
 			if err := os.WriteFile(debugPath, []byte(errorText), 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "⚠️  DEBUG: Failed to save validation errors: %v\n", err)
+				log.Warnf("DEBUG: Failed to save validation errors: %v", err)
 			} else {
-				fmt.Fprintf(os.Stderr, "🔍 DEBUG: Saved validation errors to %s\n", debugPath)
+				log.Infof("DEBUG: Saved validation errors to %s", debugPath)
 			}
 		}
 
@@ -216,9 +220,9 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 		// If no errors (only warnings or nothing), we're done
 		if criticalErrors == 0 {
 			if len(validationErrors) > 0 {
-				fmt.Fprintf(os.Stderr, "✅ Output validated (with %d warning(s))\n", len(validationErrors))
+				log.Infof("Output validated (with %d warning(s))", len(validationErrors))
 			} else {
-				fmt.Fprintf(os.Stderr, "✅ Output validated successfully\n")
+				log.Info("Output validated successfully")
 			}
 			return &RetryResult{
 				Output:            cleanedOutput,
@@ -231,7 +235,7 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 
 		// If this is the last attempt, return with errors
 		if attempt >= maxAttempts {
-			fmt.Fprintf(os.Stderr, "⚠️  Structure validation failed (%d issue(s) after %d attempt(s))\n", criticalErrors, attempt)
+			log.Warnf("Structure validation failed (%d issue(s) after %d attempt(s))", criticalErrors, attempt)
 			return &RetryResult{
 				Output:            cleanedOutput,
 				ValidationErrors:  validationErrors,
@@ -242,7 +246,7 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 		}
 
 		// Otherwise, show errors and continue to retry
-		fmt.Fprintf(os.Stderr, "⚠️  Structure validation failed, retrying...\n")
+		log.Warn("Structure validation failed, retrying...")
 	}
 
 	// Should not reach here, but return last result

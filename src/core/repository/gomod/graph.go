@@ -4,7 +4,10 @@ import (
 	"fmt"
 
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 // GraphBuilder builds dependency graphs from go.mod files
 type GraphBuilder struct {
@@ -78,7 +81,7 @@ func (gb *GraphBuilder) Build() (*DependencyGraph, error) {
 		if len(errors) > 0 {
 			// Log errors but continue
 			for _, err := range errors {
-				fmt.Printf("Warning: %v\n", err)
+				log.Warnf("%v", err)
 			}
 		}
 

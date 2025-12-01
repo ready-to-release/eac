@@ -7,11 +7,11 @@
 package list
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(RisksList)
@@ -31,14 +31,14 @@ func Run() int {
 			showHelp()
 			return 0
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Analyze linkages
 	report, err := analyzeLinkages(config.WorkspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -47,7 +47,7 @@ func Run() int {
 	if config.JSON {
 		output, err = formatJSON(report)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error formatting JSON: %v\n", err)
+			log.Errorf("Error formatting JSON: %v", err)
 			return 1
 		}
 	} else {
@@ -55,7 +55,7 @@ func Run() int {
 	}
 
 	// Print output
-	fmt.Print(output)
+	log.Info(output)
 
 	return 0
 }
@@ -79,5 +79,5 @@ Examples:
   risks list -f missing-links             # Show specs missing risk control links
   risks list -j                           # Output as JSON
 `
-	fmt.Print(help)
+	log.Info(help)
 }

@@ -11,9 +11,6 @@
 package test
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/testing"
 )
@@ -24,21 +21,21 @@ func init() {
 
 // ListSuites lists all available test suites
 func ListSuites() int {
-	fmt.Println("Available test suites:")
-	fmt.Println()
+	log.Info("Available test suites:")
+	log.Info("")
 
 	suites := testing.ListSuites()
 	for _, moniker := range suites {
 		suite, err := testing.GetSuite(moniker)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			log.Errorf("%v", err)
 			continue
 		}
 
-		fmt.Printf("  %s\n", suite.Moniker)
-		fmt.Printf("    Name: %s\n", suite.Name)
-		fmt.Printf("    Description: %s\n", suite.Description)
-		fmt.Println()
+		log.Infof("  %s", suite.Moniker)
+		log.Infof("    Name: %s", suite.Name)
+		log.Infof("    Description: %s", suite.Description)
+		log.Info("")
 	}
 
 	return 0

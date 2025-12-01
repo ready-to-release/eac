@@ -9,8 +9,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
+
+var log = logging.C()
 
 // PipelineRunner orchestrates execution of module pipelines
 type PipelineRunner struct {
@@ -36,32 +39,32 @@ func (r *PipelineRunner) RunPipeline(moniker string, ref string) error {
 		return fmt.Errorf("workflow file not found: %s\nHint: Create .github/workflows/%s", workflowPath, workflowFile)
 	}
 
-	fmt.Printf("Triggering workflow: %s\n", workflowFile)
+	log.Infof("Triggering workflow: %s", workflowFile)
 
 	runID, err := r.ghCLI.TriggerWorkflow(workflowFile, ref)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Started run %s for %s\n", runID, moniker)
-	fmt.Printf("Waiting for completion...\n")
+	log.Infof("Started run %s for %s", runID, moniker)
+	log.Info("Waiting for completion...")
 
 	if err := r.ghCLI.WatchRun(runID); err != nil {
 		return fmt.Errorf("pipeline failed for %s: %w", moniker, err)
 	}
 
-	fmt.Printf("✅ %s completed successfully\n", moniker)
+	log.Infof("✅ %s completed successfully", moniker)
 	return nil
 }
 
 // RunPipelines executes multiple pipelines respecting dependencies
 func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 	if len(monikers) == 0 {
-		fmt.Println("No modules specified")
+		log.Info("No modules specified")
 		return nil
 	}
 
-	fmt.Printf("Calculating execution order for: %v\n", monikers)
+	log.Infof("Calculating execution order for: %v", monikers)
 
 	// Calculate execution order
 	plan, err := repository.CalculateExecutionOrder(monikers, r.repoPath)
@@ -76,15 +79,16 @@ func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 	}
 
 	if len(filteredPlan.ExecutionOrder) == 0 {
-		fmt.Println("No modules with workflows found")
+		log.Info("No modules with workflows found")
 		return nil
 	}
 
-	fmt.Printf("\nExecution plan:\n")
+	log.Info("")
+	log.Info("Execution plan:")
 	for i, layer := range filteredPlan.Layers {
-		fmt.Printf("  Layer %d: %v\n", i, layer)
+		log.Infof("  Layer %d: %v", i, layer)
 	}
-	fmt.Println()
+	log.Info("")
 
 	// Execute layers sequentially
 	return r.executeLayers(filteredPlan, ref)
@@ -92,7 +96,7 @@ func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 
 // RunAllPipelines runs all modules in the repository
 func (r *PipelineRunner) RunAllPipelines(ref string) error {
-	fmt.Println("Running all modules in dependency order...")
+	log.Info("Running all modules in dependency order...")
 
 	// Pass nil to calculate order for all modules
 	plan, err := repository.CalculateExecutionOrder(nil, r.repoPath)
@@ -107,15 +111,16 @@ func (r *PipelineRunner) RunAllPipelines(ref string) error {
 	}
 
 	if len(filteredPlan.ExecutionOrder) == 0 {
-		fmt.Println("No modules with workflows found")
+		log.Info("No modules with workflows found")
 		return nil
 	}
 
-	fmt.Printf("\nExecution plan:\n")
+	log.Info("")
+	log.Info("Execution plan:")
 	for i, layer := range filteredPlan.Layers {
-		fmt.Printf("  Layer %d: %v\n", i, layer)
+		log.Infof("  Layer %d: %v", i, layer)
 	}
-	fmt.Println()
+	log.Info("")
 
 	// Execute layers sequentially
 	return r.executeLayers(filteredPlan, ref)
@@ -123,7 +128,7 @@ func (r *PipelineRunner) RunAllPipelines(ref string) error {
 
 // RunAllChangedPipelines detects changed modules and runs their pipelines
 func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
-	fmt.Println("Detecting changed modules...")
+	log.Info("Detecting changed modules...")
 
 	// Get changed files using git diff
 	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
@@ -135,15 +140,15 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 
 	changedFiles := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(changedFiles) == 1 && changedFiles[0] == "" {
-		fmt.Println("No files changed")
+		log.Info("No files changed")
 		return nil
 	}
 
-	fmt.Printf("Changed files:\n")
+	log.Info("Changed files:")
 	for _, f := range changedFiles {
-		fmt.Printf("  %s\n", f)
+		log.Infof("  %s", f)
 	}
-	fmt.Println()
+	log.Info("")
 
 	// Map to modules
 	modules, err := repository.GetChangedModules(changedFiles, r.repoPath)
@@ -152,11 +157,12 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	}
 
 	if len(modules) == 0 {
-		fmt.Println("No modules changed")
+		log.Info("No modules changed")
 		return nil
 	}
 
-	fmt.Printf("Changed modules: %v\n\n", modules)
+	log.Infof("Changed modules: %v", modules)
+	log.Info("")
 
 	// Run pipelines for changed modules
 	return r.RunPipelines(modules, ref)
@@ -165,15 +171,16 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 // executeLayers executes pipeline layers sequentially, with parallel execution within each layer
 func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref string) error {
 	for layerIdx, layer := range plan.Layers {
-		fmt.Printf("================================================\n")
-		fmt.Printf("Executing Layer %d: %v\n", layerIdx, layer)
-		fmt.Printf("================================================\n\n")
+		log.Info("================================================")
+		log.Infof("Executing Layer %d: %v", layerIdx, layer)
+		log.Info("================================================")
+		log.Info("")
 
 		// Start all workflows in this layer (parallel)
 		runIDs := make(map[string]string) // moniker -> runID
 		for _, moniker := range layer {
 			workflowFile := moniker + ".yaml"
-			fmt.Printf("Triggering workflow: %s\n", workflowFile)
+			log.Infof("Triggering workflow: %s", workflowFile)
 
 			runID, err := r.ghCLI.TriggerWorkflow(workflowFile, ref)
 			if err != nil {
@@ -181,29 +188,31 @@ func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref strin
 			}
 
 			runIDs[moniker] = runID
-			fmt.Printf("  Started %s (run %s)\n", moniker, runID)
+			log.Infof("  Started %s (run %s)", moniker, runID)
 		}
 
-		fmt.Println()
+		log.Info("")
 
 		// Wait for all workflows in this layer to complete
 		for _, moniker := range layer {
 			runID := runIDs[moniker]
-			fmt.Printf("Waiting for %s (run %s)...\n", moniker, runID)
+			log.Infof("Waiting for %s (run %s)...", moniker, runID)
 
 			if err := r.ghCLI.WatchRun(runID); err != nil {
 				return fmt.Errorf("pipeline failed: %s: %w", moniker, err)
 			}
 
-			fmt.Printf("  ✅ %s completed\n", moniker)
+			log.Infof("  ✅ %s completed", moniker)
 		}
 
-		fmt.Printf("\n✅ Layer %d completed successfully\n\n", layerIdx)
+		log.Info("")
+		log.Infof("✅ Layer %d completed successfully", layerIdx)
+		log.Info("")
 	}
 
-	fmt.Println("================================================")
-	fmt.Println("✅ All pipelines completed successfully!")
-	fmt.Println("================================================")
+	log.Info("================================================")
+	log.Info("✅ All pipelines completed successfully!")
+	log.Info("================================================")
 
 	return nil
 }

@@ -7,7 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"sync"
+	"time"
+
+	"github.com/ready-to-release/eac/src/commands/internal/output"
 )
 
 // Orchestrator manages parallel execution of work items
@@ -109,6 +113,8 @@ func (o *Orchestrator) executeParallel(workItems []WorkItem) []WorkResult {
 
 // processWorkItem processes a single work item
 func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
+	startTime := time.Now()
+
 	result := WorkResult{
 		Moniker: item.Moniker,
 		Index:   item.Index,
@@ -122,6 +128,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		result.ExitCode = 1
 		result.Errors = []string{fmt.Sprintf("Failed to create parent directory %s: %v", parentDir, err)}
 		result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
+		result.Duration = time.Since(startTime)
 		o.display.markCompleted(&result)
 		return result
 	}
@@ -133,6 +140,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		result.ExitCode = 1
 		result.Errors = []string{fmt.Sprintf("Failed to create directory %s: %v", moduleOutputDir, err)}
 		result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
+		result.Duration = time.Since(startTime)
 		o.display.markCompleted(&result)
 		return result
 	}
@@ -144,6 +152,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		result.ExitCode = 1
 		result.Errors = []string{fmt.Sprintf("Failed to create log file %s: %v", logPath, err)}
 		result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
+		result.Duration = time.Since(startTime)
 		o.display.markCompleted(&result)
 		return result
 	}
@@ -162,6 +171,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	result.Warnings = warnings
 	result.Errors = errors
 	result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
+	result.Duration = time.Since(startTime)
 
 	// Mark as completed in display (will print completion line)
 	o.display.markCompleted(&result)
@@ -173,64 +183,63 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 func (o *Orchestrator) PrintSummary(results []WorkResult) {
 	totalFailed := 0
 	totalWarnings := 0
-	modulesWithWarnings := []string{}
+	var totalDuration time.Duration
 	failedModules := []string{}
 
 	for _, result := range results {
+		totalDuration += result.Duration
 		if result.ExitCode != 0 {
 			totalFailed++
 			failedModules = append(failedModules, result.Moniker)
 		}
 		if len(result.Warnings) > 0 {
 			totalWarnings += len(result.Warnings)
-			modulesWithWarnings = append(modulesWithWarnings, result.Moniker)
 		}
 	}
 
 	nl := LineEnding
-	fmt.Fprintf(o.orchestratorOut, "%s===========================================%s", nl, nl)
-	fmt.Fprintf(o.orchestratorOut, "%s Summary%s", capitalize(o.config.ActionVerb), nl)
-	fmt.Fprintf(o.orchestratorOut, "===========================================%s", nl)
-	fmt.Fprintf(o.orchestratorOut, "Total modules: %d%s", len(results), nl)
-	fmt.Fprintf(o.orchestratorOut, "Passed: %d%s", len(results)-totalFailed, nl)
-	fmt.Fprintf(o.orchestratorOut, "Failed: %d%s", totalFailed, nl)
-	fmt.Fprintf(o.orchestratorOut, "Warnings: %d (in %d modules)%s", totalWarnings, len(modulesWithWarnings), nl)
+	fmt.Fprintf(o.orchestratorOut, "%s%s%s", nl, output.SectionHeader(capitalize(o.config.ActionVerb)+" Summary"), nl)
+	fmt.Fprintf(o.orchestratorOut, "%s%s", output.SummaryCount("Modules", len(results), len(results)-totalFailed, totalFailed), nl)
 
+	if totalWarnings > 0 {
+		fmt.Fprintf(o.orchestratorOut, "Warnings: %d%s", totalWarnings, nl)
+	}
+
+	// Show failed modules with errors
 	if len(failedModules) > 0 {
-		fmt.Fprintf(o.orchestratorOut, "%s❌ Failed modules:%s", nl, nl)
+		fmt.Fprintf(o.orchestratorOut, "%s❌ Failed:%s", nl, nl)
 		for _, result := range results {
 			if result.ExitCode != 0 {
-				fmt.Fprintf(o.orchestratorOut, "  - %s (exit code: %d)%s", result.Moniker, result.ExitCode, nl)
+				fmt.Fprintf(o.orchestratorOut, "  %s%s", result.Moniker, nl)
 				if len(result.Errors) > 0 {
-					fmt.Fprintf(o.orchestratorOut, "    Errors:%s", nl)
 					for _, errMsg := range result.Errors {
 						if len(errMsg) > 80 {
 							errMsg = errMsg[:77] + "..."
 						}
-						fmt.Fprintf(o.orchestratorOut, "      • %s%s", errMsg, nl)
+						fmt.Fprintf(o.orchestratorOut, "    %s%s", errMsg, nl)
 					}
 				}
 			}
 		}
 	}
 
-	if len(modulesWithWarnings) > 0 {
-		fmt.Fprintf(o.orchestratorOut, "%s⚠️  Modules with warnings:%s", nl, nl)
-		for _, result := range results {
-			if len(result.Warnings) > 0 && result.ExitCode == 0 {
-				fmt.Fprintf(o.orchestratorOut, "  - %s (%d warnings)%s", result.Moniker, len(result.Warnings), nl)
-				for _, warn := range result.Warnings {
-					// Show full warning message (no truncation)
-					fmt.Fprintf(o.orchestratorOut, "      • %s%s", warn, nl)
-				}
-			}
-		}
-	}
+	// Timing summary
+	fmt.Fprintf(o.orchestratorOut, "%s%s%s", nl, output.SectionHeader("Timing Summary"), nl)
 
-	fmt.Fprintf(o.orchestratorOut, "%sOrchestrator log: %s%s", nl,
-		filepath.Join(o.config.OutputBaseDir, o.config.OrchestratorLogName), nl)
-	fmt.Fprintf(o.orchestratorOut, "Module logs: %s%s",
-		filepath.Join(o.config.OutputBaseDir, "<module>", o.config.LogFileName), nl)
+	// Sort results by duration (longest first)
+	sortedResults := make([]WorkResult, len(results))
+	copy(sortedResults, results)
+	sort.Slice(sortedResults, func(i, j int) bool {
+		return sortedResults[i].Duration > sortedResults[j].Duration
+	})
+
+	for _, result := range sortedResults {
+		fmt.Fprintf(o.orchestratorOut, "%s%s", output.TimingLine(result.Duration, result.Moniker), nl)
+	}
+	fmt.Fprintf(o.orchestratorOut, "%s%s", output.TimingTotal(totalDuration), nl)
+
+	// Output location
+	fmt.Fprintf(o.orchestratorOut, "%sOutput: %s%s", nl, o.config.OutputBaseDir, nl)
 }
 
 // Close releases resources held by the orchestrator

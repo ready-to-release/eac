@@ -3,8 +3,6 @@
 package show
 
 import (
-	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -22,14 +20,14 @@ func ShowFiles() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
 	// Generate report for all tracked files (tracked only, no ignored, not staged only)
 	report, err := reports.GetFilesModulesReport(true, false, false, workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
@@ -65,6 +63,6 @@ func ShowFiles() int {
 		tb.AddRow(file.Name, modules)
 	}
 
-	fmt.Println(tb.Build())
+	log.Info(tb.Build())
 	return 0
 }

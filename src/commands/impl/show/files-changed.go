@@ -3,8 +3,6 @@
 package show
 
 import (
-	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -22,7 +20,7 @@ func ShowFilesChanged() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -31,7 +29,7 @@ func ShowFilesChanged() int {
 	cmd.Dir = workspaceRoot
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting changed files: %v\n", err)
+		log.Errorf("Error getting changed files: %v", err)
 		return 1
 	}
 
@@ -43,7 +41,7 @@ func ShowFilesChanged() int {
 	// Get full report for all tracked files
 	report, err := reports.GetFilesModulesReport(true, false, false, workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
@@ -69,7 +67,7 @@ func ShowFilesChanged() int {
 
 	result := tb.Build()
 	if result != "" {
-		fmt.Println(result)
+		log.Info(result)
 	}
 
 	return 0

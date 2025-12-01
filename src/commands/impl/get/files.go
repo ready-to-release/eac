@@ -47,14 +47,14 @@ func GetFiles() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
 	}
 
 	// Parse filter flags
 	filterOpts, err := parseFilterFlags(os.Args[1:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 

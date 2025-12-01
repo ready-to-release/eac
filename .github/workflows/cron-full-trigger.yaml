@@ -73,7 +73,7 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         run: |
           echo "Triggering full CI rebuild..."
-          gh workflow run change-trigger.yaml \
+          gh workflow run trigger-ci.yaml \
             --repo ${{ github.repository }} \
             --ref main \
             -f trigger-all=true
@@ -86,7 +86,7 @@ jobs:
           for i in 1 2 3 4 5; do
             RUN_ID=$(gh run list \
               --repo ${{ github.repository }} \
-              --workflow "change-trigger.yaml" \
+              --workflow "trigger-ci.yaml" \
               --branch main \
               --limit 1 \
               --json databaseId,status,createdAt \
@@ -190,7 +190,7 @@ jobs:
             echo "gh run view ${RUN_ID} --repo ${{ github.repository }} --log-failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "# Compare with recent incremental CI runs" >> $GITHUB_STEP_SUMMARY
-            echo "gh run list --repo ${{ github.repository }} --workflow change-trigger.yaml --branch main --limit 5" >> $GITHUB_STEP_SUMMARY
+            echo "gh run list --repo ${{ github.repository }} --workflow trigger-ci.yaml --branch main --limit 5" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "# Check which modules failed in full rebuild" >> $GITHUB_STEP_SUMMARY
             echo "gh run view ${RUN_ID} --repo ${{ github.repository }} --json jobs --jq '.jobs[] | select(.conclusion != \"success\") | {name, conclusion}'" >> $GITHUB_STEP_SUMMARY

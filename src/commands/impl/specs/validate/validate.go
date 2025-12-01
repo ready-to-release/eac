@@ -32,6 +32,8 @@ import (
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
+var log = logging.C()
+
 func init() {
 	registry.Register(SpecsValidate)
 }
@@ -89,7 +91,7 @@ func SpecsValidate() int {
 	// Parse configuration
 	config, err := parseValidateConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -103,7 +105,7 @@ func SpecsValidate() int {
 	if err != nil {
 		// Continue without logger - not fatal
 		if config.Verbose {
-			fmt.Fprintf(os.Stderr, "Warning: Failed to initialize logger: %v\n", err)
+			log.Errorf("Warning: Failed to initialize logger: %v", err)
 		}
 	} else {
 		config.Logger = logger
@@ -126,7 +128,7 @@ func SpecsValidate() int {
 				zap.String("path", config.Path),
 				zap.Error(err))
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -138,7 +140,7 @@ func SpecsValidate() int {
 				zap.String("path", config.Path),
 				zap.Error(err))
 		}
-		fmt.Fprintf(os.Stderr, "Error: file or directory not found: %s\n", config.Path)
+		log.Errorf("Error: file or directory not found: %s", config.Path)
 		return 1
 	}
 
@@ -156,7 +158,7 @@ func SpecsValidate() int {
 			if config.Logger != nil {
 				config.Logger.Error("Directory validation failed", zap.Error(err))
 			}
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			log.Errorf("Error: %v", err)
 			return 1
 		}
 	} else {
@@ -168,7 +170,7 @@ func SpecsValidate() int {
 					zap.String("path", config.Path),
 					zap.Error(err))
 			}
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			log.Errorf("Error: %v", err)
 			return 1
 		}
 
@@ -181,10 +183,10 @@ func SpecsValidate() int {
 						zap.String("path", config.Path),
 						zap.Error(fixErr))
 				}
-				fmt.Fprintf(os.Stderr, "Error fixing file: %v\n", fixErr)
+				log.Errorf("Error fixing file: %v", fixErr)
 			} else if fixResult.FixCount() > 0 {
 				// Display fix results
-				fmt.Print(formatFixResult(fixResult, config.RepositoryRoot))
+				log.Info(formatFixResult(fixResult, config.RepositoryRoot))
 
 				if config.Logger != nil {
 					config.Logger.Info("Applied fixes",
@@ -200,7 +202,7 @@ func SpecsValidate() int {
 							zap.String("path", config.Path),
 							zap.Error(err))
 					}
-					fmt.Fprintf(os.Stderr, "Error re-validating after fixes: %v\n", err)
+					log.Errorf("Error re-validating after fixes: %v", err)
 					return 1
 				}
 			}
@@ -474,7 +476,7 @@ func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, ch
 					zap.String("path", path),
 					zap.Error(validateErr))
 			}
-			fmt.Fprintf(os.Stderr, "Warning: failed to validate %s: %v\n", path, validateErr)
+			log.Errorf("Warning: failed to validate %s: %v", path, validateErr)
 			return nil
 		}
 
@@ -498,11 +500,11 @@ func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, ch
 		// In quiet mode, only show progress for invalid files
 		if !quiet || !result.Valid {
 			if result.Valid && len(result.Errors) == 0 {
-				fmt.Printf("✅ %s\n", relativePath(path, repoRoot))
+				log.Infof("✅ %s", relativePath(path, repoRoot))
 			} else if result.Valid {
-				fmt.Printf("✅ %s (%d warning(s))\n", relativePath(path, repoRoot), len(result.Errors))
+				log.Infof("✅ %s (%d warning(s))", relativePath(path, repoRoot), len(result.Errors))
 			} else {
-				fmt.Printf("❌ %s\n", relativePath(path, repoRoot))
+				log.Infof("❌ %s", relativePath(path, repoRoot))
 			}
 		}
 
@@ -527,27 +529,27 @@ func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, ch
 // outputText displays validation results in text format
 func outputText(results []*ValidationResult, quiet bool, verbose bool) {
 	if len(results) == 0 {
-		fmt.Println("No specification files found")
+		log.Info("No specification files found")
 		return
 	}
 
 	// For single file, show detailed output
 	if len(results) == 1 {
-		fmt.Println(formatValidationResult(results[0]))
+		log.Info(formatValidationResult(results[0]))
 		return
 	}
 
 	// For multiple files, show summary
-	fmt.Println()
-	fmt.Println(formatValidationSummary(results))
+	log.Info("")
+	log.Info(formatValidationSummary(results))
 
 	// Show details for failed validations (unless quiet)
 	if !quiet {
-		fmt.Println()
+		log.Info("")
 		for _, result := range results {
 			if !result.Valid {
-				fmt.Println(formatValidationResult(result))
-				fmt.Println()
+				log.Info(formatValidationResult(result))
+				log.Info("")
 			}
 		}
 	}
@@ -567,7 +569,7 @@ func outputJSON(results []*ValidationResult) {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(output); err != nil {
-		fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+		log.Errorf("Error encoding JSON: %v", err)
 	}
 }
 

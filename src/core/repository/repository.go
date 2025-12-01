@@ -5,17 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/ready-to-release/eac/src/core/git"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
 
-// debugLogRepo outputs a debug message to stderr if EAC_DEBUG environment variable is set
-func debugLogRepo(msg string) {
-	if os.Getenv("EAC_DEBUG") != "" {
-		fmt.Fprintf(os.Stderr, "%s\tDEBUG\trepository/repository.go\t%s\n", time.Now().Format(time.RFC3339Nano), msg)
-	}
-}
+// log is the package-level logger for repository operations
+var log = logging.C()
 
 // Repository represents a Git repository
 type Repository struct {
@@ -139,18 +135,18 @@ type RepositoryFileWithModule struct {
 //	repo, _ := git.Open("/path/to/repo")
 //	files, err := repository.GetRepositoryFiles(repo, true, false, false, false)
 func GetRepositoryFiles(repo git.GitRepository, trackedOnly, includeIgnored, includeGitInternalFiles, stagedOnly bool) ([]FileInfo, error) {
-	debugLogRepo("GetRepositoryFiles: start")
+	log.Debug("GetRepositoryFiles: start")
 	rootPath := repo.RootPath()
 	var files []FileInfo
 
 	// If stagedOnly is true, get only staged files
 	if stagedOnly {
-		debugLogRepo("GetRepositoryFiles: calling repo.StagedFiles()")
+		log.Debug("GetRepositoryFiles: calling repo.StagedFiles()")
 		stagedFiles, err := repo.StagedFiles()
 		if err != nil {
 			return nil, NewRepositoryError("staged files", rootPath, err, "failed to list staged files")
 		}
-		debugLogRepo("GetRepositoryFiles: repo.StagedFiles() complete")
+		log.Debug("GetRepositoryFiles: repo.StagedFiles() complete")
 
 		for _, line := range stagedFiles {
 			line = strings.TrimSpace(line)

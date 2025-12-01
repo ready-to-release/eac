@@ -27,7 +27,10 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(CISummaryLink)
@@ -36,8 +39,8 @@ func init() {
 func CISummaryLink() int {
 	// Parse arguments
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "Error: run ID required")
-		fmt.Fprintln(os.Stderr, "Usage: ci summary-link <run-id> [--type <type>] [--artifact <name>]")
+		log.Error("Error: run ID required")
+		log.Error("Usage: ci summary-link <run-id> [--type <type>] [--artifact <name>]")
 		return 1
 	}
 
@@ -156,7 +159,7 @@ func CISummaryLink() int {
 
 	sb.WriteString("```\n")
 
-	fmt.Print(sb.String())
+	log.Info(sb.String())
 	return 0
 }
 

@@ -13,7 +13,10 @@ import (
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/config"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(ShowConfig)
@@ -31,13 +34,13 @@ func ShowConfig() int {
 	// Load all configs with defaults applied
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load configuration: %v\n", err)
+		log.Errorf("failed to load configuration: %v", err)
 		return 1
 	}
 
 	// Display summary table
-	fmt.Println("# EAC Configuration Summary")
-	fmt.Println()
+	log.Info("# EAC Configuration Summary")
+	log.Info("")
 
 	summaryTb := render.NewTableBuilder().
 		WithHeaders("Config", "Status", "Items")
@@ -77,28 +80,28 @@ func ShowConfig() int {
 		summaryTb.AddRow("test_suites", "✗ not loaded", "-")
 	}
 
-	fmt.Println(summaryTb.Build())
-	fmt.Println()
+	log.Info(summaryTb.Build())
+	log.Info("")
 
 	// Display detailed tables for each config
 
 	// Modules
 	if cfg.Modules != nil && len(cfg.Modules.Modules) > 0 {
-		fmt.Println("## Modules")
-		fmt.Println()
+		log.Info("## Modules")
+		log.Info("")
 		modTb := render.NewTableBuilder().
 			WithHeaders("Moniker", "Type", "Root")
 		for _, mod := range cfg.Modules.Modules {
 			modTb.AddRow(mod.Moniker, mod.Type, mod.Files.Root)
 		}
-		fmt.Println(modTb.Build())
-		fmt.Println()
+		log.Info(modTb.Build())
+		log.Info("")
 	}
 
 	// Module Types
 	if cfg.ModuleTypes != nil && len(cfg.ModuleTypes.Types) > 0 {
-		fmt.Println("## Module Types")
-		fmt.Println()
+		log.Info("## Module Types")
+		log.Info("")
 		typeTb := render.NewTableBuilder().
 			WithHeaders("Type", "Build Deps", "Capabilities")
 		for _, t := range cfg.ModuleTypes.Types {
@@ -112,14 +115,14 @@ func ShowConfig() int {
 			}
 			typeTb.AddRow(t.Name, deps, caps)
 		}
-		fmt.Println(typeTb.Build())
-		fmt.Println()
+		log.Info(typeTb.Build())
+		log.Info("")
 	}
 
 	// Environments
 	if cfg.Environments != nil && len(cfg.Environments.Environments) > 0 {
-		fmt.Println("## Environments")
-		fmt.Println()
+		log.Info("## Environments")
+		log.Info("")
 		envTb := render.NewTableBuilder().
 			WithHeaders("Name", "Type", "Description")
 		for _, env := range cfg.Environments.Environments {
@@ -129,14 +132,14 @@ func ShowConfig() int {
 			}
 			envTb.AddRow(env.Name, env.Type, desc)
 		}
-		fmt.Println(envTb.Build())
-		fmt.Println()
+		log.Info(envTb.Build())
+		log.Info("")
 	}
 
 	// Testing Tags - group by type
 	if cfg.TestingTags != nil && len(cfg.TestingTags.Tags) > 0 {
-		fmt.Println("## Testing Tags")
-		fmt.Println()
+		log.Info("## Testing Tags")
+		log.Info("")
 		// Group tags by type
 		tagsByType := make(map[string][]config.TagDefinition)
 		for _, tag := range cfg.TestingTags.Tags {
@@ -147,8 +150,8 @@ func ShowConfig() int {
 			if len(tags) == 0 {
 				continue
 			}
-			fmt.Printf("### %s\n", tagType.Type)
-			fmt.Println()
+			log.Infof("### %s", tagType.Type)
+			log.Info("")
 			tagTb := render.NewTableBuilder().
 				WithHeaders("Tag", "Description")
 			for _, tag := range tags {
@@ -158,15 +161,15 @@ func ShowConfig() int {
 				}
 				tagTb.AddRow(tag.Tag, desc)
 			}
-			fmt.Println(tagTb.Build())
-			fmt.Println()
+			log.Info(tagTb.Build())
+			log.Info("")
 		}
 	}
 
 	// Test Suites
 	if cfg.TestSuites != nil && len(cfg.TestSuites.Suites) > 0 {
-		fmt.Println("## Test Suites")
-		fmt.Println()
+		log.Info("## Test Suites")
+		log.Info("")
 		suiteTb := render.NewTableBuilder().
 			WithHeaders("Moniker", "Name", "Description")
 		for _, suite := range cfg.TestSuites.Suites {
@@ -176,26 +179,26 @@ func ShowConfig() int {
 			}
 			suiteTb.AddRow(suite.Moniker, suite.Name, desc)
 		}
-		fmt.Println(suiteTb.Build())
-		fmt.Println()
+		log.Info(suiteTb.Build())
+		log.Info("")
 	}
 
-	fmt.Println("Use 'r2r get config' for full YAML output with all fields.")
+	log.Info("Use 'r2r get config' for full YAML output with all fields.")
 
 	return 0
 }
 
 func printShowConfigUsage() {
-	fmt.Println("Display all EAC configuration in human-readable format")
-	fmt.Println()
-	fmt.Println("Usage: r2r show config")
-	fmt.Println()
-	fmt.Println("This command displays a summary of all loaded configurations:")
-	fmt.Println("  - modules: Module contracts with defaults applied")
-	fmt.Println("  - module_types: Module type definitions")
-	fmt.Println("  - environments: Environment contracts")
-	fmt.Println("  - testing_tags: Testing tag definitions")
-	fmt.Println("  - test_suites: Test suite configurations")
-	fmt.Println()
-	fmt.Println("For full structured output, use 'r2r get config'.")
+	log.Info("Display all EAC configuration in human-readable format")
+	log.Info("")
+	log.Info("Usage: r2r show config")
+	log.Info("")
+	log.Info("This command displays a summary of all loaded configurations:")
+	log.Info("  - modules: Module contracts with defaults applied")
+	log.Info("  - module_types: Module type definitions")
+	log.Info("  - environments: Environment contracts")
+	log.Info("  - testing_tags: Testing tag definitions")
+	log.Info("  - test_suites: Test suite configurations")
+	log.Info("")
+	log.Info("For full structured output, use 'r2r get config'.")
 }

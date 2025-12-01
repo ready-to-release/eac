@@ -29,6 +29,7 @@ func (o *Output) Info(msg string) {
 	if o.logger != nil {
 		o.logger.Info(msg)
 	}
+	// Keep fmt.Println for this wrapper's output methods
 	fmt.Println(msg)
 }
 
@@ -44,6 +45,7 @@ func (o *Output) Error(msg string) {
 	if o.logger != nil {
 		o.logger.Error(msg)
 	}
+	// Keep fmt.Fprintln for this wrapper's output methods
 	fmt.Fprintln(os.Stderr, msg)
 }
 
@@ -72,6 +74,7 @@ func (o *Output) Warn(msg string) {
 	if o.logger != nil {
 		o.logger.Warn(msg)
 	}
+	// Keep fmt.Fprintf for this wrapper's output methods
 	fmt.Fprintf(os.Stderr, "Warning: %s\n", msg)
 }
 
@@ -84,10 +87,14 @@ func (o *Output) Warnf(format string, args ...interface{}) {
 // Progress prints a progress message (console only, no logging).
 // Use this for user-facing progress indicators like spinners or status updates.
 func (o *Output) Progress(msg string) {
+	// For progress messages, we print to console but don't log to file
+	// This is intentional - progress indicators are ephemeral
 	fmt.Println(msg)
 }
 
 // Progressf prints a formatted progress message (console only).
 func (o *Output) Progressf(format string, args ...interface{}) {
+	// For progress messages, we print to console but don't log to file
+	// This is intentional - progress indicators are ephemeral
 	fmt.Printf(format+"\n", args...)
 }
