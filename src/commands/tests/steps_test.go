@@ -37,6 +37,14 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/test"
 	_ "github.com/ready-to-release/eac/src/commands/impl/work"
 	_ "github.com/ready-to-release/eac/src/commands/impl/risks"
+	_ "github.com/ready-to-release/eac/src/commands/impl/security"
+	_ "github.com/ready-to-release/eac/src/commands/impl/security/sbom"
+	_ "github.com/ready-to-release/eac/src/commands/impl/security/vuln"
+	_ "github.com/ready-to-release/eac/src/commands/impl/security/secrets"
+	_ "github.com/ready-to-release/eac/src/commands/impl/security/compliance"
+	_ "github.com/ready-to-release/eac/src/commands/impl/security/iac"
+	_ "github.com/ready-to-release/eac/src/commands/impl/security/sast"
+	_ "github.com/ready-to-release/eac/src/commands/impl/security/zap"
 
 	// Import templates test packages
 	listtests "github.com/ready-to-release/eac/src/commands/impl/templates/list/tests"
@@ -509,10 +517,18 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Risks command steps
 	InitializeRisksScenario(sc)
 
+	// Security command steps
+	initializeSecuritySteps(sc)
+
 	sc.Before(func(ctx context.Context, scenario *godog.Scenario) (context.Context, error) {
 		initializeContext()
 		// Re-sync shared context after initializeContext() resets ctx
 		syncCtxToShared()
+
+		// Set up security mocks for ALL scenarios (security commands use mocking even without isolated env)
+		if err := setupSecurityMocks(); err != nil {
+			return ctx, fmt.Errorf("failed to setup security mocks: %w", err)
+		}
 
 		// Check for @env:isolated-test-project tag
 		for _, tag := range scenario.Tags {
