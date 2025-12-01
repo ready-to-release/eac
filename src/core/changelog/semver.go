@@ -152,14 +152,21 @@ func CalculateBump(entries []Entry) BumpType {
 
 // CalculateNextVersion determines the next version based on current and entries
 func CalculateNextVersion(current string, versionType VersionType, entries []Entry, now time.Time, existingVersions []string) (string, error) {
-	return CalculateNextVersionConstrained(current, versionType, entries, now, existingVersions, BumpMajor)
+	// Legacy function - assumes file changes if entries exist
+	hasFileChanges := len(entries) > 0
+	return CalculateNextVersionConstrained(current, versionType, entries, now, existingVersions, BumpMajor, hasFileChanges)
 }
 
 // CalculateNextVersionConstrained determines the next version with a maximum bump constraint
 // maxBump limits the highest bump type allowed (e.g., BumpPatch means only patch bumps are allowed)
-func CalculateNextVersionConstrained(current string, versionType VersionType, entries []Entry, now time.Time, existingVersions []string, maxBump BumpType) (string, error) {
+// hasFileChanges indicates if module files changed (determined by file ownership, not commit message)
+func CalculateNextVersionConstrained(current string, versionType VersionType, entries []Entry, now time.Time, existingVersions []string, maxBump BumpType, hasFileChanges bool) (string, error) {
 	if versionType == Calver {
-		return NextCalver(now, existingVersions), nil
+		// Calver always generates new version if there are file changes
+		if hasFileChanges {
+			return NextCalver(now, existingVersions), nil
+		}
+		return current, nil
 	}
 
 	// Semver
@@ -169,6 +176,13 @@ func CalculateNextVersionConstrained(current string, versionType VersionType, en
 	}
 
 	bump := CalculateBump(entries)
+
+	// File changes always warrant at least a patch bump, regardless of commit message types
+	// This ensures that docs/chore/test/ci/build commits still trigger releases when files change
+	if hasFileChanges && bump == BumpNone {
+		bump = BumpPatch
+	}
+
 	if bump == BumpNone {
 		return current, nil
 	}

@@ -3,5 +3,7 @@
 # SAFE TO COMMIT: Contains only environment variable references, not actual secrets
 
 provider:
-  name: claude-cli
-  model: claude-sonnet-4-5
+  name: claude-api
+  model: claude-3-haiku-20240307
+  endpoint: https://api.anthropic.com/v1
+  api_key: ${ANTHROPIC_API_KEY}

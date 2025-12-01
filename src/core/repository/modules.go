@@ -1,11 +1,21 @@
 package repository
 
 import (
+	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/git"
 )
+
+// debugLog outputs a debug message to stderr if EAC_DEBUG environment variable is set
+func debugLog(msg string) {
+	if os.Getenv("EAC_DEBUG") != "" {
+		fmt.Fprintf(os.Stderr, "%s\tDEBUG\trepository/modules.go\t%s\n", time.Now().Format(time.RFC3339Nano), msg)
+	}
+}
 
 // EnrichFilesWithModules takes a list of files and determines which module(s) own each file.
 // Returns a list of files with their module ownership information.
@@ -30,11 +40,14 @@ import (
 //	    fmt.Printf("%s -> %v\n", f.Name, f.Modules)
 //	}
 func EnrichFilesWithModules(files []FileInfo, workspaceRoot string) ([]RepositoryFileWithModule, error) {
+	debugLog("EnrichFilesWithModules: start")
 	// Load module contracts
+	debugLog("EnrichFilesWithModules: calling modules.LoadFromWorkspace")
 	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		return nil, NewRepositoryError("enrich", workspaceRoot, err, "failed to load module contracts")
 	}
+	debugLog("EnrichFilesWithModules: modules.LoadFromWorkspace complete")
 
 	// Create result list
 	result := make([]RepositoryFileWithModule, 0, len(files))
@@ -145,16 +158,22 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 //	    }
 //	}
 func GetRepositoryFilesWithModules(repo git.GitRepository, trackedOnly, includeIgnored, stagedOnly bool) ([]RepositoryFileWithModule, error) {
+	debugLog("GetRepositoryFilesWithModules: start")
 	rootPath := repo.RootPath()
 
 	// Get all repository files (exclude Git internal files by default)
+	debugLog("GetRepositoryFilesWithModules: calling GetRepositoryFiles")
 	files, err := GetRepositoryFiles(repo, trackedOnly, includeIgnored, false, stagedOnly)
 	if err != nil {
 		return nil, err
 	}
+	debugLog("GetRepositoryFilesWithModules: GetRepositoryFiles complete")
 
 	// Enrich with module ownership
-	return EnrichFilesWithModules(files, rootPath)
+	debugLog("GetRepositoryFilesWithModules: calling EnrichFilesWithModules")
+	result, err := EnrichFilesWithModules(files, rootPath)
+	debugLog("GetRepositoryFilesWithModules: EnrichFilesWithModules complete")
+	return result, err
 }
 
 // GetFilesByModule groups files by their owning module(s).

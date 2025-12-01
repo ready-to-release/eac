@@ -4,11 +4,12 @@ package git
 
 import (
 	"fmt"
-	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -16,6 +17,30 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
+
+// debugLog outputs a debug message to stderr if EAC_DEBUG environment variable is set
+func debugLog(msg string) {
+	if os.Getenv("EAC_DEBUG") != "" {
+		fmt.Fprintf(os.Stderr, "%s\tDEBUG\tgit/git.go\t%s\n", time.Now().Format(time.RFC3339Nano), msg)
+	}
+}
+
+// runGitCommand executes a git command in the repository and returns the output.
+// This is used for performance-critical operations where native git is faster than go-git.
+func (r *Repository) runGitCommand(args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = r.rootPath
+
+	output, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("git %s failed: %s", args[0], string(exitErr.Stderr))
+		}
+		return "", err
+	}
+
+	return string(output), nil
+}
 
 // Repository wraps a go-git repository with convenience methods.
 type Repository struct {
@@ -27,6 +52,7 @@ type Repository struct {
 // If path is empty, uses the current working directory.
 // It searches upward through parent directories to find the repository root.
 func Open(path string) (*Repository, error) {
+	debugLog("Open: start")
 	if path == "" {
 		var err error
 		path, err = os.Getwd()
@@ -41,18 +67,22 @@ func Open(path string) (*Repository, error) {
 	}
 
 	// Open repository, detecting .git directory by walking up
+	debugLog("Open: calling PlainOpenWithOptions")
 	repo, err := gogit.PlainOpenWithOptions(absPath, &gogit.PlainOpenOptions{
 		DetectDotGit: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open repository: %w", err)
 	}
+	debugLog("Open: PlainOpenWithOptions complete")
 
 	// Get the worktree to find the root path
+	debugLog("Open: getting worktree")
 	wt, err := repo.Worktree()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get worktree: %w", err)
 	}
+	debugLog("Open: complete")
 
 	return &Repository{
 		repo:     repo,
@@ -183,27 +213,22 @@ func (r *Repository) TrackedFiles() ([]string, error) {
 
 // StagedFiles returns files currently staged in the index (added, modified, renamed).
 // This corresponds to `git diff --cached --name-only --diff-filter=ACMR`.
+// Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedFiles() ([]string, error) {
-	wt, err := r.repo.Worktree()
+	debugLog("StagedFiles: start")
+	debugLog("StagedFiles: calling git diff --cached --name-only")
+
+	output, err := r.runGitCommand("diff", "--cached", "--name-only", "--diff-filter=ACMR")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get worktree: %w", err)
+		return nil, fmt.Errorf("failed to get staged files: %w", err)
+	}
+	debugLog("StagedFiles: git command complete")
+
+	if output == "" {
+		return []string{}, nil
 	}
 
-	status, err := wt.Status()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get status: %w", err)
-	}
-
-	var files []string
-	for path, fileStatus := range status {
-		// Check staging status (index status)
-		// A = Added, M = Modified, R = Renamed, C = Copied
-		switch fileStatus.Staging {
-		case gogit.Added, gogit.Modified, gogit.Renamed, gogit.Copied:
-			files = append(files, path)
-		}
-	}
-
+	files := strings.Split(strings.TrimSpace(output), "\n")
 	return files, nil
 }
 
@@ -357,209 +382,34 @@ func (r *Repository) AddRemote(name, url string) error {
 
 // StagedDiff returns the unified diff of all staged changes.
 // Equivalent to `git diff --staged`.
+// Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedDiff() (string, error) {
-	wt, err := r.repo.Worktree()
+	debugLog("StagedDiff: start")
+	debugLog("StagedDiff: calling git diff --cached")
+
+	output, err := r.runGitCommand("diff", "--cached")
 	if err != nil {
-		return "", fmt.Errorf("failed to get worktree: %w", err)
+		return "", fmt.Errorf("failed to get staged diff: %w", err)
 	}
+	debugLog("StagedDiff: git command complete")
 
-	status, err := wt.Status()
-	if err != nil {
-		return "", fmt.Errorf("failed to get status: %w", err)
-	}
-
-	// Get HEAD commit tree (for comparison)
-	var headTree *object.Tree
-	head, err := r.repo.Head()
-	if err == nil {
-		commit, err := r.repo.CommitObject(head.Hash())
-		if err == nil {
-			headTree, _ = commit.Tree()
-		}
-	}
-	// If no HEAD (empty repo), headTree will be nil - that's fine
-
-	var diffBuilder strings.Builder
-
-	for path, fileStatus := range status {
-		// Only process staged changes
-		switch fileStatus.Staging {
-		case gogit.Added, gogit.Modified, gogit.Renamed, gogit.Copied, gogit.Deleted:
-			// Get the staged content from the index
-			idx, err := r.repo.Storer.Index()
-			if err != nil {
-				continue
-			}
-
-			// Find the entry in the index
-			var stagedContent string
-			var stagedBlob plumbing.Hash
-			for _, entry := range idx.Entries {
-				if entry.Name == path {
-					stagedBlob = entry.Hash
-					break
-				}
-			}
-
-			if stagedBlob != plumbing.ZeroHash {
-				blob, err := r.repo.BlobObject(stagedBlob)
-				if err == nil {
-					reader, err := blob.Reader()
-					if err == nil {
-						content, _ := io.ReadAll(reader)
-						stagedContent = string(content)
-						reader.Close()
-					}
-				}
-			}
-
-			// Get the original content from HEAD (if exists)
-			var originalContent string
-			if headTree != nil && fileStatus.Staging != gogit.Added {
-				file, err := headTree.File(path)
-				if err == nil {
-					originalContent, _ = file.Contents()
-				}
-			}
-
-			// Generate unified diff
-			diffOutput := generateUnifiedDiff(path, originalContent, stagedContent, fileStatus.Staging)
-			diffBuilder.WriteString(diffOutput)
-		}
-	}
-
-	return diffBuilder.String(), nil
+	return output, nil
 }
 
 // StagedDiffStats returns the stat summary of staged changes.
 // Equivalent to `git diff --staged --stat`.
+// Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedDiffStats() (string, error) {
-	wt, err := r.repo.Worktree()
+	debugLog("StagedDiffStats: start")
+	debugLog("StagedDiffStats: calling git diff --cached --stat")
+
+	output, err := r.runGitCommand("diff", "--cached", "--stat")
 	if err != nil {
-		return "", fmt.Errorf("failed to get worktree: %w", err)
+		return "", fmt.Errorf("failed to get staged diff stats: %w", err)
 	}
+	debugLog("StagedDiffStats: git command complete")
 
-	status, err := wt.Status()
-	if err != nil {
-		return "", fmt.Errorf("failed to get status: %w", err)
-	}
-
-	// Get HEAD commit tree (for comparison)
-	var headTree *object.Tree
-	head, err := r.repo.Head()
-	if err == nil {
-		commit, err := r.repo.CommitObject(head.Hash())
-		if err == nil {
-			headTree, _ = commit.Tree()
-		}
-	}
-
-	var stats []string
-	var totalInsertions, totalDeletions int
-	filesChanged := 0
-
-	for path, fileStatus := range status {
-		// Only process staged changes
-		switch fileStatus.Staging {
-		case gogit.Added, gogit.Modified, gogit.Renamed, gogit.Copied, gogit.Deleted:
-			filesChanged++
-
-			// Get the staged content from the index
-			idx, err := r.repo.Storer.Index()
-			if err != nil {
-				continue
-			}
-
-			var stagedContent string
-			var stagedBlob plumbing.Hash
-			for _, entry := range idx.Entries {
-				if entry.Name == path {
-					stagedBlob = entry.Hash
-					break
-				}
-			}
-
-			if stagedBlob != plumbing.ZeroHash {
-				blob, err := r.repo.BlobObject(stagedBlob)
-				if err == nil {
-					reader, err := blob.Reader()
-					if err == nil {
-						content, _ := io.ReadAll(reader)
-						stagedContent = string(content)
-						reader.Close()
-					}
-				}
-			}
-
-			// Get the original content from HEAD (if exists)
-			var originalContent string
-			if headTree != nil && fileStatus.Staging != gogit.Added {
-				file, err := headTree.File(path)
-				if err == nil {
-					originalContent, _ = file.Contents()
-				}
-			}
-
-			// Calculate insertions/deletions
-			originalLines := strings.Split(originalContent, "\n")
-			stagedLines := strings.Split(stagedContent, "\n")
-
-			if originalContent == "" {
-				originalLines = []string{}
-			}
-			if stagedContent == "" {
-				stagedLines = []string{}
-			}
-
-			insertions := 0
-			deletions := 0
-
-			if fileStatus.Staging == gogit.Added {
-				insertions = len(stagedLines)
-			} else if fileStatus.Staging == gogit.Deleted {
-				deletions = len(originalLines)
-			} else {
-				// Simple line count diff (not a true diff algorithm, but good for stats)
-				insertions = max(0, len(stagedLines)-len(originalLines))
-				deletions = max(0, len(originalLines)-len(stagedLines))
-				// For modified files, count actual changes
-				if insertions == 0 && deletions == 0 && originalContent != stagedContent {
-					// Files differ but same line count - count as modifications
-					insertions = 1
-					deletions = 1
-				}
-			}
-
-			totalInsertions += insertions
-			totalDeletions += deletions
-
-			// Format: " path | changes +++ ---"
-			changeIndicator := ""
-			if insertions > 0 {
-				changeIndicator += strings.Repeat("+", min(insertions, 50))
-			}
-			if deletions > 0 {
-				changeIndicator += strings.Repeat("-", min(deletions, 50))
-			}
-
-			stats = append(stats, fmt.Sprintf(" %s | %d %s", path, insertions+deletions, changeIndicator))
-		}
-	}
-
-	if len(stats) == 0 {
-		return "", nil
-	}
-
-	// Build the final stats output
-	var result strings.Builder
-	for _, stat := range stats {
-		result.WriteString(stat)
-		result.WriteString("\n")
-	}
-	result.WriteString(fmt.Sprintf(" %d file(s) changed, %d insertion(s)(+), %d deletion(s)(-)\n",
-		filesChanged, totalInsertions, totalDeletions))
-
-	return result.String(), nil
+	return output, nil
 }
 
 // generateUnifiedDiff creates a unified diff format for a single file

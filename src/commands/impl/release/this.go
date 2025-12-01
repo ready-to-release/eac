@@ -266,7 +266,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 		return result
 	}
 
-	// Collect entries for version calculation
+	// Collect entries for version calculation from conventional commits
+	// Note: Release decision is based on file changes, not conventional commit format
 	var entries []changelog.Entry
 	for _, c := range filteredCommits {
 		if c.IsConventionalCommit() {
@@ -275,11 +276,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 		}
 	}
 
-	if len(entries) == 0 {
-		result.Error = "no conventional commits found to generate changelog entries"
-		return result
-	}
-
+	// File changes determine if release is needed, not conventional commit format
+	// Changelog may be empty if no conventional commits, but release still proceeds
 	result.EntriesAdded = len(entries)
 
 	// Get existing version numbers for calver collision detection
@@ -304,6 +302,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 		}
 	}
 
+	// Pass hasFileChanges to ensure version bumps even without conventional commits
+	hasFileChanges := len(filteredCommits) > 0
 	newVersion, err := changelog.CalculateNextVersionConstrained(
 		result.PreviousVersion,
 		versionType,
@@ -311,6 +311,7 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 		releaseDate,
 		existingVersions,
 		maxBump,
+		hasFileChanges,
 	)
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to calculate version: %v", err)

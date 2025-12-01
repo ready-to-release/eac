@@ -62,9 +62,9 @@ type Metadata struct {
 
 // EnvVar defines an environment variable request from the extension
 type EnvVar struct {
-	Name     string `yaml:"name"`                        // Environment variable name
-	Value    string `yaml:"value,omitempty"`             // If empty, pass through from host
-	Required bool   `yaml:"required,omitempty"`          // If true, fail at runtime when not set
+	Name     string `yaml:"name"`               // Environment variable name
+	Value    string `yaml:"value,omitempty"`    // If empty, pass through from host
+	Required bool   `yaml:"required,omitempty"` // If true, fail at runtime when not set
 }
 
 // Volume defines a volume mount request from the extension
@@ -98,6 +98,15 @@ type ExtensionMetadata struct {
 }
 
 func main() {
+	// Check for --debug flag and set EAC_DEBUG environment variable
+	// This enables debug logging in lower-level packages that don't have logger access
+	for _, arg := range os.Args {
+		if arg == "--debug" || arg == "-d" {
+			os.Setenv("EAC_DEBUG", "1")
+			break
+		}
+	}
+
 	// Handle special commands
 	if len(os.Args) < 2 {
 		printAvailableCommands()
@@ -234,6 +243,7 @@ func outputMetadata() {
 			{Name: "GODOG_REPORT_NAME"},   // Godog report file name
 			{Name: "GODOG_PATHS"},         // Godog feature file paths
 			{Name: "R2R_TEST_RUN_ID"},     // Test run identifier
+			{Name: "ANTHROPIC_API_KEY"},   // API Key for CLAUDE
 		},
 		Metadata: ExtensionMetadata{
 			Author:        "Ready to Release Team",
