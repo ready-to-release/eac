@@ -1,6 +1,22 @@
 # Repository Module Contracts
 modules:
   # ============================================================================
+  # R2R Configuration
+  # ============================================================================
+  - moniker: r2r-config
+    name: EAC Repository Configuration
+    type: r2r-config
+    description: Everything as Code configuration including modules, environments, AI prompts, and test suites
+    files:
+      root: .r2r
+      config:
+        - r2r-cli.yml
+        - "eac/**/*.yml"
+        - "eac/**/*.yaml"
+      assets:
+        - "eac/**/*.md"
+
+  # ============================================================================
   # Claude Code Configuration
   # ============================================================================
   - moniker: claude
@@ -116,6 +132,7 @@ modules:
     description: Repository root module including configuration files, build tools, and git settings
     depends_on:
       - src-core
+      - r2r-config
     files:
       root: /
       config:
@@ -126,7 +143,6 @@ modules:
         - cspell.config.yml
         - go.work
         - go.work.sum
-        - .r2r/**
         - definitions.yml
         - "**/definitions.yml"
         - test-repository-validations.sh
@@ -145,13 +161,12 @@ modules:
     name: AI Provider Libraries
     type: go-library
     description: AI/LLM provider integrations (Claude, OpenAI, Gemini) for code generation and analysis
+    depends_on:
+      - r2r-config
     files:
       root: src/ai
       source:
         - "**.go"
-      repo:
-        other:
-          - .r2r/eac/ai/**
 
   # ============================================================================
   # Source: CLI
@@ -167,9 +182,6 @@ modules:
       config:
         - go.mod
         - go.sum
-        - r2r-cli.examples.yml
-        - r2r.example.yml
-        - r2r-example.yml
       workflows:
         ci: .github/workflows/ci-src-cli.yaml
         release: .github/workflows/release-src-cli.yml
