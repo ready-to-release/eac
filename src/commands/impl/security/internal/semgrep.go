@@ -42,7 +42,7 @@ func getDefaultMockSemgrepOutput() map[string]interface{} {
 }
 
 // RunSemgrepSAST executes Semgrep static analysis via Docker
-func RunSemgrepSAST(moduleRoot string, config string, logger *logging.Logger) (interface{}, error) {
+func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	if mockSemgrepOutput != nil {
 		logger.Debug("Using mocked Semgrep output")
@@ -65,11 +65,18 @@ func RunSemgrepSAST(moduleRoot string, config string, logger *logging.Logger) (i
 		zap.String("moduleRoot", moduleRoot),
 		zap.String("config", config))
 
-	// Get absolute path for volume mount
-	absModuleRoot, err := filepath.Abs(moduleRoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path: %w", err)
-	}
+	// Resolve module root relative to workspace root
+	absModuleRoot := filepath.Join(workspaceRoot, moduleRoot)
+	logger.Debug("Resolved module path",
+		zap.String("workspaceRoot", workspaceRoot),
+		zap.String("moduleRoot", moduleRoot),
+		zap.String("absolute", absModuleRoot))
+
+	// Convert to Docker-compatible path format (handles Windows paths)
+	dockerPath := ToDockerPath(absModuleRoot)
+	logger.Debug("Docker bind mount path",
+		zap.String("original", absModuleRoot),
+		zap.String("docker", dockerPath))
 
 	// Configure container
 	containerConfig := &container.Config{
@@ -85,7 +92,7 @@ func RunSemgrepSAST(moduleRoot string, config string, logger *logging.Logger) (i
 	}
 
 	hostConfig := &container.HostConfig{
-		Binds: []string{fmt.Sprintf("%s:/src:ro", absModuleRoot)},
+		Binds: []string{fmt.Sprintf("%s:/src:ro", dockerPath)},
 	}
 
 	// Run container and capture output

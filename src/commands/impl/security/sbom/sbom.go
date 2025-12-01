@@ -138,7 +138,7 @@ func SBOM() int {
 		fmt.Printf("📦 Scanning %s...\n", moniker)
 
 		// Run Trivy SBOM scan
-		findings, err := internal.RunTrivySBOM(module.Files.Root, format, logger)
+		findings, err := internal.RunTrivySBOM(workspaceRoot, module.Files.Root, format, logger)
 		if err != nil {
 			logger.Error("SBOM scan failed", zap.String("moniker", moniker), zap.Error(err))
 			fmt.Fprintf(os.Stderr, "  ❌ Failed: %v\n", err)

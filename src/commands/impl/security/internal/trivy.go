@@ -45,7 +45,7 @@ func getDefaultMockTrivyOutput() map[string]interface{} {
 }
 
 // RunTrivySBOM executes Trivy SBOM scanner via Docker
-func RunTrivySBOM(moduleRoot, format string, logger *logging.Logger) (interface{}, error) {
+func RunTrivySBOM(workspaceRoot, moduleRoot, format string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	if mockTrivyOutput != nil {
 		logger.Debug("Using mocked Trivy SBOM output")
@@ -68,11 +68,18 @@ func RunTrivySBOM(moduleRoot, format string, logger *logging.Logger) (interface{
 		zap.String("moduleRoot", moduleRoot),
 		zap.String("format", format))
 
-	// Get absolute path for volume mount
-	absModuleRoot, err := filepath.Abs(moduleRoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path: %w", err)
-	}
+	// Resolve module root relative to workspace root
+	absModuleRoot := filepath.Join(workspaceRoot, moduleRoot)
+	logger.Debug("Resolved module path",
+		zap.String("workspaceRoot", workspaceRoot),
+		zap.String("moduleRoot", moduleRoot),
+		zap.String("absolute", absModuleRoot))
+
+	// Convert to Docker-compatible path format (handles Windows paths)
+	dockerPath := ToDockerPath(absModuleRoot)
+	logger.Debug("Docker bind mount path",
+		zap.String("original", absModuleRoot),
+		zap.String("docker", dockerPath))
 
 	// Configure container
 	config := &container.Config{
@@ -86,7 +93,7 @@ func RunTrivySBOM(moduleRoot, format string, logger *logging.Logger) (interface{
 	}
 
 	hostConfig := &container.HostConfig{
-		Binds: []string{fmt.Sprintf("%s:/scan:ro", absModuleRoot)},
+		Binds: []string{fmt.Sprintf("%s:/scan:ro", dockerPath)},
 	}
 
 	// Run container and capture output
@@ -147,6 +154,12 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, logger *logging.
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Convert to Docker-compatible path format (handles Windows paths)
+	dockerPath := ToDockerPath(absModuleRoot)
+	logger.Debug("Docker bind mount path",
+		zap.String("original", absModuleRoot),
+		zap.String("docker", dockerPath))
+
 	// Build command arguments
 	cmd := []string{
 		"fs",
@@ -172,7 +185,7 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, logger *logging.
 	}
 
 	hostConfig := &container.HostConfig{
-		Binds: []string{fmt.Sprintf("%s:/scan:ro", absModuleRoot)},
+		Binds: []string{fmt.Sprintf("%s:/scan:ro", dockerPath)},
 	}
 
 	// Run container and capture output
@@ -232,6 +245,12 @@ func RunTrivySecrets(moduleRoot string, logger *logging.Logger) (interface{}, er
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Convert to Docker-compatible path format (handles Windows paths)
+	dockerPath := ToDockerPath(absModuleRoot)
+	logger.Debug("Docker bind mount path",
+		zap.String("original", absModuleRoot),
+		zap.String("docker", dockerPath))
+
 	// Configure container
 	config := &container.Config{
 		Image: TrivyImage,
@@ -245,7 +264,7 @@ func RunTrivySecrets(moduleRoot string, logger *logging.Logger) (interface{}, er
 	}
 
 	hostConfig := &container.HostConfig{
-		Binds: []string{fmt.Sprintf("%s:/scan:ro", absModuleRoot)},
+		Binds: []string{fmt.Sprintf("%s:/scan:ro", dockerPath)},
 	}
 
 	// Run container and capture output
@@ -306,6 +325,12 @@ func RunTrivyCompliance(moduleRoot, compliance string, logger *logging.Logger) (
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Convert to Docker-compatible path format (handles Windows paths)
+	dockerPath := ToDockerPath(absModuleRoot)
+	logger.Debug("Docker bind mount path",
+		zap.String("original", absModuleRoot),
+		zap.String("docker", dockerPath))
+
 	// Configure container
 	config := &container.Config{
 		Image: TrivyImage,
@@ -319,7 +344,7 @@ func RunTrivyCompliance(moduleRoot, compliance string, logger *logging.Logger) (
 	}
 
 	hostConfig := &container.HostConfig{
-		Binds: []string{fmt.Sprintf("%s:/scan:ro", absModuleRoot)},
+		Binds: []string{fmt.Sprintf("%s:/scan:ro", dockerPath)},
 	}
 
 	// Run container and capture output
@@ -379,6 +404,12 @@ func RunTrivyIaC(moduleRoot string, logger *logging.Logger) (interface{}, error)
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Convert to Docker-compatible path format (handles Windows paths)
+	dockerPath := ToDockerPath(absModuleRoot)
+	logger.Debug("Docker bind mount path",
+		zap.String("original", absModuleRoot),
+		zap.String("docker", dockerPath))
+
 	// Configure container
 	config := &container.Config{
 		Image: TrivyImage,
@@ -391,7 +422,7 @@ func RunTrivyIaC(moduleRoot string, logger *logging.Logger) (interface{}, error)
 	}
 
 	hostConfig := &container.HostConfig{
-		Binds: []string{fmt.Sprintf("%s:/scan:ro", absModuleRoot)},
+		Binds: []string{fmt.Sprintf("%s:/scan:ro", dockerPath)},
 	}
 
 	// Run container and capture output
