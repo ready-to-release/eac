@@ -140,7 +140,7 @@ func SAST() int {
 		fmt.Printf("🔬 Scanning %s...\n", moniker)
 
 		// Run Semgrep SAST scan
-		findings, err := internal.RunSemgrepSAST(module.Files.Root, config, logger)
+		findings, err := internal.RunSemgrepSAST(workspaceRoot, module.Files.Root, config, logger)
 		if err != nil {
 			logger.Error("SAST scan failed", zap.String("moniker", moniker), zap.Error(err))
 			fmt.Fprintf(os.Stderr, "  ❌ Failed: %v\n", err)
