@@ -39,6 +39,12 @@ type DockerClient interface {
 	// ContainerStop stops a running container
 	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
 
+	// ContainerWait waits for a container to finish and returns its status
+	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error)
+
+	// ContainerLogs gets the logs from a container
+	ContainerLogs(ctx context.Context, containerID string, options container.LogsOptions) (io.ReadCloser, error)
+
 	// Close closes the Docker client connection
 	Close() error
 }

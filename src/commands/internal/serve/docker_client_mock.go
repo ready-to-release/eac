@@ -66,6 +66,22 @@ func (m *MockDockerClient) ContainerStop(ctx context.Context, containerID string
 	return args.Error(0)
 }
 
+func (m *MockDockerClient) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
+	args := m.Called(ctx, containerID, condition)
+	if waitChan := args.Get(0); waitChan != nil {
+		return waitChan.(<-chan container.WaitResponse), args.Get(1).(<-chan error)
+	}
+	return nil, nil
+}
+
+func (m *MockDockerClient) ContainerLogs(ctx context.Context, containerID string, options container.LogsOptions) (io.ReadCloser, error) {
+	args := m.Called(ctx, containerID, options)
+	if rc := args.Get(0); rc != nil {
+		return rc.(io.ReadCloser), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *MockDockerClient) Close() error {
 	args := m.Called()
 	return args.Error(0)
