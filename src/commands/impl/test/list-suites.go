@@ -8,14 +8,13 @@
 // Long:
 // Long: Example:
 // Long:   test list-suites
-// HasSideEffects: false
 package test
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/testing"
 )
 

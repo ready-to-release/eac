@@ -2,137 +2,83 @@
 Feature: src-commands_ai-contract-local-override
 
   As a developer using the cli tool
-  I want AI contracts to support local customization in .r2r/contracts
-  So that I can customize prompts for my project without modifying the tool's source code
+  I want AI configurations to be customizable in .r2r/eac/ai
+  So that I can customize prompts for my project
 
-  Rule: AI contracts include prompt templates as inline content
+  Background:
+    AI configurations live in .r2r/eac/ai/<command>/ (e.g., .r2r/eac/ai/commit-message/).
+    Unlike versioned contracts, AI configs are unversioned since they are project-specific.
+    Each command directory contains: contract.yml, anti-corruption.yml, and prompt files (.md).
+
+  Rule: AI configurations include prompt templates as inline content
 
     @L2 @ov
-    Scenario: Commit message contract includes top-level and module prompts
-      Given the contracts/ai/commit-message/0.1.0/contract.yml file
-      When I inspect the contract structure
+    Scenario: Commit message config includes top-level and module prompts
+      Given the .r2r/eac/ai/commit-message/contract.yml file
+      When I inspect the config structure
       Then it includes a "prompts" section
       And the prompts section contains "top_level" template
       And the prompts section contains "module" template
 
     @L2 @ov
-    Scenario: Specification contract includes generation prompt
-      Given the contracts/ai/specifications/0.1.0/contract.yml file
-      When I inspect the contract structure
+    Scenario: Specification config includes generation prompt
+      Given the .r2r/eac/ai/specifications/contract.yml file
+      When I inspect the config structure
       Then it includes a "prompts" section
       And the prompts section contains "specification" template
 
-  Rule: Init command copies AI contracts to .r2r/contracts for local customization
-
-    @L2 @ov @deps:git
-    Scenario: Init command creates .r2r/contracts directory structure
-      Given I am in a git repository root
-      When I run "init --ai claude-api"
-      Then directory ".r2r/contracts/ai/commit-message/0.1.0" exists
-      And directory ".r2r/contracts/ai/specifications/0.1.0" exists
-
-    @L2 @ov @deps:git
-    Scenario: Init command copies commit message contracts
-      Given I am in a git repository root
-      When I run "init --ai claude-api"
-      Then file ".r2r/contracts/ai/commit-message/0.1.0/contract.yml" exists
-      And file ".r2r/contracts/ai/commit-message/0.1.0/anti-corruption.yml" exists
-      And the copied contract includes prompts section
-
-    @L2 @ov @deps:git
-    Scenario: Init command copies specification contracts
-      Given I am in a git repository root
-      When I run "init --ai claude-api"
-      Then file ".r2r/contracts/ai/specifications/0.1.0/contract.yml" exists
-      And file ".r2r/contracts/ai/specifications/0.1.0/anti-corruption.yml" exists
-      And the copied contract includes prompts section
-
-  Rule: Loader supports .r2r/contracts with fallback to repo defaults
+  Rule: Loader loads AI configurations from .r2r/eac/ai
 
     @L2 @ov
-    Scenario: Contract loader uses .r2r/contracts when available
-      Given .r2r/contracts/ai/commit-message/0.1.0/contract.yml exists
-      And contracts/ai/commit-message/0.1.0/contract.yml exists in repo
-      When I load the AI contract for "commit-message"
-      Then the contract is loaded from ".r2r/contracts/ai/commit-message/0.1.0/"
-      And the source path indicates "local override"
+    Scenario: Config loader reads from .r2r/eac/ai directory
+      Given .r2r/eac/ai/commit-message/contract.yml exists
+      When I load the AI config for "commit-message"
+      Then the config is loaded from ".r2r/eac/ai/commit-message/"
 
     @L2 @ov
-    Scenario: Contract loader falls back to repo contracts
-      Given .r2r/contracts/ai/commit-message/0.1.0/ does not exist
-      And contracts/ai/commit-message/0.1.0/contract.yml exists in repo
-      When I load the AI contract for "commit-message"
-      Then the contract is loaded from "contracts/ai/commit-message/0.1.0/"
-      And the source path indicates "repository default"
-
-    @L2 @ov
-    Scenario: Prompt loader uses .r2r/contracts prompts when available
-      Given .r2r/contracts/ai/commit-message/0.1.0/top-level.md exists
+    Scenario: Prompt loader reads prompts from AI config directory
+      Given .r2r/eac/ai/commit-message/top-level.md exists
       When I load the "top-level" prompt for commit
-      Then the prompt is loaded from ".r2r/contracts/ai/commit-message/0.1.0/top-level.md"
-      And the source indicates "local contract override"
-
-    @L2 @ov
-    Scenario: Prompt loader falls back to repo contract prompts
-      Given .r2r/contracts/ does not exist
-      And contracts/ai/commit-message/0.1.0/top-level.md exists
-      When I load the "top-level" prompt for commit
-      Then the prompt is loaded from repo contract
-      And the source indicates "repository contract"
+      Then the prompt is loaded from ".r2r/eac/ai/commit-message/top-level.md"
+      And the source indicates "AI config"
 
     @L2 @ov
     Scenario: Prompt loader falls back to embedded prompts
-      Given .r2r/contracts/ does not exist
-      And contracts/ai/commit-message/0.1.0/ does not exist
-      When I load the "top-level" prompt for commit
+      Given .r2r/eac/ai/commit-message/top-level.md does not exist
+      When I load the "top-level" prompt for commit with embedded fallback
       Then the prompt is loaded from embedded resource
       And the source indicates "embedded default"
 
-  Rule: AI commands use contract loader with local override support
+  Rule: AI commands use config loader
 
     @L2 @ov @deps:git
-    Scenario: commit uses local contract prompt when customized
+    Scenario: commit uses AI config prompt
       Given I have staged changes in git
-      And .r2r/contracts/ai/commit-message/0.1.0/contract.yml exists with custom prompt
+      And .r2r/eac/ai/commit-message/contract.yml exists
       When I run "commit"
-      Then the AI generation uses the custom prompt from .r2r/contracts
-      And the commit message follows the custom prompt format
-
-    @L2 @ov @deps:git
-    Scenario: commit falls back to repo contract prompts when no local override
-      Given I have staged changes in git
-      And .r2r/contracts directory does not exist
-      When I run "commit"
-      Then the AI generation uses the prompt from contracts/ai/commit-message
-      And the commit message follows the standard format
+      Then the AI generation uses the prompt from .r2r/eac/ai/commit-message
+      And the commit message follows the configured format
 
     @L2 @ov
-    Scenario: specs create uses local contract prompt when customized
-      Given .r2r/contracts/ai/specifications/0.1.0/contract.yml exists with custom prompt
-      When I run "specs create 'Add user authentication'"
-      Then the AI generation uses the custom prompt from .r2r/contracts
-      And the specification follows the custom prompt format
-
-    @L2 @ov
-    Scenario: specs create falls back to repo contract prompts when no local override
-      Given .r2r/contracts directory does not exist
-      When I run "specs create 'Add user authentication'"
-      Then the AI generation uses the prompt from contracts/ai/specifications
-      And the specification follows the standard format
+    Scenario: create spec uses AI config prompt
+      Given .r2r/eac/ai/specifications/contract.yml exists
+      When I run "create spec 'Add user authentication'"
+      Then the AI generation uses the prompt from .r2r/eac/ai/specifications
+      And the specification follows the configured format
 
   Rule: Prompt templates can be customized without affecting validation
 
     @L2 @ov
-    Scenario: Custom prompts still enforce contract validation
-      Given .r2r/contracts/ai/commit-message/0.1.0/contract.yml with custom prompt
-      And the contract's validation rules are unchanged
+    Scenario: Custom prompts still enforce config validation
+      Given .r2r/eac/ai/commit-message/contract.yml with custom prompt
+      And the config's validation rules are unchanged
       When I generate a commit message
-      Then the output is validated against the contract rules
+      Then the output is validated against the config rules
       And violations are reported even with custom prompt
 
     @L2 @ov
     Scenario: Anti-corruption rules work with custom prompts
-      Given .r2r/contracts/ai/specifications/0.1.0/ with custom prompt
+      Given .r2r/eac/ai/specifications/ with custom prompt
       And anti-corruption.yml defines forbidden patterns
       When I generate a specification
       Then anti-corruption filtering is applied

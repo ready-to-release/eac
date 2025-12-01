@@ -19,7 +19,7 @@ func TestLoad_DefaultOptions(t *testing.T) {
 	assert.NotNil(t, cfg.Modules)
 	assert.NotNil(t, cfg.Environments)
 	assert.NotNil(t, cfg.TestingTags)
-	assert.NotNil(t, cfg.TestingTaxonomy)
+	assert.NotNil(t, cfg.TestSuites)
 }
 
 func TestLoad_WithExplicitRepoRoot(t *testing.T) {
@@ -50,7 +50,7 @@ func TestLoad_LazyLoad(t *testing.T) {
 	assert.Nil(t, cfg.Modules)
 	assert.Nil(t, cfg.Environments)
 	assert.Nil(t, cfg.TestingTags)
-	assert.Nil(t, cfg.TestingTaxonomy)
+	assert.Nil(t, cfg.TestSuites)
 
 	// Load on demand
 	err = cfg.LoadModules(true)
@@ -75,7 +75,6 @@ func TestModulesConfig_Defaults(t *testing.T) {
 	// Check that defaults are applied
 	for _, m := range cfg.Modules.Modules {
 		assert.NotEmpty(t, m.Type, "module %s should have type", m.Moniker)
-		assert.NotEmpty(t, m.Parent, "module %s should have parent", m.Moniker)
 		assert.NotEmpty(t, m.Description, "module %s should have description", m.Moniker)
 		assert.NotNil(t, m.DependsOn, "module %s should have depends_on", m.Moniker)
 	}
@@ -91,16 +90,6 @@ func TestModulesConfig_GetModule(t *testing.T) {
 
 	_, ok = cfg.Modules.GetModule("nonexistent")
 	assert.False(t, ok)
-}
-
-func TestModulesConfig_GetCatchAllModule(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	m, ok := cfg.Modules.GetCatchAllModule()
-	assert.True(t, ok)
-	assert.Equal(t, "unordered", m.Moniker)
-	assert.True(t, m.Flags.CatchAll)
 }
 
 func TestEnvironmentsConfig_GetEnvironment(t *testing.T) {
@@ -201,33 +190,231 @@ func TestTestingTagsConfig_BuildGodogSkipTagFilter(t *testing.T) {
 	assert.Contains(t, filter, "&&")
 }
 
-func TestTestingTaxonomyConfig_GetTestLevel(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	level, ok := cfg.TestingTaxonomy.GetTestLevel("L0")
-	assert.True(t, ok)
-	assert.Equal(t, "Unit Tests", level.Name)
-	assert.Equal(t, "LEFT", level.ShiftDirection)
-
-	_, ok = cfg.TestingTaxonomy.GetTestLevel("L99")
-	assert.False(t, ok)
-}
-
-func TestTestingTaxonomyConfig_GetAllLevels(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	levels := cfg.TestingTaxonomy.GetAllLevels()
-	assert.Contains(t, levels, "L0")
-	assert.Contains(t, levels, "L4")
-	assert.Contains(t, levels, "HE2E")
-}
-
 func TestValidateAll(t *testing.T) {
 	cfg, err := Load(DefaultLoadOptions())
 	require.NoError(t, err)
 
 	err = cfg.ValidateAll()
 	assert.NoError(t, err)
+}
+
+// TestLoad_ModuleTypesLoaded verifies ModuleTypes is populated after Load
+func TestLoad_ModuleTypesLoaded(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	// ModuleTypes should be loaded
+	assert.NotNil(t, cfg.ModuleTypes, "ModuleTypes should be loaded")
+	assert.NotEmpty(t, cfg.ModuleTypes.Types, "ModuleTypes should have types")
+
+	// Type lookup should work
+	goLib := cfg.ModuleTypes.Get("go-library")
+	assert.NotNil(t, goLib, "should find go-library type")
+	assert.Equal(t, []string{"go"}, goLib.BuildDeps)
+}
+
+// TestLoad_TypeDefaultsApplied verifies type defaults are applied after Load
+func TestLoad_TypeDefaultsApplied(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+
+	// Find a go-library module (src-core)
+	srcCore, ok := cfg.Modules.GetModule("src-core")
+	require.True(t, ok, "src-core module should exist")
+	assert.Equal(t, "go-library", srcCore.Type)
+
+	// Go-library type defaults should be applied
+	goLibType := cfg.ModuleTypes.Get("go-library")
+	require.NotNil(t, goLibType)
+
+	if goLibType.Defaults != nil && goLibType.Defaults.Files != nil {
+		// If type has source defaults, they should be applied (unless explicit in modules.yml)
+		if goLibType.Defaults.Files.Source != nil {
+			// src-core has explicit source in modules.yml, so check that format
+			assert.NotEmpty(t, srcCore.Files.Source)
+		}
+	}
+}
+
+// TestModulesConfig_ApplyTypeDefaults tests direct ApplyTypeDefaults call
+func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
+	t.Run("applies type defaults", func(t *testing.T) {
+		modules := &ModulesConfig{
+			Modules: []Module{
+				{
+					Moniker: "test-mod",
+					Name:    "Test Module",
+					Type:    "go-library",
+					Files: Files{
+						Root: "src/test",
+					},
+				},
+			},
+		}
+
+		types := &ModuleTypesConfig{
+			Types: []ModuleTypeDef{
+				{
+					Name:      "go-library",
+					BuildDeps: []string{"go"},
+					Defaults: &TypeDefaults{
+						Files: &FilesDefaults{
+							Source: []string{"**/*.go"},
+							Config: []string{"go.mod"},
+						},
+						Repo: &RepoDefaults{
+							Specs:    []string{"specs/{moniker}/**"},
+							TestImpl: "{root}/tests",
+						},
+					},
+				},
+			},
+		}
+
+		modules.ApplyTypeDefaults(types)
+
+		m := modules.Modules[0]
+		assert.Equal(t, []string{"**/*.go"}, m.Files.Source)
+		assert.Equal(t, []string{"go.mod"}, m.Files.Config)
+		assert.Equal(t, []string{"specs/test-mod/**"}, m.Files.Repo.Specs)
+		assert.Equal(t, "src/test/tests", m.Files.Repo.TestImpl)
+	})
+
+	t.Run("preserves explicit values", func(t *testing.T) {
+		modules := &ModulesConfig{
+			Modules: []Module{
+				{
+					Moniker: "explicit-mod",
+					Name:    "Explicit Module",
+					Type:    "go-library",
+					Files: Files{
+						Root:   "src/explicit",
+						Source: []string{"custom/*.go"},
+						Config: []string{"custom.mod"},
+						Repo: RepoFiles{
+							Specs:    []string{"my/specs/**"},
+							TestImpl: "my/tests",
+						},
+					},
+				},
+			},
+		}
+
+		types := &ModuleTypesConfig{
+			Types: []ModuleTypeDef{
+				{
+					Name: "go-library",
+					Defaults: &TypeDefaults{
+						Files: &FilesDefaults{
+							Source: []string{"**/*.go"},
+							Config: []string{"go.mod"},
+						},
+						Repo: &RepoDefaults{
+							Specs:    []string{"specs/{moniker}/**"},
+							TestImpl: "{root}/tests",
+						},
+					},
+				},
+			},
+		}
+
+		modules.ApplyTypeDefaults(types)
+
+		m := modules.Modules[0]
+		// Explicit values should be preserved
+		assert.Equal(t, []string{"custom/*.go"}, m.Files.Source)
+		assert.Equal(t, []string{"custom.mod"}, m.Files.Config)
+		assert.Equal(t, []string{"my/specs/**"}, m.Files.Repo.Specs)
+		assert.Equal(t, "my/tests", m.Files.Repo.TestImpl)
+	})
+
+	t.Run("handles nil types", func(t *testing.T) {
+		modules := &ModulesConfig{
+			Modules: []Module{
+				{
+					Moniker: "test-mod",
+					Name:    "Test Module",
+					Type:    "go-library",
+					Files: Files{
+						Root: "src/test",
+					},
+				},
+			},
+		}
+
+		// Should not panic with nil types
+		modules.ApplyTypeDefaults(nil)
+
+		m := modules.Modules[0]
+		// Generic defaults should be applied
+		assert.Equal(t, "CHANGELOG.md", m.Files.Changelog)
+		assert.Equal(t, []string{"specs/test-mod/**"}, m.Files.Repo.Specs)
+	})
+
+	t.Run("preserves explicit empty specs", func(t *testing.T) {
+		modules := &ModulesConfig{
+			Modules: []Module{
+				{
+					Moniker: "no-specs-mod",
+					Name:    "No Specs Module",
+					Type:    "go-library",
+					Files: Files{
+						Root: "src/nospecs",
+						Repo: RepoFiles{
+							Specs: []string{}, // Explicit empty
+						},
+					},
+				},
+			},
+		}
+
+		types := &ModuleTypesConfig{
+			Types: []ModuleTypeDef{
+				{
+					Name: "go-library",
+					Defaults: &TypeDefaults{
+						Repo: &RepoDefaults{
+							Specs: []string{"specs/{moniker}/**"},
+						},
+					},
+				},
+			},
+		}
+
+		modules.ApplyTypeDefaults(types)
+
+		m := modules.Modules[0]
+		// Explicit empty should be preserved
+		assert.NotNil(t, m.Files.Repo.Specs)
+		assert.Empty(t, m.Files.Repo.Specs)
+	})
+}
+
+// TestModuleTypesConfig_Integration tests type config methods with real data
+func TestModuleTypesConfig_Integration(t *testing.T) {
+	cfg, err := Load(DefaultLoadOptions())
+	require.NoError(t, err)
+	require.NotNil(t, cfg.ModuleTypes)
+
+	t.Run("Get returns type definition", func(t *testing.T) {
+		goLib := cfg.ModuleTypes.Get("go-library")
+		require.NotNil(t, goLib)
+		assert.Equal(t, []string{"go"}, goLib.BuildDeps)
+	})
+
+	t.Run("Get returns nil for unknown type", func(t *testing.T) {
+		unknown := cfg.ModuleTypes.Get("unknown-xyz")
+		assert.Nil(t, unknown)
+	})
+
+	t.Run("GetPrimaryBuildDep returns correct dep", func(t *testing.T) {
+		buildDep := cfg.ModuleTypes.GetPrimaryBuildDep("go-library")
+		assert.Equal(t, "go", buildDep)
+	})
+
+	t.Run("GetTypesWithBuildDep finds go types", func(t *testing.T) {
+		goTypes := cfg.ModuleTypes.GetTypesWithBuildDep("go")
+		assert.NotEmpty(t, goTypes)
+		assert.Contains(t, goTypes, "go-library")
+	})
 }

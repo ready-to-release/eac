@@ -1,0 +1,16 @@
+@deps:go @ov
+Feature: src-commands_custom-path
+
+  As a developer
+  I want to specify custom output paths
+  So that I can organize my specifications
+
+  Background:
+    Given the system is initialized
+
+  Rule: Custom paths must be respected
+
+    @L2 @ov
+    Scenario: Custom output path is used
+      When I specify a custom output path
+      Then the specification is saved to that path

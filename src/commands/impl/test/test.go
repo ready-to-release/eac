@@ -15,7 +15,6 @@
 // Long:   test                                 # Test all modules
 // Long:   test src-commands --suite acceptance # Run acceptance tests only
 // Flag.suite: type=string, usage=Filter tests by suite (default: "commit")
-// HasSideEffects: false
 package test
 
 import (
@@ -23,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

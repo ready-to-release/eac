@@ -14,7 +14,6 @@
 // Flag.all: type=bool, shorthand=a, default=false, usage=Stage all changes before committing
 // Flag.message: type=string, shorthand=m, usage=Custom commit message (skips AI generation)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit)
-// HasSideEffects: true
 package work
 
 import (
@@ -24,7 +23,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/impl/commit"
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/logging"
 )
 
@@ -199,5 +198,5 @@ func commitWithAI(debug bool) int {
 	}
 
 	// Call commit message
-	return commit.CommitMessage()
+	return commit.CreateCommitMessage()
 }

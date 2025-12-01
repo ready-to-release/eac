@@ -143,7 +143,7 @@ Understanding tagging for regulated software development in pharmaceutical and m
 - GxP regulatory contexts (GMP, GCP, GLP, ISO 13485, FDA 21 CFR Part 11)
 - Specification hierarchy: URS → FS → DS
 - Feature naming as URS identifier (`<module>_<feature-name>`)
-- Regulatory classification tags (`@gxp`, `@critical-aspect`)
+- Regulatory classification tags (`@gxp`, `@gmp-critical-aspect`)
 - Risk control tags (`@risk-control:gxp-<name>`)
 - GxP-specific requirements for manual tests
 - Tag combinations and usage patterns

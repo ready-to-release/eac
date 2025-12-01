@@ -1,4 +1,4 @@
-@deps:git @deps:go @ov @env:isolated-test-project
+@L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work_merge
 
   As a developer who has completed work in a workspace
@@ -8,12 +8,12 @@ Feature: src-commands_work_merge
   Rule: Command must be registered and accessible
 
     Scenario: Command is listed in available commands
-      When I run the command "list commands"
+      When I run the command "show help"
       Then the exit code is 0
       And I should see "work merge"
 
     Scenario: Command has proper description
-      When I run the command "describe commands work merge"
+      When I run the command "show help work merge"
       Then the exit code is 0
       And I should see "merge" or "squash" or "main"
 

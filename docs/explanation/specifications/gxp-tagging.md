@@ -17,7 +17,7 @@ This document describes the **regulatory tagging taxonomy** used alongside the s
 
 **Regulatory Tags**:
 
-- **Requirement Classification** - GxP classification (`@gxp`, `@critical-aspect`)
+- **Requirement Classification** - GxP classification (`@gxp`, `@gmp-critical-aspect`)
 - **Risk Controls** - Link to GxP risk controls (`@risk-control:gxp-<name>`)
 
 ---
@@ -174,7 +174,7 @@ Feature: audit_trail-gxp-operations
 
 ---
 
-### `@critical-aspect` - GmP Critical Aspect
+### `@gmp-critical-aspect` - GmP Critical Aspect
 
 **Purpose**: Mark requirements as Critical Aspects (CA) for GmP (Good Manufacturing Practice) products only
 
@@ -196,7 +196,7 @@ Feature: batch_release-quality-control
 
   Rule: Batch release requires quality approval
 
-    @ov @gxp @critical-aspect @risk-control:gxp-batch-release
+    @ov @gxp @gmp-critical-aspect @risk-control:gxp-batch-release
     Scenario: Quality manager approves batch meeting specifications
       Given a production batch has completed all quality tests
       And all test results meet specifications
@@ -207,7 +207,7 @@ Feature: batch_release-quality-control
       And the batch cannot be modified after approval
 ```
 
-**Validation Deviation**: If a test tagged with `@critical-aspect` fails after production deployment, it must be managed as a validation deviation per regulatory requirements.
+**Validation Deviation**: If a test tagged with `@gmp-critical-aspect` fails after production deployment, it must be managed as a validation deviation per regulatory requirements.
 
 **Requirements**:
 
@@ -315,14 +315,14 @@ Feature: auth_user-authentication-ldap
 - Use feature naming standard `<module>_<feature-name>` for URS identification
 - Add `@gxp` for any requirement affecting regulated processes
 - Create risk control specification for every `@gxp` requirement
-- Use `@critical-aspect` only for GmP products
+- Use `@gmp-critical-aspect` only for GmP products
 - Link scenarios to risk controls with `@risk-control:gxp-<name>`
 - Maintain traceability from URS → FS → DS → Code → Tests
 - Use lowercase for all tags
 
 ❌ **DON'T**:
 
-- Use `@critical-aspect` for non-GmP products (GCP, GLP)
+- Use `@gmp-critical-aspect` for non-GmP products (GCP, GLP)
 - Tag with `@gxp` without creating corresponding risk control specification
 - Omit negative/challenge tests for `@gxp` requirements
 - Use separate `@URS:NAME` tag (feature name serves as identifier)

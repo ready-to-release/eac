@@ -1,0 +1,135 @@
+// Command: release get-version
+// Short: Extract latest version from changelog
+// Long: Reads the CHANGELOG.md file for a module and outputs the latest version.
+// Long:
+// Long: This command is designed for use in CI/CD pipelines where the changelog
+// Long: is the source of truth for versioning.
+// Long:
+// Long: Examples:
+// Long:   release get-version src-cli              # Output: 0.0.14
+// Long:   release get-version docs                 # Output: 2025.12.01
+// Long:   release get-version src-cli --tag        # Output: src-cli/0.0.14
+// Long:   release get-version src-cli --json       # Output JSON format
+// Flag.tag: type=bool, usage=Output as git tag format (module/version)
+// Flag.json: type=bool, usage=Output in JSON format
+// Flag.path: type=string, usage=Override changelog path (default: release/<module>/CHANGELOG.md)
+package release
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/changelog"
+)
+
+func init() {
+	registry.Register(ReleaseGetVersion)
+}
+
+// VersionInfo contains version information for JSON output
+type VersionInfo struct {
+	Module      string `json:"module"`
+	Version     string `json:"version"`
+	Tag         string `json:"tag"`
+	Date        string `json:"date,omitempty"`
+	VersionType string `json:"version_type"`
+}
+
+func ReleaseGetVersion() int {
+	// Parse flags
+	module := ""
+	asTag := false
+	asJSON := false
+	customPath := ""
+
+	args := os.Args[3:] // Skip binary, "release", "get-version"
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--tag":
+			asTag = true
+		case arg == "--json":
+			asJSON = true
+		case strings.HasPrefix(arg, "--path="):
+			customPath = strings.TrimPrefix(arg, "--path=")
+		case arg == "--path" && i+1 < len(args):
+			i++
+			customPath = args[i]
+		default:
+			if !strings.HasPrefix(arg, "--") && module == "" {
+				module = arg
+			}
+		}
+	}
+
+	if module == "" {
+		fmt.Fprintln(os.Stderr, "Error: module moniker required")
+		fmt.Fprintln(os.Stderr, "Usage: release get-version <module> [--tag] [--json]")
+		return 1
+	}
+
+	// Determine changelog path
+	changelogPath := customPath
+	if changelogPath == "" {
+		changelogPath = filepath.Join("release", module, "CHANGELOG.md")
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "Error: changelog not found at %s\n", changelogPath)
+		return 1
+	}
+
+	// Parse changelog
+	cl, err := changelog.Parse(changelogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to parse changelog: %v\n", err)
+		return 1
+	}
+
+	// Get latest version
+	latestVersion := cl.LatestVersion()
+	if latestVersion == nil {
+		fmt.Fprintln(os.Stderr, "Error: no versions found in changelog")
+		return 1
+	}
+
+	// Prepare output
+	version := latestVersion.Number
+	tag := fmt.Sprintf("%s/%s", module, version)
+	versionType := "semver"
+	if cl.VersionType == changelog.Calver {
+		versionType = "calver"
+	}
+
+	// Output based on format
+	if asJSON {
+		info := VersionInfo{
+			Module:      module,
+			Version:     version,
+			Tag:         tag,
+			VersionType: versionType,
+		}
+		if !latestVersion.Date.IsZero() {
+			info.Date = latestVersion.Date.Format("2006-01-02")
+		}
+
+		output, err := json.MarshalIndent(info, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+			return 1
+		}
+		fmt.Println(string(output))
+	} else if asTag {
+		fmt.Println(tag)
+	} else {
+		fmt.Println(version)
+	}
+
+	return 0
+}

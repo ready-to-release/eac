@@ -1,13 +1,12 @@
 // Command: validate markdown
 // Description: Validate markdown file syntax
-// HasSideEffects: false
 package validate
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/markdown"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

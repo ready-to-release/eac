@@ -9,7 +9,8 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-// Embed the r2r-cli-config v0.1.0 schema at compile time// The schema is copied from contracts/cli/0.1.0/config.json by build-cli.ps1//
+// Embed the r2r-cli-config v0.1.0 schema at compile time
+// The schema is copied from contracts/src-cli/0.1.0/r2r-cli.schema.json by go generate
 //go:embed config/schema.json
 var embeddedSchema string
 

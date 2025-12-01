@@ -207,6 +207,8 @@ func TestMergeConfigsExtensions(t *testing.T) {
 func TestMergeConfigFile(t *testing.T) {
 	// Create temp directory for test files
 	tempDir := t.TempDir()
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	os.MkdirAll(r2rDir, 0755)
 
 	// Create base configuration file
 	baseConfig := `version: "1.0"
@@ -218,7 +220,7 @@ extensions:
     image: "python:3.9"
     description: "Python runtime"
 `
-	baseConfigPath := filepath.Join(tempDir, "r2r-cli.yml")
+	baseConfigPath := filepath.Join(r2rDir, "r2r-cli.yml")
 	err := os.WriteFile(baseConfigPath, []byte(baseConfig), 0644)
 	require.NoError(t, err)
 
@@ -241,7 +243,7 @@ extensions:
   - name: "node"
     image: "node:16"
 `
-	overrideConfigPath := filepath.Join(tempDir, "r2r-cli.local.yml")
+	overrideConfigPath := filepath.Join(r2rDir, "r2r-cli.local.yml")
 	err = os.WriteFile(overrideConfigPath, []byte(overrideConfig), 0644)
 	require.NoError(t, err)
 
@@ -352,6 +354,8 @@ func TestMergeConfigsEnvironment(t *testing.T) {
 func TestPartialOverrideValidation(t *testing.T) {
 	// Create temp directory for test files
 	tempDir := t.TempDir()
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	os.MkdirAll(r2rDir, 0755)
 
 	// Create base configuration file
 	baseConfig := `version: "1.0"
@@ -359,7 +363,7 @@ extensions:
   - name: "pwsh"
     image: "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0"
 `
-	baseConfigPath := filepath.Join(tempDir, "r2r-cli.yml")
+	baseConfigPath := filepath.Join(r2rDir, "r2r-cli.yml")
 	err := os.WriteFile(baseConfigPath, []byte(baseConfig), 0644)
 	require.NoError(t, err)
 

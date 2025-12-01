@@ -1,0 +1,360 @@
+# Repository Module Contracts
+modules:
+  # ============================================================================
+  # R2R Configuration
+  # ============================================================================
+  - moniker: r2r-config
+    name: EAC Repository Configuration
+    type: r2r-config
+    description: Everything as Code configuration including modules, environments, AI prompts, and test suites
+    files:
+      root: .r2r
+      config:
+        - r2r-cli.yml
+        - "eac/**/*.yml"
+        - "eac/**/*.yaml"
+      assets:
+        - "eac/**/*.md"
+
+  # ============================================================================
+  # Claude Code Configuration
+  # ============================================================================
+  - moniker: claude
+    name: Claude Code Configuration
+    type: claude-config
+    description: Claude Code CLI configuration including agents, hooks, commands, and settings
+    files:
+      root: .claude
+      source:
+        - hooks/*.sh
+        - hooks/*.ps1
+      config:
+        - "*.json"
+        - "*.md"
+        - agents/*.md
+        - commands/*.md
+        - logs/README.md
+      repo:
+        other:
+          - .mcp.json
+          - agent.md
+          - "**/agent.md"
+          - scripts/pwsh/claude/env-setup.ps1
+          - scripts/sh/claude/env-setup.sh
+
+  # ============================================================================
+  # Documentation
+  # ============================================================================
+  - moniker: docs
+    name: Documentation
+    type: mkdocs-site
+    description: MkDocs documentation site including reference documentation
+    files:
+      root: docs
+      assets:
+        - "**/*.md"
+        - assets/**
+        - LICENSE
+        - reference/**
+      changelog: ../release/docs/CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-docs.yaml
+        release: .github/workflows/release-docs.yml
+      repo:
+        other:
+          - mkdocs.yml
+          - .github/workflows/ci-docs.yaml
+          - .github/workflows/release-docs.yml
+
+  # ============================================================================
+  # EAC Extension
+  # ============================================================================
+  - moniker: ext-eac
+    name: EAC Extension for R2R CLI
+    type: go-r2r-extension
+    description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
+    depends_on:
+      - src-commands
+    files:
+      root: src/ext-eac
+      source:
+        - "*.go"
+      changelog: ../../release/ext-eac/CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-ext-eac.yaml
+        release: .github/workflows/release-ext-eac.yml
+      repo:
+        other:
+          - containers/**
+          - .github/workflows/ci-ext-eac.yaml
+          - .github/workflows/release-ext-eac.yml
+
+  # ============================================================================
+  # GitHub Configuration
+  # ============================================================================
+  - moniker: github
+    name: GitHub Configuration
+    type: configuration
+    description: GitHub workflows, actions, and CI/CD configuration
+    files:
+      root: .github
+      config:
+        - variables/**
+      assets:
+        - README.md
+      exclude:
+        - workflows/*.yaml
+        - workflows/*.yml
+
+  # ============================================================================
+  # Scripts: Go Command Invoker
+  # ============================================================================
+  - moniker: scripts-implicit-cli
+    name: Go Command Invoker Scripts
+    type: scripts-package
+    description: Cross-shell wrappers with tab completion for running Go commands from src/commands/
+    depends_on:
+      - src-commands
+    files:
+      root: scripts
+      source:
+        - "*/go-invoker/**"
+      repo:
+        specs: []
+        other:
+          - importer.ps1
+          - importer.sh
+
+  # ============================================================================
+  # Repository Root
+  # ============================================================================
+  - moniker: repository
+    name: Repository Root Module
+    type: repository-root
+    description: Repository root module including configuration files, build tools, and git settings
+    depends_on:
+      - src-core
+      - r2r-config
+    files:
+      root: /
+      config:
+        - LICENSE
+        - .gitignore
+        - .gitattributes
+        - .markdownlint.yml
+        - cspell.config.yml
+        - go.work
+        - go.work.sum
+        - definitions.yml
+        - "**/definitions.yml"
+        - test-repository-validations.sh
+        - CHANGELOG.md
+      repo:
+        test_impl: src/specs/impl/repository
+        design: ""
+        other:
+          - .github/workflows/change-trigger.yaml
+          - .github/workflows/cron-full-trigger.yaml
+          - .github/workflows/codeql.yml
+          - .github/workflows/trigger-ci.yaml
+          - .github/workflows/trigger-release.yml
+
+  # ============================================================================
+  # Source: AI Provider Libraries
+  # ============================================================================
+  - moniker: src-ai
+    name: AI Provider Libraries
+    type: go-library
+    description: AI/LLM provider integrations (Claude, OpenAI, Gemini) for code generation and analysis
+    depends_on:
+      - r2r-config
+    files:
+      root: src/ai
+      source:
+        - "**.go"
+
+  # ============================================================================
+  # Source: CLI
+  # ============================================================================
+  - moniker: src-cli
+    name: The CLI of CLIs
+    type: go-cli
+    description: The extendable go-based CLI tool
+    depends_on:
+      - src-core
+    files:
+      root: src/cli
+      config:
+        - go.mod
+        - go.sum
+      changelog: ../../release/src-cli/CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-src-cli.yaml
+        release: .github/workflows/release-src-cli.yml
+      repo:
+        test_impl: src/specs/impl/src-cli
+        other:
+          - contracts/src-cli/**
+          - .github/workflows/ci-src-cli.yaml
+          - .github/workflows/release-src-cli.yml
+    metadata:
+      exe-linux-amd64: r2r-linux-amd64
+      exe-linux-arm64: r2r-linux-arm64
+      exe-darwin-amd64: r2r-darwin-amd64
+      exe-darwin-arm64: r2r-darwin-arm64
+      exe-windows-amd64: r2r-windows-amd64.exe
+
+  # ============================================================================
+  # Scripts: CLI Installer
+  # ============================================================================
+  - moniker: scripts-cli-installer
+    name: R2R CLI Installer Scripts
+    type: scripts-package
+    description: Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases
+    depends_on:
+      - src-core
+    files:
+      root: scripts
+      source:
+        - "*/cli/**"
+      exclude:
+        - CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-scripts-cli-installer.yaml
+        release: ""
+      repo:
+        test_impl: src/specs/impl/scripts-cli-installer
+        other:
+          - .github/workflows/ci-scripts-cli-installer.yaml
+
+  # ============================================================================
+  # Source: Commands Library
+  # ============================================================================
+  - moniker: src-commands
+    name: Go Commands Library
+    type: go-commands
+    description: Go library containing CLI command implementations
+    depends_on:
+      - src-ai
+      - src-core
+    files:
+      root: src/commands
+      exclude:
+        - ext/**
+      workflows:
+        ci: .github/workflows/ci-src-commands.yaml
+        release: ""
+      repo:
+        test_impl: src/specs/impl/src-commands
+        other:
+          - .github/workflows/ci-src-commands.yaml
+
+  # ============================================================================
+  # Source: Core Domain Libraries
+  # ============================================================================
+  - moniker: src-core
+    name: Core Domain Libraries
+    type: go-library
+    description: Core library containing contracts and repository operations
+    files:
+      root: src/core
+      config:
+        - go.mod
+        - go.sum
+        - contracts/schema/schemas/*.json
+      workflows:
+        ci: .github/workflows/ci-src-core.yaml
+        release: ""
+      repo:
+        test_impl: src/specs/impl/src-core
+        other:
+          - contracts/src-core/**
+          - src/core/ai/**
+          - src/core/markdown/**
+          - src/core/module-deps/**
+          - src/core/environments/**
+          - src/.template/**
+          - .github/workflows/ci-src-core.yaml
+
+  # ============================================================================
+  # Source: MCP Commands Server
+  # ============================================================================
+  - moniker: src-mcp-commands
+    name: Go Commands MCP Server
+    type: go-mcp
+    description: Internal MCP server for Commands
+    depends_on:
+      - src-core
+    files:
+      root: src/mcp/commands
+      workflows:
+        ci: .github/workflows/ci-src-mcp-commands.yaml
+        release: ""
+      repo:
+        test_impl: ""
+        other:
+          - .github/workflows/ci-src-mcp-commands.yaml
+
+  # ============================================================================
+  # Source: Specs Shared Infrastructure
+  # ============================================================================
+  - moniker: src-specs
+    name: Specs Shared Infrastructure
+    type: go-tests
+    description: Shared godog test runner, context, and common steps for BDD specs
+    depends_on:
+      - src-core
+    files:
+      root: src/specs
+      source:
+        - "internal/**/*.go"
+      exclude:
+        - impl/**
+
+  # ============================================================================
+  # Templates
+  # ============================================================================
+  - moniker: templates
+    name: Project Templates
+    type: templates
+    description: Template files for documentation, specifications, and design records
+    files:
+      root: templates
+
+  # ============================================================================
+  # VSCode Configuration
+  # ============================================================================
+  - moniker: vscode
+    name: VSCode Repository Configuration
+    type: vscode-config
+    description: VSCode repository configuration
+    files:
+      root: .vscode
+      exclude:
+        - extensions/**
+      repo:
+        other:
+          - scripts/sh/vscode/**
+
+  - moniker: vscode-ext-commit
+    name: VSCode Extension - Git Commit
+    type: vscode-ext
+    description: VSCode extension providing Git toolbar and Claude MCP integration UI
+    files:
+      root: .vscode/extensions/vscode-ext-commit
+      repo:
+        other:
+          - contracts/vscode-commit/**
+
+  # ============================================================================
+  # Release Documentation
+  # ============================================================================
+  - moniker: release-docs
+    name: Release Documentation
+    type: documentation
+    description: Release notes and changelogs for published artifacts
+    files:
+      root: release
+      assets:
+        - README.md
+        - "**/*.md"

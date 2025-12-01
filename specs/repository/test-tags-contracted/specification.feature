@@ -10,7 +10,7 @@ Feature: repository_test-tags-contracted
 
   Rule: All tests must use only contracted tags
 
-    @L2 @ov
+    @L1 @ov
     Scenario: All test tags are defined in the tag contract
       When I run the command "validate test-tags"
       Then the exit code is 0

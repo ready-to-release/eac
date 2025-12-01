@@ -1,0 +1,48 @@
+dependencies:
+  - moniker: go
+    name: "Go"
+    description: "Go programming language compiler and toolchain"
+    version: "1.21"
+    verify:
+      command: "go version"
+      pattern: "go version go(\\d+\\.\\d+)"
+
+  - moniker: docker
+    name: "Docker"
+    description: "Container runtime for building and running containers"
+    version: "20.10"
+    verify:
+      command: "docker --version"
+      pattern: "Docker version (\\d+\\.\\d+)"
+
+  - moniker: npm
+    name: "Node.js"
+    description: "JavaScript runtime providing npm package manager"
+    version: "18.0"
+    verify:
+      command: "node --version"
+      pattern: "v(\\d+\\.\\d+)"
+
+  - moniker: git
+    name: "Git"
+    description: "Distributed version control system"
+    version: "2.30"
+    verify:
+      command: "git --version"
+      pattern: "git version (\\d+\\.\\d+)"
+
+  - moniker: gh-cli
+    name: "GitHub CLI"
+    description: "GitHub command-line interface"
+    version: "2.0"
+    verify:
+      command: "gh --version"
+      pattern: "gh version (\\d+\\.\\d+)"
+
+  - moniker: az-cli
+    name: "Azure CLI"
+    description: "Azure command-line interface"
+    version: "2.50"
+    verify:
+      command: "az --version"
+      pattern: "azure-cli\\s+(\\d+\\.\\d+)"

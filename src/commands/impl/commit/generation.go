@@ -10,7 +10,9 @@ import (
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
+	aimock "github.com/ready-to-release/eac/src/core/ai"
 	"github.com/ready-to-release/eac/src/core/contracts"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -26,18 +28,17 @@ func ResetMockAIResponse() {
 	mockAIResponse = ""
 }
 
-// loadPromptWithFallback implements three-tier prompt loading:
-// 1. Local contract: .r2r/contracts/ai/commit-message/0.1.0/<name>.md
-// 2. Repo contract: contracts/ai/commit-message/0.1.0/<name>.md
-// 3. Built-in: embedded prompts/<name>.md
+// loadPromptWithFallback implements prompt loading from AI configs:
+// 1. AI config: .r2r/eac/ai/commit-message/<name>.md
+// 2. Built-in: embedded prompts/<name>.md
 func loadPromptWithFallback(promptName string, workspaceRoot string) (string, error) {
-	// Create contract loader
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	// Create contract loader for AI config
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
 
-	// No embedded prompt - load from .r2r/contracts or contracts/ai
+	// No embedded prompt - load from .r2r/eac/ai/
 	var embeddedPrompt string
 
-	// Load prompt using three-tier system
+	// Load prompt from AI config
 	agentContent, _, err := loader.LoadPrompt(promptName+".md", embeddedPrompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
@@ -64,7 +65,12 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 
 // generateWithPromptResult generates output and returns full metadata including provider info
 func generateWithPromptResult(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
-	// Check for mock response (test mode)
+	// Check for mock response from file-based mock system (subprocess testing)
+	if mock, ok := aimock.GetMockResponse("commit"); ok {
+		return &GenerationResult{Output: mock, ProviderName: "mock-file"}, nil
+	}
+
+	// Check for mock response (test mode - in-process testing)
 	if mockAIResponse != "" {
 		return &GenerationResult{Output: mockAIResponse, ProviderName: "mock"}, nil
 	}
@@ -129,7 +135,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	// Setup debug directory if needed
 	debugOutputDir := ""
 	if debugEnabled {
-		debugOutputDir = filepath.Join(workspaceRoot, "out", "logs", "commit")
+		debugOutputDir = filepath.Join(repository.LogsPath(workspaceRoot), "commit")
 		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
 			fmt.Fprintf(os.Stderr, "⚠️  Failed to create debug directory: %v\n", err)
 		}

@@ -16,7 +16,6 @@
 // Flag.skip-deps: type=bool, usage=Skip dependency installation before running tests
 // Flag.list-only: type=bool, usage=List tests that would run without executing them
 // Flag.sequential: type=bool, usage=Run tests sequentially instead of in parallel
-// HasSideEffects: false
 package test
 
 import (
@@ -36,7 +35,8 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/reporter"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/impl/test/testers"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
@@ -267,9 +267,6 @@ func TestSuite() int {
 		writeln(multiWriter, "Inferred system deps from module types")
 	}
 
-	// Infer OS platform: add @deps:os-agnostic to tests without OS-specific deps
-	allTests = testing.InferOSPlatform(allTests)
-	writeln(multiWriter, "Inferred OS platform dependencies")
 	writeln(multiWriter, "")
 
 	// Phase 3: Select tests for suite
@@ -451,29 +448,24 @@ func TestSuite() int {
 	}
 
 	// findGodogTestRunner finds the test runner package for a feature file
-	// Feature files are in specs/src-<module>/..., test runners are in src/<module>/tests/
+	// Feature files are in specs/<module>/..., test runners are in src/specs/impl/<module>/
 	findGodogTestRunner := func(featurePath string) string {
 		// Extract module from specs path
-		// Example: specs/src-commands/commit/... -> src/commands/tests
-		//          specs/src-cli/... -> src/cli/tests
-		//          specs/repository/... -> src/core/repository/tests
+		// Example: specs/src-commands/commit/... -> src/specs/impl/src-commands
+		//          specs/src-cli/... -> src/specs/impl/src-cli
+		//          specs/repository/... -> src/specs/impl/repository
 		relPath := strings.TrimPrefix(featurePath, "specs/")
 		relPath = strings.TrimPrefix(relPath, "specs\\")
 
 		// Get first path component (e.g., "src-commands" or "repository")
 		parts := strings.Split(filepath.ToSlash(relPath), "/")
 		if len(parts) == 0 {
-			return "src/commands/tests" // fallback
+			return "src/specs/impl/src-commands" // fallback
 		}
 
-		// Special case: repository specs are in specs/repository but tests are in src/specs/impl/repository
-		if parts[0] == "repository" {
-			return "src/specs/impl/repository"
-		}
-
-		// Convert "src-commands" -> "src/commands"
-		module := strings.Replace(parts[0], "-", "/", 1)
-		return filepath.Join(module, "tests")
+		// All spec test runners are now in src/specs/impl/<module>/
+		moniker := parts[0]
+		return "src/specs/impl/" + moniker
 	}
 
 	// Phase 5: Run tests
@@ -587,7 +579,7 @@ func TestSuite() int {
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Test Selection Breakdown:")
 	writeln(multiWriter, "  Tests discovered:        %d", selectionStats.TotalDiscovered)
-	writeln(multiWriter, "  - Ignored (@ignore):     %d", selectionStats.Ignored)
+	writeln(multiWriter, "  - Skipped (@skip:*):     %d", selectionStats.Skipped)
 	writeln(multiWriter, "  - Not matching suite:    %d", selectionStats.NotMatchingSuite)
 	writeln(multiWriter, "  = Selected for suite:    %d", selectionStats.Selected)
 	if frameworkTestCount > 0 {
@@ -1742,9 +1734,9 @@ func mapGOOSToDepTag(goos string) string {
 
 // filterByOSCompatibility filters tests based on OS-specific dependencies
 // Tests with deps:linux only run on Linux, deps:macos only on macOS, deps:windows only on Windows
-// Tests without any OS-specific deps are considered OS-agnostic and run everywhere
+// Tests without any OS-specific deps run everywhere (OS-agnostic by default)
 // Tests with multiple OS deps (e.g., deps:linux AND deps:macos) run on any of those OSes
-func filterByOSCompatibility(tests []testing.TestReference, w io.Writer) []testing.TestReference {
+func filterByOSCompatibility(tests []testing.TestReference, _ io.Writer) []testing.TestReference {
 	currentOS := mapGOOSToDepTag(runtime.GOOS)
 	compatible := []testing.TestReference{}
 
@@ -1754,20 +1746,17 @@ func filterByOSCompatibility(tests []testing.TestReference, w io.Writer) []testi
 		matchesCurrentOS := false
 
 		for _, dep := range test.SystemDependencies {
-			// Check if this is an OS dependency (uses exported list from testing package)
-			for _, osDep := range testing.OsPlatformTags {
-				if dep == osDep {
-					hasOSDep = true
-					if dep == currentOS {
-						matchesCurrentOS = true
-					}
-					break
+			// Check if this is an OS dependency
+			if testing.IsOSPlatformDep(dep) {
+				hasOSDep = true
+				if dep == currentOS {
+					matchesCurrentOS = true
 				}
 			}
 		}
 
 		// Include test if:
-		// 1. It has no OS-specific deps (OS-agnostic), OR
+		// 1. It has no OS-specific deps (runs on any OS), OR
 		// 2. It has an OS dep that matches the current OS
 		if !hasOSDep || matchesCurrentOS {
 			compatible = append(compatible, test)
@@ -1932,5 +1921,29 @@ func convertCoverageToJSON(coverageFile, jsonFile string) error {
 	}
 
 	return nil
+}
+
+// runTestSuiteForModuleInternal runs the test suite command with a module filter.
+// This is the internal implementation used by the testers package.
+func runTestSuiteForModuleInternal(moniker string, suiteName string) int {
+	// Redirect to test suite with module filter
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	os.Args = []string{
+		oldArgs[0],
+		"test",
+		"suite",
+		suiteName,
+		"--module",
+		moniker,
+	}
+
+	return TestSuite()
+}
+
+func init() {
+	// Set up the callback for testers package to run test suites
+	testers.RunTestSuiteForModule = runTestSuiteForModuleInternal
 }
 

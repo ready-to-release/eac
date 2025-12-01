@@ -10,11 +10,10 @@
 // Long:
 // Long: Example:
 // Long:   show dependencies
-// HasSideEffects: false
 package show
 
 import (
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"fmt"
 	"os"
 	"strings"

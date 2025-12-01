@@ -20,7 +20,6 @@
 // Long:   templates apply docs --input-json values.json
 // Long:
 // Long: Use "help templates apply <template-type>" for detailed information.
-// HasSideEffects: true
 package templates
 
 import (
@@ -29,7 +28,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

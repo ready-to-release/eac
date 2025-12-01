@@ -10,6 +10,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
+	aimock "github.com/ready-to-release/eac/src/core/ai"
 )
 
 // ============================================================================
@@ -33,7 +34,12 @@ func ResetMockAIResponse() {
 
 // generateReport generates a risk assessment report using AI
 func generateReport(config *Config, input *AnalysisInput) (string, error) {
-	// Check for mock response (test mode)
+	// Check for mock response from file-based mock system (subprocess testing)
+	if mock, ok := aimock.GetMockResponseWithSubcommand("risks", "assessment"); ok {
+		return mock, nil
+	}
+
+	// Check for mock response (test mode - in-process testing)
 	if mockAIResponse != "" {
 		return mockAIResponse, nil
 	}

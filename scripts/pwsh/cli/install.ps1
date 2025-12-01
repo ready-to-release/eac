@@ -91,10 +91,10 @@ function Install-Binary {
 
     # Binary filename for Windows (use UPX version if requested)
     if ($Upx) {
-        $binaryFilename = "r2r-windows-upx.exe"
+        $binaryFilename = "r2r-windows-amd64-upx.exe"
         Write-ColorOutput "Binary type: UPX-compressed (smaller, slightly slower startup)" "Cyan"
     } else {
-        $binaryFilename = "r2r-windows.exe"
+        $binaryFilename = "r2r-windows-amd64.exe"
         Write-ColorOutput "Binary type: Standard" "Cyan"
     }
     $downloadUrl = "https://github.com/$Repo/releases/download/$InstallVersion/$binaryFilename"
@@ -144,6 +144,12 @@ function Add-ToPath {
     param(
         [string]$Directory
     )
+
+    # Skip PATH modification during tests to avoid polluting system PATH
+    if ($env:__R2R_TEST_NO_PATH_UPDATE -eq "1") {
+        Write-ColorOutput "Skipping PATH modification (test mode)" "Gray"
+        return
+    }
 
     $scope = if ($System) { "Machine" } else { "User" }
     $currentPath = [Environment]::GetEnvironmentVariable("Path", $scope)

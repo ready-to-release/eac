@@ -21,7 +21,7 @@ func init() {
 var InitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a new r2r-cli configuration file",
-	Long:  `Creates a minimal r2r-cli.yml configuration file in the repository root.`,
+	Long:  `Creates a minimal .r2r/r2r-cli.yml configuration file in the repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		createConfigFile(cmd)
 	},
@@ -63,10 +63,17 @@ func createConfigFile(cmd *cobra.Command) {
 		return
 	}
 
-	configFile := filepath.Join(repoRoot, "r2r-cli.yml")
+	// Ensure .r2r directory exists
+	r2rDir := filepath.Join(repoRoot, ".r2r")
+	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Failed to create .r2r directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	configFile := filepath.Join(r2rDir, "r2r-cli.yml")
 
 	if _, err := os.Stat(configFile); err == nil {
-		fmt.Fprintf(os.Stderr, "Error: r2r-cli.yml already exists in the repository root\n")
+		fmt.Fprintf(os.Stderr, "Error: .r2r/r2r-cli.yml already exists\n")
 		os.Exit(1)
 	}
 
@@ -77,7 +84,7 @@ func createConfigFile(cmd *cobra.Command) {
 
 	err = os.WriteFile(configFile, []byte(minimalConfig), 0644)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Failed to create r2r-cli.yml: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: Failed to create .r2r/r2r-cli.yml: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -85,7 +92,8 @@ func createConfigFile(cmd *cobra.Command) {
 }
 
 func deleteConfigFiles(cmd *cobra.Command, repoRoot string) {
-	// List of config files including overrides (but not examples)
+	// List of config files in .r2r directory including overrides (but not examples)
+	r2rDir := filepath.Join(repoRoot, ".r2r")
 	configFiles := []string{
 		"r2r-cli.yml",
 		"r2r-cli.local.yml",
@@ -95,7 +103,7 @@ func deleteConfigFiles(cmd *cobra.Command, repoRoot string) {
 
 	deletedCount := 0
 	for _, configFile := range configFiles {
-		configPath := filepath.Join(repoRoot, configFile)
+		configPath := filepath.Join(r2rDir, configFile)
 
 		if _, err := os.Stat(configPath); err == nil {
 			// File exists, delete it
@@ -109,8 +117,8 @@ func deleteConfigFiles(cmd *cobra.Command, repoRoot string) {
 	}
 
 	if deletedCount == 0 {
-		cmd.Printf("No configuration files found to delete in %s\n", repoRoot)
+		cmd.Printf("No configuration files found to delete in %s\n", r2rDir)
 	} else {
-		cmd.Printf("Deleted %d configuration file(s) from %s\n", deletedCount, repoRoot)
+		cmd.Printf("Deleted %d configuration file(s) from %s\n", deletedCount, r2rDir)
 	}
 }

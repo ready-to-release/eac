@@ -4,6 +4,7 @@
 package modules
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/ready-to-release/eac/src/core/contracts"
@@ -396,6 +397,106 @@ func Test_normalizePathSeparators(t *testing.T) {
 			if got != tt.expected {
 				t.Errorf("normalizePathSeparators(%q) = %q, expected %q",
 					tt.path, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestModuleContract_GetTestImplementationPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		testImpl string
+		expected string
+	}{
+		{
+			name:     "explicit test_impl path",
+			testImpl: "src/specs/impl/repository",
+			expected: "src/specs/impl/repository",
+		},
+		{
+			name:     "empty test_impl returns empty",
+			testImpl: "",
+			expected: "",
+		},
+		{
+			name:     "nested path",
+			testImpl: "src/commands/tests",
+			expected: "src/commands/tests",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := contracts.BaseContract{
+				Moniker: "test-module",
+				Files: contracts.Files{
+					Root: "src/test",
+					Repo: contracts.RepoPatterns{
+						TestImpl: tt.testImpl,
+					},
+				},
+			}
+			module := NewModuleContract(base, "/workspace")
+
+			got := module.GetTestImplementationPath()
+			if got != tt.expected {
+				t.Errorf("GetTestImplementationPath() = %q, expected %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestModuleContract_GetDesignPath(t *testing.T) {
+	tests := []struct {
+		name            string
+		moniker         string
+		design          string
+		expected        string
+		useFilepathJoin bool // if true, expected is built with filepath.Join
+	}{
+		{
+			name:     "explicit design path",
+			moniker:  "src-commands",
+			design:   "specs/src-commands/.design",
+			expected: "specs/src-commands/.design",
+		},
+		{
+			name:            "empty design uses default",
+			moniker:         "src-cli",
+			design:          "",
+			expected:        "", // will be computed with filepath.Join
+			useFilepathJoin: true,
+		},
+		{
+			name:     "custom design path",
+			moniker:  "my-module",
+			design:   "custom/design/path",
+			expected: "custom/design/path",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := contracts.BaseContract{
+				Moniker: tt.moniker,
+				Files: contracts.Files{
+					Root: "src/test",
+					Repo: contracts.RepoPatterns{
+						Design: tt.design,
+					},
+				},
+			}
+			module := NewModuleContract(base, "/workspace")
+
+			got := module.GetDesignPath()
+
+			expected := tt.expected
+			if tt.useFilepathJoin {
+				expected = filepath.Join("specs", tt.moniker, ".design")
+			}
+
+			if got != expected {
+				t.Errorf("GetDesignPath() = %q, expected %q", got, expected)
 			}
 		})
 	}

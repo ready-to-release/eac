@@ -25,18 +25,12 @@ func RenderSummary(yamlBytes []byte) (string, error) {
 	// Collect statistics
 	totalModules := len(modules)
 	modulesByType := make(map[string]int)
-	modulesByParent := make(map[string]int)
 	totalDependencies := 0
 
 	for _, module := range modules {
 		// Count by type
 		if moduleType, ok := module["type"].(string); ok {
 			modulesByType[moduleType]++
-		}
-
-		// Count by parent
-		if parent, ok := module["parent"].(string); ok {
-			modulesByParent[parent]++
 		}
 
 		// Count dependencies
@@ -59,15 +53,6 @@ func RenderSummary(yamlBytes []byte) (string, error) {
 			moduleType = "(no type)"
 		}
 		sb.WriteString(fmt.Sprintf("  %-25s %d\n", moduleType, count))
-	}
-
-	// Parent hierarchy breakdown
-	sb.WriteString("\n--- Modules by Parent ---\n")
-	for parent, count := range modulesByParent {
-		if parent == "" || parent == "." {
-			parent = "(root)"
-		}
-		sb.WriteString(fmt.Sprintf("  %-25s %d\n", parent, count))
 	}
 
 	// List all module monikers

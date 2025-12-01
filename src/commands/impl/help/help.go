@@ -4,7 +4,6 @@
 // Long: When called without arguments, it lists all commands with their short descriptions.
 // Long: When called with a command name, it displays detailed help including description, flags, and usage.
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed information including all subcommands and advanced options
-// HasSideEffects: false
 package help
 
 import (
@@ -13,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {
@@ -96,17 +95,12 @@ func showAllCommands(verbose bool) int {
 
 		fmt.Printf("%s:\n", category)
 		for _, cmdName := range cmds {
-			canonicalName := registry.GetCanonicalName(cmdName)
-			reg := commandRegistry[canonicalName]
+			reg := commandRegistry[cmdName]
 
 			// Get short description
 			desc := ""
-			if reg != nil {
-				if reg.Short != "" {
-					desc = reg.Short
-				} else if reg.Description != "" {
-					desc = reg.Description
-				}
+			if reg != nil && reg.Short != "" {
+				desc = reg.Short
 			}
 
 			// Format: "  command-name    description"
@@ -128,16 +122,11 @@ func showAllCommands(verbose bool) int {
 	if len(standaloneCommands) > 0 {
 		fmt.Println("Other commands:")
 		for _, cmdName := range standaloneCommands {
-			canonicalName := registry.GetCanonicalName(cmdName)
-			reg := commandRegistry[canonicalName]
+			reg := commandRegistry[cmdName]
 
 			desc := ""
-			if reg != nil {
-				if reg.Short != "" {
-					desc = reg.Short
-				} else if reg.Description != "" {
-					desc = reg.Description
-				}
+			if reg != nil && reg.Short != "" {
+				desc = reg.Short
 			}
 
 			padding := strings.Repeat(" ", max(2, 30-len(cmdName)))
@@ -153,9 +142,8 @@ func showAllCommands(verbose bool) int {
 // showCommandHelp displays detailed help for a specific command
 func showCommandHelp(commandName string, verbose bool) int {
 	commandRegistry := registry.GetCommandRegistry()
-	canonicalName := registry.GetCanonicalName(commandName)
 
-	reg := commandRegistry[canonicalName]
+	reg := commandRegistry[commandName]
 	if reg == nil {
 		fmt.Fprintf(os.Stderr, "Error: Command '%s' not found.\n", commandName)
 		fmt.Fprintf(os.Stderr, "\nUse 'help' to see all available commands.\n")
@@ -191,16 +179,11 @@ func showCommandHelp(commandName string, verbose bool) int {
 	if len(subcommands) > 0 {
 		fmt.Printf("COMMANDS\n")
 		for _, subcmd := range subcommands {
-			canonicalName := registry.GetCanonicalName(subcmd)
-			subReg := commandRegistry[canonicalName]
+			subReg := commandRegistry[subcmd]
 
 			desc := ""
-			if subReg != nil {
-				if subReg.Short != "" {
-					desc = subReg.Short
-				} else if subReg.Description != "" {
-					desc = subReg.Description
-				}
+			if subReg != nil && subReg.Short != "" {
+				desc = subReg.Short
 			}
 
 			// Extract just the subcommand part (e.g., "create" from "work create")
@@ -226,10 +209,6 @@ func showCommandHelp(commandName string, verbose bool) int {
 	if verbose {
 		fmt.Printf("ADDITIONAL INFORMATION\n")
 		fmt.Printf("    Canonical name: %s\n", reg.CanonicalName)
-		fmt.Printf("    Has side effects: %t\n", reg.HasSideEffects)
-		if reg.HasSideEffects {
-			fmt.Printf("    (This command modifies repository files)\n")
-		}
 		fmt.Println()
 	}
 

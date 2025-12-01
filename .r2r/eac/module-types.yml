@@ -1,0 +1,260 @@
+types:
+  # Go family
+  - name: go-cli
+    description: "Go CLI application with cross-platform builds"
+    build_deps: [go]
+    capabilities: [go_module, executable, cross_compile]
+    build:
+      artifacts:
+        - type: executable
+          pattern: "{moniker}-{os}-amd64{ext}"
+          platforms: [linux, windows, darwin]
+          verify: current_platform
+        - type: executable
+          pattern: "{moniker}-{os}-arm64{ext}"
+          platforms: [linux, darwin]
+          verify: current_platform
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+        test_impl: "{root}/tests"
+        design: "specs/{moniker}/.design"
+
+  - name: go-library
+    description: "Go library package (no executable)"
+    build_deps: [go]
+    capabilities: [go_module]
+    build:
+      artifacts:
+        - type: marker
+          pattern: ".build-complete"
+    defaults:
+      files:
+        source: ["**/*.go", "**/*.go.txt"]
+        config: ["go.mod", "go.sum"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+        test_impl: "{root}/tests"
+        design: "specs/{moniker}/.design"
+
+  - name: go-commands
+    description: "Go library with CLI invoke wrapper"
+    build_deps: [go]
+    capabilities: [go_module]
+    build:
+      artifacts:
+        - type: marker
+          pattern: ".build-complete"
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        assets: ["**/README.md", "**/assets/**"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+        test_impl: "{root}/tests"
+        design: "specs/{moniker}/.design"
+
+  - name: go-mcp
+    description: "Go MCP server module"
+    build_deps: [go]
+    capabilities: [go_module]
+    build:
+      artifacts:
+        - type: marker
+          pattern: ".build-complete"
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        assets: ["README.md"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["specs/{moniker}/**"]
+        design: "specs/{moniker}/.design"
+
+  - name: go-tests
+    description: "Go test-only module"
+    build_deps: [go]
+    capabilities: [go_module]
+    build:
+      artifacts: []
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []
+
+  - name: go-r2r-extension
+    description: "R2R extension packaged as container image"
+    build_deps: [docker]
+    capabilities: [go_module, container]
+    build:
+      artifacts:
+        - type: image
+          pattern: "{moniker}:latest"
+    defaults:
+      files:
+        source: ["**/*.go"]
+        config: ["go.mod", "go.sum"]
+        assets: ["README.md"]
+      repo:
+        specs: []
+
+  # Documentation family
+  - name: mkdocs-site
+    description: "Primary MkDocs documentation site (builds via Docker)"
+    build_deps: [docker]
+    capabilities: [documentation, serveable, container]
+    build:
+      artifacts:
+        - type: directory
+          pattern: "site"
+    defaults:
+      files:
+        config: ["**/*.nav.yml", "**/*.json"]
+        assets: ["**/*.md", "assets/**", "LICENSE"]
+      repo:
+        specs: []
+
+  # VS Code family
+  - name: vscode-ext
+    description: "VS Code extension"
+    build_deps: [npm]
+    capabilities: [npm_package, typescript]
+    build:
+      artifacts:
+        - type: directory
+          pattern: "out"
+    defaults:
+      files:
+        config: ["**/*"]
+        changelog: CHANGELOG.md
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []
+
+  - name: vscode-config
+    description: "VS Code configuration files"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        config: ["**/*"]
+        changelog: CHANGELOG.md
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []
+
+  # Scripts family
+  - name: scripts-package
+    description: "Cross-shell script package encapsulating pwsh and sh variants for the same purpose"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        source: ["**/*.ps1", "**/*.psm1", "**/*.sh", "**/*.bash"]
+        config: []
+        workflows:
+          ci: ".github/workflows/ci-{moniker}.yaml"
+          release: ""
+      repo:
+        specs: ["specs/{moniker}/**"]
+
+  # Config family
+  - name: configuration
+    description: "Configuration files"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        changelog: CHANGELOG.md
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: ["specs/{moniker}/**"]
+
+  - name: claude-config
+    description: "Claude Code configuration"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        config: ["*.json", "*.md"]
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []
+
+  - name: r2r-config
+    description: "R2R CLI repository configuration (.r2r directory)"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        config: ["**/*.yml", "**/*.yaml"]
+        assets: ["**/*.md"]
+        exclude: ["cache/**", "*.log"]
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []
+
+  # Repository structure
+  - name: repository-root
+    description: "Repository root module (catch-all parent)"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: ["specs/{moniker}/**"]
+
+  - name: templates
+    description: "Template files"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        config: ["**/*.yml", "**/*.yaml"]
+        assets: ["**/*.md", "**/*.feature"]
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []
+

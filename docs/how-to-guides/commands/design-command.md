@@ -1,8 +1,8 @@
-# Design Command
+# Design Commands (Create, Update, Validate, Serve)
 
 **Problem**: Creating and maintaining architecture diagrams is tedious and diagrams become outdated quickly.
 
-**Solution**: Use `design` to generate and visualize C4 architecture diagrams as code using Structurizr DSL.
+**Solution**: Use the design commands (`create design`, `update design`, `validate design`, `serve design`) to generate and visualize C4 architecture diagrams as code using Structurizr DSL.
 
 ## Key Benefits
 
@@ -16,13 +16,13 @@
 
 ```bash
 # Generate architecture for a module
-r2r eac design create src-commands
+r2r eac create design src-commands
 
 # Validate workspace.dsl syntax
-r2r eac design validate src-commands
+r2r eac validate design src-commands
 
 # View diagrams in browser
-r2r eac design serve src-commands
+r2r eac serve design src-commands
 ```
 
 ## Typical Workflow
@@ -31,63 +31,65 @@ r2r eac design serve src-commands
 
 ```bash
 # Generate from source code
-r2r eac design create src-auth
+r2r eac create design src-auth
 
-# Output: specs/src-auth/design/workspace.dsl created
+# Output: specs/src-auth/.design/workspace.dsl created
 # Includes: system context, containers, components
 
 # View in browser
-r2r eac design serve src-auth
-# Opens http://localhost:8080
+r2r eac serve design src-auth
+# Opens http://localhost:9000 (or next available port in 9000-9999 range)
 ```
 
 ### Validation and Iteration
 
 ```bash
 # Validate DSL syntax
-r2r eac design validate src-api
+r2r eac validate design src-api
 
 # Fix any errors in workspace.dsl
-nano specs/src-api/design/workspace.dsl
+nano specs/src-api/.design/workspace.dsl
 
 # Revalidate
-r2r eac design validate src-api
+r2r eac validate design src-api
 
 # Serve to view changes
-r2r eac design serve src-api
+r2r eac serve design src-api
 ```
 
 ### Debug AI Generation
 
 ```bash
 # Generate with debug output
-r2r eac design create src-core --debug
+r2r eac create design src-core --debug
 
 # Inspect intermediate files
-cat out/debug-full-prompt.md
-cat out/debug-raw-ai-response.md
-cat out/debug-validation-result.json
+cat out/logs/design/debug-full-prompt.md
+cat out/logs/design/debug-raw-ai-response.md
+cat out/logs/design/debug-validation-result.json
 ```
 
 ## Command Reference
 
-### design create
+### create design
 
 Generate Structurizr DSL workspace from source code.
 
 ```bash
-r2r eac design create <module> [options]
+r2r eac create design <module> [options]
 
 # Options:
 --output, -o <path>    # Custom output path
 --force, -f            # Overwrite existing workspace.dsl
---debug, -d            # Save intermediate outputs to out/
+--skip-validation      # Skip automatic validation after generation
+--debug, -d            # Save intermediate outputs to out/logs/design/
 
 # Examples:
-r2r eac design create src-auth
-r2r eac design create src-api --output custom/path/workspace.dsl
-r2r eac design create src-core --force
-r2r eac design create src-commands --debug
+r2r eac create design src-auth
+r2r eac create design src-api --output custom/path/workspace.dsl
+r2r eac create design src-core --force
+r2r eac create design src-commands --debug
+r2r eac create design src-module --skip-validation
 ```
 
 **What it does:**
@@ -97,7 +99,7 @@ r2r eac design create src-commands --debug
 3. Generates Structurizr DSL with C4 model views
 4. Validates DSL syntax with Docker/Structurizr CLI
 5. Auto-retries if validation fails
-6. Saves to `specs/<module>/design/workspace.dsl`
+6. Saves to `specs/<module>/.design/workspace.dsl`
 
 **Requirements:**
 
@@ -105,20 +107,67 @@ r2r eac design create src-commands --debug
 - Module must exist in `src/<module>/`
 - AI provider configured (`r2r eac init --ai <provider>`)
 
-### design validate
+### update design
+
+Update existing Structurizr DSL workspace with changes from source code.
+
+```bash
+r2r eac update design <module> [options]
+
+# Options:
+--skip-validation      # Skip automatic validation after update
+--debug, -d            # Save intermediate outputs to out/logs/design/
+
+# Examples:
+r2r eac update design src-auth
+r2r eac update design src-api --skip-validation
+r2r eac update design src-core --debug
+```
+
+**What it does:**
+
+1. Reads existing workspace.dsl from `specs/<module>/.design/`
+2. Analyzes current source code in `src/<module>/`
+3. Uses AI to update architecture based on code changes
+4. Preserves manual customizations where possible
+5. Validates updated DSL syntax with Docker/Structurizr CLI
+6. Overwrites `specs/<module>/.design/workspace.dsl`
+
+**When to use:**
+
+- After significant code changes to a module
+- When new components or relationships are added
+- When architecture has evolved from initial design
+- To refresh diagrams with latest code structure
+
+**Best practices:**
+
+- Review changes with `git diff` before committing
+- Use `--debug` to inspect AI reasoning for updates
+- Validate with `validate design` after manual adjustments
+- Consider backing up workspace.dsl before major updates
+
+**Requirements:**
+
+- Existing workspace.dsl must be present
+- Docker must be installed and running
+- Module must exist in `src/<module>/`
+- AI provider configured (`r2r eac init --ai <provider>`)
+
+### validate design
 
 Validate workspace.dsl syntax using Structurizr CLI.
 
 ```bash
-r2r eac design validate <module> [options]
+r2r eac validate design <module> [options]
 
 # Options:
---all                  # Validate all workspaces in specs/*/design/
+--all                  # Validate all workspaces in specs/*/.design/
 
 # Examples:
-r2r eac design validate src-auth
-r2r eac design validate src-api
-r2r eac design validate --all
+r2r eac validate design src-auth
+r2r eac validate design src-api
+r2r eac validate design --all
 ```
 
 **Validation checks:**
@@ -132,7 +181,7 @@ r2r eac design validate --all
 
 ```text
 🔍 Validating module: src-auth
-📄 Workspace: specs/src-auth/design/workspace.dsl
+📄 Workspace: specs/src-auth/.design/workspace.dsl
 🐳 Using Docker: structurizr/cli:latest
 
 ✅ Workspace is valid
@@ -142,30 +191,31 @@ r2r eac design validate --all
   Warnings: 0
   Execution time: 1.23s
 
-📝 Results written to: out/design-validation-results.json
+📝 Results written to: out/logs/design/validation-results.json
 ```
 
-### design serve
+### serve design
 
 View architecture diagrams in browser using Structurizr Lite.
 
 ```bash
-r2r eac design serve <module> [options]
+r2r eac serve design <module> [options]
 
 # Options:
 --force, -f            # Stop existing container and start new one
 
 # Examples:
-r2r eac design serve src-auth
-r2r eac design serve src-api --force
+r2r eac serve design src-auth
+r2r eac serve design src-api --force
 ```
 
 **What happens:**
 
-1. Starts Structurizr Lite in Docker on port 8080
-2. Mounts `specs/<module>/design/` directory
-3. Opens browser to <http://localhost:8080>
-4. Auto-reloads when workspace.dsl changes
+1. Finds available port in range 9000-9999 (dynamically allocated)
+2. Starts Structurizr Lite in Docker on that port
+3. Mounts `specs/<module>/.design/` directory
+4. Opens browser to `http://localhost:<port>`
+5. Auto-reloads when workspace.dsl changes
 
 **Viewer features:**
 
@@ -247,7 +297,7 @@ workspace "Authentication Module" "User authentication and authorization" {
 ```text
 specs/
 └── src-auth/
-    └── design/
+    └── .design/
         ├── workspace.dsl           # Source DSL file
         ├── workspace.json          # Generated by Structurizr
         └── .structurizr/           # Viewer metadata
@@ -292,13 +342,13 @@ Shows internal structure:
 Use `--debug` to inspect AI generation:
 
 ```bash
-r2r eac design create src-module --debug
+r2r eac create design src-module --debug
 ```
 
-Creates debug files in `out/`:
+Creates debug files in `out/logs/design/`:
 
 ```text
-out/
+out/logs/design/
 ├── debug-full-prompt.md           # AI prompt with source code
 ├── debug-raw-ai-response.dsl      # Unfiltered AI output
 ├── debug-cleaned-output.dsl       # After anti-corruption layer
@@ -320,10 +370,10 @@ Override default AI behavior:
 
 ```bash
 # Edit system prompt
-nano .r2r/contracts/ai/design-create/system-prompt.md
+nano .r2r/eac/ai/design/design.md
 
 # Changes apply to all future generation
-r2r eac design create src-module
+r2r eac create design src-module
 ```
 
 ### Manual Editing
@@ -332,16 +382,16 @@ Edit generated workspace.dsl:
 
 ```bash
 # Generate initial structure
-r2r eac design create src-module
+r2r eac create design src-module
 
 # Edit manually
-nano specs/src-module/design/workspace.dsl
+nano specs/src-module/.design/workspace.dsl
 
 # Validate changes
-r2r eac design validate src-module
+r2r eac validate design src-module
 
 # View updated diagrams
-r2r eac design serve src-module
+r2r eac serve design src-module
 ```
 
 ### Styling
@@ -375,31 +425,31 @@ views {
 
 ```bash
 # Generate architecture docs
-r2r eac design create src-module
+r2r eac create design src-module
 
 # Validate
-r2r eac design validate src-module
+r2r eac validate design src-module
 
 # Commit
-git add specs/src-module/design/
+git add specs/src-module/.design/
 r2r eac work commit -m "docs: add architecture diagrams"
 
 # View in MkDocs
-r2r eac docs serve
+r2r eac serve docs
 ```
 
 ### Review Workflow
 
 ```bash
 # Create diagrams for new module
-r2r eac design create src-new-feature
+r2r eac create design src-new-feature
 
 # Review in browser
-r2r eac design serve src-new-feature
+r2r eac serve design src-new-feature
 
 # Iterate based on feedback
-nano specs/src-new-feature/design/workspace.dsl
-r2r eac design validate src-new-feature
+nano specs/src-new-feature/.design/workspace.dsl
+r2r eac validate design src-new-feature
 
 # Commit for PR
 r2r eac work commit --all
@@ -412,7 +462,7 @@ r2r eac work pr
 # GitHub Actions example
 - name: Validate architecture
   run: |
-    r2r eac design validate --all
+    r2r eac validate design --all
     if [ $? -ne 0 ]; then
       echo "Architecture validation failed"
       exit 1
@@ -447,10 +497,10 @@ Images are pulled automatically on first use.
 - **Generate early**: Create diagrams when starting modules
 - **Keep updated**: Regenerate when architecture changes significantly
 - **Manual refinement**: AI generates structure, you add details
-- **Validate often**: Run `design validate` before commits
+- **Validate often**: Run `validate design` before commits
 - **Version control**: Commit workspace.dsl with code
 - **Review in PRs**: Use diagrams for architecture discussions
-- **Live documentation**: Use `design serve` during development
+- **Live documentation**: Use `serve design` during development
 
 ## Troubleshooting
 
@@ -459,10 +509,10 @@ Images are pulled automatically on first use.
 | Docker not found | Install Docker Desktop, ensure it's running |
 | Module not found | Check module exists in `src/<module>/` |
 | Validation fails | Use `--debug`, check DSL syntax manually |
-| Port 8080 in use | Stop existing container: `docker stop structurizr-lite-<module>` |
+| Port in use | Command auto-selects available port in 9000-9999 range |
 | AI generates invalid DSL | Use `--debug`, check AI provider setup |
 | Workspace exists | Use `--force` to overwrite |
-| Browser doesn't open | Manually visit <http://localhost:8080> |
+| Browser doesn't open | Manually visit URL shown in command output |
 
 ## Advanced Usage
 
@@ -471,18 +521,18 @@ Images are pulled automatically on first use.
 ```bash
 # Generate for multiple modules
 for module in src-auth src-api src-core; do
-  r2r eac design create $module
+  r2r eac create design $module
 done
 
 # Validate all
-r2r eac design validate --all
+r2r eac validate design --all
 ```
 
 ### Custom Output Paths
 
 ```bash
 # Save to custom location
-r2r eac design create src-module --output docs/architecture/system.dsl
+r2r eac create design src-module --output docs/architecture/system.dsl
 
 # Validate custom path
 docker run --rm -v "$(pwd):/workspace" structurizr/cli:latest \
@@ -493,9 +543,9 @@ docker run --rm -v "$(pwd):/workspace" structurizr/cli:latest \
 
 ```bash
 # Start viewer
-r2r eac design serve src-module
+r2r eac serve design src-module
 
-# In browser at http://localhost:8080:
+# In browser at the displayed URL (e.g., http://localhost:9000):
 # - Click on a view
 # - Click Export → PNG/SVG
 # - Save to docs/images/
@@ -508,21 +558,22 @@ Use Structurizr CLI directly:
 ```bash
 # Export to JSON
 docker run --rm -v "$(pwd):/workspace" structurizr/cli:latest \
-  export -workspace /workspace/specs/src-module/design/workspace.dsl \
+  export -workspace /workspace/specs/src-module/.design/workspace.dsl \
   -format json -output /workspace/out/
 
 # Generate PlantUML
 docker run --rm -v "$(pwd):/workspace" structurizr/cli:latest \
-  export -workspace /workspace/specs/src-module/design/workspace.dsl \
+  export -workspace /workspace/specs/src-module/.design/workspace.dsl \
   -format plantuml -output /workspace/out/
 ```
 
 ## Summary
 
-1. **Create**: `r2r eac design create <module>`
-2. **Validate**: `r2r eac design validate <module>`
-3. **View**: `r2r eac design serve <module>`
-4. **Edit** (optional): Refine workspace.dsl manually
-5. **Commit**: `git add specs/` and commit
+1. **Create**: `r2r eac create design <module>`
+2. **Update**: `r2r eac update design <module>` (refresh existing diagrams)
+3. **Validate**: `r2r eac validate design <module>`
+4. **View**: `r2r eac serve design <module>`
+5. **Edit** (optional): Refine workspace.dsl manually
+6. **Commit**: `git add specs/` and commit
 
 Architecture diagrams as code provide living documentation that evolves with your codebase.

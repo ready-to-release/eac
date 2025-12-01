@@ -174,7 +174,11 @@ func TestMetadataCommand_L2_WithConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Chdir(tmpDir)
 
-	// Create a test r2r-cli.yml
+	// Initialize git repo (required for finding repository root)
+	os.Mkdir(".git", 0755)
+
+	// Create .r2r directory and config file
+	os.Mkdir(".r2r", 0755)
 	configContent := `version: "1.0"
 extensions:
   - name: "test-meta"
@@ -184,13 +188,10 @@ extensions:
       - name: "TEST_VAR"
         value: "test_value"`
 
-	err = os.WriteFile("r2r-cli.yml", []byte(configContent), 0644)
+	err = os.WriteFile(".r2r/r2r-cli.yml", []byte(configContent), 0644)
 	if err != nil {
 		t.Fatal("Failed to write config file:", err)
 	}
-
-	// Initialize git repo (required for finding repository root)
-	os.Mkdir(".git", 0755)
 
 	// Initialize test config instead of production config
 	testConfig := conf.NewTestConfigWithExtensions(t, []conf.Extension{

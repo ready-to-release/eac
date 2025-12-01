@@ -1,6 +1,5 @@
-// Command: risks create
+// Command: create risk-controls
 // Short: Create risk control specifications from assessment reports
-// HasSideEffects: true
 // Args: files
 // Flag.force: type=bool, default=false, shorthand=f, usage=Overwrite existing risk control files
 // Flag.allow-orphans: type=bool, default=false, usage=Allow overwrite even if it creates orphaned tags (requires --force)
@@ -14,15 +13,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {
-	registry.Register(RisksCreate)
+	registry.Register(CreateRiskControls)
 }
 
-// RisksCreate is the entry point for the risks create command
-func RisksCreate() int {
+// CreateRiskControls is the entry point for the create risk-controls command
+func CreateRiskControls() int {
 	return Run()
 }
 

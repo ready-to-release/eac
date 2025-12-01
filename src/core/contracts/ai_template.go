@@ -3,7 +3,6 @@ package contracts
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"text/template"
 
 	"gopkg.in/yaml.v3"
@@ -82,31 +81,4 @@ func BuildPromptWithTemplate(
 	}
 
 	return buf.String(), nil
-}
-
-// BuildPromptWithContract is deprecated. Use BuildPromptWithTemplate instead.
-// Kept for backward compatibility.
-func BuildPromptWithContract(
-	promptTemplate string,
-	contract *Contract,
-	antiCorruption *AntiCorruptionRules,
-	replacements map[string]string,
-) string {
-	result, err := BuildPromptWithTemplate(promptTemplate, contract, antiCorruption, replacements)
-	if err != nil {
-		// Fallback to simple replacement for backward compatibility
-		result = promptTemplate
-		if contract != nil {
-			contractYAML, _ := yaml.Marshal(contract.RawData)
-			result = strings.ReplaceAll(result, "{CONTRACT_STRUCTURE}", string(contractYAML))
-		}
-		if antiCorruption != nil {
-			rulesYAML, _ := yaml.Marshal(antiCorruption.RawData)
-			result = strings.ReplaceAll(result, "{ANTI_CORRUPTION_RULES}", string(rulesYAML))
-		}
-		for k, v := range replacements {
-			result = strings.ReplaceAll(result, "{"+k+"}", v)
-		}
-	}
-	return result
 }

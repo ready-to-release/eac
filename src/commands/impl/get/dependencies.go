@@ -7,11 +7,10 @@
 //   --as-plantuml: Output as PlantUML diagram
 //   --as-mermaid: Output as Mermaid diagram
 //   --as-execution-order: Output execution order only
-// HasSideEffects: false
 package get
 
 import (
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"fmt"
 	"os"
 	"strings"

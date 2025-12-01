@@ -1,4 +1,4 @@
-@deps:git @deps:go @ov @env:isolated-test-project
+@L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work_pull
 
   As a developer working in a workspace
@@ -8,13 +8,13 @@ Feature: src-commands_work_pull
   Rule: Command must be registered and accessible
 
     Scenario: Command is listed in available commands
-      When I run the command "list commands"
+      When I run the command "show help"
       Then the exit code is 0
       And I should see "work pull"
 
     @skip:wip
     Scenario: Command has proper description
-      When I run the command "describe commands work pull"
+      When I run the command "show help work pull"
       Then the exit code is 0
       And I should see "sync" or "rebase" or "main"
 

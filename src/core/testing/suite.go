@@ -4,84 +4,55 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/config"
 )
 
-// SuiteRegistry holds all defined test suites
-var SuiteRegistry = map[string]*TestSuite{
-	"commit":                  NewCommitSuite(),
-	"acceptance":              NewAcceptanceSuite(),
-	"production-verification": NewProductionVerificationSuite(),
-}
-
-// NewCommitSuite creates the commit test suite (L0-L1)
-func NewCommitSuite() *TestSuite {
-	return &TestSuite{
-		Moniker:     "commit",
-		Name:        "Commit Tests",
-		Description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L1",
-		Selectors: []TagSelector{
-			{
-				AnyOfTags:   []string{"@L0", "@L1"},
-				ExcludeTags: []string{"@L2", "@L3", "@L4"},
-			},
-		},
-		Inferences: GetGlobalInferences(),
-	}
-}
-
-// NewAcceptanceSuite creates the acceptance test suite (L2+ IV, OV, PV)
-// Only includes L2+ tests to avoid overlap with commit suite (L0-L1)
-//
-// NOTE: We use separate selectors for each verification type to maintain clarity
-// and allow different exclusion rules per verification type if needed in the future.
-// The selectors are combined with comma (OR) at the top level.
-func NewAcceptanceSuite() *TestSuite {
-	return &TestSuite{
-		Moniker:     "acceptance",
-		Name:        "PLTE Acceptance Tests",
-		Description: "Stage 5-6 - L2+ Installation, Operational, and Performance Verification",
-		Selectors: []TagSelector{
-			{
-				AnyOfTags:   []string{"@iv", "@ov", "@pv"},
-				ExcludeTags: []string{"@L0", "@L1"},
-			},
-		},
-		Inferences: GetGlobalInferences(),
-	}
-}
-
-// NewProductionVerificationSuite creates the production verification suite (L4 + PIV)
-func NewProductionVerificationSuite() *TestSuite {
-	return &TestSuite{
-		Moniker:     "production-verification",
-		Name:        "Production Installation Verification",
-		Description: "Stage 11-12 - Production smoke tests",
-		Selectors: []TagSelector{
-			{
-				RequireTags: []string{"@L4", "@piv"},
-			},
-		},
-		Inferences: GetGlobalInferences(),
-	}
-}
-
-// GetSuite retrieves a suite by its moniker
+// GetSuite retrieves a suite by its moniker from configuration.
+// Returns error if config is unavailable (fail-closed - no hardcoded fallbacks).
 func GetSuite(moniker string) (*TestSuite, error) {
-	suite, exists := SuiteRegistry[moniker]
-	if !exists {
-		return nil, fmt.Errorf("suite not found: %s", moniker)
+	cfg := config.Global()
+	if cfg == nil || cfg.TestSuites == nil {
+		return nil, fmt.Errorf("cannot get suite '%s': config unavailable (ensure config is loaded)", moniker)
 	}
-	return suite, nil
+
+	suiteDef := cfg.TestSuites.Get(moniker)
+	if suiteDef != nil {
+		return convertSuiteDef(suiteDef), nil
+	}
+	return nil, fmt.Errorf("suite not found: %s", moniker)
 }
 
-// ListSuites returns all available suite monikers
+// ListSuites returns all available suite monikers.
+// Returns empty list if config is unavailable.
 func ListSuites() []string {
-	monikers := make([]string, 0, len(SuiteRegistry))
-	for moniker := range SuiteRegistry {
-		monikers = append(monikers, moniker)
+	cfg := config.Global()
+	if cfg == nil || cfg.TestSuites == nil {
+		return []string{} // Config unavailable - return empty list
 	}
+	monikers := cfg.TestSuites.List()
 	sort.Strings(monikers)
 	return monikers
+}
+
+// convertSuiteDef converts a config definition to a runtime TestSuite
+func convertSuiteDef(def *config.TestSuiteDef) *TestSuite {
+	selectors := make([]TagSelector, len(def.Selectors))
+	for i, sel := range def.Selectors {
+		selectors[i] = TagSelector{
+			RequireTags: sel.RequireTags,
+			AnyOfTags:   sel.AnyOfTags,
+			ExcludeTags: sel.ExcludeTags,
+		}
+	}
+
+	return &TestSuite{
+		Moniker:     def.Moniker,
+		Name:        def.Name,
+		Description: def.Description,
+		Selectors:   selectors,
+		Inferences:  GetGlobalInferences(),
+	}
 }
 
 // BuildGodogTagFilter generates a godog-compatible tag expression for the suite.
@@ -180,7 +151,7 @@ func (suite *TestSuite) BuildGodogTagFilter() string {
 // SelectionStats contains statistics about test selection
 type SelectionStats struct {
 	TotalDiscovered  int // Total tests discovered
-	Ignored          int // Tests tagged with @skip:<reason>
+	Skipped          int // Tests tagged with @skip:<reason>
 	NotMatchingSuite int // Tests that don't match suite selectors
 	Selected         int // Tests selected for the suite
 }
@@ -193,9 +164,9 @@ func (suite *TestSuite) SelectTestsWithStats(allTests []TestReference) ([]TestRe
 	}
 
 	for _, test := range allTests {
-		// Filter out ignored tests FIRST (before any other selection)
+		// Filter out skipped tests FIRST (before any other selection)
 		if test.IsIgnored {
-			stats.Ignored++
+			stats.Skipped++
 			continue
 		}
 
@@ -209,14 +180,15 @@ func (suite *TestSuite) SelectTestsWithStats(allTests []TestReference) ([]TestRe
 	stats.Selected = len(selected)
 
 	// Log skipped tests if any
-	if stats.Ignored > 0 {
-		fmt.Printf("INFO: %d tests skipped (tagged with @skip:<reason>)\n", stats.Ignored)
+	if stats.Skipped > 0 {
+		fmt.Printf("INFO: %d tests skipped (tagged with @skip:<reason>)\n", stats.Skipped)
 	}
 
 	return selected, stats
 }
 
-// SelectTests applies suite selectors to filter tests (legacy version for compatibility)
+// SelectTests applies suite selectors to filter tests.
+// Use SelectTestsWithStats if you need selection statistics.
 func (suite *TestSuite) SelectTests(allTests []TestReference) []TestReference {
 	selected, _ := suite.SelectTestsWithStats(allTests)
 	return selected
@@ -269,12 +241,13 @@ func matchesSelector(tags []string, selector TagSelector) bool {
 // GetSystemDependencies extracts all @deps:* tags from tests (excludes @depm:* and OS platform tags)
 func GetSystemDependencies(tests []TestReference) []string {
 	depsMap := make(map[string]bool)
+	osPlatformTagsFull := GetOSPlatformTagsFull()
 
 	for _, test := range tests {
 		for _, tag := range test.Tags {
 			// Only include @deps: tags, not @depm: (module dependencies)
-			// Also exclude OS platform tags (handled by OS filtering)
-			if strings.HasPrefix(tag, "@deps:") && !OsPlatformTagsFull[tag] {
+			// Exclude OS platform tags (handled by OS filtering)
+			if strings.HasPrefix(tag, "@deps:") && !osPlatformTagsFull[tag] {
 				depsMap[tag] = true
 			}
 		}

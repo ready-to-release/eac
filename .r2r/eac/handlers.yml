@@ -1,0 +1,165 @@
+# Handler Configuration
+# Maps build dependencies to build/test handlers
+#
+# Handler Types:
+#   - builtin: Compiled Go handlers (go, none)
+#   - command: Sequence of shell commands
+#   - script: External script file
+#   - docker: Docker container-based handler
+#
+# Build dependencies reference system-dependencies.yml monikers
+
+handlers:
+  # Go handler - builtin (this is a Go system)
+  - name: go
+    description: "Go module build and test handler"
+    type: builtin
+    build:
+      handler: go
+      config:
+        # Cross-compile targets for executables with cross_compile capability
+        cross_compile_targets:
+          - os: linux
+            arch: amd64
+            suffix: ""
+          - os: linux
+            arch: arm64
+            suffix: ""
+          - os: darwin
+            arch: amd64
+            suffix: ""
+          - os: darwin
+            arch: arm64
+            suffix: ""
+          - os: windows
+            arch: amd64
+            suffix: ".exe"
+        # UPX compression supported platforms
+        upx_platforms: [linux, windows]
+        # CGO disabled for cross-compilation
+        cgo_enabled: false
+      flags:
+        - name: tidy
+          type: bool
+          cli_positive: "--tidy-first"
+          cli_negative: "--no-tidy"
+          default: true
+          default_env:
+            CI: false
+          description: "Run 'go mod tidy' before building"
+        - name: compressed
+          type: bool
+          cli_positive: "--compressed"
+          default: false
+          description: "Strip debug info for smaller binaries (-ldflags '-s -w')"
+        - name: compressed_upx
+          type: bool
+          cli_positive: "--compressed-upx"
+          default: false
+          description: "Apply UPX compression for maximum size reduction"
+        - name: version
+          type: string
+          value_flag: "--version"
+          default: ""
+          description: "Inject version string into binary via ldflags"
+    test:
+      handler: go
+      config:
+        # Test handler delegates to test suite infrastructure
+        delegate_to_suite: true
+
+  # Docker handler - builtin
+  - name: docker
+    description: "Docker container image build handler"
+    type: builtin
+    build:
+      handler: docker
+      config:
+        # Dockerfile search paths (relative to workspace root)
+        dockerfile_paths:
+          - "containers/{moniker}/Dockerfile"
+          - "{root}/Dockerfile"
+        # CI mode platforms
+        ci_platforms: [linux/amd64, linux/arm64]
+        # Local mode: single platform (current)
+        local_platform: ""
+    test:
+      handler: static
+      config:
+        message: "Docker modules are validated at build time"
+
+  # MkDocs handler - docker-based
+  - name: mkdocs
+    description: "MkDocs documentation site builder"
+    type: docker
+    build:
+      image: cli-mkdocs:latest
+      dockerfile: "containers/mkdocs/.Dockerfile"
+      context: "containers/mkdocs"
+      command: ["mkdocs", "build", "--site-dir", "{output}/site", "--clean", "--strict"]
+      workdir: /docs
+      volumes:
+        - "{workspace}:/docs"
+      config:
+        # Config file location
+        config_file: mkdocs.yml
+    test:
+      handler: static
+      config:
+        # Verify build output exists
+        verify_paths:
+          - "{output}/site/index.html"
+
+  # NPM handler - command-based
+  - name: npm
+    description: "NPM/Node.js module handler"
+    type: command
+    build:
+      steps:
+        - name: install
+          command: npm install
+          workdir: "{root}"
+        - name: compile
+          command: npx tsc -p ./
+          workdir: "{root}"
+          # Only run if module has typescript capability
+          when: capability:typescript
+    test:
+      steps:
+        - name: test
+          command: npm test
+          workdir: "{root}"
+          # Only run if package.json exists
+          when: file_exists:package.json
+
+  # None handler - for modules with no build step
+  - name: none
+    description: "No-op handler for static modules"
+    type: builtin
+    build:
+      handler: none
+      config:
+        message: "No build step required for this module type"
+    test:
+      handler: static
+      config:
+        message: "Static module - validation done at build time"
+
+# Handler dispatch rules
+# These determine which handler to use based on module type and capabilities
+dispatch:
+  build:
+    # Special case: documentation + container = mkdocs
+    - match:
+        capabilities: [documentation, container]
+      handler: mkdocs
+    # Default: use primary build_dep
+    - match:
+        default: true
+      handler: "{primary_build_dep}"
+
+  test:
+    # Default: use primary build_dep
+    - match:
+        default: true
+      handler: "{primary_build_dep}"

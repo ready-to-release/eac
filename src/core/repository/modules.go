@@ -49,7 +49,7 @@ func EnrichFilesWithModules(files []FileInfo, workspaceRoot string) ([]Repositor
 		// - catch-all module fallback
 		matchingModules := registry.FindModulesForFile(normalizedPath)
 
-		// Filter to only the closest modules in parent chain
+		// Filter out repository-root modules when other modules match
 		closestModules := filterClosestModules(matchingModules, registry)
 
 		// Extract monikers from filtered modules
@@ -68,141 +68,57 @@ func EnrichFilesWithModules(files []FileInfo, workspaceRoot string) ([]Repositor
 	return result, nil
 }
 
-// filterClosestModules filters a list of modules to only include those that are
-// closest in the parent chain hierarchy. When multiple modules match a file,
-// this ensures we only keep the most specific (deepest) modules.
+// filterClosestModules filters a list of modules to only include the most specific ones.
+// When multiple modules match a file, this excludes repository-root modules if other
+// modules also match.
 //
-// Special handling for "repository" module:
-//   - The "repository" module is a catch-all that should only own files
-//     that no other specific module claims
-//   - If any non-repository modules match, repository is excluded
-//   - Repository is only kept if it's the ONLY match
-//
-// Special handling for exclude_children_owned_source:
-//   - If a parent module has exclude_children_owned_source: true (default)
-//     and any of its direct children match the file, the parent is excluded
-//   - This allows children to take ownership of files in their parent's source space
-//
-// Algorithm:
-//  1. Check if "repository" is present with other modules → exclude repository
-//  2. Check exclude_children_owned_source → exclude parents when children match
-//  3. Calculate depth for each remaining module (distance from root)
-//  4. Find the maximum depth
-//  5. Keep only modules at maximum depth
+// Special handling for "repository-root" type modules:
+//   - Repository-root modules should only own files that no other module claims
+//   - If any non-repository-root modules match, repository-root is excluded
+//   - Repository-root is only kept if it's the ONLY match
 //
 // Examples:
-//   - [claude-agents (depth 2), repository (depth 1)] → [claude-agents]
+//   - [claude, repository] → [claude] (repository-root excluded)
 //   - [repository] → [repository] (only match)
-//   - [claude (parent), claude-agents (child)] → [claude-agents] (if claude has exclude_children_owned_source: true)
-//   - [docs-guide (depth 2), docs-reference (depth 2), docs (depth 1)] → [docs-guide, docs-reference]
-//   - [readme (depth 1), repository (depth 1)] → [readme] (repository excluded)
+//   - [docs, src-core] → [docs, src-core] (both kept)
 //
 // Parameters:
 //   - matchingModules: List of modules that match a file
-//   - registry: Module registry for parent chain resolution
+//   - registry: Module registry (unused, kept for API compatibility)
 //
 // Returns:
-//   - Filtered list containing only the closest (most specific) modules
+//   - Filtered list containing only the most specific modules
 func filterClosestModules(matchingModules []*modules.ModuleContract, registry *modules.Registry) []*modules.ModuleContract {
 	// No filtering needed for 0 or 1 modules
 	if len(matchingModules) <= 1 {
 		return matchingModules
 	}
 
-	// Special handling for "repository" module
-	// Repository should only own files that no other module claims
-	hasRepository := false
+	// Special handling for "repository-root" type modules
+	// Repository-root modules should only own files that no other module claims
+	hasRepositoryRoot := false
 	hasOtherModules := false
 
 	for _, module := range matchingModules {
-		if module.Moniker == "repository" {
-			hasRepository = true
+		if module.Type == "repository-root" {
+			hasRepositoryRoot = true
 		} else {
 			hasOtherModules = true
 		}
 	}
 
-	// If repository is present with other modules, exclude it
-	if hasRepository && hasOtherModules {
+	// If repository-root is present with other modules, exclude it
+	if hasRepositoryRoot && hasOtherModules {
 		filteredModules := make([]*modules.ModuleContract, 0, len(matchingModules)-1)
 		for _, module := range matchingModules {
-			if module.Moniker != "repository" {
+			if module.Type != "repository-root" {
 				filteredModules = append(filteredModules, module)
 			}
 		}
-		matchingModules = filteredModules
+		return filteredModules
 	}
 
-	// If only repository remains or no modules, return as is
-	if len(matchingModules) <= 1 {
-		return matchingModules
-	}
-
-	// Filter modules based on own_children_files flag
-	// If a parent does NOT have own_children_files=true and any of its children match, exclude the parent
-	modulesToExclude := make(map[string]bool)
-
-	for _, parent := range matchingModules {
-		// Check if this module should NOT own files that children match
-		if !parent.Flags.OwnChildrenFiles {
-			// Check if any child modules are in the matching list
-			for _, candidate := range matchingModules {
-				if candidate.Moniker == parent.Moniker {
-					continue
-				}
-				// Check if candidate is a child of parent
-				if candidate.Parent == parent.Moniker {
-					// Child found - mark parent for exclusion
-					modulesToExclude[parent.Moniker] = true
-					break
-				}
-			}
-		}
-	}
-
-	// Apply exclusions
-	if len(modulesToExclude) > 0 {
-		filteredModules := make([]*modules.ModuleContract, 0, len(matchingModules))
-		for _, module := range matchingModules {
-			if !modulesToExclude[module.Moniker] {
-				filteredModules = append(filteredModules, module)
-			}
-		}
-		matchingModules = filteredModules
-	}
-
-	// If only one module remains, return as is
-	if len(matchingModules) <= 1 {
-		return matchingModules
-	}
-
-	// Calculate depth for each module
-	depths := make(map[string]int)
-	maxDepth := 0
-
-	for _, module := range matchingModules {
-		depth, err := modules.GetDepth(module, registry)
-		if err != nil {
-			// On error, default to depth 1 (root level)
-			// This ensures we don't lose modules due to validation errors
-			depth = 1
-		}
-
-		depths[module.Moniker] = depth
-		if depth > maxDepth {
-			maxDepth = depth
-		}
-	}
-
-	// Filter to only modules at maximum depth
-	result := make([]*modules.ModuleContract, 0, len(matchingModules))
-	for _, module := range matchingModules {
-		if depths[module.Moniker] == maxDepth {
-			result = append(result, module)
-		}
-	}
-
-	return result
+	return matchingModules
 }
 
 // GetRepositoryFilesWithModules is a convenience function that combines

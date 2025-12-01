@@ -8,8 +8,8 @@ import (
 )
 
 // ApplyInferences applies inference rules to enrich test tags
-// NOTE: L-level tags (@L0-@L4) and verification tags (@ov/@iv/@pv/@piv/@ppv) are NEVER inferred.
-// Tests MUST have these tags explicitly present for the executor to find them.
+// NOTE: L-level tags (@L0-@L4) are NEVER inferred - tests MUST have explicit L-tags.
+// Verification tags (@ov) ARE inferred: if no verification tag is present, @ov is added.
 func ApplyInferences(tests []TestReference, inferences []Inference) []TestReference {
 	enriched := make([]TestReference, len(tests))
 
@@ -24,8 +24,8 @@ func ApplyInferences(tests []TestReference, inferences []Inference) []TestRefere
 				continue
 			}
 
-			// NEVER infer L-level tags or verification tags - they must be explicit
-			if isLevelInference(inference) || isVerificationInference(inference) {
+			// Skip level inferences if test already has explicit level
+			if isLevelInference(inference) && hasAnyLevelTag(test.Tags) {
 				continue
 			}
 
@@ -40,24 +40,53 @@ func ApplyInferences(tests []TestReference, inferences []Inference) []TestRefere
 			}
 		}
 
-		// NOTE: Verification tags (@ov etc.) are NO LONGER derived/inferred
-		// They MUST be explicitly present in the test
+		// Derive @ov if no other verification tag is present
+		enriched[i].Tags = DeriveOperationalVerification(enriched[i].Tags)
 	}
 
 	return enriched
 }
 
-// DeriveOperationalVerification is DEPRECATED and no longer used
-// Verification tags MUST be explicitly present in tests
-// This function is kept for backwards compatibility but does nothing
+// DeriveOperationalVerification adds @ov tag if no other verification tags present
+// This allows Go tests and other tests that can't explicitly declare verification tags
+// to be automatically classified as operational verification tests.
 func DeriveOperationalVerification(tags []string) []string {
-	// NO-OP: Verification tags are never derived anymore
+	verificationTags := GetVerificationTags()
+	if verificationTags == nil {
+		// Config unavailable - can't determine verification tags
+		// Default to adding @ov as a safe fallback
+		if !contains(tags, "@ov") {
+			return append(tags, "@ov")
+		}
+		return tags
+	}
+
+	// Check if any verification tag is already present
+	hasVerificationTag := false
+	for _, tag := range tags {
+		if contains(verificationTags, tag) {
+			hasVerificationTag = true
+			break
+		}
+	}
+
+	// @ov = no other verification tag present
+	if !hasVerificationTag {
+		return append(tags, "@ov")
+	}
+
 	return tags
 }
 
 // hasAnyLevelTag checks if tags contain any level tag (@L0-@L4)
+// Returns true if config unavailable (fail-closed: assume level tags may be present)
 func hasAnyLevelTag(tags []string) bool {
-	levelTags := []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
+	levelTags := GetLevelTags()
+	if levelTags == nil {
+		// Fail closed: without config, assume level tags may be present
+		// This prevents inferences from running when we can't verify
+		return true
+	}
 	for _, tag := range tags {
 		if contains(levelTags, tag) {
 			return true
@@ -67,8 +96,14 @@ func hasAnyLevelTag(tags []string) bool {
 }
 
 // isLevelInference checks if inference adds level tags
+// Returns true if config unavailable (fail-closed: skip inference if we can't verify)
 func isLevelInference(inference Inference) bool {
-	levelTags := []string{"@L0", "@L1", "@L2", "@L3", "@L4"}
+	levelTags := GetLevelTags()
+	if levelTags == nil {
+		// Fail closed: without config, assume inference might add level tags
+		// This causes the inference to be skipped (safe default)
+		return true
+	}
 	for _, tag := range inference.ThenAddTags {
 		if contains(levelTags, tag) {
 			return true
@@ -77,16 +112,6 @@ func isLevelInference(inference Inference) bool {
 	return false
 }
 
-// isVerificationInference checks if inference adds verification tags
-func isVerificationInference(inference Inference) bool {
-	verificationTags := []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
-	for _, tag := range inference.ThenAddTags {
-		if contains(verificationTags, tag) {
-			return true
-		}
-	}
-	return false
-}
 
 // matchesConditions checks if tags match inference conditions
 func matchesConditions(tags []string, conditions []string, thenAddTags []string) bool {
@@ -222,53 +247,32 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 	return enriched
 }
 
-// OsPlatformTags lists OS-specific dependency tag values (without @deps: prefix)
-var OsPlatformTags = []string{"linux", "macos", "windows"}
+// osPlatforms is the hardcoded list of OS platform names.
+// These are intrinsic to the test system, not configurable.
+var osPlatforms = []string{"linux", "macos", "windows"}
 
-// OsPlatformTagsFull lists OS-specific dependency tags (with @deps: prefix) for filtering
-var OsPlatformTagsFull = map[string]bool{
-	"@deps:linux":       true,
-	"@deps:macos":       true,
-	"@deps:windows":     true,
-	"@deps:os-agnostic": true,
+// GetOSPlatformTags returns the hardcoded OS platform names.
+func GetOSPlatformTags() []string {
+	return osPlatforms
 }
 
-// InferOSPlatform adds @deps:os-agnostic to tests that don't have any OS-specific deps
-// This runs after other inference phases to ensure all explicit OS deps are already set
-func InferOSPlatform(tests []TestReference) []TestReference {
-	enriched := make([]TestReference, len(tests))
+// GetOSPlatformTagsFull returns OS platform tags with @deps: prefix as a map.
+func GetOSPlatformTagsFull() map[string]bool {
+	result := make(map[string]bool, len(osPlatforms))
+	for _, p := range osPlatforms {
+		result["@deps:"+p] = true
+	}
+	return result
+}
 
-	for i, test := range tests {
-		enriched[i] = test
-		enriched[i].Tags = copyTags(test.Tags)
-
-		// Check if test has any OS-specific dependency
-		hasOSDep := false
-		for _, dep := range test.SystemDependencies {
-			for _, osDep := range OsPlatformTags {
-				if dep == osDep {
-					hasOSDep = true
-					break
-				}
-			}
-			if hasOSDep {
-				break
-			}
-		}
-
-		// If no OS-specific dep, add os-agnostic
-		if !hasOSDep {
-			if !contains(enriched[i].Tags, "@deps:os-agnostic") {
-				enriched[i].Tags = append(enriched[i].Tags, "@deps:os-agnostic")
-			}
-			// Also add to SystemDependencies for consistency
-			if !contains(enriched[i].SystemDependencies, "os-agnostic") {
-				enriched[i].SystemDependencies = append(enriched[i].SystemDependencies, "os-agnostic")
-			}
+// IsOSPlatformDep checks if a dependency name is an OS platform.
+func IsOSPlatformDep(dep string) bool {
+	for _, p := range osPlatforms {
+		if dep == p {
+			return true
 		}
 	}
-
-	return enriched
+	return false
 }
 
 // InferSystemDepsFromEnv infers system dependencies based on environment tags

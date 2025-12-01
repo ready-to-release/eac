@@ -164,7 +164,7 @@ Feature: [module-name_feature-name]
 #   For complete documentation, see: docs/explanation/specifications/gxp-tagging.md
 #   Feature naming:    <module>_<feature-name> serves as URS identifier
 #   @gxp              - GxP-related requirement (requires @risk-control:gxp-<name>)
-#   @critical-aspect  - GmP Critical Aspect (GmP products only)
+#   @gmp-critical-aspect  - GmP Critical Aspect (GmP products only)
 #   @risk-control:gxp-<name> - Link to GxP risk control specification
 #   @Manual           - Manual test scenario (general use, includes GxP contexts)
 #

@@ -55,8 +55,8 @@ go run . list commands
 Current commands include:
 
 - **`commit`** - Show staged changes with their module mappings for AI commit message generation
-- **`describe commands`** - Output structured command information for shell integration
-- **`list commands`** - List all available commands
+- **`get commands`** - Output structured command information for shell integration
+- **`show help`** - Show all available commands
 - **`show files`** - Show all tracked repository files with module ownership
 - **`show files staged`** - Show only staged files with module ownership
 - **`show files changed`** - Show only modified/unstaged files with module ownership
@@ -70,8 +70,7 @@ Running a parent command without a subcommand shows available subcommands:
 ```bash
 go run . show          # Shows: files, modules, moduletypes
 go run . show files    # Shows: changed, staged (plus executes show files)
-go run . list          # Shows: commands
-go run . describe      # Shows: commands
+go run . get           # Shows: commands, modules, etc.
 ```
 
 ## Architecture
@@ -104,7 +103,7 @@ The main dispatcher (`main.go`):
 
 **PowerShell** (`scripts/pwsh/go-invoker/go.psm1`):
 
-- Calls `go run . describe commands` to get command structure
+- Calls `go run . get commands` to get command structure
 - Provides intelligent tab completion for all command levels
 - Caches command structure for performance
 
@@ -179,7 +178,7 @@ The module provides intelligent completion:
 - `run show <TAB>` → shows subcommands under 'show'
 - `run list <TAB>` → shows subcommands under 'list'
 
-Completion data comes from `go run . describe commands` which outputs:
+Completion data comes from `go run . get commands` which outputs:
 
 ```json
 {

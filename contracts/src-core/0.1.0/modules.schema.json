@@ -41,11 +41,6 @@
           "type": "string",
           "description": "Module description (defaults to name if not specified)"
         },
-        "parent": {
-          "type": "string",
-          "description": "Parent module moniker or '.' for root (defaults to '.')",
-          "default": "."
-        },
         "depends_on": {
           "type": "array",
           "description": "List of module monikers this module depends on (defaults to [])",
@@ -60,6 +55,13 @@
         },
         "flags": {
           "$ref": "#/definitions/flags"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Generic key-value store for module-specific data (e.g., executable names, custom properties)",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "required": ["moniker", "name"]
@@ -117,8 +119,25 @@
           "description": "Changelog file path relative to module root (defaults to 'CHANGELOG.md')",
           "default": "CHANGELOG.md"
         },
+        "workflows": {
+          "$ref": "#/definitions/workflows"
+        },
         "repo": {
           "$ref": "#/definitions/repo_files"
+        }
+      }
+    },
+    "workflows": {
+      "type": "object",
+      "description": "GitHub Actions workflow file ownership",
+      "properties": {
+        "ci": {
+          "type": "string",
+          "description": "CI workflow file path (e.g., '.github/workflows/ci-{moniker}.yaml')"
+        },
+        "release": {
+          "type": "string",
+          "description": "Release workflow file path (e.g., '.github/workflows/release-{moniker}.yml')"
         }
       }
     },
@@ -132,6 +151,14 @@
           "items": {
             "type": "string"
           }
+        },
+        "test_impl": {
+          "type": "string",
+          "description": "Path to test implementation directory (e.g., 'src/specs/impl/repository' for godog step definitions)"
+        },
+        "design": {
+          "type": "string",
+          "description": "Path to design workspace directory (e.g., 'specs/<moniker>/.design' for Structurizr DSL files)"
         },
         "other": {
           "type": "array",
@@ -153,19 +180,8 @@
     },
     "flags": {
       "type": "object",
-      "description": "Module behavior flags",
-      "properties": {
-        "catch_all": {
-          "type": "boolean",
-          "description": "If true, this module catches unowned files (only one module should have this)",
-          "default": false
-        },
-        "own_children_files": {
-          "type": "boolean",
-          "description": "If true, owns files in child module directories",
-          "default": false
-        }
-      }
+      "description": "Module behavior flags (reserved for future use)",
+      "properties": {}
     }
   },
   "examples": [
@@ -176,7 +192,6 @@
           "name": "Core Domain Libraries",
           "type": "go-library",
           "description": "Core library containing contracts and repository operations",
-          "parent": ".",
           "depends_on": [],
           "files": {
             "root": "src/core",
@@ -192,36 +207,7 @@
               "exclude": []
             }
           },
-          "flags": {
-            "catch_all": false,
-            "own_children_files": false
-          }
-        },
-        {
-          "moniker": "unordered",
-          "name": "Unordered Files",
-          "type": "catch-all",
-          "description": "Module for files not owned by anything else",
-          "parent": "repository",
-          "depends_on": [],
-          "files": {
-            "root": "/",
-            "source": [],
-            "config": [],
-            "assets": [],
-            "tests": [],
-            "exclude": [],
-            "changelog": "",
-            "repo": {
-              "specs": [],
-              "other": [],
-              "exclude": []
-            }
-          },
-          "flags": {
-            "catch_all": true,
-            "own_children_files": false
-          }
+          "flags": {}
         }
       ]
     }

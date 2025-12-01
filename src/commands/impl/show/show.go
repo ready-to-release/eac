@@ -1,13 +1,12 @@
 // Command: show
 // Description: Display repository information in human-readable format
-// HasSideEffects: false
 package show
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {
@@ -28,7 +27,7 @@ func Show() int {
 	case "--help", "-h":
 		printShowUsage()
 		return 0
-	case "dependencies", "environments", "files", "modules", "moduletypes", "suite", "tests":
+	case "config", "dependencies", "environments", "files", "modules", "moduletypes", "suite", "tests":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -42,6 +41,9 @@ func printShowUsage() {
 	fmt.Println("Display repository information in human-readable format")
 	fmt.Println()
 	fmt.Println("Usage: r2r show <subcommand> [args...]")
+	fmt.Println()
+	fmt.Println("Configuration:")
+	fmt.Println("  config                    Show all EAC configuration summary")
 	fmt.Println()
 	fmt.Println("Repository Structure:")
 	fmt.Println("  modules                   Show all module contracts")

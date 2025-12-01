@@ -1,7 +1,7 @@
 // Command: commit message
 // Description: Generate commit message using AI with staged changes and module mappings
 // Short: Generate AI-powered commit messages from staged changes
-// Long: The commit message command uses AI to analyze your staged git changes and generate a structured,
+// Long: The create commit-message command uses AI to analyze your staged git changes and generate a structured,
 // Long: conventional commit message that follows project standards and includes module-specific details.
 // Long: The generated message includes a top-level summary and per-module sections describing changes.
 // Long: All output is validated against the commit message contract to ensure consistency and quality.
@@ -10,7 +10,6 @@
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
 // Flag.commit: type=bool, shorthand=c, default=false, usage=Automatically create git commit with generated message
 // Flags: --debug (save intermediate outputs and show debug info), --commit (auto-commit)
-// HasSideEffects: true
 package commit
 
 import (
@@ -22,7 +21,7 @@ import (
 	"strings"
 
 	commitmessage "github.com/ready-to-release/eac/src/commands/impl/commit/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/logging"
@@ -102,7 +101,7 @@ func AutoCleanup(commitMessage string) string {
 }
 
 func init() {
-	registry.Register(CommitMessage)
+	registry.Register(CreateCommitMessage)
 }
 
 // executionConfig holds configuration for the commit AI command
@@ -115,7 +114,7 @@ type executionConfig struct {
 	gitDiff         string
 }
 
-func CommitMessage() int {
+func CreateCommitMessage() int {
 	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
 	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {
@@ -246,7 +245,7 @@ func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error
 
 // verifyContractImplementation checks if the contract implementation is valid
 func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) error {
-	contractPath := filepath.Join(workspaceRoot, "contracts/ai/commit-message/0.1.0/contract.yml")
+	contractPath := filepath.Join(workspaceRoot, ".r2r", "eac", "ai", "commit-message", "contract.yml")
 	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
 	if len(contractErrors) > 0 {
 		logger.Error("Contract implementation verification failed")

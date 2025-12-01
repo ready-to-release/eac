@@ -1,13 +1,12 @@
 // Command: commit
 // Description: Commit utilities for generating messages and managing commits
-// HasSideEffects: false
 package commit
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

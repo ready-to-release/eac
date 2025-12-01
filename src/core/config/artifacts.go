@@ -1,0 +1,269 @@
+package config
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+)
+
+// ArtifactResolver resolves artifact patterns to concrete file paths
+type ArtifactResolver struct {
+	Moniker   string            // Module moniker
+	BuildDir  string            // Build output directory (e.g., out/build/<module>)
+	OS        string            // Target OS (linux, windows, darwin)
+	Arch      string            // Target architecture (amd64, arm64)
+	Metadata  map[string]string // Module metadata for custom artifact names
+}
+
+// NewArtifactResolver creates a new resolver for a module
+func NewArtifactResolver(moniker, buildDir string) *ArtifactResolver {
+	return &ArtifactResolver{
+		Moniker:  moniker,
+		BuildDir: buildDir,
+		OS:       runtime.GOOS,
+		Arch:     runtime.GOARCH,
+	}
+}
+
+// NewArtifactResolverWithMetadata creates a resolver with module metadata
+func NewArtifactResolverWithMetadata(moniker, buildDir string, metadata map[string]string) *ArtifactResolver {
+	return &ArtifactResolver{
+		Moniker:  moniker,
+		BuildDir: buildDir,
+		OS:       runtime.GOOS,
+		Arch:     runtime.GOARCH,
+		Metadata: metadata,
+	}
+}
+
+// NewArtifactResolverWithPlatform creates a resolver for a specific platform
+func NewArtifactResolverWithPlatform(moniker, buildDir, os, arch string) *ArtifactResolver {
+	return &ArtifactResolver{
+		Moniker:  moniker,
+		BuildDir: buildDir,
+		OS:       os,
+		Arch:     arch,
+	}
+}
+
+// NewArtifactResolverFull creates a resolver with all options
+func NewArtifactResolverFull(moniker, buildDir, os, arch string, metadata map[string]string) *ArtifactResolver {
+	return &ArtifactResolver{
+		Moniker:  moniker,
+		BuildDir: buildDir,
+		OS:       os,
+		Arch:     arch,
+		Metadata: metadata,
+	}
+}
+
+// ResolvePattern resolves an artifact pattern to a concrete path
+func (r *ArtifactResolver) ResolvePattern(pattern string) string {
+	result := pattern
+	result = strings.ReplaceAll(result, "{moniker}", r.Moniker)
+	result = strings.ReplaceAll(result, "{os}", r.OS)
+	result = strings.ReplaceAll(result, "{arch}", r.Arch)
+	result = strings.ReplaceAll(result, "{ext}", r.getExtension())
+	return result
+}
+
+// ResolvePatternWithMetadata resolves a pattern, checking metadata for custom names.
+// For executables, checks for exe-{os}-{arch} metadata key to allow per-module custom names.
+func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifactType string) string {
+	// For executables, check if module has custom name in metadata
+	if artifactType == ArtifactTypeExecutable && r.Metadata != nil {
+		metadataKey := fmt.Sprintf("exe-%s-%s", r.OS, r.Arch)
+		if customName, ok := r.Metadata[metadataKey]; ok && customName != "" {
+			return customName
+		}
+	}
+
+	// Fall back to pattern resolution
+	return r.ResolvePattern(pattern)
+}
+
+// ResolvePath resolves an artifact pattern to a full file path
+func (r *ArtifactResolver) ResolvePath(pattern string) string {
+	resolved := r.ResolvePattern(pattern)
+	return filepath.Join(r.BuildDir, resolved)
+}
+
+// getExtension returns the executable extension for the current OS
+func (r *ArtifactResolver) getExtension() string {
+	if r.OS == "windows" {
+		return ".exe"
+	}
+	return ""
+}
+
+// ArtifactVerificationResult contains the result of verifying an artifact
+type ArtifactVerificationResult struct {
+	Artifact    Artifact
+	Pattern     string // Resolved pattern
+	Path        string // Full path
+	Exists      bool
+	IsDirectory bool
+	Error       error
+}
+
+// VerifyArtifact checks if an artifact exists
+func (r *ArtifactResolver) VerifyArtifact(artifact Artifact) ArtifactVerificationResult {
+	result := ArtifactVerificationResult{
+		Artifact: artifact,
+		Pattern:  r.ResolvePatternWithMetadata(artifact.Pattern, artifact.Type),
+	}
+	result.Path = filepath.Join(r.BuildDir, result.Pattern)
+
+	info, err := os.Stat(result.Path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			result.Exists = false
+		} else {
+			result.Error = err
+		}
+		return result
+	}
+
+	result.Exists = true
+	result.IsDirectory = info.IsDir()
+
+	// Verify type matches expectation
+	if artifact.Type == ArtifactTypeDirectory && !result.IsDirectory {
+		result.Error = fmt.Errorf("expected directory but found file")
+	} else if artifact.Type != ArtifactTypeDirectory && result.IsDirectory {
+		result.Error = fmt.Errorf("expected file but found directory")
+	}
+
+	return result
+}
+
+// VerifyArtifacts verifies all artifacts for a module type
+func (r *ArtifactResolver) VerifyArtifacts(artifacts []Artifact) []ArtifactVerificationResult {
+	var results []ArtifactVerificationResult
+
+	for _, artifact := range artifacts {
+		switch artifact.Type {
+		case ArtifactTypeExecutable:
+			// Handle platform-specific executables
+			results = append(results, r.verifyExecutableArtifact(artifact)...)
+		case ArtifactTypeGlob:
+			// Handle glob patterns
+			results = append(results, r.verifyGlobArtifact(artifact))
+		default:
+			// Standard artifact verification
+			results = append(results, r.VerifyArtifact(artifact))
+		}
+	}
+
+	return results
+}
+
+// verifyExecutableArtifact handles executable artifacts with platform considerations
+func (r *ArtifactResolver) verifyExecutableArtifact(artifact Artifact) []ArtifactVerificationResult {
+	var results []ArtifactVerificationResult
+	verifyMode := artifact.GetVerifyMode()
+
+	// Determine which platforms to check
+	platforms := artifact.Platforms
+	if len(platforms) == 0 {
+		platforms = []string{"linux", "windows", "darwin"}
+	}
+
+	switch verifyMode {
+	case VerifyCurrentPlatform:
+		// Only verify for current platform if it's in the list
+		for _, p := range platforms {
+			if p == r.OS {
+				results = append(results, r.VerifyArtifact(artifact))
+				break
+			}
+		}
+	case VerifyAll:
+		// Verify all specified platforms exist
+		for _, p := range platforms {
+			resolver := NewArtifactResolverFull(r.Moniker, r.BuildDir, p, r.Arch, r.Metadata)
+			results = append(results, resolver.VerifyArtifact(artifact))
+		}
+	case VerifyAny:
+		// At least one platform must exist
+		found := false
+		for _, p := range platforms {
+			resolver := NewArtifactResolverFull(r.Moniker, r.BuildDir, p, r.Arch, r.Metadata)
+			result := resolver.VerifyArtifact(artifact)
+			if result.Exists {
+				found = true
+				results = append(results, result)
+				break
+			}
+		}
+		if !found {
+			// Return last check result showing not found
+			resolver := NewArtifactResolverFull(r.Moniker, r.BuildDir, platforms[0], r.Arch, r.Metadata)
+			result := resolver.VerifyArtifact(artifact)
+			result.Error = fmt.Errorf("no executable found for any platform: %v", platforms)
+			results = append(results, result)
+		}
+	}
+
+	return results
+}
+
+// verifyGlobArtifact handles glob pattern artifacts
+func (r *ArtifactResolver) verifyGlobArtifact(artifact Artifact) ArtifactVerificationResult {
+	result := ArtifactVerificationResult{
+		Artifact: artifact,
+		Pattern:  r.ResolvePattern(artifact.Pattern),
+	}
+	result.Path = filepath.Join(r.BuildDir, result.Pattern)
+
+	matches, err := filepath.Glob(result.Path)
+	if err != nil {
+		result.Error = err
+		return result
+	}
+
+	result.Exists = len(matches) > 0
+	if !result.Exists {
+		result.Error = fmt.Errorf("no files match pattern: %s", result.Path)
+	}
+
+	return result
+}
+
+// AllSuccessful returns true if all verification results are successful
+func AllSuccessful(results []ArtifactVerificationResult) bool {
+	for _, r := range results {
+		if !r.Exists || r.Error != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// GetFailures returns only the failed verification results
+func GetFailures(results []ArtifactVerificationResult) []ArtifactVerificationResult {
+	var failures []ArtifactVerificationResult
+	for _, r := range results {
+		if !r.Exists || r.Error != nil {
+			failures = append(failures, r)
+		}
+	}
+	return failures
+}
+
+// FormatVerificationResults formats verification results for display
+func FormatVerificationResults(results []ArtifactVerificationResult) string {
+	var sb strings.Builder
+	for _, r := range results {
+		if r.Exists && r.Error == nil {
+			sb.WriteString(fmt.Sprintf("  ✅ %s\n", r.Pattern))
+		} else if r.Error != nil {
+			sb.WriteString(fmt.Sprintf("  ❌ %s: %v\n", r.Pattern, r.Error))
+		} else {
+			sb.WriteString(fmt.Sprintf("  ❌ %s: not found\n", r.Pattern))
+		}
+	}
+	return sb.String()
+}

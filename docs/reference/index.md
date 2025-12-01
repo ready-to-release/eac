@@ -10,6 +10,14 @@
 
 Architectural decisions and their rationale.
 
+### [Repository Layout](repository-layout.md)
+
+Repository structure and organization.
+
+### [Command Restructure Plan](command-restructure-plan.md)
+
+Command naming conventions and restructure plan.
+
 ---
 
 ## What is Reference?

@@ -105,9 +105,9 @@ func TestDetectEnvironment(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "default development",
+			name:     "default devbox",
 			envVars:  map[string]string{},
-			expected: "development",
+			expected: "devbox",
 		},
 		{
 			name:     "CI environment",
@@ -119,16 +119,6 @@ func TestDetectEnvironment(t *testing.T) {
 			envVars:  map[string]string{"GITHUB_ACTIONS": "true"},
 			expected: "ci",
 		},
-		{
-			name:     "production via R2R_ENV",
-			envVars:  map[string]string{"R2R_ENV": "production"},
-			expected: "production",
-		},
-		{
-			name:     "production via ENV",
-			envVars:  map[string]string{"ENV": "production"},
-			expected: "production",
-		},
 	}
 
 	for _, tt := range tests {
@@ -136,7 +126,7 @@ func TestDetectEnvironment(t *testing.T) {
 			// Save original environment values and create cleanup function
 			originalValues := make(map[string]string)
 			keysToUnset := make([]string, 0)
-			
+
 			// Set test environment variables
 			for k, v := range tt.envVars {
 				if original, exists := os.LookupEnv(k); exists {
@@ -146,12 +136,12 @@ func TestDetectEnvironment(t *testing.T) {
 				}
 				os.Setenv(k, v)
 			}
-			
+
 			// Also need to clear CI-related vars for clean test environment
-			ciVars := []string{"CI", "GITHUB_ACTIONS", "R2R_ENV", "ENV"}
+			ciVars := []string{"CI", "GITHUB_ACTIONS"}
 			ciOriginals := make(map[string]string)
 			ciToUnset := make([]string, 0)
-			
+
 			for _, k := range ciVars {
 				if _, exists := tt.envVars[k]; !exists { // Don't interfere with vars set by test
 					if original, exists := os.LookupEnv(k); exists {
@@ -174,7 +164,7 @@ func TestDetectEnvironment(t *testing.T) {
 			for _, k := range keysToUnset {
 				os.Unsetenv(k)
 			}
-			
+
 			// Restore CI environment
 			for k, v := range ciOriginals {
 				os.Setenv(k, v)
@@ -359,20 +349,14 @@ func TestConsoleWriterModes(t *testing.T) {
 		expectJSON    bool
 	}{
 		{
-			name:          "development mode",
-			config:        Config{Environment: "development"},
+			name:          "devbox mode",
+			config:        Config{Environment: "devbox"},
 			expectColored: true,
 			expectJSON:    false,
 		},
 		{
 			name:          "CI mode",
 			config:        Config{Environment: "ci"},
-			expectColored: false,
-			expectJSON:    true,
-		},
-		{
-			name:          "production mode",
-			config:        Config{Environment: "production"},
 			expectColored: false,
 			expectJSON:    true,
 		},

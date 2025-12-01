@@ -32,14 +32,32 @@ func (m *ModuleContract) getRelativePatterns() []string {
 	patterns = append(patterns, m.Files.Config...)
 	patterns = append(patterns, m.Files.Assets...)
 	patterns = append(patterns, m.Files.Tests...)
+
+	// Include changelog file for ownership
+	if m.Files.Changelog != "" {
+		patterns = append(patterns, m.Files.Changelog)
+	}
+
 	return patterns
 }
 
 // getRepoPatterns returns all patterns relative to repo root
+// Includes specs, other, and converts test_impl/design paths to glob patterns
 func (m *ModuleContract) getRepoPatterns() []string {
 	var patterns []string
 	patterns = append(patterns, m.Files.Repo.Specs...)
 	patterns = append(patterns, m.Files.Repo.Other...)
+
+	// Convert test_impl directory path to glob pattern for file ownership
+	if m.Files.Repo.TestImpl != "" {
+		patterns = append(patterns, m.Files.Repo.TestImpl+"/**")
+	}
+
+	// Convert design directory path to glob pattern for file ownership
+	if m.Files.Repo.Design != "" {
+		patterns = append(patterns, m.Files.Repo.Design+"/**")
+	}
+
 	return patterns
 }
 
@@ -224,6 +242,24 @@ func (m *ModuleContract) GetChangelogPath() string {
 		return filepath.Join(m.Files.Root, "CHANGELOG.md")
 	}
 	return "CHANGELOG.md"
+}
+
+// GetTestImplementationPath returns the test implementation directory path.
+// This is where godog step definitions and test implementations live.
+// Returns empty string if not defined in the module contract.
+func (m *ModuleContract) GetTestImplementationPath() string {
+	return m.Files.Repo.TestImpl
+}
+
+// GetDesignPath returns the design workspace directory path.
+// This is where Structurizr DSL files (workspace.dsl) are stored.
+// Returns default path specs/<moniker>/.design if not explicitly defined.
+func (m *ModuleContract) GetDesignPath() string {
+	if m.Files.Repo.Design != "" {
+		return m.Files.Repo.Design
+	}
+	// Default: specs/<module-moniker>/.design
+	return filepath.Join("specs", m.Moniker, ".design")
 }
 
 // normalizePathSeparators converts Windows backslashes to forward slashes

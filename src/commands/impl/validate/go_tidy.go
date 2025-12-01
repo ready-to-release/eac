@@ -1,6 +1,5 @@
 // Command: validate go-tidy
 // Description: Validate Go module dependencies are tidy
-// HasSideEffects: false
 package validate
 
 import (
@@ -11,7 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
@@ -87,20 +87,15 @@ func (r *goTidyReport) HasErrors() bool {
 	return len(r.untidyModules) > 0
 }
 
+// isGoModuleType checks if a module type has the go_module capability
+// by looking it up in the module types registry.
 func isGoModuleType(moduleType string) bool {
-	goModuleTypes := []string{
-		"go-cli",
-		"go-commands",
-		"go-library",
-		"go-mcp",
-		"go-tests",
+	cfg := config.Global()
+	if cfg != nil && cfg.ModuleTypes != nil {
+		return cfg.ModuleTypes.HasCapability(moduleType, "go_module")
 	}
-	for _, t := range goModuleTypes {
-		if moduleType == t {
-			return true
-		}
-	}
-	return false
+	// Fallback: use naming convention if config unavailable
+	return strings.HasPrefix(moduleType, "go-")
 }
 
 func validateGoModuleTidy(goModules []string, repoRoot string) *goTidyReport {

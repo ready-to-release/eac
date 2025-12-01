@@ -1,6 +1,5 @@
 // Command: show tests
 // Description: Show all tests in the repository in a human-readable table
-// HasSideEffects: false
 package show
 
 import (
@@ -9,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"

@@ -19,6 +19,9 @@ func findConfigFile(fileName string) (string, error) {
 		return "", err // Repository error already wrapped
 	}
 
+	// Config files are located in .r2r directory
+	r2rDir := filepath.Join(repoRoot, ".r2r")
+
 	// If looking for r2r-cli.yml, use priority-based discovery for user-specific configs
 	if fileName == "r2r-cli.yml" {
 		candidates := getConfigFileCandidates(repoRoot)
@@ -33,24 +36,26 @@ func findConfigFile(fileName string) (string, error) {
 			}
 		}
 
-		return "", NewConfigFileNotFoundError("r2r-cli.yml", repoRoot)
+		return "", NewConfigFileNotFoundError(".r2r/r2r-cli.yml", repoRoot)
 	}
 
-	// For other filenames, look for the exact file only
-	configFilePath := filepath.Join(repoRoot, fileName)
+	// For other filenames, look in .r2r directory
+	configFilePath := filepath.Join(r2rDir, fileName)
 	if _, err := os.Stat(configFilePath); err == nil {
 		return configFilePath, nil
 	} else if os.IsPermission(err) {
 		return "", NewConfigFilePermissionError(configFilePath, err)
 	}
 
-	return "", NewConfigFileNotFoundError(fileName, repoRoot)
+	return "", NewConfigFileNotFoundError(fileName, r2rDir)
 }
 
 // getConfigFileCandidates returns configuration file paths in priority order
 // Priority: R2R_CONFIG_PATH env var first, then user-specific files, then repository default
+// All config files are located in .r2r directory
 func getConfigFileCandidates(repoRoot string) []string {
 	candidates := []string{}
+	r2rDir := filepath.Join(repoRoot, ".r2r")
 
 	// 0. R2R_CONFIG_PATH environment variable (highest priority)
 	if configPath := os.Getenv("R2R_CONFIG_PATH"); configPath != "" {
@@ -74,13 +79,13 @@ func getConfigFileCandidates(repoRoot string) []string {
 		userSpecificFiles = append(userSpecificFiles, fmt.Sprintf("r2r-cli.%s.yml", currentUser.Username))
 	}
 
-	// Add user-specific files to candidates
+	// Add user-specific files to candidates (in .r2r directory)
 	for _, filename := range userSpecificFiles {
-		candidates = append(candidates, filepath.Join(repoRoot, filename))
+		candidates = append(candidates, filepath.Join(r2rDir, filename))
 	}
 
 	// 2. Repository default configuration (lowest priority)
-	candidates = append(candidates, filepath.Join(repoRoot, "r2r-cli.yml"))
+	candidates = append(candidates, filepath.Join(r2rDir, "r2r-cli.yml"))
 
 	return candidates
 }
@@ -139,9 +144,11 @@ func InitConfig() {
 
 	// Check for and merge local override configurations
 	// Priority order (highest to lowest): r2r-cli.local.yml, r2r-cli.personal.yml, r2r-cli.dev.yml
+	// All override files are in .r2r directory
 	repoRoot, _ := FindRepositoryRoot()
 	RootDir = repoRoot // Store root directory for cache operations
 	if repoRoot != "" {
+		r2rDir := filepath.Join(repoRoot, ".r2r")
 		overrideFiles := []string{
 			"r2r-cli.local.yml",
 			"r2r-cli.personal.yml",
@@ -149,7 +156,7 @@ func InitConfig() {
 		}
 
 		for _, overrideFile := range overrideFiles {
-			overridePath := filepath.Join(repoRoot, overrideFile)
+			overridePath := filepath.Join(r2rDir, overrideFile)
 			if _, err := os.Stat(overridePath); err == nil {
 				log.Debug().Str("override", overridePath).Msg("Loading configuration override")
 				if err := MergeConfigFile(overridePath); err != nil {

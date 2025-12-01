@@ -1,6 +1,5 @@
-// Command: risks assessment
+// Command: create risk-assessment
 // Short: Generate risk assessment from code changes
-// HasSideEffects: true
 // Flag.scope: type=string, default=staged, shorthand=s, usage=File scope: staged, changed, or all, completion=staged,changed,all
 // Flag.destination: type=string, shorthand=d, usage=Output file path (default: .docs/reference/risk-assessment-{timestamp}.md)
 // Flag.prompt: type=string, shorthand=p, usage=Custom AI prompt file
@@ -13,15 +12,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {
-	registry.Register(RisksAssessment)
+	registry.Register(CreateRiskAssessment)
 }
 
-// RisksAssessment is the entry point for the risks assessment command
-func RisksAssessment() int {
+// CreateRiskAssessment is the entry point for the create risk-assessment command
+func CreateRiskAssessment() int {
 	return Run()
 }
 

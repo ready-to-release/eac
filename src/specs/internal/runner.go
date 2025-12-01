@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/cucumber/godog"
@@ -36,6 +37,9 @@ func BuildTagFilter() string {
 	skipFilter := cfg.TestingTags.BuildGodogSkipTagFilter()
 	tagFilter := skipFilter + " && ~@pending"
 
+	// Add platform-specific exclusions
+	tagFilter = tagFilter + " && " + buildPlatformTagFilter()
+
 	// Add suite tag filter if provided
 	suiteTagFilter := os.Getenv("GODOG_SUITE_TAGS")
 	if suiteTagFilter != "" {
@@ -43,6 +47,23 @@ func BuildTagFilter() string {
 	}
 
 	return tagFilter
+}
+
+// buildPlatformTagFilter returns a tag filter that excludes platform-incompatible scenarios.
+// On Windows, excludes @deps:linux and @deps:darwin
+// On Linux, excludes @deps:windows and @deps:darwin
+// On Darwin, excludes @deps:windows and @deps:linux
+func buildPlatformTagFilter() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "~@deps:linux && ~@deps:darwin"
+	case "linux":
+		return "~@deps:windows && ~@deps:darwin"
+	case "darwin":
+		return "~@deps:windows && ~@deps:linux"
+	default:
+		return "" // No exclusions for unknown platforms
+	}
 }
 
 // BuildOptions constructs godog options from environment and config.

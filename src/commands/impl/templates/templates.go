@@ -1,13 +1,12 @@
 // Command: templates
 // Description: Manage project templates for documentation and specifications
-// HasSideEffects: true
 package templates
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

@@ -19,7 +19,6 @@
 // Flag.image: type=string, usage=Container image for container-type diagnostics
 // Flag.workflow: type=string, usage=CI workflow name for release-type diagnostics
 // Flag.commit: type=string, usage=Commit SHA for release-type diagnostics
-// HasSideEffects: false
 package ci
 
 import (
@@ -27,7 +26,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

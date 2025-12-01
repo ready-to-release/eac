@@ -14,7 +14,6 @@
 // Long:   build src-commands              # Build a single module
 // Long:   build src-core src-cli          # Build specific modules
 // Long:   build --tidy-first src-commands # Build with go mod tidy first
-// HasSideEffects: true
 // Args: modules
 package build
 
@@ -23,14 +22,19 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/gofrs/flock"
+	"github.com/ready-to-release/eac/src/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/src/commands/internal/orchestrator"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/platform"
 	"github.com/ready-to-release/eac/src/core/repository"
+	systemdeps "github.com/ready-to-release/eac/src/core/system-deps"
 )
 
 // writeln writes a formatted string with platform-specific line ending to the writer
@@ -50,6 +54,48 @@ type BuildResult struct {
 	Errors   []string
 }
 
+// acquireModuleBuildLock attempts to acquire an exclusive lock for building a module.
+// Returns the lock handle and nil error on success.
+// Returns nil and error if lock is already held (module is being built).
+func acquireModuleBuildLock(moniker, workspaceRoot string) (*flock.Flock, error) {
+	// Ensure out/build directory exists (parent directory for lock files)
+	buildDir := filepath.Join(workspaceRoot, "out", "build")
+	if err := os.MkdirAll(buildDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create build directory: %w", err)
+	}
+
+	// Create lock file path in parent directory (so it survives directory purge)
+	// Use module moniker as the mutex identifier
+	lockPath := filepath.Join(buildDir, fmt.Sprintf(".lock-%s", moniker))
+
+	// Create flock instance
+	lock := flock.New(lockPath)
+
+	// Try to acquire lock (non-blocking)
+	locked, err := lock.TryLock()
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	if !locked {
+		return nil, fmt.Errorf("module '%s' is already being built", moniker)
+	}
+
+	return lock, nil
+}
+
+// releaseModuleBuildLock releases the lock and removes the lock file
+func releaseModuleBuildLock(lock *flock.Flock) {
+	if lock == nil {
+		return
+	}
+
+	lockPath := lock.Path()
+	lock.Unlock()
+
+	// Clean up the lock file
+	os.Remove(lockPath)
+}
 
 // Build command entry point - builds one or more modules
 func Build() int {
@@ -70,6 +116,7 @@ func Build() int {
 	tidyExplicitlySet := false
 	compressed := false
 	compressedUPX := false
+	skipDeps := false
 	version := ""
 
 	for i := 0; i < len(args); i++ {
@@ -86,6 +133,8 @@ func Build() int {
 		case "--compressed-upx":
 			compressedUPX = true
 			compressed = true // UPX implies stripped
+		case "--skip-deps":
+			skipDeps = true
 		case "--version":
 			if i+1 >= len(args) {
 				fmt.Fprintf(os.Stderr, "Error: --version requires a value\n")
@@ -121,20 +170,23 @@ func Build() int {
 		return 1
 	}
 
+	// If no monikers provided, default to all buildable modules (before dependency check)
+	if len(monikers) == 0 {
+		for _, module := range moduleReport.Registry.All() {
+			monikers = append(monikers, module.Moniker)
+		}
+	}
+
+	// Phase 0: Verify build dependencies
+	if !skipDeps {
+		if exitCode := verifyBuildDependencies(monikers, moduleReport); exitCode != 0 {
+			return exitCode
+		}
+	}
+
 	// If exactly one module specified, run single module build (verbose output)
 	if len(monikers) == 1 {
 		return buildSingleModule(monikers[0], workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version)
-	}
-
-	// If no monikers provided, default to all buildable modules
-	if len(monikers) == 0 {
-		fmt.Println("ℹ️  No modules specified, building all modules...")
-		for _, module := range moduleReport.Registry.All() {
-			// Skip modules without build functions (e.g., catch-all)
-			if _, hasBuildFunc := buildFunctions[module.Type]; hasBuildFunc {
-				monikers = append(monikers, module.Moniker)
-			}
-		}
 	}
 
 	// Multiple modules - run parallel build with orchestrator
@@ -150,29 +202,28 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 		return 1
 	}
 
-	// Get build function for module type
-	buildFunc, hasBuilder := buildFunctions[module.Type]
-	if !hasBuilder {
-		fmt.Fprintf(os.Stderr, "Error: no build function for type: %s\n", module.Type)
-		fmt.Fprintf(os.Stderr, "Module: %s\n", moniker)
-		fmt.Fprintf(os.Stderr, "Type: %s\n", module.Type)
-		fmt.Fprintf(os.Stderr, "\nAvailable build functions:\n")
-		for moduleType := range buildFunctions {
-			fmt.Fprintf(os.Stderr, "  - %s\n", moduleType)
-		}
+	// Acquire exclusive lock for this module FIRST (before any directory operations)
+	lockFile, err := acquireModuleBuildLock(moniker, workspaceRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: module '%s' is already being built\n", moniker)
+		fmt.Fprintf(os.Stderr, "Details: %v\n", err)
 		return 1
 	}
+	defer releaseModuleBuildLock(lockFile)
+
+	// Get build function for module type
+	buildFunc := builders.GetBuildFunc(module.Type)
 
 	// Determine output directory
 	var outputDir string
 	testRunID := os.Getenv("R2R_TEST_RUN_ID")
 	if testRunID != "" {
-		outputDir = filepath.Join(workspaceRoot, "out", "test", testRunID, "build-artifacts", moniker)
+		outputDir = filepath.Join(workspaceRoot, repository.OutDir, "test", testRunID, "build-artifacts", moniker)
 	} else {
-		outputDir = filepath.Join(workspaceRoot, "out", "build", moniker)
+		outputDir = repository.BuildOutputPath(workspaceRoot, moniker)
 	}
 
-	// Purge and create output directory
+	// Purge and create output directory (now protected by lock)
 	if err := os.RemoveAll(outputDir); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to purge output directory: %v\n", err)
 		return 1
@@ -201,7 +252,7 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 	writeln(multiWriter, "Build log: %s", logPath)
 
 	// Log tidy behavior (only relevant for Go modules)
-	if IsGoModuleType(module.Type) {
+	if builders.IsGoModuleType(module.Type) {
 		if tidyFirst {
 			if tidyExplicitlySet {
 				writeln(multiWriter, "Tidy mode: enabled (explicit flag)")
@@ -218,7 +269,7 @@ func buildSingleModule(moniker string, workspaceRoot string, moduleReport *repor
 	}
 
 	// Execute build
-	buildOpts := BuildOptions{
+	buildOpts := builders.BuildOptions{
 		TidyFirst:     tidyFirst,
 		Compressed:    compressed,
 		CompressedUPX: compressedUPX,
@@ -233,7 +284,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	hasGoModules := false
 	for _, mon := range monikers {
 		if module, exists := moduleReport.Registry.Get(mon); exists {
-			if IsGoModuleType(module.Type) {
+			if builders.IsGoModuleType(module.Type) {
 				hasGoModules = true
 				break
 			}
@@ -275,7 +326,16 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			return 1
 		}
 
-		moduleOutputDir := filepath.Join(workspaceRoot, "out", "build", moniker)
+		// Acquire exclusive lock for this module FIRST (before any directory operations)
+		lockFile, err := acquireModuleBuildLock(moniker, workspaceRoot)
+		if err != nil {
+			fmt.Fprintf(logWriter, "Error: module '%s' is already being built\n", moniker)
+			fmt.Fprintf(logWriter, "Details: %v\n", err)
+			return 1
+		}
+		defer releaseModuleBuildLock(lockFile)
+
+		moduleOutputDir := repository.BuildOutputPath(workspaceRoot, moniker)
 		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version)
 	}
 
@@ -297,19 +357,84 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 
 // runModuleBuild runs build for a single module
 func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string) int {
-	buildFunc, hasBuilder := buildFunctions[module.Type]
-	if !hasBuilder {
-		fmt.Fprintf(logWriter, "Error: no build function for type: %s\n", module.Type)
-		return 1
-	}
+	// Get build function for module type
+	buildFunc := builders.GetBuildFunc(module.Type)
 
-	opts := BuildOptions{
+	opts := builders.BuildOptions{
 		TidyFirst:     tidyFirst,
 		Compressed:    compressed,
 		CompressedUPX: compressedUPX,
 		Version:       version,
 	}
 	return buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
+}
+
+// verifyBuildDependencies checks that all required build dependencies are available
+func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleContractReport) int {
+	cfg := config.Global()
+	if cfg == nil || cfg.ModuleTypes == nil {
+		// Config not loaded, skip verification
+		return 0
+	}
+
+	// Collect unique build dependencies from all modules
+	depsMap := make(map[string]bool)
+	for _, moniker := range monikers {
+		module, exists := moduleReport.Registry.Get(moniker)
+		if !exists {
+			continue
+		}
+
+		deps := cfg.ModuleTypes.GetBuildDeps(module.Type)
+		for _, dep := range deps {
+			if dep != "" {
+				depsMap[dep] = true
+			}
+		}
+	}
+
+	// No dependencies to verify
+	if len(depsMap) == 0 {
+		return 0
+	}
+
+	// Convert to sorted slice for consistent output
+	deps := make([]string, 0, len(depsMap))
+	for dep := range depsMap {
+		deps = append(deps, dep)
+	}
+	sort.Strings(deps)
+
+	// Print phase header
+	fmt.Println("=== Build Dependency Verification ===")
+	fmt.Printf("Required: %s\n", strings.Join(deps, ", "))
+
+	// Verify all dependencies
+	results := systemdeps.VerifyAll(deps)
+	var missing []string
+
+	for _, result := range results {
+		if result.Available {
+			if result.Version != "" {
+				fmt.Printf("  ✅ %s (%s)\n", result.Name, result.Version)
+			} else {
+				fmt.Printf("  ✅ %s\n", result.Name)
+			}
+		} else {
+			fmt.Printf("  ❌ %s - not available\n", result.Name)
+			missing = append(missing, result.Moniker)
+		}
+	}
+
+	fmt.Println()
+
+	if len(missing) > 0 {
+		fmt.Fprintf(os.Stderr, "❌ Error: Required build dependencies are missing: %s\n", strings.Join(missing, ", "))
+		fmt.Fprintf(os.Stderr, "   Use --skip-deps to bypass this check\n")
+		return 1
+	}
+
+	return 0
 }
 
 func printBuildUsage() {
@@ -323,6 +448,7 @@ func printBuildUsage() {
 	fmt.Println("Flags:")
 	fmt.Println("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	fmt.Println("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
+	fmt.Println("  --skip-deps               Skip build dependency verification")
 	fmt.Println("  --compressed              Strip debug info for smaller binaries (go-cli only)")
 	fmt.Println("  --compressed-upx          Also apply UPX compression for maximum size reduction")
 	fmt.Println("  --version VERSION         Inject version string into binary (go-cli only)")

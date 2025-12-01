@@ -1,5 +1,5 @@
 {
-  // Markdown settings
+  // Markdown settings (built-in preview)
   "markdown.preview.fontFamily": "Consolas, 'Courier New', monospace",
   "markdown.styles": [
     ".vscode/markdown-preview-dark.css"
@@ -9,6 +9,10 @@
   "markdown.preview.scrollPreviewWithEditor": true,
   "markdown.preview.scrollEditorWithPreview": true,
   "markdown.preview.markEditorSelection": true,
+
+  // Markdown Preview Enhanced settings
+  "markdown-preview-enhanced.previewTheme": "one-dark.css",
+  "markdown-preview-enhanced.codeBlockTheme": "one-dark.css",
   "markdownlint.config": {
     "extends": ".markdownlint.yml"
   },
@@ -24,11 +28,10 @@
 
   // Cucumber/Gherkin settings for Godog (Go BDD testing)
   "cucumber.features": [
-    "specs/**/*.feature",
-    "requirements/**/*.feature"
+    "specs/**/*.feature"
   ],
   "cucumber.glue": [
-    "src/**/tests/*_test.go",
-    "src/**/*_test.go"
+    "src/specs/impl/**/steps*.go",
+    "src/specs/internal/steps.go"
   ]
 }

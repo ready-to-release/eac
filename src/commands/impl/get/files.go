@@ -23,7 +23,6 @@
 // Flag.staged-only: type=bool, usage=Only show staged files
 // Flag.module: type=string, usage=Filter to files owned by specific module moniker
 // Flag.pattern: type=string, usage=Filter files matching glob pattern
-// HasSideEffects: false
 package get
 
 import (
@@ -35,7 +34,7 @@ import (
 
 	"github.com/gobwas/glob"
 	"github.com/ready-to-release/eac/src/commands/impl/get/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/core/repository/reports"
 )

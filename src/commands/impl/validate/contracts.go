@@ -7,21 +7,20 @@
 // Long:   - modules.yml
 // Long:   - environments.yml
 // Long:   - testing-tags.yml
-// Long:   - testing-taxonomy.yml
+// Long:   - test-suites.yml
 // Long:
 // Long: Schema validation ensures configuration files are well-formed and contain
 // Long: valid values according to the contract specifications.
 // Long:
 // Long: Example:
 // Long:   validate contracts
-// HasSideEffects: false
 package validate
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 )
 
@@ -89,15 +88,14 @@ func ValidateContracts() int {
 		validated++
 	}
 
-	// Validate testing-taxonomy.yml
-	fmt.Printf("  %-25s ", "testing-taxonomy.yml")
-	if err := cfg.LoadTestingTaxonomy(true); err != nil {
+	// Validate test-suites.yml
+	fmt.Printf("  %-25s ", "test-suites.yml")
+	if err := cfg.LoadTestSuites(true); err != nil {
 		fmt.Printf("FAILED\n")
 		fmt.Fprintf(os.Stderr, "    %v\n", err)
 		hasErrors = true
 	} else {
-		fmt.Printf("OK (%d test levels)\n",
-			len(cfg.TestingTaxonomy.TestingTaxonomy.TestLevels))
+		fmt.Printf("OK (%d suites)\n", len(cfg.TestSuites.Suites))
 		validated++
 	}
 

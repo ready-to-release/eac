@@ -1,3 +1,5 @@
+//go:build L1
+
 package serve
 
 import (

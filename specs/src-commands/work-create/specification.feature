@@ -1,4 +1,4 @@
-@deps:git @deps:go @ov @env:isolated-test-project
+@L2 @deps:git @deps:go @ov @env:isolated-test-project
 Feature: src-commands_work-create
 
   As a developer using parallel Claude sessions
@@ -8,12 +8,12 @@ Feature: src-commands_work-create
   Rule: Command must be registered and accessible
 
     Scenario: Command is listed in available commands
-      When I run the command "list commands"
+      When I run the command "show help"
       Then the exit code is 0
       And I should see "work create"
 
     Scenario: Command has proper description
-      When I run the command "describe commands work create"
+      When I run the command "show help work create"
       Then the exit code is 0
       And I should see "workspace" or "worktree" or "parallel"
 

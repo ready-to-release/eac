@@ -8,13 +8,12 @@
 // Long: The validation:
 // Long:   - Discovers all Gherkin feature files in the repository
 // Long:   - Extracts all tags from features, scenarios, and examples
-// Long:   - Loads the tag contract from .r2r/eac/repository/testing-tags.yml
+// Long:   - Loads the tag contract from .r2r/eac/testing-tags.yml
 // Long:   - Checks that each tag is defined in the contract
 // Long:   - Reports undefined tags with their file locations
 // Long:
 // Long: Example:
 // Long:   validate test-tags
-// HasSideEffects: false
 package validate
 
 import (
@@ -24,7 +23,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 )
 
@@ -270,20 +269,19 @@ func isValidSkipReason(reason string, tagsConfig *config.TestingTagsConfig) bool
 	return false
 }
 
-// isValidDepsName checks if a deps name is valid (system dep or OS platform)
+// isValidDepsName checks if a deps name is valid (system dep from system-dependencies.yml or OS platform)
 func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
-	// Check system dependencies
-	for _, sysDep := range tagsConfig.SystemDependencies {
-		if sysDep.Name == name {
+	// Check system dependencies from system-dependencies.yml
+	if eacConfig != nil && eacConfig.SystemDependencies != nil {
+		if eacConfig.SystemDependencies.Get(name) != nil {
 			return true
 		}
 	}
 
-	// Check OS platforms
-	for _, osPlatform := range tagsConfig.OSPlatforms {
-		if osPlatform.Name == name {
-			return true
-		}
+	// Check hardcoded OS platforms (linux, macos, windows)
+	switch name {
+	case "linux", "macos", "windows":
+		return true
 	}
 
 	return false

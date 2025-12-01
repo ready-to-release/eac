@@ -8,7 +8,6 @@
 // Flag.template: type=string, usage=Git repository URL or local directory to scan (default: https://github.com/ready-to-release/eac)
 // Usage: templates list [--template <git-repo-url|local-path>] [--debug]
 // Flags: --template (source location), --debug (save debug outputs)
-// HasSideEffects: false
 package list
 
 import (
@@ -19,7 +18,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/src/commands/impl/templates/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
@@ -244,6 +243,10 @@ func parseConfig() (*Config, error) {
 
 	// Set template source if provided
 	if templateSource != "" {
+		// Resolve relative paths against workspace root
+		if !internal.IsGitRepository(templateSource) && !filepath.IsAbs(templateSource) {
+			templateSource = filepath.Join(workspaceRoot, templateSource)
+		}
 		config.TemplateSource = templateSource
 	}
 
