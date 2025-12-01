@@ -11,18 +11,87 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
+
+// ExecutionContext identifies where the CLI is running
+type ExecutionContext string
+
+const (
+	// ContextImplicitCLI indicates running locally outside Docker
+	ContextImplicitCLI ExecutionContext = "implicit-cli"
+	// ContextR2RCLI indicates running inside Docker via r2r CLI
+	ContextR2RCLI ExecutionContext = "r2r-cli"
+)
+
+// executionContext holds the detected execution context
+var executionContext ExecutionContext
+
+// originalCommand holds the original command line captured at init time
+var originalCommand string
+
+// contextOnce ensures context is detected only once
+var contextOnce sync.Once
+
+// contextLogged tracks if we've already logged the execution context
+var contextLogged uint32
+
+func init() {
+	// Capture original command at package init, before any os.Args manipulation
+	originalCommand = strings.Join(os.Args, " ")
+}
 
 // debugEnabled is the global debug state.
 // Using atomic for thread-safe reads without locks.
 // 0 = disabled, 1 = enabled
 var debugEnabled uint32
 
-// debugOutput is where debug messages are written (stderr by default).
+// stdOutput is where Info messages are written (stdout by default).
+// Can be changed for testing.
+var stdOutput io.Writer = os.Stdout
+
+// debugOutput is where Debug/Warn/Error messages are written (stderr by default).
 // Can be changed for testing.
 var debugOutput io.Writer = os.Stderr
+
+// detectExecutionContext determines the execution context based on environment
+func detectExecutionContext() {
+	contextOnce.Do(func() {
+		if os.Getenv("DOCKER_R2R_MODE") == "true" {
+			executionContext = ContextR2RCLI
+		} else {
+			executionContext = ContextImplicitCLI
+		}
+	})
+}
+
+// GetExecutionContext returns the detected execution context
+func GetExecutionContext() ExecutionContext {
+	detectExecutionContext()
+	return executionContext
+}
+
+// GetFullCommand returns the original command line as a string.
+// This returns the command as it was at process startup, before any os.Args manipulation.
+func GetFullCommand() string {
+	return originalCommand
+}
+
+// LogExecutionContext emits a debug log with execution context info.
+// This is called automatically on first logger creation, but only logs once.
+func LogExecutionContext() {
+	// Only log once across all logger creations
+	if !atomic.CompareAndSwapUint32(&contextLogged, 0, 1) {
+		return
+	}
+
+	detectExecutionContext()
+	fullCommand := GetFullCommand()
+	DebugDirectf("logging", "Execution context: %s. Command: \"%s\"", executionContext, fullCommand)
+}
 
 // EnableDebug turns on debug logging globally.
 // This should be called once at application startup.

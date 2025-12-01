@@ -429,6 +429,11 @@ func (e *MultiError) Error() string {
 // findRepositoryRoot finds the git repository root by walking up directories.
 // This is a local implementation to avoid import cycles with the repository package.
 func findRepositoryRoot(startPath string) (string, error) {
+	// Check for Docker R2R mode - repository is mounted at /var/task
+	if os.Getenv("DOCKER_R2R_MODE") == "true" {
+		return "/var/task", nil
+	}
+
 	// Check for repository root override
 	if repoRoot := os.Getenv("R2R_REPO_ROOT"); repoRoot != "" {
 		return filepath.Clean(repoRoot), nil

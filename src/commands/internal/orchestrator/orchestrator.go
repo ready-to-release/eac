@@ -58,8 +58,8 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 	o.orchestratorOut = multiWriter
 
 	// Print header
-	fmt.Fprintf(o.orchestratorOut, "%s %d modules in parallel: %v%s%s",
-		capitalize(o.config.ActionVerb), len(monikers), monikers, LineEnding, LineEnding)
+	fmt.Fprintf(o.orchestratorOut, "%s %d modules in parallel:%s%s%s",
+		capitalize(o.config.ActionVerb), len(monikers), output.ListFormat(monikers, 60, 5), LineEnding, LineEnding)
 
 	// Create and start display manager
 	o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(monikers), o.config.StatusUpdateInterval)
@@ -173,6 +173,13 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
 	result.Duration = time.Since(startTime)
 
+	// Set module type from config if available
+	if o.config.ModuleTypes != nil {
+		if t, ok := o.config.ModuleTypes[item.Moniker]; ok {
+			result.Type = t
+		}
+	}
+
 	// Mark as completed in display (will print completion line)
 	o.display.markCompleted(&result)
 
@@ -223,20 +230,22 @@ func (o *Orchestrator) PrintSummary(results []WorkResult) {
 		}
 	}
 
-	// Timing summary
-	fmt.Fprintf(o.orchestratorOut, "%s%s%s", nl, output.SectionHeader("Timing Summary"), nl)
+	// Timing summary (only shown with --timings flag)
+	if o.config.ShowTimings {
+		fmt.Fprintf(o.orchestratorOut, "%s%s%s", nl, output.SectionHeader("Timing Summary"), nl)
 
-	// Sort results by duration (longest first)
-	sortedResults := make([]WorkResult, len(results))
-	copy(sortedResults, results)
-	sort.Slice(sortedResults, func(i, j int) bool {
-		return sortedResults[i].Duration > sortedResults[j].Duration
-	})
+		// Sort results by duration (longest first)
+		sortedResults := make([]WorkResult, len(results))
+		copy(sortedResults, results)
+		sort.Slice(sortedResults, func(i, j int) bool {
+			return sortedResults[i].Duration > sortedResults[j].Duration
+		})
 
-	for _, result := range sortedResults {
-		fmt.Fprintf(o.orchestratorOut, "%s%s", output.TimingLine(result.Duration, result.Moniker), nl)
+		for _, result := range sortedResults {
+			fmt.Fprintf(o.orchestratorOut, "%s%s", output.TimingLine(result.Duration, result.Moniker), nl)
+		}
+		fmt.Fprintf(o.orchestratorOut, "%s%s", output.TimingTotal(totalDuration), nl)
 	}
-	fmt.Fprintf(o.orchestratorOut, "%s%s", output.TimingTotal(totalDuration), nl)
 
 	// Output location
 	fmt.Fprintf(o.orchestratorOut, "%sOutput: %s%s", nl, o.config.OutputBaseDir, nl)

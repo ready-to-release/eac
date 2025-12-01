@@ -121,6 +121,7 @@ func Build() int {
 	compressed := false
 	compressedUPX := false
 	skipDeps := false
+	showTimings := false
 	version := ""
 
 	for i := 0; i < len(args); i++ {
@@ -139,6 +140,8 @@ func Build() int {
 			compressed = true // UPX implies stripped
 		case "--skip-deps":
 			skipDeps = true
+		case "--timings":
+			showTimings = true
 		case "--version":
 			if i+1 >= len(args) {
 				log.Errorf("Error: --version requires a value")
@@ -182,15 +185,19 @@ func Build() int {
 	}
 
 	// Run build (single or multiple modules) - phases are handled inside
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipDeps)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipDeps, showTimings)
 }
 
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipDeps bool) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipDeps bool, showTimings bool) int {
+	// Show execution context
+	log.Infof("Executing build via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
+	log.Info("")
+
 	// Phase 1: Module Discovery
 	log.Info(output.PhaseHeader(1, "Module Discovery"))
-	log.Infof("Resolving %d modules: %s", len(monikers), strings.Join(monikers, ", "))
+	log.Infof("Resolving %d modules:%s", len(monikers), output.ListFormat(monikers, 60, 5))
 
 	// Build module type lookup for worker
 	moduleTypes := make(map[string]string)
@@ -242,6 +249,8 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		ActionVerb:           "building",
 		MaxConcurrency:       0, // Use default (number of CPUs)
 		StatusUpdateInterval: 2, // Update every 2 seconds
+		ModuleTypes:          moduleTypes,
+		ShowTimings:          showTimings,
 	}
 
 	// Create worker function that builds a single module and returns type info
@@ -271,13 +280,6 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
-	}
-
-	// Set module types on results for display
-	for i := range results {
-		if t, ok := moduleTypes[results[i].Moniker]; ok {
-			results[i].Type = t
-		}
 	}
 
 	// Print summary and close orchestrator
@@ -376,6 +378,7 @@ func printBuildUsage() {
 	log.Info("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
 	log.Info("  --skip-deps               Skip build dependency verification")
+	log.Info("  --timings                 Show detailed timing summary")
 	log.Info("  --compressed              Strip debug info for smaller binaries (go-cli only)")
 	log.Info("  --compressed-upx          Also apply UPX compression for maximum size reduction")
 	log.Info("  --version VERSION         Inject version string into binary (go-cli only)")

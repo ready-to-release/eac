@@ -54,4 +54,8 @@ type Config struct {
 	MaxConcurrency int
 	// StatusUpdateInterval is how often to show status updates (default: 2 seconds)
 	StatusUpdateInterval int // in seconds
+	// ModuleTypes maps moniker to type string (e.g., "go-cli", "mkdocs") for display
+	ModuleTypes map[string]string
+	// ShowTimings enables the timing summary section (use --timings flag)
+	ShowTimings bool
 }

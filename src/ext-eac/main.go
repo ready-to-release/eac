@@ -110,6 +110,9 @@ func main() {
 	// Also check environment variable (for cases where flag isn't passed)
 	logging.InitFromEnv()
 
+	// Log execution context (only outputs if debug is enabled)
+	logging.LogExecutionContext()
+
 	// Handle special commands
 	if len(os.Args) < 2 {
 		printAvailableCommands()
