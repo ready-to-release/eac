@@ -700,11 +700,17 @@ func detectCIEnvironment() bool {
 // ValidatePinnedExtensions validates that extensions use pinned tags in CI environments
 // Returns an error if running in CI and extensions have unpinned tags
 func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
+	// Get repository root for cache operations
+	repoRoot := RootDir
+	if repoRoot == "" {
+		repoRoot, _ = FindRepositoryRoot()
+	}
+
 	// Load or create cache
-	registryCache, _ := cache.LoadRegistryCache(RootDir)
+	registryCache, _ := cache.LoadRegistryCache(repoRoot)
 	if registryCache == nil {
 		// Create new empty cache if none exists
-		registryCache, _ = cache.LoadRegistryCache(RootDir) // This returns an empty cache when file doesn't exist
+		registryCache, _ = cache.LoadRegistryCache(repoRoot) // This returns an empty cache when file doesn't exist
 	}
 
 	// Determine cache TTL
@@ -777,7 +783,7 @@ func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 	log.Debug().
 		Int("extensionsInCache", len(registryCache.Extensions)).
 		Msg("Saving registry cache")
-	if err := registryCache.SaveRegistryCache(RootDir); err != nil {
+	if err := registryCache.SaveRegistryCache(repoRoot); err != nil {
 		log.Error().Err(err).Msg("Failed to save registry cache")
 	} else {
 		log.Debug().Msg("Registry cache saved successfully")
@@ -919,12 +925,18 @@ func getActualImageVersion(image string) string {
 		cacheTTL = Global.Registry.CacheTTL
 	}
 
+	// Get repository root for cache operations
+	repoRoot := RootDir
+	if repoRoot == "" {
+		repoRoot, _ = FindRepositoryRoot()
+	}
+
 	// Try to use cached data first
-	registryCache, _ := cache.LoadRegistryCache(RootDir)
+	registryCache, _ := cache.LoadRegistryCache(repoRoot)
 	if registryCache != nil && extensionName != "" {
 		if !registryCache.IsExpired(cacheTTL) {
 			if latestSHA, ok := registryCache.GetLatestSHA(extensionName); ok {
-				cachePath := cache.GetRegistryCachePath(RootDir)
+				cachePath := cache.GetRegistryCachePath(repoRoot)
 				log.Debug().
 					Str("extension", extensionName).
 					Str("cached_sha", latestSHA).
@@ -951,7 +963,7 @@ func getActualImageVersion(image string) string {
 				// Also get all tags for caching
 				allTags, _ := client.ListTags(baseImage)
 				registryCache.SetExtension(extensionName, latestTag, allTags)
-				registryCache.SaveRegistryCache(RootDir)
+				registryCache.SaveRegistryCache(repoRoot)
 			}
 
 			log.Debug().
@@ -968,7 +980,7 @@ func getActualImageVersion(image string) string {
 			if extensionName != "" && registryCache != nil {
 				allTags, _ := client.ListTags(baseImage)
 				registryCache.SetExtension(extensionName, anyTag, allTags)
-				registryCache.SaveRegistryCache(RootDir)
+				registryCache.SaveRegistryCache(repoRoot)
 			}
 
 			log.Debug().
