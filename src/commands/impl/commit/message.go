@@ -1,4 +1,4 @@
-// Command: create commit-message
+// Command: commit message
 // Description: Generate commit message using AI with staged changes and module mappings
 // Short: Generate AI-powered commit messages from staged changes
 // Long: The create commit-message command uses AI to analyze your staged git changes and generate a structured,
