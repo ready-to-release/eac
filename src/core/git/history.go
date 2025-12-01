@@ -9,6 +9,7 @@ import (
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 )
 
 // CommitInfo represents minimal commit information for changelog generation
@@ -72,7 +73,7 @@ func (r *Repository) CommitsBetween(fromRef, toRef string) ([]CommitInfo, error)
 	err = commitIter.ForEach(func(c *object.Commit) error {
 		// Stop if we've reached the fromRef commit
 		if fromRef != "" && c.Hash == fromHash {
-			return nil // Don't include the fromRef commit itself
+			return storer.ErrStop // Stop iteration, don't include the fromRef commit
 		}
 
 		info := CommitInfo{
@@ -95,7 +96,7 @@ func (r *Repository) CommitsBetween(fromRef, toRef string) ([]CommitInfo, error)
 		return nil
 	})
 
-	if err != nil {
+	if err != nil && err != storer.ErrStop {
 		return nil, fmt.Errorf("failed to iterate commits: %w", err)
 	}
 

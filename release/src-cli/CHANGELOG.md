@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.16] - 2025-12-01
+
+### Changed
+
+- refactor(multi-module): add release automation and changelog system
+- refactor(multi-module): add r2r-config module and update contracts
+- refactor(src-cli): migrate example configs to contract documentation
+- refactor(multi-module): simplify module contract structure
+- refactor(multi-module): standardize binary naming
+- refactor(multi-module): standardize platform-specific binary naming
+- refactor(multi-module): centralize contracts, testing, and configuration
+- refactor(multi-module): centralize contracts and testing
+- refactor(multi-module): migrate to centralized contracts repository
+- refactor(multi-module): migrate to centralized contract loading
+- perf(multi-module): optimize parallelization and resource management
+- test(multi-module): expand test coverage and validation framework
+- test(multi-module): expand test coverage and validation framework
+- chore(multi-module): restructure testing framework and add module isolation
+- chore(multi-module): migrate workflow tagging logic to Go commands
+- ci: removed redundant workflow and made the change trigger more dynamic
+- chore(multi-module): enhance CI workflows and update build utilities
+
 ## [0.0.15] - 2025-12-01
 
 ### Added
@@ -98,7 +120,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release with core CLI functionality
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/src-cli/0.0.15...HEAD
+[Unreleased]: https://github.com/ready-to-release/eac/compare/src-cli/0.0.16...HEAD
+[0.0.16]: https://github.com/ready-to-release/eac/compare/src-cli/0.0.15...src-cli/0.0.16
 [0.0.15]: https://github.com/ready-to-release/eac/compare/src-cli/0.0.14...src-cli/0.0.15
 [0.0.14]: https://github.com/ready-to-release/eac/compare/src-cli/0.0.13...src-cli/0.0.14
 [0.0.13]: https://github.com/ready-to-release/eac/compare/src-cli/0.0.11...src-cli/0.0.13
