@@ -1,6 +1,10 @@
 package git
 
-import gogit "github.com/go-git/go-git/v5"
+import (
+	"time"
+
+	gogit "github.com/go-git/go-git/v5"
+)
 
 // GitRepository defines the interface for git operations.
 // This allows mocking in tests and supports alternative implementations.
@@ -54,6 +58,31 @@ type GitRepository interface {
 	// GoGitRepo returns the underlying go-git repository for advanced operations.
 	// Returns nil for mock implementations.
 	GoGitRepo() *gogit.Repository
+
+	// --- Changelog/Release related operations ---
+
+	// CommitsBetween returns commits between two references (tag/SHA/branch).
+	// If fromRef is empty, returns all commits up to toRef.
+	// Returns commits in reverse chronological order (newest first).
+	CommitsBetween(fromRef, toRef string) ([]CommitInfo, error)
+
+	// CommitsSince returns all commits since a given tag or reference.
+	CommitsSince(ref string) ([]CommitInfo, error)
+
+	// TagsMatching returns tags matching a glob pattern (e.g., "src-cli/*").
+	TagsMatching(pattern string) ([]string, error)
+
+	// LatestTag returns the most recent tag matching the pattern.
+	LatestTag(pattern string) (string, error)
+
+	// TagCommit returns the commit SHA that a tag points to.
+	TagCommit(tagName string) (string, error)
+
+	// TagDate returns the date of a tag.
+	TagDate(tagName string) (time.Time, error)
+
+	// TagExists checks if a tag with the given name exists.
+	TagExists(tagName string) (bool, error)
 }
 
 // Ensure Repository implements GitRepository

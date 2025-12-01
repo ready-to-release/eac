@@ -255,7 +255,6 @@ jobs:
           echo "Creating release for tag: $TAG_NAME with binaries"
 
           # For manual triggers, use --target to create tag atomically with release
-          # For tag triggers, use --verify-tag to ensure tag exists
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Manual trigger: creating tag and release together"
             gh release create "$TAG_NAME" \
@@ -270,6 +269,7 @@ jobs:
               out/build/src-cli/r2r-windows-amd64.exe \
               out/build/src-cli/r2r-windows-amd64-upx.exe
           else
+            # Tag trigger: use --verify-tag to ensure tag exists
             echo "Tag trigger: using existing tag"
             gh release create "$TAG_NAME" \
               --title "r2r CLI v$VERSION" \

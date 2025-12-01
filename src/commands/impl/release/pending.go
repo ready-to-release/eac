@@ -1,0 +1,359 @@
+// Command: release pending
+// Short: Check if module has pending changes for release
+// Long: Analyzes commits since the last release and outputs release decision data.
+// Long:
+// Long: This command checks the git history and changelog to determine if there
+// Long: are unreleased changes that warrant a new version.
+// Long:
+// Long: Output includes:
+// Long:   - has_changes: whether there are releasable changes
+// Long:   - current_version: the current released version
+// Long:   - next_version: the calculated next version
+// Long:   - change_counts: breakdown by change type (added, fixed, changed, etc.)
+// Long:
+// Long: This is designed for CI/CD pipelines to determine if a release is needed.
+// Long:
+// Long: Examples:
+// Long:   release pending src-cli           # Check src-cli for pending changes
+// Long:   release pending src-cli --quiet   # Exit code only (0=changes, 1=no changes)
+// Long:   release pending --all             # Check all releasable modules
+// Flag.quiet: type=bool, usage=Suppress output, use exit code only (0=has changes, 1=no changes)
+// Flag.all: type=bool, usage=Check all modules with changelogs
+// Args: modules
+package release
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/changelog"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/definitions"
+	"github.com/ready-to-release/eac/src/core/git"
+)
+
+func init() {
+	registry.Register(ReleasePending)
+}
+
+// PendingRelease contains release decision data for CI/CD
+type PendingRelease struct {
+	Module         string        `json:"module"`
+	HasChanges     bool          `json:"has_changes"`
+	CurrentVersion string        `json:"current_version"`
+	NextVersion    string        `json:"next_version"`
+	VersionType    string        `json:"version_type"`
+	Constraint     string        `json:"constraint"`
+	Tag            string        `json:"tag"`
+	CommitsTotal   int           `json:"commits_total"`
+	CommitsModule  int           `json:"commits_module"`
+	ChangeSummary  ChangeSummary `json:"change_summary"`
+}
+
+// ChangeSummary breaks down changes by type
+type ChangeSummary struct {
+	Added      int `json:"added"`
+	Changed    int `json:"changed"`
+	Deprecated int `json:"deprecated"`
+	Removed    int `json:"removed"`
+	Fixed      int `json:"fixed"`
+	Security   int `json:"security"`
+}
+
+// PendingResult is the overall result for one or more modules
+type PendingResult struct {
+	Modules      []PendingRelease `json:"modules"`
+	HasAnyChange bool             `json:"has_any_change"`
+}
+
+func ReleasePending() int {
+	// Parse flags
+	module := ""
+	quiet := false
+	checkAll := false
+
+	args := os.Args[3:] // Skip binary, "release", "pending"
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--quiet" || arg == "-q":
+			quiet = true
+		case arg == "--all":
+			checkAll = true
+		default:
+			if !strings.HasPrefix(arg, "--") && module == "" {
+				module = arg
+			}
+		}
+	}
+
+	if !checkAll && module == "" {
+		fmt.Fprintln(os.Stderr, "Error: module moniker required (or use --all)")
+		fmt.Fprintln(os.Stderr, "Usage: release pending <module> [--quiet]")
+		fmt.Fprintln(os.Stderr, "       release pending --all")
+		return 1
+	}
+
+	// Load workspace root
+	workspaceRoot, err := registry.GetWorkspaceRoot()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to get workspace root: %v\n", err)
+		return 1
+	}
+
+	// Load definitions for versioning constraints
+	defs, err := definitions.Load(workspaceRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load definitions: %v\n", err)
+		defs = definitions.Default()
+	}
+
+	// Load module contracts
+	moduleRegistry, err := modules.LoadFromWorkspace("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load modules: %v\n", err)
+		return 1
+	}
+
+	// Open git repository
+	repo, err := git.Open("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to open git repository: %v\n", err)
+		return 1
+	}
+
+	// Determine which modules to check
+	var modulesToCheck []string
+	if checkAll {
+		// Find all modules with changelogs
+		modulesToCheck = findModulesWithChangelogs(workspaceRoot)
+	} else {
+		modulesToCheck = []string{module}
+	}
+
+	// Check each module
+	result := PendingResult{
+		Modules:      make([]PendingRelease, 0, len(modulesToCheck)),
+		HasAnyChange: false,
+	}
+
+	for _, mod := range modulesToCheck {
+		pending, err := checkModulePending(mod, moduleRegistry, repo, defs, workspaceRoot)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to check module '%s': %v\n", mod, err)
+			continue
+		}
+		result.Modules = append(result.Modules, pending)
+		if pending.HasChanges {
+			result.HasAnyChange = true
+		}
+	}
+
+	// Output results
+	if quiet {
+		if result.HasAnyChange {
+			return 0 // Has changes
+		}
+		return 1 // No changes
+	}
+
+	// JSON output
+	var output interface{}
+	if len(result.Modules) == 1 {
+		output = result.Modules[0]
+	} else {
+		output = result
+	}
+
+	jsonBytes, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+		return 1
+	}
+	fmt.Println(string(jsonBytes))
+
+	return 0
+}
+
+func checkModulePending(module string, moduleRegistry *modules.Registry, repo git.GitRepository, defs *definitions.Definitions, workspaceRoot string) (PendingRelease, error) {
+	pending := PendingRelease{
+		Module:     module,
+		HasChanges: false,
+	}
+
+	// Get module contract
+	moduleContract, exists := moduleRegistry.Get(module)
+	if !exists {
+		return pending, fmt.Errorf("module '%s' not found", module)
+	}
+
+	// Determine changelog path from module contract
+	changelogPath := moduleContract.GetChangelogPath()
+	fullChangelogPath := filepath.Join(workspaceRoot, changelogPath)
+
+	// Parse existing changelog
+	var existingChangelog *changelog.Changelog
+	if _, err := os.Stat(fullChangelogPath); err == nil {
+		existingChangelog, err = changelog.Parse(fullChangelogPath)
+		if err != nil {
+			return pending, fmt.Errorf("failed to parse changelog: %v", err)
+		}
+	} else {
+		existingChangelog = &changelog.Changelog{
+			Module:      module,
+			VersionType: changelog.Semver,
+		}
+	}
+
+	// Get version info
+	pending.CurrentVersion = existingChangelog.LatestVersionNumber()
+	if pending.CurrentVersion == "" {
+		pending.CurrentVersion = "0.0.1"
+	}
+
+	versionType := existingChangelog.VersionType
+	if module == "docs" {
+		versionType = changelog.Calver
+	}
+	pending.VersionType = versionType.String()
+
+	// Get constraint
+	if defs.IsPatchOnly() {
+		pending.Constraint = "patch-only"
+	} else if defs.IsCalverOnly() {
+		pending.Constraint = "calver-only"
+	} else {
+		pending.Constraint = "unrestricted"
+	}
+
+	// Find latest tag for this module
+	tagPattern := module + "/*"
+	fromRef, err := repo.LatestTag(tagPattern)
+	if err != nil {
+		fromRef = ""
+	}
+
+	// Get commits since last release
+	commits, err := repo.CommitsBetween(fromRef, "HEAD")
+	if err != nil {
+		return pending, fmt.Errorf("failed to get commits: %v", err)
+	}
+
+	pending.CommitsTotal = len(commits)
+
+	if len(commits) == 0 {
+		pending.Tag = fmt.Sprintf("%s/%s", module, pending.CurrentVersion)
+		return pending, nil
+	}
+
+	// Filter commits by module file patterns
+	modulePatterns := moduleContract.GetGlobPatterns()
+	var filteredCommits []*changelog.Commit
+	for _, c := range commits {
+		parsed := changelog.ParseCommitMessage(c.Message)
+		parsed.SHA = c.ShortSHA
+		parsed.Date = c.Date
+		parsed.Files = c.Files
+
+		if len(modulePatterns) > 0 {
+			if commitMatchesModule(c.Files, modulePatterns) {
+				filteredCommits = append(filteredCommits, parsed)
+			}
+		} else {
+			filteredCommits = append(filteredCommits, parsed)
+		}
+	}
+
+	pending.CommitsModule = len(filteredCommits)
+
+	if len(filteredCommits) == 0 {
+		pending.NextVersion = pending.CurrentVersion
+		pending.Tag = fmt.Sprintf("%s/%s", module, pending.CurrentVersion)
+		return pending, nil
+	}
+
+	// Collect entries and count changes
+	var entries []changelog.Entry
+	for _, c := range filteredCommits {
+		if c.IsConventionalCommit() {
+			entry := c.ToEntry()
+			entries = append(entries, entry)
+
+			// Count by change type
+			switch changelog.CommitTypeToChangeType(c.Type) {
+			case changelog.Added:
+				pending.ChangeSummary.Added++
+			case changelog.Changed:
+				pending.ChangeSummary.Changed++
+			case changelog.Deprecated:
+				pending.ChangeSummary.Deprecated++
+			case changelog.Removed:
+				pending.ChangeSummary.Removed++
+			case changelog.Fixed:
+				pending.ChangeSummary.Fixed++
+			case changelog.Security:
+				pending.ChangeSummary.Security++
+			}
+		}
+	}
+
+	// Determine if there are actual changes to release
+	totalChanges := pending.ChangeSummary.Added + pending.ChangeSummary.Changed +
+		pending.ChangeSummary.Deprecated + pending.ChangeSummary.Removed +
+		pending.ChangeSummary.Fixed + pending.ChangeSummary.Security
+
+	pending.HasChanges = totalChanges > 0
+
+	// Calculate next version
+	var existingVersions []string
+	for _, v := range existingChangelog.Versions {
+		existingVersions = append(existingVersions, v.Number)
+	}
+
+	maxBump := changelog.BumpMajor
+	if defs.IsPatchOnly() {
+		maxBump = changelog.BumpPatch
+	}
+
+	nextVersion, err := changelog.CalculateNextVersionConstrained(
+		pending.CurrentVersion,
+		versionType,
+		entries,
+		time.Now(),
+		existingVersions,
+		maxBump,
+	)
+	if err != nil {
+		return pending, fmt.Errorf("failed to calculate version: %v", err)
+	}
+
+	pending.NextVersion = nextVersion
+	pending.Tag = fmt.Sprintf("%s/%s", module, nextVersion)
+
+	return pending, nil
+}
+
+func findModulesWithChangelogs(workspaceRoot string) []string {
+	releaseDir := filepath.Join(workspaceRoot, "release")
+	entries, err := os.ReadDir(releaseDir)
+	if err != nil {
+		return nil
+	}
+
+	var modules []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			changelogPath := filepath.Join(releaseDir, entry.Name(), "CHANGELOG.md")
+			if _, err := os.Stat(changelogPath); err == nil {
+				modules = append(modules, entry.Name())
+			}
+		}
+	}
+	return modules
+}

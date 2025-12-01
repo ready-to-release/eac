@@ -1,0 +1,155 @@
+# Automated Release Workflow
+#
+# This workflow detects merged release commits and creates git tags.
+# When a "release this" changelog update is merged to main, this workflow:
+#   1. Detects the new version in the changelog that doesn't have a tag
+#   2. Creates and pushes the git tag
+#   3. The tag push triggers the module's release workflow (e.g., release-src-cli.yml)
+#
+# Flow:
+#   1. Developer runs `release this src-cli` locally
+#   2. Developer commits changelog, creates PR, gets review, merges
+#   3. This workflow runs on push to main
+#   4. Detects new version in changelog without corresponding tag
+#   5. Creates tag (e.g., src-cli/0.1.0) and pushes it
+#   6. Tag push triggers release-src-cli.yml to build and publish
+#
+# Can also be triggered manually to check status or force tag creation.
+
+name: "Release Trigger"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'release/*/CHANGELOG.md'
+
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Module to check (or "all")'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - src-cli
+          - ext-eac
+          - docs
+      dry_run:
+        description: 'Dry run (check only, no tag creation)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            src/commands/go.sum
+            src/core/go.sum
+
+      - name: Check for pending tags
+        id: check
+        run: |
+          cd src/commands
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.module }}" = "all" ]; then
+              RESULT=$(go run . release tag-pending --all)
+            else
+              RESULT=$(go run . release tag-pending ${{ inputs.module }})
+            fi
+          else
+            # Push event - check all modules
+            RESULT=$(go run . release tag-pending --all)
+          fi
+
+          echo "Tag pending check result:"
+          echo "$RESULT" | jq .
+
+          # Handle both single module and multi-module responses
+          if echo "$RESULT" | jq -e '.has_pending' > /dev/null 2>&1; then
+            # Multi-module response
+            HAS_PENDING=$(echo "$RESULT" | jq -r '.has_pending')
+            MODULES_JSON=$(echo "$RESULT" | jq -c '[.results[] | select(.needs_tag == true)]')
+          else
+            # Single module response
+            NEEDS_TAG=$(echo "$RESULT" | jq -r '.needs_tag')
+            if [ "$NEEDS_TAG" = "true" ]; then
+              HAS_PENDING="true"
+              MODULES_JSON=$(echo "[$RESULT]")
+            else
+              HAS_PENDING="false"
+              MODULES_JSON="[]"
+            fi
+          fi
+
+          echo "has_pending=$HAS_PENDING" >> $GITHUB_OUTPUT
+          echo "modules_json=$MODULES_JSON" >> $GITHUB_OUTPUT
+
+      - name: Create tags
+        if: steps.check.outputs.has_pending == 'true' && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create and push tags for each module
+          echo '${{ steps.check.outputs.modules_json }}' | jq -c '.[]' | while read -r item; do
+            MODULE=$(echo "$item" | jq -r '.module')
+            TAG=$(echo "$item" | jq -r '.tag')
+            VERSION=$(echo "$item" | jq -r '.version')
+
+            echo "Creating tag: $TAG"
+            git tag -a "$TAG" -m "Release $MODULE v$VERSION"
+            git push origin "$TAG"
+            echo "✅ Pushed tag: $TAG"
+          done
+
+      - name: Summary
+        run: |
+          echo "## Release Trigger Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
+            echo "### Modules with pending tags:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Module | Version | Tag |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|---------|-----|" >> $GITHUB_STEP_SUMMARY
+
+            echo '${{ steps.check.outputs.modules_json }}' | jq -c '.[]' | while read -r item; do
+              MODULE=$(echo "$item" | jq -r '.module')
+              TAG=$(echo "$item" | jq -r '.tag')
+              VERSION=$(echo "$item" | jq -r '.version')
+              echo "| $MODULE | \`$VERSION\` | \`$TAG\` |" >> $GITHUB_STEP_SUMMARY
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "ℹ️ **Dry run** - no tags were created" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ Tags created and pushed. Release workflows will be triggered." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ **No pending releases**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All changelog versions have corresponding git tags." >> $GITHUB_STEP_SUMMARY
+          fi
