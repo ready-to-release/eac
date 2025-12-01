@@ -148,6 +148,7 @@ modules:
         - definitions.yml
         - "**/definitions.yml"
         - test-repository-validations.sh
+        - CHANGELOG.md
       repo:
         test_impl: src/specs/impl/repository
         design: ""
@@ -155,6 +156,8 @@ modules:
           - .github/workflows/change-trigger.yaml
           - .github/workflows/cron-full-trigger.yaml
           - .github/workflows/codeql.yml
+          - .github/workflows/trigger-ci.yaml
+          - .github/workflows/trigger-release.yml
 
   # ============================================================================
   # Source: AI Provider Libraries
@@ -214,6 +217,8 @@ modules:
       root: scripts
       source:
         - "*/cli/**"
+      exclude:
+        - CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-scripts-cli-installer.yaml
         release: ""
@@ -340,3 +345,16 @@ modules:
       repo:
         other:
           - contracts/vscode-commit/**
+
+  # ============================================================================
+  # Release Documentation
+  # ============================================================================
+  - moniker: release-docs
+    name: Release Documentation
+    type: documentation
+    description: Release notes and changelogs for published artifacts
+    files:
+      root: release
+      assets:
+        - README.md
+        - "**/*.md"
