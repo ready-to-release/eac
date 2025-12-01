@@ -1,10 +1,16 @@
 # Automated Release Workflow
 #
-# This workflow detects merged release commits and creates git tags.
+# This workflow detects merged release commits, creates git tags, and triggers
+# release workflows via workflow_dispatch.
+#
 # When a "release this" changelog update is merged to main, this workflow:
 #   1. Detects the new version in the changelog that doesn't have a tag
 #   2. Creates and pushes the git tag
-#   3. The tag push triggers the module's release workflow (e.g., release-src-cli.yml)
+#   3. Triggers the module's release workflow via workflow_dispatch
+#
+# Note: We use workflow_dispatch instead of relying on tag push events because
+# tags created with GITHUB_TOKEN don't trigger push:tags workflows (by design).
+# See: https://github.blog/changelog/2022-09-08-github-actions-use-github_token-with-workflow_dispatch-and-repository_dispatch/
 #
 # Flow:
 #   1. Developer runs `release this src-cli` locally
@@ -12,7 +18,7 @@
 #   3. This workflow runs on push to main
 #   4. Detects new version in changelog without corresponding tag
 #   5. Creates tag (e.g., src-cli/0.1.0) and pushes it
-#   6. Tag push triggers release-src-cli.yml to build and publish
+#   6. Dispatches release workflow (e.g., release-src-cli.yml) with version input
 #
 # Can also be triggered manually to check status or force tag creation.
 
@@ -45,6 +51,7 @@ on:
 
 permissions:
   contents: write
+  actions: write  # Required to trigger workflow_dispatch on release workflows
 
 jobs:
   check-and-tag:
@@ -123,6 +130,45 @@ jobs:
             echo "✅ Pushed tag: $TAG"
           done
 
+      - name: Trigger release workflows
+        if: steps.check.outputs.has_pending == 'true' && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
+        run: |
+          # Trigger release workflows via workflow_dispatch
+          # This is necessary because tag pushes from GITHUB_TOKEN don't trigger push:tags workflows
+          # See: https://github.blog/changelog/2022-09-08-github-actions-use-github_token-with-workflow_dispatch-and-repository_dispatch/
+
+          echo '${{ steps.check.outputs.modules_json }}' | jq -c '.[]' | while read -r item; do
+            MODULE=$(echo "$item" | jq -r '.module')
+            VERSION=$(echo "$item" | jq -r '.version')
+
+            # Map module to release workflow
+            case "$MODULE" in
+              src-cli)
+                WORKFLOW="release-src-cli.yml"
+                echo "Triggering $WORKFLOW for version $VERSION"
+                gh workflow run "$WORKFLOW" -f version="$VERSION"
+                echo "✅ Dispatched $WORKFLOW"
+                ;;
+              ext-eac)
+                WORKFLOW="release-ext-eac.yml"
+                echo "Triggering $WORKFLOW for version $VERSION"
+                gh workflow run "$WORKFLOW" -f version="$VERSION"
+                echo "✅ Dispatched $WORKFLOW"
+                ;;
+              docs)
+                WORKFLOW="release-docs.yml"
+                echo "Triggering $WORKFLOW"
+                gh workflow run "$WORKFLOW"
+                echo "✅ Dispatched $WORKFLOW"
+                ;;
+              *)
+                echo "⚠️ No release workflow mapped for module: $MODULE"
+                ;;
+            esac
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Summary
         run: |
           echo "## Release Trigger Check" >> $GITHUB_STEP_SUMMARY
@@ -146,7 +192,9 @@ jobs:
             if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
               echo "ℹ️ **Dry run** - no tags were created" >> $GITHUB_STEP_SUMMARY
             else
-              echo "✅ Tags created and pushed. Release workflows will be triggered." >> $GITHUB_STEP_SUMMARY
+              echo "✅ Tags created and release workflows dispatched." >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Release workflows are now running. Check the Actions tab for progress." >> $GITHUB_STEP_SUMMARY
             fi
           else
             echo "ℹ️ **No pending releases**" >> $GITHUB_STEP_SUMMARY
