@@ -186,14 +186,16 @@ func (c *ComponentLogger) Debugf(format string, args ...interface{}) {
 
 // Info logs an informational message.
 // Info messages are always shown (not controlled by debug flag).
+// Info goes to stdout (normal output), while Debug/Warn/Error go to stderr.
 func (c *ComponentLogger) Info(msg string) {
-	fmt.Fprintln(debugOutput, formatMessage("INFO", c.component, msg))
+	fmt.Fprintln(stdOutput, formatMessage("INFO", c.component, msg))
 }
 
 // Infof logs a formatted informational message.
+// Info goes to stdout (normal output), while Debug/Warn/Error go to stderr.
 func (c *ComponentLogger) Infof(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintln(debugOutput, formatMessage("INFO", c.component, msg))
+	fmt.Fprintln(stdOutput, formatMessage("INFO", c.component, msg))
 }
 
 // Warn logs a warning message.

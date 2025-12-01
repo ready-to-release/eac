@@ -107,8 +107,8 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 	delete(dm.running, result.Moniker)
 	dm.completed++
 
-	// Format completion line using compact format
-	// Format: "✅ module-name                    type     -      2.3s"
+	// Format completion line with timing after the icon
+	// Format: "✅ 6.2s  module-name                    type     -"
 	var icon string
 	var suffix string
 
@@ -127,7 +127,11 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 		typeStr = "-"
 	}
 
-	statusLine := output.ResultLineWithSuffix(icon, result.Moniker, typeStr, "-", result.Duration, suffix) + LineEndingPrefix
+	// Format: icon + timing + name + type + result + suffix
+	timing := fmt.Sprintf("%5.1fs", result.Duration.Seconds())
+	baseLine := output.ResultLineNoTimeWithSuffix(icon, result.Moniker, typeStr, "-", suffix)
+	// Insert timing after the icon (icon is first 2-3 chars including space)
+	statusLine := fmt.Sprintf("%s %s %s", icon, timing, baseLine[len(icon)+1:]) + LineEndingPrefix
 
 	// Store for later batch output instead of printing immediately
 	dm.completedLines = append(dm.completedLines, statusLine)

@@ -111,9 +111,9 @@ func TestComponentLoggerDebugf(t *testing.T) {
 
 func TestComponentLoggerInfo(t *testing.T) {
 	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	originalOutput := stdOutput
+	stdOutput = &buf
+	defer func() { stdOutput = originalOutput }()
 
 	DisableDebug() // Info should still work even when debug is disabled
 	log := C("test")
@@ -130,9 +130,9 @@ func TestComponentLoggerInfo(t *testing.T) {
 
 func TestComponentLoggerInfof(t *testing.T) {
 	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	originalOutput := stdOutput
+	stdOutput = &buf
+	defer func() { stdOutput = originalOutput }()
 
 	log := C("test")
 	log.Infof("count: %d", 5)
@@ -262,10 +262,17 @@ func TestComponentLoggerOutputFormat(t *testing.T) {
 }
 
 func TestComponentLoggerLevelFormatAlignment(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	// Capture both stdout (Info) and stderr (Debug/Warn/Error)
+	var stdBuf bytes.Buffer
+	var debugBuf bytes.Buffer
+	originalStdOutput := stdOutput
+	originalDebugOutput := debugOutput
+	stdOutput = &stdBuf
+	debugOutput = &debugBuf
+	defer func() {
+		stdOutput = originalStdOutput
+		debugOutput = originalDebugOutput
+	}()
 
 	EnableDebug()
 	log := C("test")
@@ -275,16 +282,27 @@ func TestComponentLoggerLevelFormatAlignment(t *testing.T) {
 	log.Warn("w")
 	log.Error("e")
 
-	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	// Combine outputs: Debug/Warn/Error go to debugBuf, Info goes to stdBuf
+	allOutput := debugBuf.String() + stdBuf.String()
+	lines := strings.Split(strings.TrimSpace(allOutput), "\n")
+
+	// Should have 4 lines total (Debug, Info, Warn, Error)
 	if len(lines) != 4 {
-		t.Fatalf("expected 4 lines, got %d", len(lines))
+		t.Fatalf("expected 4 lines, got %d: %v", len(lines), lines)
 	}
 
-	// All level strings should be 5 chars + padding for alignment
+	// All level strings should be present (order may vary due to different buffers)
 	expectedLevels := []string{"DEBUG", "INFO", "WARN", "ERROR"}
-	for i, line := range lines {
-		if !strings.Contains(line, expectedLevels[i]) {
-			t.Errorf("line %d: expected to contain '%s', got: %s", i, expectedLevels[i], line)
+	for _, level := range expectedLevels {
+		found := false
+		for _, line := range lines {
+			if strings.Contains(line, level) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected to find '%s' in output, got: %v", level, lines)
 		}
 	}
 }

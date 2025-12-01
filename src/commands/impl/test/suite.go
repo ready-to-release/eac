@@ -39,6 +39,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/internal/output"
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
+	"github.com/ready-to-release/eac/src/core/logging"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
 	"github.com/ready-to-release/eac/src/core/platform"
@@ -127,6 +128,7 @@ func TestSuite() int {
 		log.Errorf("  --as-cucumber  Generate Cucumber JSON reports (DEFAULT)")
 		log.Errorf("  --as-junit     Generate JUnit XML reports")
 		log.Errorf("  --coverage     Generate coverage reports (coverage.out, coverage.json)")
+		log.Errorf("  --timings      Show detailed timing summary")
 		log.Errorf("")
 		log.Errorf("Default: Tests run in parallel for optimal performance.")
 		log.Errorf("Use --sequential if you need deterministic ordering or debugging.")
@@ -146,6 +148,7 @@ func TestSuite() int {
 	parallel := true  // Default to parallel execution for better performance
 	reportFormat := "cucumber" // Default report format for BDD tests
 	coverage := false // Generate coverage reports
+	showTimings := false // Show timing summary
 	var moduleFilters []string // Optional module filters (can be comma-separated)
 
 	for i := 4; i < len(os.Args); i++ {
@@ -164,6 +167,8 @@ func TestSuite() int {
 			reportFormat = "cucumber"
 		} else if arg == "--coverage" {
 			coverage = true
+		} else if arg == "--timings" {
+			showTimings = true
 		} else if arg == "--module" {
 			// Read module names from next argument (comma-separated)
 			if i+1 >= len(os.Args) {
@@ -182,7 +187,7 @@ func TestSuite() int {
 			}
 		} else if strings.HasPrefix(arg, "--") {
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>, --as-junit, --as-cucumber, --coverage")
+			log.Errorf("Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>, --as-junit, --as-cucumber, --coverage, --timings")
 			return 1
 		}
 	}
@@ -216,6 +221,10 @@ func TestSuite() int {
 		return 1
 	}
 	defer releaseSuiteLock(lockFile)
+
+	// Show execution context
+	log.Infof("Executing test via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
+	log.Info("")
 
 	log.Infof("Running test suite: %s", suite.Name)
 	log.Infof("Description: %s", suite.Description)
@@ -282,7 +291,7 @@ func TestSuite() int {
 
 	// Phase 3.5: Apply module filter if specified
 	if len(moduleFilters) > 0 {
-		writeln(multiWriter, "Filtering by modules: %s", strings.Join(moduleFilters, ", "))
+		writeln(multiWriter, "%s", output.ListFormatWithPrefix("Filtering by modules", moduleFilters, 80, 5))
 		filteredTests := []testing.TestReference{}
 
 		// Track unique modules found for debugging
@@ -604,9 +613,7 @@ func TestSuite() int {
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Results directory: %s", testRunDir)
 
-	// Show timing summary table
-	writeln(multiWriter, "")
-	writeln(multiWriter, "%s", output.SectionHeader("Timing Summary"))
+	// Calculate timing data (always needed for JSON export)
 	var totalDuration time.Duration
 
 	// Build timing data for JSON export
@@ -736,10 +743,17 @@ func TestSuite() int {
 			ProposedLevel: proposedLevel,
 			NeedsRetag:    needsRetag,
 		})
-
-		writeln(multiWriter, "%s", output.TimingLine(result.Duration, displayName))
 	}
-	writeln(multiWriter, "%s", output.TimingTotal(totalDuration))
+
+	// Show timing summary table (only with --timings flag)
+	if showTimings {
+		writeln(multiWriter, "")
+		writeln(multiWriter, "%s", output.SectionHeader("Timing Summary"))
+		for _, entry := range timingEntries {
+			writeln(multiWriter, "%s", output.TimingLine(time.Duration(entry.DurationSecs*float64(time.Second)), entry.DisplayName))
+		}
+		writeln(multiWriter, "%s", output.TimingTotal(totalDuration))
+	}
 
 	// Write timing data to JSON file
 	timingsJSONPath := filepath.Join(testRunDir, "timings.json")
@@ -1422,7 +1436,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			resultStr = "-"
 		}
 
-		writeln(multiWriter, "%s", output.ResultLine(output.IconFail, pkgName, testType, resultStr, result.Duration))
+		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, testType, resultStr))
 		return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
 	}
 
@@ -1469,7 +1483,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		icon = output.IconFail
 	}
 
-	writeln(multiWriter, "%s", output.ResultLine(icon, pkgName, testType, resultStr, result.Duration))
+	writeln(multiWriter, "%s", output.ResultLineNoTime(icon, pkgName, testType, resultStr))
 	return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: testsPassed, TestsFailed: testsFailed, TestsSkipped: 0, TestsTotal: testsTotal, PackageFailed: testsFailed > 0, ExpectedFiles: expectedFiles}
 }
 

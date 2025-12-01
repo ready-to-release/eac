@@ -57,6 +57,7 @@ func Test() int {
 	coverage := false          // Generate coverage reports
 	skipDeps := false          // Skip dependency verification
 	listOnly := false          // List tests without running
+	showTimings := false       // Show timing summary
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -77,9 +78,11 @@ func Test() int {
 			skipDeps = true
 		} else if arg == "--list-only" {
 			listOnly = true
+		} else if arg == "--timings" {
+			showTimings = true
 		} else if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite <name>, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only")
+			log.Errorf("Valid flags: --suite <name>, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings")
 			return 1
 		} else {
 			monikers = append(monikers, arg)
@@ -110,12 +113,12 @@ func Test() int {
 
 	// Run test suite with module filter(s)
 	// This provides consistent output format whether testing 1 or N modules
-	return testModulesViaSuite(monikers, suiteName, reportFormat, coverage, skipDeps, listOnly)
+	return testModulesViaSuite(monikers, suiteName, reportFormat, coverage, skipDeps, listOnly, showTimings)
 }
 
 // testModulesViaSuite runs tests for one or more modules using the test suite infrastructure
 // This provides consistent output format with summary, whether testing 1 or N modules
-func testModulesViaSuite(monikers []string, suiteName string, reportFormat string, coverage bool, skipDeps bool, listOnly bool) int {
+func testModulesViaSuite(monikers []string, suiteName string, reportFormat string, coverage bool, skipDeps bool, listOnly bool, showTimings bool) int {
 	// Build module filter argument (comma-separated)
 	moduleFilter := strings.Join(monikers, ",")
 
@@ -155,6 +158,11 @@ func testModulesViaSuite(monikers []string, suiteName string, reportFormat strin
 		args = append(args, "--list-only")
 	}
 
+	// Add timings flag
+	if showTimings {
+		args = append(args, "--timings")
+	}
+
 	os.Args = args
 
 	return TestSuite()
@@ -172,6 +180,7 @@ func printTestUsage() {
 	log.Info("  --coverage             Generate coverage reports (coverage.out, coverage.json)")
 	log.Info("  --skip-deps            Skip dependency verification before running tests")
 	log.Info("  --list-only            List tests that would run without executing them")
+	log.Info("  --timings              Show detailed timing summary")
 	log.Info("")
 	log.Info("Available suites:")
 	log.Info("  commit                 L0-L2 tests (fast, pre-commit)")

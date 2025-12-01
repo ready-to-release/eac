@@ -101,8 +101,8 @@
           "name": "Docker",
           "version": "20.10",
           "verify": {
-            "command": "docker --version",
-            "pattern": "Docker version (\\d+\\.\\d+)"
+            "command": "docker info",
+            "pattern": "Server Version: (\\d+\\.\\d+)"
           }
         }
       ]
