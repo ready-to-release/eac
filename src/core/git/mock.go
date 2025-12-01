@@ -3,6 +3,7 @@ package git
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	gogit "github.com/go-git/go-git/v5"
 )
@@ -23,6 +24,10 @@ type MockRepository struct {
 	addedFiles      []string
 	commits         []MockCommit
 
+	// Changelog/release related fields
+	commitHistory []CommitInfo
+	tags          map[string]MockTag
+
 	// Error injection for testing failure paths
 	RemoteURLError       error
 	CurrentBranchError   error
@@ -35,6 +40,16 @@ type MockRepository struct {
 	CommitError          error
 	ConfigSetError       error
 	AddRemoteError       error
+	CommitsBetweenError  error
+	TagsMatchingError    error
+	TagCommitError       error
+	TagDateError         error
+}
+
+// MockTag represents a mock tag for testing
+type MockTag struct {
+	CommitSHA string
+	Date      time.Time
 }
 
 // MockCommit records commit information for assertions.
@@ -52,6 +67,7 @@ func NewMockRepository(rootPath string) *MockRepository {
 		remotes:      make(map[string]string),
 		ignoredFiles: make(map[string]bool),
 		configs:      make(map[string]map[string]string),
+		tags:         make(map[string]MockTag),
 	}
 }
 
@@ -290,6 +306,82 @@ func (m *MockRepository) Config(section, key string) (string, bool) {
 	}
 	val, ok := m.configs[section][key]
 	return val, ok
+}
+
+// --- Changelog/Release related mock implementations ---
+
+// WithCommitHistory sets the commit history for CommitsBetween/CommitsSince.
+func (m *MockRepository) WithCommitHistory(commits []CommitInfo) *MockRepository {
+	m.commitHistory = commits
+	return m
+}
+
+// WithTag adds a mock tag.
+func (m *MockRepository) WithTag(name, commitSHA string, date time.Time) *MockRepository {
+	m.tags[name] = MockTag{CommitSHA: commitSHA, Date: date}
+	return m
+}
+
+func (m *MockRepository) CommitsBetween(fromRef, toRef string) ([]CommitInfo, error) {
+	if m.CommitsBetweenError != nil {
+		return nil, m.CommitsBetweenError
+	}
+	return m.commitHistory, nil
+}
+
+func (m *MockRepository) CommitsSince(ref string) ([]CommitInfo, error) {
+	return m.CommitsBetween(ref, "HEAD")
+}
+
+func (m *MockRepository) TagsMatching(pattern string) ([]string, error) {
+	if m.TagsMatchingError != nil {
+		return nil, m.TagsMatchingError
+	}
+	var result []string
+	for name := range m.tags {
+		if matchTagPattern(name, pattern) {
+			result = append(result, name)
+		}
+	}
+	return result, nil
+}
+
+func (m *MockRepository) LatestTag(pattern string) (string, error) {
+	tags, err := m.TagsMatching(pattern)
+	if err != nil {
+		return "", err
+	}
+	if len(tags) == 0 {
+		return "", nil
+	}
+	return tags[0], nil
+}
+
+func (m *MockRepository) TagCommit(tagName string) (string, error) {
+	if m.TagCommitError != nil {
+		return "", m.TagCommitError
+	}
+	tag, ok := m.tags[tagName]
+	if !ok {
+		return "", fmt.Errorf("tag %q not found", tagName)
+	}
+	return tag.CommitSHA, nil
+}
+
+func (m *MockRepository) TagDate(tagName string) (time.Time, error) {
+	if m.TagDateError != nil {
+		return time.Time{}, m.TagDateError
+	}
+	tag, ok := m.tags[tagName]
+	if !ok {
+		return time.Time{}, fmt.Errorf("tag %q not found", tagName)
+	}
+	return tag.Date, nil
+}
+
+func (m *MockRepository) TagExists(tagName string) (bool, error) {
+	_, ok := m.tags[tagName]
+	return ok, nil
 }
 
 // Ensure MockRepository implements GitRepository

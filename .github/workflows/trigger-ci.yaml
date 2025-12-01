@@ -5,7 +5,7 @@
 # that when a module changes, all modules that depend on it are also rebuilt (cache invalidation).
 #
 # How it works:
-# 1. Compares current commit against last successful "Change Trigger" run
+# 1. Compares current commit against last successful "CI Trigger" run
 # 2. Uses `get changed modules ci` command which:
 #    - Maps changed files to their owning modules (via module contracts)
 #    - Expands to include all transitive dependents (if src-commands changes, ext-eac rebuilds too)
@@ -15,7 +15,7 @@
 # For push: Compares against last successful CI SHA
 # Bootstrap (no previous success): Builds all modules
 
-name: "Change Trigger"
+name: "CI Trigger"
 
 on:
   push:
@@ -95,7 +95,7 @@ jobs:
           else
             # Optimized CI: Only rebuild modules that have actually changed or whose
             # dependencies have changed. The `get changed modules ci` command:
-            #   1. Queries GitHub API for the last successful "Change Trigger" run SHA
+            #   1. Queries GitHub API for the last successful "CI Trigger" run SHA
             #   2. Computes git diff between that SHA and current HEAD
             #   3. Maps changed files to modules using repository contracts
             #   4. Expands with transitive dependents (cache invalidation)

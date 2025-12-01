@@ -56,6 +56,7 @@ modules:
         - assets/**
         - LICENSE
         - reference/**
+      changelog: ../release/docs/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-docs.yaml
         release: .github/workflows/release-docs.yml
@@ -78,6 +79,7 @@ modules:
       root: src/ext-eac
       source:
         - "*.go"
+      changelog: ../../release/ext-eac/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-ext-eac.yaml
         release: .github/workflows/release-ext-eac.yml
@@ -182,6 +184,7 @@ modules:
       config:
         - go.mod
         - go.sum
+      changelog: ../../release/src-cli/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-src-cli.yaml
         release: .github/workflows/release-src-cli.yml
