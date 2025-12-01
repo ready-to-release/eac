@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml"><img src="https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml/badge.svg" alt="CI Status"></a>
+  <a href="https://github.com/ready-to-release/eac/actions/workflows/trigger-ci.yaml"><img src="https://github.com/ready-to-release/eac/actions/workflows/trigger-ci.yaml/badge.svg" alt="CI Status"></a>
   <a href="https://github.com/ready-to-release/eac/stargazers"><img src="https://img.shields.io/github/stars/ready-to-release/eac?style=social" alt="GitHub Stars"></a>
 </p>
 
