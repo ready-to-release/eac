@@ -15,9 +15,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/cli/internal/logger"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/ready-to-release/eac/src/cli/internal/version"
-	"github.com/rs/zerolog"
+	
 	"github.com/spf13/cobra"
 )
 
@@ -44,77 +44,10 @@ var updateCmd = &cobra.Command{
 	Short: "Update r2r-cli to the latest version",
 	Long:  `Updates r2r-cli to the latest version from GitHub releases.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Create a pretty console writer for update progress
-		prettyWriter := zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: "", // No timestamp for clean output
-			NoColor:    os.Getenv("NO_COLOR") != "",
-			FormatLevel: func(i interface{}) string {
-				if level, ok := i.(string); ok {
-					switch level {
-					case "info":
-						return "" // No level prefix for clean output
-					case "warn":
-						return "⚠️ "
-					case "error":
-						return "❌ "
-					case "fatal":
-						return "💀 "
-					default:
-						return ""
-					}
-				}
-				return ""
-			},
-			FormatMessage: func(i interface{}) string {
-				if msg, ok := i.(string); ok {
-					// Add appropriate icons for different update steps
-					switch {
-					case strings.Contains(msg, "Downloading r2r-cli"):
-						return "📥 " + msg
-					case strings.Contains(msg, "Size:"):
-						return "📦 " + msg
-					case strings.Contains(msg, "Downloading..."):
-						return "⏳ " + msg
-					case strings.Contains(msg, "Validating"):
-						return "🔍 " + msg
-					case strings.Contains(msg, "validation passed"):
-						return "✅ " + msg
-					case strings.Contains(msg, "Extracting"):
-						return "📂 " + msg
-					case strings.Contains(msg, "Using executable"):
-						return "⚙️ " + msg
-					case strings.Contains(msg, "Installing"):
-						return "🔧 " + msg
-					case strings.Contains(msg, "Successfully updated"):
-						return "🎉 " + msg
-					case strings.Contains(msg, "Already running"):
-						return "ℹ️ " + msg
-					default:
-						return msg
-					}
-				}
-				return fmt.Sprintf("%s", i)
-			},
-			FormatFieldName: func(i interface{}) string {
-				return "" // Hide all field names for clean output
-			},
-			FormatFieldValue: func(i interface{}) string {
-				return "" // Hide all field values for clean output
-			},
-			FormatTimestamp: func(i interface{}) string {
-				return "" // No timestamp for clean output
-			},
-		}
-
-		// Create logger with pretty console output
-		verboseLogger := &logger.Logger{
-			Logger: zerolog.New(prettyWriter).Level(zerolog.InfoLevel),
-		}
 		// Get latest release info
 		release, err := getLatestRelease()
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get latest release info")
+			logging.Errorf("Failed to get latest release info: %v", err)
 			os.Exit(1)
 		}
 
@@ -123,7 +56,7 @@ var updateCmd = &cobra.Command{
 
 		// Check if update is needed
 		if !force && currentVersion == latestVersion {
-			verboseLogger.Info().Msg("Already running latest version")
+			logging.Info("Already running latest version")
 			return
 		}
 
@@ -194,23 +127,23 @@ var updateCmd = &cobra.Command{
 		}
 
 		if selectedAsset == nil {
-			verboseLogger.Error().Msgf("No binary found for %s-%s", runtime.GOOS, runtime.GOARCH)
-			verboseLogger.Info().Msg("Available assets:")
+			logging.Errorf("Error: No binary found for %s-%s", runtime.GOOS, runtime.GOARCH)
+			logging.Info("Available assets:")
 			for _, asset := range release.Assets {
-				verboseLogger.Info().Msgf("  - %s", asset.Name)
+				logging.Infof("  - %s", asset.Name)
 			}
 			os.Exit(1)
 		}
 
 		// Download new binary using GitHub API asset endpoint (matching installer pattern)
-		verboseLogger.Info().Msgf("Downloading r2r-cli %s...", release.TagName)
-		verboseLogger.Info().Msgf("Size: %.2f MB", float64(selectedAsset.Size)/1024/1024)
+		logging.Infof("Downloading r2r-cli %s...", release.TagName)
+		logging.Infof("Size: %.2f MB", float64(selectedAsset.Size)/1024/1024)
 
 		apiDownloadURL := fmt.Sprintf("https://api.github.com/repos/ready-to-release/r2r-cli/releases/assets/%d", selectedAsset.ID)
 
 		req, err := http.NewRequestWithContext(context.Background(), "GET", apiDownloadURL, nil)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to create download request")
+			logging.Errorf("Failed to create download request: %v", err)
 			os.Exit(1)
 		}
 
@@ -224,13 +157,13 @@ var updateCmd = &cobra.Command{
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to download update")
+			logging.Errorf("Failed to download update: %v", err)
 			os.Exit(1)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			log.Error().Msgf("Download failed with status %d", resp.StatusCode)
+			logging.Errorf("Download failed with status %d", resp.StatusCode)
 			os.Exit(1)
 		}
 
@@ -241,50 +174,50 @@ var updateCmd = &cobra.Command{
 		}
 		tmpFile, err := os.CreateTemp("", tempSuffix)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to create temporary file")
+			logging.Errorf("Failed to create temporary file: %v", err)
 			os.Exit(1)
 		}
 		defer os.Remove(tmpFile.Name())
 
 		// Copy download to temp file
-		verboseLogger.Info().Msg("Downloading...")
+		logging.Info("Downloading...")
 		if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-			log.Error().Err(err).Msg("Failed to write update to temp file")
+			logging.Errorf("Failed to write update to temp file: %v", err)
 			os.Exit(1)
 		}
 
 		if err := tmpFile.Close(); err != nil {
-			log.Error().Err(err).Msg("Failed to close temp file")
+			logging.Errorf("Failed to close temp file: %v", err)
 			os.Exit(1)
 		}
 
 		// Validate downloaded file (matching installer pattern)
-		verboseLogger.Info().Msg("Validating downloaded file...")
+		logging.Info("Validating downloaded file...")
 		fileInfo, err := os.Stat(tmpFile.Name())
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get file info")
+			logging.Errorf("Failed to get file info: %v", err)
 			os.Exit(1)
 		}
 
 		if fileInfo.Size() == 0 {
-			log.Error().Msg("Downloaded file is empty")
+			logging.Error("Downloaded file is empty")
 			os.Exit(1)
 		}
 
 		if fileInfo.Size() < 1000 {
-			log.Error().Msgf("Downloaded file is too small (%d bytes) - likely corrupted", fileInfo.Size())
+			logging.Errorf("Downloaded file is too small (%d bytes) - likely corrupted", fileInfo.Size())
 			os.Exit(1)
 		}
 
 		// Check file headers (matching installer pattern)
 		fileBytes, err := os.ReadFile(tmpFile.Name())
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to read downloaded file")
+			logging.Errorf("Failed to read downloaded file: %v", err)
 			os.Exit(1)
 		}
 
 		if len(fileBytes) < 2 {
-			log.Error().Msg("Downloaded file is too small to be valid")
+			logging.Error("Downloaded file is too small to be valid")
 			os.Exit(1)
 		}
 
@@ -294,34 +227,34 @@ var updateCmd = &cobra.Command{
 		if isZipFile {
 			// Check for ZIP header
 			if len(fileBytes) < 2 || string(fileBytes[0:2]) != "PK" {
-				log.Error().Msg("Downloaded file is not a valid ZIP archive")
+				logging.Error("Downloaded file is not a valid ZIP archive")
 				os.Exit(1)
 			}
 		} else if isTarGzFile {
 			// Check for gzip header (1f 8b)
 			if len(fileBytes) < 2 || fileBytes[0] != 0x1f || fileBytes[1] != 0x8b {
-				log.Error().Msg("Downloaded file is not a valid gzip archive")
+				logging.Error("Downloaded file is not a valid gzip archive")
 				os.Exit(1)
 			}
 		} else {
 			// Check for PE header (Windows executable)
 			if runtime.GOOS == "windows" && (len(fileBytes) < 2 || string(fileBytes[0:2]) != "MZ") {
-				log.Error().Msg("Downloaded file is not a valid Windows executable")
+				logging.Error("Downloaded file is not a valid Windows executable")
 				os.Exit(1)
 			}
 		}
 
-		verboseLogger.Info().Msg("File validation passed")
+		logging.Info("File validation passed")
 
 		// Get path to current executable
 		exePath, err := os.Executable()
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get executable path")
+			logging.Errorf("Failed to get executable path: %v", err)
 			os.Exit(1)
 		}
 		exePath, err = filepath.EvalSymlinks(exePath)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to resolve executable path")
+			logging.Errorf("Failed to resolve executable path: %v", err)
 			os.Exit(1)
 		}
 
@@ -329,11 +262,11 @@ var updateCmd = &cobra.Command{
 
 		if isZipFile {
 			// Extract ZIP file (matching installer pattern)
-			verboseLogger.Info().Msg("Extracting ZIP archive...")
+			logging.Info("Extracting ZIP archive...")
 
 			extractDir := filepath.Join(os.TempDir(), fmt.Sprintf("r2r-cli-extract-%d", os.Getpid()))
 			if err := os.MkdirAll(extractDir, 0755); err != nil {
-				log.Error().Err(err).Msg("Failed to create extraction directory")
+				logging.Errorf("Failed to create extraction directory: %v", err)
 				os.Exit(1)
 			}
 			defer os.RemoveAll(extractDir)
@@ -341,7 +274,7 @@ var updateCmd = &cobra.Command{
 			// Extract ZIP
 			reader, err := zip.OpenReader(tmpFile.Name())
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to open ZIP file")
+				logging.Errorf("Failed to open ZIP file: %v", err)
 				os.Exit(1)
 			}
 			defer reader.Close()
@@ -354,14 +287,14 @@ var updateCmd = &cobra.Command{
 
 					rc, err := file.Open()
 					if err != nil {
-						log.Error().Err(err).Msgf("Failed to open file in ZIP: %s", file.Name)
+						logging.Errorf("Failed to open file in ZIP: file=%s err=%v", file.Name, err)
 						continue
 					}
 
 					outFile, err := os.OpenFile(extractPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
 					if err != nil {
 						rc.Close()
-						log.Error().Err(err).Msgf("Failed to create extracted file: %s", extractPath)
+						logging.Errorf("Failed to create extracted file: path=%s err=%v", extractPath, err)
 						continue
 					}
 
@@ -370,7 +303,7 @@ var updateCmd = &cobra.Command{
 					rc.Close()
 
 					if err != nil {
-						log.Error().Err(err).Msgf("Failed to extract file: %s", file.Name)
+						logging.Errorf("Failed to extract file: file=%s err=%v", file.Name, err)
 						continue
 					}
 
@@ -382,19 +315,19 @@ var updateCmd = &cobra.Command{
 			}
 
 			if foundExe == "" {
-				log.Error().Msg("No executable found in ZIP archive")
+				logging.Error("No executable found in ZIP archive")
 				os.Exit(1)
 			}
 
 			binaryPath = foundExe
-			verboseLogger.Info().Msgf("Using executable: %s", filepath.Base(foundExe))
+			logging.Infof("Using executable: %s", filepath.Base(foundExe))
 		} else if strings.HasSuffix(selectedAsset.Name, ".tar.gz") {
 			// Extract tar.gz file for Unix systems
-			verboseLogger.Info().Msg("Extracting tar.gz archive...")
+			logging.Info("Extracting tar.gz archive...")
 
 			extractDir := filepath.Join(os.TempDir(), fmt.Sprintf("r2r-cli-extract-%d", os.Getpid()))
 			if err := os.MkdirAll(extractDir, 0755); err != nil {
-				log.Error().Err(err).Msg("Failed to create extraction directory")
+				logging.Errorf("Failed to create extraction directory: %v", err)
 				os.Exit(1)
 			}
 			defer os.RemoveAll(extractDir)
@@ -402,7 +335,7 @@ var updateCmd = &cobra.Command{
 			// Open tar.gz file
 			file, err := os.Open(tmpFile.Name())
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to open tar.gz file")
+				logging.Errorf("Failed to open tar.gz file: %v", err)
 				os.Exit(1)
 			}
 			defer file.Close()
@@ -410,7 +343,7 @@ var updateCmd = &cobra.Command{
 			// Create gzip reader
 			gzReader, err := gzip.NewReader(file)
 			if err != nil {
-				log.Error().Err(err).Msg("Failed to create gzip reader")
+				logging.Errorf("Failed to create gzip reader: %v", err)
 				os.Exit(1)
 			}
 			defer gzReader.Close()
@@ -425,7 +358,7 @@ var updateCmd = &cobra.Command{
 					break
 				}
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to read tar header")
+					logging.Errorf("Failed to read tar header: %v", err)
 					os.Exit(1)
 				}
 
@@ -438,20 +371,20 @@ var updateCmd = &cobra.Command{
 
 						outFile, err := os.OpenFile(extractPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(header.Mode))
 						if err != nil {
-							log.Error().Err(err).Msgf("Failed to create extracted file: %s", extractPath)
+							logging.Errorf("Failed to create extracted file: path=%s err=%v", extractPath, err)
 							continue
 						}
 
 						if _, err := io.Copy(outFile, tarReader); err != nil {
 							outFile.Close()
-							log.Error().Err(err).Msgf("Failed to extract file: %s", header.Name)
+							logging.Errorf("Failed to extract file: file=%s err=%v", header.Name, err)
 							continue
 						}
 						outFile.Close()
 
 						// Make executable
 						if err := os.Chmod(extractPath, 0755); err != nil {
-							log.Error().Err(err).Msgf("Failed to set executable permissions: %s", extractPath)
+							logging.Errorf("Failed to set executable permissions: path=%s err=%v", extractPath, err)
 							continue
 						}
 
@@ -464,12 +397,12 @@ var updateCmd = &cobra.Command{
 			}
 
 			if foundExe == "" {
-				log.Error().Msg("No executable found in tar.gz archive")
+				logging.Error("No executable found in tar.gz archive")
 				os.Exit(1)
 			}
 
 			binaryPath = foundExe
-			verboseLogger.Info().Msgf("Using executable: %s", filepath.Base(foundExe))
+			logging.Infof("Using executable: %s", filepath.Base(foundExe))
 		} else {
 			binaryPath = tmpFile.Name()
 		}
@@ -477,37 +410,37 @@ var updateCmd = &cobra.Command{
 		// Make binary executable (for Unix systems)
 		if runtime.GOOS != "windows" {
 			if err := os.Chmod(binaryPath, 0755); err != nil {
-				log.Error().Err(err).Msg("Failed to make binary executable")
+				logging.Errorf("Failed to make binary executable: %v", err)
 				os.Exit(1)
 			}
 		}
 
 		// Replace current executable with new version
-		verboseLogger.Info().Msgf("Installing to: %s", exePath)
+		logging.Infof("Installing to: %s", exePath)
 		if runtime.GOOS == "windows" {
 			// Windows requires special handling since files can't be renamed over existing files
 			bakPath := exePath + ".bak"
 			if err := os.Rename(exePath, bakPath); err != nil {
-				log.Error().Err(err).Msg("Failed to rename current executable")
+				logging.Errorf("Failed to rename current executable: %v", err)
 				os.Exit(1)
 			}
 			if err := copyFile(binaryPath, exePath); err != nil {
 				// Try to restore backup on failure
 				if restoreErr := os.Rename(bakPath, exePath); restoreErr != nil {
-					log.Error().Err(restoreErr).Msg("Failed to restore backup executable")
+					logging.Errorf("Failed to restore backup executable: %v", restoreErr)
 				}
-				log.Error().Err(err).Msg("Failed to copy new executable into place")
+				logging.Errorf("Failed to copy new executable into place: %v", err)
 				os.Exit(1)
 			}
 			os.Remove(bakPath)
 		} else {
 			if err := copyFile(binaryPath, exePath); err != nil {
-				log.Error().Err(err).Msg("Failed to replace current executable")
+				logging.Errorf("Failed to replace current executable: %v", err)
 				os.Exit(1)
 			}
 		}
 
-		verboseLogger.Info().Msgf("Successfully updated to version %s", release.TagName)
+		logging.Infof("Successfully updated to version %s", release.TagName)
 	},
 }
 

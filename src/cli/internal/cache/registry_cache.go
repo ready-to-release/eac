@@ -7,21 +7,21 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 // RegistryCache manages cached GitHub Container Registry data
 type RegistryCache struct {
-	Version    string                       `json:"version"`
-	Extensions map[string]*ExtensionCache   `json:"extensions"`
-	UpdatedAt  time.Time                    `json:"updated_at"`
+	Version    string                     `json:"version"`
+	Extensions map[string]*ExtensionCache `json:"extensions"`
+	UpdatedAt  time.Time                  `json:"updated_at"`
 }
 
 // ExtensionCache holds cached data for a single extension
 type ExtensionCache struct {
 	Name         string            `json:"name"`
-	LatestSHA    string            `json:"latest_sha"`  // e.g., "sha-84f1a65"
-	Tags         []string          `json:"tags"`        // All available tags
+	LatestSHA    string            `json:"latest_sha"`               // e.g., "sha-84f1a65"
+	Tags         []string          `json:"tags"`                     // All available tags
 	ImageDigests map[string]string `json:"image_digests,omitempty"` // tag -> digest mapping for fast lookup
 	UpdatedAt    time.Time         `json:"updated_at"`
 }
@@ -38,7 +38,7 @@ func GetRegistryCachePath(repoRoot string) string {
 // LoadRegistryCache reads the registry cache from disk
 func LoadRegistryCache(repoRoot string) (*RegistryCache, error) {
 	cachePath := GetRegistryCachePath(repoRoot)
-	log.Debug().Str("path", cachePath).Msg("Loading registry cache from disk")
+	logging.Debugf("Loading registry cache from disk: path=%s", cachePath)
 
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
@@ -55,7 +55,7 @@ func LoadRegistryCache(repoRoot string) (*RegistryCache, error) {
 
 	var cache RegistryCache
 	if err := json.Unmarshal(data, &cache); err != nil {
-		log.Warn().Err(err).Msg("Failed to parse cache file, creating new cache")
+		logging.Warnf("Failed to parse cache file, creating new cache: %v", err)
 		// Return empty cache if parsing fails
 		return &RegistryCache{
 			Version:    cacheVersion,
@@ -66,10 +66,7 @@ func LoadRegistryCache(repoRoot string) (*RegistryCache, error) {
 
 	// Check version compatibility
 	if cache.Version != cacheVersion {
-		log.Debug().
-			Str("cache_version", cache.Version).
-			Str("expected_version", cacheVersion).
-			Msg("Cache version mismatch, creating new cache")
+		logging.Debugf("Cache version mismatch, creating new cache: cache_version=%s expected_version=%s", cache.Version, cacheVersion)
 		return &RegistryCache{
 			Version:    cacheVersion,
 			Extensions: make(map[string]*ExtensionCache),
@@ -95,7 +92,7 @@ func (c *RegistryCache) SaveRegistryCache(repoRoot string) error {
 	}
 
 	cachePath := GetRegistryCachePath(repoRoot)
-	log.Debug().Str("path", cachePath).Msg("Saving registry cache")
+	logging.Debugf("Saving registry cache: path=%s", cachePath)
 
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
@@ -113,10 +110,7 @@ func (c *RegistryCache) SaveRegistryCache(repoRoot string) error {
 		return fmt.Errorf("failed to finalize cache: %w", err)
 	}
 
-	log.Debug().
-		Str("path", cachePath).
-		Int("extensions", len(c.Extensions)).
-		Msg("Saved registry cache")
+	logging.Debugf("Saved registry cache: path=%s extensions=%d", cachePath, len(c.Extensions))
 
 	return nil
 }
@@ -126,7 +120,7 @@ func (c *RegistryCache) IsExpired(ttlSeconds int) bool {
 	if c.UpdatedAt.IsZero() {
 		return true // Never updated
 	}
-	
+
 	ttl := time.Duration(ttlSeconds) * time.Second
 	return time.Since(c.UpdatedAt) > ttl
 }
@@ -142,7 +136,7 @@ func (c *RegistryCache) SetExtension(name string, latestSHA string, tags []strin
 	if c.Extensions == nil {
 		c.Extensions = make(map[string]*ExtensionCache)
 	}
-	
+
 	c.Extensions[name] = &ExtensionCache{
 		Name:      name,
 		LatestSHA: latestSHA,

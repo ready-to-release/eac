@@ -127,9 +127,9 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 		typeStr = "-"
 	}
 
-	// Format: icon + timing + name + type + result + suffix
+	// Format: icon + timing + name + type + suffix (no result column for builds)
 	timing := fmt.Sprintf("%5.1fs", result.Duration.Seconds())
-	baseLine := output.ResultLineNoTimeWithSuffix(icon, result.Moniker, typeStr, "-", suffix)
+	baseLine := output.ResultLineNoTimeWithSuffix(icon, result.Moniker, typeStr, "", suffix)
 	// Insert timing after the icon (icon is first 2-3 chars including space)
 	statusLine := fmt.Sprintf("%s %s %s", icon, timing, baseLine[len(icon)+1:]) + LineEndingPrefix
 

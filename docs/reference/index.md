@@ -14,9 +14,9 @@ Architectural decisions and their rationale.
 
 Repository structure and organization.
 
-### [Command Restructure Plan](command-restructure-plan.md)
+### [Claude Code Programmatic Access](claude-code-programmatic-access.md)
 
-Command naming conventions and restructure plan.
+How to use Claude CLI/Max subscription for API-like programmatic calls.
 
 ---
 

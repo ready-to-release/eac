@@ -12,9 +12,9 @@ import (
 
 // Column widths for aligned output
 const (
-	NameWidth   = 30 // Module/package name
+	NameWidth   = 46 // Module/package name
 	TypeWidth   = 15 // Type (go, godog, scripts-package - truncated if longer)
-	ResultWidth = 6  // Result (12/12, -, etc.)
+	ResultWidth = 6  // Result (12/12, etc.)
 	TimeWidth   = 6  // Duration (0.8s, 15.2s, etc.) - only used in timing summary
 )
 
@@ -47,7 +47,7 @@ func SectionHeader(name string) string {
 //   - icon: Status icon (IconPass, IconFail, etc.)
 //   - name: Module or package name (truncated/padded to NameWidth)
 //   - typeStr: Type identifier (go, godog, go-cli, mkdocs, etc.)
-//   - result: Result string (e.g., "12/12", "-" for builds)
+//   - result: Result string (e.g., "12/12" for tests, empty string for builds)
 //   - duration: Time taken
 func ResultLine(icon, name, typeStr, result string, duration time.Duration) string {
 	// Truncate name if too long

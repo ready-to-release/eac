@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -35,24 +35,24 @@ func createConfigFile(cmd *cobra.Command) {
 		// Create .git folder in current directory if it doesn't exist
 		pwd, err := os.Getwd()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Failed to get current working directory: %v\n", err)
+			logging.Errorf("Error: Failed to get current working directory: %v", err)
 			os.Exit(1)
 		}
 
 		gitPath := filepath.Join(pwd, ".git")
 		if _, err := os.Stat(gitPath); os.IsNotExist(err) {
 			if err := os.Mkdir(gitPath, 0755); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: Failed to create .git directory: %v\n", err)
+				logging.Errorf("Error: Failed to create .git directory: %v", err)
 				os.Exit(1)
 			}
-			fmt.Fprintf(os.Stderr, "💡 Created .git folder to simulate repository root\n")
+			logging.Info("💡 Created .git folder to simulate repository root")
 		}
 	}
 
 	repoRoot, err := conf.FindRepositoryRoot()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Not a git repository. %v\n", err)
-		fmt.Fprintf(os.Stderr, "💡 To enable r2r-cli in non-git projects, use: r2r init --use-pwd-as-root\n")
+		logging.Errorf("Error: Not a git repository. %v", err)
+		logging.Info("💡 To enable r2r-cli in non-git projects, use: r2r init --use-pwd-as-root")
 		os.Exit(1)
 	}
 
@@ -66,14 +66,14 @@ func createConfigFile(cmd *cobra.Command) {
 	// Ensure .r2r directory exists
 	r2rDir := filepath.Join(repoRoot, ".r2r")
 	if err := os.MkdirAll(r2rDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Failed to create .r2r directory: %v\n", err)
+		logging.Errorf("Error: Failed to create .r2r directory: %v", err)
 		os.Exit(1)
 	}
 
 	configFile := filepath.Join(r2rDir, "r2r-cli.yml")
 
 	if _, err := os.Stat(configFile); err == nil {
-		fmt.Fprintf(os.Stderr, "Error: .r2r/r2r-cli.yml already exists\n")
+		logging.Error("Error: .r2r/r2r-cli.yml already exists")
 		os.Exit(1)
 	}
 
@@ -84,11 +84,11 @@ func createConfigFile(cmd *cobra.Command) {
 
 	err = os.WriteFile(configFile, []byte(minimalConfig), 0644)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Failed to create .r2r/r2r-cli.yml: %v\n", err)
+		logging.Errorf("Error: Failed to create .r2r/r2r-cli.yml: %v", err)
 		os.Exit(1)
 	}
 
-	cmd.Printf("Created %s\n", configFile)
+	logging.Infof("Created %s", configFile)
 }
 
 func deleteConfigFiles(cmd *cobra.Command, repoRoot string) {
@@ -108,17 +108,17 @@ func deleteConfigFiles(cmd *cobra.Command, repoRoot string) {
 		if _, err := os.Stat(configPath); err == nil {
 			// File exists, delete it
 			if err := os.Remove(configPath); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: Failed to delete %s: %v\n", configFile, err)
+				logging.Warnf("Warning: Failed to delete %s: %v", configFile, err)
 				continue
 			}
-			cmd.Printf("Deleted %s\n", configPath)
+			logging.Infof("Deleted %s", configPath)
 			deletedCount++
 		}
 	}
 
 	if deletedCount == 0 {
-		cmd.Printf("No configuration files found to delete in %s\n", r2rDir)
+		logging.Infof("No configuration files found to delete in %s", r2rDir)
 	} else {
-		cmd.Printf("Deleted %d configuration file(s) from %s\n", deletedCount, r2rDir)
+		logging.Infof("Deleted %d configuration file(s) from %s", deletedCount, r2rDir)
 	}
 }

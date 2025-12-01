@@ -154,6 +154,7 @@ var binaryCheckDone = false
 
 // checkLatestReleaseHasBinary checks if the latest src-cli release has the expected binary.
 // Sets binaryAvailable flag - if false, subsequent steps should pass without doing real work.
+// Tests use UPX-compressed binaries for faster downloads where available.
 func checkLatestReleaseHasBinary() {
 	if binaryCheckDone {
 		return // Already checked
@@ -161,23 +162,24 @@ func checkLatestReleaseHasBinary() {
 	binaryCheckDone = true
 
 	// Determine expected binary name based on platform
+	// Use UPX-compressed variants for faster test downloads where available
 	var expectedBinary string
 	switch runtime.GOOS {
 	case "windows":
-		expectedBinary = "r2r-windows-amd64.exe"
+		expectedBinary = "r2r-windows-amd64-upx.exe" // UPX compressed for faster download
 	case "linux":
 		switch runtime.GOARCH {
 		case "arm64":
-			expectedBinary = "r2r-linux-arm64"
+			expectedBinary = "r2r-linux-arm64" // UPX not available for arm64
 		default:
-			expectedBinary = "r2r-linux-amd64"
+			expectedBinary = "r2r-linux-amd64-upx" // UPX compressed for faster download
 		}
 	case "darwin":
 		switch runtime.GOARCH {
 		case "arm64":
-			expectedBinary = "r2r-darwin-arm64"
+			expectedBinary = "r2r-darwin-arm64" // UPX not available for darwin
 		default:
-			expectedBinary = "r2r-darwin-amd64"
+			expectedBinary = "r2r-darwin-amd64" // UPX not available for darwin
 		}
 	default:
 		fmt.Printf("[SKIP] Unsupported platform: %s/%s\n", runtime.GOOS, runtime.GOARCH)
@@ -251,8 +253,9 @@ func iRunThePowerShellInstaller() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
+	// Use -Upx flag for faster download (smaller binary)
 	cmd := exec.CommandContext(ctx, "powershell", "-ExecutionPolicy", "Bypass", "-File", scriptPath,
-		"-InstallDir", instCtx.tempInstallDir)
+		"-InstallDir", instCtx.tempInstallDir, "-Upx")
 
 	// Isolate PATH modifications to this process only - don't let the installer pollute system PATH
 	cmd.Env = isolatePathEnv()
@@ -335,7 +338,8 @@ func iRunTheBashInstaller() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "bash", scriptPath, "--install-dir", instCtx.tempInstallDir)
+	// Use --upx flag for faster download (smaller binary) - only effective on linux-amd64
+	cmd := exec.CommandContext(ctx, "bash", scriptPath, "--install-dir", instCtx.tempInstallDir, "--upx")
 	output, err := cmd.CombinedOutput()
 	instCtx.sharedCtx.CommandOutput = string(output)
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/docker"
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 // Installer handles extension installation operations
@@ -86,7 +86,7 @@ func (i *Installer) EnsureExtensionImage(extensionName string) (bool, error) {
 
 // InstallExtension installs a single extension by name
 func (i *Installer) InstallExtension(ext conf.Extension) error {
-	log.Debug().Str("extension", ext.Name).Msg("Installing extension")
+	logging.Debugf("Installing extension: extension=%s", ext.Name)
 
 	pulled, err := i.EnsureExtensionImage(ext.Name)
 	if err != nil {
@@ -94,9 +94,9 @@ func (i *Installer) InstallExtension(ext conf.Extension) error {
 	}
 
 	if pulled {
-		log.Info().Str("extension", ext.Name).Msg("Extension image pulled successfully")
+		logging.Debugf("Extension image pulled successfully: extension=%s", ext.Name)
 	} else {
-		log.Info().Str("extension", ext.Name).Msg("Extension image already up to date")
+		logging.Debugf("Extension image already up to date: extension=%s", ext.Name)
 	}
 
 	return nil
@@ -115,7 +115,7 @@ func (i *Installer) InstallAllExtensions() error {
 
 	for _, ext := range extensions {
 		if err := i.InstallExtension(ext); err != nil {
-			log.Error().Err(err).Str("extension", ext.Name).Msg("Failed to install extension")
+			logging.Errorf("Failed to install extension: extension=%s err=%v", ext.Name, err)
 			failureCount++
 		} else {
 			successCount++
@@ -126,7 +126,7 @@ func (i *Installer) InstallAllExtensions() error {
 		return fmt.Errorf("failed to install %d out of %d extensions", failureCount, len(extensions))
 	}
 
-	log.Info().Int("count", successCount).Msg("All extensions installed successfully")
+	logging.Debugf("All extensions installed successfully: count=%d", successCount)
 	return nil
 }
 

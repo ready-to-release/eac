@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 // RegistryClient handles GitHub Container Registry operations
@@ -40,9 +40,9 @@ func NewRegistryClient() (*RegistryClient, error) {
 	}
 
 	if client.authenticated {
-		log.Debug().Bool("has_username", username != "").Msg("Registry client created with authentication")
+		logging.Debugf("Registry client created with authentication: has_username=%v", username != "")
 	} else {
-		log.Debug().Msg("Registry client created without authentication (public packages only)")
+		logging.Debug("Registry client created without authentication (public packages only)")
 	}
 
 	return client, nil
@@ -69,7 +69,7 @@ func (c *RegistryClient) ListTags(imagePath string) ([]string, error) {
 		if err == nil {
 			return tags, nil
 		}
-		log.Debug().Err(err).Msg("GitHub API failed, falling back to OCI Registry API")
+		logging.Debugf("GitHub API failed, falling back to OCI Registry API: %v", err)
 	}
 
 	// Fall back to OCI Registry API (works for public packages without auth)
@@ -111,11 +111,7 @@ func (c *RegistryClient) listTagsViaGitHubAPI(imagePath string) ([]string, error
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Debug().
-			Str("url", url).
-			Int("status", resp.StatusCode).
-			Str("body", string(body)).
-			Msg("GitHub API request failed")
+		logging.Debugf("GitHub API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
 
@@ -171,11 +167,7 @@ func (c *RegistryClient) listTagsViaOCIRegistry(imagePath string) ([]string, err
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Debug().
-			Str("url", url).
-			Int("status", resp.StatusCode).
-			Str("body", string(body)).
-			Msg("OCI Registry API request failed")
+		logging.Debugf("OCI Registry API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("OCI Registry API returned status %d", resp.StatusCode)
 	}
 
@@ -236,11 +228,7 @@ func (c *RegistryClient) listTagsWithAnonymousToken(imagePath string) ([]string,
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Debug().
-			Str("url", url).
-			Int("status", resp.StatusCode).
-			Str("body", string(body)).
-			Msg("OCI Registry API request with token failed")
+		logging.Debugf("OCI Registry API request with token failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("OCI Registry API returned status %d", resp.StatusCode)
 	}
 
@@ -390,14 +378,10 @@ func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 	
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Debug().
-			Str("url", url).
-			Int("status", resp.StatusCode).
-			Str("body", string(body)).
-			Msg("GitHub API request failed")
+		logging.Debugf("GitHub API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
-	
+
 	var packages []struct {
 		Name string `json:"name"`
 		PackageType string `json:"package_type"`
@@ -427,10 +411,7 @@ func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 				Description: fmt.Sprintf("%s development environment", strings.Title(extName)),
 				ImagePath:   fmt.Sprintf("ghcr.io/ready-to-release/%s", pkg.Name),
 			})
-			log.Debug().
-				Str("extension", extName).
-				Str("package", pkg.Name).
-				Msg("Found extension")
+			logging.Debugf("Found extension: extension=%s package=%s", extName, pkg.Name)
 		}
 	}
 	

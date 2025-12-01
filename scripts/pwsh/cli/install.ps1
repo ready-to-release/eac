@@ -110,7 +110,15 @@ function Install-Binary {
         # Download binary
         $tempFile = Join-Path $tempDir $BinaryName
         try {
-            Invoke-WebRequest -Uri $downloadUrl -OutFile $tempFile -UseBasicParsing
+            # Suppress progress bar for cleaner output and better performance
+            $previousProgressPreference = $ProgressPreference
+            $ProgressPreference = 'SilentlyContinue'
+            try {
+                Invoke-WebRequest -Uri $downloadUrl -OutFile $tempFile -UseBasicParsing
+            }
+            finally {
+                $ProgressPreference = $previousProgressPreference
+            }
         }
         catch {
             Write-ColorOutput "Failed to download binary" "Red"

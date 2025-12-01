@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	coretesting "github.com/ready-to-release/eac/src/core/testing"
@@ -93,17 +94,8 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 		return fmt.Errorf("empty command")
 	}
 
-	// Build go run command
-	cmdArgs := append([]string{"run", "."}, parts...)
-	cmd := exec.Command("go", cmdArgs...)
-
-	// Determine working directory
-	if c.IsolatedDir != "" {
-		// For isolated tests, run from source but use isolated env
-		cmd.Dir = filepath.Join(c.OriginalRepoRoot, "src", "commands")
-	} else {
-		cmd.Dir = filepath.Join(c.OriginalRepoRoot, "src", "commands")
-	}
+	// Try to use pre-built binary for better performance
+	cmd := c.createCommand(parts)
 
 	// Build environment
 	env := os.Environ()
@@ -120,6 +112,10 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 			env = append(env, fmt.Sprintf("R2R_MOCK_AI_DIR=%s", assetsDir))
 		}
 	}
+
+	// Enable security tool mocking for subprocess commands
+	// This enables security commands to use mock responses instead of real Docker tools
+	env = append(env, "R2R_MOCK_SECURITY=true")
 
 	// Apply per-scenario mock overrides
 	for key, value := range c.MockOverrides {
@@ -143,6 +139,20 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 	}
 
 	return nil
+}
+
+// createCommand creates an exec.Cmd for running commands.
+// Uses the pre-built binary at out/build/src-commands/commands{.exe}.
+// The binary must exist - tests should have @depm:src-commands dependency.
+func (c *TestContext) createCommand(parts []string) *exec.Cmd {
+	// Determine platform-specific binary name
+	binaryName := "commands"
+	if runtime.GOOS == "windows" {
+		binaryName = "commands.exe"
+	}
+
+	binaryPath := filepath.Join(c.OriginalRepoRoot, "out", "build", "src-commands", binaryName)
+	return exec.Command(binaryPath, parts...)
 }
 
 // parseCommandLine parses a command line string, respecting quoted arguments.

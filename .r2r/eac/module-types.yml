@@ -45,11 +45,13 @@ types:
   - name: go-commands
     description: "Go library with CLI invoke wrapper"
     build_deps: [go]
-    capabilities: [go_module]
+    capabilities: [go_module, executable]
     build:
       artifacts:
-        - type: marker
-          pattern: ".build-complete"
+        - type: executable
+          pattern: "commands{ext}"
+          platforms: [linux, windows, darwin]
+          verify: current_platform
     defaults:
       files:
         source: ["**/*.go"]
@@ -164,7 +166,7 @@ types:
 
   # Scripts family
   - name: scripts-package
-    description: "Cross-shell script package encapsulating pwsh and sh variants for the same purpose"
+    description: "Cross-shell script packages"
     build_deps: []
     capabilities: []
     build:
@@ -229,7 +231,7 @@ types:
 
   # Repository structure
   - name: repository-root
-    description: "Repository root module (catch-all parent)"
+    description: "Repository root module"
     build_deps: []
     capabilities: []
     build:

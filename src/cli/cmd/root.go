@@ -1,20 +1,14 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"runtime"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/cli/internal/logger"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/ready-to-release/eac/src/cli/internal/version"
 	"github.com/spf13/cobra"
-)
-
-var (
-	// Global logger instance
-	log *logger.Logger
 )
 
 // RootCmd is the base command for the r2r CLI when called without any subcommands
@@ -32,8 +26,8 @@ var RootCmd = &cobra.Command{
 		}
 
 		// Log parsed command details in debug mode
-		if os.Getenv("R2R_LOG_LEVEL") == "debug" {
-			fmt.Fprintf(os.Stderr, "Parsed command: subcommand=%s, extension=%s, viper_args=%v, container_args=%v\n",
+		if logging.IsDebugEnabled() {
+			logging.Debugf("Parsed command: subcommand=%s, extension=%s, viper_args=%v, container_args=%v",
 				parsedCmd.Subcommand, parsedCmd.ExtensionName, parsedCmd.ViperArgs, parsedCmd.ContainerArgs)
 		}
 
@@ -65,24 +59,14 @@ var RootCmd = &cobra.Command{
 		}
 
 		// Set the log level
-		if err := log.SetLevel(logLevel); err != nil {
+		if err := logging.SetLevel(logLevel); err != nil {
 			return fmt.Errorf("failed to set log level: %w", err)
-		}
-
-		// Add command context to logger
-		ctx := context.Background()
-		ctx = logger.ContextWithCommand(ctx, cmd.Name())
-		if opID := os.Getenv("R2R_OPERATION_ID"); opID != "" {
-			ctx = logger.ContextWithOperationID(ctx, opID)
 		}
 
 		// Check if we fixed redirect pollution
 		if os.Getenv("R2R_FIXED_REDIRECT") == "true" {
-			log.WithContext(ctx).WithFields(map[string]interface{}{
-				"original_args": os.Getenv("R2R_ORIGINAL_ARGS"),
-				"filtered_args": os.Getenv("R2R_FILTERED_ARGS"),
-				"fix_applied":   "redirect_pollution",
-			}).Warn().Msg("Fixed bash redirect pollution in arguments (removed spurious '2' from '2>&1')")
+			logging.Warnf("Fixed bash redirect pollution in arguments (removed spurious '2' from '2>&1'): original=%s filtered=%s",
+				os.Getenv("R2R_ORIGINAL_ARGS"), os.Getenv("R2R_FILTERED_ARGS"))
 
 			// Clean up env vars
 			os.Unsetenv("R2R_FIXED_REDIRECT")
@@ -91,55 +75,28 @@ var RootCmd = &cobra.Command{
 		}
 
 		// Log command execution
-		log.WithContext(ctx).WithFields(map[string]interface{}{
-			"args":    args,
-			"version": version.Version,
-			"os":      runtime.GOOS,
-			"arch":    runtime.GOARCH,
-		}).Debug().Msg("Executing command")
+		logging.Debugf("Executing command: cmd=%s args=%v version=%s os=%s arch=%s",
+			cmd.Name(), args, version.Version, runtime.GOOS, runtime.GOARCH)
 
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cmd.Help(); err != nil {
-			log.WithField("error", err).Error().Msg("Failed to show help")
+			logging.Errorf("Failed to show help: %v", err)
 		}
 	},
 }
 
 func init() {
-	// Initialize logger with default configuration
-	// File logging is disabled by default (File: "disabled")
-	// Set to empty string to enable with auto-detected path
-	logCfg := logger.Config{
-		Console: true,
-		Level:   "info",
-		File:    "disabled", // Disable file logging by default
-	}
-
-	// Check if file logging is explicitly requested
-	if os.Getenv("R2R_LOG_FILE") != "" {
-		logCfg.File = os.Getenv("R2R_LOG_FILE")
-	} else if os.Getenv("R2R_ENABLE_FILE_LOG") == "true" {
-		// Empty string triggers auto-detection of .r2r/r2r-cli.log path
-		logCfg.File = ""
-	}
-
-	// Initialize logger
-	if err := logger.Initialize(logCfg); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
-		os.Exit(1)
-	}
-	log = logger.Get()
+	// Initialize logger with defaults from environment
+	logging.InitFromEnv()
 
 	// Only log initialization in debug/verbose mode
 	if os.Getenv("R2R_VERBOSE_LOG") == "true" || os.Getenv("R2R_LOG_LEVEL") == "debug" {
+		logging.EnableDebug()
 		versionInfo := version.GetInfo()
-		log.WithFields(map[string]interface{}{
-			"version":   versionInfo.Version,
-			"commit":    versionInfo.Commit,
-			"timestamp": versionInfo.Timestamp,
-		}).Debug().Msg("R2R CLI initialized")
+		logging.Debugf("R2R CLI initialized: version=%s commit=%s timestamp=%s",
+			versionInfo.Version, versionInfo.Commit, versionInfo.Timestamp)
 	}
 
 	RootCmd.CompletionOptions.DisableDefaultCmd = true
@@ -153,42 +110,41 @@ func init() {
 
 	// Now validate version after flags are initialized
 	if err := version.Validate(false); err != nil {
-		log.WithField("error", err).Fatal().Msg("Version validation failed")
+		logging.Fatalf("Version validation failed: %v", err)
 	}
 
 	// Initialize extension aliases for direct execution (e.g., "r2r pwsh" instead of "r2r run pwsh")
 	InitializeExtensionAliases()
 }
 
-func buildErrorContext(err error) map[string]interface{} {
-	fields := map[string]interface{}{
-		"error":   err.Error(),
-		"command": RootCmd.Name(),
-		"args":    os.Args[1:],
-		"version": version.Version,
-		"os":      runtime.GOOS,
-		"arch":    runtime.GOARCH,
-	}
+func buildErrorContext(err error) string {
+	var parts []string
+	parts = append(parts, fmt.Sprintf("error=%v", err))
+	parts = append(parts, fmt.Sprintf("command=%s", RootCmd.Name()))
+	parts = append(parts, fmt.Sprintf("args=%v", os.Args[1:]))
+	parts = append(parts, fmt.Sprintf("version=%s", version.Version))
+	parts = append(parts, fmt.Sprintf("os=%s", runtime.GOOS))
+	parts = append(parts, fmt.Sprintf("arch=%s", runtime.GOARCH))
 
 	cmd, _, e := RootCmd.Find(os.Args[1:])
 	if e != nil {
-		fields["error_type"] = "invalid_command"
-		fields["attempted_command"] = strings.Join(os.Args[1:], " ")
+		parts = append(parts, "error_type=invalid_command")
+		parts = append(parts, fmt.Sprintf("attempted_command=%s", strings.Join(os.Args[1:], " ")))
 	} else if cmd != nil {
-		fields["subcommand"] = cmd.Name()
-		fields["path"] = cmd.CommandPath()
+		parts = append(parts, fmt.Sprintf("subcommand=%s", cmd.Name()))
+		parts = append(parts, fmt.Sprintf("path=%s", cmd.CommandPath()))
 	}
 
 	for _, name := range []string{"r2r-debug", "r2r-quiet"} {
 		if flag := RootCmd.PersistentFlags().Lookup(name); flag != nil && flag.Changed {
-			fields[name] = flag.Value.String() == "true"
+			parts = append(parts, fmt.Sprintf("%s=%s", name, flag.Value.String()))
 		}
 	}
 
 	if e == nil {
-		fields["error_type"] = "execution_failed"
+		parts = append(parts, "error_type=execution_failed")
 	}
-	return fields
+	return strings.Join(parts, " ")
 }
 
 func Execute() {
@@ -200,8 +156,7 @@ func Execute() {
 	}
 
 	if err := RootCmd.Execute(); err != nil {
-		fields := buildErrorContext(err)
-		log.WithFields(fields).Error().Msg("Command execution failed")
+		logging.Errorf("Command execution failed: %s", buildErrorContext(err))
 		os.Exit(1)
 	}
 }

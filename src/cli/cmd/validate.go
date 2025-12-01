@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/ready-to-release/eac/src/cli/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -67,7 +68,7 @@ Examples:
 			return fmt.Errorf("configuration file not found: %s", configFile)
 		}
 
-		fmt.Printf("Validating configuration file: %s\n", configFile)
+		logging.Infof("Validating configuration file: %s", configFile)
 
 		// Load the configuration using viper
 		viper.SetConfigFile(configFile)
@@ -92,36 +93,39 @@ Examples:
 
 		// Display results
 		if result.IsValid() && len(result.Warnings) == 0 {
-			fmt.Printf("✅ Configuration is valid (schema version: %s)\n", validator.GetEmbeddedSchemaVersion())
+			logging.Infof("✅ Configuration is valid (schema version: %s)", validator.GetEmbeddedSchemaVersion())
 			return nil
 		}
 
 		// Display errors
 		if len(result.Errors) > 0 {
-			fmt.Println("❌ Validation errors found:")
+			logging.Error("❌ Validation errors found:")
 			for _, e := range result.Errors {
 				if e.Field != "" {
-					fmt.Printf("  - %s: %s", e.Field, e.Message)
+					if e.Expected != "" && e.Expected != e.Rule {
+						logging.Errorf("  - %s: %s (expected: %s)", e.Field, e.Message, e.Expected)
+					} else {
+						logging.Errorf("  - %s: %s", e.Field, e.Message)
+					}
 				} else {
-					fmt.Printf("  - %s", e.Message)
+					if e.Expected != "" && e.Expected != e.Rule {
+						logging.Errorf("  - %s (expected: %s)", e.Message, e.Expected)
+					} else {
+						logging.Errorf("  - %s", e.Message)
+					}
 				}
-				if e.Expected != "" && e.Expected != e.Rule {
-					fmt.Printf(" (expected: %s)", e.Expected)
-				}
-				fmt.Println()
 			}
 		}
 
 		// Display warnings
 		if len(result.Warnings) > 0 {
-			fmt.Println("⚠️  Validation warnings:")
+			logging.Warn("⚠️  Validation warnings:")
 			for _, w := range result.Warnings {
 				if w.Field != "" {
-					fmt.Printf("  - %s: %s", w.Field, w.Message)
+					logging.Warnf("  - %s: %s", w.Field, w.Message)
 				} else {
-					fmt.Printf("  - %s", w.Message)
+					logging.Warnf("  - %s", w.Message)
 				}
-				fmt.Println()
 			}
 		}
 
@@ -135,7 +139,7 @@ Examples:
 			return fmt.Errorf("validation failed: %d error(s)", len(result.Errors))
 		}
 
-		fmt.Printf("⚠️  Configuration is valid with %d warning(s)\n", len(result.Warnings))
+		logging.Warnf("⚠️  Configuration is valid with %d warning(s)", len(result.Warnings))
 		return nil
 	},
 }
@@ -151,9 +155,9 @@ func init() {
 
 // showEmbeddedSchema displays information about the embedded schema
 func showEmbeddedSchema() error {
-	fmt.Printf("Embedded Schema Information:\n")
-	fmt.Printf("  Version: %s\n", validator.GetEmbeddedSchemaVersion())
-	fmt.Printf("  Schema ID: r2r-cli-config/v1.0\n")
+	logging.Info("Embedded Schema Information:")
+	logging.Infof("  Version: %s", validator.GetEmbeddedSchemaVersion())
+	logging.Info("  Schema ID: r2r-cli-config/v1.0")
 
 	// Get and parse the schema
 	schemaStr := validator.GetEmbeddedSchema()
@@ -164,27 +168,27 @@ func showEmbeddedSchema() error {
 
 	// Display schema details
 	if id, ok := schema["$id"].(string); ok {
-		fmt.Printf("  Full ID: %s\n", id)
+		logging.Infof("  Full ID: %s", id)
 	}
 	if title, ok := schema["title"].(string); ok {
-		fmt.Printf("  Title: %s\n", title)
+		logging.Infof("  Title: %s", title)
 	}
 	if desc, ok := schema["description"].(string); ok {
-		fmt.Printf("  Description: %s\n", desc)
+		logging.Infof("  Description: %s", desc)
 	}
 
 	// Count properties
 	if props, ok := schema["properties"].(map[string]interface{}); ok {
-		fmt.Printf("  Root Properties: %d\n", len(props))
-		fmt.Printf("    - %v\n", getKeys(props))
+		logging.Infof("  Root Properties: %d", len(props))
+		logging.Infof("    - %v", getKeys(props))
 	}
 
 	// Show required fields
 	if required, ok := schema["required"].([]interface{}); ok {
-		fmt.Printf("  Required Fields: %v\n", required)
+		logging.Infof("  Required Fields: %v", required)
 	}
 
-	fmt.Println("\nTo see the full schema, check: schemas/r2r-cli-config/v1.0/schema.json")
+	logging.Info("\nTo see the full schema, check: schemas/r2r-cli-config/v1.0/schema.json")
 
 	return nil
 }

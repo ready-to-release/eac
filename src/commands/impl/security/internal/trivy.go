@@ -4,6 +4,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
@@ -47,9 +48,14 @@ func getDefaultMockTrivyOutput() map[string]interface{} {
 // RunTrivySBOM executes Trivy SBOM scanner via Docker
 func RunTrivySBOM(workspaceRoot, moduleRoot, format string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
+	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy SBOM output")
+		logger.Debug("Using mocked Trivy SBOM output (in-process)")
 		return mockTrivyOutput, nil
+	}
+	if os.Getenv("R2R_MOCK_SECURITY") != "" {
+		logger.Debug("Using mocked Trivy SBOM output (environment)")
+		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
@@ -127,9 +133,14 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, logger *logging.Logg
 // RunTrivyVuln executes Trivy vulnerability scanner via Docker
 func RunTrivyVuln(moduleRoot string, severityFilter []Severity, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
+	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy vulnerability output")
+		logger.Debug("Using mocked Trivy vulnerability output (in-process)")
 		return mockTrivyOutput, nil
+	}
+	if os.Getenv("R2R_MOCK_SECURITY") != "" {
+		logger.Debug("Using mocked Trivy vulnerability output (environment)")
+		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
@@ -219,9 +230,14 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, logger *logging.
 // RunTrivySecrets executes Trivy secrets scanner via Docker
 func RunTrivySecrets(moduleRoot string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
+	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy secrets output")
+		logger.Debug("Using mocked Trivy secrets output (in-process)")
 		return mockTrivyOutput, nil
+	}
+	if os.Getenv("R2R_MOCK_SECURITY") != "" {
+		logger.Debug("Using mocked Trivy secrets output (environment)")
+		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
@@ -298,9 +314,14 @@ func RunTrivySecrets(moduleRoot string, logger *logging.Logger) (interface{}, er
 // RunTrivyCompliance executes Trivy compliance scanner via Docker
 func RunTrivyCompliance(moduleRoot, compliance string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
+	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy compliance output")
+		logger.Debug("Using mocked Trivy compliance output (in-process)")
 		return mockTrivyOutput, nil
+	}
+	if os.Getenv("R2R_MOCK_SECURITY") != "" {
+		logger.Debug("Using mocked Trivy compliance output (environment)")
+		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
@@ -378,9 +399,14 @@ func RunTrivyCompliance(moduleRoot, compliance string, logger *logging.Logger) (
 // RunTrivyIaC executes Trivy Infrastructure as Code scanner via Docker
 func RunTrivyIaC(moduleRoot string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
+	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy IaC output")
+		logger.Debug("Using mocked Trivy IaC output (in-process)")
 		return mockTrivyOutput, nil
+	}
+	if os.Getenv("R2R_MOCK_SECURITY") != "" {
+		logger.Debug("Using mocked Trivy IaC output (environment)")
+		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner

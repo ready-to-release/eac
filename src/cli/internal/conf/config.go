@@ -14,7 +14,7 @@ import (
 	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/github"
 	"github.com/ready-to-release/eac/src/cli/internal/session"
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/spf13/viper"
 )
 
@@ -441,7 +441,7 @@ func MergeConfigFile(configFile string) error {
 
 	// Don't validate the override config - it's allowed to have partial definitions
 	// The validation will happen after merging with the base config
-	log.Debug().Str("file", configFile).Msg("Merging override configuration (validation skipped for partial config)")
+	logging.Debugf("Merging override configuration (validation skipped for partial config): file=%s", configFile)
 
 	// Merge the override config into the Global config
 	mergeConfigs(&Global, &overrideConfig)
@@ -449,7 +449,7 @@ func MergeConfigFile(configFile string) error {
 	// Re-validate the merged configuration
 	if err := validateConfig(&Global); err != nil {
 		// Don't attribute the error to the override file - it's the merged config that failed
-		log.Error().Str("file", configFile).Err(err).Msg("Merged configuration validation failed")
+		logging.Errorf("Merged configuration validation failed: file=%s err=%v", configFile, err)
 		return fmt.Errorf("merged configuration is invalid after applying %s: %w", configFile, err)
 	}
 
@@ -538,11 +538,11 @@ func mergeConfigs(base *Config, override *Config) {
 		for _, overrideExt := range override.Extensions {
 			if existingExt, exists := baseExtMap[overrideExt.Name]; exists {
 				// Merge the override fields into the existing extension
-				log.Debug().Str("extension", overrideExt.Name).Msg("Merging override extension with existing")
+				logging.Debugf("Merging override extension with existing: extension=%s", overrideExt.Name)
 				mergeExtension(existingExt, &overrideExt)
 			} else {
 				// Add new extension
-				log.Debug().Str("extension", overrideExt.Name).Msg("Adding new extension from override")
+				logging.Debugf("Adding new extension from override: extension=%s", overrideExt.Name)
 				base.Extensions = append(base.Extensions, overrideExt)
 			}
 		}
@@ -552,17 +552,12 @@ func mergeConfigs(base *Config, override *Config) {
 // mergeExtension merges override extension fields into the base extension
 // Only non-empty/non-zero override fields replace base fields
 func mergeExtension(base *Extension, override *Extension) {
-	log.Debug().
-		Str("base_name", base.Name).
-		Str("base_image", base.Image).
-		Str("override_name", override.Name).
-		Str("override_image", override.Image).
-		Bool("override_load_local", override.LoadLocal).
-		Msg("Merging extension details")
+	logging.Debugf("Merging extension details: base_name=%s base_image=%s override_name=%s override_image=%s override_load_local=%v",
+		base.Name, base.Image, override.Name, override.Image, override.LoadLocal)
 
 	// Only override non-empty string fields
 	if override.Image != "" {
-		log.Debug().Str("old", base.Image).Str("new", override.Image).Msg("Overriding image")
+		logging.Debugf("Overriding image: old=%s new=%s", base.Image, override.Image)
 		base.Image = override.Image
 	}
 	if override.Description != "" {
@@ -762,9 +757,9 @@ func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 
 				// If not in cache or cache expired, fetch from GHCR
 				if pinnedVersion == "" {
-					log.Debug().Str("extension", extensionName).Str("baseImage", baseImage).Msg("Fetching latest tags from GHCR")
+					logging.Debugf("Fetching latest tags from GHCR: extension=%s baseImage=%s", extensionName, baseImage)
 					pinnedVersion = fetchAndCacheExtensionTags(baseImage, extensionName, registryCache)
-					log.Debug().Str("extension", extensionName).Str("pinnedVersion", pinnedVersion).Msg("Fetched pin version")
+					logging.Debugf("Fetched pin version: extension=%s pinnedVersion=%s", extensionName, pinnedVersion)
 				}
 			}
 
@@ -780,20 +775,18 @@ func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 	}
 
 	// Save updated cache
-	log.Debug().
-		Int("extensionsInCache", len(registryCache.Extensions)).
-		Msg("Saving registry cache")
+	logging.Debugf("Saving registry cache: extensionsInCache=%d", len(registryCache.Extensions))
 	if err := registryCache.SaveRegistryCache(repoRoot); err != nil {
-		log.Error().Err(err).Msg("Failed to save registry cache")
+		logging.Errorf("Failed to save registry cache: %v", err)
 	} else {
-		log.Debug().Msg("Registry cache saved successfully")
+		logging.Debug("Registry cache saved successfully")
 	}
 
 	// In CI, return error if any extensions are unpinned
 	if isCI && len(unpinnedExtensions) > 0 {
 		// Skip fatal error if we're in a test environment
 		if os.Getenv("R2R_TESTING") == "true" {
-			log.Error().Msgf("Extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
+			logging.Errorf("Extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
 			return unpinnedExtensions, fmt.Errorf("extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
 		}
 		return unpinnedExtensions, fmt.Errorf("extensions MUST be pinned in CI:\n  - %s", strings.Join(unpinnedExtensions, "\n  - "))
@@ -839,7 +832,7 @@ func checkLatestTags(cfg *Config) {
 	if err != nil {
 		// In CI with unpinned extensions - fatal error (unless in test)
 		if os.Getenv("R2R_TESTING") != "true" {
-			log.Fatal().Err(err).Msg("")
+			logging.Fatalf(": %v", err)
 		}
 		return
 	}
@@ -847,7 +840,7 @@ func checkLatestTags(cfg *Config) {
 	// Show warnings in non-CI if not suppressed
 	if !isCI && !suppressWarnings && len(unpinnedExtensions) > 0 {
 		for _, msg := range unpinnedExtensions {
-			log.Warn().Msg(msg)
+			logging.Warn(msg)
 		}
 
 		// Create/touch warning file to indicate warnings were shown for this session
@@ -857,7 +850,7 @@ func checkLatestTags(cfg *Config) {
 		warningFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("nncli-%s-warning-disabled", sessionID))
 		if file, err := os.Create(warningFilePath); err == nil {
 			file.Close()
-			log.Debug().Str("file", warningFilePath).Str("session", sessionID).Msg("Created warning flag file")
+			logging.Debugf("Created warning flag file: file=%s session=%s", warningFilePath, sessionID)
 		}
 
 		// Also set environment variable for current process tree
@@ -867,37 +860,33 @@ func checkLatestTags(cfg *Config) {
 
 // fetchAndCacheExtensionTags fetches tags from GHCR and updates cache
 func fetchAndCacheExtensionTags(baseImage, extensionName string, registryCache *cache.RegistryCache) string {
-	log.Debug().Str("baseImage", baseImage).Str("extensionName", extensionName).Msg("fetchAndCacheExtensionTags called")
+	logging.Debugf("fetchAndCacheExtensionTags called: baseImage=%s extensionName=%s", baseImage, extensionName)
 	client, err := github.NewRegistryClient()
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to create registry client")
+		logging.Debugf("Failed to create registry client: %v", err)
 		return ""
 	}
 
 	// Get the latest stable tag
 	latestTag, err := client.GetLatestStableTag(baseImage)
 	if err != nil {
-		log.Debug().Err(err).Str("baseImage", baseImage).Msg("Failed to get latest stable tag, trying any tag")
+		logging.Debugf("Failed to get latest stable tag, trying any tag: baseImage=%s err=%v", baseImage, err)
 		// Try any tag
 		latestTag, err = client.GetLatestTag(baseImage)
 		if err != nil {
-			log.Debug().Err(err).Str("baseImage", baseImage).Msg("Failed to get any tag")
+			logging.Debugf("Failed to get any tag: baseImage=%s err=%v", baseImage, err)
 			return ""
 		}
 	}
-	log.Debug().Str("latestTag", latestTag).Msg("Got latest tag")
+	logging.Debugf("Got latest tag: latestTag=%s", latestTag)
 
 	// Get all tags for caching
 	allTags, _ := client.ListTags(baseImage)
 
 	// Update cache
 	registryCache.SetExtension(extensionName, latestTag, allTags)
-	log.Debug().
-		Str("extensionName", extensionName).
-		Str("latestTag", latestTag).
-		Int("tagsCount", len(allTags)).
-		Int("cacheExtensions", len(registryCache.Extensions)).
-		Msg("Updated cache with extension data")
+	logging.Debugf("Updated cache with extension data: extensionName=%s latestTag=%s tagsCount=%d cacheExtensions=%d",
+		extensionName, latestTag, len(allTags), len(registryCache.Extensions))
 
 	return latestTag
 }
@@ -937,12 +926,8 @@ func getActualImageVersion(image string) string {
 		if !registryCache.IsExpired(cacheTTL) {
 			if latestSHA, ok := registryCache.GetLatestSHA(extensionName); ok {
 				cachePath := cache.GetRegistryCachePath(repoRoot)
-				log.Debug().
-					Str("extension", extensionName).
-					Str("cached_sha", latestSHA).
-					Str("cache_path", cachePath).
-					Int("cache_age_seconds", int(time.Since(registryCache.UpdatedAt).Seconds())).
-					Msg("Using cached SHA tag from registry cache")
+				logging.Debugf("Using cached SHA tag from registry cache: extension=%s cached_sha=%s cache_path=%s cache_age_seconds=%d",
+					extensionName, latestSHA, cachePath, int(time.Since(registryCache.UpdatedAt).Seconds()))
 				return latestSHA
 			}
 		}
@@ -951,9 +936,7 @@ func getActualImageVersion(image string) string {
 	// Cache miss or expired, try to query GitHub registry
 	client, err := github.NewRegistryClient()
 	if err == nil {
-		log.Debug().
-			Str("image", baseImage).
-			Msg("Cache miss or expired, querying GitHub Container Registry")
+		logging.Debugf("Cache miss or expired, querying GitHub Container Registry: image=%s", baseImage)
 
 		// Try to get the latest stable tag from the registry
 		latestTag, err := client.GetLatestStableTag(baseImage)
@@ -966,10 +949,7 @@ func getActualImageVersion(image string) string {
 				registryCache.SaveRegistryCache(repoRoot)
 			}
 
-			log.Debug().
-				Str("image", baseImage).
-				Str("latest_tag", latestTag).
-				Msg("Found latest stable tag from GitHub registry")
+			logging.Debugf("Found latest stable tag from GitHub registry: image=%s latest_tag=%s", baseImage, latestTag)
 			return latestTag
 		}
 
@@ -983,10 +963,7 @@ func getActualImageVersion(image string) string {
 				registryCache.SaveRegistryCache(repoRoot)
 			}
 
-			log.Debug().
-				Str("image", baseImage).
-				Str("tag", anyTag).
-				Msg("Found available tag from GitHub registry")
+			logging.Debugf("Found available tag from GitHub registry: image=%s tag=%s", baseImage, anyTag)
 			return anyTag
 		}
 	}

@@ -22,7 +22,7 @@ import (
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/github"
 	"github.com/ready-to-release/eac/src/cli/internal/terminal"
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"gopkg.in/yaml.v3"
 )
 
@@ -65,7 +65,7 @@ func NewContainerHost() (*ContainerHost, error) {
 	// Override Docker host if R2R_DOCKER_HOST is set
 	if dockerHost := os.Getenv("R2R_DOCKER_HOST"); dockerHost != "" {
 		clientOpts = append(clientOpts, client.WithHost(dockerHost))
-		log.Debug().Str("docker_host", dockerHost).Msg("Using custom Docker host from R2R_DOCKER_HOST")
+		logging.Debugf("Using custom Docker host from R2R_DOCKER_HOST: docker_host=%s", dockerHost)
 	}
 
 	cli, err := NewRealDockerClient(clientOpts...)
@@ -155,7 +155,7 @@ func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
 		// Successfully detected terminal size
 		cols = strconv.Itoa(width)
 		lines = strconv.Itoa(height)
-		log.Debug().Int("detected_width", width).Int("detected_height", height).Msg("Terminal size detected")
+		logging.Debugf("Terminal size detected: detected_width=%d detected_height=%d", width, height)
 		envVars = append(envVars, "COLUMNS="+cols, "LINES="+lines, "R2R_TERMINAL_DETECTION=auto")
 	} else {
 		// Failed to detect, use environment or defaults
@@ -165,7 +165,7 @@ func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
 		if lines == "" {
 			lines = "24"
 		}
-		log.Debug().Str("cols", cols).Str("lines", lines).Msg("Using default terminal size")
+		logging.Debugf("Using default terminal size: cols=%s lines=%s", cols, lines)
 		envVars = append(envVars, "COLUMNS="+cols, "LINES="+lines, "R2R_TERMINAL_DETECTION=default")
 	}
 
@@ -209,9 +209,9 @@ func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
 			// Passthrough from host (value omitted)
 			if hostValue := os.Getenv(env.Name); hostValue != "" {
 				envVars = append(envVars, env.Name+"="+hostValue)
-				log.Debug().Str("env", env.Name).Msg("Passing through environment variable from host")
+				logging.Debugf("Passing through environment variable from host: env=%s", env.Name)
 			} else if env.Required {
-				log.Error().Str("env", env.Name).Msg("Required environment variable not set on host")
+				logging.Errorf("Required environment variable not set on host: env=%s", env.Name)
 			}
 		}
 	}
@@ -334,13 +334,13 @@ func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode Contai
 		// When running commands, we don't want TTY to avoid cursor position queries
 		if len(args) == 0 {
 			// No args means interactive mode
-			log.Debug().Msg("ModeRun: No args detected, enabling TTY for interactive session")
+			logging.Debug("ModeRun: No args detected, enabling TTY for interactive session")
 			config.Tty = true
 			config.OpenStdin = true
 		} else {
 			// Args present means command mode - enable TTY for proper terminal width detection
 			// ANSI escape sequences will be filtered out by the CLI
-			log.Debug().Int("args_count", len(args)).Strs("args", args).Msg("ModeRun: Args present, enabling TTY for terminal width detection")
+			logging.Debugf("ModeRun: Args present, enabling TTY for terminal width detection: args_count=%d args=%v", len(args), args)
 			config.Tty = true
 			config.OpenStdin = false  // Disable stdin for command mode to avoid TTY corruption
 		}
@@ -350,10 +350,10 @@ func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode Contai
 	// Only set WorkingDir if container does NOT have an entrypoint defined
 	if len(imageInspect.Config.Entrypoint) == 0 {
 		workdir := "/var/task"
-		log.Debug().Str("workdir", workdir).Msg("No entrypoint found in extension container, setting workingdir")
+		logging.Debugf("No entrypoint found in extension container, setting workingdir: workdir=%s", workdir)
 		config.WorkingDir = workdir
 	} else {
-		log.Debug().Msg("Found entrypoint in extension container, not setting workingdir")
+		logging.Debug("Found entrypoint in extension container, not setting workingdir")
 	}
 
 	return config
@@ -386,11 +386,7 @@ func (ch *ContainerHost) CreateHostConfig(ext *ExtensionConfig, volumeRequests [
 				Source: volumeName,
 				Target: vol.Target,
 			})
-			log.Debug().
-				Str("extension", ext.Name).
-				Str("volume", volumeName).
-				Str("target", vol.Target).
-				Msg("Adding cache volume mount")
+			logging.Debugf("Adding cache volume mount: extension=%s volume=%s target=%s", ext.Name, volumeName, vol.Target)
 		}
 		// Future: handle "bind" type for bind mounts if needed
 	}
@@ -435,15 +431,15 @@ func (ch *ContainerHost) StartContainer(containerID string) error {
 	inspect, err := ch.client.ContainerInspect(ch.ctx, containerID)
 	if err == nil && inspect.Config.Tty {
 		if width, height, err := terminal.GetSize(); err == nil && width > 0 && height > 0 {
-			log.Debug().Int("terminal_width", width).Int("terminal_height", height).Msg("Resizing container TTY after start")
+			logging.Debugf("Resizing container TTY after start: terminal_width=%d terminal_height=%d", width, height)
 			resizeOptions := container.ResizeOptions{
 				Height: uint(height),
 				Width:  uint(width),
 			}
 			if err := ch.client.ContainerResize(ch.ctx, containerID, resizeOptions); err != nil {
-				log.Debug().Err(err).Msg("Failed to resize container TTY after start")
+				logging.Debugf("Failed to resize container TTY after start: %v", err)
 			} else {
-				log.Debug().Msg("Successfully resized container TTY after start")
+				logging.Debug("Successfully resized container TTY after start")
 			}
 		}
 	}
@@ -462,11 +458,7 @@ func (ch *ContainerHost) AttachToContainer(containerID string) (types.HijackedRe
 	// Only attach stdin if the container has OpenStdin enabled
 	attachStdin := inspect.Config.OpenStdin
 
-	log.Debug().
-		Bool("attach_stdin", attachStdin).
-		Bool("container_open_stdin", inspect.Config.OpenStdin).
-		Str("container_id", containerID).
-		Msg("Attaching to container with appropriate stdin setting")
+	logging.Debugf("Attaching to container with appropriate stdin setting: attach_stdin=%v container_open_stdin=%v container_id=%s", attachStdin, inspect.Config.OpenStdin, containerID)
 
 	attachResp, err := ch.client.ContainerAttach(ch.ctx, containerID, container.AttachOptions{
 		Stream: true,
@@ -513,16 +505,16 @@ func CreateGitHubAuthConfig() (*registry.AuthConfig, string, error) {
 
 	// 2. If no token in env, try GitHub CLI authentication
 	if password == "" {
-		log.Debug().Msg("No GITHUB_TOKEN found, trying GitHub CLI authentication")
+		logging.Debug("No GITHUB_TOKEN found, trying GitHub CLI authentication")
 		auth, err := github.GetCLIAuth()
 		if err == nil && auth.Token != "" {
 			password = auth.Token
 			if username == "" && auth.Username != "" {
 				username = auth.Username
 			}
-			log.Info().Msg("Using GitHub CLI authentication for ghcr.io")
+			logging.Debug("Using GitHub CLI authentication for ghcr.io")
 		} else if err != nil {
-			log.Debug().Err(err).Msg("GitHub CLI authentication not available")
+			logging.Debugf("GitHub CLI authentication not available: %v", err)
 		}
 	}
 
@@ -566,11 +558,7 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		hasLocalImage := err == nil
 
 		if hasLocalImage {
-			log.Debug().
-				Str("image", imageName).
-				Int("repoDigests", len(localImageInfo.RepoDigests)).
-				Str("id", localImageInfo.ID).
-				Msg("Local image found")
+			logging.Debugf("Local image found: image=%s repoDigests=%d id=%s", imageName, len(localImageInfo.RepoDigests), localImageInfo.ID)
 		}
 
 		// Extract tag from image name (format: registry/repo:tag)
@@ -583,11 +571,8 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		// For development: When loadLocal is true, always prefer local image
 		if hasLocalImage && loadLocal {
 			// loadLocal explicitly requests using the local image (e.g., for development builds)
-			fmt.Printf("🏠 Using local development image: %s\n", imageName)
-			log.Info().
-				Str("image", imageName).
-				Bool("hasRepoDigests", len(localImageInfo.RepoDigests) > 0).
-				Msg("Using local development image (loadLocal: true)")
+			logging.Infof("🏠 Using local development image: %s", imageName)
+			logging.Debugf("Using local development image (loadLocal: true): image=%s hasRepoDigests=%v", imageName, len(localImageInfo.RepoDigests) > 0)
 
 			// Cache the local digest for future checks
 			ch.cacheImageDigest(imageName, tag, localImageInfo)
@@ -603,38 +588,35 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 
 			if registryCache != nil && !registryCache.IsExpired(cacheTTL) {
 				// Cache is still valid, use local image
-				log.Info().
-					Str("image", imageName).
-					Int("cacheTTL", cacheTTL).
-					Msg("Using cached image (cache TTL not expired)")
+				logging.Debugf("Using cached image (cache TTL not expired): image=%s cacheTTL=%d", imageName, cacheTTL)
 				return nil
 			}
 
 			// Cache expired, pull for updates
 			pullPolicy = "Always"
-			log.Debug().Str("image", imageName).Str("tag", tag).Msg("Auto-detected pull policy: Always (dynamic tag, cache expired)")
+			logging.Debugf("Auto-detected pull policy: Always (dynamic tag, cache expired): image=%s tag=%s", imageName, tag)
 		} else if hasLocalImage && tag != "" && tag != "latest" && tag != "main" && tag != "master" {
 			// For specific version tags, check if it's a local build first (only if loadLocal is true)
 			if loadLocal && len(localImageInfo.RepoDigests) == 0 {
 				// Local build with version tag
-				fmt.Printf("🏠 Using local development image: %s\n", imageName)
-				log.Info().Str("image", imageName).Msg("Using local development image (AutoDetect: versioned local build)")
+				logging.Infof("🏠 Using local development image: %s", imageName)
+				logging.Debugf("Using local development image (AutoDetect: versioned local build): image=%s", imageName)
 				return nil
 			}
 			// For remote images with version tags, use local if present
 			// Version tags are immutable by convention, so we can cache aggressively
-			log.Info().Str("image", imageName).Msg("Using cached image (AutoDetect: version tag)")
+			logging.Debugf("Using cached image (AutoDetect: version tag): image=%s", imageName)
 			return nil
 		} else if tag == "latest" || tag == "main" || tag == "master" || tag == "" {
 			// For dynamic tags without recent local image, always pull
 			pullPolicy = "Always"
-			log.Debug().Str("image", imageName).Str("tag", tag).Msg("Auto-detected pull policy: Always (dynamic tag)")
+			logging.Debugf("Auto-detected pull policy: Always (dynamic tag): image=%s tag=%s", imageName, tag)
 		} else {
 			// For specific version tags, use IfNotPresent for aggressive caching
 			// This includes: v1.0.0, 1.2.3, dev-59-abc123, release-2.0, etc.
 			// Version tags are immutable by convention
 			pullPolicy = "IfNotPresent"
-			log.Debug().Str("image", imageName).Str("tag", tag).Msg("Auto-detected pull policy: IfNotPresent (version tag - cached aggressively)")
+			logging.Debugf("Auto-detected pull policy: IfNotPresent (version tag - cached aggressively): image=%s tag=%s", imageName, tag)
 		}
 	}
 
@@ -644,7 +626,7 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		if err != nil {
 			return fmt.Errorf("image pull policy is 'Never' but image '%s' not found locally", imageName)
 		}
-		log.Info().Str("image", imageName).Msg("Using local image (pull policy: Never)")
+		logging.Debugf("Using local image (pull policy: Never): image=%s", imageName)
 		return nil
 	}
 
@@ -653,13 +635,13 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		_, err := ch.client.ImageInspect(ch.ctx, imageName)
 		if err == nil {
 			// Image exists locally, no need to pull
-			log.Info().Str("image", imageName).Msg("Image already exists locally")
+			logging.Debugf("Image already exists locally: image=%s", imageName)
 			return nil
 		}
 	}
 
 	// For "Always" policy or when image not found with "IfNotPresent"
-	log.Info().Str("image", imageName).Str("pullPolicy", pullPolicy).Msg("Pulling image from registry")
+	logging.Debugf("Pulling image from registry: image=%s pullPolicy=%s", imageName, pullPolicy)
 
 	// Get GitHub authentication using centralized function
 	authConfig, authStr, err := CreateGitHubAuthConfig()
@@ -693,10 +675,10 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		}
 		return fmt.Errorf("error logging in to registry: %w", err)
 	}
-	log.Info().Str("status", loginResp.Status).Msg("Successfully logged in to registry")
+	logging.Infof("Successfully logged in to registry: status=%s", loginResp.Status)
 
 	// Pull image with user feedback
-	fmt.Printf("🔍 Contacting registry for %s...\n", imageName)
+	logging.Infof("🔍 Contacting registry for %s...", imageName)
 	reader, err := ch.client.ImagePull(ch.ctx, imageName, image.PullOptions{
 		RegistryAuth: authStr,
 	})
@@ -710,7 +692,7 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		return fmt.Errorf("error during image pull: %w", err)
 	}
 
-	log.Info().Str("image", imageName).Msg("Successfully pulled image")
+	logging.Infof("Successfully pulled image: image=%s", imageName)
 
 	// Cache the pulled image digest
 	tag := ch.extractTag(imageName)
@@ -827,27 +809,24 @@ func (ch *ContainerHost) GetExtensionMetadata(ext *ExtensionConfig) (*cache.Exte
 	// Get current image digest for cache validation
 	imageDigest, err := ch.GetImageDigest(ext.Image)
 	if err != nil {
-		log.Debug().Err(err).Str("image", ext.Image).Msg("Failed to get image digest, will fetch fresh metadata")
+		logging.Debugf("Failed to get image digest, will fetch fresh metadata: image=%s err=%v", ext.Image, err)
 		imageDigest = "" // Continue without digest, metadata will be fetched
 	}
 
 	// Try to load cached metadata
 	cachedMeta, err := cache.LoadMetadataCache(ch.rootDir, ext.Name)
 	if err != nil {
-		log.Warn().Err(err).Str("extension", ext.Name).Msg("Error loading metadata cache")
+		logging.Warnf("Error loading metadata cache: extension=%s err=%v", ext.Name, err)
 	}
 
 	// Check if cache is valid
 	if cache.IsMetadataCacheValid(cachedMeta, imageDigest) {
-		log.Debug().
-			Str("extension", ext.Name).
-			Str("digest", imageDigest).
-			Msg("Using cached extension metadata")
+		logging.Debugf("Using cached extension metadata: extension=%s digest=%s", ext.Name, imageDigest)
 		return cachedMeta.Metadata, nil
 	}
 
 	// Fetch fresh metadata
-	log.Debug().Str("extension", ext.Name).Msg("Fetching fresh extension metadata")
+	logging.Debugf("Fetching fresh extension metadata: extension=%s", ext.Name)
 	yamlOutput, err := ch.ExecuteMetadataCommand(ext)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch extension metadata: %w", err)
@@ -862,7 +841,7 @@ func (ch *ContainerHost) GetExtensionMetadata(ext *ExtensionConfig) (*cache.Exte
 	// Save to cache
 	newCache := cache.NewMetadataCache(ext.Name, imageDigest, meta)
 	if err := cache.SaveMetadataCache(ch.rootDir, newCache); err != nil {
-		log.Warn().Err(err).Str("extension", ext.Name).Msg("Failed to save metadata cache")
+		logging.Warnf("Failed to save metadata cache: extension=%s err=%v", ext.Name, err)
 		// Continue even if cache save fails
 	}
 
@@ -904,10 +883,7 @@ func MergeMetadataEnv(ext *ExtensionConfig, meta *cache.ExtensionMeta) {
 				Value:    metaEnv.Value,
 				Required: metaEnv.Required,
 			})
-			log.Debug().
-				Str("env", metaEnv.Name).
-				Bool("required", metaEnv.Required).
-				Msg("Added environment variable from extension metadata")
+			logging.Debugf("Added environment variable from extension metadata: env=%s required=%v", metaEnv.Name, metaEnv.Required)
 		}
 	}
 }
@@ -944,44 +920,25 @@ func (ch *ContainerHost) WarnAboutNewContainers(beforeSnapshot, afterSnapshot ma
 
 			// Skip expected host containers (e.g., from serve commands)
 			if isExpectedHostImage(image, expectedHostImages) {
-				log.Debug().
-					Str("container_id", containerID[:12]).
-					Str("image", image).
-					Msg("Skipping expected host container")
+				logging.Debugf("Skipping expected host container: container_id=%s image=%s", containerID[:12], image)
 				continue
 			}
 
 			if autoRemove {
-				log.Info().
-					Str("container_id", containerID[:12]).
-					Str("image", image).
-					Str("extension", extensionImage).
-					Msg("Auto-removing detected child container: " + image)
+				logging.Infof("Auto-removing detected child container: %s (container_id=%s extension=%s)", image, containerID[:12], extensionImage)
 
 				// Stop and remove the container
 				if err := ch.client.ContainerStop(ch.ctx, containerID, container.StopOptions{}); err != nil {
-					log.Warn().
-						Str("container_id", containerID[:12]).
-						Str("error", err.Error()).
-						Msg("Failed to stop child container")
+					logging.Warnf("Failed to stop child container: container_id=%s error=%v", containerID[:12], err)
 				}
 
 				if err := ch.client.ContainerRemove(ch.ctx, containerID, container.RemoveOptions{Force: true}); err != nil {
-					log.Warn().
-						Str("container_id", containerID[:12]).
-						Str("error", err.Error()).
-						Msg("Failed to remove child container")
+					logging.Warnf("Failed to remove child container: container_id=%s error=%v", containerID[:12], err)
 				} else {
-					log.Info().
-						Str("container_id", containerID[:12]).
-						Msg("Successfully removed child container")
+					logging.Infof("Successfully removed child container: container_id=%s", containerID[:12])
 				}
 			} else {
-				log.Warn().
-					Str("container_id", containerID[:12]).
-					Str("image", image).
-					Str("extension", extensionImage).
-					Msg("New container appeared during run: " + image + ". This could be an indication of missing internal cleanup of docker-in-docker for extension " + extensionImage)
+				logging.Warnf("New container appeared during run: %s (container_id=%s extension=%s). This could be an indication of missing internal cleanup of docker-in-docker", image, containerID[:12], extensionImage)
 			}
 		}
 	}
@@ -1043,7 +1000,7 @@ func (ch *ContainerHost) cacheImageDigest(imageName, tag string, imageInfo image
 	// Load registry cache
 	registryCache, err := cache.LoadRegistryCache(ch.rootDir)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to load registry cache for digest update")
+		logging.Warnf("Failed to load registry cache for digest update: %v", err)
 		return
 	}
 
@@ -1052,13 +1009,9 @@ func (ch *ContainerHost) cacheImageDigest(imageName, tag string, imageInfo image
 
 	// Save cache
 	if err := registryCache.SaveRegistryCache(ch.rootDir); err != nil {
-		log.Warn().Err(err).Msg("Failed to save registry cache after digest update")
+		logging.Warnf("Failed to save registry cache after digest update: %v", err)
 	} else {
-		log.Debug().
-			Str("extension", extensionName).
-			Str("tag", tag).
-			Str("digest", digest).
-			Msg("Cached image digest")
+		logging.Debugf("Cached image digest: extension=%s tag=%s digest=%s", extensionName, tag, digest)
 	}
 }
 
@@ -1087,7 +1040,7 @@ func (ch *ContainerHost) CleanupContainers(opts ContainerCleanupOptions) (*Clean
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	log.Debug().Int("total_containers", len(containers)).Msg("Scanning containers for cleanup")
+	logging.Debugf("Scanning containers for cleanup: total_containers=%d", len(containers))
 
 	for _, ctr := range containers {
 		// Skip if container is running and we don't want to include running containers
@@ -1126,18 +1079,10 @@ func (ch *ContainerHost) CleanupContainers(opts ContainerCleanupOptions) (*Clean
 		}
 
 		if opts.DryRun {
-			log.Info().
-				Str("container", containerName).
-				Str("state", ctr.State).
-				Str("image", ctr.Image).
-				Msg("[DRY RUN] Would remove container")
+			logging.Infof("[DRY RUN] Would remove container: container=%s state=%s image=%s", containerName, ctr.State, ctr.Image)
 			result.ContainersRemoved++
 		} else {
-			log.Info().
-				Str("container", containerName).
-				Str("state", ctr.State).
-				Str("image", ctr.Image).
-				Msg("Removing container")
+			logging.Infof("Removing container: container=%s state=%s image=%s", containerName, ctr.State, ctr.Image)
 
 			// Get container size before removal
 			var containerSize int64
@@ -1153,10 +1098,7 @@ func (ch *ContainerHost) CleanupContainers(opts ContainerCleanupOptions) (*Clean
 			}
 
 			if err := ch.client.ContainerRemove(ch.ctx, ctr.ID, removeOpts); err != nil {
-				log.Warn().
-					Err(err).
-					Str("container", containerName).
-					Msg("Failed to remove container")
+				logging.Warnf("Failed to remove container: container=%s err=%v", containerName, err)
 				result.Errors = append(result.Errors, fmt.Errorf("failed to remove %s: %w", containerName, err))
 			} else {
 				result.ContainersRemoved++
@@ -1165,12 +1107,7 @@ func (ch *ContainerHost) CleanupContainers(opts ContainerCleanupOptions) (*Clean
 		}
 	}
 
-	log.Info().
-		Int("removed", result.ContainersRemoved).
-		Int64("space_reclaimed_bytes", result.SpaceReclaimed).
-		Int("errors", len(result.Errors)).
-		Bool("dry_run", opts.DryRun).
-		Msg("Container cleanup completed")
+	logging.Infof("Container cleanup completed: removed=%d space_reclaimed_bytes=%d errors=%d dry_run=%v", result.ContainersRemoved, result.SpaceReclaimed, len(result.Errors), opts.DryRun)
 
 	return result, nil
 }

@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 // DockerProgress represents a Docker progress update
@@ -48,7 +48,7 @@ func DisplayDockerProgress(reader io.Reader) error {
 		var progress DockerProgress
 		if err := json.Unmarshal([]byte(line), &progress); err != nil {
 			// If we can't parse it, log it as debug
-			log.Debug().Str("line", line).Msg("Unparseable Docker output")
+			logging.Debugf("Unparseable Docker output: line=%s", line)
 			continue
 		}
 
@@ -70,8 +70,8 @@ func DisplayDockerProgress(reader io.Reader) error {
 		case progress.Status == "Downloading":
 			// We have actual downloads - show the pulling message if not shown yet
 			if !showedPullingMessage && lastStatus != "" {
-				fmt.Printf("📦 %s\n", lastStatus)
-				fmt.Printf("Downloading image")
+				logging.Infof("📦 %s", lastStatus)
+				logging.Info("Downloading image")
 				showedPullingMessage = true
 			}
 			hasActualDownload = true
@@ -84,8 +84,8 @@ func DisplayDockerProgress(reader io.Reader) error {
 		case progress.Status == "Extracting":
 			// Extracting means we downloaded something
 			if !showedPullingMessage && lastStatus != "" {
-				fmt.Printf("📦 %s\n", lastStatus)
-				fmt.Printf("Downloading image")
+				logging.Infof("📦 %s", lastStatus)
+				logging.Info("Downloading image")
 				showedPullingMessage = true
 			}
 			hasActualDownload = true
@@ -105,27 +105,27 @@ func DisplayDockerProgress(reader io.Reader) error {
 		case progress.Status == "Already exists":
 			// Layer already exists locally - don't show progress for this
 			if progress.ID != "" {
-				log.Debug().Str("layer", progress.ID).Msg("Layer already exists")
+				logging.Debugf("Layer already exists: layer=%s", progress.ID)
 			}
 
 		case strings.Contains(progress.Status, "Downloaded newer image"):
 			// Show final status for actual downloads
 			if !showedPullingMessage && lastStatus != "" {
 				// Show the pulling message before the completion
-				fmt.Printf("📦 %s\n", lastStatus)
+				logging.Infof("📦 %s", lastStatus)
 			}
 			if dotCount > 0 {
-				fmt.Printf("\n") // End the dots line
+				logging.Info("") // End the dots line
 			}
-			fmt.Printf("✅ %s\n", progress.Status)
+			logging.Infof("✅ %s", progress.Status)
 
 		case strings.Contains(progress.Status, "Image is up to date"):
 			// Only show "up to date" message if we showed pulling info
 			if hasActualDownload || showedPullingMessage {
 				if dotCount > 0 {
-					fmt.Printf("\n") // End the dots line
+					logging.Info("") // End the dots line
 				}
-				fmt.Printf("✅ %s\n", progress.Status)
+				logging.Infof("✅ %s", progress.Status)
 			}
 			// Otherwise stay silent - image was already present
 
@@ -138,7 +138,7 @@ func DisplayDockerProgress(reader io.Reader) error {
 		default:
 			// Other status messages
 			if statusMsg != "" && statusMsg != lastStatus {
-				log.Debug().Str("status", statusMsg).Msg("Docker pull status")
+				logging.Debugf("Docker pull status: status=%s", statusMsg)
 				lastStatus = statusMsg
 			}
 		}
@@ -155,7 +155,7 @@ func DisplayDockerProgress(reader io.Reader) error {
 func showProgressDot(dotCount *int) {
 	// Limit dots to avoid overly long lines (max ~50 dots)
 	if *dotCount < 50 {
-		fmt.Print(".")
+		logging.Print(".")
 		*dotCount++
 	}
 }

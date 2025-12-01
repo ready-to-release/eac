@@ -8,7 +8,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/ready-to-release/eac/src/cli/internal/logger"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 )
 
 // IsRunningInContainer detects if we're running inside a Docker container
@@ -41,7 +41,6 @@ func IsRunningInContainer() bool {
 // This is useful for Docker-in-Docker scenarios where the parent container starts child containers
 func (ch *ContainerHost) CleanupChildContainers() error {
 	ctx := context.Background()
-	log := logger.Get()
 
 	// Get our own container ID if we're running in a container
 	containerID := os.Getenv("HOSTNAME") // In Docker, HOSTNAME is usually the container ID
@@ -56,7 +55,7 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 		}
 	}
 
-	log.WithField("parent_container", containerID).Debug().Msg("Checking for child containers to clean up")
+	logging.Debugf("Checking for child containers to clean up: parent_container=%s", containerID)
 
 	// List all running containers
 	containers, err := ch.client.ContainerList(ctx, container.ListOptions{
@@ -80,10 +79,7 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 		for _, name := range cont.Names {
 			if contains(name, "mkdocs-show-") || contains(name, "r2r-cli-") {
 				containersToStop = append(containersToStop, cont.ID)
-				log.WithFields(map[string]interface{}{
-					"container_id":   cont.ID[:12],
-					"container_name": name,
-				}).Info().Msg("Found child container to clean up")
+				logging.Debugf("Found child container to clean up: container_id=%s container_name=%s", cont.ID[:12], name)
 				break
 			}
 		}
@@ -92,22 +88,22 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 		if _, ok := cont.Labels["r2r-cli"]; ok {
 			if !containsString(containersToStop, cont.ID) {
 				containersToStop = append(containersToStop, cont.ID)
-				log.WithField("container_id", cont.ID[:12]).Info().Msg("Found labeled container to clean up")
+				logging.Debugf("Found labeled container to clean up: container_id=%s", cont.ID[:12])
 			}
 		}
 	}
 
 	if len(containersToStop) == 0 {
-		log.Debug().Msg("No child containers to clean up")
+		logging.Debug("No child containers to clean up")
 		return nil
 	}
 
-	log.WithField("count", len(containersToStop)).Info().Msg("Cleaning up child containers")
+	logging.Debugf("Cleaning up child containers: count=%d", len(containersToStop))
 
 	// Stop all child containers gracefully
 	stopTimeout := 5 * time.Second
 	for _, id := range containersToStop {
-		log.WithField("container_id", id[:12]).Debug().Msg("Stopping container")
+		logging.Debugf("Stopping container: container_id=%s", id[:12])
 
 		stopCtx, cancel := context.WithTimeout(ctx, stopTimeout)
 		err := ch.client.ContainerStop(stopCtx, id, container.StopOptions{
@@ -116,23 +112,17 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 		cancel()
 
 		if err != nil {
-			log.WithFields(map[string]interface{}{
-				"container_id": id[:12],
-				"error":        err.Error(),
-			}).Warn().Msg("Failed to stop container gracefully")
+			logging.Warnf("Failed to stop container gracefully: container_id=%s error=%v", id[:12], err)
 
 			// Try force removal
 			removeErr := ch.client.ContainerRemove(ctx, id, container.RemoveOptions{
 				Force: true,
 			})
 			if removeErr != nil {
-				log.WithFields(map[string]interface{}{
-					"container_id": id[:12],
-					"error":        removeErr.Error(),
-				}).Error().Msg("Failed to force remove container")
+				logging.Errorf("Failed to force remove container: container_id=%s error=%v", id[:12], removeErr)
 			}
 		} else {
-			log.WithField("container_id", id[:12]).Info().Msg("Container stopped successfully")
+			logging.Debugf("Container stopped successfully: container_id=%s", id[:12])
 		}
 	}
 
@@ -142,7 +132,6 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 // CleanupOrphanedContainers removes containers that match r2r-cli patterns but are no longer needed
 func (ch *ContainerHost) CleanupOrphanedContainers() error {
 	ctx := context.Background()
-	log := logger.Get()
 
 	// Create filters for r2r-cli managed containers
 	filterArgs := filters.NewArgs()
@@ -160,19 +149,13 @@ func (ch *ContainerHost) CleanupOrphanedContainers() error {
 	for _, cont := range containers {
 		// Remove stopped containers
 		if cont.State == "exited" || cont.State == "dead" {
-			log.WithFields(map[string]interface{}{
-				"container_id": cont.ID[:12],
-				"state":        cont.State,
-			}).Debug().Msg("Removing orphaned container")
+			logging.Debugf("Removing orphaned container: container_id=%s state=%s", cont.ID[:12], cont.State)
 
 			err := ch.client.ContainerRemove(ctx, cont.ID, container.RemoveOptions{
 				Force: true,
 			})
 			if err != nil {
-				log.WithFields(map[string]interface{}{
-					"container_id": cont.ID[:12],
-					"error":        err.Error(),
-				}).Warn().Msg("Failed to remove orphaned container")
+				logging.Warnf("Failed to remove orphaned container: container_id=%s error=%v", cont.ID[:12], err)
 			}
 		}
 	}

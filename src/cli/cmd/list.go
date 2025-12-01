@@ -10,6 +10,7 @@ import (
 	"github.com/ready-to-release/eac/src/cli/internal/cache"
 	"github.com/ready-to-release/eac/src/cli/internal/conf"
 	"github.com/ready-to-release/eac/src/cli/internal/github"
+	"github.com/ready-to-release/eac/src/cli/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +43,7 @@ Can optionally show all available tags for each extension.`,
 		// Get repository root for cache operations
 		repoRoot, err := conf.FindRepositoryRoot()
 		if err != nil {
-			fmt.Printf("❌ Failed to find repository root: %v\n", err)
+			logging.Errorf("❌ Failed to find repository root: %v", err)
 			os.Exit(1)
 		}
 
@@ -53,18 +54,18 @@ Can optionally show all available tags for each extension.`,
 				registryCache.Clear()
 				err := registryCache.SaveRegistryCache(repoRoot)
 				if err != nil {
-					fmt.Printf("❌ Failed to clear cache: %v\n", err)
+					logging.Errorf("❌ Failed to clear cache: %v", err)
 					os.Exit(1)
 				}
-				fmt.Println("✅ Cache cleared successfully")
+				logging.Info("✅ Cache cleared successfully")
 			} else {
-				fmt.Println("ℹ️  No cache found to clear")
+				logging.Info("ℹ️  No cache found to clear")
 			}
 			return
 		}
 
 		// Discover available extensions from registry
-		log.Debug().Msg("Discovering available extensions from registry...")
+		logging.Debug("Discovering available extensions from registry...")
 
 		// Try to get extensions from cache first
 		registryCache, _ := cache.LoadRegistryCache(repoRoot)
@@ -83,7 +84,7 @@ Can optionally show all available tags for each extension.`,
 						knownExtensions = make(map[string]string)
 						for _, ext := range extensions {
 							knownExtensions[ext.Name] = ext.ImagePath
-							log.Debug().Str("extension", ext.Name).Str("path", ext.ImagePath).Msg("Discovered extension")
+							logging.Debugf("Discovered extension: extension=%s path=%s", ext.Name, ext.ImagePath)
 						}
 					}
 				}
@@ -91,10 +92,10 @@ Can optionally show all available tags for each extension.`,
 
 			// If we don't have extensions yet (no auth or API failed), error
 			if len(knownExtensions) == 0 {
-				fmt.Println("❌ No extensions discovered. Set GITHUB_TOKEN and GITHUB_USERNAME environment variables.")
-				fmt.Println("\nTo set credentials:")
-				fmt.Println("  export GITHUB_TOKEN=your_github_token")
-				fmt.Println("  export GITHUB_USERNAME=your_username")
+				logging.Error("❌ No extensions discovered. Set GITHUB_TOKEN and GITHUB_USERNAME environment variables.")
+				logging.Info("\nTo set credentials:")
+				logging.Info("  export GITHUB_TOKEN=your_github_token")
+				logging.Info("  export GITHUB_USERNAME=your_username")
 				os.Exit(1)
 			}
 		} else {
@@ -113,7 +114,7 @@ Can optionally show all available tags for each extension.`,
 				registryCache.Clear()
 				registryCache.SaveRegistryCache(repoRoot)
 			}
-			fmt.Println("ℹ️  Cache cleared, fetching fresh data from registry...")
+			logging.Info("ℹ️  Cache cleared, fetching fresh data from registry...")
 		}
 
 		// Load configuration to get currently installed extensions
@@ -252,16 +253,16 @@ Can optionally show all available tags for each extension.`,
 		}
 
 		if hasUninstalled {
-			fmt.Println("\n📦 To add and install extensions:")
-			fmt.Println("  r2r install <name>")
+			logging.Info("\n📦 To add and install extensions:")
+			logging.Info("  r2r install <name>")
 		}
 
 		// Show tips
-		fmt.Println("\n💡 Tips:")
-		fmt.Println("  • Use 'r2r list --tags' to see all available tags")
-		fmt.Println("  • Use 'r2r list --refresh' to update cache from registry")
-		fmt.Println("  • Use 'r2r list --clear-cache' to clear cache without listing")
-		fmt.Println("  • Use 'r2r install <name>' to add extensions with latest SHA")
+		logging.Info("\n💡 Tips:")
+		logging.Info("  • Use 'r2r list --tags' to see all available tags")
+		logging.Info("  • Use 'r2r list --refresh' to update cache from registry")
+		logging.Info("  • Use 'r2r list --clear-cache' to clear cache without listing")
+		logging.Info("  • Use 'r2r install <name>' to add extensions with latest SHA")
 	},
 }
 
