@@ -24,7 +24,10 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/changelog"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var getVersionLog = logging.C("release")
 
 func init() {
 	registry.Register(ReleaseGetVersion)
@@ -68,8 +71,8 @@ func ReleaseGetVersion() int {
 	}
 
 	if module == "" {
-		fmt.Fprintln(os.Stderr, "Error: module moniker required")
-		fmt.Fprintln(os.Stderr, "Usage: release get-version <module> [--tag] [--json]")
+		getVersionLog.Error("module moniker required")
+		getVersionLog.Info("Usage: release get-version <module> [--tag] [--json]")
 		return 1
 	}
 
@@ -81,21 +84,21 @@ func ReleaseGetVersion() int {
 
 	// Check if file exists
 	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: changelog not found at %s\n", changelogPath)
+		getVersionLog.Errorf("changelog not found at %s", changelogPath)
 		return 1
 	}
 
 	// Parse changelog
 	cl, err := changelog.Parse(changelogPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to parse changelog: %v\n", err)
+		getVersionLog.Errorf("failed to parse changelog: %v", err)
 		return 1
 	}
 
 	// Get latest version
 	latestVersion := cl.LatestVersion()
 	if latestVersion == nil {
-		fmt.Fprintln(os.Stderr, "Error: no versions found in changelog")
+		getVersionLog.Error("no versions found in changelog")
 		return 1
 	}
 
@@ -121,14 +124,14 @@ func ReleaseGetVersion() int {
 
 		output, err := json.MarshalIndent(info, "", "  ")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+			getVersionLog.Errorf("failed to marshal JSON: %v", err)
 			return 1
 		}
-		fmt.Println(string(output))
+		getVersionLog.Info(string(output))
 	} else if asTag {
-		fmt.Println(tag)
+		getVersionLog.Info(tag)
 	} else {
-		fmt.Println(version)
+		getVersionLog.Info(version)
 	}
 
 	return 0

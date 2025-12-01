@@ -57,7 +57,7 @@ func ShowWorkspaces() int {
 	// Phase 1: Parse configuration
 	config, err := parseListConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 	defer config.base.Logger.Sync()

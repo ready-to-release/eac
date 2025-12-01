@@ -17,7 +17,6 @@
 package validate
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -39,7 +38,7 @@ func TestTags() int {
 	// Load central config
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
+		log.Errorf("Error: failed to load config: %v", err)
 		return 1
 	}
 	eacConfig = cfg // Store for helper functions
@@ -68,7 +67,7 @@ func TestTags() int {
 	})
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to discover feature files: %v\n", err)
+		log.Errorf("Error: failed to discover feature files: %v", err)
 		return 1
 	}
 
@@ -85,7 +84,7 @@ func TestTags() int {
 	for _, featurePath := range featureFiles {
 		tags, err := extractTagsFromFeature(featurePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to extract tags from %s: %v\n", featurePath, err)
+			log.Errorf("Warning: failed to extract tags from %s: %v", featurePath, err)
 			continue
 		}
 
@@ -116,9 +115,9 @@ func TestTags() int {
 
 	// Report results
 	if len(undefinedTags) == 0 {
-		fmt.Println("✅ All test tags are defined in the tag contract")
-		fmt.Printf("   Validated %d feature files\n", len(featureFiles))
-		fmt.Printf("   Contract defines %d valid tags\n", len(validTags))
+		log.Info("✅ All test tags are defined in the tag contract")
+		log.Infof("   Validated %d feature files", len(featureFiles))
+		log.Infof("   Contract defines %d valid tags", len(validTags))
 		return 0
 	}
 
@@ -135,25 +134,25 @@ func TestTags() int {
 	}
 	sort.Strings(tagNames)
 
-	fmt.Printf("❌ Found %d undefined tag(s) used in %d location(s):\n\n", len(tagNames), len(undefinedTags))
+	log.Infof("❌ Found %d undefined tag(s) used in %d location(s):\n", len(tagNames), len(undefinedTags))
 
 	for _, tag := range tagNames {
 		usages := tagsByName[tag]
-		fmt.Printf("  %s (used in %d file(s)):\n", tag, len(usages))
+		log.Infof("  %s (used in %d file(s)):", tag, len(usages))
 
 		// Show first 3 locations for each tag
 		maxToShow := 3
 		for i, usage := range usages {
 			if i >= maxToShow {
-				fmt.Printf("    ... and %d more location(s)\n", len(usages)-maxToShow)
+				log.Infof("    ... and %d more location(s)", len(usages)-maxToShow)
 				break
 			}
-			fmt.Printf("    - %s:%d\n", usage.FilePath, usage.LineNum)
+			log.Infof("    - %s:%d", usage.FilePath, usage.LineNum)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
-	fmt.Printf("Fix: Add missing tags to %s/%s\n", config.EACConfigRelPath, config.TestingTagsFileName)
+	log.Infof("Fix: Add missing tags to %s/%s", config.EACConfigRelPath, config.TestingTagsFileName)
 	return 1
 }
 
@@ -291,7 +290,7 @@ func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
 func isValidEnvMoniker(moniker string) bool {
 	// Use the already-loaded config
 	if eacConfig == nil || eacConfig.Environments == nil {
-		fmt.Fprintf(os.Stderr, "Warning: environments config not loaded\n")
+		log.Errorf("Warning: environments config not loaded")
 		return true
 	}
 
@@ -309,7 +308,7 @@ func isValidEnvMoniker(moniker string) bool {
 func isValidModuleName(moduleName string) bool {
 	// Use the already-loaded config
 	if eacConfig == nil || eacConfig.Modules == nil {
-		fmt.Fprintf(os.Stderr, "Warning: modules config not loaded\n")
+		log.Errorf("Warning: modules config not loaded")
 		return true
 	}
 

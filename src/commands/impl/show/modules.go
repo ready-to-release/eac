@@ -9,9 +9,6 @@
 package show
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
@@ -26,14 +23,14 @@ func ShowModules() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
 	// Generate module contracts report
 	report, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
@@ -45,6 +42,6 @@ func ShowModules() int {
 		tb.AddRow(mod.Moniker, mod.Type, mod.Files.Root)
 	}
 
-	fmt.Println(tb.Build())
+	log.Info(tb.Build())
 	return 0
 }

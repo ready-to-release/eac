@@ -46,17 +46,17 @@ func ReleaseSrcCli() int {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Get version from remaining args
 	remainingArgs := fs.Args()
 	if len(remainingArgs) == 0 {
-		fmt.Fprintf(os.Stderr, "Error: version required\n")
-		fmt.Fprintf(os.Stderr, "Usage: release src-cli [--dry-run] [--push=true|false] <version>\n")
-		fmt.Fprintf(os.Stderr, "Example: release src-cli --dry-run 1.0.0\n")
-		fmt.Fprintf(os.Stderr, "Note: Flags must come before the version number\n")
+		log.Errorf("Error: version required")
+		log.Errorf("Usage: release src-cli [--dry-run] [--push=true|false] <version>")
+		log.Errorf("Example: release src-cli --dry-run 1.0.0")
+		log.Errorf("Note: Flags must come before the version number")
 		return 1
 	}
 
@@ -64,13 +64,13 @@ func ReleaseSrcCli() int {
 
 	// Validate module exists
 	if err := validateModule("src-cli"); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Validate semver format
 	if err := validateSemver(version); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -79,40 +79,41 @@ func ReleaseSrcCli() int {
 
 	// Check if tag already exists
 	if tagExists(tagName) {
-		fmt.Fprintf(os.Stderr, "Error: tag '%s' already exists\n", tagName)
+		log.Errorf("Error: tag '%s' already exists", tagName)
 		return 1
 	}
 
 	if *dryRun {
-		fmt.Printf("[DRY RUN] Would create tag: %s\n", tagName)
+		log.Infof("[DRY RUN] Would create tag: %s", tagName)
 		if *push {
-			fmt.Printf("[DRY RUN] Would push tag to remote\n")
+			log.Infof("[DRY RUN] Would push tag to remote")
 		}
 		return 0
 	}
 
 	// Create the git tag
 	if err := createGitTag(tagName); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create tag: %v\n", err)
+		log.Errorf("Error: failed to create tag: %v", err)
 		return 1
 	}
 
-	fmt.Printf("Created tag: %s\n", tagName)
+	log.Infof("Created tag: %s", tagName)
 
 	// Push the tag if requested
 	if *push {
 		if err := pushGitTag(tagName); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to push tag: %v\n", err)
+			log.Errorf("Error: failed to push tag: %v", err)
 			return 1
 		}
-		fmt.Printf("Pushed tag to remote: %s\n", tagName)
+		log.Infof("Pushed tag to remote: %s", tagName)
 	}
 
-	fmt.Printf("\n✅ Release %s created successfully\n", tagName)
+	log.Infof("")
+	log.Infof("✅ Release %s created successfully", tagName)
 	if *push {
-		fmt.Printf("The release workflow will be triggered automatically.\n")
+		log.Infof("The release workflow will be triggered automatically.")
 	} else {
-		fmt.Printf("Push the tag to trigger the release workflow: git push origin %s\n", tagName)
+		log.Infof("Push the tag to trigger the release workflow: git push origin %s", tagName)
 	}
 
 	return 0

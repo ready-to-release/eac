@@ -46,7 +46,7 @@ func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to write debug file %s: %v", debugFile, err))
 	} else {
-		logger.Debug(fmt.Sprintf("Saved debug file: %s", debugFile))
+		log.Debugf("Saved debug file: %s", debugFile)
 	}
 }
 
@@ -118,7 +118,7 @@ func CreateCommitMessage() int {
 	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
 	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
@@ -130,12 +130,12 @@ func CreateCommitMessage() int {
 		logger, err = logging.NewDefault("commit", workspaceRoot)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error initializing logger: %v\n", err)
+		log.Errorf("initializing logger: %v", err)
 		return 1
 	}
 	defer logger.Sync()
 
-	logger.Debug("Logger initialized")
+	log.Debug("Logger initialized")
 
 	// Retry loop for regenerating commit message if validation fails
 	// Limited to prevent infinite loops
@@ -247,10 +247,10 @@ func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error
 
 // verifyContractImplementation checks if the contract implementation is valid
 func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) error {
-	logger.Debug("verifyContractImplementation: start")
+	log.Debug("verifyContractImplementation: start")
 	contractPath := filepath.Join(workspaceRoot, ".r2r", "eac", "ai", "commit-message", "contract.yml")
 	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
-	logger.Debug("verifyContractImplementation: contract verified")
+	log.Debug("verifyContractImplementation: contract verified")
 	if len(contractErrors) > 0 {
 		logger.Error("Contract implementation verification failed")
 		for _, err := range contractErrors {
@@ -263,7 +263,7 @@ func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) 
 
 // Phase 3: Build Execution Context
 func buildExecutionContext(workspaceRoot string, logger *logging.Logger) (*executionConfig, string, string, error) {
-	logger.Debug("buildExecutionContext: start")
+	log.Debug("buildExecutionContext: start")
 	// Validate inputs
 	if workspaceRoot == "" {
 		return nil, "", "", fmt.Errorf("workspaceRoot cannot be empty")
@@ -273,9 +273,9 @@ func buildExecutionContext(workspaceRoot string, logger *logging.Logger) (*execu
 	}
 
 	// Get staged files report
-	logger.Debug("buildExecutionContext: calling getStagedFilesReport")
+	log.Debug("buildExecutionContext: calling getStagedFilesReport")
 	report, stagedFilesTable, err := getStagedFilesReport(workspaceRoot)
-	logger.Debug("buildExecutionContext: getStagedFilesReport complete")
+	log.Debug("buildExecutionContext: getStagedFilesReport complete")
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -285,19 +285,19 @@ func buildExecutionContext(workspaceRoot string, logger *logging.Logger) (*execu
 	}
 
 	// Extract affected modules
-	logger.Debug("buildExecutionContext: extracting affected modules")
+	log.Debug("buildExecutionContext: extracting affected modules")
 	affectedModules := extractAffectedModules(report, logger)
 
 	// Get git diff and stats
-	logger.Debug("buildExecutionContext: calling getGitDiffAndStats")
+	log.Debug("buildExecutionContext: calling getGitDiffAndStats")
 	gitDiff, diffStats, err := getGitDiffAndStats(workspaceRoot, logger)
 	if err != nil {
 		return nil, "", "", err
 	}
 
-	logger.Debug(fmt.Sprintf("Affected modules count: %d", len(affectedModules)))
+	log.Debugf("Affected modules count: %d", len(affectedModules))
 	for i, mod := range affectedModules {
-		logger.Debug(fmt.Sprintf("  %d. %s", i+1, mod))
+		log.Debugf("  %d. %s", i+1, mod)
 	}
 
 	cfg := &executionConfig{
@@ -357,21 +357,21 @@ func extractAffectedModules(report *reports.FilesModulesReport, logger *logging.
 
 // getGitDiffAndStats retrieves git diff and diff stats for staged changes
 func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, string, error) {
-	logger.Debug("getGitDiffAndStats: start")
-	logger.Debug("getGitDiffAndStats: calling getGitRepo")
+	log.Debug("getGitDiffAndStats: start")
+	log.Debug("getGitDiffAndStats: calling getGitRepo")
 	repo, err := getGitRepo(workspaceRoot)
 	if err != nil {
 		return "", "", err
 	}
-	logger.Debug("getGitDiffAndStats: getGitRepo complete")
+	log.Debug("getGitDiffAndStats: getGitRepo complete")
 
 	// Get git diff
-	logger.Debug("getGitDiffAndStats: calling StagedDiff")
+	log.Debug("getGitDiffAndStats: calling StagedDiff")
 	diffOutput, err := repo.StagedDiff()
 	if err != nil {
 		return "", "", fmt.Errorf("getting git diff: %w", err)
 	}
-	logger.Debug("getGitDiffAndStats: StagedDiff complete")
+	log.Debug("getGitDiffAndStats: StagedDiff complete")
 
 	// Check diff size to prevent memory issues
 	if len(diffOutput) > commitmessage.MaxDiffSize {
@@ -380,13 +380,13 @@ func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, s
 	}
 
 	// Get git diff stats
-	logger.Debug("getGitDiffAndStats: calling StagedDiffStats")
+	log.Debug("getGitDiffAndStats: calling StagedDiffStats")
 	diffStats, err := repo.StagedDiffStats()
 	if err != nil {
 		logger.Warn(fmt.Sprintf("Failed to get diff stats: %v", err))
 		diffStats = ""
 	}
-	logger.Debug("getGitDiffAndStats: StagedDiffStats complete")
+	log.Debug("getGitDiffAndStats: StagedDiffStats complete")
 
 	return diffOutput, strings.TrimSpace(diffStats), nil
 }
@@ -414,7 +414,7 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 
 	// Log provider info when debug is enabled
 	if providerName != "" {
-		logger.Debug(fmt.Sprintf("AI provider used: %s", providerName))
+		log.Debugf("AI provider used: %s", providerName)
 	}
 
 	// Strip out any module sections the AI may have added after "Changes:" line
@@ -470,10 +470,11 @@ func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 
 	// Output marker for VSCode extension to find the start of commit message
 	// This separates progress/status messages from the actual output
+	// Write directly to stdout (not via log) for programmatic consumption
 	fmt.Println(">>>>>>OUTPUT START<<<<<<")
 
 	// Output the generated message (raw, clean output for piping/copying)
-	fmt.Print(message)
+	fmt.Println(message)
 
 	return 0, false
 }
@@ -504,7 +505,7 @@ func performAutoCommit(workspaceRoot string, message string, logger *logging.Log
 	}
 
 	// Success message to stderr (so it doesn't interfere with stdout output)
-	fmt.Fprintf(os.Stderr, "\n✓ Committed: %s\n", hash[:7])
+	log.Infof("\n✓ Committed: %s", hash[:7])
 	return 0
 }
 
@@ -553,18 +554,18 @@ func promptYNWithRetries(question string, attempt int) string {
 	const maxAttempts = 3
 
 	if attempt >= maxAttempts {
-		fmt.Printf("\nToo many invalid inputs. Defaulting to 'no'.\n")
+		log.Info("\nToo many invalid inputs. Defaulting to 'no'.")
 		return "n"
 	}
 
-	fmt.Printf("%s (y/n): ", question)
+	log.Infof("%s (y/n): ", question)
 
 	var response string
 	_, err := fmt.Scanln(&response)
 
 	// If we can't read from stdin (non-interactive), default to "no"
 	if err != nil {
-		fmt.Printf("\nNo input available (non-interactive mode). Defaulting to 'no'.\n")
+		log.Info("\nNo input available (non-interactive mode). Defaulting to 'no'.")
 		return "n"
 	}
 
@@ -572,7 +573,7 @@ func promptYNWithRetries(question string, attempt int) string {
 
 	// If response is empty (stdin exhausted), default to "no"
 	if response == "" {
-		fmt.Printf("\nEmpty input received. Defaulting to 'no'.\n")
+		log.Info("\nEmpty input received. Defaulting to 'no'.")
 		return "n"
 	}
 
@@ -582,7 +583,7 @@ func promptYNWithRetries(question string, attempt int) string {
 	case "n", "no":
 		return "n"
 	default:
-		fmt.Printf("Invalid input '%s'. Please enter y (yes) or n (no).\n", response)
+		log.Infof("Invalid input '%s'. Please enter y (yes) or n (no).", response)
 		return promptYNWithRetries(question, attempt+1)
 	}
 }

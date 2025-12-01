@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	get "github.com/ready-to-release/eac/src/commands/impl/get/internal"
+	getInternal "github.com/ready-to-release/eac/src/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 )
@@ -30,7 +30,7 @@ type ConfigOutput struct {
 
 func GetConfig() int {
 	// Use the shared get command helper
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return getInternal.ExecuteGetCommand(func() (interface{}, error) {
 		// Load all configs with defaults applied
 		cfg, err := config.Load(config.DefaultLoadOptions())
 		if err != nil {
@@ -66,22 +66,22 @@ func GetConfig() int {
 
 // printConfigUsage prints help for the get config command
 func printConfigUsage() {
-	fmt.Println("Get all EAC configuration in structured format")
-	fmt.Println()
-	fmt.Println("Usage: r2r get config [flags]")
-	fmt.Println()
-	fmt.Println("Flags:")
-	fmt.Println("  --as-yaml    Output as YAML (default)")
-	fmt.Println("  --as-json    Output as JSON")
-	fmt.Println("  --as-toml    Output as TOML")
-	fmt.Println("  -h, --help   Show this help message")
-	fmt.Println()
-	fmt.Println("Output includes all loaded configurations with defaults applied:")
-	fmt.Println("  - modules: Module contracts")
-	fmt.Println("  - module_types: Module type definitions")
-	fmt.Println("  - environments: Environment contracts")
-	fmt.Println("  - testing_tags: Testing tag definitions")
-	fmt.Println("  - test_suites: Test suite configurations")
+	log.Info("Get all EAC configuration in structured format")
+	log.Info("")
+	log.Info("Usage: r2r get config [flags]")
+	log.Info("")
+	log.Info("Flags:")
+	log.Info("  --as-yaml    Output as YAML (default)")
+	log.Info("  --as-json    Output as JSON")
+	log.Info("  --as-toml    Output as TOML")
+	log.Info("  -h, --help   Show this help message")
+	log.Info("")
+	log.Info("Output includes all loaded configurations with defaults applied:")
+	log.Info("  - modules: Module contracts")
+	log.Info("  - module_types: Module type definitions")
+	log.Info("  - environments: Environment contracts")
+	log.Info("  - testing_tags: Testing tag definitions")
+	log.Info("  - test_suites: Test suite configurations")
 }
 
 func checkConfigHelp() bool {

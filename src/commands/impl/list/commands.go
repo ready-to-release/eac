@@ -14,7 +14,10 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(ShowHelp)
@@ -62,7 +65,7 @@ func showAllCommands(verbose bool) int {
 
 	// Render as compact list
 	result := render.RenderCompactList("Available Commands", names)
-	fmt.Println(result)
+	log.Info(result)
 
 	return 0
 }
@@ -72,15 +75,15 @@ func showParentHelp(parentName string, subcommands []string, verbose bool) int {
 	commandRegistry := registry.GetCommandRegistry()
 
 	// Display NAME section
-	fmt.Printf("NAME\n")
-	fmt.Printf("    %s - Parent command with subcommands\n\n", parentName)
+	log.Info("NAME")
+	log.Infof("    %s - Parent command with subcommands\n", parentName)
 
 	// Display SYNOPSIS section
-	fmt.Printf("SYNOPSIS\n")
-	fmt.Printf("    eac %s <subcommand> [arguments]\n\n", parentName)
+	log.Info("SYNOPSIS")
+	log.Infof("    eac %s <subcommand> [arguments]\n", parentName)
 
 	// Display COMMANDS section (subcommands)
-	fmt.Printf("COMMANDS\n")
+	log.Info("COMMANDS")
 	for _, subcmd := range subcommands {
 		subReg := commandRegistry[subcmd]
 
@@ -92,17 +95,17 @@ func showParentHelp(parentName string, subcommands []string, verbose bool) int {
 		// Show full command name (e.g., "create spec") so users know the full command
 		// Format with padding
 		padding := strings.Repeat(" ", max(2, 24-len(subcmd)))
-		fmt.Printf("    %s%s%s\n", subcmd, padding, desc)
+		log.Infof("    %s%s%s", subcmd, padding, desc)
 	}
-	fmt.Println()
+	log.Info("")
 
 	// Display EXAMPLES section
-	fmt.Printf("EXAMPLES\n")
+	log.Info("EXAMPLES")
 	if len(subcommands) > 0 {
 		// Show first subcommand as example
-		fmt.Printf("    eac %s\n", subcommands[0])
+		log.Infof("    eac %s", subcommands[0])
 	}
-	fmt.Println()
+	log.Info("")
 
 	return 0
 }
@@ -119,39 +122,39 @@ func showCommandHelp(commandName string, verbose bool) int {
 			return showParentHelp(commandName, subcommands, verbose)
 		}
 
-		fmt.Fprintf(os.Stderr, "Error: unknown command '%s'\n", commandName)
-		fmt.Fprintf(os.Stderr, "\nUse 'show help' to see all available commands.\n")
+		log.Errorf("Error: unknown command '%s'", commandName)
+		log.Error("\nUse 'show help' to see all available commands.")
 		return 1
 	}
 
 	// Display NAME section
-	fmt.Printf("NAME\n")
-	fmt.Printf("    %s - %s\n\n", reg.ActualCommand, reg.Short)
+	log.Info("NAME")
+	log.Infof("    %s - %s\n", reg.ActualCommand, reg.Short)
 
 	// Display SYNOPSIS section
-	fmt.Printf("SYNOPSIS\n")
+	log.Info("SYNOPSIS")
 	synopsis := buildSynopsis(reg)
-	fmt.Printf("    %s\n\n", synopsis)
+	log.Infof("    %s\n", synopsis)
 
 	// Display DESCRIPTION section
 	if reg.Long != "" {
-		fmt.Printf("DESCRIPTION\n")
+		log.Info("DESCRIPTION")
 		// Wrap long description with indentation
 		lines := strings.Split(reg.Long, "\n")
 		for _, line := range lines {
 			if line == "" {
-				fmt.Println()
+				log.Info("")
 			} else {
-				fmt.Printf("    %s\n", line)
+				log.Infof("    %s", line)
 			}
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Display COMMANDS section (subcommands)
 	subcommands := getSubcommands(commandName)
 	if len(subcommands) > 0 {
-		fmt.Printf("COMMANDS\n")
+		log.Info("COMMANDS")
 		for _, subcmd := range subcommands {
 			subReg := commandRegistry[subcmd]
 
@@ -165,39 +168,39 @@ func showCommandHelp(commandName string, verbose bool) int {
 
 			// Format with padding
 			padding := strings.Repeat(" ", max(2, 20-len(subPart)))
-			fmt.Printf("    %s%s%s\n", subPart, padding, desc)
+			log.Infof("    %s%s%s", subPart, padding, desc)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Display FLAGS section
 	if len(reg.Flags) > 0 {
-		fmt.Printf("FLAGS\n")
+		log.Info("FLAGS")
 		for _, flag := range reg.Flags {
 			displayFlag(flag)
 		}
-		fmt.Println()
+		log.Info("")
 	}
 
 	// Display EXAMPLES section
-	fmt.Printf("EXAMPLES\n")
-	fmt.Printf("    eac %s\n", reg.ActualCommand)
+	log.Info("EXAMPLES")
+	log.Infof("    eac %s", reg.ActualCommand)
 	if len(reg.Flags) > 0 {
 		// Show example with a flag if available
 		for _, flag := range reg.Flags {
 			if flag.Type == "bool" {
-				fmt.Printf("    eac %s --%s\n", reg.ActualCommand, flag.Name)
+				log.Infof("    eac %s --%s", reg.ActualCommand, flag.Name)
 				break
 			}
 		}
 	}
-	fmt.Println()
+	log.Info("")
 
 	// Display additional info
 	if verbose {
-		fmt.Printf("ADDITIONAL INFORMATION\n")
-		fmt.Printf("    Canonical name: %s\n", reg.CanonicalName)
-		fmt.Println()
+		log.Info("ADDITIONAL INFORMATION")
+		log.Infof("    Canonical name: %s", reg.CanonicalName)
+		log.Info("")
 	}
 
 	return 0
@@ -246,19 +249,19 @@ func displayFlag(flag registry.FlagMetadata) {
 	reqInfo := strings.Join(requirements, ", ")
 
 	// Display flag header
-	fmt.Printf("    %s %s (%s)\n", flagName, typeInfo, reqInfo)
+	log.Infof("    %s %s (%s)", flagName, typeInfo, reqInfo)
 
 	// Display usage with indentation
 	if flag.Usage != "" {
-		fmt.Printf("        %s\n", flag.Usage)
+		log.Infof("        %s", flag.Usage)
 	}
 
 	// Display completion values if available
 	if len(flag.Completion) > 0 && flag.Type != "bool" {
-		fmt.Printf("        Valid values: %s\n", strings.Join(flag.Completion, ", "))
+		log.Infof("        Valid values: %s", strings.Join(flag.Completion, ", "))
 	}
 
-	fmt.Println()
+	log.Info("")
 }
 
 // getSubcommands returns all subcommands for a given parent command

@@ -69,7 +69,7 @@ func ShowPipelineStatus() int {
 	if commitSHA == "" {
 		sha, err := getHeadCommit(ref)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to get HEAD commit for %s: %v\n", ref, err)
+			log.Errorf("failed to get HEAD commit for %s: %v", ref, err)
 			return 1
 		}
 		commitSHA = sha
@@ -78,13 +78,13 @@ func ShowPipelineStatus() int {
 	// Get commit info
 	commitInfo, err := getPipelineCommitInfo(commitSHA)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to get commit info: %v\n", err)
+		log.Errorf("Warning: failed to get commit info: %v", err)
 		commitInfo = &PipelineCommitInfo{SHA: commitSHA, Message: "(unknown)", Author: "(unknown)"}
 	}
 
 	// Print header
-	fmt.Printf("Pipeline Status: %s\n", ref)
-	fmt.Printf("Commit: %s\n", commitSHA[:7])
+	log.Infof("Pipeline Status: %s", ref)
+	log.Infof("Commit: %s", commitSHA[:7])
 	// Truncate message at first newline
 	message := commitInfo.Message
 	if idx := strings.Index(message, "\n"); idx > 0 {
@@ -93,23 +93,23 @@ func ShowPipelineStatus() int {
 	if len(message) > 60 {
 		message = message[:57] + "..."
 	}
-	fmt.Printf("Message: %s\n", message)
-	fmt.Println()
+	log.Infof("Message: %s", message)
+	log.Info("")
 
 	// Get all workflow runs for this commit
 	runs, err := getWorkflowRunsForCommit(commitSHA)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get workflow runs: %v\n", err)
+		log.Errorf("failed to get workflow runs: %v", err)
 		return 1
 	}
 
 	if len(runs) == 0 {
-		fmt.Println("No workflow runs found for this commit.")
-		fmt.Println()
-		fmt.Println("This could mean:")
-		fmt.Println("  - The commit was just pushed and workflows haven't started yet")
-		fmt.Println("  - No workflows are configured to run on this commit")
-		fmt.Println("  - The commit was skipped by workflow filters")
+		log.Info("No workflow runs found for this commit.")
+		log.Info("")
+		log.Info("This could mean:")
+		log.Info("  - The commit was just pushed and workflows haven't started yet")
+		log.Info("  - No workflows are configured to run on this commit")
+		log.Info("  - The commit was skipped by workflow filters")
 		return 0
 	}
 
@@ -124,8 +124,8 @@ func ShowPipelineStatus() int {
 	}
 
 	// Print status table
-	fmt.Printf("%-40s  %-12s  %s\n", "Workflow", "Status", "Conclusion")
-	fmt.Printf("%-40s  %-12s  %s\n", strings.Repeat("-", 40), strings.Repeat("-", 12), strings.Repeat("-", 12))
+	log.Infof("%-40s  %-12s  %s", "Workflow", "Status", "Conclusion")
+	log.Infof("%-40s  %-12s  %s", strings.Repeat("-", 40), strings.Repeat("-", 12), strings.Repeat("-", 12))
 
 	allSuccess := true
 	anyFailed := false
@@ -147,20 +147,20 @@ func ShowPipelineStatus() int {
 			allSuccess = false
 		}
 
-		fmt.Printf("%s %-38s  %-12s  %s\n", icon, truncate(run.Name, 38), run.Status, conclusion)
+		log.Infof("%s %-38s  %-12s  %s", icon, truncate(run.Name, 38), run.Status, conclusion)
 	}
 
-	fmt.Println()
+	log.Info("")
 
 	// Print summary
 	if allSuccess {
-		fmt.Println("✅ All workflows passed")
+		log.Info("✅ All workflows passed")
 		return 0
 	} else if anyFailed {
-		fmt.Println("❌ One or more workflows failed")
+		log.Info("❌ One or more workflows failed")
 		return 1
 	} else if anyRunning {
-		fmt.Println("◐ Workflows in progress")
+		log.Info("◐ Workflows in progress")
 		return 0
 	}
 

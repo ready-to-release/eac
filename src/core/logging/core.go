@@ -5,39 +5,64 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/src/core/repository"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-// coreResult holds the core and any closers that need to be closed on Sync.
-type coreResult struct {
-	core    zapcore.Core
-	closers []io.Closer
+// logsPath returns the path to the logs output directory.
+// Inlined here to avoid import cycle with repository package.
+func logsPath(repoRoot string) string {
+	return filepath.Join(repoRoot, "out", "logs")
 }
 
-// buildConsoleCore creates a console output core.
-// Console shows Info/Warn/Error by default, or all levels in debug mode.
-func buildConsoleCore(cfg Config) zapcore.Core {
-	encoderCfg := zap.NewProductionEncoderConfig()
-	if cfg.Development {
-		encoderCfg = zap.NewDevelopmentEncoderConfig()
-	}
-	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoderCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+// configLevelEnabler implements zapcore.LevelEnabler based on config
+type configLevelEnabler struct {
+	levels map[zapcore.Level]bool
+}
 
-	encoder := zapcore.NewConsoleEncoder(encoderCfg)
-	enabler := newConsoleEnabler(cfg.DebugMode)
+// Enabled returns true if the level is in the configured levels
+func (e *configLevelEnabler) Enabled(lvl zapcore.Level) bool {
+	return e.levels[lvl]
+}
+
+// newConfigLevelEnabler creates a level enabler from config level strings
+func newConfigLevelEnabler(levels []string) zapcore.LevelEnabler {
+	enabler := &configLevelEnabler{
+		levels: make(map[zapcore.Level]bool),
+	}
+	for _, level := range levels {
+		switch level {
+		case "debug":
+			enabler.levels[zapcore.DebugLevel] = true
+		case "info":
+			enabler.levels[zapcore.InfoLevel] = true
+		case "warn":
+			enabler.levels[zapcore.WarnLevel] = true
+		case "error":
+			enabler.levels[zapcore.ErrorLevel] = true
+		}
+	}
+	return enabler
+}
+
+// buildConsoleCore creates a console output core based on logging config.
+func buildConsoleCore(cfg Config, logCfg LoggingConfig) zapcore.Core {
+	encoder := CreateEncoder(logCfg.Console.Formatter, cfg.Module)
+	enabler := newConfigLevelEnabler(logCfg.Console.Levels)
+
+	// If debug mode is enabled, also show debug on console
+	if cfg.DebugMode && !logCfg.Console.HasLevel("debug") {
+		levels := append([]string{"debug"}, logCfg.Console.Levels...)
+		enabler = newConfigLevelEnabler(levels)
+	}
 
 	return zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), enabler)
 }
 
-// buildFileCore creates a file output core.
-// File receives all levels (Debug, Info, Warn, Error) when debug mode is enabled.
+// buildFileCore creates a file output core based on logging config.
 // Returns the core and the file that needs to be closed.
-func buildFileCore(cfg Config) (zapcore.Core, *os.File, error) {
+func buildFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, *os.File, error) {
 	// Create log directory: out/logs/<module>/
-	logDir := filepath.Join(repository.LogsPath(cfg.WorkspaceRoot), cfg.Module)
+	logDir := filepath.Join(logsPath(cfg.WorkspaceRoot), cfg.Module)
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, nil, err
 	}
@@ -48,30 +73,37 @@ func buildFileCore(cfg Config) (zapcore.Core, *os.File, error) {
 		return nil, nil, err
 	}
 
-	encoderCfg := zap.NewProductionEncoderConfig()
-	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoder := zapcore.NewJSONEncoder(encoderCfg)
-
-	enabler := newFileEnabler()
+	encoder := CreateEncoder(logCfg.File.Formatter, cfg.Module)
+	enabler := newConfigLevelEnabler(logCfg.File.Levels)
 
 	return zapcore.NewCore(encoder, zapcore.AddSync(file), enabler), file, nil
 }
 
 // buildCore creates the appropriate core based on configuration.
-// Default mode: console only (no file logging)
-// Debug mode: console + file (tee core)
+// Uses logging.yml config to determine:
+// - Which levels go to console
+// - Which levels go to file
+// - What formatter each sink uses
 // Returns the core and any closers that need to be closed on Sync.
 func buildCore(cfg Config) (zapcore.Core, []io.Closer, error) {
-	consoleCore := buildConsoleCore(cfg)
+	// Load logging configuration from .r2r/eac/logging.yml
+	logCfg := LoadLoggingConfig(cfg.WorkspaceRoot)
 
-	// Only add file core when debug mode is enabled
+	consoleCore := buildConsoleCore(cfg, logCfg)
+
+	// Only add file core when enabled
+	if !logCfg.File.IsEnabled() {
+		return consoleCore, nil, nil
+	}
+
+	// File logging requires debug mode to actually write
 	if !cfg.DebugMode {
 		return consoleCore, nil, nil
 	}
 
-	fileCore, file, err := buildFileCore(cfg)
+	fileCore, file, err := buildFileCore(cfg, logCfg)
 	if err != nil {
-		// Log warning but continue with console only
+		// Continue with console only on error
 		return consoleCore, nil, nil
 	}
 

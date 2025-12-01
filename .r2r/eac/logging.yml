@@ -1,0 +1,28 @@
+# Logging Configuration
+# Controls how log messages are routed to console and file sinks
+
+# Console output (stdout)
+console:
+  # Levels to show on console: debug, info, warn, error
+  levels:
+    - info
+    - warn
+    - error
+  # Formatter for console output:
+  #   raw        - message only (clean CLI output)
+  #   timestamped - "HH:MM:SS.mmm  LEVEL  module:message"
+  #   json       - structured JSON
+  formatter: raw
+
+# File output (out/logs/<module>/debug.log)
+file:
+  # Levels to write to file: debug, info, warn, error
+  levels:
+    - debug
+    - info
+    - warn
+    - error
+  # Formatter for file output
+  formatter: json
+  # Enable file logging (set to false to disable)
+  enabled: true

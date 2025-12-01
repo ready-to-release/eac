@@ -43,11 +43,11 @@ func ShowSuite() int {
 	}
 
 	if suiteIdx == -1 || suiteIdx >= len(args) {
-		fmt.Fprintf(os.Stderr, "Error: suite moniker required\n\n")
-		fmt.Fprintf(os.Stderr, "Usage: show suite <suite-moniker>\n\n")
-		fmt.Fprintf(os.Stderr, "Available suites:\n")
+		log.Errorf("suite moniker required\n")
+		log.Errorf("Usage: show suite <suite-moniker>\n")
+		log.Errorf("Available suites:")
 		for _, moniker := range testing.ListSuites() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", moniker)
+			log.Errorf("  - %s", moniker)
 		}
 		return 1
 	}
@@ -57,17 +57,17 @@ func ShowSuite() int {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot(".")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: not in a git repository: %v\n", err)
+		log.Errorf("not in a git repository: %v", err)
 		return 1
 	}
 
 	// Get suite
 	suite, err := testing.GetSuite(suiteMoniker)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
-		fmt.Fprintf(os.Stderr, "Available suites:\n")
+		log.Errorf("%v\n", err)
+		log.Errorf("Available suites:")
 		for _, moniker := range testing.ListSuites() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", moniker)
+			log.Errorf("  - %s", moniker)
 		}
 		return 1
 	}
@@ -82,62 +82,62 @@ func ShowSuite() int {
 	// Build file-to-module mapping
 	fileModuleMap, err := buildFileModuleMap(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not load file-module mapping: %v\n", err)
+		log.Errorf("Warning: could not load file-module mapping: %v", err)
 		fileModuleMap = make(map[string]string)
 	}
 
 	// Generate suite report using canonical data generator
 	report, err := testing.GenerateSuiteReport(suite, repoRoot, moduleRegistry, fileModuleMap)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating suite report: %v\n", err)
+		log.Errorf("Error generating suite report: %v", err)
 		return 1
 	}
 
 	// Display validation errors if any
 	if len(report.ValidationErrors) > 0 {
-		fmt.Fprintf(os.Stderr, "\n⚠️  WARNING: %d tests have validation errors:\n", len(report.ValidationErrors))
+		log.Errorf("\n⚠️  WARNING: %d tests have validation errors:", len(report.ValidationErrors))
 		if len(report.FrameworkTests) > 0 {
-			fmt.Fprintf(os.Stderr, "          (%d framework tests excluded from validation)\n", len(report.FrameworkTests))
+			log.Errorf("          (%d framework tests excluded from validation)", len(report.FrameworkTests))
 		}
-		fmt.Fprintf(os.Stderr, "\n")
+		log.Errorf("")
 		for testName, errors := range report.ValidationErrors {
-			fmt.Fprintf(os.Stderr, "  - %s:\n", testName)
+			log.Errorf("  - %s:", testName)
 			for _, err := range errors {
-				fmt.Fprintf(os.Stderr, "    • %s\n", err)
+				log.Errorf("    • %s", err)
 			}
 		}
-		fmt.Fprintf(os.Stderr, "\n")
+		log.Errorf("")
 	} else if len(report.FrameworkTests) > 0 {
-		fmt.Fprintf(os.Stderr, "\n✓ All tests pass validation (%d framework tests excluded from display)\n\n", len(report.FrameworkTests))
+		log.Errorf("\n✓ All tests pass validation (%d framework tests excluded from display)\n", len(report.FrameworkTests))
 	}
 
 	// Display suite information
-	fmt.Printf("# Test Suite: %s\n\n", report.SuiteName)
-	fmt.Printf("**Moniker**: `%s`  \n", report.SuiteMoniker)
-	fmt.Printf("**Description**: %s  \n", report.Description)
-	fmt.Printf("**Production Tests**: %d  \n", len(report.ProductionTests))
-	fmt.Printf("**Framework Tests**: %d (excluded from display)  \n", len(report.FrameworkTests))
-	fmt.Printf("**Total Discovered**: %d  \n", report.TotalDiscovered)
-	fmt.Printf("\n")
+	log.Infof("# Test Suite: %s\n", report.SuiteName)
+	log.Infof("**Moniker**: `%s`  ", report.SuiteMoniker)
+	log.Infof("**Description**: %s  ", report.Description)
+	log.Infof("**Production Tests**: %d  ", len(report.ProductionTests))
+	log.Infof("**Framework Tests**: %d (excluded from display)  ", len(report.FrameworkTests))
+	log.Infof("**Total Discovered**: %d  ", report.TotalDiscovered)
+	log.Info("")
 
 	// Display selection criteria
-	fmt.Printf("## Selection Criteria\n\n")
+	log.Info("## Selection Criteria\n")
 	for i, selector := range report.Selectors {
-		fmt.Printf("**Selector %d**:\n", i+1)
+		log.Infof("**Selector %d**:", i+1)
 		if len(selector.AnyOfTags) > 0 {
-			fmt.Printf("  - **AnyOf**: %s\n", strings.Join(selector.AnyOfTags, ", "))
+			log.Infof("  - **AnyOf**: %s", strings.Join(selector.AnyOfTags, ", "))
 		}
 		if len(selector.RequireTags) > 0 {
-			fmt.Printf("  - **RequireAll**: %s\n", strings.Join(selector.RequireTags, ", "))
+			log.Infof("  - **RequireAll**: %s", strings.Join(selector.RequireTags, ", "))
 		}
 		if len(selector.ExcludeTags) > 0 {
-			fmt.Printf("  - **Exclude**: %s\n", strings.Join(selector.ExcludeTags, ", "))
+			log.Infof("  - **Exclude**: %s", strings.Join(selector.ExcludeTags, ", "))
 		}
-		fmt.Printf("\n")
+		log.Info("")
 	}
 
 	// Display tests in markdown table using TableBuilder
-	fmt.Printf("## Production Tests\n\n")
+	log.Info("## Production Tests\n")
 
 	tb := render.NewTableBuilder().
 		WithHeaders("#", "Moniker", "Test Name", "Type", "Module", "Level", "Verification", "System Deps")
@@ -160,11 +160,11 @@ func ShowSuite() int {
 		)
 	}
 
-	fmt.Println(tb.Build())
-	fmt.Printf("\n")
+	log.Info(tb.Build())
+	log.Info("")
 
 	// Display summary statistics
-	fmt.Printf("## Statistics\n\n")
+	log.Info("## Statistics\n")
 
 	// Count by type
 	typeCounts := make(map[string]int)
@@ -172,11 +172,11 @@ func ShowSuite() int {
 		typeCounts[entry.Type]++
 	}
 
-	fmt.Printf("**By Type**:\n")
+	log.Info("**By Type**:")
 	for testType, count := range typeCounts {
-		fmt.Printf("  - %s: %d\n", testType, count)
+		log.Infof("  - %s: %d", testType, count)
 	}
-	fmt.Printf("\n")
+	log.Info("")
 
 	// Count by module
 	moduleCounts := make(map[string]int)
@@ -184,11 +184,11 @@ func ShowSuite() int {
 		moduleCounts[entry.Module]++
 	}
 
-	fmt.Printf("**By Module**:\n")
+	log.Info("**By Module**:")
 	for module, count := range moduleCounts {
-		fmt.Printf("  - %s: %d\n", module, count)
+		log.Infof("  - %s: %d", module, count)
 	}
-	fmt.Printf("\n")
+	log.Info("")
 
 	// Extract and display dependencies
 	allSystemDeps := make(map[string]bool)
@@ -212,14 +212,14 @@ func ShowSuite() int {
 	}
 
 	if len(systemDeps) > 0 || len(moduleDeps) > 0 {
-		fmt.Printf("**Dependencies**:\n")
+		log.Info("**Dependencies**:")
 		if len(systemDeps) > 0 {
-			fmt.Printf("  - System: %s\n", strings.Join(systemDeps, ", "))
+			log.Infof("  - System: %s", strings.Join(systemDeps, ", "))
 		}
 		if len(moduleDeps) > 0 {
-			fmt.Printf("  - Module: %s\n", strings.Join(moduleDeps, ", "))
+			log.Infof("  - Module: %s", strings.Join(moduleDeps, ", "))
 		}
-		fmt.Printf("\n")
+		log.Info("")
 	}
 
 	return 0

@@ -43,7 +43,7 @@ func GetChangedModulesCI() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -72,14 +72,14 @@ func GetChangedModulesCI() int {
 	// Determine base SHA
 	baseSHA, isBootstrap, err := determineBaseSHA(prBase, workflow, branch, workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error determining base SHA: %v\n", err)
+		log.Errorf("Error determining base SHA: %v", err)
 		return 1
 	}
 
 	// Get current HEAD SHA
 	headSHA, err := getCurrentSHA(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting current SHA: %v\n", err)
+		log.Errorf("Error getting current SHA: %v", err)
 		return 1
 	}
 

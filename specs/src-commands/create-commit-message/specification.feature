@@ -1,5 +1,5 @@
 @L2 @deps:go @deps:git @ov @env:isolated-test-project
-Feature: src-commands_create-commit-message
+Feature: src-commands_commit-message
 
   As a developer using the eac platform
   I want to generate commit messages using AI
@@ -14,10 +14,10 @@ Feature: src-commands_create-commit-message
     Scenario: Command is listed in available commands
       When I run the command "show help"
       Then the exit code is 0
-      And I should see "create commit-message"
+      And I should see "commit message"
 
     Scenario: Command has proper description
-      When I run the command "show help create commit-message"
+      When I run the command "show help commit message"
       Then the exit code is 0
       And I should see "commit" or "message" or "AI"
 
@@ -26,7 +26,7 @@ Feature: src-commands_create-commit-message
     @skip:wip
     Scenario: Fail when no staged changes
       Given no files are staged
-      When I run "create commit-message"
+      When I run "commit message"
       Then the exit code is 1
       And stderr contains "no staged changes"
 
@@ -34,7 +34,7 @@ Feature: src-commands_create-commit-message
     Scenario: Generate message for staged changes
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message"
+      When I run "commit message"
       Then the exit code is 0
       And stdout contains a conventional commit message
       And the message includes module-specific details
@@ -45,7 +45,7 @@ Feature: src-commands_create-commit-message
     Scenario: Message has proper structure
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message"
+      When I run "commit message"
       Then the exit code is 0
       And the message has a type prefix
       And the message has a scope
@@ -55,7 +55,7 @@ Feature: src-commands_create-commit-message
     Scenario: Message validated against contract
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message"
+      When I run "commit message"
       Then the exit code is 0
       And the message passes commit message contract validation
 
@@ -65,7 +65,7 @@ Feature: src-commands_create-commit-message
     Scenario: Create commit with --commit flag
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message --commit"
+      When I run "commit message --commit"
       Then the exit code is 0
       And a git commit is created
       And the commit message matches the generated message
@@ -74,7 +74,7 @@ Feature: src-commands_create-commit-message
     Scenario: Shorthand -c for commit
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message -c"
+      When I run "commit message -c"
       Then the exit code is 0
       And a git commit is created
 
@@ -84,7 +84,7 @@ Feature: src-commands_create-commit-message
     Scenario: Debug flag saves outputs
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message --debug"
+      When I run "commit message --debug"
       Then the exit code is 0
       And debug files are saved to "out/logs/commit/"
       And debug files include the AI prompt
@@ -94,7 +94,7 @@ Feature: src-commands_create-commit-message
     Scenario: Shorthand -d for debug
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message -d"
+      When I run "commit message -d"
       Then the exit code is 0
       And debug files are saved to "out/logs/commit/"
 
@@ -104,7 +104,7 @@ Feature: src-commands_create-commit-message
     Scenario: Include module context in message
       Given files are staged in module "src-core"
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message"
+      When I run "commit message"
       Then the exit code is 0
       And the message references "src-core"
 
@@ -112,6 +112,6 @@ Feature: src-commands_create-commit-message
     Scenario: Handle changes across multiple modules
       Given files are staged in modules "src-core" and "src-cli"
       And the mock AI is configured to return a valid commit message
-      When I run "create commit-message"
+      When I run "commit message"
       Then the exit code is 0
       And the message includes sections for each module

@@ -61,7 +61,7 @@ func generateReport(config *Config, input *AnalysisInput) (string, error) {
 	// Debug: save prompt if requested
 	if config.Debug {
 		if err := saveDebugFile(config, "prompt.md", prompt); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to save debug prompt: %v\n", err)
+			log.Warnf("failed to save debug prompt: %v", err)
 		}
 	}
 
@@ -82,10 +82,10 @@ func generateReport(config *Config, input *AnalysisInput) (string, error) {
 	// Debug: save raw response if requested
 	if config.Debug {
 		if err := saveDebugFile(config, "raw-response.md", response); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to save debug response: %v\n", err)
+			log.Warnf("failed to save debug response: %v", err)
 		}
 		if err := saveDebugFile(config, "cleaned-report.md", report); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to save debug report: %v\n", err)
+			log.Warnf("failed to save debug report: %v", err)
 		}
 	}
 

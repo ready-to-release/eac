@@ -6,7 +6,10 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 // ModuleContractReport contains information about loaded module contracts
 type ModuleContractReport struct {
@@ -159,9 +162,9 @@ func (r *ModuleContractReport) GetModulesWithPattern(pattern string) []*modules.
 
 // PrintSummary prints a concise summary of the loaded contracts
 func (r *ModuleContractReport) PrintSummary() {
-	fmt.Println("=== Module Contracts Summary ===")
-	fmt.Printf("Total modules:    %d\n", r.TotalModules)
-	fmt.Printf("Version:          %s\n", r.Registry.Version())
+	log.Info("=== Module Contracts Summary ===")
+	log.Infof("Total modules:    %d", r.TotalModules)
+	log.Infof("Version:          %s", r.Registry.Version())
 
 	// Count by type
 	typeCount := make(map[string]int)
@@ -169,8 +172,8 @@ func (r *ModuleContractReport) PrintSummary() {
 		typeCount[module.Type]++
 	}
 
-	fmt.Println("\nBy type:")
+	log.Info("\nBy type:")
 	for typ, count := range typeCount {
-		fmt.Printf("  %-20s %d modules\n", typ, count)
+		log.Infof("  %-20s %d modules", typ, count)
 	}
 }

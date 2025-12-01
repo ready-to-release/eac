@@ -14,9 +14,6 @@
 package validate
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/repository"
@@ -31,7 +28,7 @@ func ValidateDependencies() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -40,7 +37,7 @@ func ValidateDependencies() int {
 	// Load module contracts
 	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading contracts: %v\n", err)
+		log.Errorf("Error loading contracts: %v", err)
 		return 1
 	}
 
@@ -48,7 +45,7 @@ func ValidateDependencies() int {
 	excludeDirs := []string{"out", "vendor", ".git", "node_modules"}
 	graph, err := gomod.BuildFromDirectory(workspaceRoot, moduleRegistry, baseModulePath, excludeDirs)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error building dependency graph: %v\n", err)
+		log.Errorf("Error building dependency graph: %v", err)
 		return 1
 	}
 
@@ -57,7 +54,7 @@ func ValidateDependencies() int {
 	report := validator.Validate()
 
 	// Print report
-	fmt.Println(validator.FormatReport(report))
+	log.Info(validator.FormatReport(report))
 
 	// Return appropriate exit code
 	if report.HasDiscrepancies() {

@@ -1,20 +1,13 @@
 package reports
 
 import (
-	"fmt"
-	"os"
-	"time"
-
 	"github.com/ready-to-release/eac/src/core/git"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
-// debugLog outputs a debug message to stderr if EAC_DEBUG environment variable is set
-func debugLog(msg string) {
-	if os.Getenv("EAC_DEBUG") != "" {
-		fmt.Fprintf(os.Stderr, "%s\tDEBUG\treports/files_modules.go\t%s\n", time.Now().Format(time.RFC3339Nano), msg)
-	}
-}
+// log is the package-level logger for reports
+var log = logging.C()
 
 // FilesModulesReport contains statistics about file-module relationships
 type FilesModulesReport struct {
@@ -41,22 +34,22 @@ type FilesModulesReport struct {
 //   - FilesModulesReport containing all statistics and data
 //   - Error if repository operations or module loading fails
 func GetFilesModulesReport(trackedOnly bool, includeIgnored bool, stagedOnly bool, rootPath string) (*FilesModulesReport, error) {
-	debugLog("GetFilesModulesReport: start")
+	log.Debug("GetFilesModulesReport: start")
 	// Open git repository
-	debugLog("GetFilesModulesReport: calling git.Open")
+	log.Debug("GetFilesModulesReport: calling git.Open")
 	repo, err := git.Open(rootPath)
 	if err != nil {
 		return nil, err
 	}
-	debugLog("GetFilesModulesReport: git.Open complete")
+	log.Debug("GetFilesModulesReport: git.Open complete")
 
 	// Get all files with module ownership
-	debugLog("GetFilesModulesReport: calling GetRepositoryFilesWithModules")
+	log.Debug("GetFilesModulesReport: calling GetRepositoryFilesWithModules")
 	files, err := repository.GetRepositoryFilesWithModules(repo, trackedOnly, includeIgnored, stagedOnly)
 	if err != nil {
 		return nil, err
 	}
-	debugLog("GetFilesModulesReport: GetRepositoryFilesWithModules complete")
+	log.Debug("GetFilesModulesReport: GetRepositoryFilesWithModules complete")
 
 	// Calculate statistics
 	report := &FilesModulesReport{

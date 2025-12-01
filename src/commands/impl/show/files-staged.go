@@ -3,8 +3,6 @@
 package show
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
@@ -21,14 +19,14 @@ func ShowFilesStaged() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
 	// Generate report for staged files only
 	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
@@ -44,6 +42,6 @@ func ShowFilesStaged() int {
 		tb.AddRow(file.Name, modules)
 	}
 
-	fmt.Println(tb.Build())
+	log.Info(tb.Build())
 	return 0
 }

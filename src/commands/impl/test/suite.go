@@ -36,6 +36,7 @@ import (
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/reporter"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/src/commands/impl/test/testers"
+	"github.com/ready-to-release/eac/src/commands/internal/output"
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
@@ -115,21 +116,24 @@ type PackageTestResult struct {
 func TestSuite() int {
 	// Parse arguments and flags
 	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Error: missing suite name\n")
-		fmt.Fprintf(os.Stderr, "Usage: test suite <suite-name> [flags]\n")
-		fmt.Fprintf(os.Stderr, "\nFlags:\n")
-		fmt.Fprintf(os.Stderr, "  --skip-deps    Skip dependency verification\n")
-		fmt.Fprintf(os.Stderr, "  --list-only    List tests without running them\n")
-		fmt.Fprintf(os.Stderr, "  --sequential   Run tests sequentially (for debugging)\n")
-		fmt.Fprintf(os.Stderr, "  --parallel     Run tests in parallel (DEFAULT, explicit override)\n")
-		fmt.Fprintf(os.Stderr, "  --as-cucumber  Generate Cucumber JSON reports (DEFAULT)\n")
-		fmt.Fprintf(os.Stderr, "  --as-junit     Generate JUnit XML reports\n")
-		fmt.Fprintf(os.Stderr, "  --coverage     Generate coverage reports (coverage.out, coverage.json)\n")
-		fmt.Fprintf(os.Stderr, "\nDefault: Tests run in parallel for optimal performance.\n")
-		fmt.Fprintf(os.Stderr, "Use --sequential if you need deterministic ordering or debugging.\n")
-		fmt.Fprintf(os.Stderr, "\nAvailable suites:\n")
+		log.Errorf("missing suite name")
+		log.Errorf("Usage: test suite <suite-name> [flags]")
+		log.Errorf("")
+		log.Errorf("Flags:")
+		log.Errorf("  --skip-deps    Skip dependency verification")
+		log.Errorf("  --list-only    List tests without running them")
+		log.Errorf("  --sequential   Run tests sequentially (for debugging)")
+		log.Errorf("  --parallel     Run tests in parallel (DEFAULT, explicit override)")
+		log.Errorf("  --as-cucumber  Generate Cucumber JSON reports (DEFAULT)")
+		log.Errorf("  --as-junit     Generate JUnit XML reports")
+		log.Errorf("  --coverage     Generate coverage reports (coverage.out, coverage.json)")
+		log.Errorf("")
+		log.Errorf("Default: Tests run in parallel for optimal performance.")
+		log.Errorf("Use --sequential if you need deterministic ordering or debugging.")
+		log.Errorf("")
+		log.Errorf("Available suites:")
 		for _, suite := range testing.ListSuites() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", suite)
+			log.Errorf("  - %s", suite)
 		}
 		return 1
 	}
@@ -163,8 +167,8 @@ func TestSuite() int {
 		} else if arg == "--module" {
 			// Read module names from next argument (comma-separated)
 			if i+1 >= len(os.Args) {
-				fmt.Fprintf(os.Stderr, "Error: --module requires one or more module names\n")
-				fmt.Fprintf(os.Stderr, "Usage: --module <name> or --module <name1>,<name2>\n")
+				log.Errorf("--module requires one or more module names")
+				log.Errorf("Usage: --module <name> or --module <name1>,<name2>")
 				return 1
 			}
 			i++
@@ -177,8 +181,8 @@ func TestSuite() int {
 				}
 			}
 		} else if strings.HasPrefix(arg, "--") {
-			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
-			fmt.Fprintf(os.Stderr, "Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>, --as-junit, --as-cucumber, --coverage\n")
+			log.Errorf("unknown flag: %s", arg)
+			log.Errorf("Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>, --as-junit, --as-cucumber, --coverage")
 			return 1
 		}
 	}
@@ -186,7 +190,7 @@ func TestSuite() int {
 	// Get repository root
 	workspaceRootNative, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 	// Codebase uses Unix-style paths throughout - normalize for path comparisons
@@ -195,10 +199,11 @@ func TestSuite() int {
 	// Get the test suite
 	suite, err := testing.GetSuite(suiteName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		fmt.Fprintf(os.Stderr, "\nAvailable suites:\n")
+		log.Errorf("%v", err)
+		log.Errorf("")
+		log.Errorf("Available suites:")
 		for _, s := range testing.ListSuites() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", s)
+			log.Errorf("  - %s", s)
 		}
 		return 1
 	}
@@ -206,22 +211,23 @@ func TestSuite() int {
 	// Acquire exclusive lock for this test suite FIRST (before any directory operations)
 	lockFile, err := acquireSuiteLock(suiteName, workspaceRootNative)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: test suite '%s' is already running\n", suiteName)
-		fmt.Fprintf(os.Stderr, "Details: %v\n", err)
+		log.Errorf("test suite '%s' is already running", suiteName)
+		log.Errorf("Details: %v", err)
 		return 1
 	}
 	defer releaseSuiteLock(lockFile)
 
-	fmt.Printf("🧪 Running test suite: %s\n", suite.Name)
-	fmt.Printf("Description: %s\n\n", suite.Description)
+	log.Infof("Running test suite: %s", suite.Name)
+	log.Infof("Description: %s", suite.Description)
+	log.Info("")
 
 	// Purge and recreate test output directory (now protected by lock)
 	testRunDir := filepath.Join(workspaceRootNative, "out", "test", suiteName)
 	if err := os.RemoveAll(testRunDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to purge test directory: %v\n", err)
+		log.Errorf("Warning: failed to purge test directory: %v", err)
 	}
 	if err := os.MkdirAll(testRunDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create test run directory: %v\n", err)
+		log.Errorf("failed to create test run directory: %v", err)
 		return 1
 	}
 
@@ -229,7 +235,7 @@ func TestSuite() int {
 	logPath := filepath.Join(testRunDir, "test-suite.log")
 	logFile, err := os.Create(logPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to create log file: %v\n", err)
+		log.Errorf("failed to create log file: %v", err)
 		return 1
 	}
 	defer logFile.Close()
@@ -241,11 +247,11 @@ func TestSuite() int {
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 
 	// Phase 1: Discover all tests (Go + Godog)
-	writeln(multiWriter, "=== Phase 1: Test Discovery ===")
+	writeln(multiWriter, "%s", output.PhaseHeader(1, "Test Discovery"))
 
 	allTests, err := testing.DiscoverAllTests(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to discover tests: %v\n", err)
+		log.Errorf("failed to discover tests: %v", err)
 		return 1
 	}
 
@@ -253,14 +259,14 @@ func TestSuite() int {
 	writeln(multiWriter, "")
 
 	// Phase 2: Apply inference rules
-	writeln(multiWriter, "=== Phase 2: Inference Engine ===")
+	writeln(multiWriter, "%s", output.PhaseHeader(2, "Tag Inference"))
 	allTests = testing.ApplyInferences(allTests, suite.Inferences)
 	writeln(multiWriter, "Applied %d inference rules", len(suite.Inferences))
 
 	// Load module registry for module-based inference
 	moduleReport, err := contractsreports.GetModuleContracts(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to load module contracts: %v\n", err)
+		log.Errorf("Warning: failed to load module contracts: %v", err)
 	} else {
 		// Infer system dependencies from module dependencies
 		allTests = testing.InferSystemDepsFromModuleDeps(allTests, moduleReport.Registry)
@@ -270,7 +276,7 @@ func TestSuite() int {
 	writeln(multiWriter, "")
 
 	// Phase 3: Select tests for suite
-	writeln(multiWriter, "=== Phase 3: Suite Selection ===")
+	writeln(multiWriter, "%s", output.PhaseHeader(3, "Suite Selection"))
 	selectedTests, selectionStats := suite.SelectTestsWithStats(allTests)
 	writeln(multiWriter, "Selected %d tests for suite '%s'", len(selectedTests), suite.Moniker)
 
@@ -396,7 +402,7 @@ func TestSuite() int {
 	}
 
 	// Phase 4: Extract and verify dependencies (system + module)
-	writeln(multiWriter, "=== Phase 4: Dependency Verification ===")
+	writeln(multiWriter, "%s", output.PhaseHeader(4, "Dependency Verification"))
 	systemDeps := testing.GetSystemDependencies(productionTests)
 	moduleDeps := testing.GetModuleDependencies(productionTests)
 
@@ -415,10 +421,8 @@ func TestSuite() int {
 			// Verify system dependencies
 			sysResults := systemdeps.VerifyAll(systemDeps)
 			for _, result := range sysResults {
-				if result.Available {
-					writeln(multiWriter, "✅ %s - %s", result.Dependency, result.Version)
-				} else {
-					writeln(multiWriter, "❌ %s - not available", result.Dependency)
+				writeln(multiWriter, "%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
+				if !result.Available {
 					hasFailures = true
 				}
 			}
@@ -426,18 +430,16 @@ func TestSuite() int {
 			// Verify module dependencies
 			modResults := moduledeps.VerifyAll(moduleDeps)
 			for _, result := range modResults {
-				if result.Available {
-					writeln(multiWriter, "✅ %s - %s", result.Dependency, result.Version)
-				} else {
-					writeln(multiWriter, "❌ %s - not available", result.Dependency)
+				writeln(multiWriter, "%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
+				if !result.Available {
 					hasFailures = true
 				}
 			}
 
-			fmt.Fprintln(multiWriter)
+			writeln(multiWriter, "")
 
 			if hasFailures {
-				writeln(multiWriter, "❌ Error: Required dependencies are missing")
+				writeln(multiWriter, "%s Error: Required dependencies are missing", output.IconFail)
 				writeln(multiWriter, "Use --skip-deps to run tests anyway")
 				return 1
 			}
@@ -469,7 +471,8 @@ func TestSuite() int {
 	}
 
 	// Phase 5: Run tests
-	writeln(multiWriter, "=== Phase 5: Test Execution ===")
+	writeln(multiWriter, "%s", output.PhaseHeader(5, "Test Execution"))
+	writeln(multiWriter, "%s", output.OutputDir(testRunDir))
 
 	// Group tests by package
 	// For Godog tests: need to find their test runner package
@@ -574,7 +577,7 @@ func TestSuite() int {
 	// Phase 6: Generate summary
 	endTime := time.Now()
 
-	writeln(multiWriter, "=== Test Run Summary ===")
+	writeln(multiWriter, "%s", output.SectionHeader("Test Summary"))
 	writeln(multiWriter, "Suite: %s", suite.Name)
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Test Selection Breakdown:")
@@ -603,7 +606,7 @@ func TestSuite() int {
 
 	// Show timing summary table
 	writeln(multiWriter, "")
-	writeln(multiWriter, "=== Timing Summary ===")
+	writeln(multiWriter, "%s", output.SectionHeader("Timing Summary"))
 	var totalDuration time.Duration
 
 	// Build timing data for JSON export
@@ -734,16 +737,15 @@ func TestSuite() int {
 			NeedsRetag:    needsRetag,
 		})
 
-		writeln(multiWriter, "%06.1f  %s", seconds, displayName)
+		writeln(multiWriter, "%s", output.TimingLine(result.Duration, displayName))
 	}
-	totalSeconds := totalDuration.Seconds()
-	writeln(multiWriter, "%06.1f  %s", totalSeconds, "TOTAL")
+	writeln(multiWriter, "%s", output.TimingTotal(totalDuration))
 
 	// Write timing data to JSON file
 	timingsJSONPath := filepath.Join(testRunDir, "timings.json")
 	timingsData := map[string]interface{}{
 		"suite":         suiteName,
-		"total_seconds": totalSeconds,
+		"total_seconds": totalDuration.Seconds(),
 		"entries":       timingEntries,
 		"timestamp":     time.Now().Format(time.RFC3339),
 	}
@@ -757,7 +759,7 @@ func TestSuite() int {
 	// Show failed test outputs (top 5)
 	if packagesFailed > 0 {
 		writeln(multiWriter, "")
-		writeln(multiWriter, "=== Failed Test Outputs ===")
+		writeln(multiWriter, "%s", output.SectionHeader("Failed Test Outputs"))
 
 		failedResults := []PackageTestResult{}
 		for _, result := range results {
@@ -805,7 +807,7 @@ func TestSuite() int {
 
 	// Validate expected output files
 	writeln(multiWriter, "")
-	writeln(multiWriter, "=== Output File Validation ===")
+	writeln(multiWriter, "%s", output.SectionHeader("Output File Validation"))
 	fileValidationErrors := validateOutputFiles(results, multiWriter)
 	if len(fileValidationErrors) > 0 {
 		writeln(multiWriter, "")
@@ -818,7 +820,7 @@ func TestSuite() int {
 	// Generate markdown report using template
 	modules, err := reporter.CollectModuleReports(testRunDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to collect module reports: %v\n", err)
+		log.Errorf("Warning: failed to collect module reports: %v", err)
 		modules = nil // Continue without module breakdown
 	}
 
@@ -838,7 +840,7 @@ func TestSuite() int {
 
 	renderer := reporter.NewRenderer(templatePath, mdPath, reportData)
 	if err := renderer.Render(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to generate markdown report: %v\n", err)
+		log.Errorf("Warning: failed to generate markdown report: %v", err)
 	}
 
 	if packagesFailed > 0 {
@@ -1413,42 +1415,19 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	}
 
 	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			testType := "go"
-			testCountInfo := fmt.Sprintf("(0/%d)", len(tests))
-			if isGodogTestPackage {
-				testType = "godog"
-				// For Godog, len(tests) is test files not scenarios, so omit count
-				testCountInfo = ""
-			}
-
-			// Create relative log path from test run directory
-			relLogPath, _ := filepath.Rel(filepath.Dir(testRunDir), logFilePath)
-			if testCountInfo != "" {
-				writeln(multiWriter, "❌ Package %s [%s] %s failed (See %s for details)", pkgName, testType, testCountInfo, relLogPath)
-			} else {
-				writeln(multiWriter, "❌ Package %s [%s] failed (See %s for details)", pkgName, testType, relLogPath)
-			}
-			return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
-		} else {
-			testType := "go"
-			testCountInfo := fmt.Sprintf("(0/%d)", len(tests))
-			if isGodogTestPackage {
-				testType = "godog"
-				testCountInfo = ""
-			}
-
-			if testCountInfo != "" {
-				writeln(multiWriter, "❌ Package %s [%s] %s failed to run tests: %v", pkgName, testType, testCountInfo, err)
-			} else {
-				writeln(multiWriter, "❌ Package %s [%s] failed to run tests: %v", pkgName, testType, err)
-			}
-			return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
+		testType := "go"
+		resultStr := fmt.Sprintf("0/%d", len(tests))
+		if isGodogTestPackage {
+			testType = "godog"
+			resultStr = "-"
 		}
+
+		writeln(multiWriter, "%s", output.ResultLine(output.IconFail, pkgName, testType, resultStr, result.Duration))
+		return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
 	}
 
 	testType := "go"
-	testCountInfo := fmt.Sprintf("(%d/%d)", len(tests), len(tests))
+	resultStr := fmt.Sprintf("%d/%d", len(tests), len(tests))
 	testsPassed := len(tests)
 	testsFailed := 0
 	testsTotal := len(tests)
@@ -1462,7 +1441,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		testsTotal = passedScenarios + failedScenarios
 
 		if testsTotal > 0 {
-			testCountInfo = fmt.Sprintf("(%d/%d)", passedScenarios, testsTotal)
+			resultStr = fmt.Sprintf("%d/%d", passedScenarios, testsTotal)
 
 			// Only expect report files if tests actually executed
 			// If all scenarios were skipped (testsTotal = 0), report files won't be created
@@ -1480,18 +1459,18 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 				expectedFiles = append(expectedFiles, reportFilePath)
 			}
 		} else {
-			testCountInfo = ""
+			resultStr = "-"
 		}
 	}
 
-	// Create relative log path from test run directory
-	relLogPath, _ := filepath.Rel(filepath.Dir(testRunDir), logFilePath)
-	if testCountInfo != "" {
-		writeln(multiWriter, "✅ Package %s [%s] %s passed (See %s for details)", pkgName, testType, testCountInfo, relLogPath)
-	} else {
-		writeln(multiWriter, "✅ Package %s [%s] passed (See %s for details)", pkgName, testType, relLogPath)
+	// Use appropriate icon based on failures
+	icon := output.IconPass
+	if testsFailed > 0 {
+		icon = output.IconFail
 	}
-	return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: testsPassed, TestsFailed: testsFailed, TestsSkipped: 0, TestsTotal: testsTotal, PackageFailed: false, ExpectedFiles: expectedFiles}
+
+	writeln(multiWriter, "%s", output.ResultLine(icon, pkgName, testType, resultStr, result.Duration))
+	return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: testsPassed, TestsFailed: testsFailed, TestsSkipped: 0, TestsTotal: testsTotal, PackageFailed: testsFailed > 0, ExpectedFiles: expectedFiles}
 }
 
 // extractGodogScenarioCounts parses godog JSON test results to extract scenario counts

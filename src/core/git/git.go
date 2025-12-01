@@ -9,21 +9,18 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/go-git/go-git/v5/plumbing/object"
+
+	"github.com/ready-to-release/eac/src/core/logging"
 )
 
-// debugLog outputs a debug message to stderr if EAC_DEBUG environment variable is set
-func debugLog(msg string) {
-	if os.Getenv("EAC_DEBUG") != "" {
-		fmt.Fprintf(os.Stderr, "%s\tDEBUG\tgit/git.go\t%s\n", time.Now().Format(time.RFC3339Nano), msg)
-	}
-}
+// log is the package-level logger for git operations
+var log = logging.C()
 
 // runGitCommand executes a git command in the repository and returns the output.
 // This is used for performance-critical operations where native git is faster than go-git.
@@ -52,7 +49,7 @@ type Repository struct {
 // If path is empty, uses the current working directory.
 // It searches upward through parent directories to find the repository root.
 func Open(path string) (*Repository, error) {
-	debugLog("Open: start")
+	log.Debug("Open: start")
 	if path == "" {
 		var err error
 		path, err = os.Getwd()
@@ -67,22 +64,22 @@ func Open(path string) (*Repository, error) {
 	}
 
 	// Open repository, detecting .git directory by walking up
-	debugLog("Open: calling PlainOpenWithOptions")
+	log.Debug("Open: calling PlainOpenWithOptions")
 	repo, err := gogit.PlainOpenWithOptions(absPath, &gogit.PlainOpenOptions{
 		DetectDotGit: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open repository: %w", err)
 	}
-	debugLog("Open: PlainOpenWithOptions complete")
+	log.Debug("Open: PlainOpenWithOptions complete")
 
 	// Get the worktree to find the root path
-	debugLog("Open: getting worktree")
+	log.Debug("Open: getting worktree")
 	wt, err := repo.Worktree()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get worktree: %w", err)
 	}
-	debugLog("Open: complete")
+	log.Debug("Open: complete")
 
 	return &Repository{
 		repo:     repo,
@@ -215,14 +212,14 @@ func (r *Repository) TrackedFiles() ([]string, error) {
 // This corresponds to `git diff --cached --name-only --diff-filter=ACMR`.
 // Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedFiles() ([]string, error) {
-	debugLog("StagedFiles: start")
-	debugLog("StagedFiles: calling git diff --cached --name-only")
+	log.Debug("StagedFiles: start")
+	log.Debug("StagedFiles: calling git diff --cached --name-only")
 
 	output, err := r.runGitCommand("diff", "--cached", "--name-only", "--diff-filter=ACMR")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staged files: %w", err)
 	}
-	debugLog("StagedFiles: git command complete")
+	log.Debug("StagedFiles: git command complete")
 
 	if output == "" {
 		return []string{}, nil
@@ -384,14 +381,14 @@ func (r *Repository) AddRemote(name, url string) error {
 // Equivalent to `git diff --staged`.
 // Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedDiff() (string, error) {
-	debugLog("StagedDiff: start")
-	debugLog("StagedDiff: calling git diff --cached")
+	log.Debug("StagedDiff: start")
+	log.Debug("StagedDiff: calling git diff --cached")
 
 	output, err := r.runGitCommand("diff", "--cached")
 	if err != nil {
 		return "", fmt.Errorf("failed to get staged diff: %w", err)
 	}
-	debugLog("StagedDiff: git command complete")
+	log.Debug("StagedDiff: git command complete")
 
 	return output, nil
 }
@@ -400,14 +397,14 @@ func (r *Repository) StagedDiff() (string, error) {
 // Equivalent to `git diff --staged --stat`.
 // Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedDiffStats() (string, error) {
-	debugLog("StagedDiffStats: start")
-	debugLog("StagedDiffStats: calling git diff --cached --stat")
+	log.Debug("StagedDiffStats: start")
+	log.Debug("StagedDiffStats: calling git diff --cached --stat")
 
 	output, err := r.runGitCommand("diff", "--cached", "--stat")
 	if err != nil {
 		return "", fmt.Errorf("failed to get staged diff stats: %w", err)
 	}
-	debugLog("StagedDiffStats: git command complete")
+	log.Debug("StagedDiffStats: git command complete")
 
 	return output, nil
 }

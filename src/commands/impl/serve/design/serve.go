@@ -16,8 +16,11 @@ import (
 	designInternal "github.com/ready-to-release/eac/src/commands/impl/design/helper"
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(ServeDesign)
@@ -28,8 +31,8 @@ func ServeDesign() int {
 	args := os.Args[3:] // Skip program, "serve", and "design"
 
 	if len(args) == 0 {
-		fmt.Println("❌ Error: module name required")
-		fmt.Println()
+		log.Info("❌ Error: module name required")
+		log.Info("")
 		printServeUsage()
 		return 1
 	}
@@ -54,8 +57,8 @@ func ServeDesign() int {
 	}
 
 	if module == "" {
-		fmt.Println("❌ Error: module name required")
-		fmt.Println()
+		log.Info("❌ Error: module name required")
+		log.Info("")
 		printServeUsage()
 		return 1
 	}
@@ -63,26 +66,26 @@ func ServeDesign() int {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Printf("❌ Failed to find repository root: %v\n", err)
+		log.Errorf("❌ Failed to find repository root: %v", err)
 		return 1
 	}
 
 	// Validate module name for security
 	if err := designInternal.ValidateModuleName(module); err != nil {
-		fmt.Printf("❌ Invalid module name: %v\n", err)
+		log.Errorf("❌ Invalid module name: %v", err)
 		return 1
 	}
 
 	// Load module contracts and validate moniker exists (same as build command)
 	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Failed to load module contracts: %v\n", err)
+		log.Errorf("❌ Failed to load module contracts: %v", err)
 		return 1
 	}
 
 	mod, exists := moduleReport.Registry.Get(module)
 	if !exists {
-		fmt.Fprintf(os.Stderr, "❌ Module not found: %s\n\nAvailable modules:\n%s\n",
+		log.Errorf("❌ Module not found: %s\n\nAvailable modules:\n%s",
 			module, formatModuleList(moduleReport))
 		return 1
 	}
@@ -93,19 +96,20 @@ func ServeDesign() int {
 	// Check if workspace exists
 	workspacePath := repository.WorkspaceDSLPath(repoRoot, module)
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
-		fmt.Printf("❌ Workspace not found: %s\n", workspacePath)
-		fmt.Printf("\n💡 Create one first with:\n")
-		fmt.Printf("   r2r design create %s\n", module)
+		log.Infof("❌ Workspace not found: %s", workspacePath)
+		log.Info("")
+		log.Info("💡 Create one first with:")
+		log.Infof("   r2r design create %s", module)
 		return 1
 	}
 
 	// Start Structurizr Lite
-	fmt.Printf("🚀 Starting Structurizr Lite for module: %s\n", module)
-	fmt.Printf("📁 Workspace: %s\n", workspacePath)
-	fmt.Println()
+	log.Infof("🚀 Starting Structurizr Lite for module: %s", module)
+	log.Infof("📁 Workspace: %s", workspacePath)
+	log.Info("")
 
 	if err := designInternal.StartStructurizrLite(module, autoStop); err != nil {
-		fmt.Printf("❌ Failed to start Structurizr Lite: %v\n", err)
+		log.Errorf("❌ Failed to start Structurizr Lite: %v", err)
 		return 1
 	}
 
@@ -122,37 +126,37 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 }
 
 func printServeUsage() {
-	fmt.Println("Start Structurizr Lite viewer to view architecture diagrams in browser")
-	fmt.Println()
-	fmt.Println("Launches a Docker container running Structurizr Lite and opens your browser.")
-	fmt.Println("The viewer displays interactive C4 model diagrams defined in workspace.dsl.")
-	fmt.Println()
-	fmt.Println("Usage:")
-	fmt.Println("  r2r design serve <module>")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  r2r design serve src-cli")
-	fmt.Println("  r2r design serve src-commands")
-	fmt.Println()
-	fmt.Println("Module Locations:")
-	fmt.Println("  src-cli        → specs/src-cli/.design/workspace.dsl")
-	fmt.Println("  src-commands   → specs/src-commands/.design/workspace.dsl")
-	fmt.Println()
-	fmt.Println("What It Does:")
-	fmt.Println("  1. Reads specs/<module>/.design/workspace.dsl")
-	fmt.Println("  2. Generates workspace.json and .structurizr/ (ignored by git)")
-	fmt.Println("  3. Allocates an available port in the 9000-9999 range")
-	fmt.Println("  4. Starts Docker container with Structurizr Lite")
-	fmt.Println("  5. Opens browser at the allocated port")
-	fmt.Println()
-	fmt.Println("Multi-Instance Support:")
-	fmt.Println("  Each module gets its own container with a unique port.")
-	fmt.Println("  You can run multiple viewers simultaneously for different modules.")
-	fmt.Println()
-	fmt.Println("Requirements:")
-	fmt.Println("  - Docker must be running")
-	fmt.Println()
-	fmt.Println("Note:")
-	fmt.Println("  Accepts module name with or without 'specs/' prefix and '/design' suffix.")
-	fmt.Println("  Generated files are automatically ignored by git.")
+	log.Info("Start Structurizr Lite viewer to view architecture diagrams in browser")
+	log.Info("")
+	log.Info("Launches a Docker container running Structurizr Lite and opens your browser.")
+	log.Info("The viewer displays interactive C4 model diagrams defined in workspace.dsl.")
+	log.Info("")
+	log.Info("Usage:")
+	log.Info("  r2r design serve <module>")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  r2r design serve src-cli")
+	log.Info("  r2r design serve src-commands")
+	log.Info("")
+	log.Info("Module Locations:")
+	log.Info("  src-cli        → specs/src-cli/.design/workspace.dsl")
+	log.Info("  src-commands   → specs/src-commands/.design/workspace.dsl")
+	log.Info("")
+	log.Info("What It Does:")
+	log.Info("  1. Reads specs/<module>/.design/workspace.dsl")
+	log.Info("  2. Generates workspace.json and .structurizr/ (ignored by git)")
+	log.Info("  3. Allocates an available port in the 9000-9999 range")
+	log.Info("  4. Starts Docker container with Structurizr Lite")
+	log.Info("  5. Opens browser at the allocated port")
+	log.Info("")
+	log.Info("Multi-Instance Support:")
+	log.Info("  Each module gets its own container with a unique port.")
+	log.Info("  You can run multiple viewers simultaneously for different modules.")
+	log.Info("")
+	log.Info("Requirements:")
+	log.Info("  - Docker must be running")
+	log.Info("")
+	log.Info("Note:")
+	log.Info("  Accepts module name with or without 'specs/' prefix and '/design' suffix.")
+	log.Info("  Generated files are automatically ignored by git.")
 }

@@ -14,7 +14,6 @@ package test
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -46,7 +45,7 @@ type Failure struct {
 func TestDebug() int {
 	workspaceRoot, err := registry.GetWorkspaceRoot()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get workspace root: %v\n", err)
+		log.Errorf("failed to get workspace root: %v", err)
 		return 1
 	}
 
@@ -55,21 +54,21 @@ func TestDebug() int {
 	// Find all test result files
 	goTestFiles, err := findGoTestJSONFiles(testOutputDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error finding Go test JSON files: %v\n", err)
+		log.Errorf("Error finding Go test JSON files: %v", err)
 		return 1
 	}
 
 	cucumberFiles, err := findCucumberJSONFiles(testOutputDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error finding Cucumber JSON files: %v\n", err)
+		log.Errorf("Error finding Cucumber JSON files: %v", err)
 		return 1
 	}
 
 	if len(goTestFiles) == 0 && len(cucumberFiles) == 0 {
 		if _, err := os.Stat(testOutputDir); os.IsNotExist(err) {
-			fmt.Println("No test output directory found. Run tests first to generate output.")
+			log.Info("No test output directory found. Run tests first to generate output.")
 		} else {
-			fmt.Println("No test results found. Run tests to generate output.")
+			log.Info("No test results found. Run tests to generate output.")
 		}
 		return 0
 	}
@@ -81,7 +80,7 @@ func TestDebug() int {
 	for _, jsonFile := range goTestFiles {
 		failures, err := collectFailuresFromGoTestJSON(jsonFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to parse %s: %v\n", jsonFile, err)
+			log.Errorf("Warning: failed to parse %s: %v", jsonFile, err)
 			continue
 		}
 		allFailures = append(allFailures, failures...)
@@ -91,14 +90,14 @@ func TestDebug() int {
 	for _, jsonFile := range cucumberFiles {
 		failures, err := collectFailuresFromCucumberJSON(jsonFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to parse %s: %v\n", jsonFile, err)
+			log.Errorf("Warning: failed to parse %s: %v", jsonFile, err)
 			continue
 		}
 		allFailures = append(allFailures, failures...)
 	}
 
 	if len(allFailures) == 0 {
-		fmt.Println("No test failures found. All tests passed!")
+		log.Info("No test failures found. All tests passed!")
 		return 0
 	}
 
@@ -251,33 +250,34 @@ func collectFailuresFromCucumberJSON(jsonPath string) ([]Failure, error) {
 
 // printFailureTable prints test failures in a readable format
 func printFailureTable(failures []Failure) {
-	fmt.Println("\n=== Test Failures Found ===")
-	fmt.Printf("Total failures: %d\n", len(failures))
+	log.Info("")
+	log.Info("=== Test Failures Found ===")
+	log.Infof("Total failures: %d", len(failures))
 
 	for i, f := range failures {
-		fmt.Println()
-		fmt.Printf("--- Failure %d ---\n", i+1)
-		fmt.Printf("Test:    %s\n", f.TestName)
+		log.Info("")
+		log.Infof("--- Failure %d ---", i+1)
+		log.Infof("Test:    %s", f.TestName)
 
 		// Show short package name for readability
 		pkg := f.Package
 		if idx := strings.LastIndex(pkg, "/"); idx != -1 {
 			pkg = ".../" + pkg[idx+1:]
 		}
-		fmt.Printf("Package: %s\n", pkg)
+		log.Infof("Package: %s", pkg)
 
 		if f.Source == "cucumber" && f.File != "" {
-			fmt.Printf("File:    %s:%d\n", f.File, f.Line)
+			log.Infof("File:    %s:%d", f.File, f.Line)
 		}
 
-		fmt.Println("Output:")
+		log.Info("Output:")
 		// Print each line of error output with indentation
 		for _, line := range strings.Split(f.ErrorOutput, "\n") {
 			if strings.TrimSpace(line) != "" {
-				fmt.Printf("  %s\n", line)
+				log.Infof("  %s", line)
 			}
 		}
 	}
 
-	fmt.Println()
+	log.Info("")
 }

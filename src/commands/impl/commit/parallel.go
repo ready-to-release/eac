@@ -92,7 +92,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 
 	// Single-module commits skip module sections (existing behavior)
 	if len(cfg.affectedModules) <= 1 {
-		logger.Debug("Single-module commit - skipping module sections")
+		log.Debug("Single-module commit - skipping module sections")
 		return []string{}, nil
 	}
 
@@ -185,7 +185,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 
 		// Log provider info once (all modules use the same provider)
 		if !loggedProvider && result.providerName != "" {
-			logger.Debug(fmt.Sprintf("AI provider used for module sections: %s", result.providerName))
+			log.Debugf("AI provider used for module sections: %s", result.providerName)
 			loggedProvider = true
 		}
 

@@ -94,37 +94,37 @@ func ReleasePending() int {
 	}
 
 	if !checkAll && module == "" {
-		fmt.Fprintln(os.Stderr, "Error: module moniker required (or use --all)")
-		fmt.Fprintln(os.Stderr, "Usage: release pending <module> [--quiet]")
-		fmt.Fprintln(os.Stderr, "       release pending --all")
+		log.Error("module moniker required (or use --all)")
+		log.Info("Usage: release pending <module> [--quiet]")
+		log.Info("       release pending --all")
 		return 1
 	}
 
 	// Load workspace root
 	workspaceRoot, err := registry.GetWorkspaceRoot()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get workspace root: %v\n", err)
+		log.Errorf("failed to get workspace root: %v", err)
 		return 1
 	}
 
 	// Load definitions for versioning constraints
 	defs, err := definitions.Load(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to load definitions: %v\n", err)
+		log.Warnf("failed to load definitions: %v", err)
 		defs = definitions.Default()
 	}
 
 	// Load module contracts
 	moduleRegistry, err := modules.LoadFromWorkspace("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load modules: %v\n", err)
+		log.Errorf("failed to load modules: %v", err)
 		return 1
 	}
 
 	// Open git repository
 	repo, err := git.Open("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to open git repository: %v\n", err)
+		log.Errorf("failed to open git repository: %v", err)
 		return 1
 	}
 
@@ -146,7 +146,7 @@ func ReleasePending() int {
 	for _, mod := range modulesToCheck {
 		pending, err := checkModulePending(mod, moduleRegistry, repo, defs, workspaceRoot)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to check module '%s': %v\n", mod, err)
+			log.Warnf("failed to check module '%s': %v", mod, err)
 			continue
 		}
 		result.Modules = append(result.Modules, pending)
@@ -173,10 +173,10 @@ func ReleasePending() int {
 
 	jsonBytes, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+		log.Errorf("failed to marshal JSON: %v", err)
 		return 1
 	}
-	fmt.Println(string(jsonBytes))
+	log.Info(string(jsonBytes))
 
 	return 0
 }

@@ -23,6 +23,8 @@ import (
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
+var log = logging.C()
+
 func init() {
 	registry.Register(TemplatesList)
 }
@@ -32,7 +34,7 @@ func TemplatesList() int {
 	// Parse configuration from command-line args
 	config, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 	defer config.Logger.Sync()
@@ -45,7 +47,7 @@ func TemplatesList() int {
 	templateDir, cleanup, err := resolveTemplateDirectory(config)
 	if err != nil {
 		config.Logger.Error("Failed to resolve template directory", zap.Error(err))
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 	defer cleanup()
@@ -54,7 +56,7 @@ func TemplatesList() int {
 	placeholderInfos, err := scanTemplates(config, templateDir)
 	if err != nil {
 		config.Logger.Error("Failed to scan templates", zap.Error(err))
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
@@ -83,7 +85,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 		// Clone repository to temp directory
 		config.Logger.Info("Cloning templates from Git repository",
 			zap.String("url", config.TemplateSource))
-		fmt.Printf("Cloning templates from %s...\n", config.TemplateSource)
+		log.Infof("Cloning templates from %s...", config.TemplateSource)
 
 		cloner := internal.NewGitCloner(config.TemplateSource)
 		clonedDir, err := cloner.CloneToTemp()
@@ -102,7 +104,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 		config.Logger.Debug("Templates cloned successfully",
 			zap.String("clonedDir", clonedDir),
 			zap.String("templateDir", templateDir))
-		fmt.Printf("✓ Templates cloned successfully\n\n")
+		log.Info("✓ Templates cloned successfully\n")
 	} else {
 		// Use local directory
 		config.Logger.Info("Using local templates directory",
@@ -133,33 +135,33 @@ func scanTemplates(config *Config, templateDir string) ([]internal.PlaceholderIn
 
 // displayPlaceholders prints the found placeholder variables with their locations
 func displayPlaceholders(templateDir string, placeholderInfos []internal.PlaceholderInfo) {
-	fmt.Printf("Template Placeholders in '%s':\n", templateDir)
-	fmt.Println("----------------------------")
+	log.Infof("Template Placeholders in '%s':", templateDir)
+	log.Info("----------------------------")
 
 	if len(placeholderInfos) == 0 {
-		fmt.Println("No placeholders found.")
+		log.Info("No placeholders found.")
 		return
 	}
 
 	// Display each placeholder with its file locations
 	for _, info := range placeholderInfos {
-		fmt.Printf("  {{ .%s }}\n", info.Name)
+		log.Infof("  {{ .%s }}", info.Name)
 		for _, file := range info.Files {
-			fmt.Printf("    - %s\n", file)
+			log.Infof("    - %s", file)
 		}
 	}
 
-	fmt.Printf("\nTotal: %d placeholders\n", len(placeholderInfos))
-	fmt.Println("\nTo use these templates, provide a values.json file with these keys:")
-	fmt.Println("{")
+	log.Infof("\nTotal: %d placeholders", len(placeholderInfos))
+	log.Info("\nTo use these templates, provide a values.json file with these keys:")
+	log.Info("{")
 	for i, info := range placeholderInfos {
 		if i == len(placeholderInfos)-1 {
-			fmt.Printf("  \"%s\": \"value\"\n", info.Name)
+			log.Infof("  \"%s\": \"value\"", info.Name)
 		} else {
-			fmt.Printf("  \"%s\": \"value\",\n", info.Name)
+			log.Infof("  \"%s\": \"value\",", info.Name)
 		}
 	}
-	fmt.Println("}")
+	log.Info("}")
 }
 
 // saveDebugOutput saves scan results to debug files
@@ -255,19 +257,19 @@ func parseConfig() (*Config, error) {
 
 // printUsage prints command usage information
 func printUsage() {
-	fmt.Println("List all placeholder variables found in template files")
-	fmt.Println()
-	fmt.Println("Usage: r2r templates list [--template <source>] [--debug]")
-	fmt.Println()
-	fmt.Println("Flags:")
-	fmt.Println("  --template <source>  Git repository URL or local directory to scan")
-	fmt.Println("                       (default: https://github.com/ready-to-release/eac)")
-	fmt.Println("  --debug, -d          Enable debug mode to save scan results")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # List placeholders from default repository")
-	fmt.Println("  r2r templates list")
-	fmt.Println()
-	fmt.Println("  # List placeholders from local directory with debug output")
-	fmt.Println("  r2r templates list --template ./my-templates --debug")
+	log.Info("List all placeholder variables found in template files")
+	log.Info("")
+	log.Info("Usage: r2r templates list [--template <source>] [--debug]")
+	log.Info("")
+	log.Info("Flags:")
+	log.Info("  --template <source>  Git repository URL or local directory to scan")
+	log.Info("                       (default: https://github.com/ready-to-release/eac)")
+	log.Info("  --debug, -d          Enable debug mode to save scan results")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # List placeholders from default repository")
+	log.Info("  r2r templates list")
+	log.Info("")
+	log.Info("  # List placeholders from local directory with debug output")
+	log.Info("  r2r templates list --template ./my-templates --debug")
 }

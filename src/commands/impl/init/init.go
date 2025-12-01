@@ -36,6 +36,8 @@ func init() {
 	registry.Register(Init)
 }
 
+var log = logging.C()
+
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
 var gitRepo git.GitRepository
@@ -101,20 +103,22 @@ func Init() int {
 
 	// Validate required flag
 	if aiProvider == "" {
-		fmt.Fprintf(os.Stderr, "Error: --ai flag is required\n")
-		fmt.Fprintf(os.Stderr, "Usage: init --ai <provider>\n")
-		fmt.Fprintf(os.Stderr, "\nAvailable providers: claude-api, claude-cli, openai, gemini\n")
-		fmt.Fprintf(os.Stderr, "\nExample:\n")
-		fmt.Fprintf(os.Stderr, "  init --ai claude-api\n")
-		fmt.Fprintf(os.Stderr, "  init --ai claude-cli   # Subscription access (no API costs)\n")
-		fmt.Fprintf(os.Stderr, "  init --ai claude-api --debug   # With debug logging\n")
+		log.Errorf("--ai flag is required")
+		log.Info("Usage: init --ai <provider>")
+		log.Info("")
+		log.Info("Available providers: claude-api, claude-cli, openai, gemini")
+		log.Info("")
+		log.Info("Example:")
+		log.Info("  init --ai claude-api")
+		log.Info("  init --ai claude-cli   # Subscription access (no API costs)")
+		log.Info("  init --ai claude-api --debug   # With debug logging")
 		return 1
 	}
 
 	// Get workspace root via repository API
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -126,7 +130,7 @@ func Init() int {
 		logger, err = logging.NewDefault("init", workspaceRoot)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error initializing logger: %v\n", err)
+		log.Errorf("Error initializing logger: %v", err)
 		return 1
 	}
 	defer logger.Sync()

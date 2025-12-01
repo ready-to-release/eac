@@ -37,6 +37,8 @@ import (
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
+var log = logging.C()
+
 func init() {
 	registry.Register(CreateSpec)
 }
@@ -89,7 +91,7 @@ func CreateSpec() int {
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -101,7 +103,7 @@ func CreateSpec() int {
 		logger, err = logging.NewDefault("specs", config.TemplateRoot)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize logger: %v\n", err)
+		log.Errorf("Warning: Failed to initialize logger: %v", err)
 		// Continue without logger - not fatal
 	} else {
 		config.Logger = logger
@@ -122,7 +124,7 @@ func CreateSpec() int {
 		if config.Logger != nil {
 			config.Logger.Error("Failed to build prompt", zap.Error(err))
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -132,7 +134,7 @@ func CreateSpec() int {
 		if config.Logger != nil {
 			config.Logger.Error("AI generation failed", zap.Error(err))
 		}
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
@@ -142,7 +144,7 @@ func CreateSpec() int {
 		if config.Logger != nil {
 			config.Logger.Error("Output path validation failed", zap.Error(err))
 		}
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
@@ -154,8 +156,8 @@ func CreateSpec() int {
 					zap.String("path", finalOutputPath),
 					zap.Bool("force", config.Force))
 			}
-			fmt.Fprintf(os.Stderr, "Error: File already exists: %s\n", finalOutputPath)
-			fmt.Fprintf(os.Stderr, "Use --force to overwrite\n")
+			log.Errorf("Error: File already exists: %s", finalOutputPath)
+			log.Error("Use --force to overwrite")
 			return 1
 		}
 	}
@@ -165,7 +167,7 @@ func CreateSpec() int {
 		if config.Logger != nil {
 			config.Logger.Error("Failed to write output", zap.Error(err))
 		}
-		fmt.Fprintf(os.Stderr, "\n❌ Error: %v\n", err)
+		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
@@ -209,7 +211,7 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 	if config.Logger != nil {
 		config.Logger.Debug("Loading specification contract")
 	}
-	fmt.Println("📋 Loading specification contract...")
+	log.Info("📋 Loading specification contract...")
 
 	fullPrompt, err := buildContractBasedPrompt(config)
 	if err != nil {
@@ -236,12 +238,12 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 			if config.Logger != nil {
 				config.Logger.Warn("Failed to save debug prompt", zap.String("path", debugPath), zap.Error(err))
 			}
-			fmt.Fprintf(os.Stderr, "⚠️  DEBUG: Failed to save prompt to %s: %v\n", debugPath, err)
+			log.Errorf("⚠️  DEBUG: Failed to save prompt to %s: %v", debugPath, err)
 		} else {
 			if config.Logger != nil {
 				config.Logger.Debug("Saved full prompt to file", zap.String("path", debugPath))
 			}
-			fmt.Fprintf(os.Stderr, "🔍 DEBUG: Saved full prompt to %s\n", debugPath)
+			log.Errorf("🔍 DEBUG: Saved full prompt to %s", debugPath)
 		}
 	}
 
@@ -298,7 +300,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 			if config.Logger != nil {
 				config.Logger.Warn("Failed to create debug directory", zap.Error(err))
 			}
-			fmt.Fprintf(os.Stderr, "⚠️  Failed to create debug directory: %v\n", err)
+			log.Errorf("⚠️  Failed to create debug directory: %v", err)
 		}
 	}
 
@@ -327,10 +329,10 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		if config.Logger != nil {
 			config.Logger.Error("AI generation failed after retries", zap.Error(err))
 		}
-		fmt.Fprintf(os.Stderr, "\nTroubleshooting:\n")
-		fmt.Fprintf(os.Stderr, "  1. Ensure AI provider is configured: r2r agent init --ai <provider>\n")
-		fmt.Fprintf(os.Stderr, "  2. Check API key environment variable is set\n")
-		fmt.Fprintf(os.Stderr, "  3. Verify network connectivity to AI provider\n")
+		log.Error("\nTroubleshooting:")
+		log.Error("  1. Ensure AI provider is configured: r2r agent init --ai <provider>")
+		log.Error("  2. Check API key environment variable is set")
+		log.Error("  3. Verify network connectivity to AI provider")
 		return "", fmt.Errorf("AI generation failed: %w", err)
 	}
 
@@ -351,14 +353,14 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 					zap.Int("criticalErrors", criticalErrors),
 					zap.Int("attempts", result.Attempts))
 			}
-			fmt.Fprintf(os.Stderr, "\n")
-			fmt.Fprintf(os.Stderr, "⚠️  Generated specification has validation errors:\n\n")
-			fmt.Fprintf(os.Stderr, "%s\n", contracts.FormatValidationErrors(result.ValidationErrors))
-			fmt.Fprintf(os.Stderr, "\nThe AI attempted %d time(s) but could not generate valid output.\n", result.Attempts)
-			fmt.Fprintf(os.Stderr, "\nTroubleshooting:\n")
-			fmt.Fprintf(os.Stderr, "  1. Try rephrasing your description to be more specific\n")
-			fmt.Fprintf(os.Stderr, "  2. Use --debug to inspect the generated output\n")
-			fmt.Fprintf(os.Stderr, "  3. Review the validation errors above and manually fix the output\n")
+			log.Error("")
+			log.Error("⚠️  Generated specification has validation errors:\n")
+			log.Errorf("%s", contracts.FormatValidationErrors(result.ValidationErrors))
+			log.Errorf("\nThe AI attempted %d time(s) but could not generate valid output.", result.Attempts)
+			log.Error("\nTroubleshooting:")
+			log.Error("  1. Try rephrasing your description to be more specific")
+			log.Error("  2. Use --debug to inspect the generated output")
+			log.Error("  3. Review the validation errors above and manually fix the output")
 			return "", fmt.Errorf("generated specification has %d critical validation error(s)", criticalErrors)
 		}
 
@@ -367,8 +369,8 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 			config.Logger.Warn("Generated specification has warnings",
 				zap.Int("warnings", len(result.ValidationErrors)))
 		}
-		fmt.Fprintf(os.Stderr, "\nℹ️  Generated specification has %d warning(s):\n", len(result.ValidationErrors))
-		fmt.Fprintf(os.Stderr, "%s\n", contracts.FormatValidationErrors(result.ValidationErrors))
+		log.Errorf("\nℹ️  Generated specification has %d warning(s):", len(result.ValidationErrors))
+		log.Errorf("%s", contracts.FormatValidationErrors(result.ValidationErrors))
 	}
 
 	return result.Output, nil
@@ -454,15 +456,15 @@ func writeOutputAndReportSuccess(outputPath string, content string, config *Spec
 	}
 
 	// Report success
-	fmt.Println()
-	fmt.Println("✅ Specification created")
-	fmt.Printf("   File: %s\n", outputPath)
-	fmt.Println()
-	fmt.Println("ℹ️  Next steps:")
-	fmt.Println("   1. Review the generated specification")
-	fmt.Println("   2. Refine Rules and Scenarios as needed")
-	fmt.Println("   3. Implement step definitions in src/<module>/tests/")
-	fmt.Println()
+	log.Info("")
+	log.Info("✅ Specification created")
+	log.Infof("   File: %s", outputPath)
+	log.Info("")
+	log.Info("ℹ️  Next steps:")
+	log.Info("   1. Review the generated specification")
+	log.Info("   2. Refine Rules and Scenarios as needed")
+	log.Info("   3. Implement step definitions in src/<module>/tests/")
+	log.Info("")
 
 	return nil
 }
@@ -520,7 +522,7 @@ func parseConfig() (*SpecsConfig, error) {
 	// Truncate very long descriptions
 	const maxDescLength = 1000
 	if len(description) > maxDescLength {
-		fmt.Fprintf(os.Stderr, "⚠️  Warning: Description truncated to %d characters\n", maxDescLength)
+		log.Errorf("⚠️  Warning: Description truncated to %d characters", maxDescLength)
 		description = description[:maxDescLength]
 	}
 
@@ -578,7 +580,7 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 		if err != nil {
 			return "", fmt.Errorf("custom prompt not found: %w\n\nSpecified path: %s", err, customPath)
 		}
-		fmt.Fprintf(os.Stderr, "📋 Using custom prompt: %s\n", customPath)
+		log.Errorf("📋 Using custom prompt: %s", customPath)
 		return string(content), nil
 	}
 
@@ -591,7 +593,7 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 
 	// Log source if not default
 	if source != "embedded default" {
-		fmt.Fprintf(os.Stderr, "ℹ️  Using %s prompt\n", source)
+		log.Errorf("ℹ️  Using %s prompt", source)
 	}
 
 	return prompt, nil

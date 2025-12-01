@@ -17,12 +17,12 @@
 package validate
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(ValidateContracts)
@@ -30,8 +30,8 @@ func init() {
 
 // ValidateContracts validates all repository contracts against JSON schemas
 func ValidateContracts() int {
-	fmt.Println("Validating repository contracts...")
-	fmt.Println()
+	log.Info("Validating repository contracts...")
+	log.Info("")
 
 	// Load with schema validation enabled
 	opts := config.LoadOptions{
@@ -41,7 +41,7 @@ func ValidateContracts() int {
 
 	cfg, err := config.Load(opts)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -49,63 +49,63 @@ func ValidateContracts() int {
 	var validated int
 
 	// Validate modules.yml
-	fmt.Printf("  %-25s ", "modules.yml")
+	log.Infof("  %-25s ", "modules.yml")
 	if err := cfg.LoadModules(true); err != nil {
-		fmt.Printf("FAILED\n")
-		fmt.Fprintf(os.Stderr, "    %v\n", err)
+		log.Info("FAILED")
+		log.Errorf("    %v", err)
 		hasErrors = true
 	} else {
-		fmt.Printf("OK (%d modules)\n", len(cfg.Modules.Modules))
+		log.Infof("OK (%d modules)", len(cfg.Modules.Modules))
 		validated++
 	}
 
 	// Validate environments.yml
-	fmt.Printf("  %-25s ", "environments.yml")
+	log.Infof("  %-25s ", "environments.yml")
 	if err := cfg.LoadEnvironments(true); err != nil {
-		fmt.Printf("FAILED\n")
-		fmt.Fprintf(os.Stderr, "    %v\n", err)
+		log.Info("FAILED")
+		log.Errorf("    %v", err)
 		hasErrors = true
 	} else {
-		fmt.Printf("OK (%d environments)\n", len(cfg.Environments.Environments))
+		log.Infof("OK (%d environments)", len(cfg.Environments.Environments))
 		validated++
 
 		// Additional semantic validation
 		if err := cfg.Environments.Validate(); err != nil {
-			fmt.Printf("    Warning: semantic validation: %v\n", err)
+			log.Infof("    Warning: semantic validation: %v", err)
 		}
 	}
 
 	// Validate testing-tags.yml
-	fmt.Printf("  %-25s ", "testing-tags.yml")
+	log.Infof("  %-25s ", "testing-tags.yml")
 	if err := cfg.LoadTestingTags(true); err != nil {
-		fmt.Printf("FAILED\n")
-		fmt.Fprintf(os.Stderr, "    %v\n", err)
+		log.Info("FAILED")
+		log.Errorf("    %v", err)
 		hasErrors = true
 	} else {
-		fmt.Printf("OK (%d tags, %d skip reasons)\n",
+		log.Infof("OK (%d tags, %d skip reasons)",
 			len(cfg.TestingTags.Tags),
 			len(cfg.TestingTags.SkipReasons))
 		validated++
 	}
 
 	// Validate test-suites.yml
-	fmt.Printf("  %-25s ", "test-suites.yml")
+	log.Infof("  %-25s ", "test-suites.yml")
 	if err := cfg.LoadTestSuites(true); err != nil {
-		fmt.Printf("FAILED\n")
-		fmt.Fprintf(os.Stderr, "    %v\n", err)
+		log.Info("FAILED")
+		log.Errorf("    %v", err)
 		hasErrors = true
 	} else {
-		fmt.Printf("OK (%d suites)\n", len(cfg.TestSuites.Suites))
+		log.Infof("OK (%d suites)", len(cfg.TestSuites.Suites))
 		validated++
 	}
 
-	fmt.Println()
+	log.Info("")
 
 	if hasErrors {
-		fmt.Printf("Validation failed: %d/4 contracts valid\n", validated)
+		log.Infof("Validation failed: %d/4 contracts valid", validated)
 		return 1
 	}
 
-	fmt.Printf("All %d contracts validated successfully\n", validated)
+	log.Infof("All %d contracts validated successfully", validated)
 	return 0
 }

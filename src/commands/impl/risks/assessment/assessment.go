@@ -8,12 +8,14 @@
 package assessment
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(CreateRiskAssessment)
@@ -33,44 +35,44 @@ func Run() int {
 			showHelp()
 			return 0
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Get files in scope
 	files, err := getFilesInScope(config.Scope, config.WorkspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	if len(files) == 0 {
-		fmt.Fprintf(os.Stderr, "No files found in scope '%s'\n", config.Scope)
+		log.Errorf("No files found in scope '%s'", config.Scope)
 		return 1
 	}
 
-	fmt.Printf("Analyzing %d file(s) in scope '%s'...\n", len(files), config.Scope)
+	log.Infof("Analyzing %d file(s) in scope '%s'...", len(files), config.Scope)
 
 	// Prepare analysis input
 	input, err := prepareAnalysisInput(config, files)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
-	fmt.Printf("Loaded %d specification(s)...\n", len(input.Specifications))
+	log.Infof("Loaded %d specification(s)...", len(input.Specifications))
 
 	// Generate report
-	fmt.Println("Generating risk assessment report...")
+	log.Info("Generating risk assessment report...")
 	report, err := generateReport(config, input)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Ensure output directory exists
 	if err := ensureOutputDir(config.Destination); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -81,15 +83,15 @@ func Run() int {
 	}
 
 	if err := os.WriteFile(destPath, []byte(report), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing report: %v\n", err)
+		log.Errorf("Error writing report: %v", err)
 		return 1
 	}
 
-	fmt.Printf("✓ Risk assessment report generated: %s\n", config.Destination)
+	log.Infof("✓ Risk assessment report generated: %s", config.Destination)
 
 	if config.Debug {
 		debugDir := filepath.Join(config.WorkspaceRoot, "out", "logs", "risks")
-		fmt.Printf("Debug logs saved to: %s\n", debugDir)
+		log.Infof("Debug logs saved to: %s", debugDir)
 	}
 
 	return 0
@@ -114,5 +116,5 @@ Examples:
   risks assessment -s all -d report.md       # Analyze all files, custom destination
   risks assessment -D                        # Debug mode with logs
 `
-	fmt.Print(help)
+	log.Info(help)
 }

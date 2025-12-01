@@ -3,7 +3,6 @@
 package validate
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
@@ -33,7 +32,7 @@ func ValidateMarkdown() int {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get repository root: %v\n", err)
+		log.Errorf("Error: failed to get repository root: %v", err)
 		return 1
 	}
 
@@ -44,7 +43,7 @@ func ValidateMarkdown() int {
 	// Validate all markdown files
 	results, err := validator.ValidateDirectory(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to validate directory: %v\n", err)
+		log.Errorf("Error: failed to validate directory: %v", err)
 		return 1
 	}
 
@@ -53,16 +52,16 @@ func ValidateMarkdown() int {
 }
 
 func printMarkdownUsage() {
-	fmt.Println("Validate markdown file syntax")
-	fmt.Println()
-	fmt.Println("Usage: r2r validate markdown")
-	fmt.Println()
-	fmt.Println("Checks:")
-	fmt.Println("  - Valid markdown syntax")
-	fmt.Println("  - Proper heading hierarchy")
-	fmt.Println("  - Valid code blocks (JSON, YAML)")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # Validate all markdown files")
-	fmt.Println("  r2r validate markdown")
+	log.Info("Validate markdown file syntax")
+	log.Info("")
+	log.Info("Usage: r2r validate markdown")
+	log.Info("")
+	log.Info("Checks:")
+	log.Info("  - Valid markdown syntax")
+	log.Info("  - Proper heading hierarchy")
+	log.Info("  - Valid code blocks (JSON, YAML)")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # Validate all markdown files")
+	log.Info("  r2r validate markdown")
 }

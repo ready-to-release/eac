@@ -3,7 +3,6 @@
 package show
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
@@ -31,46 +30,46 @@ func Show() int {
 		// Handled by separate registrations in respective files
 		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
+		log.Errorf("unknown subcommand: %s\n", args[0])
 		printShowUsage()
 		return 1
 	}
 }
 
 func printShowUsage() {
-	fmt.Println("Display repository information in human-readable format")
-	fmt.Println()
-	fmt.Println("Usage: r2r show <subcommand> [args...]")
-	fmt.Println()
-	fmt.Println("Configuration:")
-	fmt.Println("  config                    Show all EAC configuration summary")
-	fmt.Println()
-	fmt.Println("Repository Structure:")
-	fmt.Println("  modules                   Show all module contracts")
-	fmt.Println("  moduletypes               Show module types grouped by count")
-	fmt.Println("  dependencies              Show module dependencies")
-	fmt.Println()
-	fmt.Println("Files and Changes:")
-	fmt.Println("  files                     Show repository files with module ownership")
-	fmt.Println("  files changed             Show modified files with module ownership")
-	fmt.Println("  files staged              Show staged files with module ownership")
-	fmt.Println()
-	fmt.Println("Testing:")
-	fmt.Println("  tests                     Show all tests in the repository")
-	fmt.Println("  suite <name>              Show detailed test suite information")
-	fmt.Println()
-	fmt.Println("Environment:")
-	fmt.Println("  environments              Show all environment contracts")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # Show all modules")
-	fmt.Println("  r2r show modules")
-	fmt.Println()
-	fmt.Println("  # Show changed files")
-	fmt.Println("  r2r show files changed")
-	fmt.Println()
-	fmt.Println("  # Show test suite details")
-	fmt.Println("  r2r show suite integration")
-	fmt.Println()
-	fmt.Println("Use 'r2r show <subcommand> --help' for more information about a command.")
+	log.Info("Display repository information in human-readable format")
+	log.Info("")
+	log.Info("Usage: r2r show <subcommand> [args...]")
+	log.Info("")
+	log.Info("Configuration:")
+	log.Info("  config                    Show all EAC configuration summary")
+	log.Info("")
+	log.Info("Repository Structure:")
+	log.Info("  modules                   Show all module contracts")
+	log.Info("  moduletypes               Show module types grouped by count")
+	log.Info("  dependencies              Show module dependencies")
+	log.Info("")
+	log.Info("Files and Changes:")
+	log.Info("  files                     Show repository files with module ownership")
+	log.Info("  files changed             Show modified files with module ownership")
+	log.Info("  files staged              Show staged files with module ownership")
+	log.Info("")
+	log.Info("Testing:")
+	log.Info("  tests                     Show all tests in the repository")
+	log.Info("  suite <name>              Show detailed test suite information")
+	log.Info("")
+	log.Info("Environment:")
+	log.Info("  environments              Show all environment contracts")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # Show all modules")
+	log.Info("  r2r show modules")
+	log.Info("")
+	log.Info("  # Show changed files")
+	log.Info("  r2r show files changed")
+	log.Info("")
+	log.Info("  # Show test suite details")
+	log.Info("  r2r show suite integration")
+	log.Info("")
+	log.Info("Use 'r2r show <subcommand> --help' for more information about a command.")
 }

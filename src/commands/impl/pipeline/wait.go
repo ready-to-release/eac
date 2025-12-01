@@ -24,7 +24,10 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(PipelineWait)
@@ -63,8 +66,8 @@ func PipelineWait() int {
 	}
 
 	if len(runIDs) == 0 {
-		fmt.Fprintln(os.Stderr, "Error: no workflow run IDs provided")
-		fmt.Fprintln(os.Stderr, "Usage: pipeline wait <run-id> [run-id...]")
+		log.Errorf("Error: no workflow run IDs provided")
+		log.Errorf("Usage: pipeline wait <run-id> [run-id...]")
 		return 1
 	}
 
@@ -88,7 +91,8 @@ func PipelineWait() int {
 	for {
 		elapsed := time.Since(startTime)
 		if elapsed.Seconds() > float64(timeout) {
-			fmt.Printf("\n❌ Timeout after %v\n", elapsed.Round(time.Second))
+			log.Info("")
+			log.Infof("❌ Timeout after %v", elapsed.Round(time.Second))
 			return 1
 		}
 
@@ -123,14 +127,14 @@ func PipelineWait() int {
 
 		// Clear previous output
 		for i := 0; i < lastLineCount; i++ {
-			fmt.Print("\033[A\033[K") // Move up and clear line
+			log.Info("\033[A\033[K") // Move up and clear line
 		}
 
 		// Print compact status
 		lineCount := 0
 		elapsedStr := formatDuration(elapsed)
 
-		fmt.Printf("⏱  %s", elapsedStr)
+		log.Infof("⏱  %s", elapsedStr)
 		lineCount++
 
 		for _, r := range runs {
@@ -147,19 +151,19 @@ func PipelineWait() int {
 			default:
 				icon = "?"
 			}
-			fmt.Printf("  %s %s", icon, r.name)
+			log.Infof("  %s %s", icon, r.name)
 		}
-		fmt.Println()
+		log.Info("")
 
 		lastLineCount = lineCount
 
 		if allDone {
-			fmt.Println()
+			log.Info("")
 			if anyFailed {
-				fmt.Println("❌ One or more workflows failed")
+				log.Info("❌ One or more workflows failed")
 				return 1
 			}
-			fmt.Println("✓ All workflows completed successfully")
+			log.Info("✓ All workflows completed successfully")
 			return 0
 		}
 

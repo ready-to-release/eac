@@ -2,10 +2,13 @@ package commitmessage
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 // WhimsicalStatusLines are fun status messages shown during generation
 var WhimsicalStatusLines = []string{
@@ -35,7 +38,7 @@ func startProgressWithLines(initialMessage string, statusLines []string) context
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Show initial message immediately
-	fmt.Println(initialMessage)
+	log.Info(initialMessage)
 
 	// Start ticker for updates every 10 seconds
 	go func() {
@@ -49,7 +52,7 @@ func startProgressWithLines(initialMessage string, statusLines []string) context
 				return
 			case <-ticker.C:
 				// Show next status
-				fmt.Println(statusLines[statusIndex%len(statusLines)])
+				log.Info(statusLines[statusIndex%len(statusLines)])
 				statusIndex++
 			}
 		}
@@ -108,7 +111,7 @@ func WithAngryProgress(stage string, fn func() error) error {
 	defer cancel()
 
 	// Show initial message immediately
-	fmt.Println(stage)
+	log.Info(stage)
 
 	// Start ticker for angry updates every 8 seconds (faster than normal)
 	go func() {
@@ -122,7 +125,7 @@ func WithAngryProgress(stage string, fn func() error) error {
 				return
 			case <-ticker.C:
 				// Show next status
-				fmt.Println(statusLines[statusIndex%len(statusLines)])
+				log.Info(statusLines[statusIndex%len(statusLines)])
 				statusIndex++
 			}
 		}

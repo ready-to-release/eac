@@ -6,8 +6,11 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/internal/render"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"gopkg.in/yaml.v3"
 )
+
+var log = logging.C()
 
 // getCallerCommandName extracts the canonical command name from the calling file
 // Returns kebab-case format (e.g., "get-files")
@@ -97,24 +100,24 @@ func RenderAndOutput(data interface{}, format *OutputFormat, commandName string)
 		if err != nil {
 			return fmt.Errorf("custom renderer failed: %w", err)
 		}
-		fmt.Print(output)
+		log.Info(output)
 	} else if format.AsJSON {
 		// Render as JSON
 		output, err := render.RenderAsJSON(data)
 		if err != nil {
 			return fmt.Errorf("failed to render JSON: %w", err)
 		}
-		fmt.Println(output)
+		log.Info(output)
 	} else if format.AsTOML {
 		// Render as TOML
 		output, err := render.RenderAsTOML(data)
 		if err != nil {
 			return fmt.Errorf("failed to render TOML: %w", err)
 		}
-		fmt.Print(output)
+		log.Info(output)
 	} else {
 		// Default: output as YAML
-		fmt.Print(string(yamlBytes))
+		log.Info(string(yamlBytes))
 	}
 
 	return nil
@@ -131,20 +134,20 @@ func ExecuteGetCommand(dataFetcher func() (interface{}, error)) int {
 	// Parse output format flags (with command-specific filtering)
 	format, err := ParseOutputFlags(os.Args[1:], commandName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Fetch the data
 	data, err := dataFetcher()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Render and output (with command name for custom renderer filtering)
 	if err := RenderAndOutput(data, format, commandName); err != nil {
-		fmt.Fprintf(os.Stderr, "Error rendering output: %v\n", err)
+		log.Errorf("Error rendering output: %v", err)
 		return 1
 	}
 

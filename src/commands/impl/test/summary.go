@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/commands/impl/test/internal/cucumber"
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // generateSummary generates a summary.md file from cucumber.json test results for a single module
@@ -43,13 +43,13 @@ func generateSummaryForOutputDir(outputDir string) error {
 	}
 
 	// Parse cucumber.json
-	fmt.Printf("📊 Parsing test results: %s\n", cucumberPath)
+	log.Infof("Parsing test results: %s", cucumberPath)
 	report, err := cucumber.ParseFile(cucumberPath)
 	if err != nil {
 		return fmt.Errorf("failed to parse cucumber.json: %w", err)
 	}
 
-	fmt.Printf("📝 Found %d features\n", len(report))
+	log.Infof("Found %d features", len(report))
 
 	// Generate summary markdown with Appendix A
 	var summary string
@@ -63,6 +63,6 @@ func generateSummaryForOutputDir(outputDir string) error {
 		return fmt.Errorf("failed to write summary.md: %w", err)
 	}
 
-	fmt.Printf("✅ Generated summary: %s\n", summaryPath)
+	log.Infof("Generated summary: %s", summaryPath)
 	return nil
 }

@@ -10,11 +10,11 @@
 package create
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(CreateRiskControls)
@@ -34,18 +34,18 @@ func Run() int {
 			showHelp()
 			return 0
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Find assessment files
 	assessmentFiles, err := findAssessmentFiles(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
-	fmt.Printf("Processing %d assessment file(s)...\n", len(assessmentFiles))
+	log.Infof("Processing %d assessment file(s)...", len(assessmentFiles))
 
 	totalRisks := 0
 	totalCreated := 0
@@ -54,26 +54,26 @@ func Run() int {
 
 	// Process each assessment file
 	for _, assessmentFile := range assessmentFiles {
-		fmt.Printf("\nProcessing: %s\n", assessmentFile)
+		log.Infof("\nProcessing: %s", assessmentFile)
 
 		// Parse assessment
 		risks, err := parseAssessment(config, assessmentFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "  Error parsing assessment: %v\n", err)
+			log.Errorf("  Error parsing assessment: %v", err)
 			totalFailed++
 			continue
 		}
 
-		fmt.Printf("  Found %d risk(s)\n", len(risks))
+		log.Infof("  Found %d risk(s)", len(risks))
 		totalRisks += len(risks)
 
 		// Generate control for each risk
 		for _, risk := range risks {
-			fmt.Printf("  Processing %s: %s...\n", risk.RiskID, risk.Description)
+			log.Infof("  Processing %s: %s...", risk.RiskID, risk.Description)
 
 			err := generateControl(config, risk)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "    Error: %v\n", err)
+				log.Errorf("    Error: %v", err)
 				totalFailed++
 				continue
 			}
@@ -83,22 +83,22 @@ func Run() int {
 	}
 
 	// Summary
-	fmt.Printf("\n═══════════════════════════════════════════════════════════\n")
-	fmt.Printf("  Summary\n")
-	fmt.Printf("═══════════════════════════════════════════════════════════\n\n")
-	fmt.Printf("  Assessments processed: %d\n", len(assessmentFiles))
-	fmt.Printf("  Risks identified: %d\n", totalRisks)
-	fmt.Printf("  Controls created: %d\n", totalCreated)
+	log.Info("\n═══════════════════════════════════════════════════════════")
+	log.Info("  Summary")
+	log.Info("═══════════════════════════════════════════════════════════\n")
+	log.Infof("  Assessments processed: %d", len(assessmentFiles))
+	log.Infof("  Risks identified: %d", totalRisks)
+	log.Infof("  Controls created: %d", totalCreated)
 	if totalSkipped > 0 {
-		fmt.Printf("  Controls skipped: %d\n", totalSkipped)
+		log.Infof("  Controls skipped: %d", totalSkipped)
 	}
 	if totalFailed > 0 {
-		fmt.Printf("  Failures: %d\n", totalFailed)
+		log.Infof("  Failures: %d", totalFailed)
 	}
-	fmt.Printf("\n")
+	log.Info("")
 
 	if config.Debug {
-		fmt.Printf("Debug logs saved to: out/logs/risks/\n")
+		log.Info("Debug logs saved to: out/logs/risks/")
 	}
 
 	if totalFailed > 0 {
@@ -131,5 +131,5 @@ Examples:
   risks create assessment.md --force                      # Overwrite existing
   risks create assessment.md -o specs/custom/             # Custom output directory
 `
-	fmt.Print(help)
+	log.Info(help)
 }

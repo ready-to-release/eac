@@ -3,11 +3,13 @@
 package work
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(Work)
@@ -31,48 +33,49 @@ func Work() int {
 		// Handled by separate registrations in respective files
 		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
+		log.Errorf("Error: unknown subcommand: %s", args[0])
+		log.Info("")
 		printWorkUsage()
 		return 1
 	}
 }
 
 func printWorkUsage() {
-	fmt.Println("Workspace management for parallel development using git worktrees")
-	fmt.Println()
-	fmt.Println("Usage: r2r work <subcommand> [args...]")
-	fmt.Println()
-	fmt.Println("Workspace Lifecycle:")
-	fmt.Println("  create <branch>           Create new workspace for parallel development")
-	fmt.Println("  list                      List all workspaces and their status")
-	fmt.Println("  remove [branch]           Remove workspace and optionally delete branches")
-	fmt.Println()
-	fmt.Println("Development Workflow:")
-	fmt.Println("  commit                    Commit changes with AI-generated messages")
-	fmt.Println("  pull                      Sync workspace with latest main via rebase")
-	fmt.Println()
-	fmt.Println("Completion:")
-	fmt.Println("  merge                     Merge workspace to main (squash by default)")
-	fmt.Println("  pr                        Create pull request with AI-generated description")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # Create workspace")
-	fmt.Println("  r2r work create feature/authentication")
-	fmt.Println()
-	fmt.Println("  # Make changes and commit")
-	fmt.Println("  r2r work commit --all")
-	fmt.Println()
-	fmt.Println("  # Sync with main")
-	fmt.Println("  r2r work pull")
-	fmt.Println()
-	fmt.Println("  # Merge back to main")
-	fmt.Println("  r2r work merge")
-	fmt.Println()
-	fmt.Println("  # Or create PR for review")
-	fmt.Println("  r2r work pr")
-	fmt.Println()
-	fmt.Println("  # List all workspaces")
-	fmt.Println("  r2r work list")
-	fmt.Println()
-	fmt.Println("Use 'r2r work <subcommand> --help' for more information about a command.")
+	log.Info("Workspace management for parallel development using git worktrees")
+	log.Info("")
+	log.Info("Usage: r2r work <subcommand> [args...]")
+	log.Info("")
+	log.Info("Workspace Lifecycle:")
+	log.Info("  create <branch>           Create new workspace for parallel development")
+	log.Info("  list                      List all workspaces and their status")
+	log.Info("  remove [branch]           Remove workspace and optionally delete branches")
+	log.Info("")
+	log.Info("Development Workflow:")
+	log.Info("  commit                    Commit changes with AI-generated messages")
+	log.Info("  pull                      Sync workspace with latest main via rebase")
+	log.Info("")
+	log.Info("Completion:")
+	log.Info("  merge                     Merge workspace to main (squash by default)")
+	log.Info("  pr                        Create pull request with AI-generated description")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # Create workspace")
+	log.Info("  r2r work create feature/authentication")
+	log.Info("")
+	log.Info("  # Make changes and commit")
+	log.Info("  r2r work commit --all")
+	log.Info("")
+	log.Info("  # Sync with main")
+	log.Info("  r2r work pull")
+	log.Info("")
+	log.Info("  # Merge back to main")
+	log.Info("  r2r work merge")
+	log.Info("")
+	log.Info("  # Or create PR for review")
+	log.Info("  r2r work pr")
+	log.Info("")
+	log.Info("  # List all workspaces")
+	log.Info("  r2r work list")
+	log.Info("")
+	log.Info("Use 'r2r work <subcommand> --help' for more information about a command.")
 }

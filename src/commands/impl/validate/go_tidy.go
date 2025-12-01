@@ -4,7 +4,6 @@ package validate
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,14 +37,14 @@ func ValidateGoTidy() int {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get repository root: %v\n", err)
+		log.Errorf("Error: failed to get repository root: %v", err)
 		return 1
 	}
 
 	// Load module contracts
 	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
+		log.Errorf("Error: failed to load module contracts: %v", err)
 		return 1
 	}
 
@@ -59,7 +58,7 @@ func ValidateGoTidy() int {
 	}
 
 	if len(goModules) == 0 {
-		fmt.Println("No Go modules found in repository")
+		log.Info("No Go modules found in repository")
 		return 0
 	}
 
@@ -130,28 +129,28 @@ func validateGoModuleTidy(goModules []string, repoRoot string) *goTidyReport {
 }
 
 func printGoTidyReport(report *goTidyReport) {
-	fmt.Println("=== Go Module Tidy Validation Report ===")
-	fmt.Println()
-	fmt.Printf("Total Go modules: %d\n", report.totalModules)
-	fmt.Printf("Tidy modules: %d\n", report.tidyModules)
-	fmt.Printf("Untidy modules: %d\n", len(report.untidyModules))
-	fmt.Println()
+	log.Info("=== Go Module Tidy Validation Report ===")
+	log.Info("")
+	log.Infof("Total Go modules: %d", report.totalModules)
+	log.Infof("Tidy modules: %d", report.tidyModules)
+	log.Infof("Untidy modules: %d", len(report.untidyModules))
+	log.Info("")
 
 	if len(report.untidyModules) > 0 {
-		fmt.Printf("❌ Modules with untidy dependencies:\n")
+		log.Info("❌ Modules with untidy dependencies:")
 		for modulePath, diff := range report.untidyModules {
 			relPath, _ := filepath.Rel(report.repoRoot, modulePath)
-			fmt.Printf("\n  • %s\n", relPath)
+			log.Infof("\n  • %s", relPath)
 			if strings.TrimSpace(diff) != "" {
-				fmt.Printf("    Diff:\n%s\n", indentLines(diff, "    "))
+				log.Infof("    Diff:\n%s", indentLines(diff, "    "))
 			}
 		}
-		fmt.Println()
-		fmt.Println("To fix, run: go mod tidy")
-		fmt.Println()
+		log.Info("")
+		log.Info("To fix, run: go mod tidy")
+		log.Info("")
 	} else {
-		fmt.Println("✅ All Go modules have tidy dependencies!")
-		fmt.Println()
+		log.Info("✅ All Go modules have tidy dependencies!")
+		log.Info("")
 	}
 }
 
@@ -166,15 +165,15 @@ func indentLines(text string, prefix string) string {
 }
 
 func printGoTidyUsage() {
-	fmt.Println("Validate Go module dependencies are tidy")
-	fmt.Println()
-	fmt.Println("Usage: r2r validate go-tidy")
-	fmt.Println()
-	fmt.Println("Checks:")
-	fmt.Println("  - Runs 'go mod tidy -diff' on all Go modules")
-	fmt.Println("  - Ensures go.mod and go.sum are synchronized")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  # Validate all Go modules")
-	fmt.Println("  r2r validate go-tidy")
+	log.Info("Validate Go module dependencies are tidy")
+	log.Info("")
+	log.Info("Usage: r2r validate go-tidy")
+	log.Info("")
+	log.Info("Checks:")
+	log.Info("  - Runs 'go mod tidy -diff' on all Go modules")
+	log.Info("  - Ensures go.mod and go.sum are synchronized")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  # Validate all Go modules")
+	log.Info("  r2r validate go-tidy")
 }

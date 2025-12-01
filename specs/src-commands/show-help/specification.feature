@@ -72,5 +72,4 @@ Feature: src-commands_show-help
       Then the exit code is 0
       And I see "create spec"
       And I see "create design"
-      And I see "create commit-message"
       And I see "create pr"

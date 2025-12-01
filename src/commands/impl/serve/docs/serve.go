@@ -23,36 +23,38 @@ import (
 	"go.uber.org/zap"
 )
 
+var log = logging.C()
+
 func init() {
 	registry.Register(ServeDocs)
 }
 
 // printHelp displays help information for the serve docs command
 func printHelp() {
-	fmt.Println("NAME")
-	fmt.Println("    serve docs - Start or stop MkDocs server")
-	fmt.Println()
-	fmt.Println("SYNOPSIS")
-	fmt.Println("    eac serve docs [flags]")
-	fmt.Println()
-	fmt.Println("DESCRIPTION")
-	fmt.Println("    The serve docs command manages the MkDocs documentation server using Docker.")
-	fmt.Println("    It can start a server on a specified port, stop a running server, and open")
-	fmt.Println("    the documentation in your browser.")
-	fmt.Println()
-	fmt.Println("FLAGS")
-	fmt.Println("    --no-browser     Don't open browser after starting server")
-	fmt.Println("    -p, --port       Port number for MkDocs server (default: auto-allocated 9000-9999)")
-	fmt.Println("    --stop           Stop the running MkDocs server")
-	fmt.Println("    --debug          Enable debug mode with log streaming")
-	fmt.Println("    -h, --help       Show this help message")
-	fmt.Println()
-	fmt.Println("EXAMPLES")
-	fmt.Println("    eac serve docs                  # Start server with auto-allocated port")
-	fmt.Println("    eac serve docs --port 9001      # Start server on specific port")
-	fmt.Println("    eac serve docs --no-browser     # Start without opening browser")
-	fmt.Println("    eac serve docs --stop           # Stop the running server")
-	fmt.Println()
+	log.Info("NAME")
+	log.Info("    serve docs - Start or stop MkDocs server")
+	log.Info("")
+	log.Info("SYNOPSIS")
+	log.Info("    eac serve docs [flags]")
+	log.Info("")
+	log.Info("DESCRIPTION")
+	log.Info("    The serve docs command manages the MkDocs documentation server using Docker.")
+	log.Info("    It can start a server on a specified port, stop a running server, and open")
+	log.Info("    the documentation in your browser.")
+	log.Info("")
+	log.Info("FLAGS")
+	log.Info("    --no-browser     Don't open browser after starting server")
+	log.Info("    -p, --port       Port number for MkDocs server (default: auto-allocated 9000-9999)")
+	log.Info("    --stop           Stop the running MkDocs server")
+	log.Info("    --debug          Enable debug mode with log streaming")
+	log.Info("    -h, --help       Show this help message")
+	log.Info("")
+	log.Info("EXAMPLES")
+	log.Info("    eac serve docs                  # Start server with auto-allocated port")
+	log.Info("    eac serve docs --port 9001      # Start server on specific port")
+	log.Info("    eac serve docs --no-browser     # Start without opening browser")
+	log.Info("    eac serve docs --stop           # Stop the running server")
+	log.Info("")
 }
 
 // writeDebugFile writes content to a debug file when debug mode is enabled.
@@ -81,7 +83,7 @@ func ServeDocs() int {
 	// Get workspace root early for logging
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -111,16 +113,16 @@ func ServeDocs() int {
 				i++
 				p, err := strconv.Atoi(args[i])
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error: invalid port number: %s\n", args[i])
+					log.Errorf("Error: invalid port number: %s", args[i])
 					return 1
 				}
 				port = p
 			} else {
-				fmt.Fprintf(os.Stderr, "Error: --port requires a value\n")
+				log.Errorf("Error: --port requires a value")
 				return 1
 			}
 		default:
-			fmt.Fprintf(os.Stderr, "Error: unknown flag: %s\n", arg)
+			log.Errorf("Error: unknown flag: %s", arg)
 			return 1
 		}
 	}
@@ -133,7 +135,7 @@ func ServeDocs() int {
 		logger, err = logging.NewDefault("docs", workspaceRoot)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error initializing logger: %v\n", err)
+		log.Errorf("Error initializing logger: %v", err)
 		return 1
 	}
 	defer logger.Sync()
@@ -153,7 +155,7 @@ func ServeDocs() int {
 	dockerClient, err := docsInternal.NewClient(logger)
 	if err != nil {
 		logger.Error("Failed to initialize Docker client", zap.Error(err))
-		fmt.Printf("❌ Failed to initialize: %v\n", err)
+		log.Infof("❌ Failed to initialize: %v", err)
 		return 1
 	}
 	defer dockerClient.Close()
@@ -168,7 +170,7 @@ func ServeDocs() int {
 	running, info, err := dockerClient.IsRunning()
 	if err != nil {
 		logger.Error("Failed to check container status", zap.Error(err))
-		fmt.Printf("❌ Failed to check container status: %v\n", err)
+		log.Infof("❌ Failed to check container status: %v", err)
 		return 1
 	}
 
@@ -178,11 +180,12 @@ func ServeDocs() int {
 			logger.Error("MkDocs container already running on different port",
 				zap.Int("runningPort", info.Port),
 				zap.Int("requestedPort", port))
-			fmt.Printf("❌ MkDocs is already running on port %d\n", info.Port)
-			fmt.Printf("📚 Running at: %s\n", info.URL)
-			fmt.Printf("\n💡 To use a different port:\n")
-			fmt.Printf("  1. Stop the running container: go run . docs serve --stop\n")
-			fmt.Printf("  2. Start with new port: go run . docs serve --port %d\n", port)
+			log.Infof("❌ MkDocs is already running on port %d", info.Port)
+			log.Infof("📚 Running at: %s", info.URL)
+			log.Info("")
+			log.Info("💡 To use a different port:")
+			log.Info("  1. Stop the running container: go run . docs serve --stop")
+			log.Infof("  2. Start with new port: go run . docs serve --port %d", port)
 			return 1
 		}
 
@@ -190,18 +193,19 @@ func ServeDocs() int {
 		logger.Info("MkDocs container already running",
 			zap.String("url", info.URL),
 			zap.Int("port", info.Port))
-		fmt.Printf("ℹ️  MkDocs is already running\n")
-		fmt.Printf("📚 Documentation: %s\n", info.URL)
+		log.Info("ℹ️  MkDocs is already running")
+		log.Infof("📚 Documentation: %s", info.URL)
 
 		if !noBrowser {
 			opened, err := dockerClient.OpenBrowserWithFallback(info.URL)
 			if err != nil {
 				logger.Warn("Failed to open browser", zap.Error(err))
-				fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)
-				fmt.Printf("📖 Please open manually: %s\n", info.URL)
+				log.Info("")
+				log.Infof("⚠️  Failed to open browser: %v", err)
+				log.Infof("📖 Please open manually: %s", info.URL)
 			} else if !opened {
 				logger.Debug("Browser opening skipped (DinD mode or no display)")
-				fmt.Printf("📖 Open in your browser: %s\n", info.URL)
+				log.Infof("📖 Open in your browser: %s", info.URL)
 			}
 		}
 		return 0
@@ -209,7 +213,7 @@ func ServeDocs() int {
 
 	// Start container
 	logger.Info("Starting MkDocs documentation server", zap.Int("port", port))
-	fmt.Printf("🚀 Starting MkDocs documentation server\n")
+	log.Info("🚀 Starting MkDocs documentation server")
 
 	// Write debug info about container configuration
 	if debug {
@@ -225,11 +229,11 @@ func ServeDocs() int {
 	if err != nil {
 		if info != nil {
 			logger.Warn("Container started with warnings", zap.Error(err), zap.String("url", info.URL))
-			fmt.Printf("⚠️  %v\n", err)
-			fmt.Printf("📖 Try accessing manually: %s\n", info.URL)
+			log.Infof("⚠️  %v", err)
+			log.Infof("📖 Try accessing manually: %s", info.URL)
 		} else {
 			logger.Error("Failed to start container", zap.Error(err))
-			fmt.Printf("❌ Failed to start container: %v\n", err)
+			log.Infof("❌ Failed to start container: %v", err)
 			return 1
 		}
 	}
@@ -239,19 +243,21 @@ func ServeDocs() int {
 		zap.String("url", info.URL),
 		zap.Int("port", info.Port),
 		zap.String("containerName", info.Name))
-	fmt.Printf("\n✅ MkDocs documentation server is running\n")
-	fmt.Printf("📚 Documentation: %s\n", info.URL)
+	log.Info("")
+	log.Info("✅ MkDocs documentation server is running")
+	log.Infof("📚 Documentation: %s", info.URL)
 
 	// Open browser (skipped in DinD mode)
 	if !noBrowser {
 		opened, err := dockerClient.OpenBrowserWithFallback(info.URL)
 		if err != nil {
 			logger.Warn("Failed to open browser", zap.Error(err))
-			fmt.Printf("\n⚠️  Failed to open browser: %v\n", err)
-			fmt.Printf("📖 Please open manually: %s\n", info.URL)
+			log.Info("")
+			log.Infof("⚠️  Failed to open browser: %v", err)
+			log.Infof("📖 Please open manually: %s", info.URL)
 		} else if !opened {
 			logger.Debug("Browser opening skipped (DinD mode or no display)")
-			fmt.Printf("📖 Open in your browser: %s\n", info.URL)
+			log.Infof("📖 Open in your browser: %s", info.URL)
 		} else {
 			logger.Debug("Browser opened successfully")
 		}
@@ -259,22 +265,25 @@ func ServeDocs() int {
 
 	// Show tips
 	if !debug {
-		fmt.Println("\n💡 Tips:")
-		fmt.Println("  • Container will keep running until stopped")
-		fmt.Printf("  • Stop with: go run . docs serve --stop\n")
-		fmt.Printf("  • Or: docker stop %s\n", info.Name)
-		fmt.Printf("  • View logs: docker logs %s\n", info.Name)
+		log.Info("")
+		log.Info("💡 Tips:")
+		log.Info("  • Container will keep running until stopped")
+		log.Info("  • Stop with: go run . docs serve --stop")
+		log.Infof("  • Or: docker stop %s", info.Name)
+		log.Infof("  • View logs: docker logs %s", info.Name)
 	}
 
 	// Stream logs if debug mode
 	if debug {
 		logger.Info("Starting log streaming (debug mode)")
-		fmt.Println("\n🔍 Debug mode: Streaming MkDocs logs (Press Ctrl+C to exit)")
-		fmt.Println("─────────────────────────────────────────────────────────────")
+		log.Info("")
+		log.Info("🔍 Debug mode: Streaming MkDocs logs (Press Ctrl+C to exit)")
+		log.Info("─────────────────────────────────────────────────────────────")
 		err = dockerClient.StreamLogs()
 		if err != nil {
 			logger.Error("Error streaming logs", zap.Error(err))
-			fmt.Printf("\n❌ Error streaming logs: %v\n", err)
+			log.Info("")
+			log.Infof("❌ Error streaming logs: %v", err)
 			return 1
 		}
 	}
@@ -290,7 +299,7 @@ func handleDocsStop(workspaceRoot string, logger *logging.Logger) int {
 	dockerClient, err := docsInternal.NewClient(logger)
 	if err != nil {
 		logger.Error("Failed to initialize Docker client", zap.Error(err))
-		fmt.Printf("❌ Failed to initialize: %v\n", err)
+		log.Infof("❌ Failed to initialize: %v", err)
 		return 1
 	}
 	defer dockerClient.Close()
@@ -300,15 +309,15 @@ func handleDocsStop(workspaceRoot string, logger *logging.Logger) int {
 		// Check if error is "container not found" - treat as success (idempotent operation)
 		if strings.Contains(err.Error(), "no container found") {
 			logger.Info("Container already stopped (not found)")
-			fmt.Printf("✅ MkDocs documentation server stopped\n")
+			log.Info("✅ MkDocs documentation server stopped")
 			return 0
 		}
 		logger.Error("Failed to stop container", zap.Error(err))
-		fmt.Printf("❌ Failed to stop container: %v\n", err)
+		log.Infof("❌ Failed to stop container: %v", err)
 		return 1
 	}
 
 	logger.Info("MkDocs server stopped successfully")
-	fmt.Printf("✅ MkDocs documentation server stopped\n")
+	log.Info("✅ MkDocs documentation server stopped")
 	return 0
 }

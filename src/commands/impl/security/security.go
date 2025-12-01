@@ -24,11 +24,13 @@
 package security
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(Security)
@@ -52,46 +54,47 @@ func Security() int {
 		// Handled by separate registrations in respective sub-command files
 		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n\n", args[0])
+		log.Errorf("unknown subcommand: %s", args[0])
+		log.Info("")
 		printSecurityUsage()
 		return 1
 	}
 }
 
 func printSecurityUsage() {
-	fmt.Println("Security scanning and evidence collection for audit compliance")
-	fmt.Println()
-	fmt.Println("Usage: security <scanner> [modules...] [flags]")
-	fmt.Println()
-	fmt.Println("Available scanners:")
-	fmt.Println("  sbom                      Generate Software Bill of Materials (Trivy)")
-	fmt.Println("  vuln                      Vulnerability scanning (Trivy)")
-	fmt.Println("  secrets                   Secrets detection (Trivy)")
-	fmt.Println("  compliance                CIS compliance checking (Trivy)")
-	fmt.Println("  iac                       Infrastructure as Code scanning (Trivy)")
-	fmt.Println("  sast                      Static Application Security Testing (Semgrep)")
-	fmt.Println("  zap                       Dynamic Application Security Testing (OWASP ZAP)")
-	fmt.Println()
-	fmt.Println("Module arguments:")
-	fmt.Println("  [modules...]              One or more module monikers to scan")
-	fmt.Println("                            If no modules specified, scans all modules")
-	fmt.Println()
-	fmt.Println("Common flags:")
-	fmt.Println("  --debug, -d               Enable debug logging")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  security sbom src-core                    # Single module")
-	fmt.Println("  security sbom src-core src-cli            # Multiple modules")
-	fmt.Println("  security sbom                             # All modules")
-	fmt.Println("  security vuln src-core --severity HIGH    # With scanner flags")
-	fmt.Println("  security sbom src-core --debug            # With debug logging")
-	fmt.Println()
-	fmt.Println("Evidence output:")
-	fmt.Println("  out/security/<module>/<scanner>/<timestamp>.json")
-	fmt.Println()
-	fmt.Println("External tools:")
-	fmt.Println("  This command uses third-party security tools. See the NOTICE file")
-	fmt.Println("  in the repository root for full attribution and licensing information.")
-	fmt.Println()
-	fmt.Println("Use 'security <scanner> --help' for scanner-specific options.")
+	log.Info("Security scanning and evidence collection for audit compliance")
+	log.Info("")
+	log.Info("Usage: security <scanner> [modules...] [flags]")
+	log.Info("")
+	log.Info("Available scanners:")
+	log.Info("  sbom                      Generate Software Bill of Materials (Trivy)")
+	log.Info("  vuln                      Vulnerability scanning (Trivy)")
+	log.Info("  secrets                   Secrets detection (Trivy)")
+	log.Info("  compliance                CIS compliance checking (Trivy)")
+	log.Info("  iac                       Infrastructure as Code scanning (Trivy)")
+	log.Info("  sast                      Static Application Security Testing (Semgrep)")
+	log.Info("  zap                       Dynamic Application Security Testing (OWASP ZAP)")
+	log.Info("")
+	log.Info("Module arguments:")
+	log.Info("  [modules...]              One or more module monikers to scan")
+	log.Info("                            If no modules specified, scans all modules")
+	log.Info("")
+	log.Info("Common flags:")
+	log.Info("  --debug, -d               Enable debug logging")
+	log.Info("")
+	log.Info("Examples:")
+	log.Info("  security sbom src-core                    # Single module")
+	log.Info("  security sbom src-core src-cli            # Multiple modules")
+	log.Info("  security sbom                             # All modules")
+	log.Info("  security vuln src-core --severity HIGH    # With scanner flags")
+	log.Info("  security sbom src-core --debug            # With debug logging")
+	log.Info("")
+	log.Info("Evidence output:")
+	log.Info("  out/security/<module>/<scanner>/<timestamp>.json")
+	log.Info("")
+	log.Info("External tools:")
+	log.Info("  This command uses third-party security tools. See the NOTICE file")
+	log.Info("  in the repository root for full attribution and licensing information.")
+	log.Info("")
+	log.Info("Use 'security <scanner> --help' for scanner-specific options.")
 }

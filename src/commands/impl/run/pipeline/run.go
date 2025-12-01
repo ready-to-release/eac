@@ -20,15 +20,17 @@
 package pipeline
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
 	pipelinerunner "github.com/ready-to-release/eac/src/commands/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/src/commands/registry"
+	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(RunPipeline)
@@ -57,7 +59,7 @@ func RunPipeline() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -79,7 +81,7 @@ func RunPipeline() int {
 	}
 
 	if pipelineErr != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", pipelineErr)
+		log.Errorf("Error: %v", pipelineErr)
 		return 1
 	}
 

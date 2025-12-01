@@ -4,6 +4,7 @@ go 1.24.4
 
 require (
 	github.com/ready-to-release/eac/src/commands v0.0.0
+	github.com/ready-to-release/eac/src/core v0.0.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -58,7 +59,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/ready-to-release/eac/src/ai v0.0.0 // indirect
-	github.com/ready-to-release/eac/src/core v0.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect

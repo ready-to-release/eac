@@ -21,7 +21,6 @@
 package release
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -31,7 +30,11 @@ import (
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/definitions"
 	"github.com/ready-to-release/eac/src/core/git"
+	"github.com/ready-to-release/eac/src/core/logging"
 )
+
+// log is the package-level logger for release commands
+var log = logging.C()
 
 func init() {
 	registry.Register(ReleaseChangelog)
@@ -84,28 +87,28 @@ func ReleaseChangelog() int {
 	}
 
 	if module == "" {
-		fmt.Fprintln(os.Stderr, "Error: module moniker required")
-		fmt.Fprintln(os.Stderr, "Usage: release changelog <module> [--write] [--from <ref>] [--version <ver>]")
+		log.Error("module moniker required")
+		log.Info("Usage: release changelog <module> [--write] [--from <ref>] [--version <ver>]")
 		return 1
 	}
 
 	// Load module contracts
 	moduleRegistry, err := modules.LoadFromWorkspace("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load modules: %v\n", err)
+		log.Errorf("failed to load modules: %v", err)
 		return 1
 	}
 
 	moduleContract, exists := moduleRegistry.Get(module)
 	if !exists {
-		fmt.Fprintf(os.Stderr, "Error: module '%s' not found\n", module)
+		log.Errorf("module '%s' not found", module)
 		return 1
 	}
 
 	// Open git repository
 	repo, err := git.Open("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to open git repository: %v\n", err)
+		log.Errorf("failed to open git repository: %v", err)
 		return 1
 	}
 
@@ -117,7 +120,7 @@ func ReleaseChangelog() int {
 	if _, err := os.Stat(changelogPath); err == nil {
 		existingChangelog, err = changelog.Parse(changelogPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to parse existing changelog: %v\n", err)
+			log.Warnf("failed to parse existing changelog: %v", err)
 		}
 	}
 
@@ -140,7 +143,7 @@ func ReleaseChangelog() int {
 	if fromRef == "" {
 		latestTag, err := repo.LatestTag(tagPattern)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to get latest tag: %v\n", err)
+			log.Warnf("failed to get latest tag: %v", err)
 		}
 		fromRef = latestTag
 	}
@@ -148,12 +151,12 @@ func ReleaseChangelog() int {
 	// Get commits since last release
 	commits, err := repo.CommitsBetween(fromRef, toRef)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get commits: %v\n", err)
+		log.Errorf("failed to get commits: %v", err)
 		return 1
 	}
 
 	if len(commits) == 0 {
-		fmt.Println("No commits found since last release.")
+		log.Info("No commits found since last release.")
 		return 0
 	}
 
@@ -177,7 +180,7 @@ func ReleaseChangelog() int {
 	}
 
 	if len(filteredCommits) == 0 {
-		fmt.Printf("No commits affecting module '%s' found since last release.\n", module)
+		log.Infof("No commits affecting module '%s' found since last release.", module)
 		return 0
 	}
 
@@ -209,7 +212,7 @@ func ReleaseChangelog() int {
 	workspaceRoot, _ := registry.GetWorkspaceRoot()
 	defs, err := definitions.Load(workspaceRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to load definitions: %v\n", err)
+		log.Warnf("failed to load definitions: %v", err)
 		defs = definitions.Default()
 	}
 
@@ -218,7 +221,7 @@ func ReleaseChangelog() int {
 	if defs.IsPatchOnly() {
 		maxBump = changelog.BumpPatch
 		if forceBreaking {
-			fmt.Fprintln(os.Stderr, "Warning: --breaking ignored due to patch-only constraint in .r2r/definitions.yml")
+			log.Warn("--breaking ignored due to patch-only constraint in .r2r/definitions.yml")
 			forceBreaking = false
 		}
 	}
@@ -241,7 +244,7 @@ func ReleaseChangelog() int {
 			hasFileChanges,
 		)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to calculate version: %v\n", err)
+			log.Errorf("failed to calculate version: %v", err)
 			return 1
 		}
 	}
@@ -251,7 +254,7 @@ func ReleaseChangelog() int {
 	if overrideDate != "" {
 		releaseDate, err = time.Parse("2006-01-02", overrideDate)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: invalid date format '%s' (use YYYY-MM-DD)\n", overrideDate)
+			log.Errorf("invalid date format '%s' (use YYYY-MM-DD)", overrideDate)
 			return 1
 		}
 	}
@@ -260,34 +263,34 @@ func ReleaseChangelog() int {
 	newVersionEntry := changelog.CommitsToVersion(filteredCommits, newVersion, releaseDate)
 
 	// Display preview
-	fmt.Printf("Module: %s\n", module)
-	fmt.Printf("Current version: %s\n", currentVersion)
-	fmt.Printf("New version: %s\n", newVersion)
+	log.Infof("Module: %s", module)
+	log.Infof("Current version: %s", currentVersion)
+	log.Infof("New version: %s", newVersion)
 	if defs.IsPatchOnly() && versionType == changelog.Semver {
-		fmt.Printf("Version constraint: patch-only (from .r2r/definitions.yml)\n")
+		log.Info("Version constraint: patch-only (from .r2r/definitions.yml)")
 	}
-	fmt.Printf("Commits analyzed: %d\n", len(commits))
-	fmt.Printf("Module commits: %d\n", len(filteredCommits))
-	fmt.Println()
+	log.Infof("Commits analyzed: %d", len(commits))
+	log.Infof("Module commits: %d", len(filteredCommits))
+	log.Info("")
 
 	if !newVersionEntry.HasEntries() {
-		fmt.Println("No conventional commits found to generate changelog entries.")
-		fmt.Println("Commits must follow format: type(scope): description")
+		log.Info("No conventional commits found to generate changelog entries.")
+		log.Info("Commits must follow format: type(scope): description")
 		return 0
 	}
 
 	// Preview the changelog entry
-	fmt.Println("--- Changelog Preview ---")
+	log.Info("--- Changelog Preview ---")
 	previewChangelog := &changelog.Changelog{
 		Module:      module,
 		VersionType: versionType,
 		Versions:    []changelog.Version{newVersionEntry},
 	}
-	fmt.Println(previewChangelog.String())
-	fmt.Println("-------------------------")
+	log.Info(previewChangelog.String())
+	log.Info("-------------------------")
 
 	if !write {
-		fmt.Printf("\nTo write changes, run: release changelog %s --write\n", module)
+		log.Infof("\nTo write changes, run: release changelog %s --write", module)
 		return 0
 	}
 
@@ -305,11 +308,11 @@ func ReleaseChangelog() int {
 
 	// Write changelog
 	if err := existingChangelog.Write(changelogPath); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to write changelog: %v\n", err)
+		log.Errorf("failed to write changelog: %v", err)
 		return 1
 	}
 
-	fmt.Printf("\n✅ Updated %s with version %s\n", changelogPath, newVersion)
+	log.Infof("\n✅ Updated %s with version %s", changelogPath, newVersion)
 	return 0
 }
 

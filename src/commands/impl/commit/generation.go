@@ -100,7 +100,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
 	if err != nil {
 		// If anti-corruption rules fail, fall back to non-validated generation
-		fmt.Fprintf(os.Stderr, "⚠️  Could not load anti-corruption rules, proceeding without validation: %v\n", err)
+		log.Warnf("Could not load anti-corruption rules, proceeding without validation: %v", err)
 		return generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
 	}
 
@@ -118,7 +118,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 		contractPath := filepath.Join(loader.GetContractPath(), "contract.yml")
 		commitContract, err := commitmessage.LoadContract(contractPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  Could not load commit contract, proceeding without validation: %v\n", err)
+			log.Warnf("Could not load commit contract, proceeding without validation: %v", err)
 			return generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
 		}
 		validator = commitmessage.NewCommitMessageValidator(
@@ -137,7 +137,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	if debugEnabled {
 		debugOutputDir = filepath.Join(repository.LogsPath(workspaceRoot), "commit")
 		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  Failed to create debug directory: %v\n", err)
+			log.Warnf("Failed to create debug directory: %v", err)
 		}
 	}
 
@@ -153,11 +153,11 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 
 	// Report validation errors if any
 	if len(result.ValidationErrors) > 0 {
-		fmt.Fprintf(os.Stderr, "\n⚠️  Generated commit message has validation issues:\n")
+		log.Warn("\nGenerated commit message has validation issues:")
 		for _, verr := range result.ValidationErrors {
-			fmt.Fprintf(os.Stderr, "  - %s\n", verr.Message)
+			log.Warnf("  - %s", verr.Message)
 		}
-		fmt.Fprintf(os.Stderr, "\n")
+		log.Warn("")
 	}
 
 	return &GenerationResult{

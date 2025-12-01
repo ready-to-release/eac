@@ -34,6 +34,8 @@ import (
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
+var log = logging.C()
+
 func init() {
 	registry.Register(UpdateDesign)
 }
@@ -45,7 +47,7 @@ func UpdateDesign() int {
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -57,7 +59,7 @@ func UpdateDesign() int {
 		logger, err = logging.NewDefault("design", config.TemplateRoot)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to initialize logger: %v\n", err)
+		log.Warnf("Warning: failed to initialize logger: %v", err)
 		// Continue without logger - output will still work
 	}
 

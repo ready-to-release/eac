@@ -24,20 +24,20 @@ func ShowTests() int {
 	// Get repository root
 	cwd, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get current directory: %v\n", err)
+		log.Errorf("failed to get current directory: %v", err)
 		return 1
 	}
 
 	repoRoot, err := findRepoRoot(cwd)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
 	// Discover all tests
 	allTests, err := testing.DiscoverAllTests(repoRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to discover tests: %v\n", err)
+		log.Errorf("failed to discover tests: %v", err)
 		return 1
 	}
 
@@ -72,8 +72,8 @@ func ShowTests() int {
 	entries := convertToTestEntries(allTests, fileModuleMap, moduleRegistry, repoRoot)
 
 	// Display header
-	fmt.Printf("# All Tests\n\n")
-	fmt.Printf("**Total Tests**: %d  \n\n", len(entries))
+	log.Info("# All Tests\n")
+	log.Infof("**Total Tests**: %d  \n", len(entries))
 
 	// Build markdown table
 	tb := render.NewTableBuilder().
@@ -95,22 +95,22 @@ func ShowTests() int {
 		)
 	}
 
-	fmt.Println(tb.Build())
-	fmt.Printf("\n")
+	log.Info(tb.Build())
+	log.Info("")
 
 	// Display summary
-	fmt.Printf("## Summary\n\n")
+	log.Info("## Summary\n")
 
 	// Count by type
 	typeCounts := make(map[string]int)
 	for _, entry := range entries {
 		typeCounts[entry.Type]++
 	}
-	fmt.Printf("### By Type\n\n")
+	log.Info("### By Type\n")
 	for testType, count := range typeCounts {
-		fmt.Printf("- **%s**: %d tests\n", testType, count)
+		log.Infof("- **%s**: %d tests", testType, count)
 	}
-	fmt.Printf("\n")
+	log.Info("")
 
 	// Count by level
 	levelCounts := make(map[string]int)
@@ -119,13 +119,13 @@ func ShowTests() int {
 			levelCounts[level]++
 		}
 	}
-	fmt.Printf("### By Level\n\n")
+	log.Info("### By Level\n")
 	for _, level := range []string{"@L0", "@L1", "@L2", "@L3", "@L4"} {
 		if count, ok := levelCounts[level]; ok {
-			fmt.Printf("- **%s**: %d tests\n", level, count)
+			log.Infof("- **%s**: %d tests", level, count)
 		}
 	}
-	fmt.Printf("\n")
+	log.Info("")
 
 	// Count by module
 	moduleCounts := make(map[string]int)
@@ -134,11 +134,11 @@ func ShowTests() int {
 			moduleCounts[entry.Module]++
 		}
 	}
-	fmt.Printf("### By Module\n\n")
+	log.Info("### By Module\n")
 	for module, count := range moduleCounts {
-		fmt.Printf("- **%s**: %d tests\n", module, count)
+		log.Infof("- **%s**: %d tests", module, count)
 	}
-	fmt.Printf("\n")
+	log.Info("")
 
 	return 0
 }

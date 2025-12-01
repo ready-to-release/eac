@@ -8,7 +8,6 @@
 package get
 
 import (
-	"fmt"
 	"os"
 
 	get "github.com/ready-to-release/eac/src/commands/impl/get/internal"
@@ -39,11 +38,11 @@ func GetSuite() int {
 	}
 
 	if suiteIdx == -1 || suiteIdx >= len(args) {
-		fmt.Fprintf(os.Stderr, "Error: suite moniker required\n\n")
-		fmt.Fprintf(os.Stderr, "Usage: get suite <suite-moniker> [--as-yaml|--as-json|--as-toml]\n\n")
-		fmt.Fprintf(os.Stderr, "Available suites:\n")
+		log.Error("Error: suite moniker required\n")
+		log.Info("Usage: get suite <suite-moniker> [--as-yaml|--as-json|--as-toml]\n")
+		log.Info("Available suites:")
 		for _, moniker := range testing.ListSuites() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", moniker)
+			log.Infof("  - %s", moniker)
 		}
 		return 1
 	}
@@ -59,24 +58,24 @@ func GetSuite() int {
 	}
 
 	if suiteMoniker == "" {
-		fmt.Fprintf(os.Stderr, "Error: suite moniker required\n")
+		log.Error("Error: suite moniker required")
 		return 1
 	}
 
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot(".")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: not in a git repository: %v\n", err)
+		log.Errorf("Error: not in a git repository: %v", err)
 		return 1
 	}
 
 	// Get suite
 	suite, err := testing.GetSuite(suiteMoniker)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
-		fmt.Fprintf(os.Stderr, "Available suites:\n")
+		log.Errorf("Error: %v\n", err)
+		log.Info("Available suites:")
 		for _, moniker := range testing.ListSuites() {
-			fmt.Fprintf(os.Stderr, "  - %s\n", moniker)
+			log.Infof("  - %s", moniker)
 		}
 		return 1
 	}

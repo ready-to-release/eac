@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"io"
+	"time"
 )
 
 // WorkItem represents a single unit of work to be processed
@@ -26,6 +27,10 @@ type WorkResult struct {
 	Warnings []string
 	// Errors are any error messages collected during processing
 	Errors []string
+	// Duration is the time taken to process this work item
+	Duration time.Duration
+	// Type is the module/work type (e.g., "go-cli", "mkdocs", "go")
+	Type string
 }
 
 // WorkerFunc is a function that processes a single work item

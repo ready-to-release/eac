@@ -23,7 +23,6 @@
 package templates
 
 import (
-	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -43,8 +42,8 @@ func TemplatesApply() int {
 	if len(os.Args) < 4 {
 		// No template name provided - this shouldn't happen since main.go
 		// will show subcommand help, but handle it gracefully
-		fmt.Fprintf(os.Stderr, "Error: template name required\n")
-		fmt.Fprintf(os.Stderr, "Usage: go run . templates apply <template-name> [flags...]\n")
+		log.Errorf("Error: template name required")
+		log.Info("Usage: go run . templates apply <template-name> [flags...]")
 		showAvailableTemplates("apply")
 		return 1
 	}
@@ -62,7 +61,7 @@ func TemplatesApply() int {
 	}
 
 	// Template doesn't exist - show helpful error
-	fmt.Fprintf(os.Stderr, "Error: unknown template: %s\n", templateName)
+	log.Errorf("Error: unknown template: %s", templateName)
 	showAvailableTemplates("apply")
 	return 1
 }
@@ -72,11 +71,11 @@ func showAvailableTemplates(category string) {
 	templates := getAvailableTemplates(category)
 
 	if len(templates) == 0 {
-		fmt.Fprintf(os.Stderr, "No templates available for category: %s\n", category)
+		log.Errorf("No templates available for category: %s", category)
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "Available templates: %s\n", strings.Join(templates, ", "))
+	log.Info("Available templates: " + strings.Join(templates, ", "))
 }
 
 // getAvailableTemplates scans the registry for templates in a given category

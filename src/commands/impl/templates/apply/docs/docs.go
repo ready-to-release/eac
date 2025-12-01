@@ -40,6 +40,8 @@ const (
 	defaultDocsDest       = ".docs/reference"
 )
 
+var log = logging.C()
+
 func init() {
 	registry.Register(TemplatesApplyDocs)
 }
@@ -60,7 +62,7 @@ func TemplatesApplyDocs() int {
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 	defer config.Logger.Sync()
@@ -75,7 +77,7 @@ func TemplatesApplyDocs() int {
 	templateDir, cleanup, err := resolveTemplateDirectory(config)
 	if err != nil {
 		config.Logger.Error("Failed to resolve template directory", zap.Error(err))
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 	defer cleanup()
@@ -84,20 +86,20 @@ func TemplatesApplyDocs() int {
 	values, err := loadValues(config)
 	if err != nil {
 		config.Logger.Error("Failed to load values", zap.Error(err))
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
 	// Apply templates
 	if err := applyTemplates(config, templateDir, values); err != nil {
 		config.Logger.Error("Failed to apply templates", zap.Error(err))
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("%v", err)
 		return 1
 	}
 
 	config.Logger.Info("Documentation templates applied successfully",
 		zap.String("destination", config.Destination))
-	fmt.Printf("✓ Documentation templates applied successfully to %s\n", config.Destination)
+	log.Infof("✓ Documentation templates applied successfully to %s", config.Destination)
 
 	return 0
 }
@@ -120,13 +122,13 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 
 		config.Logger.Debug("Local templates validated",
 			zap.String("dir", templateDir))
-		fmt.Printf("Using local templates from %s\n", templateDir)
+		log.Infof("Using local templates from %s", templateDir)
 		cleanup = func() {}
 	} else {
 		// Clone from Git repository
 		config.Logger.Info("Cloning templates from Git",
 			zap.String("url", defaultDocsRepoURL))
-		fmt.Printf("Cloning templates from %s...\n", defaultDocsRepoURL)
+		log.Infof("Cloning templates from %s...", defaultDocsRepoURL)
 
 		cloner := internal.NewGitCloner(defaultDocsRepoURL)
 		clonedDir, err := cloner.CloneToTemp()
@@ -153,7 +155,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 		config.Logger.Debug("Templates cloned successfully",
 			zap.String("clonedDir", clonedDir),
 			zap.String("templateDir", templateDir))
-		fmt.Printf("✓ Templates cloned successfully\n")
+		log.Info("✓ Templates cloned successfully")
 
 		// Save debug info if enabled
 		if config.Debug {
@@ -183,7 +185,7 @@ func loadValues(config *Config) (internal.TemplateValues, error) {
 
 	config.Logger.Debug("Values loaded successfully",
 		zap.Int("count", len(values)))
-	fmt.Printf("Loaded %d replacement values\n", len(values))
+	log.Infof("Loaded %d replacement values", len(values))
 
 	// Save debug info if enabled
 	if config.Debug {
@@ -205,7 +207,7 @@ func applyTemplates(config *Config, templateDir string, values internal.Template
 		zap.String("source", templateDir),
 		zap.String("destination", config.Destination),
 		zap.Int("valueCount", len(values)))
-	fmt.Printf("Applying templates to %s...\n", config.Destination)
+	log.Infof("Applying templates to %s...", config.Destination)
 
 	renderer := internal.NewRenderer(templateDir, config.Destination, values)
 	if err := renderer.RenderTemplates(); err != nil {

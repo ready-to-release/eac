@@ -93,8 +93,8 @@ func ReleaseThis() int {
 	}
 
 	if module == "" {
-		fmt.Fprintln(os.Stderr, "Error: module moniker required")
-		fmt.Fprintln(os.Stderr, "Usage: release this <module> [--dry-run] [--json]")
+		log.Error("module moniker required")
+		log.Info("Usage: release this <module> [--dry-run] [--json]")
 		return 1
 	}
 
@@ -103,36 +103,36 @@ func ReleaseThis() int {
 	if asJSON {
 		jsonBytes, err := json.MarshalIndent(result, "", "  ")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+			log.Errorf("failed to marshal JSON: %v", err)
 			return 1
 		}
-		fmt.Println(string(jsonBytes))
+		log.Info(string(jsonBytes))
 	} else {
 		if result.Error != "" {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", result.Error)
+			log.Errorf("%s", result.Error)
 			return 1
 		}
 
 		if dryRun {
-			fmt.Println("=== DRY RUN - No changes written ===")
-			fmt.Println()
+			log.Info("=== DRY RUN - No changes written ===")
+			log.Info("")
 		}
 
-		fmt.Printf("Module: %s\n", result.Module)
-		fmt.Printf("Previous version: %s\n", result.PreviousVersion)
-		fmt.Printf("New version: %s\n", result.NewVersion)
-		fmt.Printf("Tag: %s\n", result.Tag)
-		fmt.Printf("Entries added: %d\n", result.EntriesAdded)
+		log.Infof("Module: %s", result.Module)
+		log.Infof("Previous version: %s", result.PreviousVersion)
+		log.Infof("New version: %s", result.NewVersion)
+		log.Infof("Tag: %s", result.Tag)
+		log.Infof("Entries added: %d", result.EntriesAdded)
 
 		if !dryRun {
-			fmt.Println()
-			fmt.Printf("Updated: %s\n", result.ChangelogPath)
-			fmt.Println()
-			fmt.Println("Next steps:")
-			fmt.Printf("  1. git add %s\n", result.ChangelogPath)
-			fmt.Printf("  2. git commit -m \"release(%s): %s\"\n", result.Module, result.NewVersion)
-			fmt.Println("  3. Create PR and merge to main")
-			fmt.Println("  4. release-auto workflow will create tag and trigger release")
+			log.Info("")
+			log.Infof("Updated: %s", result.ChangelogPath)
+			log.Info("")
+			log.Info("Next steps:")
+			log.Infof("  1. git add %s", result.ChangelogPath)
+			log.Infof("  2. git commit -m \"release(%s): %s\"", result.Module, result.NewVersion)
+			log.Info("  3. Create PR and merge to main")
+			log.Info("  4. release-auto workflow will create tag and trigger release")
 		}
 	}
 

@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/ready-to-release/eac/src/commands/internal/output"
 )
 
 // displayManager handles all console output in a single goroutine
@@ -105,19 +107,27 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 	delete(dm.running, result.Moniker)
 	dm.completed++
 
-	// Format completion line
-	// Note: No newline here - logger.Print adds \n, we add LineEndingPrefix for Windows compatibility
-	var statusLine string
+	// Format completion line using compact format
+	// Format: "✅ module-name                    type     -      2.3s"
+	var icon string
+	var suffix string
+
 	if result.ExitCode != 0 {
-		statusLine = fmt.Sprintf("[%s] %s (See %s for details) ........ Failed%s",
-			dm.actionVerb, result.Moniker, result.LogPath, LineEndingPrefix)
+		icon = output.IconFail
 	} else if len(result.Warnings) > 0 {
-		statusLine = fmt.Sprintf("[%s] %s (See %s for details) ........ Done (with %d warnings)%s",
-			dm.actionVerb, result.Moniker, result.LogPath, len(result.Warnings), LineEndingPrefix)
+		icon = output.IconWarn
+		suffix = fmt.Sprintf("(%d warnings)", len(result.Warnings))
 	} else {
-		statusLine = fmt.Sprintf("[%s] %s (See %s for details) ........ Done%s",
-			dm.actionVerb, result.Moniker, result.LogPath, LineEndingPrefix)
+		icon = output.IconPass
 	}
+
+	// Use Type from result, fallback to "-" if not set
+	typeStr := result.Type
+	if typeStr == "" {
+		typeStr = "-"
+	}
+
+	statusLine := output.ResultLineWithSuffix(icon, result.Moniker, typeStr, "-", result.Duration, suffix) + LineEndingPrefix
 
 	// Store for later batch output instead of printing immediately
 	dm.completedLines = append(dm.completedLines, statusLine)
