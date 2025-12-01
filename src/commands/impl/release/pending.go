@@ -272,13 +272,18 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 
 	pending.CommitsModule = len(filteredCommits)
 
+	// HasChanges is based SOLELY on whether module files changed (file ownership)
+	// NOT on whether commits follow conventional commit format
+	pending.HasChanges = len(filteredCommits) > 0
+
 	if len(filteredCommits) == 0 {
 		pending.NextVersion = pending.CurrentVersion
 		pending.Tag = fmt.Sprintf("%s/%s", module, pending.CurrentVersion)
 		return pending, nil
 	}
 
-	// Collect entries and count changes
+	// Collect entries and count changes from conventional commits
+	// This is for changelog content and summary display, not for release decision
 	var entries []changelog.Entry
 	for _, c := range filteredCommits {
 		if c.IsConventionalCommit() {
@@ -303,13 +308,6 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 		}
 	}
 
-	// Determine if there are actual changes to release
-	totalChanges := pending.ChangeSummary.Added + pending.ChangeSummary.Changed +
-		pending.ChangeSummary.Deprecated + pending.ChangeSummary.Removed +
-		pending.ChangeSummary.Fixed + pending.ChangeSummary.Security
-
-	pending.HasChanges = totalChanges > 0
-
 	// Calculate next version
 	var existingVersions []string
 	for _, v := range existingChangelog.Versions {
@@ -321,6 +319,9 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 		maxBump = changelog.BumpPatch
 	}
 
+	// Pass hasFileChanges (len(filteredCommits) > 0) to ensure version bumps
+	// even when commits don't follow conventional format
+	hasFileChanges := len(filteredCommits) > 0
 	nextVersion, err := changelog.CalculateNextVersionConstrained(
 		pending.CurrentVersion,
 		versionType,
@@ -328,6 +329,7 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 		time.Now(),
 		existingVersions,
 		maxBump,
+		hasFileChanges,
 	)
 	if err != nil {
 		return pending, fmt.Errorf("failed to calculate version: %v", err)

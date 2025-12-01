@@ -224,6 +224,9 @@ func ReleaseChangelog() int {
 	}
 
 	// Calculate next version
+	// hasFileChanges ensures version bumps even without conventional commits
+	hasFileChanges := len(filteredCommits) > 0
+
 	var newVersion string
 	if overrideVersion != "" {
 		newVersion = overrideVersion
@@ -235,6 +238,7 @@ func ReleaseChangelog() int {
 			time.Now(),
 			existingVersions,
 			maxBump,
+			hasFileChanges,
 		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to calculate version: %v\n", err)

@@ -135,6 +135,8 @@ func CreateCommitMessage() int {
 	}
 	defer logger.Sync()
 
+	logger.Debug("Logger initialized")
+
 	// Retry loop for regenerating commit message if validation fails
 	// Limited to prevent infinite loops
 	const maxRetries = 5
@@ -245,8 +247,10 @@ func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error
 
 // verifyContractImplementation checks if the contract implementation is valid
 func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) error {
+	logger.Debug("verifyContractImplementation: start")
 	contractPath := filepath.Join(workspaceRoot, ".r2r", "eac", "ai", "commit-message", "contract.yml")
 	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
+	logger.Debug("verifyContractImplementation: contract verified")
 	if len(contractErrors) > 0 {
 		logger.Error("Contract implementation verification failed")
 		for _, err := range contractErrors {
@@ -259,6 +263,7 @@ func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) 
 
 // Phase 3: Build Execution Context
 func buildExecutionContext(workspaceRoot string, logger *logging.Logger) (*executionConfig, string, string, error) {
+	logger.Debug("buildExecutionContext: start")
 	// Validate inputs
 	if workspaceRoot == "" {
 		return nil, "", "", fmt.Errorf("workspaceRoot cannot be empty")
@@ -268,7 +273,9 @@ func buildExecutionContext(workspaceRoot string, logger *logging.Logger) (*execu
 	}
 
 	// Get staged files report
+	logger.Debug("buildExecutionContext: calling getStagedFilesReport")
 	report, stagedFilesTable, err := getStagedFilesReport(workspaceRoot)
+	logger.Debug("buildExecutionContext: getStagedFilesReport complete")
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -278,9 +285,11 @@ func buildExecutionContext(workspaceRoot string, logger *logging.Logger) (*execu
 	}
 
 	// Extract affected modules
+	logger.Debug("buildExecutionContext: extracting affected modules")
 	affectedModules := extractAffectedModules(report, logger)
 
 	// Get git diff and stats
+	logger.Debug("buildExecutionContext: calling getGitDiffAndStats")
 	gitDiff, diffStats, err := getGitDiffAndStats(workspaceRoot, logger)
 	if err != nil {
 		return nil, "", "", err
@@ -348,16 +357,21 @@ func extractAffectedModules(report *reports.FilesModulesReport, logger *logging.
 
 // getGitDiffAndStats retrieves git diff and diff stats for staged changes
 func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, string, error) {
+	logger.Debug("getGitDiffAndStats: start")
+	logger.Debug("getGitDiffAndStats: calling getGitRepo")
 	repo, err := getGitRepo(workspaceRoot)
 	if err != nil {
 		return "", "", err
 	}
+	logger.Debug("getGitDiffAndStats: getGitRepo complete")
 
 	// Get git diff
+	logger.Debug("getGitDiffAndStats: calling StagedDiff")
 	diffOutput, err := repo.StagedDiff()
 	if err != nil {
 		return "", "", fmt.Errorf("getting git diff: %w", err)
 	}
+	logger.Debug("getGitDiffAndStats: StagedDiff complete")
 
 	// Check diff size to prevent memory issues
 	if len(diffOutput) > commitmessage.MaxDiffSize {
@@ -366,11 +380,13 @@ func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, s
 	}
 
 	// Get git diff stats
+	logger.Debug("getGitDiffAndStats: calling StagedDiffStats")
 	diffStats, err := repo.StagedDiffStats()
 	if err != nil {
 		logger.Warn(fmt.Sprintf("Failed to get diff stats: %v", err))
 		diffStats = ""
 	}
+	logger.Debug("getGitDiffAndStats: StagedDiffStats complete")
 
 	return diffOutput, strings.TrimSpace(diffStats), nil
 }

@@ -438,8 +438,8 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         // This leverages the 7-phase system with auto-cleanup and validation
         const commandsPath = path.join(workspacePath, 'src', 'commands');
 
-        // Call create commit-message which handles everything: generation, cleanup, validation, auto-fix
-        const childProcess = child_process.spawn('go', ['run', '.', 'create', 'commit-message'], {
+        // Call commit message which handles everything: generation, cleanup, validation, auto-fix
+        const childProcess = child_process.spawn('go', ['run', '.', 'commit', 'message'], {
             cwd: commandsPath,
             stdio: ['pipe', 'pipe', 'pipe'],
             env: process.env
@@ -452,7 +452,7 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         childProcess.stdout.on('data', (data) => {
             const text = data.toString();
             fullOutput += text;
-            log('[create commit-message output] ' + text);
+            log('[commit message output] ' + text);
 
             // Extract progress indicators for real-time feedback
             const lines = text.split('\n');
@@ -483,7 +483,7 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         childProcess.stderr.on('data', (data) => {
             const stderrText = data.toString();
             errorOutput += stderrText;
-            log('[create commit-message error] ' + stderrText);
+            log('[commit message error] ' + stderrText);
         });
 
         childProcess.on('close', (code) => {
@@ -493,7 +493,7 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
             if (!commitMessage) {
                 // Only fail if we can't extract anything at all
                 const errorMsg = errorOutput || fullOutput || 'Command failed with exit code ' + code;
-                reject(new Error(`create commit-message failed: ${errorMsg}`));
+                reject(new Error(`commit message failed: ${errorMsg}`));
                 return;
             }
 
@@ -502,7 +502,7 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
             resolve(commitMessage);
         });
 
-        // No input needed for create commit-message (it reads git directly)
+        // No input needed for commit message (it reads git directly)
         childProcess.stdin.end();
     });
 }
