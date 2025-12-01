@@ -121,30 +121,6 @@ func TestInferSystemDepsFromModuleDeps_GoModule(t *testing.T) {
 	t.Skip("Requires module registry - use integration testing")
 }
 
-// DeriveOperationalVerification is now a no-op
-// These tests verify it doesn't modify tags
-
-func TestDeriveOperationalVerification_NoOp(t *testing.T) {
-	tags := []string{"@L1", "@deps:go"}
-
-	result := DeriveOperationalVerification(tags)
-
-	// Should return tags unchanged - no @ov added
-	assert.Equal(t, tags, result)
-	assert.NotContains(t, result, "@ov")
-}
-
-func TestDeriveOperationalVerification_PreservesExistingTags(t *testing.T) {
-	tags := []string{"@L3", "@iv"}
-
-	result := DeriveOperationalVerification(tags)
-
-	// Should preserve existing tags exactly
-	assert.Equal(t, tags, result)
-	assert.Contains(t, result, "@L3")
-	assert.Contains(t, result, "@iv")
-}
-
 func TestHasAnyLevelTag(t *testing.T) {
 	assert.True(t, hasAnyLevelTag([]string{"@L0", "@deps:go"}))
 	assert.True(t, hasAnyLevelTag([]string{"@L1"}))

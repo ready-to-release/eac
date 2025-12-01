@@ -1,4 +1,4 @@
-@L2
+@L1
 Feature: repository_feature-level-tags
 
   As a repository maintainer
@@ -15,7 +15,7 @@ Feature: repository_feature-level-tags
     - L-level tags (@L0-@L4) - must have exactly one
     - Verification tags (@ov/@iv/@pv/@piv/@ppv) - validation checks for multiple
 
-    @L2 @ov
+    @L1 @ov
     Scenario: No Feature has conflicting taxonomy tags with its Scenarios
       Given I discover all Gherkin feature files in the repository
       When I validate each feature file for conflicting L-level tags

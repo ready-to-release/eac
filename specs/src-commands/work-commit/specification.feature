@@ -8,12 +8,12 @@ Feature: src-commands_work-commit
   Rule: Command must be registered and accessible
 
     Scenario: Command is listed in available commands
-      When I run the command "list commands"
+      When I run the command "show help"
       Then the exit code is 0
       And I should see "work commit"
 
     Scenario: Command has proper description
-      When I run the command "describe commands work commit"
+      When I run the command "show help work commit"
       Then the exit code is 0
       And I should see "commit" or "AI" or "message"
 

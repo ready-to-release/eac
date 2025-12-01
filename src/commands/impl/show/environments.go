@@ -1,6 +1,5 @@
 // Command: show environments
 // Description: Show all environment contracts in a human-readable table
-// HasSideEffects: false
 package show
 
 import (
@@ -8,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/config"
 )
@@ -32,19 +31,16 @@ func ShowEnvironments() int {
 		fmt.Fprintf(os.Stderr, "Warning: environment contract validation failed: %v\n", err)
 	}
 
-	// Display contract metadata
+	// Display header
 	fmt.Printf("# Environment Contracts\n\n")
-	fmt.Printf("**Version**: %s  \n", envConfig.Metadata.Version)
-	fmt.Printf("**Description**: %s  \n", envConfig.Metadata.Description)
 	fmt.Printf("**Total Environments**: %d  \n\n", len(envConfig.Environments))
 
 	// Build markdown table
 	tb := render.NewTableBuilder().
-		WithHeaders("Moniker", "Name", "Level", "Type", "System Dependencies", "Env Tags")
+		WithHeaders("Moniker", "Name", "Level", "Type", "System Dependencies")
 
 	for _, env := range envConfig.Environments {
 		systemDepsStr := strings.Join(env.SystemDeps, ", ")
-		envTagsStr := strings.Join(env.EnvTags, ", ")
 
 		tb.AddRow(
 			env.Moniker,
@@ -52,7 +48,6 @@ func ShowEnvironments() int {
 			env.Level,
 			env.Type,
 			systemDepsStr,
-			envTagsStr,
 		)
 	}
 

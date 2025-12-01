@@ -1,13 +1,12 @@
 // Command: work
 // Description: Workspace management for parallel development using git worktrees
-// HasSideEffects: false
 package work
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

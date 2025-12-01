@@ -13,21 +13,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// getRepoRoot is a test helper that returns the repository root
+func getRepoRoot(t *testing.T) string {
+	t.Helper()
+	repoRoot, err := repository.GetRepositoryRoot("")
+	require.NoError(t, err)
+	return repoRoot
+}
+
 func TestNewValidator(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 	assert.NotNil(t, v)
 }
 
 func TestValidator_ValidateModulesYAML(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	// Load the actual modules.yml from the repository
-	repoRoot, err := repository.GetRepositoryRoot("")
-	require.NoError(t, err)
-
-	modulesPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "modules.yml")
+	modulesPath := filepath.Join(repoRoot, ".r2r", "eac", "modules.yml")
 	data, err := os.ReadFile(modulesPath)
 	require.NoError(t, err)
 
@@ -36,14 +43,12 @@ func TestValidator_ValidateModulesYAML(t *testing.T) {
 }
 
 func TestValidator_ValidateEnvironmentsYAML(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	// Load the actual environments.yml from the repository
-	repoRoot, err := repository.GetRepositoryRoot("")
-	require.NoError(t, err)
-
-	envPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "environments.yml")
+	envPath := filepath.Join(repoRoot, ".r2r", "eac", "environments.yml")
 	data, err := os.ReadFile(envPath)
 	require.NoError(t, err)
 
@@ -52,14 +57,12 @@ func TestValidator_ValidateEnvironmentsYAML(t *testing.T) {
 }
 
 func TestValidator_ValidateTestingTagsYAML(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	// Load the actual testing-tags.yml from the repository
-	repoRoot, err := repository.GetRepositoryRoot("")
-	require.NoError(t, err)
-
-	tagsPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "testing-tags.yml")
+	tagsPath := filepath.Join(repoRoot, ".r2r", "eac", "testing-tags.yml")
 	data, err := os.ReadFile(tagsPath)
 	require.NoError(t, err)
 
@@ -67,24 +70,9 @@ func TestValidator_ValidateTestingTagsYAML(t *testing.T) {
 	assert.NoError(t, err, "testing-tags.yml should be valid against schema")
 }
 
-func TestValidator_ValidateTestingTaxonomyYAML(t *testing.T) {
-	v, err := schema.NewValidator()
-	require.NoError(t, err)
-
-	// Load the actual testing-taxonomy.yml from the repository
-	repoRoot, err := repository.GetRepositoryRoot("")
-	require.NoError(t, err)
-
-	taxonomyPath := filepath.Join(repoRoot, ".r2r", "eac", "repository", "testing-taxonomy.yml")
-	data, err := os.ReadFile(taxonomyPath)
-	require.NoError(t, err)
-
-	err = v.ValidateYAML(schema.SchemaTestingTaxonomy, data)
-	assert.NoError(t, err, "testing-taxonomy.yml should be valid against schema")
-}
-
 func TestValidator_InvalidModulesYAML(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	// Missing required 'modules' field
@@ -102,20 +90,18 @@ something_else:
 }
 
 func TestValidator_InvalidEnvironmentsYAML(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
-	// Missing required 'metadata' field
+	// Missing required 'environments' field
 	invalidYAML := []byte(`
-environments:
+something_else:
   - moniker: test
-    name: Test Environment
-    level: L0
-    type: unit
 `)
 
 	err = v.ValidateYAML(schema.SchemaEnvironments, invalidYAML)
-	assert.Error(t, err, "should fail validation for missing 'metadata' field")
+	assert.Error(t, err, "should fail validation for missing 'environments' field")
 
 	var validErr *schema.ValidationError
 	assert.ErrorAs(t, err, &validErr)
@@ -123,14 +109,12 @@ environments:
 }
 
 func TestValidator_InvalidEnvironmentLevel(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	// Invalid level value
 	invalidYAML := []byte(`
-metadata:
-  version: "0.1.0"
-  description: Test
 environments:
   - moniker: test
     name: Test Environment
@@ -143,7 +127,8 @@ environments:
 }
 
 func TestValidator_InvalidModuleMoniker(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	// Invalid moniker (uppercase not allowed)
@@ -158,7 +143,8 @@ modules:
 }
 
 func TestValidator_ValidMinimalModulesYAML(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	// Minimal valid modules config
@@ -173,14 +159,12 @@ modules:
 }
 
 func TestValidator_ValidMinimalEnvironmentsYAML(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
-	// Minimal valid environments config
+	// Minimal valid environments config (metadata is optional)
 	validYAML := []byte(`
-metadata:
-  version: "0.1.0"
-  description: Test environments
 environments:
   - moniker: test-env
     name: Test Environment
@@ -193,7 +177,8 @@ environments:
 }
 
 func TestValidator_UnknownSchemaType(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	err = v.ValidateYAML(schema.SchemaType("unknown"), []byte(`test: value`))
@@ -202,7 +187,8 @@ func TestValidator_UnknownSchemaType(t *testing.T) {
 }
 
 func TestValidator_InvalidYAMLSyntax(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	// Invalid YAML syntax
@@ -218,7 +204,8 @@ modules:
 }
 
 func TestValidator_ValidateJSON(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	validJSON := []byte(`{
@@ -235,7 +222,8 @@ func TestValidator_ValidateJSON(t *testing.T) {
 }
 
 func TestValidator_InvalidJSON(t *testing.T) {
-	v, err := schema.NewValidator()
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
 	invalidJSON := []byte(`{ invalid json }`)
@@ -247,9 +235,23 @@ func TestValidator_InvalidJSON(t *testing.T) {
 
 func TestGetSchemaTypes(t *testing.T) {
 	types := schema.GetSchemaTypes()
-	assert.Len(t, types, 4)
+	assert.Len(t, types, 7)
 	assert.Contains(t, types, schema.SchemaModules)
+	assert.Contains(t, types, schema.SchemaModuleTypes)
 	assert.Contains(t, types, schema.SchemaEnvironments)
 	assert.Contains(t, types, schema.SchemaTestingTags)
-	assert.Contains(t, types, schema.SchemaTestingTaxonomy)
+	assert.Contains(t, types, schema.SchemaTestSuites)
+	assert.Contains(t, types, schema.SchemaSystemDependencies)
+	assert.Contains(t, types, schema.SchemaHandlers)
+}
+
+func TestValidator_GetSchemaPath(t *testing.T) {
+	repoRoot := getRepoRoot(t)
+	v, err := schema.NewValidator(repoRoot)
+	require.NoError(t, err)
+
+	schemaPath := v.GetSchemaPath()
+	assert.Contains(t, schemaPath, "contracts")
+	assert.Contains(t, schemaPath, "src-core")
+	assert.Contains(t, schemaPath, schema.ContractVersion)
 }

@@ -203,7 +203,7 @@ Feature files are plain text files stored in the same repository as the system c
 | Tag Type                   | Format                     | Purpose                                 |
 | -------------------------- | -------------------------- | --------------------------------------- |
 | GxP-Related Requirement    | `@gxp`                     | Identify GxP-controlled aspects         |
-| Critical Aspect (GmP only) | `@critical-aspect`         | Mark critical aspects for GmP products  |
+| Critical Aspect (GmP only) | `@gmp-critical-aspect`         | Mark critical aspects for GmP products  |
 | GxP Risk Control           | `@risk-control:gxp-<name>` | Link to GxP risk control specifications |
 
 If manual test cases are required, they will be stored alongside the automated test scenarios and marked with the tag `@Manual`. Test results will be fed back into the repository and stored alongside the automated test results, enabling visualization within a unified traceability matrix.

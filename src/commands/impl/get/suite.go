@@ -5,7 +5,6 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
-// HasSideEffects: false
 package get
 
 import (
@@ -13,7 +12,7 @@ import (
 	"os"
 
 	get "github.com/ready-to-release/eac/src/commands/impl/get/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/git"

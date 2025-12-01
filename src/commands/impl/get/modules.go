@@ -5,7 +5,6 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --as-<name>: Output using custom renderer (e.g., --as-summary, --as-count)
-// HasSideEffects: false
 package get
 
 import (
@@ -13,7 +12,7 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/impl/get/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

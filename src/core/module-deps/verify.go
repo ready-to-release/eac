@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/src/core/config"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
@@ -69,158 +69,129 @@ func GetMissingDependencies(dependencies []string) []string {
 
 // ModuleChecker checks if an internal module has been built
 type ModuleChecker struct {
-	moniker string
+	moniker   string
+	repoRoot  string
+	eacConfig *config.EACConfig
 }
 
 func (c *ModuleChecker) GetName() string {
 	return fmt.Sprintf("Module: %s", c.moniker)
 }
 
+// init initializes the checker with repo root and EAC config
+func (c *ModuleChecker) init() error {
+	if c.repoRoot != "" {
+		return nil // Already initialized
+	}
+
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		return fmt.Errorf("failed to find repository root: %w", err)
+	}
+	c.repoRoot = repoRoot
+
+	// Load EAC config to get module types
+	cfg, err := config.Load(config.LoadOptions{
+		RepoRoot:        repoRoot,
+		ValidateSchemas: false,
+		LazyLoad:        false, // Need module types loaded immediately
+	})
+	if err != nil {
+		return fmt.Errorf("failed to load EAC config: %w", err)
+	}
+	c.eacConfig = cfg
+
+	return nil
+}
+
 func (c *ModuleChecker) IsAvailable() bool {
+	if err := c.init(); err != nil {
+		return false
+	}
+
 	// Load module contract
 	module, err := c.loadModuleContract()
 	if err != nil {
 		return false
 	}
 
-	// Check based on module type
-	switch module.Type {
-	case "go-cli":
-		// CLI modules: check if binary exists
-		path := c.getExecutablePath(module)
-		if path == "" {
-			return false
-		}
-		_, err := os.Stat(path)
-		return err == nil
-
-	case "go-commands":
-		// Commands modules: always run with 'go run', check if main.go exists
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return false
-		}
-		mainGoPath := filepath.Join(repoRoot, module.Files.Root, "main.go")
-		_, err = os.Stat(mainGoPath)
-		return err == nil
-
-	case "go-library":
-		// Library modules: check if go.mod exists (module is properly set up)
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return false
-		}
-		goModPath := filepath.Join(repoRoot, module.Files.Root, "go.mod")
-		_, err = os.Stat(goModPath)
-		return err == nil
-
-	case "go-mcp":
-		// MCP modules: check if main.go exists
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return false
-		}
-		mainGoPath := filepath.Join(repoRoot, module.Files.Root, "main.go")
-		_, err = os.Stat(mainGoPath)
-		return err == nil
-
-	case "repository-root":
-		// Repository root module: check if repository tests directory exists
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return false
-		}
-		testsPath := filepath.Join(repoRoot, "src", "specs", "impl", "repository")
-		_, err = os.Stat(testsPath)
-		return err == nil
-
-	case "scripts":
-		// Scripts modules: check if source root directory exists
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return false
-		}
-		scriptsPath := filepath.Join(repoRoot, module.Files.Root)
-		_, err = os.Stat(scriptsPath)
-		return err == nil
-
-	default:
-		// Unknown module type
-		return false
+	// Get module type definition (with nil safety)
+	var typeDef *config.ModuleTypeDef
+	if c.eacConfig.ModuleTypes != nil {
+		typeDef = c.eacConfig.ModuleTypes.Get(module.Type)
 	}
+	if typeDef == nil {
+		// Fallback for unknown types or missing config: check if source root exists
+		return c.checkSourceRootExists(module)
+	}
+
+	// If module type has no build artifacts, check source root exists
+	if !typeDef.HasArtifacts() {
+		return c.checkSourceRootExists(module)
+	}
+
+	// Verify build artifacts exist
+	buildDir := repository.BuildOutputPath(c.repoRoot, c.moniker)
+	resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
+	results := resolver.VerifyArtifacts(typeDef.GetArtifacts())
+
+	return config.AllSuccessful(results)
+}
+
+// checkSourceRootExists verifies the module's source directory exists
+func (c *ModuleChecker) checkSourceRootExists(module *modules.ModuleContract) bool {
+	// For modules without build artifacts, check source exists
+	sourcePath := filepath.Join(c.repoRoot, module.Files.Root)
+	_, err := os.Stat(sourcePath)
+	return err == nil
 }
 
 func (c *ModuleChecker) GetVersion() (string, error) {
+	if err := c.init(); err != nil {
+		return "", err
+	}
+
 	// Load module contract
 	module, err := c.loadModuleContract()
 	if err != nil {
 		return "", fmt.Errorf("failed to load module contract: %w", err)
 	}
 
-	// Check based on module type
-	switch module.Type {
-	case "go-cli":
-		// CLI modules: check for built executable
-		path := c.getExecutablePath(module)
-		if path == "" {
-			return "", fmt.Errorf("module executable path not found (repo root not detected)")
-		}
-
-		if _, err := os.Stat(path); err != nil {
-			return "", fmt.Errorf("module executable not found at %s", path)
-		}
-
-		absPath, _ := filepath.Abs(path)
-		return fmt.Sprintf("Built executable: %s", absPath), nil
-
-	case "go-commands":
-		// Commands modules: run with 'go run'
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return "", err
-		}
-		modulePath := filepath.Join(repoRoot, module.Files.Root)
-		return fmt.Sprintf("Commands module (go run): %s", modulePath), nil
-
-	case "go-library":
-		// Library modules: return module path
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return "", err
-		}
-		modulePath := filepath.Join(repoRoot, module.Files.Root)
-		return fmt.Sprintf("Go library: %s", modulePath), nil
-
-	case "go-mcp":
-		// MCP modules: return module path
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return "", err
-		}
-		modulePath := filepath.Join(repoRoot, module.Files.Root)
-		return fmt.Sprintf("MCP module: %s", modulePath), nil
-
-	case "repository-root":
-		// Repository root module: return tests path
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return "", err
-		}
-		testsPath := filepath.Join(repoRoot, "src", "specs", "impl", "repository")
-		return fmt.Sprintf("Repository validation tests: %s", testsPath), nil
-
-	case "scripts":
-		// Scripts modules: return scripts path
-		repoRoot, err := repository.GetRepositoryRoot("")
-		if err != nil {
-			return "", err
-		}
-		scriptsPath := filepath.Join(repoRoot, module.Files.Root)
-		return fmt.Sprintf("Scripts: %s", scriptsPath), nil
-
-	default:
-		return "", fmt.Errorf("module type '%s' verification not implemented", module.Type)
+	// Get module type definition (with nil safety)
+	var typeDef *config.ModuleTypeDef
+	if c.eacConfig.ModuleTypes != nil {
+		typeDef = c.eacConfig.ModuleTypes.Get(module.Type)
 	}
+	if typeDef == nil {
+		sourcePath := filepath.Join(c.repoRoot, module.Files.Root)
+		return fmt.Sprintf("Module source: %s", sourcePath), nil
+	}
+
+	// If no build artifacts, return source path
+	if !typeDef.HasArtifacts() {
+		sourcePath := filepath.Join(c.repoRoot, module.Files.Root)
+		return fmt.Sprintf("%s: %s", typeDef.Description, sourcePath), nil
+	}
+
+	// Return info about build artifacts
+	buildDir := repository.BuildOutputPath(c.repoRoot, c.moniker)
+	resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
+	results := resolver.VerifyArtifacts(typeDef.GetArtifacts())
+
+	if !config.AllSuccessful(results) {
+		failures := config.GetFailures(results)
+		return "", fmt.Errorf("missing build artifacts:\n%s", config.FormatVerificationResults(failures))
+	}
+
+	// Return first successful artifact path as version info
+	for _, r := range results {
+		if r.Exists {
+			absPath, _ := filepath.Abs(r.Path)
+			return fmt.Sprintf("Built: %s", absPath), nil
+		}
+	}
+
+	return fmt.Sprintf("Build directory: %s", buildDir), nil
 }
 
 // loadModuleContract loads the module contract from the registry
@@ -243,67 +214,4 @@ func (c *ModuleChecker) loadModuleContract() (*modules.ModuleContract, error) {
 	}
 
 	return module, nil
-}
-
-// getExecutablePath returns the full path to the module's executable
-// For multi-platform builds, looks for platform-specific binaries (e.g., windows-r2r-cli.exe)
-func (c *ModuleChecker) getExecutablePath(module *modules.ModuleContract) string {
-	// Find repository root using the centralized utility
-	repoRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		return ""
-	}
-
-	// Determine executable name based on module moniker and current OS
-	var baseName string
-	var ext string
-
-	switch c.moniker {
-	case "src-cli":
-		baseName = "r2r"
-	case "src-commands":
-		baseName = "eac"
-	default:
-		// For other modules, assume executable name matches moniker
-		baseName = c.moniker
-	}
-
-	// Add OS-specific extension
-	if runtime.GOOS == "windows" {
-		ext = ".exe"
-	}
-
-	// Try platform-specific binary first (format: r2r-windows.exe, r2r-linux, r2r-darwin-amd64)
-	platformBinary := fmt.Sprintf("%s-%s%s", baseName, runtime.GOOS, ext)
-	platformPath := filepath.Join(repoRoot, "out", "build", c.moniker, platformBinary)
-	if _, err := os.Stat(platformPath); err == nil {
-		return platformPath
-	}
-
-	// Try architecture-specific variants for darwin (darwin-amd64, darwin-arm64)
-	if runtime.GOOS == "darwin" {
-		archBinary := fmt.Sprintf("%s-%s-%s", baseName, runtime.GOOS, runtime.GOARCH)
-		archPath := filepath.Join(repoRoot, "out", "build", c.moniker, archBinary)
-		if _, err := os.Stat(archPath); err == nil {
-			return archPath
-		}
-	}
-
-	// Fallback to legacy format for backward compatibility (r2r-cli.exe, r2r-cli)
-	// Also try old platform-specific format: windows-r2r-cli.exe, linux-r2r-cli
-	legacyBinary := baseName + ext
-	legacyPath := filepath.Join(repoRoot, "out", "build", c.moniker, legacyBinary)
-	if _, err := os.Stat(legacyPath); err == nil {
-		return legacyPath
-	}
-
-	// Try old platform-prefix format (windows-r2r-cli.exe, linux-r2r-cli, darwin-r2r-cli)
-	oldPlatformBinary := fmt.Sprintf("%s-%s%s", runtime.GOOS, baseName, ext)
-	oldPlatformPath := filepath.Join(repoRoot, "out", "build", c.moniker, oldPlatformBinary)
-	if _, err := os.Stat(oldPlatformPath); err == nil {
-		return oldPlatformPath
-	}
-
-	// Return the primary expected path (even if it doesn't exist, for error messages)
-	return platformPath
 }

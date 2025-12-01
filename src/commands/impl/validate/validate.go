@@ -1,13 +1,12 @@
 // Command: validate
 // Description: Validate repository contracts and dependencies
-// HasSideEffects: false
 package validate
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

@@ -259,10 +259,10 @@ func (v *GherkinValidator) validateScenarioTags(lines []string) []ValidationErro
 	var errors []ValidationError
 
 	// Inherited tags from Feature and Rule levels
-	var featureTags []string      // Tags on the Feature (inherited by all)
-	var currentRuleTags []string  // Tags on current Rule (inherited by scenarios in that rule)
-	var pendingTags []string      // Tags collected immediately before a scenario
-	var pendingTagLines []int     // Line numbers for pending tags
+	var featureTags []string     // Tags on the Feature (inherited by all)
+	var currentRuleTags []string // Tags on current Rule (inherited by scenarios in that rule)
+	var pendingTags []string     // Tags collected immediately before a scenario
+	var pendingTagLines []int    // Line numbers for pending tags
 
 	for i, line := range lines {
 		lineNum := i + 1
@@ -443,16 +443,16 @@ func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int
 		})
 	}
 
-	// Check @critical-aspect requires @gxp
+	// Check @gmp-critical-aspect requires @gxp
 	for i, tag := range tags {
-		if tag == "@critical-aspect" && !hasGxP {
+		if tag == "@gmp-critical-aspect" && !hasGxP {
 			lineNum := scenarioLine
 			if i < len(tagLines) {
 				lineNum = tagLines[i]
 			}
 			errors = append(errors, ValidationError{
 				Code:     "CRITICAL_ASPECT_REQUIRES_GXP",
-				Message:  "@critical-aspect tag requires @gxp tag to be present",
+				Message:  "@gmp-critical-aspect tag requires @gxp tag to be present",
 				Line:     lineNum,
 				Severity: "error",
 			})
@@ -504,7 +504,15 @@ func (v *GherkinValidator) getVerificationTags() []string {
 		}
 	}
 
-	// Fallback to hardcoded defaults
+	// Try global config as last resort
+	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
+		tags := cfg.TestingTags.GetVerificationTags()
+		if len(tags) > 0 {
+			return tags
+		}
+	}
+
+	// Fallback to hardcoded defaults (should rarely be reached)
 	return []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
 }
 

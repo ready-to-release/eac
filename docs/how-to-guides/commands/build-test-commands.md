@@ -49,12 +49,20 @@ r2r eac build [module1] [module2] ... [options]
 # Options:
 --tidy-first           # Run 'go mod tidy' before building (default for local)
 --no-tidy              # Skip 'go mod tidy' (default for CI)
+--skip-deps            # Skip build dependency verification
+--compressed           # Strip debug info for smaller binaries
+--compressed-upx       # Apply UPX compression to binaries
+--version <string>     # Inject version string into binary
 
 # Examples:
 r2r eac build                          # Build all modules
 r2r eac build src-commands             # Build single module (verbose)
 r2r eac build src-cli src-core         # Build multiple modules (parallel)
 r2r eac build --tidy-first src-cli     # Build with go mod tidy first
+r2r eac build --compressed src-cli     # Build with stripped debug info
+r2r eac build --compressed-upx src-cli # Build with UPX compression
+r2r eac build --version v1.2.3 src-cli # Build with version injected
+r2r eac build --skip-deps src-core     # Build without checking dependencies
 ```
 
 **Supported module types:**
@@ -81,6 +89,7 @@ r2r eac test [module1] [module2] ... [options]
 --as-cucumber          # Output in Cucumber JSON format (default)
 --as-junit             # Output in JUnit XML format
 --suite <name>         # Filter tests by suite (default: "commit")
+--coverage             # Generate coverage reports (outputs to out/reports/)
 
 # Examples:
 r2r eac test                           # Test all modules
@@ -88,6 +97,7 @@ r2r eac test src-commands              # Test single module (verbose)
 r2r eac test src-cli src-core          # Test multiple modules (parallel)
 r2r eac test src-core --as-junit       # Test with JUnit output
 r2r eac test src-commands --suite integration
+r2r eac test src-core --coverage       # Test with coverage report
 ```
 
 **Supported module types:**
@@ -125,6 +135,45 @@ r2r eac test list-suites
 # - smoke (3 tests)
 ```
 
+### test debug
+
+Parse test results and list all failures.
+
+```bash
+r2r eac test debug [options]
+
+# Examples:
+r2r eac test debug                     # Parse and list all test failures
+r2r eac test debug --verbose           # Show detailed failure information
+```
+
+**What it does:**
+
+- Parses test output files from `out/reports/`
+- Identifies failed tests across all modules
+- Displays failure messages and stack traces
+- Helps quickly identify what went wrong in test runs
+
+**Output format:**
+
+```text
+Test Failures Summary
+=====================
+
+Module: src-auth
+  - TestLoginHandler: Expected status 200, got 500
+    File: src/auth/login_test.go:45
+
+  - TestTokenValidation: Token validation failed
+    File: src/auth/token_test.go:78
+
+Module: src-core
+  - TestDatabaseConnection: Connection timeout
+    File: src/core/db_test.go:23
+
+Total: 3 failures across 2 modules
+```
+
 ## Typical Workflows
 
 ### Local Development
@@ -159,7 +208,7 @@ r2r eac validate
 
 ```bash
 # 1. Write spec
-r2r eac specs create "Feature description"
+r2r eac create spec "Feature description"
 
 # 2. Run tests (failing)
 r2r eac test src-feature
@@ -177,6 +226,28 @@ r2r eac test src-feature
 r2r eac work commit --all
 ```
 
+### Debugging Test Failures
+
+```bash
+# 1. Run tests
+r2r eac test src-auth
+
+# 2. If tests fail, use debug to see failures
+r2r eac test debug
+
+# 3. Review specific failure details
+# Output shows which tests failed and why
+
+# 4. Fix the code
+# ... edit src/auth/*.go ...
+
+# 5. Re-run tests
+r2r eac test src-auth
+
+# 6. Verify with coverage
+r2r eac test src-auth --coverage
+```
+
 ## Module Type Dispatch
 
 ### Go Modules
@@ -186,12 +257,20 @@ r2r eac work commit --all
 - Runs `go build`
 - Outputs to `out/build/<moniker>/`
 - Platform-specific binaries for go-cli
+- Supports compression flags:
+  - `--compressed`: Strips debug symbols using `-ldflags="-s -w"` (reduces binary size by ~30%)
+  - `--compressed-upx`: Additionally applies UPX compression (requires UPX installed, reduces size by ~60-70%)
+- Supports version injection:
+  - `--version`: Injects version string into binary via `-ldflags="-X main.version=<value>"`
+- Supports dependency control:
+  - `--skip-deps`: Skips verification of build dependencies (faster but potentially unsafe)
 
 **Test:**
 
 - Runs `go test ./...`
 - Table-driven tests
-- Outputs coverage reports
+- Outputs coverage reports with `--coverage` flag
+- Coverage profiles in `out/reports/coverage/`
 
 ### MkDocs Sites
 
@@ -298,8 +377,9 @@ out/
 ├── build/                        # Build outputs per module
 │   ├── src-cli/
 │   │   ├── build.log
-│   │   ├── r2r-linux
-│   │   ├── r2r-windows.exe
+│   │   ├── r2r-linux-amd64
+│   │   ├── r2r-linux-arm64
+│   │   ├── r2r-windows-amd64.exe
 │   │   ├── r2r-darwin-amd64
 │   │   └── r2r-darwin-arm64
 │   ├── docs/
@@ -378,19 +458,19 @@ jobs:
 .PHONY: build test clean
 
 build:
-	r2r eac build
+  r2r eac build
 
 test:
-	r2r eac test
+  r2r eac test
 
 validate:
-	r2r eac validate
+  r2r eac validate
 
 ci: build test validate
-	@echo "✅ CI pipeline completed"
+  @echo "✅ CI pipeline completed"
 
 clean:
-	rm -rf out/
+  rm -rf out/
 ```
 
 ## Best Practices
@@ -404,15 +484,17 @@ clean:
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Module not found | Check moniker in module contract |
-| Unknown module type | Verify module type in contract YAML |
-| Build fails | Check module dependencies, run with verbose output |
-| Tests fail | Review test output, check test files exist |
-| Permission denied | Check file permissions, may need sudo |
-| Go not found | Install Go ≥ 1.21 |
-| Output format error | Use valid format: `--as-cucumber` or `--as-junit` |
+| Problem                 | Solution                                                     |
+| ----------------------- | ------------------------------------------------------------ |
+| Module not found        | Check moniker in module contract                             |
+| Unknown module type     | Verify module type in contract YAML                          |
+| Build fails             | Check module dependencies, run with verbose output           |
+| Tests fail              | Review test output, use `r2r eac test debug` to see failures |
+| Permission denied       | Check file permissions, may need sudo                        |
+| Go not found            | Install Go ≥ 1.21                                            |
+| Output format error     | Use valid format: `--as-cucumber` or `--as-junit`            |
+| UPX compression fails   | Install UPX or use `--compressed` instead                    |
+| Coverage report missing | Ensure tests ran with `--coverage` flag                      |
 
 ## Advanced Usage
 
@@ -435,6 +517,56 @@ done
 ```bash
 # Build multiple specific modules (built-in parallel)
 r2r eac build src-commands src-core src-cli
+```
+
+### Coverage Reports
+
+The `--coverage` flag enables test coverage reporting for Go modules:
+
+```bash
+# Generate coverage for a single module
+r2r eac test src-core --coverage
+
+# Generate coverage for multiple modules
+r2r eac test src-cli src-core --coverage
+
+# Generate coverage for all modules
+r2r eac test --coverage
+```
+
+**Coverage outputs:**
+
+- Coverage data is written to `out/reports/coverage/`
+- Per-module coverage profiles: `out/reports/coverage/<moniker>.out`
+- HTML coverage reports: `out/reports/coverage/<moniker>.html`
+- Combined coverage summary in test output
+
+**Viewing coverage:**
+
+```bash
+# View HTML coverage report in browser
+open out/reports/coverage/src-core.html
+
+# View coverage summary with go tool
+go tool cover -func=out/reports/coverage/src-core.out
+
+# Generate combined coverage report
+go tool cover -html=out/reports/coverage/src-core.out -o coverage.html
+```
+
+**Coverage in CI/CD:**
+
+```bash
+# Generate coverage and upload to codecov
+r2r eac test --coverage --as-junit
+codecov -f out/reports/coverage/*.out
+
+# Set minimum coverage threshold
+COVERAGE=$(go tool cover -func=out/reports/coverage/src-core.out | grep total | awk '{print $3}' | sed 's/%//')
+if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+  echo "Coverage $COVERAGE% is below threshold 80%"
+  exit 1
+fi
 ```
 
 ## Summary

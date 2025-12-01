@@ -1,4 +1,4 @@
-// Command: work list
+// Command: show workspaces
 // Short: List all workspaces and their status
 // Long: Lists all git worktrees (workspaces) in a formatted table showing their path, branch, and status.
 // Long:
@@ -10,13 +10,12 @@
 // Long: Use --debug to enable detailed logging to out/logs/work/.
 // Long:
 // Long: Example:
-// Long:   work list
-// Long:   work list --verbose
-// Long:   work list -v
-// Long:   work list --debug
+// Long:   show workspaces
+// Long:   show workspaces --verbose
+// Long:   show workspaces -v
+// Long:   show workspaces --debug
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed information including commit SHA
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
-// HasSideEffects: false
 package work
 
 import (
@@ -25,13 +24,13 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/logging"
 )
 
 func init() {
-	registry.Register(List)
+	registry.Register(ShowWorkspaces)
 }
 
 // Intent: List all workspaces (git worktrees) with their status
@@ -53,8 +52,8 @@ func init() {
 //   - Handles empty worktree list
 //   - Clear error messages for failure cases
 
-// List displays all git worktrees in a formatted table
-func List() int {
+// ShowWorkspaces displays all git worktrees in a formatted table
+func ShowWorkspaces() int {
 	// Phase 1: Parse configuration
 	config, err := parseListConfig()
 	if err != nil {

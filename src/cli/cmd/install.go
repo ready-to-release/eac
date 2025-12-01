@@ -58,8 +58,20 @@ Examples:
 				os.Exit(1)
 			}
 
-			configPath := filepath.Join(repoRoot, "r2r-cli.yml")
-			if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			// Check for config file at .r2r/r2r-cli.yml
+			configPaths := []string{
+				filepath.Join(repoRoot, ".r2r", "r2r-cli.yml"),
+				filepath.Join(repoRoot, ".r2r", "r2r-cli.yaml"),
+			}
+			configFound := false
+			for _, cp := range configPaths {
+				if _, err := os.Stat(cp); err == nil {
+					configFound = true
+					break
+				}
+			}
+			if !configFound {
+				configPath := filepath.Join(repoRoot, ".r2r", "r2r-cli.yml")
 				fmt.Println("❌ No configuration file found.")
 				fmt.Printf("To install all configured extensions, you need a configuration file at: %s\n", configPath)
 				fmt.Println("\nTo get started:")
@@ -173,24 +185,44 @@ func addExtensionToConfig(extensionName string) error {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	configPath := filepath.Join(repoRoot, "r2r-cli.yml")
+	// Check for config file at .r2r/r2r-cli.yml
+	configPaths := []string{
+		filepath.Join(repoRoot, ".r2r", "r2r-cli.yml"),
+		filepath.Join(repoRoot, ".r2r", "r2r-cli.yaml"),
+	}
 
-	// Check if config file exists
+	var configPath string
 	var configMap map[string]interface{}
-	configData, err := os.ReadFile(configPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Config file doesn't exist, create a minimal one
-			fmt.Printf("📝 Creating r2r-cli.yml in repository root\n")
-			configMap = map[string]interface{}{
-				"version":    "1.0",
-				"extensions": []interface{}{},
-			}
-		} else {
-			return fmt.Errorf("failed to read config file: %w", err)
+
+	// Find existing config
+	for _, cp := range configPaths {
+		if _, err := os.Stat(cp); err == nil {
+			configPath = cp
+			break
+		}
+	}
+
+	if configPath == "" {
+		// No config exists, create at .r2r/r2r-cli.yml
+		configPath = filepath.Join(repoRoot, ".r2r", "r2r-cli.yml")
+
+		// Ensure .r2r directory exists
+		r2rDir := filepath.Join(repoRoot, ".r2r")
+		if err := os.MkdirAll(r2rDir, 0755); err != nil {
+			return fmt.Errorf("failed to create .r2r directory: %w", err)
+		}
+
+		fmt.Printf("📝 Creating %s\n", configPath)
+		configMap = map[string]interface{}{
+			"version":    "1.0",
+			"extensions": []interface{}{},
 		}
 	} else {
 		// Parse existing config
+		configData, err := os.ReadFile(configPath)
+		if err != nil {
+			return fmt.Errorf("failed to read config file: %w", err)
+		}
 		if err := yaml.Unmarshal(configData, &configMap); err != nil {
 			return fmt.Errorf("failed to parse config: %w", err)
 		}

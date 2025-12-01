@@ -18,7 +18,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # Examples:
 #   invoke_go_src_command show modules
 #   invoke_go_src_command show files
-#   invoke_go_src_command list-commands
+#   invoke_go_src_command show help
 #
 invoke_go_src_command() {
     # Check if any args provided
@@ -63,7 +63,7 @@ get_go_src_commands() {
     # Call the Go dispatcher to get the list of commands (single source of truth)
     (
         cd "$commands_path" || return 1
-        go run . list-commands 2>/dev/null
+        go run . show help 2>/dev/null
     )
 }
 

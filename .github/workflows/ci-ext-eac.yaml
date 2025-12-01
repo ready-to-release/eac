@@ -175,7 +175,7 @@ jobs:
 
           echo ""
           echo "Copying Linux binary to workspace root..."
-          cp out/build/src-cli/r2r-linux ./r2r
+          cp out/build/src-cli/r2r-linux-amd64 ./r2r
           chmod +x ./r2r
 
           echo ""
@@ -201,8 +201,9 @@ jobs:
           cp -r $GITHUB_WORKSPACE/contracts ./contracts
 
           echo ""
-          echo "Creating r2r-cli.yml config with CI test image..."
-          cat > r2r-cli.yml << EOF
+          echo "Creating .r2r/r2r-cli.yml config with CI test image..."
+          mkdir -p .r2r
+          cat > .r2r/r2r-cli.yml << EOF
           extensions:
             - name: 'eac'
               image: 'ext-eac:ci-test'

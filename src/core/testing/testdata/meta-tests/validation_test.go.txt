@@ -21,8 +21,8 @@ func TestValidateTags_AllValid(t *testing.T) {
 
 func TestValidateTags_InvalidTag(t *testing.T) {
 	// NOTE: This test cannot properly validate invalid tags in the isolated meta-test
-	// environment because config.Load() fails (not a git repo), causing IsValidTag()
-	// to return true (fail open). This is tested via integration tests in the main suite.
+	// environment because config.Load() fails (not a git repo). With fail-closed behavior,
+	// ValidateTags returns a config error. This is tested via integration tests.
 	t.Skip("Requires git repository and config files - covered by integration tests")
 }
 
@@ -102,8 +102,9 @@ func TestValidateTestReference_InvalidTags(t *testing.T) {
 }
 
 // NOTE: IsValidTag tests are skipped in the isolated meta-test environment
-// because config.Load() fails (not a git repo), causing IsValidTag() to
-// return true (fail open). These functions are tested via integration tests.
+// because config.Load() fails (not a git repo). With fail-closed behavior,
+// IsValidTag() returns false when config is unavailable. These functions
+// are tested via integration tests.
 
 func TestIsValidTag_RequiresConfigLoad(t *testing.T) {
 	t.Skip("Requires git repository and config files - covered by integration tests")
@@ -148,14 +149,14 @@ func TestValidateGxPRequirements_CriticalAspectWithoutGxP(t *testing.T) {
 		FilePath:         "test.feature",
 		Type:             "godog",
 		TestName:         "test",
-		Tags:             []string{"@critical-aspect"},
+		Tags:             []string{"@gmp-critical-aspect"},
 		IsCriticalAspect: true,
 		IsGxP:            false,
 	}
 
 	errors := ValidateGxPRequirements(test)
 	assert.Len(t, errors, 1)
-	assert.Contains(t, errors[0], "@critical-aspect must be used with @gxp tag")
+	assert.Contains(t, errors[0], "@gmp-critical-aspect must be used with @gxp tag")
 }
 
 // Test risk control validation

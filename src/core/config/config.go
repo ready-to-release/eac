@@ -1,5 +1,5 @@
 // Package config provides a central configuration loader for all EAC repository configs.
-// It consolidates loading of modules, environments, testing-tags, and testing-taxonomy
+// It consolidates loading of modules, environments, testing-tags, and test-suites
 // with integrated JSON Schema validation.
 package config
 
@@ -13,15 +13,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// EACConfigRelPath is the relative path from repo root to EAC repository configuration.
-const EACConfigRelPath = ".r2r/eac/repository"
+// EAC configuration path constants (local to avoid import cycle with repository)
+const (
+	r2rDir = ".r2r"
+	eacDir = "eac"
+
+	// EACConfigRelPath is the relative path from repo root to EAC configuration.
+	// Note: Duplicated here to avoid import cycle with repository package.
+	EACConfigRelPath = r2rDir + "/" + eacDir
+)
 
 // Config file names
 const (
-	ModulesFileName         = "modules.yml"
-	EnvironmentsFileName    = "environments.yml"
-	TestingTagsFileName     = "testing-tags.yml"
-	TestingTaxonomyFileName = "testing-taxonomy.yml"
+	ModulesFileName            = "modules.yml"
+	ModuleTypesFileName        = "module-types.yml"
+	EnvironmentsFileName       = "environments.yml"
+	TestingTagsFileName        = "testing-tags.yml"
+	TestSuitesFileName         = "test-suites.yml"
+	SystemDependenciesFileName = "system-dependencies.yml"
 )
 
 // EACConfig holds all loaded EAC repository configuration.
@@ -32,10 +41,13 @@ type EACConfig struct {
 	ConfigRoot string
 
 	// Loaded configurations
-	Modules         *ModulesConfig
-	Environments    *EnvironmentsConfig
-	TestingTags     *TestingTagsConfig
-	TestingTaxonomy *TestingTaxonomyConfig
+	Modules            *ModulesConfig
+	ModuleTypes        *ModuleTypesConfig
+	Environments       *EnvironmentsConfig
+	TestingTags        *TestingTagsConfig
+	TestSuites         *TestSuitesConfig
+	SystemDependencies *SystemDependenciesConfig
+	Handlers           *HandlersConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -74,7 +86,7 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		}
 	}
 
-	configRoot := filepath.Join(repoRoot, EACConfigRelPath)
+	configRoot := filepath.Join(repoRoot, r2rDir, eacDir)
 
 	cfg := &EACConfig{
 		RepoRoot:   repoRoot,
@@ -101,6 +113,15 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 		errs = append(errs, fmt.Errorf("modules: %w", err))
 	}
 
+	if err := c.LoadModuleTypes(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("module-types: %w", err))
+	}
+
+	// Apply type-specific defaults after both modules and types are loaded
+	if c.Modules != nil {
+		c.Modules.ApplyTypeDefaults(c.ModuleTypes)
+	}
+
 	if err := c.LoadEnvironments(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("environments: %w", err))
 	}
@@ -109,8 +130,16 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 		errs = append(errs, fmt.Errorf("testing-tags: %w", err))
 	}
 
-	if err := c.LoadTestingTaxonomy(validateSchemas); err != nil {
-		errs = append(errs, fmt.Errorf("testing-taxonomy: %w", err))
+	if err := c.LoadTestSuites(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("test-suites: %w", err))
+	}
+
+	if err := c.LoadSystemDependencies(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
+	}
+
+	if err := c.LoadHandlers(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("handlers: %w", err))
 	}
 
 	if len(errs) > 0 {
@@ -140,6 +169,29 @@ func (c *EACConfig) LoadModules(validateSchema bool) error {
 
 	cfg.applyDefaults()
 	c.Modules = &cfg
+	return nil
+}
+
+// LoadModuleTypes loads the module-types configuration
+func (c *EACConfig) LoadModuleTypes(validateSchema bool) error {
+	data, err := c.readConfigFile(ModuleTypesFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaModuleTypes, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg ModuleTypesConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", ModuleTypesFileName, err)
+	}
+
+	cfg.buildTypeMap()
+	c.ModuleTypes = &cfg
 	return nil
 }
 
@@ -191,25 +243,81 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 	return nil
 }
 
-// LoadTestingTaxonomy loads the testing-taxonomy configuration
-func (c *EACConfig) LoadTestingTaxonomy(validateSchema bool) error {
-	data, err := c.readConfigFile(TestingTaxonomyFileName)
+// LoadTestSuites loads the test-suites configuration
+func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
+	data, err := c.readConfigFile(TestSuitesFileName)
 	if err != nil {
 		return err
 	}
 
 	if validateSchema {
-		if err := c.validateSchema(schema.SchemaTestingTaxonomy, data); err != nil {
+		if err := c.validateSchema(schema.SchemaTestSuites, data); err != nil {
 			return err
 		}
 	}
 
-	var cfg TestingTaxonomyConfig
+	var cfg TestSuitesConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", TestingTaxonomyFileName, err)
+		return fmt.Errorf("failed to parse %s: %w", TestSuitesFileName, err)
 	}
 
-	c.TestingTaxonomy = &cfg
+	cfg.buildSuiteMap()
+	c.TestSuites = &cfg
+	return nil
+}
+
+// LoadSystemDependencies loads the system-dependencies configuration
+func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
+	data, err := c.readConfigFile(SystemDependenciesFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaSystemDependencies, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg SystemDependenciesConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", SystemDependenciesFileName, err)
+	}
+
+	cfg.buildDepMap()
+	c.SystemDependencies = &cfg
+	return nil
+}
+
+// LoadHandlers loads the handlers configuration
+func (c *EACConfig) LoadHandlers(validateSchema bool) error {
+	// Check if handlers file exists - it's optional
+	handlersPath := filepath.Join(c.ConfigRoot, HandlersFileName)
+	if _, err := os.Stat(handlersPath); os.IsNotExist(err) {
+		// Handlers config is optional - use empty config
+		c.Handlers = &HandlersConfig{}
+		c.Handlers.buildHandlerMap()
+		return nil
+	}
+
+	data, err := c.readConfigFile(HandlersFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaHandlers, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg HandlersConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", HandlersFileName, err)
+	}
+
+	cfg.buildHandlerMap()
+	c.Handlers = &cfg
 	return nil
 }
 
@@ -229,7 +337,7 @@ func (c *EACConfig) readConfigFile(filename string) ([]byte, error) {
 // validateSchema validates data against a JSON schema
 func (c *EACConfig) validateSchema(schemaType schema.SchemaType, data []byte) error {
 	c.validatorOnce.Do(func() {
-		c.validator, c.validatorErr = schema.NewValidator()
+		c.validator, c.validatorErr = schema.NewValidator(c.RepoRoot)
 	})
 
 	if c.validatorErr != nil {
@@ -250,6 +358,13 @@ func (c *EACConfig) ValidateAll() error {
 		}
 	}
 
+	if c.ModuleTypes != nil {
+		data, _ := c.readConfigFile(ModuleTypesFileName)
+		if err := c.validateSchema(schema.SchemaModuleTypes, data); err != nil {
+			errs = append(errs, fmt.Errorf("module-types: %w", err))
+		}
+	}
+
 	if c.Environments != nil {
 		data, _ := c.readConfigFile(EnvironmentsFileName)
 		if err := c.validateSchema(schema.SchemaEnvironments, data); err != nil {
@@ -264,10 +379,27 @@ func (c *EACConfig) ValidateAll() error {
 		}
 	}
 
-	if c.TestingTaxonomy != nil {
-		data, _ := c.readConfigFile(TestingTaxonomyFileName)
-		if err := c.validateSchema(schema.SchemaTestingTaxonomy, data); err != nil {
-			errs = append(errs, fmt.Errorf("testing-taxonomy: %w", err))
+	if c.TestSuites != nil {
+		data, _ := c.readConfigFile(TestSuitesFileName)
+		if err := c.validateSchema(schema.SchemaTestSuites, data); err != nil {
+			errs = append(errs, fmt.Errorf("test-suites: %w", err))
+		}
+	}
+
+	if c.SystemDependencies != nil {
+		data, _ := c.readConfigFile(SystemDependenciesFileName)
+		if err := c.validateSchema(schema.SchemaSystemDependencies, data); err != nil {
+			errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
+		}
+	}
+
+	if c.Handlers != nil {
+		data, err := c.readConfigFile(HandlersFileName)
+		// Only validate if file exists (handlers are optional)
+		if err == nil {
+			if err := c.validateSchema(schema.SchemaHandlers, data); err != nil {
+				errs = append(errs, fmt.Errorf("handlers: %w", err))
+			}
 		}
 	}
 

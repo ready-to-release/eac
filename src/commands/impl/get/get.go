@@ -1,13 +1,12 @@
 // Command: get
 // Description: Retrieve repository data in structured format
-// HasSideEffects: false
 package get
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {
@@ -28,7 +27,7 @@ func Get() int {
 	case "--help", "-h":
 		printGetUsage()
 		return 0
-	case "changed", "dependencies", "environments", "execution", "files", "modules", "suite", "tests":
+	case "changed", "config", "dependencies", "environments", "execution", "files", "modules", "suite", "tests":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -42,6 +41,9 @@ func printGetUsage() {
 	fmt.Println("Retrieve repository data in structured format")
 	fmt.Println()
 	fmt.Println("Usage: r2r get <subcommand> [args...]")
+	fmt.Println()
+	fmt.Println("Configuration:")
+	fmt.Println("  config                    Get all EAC configuration (6 configs with defaults)")
 	fmt.Println()
 	fmt.Println("Repository Structure:")
 	fmt.Println("  modules                   Get all module contracts")

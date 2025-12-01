@@ -17,7 +17,6 @@
 // Flag.commit: type=string, usage=Commit SHA to check
 // Flag.timeout: type=int, usage=Maximum wait time in seconds (default: 300)
 // Flag.interval: type=int, usage=Poll interval in seconds (default: 15)
-// HasSideEffects: false
 package release
 
 import (
@@ -29,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

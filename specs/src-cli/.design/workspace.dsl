@@ -16,7 +16,7 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
                 run_cmd = component "Run Command" "Executes extensions in containers with TTY/non-TTY support" "Go"
                 interactive_cmd = component "Interactive Command" "Starts extension containers with shell access" "Go"
                 install_cmd = component "Install Command" "Pulls images and manages extension installation" "Go"
-                init_cmd = component "Init Command" "Creates r2r-cli.yml configuration" "Go"
+                init_cmd = component "Init Command" "Creates .r2r/r2r-cli.yml configuration" "Go"
                 agent_cmd = component "Agent Command" "Parent for AI agent configuration" "Go"
                 ai_cmd = component "AI Command" "AI-powered operations (ask subcommand)" "Go"
                 definitions_cmd = component "Definitions Command" "Processes and merges definitions.yml files" "Go"
@@ -31,7 +31,7 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
 
             // Configuration Management
             config_system = container "Configuration System" "Multi-layer configuration management" "Go/Viper" {
-                config_loader = component "Config Loader" "Loads and merges r2r-cli.yml files" "Go"
+                config_loader = component "Config Loader" "Loads .r2r/r2r-cli.yml configuration" "Go"
                 repo_finder = component "Repository Finder" "Locates git repository root" "Go"
                 extension_validator = component "Extension Validator" "Validates pinned SHA tags" "Go"
                 config_merger = component "Config Merger" "Merges base + local + personal + dev configs" "Go"
@@ -71,7 +71,7 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
             // Validation System
             validator_system = container "Validation System" "Configuration and command validation" "Go" {
                 command_validator = component "Command Validator" "Validates commands against EBNF" "Go"
-                schema_validator = component "Schema Validator" "Validates r2r-cli.yml against JSON schema" "Go"
+                schema_validator = component "Schema Validator" "Validates .r2r/r2r-cli.yml against JSON schema" "Go"
                 contract_validator = component "Contract Validator" "Validates against contracts" "Go"
             }
 

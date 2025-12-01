@@ -1,0 +1,13 @@
+version: "0.1.0"
+name: "Structurizr DSL Architecture"
+description: "Formal contract defining Structurizr workspace validation rules"
+
+# Naming patterns
+workspace_name_pattern: "^[A-Z][A-Za-z0-9 -]+$"
+identifier_pattern: "^[a-z][a-z0-9_]*$"
+
+# Required structure elements
+required_elements:
+  - "workspace"
+  - "model"
+  - "views"

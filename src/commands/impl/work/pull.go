@@ -20,7 +20,6 @@
 // Flag.autostash: type=bool, default=false, usage=Automatically stash and unstash uncommitted changes
 // Flag.no-fetch: type=bool, default=false, usage=Skip fetching from remote (use local target branch)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
-// HasSideEffects: true
 package work
 
 import (
@@ -28,7 +27,7 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/logging"
 )
 

@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/src-core/test-suites/0.1.0",
+  "title": "Test Suite Contracts Schema",
+  "description": "Schema for test suite definitions and tag-based test selection rules",
+  "type": "object",
+  "properties": {
+    "suites": {
+      "type": "array",
+      "description": "List of test suite definitions",
+      "items": {
+        "$ref": "#/definitions/suite"
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["suites"],
+  "definitions": {
+    "suite": {
+      "type": "object",
+      "description": "A test suite definition",
+      "properties": {
+        "moniker": {
+          "type": "string",
+          "description": "Unique suite identifier (e.g., 'commit', 'acceptance')",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable suite name",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "What this suite tests and when to use it"
+        },
+        "selectors": {
+          "type": "array",
+          "description": "Tag selection criteria (combined with OR at top level)",
+          "items": {
+            "$ref": "#/definitions/tag_selector"
+          },
+          "minItems": 1
+        }
+      },
+      "required": ["moniker", "name", "selectors"]
+    },
+    "tag_selector": {
+      "type": "object",
+      "description": "Criteria for selecting tests based on tags",
+      "properties": {
+        "require_tags": {
+          "type": "array",
+          "description": "Tags that MUST be present (AND logic)",
+          "items": {
+            "type": "string",
+            "pattern": "^@[a-zA-Z0-9-:_]+$"
+          },
+          "default": []
+        },
+        "any_of_tags": {
+          "type": "array",
+          "description": "At least ONE of these tags must be present (OR logic)",
+          "items": {
+            "type": "string",
+            "pattern": "^@[a-zA-Z0-9-:_]+$"
+          },
+          "default": []
+        },
+        "exclude_tags": {
+          "type": "array",
+          "description": "Tags that MUST NOT be present (NOT logic)",
+          "items": {
+            "type": "string",
+            "pattern": "^@[a-zA-Z0-9-:_]+$"
+          },
+          "default": []
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "suites": [
+        {
+          "moniker": "commit",
+          "name": "Commit Tests",
+          "description": "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L1",
+          "selectors": [
+            {
+              "any_of_tags": ["@L0", "@L1"],
+              "exclude_tags": ["@L2", "@L3", "@L4"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -19,7 +19,6 @@
 // Flag.no-squash: type=bool, default=false, usage=Use regular merge instead of squash merge
 // Flag.keep-worktree: type=bool, default=false, usage=Keep workspace after merge (don't remove)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode (pass through to commit)
-// HasSideEffects: true
 package work
 
 import (
@@ -30,7 +29,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/commands/impl/commit"
 	"github.com/ready-to-release/eac/src/commands/impl/work/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/logging"
 )
 
@@ -310,7 +309,7 @@ func performSquashMerge(config *mergeConfig) error {
 		os.Args = []string{"r2r", "commit", "message"}
 	}
 
-	exitCode := commit.CommitMessage()
+	exitCode := commit.CreateCommitMessage()
 	if exitCode != 0 {
 		return fmt.Errorf("commit message failed with exit code %d", exitCode)
 	}

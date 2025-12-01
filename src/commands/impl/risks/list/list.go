@@ -1,6 +1,5 @@
 // Command: risks list
 // Short: List risk controls and their linkages to specifications
-// HasSideEffects: false
 // Flag.filter: type=string, default=all, shorthand=f, usage=Filter view: all, orphaned, linked, or missing-links, completion=all,orphaned,linked,missing-links
 // Flag.json: type=bool, default=false, shorthand=j, usage=Output as JSON instead of table
 // Flag.debug: type=bool, default=false, shorthand=D, usage=Enable debug mode
@@ -11,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 )
 
 func init() {

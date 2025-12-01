@@ -1,6 +1,5 @@
 // Command: show suite
 // Description: Display detailed information about a test suite
-// HasSideEffects: false
 package show
 
 import (
@@ -8,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/commands/internal/render"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"

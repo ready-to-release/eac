@@ -24,30 +24,21 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// TestLoadExamplesFile validates that r2r-cli.examples.yml loads correctly
+// TestLoadMinimalConfig validates that a minimal config loads correctly
 // and all values fall back to sensible defaults when fields are empty
-func TestLoadExamplesFile(t *testing.T) {
-	// Get the repository root
-	repoRoot, err := FindRepositoryRoot()
-	require.NoError(t, err, "Failed to find repository root")
-
-	// Path to r2r-cli.examples.yml
-	examplesPath := filepath.Join(repoRoot, "r2r-cli.examples.yml")
-
-	// Verify the examples file exists
-	_, err = os.Stat(examplesPath)
-	require.NoError(t, err, "r2r-cli.examples.yml not found at repository root")
-
-	// Create a temporary r2r-cli.yml with empty extensions
+func TestLoadMinimalConfig(t *testing.T) {
+	// Create a temporary .r2r/r2r-cli.yml with minimal extension
 	tempDir := t.TempDir()
-	tempConfigPath := filepath.Join(tempDir, "r2r-cli.yml")
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	os.MkdirAll(r2rDir, 0755)
+	tempConfigPath := filepath.Join(r2rDir, "r2r-cli.yml")
 
 	// Write minimal valid config with empty values
 	configContent := `extensions:
   - name: 'test-extension'
     image: 'test/image:latest'
 `
-	err = os.WriteFile(tempConfigPath, []byte(configContent), 0644)
+	err := os.WriteFile(tempConfigPath, []byte(configContent), 0644)
 	require.NoError(t, err, "Failed to write test config file")
 
 	// Change to temp directory for the test
@@ -79,46 +70,62 @@ func TestLoadExamplesFile(t *testing.T) {
 	assert.Empty(t, ext.Env, "Env should default to empty slice")
 }
 
-// TestExamplesFileSchema validates that the examples file contains
+// TestConfigDocumentation validates that the configuration documentation contains
 // all documented fields and proper schema structure
-func TestExamplesFileSchema(t *testing.T) {
+func TestConfigDocumentation(t *testing.T) {
 	// Get the repository root
 	repoRoot, err := FindRepositoryRoot()
 	require.NoError(t, err, "Failed to find repository root")
 
-	// Path to r2r-cli.examples.yml
-	examplesPath := filepath.Join(repoRoot, "r2r-cli.examples.yml")
+	// Path to r2r-cli.yml.md (in contracts/src-cli/0.1.0/)
+	docsPath := filepath.Join(repoRoot, "contracts", "src-cli", "0.1.0", "r2r-cli.yml.md")
 
-	// Read the examples file
-	content, err := os.ReadFile(examplesPath)
-	require.NoError(t, err, "Failed to read r2r-cli.examples.yml")
+	// Read the documentation file
+	content, err := os.ReadFile(docsPath)
+	require.NoError(t, err, "Failed to read r2r-cli.yml.md")
 
 	// Convert to string for validation
-	examplesContent := string(content)
+	docsContent := string(content)
 
-	// Validate that all schema fields are documented
+	// Validate that all schema fields are documented in the markdown
 	requiredPatterns := []string{
+		// Top-level sections from schema
 		"extensions:",
-		"name:",
-		"description:",
-		"version:",
-		"image:",
-		"repo_url:",
-		"docs_url:",
-		"env:",
-		"Configuration Hierarchy:",
-		"Environment variables",
-		"Values in r2r-cli.yml",
-		"Sensible defaults",
+		"registry:",
+		"defaults:",
+		"environment:",
+		// Extension fields (in code blocks or tables)
+		"`name`",
+		"`description`",
+		"`version`",
+		"`image`",
+		"`image_pull_policy`",
+		"`repo_url`",
+		"`docs_url`",
+		"`env`",
+		"`volumes`",
+		"`ports`",
+		"`working_dir`",
+		"`entrypoint`",
+		"`command`",
+		"`privileged`",
+		"`network_mode`",
+		"`memory_limit`",
+		"`cpu_limit`",
+		// Documentation elements
+		"Configuration Hierarchy",
+		"Environment Variables",
 		"R2R_CONTAINER_REPOROOT",
 		"R2R_HOST_REPOROOT",
-		"memory_limit:",
-		"cpu_limit:",
+		// Important sections
+		"CI/CD Considerations",
+		"User-Specific Overrides",
+		"Schema Validation",
 	}
 
 	for _, pattern := range requiredPatterns {
-		assert.Contains(t, examplesContent, pattern,
-			"r2r-cli.examples.yml should document field: %s", pattern)
+		assert.Contains(t, docsContent, pattern,
+			"r2r-cli.yml.md should document: %s", pattern)
 	}
 }
 

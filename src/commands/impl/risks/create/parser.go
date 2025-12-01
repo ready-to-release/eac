@@ -10,6 +10,7 @@ import (
 
 	"github.com/ready-to-release/eac/src/ai"
 	"github.com/ready-to-release/eac/src/ai/providers"
+	aimock "github.com/ready-to-release/eac/src/core/ai"
 )
 
 // ============================================================================
@@ -76,8 +77,11 @@ func parseAssessment(config *Config, assessmentPath string) ([]RiskData, error) 
 func parseWithAI(config *Config, assessmentPath string, assessmentContent string) ([]RiskData, error) {
 	var response string
 
-	// Check for mock response (test mode)
-	if mockAIResponse != "" {
+	// Check for mock response from file-based mock system (subprocess testing)
+	if mock, ok := aimock.GetMockResponseWithSubcommand("risks", "create"); ok {
+		response = mock
+	} else if mockAIResponse != "" {
+		// Check for mock response (test mode - in-process testing)
 		response = mockAIResponse
 	} else {
 		// Load AI contract

@@ -18,9 +18,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	sc.Step(`^I run the command "([^"]*)"$`, func(cmdLine string) error {
 		return ctx.RunCommand(cmdLine)
 	})
-	sc.Step(`^I run the command "([^"]*)" without arguments$`, func(cmdLine string) error {
-		return ctx.RunCommand(cmdLine)
-	})
 
 	// Exit code steps - using helpers
 	sc.Step(`^the exit code is (\d+)$`, func(expectedCode int) error {
@@ -31,9 +28,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	})
 	sc.Step(`^the command should succeed$`, func() error {
 		return CommandSucceeded(ctx)
-	})
-	sc.Step(`^the command should fail$`, func() error {
-		return CommandFailed(ctx)
 	})
 	sc.Step(`^the command exits with code (\d+)$`, func(expectedCode int) error {
 		return ExitCodeIs(ctx, expectedCode)
@@ -61,15 +55,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	sc.Step(`^stderr contains "([^"]*)"$`, func(text string) error {
 		return OutputContains(ctx, text)
 	})
-	sc.Step(`^the standard output contains "([^"]*)"$`, func(text string) error {
-		return OutputContains(ctx, text)
-	})
-	sc.Step(`^the standard output does not contain "([^"]*)"$`, func(text string) error {
-		return OutputDoesNotContain(ctx, text)
-	})
-	sc.Step(`^the standard output matches the pattern "([^"]*)"$`, func(pattern string) error {
-		return OutputMatches(ctx, pattern)
-	})
 
 	// File verification steps - using helpers
 	sc.Step(`^the file "([^"]*)" should exist$`, func(path string) error {
@@ -85,8 +70,26 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 		return DirectoryHasFiles(ctx, dir)
 	})
 
-	// NOTE: "the custom prompt is used" is NOT registered here.
-	// Each verb that uses custom prompts should register its own step
-	// with a verb-specific pattern, calling the CustomPromptWasUsed helper.
-	// This avoids step conflicts between specs and risks.
+	// Git repository setup steps
+	sc.Step(`^I am in a git repository$`, func() error {
+		return IsGitRepository(ctx)
+	})
+	sc.Step(`^I am not in a git repository$`, func() error {
+		return EnsureNotGitRepository(ctx)
+	})
+	sc.Step(`^the repository root exists$`, func() error {
+		// This is typically satisfied by test setup
+		return nil
+	})
+
+	// Directory setup steps
+	sc.Step(`^no \.r2r directory exists$`, func() error {
+		return RemoveAll(ctx, ".r2r")
+	})
+	sc.Step(`^a \.r2r directory already exists$`, func() error {
+		return CreateDirectory(ctx, ".r2r/eac")
+	})
+
+	// NOTE: Feature-specific steps (work, risks, specs, etc.) are registered
+	// in their respective step files in impl/src-commands/
 }

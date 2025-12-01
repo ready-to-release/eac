@@ -1,130 +1,210 @@
-# Everything as Code
+<!-- markdownlint-disable MD033 MD045 -->
+#
 
 <p align="center">
   <img src="../docs/assets/logo/eac-logo.png" width="200" /><br>
-  <span style="font-size: 1.3em;">Turn every commit into deployable, compliant software you can trust</span>
+  <strong style="font-size: 2em;">Everything as Code</strong><br>
+  <em>Continuous delivery for regulated industries—without the compliance bottleneck</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml"><img src="https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml/badge.svg" alt="CI Status"></a>
+  <a href="https://github.com/ready-to-release/eac/stargazers"><img src="https://img.shields.io/github/stars/ready-to-release/eac?style=social" alt="GitHub Stars"></a>
+</p>
+
+<p align="center">
+  <a href="https://ready-to-release.github.io/eac/"><img src="https://img.shields.io/badge/docs-ready--to--release.github.io%2Feac-blue" alt="docs"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=src-cli"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=src-cli/*&label=src-cli&color=green" alt="src-cli release"></a>
+  <a href="https://github.com/ready-to-release/eac/pkgs/container/ext-eac"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=ext-eac/*&label=ext-eac&color=green" alt="ext-eac release"></a>
+  <a href="https://github.com/ready-to-release/eac/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-yellow" alt="MIT license"></a>
 </p>
 
 ---
 
-[![CI Status](https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml/badge.svg)](https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml)
-[![GitHub Stars](https://img.shields.io/github/stars/ready-to-release/eac?style=social)](https://github.com/ready-to-release/eac/stargazers)
+## The Problem
 
-[![docs release](https://github.com/ready-to-release/eac/actions/workflows/pages/pages-build-deployment/badge.svg)](https://ready-to-release.github.io/eac/)
-[![docs license](https://img.shields.io/badge/license-CC%20BY--SA%204.0-lightgrey)](https://github.com/ready-to-release/eac/blob/main/docs/LICENSE)
+Regulated industries face a paradox: **compliance demands rigor, markets demand speed**.
 
-[![src-cli release](https://img.shields.io/github/v/tag/ready-to-release/eac?filter=src-cli/*&label=release&color=green)](https://github.com/ready-to-release/eac/releases?q=src-cli)
-[![src-cli license](https://img.shields.io/badge/license-MIT-yellow)](https://github.com/ready-to-release/eac/blob/main/LICENSE)
+[DORA's research on change approval](https://dora.dev/capabilities/streamlining-change-approval/) shows that heavyweight approval processes backfire—they "slow down the delivery process leading to the release of larger batches less frequently," which *increases* production risk. External review boards show no correlation with lower failure rates.
 
-[![ext-eac release](https://img.shields.io/github/v/tag/ready-to-release/eac?filter=ext-eac/*&label=release&color=green)](https://github.com/ready-to-release/eac/pkgs/container/ext-eac)
-[![ext-eac license](https://img.shields.io/badge/license-MIT-yellow)](https://github.com/ready-to-release/eac/blob/main/LICENSE)
+Traditional approaches force a choice—move fast and risk audit failures, or stay compliant and watch competitors ship.
+Manual documentation drifts.
+Traceability is reconstructed after the fact.
+Audit prep takes months.
 
----
-
-## What is r2r (Ready to Release)?
-
-**r2r** is an extensible CLI that enables Everything-as-Code workflows from your terminal, IDE, or CI/CD pipeline. Built by engineers, for engineers.
-
-The CLI is your primary interface for:
-
-- Writing executable specifications that validate your system
-- Running continuous compliance checks on every commit
-- Generating audit evidence as a byproduct of your pipeline
-- Integrating with MCP servers and VSCode for IDE-native workflows
-- Automating delivery flows with containers and GitHub Actions
-
-**This repository is both the tool and a working example** - it demonstrates CI/CD implementation with the same principles and patterns explained in the documentation. Study the `.github/workflows/`, specs, and build processes to see Everything-as-Code in action.
-
-## Why Everything as Code?
-
-Traditional compliance creates friction: manual documentation, periodic audits, late validation. Development teams wait for approvals. Compliance teams scramble during audit prep. Quality suffers.
-
-**The r2r CLI transforms compliance from a bottleneck into automation:**
-
-- **Terminal-First**: Run validation and evidence generation from `r2r` commands
-- **Shift-Left Compliance** - Catch issues at commit time (5 minutes) vs. production (days)
-- **Executable Specifications** - Requirements and policies as code in version control
-- **Continuous Validation** - Compliance checked on every commit, not quarterly
-- **Automated Evidence** - Traceability generated automatically by your pipeline
-- **Reference Implementation** - This repo's own CI/CD demonstrates the patterns
+**This is a false choice.**
 
 ---
 
-## Table of Content
+## The Solution
 
-Documentation is organized using the [Diataxis framework](https://diataxis.fr/):
+[DORA's Version Control capability](https://dora.dev/capabilities/version-control/) proves that elite performers store **everything** in version control—not just code, but configurations, infrastructure, specifications, tests, and deployment automation.
 
-### [Tutorials](docs/tutorials/index.md)
+This enables complete traceability: "the path backward from every deployment to the elements it came from."
 
-**Learning-oriented**: Step-by-step lessons for newcomers
+We implement this with two complementary ideas:
 
-Start here if you're new to the CLI and want hands-on guidance through core concepts and workflows.
+### R2R — Ready to Release
 
-### [How-to Guides](docs/how-to-guides/index.md)
+> *"We want to be ready to release at any time, for any team."*
 
-**Problem-oriented**: Recipes for specific tasks
+An extensible CLI that isolates teams from tooling and platform dependencies. Through Docker encapsulation, R2R runs almost entirely independent of local setups—ensuring every commit is validated, every artifact traceable, and every deployment repeatable.
 
-Use these when you need to accomplish a specific task like writing specifications, setting up CI validation, or linking risk controls.
+### EAC — Everything as Code
 
-### [Reference](docs/reference/index.md)
+> *"We treat everything as code—to trace, version, review, and automate."*
 
-**Information-oriented**: Technical descriptions and specifications
+A paradigm where requirements, documentation, compliance rules, and architecture live as executable, version-controlled artifacts. Not documents that drift—code that runs. Full traceability. Full auditability. Always.
 
-Look here for command syntax, configuration options, Gherkin format details, and API specifications.
-
-### [Explanation](docs/explanation/index.md)
-
-**Understanding-oriented**: Conceptual discussions and design rationale
-
-Read these to understand the "why" behind continuous delivery models, compliance transformation, testing strategies, and architectural decisions.
-
-**Choose based on what you need:**
-
-- "I'm new and want to learn" → [Tutorials](docs/tutorials/index.md)
-- "I need to accomplish a task" → [How-to Guides](docs/how-to-guides/index.md)
-- "I need technical details" → [Reference](docs/reference/index.md)
-- "I want to understand why" → [Explanation](docs/explanation/index.md)
+The EAC extension helps organizations design reusable templates for apps, tools, workflows, and repositories—standardizing delivery across teams.
 
 ---
 
-## Installation
+## How It Works
 
-Installation instructions coming soon.
+| What Changes       | From                             | To                                |
+| ------------------ | -------------------------------- | --------------------------------- |
+| **Requirements**   | Word documents                   | Executable Gherkin specifications |
+| **Documentation**  | Wiki pages that drift            | Audit-ready, generated from code  |
+| **Compliance**     | Manual checklists                | Automated pipeline gates          |
+| **Traceability**   | Spreadsheets compiled for audits | Git history—always complete       |
+| **Audit evidence** | Months of preparation            | Continuous capture—always ready   |
+
+**The result**: Audit-ready documentation as a byproduct of your pipeline, not a bottleneck before release.
+
+[Understand the paradigm →](https://ready-to-release.github.io/eac/explanation/everything-as-code/) · [See the compliance-velocity paradox →](https://ready-to-release.github.io/eac/explanation/everything-as-code/compliance-velocity-paradox/)
+
+---
+
+## Get Started
+
+### 1. Install R2R
+
+<details>
+<summary><b>Linux / macOS</b></summary>
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
+```
+
+</details>
+
+<details>
+<summary><b>Windows (PowerShell)</b></summary>
+
+```powershell
+irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli/install.ps1 | iex
+```
+
+</details>
+
+### 2. Initialize and install EAC extension
+
+<details>
+<summary><b>Commands</b></summary>
+
+```bash
+# In your repository root
+r2r init
+r2r install eac
+# Creates .r2r/r2r-cli.yml
+```
+
+</details>
+
+### 3. Initialize EAC in your repository
+
+<details>
+<summary><b>Commands</b></summary>
+
+```bash
+r2r eac init
+# Creates .r2r/eac/modules.yml, module-types.yml, ...
+```
+
+</details>
+
+### 4. Start using it
+
+<details>
+<summary><b>Commands</b></summary>
+
+```bash
+r2r eac show modules              # Discover module structure
+r2r eac create spec "..."         # Generate executable specifications
+r2r eac validate contracts        # Validate compliance continuously
+```
+
+</details>
+
+[See all 67+ commands →](https://ready-to-release.github.io/eac/how-to-guides/)
+
+---
+
+## Why It Works
+
+[DORA research](https://dora.dev/research/) proves that high performers in **regulated industries** achieve the same metrics as tech companies:
+
+- **208×** faster deployment frequency
+- **106×** faster lead time
+- **7×** lower change failure rate
+
+The difference isn't less compliance—it's **automated compliance**. Small, validated changes. Continuous evidence capture. Traceability built into every commit.
+
+**This repository is a demonstration of the tooling in action**: We use R2R and EAC to build R2R and EAC.
+
+---
+
+## Extend It
+
+<details>
+<summary><b>Create R2R extensions</b></summary>
+
+```yaml
+# .r2r/r2r-cli.yml
+extensions:
+  - name: 'my-extension'
+    image: 'ghcr.io/my-org/my-extension:latest'
+```
+
+[Full guide →](https://ready-to-release.github.io/eac/how-to-guides/r2r/creating-extensions/)
+
+</details>
+
+<details>
+<summary><b>Add EAC modules</b></summary>
+
+```yaml
+# .r2r/eac/modules.yml
+modules:
+  - moniker: my-service
+    type: go-library
+    files:
+      root: src/my-service
+```
+
+[Full guide →](https://ready-to-release.github.io/eac/how-to-guides/eac/creating-modules/)
+
+</details>
+
+---
+
+## Documentation
+
+| I want to...               | Go to                                        |
+| -------------------------- | -------------------------------------------- |
+| Learn step-by-step         | [Tutorials](https://ready-to-release.github.io/eac/tutorials/)         |
+| Accomplish a specific task | [How-to Guides](https://ready-to-release.github.io/eac/how-to-guides/) |
+| Look up technical details  | [Reference](https://ready-to-release.github.io/eac/reference/)         |
+| Understand why things work | [Explanation](https://ready-to-release.github.io/eac/explanation/)     |
+
+**Full documentation**: [ready-to-release.github.io/eac](https://ready-to-release.github.io/eac/)
 
 ---
 
 ## Maintainers
 
-- Casper Leon Nielsen ([@casperease](https://github.com/casperease)
+- Casper Leon Nielsen ([@casperease](https://github.com/casperease))
 - Mikael Ottesen Hansen ([@miohansen](https://github.com/miohansen))
 
-## Support and Community
-
-Need help getting started or have questions?
-
-- **Documentation**: Browse the [full documentation](https://ready-to-release.github.io/eac/) for guides and references
-- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/ready-to-release/eac/issues/new)
-
----
-
-## License
-
-This project uses a dual-license structure:
-
-### Software License
-
-The r2r software (all source code) is licensed under the **MIT License**.
-
-- **License**: MIT
-- **Details**: See [LICENSE](LICENSE)
-- **What it covers**: All source code in `src/`, build scripts, configuration files, and other software components
-
-### Documentation License
-
-The documentation is licensed under **Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)**.
-
-- **License**: CC BY-SA 4.0
-- **Details**: See [docs/LICENSE](docs/LICENSE)
-- **What it covers**: All documentation in `docs/`, including guides, tutorials, explanations, and reference materials
-
-This dual-license approach allows the software to be freely used and modified under permissive terms, while ensuring documentation improvements are shared back with the community.
+**Questions?** [Open an issue](https://github.com/ready-to-release/eac/issues/new) · **License**: [MIT](LICENSE) (code) / [CC BY-SA 4.0](docs/LICENSE) (docs)

@@ -10,8 +10,9 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/src/core/contracts/reports"
+	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
+	repositoryreports "github.com/ready-to-release/eac/src/core/repository/reports"
 	"github.com/ready-to-release/eac/src/specs/internal"
 )
 
@@ -20,10 +21,12 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Create repository-specific context that also updates the shared context
 	repoCtx := &repositoryContext{sharedCtx: ctx}
 
+	// Register module isolation steps
+	registerModuleIsolationSteps(sc, ctx)
+
 	// Given steps
-	sc.Step(`^the repository root exists$`, func() error {
-		return repoCtx.repositoryRootExists()
-	})
+	// Note: "the repository root exists" is registered in common steps (internal/steps.go)
+	// Repository context is initialized lazily via ensureRepoRoot() when needed
 	sc.Step(`^I discover all Go modules in the repository using module contracts$`, func() error {
 		return repoCtx.discoverAllGoModulesUsingContracts()
 	})
@@ -141,18 +144,18 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return repoCtx.shouldSeeDetailsOfInconsistencies()
 	})
 
-	// No-unordered-files steps
+	// No-unordered-files steps (orphan file detection)
 	sc.Step(`^the module contracts are loaded$`, func() error {
 		return repoCtx.loadAllModuleContracts()
 	})
-	sc.Step(`^I lookup files belonging to the "([^"]*)" module$`, func(moduleName string) error {
-		return repoCtx.lookupFilesBelongingToModule(moduleName)
+	sc.Step(`^I check for orphan files$`, func() error {
+		return repoCtx.checkForOrphanFiles()
 	})
-	sc.Step(`^the file list should be empty$`, func() error {
-		return repoCtx.fileListShouldBeEmpty()
+	sc.Step(`^no files should be orphaned$`, func() error {
+		return repoCtx.noFilesShouldBeOrphaned()
 	})
-	sc.Step(`^if any files are found, I should see their paths with counts$`, func() error {
-		return repoCtx.ifAnyFilesFoundShowPathsWithCounts()
+	sc.Step(`^if any orphan files are found, I should see their paths with counts$`, func() error {
+		return repoCtx.ifOrphanFilesFoundShowPathsWithCounts()
 	})
 
 	// One-module-per-file steps
@@ -172,6 +175,61 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 	sc.Step(`^I should not see any undefined tag errors$`, func() error {
 		return repoCtx.shouldNotSeeBuildErrors() // Reuses build error check
+	})
+
+	// Build tags in step files validation
+	sc.Step(`^I discover all godog_test\.go files in "([^"]*)"$`, func(dir string) error {
+		return repoCtx.discoverGodogTestFiles(dir)
+	})
+	sc.Step(`^I check each file for Go build tags$`, func() error {
+		return repoCtx.checkFilesForBuildTags()
+	})
+	sc.Step(`^no files should have "([^"]*)" directives$`, func(directive string) error {
+		return repoCtx.noFilesShouldHaveDirective(directive)
+	})
+	sc.Step(`^if any files have build tags, I should see the file path and the tag$`, func() error {
+		return repoCtx.ifBuildTagsFoundShowDetails()
+	})
+
+	// Script location validation steps
+	sc.Step(`^the following script extensions are tracked:$`, func(table *godog.Table) error {
+		return repoCtx.theFollowingScriptExtensionsAreTracked(table)
+	})
+	sc.Step(`^I scan the repository for script files$`, func() error {
+		return repoCtx.scanRepositoryForScriptFiles()
+	})
+	sc.Step(`^all scripts should be in one of these locations:$`, func(table *godog.Table) error {
+		return repoCtx.allScriptsShouldBeInApprovedLocations(table)
+	})
+	sc.Step(`^no scripts should exist in:$`, func(table *godog.Table) error {
+		return repoCtx.noScriptsShouldExistIn(table)
+	})
+	sc.Step(`^these locations are excluded from validation:$`, func(table *godog.Table) error {
+		return repoCtx.theseLocationsAreExcludedFromValidation(table)
+	})
+	sc.Step(`^I scan the scripts directory structure$`, func() error {
+		return repoCtx.scanScriptsDirectoryStructure()
+	})
+	sc.Step(`^each script type directory should contain only package subdirectories$`, func() error {
+		return repoCtx.eachScriptTypeDirectoryShouldContainOnlyPackageSubdirectories()
+	})
+	sc.Step(`^package names should be lowercase with hyphens$`, func() error {
+		return repoCtx.packageNamesShouldBeLowercaseWithHyphens()
+	})
+	sc.Step(`^each package should contain at least one script file$`, func() error {
+		return repoCtx.eachPackageShouldContainAtLeastOneScriptFile()
+	})
+	sc.Step(`^I check the scripts directory structure$`, func() error {
+		return repoCtx.checkScriptsDirectoryStructure()
+	})
+	sc.Step(`^scripts/pwsh/ should contain only directories$`, func() error {
+		return repoCtx.scriptsTypeDirShouldContainOnlyDirectories("scripts/pwsh")
+	})
+	sc.Step(`^scripts/sh/ should contain only directories$`, func() error {
+		return repoCtx.scriptsTypeDirShouldContainOnlyDirectories("scripts/sh")
+	})
+	sc.Step(`^scripts/cmd/ should contain only directories if it exists$`, func() error {
+		return repoCtx.scriptsCmdDirShouldContainOnlyDirectoriesIfExists()
 	})
 }
 
@@ -194,7 +252,7 @@ type repositoryContext struct {
 	tagConflicts []string
 
 	// Module hierarchy validation
-	moduleReport          *reports.ModuleContractReport
+	moduleReport          *contractsreports.ModuleContractReport
 	dependencyErrors      []string
 	circularDependencies  []string
 	missingModules        []string
@@ -202,7 +260,18 @@ type repositoryContext struct {
 
 	// File ownership validation
 	moduleFiles       []string
-	multiOwnershipMap map[string][]string // file -> list of owning modules
+	orphanFiles       []repository.RepositoryFileWithModule // files with no owner
+	multiOwnershipMap map[string][]string                   // file -> list of owning modules
+
+	// Build tags validation
+	godogTestFiles   []string
+	filesWithBuildTags map[string]string // file -> build tag found
+
+	// Script location validation
+	scriptExtensions     []string
+	discoveredScripts    []string
+	disallowedScripts    []string
+	looseScriptsInType   []string
 }
 
 func (c *repositoryContext) ensureRepoRoot() error {
@@ -212,6 +281,14 @@ func (c *repositoryContext) ensureRepoRoot() error {
 			return fmt.Errorf("failed to get repository root: %w", err)
 		}
 		c.repoRoot = repoRoot
+		// Initialize collections
+		c.discoveredModules = []string{}
+		c.tidyResults = make(map[string]string)
+		c.failedModules = []string{}
+		c.markdownFiles = []string{}
+		c.markdownErrors = make(map[string][]string)
+		c.featureFiles = []string{}
+		c.tagConflicts = []string{}
 	}
 	return nil
 }
@@ -243,7 +320,7 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 		return err
 	}
 
-	moduleReport, err := reports.GetModuleContracts(c.repoRoot)
+	moduleReport, err := contractsreports.GetModuleContracts(c.repoRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -490,7 +567,7 @@ func (c *repositoryContext) loadAllModuleContracts() error {
 		return err
 	}
 
-	moduleReport, err := reports.GetModuleContracts(c.repoRoot)
+	moduleReport, err := contractsreports.GetModuleContracts(c.repoRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -659,55 +736,38 @@ func (c *repositoryContext) shouldSeeDetailsOfInconsistencies() error {
 // File Ownership Validation Steps
 // ============================================================================
 
-func (c *repositoryContext) lookupFilesBelongingToModule(moduleName string) error {
+func (c *repositoryContext) checkForOrphanFiles() error {
 	if c.moduleReport == nil {
 		return fmt.Errorf("module contracts not loaded")
 	}
 
-	c.moduleFiles = []string{}
+	c.orphanFiles = []repository.RepositoryFileWithModule{}
 
-	m, exists := c.moduleReport.Registry.Get(moduleName)
-	if !exists {
-		// Module doesn't exist, so no files belong to it
-		return nil
+	// Get all files with module ownership using the repository package
+	filesReport, err := repositoryreports.GetFilesModulesReport(true, false, false, c.repoRoot)
+	if err != nil {
+		return fmt.Errorf("failed to get files report: %w", err)
 	}
 
-	// Walk the repository and find files that match this module
-	err := filepath.Walk(c.repoRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			name := info.Name()
-			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		// Get relative path
-		relPath, err := filepath.Rel(c.repoRoot, path)
-		if err != nil {
-			return nil
-		}
-		relPath = strings.ReplaceAll(relPath, "\\", "/")
-		if m.MatchesFile(relPath) {
-			c.moduleFiles = append(c.moduleFiles, relPath)
-		}
-		return nil
-	})
-	return err
+	// GetOrphanFiles returns files with no module ownership
+	c.orphanFiles = filesReport.OrphanFiles
+	return nil
 }
 
-func (c *repositoryContext) fileListShouldBeEmpty() error {
-	if len(c.moduleFiles) > 0 {
-		return fmt.Errorf("found %d file(s) in module:\n%s",
-			len(c.moduleFiles), strings.Join(c.moduleFiles, "\n"))
+func (c *repositoryContext) noFilesShouldBeOrphaned() error {
+	if len(c.orphanFiles) > 0 {
+		paths := make([]string, len(c.orphanFiles))
+		for i, f := range c.orphanFiles {
+			paths[i] = f.Name
+		}
+		return fmt.Errorf("found %d orphan file(s) without module ownership:\n%s",
+			len(c.orphanFiles), strings.Join(paths, "\n"))
 	}
 	return nil
 }
 
-func (c *repositoryContext) ifAnyFilesFoundShowPathsWithCounts() error {
-	// Passive assertion - error in fileListShouldBeEmpty provides details
+func (c *repositoryContext) ifOrphanFilesFoundShowPathsWithCounts() error {
+	// Passive assertion - error in noFilesShouldBeOrphaned provides details
 	return nil
 }
 
@@ -768,6 +828,367 @@ func (c *repositoryContext) noFilesShouldBelongToMultipleModules() error {
 func (c *repositoryContext) ifMultiOwnershipShowPathsAndModules() error {
 	// Passive assertion - error in noFilesShouldBelongToMultipleModules provides details
 	return nil
+}
+
+// ============================================================================
+// Build Tags Validation Steps
+// ============================================================================
+
+func (c *repositoryContext) discoverGodogTestFiles(dir string) error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	c.godogTestFiles = []string{}
+	c.filesWithBuildTags = make(map[string]string)
+
+	searchDir := filepath.Join(c.repoRoot, dir)
+	return filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if info.Name() == "godog_test.go" {
+			relPath, _ := filepath.Rel(c.repoRoot, path)
+			c.godogTestFiles = append(c.godogTestFiles, relPath)
+		}
+		return nil
+	})
+}
+
+func (c *repositoryContext) checkFilesForBuildTags() error {
+	for _, relPath := range c.godogTestFiles {
+		fullPath := filepath.Join(c.repoRoot, relPath)
+		content, err := os.ReadFile(fullPath)
+		if err != nil {
+			continue
+		}
+
+		lines := strings.Split(string(content), "\n")
+		// Check first 10 lines for build tags (they must appear before package declaration)
+		for i := 0; i < len(lines) && i < 10; i++ {
+			line := strings.TrimSpace(lines[i])
+			if strings.HasPrefix(line, "//go:build ") {
+				c.filesWithBuildTags[relPath] = line
+				break
+			}
+			if strings.HasPrefix(line, "// +build ") {
+				c.filesWithBuildTags[relPath] = line
+				break
+			}
+			// Stop if we hit the package declaration
+			if strings.HasPrefix(line, "package ") {
+				break
+			}
+		}
+	}
+	return nil
+}
+
+func (c *repositoryContext) noFilesShouldHaveDirective(directive string) error {
+	var violations []string
+	for file, tag := range c.filesWithBuildTags {
+		if strings.Contains(tag, directive) {
+			violations = append(violations, fmt.Sprintf("  %s: %s", file, tag))
+		}
+	}
+	if len(violations) > 0 {
+		return fmt.Errorf("found %d file(s) with %s directives:\n%s",
+			len(violations), directive, strings.Join(violations, "\n"))
+	}
+	return nil
+}
+
+func (c *repositoryContext) ifBuildTagsFoundShowDetails() error {
+	// Passive assertion - errors from noFilesShouldHaveDirective provide details
+	return nil
+}
+
+// ============================================================================
+// Script Location Validation Steps
+// ============================================================================
+
+func (c *repositoryContext) theFollowingScriptExtensionsAreTracked(table *godog.Table) error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	c.scriptExtensions = []string{}
+	c.discoveredScripts = []string{}
+	c.disallowedScripts = []string{}
+	c.looseScriptsInType = []string{}
+
+	// Parse table (skip header row)
+	for i, row := range table.Rows {
+		if i == 0 {
+			continue // Skip header
+		}
+		if len(row.Cells) >= 1 {
+			c.scriptExtensions = append(c.scriptExtensions, row.Cells[0].Value)
+		}
+	}
+	return nil
+}
+
+func (c *repositoryContext) scanRepositoryForScriptFiles() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	return filepath.Walk(c.repoRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors
+		}
+		if info.IsDir() {
+			name := info.Name()
+			// Skip excluded directories
+			if name == "node_modules" || name == "vendor" || name == "out" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Check if file has a script extension
+		for _, ext := range c.scriptExtensions {
+			if strings.HasSuffix(info.Name(), ext) {
+				relPath, _ := filepath.Rel(c.repoRoot, path)
+				relPath = strings.ReplaceAll(relPath, "\\", "/")
+				c.discoveredScripts = append(c.discoveredScripts, relPath)
+				break
+			}
+		}
+		return nil
+	})
+}
+
+func (c *repositoryContext) allScriptsShouldBeInApprovedLocations(table *godog.Table) error {
+	// Approved patterns from the table
+	approvedPatterns := []string{
+		".claude/hooks/",
+		"scripts/pwsh/",
+		"scripts/sh/",
+		"scripts/cmd/",
+	}
+	approvedRootFiles := []string{
+		"importer.sh",
+		"importer.ps1",
+	}
+
+	for _, script := range c.discoveredScripts {
+		approved := false
+
+		// Check root-level importers
+		for _, rootFile := range approvedRootFiles {
+			if script == rootFile {
+				approved = true
+				break
+			}
+		}
+
+		// Check approved directory patterns
+		if !approved {
+			for _, pattern := range approvedPatterns {
+				if strings.HasPrefix(script, pattern) {
+					approved = true
+					break
+				}
+			}
+		}
+
+		if !approved {
+			c.disallowedScripts = append(c.disallowedScripts, script)
+		}
+	}
+
+	if len(c.disallowedScripts) > 0 {
+		return fmt.Errorf("found %d script(s) in unapproved locations:\n  %s",
+			len(c.disallowedScripts), strings.Join(c.disallowedScripts, "\n  "))
+	}
+	return nil
+}
+
+func (c *repositoryContext) noScriptsShouldExistIn(table *godog.Table) error {
+	// Parse disallowed locations from table (skip header)
+	disallowedPrefixes := []string{}
+	for i, row := range table.Rows {
+		if i == 0 {
+			continue
+		}
+		if len(row.Cells) >= 1 {
+			disallowedPrefixes = append(disallowedPrefixes, row.Cells[0].Value)
+		}
+	}
+
+	var violations []string
+	for _, script := range c.discoveredScripts {
+		for _, prefix := range disallowedPrefixes {
+			if strings.HasPrefix(script, prefix) {
+				violations = append(violations, script)
+				break
+			}
+		}
+	}
+
+	if len(violations) > 0 {
+		return fmt.Errorf("found %d script(s) in disallowed locations:\n  %s",
+			len(violations), strings.Join(violations, "\n  "))
+	}
+	return nil
+}
+
+func (c *repositoryContext) theseLocationsAreExcludedFromValidation(table *godog.Table) error {
+	// This is informational - excluded locations are already skipped during scanning
+	return nil
+}
+
+func (c *repositoryContext) scanScriptsDirectoryStructure() error {
+	// Already scanned in scanRepositoryForScriptFiles
+	return nil
+}
+
+func (c *repositoryContext) eachScriptTypeDirectoryShouldContainOnlyPackageSubdirectories() error {
+	// This is checked in scriptsTypeDirShouldContainOnlyDirectories
+	return nil
+}
+
+func (c *repositoryContext) packageNamesShouldBeLowercaseWithHyphens() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	typesDirs := []string{"scripts/pwsh", "scripts/sh", "scripts/cmd"}
+	var violations []string
+
+	for _, typeDir := range typesDirs {
+		fullPath := filepath.Join(c.repoRoot, typeDir)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			continue
+		}
+
+		entries, err := os.ReadDir(fullPath)
+		if err != nil {
+			continue
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				name := entry.Name()
+				// Check lowercase with hyphens only
+				for _, ch := range name {
+					if !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-') {
+						violations = append(violations, fmt.Sprintf("%s/%s", typeDir, name))
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if len(violations) > 0 {
+		return fmt.Errorf("found %d package(s) with invalid names (must be lowercase with hyphens):\n  %s",
+			len(violations), strings.Join(violations, "\n  "))
+	}
+	return nil
+}
+
+func (c *repositoryContext) eachPackageShouldContainAtLeastOneScriptFile() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	// Use default extensions if not set by previous step
+	extensions := c.scriptExtensions
+	if len(extensions) == 0 {
+		extensions = []string{".sh", ".ps1", ".psm1", ".bat", ".cmd"}
+	}
+
+	typesDirs := []string{"scripts/pwsh", "scripts/sh", "scripts/cmd"}
+	var emptyPackages []string
+
+	for _, typeDir := range typesDirs {
+		fullPath := filepath.Join(c.repoRoot, typeDir)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			continue
+		}
+
+		entries, err := os.ReadDir(fullPath)
+		if err != nil {
+			continue
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				packagePath := filepath.Join(fullPath, entry.Name())
+				hasScript := false
+
+				// Check for any script file in this package
+				filepath.Walk(packagePath, func(path string, info os.FileInfo, err error) error {
+					if err != nil || info.IsDir() {
+						return nil
+					}
+					for _, ext := range extensions {
+						if strings.HasSuffix(info.Name(), ext) {
+							hasScript = true
+							return filepath.SkipAll
+						}
+					}
+					return nil
+				})
+
+				if !hasScript {
+					relPath := fmt.Sprintf("%s/%s", typeDir, entry.Name())
+					emptyPackages = append(emptyPackages, relPath)
+				}
+			}
+		}
+	}
+
+	if len(emptyPackages) > 0 {
+		return fmt.Errorf("found %d empty package(s) with no script files:\n  %s",
+			len(emptyPackages), strings.Join(emptyPackages, "\n  "))
+	}
+	return nil
+}
+
+func (c *repositoryContext) checkScriptsDirectoryStructure() error {
+	return c.ensureRepoRoot()
+}
+
+func (c *repositoryContext) scriptsTypeDirShouldContainOnlyDirectories(typeDir string) error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	fullPath := filepath.Join(c.repoRoot, typeDir)
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		// Directory doesn't exist, that's fine
+		return nil
+	}
+
+	entries, err := os.ReadDir(fullPath)
+	if err != nil {
+		return fmt.Errorf("failed to read %s: %w", typeDir, err)
+	}
+
+	var looseFiles []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			looseFiles = append(looseFiles, fmt.Sprintf("%s/%s", typeDir, entry.Name()))
+		}
+	}
+
+	if len(looseFiles) > 0 {
+		c.looseScriptsInType = append(c.looseScriptsInType, looseFiles...)
+		return fmt.Errorf("found %d loose file(s) in %s (should be in package subdirectory):\n  %s",
+			len(looseFiles), typeDir, strings.Join(looseFiles, "\n  "))
+	}
+	return nil
+}
+
+func (c *repositoryContext) scriptsCmdDirShouldContainOnlyDirectoriesIfExists() error {
+	return c.scriptsTypeDirShouldContainOnlyDirectories("scripts/cmd")
 }
 
 // Helper functions

@@ -19,7 +19,6 @@
 // Flag.destination: type=string, usage=Output directory (default: .docs/reference)
 // Flag.input-json: type=string, usage=JSON file with replacement values {"Key": "Value"}
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/logs/templates/apply/
-// HasSideEffects: true
 package docs
 
 import (
@@ -30,7 +29,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/src/commands/impl/templates/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

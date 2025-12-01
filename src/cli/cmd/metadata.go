@@ -46,6 +46,12 @@ var MetadataCmd = &cobra.Command{
 		cmd.PrintErrln("Retrieving metadata from extension:", ext.Name)
 		cmd.PrintErrln("Image:", ext.Image)
 
+		// Ensure image exists locally (pull if necessary)
+		if err := host.EnsureImageExists(ext.Image, ext.ImagePullPolicy, ext.LoadLocal); err != nil {
+			cmd.PrintErrf("Error ensuring image exists: %v\n", err)
+			os.Exit(1)
+		}
+
 		// Execute metadata command
 		output, err := host.ExecuteMetadataCommand(ext)
 		if err != nil {

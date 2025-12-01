@@ -7,7 +7,6 @@
 //   --pr-base <sha>: For PRs, the base SHA to compare against
 //   --workflow <name>: Workflow name to find last success (default: "Change Trigger")
 //   --branch <name>: Branch to check for last success (default: main)
-// HasSideEffects: false
 package get
 
 import (
@@ -17,7 +16,7 @@ import (
 	"strings"
 
 	get "github.com/ready-to-release/eac/src/commands/impl/get/internal"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/repository"
 )

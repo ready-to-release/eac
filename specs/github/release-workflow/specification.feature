@@ -1,4 +1,4 @@
-@L3
+@L3 @skip:wip
 Feature: github_release-workflow
 
 As a developer

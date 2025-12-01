@@ -109,17 +109,20 @@ var RootCmd = &cobra.Command{
 
 func init() {
 	// Initialize logger with default configuration
+	// File logging is disabled by default (File: "disabled")
+	// Set to empty string to enable with auto-detected path
 	logCfg := logger.Config{
 		Console: true,
 		Level:   "info",
-		File:    "", // Disable file logging by default
+		File:    "disabled", // Disable file logging by default
 	}
 
 	// Check if file logging is explicitly requested
 	if os.Getenv("R2R_LOG_FILE") != "" {
 		logCfg.File = os.Getenv("R2R_LOG_FILE")
 	} else if os.Getenv("R2R_ENABLE_FILE_LOG") == "true" {
-		logCfg.File = "r2r.log"
+		// Empty string triggers auto-detection of .r2r/r2r-cli.log path
+		logCfg.File = ""
 	}
 
 	// Initialize logger

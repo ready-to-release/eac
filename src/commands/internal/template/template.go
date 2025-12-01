@@ -6,7 +6,6 @@
 // Long: REPLACE (Optional): Additional paragraphs for default behaviors, validation requirements, or special notes.
 // Flag.example: type=string, shorthand=e, default=value, usage=REPLACE: Educational description explaining what this flag does, when to use it, and why it's useful, required=false, completion=value1,value2
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode with verbose logging and intermediate file outputs for troubleshooting
-// HasSideEffects: false
 package template
 
 // INSTRUCTIONS:
@@ -25,7 +24,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 

@@ -5,9 +5,6 @@
   "description": "Schema for the environment contract defining test execution contexts",
   "type": "object",
   "properties": {
-    "metadata": {
-      "$ref": "#/definitions/metadata"
-    },
     "environments": {
       "type": "array",
       "description": "List of test execution environments",
@@ -17,28 +14,8 @@
       "minItems": 1
     }
   },
-  "required": ["metadata", "environments"],
+  "required": ["environments"],
   "definitions": {
-    "metadata": {
-      "type": "object",
-      "description": "Contract metadata",
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "Contract version",
-          "pattern": "^\\d+\\.\\d+\\.\\d+$"
-        },
-        "description": {
-          "type": "string",
-          "description": "Contract description"
-        },
-        "scope": {
-          "type": "string",
-          "description": "Scope of the contract"
-        }
-      },
-      "required": ["version", "description"]
-    },
     "environment": {
       "type": "object",
       "description": "A test execution environment definition",
@@ -68,20 +45,12 @@
           "description": "Environment type",
           "enum": ["unit", "docker", "docker-compose", "plte", "production"]
         },
-        "env_tags": {
+        "system_deps": {
           "type": "array",
-          "description": "Environment classification tags",
+          "description": "Required system dependencies (e.g., docker, go, helm)",
           "items": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9-]*$"
-          }
-        },
-        "system_deps": {
-          "type": "array",
-          "description": "Required system dependencies (e.g., @deps:docker)",
-          "items": {
-            "type": "string",
-            "pattern": "^@deps:[a-z][a-z0-9-]*$"
           }
         }
       },
@@ -90,11 +59,6 @@
   },
   "examples": [
     {
-      "metadata": {
-        "version": "0.1.0",
-        "description": "Environment contract defining test execution contexts",
-        "scope": "Test environment classification and requirements"
-      },
       "environments": [
         {
           "moniker": "l00-01",
@@ -102,7 +66,6 @@
           "description": "Very fast unit tests running in-process with direct access to source",
           "level": "L0",
           "type": "unit",
-          "env_tags": ["in-process", "very-fast"],
           "system_deps": []
         },
         {
@@ -111,8 +74,7 @@
           "description": "Single Docker container execution environment",
           "level": "L2",
           "type": "docker",
-          "env_tags": ["local", "isolated"],
-          "system_deps": ["@deps:docker"]
+          "system_deps": ["docker"]
         }
       ]
     }

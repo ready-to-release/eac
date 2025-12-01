@@ -1,6 +1,5 @@
-// Command: describe commands
+// Command: get commands
 // Description: Output structured command information for shell integration
-// HasSideEffects: false
 package describe
 
 import (
@@ -10,13 +9,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/reports"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 func init() {
-	registry.Register(DescribeCommands)
+	registry.Register(GetCommands)
 }
 
 // CommandInfo represents structured information about a command
@@ -36,7 +35,7 @@ type CommandTree struct {
 	Modules  []string            `json:"modules"`  // Available module monikers for completion
 }
 
-func DescribeCommands() int {
+func GetCommands() int {
 	tree := buildCommandTree()
 
 	// Output as JSON
@@ -63,7 +62,7 @@ func buildCommandTree() CommandTree {
 		info := CommandInfo{
 			Name:        cmdName,
 			Parts:       parts,
-			Description: reg.Description,
+			Description: reg.Short,
 			IsLeaf:      true,
 			Args:        reg.Args,
 		}

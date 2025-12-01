@@ -73,7 +73,7 @@ func getUniqueFeatures(tests []TestReference) []string {
 	return features
 }
 
-// countCriticalAspects counts tests with @critical-aspect
+// countCriticalAspects counts tests with @gmp-critical-aspect
 func countCriticalAspects(tests []TestReference) int {
 	count := 0
 	for _, test := range tests {

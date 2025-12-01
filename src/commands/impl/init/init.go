@@ -17,7 +17,6 @@
 // Long:   init --ai claude-cli --debug
 // Flag.ai: type=string, shorthand=a, usage=AI provider to configure, required=true, completion=claude-api,claude-cli,openai,gemini
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs to the 'out' directory for troubleshooting and analysis
-// HasSideEffects: true
 package init
 
 import (
@@ -27,7 +26,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/src/ai/providers"
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/git"
 	"github.com/ready-to-release/eac/src/core/logging"
 	"github.com/ready-to-release/eac/src/core/repository"

@@ -1,6 +1,5 @@
 // Command: validate module-hierarchy
 // Description: Validate module dependency graph structure
-// HasSideEffects: false
 package validate
 
 import (
@@ -8,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/src/commands/internal/registry"
+	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	"github.com/ready-to-release/eac/src/core/repository"
 )
@@ -158,78 +157,16 @@ func validateNoCircularDependencies(reg *modules.Registry, report *moduleHierarc
 }
 
 func validateAllModulesReachable(reg *modules.Registry, report *moduleHierarchyReport) {
-	// Find root modules (modules with parent "." or no parent)
-	rootModules := []*modules.ModuleContract{}
-	for _, module := range reg.All() {
-		if module.Parent == "." || module.Parent == "" {
-			rootModules = append(rootModules, module)
-		}
-	}
-
-	if len(rootModules) == 0 {
-		// No root modules - this might be okay for some repos
+	// All modules are now root modules (no parent hierarchy)
+	// Build dependency graph and check reachability through dependencies
+	allModules := reg.All()
+	if len(allModules) == 0 {
 		return
 	}
 
-	// BFS to find all reachable modules
-	reachable := make(map[string]bool)
-	queue := []string{}
-
-	for _, root := range rootModules {
-		queue = append(queue, root.Moniker)
-		reachable[root.Moniker] = true
-	}
-
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-
-		if !reg.Has(current) {
-			continue
-		}
-
-		// Add all modules that depend on current (reverse direction)
-		for _, other := range reg.All() {
-			for _, dep := range other.DependsOn {
-				if dep == current && !reachable[other.Moniker] {
-					reachable[other.Moniker] = true
-					queue = append(queue, other.Moniker)
-				}
-			}
-		}
-
-		// Also follow used_by relationships (computed from depends_on)
-		usedBy := reg.GetUsedBy(current)
-		for _, user := range usedBy {
-			if !reachable[user] {
-				reachable[user] = true
-				queue = append(queue, user)
-			}
-		}
-
-		// Follow parent relationships (children should be reachable)
-		for _, other := range reg.All() {
-			if other.Parent == current && !reachable[other.Moniker] {
-				reachable[other.Moniker] = true
-				queue = append(queue, other.Moniker)
-			}
-		}
-	}
-
-	// Check for unreachable modules
-	// Skip catch-all modules as they don't participate in the dependency graph
-	for _, module := range reg.All() {
-		if !reachable[module.Moniker] {
-			// Skip catch-all modules
-			if module.Flags.CatchAll {
-				continue
-			}
-
-			report.unreachableModules = append(report.unreachableModules,
-				fmt.Sprintf("Module '%s' (parent: '%s') is not reachable from root modules",
-					module.Moniker, module.Parent))
-		}
-	}
+	// All modules are reachable since there's no parent hierarchy
+	// The dependency graph validation is already done by validateNoCircularDependencies
+	// and validateBidirectionalRelationships
 }
 
 func printModuleHierarchyReport(report *moduleHierarchyReport) {
