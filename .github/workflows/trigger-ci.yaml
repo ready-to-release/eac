@@ -45,14 +45,14 @@ jobs:
     name: Build CI Tooling
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: commands-binary
           path: out/build/eac-commands/commands
@@ -76,7 +76,7 @@ jobs:
     needs: build-tooling
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download commands binary
         uses: actions/download-artifact@v6
@@ -155,7 +155,7 @@ jobs:
       changed_file_count: ${{ steps.detect.outputs.changed_file_count }}
       files_by_module: ${{ steps.detect.outputs.files_by_module }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -344,7 +344,7 @@ jobs:
       execution-plan: ${{ steps.calculate.outputs.plan }}
       layer-count: ${{ steps.calculate.outputs.layer-count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download commands binary
         uses: actions/download-artifact@v6
@@ -401,7 +401,7 @@ jobs:
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download commands binary
         uses: actions/download-artifact@v6
