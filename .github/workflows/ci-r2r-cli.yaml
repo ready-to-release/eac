@@ -111,7 +111,7 @@ jobs:
         uses: ./.github/actions/setup-commands
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: build-artifacts-r2r-cli
 
