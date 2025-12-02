@@ -1,7 +1,7 @@
 # ============================================================
 # DEPENDENCIES STAGE - Download Go dependencies
 # ============================================================
-FROM golang:1.24-alpine AS deps
+FROM golang:1.25-alpine AS deps
 
 # Build arguments for multi-platform support
 ARG TARGETARCH
