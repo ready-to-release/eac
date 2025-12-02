@@ -443,7 +443,7 @@ func TestExecutor_LoadProvider(t *testing.T) {
 			})
 			executor.RegisterProvider("claude-api", func(config *ai.Config) (ai.Provider, error) {
 				// For claude-api, validate API key is present in config
-				if config.APIKey == "" {
+				if config.AI.APIKey == "" {
 					return nil, fmt.Errorf("ANTHROPIC_API_KEY is required for claude-api provider")
 				}
 				return &namedMockProvider{name: "claude-api", response: "mock response from claude-api"}, nil
