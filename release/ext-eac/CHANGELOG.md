@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2025-12-02
+
+### Added
+
+- feat(multi-module): add post-build steps and npm testing support
+
+### Changed
+
+- chore(multi-module): unify CI/CD and add repository config
+- refactor: restructure monorepo from src/ to go/eac and go/r2r
+
 ## [0.0.4] - 2025-12-01
 
 ### Added
@@ -59,7 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial container-based extension release
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.4...HEAD
+[Unreleased]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.5...HEAD
+[0.0.5]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.4...ext-eac/0.0.5
 [0.0.4]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.3...ext-eac/0.0.4
 [0.0.3]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.2...ext-eac/0.0.3
 [0.0.2]: https://github.com/ready-to-release/eac/releases/tag/ext-eac/0.0.2
