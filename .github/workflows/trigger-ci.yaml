@@ -52,7 +52,7 @@ jobs:
         uses: ./.github/actions/setup-commands
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: commands-binary
           path: out/build/eac-commands/commands
