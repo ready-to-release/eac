@@ -3,6 +3,7 @@ module github.com/ready-to-release/eac/src/commands
 go 1.24.4
 
 require (
+	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/docker/docker v28.0.0+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/gobwas/glob v0.2.3

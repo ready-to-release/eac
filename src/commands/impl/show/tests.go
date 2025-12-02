@@ -170,10 +170,18 @@ func convertToTestEntries(
 	entries := make([]testing.SuiteTestEntry, len(tests))
 
 	for i, test := range tests {
-		// Extract module from file path
-		module := extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
-		if module == "unknown" {
-			module = ""
+		// Extract module from multiple sources (in priority order):
+		// 1. Module dependencies from test tags (@depm:)
+		// 2. File path inference
+		module := ""
+		if len(test.ModuleDependencies) > 0 {
+			module = test.ModuleDependencies[0] // Use first module dependency
+		}
+		if module == "" {
+			module = extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
+			if module == "unknown" {
+				module = ""
+			}
 		}
 
 		// Look up the owning module's type

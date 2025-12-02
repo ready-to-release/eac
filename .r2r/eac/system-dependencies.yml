@@ -18,7 +18,7 @@ dependencies:
   - moniker: npm
     name: "Node.js"
     description: "JavaScript runtime providing npm package manager"
-    version: "18.0"
+    version: "22.0"
     verify:
       command: "node --version"
       pattern: "v(\\d+\\.\\d+)"
@@ -46,3 +46,11 @@ dependencies:
     verify:
       command: "az --version"
       pattern: "azure-cli\\s+(\\d+\\.\\d+)"
+
+  - moniker: curl
+    name: "cURL"
+    description: "Command-line tool for transferring data with URLs"
+    version: "7.0"
+    verify:
+      command: "curl --version"
+      pattern: "curl (\\d+\\.\\d+)"

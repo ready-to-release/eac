@@ -76,16 +76,15 @@ modules:
     depends_on:
       - src-commands
     files:
-      root: src/ext-eac
+      root: containers/ext-eac
       source:
-        - "*.go"
+        - Dockerfile
       changelog: ../../release/ext-eac/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-ext-eac.yaml
         release: .github/workflows/release-ext-eac.yml
       repo:
         other:
-          - containers/**
           - .github/workflows/ci-ext-eac.yaml
           - .github/workflows/release-ext-eac.yml
 
@@ -248,6 +247,7 @@ modules:
         test_impl: src/specs/impl/src-commands
         other:
           - .github/workflows/ci-src-commands.yaml
+          - "containers/mkdocs/*"
 
   # ============================================================================
   # Source: Core Domain Libraries
@@ -342,9 +342,18 @@ modules:
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
     files:
       root: .vscode/extensions/vscode-ext-commit
+      source:
+        - "src/**/*.ts"
+      tests:
+        - "test/**/*.ts"
+        - "features/**/*.ts"
       repo:
+        specs:
+          - "specs/vscode-ext-commit/**"
         other:
           - contracts/vscode-commit/**
+          - ".vscode/extensions/vscode-ext-commit/*"
+          - ".vscode/extensions/vscode-ext-commit/test/*"
 
   # ============================================================================
   # Release Documentation

@@ -10,18 +10,35 @@ type ModuleTypesConfig struct {
 
 // ModuleTypeDef defines a module type
 type ModuleTypeDef struct {
-	Name         string        `yaml:"name"`
-	Description  string        `yaml:"description"`
-	BuildDeps    []string      `yaml:"build_deps"` // System dependencies required for building
-	Capabilities []string      `yaml:"capabilities"`
-	Build        *BuildConfig  `yaml:"build,omitempty"`
-	Defaults     *TypeDefaults `yaml:"defaults,omitempty"`
+	Name          string        `yaml:"name"`
+	Description   string        `yaml:"description"`
+	BuildDeps     []string      `yaml:"build_deps"`     // System dependencies required for building
+	Capabilities  []string      `yaml:"capabilities"`
+	TestFramework string        `yaml:"test_framework,omitempty"` // Test framework: mocha, jest, pytest, go (default)
+	Build         *BuildConfig  `yaml:"build,omitempty"`
+	Defaults      *TypeDefaults `yaml:"defaults,omitempty"`
 }
 
 // BuildConfig contains build output configuration for a module type
 type BuildConfig struct {
-	Artifacts []Artifact `yaml:"artifacts"`
+	Artifacts []Artifact      `yaml:"artifacts"`
+	PostBuild []PostBuildStep `yaml:"post_build,omitempty"`
 }
+
+// PostBuildStep defines a post-build action to execute after successful build
+type PostBuildStep struct {
+	Action  string   `yaml:"action"`            // copy, script
+	Target  string   `yaml:"target,omitempty"`  // Target path for copy action
+	Include []string `yaml:"include,omitempty"` // Glob patterns to include (for copy)
+	Exclude []string `yaml:"exclude,omitempty"` // Glob patterns to exclude (for copy)
+	Script  string   `yaml:"script,omitempty"`  // Script command to run (for script action)
+}
+
+// PostBuildAction constants
+const (
+	PostBuildActionCopy   = "copy"
+	PostBuildActionScript = "script"
+)
 
 // Artifact defines an expected build artifact
 type Artifact struct {
@@ -135,6 +152,16 @@ func (c *ModuleTypesConfig) GetPrimaryBuildDep(typeName string) string {
 	return deps[0]
 }
 
+// GetTestFramework returns the test framework for a module type.
+// Returns empty string if not specified (caller should use default based on file type).
+func (c *ModuleTypesConfig) GetTestFramework(typeName string) string {
+	typeDef := c.Get(typeName)
+	if typeDef == nil {
+		return ""
+	}
+	return typeDef.TestFramework
+}
+
 // GetTypesWithCapability returns all type names that have the given capability
 func (c *ModuleTypesConfig) GetTypesWithCapability(capability string) []string {
 	var result []string
@@ -161,6 +188,15 @@ func (c *ModuleTypesConfig) GetTypesWithBuildDep(dep string) []string {
 		}
 	}
 	return result
+}
+
+// GetPostBuildSteps returns the post-build steps for a module type
+func (c *ModuleTypesConfig) GetPostBuildSteps(typeName string) []PostBuildStep {
+	typeDef := c.Get(typeName)
+	if typeDef == nil {
+		return nil
+	}
+	return typeDef.GetPostBuildSteps()
 }
 
 // HasCapability checks if this type definition has a specific capability
@@ -216,4 +252,27 @@ func (a *Artifact) IsExecutable() bool {
 // IsMarker returns true if this is a marker artifact
 func (a *Artifact) IsMarker() bool {
 	return a.Type == ArtifactTypeMarker
+}
+
+// GetPostBuildSteps returns the post-build steps for this module type
+func (t *ModuleTypeDef) GetPostBuildSteps() []PostBuildStep {
+	if t.Build == nil {
+		return nil
+	}
+	return t.Build.PostBuild
+}
+
+// HasPostBuild returns true if this module type defines post-build steps
+func (t *ModuleTypeDef) HasPostBuild() bool {
+	return t.Build != nil && len(t.Build.PostBuild) > 0
+}
+
+// IsCopyAction returns true if this is a copy action
+func (p *PostBuildStep) IsCopyAction() bool {
+	return p.Action == PostBuildActionCopy
+}
+
+// IsScriptAction returns true if this is a script action
+func (p *PostBuildStep) IsScriptAction() bool {
+	return p.Action == PostBuildActionScript
 }

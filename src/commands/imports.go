@@ -9,6 +9,7 @@ import (
 	_ "github.com/ready-to-release/eac/src/commands/impl/create/spec"
 	_ "github.com/ready-to-release/eac/src/commands/impl/describe"
 	_ "github.com/ready-to-release/eac/src/commands/impl/design"
+	_ "github.com/ready-to-release/eac/src/commands/impl/extension"
 	_ "github.com/ready-to-release/eac/src/commands/impl/get"
 	_ "github.com/ready-to-release/eac/src/commands/impl/help"
 	_ "github.com/ready-to-release/eac/src/commands/impl/init"

@@ -301,7 +301,13 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 		CompressedUPX: compressedUPX,
 		Version:       version,
 	}
-	return buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
+	exitCode := buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
+	if exitCode != 0 {
+		return exitCode
+	}
+
+	// Execute post-build steps if build succeeded
+	return builders.ExecutePostBuildSteps(module.Type, module.Moniker, workspaceRoot, outputDir, logWriter)
 }
 
 // verifyBuildDependencies checks that all required build dependencies are available

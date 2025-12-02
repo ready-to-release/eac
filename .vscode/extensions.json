@@ -1,5 +1,6 @@
 {
   "recommendations": [
-    "local.vscode-ext-commit"
+    "local.vscode-ext-commit",
+    "CucumberOpen.cucumber-official"
   ]
 }

@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/ready-to-release/eac/src/core/repository"
 )
 
 // ============================================================================
@@ -25,8 +27,10 @@ import (
 
 // LoadAsset loads content from an asset file in src/specs/impl/src-commands/assets/.
 // The assetPath is relative to the assets directory (e.g., "specs/valid-spec.txt").
+// Uses container root if in container, otherwise repo root.
 func LoadAsset(ctx *TestContext, assetPath string) (string, error) {
-	fullPath := filepath.Join(ctx.OriginalRepoRoot, "src", "specs", "impl", "src-commands", "assets", assetPath)
+	assetsRoot := repository.GetEffectiveRoot(ctx.OriginalRepoRoot)
+	fullPath := filepath.Join(assetsRoot, "src", "specs", "impl", "src-commands", "assets", assetPath)
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load asset %s: %w", assetPath, err)

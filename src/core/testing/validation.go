@@ -12,8 +12,10 @@ import (
 // NOTE: ValidTags map has been removed - validation now uses tag contract
 // See LoadTagContract() and IsValidTag() for contract-based validation
 
-// ValidTestTypes are the allowed test types
-var ValidTestTypes = []string{"gotest", "godog"}
+// ValidTestTypes defines the valid test types.
+// Unit tests: gotest (Go), mocha (npm)
+// Spec tests: godog (Go), tscucumber (npm)
+var ValidTestTypes = []string{"gotest", "godog", "mocha", "tscucumber"}
 
 // GetLevelTags returns taxonomy level tags from config.
 // Returns nil if config is unavailable - callers must handle this.
@@ -263,7 +265,7 @@ func ValidateTestReference(test TestReference) []string {
 
 	// Validate test type
 	if !contains(ValidTestTypes, test.Type) {
-		errors = append(errors, fmt.Sprintf("invalid test type: %s (must be gotest or godog)", test.Type))
+		errors = append(errors, fmt.Sprintf("invalid test type: %s (valid types: %v)", test.Type, ValidTestTypes))
 	}
 
 	// Validate tags

@@ -19,7 +19,7 @@ Feature: scripts-cli-installer_cli-installation
       And the binary is installed to "%LOCALAPPDATA%\r2r\r2r.exe"
       And the installation is verified by running "r2r --version"
 
-    @ov @deps:linux @depm:scripts-cli-installer @L3
+    @ov @deps:linux @deps:curl @depm:scripts-cli-installer @L3
     Scenario: Install latest version on Linux
       Given I am on Linux with bash and curl available
       When I run the bash installer
@@ -36,7 +36,7 @@ Feature: scripts-cli-installer_cli-installation
       Then the installer displays an error about the failed download
       And exits with a non-zero exit code
 
-    @L2 @ov @deps:linux @depm:scripts-cli-installer
+    @L2 @ov @deps:linux @deps:curl @depm:scripts-cli-installer
     Scenario: Linux installer fails when release does not exist
       Given I am on Linux
       When I run the bash installer with "--version v999.999.999"
