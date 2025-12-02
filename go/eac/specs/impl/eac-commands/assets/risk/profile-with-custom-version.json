@@ -1,0 +1,11 @@
+{
+  "profile": {
+    "uuid": "test",
+    "metadata": {
+      "title": "Test",
+      "last-modified": "2024-01-01T00:00:00Z",
+      "oscal-version": "{{VERSION}}"
+    },
+    "imports": [{"href": "catalog.json"}]
+  }
+}

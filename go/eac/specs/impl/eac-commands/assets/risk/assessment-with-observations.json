@@ -1,0 +1,21 @@
+{
+  "assessment-results": {
+    "uuid": "ar-test",
+    "metadata": {
+      "title": "Test",
+      "last-modified": "2024-01-01T00:00:00Z",
+      "version": "1.0",
+      "oscal-version": "1.1.2"
+    },
+    "import-ap": {
+      "href": "profile.json"
+    },
+    "results": [{
+      "uuid": "result-1",
+      "title": "Test Result",
+      "start": "2024-01-01T00:00:00Z",
+      "observations": [{{OBSERVATIONS}}],
+      "findings": [{{FINDINGS}}]
+    }]
+  }
+}

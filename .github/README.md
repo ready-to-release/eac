@@ -4,7 +4,7 @@
 <p align="center">
   <img src="../docs/assets/logo/eac-logo.png" width="200" /><br>
   <strong style="font-size: 2em;">Everything as Code</strong><br>
-  <em>Continuous delivery for regulated industries—without the compliance bottleneck</em>
+  <em>Continuous delivery for regulated industries - without the compliance bottleneck</em>
 </p>
 
 <p align="center">
@@ -25,12 +25,10 @@
 
 Regulated industries face a paradox: **compliance demands rigor, markets demand speed**.
 
-[DORA's research on change approval](https://dora.dev/capabilities/streamlining-change-approval/) shows that heavyweight approval processes backfire—they "slow down the delivery process leading to the release of larger batches less frequently," which *increases* production risk. External review boards show no correlation with lower failure rates.
+[DORA's research on change approval](https://dora.dev/capabilities/streamlining-change-approval/) shows that heavyweight approval processes backfire - they "slow down the delivery process leading to the release of larger batches less frequently", which *increases* production risk. External review boards show no correlation with lower failure rates.
 
-Traditional approaches force a choice—move fast and risk audit failures, or stay compliant and watch competitors ship.
-Manual documentation drifts.
-Traceability is reconstructed after the fact.
-Audit prep takes months.
+Traditional approaches force a choice — move fast and risk audit failures, or stay compliant and watch competitors ship.
+Manual documentation drifts. Traceability is reconstructed after the fact. Audit prep takes months.
 
 **This is a false choice.**
 
@@ -38,7 +36,7 @@ Audit prep takes months.
 
 ## The Solution
 
-[DORA's Version Control capability](https://dora.dev/capabilities/version-control/) proves that elite performers store **everything** in version control—not just code, but configurations, infrastructure, specifications, tests, and deployment automation.
+[DORA's Version Control capability](https://dora.dev/capabilities/version-control/) proves that elite performers store **everything** in version control — not just code, but configurations, infrastructure, specifications, tests, and deployment automation.
 
 This enables complete traceability: "the path backward from every deployment to the elements it came from."
 
@@ -48,15 +46,15 @@ We implement this with two complementary ideas:
 
 > *"We want to be ready to release at any time, for any team."*
 
-An extensible CLI that isolates teams from tooling and platform dependencies. Through Docker encapsulation, R2R runs almost entirely independent of local setups—ensuring every commit is validated, every artifact traceable, and every deployment repeatable.
+An extensible CLI that isolates teams from tooling and platform dependencies. Through Docker encapsulation, R2R runs almost entirely independent of local setups ensuring every commit is validated, every artifact traceable, and every deployment repeatable.
 
 ### EAC — Everything as Code
 
-> *"We treat everything as code—to trace, version, review, and automate."*
+> *"We treat everything as code to trace, version, review, and automate."*
 
-A paradigm where requirements, documentation, compliance rules, and architecture live as executable, version-controlled artifacts. Not documents that drift—code that runs. Full traceability. Full auditability. Always.
+A paradigm where requirements, documentation, compliance rules, and architecture live as executable, version-controlled artifacts. Not documents that drift - code that runs. Full traceability. Full auditability. Always.
 
-The EAC extension helps organizations design reusable templates for apps, tools, workflows, and repositories—standardizing delivery across teams.
+The EAC extension helps organizations design reusable templates for apps, tools, workflows, and repositories - standardizing delivery across teams.
 
 ---
 
@@ -67,7 +65,7 @@ The EAC extension helps organizations design reusable templates for apps, tools,
 | **Requirements**   | Word documents                   | Executable Gherkin specifications |
 | **Documentation**  | Wiki pages that drift            | Audit-ready, generated from code  |
 | **Compliance**     | Manual checklists                | Automated pipeline gates          |
-| **Traceability**   | Spreadsheets compiled for audits | Git history—always complete       |
+| **Traceability**   | Spreadsheets compiled for audits | Git history - always complete     |
 | **Audit evidence** | Months of preparation            | Continuous capture—always ready   |
 
 **The result**: Audit-ready documentation as a byproduct of your pipeline, not a bottleneck before release.
@@ -149,7 +147,7 @@ r2r eac validate contracts        # Validate compliance continuously
 - **106×** faster lead time
 - **7×** lower change failure rate
 
-The difference isn't less compliance—it's **automated compliance**. Small, validated changes. Continuous evidence capture. Traceability built into every commit.
+The difference isn't less compliance it's **automated compliance**. Small, validated changes. Continuous evidence capture. Traceability built into every commit.
 
 **This repository is a demonstration of the tooling in action**: We use R2R and EAC to build R2R and EAC.
 
