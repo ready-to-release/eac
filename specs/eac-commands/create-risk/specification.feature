@@ -83,7 +83,8 @@ Feature: eac-commands_create-risk
 
     @L2 @ov
     Scenario: Existing profile not overwritten by default
-      Given a profile exists at "specs/risk-controls/billing.profile.json"
+      Given a risk assessment file at "assessment.md"
+      And a profile exists at "specs/risk-controls/billing.profile.json"
       When I run "create risk assessment.md --module billing"
       Then the exit code is 1
       And stderr contains "already exists"
@@ -91,14 +92,16 @@ Feature: eac-commands_create-risk
 
     @L2 @ov
     Scenario: Force flag overwrites existing profile
-      Given a profile exists at "specs/risk-controls/billing.profile.json"
+      Given a risk assessment file at "assessment.md"
+      And a profile exists at "specs/risk-controls/billing.profile.json"
       When I run "create risk assessment.md --module billing --force"
       Then the exit code is 0
       And the profile is overwritten
 
     @L2 @ov
     Scenario: Short force flag works
-      Given a profile exists at "specs/risk-controls/billing.profile.json"
+      Given a risk assessment file at "assessment.md"
+      And a profile exists at "specs/risk-controls/billing.profile.json"
       When I run "create risk assessment.md --module billing -f"
       Then the exit code is 0
       And the profile is overwritten
@@ -121,11 +124,13 @@ Feature: eac-commands_create-risk
 
     @L2 @ov
     Scenario: Use default output path
+      Given a risk assessment file at "assessment.md"
       When I run "create risk assessment.md --module billing"
       Then the profile is created at "specs/risk-controls/billing.profile.json"
 
     @L2 @ov
     Scenario: Use custom output path
+      Given a risk assessment file at "assessment.md"
       When I run "create risk assessment.md --output custom/path/my.profile.json"
       Then the profile is created at "custom/path/my.profile.json"
 
@@ -144,7 +149,8 @@ Feature: eac-commands_create-risk
 
     @L2 @ov
     Scenario: Load prompt from .r2r/eac/ai/risk-create/profile.md
-      Given a custom prompt exists at ".r2r/eac/ai/risk-create/profile.md"
+      Given a risk assessment file at "assessment.md"
+      And a custom prompt exists at ".r2r/eac/ai/risk-create/profile.md"
       When I run "create risk assessment.md"
       Then the custom prompt is used for AI generation
 
@@ -152,14 +158,16 @@ Feature: eac-commands_create-risk
 
     @L2 @ov
     Scenario: AI provider not configured
-      Given AI provider is not configured
+      Given a risk assessment file at "assessment.md"
+      And AI provider is not configured
       When I run "create risk assessment.md"
       Then the exit code is 1
       And stderr contains "AI" or "provider"
 
     @L2 @ov
     Scenario: AI call fails
-      Given AI provider returns an error
+      Given a risk assessment file at "assessment.md"
+      And AI provider returns an error
       When I run "create risk assessment.md"
       Then the exit code is 1
       And stderr contains "AI" or "failed"

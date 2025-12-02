@@ -55,23 +55,25 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// Validate required fields
-	if config.ProviderName == "" {
-		return nil, fmt.Errorf("provider name is required in .r2r/eac/agent-config.yml\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+	if config.AI.Provider == "" {
+		return nil, fmt.Errorf("ai.provider is required in .r2r/eac/eac-config.yml\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
 	}
 
 	return config, nil
 }
 
 // LoadConfigWithOverrides loads team config and merges with personal overrides.
-// Personal config can override any field: name, model, api_key, endpoint.
-// Validates both configs against the agent-config schema.
+// Personal config can override any field: provider, model, api_key, endpoint, git token.
+// Validates both configs against the eac-config schema.
 //
 // Schema (both files use same structure):
-//   provider:
-//     name: claude-api          # or claude-cli, openai, gemini
+//   ai:
+//     provider: claude-api          # or claude-cli, openai, gemini
 //     model: claude-3-haiku-20240307
 //     endpoint: https://api.anthropic.com/v1
 //     api_key: ${ANTHROPIC_API_KEY}  # or literal key
+//   git:
+//     token: ${GIT_TOKEN}  # or literal token
 //
 // Personal config only needs to specify fields to override.
 func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath string) (*Config, error) {
@@ -98,8 +100,8 @@ func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath s
 	}
 
 	// Validate required fields
-	if config.ProviderName == "" {
-		return nil, fmt.Errorf("provider name is required\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+	if config.AI.Provider == "" {
+		return nil, fmt.Errorf("ai.provider is required\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
 	}
 
 	return config, nil
@@ -108,7 +110,8 @@ func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath s
 // PersonalConfig represents the personal override file structure.
 // Uses same nested structure as team config for consistency.
 type PersonalConfig struct {
-	Provider *Config `yaml:"provider"`
+	AI  *AIConfig  `yaml:"ai"`
+	Git *GitConfig `yaml:"git"`
 }
 
 // loadConfigFile loads and parses a config file without env var substitution
@@ -121,13 +124,13 @@ func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, e
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf(".r2r/eac/agent-config.yml not found at %s\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", path)
+			return nil, fmt.Errorf(".r2r/eac/eac-config.yml not found at %s\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini", path)
 		}
-		return nil, fmt.Errorf("failed to read config file %s: %w\n\nPlease run: r2r init --ai <provider>", path, err)
+		return nil, fmt.Errorf("failed to read config file %s: %w\n\nPlease run: eac init --ai <provider>", path, err)
 	}
 
 	if len(data) == 0 {
-		return nil, fmt.Errorf(".r2r/eac/agent-config.yml is empty\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+		return nil, fmt.Errorf(".r2r/eac/eac-config.yml is empty\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
 	}
 
 	// Validate against schema if workspaceRoot is provided
@@ -137,17 +140,15 @@ func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, e
 		}
 	}
 
-	var rawConfig struct {
-		Provider Config `yaml:"provider"`
-	}
-	if err := yaml.Unmarshal(data, &rawConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse .r2r/eac/agent-config.yml: %w\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", err)
+	var config Config
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse .r2r/eac/eac-config.yml: %w\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini", err)
 	}
 
-	return &rawConfig.Provider, nil
+	return &config, nil
 }
 
-// validateAgentConfigSchema validates config data against the agent-config schema
+// validateAgentConfigSchema validates config data against the eac-config schema
 func validateAgentConfigSchema(workspaceRoot string, data []byte) error {
 	schemaValidatorOnce.Do(func() {
 		schemaValidator, schemaValidatorErr = schema.NewValidator(workspaceRoot)
@@ -158,7 +159,7 @@ func validateAgentConfigSchema(workspaceRoot string, data []byte) error {
 		return nil
 	}
 
-	return schemaValidator.ValidateYAML(schema.SchemaAgentConfig, data)
+	return schemaValidator.ValidateYAML(schema.SchemaEACConfig, data)
 }
 
 // loadPersonalConfig loads the personal override file
@@ -194,20 +195,27 @@ func loadPersonalConfigWithValidation(path string, workspaceRoot string) (*Perso
 
 // mergePersonalConfig applies personal overrides to the base config
 func mergePersonalConfig(base *Config, personal *PersonalConfig) {
-	if personal.Provider == nil {
-		return
+	// Merge AI config
+	if personal.AI != nil {
+		if personal.AI.Provider != "" {
+			base.AI.Provider = personal.AI.Provider
+		}
+		if personal.AI.Model != "" {
+			base.AI.Model = personal.AI.Model
+		}
+		if personal.AI.APIKey != "" {
+			base.AI.APIKey = personal.AI.APIKey
+		}
+		if personal.AI.Endpoint != "" {
+			base.AI.Endpoint = personal.AI.Endpoint
+		}
 	}
-	if personal.Provider.ProviderName != "" {
-		base.ProviderName = personal.Provider.ProviderName
-	}
-	if personal.Provider.Model != "" {
-		base.Model = personal.Provider.Model
-	}
-	if personal.Provider.APIKey != "" {
-		base.APIKey = personal.Provider.APIKey
-	}
-	if personal.Provider.Endpoint != "" {
-		base.Endpoint = personal.Provider.Endpoint
+
+	// Merge Git config
+	if personal.Git != nil {
+		if personal.Git.Token != "" {
+			base.Git.Token = personal.Git.Token
+		}
 	}
 }
 
@@ -215,15 +223,20 @@ func mergePersonalConfig(base *Config, personal *PersonalConfig) {
 func applyEnvVarSubstitution(config *Config) error {
 	var missingVars []string
 
-	config.APIKey, missingVars = substituteEnvVars(config.APIKey)
+	// Substitute AI config variables
+	config.AI.APIKey, missingVars = substituteEnvVars(config.AI.APIKey)
 	// Only error on missing env vars if provider requires an API key
 	// claude-cli doesn't need an API key (uses local Claude installation)
-	if len(missingVars) > 0 && config.ProviderName != "claude-cli" {
-		return fmt.Errorf("missing environment variable(s) for API key: %v\n\nPlease set:\n  export %s=your-api-key\n\nOr use claude-cli provider (no API key needed):\n  echo 'name: claude-cli' > .r2r/eac/agent-config.personal.yml",
+	if len(missingVars) > 0 && config.AI.Provider != "claude-cli" {
+		return fmt.Errorf("missing environment variable(s) for API key: %v\n\nPlease set:\n  export %s=your-api-key\n\nOr use claude-cli provider (no API key needed):\n  Run: .\\importer.ps1 (creates .r2r/eac/eac-config.personal.yml with claude-cli)",
 			missingVars, missingVars[0])
 	}
 
-	config.Endpoint, _ = substituteEnvVars(config.Endpoint)
+	config.AI.Endpoint, _ = substituteEnvVars(config.AI.Endpoint)
+
+	// Substitute Git config variables
+	config.Git.Token, _ = substituteEnvVars(config.Git.Token)
+
 	return nil
 }
 

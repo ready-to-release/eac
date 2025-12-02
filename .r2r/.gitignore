@@ -2,4 +2,3 @@
 !.gitignore
 !r2r-cli.yml
 !definitions.yml
-eac/agent-config.personal*

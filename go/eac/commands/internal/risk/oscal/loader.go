@@ -189,7 +189,7 @@ func DetectOSCALDocumentType(filePath string) (string, error) {
 	// Try to detect based on JSON structure
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return "", fmt.Errorf("failed to parse JSON: %w", err)
+		return "", fmt.Errorf("invalid JSON: %w", err)
 	}
 
 	if _, ok := raw["profile"]; ok {

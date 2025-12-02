@@ -23,7 +23,7 @@ const (
 	SchemaSystemDependencies SchemaType = "system-dependencies"
 	SchemaHandlers           SchemaType = "handlers"
 	SchemaRepository         SchemaType = "repository"
-	SchemaAgentConfig        SchemaType = "agent-config"
+	SchemaEACConfig          SchemaType = "eac-config"
 )
 
 // schemaFileNames maps schema types to their file names (without path)
@@ -36,7 +36,7 @@ var schemaFileNames = map[SchemaType]string{
 	SchemaSystemDependencies: "system-dependencies.schema.json",
 	SchemaHandlers:           "handlers.schema.json",
 	SchemaRepository:         "repository.schema.json",
-	SchemaAgentConfig:        "agent-config.schema.json",
+	SchemaEACConfig:          "eac-config.schema.json",
 }
 
 // ContractVersion is the schema contract version
@@ -220,7 +220,7 @@ func GetSchemaTypes() []SchemaType {
 		SchemaSystemDependencies,
 		SchemaHandlers,
 		SchemaRepository,
-		SchemaAgentConfig,
+		SchemaEACConfig,
 	}
 }
 

@@ -26,7 +26,7 @@ func Show() int {
 	case "--help", "-h":
 		printShowUsage()
 		return 0
-	case "config", "dependencies", "environments", "files", "modules", "moduletypes", "suite", "tests":
+	case "config", "dependencies", "environments", "files", "modules", "moduletypes", "suite", "tests", "risk-report":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -60,6 +60,9 @@ func printShowUsage() {
 	log.Info("")
 	log.Info("Environment:")
 	log.Info("  environments              Show all environment contracts")
+	log.Info("")
+	log.Info("Risk Assessment:")
+	log.Info("  risk-report               Show aggregated risk assessment report")
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Show all modules")

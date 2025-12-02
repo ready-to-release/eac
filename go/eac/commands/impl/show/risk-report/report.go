@@ -88,7 +88,7 @@ func ShowRiskReport() int {
 		log.Error("No assessment results found")
 		log.Error("")
 		log.Error("Run risk assessment first:")
-		log.Error("  risk assess <module>")
+		log.Error("  create risk-assess <module>")
 		return 1
 	}
 
@@ -124,7 +124,7 @@ func ShowRiskReport() int {
 
 // parseConfig parses command line configuration.
 func parseConfig() (*Config, error) {
-	args := os.Args[2:] // Skip program name and "show risk-report"
+	args := os.Args[3:] // Skip program name, "show", and "risk-report"
 
 	config := &Config{
 		Format: "text",

@@ -2,7 +2,7 @@
 //
 // This file contains step definitions for the new OSCAL-based risk commands:
 // - create risk (OSCAL profile generation)
-// - risk assess (assessment-results creation)
+// - create risk-assess (assessment-results creation)
 // - validate risk (OSCAL validation)
 // - show risk-report (aggregated reporting)
 package srccommands
@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
@@ -97,18 +98,23 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 
 	// AI provider setup
 	sc.Step(`^AI provider is configured$`, func() error {
-		// AI provider configuration is handled by the command itself
-		return nil
+		// Load mock AI response for profile generation
+		mockContent, err := internal.LoadAsset(ctx, "risk/profile-mock-response.txt")
+		if err != nil {
+			return err
+		}
+		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
 	})
 
 	sc.Step(`^AI provider is not configured$`, func() error {
-		// AI provider not configured scenario
+		// Don't create mock file - this will cause AI provider to fail
+		// The command should detect missing AI configuration
 		return nil
 	})
 
 	sc.Step(`^AI provider returns an error$`, func() error {
-		// This would require mocking AI failure
-		return nil
+		// Create an invalid mock response that will cause parsing errors
+		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", "invalid json response")
 	})
 
 	// Assessment file setup
@@ -211,22 +217,47 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^module "([^"]*)" exists with a profile at "([^"]*)"$`, func(module, profilePath string) error {
 		state.moduleName = module
 		state.profilePath = profilePath
+
+		// Create go.mod file at repository root (needed for `go run` commands)
+		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
+			return err
+		}
+
+		// Create module contract
+		moduleContract := fmt.Sprintf(`module:
+  moniker: %s
+  type: service
+  description: Test module
+paths:
+  - .
+`, module)
+		contractPath := filepath.Join("contracts", fmt.Sprintf("%s.yml", module))
+		if err := internal.CreateFile(ctx, contractPath, moduleContract); err != nil {
+			return err
+		}
+
+		// Create profile
 		profile := createValidProfile("module-profile-uuid", fmt.Sprintf("Profile for %s", module), []string{"ac-2", "ia-2"})
 		return internal.CreateFile(ctx, profilePath, profile)
 	})
 
 	sc.Step(`^module "([^"]*)" has test results with @control tags$`, func(module string) error {
-		// Create mock cucumber results
+		// Create mock cucumber results with timestamp directory (as expected by evidence loader)
 		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-		testDir := filepath.Join("out", "test", "latest", module)
+		// Use a recent timestamp so evidence is fresh
+		timestamp := time.Now().Format("2006-01-02T15-04-05")
+		testDir := filepath.Join("out", "test", timestamp, module)
 		return internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON)
 	})
 
 	sc.Step(`^module "([^"]*)" has security scan results$`, func(module string) error {
-		// Create mock security scan results
+		// Create mock security scan results with timestamp filename (as expected by evidence loader)
+		// Use a recent timestamp so evidence is fresh
+		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
 		securityDir := filepath.Join("out", "security", module, "vuln")
 		trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001", "Severity": "HIGH"}]}]}`
-		return internal.CreateFile(ctx, filepath.Join(securityDir, "trivy-results.json"), trivyJSON)
+		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), trivyJSON)
 	})
 
 	// Assessment-results with findings
@@ -420,7 +451,9 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^tests exist with "([^"]*)" tag that pass$`, func(tag string) error {
 		controlID := strings.TrimPrefix(strings.TrimSuffix(tag, ")"), "@control(")
 		cucumberJSON := createMockCucumberResults([]string{controlID})
-		testDir := filepath.Join("out", "test", "latest", state.moduleName)
+		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
+		timestamp := time.Now().Format("2006-01-02T15-04-05")
+		testDir := filepath.Join("out", "test", timestamp, state.moduleName)
 		return internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON)
 	})
 
@@ -465,7 +498,10 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^cucumber results exist at "([^"]*)"$`, func(pattern string) error {
 		// Create mock results matching the pattern
 		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-		return internal.CreateFile(ctx, "out/test/latest/billing/results.cucumber.json", cucumberJSON)
+		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
+		timestamp := time.Now().Format("2006-01-02T15-04-05")
+		testDir := filepath.Join("out", "test", timestamp, "billing")
+		return internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON)
 	})
 
 	sc.Step(`^tests have "([^"]*)" tags$`, func(tag string) error {
@@ -480,7 +516,9 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^vulnerability scan results exist at "([^"]*)"$`, func(pattern string) error {
 		securityDir := filepath.Join("out", "security", state.moduleName, "vuln")
 		trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001"}]}]}`
-		return internal.CreateFile(ctx, filepath.Join(securityDir, "trivy-results.json"), trivyJSON)
+		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
+		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
+		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), trivyJSON)
 	})
 
 	sc.Step(`^vulnerabilities are linked to relevant controls$`, func() error {
@@ -490,13 +528,17 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^SBOM results exist at "([^"]*)"$`, func(pattern string) error {
 		securityDir := filepath.Join("out", "security", state.moduleName, "sbom")
 		sbomJSON := `{"bomFormat": "CycloneDX", "components": []}`
-		return internal.CreateFile(ctx, filepath.Join(securityDir, "sbom.json"), sbomJSON)
+		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
+		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
+		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), sbomJSON)
 	})
 
 	sc.Step(`^SAST results exist at "([^"]*)"$`, func(pattern string) error {
 		securityDir := filepath.Join("out", "security", state.moduleName, "sast")
 		sastJSON := `{"results": []}`
-		return internal.CreateFile(ctx, filepath.Join(securityDir, "sast.json"), sastJSON)
+		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
+		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
+		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), sastJSON)
 	})
 
 	sc.Step(`^test results are (\d+) hours old$`, func(hours int) error {
@@ -591,11 +633,46 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 
 	sc.Step(`^a profile with (\d+) validation errors$`, func(count int) error {
-		return internal.CreateFile(ctx, "profile.json", profileEmptyTemplate)
+		// Create a profile with exactly the requested number of validation errors
+		// Errors are created by omitting required fields in order:
+		// 1. uuid, 2. metadata.title, 3. metadata.last-modified, 4. imports
+		profile := `{"profile": {`
+
+		// Add uuid if count < 1
+		if count < 1 {
+			profile += `"uuid": "test-uuid",`
+		}
+
+		profile += `"metadata": {`
+
+		// Add title if count < 2
+		if count < 2 {
+			profile += `"title": "Test Profile",`
+		}
+
+		// Add last-modified if count < 3
+		if count < 3 {
+			profile += `"last-modified": "2024-01-01T00:00:00Z",`
+		}
+
+		profile += `"version": "1.0.0", "oscal-version": "1.1.2"}`
+
+		// Add imports if count < 4
+		if count < 4 {
+			profile += `,"imports": [{"href": "catalog.json", "include-controls": [{"with-id": "ac-2"}]}]`
+		}
+
+		profile += `}}`
+		return internal.CreateFile(ctx, "profile.json", profile)
 	})
 
 	sc.Step(`^a profile with (\d+) warnings$`, func(count int) error {
-		profile := createValidProfile("test-uuid", "Test", []string{"invalid-format"})
+		// Create multiple invalid control IDs to generate warnings
+		controlIDs := make([]string, count)
+		for i := 0; i < count; i++ {
+			controlIDs[i] = fmt.Sprintf("invalid-format-%d", i)
+		}
+		profile := createValidProfile("test-uuid", "Test", controlIDs)
 		return internal.CreateFile(ctx, "profile.json", profile)
 	})
 

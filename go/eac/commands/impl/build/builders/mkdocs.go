@@ -100,12 +100,26 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
+	}
+
+	// In Docker-in-Docker mode, run as current user to avoid permission issues
+	// This ensures files created in the container have the same ownership as the host
+	// We use the current process's UID/GID which matches the ext-eac container user
+	if isDinD {
+		uid := os.Getuid()
+		gid := os.Getgid()
+		userSpec := fmt.Sprintf("%d:%d", uid, gid)
+		buildArgs = append(buildArgs, "--user", userSpec)
+		Logln(logWriter, "   Docker-in-Docker: running as user %s", userSpec)
+	}
+
+	buildArgs = append(buildArgs,
 		imageName,
 		"mkdocs", "build",
 		"--site-dir", dockerSiteDir,
 		"--clean",
 		"--strict",
-	}
+	)
 
 	Logln(logWriter, "   Image: %s", imageName)
 	Logln(logWriter, "   Output: %s", siteDir)

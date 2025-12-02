@@ -22,39 +22,55 @@ func TestLoadConfig(t *testing.T) {
 	}{
 		{
 			name: "valid config with claude-cli provider",
-			configYAML: `provider:
-  name: claude-cli
-  model: claude-3-haiku-20240307`,
+			configYAML: `ai:
+  provider: claude-cli
+  model: claude-3-haiku-20240307
+git:
+  token: ""`,
 			envVars: map[string]string{},
 			want: &Config{
-				ProviderName: "claude-cli",
-				Model:        "claude-3-haiku-20240307",
-				APIKey:       "",
+				AI: AIConfig{
+					Provider: "claude-cli",
+					Model:    "claude-3-haiku-20240307",
+					APIKey:   "",
+				},
+				Git: GitConfig{
+					Token: "",
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid config with env var substitution",
-			configYAML: `provider:
-  name: claude-api
+			configYAML: `ai:
+  provider: claude-api
   model: claude-3-haiku-20240307
   endpoint: https://api.anthropic.com/v1
-  api_key: ${ANTHROPIC_API_KEY}`,
-			envVars: map[string]string{"ANTHROPIC_API_KEY": "sk-ant-test"},
+  api_key: ${ANTHROPIC_API_KEY}
+git:
+  token: ${GIT_TOKEN}`,
+			envVars: map[string]string{"ANTHROPIC_API_KEY": "sk-ant-test", "GIT_TOKEN": "ghp_test"},
 			want: &Config{
-				ProviderName: "claude-api",
-				Model:        "claude-3-haiku-20240307",
-				Endpoint:     "https://api.anthropic.com/v1",
-				APIKey:       "sk-ant-test",
+				AI: AIConfig{
+					Provider: "claude-api",
+					Model:    "claude-3-haiku-20240307",
+					Endpoint: "https://api.anthropic.com/v1",
+					APIKey:   "sk-ant-test",
+				},
+				Git: GitConfig{
+					Token: "ghp_test",
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "missing env var returns error with instructions",
-			configYAML: `provider:
-  name: openai
+			configYAML: `ai:
+  provider: openai
   model: gpt-4-turbo
-  api_key: ${MISSING_VAR}`,
+  api_key: ${MISSING_VAR}
+git:
+  token: ""`,
 			envVars:     map[string]string{},
 			wantErr:     true,
 			errContains: "missing environment variable",
@@ -63,20 +79,22 @@ func TestLoadConfig(t *testing.T) {
 			name:        "malformed YAML returns error with init instructions",
 			configYAML:  "invalid: yaml: content:",
 			wantErr:     true,
-			errContains: "run: r2r init",
+			errContains: "run: eac init",
 		},
 		{
 			name: "missing provider name returns error with init instructions",
-			configYAML: `provider:
-  model: some-model`,
+			configYAML: `ai:
+  model: some-model
+git:
+  token: ""`,
 			wantErr:     true,
-			errContains: "provider name is required",
+			errContains: "ai.provider is required",
 		},
 		{
 			name:        "empty config file returns error with init instructions",
 			configYAML:  "",
 			wantErr:     true,
-			errContains: "run: r2r init",
+			errContains: "run: eac init",
 		},
 	}
 
@@ -90,7 +108,7 @@ func TestLoadConfig(t *testing.T) {
 
 			// Create temporary config file
 			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, "agent-config.yml")
+			configPath := filepath.Join(tmpDir, "eac-config.yml")
 			if err := os.WriteFile(configPath, []byte(tt.configYAML), 0644); err != nil {
 				t.Fatalf("failed to write test config: %v", err)
 			}
@@ -110,14 +128,17 @@ func TestLoadConfig(t *testing.T) {
 			}
 
 			// Compare results
-			if got.ProviderName != tt.want.ProviderName {
-				t.Errorf("ProviderName = %v, want %v", got.ProviderName, tt.want.ProviderName)
+			if got.AI.Provider != tt.want.AI.Provider {
+				t.Errorf("AI.Provider = %v, want %v", got.AI.Provider, tt.want.AI.Provider)
 			}
-			if got.Model != tt.want.Model {
-				t.Errorf("Model = %v, want %v", got.Model, tt.want.Model)
+			if got.AI.Model != tt.want.AI.Model {
+				t.Errorf("AI.Model = %v, want %v", got.AI.Model, tt.want.AI.Model)
 			}
-			if got.APIKey != tt.want.APIKey {
-				t.Errorf("APIKey = %v, want %v", got.APIKey, tt.want.APIKey)
+			if got.AI.APIKey != tt.want.AI.APIKey {
+				t.Errorf("AI.APIKey = %v, want %v", got.AI.APIKey, tt.want.AI.APIKey)
+			}
+			if got.Git.Token != tt.want.Git.Token {
+				t.Errorf("Git.Token = %v, want %v", got.Git.Token, tt.want.Git.Token)
 			}
 		})
 	}
@@ -133,11 +154,11 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 	}
 
 	// Verify error message contains init instructions
-	if !strings.Contains(err.Error(), ".r2r/eac/agent-config.yml not found") {
-		t.Errorf("LoadConfig() error = %v, want error containing '.r2r/eac/agent-config.yml not found'", err)
+	if !strings.Contains(err.Error(), ".r2r/eac/eac-config.yml not found") {
+		t.Errorf("LoadConfig() error = %v, want error containing '.r2r/eac/eac-config.yml not found'", err)
 	}
-	if !strings.Contains(err.Error(), "run: r2r init") {
-		t.Errorf("LoadConfig() error = %v, want error containing 'run: r2r init'", err)
+	if !strings.Contains(err.Error(), "run: eac init") {
+		t.Errorf("LoadConfig() error = %v, want error containing 'run: eac init'", err)
 	}
 }
 
@@ -145,11 +166,13 @@ func TestLoadConfigFromRepoRoot(t *testing.T) {
 	// Test that config is loaded from repository root
 	tmpDir := t.TempDir()
 
-	// Create agent-config.yml in repo root (tmpDir simulates repo root)
-	configPath := filepath.Join(tmpDir, "agent-config.yml")
-	configContent := `provider:
-  name: claude-cli
-  model: claude-3-haiku-20240307`
+	// Create eac-config.yml in repo root (tmpDir simulates repo root)
+	configPath := filepath.Join(tmpDir, "eac-config.yml")
+	configContent := `ai:
+  provider: claude-cli
+  model: claude-3-haiku-20240307
+git:
+  token: ""`
 
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
@@ -163,11 +186,11 @@ func TestLoadConfigFromRepoRoot(t *testing.T) {
 	}
 
 	// Verify config was loaded correctly
-	if got.ProviderName != "claude-cli" {
-		t.Errorf("ProviderName = %v, want claude-cli", got.ProviderName)
+	if got.AI.Provider != "claude-cli" {
+		t.Errorf("AI.Provider = %v, want claude-cli", got.AI.Provider)
 	}
-	if got.Model != "claude-3-haiku-20240307" {
-		t.Errorf("Model = %v, want claude-3-haiku-20240307", got.Model)
+	if got.AI.Model != "claude-3-haiku-20240307" {
+		t.Errorf("AI.Model = %v, want claude-3-haiku-20240307", got.AI.Model)
 	}
 }
 

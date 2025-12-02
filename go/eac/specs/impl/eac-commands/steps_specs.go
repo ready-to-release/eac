@@ -284,10 +284,6 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		// Template usage verification
 		return nil
 	})
-	sc.Step(`^the AI receives module context "([^"]*)"$`, func(module string) error {
-		// Module context passed to AI
-		return nil
-	})
 
 	// Gherkin structure validation - check the generated file content
 	sc.Step(`^it must contain a "Feature:" declaration$`, func() error {
