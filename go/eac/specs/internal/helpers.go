@@ -211,6 +211,19 @@ func RemoveAll(ctx *TestContext, path string) error {
 	return os.RemoveAll(fullPath)
 }
 
+// RemoveFile removes a file from the test environment.
+// This is a convenience wrapper around RemoveAll for file-specific removal.
+func RemoveFile(ctx *TestContext, path string) error {
+	fullPath := ResolvePath(ctx, path)
+
+	// Check if file exists first (not an error if it doesn't)
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		return nil // File doesn't exist, which is fine
+	}
+
+	return RemoveAll(ctx, path)
+}
+
 // ============================================================================
 // Path Helpers
 // ============================================================================

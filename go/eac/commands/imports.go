@@ -17,7 +17,6 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/list"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/pipeline"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/release"
-	_ "github.com/ready-to-release/eac/go/eac/commands/impl/risk"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/run/pipeline"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/security"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/security/compliance"

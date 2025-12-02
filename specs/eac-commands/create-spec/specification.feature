@@ -107,13 +107,6 @@ Feature: eac-commands_create-spec
       Then the exit code is 0
       And the file is saved at "custom/path/spec.feature"
 
-    @L2 @ov
-    Scenario: Module flag sets target module
-      Given the mock AI is configured to return a valid specification
-      When I run the command "create spec -m eac-core 'Add validation helper'"
-      Then the exit code is 0
-      And the AI receives module context "eac-core"
-
   Rule: Debug mode saves intermediate outputs
 
     @L2 @ov

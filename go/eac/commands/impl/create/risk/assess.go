@@ -1,6 +1,6 @@
-// Command: risk assess
+// Command: create risk-assess
 // Short: Update OSCAL assessment-results with test and security evidence
-// Long: The risk assess command creates or updates OSCAL assessment-results for a module
+// Long: The create risk-assess command creates or updates OSCAL assessment-results for a module
 // Long: by collecting test results and security scan evidence. It maps @control tags in
 // Long: feature files to OSCAL control IDs and determines satisfied/not-satisfied status.
 // Long:
@@ -15,7 +15,7 @@
 // Flag.skip-auto-run: type=bool, default=false, usage=Use existing evidence only, fail if missing
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/logs/risk/
 // Args: modules
-package assess
+package risk
 
 import (
 	"fmt"
@@ -35,14 +35,14 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-var log = logging.C()
+var assessLog = logging.C()
 
 func init() {
-	registry.Register(RiskAssess)
+	registry.Register(CreateRiskAssess)
 }
 
-// Config holds configuration for risk assess command.
-type Config struct {
+// AssessConfig holds configuration for risk assess command.
+type AssessConfig struct {
 	Module         string
 	MaxEvidenceAge time.Duration
 	ForceTests     bool
@@ -53,15 +53,15 @@ type Config struct {
 	Logger         *logging.Logger
 }
 
-// RiskAssess is the entry point for the risk assess command.
-func RiskAssess() int {
-	config, err := parseConfig()
+// CreateRiskAssess is the entry point for the create risk-assess command.
+func CreateRiskAssess() int {
+	config, err := parseAssessConfig()
 	if err != nil {
 		if err.Error() == "help requested" {
-			showHelp()
+			showAssessHelp()
 			return 0
 		}
-		log.Errorf("Error: %v", err)
+		assessLog.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -73,7 +73,7 @@ func RiskAssess() int {
 		logger, err = logging.NewDefault("risk", config.WorkspaceRoot)
 	}
 	if err != nil {
-		log.Errorf("Warning: Failed to initialize logger: %v", err)
+		assessLog.Errorf("Warning: Failed to initialize logger: %v", err)
 	} else {
 		config.Logger = logger
 		defer logger.Sync()
@@ -90,21 +90,21 @@ func RiskAssess() int {
 	profilePath := oscal.GetProfilePath(config.WorkspaceRoot, config.Module)
 	profile, err := oscal.LoadProfile(profilePath)
 	if err != nil {
-		log.Errorf("Error: Profile not found for module '%s'", config.Module)
-		log.Errorf("Expected at: %s", profilePath)
-		log.Error("")
-		log.Error("Create a profile first:")
-		log.Errorf("  create risk <assessment.md> --module %s", config.Module)
+		assessLog.Errorf("Error: Profile not found for module '%s'", config.Module)
+		assessLog.Errorf("Expected at: %s", profilePath)
+		assessLog.Error("")
+		assessLog.Error("Create a profile first:")
+		assessLog.Errorf("  create risk <assessment.md> --module %s", config.Module)
 		return 1
 	}
 
 	controlIDs := profile.GetControlIDs()
-	log.Infof("Loaded profile with %d controls: %s", len(controlIDs), strings.Join(controlIDs, ", "))
+	assessLog.Infof("Loaded profile with %d controls: %s", len(controlIDs), strings.Join(controlIDs, ", "))
 
 	// Collect evidence
 	evidenceCollection, err := collectEvidence(config)
 	if err != nil {
-		log.Errorf("Error collecting evidence: %v", err)
+		assessLog.Errorf("Error collecting evidence: %v", err)
 		return 1
 	}
 
@@ -112,13 +112,13 @@ func RiskAssess() int {
 	arPath := oscal.GetAssessmentResultsPath(config.WorkspaceRoot, config.Module)
 	ar, err := buildAssessmentResults(config, profile, evidenceCollection)
 	if err != nil {
-		log.Errorf("Error building assessment results: %v", err)
+		assessLog.Errorf("Error building assessment results: %v", err)
 		return 1
 	}
 
 	// Write assessment-results
 	if err := oscal.WriteAssessmentResults(arPath, ar); err != nil {
-		log.Errorf("Error writing assessment results: %v", err)
+		assessLog.Errorf("Error writing assessment results: %v", err)
 		return 1
 	}
 
@@ -133,11 +133,11 @@ func RiskAssess() int {
 	return 0
 }
 
-// parseConfig parses command line configuration.
-func parseConfig() (*Config, error) {
-	args := os.Args[2:] // Skip program name and "risk assess"
+// parseAssessConfig parses command line configuration.
+func parseAssessConfig() (*AssessConfig, error) {
+	args := os.Args[3:] // Skip program name, "create", and "risk-assess"
 
-	config := &Config{
+	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,
 	}
 
@@ -205,7 +205,7 @@ func parseConfig() (*Config, error) {
 }
 
 // collectEvidence gathers test and security evidence for a module.
-func collectEvidence(config *Config) (*evidence.EvidenceCollection, error) {
+func collectEvidence(config *AssessConfig) (*evidence.EvidenceCollection, error) {
 	collection := &evidence.EvidenceCollection{
 		Module:      config.Module,
 		CollectedAt: time.Now(),
@@ -222,9 +222,9 @@ func collectEvidence(config *Config) (*evidence.EvidenceCollection, error) {
 	testResults, err := collectTestEvidence(config, policy)
 	if err != nil {
 		if config.SkipAutoRun {
-			log.Warnf("No test evidence available: %v", err)
+			assessLog.Warnf("No test evidence available: %v", err)
 		} else {
-			log.Warnf("Test evidence collection failed: %v", err)
+			assessLog.Warnf("Test evidence collection failed: %v", err)
 		}
 	} else {
 		collection.TestResults = testResults
@@ -238,9 +238,9 @@ func collectEvidence(config *Config) (*evidence.EvidenceCollection, error) {
 	securityResults, err := collectSecurityEvidence(config, policy)
 	if err != nil {
 		if config.SkipAutoRun {
-			log.Warnf("No security evidence available: %v", err)
+			assessLog.Warnf("No security evidence available: %v", err)
 		} else {
-			log.Warnf("Security evidence collection failed: %v", err)
+			assessLog.Warnf("Security evidence collection failed: %v", err)
 		}
 	} else {
 		collection.SecurityResults = securityResults
@@ -254,6 +254,13 @@ func collectEvidence(config *Config) (*evidence.EvidenceCollection, error) {
 	}
 
 	if !collection.HasAnyEvidence() {
+		if config.SkipAutoRun {
+			// Allow proceeding with no evidence when --skip-auto-run is used
+			// This will result in all controls being marked as not-satisfied
+			assessLog.Warn("⚠️  No evidence available for this module")
+			assessLog.Warn("All controls will be marked as not-satisfied")
+			return collection, nil
+		}
 		return nil, fmt.Errorf("no evidence found for module '%s'", config.Module)
 	}
 
@@ -261,7 +268,7 @@ func collectEvidence(config *Config) (*evidence.EvidenceCollection, error) {
 }
 
 // collectTestEvidence collects test evidence, optionally running tests if stale.
-func collectTestEvidence(config *Config, policy evidence.EvidenceAgePolicy) (*evidence.TestResults, error) {
+func collectTestEvidence(config *AssessConfig, policy evidence.EvidenceAgePolicy) (*evidence.TestResults, error) {
 	results, err := evidence.FindTestResultsForModule(config.WorkspaceRoot, config.Module)
 
 	// Determine if we need to run tests
@@ -270,11 +277,11 @@ func collectTestEvidence(config *Config, policy evidence.EvidenceAgePolicy) (*ev
 		needsRun = true
 	} else if policy.ForceTests {
 		needsRun = true
-		log.Info("Forcing test re-run...")
+		assessLog.Info("Forcing test re-run...")
 	} else if !evidence.IsEvidenceFresh(results.TestRunDirectory, policy.MaxAge) {
 		needsRun = true
 		age, _ := evidence.GetEvidenceAge(results.TestRunDirectory)
-		log.Infof("Test results are %s old, running tests...", formatDuration(age))
+		assessLog.Infof("Test results are %s old, running tests...", formatDuration(age))
 	}
 
 	if needsRun {
@@ -298,7 +305,7 @@ func collectTestEvidence(config *Config, policy evidence.EvidenceAgePolicy) (*ev
 }
 
 // collectSecurityEvidence collects security evidence, optionally running scans if stale.
-func collectSecurityEvidence(config *Config, policy evidence.EvidenceAgePolicy) (*evidence.SecurityResults, error) {
+func collectSecurityEvidence(config *AssessConfig, policy evidence.EvidenceAgePolicy) (*evidence.SecurityResults, error) {
 	results, err := evidence.FindSecurityResultsForModule(config.WorkspaceRoot, config.Module)
 
 	// Determine if we need to run scans
@@ -307,17 +314,17 @@ func collectSecurityEvidence(config *Config, policy evidence.EvidenceAgePolicy) 
 		needsRun = true
 	} else if policy.ForceSecurity {
 		needsRun = true
-		log.Info("Forcing security scan re-run...")
+		assessLog.Info("Forcing security scan re-run...")
 	} else if results.VulnFile != "" && !evidence.IsEvidenceFresh(results.VulnFile, policy.MaxAge) {
 		needsRun = true
 		age, _ := evidence.GetEvidenceAge(results.VulnFile)
-		log.Infof("Security evidence is %s old, running scans...", formatDuration(age))
+		assessLog.Infof("Security evidence is %s old, running scans...", formatDuration(age))
 	}
 
 	if needsRun && !policy.SkipAutoRun {
 		// Run security scans
 		if err := runSecurityScans(config); err != nil {
-			log.Warnf("Security scan failed: %v", err)
+			assessLog.Warnf("Security scan failed: %v", err)
 			// Continue with partial results
 		}
 
@@ -329,8 +336,8 @@ func collectSecurityEvidence(config *Config, policy evidence.EvidenceAgePolicy) 
 }
 
 // runTests runs the test suite for a module.
-func runTests(config *Config) error {
-	log.Infof("Running tests for %s...", config.Module)
+func runTests(config *AssessConfig) error {
+	assessLog.Infof("Running tests for %s...", config.Module)
 
 	cmd := exec.Command("go", "run", "./go/eac/commands", "test", config.Module)
 	cmd.Dir = config.WorkspaceRoot
@@ -345,8 +352,8 @@ func runTests(config *Config) error {
 }
 
 // runSecurityScans runs security scans for a module.
-func runSecurityScans(config *Config) error {
-	log.Infof("Running security scans for %s...", config.Module)
+func runSecurityScans(config *AssessConfig) error {
+	assessLog.Infof("Running security scans for %s...", config.Module)
 
 	// Run vulnerability scan
 	cmd := exec.Command("go", "run", "./go/eac/commands", "security", "vuln", config.Module)
@@ -366,7 +373,7 @@ func runSecurityScans(config *Config) error {
 }
 
 // buildAssessmentResults creates OSCAL assessment-results from profile and evidence.
-func buildAssessmentResults(config *Config, profile *oscal.Profile, ec *evidence.EvidenceCollection) (*oscal.AssessmentResults, error) {
+func buildAssessmentResults(config *AssessConfig, profile *oscal.Profile, ec *evidence.EvidenceCollection) (*oscal.AssessmentResults, error) {
 	controlIDs := profile.GetControlIDs()
 
 	// Get control to test mapping
@@ -421,7 +428,7 @@ func buildAssessmentResults(config *Config, profile *oscal.Profile, ec *evidence
 }
 
 // createObservations creates OSCAL observations from evidence.
-func createObservations(config *Config, ec *evidence.EvidenceCollection) []oscal.Observation {
+func createObservations(config *AssessConfig, ec *evidence.EvidenceCollection) []oscal.Observation {
 	var observations []oscal.Observation
 	now := time.Now().UTC().Format(time.RFC3339)
 
@@ -507,7 +514,7 @@ func createObservations(config *Config, ec *evidence.EvidenceCollection) []oscal
 }
 
 // createFindings creates OSCAL findings for each control.
-func createFindings(config *Config, controlIDs []string, controlTestMap map[string][]string, ec *evidence.EvidenceCollection, observations []oscal.Observation) []oscal.Finding {
+func createFindings(config *AssessConfig, controlIDs []string, controlTestMap map[string][]string, ec *evidence.EvidenceCollection, observations []oscal.Observation) []oscal.Finding {
 	var findings []oscal.Finding
 
 	for _, controlID := range controlIDs {
@@ -592,12 +599,12 @@ func determineControlStatus(controlID string, controlTestMap map[string][]string
 }
 
 // reportResults prints assessment summary.
-func reportResults(config *Config, ar *oscal.AssessmentResults, arPath string) {
-	log.Info("")
-	log.Info("═══════════════════════════════════════════════════════════")
-	log.Infof("  Assessment Results: %s", config.Module)
-	log.Info("═══════════════════════════════════════════════════════════")
-	log.Info("")
+func reportResults(config *AssessConfig, ar *oscal.AssessmentResults, arPath string) {
+	assessLog.Info("")
+	assessLog.Info("═══════════════════════════════════════════════════════════")
+	assessLog.Infof("  Assessment Results: %s", config.Module)
+	assessLog.Info("═══════════════════════════════════════════════════════════")
+	assessLog.Info("")
 
 	if len(ar.AssessmentResults.Results) > 0 {
 		result := ar.AssessmentResults.Results[0]
@@ -613,16 +620,16 @@ func reportResults(config *Config, ar *oscal.AssessmentResults, arPath string) {
 		}
 
 		total := len(result.Findings)
-		log.Infof("  Controls assessed: %d", total)
-		log.Infof("  ✓ Satisfied:       %d", satisfied)
-		log.Infof("  ✗ Not satisfied:   %d", notSatisfied)
+		assessLog.Infof("  Controls assessed: %d", total)
+		assessLog.Infof("  ✓ Satisfied:       %d", satisfied)
+		assessLog.Infof("  ✗ Not satisfied:   %d", notSatisfied)
 
 		if notSatisfied > 0 {
-			log.Info("")
-			log.Info("  Controls needing attention:")
+			assessLog.Info("")
+			assessLog.Info("  Controls needing attention:")
 			for _, finding := range result.Findings {
 				if finding.Target.Status.State == oscal.StateNotSatisfied {
-					log.Infof("    - %s", finding.Target.TargetID)
+					assessLog.Infof("    - %s", finding.Target.TargetID)
 				}
 			}
 		}
@@ -632,17 +639,17 @@ func reportResults(config *Config, ar *oscal.AssessmentResults, arPath string) {
 		impact := scoring.GetDefaultImpact("service")
 		riskScore := scoring.ComputeRiskScore(config.Module, likelihood, impact, "Based on control satisfaction")
 
-		log.Info("")
-		log.Infof("  Risk Score: %s", scoring.FormatRiskScore(riskScore))
+		assessLog.Info("")
+		assessLog.Infof("  Risk Score: %s", scoring.FormatRiskScore(riskScore))
 	}
 
-	log.Info("")
-	log.Infof("  Output: %s", arPath)
-	log.Info("")
-	log.Info("  Next steps:")
-	log.Infof("    show risk-report              # View aggregated report")
-	log.Infof("    validate risk %s  # Validate OSCAL", filepath.Base(arPath))
-	log.Info("")
+	assessLog.Info("")
+	assessLog.Infof("  Output: %s", arPath)
+	assessLog.Info("")
+	assessLog.Info("  Next steps:")
+	assessLog.Infof("    show risk-report              # View aggregated report")
+	assessLog.Infof("    validate risk %s  # Validate OSCAL", filepath.Base(arPath))
+	assessLog.Info("")
 }
 
 // formatDuration formats a duration for display.
@@ -658,9 +665,9 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%d minutes", int(d.Minutes()))
 }
 
-// showHelp displays help information.
-func showHelp() {
-	help := `Usage: risk assess <module> [flags]
+// showAssessHelp displays help information.
+func showAssessHelp() {
+	help := `Usage: create risk-assess <module> [flags]
 
 Update OSCAL assessment-results with test and security evidence
 
@@ -680,16 +687,16 @@ Output:
 
 Examples:
   # Assess a module (auto-refreshes stale evidence)
-  risk assess billing-service
+  create risk-assess billing-service
 
   # Force fresh test results
-  risk assess api-gateway --force-tests
+  create risk-assess api-gateway --force-tests
 
   # Use existing evidence only
-  risk assess my-module --skip-auto-run
+  create risk-assess my-module --skip-auto-run
 
   # Set custom evidence freshness threshold
-  risk assess my-module --max-evidence-age 1h
+  create risk-assess my-module --max-evidence-age 1h
 `
-	log.Info(help)
+	assessLog.Info(help)
 }

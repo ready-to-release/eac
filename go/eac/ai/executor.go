@@ -100,15 +100,15 @@ func (e *Executor) GetLastUsedProvider() Provider {
 	return e.lastUsedProvider
 }
 
-// loadConfig loads the agent configuration from .r2r/eac directory.
+// loadConfig loads the EAC configuration from .r2r/eac directory.
 // Loads team config and merges with personal overrides if present.
-// Personal config can override: api_key, model, provider name, endpoint.
-// Both configs are validated against the agent-config schema.
+// Personal config can override: api_key, model, provider name, endpoint, git token.
+// Both configs are validated against the eac-config schema.
 func (e *Executor) loadConfig() (*Config, error) {
 	eacDir := filepath.Join(e.workspaceRoot, ".r2r", "eac")
 
-	teamConfigPath := filepath.Join(eacDir, "agent-config.yml")
-	personalConfigPath := filepath.Join(eacDir, "agent-config.personal.yml")
+	teamConfigPath := filepath.Join(eacDir, "eac-config.yml")
+	personalConfigPath := filepath.Join(eacDir, "eac-config.personal.yml")
 
 	// Use merge-based loading with schema validation
 	return LoadConfigWithOverrides(e.workspaceRoot, teamConfigPath, personalConfigPath)
@@ -119,19 +119,19 @@ func (e *Executor) loadConfig() (*Config, error) {
 func (e *Executor) LoadProvider(config *Config) (Provider, error) {
 	// Config is required
 	if config == nil {
-		return nil, fmt.Errorf("configuration is required\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+		return nil, fmt.Errorf("configuration is required\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini\nOr run: .\\importer.ps1 (for claude-cli)")
 	}
 
 	// Check if provider factory exists
-	factory, exists := e.providerFactories[config.ProviderName]
+	factory, exists := e.providerFactories[config.AI.Provider]
 	if !exists {
-		return nil, fmt.Errorf("unknown provider: %s\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", config.ProviderName)
+		return nil, fmt.Errorf("unknown provider: %s\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini\nOr run: .\\importer.ps1 (for claude-cli)", config.AI.Provider)
 	}
 
 	// Try to create provider
 	provider, err := factory(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create %s provider: %w\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", config.ProviderName, err)
+		return nil, fmt.Errorf("failed to create %s provider: %w\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini\nOr run: .\\importer.ps1 (for claude-cli)", config.AI.Provider, err)
 	}
 
 	return provider, nil

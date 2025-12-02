@@ -9,7 +9,7 @@ Feature: eac-core_ai-executor
 
   Rule: Executor loads provider from configuration
 
-    The executor reads agent-config.yml to determine which provider to use.
+    The executor reads eac-config.yml to determine which provider to use.
     If the config exists and is valid, the executor uses the specified provider.
 
     @L2 @ov
@@ -30,7 +30,7 @@ Feature: eac-core_ai-executor
       Given no agent config file exists
       When I execute a prompt "Hello"
       Then an error is returned
-      And the error message contains "agent-config.yml not found"
+      And the error message contains "eac-config.yml not found"
       And the error message contains "run: r2r agent init"
 
     @L2 @ov
@@ -38,7 +38,7 @@ Feature: eac-core_ai-executor
       Given agent config file is malformed
       When I execute a prompt "Hello"
       Then an error is returned
-      And the error message contains "failed to parse agent-config.yml"
+      And the error message contains "failed to parse eac-config.yml"
       And the error message contains "run: r2r agent init"
 
     @L2 @ov
@@ -115,13 +115,13 @@ Feature: eac-core_ai-executor
 
   Rule: Default configuration is included in repository
 
-    The repository includes a default .r2r/agent-config.yml file
+    The repository includes a default .r2r/eac/eac-config.yml file
     with claude-cli as the only configured provider.
 
     @L1 @ov
-    Scenario: Repository contains default agent-config.yml
+    Scenario: Repository contains default eac-config.yml
       Given a fresh clone of the repository
-      Then agent-config.yml exists in the .r2r directory
+      Then eac-config.yml exists in the .r2r directory
       And the config specifies provider "claude-cli"
       And the config does not require API keys
       And the config is safe to commit to version control

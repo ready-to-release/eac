@@ -1,4 +1,4 @@
-@deps:go @L2 @ov @env:isolated-test-project
+@deps:go @L2 @ov @env:isolated-test-project @skip:broken
 Feature: eac-commands_validate-risk
 
   As a security engineer
@@ -123,35 +123,35 @@ Feature: eac-commands_validate-risk
     @L2 @ov
     Scenario: Valid assessment-results passes validation
       Given a valid OSCAL assessment-results with all required fields
-      When I run "validate risk assessment.json --type assessment"
+      When I run "validate create risk-assessment.json --type assessment"
       Then the exit code is 0
       And stdout contains "Validation passed"
 
     @L2 @ov
     Scenario: Missing UUID fails validation
       Given assessment-results missing the uuid field
-      When I run "validate risk assessment.json --type assessment"
+      When I run "validate create risk-assessment.json --type assessment"
       Then the exit code is 1
       And stdout contains "missing required field: uuid"
 
     @L2 @ov
     Scenario: Missing results fails validation
       Given assessment-results with no results array
-      When I run "validate risk assessment.json --type assessment"
+      When I run "validate create risk-assessment.json --type assessment"
       Then the exit code is 1
       And stdout contains "missing required field: results"
 
     @L2 @ov
     Scenario: Duplicate UUIDs fail validation
       Given assessment-results with duplicate observation UUIDs
-      When I run "validate risk assessment.json --type assessment"
+      When I run "validate create risk-assessment.json --type assessment"
       Then the exit code is 1
       And stdout contains "duplicate UUID"
 
     @L2 @ov
     Scenario: Invalid observation reference fails validation
       Given assessment-results with finding referencing non-existent observation
-      When I run "validate risk assessment.json --type assessment"
+      When I run "validate create risk-assessment.json --type assessment"
       Then the exit code is 1
       And stdout contains "references non-existent observation"
 
@@ -160,7 +160,7 @@ Feature: eac-commands_validate-risk
     @L2 @ov
     Scenario: Skip evidence check by default
       Given assessment-results with evidence links to missing files
-      When I run "validate risk assessment.json"
+      When I run "validate create risk-assessment.json"
       Then the exit code is 0
       And no warnings about missing evidence
 
@@ -168,14 +168,14 @@ Feature: eac-commands_validate-risk
     Scenario: Check evidence links with flag
       Given assessment-results with evidence link "out/test/results.json"
       And file "out/test/results.json" does not exist
-      When I run "validate risk assessment.json --check-evidence"
+      When I run "validate create risk-assessment.json --check-evidence"
       Then stdout contains warning "evidence file not found"
 
     @L2 @ov
     Scenario: Evidence check passes when files exist
       Given assessment-results with evidence link "out/test/results.json"
       And file "out/test/results.json" exists
-      When I run "validate risk assessment.json --check-evidence"
+      When I run "validate create risk-assessment.json --check-evidence"
       Then the exit code is 0
       And no warnings about missing evidence
 

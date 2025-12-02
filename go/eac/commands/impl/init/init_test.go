@@ -58,10 +58,13 @@ func TestWriteAgentConfig(t *testing.T) {
 			},
 			wantErr: false,
 			wantContains: []string{
-				"name: claude-api",
+				"ai:",
+				"provider: claude-api",
 				"model: claude-3-haiku-20240307",
 				"endpoint: https://api.anthropic.com/v1",
 				"api_key: ${ANTHROPIC_API_KEY}",
+				"git:",
+				"token: ${GIT_TOKEN}",
 			},
 		},
 		{
@@ -74,8 +77,10 @@ func TestWriteAgentConfig(t *testing.T) {
 			},
 			wantErr: false,
 			wantContains: []string{
-				"name: claude-cli",
+				"ai:",
+				"provider: claude-cli",
 				"model: claude-3-haiku-20240307",
+				"git:",
 			},
 		},
 		{
@@ -88,9 +93,11 @@ func TestWriteAgentConfig(t *testing.T) {
 			},
 			wantErr: false,
 			wantContains: []string{
-				"name: openai",
+				"ai:",
+				"provider: openai",
 				"model: gpt-4-turbo",
 				"api_key: ${OPENAI_API_KEY}",
+				"git:",
 			},
 		},
 	}
@@ -104,9 +111,11 @@ func TestWriteAgentConfig(t *testing.T) {
 				t.Fatalf("failed to create .r2r/eac directory: %v", err)
 			}
 
-			configPath := filepath.Join(eacDir, "agent-config.yml")
+			configPath := filepath.Join(eacDir, "eac-config.yml")
 
-			err := writeAgentConfig(configPath, tt.config)
+			// Create empty token config since we're just testing team config generation
+			tokens := &tokenConfig{}
+			err := writeConfig(tmpDir, tt.config, tokens, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("writeAgentConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return

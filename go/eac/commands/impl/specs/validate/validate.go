@@ -96,20 +96,23 @@ func SpecsValidate() int {
 	}
 
 	// Initialize logger (logs to out/logs/specs/)
+	// Skip logger when format is JSON to avoid corrupting JSON output
 	var logger *logging.Logger
-	if config.Verbose {
-		logger, err = logging.NewWithDebug("specs", config.RepositoryRoot)
-	} else {
-		logger, err = logging.NewDefault("specs", config.RepositoryRoot)
-	}
-	if err != nil {
-		// Continue without logger - not fatal
+	if config.Format != "json" {
 		if config.Verbose {
-			log.Errorf("Warning: Failed to initialize logger: %v", err)
+			logger, err = logging.NewWithDebug("specs", config.RepositoryRoot)
+		} else {
+			logger, err = logging.NewDefault("specs", config.RepositoryRoot)
 		}
-	} else {
-		config.Logger = logger
-		defer logger.Sync()
+		if err != nil {
+			// Continue without logger - not fatal
+			if config.Verbose {
+				log.Errorf("Warning: Failed to initialize logger: %v", err)
+			}
+		} else {
+			config.Logger = logger
+			defer logger.Sync()
+		}
 	}
 
 	// Log command start
@@ -153,7 +156,7 @@ func SpecsValidate() int {
 	var results []*ValidationResult
 	if info.IsDir() {
 		// Validate directory (recursive)
-		results, err = validateDirectoryWithLogger(config.Path, config.RepositoryRoot, config.Quiet, config.CheckTags, config.Logger)
+		results, err = validateDirectoryWithLogger(config.Path, config.RepositoryRoot, config.Quiet, config.CheckTags, config.Format, config.Logger)
 		if err != nil {
 			if config.Logger != nil {
 				config.Logger.Error("Directory validation failed", zap.Error(err))
@@ -433,11 +436,11 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 // validateDirectory validates all .feature files in a directory (recursive)
 // Deprecated: Use validateDirectoryWithLogger for better logging support
 func validateDirectory(dirPath string, repoRoot string, quiet bool, checkTags bool) ([]*ValidationResult, error) {
-	return validateDirectoryWithLogger(dirPath, repoRoot, quiet, checkTags, nil)
+	return validateDirectoryWithLogger(dirPath, repoRoot, quiet, checkTags, "text", nil)
 }
 
 // validateDirectoryWithLogger validates all .feature files in a directory with logging support
-func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, checkTags bool, logger *logging.Logger) ([]*ValidationResult, error) {
+func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, checkTags bool, format string, logger *logging.Logger) ([]*ValidationResult, error) {
 	var results []*ValidationResult
 
 	if logger != nil {
@@ -498,7 +501,8 @@ func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, ch
 		}
 
 		// In quiet mode, only show progress for invalid files
-		if !quiet || !result.Valid {
+		// Skip progress output entirely when format is JSON to avoid corrupting JSON output
+		if format != "json" && (!quiet || !result.Valid) {
 			if result.Valid && len(result.Errors) == 0 {
 				log.Infof("✅ %s", relativePath(path, repoRoot))
 			} else if result.Valid {
