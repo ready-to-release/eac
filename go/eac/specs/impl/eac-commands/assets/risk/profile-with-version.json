@@ -1,0 +1,9 @@
+{
+  "profile": {
+    "uuid": "test",
+    "metadata": {
+      "title": "Test",
+      "oscal-version": "{{VERSION}}"
+    }
+  }
+}

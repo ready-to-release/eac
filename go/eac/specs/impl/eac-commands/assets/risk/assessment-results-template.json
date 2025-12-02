@@ -1,0 +1,21 @@
+{
+  "assessment-results": {
+    "uuid": "{{UUID}}",
+    "metadata": {
+      "title": "{{TITLE}}",
+      "last-modified": "2024-01-01T00:00:00Z",
+      "version": "1.0",
+      "oscal-version": "1.1.2"
+    },
+    "import-ap": {
+      "href": "{{PROFILE_REF}}"
+    },
+    "results": [{
+      "uuid": "result-1",
+      "title": "Assessment Result",
+      "description": "Test assessment result",
+      "start": "2024-01-01T00:00:00Z",
+      "findings": []
+    }]
+  }
+}
