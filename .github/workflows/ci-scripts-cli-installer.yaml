@@ -73,7 +73,7 @@ jobs:
 
       # Note: Using setup-go + go run on Windows since the composite action
       # uses bash-specific commands that may not work reliably on Windows
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
           cache-dependency-path: go/eac/commands/go.sum
