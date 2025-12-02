@@ -56,6 +56,12 @@ func BuildNpmModule(module *modules.ModuleContract, workspaceRoot string, output
 		}
 	}
 
+	// Copy package.json to output directory for post-build steps
+	destPackageJSON := filepath.Join(outputDir, "package.json")
+	if err := CopyFile(packageJSON, destPackageJSON); err != nil {
+		Logln(logWriter, "⚠️  Could not copy package.json: %v", err)
+	}
+
 	// Write build marker for dependency verification
 	if err := WriteBuildMarker(outputDir); err != nil {
 		Logln(logWriter, "⚠️  Could not write build marker: %v", err)

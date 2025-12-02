@@ -32,7 +32,7 @@ func GetExecutionOrder() int {
 	var monikers []string
 	skipNext := false
 	for i, arg := range os.Args {
-		if i < 3 { // Skip program name and command
+		if i < 4 { // Skip program name, "get", "execution", "order"
 			continue
 		}
 		if skipNext {
