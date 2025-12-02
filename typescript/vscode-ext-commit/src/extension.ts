@@ -303,7 +303,7 @@ export function activate(context: vscode.ExtensionContext) {
                     location: vscode.ProgressLocation.SourceControl,
                     title: "Generating commit message",
                     cancellable: false
-                }, async (progress) => {
+                }, async (progress: vscode.Progress<{ message?: string; increment?: number }>) => {
                     // Show initial message in SCM panel
                     const randomMessages = [
                         "🚀 Initializing workflow...",
@@ -442,7 +442,7 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         let errorOutput = '';
 
         // Capture all stdout
-        childProcess.stdout.on('data', (data) => {
+        childProcess.stdout.on('data', (data: Buffer) => {
             const text = data.toString();
             fullOutput += text;
             log('[commit message output] ' + text);
@@ -473,19 +473,19 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         });
 
         // Capture stderr for errors
-        childProcess.stderr.on('data', (data) => {
+        childProcess.stderr.on('data', (data: Buffer) => {
             const stderrText = data.toString();
             errorOutput += stderrText;
             log('[commit message error] ' + stderrText);
         });
 
         // Handle spawn errors (e.g., command not found, path doesn't exist)
-        childProcess.on('error', (err) => {
+        childProcess.on('error', (err: Error) => {
             log('[commit message spawn error] ' + err.message);
             reject(new Error(`Failed to start commit message command: ${err.message}. Is 'go' installed and in PATH?`));
         });
 
-        childProcess.on('close', (code) => {
+        childProcess.on('close', (code: number | null) => {
             log(`[commit message] Process exited with code ${code}`);
             log(`[commit message] stdout length: ${fullOutput.length}, stderr length: ${errorOutput.length}`);
 
