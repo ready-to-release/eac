@@ -61,9 +61,9 @@ func writeln(w io.Writer, format string, args ...interface{}) {
 // acquireSuiteLock attempts to acquire an exclusive lock for the test suite.
 // Returns the lock handle and nil error on success.
 // Returns nil and error if lock is already held (suite is running).
-func acquireSuiteLock(suiteName, workspaceRoot string) (*flock.Flock, error) {
+func acquireSuiteLock(suiteName, workspaceRoot string, repoCfg *config.RepositoryConfig) (*flock.Flock, error) {
 	// Ensure out/test directory exists (parent directory for lock files)
-	testDir := filepath.Join(workspaceRoot, "out", "test")
+	testDir := filepath.Join(workspaceRoot, repoCfg.Paths.Out.Test)
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create test directory: %w", err)
 	}
@@ -202,6 +202,13 @@ func TestSuite() int {
 	// Codebase uses Unix-style paths throughout - normalize for path comparisons
 	workspaceRoot := filepath.ToSlash(workspaceRootNative)
 
+	// Load repository configuration for path resolution
+	repoCfg, err := config.LoadRepositoryConfig(workspaceRootNative)
+	if err != nil {
+		log.Errorf("failed to load repository config: %v", err)
+		return 1
+	}
+
 	// Get the test suite
 	suite, err := testing.GetSuite(suiteName)
 	if err != nil {
@@ -215,7 +222,7 @@ func TestSuite() int {
 	}
 
 	// Acquire exclusive lock for this test suite FIRST (before any directory operations)
-	lockFile, err := acquireSuiteLock(suiteName, workspaceRootNative)
+	lockFile, err := acquireSuiteLock(suiteName, workspaceRootNative, repoCfg)
 	if err != nil {
 		log.Errorf("test suite '%s' is already running", suiteName)
 		log.Errorf("Details: %v", err)
@@ -232,7 +239,7 @@ func TestSuite() int {
 	log.Info("")
 
 	// Purge and recreate test output directory (now protected by lock)
-	testRunDir := filepath.Join(workspaceRootNative, "out", "test", suiteName)
+	testRunDir := filepath.Join(workspaceRootNative, repoCfg.TestOutputPath(suiteName))
 	if err := os.RemoveAll(testRunDir); err != nil {
 		log.Errorf("Warning: failed to purge test directory: %v", err)
 	}
@@ -460,24 +467,25 @@ func TestSuite() int {
 	}
 
 	// findGodogTestRunner finds the test runner package for a feature file
-	// Feature files are in specs/<module>/..., test runners are in go/eac/specs/impl/<module>/
+	// Feature files are in specs/<module>/..., test runners are in {test_impl_root}/<module>/
 	findGodogTestRunner := func(featurePath string) string {
 		// Extract module from specs path
 		// Example: specs/eac-commands/commit/... -> go/eac/specs/impl/eac-commands
 		//          specs/r2r-cli/... -> go/eac/specs/impl/r2r-cli
 		//          specs/repository/... -> go/eac/specs/impl/repository
-		relPath := strings.TrimPrefix(featurePath, "specs/")
-		relPath = strings.TrimPrefix(relPath, "specs\\")
+		specsPrefix := repoCfg.Paths.SpecsRoot + "/"
+		relPath := strings.TrimPrefix(featurePath, specsPrefix)
+		relPath = strings.TrimPrefix(relPath, strings.ReplaceAll(specsPrefix, "/", "\\"))
 
 		// Get first path component (e.g., "eac-commands" or "repository")
 		parts := strings.Split(filepath.ToSlash(relPath), "/")
 		if len(parts) == 0 {
-			return "go/eac/specs/impl/eac-commands" // fallback
+			return repoCfg.TestImplPath("eac-commands") // fallback
 		}
 
-		// All spec test runners are now in go/eac/specs/impl/<module>/
+		// Test runners are in {test_impl_root}/<module>/
 		moniker := parts[0]
-		return "go/eac/specs/impl/" + moniker
+		return repoCfg.TestImplPath(moniker)
 	}
 
 	// Phase 5: Run tests
@@ -850,7 +858,7 @@ func TestSuite() int {
 	)
 
 	// Get repository root to find template
-	templatePath := filepath.Join(workspaceRootNative, "templates", "test-reports", "suite-summary.md")
+	templatePath := filepath.Join(workspaceRootNative, repoCfg.Paths.Templates, "test-reports", "suite-summary.md")
 	mdPath := filepath.Join(testRunDir, "test-suite-summary.md")
 
 	renderer := reporter.NewRenderer(templatePath, mdPath, reportData)

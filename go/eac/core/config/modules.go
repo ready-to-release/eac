@@ -75,7 +75,13 @@ func (c *ModulesConfig) applyDefaults() {
 
 // ApplyTypeDefaults applies type-specific defaults to all modules.
 // This should be called after both Modules and ModuleTypes are loaded.
-func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
+func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig, repoCfg *RepositoryConfig) {
+	// Build path variables from repository config
+	var pathVars map[string]string
+	if repoCfg != nil {
+		pathVars = repoCfg.GetPathVariables()
+	}
+
 	for i := range c.Modules {
 		m := &c.Modules[i]
 
@@ -91,6 +97,7 @@ func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
 		resolved := defaults.ResolveDefaults(
 			typeDef,
 			m.Moniker, m.Files.Root, m.Type,
+			pathVars,
 			m.Files.Source, m.Files.Config, m.Files.Assets, m.Files.Tests,
 			m.Files.Changelog,
 			m.Files.Workflows.CI, m.Files.Workflows.Release,

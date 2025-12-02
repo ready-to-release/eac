@@ -29,21 +29,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: go/eac/commands/go.sum
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Generate calver tag name
         id: tag
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           # Configure git for tag operations
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch --tags --force
 
           # Generate calver tag (docs/YYYY.MM.DD or docs/YYYY.MM.DD.N)
-          TAG=$(go run ./go/eac/commands release calver docs)
+          TAG=$($COMMANDS release calver docs)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "✅ Will create tag after successful deployment: $TAG"
 
@@ -61,8 +62,9 @@ jobs:
       - name: Build docs (no CI artifacts)
         if: inputs.ci_run_id == ''
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
           echo "No CI run ID provided - building docs..."
-          go run ./go/eac/commands build docs
+          $COMMANDS build docs
 
       - name: Verify build output
         run: |
@@ -121,7 +123,8 @@ jobs:
           echo "| CI Run ID | \`${{ inputs.ci_run_id || 'none (building from source)' }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Planned Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+          $COMMANDS ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
 
       - name: Summary (success)
         if: success()

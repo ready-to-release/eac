@@ -40,6 +40,9 @@ type EACConfig struct {
 	RepoRoot   string
 	ConfigRoot string
 
+	// Repository-wide configuration (loaded first, used by other configs)
+	Repository *RepositoryConfig
+
 	// Loaded configurations
 	Modules            *ModulesConfig
 	ModuleTypes        *ModuleTypesConfig
@@ -109,6 +112,11 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 func (c *EACConfig) LoadAll(validateSchemas bool) error {
 	var errs []error
 
+	// Load repository config first (provides path variables for other configs)
+	if err := c.LoadRepository(); err != nil {
+		errs = append(errs, fmt.Errorf("repository: %w", err))
+	}
+
 	if err := c.LoadModules(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("modules: %w", err))
 	}
@@ -119,7 +127,7 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 
 	// Apply type-specific defaults after both modules and types are loaded
 	if c.Modules != nil {
-		c.Modules.ApplyTypeDefaults(c.ModuleTypes)
+		c.Modules.ApplyTypeDefaults(c.ModuleTypes, c.Repository)
 	}
 
 	if err := c.LoadEnvironments(validateSchemas); err != nil {
@@ -146,6 +154,16 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 		return &MultiError{Errors: errs}
 	}
 
+	return nil
+}
+
+// LoadRepository loads the repository-wide configuration
+func (c *EACConfig) LoadRepository() error {
+	cfg, err := LoadRepositoryConfig(c.RepoRoot)
+	if err != nil {
+		return err
+	}
+	c.Repository = cfg
 	return nil
 }
 

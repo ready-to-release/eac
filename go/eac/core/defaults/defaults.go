@@ -22,12 +22,7 @@ const (
 
 // Path derivation functions - use these to derive default paths from moniker.
 // All paths use forward slashes (/) for cross-platform config file compatibility.
-
-// TestImplPath returns the default test implementation path for a moniker.
-// Pattern: go/eac/specs/impl/{moniker}
-func TestImplPath(moniker string) string {
-	return "go/eac/specs/impl/" + moniker
-}
+// Note: TestImplPath is not provided here - it must come from repository.yml configuration.
 
 // DesignPath returns the default design workspace path for a moniker.
 // Pattern: specs/{moniker}/.design

@@ -149,7 +149,6 @@ modules:
         - test-repository-validations.sh
         - CHANGELOG.md
       repo:
-        test_impl: go/eac/specs/impl/repository
         design: ""
         other:
           - .github/workflows/change-trigger.yaml
@@ -191,7 +190,6 @@ modules:
         ci: .github/workflows/ci-r2r-cli.yaml
         release: .github/workflows/release-r2r-cli.yml
       repo:
-        test_impl: go/eac/specs/impl/r2r-cli
         other:
           - contracts/r2r-cli/**
           - .github/workflows/ci-r2r-cli.yaml
@@ -222,7 +220,6 @@ modules:
         ci: .github/workflows/ci-scripts-cli-installer.yaml
         release: ""
       repo:
-        test_impl: go/eac/specs/impl/scripts-cli-installer
         other:
           - .github/workflows/ci-scripts-cli-installer.yaml
 
@@ -244,7 +241,6 @@ modules:
         ci: .github/workflows/ci-eac-commands.yaml
         release: ""
       repo:
-        test_impl: go/eac/specs/impl/eac-commands
         other:
           - .github/workflows/ci-eac-commands.yaml
           - "containers/mkdocs/*"
@@ -263,7 +259,6 @@ modules:
         - go.sum
         - contracts/schema/schemas/*.json
       repo:
-        test_impl: go/eac/specs/impl/eac-core
         other:
           - contracts/eac-core/**
           - go/eac/core/ai/**
@@ -286,7 +281,6 @@ modules:
         ci: .github/workflows/ci-eac-mcp-commands.yaml
         release: ""
       repo:
-        test_impl: ""
         other:
           - .github/workflows/ci-eac-mcp-commands.yaml
 

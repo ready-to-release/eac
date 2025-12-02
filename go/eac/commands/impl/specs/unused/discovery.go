@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -42,11 +43,17 @@ type ImplSpecsPair struct {
 // DiscoverPairs finds all impl↔specs pairs by scanning for godog_test.go files.
 // Each godog_test.go declares its SpecsPath, giving us the exact pairing.
 func DiscoverPairs(repoRoot string) ([]ImplSpecsPair, error) {
-	implRoot := filepath.Join(repoRoot, "go", "eac", "specs", "impl")
+	// Load repository config to get test_impl_root path
+	repoCfg, err := config.LoadRepositoryConfig(repoRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load repository config: %w", err)
+	}
+
+	implRoot := filepath.Join(repoRoot, repoCfg.Paths.TestImplRoot)
 
 	// Find all godog_test.go files
 	var godogFiles []string
-	err := filepath.Walk(implRoot, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(implRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -212,5 +219,5 @@ func checkUsesInternalFromFiles(stepFiles []string) bool {
 
 // GetInternalStepsFile returns the path to the shared internal steps file.
 func GetInternalStepsFile(repoRoot string) string {
-	return filepath.Join(repoRoot, "src", "specs", "internal", "steps.go")
+	return filepath.Join(repoRoot, "go", "eac", "specs", "internal", "steps.go")
 }

@@ -48,8 +48,13 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 		// This allows backward compatibility when module-types.yml doesn't exist
 	}
 
-	// Apply type-specific defaults
-	cfg.Modules.ApplyTypeDefaults(cfg.ModuleTypes)
+	// Load repository config for path variables
+	if err := cfg.LoadRepository(); err != nil {
+		// Repository config is optional - continue with defaults
+	}
+
+	// Apply type-specific defaults with repository path variables
+	cfg.Modules.ApplyTypeDefaults(cfg.ModuleTypes, cfg.Repository)
 
 	// Create registry (version kept for internal compatibility)
 	registry := NewRegistry("0.1.0", workspaceRoot)

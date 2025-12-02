@@ -20,9 +20,9 @@ types:
         config: ["go.mod", "go.sum"]
         changelog: CHANGELOG.md
       repo:
-        specs: ["specs/{moniker}/**"]
-        test_impl: "{root}/tests"
-        design: "specs/{moniker}/.design"
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
+        design: "{specs_root}/{moniker}/.design"
 
   - name: go-library
     description: "Go library package (no executable)"
@@ -38,9 +38,9 @@ types:
         config: ["go.mod", "go.sum"]
         changelog: CHANGELOG.md
       repo:
-        specs: ["specs/{moniker}/**"]
-        test_impl: "{root}/tests"
-        design: "specs/{moniker}/.design"
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
+        design: "{specs_root}/{moniker}/.design"
 
   - name: go-commands
     description: "Go library with CLI invoke wrapper"
@@ -59,9 +59,9 @@ types:
         assets: ["**/README.md", "**/assets/**"]
         changelog: CHANGELOG.md
       repo:
-        specs: ["specs/{moniker}/**"]
-        test_impl: "{root}/tests"
-        design: "specs/{moniker}/.design"
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
+        design: "{specs_root}/{moniker}/.design"
 
   - name: go-mcp
     description: "Go MCP server module"
@@ -78,8 +78,9 @@ types:
         assets: ["README.md"]
         changelog: CHANGELOG.md
       repo:
-        specs: ["specs/{moniker}/**"]
-        design: "specs/{moniker}/.design"
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
+        design: "{specs_root}/{moniker}/.design"
 
   - name: go-tests
     description: "Go test-only module"
@@ -143,6 +144,9 @@ types:
         - action: copy
           target: ".vscode/extensions/{moniker}/out/"
           include: ["**/*.js", "**/*.js.map"]
+        - action: copy
+          target: ".vscode/extensions/{moniker}/"
+          include: ["package.json"]
     defaults:
       files:
         source: ["src/**/*.ts"]
@@ -186,7 +190,8 @@ types:
           ci: ".github/workflows/ci-{moniker}.yaml"
           release: ""
       repo:
-        specs: ["specs/{moniker}/**"]
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
 
   # Config family
   - name: configuration
@@ -202,7 +207,8 @@ types:
           ci: ""
           release: ""
       repo:
-        specs: ["specs/{moniker}/**"]
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
 
   - name: claude-config
     description: "Claude Code configuration"
@@ -249,7 +255,8 @@ types:
           ci: ""
           release: ""
       repo:
-        specs: ["specs/{moniker}/**"]
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
 
   - name: templates
     description: "Template files"

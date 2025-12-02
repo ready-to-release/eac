@@ -32,16 +32,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/eac/mcp/commands/go.sum
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Build Module
-        working-directory: ./go/eac/commands
-        run: go run . build eac-mcp-commands
+        run: ${{ steps.commands.outputs.commands-path }} build eac-mcp-commands
 
       - name: Upload Build Artifacts
         if: always()
@@ -53,14 +49,16 @@ jobs:
       - name: Build Summary
         if: always()
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           echo "## Build: eac-mcp-commands" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ MCP Commands server module built successfully." >> $GITHUB_STEP_SUMMARY
+            echo "MCP Commands server module built successfully." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ MCP Commands server module build failed." >> $GITHUB_STEP_SUMMARY
+            echo "MCP Commands server module build failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -76,7 +74,7 @@ jobs:
             ARTIFACT_COUNT=$(find out/build/eac-mcp-commands -type f 2>/dev/null | wc -l | tr -d ' ')
             echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📦 ${ARTIFACT_COUNT} file(s) uploaded as \`build-artifacts-eac-mcp-commands\`" >> $GITHUB_STEP_SUMMARY
+            echo "${ARTIFACT_COUNT} file(s) uploaded as \`build-artifacts-eac-mcp-commands\`" >> $GITHUB_STEP_SUMMARY
           fi
 
   test:
@@ -88,12 +86,9 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/eac/mcp/commands/go.sum
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -102,8 +97,7 @@ jobs:
           path: out/build/eac-mcp-commands
 
       - name: Test Module
-        working-directory: ./go/eac/commands
-        run: go run . test eac-mcp-commands
+        run: ${{ steps.commands.outputs.commands-path }} test eac-mcp-commands
 
       - name: Upload Test Results
         if: always()
@@ -115,14 +109,16 @@ jobs:
       - name: Test Summary
         if: always()
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           echo "## Test: eac-mcp-commands" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ All unit tests passed for MCP Commands server." >> $GITHUB_STEP_SUMMARY
+            echo "All unit tests passed for MCP Commands server." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Unit tests failed for MCP Commands server." >> $GITHUB_STEP_SUMMARY
+            echo "Unit tests failed for MCP Commands server." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-eac-mcp-commands >> $GITHUB_STEP_SUMMARY
+            $COMMANDS ci summary-link ${{ github.run_id }} --type test --artifact test-results-eac-mcp-commands >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -131,5 +127,5 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`eac-mcp-commands\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Command | \`go run . test eac-mcp-commands\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Command | \`commands test eac-mcp-commands\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

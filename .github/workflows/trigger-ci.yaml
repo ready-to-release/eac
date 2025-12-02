@@ -4,12 +4,13 @@
 # since the last successful CI run. It uses the repository's dependency graph to ensure
 # that when a module changes, all modules that depend on it are also rebuilt (cache invalidation).
 #
-# How it works:
-# 1. Compares current commit against last successful "CI Trigger" run
-# 2. Uses `get changed modules ci` command which:
-#    - Maps changed files to their owning modules (via module contracts)
-#    - Expands to include all transitive dependents (if eac-commands changes, ext-eac rebuilds too)
-# 3. Triggers only the necessary module workflows in dependency order
+# Pipeline stages:
+# 1. build-tooling: Build/cache the commands binary for fast subsequent operations
+# 2. validate-all: Run full test suite for ALL modules (commit suite)
+# 3. detect-changes: Determine which modules need CI workflows triggered
+# 4. calculate-order: Compute dependency-based execution order
+# 5. execute-layers: Trigger child workflows in dependency order
+# 6. summary: Report results
 #
 # For PRs: Compares against PR base SHA
 # For push: Compares against last successful CI SHA
@@ -37,8 +38,112 @@ permissions:
   contents: read
 
 jobs:
+  # =========================================
+  # Stage 0: Build CI Tooling
+  # =========================================
+  build-tooling:
+    name: Build CI Tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: commands-binary
+          path: out/build/eac-commands/commands
+          retention-days: 1
+
+      - name: Build Summary
+        run: |
+          echo "## Build CI Tooling" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.commands.outputs.cache-hit }}" = "true" ]; then
+            echo "Restored commands binary from cache" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Built commands binary from source" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # =========================================
+  # Stage 1: Validate ALL Modules
+  # =========================================
+  validate-all:
+    name: Validate All Modules
+    needs: build-tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download commands binary
+        uses: actions/download-artifact@v4
+        with:
+          name: commands-binary
+          path: out/build/eac-commands
+
+      - name: Make executable
+        run: chmod +x out/build/eac-commands/commands
+
+      - name: Run full test suite
+        id: test
+        run: |
+          COMMANDS="./out/build/eac-commands/commands"
+
+          echo "Running full commit test suite for all modules..."
+          echo ""
+
+          # Capture output for summary
+          OUTPUT_FILE=$(mktemp)
+          EXIT_CODE=0
+          $COMMANDS test --suite commit 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Full test suite failed"
+            echo "## Validate All Modules" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Test Suite Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Extract failed scenarios from output
+            FAILED_SCENARIOS=$(grep -E "--- FAIL:|FAIL\s+" "$OUTPUT_FILE" | head -20 || true)
+            ERROR_MESSAGES=$(grep -E "Error:|error:|FAIL" "$OUTPUT_FILE" | grep -v "^go: downloading" | head -30 || true)
+
+            if [ -n "$FAILED_SCENARIOS" ]; then
+              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "$FAILED_SCENARIOS" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            if [ -n "$ERROR_MESSAGES" ]; then
+              echo "### Error Details" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "$ERROR_MESSAGES" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            rm -f "$OUTPUT_FILE"
+            exit 1
+          fi
+
+          rm -f "$OUTPUT_FILE"
+
+          echo ""
+          echo "All tests passed"
+          echo "## Validate All Modules" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All module tests passed (commit suite)" >> $GITHUB_STEP_SUMMARY
+
+  # =========================================
+  # Stage 2: Detect Changed Modules
+  # =========================================
   detect-changes:
     name: Detect Changed Modules
+    needs: validate-all
     runs-on: ubuntu-latest
     outputs:
       changed-modules: ${{ steps.detect.outputs.modules }}
@@ -54,29 +159,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - name: Download commands binary
+        uses: actions/download-artifact@v4
         with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/eac/core/go.sum
+          name: commands-binary
+          path: out/build/eac-commands
+
+      - name: Make executable
+        run: chmod +x out/build/eac-commands/commands
 
       - name: Detect Changed Modules
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cd go/eac/commands
+          COMMANDS="./out/build/eac-commands/commands"
 
           # Check if trigger-all override is enabled
           TRIGGER_ALL="${{ inputs.trigger-all }}"
 
           if [ "$TRIGGER_ALL" = "true" ]; then
-            echo "🔄 Trigger-all override enabled - building all modules"
+            echo "Trigger-all override enabled - building all modules"
 
             # Dynamically discover all CI workflows by scanning for ci-*.yaml files
             WORKFLOW_MODULES=""
-            for workflow in ../../../.github/workflows/ci-*.yaml; do
+            for workflow in .github/workflows/ci-*.yaml; do
               if [ -f "$workflow" ]; then
                 # Extract module name from ci-<module>.yaml
                 module=$(basename "$workflow" .yaml | sed 's/^ci-//')
@@ -85,7 +192,7 @@ jobs:
             done
             WORKFLOW_MODULES=$(echo $WORKFLOW_MODULES | xargs)
 
-            echo "📦 Discovered CI workflows: $WORKFLOW_MODULES"
+            echo "Discovered CI workflows: $WORKFLOW_MODULES"
             echo "directly_changed=all" >> $GITHUB_OUTPUT
             echo "invalidated=none" >> $GITHUB_OUTPUT
             echo "base_sha=N/A" >> $GITHUB_OUTPUT
@@ -93,38 +200,22 @@ jobs:
             echo "changed_file_count=N/A" >> $GITHUB_OUTPUT
             echo "files_by_module={}" >> $GITHUB_OUTPUT
           else
-            # Optimized CI: Only rebuild modules that have actually changed or whose
-            # dependencies have changed. The `get changed modules ci` command:
-            #   1. Queries GitHub API for the last successful "CI Trigger" run SHA
-            #   2. Computes git diff between that SHA and current HEAD
-            #   3. Maps changed files to modules using repository contracts
-            #   4. Expands with transitive dependents (cache invalidation)
-            #
-            # Example: If only go/eac/commands/* files changed:
-            #   - directly_changed: [eac-commands]
-            #   - invalidated: [ext-eac] (ext-eac depends on eac-commands)
-            #   - modules: [eac-commands, ext-eac]
-            echo "🔍 Detecting modules requiring rebuild (with dependency invalidation)..."
+            echo "Detecting modules requiring rebuild (with dependency invalidation)..."
 
             # For PRs: compare against PR base (what the PR introduces)
             # For push: compare against last successful CI (incremental since last success)
             if [ "${{ github.event_name }}" = "pull_request" ]; then
-              echo "📋 Pull Request detected - comparing against PR base"
-              RESULT=$(go run . "get changed modules ci" --pr-base "${{ github.event.pull_request.base.sha }}" --as-json)
+              echo "Pull Request detected - comparing against PR base"
+              RESULT=$($COMMANDS get changed modules ci --pr-base "${{ github.event.pull_request.base.sha }}" --as-json)
             else
-              echo "📋 Push detected - comparing against last successful CI"
-              RESULT=$(go run . "get changed modules ci" --as-json)
+              echo "Push detected - comparing against last successful CI"
+              RESULT=$($COMMANDS get changed modules ci --as-json)
             fi
 
             echo "Raw result:"
             echo "$RESULT" | jq .
 
-            # Extract the analysis results:
-            # - modules: ALL modules that need rebuilding (changed + dependents)
-            # - directly_changed: modules with actual file changes
-            # - invalidated: modules that need rebuild because their dependencies changed
-            # - changed_file_count: total number of changed files
-            # - files_by_module: map of module -> files (for detailed reasoning)
+            # Extract the analysis results
             MODULES=$(echo "$RESULT" | jq -r '.modules | join(" ")')
             DIRECTLY_CHANGED=$(echo "$RESULT" | jq -r '.directly_changed | join(" ")')
             INVALIDATED=$(echo "$RESULT" | jq -r '.invalidated | join(" ")')
@@ -134,7 +225,7 @@ jobs:
             FILES_BY_MODULE=$(echo "$RESULT" | jq -c '.files_by_module')
 
             echo ""
-            echo "📊 Analysis Results:"
+            echo "Analysis Results:"
             echo "  Base SHA: $BASE_SHA"
             echo "  Is Bootstrap: $IS_BOOTSTRAP"
             echo "  Changed Files: $CHANGED_FILE_COUNT"
@@ -145,14 +236,14 @@ jobs:
             # Filter to only modules that have workflows
             WORKFLOW_MODULES=""
             for module in $MODULES; do
-              if [ -f "../../../.github/workflows/ci-${module}.yaml" ]; then
+              if [ -f ".github/workflows/ci-${module}.yaml" ]; then
                 WORKFLOW_MODULES="$WORKFLOW_MODULES $module"
               fi
             done
             WORKFLOW_MODULES=$(echo $WORKFLOW_MODULES | xargs)
 
             echo ""
-            echo "📦 Modules with workflows: $WORKFLOW_MODULES"
+            echo "Modules with workflows: $WORKFLOW_MODULES"
 
             # Store additional context for summary
             echo "directly_changed=$DIRECTLY_CHANGED" >> $GITHUB_OUTPUT
@@ -172,7 +263,7 @@ jobs:
           fi
 
           # Generate step summary
-          echo "## 🔍 Change Detection Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Change Detection Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "$TRIGGER_ALL" = "true" ]; then
@@ -241,93 +332,12 @@ jobs:
             fi
           fi
 
-  # Validate repository contracts before running any module builds
-  # This catches configuration errors early (unordered files, overlapping ownership)
-  validate-repository:
-    name: Validate Repository Contracts
-    needs: detect-changes
-    if: needs.detect-changes.outputs.has-changes == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/eac/core/go.sum
-
-      - name: Run Repository Validation
-        id: validation
-        run: |
-          cd go/eac/commands
-
-          echo "🔍 Running repository validation test suite..."
-
-          # Capture output for both success and failure cases
-          OUTPUT_FILE=$(mktemp)
-          EXIT_CODE=0
-          go run . test repository 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
-
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::Repository validation test suite failed"
-            echo "## ❌ Repository Validation Failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-
-            # Extract failed scenarios from output
-            FAILED_SCENARIOS=$(grep -E "--- FAIL:|FAIL\s+" "$OUTPUT_FILE" | head -20 || true)
-            ERROR_MESSAGES=$(grep -E "Error:|error:|❌|FAIL" "$OUTPUT_FILE" | grep -v "^go: downloading" | head -30 || true)
-
-            if [ -n "$FAILED_SCENARIOS" ]; then
-              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "$FAILED_SCENARIOS" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-            fi
-
-            if [ -n "$ERROR_MESSAGES" ]; then
-              echo "### Error Details" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "$ERROR_MESSAGES" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-            fi
-
-            echo "See the full test output in the job logs above for complete details." >> $GITHUB_STEP_SUMMARY
-            rm -f "$OUTPUT_FILE"
-            exit 1
-          fi
-
-          rm -f "$OUTPUT_FILE"
-
-          echo ""
-          echo "✅ All repository validations passed"
-          echo "## ✅ Repository Validation Passed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Extract test statistics from output
-          TEST_SUMMARY=$(grep -E "scenarios.*passed|steps.*passed" "$OUTPUT_FILE" | tail -2 || echo "All tests passed")
-
-          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "$TEST_SUMMARY" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All repository validation tests passed successfully before module builds." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Validated Checks" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Repository contract validation (file ownership, module hierarchy)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Module dependency validation (dependency graph integrity)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Go module tidiness (go.mod/go.sum consistency)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Markdown syntax validation" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Test tag contract compliance" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Static module builds (repo-config, contracts)" >> $GITHUB_STEP_SUMMARY
-
+  # =========================================
+  # Stage 3: Calculate Execution Order
+  # =========================================
   calculate-order:
     name: Calculate Execution Order
-    needs: [detect-changes, validate-repository]
+    needs: [detect-changes]
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     outputs:
@@ -336,23 +346,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: Download commands binary
+        uses: actions/download-artifact@v4
         with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/eac/core/go.sum
+          name: commands-binary
+          path: out/build/eac-commands
+
+      - name: Make executable
+        run: chmod +x out/build/eac-commands/commands
 
       - name: Calculate Execution Order
         id: calculate
         run: |
-          cd go/eac/commands
+          COMMANDS="./out/build/eac-commands/commands"
 
           # Get execution order for changed modules
           MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
 
           # Calculate execution order using the new command
-          PLAN=$(go run . "get execution order" $MODULES --as-json)
+          PLAN=$($COMMANDS get execution order $MODULES --as-json)
 
           echo "Execution plan:"
           echo "$PLAN" | jq .
@@ -367,7 +379,7 @@ jobs:
           echo "layer-count=$LAYER_COUNT" >> $GITHUB_OUTPUT
 
           # Generate step summary
-          echo "## 📦 Execution Order" >> $GITHUB_STEP_SUMMARY
+          echo "## Execution Order" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Modules will be built in **$LAYER_COUNT layer(s)** based on dependency order:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -380,10 +392,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> Modules in the same layer run in parallel. Layers run sequentially." >> $GITHUB_STEP_SUMMARY
 
-  # Execute module workflows in dependency order
-  # Single job that processes all layers sequentially
-  # Each layer's workflows are triggered in parallel and awaited
-
+  # =========================================
+  # Stage 4: Execute Module Workflows
+  # =========================================
   execute-layers:
     name: Execute Dependency Layers
     needs: [detect-changes, calculate-order]
@@ -392,15 +403,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: Download commands binary
+        uses: actions/download-artifact@v4
         with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/eac/core/go.sum
+          name: commands-binary
+          path: out/build/eac-commands
+
+      - name: Make executable
+        run: chmod +x out/build/eac-commands/commands
 
       - name: Execute All Layers
         run: |
+          COMMANDS="./out/build/eac-commands/commands"
           PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
           LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
 
@@ -419,10 +433,19 @@ jobs:
 
             # Trigger all workflows in this layer
             RUN_IDS=""
+
+            # Determine the correct ref for workflow_dispatch
+            # For PRs: use head_ref (the PR branch), for push: use ref_name (the branch)
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              DISPATCH_REF="${{ github.head_ref }}"
+            else
+              DISPATCH_REF="${{ github.ref_name }}"
+            fi
+
             for module in $LAYER_MODULES; do
               if [ -f ".github/workflows/ci-${module}.yaml" ]; then
                 gh workflow run "ci-${module}.yaml" \
-                  --ref ${{ github.ref_name }} \
+                  --ref "$DISPATCH_REF" \
                   -f ref=${{ github.ref }} \
                   -f sha=${{ github.sha }}
                 sleep 2
@@ -436,23 +459,24 @@ jobs:
 
             # Wait for all workflows in this layer using pipeline wait
             if [ -n "$RUN_IDS" ]; then
-              cd go/eac/commands
-              if ! go run . pipeline wait $RUN_IDS --timeout 1800; then
+              if ! $COMMANDS pipeline wait $RUN_IDS --timeout 1800; then
                 echo "::error::Layer $LAYER_NUM failed"
                 exit 1
               fi
-              cd ../../..
             fi
           done
 
           echo ""
-          echo "✓ All layers completed"
+          echo "All layers completed"
         env:
           GH_TOKEN: ${{ github.token }}
 
+  # =========================================
+  # Stage 5: Summary
+  # =========================================
   summary:
     name: Summary
-    needs: [detect-changes, validate-repository, calculate-order, execute-layers]
+    needs: [build-tooling, validate-all, detect-changes, calculate-order, execute-layers]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -464,8 +488,26 @@ jobs:
           echo "**Commit**: [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
+          # Check build-tooling status
+          BUILD_TOOLING="${{ needs.build-tooling.result }}"
+          VALIDATE_ALL="${{ needs.validate-all.result }}"
+
+          if [ "$BUILD_TOOLING" = "failure" ]; then
+            echo "### Build Tooling Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Failed to build the commands binary. Check the build-tooling job for details." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          if [ "$VALIDATE_ALL" = "failure" ]; then
+            echo "### Validation Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Full test suite failed. Fix test failures before continuing." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
-            echo "### ✅ No CI Workflows Triggered" >> $GITHUB_STEP_SUMMARY
+            echo "### No CI Workflows Triggered" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "No module CI workflows were triggered for this commit." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -497,45 +539,49 @@ jobs:
           fi
 
           # Determine overall status
-          VALIDATION="${{ needs.validate-repository.result }}"
           EXECUTION="${{ needs.execute-layers.result }}"
           TOTAL_MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
           TOTAL_COUNT=$(echo "$TOTAL_MODULES" | wc -w | tr -d ' ')
 
-          if [ "$VALIDATION" = "success" ] && [ "$EXECUTION" = "success" ]; then
-            echo "### ✅ All Module Builds Passed" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATION" = "failure" ]; then
-            echo "### ❌ Validation Failed" >> $GITHUB_STEP_SUMMARY
+          if [ "$VALIDATE_ALL" = "success" ] && [ "$EXECUTION" = "success" ]; then
+            echo "### All Module Builds Passed" >> $GITHUB_STEP_SUMMARY
           elif [ "$EXECUTION" = "failure" ]; then
-            echo "### ❌ Module Build(s) Failed" >> $GITHUB_STEP_SUMMARY
+            echo "### Module Build(s) Failed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ⚠️ Partial Execution" >> $GITHUB_STEP_SUMMARY
+            echo "### Partial Execution" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### 🔍 Pipeline Stages" >> $GITHUB_STEP_SUMMARY
+          echo "### Pipeline Stages" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Stage | Status | Description |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
 
-          # Validation stage
-          if [ "$VALIDATION" = "success" ]; then
-            echo "| Repository Validation | ✅ Pass | Contracts, dependencies, and configs verified |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATION" = "failure" ]; then
-            echo "| Repository Validation | ❌ Fail | Contract or dependency errors found |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATION" = "skipped" ]; then
-            echo "| Repository Validation | ⏭️ Skip | No changes to validate |" >> $GITHUB_STEP_SUMMARY
+          # Build tooling stage
+          if [ "$BUILD_TOOLING" = "success" ]; then
+            echo "| Build Tooling | Pass | Commands binary built/cached |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Repository Validation | ⚠️ $VALIDATION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
+            echo "| Build Tooling | $BUILD_TOOLING | Unexpected state |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Validation stage
+          if [ "$VALIDATE_ALL" = "success" ]; then
+            echo "| Validate All | Pass | Full test suite passed |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATE_ALL" = "failure" ]; then
+            echo "| Validate All | Fail | Test failures found |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATE_ALL" = "skipped" ]; then
+            echo "| Validate All | Skip | Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Validate All | $VALIDATE_ALL | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
 
           # Execution stage
           if [ "$EXECUTION" = "success" ]; then
-            echo "| Module Builds | ✅ Pass | All $TOTAL_COUNT module workflow(s) succeeded |" >> $GITHUB_STEP_SUMMARY
+            echo "| Module Builds | Pass | All $TOTAL_COUNT module workflow(s) succeeded |" >> $GITHUB_STEP_SUMMARY
           elif [ "$EXECUTION" = "failure" ]; then
-            echo "| Module Builds | ❌ Fail | One or more module builds failed |" >> $GITHUB_STEP_SUMMARY
+            echo "| Module Builds | Fail | One or more module builds failed |" >> $GITHUB_STEP_SUMMARY
           elif [ "$EXECUTION" = "skipped" ]; then
-            echo "| Module Builds | ⏭️ Skip | Skipped due to earlier failure |" >> $GITHUB_STEP_SUMMARY
+            echo "| Module Builds | Skip | Skipped due to earlier failure |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Module Builds | ⚠️ $EXECUTION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
+            echo "| Module Builds | $EXECUTION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
