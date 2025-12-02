@@ -1,0 +1,183 @@
+name: Test Module
+description: Test any module using the EAC commands binary
+
+inputs:
+  module:
+    description: Module moniker to test
+    required: true
+  commands-path:
+    description: Path to the commands binary
+    required: true
+  setup-deps:
+    description: |
+      Setup system dependencies before test:
+      - none: Skip (default, assumes deps already setup)
+      - auto: Auto-detect from module type
+      - Explicit: go, node, docker (comma-separated)
+    required: false
+    default: 'none'
+  suites:
+    description: Comma-separated list of test suites to run
+    required: false
+    default: 'commit,acceptance'
+  download-artifact:
+    description: Whether to download build artifacts first
+    required: false
+    default: 'true'
+  build-artifact-name:
+    description: 'Name of build artifact to download. If empty, uses build-artifacts-{module}'
+    required: false
+    default: ''
+  build-artifact-path:
+    description: 'Path to download build artifacts to. If empty, uses out/build/{module}'
+    required: false
+    default: ''
+  results-artifact-name:
+    description: 'Name for test results artifact. If empty, uses test-results-{module}'
+    required: false
+    default: ''
+  results-artifact-path:
+    description: 'Path pattern for test results to upload. If empty, uses out/test/**/{module}/**'
+    required: false
+    default: ''
+  extra-args:
+    description: Additional arguments to pass to the test command
+    required: false
+    default: ''
+
+outputs:
+  artifact-name:
+    description: Name of the uploaded test results artifact
+    value: ${{ steps.vars.outputs.results-artifact-name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Module Dependencies
+      if: inputs.setup-deps != 'none'
+      uses: ./.github/actions/setup-module-deps
+      with:
+        module: ${{ inputs.module }}
+        commands-path: ${{ inputs.commands-path }}
+        deps: ${{ inputs.setup-deps }}
+
+    - name: Set variables
+      id: vars
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        INPUT_BUILD_ARTIFACT_NAME: ${{ inputs.build-artifact-name }}
+        INPUT_BUILD_ARTIFACT_PATH: ${{ inputs.build-artifact-path }}
+        INPUT_RESULTS_ARTIFACT_NAME: ${{ inputs.results-artifact-name }}
+        INPUT_RESULTS_ARTIFACT_PATH: ${{ inputs.results-artifact-path }}
+      run: |
+        # Build artifact settings
+        if [ -n "$INPUT_BUILD_ARTIFACT_NAME" ]; then
+          echo "build-artifact-name=$INPUT_BUILD_ARTIFACT_NAME" >> $GITHUB_OUTPUT
+        else
+          echo "build-artifact-name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
+        if [ -n "$INPUT_BUILD_ARTIFACT_PATH" ]; then
+          echo "build-artifact-path=$INPUT_BUILD_ARTIFACT_PATH" >> $GITHUB_OUTPUT
+        else
+          echo "build-artifact-path=out/build/${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
+        # Results artifact settings
+        if [ -n "$INPUT_RESULTS_ARTIFACT_NAME" ]; then
+          echo "results-artifact-name=$INPUT_RESULTS_ARTIFACT_NAME" >> $GITHUB_OUTPUT
+        else
+          echo "results-artifact-name=test-results-${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
+        if [ -n "$INPUT_RESULTS_ARTIFACT_PATH" ]; then
+          echo "results-artifact-path=$INPUT_RESULTS_ARTIFACT_PATH" >> $GITHUB_OUTPUT
+        else
+          echo "results-artifact-path=out/test/**/${MODULE}/**" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Download Build Artifacts
+      if: inputs.download-artifact == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ steps.vars.outputs.build-artifact-name }}
+        path: ${{ steps.vars.outputs.build-artifact-path }}
+
+    - name: Run Test Suites
+      shell: bash
+      env:
+        COMMANDS: ${{ inputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        SUITES: ${{ inputs.suites }}
+        EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: |
+        # Split suites by comma and run each
+        IFS=',' read -ra SUITE_ARRAY <<< "$SUITES"
+        for suite in "${SUITE_ARRAY[@]}"; do
+          suite=$(echo "$suite" | xargs)  # trim whitespace
+          echo "Running test suite: $suite"
+          $COMMANDS test $MODULE --suite $suite $EXTRA_ARGS
+        done
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.vars.outputs.results-artifact-name }}
+        path: ${{ steps.vars.outputs.results-artifact-path }}
+        if-no-files-found: warn
+
+    - name: Test Summary
+      if: always()
+      shell: bash
+      env:
+        COMMANDS: ${{ inputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        SUITES: ${{ inputs.suites }}
+        RESULTS_ARTIFACT_NAME: ${{ steps.vars.outputs.results-artifact-name }}
+        RUN_ID: ${{ github.run_id }}
+      run: |
+        echo "## Test: ${MODULE}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Check if test results exist
+        if [ -d "out/test" ] && find out/test -name "${MODULE}" -type d 2>/dev/null | grep -q .; then
+          echo "All tests passed for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "Tests failed or produced no results for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          $COMMANDS ci summary-link ${RUN_ID} --type test --artifact ${RESULTS_ARTIFACT_NAME} >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Suite | Level | Description |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|-------|-------------|" >> $GITHUB_STEP_SUMMARY
+
+        IFS=',' read -ra SUITE_ARRAY <<< "$SUITES"
+        for suite in "${SUITE_ARRAY[@]}"; do
+          suite=$(echo "$suite" | xargs)
+          case "$suite" in
+            commit)
+              echo "| commit | L0-L2 | Unit and integration tests |" >> $GITHUB_STEP_SUMMARY
+              ;;
+            acceptance)
+              echo "| acceptance | L3 | Acceptance verification tests |" >> $GITHUB_STEP_SUMMARY
+              ;;
+            production-verification)
+              echo "| production-verification | L4 | Production smoke tests |" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "| $suite | - | Custom test suite |" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
+        done
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Details" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Module | \`${MODULE}\` |" >> $GITHUB_STEP_SUMMARY

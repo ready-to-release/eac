@@ -435,12 +435,24 @@ jobs:
             RUN_IDS=""
 
             # Determine the correct ref for workflow_dispatch
-            # For PRs: use head_ref (the PR branch), for push: use ref_name (the branch)
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-              DISPATCH_REF="${{ github.head_ref }}"
+            # For PRs: use head_ref (the PR source branch)
+            # For push: use ref_name (the branch name)
+            # Note: head_ref is only available for pull_request events
+            HEAD_REF="${{ github.head_ref }}"
+            REF_NAME="${{ github.ref_name }}"
+
+            if [ -n "$HEAD_REF" ]; then
+              # PR: use the source branch name
+              DISPATCH_REF="$HEAD_REF"
             else
-              DISPATCH_REF="${{ github.ref_name }}"
+              # Push: use the branch name directly
+              DISPATCH_REF="$REF_NAME"
             fi
+
+            echo "Event: ${{ github.event_name }}"
+            echo "head_ref: $HEAD_REF"
+            echo "ref_name: $REF_NAME"
+            echo "DISPATCH_REF: $DISPATCH_REF"
 
             for module in $LAYER_MODULES; do
               if [ -f ".github/workflows/ci-${module}.yaml" ]; then

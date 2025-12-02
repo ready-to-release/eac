@@ -12,6 +12,7 @@ on:
       ref:
         required: false
         type: string
+        description: 'Git ref to checkout'
         default: ''
       sha:
         required: false
@@ -37,45 +38,10 @@ jobs:
         uses: ./.github/actions/setup-commands
 
       - name: Build Module
-        run: ${{ steps.commands.outputs.commands-path }} build eac-mcp-commands
-
-      - name: Upload Build Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/build-module
         with:
-          name: build-artifacts-eac-mcp-commands
-          path: out/build/eac-mcp-commands/**
-
-      - name: Build Summary
-        if: always()
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "## Build: eac-mcp-commands" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "MCP Commands server module built successfully." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "MCP Commands server module build failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Module | \`eac-mcp-commands\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ -d "out/build/eac-mcp-commands" ]; then
-            ARTIFACT_COUNT=$(find out/build/eac-mcp-commands -type f 2>/dev/null | wc -l | tr -d ' ')
-            echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "${ARTIFACT_COUNT} file(s) uploaded as \`build-artifacts-eac-mcp-commands\`" >> $GITHUB_STEP_SUMMARY
-          fi
+          module: eac-mcp-commands
+          commands-path: ${{ steps.commands.outputs.commands-path }}
 
   test:
     name: Test
@@ -90,52 +56,8 @@ jobs:
         id: commands
         uses: ./.github/actions/setup-commands
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+      - name: Test Module
+        uses: ./.github/actions/test-module
         with:
-          name: build-artifacts-eac-mcp-commands
-          path: out/build/eac-mcp-commands
-
-      - name: Test Module (Commit Suite - L0-L2)
-        run: ${{ steps.commands.outputs.commands-path }} test eac-mcp-commands --suite commit
-
-      - name: Test Module (Acceptance Suite - L3)
-        run: ${{ steps.commands.outputs.commands-path }} test eac-mcp-commands --suite acceptance
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-eac-mcp-commands
-          path: out/test/**/eac-mcp-commands/**
-
-      - name: Test Summary
-        if: always()
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "## Test: eac-mcp-commands" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "All tests passed for MCP Commands server." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Tests failed for MCP Commands server." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type test --artifact test-results-eac-mcp-commands >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Suite | Level | Description |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|-------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| commit | L0-L2 | Unit and integration tests |" >> $GITHUB_STEP_SUMMARY
-          echo "| acceptance | L3 | Acceptance verification tests |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Test Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Module | \`eac-mcp-commands\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          module: eac-mcp-commands
+          commands-path: ${{ steps.commands.outputs.commands-path }}

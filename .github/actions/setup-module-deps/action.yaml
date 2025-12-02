@@ -1,0 +1,119 @@
+name: Setup Module Dependencies
+description: Setup system dependencies required for building/testing a module
+
+inputs:
+  module:
+    description: Module moniker
+    required: true
+  commands-path:
+    description: Path to the commands binary
+    required: true
+  deps:
+    description: |
+      Dependencies to setup:
+      - auto: Infer from module type (default)
+      - none: Skip dependency setup
+      - Comma-separated list: go, npm, docker, node
+    required: false
+    default: 'auto'
+  go-version:
+    description: Go version to use
+    required: false
+    default: '1.24'
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: '22'
+
+outputs:
+  deps:
+    description: Dependencies that were set up
+    value: ${{ steps.resolve.outputs.deps }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve dependencies
+      id: resolve
+      shell: bash
+      env:
+        COMMANDS: ${{ inputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        INPUT_DEPS: ${{ inputs.deps }}
+      run: |
+        if [ "$INPUT_DEPS" = "none" ]; then
+          echo "deps=" >> $GITHUB_OUTPUT
+          echo "Skipping dependency setup"
+          exit 0
+        fi
+
+        if [ "$INPUT_DEPS" = "auto" ]; then
+          # Query module type from commands binary
+          MODULE_TYPE=$($COMMANDS get modules --as-json | jq -r --arg m "$MODULE" '.[] | select(.moniker == $m) | .type')
+
+          echo "Module: $MODULE"
+          echo "Type: $MODULE_TYPE"
+
+          # Map module type to dependencies
+          case "$MODULE_TYPE" in
+            go-cli|go-library|go-commands|go-mcp|go-tests)
+              DEPS="go"
+              ;;
+            go-r2r-extension|mkdocs-site)
+              DEPS="docker"
+              ;;
+            vscode-ext)
+              DEPS="node"
+              ;;
+            *)
+              DEPS=""
+              ;;
+          esac
+        else
+          # Use explicit deps
+          DEPS="$INPUT_DEPS"
+        fi
+
+        echo "deps=$DEPS" >> $GITHUB_OUTPUT
+        echo "Dependencies to setup: $DEPS"
+
+    - name: Setup Go
+      if: contains(steps.resolve.outputs.deps, 'go')
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache-dependency-path: |
+          go/eac/commands/go.sum
+          go/eac/core/go.sum
+
+    - name: Setup Node.js
+      if: contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm')
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Setup Docker Buildx
+      if: contains(steps.resolve.outputs.deps, 'docker')
+      uses: docker/setup-buildx-action@v3
+
+    - name: Summary
+      if: steps.resolve.outputs.deps != ''
+      shell: bash
+      env:
+        DEPS: ${{ steps.resolve.outputs.deps }}
+        MODULE: ${{ inputs.module }}
+      run: |
+        echo "### Dependencies Setup for \`${MODULE}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Dependency | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+
+        if [[ "$DEPS" == *"go"* ]]; then
+          echo "| Go | Installed |" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [[ "$DEPS" == *"node"* ]] || [[ "$DEPS" == *"npm"* ]]; then
+          echo "| Node.js | Installed |" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [[ "$DEPS" == *"docker"* ]]; then
+          echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
+        fi
