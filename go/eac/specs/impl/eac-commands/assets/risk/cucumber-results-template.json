@@ -1,0 +1,9 @@
+[{
+  "uri": "test.feature",
+  "elements": [{
+    "type": "scenario",
+    "tags": {{TAGS}},
+    "name": "Test scenario",
+    "steps": [{"result": {"status": "passed"}}]
+  }]
+}]
