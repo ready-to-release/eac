@@ -1,0 +1,24 @@
+{
+  "assessment-results": {
+    "uuid": "test-uuid",
+    "metadata": {
+      "title": "Test",
+      "last-modified": "2024-01-01T00:00:00Z",
+      "version": "1.0",
+      "oscal-version": "1.1.2"
+    },
+    "import-ap": {
+      "href": "profile.json"
+    },
+    "results": [{
+      "uuid": "result-1",
+      "title": "Test",
+      "start": "2024-01-01T00:00:00Z",
+      "observations": [{
+        "uuid": "obs-1",
+        "relevant-evidence": [{"href": "missing-file.json"}]
+      }],
+      "findings": []
+    }]
+  }
+}

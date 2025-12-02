@@ -1,0 +1,21 @@
+{
+  "assessment-results": {
+    "uuid": "ar-{{MODULE}}",
+    "metadata": {
+      "title": "Assessment for {{MODULE}}",
+      "last-modified": "2024-01-01T00:00:00Z",
+      "version": "1.0",
+      "oscal-version": "1.1.2"
+    },
+    "import-ap": {
+      "href": "specs/risk-controls/{{MODULE}}.profile.json"
+    },
+    "results": [{
+      "uuid": "result-1",
+      "title": "Assessment Result",
+      "description": "Test assessment",
+      "start": "2024-01-01T00:00:00Z",
+      "findings": [{{FINDINGS}}]
+    }]
+  }
+}
