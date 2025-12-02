@@ -48,6 +48,7 @@ package-lock.json
 .vscode/extensions/*/node_modules/
 .vscode/extensions/*/*.vsix
 .vscode/extensions/*/.vscode-test/
+.vscode/extensions/*/package.json
 
 # env file
 .env
