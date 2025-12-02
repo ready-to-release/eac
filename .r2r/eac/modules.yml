@@ -185,7 +185,7 @@ modules:
       config:
         - go.mod
         - go.sum
-      changelog: ../../release/r2r-cli/CHANGELOG.md
+      changelog: ../../../release/r2r-cli/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-r2r-cli.yaml
         release: .github/workflows/release-r2r-cli.yml
