@@ -169,7 +169,7 @@ jobs:
           ./out/build/r2r-cli/r2r-linux-amd64-upx version || true
 
       - name: Generate build attestations
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-path: |
             out/build/r2r-cli/r2r-linux-amd64
