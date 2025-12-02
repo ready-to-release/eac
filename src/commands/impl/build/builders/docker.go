@@ -77,12 +77,15 @@ func BuildDockerModule(module *modules.ModuleContract, workspaceRoot string, out
 	return buildDockerLocal(workspaceRoot, outputDir, dockerfilePath, imageName, logWriter)
 }
 
-// buildDockerLocal builds a Docker image locally
+// buildDockerLocal builds a Docker image locally using BuildKit for cache support
 func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath string, imageName string, logWriter io.Writer) int {
+	// Use buildx to enable BuildKit cache mounts (RUN --mount=type=cache)
+	// This significantly speeds up subsequent builds by caching Go modules and build artifacts
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter,
-		"docker", "build",
+		"docker", "buildx", "build",
 		"-t", imageName,
 		"-f", dockerfilePath,
+		"--load",
 		".")
 
 	if exitCode != 0 {

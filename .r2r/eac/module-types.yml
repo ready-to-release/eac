@@ -66,11 +66,11 @@ types:
   - name: go-mcp
     description: "Go MCP server module"
     build_deps: [go]
-    capabilities: [go_module]
+    capabilities: [go_module, executable]
     build:
       artifacts:
-        - type: marker
-          pattern: ".build-complete"
+        - type: executable
+          pattern: "{moniker}*"
     defaults:
       files:
         source: ["**/*.go"]
@@ -134,13 +134,20 @@ types:
     description: "VS Code extension"
     build_deps: [npm]
     capabilities: [npm_package, typescript]
+    test_framework: mocha
     build:
       artifacts:
-        - type: directory
-          pattern: "out"
+        - type: marker
+          pattern: ".build-complete"
+      post_build:
+        - action: copy
+          target: ".vscode/extensions/{moniker}/out/"
+          include: ["**/*.js", "**/*.js.map"]
     defaults:
       files:
-        config: ["**/*"]
+        source: ["src/**/*.ts"]
+        tests: ["test/**/*.ts"]
+        config: ["package.json", "tsconfig.json", "*.config.js"]
         changelog: CHANGELOG.md
         workflows:
           ci: ""

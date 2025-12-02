@@ -6,7 +6,7 @@ FROM golang:1.24-alpine AS deps
 # Build arguments for multi-platform support
 ARG TARGETARCH
 
-# Install runtime dependencies
+# Install all dependencies (shared between build and runtime)
 RUN apk add --no-cache \
     ca-certificates \
     git \
@@ -15,40 +15,68 @@ RUN apk add --no-cache \
     bash \
     npm \
     docker-cli \
+    docker-cli-buildx \
+    curl \
     && rm -rf /var/cache/apk/*
 
 ENV GO111MODULE=on
 ENV GOWORK=off
-# Disable CGO for cross-compilation (Windows/macOS builds from Linux)
 ENV CGO_ENABLED=0
 
 WORKDIR /app
 
-# Copy go.mod and go.sum files first to leverage Docker layer caching
-# The ext-eac module has replace directives pointing to sibling modules,
-# so we need all related go.mod files for dependency resolution
+# Copy go.mod and go.sum files for dependency caching
 COPY src/ai/go.mod src/ai/go.sum ./src/ai/
 COPY src/core/go.mod src/core/go.sum ./src/core/
 COPY src/commands/go.mod src/commands/go.sum ./src/commands/
-COPY src/ext-eac/go.mod src/ext-eac/go.sum ./src/ext-eac/
 
-# Download dependencies (this layer will be cached)
-RUN cd src/ext-eac && go mod download -x
+# Download dependencies with BuildKit cache mount for faster rebuilds
+RUN --mount=type=cache,target=/go/pkg/mod \
+    cd src/commands && go mod download
 
 # ============================================================
-# RUNTIME STAGE - Final image with source code
+# BUILD STAGE - Build src-commands binary
 # ============================================================
-FROM deps AS runtime
+FROM deps AS builder
 
-ENV DOCKER_R2R_MODE=true
-ENV TZ=UTC
-
-# Copy source code (won't invalidate the dependency layer above)
+# Copy source code
 COPY src/ai/ ./src/ai/
 COPY src/core/ ./src/core/
 COPY src/commands/ ./src/commands/
-COPY src/ext-eac/ ./src/ext-eac/
+
+# Build the commands binary with BuildKit cache mounts
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    cd src/commands && go build -o /app/out/build/src-commands/commands .
+
+# ============================================================
+# RUNTIME STAGE - Final image
+# ============================================================
+FROM deps AS runtime
+
+# Note: DOCKER_R2R_MODE is set by r2r CLI at runtime, not here
+# This allows tests to find /app via .git while normal usage gets /var/task
+ENV TZ=UTC
+ENV R2R_CONTAINER_ROOT=/app
+
+# Copy source code to /app (needed for go test in acceptance tests)
+COPY src/ai/ ./src/ai/
+COPY src/core/ ./src/core/
+COPY src/commands/ ./src/commands/
+COPY src/specs/ ./src/specs/
 COPY contracts/ ./contracts/
+COPY .r2r/ ./.r2r/
+COPY specs/ ./specs/
+
+# Copy pre-built binary from builder
+COPY --from=builder /app/out/build/src-commands/commands /app/out/build/src-commands/commands
+
+# Create fake .git so GetRepositoryRoot() finds /app when running tests
+# (tests run from /app, not /var/task which is for user repo mounts)
+RUN mkdir -p /app/.git
+
+# Copy test assets needed for godog tests (scripts for installer tests)
+COPY scripts/ ./scripts/
 
 # Add OCI labels
 LABEL org.opencontainers.image.title="EAC Extension"
@@ -78,5 +106,5 @@ LABEL r2r-cli.multi-platform.support="true"
 # Set working directory for command execution (r2r CLI mounts repo here)
 WORKDIR /var/task
 
-# Run Go source directly to allow runtime metadata reading
-ENTRYPOINT ["sh", "-c", "cd /app/src/ext-eac && exec go run . \"$@\"", "--"]
+# Use pre-built src-commands binary as entrypoint
+ENTRYPOINT ["/app/out/build/src-commands/commands"]

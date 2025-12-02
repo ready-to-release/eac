@@ -145,6 +145,20 @@ handlers:
       config:
         message: "Static module - validation done at build time"
 
+  # Scripts handler - copies script files to build output
+  - name: scripts
+    description: "Script package copy handler"
+    type: builtin
+    build:
+      handler: scripts
+      config:
+        # Copies files.source patterns to output directory
+        preserve_structure: true
+    test:
+      handler: static
+      config:
+        message: "Script packages are validated at build time"
+
 # Handler dispatch rules
 # These determine which handler to use based on module type and capabilities
 dispatch:
@@ -153,6 +167,10 @@ dispatch:
     - match:
         capabilities: [documentation, container]
       handler: mkdocs
+    # Scripts packages: copy source files to output
+    - match:
+        type: scripts-package
+      handler: scripts
     # Default: use primary build_dep
     - match:
         default: true

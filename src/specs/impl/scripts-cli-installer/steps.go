@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
+	"github.com/ready-to-release/eac/src/core/repository"
 	"github.com/ready-to-release/eac/src/specs/internal"
 )
 
@@ -63,14 +64,11 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 }
 
 func initializeInstallerContext() {
-	// Find scripts directory relative to test location
-	workspaceRoot := filepath.Join("..", "..", "..", "..")
-	instCtx.scriptsRoot = filepath.Join(workspaceRoot, "scripts")
-
-	if _, err := os.Stat(instCtx.scriptsRoot); os.IsNotExist(err) {
-		absRoot, _ := filepath.Abs(instCtx.scriptsRoot)
-		instCtx.scriptsRoot = absRoot
-	}
+	// Find scripts from build output using repository path conventions
+	// Use OriginalRepoRoot (not IsolatedDir) because build output is read-only
+	// and doesn't need to be copied to isolated test environments
+	repoRoot := instCtx.sharedCtx.OriginalRepoRoot
+	instCtx.scriptsRoot = repository.BuildOutputPath(repoRoot, "scripts-cli-installer")
 
 	// Create isolated temp directory for this test scenario
 	tempDir, err := os.MkdirTemp("", "r2r-installer-test-*")

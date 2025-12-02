@@ -59,16 +59,17 @@ func NewRepositoryError(op, path string, err error, message string) *RepositoryE
 //	root, err := repository.GetRepositoryRoot("")
 //	root, err := repository.GetRepositoryRoot("/path/to/subdir")
 func GetRepositoryRoot(startPath string) (string, error) {
-	// Check for Docker R2R mode - repository is mounted at /var/task
-	if os.Getenv("DOCKER_R2R_MODE") == "true" {
-		// In R2R CLI Docker mode, the repository is always at /var/task
-		return "/var/task", nil
-	}
-
-	// Check for repository root override environment variable
+	// Check for explicit repository root override first
+	// This takes precedence over DOCKER_R2R_MODE to allow test isolation
 	// Used by CLI wrapper and tests to specify the repository root
 	if repoRoot := os.Getenv("R2R_REPO_ROOT"); repoRoot != "" {
 		return filepath.Clean(repoRoot), nil
+	}
+
+	// Check for Docker R2R mode - repository is mounted at /var/task
+	// Only applies when no explicit override is set
+	if os.Getenv("DOCKER_R2R_MODE") == "true" {
+		return "/var/task", nil
 	}
 
 	// Use current directory if no path provided
@@ -300,6 +301,25 @@ func (r *Repository) Files(trackedOnly bool, includeIgnored bool) ([]FileInfo, e
 func IsGitRepository(path string) bool {
 	_, err := GetRepositoryRoot(path)
 	return err == nil
+}
+
+// GetContainerRoot returns the container's internal root directory if running
+// inside a container (R2R_CONTAINER_ROOT is set), otherwise returns empty string.
+//
+// This is used to locate container-internal files (pre-built binaries, test assets)
+// which may differ from the mounted repository root in container environments.
+func GetContainerRoot() string {
+	return os.Getenv("R2R_CONTAINER_ROOT")
+}
+
+// GetEffectiveRoot returns R2R_CONTAINER_ROOT if set, otherwise falls back to
+// the provided repoRoot. Use this when looking up container-internal files
+// that should come from the container's /app directory rather than the mounted repo.
+func GetEffectiveRoot(repoRoot string) string {
+	if containerRoot := GetContainerRoot(); containerRoot != "" {
+		return containerRoot
+	}
+	return repoRoot
 }
 
 // GetRepoEACConfigRoot returns the path to the EAC repository configuration directory.

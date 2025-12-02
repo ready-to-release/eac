@@ -39,8 +39,9 @@ import (
 	"github.com/ready-to-release/eac/src/commands/internal/output"
 	"github.com/ready-to-release/eac/src/commands/registry"
 	"github.com/ready-to-release/eac/src/core/config"
-	"github.com/ready-to-release/eac/src/core/logging"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/src/core/contracts/reports"
+	"github.com/ready-to-release/eac/src/core/logging"
 	moduledeps "github.com/ready-to-release/eac/src/core/module-deps"
 	"github.com/ready-to-release/eac/src/core/platform"
 	"github.com/ready-to-release/eac/src/core/repository"
@@ -1159,22 +1160,14 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		pkgName = filepath.ToSlash(relPkgPath)
 	}
 
-	// Check if this package contains only Godog features
-	// BUT: if we have a relFeatureFile, we're explicitly running it through its test runner
-	isGodogOnly := relFeatureFile == "" // If we have a specific feature, not Godog-only
-	if isGodogOnly {
-		for _, test := range tests {
-			if test.Type != "godog" {
-				isGodogOnly = false
-				break
-			}
-		}
-	}
+	// Check if this is a spec-only package (godog or tscucumber)
+	// These are handled differently than unit tests
+	testType := getPackageTestType(tests)
+	isSpecOnly := testType == "godog" || testType == "tscucumber"
 
-	if isGodogOnly {
-		// Skip running go test for spec directories (features only, no test code)
-		// These specs are executed by their corresponding test packages
-		// No console output needed - reduces noise in orchestrator output
+	if isSpecOnly && testType == "godog" && relFeatureFile == "" {
+		// Godog specs without explicit feature file - executed via Go test runner
+		// Skip here to avoid duplicate execution
 		return PackageTestResult{
 			PackageName:   pkgPath,
 			LogFilePath:   "",
@@ -1183,9 +1176,16 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			TestsSkipped:  0,
 			TestsTotal:    len(tests),
 			PackageFailed: false,
-			ExpectedFiles: []string{}, // No files expected for godog-only packages
+			ExpectedFiles: []string{},
 		}
 	}
+
+	// Dispatch to appropriate handler based on test type
+	if handler, ok := getTestTypeHandler(testType); ok {
+		return handler(pkgPath, tests, multiWriter, testRunDir, reportFormat, suiteTagFilter)
+	}
+
+	// Default: Go test execution (handles "go", "godog", and unknown types)
 
 	// Create absolute paths for cmd.Dir by joining relative paths with workspace root
 	absPkgPath := filepath.Join(workspaceRootNative, relPkgPath)
@@ -1440,14 +1440,14 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
 	}
 
-	testType := "go"
+	displayTestType := "go"
 	resultStr := fmt.Sprintf("%d/%d", len(tests), len(tests))
 	testsPassed := len(tests)
 	testsFailed := 0
 	testsTotal := len(tests)
 
 	if isGodogTestPackage {
-		testType = "godog"
+		displayTestType = "godog"
 		// Extract scenario counts from godog test output
 		passedScenarios, failedScenarios := extractGodogScenarioCountsDetailed(logFilePath)
 		testsPassed = passedScenarios
@@ -1483,7 +1483,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		icon = output.IconFail
 	}
 
-	writeln(multiWriter, "%s", output.ResultLineNoTime(icon, pkgName, testType, resultStr))
+	writeln(multiWriter, "%s", output.ResultLineNoTime(icon, pkgName, displayTestType, resultStr))
 	return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: testsPassed, TestsFailed: testsFailed, TestsSkipped: 0, TestsTotal: testsTotal, PackageFailed: testsFailed > 0, ExpectedFiles: expectedFiles}
 }
 
@@ -1914,6 +1914,310 @@ func convertCoverageToJSON(coverageFile, jsonFile string) error {
 	}
 
 	return nil
+}
+
+// TestTypeHandler is a function that runs tests for a specific test type (mocha, jest, etc.)
+type TestTypeHandler func(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult
+
+// testTypeHandlers maps test types to their suite-level handlers.
+// Unit tests: mocha (npm)
+// Spec tests: tscucumber (npm)
+// Go tests (gotest, godog) are handled by default Go execution path.
+var testTypeHandlers = map[string]TestTypeHandler{
+	"mocha":      runMochaTests,
+	"tscucumber": runTsCucumberTests,
+}
+
+// getPackageTestType determines the test type for a package.
+// If all tests have the same type, returns that type.
+// If mixed or empty, returns empty string (use default Go handler).
+func getPackageTestType(tests []testing.TestReference) string {
+	if len(tests) == 0 {
+		return ""
+	}
+
+	firstType := tests[0].Type
+	for _, test := range tests[1:] {
+		if test.Type != firstType {
+			return "" // Mixed types, use default
+		}
+	}
+
+	return firstType
+}
+
+// getTestTypeHandler returns the handler for a test type if one is registered.
+// Returns false if no handler exists (should use default Go test execution).
+func getTestTypeHandler(testType string) (TestTypeHandler, bool) {
+	// Go and godog tests are handled by the default Go test execution
+	if testType == "" || testType == "go" || testType == "godog" {
+		return nil, false
+	}
+
+	handler, ok := testTypeHandlers[testType]
+	return handler, ok
+}
+
+// runMochaTests runs mocha tests for a TypeScript/npm package.
+// It dispatches to npm test with Mocha grep pattern for tag filtering.
+func runMochaTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult {
+	start := time.Now()
+
+	// Get workspace root
+	workspaceRootNative, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		workspaceRootNative = "."
+	}
+
+	pkgName := filepath.ToSlash(pkgPath)
+
+	// Find the module root (where package.json is located)
+	// pkgPath might be something like ".vscode/extensions/vscode-ext-commit/test"
+	// We need to find the parent directory containing package.json
+	moduleRoot := filepath.Join(workspaceRootNative, pkgPath)
+
+	// Walk up to find package.json
+	for {
+		packageJSON := filepath.Join(moduleRoot, "package.json")
+		if fileExists(packageJSON) {
+			break
+		}
+		parent := filepath.Dir(moduleRoot)
+		if parent == moduleRoot {
+			// Reached root without finding package.json
+			writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", "no package.json"))
+			return PackageTestResult{
+				PackageName:   pkgPath,
+				LogFilePath:   "",
+				TestsPassed:   0,
+				TestsFailed:   len(tests),
+				TestsTotal:    len(tests),
+				PackageFailed: true,
+				Duration:      time.Since(start),
+			}
+		}
+		moduleRoot = parent
+	}
+
+	// Create log file for mocha output
+	// Organize under module name
+	relModuleRoot, _ := filepath.Rel(workspaceRootNative, moduleRoot)
+	moduleName := strings.ReplaceAll(filepath.ToSlash(relModuleRoot), "/", "-")
+	logFilePath := filepath.Join(testRunDir, moduleName+".log")
+
+	logFile, err := os.Create(logFilePath)
+	if err != nil {
+		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", "log create failed"))
+		return PackageTestResult{
+			PackageName:   pkgPath,
+			LogFilePath:   "",
+			TestsPassed:   0,
+			TestsFailed:   len(tests),
+			TestsTotal:    len(tests),
+			PackageFailed: true,
+			Duration:      time.Since(start),
+		}
+	}
+	defer logFile.Close()
+
+	fmt.Fprintf(logFile, "=== Testing npm package: %s ===\n", pkgName)
+	fmt.Fprintf(logFile, "Module root: %s\n", moduleRoot)
+	fmt.Fprintf(logFile, "Tests selected by suite: %d\n", len(tests))
+	fmt.Fprintf(logFile, "\n")
+
+	// Run npm test without grep filtering
+	// The suite has already selected which tests to run based on discovered tags.
+	// Mocha will run all tests, but since we're running from the suite infrastructure,
+	// the test count is already correct from discovery.
+	args := []string{"test"}
+
+	fmt.Fprintf(logFile, "Running: npm %s\n\n", strings.Join(args, " "))
+
+	// Execute npm test
+	wrappedName, wrappedArgs := platform.WrapCommand("npm", args...)
+	cmd := exec.Command(wrappedName, wrappedArgs...)
+	cmd.Dir = moduleRoot
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+
+	err = cmd.Run()
+
+	duration := time.Since(start)
+
+	if err != nil {
+		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", fmt.Sprintf("0/%d", len(tests))))
+		return PackageTestResult{
+			PackageName:   pkgPath,
+			LogFilePath:   logFilePath,
+			TestsPassed:   0,
+			TestsFailed:   len(tests),
+			TestsTotal:    len(tests),
+			PackageFailed: true,
+			Duration:      duration,
+			ExpectedFiles: []string{logFilePath},
+		}
+	}
+
+	writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconPass, pkgName, "npm", fmt.Sprintf("%d/%d", len(tests), len(tests))))
+	return PackageTestResult{
+		PackageName:   pkgPath,
+		LogFilePath:   logFilePath,
+		TestsPassed:   len(tests),
+		TestsFailed:   0,
+		TestsTotal:    len(tests),
+		PackageFailed: false,
+		Duration:      duration,
+		ExpectedFiles: []string{logFilePath},
+	}
+}
+
+// runTsCucumberTests runs cucumber-js BDD tests for a TypeScript/npm package.
+func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult {
+	start := time.Now()
+
+	workspaceRootNative, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		workspaceRootNative = "."
+	}
+
+	pkgName := filepath.ToSlash(pkgPath)
+
+	// Get module root from test's module dependency
+	// The tests come from repo.specs but the package.json is in the module's files.root
+	var moduleRoot string
+	if len(tests) > 0 && len(tests[0].ModuleDependencies) > 0 {
+		moniker := tests[0].ModuleDependencies[0]
+		registry, err := modules.LoadFromWorkspace(workspaceRootNative)
+		if err == nil {
+			if module, ok := registry.Get(moniker); ok {
+				moduleRoot = filepath.Join(workspaceRootNative, module.Files.Root)
+			}
+		}
+	}
+
+	// Verify package.json exists
+	if moduleRoot == "" {
+		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "no module"))
+		return PackageTestResult{
+			PackageName:   pkgPath,
+			TestsFailed:   len(tests),
+			TestsTotal:    len(tests),
+			PackageFailed: true,
+			Duration:      time.Since(start),
+		}
+	}
+
+	packageJSON := filepath.Join(moduleRoot, "package.json")
+	if !fileExists(packageJSON) {
+		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "no package.json"))
+		return PackageTestResult{
+			PackageName:   pkgPath,
+			TestsFailed:   len(tests),
+			TestsTotal:    len(tests),
+			PackageFailed: true,
+			Duration:      time.Since(start),
+		}
+	}
+
+	// Create log file
+	relModuleRoot, _ := filepath.Rel(workspaceRootNative, moduleRoot)
+	moduleName := strings.ReplaceAll(filepath.ToSlash(relModuleRoot), "/", "-")
+	logFilePath := filepath.Join(testRunDir, moduleName+"-cucumber.log")
+
+	logFile, err := os.Create(logFilePath)
+	if err != nil {
+		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "log create failed"))
+		return PackageTestResult{
+			PackageName:   pkgPath,
+			TestsFailed:   len(tests),
+			TestsTotal:    len(tests),
+			PackageFailed: true,
+			Duration:      time.Since(start),
+		}
+	}
+	defer logFile.Close()
+
+	fmt.Fprintf(logFile, "=== Testing cucumber specs: %s ===\n", pkgName)
+	fmt.Fprintf(logFile, "Module root: %s\n", moduleRoot)
+	fmt.Fprintf(logFile, "Tests selected by suite: %d\n", len(tests))
+	fmt.Fprintf(logFile, "\n")
+
+	// Build cucumber-js command
+	args := []string{"cucumber-js"}
+
+	// Add tag filter if provided
+	if suiteTagFilter != "" {
+		// Convert godog tag format to cucumber tag expression
+		tagExpr := convertToCucumberTagExpr(suiteTagFilter)
+		if tagExpr != "" {
+			args = append(args, "--tags", tagExpr)
+		}
+	}
+
+	fmt.Fprintf(logFile, "Running: npx %s\n\n", strings.Join(args, " "))
+
+	// Execute cucumber-js via npx
+	wrappedName, wrappedArgs := platform.WrapCommand("npx", args...)
+	cmd := exec.Command(wrappedName, wrappedArgs...)
+	cmd.Dir = moduleRoot
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+
+	err = cmd.Run()
+	duration := time.Since(start)
+
+	if err != nil {
+		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", fmt.Sprintf("0/%d", len(tests))))
+		return PackageTestResult{
+			PackageName:   pkgPath,
+			LogFilePath:   logFilePath,
+			TestsPassed:   0,
+			TestsFailed:   len(tests),
+			TestsTotal:    len(tests),
+			PackageFailed: true,
+			Duration:      duration,
+			ExpectedFiles: []string{logFilePath},
+		}
+	}
+
+	writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconPass, pkgName, "tscucumber", fmt.Sprintf("%d/%d", len(tests), len(tests))))
+	return PackageTestResult{
+		PackageName:   pkgPath,
+		LogFilePath:   logFilePath,
+		TestsPassed:   len(tests),
+		TestsFailed:   0,
+		TestsTotal:    len(tests),
+		PackageFailed: false,
+		Duration:      duration,
+		ExpectedFiles: []string{logFilePath},
+	}
+}
+
+// convertToCucumberTagExpr converts godog tag format to cucumber-js tag expression.
+// Godog: "@L0,@L1 && ~@skip:wip" → Cucumber: "(@L0 or @L1) and not @skip:wip"
+func convertToCucumberTagExpr(godogTags string) string {
+	if godogTags == "" {
+		return ""
+	}
+
+	var parts []string
+	// Split by && for AND conditions
+	andParts := strings.Split(godogTags, " && ")
+	for _, part := range andParts {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "~") {
+			// Negation: ~@tag → not @tag
+			parts = append(parts, "not "+strings.TrimPrefix(part, "~"))
+		} else if strings.Contains(part, ",") {
+			// OR: @L0,@L1 → (@L0 or @L1)
+			orTags := strings.Split(part, ",")
+			parts = append(parts, "("+strings.Join(orTags, " or ")+")")
+		} else {
+			parts = append(parts, part)
+		}
+	}
+
+	return strings.Join(parts, " and ")
 }
 
 // runTestSuiteForModuleInternal runs the test suite command with a module filter.

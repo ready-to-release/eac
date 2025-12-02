@@ -33,10 +33,22 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "📚 Building MkDocs site using Docker")
 	Logln(logWriter, "   Config: %s", mkdocsConfig)
 
+	// For Docker-in-Docker: use host path for volume mount and docker build context
+	// When running inside a container (DOCKER_R2R_MODE=true), the Docker daemon
+	// runs on the host, so we need to use R2R_HOST_REPOROOT for all Docker operations
+	hostRepoRoot := workspaceRoot
+	if os.Getenv("DOCKER_R2R_MODE") == "true" {
+		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+			hostRepoRoot = hostRoot
+			Logln(logWriter, "   Docker-in-Docker: using host path %s", hostRoot)
+		}
+	}
+
 	// Ensure the Docker image exists
+	// Use hostRepoRoot for Dockerfile paths since docker build runs on host
 	imageName := "cli-mkdocs:latest"
-	dockerfilePath := filepath.Join(workspaceRoot, "containers", "mkdocs", ".Dockerfile")
-	contextPath := filepath.Join(workspaceRoot, "containers", "mkdocs")
+	dockerfilePath := filepath.Join(hostRepoRoot, "containers", "mkdocs", ".Dockerfile")
+	contextPath := filepath.Join(hostRepoRoot, "containers", "mkdocs")
 
 	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
 		Logln(logWriter, "❌ Failed to ensure Docker image: %v", err)
@@ -51,13 +63,21 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		return 1
 	}
 
-	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
+	// Calculate relative site dir from the host repo root for Docker volume mount
+	relSiteDir, err := filepath.Rel(hostRepoRoot, siteDir)
 	if err != nil {
-		Logln(logWriter, "❌ Failed to calculate relative path: %v", err)
-		return 1
+		// If we can't get relative path (e.g., different drives on Windows),
+		// fall back to relative from workspaceRoot
+		relSiteDir, err = filepath.Rel(workspaceRoot, siteDir)
+		if err != nil {
+			Logln(logWriter, "❌ Failed to calculate relative path: %v", err)
+			return 1
+		}
 	}
 
-	dockerVolume := FormatDockerVolumePath(workspaceRoot)
+	volumeMountPath := hostRepoRoot
+
+	dockerVolume := FormatDockerVolumePath(volumeMountPath)
 	dockerSiteDir := strings.ReplaceAll(relSiteDir, "\\", "/")
 
 	// Check for --accept-warnings flag

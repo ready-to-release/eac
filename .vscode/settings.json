@@ -1,4 +1,9 @@
 {
+  // File associations
+  "files.associations": {
+    "*.feature": "cucumber"
+  },
+
   // Markdown settings (built-in preview)
   "markdown.preview.fontFamily": "Consolas, 'Courier New', monospace",
   "markdown.styles": [
@@ -26,12 +31,13 @@
     "editor.wordWrap": "on"
   },
 
-  // Cucumber/Gherkin settings for Godog (Go BDD testing)
+  // Cucumber/Gherkin settings for BDD testing
   "cucumber.features": [
     "specs/**/*.feature"
   ],
   "cucumber.glue": [
-    "src/specs/impl/**/steps*.go",
-    "src/specs/internal/steps.go"
+    "src/specs/impl/**/*.go",
+    "src/specs/internal/**/*.go",
+    ".vscode/extensions/**/features/**/*.ts"
   ]
 }

@@ -164,6 +164,48 @@
             "$ref": "#/definitions/artifact"
           },
           "default": []
+        },
+        "post_build": {
+          "type": "array",
+          "description": "Post-build steps to execute after successful build",
+          "items": {
+            "$ref": "#/definitions/post_build_step"
+          },
+          "default": []
+        }
+      }
+    },
+    "post_build_step": {
+      "type": "object",
+      "description": "A post-build step definition",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Type of post-build action",
+          "enum": ["copy", "script"]
+        },
+        "target": {
+          "type": "string",
+          "description": "Target path relative to repo root (for copy action). Variables: {moniker}, {root}"
+        },
+        "include": {
+          "type": "array",
+          "description": "Glob patterns to include from build output (for copy action)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "description": "Glob patterns to exclude (for copy action)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "script": {
+          "type": "string",
+          "description": "Script command to run (for script action). Variables: {moniker}, {root}, {output_dir}"
         }
       }
     },

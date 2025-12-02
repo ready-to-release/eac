@@ -8,6 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
+	"github.com/ready-to-release/eac/src/core/config"
+	"github.com/ready-to-release/eac/src/core/contracts/modules"
 )
 
 // DiscoverGoTestTags discovers Go test functions and their build tags
@@ -193,28 +197,177 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-// DiscoverAllTests discovers all tests from a root path
+// DiscoverAllTests discovers all tests from a root path using module contracts.
+// All test discovery is driven by module definitions in modules.yml and module-types.yml:
+// - files.tests: patterns for test files within module (e.g., "test/**/*.ts", "**/*_test.go")
+// - repo.specs: patterns for specification files (e.g., "specs/{moniker}/**")
+// - repo.test_impl: path to test implementation (e.g., "{root}/tests")
 func DiscoverAllTests(rootPath string) ([]TestReference, error) {
 	refs := []TestReference{}
 
-	// Discover Go tests from src/
-	srcPath := filepath.Join(rootPath, "src")
-	if _, err := os.Stat(srcPath); err == nil {
-		goRefs, err := DiscoverGoTestTags(srcPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to discover Go tests: %w", err)
-		}
-		refs = append(refs, goRefs...)
+	// Load module registry
+	registry, err := modules.LoadFromWorkspaceLatest(rootPath)
+	if err != nil {
+		// If no registry found, return empty (not an error)
+		return refs, nil
 	}
 
-	// Discover Godog features from specs/
-	specsPath := filepath.Join(rootPath, "specs")
-	if _, err := os.Stat(specsPath); err == nil {
-		godogRefs, err := DiscoverGodogFeatureTags(specsPath)
+	// Discover tests for each module based on its contracts
+	for _, module := range registry.All() {
+		moduleRefs, err := discoverModuleAllTests(rootPath, module)
 		if err != nil {
-			return nil, fmt.Errorf("failed to discover Godog features: %w", err)
+			continue // Skip modules that fail to parse
 		}
-		refs = append(refs, godogRefs...)
+		refs = append(refs, moduleRefs...)
+	}
+
+	return refs, nil
+}
+
+// discoverModuleAllTests discovers all tests for a single module.
+// It uses the module's contract to find:
+// - Go tests from files.tests patterns (e.g., "**/*_test.go")
+// - Godog specs from repo.specs patterns (e.g., "specs/{moniker}/**")
+// - Other test files from files.tests patterns (e.g., "test/**/*.ts")
+func discoverModuleAllTests(rootPath string, module *modules.ModuleContract) ([]TestReference, error) {
+	refs := []TestReference{}
+	moduleRoot := filepath.Join(rootPath, module.Files.Root)
+
+	// 1. Discover tests from files.tests patterns
+	for _, pattern := range module.Files.Tests {
+		fullPattern := filepath.Join(moduleRoot, pattern)
+		fullPattern = filepath.ToSlash(fullPattern)
+
+		matches, err := doublestar.FilepathGlob(fullPattern)
+		if err != nil {
+			continue
+		}
+
+		for _, testFile := range matches {
+			fileRefs, err := discoverTestsInFile(testFile, module.Moniker, module.Type)
+			if err != nil {
+				continue
+			}
+			refs = append(refs, fileRefs...)
+		}
+	}
+
+	// 2. Discover Go tests from test_impl path if specified
+	if module.Files.Repo.TestImpl != "" {
+		testImplPath := expandModuleVars(module.Files.Repo.TestImpl, module, rootPath)
+		if _, err := os.Stat(testImplPath); err == nil {
+			goRefs, err := DiscoverGoTestTags(testImplPath)
+			if err == nil {
+				// Tag tests with module dependency
+				for i := range goRefs {
+					depmTag := "@depm:" + module.Moniker
+					if !contains(goRefs[i].Tags, depmTag) {
+						goRefs[i].Tags = append(goRefs[i].Tags, depmTag)
+					}
+					goRefs[i].ModuleDependencies = append(goRefs[i].ModuleDependencies, module.Moniker)
+				}
+				refs = append(refs, goRefs...)
+			}
+		}
+	}
+
+	// 3. Discover Gherkin specs from repo.specs patterns
+	// Determine the test type based on module's test framework:
+	// - Module metadata test_framework: cucumber → Type: "cucumber"
+	// - Module type test_framework: cucumber → Type: "cucumber"
+	// - Default → Type: "godog"
+	featureTestType := getFeatureTestTypeForModule(module)
+
+	for _, specPattern := range module.Files.Repo.Specs {
+		expandedPattern := expandModuleVars(specPattern, module, rootPath)
+		fullPattern := filepath.Join(rootPath, expandedPattern)
+		fullPattern = filepath.ToSlash(fullPattern)
+
+		matches, err := doublestar.FilepathGlob(fullPattern)
+		if err != nil {
+			continue
+		}
+
+		for _, specFile := range matches {
+			if strings.HasSuffix(specFile, ".feature") {
+				featureRefs, err := parseFeatureFile(specFile)
+				if err != nil {
+					continue
+				}
+				// Tag specs with module dependency and set correct test type
+				for i := range featureRefs {
+					featureRefs[i].Type = featureTestType
+					depmTag := "@depm:" + module.Moniker
+					if !contains(featureRefs[i].Tags, depmTag) {
+						featureRefs[i].Tags = append(featureRefs[i].Tags, depmTag)
+					}
+					featureRefs[i].ModuleDependencies = append(featureRefs[i].ModuleDependencies, module.Moniker)
+				}
+				refs = append(refs, featureRefs...)
+			}
+		}
+	}
+
+	return refs, nil
+}
+
+// expandModuleVars expands variables in a path pattern.
+// Supported: {moniker}, {root}, {type}
+func expandModuleVars(pattern string, module *modules.ModuleContract, rootPath string) string {
+	result := pattern
+	result = strings.ReplaceAll(result, "{moniker}", module.Moniker)
+	result = strings.ReplaceAll(result, "{root}", module.Files.Root)
+	result = strings.ReplaceAll(result, "{type}", module.Type)
+	return result
+}
+
+// discoverTestsInFile discovers tests in a single file based on its type.
+// Returns test references with the module moniker attached.
+// moduleType is used to determine the test framework from module-types.yml.
+func discoverTestsInFile(filePath string, moniker string, moduleType string) ([]TestReference, error) {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	name := filepath.Base(filePath)
+
+	var refs []TestReference
+	var err error
+
+	// Get test framework from module type configuration
+	testFramework := getTestFrameworkForType(moduleType)
+
+	switch {
+	case ext == ".ts" && strings.HasSuffix(name, ".test.ts"):
+		// TypeScript test file
+		refs, err = parseNodeTestFile(filePath, testFramework)
+	case ext == ".js" && strings.HasSuffix(name, ".test.js"):
+		// JavaScript test file
+		refs, err = parseNodeTestFile(filePath, testFramework)
+	case ext == ".feature":
+		// Gherkin feature file - already handled by DiscoverGodogFeatureTags
+		// Skip to avoid duplicates
+		return nil, nil
+	case ext == ".go" && strings.HasSuffix(name, "_test.go"):
+		// Go test file - already handled by DiscoverGoTestTags
+		// Skip to avoid duplicates
+		return nil, nil
+	default:
+		// Unknown test file type
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Attach module moniker to all discovered tests
+	for i := range refs {
+		// Add @depm:<moniker> tag if not already present
+		depmTag := "@depm:" + moniker
+		if !contains(refs[i].Tags, depmTag) {
+			refs[i].Tags = append(refs[i].Tags, depmTag)
+		}
+		if !contains(refs[i].ModuleDependencies, moniker) {
+			refs[i].ModuleDependencies = append(refs[i].ModuleDependencies, moniker)
+		}
 	}
 
 	return refs, nil
@@ -546,3 +699,153 @@ func extractModuleDependencies(tags []string) []string {
 	}
 	return deps
 }
+
+// getTestFrameworkForType returns the test framework for a module type.
+// Looks up test_framework from module-types.yml configuration.
+// Returns "mocha" as default for npm-based modules if not specified.
+func getTestFrameworkForType(moduleType string) string {
+	cfg := config.Global()
+	if cfg != nil && cfg.ModuleTypes != nil {
+		framework := cfg.ModuleTypes.GetTestFramework(moduleType)
+		if framework != "" {
+			return framework
+		}
+	}
+
+	// Default: return "mocha" for backwards compatibility with npm-based test files
+	return "mocha"
+}
+
+// getFeatureTestTypeForModule returns the test type for Gherkin feature files.
+// Determined by primary build dependency:
+// - npm → "tscucumber" (TypeScript cucumber-js)
+// - go → "godog" (Go BDD framework)
+func getFeatureTestTypeForModule(module *modules.ModuleContract) string {
+	cfg := config.Global()
+	if cfg != nil && cfg.ModuleTypes != nil {
+		primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(module.Type)
+		if primaryDep == "npm" {
+			return "tscucumber"
+		}
+	}
+	return "godog"
+}
+
+// parseNodeTestFile extracts describe blocks with tags from TypeScript/JavaScript test file.
+// Pattern: describe('@L0 ComponentName', ...) or describe('@L0 @deps:foo ComponentName', ...)
+// Tags must be at the start of the describe name, space-separated before the actual name.
+// testFramework determines the Type field (e.g., "mocha", "jest").
+// Note: Module dependency is attached by the caller (discoverTestsInFile) based on module contract.
+func parseNodeTestFile(filePath string, testFramework string) ([]TestReference, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	refs := []TestReference{}
+	lines := strings.Split(string(content), "\n")
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Look for describe( patterns
+		if !strings.Contains(trimmed, "describe(") {
+			continue
+		}
+
+		// Extract the string inside describe('...' or describe("..."
+		descName := extractDescribeName(trimmed)
+		if descName == "" {
+			continue
+		}
+
+		// Parse tags from the describe name
+		// Format: "@L0 @deps:foo ComponentName" -> tags=[@L0, @deps:foo], name=ComponentName
+		tags, testName := parseDescribeTags(descName)
+
+		if len(tags) == 0 {
+			// No tags in this describe, skip it (we only track tagged tests)
+			continue
+		}
+
+		ref := TestReference{
+			FilePath: filePath,
+			Type:     testFramework,
+			TestName: testName,
+			Tags:     tags,
+		}
+
+		// Set execution control fields
+		ref.IsIgnored, ref.SkipReason = extractSkipReason(ref.Tags)
+		ref.SystemDependencies = extractSystemDependencies(ref.Tags)
+		ref.ModuleDependencies = extractModuleDependencies(ref.Tags)
+
+		refs = append(refs, ref)
+	}
+
+	return refs, nil
+}
+
+// extractDescribeName extracts the string content from describe('...' or describe("..."
+func extractDescribeName(line string) string {
+	// Find describe( and then the opening quote
+	idx := strings.Index(line, "describe(")
+	if idx == -1 {
+		return ""
+	}
+
+	rest := line[idx+len("describe("):]
+	rest = strings.TrimSpace(rest)
+
+	// Find the quote type (single or double)
+	if len(rest) == 0 {
+		return ""
+	}
+
+	quote := rest[0]
+	if quote != '\'' && quote != '"' && quote != '`' {
+		return ""
+	}
+
+	// Find the closing quote
+	rest = rest[1:]
+	endIdx := strings.IndexByte(rest, quote)
+	if endIdx == -1 {
+		return ""
+	}
+
+	return rest[:endIdx]
+}
+
+// parseDescribeTags parses tags from the start of a describe name.
+// Input: "@L0 @deps:foo ComponentName"
+// Output: tags=["@L0", "@deps:foo"], name="ComponentName"
+func parseDescribeTags(descName string) ([]string, string) {
+	parts := strings.Fields(descName)
+	if len(parts) == 0 {
+		return nil, ""
+	}
+
+	var tags []string
+	var nameStart int
+
+	for i, part := range parts {
+		if strings.HasPrefix(part, "@") {
+			tags = append(tags, part)
+		} else {
+			// First non-tag part starts the name
+			nameStart = i
+			break
+		}
+	}
+
+	// If all parts were tags, no name found
+	if nameStart == 0 && len(tags) == len(parts) {
+		return tags, ""
+	}
+
+	// Reconstruct the name from remaining parts
+	name := strings.Join(parts[nameStart:], " ")
+	return tags, name
+}
+

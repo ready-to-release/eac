@@ -12,7 +12,7 @@ import (
 func init() {
 	// Build dependency handlers - contracts define which types use which build deps
 	RegisterSystem("mkdocs", TestMkDocsModule)
-	RegisterSystem("npm", TestNpmModule)
+	// npm is registered in npm.go with full suite/tag support
 	RegisterSystem("docker", TestStaticModule)
 	RegisterSystem("", TestStaticModule) // Modules with no build deps
 }
@@ -25,24 +25,6 @@ func TestStaticModule(module *modules.ModuleContract, workspaceRoot string, outp
 	Writeln(logWriter, "Module type '%s' has no runtime tests", module.Type)
 	Writeln(logWriter, "✅ Static module - validation done at build time")
 	return 0
-}
-
-// TestNpmModule runs npm test for npm-based modules.
-func TestNpmModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
-
-	Writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
-	Writeln(logWriter, "Suite: %s", suiteName)
-
-	// Check for package.json
-	packageJSON := filepath.Join(moduleRoot, "package.json")
-	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
-		Writeln(logWriter, "⚠️  No package.json found, skipping tests")
-		return 0
-	}
-
-	Writeln(logWriter, "Running: npm test")
-	return RunTestCommand(moduleRoot, logWriter, "npm", "test")
 }
 
 // TestMkDocsModule tests MkDocs sites by verifying the build output exists.

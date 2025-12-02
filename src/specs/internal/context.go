@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/src/core/repository"
 	coretesting "github.com/ready-to-release/eac/src/core/testing"
 )
 
@@ -106,8 +107,10 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 
 	// Set mock AI directory for subprocess commands
 	// This enables commands to use mock responses instead of real AI calls
-	if c.OriginalRepoRoot != "" {
-		assetsDir := filepath.Join(c.OriginalRepoRoot, "src", "specs", "impl", "src-commands", "assets")
+	// Use container root if in container, otherwise repo root
+	assetsRoot := repository.GetEffectiveRoot(c.OriginalRepoRoot)
+	if assetsRoot != "" {
+		assetsDir := filepath.Join(assetsRoot, "src", "specs", "impl", "src-commands", "assets")
 		if _, err := os.Stat(assetsDir); err == nil {
 			env = append(env, fmt.Sprintf("R2R_MOCK_AI_DIR=%s", assetsDir))
 		}
@@ -144,6 +147,10 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 // createCommand creates an exec.Cmd for running commands.
 // Uses the pre-built binary at out/build/src-commands/commands{.exe}.
 // The binary must exist - tests should have @depm:src-commands dependency.
+//
+// When running in a container, R2R_CONTAINER_ROOT points to where the
+// container's internal files are located (e.g., /app), which may differ
+// from the mounted repo root.
 func (c *TestContext) createCommand(parts []string) *exec.Cmd {
 	// Determine platform-specific binary name
 	binaryName := "commands"
@@ -151,7 +158,9 @@ func (c *TestContext) createCommand(parts []string) *exec.Cmd {
 		binaryName = "commands.exe"
 	}
 
-	binaryPath := filepath.Join(c.OriginalRepoRoot, "out", "build", "src-commands", binaryName)
+	// Use container root if in container, otherwise repo root
+	binaryRoot := repository.GetEffectiveRoot(c.OriginalRepoRoot)
+	binaryPath := filepath.Join(binaryRoot, "out", "build", "src-commands", binaryName)
 	return exec.Command(binaryPath, parts...)
 }
 
