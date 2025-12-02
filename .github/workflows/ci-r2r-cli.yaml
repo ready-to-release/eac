@@ -122,8 +122,11 @@ jobs:
           chmod +x out/build/r2r-cli/r2r-darwin-amd64
           chmod +x out/build/r2r-cli/r2r-darwin-arm64
 
-      - name: Test Module
-        run: ${{ steps.commands.outputs.commands-path }} test r2r-cli
+      - name: Test Module (Commit Suite - L0-L2)
+        run: ${{ steps.commands.outputs.commands-path }} test r2r-cli --suite commit
+
+      - name: Test Module (Acceptance Suite - L3)
+        run: ${{ steps.commands.outputs.commands-path }} test r2r-cli --suite acceptance
 
       - name: Upload Test Results
         if: always()
@@ -148,12 +151,19 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
+          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Suite | Level | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| commit | L0-L2 | Unit and integration tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| acceptance | L3 | Acceptance verification tests |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
           echo "### Test Details" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`r2r-cli\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Command | \`commands test r2r-cli\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Binaries Verified" >> $GITHUB_STEP_SUMMARY

@@ -103,8 +103,11 @@ jobs:
           name: build-artifacts-docs
           path: out/build/docs
 
-      - name: Test Module
-        run: ${{ steps.commands.outputs.commands-path }} test docs
+      - name: Test Module (Commit Suite - L0-L2)
+        run: ${{ steps.commands.outputs.commands-path }} test docs --suite commit
+
+      - name: Test Module (Acceptance Suite - L3)
+        run: ${{ steps.commands.outputs.commands-path }} test docs --suite acceptance
 
       - name: Test Summary
         if: always()
@@ -121,6 +124,15 @@ jobs:
             $COMMANDS ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Suite | Level | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| commit | L0-L2 | Unit and integration tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| acceptance | L3 | Acceptance verification tests |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
           echo "### Checks Performed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Site structure validation" >> $GITHUB_STEP_SUMMARY
