@@ -249,9 +249,7 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 
 	// Then steps - output/content verification
 	// Note: "stdout contains" and "stderr contains" are registered in internal/steps.go
-	sc.Step(`^stdout contains valid JSON$`, func() error {
-		return internal.OutputContains(ctx, "{")
-	})
+	// Note: "stdout contains valid JSON" is registered in steps_risk.go
 	sc.Step(`^stdout only contains files with errors$`, func() error {
 		// Quiet mode output verification
 		return nil
@@ -283,10 +281,6 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 	sc.Step(`^the custom template is used$`, func() error {
 		// Template usage verification
-		return nil
-	})
-	sc.Step(`^the AI receives module context "([^"]*)"$`, func(module string) error {
-		// Module context passed to AI
 		return nil
 	})
 

@@ -180,7 +180,7 @@ func CreateRisk() int {
 	log.Info("")
 	log.Info("Next steps:")
 	log.Infof("  1. Add @control(%s) tags to your .feature files", controlIDs[0])
-	log.Infof("  2. Run: risk assess %s", config.Module)
+	log.Infof("  2. Run: create risk-assess %s", config.Module)
 
 	if config.Logger != nil {
 		config.Logger.Info("Profile created successfully",
@@ -193,7 +193,7 @@ func CreateRisk() int {
 
 // parseConfig parses command line configuration.
 func parseConfig() (*Config, error) {
-	args := os.Args[2:] // Skip program name and "create risk"
+	args := os.Args[3:] // Skip program name, "create", and "risk"
 
 	config := &Config{
 		Module:     "common",
