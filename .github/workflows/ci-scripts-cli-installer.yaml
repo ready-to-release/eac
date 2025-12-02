@@ -35,10 +35,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-          cache-dependency-path: src/commands/go.sum
+          cache-dependency-path: go/eac/commands/go.sum
 
       - name: Build Module
-        working-directory: ./src/commands
+        working-directory: ./go/eac/commands
         run: go run . build scripts-cli-installer
 
       - name: Upload Build Artifacts
@@ -58,7 +58,7 @@ jobs:
           else
             echo "❌ Installer script validation failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -90,8 +90,7 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/cli-installers/tests/go.sum
+            go/eac/commands/go.sum
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -100,11 +99,11 @@ jobs:
           path: out/build/scripts-cli-installer
 
       - name: Test Module (Commit Suite - L0-L2)
-        working-directory: ./src/commands
+        working-directory: ./go/eac/commands
         run: go run . test scripts-cli-installer --suite commit
 
       - name: Test Module (Acceptance Suite - L3)
-        working-directory: ./src/commands
+        working-directory: ./go/eac/commands
         run: go run . test scripts-cli-installer --suite acceptance
 
       - name: Upload Test Results
@@ -124,7 +123,7 @@ jobs:
           else
             echo "❌ Bash installer tests failed on Linux." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-scripts-cli-installer-linux >> $GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-scripts-cli-installer-linux >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -156,8 +155,7 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/cli-installers/tests/go.sum
+            go/eac/commands/go.sum
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -166,11 +164,11 @@ jobs:
           path: out/build/scripts-cli-installer
 
       - name: Test Module (Commit Suite - L0-L2)
-        working-directory: ./src/commands
+        working-directory: ./go/eac/commands
         run: go run . test scripts-cli-installer --suite commit
 
       - name: Test Module (Acceptance Suite - L3)
-        working-directory: ./src/commands
+        working-directory: ./go/eac/commands
         run: go run . test scripts-cli-installer --suite acceptance
 
       - name: Upload Test Results
@@ -191,7 +189,7 @@ jobs:
           } else {
             echo "❌ PowerShell installer tests failed on Windows." >> $env:GITHUB_STEP_SUMMARY
             echo "" >> $env:GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-scripts-cli-installer-windows >> $env:GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-scripts-cli-installer-windows >> $env:GITHUB_STEP_SUMMARY
           }
           echo "" >> $env:GITHUB_STEP_SUMMARY
 

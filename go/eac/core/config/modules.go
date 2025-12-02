@@ -1,0 +1,196 @@
+package config
+
+import (
+	"github.com/ready-to-release/eac/go/eac/core/defaults"
+)
+
+// ModulesConfig represents the modules.yml configuration
+type ModulesConfig struct {
+	Modules []Module `yaml:"modules"`
+}
+
+// Module represents a single module definition
+type Module struct {
+	Moniker     string            `yaml:"moniker"`
+	Name        string            `yaml:"name"`
+	Type        string            `yaml:"type"`
+	Description string            `yaml:"description"`
+	DependsOn   []string          `yaml:"depends_on"`
+	Files       Files             `yaml:"files"`
+	Flags       Flags             `yaml:"flags"`
+	Metadata    map[string]string `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
+}
+
+// Files defines file ownership patterns for a module
+type Files struct {
+	Root      string    `yaml:"root"`
+	Source    []string  `yaml:"source"`
+	Config    []string  `yaml:"config"`
+	Assets    []string  `yaml:"assets"`
+	Tests     []string  `yaml:"tests"`
+	Exclude   []string  `yaml:"exclude"`
+	Changelog string    `yaml:"changelog"`
+	Workflows Workflows `yaml:"workflows"`
+	Repo      RepoFiles `yaml:"repo"`
+}
+
+// Workflows defines GitHub Actions workflow file ownership
+type Workflows struct {
+	CI      string `yaml:"ci"`      // CI workflow file path
+	Release string `yaml:"release"` // Release workflow file path
+}
+
+// RepoFiles defines repository-level file ownership
+type RepoFiles struct {
+	Specs    []string `yaml:"specs"`
+	TestImpl string   `yaml:"test_impl"` // Test implementation directory path
+	Design   string   `yaml:"design"`    // Design workspace directory path
+	Other    []string `yaml:"other"`
+	Exclude  []string `yaml:"exclude"`
+}
+
+// Flags defines module behavior flags (reserved for future use)
+type Flags struct {
+}
+
+// applyDefaults applies default values to all modules (generic defaults only).
+// Call ApplyTypeDefaults after loading ModuleTypes for type-specific defaults.
+func (c *ModulesConfig) applyDefaults() {
+	for i := range c.Modules {
+		m := &c.Modules[i]
+
+		if m.Type == "" {
+			m.Type = defaults.ModuleType
+		}
+		if m.Description == "" {
+			m.Description = m.Name
+		}
+		if m.DependsOn == nil {
+			m.DependsOn = []string{}
+		}
+		// Note: Other defaults (Source, Config, Changelog, Specs, etc.) are now
+		// applied by ApplyTypeDefaults using type-specific defaults with fallback.
+	}
+}
+
+// ApplyTypeDefaults applies type-specific defaults to all modules.
+// This should be called after both Modules and ModuleTypes are loaded.
+func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
+	for i := range c.Modules {
+		m := &c.Modules[i]
+
+		// Get type definition
+		var typeDef *defaults.TypeDefaults
+		if types != nil {
+			if td := types.Get(m.Type); td != nil && td.Defaults != nil {
+				typeDef = convertTypeDefaults(td.Defaults)
+			}
+		}
+
+		// Resolve defaults using type-specific + generic fallback
+		resolved := defaults.ResolveDefaults(
+			typeDef,
+			m.Moniker, m.Files.Root, m.Type,
+			m.Files.Source, m.Files.Config, m.Files.Assets, m.Files.Tests,
+			m.Files.Changelog,
+			m.Files.Workflows.CI, m.Files.Workflows.Release,
+			m.Files.Repo.Specs,
+			m.Files.Repo.TestImpl, m.Files.Repo.Design,
+		)
+
+		// Apply resolved values (only if not already set)
+		if m.Files.Source == nil {
+			m.Files.Source = resolved.Source
+		}
+		if m.Files.Config == nil {
+			m.Files.Config = resolved.Config
+		}
+		if m.Files.Assets == nil {
+			m.Files.Assets = resolved.Assets
+		}
+		if m.Files.Tests == nil {
+			m.Files.Tests = resolved.Tests
+		}
+		if m.Files.Changelog == "" {
+			m.Files.Changelog = resolved.Changelog
+		}
+		if m.Files.Workflows.CI == "" {
+			m.Files.Workflows.CI = resolved.WorkflowCI
+		}
+		if m.Files.Workflows.Release == "" {
+			m.Files.Workflows.Release = resolved.WorkflowRelease
+		}
+		if m.Files.Repo.Specs == nil {
+			m.Files.Repo.Specs = resolved.Specs
+		}
+		if m.Files.Repo.TestImpl == "" {
+			m.Files.Repo.TestImpl = resolved.TestImpl
+		}
+		if m.Files.Repo.Design == "" {
+			m.Files.Repo.Design = resolved.Design
+		}
+	}
+}
+
+// convertTypeDefaults converts config.TypeDefaults to defaults.TypeDefaults
+func convertTypeDefaults(td *TypeDefaults) *defaults.TypeDefaults {
+	if td == nil {
+		return nil
+	}
+
+	result := &defaults.TypeDefaults{}
+
+	if td.Files != nil {
+		result.Files = &defaults.FilesDefaults{
+			Source:    td.Files.Source,
+			Config:    td.Files.Config,
+			Assets:    td.Files.Assets,
+			Tests:     td.Files.Tests,
+			Changelog: td.Files.Changelog,
+		}
+		if td.Files.Workflows != nil {
+			result.Files.WorkflowCI = td.Files.Workflows.CI
+			result.Files.WorkflowRelease = td.Files.Workflows.Release
+		}
+	}
+
+	if td.Repo != nil {
+		result.Repo = &defaults.RepoDefaults{
+			Specs:    td.Repo.Specs,
+			TestImpl: td.Repo.TestImpl,
+			Design:   td.Repo.Design,
+		}
+	}
+
+	return result
+}
+
+// GetModule returns a module by moniker
+func (c *ModulesConfig) GetModule(moniker string) (*Module, bool) {
+	for i := range c.Modules {
+		if c.Modules[i].Moniker == moniker {
+			return &c.Modules[i], true
+		}
+	}
+	return nil, false
+}
+
+// GetModulesByType returns all modules of a specific type
+func (c *ModulesConfig) GetModulesByType(moduleType string) []Module {
+	var result []Module
+	for _, m := range c.Modules {
+		if m.Type == moduleType {
+			result = append(result, m)
+		}
+	}
+	return result
+}
+
+// AllMonikers returns a list of all module monikers
+func (c *ModulesConfig) AllMonikers() []string {
+	monikers := make([]string, len(c.Modules))
+	for i, m := range c.Modules {
+		monikers[i] = m.Moniker
+	}
+	return monikers
+}

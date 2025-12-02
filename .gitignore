@@ -72,7 +72,7 @@ site/
 **/.design/workspace.json
 
 # Generated embed files (created by go:generate, source is in .r2r/eac/)
-src/core/environments/repository/
+go/eac/core/environments/repository/
 
 # Docker
 .docker/

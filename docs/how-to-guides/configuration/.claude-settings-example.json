@@ -7,7 +7,7 @@
       "command": "go",
       "args": [
         "run",
-        "./src/mcp/commands/main.go"
+        "./go/eac/mcp/commands/main.go"
       ],
       "env": {}
     },

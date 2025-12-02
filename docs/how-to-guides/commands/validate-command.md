@@ -201,7 +201,7 @@ r2r eac validate module-hierarchy
   • Module 'src-api' depends on 'src-common', but 'src-common' does not exist
 
 ❌ Circular Dependencies (1):
-  • Circular dependency: src-auth -> src-core -> src-utils -> src-auth
+  • Circular dependency: src-auth -> eac-core -> src-utils -> src-auth
 ```
 
 **Common errors:**
@@ -249,8 +249,8 @@ r2r eac validate module-files
 
 ❌ Files with Multi-Module Ownership (1):
    Each file should belong to exactly one module:
-  • src/core/types.go
-    Claimed by: src-core, src-api
+  • go/eac/core/types.go
+    Claimed by: eac-core, src-api
 
    Fix: Adjust module contract glob patterns to prevent overlap.
 ```
@@ -345,7 +345,7 @@ Untidy modules: 1
 
 ❌ Modules with untidy dependencies:
 
-  • src/commands
+  • go/eac/commands
     Diff:
     -  github.com/example/old v1.0.0
     +  github.com/example/new v2.0.0
@@ -480,7 +480,7 @@ modules:
 **Error:** Missing dependency in contract
 
 ```text
-Error: Module 'src-api' depends on 'src-core' but contract doesn't declare it
+Error: Module 'src-api' depends on 'eac-core' but contract doesn't declare it
 ```
 
 **Fix:** Add dependency to module contract.
@@ -490,7 +490,7 @@ Error: Module 'src-api' depends on 'src-core' but contract doesn't declare it
 modules:
   - moniker: src-api
     depends_on:
-      - src-core  # Add missing dependency
+      - eac-core  # Add missing dependency
 ```
 
 ### Test Tag Errors
@@ -518,7 +518,7 @@ tags:
 
 ```text
 ❌ Circular Dependencies (1):
-  • Circular dependency: src-auth -> src-core -> src-auth
+  • Circular dependency: src-auth -> eac-core -> src-auth
 ```
 
 **Fix:** Refactor to break the cycle, extract common code to a new module.
@@ -569,7 +569,7 @@ docs/guide.md:
 
 ```text
 ❌ Modules with untidy dependencies:
-  • src/commands
+  • go/eac/commands
     Diff:
     -  github.com/old/package v1.0.0
 ```
@@ -577,7 +577,7 @@ docs/guide.md:
 **Fix:** Run go mod tidy.
 
 ```bash
-cd src/commands
+cd go/eac/commands
 go mod tidy
 ```
 

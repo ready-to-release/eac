@@ -45,7 +45,7 @@ echo "Installing VSCode Extension"
 echo "=================================="
 echo ""
 
-cd "$PROJECT_ROOT/.vscode/extensions/vscode-ext-commit"
+cd "$PROJECT_ROOT/typescript/vscode-ext-commit"
 
 echo "Installing dependencies..."
 npm install
@@ -63,7 +63,7 @@ echo ""
 # Check if Go modules are initialized
 for server in pwsh docs github vscode; do
     echo "Checking $server server..."
-    cd "$PROJECT_ROOT/src/mcp/$server"
+    cd "$PROJECT_ROOT/go/eac/mcp/$server"
 
     if [ ! -f "go.mod" ]; then
         echo "  ❌ go.mod not found"

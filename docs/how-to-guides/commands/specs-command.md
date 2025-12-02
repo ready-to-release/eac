@@ -79,7 +79,7 @@ Generate Gherkin specification from natural language.
 r2r eac create spec <description> [options]
 
 # Options:
---module, -m <name>      # Target module (e.g., src-commands)
+--module, -m <name>      # Target module (e.g., eac-commands)
 --output, -o <path>      # Custom output path
 --debug, -d              # Save intermediate outputs to out/logs/specs/
 --template <path>        # Custom template file
@@ -194,7 +194,7 @@ specs/
 ├── src-api/
 │   ├── rate-limiting.feature
 │   └── versioning.feature
-└── src-core/
+└── eac-core/
     └── validation.feature
 ```
 

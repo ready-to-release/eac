@@ -60,7 +60,7 @@ if (-not $env:ANTHROPIC_API_KEY) {
 
 # Display MCP server configuration status
 Write-Information "Claude Code MCP servers will use:"
-Write-Information "  Commands Server: go run ./src/mcp/commands/main.go (local)"
+Write-Information "  Commands Server: go run ./go/eac/mcp/commands/main.go (local)"
 Write-Information "  GitHub Server:   Official GitHub MCP server"
 Write-Information ""
 Write-Information "MCP servers are configured in .claude/settings.json"

@@ -97,12 +97,12 @@ The AI uses standard semantic commit types:
 |------|-------------|---------|
 | `feat` | New feature or capability | `feat(src-auth): implement JWT authentication` |
 | `fix` | Bug fix | `fix(src-api): resolve rate limiting race condition` |
-| `refactor` | Code restructuring (no behavior change) | `refactor(src-core): extract validation logic` |
+| `refactor` | Code restructuring (no behavior change) | `refactor(eac-core): extract validation logic` |
 | `docs` | Documentation only | `docs(specs): add authentication examples` |
 | `chore` | Maintenance tasks | `chore(deps): update dependencies` |
 | `test` | Test changes only | `test(src-auth): add integration tests` |
 | `perf` | Performance improvements | `perf(src-cache): optimize lookup algorithm` |
-| `style` | Code formatting (no logic change) | `style(src-core): apply gofmt` |
+| `style` | Code formatting (no logic change) | `style(eac-core): apply gofmt` |
 
 ## AI Generation Process
 
@@ -130,7 +130,7 @@ Generating summary...
 ```text
 Processing modules in parallel...
 - src-auth: Analyzing authentication changes...
-- src-core: Analyzing core library changes...
+- eac-core: Analyzing core library changes...
 - src-tests: Analyzing test changes...
 ```
 
@@ -185,7 +185,7 @@ refactor(multi-module): reorganize validation logic
 Extract validation logic from individual modules into a shared validation
 package to reduce duplication and improve consistency across the codebase.
 
-src-core changes:
+eac-core changes:
 - Create new validation package with common validators
 - Add field validation helpers
 - Implement error aggregation
@@ -199,8 +199,8 @@ src-api changes:
 - Remove duplicate validation code
 
 Files modified:
-- src/core/validation/validators.go (new)
-- src/core/validation/validators_test.go (new)
+- go/eac/core/validation/validators.go (new)
+- go/eac/core/validation/validators_test.go (new)
 - src/auth/validators.go (removed)
 - src/auth/login.go
 - src/api/handlers.go
@@ -243,10 +243,10 @@ out/
 │   ├── 03-summary-response.md     # AI-generated summary
 │   ├── 04-module-prompts/
 │   │   ├── src-auth.md            # Prompt for src-auth module
-│   │   └── src-core.md            # Prompt for src-core module
+│   │   └── eac-core.md            # Prompt for eac-core module
 │   ├── 05-module-responses/
 │   │   ├── src-auth.md            # AI response for src-auth
-│   │   └── src-core.md            # AI response for src-core
+│   │   └── eac-core.md            # AI response for eac-core
 │   ├── 06-assembly-prompt.md      # Prompt to combine sections
 │   ├── 07-assembly-response.md    # Final assembled message
 │   ├── 08-validation-result.json  # Validation details
@@ -311,11 +311,11 @@ r2r eac create commit-message --commit
 ```bash
 # Work on multiple modules
 vim src/auth/jwt.go
-vim src/core/validation.go
+vim go/eac/core/validation.go
 vim src/api/handlers.go
 
 # Stage all changes
-git add src/auth/ src/core/ src/api/
+git add go/eac/auth/ go/eac/core/ go/eac/api/
 
 # AI processes modules in parallel
 r2r eac create commit-message --debug
@@ -480,7 +480,7 @@ fi
 
 ```bash
 # Commit multiple logical changes separately
-for dir in src/auth src/api src/core; do
+for dir in go/eac/auth go/eac/api go/eac/core; do
   if git diff --cached --name-only | grep -q "^$dir/"; then
     git reset  # Unstage all
     git add $dir/
@@ -525,9 +525,9 @@ Multi-module commits process modules in parallel:
 Processing 3 modules...
 [src-auth] Started
 [src-api]  Started
-[src-core] Started
+[eac-core] Started
 [src-auth] Complete (2.3s)
-[src-core] Complete (2.5s)
+[eac-core] Complete (2.5s)
 [src-api]  Complete (2.8s)
 Total: 2.8s (vs 7.6s sequential)
 ```

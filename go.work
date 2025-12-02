@@ -1,10 +1,10 @@
 go 1.24.4
 
 use (
-	./src/ai
-	./src/cli
-	./src/commands
-	./src/core
-	./src/mcp/commands
-	./src/specs
+	./go/eac/ai
+	./go/eac/commands
+	./go/eac/core
+	./go/eac/mcp/commands
+	./go/eac/specs
+	./go/r2r/cli
 )

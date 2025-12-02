@@ -14,7 +14,7 @@ Generate a module section for a multi-module commit message.
 
 ## Requirements
 
-**Line 1**: Module name only (e.g., `src-commands`, `contracts`)
+**Line 1**: Module name only (e.g., `eac-commands`, `contracts`)
 
 **Line 2**: Exactly 12 dashes: `------------`
 
@@ -30,9 +30,9 @@ Generate a module section for a multi-module commit message.
 ## Example
 
 ```text
-src-commands
+eac-commands
 ------------
-src-commands: refactor: simplify commit message generation
+eac-commands: refactor: simplify commit message generation
 
 Removed template variable embedding from generation logic and updated
 prompts to use direct format instructions. Simplified assembly code to

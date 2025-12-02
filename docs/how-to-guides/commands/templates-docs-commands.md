@@ -289,7 +289,7 @@ r2r eac templates list --template ./templates/new-template.md
 cat > values.json << 'EOF'
 {
   "PROJECT_NAME": "MyApp",
-  "MODULE_NAME": "src-core",
+  "MODULE_NAME": "eac-core",
   "FEATURE_NAME": "authentication"
 }
 EOF

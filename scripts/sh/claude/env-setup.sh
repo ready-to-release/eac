@@ -50,7 +50,7 @@ fi
 
 # Display MCP server configuration status
 echo "Claude Code MCP servers will use:"
-echo "  Commands Server: go run ./src/mcp/commands/main.go (local)"
+echo "  Commands Server: go run ./go/eac/mcp/commands/main.go (local)"
 echo "  GitHub Server:   Official GitHub MCP server"
 echo ""
 echo "MCP servers are configured in .claude/settings.json"

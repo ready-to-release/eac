@@ -62,14 +62,14 @@ function Write-ColorOutput {
 
 function Get-LatestVersion {
     try {
-        # Fetch releases and find the latest src-cli/* release (monorepo has multiple release tags)
+        # Fetch releases and find the latest r2r-cli/* release (monorepo has multiple release tags)
         $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=20" -UseBasicParsing
         foreach ($release in $releases) {
-            if ($release.tag_name -like "src-cli/*") {
+            if ($release.tag_name -like "r2r-cli/*") {
                 return $release.tag_name
             }
         }
-        Write-ColorOutput "No src-cli release found" "Red"
+        Write-ColorOutput "No r2r-cli release found" "Red"
         exit 1
     }
     catch {

@@ -26,50 +26,51 @@ ENV CGO_ENABLED=0
 WORKDIR /app
 
 # Copy go.mod and go.sum files for dependency caching
-COPY src/ai/go.mod src/ai/go.sum ./src/ai/
-COPY src/core/go.mod src/core/go.sum ./src/core/
-COPY src/commands/go.mod src/commands/go.sum ./src/commands/
+COPY go/eac/ai/go.mod go/eac/ai/go.sum ./go/eac/ai/
+COPY go/eac/core/go.mod go/eac/core/go.sum ./go/eac/core/
+COPY go/eac/commands/go.mod go/eac/commands/go.sum ./go/eac/commands/
 
 # Download dependencies with BuildKit cache mount for faster rebuilds
 RUN --mount=type=cache,target=/go/pkg/mod \
-    cd src/commands && go mod download
+    cd go/eac/commands && go mod download
 
 # ============================================================
-# BUILD STAGE - Build src-commands binary
+# BUILD STAGE - Build eac-commands binary
 # ============================================================
 FROM deps AS builder
 
 # Copy source code
-COPY src/ai/ ./src/ai/
-COPY src/core/ ./src/core/
-COPY src/commands/ ./src/commands/
+COPY go/eac/ai/ ./go/eac/ai/
+COPY go/eac/core/ ./go/eac/core/
+COPY go/eac/commands/ ./go/eac/commands/
 
-# Build the commands binary with BuildKit cache mounts
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    cd src/commands && go build -o /app/out/build/src-commands/commands .
+# Copy go.work.sum as cache-buster (changes when deps change)
+COPY go.work.sum ./
+
+# Build the commands binary (no cache mounts for reproducible builds)
+RUN cd go/eac/commands && go build -o /app/out/build/eac-commands/commands .
 
 # ============================================================
 # RUNTIME STAGE - Final image
 # ============================================================
 FROM deps AS runtime
 
-# Note: DOCKER_R2R_MODE is set by r2r CLI at runtime, not here
+# Note: R2R_DOCKER_MODE is set by r2r CLI at runtime, not here
 # This allows tests to find /app via .git while normal usage gets /var/task
 ENV TZ=UTC
 ENV R2R_CONTAINER_ROOT=/app
 
 # Copy source code to /app (needed for go test in acceptance tests)
-COPY src/ai/ ./src/ai/
-COPY src/core/ ./src/core/
-COPY src/commands/ ./src/commands/
-COPY src/specs/ ./src/specs/
+COPY go/eac/ai/ ./go/eac/ai/
+COPY go/eac/core/ ./go/eac/core/
+COPY go/eac/commands/ ./go/eac/commands/
+COPY go/eac/specs/ ./go/eac/specs/
 COPY contracts/ ./contracts/
 COPY .r2r/ ./.r2r/
 COPY specs/ ./specs/
 
 # Copy pre-built binary from builder
-COPY --from=builder /app/out/build/src-commands/commands /app/out/build/src-commands/commands
+COPY --from=builder /app/out/build/eac-commands/commands /app/out/build/eac-commands/commands
 
 # Create fake .git so GetRepositoryRoot() finds /app when running tests
 # (tests run from /app, not /var/task which is for user repo mounts)
@@ -106,5 +107,5 @@ LABEL r2r-cli.multi-platform.support="true"
 # Set working directory for command execution (r2r CLI mounts repo here)
 WORKDIR /var/task
 
-# Use pre-built src-commands binary as entrypoint
-ENTRYPOINT ["/app/out/build/src-commands/commands"]
+# Use pre-built eac-commands binary as entrypoint
+ENTRYPOINT ["/app/out/build/eac-commands/commands"]

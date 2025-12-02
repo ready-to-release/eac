@@ -1,0 +1,9 @@
+@deps:go @ov
+Feature: eac-commands_auth
+
+  Rule: Conflict detection
+
+    @L2 @ov
+    Scenario: Duplicate path detected
+      When a conflicting feature is generated
+      Then an error should be reported

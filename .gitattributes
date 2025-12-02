@@ -11,13 +11,13 @@
 /* export-ignore
 ## Then selectively include only source code and essential files
 # Go source code
-/src -export-ignore
-/src/** -export-ignore
+/go -export-ignore
+/go/** -export-ignore
 # Go module files
 /go.mod -export-ignore
 /go.sum -export-ignore
 # GitHub workflows (for transparency/reproducibility)
-/.github/workflows/*src-cli*.yml -export-ignore
+/.github/workflows/*r2r-cli*.yml -export-ignore
 # Docs
 /documentation -export-ignore
 # Keep the gitignore and gitattributes for proper repo setup

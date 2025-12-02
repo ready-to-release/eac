@@ -266,7 +266,7 @@ Feature names use kebab-case: `[module-name_feature-name]`
 
 **Structure**:
 
-- Module name in kebab-case (e.g., `src-commands`, `vscode-extension`)
+- Module name in kebab-case (e.g., `eac-commands`, `vscode-extension`)
 - Underscore separator
 - Feature name in kebab-case (e.g., `design-command`, `init-project`)
 
@@ -274,7 +274,7 @@ Feature names use kebab-case: `[module-name_feature-name]`
 
 ```gherkin
 Feature: cli_init-project
-Feature: src-commands_design-command
+Feature: eac-commands_design-command
 Feature: vscode-extension_status-bar
 Feature: mcp-server_tools-registration
 ```

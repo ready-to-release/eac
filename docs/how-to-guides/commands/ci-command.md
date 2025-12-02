@@ -332,7 +332,7 @@ jobs:
 
       - name: Create release
         id: release
-        run: r2r eac release-calver src-cli
+        run: r2r eac release-calver r2r-cli
         continue-on-error: true
 
       - name: Release summary
@@ -543,7 +543,7 @@ ci-test:
 FROM golang:1.21
 
 # Install r2r CLI
-RUN go install github.com/ready-to-release/eac/src/cli@latest
+RUN go install github.com/ready-to-release/eac/go/r2r/cli@latest
 
 # Generate diagnostics on build failure
 RUN r2r eac build || \

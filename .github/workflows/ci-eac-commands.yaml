@@ -1,0 +1,133 @@
+name: "ci-eac-commands (stage 1-6)"
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to test'
+        default: ''
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            go/eac/commands/go.sum
+
+      - name: Build Module
+        working-directory: ./go/eac/commands
+        run: go run . build eac-commands
+
+      - name: Upload Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-eac-commands
+          path: out/build/eac-commands/**
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "## Build: eac-commands" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Commands module built successfully." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Commands module build failed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | \`eac-commands\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -d "out/build/eac-commands" ]; then
+            ARTIFACT_COUNT=$(find out/build/eac-commands -type f 2>/dev/null | wc -l | tr -d ' ')
+            echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📦 ${ARTIFACT_COUNT} file(s) uploaded as \`build-artifacts-eac-commands\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            go/eac/commands/go.sum
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-eac-commands
+          path: out/build/eac-commands
+
+      - name: Test Module
+        working-directory: ./go/eac/commands
+        run: go run . test eac-commands
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-eac-commands
+          path: out/test/**/eac-commands/**
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Test: eac-commands" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ All unit tests passed for eac-commands module." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Unit tests failed for eac-commands module." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-eac-commands >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Test Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | \`eac-commands\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Command | \`go run . test eac-commands\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY

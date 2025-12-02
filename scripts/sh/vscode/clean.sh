@@ -13,7 +13,7 @@ echo ""
 
 # Clean VSCode extension
 echo "Cleaning VSCode extension..."
-cd "$PROJECT_ROOT/.vscode/extensions/vscode-ext-commit"
+cd "$PROJECT_ROOT/typescript/vscode-ext-commit"
 
 CLEANED=false
 
@@ -64,7 +64,7 @@ cd "$PROJECT_ROOT"
 MCP_CLEANED=false
 
 for server in pwsh docs github vscode; do
-    SERVER_DIR="$PROJECT_ROOT/src/mcp/$server"
+    SERVER_DIR="$PROJECT_ROOT/go/eac/mcp/$server"
     if [ -d "$SERVER_DIR" ]; then
         cd "$SERVER_DIR"
 

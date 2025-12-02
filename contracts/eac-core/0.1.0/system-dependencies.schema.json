@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/system-dependencies/0.1.0",
+  "title": "System Dependencies Contract Schema",
+  "description": "Schema for system dependency definitions used by build and test systems",
+  "type": "object",
+  "properties": {
+    "dependencies": {
+      "type": "array",
+      "description": "System dependency definitions",
+      "items": {
+        "$ref": "#/definitions/dependency"
+      }
+    }
+  },
+  "required": ["dependencies"],
+  "definitions": {
+    "dependency": {
+      "type": "object",
+      "description": "A system dependency definition",
+      "properties": {
+        "moniker": {
+          "type": "string",
+          "description": "Unique identifier for the dependency",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the dependency"
+        },
+        "version": {
+          "type": "string",
+          "description": "Minimum required version (e.g., '1.21') or 'any' for no version check"
+        },
+        "verify": {
+          "$ref": "#/definitions/verify"
+        }
+      },
+      "required": ["moniker", "name", "version", "verify"]
+    },
+    "verify": {
+      "type": "object",
+      "description": "Verification method for the dependency",
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Command-based verification",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "Command to run to check availability and version"
+            },
+            "pattern": {
+              "type": "string",
+              "description": "Regex pattern to extract version from command output. First capture group is the version."
+            }
+          },
+          "required": ["command", "pattern"]
+        },
+        {
+          "type": "object",
+          "description": "Environment variable verification",
+          "properties": {
+            "env_vars": {
+              "type": "array",
+              "description": "Environment variables to check",
+              "items": {
+                "type": "string"
+              }
+            },
+            "require": {
+              "type": "string",
+              "description": "Requirement mode: 'any' (at least one) or 'all' (all required)",
+              "enum": ["any", "all"],
+              "default": "any"
+            }
+          },
+          "required": ["env_vars"]
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "dependencies": [
+        {
+          "moniker": "go",
+          "name": "Go",
+          "version": "1.21",
+          "verify": {
+            "command": "go version",
+            "pattern": "go version go(\\d+\\.\\d+)"
+          }
+        },
+        {
+          "moniker": "docker",
+          "name": "Docker",
+          "version": "20.10",
+          "verify": {
+            "command": "docker info",
+            "pattern": "Server Version: (\\d+\\.\\d+)"
+          }
+        }
+      ]
+    }
+  ]
+}

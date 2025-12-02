@@ -74,7 +74,7 @@ modules:
     type: go-r2r-extension
     description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
     depends_on:
-      - src-commands
+      - eac-commands
     files:
       root: containers/ext-eac
       source:
@@ -111,9 +111,9 @@ modules:
   - moniker: scripts-implicit-cli
     name: Go Command Invoker Scripts
     type: scripts-package
-    description: Cross-shell wrappers with tab completion for running Go commands from src/commands/
+    description: Cross-shell wrappers with tab completion for running Go commands from go/eac/commands/
     depends_on:
-      - src-commands
+      - eac-commands
     files:
       root: scripts
       source:
@@ -132,7 +132,7 @@ modules:
     type: repository-root
     description: Repository root module including configuration files, build tools, and git settings
     depends_on:
-      - src-core
+      - eac-core
       - r2r-config
     files:
       root: /
@@ -149,7 +149,7 @@ modules:
         - test-repository-validations.sh
         - CHANGELOG.md
       repo:
-        test_impl: src/specs/impl/repository
+        test_impl: go/eac/specs/impl/repository
         design: ""
         other:
           - .github/workflows/change-trigger.yaml
@@ -161,41 +161,41 @@ modules:
   # ============================================================================
   # Source: AI Provider Libraries
   # ============================================================================
-  - moniker: src-ai
+  - moniker: eac-ai
     name: AI Provider Libraries
     type: go-library
     description: AI/LLM provider integrations (Claude, OpenAI, Gemini) for code generation and analysis
     depends_on:
       - r2r-config
     files:
-      root: src/ai
+      root: go/eac/ai
       source:
         - "**.go"
 
   # ============================================================================
   # Source: CLI
   # ============================================================================
-  - moniker: src-cli
+  - moniker: r2r-cli
     name: The CLI of CLIs
     type: go-cli
     description: The extendable go-based CLI tool
     depends_on:
-      - src-core
+      - eac-core
     files:
-      root: src/cli
+      root: go/r2r/cli
       config:
         - go.mod
         - go.sum
-      changelog: ../../release/src-cli/CHANGELOG.md
+      changelog: ../../release/r2r-cli/CHANGELOG.md
       workflows:
-        ci: .github/workflows/ci-src-cli.yaml
-        release: .github/workflows/release-src-cli.yml
+        ci: .github/workflows/ci-r2r-cli.yaml
+        release: .github/workflows/release-r2r-cli.yml
       repo:
-        test_impl: src/specs/impl/src-cli
+        test_impl: go/eac/specs/impl/r2r-cli
         other:
-          - contracts/src-cli/**
-          - .github/workflows/ci-src-cli.yaml
-          - .github/workflows/release-src-cli.yml
+          - contracts/r2r-cli/**
+          - .github/workflows/ci-r2r-cli.yaml
+          - .github/workflows/release-r2r-cli.yml
     metadata:
       exe-linux-amd64: r2r-linux-amd64
       exe-linux-arm64: r2r-linux-arm64
@@ -211,7 +211,7 @@ modules:
     type: scripts-package
     description: Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases
     depends_on:
-      - src-core
+      - eac-core
     files:
       root: scripts
       source:
@@ -222,90 +222,85 @@ modules:
         ci: .github/workflows/ci-scripts-cli-installer.yaml
         release: ""
       repo:
-        test_impl: src/specs/impl/scripts-cli-installer
+        test_impl: go/eac/specs/impl/scripts-cli-installer
         other:
           - .github/workflows/ci-scripts-cli-installer.yaml
 
   # ============================================================================
   # Source: Commands Library
   # ============================================================================
-  - moniker: src-commands
+  - moniker: eac-commands
     name: Go Commands Library
     type: go-commands
     description: Go library containing CLI command implementations
     depends_on:
-      - src-ai
-      - src-core
+      - eac-ai
+      - eac-core
     files:
-      root: src/commands
+      root: go/eac/commands
       exclude:
         - ext/**
       workflows:
-        ci: .github/workflows/ci-src-commands.yaml
+        ci: .github/workflows/ci-eac-commands.yaml
         release: ""
       repo:
-        test_impl: src/specs/impl/src-commands
+        test_impl: go/eac/specs/impl/eac-commands
         other:
-          - .github/workflows/ci-src-commands.yaml
+          - .github/workflows/ci-eac-commands.yaml
           - "containers/mkdocs/*"
 
   # ============================================================================
   # Source: Core Domain Libraries
   # ============================================================================
-  - moniker: src-core
+  - moniker: eac-core
     name: Core Domain Libraries
     type: go-library
     description: Core library containing contracts and repository operations
     files:
-      root: src/core
+      root: go/eac/core
       config:
         - go.mod
         - go.sum
         - contracts/schema/schemas/*.json
-      workflows:
-        ci: .github/workflows/ci-src-core.yaml
-        release: ""
       repo:
-        test_impl: src/specs/impl/src-core
+        test_impl: go/eac/specs/impl/eac-core
         other:
-          - contracts/src-core/**
-          - src/core/ai/**
-          - src/core/markdown/**
-          - src/core/module-deps/**
-          - src/core/environments/**
-          - src/.template/**
-          - .github/workflows/ci-src-core.yaml
+          - contracts/eac-core/**
+          - go/eac/core/ai/**
+          - go/eac/core/markdown/**
+          - go/eac/core/module-deps/**
+          - go/eac/core/environments/**
 
   # ============================================================================
   # Source: MCP Commands Server
   # ============================================================================
-  - moniker: src-mcp-commands
+  - moniker: eac-mcp-commands
     name: Go Commands MCP Server
     type: go-mcp
     description: Internal MCP server for Commands
     depends_on:
-      - src-core
+      - eac-core
     files:
-      root: src/mcp/commands
+      root: go/eac/mcp/commands
       workflows:
-        ci: .github/workflows/ci-src-mcp-commands.yaml
+        ci: .github/workflows/ci-eac-mcp-commands.yaml
         release: ""
       repo:
         test_impl: ""
         other:
-          - .github/workflows/ci-src-mcp-commands.yaml
+          - .github/workflows/ci-eac-mcp-commands.yaml
 
   # ============================================================================
   # Source: Specs Shared Infrastructure
   # ============================================================================
-  - moniker: src-specs
+  - moniker: eac-specs
     name: Specs Shared Infrastructure
     type: go-tests
     description: Shared godog test runner, context, and common steps for BDD specs
     depends_on:
-      - src-core
+      - eac-core
     files:
-      root: src/specs
+      root: go/eac/specs
       source:
         - "internal/**/*.go"
       exclude:
@@ -341,7 +336,7 @@ modules:
     type: vscode-ext
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
     files:
-      root: .vscode/extensions/vscode-ext-commit
+      root: typescript/vscode-ext-commit
       source:
         - "src/**/*.ts"
       tests:
@@ -352,8 +347,8 @@ modules:
           - "specs/vscode-ext-commit/**"
         other:
           - contracts/vscode-commit/**
-          - ".vscode/extensions/vscode-ext-commit/*"
-          - ".vscode/extensions/vscode-ext-commit/test/*"
+          - "typescript/vscode-ext-commit/*"
+          - "typescript/vscode-ext-commit/test/*"
 
   # ============================================================================
   # Release Documentation

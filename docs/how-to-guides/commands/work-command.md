@@ -266,7 +266,7 @@ Run multiple AI agents simultaneously in different workspaces without conflicts.
 Example output:
 
 ```text
-feat(src-core): implement JWT authentication system
+feat(eac-core): implement JWT authentication system
 
 Add secure authentication with JWT tokens:
 - Token generation and validation
@@ -274,8 +274,8 @@ Add secure authentication with JWT tokens:
 - Session management middleware
 
 Files modified:
-- src/core/auth.go (new)
-- src/core/auth_test.go (new)
+- go/eac/core/auth.go (new)
+- go/eac/core/auth_test.go (new)
 ```
 
 ## Summary

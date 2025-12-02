@@ -1,0 +1,23 @@
+@deps:go @ov
+Feature: eac-commands_user-auth
+
+  As a developer
+  I want to authenticate users
+  So that I can secure my application
+
+  Background:
+    Given the system is initialized
+
+  Rule: User authentication must be secure
+
+    @L2 @ov
+    Scenario: Basic user authentication works
+      When I attempt to authenticate
+      Then the user is authenticated successfully
+      And the session is created
+
+    @L2 @ov
+    Scenario: Invalid credentials are rejected
+      When I attempt to authenticate with invalid credentials
+      Then the authentication fails
+      And an error message is displayed

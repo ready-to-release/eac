@@ -33,13 +33,13 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/cli/go.sum
+            go/eac/commands/go.sum
+            go/r2r/cli/go.sum
 
       - name: Build extension using EAC build system
         run: |
           echo "Building ext-eac using EAC build system..."
-          go run ./src/commands build ext-eac
+          go run ./go/eac/commands build ext-eac
 
           echo ""
           echo "Verifying image was built..."
@@ -113,7 +113,7 @@ jobs:
             echo "- Go compilation error" >> $GITHUB_STEP_SUMMARY
             echo "- Registry authentication failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -165,17 +165,17 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/cli/go.sum
+            go/eac/commands/go.sum
+            go/r2r/cli/go.sum
 
       - name: Build r2r CLI
         run: |
           echo "Building r2r CLI using EAC build system..."
-          go run ./src/commands build src-cli
+          go run ./go/eac/commands build r2r-cli
 
           echo ""
           echo "Copying Linux binary to workspace root..."
-          cp out/build/src-cli/r2r-linux-amd64 ./r2r
+          cp out/build/r2r-cli/r2r-linux-amd64 ./r2r
           chmod +x ./r2r
 
           echo ""
@@ -268,7 +268,7 @@ jobs:
             echo "- Extension command returned non-zero exit code" >> $GITHUB_STEP_SUMMARY
             echo "- Test timeout exceeded" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 

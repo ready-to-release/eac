@@ -186,8 +186,8 @@ flowchart TD
 ```mermaid
 flowchart TD
     Feature[Feature: cli_init-project] --> Spec[specs/cli/init-project/<br/>specification.feature]
-    Feature --> Steps[src/cli/tests/<br/>steps_test.go]
-    Feature --> Unit[src/cli/<br/>*_test.go]
+    Feature --> Steps[go/r2r/cli/tests/<br/>steps_test.go]
+    Feature --> Unit[go/r2r/cli/<br/>*_test.go]
 
     Spec --> Rules[Rule blocks]
     Spec --> Scenarios[Scenario blocks]

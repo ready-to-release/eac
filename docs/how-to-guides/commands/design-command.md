@@ -16,13 +16,13 @@
 
 ```bash
 # Generate architecture for a module
-r2r eac create design src-commands
+r2r eac create design eac-commands
 
 # Validate workspace.dsl syntax
-r2r eac validate design src-commands
+r2r eac validate design eac-commands
 
 # View diagrams in browser
-r2r eac serve design src-commands
+r2r eac serve design eac-commands
 ```
 
 ## Typical Workflow
@@ -61,7 +61,7 @@ r2r eac serve design src-api
 
 ```bash
 # Generate with debug output
-r2r eac create design src-core --debug
+r2r eac create design eac-core --debug
 
 # Inspect intermediate files
 cat out/logs/design/debug-full-prompt.md
@@ -87,8 +87,8 @@ r2r eac create design <module> [options]
 # Examples:
 r2r eac create design src-auth
 r2r eac create design src-api --output custom/path/workspace.dsl
-r2r eac create design src-core --force
-r2r eac create design src-commands --debug
+r2r eac create design eac-core --force
+r2r eac create design eac-commands --debug
 r2r eac create design src-module --skip-validation
 ```
 
@@ -121,7 +121,7 @@ r2r eac update design <module> [options]
 # Examples:
 r2r eac update design src-auth
 r2r eac update design src-api --skip-validation
-r2r eac update design src-core --debug
+r2r eac update design eac-core --debug
 ```
 
 **What it does:**
@@ -520,7 +520,7 @@ Images are pulled automatically on first use.
 
 ```bash
 # Generate for multiple modules
-for module in src-auth src-api src-core; do
+for module in src-auth src-api eac-core; do
   r2r eac create design $module
 done
 

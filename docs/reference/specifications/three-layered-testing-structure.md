@@ -15,8 +15,8 @@ Each layer serves a distinct purpose, uses different tools, and addresses differ
 | Layer         | Question | Stakeholders | Tool | Representation | Location |
 |---------------|----------|--------------|------|----------------|----------|
 | **Rule**      | "What business value?" | Product Owner, Business | Godog | `Rule:` blocks | `specs/` |
-| **Scenario**  | "How does user interact?" | QA, Developers, Product | Godog | `Scenario:` under Rules | `specs/` + `src/tests/` |
-| **Unit test** | "Does code work?" | Developers | Go test | Unit test functions | `src/*_test.go` |
+| **Scenario**  | "How does user interact?" | QA, Developers, Product | Godog | `Scenario:` under Rules | `specs/` + `go/eac/specs/impl/` |
+| **Unit test** | "Does code work?" | Developers | Go test | Unit test functions | `go/**/*_test.go` |
 
 ### Layer 1: Rule
 
@@ -55,7 +55,7 @@ Rule: Creates project directory structure
     Given I am in an empty folder
     When I run "simply init"
     Then a file named "simply.yaml" should be created
-    And a directory named "src/" should exist
+    And a directory named "go/" should exist
 
   @ov
   Scenario: Initialize in existing project
@@ -67,7 +67,7 @@ Rule: Creates project directory structure
 
 **Origin**: <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> Green cards from Example Mapping
 **Location**: `specs/<module>/<feature>/specification.feature`
-**Implementation**: `src/<module>/tests/steps_test.go`
+**Implementation**: `go/eac/specs/impl/<module>/steps.go`
 
 ### Layer 3: Unit Tests
 

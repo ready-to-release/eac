@@ -69,7 +69,7 @@ When you start Claude Code:
 
 1. Claude reads `.claude/settings.json` in the project root
 2. Launches MCP servers as child processes:
-   - Commands: `go run ./src/mcp/commands/main.go` (local implementation)
+   - Commands: `go run ./go/eac/mcp/commands/main.go` (local implementation)
    - GitHub: Official GitHub MCP server (configured via npx or direct installation)
 3. Servers inherit environment variables from your shell
 4. Claude can call MCP tools like `mcp__commands__show-modules` and `mcp__github__*`
@@ -90,7 +90,7 @@ go version  # Should be ≥ 1.21
 
 ```bash
 # Test commands server (local)
-go run ./src/mcp/commands/main.go < /dev/null
+go run ./go/eac/mcp/commands/main.go < /dev/null
 
 # GitHub server uses official implementation - check .claude/settings.json for configuration
 # Verify GitHub token is set:

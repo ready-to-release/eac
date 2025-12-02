@@ -23,9 +23,9 @@ r2r eac release calver auth --create --push
 # Check CI status before release
 r2r eac release check-ci --workflow=ci --commit=abc123
 
-# Release src-cli with SemVer
-r2r eac release src-cli 1.2.0 --dry-run
-r2r eac release src-cli 1.2.0
+# Release r2r-cli with SemVer
+r2r eac release r2r-cli 1.2.0 --dry-run
+r2r eac release r2r-cli 1.2.0
 ```
 
 ## Command Reference
@@ -104,22 +104,22 @@ r2r eac release check-ci --workflow=test --commit=$(git rev-parse HEAD)
 - Manual release workflows requiring approval
 - Hotfix releases requiring immediate CI confirmation
 
-### release src-cli
+### release r2r-cli
 
-Create a semantic version tag for the src-cli tool in the format `src-cli/x.y.z`.
+Create a semantic version tag for the r2r-cli tool in the format `r2r-cli/x.y.z`.
 
 ```bash
-r2r eac release src-cli <version> [options]
+r2r eac release r2r-cli <version> [options]
 
 # Options:
 --dry-run              # Show what would happen without creating tag
 --push                 # Push tag to remote (default: true)
 
 # Examples:
-r2r eac release src-cli 1.2.0 --dry-run        # Preview release
-r2r eac release src-cli 1.2.0                  # Create and push tag
-r2r eac release src-cli 1.2.0 --push=false     # Create tag locally only
-r2r eac release src-cli 2.0.0-beta.1           # Pre-release version
+r2r eac release r2r-cli 1.2.0 --dry-run        # Preview release
+r2r eac release r2r-cli 1.2.0                  # Create and push tag
+r2r eac release r2r-cli 1.2.0 --push=false     # Create tag locally only
+r2r eac release r2r-cli 2.0.0-beta.1           # Pre-release version
 ```
 
 **Version Format:**
@@ -132,8 +132,8 @@ Must follow SemVer specification:
 
 **Tag Format:**
 
-- Version `1.2.0` creates tag `src-cli/1.2.0`
-- Version `2.0.0-beta.1` creates tag `src-cli/2.0.0-beta.1`
+- Version `1.2.0` creates tag `r2r-cli/1.2.0`
+- Version `2.0.0-beta.1` creates tag `r2r-cli/2.0.0-beta.1`
 
 **Validation:**
 
@@ -153,7 +153,7 @@ Must follow SemVer specification:
 - Multiple releases per day are possible
 - Breaking changes are managed through API versioning
 
-**Use SemVer (`release src-cli`) when:**
+**Use SemVer (`release r2r-cli`) when:**
 
 - Versioning developer tools and libraries
 - Version communicates compatibility (breaking, features, fixes)
@@ -248,13 +248,13 @@ git push origin main
 r2r eac release check-ci --workflow=ci --commit=HEAD
 
 # 4. Preview release
-r2r eac release src-cli 1.2.0 --dry-run
+r2r eac release r2r-cli 1.2.0 --dry-run
 
 # 5. Create and push release
-r2r eac release src-cli 1.2.0
+r2r eac release r2r-cli 1.2.0
 
 # 6. Verify tag
-git tag -l "src-cli/*"
+git tag -l "r2r-cli/*"
 ```
 
 ### Hotfix Release
@@ -474,7 +474,7 @@ jobs:
 - **Tag from main**: Always create tags from the main branch
 - **Document releases**: Update CHANGELOG for important releases
 - **Consistent prefixes**: Use module monikers as CalVer prefixes
-- **SemVer for tools**: Use `release src-cli` for developer-facing tools
+- **SemVer for tools**: Use `release r2r-cli` for developer-facing tools
 - **CalVer for services**: Use `release calver` for deployed modules
 - **Push carefully**: Ensure tag is correct before pushing to remote
 - **Fetch tags**: Run `git fetch --tags` before checking for duplicates
@@ -546,10 +546,10 @@ release_after_ci auth HEAD
 
 ```bash
 # SemVer supports pre-release identifiers
-r2r eac release src-cli 2.0.0-alpha.1 --dry-run
-r2r eac release src-cli 2.0.0-beta.1
-r2r eac release src-cli 2.0.0-rc.1
-r2r eac release src-cli 2.0.0  # Final release
+r2r eac release r2r-cli 2.0.0-alpha.1 --dry-run
+r2r eac release r2r-cli 2.0.0-beta.1
+r2r eac release r2r-cli 2.0.0-rc.1
+r2r eac release r2r-cli 2.0.0  # Final release
 ```
 
 ### Tag Cleanup
@@ -659,8 +659,8 @@ Do not proceed with release.
 1. Update version in code/docs
 2. Commit and push version bump
 3. Wait for CI: `r2r eac release check-ci --workflow=ci --commit=HEAD`
-4. Preview: `r2r eac release src-cli <version> --dry-run`
-5. Release: `r2r eac release src-cli <version>`
+4. Preview: `r2r eac release r2r-cli <version> --dry-run`
+5. Release: `r2r eac release r2r-cli <version>`
 
 **Key differences:**
 

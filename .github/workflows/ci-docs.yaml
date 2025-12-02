@@ -29,10 +29,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-          cache-dependency-path: src/commands/go.sum
+          cache-dependency-path: go/eac/commands/go.sum
 
       - name: Build Module
-        working-directory: ./src/commands
+        working-directory: ./go/eac/commands
         run: go run . build docs
 
       - name: Upload Build Artifacts
@@ -56,7 +56,7 @@ jobs:
             echo "- Missing markdown files referenced in nav" >> $GITHUB_STEP_SUMMARY
             echo "- Broken internal links" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -87,7 +87,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-          cache-dependency-path: src/commands/go.sum
+          cache-dependency-path: go/eac/commands/go.sum
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -96,7 +96,7 @@ jobs:
           path: out/build/docs
 
       - name: Test Module
-        working-directory: ./src/commands
+        working-directory: ./go/eac/commands
         run: go run . test docs
 
       - name: Test Summary
@@ -109,7 +109,7 @@ jobs:
           else
             echo "❌ Documentation validation tests failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./src/commands ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
+            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Checks Performed" >> $GITHUB_STEP_SUMMARY
