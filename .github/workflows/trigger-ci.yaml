@@ -76,7 +76,7 @@ jobs:
 
             # Dynamically discover all CI workflows by scanning for ci-*.yaml files
             WORKFLOW_MODULES=""
-            for workflow in ../../.github/workflows/ci-*.yaml; do
+            for workflow in ../../../.github/workflows/ci-*.yaml; do
               if [ -f "$workflow" ]; then
                 # Extract module name from ci-<module>.yaml
                 module=$(basename "$workflow" .yaml | sed 's/^ci-//')
@@ -145,7 +145,7 @@ jobs:
             # Filter to only modules that have workflows
             WORKFLOW_MODULES=""
             for module in $MODULES; do
-              if [ -f "../../.github/workflows/ci-${module}.yaml" ]; then
+              if [ -f "../../../.github/workflows/ci-${module}.yaml" ]; then
                 WORKFLOW_MODULES="$WORKFLOW_MODULES $module"
               fi
             done
