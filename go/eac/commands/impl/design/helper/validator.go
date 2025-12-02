@@ -18,16 +18,29 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// ValidationResult represents the outcome of validating a workspace
-type ValidationResult struct {
-	Module        string              `json:"module"`          // Module name (e.g., "r2r-cli")
-	WorkspacePath string              `json:"workspace_path"`  // Path to workspace.dsl file
-	Valid         bool                `json:"valid"`           // Overall validation status
+// FileValidationResult represents the outcome of validating a single DSL file
+type FileValidationResult struct {
+	FileName      string              `json:"file_name"`       // File name (e.g., "workspace.dsl")
+	FilePath      string              `json:"file_path"`       // Full path to file
+	Valid         bool                `json:"valid"`           // Validation status for this file
 	Errors        []ValidationMessage `json:"errors"`          // Validation errors
 	Warnings      []ValidationMessage `json:"warnings"`        // Validation warnings
 	RawOutput     string              `json:"raw_output"`      // Raw Structurizr CLI output
 	ExecutionTime time.Duration       `json:"execution_time"`  // Time taken to validate
-	Timestamp     time.Time           `json:"timestamp"`       // When validation occurred
+}
+
+// ValidationResult represents the outcome of validating a module's workspace(s)
+type ValidationResult struct {
+	Module        string                 `json:"module"`          // Module name (e.g., "r2r-cli")
+	WorkspacePath string                 `json:"workspace_path"`  // Path to workspace.dsl file (backward compat)
+	Valid         bool                   `json:"valid"`           // Overall validation status
+	Errors        []ValidationMessage    `json:"errors"`          // Validation errors (backward compat)
+	Warnings      []ValidationMessage    `json:"warnings"`        // Validation warnings (backward compat)
+	RawOutput     string                 `json:"raw_output"`      // Raw Structurizr CLI output (backward compat)
+	ExecutionTime time.Duration          `json:"execution_time"`  // Time taken to validate
+	Timestamp     time.Time              `json:"timestamp"`       // When validation occurred
+	Files         []FileValidationResult `json:"files,omitempty"` // Individual file results (multi-file mode)
+	TotalFiles    int                    `json:"total_files"`     // Number of files validated
 }
 
 // ValidationMessage represents a single error or warning
@@ -52,8 +65,12 @@ type ValidationSummary struct {
 
 // StructurizrValidator validates workspaces using Structurizr CLI via Docker
 type StructurizrValidator interface {
-	// ValidateModule validates a single module's workspace
+	// ValidateModule validates a single module's workspace(s)
+	// Validates all DSL files in the module's .design folder (except _*.dsl fragments)
 	ValidateModule(moduleName string) (*ValidationResult, error)
+
+	// ValidateModuleFile validates a specific DSL file within a module
+	ValidateModuleFile(moduleName, fileName string) (*ValidationResult, error)
 
 	// ValidateAll validates all modules with workspaces
 	ValidateAll() (*ValidationSummary, error)
@@ -71,13 +88,15 @@ func NewValidator() (StructurizrValidator, error) {
 	return &StructurizrValidatorImpl{}, nil
 }
 
-// moduleInfo represents a module with a workspace file
+// moduleInfo represents a module with workspace file(s)
 type moduleInfo struct {
-	Name string
-	Path string
+	Name  string   // Module name/moniker
+	Path  string   // Path to .design directory
+	Files []string // List of DSL files (full paths)
 }
 
-// listAvailableModules returns all modules that have workspace.dsl files
+// listAvailableModules returns all modules that have DSL files in their .design folder
+// Uses the new multi-file discovery (excludes _*.dsl fragments)
 func listAvailableModules() ([]moduleInfo, error) {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
@@ -105,13 +124,19 @@ func listAvailableModules() ([]moduleInfo, error) {
 		}
 
 		moduleName := entry.Name()
-		workspacePath := repository.WorkspaceDSLPath(repoRoot, moduleName)
 
-		// Check if workspace.dsl exists
-		if _, err := os.Stat(workspacePath); err == nil {
+		// Use new multi-file discovery
+		files, err := repository.WorkspaceDSLFiles(repoRoot, moduleName)
+		if err != nil {
+			continue // Skip modules with errors
+		}
+
+		// Only include modules with at least one DSL file
+		if len(files) > 0 {
 			modules = append(modules, moduleInfo{
-				Name: moduleName,
-				Path: repository.DesignPath(repoRoot, moduleName),
+				Name:  moduleName,
+				Path:  repository.DesignPath(repoRoot, moduleName),
+				Files: files,
 			})
 		}
 	}
@@ -126,7 +151,8 @@ func (v *StructurizrValidatorImpl) IsDockerRunning() bool {
 	return err == nil
 }
 
-// ValidateModule validates a single module's workspace
+// ValidateModule validates all DSL files in a module's .design folder
+// Files starting with "_" are skipped (they are fragments for !include)
 func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*ValidationResult, error) {
 	// Check Docker first
 	if !v.IsDockerRunning() {
@@ -139,22 +165,128 @@ func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*Validatio
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Construct workspace path: specs/<module>/.design/workspace.dsl
-	workspacePath := repository.WorkspaceDSLPath(repoRoot, moduleName)
-
-	// Verify workspace file exists
-	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("workspace file not found: %s", workspacePath)
+	// Get all DSL files for this module
+	files, err := repository.WorkspaceDSLFiles(repoRoot, moduleName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list DSL files: %w", err)
 	}
 
-	// Use ValidateWorkspacePath to perform the actual validation
-	result, err := v.ValidateWorkspacePath(workspacePath)
+	if len(files) == 0 {
+		return nil, fmt.Errorf("no DSL files found in %s", repository.DesignPath(repoRoot, moduleName))
+	}
+
+	// Start timing
+	startTime := time.Now()
+
+	// Initialize result
+	result := &ValidationResult{
+		Module:     moduleName,
+		Valid:      true,
+		Errors:     []ValidationMessage{},
+		Warnings:   []ValidationMessage{},
+		Files:      make([]FileValidationResult, 0, len(files)),
+		TotalFiles: len(files),
+		Timestamp:  time.Now(),
+	}
+
+	// Validate each file
+	for _, filePath := range files {
+		fileName := filepath.Base(filePath)
+
+		fileStartTime := time.Now()
+		rawOutput, err := v.executeDockerValidation(filePath)
+		fileExecutionTime := time.Since(fileStartTime)
+
+		fileResult := FileValidationResult{
+			FileName:      fileName,
+			FilePath:      filePath,
+			Valid:         true,
+			Errors:        []ValidationMessage{},
+			Warnings:      []ValidationMessage{},
+			RawOutput:     rawOutput,
+			ExecutionTime: fileExecutionTime,
+		}
+
+		if err != nil {
+			fileResult.Valid = false
+			fileResult.Errors = append(fileResult.Errors, ValidationMessage{
+				Severity: "error",
+				Message:  fmt.Sprintf("Validation execution failed: %v", err),
+			})
+		} else {
+			// Parse output
+			parsed := v.parseValidationOutput(rawOutput)
+			fileResult.Valid = parsed.Valid
+			fileResult.Errors = parsed.Errors
+			fileResult.Warnings = parsed.Warnings
+		}
+
+		// Update overall result
+		if !fileResult.Valid {
+			result.Valid = false
+		}
+		result.Errors = append(result.Errors, fileResult.Errors...)
+		result.Warnings = append(result.Warnings, fileResult.Warnings...)
+		result.Files = append(result.Files, fileResult)
+
+		// For backward compatibility, set WorkspacePath and RawOutput from first file
+		if len(result.Files) == 1 {
+			result.WorkspacePath = filePath
+			result.RawOutput = rawOutput
+		}
+	}
+
+	result.ExecutionTime = time.Since(startTime)
+
+	return result, nil
+}
+
+// ValidateModuleFile validates a specific DSL file within a module
+func (v *StructurizrValidatorImpl) ValidateModuleFile(moduleName, fileName string) (*ValidationResult, error) {
+	// Check Docker first
+	if !v.IsDockerRunning() {
+		return nil, fmt.Errorf("Docker is not running. Please start Docker to use validation")
+	}
+
+	// Get repository root
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to find repository root: %w", err)
+	}
+
+	// Ensure fileName has .dsl extension
+	if !strings.HasSuffix(fileName, ".dsl") {
+		fileName = fileName + ".dsl"
+	}
+
+	// Construct file path
+	filePath := filepath.Join(repository.DesignPath(repoRoot, moduleName), fileName)
+
+	// Verify file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("DSL file not found: %s", filePath)
+	}
+
+	// Validate using ValidateWorkspacePath
+	result, err := v.ValidateWorkspacePath(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set module name
+	// Set module name and file info
 	result.Module = moduleName
+	result.TotalFiles = 1
+	result.Files = []FileValidationResult{
+		{
+			FileName:      fileName,
+			FilePath:      filePath,
+			Valid:         result.Valid,
+			Errors:        result.Errors,
+			Warnings:      result.Warnings,
+			RawOutput:     result.RawOutput,
+			ExecutionTime: result.ExecutionTime,
+		},
+	}
 
 	return result, nil
 }
@@ -186,6 +318,7 @@ func (v *StructurizrValidatorImpl) ValidateWorkspacePath(workspacePath string) (
 	result.WorkspacePath = workspacePath
 	result.ExecutionTime = executionTime
 	result.Timestamp = time.Now()
+	result.TotalFiles = 1
 
 	return result, nil
 }
@@ -264,25 +397,38 @@ func (v *StructurizrValidatorImpl) executeDockerValidation(workspacePath string)
 		return "", fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
-	// Get directory containing workspace.dsl
-	workspaceDir := filepath.Dir(absWorkspacePath)
-	workspaceFile := filepath.Base(absWorkspacePath)
+	// Get repository root to mount the entire specs directory
+	// This allows !include paths like ../../repository/.design/_styles.dsl to work
+	repoRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		return "", fmt.Errorf("failed to get repository root: %w", err)
+	}
+
+	specsDir := filepath.Join(repoRoot, "specs")
+
+	// Calculate relative path from specs dir to workspace file
+	relWorkspacePath, err := filepath.Rel(specsDir, absWorkspacePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to get relative path: %w", err)
+	}
+	// Convert to Unix-style path for Docker
+	relWorkspacePath = filepath.ToSlash(relWorkspacePath)
 
 	// Convert Windows path to Docker volume format
-	dockerVolume := formatDockerVolume(workspaceDir)
+	dockerVolume := formatDockerVolume(specsDir)
 
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), DockerValidationTimeout)
 	defer cancel()
 
 	// Use Structurizr CLI for validation
-	// Run it directly without -d flag so we can capture output immediately
+	// Mount entire specs directory so relative !include paths work
 	cmd := exec.CommandContext(ctx, "docker", "run",
 		"--rm",
 		"-v", dockerVolume+":"+DockerWorkspaceMount,
 		StructurizrCLIImage,
 		"validate",
-		"-workspace", DockerWorkspaceMount+"/"+workspaceFile,
+		"-workspace", DockerWorkspaceMount+"/"+relWorkspacePath,
 	)
 
 	// Create limited buffers to prevent memory exhaustion
@@ -451,5 +597,17 @@ func (s ValidationSummary) MarshalJSON() ([]byte, error) {
 	}{
 		ExecutionTime: s.ExecutionTime.String(),
 		Alias:         (*Alias)(&s),
+	})
+}
+
+// MarshalJSON customizes JSON encoding for time.Duration in file results
+func (f FileValidationResult) MarshalJSON() ([]byte, error) {
+	type Alias FileValidationResult
+	return json.Marshal(&struct {
+		ExecutionTime string `json:"execution_time"`
+		*Alias
+	}{
+		ExecutionTime: f.ExecutionTime.String(),
+		Alias:         (*Alias)(&f),
 	})
 }

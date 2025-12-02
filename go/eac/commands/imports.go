@@ -37,6 +37,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/apply/docs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/install/reports"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/list"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/tags"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/test"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/design"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate"

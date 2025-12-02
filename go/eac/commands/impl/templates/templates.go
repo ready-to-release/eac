@@ -29,7 +29,7 @@ func Templates() int {
 	case "--help", "-h":
 		printTemplatesUsage()
 		return 0
-	case "apply", "install", "list":
+	case "apply", "install", "list", "tags":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -48,6 +48,7 @@ func printTemplatesUsage() {
 	log.Info("  apply                     Apply templates with variable substitution")
 	log.Info("  install                   Install template files to local directory")
 	log.Info("  list                      List all placeholder variables in templates")
+	log.Info("  tags                      Extract and validate Gherkin tags from templates")
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # List all template variables")
@@ -58,6 +59,9 @@ func printTemplatesUsage() {
 	log.Info("")
 	log.Info("  # Apply documentation templates")
 	log.Info("  r2r templates apply docs")
+	log.Info("")
+	log.Info("  # Extract and validate template tags")
+	log.Info("  r2r templates tags")
 	log.Info("")
 	log.Info("Use 'r2r templates <subcommand> --help' for more information about a command.")
 }
