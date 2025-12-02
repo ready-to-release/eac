@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.4
 
 require (
-	github.com/anthropics/anthropic-sdk-go v1.17.0
+	github.com/anthropics/anthropic-sdk-go v1.19.0
 	github.com/google/generative-ai-go v0.20.1
 	github.com/ready-to-release/eac/go/eac/core v0.0.0-20251128132854-0107bb34781b
 	github.com/sashabaranov/go-openai v1.41.2
