@@ -11,7 +11,7 @@ import (
 
 func TestRepositoryFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../specs/repository",
+		SpecsPath:         "../../../../../specs/repository",
 		DefaultReportName: "cucumber-repository",
 		RegisterSteps:     RegisterSteps,
 	}

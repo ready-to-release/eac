@@ -105,6 +105,62 @@ func WorkspaceDSLPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, SpecsDir, moniker, DesignDir, WorkspaceDSL)
 }
 
+// WorkspaceDSLFiles returns all validatable DSL files in a module's .design folder.
+// Files starting with "_" are considered fragments (for !include) and are excluded.
+// Returns paths sorted with workspace.dsl first if present.
+// Example: specs/r2r-cli/.design/*.dsl (excluding _*.dsl)
+func WorkspaceDSLFiles(repoRoot, moniker string) ([]string, error) {
+	designDir := filepath.Join(repoRoot, SpecsDir, moniker, DesignDir)
+
+	// Check if design directory exists
+	if _, err := os.Stat(designDir); os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	entries, err := os.ReadDir(designDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var files []string
+	var hasMainWorkspace bool
+
+	for _, entry := range entries {
+		name := entry.Name()
+
+		// Skip directories
+		if entry.IsDir() {
+			continue
+		}
+
+		// Skip files not ending in .dsl
+		if !strings.HasSuffix(name, ".dsl") {
+			continue
+		}
+
+		// Skip fragment files (underscore prefix - used for !include)
+		if strings.HasPrefix(name, "_") {
+			continue
+		}
+
+		fullPath := filepath.Join(designDir, name)
+
+		// Track if we have the main workspace.dsl
+		if name == WorkspaceDSL {
+			hasMainWorkspace = true
+			// Prepend workspace.dsl so it's validated first
+			files = append([]string{fullPath}, files...)
+		} else {
+			files = append(files, fullPath)
+		}
+	}
+
+	// If no main workspace.dsl but other files exist, that's fine
+	_ = hasMainWorkspace
+
+	return files, nil
+}
+
 // EACConfigPath returns the path to the EAC configuration directory
 // Example: .r2r/eac
 func EACConfigPath(repoRoot string) string {

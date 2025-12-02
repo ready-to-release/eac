@@ -9,6 +9,10 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         claude_api = softwareSystem "Claude API" "AI service for generation tasks" "External"
         github_api = softwareSystem "GitHub API" "GitHub integration for PRs and CI" "External"
         git_system = softwareSystem "Git" "Version control and worktree management" "External"
+        trivy = softwareSystem "Trivy" "Security scanner for vulnerabilities, SBOM, secrets, compliance, and IaC" "External"
+        semgrep = softwareSystem "Semgrep" "Static Application Security Testing (SAST)" "External"
+        owasp_zap = softwareSystem "OWASP ZAP" "Dynamic Application Security Testing (DAST)" "External"
+        oscal_schemas = softwareSystem "OSCAL Schemas" "NIST OSCAL schema validation for risk documents" "External"
 
         # Main commands system
         commands_system = softwareSystem "Commands Module" "CLI command handlers and orchestration" {
@@ -98,16 +102,50 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
                 specSecurity = component "Spec Security" "Validates spec security requirements" "Go"
             }
 
-            validate_commands = container "Validate Commands" "Validates module contracts and dependency configurations." "Go" "Command" {
+            validate_commands = container "Validate Commands" "Validates module contracts, dependencies, specs, risk documents, and design DSL." "Go" "Command" {
                 contractValidator = component "Contract Validator" "Validates module contracts" "Go"
                 dependencyValidator = component "Dependency Validator" "Validates dependency graphs" "Go"
+                gherkinValidator = component "Gherkin Validator" "Validates Gherkin specification contracts" "Go"
+                riskValidator = component "Risk Validator" "Validates OSCAL profiles and assessment-results" "Go"
+                designValidatorCmd = component "Design Validator" "Validates Structurizr DSL syntax" "Go"
+                markdownValidator = component "Markdown Validator" "Validates markdown file syntax" "Go"
+                testTagValidator = component "Test Tag Validator" "Validates test tags against contracts" "Go"
             }
 
-            other_commands = container "Other Commands" "Miscellaneous commands including help, init, release, and CI utilities." "Go" "Command" {
+            security_commands = container "Security Commands" "Security scanning and evidence collection for audit compliance." "Go" "Command" {
+                vulnScanner = component "Vulnerability Scanner" "Scans for CVEs using Trivy" "Go"
+                sastScanner = component "SAST Scanner" "Static analysis using Semgrep" "Go"
+                sbomGenerator = component "SBOM Generator" "Generates Software Bill of Materials" "Go"
+                secretsScanner = component "Secrets Scanner" "Detects exposed credentials using Trivy" "Go"
+                complianceChecker = component "Compliance Checker" "Checks security standards compliance" "Go"
+                iacScanner = component "IaC Scanner" "Scans Infrastructure as Code for misconfigurations" "Go"
+                dastScanner = component "DAST Scanner" "Dynamic testing using OWASP ZAP" "Go"
+                evidenceCollector = component "Evidence Collector" "Collects security evidence for audits" "Go"
+            }
+
+            risk_commands = container "Risk Commands" "OSCAL-based risk assessment and management." "Go" "Command" {
+                riskAssessor = component "Risk Assessor" "Executes risk assessment pipelines" "Go"
+                profileGenerator = component "Profile Generator" "Creates OSCAL profiles from assessments" "Go"
+                riskReportGenerator = component "Risk Report Generator" "Generates risk assessment reports" "Go"
+                controlMapper = component "Control Mapper" "Maps findings to security controls" "Go"
+            }
+
+            release_commands = container "Release Commands" "Release management with CalVer versioning and changelog generation." "Go" "Command" {
+                calverGenerator = component "CalVer Generator" "Generates calendar-based version tags" "Go"
+                changelogManager = component "Changelog Manager" "Generates and validates changelogs" "Go"
+                releaseValidator = component "Release Validator" "Validates release readiness" "Go"
+                ciChecker = component "CI Checker" "Verifies CI status before release" "Go"
+                tagManager = component "Tag Manager" "Manages git tags for releases" "Go"
+            }
+
+            ci_commands = container "CI Commands" "CI/CD integration utilities." "Go" "Command" {
+                summaryGenerator = component "Summary Generator" "Generates CI summary diagnostics" "Go"
+            }
+
+            other_commands = container "Other Commands" "Miscellaneous commands including help and init." "Go" "Command" {
                 helpProvider = component "Help Provider" "Provides command help and documentation" "Go"
                 initProvider = component "Init Provider" "Project initialization" "Go"
-                releaseManager = component "Release Manager" "Handles CalVer releases" "Go"
-                ciUtilities = component "CI Utilities" "CI-specific utilities" "Go"
+                extensionMeta = component "Extension Meta" "Outputs extension metadata for r2r CLI" "Go"
             }
 
             render_engine = container "Render Engine" "Provides table rendering, JSON, TOML output, and custom formatters for all commands." "Go" "Infrastructure" {
@@ -158,8 +196,19 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         design_commands -> claude_api "Generates architecture diagrams" "HTTPS/REST"
         templates_commands -> claude_api "Validates templates" "HTTPS/REST"
         specs_commands -> claude_api "Generates specifications" "HTTPS/REST"
+        risk_commands -> claude_api "Generates OSCAL profiles from descriptions" "HTTPS/REST"
         work_commands -> github_api "Creates pull requests" "HTTPS/REST"
-        other_commands -> github_api "CI integrations" "HTTPS/REST"
+        release_commands -> github_api "Checks CI status and creates tags" "HTTPS/REST"
+        ci_commands -> github_api "Retrieves workflow run information" "HTTPS/REST"
+
+        # Security tool relationships
+        security_commands -> trivy "Scans vulnerabilities, secrets, compliance, SBOM, IaC" "CLI (os/exec)"
+        security_commands -> semgrep "Performs static analysis" "CLI (os/exec)"
+        security_commands -> owasp_zap "Performs dynamic security testing" "Docker API"
+
+        # Risk/OSCAL relationships
+        risk_commands -> oscal_schemas "Validates against OSCAL schema" "JSON Schema"
+        validate_commands -> oscal_schemas "Validates risk documents" "JSON Schema"
 
         # Internal command routing
         command_registry -> commit_handler "Routes commit command" "Function calls"
@@ -174,6 +223,10 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         command_registry -> templates_commands "Routes template commands" "Function calls"
         command_registry -> specs_commands "Routes specs commands" "Function calls"
         command_registry -> validate_commands "Routes validate commands" "Function calls"
+        command_registry -> security_commands "Routes security commands" "Function calls"
+        command_registry -> risk_commands "Routes risk commands" "Function calls"
+        command_registry -> release_commands "Routes release commands" "Function calls"
+        command_registry -> ci_commands "Routes CI commands" "Function calls"
         command_registry -> other_commands "Routes other commands" "Function calls"
 
         # Render engine relationships
@@ -185,12 +238,18 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         pipeline_commands -> render_engine "Renders pipeline status" "Function calls"
         work_commands -> render_engine "Renders worktree info" "Function calls"
         validate_commands -> render_engine "Renders validation results" "Function calls"
+        security_commands -> render_engine "Renders security scan results" "Function calls"
+        risk_commands -> render_engine "Renders risk reports" "Function calls"
+        release_commands -> render_engine "Renders release status" "Function calls"
+        ci_commands -> render_engine "Renders CI diagnostics" "Function calls"
         other_commands -> render_engine "Renders output" "Function calls"
 
         # Orchestrator relationships
         build_commands -> orchestrator "Uses for multi-module builds" "Function calls"
         test_commands -> orchestrator "Uses for test orchestration" "Function calls"
         pipeline_commands -> orchestrator "Uses for pipeline execution" "Function calls"
+        security_commands -> orchestrator "Uses for multi-scan orchestration" "Function calls"
+        risk_commands -> orchestrator "Uses for assessment pipeline execution" "Function calls"
 
         # Serve framework relationships
         design_commands -> serve_framework "Manages Structurizr server" "Function calls"
@@ -202,6 +261,8 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         templates_commands -> template_engine "Substitutes variables" "Function calls"
         specs_commands -> template_engine "Renders spec prompts" "Function calls"
         work_commands -> template_engine "Renders PR prompts" "Function calls"
+        risk_commands -> template_engine "Renders risk assessment prompts" "Function calls"
+        release_commands -> template_engine "Renders changelog prompts" "Function calls"
 
         # Component relationships
 
@@ -257,6 +318,26 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
         # Specs Commands components
         specsGenerator -> specsValidator "Validates generated specs" "Go function calls"
         specsValidator -> specSecurity "Validates security" "Go function calls"
+
+        # Security Commands components
+        vulnScanner -> evidenceCollector "Collects scan evidence" "Go function calls"
+        sastScanner -> evidenceCollector "Collects SAST evidence" "Go function calls"
+        sbomGenerator -> evidenceCollector "Collects SBOM evidence" "Go function calls"
+        secretsScanner -> evidenceCollector "Collects secrets scan evidence" "Go function calls"
+        complianceChecker -> evidenceCollector "Collects compliance evidence" "Go function calls"
+        iacScanner -> evidenceCollector "Collects IaC scan evidence" "Go function calls"
+        dastScanner -> evidenceCollector "Collects DAST evidence" "Go function calls"
+
+        # Risk Commands components
+        riskAssessor -> profileGenerator "Creates profiles from assessment" "Go function calls"
+        riskAssessor -> controlMapper "Maps findings to controls" "Go function calls"
+        profileGenerator -> riskReportGenerator "Generates assessment reports" "Go function calls"
+
+        # Release Commands components
+        releaseValidator -> ciChecker "Verifies CI before release" "Go function calls"
+        releaseValidator -> changelogManager "Validates changelog" "Go function calls"
+        changelogManager -> calverGenerator "Generates version tags" "Go function calls"
+        calverGenerator -> tagManager "Creates git tags" "Go function calls"
 
         # Orchestrator components
         executionPlanner -> parallelExecutor "Provides execution plan" "Go function calls"
@@ -338,6 +419,27 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
             description "Multi-module execution orchestration"
         }
 
+        component security_commands "SecurityComponents" {
+            include *
+            autoLayout tb
+            title "Security Commands - Components"
+            description "Security scanning and evidence collection"
+        }
+
+        component risk_commands "RiskComponents" {
+            include *
+            autoLayout tb
+            title "Risk Commands - Components"
+            description "OSCAL-based risk assessment and management"
+        }
+
+        component release_commands "ReleaseComponents" {
+            include *
+            autoLayout tb
+            title "Release Commands - Components"
+            description "Release management with CalVer versioning"
+        }
+
         # Filtered views
 
         container commands_system "QueryAndInspection" {
@@ -382,74 +484,26 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
             description "Commands for development workflows and artifact generation"
         }
 
-        # Styles
-        styles {
-            element "Person" {
-                shape person
-                background #08427b
-                color #ffffff
-            }
-            element "Software System" {
-                background #1168bd
-                color #ffffff
-            }
-            element "External" {
-                background #999999
-                color #ffffff
-            }
-            element "Container" {
-                background #438dd5
-                color #ffffff
-                shape roundedbox
-            }
-            element "Core" {
-                background #2E7D32
-                color #ffffff
-            }
-            element "Command" {
-                background #1976D2
-                color #ffffff
-            }
-            element "Infrastructure" {
-                background #F57C00
-                color #ffffff
-            }
-            element "Component" {
-                background #85bbf0
-                color #000000
-                shape component
-            }
-            relationship "Relationship" {
-                thickness 2
-                color #707070
-                style solid
-            }
-            relationship "Function calls" {
-                thickness 2
-                color #2E7D32
-            }
-            relationship "Go package import" {
-                thickness 2
-                color #5E35B1
-                style dashed
-            }
-            relationship "Docker API" {
-                thickness 3
-                color #1976D2
-                style dashed
-            }
-            relationship "HTTPS/REST" {
-                thickness 2
-                color #D32F2F
-                style dashed
-            }
-            relationship "Go (os/exec)" {
-                thickness 2
-                color #7B1FA2
-            }
+        container commands_system "SecurityAndRiskCommands" {
+            include ->command_registry->
+            include ->security_commands->
+            include ->risk_commands->
+            include ->validate_commands->
+            include ->orchestrator->
+            autoLayout lr
+            title "Security and Risk Commands"
+            description "Commands for security scanning, risk assessment, and compliance"
         }
 
-        # Theme
+        container commands_system "ReleaseCommands" {
+            include ->command_registry->
+            include ->release_commands->
+            include ->ci_commands->
+            autoLayout lr
+            title "Release and CI Commands"
+            description "Commands for release management and CI integration"
+        }
+
         theme default
     }
 

@@ -6,7 +6,9 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
         docker_engine = softwareSystem "Docker Engine" "Container runtime and orchestration" "External"
         github_registry = softwareSystem "GitHub Container Registry" "Docker image registry" "External"
         git_repo = softwareSystem "Git Repository" "Version control system" "External"
-        ai_providers = softwareSystem "AI Providers" "Claude, OpenAI, Gemini APIs" "External"
+
+        # Dependencies (from module contracts)
+        eac_core = softwareSystem "EAC Core" "Core domain libraries for repository operations" "Dependency"
 
         r2r_cli = softwareSystem "R2R CLI" "Command-line interface for containerized workflow execution" {
 
@@ -17,10 +19,8 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
                 interactive_cmd = component "Interactive Command" "Starts extension containers with shell access" "Go"
                 install_cmd = component "Install Command" "Pulls images and manages extension installation" "Go"
                 init_cmd = component "Init Command" "Creates .r2r/r2r-cli.yml configuration" "Go"
-                agent_cmd = component "Agent Command" "Parent for AI agent configuration" "Go"
-                ai_cmd = component "AI Command" "AI-powered operations (ask subcommand)" "Go"
-                definitions_cmd = component "Definitions Command" "Processes and merges definitions.yml files" "Go"
                 version_cmd = component "Version Command" "Displays version information" "Go"
+                extension_aliases = component "Extension Aliases" "Registers extension name aliases for convenience" "Go"
                 verify_cmd = component "Verify Command" "Validates extension configurations" "Go"
                 validate_cmd = component "Validate Command" "Validates configuration schema" "Go"
                 update_cmd = component "Update Command" "Updates extension image tags" "Go"
@@ -100,12 +100,21 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
                 cache_manager = component "Cache Manager" "Caches registry responses" "Go"
             }
 
-            // AI Integration
-            ai_system = container "AI Integration" "AI provider integration for enhanced workflows" "Go" {
-                ai_executor = component "AI Executor" "Executes AI prompts" "Go"
-                provider_registry = component "Provider Registry" "Manages AI provider plugins" "Go"
-                model_selector = component "Model Selector" "Selects model based on flags" "Go"
-                temperature_controller = component "Temperature Controller" "Controls generation temperature" "Go"
+            // Cache System
+            cache_system = container "Cache System" "Caching for registry responses and metadata" "Go" {
+                registry_cache = component "Registry Cache" "Caches GitHub registry API responses" "Go"
+                metadata_cache = component "Metadata Cache" "Caches extension metadata" "Go"
+            }
+
+            // Session Management
+            session_system = container "Session System" "Manages CLI session state" "Go" {
+                session_manager = component "Session Manager" "Tracks session state across commands" "Go"
+            }
+
+            // TUI System
+            tui_system = container "TUI System" "Terminal UI components" "Go" {
+                tui_spinner = component "TUI Spinner" "Progress indicators for long operations" "Go"
+                progress_bar = component "Progress Bar" "Visual progress for downloads" "Go"
             }
 
             // Version Management
@@ -120,15 +129,21 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
         developer -> command_layer "Executes CLI commands"
         cicd_system -> r2r_cli "Runs automated workflows"
 
+        // Dependency relationships (from module contracts)
+        r2r_cli -> eac_core "Uses repository utilities" "Go Import"
+
         // Command Layer relationships
         root_cmd -> run_cmd "Routes to run command"
         root_cmd -> interactive_cmd "Routes to interactive command"
         root_cmd -> install_cmd "Routes to install command"
         root_cmd -> init_cmd "Routes to init command"
-        root_cmd -> agent_cmd "Routes to agent command"
-        root_cmd -> ai_cmd "Routes to AI command"
-        root_cmd -> definitions_cmd "Routes to definitions command"
         root_cmd -> version_cmd "Routes to version command"
+        root_cmd -> verify_cmd "Routes to verify command"
+        root_cmd -> validate_cmd "Routes to validate command"
+        root_cmd -> update_cmd "Routes to update command"
+        root_cmd -> cleanup_cmd "Routes to cleanup command"
+        root_cmd -> list_cmd "Routes to list command"
+        root_cmd -> metadata_cmd "Routes to metadata command"
         root_cmd -> logging_system "Initializes logging"
         root_cmd -> parser_system "Validates command structure"
 
@@ -168,10 +183,19 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
 
         // GitHub System relationships
         github_system -> github_registry "Queries registry" "HTTPS"
+        github_system -> cache_system "Caches registry responses"
 
-        // AI System relationships
-        ai_system -> ai_providers "Executes AI prompts" "HTTPS"
-        ai_cmd -> ai_system "Delegates AI operations"
+        // Cache System relationships
+        extension_system -> cache_system "Caches metadata"
+        install_cmd -> cache_system "Uses cached registry data"
+
+        // Session System relationships
+        command_layer -> session_system "Manages session state"
+
+        // TUI System relationships
+        install_cmd -> tui_system "Shows download progress"
+        run_cmd -> tui_system "Shows spinner during setup"
+        docker_system -> tui_system "Shows pull progress"
 
         // Cross-cutting concerns
         command_layer -> logging_system "Logs all operations"
@@ -187,11 +211,6 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
         container r2r_cli "Containers" {
             include *
             autoLayout lr
-        }
-
-        component command_layer "CommandLayer" {
-            include *
-            autoLayout
         }
 
         component config_system "ConfigurationSystem" {
@@ -234,7 +253,17 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
             autoLayout
         }
 
-        component ai_system "AIIntegration" {
+        component cache_system "CacheSystem" {
+            include *
+            autoLayout
+        }
+
+        component session_system "SessionSystem" {
+            include *
+            autoLayout
+        }
+
+        component tui_system "TUISystem" {
             include *
             autoLayout
         }
@@ -266,37 +295,6 @@ workspace "R2R CLI Architecture" "Enterprise-grade containerized workflow execut
             autoLayout
         }
 
-        styles {
-            element "Software System" {
-                background #1168bd
-                color #ffffff
-                fontSize 22
-            }
-            element "External" {
-                background #999999
-                color #ffffff
-            }
-            element "Container" {
-                background #438dd5
-                color #ffffff
-                fontSize 16
-            }
-            element "Component" {
-                background #85BBF0
-                color #000000
-                fontSize 12
-            }
-            element "Person" {
-                background #08427b
-                color #ffffff
-                shape person
-                fontSize 18
-            }
-            element "Automation" {
-                background #2e7d32
-                color #ffffff
-                shape robot
-            }
-        }
+        theme default
     }
 }

@@ -1,13 +1,15 @@
 // Command: validate design
 // Description: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
 // Short: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
-// Long: Validates workspace.dsl files for syntax errors and structural issues using the official
+// Long: Validates DSL files for syntax errors and structural issues using the official
 // Long: Structurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,
-// Long: and ensures the workspace can be properly rendered. Validation results are displayed in the
-// Long: console with human-readable output and saved to out/logs/design/validation-results.json for
-// Long: detailed inspection. Use --all to validate all workspace files in specs/*/.design/ directories.
-// Usage: validate design <module>
+// Long: and ensures the workspace can be properly rendered. Supports multiple DSL files per module -
+// Long: files starting with "_" are treated as fragments (for !include) and skipped. Validation results
+// Long: are displayed in the console and saved to out/logs/design/validation-results.json.
+// Long: Use --all to validate all modules, or --file to validate a specific DSL file.
+// Usage: validate design <module> [--file=<name>]
 // Flag.all: type=bool, shorthand=a, default=false, usage=Validate all workspace files in specs/*/.design/ directories
+// Flag.file: type=string, shorthand=f, default="", usage=Validate only a specific DSL file (e.g., --file=landscape)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs and detailed logs to out/logs/design/ for debugging
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show Docker command and raw Structurizr CLI output
 package validate
@@ -33,6 +35,7 @@ func ValidateDesign() int {
 	args := os.Args[3:] // Skip program, "validate", and "design"
 
 	var module string
+	var file string
 	var all bool
 	var verbose bool
 
@@ -40,24 +43,29 @@ func ValidateDesign() int {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
-		switch arg {
-		case "--all", "-a":
+		switch {
+		case arg == "--all" || arg == "-a":
 			all = true
-		case "--debug", "-d":
+		case arg == "--debug" || arg == "-d":
 			// debug flag accepted but ignored (no logger)
-		case "--verbose", "-v":
+		case arg == "--verbose" || arg == "-v":
 			verbose = true
-		case "--help", "-h":
+		case arg == "--help" || arg == "-h":
 			printDesignValidateUsage()
 			return 0
+		case strings.HasPrefix(arg, "--file="):
+			file = strings.TrimPrefix(arg, "--file=")
+		case strings.HasPrefix(arg, "-f="):
+			file = strings.TrimPrefix(arg, "-f=")
+		case (arg == "--file" || arg == "-f") && i+1 < len(args):
+			i++
+			file = args[i]
+		case arg[0] != '-':
+			module = arg
 		default:
-			if arg[0] != '-' {
-				module = arg
-			} else {
-				log.Errorf("unknown flag: %s", arg)
-				printDesignValidateUsage()
-				return 1
-			}
+			log.Errorf("unknown flag: %s", arg)
+			printDesignValidateUsage()
+			return 1
 		}
 	}
 
@@ -101,8 +109,8 @@ func ValidateDesign() int {
 		// Validate all modules
 		return validateAllModules(validator, outputPath, verbose)
 	} else if module != "" {
-		// Validate single module
-		return validateSingleModule(validator, module, outputPath, verbose)
+		// Validate single module (optionally a specific file)
+		return validateSingleModule(validator, module, file, outputPath, verbose)
 	} else {
 		log.Info("❌ Error: module name required or use --all flag")
 		log.Info("")
@@ -111,7 +119,7 @@ func ValidateDesign() int {
 	}
 }
 
-func validateSingleModule(validator designInternal.StructurizrValidator, module string, outputPath string, verbose bool) int {
+func validateSingleModule(validator designInternal.StructurizrValidator, module string, file string, outputPath string, verbose bool) int {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -142,8 +150,15 @@ func validateSingleModule(validator designInternal.StructurizrValidator, module 
 	// Use validated moniker
 	module = mod.Moniker
 
-	// Validate module
-	result, err := validator.ValidateModule(module)
+	// Validate module (all files or specific file)
+	var result *designInternal.ValidationResult
+	if file != "" {
+		// Validate specific file
+		result, err = validator.ValidateModuleFile(module, file)
+	} else {
+		// Validate all files in module
+		result, err = validator.ValidateModule(module)
+	}
 	if err != nil {
 		log.Infof("❌ Validation failed: %v", err)
 		return 2
@@ -199,38 +214,41 @@ func validateAllModules(validator designInternal.StructurizrValidator, outputPat
 }
 
 func printDesignValidateUsage() {
-	log.Info("Validate workspace.dsl syntax using Structurizr CLI")
+	log.Info("Validate DSL files using Structurizr CLI")
 	log.Info("")
-	log.Info("Checks workspace.dsl files for syntax errors and structural issues.")
-	log.Info("Runs validation in Docker using the official Structurizr CLI image.")
+	log.Info("Validates all DSL files in a module's .design folder for syntax errors")
+	log.Info("and structural issues. Files starting with '_' are treated as fragments")
+	log.Info("(for !include) and skipped. Runs validation in Docker using Structurizr CLI.")
 	log.Info("")
 	log.Info("Usage:")
-	log.Info("  r2r design validate <module>   Validate one module")
-	log.Info("  r2r design validate --all      Validate all modules")
+	log.Info("  r2r validate design <module>              Validate all DSL files in module")
+	log.Info("  r2r validate design <module> --file=NAME  Validate specific DSL file")
+	log.Info("  r2r validate design --all                 Validate all modules")
 	log.Info("")
 	log.Info("Flags:")
-	log.Info("  --all, -a        Validate all workspace files in specs/*/.design/")
-	log.Info("  --debug, -d      Save intermediate outputs and detailed logs to out/logs/design/")
-	log.Info("  --verbose, -v    Show Docker command and raw Structurizr CLI output")
-	log.Info("  --help, -h       Show this help message")
+	log.Info("  --all, -a           Validate all DSL files in specs/*/.design/")
+	log.Info("  --file, -f <name>   Validate only a specific DSL file (e.g., --file=landscape)")
+	log.Info("  --debug, -d         Save intermediate outputs and detailed logs")
+	log.Info("  --verbose, -v       Show Docker command and raw Structurizr CLI output")
+	log.Info("  --help, -h          Show this help message")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  r2r design validate r2r-cli")
-	log.Info("  r2r design validate eac-commands --verbose")
-	log.Info("  r2r design validate --all --debug")
+	log.Info("  r2r validate design r2r-cli                    # All DSL files")
+	log.Info("  r2r validate design r2r-cli --file=workspace   # Just workspace.dsl")
+	log.Info("  r2r validate design r2r-cli --file=landscape   # Just landscape.dsl")
+	log.Info("  r2r validate design eac-commands --verbose")
+	log.Info("  r2r validate design --all")
 	log.Info("")
-	log.Info("Module Locations:")
-	log.Info("  r2r-cli        → specs/r2r-cli/.design/workspace.dsl")
-	log.Info("  eac-commands   → specs/eac-commands/.design/workspace.dsl")
+	log.Info("Multi-DSL Support:")
+	log.Info("  specs/module/.design/")
+	log.Info("    workspace.dsl      # Main module design (validated)")
+	log.Info("    landscape.dsl      # Cross-module view (validated)")
+	log.Info("    _model.dsl         # Fragment for !include (skipped)")
+	log.Info("    _styles.dsl        # Shared styles (skipped)")
 	log.Info("")
 	log.Info("Output:")
 	log.Info("  Console: Human-readable validation summary")
-	log.Info("  File:    out/logs/design/validation-results.json (detailed results)")
-	log.Info("  Logs:    out/logs/design/designInternal.log (when --debug is set)")
-	log.Info("")
-	log.Info("Note:")
-	log.Info("  Module argument must be a valid module moniker (e.g., eac-commands).")
-	log.Info("  Use 'show modules' to see all available modules.")
+	log.Info("  File:    out/logs/design/validation-results.json")
 }
 
 // getValidationOutputPath returns the absolute path to the validation output JSON file

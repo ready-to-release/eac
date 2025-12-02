@@ -1,4 +1,4 @@
-@deps:go @env:local @L1 @ov
+@deps:go @L1 @ov
 Feature: repository_test-sanity
 
   As a developer
@@ -43,6 +43,12 @@ Feature: repository_test-sanity
       When I scan for *.test.ts files
       And I run test discovery
       Then the discovered mocha file count matches the raw scan count
+
+    @L1 @ov
+    Scenario: TypeScript Cucumber feature files are discovered as tscucumber
+      When I run test discovery
+      Then at least one test should have type tscucumber
+      And all tscucumber tests should reference existing feature files
 
   Rule: Discovery totals must be verifiable
 
