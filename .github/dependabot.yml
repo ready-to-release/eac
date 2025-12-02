@@ -98,3 +98,39 @@ updates:
     labels:
       - "dependencies"
       - "python"
+
+  # npm - VSCode extension
+  - package-ecosystem: "npm"
+    directory: "/typescript/vscode-ext-commit"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # Docker - ext-eac container (golang base image)
+  - package-ecosystem: "docker"
+    directory: "/containers/ext-eac"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Docker - mkdocs container (python base image)
+  - package-ecosystem: "docker"
+    directory: "/containers/mkdocs"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
