@@ -2,6 +2,7 @@
 package builders
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -61,7 +62,7 @@ func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputD
 
 	// Step 3: Build based on capabilities
 	if hasExecutable && hasCrossCompile {
-		return buildCrossCompiled(module, moduleRoot, outputDir, logWriter, opts)
+		return buildCrossCompiled(module, moduleRoot, workspaceRoot, outputDir, logWriter, opts)
 	} else if hasExecutable {
 		return buildSingleBinary(module, moduleRoot, outputDir, logWriter, opts)
 	} else {
@@ -144,7 +145,7 @@ func getHostPlatform() (goos, goarch string) {
 // buildCrossCompiled builds binaries for multiple platforms
 // In CI mode, builds all configured targets. In local dev mode, builds only for target platform.
 // In Docker-in-Docker mode, cross-compiles for the detected host platform.
-func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	binaryName := module.Moniker
 
 	// Detect if running in CI
@@ -233,12 +234,33 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outpu
 	if opts.Compressed {
 		ldflags = "-s -w"
 	}
-	if opts.Version != "" {
-		versionFlag := fmt.Sprintf("-X main.version=%s", opts.Version)
-		if ldflags != "" {
-			ldflags += " " + versionFlag
+
+	// Determine version to inject
+	version := opts.Version
+	if version == "" {
+		if isCI {
+			// CI: Auto-detect from changelog for release builds
+			version = getVersionFromChangelog(moduleRoot, workspaceRoot, module.Moniker)
 		} else {
-			ldflags = versionFlag
+			// Local dev: Use high version number to always be "newer" than releases
+			// This makes it clear the binary is a local non-production build
+			version = "666.666.666-local"
+		}
+	}
+
+	// Inject version if available
+	if version != "" {
+		// Get module import path for correct ldflags
+		modulePath := getGoModulePath(moduleRoot)
+		if modulePath != "" {
+			// Use module/cmd.Version pattern (standard for CLI tools)
+			versionFlag := fmt.Sprintf("-X %s/cmd.Version=%s", modulePath, version)
+			if ldflags != "" {
+				ldflags += " " + versionFlag
+			} else {
+				ldflags = versionFlag
+			}
+			Logln(logWriter, "Injecting version: %s", version)
 		}
 	}
 
@@ -343,6 +365,68 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, outpu
 	generateChecksums(outputDir, binaryName, logWriter)
 
 	return 0
+}
+
+// getGoModulePath reads the module path from go.mod file
+func getGoModulePath(moduleRoot string) string {
+	goModPath := filepath.Join(moduleRoot, "go.mod")
+	f, err := os.Open(goModPath)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "module ") {
+			return strings.TrimPrefix(line, "module ")
+		}
+	}
+	return ""
+}
+
+// getVersionFromChangelog attempts to extract version from CHANGELOG.md
+// Checks both module root and release/{moniker}/ directories
+func getVersionFromChangelog(moduleRoot, workspaceRoot, moniker string) string {
+	// Try multiple locations for changelog
+	paths := []string{
+		filepath.Join(moduleRoot, "CHANGELOG.md"),
+		filepath.Join(workspaceRoot, "release", moniker, "CHANGELOG.md"),
+	}
+
+	for _, changelogPath := range paths {
+		if version := extractVersionFromFile(changelogPath); version != "" {
+			return version
+		}
+	}
+	return ""
+}
+
+// extractVersionFromFile extracts the first version from a changelog file
+func extractVersionFromFile(changelogPath string) string {
+	f, err := os.Open(changelogPath)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Look for version headers like "## [0.0.17]" or "## 0.0.17"
+		if strings.HasPrefix(line, "## ") {
+			version := strings.TrimPrefix(line, "## ")
+			// Remove brackets if present: [0.0.17] -> 0.0.17
+			version = strings.TrimPrefix(version, "[")
+			version = strings.Split(version, "]")[0]
+			// Skip [Unreleased]
+			if version != "Unreleased" && version != "" {
+				return version
+			}
+		}
+	}
+	return ""
 }
 
 // generateChecksums creates SHA256 checksums for all built binaries

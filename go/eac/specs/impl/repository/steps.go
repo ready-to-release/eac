@@ -24,6 +24,9 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Register module isolation steps
 	registerModuleIsolationSteps(sc, ctx)
 
+	// Register test sanity steps
+	registerTestSanitySteps(sc, ctx)
+
 	// Given steps
 	// Note: "the repository root exists" is registered in common steps (internal/steps.go)
 	// Repository context is initialized lazily via ensureRepoRoot() when needed

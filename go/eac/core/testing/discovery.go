@@ -14,38 +14,68 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// DiscoverGoTestTags discovers Go test functions and their build tags
+// DiscoveryConfig holds configuration for test discovery.
+// All values come from repository.yml - no defaults, no fallbacks.
+type DiscoveryConfig struct {
+	// SpecsRoot is the root directory for specifications (from repository.yml paths.specs_root)
+	SpecsRoot string
+	// TestImplRoot is the root directory for test implementations (from repository.yml paths.test_impl_root)
+	TestImplRoot string
+	// GodogTestFile is the conventional filename for godog test files (from repository.yml conventions.godog_test)
+	GodogTestFile string
+}
+
+// NewDiscoveryConfig creates a DiscoveryConfig from global configuration.
+// Panics if configuration is not loaded - configuration is required, not optional.
+func NewDiscoveryConfig() *DiscoveryConfig {
+	cfg := config.Global()
+	if cfg == nil || cfg.Repository == nil {
+		panic("discovery: repository configuration not loaded - ensure config.LoadGlobal() is called first")
+	}
+
+	return &DiscoveryConfig{
+		SpecsRoot:     cfg.Repository.Paths.SpecsRoot,
+		TestImplRoot:  cfg.Repository.Paths.TestImplRoot,
+		GodogTestFile: cfg.Repository.Conventions.GodogTest,
+	}
+}
+
+// IsGodogTestFile checks if the given filename matches the configured godog test file name.
+func (dc *DiscoveryConfig) IsGodogTestFile(filename string) bool {
+	return filename == dc.GodogTestFile
+}
+
+// DiscoverGoTestTags discovers Go test functions and their build tags.
+// Public API - creates config internally.
 func DiscoverGoTestTags(pkgPath string) ([]TestReference, error) {
+	return discoverGoTestTagsInPath(pkgPath, NewDiscoveryConfig())
+}
+
+// discoverGoTestTagsInPath discovers Go test functions using provided config.
+func discoverGoTestTagsInPath(pkgPath string, dc *DiscoveryConfig) ([]TestReference, error) {
 	refs := []TestReference{}
 
-	// Walk the directory
 	err := filepath.Walk(pkgPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Skip testdata directories (Go convention for test fixtures)
 		if info.IsDir() && info.Name() == "testdata" {
 			return filepath.SkipDir
 		}
 
-		// Skip directories
 		if info.IsDir() {
 			return nil
 		}
 
-		// Only process *_test.go files
 		if !strings.HasSuffix(info.Name(), "_test.go") {
 			return nil
 		}
 
-		// Skip godog_test.go files - these are godog runners, not Go unit tests
-		// The actual tests are in .feature files and discovered separately
-		if info.Name() == "godog_test.go" {
+		if dc.IsGodogTestFile(info.Name()) {
 			return nil
 		}
 
-		// Parse the file
 		fileRefs, err := parseGoTestFile(path)
 		if err != nil {
 			return fmt.Errorf("failed to parse %s: %w", path, err)
@@ -203,6 +233,7 @@ func contains(slice []string, item string) bool {
 // - repo.specs: patterns for specification files (e.g., "specs/{moniker}/**")
 // - repo.test_impl: path to test implementation (e.g., "{root}/tests")
 func DiscoverAllTests(rootPath string) ([]TestReference, error) {
+	dc := NewDiscoveryConfig()
 	refs := []TestReference{}
 
 	// Load module registry
@@ -214,7 +245,7 @@ func DiscoverAllTests(rootPath string) ([]TestReference, error) {
 
 	// Discover tests for each module based on its contracts
 	for _, module := range registry.All() {
-		moduleRefs, err := discoverModuleAllTests(rootPath, module)
+		moduleRefs, err := discoverModuleAllTests(rootPath, module, dc)
 		if err != nil {
 			continue // Skip modules that fail to parse
 		}
@@ -229,7 +260,7 @@ func DiscoverAllTests(rootPath string) ([]TestReference, error) {
 // - Go tests from files.tests patterns (e.g., "**/*_test.go")
 // - Godog specs from repo.specs patterns (e.g., "specs/{moniker}/**")
 // - Other test files from files.tests patterns (e.g., "test/**/*.ts")
-func discoverModuleAllTests(rootPath string, module *modules.ModuleContract) ([]TestReference, error) {
+func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc *DiscoveryConfig) ([]TestReference, error) {
 	refs := []TestReference{}
 	moduleRoot := filepath.Join(rootPath, module.Files.Root)
 
@@ -244,7 +275,7 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract) ([]
 		}
 
 		for _, testFile := range matches {
-			fileRefs, err := discoverTestsInFile(testFile, module.Moniker, module.Type)
+			fileRefs, err := discoverTestsInFile(testFile, module.Moniker, module.Type, dc)
 			if err != nil {
 				continue
 			}
@@ -254,9 +285,9 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract) ([]
 
 	// 2. Discover Go tests from test_impl path if specified
 	if module.Files.Repo.TestImpl != "" {
-		testImplPath := expandModuleVars(module.Files.Repo.TestImpl, module, rootPath)
+		testImplPath := expandModuleVars(module.Files.Repo.TestImpl, module, rootPath, dc)
 		if _, err := os.Stat(testImplPath); err == nil {
-			goRefs, err := DiscoverGoTestTags(testImplPath)
+			goRefs, err := discoverGoTestTagsInPath(testImplPath, dc)
 			if err == nil {
 				// Tag tests with module dependency
 				for i := range goRefs {
@@ -272,14 +303,10 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract) ([]
 	}
 
 	// 3. Discover Gherkin specs from repo.specs patterns
-	// Determine the test type based on module's test framework:
-	// - Module metadata test_framework: cucumber → Type: "cucumber"
-	// - Module type test_framework: cucumber → Type: "cucumber"
-	// - Default → Type: "godog"
 	featureTestType := getFeatureTestTypeForModule(module)
 
 	for _, specPattern := range module.Files.Repo.Specs {
-		expandedPattern := expandModuleVars(specPattern, module, rootPath)
+		expandedPattern := expandModuleVars(specPattern, module, rootPath, dc)
 		fullPattern := filepath.Join(rootPath, expandedPattern)
 		fullPattern = filepath.ToSlash(fullPattern)
 
@@ -290,7 +317,7 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract) ([]
 
 		for _, specFile := range matches {
 			if strings.HasSuffix(specFile, ".feature") {
-				featureRefs, err := parseFeatureFile(specFile)
+				featureRefs, err := parseFeatureFile(specFile, dc)
 				if err != nil {
 					continue
 				}
@@ -312,19 +339,21 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract) ([]
 }
 
 // expandModuleVars expands variables in a path pattern.
-// Supported: {moniker}, {root}, {type}
-func expandModuleVars(pattern string, module *modules.ModuleContract, rootPath string) string {
+// Supported: {moniker}, {root}, {type}, {specs_root}, {test_impl_root}
+func expandModuleVars(pattern string, module *modules.ModuleContract, rootPath string, dc *DiscoveryConfig) string {
 	result := pattern
 	result = strings.ReplaceAll(result, "{moniker}", module.Moniker)
 	result = strings.ReplaceAll(result, "{root}", module.Files.Root)
 	result = strings.ReplaceAll(result, "{type}", module.Type)
+	result = strings.ReplaceAll(result, "{specs_root}", dc.SpecsRoot)
+	result = strings.ReplaceAll(result, "{test_impl_root}", dc.TestImplRoot)
 	return result
 }
 
 // discoverTestsInFile discovers tests in a single file based on its type.
 // Returns test references with the module moniker attached.
 // moduleType is used to determine the test framework from module-types.yml.
-func discoverTestsInFile(filePath string, moniker string, moduleType string) ([]TestReference, error) {
+func discoverTestsInFile(filePath string, moniker string, moduleType string, dc *DiscoveryConfig) ([]TestReference, error) {
 	ext := strings.ToLower(filepath.Ext(filePath))
 	name := filepath.Base(filePath)
 
@@ -346,9 +375,12 @@ func discoverTestsInFile(filePath string, moniker string, moduleType string) ([]
 		// Skip to avoid duplicates
 		return nil, nil
 	case ext == ".go" && strings.HasSuffix(name, "_test.go"):
-		// Go test file - already handled by DiscoverGoTestTags
-		// Skip to avoid duplicates
-		return nil, nil
+		// Go test file - parse it directly
+		// Skip godog runners as they're not unit tests
+		if dc.IsGodogTestFile(name) {
+			return nil, nil
+		}
+		refs, err = parseGoTestFile(filePath)
 	default:
 		// Unknown test file type
 		return nil, nil
@@ -373,33 +405,29 @@ func discoverTestsInFile(filePath string, moniker string, moduleType string) ([]
 	return refs, nil
 }
 
-// DiscoverGodogFeatureTags discovers Godog feature files and their tags
+// DiscoverGodogFeatureTags discovers Godog feature files and their tags.
 func DiscoverGodogFeatureTags(specsPath string) ([]TestReference, error) {
+	dc := NewDiscoveryConfig()
 	refs := []TestReference{}
 
-	// Walk the specs directory
 	err := filepath.Walk(specsPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Skip testdata directories (Go convention for test fixtures)
 		if info.IsDir() && info.Name() == "testdata" {
 			return filepath.SkipDir
 		}
 
-		// Skip directories
 		if info.IsDir() {
 			return nil
 		}
 
-		// Only process .feature files
 		if !strings.HasSuffix(info.Name(), ".feature") {
 			return nil
 		}
 
-		// Parse the feature file
-		fileRefs, err := parseFeatureFile(path)
+		fileRefs, err := parseFeatureFile(path, dc)
 		if err != nil {
 			return fmt.Errorf("failed to parse %s: %w", path, err)
 		}
@@ -415,8 +443,8 @@ func DiscoverGodogFeatureTags(specsPath string) ([]TestReference, error) {
 	return refs, nil
 }
 
-// parseFeatureFile parses a Gherkin feature file and extracts scenarios with tags
-func parseFeatureFile(filePath string) ([]TestReference, error) {
+// parseFeatureFile parses a Gherkin feature file and extracts scenarios with tags.
+func parseFeatureFile(filePath string, dc *DiscoveryConfig) ([]TestReference, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -463,7 +491,7 @@ func parseFeatureFile(filePath string) ([]TestReference, error) {
 
 			// Infer internal module dependency from file path
 			// Example: specs/r2r-cli/verify-configuration/... → @deps:r2r-cli
-			inferredDepTag := inferInternalDependencyFromPath(filePath)
+			inferredDepTag := inferInternalDependencyFromPath(filePath, dc)
 			if inferredDepTag != "" {
 				allTags = append(allTags, inferredDepTag)
 			}
@@ -631,27 +659,27 @@ func extractRiskControlTags(tags []string) []string {
 	return controls
 }
 
-// inferInternalDependencyFromPath infers @depm:<module> from feature file path
+// inferInternalDependencyFromPath infers @depm:<module> from feature file path.
 // Example: specs/r2r-cli/verify-configuration/specification.feature → @depm:r2r-cli
-// Example: C:\projects\eac\specs\eac-commands\docs\specification.feature → @depm:eac-commands
-func inferInternalDependencyFromPath(filePath string) string {
+func inferInternalDependencyFromPath(filePath string, dc *DiscoveryConfig) string {
 	// Normalize path separators
 	normalized := filepath.ToSlash(filePath)
 
 	// Split by "/"
 	parts := strings.Split(normalized, "/")
 
-	// Find "specs" in the path
+	// Find specs_root directory in the path (e.g., "specs" from config)
+	specsRoot := dc.SpecsRoot
 	specsIndex := -1
 	for i, part := range parts {
-		if part == "specs" {
+		if part == specsRoot {
 			specsIndex = i
 			break
 		}
 	}
 
-	// Expected format: specs/<module>/...
-	// Extract module name (the directory right after "specs")
+	// Expected format: <specs_root>/<module>/...
+	// Extract module name (the directory right after specs_root)
 	if specsIndex >= 0 && len(parts) > specsIndex+1 {
 		moduleName := parts[specsIndex+1]
 		return fmt.Sprintf("@depm:%s", moduleName)
@@ -702,31 +730,27 @@ func extractModuleDependencies(tags []string) []string {
 
 // getTestFrameworkForType returns the test framework for a module type.
 // Looks up test_framework from module-types.yml configuration.
-// Returns "mocha" as default for npm-based modules if not specified.
+// Returns empty string if not configured - caller must handle.
 func getTestFrameworkForType(moduleType string) string {
 	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		framework := cfg.ModuleTypes.GetTestFramework(moduleType)
-		if framework != "" {
-			return framework
-		}
+	if cfg == nil || cfg.ModuleTypes == nil {
+		return ""
 	}
-
-	// Default: return "mocha" for backwards compatibility with npm-based test files
-	return "mocha"
+	return cfg.ModuleTypes.GetTestFramework(moduleType)
 }
 
 // getFeatureTestTypeForModule returns the test type for Gherkin feature files.
-// Determined by primary build dependency:
+// Determined by primary build dependency from module-types.yml:
 // - npm → "tscucumber" (TypeScript cucumber-js)
-// - go → "godog" (Go BDD framework)
+// - go (or anything else) → "godog" (Go BDD framework)
 func getFeatureTestTypeForModule(module *modules.ModuleContract) string {
 	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(module.Type)
-		if primaryDep == "npm" {
-			return "tscucumber"
-		}
+	if cfg == nil || cfg.ModuleTypes == nil {
+		panic("discovery: module types configuration not loaded")
+	}
+	primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(module.Type)
+	if primaryDep == "npm" {
+		return "tscucumber"
 	}
 	return "godog"
 }

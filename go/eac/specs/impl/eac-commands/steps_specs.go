@@ -249,9 +249,8 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 
 	// Then steps - output/content verification
 	// Note: "stdout contains" and "stderr contains" are registered in internal/steps.go
-	sc.Step(`^stdout contains valid JSON$`, func() error {
-		return internal.OutputContains(ctx, "{")
-	})
+	// Note: "stdout contains valid JSON" is registered in steps_risk.go
+
 	sc.Step(`^stdout only contains files with errors$`, func() error {
 		// Quiet mode output verification
 		return nil

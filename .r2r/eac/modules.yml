@@ -176,6 +176,8 @@ modules:
       root: go/eac/ai
       source:
         - "**.go"
+      tests:
+        - "**/*_test.go"
       workflows:
         ci: .github/workflows/ci-eac-ai.yaml
         release: ""

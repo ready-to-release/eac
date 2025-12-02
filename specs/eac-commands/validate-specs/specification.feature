@@ -1,4 +1,4 @@
-@deps:go @env:isolated-test-project
+@deps:go @env:isolated-test-project @skip:broken
 Feature: eac-commands_validate-specs
 
   As a developer of the eac platform

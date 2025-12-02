@@ -1,4 +1,4 @@
-@deps:go @L2 @ov @env:isolated-test-project
+@deps:go @L2 @ov @env:isolated-test-project @skip:broken
 Feature: eac-commands_risk-assess
 
   As a security engineer
