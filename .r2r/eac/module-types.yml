@@ -18,6 +18,7 @@ types:
     defaults:
       files:
         source: ["**/*.go"]
+        tests: ["**/*_test.go"]
         config: ["go.mod", "go.sum"]
         changelog: CHANGELOG.md
       repo:
@@ -36,6 +37,7 @@ types:
     defaults:
       files:
         source: ["**/*.go", "**/*.go.txt"]
+        tests: ["**/*_test.go"]
         config: ["go.mod", "go.sum"]
         changelog: CHANGELOG.md
       repo:
@@ -56,6 +58,7 @@ types:
     defaults:
       files:
         source: ["**/*.go"]
+        tests: ["**/*_test.go"]
         config: ["go.mod", "go.sum"]
         assets: ["**/README.md", "**/assets/**"]
         changelog: CHANGELOG.md
@@ -75,6 +78,7 @@ types:
     defaults:
       files:
         source: ["**/*.go"]
+        tests: ["**/*_test.go"]
         config: ["go.mod", "go.sum"]
         assets: ["README.md"]
         changelog: CHANGELOG.md

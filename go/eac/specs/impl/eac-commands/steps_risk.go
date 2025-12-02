@@ -583,49 +583,8 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return nil // Simplified
 	})
 
-	// ========== Additional Validate-Risk Steps ==========
-
-	sc.Step(`^a profile missing the uuid field$`, func() error {
-		invalidProfile := `{"profile": {"metadata": {"title": "Test"}}}`
-		return internal.CreateFile(ctx, "profile.json", invalidProfile)
-	})
-
-	sc.Step(`^a profile missing the metadata\.title field$`, func() error {
-		invalidProfile := `{"profile": {"uuid": "test-uuid", "metadata": {}}}`
-		return internal.CreateFile(ctx, "profile.json", invalidProfile)
-	})
-
-	sc.Step(`^a profile with no imports$`, func() error {
-		invalidProfile := `{"profile": {"uuid": "test-uuid", "metadata": {"title": "Test"}}}`
-		return internal.CreateFile(ctx, "profile.json", invalidProfile)
-	})
-
-	sc.Step(`^a profile with control ID "([^"]*)"$`, func(controlID string) error {
-		profile := createValidProfile("test-uuid", "Test", []string{controlID})
-		return internal.CreateFile(ctx, "profile.json", profile)
-	})
-
-	sc.Step(`^assessment-results missing the uuid field$`, func() error {
-		invalid := `{"assessment-results": {"metadata": {"title": "Test"}}}`
-		return internal.CreateFile(ctx, "assessment.json", invalid)
-	})
-
-	sc.Step(`^assessment-results with no results array$`, func() error {
-		invalid := `{"assessment-results": {"uuid": "test", "metadata": {"title": "Test"}}}`
-		return internal.CreateFile(ctx, "assessment.json", invalid)
-	})
-
-	sc.Step(`^assessment-results with duplicate observation UUIDs$`, func() error {
-		invalid := createValidAssessmentResults("test-uuid", "Test", "profile.json")
-		// Would need to add duplicate UUIDs - simplified
-		return internal.CreateFile(ctx, "assessment.json", invalid)
-	})
-
-	sc.Step(`^assessment-results with finding referencing non-existent observation$`, func() error {
-		invalid := createValidAssessmentResults("test-uuid", "Test", "profile.json")
-		// Would need to add invalid reference - simplified
-		return internal.CreateFile(ctx, "assessment.json", invalid)
-	})
+	// NOTE: Additional validate-risk steps are already defined above (lines ~147-194)
+	// Do NOT add duplicate registrations here - godog will report "ambiguous step" errors
 
 	sc.Step(`^a profile missing nested field "([^"]*)"$`, func(field string) error {
 		return internal.CreateFile(ctx, "profile.json", profileMissingTitleTemplate)
@@ -640,10 +599,8 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return internal.CreateFile(ctx, "profile.json", profile)
 	})
 
-	sc.Step(`^a profile with oscal-version "([^"]*)"$`, func(version string) error {
-		content := strings.ReplaceAll(profileWithVersionTemplate, "{{VERSION}}", version)
-		return internal.CreateFile(ctx, "profile.json", content)
-	})
+	// NOTE: "a profile with oscal-version" is already defined on line ~164
+	// Do NOT duplicate here
 
 	sc.Step(`^stdout contains warning about control ID format$`, func() error {
 		return internal.OutputContainsAny(ctx, "control ID", "format", "warning")

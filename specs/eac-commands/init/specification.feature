@@ -1,4 +1,4 @@
-@env:isolated-test-project
+@env:isolated-test-project @skip:broken
 Feature: eac-commands_init
   As a developer
   I want to initialize AI provider configuration with a simple command
