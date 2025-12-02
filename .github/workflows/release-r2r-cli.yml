@@ -180,6 +180,26 @@ jobs:
       - name: Create release notes
         id: release_notes
         run: |
+          # Helper function to get file size in MB
+          get_size_mb() {
+            local file="$1"
+            if [ -f "$file" ]; then
+              size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+              echo "scale=1; $size / 1048576" | bc
+            else
+              echo "?"
+            fi
+          }
+
+          # Calculate sizes for all binaries
+          SIZE_LINUX_AMD64=$(get_size_mb "out/build/r2r-cli/r2r-linux-amd64")
+          SIZE_LINUX_ARM64=$(get_size_mb "out/build/r2r-cli/r2r-linux-arm64")
+          SIZE_DARWIN_AMD64=$(get_size_mb "out/build/r2r-cli/r2r-darwin-amd64")
+          SIZE_DARWIN_ARM64=$(get_size_mb "out/build/r2r-cli/r2r-darwin-arm64")
+          SIZE_WINDOWS_AMD64=$(get_size_mb "out/build/r2r-cli/r2r-windows-amd64.exe")
+          SIZE_LINUX_AMD64_UPX=$(get_size_mb "out/build/r2r-cli/r2r-linux-amd64-upx")
+          SIZE_WINDOWS_AMD64_UPX=$(get_size_mb "out/build/r2r-cli/r2r-windows-amd64-upx.exe")
+
           cat << EOF > release_notes.md
           # r2r CLI ${{ steps.extract_version.outputs.version }}
 
@@ -192,23 +212,23 @@ jobs:
           Download the appropriate binary for your platform. Two versions are available:
 
           ### Standard Binaries (Recommended)
-          Smaller than debug builds (~26 MB), best compatibility:
+          Stripped symbols, best compatibility:
 
-          | Platform | Binary |
-          |----------|--------|
-          | Linux (AMD64) | \`r2r-linux-amd64\` |
-          | Linux (ARM64) | \`r2r-linux-arm64\` |
-          | macOS (Intel) | \`r2r-darwin-amd64\` |
-          | macOS (Apple Silicon) | \`r2r-darwin-arm64\` |
-          | Windows (AMD64) | \`r2r-windows-amd64.exe\` |
+          | Platform              | Binary                    | Size                     |
+          |-----------------------|---------------------------|--------------------------|
+          | Linux (AMD64)         | \`r2r-linux-amd64\`       | ${SIZE_LINUX_AMD64} MB   |
+          | Linux (ARM64)         | \`r2r-linux-arm64\`       | ${SIZE_LINUX_ARM64} MB   |
+          | macOS (Intel)         | \`r2r-darwin-amd64\`      | ${SIZE_DARWIN_AMD64} MB  |
+          | macOS (Apple Silicon) | \`r2r-darwin-arm64\`      | ${SIZE_DARWIN_ARM64} MB  |
+          | Windows (AMD64)       | \`r2r-windows-amd64.exe\` | ${SIZE_WINDOWS_AMD64} MB |
 
           ### UPX-Compressed Binaries (Minimal Size)
-          Maximum compression (~10 MB), slightly slower startup. Available for Linux and Windows only:
+          Maximum compression, slightly slower startup. Available for Linux and Windows only:
 
-          | Platform | Binary |
-          |----------|--------|
-          | Linux (AMD64) | \`r2r-linux-amd64-upx\` |
-          | Windows (AMD64) | \`r2r-windows-amd64-upx.exe\` |
+          | Platform        | Binary                        | Size                         |
+          |-----------------|-------------------------------|------------------------------|
+          | Linux (AMD64)   | \`r2r-linux-amd64-upx\`       | ${SIZE_LINUX_AMD64_UPX} MB   |
+          | Windows (AMD64) | \`r2r-windows-amd64-upx.exe\` | ${SIZE_WINDOWS_AMD64_UPX} MB |
 
           > **Note**: UPX compression is not available for macOS binaries when cross-compiling. UPX binaries may trigger antivirus false positives on Windows.
 
