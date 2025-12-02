@@ -49,7 +49,7 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	}
 
 	// Load repository config for path variables
-	if err := cfg.LoadRepository(); err != nil {
+	if err := cfg.LoadRepository(validate); err != nil {
 		// Repository config is optional - continue with defaults
 	}
 

@@ -118,7 +118,7 @@ func CreateCommitMessage() int {
 	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
 	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {
-		log.Errorf("%v", err)
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		return 1
 	}
 
@@ -194,7 +194,7 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	// Phase 2: Build Execution Context
 	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, logger)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Build context failed: %v", err))
+		fmt.Fprintf(os.Stderr, "ERROR: Build context failed: %v\n", err)
 		return 1, false, ""
 	}
 	if cfg == nil {
@@ -205,14 +205,14 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	// Phase 3: Generate Top-Level Summary
 	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, diffStats, logger)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Top-level generation failed: %v", err))
+		fmt.Fprintf(os.Stderr, "ERROR: Top-level generation failed: %v\n", err)
 		return 1, false, ""
 	}
 
 	// Phase 4: Generate Module Sections
 	moduleSections, err := generateModuleSections(cfg, logger)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Module section generation failed: %v", err))
+		fmt.Fprintf(os.Stderr, "ERROR: Module section generation failed: %v\n", err)
 		return 1, false, ""
 	}
 

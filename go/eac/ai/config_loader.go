@@ -5,11 +5,21 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sync"
 
+	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
 	"gopkg.in/yaml.v3"
 )
 
-// LoadConfig loads and parses agent configuration from .r2r/eac/agent-config.yml
+// Schema validator (lazy initialized)
+var (
+	schemaValidator     *schema.Validator
+	schemaValidatorOnce sync.Once
+	schemaValidatorErr  error
+)
+
+// LoadConfig loads and parses agent configuration from a single file.
+// For full team+personal merge behavior, use LoadConfigWithOverrides.
 //
 // Intent: Load AI provider configuration from file with environment variable substitution.
 //
@@ -34,32 +44,15 @@ import (
 //   - No global state - function is stateless and testable
 //   - Errors include actionable instructions to run r2r init --ai
 func LoadConfig(path string) (*Config, error) {
-	// Read file
-	data, err := os.ReadFile(path)
+	config, err := loadConfigFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf(".r2r/eac/agent-config.yml not found at %s\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", path)
-		}
-		return nil, fmt.Errorf("failed to read config file %s: %w\n\nPlease run: r2r init --ai <provider>", path, err)
+		return nil, err
 	}
 
-	// Handle empty file
-	if len(data) == 0 {
-		return nil, fmt.Errorf(".r2r/eac/agent-config.yml is empty\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+	// Apply environment variable substitution
+	if err := applyEnvVarSubstitution(config); err != nil {
+		return nil, err
 	}
-
-	// Parse YAML
-	var rawConfig struct {
-		Provider Config `yaml:"provider"`
-	}
-	if err := yaml.Unmarshal(data, &rawConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse .r2r/eac/agent-config.yml: %w\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", err)
-	}
-
-	// Substitute environment variables
-	config := &rawConfig.Provider
-	config.APIKey = substituteEnvVars(config.APIKey)
-	config.Endpoint = substituteEnvVars(config.Endpoint)
 
 	// Validate required fields
 	if config.ProviderName == "" {
@@ -69,20 +62,192 @@ func LoadConfig(path string) (*Config, error) {
 	return config, nil
 }
 
+// LoadConfigWithOverrides loads team config and merges with personal overrides.
+// Personal config can override any field: name, model, api_key, endpoint.
+// Validates both configs against the agent-config schema.
+//
+// Schema (both files use same structure):
+//   provider:
+//     name: claude-api          # or claude-cli, openai, gemini
+//     model: claude-3-haiku-20240307
+//     endpoint: https://api.anthropic.com/v1
+//     api_key: ${ANTHROPIC_API_KEY}  # or literal key
+//
+// Personal config only needs to specify fields to override.
+func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath string) (*Config, error) {
+	// Load and validate team config (required)
+	config, err := loadConfigFileWithValidation(teamConfigPath, workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load and validate personal config (optional) and merge
+	if personalConfigPath != "" {
+		if _, statErr := os.Stat(personalConfigPath); statErr == nil {
+			personalConfig, loadErr := loadPersonalConfigWithValidation(personalConfigPath, workspaceRoot)
+			if loadErr != nil {
+				return nil, fmt.Errorf("failed to load personal config: %w", loadErr)
+			}
+			mergePersonalConfig(config, personalConfig)
+		}
+	}
+
+	// Apply environment variable substitution
+	if err := applyEnvVarSubstitution(config); err != nil {
+		return nil, err
+	}
+
+	// Validate required fields
+	if config.ProviderName == "" {
+		return nil, fmt.Errorf("provider name is required\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+	}
+
+	return config, nil
+}
+
+// PersonalConfig represents the personal override file structure.
+// Uses same nested structure as team config for consistency.
+type PersonalConfig struct {
+	Provider *Config `yaml:"provider"`
+}
+
+// loadConfigFile loads and parses a config file without env var substitution
+func loadConfigFile(path string) (*Config, error) {
+	return loadConfigFileWithValidation(path, "")
+}
+
+// loadConfigFileWithValidation loads, validates, and parses a config file
+func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf(".r2r/eac/agent-config.yml not found at %s\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", path)
+		}
+		return nil, fmt.Errorf("failed to read config file %s: %w\n\nPlease run: r2r init --ai <provider>", path, err)
+	}
+
+	if len(data) == 0 {
+		return nil, fmt.Errorf(".r2r/eac/agent-config.yml is empty\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini")
+	}
+
+	// Validate against schema if workspaceRoot is provided
+	if workspaceRoot != "" {
+		if err := validateAgentConfigSchema(workspaceRoot, data); err != nil {
+			return nil, fmt.Errorf("schema validation failed: %w", err)
+		}
+	}
+
+	var rawConfig struct {
+		Provider Config `yaml:"provider"`
+	}
+	if err := yaml.Unmarshal(data, &rawConfig); err != nil {
+		return nil, fmt.Errorf("failed to parse .r2r/eac/agent-config.yml: %w\n\nPlease run: r2r init --ai <provider>\nSupported providers: claude-cli, claude-api, openai, gemini", err)
+	}
+
+	return &rawConfig.Provider, nil
+}
+
+// validateAgentConfigSchema validates config data against the agent-config schema
+func validateAgentConfigSchema(workspaceRoot string, data []byte) error {
+	schemaValidatorOnce.Do(func() {
+		schemaValidator, schemaValidatorErr = schema.NewValidator(workspaceRoot)
+	})
+
+	if schemaValidatorErr != nil {
+		// Schema validation is optional - don't fail if schemas can't be loaded
+		return nil
+	}
+
+	return schemaValidator.ValidateYAML(schema.SchemaAgentConfig, data)
+}
+
+// loadPersonalConfig loads the personal override file
+func loadPersonalConfig(path string) (*PersonalConfig, error) {
+	return loadPersonalConfigWithValidation(path, "")
+}
+
+// loadPersonalConfigWithValidation loads and validates the personal override file
+func loadPersonalConfigWithValidation(path string, workspaceRoot string) (*PersonalConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) == 0 {
+		return &PersonalConfig{}, nil
+	}
+
+	// Validate against schema if workspaceRoot is provided
+	if workspaceRoot != "" {
+		if err := validateAgentConfigSchema(workspaceRoot, data); err != nil {
+			return nil, fmt.Errorf("schema validation failed: %w", err)
+		}
+	}
+
+	var personal PersonalConfig
+	if err := yaml.Unmarshal(data, &personal); err != nil {
+		return nil, fmt.Errorf("failed to parse personal config: %w", err)
+	}
+
+	return &personal, nil
+}
+
+// mergePersonalConfig applies personal overrides to the base config
+func mergePersonalConfig(base *Config, personal *PersonalConfig) {
+	if personal.Provider == nil {
+		return
+	}
+	if personal.Provider.ProviderName != "" {
+		base.ProviderName = personal.Provider.ProviderName
+	}
+	if personal.Provider.Model != "" {
+		base.Model = personal.Provider.Model
+	}
+	if personal.Provider.APIKey != "" {
+		base.APIKey = personal.Provider.APIKey
+	}
+	if personal.Provider.Endpoint != "" {
+		base.Endpoint = personal.Provider.Endpoint
+	}
+}
+
+// applyEnvVarSubstitution substitutes environment variables in config values
+func applyEnvVarSubstitution(config *Config) error {
+	var missingVars []string
+
+	config.APIKey, missingVars = substituteEnvVars(config.APIKey)
+	// Only error on missing env vars if provider requires an API key
+	// claude-cli doesn't need an API key (uses local Claude installation)
+	if len(missingVars) > 0 && config.ProviderName != "claude-cli" {
+		return fmt.Errorf("missing environment variable(s) for API key: %v\n\nPlease set:\n  export %s=your-api-key\n\nOr use claude-cli provider (no API key needed):\n  echo 'name: claude-cli' > .r2r/eac/agent-config.personal.yml",
+			missingVars, missingVars[0])
+	}
+
+	config.Endpoint, _ = substituteEnvVars(config.Endpoint)
+	return nil
+}
+
 // substituteEnvVars replaces ${VAR_NAME} with environment variable values.
-// This is a pure function with no side effects.
+// Returns the substituted string and any variable names that were not found.
 //
 // Intent: Replace environment variable placeholders with actual values.
 //
 // Design:
 //   - Uses regex for reliable pattern matching
 //   - Returns empty string for undefined variables (defensive)
+//   - Reports missing variables for error handling
 //   - No side effects - doesn't modify environment
-func substituteEnvVars(s string) string {
+func substituteEnvVars(s string) (string, []string) {
+	var missing []string
 	re := regexp.MustCompile(`\$\{([^}]+)\}`)
-	return re.ReplaceAllStringFunc(s, func(match string) string {
+	result := re.ReplaceAllStringFunc(s, func(match string) string {
 		// Extract VAR_NAME from ${VAR_NAME}
 		varName := match[2 : len(match)-1]
-		return os.Getenv(varName)
+		value := os.Getenv(varName)
+		if value == "" {
+			missing = append(missing, varName)
+		}
+		return value
 	})
+	return result, missing
 }

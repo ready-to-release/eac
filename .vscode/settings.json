@@ -4,6 +4,19 @@
     "*.feature": "cucumber"
   },
 
+  // YAML Schema associations (Red Hat YAML extension)
+  "yaml.schemas": {
+    "contracts/eac-core/0.1.0/modules.schema.json": ".r2r/**/modules.yml",
+    "contracts/eac-core/0.1.0/environments.schema.json": ".r2r/**/environments.yml",
+    "contracts/eac-core/0.1.0/handlers.schema.json": ".r2r/**/handlers.yml",
+    "contracts/eac-core/0.1.0/module-types.schema.json": ".r2r/**/module-types.yml",
+    "contracts/eac-core/0.1.0/system-dependencies.schema.json": ".r2r/**/system-dependencies.yml",
+    "contracts/eac-core/0.1.0/test-suites.schema.json": ".r2r/**/test-suites.yml",
+    "contracts/eac-core/0.1.0/testing-tags.schema.json": ".r2r/**/testing-tags.yml",
+    "contracts/eac-core/0.1.0/repository.schema.json": ".r2r/**/repository.yml",
+    "contracts/r2r-cli/0.1.0/r2r-cli.schema.json": ".r2r/r2r-cli.yml"
+  },
+
   // Markdown settings (built-in preview)
   "markdown.preview.fontFamily": "Consolas, 'Courier New', monospace",
   "markdown.styles": [

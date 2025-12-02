@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/system-dependencies.schema.json
 dependencies:
   - moniker: go
     name: "Go"

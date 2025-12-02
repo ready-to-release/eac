@@ -56,7 +56,7 @@ eac help
 ```
 
 ```text
-EAC - Enterprise Application Contracts
+EAC - Everything as Code tooling
 
 USAGE:
   eac [command] [flags]

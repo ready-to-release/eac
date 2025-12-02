@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/modules.schema.json
 # Repository Module Contracts
 modules:
   # ============================================================================
