@@ -33,7 +33,7 @@ types:
     build:
       artifacts:
         - type: marker
-          pattern: ".build-complete"
+          pattern: "build-complete.marker"
     defaults:
       files:
         source: ["**/*.go", "**/*.go.txt"]
@@ -144,7 +144,7 @@ types:
     build:
       artifacts:
         - type: marker
-          pattern: ".build-complete"
+          pattern: "build-complete.marker"
       post_build:
         - action: copy
           target: ".vscode/extensions/{moniker}/out/"

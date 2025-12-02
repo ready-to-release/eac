@@ -100,7 +100,8 @@ func FormatDockerVolumePath(path string) string {
 }
 
 // BuildMarkerFilename is the standard name for build completion markers
-const BuildMarkerFilename = ".build-complete"
+// Note: Using a non-hidden filename ensures reliable artifact upload/download in CI
+const BuildMarkerFilename = "build-complete.marker"
 
 // WriteBuildMarker writes a build completion marker file to the output directory.
 // This marker is used by module dependency verification to confirm a module was built.
