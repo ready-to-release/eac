@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/testing-tags.schema.json
 # Test Tagging System Specification
 # Contract for test classification and dependency management
 

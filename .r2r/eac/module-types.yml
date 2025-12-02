@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/module-types.schema.json
 types:
   # Go family
   - name: go-cli

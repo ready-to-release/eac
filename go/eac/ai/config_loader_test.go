@@ -50,18 +50,14 @@ func TestLoadConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing env var results in empty string",
+			name: "missing env var returns error with instructions",
 			configYAML: `provider:
   name: openai
   model: gpt-4-turbo
   api_key: ${MISSING_VAR}`,
-			envVars: map[string]string{},
-			want: &Config{
-				ProviderName: "openai",
-				Model:        "gpt-4-turbo",
-				APIKey:       "",
-			},
-			wantErr: false,
+			envVars:     map[string]string{},
+			wantErr:     true,
+			errContains: "missing environment variable",
 		},
 		{
 			name:        "malformed YAML returns error with init instructions",
@@ -177,40 +173,46 @@ func TestLoadConfigFromRepoRoot(t *testing.T) {
 
 func TestSubstituteEnvVars(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		envVars map[string]string
-		want    string
+		name        string
+		input       string
+		envVars     map[string]string
+		want        string
+		wantMissing []string
 	}{
 		{
-			name:    "single env var",
-			input:   "${API_KEY}",
-			envVars: map[string]string{"API_KEY": "secret"},
-			want:    "secret",
+			name:        "single env var",
+			input:       "${API_KEY}",
+			envVars:     map[string]string{"API_KEY": "secret"},
+			want:        "secret",
+			wantMissing: nil,
 		},
 		{
-			name:    "multiple env vars",
-			input:   "${VAR1}-${VAR2}",
-			envVars: map[string]string{"VAR1": "foo", "VAR2": "bar"},
-			want:    "foo-bar",
+			name:        "multiple env vars",
+			input:       "${VAR1}-${VAR2}",
+			envVars:     map[string]string{"VAR1": "foo", "VAR2": "bar"},
+			want:        "foo-bar",
+			wantMissing: nil,
 		},
 		{
-			name:    "missing env var",
-			input:   "${MISSING}",
-			envVars: map[string]string{},
-			want:    "",
+			name:        "missing env var",
+			input:       "${MISSING}",
+			envVars:     map[string]string{},
+			want:        "",
+			wantMissing: []string{"MISSING"},
 		},
 		{
-			name:    "no env vars to substitute",
-			input:   "literal-string",
-			envVars: map[string]string{},
-			want:    "literal-string",
+			name:        "no env vars to substitute",
+			input:       "literal-string",
+			envVars:     map[string]string{},
+			want:        "literal-string",
+			wantMissing: nil,
 		},
 		{
-			name:    "env var in middle of string",
-			input:   "prefix-${VAR}-suffix",
-			envVars: map[string]string{"VAR": "middle"},
-			want:    "prefix-middle-suffix",
+			name:        "env var in middle of string",
+			input:       "prefix-${VAR}-suffix",
+			envVars:     map[string]string{"VAR": "middle"},
+			want:        "prefix-middle-suffix",
+			wantMissing: nil,
 		},
 	}
 
@@ -221,9 +223,18 @@ func TestSubstituteEnvVars(t *testing.T) {
 				defer os.Unsetenv(k)
 			}
 
-			got := substituteEnvVars(tt.input)
+			got, missing := substituteEnvVars(tt.input)
 			if got != tt.want {
-				t.Errorf("substituteEnvVars() = %v, want %v", got, tt.want)
+				t.Errorf("substituteEnvVars() result = %v, want %v", got, tt.want)
+			}
+			if len(missing) != len(tt.wantMissing) {
+				t.Errorf("substituteEnvVars() missing = %v, want %v", missing, tt.wantMissing)
+			} else {
+				for i, m := range missing {
+					if m != tt.wantMissing[i] {
+						t.Errorf("substituteEnvVars() missing[%d] = %v, want %v", i, m, tt.wantMissing[i])
+					}
+				}
 			}
 		})
 	}

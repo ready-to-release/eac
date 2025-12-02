@@ -113,7 +113,7 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 	var errs []error
 
 	// Load repository config first (provides path variables for other configs)
-	if err := c.LoadRepository(); err != nil {
+	if err := c.LoadRepository(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("repository: %w", err))
 	}
 
@@ -158,7 +158,26 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 }
 
 // LoadRepository loads the repository-wide configuration
-func (c *EACConfig) LoadRepository() error {
+func (c *EACConfig) LoadRepository(validateSchema bool) error {
+	// repository.yml is optional - check if it exists
+	repoPath := filepath.Join(c.ConfigRoot, RepositoryFileName)
+	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
+		// Use defaults if file doesn't exist
+		cfg := DefaultRepositoryConfig()
+		c.Repository = &cfg
+		return nil
+	}
+
+	if validateSchema {
+		data, err := c.readConfigFile(RepositoryFileName)
+		if err != nil {
+			return err
+		}
+		if err := c.validateSchema(schema.SchemaRepository, data); err != nil {
+			return err
+		}
+	}
+
 	cfg, err := LoadRepositoryConfig(c.RepoRoot)
 	if err != nil {
 		return err
@@ -368,6 +387,17 @@ func (c *EACConfig) validateSchema(schemaType schema.SchemaType, data []byte) er
 // ValidateAll validates all loaded configs against their schemas
 func (c *EACConfig) ValidateAll() error {
 	var errs []error
+
+	// Repository config is optional
+	if c.Repository != nil {
+		repoPath := filepath.Join(c.ConfigRoot, RepositoryFileName)
+		if _, err := os.Stat(repoPath); err == nil {
+			data, _ := c.readConfigFile(RepositoryFileName)
+			if err := c.validateSchema(schema.SchemaRepository, data); err != nil {
+				errs = append(errs, fmt.Errorf("repository: %w", err))
+			}
+		}
+	}
 
 	if c.Modules != nil {
 		data, _ := c.readConfigFile(ModulesFileName)

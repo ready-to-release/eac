@@ -1,6 +1,7 @@
 {
   "recommendations": [
     "local.vscode-ext-commit",
-    "CucumberOpen.cucumber-official"
+    "CucumberOpen.cucumber-official",
+    "redhat.vscode-yaml"
   ]
 }

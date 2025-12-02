@@ -1,5 +1,6 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/environments.schema.json
 environments:
-  # L0 Environments - Very Fast Unit Tests
+    # L0 Environments - Very Fast Unit Tests
   - moniker: l00-01
     name: "L0 Environment 01 - In-process Unit Tests"
     description: "Very fast unit tests running in-process with direct access to source"

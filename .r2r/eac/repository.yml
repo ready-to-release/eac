@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/repository.schema.json
 # Repository-wide path configuration
 # Defines repository-specific directory structures used by module type defaults
 

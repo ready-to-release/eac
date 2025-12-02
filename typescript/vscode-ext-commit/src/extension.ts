@@ -420,15 +420,8 @@ async function validateGitState(repo: any): Promise<string | null> {
         return 'No staged changes found. Stage your changes before generating a commit message.';
     }
 
-    // Check if there are unstaged changes (working tree changes that aren't staged)
-    // This includes both modified files and untracked files
-    const hasUnstagedChanges = (state.workingTreeChanges?.length || 0) > 0;
-
-    if (hasUnstagedChanges) {
-        return 'You have unstaged changes. Please stage or stash them before generating a commit message.';
-    }
-
-    // All validations passed
+    // Allow generating commit messages with unstaged changes present
+    // The commit message will only describe the staged changes
     return null;
 }
 
@@ -486,13 +479,29 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
             log('[commit message error] ' + stderrText);
         });
 
+        // Handle spawn errors (e.g., command not found, path doesn't exist)
+        childProcess.on('error', (err) => {
+            log('[commit message spawn error] ' + err.message);
+            reject(new Error(`Failed to start commit message command: ${err.message}. Is 'go' installed and in PATH?`));
+        });
+
         childProcess.on('close', (code) => {
+            log(`[commit message] Process exited with code ${code}`);
+            log(`[commit message] stdout length: ${fullOutput.length}, stderr length: ${errorOutput.length}`);
+
             // Extract commit message regardless of exit code (validation errors are included in output)
             const commitMessage = extractCommitMessageFromOutput(fullOutput);
 
             if (!commitMessage) {
                 // Only fail if we can't extract anything at all
-                const errorMsg = errorOutput || fullOutput || 'Command failed with exit code ' + code;
+                let errorMsg = '';
+                if (errorOutput.trim()) {
+                    errorMsg = errorOutput.trim();
+                } else if (fullOutput.trim()) {
+                    errorMsg = fullOutput.trim();
+                } else {
+                    errorMsg = `Command exited with code ${code} but produced no output. Check the "Commit Message AI" output panel for details.`;
+                }
                 reject(new Error(`commit message failed: ${errorMsg}`));
                 return;
             }

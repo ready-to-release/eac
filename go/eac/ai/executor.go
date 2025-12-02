@@ -28,7 +28,6 @@ package ai
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 )
@@ -102,19 +101,17 @@ func (e *Executor) GetLastUsedProvider() Provider {
 }
 
 // loadConfig loads the agent configuration from .r2r/eac directory.
-// Checks .r2r/eac/agent-config.personal.yml first (gitignored), then falls back to .r2r/eac/agent-config.yml.
+// Loads team config and merges with personal overrides if present.
+// Personal config can override: api_key, model, provider name, endpoint.
+// Both configs are validated against the agent-config schema.
 func (e *Executor) loadConfig() (*Config, error) {
 	eacDir := filepath.Join(e.workspaceRoot, ".r2r", "eac")
 
-	// Try personal config first (gitignored, user-specific)
+	teamConfigPath := filepath.Join(eacDir, "agent-config.yml")
 	personalConfigPath := filepath.Join(eacDir, "agent-config.personal.yml")
-	if _, err := os.Stat(personalConfigPath); err == nil {
-		return LoadConfig(personalConfigPath)
-	}
 
-	// Fall back to team config
-	configPath := filepath.Join(eacDir, "agent-config.yml")
-	return LoadConfig(configPath)
+	// Use merge-based loading with schema validation
+	return LoadConfigWithOverrides(e.workspaceRoot, teamConfigPath, personalConfigPath)
 }
 
 // LoadProvider loads the configured provider without fallback

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/handlers.schema.json
 # Handler Configuration
 # Maps build dependencies to build/test handlers
 #

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/test-suites.schema.json
 suites:
   # ============================================================================
   # Commit Suite - Fast unit and integration tests for pre-commit stages

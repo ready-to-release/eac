@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/repository/0.1.0",
+  "title": "Repository Configuration Schema",
+  "description": "Schema for repository-wide path configuration and conventions used by module type defaults",
+  "type": "object",
+  "properties": {
+    "paths": {
+      "$ref": "#/definitions/paths_config",
+      "description": "Repository-specific directory structures"
+    },
+    "conventions": {
+      "$ref": "#/definitions/conventions_config",
+      "description": "Conventional filenames used across the repository"
+    }
+  },
+  "definitions": {
+    "paths_config": {
+      "type": "object",
+      "description": "Repository-specific directory structures used by module type defaults",
+      "properties": {
+        "test_impl_root": {
+          "type": "string",
+          "description": "Test implementation root directory. Used in type defaults as: {test_impl_root}/{moniker}",
+          "default": "go/eac/specs/impl"
+        },
+        "specs_root": {
+          "type": "string",
+          "description": "Specs root directory. Used in type defaults as: {specs_root}/{moniker}",
+          "default": "specs"
+        },
+        "templates": {
+          "type": "string",
+          "description": "Templates directory",
+          "default": "templates"
+        },
+        "out": {
+          "$ref": "#/definitions/out_config",
+          "description": "Output directory structure"
+        }
+      }
+    },
+    "out_config": {
+      "type": "object",
+      "description": "Output directory structure for build artifacts, test results, and logs",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Root output directory",
+          "default": "out"
+        },
+        "build": {
+          "type": "string",
+          "description": "Build output directory",
+          "default": "out/build"
+        },
+        "test": {
+          "type": "string",
+          "description": "Test output directory",
+          "default": "out/test"
+        },
+        "logs": {
+          "type": "string",
+          "description": "Logs output directory",
+          "default": "out/logs"
+        },
+        "security": {
+          "type": "string",
+          "description": "Security scan output directory",
+          "default": "out/security"
+        }
+      }
+    },
+    "conventions_config": {
+      "type": "object",
+      "description": "Conventional filenames used across the repository",
+      "properties": {
+        "godog_test": {
+          "type": "string",
+          "description": "Godog test file name",
+          "default": "godog_test.go"
+        },
+        "package_json": {
+          "type": "string",
+          "description": "Node.js package file name",
+          "default": "package.json"
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Changelog file name",
+          "default": "CHANGELOG.md"
+        }
+      }
+    }
+  }
+}

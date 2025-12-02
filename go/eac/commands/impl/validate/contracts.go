@@ -4,6 +4,7 @@
 // Long:
 // Long: This command validates all EAC repository configuration files against their
 // Long: JSON Schema definitions. It checks:
+// Long:   - repository.yml (optional)
 // Long:   - modules.yml
 // Long:   - environments.yml
 // Long:   - testing-tags.yml
@@ -47,8 +48,23 @@ func ValidateContracts() int {
 
 	var hasErrors bool
 	var validated int
+	var total int
+
+	// Validate repository.yml (optional)
+	log.Infof("  %-25s ", "repository.yml")
+	if err := cfg.LoadRepository(true); err != nil {
+		log.Info("FAILED")
+		log.Errorf("    %v", err)
+		hasErrors = true
+		total++
+	} else if cfg.Repository != nil {
+		log.Info("OK (optional)")
+		validated++
+		total++
+	}
 
 	// Validate modules.yml
+	total++
 	log.Infof("  %-25s ", "modules.yml")
 	if err := cfg.LoadModules(true); err != nil {
 		log.Info("FAILED")
@@ -60,6 +76,7 @@ func ValidateContracts() int {
 	}
 
 	// Validate environments.yml
+	total++
 	log.Infof("  %-25s ", "environments.yml")
 	if err := cfg.LoadEnvironments(true); err != nil {
 		log.Info("FAILED")
@@ -76,6 +93,7 @@ func ValidateContracts() int {
 	}
 
 	// Validate testing-tags.yml
+	total++
 	log.Infof("  %-25s ", "testing-tags.yml")
 	if err := cfg.LoadTestingTags(true); err != nil {
 		log.Info("FAILED")
@@ -89,6 +107,7 @@ func ValidateContracts() int {
 	}
 
 	// Validate test-suites.yml
+	total++
 	log.Infof("  %-25s ", "test-suites.yml")
 	if err := cfg.LoadTestSuites(true); err != nil {
 		log.Info("FAILED")
@@ -102,7 +121,7 @@ func ValidateContracts() int {
 	log.Info("")
 
 	if hasErrors {
-		log.Infof("Validation failed: %d/4 contracts valid", validated)
+		log.Infof("Validation failed: %d/%d contracts valid", validated, total)
 		return 1
 	}
 
