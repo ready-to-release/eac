@@ -44,11 +44,10 @@ COPY go/eac/ai/ ./go/eac/ai/
 COPY go/eac/core/ ./go/eac/core/
 COPY go/eac/commands/ ./go/eac/commands/
 
-# Copy go.work.sum as cache-buster (changes when deps change)
-COPY go.work.sum ./
-
-# Build the commands binary (no cache mounts for reproducible builds)
-RUN cd go/eac/commands && go build -o /app/out/build/eac-commands/commands .
+# Build the commands binary with Go module cache for faster rebuilds
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    cd go/eac/commands && go build -o /app/out/build/eac-commands/commands .
 
 # ============================================================
 # RUNTIME STAGE - Final image

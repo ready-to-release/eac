@@ -119,11 +119,16 @@ modules:
       root: scripts
       source:
         - "*/go-invoker/**"
+      workflows:
+        ci: .github/workflows/ci-scripts-implicit-cli.yaml
+        release: ""
       repo:
-        specs: []
+        specs:
+          - "specs/scripts-implicit-cli/**"
         other:
           - importer.ps1
           - importer.sh
+          - .github/workflows/ci-scripts-implicit-cli.yaml
 
   # ============================================================================
   # Repository Root
@@ -171,6 +176,12 @@ modules:
       root: go/eac/ai
       source:
         - "**.go"
+      workflows:
+        ci: .github/workflows/ci-eac-ai.yaml
+        release: ""
+      repo:
+        other:
+          - .github/workflows/ci-eac-ai.yaml
 
   # ============================================================================
   # Source: CLI
@@ -259,6 +270,9 @@ modules:
         - go.mod
         - go.sum
         - contracts/schema/schemas/*.json
+      workflows:
+        ci: .github/workflows/ci-eac-core.yaml
+        release: ""
       repo:
         other:
           - contracts/eac-core/**
@@ -266,6 +280,7 @@ modules:
           - go/eac/core/markdown/**
           - go/eac/core/module-deps/**
           - go/eac/core/environments/**
+          - .github/workflows/ci-eac-core.yaml
 
   # ============================================================================
   # Source: MCP Commands Server
@@ -337,6 +352,9 @@ modules:
       tests:
         - "test/**/*.ts"
         - "features/**/*.ts"
+      workflows:
+        ci: .github/workflows/ci-vscode-ext-commit.yaml
+        release: ""
       repo:
         specs:
           - "specs/vscode-ext-commit/**"
@@ -344,6 +362,7 @@ modules:
           - contracts/vscode-commit/**
           - "typescript/vscode-ext-commit/*"
           - "typescript/vscode-ext-commit/test/*"
+          - .github/workflows/ci-vscode-ext-commit.yaml
 
   # ============================================================================
   # Release Documentation

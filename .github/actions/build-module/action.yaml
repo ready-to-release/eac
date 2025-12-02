@@ -1,0 +1,122 @@
+name: Build Module
+description: Build any module using the EAC commands binary
+
+inputs:
+  module:
+    description: Module moniker to build
+    required: true
+  commands-path:
+    description: Path to the commands binary
+    required: true
+  setup-deps:
+    description: |
+      Setup system dependencies before build:
+      - none: Skip (default, assumes deps already setup)
+      - auto: Auto-detect from module type
+      - Explicit: go, node, docker (comma-separated)
+    required: false
+    default: 'none'
+  artifact-name:
+    description: 'Name for the build artifact. If empty, uses build-artifacts-{module}'
+    required: false
+    default: ''
+  artifact-path:
+    description: 'Path pattern for artifacts to upload. If empty, uses out/build/{module}/**'
+    required: false
+    default: ''
+  upload-artifact:
+    description: Whether to upload build artifacts
+    required: false
+    default: 'true'
+  extra-args:
+    description: Additional arguments to pass to the build command
+    required: false
+    default: ''
+
+outputs:
+  artifact-name:
+    description: Name of the uploaded artifact
+    value: ${{ steps.vars.outputs.artifact-name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Module Dependencies
+      if: inputs.setup-deps != 'none'
+      uses: ./.github/actions/setup-module-deps
+      with:
+        module: ${{ inputs.module }}
+        commands-path: ${{ inputs.commands-path }}
+        deps: ${{ inputs.setup-deps }}
+
+    - name: Set variables
+      id: vars
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        INPUT_ARTIFACT_PATH: ${{ inputs.artifact-path }}
+      run: |
+        # Use provided values or defaults
+        if [ -n "$INPUT_ARTIFACT_NAME" ]; then
+          echo "artifact-name=$INPUT_ARTIFACT_NAME" >> $GITHUB_OUTPUT
+        else
+          echo "artifact-name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
+        if [ -n "$INPUT_ARTIFACT_PATH" ]; then
+          echo "artifact-path=$INPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
+        else
+          echo "artifact-path=out/build/${MODULE}/**" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build Module
+      shell: bash
+      env:
+        COMMANDS: ${{ inputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: $COMMANDS build $MODULE $EXTRA_ARGS
+
+    - name: Upload Build Artifacts
+      if: inputs.upload-artifact == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.vars.outputs.artifact-name }}
+        path: ${{ steps.vars.outputs.artifact-path }}
+        if-no-files-found: warn
+
+    - name: Build Summary
+      if: always()
+      shell: bash
+      env:
+        COMMANDS: ${{ inputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        ARTIFACT_NAME: ${{ steps.vars.outputs.artifact-name }}
+        RUN_ID: ${{ github.run_id }}
+        COMMIT: ${{ github.sha }}
+      run: |
+        echo "## Build: ${MODULE}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ -d "out/build/${MODULE}" ]; then
+          echo "Module built successfully." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | \`${MODULE}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${COMMIT}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          ARTIFACT_COUNT=$(find "out/build/${MODULE}" -type f 2>/dev/null | wc -l | tr -d ' ')
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "${ARTIFACT_COUNT} file(s) uploaded as \`${ARTIFACT_NAME}\`" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "Module build failed or produced no artifacts." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          $COMMANDS ci summary-link ${RUN_ID} --type build >> $GITHUB_STEP_SUMMARY
+        fi

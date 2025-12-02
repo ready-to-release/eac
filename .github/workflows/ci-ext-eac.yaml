@@ -12,6 +12,7 @@ on:
       ref:
         required: false
         type: string
+        description: 'Git ref to checkout'
         default: ''
       sha:
         required: false
@@ -35,38 +36,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
-
-      - name: Build extension using EAC build system
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "Building ext-eac using EAC build system..."
-          $COMMANDS build ext-eac
-
-          echo ""
-          echo "Verifying image was built..."
-          docker images ext-eac:latest
-
-          echo ""
-          echo "Re-tagging for CI tests..."
-          docker tag ext-eac:latest ext-eac:ci-test
-
-      - name: Verify Docker Image
-        run: |
-          echo "Verifying ext-eac Docker image..."
-          docker images ext-eac:ci-test
-
-          echo ""
-          echo "Checking image labels..."
-          docker inspect ext-eac:ci-test --format='{{json .Config.Labels}}' | jq '.'
-
-          echo ""
-          echo "Testing extension metadata..."
-          docker run --rm ext-eac:ci-test extension-meta
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -74,34 +43,56 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push multi-platform image to GHCR with CI tag
+      - name: Build and push multi-platform image
+        id: build
         run: |
           IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
 
-          echo "Building and pushing multi-platform image with CI tags..."
-          echo "Including SLSA provenance and SBOM attestations for supply chain security"
+          echo "Building and pushing multi-platform image..."
+          echo "Using registry-based caching for fast rebuilds"
+
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag "$IMAGE_NAME:ci" \
             --tag "$IMAGE_NAME:sha-$SHORT_SHA" \
             --file ./containers/ext-eac/Dockerfile \
-            --cache-from type=gha \
+            --cache-from type=registry,ref=$IMAGE_NAME:buildcache \
+            --cache-from type=registry,ref=$IMAGE_NAME:ci \
+            --cache-to type=registry,ref=$IMAGE_NAME:buildcache,mode=max \
             --provenance=true \
             --sbom=true \
             --push \
             .
 
           echo ""
-          echo "Published CI images:"
+          echo "Published images:"
           echo "  - $IMAGE_NAME:ci"
           echo "  - $IMAGE_NAME:sha-$SHORT_SHA"
+
+          echo "image-name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "short-sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Verify pushed image
+        run: |
+          IMAGE_NAME="${{ steps.build.outputs.image-name }}"
+          SHORT_SHA="${{ steps.build.outputs.short-sha }}"
+
+          echo "Pulling and verifying pushed image..."
+          docker pull "$IMAGE_NAME:sha-$SHORT_SHA"
+
+          echo ""
+          echo "Checking image labels..."
+          docker inspect "$IMAGE_NAME:sha-$SHORT_SHA" --format='{{json .Config.Labels}}' | jq '.'
+
+          echo ""
+          echo "Testing extension metadata..."
+          docker run --rm "$IMAGE_NAME:sha-$SHORT_SHA" extension-meta
 
       - name: Build Summary
         if: always()
         run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
           IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
@@ -118,8 +109,6 @@ jobs:
             echo "- Base image pull failed" >> $GITHUB_STEP_SUMMARY
             echo "- Go compilation error" >> $GITHUB_STEP_SUMMARY
             echo "- Registry authentication failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -138,6 +127,7 @@ jobs:
           echo "| Platforms | \`linux/amd64\`, \`linux/arm64\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Dockerfile | \`containers/ext-eac/Dockerfile\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cache | Registry-based (\`:buildcache\`) |" >> $GITHUB_STEP_SUMMARY
           echo "| Attestations | SLSA Provenance, SBOM |" >> $GITHUB_STEP_SUMMARY
 
   test:
@@ -175,7 +165,7 @@ jobs:
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
 
-          echo "Building r2r CLI using EAC build system..."
+          echo "Building r2r CLI..."
           $COMMANDS build r2r-cli
 
           echo ""
@@ -183,30 +173,17 @@ jobs:
           cp out/build/r2r-cli/r2r-linux-amd64 ./r2r
           chmod +x ./r2r
 
-          echo ""
-          echo "Verifying r2r CLI binary..."
-          ls -lh ./r2r
-          file ./r2r
-
       - name: Test Extension via r2r CLI
         run: |
           echo "Testing eac extension through r2r CLI..."
 
-          echo ""
-          echo "Setting up isolated test environment..."
-
-          # Create a temporary test directory isolated from the mono repo
+          # Create isolated test environment
           mkdir -p /tmp/ext-eac-test
           cd /tmp/ext-eac-test
-
-          # Create .git directory for r2r to detect repository root
           mkdir -p .git
-
-          # Copy contract files needed for testing
           cp -r $GITHUB_WORKSPACE/contracts ./contracts
 
-          echo ""
-          echo "Creating .r2r/r2r-cli.yml config with CI test image..."
+          # Configure to use CI test image
           mkdir -p .r2r
           cat > .r2r/r2r-cli.yml << EOF
           extensions:
@@ -215,19 +192,8 @@ jobs:
               image_pull_policy: 'Never'
           EOF
 
-          # Copy r2r binary to test directory
           cp $GITHUB_WORKSPACE/r2r ./r2r
           chmod +x ./r2r
-
-          echo ""
-          echo "Verifying test environment..."
-          pwd
-          ls -la
-          ./r2r --version
-
-          echo ""
-          echo "Testing 'help' command..."
-          timeout 120 ./r2r run eac help || true
 
           echo ""
           echo "Testing 'show modules' command..."
@@ -258,7 +224,6 @@ jobs:
       - name: Test Summary
         if: always()
         run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
 
@@ -268,25 +233,17 @@ jobs:
             echo "All extension tests passed." >> $GITHUB_STEP_SUMMARY
           else
             echo "Extension tests failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
-            echo "- Container image failed to pull from GHCR" >> $GITHUB_STEP_SUMMARY
-            echo "- Extension command returned non-zero exit code" >> $GITHUB_STEP_SUMMARY
-            echo "- Test timeout exceeded" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Test | Method | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Extension metadata | r2r CLI | Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Help command | r2r CLI | Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Show modules | r2r CLI | Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Direct Docker help | Docker run | Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Direct Docker meta | Docker run | Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Method | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| show modules | r2r CLI | List repository modules |" >> $GITHUB_STEP_SUMMARY
+          echo "| extension-meta | r2r CLI | Extension metadata |" >> $GITHUB_STEP_SUMMARY
+          echo "| help | Docker | Direct container execution |" >> $GITHUB_STEP_SUMMARY
+          echo "| extension-meta | Docker | Direct container execution |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Tested Image" >> $GITHUB_STEP_SUMMARY

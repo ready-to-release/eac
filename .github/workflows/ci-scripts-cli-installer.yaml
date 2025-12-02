@@ -12,6 +12,7 @@ on:
       ref:
         required: false
         type: string
+        description: 'Git ref to checkout'
         default: ''
       sha:
         required: false
@@ -37,45 +38,10 @@ jobs:
         uses: ./.github/actions/setup-commands
 
       - name: Build Module
-        run: ${{ steps.commands.outputs.commands-path }} build scripts-cli-installer
-
-      - name: Upload Build Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/build-module
         with:
-          name: build-artifacts-scripts-cli-installer
-          path: out/build/scripts-cli-installer/**
-
-      - name: Build Summary
-        if: always()
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "## Build: scripts-cli-installer" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "Installer scripts validated successfully." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Installer script validation failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Scripts Validated" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Type | Script |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Bash | \`scripts/sh/cli/install.sh\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| PowerShell | \`scripts/pwsh/cli/install.ps1\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Module | \`scripts-cli-installer\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          module: scripts-cli-installer
+          commands-path: ${{ steps.commands.outputs.commands-path }}
 
   test-linux:
     name: Test (Linux)
@@ -90,55 +56,11 @@ jobs:
         id: commands
         uses: ./.github/actions/setup-commands
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+      - name: Test Module
+        uses: ./.github/actions/test-module
         with:
-          name: build-artifacts-scripts-cli-installer
-          path: out/build/scripts-cli-installer
-
-      - name: Test Module (Commit Suite - L0-L2)
-        run: ${{ steps.commands.outputs.commands-path }} test scripts-cli-installer --suite commit
-
-      - name: Test Module (Acceptance Suite - L3)
-        run: ${{ steps.commands.outputs.commands-path }} test scripts-cli-installer --suite acceptance
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-scripts-cli-installer-linux
-          path: out/test/**
-
-      - name: Test Summary
-        if: always()
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "## Test: scripts-cli-installer (Linux)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "Bash installer tests passed on Linux." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Bash installer tests failed on Linux." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type test --artifact test-results-scripts-cli-installer-linux >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Suite | Level | Tests |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| commit | L0-L2 | Error handling (invalid version) |" >> $GITHUB_STEP_SUMMARY
-          echo "| acceptance | L3 | Install latest from GitHub releases |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Test Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Linux (ubuntu-latest) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Installer | \`scripts/sh/cli/install.sh\` |" >> $GITHUB_STEP_SUMMARY
+          module: scripts-cli-installer
+          commands-path: ${{ steps.commands.outputs.commands-path }}
 
   test-windows:
     name: Test (Windows)
@@ -181,28 +103,20 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          echo "## Test: scripts-cli-installer (Windows)" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          if ("${{ job.status }}" -eq "success") {
-            echo "PowerShell installer tests passed on Windows." >> $env:GITHUB_STEP_SUMMARY
-          } else {
-            echo "PowerShell installer tests failed on Windows." >> $env:GITHUB_STEP_SUMMARY
-            echo "" >> $env:GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-scripts-cli-installer-windows >> $env:GITHUB_STEP_SUMMARY
-          }
-          echo "" >> $env:GITHUB_STEP_SUMMARY
+          @"
+          ## Test: scripts-cli-installer (Windows)
 
-          echo "### Tests Executed" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "| Suite | Level | Tests |" >> $env:GITHUB_STEP_SUMMARY
-          echo "|-------|-------|-------|" >> $env:GITHUB_STEP_SUMMARY
-          echo "| commit | L0-L2 | Error handling (invalid version) |" >> $env:GITHUB_STEP_SUMMARY
-          echo "| acceptance | L3 | Install latest from GitHub releases |" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
+          ### Tests Executed
 
-          echo "### Test Details" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $env:GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $env:GITHUB_STEP_SUMMARY
-          echo "| Platform | Windows (windows-latest) |" >> $env:GITHUB_STEP_SUMMARY
-          echo "| Installer | ``scripts/pwsh/cli/install.ps1`` |" >> $env:GITHUB_STEP_SUMMARY
+          | Suite | Level | Tests |
+          |-------|-------|-------|
+          | commit | L0-L2 | Error handling (invalid version) |
+          | acceptance | L3 | Install latest from GitHub releases |
+
+          ### Test Details
+
+          | Property | Value |
+          |----------|-------|
+          | Platform | Windows (windows-latest) |
+          | Installer | ``scripts/pwsh/cli/install.ps1`` |
+          "@ >> $env:GITHUB_STEP_SUMMARY

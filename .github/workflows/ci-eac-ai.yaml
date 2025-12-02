@@ -1,0 +1,63 @@
+name: "ci-eac-ai (stage 1-6)"
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        type: string
+        description: 'Git ref to checkout'
+        default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to test'
+        default: ''
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Build Module
+        uses: ./.github/actions/build-module
+        with:
+          module: eac-ai
+          commands-path: ${{ steps.commands.outputs.commands-path }}
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Test Module
+        uses: ./.github/actions/test-module
+        with:
+          module: eac-ai
+          commands-path: ${{ steps.commands.outputs.commands-path }}

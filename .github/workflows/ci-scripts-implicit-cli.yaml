@@ -1,0 +1,102 @@
+name: "ci-scripts-implicit-cli (stage 1-6)"
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        type: string
+        description: 'Git ref to checkout'
+        default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to test'
+        default: ''
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  # Scripts package has no build step - test only
+  test-linux:
+    name: Test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Test Module
+        uses: ./.github/actions/test-module
+        with:
+          module: scripts-implicit-cli
+          commands-path: ${{ steps.commands.outputs.commands-path }}
+          download-artifact: 'false'
+
+  test-windows:
+    name: Test (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: |
+            go/eac/commands/go.sum
+            go/eac/core/go.sum
+
+      - name: Run Tests (Commit Suite)
+        shell: pwsh
+        run: |
+          go run ./go/eac/commands test scripts-implicit-cli --suite commit
+
+      - name: Run Tests (Acceptance Suite)
+        shell: pwsh
+        run: |
+          go run ./go/eac/commands test scripts-implicit-cli --suite acceptance
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-scripts-implicit-cli-windows
+          path: out/test/**/scripts-implicit-cli/**
+          if-no-files-found: warn
+
+      - name: Test Summary
+        if: always()
+        shell: pwsh
+        run: |
+          @"
+          ## Test: scripts-implicit-cli (Windows)
+
+          ### Tests Executed
+
+          | Suite | Level | Description |
+          |-------|-------|-------------|
+          | commit | L0-L2 | Unit and integration tests |
+          | acceptance | L3 | Acceptance verification tests |
+
+          ### Test Details
+
+          | Property | Value |
+          |----------|-------|
+          | Module | ``scripts-implicit-cli`` |
+          | Platform | Windows |
+          "@ >> $env:GITHUB_STEP_SUMMARY
