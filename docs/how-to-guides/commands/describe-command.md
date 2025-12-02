@@ -93,9 +93,9 @@ Array of available module monikers for completion (sorted alphabetically).
     "docs",
     "scripts",
     "specs",
-    "src-cli",
-    "src-commands",
-    "src-core",
+    "r2r-cli",
+    "eac-commands",
+    "eac-core",
     "src-mcp"
   ]
 }
@@ -105,7 +105,7 @@ Array of available module monikers for completion (sorted alphabetically).
 
 ### 1. MCP Server Integration
 
-The MCP server (`src/mcp/commands/main.go`) uses `get commands` for dynamic tool discovery:
+The MCP server (`go/eac/mcp/commands/main.go`) uses `get commands` for dynamic tool discovery:
 
 ```go
 // getCommandTools discovers commands by calling "describe commands"
@@ -222,9 +222,9 @@ r2r eac get commands | jq -r '.modules[]'
 # docs
 # scripts
 # specs
-# src-cli
-# src-commands
-# src-core
+# r2r-cli
+# eac-commands
+# eac-core
 # src-mcp
 ```
 
@@ -456,7 +456,7 @@ func loadModuleMonikers() []string {
 
 **Integration Points:**
 
-- MCP server (`src/mcp/commands/main.go`)
+- MCP server (`go/eac/mcp/commands/main.go`)
 - PowerShell completion (`scripts/pwsh/go-invoker/go.psm1`)
 - Command validation scripts
 - AI assistant tool discovery

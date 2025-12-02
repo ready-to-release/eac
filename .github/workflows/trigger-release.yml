@@ -13,12 +13,12 @@
 # See: https://github.blog/changelog/2022-09-08-github-actions-use-github_token-with-workflow_dispatch-and-repository_dispatch/
 #
 # Flow:
-#   1. Developer runs `release this src-cli` locally
+#   1. Developer runs `release this r2r-cli` locally
 #   2. Developer commits changelog, creates PR, gets review, merges
 #   3. This workflow runs on push to main
 #   4. Detects new version in changelog without corresponding tag
-#   5. Creates tag (e.g., src-cli/0.1.0) and pushes it
-#   6. Dispatches release workflow (e.g., release-src-cli.yml) with version input
+#   5. Creates tag (e.g., r2r-cli/0.1.0) and pushes it
+#   6. Dispatches release workflow (e.g., release-r2r-cli.yml) with version input
 #
 # Can also be triggered manually to check status or force tag creation.
 
@@ -40,7 +40,7 @@ on:
         type: choice
         options:
           - all
-          - src-cli
+          - r2r-cli
           - ext-eac
           - docs
       dry_run:
@@ -69,13 +69,13 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
+            go/eac/commands/go.sum
+            go/eac/core/go.sum
 
       - name: Check for pending tags
         id: check
         run: |
-          cd src/commands
+          cd go/eac/commands
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ "${{ inputs.module }}" = "all" ]; then
@@ -143,8 +143,8 @@ jobs:
 
             # Map module to release workflow
             case "$MODULE" in
-              src-cli)
-                WORKFLOW="release-src-cli.yml"
+              r2r-cli)
+                WORKFLOW="release-r2r-cli.yml"
                 echo "Triggering $WORKFLOW for version $VERSION"
                 gh workflow run "$WORKFLOW" -f version="$VERSION"
                 echo "✅ Dispatched $WORKFLOW"

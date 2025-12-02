@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://ready-to-release.github.io/eac/"><img src="https://img.shields.io/badge/docs-ready--to--release.github.io%2Feac-blue" alt="docs"></a>
-  <a href="https://github.com/ready-to-release/eac/releases?q=src-cli"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=src-cli/*&label=src-cli&color=green" alt="src-cli release"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=r2r-cli"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=r2r-cli/*&label=r2r-cli&color=green" alt="r2r-cli release"></a>
   <a href="https://github.com/ready-to-release/eac/pkgs/container/ext-eac"><img src="https://img.shields.io/github/v/tag/ready-to-release/eac?filter=ext-eac/*&label=ext-eac&color=green" alt="ext-eac release"></a>
   <a href="https://github.com/ready-to-release/eac/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-yellow" alt="MIT license"></a>
 </p>

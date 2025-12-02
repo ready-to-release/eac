@@ -36,8 +36,8 @@
     "specs/**/*.feature"
   ],
   "cucumber.glue": [
-    "src/specs/impl/**/*.go",
-    "src/specs/internal/**/*.go",
+    "go/eac/specs/impl/**/*.go",
+    "go/eac/specs/internal/**/*.go",
     ".vscode/extensions/**/features/**/*.ts"
   ]
 }

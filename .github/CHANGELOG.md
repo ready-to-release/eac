@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- feat(multi-module): add src-cli release workflow
+- feat(multi-module): add r2r-cli release workflow
 - feat: commands for docs and design
 - feat: added new public facing readme
 

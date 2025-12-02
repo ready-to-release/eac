@@ -38,7 +38,7 @@ r2r eac get modules                     # Module contracts (JSON)
 r2r eac get dependencies                # Dependency graph (JSON)
 r2r eac get files                       # File mappings (JSON)
 r2r eac get changed-modules             # Changed modules (JSON)
-r2r eac get execution-order src-cli     # Build order (JSON)
+r2r eac get execution-order r2r-cli     # Build order (JSON)
 r2r eac get config                      # EAC configuration (JSON)
 r2r eac get tests                       # All tests (JSON)
 r2r eac get environments                # Environment contracts (JSON)
@@ -61,8 +61,8 @@ r2r eac show modules
 # ┌─────────────────┬──────────────┬────────────┬─────────────┐
 # │ Module          │ Type         │ Files      │ Dependencies│
 # ├─────────────────┼──────────────┼────────────┼─────────────┤
-# │ src-commands    │ go-commands  │ 45         │ 2           │
-# │ src-core        │ go-library   │ 32         │ 0           │
+# │ eac-commands    │ go-commands  │ 45         │ 2           │
+# │ eac-core        │ go-library   │ 32         │ 0           │
 # │ src-auth        │ go-library   │ 28         │ 1           │
 # │ docs            │ mkdocs-site  │ 156        │ 0           │
 # └─────────────────┴──────────────┴────────────┴─────────────┘
@@ -78,15 +78,15 @@ r2r eac show dependencies
 # Output:
 # Module Dependencies:
 #
-# src-cli
-#   └─→ src-commands
-#       └─→ src-core
+# r2r-cli
+#   └─→ eac-commands
+#       └─→ eac-core
 #
 # src-auth
-#   └─→ src-core
+#   └─→ eac-core
 #
 # src-api
-#   ├─→ src-core
+#   ├─→ eac-core
 #   └─→ src-auth
 ```
 
@@ -101,8 +101,8 @@ r2r eac show files
 # ┌────────────────────────────────────┬─────────────────┐
 # │ File                               │ Module          │
 # ├────────────────────────────────────┼─────────────────┤
-# │ src/commands/impl/work/work.go     │ src-commands    │
-# │ src/core/repository/repo.go        │ src-core        │
+# │ go/eac/commands/impl/work/work.go  │ eac-commands    │
+# │ go/eac/core/repository/repo.go     │ eac-core        │
 # │ src/auth/jwt/token.go              │ src-auth        │
 # │ docs/index.md                      │ docs            │
 # └────────────────────────────────────┴─────────────────┘
@@ -141,7 +141,7 @@ r2r eac show tests
 # ┌──────────────┬────────────┬────────────┬─────────────┐
 # │ Suite        │ Module     │ Tests      │ Status      │
 # ├──────────────┼────────────┼────────────┼─────────────┤
-# │ integration  │ src-cli    │ 12         │ passing     │
+# │ integration  │ r2r-cli    │ 12         │ passing     │
 # │ e2e          │ src-api    │ 8          │ passing     │
 # │ smoke        │ src-auth   │ 3          │ passing     │
 # └──────────────┴────────────┴────────────┴─────────────┘
@@ -199,11 +199,11 @@ r2r eac show-files-changed
 # ┌────────────────────────────────────┬─────────────────┐
 # │ Changed File                       │ Module          │
 # ├────────────────────────────────────┼─────────────────┤
-# │ src/commands/impl/work/remove.go   │ src-commands    │
-# │ src/core/repository/repo.go        │ src-core        │
+# │ go/eac/commands/impl/work/remove.go│ eac-commands    │
+# │ go/eac/core/repository/repo.go     │ eac-core        │
 # └────────────────────────────────────┴─────────────────┘
 #
-# Changed modules: src-commands, src-core
+# Changed modules: eac-commands, eac-core
 ```
 
 ### show files-staged
@@ -235,10 +235,10 @@ r2r eac get modules
 {
   "modules": [
     {
-      "moniker": "src-commands",
+      "moniker": "eac-commands",
       "type": "go-commands",
-      "path": "src/commands",
-      "dependencies": ["src-core"],
+      "path": "go/eac/commands",
+      "dependencies": ["eac-core"],
       "files": 45
     }
   ]
@@ -261,10 +261,10 @@ r2r eac get dependencies
 # Output (JSON):
 {
   "dependencies": {
-    "src-cli": ["src-commands"],
-    "src-commands": ["src-core"],
-    "src-auth": ["src-core"],
-    "src-api": ["src-core", "src-auth"]
+    "r2r-cli": ["eac-commands"],
+    "eac-commands": ["eac-core"],
+    "src-auth": ["eac-core"],
+    "src-api": ["eac-core", "src-auth"]
   }
 }
 ```
@@ -277,16 +277,16 @@ r2r eac get dependencies --as-plantuml
 
 # Output:
 @startuml
-component "src-core"
-component "src-commands"
-component "src-cli"
+component "eac-core"
+component "eac-commands"
+component "r2r-cli"
 component "src-auth"
 component "src-api"
 
-"src-cli" --> "src-commands"
-"src-commands" --> "src-core"
-"src-auth" --> "src-core"
-"src-api" --> "src-core"
+"r2r-cli" --> "eac-commands"
+"eac-commands" --> "eac-core"
+"src-auth" --> "eac-core"
+"src-api" --> "eac-core"
 "src-api" --> "src-auth"
 @enduml
 
@@ -295,10 +295,10 @@ r2r eac get dependencies --as-mermaid
 
 # Output:
 graph TD
-    src-cli --> src-commands
-    src-commands --> src-core
-    src-auth --> src-core
-    src-api --> src-core
+    r2r-cli --> eac-commands
+    eac-commands --> eac-core
+    src-auth --> eac-core
+    src-api --> eac-core
     src-api --> src-auth
 ```
 
@@ -313,8 +313,8 @@ r2r eac get files
 {
   "files": [
     {
-      "path": "src/commands/impl/work/work.go",
-      "module": "src-commands"
+      "path": "go/eac/commands/impl/work/work.go",
+      "module": "eac-commands"
     }
   ],
   "total": 2690
@@ -338,8 +338,8 @@ r2r eac get changed-modules
 # Output (JSON):
 {
   "changed_modules": [
-    "src-commands",
-    "src-core"
+    "eac-commands",
+    "eac-core"
   ]
 }
 ```
@@ -355,14 +355,14 @@ r2r eac get changed-modules
 Get build order for modules based on dependencies.
 
 ```bash
-r2r eac get execution-order src-cli
+r2r eac get execution-order r2r-cli
 
 # Output (JSON):
 {
   "execution_order": [
-    "src-core",
-    "src-commands",
-    "src-cli"
+    "eac-core",
+    "eac-commands",
+    "r2r-cli"
   ]
 }
 ```
@@ -413,17 +413,17 @@ r2r eac get tests
   "tests": [
     {
       "suite": "integration",
-      "module": "src-cli",
+      "module": "r2r-cli",
       "count": 12,
       "status": "passing",
-      "path": "src/cli/tests/integration"
+      "path": "go/r2r/cli/tests/integration"
     },
     {
       "suite": "e2e",
       "module": "src-api",
       "count": 8,
       "status": "passing",
-      "path": "src/api/tests/e2e"
+      "path": "go/eac/api/tests/e2e"
     }
   ],
   "total": 20
@@ -490,8 +490,8 @@ r2r eac get changed-modules-ci
 # Output (JSON):
 {
   "changed_modules": [
-    "src-commands",
-    "src-core"
+    "eac-commands",
+    "eac-core"
   ],
   "base_commit": "abc123",
   "head_commit": "def456"
@@ -533,7 +533,7 @@ r2r eac get suite integration
 # Output (JSON):
 {
   "name": "integration",
-  "module": "src-cli",
+  "module": "r2r-cli",
   "tests": 12,
   "status": "passing"
 }
@@ -575,7 +575,7 @@ done
 
 ```bash
 # Get execution order
-r2r eac get execution-order src-cli | jq -r '.execution_order[]' | while read module; do
+r2r eac get execution-order r2r-cli | jq -r '.execution_order[]' | while read module; do
   echo "Building $module..."
   r2r eac build $module
 done
@@ -710,7 +710,7 @@ r2r eac get modules | jq '{module: [.modules[].moniker]}'
 
 # Output:
 # {
-#   "module": ["src-cli", "src-commands", "src-core", ...]
+#   "module": ["r2r-cli", "eac-commands", "eac-core", ...]
 # }
 ```
 

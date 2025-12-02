@@ -1,6 +1,6 @@
 # Command Template Guide
 
-This guide provides a reusable template for creating new commands in `src/commands/impl/`.
+This guide provides a reusable template for creating new commands in `go/eac/commands/impl/`.
 
 ## Command File Header Template
 
@@ -112,7 +112,7 @@ The usage field is the most important part - make it educational and specific:
 
 ```go
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
-// Flag.module: type=string, shorthand=m, usage=Target module for the specification (e.g., src-commands, src-core). If not provided, the module will be inferred from the description
+// Flag.module: type=string, shorthand=m, usage=Target module for the specification (e.g., eac-commands, eac-core). If not provided, the module will be inferred from the description
 // Flag.format: type=string, shorthand=f, default=text, completion=text,json, usage=Output format for validation results (text for human-readable, json for machine-readable)
 // Flag.quiet: type=bool, shorthand=q, default=false, usage=Suppress success messages and show only validation errors and warnings
 ```
@@ -150,8 +150,8 @@ import (
     "os"
     "strings"
 
-    "github.com/ready-to-release/eac/src/commands/internal/registry"
-    "github.com/ready-to-release/eac/src/core/repository"
+    "github.com/ready-to-release/eac/go/eac/commands/internal/registry"
+    "github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 func init() {
@@ -233,7 +233,7 @@ func parseConfig() (*Config, error) {
 1. **Be Specific**: Instead of "Process files", write "Validate all .feature files in the specs/ directory"
 2. **Explain Defaults**: "By default, output is in human-readable text format"
 3. **Mention Validation**: "The command validates that the module exists before proceeding"
-4. **Reference Examples**: "e.g., src-commands, src-core" when describing modules
+4. **Reference Examples**: "e.g., eac-commands, eac-core" when describing modules
 5. **Explain Exit Codes**: "Exit code is 0 if all validations pass, 1 if any critical errors are found"
 
 ### Flag Design
@@ -273,8 +273,8 @@ go run . completion bash
 
 See these well-documented commands for examples:
 
-- `src/commands/impl/commit/message.go` - Complex command with AI integration
-- `src/commands/impl/create/spec/create.go` - Multiple flags with completion
-- `src/commands/impl/validate/specs.go` - Format flag with completion
-- `src/commands/impl/show/modules.go` - Simple read-only command
-- `src/commands/impl/help/help.go` - Command with verbose flag
+- `go/eac/commands/impl/commit/message.go` - Complex command with AI integration
+- `go/eac/commands/impl/create/spec/create.go` - Multiple flags with completion
+- `go/eac/commands/impl/validate/specs.go` - Format flag with completion
+- `go/eac/commands/impl/show/modules.go` - Simple read-only command
+- `go/eac/commands/impl/help/help.go` - Command with verbose flag

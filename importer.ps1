@@ -52,7 +52,7 @@ Import-Module $ModulePath -Force
 Write-Host "✅ CommandRunner module imported successfully!" -ForegroundColor Green
 
 # Create r2r alias pointing to the OS-specific binary
-$R2rBinaryPath = Join-Path $PSScriptRoot "out\build\src-cli"
+$R2rBinaryPath = Join-Path $PSScriptRoot "out\build\r2r-cli"
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
     $R2rBinary = Join-Path $R2rBinaryPath "r2r-windows-amd64.exe"
 } elseif ($IsMacOS) {
@@ -88,7 +88,7 @@ function global:eac {
     Write-Host "✅ eac alias created -> r2r eac <args>" -ForegroundColor Green
 } else {
     Write-Host "⚠️  r2r binary not found at: $R2rBinary" -ForegroundColor Yellow
-    Write-Host "   Run 'go run ./src/commands build module src-cli' to build it" -ForegroundColor Gray
+    Write-Host "   Run 'go run ./go/eac/commands build module r2r-cli' to build it" -ForegroundColor Gray
 }
 
 # Create top-level command aliases unless -NoAlias specified

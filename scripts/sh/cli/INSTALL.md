@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/s
 chmod +x install.sh
 
 # Install specific version
-./install.sh --version src-cli/v1.0.0
+./install.sh --version r2r-cli/v1.0.0
 
 # Install system-wide (requires sudo)
 ./install.sh --system

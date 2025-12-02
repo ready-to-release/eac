@@ -1,11 +1,11 @@
 # ============================================================================
 # ARCHITECTURAL NOTE:
 # - This file: specs/<module>/<feature>/specification.feature
-# - Step definitions: src/<module>/tests/steps_test.go (SEPARATE LOCATION)
-# - Test runner: src/<module>/tests/godog_test.go
+# - Step definitions: go/eac/specs/impl/<module>/steps.go (SEPARATE LOCATION)
+# - Test runner: go/eac/specs/impl/<module>/godog_test.go
 #
 # This template is for SPECIFICATIONS ONLY (business-readable WHAT).
-# Implementation code (HOW) goes in src/, not in specs/.
+# Implementation code (HOW) goes in go/, not in specs/.
 # ============================================================================
 #
 # INSTRUCTIONS:
@@ -13,7 +13,7 @@
 # 2. Rules represent acceptance criteria
 # 3. Scenarios under Rules are executable examples
 # 4. Save this file in specs/<module>/<feature>/
-# 5. Implement step definitions separately in src/<module>/tests/steps_test.go
+# 5. Implement step definitions separately in go/eac/specs/impl/<module>/steps.go
 #
 # TAG USAGE:
 # - Scenario level: REQUIRED verification tag (@ov, @iv, @pv, @piv, @ppv)

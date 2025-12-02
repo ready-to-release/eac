@@ -112,10 +112,10 @@ detect_platform() {
 # Get the latest release version from GitHub
 get_latest_version() {
     local latest
-    # Fetch releases and find the latest src-cli/* release (monorepo has multiple release tags)
-    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" | grep '"tag_name":' | grep 'src-cli/' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+    # Fetch releases and find the latest r2r-cli/* release (monorepo has multiple release tags)
+    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" | grep '"tag_name":' | grep 'r2r-cli/' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
     if [[ -z "$latest" ]]; then
-        echo -e "${RED}No src-cli release found${NC}"
+        echo -e "${RED}No r2r-cli release found${NC}"
         exit 1
     fi
     echo "$latest"

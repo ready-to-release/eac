@@ -35,7 +35,7 @@ Generate a complete, well-structured Gherkin feature specification following the
 
 1. **Feature Declaration**: `Feature: <module>_<feature-name>`
    - Must follow pattern: lowercase module, underscore, lowercase feature name
-   - Examples: `src-commands_commit`, `src-cli_init-command`
+   - Examples: `eac-commands_commit`, `r2r-cli_init-command`
 
 2. **User Story**: As a.../I want.../So that... format
 
@@ -89,7 +89,7 @@ EVERY scenario MUST have at least one verification tag:
 
 - `@L0` to `@L4` - Test environment complexity (usually inferred)
 - `@deps:<system>` - External system dependencies (e.g., @deps:docker)
-- `@depm:<module>` - Internal module dependencies (e.g., @depm:src-cli)
+- `@depm:<module>` - Internal module dependencies (e.g., @depm:r2r-cli)
 - `@risk-control:<name>-<id>` - Compliance/security requirements
 - `@skip:<reason>` - Temporarily excluded (e.g., @skip:wip)
 - `@Manual` - Manual test (cannot be automated)

@@ -8,7 +8,7 @@
 
 A module is a logical unit of code with:
 
-- **Moniker**: Unique identifier (e.g., `src-core`, `my-service`)
+- **Moniker**: Unique identifier (e.g., `eac-core`, `my-service`)
 - **Type**: Classification that provides defaults (e.g., `go-library`, `go-cli`)
 - **Files**: Ownership boundaries (which files belong to this module)
 - **Dependencies**: Other modules this depends on
@@ -57,8 +57,8 @@ modules:
     description: API service for user management
 
     depends_on:               # Other modules this depends on
-      - src-core
-      - src-ai
+      - eac-core
+      - eac-ai
 
     metadata:                 # Custom key-value data
       exe: my-service         # Binary name for go-cli types
@@ -91,7 +91,7 @@ modules:
         specs:
           - "specs/my-service/**/*.feature"
         design: "specs/my-service/.design/workspace.dsl"
-        test_impl: "src/specs/impl/my-service"
+        test_impl: "go/eac/specs/impl/my-service"
 ```
 
 ## Common Module Types
@@ -121,7 +121,7 @@ Declare dependencies between modules:
 modules:
   - moniker: my-api
     depends_on:
-      - src-core      # Foundation library
+      - eac-core      # Foundation library
       - my-models     # Data models
 ```
 
@@ -180,7 +180,7 @@ files:
     specs:
       - "specs/my-service/**/*.feature"    # Gherkin specs
     design: "specs/my-service/.design/workspace.dsl"  # Architecture
-    test_impl: "src/specs/impl/my-service"  # Step definitions
+    test_impl: "go/eac/specs/impl/my-service"  # Step definitions
     other:
       - "docs/my-service/**/*.md"          # Documentation
 ```

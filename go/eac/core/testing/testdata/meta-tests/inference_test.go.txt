@@ -1,0 +1,181 @@
+package testing
+
+import (
+	"testing"
+
+	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/stretchr/testify/assert"
+)
+
+// NOTE: L-level tags (@L0-@L4) and verification tags (@ov/@iv/@pv/@piv/@ppv) are NEVER inferred.
+// These tests verify that inferences are correctly SKIPPED for these tag types.
+
+func TestApplyInferences_LevelTagsNeverInferred(t *testing.T) {
+	// Inference rules that try to add level tags should be skipped
+	inferences := []Inference{
+		{
+			TestTypes:   []string{"gotest"},
+			IfTags:      []string{},
+			ThenAddTags: []string{"@L1"},
+			Description: "Go tests default to L1",
+		},
+	}
+
+	tests := []TestReference{
+		{
+			FilePath: "service_test.go",
+			Type:     "gotest",
+			TestName: "TestValidateEmail",
+			Tags:     []string{}, // No tags
+		},
+	}
+
+	result := ApplyInferences(tests, inferences)
+
+	assert.Len(t, result, 1)
+	// Level tags should NOT be added - they must be explicit
+	assert.NotContains(t, result[0].Tags, "@L1")
+}
+
+func TestApplyInferences_VerificationTagsNeverInferred(t *testing.T) {
+	// Inference rules that try to add verification tags should be skipped
+	inferences := []Inference{
+		{
+			IfTags:      []string{"@L3"},
+			ThenAddTags: []string{"@ov"},
+			Description: "Add @ov to L3 tests",
+		},
+	}
+
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test scenario",
+			Tags:     []string{"@L3"},
+		},
+	}
+
+	result := ApplyInferences(tests, inferences)
+
+	assert.Len(t, result, 1)
+	// Verification tags should NOT be added - they must be explicit
+	assert.Contains(t, result[0].Tags, "@L3")
+	assert.NotContains(t, result[0].Tags, "@ov")
+}
+
+func TestApplyInferences_DependencyInferencesStillWork(t *testing.T) {
+	// Dependency inferences (like @deps:go) should still work
+	inferences := []Inference{
+		{
+			TestTypes:   []string{"gotest"},
+			IfTags:      []string{},
+			ThenAddTags: []string{"@deps:go"},
+			Description: "Go tests require go toolchain",
+		},
+	}
+
+	tests := []TestReference{
+		{
+			FilePath: "service_test.go",
+			Type:     "gotest",
+			TestName: "TestValidateEmail",
+			Tags:     []string{"@L1", "@ov"},
+		},
+	}
+
+	result := ApplyInferences(tests, inferences)
+
+	assert.Len(t, result, 1)
+	assert.Contains(t, result[0].Tags, "@L1")
+	assert.Contains(t, result[0].Tags, "@ov")
+	assert.Contains(t, result[0].Tags, "@deps:go")
+}
+
+func TestApplyInferences_OnlyAppliesToMatchingTestType(t *testing.T) {
+	inferences := []Inference{
+		{
+			TestTypes:   []string{"godog"},
+			IfTags:      []string{},
+			ThenAddTags: []string{"@deps:godog"},
+			Description: "Godog tests require godog dependency",
+		},
+	}
+
+	tests := []TestReference{
+		{
+			Type:     "gotest",
+			TestName: "Go test",
+			Tags:     []string{"@L1", "@ov"},
+		},
+	}
+
+	result := ApplyInferences(tests, inferences)
+
+	// Should NOT apply godog inference to gotest
+	assert.NotContains(t, result[0].Tags, "@deps:godog")
+}
+
+func TestInferSystemDepsFromModuleDeps_GoModule(t *testing.T) {
+	// This test requires a mock registry
+	// For now, we'll skip it and rely on integration testing
+	t.Skip("Requires module registry - use integration testing")
+}
+
+func TestHasAnyLevelTag(t *testing.T) {
+	assert.True(t, hasAnyLevelTag([]string{"@L0", "@deps:go"}))
+	assert.True(t, hasAnyLevelTag([]string{"@L1"}))
+	assert.True(t, hasAnyLevelTag([]string{"@L2", "@ov"}))
+	assert.True(t, hasAnyLevelTag([]string{"@L3"}))
+	assert.True(t, hasAnyLevelTag([]string{"@L4"}))
+	assert.False(t, hasAnyLevelTag([]string{"@ov", "@deps:go"}))
+	assert.False(t, hasAnyLevelTag([]string{}))
+}
+
+// NOTE: Tests for InferSystemDepsFromEnv are skipped in isolated meta-test environment
+// because they require config.Load() which needs a git repository and config files.
+// These functions are tested via integration tests in the main test suite.
+
+func TestInferSystemDepsFromEnv_SkippedInIsolation(t *testing.T) {
+	t.Skip("Requires git repository and config files - covered by integration tests")
+}
+
+func TestInferSystemDepsFromEnv_NilContract(t *testing.T) {
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test with nil contract",
+			Tags:     []string{"@env:local01"},
+		},
+	}
+
+	result := InferSystemDepsFromEnv(tests, nil)
+
+	assert.Len(t, result, 1)
+	assert.Equal(t, tests[0].Tags, result[0].Tags)
+}
+
+func TestInferSystemDepsFromEnv_NoEnvironmentTags(t *testing.T) {
+	// Create a minimal env config for testing
+	envConfig := &config.EnvironmentsConfig{
+		Environments: []config.Environment{
+			{
+				Moniker:    "test-env",
+				SystemDeps: []string{"@deps:docker"},
+			},
+		},
+	}
+
+	tests := []TestReference{
+		{
+			Type:     "godog",
+			TestName: "Test without environment tags",
+			Tags:     []string{"@L2", "@ov"},
+		},
+	}
+
+	result := InferSystemDepsFromEnv(tests, envConfig)
+
+	assert.Len(t, result, 1)
+	// Tags should be unchanged since no @env: tag matches
+	assert.Equal(t, tests[0].Tags, result[0].Tags)
+}

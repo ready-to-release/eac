@@ -7,105 +7,105 @@ Feature: repository_module-isolation
 
   Background:
     Given the repository contains the following Go modules:
-      | Module           | Path             | Role                          |
-      | src/core         | src/core         | Foundational library          |
-      | src/ai           | src/ai           | AI provider integrations      |
-      | src/cli          | src/cli          | CLI binary (isolated)         |
-      | src/commands     | src/commands     | Command implementations       |
-      | src/ext-eac      | src/ext-eac      | R2R CLI extension             |
-      | src/mcp/commands | src/mcp/commands | MCP server                    |
-      | src/specs        | src/specs        | BDD test implementations      |
+      | Module              | Path                | Role                          |
+      | go/eac/core         | go/eac/core         | Foundational library          |
+      | go/eac/ai           | go/eac/ai           | AI provider integrations      |
+      | go/r2r/cli          | go/r2r/cli          | CLI binary (isolated)         |
+      | go/eac/commands     | go/eac/commands     | Command implementations       |
+      | ext-eac             | containers/ext-eac  | R2R CLI extension (Docker)    |
+      | go/eac/mcp/commands | go/eac/mcp/commands | MCP server                    |
+      | go/eac/specs        | go/eac/specs        | BDD test implementations      |
 
-  Rule: src/core is the foundational module with no local dependencies
+  Rule: go/eac/core is the foundational module with no local dependencies
 
-    src/core provides shared utilities (contracts, config, testing, git, etc.)
+    go/eac/core provides shared utilities (contracts, config, testing, git, etc.)
     and must not depend on any other local modules.
 
     @L0 @ov
-    Scenario: src/core has no local module dependencies
-      Given I am checking module "src/core"
+    Scenario: go/eac/core has no local module dependencies
+      Given I am checking module "go/eac/core"
       When I scan all .go files for import statements
-      Then no files should import "github.com/ready-to-release/eac/src/ai"
-      And no files should import "github.com/ready-to-release/eac/src/cli"
-      And no files should import "github.com/ready-to-release/eac/src/commands"
-      And no files should import "github.com/ready-to-release/eac/src/mcp"
-      And no files should import "github.com/ready-to-release/eac/src/specs"
+      Then no files should import "github.com/ready-to-release/eac/go/eac/ai"
+      And no files should import "github.com/ready-to-release/eac/go/r2r/cli"
+      And no files should import "github.com/ready-to-release/eac/go/eac/commands"
+      And no files should import "github.com/ready-to-release/eac/go/eac/mcp"
+      And no files should import "github.com/ready-to-release/eac/go/eac/specs"
 
-  Rule: src/cli is fully isolated with no local dependencies
+  Rule: go/r2r/cli is fully isolated with no local dependencies
 
     The CLI binary must remain lightweight and independently distributable.
     Production code must not import any other local modules.
     Test code MAY import local modules for test infrastructure.
 
     @L0 @ov
-    Scenario: src/cli production code has no local module imports
-      Given I am checking module "src/cli"
-      When I scan all production .go files in "src/cli"
-      Then no production files should import "github.com/ready-to-release/eac/src/core"
-      And no production files should import "github.com/ready-to-release/eac/src/ai"
-      And no production files should import "github.com/ready-to-release/eac/src/commands"
-      And no production files should import "github.com/ready-to-release/eac/src/mcp"
-      And no production files should import "github.com/ready-to-release/eac/src/specs"
+    Scenario: go/r2r/cli production code has no local module imports
+      Given I am checking module "go/r2r/cli"
+      When I scan all production .go files in "go/r2r/cli"
+      Then no production files should import "github.com/ready-to-release/eac/go/eac/core"
+      And no production files should import "github.com/ready-to-release/eac/go/eac/ai"
+      And no production files should import "github.com/ready-to-release/eac/go/eac/commands"
+      And no production files should import "github.com/ready-to-release/eac/go/eac/mcp"
+      And no production files should import "github.com/ready-to-release/eac/go/eac/specs"
 
-  Rule: src/ai depends only on src/core
+  Rule: go/eac/ai depends only on go/eac/core
 
     AI provider integrations use core utilities but should not depend on
     commands, CLI, or other higher-level modules.
 
     @L0 @ov
-    Scenario: src/ai only depends on src/core
-      Given I am checking module "src/ai"
+    Scenario: go/eac/ai only depends on go/eac/core
+      Given I am checking module "go/eac/ai"
       When I scan all .go files for import statements
-      Then files may import "github.com/ready-to-release/eac/src/core"
-      But no files should import "github.com/ready-to-release/eac/src/cli"
-      And no files should import "github.com/ready-to-release/eac/src/commands"
-      And no files should import "github.com/ready-to-release/eac/src/mcp"
-      And no files should import "github.com/ready-to-release/eac/src/specs"
+      Then files may import "github.com/ready-to-release/eac/go/eac/core"
+      But no files should import "github.com/ready-to-release/eac/go/r2r/cli"
+      And no files should import "github.com/ready-to-release/eac/go/eac/commands"
+      And no files should import "github.com/ready-to-release/eac/go/eac/mcp"
+      And no files should import "github.com/ready-to-release/eac/go/eac/specs"
 
-  Rule: src/commands depends on src/core and src/ai
+  Rule: go/eac/commands depends on go/eac/core and go/eac/ai
 
     Command implementations use core utilities and AI integrations.
     They should not depend on CLI, MCP server, or test specs.
 
     @L0 @ov
-    Scenario: src/commands depends only on src/core and src/ai
-      Given I am checking module "src/commands"
+    Scenario: go/eac/commands depends only on go/eac/core and go/eac/ai
+      Given I am checking module "go/eac/commands"
       When I scan all .go files for import statements
-      Then files may import "github.com/ready-to-release/eac/src/core"
-      And files may import "github.com/ready-to-release/eac/src/ai"
-      But no files should import "github.com/ready-to-release/eac/src/cli"
-      And no files should import "github.com/ready-to-release/eac/src/mcp"
-      And no files should import "github.com/ready-to-release/eac/src/specs"
+      Then files may import "github.com/ready-to-release/eac/go/eac/core"
+      And files may import "github.com/ready-to-release/eac/go/eac/ai"
+      But no files should import "github.com/ready-to-release/eac/go/r2r/cli"
+      And no files should import "github.com/ready-to-release/eac/go/eac/mcp"
+      And no files should import "github.com/ready-to-release/eac/go/eac/specs"
 
-  Rule: src/mcp/commands depends only on src/core
+  Rule: go/eac/mcp/commands depends only on go/eac/core
 
     MCP server uses core utilities for contract loading.
     It should not depend on commands, AI, or CLI.
 
     @L0 @ov
-    Scenario: src/mcp/commands depends only on src/core
-      Given I am checking module "src/mcp/commands"
+    Scenario: go/eac/mcp/commands depends only on go/eac/core
+      Given I am checking module "go/eac/mcp/commands"
       When I scan all .go files for import statements
-      Then files may import "github.com/ready-to-release/eac/src/core"
-      But no files should import "github.com/ready-to-release/eac/src/cli"
-      And no files should import "github.com/ready-to-release/eac/src/ai"
-      And no files should import "github.com/ready-to-release/eac/src/commands"
-      And no files should import "github.com/ready-to-release/eac/src/specs"
+      Then files may import "github.com/ready-to-release/eac/go/eac/core"
+      But no files should import "github.com/ready-to-release/eac/go/r2r/cli"
+      And no files should import "github.com/ready-to-release/eac/go/eac/ai"
+      And no files should import "github.com/ready-to-release/eac/go/eac/commands"
+      And no files should import "github.com/ready-to-release/eac/go/eac/specs"
 
-  Rule: src/specs may depend on src/core for test utilities
+  Rule: go/eac/specs may depend on go/eac/core for test utilities
 
     BDD test implementations use core utilities.
     They should not import production modules directly.
 
     @L0 @ov
-    Scenario: src/specs depends only on src/core
-      Given I am checking module "src/specs"
+    Scenario: go/eac/specs depends only on go/eac/core
+      Given I am checking module "go/eac/specs"
       When I scan all .go files for import statements
-      Then files may import "github.com/ready-to-release/eac/src/core"
-      But no files should import "github.com/ready-to-release/eac/src/cli"
-      And no files should import "github.com/ready-to-release/eac/src/ai"
-      And no files should import "github.com/ready-to-release/eac/src/commands"
-      And no files should import "github.com/ready-to-release/eac/src/mcp"
+      Then files may import "github.com/ready-to-release/eac/go/eac/core"
+      But no files should import "github.com/ready-to-release/eac/go/r2r/cli"
+      And no files should import "github.com/ready-to-release/eac/go/eac/ai"
+      And no files should import "github.com/ready-to-release/eac/go/eac/commands"
+      And no files should import "github.com/ready-to-release/eac/go/eac/mcp"
 
   Rule: No circular dependencies between modules
 
@@ -116,8 +116,8 @@ Feature: repository_module-isolation
       When I build the module dependency graph from go.mod files
       Then the graph should have no circular dependencies
       And the dependency order should be:
-        | Layer | Modules                              |
-        | 0     | src/core                             |
-        | 1     | src/ai, src/cli, src/mcp/commands, src/specs |
-        | 2     | src/commands                         |
-        | 3     | src/ext-eac                          |
+        | Layer | Modules                                               |
+        | 0     | go/eac/core                                           |
+        | 1     | go/eac/ai, go/r2r/cli, go/eac/mcp/commands, go/eac/specs |
+        | 2     | go/eac/commands                                       |
+        | 3     | ext-eac                                               |

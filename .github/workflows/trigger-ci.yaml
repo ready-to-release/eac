@@ -8,7 +8,7 @@
 # 1. Compares current commit against last successful "CI Trigger" run
 # 2. Uses `get changed modules ci` command which:
 #    - Maps changed files to their owning modules (via module contracts)
-#    - Expands to include all transitive dependents (if src-commands changes, ext-eac rebuilds too)
+#    - Expands to include all transitive dependents (if eac-commands changes, ext-eac rebuilds too)
 # 3. Triggers only the necessary module workflows in dependency order
 #
 # For PRs: Compares against PR base SHA
@@ -58,15 +58,15 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
+            go/eac/commands/go.sum
+            go/eac/core/go.sum
 
       - name: Detect Changed Modules
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cd src/commands
+          cd go/eac/commands
 
           # Check if trigger-all override is enabled
           TRIGGER_ALL="${{ inputs.trigger-all }}"
@@ -100,10 +100,10 @@ jobs:
             #   3. Maps changed files to modules using repository contracts
             #   4. Expands with transitive dependents (cache invalidation)
             #
-            # Example: If only src/commands/* files changed:
-            #   - directly_changed: [src-commands]
-            #   - invalidated: [ext-eac] (ext-eac depends on src-commands)
-            #   - modules: [src-commands, ext-eac]
+            # Example: If only go/eac/commands/* files changed:
+            #   - directly_changed: [eac-commands]
+            #   - invalidated: [ext-eac] (ext-eac depends on eac-commands)
+            #   - modules: [eac-commands, ext-eac]
             echo "🔍 Detecting modules requiring rebuild (with dependency invalidation)..."
 
             # For PRs: compare against PR base (what the PR introduces)
@@ -255,13 +255,13 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
+            go/eac/commands/go.sum
+            go/eac/core/go.sum
 
       - name: Run Repository Validation
         id: validation
         run: |
-          cd src/commands
+          cd go/eac/commands
 
           echo "🔍 Running repository validation test suite..."
 
@@ -340,13 +340,13 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
+            go/eac/commands/go.sum
+            go/eac/core/go.sum
 
       - name: Calculate Execution Order
         id: calculate
         run: |
-          cd src/commands
+          cd go/eac/commands
 
           # Get execution order for changed modules
           MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
@@ -396,8 +396,8 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
+            go/eac/commands/go.sum
+            go/eac/core/go.sum
 
       - name: Execute All Layers
         run: |
@@ -436,12 +436,12 @@ jobs:
 
             # Wait for all workflows in this layer using pipeline wait
             if [ -n "$RUN_IDS" ]; then
-              cd src/commands
+              cd go/eac/commands
               if ! go run . pipeline wait $RUN_IDS --timeout 1800; then
                 echo "::error::Layer $LAYER_NUM failed"
                 exit 1
               fi
-              cd ../..
+              cd ../../..
             fi
           done
 

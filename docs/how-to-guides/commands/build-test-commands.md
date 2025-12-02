@@ -16,25 +16,25 @@
 
 ```bash
 # Build a single module (verbose output)
-r2r eac build src-commands
+r2r eac build eac-commands
 
 # Build multiple modules (parallel)
-r2r eac build src-commands src-core
+r2r eac build eac-commands eac-core
 
 # Build all modules
 r2r eac build
 
 # Test a single module (verbose output)
-r2r eac test src-commands
+r2r eac test eac-commands
 
 # Test multiple modules (parallel)
-r2r eac test src-commands src-core
+r2r eac test eac-commands eac-core
 
 # Test all modules
 r2r eac test
 
 # Test with JUnit output (for CI/CD)
-r2r eac test src-core --as-junit
+r2r eac test eac-core --as-junit
 ```
 
 ## Command Reference
@@ -56,13 +56,13 @@ r2r eac build [module1] [module2] ... [options]
 
 # Examples:
 r2r eac build                          # Build all modules
-r2r eac build src-commands             # Build single module (verbose)
-r2r eac build src-cli src-core         # Build multiple modules (parallel)
-r2r eac build --tidy-first src-cli     # Build with go mod tidy first
-r2r eac build --compressed src-cli     # Build with stripped debug info
-r2r eac build --compressed-upx src-cli # Build with UPX compression
-r2r eac build --version v1.2.3 src-cli # Build with version injected
-r2r eac build --skip-deps src-core     # Build without checking dependencies
+r2r eac build eac-commands             # Build single module (verbose)
+r2r eac build r2r-cli eac-core         # Build multiple modules (parallel)
+r2r eac build --tidy-first r2r-cli     # Build with go mod tidy first
+r2r eac build --compressed r2r-cli     # Build with stripped debug info
+r2r eac build --compressed-upx r2r-cli # Build with UPX compression
+r2r eac build --version v1.2.3 r2r-cli # Build with version injected
+r2r eac build --skip-deps eac-core     # Build without checking dependencies
 ```
 
 **Supported module types:**
@@ -93,11 +93,11 @@ r2r eac test [module1] [module2] ... [options]
 
 # Examples:
 r2r eac test                           # Test all modules
-r2r eac test src-commands              # Test single module (verbose)
-r2r eac test src-cli src-core          # Test multiple modules (parallel)
-r2r eac test src-core --as-junit       # Test with JUnit output
-r2r eac test src-commands --suite integration
-r2r eac test src-core --coverage       # Test with coverage report
+r2r eac test eac-commands              # Test single module (verbose)
+r2r eac test r2r-cli eac-core          # Test multiple modules (parallel)
+r2r eac test eac-core --as-junit       # Test with JUnit output
+r2r eac test eac-commands --suite integration
+r2r eac test eac-core --coverage       # Test with coverage report
 ```
 
 **Supported module types:**
@@ -167,9 +167,9 @@ Module: src-auth
   - TestTokenValidation: Token validation failed
     File: src/auth/token_test.go:78
 
-Module: src-core
+Module: eac-core
   - TestDatabaseConnection: Connection timeout
-    File: src/core/db_test.go:23
+    File: go/eac/core/db_test.go:23
 
 Total: 3 failures across 2 modules
 ```
@@ -319,13 +319,13 @@ r2r eac test src-auth --coverage
 ### Standard Output (Default)
 
 ```text
-Building module: src-commands (type: go-commands)
-Module root: src/commands
-Output directory: C:\projects\eac\out\build\src-commands
-Build log: C:\projects\eac\out\build\src-commands\build.log
+Building module: eac-commands (type: go-commands)
+Module root: go/eac/commands
+Output directory: C:\projects\eac\out\build\eac-commands
+Build log: C:\projects\eac\out\build\eac-commands\build.log
 Tidy mode: enabled (default for local builds)
 
-=== go-commands: src-commands ===
+=== go-commands: eac-commands ===
 🔄 Running go mod tidy...
 ✅ go mod tidy completed
 🔄 Running go generate...
@@ -362,7 +362,7 @@ Tidy mode: enabled (default for local builds)
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="Module Tests">
-  <testsuite name="src-commands" tests="10" failures="0" errors="0" time="2.5">
+  <testsuite name="eac-commands" tests="10" failures="0" errors="0" time="2.5">
     <testcase name="TestExample" classname="commands" time="0.25"/>
   </testsuite>
 </testsuites>
@@ -375,7 +375,7 @@ Tidy mode: enabled (default for local builds)
 ```text
 out/
 ├── build/                        # Build outputs per module
-│   ├── src-cli/
+│   ├── r2r-cli/
 │   │   ├── build.log
 │   │   ├── r2r-linux-amd64
 │   │   ├── r2r-linux-arm64
@@ -507,7 +507,7 @@ r2r eac get-modules --type go-* | while read module; do
 done
 
 # Build in dependency order
-r2r eac get-execution-order src-cli | while read module; do
+r2r eac get-execution-order r2r-cli | while read module; do
   r2r eac build $module
 done
 ```
@@ -516,7 +516,7 @@ done
 
 ```bash
 # Build multiple specific modules (built-in parallel)
-r2r eac build src-commands src-core src-cli
+r2r eac build eac-commands eac-core r2r-cli
 ```
 
 ### Coverage Reports
@@ -525,10 +525,10 @@ The `--coverage` flag enables test coverage reporting for Go modules:
 
 ```bash
 # Generate coverage for a single module
-r2r eac test src-core --coverage
+r2r eac test eac-core --coverage
 
 # Generate coverage for multiple modules
-r2r eac test src-cli src-core --coverage
+r2r eac test r2r-cli eac-core --coverage
 
 # Generate coverage for all modules
 r2r eac test --coverage
@@ -545,13 +545,13 @@ r2r eac test --coverage
 
 ```bash
 # View HTML coverage report in browser
-open out/reports/coverage/src-core.html
+open out/reports/coverage/eac-core.html
 
 # View coverage summary with go tool
-go tool cover -func=out/reports/coverage/src-core.out
+go tool cover -func=out/reports/coverage/eac-core.out
 
 # Generate combined coverage report
-go tool cover -html=out/reports/coverage/src-core.out -o coverage.html
+go tool cover -html=out/reports/coverage/eac-core.out -o coverage.html
 ```
 
 **Coverage in CI/CD:**
@@ -562,7 +562,7 @@ r2r eac test --coverage --as-junit
 codecov -f out/reports/coverage/*.out
 
 # Set minimum coverage threshold
-COVERAGE=$(go tool cover -func=out/reports/coverage/src-core.out | grep total | awk '{print $3}' | sed 's/%//')
+COVERAGE=$(go tool cover -func=out/reports/coverage/eac-core.out | grep total | awk '{print $3}' | sed 's/%//')
 if (( $(echo "$COVERAGE < 80" | bc -l) )); then
   echo "Coverage $COVERAGE% is below threshold 80%"
   exit 1

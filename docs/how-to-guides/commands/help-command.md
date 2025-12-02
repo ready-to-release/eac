@@ -421,7 +421,7 @@ eac help work
 **Solution:**
 
 1. Update to latest version: `git pull`
-2. Rebuild EAC: `eac build src-cli`
+2. Rebuild EAC: `eac build r2r-cli`
 3. Check command exists: `eac <command> --help`
 
 ### Verbose Flag No Effect

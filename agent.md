@@ -37,12 +37,12 @@ Project Context Loaded:
 Active Constraints:
 - Git: READ-ONLY by default. No commits/pushes/branches without explicit user request
 - Multi-Worktree Aware: Operating in [current directory] ([branch])
-- File Organization: Modules in /src, intermediate files in /out
+- File Organization: Modules in /go, intermediate files in /out
 - Execution Mode: [MCP-First / CLI Fallback] based on MCP server availability
 
 MCP Server Status:
 Commands Server (mcp__commands__*):
-  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: go run ./src/commands]
+  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: go run ./go/eac/commands]
 
 GitHub Server (mcp__github__*):
   [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED / ⚠️ NOT CONFIGURED]
@@ -50,12 +50,12 @@ GitHub Server (mcp__github__*):
 [If NOT CONNECTED, include this troubleshooting section:]
 ⚠️ MCP Troubleshooting:
 - Servers configured in: .mcp.json and .claude/settings.json
-- Commands server: go run ./src/mcp/commands/main.go
+- Commands server: go run ./go/eac/mcp/commands/main.go
 - GitHub server: Official GitHub MCP server (requires GITHUB_TOKEN)
-- Verify commands server: go run ./src/mcp/commands/main.go < /dev/null
+- Verify commands server: go run ./go/eac/mcp/commands/main.go < /dev/null
 - Verify GitHub token: echo $GITHUB_TOKEN (bash) or $env:GITHUB_TOKEN (PowerShell)
 - Check Claude Code MCP server logs for errors
-- Fallback: Commands operations will use direct CLI commands (go run ./src/commands)
+- Fallback: Commands operations will use direct CLI commands (go run ./go/eac/commands)
 
 Ready to assist with project tasks.
 ```
@@ -83,7 +83,7 @@ During initialization, you MUST verify MCP server availability:
 
 4. **Set execution mode**:
    - If CONNECTED: Use MCP-first approach (prefer `mcp__commands__*` tools)
-   - If NOT CONNECTED: Use fallback CLI approach (`go run ./src/commands`)
+   - If NOT CONNECTED: Use fallback CLI approach (`go run ./go/eac/commands`)
 
 #### Expected MCP Servers
 
@@ -111,12 +111,12 @@ If MCP servers are NOT CONNECTED, use direct CLI commands:
 
 | MCP Tool | Fallback Command |
 |----------|------------------|
-| `mcp__commands__show-modules` | `go run ./src/commands show modules` |
-| `mcp__commands__test-module` | `go run ./src/commands test module <name>` |
-| `mcp__commands__build-module` | `go run ./src/commands build module <name>` |
-| `mcp__commands__specs-create` | `go run ./src/commands create spec <description>` |
-| `mcp__commands__specs-validate` | `go run ./src/commands validate specs` |
-| All other tools | `go run ./src/commands <command> [args]` |
+| `mcp__commands__show-modules` | `go run ./go/eac/commands show modules` |
+| `mcp__commands__test-module` | `go run ./go/eac/commands test module <name>` |
+| `mcp__commands__build-module` | `go run ./go/eac/commands build module <name>` |
+| `mcp__commands__specs-create` | `go run ./go/eac/commands create spec <description>` |
+| `mcp__commands__specs-validate` | `go run ./go/eac/commands validate specs` |
+| All other tools | `go run ./go/eac/commands <command> [args]` |
 
 **Note**: GitHub MCP server has no CLI fallback - it uses the official MCP implementation from GitHub.
 
@@ -132,7 +132,7 @@ Prefer MCP tools over direct CLI commands for all module-related operations.
 
 ### When MCP Servers are NOT CONNECTED
 
-**Use CLI fallback commands**: `go run ./src/commands <command> [args]`
+**Use CLI fallback commands**: `go run ./go/eac/commands <command> [args]`
 
 Continue working normally using direct CLI commands. All functionality remains available, just accessed differently.
 
@@ -162,7 +162,7 @@ Each Claude session works independently. The user handles all git coordination.
 
 ### File Organization
 
-- **Modules**: All modules are placed in the `src/` directory
+- **Modules**: All Go modules are placed in the `go/` directory (`go/eac/` for EAC modules, `go/r2r/` for R2R CLI)
 - **Result files**: DO NOT create result markdown files except in:
   - Module directories (as identified by module contracts or `get-files`)
   - `/out/<my-result-file>.md` for intermediate/temporary files
@@ -313,7 +313,7 @@ TDD embodies all three rules: tests document behavior (Rule 1), enable safe refa
 
 **Test file organization:**
 
-- **TDD unit tests**: Place `*_test.go` files alongside the code they test in module `src/` directories
+- **TDD unit tests**: Place `*_test.go` files alongside the code they test in module `go/` directories
 - **Gherkin step definitions**: Place step implementation files in a dedicated `tests/` folder within each module
 - **Feature files**: Place `.feature` files in the project's `specs/` directory
 

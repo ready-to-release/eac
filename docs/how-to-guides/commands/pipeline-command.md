@@ -19,7 +19,7 @@
 r2r eac pipeline run --changed-only
 
 # Run pipelines for specific modules
-r2r eac pipeline run src-commands src-core
+r2r eac pipeline run eac-commands eac-core
 
 # Check CI status for trunk HEAD
 r2r eac pipeline status
@@ -49,8 +49,8 @@ r2r eac pipeline run [module1] [module2] ... [options]
 
 # Examples:
 r2r eac pipeline run                      # Run all module pipelines
-r2r eac pipeline run src-commands         # Run single module pipeline
-r2r eac pipeline run src-cli src-core     # Run specific modules
+r2r eac pipeline run eac-commands         # Run single module pipeline
+r2r eac pipeline run r2r-cli eac-core     # Run specific modules
 r2r eac pipeline run --changed-only       # Run only changed modules
 r2r eac pipeline run --ref=develop        # Run against develop branch
 ```
@@ -170,7 +170,7 @@ r2r eac pipeline status --commit=$(git rev-parse HEAD)
 
 # 2. If successful, proceed with release
 if [ $? -eq 0 ]; then
-  r2r eac release calver src-cli
+  r2r eac release calver r2r-cli
 else
   echo "CI checks not passing, aborting release"
   exit 1
@@ -200,9 +200,9 @@ r2r eac pipeline status
 r2r eac pipeline run
 
 # Example execution order:
-# Layer 1 (no dependencies): src-core, src-contracts
-# Layer 2 (depends on Layer 1): src-commands, src-registry
-# Layer 3 (depends on Layer 2): src-cli
+# Layer 1 (no dependencies): eac-core, src-contracts
+# Layer 2 (depends on Layer 1): eac-commands, src-registry
+# Layer 3 (depends on Layer 2): r2r-cli
 ```
 
 ## Integration Patterns
@@ -341,16 +341,16 @@ The pipeline run command analyzes module dependencies and executes in layers:
 
 ```text
 Layer 1 (Foundation - no dependencies):
-├── src-core
+├── eac-core
 └── src-contracts
 
 Layer 2 (Core Services - depends on Layer 1):
-├── src-commands
+├── eac-commands
 ├── src-registry
 └── src-repository
 
 Layer 3 (Integration - depends on Layer 2):
-├── src-cli
+├── r2r-cli
 └── src-mcp
 
 Layer 4 (Distribution - depends on Layer 3):
@@ -370,29 +370,29 @@ Layer 4 (Distribution - depends on Layer 3):
 Pipeline Execution Plan:
 
 Layer 1 (2 modules):
-  - src-core
+  - eac-core
   - src-contracts
 
 Layer 2 (3 modules):
-  - src-commands
+  - eac-commands
   - src-registry
   - src-repository
 
 Layer 3 (2 modules):
-  - src-cli
+  - r2r-cli
   - src-mcp
 
 Executing Layer 1...
-  ✓ src-core (build: 45s, test: 12s)
+  ✓ eac-core (build: 45s, test: 12s)
   ✓ src-contracts (validate: 3s)
 
 Executing Layer 2...
-  ✓ src-commands (build: 38s, test: 15s)
+  ✓ eac-commands (build: 38s, test: 15s)
   ✓ src-registry (build: 22s, test: 8s)
   ✓ src-repository (build: 31s, test: 11s)
 
 Executing Layer 3...
-  ✓ src-cli (build: 55s, test: 18s)
+  ✓ r2r-cli (build: 55s, test: 18s)
   ✓ src-mcp (build: 42s, test: 14s)
 
 ✅ All pipelines completed successfully
@@ -475,7 +475,7 @@ The GitHub token needs these scopes:
 
 ```bash
 # Run specific modules in custom order
-r2r eac get-execution-order src-cli | while read module; do
+r2r eac get-execution-order r2r-cli | while read module; do
   r2r eac pipeline run $module
 done
 

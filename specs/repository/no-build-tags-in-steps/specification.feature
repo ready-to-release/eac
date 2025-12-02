@@ -17,7 +17,7 @@ Feature: repository_no-build-tags-in-steps
 
     @L0 @ov
     Scenario: No godog_test.go files have build tags
-      Given I discover all godog_test.go files in "src/specs/impl"
+      Given I discover all godog_test.go files in "go/eac/specs/impl"
       When I check each file for Go build tags
       Then no files should have "//go:build" directives
       And no files should have "// +build" directives

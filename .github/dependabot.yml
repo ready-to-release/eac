@@ -13,9 +13,9 @@ updates:
       - "dependencies"
       - "github-actions"
 
-  # Go modules - src/cli
+  # Go modules - go/r2r/cli
   - package-ecosystem: "gomod"
-    directory: "/src/cli"
+    directory: "/go/r2r/cli"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -25,9 +25,9 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - src/commands
+  # Go modules - go/eac/commands
   - package-ecosystem: "gomod"
-    directory: "/src/commands"
+    directory: "/go/eac/commands"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -37,9 +37,9 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - src/core
+  # Go modules - go/eac/core
   - package-ecosystem: "gomod"
-    directory: "/src/core"
+    directory: "/go/eac/core"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -49,9 +49,9 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - src/ai
+  # Go modules - go/eac/ai
   - package-ecosystem: "gomod"
-    directory: "/src/ai"
+    directory: "/go/eac/ai"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -61,9 +61,9 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - src/specs
+  # Go modules - go/eac/specs
   - package-ecosystem: "gomod"
-    directory: "/src/specs"
+    directory: "/go/eac/specs"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -73,21 +73,11 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - src/ext-eac
-  - package-ecosystem: "gomod"
-    directory: "/src/ext-eac"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    commit-message:
-      prefix: "chore(deps)"
-    labels:
-      - "dependencies"
-      - "go"
+  # ext-eac is a Docker-based extension (no Go module to track)
 
-  # Go modules - src/mcp/commands
+  # Go modules - go/eac/mcp/commands
   - package-ecosystem: "gomod"
-    directory: "/src/mcp/commands"
+    directory: "/go/eac/mcp/commands"
     schedule:
       interval: "weekly"
       day: "monday"

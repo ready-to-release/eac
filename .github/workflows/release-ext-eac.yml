@@ -38,13 +38,13 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: |
-            src/commands/go.sum
-            src/core/go.sum
+            go/eac/commands/go.sum
+            go/eac/core/go.sum
 
       - name: Check CI status and find source image
         id: ci_check
         run: |
-          cd src/commands
+          cd go/eac/commands
           go run . release check-ci \
             --workflow ci-ext-eac.yaml \
             --commit ${{ github.sha }} \
@@ -229,7 +229,7 @@ jobs:
           echo "| Version Input | \`${{ github.event.inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Expected Source | \`ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          go run ./src/commands ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
+          go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
         env:
           GH_TOKEN: ${{ github.token }}
 
