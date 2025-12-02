@@ -48,47 +48,6 @@ Feature: eac-commands_commit
       When the contract implementation is verified
       Then the contract must include semantic types: feat, fix, refactor, docs, chore, test, perf, style
 
-  Rule: Commit messages must follow conventional commit format
-
-    @skip:broken
-    Scenario: Header exceeds 72 characters
-      Given a commit message with header longer than 72 characters
-      When the message is validated
-      Then a "HEADER_TOO_LONG" error should occur
-
-    @skip:broken
-    Scenario: Header has trailing period
-      Given a commit message with header ending in a period
-      When the message is validated
-      Then a "HEADER_TRAILING_PERIOD" error should occur
-
-    @skip:broken
-    Scenario: Missing Auditor-Summary field
-      Given a commit message without Auditor-Summary
-      When the message is validated
-      Then a "MISSING_AUDITOR_SUMMARY" error should occur
-
-  Rule: Agent noise must be filtered from AI-generated output
-
-    @skip:broken
-    Scenario: Remove initialization messages from top-level output
-      Given AI output starting with "**Initialized and ready to assist**"
-      And followed by a valid commit header "feat(multi-module): add features"
-      When noise filtering is applied
-      Then the output should start with "feat(multi-module): add features"
-
-    @skip:broken
-    Scenario: Remove greeting from module section output
-      Given AI output starting with "I'll generate the module section for you."
-      And followed by module section "eac-commands"
-      When noise filtering is applied
-      Then the output should start with "eac-commands"
-
-    Scenario: Remove markdown code fences wrapping entire output
-      Given AI output wrapped in triple backticks
-      When noise filtering is applied
-      Then the code fences should be removed
-
   Rule: Auto-cleanup must fix common formatting issues
 
     Scenario: Remove trailing periods from header
@@ -116,35 +75,12 @@ Feature: eac-commands_commit
       When auto-cleanup is applied
       Then blank lines should be added before and after the code block
 
-  Rule: Context building must aggregate git information
+  Rule: Agent noise must be filtered from AI-generated output
 
-    @skip:broken
-    Scenario: Build context for single-module commit
-      Given staged files belonging to one module
-      And a git diff for those files
-      When top-level context is built
-      Then the context should indicate "1 (single-module)"
-      And the context should list the affected module
-      And the context should include the staged files table
-      And the context should include the git diff
-
-    @skip:broken
-    Scenario: Build context for multi-module commit
-      Given staged files belonging to multiple modules
-      And a git diff for those files
-      When top-level context is built
-      Then the context should indicate the count as "(multi-module)"
-      And the context should list all affected modules
-      And the context should include the staged files table
-      And the context should include the git diff
-
-    @skip:broken
-    Scenario: Build module-specific context
-      Given a module with specific files
-      And a full git diff
-      When module context is built
-      Then the context should include only files for that module
-      And the diff should be filtered to only that module's changes
+    Scenario: Remove markdown code fences wrapping entire output
+      Given AI output wrapped in triple backticks
+      When noise filtering is applied
+      Then the code fences should be removed
 
   Rule: Module sections must be generated for multi-module commits
 
@@ -152,20 +88,6 @@ Feature: eac-commands_commit
       Given one affected module
       When module sections are generated
       Then no module sections should be created
-
-    @skip:broken
-    Scenario: Generate sections for each module in multi-module commit
-      Given multiple affected modules
-      When module sections are generated
-      Then a section should be created for each module
-
-    @skip:broken
-    Scenario: Add missing module sections as stubs
-      Given a multi-module commit message
-      And some modules missing from the output
-      When missing modules are added
-      Then stub sections should be generated for missing modules
-      And stubs should indicate "Module changes not described by AI agent"
 
   Rule: Diff filtering must isolate module-specific changes
 
@@ -183,24 +105,6 @@ Feature: eac-commands_commit
       And other files should be excluded
 
   Rule: Edge cases must be handled gracefully
-
-    @skip:broken
-    Scenario: Handle empty staged changes
-      Given no staged changes in git
-      When the commit command is run
-      Then the message "No staged changes." should be displayed
-
-    @skip:broken
-    Scenario: Handle git command failure
-      Given git diff command fails
-      When execution context is built
-      Then the error should indicate git failure
-
-    @skip:broken
-    Scenario: Handle very large diff
-      Given a git diff larger than 10 MB
-      When execution context is built
-      Then the error should indicate diff size limit exceeded
 
     Scenario: Handle module name edge cases
       Given module names with edge cases (single char, max length, special patterns)

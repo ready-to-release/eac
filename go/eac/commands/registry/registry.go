@@ -28,6 +28,13 @@ func init() {
 
 // GetWorkspaceRoot returns the repository root directory, using cached value if available
 func GetWorkspaceRoot() (string, error) {
+	// IMPORTANT: Check for test isolation override FIRST, before using cached value
+	// This ensures isolated tests use their temporary directory instead of the cached real repo root
+	if testRoot := os.Getenv("R2R_REPO_ROOT"); testRoot != "" {
+		return testRoot, nil
+	}
+
+	// Use cached value only if we're not in a test isolation environment
 	if WorkspaceRoot != "" {
 		return WorkspaceRoot, nil
 	}

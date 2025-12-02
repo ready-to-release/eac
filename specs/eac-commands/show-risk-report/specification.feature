@@ -2,7 +2,7 @@
 Feature: eac-commands_show-risk-report
 
   As a security engineer
-  I want to view aggregated risk assessment reports
+  I want to view aggregated create risk-assessment reports
   So that I can understand the overall risk posture across modules
 
   Background:
@@ -182,7 +182,7 @@ Feature: eac-commands_show-risk-report
       When I run "show risk-report"
       Then the exit code is 1
       And stderr contains "No assessment results found"
-      And stderr suggests running "risk assess"
+      And stderr suggests running "create risk-assess"
 
     @L2 @ov
     Scenario: Partial assessment-results with load errors

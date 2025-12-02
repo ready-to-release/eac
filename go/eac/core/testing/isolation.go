@@ -94,7 +94,7 @@ func (t *TestIsolation) WithCopyMkdocsConfig(copy bool) *TestIsolation {
 	return t
 }
 
-// WithMockAIConfig creates a test agent-config.yml in the isolated environment.
+// WithMockAIConfig creates a test eac-config.yml in the isolated environment.
 // This configures the "test" provider which reads mock responses from files.
 func (t *TestIsolation) WithMockAIConfig(create bool) *TestIsolation {
 	t.createMockAIConfig = create
@@ -166,9 +166,11 @@ func (t *TestIsolation) Setup() error {
 		// Use "test" provider which reads mock responses from .r2r/test/ai-mock.txt
 		testConfig := `# Test AI configuration for acceptance testing
 # Uses the "test" provider which reads responses from .r2r/test/ai-mock.txt
-provider:
-  name: test
+ai:
+  provider: test
   model: test-model
+git:
+  token: ""
 `
 		configDir := filepath.Join(t.isolatedDir, ".r2r", "eac")
 		if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -177,13 +179,13 @@ provider:
 		}
 
 		// Remove any personal config that may have been copied (it takes precedence)
-		personalConfigPath := filepath.Join(configDir, "agent-config.personal.yml")
+		personalConfigPath := filepath.Join(configDir, "eac-config.personal.yml")
 		os.Remove(personalConfigPath) // Ignore error - file may not exist
 
-		configPath := filepath.Join(configDir, "agent-config.yml")
+		configPath := filepath.Join(configDir, "eac-config.yml")
 		if err := os.WriteFile(configPath, []byte(testConfig), 0644); err != nil {
 			t.Cleanup()
-			return fmt.Errorf("failed to create test agent-config.yml: %w", err)
+			return fmt.Errorf("failed to create test eac-config.yml: %w", err)
 		}
 	}
 

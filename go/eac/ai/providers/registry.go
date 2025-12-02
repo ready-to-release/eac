@@ -21,26 +21,26 @@ func RegisterBuiltIn(executor ExecutorRegistry) {
 
 	// Register claude-api provider
 	executor.RegisterProvider("claude-api", func(config *ai.Config) (ai.Provider, error) {
-		if config.APIKey == "" {
+		if config.AI.APIKey == "" {
 			return nil, fmt.Errorf("ANTHROPIC_API_KEY is required for claude-api provider")
 		}
-		return NewClaudeAPI(config.APIKey, config.Model)
+		return NewClaudeAPI(config.AI.APIKey, config.AI.Model)
 	})
 
 	// Register openai provider
 	executor.RegisterProvider("openai", func(config *ai.Config) (ai.Provider, error) {
-		if config.APIKey == "" {
+		if config.AI.APIKey == "" {
 			return nil, fmt.Errorf("OPENAI_API_KEY is required for openai provider")
 		}
-		return NewOpenAI(config.APIKey, config.Model)
+		return NewOpenAI(config.AI.APIKey, config.AI.Model)
 	})
 
 	// Register gemini provider
 	executor.RegisterProvider("gemini", func(config *ai.Config) (ai.Provider, error) {
-		if config.APIKey == "" {
+		if config.AI.APIKey == "" {
 			return nil, fmt.Errorf("GOOGLE_API_KEY is required for gemini provider")
 		}
-		return NewGemini(config.APIKey, config.Model)
+		return NewGemini(config.AI.APIKey, config.AI.Model)
 	})
 
 	// Register test provider for acceptance tests

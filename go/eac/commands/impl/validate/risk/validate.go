@@ -106,7 +106,7 @@ func ValidateRisk() int {
 
 // parseConfig parses command line configuration.
 func parseConfig() (*Config, error) {
-	args := os.Args[2:] // Skip program name and "validate risk"
+	args := os.Args[3:] // Skip program name, "validate", and "risk"
 
 	config := &Config{}
 

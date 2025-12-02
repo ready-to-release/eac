@@ -79,7 +79,7 @@ jobs:
           cache-dependency-path: go/eac/commands/go.sum
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: build-artifacts-scripts-cli-installer
           path: out/build/scripts-cli-installer

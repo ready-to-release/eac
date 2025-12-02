@@ -31,9 +31,11 @@ func TestExecutor_Execute(t *testing.T) {
 		{
 			name:         "execute with claude-cli configured",
 			createConfig: true,
-			configContent: fmt.Sprintf(`provider:
-  name: claude-cli
-  model: %s`, providers.DefaultClaudeCLIModel),
+			configContent: fmt.Sprintf(`ai:
+  provider: claude-cli
+  model: %s
+git:
+  token: ""`, providers.DefaultClaudeCLIModel),
 			input:        "test prompt",
 			wantProvider: "claude-cli",
 			wantErr:      false,
@@ -43,7 +45,7 @@ func TestExecutor_Execute(t *testing.T) {
 			createConfig: false,
 			input:        "test prompt",
 			wantErr:      true,
-			errContains:  ".r2r/eac/agent-config.yml not found",
+			errContains:  ".r2r/eac/eac-config.yml not found",
 		},
 		{
 			name:         "execute with malformed config returns error",
@@ -52,36 +54,40 @@ func TestExecutor_Execute(t *testing.T) {
   - broken`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "failed to parse .r2r/eac/agent-config.yml",
+			errContains: "failed to parse .r2r/eac/eac-config.yml",
 		},
 		{
-			name:         "execute with malformed config suggests r2r init",
+			name:         "execute with malformed config suggests eac init",
 			createConfig: true,
 			configContent: `invalid: yaml: content:
   - broken`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "run: r2r init",
+			errContains: "run: eac init",
 		},
 		{
 			name:         "execute with invalid provider returns error",
 			createConfig: true,
-			configContent: `provider:
-  name: invalid-provider
-  model: some-model`,
+			configContent: `ai:
+  provider: invalid-provider
+  model: some-model
+git:
+  token: ""`,
 			input:       "test prompt",
 			wantErr:     true,
 			errContains: "unknown provider: invalid-provider",
 		},
 		{
-			name:         "execute with invalid provider suggests r2r init",
+			name:         "execute with invalid provider suggests eac init",
 			createConfig: true,
-			configContent: `provider:
-  name: invalid-provider
-  model: some-model`,
+			configContent: `ai:
+  provider: invalid-provider
+  model: some-model
+git:
+  token: ""`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "run: r2r init",
+			errContains: "run: eac init",
 		},
 	}
 
@@ -95,7 +101,7 @@ func TestExecutor_Execute(t *testing.T) {
 
 			// Create temporary directory for config
 			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
+			configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
 
 			// Create config file if needed
 			if tt.createConfig {
@@ -183,10 +189,12 @@ func TestExecutor_ExecuteWithDebug(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			// Create config with claude-cli
-			configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
-			configContent := fmt.Sprintf(`provider:
-  name: claude-cli
-  model: %s`, providers.DefaultClaudeCLIModel)
+			configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+			configContent := fmt.Sprintf(`ai:
+  provider: claude-cli
+  model: %s
+git:
+  token: ""`, providers.DefaultClaudeCLIModel)
 
 			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 				t.Fatalf("failed to create .r2r dir: %v", err)
@@ -228,10 +236,12 @@ func TestExecutor_ExecuteWithDebugDefault(t *testing.T) {
 	// Verify debug is false by default
 	tmpDir := t.TempDir()
 
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
-	configContent := `provider:
-  name: mock
-  model: test-model`
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+	configContent := `ai:
+  provider: mock
+  model: test-model
+git:
+  token: ""`
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		t.Fatalf("failed to create .r2r dir: %v", err)
@@ -274,10 +284,12 @@ func TestExecutor_NoLogFilesCreated(t *testing.T) {
 	// Verify that NO log files are created in .r2r directory
 	tmpDir := t.TempDir()
 
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
-	configContent := fmt.Sprintf(`provider:
-  name: claude-cli
-  model: %s`, providers.DefaultClaudeCLIModel)
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+	configContent := fmt.Sprintf(`ai:
+  provider: claude-cli
+  model: %s
+git:
+  token: ""`, providers.DefaultClaudeCLIModel)
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		t.Fatalf("failed to create .r2r dir: %v", err)
@@ -322,10 +334,12 @@ func TestExecutor_ExecuteWithOptions(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config with claude-cli
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
-	configContent := fmt.Sprintf(`provider:
-  name: claude-cli
-  model: %s`, providers.DefaultClaudeCLIModel)
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+	configContent := fmt.Sprintf(`ai:
+  provider: claude-cli
+  model: %s
+git:
+  token: ""`, providers.DefaultClaudeCLIModel)
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		t.Fatalf("failed to create .r2r dir: %v", err)
@@ -371,8 +385,10 @@ func TestExecutor_LoadProvider(t *testing.T) {
 		{
 			name: "load claude-cli provider",
 			config: &ai.Config{
-				ProviderName: "claude-cli",
-				Model:        providers.DefaultClaudeCLIModel,
+				AI: ai.AIConfig{
+					Provider: "claude-cli",
+					Model:    providers.DefaultClaudeCLIModel,
+				},
 			},
 			wantProvider: "claude-cli",
 			wantErr:      false,
@@ -380,10 +396,12 @@ func TestExecutor_LoadProvider(t *testing.T) {
 		{
 			name: "load claude-api provider with API key",
 			config: &ai.Config{
-				ProviderName: "claude-api",
-				Model:        providers.DefaultClaudeAPIModel,
-				Endpoint:     "https://api.anthropic.com/v1",
-				APIKey:       "test-key",
+				AI: ai.AIConfig{
+					Provider: "claude-api",
+					Model:    providers.DefaultClaudeAPIModel,
+					Endpoint: "https://api.anthropic.com/v1",
+					APIKey:   "test-key",
+				},
 			},
 			wantProvider: "claude-api",
 			wantErr:      false,
@@ -391,10 +409,12 @@ func TestExecutor_LoadProvider(t *testing.T) {
 		{
 			name: "load claude-api without API key returns error",
 			config: &ai.Config{
-				ProviderName: "claude-api",
-				Model:        providers.DefaultClaudeAPIModel,
-				Endpoint:     "https://api.anthropic.com/v1",
-				APIKey:       "",
+				AI: ai.AIConfig{
+					Provider: "claude-api",
+					Model:    providers.DefaultClaudeAPIModel,
+					Endpoint: "https://api.anthropic.com/v1",
+					APIKey:   "",
+				},
 			},
 			wantErr:     true,
 			errContains: "ANTHROPIC_API_KEY is required",
@@ -402,8 +422,10 @@ func TestExecutor_LoadProvider(t *testing.T) {
 		{
 			name: "invalid provider returns error",
 			config: &ai.Config{
-				ProviderName: "invalid-provider",
-				Model:        "some-model",
+				AI: ai.AIConfig{
+					Provider: "invalid-provider",
+					Model:    "some-model",
+				},
 			},
 			wantErr:     true,
 			errContains: "unknown provider: invalid-provider",
@@ -461,10 +483,12 @@ func TestExecutor_WithMockProvider(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config with mock provider
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "agent-config.yml")
-	configContent := `provider:
-  name: mock
-  model: test-model`
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+	configContent := `ai:
+  provider: mock
+  model: test-model
+git:
+  token: ""`
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		t.Fatalf("failed to create .r2r dir: %v", err)

@@ -47,6 +47,9 @@ func Validate() int {
 	case "go-tidy":
 		// Handled by separate registrations in respective files
 		return 0
+	case "risk":
+		// Handled by separate registrations in respective files
+		return 0
 	default:
 		log.Errorf("Error: unknown subcommand: %s\n", args[0])
 		printValidateUsage()
@@ -67,6 +70,7 @@ func printValidateUsage() {
 	log.Info("  module-files              Validate module file ownership")
 	log.Info("  markdown                  Validate markdown file syntax")
 	log.Info("  go-tidy                   Validate Go module dependencies are tidy")
+	log.Info("  risk                      Validate OSCAL profiles and assessment-results")
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Validate all contracts against schemas")
@@ -89,6 +93,9 @@ func printValidateUsage() {
 	log.Info("")
 	log.Info("  # Validate Go module tidiness")
 	log.Info("  r2r validate go-tidy")
+	log.Info("")
+	log.Info("  # Validate OSCAL risk documents")
+	log.Info("  r2r validate risk specs/risk-controls/billing.profile.json")
 	log.Info("")
 	log.Info("Use 'r2r validate <subcommand> --help' for more information about a command.")
 }
