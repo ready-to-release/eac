@@ -1,6 +1,12 @@
 name: "ci-docs (stage 1-6)"
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       ref:
@@ -26,14 +32,15 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: go/eac/commands/go.sum
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Build Module
-        working-directory: ./go/eac/commands
-        run: go run . build docs
+        run: ${{ steps.commands.outputs.commands-path }} build docs
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -44,19 +51,21 @@ jobs:
       - name: Build Summary
         if: always()
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           echo "## Build: docs" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ Documentation site built successfully with MkDocs." >> $GITHUB_STEP_SUMMARY
+            echo "Documentation site built successfully with MkDocs." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Documentation build failed." >> $GITHUB_STEP_SUMMARY
+            echo "Documentation build failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
             echo "- Invalid mkdocs.yml configuration" >> $GITHUB_STEP_SUMMARY
             echo "- Missing markdown files referenced in nav" >> $GITHUB_STEP_SUMMARY
             echo "- Broken internal links" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -73,7 +82,7 @@ jobs:
             echo "| Total Size | ${TOTAL_SIZE} |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📦 Artifacts uploaded as \`build-artifacts-docs\`" >> $GITHUB_STEP_SUMMARY
+          echo "Artifacts uploaded as \`build-artifacts-docs\`" >> $GITHUB_STEP_SUMMARY
 
   test:
     name: Test
@@ -84,10 +93,9 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: go/eac/commands/go.sum
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -96,20 +104,21 @@ jobs:
           path: out/build/docs
 
       - name: Test Module
-        working-directory: ./go/eac/commands
-        run: go run . test docs
+        run: ${{ steps.commands.outputs.commands-path }} test docs
 
       - name: Test Summary
         if: always()
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           echo "## Test: docs" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ Documentation validation tests passed." >> $GITHUB_STEP_SUMMARY
+            echo "Documentation validation tests passed." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Documentation validation tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "Documentation validation tests failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
+            $COMMANDS ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Checks Performed" >> $GITHUB_STEP_SUMMARY
@@ -122,8 +131,10 @@ jobs:
     name: Trigger Release
     needs: test
     runs-on: ubuntu-latest
-    # Only trigger release on main branch
-    if: github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main'
+    # Only trigger release on main branch, NEVER for PRs
+    if: |
+      (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') &&
+      !startsWith(inputs.ref || github.ref, 'refs/pull/')
     steps:
       - name: Trigger release workflow
         run: |
@@ -137,7 +148,7 @@ jobs:
         run: |
           echo "## Release Triggered: docs" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Triggered \`release-docs.yml\` workflow to deploy documentation." >> $GITHUB_STEP_SUMMARY
+          echo "Triggered \`release-docs.yml\` workflow to deploy documentation." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY

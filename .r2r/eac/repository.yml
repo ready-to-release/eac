@@ -1,0 +1,28 @@
+# Repository-wide path configuration
+# Defines repository-specific directory structures used by module type defaults
+
+paths:
+  # Test implementation root directory
+  # Used in type defaults as: {test_impl_root}/{moniker}
+  test_impl_root: "go/eac/specs/impl"
+
+  # Specs root directory
+  # Used in type defaults as: {specs_root}/{moniker}
+  specs_root: "specs"
+
+  # Templates directory
+  templates: "templates"
+
+  # Output directory structure
+  out:
+    root: "out"
+    build: "out/build"
+    test: "out/test"
+    logs: "out/logs"
+    security: "out/security"
+
+# Conventional filenames
+conventions:
+  godog_test: "godog_test.go"
+  package_json: "package.json"
+  changelog: "CHANGELOG.md"

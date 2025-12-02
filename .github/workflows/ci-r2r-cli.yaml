@@ -32,14 +32,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: go/r2r/cli/go.sum
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Build Module
-        working-directory: ./go/eac/commands
-        run: go run . build r2r-cli
+        run: ${{ steps.commands.outputs.commands-path }} build r2r-cli
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -54,14 +52,16 @@ jobs:
       - name: Build Summary
         if: always()
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           echo "## Build: r2r-cli" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ CLI binaries built for all platforms." >> $GITHUB_STEP_SUMMARY
+            echo "CLI binaries built for all platforms." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ CLI binary build failed." >> $GITHUB_STEP_SUMMARY
+            echo "CLI binary build failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -95,7 +95,7 @@ jobs:
           echo "| Module | \`r2r-cli\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📦 Artifacts uploaded as \`build-artifacts-r2r-cli\`" >> $GITHUB_STEP_SUMMARY
+          echo "Artifacts uploaded as \`build-artifacts-r2r-cli\`" >> $GITHUB_STEP_SUMMARY
 
   test:
     name: Test
@@ -106,10 +106,9 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: go/eac/commands/go.sum
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -124,8 +123,7 @@ jobs:
           chmod +x out/build/r2r-cli/r2r-darwin-arm64
 
       - name: Test Module
-        working-directory: ./go/eac/commands
-        run: go run . test r2r-cli
+        run: ${{ steps.commands.outputs.commands-path }} test r2r-cli
 
       - name: Upload Test Results
         if: always()
@@ -137,14 +135,16 @@ jobs:
       - name: Test Summary
         if: always()
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           echo "## Test: r2r-cli" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ All CLI tests passed." >> $GITHUB_STEP_SUMMARY
+            echo "All CLI tests passed." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ CLI tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "CLI tests failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type test --artifact test-results-r2r-cli >> $GITHUB_STEP_SUMMARY
+            $COMMANDS ci summary-link ${{ github.run_id }} --type test --artifact test-results-r2r-cli >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -153,7 +153,7 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Module | \`r2r-cli\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Command | \`go run . test r2r-cli\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Command | \`commands test r2r-cli\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Binaries Verified" >> $GITHUB_STEP_SUMMARY

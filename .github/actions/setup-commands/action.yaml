@@ -1,0 +1,60 @@
+name: Setup EAC Commands
+description: Build or restore the EAC commands binary with caching
+
+inputs:
+  go-version:
+    description: Go version to use
+    default: '1.24'
+
+outputs:
+  commands-path:
+    description: Absolute path to the commands binary
+    value: ${{ steps.setup.outputs.path }}
+  cache-hit:
+    description: Whether the binary was restored from cache
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Calculate cache key
+      id: cache-key
+      shell: bash
+      run: |
+        # Hash all Go source files that affect the commands binary
+        HASH=$(find go/eac -name '*.go' -type f | sort | xargs cat | sha256sum | cut -d' ' -f1)
+        echo "hash=$HASH" >> $GITHUB_OUTPUT
+        echo "key=commands-binary-linux-$HASH" >> $GITHUB_OUTPUT
+
+    - name: Restore cached binary
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: out/build/eac-commands/commands
+        key: ${{ steps.cache-key.outputs.key }}
+
+    # Only setup Go if we need to build (cache miss)
+    - name: Setup Go
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache-dependency-path: |
+          go/eac/commands/go.sum
+          go/eac/core/go.sum
+
+    - name: Build commands binary
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p out/build/eac-commands
+        cd go/eac/commands
+        go build -o ../../../out/build/eac-commands/commands .
+        echo "Built commands binary from source"
+
+    - name: Set output
+      id: setup
+      shell: bash
+      run: |
+        chmod +x out/build/eac-commands/commands
+        echo "path=$GITHUB_WORKSPACE/out/build/eac-commands/commands" >> $GITHUB_OUTPUT

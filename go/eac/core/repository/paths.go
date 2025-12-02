@@ -1,6 +1,10 @@
 package repository
 
-import "path/filepath"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+)
 
 // Repository directory conventions
 // These are the standard directory names used throughout the repository.
@@ -11,8 +15,14 @@ const (
 	// BuildDir is the subdirectory under OutDir for build outputs
 	BuildDir = "build"
 
+	// TestDir is the subdirectory under OutDir for test outputs
+	TestDir = "test"
+
 	// LogsDir is the subdirectory under OutDir for log files
 	LogsDir = "logs"
+
+	// SecurityDir is the subdirectory under OutDir for security scan outputs
+	SecurityDir = "security"
 
 	// SpecsDir is the root directory for specifications (Gherkin, Structurizr)
 	SpecsDir = "specs"
@@ -22,6 +32,12 @@ const (
 
 	// SrcDir is the root directory for source code
 	SrcDir = "src"
+
+	// GoDir is the root directory for Go source code
+	GoDir = "go"
+
+	// TemplatesDir is the root directory for templates
+	TemplatesDir = "templates"
 
 	// R2RDir is the configuration directory (.r2r)
 	R2RDir = ".r2r"
@@ -36,6 +52,15 @@ const (
 	WorkspaceDSL = "workspace.dsl"
 )
 
+// Conventional filenames
+const (
+	// GodogTestFile is the conventional name for godog test files
+	GodogTestFile = "godog_test.go"
+
+	// PackageJSONFile is the conventional name for npm package files
+	PackageJSONFile = "package.json"
+)
+
 // Relative path constants (combinations of directory names)
 const (
 	// EACConfigRelPath is the relative path from repo root to EAC configuration
@@ -44,8 +69,14 @@ const (
 	// OutBuildRelPath is the relative path from repo root to build output
 	OutBuildRelPath = OutDir + "/" + BuildDir
 
+	// OutTestRelPath is the relative path from repo root to test output
+	OutTestRelPath = OutDir + "/" + TestDir
+
 	// OutLogsRelPath is the relative path from repo root to logs output
 	OutLogsRelPath = OutDir + "/" + LogsDir
+
+	// OutSecurityRelPath is the relative path from repo root to security output
+	OutSecurityRelPath = OutDir + "/" + SecurityDir
 )
 
 // Path builder functions for common paths
@@ -96,4 +127,54 @@ func ContractsVersionPath(repoRoot, module, version string) string {
 // Example: out/logs
 func LogsPath(repoRoot string) string {
 	return filepath.Join(repoRoot, OutDir, LogsDir)
+}
+
+// TestOutputPath returns the path to a test suite's output directory
+// Example: out/test/acceptance
+func TestOutputPath(repoRoot, suiteName string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, suiteName)
+}
+
+// SecurityOutputPath returns the path to security scan output
+// Example: out/security/trivy
+func SecurityOutputPath(repoRoot, scanner string) string {
+	return filepath.Join(repoRoot, OutDir, SecurityDir, scanner)
+}
+
+// TemplatePath returns the path to a template file or directory
+// Example: templates/test-reports/suite-summary.md
+func TemplatePath(repoRoot string, subpaths ...string) string {
+	parts := append([]string{repoRoot, TemplatesDir}, subpaths...)
+	return filepath.Join(parts...)
+}
+
+// CommandLogsPath returns the path to a command's log directory
+// Example: out/logs/commit
+func CommandLogsPath(repoRoot, command string) string {
+	return filepath.Join(repoRoot, OutDir, LogsDir, command)
+}
+
+// StripSpecsPrefix removes the specs/ prefix from a path (handles both / and \)
+func StripSpecsPrefix(path string) string {
+	path = strings.TrimPrefix(path, SpecsDir+"/")
+	path = strings.TrimPrefix(path, SpecsDir+"\\")
+	return path
+}
+
+// IsGodogTestDir checks if a directory contains a godog_test.go file
+func IsGodogTestDir(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, GodogTestFile))
+	return err == nil
+}
+
+// ExtractMonikerFromSpecsPath extracts the module moniker from a specs path
+// Input:  specs/eac-commands/templates/specification.feature
+// Output: eac-commands
+func ExtractMonikerFromSpecsPath(specsPath string) string {
+	relPath := StripSpecsPrefix(specsPath)
+	parts := strings.Split(filepath.ToSlash(relPath), "/")
+	if len(parts) > 0 && parts[0] != "" {
+		return parts[0]
+	}
+	return ""
 }

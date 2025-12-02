@@ -1,6 +1,12 @@
 name: "ci-ext-eac (stage 1-6)"
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       ref:
@@ -29,17 +35,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/r2r/cli/go.sum
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Build extension using EAC build system
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           echo "Building ext-eac using EAC build system..."
-          go run ./go/eac/commands build ext-eac
+          $COMMANDS build ext-eac
 
           echo ""
           echo "Verifying image was built..."
@@ -89,13 +94,14 @@ jobs:
             .
 
           echo ""
-          echo "✅ Published CI images:"
+          echo "Published CI images:"
           echo "  - $IMAGE_NAME:ci"
           echo "  - $IMAGE_NAME:sha-$SHORT_SHA"
 
       - name: Build Summary
         if: always()
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
           IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
@@ -103,9 +109,9 @@ jobs:
           echo "## Build: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ Built and pushed multi-platform container image to GitHub Container Registry." >> $GITHUB_STEP_SUMMARY
+            echo "Built and pushed multi-platform container image to GitHub Container Registry." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Container image build failed." >> $GITHUB_STEP_SUMMARY
+            echo "Container image build failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
             echo "- Dockerfile syntax error" >> $GITHUB_STEP_SUMMARY
@@ -113,7 +119,7 @@ jobs:
             echo "- Go compilation error" >> $GITHUB_STEP_SUMMARY
             echo "- Registry authentication failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -161,17 +167,16 @@ jobs:
           docker tag "$IMAGE_NAME:sha-$SHORT_SHA" ext-eac:ci-test
           docker images ext-eac:ci-test
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/r2r/cli/go.sum
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Build r2r CLI
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
           echo "Building r2r CLI using EAC build system..."
-          go run ./go/eac/commands build r2r-cli
+          $COMMANDS build r2r-cli
 
           echo ""
           echo "Copying Linux binary to workspace root..."
@@ -233,7 +238,7 @@ jobs:
           timeout 30 ./r2r run eac extension-meta
 
           echo ""
-          echo "✅ Extension tests passed"
+          echo "Extension tests passed"
 
       - name: Test Direct Docker Execution
         run: |
@@ -248,27 +253,28 @@ jobs:
           docker run --rm ext-eac:ci-test extension-meta
 
           echo ""
-          echo "✅ Direct Docker tests passed"
+          echo "Direct Docker tests passed"
 
       - name: Test Summary
         if: always()
         run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
 
           echo "## Test: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ All extension tests passed." >> $GITHUB_STEP_SUMMARY
+            echo "All extension tests passed." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Extension tests failed." >> $GITHUB_STEP_SUMMARY
+            echo "Extension tests failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
             echo "- Container image failed to pull from GHCR" >> $GITHUB_STEP_SUMMARY
             echo "- Extension command returned non-zero exit code" >> $GITHUB_STEP_SUMMARY
             echo "- Test timeout exceeded" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            go run ./go/eac/commands ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -276,11 +282,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Test | Method | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|------|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Extension metadata | r2r CLI | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Help command | r2r CLI | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Show modules | r2r CLI | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Direct Docker help | Docker run | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Direct Docker meta | Docker run | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Extension metadata | r2r CLI | Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Help command | r2r CLI | Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Show modules | r2r CLI | Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Direct Docker help | Docker run | Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Direct Docker meta | Docker run | Pass |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Tested Image" >> $GITHUB_STEP_SUMMARY

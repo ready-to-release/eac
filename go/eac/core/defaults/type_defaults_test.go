@@ -78,7 +78,44 @@ func TestSubstituteVariables(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := SubstituteVariables(tt.pattern, tt.moniker, tt.root, tt.moduleType)
+			result := SubstituteVariables(tt.pattern, tt.moniker, tt.root, tt.moduleType, nil)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestSubstituteVariables_WithPathVars tests path variable substitution
+func TestSubstituteVariables_WithPathVars(t *testing.T) {
+	pathVars := map[string]string{
+		"test_impl_root": "go/eac/specs/impl",
+		"specs_root":     "specs",
+	}
+
+	tests := []struct {
+		name     string
+		pattern  string
+		expected string
+	}{
+		{
+			name:     "test_impl_root substitution",
+			pattern:  "{test_impl_root}/{moniker}",
+			expected: "go/eac/specs/impl/test-mod",
+		},
+		{
+			name:     "specs_root substitution",
+			pattern:  "{specs_root}/{moniker}/**",
+			expected: "specs/test-mod/**",
+		},
+		{
+			name:     "combined with standard vars",
+			pattern:  "{test_impl_root}/{moniker}/{type}",
+			expected: "go/eac/specs/impl/test-mod/go-lib",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SubstituteVariables(tt.pattern, "test-mod", "src/test", "go-lib", pathVars)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -87,12 +124,12 @@ func TestSubstituteVariables(t *testing.T) {
 // TestSubstituteAll tests batch substitution
 func TestSubstituteAll(t *testing.T) {
 	t.Run("nil slice returns nil", func(t *testing.T) {
-		result := SubstituteAll(nil, "moniker", "root", "type")
+		result := SubstituteAll(nil, "moniker", "root", "type", nil)
 		assert.Nil(t, result)
 	})
 
 	t.Run("empty slice returns empty slice", func(t *testing.T) {
-		result := SubstituteAll([]string{}, "moniker", "root", "type")
+		result := SubstituteAll([]string{}, "moniker", "root", "type", nil)
 		assert.NotNil(t, result)
 		assert.Empty(t, result)
 	})
@@ -103,7 +140,7 @@ func TestSubstituteAll(t *testing.T) {
 			"{root}/tests",
 			"**/*.go",
 		}
-		result := SubstituteAll(patterns, "eac-core", "go/eac/core", "go-library")
+		result := SubstituteAll(patterns, "eac-core", "go/eac/core", "go-library", nil)
 
 		assert.Len(t, result, 3)
 		assert.Equal(t, "specs/eac-core/**", result[0])
@@ -113,7 +150,7 @@ func TestSubstituteAll(t *testing.T) {
 
 	t.Run("preserves order", func(t *testing.T) {
 		patterns := []string{"a", "b", "c", "d"}
-		result := SubstituteAll(patterns, "m", "r", "t")
+		result := SubstituteAll(patterns, "m", "r", "t", nil)
 		assert.Equal(t, patterns, result)
 	})
 }
@@ -123,6 +160,7 @@ func TestResolveDefaults_NoTypeDefaults(t *testing.T) {
 	result := ResolveDefaults(
 		nil, // no type defaults
 		"test-module", "src/test", "unknown-type",
+		nil, // pathVars
 		nil, nil, nil, nil, // source, config, assets, tests
 		"",     // changelog
 		"", "", // workflowCI, workflowRelease
@@ -133,7 +171,7 @@ func TestResolveDefaults_NoTypeDefaults(t *testing.T) {
 	// Generic defaults should be applied
 	assert.Equal(t, "CHANGELOG.md", result.Changelog)
 	assert.Equal(t, []string{"specs/test-module/**"}, result.Specs)
-	assert.Equal(t, "go/eac/specs/impl/test-module", result.TestImpl)
+	assert.Empty(t, result.TestImpl) // No fallback - must come from config
 	assert.Equal(t, "specs/test-module/.design", result.Design)
 
 	// No generic defaults for source/config/assets/tests
@@ -153,15 +191,21 @@ func TestResolveDefaults_WithTypeDefaults(t *testing.T) {
 			Changelog: "HISTORY.md",
 		},
 		Repo: &RepoDefaults{
-			Specs:    []string{"specs/{moniker}/**"},
-			TestImpl: "{root}/tests",
-			Design:   "specs/{moniker}/.design",
+			Specs:    []string{"{specs_root}/{moniker}/**"},
+			TestImpl: "{test_impl_root}/{moniker}",
+			Design:   "{specs_root}/{moniker}/.design",
 		},
+	}
+
+	pathVars := map[string]string{
+		"test_impl_root": "go/eac/specs/impl",
+		"specs_root":     "specs",
 	}
 
 	result := ResolveDefaults(
 		typeDef,
 		"my-lib", "src/lib", "go-library",
+		pathVars,
 		nil, nil, nil, nil,
 		"",
 		"", "",
@@ -175,7 +219,7 @@ func TestResolveDefaults_WithTypeDefaults(t *testing.T) {
 	assert.Equal(t, []string{"README.md"}, result.Assets)
 	assert.Equal(t, "HISTORY.md", result.Changelog)
 	assert.Equal(t, []string{"specs/my-lib/**"}, result.Specs)
-	assert.Equal(t, "src/lib/tests", result.TestImpl) // Type default uses {root}/tests pattern
+	assert.Equal(t, "go/eac/specs/impl/my-lib", result.TestImpl)
 	assert.Equal(t, "specs/my-lib/.design", result.Design)
 }
 
@@ -188,9 +232,14 @@ func TestResolveDefaults_ExplicitOverridesType(t *testing.T) {
 			Changelog: "HISTORY.md",
 		},
 		Repo: &RepoDefaults{
-			Specs:    []string{"specs/{moniker}/**"},
-			TestImpl: "{root}/tests",
+			Specs:    []string{"{specs_root}/{moniker}/**"},
+			TestImpl: "{test_impl_root}/{moniker}",
 		},
+	}
+
+	pathVars := map[string]string{
+		"test_impl_root": "go/eac/specs/impl",
+		"specs_root":     "specs",
 	}
 
 	// Explicit values
@@ -201,6 +250,7 @@ func TestResolveDefaults_ExplicitOverridesType(t *testing.T) {
 	result := ResolveDefaults(
 		typeDef,
 		"my-lib", "src/lib", "go-library",
+		pathVars,
 		explicitSource, explicitConfig, nil, nil,
 		"CUSTOM.md", // explicit changelog
 		"", "",
@@ -221,7 +271,7 @@ func TestResolveDefaults_ExplicitOverridesType(t *testing.T) {
 func TestResolveDefaults_EmptySlicePreserved(t *testing.T) {
 	typeDef := &TypeDefaults{
 		Repo: &RepoDefaults{
-			Specs: []string{"specs/{moniker}/**"},
+			Specs: []string{"{specs_root}/{moniker}/**"},
 		},
 	}
 
@@ -231,6 +281,7 @@ func TestResolveDefaults_EmptySlicePreserved(t *testing.T) {
 	result := ResolveDefaults(
 		typeDef,
 		"my-lib", "src/lib", "go-library",
+		nil, // pathVars
 		nil, nil, nil, nil,
 		"",
 		"", "",
@@ -255,6 +306,7 @@ func TestResolveDefaults_PartialTypeDefaults(t *testing.T) {
 	result := ResolveDefaults(
 		typeDef,
 		"my-module", "src/mod", "custom-type",
+		nil, // pathVars
 		nil, nil, nil, nil,
 		"",
 		"", "",
@@ -268,7 +320,7 @@ func TestResolveDefaults_PartialTypeDefaults(t *testing.T) {
 	// Generic defaults for others
 	assert.Equal(t, "CHANGELOG.md", result.Changelog)
 	assert.Equal(t, []string{"specs/my-module/**"}, result.Specs)
-	assert.Equal(t, "go/eac/specs/impl/my-module", result.TestImpl)
+	assert.Empty(t, result.TestImpl) // No fallback - must come from config
 	assert.Equal(t, "specs/my-module/.design", result.Design)
 }
 
@@ -283,6 +335,7 @@ func TestResolveDefaults_TypeDefaultsWithNilFields(t *testing.T) {
 	result := ResolveDefaults(
 		typeDef,
 		"my-module", "src/mod", "custom-type",
+		nil, // pathVars
 		nil, nil, nil, nil,
 		"",
 		"", "",
