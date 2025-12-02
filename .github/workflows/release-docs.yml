@@ -52,7 +52,7 @@ jobs:
 
       - name: Download build artifacts from CI
         if: inputs.ci_run_id != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: build-artifacts-docs
           path: out/build/docs
