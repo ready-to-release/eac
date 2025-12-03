@@ -17,7 +17,7 @@ import (
 
 func TestScriptsImplicitCLIFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../specs/scripts-implicit-cli",
+		SpecsPath:         "../../../../../specs/scripts-implicit-cli",
 		DefaultReportName: "cucumber-scripts-implicit-cli",
 		RegisterSteps:     RegisterSteps,
 	}

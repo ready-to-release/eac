@@ -14,7 +14,7 @@ import (
 
 func TestSrcCommandsFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../specs/eac-commands",
+		SpecsPath:         "../../../../../specs/eac-commands",
 		DefaultReportName: "cucumber-eac-commands",
 		RegisterSteps:     RegisterSteps,
 	}

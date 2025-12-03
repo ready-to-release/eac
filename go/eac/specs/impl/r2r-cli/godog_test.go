@@ -18,7 +18,7 @@ import (
 
 func TestSrcCliFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../specs/r2r-cli",
+		SpecsPath:         "../../../../../specs/r2r-cli",
 		DefaultReportName: "cucumber-r2r-cli",
 		RegisterSteps:     RegisterSteps,
 	}

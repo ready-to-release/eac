@@ -168,8 +168,19 @@ func parsePRConfig() (*prConfig, error) {
 		}
 	}
 
-	// Get current branch
-	currentBranch, err := config.base.GitOps.GetCurrentBranch(config.base.RepoRoot)
+	// Get current branch from current working directory (not repoRoot)
+	// This ensures we get the correct branch in worktree environments
+	// Check R2R_PWD first (for test isolation)
+	cwd := os.Getenv("R2R_PWD")
+	if cwd == "" {
+		// Fall back to actual working directory
+		var err error
+		cwd, err = os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current directory: %w", err)
+		}
+	}
+	currentBranch, err := config.base.GitOps.GetCurrentBranch(cwd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current branch: %w", err)
 	}
@@ -191,7 +202,11 @@ func validatePREnvironment(config *prConfig) error {
 	}
 
 	// Check for uncommitted changes
-	cwd, _ := os.Getwd()
+	// Check R2R_PWD first (for test isolation)
+	cwd := os.Getenv("R2R_PWD")
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
 	clean, err := config.base.GitOps.IsWorktreeClean(cwd)
 	if err != nil {
 		return fmt.Errorf("failed to check working tree status: %w", err)
