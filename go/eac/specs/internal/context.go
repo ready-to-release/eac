@@ -187,6 +187,16 @@ func (c *TestContext) createCommand(parts []string) *exec.Cmd {
 	// Use container root if in container, otherwise repo root
 	binaryRoot := repository.GetEffectiveRoot(c.OriginalRepoRoot)
 	binaryPath := filepath.Join(binaryRoot, "out", "build", "eac-commands", binaryName)
+
+	// Check if binary exists and log diagnostic info if it doesn't
+	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
+		// Binary doesn't exist - log diagnostic info to help debug CI issues
+		fmt.Fprintf(os.Stderr, "DEBUG: Binary not found at: %s\n", binaryPath)
+		fmt.Fprintf(os.Stderr, "DEBUG: OriginalRepoRoot: %s\n", c.OriginalRepoRoot)
+		fmt.Fprintf(os.Stderr, "DEBUG: EffectiveRoot: %s\n", binaryRoot)
+		fmt.Fprintf(os.Stderr, "DEBUG: IsolatedDir: %s\n", c.IsolatedDir)
+	}
+
 	return exec.Command(binaryPath, parts...)
 }
 
