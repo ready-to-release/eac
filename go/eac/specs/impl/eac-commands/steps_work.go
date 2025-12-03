@@ -23,9 +23,6 @@ func registerWorkSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^I see error "([^"]*)"$`, func(text string) error {
 		return workOutputContains(ctx, text)
 	})
-	sc.Step(`^I see warning "([^"]*)"$`, func(text string) error {
-		return workOutputContains(ctx, text)
-	})
 	sc.Step(`^I see suggestion "([^"]*)"$`, func(text string) error {
 		return workOutputContains(ctx, text)
 	})

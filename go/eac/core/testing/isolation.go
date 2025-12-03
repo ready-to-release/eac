@@ -296,6 +296,14 @@ func (t *TestIsolation) initGitRepository() error {
 		}
 	}
 
+	// Set up a self-referencing "origin" remote for testing work-pull and other remote-dependent commands
+	// This allows work-pull to fetch from "origin/main" even in isolated tests
+	cmd = exec.Command("git", "remote", "add", "origin", t.isolatedDir)
+	cmd.Dir = t.isolatedDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git remote add origin failed: %w (output: %s)", err, string(output))
+	}
+
 	return nil
 }
 
