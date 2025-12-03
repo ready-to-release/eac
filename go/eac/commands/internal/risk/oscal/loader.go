@@ -178,8 +178,8 @@ func GetModuleNamesFromAssessments(workspaceRoot string) ([]string, error) {
 	return names, nil
 }
 
-// DetectOSCALDocumentType detects if a file is a profile or assessment-results.
-// Returns "profile", "assessment-results", or empty string if unknown.
+// DetectOSCALDocumentType detects if a file is a profile, assessment-results, or catalog.
+// Returns "profile", "assessment-results", "catalog", or empty string if unknown.
 func DetectOSCALDocumentType(filePath string) (string, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -203,6 +203,10 @@ func DetectOSCALDocumentType(filePath string) (string, error) {
 	// Also check for hyphenated version
 	if _, ok := raw["assessment_results"]; ok {
 		return "assessment-results", nil
+	}
+
+	if _, ok := raw["catalog"]; ok {
+		return "catalog", nil
 	}
 
 	return "", nil

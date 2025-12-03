@@ -1,0 +1,207 @@
+// Command: validate risk-catalog
+// Short: Validate OSCAL catalogs against OSCAL 1.1.3 schema
+// Long: The validate risk-catalog command validates OSCAL catalog documents against the official
+// Long: OSCAL 1.1.3 JSON schema from NIST.
+// Long:
+// Long: Catalogs define security control libraries (e.g., NIST 800-53) with structured control
+// Long: definitions, parameters, and supporting materials.
+// Long:
+// Long: Validation uses the official OSCAL JSON schema:
+// Long: https://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json
+// Args: files
+package riskcatalog
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
+)
+
+var log = logging.C()
+
+func init() {
+	registry.Register(ValidateRiskCatalog)
+}
+
+// Config holds configuration for validate risk-catalog command.
+type Config struct {
+	FilePath      string
+	WorkspaceRoot string
+}
+
+// ValidationError represents a validation failure.
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+// ValidationResult holds the outcome of validation.
+type ValidationResult struct {
+	Valid  bool              `json:"valid"`
+	Errors []ValidationError `json:"errors,omitempty"`
+}
+
+// ValidateRiskCatalog is the entry point for the validate risk-catalog command.
+func ValidateRiskCatalog() int {
+	config, err := parseConfig()
+	if err != nil {
+		if err.Error() == "help requested" {
+			showHelp()
+			return 0
+		}
+		log.Errorf("Error: %v", err)
+		return 1
+	}
+
+	// Validate the catalog using schema
+	result := validateCatalog(config)
+
+	// Report results
+	reportValidationResults(config, result)
+
+	if !result.Valid {
+		return 1
+	}
+	return 0
+}
+
+// parseConfig parses command line configuration.
+func parseConfig() (*Config, error) {
+	args := os.Args[3:] // Skip program name, "validate", and "risk-catalog"
+
+	config := &Config{}
+
+	// Get workspace root
+	workspaceRoot, err := registry.GetWorkspaceRoot()
+	if err != nil {
+		return nil, fmt.Errorf("failed to find workspace root: %w", err)
+	}
+	config.WorkspaceRoot = workspaceRoot
+
+	// Parse flags and arguments
+	i := 0
+	for i < len(args) {
+		arg := args[i]
+
+		switch {
+		case arg == "--help" || arg == "-h":
+			return nil, fmt.Errorf("help requested")
+
+		case strings.HasPrefix(arg, "-"):
+			return nil, fmt.Errorf("unknown flag: %s", arg)
+
+		default:
+			// Positional argument: file path
+			if config.FilePath == "" {
+				config.FilePath = arg
+				// Make path absolute if relative
+				if !filepath.IsAbs(config.FilePath) {
+					config.FilePath = filepath.Join(config.WorkspaceRoot, config.FilePath)
+				}
+			}
+			i++
+		}
+	}
+
+	// Validate required arguments
+	if config.FilePath == "" {
+		return nil, fmt.Errorf("file path required")
+	}
+
+	// Check file exists
+	if _, err := os.Stat(config.FilePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("file not found: %s", config.FilePath)
+	}
+
+	return config, nil
+}
+
+// validateCatalog validates an OSCAL catalog using the official schema.
+func validateCatalog(config *Config) *ValidationResult {
+	result := &ValidationResult{Valid: true}
+
+	// Create schema validator
+	validator := oscal.NewSchemaValidator()
+
+	// Validate against OSCAL schema
+	if err := validator.ValidateCatalog(config.FilePath); err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "schema",
+			Message: err.Error(),
+		})
+	}
+
+	return result
+}
+
+// reportValidationResults prints validation results.
+func reportValidationResults(config *Config, result *ValidationResult) {
+	filename := filepath.Base(config.FilePath)
+
+	if result.Valid {
+		log.Info("")
+		log.Infof("✓ Validation passed: %s", filename)
+		log.Info("  Type: catalog")
+		log.Info("  Schema: OSCAL 1.1.3")
+		log.Info("")
+	} else {
+		log.Info("")
+		log.Errorf("✗ Validation failed: %s", filename)
+		log.Info("  Type: catalog")
+		log.Info("  Schema: OSCAL 1.1.3")
+		log.Info("")
+
+		log.Errorf("  Errors: %d", len(result.Errors))
+		for _, e := range result.Errors {
+			log.Errorf("    - %s: %s", e.Field, e.Message)
+		}
+		log.Info("")
+	}
+}
+
+// showHelp displays help information.
+func showHelp() {
+	help := `Usage: validate risk-catalog <file>
+
+Validate OSCAL catalogs against OSCAL 1.1.3 schema
+
+Arguments:
+  file                   Path to OSCAL catalog document to validate
+
+Flags:
+  -h, --help             Show this help message
+
+Examples:
+  # Validate a catalog
+  validate risk-catalog catalogs/nist-800-53-rev5.json
+
+  # Validate catalog from URL (download first)
+  curl -o catalog.json https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json
+  validate risk-catalog catalog.json
+
+OSCAL Catalog Structure:
+  Catalogs define security control libraries with:
+  - Metadata (title, version, last-modified, OSCAL version)
+  - Groups (control families like Access Control, System Integrity)
+  - Controls (individual security requirements with statements)
+  - Parameters (configurable values within controls)
+  - Back-matter (supporting resources and references)
+
+  Official NIST 800-53 Rev 5 catalog:
+  https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json
+
+Validation:
+  This command validates catalogs against the official OSCAL 1.1.3 JSON schema
+  maintained by NIST. The schema ensures complete compliance with the OSCAL
+  specification including all required fields, data types, and structural constraints.
+
+  Schema URL: https://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json
+`
+	log.Info(help)
+}

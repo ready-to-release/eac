@@ -41,5 +41,6 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/design"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk-catalog"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/work"
 )

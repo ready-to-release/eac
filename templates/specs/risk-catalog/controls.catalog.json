@@ -1,0 +1,508 @@
+{
+  "catalog": {
+    "uuid": "8f6d4c2a-3b1e-4a5f-9c7d-2e8b5f1a3c9d",
+    "metadata": {
+      "title": "Enterprise Software Development Security Controls Catalog",
+      "last-modified": "2025-12-03T00:00:00Z",
+      "version": "1.0.0",
+      "oscal-version": "1.1.3",
+      "remarks": "Security control catalog for software development and deployment in regulated industries. This catalog defines foundational security controls applicable to enterprise software projects."
+    },
+    "groups": [
+      {
+        "id": "ac",
+        "title": "Access Control",
+        "controls": [
+          {
+            "id": "ac-1",
+            "title": "Access Control Policy and Procedures",
+            "parts": [
+              {
+                "id": "ac-1_stmt",
+                "name": "statement",
+                "prose": "The organization shall develop, document, and disseminate access control policies that address purpose, scope, roles, responsibilities, and compliance requirements for information systems."
+              }
+            ]
+          },
+          {
+            "id": "ac-2",
+            "title": "Account Management",
+            "parts": [
+              {
+                "id": "ac-2_stmt",
+                "name": "statement",
+                "prose": "The organization shall manage system accounts including creation, modification, enabling, disabling, and removal of accounts with appropriate authorization."
+              }
+            ]
+          },
+          {
+            "id": "ac-3",
+            "title": "Access Enforcement",
+            "parts": [
+              {
+                "id": "ac-3_stmt",
+                "name": "statement",
+                "prose": "The information system shall enforce approved authorizations for logical access to information and system resources based on applicable access control policies."
+              }
+            ]
+          },
+          {
+            "id": "ac-6",
+            "title": "Least Privilege",
+            "parts": [
+              {
+                "id": "ac-6_stmt",
+                "name": "statement",
+                "prose": "The organization shall employ the principle of least privilege, allowing only authorized access for users (or processes acting on behalf of users) which are necessary to accomplish assigned tasks."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "au",
+        "title": "Audit and Accountability",
+        "controls": [
+          {
+            "id": "au-2",
+            "title": "Audit Events",
+            "parts": [
+              {
+                "id": "au-2_stmt",
+                "name": "statement",
+                "prose": "The information system shall generate audit records for system events, configuration changes, security-relevant events including authentication attempts, and access control decisions."
+              }
+            ]
+          },
+          {
+            "id": "au-3",
+            "title": "Content of Audit Records",
+            "parts": [
+              {
+                "id": "au-3_stmt",
+                "name": "statement",
+                "prose": "Audit records shall contain information that establishes: what type of event occurred, when the event occurred, where the event occurred, the source of the event, the outcome of the event, and the identity of any individuals or subjects associated with the event."
+              }
+            ]
+          },
+          {
+            "id": "au-6",
+            "title": "Audit Review, Analysis, and Reporting",
+            "parts": [
+              {
+                "id": "au-6_stmt",
+                "name": "statement",
+                "prose": "The organization shall review and analyze information system audit records for indications of inappropriate or unusual activity, investigate suspicious activity or suspected violations, and report findings to designated organizational officials."
+              }
+            ]
+          },
+          {
+            "id": "au-12",
+            "title": "Audit Generation",
+            "parts": [
+              {
+                "id": "au-12_stmt",
+                "name": "statement",
+                "prose": "The information system shall provide audit record generation capability for auditable events and allow authorized personnel to select which auditable events are to be audited by specific components."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "cm",
+        "title": "Configuration Management",
+        "controls": [
+          {
+            "id": "cm-2",
+            "title": "Baseline Configuration",
+            "parts": [
+              {
+                "id": "cm-2_stmt",
+                "name": "statement",
+                "prose": "The organization shall develop, document, and maintain baseline configurations for information systems including software components, dependencies, and security configurations."
+              }
+            ]
+          },
+          {
+            "id": "cm-3",
+            "title": "Configuration Change Control",
+            "parts": [
+              {
+                "id": "cm-3_stmt",
+                "name": "statement",
+                "prose": "The organization shall determine configuration changes to information systems, review proposed changes for security impacts, document configuration change decisions, and implement approved configuration changes through validated change control processes."
+              }
+            ]
+          },
+          {
+            "id": "cm-6",
+            "title": "Configuration Settings",
+            "parts": [
+              {
+                "id": "cm-6_stmt",
+                "name": "statement",
+                "prose": "The organization shall establish and document configuration settings for information systems using security configuration checklists that reflect the most restrictive mode consistent with operational requirements."
+              }
+            ]
+          },
+          {
+            "id": "cm-8",
+            "title": "Information System Component Inventory",
+            "parts": [
+              {
+                "id": "cm-8_stmt",
+                "name": "statement",
+                "prose": "The organization shall develop and document an inventory of information system components including software modules, dependencies, and third-party libraries, and update the inventory as part of component installations, removals, and updates."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ia",
+        "title": "Identification and Authentication",
+        "controls": [
+          {
+            "id": "ia-2",
+            "title": "Identification and Authentication (Organizational Users)",
+            "parts": [
+              {
+                "id": "ia-2_stmt",
+                "name": "statement",
+                "prose": "The information system shall uniquely identify and authenticate organizational users accessing the system through appropriate authentication mechanisms."
+              }
+            ]
+          },
+          {
+            "id": "ia-5",
+            "title": "Authenticator Management",
+            "parts": [
+              {
+                "id": "ia-5_stmt",
+                "name": "statement",
+                "prose": "The organization shall manage information system authenticators including initial authenticator distribution, establishing minimum authenticator strength requirements, and protecting authenticator content from unauthorized disclosure and modification."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sc",
+        "title": "System and Communications Protection",
+        "controls": [
+          {
+            "id": "sc-7",
+            "title": "Boundary Protection",
+            "parts": [
+              {
+                "id": "sc-7_stmt",
+                "name": "statement",
+                "prose": "The information system shall monitor and control communications at external boundaries and key internal boundaries, implementing network isolation for different security domains."
+              }
+            ]
+          },
+          {
+            "id": "sc-8",
+            "title": "Transmission Confidentiality and Integrity",
+            "parts": [
+              {
+                "id": "sc-8_stmt",
+                "name": "statement",
+                "prose": "The information system shall protect the confidentiality and integrity of transmitted information through encryption when communicating with external services and systems."
+              }
+            ]
+          },
+          {
+            "id": "sc-13",
+            "title": "Cryptographic Protection",
+            "parts": [
+              {
+                "id": "sc-13_stmt",
+                "name": "statement",
+                "prose": "The information system shall implement cryptographic mechanisms to protect sensitive information at rest and in transit using FIPS-validated cryptographic modules where applicable."
+              }
+            ]
+          },
+          {
+            "id": "sc-28",
+            "title": "Protection of Information at Rest",
+            "parts": [
+              {
+                "id": "sc-28_stmt",
+                "name": "statement",
+                "prose": "The information system shall protect the confidentiality and integrity of sensitive information at rest including credentials, configuration files, and assessment data."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "si",
+        "title": "System and Information Integrity",
+        "controls": [
+          {
+            "id": "si-2",
+            "title": "Flaw Remediation",
+            "parts": [
+              {
+                "id": "si-2_stmt",
+                "name": "statement",
+                "prose": "The organization shall identify, report, and correct information system flaws through systematic flaw remediation processes including security vulnerability scanning and patch management."
+              }
+            ]
+          },
+          {
+            "id": "si-3",
+            "title": "Malicious Code Protection",
+            "parts": [
+              {
+                "id": "si-3_stmt",
+                "name": "statement",
+                "prose": "The organization shall implement malicious code protection mechanisms including scanning downloaded software, configuration files, and dependencies from external sources."
+              }
+            ]
+          },
+          {
+            "id": "si-4",
+            "title": "Information System Monitoring",
+            "parts": [
+              {
+                "id": "si-4_stmt",
+                "name": "statement",
+                "prose": "The organization shall monitor information systems to detect attacks, unauthorized access attempts, and indicators of potential attacks, and identify unauthorized use of the system."
+              }
+            ]
+          },
+          {
+            "id": "si-7",
+            "title": "Software, Firmware, and Information Integrity",
+            "parts": [
+              {
+                "id": "si-7_stmt",
+                "name": "statement",
+                "prose": "The information system shall employ integrity verification tools and techniques to detect unauthorized changes to software, firmware, and information including component validation, dependency verification, and code signing."
+              }
+            ]
+          },
+          {
+            "id": "si-10",
+            "title": "Information Input Validation",
+            "parts": [
+              {
+                "id": "si-10_stmt",
+                "name": "statement",
+                "prose": "The information system shall check the validity of user inputs including command arguments, configuration files, and structured documents to prevent injection attacks and ensure data integrity."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sa",
+        "title": "System and Services Acquisition",
+        "controls": [
+          {
+            "id": "sa-3",
+            "title": "System Development Life Cycle",
+            "parts": [
+              {
+                "id": "sa-3_stmt",
+                "name": "statement",
+                "prose": "The organization shall manage information systems using a system development life cycle that incorporates information security considerations throughout all phases."
+              }
+            ]
+          },
+          {
+            "id": "sa-10",
+            "title": "Developer Configuration Management",
+            "parts": [
+              {
+                "id": "sa-10_stmt",
+                "name": "statement",
+                "prose": "The organization shall require developers to perform configuration management during system development, including tracking security flaws and flaw resolution, and managing component dependencies."
+              }
+            ]
+          },
+          {
+            "id": "sa-11",
+            "title": "Developer Security Testing and Evaluation",
+            "parts": [
+              {
+                "id": "sa-11_stmt",
+                "name": "statement",
+                "prose": "The organization shall require developers to create and implement security test and evaluation plans including static analysis, dynamic analysis, and security validation testing."
+              }
+            ]
+          },
+          {
+            "id": "sa-15",
+            "title": "Development Process, Standards, and Tools",
+            "parts": [
+              {
+                "id": "sa-15_stmt",
+                "name": "statement",
+                "prose": "The organization shall require developers to follow documented development processes, standards, and use approved development tools that ensure code quality and security."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "pr",
+        "title": "Privacy Controls",
+        "controls": [
+          {
+            "id": "pr-1",
+            "title": "Privacy Policy and Procedures",
+            "parts": [
+              {
+                "id": "pr-1_stmt",
+                "name": "statement",
+                "prose": "The organization shall develop, document, and disseminate privacy policies and procedures that address the collection, use, retention, and disposal of personal data in compliance with applicable regulations including GDPR."
+              }
+            ]
+          },
+          {
+            "id": "pr-2",
+            "title": "Data Minimization",
+            "parts": [
+              {
+                "id": "pr-2_stmt",
+                "name": "statement",
+                "prose": "The organization shall implement data minimization principles to ensure that only personal data necessary for specified purposes is collected, processed, and retained."
+              }
+            ]
+          },
+          {
+            "id": "pr-3",
+            "title": "Consent Management",
+            "parts": [
+              {
+                "id": "pr-3_stmt",
+                "name": "statement",
+                "prose": "The organization shall obtain, record, and manage user consent for the collection and processing of personal data, providing mechanisms for users to withdraw consent at any time."
+              }
+            ]
+          },
+          {
+            "id": "pr-4",
+            "title": "Data Subject Rights",
+            "parts": [
+              {
+                "id": "pr-4_stmt",
+                "name": "statement",
+                "prose": "The organization shall implement processes to support data subject rights including the right to access, rectification, erasure, data portability, and objection to processing of personal data."
+              }
+            ]
+          },
+          {
+            "id": "pr-5",
+            "title": "Privacy Impact Assessment",
+            "parts": [
+              {
+                "id": "pr-5_stmt",
+                "name": "statement",
+                "prose": "The organization shall conduct privacy impact assessments for systems and processes that involve the collection, use, or disclosure of personal data, particularly when introducing new technologies or processing methods."
+              }
+            ]
+          },
+          {
+            "id": "pr-6",
+            "title": "Cross-Border Data Transfers",
+            "parts": [
+              {
+                "id": "pr-6_stmt",
+                "name": "statement",
+                "prose": "The organization shall ensure that transfers of personal data to third countries or international organizations comply with applicable legal frameworks including adequacy decisions, standard contractual clauses, or binding corporate rules."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ai",
+        "title": "Artificial Intelligence and Machine Learning",
+        "controls": [
+          {
+            "id": "ai-1",
+            "title": "AI System Risk Classification",
+            "parts": [
+              {
+                "id": "ai-1_stmt",
+                "name": "statement",
+                "prose": "The organization shall classify AI systems according to their risk level (unacceptable, high, limited, minimal) based on the EU AI Act framework and implement appropriate controls for each risk category."
+              }
+            ]
+          },
+          {
+            "id": "ai-2",
+            "title": "AI Transparency and Explainability",
+            "parts": [
+              {
+                "id": "ai-2_stmt",
+                "name": "statement",
+                "prose": "The organization shall ensure AI systems provide appropriate transparency, including disclosure when users are interacting with AI systems, and implement explainability mechanisms for high-risk AI applications."
+              }
+            ]
+          },
+          {
+            "id": "ai-3",
+            "title": "AI Training Data Governance",
+            "parts": [
+              {
+                "id": "ai-3_stmt",
+                "name": "statement",
+                "prose": "The organization shall implement data governance practices for AI training datasets, including data quality assurance, bias detection and mitigation, and documentation of data sources and characteristics."
+              }
+            ]
+          },
+          {
+            "id": "ai-4",
+            "title": "AI Model Validation and Testing",
+            "parts": [
+              {
+                "id": "ai-4_stmt",
+                "name": "statement",
+                "prose": "The organization shall establish validation and testing procedures for AI models including accuracy assessment, fairness testing, robustness evaluation, and ongoing monitoring of model performance."
+              }
+            ]
+          },
+          {
+            "id": "ai-5",
+            "title": "Human Oversight of AI Systems",
+            "parts": [
+              {
+                "id": "ai-5_stmt",
+                "name": "statement",
+                "prose": "The organization shall implement appropriate human oversight mechanisms for high-risk AI systems, ensuring that humans can intervene, override, or halt AI decisions when necessary."
+              }
+            ]
+          },
+          {
+            "id": "ai-6",
+            "title": "AI System Documentation",
+            "parts": [
+              {
+                "id": "ai-6_stmt",
+                "name": "statement",
+                "prose": "The organization shall maintain comprehensive documentation for AI systems including intended purpose, capabilities, limitations, training data, model architecture, performance metrics, and known risks."
+              }
+            ]
+          },
+          {
+            "id": "ai-7",
+            "title": "AI Incident Response",
+            "parts": [
+              {
+                "id": "ai-7_stmt",
+                "name": "statement",
+                "prose": "The organization shall establish incident response procedures for AI systems to detect, report, and remediate harmful or unintended behavior, including mechanisms for user feedback and continuous improvement."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
