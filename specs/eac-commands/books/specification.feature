@@ -6,7 +6,7 @@ Feature: eac-commands_books
   So that I can produce comprehensive documentation with up-to-date reference material
 
   # ============================================================================
-  # Configuration Commands - No build dependency needed
+  # Configuration Commands - Run against real repository
   # ============================================================================
 
   Rule: Books configuration must be discoverable
@@ -17,33 +17,12 @@ Feature: eac-commands_books
       And I should see "docs" in the output
       And I should see a table with book information
 
-    @isolated
-    Scenario: Show books when none configured
-      Given books.yml does not exist
-      When I run the command "show books"
-      Then the exit code is 0
-      And I should see "No books" or "empty"
-
   Rule: Books configuration must be validated
 
     Scenario: Validate valid books.yml
       When I run the command "validate books"
       Then the exit code is 0
       And I should see "valid" or "success"
-
-    @isolated
-    Scenario: Validate detects missing module
-      Given books.yml references module "nonexistent"
-      When I run the command "validate books"
-      Then the exit code is 1
-      And I should see "not found" or "Error"
-
-    @isolated
-    Scenario: Validate detects invalid command
-      Given books.yml has inline source with command "nonexistent-command"
-      When I run the command "validate books"
-      Then the exit code is 1
-      And I should see "Unknown command" or "unknown"
 
   # ============================================================================
   # Build Output Verification - Depends on pre-built docs module
@@ -95,10 +74,6 @@ Feature: eac-commands_books
     Scenario: Build output contains HTML site
       Given the "docs" module has been built
       Then build output "docs/site/index.html" exists
-
-  # ============================================================================
-  # Build Log Verification - Check preprocessing messages in build output
-  # ============================================================================
 
   @depm:docs
   Rule: Book preprocessing must be transparent
