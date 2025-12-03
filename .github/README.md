@@ -276,9 +276,9 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 </td>
 <td align="center">
 <img src="https://img.shields.io/badge/📚-Books-6366f1?style=for-the-badge" alt="Books"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/books-commands/#build"><code>build &lt;book&gt;</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/books-commands/#serve-docs"><code>serve-docs</code></a><br>
-<br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/books-commands/#build-with-book"><code>build &lt;module&gt;</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/books-commands/#show-books"><code>show books</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/books-commands/#validate-books"><code>validate books</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/books-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/books-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/books-commands/">all</a></sup>
 </td>
 </tr>
@@ -292,9 +292,9 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 </td>
 <td align="center">
 <img src="https://img.shields.io/badge/✅-Validate-a855f7?style=for-the-badge" alt="Validate"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-commands/#validate"><code>validate</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-commands/#validate-contracts"><code>validate-contracts</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-commands/#validate-go-tidy"><code>validate-go-tidy</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-commands/#validate-contracts"><code>validate contracts</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-commands/#validate-dependencies"><code>validate dependencies</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-commands/#validate-go-tidy"><code>validate go-tidy</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-commands/">all</a></sup>
 </td>
 <td align="center">
@@ -315,16 +315,16 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <tr>
 <td align="center">
 <img src="https://img.shields.io/badge/🔀-Workspace-0ea5e9?style=for-the-badge" alt="Workspace"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-commands/#work-create"><code>work-create</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-commands/#work-commit"><code>work-commit</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-commands/#work-merge"><code>work-merge</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-commands/#work-create"><code>work create</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-commands/#work-commit"><code>work commit</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-commands/#work-merge"><code>work merge</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/workspace-commands/">all</a></sup>
 </td>
 <td align="center">
 <img src="https://img.shields.io/badge/🔨-Build-3b82f6?style=for-the-badge" alt="Build"><br>
 <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/build-commands/#build"><code>build</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/build-commands/#build-module"><code>build &lt;module&gt;</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/build-commands/#show-modules"><code>show-modules</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/build-commands/#build"><code>build &lt;module&gt;</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/show-get-list-commands/#show-modules"><code>show modules</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/build-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/build-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/build-commands/">all</a></sup>
 </td>
 <td align="center">
