@@ -193,6 +193,10 @@ func (c *ComponentLogger) Debugf(format string, args ...interface{}) {
 // Info goes to stdout (normal output), while Debug/Warn/Error go to stderr.
 func (c *ComponentLogger) Info(msg string) {
 	fmt.Fprintln(stdOutput, formatMessage("INFO", c.component, msg))
+	// Explicitly sync stdout to ensure output is captured in tests (Linux CI buffering issue)
+	if f, ok := stdOutput.(*os.File); ok {
+		f.Sync()
+	}
 }
 
 // Infof logs a formatted informational message.
@@ -200,30 +204,50 @@ func (c *ComponentLogger) Info(msg string) {
 func (c *ComponentLogger) Infof(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintln(stdOutput, formatMessage("INFO", c.component, msg))
+	// Explicitly sync stdout to ensure output is captured in tests (Linux CI buffering issue)
+	if f, ok := stdOutput.(*os.File); ok {
+		f.Sync()
+	}
 }
 
 // Warn logs a warning message.
 // Warning messages are always shown.
 func (c *ComponentLogger) Warn(msg string) {
 	fmt.Fprintln(debugOutput, formatMessage("WARN", c.component, msg))
+	// Explicitly sync stderr to ensure output is captured in tests (Linux CI buffering issue)
+	if f, ok := debugOutput.(*os.File); ok {
+		f.Sync()
+	}
 }
 
 // Warnf logs a formatted warning message.
 func (c *ComponentLogger) Warnf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintln(debugOutput, formatMessage("WARN", c.component, msg))
+	// Explicitly sync stderr to ensure output is captured in tests (Linux CI buffering issue)
+	if f, ok := debugOutput.(*os.File); ok {
+		f.Sync()
+	}
 }
 
 // Error logs an error message.
 // Error messages are always shown.
 func (c *ComponentLogger) Error(msg string) {
 	fmt.Fprintln(debugOutput, formatMessage("ERROR", c.component, msg))
+	// Explicitly sync stderr to ensure output is captured in tests (Linux CI buffering issue)
+	if f, ok := debugOutput.(*os.File); ok {
+		f.Sync()
+	}
 }
 
 // Errorf logs a formatted error message.
 func (c *ComponentLogger) Errorf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintln(debugOutput, formatMessage("ERROR", c.component, msg))
+	// Explicitly sync stderr to ensure output is captured in tests (Linux CI buffering issue)
+	if f, ok := debugOutput.(*os.File); ok {
+		f.Sync()
+	}
 }
 
 // WithSuffix creates a new ComponentLogger with an additional suffix.
