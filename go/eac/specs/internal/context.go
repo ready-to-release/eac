@@ -82,6 +82,13 @@ func (c *TestContext) SetupIsolation() error {
 	c.SharedTestContext.SetIsolation(c.OriginalRepoRoot, c.IsolatedDir)
 	c.SharedTestContext.Isolation = c.Isolation
 
+	// Create specs/ directory for commands that write to specs/{module}/.design/
+	// This prevents "permission denied" errors when creating design output directories
+	specsDir := filepath.Join(c.IsolatedDir, "specs")
+	if err := os.MkdirAll(specsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create specs directory in isolation: %w", err)
+	}
+
 	return nil
 }
 
@@ -149,7 +156,12 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			c.ExitCode = exitErr.ExitCode()
 		} else {
+			// Non-exit error (e.g., binary not found, permission denied)
+			// Include the error message in output so tests can diagnose the issue
 			c.ExitCode = 1
+			if c.CommandOutput == "" {
+				c.CommandOutput = fmt.Sprintf("Command execution failed: %v\nBinary path: %s", err, cmd.Path)
+			}
 		}
 	} else {
 		c.ExitCode = 0
