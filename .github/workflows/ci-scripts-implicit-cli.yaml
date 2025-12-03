@@ -44,6 +44,7 @@ jobs:
           module: scripts-implicit-cli
           commands-path: ${{ steps.commands.outputs.commands-path }}
           download-artifact: 'false'
+          setup-deps: auto
 
   test-windows:
     name: Test (Windows)

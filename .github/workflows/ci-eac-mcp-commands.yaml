@@ -61,3 +61,4 @@ jobs:
         with:
           module: eac-mcp-commands
           commands-path: ${{ steps.commands.outputs.commands-path }}
+          setup-deps: auto

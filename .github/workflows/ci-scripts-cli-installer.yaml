@@ -61,6 +61,7 @@ jobs:
         with:
           module: scripts-cli-installer
           commands-path: ${{ steps.commands.outputs.commands-path }}
+          setup-deps: auto
 
   test-windows:
     name: Test (Windows)
