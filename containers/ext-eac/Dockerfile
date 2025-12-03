@@ -67,6 +67,7 @@ COPY go/eac/specs/ ./go/eac/specs/
 COPY contracts/ ./contracts/
 COPY .r2r/ ./.r2r/
 COPY specs/ ./specs/
+COPY templates/ ./templates/
 
 # Copy pre-built binary from builder
 COPY --from=builder /app/out/build/eac-commands/commands /app/out/build/eac-commands/commands

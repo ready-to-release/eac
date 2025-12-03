@@ -228,37 +228,48 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 	var cleanup func()
 
 	if internal.IsGitRepository(config.TemplateSource) {
-		config.Logger.Info("Cloning templates from Git repository",
-			zap.String("url", config.TemplateSource))
-		log.Infof("Cloning templates from %s...", config.TemplateSource)
-
-		cloner := internal.NewGitCloner(config.TemplateSource)
-		clonedDir, err := cloner.CloneToTemp()
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to clone repository: %w", err)
-		}
-
-		templateDir = filepath.Join(clonedDir, "templates")
-		cleanup = func() {
-			if err := cloner.Cleanup(); err != nil {
-				config.Logger.Warn("Failed to cleanup temp directory", zap.Error(err))
-			}
-		}
-
-		config.Logger.Debug("Templates cloned successfully",
-			zap.String("templateDir", templateDir))
-		log.Info("✓ Templates cloned successfully\n")
-	} else {
-		// Local directory - resolve relative to workspace
-		if !filepath.IsAbs(config.TemplateSource) {
-			templateDir = filepath.Join(config.WorkspaceRoot, config.TemplateSource)
+		// Git URL provided - use local templates from appropriate root
+		var root string
+		if containerRoot := repository.GetContainerRoot(); containerRoot != "" {
+			// Running in container - use container root
+			root = containerRoot
+			config.Logger.Info("Running in container, using local templates",
+				zap.String("containerRoot", containerRoot))
 		} else {
-			templateDir = config.TemplateSource
+			// Not in container - use workspace root
+			root = config.WorkspaceRoot
+			config.Logger.Info("Using local templates from repository",
+				zap.String("workspaceRoot", root))
 		}
+
+		templateDir = filepath.Join(root, "templates")
 		cleanup = func() {}
 
-		config.Logger.Info("Using local templates directory",
-			zap.String("path", templateDir))
+		config.Logger.Debug("Local templates validated",
+			zap.String("dir", templateDir))
+		log.Infof("Using templates from %s", templateDir)
+	} else {
+		// Local directory - resolve relative to appropriate root
+		if !filepath.IsAbs(config.TemplateSource) {
+			var root string
+			if containerRoot := repository.GetContainerRoot(); containerRoot != "" {
+				// Running in container - use container root
+				root = containerRoot
+				config.Logger.Info("Running in container, using local templates",
+					zap.String("containerRoot", containerRoot))
+			} else {
+				// Not in container - use workspace root
+				root = config.WorkspaceRoot
+				config.Logger.Info("Using local templates from repository",
+					zap.String("workspaceRoot", root))
+			}
+			templateDir = filepath.Join(root, config.TemplateSource)
+		} else {
+			templateDir = config.TemplateSource
+			config.Logger.Info("Using local templates directory",
+				zap.String("path", templateDir))
+		}
+		cleanup = func() {}
 	}
 
 	// Verify directory exists

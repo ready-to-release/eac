@@ -431,8 +431,8 @@ async function executeAgent(workspacePath: string, onProgress?: (message: string
         // This leverages the 7-phase system with auto-cleanup and validation
         const commandsPath = path.join(workspacePath, 'go', 'eac', 'commands');
 
-        // Call commit message which handles everything: generation, cleanup, validation, auto-fix
-        const childProcess = child_process.spawn('go', ['run', '.', 'commit', 'message'], {
+        // Call create commit-message which handles everything: generation, cleanup, validation, auto-fix
+        const childProcess = child_process.spawn('go', ['run', '.', 'create', 'commit-message'], {
             cwd: commandsPath,
             stdio: ['pipe', 'pipe', 'pipe'],
             env: process.env
