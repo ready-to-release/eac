@@ -249,6 +249,10 @@ modules:
       - eac-core
     files:
       root: go/eac/commands
+      config:
+        - go.mod
+        - go.sum
+        - "internal/risk/oscal/schemas/*.json"
       exclude:
         - ext/**
       workflows:
@@ -327,6 +331,10 @@ modules:
     description: Template files for documentation, specifications, and design records
     files:
       root: templates
+      assets:
+        - "**/*.md"
+        - "**/*.feature"
+        - "specs/risk-catalog/*.json"
 
   # ============================================================================
   # VSCode Configuration
