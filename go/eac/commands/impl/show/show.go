@@ -26,7 +26,7 @@ func Show() int {
 	case "--help", "-h":
 		printShowUsage()
 		return 0
-	case "config", "dependencies", "environments", "files", "modules", "moduletypes", "suite", "tests", "risk-report":
+	case "books", "config", "dependencies", "environments", "files", "modules", "moduletypes", "suite", "tests", "risk-report":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -43,6 +43,9 @@ func printShowUsage() {
 	log.Info("")
 	log.Info("Configuration:")
 	log.Info("  config                    Show all EAC configuration summary")
+	log.Info("")
+	log.Info("Documentation:")
+	log.Info("  books                     Show all configured books")
 	log.Info("")
 	log.Info("Repository Structure:")
 	log.Info("  modules                   Show all module contracts")

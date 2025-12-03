@@ -664,8 +664,8 @@ The configuration file is stored at:
 
 ## See Also
 
-- [Work Command](work-command.md) - Workspace management with AI commits
-- [Specs Command](specs-command.md) - AI-powered specification generation
-- [Design Command](design-command.md) - Architecture diagram generation
+- [Workspace Commands](areas/workspace-overview.md) - Workspace management with AI commits
+- [Specifications Commands](areas/specifications-overview.md) - AI-powered specification generation
+- [Design Commands](areas/design-overview.md) - Architecture diagram generation
 - [Tutorials](../../tutorials/index.md) - Introduction to EAC
 - [Claude MCP Setup](../configuration/claude-mcp-setup.md) - MCP server configuration

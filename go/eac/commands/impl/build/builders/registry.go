@@ -15,6 +15,8 @@ type BuildOptions struct {
 	Version       string // Version to inject via ldflags
 	Compressed    bool   // Strip debug info with -ldflags "-s -w" (for releases)
 	CompressedUPX bool   // Also apply UPX compression after build
+	PDFMode       bool   // Generate PDF documentation (mkdocs only)
+	PDFTheme      string // PDF theme: "dark", "light", "all" (default: "dark")
 }
 
 // BuildFunc is the signature for module build functions.

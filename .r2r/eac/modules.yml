@@ -379,6 +379,21 @@ modules:
           - .github/workflows/ci-vscode-ext-commit.yaml
 
   # ============================================================================
+  # Repository Report
+  # ============================================================================
+  - moniker: repository-report
+    name: Repository Report
+    type: mkdocs-site
+    description: Generated report of repository modules and dependency graph
+    depends_on:
+      - eac-commands
+    files:
+      root: out/reports/repository
+      assets:
+        - "**/*.md"
+        - assets/**
+
+  # ============================================================================
   # Release Documentation
   # ============================================================================
   - moniker: release-docs

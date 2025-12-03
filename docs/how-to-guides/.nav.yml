@@ -6,21 +6,59 @@ nav:
   - Commands:
     - commands/help-command.md
     - commands/init-command.md
-    - commands/completion-command.md
-    - commands/build-test-commands.md
-    - commands/validate-command.md
     - commands/ci-command.md
-    - commands/work-command.md
     - commands/commit-command.md
     - commands/describe-command.md
-    - commands/design-command.md
-    - commands/specs-command.md
     - commands/show-get-list-commands.md
-    - commands/pipeline-command.md
-    - commands/release-command.md
-    - commands/risks-command.md
-    - commands/templates-docs-commands.md
     - commands/command-template.md
+  - Books:
+    - commands/areas/books-overview.md
+    - commands/areas/books-configuration.md
+    - commands/areas/books-commands.md
+  - Build:
+    - commands/areas/build-overview.md
+    - commands/areas/build-configuration.md
+    - commands/areas/build-commands.md
+  - Design:
+    - commands/areas/design-overview.md
+    - commands/areas/design-configuration.md
+    - commands/areas/design-commands.md
+  - Pipeline:
+    - commands/areas/pipeline-overview.md
+    - commands/areas/pipeline-configuration.md
+    - commands/areas/pipeline-commands.md
+  - Release:
+    - commands/areas/release-overview.md
+    - commands/areas/release-configuration.md
+    - commands/areas/release-commands.md
+  - Risk Management:
+    - commands/areas/risks-overview.md
+    - commands/areas/risks-configuration.md
+    - commands/areas/risks-commands.md
+  - Security:
+    - commands/areas/security-overview.md
+    - commands/areas/security-configuration.md
+    - commands/areas/security-commands.md
+  - Specifications:
+    - commands/areas/specifications-overview.md
+    - commands/areas/specifications-configuration.md
+    - commands/areas/specifications-commands.md
+  - Templates:
+    - commands/areas/templates-overview.md
+    - commands/areas/templates-configuration.md
+    - commands/areas/templates-commands.md
+  - Test:
+    - commands/areas/test-overview.md
+    - commands/areas/test-configuration.md
+    - commands/areas/test-commands.md
+  - Validate:
+    - commands/areas/validate-overview.md
+    - commands/areas/validate-configuration.md
+    - commands/areas/validate-commands.md
+  - Workspace:
+    - commands/areas/workspace-overview.md
+    - commands/areas/workspace-configuration.md
+    - commands/areas/workspace-commands.md
   - EAC:
     - eac/index.md
     - eac/creating-module-types.md

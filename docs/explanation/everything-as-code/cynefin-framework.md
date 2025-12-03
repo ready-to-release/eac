@@ -152,8 +152,11 @@ The challenge isn't that they CAN'T be automated it's that organizations haven't
 
 ```mermaid
 flowchart LR
-    A[Requirement] --> B[Expert interprets] --> C[Manual review]
-    C --> D[Human judgment] --> E[Approval] --> F[Documentation]
+    A[Requirement] --> B[Expert interprets]
+    B --> C[Manual review]
+    C --> D[Human judgment]
+    D --> E[Approval]
+    E --> F[Documentation]
 ```
 
 This treats each instance as novel, requiring fresh interpretation. It's expensive, slow, and inconsistent.
@@ -162,8 +165,11 @@ This treats each instance as novel, requiring fresh interpretation. It's expensi
 
 ```mermaid
 flowchart LR
-    A[Requirement defined] --> B[Encoded as test] --> C[Automated validation]
-    C --> D[Evidence captured] --> E[Continuous compliance] --> F[Documentation generated]
+    A[Requirement defined] --> B[Encoded as test]
+    B --> C[Automated validation]
+    C --> D[Evidence captured]
+    D --> E[Continuous compliance]
+    E --> F[Documentation generated]
 ```
 
 This recognizes the rule is repeatable and codifies it once. It's fast, consistent, and scalable.
@@ -199,7 +205,8 @@ Cynefin shows us that domains aren't fixed. We can intentionally move practices 
 
 ```mermaid
 flowchart LR
-    A[Chaotic<br/>crisis] --> B[Complicated<br/>analyze & establish rules] --> C[Clear<br/>best practice]
+    A[Chaotic<br/>crisis] --> B[Complicated<br/>analyze & establish rules]
+    B --> C[Clear<br/>best practice]
 ```
 
 **For compliance:**

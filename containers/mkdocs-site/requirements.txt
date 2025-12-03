@@ -1,0 +1,12 @@
+# MkDocs core
+mkdocs>=1.5
+mkdocs-material>=9.4
+
+# Navigation
+mkdocs-awesome-nav>=1.0.0
+
+# Markdown extensions
+pymdown-extensions
+
+# Mermaid diagrams (client-side JS rendering)
+mkdocs-mermaid2-plugin>=1.1.0

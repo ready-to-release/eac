@@ -1,0 +1,6 @@
+title: Command Areas
+nav:
+  - Books:
+      - books-overview.md
+      - books-configuration.md
+      - books-commands.md

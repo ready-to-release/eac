@@ -122,6 +122,8 @@ func Build() int {
 	compressedUPX := false
 	skipDeps := false
 	showTimings := false
+	pdfMode := false
+	pdfTheme := ""
 	version := ""
 
 	for i := 0; i < len(args); i++ {
@@ -142,6 +144,20 @@ func Build() int {
 			skipDeps = true
 		case "--timings":
 			showTimings = true
+		case "--pdf":
+			pdfMode = true
+		case "--accept-warnings":
+			// Flag is handled in mkdocs builder via os.Args check
+			// Just accept it here so it doesn't fail as unknown flag
+		case "--pdf-theme":
+			if i+1 >= len(args) {
+				log.Errorf("Error: --pdf-theme requires a value (dark, light, or all)")
+				printBuildUsage()
+				return 1
+			}
+			i++
+			pdfTheme = args[i]
+			pdfMode = true // --pdf-theme implies --pdf
 		case "--version":
 			if i+1 >= len(args) {
 				log.Errorf("Error: --version requires a value")
@@ -151,7 +167,10 @@ func Build() int {
 			i++
 			version = args[i]
 		default:
-			if strings.HasPrefix(arg, "--version=") {
+			if strings.HasPrefix(arg, "--pdf-theme=") {
+				pdfTheme = strings.TrimPrefix(arg, "--pdf-theme=")
+				pdfMode = true // --pdf-theme implies --pdf
+			} else if strings.HasPrefix(arg, "--version=") {
 				version = strings.TrimPrefix(arg, "--version=")
 			} else if strings.HasPrefix(arg, "--") {
 				log.Errorf("Error: unknown flag: %s", arg)
@@ -185,12 +204,12 @@ func Build() int {
 	}
 
 	// Run build (single or multiple modules) - phases are handled inside
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipDeps, showTimings)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipDeps, showTimings, pdfMode, pdfTheme)
 }
 
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipDeps bool, showTimings bool) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipDeps bool, showTimings bool, pdfMode bool, pdfTheme string) int {
 	// Show execution context
 	log.Infof("Executing build via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
 	log.Info("")
@@ -271,7 +290,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		defer releaseModuleBuildLock(lockFile)
 
 		moduleOutputDir := repository.BuildOutputPath(workspaceRoot, moniker)
-		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version)
+		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version, pdfMode, pdfTheme)
 	}
 
 	// Create and run orchestrator
@@ -291,7 +310,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 }
 
 // runModuleBuild runs build for a single module
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string, pdfMode bool, pdfTheme string) int {
 	// Get build function for module type
 	buildFunc := builders.GetBuildFunc(module.Type)
 
@@ -300,6 +319,8 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 		Compressed:    compressed,
 		CompressedUPX: compressedUPX,
 		Version:       version,
+		PDFMode:       pdfMode,
+		PDFTheme:      pdfTheme,
 	}
 	exitCode := buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
 	if exitCode != 0 {
@@ -388,12 +409,23 @@ func printBuildUsage() {
 	log.Info("  --compressed              Strip debug info for smaller binaries (go-cli only)")
 	log.Info("  --compressed-upx          Also apply UPX compression for maximum size reduction")
 	log.Info("  --version VERSION         Inject version string into binary (go-cli only)")
+	log.Info("  --pdf                     Generate PDF documentation (mkdocs modules only)")
+	log.Info("  --pdf-theme THEME         PDF theme: dark, light, or all (default: dark)")
+	log.Info("  --accept-warnings         Don't fail on MkDocs warnings (non-strict mode)")
 	log.Info("  -h, --help                Show this help message")
 	log.Info("")
 	log.Info("Compression (go-cli only):")
 	log.Info("  Default (dev):     Full debug info for debugging (~39 MB)")
 	log.Info("  --compressed:      Strip debug info with -ldflags \"-s -w\" (~26 MB, ~30% smaller)")
 	log.Info("  --compressed-upx:  Also UPX compress (~10 MB, ~70% smaller total)")
+	log.Info("")
+	log.Info("PDF Generation (mkdocs only):")
+	log.Info("  --pdf:                Enable PDF export alongside HTML site (dark theme)")
+	log.Info("  --pdf-theme=dark:     Dark PDF for digital viewing")
+	log.Info("  --pdf-theme=light:    Light PDF for paper printing")
+	log.Info("  --pdf-theme=all:      Build both dark and light PDFs")
+	log.Info("                        Uses mkdocs-with-pdf plugin with WeasyPrint")
+	log.Info("                        Output: out/build/<module>/site/pdf/ready-to-release-docs-{theme}.pdf")
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  build                                # Build all modules (dev mode)")
@@ -402,4 +434,6 @@ func printBuildUsage() {
 	log.Info("  build r2r-cli --compressed-upx       # Build CLI with UPX for minimal size")
 	log.Info("  build r2r-cli --version 1.0.0        # Build with version injection")
 	log.Info("  build --tidy-first docs              # Build with go mod tidy first")
+	log.Info("  build docs --pdf                     # Build docs with dark PDF")
+	log.Info("  build docs --pdf-theme=all           # Build docs with both PDF themes")
 }
