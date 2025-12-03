@@ -909,6 +909,11 @@ paths:
 	sc.Step(`^assessment-results with evidence links to missing files$`, func() error {
 		return internal.CreateFile(ctx, "assessment.json", assessmentMissingEvidenceTemplate)
 	})
+
+	// Catalog validation steps - for validate risk-catalog command
+	sc.Step(`^a file "([^"]*)" with content:$`, func(filePath string, content *godog.DocString) error {
+		return internal.CreateFile(ctx, filePath, content.Content)
+	})
 }
 
 // Helper functions

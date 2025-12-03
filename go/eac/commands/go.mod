@@ -14,6 +14,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/ready-to-release/eac/go/eac/ai v0.0.0
 	github.com/ready-to-release/eac/go/eac/core v0.0.0
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -64,7 +65,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
