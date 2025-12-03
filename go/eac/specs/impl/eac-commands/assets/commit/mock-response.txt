@@ -1,5 +1,0 @@
-feat(core): add mock testing support
-
-Auditor-Summary: Enable testing without real AI providers
-
-Implement mock provider system for tests without requiring real AI API credentials

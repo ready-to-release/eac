@@ -15,7 +15,7 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	registerInitSteps(sc, ctx)
 	registerWorkSteps(sc, ctx)
 	registerDocsSteps(sc, ctx)
-	registerCommitSteps(sc, ctx)
+	registerCreateCommitMessageSteps(sc, ctx)
 	registerDesignSteps(sc, ctx)
 	registerSpecsSteps(sc, ctx)
 	registerRiskSteps(sc, ctx)  // New risk command (OSCAL-based)

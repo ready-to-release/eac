@@ -1,11 +1,11 @@
-package commit
+package commitmessage
 
 import (
 	"bytes"
 	"fmt"
 	"strings"
 
-	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/commit/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -44,9 +44,9 @@ func buildTopLevelContext(stagedFilesTable string, gitDiff string, diffStats str
 	// Git Diff - shows all code changes (truncated if too large for prompt)
 	context.WriteString("## Git Diff\n\n")
 	context.WriteString("```diff\n")
-	if len(gitDiff) > commitmessage.MaxPromptDiffSize {
+	if len(gitDiff) > commitmessageinternal.MaxPromptDiffSize {
 		// Truncate diff to avoid exceeding Claude CLI prompt limits
-		truncatedDiff := gitDiff[:commitmessage.MaxPromptDiffSize]
+		truncatedDiff := gitDiff[:commitmessageinternal.MaxPromptDiffSize]
 		// Find last complete line to avoid cutting mid-line
 		lastNewline := strings.LastIndex(truncatedDiff, "\n")
 		if lastNewline > 0 {
@@ -54,7 +54,7 @@ func buildTopLevelContext(stagedFilesTable string, gitDiff string, diffStats str
 		}
 		context.WriteString(truncatedDiff)
 		context.WriteString("\n\n... [DIFF TRUNCATED - ")
-		context.WriteString(fmt.Sprintf("%d KB of %d KB shown", commitmessage.MaxPromptDiffSize/1024, len(gitDiff)/1024))
+		context.WriteString(fmt.Sprintf("%d KB of %d KB shown", commitmessageinternal.MaxPromptDiffSize/1024, len(gitDiff)/1024))
 		context.WriteString("] ...\n")
 		context.WriteString("Note: Use diff stats and file list above to understand full scope of changes.\n")
 	} else {
@@ -89,9 +89,9 @@ func buildModuleContext(moduleName string, moduleFiles []repository.RepositoryFi
 	filteredDiff := filterDiffForModule(fullDiff, moduleFiles)
 	context.WriteString("## Git Diff\n\n")
 	context.WriteString("```diff\n")
-	if len(filteredDiff) > commitmessage.MaxPromptDiffSize {
+	if len(filteredDiff) > commitmessageinternal.MaxPromptDiffSize {
 		// Truncate diff to avoid exceeding Claude CLI prompt limits
-		truncatedDiff := filteredDiff[:commitmessage.MaxPromptDiffSize]
+		truncatedDiff := filteredDiff[:commitmessageinternal.MaxPromptDiffSize]
 		// Find last complete line to avoid cutting mid-line
 		lastNewline := strings.LastIndex(truncatedDiff, "\n")
 		if lastNewline > 0 {
@@ -99,7 +99,7 @@ func buildModuleContext(moduleName string, moduleFiles []repository.RepositoryFi
 		}
 		context.WriteString(truncatedDiff)
 		context.WriteString("\n\n... [DIFF TRUNCATED - ")
-		context.WriteString(fmt.Sprintf("%d KB of %d KB shown", commitmessage.MaxPromptDiffSize/1024, len(filteredDiff)/1024))
+		context.WriteString(fmt.Sprintf("%d KB of %d KB shown", commitmessageinternal.MaxPromptDiffSize/1024, len(filteredDiff)/1024))
 		context.WriteString("] ...\n")
 		context.WriteString("Note: Use file list above to understand full scope of changes.\n")
 	} else {

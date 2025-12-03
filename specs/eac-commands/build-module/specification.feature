@@ -1,4 +1,4 @@
-@deps:go @L2 @ov @skip:broken
+@deps:go @L2 @ov
 Feature: eac-commands_build
 
   As a developer of the eac platform

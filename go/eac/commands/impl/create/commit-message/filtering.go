@@ -1,4 +1,4 @@
-package commit
+package commitmessage
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/commit/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -100,7 +100,7 @@ func (m *commitPatternMatcher) isValidTopLevelLine(trimmed string) bool {
 	// Conventional commit with scope
 	// Format: <type>(<scope>): <summary>
 	// Examples: feat(multi-module): add feature, fix(cli): resolve bug
-	for _, commitType := range commitmessage.StandardCommitTypes {
+	for _, commitType := range commitmessageinternal.StandardCommitTypes {
 		// Look for <type>(<scope>): pattern
 		pattern := commitType + "("
 		if strings.HasPrefix(trimmed, pattern) {

@@ -28,13 +28,13 @@
 //   - Parallel:   max(5s) = 5s for 3 modules
 //   - Speedup:    60-70% for multi-module commits
 
-package commit
+package commitmessage
 
 import (
 	"fmt"
 	"sync"
 
-	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/commit/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/ai"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -139,7 +139,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 
 			// Generate module section using existing function
 			// WithProgress is goroutine-safe (uses internal synchronization)
-			err := commitmessage.WithProgress(progressMsg, func() error {
+			err := commitmessageinternal.WithProgress(progressMsg, func() error {
 				result, genErr := generateWithPromptResult("module", moduleContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, testExecutor)
 				if result != nil {
 					output = result.Output

@@ -27,7 +27,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/commit"
+	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -309,7 +309,7 @@ func performSquashMerge(config *mergeConfig) error {
 		os.Args = []string{"r2r", "commit", "message"}
 	}
 
-	exitCode := commit.CreateCommitMessage()
+	exitCode := commitmessage.CreateCommitMessage()
 	if exitCode != 0 {
 		return fmt.Errorf("commit message failed with exit code %d", exitCode)
 	}

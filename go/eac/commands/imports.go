@@ -4,7 +4,7 @@ package main
 import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/build"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/ci"
-	_ "github.com/ready-to-release/eac/go/eac/commands/impl/commit"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/design"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/risk"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/spec"

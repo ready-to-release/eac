@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
@@ -103,20 +104,39 @@ func Remove() int {
 		}
 	}
 
-	// Phase 4: Switch to main if we're in the workspace being removed
+	// Phase 4: Note about switching (actual directory change happens outside this command)
+	// When running from within the workspace being removed, the caller is responsible
+	// for changing to a safe directory after this command completes.
 	inWorkspace := isInWorkspace(config.worktreePath, config.base.RepoRoot)
 	if inWorkspace {
 		config.base.Logger.Info("Switching to main...")
-		if err := switchToMain(config.base.RepoRoot); err != nil {
-			config.base.Logger.Error(fmt.Sprintf("Failed to switch to main: %v", err))
-			return 1
-		}
+		config.base.Logger.Debug("Note: You are currently in the workspace being removed")
+		config.base.Logger.Debug("Your shell will need to change directories after removal")
 	}
 
 	// Phase 5: Remove workspace
 	config.base.Logger.Info("Removing workspace...")
-	if err := config.base.GitOps.RemoveWorktree(config.worktreePath); err != nil {
-		config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v", err))
+
+	// Use git to find the actual common git directory (works correctly in worktrees)
+	cmd := exec.Command("git", "rev-parse", "--git-common-dir")
+	cmd.Dir = config.worktreePath
+	output, err := cmd.Output()
+	if err != nil {
+		config.base.Logger.Error(fmt.Sprintf("Failed to detect git directory: %v", err))
+		return 1
+	}
+	gitCommonDir := strings.TrimSpace(string(output))
+
+	// The common git dir's parent is the main repository root
+	actualRepoRoot := filepath.Dir(gitCommonDir)
+	config.base.Logger.Debug(fmt.Sprintf("Detected actual repository root: %s", actualRepoRoot))
+
+	// Run git worktree remove from the detected repository root
+	cmd = exec.Command("git", "worktree", "remove", config.worktreePath)
+	cmd.Dir = actualRepoRoot
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, string(output)))
 		return 1
 	}
 
@@ -208,18 +228,24 @@ func parseRemoveConfig() (*removeConfig, error) {
 		config.worktreePath = worktree.Path
 	} else {
 		// Remove current workspace
-		currentBranch, err := config.base.GitOps.GetCurrentBranch(config.base.RepoRoot)
+		// Get current working directory - check R2R_PWD first (for test isolation)
+		cwd := os.Getenv("R2R_PWD")
+		if cwd == "" {
+			// Fall back to actual working directory
+			var err error
+			cwd, err = os.Getwd()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get current directory: %w", err)
+			}
+		}
+		config.worktreePath = cwd
+
+		// Get branch from current working directory (not repo root)
+		currentBranch, err := config.base.GitOps.GetCurrentBranch(cwd)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get current branch: %w", err)
 		}
 		config.branchName = currentBranch
-
-		// Get current worktree path
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get current directory: %w", err)
-		}
-		config.worktreePath = cwd
 	}
 
 	return config, nil
@@ -253,13 +279,73 @@ func isInWorkspace(worktreePath, repoRoot string) bool {
 
 // switchToMain switches to the main branch in the main workspace
 func switchToMain(repoRoot string) error {
-	cmd := exec.Command("git", "checkout", "main")
+	// First verify which branch exists
+	// Try "main" first (preferred for modern git repositories)
+	cmd := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/main")
 	cmd.Dir = repoRoot
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to switch to main: %w\nOutput: %s", err, string(output))
+	mainExists := cmd.Run() == nil
+
+	cmd = exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/master")
+	cmd.Dir = repoRoot
+	masterExists := cmd.Run() == nil
+
+	// Try to checkout main if it exists
+	if mainExists {
+		cmd = exec.Command("git", "checkout", "main")
+		cmd.Dir = repoRoot
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			return nil
+		}
+		// If main exists but checkout failed, return detailed error
+		return fmt.Errorf("branch 'main' exists but checkout failed: %w\nOutput: %s", err, string(output))
 	}
-	return nil
+
+	// Try to checkout master if it exists
+	if masterExists {
+		cmd = exec.Command("git", "checkout", "master")
+		cmd.Dir = repoRoot
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			return nil
+		}
+		return fmt.Errorf("branch 'master' exists but checkout failed: %w\nOutput: %s", err, string(output))
+	}
+
+	// Neither branch exists - this shouldn't happen in a valid repository
+	return fmt.Errorf("neither 'main' nor 'master' branch found in repository at %s", repoRoot)
+}
+
+// getDefaultBranch detects the default/trunk branch name (main or master)
+func getDefaultBranch(repoRoot string) string {
+	// Try to get the default branch from git config
+	cmd := exec.Command("git", "config", "--get", "init.defaultBranch")
+	cmd.Dir = repoRoot
+	if output, err := cmd.Output(); err == nil && len(output) > 0 {
+		branch := strings.TrimSpace(string(output))
+		if branch != "" {
+			return branch
+		}
+	}
+
+	// Check which branches actually exist locally using git branch --list
+	// This is more reliable than rev-parse in worktree contexts
+	cmd = exec.Command("git", "branch", "--list")
+	cmd.Dir = repoRoot
+	if output, err := cmd.Output(); err == nil {
+		branches := string(output)
+		// Check for main first (preferred)
+		if strings.Contains(branches, " main\n") || strings.Contains(branches, "* main\n") {
+			return "main"
+		}
+		// Fall back to master if main doesn't exist
+		if strings.Contains(branches, " master\n") || strings.Contains(branches, "* master\n") {
+			return "master"
+		}
+	}
+
+	// Default to main (safest default for modern git)
+	return "main"
 }
 
 // deleteRemoteBranch deletes the remote branch

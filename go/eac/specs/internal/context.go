@@ -23,8 +23,13 @@ type TestContext struct {
 	// OriginalRepoRoot is the actual repository root (for running go commands)
 	OriginalRepoRoot string
 
-	// IsolatedDir is the temp directory for isolated tests
+	// IsolatedDir is the temp directory for isolated tests (main repository root)
+	// This should NEVER be changed after initial setup - it's the main isolated directory
 	IsolatedDir string
+
+	// CurrentWorkDir is the current working directory within the isolated environment
+	// This changes when switching between main workspace and feature worktrees
+	CurrentWorkDir string
 
 	// Isolation infrastructure
 	Isolation *coretesting.TestIsolation
@@ -45,7 +50,8 @@ func NewTestContext() *TestContext {
 func (c *TestContext) Reset() {
 	c.SharedTestContext.Reset()
 	c.MockOverrides = nil // Clear per-scenario mock overrides
-	// Don't reset OriginalRepoRoot - it's set once at init
+	c.CurrentWorkDir = c.IsolatedDir // Reset to main isolated directory
+	// Don't reset OriginalRepoRoot or IsolatedDir - they're set once at init
 }
 
 // SetMockOverride sets a mock environment variable override for this scenario.
@@ -72,6 +78,7 @@ func (c *TestContext) SetupIsolation() error {
 	}
 
 	c.IsolatedDir = c.Isolation.IsolatedDir()
+	c.CurrentWorkDir = c.IsolatedDir // Start in main isolated directory
 	c.SharedTestContext.SetIsolation(c.OriginalRepoRoot, c.IsolatedDir)
 	c.SharedTestContext.Isolation = c.Isolation
 
@@ -102,7 +109,13 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 	// Build environment
 	env := os.Environ()
 	if c.IsolatedDir != "" {
-		env = append(env, fmt.Sprintf("R2R_PWD=%s", c.IsolatedDir))
+		// R2R_PWD: current working directory (may be worktree)
+		// R2R_REPO_ROOT: main repository root (never changes)
+		pwd := c.CurrentWorkDir
+		if pwd == "" {
+			pwd = c.IsolatedDir
+		}
+		env = append(env, fmt.Sprintf("R2R_PWD=%s", pwd))
 		env = append(env, fmt.Sprintf("R2R_REPO_ROOT=%s", c.IsolatedDir))
 	}
 

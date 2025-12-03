@@ -1,4 +1,4 @@
-// Command: commit message
+// Command: create commit-message
 // Description: Generate commit message using AI with staged changes and module mappings
 // Short: Generate AI-powered commit messages from staged changes
 // Long: The create commit-message command uses AI to analyze your staged git changes and generate a structured,
@@ -10,7 +10,7 @@
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
 // Flag.commit: type=bool, shorthand=c, default=false, usage=Automatically create git commit with generated message
 // Flags: --debug (save intermediate outputs and show debug info), --commit (auto-commit)
-package commit
+package commitmessage
 
 import (
 	_ "embed"
@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/commit/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/core/git"
@@ -28,6 +28,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/repository/reports"
 )
+
+var log = logging.C()
 
 // writeDebugFile writes content to a debug file when debug mode is enabled.
 // Files are written to out/logs/commit/<filename> in the workspace root.
@@ -85,19 +87,19 @@ func ResetGitRepo() {
 	gitRepo = nil
 }
 
-// ValidationError is an alias for commitmessage.ValidationError for external access
-type ValidationError = commitmessage.ValidationError
+// ValidationError is an alias for commitmessageinternal.ValidationError for external access
+type ValidationError = commitmessageinternal.ValidationError
 
 // VerifyCommitMessageContract validates a commit message against the contract rules.
 // This is exposed for testing purposes.
 func VerifyCommitMessageContract(commitMessage string, affectedModules []string) []ValidationError {
-	return commitmessage.VerifyCommitMessageContract(commitMessage, affectedModules)
+	return commitmessageinternal.VerifyCommitMessageContract(commitMessage, affectedModules)
 }
 
 // AutoCleanup performs automatic fixes on commit message before validation.
 // This is exposed for testing purposes.
 func AutoCleanup(commitMessage string) string {
-	return commitmessage.AutoCleanup(commitMessage)
+	return commitmessageinternal.AutoCleanup(commitMessage)
 }
 
 func init() {
@@ -199,7 +201,7 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	}
 	if cfg == nil {
 		logger.Info("No staged changes.")
-		return 0, false, ""
+		return 1, false, ""
 	}
 
 	// Phase 3: Generate Top-Level Summary
@@ -227,7 +229,7 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 // Phase 1: Parse Configuration
 func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error) {
 	// Parse flags
-	for _, arg := range os.Args[3:] { // Skip program name, "commit", and "message"
+	for _, arg := range os.Args[3:] { // Skip program name, "create", and "commit-message"
 		switch arg {
 		case "--debug", "-d":
 			debug = true
@@ -249,7 +251,7 @@ func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error
 func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) error {
 	log.Debug("verifyContractImplementation: start")
 	contractPath := filepath.Join(workspaceRoot, ".r2r", "eac", "ai", "commit-message", "contract.yml")
-	contractErrors := commitmessage.VerifyContractImplementation(contractPath)
+	contractErrors := commitmessageinternal.VerifyContractImplementation(contractPath)
 	log.Debug("verifyContractImplementation: contract verified")
 	if len(contractErrors) > 0 {
 		logger.Error("Contract implementation verification failed")
@@ -374,9 +376,9 @@ func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, s
 	log.Debug("getGitDiffAndStats: StagedDiff complete")
 
 	// Check diff size to prevent memory issues
-	if len(diffOutput) > commitmessage.MaxDiffSize {
+	if len(diffOutput) > commitmessageinternal.MaxDiffSize {
 		return "", "", fmt.Errorf("git diff too large: %d bytes (max %d bytes / %.1f MB). Consider committing in smaller chunks",
-			len(diffOutput), commitmessage.MaxDiffSize, float64(commitmessage.MaxDiffSize)/(1024*1024))
+			len(diffOutput), commitmessageinternal.MaxDiffSize, float64(commitmessageinternal.MaxDiffSize)/(1024*1024))
 	}
 
 	// Get git diff stats
@@ -399,7 +401,7 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 
 	var topLevelOutput string
 	var providerName string
-	err := commitmessage.WithProgress("🤖 Generating top-level commit summary...", func() error {
+	err := commitmessageinternal.WithProgress("🤖 Generating top-level commit summary...", func() error {
 		result, genErr := generateWithPromptResult("top-level", topLevelContext, cfg.workspaceRoot, cfg.affectedModules, cfg.debug, nil)
 		if result != nil {
 			topLevelOutput = result.Output
@@ -441,7 +443,7 @@ func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections 
 	writeDebugFile(cfg.workspaceRoot, logger, "debug-combined-message.md", combinedMessage)
 
 	// Auto-cleanup
-	cleanedOutput := commitmessage.AutoCleanup(combinedMessage)
+	cleanedOutput := commitmessageinternal.AutoCleanup(combinedMessage)
 	writeDebugFile(cfg.workspaceRoot, logger, "debug-after-cleanup.md", cleanedOutput)
 
 	// Add missing modules
@@ -457,7 +459,7 @@ func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections 
 // The user is expected to copy/use the message with their preferred commit workflow.
 func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 	// Verify contract compliance
-	validationErrors := commitmessage.VerifyCommitMessageContract(message, cfg.affectedModules)
+	validationErrors := commitmessageinternal.VerifyCommitMessageContract(message, cfg.affectedModules)
 
 	errorCount, warningCount := 0, 0
 	for _, verr := range validationErrors {

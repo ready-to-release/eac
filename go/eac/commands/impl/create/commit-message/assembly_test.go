@@ -1,7 +1,7 @@
 //go:build L1 && ov
 // +build L1,ov
 
-package commit
+package commitmessage
 
 import (
 	"strings"

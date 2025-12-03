@@ -1,4 +1,4 @@
-package commit
+package commitmessage
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/commit/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/ai"
 	"github.com/ready-to-release/eac/go/eac/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
@@ -109,19 +109,19 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	switch promptName {
 	case "top-level":
 		// Top-level validator checks header, auditor-summary, body (no module sections)
-		validator = commitmessage.NewTopLevelValidator(affectedModules)
+		validator = commitmessageinternal.NewTopLevelValidator(affectedModules)
 	case "module":
 		// Module validator checks module section format only
-		validator = commitmessage.NewModuleSectionValidator("")
+		validator = commitmessageinternal.NewModuleSectionValidator("")
 	default:
 		// Fallback to full commit message validator for final assembly validation
 		contractPath := filepath.Join(loader.GetContractPath(), "contract.yml")
-		commitContract, err := commitmessage.LoadContract(contractPath)
+		commitContract, err := commitmessageinternal.LoadContract(contractPath)
 		if err != nil {
 			log.Warnf("Could not load commit contract, proceeding without validation: %v", err)
 			return generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
 		}
-		validator = commitmessage.NewCommitMessageValidator(
+		validator = commitmessageinternal.NewCommitMessageValidator(
 			commitContract,
 			antiCorruptionRules,
 			affectedModules,
@@ -223,7 +223,7 @@ func buildRetryConfig(
 		Validator:      validator,
 		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
 		AntiCorruption: antiCorruption,
-		Fixer:          commitmessage.AutoCleanup, // Apply line wrapping and formatting fixes before validation
+		Fixer:          commitmessageinternal.AutoCleanup, // Apply line wrapping and formatting fixes before validation
 		ContentMarker:  "", // Commit messages don't have a specific content marker
 		MaxAttempts:    2,
 		Debug:          debug,
