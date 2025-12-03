@@ -249,6 +249,10 @@ modules:
       - eac-core
     files:
       root: go/eac/commands
+      config:
+        - go.mod
+        - go.sum
+        - "internal/risk/oscal/schemas/*.json"
       exclude:
         - ext/**
       workflows:
