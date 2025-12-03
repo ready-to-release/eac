@@ -66,6 +66,9 @@ modules:
           - mkdocs.yml
           - .github/workflows/ci-docs.yaml
           - .github/workflows/release-docs.yml
+          - .github/workflows/release-docs-book.yaml
+          - containers/mkdocs-site/**
+          - containers/mkdocs-pdf/**
 
   # ============================================================================
   # EAC Extension
@@ -265,7 +268,6 @@ modules:
       repo:
         other:
           - .github/workflows/ci-eac-commands.yaml
-          - "containers/mkdocs/*"
 
   # ============================================================================
   # Source: Core Domain Libraries

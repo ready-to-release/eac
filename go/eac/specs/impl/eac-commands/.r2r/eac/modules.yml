@@ -1,5 +1,0 @@
-modules:
-  - moniker: docs
-    type: mkdocs-site
-    description: Documentation site
-    path: docs

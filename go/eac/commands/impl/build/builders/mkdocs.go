@@ -56,7 +56,7 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	// Check for book configuration and run preprocessing if found
-	stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, logWriter)
+	stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter)
 	if bookUsed && stagingDir == "" {
 		// Preprocessing failed
 		return 1
@@ -464,7 +464,7 @@ func removePDFPlugins(configContent string) string {
 
 // checkAndPreprocessBook checks for books.yml and runs preprocessing if a book matches
 // Returns (stagingDir, bookUsed) - stagingDir is empty on error, bookUsed indicates if preprocessing was attempted
-func checkAndPreprocessBook(moniker, workspaceRoot string, logWriter io.Writer) (string, bool) {
+func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter io.Writer) (string, bool) {
 	// Load config with books
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if err != nil {
@@ -483,8 +483,8 @@ func checkAndPreprocessBook(moniker, workspaceRoot string, logWriter io.Writer) 
 
 	Logln(logWriter, "📚 Book configuration found for '%s'", moniker)
 
-	// Create staging directory
-	stagingDir := filepath.Join(workspaceRoot, "out", "staging", "books", moniker)
+	// Create staging directory inside build output for test visibility
+	stagingDir := filepath.Join(outputDir, "staging")
 
 	// Clean and create staging directory
 	if err := os.RemoveAll(stagingDir); err != nil {

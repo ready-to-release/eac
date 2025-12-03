@@ -14,60 +14,22 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-// booksContext holds state for books tests.
-type booksContext struct {
-	stagingDir        string
-	bookName          string
-	originalBooksYaml string
-	tempBooksYaml     string
-}
-
 // registerBooksSteps registers step definitions for books command features.
 func registerBooksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
-	bCtx := &booksContext{}
-
-	// Background steps
-	sc.Step(`^a repository with books\.yml configuration$`, func() error {
-		return booksEnsureBooksYaml(ctx, bCtx)
-	})
-	sc.Step(`^the docs module is of type mkdocs-site$`, func() error {
-		return booksEnsureDocsModule(ctx)
+	// Given steps - build output verification
+	sc.Step(`^the "([^"]*)" module has been built$`, func(module string) error {
+		return booksVerifyModuleBuilt(ctx, module)
 	})
 
-	// Given steps - configuration manipulation
+	// Given steps - configuration manipulation (uses isolation)
 	sc.Step(`^books\.yml does not exist$`, func() error {
-		return booksRemoveBooksYaml(ctx, bCtx)
+		return booksRemoveBooksYaml(ctx)
 	})
 	sc.Step(`^books\.yml references module "([^"]*)"$`, func(module string) error {
-		return booksCreateWithModule(ctx, bCtx, module)
+		return booksCreateWithModule(ctx, module)
 	})
 	sc.Step(`^books\.yml has inline source with command "([^"]*)"$`, func(cmd string) error {
-		return booksCreateWithInlineCommand(ctx, bCtx, cmd)
-	})
-	sc.Step(`^source file "([^"]*)" contains "([^"]*)"$`, func(file, content string) error {
-		return booksCreateSourceFile(ctx, file, content)
-	})
-	sc.Step(`^source file contains "([^"]*)"$`, func(content string) error {
-		return booksCreateSourceFile(ctx, "docs/index.md", content)
-	})
-	sc.Step(`^books\.yml does not define "([^"]*)"$`, func(marker string) error {
-		// This is already the case with default books.yml - no action needed
-		return nil
-	})
-	sc.Step(`^books\.yml defines custom marker_pattern$`, func() error {
-		return booksCreateWithCustomPattern(ctx, bCtx)
-	})
-	sc.Step(`^source file uses custom marker format$`, func() error {
-		return booksCreateSourceFile(ctx, "docs/index.md", "{{BOOK_INSERT:test-marker}}")
-	})
-	sc.Step(`^books\.yml exists for module "([^"]*)"$`, func(module string) error {
-		return booksEnsureBooksYaml(ctx, bCtx)
-	})
-
-	// When steps
-	sc.Step(`^I build book "([^"]*)"$`, func(bookName string) error {
-		bCtx.bookName = bookName
-		return ctx.RunCommand("build " + bookName)
+		return booksCreateWithInlineCommand(ctx, cmd)
 	})
 
 	// Then steps - output verification
@@ -78,164 +40,54 @@ func registerBooksSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return internal.OutputContains(ctx, text)
 	})
 
-	// Then steps - staging directory verification
-	sc.Step(`^staging directory contains files from "([^"]*)"$`, func(pattern string) error {
-		return booksStagingContainsPattern(ctx, bCtx, pattern)
+	// Then steps - build output directory verification
+	sc.Step(`^build output "([^"]*)" exists$`, func(path string) error {
+		return booksBuildOutputExists(ctx, path)
 	})
-	sc.Step(`^directory structure is preserved$`, func() error {
-		// Verified by the previous step - structure is inherent in glob pattern matching
+	sc.Step(`^build output "([^"]*)" contains "([^"]*)"$`, func(path, content string) error {
+		return booksBuildOutputContains(ctx, path, content)
+	})
+	sc.Step(`^build output "([^"]*)" contains "([^"]*)" files$`, func(dir, pattern string) error {
+		return booksBuildOutputHasFiles(ctx, dir, pattern)
+	})
+	sc.Step(`^build output "([^"]*)" directory exists$`, func(path string) error {
+		return booksBuildOutputDirExists(ctx, path)
+	})
+	sc.Step(`^the file contains "([^"]*)"$`, func(content string) error {
+		// Uses last checked file from previous step
+		return internal.OutputContains(ctx, content)
+	})
+	sc.Step(`^directory structure is preserved from source$`, func() error {
+		// Verified implicitly by glob pattern matching
 		return nil
 	})
-	sc.Step(`^staging directory contains "([^"]*)" files$`, func(pattern string) error {
-		return booksStagingContainsPattern(ctx, bCtx, "**/*"+pattern)
-	})
-	sc.Step(`^nav files match source structure$`, func() error {
-		// Verified by previous step
-		return nil
-	})
-	sc.Step(`^staging directory contains "([^"]*)" directory$`, func(dir string) error {
-		return booksStagingDirExists(ctx, bCtx, dir)
-	})
-	sc.Step(`^asset files are copied$`, func() error {
-		// Verified by previous step
-		return nil
-	})
-	sc.Step(`^staging contains "([^"]*)"$`, func(path string) error {
-		return booksStagingFileExists(ctx, bCtx, path)
-	})
-	sc.Step(`^the file contains module table output$`, func() error {
-		return booksStagingFileContains(ctx, bCtx, "reference/generated/modules.md", "|")
-	})
-	sc.Step(`^"([^"]*)" has YAML frontmatter$`, func(path string) error {
-		return booksStagingFileContains(ctx, bCtx, path, "---")
-	})
-	sc.Step(`^frontmatter contains "([^"]*)"$`, func(field string) error {
-		return booksStagingFileContains(ctx, bCtx, "reference/generated/modules.md", field)
-	})
-	sc.Step(`^"([^"]*)" contains "([^"]*)"$`, func(path, content string) error {
-		return booksStagingFileContains(ctx, bCtx, path, content)
-	})
-	sc.Step(`^staging "([^"]*)" contains "([^"]*)"$`, func(path, content string) error {
-		return booksStagingFileContains(ctx, bCtx, path, content)
-	})
-	sc.Step(`^staging "([^"]*)" contains module table output$`, func(path string) error {
-		return booksStagingFileContains(ctx, bCtx, path, "|")
-	})
-	sc.Step(`^the marker is replaced with generated content$`, func() error {
-		return booksStagingFileContains(ctx, bCtx, "index.md", "book:generated")
-	})
-	sc.Step(`^custom markers are replaced with content$`, func() error {
-		return booksStagingFileContains(ctx, bCtx, "index.md", "book:generated")
-	})
-	sc.Step(`^the marker remains unchanged in output$`, func() error {
-		return booksStagingFileContains(ctx, bCtx, "index.md", "book:insert")
-	})
-	sc.Step(`^nav\.yml lists generated files$`, func() error {
-		return booksStagingFileExists(ctx, bCtx, "reference/generated/.nav.yml")
-	})
-	sc.Step(`^staging "([^"]*)" includes "([^"]*)"$`, func(path, content string) error {
-		return booksStagingFileContains(ctx, bCtx, path, content)
-	})
-	sc.Step(`^section is inserted at configured position$`, func() error {
-		// Verified by previous step
-		return nil
-	})
-	sc.Step(`^output directory contains "([^"]*)"$`, func(path string) error {
-		return booksOutputContains(ctx, path)
-	})
-	sc.Step(`^output directory contains PDF files$`, func() error {
-		return booksOutputContains(ctx, "*.pdf")
-	})
-	sc.Step(`^book preprocessing is triggered$`, func() error {
-		return internal.OutputContainsAny(ctx, "Book configuration found", "preprocessing", "Preprocessing")
-	})
-	sc.Step(`^standard mkdocs build is used$`, func() error {
-		// If no books.yml, standard build is used - check no preprocessing message
-		if strings.Contains(ctx.CommandOutput, "preprocessing") {
-			return fmt.Errorf("expected standard build, but found preprocessing in output")
-		}
-		return nil
-	})
-	sc.Step(`^no preprocessing occurs$`, func() error {
-		if strings.Contains(ctx.CommandOutput, "Book configuration found") {
-			return fmt.Errorf("expected no preprocessing, but found book configuration message")
-		}
-		return nil
+	sc.Step(`^build log "([^"]*)" contains "([^"]*)" or "([^"]*)"$`, func(path, text1, text2 string) error {
+		return booksBuildLogContains(ctx, path, text1, text2)
 	})
 }
 
-// booksEnsureBooksYaml ensures books.yml exists in the test environment.
-func booksEnsureBooksYaml(ctx *internal.TestContext, bCtx *booksContext) error {
-	booksPath := internal.ResolvePath(ctx, ".r2r/eac/books.yml")
-
-	// Check if it already exists
-	if _, err := os.Stat(booksPath); err == nil {
-		return nil // Already exists
+// booksVerifyModuleBuilt checks that a module's build output exists.
+func booksVerifyModuleBuilt(ctx *internal.TestContext, module string) error {
+	buildDir := filepath.Join(ctx.OriginalRepoRoot, "out", "build", module)
+	if _, err := os.Stat(buildDir); os.IsNotExist(err) {
+		return fmt.Errorf("module '%s' has not been built (expected: %s)", module, buildDir)
 	}
-
-	// Create minimal books.yml
-	content := `books:
-  - name: docs
-    description: Test documentation book
-    sources:
-      - type: copy
-        from: "docs/**/*.md"
-        to: ""
-      - type: command
-        command: "show modules"
-        target: "reference/generated/modules.md"
-        frontmatter:
-          title: "Modules"
-`
-	return internal.CreateFile(ctx, ".r2r/eac/books.yml", content)
+	return nil
 }
 
-// booksEnsureDocsModule ensures the docs module exists and is mkdocs-site type.
-func booksEnsureDocsModule(ctx *internal.TestContext) error {
-	modulesPath := internal.ResolvePath(ctx, ".r2r/eac/modules.yml")
-
-	// Read existing modules.yml
-	data, err := os.ReadFile(modulesPath)
-	if err != nil {
-		// Create minimal modules.yml with docs
-		content := `modules:
-  - moniker: docs
-    type: mkdocs-site
-    description: Documentation site
-    path: docs
-`
-		return internal.CreateFile(ctx, ".r2r/eac/modules.yml", content)
+// booksRemoveBooksYaml removes books.yml for negative tests (requires isolation).
+func booksRemoveBooksYaml(ctx *internal.TestContext) error {
+	if ctx.IsolatedDir == "" {
+		return fmt.Errorf("books.yml removal requires isolated test environment")
 	}
-
-	// Check if docs module exists
-	if strings.Contains(string(data), "moniker: docs") {
-		return nil
-	}
-
-	// Append docs module
-	content := string(data) + `
-  - moniker: docs
-    type: mkdocs-site
-    description: Documentation site
-    path: docs
-`
-	return internal.CreateFile(ctx, ".r2r/eac/modules.yml", content)
-}
-
-// booksRemoveBooksYaml removes books.yml for negative tests.
-func booksRemoveBooksYaml(ctx *internal.TestContext, bCtx *booksContext) error {
-	booksPath := internal.ResolvePath(ctx, ".r2r/eac/books.yml")
-
-	// Store original content for potential restoration
-	if data, err := os.ReadFile(booksPath); err == nil {
-		bCtx.originalBooksYaml = string(data)
-	}
-
 	return internal.RemoveFile(ctx, ".r2r/eac/books.yml")
 }
 
-// booksCreateWithModule creates books.yml referencing a specific module.
-func booksCreateWithModule(ctx *internal.TestContext, bCtx *booksContext, module string) error {
+// booksCreateWithModule creates books.yml referencing a specific module (requires isolation).
+func booksCreateWithModule(ctx *internal.TestContext, module string) error {
+	if ctx.IsolatedDir == "" {
+		return fmt.Errorf("books.yml creation requires isolated test environment")
+	}
 	content := fmt.Sprintf(`books:
   - name: %s
     description: Test book with specific module
@@ -247,8 +99,11 @@ func booksCreateWithModule(ctx *internal.TestContext, bCtx *booksContext, module
 	return internal.CreateFile(ctx, ".r2r/eac/books.yml", content)
 }
 
-// booksCreateWithInlineCommand creates books.yml with an inline command source.
-func booksCreateWithInlineCommand(ctx *internal.TestContext, bCtx *booksContext, cmd string) error {
+// booksCreateWithInlineCommand creates books.yml with an inline command source (requires isolation).
+func booksCreateWithInlineCommand(ctx *internal.TestContext, cmd string) error {
+	if ctx.IsolatedDir == "" {
+		return fmt.Errorf("books.yml creation requires isolated test environment")
+	}
 	content := fmt.Sprintf(`books:
   - name: docs
     description: Test book with inline command
@@ -265,145 +120,71 @@ func booksCreateWithInlineCommand(ctx *internal.TestContext, bCtx *booksContext,
 	return internal.CreateFile(ctx, ".r2r/eac/books.yml", content)
 }
 
-// booksCreateWithCustomPattern creates books.yml with a custom marker pattern.
-func booksCreateWithCustomPattern(ctx *internal.TestContext, bCtx *booksContext) error {
-	content := `books:
-  - name: docs
-    description: Test book with custom pattern
-    sources:
-      - type: copy
-        from: "docs/**/*.md"
-        to: ""
-      - type: inline
-        target: "index.md"
-        marker_pattern: "\\{\\{BOOK_INSERT:([a-zA-Z0-9_-]+)\\}\\}"
-        inserts:
-          - marker: "test-marker"
-            command: "show modules"
-`
-	return internal.CreateFile(ctx, ".r2r/eac/books.yml", content)
-}
-
-// booksCreateSourceFile creates a source file with given content.
-func booksCreateSourceFile(ctx *internal.TestContext, path, content string) error {
-	return internal.CreateFile(ctx, path, content)
-}
-
-// booksStagingContainsPattern checks if staging directory contains files matching pattern.
-func booksStagingContainsPattern(ctx *internal.TestContext, bCtx *booksContext, pattern string) error {
-	stagingDir := booksGetStagingDir(ctx, bCtx)
-	if stagingDir == "" {
-		// If staging doesn't exist yet, check the output instead
-		return internal.OutputContainsAny(ctx, "Created", "Copied", "staging")
+// booksBuildOutputExists checks if a path exists in the build output.
+func booksBuildOutputExists(ctx *internal.TestContext, path string) error {
+	fullPath := filepath.Join(ctx.OriginalRepoRoot, "out", "build", path)
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		return fmt.Errorf("build output not found: %s", fullPath)
 	}
+	// Store content for subsequent "the file contains" steps
+	if data, err := os.ReadFile(fullPath); err == nil {
+		ctx.CommandOutput = string(data)
+	}
+	return nil
+}
 
-	fullPattern := filepath.Join(stagingDir, pattern)
+// booksBuildOutputContains checks if a file in build output contains expected content.
+func booksBuildOutputContains(ctx *internal.TestContext, path, content string) error {
+	fullPath := filepath.Join(ctx.OriginalRepoRoot, "out", "build", path)
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return fmt.Errorf("failed to read build output %s: %w", path, err)
+	}
+	if !strings.Contains(string(data), content) {
+		return fmt.Errorf("build output %s does not contain '%s'", path, content)
+	}
+	ctx.CommandOutput = string(data)
+	return nil
+}
+
+// booksBuildOutputHasFiles checks if a directory contains files matching a pattern.
+func booksBuildOutputHasFiles(ctx *internal.TestContext, dir, pattern string) error {
+	fullDir := filepath.Join(ctx.OriginalRepoRoot, "out", "build", dir)
+	fullPattern := filepath.Join(fullDir, pattern)
+
 	matches, err := doublestar.FilepathGlob(fullPattern)
 	if err != nil {
 		return fmt.Errorf("invalid pattern %s: %w", pattern, err)
 	}
-
 	if len(matches) == 0 {
-		return fmt.Errorf("no files matching pattern %s in staging", pattern)
+		return fmt.Errorf("no files matching %s in %s", pattern, dir)
 	}
-
 	return nil
 }
 
-// booksStagingDirExists checks if a directory exists in staging.
-func booksStagingDirExists(ctx *internal.TestContext, bCtx *booksContext, dir string) error {
-	stagingDir := booksGetStagingDir(ctx, bCtx)
-	if stagingDir == "" {
-		return internal.OutputContainsAny(ctx, "staging", dir)
-	}
-
-	fullPath := filepath.Join(stagingDir, dir)
+// booksBuildOutputDirExists checks if a directory exists in build output.
+func booksBuildOutputDirExists(ctx *internal.TestContext, path string) error {
+	fullPath := filepath.Join(ctx.OriginalRepoRoot, "out", "build", path)
 	info, err := os.Stat(fullPath)
 	if err != nil {
-		return fmt.Errorf("directory %s not found in staging: %w", dir, err)
+		return fmt.Errorf("directory not found: %s", fullPath)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("%s exists but is not a directory", dir)
+		return fmt.Errorf("%s exists but is not a directory", path)
 	}
 	return nil
 }
 
-// booksStagingFileExists checks if a file exists in staging.
-func booksStagingFileExists(ctx *internal.TestContext, bCtx *booksContext, path string) error {
-	stagingDir := booksGetStagingDir(ctx, bCtx)
-	if stagingDir == "" {
-		return internal.OutputContainsAny(ctx, "Created", path)
-	}
-
-	fullPath := filepath.Join(stagingDir, path)
-	if _, err := os.Stat(fullPath); err != nil {
-		return fmt.Errorf("file %s not found in staging: %w", path, err)
-	}
-	return nil
-}
-
-// booksStagingFileContains checks if a staging file contains expected content.
-func booksStagingFileContains(ctx *internal.TestContext, bCtx *booksContext, path, content string) error {
-	stagingDir := booksGetStagingDir(ctx, bCtx)
-	if stagingDir == "" {
-		// Fall back to checking command output
-		return internal.OutputContainsAny(ctx, content)
-	}
-
-	fullPath := filepath.Join(stagingDir, path)
+// booksBuildLogContains checks if build log contains expected text.
+func booksBuildLogContains(ctx *internal.TestContext, path, text1, text2 string) error {
+	fullPath := filepath.Join(ctx.OriginalRepoRoot, "out", "build", path)
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
-		return fmt.Errorf("failed to read %s: %w", path, err)
+		return fmt.Errorf("failed to read build log %s: %w", path, err)
 	}
-
-	if !strings.Contains(string(data), content) {
-		return fmt.Errorf("file %s does not contain '%s'. Content:\n%s", path, content, string(data))
-	}
-	return nil
-}
-
-// booksGetStagingDir returns the staging directory path.
-func booksGetStagingDir(ctx *internal.TestContext, bCtx *booksContext) string {
-	if bCtx.stagingDir != "" {
-		return bCtx.stagingDir
-	}
-
-	// Default staging location
-	bookName := bCtx.bookName
-	if bookName == "" {
-		bookName = "docs"
-	}
-
-	stagingDir := internal.ResolvePath(ctx, filepath.Join("out", "build", bookName, "staging"))
-	if _, err := os.Stat(stagingDir); err == nil {
-		bCtx.stagingDir = stagingDir
-		return stagingDir
-	}
-
-	return ""
-}
-
-// booksOutputContains checks if the build output directory contains a file.
-func booksOutputContains(ctx *internal.TestContext, path string) error {
-	outputDir := internal.ResolvePath(ctx, filepath.Join("out", "build", "docs"))
-
-	// Handle glob patterns
-	if strings.Contains(path, "*") {
-		fullPattern := filepath.Join(outputDir, path)
-		matches, err := doublestar.FilepathGlob(fullPattern)
-		if err != nil {
-			return fmt.Errorf("invalid pattern %s: %w", path, err)
-		}
-		if len(matches) == 0 {
-			return fmt.Errorf("no files matching pattern %s in output", path)
-		}
+	content := string(data)
+	if strings.Contains(content, text1) || strings.Contains(content, text2) {
 		return nil
 	}
-
-	// Check specific path
-	fullPath := filepath.Join(outputDir, path)
-	if _, err := os.Stat(fullPath); err != nil {
-		return fmt.Errorf("file %s not found in output: %w", path, err)
-	}
-	return nil
+	return fmt.Errorf("build log does not contain '%s' or '%s'", text1, text2)
 }
