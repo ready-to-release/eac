@@ -17,7 +17,7 @@ import (
 
 func TestScriptsInstallerFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../specs/scripts-cli-installer",
+		SpecsPath:         "../../../../../specs/scripts-cli-installer",
 		DefaultReportName: "cucumber-scripts-cli-installer",
 		RegisterSteps:     RegisterSteps,
 	}

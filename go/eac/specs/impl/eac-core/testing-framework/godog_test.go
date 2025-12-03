@@ -14,7 +14,7 @@ import (
 
 func TestTestingFrameworkFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../specs/eac-core/testing-framework",
+		SpecsPath:         "../../../../../specs/eac-core/testing-framework",
 		DefaultReportName: "cucumber-testing-framework",
 		RegisterSteps:     RegisterSteps,
 	}

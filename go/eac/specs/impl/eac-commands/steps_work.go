@@ -23,16 +23,10 @@ func registerWorkSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^I see error "([^"]*)"$`, func(text string) error {
 		return workOutputContains(ctx, text)
 	})
-	sc.Step(`^I see suggestion "([^"]*)"$`, func(text string) error {
-		return workOutputContains(ctx, text)
-	})
 
 	// Workspace setup steps
 	sc.Step(`^I am in a workspace for "([^"]*)"$`, func(branch string) error {
 		return setupWorkspace(ctx, branch)
-	})
-	sc.Step(`^I am in the main workspace$`, func() error {
-		return ensureMainWorkspace(ctx)
 	})
 	sc.Step(`^I am in the main workspace on branch "([^"]*)"$`, func(branch string) error {
 		if err := ensureMainWorkspace(ctx); err != nil {
@@ -54,11 +48,6 @@ func registerWorkSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		// After work remove, we need to verify from the main worktree
 		ensureMainWorkspace(ctx)
 		return verifyCurrentBranch(ctx, "main")
-	})
-	sc.Step(`^the workspace is removed$`, func() error {
-		// Ensure we're checking from the main worktree
-		ensureMainWorkspace(ctx)
-		return verifyWorkspaceRemoved(ctx)
 	})
 	sc.Step(`^the local branch "([^"]*)" is deleted$`, func(branch string) error {
 		// Ensure we're checking from the main worktree
