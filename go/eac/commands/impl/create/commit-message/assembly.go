@@ -1,11 +1,11 @@
-package commit
+package commitmessage
 
 import (
 	"bytes"
 	"fmt"
 	"strings"
 
-	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/commit/internal"
+	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -170,7 +170,7 @@ func addMissingModules(commitMessage string, affectedModules []string, allFiles 
 
 // isModuleNameLine checks if a line looks like a module name
 func isModuleNameLine(s string) bool {
-	if s == "" || len(s) > commitmessage.MaxModuleNameLength {
+	if s == "" || len(s) > commitmessageinternal.MaxModuleNameLength {
 		return false
 	}
 
@@ -185,7 +185,7 @@ func isModuleNameLine(s string) bool {
 
 // isDashesLine checks if a line consists only of dashes
 func isDashesLine(s string) bool {
-	if len(s) < commitmessage.MinDashesLength {
+	if len(s) < commitmessageinternal.MinDashesLength {
 		return false
 	}
 

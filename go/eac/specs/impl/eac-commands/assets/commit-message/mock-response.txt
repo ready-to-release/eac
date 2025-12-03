@@ -1,0 +1,12 @@
+feat(eac-core): add test functionality
+
+Auditor-Summary: Adding test infrastructure and mock support.
+
+This commit implements new test features to improve coverage and reliability.
+The changes include test helpers, mock data structures, and updated documentation
+to support easier test creation.
+
+eac-core
+---
+
+eac-core: test: implement testing infrastructure with mock support and helper functions for easier test creation

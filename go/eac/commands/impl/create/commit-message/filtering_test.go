@@ -1,6 +1,6 @@
 //go:build L1
 
-package commit
+package commitmessage
 
 import (
 	"testing"

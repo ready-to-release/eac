@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/commit"
+	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -198,5 +198,5 @@ func commitWithAI(debug bool) int {
 	}
 
 	// Call commit message
-	return commit.CreateCommitMessage()
+	return commitmessage.CreateCommitMessage()
 }
