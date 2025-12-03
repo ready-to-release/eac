@@ -135,12 +135,15 @@ Process metrics show **what causes bottlenecks**:
 
 ```mermaid
 flowchart LR
-    A[Process Improvements] --> B[Better Flow Metrics] --> C[Better DORA Outcomes]
+    A[Process Improvements] --> B[Better Flow Metrics]
+    B --> C[Better DORA Outcomes]
 
-    A1[automate testing] -.-> B1[lower cycle time] -.-> C1[faster lead time]
-    A2[remove approvals] -.-> B2[lower wait time] -.-> C2[higher deployment frequency]
-    A3[smaller batches] -.-> B3[lower WIP] -.-> C3[lower change fail rate]
-
+    A1[automate testing] -.-> B1[lower cycle time]
+    B1 -.-> C1[faster lead time]
+    A2[remove approvals] -.-> B2[lower wait time]
+    B2 -.-> C2[higher deployment frequency]
+    A3[smaller batches] -.-> B3[lower WIP]
+    B3 -.-> C3[lower change fail rate]
 ```
 
 Don't just measure DORA metrics and hope they improve. **Measure the underlying flow and process metrics that you can actually improve**, then validate that those improvements lead to better DORA outcomes.

@@ -46,7 +46,6 @@ workspace "Commands Module Architecture" "CLI command handlers and orchestration
                 typeInspector = component "Type Inspector" "Lists available module types" "Go"
                 suiteInspector = component "Suite Inspector" "Lists test suites" "Go"
                 commandInspector = component "Command Inspector" "Describes available commands" "Go"
-                completionProvider = component "Completion Provider" "Shell completion integration" "Go"
             }
 
             test_commands = container "Test Commands" "Manages Godog test execution with Docker containers and generates Cucumber/JUnit reports." "Go" "Command" {

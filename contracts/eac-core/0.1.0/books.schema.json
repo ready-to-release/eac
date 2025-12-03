@@ -1,0 +1,180 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "books.schema.json",
+  "title": "Books Configuration",
+  "description": "Configuration for book preprocessing that aggregates static content with dynamically-generated content from EAC commands",
+  "type": "object",
+  "properties": {
+    "books": {
+      "type": "array",
+      "description": "List of book configurations",
+      "items": {
+        "$ref": "#/definitions/book"
+      }
+    }
+  },
+  "required": ["books"],
+  "definitions": {
+    "book": {
+      "type": "object",
+      "description": "A book definition that aggregates content for an mkdocs-site module",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Module moniker this book builds (must match a mkdocs-site module)",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the book"
+        },
+        "sources": {
+          "type": "array",
+          "description": "Content sources for the book",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/copySource" },
+              { "$ref": "#/definitions/commandSource" },
+              { "$ref": "#/definitions/inlineSource" }
+            ]
+          },
+          "minItems": 1
+        },
+        "generated_nav": {
+          "type": "array",
+          "description": "Navigation configuration for generated sections",
+          "items": {
+            "$ref": "#/definitions/generatedNav"
+          }
+        }
+      },
+      "required": ["name", "sources"],
+      "additionalProperties": false
+    },
+    "copySource": {
+      "type": "object",
+      "description": "Copy static files from repository to staging",
+      "properties": {
+        "type": {
+          "const": "copy"
+        },
+        "from": {
+          "type": "string",
+          "description": "Glob pattern for source files (relative to repo root)"
+        },
+        "to": {
+          "type": "string",
+          "description": "Target directory in staging"
+        },
+        "exclude": {
+          "type": "array",
+          "description": "Patterns to exclude from copy",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["type", "from", "to"],
+      "additionalProperties": false
+    },
+    "commandSource": {
+      "type": "object",
+      "description": "Execute EAC command and write output to new file",
+      "properties": {
+        "type": {
+          "const": "command"
+        },
+        "command": {
+          "type": "string",
+          "description": "EAC command to execute (e.g., 'show modules')"
+        },
+        "target": {
+          "type": "string",
+          "description": "Output file path in staging"
+        },
+        "frontmatter": {
+          "type": "object",
+          "description": "YAML frontmatter to prepend to output",
+          "additionalProperties": true
+        },
+        "order": {
+          "type": "integer",
+          "description": "Sort order within generated section (default: 0)",
+          "default": 0
+        }
+      },
+      "required": ["type", "command", "target"],
+      "additionalProperties": false
+    },
+    "inlineSource": {
+      "type": "object",
+      "description": "Execute EAC commands and insert output at markers in existing files",
+      "properties": {
+        "type": {
+          "const": "inline"
+        },
+        "target": {
+          "type": "string",
+          "description": "Path to file in staging (must exist after copy phase)"
+        },
+        "marker_pattern": {
+          "type": "string",
+          "description": "Regex pattern with capture group for marker ID (optional, uses default if not specified)"
+        },
+        "inserts": {
+          "type": "array",
+          "description": "Marker-to-command mappings",
+          "items": {
+            "$ref": "#/definitions/inlineInsert"
+          },
+          "minItems": 1
+        }
+      },
+      "required": ["type", "target", "inserts"],
+      "additionalProperties": false
+    },
+    "inlineInsert": {
+      "type": "object",
+      "description": "Maps a marker ID to an EAC command",
+      "properties": {
+        "marker": {
+          "type": "string",
+          "description": "Marker ID to find in the target file",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "command": {
+          "type": "string",
+          "description": "EAC command to execute"
+        }
+      },
+      "required": ["marker", "command"],
+      "additionalProperties": false
+    },
+    "generatedNav": {
+      "type": "object",
+      "description": "Navigation configuration for a generated section",
+      "properties": {
+        "section": {
+          "type": "string",
+          "description": "Path to the generated section directory"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title for the section in navigation"
+        },
+        "insert_into": {
+          "type": "string",
+          "description": "Parent directory whose .nav.yml to modify"
+        },
+        "position": {
+          "type": "string",
+          "description": "Where to insert: 'first', 'last', or 'after:<item>'",
+          "pattern": "^(first|last|after:.+)$",
+          "default": "last"
+        }
+      },
+      "required": ["section", "insert_into"],
+      "additionalProperties": false
+    }
+  }
+}

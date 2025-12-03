@@ -50,23 +50,13 @@ jobs:
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: commands-binary
-          path: out/build/eac-commands/commands
-          retention-days: 1
+        # Don't require artifact - this is the job that creates it
 
       - name: Build Summary
         run: |
           echo "## Build CI Tooling" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.commands.outputs.cache-hit }}" = "true" ]; then
-            echo "Restored commands binary from cache" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Built commands binary from source" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "Commands binary: ${{ steps.commands.outputs.source }}" >> $GITHUB_STEP_SUMMARY
 
   # =========================================
   # Stage 1: Validate ALL Modules
@@ -379,18 +369,30 @@ jobs:
           echo "layer-count=$LAYER_COUNT" >> $GITHUB_OUTPUT
 
           # Generate step summary
+          IS_PR="${{ github.event_name == 'pull_request' }}"
+
           echo "## Execution Order" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Modules will be built in **$LAYER_COUNT layer(s)** based on dependency order:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
 
-          for ((i=0; i<LAYER_COUNT; i++)); do
-            LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$i] | join(\", \")")
-            echo "**Layer $((i+1))**: \`$LAYER_MODULES\`" >> $GITHUB_STEP_SUMMARY
-          done
+          if [ "$IS_PR" = "true" ]; then
+            echo "**Mode**: PR (parallel execution, commit tests only)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            ALL_MODULES=$(echo "$PLAN" | jq -r '[.layers[][]] | join(", ")')
+            echo "All modules will run in parallel: \`$ALL_MODULES\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Mode**: Trunk (layered execution, full test suite)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Modules will be built in **$LAYER_COUNT layer(s)** based on dependency order:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> Modules in the same layer run in parallel. Layers run sequentially." >> $GITHUB_STEP_SUMMARY
+            for ((i=0; i<LAYER_COUNT; i++)); do
+              LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$i] | join(\", \")")
+              echo "**Layer $((i+1))**: \`$LAYER_MODULES\`" >> $GITHUB_STEP_SUMMARY
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> Modules in the same layer run in parallel. Layers run sequentially." >> $GITHUB_STEP_SUMMARY
+          fi
 
   # =========================================
   # Stage 4: Execute Module Workflows
@@ -417,69 +419,104 @@ jobs:
           COMMANDS="./out/build/eac-commands/commands"
           PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
           LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
+          IS_PR="${{ github.event_name == 'pull_request' }}"
 
-          echo "Executing $LAYER_COUNT layer(s)"
+          # Determine the correct ref for workflow_dispatch
+          # For PRs: use head_ref (the PR source branch)
+          # For push: use ref_name (the branch name)
+          HEAD_REF="${{ github.head_ref }}"
+          REF_NAME="${{ github.ref_name }}"
 
-          for ((layer_idx=0; layer_idx<LAYER_COUNT; layer_idx++)); do
-            LAYER_NUM=$((layer_idx + 1))
-            LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$layer_idx][]")
+          if [ -n "$HEAD_REF" ]; then
+            DISPATCH_REF="$HEAD_REF"
+          else
+            DISPATCH_REF="$REF_NAME"
+          fi
 
-            if [ -z "$LAYER_MODULES" ]; then
-              continue
-            fi
+          echo "Event: ${{ github.event_name }}"
+          echo "Is PR: $IS_PR"
+          echo "DISPATCH_REF: $DISPATCH_REF"
+          echo "Layer count: $LAYER_COUNT"
 
+          # For PRs: run all workflows in parallel (faster feedback, commit tests only)
+          # For main/release: run in dependency layers (full integration testing)
+          if [ "$IS_PR" = "true" ]; then
             echo ""
-            echo "Layer $LAYER_NUM: $LAYER_MODULES"
+            echo "PR Mode: Running all workflows in parallel"
 
-            # Trigger all workflows in this layer
-            RUN_IDS=""
+            ALL_RUN_IDS=""
+            ALL_MODULES=$(echo "$PLAN" | jq -r '.layers[][]')
 
-            # Determine the correct ref for workflow_dispatch
-            # For PRs: use head_ref (the PR source branch)
-            # For push: use ref_name (the branch name)
-            # Note: head_ref is only available for pull_request events
-            HEAD_REF="${{ github.head_ref }}"
-            REF_NAME="${{ github.ref_name }}"
-
-            if [ -n "$HEAD_REF" ]; then
-              # PR: use the source branch name
-              DISPATCH_REF="$HEAD_REF"
-            else
-              # Push: use the branch name directly
-              DISPATCH_REF="$REF_NAME"
-            fi
-
-            echo "Event: ${{ github.event_name }}"
-            echo "head_ref: $HEAD_REF"
-            echo "ref_name: $REF_NAME"
-            echo "DISPATCH_REF: $DISPATCH_REF"
-
-            for module in $LAYER_MODULES; do
+            for module in $ALL_MODULES; do
               if [ -f ".github/workflows/ci-${module}.yaml" ]; then
+                echo "Triggering: ci-${module}.yaml"
                 gh workflow run "ci-${module}.yaml" \
                   --ref "$DISPATCH_REF" \
                   -f ref=${{ github.ref }} \
-                  -f sha=${{ github.sha }}
+                  -f sha=${{ github.sha }} \
+                  -f trigger_run_id=${{ github.run_id }}
                 sleep 2
 
                 RUN_ID=$(gh run list --workflow="ci-${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
                 if [ -n "$RUN_ID" ]; then
-                  RUN_IDS="$RUN_IDS $RUN_ID"
+                  ALL_RUN_IDS="$ALL_RUN_IDS $RUN_ID"
                 fi
               fi
             done
 
-            # Wait for all workflows in this layer using pipeline wait
-            if [ -n "$RUN_IDS" ]; then
-              if ! $COMMANDS pipeline wait $RUN_IDS --timeout 1800; then
-                echo "::error::Layer $LAYER_NUM failed"
+            # Wait for all workflows at once
+            if [ -n "$ALL_RUN_IDS" ]; then
+              echo ""
+              echo "Waiting for all workflows to complete..."
+              if ! $COMMANDS pipeline wait $ALL_RUN_IDS --timeout 1800; then
+                echo "::error::One or more workflows failed"
                 exit 1
               fi
             fi
-          done
+          else
+            echo ""
+            echo "Trunk Mode: Executing $LAYER_COUNT layer(s) sequentially"
+
+            for ((layer_idx=0; layer_idx<LAYER_COUNT; layer_idx++)); do
+              LAYER_NUM=$((layer_idx + 1))
+              LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$layer_idx][]")
+
+              if [ -z "$LAYER_MODULES" ]; then
+                continue
+              fi
+
+              echo ""
+              echo "Layer $LAYER_NUM: $LAYER_MODULES"
+
+              RUN_IDS=""
+              for module in $LAYER_MODULES; do
+                if [ -f ".github/workflows/ci-${module}.yaml" ]; then
+                  gh workflow run "ci-${module}.yaml" \
+                    --ref "$DISPATCH_REF" \
+                    -f ref=${{ github.ref }} \
+                    -f sha=${{ github.sha }} \
+                    -f trigger_run_id=${{ github.run_id }}
+                  sleep 2
+
+                  RUN_ID=$(gh run list --workflow="ci-${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+                  if [ -n "$RUN_ID" ]; then
+                    RUN_IDS="$RUN_IDS $RUN_ID"
+                  fi
+                fi
+              done
+
+              # Wait for all workflows in this layer
+              if [ -n "$RUN_IDS" ]; then
+                if ! $COMMANDS pipeline wait $RUN_IDS --timeout 1800; then
+                  echo "::error::Layer $LAYER_NUM failed"
+                  exit 1
+                fi
+              fi
+            done
+          fi
 
           echo ""
-          echo "All layers completed"
+          echo "All workflows completed"
         env:
           GH_TOKEN: ${{ github.token }}
 

@@ -7,6 +7,11 @@ on:
         required: false
         type: string
         default: ''
+      trigger_run_id:
+        required: false
+        type: string
+        description: 'Run ID of trigger workflow (for artifact download)'
+        default: ''
   workflow_dispatch:
     inputs:
       ref:
@@ -19,10 +24,16 @@ on:
         type: string
         description: 'Commit SHA to test'
         default: ''
+      trigger_run_id:
+        required: false
+        type: string
+        description: 'Run ID of trigger workflow (for artifact download)'
+        default: ''
 
 permissions:
   contents: read
   packages: read
+  actions: read
 
 jobs:
   build:
@@ -36,6 +47,8 @@ jobs:
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.trigger_run_id }}
 
       - name: Build Module
         uses: ./.github/actions/build-module
@@ -55,6 +68,8 @@ jobs:
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.trigger_run_id }}
 
       - name: Test Module
         uses: ./.github/actions/test-module
@@ -62,6 +77,8 @@ jobs:
           module: scripts-cli-installer
           commands-path: ${{ steps.commands.outputs.commands-path }}
           setup-deps: auto
+          # PRs run commit suite only; main/release branches run full suite
+          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
 
   test-windows:
     name: Test (Windows)
@@ -90,6 +107,8 @@ jobs:
         run: go run . test scripts-cli-installer --suite commit
 
       - name: Test Module (Acceptance Suite - L3)
+        # Skip acceptance tests for PRs - only run on main/release branches
+        if: ${{ !startsWith(inputs.ref, 'refs/pull/') }}
         working-directory: ./go/eac/commands
         run: go run . test scripts-cli-installer --suite acceptance
 

@@ -1,5 +1,0 @@
-mkdocs
-mkdocs-material>=9.4
-mkdocs-awesome-nav>=1.0.0
-pymdown-extensions
-mkdocs-drawio

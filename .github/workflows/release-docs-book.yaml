@@ -1,0 +1,182 @@
+name: "release-docs-book"
+
+# Release documentation as downloadable PDF books
+# Triggered by ci-docs after successful build on main branch
+# Runs in parallel with GitHub Pages deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'CI workflow run ID to download artifacts from'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      ci_run_id:
+        description: 'CI workflow run ID to download artifacts from'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-pdfs:
+    name: Build PDF Books
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and cache MkDocs PDF image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./containers/mkdocs-pdf
+          file: ./containers/mkdocs-pdf/Dockerfile
+          tags: cli-mkdocs-pdf:latest
+          load: true
+          cache-from: type=gha,scope=mkdocs-pdf
+          cache-to: type=gha,mode=max,scope=mkdocs-pdf
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Build PDF Books (dark + light themes)
+        run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+          echo "Building PDF documentation with both themes..."
+          $COMMANDS build docs --pdf-theme=all
+
+      - name: Verify PDF outputs
+        id: verify
+        run: |
+          PDF_DIR="out/build/docs/site/pdf"
+
+          if [ ! -f "$PDF_DIR/ready-to-release-docs-dark.pdf" ]; then
+            echo "::error::Dark PDF not found"
+            exit 1
+          fi
+
+          if [ ! -f "$PDF_DIR/ready-to-release-docs-light.pdf" ]; then
+            echo "::error::Light PDF not found"
+            exit 1
+          fi
+
+          DARK_SIZE=$(du -h "$PDF_DIR/ready-to-release-docs-dark.pdf" | cut -f1)
+          LIGHT_SIZE=$(du -h "$PDF_DIR/ready-to-release-docs-light.pdf" | cut -f1)
+
+          echo "dark_size=$DARK_SIZE" >> $GITHUB_OUTPUT
+          echo "light_size=$LIGHT_SIZE" >> $GITHUB_OUTPUT
+
+          echo "PDF books built successfully:"
+          echo "  Dark theme:  $DARK_SIZE"
+          echo "  Light theme: $LIGHT_SIZE"
+
+      - name: Upload PDF artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: pdf-books
+          path: |
+            out/build/docs/site/pdf/ready-to-release-docs-dark.pdf
+            out/build/docs/site/pdf/ready-to-release-docs-light.pdf
+          retention-days: 90
+
+      - name: Generate calver tag name
+        id: tag
+        run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+
+          # Generate calver tag for book release (book/YYYY.MM.DD or book/YYYY.MM.DD.N)
+          TAG=$($COMMANDS release calver book)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Generated tag: $TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "Documentation Book ${{ steps.tag.outputs.tag }}"
+          body: |
+            ## Ready-to-Release Documentation Book
+
+            PDF versions of the project documentation for offline reading and printing.
+
+            ### Downloads
+
+            | File | Description | Size |
+            |------|-------------|------|
+            | `ready-to-release-docs-dark.pdf` | Dark theme (digital viewing) | ${{ steps.verify.outputs.dark_size }} |
+            | `ready-to-release-docs-light.pdf` | Light theme (paper printing) | ${{ steps.verify.outputs.light_size }} |
+
+            ### Usage
+
+            - **Dark PDF**: Optimized for reading on screens with dark background
+            - **Light PDF**: Optimized for printing on paper with light background
+
+            ---
+            Generated from commit: ${{ github.sha }}
+          files: |
+            out/build/docs/site/pdf/ready-to-release-docs-dark.pdf
+            out/build/docs/site/pdf/ready-to-release-docs-light.pdf
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+
+      - name: Create git tag
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+
+          # Check if tag already exists (created by release action)
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists"
+          else
+            echo "Creating tag: $TAG"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "## PDF Book Release" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Successfully built and released PDF documentation books." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Release Details" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Dark PDF Size | ${{ steps.verify.outputs.dark_size }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Light PDF Size | ${{ steps.verify.outputs.light_size }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Downloads" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "PDFs are available as release assets and workflow artifacts." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## PDF Book Release Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Failed to build or release PDF documentation." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- Docker image build failure" >> $GITHUB_STEP_SUMMARY
+            echo "- WeasyPrint rendering errors" >> $GITHUB_STEP_SUMMARY
+            echo "- Missing PDF template styles" >> $GITHUB_STEP_SUMMARY
+          fi

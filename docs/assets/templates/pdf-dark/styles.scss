@@ -1,0 +1,365 @@
+// PDF-specific styles for mkdocs-with-pdf
+// Dark theme - overrides Material theme's print CSS that strips backgrounds
+//
+// Note: This file MUST be named styles.scss (or styles.css) for the
+// mkdocs-with-pdf plugin to find it in custom_template_path
+
+// =============================================================================
+// Color Variables
+// =============================================================================
+
+$bg-primary: #0d1117;
+$bg-secondary: #161b22;
+$bg-tertiary: #21262d;
+$text-primary: #e6edf3;
+$text-secondary: #8b949e;
+$text-muted: #6e7681;
+$border-color: #30363d;
+$accent-color: #58a6ff;
+$accent-purple: #d2a8ff;
+
+// =============================================================================
+// Override Material/Bootstrap print CSS that strips backgrounds
+// This MUST use @media print to counter their @media print rules
+// =============================================================================
+
+@media print {
+  // Nuclear option - override the * { background: transparent } reset
+  *, *::before, *::after {
+    background-color: inherit;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  // Page layout with proper margins for headers/footers
+  @page {
+    size: A4;
+    margin: 2.5cm 2cm 2.5cm 2cm;
+    background: $bg-primary;
+
+    // Running header - chapter/section name
+    @top-left {
+      content: string(chapter);
+      font-size: 9pt;
+      color: $text-secondary;
+      font-family: "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
+    }
+
+    // Page number
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+      font-size: 9pt;
+      color: $text-secondary;
+      font-family: "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
+    }
+  }
+
+  // First page - no header
+  @page :first {
+    @top-left { content: none; }
+  }
+
+  html {
+    background: $bg-primary !important;
+    background-color: $bg-primary !important;
+  }
+
+  body {
+    background: $bg-primary !important;
+    background-color: $bg-primary !important;
+    color: $text-primary !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: "Nobo", "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.6;
+  }
+
+  article,
+  main,
+  section,
+  div,
+  .md-content,
+  .md-content__inner,
+  .md-main,
+  .md-main__inner,
+  .md-container,
+  .md-typeset,
+  #doc-cover {
+    background: $bg-primary !important;
+    background-color: $bg-primary !important;
+    color: $text-primary !important;
+  }
+
+  // Typography
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Nobo", "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
+    font-weight: bold;
+    color: $text-primary !important;
+    page-break-after: avoid;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+  }
+
+  h1 {
+    font-size: 24pt;
+    border-bottom: 2px solid $accent-color !important;
+    padding-bottom: 0.3em;
+    string-set: chapter content();  // For running header
+  }
+
+  h2 {
+    font-size: 18pt;
+    border-bottom: 1px solid $border-color !important;
+    padding-bottom: 0.2em;
+  }
+
+  h3 { font-size: 14pt; }
+  h4 { font-size: 12pt; }
+  h5 { font-size: 11pt; }
+  h6 { font-size: 10pt; }
+
+  p {
+    margin: 0.5em 0;
+    orphans: 3;
+    widows: 3;
+    color: $text-primary !important;
+  }
+
+  // Links
+  a {
+    color: $accent-color !important;
+    text-decoration: none;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: $text-secondary !important;
+    word-break: break-all;
+  }
+
+  a[href^="#"]::after,
+  a[href^="/"]::after {
+    content: none;
+  }
+
+  // Code Blocks
+  code, pre {
+    font-family: "Nobo", "Liberation Mono", "DejaVu Sans Mono", monospace;
+    font-size: 9pt;
+  }
+
+  code {
+    background: $bg-tertiary !important;
+    background-color: $bg-tertiary !important;
+    color: $text-primary !important;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+  }
+
+  pre {
+    background: $bg-secondary !important;
+    background-color: $bg-secondary !important;
+    border: 1px solid $border-color !important;
+    border-radius: 4px;
+    padding: 1em;
+    overflow-x: auto;
+    page-break-inside: avoid;
+
+    code {
+      background: transparent !important;
+      padding: 0;
+      border-radius: 0;
+    }
+  }
+
+  // Syntax highlighting - GitHub dark theme
+  .highlight .k, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kt { color: #ff7b72 !important; font-weight: bold; }
+  .highlight .s, .highlight .s1, .highlight .s2, .highlight .sb, .highlight .sc, .highlight .sd, .highlight .se, .highlight .sh, .highlight .si, .highlight .sx, .highlight .sr, .highlight .ss { color: #a5d6ff !important; }
+  .highlight .c, .highlight .c1, .highlight .cm, .highlight .cp, .highlight .cs { color: #8b949e !important; font-style: italic; }
+  .highlight .m, .highlight .mf, .highlight .mh, .highlight .mi, .highlight .mo { color: #79c0ff !important; }
+  .highlight .na, .highlight .nb, .highlight .nc, .highlight .nd, .highlight .ne, .highlight .nf, .highlight .ni, .highlight .nl, .highlight .nn, .highlight .nt, .highlight .nv { color: #d2a8ff !important; }
+  .highlight .o, .highlight .ow { color: #ff7b72 !important; }
+
+  // Tables
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    page-break-inside: avoid;
+    font-size: 9pt;
+  }
+
+  th, td {
+    border: 1px solid $border-color !important;
+    padding: 0.5em;
+    text-align: left;
+    color: $text-primary !important;
+  }
+
+  th {
+    background: $bg-tertiary !important;
+    background-color: $bg-tertiary !important;
+    color: $text-primary !important;
+    font-weight: bold;
+  }
+
+  tr:nth-child(even) {
+    background: $bg-secondary !important;
+    background-color: $bg-secondary !important;
+  }
+
+  tr:nth-child(odd) {
+    background: $bg-primary !important;
+    background-color: $bg-primary !important;
+  }
+
+  // Admonitions
+  .admonition {
+    margin: 1em 0;
+    padding: 1em;
+    border-left: 4px solid $accent-color !important;
+    background: $bg-secondary !important;
+    background-color: $bg-secondary !important;
+    page-break-inside: avoid;
+  }
+
+  .admonition-title {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+    color: $accent-color !important;
+  }
+
+  .admonition.note {
+    border-left-color: #388bfd !important;
+    .admonition-title { color: #388bfd !important; }
+  }
+
+  .admonition.tip, .admonition.hint {
+    border-left-color: #2ea043 !important;
+    .admonition-title { color: #2ea043 !important; }
+  }
+
+  .admonition.warning, .admonition.caution, .admonition.attention {
+    border-left-color: #bb8009 !important;
+    .admonition-title { color: #bb8009 !important; }
+  }
+
+  .admonition.danger, .admonition.error {
+    border-left-color: #f85149 !important;
+    .admonition-title { color: #f85149 !important; }
+  }
+
+  .admonition.info {
+    border-left-color: #388bfd !important;
+    .admonition-title { color: #388bfd !important; }
+  }
+
+  // Lists
+  ul, ol {
+    margin: 0.5em 0;
+    padding-left: 2em;
+    color: $text-primary !important;
+  }
+
+  li {
+    margin: 0.25em 0;
+    color: $text-primary !important;
+  }
+
+  // Images
+  img {
+    max-width: 100%;
+    height: auto;
+    page-break-inside: avoid;
+  }
+
+  figure {
+    margin: 1em 0;
+    text-align: center;
+    page-break-inside: avoid;
+    background: $bg-primary !important;
+  }
+
+  figcaption {
+    font-size: 9pt;
+    color: $text-secondary !important;
+    font-style: italic;
+    margin-top: 0.5em;
+  }
+
+  // Blockquotes
+  blockquote {
+    margin: 1em 0;
+    padding: 0.5em 1em;
+    border-left: 4px solid $border-color !important;
+    color: $text-secondary !important;
+    font-style: italic;
+    background: $bg-secondary !important;
+    background-color: $bg-secondary !important;
+  }
+
+  // Table of Contents
+  .md-nav {
+    font-size: 10pt;
+    background: $bg-primary !important;
+  }
+
+  .md-nav a {
+    color: $text-primary !important;
+    text-decoration: none;
+  }
+
+  .md-nav__item {
+    margin: 0.25em 0;
+  }
+
+  // Cover Page
+  #doc-cover {
+    text-align: center;
+    page-break-after: always;
+    background: $bg-primary !important;
+    background-color: $bg-primary !important;
+    color: $text-primary !important;
+  }
+
+  // Footnotes
+  .footnote {
+    font-size: 8pt;
+    color: $text-secondary !important;
+  }
+
+  // Hide web-only elements
+  .md-header,
+  .md-footer,
+  .md-sidebar,
+  .md-tabs,
+  .md-search,
+  .md-clipboard,
+  .md-source,
+  .headerlink,
+  [data-md-component="navigation"],
+  [data-md-component="toc"],
+  [data-md-component="search"] {
+    display: none !important;
+  }
+
+  // Print utilities
+  .no-print {
+    display: none !important;
+  }
+
+  .page-break {
+    page-break-after: always;
+  }
+
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .keep-together {
+    page-break-inside: avoid;
+  }
+}

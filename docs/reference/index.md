@@ -4,6 +4,12 @@
 
 ---
 
+## Module Types
+
+<!-- book:insert module-types-summary -->
+
+---
+
 ## Available Reference Documentation
 
 ### [Decision Records](decision-records/index.md)

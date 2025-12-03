@@ -26,6 +26,9 @@ func Validate() int {
 	case "--help", "-h":
 		printValidateUsage()
 		return 0
+	case "books":
+		// Handled by separate registrations in respective files
+		return 0
 	case "contracts":
 		// Handled by separate registrations in respective files
 		return 0
@@ -63,6 +66,7 @@ func printValidateUsage() {
 	log.Info("Usage: r2r validate <subcommand> [args...]")
 	log.Info("")
 	log.Info("Subcommands:")
+	log.Info("  books                     Validate books.yml configuration")
 	log.Info("  contracts                 Validate repository contracts against JSON schemas")
 	log.Info("  dependencies              Validate module dependency contracts")
 	log.Info("  test-tags                 Validate that all test tags are defined in the tag contract")
