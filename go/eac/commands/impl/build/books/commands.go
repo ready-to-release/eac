@@ -76,9 +76,14 @@ func (p *Preprocessor) runCommand(command string) (string, error) {
 		return "", fmt.Errorf("empty command")
 	}
 
-	// Run via r2r eac <command>
-	args := append([]string{"eac"}, parts...)
-	cmd := exec.Command("r2r", args...)
+	// Use pre-built commands binary from out/build/eac-commands
+	suffix := ""
+	if os.PathSeparator == '\\' {
+		suffix = ".exe"
+	}
+	cmdBinary := filepath.Join(p.workspaceRoot, "out", "build", "eac-commands", "commands"+suffix)
+
+	cmd := exec.Command(cmdBinary, parts...)
 	cmd.Dir = p.workspaceRoot
 
 	// Set environment to ensure consistent output
