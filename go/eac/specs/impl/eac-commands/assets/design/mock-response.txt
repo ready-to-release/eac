@@ -1,0 +1,13 @@
+workspace "test-module" "Test workspace" {
+    model {
+        user = person "User"
+        system = softwareSystem "test-module System"
+        user -> system "Uses"
+    }
+    views {
+        systemContext system "SystemContext" {
+            include *
+            autoLayout
+        }
+    }
+}

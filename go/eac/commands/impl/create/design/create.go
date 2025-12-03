@@ -206,11 +206,18 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 		return "", nil, fmt.Errorf("invalid command structure")
 	}
 
+	// Skip "create" and "design" tokens - start parsing from the module name
+	// Args structure: [... "create" "design" <module> <flags>...]
+	startPos := cmdPos + 1
+	if startPos < len(args) && args[startPos] == "design" {
+		startPos++ // Skip "design" subcommand token
+	}
+
 	// Parse flags and positional arguments
 	flags := &createFlags{}
 	var positionalArgs []string
 
-	for i := cmdPos + 1; i < len(args); i++ {
+	for i := startPos; i < len(args); i++ {
 		arg := args[i]
 
 		if arg == "--debug" || arg == "-d" {
@@ -238,7 +245,7 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 
 	// Validate we have a module name
 	if len(positionalArgs) == 0 {
-		return "", nil, fmt.Errorf("module name required\n\nUsage: design create <module>\nExample: design create r2r-cli")
+		return "", nil, fmt.Errorf("module name required\n\nUsage: create design <module>\nExample: create design r2r-cli")
 	}
 
 	return positionalArgs[0], flags, nil
@@ -400,12 +407,6 @@ func loadPrompt(config *DesignConfig) (string, error) {
 
 // generateAndValidate generates AI output with retry and validates with Structurizr CLI
 func generateAndValidate(config *DesignConfig, prompt string, out *design.Output, logger *logging.Logger) (string, error) {
-	// Check for mock AI response (for testing)
-	if mockResponse := GetMockAIResponse(); mockResponse != "" {
-		out.Progress("🤖 Using mock AI response (test mode)...")
-		return mockResponse, nil
-	}
-
 	// Load contract and anti-corruption rules for validator
 	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "0.1.0")
 

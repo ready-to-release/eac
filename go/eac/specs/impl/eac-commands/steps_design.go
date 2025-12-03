@@ -7,12 +7,15 @@ package srccommands
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cucumber/godog"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
+	"gopkg.in/yaml.v3"
 )
 
 // designContext holds Docker-related state for design tests.
@@ -26,7 +29,7 @@ type designContext struct {
 func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	dCtx := &designContext{}
 
-	// Setup/teardown
+	// Teardown
 	sc.After(func(goctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
 		if dCtx.dockerClient != nil {
 			dCtx.dockerClient.Close()
@@ -36,6 +39,12 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 
 	// Given steps - repository/module setup
 	sc.Step(`^a repository with AI configs at "([^"]*)"$`, func(path string) error {
+		return createAIContractFiles(ctx, path)
+	})
+	sc.Step(`^a module contract exists for "([^"]*)" at "([^"]*)"$`, func(module, sourcePath string) error {
+		return createModuleContract(ctx, module, sourcePath)
+	})
+	sc.Step(`^source code exists at "([^"]*)"$`, func(path string) error {
 		return internal.CreateDirectory(ctx, path)
 	})
 	sc.Step(`^module "([^"]*)" exists in "([^"]*)"$`, func(name, path string) error {
@@ -73,33 +82,28 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return nil
 	})
 
-	// Docker availability - Note: "docker service is available" is registered in steps_docs.go
-	// Design tests that need Docker should use the same step or be refactored
-
-	// Mock AI configuration
+	// Mock AI configuration - creates mock file in isolated directory for subprocess
 	sc.Step(`^the mock AI is configured to return a valid workspace$`, func() error {
-		dCtx.mockAIResponse = minimalWorkspaceDSL("test-module")
-		return nil
+		// Load mock from assets
+		mockContent, err := internal.LoadAsset(ctx, "design/mock-response.txt")
+		if err != nil {
+			return err
+		}
+		// Create mock file in isolated directory that AI executor will find
+		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
 	})
 	sc.Step(`^the mock AI is configured to return an updated workspace$`, func() error {
-		dCtx.mockAIResponse = minimalWorkspaceDSL("test-module") + "\n// Updated"
-		return nil
-	})
-
-	// Custom prompt
-	sc.Step(`^a custom prompt file at "([^"]*)"$`, func(path string) error {
-		return internal.CreateFile(ctx, path, "Custom design prompt content")
+		mockWorkspace := minimalWorkspaceDSL("test-module") + "\n// Updated"
+		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockWorkspace)
 	})
 
 	// Then steps - file verification
 	// Note: "the file ... should exist" is registered in internal/steps.go
 	sc.Step(`^a workspace file exists at "([^"]*)"$`, func(path string) error {
-		return internal.FileExists(ctx, path)
+		// Create the file (this is a Given step, not a Then step)
+		return internal.CreateFile(ctx, path, minimalWorkspaceDSL("test-module"))
 	})
 	// Note: "debug files should exist in" is registered in internal/steps.go
-	sc.Step(`^debug logs should show the custom prompt was used$`, func() error {
-		return internal.CustomPromptWasUsed(ctx, "design")
-	})
 	sc.Step(`^validation results should be written to "([^"]*)"$`, func(path string) error {
 		return internal.FileExists(ctx, path)
 	})
@@ -201,5 +205,116 @@ func minimalWorkspaceDSL(module string) string {
         }
     }
 }`, module, module)
+}
+
+// createModuleContract creates a minimal module contract for testing by appending to modules.yml.
+func createModuleContract(ctx *internal.TestContext, module, sourcePath string) error {
+	// Path to modules.yml in isolated environment
+	modulesYmlPath := filepath.Join(internal.ResolvePath(ctx, ""), ".r2r", "eac", "modules.yml")
+
+	// Read existing modules.yml
+	existingData, err := os.ReadFile(modulesYmlPath)
+	if err != nil {
+		return fmt.Errorf("failed to read modules.yml: %w", err)
+	}
+
+	// Parse existing YAML
+	var config map[string]interface{}
+	if err := yaml.Unmarshal(existingData, &config); err != nil {
+		return fmt.Errorf("failed to parse modules.yml: %w", err)
+	}
+
+	// Get modules array
+	modules, ok := config["modules"].([]interface{})
+	if !ok {
+		return fmt.Errorf("modules field is not an array")
+	}
+
+	// Append our test module
+	testModule := map[string]interface{}{
+		"moniker": module,
+		"name":    fmt.Sprintf("Test Module %s", module),
+		"type":    "go-module",
+		"description": "Test module for BDD tests",
+		"files": map[string]interface{}{
+			"root": sourcePath,
+		},
+	}
+	modules = append(modules, testModule)
+	config["modules"] = modules
+
+	// Marshal back to YAML
+	updatedData, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated modules.yml: %w", err)
+	}
+
+	// Write back to file
+	if err := os.WriteFile(modulesYmlPath, updatedData, 0644); err != nil {
+		return fmt.Errorf("failed to write updated modules.yml: %w", err)
+	}
+
+	return nil
+}
+
+// createAIContractFiles creates the minimal AI contract files needed for design command.
+func createAIContractFiles(ctx *internal.TestContext, configPath string) error {
+	// Ensure the directory exists
+	if err := internal.CreateDirectory(ctx, configPath); err != nil {
+		return err
+	}
+
+	// Create design.md (prompt file)
+	designMd := filepath.Join(configPath, "design.md")
+	designContent := `# Structurizr DSL Architecture Generation
+
+Generate a complete Structurizr DSL workspace.
+
+## Output Requirements
+
+1. Valid DSL
+2. Clean Format
+3. Complete Structure
+`
+	if err := internal.CreateFile(ctx, designMd, designContent); err != nil {
+		return err
+	}
+
+	// Create contract.yml
+	contractYml := filepath.Join(configPath, "contract.yml")
+	contractContent := `version: "0.1.0"
+name: "Structurizr DSL Architecture"
+description: "Formal contract"
+
+workspace_name_pattern: "^[A-Z][A-Za-z0-9 -]+$"
+identifier_pattern: "^[a-z][a-z0-9_]*$"
+
+required_elements:
+  - "workspace"
+  - "model"
+  - "views"
+`
+	if err := internal.CreateFile(ctx, contractYml, contractContent); err != nil {
+		return err
+	}
+
+	// Create anti-corruption.yml
+	antiCorruptionYml := filepath.Join(configPath, "anti-corruption.yml")
+	antiCorruptionContent := `version: "0.1.0"
+name: "Structurizr DSL Anti-Corruption Rules"
+
+forbidden_prefixes:
+  - "Here is"
+  - "I'll"
+
+forbidden_contains:
+  - "generating"
+
+forbidden_emojis:
+  - "🚀"
+
+agent_signatures: []
+`
+	return internal.CreateFile(ctx, antiCorruptionYml, antiCorruptionContent)
 }
 
