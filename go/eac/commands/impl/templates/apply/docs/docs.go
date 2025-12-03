@@ -125,44 +125,31 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 		log.Infof("Using local templates from %s", templateDir)
 		cleanup = func() {}
 	} else {
-		// Clone from Git repository
-		config.Logger.Info("Cloning templates from Git",
-			zap.String("url", defaultDocsRepoURL))
-		log.Infof("Cloning templates from %s...", defaultDocsRepoURL)
-
-		cloner := internal.NewGitCloner(defaultDocsRepoURL)
-		clonedDir, err := cloner.CloneToTemp()
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to clone repository: %w", err)
+		// Use local templates from appropriate root
+		var root string
+		if containerRoot := repository.GetContainerRoot(); containerRoot != "" {
+			// Running in container - use container root
+			root = containerRoot
+			config.Logger.Info("Running in container, using local templates",
+				zap.String("containerRoot", containerRoot))
+		} else {
+			// Not in container - use workspace root
+			root = config.WorkspaceRoot
+			config.Logger.Info("Using local templates from repository",
+				zap.String("workspaceRoot", root))
 		}
 
-		cleanup = func() {
-			if err := cloner.Cleanup(); err != nil {
-				config.Logger.Warn("Failed to cleanup temp directory", zap.Error(err))
-			}
-		}
+		templateDir = filepath.Join(root, defaultDocsSourcePath)
 
-		// Point to docs subdirectory
-		templateDir = filepath.Join(clonedDir, defaultDocsSourcePath)
-
-		// Verify subdirectory exists
+		// Verify directory exists
 		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			cleanup()
-			return "", nil, fmt.Errorf("template directory does not exist: %s in repository: %s",
-				defaultDocsSourcePath, defaultDocsRepoURL)
+			return "", nil, fmt.Errorf("template directory does not exist: %s", templateDir)
 		}
 
-		config.Logger.Debug("Templates cloned successfully",
-			zap.String("clonedDir", clonedDir),
-			zap.String("templateDir", templateDir))
-		log.Info("✓ Templates cloned successfully")
-
-		// Save debug info if enabled
-		if config.Debug {
-			writeDebugFile(config, "clone-info.txt", fmt.Sprintf(
-				"Cloned from: %s\nClone directory: %s\nTemplate directory: %s\n",
-				defaultDocsRepoURL, clonedDir, templateDir))
-		}
+		config.Logger.Debug("Local templates validated",
+			zap.String("dir", templateDir))
+		log.Infof("Using templates from %s", templateDir)
+		cleanup = func() {}
 	}
 
 	return templateDir, cleanup, nil

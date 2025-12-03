@@ -82,31 +82,33 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 
 	// Check if template is a Git repository URL or local path
 	if internal.IsGitRepository(config.TemplateSource) {
-		// Clone repository to temp directory
-		config.Logger.Info("Cloning templates from Git repository",
-			zap.String("url", config.TemplateSource))
-		log.Infof("Cloning templates from %s...", config.TemplateSource)
-
-		cloner := internal.NewGitCloner(config.TemplateSource)
-		clonedDir, err := cloner.CloneToTemp()
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to clone repository: %w", err)
+		// Git URL provided - use local templates from appropriate root
+		var root string
+		if containerRoot := repository.GetContainerRoot(); containerRoot != "" {
+			// Running in container - use container root
+			root = containerRoot
+			config.Logger.Info("Running in container, using local templates",
+				zap.String("containerRoot", containerRoot))
+		} else {
+			// Not in container - use workspace root
+			root = config.WorkspaceRoot
+			config.Logger.Info("Using local templates from repository",
+				zap.String("workspaceRoot", root))
 		}
 
-		// Point to the templates subdirectory within the cloned repository
-		templateDir = filepath.Join(clonedDir, "templates")
-		cleanup = func() {
-			if err := cloner.Cleanup(); err != nil {
-				config.Logger.Warn("Failed to cleanup temp directory", zap.Error(err))
-			}
+		templateDir = filepath.Join(root, "templates")
+
+		// Verify directory exists
+		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
+			return "", nil, fmt.Errorf("template directory does not exist: %s", templateDir)
 		}
 
-		config.Logger.Debug("Templates cloned successfully",
-			zap.String("clonedDir", clonedDir),
-			zap.String("templateDir", templateDir))
-		log.Info("✓ Templates cloned successfully\n")
+		config.Logger.Debug("Local templates validated",
+			zap.String("dir", templateDir))
+		log.Infof("Using templates from %s", templateDir)
+		cleanup = func() {}
 	} else {
-		// Use local directory
+		// Use local directory as specified
 		config.Logger.Info("Using local templates directory",
 			zap.String("path", config.TemplateSource))
 		templateDir = config.TemplateSource
