@@ -23,4 +23,4 @@ Feature: eac-commands_books_validation_edge_cases
       Given books.yml has inline source with command "nonexistent-command"
       When I run the command "validate books"
       Then the exit code is 1
-      And I should see "Unknown command" or "unknown"
+      And I should see "Unknown inline command" or "unknown command"

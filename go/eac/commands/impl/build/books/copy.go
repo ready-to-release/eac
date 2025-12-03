@@ -4,7 +4,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -86,11 +85,17 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 
 // calculateRelativePath calculates the relative path for a matched file
 func calculateRelativePath(matchPath, pattern, workspaceRoot string) (string, error) {
-	// Find the base directory of the pattern (everything before the first wildcard)
-	pattern = filepath.Join(workspaceRoot, pattern)
-	baseDir := pattern
-	for strings.Contains(filepath.Base(baseDir), "*") || strings.Contains(filepath.Base(baseDir), "?") {
-		baseDir = filepath.Dir(baseDir)
+	// Build full pattern path with forward slashes for doublestar
+	fullPattern := filepath.ToSlash(filepath.Join(workspaceRoot, pattern))
+
+	// Use doublestar.SplitPattern to find the base directory
+	// SplitPattern works with forward slashes
+	baseDir, _ := doublestar.SplitPattern(fullPattern)
+	if baseDir == "" || baseDir == "." {
+		baseDir = workspaceRoot
+	} else {
+		// Convert back to OS-specific path separators
+		baseDir = filepath.FromSlash(baseDir)
 	}
 
 	// Get relative path from base directory

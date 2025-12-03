@@ -123,10 +123,14 @@ func (p *Preprocessor) insertNavSections() error {
 func (p *Preprocessor) getSourcesForSection(section string) []config.Source {
 	var sources []config.Source
 
+	// Normalize section path (convert to forward slashes for comparison)
+	normalizedSection := filepath.ToSlash(section)
+
 	for _, src := range p.book.GetCommandSources() {
 		// Check if target is in this section
-		targetDir := filepath.Dir(src.Target)
-		if targetDir == section || strings.HasPrefix(targetDir, section+"/") {
+		// Normalize target dir to forward slashes for cross-platform comparison
+		targetDir := filepath.ToSlash(filepath.Dir(src.Target))
+		if targetDir == normalizedSection || strings.HasPrefix(targetDir, normalizedSection+"/") {
 			sources = append(sources, src)
 		}
 	}
