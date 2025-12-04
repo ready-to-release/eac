@@ -111,9 +111,18 @@ func parseConfig() (*Config, error) {
 		return nil, fmt.Errorf("file path required")
 	}
 
-	// Check file exists
-	if _, err := os.Stat(config.FilePath); os.IsNotExist(err) {
+	// Check file exists and is regular file
+	fileInfo, err := os.Stat(config.FilePath)
+	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("file not found: %s", config.FilePath)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("cannot access file: %w", err)
+	}
+
+	// Ensure it's a file, not a directory
+	if fileInfo.IsDir() {
+		return nil, fmt.Errorf("path is a directory, not a file: %s", config.FilePath)
 	}
 
 	return config, nil
@@ -213,7 +222,7 @@ func validateProfile(config *Config) *ValidationResult {
 					for k, id := range *ctrl.WithIds {
 						if !isValidControlID(id) {
 							result.Warnings = append(result.Warnings, ValidationError{
-								Field:   fmt.Sprintf("profile.imports[%d].include-controls[%d].with-ids[%k]", i, j, k),
+								Field:   fmt.Sprintf("profile.imports[%d].include-controls[%d].with-ids[%d]", i, j, k),
 								Message: fmt.Sprintf("control ID '%s' may not be valid NIST 800-53 format", id),
 							})
 						}
@@ -263,8 +272,13 @@ func isValidControlID(id string) bool {
 		}
 	}
 
-	// Number part should be numeric
-	for _, c := range parts[1] {
+	// Number part should be non-empty and numeric
+	number := parts[1]
+	if len(number) == 0 {
+		return false
+	}
+
+	for _, c := range number {
 		if c < '0' || c > '9' {
 			return false
 		}

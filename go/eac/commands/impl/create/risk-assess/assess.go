@@ -196,6 +196,7 @@ func parseAssessConfig() (*AssessConfig, error) {
 	config.WorkspaceRoot = workspaceRoot
 
 	// Collect positional arguments (module names) before flags
+	seen := make(map[string]bool)
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
@@ -203,6 +204,12 @@ func parseAssessConfig() (*AssessConfig, error) {
 		if strings.HasPrefix(arg, "-") {
 			break
 		}
+
+		// Check for duplicates
+		if seen[arg] {
+			return nil, fmt.Errorf("duplicate module specified: %s", arg)
+		}
+		seen[arg] = true
 
 		// Collect module name
 		config.Modules = append(config.Modules, arg)
@@ -236,6 +243,17 @@ func parseAssessConfig() (*AssessConfig, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid duration: %s", args[i+1])
 			}
+
+			// Validate duration is positive and reasonable
+			if duration <= 0 {
+				return nil, fmt.Errorf("--max-evidence-age must be positive")
+			}
+
+			const maxDuration = 30 * 24 * time.Hour // 30 days
+			if duration > maxDuration {
+				return nil, fmt.Errorf("--max-evidence-age too large (max: 30d)")
+			}
+
 			config.MaxEvidenceAge = duration
 			i += 2
 
@@ -267,13 +285,14 @@ func parseAssessConfig() (*AssessConfig, error) {
 		}
 	}
 
+	// Load registry to validate modules or discover all
+	registry, err := loadModuleRegistry(workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load modules: %w", err)
+	}
+
 	// If no modules specified, discover all modules
 	if len(config.Modules) == 0 {
-		registry, err := loadModuleRegistry(workspaceRoot)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load modules: %w", err)
-		}
-
 		allModules := registry.All()
 		for _, mod := range allModules {
 			config.Modules = append(config.Modules, mod.Moniker)
@@ -282,11 +301,52 @@ func parseAssessConfig() (*AssessConfig, error) {
 		if len(config.Modules) == 0 {
 			return nil, fmt.Errorf("no modules found in workspace")
 		}
+	} else {
+		// Validate that all specified modules exist
+		allModules := make(map[string]bool)
+		for _, mod := range registry.All() {
+			allModules[mod.Moniker] = true
+		}
+
+		var invalidModules []string
+		for _, moduleName := range config.Modules {
+			if !allModules[moduleName] {
+				invalidModules = append(invalidModules, moduleName)
+			}
+		}
+
+		if len(invalidModules) > 0 {
+			availableModules := make([]string, 0, len(allModules))
+			for mod := range allModules {
+				availableModules = append(availableModules, mod)
+			}
+			return nil, fmt.Errorf(`unknown module(s): %s
+
+Available modules:
+  %s
+
+Try:
+  - Check module name spelling
+  - List all modules: show modules
+  - View module contracts: cat .r2r/eac/modules.yml`,
+				strings.Join(invalidModules, ", "),
+				strings.Join(availableModules, ", "))
+		}
 	}
 
 	// Validate required flags
 	if config.ProfilePath == "" {
 		return nil, fmt.Errorf("--profile flag is required")
+	}
+
+	// Validate flag combinations
+	if config.SkipAutoRun {
+		if config.ForceTests {
+			return nil, fmt.Errorf("--skip-auto-run conflicts with --force-tests")
+		}
+		if config.ForceSecurity {
+			return nil, fmt.Errorf("--skip-auto-run conflicts with --force-security")
+		}
 	}
 
 	return config, nil

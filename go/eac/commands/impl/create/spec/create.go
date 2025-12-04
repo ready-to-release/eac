@@ -28,6 +28,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/ai"
 	"github.com/ready-to-release/eac/go/eac/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/specs"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
@@ -756,10 +757,14 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 		return "", fmt.Errorf("failed to load taxonomy: %w", err)
 	}
 
+	// Load available OSCAL controls for module (if profile exists)
+	availableControls := loadModuleControlsContext(config.TemplateRoot, config.Module)
+
 	// Build prompt with contract using Go templates
 	customData := map[string]string{
-		"TagsSpec":     string(tagsContent),
-		"TaxonomySpec": string(taxonomyContent),
+		"TagsSpec":          string(tagsContent),
+		"TaxonomySpec":      string(taxonomyContent),
+		"AvailableControls": availableControls,
 	}
 
 	promptTemplate, err := contracts.BuildPromptWithTemplate(
@@ -821,4 +826,83 @@ func stripAgentNoiseWithContract(output string, templateRoot string) string {
 
 	// Use generalized anti-corruption filter with "Feature:" as content start marker
 	return contracts.ApplyWithFallback(output, rules, "Feature:")
+}
+
+// loadModuleControlsContext loads OSCAL profile and formats controls for AI prompt
+func loadModuleControlsContext(workspaceRoot string, moduleName string) string {
+	// Only load if module is specified
+	if moduleName == "" {
+		return "(No module specified - control tags optional)"
+	}
+
+	// Get profile path for module
+	profilePath := filepath.Join(workspaceRoot, "specs", ".risk-controls", moduleName+".profile.json")
+
+	// Check if profile exists
+	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
+		return "(No risk profile found for this module - control tags optional)"
+	}
+
+	// Load profile
+	profile, err := oscal.LoadProfile(profilePath)
+	if err != nil {
+		log.Errorf("Warning: Failed to load profile for module %s: %v", moduleName, err)
+		return "(Failed to load risk profile - control tags optional)"
+	}
+
+	// Load catalog to get control descriptions
+	catalogPath := filepath.Join(workspaceRoot, "templates/specs/risk-catalog/controls.catalog.json")
+	catalog, err := oscal.LoadCatalog(catalogPath)
+	if err != nil {
+		log.Errorf("Warning: Failed to load catalog: %v", err)
+		return "(Failed to load control catalog - control tags optional)"
+	}
+
+	// Get control IDs from profile
+	controlIDs := oscal.GetControlIDsFromProfile(profile)
+	if len(controlIDs) == 0 {
+		return "(Profile contains no controls - control tags optional)"
+	}
+
+	// Format controls for AI prompt
+	var sb strings.Builder
+	sb.WriteString("This module has a risk profile with the following controls:\n\n")
+	sb.WriteString("| Control ID | Title | Description |\n")
+	sb.WriteString("|------------|-------|-------------|\n")
+
+	for _, controlID := range controlIDs {
+		control := oscal.GetControl(catalog, controlID)
+		if control != nil {
+			// Get title
+			title := control.Title
+			if title == "" {
+				title = "N/A"
+			}
+
+			// Get statement description
+			desc := oscal.GetControlStatement(control)
+			if desc == "" {
+				desc = "N/A"
+			}
+
+			// Truncate description for prompt
+			if len(desc) > 120 {
+				desc = desc[:117] + "..."
+			}
+
+			sb.WriteString(fmt.Sprintf("| `%s` | %s | %s |\n",
+				controlID, title, desc))
+		} else {
+			// Control not found in catalog
+			sb.WriteString(fmt.Sprintf("| `%s` | (Not found in catalog) | |\n", controlID))
+		}
+	}
+
+	sb.WriteString("\n**When to tag scenarios with these controls:**\n\n")
+	sb.WriteString("- If a scenario validates security, access control, or compliance behavior\n")
+	sb.WriteString("- Tag with `@control:<id>` if it provides evidence for that control\n")
+	sb.WriteString("- Tag with `@controls:<id1>,<id2>` if it covers multiple controls\n")
+	sb.WriteString("- Omit control tags for non-security scenarios\n")
+
+	return sb.String()
 }

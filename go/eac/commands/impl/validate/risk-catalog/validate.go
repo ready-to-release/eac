@@ -114,9 +114,18 @@ func parseConfig() (*Config, error) {
 		return nil, fmt.Errorf("file path required")
 	}
 
-	// Check file exists
-	if _, err := os.Stat(config.FilePath); os.IsNotExist(err) {
+	// Check file exists and is regular file
+	fileInfo, err := os.Stat(config.FilePath)
+	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("file not found: %s", config.FilePath)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("cannot access file: %w", err)
+	}
+
+	// Ensure it's a file, not a directory
+	if fileInfo.IsDir() {
+		return nil, fmt.Errorf("path is a directory, not a file: %s", config.FilePath)
 	}
 
 	return config, nil

@@ -1,12 +1,14 @@
 package oscal
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -77,9 +79,20 @@ func LoadCatalog(catalogPath string) (*oscalTypes.Catalog, error) {
 	return catalog, nil
 }
 
-// fetchCatalogFromURL fetches catalog JSON from a URL.
+// fetchCatalogFromURL fetches catalog JSON from a URL with timeout.
 func fetchCatalogFromURL(url string) ([]byte, error) {
-	resp, err := http.Get(url)
+	// Create context with 30 second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Create request with context
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Execute request
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
@@ -283,4 +296,55 @@ func addControlsFromGroup(group *oscalTypes.Group, controlMap map[string]*oscalT
 			addControlsFromGroup(&(*group.Groups)[i], controlMap)
 		}
 	}
+}
+
+// GetControl retrieves a single control by ID from the catalog
+func GetControl(catalog *oscalTypes.Catalog, controlID string) *oscalTypes.Control {
+	if catalog == nil {
+		return nil
+	}
+
+	normalizedID := strings.ToLower(controlID)
+
+	// Build control map
+	controlMap := make(map[string]*oscalTypes.Control)
+
+	// Add top-level controls
+	if catalog.Controls != nil {
+		for i := range *catalog.Controls {
+			control := &(*catalog.Controls)[i]
+			if control.ID != "" {
+				controlMap[strings.ToLower(control.ID)] = control
+			}
+		}
+	}
+
+	// Add controls from groups
+	if catalog.Groups != nil {
+		for i := range *catalog.Groups {
+			addControlsFromGroup(&(*catalog.Groups)[i], controlMap)
+		}
+	}
+
+	return controlMap[normalizedID]
+}
+
+// GetControlStatement extracts the statement prose from a control
+func GetControlStatement(control *oscalTypes.Control) string {
+	if control == nil || control.Parts == nil {
+		return ""
+	}
+
+	for _, part := range *control.Parts {
+		if part.Name == "statement" && part.Prose != "" {
+			return part.Prose
+		}
+	}
+
+	return ""
+}
+
+// CatalogHasControl checks if a control ID exists in the catalog
+func CatalogHasControl(catalog *oscalTypes.Catalog, controlID string) bool {
+	return GetControl(catalog, controlID) != nil
 }

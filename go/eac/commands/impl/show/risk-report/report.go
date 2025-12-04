@@ -93,8 +93,17 @@ func ShowRiskReport() int {
 	if len(arMap) == 0 {
 		log.Error("No assessment results found")
 		log.Error("")
-		log.Error("Run risk assessment first:")
-		log.Error("  create risk-assess <module>")
+		log.Error("You need to run risk assessment first.")
+		log.Error("")
+		log.Error("Steps:")
+		log.Error("  1. Create a risk profile:")
+		log.Error("     create risk-profile docs/security-assessment.md")
+		log.Error("")
+		log.Error("  2. Run risk assessment:")
+		log.Error("     create risk-assess --profile specs/.risk-controls/risk-profile.json")
+		log.Error("")
+		log.Error("  3. View the report:")
+		log.Error("     show risk-report")
 		return 1
 	}
 
@@ -324,8 +333,8 @@ func writeReportToFile(config *Config, content string) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Generate timestamped filename
-	timestamp := time.Now().Format("2006-01-02T15-04-05")
+	// Generate timestamped filename with milliseconds to prevent collisions
+	timestamp := time.Now().Format("2006-01-02T15-04-05.000")
 	var ext string
 	switch config.Format {
 	case "json":
@@ -377,7 +386,10 @@ func generateText(config *Config, report *AggregatedReport) string {
 	sb.WriteString("\n")
 
 	for _, module := range report.Modules {
-		riskStr := scoring.FormatRiskScore(module.RiskScore)
+		riskStr := "N/A"
+		if module.RiskScore != nil {
+			riskStr = scoring.FormatRiskScore(module.RiskScore)
+		}
 		sb.WriteString(fmt.Sprintf("  %-25s %d/%d satisfied    Risk: %s\n",
 			module.Module, module.Satisfied, module.Total, riskStr))
 		sb.WriteString(fmt.Sprintf("    Assessment: %s\n", module.AssessmentFile))
@@ -464,9 +476,15 @@ func generateMarkdown(config *Config, report *AggregatedReport) string {
 	sb.WriteString("|--------|-----------|-------|------------|----------|------------------|\n")
 
 	for _, module := range report.Modules {
+		score := 0
+		band := "N/A"
+		if module.RiskScore != nil {
+			score = module.RiskScore.Score
+			band = string(module.RiskScore.Band)
+		}
 		sb.WriteString(fmt.Sprintf("| %s | %d | %d | %d | %s | `%s` |\n",
 			module.Module, module.Satisfied, module.Total,
-			module.RiskScore.Score, module.RiskScore.Band, module.AssessmentFile))
+			score, band, module.AssessmentFile))
 	}
 	sb.WriteString("\n")
 
