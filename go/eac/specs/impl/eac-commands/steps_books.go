@@ -121,8 +121,9 @@ func booksCreateWithInlineCommand(ctx *internal.TestContext, cmd string) error {
 }
 
 // booksBuildOutputExists checks if a path exists in the build output.
+// Paths containing "/staging" are routed to out/staging/{module}/ instead of out/build/
 func booksBuildOutputExists(ctx *internal.TestContext, path string) error {
-	fullPath := filepath.Join(ctx.OriginalRepoRoot, "out", "build", path)
+	fullPath := resolveBuildPath(ctx.OriginalRepoRoot, path)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		return fmt.Errorf("build output not found: %s", fullPath)
 	}
@@ -133,9 +134,23 @@ func booksBuildOutputExists(ctx *internal.TestContext, path string) error {
 	return nil
 }
 
+// resolveBuildPath converts a test path to the actual filesystem path.
+// Paths like "docs/staging/..." are routed to out/staging/docs/...
+// Other paths go to out/build/...
+func resolveBuildPath(repoRoot, path string) string {
+	parts := strings.Split(filepath.ToSlash(path), "/")
+	if len(parts) >= 2 && parts[1] == "staging" {
+		// "docs/staging/foo" -> "out/staging/docs/foo"
+		module := parts[0]
+		rest := strings.Join(parts[2:], string(filepath.Separator))
+		return filepath.Join(repoRoot, "out", "staging", module, rest)
+	}
+	return filepath.Join(repoRoot, "out", "build", path)
+}
+
 // booksBuildOutputContains checks if a file in build output contains expected content.
 func booksBuildOutputContains(ctx *internal.TestContext, path, content string) error {
-	fullPath := filepath.Join(ctx.OriginalRepoRoot, "out", "build", path)
+	fullPath := resolveBuildPath(ctx.OriginalRepoRoot, path)
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		return fmt.Errorf("failed to read build output %s: %w", path, err)
@@ -149,7 +164,7 @@ func booksBuildOutputContains(ctx *internal.TestContext, path, content string) e
 
 // booksBuildOutputHasFiles checks if a directory contains files matching a pattern.
 func booksBuildOutputHasFiles(ctx *internal.TestContext, dir, pattern string) error {
-	fullDir := filepath.Join(ctx.OriginalRepoRoot, "out", "build", dir)
+	fullDir := resolveBuildPath(ctx.OriginalRepoRoot, dir)
 	fullPattern := filepath.Join(fullDir, pattern)
 
 	matches, err := doublestar.FilepathGlob(fullPattern)
@@ -164,7 +179,7 @@ func booksBuildOutputHasFiles(ctx *internal.TestContext, dir, pattern string) er
 
 // booksBuildOutputDirExists checks if a directory exists in build output.
 func booksBuildOutputDirExists(ctx *internal.TestContext, path string) error {
-	fullPath := filepath.Join(ctx.OriginalRepoRoot, "out", "build", path)
+	fullPath := resolveBuildPath(ctx.OriginalRepoRoot, path)
 	info, err := os.Stat(fullPath)
 	if err != nil {
 		return fmt.Errorf("directory not found: %s", fullPath)

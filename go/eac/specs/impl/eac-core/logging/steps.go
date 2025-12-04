@@ -42,9 +42,9 @@ func resetLoggingContext() {
 			l.Sync()
 		}
 	}
-	// Clean up temp directory
+	// Clean up only log files created by tests (not the entire out directory)
 	if logCtx.workspaceRoot != "" {
-		os.RemoveAll(filepath.Join(logCtx.workspaceRoot, "out"))
+		os.RemoveAll(filepath.Join(logCtx.workspaceRoot, "out", "logs"))
 	}
 	logCtx = loggingContext{
 		loggers: make(map[string]*logging.Logger),

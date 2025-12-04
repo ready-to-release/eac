@@ -293,9 +293,16 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version, pdfMode, pdfTheme)
 	}
 
-	// Create and run orchestrator
+	// Calculate execution order based on dependencies
+	executionPlan, err := repository.CalculateExecutionOrder(monikers, workspaceRoot)
+	if err != nil {
+		log.Errorf("Failed to calculate execution order: %v", err)
+		return 1
+	}
+
+	// Create and run orchestrator with layered execution
 	orch := orchestrator.New(orchConfig, worker)
-	results, err := orch.Run(monikers)
+	results, err := orch.RunLayered(executionPlan.Layers)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1

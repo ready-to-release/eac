@@ -14,6 +14,7 @@ mkdocs-mermaid2-plugin>=1.1.0
 # PDF generation
 mkdocs-with-pdf>=0.9.3
 weasyprint>=60.0
+libsass>=0.23.0  # SCSS compilation for custom PDF templates
 
 # Mermaid to SVG (server-side rendering for PDF)
 mkdocs-mermaid-to-svg

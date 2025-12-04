@@ -3,6 +3,7 @@ package repository
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -77,6 +78,9 @@ const (
 
 	// OutSecurityRelPath is the relative path from repo root to security output
 	OutSecurityRelPath = OutDir + "/" + SecurityDir
+
+	// EACCommandsModule is the module name for the EAC commands binary
+	EACCommandsModule = "eac-commands"
 )
 
 // Path builder functions for common paths
@@ -85,6 +89,41 @@ const (
 // Example: out/build/r2r-cli
 func BuildOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker)
+}
+
+// CommandsBinaryPath returns the full path to the pre-built eac-commands binary.
+// This is THE canonical way to locate the commands binary for execution.
+//
+// When running in a container (R2R_CONTAINER_ROOT is set), uses the container's
+// internal path (e.g., /app/out/build/eac-commands/commands) where the binary
+// was pre-built during container image creation.
+//
+// When running locally, uses the repo root's build output directory
+// (e.g., out/build/eac-commands/commands.exe on Windows).
+//
+// Usage:
+//
+//	binaryPath := repository.CommandsBinaryPath(repoRoot)
+//	cmd := exec.Command(binaryPath, "show", "modules")
+func CommandsBinaryPath(repoRoot string) string {
+	binaryName := "commands"
+	if runtime.GOOS == "windows" {
+		binaryName = "commands.exe"
+	}
+
+	// Use container root if running in container, otherwise use repo root
+	effectiveRoot := GetEffectiveRoot(repoRoot)
+	return filepath.Join(effectiveRoot, OutDir, BuildDir, EACCommandsModule, binaryName)
+}
+
+// CommandsBinaryExists checks if the commands binary exists at the expected path.
+// Returns the path and true if it exists, empty string and false otherwise.
+func CommandsBinaryExists(repoRoot string) (string, bool) {
+	binaryPath := CommandsBinaryPath(repoRoot)
+	if _, err := os.Stat(binaryPath); err == nil {
+		return binaryPath, true
+	}
+	return "", false
 }
 
 // SpecsPath returns the path to a module's specs directory

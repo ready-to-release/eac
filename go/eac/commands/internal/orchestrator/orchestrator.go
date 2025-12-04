@@ -37,6 +37,96 @@ func New(config Config, worker WorkerFunc) *Orchestrator {
 	}
 }
 
+// RunLayered executes modules in dependency layers - layers run sequentially, modules within a layer run in parallel
+func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
+	// Flatten layers to get total count
+	var allMonikers []string
+	for _, layer := range layers {
+		allMonikers = append(allMonikers, layer...)
+	}
+
+	// Create orchestrator log file
+	orchestratorLogPath := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, o.config.OrchestratorLogName)
+	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create orchestrator log directory: %w", err)
+	}
+
+	orchestratorLog, err := os.Create(orchestratorLogPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create orchestrator log: %w", err)
+	}
+	o.logFile = orchestratorLog
+
+	// Create a goroutine-safe logger
+	multiWriter := io.MultiWriter(os.Stdout, orchestratorLog)
+	o.logger = log.New(multiWriter, "", 0)
+	o.orchestratorOut = multiWriter
+
+	// Print header with layer info
+	fmt.Fprintf(o.orchestratorOut, "%s %d modules in %d layer(s)%s%s",
+		capitalize(o.config.ActionVerb), len(allMonikers), len(layers), LineEnding, LineEnding)
+
+	// Create and start display manager
+	o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allMonikers), o.config.StatusUpdateInterval)
+	o.display.start()
+
+	// Execute layers sequentially
+	allResults := make([]WorkResult, len(allMonikers))
+	globalIndex := 0
+
+	for layerIdx, layerMonikers := range layers {
+		if len(layerMonikers) == 0 {
+			continue
+		}
+
+		fmt.Fprintf(o.orchestratorOut, "Layer %d: %s%s", layerIdx+1, formatMonikerList(layerMonikers), LineEnding)
+
+		// Create work items for this layer with local indices (0-based within layer)
+		workItems := make([]WorkItem, len(layerMonikers))
+		for i, moniker := range layerMonikers {
+			workItems[i] = WorkItem{
+				Moniker: moniker,
+				Index:   i, // Local index within this layer's results
+			}
+		}
+
+		// Execute this layer in parallel
+		layerResults := o.executeParallel(workItems)
+
+		// Copy layer results to all results at the correct global offset
+		for i, result := range layerResults {
+			result.Index = globalIndex + i // Update to global index
+			allResults[globalIndex+i] = result
+		}
+
+		// Check if any module in this layer failed - stop if so
+		for _, result := range layerResults {
+			if result.ExitCode != 0 {
+				// Stop display and return early with results up to this point
+				o.display.stop()
+				o.display.flushCompletedLines()
+				return allResults[:globalIndex+len(layerMonikers)], nil
+			}
+		}
+
+		globalIndex += len(layerMonikers)
+	}
+
+	// Stop display manager and flush all collected completion lines
+	o.display.stop()
+	o.display.flushCompletedLines()
+
+	return allResults, nil
+}
+
+// formatMonikerList formats a list of monikers for display
+func formatMonikerList(monikers []string) string {
+	if len(monikers) <= 5 {
+		return fmt.Sprintf("%v", monikers)
+	}
+	return fmt.Sprintf("%v... (%d total)", monikers[:5], len(monikers))
+}
+
 // Run executes all work items in parallel and returns the results
 func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 	// Create orchestrator log file
