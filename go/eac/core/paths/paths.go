@@ -34,6 +34,9 @@ const (
 	// RiskControlsDir is the subdirectory under SpecsDir for OSCAL profiles
 	RiskControlsDir = ".risk-controls"
 
+	// ToolsDir is the subdirectory under OutDir for CI tools (not build outputs)
+	ToolsDir = "tools"
+
 	// SpecsDir is the root directory for specifications (Gherkin, Structurizr)
 	SpecsDir = "specs"
 
@@ -99,14 +102,55 @@ func BuildOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker)
 }
 
-// CommandsBinaryPath returns the full path to the pre-built eac-commands binary
+// CommandsBinaryPath returns the full path to the pre-built eac-commands binary.
+// This is THE canonical way to locate the commands binary for execution.
+//
+// When running in a container (R2R_CONTAINER_ROOT is set), uses the container's
+// internal path (e.g., /app/out/tools/commands) where the binary
+// was pre-built during container image creation.
+//
+// When running locally, uses the repo root's tools output directory
+// (e.g., out/tools/commands.exe on Windows).
+//
+// The commands binary is stored in out/tools/ (not out/build/) because it's a
+// CI tool used to create builds, not a build output itself. This separation
+// ensures the tool binary isn't confused with or overwritten by module build outputs.
+//
+// Path Configuration:
+// The tools directory path is defined in .r2r/eac/repository.yml under paths.out.tools.
+// The default value "out/tools" is also defined as the ToolsDir constant in this package.
+// GitHub Actions and Dockerfile must use this same path - they cannot read the config
+// dynamically, so if the path changes, all locations must be updated together:
+//   - .r2r/eac/repository.yml (paths.out.tools)
+//   - go/eac/core/paths/paths.go (ToolsDir constant)
+//   - .github/actions/setup-commands/action.yaml
+//   - containers/ext-eac/Dockerfile
+//
+// Usage:
+//
+//	binaryPath := paths.CommandsBinaryPath(repoRoot)
+//	cmd := exec.Command(binaryPath, "show", "modules")
 func CommandsBinaryPath(repoRoot string) string {
+	return CommandsBinaryPathWithToolsDir(repoRoot, "")
+}
+
+// CommandsBinaryPathWithToolsDir returns the full path to the commands binary,
+// allowing the tools directory to be specified explicitly.
+// If toolsDir is empty, uses the default ToolsDir constant.
+// This variant is useful when the caller has access to configuration.
+func CommandsBinaryPathWithToolsDir(repoRoot string, toolsDir string) string {
 	binaryName := "commands"
 	if runtime.GOOS == "windows" {
 		binaryName = "commands.exe"
 	}
+
+	if toolsDir == "" {
+		toolsDir = filepath.Join(OutDir, ToolsDir)
+	}
+
+	// Use container root if running in container, otherwise use repo root
 	effectiveRoot := GetEffectiveRoot(repoRoot)
-	return filepath.Join(effectiveRoot, OutDir, BuildDir, EACCommandsModule, binaryName)
+	return filepath.Join(effectiveRoot, toolsDir, binaryName)
 }
 
 // CommandsBinaryExists checks if the commands binary exists at the expected path
