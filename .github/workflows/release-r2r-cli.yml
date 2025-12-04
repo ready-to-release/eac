@@ -53,37 +53,18 @@ jobs:
 
       - name: Extract and validate version
         id: extract_version
+        uses: ./.github/actions/extract-release-version
+        with:
+          module-prefix: r2r-cli
+          legacy-prefixes: src-cli
+          commands-path: ${{ steps.commands.outputs.commands-path }}
+
+      - name: Verify version is valid
+        if: steps.extract_version.outputs.is_valid != 'true'
         run: |
-          # Determine version based on trigger type
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-            TAG_NAME="r2r-cli/$VERSION"
-            echo "Manual trigger with version: $VERSION"
-          else
-            TAG_NAME="${GITHUB_REF#refs/tags/}"
-            # Handle both r2r-cli/* and legacy src-cli/* tag formats
-            VERSION="${TAG_NAME#r2r-cli/}"
-            VERSION="${VERSION#src-cli/}"
-            echo "Tag trigger with version: $VERSION"
-          fi
-
-          # Validate semver format (x.y.z where x, y, z are non-negative integers)
-          if ! echo "$VERSION" | grep -E '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' > /dev/null; then
-            echo "Error: Invalid semver format: $VERSION"
-            echo "Expected format: x.y.z (e.g., 1.0.0)"
-            exit 1
-          fi
-
-          # Reject versions with 'v' prefix
-          if echo "$VERSION" | grep -E '^v' > /dev/null; then
-            echo "Error: Version should not have 'v' prefix: $VERSION"
-            echo "Use x.y.z format (e.g., 1.0.0 not v1.0.0)"
-            exit 1
-          fi
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "✅ Valid semver: $VERSION"
+          echo "Error: Invalid version format: ${{ steps.extract_version.outputs.version }}"
+          echo "Expected format: x.y.z (e.g., 1.0.0)"
+          exit 1
 
       - name: Check for existing release
         run: |
@@ -340,7 +321,7 @@ jobs:
           echo "| Version Input | \`${{ github.event.inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          $COMMANDS ci summary-link ${{ github.run_id }} --type release --workflow ci-r2r-cli.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-r2r-cli.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
         env:
           GH_TOKEN: ${{ github.token }}
 

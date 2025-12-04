@@ -77,10 +77,14 @@ Consider a typical regulated software release:
 
 ```mermaid
 flowchart LR
-    A[Development] --> B[Manual testing] --> C[Documentation]
-    C --> D[Quality review] --> E[Validation testing]
-    E --> F[Compliance review] --> G[Audit trail]
-    G --> H[Approval] --> I[Deployment]
+    A[Development] --> B[Manual testing]
+    B --> C[Documentation]
+    C --> D[Quality review]
+    D --> E[Validation testing]
+    E --> F[Compliance review]
+    F --> G[Audit trail]
+    G --> H[Approval]
+    H --> I[Deployment]
 ```
 
 **Timeline:** 6-12 weeks

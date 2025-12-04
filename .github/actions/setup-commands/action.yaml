@@ -1,41 +1,102 @@
 name: Setup EAC Commands
-description: Build or restore the EAC commands binary with caching
+description: Get the EAC commands binary - download from trigger workflow or build from source
 
 inputs:
   go-version:
-    description: Go version to use
+    description: Go version to use if building from source
     default: '1.24'
+  trigger-run-id:
+    description: |
+      Run ID of the trigger workflow to download artifact from.
+      On Linux/macOS: artifact MUST exist (fails if not found).
+      On Windows: tries Windows artifact first, falls back to building from source
+      if only Linux artifact exists (cross-platform CI support).
+      If empty, builds from source.
+    default: ''
 
 outputs:
   commands-path:
     description: Absolute path to the commands binary
-    value: ${{ steps.setup.outputs.path }}
-  cache-hit:
-    description: Whether the binary was restored from cache
-    value: ${{ steps.cache.outputs.cache-hit }}
+    value: ${{ steps.setup.outputs.path || steps.setup-windows.outputs.path }}
+  source:
+    description: How the binary was obtained (artifact or built)
+    value: ${{ steps.setup.outputs.source || steps.setup-windows.outputs.source }}
 
 runs:
   using: composite
   steps:
-    - name: Calculate cache key
-      id: cache-key
+    # When trigger-run-id is provided, download from that specific run
+    # On Windows, try Windows-specific artifact first
+    - name: Download from trigger workflow (Windows)
+      id: download-trigger-windows
+      if: inputs.trigger-run-id != '' && runner.os == 'Windows'
+      uses: actions/download-artifact@v4
+      with:
+        name: commands-binary-windows
+        path: out/build/eac-commands
+        github-token: ${{ github.token }}
+        run-id: ${{ inputs.trigger-run-id }}
+      continue-on-error: true
+
+    # On Linux/macOS, or if Windows artifact doesn't exist, try standard artifact
+    - name: Download from trigger workflow
+      id: download-trigger
+      if: inputs.trigger-run-id != '' && (runner.os != 'Windows' || steps.download-trigger-windows.outcome == 'failure')
+      uses: actions/download-artifact@v4
+      with:
+        name: commands-binary
+        path: out/build/eac-commands
+        github-token: ${{ github.token }}
+        run-id: ${{ inputs.trigger-run-id }}
+      continue-on-error: ${{ runner.os == 'Windows' }}
+
+    # When no trigger-run-id, try downloading from current run (for multi-job workflows)
+    - name: Download from current run
+      id: download-current
+      if: inputs.trigger-run-id == ''
+      uses: actions/download-artifact@v4
+      with:
+        name: commands-binary
+        path: out/build/eac-commands
+      continue-on-error: true
+
+    - name: Check binary availability (Linux/macOS)
+      id: check
+      if: runner.os != 'Windows'
       shell: bash
       run: |
-        # Hash all Go source files that affect the commands binary
-        HASH=$(find go/eac -name '*.go' -type f | sort | xargs cat | sha256sum | cut -d' ' -f1)
-        echo "hash=$HASH" >> $GITHUB_OUTPUT
-        echo "key=commands-binary-linux-$HASH" >> $GITHUB_OUTPUT
+        if [ -f "out/build/eac-commands/commands" ]; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ Commands binary available"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
 
-    - name: Restore cached binary
-      id: cache
-      uses: actions/cache@v4
-      with:
-        path: out/build/eac-commands/commands
-        key: ${{ steps.cache-key.outputs.key }}
+          # If trigger-run-id was provided, artifact MUST exist
+          if [ -n "${{ inputs.trigger-run-id }}" ]; then
+            echo "::error::Commands artifact not found in trigger workflow run ${{ inputs.trigger-run-id }}"
+            exit 1
+          fi
 
-    # Only setup Go if we need to build (cache miss)
+          echo "Commands binary not available, will build from source"
+        fi
+
+    - name: Check binary availability (Windows)
+      id: check-windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (Test-Path "out/build/eac-commands/commands.exe") {
+          echo "available=true" >> $env:GITHUB_OUTPUT
+          Write-Host "✓ Commands binary available"
+        } else {
+          echo "available=false" >> $env:GITHUB_OUTPUT
+          # On Windows, if trigger-run-id was provided but no Windows artifact exists,
+          # the trigger was Linux-only. Fall back to building from source.
+          Write-Host "Commands binary not available, will build from source"
+        }
+
     - name: Setup Go
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: (runner.os != 'Windows' && steps.check.outputs.available != 'true') || (runner.os == 'Windows' && steps.check-windows.outputs.available != 'true')
       uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.go-version }}
@@ -43,18 +104,79 @@ runs:
           go/eac/commands/go.sum
           go/eac/core/go.sum
 
-    - name: Build commands binary
-      if: steps.cache.outputs.cache-hit != 'true'
+    - name: Build from source (Linux/macOS)
+      if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
       shell: bash
       run: |
+        echo "Building commands binary from source..."
         mkdir -p out/build/eac-commands
         cd go/eac/commands
         go build -o ../../../out/build/eac-commands/commands .
-        echo "Built commands binary from source"
+        echo "✓ Commands binary built"
 
-    - name: Set output
+    - name: Build from source (Windows)
+      if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true'
+      shell: pwsh
+      run: |
+        Write-Host "Building commands binary from source..."
+        New-Item -ItemType Directory -Force -Path out/build/eac-commands | Out-Null
+        Set-Location go/eac/commands
+        go build -o ../../../out/build/eac-commands/commands.exe .
+        Write-Host "✓ Commands binary built"
+
+    - name: Upload artifact (for downstream jobs, Linux/macOS)
+      if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: commands-binary
+        path: out/build/eac-commands/commands
+        if-no-files-found: error
+
+    - name: Upload artifact (for downstream jobs, Windows)
+      if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: commands-binary-windows
+        path: out/build/eac-commands/commands.exe
+        if-no-files-found: error
+
+    - name: Set output (Linux/macOS)
       id: setup
+      if: runner.os != 'Windows'
       shell: bash
       run: |
-        chmod +x out/build/eac-commands/commands
-        echo "path=$GITHUB_WORKSPACE/out/build/eac-commands/commands" >> $GITHUB_OUTPUT
+        BINARY_PATH="out/build/eac-commands/commands"
+
+        if [ ! -f "$BINARY_PATH" ]; then
+          echo "::error::Commands binary not found at $BINARY_PATH"
+          exit 1
+        fi
+
+        chmod +x "$BINARY_PATH"
+        echo "path=$GITHUB_WORKSPACE/$BINARY_PATH" >> $GITHUB_OUTPUT
+
+        if [ "${{ steps.check.outputs.available }}" = "true" ]; then
+          echo "source=artifact" >> $GITHUB_OUTPUT
+        else
+          echo "source=built" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Set output (Windows)
+      id: setup-windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $BINARY_PATH = "out\build\eac-commands\commands.exe"
+
+        if (-not (Test-Path $BINARY_PATH)) {
+          Write-Host "::error::Commands binary not found at $BINARY_PATH"
+          exit 1
+        }
+
+        echo "path=$env:GITHUB_WORKSPACE\$BINARY_PATH" >> $env:GITHUB_OUTPUT
+
+        if ("${{ steps.check-windows.outputs.available }}" -eq "true") {
+          echo "source=artifact" >> $env:GITHUB_OUTPUT
+        } else {
+          echo "source=built" >> $env:GITHUB_OUTPUT
+        }

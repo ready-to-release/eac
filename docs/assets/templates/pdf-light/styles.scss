@@ -1,0 +1,360 @@
+// PDF-specific styles for mkdocs-with-pdf
+// Light theme - optimized for printing on paper
+//
+// Note: This file MUST be named styles.scss (or styles.css) for the
+// mkdocs-with-pdf plugin to find it in custom_template_path
+
+// =============================================================================
+// Color Variables
+// =============================================================================
+
+$bg-primary: #ffffff;
+$bg-secondary: #f6f8fa;
+$bg-tertiary: #f0f0f0;
+$text-primary: #24292f;
+$text-secondary: #57606a;
+$text-muted: #8c959f;
+$border-color: #d0d7de;
+$accent-color: #0969da;
+$accent-purple: #8250df;
+
+// =============================================================================
+// Page Layout
+// =============================================================================
+
+@page {
+  size: A4;
+  margin: 2cm 1.5cm;
+
+  @top-center {
+    content: string(chapter);
+    font-size: 9pt;
+    color: $text-secondary;
+  }
+
+  @bottom-center {
+    content: counter(page);
+    font-size: 9pt;
+    color: $text-secondary;
+  }
+}
+
+@page :first {
+  @top-center { content: none; }
+  @bottom-center { content: none; }
+}
+
+// =============================================================================
+// Base styles
+// =============================================================================
+
+html, body {
+  background-color: $bg-primary;
+  color: $text-primary;
+}
+
+body {
+  font-family: "Nobo", "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+// =============================================================================
+// Typography
+// =============================================================================
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Nobo", "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
+  font-weight: bold;
+  color: $text-primary;
+  page-break-after: avoid;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+h1 {
+  font-size: 24pt;
+  border-bottom: 2px solid $accent-color;
+  padding-bottom: 0.3em;
+  string-set: chapter content();
+}
+
+h2 {
+  font-size: 18pt;
+  border-bottom: 1px solid $border-color;
+  padding-bottom: 0.2em;
+}
+
+h3 { font-size: 14pt; }
+h4 { font-size: 12pt; }
+h5 { font-size: 11pt; }
+h6 { font-size: 10pt; }
+
+p {
+  margin: 0.5em 0;
+  text-align: justify;
+  orphans: 3;
+  widows: 3;
+}
+
+// =============================================================================
+// Links
+// =============================================================================
+
+a {
+  color: $accent-color;
+  text-decoration: none;
+}
+
+a[href^="http"]::after {
+  content: " (" attr(href) ")";
+  font-size: 8pt;
+  color: $text-secondary;
+  word-break: break-all;
+}
+
+a[href^="#"]::after,
+a[href^="/"]::after {
+  content: none;
+}
+
+// =============================================================================
+// Code Blocks
+// =============================================================================
+
+code, pre {
+  font-family: "Nobo", "Liberation Mono", "DejaVu Sans Mono", monospace;
+  font-size: 9pt;
+}
+
+code {
+  background-color: $bg-secondary;
+  color: $text-primary;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+pre {
+  background-color: $bg-secondary;
+  border: 1px solid $border-color;
+  border-radius: 4px;
+  padding: 1em;
+  overflow-x: auto;
+  page-break-inside: avoid;
+
+  code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+  }
+}
+
+// Syntax highlighting - GitHub light theme
+.highlight {
+  .k, .kd, .kn, .kp, .kr, .kt { color: #cf222e; font-weight: bold; }
+  .s, .s1, .s2, .sb, .sc, .sd, .se, .sh, .si, .sx, .sr, .ss { color: #0a3069; }
+  .c, .c1, .cm, .cp, .cs { color: #6e7781; font-style: italic; }
+  .m, .mf, .mh, .mi, .mo { color: #0550ae; }
+  .na, .nb, .nc, .nd, .ne, .nf, .ni, .nl, .nn, .nt, .nv { color: #8250df; }
+  .o, .ow { color: #cf222e; }
+}
+
+// =============================================================================
+// Tables
+// =============================================================================
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  page-break-inside: avoid;
+  font-size: 9pt;
+}
+
+th, td {
+  border: 1px solid $border-color;
+  padding: 0.5em;
+  text-align: left;
+}
+
+th {
+  background-color: $bg-secondary;
+  color: $text-primary;
+  font-weight: bold;
+}
+
+tr:nth-child(even) {
+  background-color: $bg-secondary;
+}
+
+// =============================================================================
+// Admonitions
+// =============================================================================
+
+.admonition {
+  margin: 1em 0;
+  padding: 1em;
+  border-left: 4px solid $accent-color;
+  background-color: $bg-secondary;
+  page-break-inside: avoid;
+
+  .admonition-title {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+    color: $accent-color;
+  }
+}
+
+.admonition.note {
+  border-left-color: #0969da;
+  background-color: rgba(9, 105, 218, 0.08);
+  .admonition-title { color: #0969da; }
+}
+
+.admonition.tip, .admonition.hint {
+  border-left-color: #1a7f37;
+  background-color: rgba(26, 127, 55, 0.08);
+  .admonition-title { color: #1a7f37; }
+}
+
+.admonition.warning, .admonition.caution, .admonition.attention {
+  border-left-color: #9a6700;
+  background-color: rgba(154, 103, 0, 0.08);
+  .admonition-title { color: #9a6700; }
+}
+
+.admonition.danger, .admonition.error {
+  border-left-color: #cf222e;
+  background-color: rgba(207, 34, 46, 0.08);
+  .admonition-title { color: #cf222e; }
+}
+
+.admonition.info {
+  border-left-color: #0969da;
+  background-color: rgba(9, 105, 218, 0.08);
+  .admonition-title { color: #0969da; }
+}
+
+// =============================================================================
+// Lists
+// =============================================================================
+
+ul, ol {
+  margin: 0.5em 0;
+  padding-left: 2em;
+}
+
+li {
+  margin: 0.25em 0;
+}
+
+// =============================================================================
+// Images
+// =============================================================================
+
+img {
+  max-width: 100%;
+  height: auto;
+  page-break-inside: avoid;
+}
+
+figure {
+  margin: 1em 0;
+  text-align: center;
+  page-break-inside: avoid;
+
+  figcaption {
+    font-size: 9pt;
+    color: $text-secondary;
+    font-style: italic;
+    margin-top: 0.5em;
+  }
+}
+
+// =============================================================================
+// Blockquotes
+// =============================================================================
+
+blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid $border-color;
+  color: $text-secondary;
+  font-style: italic;
+  background-color: $bg-secondary;
+}
+
+// =============================================================================
+// Table of Contents
+// =============================================================================
+
+.md-nav {
+  font-size: 10pt;
+
+  a {
+    color: $text-primary;
+    text-decoration: none;
+  }
+
+  .md-nav__item {
+    margin: 0.25em 0;
+  }
+}
+
+// =============================================================================
+// Cover Page
+// =============================================================================
+
+#doc-cover {
+  text-align: center;
+  page-break-after: always;
+}
+
+// =============================================================================
+// Footnotes
+// =============================================================================
+
+.footnote {
+  font-size: 8pt;
+  color: $text-secondary;
+}
+
+// =============================================================================
+// Hide web-only elements
+// =============================================================================
+
+.md-header,
+.md-footer,
+.md-sidebar,
+.md-tabs,
+.md-search,
+.md-clipboard,
+.md-source,
+.headerlink,
+[data-md-component="navigation"],
+[data-md-component="toc"],
+[data-md-component="search"] {
+  display: none !important;
+}
+
+// =============================================================================
+// Print utilities
+// =============================================================================
+
+.no-print {
+  display: none !important;
+}
+
+.page-break {
+  page-break-after: always;
+}
+
+.page-break-before {
+  page-break-before: always;
+}
+
+.keep-together {
+  page-break-inside: avoid;
+}

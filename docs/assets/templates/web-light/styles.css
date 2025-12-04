@@ -1,0 +1,242 @@
+/* Light mode customizations for Ready-to-Release Documentation
+ * Extends Material theme default scheme for GitHub Pages
+ * Applied when light mode is active
+ */
+
+/* =============================================================================
+ * Color Variables (CSS Custom Properties)
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] {
+  /* Font */
+  --md-text-font: "Nobo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --md-code-font: "Nobo", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Primary brand colors */
+  --md-primary-fg-color: #3f51b5;
+  --md-primary-bg-color: #ffffff;
+
+  /* Accent colors */
+  --md-accent-fg-color: #536dfe;
+
+  /* Background colors */
+  --md-default-bg-color: #ffffff;
+  --md-code-bg-color: #f6f8fa;
+
+  /* Text colors */
+  --md-default-fg-color: #24292f;
+  --md-default-fg-color--light: #57606a;
+  --md-default-fg-color--lighter: #8c959f;
+}
+
+/* =============================================================================
+ * Code Blocks
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] .highlight,
+[data-md-color-scheme="default"] pre {
+  background-color: var(--md-code-bg-color);
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+}
+
+[data-md-color-scheme="default"] code {
+  background-color: rgba(175, 184, 193, 0.2);
+  border-radius: 4px;
+  padding: 0.2em 0.4em;
+}
+
+/* Syntax highlighting - GitHub light theme inspired */
+[data-md-color-scheme="default"] .highlight .k,
+[data-md-color-scheme="default"] .highlight .kd,
+[data-md-color-scheme="default"] .highlight .kn,
+[data-md-color-scheme="default"] .highlight .kp,
+[data-md-color-scheme="default"] .highlight .kr,
+[data-md-color-scheme="default"] .highlight .kt { color: #cf222e; } /* Keywords */
+
+[data-md-color-scheme="default"] .highlight .s,
+[data-md-color-scheme="default"] .highlight .s1,
+[data-md-color-scheme="default"] .highlight .s2,
+[data-md-color-scheme="default"] .highlight .sb,
+[data-md-color-scheme="default"] .highlight .sc,
+[data-md-color-scheme="default"] .highlight .sd,
+[data-md-color-scheme="default"] .highlight .se,
+[data-md-color-scheme="default"] .highlight .sh,
+[data-md-color-scheme="default"] .highlight .si,
+[data-md-color-scheme="default"] .highlight .sx,
+[data-md-color-scheme="default"] .highlight .sr,
+[data-md-color-scheme="default"] .highlight .ss { color: #0a3069; } /* Strings */
+
+[data-md-color-scheme="default"] .highlight .c,
+[data-md-color-scheme="default"] .highlight .c1,
+[data-md-color-scheme="default"] .highlight .cm,
+[data-md-color-scheme="default"] .highlight .cp,
+[data-md-color-scheme="default"] .highlight .cs { color: #6e7781; font-style: italic; } /* Comments */
+
+[data-md-color-scheme="default"] .highlight .m,
+[data-md-color-scheme="default"] .highlight .mf,
+[data-md-color-scheme="default"] .highlight .mh,
+[data-md-color-scheme="default"] .highlight .mi,
+[data-md-color-scheme="default"] .highlight .mo { color: #0550ae; } /* Numbers */
+
+[data-md-color-scheme="default"] .highlight .na,
+[data-md-color-scheme="default"] .highlight .nb,
+[data-md-color-scheme="default"] .highlight .nc,
+[data-md-color-scheme="default"] .highlight .nd,
+[data-md-color-scheme="default"] .highlight .ne,
+[data-md-color-scheme="default"] .highlight .nf,
+[data-md-color-scheme="default"] .highlight .ni,
+[data-md-color-scheme="default"] .highlight .nl,
+[data-md-color-scheme="default"] .highlight .nn,
+[data-md-color-scheme="default"] .highlight .nt,
+[data-md-color-scheme="default"] .highlight .nv { color: #8250df; } /* Names */
+
+[data-md-color-scheme="default"] .highlight .o,
+[data-md-color-scheme="default"] .highlight .ow { color: #cf222e; } /* Operators */
+
+/* =============================================================================
+ * Tables
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] table {
+  border-collapse: collapse;
+}
+
+[data-md-color-scheme="default"] th {
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="default"] td {
+  border: 1px solid #d0d7de;
+}
+
+[data-md-color-scheme="default"] tr:nth-child(even) {
+  background-color: #f6f8fa;
+}
+
+/* =============================================================================
+ * Admonitions
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] .admonition {
+  border-radius: 6px;
+  border-left-width: 4px;
+}
+
+[data-md-color-scheme="default"] .admonition.note {
+  background-color: rgba(9, 105, 218, 0.08);
+  border-left-color: #0969da;
+}
+
+[data-md-color-scheme="default"] .admonition.tip,
+[data-md-color-scheme="default"] .admonition.hint {
+  background-color: rgba(26, 127, 55, 0.08);
+  border-left-color: #1a7f37;
+}
+
+[data-md-color-scheme="default"] .admonition.warning,
+[data-md-color-scheme="default"] .admonition.caution,
+[data-md-color-scheme="default"] .admonition.attention {
+  background-color: rgba(154, 103, 0, 0.08);
+  border-left-color: #9a6700;
+}
+
+[data-md-color-scheme="default"] .admonition.danger,
+[data-md-color-scheme="default"] .admonition.error {
+  background-color: rgba(207, 34, 46, 0.08);
+  border-left-color: #cf222e;
+}
+
+[data-md-color-scheme="default"] .admonition.info {
+  background-color: rgba(9, 105, 218, 0.08);
+  border-left-color: #0969da;
+}
+
+/* =============================================================================
+ * Navigation
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] .md-nav__link--active {
+  color: var(--md-accent-fg-color);
+  font-weight: 600;
+}
+
+[data-md-color-scheme="default"] .md-nav__item--active > .md-nav__link {
+  color: var(--md-accent-fg-color);
+}
+
+/* =============================================================================
+ * Search
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] .md-search__input {
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
+}
+
+[data-md-color-scheme="default"] .md-search__input:focus {
+  border-color: #0969da;
+}
+
+/* =============================================================================
+ * Scrollbar (Webkit)
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-md-color-scheme="default"] ::-webkit-scrollbar-track {
+  background: #f6f8fa;
+}
+
+[data-md-color-scheme="default"] ::-webkit-scrollbar-thumb {
+  background: #d0d7de;
+  border-radius: 4px;
+}
+
+[data-md-color-scheme="default"] ::-webkit-scrollbar-thumb:hover {
+  background: #8c959f;
+}
+
+/* =============================================================================
+ * Links
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] a {
+  color: #0969da;
+}
+
+[data-md-color-scheme="default"] a:hover {
+  color: #0550ae;
+  text-decoration: underline;
+}
+
+/* =============================================================================
+ * Blockquotes
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] blockquote {
+  border-left: 4px solid #d0d7de;
+  background-color: #f6f8fa;
+  color: #57606a;
+}
+
+/* =============================================================================
+ * Header
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] .md-header {
+  background-color: #3f51b5;
+}
+
+/* =============================================================================
+ * Footer
+ * ============================================================================= */
+
+[data-md-color-scheme="default"] .md-footer {
+  background-color: #24292f;
+}

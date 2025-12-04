@@ -13,6 +13,13 @@ import (
 func init() {
 	// Register handler for scripts-package modules
 	RegisterSystem("scripts", BuildScriptsModule)
+	RegisterSystemArtifacts("scripts", ListScriptsArtifacts)
+}
+
+// ListScriptsArtifacts returns the artifacts that would be produced by building this scripts module
+func ListScriptsArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+	// Scripts produce copied files and build marker
+	return []string{".build-complete"}
 }
 
 // BuildScriptsModule copies script files from source to build output.

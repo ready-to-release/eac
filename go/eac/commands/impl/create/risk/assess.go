@@ -35,6 +35,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 var assessLog = logging.C()
@@ -363,7 +364,9 @@ func collectSecurityEvidence(config *AssessConfig, policy evidence.EvidenceAgePo
 func runTests(config *AssessConfig) error {
 	assessLog.Infof("Running tests for %s...", config.Module)
 
-	cmd := exec.Command("go", "run", "./go/eac/commands", "test", config.Module)
+	// Use the canonical binary path
+	binaryPath := repository.CommandsBinaryPath(config.WorkspaceRoot)
+	cmd := exec.Command(binaryPath, "test", config.Module)
 	cmd.Dir = config.WorkspaceRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -379,15 +382,18 @@ func runTests(config *AssessConfig) error {
 func runSecurityScans(config *AssessConfig) error {
 	assessLog.Infof("Running security scans for %s...", config.Module)
 
+	// Use the canonical binary path
+	binaryPath := repository.CommandsBinaryPath(config.WorkspaceRoot)
+
 	// Run vulnerability scan
-	cmd := exec.Command("go", "run", "./go/eac/commands", "security", "vuln", config.Module)
+	cmd := exec.Command(binaryPath, "security", "vuln", config.Module)
 	cmd.Dir = config.WorkspaceRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Run() // Don't fail on security scan errors
 
 	// Run SBOM
-	cmd = exec.Command("go", "run", "./go/eac/commands", "security", "sbom", config.Module)
+	cmd = exec.Command(binaryPath, "security", "sbom", config.Module)
 	cmd.Dir = config.WorkspaceRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

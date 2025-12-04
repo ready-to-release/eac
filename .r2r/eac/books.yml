@@ -1,0 +1,137 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/books.schema.json
+# Book Definitions
+# Books aggregate static content with dynamically-generated content from EAC commands
+
+books:
+  # Primary documentation book
+  - name: docs
+    description: "Ready-to-Release Documentation with generated reference content"
+
+    sources:
+      # ==========================================================================
+      # Static Content - Copy from docs/
+      # ==========================================================================
+      - type: copy
+        from: "docs/**/*.md"
+        to: "./"
+
+      - type: copy
+        from: "docs/**/.nav.yml"
+        to: "./"
+
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+
+      # ==========================================================================
+      # Generated Content - New files from EAC commands
+      # ==========================================================================
+      - type: command
+        command: "show files"
+        target: "reference/generated/files.md"
+        frontmatter:
+          title: "Repository Files"
+          description: "Complete file inventory with module ownership"
+        order: 1
+
+      - type: command
+        command: "show modules"
+        target: "reference/generated/modules.md"
+        frontmatter:
+          title: "Modules"
+          description: "All module contracts in the repository"
+        order: 2
+
+      - type: command
+        command: "show dependencies"
+        target: "reference/generated/dependencies.md"
+        frontmatter:
+          title: "Dependencies"
+          description: "Module dependency relationships"
+        order: 3
+
+      - type: command
+        command: "show moduletypes"
+        target: "reference/generated/module-types.md"
+        frontmatter:
+          title: "Module Types"
+          description: "Available module type definitions"
+        order: 4
+
+      - type: command
+        command: "show environments"
+        target: "reference/generated/environments.md"
+        frontmatter:
+          title: "Environments"
+          description: "Environment contract definitions"
+        order: 5
+
+      - type: command
+        command: "show tests"
+        target: "reference/generated/tests.md"
+        frontmatter:
+          title: "Test Suites"
+          description: "All test suites in the repository"
+        order: 6
+
+      # ==========================================================================
+      # Inline Content - Insert at markers in existing files
+      # ==========================================================================
+      - type: inline
+        target: "index.md"
+        inserts:
+          - marker: "modules-overview"
+            command: "show modules"
+
+      - type: inline
+        target: "reference/index.md"
+        inserts:
+          - marker: "module-types-summary"
+            command: "show moduletypes"
+
+    # Navigation for generated sections
+    generated_nav:
+      - section: "reference/generated"
+        title: "Generated Reference"
+        insert_into: "reference"
+        position: "after:index.md"
+
+  # Repository Report - standalone module/dependency report
+  - name: repository-report
+    description: "Repository structure report with modules and dependency graph"
+
+    sources:
+      # ==========================================================================
+      # Generated Content - All content is dynamically generated
+      # ==========================================================================
+      - type: command
+        command: "show modules"
+        target: "modules.md"
+        frontmatter:
+          title: "Repository Modules"
+          description: "Complete inventory of all modules in the repository"
+        order: 1
+
+      - type: command
+        command: "show dependencies"
+        target: "dependencies.md"
+        frontmatter:
+          title: "Module Dependencies"
+          description: "Dependency relationships between modules"
+        order: 2
+
+      - type: command
+        command: "show moduletypes"
+        target: "module-types.md"
+        frontmatter:
+          title: "Module Types"
+          description: "Available module type definitions"
+        order: 3
+
+      - type: command
+        command: "show files"
+        target: "files.md"
+        frontmatter:
+          title: "File Ownership"
+          description: "Repository files with module ownership"
+        order: 4

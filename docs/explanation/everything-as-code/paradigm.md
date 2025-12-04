@@ -38,7 +38,11 @@ But "Everything as Code" extends much further:
 
 ```mermaid
 flowchart LR
-    A[Word] --> B[Visio] --> C[Git] --> D[Excel] --> E[Wiki] --> F[SharePoint]
+    A[Word] --> B[Visio]
+    B --> C[Git]
+    C --> D[Excel]
+    D --> E[Wiki]
+    E --> F[SharePoint]
 ```
 
 **Problems:**
@@ -53,7 +57,8 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[Everything in Git] --> B[Single immutable history] --> C[Complete traceability]
+    A[Everything in Git] --> B[Single immutable history]
+    B --> C[Complete traceability]
 ```
 
 **Benefits:**
@@ -106,7 +111,8 @@ For more on building shared language for specifications, see:
 
 ```mermaid
 flowchart LR
-    A[Business writes requirements] --> B[Developers interpret] --> C[QA tests interpretation]
+    A[Business writes requirements] --> B[Developers interpret]
+    B --> C[QA tests interpretation]
 ```
 
 **Problems:**
@@ -165,7 +171,11 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    A[Commit] --> B[Build] --> C[Test] --> D[Validate] --> E[Deploy] --> F[Document]
+    A[Commit] --> B[Build]
+    B --> C[Test]
+    C --> D[Validate]
+    D --> E[Deploy]
+    E --> F[Document]
 ```
 
 **Benefits:**

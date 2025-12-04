@@ -33,7 +33,55 @@ theme:
 plugins:
   - search
   - awesome-nav
-  - drawio
+  # Mermaid diagram rendering for web (JavaScript-based)
+  - mermaid2:
+      version: '9.4.3'
+  # Mermaid to SVG conversion for PDF generation
+  # Pre-renders mermaid diagrams to SVG images before PDF generation
+  # Only active when ENABLE_PDF_EXPORT=1 (same trigger as with-pdf)
+  # Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
+  - mermaid-to-svg:
+      enabled_if_env: ENABLE_PDF_EXPORT
+      # Output SVG files to rendered assets directory (gitignored)
+      # Path is relative to docs_dir, so assets/ maps to docs/assets/
+      output_dir: assets/.rendered/mermaid
+      # Use dark theme to match PDF template
+      theme: dark
+      # Puppeteer configuration for Docker environments
+      puppeteer_config: containers/mkdocs-pdf/puppeteer-config.json
+      # Disable htmlLabels for PDF compatibility
+      # When enabled, mermaid generates <foreignObject> HTML elements
+      # that PDF tools cannot render, causing text to disappear
+      mermaid_config:
+        htmlLabels: false
+        flowchart:
+          htmlLabels: false
+        class:
+          htmlLabels: false
+  # PDF export plugin - only active when ENABLE_PDF_EXPORT=1
+  # Use: build docs --pdf (or set ENABLE_PDF_EXPORT=1 manually)
+  - with-pdf:
+      enabled_if_env: ENABLE_PDF_EXPORT
+      # Custom PDF theme (avoids Material theme CSS warnings)
+      # Use pdf-dark for digital viewing, pdf-light for paper printing
+      custom_template_path: docs/assets/templates/pdf-dark
+      # Cover page configuration
+      cover: true
+      cover_title: Ready-to-Release Documentation
+      cover_subtitle: Everything-as-Code Platform
+      cover_logo: docs/assets/logo/eac-logo.png
+      # Table of contents
+      toc_title: Table of Contents
+      toc_level: 3
+      # Heading configuration
+      heading_shift: true
+      ordered_chapter_level: 2
+      # Output configuration
+      output_path: pdf/ready-to-release-docs.pdf
+      # Debug options
+      debug_html: true
+      show_anchors: false
+      verbose: false
 
 markdown_extensions:
   - footnotes
@@ -42,7 +90,7 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.highlight:
-      anchor_linenums: true
+      anchor_linenums: false  # Disabled for PDF compatibility (anchor links break WeasyPrint)
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.tabbed:
@@ -51,10 +99,16 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+          format: !!python/name:mermaid2.fence_mermaid_custom
+
+extra_css:
+  - assets/templates/web-light/styles.css
+  - assets/templates/web-dark/styles.css
 
 extra_javascript:
+  # Draw.io viewer - enables interactive/clickable .drawio diagrams
   - https://viewer.diagrams.net/js/viewer-static.min.js
+  # Note: Mermaid.js is loaded by mermaid2 plugin
 
 dev_addr: '0.0.0.0:8000'
 

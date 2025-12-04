@@ -1,5 +1,5 @@
-// Command: show files staged
-// Description: Show staged files with their module ownership
+// Command: show files-staged
+// Short: Show staged files with their module ownership
 package show
 
 import (

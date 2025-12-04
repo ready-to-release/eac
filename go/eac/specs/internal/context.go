@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -171,29 +170,16 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 }
 
 // createCommand creates an exec.Cmd for running commands.
-// Uses the pre-built binary at out/build/eac-commands/commands{.exe}.
+// Uses repository.CommandsBinaryPath() to locate the pre-built binary.
 // The binary must exist - tests should have @depm:eac-commands dependency.
-//
-// When running in a container, R2R_CONTAINER_ROOT points to where the
-// container's internal files are located (e.g., /app), which may differ
-// from the mounted repo root.
 func (c *TestContext) createCommand(parts []string) *exec.Cmd {
-	// Determine platform-specific binary name
-	binaryName := "commands"
-	if runtime.GOOS == "windows" {
-		binaryName = "commands.exe"
-	}
-
-	// Use container root if in container, otherwise repo root
-	binaryRoot := repository.GetEffectiveRoot(c.OriginalRepoRoot)
-	binaryPath := filepath.Join(binaryRoot, "out", "build", "eac-commands", binaryName)
+	binaryPath := repository.CommandsBinaryPath(c.OriginalRepoRoot)
 
 	// Check if binary exists and log diagnostic info if it doesn't
 	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
 		// Binary doesn't exist - log diagnostic info to help debug CI issues
 		fmt.Fprintf(os.Stderr, "DEBUG: Binary not found at: %s\n", binaryPath)
 		fmt.Fprintf(os.Stderr, "DEBUG: OriginalRepoRoot: %s\n", c.OriginalRepoRoot)
-		fmt.Fprintf(os.Stderr, "DEBUG: EffectiveRoot: %s\n", binaryRoot)
 		fmt.Fprintf(os.Stderr, "DEBUG: IsolatedDir: %s\n", c.IsolatedDir)
 	}
 

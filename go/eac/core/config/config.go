@@ -51,6 +51,7 @@ type EACConfig struct {
 	TestSuites         *TestSuitesConfig
 	SystemDependencies *SystemDependenciesConfig
 	Handlers           *HandlersConfig
+	Books              *BooksConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -356,6 +357,43 @@ func (c *EACConfig) LoadHandlers(validateSchema bool) error {
 	cfg.buildHandlerMap()
 	c.Handlers = &cfg
 	return nil
+}
+
+// LoadBooks loads the books configuration (optional - only if file exists)
+func (c *EACConfig) LoadBooks(validateSchema bool) error {
+	// Check if books file exists - it's optional
+	booksPath := filepath.Join(c.ConfigRoot, BooksFileName)
+	if _, err := os.Stat(booksPath); os.IsNotExist(err) {
+		// Books config is optional - no books defined
+		return nil
+	}
+
+	data, err := c.readConfigFile(BooksFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaBooks, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg BooksConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", BooksFileName, err)
+	}
+
+	c.Books = &cfg
+	return nil
+}
+
+// GetBookByName finds a book by its name (module moniker)
+func (c *EACConfig) GetBookByName(name string) *Book {
+	if c.Books == nil {
+		return nil
+	}
+	return c.Books.GetBookByName(name)
 }
 
 // readConfigFile reads a config file from the config root

@@ -70,6 +70,12 @@ Read these to understand the "why" behind continuous delivery models, compliance
 
 ---
 
+## Repository Modules
+
+<!-- book:insert modules-overview -->
+
+---
+
 ## Working with Documentation
 
 ### Directory Structure

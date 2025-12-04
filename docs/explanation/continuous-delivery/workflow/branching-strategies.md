@@ -86,7 +86,9 @@ flowchart TD
     S5["Stage 5: Acceptance<br/>Deploy to PLTE, L0-L3 (1-2 hrs)"]
     S6["Stage 6: Extended<br/>Full suite, perf, security (2-8 hrs)"]
     S7["Stage 7: Exploration<br/>Demo env, manual UAT (days)"]
-    S4 --> S5 --> S6 --> S7
+    S4 --> S5
+    S5 --> S6
+    S6 --> S7
 ```
 
 **Key Characteristics**:
@@ -106,8 +108,10 @@ flowchart TD
     S11["Stage 11: Live Monitoring<br/>Monitor production behavior<br/>Automated: Metrics, alerts, health checks<br/>Ongoing monitoring"]
     S12["Stage 12: Release Toggling<br/>Feature flag management<br/>Control: Enable/disable features at runtime<br/>Gradual rollout (optional)"]
 
-    S8 --> S9 --> S10 --> S11 --> S12
-
+    S8 --> S9
+    S9 --> S10
+    S10 --> S11
+    S11 --> S12
 ```
 
 **Example Commands**:

@@ -13,6 +13,13 @@ import (
 func init() {
 	// Register handler for "npm" build system
 	RegisterSystem("npm", BuildNpmModule)
+	RegisterSystemArtifacts("npm", ListNpmArtifacts)
+}
+
+// ListNpmArtifacts returns the artifacts that would be produced by building this npm module
+func ListNpmArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+	// npm builds produce compiled JS files and package.json in output directory
+	return []string{"package.json", ".build-complete"}
 }
 
 // BuildNpmModule builds npm-based modules.

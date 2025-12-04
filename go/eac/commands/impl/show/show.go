@@ -26,7 +26,7 @@ func Show() int {
 	case "--help", "-h":
 		printShowUsage()
 		return 0
-	case "config", "dependencies", "environments", "files", "modules", "moduletypes", "suite", "tests", "risk-report":
+	case "books", "config", "dependencies", "environments", "files", "files-changed", "files-staged", "modules", "moduletypes", "suite", "tests", "risk-report", "valid-commands":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -44,6 +44,9 @@ func printShowUsage() {
 	log.Info("Configuration:")
 	log.Info("  config                    Show all EAC configuration summary")
 	log.Info("")
+	log.Info("Documentation:")
+	log.Info("  books                     Show all configured books")
+	log.Info("")
 	log.Info("Repository Structure:")
 	log.Info("  modules                   Show all module contracts")
 	log.Info("  moduletypes               Show module types grouped by count")
@@ -51,8 +54,8 @@ func printShowUsage() {
 	log.Info("")
 	log.Info("Files and Changes:")
 	log.Info("  files                     Show repository files with module ownership")
-	log.Info("  files changed             Show modified files with module ownership")
-	log.Info("  files staged              Show staged files with module ownership")
+	log.Info("  files-changed             Show modified files with module ownership")
+	log.Info("  files-staged              Show staged files with module ownership")
 	log.Info("")
 	log.Info("Testing:")
 	log.Info("  tests                     Show all tests in the repository")
@@ -64,12 +67,15 @@ func printShowUsage() {
 	log.Info("Risk Assessment:")
 	log.Info("  risk-report               Show aggregated risk assessment report")
 	log.Info("")
+	log.Info("Commands:")
+	log.Info("  valid-commands            Show all valid commands in a table")
+	log.Info("")
 	log.Info("Examples:")
 	log.Info("  # Show all modules")
 	log.Info("  r2r show modules")
 	log.Info("")
 	log.Info("  # Show changed files")
-	log.Info("  r2r show files changed")
+	log.Info("  r2r show files-changed")
 	log.Info("")
 	log.Info("  # Show test suite details")
 	log.Info("  r2r show suite integration")

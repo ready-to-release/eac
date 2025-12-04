@@ -1,0 +1,20 @@
+# MkDocs core
+mkdocs>=1.5
+mkdocs-material>=9.4
+
+# Navigation
+mkdocs-awesome-nav>=1.0.0
+
+# Markdown extensions
+pymdown-extensions
+
+# Mermaid diagrams (client-side JS for HTML)
+mkdocs-mermaid2-plugin>=1.1.0
+
+# PDF generation
+mkdocs-with-pdf>=0.9.3
+weasyprint>=60.0
+libsass>=0.23.0  # SCSS compilation for custom PDF templates
+
+# Mermaid to SVG (server-side rendering for PDF)
+mkdocs-mermaid-to-svg

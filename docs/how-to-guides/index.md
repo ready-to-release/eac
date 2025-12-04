@@ -25,24 +25,24 @@ Guides for using EAC commands.
 
 - [Help Command](commands/help-command.md) - Get help for any command
 - [Init Command](commands/init-command.md) - Initialize AI provider configuration
-- [Completion Command](commands/completion-command.md) - Generate shell completion scripts
 
 ### Build & Test
 
-- [Build & Test Commands](commands/build-test-commands.md) - Build and test modules
-- [Validate Command](commands/validate-command.md) - Validate contracts and dependencies
-- [CI Command](commands/ci-command.md) - Continuous integration workflows
+- [Build Commands](commands/areas/build-overview.md) - Build modules
+- [Test Commands](commands/areas/test-overview.md) - Test modules
+- [Validate Commands](commands/areas/validate-overview.md) - Validate contracts and dependencies
+- [Pipeline CI Commands](commands/areas/pipeline-ci-commands.md) - CI diagnostics and workflow orchestration
 
 ### Development Workflow
 
-- [Work Command](commands/work-command.md) - Workspace management
+- [Workspace Commands](commands/areas/workspace-overview.md) - Workspace management
 - [Commit Command](commands/commit-command.md) - AI-powered commit messages
 - [Describe Command](commands/describe-command.md) - Describe changes
 
 ### Architecture & Design
 
-- [Design Command](commands/design-command.md) - Architecture diagrams
-- [Specs Command](commands/specs-command.md) - Specification generation
+- [Design Commands](commands/areas/design-overview.md) - Architecture diagrams
+- [Specifications Commands](commands/areas/specifications-overview.md) - Specification generation
 
 ### Data & Info
 
@@ -50,13 +50,14 @@ Guides for using EAC commands.
 
 ### CI/CD & Release
 
-- [Pipeline Command](commands/pipeline-command.md) - Pipeline operations
-- [Release Command](commands/release-command.md) - Release management
-- [Risks Command](commands/risks-command.md) - Risk assessment
+- [Pipeline Commands](commands/areas/pipeline-overview.md) - Pipeline operations
+- [Release Commands](commands/areas/release-overview.md) - Release management
+- [Risk Commands](commands/areas/risks-overview.md) - Risk assessment
 
 ### Other
 
-- [Templates & Docs Commands](commands/templates-docs-commands.md) - Templates and documentation
+- [Templates Commands](commands/areas/templates-overview.md) - Templates and documentation
+- [Books Commands](commands/areas/books-overview.md) - Documentation books
 
 ## Configuration
 

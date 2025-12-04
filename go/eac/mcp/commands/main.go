@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -170,20 +169,21 @@ func getCommandTools() []Tool {
 	return tools
 }
 
-// getCommands calls "go run ./go/eac/commands get commands" to get command info
+// getCommands calls the pre-built commands binary to get command info
 func getCommands() CommandTree {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
 		return CommandTree{Commands: []CommandInfo{}}
 	}
 
-	cmdPath := filepath.Join(repoRoot, "go", "eac", "commands")
-	cmd := exec.Command("go", "run", ".", "get", "commands")
-	cmd.Dir = cmdPath
+	// Use the canonical binary path
+	binaryPath := repository.CommandsBinaryPath(repoRoot)
+	cmd := exec.Command(binaryPath, "get", "commands")
+	cmd.Dir = repoRoot
 
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting commands: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting commands (binary: %s): %v\n", binaryPath, err)
 		return CommandTree{Commands: []CommandInfo{}}
 	}
 
@@ -210,14 +210,12 @@ func callTool(params *CallToolParams) ToolResult {
 	return textResult(output)
 }
 
-// execCommand executes a command via "go run ./go/eac/commands <command> [args]"
+// execCommand executes a command via the pre-built commands binary
 func execCommand(commandName string, additionalArgs string) string {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
 		return "Error: Could not find repository root"
 	}
-
-	cmdPath := filepath.Join(repoRoot, "go", "eac", "commands")
 
 	// Build command arguments
 	cmdParts := strings.Fields(commandName)
@@ -225,15 +223,14 @@ func execCommand(commandName string, additionalArgs string) string {
 		cmdParts = append(cmdParts, strings.Fields(additionalArgs)...)
 	}
 
-	// Prepend "go run ."
-	cmdArgs := append([]string{"run", "."}, cmdParts...)
-
-	cmd := exec.Command("go", cmdArgs...)
-	cmd.Dir = cmdPath
+	// Use the canonical binary path
+	binaryPath := repository.CommandsBinaryPath(repoRoot)
+	cmd := exec.Command(binaryPath, cmdParts...)
+	cmd.Dir = repoRoot
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Sprintf("Error executing command '%s': %v\n\nOutput:\n%s", commandName, err, string(output))
+		return fmt.Sprintf("Error executing command '%s' (binary: %s): %v\n\nOutput:\n%s", commandName, binaryPath, err, string(output))
 	}
 
 	return strings.TrimSpace(string(output))

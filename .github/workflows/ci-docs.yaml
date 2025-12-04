@@ -7,16 +7,27 @@ on:
         required: false
         type: string
         default: ''
+      trigger_run_id:
+        required: false
+        type: string
+        description: 'Run ID of trigger workflow (for artifact download)'
+        default: ''
   workflow_dispatch:
     inputs:
       ref:
         required: false
         type: string
+        description: 'Git ref to checkout'
         default: ''
       sha:
         required: false
         type: string
         description: 'Commit SHA to test'
+        default: ''
+      trigger_run_id:
+        required: false
+        type: string
+        description: 'Run ID of trigger workflow (for artifact download)'
         default: ''
 
 permissions:
@@ -35,9 +46,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Build and cache MkDocs Site image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./containers/mkdocs-site
+          file: ./containers/mkdocs-site/Dockerfile
+          tags: cli-mkdocs-site:latest
+          load: true
+          cache-from: type=gha,scope=mkdocs-site
+          cache-to: type=gha,mode=max,scope=mkdocs-site
+
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.trigger_run_id }}
 
       - name: Build Module
         run: ${{ steps.commands.outputs.commands-path }} build docs
@@ -65,7 +88,7 @@ jobs:
             echo "- Missing markdown files referenced in nav" >> $GITHUB_STEP_SUMMARY
             echo "- Broken internal links" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -96,6 +119,8 @@ jobs:
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.trigger_run_id }}
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v6
@@ -107,6 +132,8 @@ jobs:
         run: ${{ steps.commands.outputs.commands-path }} test docs --suite commit
 
       - name: Test Module (Acceptance Suite - L3)
+        # Skip acceptance tests for PRs - only run on main/release branches
+        if: ${{ !startsWith(inputs.ref, 'refs/pull/') }}
         run: ${{ steps.commands.outputs.commands-path }} test docs --suite acceptance
 
       - name: Test Summary
@@ -121,7 +148,7 @@ jobs:
           else
             echo "Documentation validation tests failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -148,9 +175,15 @@ jobs:
       (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') &&
       !startsWith(inputs.ref || github.ref, 'refs/pull/')
     steps:
-      - name: Trigger release workflow
+      - name: Trigger release workflows (pages + book)
         run: |
+          # Trigger GitHub Pages deployment
           gh workflow run release-docs.yml \
+            --repo ${{ github.repository }} \
+            -f ci_run_id=${{ github.run_id }}
+
+          # Trigger PDF book release (runs in parallel)
+          gh workflow run release-docs-book.yaml \
             --repo ${{ github.repository }} \
             -f ci_run_id=${{ github.run_id }}
         env:
@@ -160,7 +193,12 @@ jobs:
         run: |
           echo "## Release Triggered: docs" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Triggered \`release-docs.yml\` workflow to deploy documentation." >> $GITHUB_STEP_SUMMARY
+          echo "Triggered release workflows:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`release-docs.yml\` | Deploy to GitHub Pages |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`release-docs-book.yaml\` | Build and release PDF books |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY

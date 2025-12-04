@@ -1,0 +1,225 @@
+/* Dark mode customizations for Ready-to-Release Documentation
+ * Extends Material theme slate scheme for GitHub Pages
+ * Applied when dark mode is active
+ */
+
+/* =============================================================================
+ * Color Variables (CSS Custom Properties)
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] {
+  /* Font */
+  --md-text-font: "Nobo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --md-code-font: "Nobo", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Primary brand colors */
+  --md-primary-fg-color: #5c6bc0;
+  --md-primary-bg-color: #1a1a2e;
+
+  /* Accent colors */
+  --md-accent-fg-color: #82b1ff;
+
+  /* Background colors */
+  --md-default-bg-color: #0d1117;
+  --md-code-bg-color: #161b22;
+
+  /* Text colors */
+  --md-default-fg-color: #e6edf3;
+  --md-default-fg-color--light: #8b949e;
+  --md-default-fg-color--lighter: #6e7681;
+}
+
+/* =============================================================================
+ * Code Blocks
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] .highlight,
+[data-md-color-scheme="slate"] pre {
+  background-color: var(--md-code-bg-color);
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+
+[data-md-color-scheme="slate"] code {
+  background-color: rgba(110, 118, 129, 0.2);
+  border-radius: 4px;
+  padding: 0.2em 0.4em;
+}
+
+/* Syntax highlighting - GitHub dark theme inspired */
+[data-md-color-scheme="slate"] .highlight .k,
+[data-md-color-scheme="slate"] .highlight .kd,
+[data-md-color-scheme="slate"] .highlight .kn,
+[data-md-color-scheme="slate"] .highlight .kp,
+[data-md-color-scheme="slate"] .highlight .kr,
+[data-md-color-scheme="slate"] .highlight .kt { color: #ff7b72; } /* Keywords */
+
+[data-md-color-scheme="slate"] .highlight .s,
+[data-md-color-scheme="slate"] .highlight .s1,
+[data-md-color-scheme="slate"] .highlight .s2,
+[data-md-color-scheme="slate"] .highlight .sb,
+[data-md-color-scheme="slate"] .highlight .sc,
+[data-md-color-scheme="slate"] .highlight .sd,
+[data-md-color-scheme="slate"] .highlight .se,
+[data-md-color-scheme="slate"] .highlight .sh,
+[data-md-color-scheme="slate"] .highlight .si,
+[data-md-color-scheme="slate"] .highlight .sx,
+[data-md-color-scheme="slate"] .highlight .sr,
+[data-md-color-scheme="slate"] .highlight .ss { color: #a5d6ff; } /* Strings */
+
+[data-md-color-scheme="slate"] .highlight .c,
+[data-md-color-scheme="slate"] .highlight .c1,
+[data-md-color-scheme="slate"] .highlight .cm,
+[data-md-color-scheme="slate"] .highlight .cp,
+[data-md-color-scheme="slate"] .highlight .cs { color: #8b949e; font-style: italic; } /* Comments */
+
+[data-md-color-scheme="slate"] .highlight .m,
+[data-md-color-scheme="slate"] .highlight .mf,
+[data-md-color-scheme="slate"] .highlight .mh,
+[data-md-color-scheme="slate"] .highlight .mi,
+[data-md-color-scheme="slate"] .highlight .mo { color: #79c0ff; } /* Numbers */
+
+[data-md-color-scheme="slate"] .highlight .na,
+[data-md-color-scheme="slate"] .highlight .nb,
+[data-md-color-scheme="slate"] .highlight .nc,
+[data-md-color-scheme="slate"] .highlight .nd,
+[data-md-color-scheme="slate"] .highlight .ne,
+[data-md-color-scheme="slate"] .highlight .nf,
+[data-md-color-scheme="slate"] .highlight .ni,
+[data-md-color-scheme="slate"] .highlight .nl,
+[data-md-color-scheme="slate"] .highlight .nn,
+[data-md-color-scheme="slate"] .highlight .nt,
+[data-md-color-scheme="slate"] .highlight .nv { color: #d2a8ff; } /* Names */
+
+[data-md-color-scheme="slate"] .highlight .o,
+[data-md-color-scheme="slate"] .highlight .ow { color: #ff7b72; } /* Operators */
+
+/* =============================================================================
+ * Tables
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] table {
+  border-collapse: collapse;
+}
+
+[data-md-color-scheme="slate"] th {
+  background-color: #21262d;
+  border: 1px solid #30363d;
+}
+
+[data-md-color-scheme="slate"] td {
+  border: 1px solid #30363d;
+}
+
+[data-md-color-scheme="slate"] tr:nth-child(even) {
+  background-color: #161b22;
+}
+
+/* =============================================================================
+ * Admonitions
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] .admonition {
+  border-radius: 6px;
+  border-left-width: 4px;
+}
+
+[data-md-color-scheme="slate"] .admonition.note {
+  background-color: rgba(56, 139, 253, 0.1);
+  border-left-color: #388bfd;
+}
+
+[data-md-color-scheme="slate"] .admonition.tip,
+[data-md-color-scheme="slate"] .admonition.hint {
+  background-color: rgba(46, 160, 67, 0.1);
+  border-left-color: #2ea043;
+}
+
+[data-md-color-scheme="slate"] .admonition.warning,
+[data-md-color-scheme="slate"] .admonition.caution,
+[data-md-color-scheme="slate"] .admonition.attention {
+  background-color: rgba(187, 128, 9, 0.1);
+  border-left-color: #bb8009;
+}
+
+[data-md-color-scheme="slate"] .admonition.danger,
+[data-md-color-scheme="slate"] .admonition.error {
+  background-color: rgba(248, 81, 73, 0.1);
+  border-left-color: #f85149;
+}
+
+[data-md-color-scheme="slate"] .admonition.info {
+  background-color: rgba(56, 139, 253, 0.1);
+  border-left-color: #388bfd;
+}
+
+/* =============================================================================
+ * Navigation
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] .md-nav__link--active {
+  color: var(--md-accent-fg-color);
+  font-weight: 600;
+}
+
+[data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link {
+  color: var(--md-accent-fg-color);
+}
+
+/* =============================================================================
+ * Search
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] .md-search__input {
+  background-color: #21262d;
+  border: 1px solid #30363d;
+}
+
+[data-md-color-scheme="slate"] .md-search__input:focus {
+  border-color: #388bfd;
+}
+
+/* =============================================================================
+ * Scrollbar (Webkit)
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* =============================================================================
+ * Links
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] a {
+  color: #58a6ff;
+}
+
+[data-md-color-scheme="slate"] a:hover {
+  color: #79c0ff;
+  text-decoration: underline;
+}
+
+/* =============================================================================
+ * Blockquotes
+ * ============================================================================= */
+
+[data-md-color-scheme="slate"] blockquote {
+  border-left: 4px solid #30363d;
+  background-color: #161b22;
+  color: #8b949e;
+}
