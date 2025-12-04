@@ -1,5 +1,5 @@
-// Command: show files changed
-// Description: Show changed (modified, unstaged) files with their module ownership
+// Command: show files-changed
+// Short: Show changed (modified, unstaged) files with their module ownership
 package show
 
 import (

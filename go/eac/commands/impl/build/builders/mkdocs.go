@@ -18,6 +18,13 @@ import (
 func init() {
 	// Register handler for "mkdocs" build system
 	RegisterSystem("mkdocs", BuildMkDocsModule)
+	RegisterSystemArtifacts("mkdocs", ListMkDocsArtifacts)
+}
+
+// ListMkDocsArtifacts returns the artifacts that would be produced by building this MkDocs module
+func ListMkDocsArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+	// MkDocs produces a site directory
+	return []string{"site/"}
 }
 
 // BuildMkDocsModule builds MkDocs documentation sites using Docker.
@@ -57,7 +64,8 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	// Check for book configuration and run preprocessing if found
-	stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter)
+	// pdfMode=false for standard HTML builds
+	stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter, false)
 	if bookUsed && stagingDir == "" {
 		// Preprocessing failed
 		return 1
@@ -234,9 +242,11 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		"--clean",
 	)
 
-	// Note: --strict mode is NOT used because mkdocs-with-pdf emits an unavoidable
-	// warning when PDF export is disabled. Link validation is handled by mkdocs
-	// automatically and broken links will still cause errors.
+	// Determine strict mode: enabled by default, disabled for PDF mode or --accept-warnings
+	useStrict := !opts.PDFMode && !acceptWarnings
+	if useStrict {
+		buildArgs = append(buildArgs, "--strict")
+	}
 
 	Logln(logWriter, "   Image: %s", imageName)
 	Logln(logWriter, "   Output: %s", siteDir)
@@ -248,7 +258,7 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	} else if acceptWarnings {
 		Logln(logWriter, "   Mode: accepting warnings (--accept-warnings)")
 	} else {
-		Logln(logWriter, "   Mode: strict (warnings will fail build)")
+		Logln(logWriter, "   Mode: strict (--strict flag enabled)")
 	}
 
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
@@ -316,6 +326,14 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 
 	Logln(logWriter, "\n=== Building %s: %s (PDF %s) ===", module.Type, module.Moniker, theme)
 
+	// Check for book configuration and run preprocessing if found
+	// pdfMode=true enables link normalization for PDF compatibility
+	stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter, true)
+	if bookUsed && stagingDir == "" {
+		// Preprocessing failed
+		return 1
+	}
+
 	// Check for mkdocs.yml at repository root
 	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
 	if _, err := os.Stat(mkdocsConfig); os.IsNotExist(err) {
@@ -335,6 +353,14 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 	// IMPORTANT: Write to temp file in output directory, never modify source
 	themePath := fmt.Sprintf("docs/assets/templates/pdf-%s", theme)
 	patchedConfig := patchMkDocsConfig(string(originalConfig), themePath)
+
+	// Override docs_dir for book preprocessing (use staging directory)
+	if stagingDir != "" {
+		relStagingDir, _ := filepath.Rel(workspaceRoot, stagingDir)
+		relStagingDir = filepath.ToSlash(relStagingDir)
+		patchedConfig = patchDocsDir(patchedConfig, relStagingDir)
+		Logln(logWriter, "   Using staging: %s", relStagingDir)
+	}
 
 	patchedConfigPath := filepath.Join(outputDir, "mkdocs.yml")
 	if err := os.WriteFile(patchedConfigPath, []byte(patchedConfig), 0644); err != nil {
@@ -533,7 +559,8 @@ func removePDFPlugins(configContent string) string {
 
 // checkAndPreprocessBook checks for books.yml and runs preprocessing if a book matches
 // Returns (stagingDir, bookUsed) - stagingDir is empty on error, bookUsed indicates if preprocessing was attempted
-func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter io.Writer) (string, bool) {
+// pdfMode enables PDF-specific processing like link normalization
+func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter io.Writer, pdfMode bool) (string, bool) {
 	// Load config with books
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if err != nil {
@@ -566,7 +593,7 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	}
 
 	// Run preprocessing (overwrites existing files incrementally)
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter)
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", true

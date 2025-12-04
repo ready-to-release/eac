@@ -44,7 +44,7 @@ jobs:
           git fetch --tags --force
 
           # Generate calver tag (docs/YYYY.MM.DD or docs/YYYY.MM.DD.N)
-          TAG=$($COMMANDS release calver docs)
+          TAG=$($COMMANDS release generate-module-calver docs)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "✅ Will create tag after successful deployment: $TAG"
 
@@ -124,7 +124,7 @@ jobs:
           echo "| Planned Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          $COMMANDS ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
 
       - name: Summary (success)
         if: success()

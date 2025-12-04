@@ -249,13 +249,13 @@ domains:
 
 ```bash
 # Create profile for specific domain
-r2r eac create-risk --domain security
+r2r eac create risk --domain security
 
 # Create profile for multiple domains
-r2r eac create-risk --domain security --domain compliance
+r2r eac create risk --domain security --domain compliance
 
 # Create profile for all domains
-r2r eac create-risk --domain all
+r2r eac create risk --domain all
 ```
 
 ## Evidence Mapping
@@ -305,7 +305,7 @@ evidence:
 ### Profile Validation
 
 ```bash
-r2r eac validate-risk
+r2r eac validate risk
 ```
 
 Validates:
@@ -318,7 +318,7 @@ Validates:
 ### Catalog Validation
 
 ```bash
-r2r eac validate-risk-catalog
+r2r eac validate risk-catalog
 ```
 
 Validates:

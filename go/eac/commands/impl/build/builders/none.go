@@ -11,6 +11,12 @@ func init() {
 	// Register handler for modules with no build dependencies
 	// These modules have no build step - validation is done separately
 	RegisterSystem("", BuildNoneModule)
+	RegisterSystemArtifacts("", ListNoneArtifacts)
+}
+
+// ListNoneArtifacts returns no artifacts since modules with no build deps produce nothing
+func ListNoneArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+	return nil
 }
 
 // BuildNoneModule is a no-op build function for modules that don't require building.

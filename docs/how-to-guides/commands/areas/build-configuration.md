@@ -289,7 +289,7 @@ modules:
 r2r eac build eac-commands eac-core r2r-cli
 
 # Build in dependency order
-r2r eac get-execution-order r2r-cli | xargs r2r eac build
+r2r eac get execution order r2r-cli | xargs r2r eac build
 ```
 
 ## Troubleshooting

@@ -15,6 +15,14 @@ import (
 func init() {
 	// Register handler for "docker" build system
 	RegisterSystem("docker", BuildDockerModule)
+	RegisterSystemArtifacts("docker", ListDockerArtifacts)
+}
+
+// ListDockerArtifacts returns the artifacts that would be produced by building this Docker module
+func ListDockerArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+	// Docker builds produce container images, not files
+	// Return image reference pattern for CI to use
+	return []string{fmt.Sprintf("docker-image:%s", module.Moniker)}
 }
 
 // BuildDockerModule builds a Docker container image.

@@ -22,9 +22,14 @@ type BuildOptions struct {
 // BuildFunc is the signature for module build functions.
 type BuildFunc func(*modules.ModuleContract, string, string, io.Writer, BuildOptions) int
 
+// ListArtifactsFunc returns a list of artifacts that would be produced by building a module.
+// The returned paths are relative to the module's output directory.
+type ListArtifactsFunc func(*modules.ModuleContract, string) []string
+
 var (
-	mu             sync.RWMutex
-	systemHandlers = make(map[string]BuildFunc)
+	mu               sync.RWMutex
+	systemHandlers   = make(map[string]BuildFunc)
+	artifactHandlers = make(map[string]ListArtifactsFunc)
 )
 
 // RegisterSystem registers a handler for a build dependency.
@@ -34,6 +39,13 @@ func RegisterSystem(buildDep string, fn BuildFunc) {
 	mu.Lock()
 	defer mu.Unlock()
 	systemHandlers[buildDep] = fn
+}
+
+// RegisterSystemArtifacts registers an artifacts listing function for a build dependency.
+func RegisterSystemArtifacts(buildDep string, fn ListArtifactsFunc) {
+	mu.Lock()
+	defer mu.Unlock()
+	artifactHandlers[buildDep] = fn
 }
 
 // GetBuildFunc returns the appropriate build function for a module type.
@@ -97,4 +109,43 @@ func IsGoModuleType(moduleType string) bool {
 		return cfg.ModuleTypes.HasCapability(moduleType, "go_module")
 	}
 	return false
+}
+
+// GetListArtifactsFunc returns the appropriate artifacts listing function for a module type.
+// Returns nil if no artifacts function is registered for this type.
+func GetListArtifactsFunc(moduleType string) ListArtifactsFunc {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	cfg := config.Global()
+	if cfg == nil || cfg.ModuleTypes == nil {
+		return nil
+	}
+
+	// Get module capabilities and primary build dep
+	capabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
+	primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
+
+	// Use handlers config dispatch rules if available
+	var handlerName string
+	if cfg.Handlers != nil {
+		handlerName = cfg.Handlers.GetBuildHandler(moduleType, capabilities, primaryDep)
+	} else {
+		// Legacy fallback: special case for documentation + container
+		if cfg.ModuleTypes.HasCapability(moduleType, "documentation") &&
+			cfg.ModuleTypes.HasCapability(moduleType, "container") {
+			handlerName = "mkdocs"
+		} else {
+			handlerName = primaryDep
+		}
+	}
+
+	// Look up the artifacts handler
+	if handlerName != "" {
+		if fn, ok := artifactHandlers[handlerName]; ok {
+			return fn
+		}
+	}
+
+	return nil
 }

@@ -19,10 +19,10 @@ Use template commands when you need:
 
 | Scenario                               | Commands                                         |
 | -------------------------------------- | ------------------------------------------------ |
-| Apply templates with values            | `templates-apply`, `templates-apply-docs`        |
-| Install templates without substitution | `templates-install`, `templates-install-reports` |
-| List available placeholders            | `templates-list`                                 |
-| Extract tags from templates            | `templates-tags`                                 |
+| Apply templates with values            | `templates apply`, `templates apply docs`        |
+| Install templates without substitution | `templates install`, `templates install reports` |
+| List available placeholders            | `templates list`                                 |
+| Extract tags from templates            | `templates tags`                                 |
 
 ### Common Use Cases
 
@@ -82,13 +82,13 @@ Templates are resolved from multiple locations:
 
 ```bash
 # 1. List available templates
-r2r eac templates-list
+r2r eac templates list
 
 # 2. Preview placeholder values
-r2r eac templates-list --show-values
+r2r eac templates list --show-values
 
 # 3. Apply documentation templates
-r2r eac templates-apply-docs
+r2r eac templates apply docs
 
 # 4. Review generated files
 cat docs/README.md
@@ -98,10 +98,10 @@ cat docs/README.md
 
 ```bash
 # 1. Install report templates (first time)
-r2r eac templates-install-reports
+r2r eac templates install reports
 
 # 2. Apply templates with current data
-r2r eac templates-apply --type reports
+r2r eac templates apply --type reports
 
 # 3. Review reports
 cat out/reports/compliance-report.md
@@ -126,7 +126,7 @@ See documentation at {{.DocsURL}}.
 EOF
 
 # 2. Apply to specific module
-r2r eac templates-apply --template module-readme.md --module eac-core
+r2r eac templates apply --template module-readme.md --module eac-core
 ```
 
 ## Template Structure
@@ -207,13 +207,13 @@ Generate pages for documentation site:
 
 ```bash
 # Generate docs
-r2r eac templates-apply-docs
+r2r eac templates apply docs
 
 # Build site
 r2r eac build docs
 
 # Serve locally
-r2r eac serve-docs
+r2r eac serve docs
 ```
 
 ### With CI/CD
@@ -223,7 +223,7 @@ Automate documentation updates:
 ```yaml
 - name: Update documentation
   run: |
-    r2r eac templates-apply-docs
+    r2r eac templates apply docs
     git add docs/
     git diff --cached --quiet || git commit -m "docs: update from templates"
 ```
@@ -234,7 +234,7 @@ Templates feed into book generation:
 
 ```bash
 # Apply templates first
-r2r eac templates-apply-docs
+r2r eac templates apply docs
 
 # Then build book
 r2r eac build docs-book
@@ -322,7 +322,7 @@ Version: {{.Version}}
 
 | Problem                  | Solution                                      |
 | ------------------------ | --------------------------------------------- |
-| Placeholder not replaced | Check spelling, use `templates-list`          |
+| Placeholder not replaced | Check spelling, use `templates list`          |
 | Missing value            | Ensure data source exists (contracts, config) |
 | Template syntax error    | Validate Go template syntax                   |
 | Empty output             | Check conditionals, verify data exists        |

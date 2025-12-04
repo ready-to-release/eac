@@ -133,5 +133,5 @@ runs:
         else
           echo "Module build failed or produced no artifacts." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS ci summary-link ${RUN_ID} --type build >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link ${RUN_ID} --type build >> $GITHUB_STEP_SUMMARY
         fi

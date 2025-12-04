@@ -196,10 +196,10 @@ jobs:
             # For push: compare against last successful CI (incremental since last success)
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo "Pull Request detected - comparing against PR base"
-              RESULT=$($COMMANDS get changed modules ci --pr-base "${{ github.event.pull_request.base.sha }}" --as-json)
+              RESULT=$($COMMANDS get changed-modules-ci --pr-base "${{ github.event.pull_request.base.sha }}" --as-json)
             else
               echo "Push detected - comparing against last successful CI"
-              RESULT=$($COMMANDS get changed modules ci --as-json)
+              RESULT=$($COMMANDS get changed-modules-ci --as-json)
             fi
 
             echo "Raw result:"

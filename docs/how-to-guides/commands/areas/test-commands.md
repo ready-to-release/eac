@@ -7,9 +7,9 @@ Command reference for EAC's testing system.
 | Command | Description |
 |---------|-------------|
 | `test` | Test one or more modules by moniker |
-| `test-suite` | Run tests for a specific test suite |
-| `test-list-suites` | List all available test suites |
-| `test-debug` | Parse test results and list all failures |
+| `test suite` | Run tests for a specific test suite |
+| `test list-suites` | List all available test suites |
+| `test debug` | Parse test results and list all failures |
 
 ---
 
@@ -137,14 +137,14 @@ exit status 1
 
 ---
 
-## test-suite
+## test suite
 
 Run tests for a specific test suite.
 
 ### Synopsis
 
 ```bash
-r2r eac test-suite <name> [options]
+r2r eac test suite <name> [options]
 ```
 
 ### Description
@@ -169,16 +169,16 @@ Runs all tests matching the specified suite's tag configuration.
 
 ```bash
 # Run commit suite
-r2r eac test-suite commit
+r2r eac test suite commit
 
 # Run integration suite
-r2r eac test-suite integration
+r2r eac test suite integration
 
 # Run e2e suite with JUnit output
-r2r eac test-suite e2e --as-junit
+r2r eac test suite e2e --as-junit
 
 # Run smoke tests
-r2r eac test-suite smoke
+r2r eac test suite smoke
 ```
 
 ### Output
@@ -211,14 +211,14 @@ Running tests...
 
 ---
 
-## test-list-suites
+## test list-suites
 
 List all available test suites.
 
 ### Synopsis
 
 ```bash
-r2r eac test-list-suites
+r2r eac test list-suites
 ```
 
 ### Description
@@ -228,7 +228,7 @@ Displays all configured test suites with their descriptions and test counts.
 ### Examples
 
 ```bash
-r2r eac test-list-suites
+r2r eac test list-suites
 ```
 
 ### Output
@@ -244,7 +244,7 @@ Available Test Suites
 │ e2e         │ 12    │ 30m     │ End-to-end tests               │
 │ smoke       │ 8     │ 1m      │ Quick health checks            │
 
-Run a suite with: r2r eac test-suite <name>
+Run a suite with: r2r eac test suite <name>
 ```
 
 ### Exit Codes
@@ -256,14 +256,14 @@ Run a suite with: r2r eac test-suite <name>
 
 ---
 
-## test-debug
+## test debug
 
 Parse test results and list all failures.
 
 ### Synopsis
 
 ```bash
-r2r eac test-debug [options]
+r2r eac test debug [options]
 ```
 
 ### Description
@@ -280,10 +280,10 @@ Analyzes test output files to identify and display all test failures with detail
 
 ```bash
 # List all failures
-r2r eac test-debug
+r2r eac test debug
 
 # Verbose output
-r2r eac test-debug --verbose
+r2r eac test debug --verbose
 ```
 
 ### Output
@@ -361,14 +361,14 @@ r2r eac build src-auth
 r2r eac test src-auth
 
 # Debug failures
-r2r eac test-debug --verbose
+r2r eac test debug --verbose
 ```
 
 ### TDD Workflow
 
 ```bash
 # 1. Create spec
-r2r eac create-spec "User can reset password"
+r2r eac create spec "User can reset password"
 
 # 2. Run tests (expect failure)
 r2r eac test src-auth
@@ -401,7 +401,7 @@ r2r eac test --as-junit > test-results.xml
 # .git/hooks/pre-commit
 
 echo "Running tests..."
-r2r eac test-suite commit || exit 1
+r2r eac test suite commit || exit 1
 echo "✅ Tests passed"
 ```
 
@@ -481,7 +481,7 @@ test-coverage:
   r2r eac test --coverage
 
 test-suite:
-  r2r eac test-suite $(SUITE)
+  r2r eac test suite $(SUITE)
 ```
 
 ---

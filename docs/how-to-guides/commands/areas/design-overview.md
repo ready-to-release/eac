@@ -19,10 +19,10 @@ Use design commands when you need:
 
 | Scenario                           | Commands          |
 | ---------------------------------- | ----------------- |
-| Creating initial architecture docs | `create-design`   |
-| Updating after structural changes  | `update-design`   |
-| Validating DSL syntax              | `validate-design` |
-| Viewing diagrams in browser        | `serve-design`    |
+| Creating initial architecture docs | `create design`   |
+| Updating after structural changes  | `update design`   |
+| Validating DSL syntax              | `validate design` |
+| Viewing diagrams in browser        | `serve design`    |
 
 ### Common Use Cases
 
@@ -99,37 +99,37 @@ When generating diagrams, AI analyzes:
 
 ```bash
 # 1. Generate workspace.dsl for a module
-r2r eac create-design eac-commands
+r2r eac create design eac-commands
 
 # 2. Review generated DSL
 cat go/eac/commands/.design/workspace.dsl
 
 # 3. Validate syntax
-r2r eac validate-design eac-commands
+r2r eac validate design eac-commands
 
 # 4. View in browser
-r2r eac serve-design eac-commands
+r2r eac serve design eac-commands
 ```
 
 ### Updating After Changes
 
 ```bash
 # 1. After code changes, update the design
-r2r eac update-design eac-commands
+r2r eac update design eac-commands
 
 # 2. Review changes
 git diff go/eac/commands/.design/workspace.dsl
 
 # 3. Validate and view
-r2r eac validate-design eac-commands
-r2r eac serve-design eac-commands
+r2r eac validate design eac-commands
+r2r eac serve design eac-commands
 ```
 
 ### Team Collaboration
 
 ```bash
 # 1. Create designs for all modules
-r2r eac create-design --all
+r2r eac create design --all
 
 # 2. Commit to version control
 git add **/.design/workspace.dsl
@@ -137,7 +137,7 @@ git commit -m "docs: add architecture diagrams"
 
 # 3. CI validates on every PR
 # In GitHub Actions:
-r2r eac validate-design
+r2r eac validate design
 ```
 
 ## Diagram Types
@@ -194,11 +194,11 @@ Validate designs in pipelines:
 
 ```yaml
 - name: Validate architecture
-  run: r2r eac validate-design
+  run: r2r eac validate design
 
 - name: Check for drift
   run: |
-    r2r eac update-design --dry-run
+    r2r eac update design --dry-run
     git diff --exit-code
 ```
 
@@ -206,10 +206,10 @@ Validate designs in pipelines:
 
 ### Structurizr Lite
 
-`serve-design` launches Structurizr Lite in Docker:
+`serve design` launches Structurizr Lite in Docker:
 
 ```bash
-r2r eac serve-design eac-commands
+r2r eac serve design eac-commands
 # Opens http://localhost:8080
 ```
 

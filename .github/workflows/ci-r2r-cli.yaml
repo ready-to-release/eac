@@ -75,7 +75,7 @@ jobs:
           else
             echo "CLI binary build failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -165,7 +165,7 @@ jobs:
           else
             echo "CLI tests failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS ci summary-link ${{ github.run_id }} --type test --artifact test-results-r2r-cli >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type test --artifact test-results-r2r-cli >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 

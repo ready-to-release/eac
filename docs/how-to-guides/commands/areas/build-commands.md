@@ -205,7 +205,7 @@ sha256sum out/build/r2r-cli/*
 
 ```bash
 # Build in correct dependency order
-r2r eac get-execution-order r2r-cli | while read module; do
+r2r eac get execution order r2r-cli | while read module; do
   r2r eac build $module
 done
 ```
@@ -214,12 +214,12 @@ done
 
 ```bash
 # Build only Go modules
-r2r eac get-modules --type go-* | while read module; do
+r2r eac get modules --type go-* | while read module; do
   r2r eac build $module
 done
 
 # Build changed modules only
-r2r eac get-changed-modules | while read module; do
+r2r eac get changed-modules | while read module; do
   r2r eac build $module
 done
 ```
@@ -234,7 +234,7 @@ done
 #!/bin/bash
 # .git/hooks/pre-commit
 
-CHANGED=$(r2r eac get-changed-modules)
+CHANGED=$(r2r eac get changed-modules)
 for module in $CHANGED; do
   echo "Building $module..."
   r2r eac build $module || exit 1

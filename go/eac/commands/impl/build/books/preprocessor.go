@@ -15,15 +15,18 @@ type Preprocessor struct {
 	workspaceRoot string
 	stagingDir    string
 	logWriter     io.Writer
+	pdfMode       bool
 }
 
 // NewPreprocessor creates a new book preprocessor
-func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer) *Preprocessor {
+// pdfMode enables PDF-specific processing like link normalization
+func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer, pdfMode bool) *Preprocessor {
 	return &Preprocessor{
 		book:          book,
 		workspaceRoot: workspaceRoot,
 		stagingDir:    stagingDir,
 		logWriter:     logWriter,
+		pdfMode:       pdfMode,
 	}
 }
 
@@ -60,6 +63,15 @@ func (p *Preprocessor) Preprocess() error {
 	p.log("  Step 5: Inserting inline content...")
 	if err := p.insertInlineContent(commandOutputs); err != nil {
 		return fmt.Errorf("step 5 (inline): %w", err)
+	}
+
+	// Step 6: Normalize links for PDF (only in PDF mode)
+	// Converts relative markdown links to anchor format for WeasyPrint compatibility
+	if p.pdfMode {
+		p.log("  Step 6: Normalizing links for PDF...")
+		if err := p.cleanupLinksForPDF(); err != nil {
+			return fmt.Errorf("step 6 (links): %w", err)
+		}
 	}
 
 	p.log("✅ Book preprocessing complete: %s", p.book.Name)

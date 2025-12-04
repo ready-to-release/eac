@@ -1,7 +1,7 @@
-// Command: specs unused-steps
+// Command: get specs unused-steps
 // Description: Find step definitions not used by any feature file
 // Short: Detect unused godog step definitions
-// Long: The specs unused-steps command scans step definition files in go/eac/specs/impl/
+// Long: The get specs unused-steps command scans step definition files in go/eac/specs/impl/
 // Long: and compares them against feature files in specs/ to find step definitions
 // Long: that are not matched by any Gherkin step.
 // Long: This helps identify dead code and maintain a clean test codebase.

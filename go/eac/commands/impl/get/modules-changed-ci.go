@@ -1,5 +1,5 @@
-// Command: get changed modules ci
-// Description: Get modules requiring rebuild since last successful CI run
+// Command: get changed-modules-ci
+// Short: Get modules requiring rebuild since last successful CI run
 // Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
@@ -7,12 +7,14 @@
 //   --pr-base <sha>: For PRs, the base SHA to compare against
 //   --workflow <name>: Workflow name to find last success (default: "Change Trigger")
 //   --branch <name>: Branch to check for last success (default: main)
+//   --filter-workflows: Only include modules that have a ci-{module}.yaml workflow file
 package get
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
@@ -25,7 +27,7 @@ func init() {
 	registry.Register(GetChangedModulesCI)
 }
 
-// CIChangedModulesResult represents the output of the get changed modules ci command
+// CIChangedModulesResult represents the output of the get changed-modules-ci command
 type CIChangedModulesResult struct {
 	Modules         []string `json:"modules" yaml:"modules" toml:"modules"`
 	DirectlyChanged []string `json:"directly_changed" yaml:"directly_changed" toml:"directly_changed"`
@@ -34,9 +36,11 @@ type CIChangedModulesResult struct {
 	HeadSHA         string   `json:"head_sha" yaml:"head_sha" toml:"head_sha"`
 	IsBootstrap     bool     `json:"is_bootstrap" yaml:"is_bootstrap" toml:"is_bootstrap"`
 	// Additional context for CI reasoning
-	ChangedFiles      []string          `json:"changed_files" yaml:"changed_files" toml:"changed_files"`
-	ChangedFileCount  int               `json:"changed_file_count" yaml:"changed_file_count" toml:"changed_file_count"`
+	ChangedFiles      []string            `json:"changed_files" yaml:"changed_files" toml:"changed_files"`
+	ChangedFileCount  int                 `json:"changed_file_count" yaml:"changed_file_count" toml:"changed_file_count"`
 	FilesByModule     map[string][]string `json:"files_by_module" yaml:"files_by_module" toml:"files_by_module"`
+	// Workflow filtering (only present when --filter-workflows is used)
+	FilteredOut []string `json:"filtered_out,omitempty" yaml:"filtered_out,omitempty" toml:"filtered_out,omitempty"`
 }
 
 func GetChangedModulesCI() int {
@@ -51,6 +55,7 @@ func GetChangedModulesCI() int {
 	prBase := ""
 	workflow := "Change Trigger"
 	branch := "main"
+	filterWorkflows := false
 
 	for i, arg := range os.Args {
 		switch arg {
@@ -66,6 +71,8 @@ func GetChangedModulesCI() int {
 			if i+1 < len(os.Args) {
 				branch = os.Args[i+1]
 			}
+		case "--filter-workflows":
+			filterWorkflows = true
 		}
 	}
 
@@ -91,6 +98,13 @@ func GetChangedModulesCI() int {
 			if err != nil {
 				return nil, err
 			}
+
+			// Apply workflow filter if requested
+			var filteredOut []string
+			if filterWorkflows {
+				allModules, filteredOut = filterModulesWithWorkflows(allModules, workspaceRoot)
+			}
+
 			return CIChangedModulesResult{
 				Modules:          allModules,
 				DirectlyChanged:  allModules,
@@ -101,6 +115,7 @@ func GetChangedModulesCI() int {
 				ChangedFiles:     []string{},
 				ChangedFileCount: 0,
 				FilesByModule:    map[string][]string{},
+				FilteredOut:      filteredOut,
 			}, nil
 		}
 
@@ -156,6 +171,14 @@ func GetChangedModulesCI() int {
 			filesByModule = map[string][]string{}
 		}
 
+		// Apply workflow filter if requested
+		var filteredOut []string
+		if filterWorkflows {
+			allRequiringRebuild, filteredOut = filterModulesWithWorkflows(allRequiringRebuild, workspaceRoot)
+			directlyChanged, _ = filterModulesWithWorkflows(directlyChanged, workspaceRoot)
+			invalidated, _ = filterModulesWithWorkflows(invalidated, workspaceRoot)
+		}
+
 		return CIChangedModulesResult{
 			Modules:          allRequiringRebuild,
 			DirectlyChanged:  directlyChanged,
@@ -166,6 +189,7 @@ func GetChangedModulesCI() int {
 			ChangedFiles:     changedFiles,
 			ChangedFileCount: len(changedFiles),
 			FilesByModule:    filesByModule,
+			FilteredOut:      filteredOut,
 		}, nil
 	})
 }
@@ -279,4 +303,22 @@ func getFilesByModule(changedFiles []string, workspaceRoot string) (map[string][
 	}
 
 	return result, nil
+}
+
+// filterModulesWithWorkflows filters modules to only those that have a ci-{module}.yaml workflow file
+// Returns (filtered modules, modules that were filtered out)
+func filterModulesWithWorkflows(monikers []string, workspaceRoot string) ([]string, []string) {
+	filtered := []string{}
+	filteredOut := []string{}
+
+	for _, moniker := range monikers {
+		workflowPath := filepath.Join(workspaceRoot, ".github", "workflows", fmt.Sprintf("ci-%s.yaml", moniker))
+		if _, err := os.Stat(workflowPath); err == nil {
+			filtered = append(filtered, moniker)
+		} else {
+			filteredOut = append(filteredOut, moniker)
+		}
+	}
+
+	return filtered, filteredOut
 }

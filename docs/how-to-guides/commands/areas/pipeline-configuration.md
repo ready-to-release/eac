@@ -105,7 +105,7 @@ Layer 3: r2r-cli
 
 ```bash
 # View execution order
-r2r eac get-execution-order r2r-cli
+r2r eac get execution order r2r-cli
 
 # Output:
 # Layer 0: eac-core
@@ -269,7 +269,7 @@ jobs:
           go-version: '1.21'
 
       - name: Run Pipeline
-        run: r2r eac run-pipeline
+        run: r2r eac pipeline run
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4
@@ -290,7 +290,7 @@ jobs:
       - uses: actions/checkout@v4
       - id: set-matrix
         run: |
-          LAYERS=$(r2r eac get-execution-order --json)
+          LAYERS=$(r2r eac get execution order --json)
           echo "matrix=$LAYERS" >> $GITHUB_OUTPUT
 
   build:
@@ -309,10 +309,10 @@ jobs:
 
 ```yaml
 - name: Wait for Pipeline
-  run: r2r eac pipeline-wait --timeout 30m
+  run: r2r eac pipeline wait --timeout 30m
 
 - name: Check Status
-  run: r2r eac show-pipeline-status
+  run: r2r eac pipeline status
 ```
 
 ## Pipeline Wait Configuration
@@ -342,16 +342,16 @@ wait:
 
 ```bash
 # Wait with default settings
-r2r eac pipeline-wait
+r2r eac pipeline wait
 
 # Custom timeout
-r2r eac pipeline-wait --timeout 1h
+r2r eac pipeline wait --timeout 1h
 
 # Specific workflow
-r2r eac pipeline-wait --workflow ci
+r2r eac pipeline wait --workflow ci
 
 # Specific run
-r2r eac pipeline-wait --run-id 12345678
+r2r eac pipeline wait --run-id 12345678
 ```
 
 ## Status Configuration
@@ -375,7 +375,7 @@ status:
 ### Status Output
 
 ```bash
-r2r eac show-pipeline-status
+r2r eac pipeline status
 
 # Output:
 # Pipeline Status for main (abc1234)
@@ -424,14 +424,14 @@ changes:
 
 ```bash
 # Get changed modules
-r2r eac get-changed-modules
+r2r eac get changed-modules
 
 # Get changed modules for CI
-r2r eac get-changed-modules-ci
+r2r eac get changed-modules-ci
 
 # Run pipeline for changed only
-CHANGED=$(r2r eac get-changed-modules)
-r2r eac run-pipeline $CHANGED
+CHANGED=$(r2r eac get changed-modules)
+r2r eac pipeline run $CHANGED
 ```
 
 ## Environment Variables

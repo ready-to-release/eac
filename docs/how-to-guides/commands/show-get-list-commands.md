@@ -38,7 +38,7 @@ r2r eac get modules                     # Module contracts (JSON)
 r2r eac get dependencies                # Dependency graph (JSON)
 r2r eac get files                       # File mappings (JSON)
 r2r eac get changed-modules             # Changed modules (JSON)
-r2r eac get execution-order r2r-cli     # Build order (JSON)
+r2r eac get execution order r2r-cli     # Build order (JSON)
 r2r eac get config                      # EAC configuration (JSON)
 r2r eac get tests                       # All tests (JSON)
 r2r eac get environments                # Environment contracts (JSON)
@@ -193,7 +193,7 @@ r2r eac show config
 Display changed files with module ownership.
 
 ```bash
-r2r eac show-files-changed
+r2r eac show files-changed
 
 # Output:
 # ┌────────────────────────────────────┬─────────────────┐
@@ -211,7 +211,7 @@ r2r eac show-files-changed
 Display staged files with module ownership.
 
 ```bash
-r2r eac show-files-staged
+r2r eac show files-staged
 
 # Output:
 # ┌────────────────────────────────────┬─────────────────┐
@@ -325,8 +325,8 @@ r2r eac get files
 
 **Alternatives for specific queries:**
 
-- `show-files-changed` - Only changed files
-- `show-files-staged` - Only staged files
+- `show files-changed` - Only changed files
+- `show files-staged` - Only staged files
 
 ### get changed-modules
 
@@ -350,12 +350,12 @@ r2r eac get changed-modules
 - Selective testing
 - CI optimization
 
-### get execution-order
+### get execution order
 
 Get build order for modules based on dependencies.
 
 ```bash
-r2r eac get execution-order r2r-cli
+r2r eac get execution order r2r-cli
 
 # Output (JSON):
 {
@@ -558,7 +558,7 @@ r2r eac show dependencies
 
 ```bash
 # What files changed?
-r2r eac show-files-changed
+r2r eac show files-changed
 
 # What modules are affected?
 r2r eac get changed-modules
@@ -575,7 +575,7 @@ done
 
 ```bash
 # Get execution order
-r2r eac get execution-order r2r-cli | jq -r '.execution_order[]' | while read module; do
+r2r eac get execution order r2r-cli | jq -r '.execution_order[]' | while read module; do
   echo "Building $module..."
   r2r eac build $module
 done
@@ -627,7 +627,7 @@ fi
 
 # Build in dependency order
 for module in $CHANGED; do
-  ORDER=$(r2r eac get execution-order $module | jq -r '.execution_order[]')
+  ORDER=$(r2r eac get execution order $module | jq -r '.execution_order[]')
   for dep in $ORDER; do
     echo "Building $dep..."
     r2r eac build module $dep || exit 1
@@ -669,7 +669,7 @@ done
 | --------------------------- | ------------------------------------------------------- |
 | Empty output                | No modules/files found, check repository structure      |
 | JSON parse error            | Pipe through `jq` for validation                        |
-| Slow `get files`            | Use `show-files-changed` or `show-files-staged` instead |
+| Slow `get files`            | Use `show files-changed` or `show files-staged` instead |
 | Module not found            | Check module contract exists                            |
 | Circular dependency warning | Review `show dependencies`, fix architecture            |
 
@@ -725,8 +725,8 @@ r2r eac get modules | jq '{module: [.modules[].moniker]}'
 - `show tests` - Test suites table
 - `show environments` - Environment configs
 - `show config` - EAC configuration
-- `show-files-changed` - Changed files only
-- `show-files-staged` - Staged files only
+- `show files-changed` - Changed files only
+- `show files-staged` - Staged files only
 
 **Get commands** (JSON):
 
@@ -735,7 +735,7 @@ r2r eac get modules | jq '{module: [.modules[].moniker]}'
 - `get files` - File mappings
 - `get changed-modules` - Affected modules
 - `get changed-modules-ci` - Modules needing rebuild since last CI
-- `get execution-order` - Build order
+- `get execution order` - Build order
 - `get config` - EAC configuration
 - `get tests` - All tests
 - `get environments` - Environment contracts

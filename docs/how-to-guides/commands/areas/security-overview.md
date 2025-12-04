@@ -21,13 +21,13 @@ Use security commands when you need:
 
 | Scenario                        | Commands              |
 | ------------------------------- | --------------------- |
-| Static code analysis            | `security-sast`       |
-| Dependency vulnerabilities      | `security-vuln`       |
-| Infrastructure as Code scanning | `security-iac`        |
-| Secrets detection               | `security-secrets`    |
-| Compliance checking             | `security-compliance` |
-| Generate SBOM                   | `security-sbom`       |
-| Dynamic testing                 | `security-zap`        |
+| Static code analysis            | `security sast`       |
+| Dependency vulnerabilities      | `security vuln`       |
+| Infrastructure as Code scanning | `security iac`        |
+| Secrets detection               | `security secrets`    |
+| Compliance checking             | `security compliance` |
+| Generate SBOM                   | `security sbom`       |
+| Dynamic testing                 | `security zap`        |
 | Run all scans                   | `security`            |
 
 ### Common Use Cases
@@ -89,15 +89,15 @@ Formats: SPDX, CycloneDX
 
 ```bash
 # 1. Run quick security check before commit
-r2r eac security-secrets
-r2r eac security-sast
+r2r eac security secrets
+r2r eac security sast
 
 # 2. Fix any issues found
 # ... make fixes ...
 
 # 3. Verify fixes
-r2r eac security-secrets
-r2r eac security-sast
+r2r eac security secrets
+r2r eac security sast
 ```
 
 ### CI/CD Workflow
@@ -107,23 +107,23 @@ r2r eac security-sast
 r2r eac security
 
 # Or run individual scans
-r2r eac security-sast
-r2r eac security-vuln
-r2r eac security-secrets
-r2r eac security-compliance
+r2r eac security sast
+r2r eac security vuln
+r2r eac security secrets
+r2r eac security compliance
 ```
 
 ### Compliance Workflow
 
 ```bash
 # 1. Generate SBOM for audit
-r2r eac security-sbom --format spdx
+r2r eac security sbom --format spdx
 
 # 2. Run compliance checks
-r2r eac security-compliance --framework soc2
+r2r eac security compliance --framework soc2
 
 # 3. Generate evidence for risk assessment
-r2r eac create-risk-assess
+r2r eac create risk-assess
 ```
 
 ## Scan Details
@@ -133,7 +133,7 @@ r2r eac create-risk-assess
 Static Application Security Testing analyzes source code:
 
 ```bash
-r2r eac security-sast
+r2r eac security sast
 
 # Output:
 # Scanning with Semgrep...
@@ -160,7 +160,7 @@ Detects:
 Scans dependencies for known CVEs:
 
 ```bash
-r2r eac security-vuln
+r2r eac security vuln
 
 # Output:
 # Scanning dependencies...
@@ -180,7 +180,7 @@ r2r eac security-vuln
 Checks IaC files for misconfigurations:
 
 ```bash
-r2r eac security-iac
+r2r eac security iac
 
 # Scans:
 # - Dockerfiles
@@ -194,7 +194,7 @@ r2r eac security-iac
 Finds exposed credentials:
 
 ```bash
-r2r eac security-secrets
+r2r eac security secrets
 
 # Output:
 # Scanning for secrets...
@@ -213,7 +213,7 @@ r2r eac security-secrets
 Validates against security frameworks:
 
 ```bash
-r2r eac security-compliance --framework cis
+r2r eac security compliance --framework cis
 
 # Output:
 # CIS Benchmark Compliance
@@ -230,7 +230,7 @@ r2r eac security-compliance --framework cis
 Creates software bill of materials:
 
 ```bash
-r2r eac security-sbom --format cyclonedx
+r2r eac security sbom --format cyclonedx
 
 # Output: out/sbom/sbom.json
 # Contains:
@@ -245,11 +245,11 @@ r2r eac security-sbom --format cyclonedx
 Runs against live application:
 
 ```bash
-# Start application
-r2r eac serve-api &
+# Start your application (replace with your actual start command)
+./your-api-server &
 
 # Run ZAP scan
-r2r eac security-zap --target http://localhost:8080
+r2r eac security zap --target http://localhost:8080
 
 # Output:
 # OWASP ZAP Scan Results
@@ -272,10 +272,10 @@ Security scan results feed into risk assessment:
 r2r eac security
 
 # Update risk assessment with findings
-r2r eac create-risk-assess
+r2r eac create risk-assess
 
 # View risk report
-r2r eac show-risk-report
+r2r eac show risk-report
 ```
 
 ### With CI/CD
@@ -292,16 +292,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: SAST Scan
-        run: r2r eac security-sast
+        run: r2r eac security sast
 
       - name: Vulnerability Scan
-        run: r2r eac security-vuln
+        run: r2r eac security vuln
 
       - name: Secrets Check
-        run: r2r eac security-secrets
+        run: r2r eac security secrets
 
       - name: Generate SBOM
-        run: r2r eac security-sbom
+        run: r2r eac security sbom
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v3
@@ -319,8 +319,8 @@ jobs:
 echo "Running security checks..."
 
 # Quick checks only
-r2r eac security-secrets || exit 1
-r2r eac security-sast --quick || exit 1
+r2r eac security secrets || exit 1
+r2r eac security sast --quick || exit 1
 
 echo "✅ Security checks passed"
 ```

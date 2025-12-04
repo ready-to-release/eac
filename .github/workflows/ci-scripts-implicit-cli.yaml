@@ -63,25 +63,23 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
         with:
-          go-version: '1.24'
-          cache-dependency-path: |
-            go/eac/commands/go.sum
-            go/eac/core/go.sum
+          trigger-run-id: ${{ inputs.trigger_run_id }}
 
       - name: Run Tests (Commit Suite)
         shell: pwsh
         run: |
-          go run ./go/eac/commands test scripts-implicit-cli --suite commit
+          & "${{ steps.commands.outputs.commands-path }}" test scripts-implicit-cli --suite commit
 
       - name: Run Tests (Acceptance Suite)
         # Skip acceptance tests for PRs - only run on main/release branches
         if: ${{ !startsWith(inputs.ref, 'refs/pull/') }}
         shell: pwsh
         run: |
-          go run ./go/eac/commands test scripts-implicit-cli --suite acceptance
+          & "${{ steps.commands.outputs.commands-path }}" test scripts-implicit-cli --suite acceptance
 
       - name: Upload Test Results
         if: always()

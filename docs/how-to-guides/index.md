@@ -31,7 +31,7 @@ Guides for using EAC commands.
 - [Build Commands](commands/areas/build-overview.md) - Build modules
 - [Test Commands](commands/areas/test-overview.md) - Test modules
 - [Validate Commands](commands/areas/validate-overview.md) - Validate contracts and dependencies
-- [CI Command](commands/ci-command.md) - Continuous integration workflows
+- [Pipeline CI Commands](commands/areas/pipeline-ci-commands.md) - CI diagnostics and workflow orchestration
 
 ### Development Workflow
 

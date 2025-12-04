@@ -20,12 +20,12 @@ Use release commands when you need:
 
 | Scenario                      | Commands                         |
 | ----------------------------- | -------------------------------- |
-| Check if module needs release | `release-pending`                |
-| Generate/update changelog     | `release-changelog`              |
-| Validate changelog format     | `release-validate`               |
-| Check CI before release       | `release-check-ci`               |
-| Create release tag            | `release-calver`, `release-this` |
-| Find untagged versions        | `release-tag-pending`            |
+| Check if module needs release | `release pending`                |
+| Generate/update changelog     | `release changelog`              |
+| Validate changelog format     | `validate release`               |
+| Check CI before release       | `release check-ci`               |
+| Create release tag            | `release generate-module-calver`, `release this` |
+| Find untagged versions        | `release tag-pending`            |
 
 ### Common Use Cases
 
@@ -102,22 +102,22 @@ r2r-cli/v2024.12.3
 
 ```bash
 # 1. Check if module has pending changes
-r2r eac release-pending eac-commands
+r2r eac release pending eac-commands
 
 # 2. Generate/update changelog
-r2r eac release-changelog eac-commands
+r2r eac release changelog eac-commands
 
 # 3. Review changelog
 cat go/eac/commands/CHANGELOG.md
 
 # 4. Validate changelog format
-r2r eac release-validate eac-commands
+r2r eac validate release eac-commands
 
 # 5. Check CI status
-r2r eac release-check-ci eac-commands
+r2r eac release check-ci eac-commands
 
 # 6. Create release
-r2r eac release-this eac-commands
+r2r eac release this eac-commands
 
 # 7. Push tag
 git push origin eac-commands/v2024.12.1
@@ -129,7 +129,7 @@ git push origin eac-commands/v2024.12.1
 # On merge to main
 - name: Check pending releases
   run: |
-    PENDING=$(r2r eac release-pending --all)
+    PENDING=$(r2r eac release pending --all)
     if [ -n "$PENDING" ]; then
       echo "modules=$PENDING" >> $GITHUB_OUTPUT
     fi
@@ -137,8 +137,8 @@ git push origin eac-commands/v2024.12.1
 - name: Release pending modules
   run: |
     for module in ${{ steps.check.outputs.modules }}; do
-      r2r eac release-changelog $module
-      r2r eac release-this $module
+      r2r eac release changelog $module
+      r2r eac release this $module
     done
 
 - name: Push tags
@@ -159,8 +159,8 @@ r2r eac work merge
 cd ../eac && git push
 
 # 4. Release immediately
-r2r eac release-changelog eac-core
-r2r eac release-this eac-core
+r2r eac release changelog eac-core
+r2r eac release this eac-core
 git push origin eac-core/v2024.12.3
 ```
 
@@ -191,14 +191,14 @@ Release validation in pipelines:
 
 ```yaml
 - name: Validate changelogs
-  run: r2r eac release-validate
+  run: r2r eac validate release
 
 - name: Check CI status
-  run: r2r eac release-check-ci $MODULE
+  run: r2r eac release check-ci $MODULE
 
 - name: Release on green
   if: success()
-  run: r2r eac release-this $MODULE
+  run: r2r eac release this $MODULE
 ```
 
 ### With GitHub Releases
@@ -235,8 +235,8 @@ r2r eac work merge
 cd ../eac
 
 # Back in main
-r2r eac release-pending eac-commands  # Check if release needed
-r2r eac release-this eac-commands     # Release if pending
+r2r eac release pending eac-commands  # Check if release needed
+r2r eac release this eac-commands     # Release if pending
 ```
 
 ## Special Cases
@@ -246,7 +246,7 @@ r2r eac release-this eac-commands     # Release if pending
 The CLI uses SemVer for compatibility:
 
 ```bash
-r2r eac release-r2r-cli
+r2r eac release r2r-cli
 # Creates tag: r2r-cli/v1.2.3 (semver)
 ```
 
@@ -256,13 +256,13 @@ Release multiple modules together:
 
 ```bash
 # Check all pending
-r2r eac release-pending --all
+r2r eac release pending --all
 
 # Release specific modules
-r2r eac release-this eac-commands eac-core
+r2r eac release this eac-commands eac-core
 
 # Or release all pending
-r2r eac release-this --all
+r2r eac release this --all
 ```
 
 ### Version Extraction
@@ -270,7 +270,7 @@ r2r eac release-this --all
 Get current version programmatically:
 
 ```bash
-r2r eac release-get-version eac-commands
+r2r eac release get-version eac-commands
 # Output: 2024.12.1
 ```
 
@@ -286,7 +286,7 @@ r2r eac release-get-version eac-commands
 ### Don'ts
 
 - **Don't skip validation** - Catches format issues early
-- **Don't release without CI** - `release-check-ci` exists for a reason
+- **Don't release without CI** - `release check-ci` exists for a reason
 - **Don't forget to push** - Tags must be pushed to be useful
 
 ## Next Steps

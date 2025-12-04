@@ -19,9 +19,9 @@ Use specification commands when you need:
 
 | Scenario                          | Commands             |
 | --------------------------------- | -------------------- |
-| Creating new feature specs        | `create-spec`        |
-| Validating spec quality           | `validate-specs`     |
-| Finding orphaned step definitions | `specs-unused-steps` |
+| Creating new feature specs        | `create spec`        |
+| Validating spec quality           | `validate specs`     |
+| Finding orphaned step definitions | `get specs unused-steps` |
 
 ### Common Use Cases
 
@@ -115,7 +115,7 @@ func init() {
 
 ```bash
 # 1. Generate spec from requirements
-r2r eac create-spec "User can reset password via email"
+r2r eac create spec "User can reset password via email"
 
 # 2. Review generated spec
 cat specs/src-auth/password-reset.feature
@@ -137,13 +137,13 @@ r2r eac work commit --all
 
 ```bash
 # 1. Validate all specs meet quality standards
-r2r eac validate-specs
+r2r eac validate specs
 
 # 2. Check for undefined tags
 r2r eac validate test-tags
 
 # 3. Find unused step definitions
-r2r eac specs-unused-steps
+r2r eac get specs unused-steps
 ```
 
 ### AI Generation
@@ -152,10 +152,10 @@ When generating specs, provide clear requirements:
 
 ```bash
 # Simple feature
-r2r eac create-spec "Users can update their profile picture"
+r2r eac create spec "Users can update their profile picture"
 
 # Detailed requirements
-r2r eac create-spec "Users can update their profile picture. \
+r2r eac create spec "Users can update their profile picture. \
   They should be able to upload JPG or PNG files up to 5MB. \
   The old picture should be deleted. \
   A thumbnail should be generated automatically."
@@ -227,20 +227,20 @@ Scenario: User provisioning
   ...
 
 # Assessment includes spec results
-r2r eac create-risk-assess
+r2r eac create risk-assess
 ```
 
 ### With CI/CD
 
 ```yaml
 - name: Validate specifications
-  run: r2r eac validate-specs
+  run: r2r eac validate specs
 
 - name: Run BDD tests
   run: r2r eac test --as-junit
 
 - name: Check for unused steps
-  run: r2r eac specs-unused-steps
+  run: r2r eac get specs unused-steps
 ```
 
 ## Best Practices

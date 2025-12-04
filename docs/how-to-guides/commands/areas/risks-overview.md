@@ -19,10 +19,10 @@ Use risk management commands when you need:
 
 | Scenario                              | Commands                                 |
 | ------------------------------------- | ---------------------------------------- |
-| Starting compliance for a new project | `create-risk`                            |
-| Updating assessments after changes    | `create-risk-assess`                     |
-| Preparing for audits                  | `show-risk-report`                       |
-| Validating OSCAL files                | `validate-risk`, `validate-risk-catalog` |
+| Starting compliance for a new project | `create risk`                            |
+| Updating assessments after changes    | `create risk-assess`                     |
+| Preparing for audits                  | `show risk-report`                       |
+| Validating OSCAL files                | `validate risk`, `validate risk-catalog` |
 
 ### Common Use Cases
 
@@ -66,7 +66,7 @@ Control → Implementation → Evidence
 
 ### AI-Powered Assessment
 
-When you run `create-risk-assess`, AI analyzes:
+When you run `create risk-assess`, AI analyzes:
 
 1. **Test results** - Which controls have passing tests
 2. **Security scans** - SAST, vulnerability, and compliance findings
@@ -79,7 +79,7 @@ When you run `create-risk-assess`, AI analyzes:
 
 ```bash
 # 1. Create risk profile from compliance requirements
-r2r eac create-risk --domain security --framework soc2
+r2r eac create risk --domain security --framework soc2
 
 # 2. Review generated OSCAL profile
 cat .r2r/eac/risk/profile.json
@@ -97,23 +97,23 @@ r2r eac security
 r2r eac test
 
 # 3. Update assessment with latest evidence
-r2r eac create-risk-assess
+r2r eac create risk-assess
 
 # 4. Review assessment results
-r2r eac show-risk-report
+r2r eac show risk-report
 ```
 
 ### Audit Preparation
 
 ```bash
 # 1. Validate all OSCAL files
-r2r eac validate-risk
+r2r eac validate risk
 
 # 2. Generate comprehensive report
-r2r eac show-risk-report --format detailed
+r2r eac show risk-report --format detailed
 
 # 3. Export for auditors
-r2r eac show-risk-report --format json > audit-report.json
+r2r eac show risk-report --format json > audit-report.json
 ```
 
 ## Integration Points
@@ -122,10 +122,10 @@ r2r eac show-risk-report --format json > audit-report.json
 
 Risk assessment automatically incorporates:
 
-- SAST findings (`security-sast`)
-- Vulnerability scan results (`security-vuln`)
-- Compliance check results (`security-compliance`)
-- SBOM data (`security-sbom`)
+- SAST findings (`security sast`)
+- Vulnerability scan results (`security vuln`)
+- Compliance check results (`security compliance`)
+- SBOM data (`security sbom`)
 
 ### With Testing
 
@@ -141,10 +141,10 @@ Integrate risk assessment into pipelines:
 
 ```yaml
 - name: Update risk assessment
-  run: r2r eac create-risk-assess
+  run: r2r eac create risk-assess
 
 - name: Validate compliance
-  run: r2r eac validate-risk
+  run: r2r eac validate risk
 ```
 
 ## Next Steps
