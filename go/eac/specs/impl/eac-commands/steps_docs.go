@@ -17,13 +17,14 @@ import (
 
 // docsContext holds Docker-related state for docs tests.
 type docsContext struct {
+	testCtx         *internal.TestContext
 	dockerClient    *client.Client
 	dockerAvailable bool
 }
 
 // registerDocsSteps registers step definitions for docs command features.
 func registerDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
-	dCtx := &docsContext{}
+	dCtx := &docsContext{testCtx: ctx}
 
 	// Setup/teardown
 	sc.After(func(goctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
@@ -78,7 +79,7 @@ func docsCheckDocker(dCtx *docsContext) error {
 }
 
 // docsContainerState ensures MkDocs container is in expected state.
-// When used as a Given step, it will start/stop the container as needed.
+// When used as a Given step, it will create/start/stop the container as needed.
 // When used as a Then step, it verifies the container is in the expected state.
 func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 	if !dCtx.dockerAvailable || dCtx.dockerClient == nil {
@@ -110,9 +111,16 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 
 	if shouldBeRunning {
 		if !found {
-			return fmt.Errorf("MkDocs container not found")
-		}
-		if !running {
+			// Container doesn't exist - create and start it via serve docs command
+			if err := dCtx.testCtx.RunCommand("serve docs --no-browser"); err != nil {
+				return fmt.Errorf("failed to start MkDocs container: %w", err)
+			}
+			// Verify the command succeeded
+			if dCtx.testCtx.ExitCode != 0 {
+				return fmt.Errorf("serve docs command failed with exit code %d: %s",
+					dCtx.testCtx.ExitCode, dCtx.testCtx.CommandOutput)
+			}
+		} else if !running {
 			// Container exists but stopped - start it
 			if err := dCtx.dockerClient.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 				return fmt.Errorf("failed to start stopped MkDocs container: %w", err)

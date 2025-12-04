@@ -8,11 +8,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
+)
+
+// Package-level cache for test discovery results.
+// This avoids re-running expensive discovery for each scenario in test-sanity.
+var (
+	discoveryCache      []testing.TestReference
+	discoveryCacheRoot  string
+	discoveryCacheMutex sync.Mutex
 )
 
 // testSanityContext holds state for test-sanity scenarios.
@@ -250,16 +259,31 @@ func (c *testSanityContext) scanForTypeScriptTests() error {
 func (c *testSanityContext) runTestDiscovery() error {
 	root := c.repoRoot
 
-	tests, err := testing.DiscoverAllTests(root)
-	if err != nil {
-		return err
-	}
+	// Use cached results if available for the same repo root
+	discoveryCacheMutex.Lock()
+	if discoveryCacheRoot == root && discoveryCache != nil {
+		c.discoveredTests = discoveryCache
+		discoveryCacheMutex.Unlock()
+	} else {
+		discoveryCacheMutex.Unlock()
 
-	c.discoveredTests = tests
+		tests, err := testing.DiscoverAllTests(root)
+		if err != nil {
+			return err
+		}
+
+		// Cache the results
+		discoveryCacheMutex.Lock()
+		discoveryCache = tests
+		discoveryCacheRoot = root
+		discoveryCacheMutex.Unlock()
+
+		c.discoveredTests = tests
+	}
 
 	// Count by type
 	c.discoveredCounts = make(map[string]int)
-	for _, t := range tests {
+	for _, t := range c.discoveredTests {
 		c.discoveredCounts[t.Type]++
 	}
 

@@ -120,12 +120,14 @@ func Build() int {
 	tidyExplicitlySet := false
 	compressed := false
 	compressedUPX := false
-	skipDeps := false
+	skipVerification := false // Skip system dependency verification (go, docker, etc.)
+	skipModuleDeps := false   // Skip including transitive module dependencies
 	showTimings := false
 	pdfMode := false
 	pdfTheme := ""
 	version := ""
 	listArtifacts := false
+	dryRun := false
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -142,7 +144,9 @@ func Build() int {
 			compressedUPX = true
 			compressed = true // UPX implies stripped
 		case "--skip-deps":
-			skipDeps = true
+			skipModuleDeps = true
+		case "--skip-verification":
+			skipVerification = true
 		case "--timings":
 			showTimings = true
 		case "--pdf":
@@ -152,6 +156,8 @@ func Build() int {
 			// Just accept it here so it doesn't fail as unknown flag
 		case "--list-artifacts":
 			listArtifacts = true
+		case "--dry-run":
+			dryRun = true
 		case "--pdf-theme":
 			if i+1 >= len(args) {
 				log.Errorf("Error: --pdf-theme requires a value (dark, light, or all)")
@@ -212,7 +218,7 @@ func Build() int {
 	}
 
 	// Run build (single or multiple modules) - phases are handled inside
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipDeps, showTimings, pdfMode, pdfTheme)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, pdfMode, pdfTheme, dryRun)
 }
 
 // listModuleArtifacts lists the artifacts that would be produced by building the specified modules
@@ -252,23 +258,47 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipDeps bool, showTimings bool, pdfMode bool, pdfTheme string) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, pdfMode bool, pdfTheme string, dryRun bool) int {
 	// Show execution context
 	log.Infof("Executing build via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
 	log.Info("")
 
 	// Phase 1: Module Discovery
 	log.Info(output.PhaseHeader(1, "Module Discovery"))
-	log.Infof("Resolving %d modules:%s", len(monikers), output.ListFormat(monikers, 60, 5))
+	log.Infof("Requested: %d modules:%s", len(monikers), output.ListFormat(monikers, 60, 5))
 
-	// Build module type lookup for worker
-	moduleTypes := make(map[string]string)
+	// Calculate execution order to determine dependencies early
+	includeDependencies := !skipModuleDeps
+	executionPlan, err := repository.CalculateExecutionOrder(monikers, workspaceRoot, includeDependencies)
+	if err != nil {
+		log.Errorf("Failed to calculate execution order: %v", err)
+		return 1
+	}
+
+	// Show dependencies if any were added
+	if includeDependencies && len(executionPlan.ExecutionOrder) > len(monikers) {
+		// Find which modules were added as dependencies
+		requestedSet := make(map[string]bool)
+		for _, m := range monikers {
+			requestedSet[m] = true
+		}
+		var addedDeps []string
+		for _, m := range executionPlan.ExecutionOrder {
+			if !requestedSet[m] {
+				addedDeps = append(addedDeps, m)
+			}
+		}
+		log.Infof("Dependencies: %d modules:%s", len(addedDeps), output.ListFormat(addedDeps, 60, 5))
+		log.Infof("Total: %d modules to build", len(executionPlan.ExecutionOrder))
+	}
+
+	// Check if any requested modules are Go modules (for tidy mode logging)
 	hasGoModules := false
 	for _, mon := range monikers {
 		if module, exists := moduleReport.Registry.Get(mon); exists {
-			moduleTypes[mon] = module.Type
 			if builders.IsGoModuleType(module.Type) {
 				hasGoModules = true
+				break
 			}
 		}
 	}
@@ -290,9 +320,10 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	}
 	log.Info("")
 
-	// Phase 2: Dependency Verification
-	if !skipDeps {
-		if exitCode := verifyBuildDependencies(monikers, moduleReport); exitCode != 0 {
+	// Phase 2: Dependency Verification (system dependencies like go, docker, etc.)
+	// Use the expanded execution order to verify deps for ALL modules that will be built
+	if !skipVerification {
+		if exitCode := verifyBuildDependencies(executionPlan.ExecutionOrder, moduleReport); exitCode != 0 {
 			return exitCode
 		}
 	}
@@ -301,6 +332,14 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	log.Info(output.PhaseHeader(3, "Build Execution"))
 	log.Info(output.OutputDir("out/build/"))
 	log.Info("")
+
+	// Build module type lookup for ALL modules in execution plan (including dependencies)
+	moduleTypes := make(map[string]string)
+	for _, mon := range executionPlan.ExecutionOrder {
+		if module, exists := moduleReport.Registry.Get(mon); exists {
+			moduleTypes[mon] = module.Type
+		}
+	}
 
 	// Configure orchestrator
 	orchConfig := orchestrator.Config{
@@ -323,24 +362,20 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			return 1
 		}
 
-		// Acquire exclusive lock for this module FIRST (before any directory operations)
-		lockFile, err := acquireModuleBuildLock(moniker, workspaceRoot)
-		if err != nil {
-			fmt.Fprintf(logWriter, "Error: module '%s' is already being built\n", moniker)
-			fmt.Fprintf(logWriter, "Details: %v\n", err)
-			return 1
+		// Skip lock acquisition in dry-run mode since we're not actually building
+		if !dryRun {
+			// Acquire exclusive lock for this module FIRST (before any directory operations)
+			lockFile, err := acquireModuleBuildLock(moniker, workspaceRoot)
+			if err != nil {
+				fmt.Fprintf(logWriter, "Error: module '%s' is already being built\n", moniker)
+				fmt.Fprintf(logWriter, "Details: %v\n", err)
+				return 1
+			}
+			defer releaseModuleBuildLock(lockFile)
 		}
-		defer releaseModuleBuildLock(lockFile)
 
 		moduleOutputDir := repository.BuildOutputPath(workspaceRoot, moniker)
-		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version, pdfMode, pdfTheme)
-	}
-
-	// Calculate execution order based on dependencies
-	executionPlan, err := repository.CalculateExecutionOrder(monikers, workspaceRoot)
-	if err != nil {
-		log.Errorf("Failed to calculate execution order: %v", err)
-		return 1
+		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version, pdfMode, pdfTheme, dryRun)
 	}
 
 	// Create and run orchestrator with layered execution
@@ -360,7 +395,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 }
 
 // runModuleBuild runs build for a single module
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string, pdfMode bool, pdfTheme string) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string, pdfMode bool, pdfTheme string, dryRun bool) int {
 	// Get build function for module type
 	buildFunc := builders.GetBuildFunc(module.Type)
 
@@ -371,7 +406,19 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 		Version:       version,
 		PDFMode:       pdfMode,
 		PDFTheme:      pdfTheme,
+		DryRun:        dryRun,
 	}
+
+	// In dry-run mode, simulate a successful build
+	if dryRun {
+		writeln(logWriter, "Build: %s (dry-run)", module.Moniker)
+		writeln(logWriter, "Type: %s", module.Type)
+		writeln(logWriter, "Root: %s", module.Files.Root)
+		writeln(logWriter, "")
+		writeln(logWriter, "Dry-run mode: skipping actual build")
+		return 0
+	}
+
 	exitCode := buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
 	if exitCode != 0 {
 		return exitCode
@@ -436,7 +483,7 @@ func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleCont
 
 	if len(missing) > 0 {
 		log.Errorf("❌ Error: Required build dependencies are missing: %s", strings.Join(missing, ", "))
-		log.Errorf("   Use --skip-deps to bypass this check")
+		log.Errorf("   Use --skip-verification to bypass this check")
 		return 1
 	}
 
@@ -452,10 +499,12 @@ func printBuildUsage() {
 	log.Info("  module1, module2, ...     Module monikers to build (builds all if none specified)")
 	log.Info("")
 	log.Info("Flags:")
+	log.Info("  --dry-run                 Simulate build without running actual commands")
 	log.Info("  --list-artifacts          List artifacts that would be produced (no build)")
 	log.Info("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
-	log.Info("  --skip-deps               Skip build dependency verification")
+	log.Info("  --skip-deps               Only build specified modules (skip transitive dependencies)")
+	log.Info("  --skip-verification       Skip system dependency verification (go, docker, etc.)")
 	log.Info("  --timings                 Show detailed timing summary")
 	log.Info("  --compressed              Strip debug info for smaller binaries (go-cli only)")
 	log.Info("  --compressed-upx          Also apply UPX compression for maximum size reduction")
