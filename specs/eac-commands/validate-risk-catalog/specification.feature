@@ -119,3 +119,39 @@ Feature: eac-commands_validate-risk-catalog
       When I run "validate risk-catalog bad-catalog.json"
       Then the exit code is 1
       And stdout contains "Validation failed"
+  Rule: Catalog validated using go-oscal types
+
+    @L2 @ov
+    Scenario: Catalog parsed with go-oscal types
+      Given a valid OSCAL catalog
+      When I run "validate risk-catalog catalog.json"
+      Then the catalog is parsed using go-oscal types
+      And go-oscal validation is used
+
+    @L2 @ov
+    Scenario: Required fields validated with go-oscal
+      Given a catalog missing UUID
+      When I run "validate risk-catalog catalog.json"
+      Then the exit code is 1
+      And stderr contains "missing required field: uuid"
+
+    @L2 @ov
+    Scenario: Metadata validated with go-oscal
+      Given a catalog with missing metadata title
+      When I run "validate risk-catalog catalog.json"
+      Then the exit code is 1
+      And stderr contains "missing required field: title"
+
+    @L2 @ov
+    Scenario: Catalog must have controls or groups
+      Given a catalog without controls or groups
+      When I run "validate risk-catalog catalog.json"
+      Then the exit code is 1
+      And stderr contains "must have at least one control or group"
+
+    @L2 @ov
+    Scenario: Valid catalog output format
+      Given a valid OSCAL 1.1.3 catalog
+      When I run "validate risk-catalog catalog.json"
+      Then the exit code is 0
+      And stdout contains "✓ Catalog is valid OSCAL 1.1.3 document"

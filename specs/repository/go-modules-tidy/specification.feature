@@ -1,4 +1,4 @@
-@deps:go
+@deps:go @control:sa-10
 Feature: repository_go-modules-tidy
 
   As a repository maintainer

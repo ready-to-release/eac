@@ -14,7 +14,7 @@ This reference documents the **testing taxonomy tags** that define test levels, 
 - **Verification Tags** - Categorize validation type (REQUIRED: `@ov`, `@iv`, `@pv`, `@piv`, `@ppv`)
 - **Test Execution Control** - Control test execution behavior (`@ignore`, `@Manual`)
 - **System Dependencies** - Declare required tooling (`@deps:*`)
-- **Risk Controls** - Link to compliance requirements (`@risk-control:<name>-<id>`)
+- **Risk Control Tags** - Link to compliance requirements (`@control:<id>`, `@controls:<id1>,<id2>`)
 
 **Note:** Depending on the context you work in, you might need additional tags to support specific regulatory requirements. See [GxP Tagging](gxp-tagging.md) as an example.
 
@@ -385,65 +385,171 @@ Feature: Container Build Pipeline
 
 ## Risk Control Tags
 
-Risk control tags link scenarios to compliance and security requirements.
+risk control tags link scenarios to standardized security and compliance requirements using [NIST OSCAL](https://pages.nist.gov/OSCAL/) format.
 
-### Format
+### Formats
 
-`@risk-control:<name>-<id>`
+**Single Control**: `@control:<control-id>`
+**Multiple Controls**: `@controls:<id1>,<id2>`
+
+### Control ID Format
+
+**Pattern**: `<family>-<number>` or `<family>-<number>(<enhancement>)`
 
 **Parts**:
+- `<family>` - Control family (2-4 lowercase letters: `ac`, `au`, `ia`, `sc`, etc.)
+- `<number>` - Control number (1+ digits: `2`, `12`, etc.)
+- `<enhancement>` - Optional enhancement number in parentheses: `(1)`, `(10)`
 
-- `<name>` - Control name (e.g., `auth-mfa`, `encrypt-rest`, `audit-trail`)
-- `<id>` - Scenario number (e.g., `01`, `02`, `03`)
+**Examples**:
+- `ac-2` - Account Management (NIST 800-53)
+- `au-3` - Audit Record Content
+- `ia-5(1)` - Password-Based Authentication (enhancement)
 
 ### Purpose
 
-- Links implementation scenarios to risk control specifications
-- Enables compliance traceability
-- Supports audit evidence collection
+- Links test scenarios to OSCAL catalog controls
+- Enables automated compliance evidence collection
+- Provides standardized control traceability
+- Supports audit and assessment reporting
 
-### Example
+### Examples
 
-**Control Specification** (`specs/risk-controls/auth-mfa.feature`):
-
-```gherkin
-@risk-control:auth-mfa
-Feature: Multi-Factor Authentication
-
-  # Source: Risk Assessment RA-2025-001
-  # Addresses Risk: Unauthorized access to patient data
-
-  Rule: Authentication requires multiple factors
-
-    @risk-control:auth-mfa-01
-    Scenario: MFA required for access
-      Then authentication MUST require at least two factors
-      And authentication MUST occur before granting access
-```
-
-**Implementation** (`specs/cli/login/specification.feature`):
+**Single Control**:
 
 ```gherkin
-@ov @risk-control:auth-mfa-01
-Scenario: User logs in with MFA
-  Given I have valid credentials and MFA token
-  When I run "r2r login --mfa"
-  Then I should be authenticated
-  And my session should be established
+@ov @control:ac-2
+Scenario: Account creation requires approval
+  Given a user registration request
+  When an administrator reviews the request
+  Then the account should require approval
+  And the approval should be logged
 ```
 
-### Traceability
+**Control with Enhancement**:
+
+```gherkin
+@ov @control:ia-5(1)
+Scenario: Password authentication enforces complexity
+  Given a user creating a password
+  When the password is validated
+  Then it must meet complexity requirements
+  And weak passwords must be rejected
+```
+
+**Multiple Controls**:
+
+```gherkin
+@ov @controls:ac-2,au-3
+Scenario: Account creation is audited
+  Given an account creation request
+  When the account is created
+  Then an audit record must be created
+  And the record must include timestamp, user ID, and admin approver
+```
+
+### Traceability and Evidence Collection
+
+**Find scenarios for a control**:
 
 ```bash
-# Find all implementations of a control
-grep -r "@risk-control:auth-mfa" specs/
+# Single control
+grep -r "@control:ac-2" specs/
 
-# Run tests for specific control
-godog run --tags="@risk-control:auth-mfa-01"
-
-# Run all authentication controls
-godog run --tags="@risk-control:auth.*"
+# All account management controls
+grep -r "@control:ac-" specs/
 ```
+
+**Validate control tags**:
+
+```bash
+# Check all @control: tags reference valid catalog controls
+validate control-tags
+
+# Output: Reports invalid control IDs with file locations
+```
+
+**Collect evidence**:
+
+```bash
+# Run tests
+test <module> --suite acceptance
+
+# Collect compliance evidence
+create risk-assess <module> --profile specs/.risk-controls/<module>.profile.json
+
+# Output: out/risk/<module>/assessment-results.json
+# Contains: Controls + Test Evidence + Satisfied/Not-Satisfied Status
+```
+
+### OSCAL Profile Integration
+
+Control tags work with OSCAL profiles to provide complete traceability:
+
+```
+OSCAL Catalog          → Standard control definitions (NIST 800-53)
+     ↓
+OSCAL Profile          → Selected controls for your system
+     ↓
+@control: tags         → BDD scenarios verifying controls
+     ↓
+Test Results           → Cucumber JSON with pass/fail status
+     ↓
+Assessment Results     → OSCAL evidence linking controls to tests
+```
+
+**Profile Example** (`specs/.risk-controls/auth-service.profile.json`):
+
+```json
+{
+  "profile": {
+    "metadata": { "title": "Authentication Service Controls" },
+    "imports": [{
+      "href": "../../../templates/specs/risk-catalog/controls.catalog.json",
+      "include-controls": [{
+        "with-ids": ["ac-2", "ac-3", "au-2", "ia-5", "ia-5(1)"]
+      }]
+    }]
+  }
+}
+```
+
+When you run `create-spec` with this profile, the AI automatically suggests applicable `@control:` tags.
+
+### Migration from Old Format
+
+**Deprecated** (old format):
+```gherkin
+@risk-control:auth-mfa-01
+Scenario: MFA required
+```
+
+**Current** (OSCAL format):
+```gherkin
+@control:ia-2(1)
+Scenario: Multi-factor authentication required
+```
+
+**Migration steps**:
+1. Map old controls to OSCAL equivalents (e.g., `auth-mfa` → `ia-2(1)`)
+2. Create OSCAL profile with selected controls
+3. Replace `@risk-control:` tags with `@control:` tags
+4. Run `validate control-tags` to verify
+5. Collect evidence with `create risk-assess`
+
+### Common NIST 800-53 Control Families
+
+| Family | Description | Example Tags |
+|--------|-------------|--------------|
+| **AC** | Access Control | `@control:ac-2`, `@control:ac-3` |
+| **AU** | Audit and Accountability | `@control:au-2`, `@control:au-3` |
+| **IA** | Identification and Authentication | `@control:ia-2`, `@control:ia-5(1)` |
+| **SC** | System and Communications Protection | `@control:sc-7`, `@control:sc-8(1)` |
+| **SI** | System and Information Integrity | `@control:si-2`, `@control:si-10` |
+| **CM** | Configuration Management | `@control:cm-2`, `@control:cm-6` |
+| **IR** | Incident Response | `@control:ir-4`, `@control:ir-6` |
+
+See [Risk Controls](risk-controls.md) for complete documentation.
 
 ---
 
@@ -546,7 +652,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 - Add verification tag to ALL Gherkin scenarios (`@ov`, `@iv`, `@pv`, `@piv`, `@ppv`)
 - Use `@ov` for all functional tests
 - Declare system dependencies with `@deps:*` when needed
-- Link to risk controls with `@risk-control:<name>-<id>` when applicable
+- Link to risk controls with `@control:<id>` when applicable
 
 ❌ **DON'T**:
 
@@ -615,7 +721,7 @@ Feature: cli_container-management
   @ov
   Rule: Containers can be started and stopped
 
-    @ov @risk-control:container-isolation-01
+    @ov @control:sc-39
     Scenario: Start container with resource limits
       Given I have a container configuration
       When I run "r2r container start --memory 512m"

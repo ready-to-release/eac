@@ -1,3 +1,4 @@
+@control:sa-3
 Feature: repository_no-unused-steps
 
   As a repository maintainer

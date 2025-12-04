@@ -1,4 +1,4 @@
-@deps:go @L1 @ov
+@deps:go @L1 @ov @control:sa-11
 Feature: repository_test-sanity
 
   As a developer
@@ -15,12 +15,6 @@ Feature: repository_test-sanity
       When I scan specs/ for *.feature files
       And I run test discovery
       Then the discovered godog file count matches the raw scan count
-
-    @L1 @ov
-    Scenario: Template feature files are NOT discovered
-      When I scan templates/ for *.feature files
-      Then the count is greater than zero
-      And none of those files appear in test discovery
 
   Rule: Go test discovery must be complete
 

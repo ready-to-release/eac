@@ -1,6 +1,7 @@
 @skip:wip
 @env:isolated-test-project
 @deps:go @depm:r2r-cli
+@control:ac-2 @control:ia-2
 Feature: r2r-cli_user-authentication
 
   As a user

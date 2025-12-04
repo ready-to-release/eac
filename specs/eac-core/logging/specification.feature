@@ -1,4 +1,4 @@
-@deps:go @L2 @ov
+@deps:go @L2 @ov @control:au-2 @control:au-3 @control:au-12
 Feature: eac-core_logging
   As a developer
   I want logs routed to console and/or file based on debug mode

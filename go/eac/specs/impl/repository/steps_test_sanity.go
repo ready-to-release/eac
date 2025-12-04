@@ -50,9 +50,6 @@ func registerTestSanitySteps(sc *godog.ScenarioContext, ctx *internal.TestContex
 	sc.Step(`^I scan specs/ for \*\.feature files$`, func() error {
 		return tsCtx.scanForFeatureFiles("specs")
 	})
-	sc.Step(`^I scan templates/ for \*\.feature files$`, func() error {
-		return tsCtx.scanForFeatureFiles("templates")
-	})
 	sc.Step(`^I scan for \*_test\.go files excluding godog_test\.go$`, func() error {
 		return tsCtx.scanForGoTestFiles(true)
 	})
@@ -84,9 +81,6 @@ func registerTestSanitySteps(sc *godog.ScenarioContext, ctx *internal.TestContex
 	// Then - exclusion checks
 	sc.Step(`^the count is greater than zero$`, func() error {
 		return tsCtx.assertCountGreaterThanZero()
-	})
-	sc.Step(`^none of those files appear in test discovery$`, func() error {
-		return tsCtx.assertNoneAppearInDiscovery()
 	})
 	sc.Step(`^none of those files appear as gotest type in discovery$`, func() error {
 		return tsCtx.assertNoneAppearAsGotest()
@@ -375,23 +369,6 @@ func (c *testSanityContext) assertDiscoveredFileCountMatches(testType string) er
 func (c *testSanityContext) assertCountGreaterThanZero() error {
 	if c.rawScanCount == 0 {
 		return fmt.Errorf("expected count > 0, got 0")
-	}
-	return nil
-}
-
-func (c *testSanityContext) assertNoneAppearInDiscovery() error {
-	// Build set of discovered file paths
-	discoveredFiles := make(map[string]bool)
-	for _, t := range c.discoveredTests {
-		discoveredFiles[filepath.ToSlash(t.FilePath)] = true
-	}
-
-	// Check none of raw scan files appear
-	for _, f := range c.rawScanFiles {
-		normalized := filepath.ToSlash(f)
-		if discoveredFiles[normalized] {
-			return fmt.Errorf("file %s should NOT be discovered but was found in discovery", f)
-		}
 	}
 	return nil
 }

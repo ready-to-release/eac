@@ -1,4 +1,4 @@
-@L0 @ov
+@L0 @ov @control:sa-3
 Feature: repository_no-build-tags-in-steps
 
   As a repository maintainer

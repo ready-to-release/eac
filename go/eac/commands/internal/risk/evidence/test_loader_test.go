@@ -221,8 +221,8 @@ func TestExtractControlTags(t *testing.T) {
 							Type: "scenario",
 							Name: "Process payment",
 							Tags: []CucumberTag{
-								{Name: "@control(ac-2)"},
-								{Name: "@control(ia-2)"},
+								{Name: "@control:ac-2"},
+								{Name: "@control:ia-2"},
 								{Name: "@smoke"},
 							},
 						},

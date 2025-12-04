@@ -1,4 +1,4 @@
-@ov @deps:go @deps:docker @env:isolated-test-project @skip:broken
+@ov @deps:go @deps:docker @env:isolated-test-project @skip:broken @control:si-7 @control:sa-11
 Feature: security_iac
 
   As a security auditor

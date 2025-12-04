@@ -177,16 +177,27 @@ func ParseCucumberResults(filePath string) ([]CucumberFeature, error) {
 	return features, nil
 }
 
-// ExtractControlTags extracts @control(...) tags from Cucumber features.
+// ExtractControlTags extracts @control:<id> and @controls:<id1>,<id2> tags from Cucumber features.
 // Returns a map of control ID to scenarios containing that control tag.
+// Supports new OSCAL tag format: @control:ac-2 and @controls:ac-2,au-3
 func ExtractControlTags(features []CucumberFeature) map[string][]string {
 	controlMap := make(map[string][]string)
-	controlRegex := regexp.MustCompile(`@control\(([^)]+)\)`)
+
+	// New OSCAL tag patterns
+	controlTagPattern := regexp.MustCompile(`@control:([a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
+	controlsTagPattern := regexp.MustCompile(`@controls:((?:[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?,)*[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
 
 	for _, feature := range features {
 		// Check feature-level tags
 		for _, tag := range feature.Tags {
-			if matches := controlRegex.FindStringSubmatch(tag.Name); len(matches) > 1 {
+			// Check @control:<id>
+			if matches := controlTagPattern.FindStringSubmatch(tag.Name); len(matches) > 1 {
+				controlID := matches[1]
+				controlMap[controlID] = append(controlMap[controlID], feature.URI)
+			}
+
+			// Check @controls:<id1>,<id2>
+			if matches := controlsTagPattern.FindStringSubmatch(tag.Name); len(matches) > 1 {
 				controlIDs := strings.Split(matches[1], ",")
 				for _, id := range controlIDs {
 					id = strings.TrimSpace(id)
@@ -202,11 +213,19 @@ func ExtractControlTags(features []CucumberFeature) map[string][]string {
 			}
 
 			for _, tag := range element.Tags {
-				if matches := controlRegex.FindStringSubmatch(tag.Name); len(matches) > 1 {
+				location := fmt.Sprintf("%s:%s", feature.URI, element.Name)
+
+				// Check @control:<id>
+				if matches := controlTagPattern.FindStringSubmatch(tag.Name); len(matches) > 1 {
+					controlID := matches[1]
+					controlMap[controlID] = append(controlMap[controlID], location)
+				}
+
+				// Check @controls:<id1>,<id2>
+				if matches := controlsTagPattern.FindStringSubmatch(tag.Name); len(matches) > 1 {
 					controlIDs := strings.Split(matches[1], ",")
 					for _, id := range controlIDs {
 						id = strings.TrimSpace(id)
-						location := fmt.Sprintf("%s:%s", feature.URI, element.Name)
 						controlMap[id] = append(controlMap[id], location)
 					}
 				}

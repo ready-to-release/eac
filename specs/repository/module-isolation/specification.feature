@@ -1,4 +1,4 @@
-@L0 @ov
+@L0 @ov @control:ac-6 @control:sa-3
 Feature: repository_module-isolation
 
   As a repository maintainer
