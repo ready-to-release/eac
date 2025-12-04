@@ -5,10 +5,9 @@ import (
 	"time"
 )
 
-func TestNewProfile(t *testing.T) {
+func TestNewProfileDocument(t *testing.T) {
 	tests := []struct {
 		name       string
-		uuid       string
 		title      string
 		catalogURL string
 		controlIDs []string
@@ -16,7 +15,6 @@ func TestNewProfile(t *testing.T) {
 	}{
 		{
 			name:       "valid profile",
-			uuid:       "test-uuid-123",
 			title:      "Test Profile",
 			catalogURL: "https://example.com/catalog.json",
 			controlIDs: []string{"ac-2", "ia-2"},
@@ -24,7 +22,6 @@ func TestNewProfile(t *testing.T) {
 		},
 		{
 			name:       "empty controls",
-			uuid:       "test-uuid-456",
 			title:      "Empty Profile",
 			catalogURL: "https://example.com/catalog.json",
 			controlIDs: []string{},
@@ -34,44 +31,51 @@ func TestNewProfile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			profile := NewProfile(tt.uuid, tt.title, tt.catalogURL, tt.controlIDs)
+			oscalDoc, err := NewProfileDocument(tt.title, tt.catalogURL, tt.controlIDs)
 
-			if profile == nil {
-				t.Fatal("NewProfile returned nil")
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error, got nil")
+				}
+				return
 			}
 
-			if profile.Profile.UUID != tt.uuid {
-				t.Errorf("UUID = %s, want %s", profile.Profile.UUID, tt.uuid)
+			if err != nil {
+				t.Fatalf("NewProfileDocument returned error: %v", err)
 			}
 
-			if profile.Profile.Metadata.Title != tt.title {
-				t.Errorf("Title = %s, want %s", profile.Profile.Metadata.Title, tt.title)
+			if oscalDoc == nil || oscalDoc.Profile == nil {
+				t.Fatal("NewProfileDocument returned nil profile")
 			}
 
-			if profile.Profile.Metadata.OSCALVersion != OSCALVersion {
-				t.Errorf("OSCALVersion = %s, want %s", profile.Profile.Metadata.OSCALVersion, OSCALVersion)
+			profile := oscalDoc.Profile
+
+			if profile.UUID == "" {
+				t.Error("UUID is empty")
 			}
 
-			if len(profile.Profile.Imports) != 1 {
-				t.Errorf("Imports length = %d, want 1", len(profile.Profile.Imports))
+			if profile.Metadata.Title != tt.title {
+				t.Errorf("Title = %s, want %s", profile.Metadata.Title, tt.title)
 			}
 
-			if profile.Profile.Imports[0].Href != tt.catalogURL {
-				t.Errorf("Catalog URL = %s, want %s", profile.Profile.Imports[0].Href, tt.catalogURL)
+			if profile.Metadata.OscalVersion == "" {
+				t.Error("OscalVersion is empty")
 			}
 
-			if len(profile.Profile.Imports[0].IncludeControls) != len(tt.controlIDs) {
-				t.Errorf("IncludeControls length = %d, want %d",
-					len(profile.Profile.Imports[0].IncludeControls), len(tt.controlIDs))
+			if len(profile.Imports) != 1 {
+				t.Errorf("Imports length = %d, want 1", len(profile.Imports))
+			}
+
+			if profile.Imports[0].Href != tt.catalogURL {
+				t.Errorf("Catalog URL = %s, want %s", profile.Imports[0].Href, tt.catalogURL)
 			}
 
 			// Verify last-modified is recent
-			lastMod, err := time.Parse(time.RFC3339, profile.Profile.Metadata.LastModified)
-			if err != nil {
-				t.Errorf("Failed to parse LastModified: %v", err)
+			if profile.Metadata.LastModified.IsZero() {
+				t.Error("LastModified is zero time")
 			}
-			if time.Since(lastMod) > time.Minute {
-				t.Errorf("LastModified is not recent: %s", profile.Profile.Metadata.LastModified)
+			if time.Since(profile.Metadata.LastModified) > time.Minute {
+				t.Errorf("LastModified is not recent: %s", profile.Metadata.LastModified)
 			}
 		})
 	}
@@ -102,24 +106,24 @@ func TestNewAssessmentResults(t *testing.T) {
 				t.Fatal("NewAssessmentResults returned nil")
 			}
 
-			if ar.AssessmentResults.UUID != tt.uuid {
-				t.Errorf("UUID = %s, want %s", ar.AssessmentResults.UUID, tt.uuid)
+			if ar.UUID != tt.uuid {
+				t.Errorf("UUID = %s, want %s", ar.UUID, tt.uuid)
 			}
 
-			if ar.AssessmentResults.Metadata.Title != tt.title {
-				t.Errorf("Title = %s, want %s", ar.AssessmentResults.Metadata.Title, tt.title)
+			if ar.Metadata.Title != tt.title {
+				t.Errorf("Title = %s, want %s", ar.Metadata.Title, tt.title)
 			}
 
-			if ar.AssessmentResults.Metadata.OSCALVersion != OSCALVersion {
-				t.Errorf("OSCALVersion = %s, want %s", ar.AssessmentResults.Metadata.OSCALVersion, OSCALVersion)
+			if ar.Metadata.OscalVersion == "" {
+				t.Error("OscalVersion is empty")
 			}
 
-			if ar.AssessmentResults.ImportAP.Href != tt.profileRef {
-				t.Errorf("ProfileRef = %s, want %s", ar.AssessmentResults.ImportAP.Href, tt.profileRef)
+			if ar.ImportAp.Href != tt.profileRef {
+				t.Errorf("ProfileRef = %s, want %s", ar.ImportAp.Href, tt.profileRef)
 			}
 
 			// Results array is empty by default - results are added via AddResult
-			if ar.AssessmentResults.Results == nil {
+			if ar.Results == nil {
 				t.Error("Results should not be nil")
 			}
 		})
@@ -127,10 +131,6 @@ func TestNewAssessmentResults(t *testing.T) {
 }
 
 func TestConstants(t *testing.T) {
-	if OSCALVersion != "1.1.2" {
-		t.Errorf("OSCALVersion = %s, want 1.1.2", OSCALVersion)
-	}
-
 	if StateSatisfied != "satisfied" {
 		t.Errorf("StateSatisfied = %s, want satisfied", StateSatisfied)
 	}

@@ -7,6 +7,7 @@ Feature: security_vuln
 
   Rule: Vulnerability scanner creates evidence file with integrity verification
 
+    @control:si-2 @control:si-3
     Scenario: Scan module for vulnerabilities with mocked tool
       When I run the command "security vuln eac-core"
       Then the exit code is 0
@@ -17,6 +18,7 @@ Feature: security_vuln
       And the latest evidence file should have JSON field "sha256" with 64 character hex hash
       And the latest evidence file should have JSON field "findings" with non-empty data
 
+    @control:si-2
     Scenario: Vulnerability scan with severity filter
       When I run the command "security vuln eac-core --severity HIGH,CRITICAL"
       Then the exit code is 0

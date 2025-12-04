@@ -1,4 +1,4 @@
-@ov @deps:go @deps:docker @env:isolated-test-project @skip:broken
+@ov @deps:go @deps:docker @env:isolated-test-project @skip:broken @control:sc-28 @control:ia-5
 Feature: security_secrets
 
   As a security auditor

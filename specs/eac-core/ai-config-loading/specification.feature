@@ -1,4 +1,4 @@
-@skip:deprecated
+@skip:deprecated @control:cm-2
 Feature: eac-core_ai-config-loading
   As a developer
   I want to load AI provider configuration from eac-config.yml

@@ -60,7 +60,9 @@
             "test_behavior",
             "risk_control",
             "risk_control_gxp",
-            "gxp_regulatory"
+            "gxp_regulatory",
+            "oscal_control",
+            "oscal_control_multi"
           ]
         },
         "level": {

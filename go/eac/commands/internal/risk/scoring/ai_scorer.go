@@ -58,7 +58,7 @@ func (s *AIScorer) AnalyzeRisk(ctx context.Context, input *AIAnalysisInput) (*AI
 	}
 
 	// Check for mock AI provider (integration testing via environment)
-	if mock, ok := aimock.GetMockResponse("risk-scoring"); ok {
+	if mock, ok := aimock.GetMockResponse("risk-access"); ok {
 		return parseAIResponse(mock)
 	}
 
@@ -85,10 +85,10 @@ func (s *AIScorer) AnalyzeRisk(ctx context.Context, input *AIAnalysisInput) (*AI
 
 // buildPrompt constructs the AI prompt for risk analysis.
 func (s *AIScorer) buildPrompt(input *AIAnalysisInput) (string, error) {
-	// Load prompt from .r2r/eac/ai/risk-scoring/analysis.md
+	// Load prompt from .r2r/eac/ai/risk-access/analysis.md
 	systemPrompt := defaultRiskAnalysisPrompt
 	if s.workspaceRoot != "" {
-		loader := contracts.NewContractLoader(s.workspaceRoot, "ai/risk-scoring", "")
+		loader := contracts.NewContractLoader(s.workspaceRoot, "ai/risk-access", "")
 		if loadedPrompt, _, err := loader.LoadPrompt("analysis.md", defaultRiskAnalysisPrompt); err == nil {
 			systemPrompt = loadedPrompt
 		}

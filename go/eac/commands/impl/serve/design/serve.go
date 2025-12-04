@@ -46,7 +46,7 @@ func ServeDesign() int {
 			printServeUsage()
 			return 0
 		}
-		if arg == "--force" || arg == "-f" {
+		if arg == "--force" {
 			autoStop = true
 			continue
 		}

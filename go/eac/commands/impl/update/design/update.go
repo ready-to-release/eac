@@ -202,7 +202,7 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 
 		if arg == "--debug" || arg == "-d" {
 			flags.debug = true
-		} else if arg == "--force" || arg == "-f" {
+		} else if arg == "--force" {
 			flags.force = true
 		} else if arg == "--output" || arg == "-o" {
 			// Next argument is the output path

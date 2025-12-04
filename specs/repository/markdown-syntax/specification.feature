@@ -1,4 +1,4 @@
-@L1
+@L1 @control:sa-3
 Feature: repository_markdown-syntax
 
   As a repository maintainer

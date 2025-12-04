@@ -28,6 +28,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/ai"
 	"github.com/ready-to-release/eac/go/eac/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/specs"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
@@ -193,7 +194,7 @@ func truncateForLog(s string, maxLen int) string {
 type SpecsConfig struct {
 	Description  string
 	Debug        bool   // -d, --debug: Save intermediate outputs
-	Force        bool   // -f, --force: Overwrite existing files
+	Force        bool   // --force: Overwrite existing files
 	Module       string // -m, --module: Target module
 	OutputPath   string // -o, --output: Custom output path
 	PromptPath   string // --prompt: Custom system prompt file
@@ -263,7 +264,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	}
 
 	// Load contract and anti-corruption rules for validator
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
+	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specs", "0.1.0")
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
@@ -480,7 +481,7 @@ func parseConfig() (*SpecsConfig, error) {
 		switch arg {
 		case "-d", "--debug":
 			config.Debug = true
-		case "-f", "--force":
+		case "--force":
 			config.Force = true
 		case "-m", "--module":
 			if i+1 < len(args) {
@@ -566,7 +567,7 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 
 // loadPromptWithFallback implements prompt loading:
 // 1. Custom path (if specified via --prompt flag)
-// 2. AI config: .r2r/eac/ai/specifications/specification.md
+// 2. AI config: .r2r/eac/ai/specs/specification.md
 // 3. Built-in: embedded prompts/specification.md
 func loadPromptWithFallback(templateRoot string, customPath string) (string, error) {
 	// Tier 1: Check for custom path (from --prompt flag)
@@ -584,8 +585,8 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 		return string(content), nil
 	}
 
-	// Load from AI config: .r2r/eac/ai/specifications/
-	loader := contracts.NewContractLoader(templateRoot, "ai/specifications", "")
+	// Load from AI config: .r2r/eac/ai/specs/
+	loader := contracts.NewContractLoader(templateRoot, "ai/specs", "")
 	prompt, source, err := loader.LoadPrompt("specification.md", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
@@ -628,6 +629,13 @@ func generateWithAI(templateRoot string, prompt string, debug bool) (string, err
 	}
 
 	output, err := executor.Execute(ctx, prompt, opts...)
+
+	// Log provider information after execution
+	provider := executor.GetLastUsedProvider()
+	if provider != nil && debug {
+		log.Infof("  → AI provider used: %s", provider.Name())
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("AI execution failed: %w", err)
 	}
@@ -722,7 +730,7 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	}
 
 	// Use generalized contract loader
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specifications", "0.1.0")
+	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specs", "0.1.0")
 
 	// Load contract and anti-corruption rules
 	contractData, err := loader.LoadContract()
@@ -742,17 +750,21 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 		return "", fmt.Errorf("failed to load tags: %w", err)
 	}
 
-	// Taxonomy is co-located with the specifications AI config (unversioned)
-	taxonomyPath := ".r2r/eac/ai/specifications/testing-taxonomy.yml"
+	// Taxonomy is co-located with the specs AI config (unversioned)
+	taxonomyPath := ".r2r/eac/ai/specs/testing-taxonomy.yml"
 	taxonomyContent, err := loader.LoadReferencedFile(taxonomyPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load taxonomy: %w", err)
 	}
 
+	// Load available OSCAL controls for module (if profile exists)
+	availableControls := loadModuleControlsContext(config.TemplateRoot, config.Module)
+
 	// Build prompt with contract using Go templates
 	customData := map[string]string{
-		"TagsSpec":     string(tagsContent),
-		"TaxonomySpec": string(taxonomyContent),
+		"TagsSpec":          string(tagsContent),
+		"TaxonomySpec":      string(taxonomyContent),
+		"AvailableControls": availableControls,
 	}
 
 	promptTemplate, err := contracts.BuildPromptWithTemplate(
@@ -803,7 +815,7 @@ func buildUserInputSection(config *SpecsConfig) string {
 // stripAgentNoiseWithContract applies anti-corruption rules from contract using generalized framework
 func stripAgentNoiseWithContract(output string, templateRoot string) string {
 	// Use generalized contract loader
-	loader := contracts.NewContractLoader(templateRoot, "ai/specifications", "0.1.0")
+	loader := contracts.NewContractLoader(templateRoot, "ai/specs", "0.1.0")
 
 	// Try to load anti-corruption rules
 	rules, err := loader.LoadAntiCorruptionRules()
@@ -814,4 +826,83 @@ func stripAgentNoiseWithContract(output string, templateRoot string) string {
 
 	// Use generalized anti-corruption filter with "Feature:" as content start marker
 	return contracts.ApplyWithFallback(output, rules, "Feature:")
+}
+
+// loadModuleControlsContext loads OSCAL profile and formats controls for AI prompt
+func loadModuleControlsContext(workspaceRoot string, moduleName string) string {
+	// Only load if module is specified
+	if moduleName == "" {
+		return "(No module specified - control tags optional)"
+	}
+
+	// Get profile path for module
+	profilePath := filepath.Join(workspaceRoot, "specs", ".risk-controls", moduleName+".profile.json")
+
+	// Check if profile exists
+	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
+		return "(No risk profile found for this module - control tags optional)"
+	}
+
+	// Load profile
+	profile, err := oscal.LoadProfile(profilePath)
+	if err != nil {
+		log.Errorf("Warning: Failed to load profile for module %s: %v", moduleName, err)
+		return "(Failed to load risk profile - control tags optional)"
+	}
+
+	// Load catalog to get control descriptions
+	catalogPath := filepath.Join(workspaceRoot, "templates/specs/risk-catalog/controls.catalog.json")
+	catalog, err := oscal.LoadCatalog(catalogPath)
+	if err != nil {
+		log.Errorf("Warning: Failed to load catalog: %v", err)
+		return "(Failed to load control catalog - control tags optional)"
+	}
+
+	// Get control IDs from profile
+	controlIDs := oscal.GetControlIDsFromProfile(profile)
+	if len(controlIDs) == 0 {
+		return "(Profile contains no controls - control tags optional)"
+	}
+
+	// Format controls for AI prompt
+	var sb strings.Builder
+	sb.WriteString("This module has a risk profile with the following controls:\n\n")
+	sb.WriteString("| Control ID | Title | Description |\n")
+	sb.WriteString("|------------|-------|-------------|\n")
+
+	for _, controlID := range controlIDs {
+		control := oscal.GetControl(catalog, controlID)
+		if control != nil {
+			// Get title
+			title := control.Title
+			if title == "" {
+				title = "N/A"
+			}
+
+			// Get statement description
+			desc := oscal.GetControlStatement(control)
+			if desc == "" {
+				desc = "N/A"
+			}
+
+			// Truncate description for prompt
+			if len(desc) > 120 {
+				desc = desc[:117] + "..."
+			}
+
+			sb.WriteString(fmt.Sprintf("| `%s` | %s | %s |\n",
+				controlID, title, desc))
+		} else {
+			// Control not found in catalog
+			sb.WriteString(fmt.Sprintf("| `%s` | (Not found in catalog) | |\n", controlID))
+		}
+	}
+
+	sb.WriteString("\n**When to tag scenarios with these controls:**\n\n")
+	sb.WriteString("- If a scenario validates security, access control, or compliance behavior\n")
+	sb.WriteString("- Tag with `@control:<id>` if it provides evidence for that control\n")
+	sb.WriteString("- Tag with `@controls:<id1>,<id2>` if it covers multiple controls\n")
+	sb.WriteString("- Omit control tags for non-security scenarios\n")
+
+	return sb.String()
 }

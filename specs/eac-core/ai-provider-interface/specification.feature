@@ -1,4 +1,4 @@
-@skip:deprecated
+@skip:deprecated @control:ai-1 @control:ai-3 @control:cm-2
 Feature: eac-core_ai-provider-interface
   As a developer
   I want a consistent interface for all AI providers
