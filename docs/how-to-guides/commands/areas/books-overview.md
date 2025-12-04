@@ -114,14 +114,14 @@ Books fit into the EAC ecosystem without disruption:
 │  books.yml                                             │         │
 │  ┌─────────────┐                                       │         │
 │  │ books:      │───────────────────────────────────────┘         │
-│  │   - name:   │  "if books.yml exists,                         │
-│  │     docs    │   run book preprocessing"                      │
-│  │     sources:│                                                │
-│  │     - copy  │                                                │
-│  │     - cmd   │                                                │
-│  └─────────────┘                                                │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+│  │   - name:   │  "if books.yml exists,                          │
+│  │     docs    │   run book preprocessing"                       │
+│  │     sources:│                                                 │
+│  │     - copy  │                                                 │
+│  │     - cmd   │                                                 │
+│  └─────────────┘                                                 │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### What Stays the Same
