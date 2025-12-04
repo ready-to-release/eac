@@ -58,4 +58,6 @@ type Config struct {
 	ModuleTypes map[string]string
 	// ShowTimings enables the timing summary section (use --timings flag)
 	ShowTimings bool
+	// DryRun skips actual execution and preserves existing output artifacts
+	DryRun bool
 }
