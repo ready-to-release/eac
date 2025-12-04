@@ -5,9 +5,14 @@ inputs:
   module:
     description: Module moniker to build
     required: true
-  commands-path:
-    description: Path to the commands binary
-    required: true
+  trigger-run-id:
+    description: 'Run ID of trigger workflow (for artifact download). If empty, builds from source.'
+    required: false
+    default: ''
+  go-version:
+    description: 'Go version for building commands from source'
+    required: false
+    default: '1.24'
   setup-deps:
     description: |
       Setup system dependencies before build:
@@ -37,16 +42,26 @@ outputs:
   artifact-name:
     description: Name of the uploaded artifact
     value: ${{ steps.vars.outputs.artifact-name }}
+  commands-path:
+    description: Path to the commands binary used
+    value: ${{ steps.commands.outputs.commands-path }}
 
 runs:
   using: composite
   steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+      with:
+        go-version: ${{ inputs.go-version }}
+        trigger-run-id: ${{ inputs.trigger-run-id }}
+
     - name: Setup Module Dependencies
       if: inputs.setup-deps != 'none'
       uses: ./.github/actions/setup-module-deps
       with:
         module: ${{ inputs.module }}
-        commands-path: ${{ inputs.commands-path }}
+        commands-path: ${{ steps.commands.outputs.commands-path }}
         deps: ${{ inputs.setup-deps }}
 
     - name: Set variables
@@ -73,7 +88,7 @@ runs:
     - name: Build Module
       shell: bash
       env:
-        COMMANDS: ${{ inputs.commands-path }}
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
       run: $COMMANDS build $MODULE $EXTRA_ARGS
@@ -90,7 +105,7 @@ runs:
       if: always()
       shell: bash
       env:
-        COMMANDS: ${{ inputs.commands-path }}
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         ARTIFACT_NAME: ${{ steps.vars.outputs.artifact-name }}
         RUN_ID: ${{ github.run_id }}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"gopkg.in/yaml.v3"
 )
 
@@ -76,12 +77,8 @@ func (p *Preprocessor) runCommand(command string) (string, error) {
 		return "", fmt.Errorf("empty command")
 	}
 
-	// Use pre-built commands binary from out/build/eac-commands
-	suffix := ""
-	if os.PathSeparator == '\\' {
-		suffix = ".exe"
-	}
-	cmdBinary := filepath.Join(p.workspaceRoot, "out", "build", "eac-commands", "commands"+suffix)
+	// Use repository.CommandsBinaryPath() for the canonical binary location
+	cmdBinary := repository.CommandsBinaryPath(p.workspaceRoot)
 
 	cmd := exec.Command(cmdBinary, parts...)
 	cmd.Dir = p.workspaceRoot

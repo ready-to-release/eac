@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -78,26 +79,44 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "   Config: %s", mkdocsConfig)
 	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
-	// For site builds, patch mkdocs.yml to remove PDF-specific plugins
-	// The site container doesn't have WeasyPrint/Chromium dependencies
-	var originalConfig []byte
+	// Patch mkdocs.yml as needed:
+	// 1. For site builds: remove PDF-specific plugins (container doesn't have WeasyPrint/Chromium)
+	// 2. For book builds: override docs_dir to use staging directory
+	// IMPORTANT: We write to a temp file and mount it in Docker, never modifying the source file
+	originalConfig, err := os.ReadFile(mkdocsConfig)
+	if err != nil {
+		Logln(logWriter, "❌ Failed to read mkdocs.yml: %v", err)
+		return 1
+	}
+
+	patchedConfig := string(originalConfig)
+	needsPatch := false
+
+	// Remove PDF plugins for non-PDF builds
 	if !opts.PDFMode {
-		var err error
-		originalConfig, err = os.ReadFile(mkdocsConfig)
-		if err != nil {
-			Logln(logWriter, "❌ Failed to read mkdocs.yml: %v", err)
-			return 1
-		}
-		patchedConfig := removePDFPlugins(string(originalConfig))
-		if err := os.WriteFile(mkdocsConfig, []byte(patchedConfig), 0644); err != nil {
+		patchedConfig = removePDFPlugins(patchedConfig)
+		needsPatch = true
+	}
+
+	// Override docs_dir for book preprocessing (use staging directory)
+	if stagingDir != "" {
+		// Get relative path from workspace root to staging dir
+		relStagingDir, _ := filepath.Rel(workspaceRoot, stagingDir)
+		relStagingDir = filepath.ToSlash(relStagingDir) // Use forward slashes for YAML
+		patchedConfig = patchDocsDir(patchedConfig, relStagingDir)
+		needsPatch = true
+		Logln(logWriter, "   Using staging: %s", relStagingDir)
+	}
+
+	// Write patched config to temp file in output directory (never modify source)
+	var patchedConfigPath string
+	if needsPatch {
+		patchedConfigPath = filepath.Join(outputDir, "mkdocs.yml")
+		if err := os.WriteFile(patchedConfigPath, []byte(patchedConfig), 0644); err != nil {
 			Logln(logWriter, "❌ Failed to write patched mkdocs.yml: %v", err)
 			return 1
 		}
-		defer func() {
-			if err := os.WriteFile(mkdocsConfig, originalConfig, 0644); err != nil {
-				Logln(logWriter, "⚠️  Failed to restore original mkdocs.yml: %v", err)
-			}
-		}()
+		Logln(logWriter, "   Patched config: %s", patchedConfigPath)
 	}
 
 	// For Docker-in-Docker: use host path for volume mount
@@ -177,6 +196,19 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		"-w", "/docs",
 	}
 
+	// Mount patched mkdocs.yml over the original (if patched)
+	if patchedConfigPath != "" {
+		var patchedConfigMount string
+		if isDinD {
+			// For DinD, convert to host path
+			relPatchedConfig, _ := filepath.Rel(workspaceRoot, patchedConfigPath)
+			patchedConfigMount = FormatDockerVolumePath(filepath.Join(hostRepoRoot, relPatchedConfig))
+		} else {
+			patchedConfigMount = FormatDockerVolumePath(patchedConfigPath)
+		}
+		buildArgs = append(buildArgs, "-v", patchedConfigMount+":/docs/mkdocs.yml:ro")
+	}
+
 	// Enable PDF export if PDFMode is set
 	// This sets the environment variable that mkdocs-with-pdf checks
 	if opts.PDFMode {
@@ -247,13 +279,21 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	return 0
 }
 
-// ensureMkDocsImage builds the cli-mkdocs Docker image, using Docker's layer cache for efficiency
-// In DinD mode, dockerfilePath and contextPath are host (Windows) paths
+// ensureMkDocsImage ensures the cli-mkdocs Docker image exists.
+// In CI workflows, the image is pre-built by docker/build-push-action with GHA caching.
+// This function checks if the image exists first; only builds if missing.
+// In DinD mode, dockerfilePath and contextPath are host (Windows) paths.
 func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter io.Writer) error {
-	Logln(logWriter, "   Building Docker image: %s (using cache)", imageName)
+	// Check if image already exists (e.g., pre-built by CI workflow)
+	cmd := exec.Command("docker", "image", "inspect", imageName)
+	if err := cmd.Run(); err == nil {
+		Logln(logWriter, "   Docker image exists: %s (using pre-built)", imageName)
+		return nil
+	}
 
-	// Always run docker build - Docker's layer cache handles efficiency
-	// This ensures the image is rebuilt when Dockerfile or requirements.txt change
+	// Image doesn't exist, build it
+	Logln(logWriter, "   Building Docker image: %s", imageName)
+
 	exitCode := RunCommandWithLog("", logWriter,
 		"docker", "build",
 		"-t", imageName,
@@ -292,21 +332,15 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 	}
 
 	// Patch mkdocs.yml to use the correct theme template path
+	// IMPORTANT: Write to temp file in output directory, never modify source
 	themePath := fmt.Sprintf("docs/assets/templates/pdf-%s", theme)
 	patchedConfig := patchMkDocsConfig(string(originalConfig), themePath)
 
-	// Write patched config
-	if err := os.WriteFile(mkdocsConfig, []byte(patchedConfig), 0644); err != nil {
+	patchedConfigPath := filepath.Join(outputDir, "mkdocs.yml")
+	if err := os.WriteFile(patchedConfigPath, []byte(patchedConfig), 0644); err != nil {
 		Logln(logWriter, "❌ Failed to write patched mkdocs.yml: %v", err)
 		return 1
 	}
-
-	// Ensure we restore the original config
-	defer func() {
-		if err := os.WriteFile(mkdocsConfig, originalConfig, 0644); err != nil {
-			Logln(logWriter, "⚠️  Failed to restore original mkdocs.yml: %v", err)
-		}
-	}()
 
 	Logln(logWriter, "📄 Building MkDocs site with PDF export (%s theme)", theme)
 	Logln(logWriter, "   Config: %s", mkdocsConfig)
@@ -364,7 +398,18 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 		"-e", "ENABLE_PDF_EXPORT=1",
 	}
 
+	// Mount patched mkdocs.yml over the original (never modify source files)
+	var patchedConfigMount string
+	if isDinD {
+		relPatchedConfig, _ := filepath.Rel(workspaceRoot, patchedConfigPath)
+		patchedConfigMount = FormatDockerVolumePath(filepath.Join(hostRepoRoot, relPatchedConfig))
+	} else {
+		patchedConfigMount = FormatDockerVolumePath(patchedConfigPath)
+	}
+	buildArgs = append(buildArgs, "-v", patchedConfigMount+":/docs/mkdocs.yml:ro")
+
 	Logln(logWriter, "   PDF Export: enabled")
+	Logln(logWriter, "   Patched config: %s", patchedConfigPath)
 
 	if isDinD {
 		uid := os.Getuid()
@@ -407,11 +452,28 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 			Logln(logWriter, "✅ MkDocs PDF built successfully (%s theme)", theme)
 			Logln(logWriter, "   PDF Output: %s", dstPdfPath)
 		}
-	} else {
-		Logln(logWriter, "⚠️  PDF file not found at expected location: %s", srcPdfPath)
+		return 0
 	}
 
-	return 0
+	// PDF not generated - this is an error in PDF mode
+	Logln(logWriter, "❌ PDF file not found at expected location: %s", srcPdfPath)
+
+	// List what's actually in the site directory for diagnostics
+	pdfDir := filepath.Join(siteDir, "pdf")
+	if entries, err := os.ReadDir(pdfDir); err == nil {
+		Logln(logWriter, "   Contents of %s:", pdfDir)
+		for _, e := range entries {
+			Logln(logWriter, "     - %s", e.Name())
+		}
+	} else if os.IsNotExist(err) {
+		Logln(logWriter, "   PDF directory does not exist: %s", pdfDir)
+		Logln(logWriter, "   This usually means mkdocs-with-pdf plugin didn't run")
+		Logln(logWriter, "   Check that ENABLE_PDF_EXPORT=1 environment is set")
+	} else {
+		Logln(logWriter, "   Error reading PDF directory: %v", err)
+	}
+
+	return 1
 }
 
 // patchMkDocsConfig patches the custom_template_path in mkdocs.yml
@@ -419,6 +481,13 @@ func patchMkDocsConfig(configContent string, themePath string) string {
 	// Match custom_template_path line and replace its value
 	re := regexp.MustCompile(`(?m)^(\s*custom_template_path:\s*).*$`)
 	return re.ReplaceAllString(configContent, "${1}"+themePath)
+}
+
+// patchDocsDir patches the docs_dir in mkdocs.yml to use staging directory
+func patchDocsDir(configContent string, newDocsDir string) string {
+	// Match docs_dir line and replace its value
+	re := regexp.MustCompile(`(?m)^(docs_dir:\s*).*$`)
+	return re.ReplaceAllString(configContent, "${1}"+newDocsDir)
 }
 
 // removePDFPlugins removes PDF-specific plugins from mkdocs.yml for site builds
@@ -483,20 +552,20 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 
 	Logln(logWriter, "📚 Book configuration found for '%s'", moniker)
 
-	// Create staging directory inside build output for test visibility
-	stagingDir := filepath.Join(outputDir, "staging")
+	// Use persistent staging directory at out/staging/{moniker}
+	// This survives across builds, enabling:
+	// - Mermaid SVG caching (rendered diagrams persist)
+	// - Faster incremental builds (unchanged files already staged)
+	// NOTE: We don't clean this directory - files are overwritten incrementally.
+	// For a clean rebuild, delete out/staging/ manually.
+	stagingDir := filepath.Join(workspaceRoot, "out", "staging", moniker)
 
-	// Clean and create staging directory
-	if err := os.RemoveAll(stagingDir); err != nil {
-		Logln(logWriter, "❌ Failed to clean staging directory: %v", err)
-		return "", true
-	}
 	if err := os.MkdirAll(stagingDir, 0755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)
 		return "", true
 	}
 
-	// Run preprocessing
+	// Run preprocessing (overwrites existing files incrementally)
 	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)

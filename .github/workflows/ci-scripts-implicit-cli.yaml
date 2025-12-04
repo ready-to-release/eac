@@ -45,17 +45,11 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
-        with:
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-
       - name: Test Module
         uses: ./.github/actions/test-module
         with:
           module: scripts-implicit-cli
-          commands-path: ${{ steps.commands.outputs.commands-path }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
           download-artifact: 'false'
           setup-deps: auto
           # PRs run commit suite only; main/release branches run full suite
