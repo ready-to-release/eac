@@ -18,10 +18,10 @@ import (
 
 const (
 	// containerNameBase is the base name for mkdocs containers
-	// Actual containers will have port suffix, e.g., cli-mkdocs-9001
-	containerNameBase = "cli-mkdocs"
-	imageName         = "cli-mkdocs:latest"
-	dockerfile        = "containers/mkdocs/.Dockerfile"
+	// Actual containers will have port suffix, e.g., cli-mkdocs-site-9001
+	containerNameBase = "cli-mkdocs-site"
+	imageName         = "cli-mkdocs-site:latest"
+	dockerfile        = "containers/mkdocs-site/Dockerfile"
 
 	// containerInternalPort is the port MkDocs listens on inside the container
 	containerInternalPort = 8000
@@ -87,8 +87,8 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 	}
 
 	// Build configuration for the serve helper
-	dockerfilePath := filepath.Join(repoRoot, "containers", "mkdocs", ".Dockerfile")
-	contextPath := filepath.Join(repoRoot, "containers", "mkdocs")
+	dockerfilePath := filepath.Join(repoRoot, "containers", "mkdocs-site", "Dockerfile")
+	contextPath := filepath.Join(repoRoot, "containers", "mkdocs-site")
 
 	logger.Debug("Container configuration",
 		zap.String("dockerfile", dockerfilePath),
