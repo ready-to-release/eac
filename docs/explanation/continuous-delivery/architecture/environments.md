@@ -112,7 +112,7 @@ Build Agents are dedicated CI/CD pipeline runners that provide consistent, repro
 
 PLTEs are ephemeral, isolated environments that emulate production characteristics for realistic testing.
 
-![PLTE Legend](../../../assets/cd-model/legend-env-plte.drawio.png)
+![PLTE Legend](../../../assets/cd-model/legend-env-plte.drawio.png){width=60}
 
 **Legend for PLTE notation:** Shows the symbol used in CD Model diagrams to represent Production-Like Test Environments - ephemeral, isolated environments for vertical testing (L3) with test doubles for all external dependencies.
 
@@ -194,7 +194,7 @@ The Demo (or "Trunk Demo") environment provides a stable, production-like enviro
 
 Deploy Agents are specialized CI/CD runners with segregated access to production networks and deployment credentials.
 
-![Environment Agent Legend](../../../assets/cd-model/legend-env-agent.drawio.png)
+![Environment Agent Legend](../../../assets/cd-model/legend-env-agent.drawio.png){width=60}
 
 **Legend for agent types:** Shows the symbols for Build Agents (no production access, run Stages 2-4) and Deploy Agents (segregated production access, run Stage 10). The diagram illustrates network boundaries and credential segregation between agent types.
 

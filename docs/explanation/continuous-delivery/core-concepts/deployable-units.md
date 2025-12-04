@@ -11,7 +11,7 @@ Understanding deployable units is critical for:
 - Establishing clear ownership boundaries
 - Enabling independent testing and deployment
 
-![Deployable Unit Legend](../../../assets/branching/legend-deployable-unit.drawio.png)
+![Deployable Unit Legend](../../../assets/branching/legend-deployable-unit.drawio.png){width=100}
 
 This diagram shows the deployable unit notation used throughout CD Model visualizations.
 

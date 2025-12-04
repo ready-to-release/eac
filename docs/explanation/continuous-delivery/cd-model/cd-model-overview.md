@@ -47,13 +47,13 @@ The CD Model uses specific visual elements to represent different concepts. Unde
 
 ### Start Elements
 
-![Start Elements](../../../assets/cd-model/legend-start.drawio.png)
+![Start Elements](../../../assets/cd-model/legend-start.drawio.png){width=60}
 
 Start elements indicate entry points into the CD Model workflow. These represent where work begins, typically when a developer starts authoring changes on a local branch.
 
 ### Quality Gates
 
-![Quality Gates](../../../assets/cd-model/legend-gate.drawio.png)
+![Quality Gates](../../../assets/cd-model/legend-gate.drawio.png){width=60}
 
 Quality gates are automated or manual checkpoints that validate specific criteria before allowing progression to the next stage. Examples include:
 
@@ -67,7 +67,7 @@ If quality gates fail, the pipeline stops, preventing defects from progressing f
 
 ### Signoff Points
 
-![Signoff Points](../../../assets/cd-model/legend-signoff.drawio.png)
+![Signoff Points](../../../assets/cd-model/legend-signoff.drawio.png){width=60}
 
 Signoff points represent formal approvals required at critical stages. These may be:
 
@@ -78,7 +78,7 @@ Signoff points represent formal approvals required at critical stages. These may
 
 ### Exploration Activities
 
-![Exploration Activities](../../../assets/cd-model/legend-explore.drawio.png)
+![Exploration Activities](../../../assets/cd-model/legend-explore.drawio.png){width=60}
 
 Exploration activities represent human-driven validation that complements automated testing. These include:
 
@@ -89,7 +89,7 @@ Exploration activities represent human-driven validation that complements automa
 
 ### Environment Agents
 
-![Environment Agents](../../../assets/cd-model/legend-env-agent.drawio.png)
+![Environment Agents](../../../assets/cd-model/legend-env-agent.drawio.png){width=60}
 
 Environment agents represent different types of execution environments:
 
@@ -99,7 +99,7 @@ Environment agents represent different types of execution environments:
 
 ### Production-Like Test Environments (PLTE)
 
-![PLTE Environments](../../../assets/cd-model/legend-env-plte.drawio.png)
+![PLTE Environments](../../../assets/cd-model/legend-env-plte.drawio.png){width=60}
 
 PLTEs are ephemeral, isolated environments that emulate production characteristics. They enable:
 
