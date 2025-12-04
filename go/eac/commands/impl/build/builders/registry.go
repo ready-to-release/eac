@@ -17,6 +17,7 @@ type BuildOptions struct {
 	CompressedUPX bool   // Also apply UPX compression after build
 	PDFMode       bool   // Generate PDF documentation (mkdocs only)
 	PDFTheme      string // PDF theme: "dark", "light", "all" (default: "dark")
+	DryRun        bool   // Simulate build without actually running it
 }
 
 // BuildFunc is the signature for module build functions.
