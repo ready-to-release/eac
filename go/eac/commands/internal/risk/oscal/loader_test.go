@@ -233,8 +233,8 @@ func TestDetectOSCALDocumentType(t *testing.T) {
 func TestDiscoverProfiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create specs/risk-controls directory
-	riskDir := filepath.Join(tmpDir, "specs", "risk-controls")
+	// Create specs/.risk-controls directory
+	riskDir := filepath.Join(tmpDir, "specs", ".risk-controls")
 	os.MkdirAll(riskDir, 0755)
 
 	// Create profile files

@@ -1,5 +1,5 @@
 // Command: validate risk-profile
-// Short: Validate OSCAL profile documents against OSCAL 1.1.3 schema
+// Short: Validate OSCAL profile documents against OSCAL 1.1.2 schema
 // Long: The validate risk-profile command validates OSCAL profile documents using go-oscal types.
 // Long:
 // Long: Validation checks include:
@@ -135,8 +135,8 @@ func validateProfile(config *Config) *ValidationResult {
 	}
 
 	// Parse using go-oscal types
-	var profile oscalTypes.Profile
-	if err := json.Unmarshal(data, &profile); err != nil {
+	var oscalDoc oscalTypes.OscalModels
+	if err := json.Unmarshal(data, &oscalDoc); err != nil {
 		result.Valid = false
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "json",
@@ -144,6 +144,18 @@ func validateProfile(config *Config) *ValidationResult {
 		})
 		return result
 	}
+
+	// Check if document contains a profile
+	if oscalDoc.Profile == nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "json",
+			Message: "invalid OSCAL profile JSON: document does not contain a profile",
+		})
+		return result
+	}
+
+	profile := oscalDoc.Profile
 
 	// Validate required UUID field
 	if profile.UUID == "" {

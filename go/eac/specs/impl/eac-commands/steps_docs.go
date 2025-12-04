@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 	"github.com/docker/docker/api/types/container"
@@ -37,9 +38,9 @@ func registerDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return docsCheckDocker(dCtx)
 	})
 
-	// Then steps - MkDocs container state
+	// Given/Then steps - MkDocs container state
 	sc.Step(`^MkDocs container is running$`, func() error {
-		return docsContainerState(dCtx, true)
+		return docsEnsureContainerRunning(dCtx, ctx)
 	})
 	sc.Step(`^MkDocs container is not running$`, func() error {
 		return docsContainerState(dCtx, false)
@@ -82,35 +83,92 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 		return fmt.Errorf("Docker is not available")
 	}
 
+	// Retry up to 3 times with 1 second delay for container state to stabilize
+	maxRetries := 3
+	var lastErr error
+
+	for i := 0; i < maxRetries; i++ {
+		if i > 0 {
+			time.Sleep(1 * time.Second)
+		}
+
+		containers, err := dCtx.dockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
+		if err != nil {
+			lastErr = fmt.Errorf("failed to list containers: %w", err)
+			continue
+		}
+
+		found := false
+		running := false
+		for _, c := range containers {
+			for _, name := range c.Names {
+				if strings.Contains(name, "mkdocs") || strings.Contains(name, "cli-mkdocs") {
+					found = true
+					running = c.State == "running"
+					break
+				}
+			}
+		}
+
+		if shouldBeRunning {
+			if !found {
+				lastErr = fmt.Errorf("MkDocs container not found")
+				continue
+			}
+			if !running {
+				lastErr = fmt.Errorf("MkDocs container exists but is not running")
+				continue
+			}
+			return nil // Success!
+		} else {
+			if found && running {
+				lastErr = fmt.Errorf("MkDocs container is still running")
+				continue
+			}
+			return nil // Success!
+		}
+	}
+
+	return lastErr
+}
+
+// docsEnsureContainerRunning ensures the MkDocs container is running, starting it if necessary.
+func docsEnsureContainerRunning(dCtx *docsContext, ctx *internal.TestContext) error {
+	if !dCtx.dockerAvailable || dCtx.dockerClient == nil {
+		return fmt.Errorf("Docker is not available")
+	}
+
 	containers, err := dCtx.dockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	found := false
+	var containerID string
 	running := false
 	for _, c := range containers {
 		for _, name := range c.Names {
 			if strings.Contains(name, "mkdocs") || strings.Contains(name, "cli-mkdocs") {
-				found = true
+				containerID = c.ID
 				running = c.State == "running"
 				break
 			}
 		}
 	}
 
-	if shouldBeRunning {
-		if !found {
-			return fmt.Errorf("MkDocs container not found")
+	// If container exists but is not running, start it
+	if containerID != "" && !running {
+		err := dCtx.dockerClient.ContainerStart(context.Background(), containerID, container.StartOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to start existing MkDocs container: %w", err)
 		}
-		if !running {
-			return fmt.Errorf("MkDocs container exists but is not running")
-		}
-	} else {
-		if found && running {
-			return fmt.Errorf("MkDocs container is still running")
-		}
+		return nil
 	}
 
-	return nil
+	// If container is already running, that's fine
+	if running {
+		return nil
+	}
+
+	// If no container exists, run the serve docs command to create it
+	return ctx.RunCommand("serve docs --no-browser")
 }

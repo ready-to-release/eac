@@ -6,6 +6,8 @@
 // Long:
 // Long: The report aggregates findings from out/risk/<module>/assessment-results.json
 // Long: files and provides a summary view with optional detailed breakdowns.
+// Long:
+// Long: Reports are automatically written to out/risk/reports/ with a timestamp.
 // Flag.format: type=string, default=text, completion=text,json,markdown, usage=Output format: text, json, or markdown
 // Flag.module: type=string, shorthand=m, usage=Show report for specific module only
 // Flag.detail: type=bool, default=false, usage=Show detailed findings breakdown
@@ -15,8 +17,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
@@ -36,16 +40,18 @@ type Config struct {
 	Module        string // Optional: filter to specific module
 	Detail        bool   // Show detailed breakdown
 	WorkspaceRoot string
+	OutputDir     string // Directory to write report files
 }
 
 // ModuleReport holds report data for a single module.
 type ModuleReport struct {
-	Module       string               `json:"module"`
-	Satisfied    int                  `json:"satisfied"`
-	NotSatisfied int                  `json:"not_satisfied"`
-	Total        int                  `json:"total"`
-	RiskScore    *scoring.RiskScore   `json:"risk_score,omitempty"`
-	Findings     []FindingReport      `json:"findings,omitempty"`
+	Module             string               `json:"module"`
+	AssessmentFile     string               `json:"assessment_file"`
+	Satisfied          int                  `json:"satisfied"`
+	NotSatisfied       int                  `json:"not_satisfied"`
+	Total              int                  `json:"total"`
+	RiskScore          *scoring.RiskScore   `json:"risk_score,omitempty"`
+	Findings           []FindingReport      `json:"findings,omitempty"`
 }
 
 // FindingReport holds finding information for reports.
@@ -109,15 +115,34 @@ func ShowRiskReport() int {
 	// Build aggregated report
 	report := buildAggregatedReport(config, arMap)
 
-	// Output based on format
+	// Generate output for stdout
+	var stdoutOutput string
 	switch config.Format {
 	case "json":
-		outputJSON(report)
+		stdoutOutput = generateJSON(report)
 	case "markdown":
-		outputMarkdown(config, report)
+		stdoutOutput = generateMarkdown(config, report)
 	default:
-		outputText(config, report)
+		stdoutOutput = generateText(config, report)
 	}
+
+	// Generate output for file (use markdown for text format)
+	var fileOutput string
+	switch config.Format {
+	case "json":
+		fileOutput = generateJSON(report)
+	default:
+		// Use markdown for file output (cleaner, no color codes)
+		fileOutput = generateMarkdown(config, report)
+	}
+
+	// Write to file
+	if err := writeReportToFile(config, fileOutput); err != nil {
+		log.Warnf("Failed to write report to file: %v", err)
+	}
+
+	// Output to stdout
+	fmt.Print(stdoutOutput)
 
 	return 0
 }
@@ -136,6 +161,7 @@ func parseConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to find workspace root: %w", err)
 	}
 	config.WorkspaceRoot = workspaceRoot
+	config.OutputDir = filepath.Join(workspaceRoot, "out", "risk", "reports")
 
 	// Parse flags
 	i := 0
@@ -206,7 +232,8 @@ func buildAggregatedReport(config *Config, arMap map[string]string) *AggregatedR
 		}
 
 		moduleReport := ModuleReport{
-			Module: moduleName,
+			Module:         moduleName,
+			AssessmentFile: filepath.Base(arPath),
 		}
 
 		// Process findings
@@ -215,19 +242,18 @@ func buildAggregatedReport(config *Config, arMap map[string]string) *AggregatedR
 
 			if result.Findings != nil {
 				for _, finding := range *result.Findings {
-				moduleReport.Total++
-				report.TotalControls++
+					moduleReport.Total++
+					report.TotalControls++
 
-				if finding.Target.Status.State == oscal.StateSatisfied {
-					moduleReport.Satisfied++
-					report.TotalSatisfied++
-				} else {
-					moduleReport.NotSatisfied++
-					report.TotalNotSatisfied++
-				}
+					if finding.Target.Status.State == oscal.StateSatisfied {
+						moduleReport.Satisfied++
+						report.TotalSatisfied++
+					} else {
+						moduleReport.NotSatisfied++
+						report.TotalNotSatisfied++
+					}
 
-				// Add finding detail if requested
-				if config.Detail {
+					// Always collect finding details (needed for recommendations)
 					fr := FindingReport{
 						ControlID: finding.Target.TargetId,
 						Status:    finding.Target.Status.State,
@@ -243,7 +269,6 @@ func buildAggregatedReport(config *Config, arMap map[string]string) *AggregatedR
 					}
 
 					moduleReport.Findings = append(moduleReport.Findings, fr)
-				}
 				}
 			}
 		}
@@ -292,37 +317,70 @@ func calculateOverallRiskBand(report *AggregatedReport) scoring.RiskBand {
 	return worstBand
 }
 
-// outputText outputs the report in text format.
-func outputText(config *Config, report *AggregatedReport) {
-	log.Info("")
-	log.Info("═══════════════════════════════════════════════════════════════")
-	log.Info("                      RISK ASSESSMENT REPORT")
-	log.Info("═══════════════════════════════════════════════════════════════")
-	log.Info("")
+// writeReportToFile writes the report content to a timestamped file.
+func writeReportToFile(config *Config, content string) error {
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Generate timestamped filename
+	timestamp := time.Now().Format("2006-01-02T15-04-05")
+	var ext string
+	switch config.Format {
+	case "json":
+		ext = "json"
+	case "markdown":
+		ext = "md"
+	default:
+		ext = "md"
+	}
+	filename := fmt.Sprintf("%s-risk-report.%s", timestamp, ext)
+	filepath := filepath.Join(config.OutputDir, filename)
+
+	// Write file
+	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	log.Infof("Report written to: %s", filepath)
+	return nil
+}
+
+// generateText generates the report in text format.
+func generateText(config *Config, report *AggregatedReport) string {
+	var sb strings.Builder
+
+	sb.WriteString("\n")
+	sb.WriteString("═══════════════════════════════════════════════════════════════\n")
+	sb.WriteString("                      RISK ASSESSMENT REPORT\n")
+	sb.WriteString("═══════════════════════════════════════════════════════════════\n")
+	sb.WriteString("\n")
 
 	// Summary
-	log.Infof("  Modules Assessed:    %d", report.TotalModules)
-	log.Infof("  Total Controls:      %d", report.TotalControls)
-	log.Infof("  ✓ Satisfied:         %d", report.TotalSatisfied)
-	log.Infof("  ✗ Not Satisfied:     %d", report.TotalNotSatisfied)
-	log.Info("")
+	sb.WriteString(fmt.Sprintf("  Modules Assessed:    %d\n", report.TotalModules))
+	sb.WriteString(fmt.Sprintf("  Total Controls:      %d\n", report.TotalControls))
+	sb.WriteString(fmt.Sprintf("  ✓ Satisfied:         %d\n", report.TotalSatisfied))
+	sb.WriteString(fmt.Sprintf("  ✗ Not Satisfied:     %d\n", report.TotalNotSatisfied))
+	sb.WriteString("\n")
 
 	// Overall risk
 	color := scoring.FormatRiskBandColor(report.OverallRiskBand)
 	reset := scoring.ResetColor()
-	log.Infof("  Overall Risk Band:   %s%s%s", color, report.OverallRiskBand, reset)
-	log.Info("")
+	sb.WriteString(fmt.Sprintf("  Overall Risk Band:   %s%s%s\n", color, report.OverallRiskBand, reset))
+	sb.WriteString("\n")
 
 	// Per-module breakdown
-	log.Info("───────────────────────────────────────────────────────────────")
-	log.Info("  MODULE BREAKDOWN")
-	log.Info("───────────────────────────────────────────────────────────────")
-	log.Info("")
+	sb.WriteString("───────────────────────────────────────────────────────────────\n")
+	sb.WriteString("  MODULE BREAKDOWN\n")
+	sb.WriteString("───────────────────────────────────────────────────────────────\n")
+	sb.WriteString("\n")
 
 	for _, module := range report.Modules {
 		riskStr := scoring.FormatRiskScore(module.RiskScore)
-		log.Infof("  %-25s %d/%d satisfied    Risk: %s",
-			module.Module, module.Satisfied, module.Total, riskStr)
+		sb.WriteString(fmt.Sprintf("  %-25s %d/%d satisfied    Risk: %s\n",
+			module.Module, module.Satisfied, module.Total, riskStr))
+		sb.WriteString(fmt.Sprintf("    Assessment: %s\n", module.AssessmentFile))
 
 		if config.Detail && len(module.Findings) > 0 {
 			for _, finding := range module.Findings {
@@ -334,88 +392,92 @@ func outputText(config *Config, report *AggregatedReport) {
 				if coverage == "" {
 					coverage = "no tests"
 				}
-				log.Infof("    %s %-15s [%s]", status, finding.ControlID, coverage)
+				sb.WriteString(fmt.Sprintf("    %s %-15s [%s]\n", status, finding.ControlID, coverage))
 			}
-			log.Info("")
+			sb.WriteString("\n")
 		}
 	}
 
-	log.Info("")
-	log.Info("───────────────────────────────────────────────────────────────")
-	log.Info("  RECOMMENDATIONS")
-	log.Info("───────────────────────────────────────────────────────────────")
-	log.Info("")
+	sb.WriteString("\n")
+	sb.WriteString("───────────────────────────────────────────────────────────────\n")
+	sb.WriteString("  RECOMMENDATIONS\n")
+	sb.WriteString("───────────────────────────────────────────────────────────────\n")
+	sb.WriteString("\n")
 
 	// Generate recommendations based on findings
 	if report.TotalNotSatisfied == 0 {
-		log.Info("  ✓ All controls are satisfied. Continue monitoring.")
+		sb.WriteString("  ✓ All controls are satisfied. Continue monitoring.\n")
 	} else {
-		log.Infof("  ! %d control(s) need attention:", report.TotalNotSatisfied)
-		log.Info("")
+		sb.WriteString(fmt.Sprintf("  ! %d control(s) need attention:\n", report.TotalNotSatisfied))
+		sb.WriteString("\n")
 
 		for _, module := range report.Modules {
 			if module.NotSatisfied > 0 {
-				log.Infof("    %s:", module.Module)
+				sb.WriteString(fmt.Sprintf("    %s:\n", module.Module))
 				for _, finding := range module.Findings {
 					if finding.Status != oscal.StateSatisfied {
-						log.Infof("      - Address %s (add tests with @control(%s) tags)",
-							finding.ControlID, finding.ControlID)
+						sb.WriteString(fmt.Sprintf("      - Address %s (add tests with @control(%s) tags)\n",
+							finding.ControlID, finding.ControlID))
 					}
 				}
 			}
 		}
 	}
 
-	log.Info("")
-	log.Info("═══════════════════════════════════════════════════════════════")
-	log.Info("")
+	sb.WriteString("\n")
+	sb.WriteString("═══════════════════════════════════════════════════════════════\n")
+	sb.WriteString("\n")
+
+	return sb.String()
 }
 
-// outputJSON outputs the report in JSON format.
-func outputJSON(report *AggregatedReport) {
+// generateJSON generates the report in JSON format.
+func generateJSON(report *AggregatedReport) string {
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		log.Errorf("Error marshaling report: %v", err)
-		return
+		return ""
 	}
-	fmt.Println(string(data))
+	return string(data) + "\n"
 }
 
-// outputMarkdown outputs the report in markdown format.
-func outputMarkdown(config *Config, report *AggregatedReport) {
-	fmt.Println("# Risk Assessment Report")
-	fmt.Println()
-	fmt.Println("## Summary")
-	fmt.Println()
-	fmt.Printf("| Metric | Value |\n")
-	fmt.Printf("|--------|-------|\n")
-	fmt.Printf("| Modules Assessed | %d |\n", report.TotalModules)
-	fmt.Printf("| Total Controls | %d |\n", report.TotalControls)
-	fmt.Printf("| Satisfied | %d |\n", report.TotalSatisfied)
-	fmt.Printf("| Not Satisfied | %d |\n", report.TotalNotSatisfied)
-	fmt.Printf("| **Overall Risk** | **%s** |\n", report.OverallRiskBand)
-	fmt.Println()
+// generateMarkdown generates the report in markdown format.
+func generateMarkdown(config *Config, report *AggregatedReport) string {
+	var sb strings.Builder
 
-	fmt.Println("## Module Breakdown")
-	fmt.Println()
-	fmt.Printf("| Module | Satisfied | Total | Risk Score | Risk Band |\n")
-	fmt.Printf("|--------|-----------|-------|------------|----------|\n")
+	sb.WriteString("# Risk Assessment Report\n")
+	sb.WriteString("\n")
+	sb.WriteString("## Summary\n")
+	sb.WriteString("\n")
+	sb.WriteString("| Metric | Value |\n")
+	sb.WriteString("|--------|-------|\n")
+	sb.WriteString(fmt.Sprintf("| Modules Assessed | %d |\n", report.TotalModules))
+	sb.WriteString(fmt.Sprintf("| Total Controls | %d |\n", report.TotalControls))
+	sb.WriteString(fmt.Sprintf("| Satisfied | %d |\n", report.TotalSatisfied))
+	sb.WriteString(fmt.Sprintf("| Not Satisfied | %d |\n", report.TotalNotSatisfied))
+	sb.WriteString(fmt.Sprintf("| **Overall Risk** | **%s** |\n", report.OverallRiskBand))
+	sb.WriteString("\n")
+
+	sb.WriteString("## Module Breakdown\n")
+	sb.WriteString("\n")
+	sb.WriteString("| Module | Satisfied | Total | Risk Score | Risk Band | Assessment File |\n")
+	sb.WriteString("|--------|-----------|-------|------------|----------|------------------|\n")
 
 	for _, module := range report.Modules {
-		fmt.Printf("| %s | %d | %d | %d | %s |\n",
+		sb.WriteString(fmt.Sprintf("| %s | %d | %d | %d | %s | `%s` |\n",
 			module.Module, module.Satisfied, module.Total,
-			module.RiskScore.Score, module.RiskScore.Band)
+			module.RiskScore.Score, module.RiskScore.Band, module.AssessmentFile))
 	}
-	fmt.Println()
+	sb.WriteString("\n")
 
 	if config.Detail {
-		fmt.Println("## Detailed Findings")
-		fmt.Println()
+		sb.WriteString("## Detailed Findings\n")
+		sb.WriteString("\n")
 
 		for _, module := range report.Modules {
-			fmt.Printf("### %s\n\n", module.Module)
-			fmt.Printf("| Control | Status | Test Coverage |\n")
-			fmt.Printf("|---------|--------|---------------|\n")
+			sb.WriteString(fmt.Sprintf("### %s\n\n", module.Module))
+			sb.WriteString("| Control | Status | Test Coverage |\n")
+			sb.WriteString("|---------|--------|---------------|\n")
 
 			for _, finding := range module.Findings {
 				status := "✓ Satisfied"
@@ -426,30 +488,32 @@ func outputMarkdown(config *Config, report *AggregatedReport) {
 				if coverage == "" {
 					coverage = "None"
 				}
-				fmt.Printf("| %s | %s | %s |\n", finding.ControlID, status, coverage)
+				sb.WriteString(fmt.Sprintf("| %s | %s | %s |\n", finding.ControlID, status, coverage))
 			}
-			fmt.Println()
+			sb.WriteString("\n")
 		}
 	}
 
 	if report.TotalNotSatisfied > 0 {
-		fmt.Println("## Recommendations")
-		fmt.Println()
-		fmt.Printf("%d control(s) need attention:\n\n", report.TotalNotSatisfied)
+		sb.WriteString("## Recommendations\n")
+		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf("%d control(s) need attention:\n\n", report.TotalNotSatisfied))
 
 		for _, module := range report.Modules {
 			if module.NotSatisfied > 0 {
-				fmt.Printf("**%s**:\n", module.Module)
+				sb.WriteString(fmt.Sprintf("**%s**:\n", module.Module))
 				for _, finding := range module.Findings {
 					if finding.Status != oscal.StateSatisfied {
-						fmt.Printf("- Address `%s`: Add tests with `@control(%s)` tags\n",
-							finding.ControlID, finding.ControlID)
+						sb.WriteString(fmt.Sprintf("- Address `%s`: Add tests with `@control(%s)` tags\n",
+							finding.ControlID, finding.ControlID))
 					}
 				}
-				fmt.Println()
+				sb.WriteString("\n")
 			}
 		}
 	}
+
+	return sb.String()
 }
 
 // showHelp displays help information.
@@ -457,6 +521,8 @@ func showHelp() {
 	help := `Usage: show risk-report [flags]
 
 Display aggregated risk assessment report
+
+The report is automatically written to out/risk/reports/ with a timestamp.
 
 Flags:
       --format <format>    Output format: text, json, or markdown (default: text)
@@ -478,7 +544,12 @@ Examples:
   show risk-report --format json
 
   # Output as markdown
-  show risk-report --format markdown > report.md
+  show risk-report --format markdown
+
+Output:
+  - Console: Report is displayed to stdout
+  - File: Report is written to out/risk/reports/YYYY-MM-DDTHH-MM-SS-risk-report.md
+           (or .json for JSON format)
 `
 	log.Info(help)
 }

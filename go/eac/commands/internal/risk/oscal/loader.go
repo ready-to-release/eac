@@ -17,6 +17,9 @@ import (
 func LoadProfile(profilePath string) (*oscalTypes.Profile, error) {
 	data, err := os.ReadFile(profilePath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("profile file not found: %s", profilePath)
+		}
 		return nil, fmt.Errorf("failed to read profile file: %w", err)
 	}
 
@@ -84,8 +87,41 @@ func DiscoverProfiles(workspaceRoot string) (map[string]string, error) {
 	return profiles, nil
 }
 
+// findLatestAssessmentResults finds the most recent assessment-results file in a module directory.
+// Returns the full path to the latest file, or empty string if none found.
+func findLatestAssessmentResults(moduleDir string) (string, error) {
+	entries, err := os.ReadDir(moduleDir)
+	if err != nil {
+		return "", err
+	}
+
+	var assessmentFiles []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		// Match both legacy and timestamped formats
+		if name == "assessment-results.json" || (strings.HasPrefix(name, "assessment-results-") && strings.HasSuffix(name, ".json")) {
+			assessmentFiles = append(assessmentFiles, name)
+		}
+	}
+
+	if len(assessmentFiles) == 0 {
+		return "", fmt.Errorf("no assessment-results files found")
+	}
+
+	// Sort in reverse order (latest first) - timestamps are lexicographically sortable
+	sort.Sort(sort.Reverse(sort.StringSlice(assessmentFiles)))
+
+	// Return the latest file
+	return filepath.Join(moduleDir, assessmentFiles[0]), nil
+}
+
 // DiscoverAssessmentResults finds all assessment-results files in the out/risk directory.
 // Returns a map of module name to assessment-results path.
+// If multiple assessment-results exist for a module, returns the most recent one.
 func DiscoverAssessmentResults(workspaceRoot string) (map[string]string, error) {
 	riskDir := filepath.Join(workspaceRoot, repository.OutDir, repository.RiskDir)
 
@@ -105,10 +141,12 @@ func DiscoverAssessmentResults(workspaceRoot string) (map[string]string, error) 
 		}
 
 		moduleName := entry.Name()
-		arPath := filepath.Join(riskDir, moduleName, "assessment-results.json")
+		moduleDir := filepath.Join(riskDir, moduleName)
 
-		if _, err := os.Stat(arPath); err == nil {
-			assessments[moduleName] = arPath
+		// Find latest assessment-results file
+		latestFile, err := findLatestAssessmentResults(moduleDir)
+		if err == nil && latestFile != "" {
+			assessments[moduleName] = latestFile
 		}
 	}
 

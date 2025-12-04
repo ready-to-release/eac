@@ -6,7 +6,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/pipeline/ci"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/design"
-	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/risk"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/risk-assess"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/risk-profile"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/spec"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/describe"

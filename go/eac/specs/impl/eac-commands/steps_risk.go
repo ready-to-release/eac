@@ -12,6 +12,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -67,32 +68,11 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
 	})
 
-	sc.Step(`^AI provider is not configured$`, func() error {
-		// Don't create mock file - this will cause AI provider to fail
-		// The command should detect missing AI configuration
-		return nil
-	})
-
-	sc.Step(`^AI provider returns an error$`, func() error {
-		// Create an invalid mock response that will cause parsing errors
-		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", "invalid json response")
-	})
-
 	// Assessment file setup
 	sc.Step(`^a risk assessment file at "([^"]*)"$`, func(path string) error {
 		state.assessmentPath = path
 		content := createRiskAssessmentDocument()
 		return internal.CreateFile(ctx, path, content)
-	})
-
-	sc.Step(`^the assessment identifies risks requiring controls "([^"]*)" and "([^"]*)"$`, func(c1, c2 string) error {
-		state.controlIDs = []string{c1, c2}
-		return nil
-	})
-
-	sc.Step(`^a risk assessment that causes invalid output$`, func() error {
-		// Create a scenario that causes invalid output
-		return nil
 	})
 
 	// Profile setup
@@ -106,6 +86,10 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return internal.CreateFile(ctx, path, profile)
 	})
 
+	sc.Step(`^a file "([^"]*)" with invalid JSON$`, func(path string) error {
+		return internal.CreateFile(ctx, path, `{invalid json content`)
+	})
+
 	// Module setup
 	sc.Step(`^module "([^"]*)" exists with a profile at "([^"]*)"$`, func(module, profilePath string) error {
 		state.moduleName = module
@@ -115,6 +99,20 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
 		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
 			return err
+		}
+
+		// Create minimal modules.yml (isolation copies real one with all modules)
+		modulesYml := fmt.Sprintf(`modules:
+  - moniker: %s
+    name: Test Module %s
+    type: service
+    description: Test module
+    files:
+      root: .
+`, module, module)
+		modulesYmlPath := filepath.Join(".r2r", "eac", "modules.yml")
+		if err := internal.CreateFile(ctx, modulesYmlPath, modulesYml); err != nil {
+			return fmt.Errorf("failed to create modules.yml: %w", err)
 		}
 
 		// Create module contract
@@ -133,6 +131,179 @@ paths:
 		// Create profile
 		profile := createValidProfile("module-profile-uuid", fmt.Sprintf("Profile for %s", module), []string{"ac-2", "ia-2"})
 		return internal.CreateFile(ctx, profilePath, profile)
+	})
+
+	sc.Step(`^module "([^"]*)" exists with a profile$`, func(module string) error {
+		state.moduleName = module
+		profilePath := filepath.Join("specs", "risk-controls", fmt.Sprintf("%s.profile.json", module))
+		state.profilePath = profilePath
+
+		// Create go.mod file at repository root (needed for `go run` commands)
+		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
+			return err
+		}
+
+		// Create minimal modules.yml (isolation copies real one with all modules)
+		modulesYml := fmt.Sprintf(`modules:
+  - moniker: %s
+    name: Test Module %s
+    type: service
+    description: Test module
+    files:
+      root: .
+`, module, module)
+		modulesYmlPath := filepath.Join(".r2r", "eac", "modules.yml")
+		if err := internal.CreateFile(ctx, modulesYmlPath, modulesYml); err != nil {
+			return fmt.Errorf("failed to create modules.yml: %w", err)
+		}
+
+		// Create module contract
+		moduleContract := fmt.Sprintf(`module:
+  moniker: %s
+  type: service
+  description: Test module
+paths:
+  - .
+`, module)
+		contractPath := filepath.Join("contracts", fmt.Sprintf("%s.yml", module))
+		if err := internal.CreateFile(ctx, contractPath, moduleContract); err != nil {
+			return err
+		}
+
+		// Create module-specific profile
+		profile := createValidProfile("module-profile-uuid", fmt.Sprintf("Profile for %s", module), []string{"ac-2", "ia-2"})
+		if err := internal.CreateFile(ctx, profilePath, profile); err != nil {
+			return err
+		}
+
+		// Also create shared profile for multi-module assessments
+		sharedProfile := createValidProfile("shared-profile-uuid", "Shared Profile", []string{"ac-2", "ia-2"})
+		return internal.CreateFile(ctx, "specs/.risk-controls/risk-profile.json", sharedProfile)
+	})
+
+	sc.Step(`^module "([^"]*)" has no evidence$`, func(module string) error {
+		// Create module but don't create any test or security evidence
+		state.moduleName = module
+
+		// Create module contract
+		moduleContract := fmt.Sprintf(`module:
+  moniker: %s
+  type: service
+  description: Test module
+paths:
+  - .
+`, module)
+		contractPath := filepath.Join("contracts", fmt.Sprintf("%s.yml", module))
+		return internal.CreateFile(ctx, contractPath, moduleContract)
+	})
+
+	sc.Step(`^modules "([^"]*)", "([^"]*)", and "([^"]*)" exist with profiles$`, func(m1, m2, m3 string) error {
+		modules := []string{m1, m2, m3}
+
+		// Create go.mod file at repository root (needed for `go run` commands)
+		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
+			return err
+		}
+
+		// Clear contracts directory (isolation setup copies real contracts, we only want test modules)
+		contractsDir := filepath.Join(ctx.CurrentWorkDir, "contracts")
+		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to clear contracts directory: %w", err)
+		}
+		if err := os.MkdirAll(contractsDir, 0755); err != nil {
+			return fmt.Errorf("failed to create contracts directory: %w", err)
+		}
+
+		// Create modules.yml with only test modules (isolation copies real one with all modules)
+		modulesYml := "modules:\n"
+		for _, module := range modules {
+			modulesYml += "  - moniker: " + module + "\n"
+			modulesYml += "    name: Test Module " + module + "\n"
+			modulesYml += "    type: service\n"
+			modulesYml += "    description: Test module\n"
+			modulesYml += "    files:\n"
+			modulesYml += "      root: .\n"
+		}
+		modulesYmlPath := filepath.Join(".r2r", "eac", "modules.yml")
+		if err := internal.CreateFile(ctx, modulesYmlPath, modulesYml); err != nil {
+			return fmt.Errorf("failed to create modules.yml: %w", err)
+		}
+
+		// Create module contracts (for backward compatibility)
+		for _, module := range modules {
+			// Create module contract
+			moduleContract := fmt.Sprintf(`module:
+  moniker: %s
+  type: service
+  description: Test module
+paths:
+  - .
+`, module)
+			contractPath := filepath.Join("contracts", fmt.Sprintf("%s.yml", module))
+			if err := internal.CreateFile(ctx, contractPath, moduleContract); err != nil {
+				return err
+			}
+		}
+
+		// Create shared profile
+		profile := createValidProfile("shared-profile-uuid", "Shared Profile", []string{"ac-2", "ia-2"})
+		return internal.CreateFile(ctx, "specs/.risk-controls/risk-profile.json", profile)
+	})
+
+	sc.Step(`^modules "([^"]*)" and "([^"]*)" exist with profiles$`, func(m1, m2 string) error {
+		modules := []string{m1, m2}
+
+		// Create go.mod file at repository root (needed for `go run` commands)
+		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
+			return err
+		}
+
+		// Clear contracts directory (isolation setup copies real contracts, we only want test modules)
+		contractsDir := filepath.Join(ctx.CurrentWorkDir, "contracts")
+		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to clear contracts directory: %w", err)
+		}
+		if err := os.MkdirAll(contractsDir, 0755); err != nil {
+			return fmt.Errorf("failed to create contracts directory: %w", err)
+		}
+
+		// Create modules.yml with only test modules (isolation copies real one with all modules)
+		modulesYml := "modules:\n"
+		for _, module := range modules {
+			modulesYml += "  - moniker: " + module + "\n"
+			modulesYml += "    name: Test Module " + module + "\n"
+			modulesYml += "    type: service\n"
+			modulesYml += "    description: Test module\n"
+			modulesYml += "    files:\n"
+			modulesYml += "      root: .\n"
+		}
+		modulesYmlPath := filepath.Join(".r2r", "eac", "modules.yml")
+		if err := internal.CreateFile(ctx, modulesYmlPath, modulesYml); err != nil {
+			return fmt.Errorf("failed to create modules.yml: %w", err)
+		}
+
+		// Create module contracts (for backward compatibility)
+		for _, module := range modules {
+			// Create module contract
+			moduleContract := fmt.Sprintf(`module:
+  moniker: %s
+  type: service
+  description: Test module
+paths:
+  - .
+`, module)
+			contractPath := filepath.Join("contracts", fmt.Sprintf("%s.yml", module))
+			if err := internal.CreateFile(ctx, contractPath, moduleContract); err != nil {
+				return err
+			}
+		}
+
+		// Create shared profile
+		profile := createValidProfile("shared-profile-uuid", "Shared Profile", []string{"ac-2", "ia-2"})
+		return internal.CreateFile(ctx, "specs/.risk-controls/risk-profile.json", profile)
 	})
 
 	sc.Step(`^module "([^"]*)" has test results with @control tags$`, func(module string) error {
@@ -187,68 +358,18 @@ paths:
 		return nil
 	})
 
-	// Custom prompts
-	sc.Step(`^a custom prompt exists at "([^"]*)"$`, func(path string) error {
-		return internal.CreateFile(ctx, path, "Custom AI prompt for profile generation")
-	})
-
 	// ==================== Then Steps ====================
 
-	// File existence
-	sc.Step(`^the profile is created at "([^"]*)"$`, func(path string) error {
-		return internal.FileExists(ctx, path)
-	})
-
-	// OSCAL validation
-	sc.Step(`^the profile contains valid OSCAL (\d+\.\d+\.\d+) JSON$`, func(version string) error {
-		// Check that the file is valid JSON and has OSCAL structure
-		return nil
-	})
-
-	sc.Step(`^the profile imports NIST 800-53 catalog$`, func() error {
-		return internal.OutputContainsAny(ctx, "800-53", "nist.gov")
-	})
-
-	sc.Step(`^the profile includes controls "([^"]*)" and "([^"]*)"$`, func(c1, c2 string) error {
-		if err := internal.OutputContains(ctx, c1); err != nil {
-			return err
+	// File existence with pattern matching
+	sc.Step(`^files matching "([^"]*)" exist$`, func(pattern string) error {
+		matches, err := filepath.Glob(filepath.Join(ctx.CurrentWorkDir, pattern))
+		if err != nil {
+			return fmt.Errorf("glob error: %w", err)
 		}
-		return internal.OutputContains(ctx, c2)
-	})
-
-	sc.Step(`^the generated profile passes OSCAL validation$`, func() error {
-		// In a real implementation, this would validate against OSCAL schema
+		if len(matches) == 0 {
+			return fmt.Errorf("no files matching pattern: %s", pattern)
+		}
 		return nil
-	})
-
-	sc.Step(`^the assessment-results contains valid OSCAL (\d+\.\d+\.\d+) JSON$`, func(version string) error {
-		return nil
-	})
-
-	sc.Step(`^the assessment-results references the profile$`, func() error {
-		return nil
-	})
-
-	sc.Step(`^the generated profile references NIST 800-53 Rev 5 catalog$`, func() error {
-		return internal.OutputContains(ctx, "800-53")
-	})
-
-	sc.Step(`^the generated profile references "([^"]*)"$`, func(url string) error {
-		return internal.OutputContains(ctx, url)
-	})
-
-	// AI and retry
-	sc.Step(`^the AI is called up to (\d+) times$`, func(times int) error {
-		// Would check AI call count in real implementation
-		return nil
-	})
-
-	sc.Step(`^validation errors are fed back to AI$`, func() error {
-		return nil
-	})
-
-	sc.Step(`^the custom prompt is used for AI generation$`, func() error {
-		return internal.CustomPromptWasUsed(ctx, "risk")
 	})
 
 	// Output verification
@@ -280,208 +401,11 @@ paths:
 		return internal.OutputContains(ctx, coverage)
 	})
 
-	// State checks
-	sc.Step(`^the profile is overwritten$`, func() error {
-		return nil
-	})
-
-	sc.Step(`^the existing profile is not modified$`, func() error {
-		return nil
-	})
-
-	sc.Step(`^debug output is saved to "([^"]*)"$`, func(dir string) error {
-		return internal.DirectoryHasFiles(ctx, dir)
-	})
-
-	sc.Step(`^the debug output includes the AI prompt$`, func() error {
-		return nil
-	})
-
-	sc.Step(`^the debug output includes the AI response$`, func() error {
-		return nil
-	})
-
-	sc.Step(`^a warning is displayed about missing evidence$`, func() error {
-		return internal.OutputContainsAny(ctx, "missing", "evidence", "warning")
-	})
-
 	// ========== Additional Risk-Assess Steps ==========
 
-	sc.Step(`^the profile has controls "([^"]*)" and "([^"]*)"$`, func(c1, c2 string) error {
-		profile := createValidProfile("test-profile", "Test Profile", []string{c1, c2})
-		return internal.CreateFile(ctx, state.profilePath, profile)
-	})
 
-	sc.Step(`^tests exist with "([^"]*)" tag that pass$`, func(tag string) error {
-		controlID := strings.TrimPrefix(strings.TrimSuffix(tag, ")"), "@control(")
-		cucumberJSON := createMockCucumberResults([]string{controlID})
-		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
-		timestamp := time.Now().Format("2006-01-02T15-04-05")
-		testDir := filepath.Join("out", "test", timestamp, state.moduleName)
-		return internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON)
-	})
 
-	sc.Step(`^no tests exist for "([^"]*)"$`, func(controlID string) error {
-		// Don't create test results for this control
-		return nil
-	})
 
-	sc.Step(`^the assessment-results has finding for "([^"]*)" with status "([^"]*)"$`, func(controlID, status string) error {
-		// Check if the assessment-results file contains a finding with the expected status
-		return nil // Simplified - would parse JSON and verify
-	})
-
-	sc.Step(`^the assessment-results includes test evidence$`, func() error {
-		return nil // Simplified - would check for test observations
-	})
-
-	sc.Step(`^the assessment-results includes security observations$`, func() error {
-		return nil // Simplified - would check for security observations
-	})
-
-	sc.Step(`^the assessment-results includes SBOM observations$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^the assessment-results includes SAST observations$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^control "([^"]*)" is linked to test results$`, func(controlID string) error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^the finding for "([^"]*)" includes coverage metrics$`, func(controlID string) error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^the coverage shows "([^"]*)"$`, func(coverage string) error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^cucumber results exist at "([^"]*)"$`, func(pattern string) error {
-		// Create mock results matching the pattern
-		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
-		timestamp := time.Now().Format("2006-01-02T15-04-05")
-		testDir := filepath.Join("out", "test", timestamp, "billing")
-		return internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON)
-	})
-
-	sc.Step(`^tests have "([^"]*)" tags$`, func(tag string) error {
-		return nil // Already handled by cucumber results creation
-	})
-
-	sc.Step(`^tests with "([^"]*)" have (\d+) passing and (\d+) failing scenarios$`, func(tag string, passing, failing int) error {
-		// Create results with specific pass/fail counts
-		return nil // Simplified
-	})
-
-	sc.Step(`^vulnerability scan results exist at "([^"]*)"$`, func(pattern string) error {
-		securityDir := filepath.Join("out", "security", state.moduleName, "vuln")
-		trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001"}]}]}`
-		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
-		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
-		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), trivyJSON)
-	})
-
-	sc.Step(`^vulnerabilities are linked to relevant controls$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^SBOM results exist at "([^"]*)"$`, func(pattern string) error {
-		securityDir := filepath.Join("out", "security", state.moduleName, "sbom")
-		sbomJSON := `{"bomFormat": "CycloneDX", "components": []}`
-		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
-		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
-		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), sbomJSON)
-	})
-
-	sc.Step(`^SAST results exist at "([^"]*)"$`, func(pattern string) error {
-		securityDir := filepath.Join("out", "security", state.moduleName, "sast")
-		sastJSON := `{"results": []}`
-		// Use a recent timestamp so evidence is fresh (matching evidence loader expectations)
-		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
-		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), sastJSON)
-	})
-
-	sc.Step(`^test results are (\d+) hours old$`, func(hours int) error {
-		return nil // Simplified - would set file timestamps
-	})
-
-	sc.Step(`^test results are (\d+) hour old$`, func(hours int) error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^security scan results are (\d+) hours old$`, func(hours int) error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^security scan results are (\d+) hour old$`, func(hours int) error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^tests are automatically executed$`, func() error {
-		return nil // Simplified - would verify tests ran
-	})
-
-	sc.Step(`^security scans are automatically executed$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^tests are not executed$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^tests are executed despite fresh evidence$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^security scans are executed despite fresh evidence$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^the assessment-results is updated$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^the UUID is preserved$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^the last-modified timestamp is updated$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^new observations are added$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^existing observations are preserved$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^assessment-results has existing observations$`, func() error {
-		ar := createMockAssessmentResults(state.moduleName, 3, 2)
-		path := filepath.Join("out", "risk", state.moduleName, "assessment-results.json")
-		return internal.CreateFile(ctx, path, ar)
-	})
-
-	sc.Step(`^test execution will fail$`, func() error {
-		return nil // Simplified - would set up failure condition
-	})
-
-	sc.Step(`^stdout shows test evidence discovery$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^stdout shows security evidence discovery$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^stdout shows control mapping details$`, func() error {
-		return nil // Simplified
-	})
 
 	// NOTE: Additional validate-risk steps are already defined above (lines ~147-194)
 	// Do NOT add duplicate registrations here - godog will report "ambiguous step" errors
@@ -636,38 +560,6 @@ paths:
 		return internal.OutputContainsAny(ctx, "warning", module)
 	})
 
-	// ========== Additional Missing Steps ==========
-
-	sc.Step(`^all controls are marked "([^"]*)"$`, func(status string) error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^assessment-results exists at "([^"]*)"$`, func(path string) error {
-		ar := createMockAssessmentResults(state.moduleName, 5, 2)
-		return internal.CreateFile(ctx, path, ar)
-	})
-
-	sc.Step(`^existing evidence is used$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^fresh evidence is collected$`, func() error {
-		return nil // Simplified
-	})
-
-	sc.Step(`^no security scan results exist$`, func() error {
-		// Don't create security scan files
-		return nil
-	})
-
-	sc.Step(`^no test results exist$`, func() error {
-		// Don't create test result files
-		return nil
-	})
-
-	sc.Step(`^--skip-auto-run is not set$`, func() error {
-		return nil // Simplified
-	})
 
 	sc.Step(`^assessment-results exist for "([^"]*)"$`, func(module string) error {
 		ar := createMockAssessmentResults(module, 5, 2)

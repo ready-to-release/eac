@@ -88,8 +88,8 @@ These examples use NIST 800-53 syntax but apply conceptually to any catalog:
 | **Dependency vulnerabilities** | `ra-5`, `si-2` | Vulnerability scanning, flaw remediation |
 | **Injection attacks** | `si-10`, `si-15` | Input validation, output encoding |
 | **Data exposure** | `sc-8`, `sc-13`, `sc-28` | Transmission protection, cryptographic protection, at-rest encryption |
-| **Audit trail tampering** | `au-9`, `au-10` | Audit information protection, non-repudiation |
-| **Insufficient logging** | `au-2`, `au-3`, `au-6` | Audit events, content, review |
+| **Audit trail tampering** | `au-2`, `au-3`, `au-6` | Audit events, content, review |
+| **Insufficient logging** | `au-2`, `au-3`, `au-6`, `au-12` | Audit events, content, review, generation |
 | **Configuration drift** | `cm-2`, `cm-3`, `cm-6`, `cm-7` | Baseline, change control, settings, least functionality |
 | **Privilege escalation** | `ac-6`, `ac-6(1)`, `ac-6(2)` | Least privilege, no privilege without authorization, separation |
 | **Session hijacking** | `ac-12`, `sc-23` | Session termination, session authenticity |
@@ -207,8 +207,8 @@ Before returning your response, verify:
 ### Scenario 1: NIST 800-53 Catalog
 
 **Assessment excerpt**: "HIGH risk of credential leakage via logs (RISK-2)"
-**Response**: `["ia-5", "ia-5(1)", "ia-5(7)", "au-9"]`
-**Rationale**: IA-5 family for credential management, AU-9 for log protection
+**Response**: `["ia-5", "au-2", "au-3"]`
+**Rationale**: IA-5 for credential management, AU-2/AU-3 for audit event logging
 
 ### Scenario 2: Custom Organizational Catalog
 

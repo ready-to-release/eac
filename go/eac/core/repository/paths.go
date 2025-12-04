@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // Repository directory conventions
@@ -251,10 +253,12 @@ func RiskProfilePath(repoRoot, moduleName string) string {
 	return filepath.Join(repoRoot, SpecsDir, RiskControlsDir, moduleName+".profile.json")
 }
 
-// RiskAssessmentResultsPath returns the path to a module's OSCAL assessment-results
-// Example: out/risk/billing/assessment-results.json
+// RiskAssessmentResultsPath returns the path to a module's OSCAL assessment-results with timestamp
+// Example: out/risk/billing/assessment-results-20251204-143025.json
 func RiskAssessmentResultsPath(repoRoot, moduleName string) string {
-	return filepath.Join(repoRoot, OutDir, RiskDir, moduleName, "assessment-results.json")
+	timestamp := time.Now().Format("20060102-150405")
+	filename := fmt.Sprintf("assessment-results-%s.json", timestamp)
+	return filepath.Join(repoRoot, OutDir, RiskDir, moduleName, filename)
 }
 
 // RiskOutputPath returns the path to a module's risk output directory

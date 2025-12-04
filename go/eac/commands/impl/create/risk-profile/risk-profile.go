@@ -184,7 +184,8 @@ func CreateRiskProfile() int {
 		log.Info("  ✓ All controls validated against catalog")
 		log.Info("")
 
-		// Success
+		// Success - clear lastErr to indicate success
+		lastErr = nil
 		break
 	}
 
@@ -351,7 +352,85 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 			zap.Int("response_length", len(response)))
 	}
 
-	return parseProfileFromAI(response, config, catalog)
+	profile, err := parseProfileFromAI(response, config, catalog)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter out any control IDs that don't exist in the catalog
+	// This handles cases where AI returns valid NIST controls not in custom catalogs
+	profile, err = filterInvalidControls(profile, catalog, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return profile, nil
+}
+
+// filterInvalidControls removes control IDs that don't exist in the catalog
+func filterInvalidControls(profile *oscalTypes.Profile, catalog *oscalTypes.Catalog, config *Config) (*oscalTypes.Profile, error) {
+	originalIDs := oscal.GetProfileControlIDs(profile)
+	if len(originalIDs) == 0 {
+		return profile, nil
+	}
+
+	// Extract valid control IDs from catalog
+	validControlIDs, err := oscal.ExtractControlIDs(catalog)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract valid control IDs: %w", err)
+	}
+
+	// Build lookup map for O(1) validation
+	validMap := make(map[string]bool)
+	for _, id := range validControlIDs {
+		validMap[strings.ToLower(id)] = true
+	}
+
+	// Filter controls, keeping only valid ones
+	var filteredIDs []string
+	var removedIDs []string
+	for _, id := range originalIDs {
+		normalizedID := strings.ToLower(id)
+		if validMap[normalizedID] {
+			filteredIDs = append(filteredIDs, id)
+		} else {
+			removedIDs = append(removedIDs, id)
+		}
+	}
+
+	// Warn about removed controls
+	if len(removedIDs) > 0 {
+		log.Warnf("  ⚠ Filtered out %d control(s) not in catalog: %s", len(removedIDs), strings.Join(removedIDs, ", "))
+		if config.Logger != nil {
+			config.Logger.Warn("Controls filtered out (not in catalog)",
+				zap.Strings("removed", removedIDs),
+				zap.Strings("kept", filteredIDs))
+		}
+	}
+
+	// If no valid controls remain, return error
+	if len(filteredIDs) == 0 {
+		return nil, fmt.Errorf("AI returned controls but none exist in catalog (removed: %s)", strings.Join(removedIDs, ", "))
+	}
+
+	// Rebuild profile with filtered controls
+	title := "Solution Risk Profile"
+	controlInfo, err := oscal.GetControlInfo(catalog, filteredIDs)
+	if err != nil {
+		log.Warnf("Could not fetch control info: %v, creating profile without back-matter", err)
+		oscalDoc, err := oscal.NewProfileDocument(title, oscal.GetProfileCatalogURL(profile), filteredIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create filtered profile: %w", err)
+		}
+		return oscalDoc.Profile, nil
+	}
+
+	oscalDoc, err := oscal.NewProfileDocumentWithInfo(title, oscal.GetProfileCatalogURL(profile), controlInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create filtered profile: %w", err)
+	}
+
+	return oscalDoc.Profile, nil
 }
 
 // buildProfilePrompt constructs the AI prompt for profile generation using templates.
@@ -440,7 +519,7 @@ func callAI(ctx context.Context, prompt string, config *Config) (string, error) 
 		return "", fmt.Errorf("AI execution failed: %w", err)
 	}
 
-	// Warn if response is empty or very short
+	// Check if response is empty or very short
 	if len(response) == 0 {
 		if config.Logger != nil {
 			config.Logger.Warn("AI returned empty response",
@@ -448,7 +527,10 @@ func callAI(ctx context.Context, prompt string, config *Config) (string, error) 
 				zap.Int("prompt_length", len(prompt)))
 		}
 		log.Warn("  ⚠ AI returned empty response (this may be an API issue, retrying...)")
-	} else if len(response) < 10 {
+		return "", fmt.Errorf("AI provider returned empty response")
+	}
+
+	if len(response) < 10 {
 		if config.Logger != nil {
 			config.Logger.Warn("AI returned very short response",
 				zap.String("provider", provider.Name()),
