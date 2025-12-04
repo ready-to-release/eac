@@ -9,6 +9,7 @@
 // Long: - Security scans: out/security/<module>/**/*.json
 // Long:
 // Long: If evidence is older than 24 hours, tests and scans are automatically re-run.
+// Flag.profile: type=string, shorthand=p, required=true, usage=Path to OSCAL profile JSON file
 // Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for evidence before auto-refresh (e.g., 24h, 7d)
 // Flag.force-tests: type=bool, default=false, usage=Force re-run tests regardless of age
 // Flag.force-security: type=bool, default=false, usage=Force re-run security scans regardless of age
@@ -28,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/evidence"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
@@ -44,6 +46,7 @@ func init() {
 // AssessConfig holds configuration for risk assess command.
 type AssessConfig struct {
 	Module         string
+	ProfilePath    string
 	MaxEvidenceAge time.Duration
 	ForceTests     bool
 	ForceSecurity  bool
@@ -82,23 +85,23 @@ func CreateRiskAssess() int {
 	if config.Logger != nil {
 		config.Logger.Info("Starting risk assess",
 			zap.String("module", config.Module),
+			zap.String("profile", config.ProfilePath),
 			zap.Duration("max_evidence_age", config.MaxEvidenceAge),
 			zap.Bool("debug", config.Debug))
 	}
 
-	// Load profile for the module
-	profilePath := oscal.GetProfilePath(config.WorkspaceRoot, config.Module)
-	profile, err := oscal.LoadProfile(profilePath)
+	// Load profile from specified path
+	profile, err := oscal.LoadProfile(config.ProfilePath)
 	if err != nil {
-		assessLog.Errorf("Error: Profile not found for module '%s'", config.Module)
-		assessLog.Errorf("Expected at: %s", profilePath)
+		assessLog.Errorf("Error: Failed to load profile: %s", config.ProfilePath)
+		assessLog.Errorf("Error details: %v", err)
 		assessLog.Error("")
 		assessLog.Error("Create a profile first:")
-		assessLog.Errorf("  create risk <assessment.md> --module %s", config.Module)
+		assessLog.Errorf("  create risk-profile <assessment.md> --module %s", config.Module)
 		return 1
 	}
 
-	controlIDs := profile.GetControlIDs()
+	controlIDs := oscal.GetProfileControlIDs(profile)
 	assessLog.Infof("Loaded profile with %d controls: %s", len(controlIDs), strings.Join(controlIDs, ", "))
 
 	// Collect evidence
@@ -157,6 +160,17 @@ func parseAssessConfig() (*AssessConfig, error) {
 		case arg == "--help" || arg == "-h":
 			return nil, fmt.Errorf("help requested")
 
+		case arg == "--profile" || arg == "-p":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--profile requires a value")
+			}
+			config.ProfilePath = args[i+1]
+			// Make path absolute if relative
+			if !filepath.IsAbs(config.ProfilePath) {
+				config.ProfilePath = filepath.Join(config.WorkspaceRoot, config.ProfilePath)
+			}
+			i += 2
+
 		case arg == "--max-evidence-age":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--max-evidence-age requires a value")
@@ -199,6 +213,16 @@ func parseAssessConfig() (*AssessConfig, error) {
 	// Validate required arguments
 	if config.Module == "" {
 		return nil, fmt.Errorf("module name required")
+	}
+
+	// Validate required flags
+	if config.ProfilePath == "" {
+		return nil, fmt.Errorf("--profile flag is required")
+	}
+
+	// Check profile file exists
+	if _, err := os.Stat(config.ProfilePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("profile file not found: %s", config.ProfilePath)
 	}
 
 	return config, nil
@@ -373,8 +397,8 @@ func runSecurityScans(config *AssessConfig) error {
 }
 
 // buildAssessmentResults creates OSCAL assessment-results from profile and evidence.
-func buildAssessmentResults(config *AssessConfig, profile *oscal.Profile, ec *evidence.EvidenceCollection) (*oscal.AssessmentResults, error) {
-	controlIDs := profile.GetControlIDs()
+func buildAssessmentResults(config *AssessConfig, profile *oscalTypes.Profile, ec *evidence.EvidenceCollection) (*oscalTypes.AssessmentResults, error) {
+	controlIDs := oscal.GetProfileControlIDs(profile)
 
 	// Get control to test mapping
 	controlTestMap, _ := evidence.GetControlToTestMapping(config.WorkspaceRoot, config.Module)
@@ -391,28 +415,29 @@ func buildAssessmentResults(config *AssessConfig, profile *oscal.Profile, ec *ev
 	)
 
 	// Create result with observations and findings
-	result := oscal.Result{
+	props := []oscalTypes.Property{
+		{Name: "assessment-type", Value: "automated"},
+	}
+	controlRefs := make([]oscalTypes.AssessedControlsSelectControlById, len(controlIDs))
+	for i, id := range controlIDs {
+		controlRefs[i] = oscalTypes.AssessedControlsSelectControlById{
+			ControlId: id,
+		}
+	}
+	controlSelections := []oscalTypes.AssessedControls{
+		{
+			IncludeControls: &controlRefs,
+		},
+	}
+	result := oscalTypes.Result{
 		UUID:        uuid.New().String(),
 		Title:       fmt.Sprintf("%s Assessment", config.Module),
 		Description: "Assessment-results generated from test and security evidence",
-		Start:       time.Now().UTC().Format(time.RFC3339),
-		Props: []oscal.Prop{
-			{Name: "assessment-type", Value: "automated"},
+		Start:       time.Now().UTC(),
+		Props:       &props,
+		ReviewedControls: oscalTypes.ReviewedControls{
+			ControlSelections: controlSelections,
 		},
-		ReviewedControls: &oscal.ReviewedControls{
-			ControlSelections: []oscal.ControlSelection{
-				{
-					IncludeControls: make([]oscal.ControlRef, len(controlIDs)),
-				},
-			},
-		},
-	}
-
-	// Add control refs
-	for i, id := range controlIDs {
-		result.ReviewedControls.ControlSelections[0].IncludeControls[i] = oscal.ControlRef{
-			ControlID: id,
-		}
 	}
 
 	// Create observations from evidence
@@ -423,29 +448,23 @@ func buildAssessmentResults(config *AssessConfig, profile *oscal.Profile, ec *ev
 	findings := createFindings(config, controlIDs, controlTestMap, ec, observations)
 	result.Findings = findings
 
-	ar.AddResult(result)
+	oscal.AddResult(ar, result)
 	return ar, nil
 }
 
 // createObservations creates OSCAL observations from evidence.
-func createObservations(config *AssessConfig, ec *evidence.EvidenceCollection) []oscal.Observation {
-	var observations []oscal.Observation
-	now := time.Now().UTC().Format(time.RFC3339)
+func createObservations(config *AssessConfig, ec *evidence.EvidenceCollection) *[]oscalTypes.Observation {
+	var observations []oscalTypes.Observation
+	now := time.Now().UTC()
 
 	// Create observation for test evidence
 	if ec.TestResults != nil {
-		testObs := oscal.Observation{
-			UUID:        uuid.New().String(),
-			Title:       "Test Results",
-			Description: fmt.Sprintf("Test evidence for module %s", config.Module),
-			Methods:     []string{oscal.MethodTestAutomated},
-			Collected:   now,
-		}
+		var relevantEvidence []oscalTypes.RelevantEvidence
 
 		// Add evidence references
 		for _, file := range ec.TestResults.AcceptanceFiles {
 			relPath, _ := filepath.Rel(config.WorkspaceRoot, file)
-			testObs.RelevantEvidence = append(testObs.RelevantEvidence, oscal.RelevantEvidence{
+			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
 				Href:        relPath,
 				Description: "Acceptance test results (Cucumber JSON)",
 			})
@@ -453,19 +472,30 @@ func createObservations(config *AssessConfig, ec *evidence.EvidenceCollection) [
 
 		for _, file := range ec.TestResults.UnitTestFiles {
 			relPath, _ := filepath.Rel(config.WorkspaceRoot, file)
-			testObs.RelevantEvidence = append(testObs.RelevantEvidence, oscal.RelevantEvidence{
+			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
 				Href:        relPath,
 				Description: "Unit test results",
 			})
 		}
 
+		var props []oscalTypes.Property
 		// Add summary props
 		if ec.TestSummary != nil {
-			testObs.Props = append(testObs.Props,
-				oscal.Prop{Name: "total-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Total)},
-				oscal.Prop{Name: "passed-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Passed)},
-				oscal.Prop{Name: "failed-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Failed)},
+			props = append(props,
+				oscalTypes.Property{Name: "total-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Total)},
+				oscalTypes.Property{Name: "passed-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Passed)},
+				oscalTypes.Property{Name: "failed-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Failed)},
 			)
+		}
+
+		testObs := oscalTypes.Observation{
+			UUID:             uuid.New().String(),
+			Title:            "Test Results",
+			Description:      fmt.Sprintf("Test evidence for module %s", config.Module),
+			Methods:          []string{oscal.MethodTestAutomated},
+			Collected:        now,
+			RelevantEvidence: &relevantEvidence,
+			Props:            &props,
 		}
 
 		observations = append(observations, testObs)
@@ -473,17 +503,11 @@ func createObservations(config *AssessConfig, ec *evidence.EvidenceCollection) [
 
 	// Create observation for security evidence
 	if ec.SecurityResults != nil {
-		secObs := oscal.Observation{
-			UUID:        uuid.New().String(),
-			Title:       "Security Scan Results",
-			Description: fmt.Sprintf("Security evidence for module %s", config.Module),
-			Methods:     []string{oscal.MethodTestAutomated},
-			Collected:   now,
-		}
+		var relevantEvidence []oscalTypes.RelevantEvidence
 
 		if ec.SecurityResults.VulnFile != "" {
 			relPath, _ := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.VulnFile)
-			secObs.RelevantEvidence = append(secObs.RelevantEvidence, oscal.RelevantEvidence{
+			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
 				Href:        relPath,
 				Description: "Vulnerability scan results",
 			})
@@ -491,74 +515,98 @@ func createObservations(config *AssessConfig, ec *evidence.EvidenceCollection) [
 
 		if ec.SecurityResults.SBOMFile != "" {
 			relPath, _ := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.SBOMFile)
-			secObs.RelevantEvidence = append(secObs.RelevantEvidence, oscal.RelevantEvidence{
+			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
 				Href:        relPath,
 				Description: "Software Bill of Materials (SBOM)",
 			})
 		}
 
+		var props []oscalTypes.Property
 		// Add vulnerability summary props
 		if ec.VulnSummary != nil {
-			secObs.Props = append(secObs.Props,
-				oscal.Prop{Name: "critical-vulns", Value: fmt.Sprintf("%d", ec.VulnSummary.Critical)},
-				oscal.Prop{Name: "high-vulns", Value: fmt.Sprintf("%d", ec.VulnSummary.High)},
-				oscal.Prop{Name: "medium-vulns", Value: fmt.Sprintf("%d", ec.VulnSummary.Medium)},
-				oscal.Prop{Name: "low-vulns", Value: fmt.Sprintf("%d", ec.VulnSummary.Low)},
+			props = append(props,
+				oscalTypes.Property{Name: "critical-vulns", Value: fmt.Sprintf("%d", ec.VulnSummary.Critical)},
+				oscalTypes.Property{Name: "high-vulns", Value: fmt.Sprintf("%d", ec.VulnSummary.High)},
+				oscalTypes.Property{Name: "medium-vulns", Value: fmt.Sprintf("%d", ec.VulnSummary.Medium)},
+				oscalTypes.Property{Name: "low-vulns", Value: fmt.Sprintf("%d", ec.VulnSummary.Low)},
 			)
+		}
+
+		secObs := oscalTypes.Observation{
+			UUID:             uuid.New().String(),
+			Title:            "Security Scan Results",
+			Description:      fmt.Sprintf("Security evidence for module %s", config.Module),
+			Methods:          []string{oscal.MethodTestAutomated},
+			Collected:        now,
+			RelevantEvidence: &relevantEvidence,
+			Props:            &props,
 		}
 
 		observations = append(observations, secObs)
 	}
 
-	return observations
+	return &observations
 }
 
 // createFindings creates OSCAL findings for each control.
-func createFindings(config *AssessConfig, controlIDs []string, controlTestMap map[string][]string, ec *evidence.EvidenceCollection, observations []oscal.Observation) []oscal.Finding {
-	var findings []oscal.Finding
+func createFindings(config *AssessConfig, controlIDs []string, controlTestMap map[string][]string, ec *evidence.EvidenceCollection, observations *[]oscalTypes.Observation) *[]oscalTypes.Finding {
+	var findings []oscalTypes.Finding
 
 	for _, controlID := range controlIDs {
-		finding := oscal.Finding{
-			UUID:        uuid.New().String(),
-			Title:       fmt.Sprintf("Control %s Assessment", strings.ToUpper(controlID)),
-			Description: fmt.Sprintf("Assessment finding for control %s", controlID),
-			Target: oscal.Target{
-				Type:     oscal.TargetTypeControlID,
-				TargetID: controlID,
+		// Determine status based on evidence
+		state := determineControlStatus(controlID, controlTestMap, ec)
+
+		target := oscalTypes.FindingTarget{
+			Type:     oscal.TargetTypeControlID,
+			TargetId: controlID,
+			Status: oscalTypes.ObjectiveStatus{
+				State: state,
 			},
 		}
 
-		// Determine status based on evidence
-		state := determineControlStatus(controlID, controlTestMap, ec)
-		finding.Target.Status = oscal.Status{
-			State: state,
-		}
-
+		var relatedObs []oscalTypes.RelatedObservation
 		// Link to observations
-		for _, obs := range observations {
-			finding.RelatedObservations = append(finding.RelatedObservations, oscal.RelatedObservation{
-				ObservationUUID: obs.UUID,
-			})
+		if observations != nil {
+			for _, obs := range *observations {
+				relatedObs = append(relatedObs, oscalTypes.RelatedObservation{
+					ObservationUuid: obs.UUID,
+				})
+			}
 		}
 
+		var props []oscalTypes.Property
 		// Add test coverage info
 		if tests, ok := controlTestMap[controlID]; ok {
-			finding.Props = append(finding.Props, oscal.Prop{
+			props = append(props, oscalTypes.Property{
 				Name:  "test-coverage",
 				Value: fmt.Sprintf("%d tests", len(tests)),
 			})
-			finding.Remarks = fmt.Sprintf("Tested by: %s", strings.Join(tests, ", "))
 		} else {
-			finding.Props = append(finding.Props, oscal.Prop{
+			props = append(props, oscalTypes.Property{
 				Name:  "test-coverage",
 				Value: "no tests",
 			})
 		}
 
+		remarks := ""
+		if tests, ok := controlTestMap[controlID]; ok {
+			remarks = fmt.Sprintf("Tested by: %s", strings.Join(tests, ", "))
+		}
+
+		finding := oscalTypes.Finding{
+			UUID:                uuid.New().String(),
+			Title:               fmt.Sprintf("Control %s Assessment", strings.ToUpper(controlID)),
+			Description:         fmt.Sprintf("Assessment finding for control %s", controlID),
+			Target:              target,
+			RelatedObservations: &relatedObs,
+			Props:               &props,
+			Remarks:             remarks,
+		}
+
 		findings = append(findings, finding)
 	}
 
-	return findings
+	return &findings
 }
 
 // determineControlStatus determines the satisfied/not-satisfied status for a control.
@@ -599,37 +647,42 @@ func determineControlStatus(controlID string, controlTestMap map[string][]string
 }
 
 // reportResults prints assessment summary.
-func reportResults(config *AssessConfig, ar *oscal.AssessmentResults, arPath string) {
+func reportResults(config *AssessConfig, ar *oscalTypes.AssessmentResults, arPath string) {
 	assessLog.Info("")
 	assessLog.Info("═══════════════════════════════════════════════════════════")
 	assessLog.Infof("  Assessment Results: %s", config.Module)
 	assessLog.Info("═══════════════════════════════════════════════════════════")
 	assessLog.Info("")
 
-	if len(ar.AssessmentResults.Results) > 0 {
-		result := ar.AssessmentResults.Results[0]
+	if len(ar.Results) > 0 {
+		result := ar.Results[0]
 
 		satisfied := 0
 		notSatisfied := 0
-		for _, finding := range result.Findings {
-			if finding.Target.Status.State == oscal.StateSatisfied {
-				satisfied++
-			} else {
-				notSatisfied++
+		if result.Findings != nil {
+			for _, finding := range *result.Findings {
+				if finding.Target.Status.State == oscal.StateSatisfied {
+					satisfied++
+				} else {
+					notSatisfied++
+				}
 			}
 		}
 
-		total := len(result.Findings)
+		total := 0
+		if result.Findings != nil {
+			total = len(*result.Findings)
+		}
 		assessLog.Infof("  Controls assessed: %d", total)
 		assessLog.Infof("  ✓ Satisfied:       %d", satisfied)
 		assessLog.Infof("  ✗ Not satisfied:   %d", notSatisfied)
 
-		if notSatisfied > 0 {
+		if notSatisfied > 0 && result.Findings != nil {
 			assessLog.Info("")
 			assessLog.Info("  Controls needing attention:")
-			for _, finding := range result.Findings {
+			for _, finding := range *result.Findings {
 				if finding.Target.Status.State == oscal.StateNotSatisfied {
-					assessLog.Infof("    - %s", finding.Target.TargetID)
+					assessLog.Infof("    - %s", finding.Target.TargetId)
 				}
 			}
 		}
@@ -667,14 +720,17 @@ func formatDuration(d time.Duration) string {
 
 // showAssessHelp displays help information.
 func showAssessHelp() {
-	help := `Usage: create risk-assess <module> [flags]
+	help := `Usage: create risk-assess <module> --profile <path> [flags]
 
 Update OSCAL assessment-results with test and security evidence
 
 Arguments:
   module               Module name to assess
 
-Flags:
+Required Flags:
+  -p, --profile <path>               Path to OSCAL profile JSON file
+
+Optional Flags:
       --max-evidence-age <duration>  Maximum age for evidence (default: 24h)
       --force-tests                  Force re-run tests regardless of age
       --force-security               Force re-run security scans regardless of age
@@ -686,17 +742,17 @@ Output:
   out/risk/<module>/assessment-results.json
 
 Examples:
-  # Assess a module (auto-refreshes stale evidence)
-  create risk-assess billing-service
+  # Assess a module with its profile (auto-refreshes stale evidence)
+  create risk-assess billing --profile specs/risk-controls/billing.profile.json
 
   # Force fresh test results
-  create risk-assess api-gateway --force-tests
+  create risk-assess api --profile specs/risk-controls/api.profile.json --force-tests
 
   # Use existing evidence only
-  create risk-assess my-module --skip-auto-run
+  create risk-assess auth --profile specs/risk-controls/auth.profile.json --skip-auto-run
 
   # Set custom evidence freshness threshold
-  create risk-assess my-module --max-evidence-age 1h
+  create risk-assess data --profile specs/risk-controls/data.profile.json --max-evidence-age 1h
 `
 	assessLog.Info(help)
 }

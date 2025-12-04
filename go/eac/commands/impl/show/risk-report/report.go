@@ -210,10 +210,11 @@ func buildAggregatedReport(config *Config, arMap map[string]string) *AggregatedR
 		}
 
 		// Process findings
-		if len(ar.AssessmentResults.Results) > 0 {
-			result := ar.AssessmentResults.Results[0]
+		if len(ar.Results) > 0 {
+			result := ar.Results[0]
 
-			for _, finding := range result.Findings {
+			if result.Findings != nil {
+				for _, finding := range *result.Findings {
 				moduleReport.Total++
 				report.TotalControls++
 
@@ -228,18 +229,21 @@ func buildAggregatedReport(config *Config, arMap map[string]string) *AggregatedR
 				// Add finding detail if requested
 				if config.Detail {
 					fr := FindingReport{
-						ControlID: finding.Target.TargetID,
+						ControlID: finding.Target.TargetId,
 						Status:    finding.Target.Status.State,
 					}
 
 					// Extract test coverage from props
-					for _, prop := range finding.Props {
-						if prop.Name == "test-coverage" {
-							fr.TestCoverage = prop.Value
+					if finding.Props != nil {
+						for _, prop := range *finding.Props {
+							if prop.Name == "test-coverage" {
+								fr.TestCoverage = prop.Value
+							}
 						}
 					}
 
 					moduleReport.Findings = append(moduleReport.Findings, fr)
+				}
 				}
 			}
 		}

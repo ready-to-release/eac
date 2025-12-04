@@ -208,7 +208,7 @@ func parseRemoveConfig() (*removeConfig, error) {
 	// Parse flags
 	config.keepBranch = internal.HasFlag(args, "--keep-branch", "")
 	config.deleteRemote = internal.HasFlag(args, "--delete-remote", "")
-	config.force = internal.HasFlag(args, "--force", "-f")
+	config.force = internal.HasFlag(args, "--force", "")
 
 	// Get positional arguments
 	positionalArgs := internal.GetPositionalArgs(args)

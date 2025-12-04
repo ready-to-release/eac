@@ -252,14 +252,12 @@ modules:
       config:
         - go.mod
         - go.sum
-        - "internal/risk/oscal/schemas/*.json"
       exclude:
         - ext/**
       workflows:
         ci: .github/workflows/ci-eac-commands.yaml
         release: ""
       assets:
-        - internal/risk/oscal/schemas/**/*.json
         - "README.md"
         - "**/README.md"
       repo:

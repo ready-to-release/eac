@@ -405,9 +405,9 @@ out/
 ├── debug-risk-assessment-context.md     # Full context sent to AI
 ├── debug-risk-assessment-prompt.md      # Complete AI prompt
 ├── debug-risk-assessment-response.md    # Raw AI response
-├── debug-risk-create-parsed.json        # Parsed risk data
-├── debug-risk-create-controls.json      # Generated control structures
-└── debug-risk-create-prompts/           # Individual control prompts
+├── debug-risk-profile-parsed.json       # Parsed risk data
+├── debug-risk-profile-controls.json     # Generated control structures
+└── debug-risk-profile-prompts/          # Individual control prompts
     ├── risk-001-prompt.md
     └── risk-002-prompt.md
 ```

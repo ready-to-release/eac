@@ -8,42 +8,53 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// LoadProfile loads an OSCAL profile from a file.
-func LoadProfile(profilePath string) (*Profile, error) {
+// LoadProfile loads an OSCAL profile from a file using go-oscal types.
+func LoadProfile(profilePath string) (*oscalTypes.Profile, error) {
 	data, err := os.ReadFile(profilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read profile file: %w", err)
 	}
 
-	var profile Profile
-	if err := json.Unmarshal(data, &profile); err != nil {
+	var oscalDoc oscalTypes.OscalModels
+	if err := json.Unmarshal(data, &oscalDoc); err != nil {
 		return nil, fmt.Errorf("failed to parse profile JSON: %w", err)
 	}
 
-	return &profile, nil
+	if oscalDoc.Profile == nil {
+		return nil, fmt.Errorf("file does not contain a profile document")
+	}
+
+	return oscalDoc.Profile, nil
 }
 
-// LoadAssessmentResults loads an OSCAL assessment-results from a file.
-func LoadAssessmentResults(arPath string) (*AssessmentResults, error) {
+// LoadAssessmentResults loads an OSCAL assessment-results from a file using go-oscal types.
+func LoadAssessmentResults(arPath string) (*oscalTypes.AssessmentResults, error) {
 	data, err := os.ReadFile(arPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read assessment-results file: %w", err)
 	}
 
-	var ar AssessmentResults
-	if err := json.Unmarshal(data, &ar); err != nil {
+	var oscalDoc oscalTypes.OscalModels
+	if err := json.Unmarshal(data, &oscalDoc); err != nil {
 		return nil, fmt.Errorf("failed to parse assessment-results JSON: %w", err)
 	}
 
-	return &ar, nil
+	if oscalDoc.AssessmentResults == nil {
+		return nil, fmt.Errorf("file does not contain an assessment-results document")
+	}
+
+	return oscalDoc.AssessmentResults, nil
 }
 
 // DiscoverProfiles finds all profile files in the specs/risk-controls directory.
 // Returns a map of module name to profile path.
 func DiscoverProfiles(workspaceRoot string) (map[string]string, error) {
-	profileDir := filepath.Join(workspaceRoot, "specs", "risk-controls")
+	profileDir := filepath.Join(workspaceRoot, repository.SpecsDir, repository.RiskControlsDir)
 
 	profiles := make(map[string]string)
 
@@ -76,7 +87,7 @@ func DiscoverProfiles(workspaceRoot string) (map[string]string, error) {
 // DiscoverAssessmentResults finds all assessment-results files in the out/risk directory.
 // Returns a map of module name to assessment-results path.
 func DiscoverAssessmentResults(workspaceRoot string) (map[string]string, error) {
-	riskDir := filepath.Join(workspaceRoot, "out", "risk")
+	riskDir := filepath.Join(workspaceRoot, repository.OutDir, repository.RiskDir)
 
 	assessments := make(map[string]string)
 
@@ -105,30 +116,29 @@ func DiscoverAssessmentResults(workspaceRoot string) (map[string]string, error) 
 }
 
 // GetProfilePath returns the default path for a module's profile.
+// Uses centralized repository path conventions.
 func GetProfilePath(workspaceRoot, moduleName string) string {
-	if moduleName == "" {
-		moduleName = "common"
-	}
-	return filepath.Join(workspaceRoot, "specs", "risk-controls", moduleName+".profile.json")
+	return repository.RiskProfilePath(workspaceRoot, moduleName)
 }
 
 // GetAssessmentResultsPath returns the default path for a module's assessment-results.
+// Uses centralized repository path conventions.
 func GetAssessmentResultsPath(workspaceRoot, moduleName string) string {
-	return filepath.Join(workspaceRoot, "out", "risk", moduleName, "assessment-results.json")
+	return repository.RiskAssessmentResultsPath(workspaceRoot, moduleName)
 }
 
 // LoadAllAssessmentResults loads all assessment-results files for aggregated reporting.
-func LoadAllAssessmentResults(workspaceRoot string) ([]*AssessmentResults, error) {
+func LoadAllAssessmentResults(workspaceRoot string) ([]*oscalTypes.AssessmentResults, error) {
 	arMap, err := DiscoverAssessmentResults(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(arMap) == 0 {
-		return nil, fmt.Errorf("no assessment-results found in out/risk/")
+		return nil, fmt.Errorf("no assessment-results found in %s/%s/", repository.OutDir, repository.RiskDir)
 	}
 
-	var results []*AssessmentResults
+	var results []*oscalTypes.AssessmentResults
 	for _, arPath := range arMap {
 		ar, err := LoadAssessmentResults(arPath)
 		if err != nil {
@@ -141,17 +151,17 @@ func LoadAllAssessmentResults(workspaceRoot string) ([]*AssessmentResults, error
 }
 
 // LoadAllProfiles loads all profile files for a given module or all modules.
-func LoadAllProfiles(workspaceRoot string) ([]*Profile, error) {
+func LoadAllProfiles(workspaceRoot string) ([]*oscalTypes.Profile, error) {
 	profileMap, err := DiscoverProfiles(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(profileMap) == 0 {
-		return nil, fmt.Errorf("no profiles found in specs/risk-controls/")
+		return nil, fmt.Errorf("no profiles found in %s/%s/", repository.SpecsDir, repository.RiskControlsDir)
 	}
 
-	var profiles []*Profile
+	var profiles []*oscalTypes.Profile
 	for _, profilePath := range profileMap {
 		profile, err := LoadProfile(profilePath)
 		if err != nil {

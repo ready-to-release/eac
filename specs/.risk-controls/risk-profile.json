@@ -1,0 +1,116 @@
+{
+  "profile": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "ac-2: Account Management - The organization shall manage system accounts including creation, modification, enabling, disabling, and removal of accounts with appropriate authorization.",
+          "uuid": "82ff39bb-5763-4005-9950-1e87716c8fda"
+        },
+        {
+          "description": "ac-3: Access Enforcement - The information system shall enforce approved authorizations for logical access to information and system resources based on applicable access control policies.",
+          "uuid": "1095c691-0143-41f3-b12f-cde583472d80"
+        },
+        {
+          "description": "ac-6: Least Privilege - The organization shall employ the principle of least privilege, allowing only authorized access for users (or processes acting on behalf of users) which are necessary to accomplish assigned tasks.",
+          "uuid": "9fba7db5-a4df-4d47-8326-802214a6a6fc"
+        },
+        {
+          "description": "au-2: Audit Events - The information system shall generate audit records for system events, configuration changes, security-relevant events including authentication attempts, and access control decisions.",
+          "uuid": "7e34c8e5-2698-4db3-a780-8248c0f23a97"
+        },
+        {
+          "description": "au-3: Content of Audit Records - Audit records shall contain information that establishes: what type of event occurred, when the event occurred, where the event occurred, the source of the event, the outcome of the event, and the ...",
+          "uuid": "f9a4ebbc-25d2-4560-84a6-2420cb853683"
+        },
+        {
+          "description": "au-12: Audit Generation - The information system shall provide audit record generation capability for auditable events and allow authorized personnel to select which auditable events are to be audited by specific components.",
+          "uuid": "e3a3a5ad-6c5d-42c2-885c-10e03b769407"
+        },
+        {
+          "description": "cm-2: Baseline Configuration - The organization shall develop, document, and maintain baseline configurations for information systems including software components, dependencies, and security configurations.",
+          "uuid": "9efffa16-4387-472d-9d43-b25fe612abd4"
+        },
+        {
+          "description": "cm-3: Configuration Change Control - The organization shall determine configuration changes to information systems, review proposed changes for security impacts, document configuration change decisions, and implement approved configur...",
+          "uuid": "28527117-564b-44b1-944f-6feff630428a"
+        },
+        {
+          "description": "cm-6: Configuration Settings - The organization shall establish and document configuration settings for information systems using security configuration checklists that reflect the most restrictive mode consistent with operation...",
+          "uuid": "08cbf5a4-b343-49d1-a0a3-1d9422b520f6"
+        },
+        {
+          "description": "ia-5: Authenticator Management - The organization shall manage information system authenticators including initial authenticator distribution, establishing minimum authenticator strength requirements, and protecting authenticator ...",
+          "uuid": "5fb23ada-bc0e-45ea-8e83-b098e881aaf4"
+        },
+        {
+          "description": "sa-3: System Development Life Cycle - The organization shall manage information systems using a system development life cycle that incorporates information security considerations throughout all phases.",
+          "uuid": "4a87f356-37aa-48bd-b8df-57fa4a81821a"
+        },
+        {
+          "description": "sa-10: Developer Configuration Management - The organization shall require developers to perform configuration management during system development, including tracking security flaws and flaw resolution, and managing component dependencies.",
+          "uuid": "1bf99bee-e107-4dc5-bce4-3bd356389726"
+        },
+        {
+          "description": "sa-11: Developer Security Testing and Evaluation - The organization shall require developers to create and implement security test and evaluation plans including static analysis, dynamic analysis, and security validation testing.",
+          "uuid": "5da9dfc8-4aca-454c-825d-5c7c2ccd2d8b"
+        },
+        {
+          "description": "sc-28: Protection of Information at Rest - The information system shall protect the confidentiality and integrity of sensitive information at rest including credentials, configuration files, and assessment data.",
+          "uuid": "54ddb76d-c4eb-4021-9e46-2b51bf64197b"
+        },
+        {
+          "description": "si-2: Flaw Remediation - The organization shall identify, report, and correct information system flaws through systematic flaw remediation processes including security vulnerability scanning and patch management.",
+          "uuid": "c7c1c3c9-22d5-45e2-9a88-4ba49708fc3a"
+        },
+        {
+          "description": "si-3: Malicious Code Protection - The organization shall implement malicious code protection mechanisms including scanning downloaded software, configuration files, and dependencies from external sources.",
+          "uuid": "4a947008-222f-4a87-93fb-91d50258a6ec"
+        },
+        {
+          "description": "si-7: Software, Firmware, and Information Integrity - The information system shall employ integrity verification tools and techniques to detect unauthorized changes to software, firmware, and information including component validation, dependency veri...",
+          "uuid": "a9ae6d90-7d4e-416f-ab80-3ef1ec4f8902"
+        },
+        {
+          "description": "si-10: Information Input Validation - The information system shall check the validity of user inputs including command arguments, configuration files, and structured documents to prevent injection attacks and ensure data integrity.",
+          "uuid": "5b710151-3537-487a-afa2-16402fe2eee9"
+        }
+      ]
+    },
+    "imports": [
+      {
+        "href": "C:\\source\\simply-cli\\cli\\templates\\specs\\risk-catalog\\controls.catalog.json",
+        "include-controls": [
+          {
+            "with-ids": [
+              "ac-2",
+              "ac-3",
+              "ac-6",
+              "au-2",
+              "au-3",
+              "au-12",
+              "cm-2",
+              "cm-3",
+              "cm-6",
+              "ia-5",
+              "sa-3",
+              "sa-10",
+              "sa-11",
+              "sc-28",
+              "si-2",
+              "si-3",
+              "si-7",
+              "si-10"
+            ]
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "last-modified": "2025-12-04T10:07:32.4256224Z",
+      "oscal-version": "1.1.3",
+      "title": "Solution Risk Profile",
+      "version": "1.0.0"
+    },
+    "uuid": "22914b91-58ea-4994-bb4f-191e056491f3"
+  }
+}

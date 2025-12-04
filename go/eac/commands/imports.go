@@ -7,6 +7,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/design"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/risk"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/risk-profile"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/spec"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/describe"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/design"
@@ -40,7 +41,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/test"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/design"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate"
-	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk-catalog"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk-profile"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/work"
 )

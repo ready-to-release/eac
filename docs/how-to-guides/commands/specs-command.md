@@ -258,11 +258,11 @@ r2r eac create spec "Feature" --template templates/my-spec-template.md
 
 ### AI Config Customization
 
-Edit AI configs in `.r2r/eac/ai/specifications/`:
+Edit AI configs in `.r2r/eac/ai/specs/`:
 
 ```bash
 # Modify system prompt
-nano .r2r/eac/ai/specifications/specification.md
+nano .r2r/eac/ai/specs/specification.md
 
 # Changes apply to all future spec generation
 r2r eac create spec "New feature"
@@ -393,7 +393,7 @@ r2r eac work pr
 | -------------------------------- | ----------------------------------------------------------------------------- |
 | AI generates invalid Gherkin     | Use `--debug` to inspect output in `out/logs/specs/`, check AI provider setup |
 | Module not inferred correctly    | Use `--module src-modulename` explicitly                                      |
-| Validation fails repeatedly      | Check `.r2r/eac/ai/specifications/` for AI config requirements                |
+| Validation fails repeatedly      | Check `.r2r/eac/ai/specs/` for AI config requirements                |
 | API key error                    | Run `r2r eac init --ai <provider>` first                                      |
 | Output path issues               | Use `--output` to specify exact path                                          |
 | Complex feature generates poorly | Break into smaller features, be more specific in description                  |
@@ -443,7 +443,7 @@ fi
 1. **Create specs**: `r2r eac create spec "<description>"`
 2. **Validate**: `r2r eac validate specs`
 3. **Debug** (if needed): Add `--debug` flag
-4. **Customize** (optional): Edit `.r2r/eac/ai/specifications/`
+4. **Customize** (optional): Edit `.r2r/eac/ai/specs/`
 5. **Commit**: `git add specs/` and commit
 
 Specifications drive BDD/TDD workflows and serve as living documentation for your project.

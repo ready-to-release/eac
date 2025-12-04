@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/gofrs/flock"
 )
 
@@ -17,18 +18,23 @@ const (
 	LockTimeout = 30 * time.Second
 )
 
-// WriteProfile writes an OSCAL profile to a file.
-func WriteProfile(path string, profile *Profile) error {
+// WriteProfile writes an OSCAL profile to a file using go-oscal types.
+func WriteProfile(path string, profile *oscalTypes.Profile) error {
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	// Update last-modified timestamp
-	profile.Profile.Metadata.LastModified = time.Now().UTC().Format(time.RFC3339)
+	UpdateProfileMetadata(profile)
+
+	// Wrap in OscalModels for correct JSON structure
+	oscalDoc := &oscalTypes.OscalModels{
+		Profile: profile,
+	}
 
 	// Marshal to JSON with indentation
-	data, err := json.MarshalIndent(profile, "", "  ")
+	data, err := json.MarshalIndent(oscalDoc, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal profile: %w", err)
 	}
@@ -41,9 +47,9 @@ func WriteProfile(path string, profile *Profile) error {
 	return nil
 }
 
-// WriteAssessmentResults writes OSCAL assessment-results with file locking.
+// WriteAssessmentResults writes OSCAL assessment-results with file locking using go-oscal types.
 // Uses exclusive file locking to prevent concurrent write corruption.
-func WriteAssessmentResults(path string, ar *AssessmentResults) error {
+func WriteAssessmentResults(path string, ar *oscalTypes.AssessmentResults) error {
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -70,7 +76,7 @@ func WriteAssessmentResults(path string, ar *AssessmentResults) error {
 	}()
 
 	// Update last-modified timestamp
-	ar.AssessmentResults.Metadata.LastModified = time.Now().UTC().Format(time.RFC3339)
+	UpdateAssessmentResultsMetadata(ar)
 
 	// Write to temporary file first (atomic write)
 	tmpPath := path + ".tmp"
@@ -89,8 +95,13 @@ func WriteAssessmentResults(path string, ar *AssessmentResults) error {
 }
 
 // writeAssessmentResultsJSON marshals and writes OSCAL JSON.
-func writeAssessmentResultsJSON(path string, ar *AssessmentResults) error {
-	data, err := json.MarshalIndent(ar, "", "  ")
+func writeAssessmentResultsJSON(path string, ar *oscalTypes.AssessmentResults) error {
+	// Wrap in OscalModels for correct JSON structure
+	oscalDoc := &oscalTypes.OscalModels{
+		AssessmentResults: ar,
+	}
+
+	data, err := json.MarshalIndent(oscalDoc, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal assessment-results: %w", err)
 	}
@@ -98,16 +109,16 @@ func writeAssessmentResultsJSON(path string, ar *AssessmentResults) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-// WriteAssessmentResultsWithoutLock writes without file locking.
+// WriteAssessmentResultsWithoutLock writes without file locking using go-oscal types.
 // Use only when you know concurrent access is not possible.
-func WriteAssessmentResultsWithoutLock(path string, ar *AssessmentResults) error {
+func WriteAssessmentResultsWithoutLock(path string, ar *oscalTypes.AssessmentResults) error {
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	// Update last-modified timestamp
-	ar.AssessmentResults.Metadata.LastModified = time.Now().UTC().Format(time.RFC3339)
+	UpdateAssessmentResultsMetadata(ar)
 
 	return writeAssessmentResultsJSON(path, ar)
 }
@@ -162,8 +173,8 @@ func WriteRiskReport(path string, content string) error {
 	return nil
 }
 
-// WriteHistoricalSnapshot writes a timestamped snapshot of assessment results.
-func WriteHistoricalSnapshot(workspaceRoot, moduleName string, ar *AssessmentResults) (string, error) {
+// WriteHistoricalSnapshot writes a timestamped snapshot of assessment results using go-oscal types.
+func WriteHistoricalSnapshot(workspaceRoot, moduleName string, ar *oscalTypes.AssessmentResults) (string, error) {
 	outputDir, err := EnsureRiskOutputDir(workspaceRoot, moduleName)
 	if err != nil {
 		return "", err

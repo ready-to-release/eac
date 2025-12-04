@@ -117,7 +117,7 @@ func Init() int {
 				gitToken = os.Args[i+1]
 				i++ // Skip the value
 			}
-		case "--force", "-f":
+		case "--force":
 			force = true
 		case "--debug", "-d":
 			debug = true
