@@ -255,23 +255,23 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <tr>
 <td align="center">
 <img src="https://img.shields.io/badge/🏗️-Design-8b5cf6?style=for-the-badge" alt="Design"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-commands/#create-design"><code>create-design</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-commands/#serve-design"><code>serve-design</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-commands/#validate-design"><code>validate-design</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-commands/#create-design"><code>create design</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-commands/#serve-design"><code>serve design</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-commands/#validate-design"><code>validate design</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/design-commands/">all</a></sup>
 </td>
 <td align="center">
 <img src="https://img.shields.io/badge/📋-Specs-22c55e?style=for-the-badge" alt="Specs"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-commands/#create-spec"><code>create-spec</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-commands/#validate-specs"><code>validate-specs</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-commands/#specs-unused-steps"><code>specs-unused-steps</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-commands/#create-spec"><code>create spec</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-commands/#validate-specs"><code>validate specs</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-commands/#get-specs-unused-steps"><code>get specs unused-steps</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/specifications-commands/">all</a></sup>
 </td>
 <td align="center">
 <img src="https://img.shields.io/badge/📄-Templates-14b8a6?style=for-the-badge" alt="Templates"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-commands/#templates-apply"><code>templates-apply</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-commands/#templates-list"><code>templates-list</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-commands/#templates-install"><code>templates-install</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-commands/#templates-apply"><code>templates apply</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-commands/#templates-list"><code>templates list</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-commands/#templates-install"><code>templates install</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/templates-commands/">all</a></sup>
 </td>
 <td align="center">
@@ -286,8 +286,8 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <td align="center">
 <img src="https://img.shields.io/badge/🧪-Test-10b981?style=for-the-badge" alt="Test"><br>
 <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/test-commands/#test"><code>test</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/test-commands/#test-suite"><code>test-suite</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/test-commands/#test-debug"><code>test-debug</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/test-commands/#test-suite"><code>test suite</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/test-commands/#test-debug"><code>test debug</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/test-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/test-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/test-commands/">all</a></sup>
 </td>
 <td align="center">
@@ -300,15 +300,15 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <td align="center">
 <img src="https://img.shields.io/badge/🔒-Security-eab308?style=for-the-badge" alt="Security"><br>
 <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#security"><code>security</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#security-sast"><code>security-sast</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#security-sbom"><code>security-sbom</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#security-sast"><code>security sast</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#security-sbom"><code>security sbom</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/">all</a></sup>
 </td>
 <td align="center">
 <img src="https://img.shields.io/badge/🛡️-Risk-f97316?style=for-the-badge" alt="Risk"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#create-risk"><code>create-risk</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#validate-risk"><code>validate-risk</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#show-risk-report"><code>show-risk-report</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#create-risk"><code>create risk</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#validate-risk"><code>validate risk</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#show-risk-report"><code>show risk-report</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/">all</a></sup>
 </td>
 </tr>
@@ -329,16 +329,16 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 </td>
 <td align="center">
 <img src="https://img.shields.io/badge/⚡-Pipeline-ec4899?style=for-the-badge" alt="Pipeline"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-commands/#run-pipeline"><code>run-pipeline</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-commands/#pipeline-wait"><code>pipeline-wait</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-commands/#show-pipeline-status"><code>show-pipeline-status</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-commands/#pipeline-run"><code>pipeline run</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-commands/#pipeline-wait"><code>pipeline wait</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-commands/#pipeline-status"><code>pipeline status</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/pipeline-commands/">all</a></sup>
 </td>
 <td align="center">
 <img src="https://img.shields.io/badge/🚀-Release-f43f5e?style=for-the-badge" alt="Release"><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-commands/#release-changelog"><code>release-changelog</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-commands/#release-this"><code>release-this</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-commands/#release-calver"><code>release-calver</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-commands/#release-changelog"><code>release changelog</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-commands/#release-this"><code>release this</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-commands/#release-generate-module-calver"><code>release generate-module-calver</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-commands/">all</a></sup>
 </td>
 </tr>

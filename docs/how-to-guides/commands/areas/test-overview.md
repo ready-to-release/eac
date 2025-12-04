@@ -23,9 +23,9 @@ Use test commands when you need:
 | Test a single module  | `test <module>`     |
 | Test multiple modules | `test <m1> <m2>`    |
 | Test all modules      | `test`              |
-| Run a test suite      | `test-suite <name>` |
-| List available suites | `test-list-suites`  |
-| Debug test failures   | `test-debug`        |
+| Run a test suite      | `test suite <name>` |
+| List available suites | `test list-suites`  |
+| Debug test failures   | `test debug`        |
 
 ### Common Use Cases
 
@@ -87,14 +87,14 @@ r2r eac test eac-commands
 r2r eac test eac-core --coverage
 
 # Debug failures
-r2r eac test-debug
+r2r eac test debug
 ```
 
 ### TDD Workflow
 
 ```bash
 # 1. Write spec
-r2r eac create-spec "User authentication"
+r2r eac create spec "User authentication"
 
 # 2. Run tests (expect failure)
 r2r eac test src-auth
@@ -116,7 +116,7 @@ r2r eac test src-auth --coverage
 r2r eac test --as-junit > test-results.xml
 
 # Run specific suite
-r2r eac test-suite integration --as-junit
+r2r eac test suite integration --as-junit
 ```
 
 ## Test Suite System
@@ -146,13 +146,13 @@ suites:
 
 ```bash
 # List available suites
-r2r eac test-list-suites
+r2r eac test list-suites
 
 # Run specific suite
-r2r eac test-suite integration
+r2r eac test suite integration
 
 # Run suite with JUnit output
-r2r eac test-suite e2e --as-junit
+r2r eac test suite e2e --as-junit
 ```
 
 ## Coverage Collection
@@ -192,7 +192,7 @@ COVERAGE=$(go tool cover -func=out/reports/coverage/eac-core.out | grep total | 
 r2r eac test src-auth
 
 # If failures, analyze
-r2r eac test-debug
+r2r eac test debug
 ```
 
 ### Debug Output
@@ -236,7 +236,7 @@ r2r eac build && r2r eac test && r2r eac validate
 
 ```bash
 # Generate spec, test, implement
-r2r eac create-spec "Feature description"
+r2r eac create spec "Feature description"
 r2r eac test src-feature  # Fails
 # ... implement ...
 r2r eac test src-feature  # Passes

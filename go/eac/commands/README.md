@@ -58,8 +58,8 @@ Current commands include:
 - **`get commands`** - Output structured command information for shell integration
 - **`show help`** - Show all available commands
 - **`show files`** - Show all tracked repository files with module ownership
-- **`show files staged`** - Show only staged files with module ownership
-- **`show files changed`** - Show only modified/unstaged files with module ownership
+- **`show files-staged`** - Show only staged files with module ownership
+- **`show files-changed`** - Show only modified/unstaged files with module ownership
 - **`show modules`** - Show all module contracts in the repository (markdown table)
 - **`show moduletypes`** - Show module types grouped by count (markdown table)
 
@@ -314,8 +314,8 @@ All commands use the `render` package to output clean markdown tables:
 **File commands:**
 
 - `show files` - Table with File, Modules columns
-- `show files staged` - Table with File, Modules columns
-- `show files changed` - Table with File, Modules columns
+- `show files-staged` - Table with File, Modules columns
+- `show files-changed` - Table with File, Modules columns
 
 **Module commands:**
 

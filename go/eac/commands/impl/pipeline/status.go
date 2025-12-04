@@ -1,4 +1,4 @@
-// Command: show pipeline-status
+// Command: pipeline status
 // Short: Show CI status for the head of trunk
 // Long: Show the CI pipeline status for the head of the main branch.
 // Long:
@@ -7,12 +7,12 @@
 // Long: summary of each workflow's status.
 // Long:
 // Long: Example:
-// Long:   show pipeline-status              # Show status for main branch HEAD
-// Long:   show pipeline-status --ref dev    # Show status for dev branch HEAD
-// Long:   show pipeline-status --commit abc # Show status for specific commit
+// Long:   pipeline status              # Show status for main branch HEAD
+// Long:   pipeline status --ref dev    # Show status for dev branch HEAD
+// Long:   pipeline status --commit abc # Show status for specific commit
 // Flag.ref: type=string, usage=Git ref to check (default: main)
 // Flag.commit: type=string, usage=Specific commit SHA to check
-package show
+package pipeline
 
 import (
 	"encoding/json"
@@ -25,11 +25,11 @@ import (
 )
 
 func init() {
-	registry.Register(ShowPipelineStatus)
+	registry.Register(PipelineStatus)
 }
 
-// PipelineWorkflowRunInfo represents workflow run information from GitHub
-type PipelineWorkflowRunInfo struct {
+// StatusWorkflowRunInfo represents workflow run information from GitHub
+type StatusWorkflowRunInfo struct {
 	DatabaseID  int    `json:"databaseId"`
 	Name        string `json:"name"`
 	DisplayName string `json:"displayTitle"`
@@ -42,14 +42,14 @@ type PipelineWorkflowRunInfo struct {
 	Event       string `json:"event"`
 }
 
-// PipelineCommitInfo represents commit information
-type PipelineCommitInfo struct {
+// StatusCommitInfo represents commit information
+type StatusCommitInfo struct {
 	SHA     string `json:"sha"`
 	Message string `json:"message"`
 	Author  string `json:"author"`
 }
 
-func ShowPipelineStatus() int {
+func PipelineStatus() int {
 	// Parse flags
 	ref := "main"
 	commitSHA := ""
@@ -67,7 +67,7 @@ func ShowPipelineStatus() int {
 
 	// Get commit SHA if not specified
 	if commitSHA == "" {
-		sha, err := getHeadCommit(ref)
+		sha, err := getStatusHeadCommit(ref)
 		if err != nil {
 			log.Errorf("failed to get HEAD commit for %s: %v", ref, err)
 			return 1
@@ -76,10 +76,10 @@ func ShowPipelineStatus() int {
 	}
 
 	// Get commit info
-	commitInfo, err := getPipelineCommitInfo(commitSHA)
+	commitInfo, err := getStatusCommitInfo(commitSHA)
 	if err != nil {
 		log.Errorf("Warning: failed to get commit info: %v", err)
-		commitInfo = &PipelineCommitInfo{SHA: commitSHA, Message: "(unknown)", Author: "(unknown)"}
+		commitInfo = &StatusCommitInfo{SHA: commitSHA, Message: "(unknown)", Author: "(unknown)"}
 	}
 
 	// Print header
@@ -97,7 +97,7 @@ func ShowPipelineStatus() int {
 	log.Info("")
 
 	// Get all workflow runs for this commit
-	runs, err := getWorkflowRunsForCommit(commitSHA)
+	runs, err := getStatusWorkflowRunsForCommit(commitSHA)
 	if err != nil {
 		log.Errorf("failed to get workflow runs: %v", err)
 		return 1
@@ -114,7 +114,7 @@ func ShowPipelineStatus() int {
 	}
 
 	// Group runs by workflow name (keep only most recent per workflow)
-	latestRuns := make(map[string]*PipelineWorkflowRunInfo)
+	latestRuns := make(map[string]*StatusWorkflowRunInfo)
 	for i := range runs {
 		run := &runs[i]
 		existing, exists := latestRuns[run.Name]
@@ -132,7 +132,7 @@ func ShowPipelineStatus() int {
 	anyRunning := false
 
 	for _, run := range latestRuns {
-		icon := getStatusIcon(run.Status, run.Conclusion)
+		icon := getStatusWorkflowIcon(run.Status, run.Conclusion)
 		conclusion := run.Conclusion
 		if conclusion == "" {
 			conclusion = "-"
@@ -147,7 +147,7 @@ func ShowPipelineStatus() int {
 			allSuccess = false
 		}
 
-		log.Infof("%s %-38s  %-12s  %s", icon, truncate(run.Name, 38), run.Status, conclusion)
+		log.Infof("%s %-38s  %-12s  %s", icon, truncateStatus(run.Name, 38), run.Status, conclusion)
 	}
 
 	log.Info("")
@@ -167,8 +167,8 @@ func ShowPipelineStatus() int {
 	return 0
 }
 
-// getHeadCommit gets the HEAD commit SHA for a ref
-func getHeadCommit(ref string) (string, error) {
+// getStatusHeadCommit gets the HEAD commit SHA for a ref
+func getStatusHeadCommit(ref string) (string, error) {
 	cmd := exec.Command("gh", "api", fmt.Sprintf("repos/{owner}/{repo}/commits/%s", ref), "--jq", ".sha")
 	output, err := cmd.Output()
 	if err != nil {
@@ -182,8 +182,8 @@ func getHeadCommit(ref string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-// getPipelineCommitInfo gets commit information
-func getPipelineCommitInfo(sha string) (*PipelineCommitInfo, error) {
+// getStatusCommitInfo gets commit information
+func getStatusCommitInfo(sha string) (*StatusCommitInfo, error) {
 	cmd := exec.Command("gh", "api", fmt.Sprintf("repos/{owner}/{repo}/commits/%s", sha),
 		"--jq", `{sha: .sha, message: .commit.message, author: .commit.author.name}`)
 	output, err := cmd.Output()
@@ -191,7 +191,7 @@ func getPipelineCommitInfo(sha string) (*PipelineCommitInfo, error) {
 		return nil, fmt.Errorf("failed to get commit info: %w", err)
 	}
 
-	var info PipelineCommitInfo
+	var info StatusCommitInfo
 	if err := json.Unmarshal(output, &info); err != nil {
 		return nil, fmt.Errorf("failed to parse commit info: %w", err)
 	}
@@ -199,8 +199,8 @@ func getPipelineCommitInfo(sha string) (*PipelineCommitInfo, error) {
 	return &info, nil
 }
 
-// getWorkflowRunsForCommit gets all workflow runs for a specific commit
-func getWorkflowRunsForCommit(sha string) ([]PipelineWorkflowRunInfo, error) {
+// getStatusWorkflowRunsForCommit gets all workflow runs for a specific commit
+func getStatusWorkflowRunsForCommit(sha string) ([]StatusWorkflowRunInfo, error) {
 	cmd := exec.Command("gh", "run", "list",
 		"--commit", sha,
 		"--json", "databaseId,name,displayTitle,status,conclusion,headSha,url,createdAt,updatedAt,event",
@@ -211,7 +211,7 @@ func getWorkflowRunsForCommit(sha string) ([]PipelineWorkflowRunInfo, error) {
 		return nil, fmt.Errorf("failed to list runs: %w", err)
 	}
 
-	var runs []PipelineWorkflowRunInfo
+	var runs []StatusWorkflowRunInfo
 	if err := json.Unmarshal(output, &runs); err != nil {
 		return nil, fmt.Errorf("failed to parse runs: %w", err)
 	}
@@ -219,8 +219,8 @@ func getWorkflowRunsForCommit(sha string) ([]PipelineWorkflowRunInfo, error) {
 	return runs, nil
 }
 
-// getStatusIcon returns an icon for the workflow status
-func getStatusIcon(status, conclusion string) string {
+// getStatusWorkflowIcon returns an icon for the workflow status
+func getStatusWorkflowIcon(status, conclusion string) string {
 	if status == "completed" {
 		switch conclusion {
 		case "success":
@@ -248,8 +248,8 @@ func getStatusIcon(status, conclusion string) string {
 	}
 }
 
-// truncate truncates a string to maxLen characters
-func truncate(s string, maxLen int) string {
+// truncateStatus truncates a string to maxLen characters
+func truncateStatus(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}

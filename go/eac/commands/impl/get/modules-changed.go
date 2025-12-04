@@ -1,5 +1,5 @@
-// Command: get changed modules
-// Description: Get modules affected by changed files
+// Command: get changed-modules
+// Short: Get modules affected by changed files
 // Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON

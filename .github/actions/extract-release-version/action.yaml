@@ -1,0 +1,92 @@
+name: Extract Release Version
+description: Extract version from tag trigger or workflow dispatch input
+
+inputs:
+  module-prefix:
+    description: 'Module prefix in tag (e.g., r2r-cli, ext-eac, docs)'
+    required: true
+  legacy-prefixes:
+    description: 'Comma-separated legacy prefixes to also accept (e.g., src-cli)'
+    required: false
+    default: ''
+  commands-path:
+    description: 'Path to commands binary for validation (optional, skips validation if not provided)'
+    required: false
+    default: ''
+
+outputs:
+  version:
+    description: 'Extracted version without prefix (e.g., 1.2.3)'
+    value: ${{ steps.extract.outputs.version }}
+  tag_name:
+    description: 'Full tag name (e.g., r2r-cli/1.2.3)'
+    value: ${{ steps.extract.outputs.tag_name }}
+  is_valid:
+    description: 'Whether version is valid semver (true/false)'
+    value: ${{ steps.extract.outputs.is_valid }}
+
+runs:
+  using: composite
+  steps:
+    - name: Extract version
+      id: extract
+      shell: bash
+      env:
+        MODULE_PREFIX: ${{ inputs.module-prefix }}
+        LEGACY_PREFIXES: ${{ inputs.legacy-prefixes }}
+        EVENT_NAME: ${{ github.event_name }}
+        DISPATCH_VERSION: ${{ github.event.inputs.version }}
+        GITHUB_REF: ${{ github.ref }}
+        COMMANDS_PATH: ${{ inputs.commands-path }}
+      run: |
+        # Determine version based on trigger type
+        if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+          VERSION="$DISPATCH_VERSION"
+          TAG_NAME="${MODULE_PREFIX}/${VERSION}"
+          echo "Extracting from workflow_dispatch: version=$VERSION"
+        else
+          # Extract from tag ref
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#${MODULE_PREFIX}/}"
+
+          # Handle legacy prefixes
+          if [ -n "$LEGACY_PREFIXES" ]; then
+            IFS=',' read -ra PREFIXES <<< "$LEGACY_PREFIXES"
+            for prefix in "${PREFIXES[@]}"; do
+              prefix=$(echo "$prefix" | xargs)  # trim whitespace
+              VERSION="${VERSION#${prefix}/}"
+            done
+          fi
+
+          echo "Extracting from tag: tag=$TAG_NAME version=$VERSION"
+        fi
+
+        # Output extracted values
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+        # Validate if commands binary is available
+        if [ -n "$COMMANDS_PATH" ] && [ -f "$COMMANDS_PATH" ]; then
+          if "$COMMANDS_PATH" validate release-version "$VERSION" 2>/dev/null; then
+            echo "is_valid=true" >> $GITHUB_OUTPUT
+            echo "Version $VERSION is valid"
+          else
+            echo "is_valid=false" >> $GITHUB_OUTPUT
+            echo "::warning::Version $VERSION failed validation"
+          fi
+        else
+          # Fallback validation with regex
+          if echo "$VERSION" | grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+            # Also check no 'v' prefix
+            if echo "$VERSION" | grep -qE '^[vV]'; then
+              echo "is_valid=false" >> $GITHUB_OUTPUT
+              echo "::warning::Version $VERSION has 'v' prefix"
+            else
+              echo "is_valid=true" >> $GITHUB_OUTPUT
+              echo "Version $VERSION is valid (regex check)"
+            fi
+          else
+            echo "is_valid=false" >> $GITHUB_OUTPUT
+            echo "::warning::Version $VERSION is not valid semver"
+          fi
+        fi

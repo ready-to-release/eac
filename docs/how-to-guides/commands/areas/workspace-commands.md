@@ -12,7 +12,7 @@ Command reference for EAC's workspace management system.
 | `work merge`      | Merge workspace changes back to main (squash by default)   |
 | `work pr`         | Create pull request with AI-generated description          |
 | `work remove`     | Remove workspace and optionally delete associated branches |
-| `show-workspaces` | List all workspaces and their status                       |
+| `show workspaces` | List all workspaces and their status                       |
 
 ---
 
@@ -484,14 +484,14 @@ Workspace removed successfully.
 
 ---
 
-## show-workspaces
+## show workspaces
 
 List all workspaces and their status.
 
 ### Synopsis
 
 ```bash
-r2r eac show-workspaces [options]
+r2r eac show workspaces [options]
 ```
 
 ### Description
@@ -508,10 +508,10 @@ Displays all git worktrees with their status, branch information, and sync state
 
 ```bash
 # List all workspaces
-r2r eac show-workspaces
+r2r eac show workspaces
 
 # JSON output
-r2r eac show-workspaces --json
+r2r eac show workspaces --json
 ```
 
 ### Output

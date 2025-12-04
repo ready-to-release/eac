@@ -19,9 +19,9 @@ Use pipeline commands when you need:
 
 | Scenario                | Commands               |
 | ----------------------- | ---------------------- |
-| Build modules in order  | `run-pipeline`         |
-| Wait for CI to complete | `pipeline-wait`        |
-| Check CI status         | `show-pipeline-status` |
+| Build modules in order  | `pipeline run`         |
+| Wait for CI to complete | `pipeline wait`        |
+| Check CI status         | `pipeline status`      |
 
 ### Common Use Cases
 
@@ -98,16 +98,16 @@ When running a pipeline:
 
 ```bash
 # 1. View dependencies
-r2r eac show-dependencies
+r2r eac show dependencies
 
 # 2. Get execution order for specific module
-r2r eac get-execution-order r2r-cli
+r2r eac get execution order r2r-cli
 
 # 3. Run pipeline for module and dependencies
-r2r eac run-pipeline r2r-cli
+r2r eac pipeline run r2r-cli
 
 # 4. Or run full pipeline
-r2r eac run-pipeline
+r2r eac pipeline run
 ```
 
 ### CI/CD Integration
@@ -121,23 +121,23 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run pipeline
-        run: r2r eac run-pipeline
+        run: r2r eac pipeline run
 
       - name: Check status
-        run: r2r eac show-pipeline-status
+        run: r2r eac pipeline status
 ```
 
 ### Waiting for Workflows
 
 ```bash
 # Wait for current workflow runs to complete
-r2r eac pipeline-wait
+r2r eac pipeline wait
 
 # Wait with timeout
-r2r eac pipeline-wait --timeout 30m
+r2r eac pipeline wait --timeout 30m
 
 # Wait for specific workflow
-r2r eac pipeline-wait --workflow ci
+r2r eac pipeline wait --workflow ci
 ```
 
 ## Execution Modes
@@ -146,31 +146,31 @@ r2r eac pipeline-wait --workflow ci
 
 ```bash
 # Build all modules in dependency order
-r2r eac run-pipeline --action build
+r2r eac pipeline run --action build
 
 # Build specific module and its dependencies
-r2r eac run-pipeline --action build r2r-cli
+r2r eac pipeline run --action build r2r-cli
 ```
 
 ### Test Pipeline
 
 ```bash
 # Test all modules
-r2r eac run-pipeline --action test
+r2r eac pipeline run --action test
 
 # Test with coverage
-r2r eac run-pipeline --action test --coverage
+r2r eac pipeline run --action test --coverage
 ```
 
 ### Full Pipeline
 
 ```bash
 # Build + Test + Validate
-r2r eac run-pipeline --action full
+r2r eac pipeline run --action full
 
 # Equivalent to:
-r2r eac run-pipeline --action build
-r2r eac run-pipeline --action test
+r2r eac pipeline run --action build
+r2r eac pipeline run --action test
 r2r eac validate
 ```
 
@@ -179,7 +179,7 @@ r2r eac validate
 ### Viewing Status
 
 ```bash
-r2r eac show-pipeline-status
+r2r eac pipeline status
 
 # Output:
 # Pipeline Status for main (commit abc123)
@@ -212,14 +212,14 @@ Pipeline commands integrate with GitHub's API:
 
 ```bash
 # Check workflow status
-r2r eac show-pipeline-status --repo owner/repo
+r2r eac pipeline status --repo owner/repo
 
 # Wait for workflows
-r2r eac pipeline-wait --repo owner/repo --run-id 12345
+r2r eac pipeline wait --repo owner/repo --run-id 12345
 
 # Trigger workflow
 gh workflow run ci.yml
-r2r eac pipeline-wait
+r2r eac pipeline wait
 ```
 
 ### With Module Contracts
@@ -249,7 +249,7 @@ Generate diagnostic on failure:
 
 ```bash
 # On pipeline failure
-r2r eac ci summary-link $RUN_ID --type build
+r2r eac pipeline ci summary-link $RUN_ID --type build
 ```
 
 ## Advanced Usage
@@ -258,7 +258,7 @@ r2r eac ci summary-link $RUN_ID --type build
 
 ```bash
 # Get execution order without running
-r2r eac get-execution-order r2r-cli
+r2r eac get execution order r2r-cli
 
 # Output:
 # Layer 0: eac-core, eac-ai
@@ -282,7 +282,7 @@ jobs:
     steps:
       - id: matrix
         run: |
-          LAYERS=$(r2r eac get-execution-order --json)
+          LAYERS=$(r2r eac get execution order --json)
           echo "layers=$LAYERS" >> $GITHUB_OUTPUT
 
   build:
@@ -295,8 +295,8 @@ jobs:
 
 ```bash
 # Only run pipeline for changed modules
-CHANGED=$(r2r eac get-changed-modules)
-r2r eac run-pipeline $CHANGED
+CHANGED=$(r2r eac get changed-modules)
+r2r eac pipeline run $CHANGED
 ```
 
 ## Best Practices
@@ -320,7 +320,7 @@ r2r eac run-pipeline $CHANGED
 | -------------------------- | ------------------------------- |
 | Module builds out of order | Check `depends_on` in contracts |
 | Circular dependency error  | Review and break the cycle      |
-| Pipeline hangs             | Check `pipeline-wait` timeout   |
+| Pipeline hangs             | Check `pipeline wait` timeout   |
 | Status not updating        | Verify GitHub API access        |
 
 ## Next Steps
@@ -328,9 +328,20 @@ r2r eac run-pipeline $CHANGED
 - [Pipeline Configuration](pipeline-configuration.md) - Configure workflows and timeouts
 - [Pipeline Commands](pipeline-commands.md) - Full command reference
 
+## CI Commands
+
+The pipeline CI commands provide workflow orchestration and diagnostics:
+
+| Command | Description |
+|---------|-------------|
+| `pipeline ci dispatch-and-wait` | Dispatch workflow and wait for completion |
+| `pipeline ci summary-link` | Generate CI diagnostic markdown |
+
+See [Pipeline CI Commands](pipeline-ci-commands.md) for detailed documentation.
+
 ## Related Areas
 
 - [Build Commands](build-overview.md) - Individual module build
 - [Test Commands](test-overview.md) - Individual module test
-- [CI Command](../ci-command.md) - CI diagnostics and summaries
+- [Pipeline CI Commands](pipeline-ci-commands.md) - CI diagnostics and summaries
 - [Validate Commands](validate-overview.md) - Dependency graph validation

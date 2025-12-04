@@ -3,7 +3,7 @@ package main
 
 import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/build"
-	_ "github.com/ready-to-release/eac/go/eac/commands/impl/ci"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/pipeline/ci"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/design"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/risk"
@@ -17,7 +17,6 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/list"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/pipeline"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/release"
-	_ "github.com/ready-to-release/eac/go/eac/commands/impl/run/pipeline"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/security"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/security/compliance"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/security/iac"

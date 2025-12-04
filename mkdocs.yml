@@ -79,7 +79,7 @@ plugins:
       # Output configuration
       output_path: pdf/ready-to-release-docs.pdf
       # Debug options
-      debug_html: false
+      debug_html: true
       show_anchors: false
       verbose: false
 

@@ -399,7 +399,7 @@ eac help work
 ## Related Commands
 
 - `completion` - Generate shell completion scripts
-- `show-config` - Display current configuration
+- `show config` - Display current configuration
 - `get` - Retrieve repository data
 
 ## Troubleshooting

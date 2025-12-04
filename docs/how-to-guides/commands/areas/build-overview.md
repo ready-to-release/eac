@@ -181,7 +181,7 @@ r2r eac build && r2r eac test && r2r eac validate
 
 ```bash
 # Pre-release build
-r2r eac build --version $(r2r eac release-get-version) --compressed r2r-cli
+r2r eac build --version $(r2r eac release get-version) --compressed r2r-cli
 ```
 
 ## Best Practices

@@ -21,6 +21,80 @@ func init() {
 	// All go-* types use this via their build_deps contract
 	// Behavior is determined by capabilities, not type names
 	RegisterSystem("go", BuildGoModule)
+	RegisterSystemArtifacts("go", ListGoModuleArtifacts)
+}
+
+// ListGoModuleArtifacts returns the artifacts that would be produced by building this Go module
+func ListGoModuleArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+	cfg := config.Global()
+	hasExecutable := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "executable")
+	hasCrossCompile := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "cross_compile")
+	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+
+	if !hasGoModule {
+		return nil
+	}
+
+	if hasExecutable && hasCrossCompile {
+		return listCrossCompiledArtifacts(module)
+	} else if hasExecutable {
+		return listSingleBinaryArtifacts(module)
+	} else {
+		// Library - only produces build marker
+		return []string{".build-complete"}
+	}
+}
+
+// listSingleBinaryArtifacts returns artifacts for a single-platform build
+func listSingleBinaryArtifacts(module *modules.ModuleContract) []string {
+	binaryName := module.Moniker
+	if module.Type == "go-commands" {
+		binaryName = "commands"
+	}
+
+	// Add platform-specific extension based on current platform
+	if strings.Contains(strings.ToLower(os.Getenv("GOOS")), "windows") ||
+		(os.Getenv("GOOS") == "" && filepath.Separator == '\\') {
+		binaryName += ".exe"
+	}
+
+	return []string{binaryName}
+}
+
+// listCrossCompiledArtifacts returns artifacts for cross-compiled builds
+func listCrossCompiledArtifacts(module *modules.ModuleContract) []string {
+	binaryName := module.Moniker
+
+	// Get target platforms from handlers config
+	cfg := config.Global()
+	var targets []config.CrossCompileTarget
+	if cfg != nil && cfg.Handlers != nil {
+		targets = cfg.Handlers.GetCrossCompileTargets()
+	} else {
+		// Fallback to defaults
+		targets = []config.CrossCompileTarget{
+			{OS: "linux", Arch: "amd64", Suffix: ""},
+			{OS: "linux", Arch: "arm64", Suffix: ""},
+			{OS: "darwin", Arch: "amd64", Suffix: ""},
+			{OS: "darwin", Arch: "arm64", Suffix: ""},
+			{OS: "windows", Arch: "amd64", Suffix: ".exe"},
+		}
+	}
+
+	var artifacts []string
+	for _, target := range targets {
+		metadataKey := fmt.Sprintf("exe-%s-%s", target.OS, target.Arch)
+		outputName := fmt.Sprintf("%s-%s-%s%s", binaryName, target.OS, target.Arch, target.Suffix)
+		if customName, ok := module.Metadata[metadataKey]; ok && customName != "" {
+			outputName = customName
+		}
+		artifacts = append(artifacts, outputName)
+	}
+
+	// Add checksums file
+	artifacts = append(artifacts, "checksums.txt")
+
+	return artifacts
 }
 
 // BuildGoModule builds any Go module based on its capabilities from the contract.

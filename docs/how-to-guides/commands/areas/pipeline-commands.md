@@ -4,22 +4,24 @@ Command reference for EAC's pipeline orchestration system.
 
 ## Quick Reference
 
-| Command                | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| `run-pipeline`         | Execute module pipelines respecting dependencies |
-| `pipeline-wait`        | Wait for GitHub workflow runs to complete        |
-| `show-pipeline-status` | Show CI status for the head of trunk             |
+| Command                         | Description                                      |
+| ------------------------------- | ------------------------------------------------ |
+| `pipeline run`                  | Execute module pipelines respecting dependencies |
+| `pipeline wait`                 | Wait for GitHub workflow runs to complete        |
+| `pipeline status`               | Show CI status for the head of trunk             |
+| `pipeline ci dispatch-and-wait` | Dispatch workflow and wait for completion        |
+| `pipeline ci summary-link`      | Generate diagnostic markdown for CI summaries    |
 
 ---
 
-## run-pipeline
+## pipeline run
 
 Execute module pipelines respecting dependencies.
 
 ### Synopsis
 
 ```bash
-r2r eac run-pipeline [module1] [module2] ... [options]
+r2r eac pipeline run [module1] [module2] ... [options]
 ```
 
 ### Description
@@ -44,22 +46,22 @@ Analyzes module dependency graph and executes pipelines in the correct order. Mo
 
 ```bash
 # Run all module pipelines
-r2r eac run-pipeline
+r2r eac pipeline run
 
 # Run single module pipeline
-r2r eac run-pipeline eac-commands
+r2r eac pipeline run eac-commands
 
 # Run specific modules
-r2r eac run-pipeline r2r-cli eac-core
+r2r eac pipeline run r2r-cli eac-core
 
 # Run only changed modules
-r2r eac run-pipeline --changed-only
+r2r eac pipeline run --changed-only
 
 # Run against specific branch
-r2r eac run-pipeline --ref=develop
+r2r eac pipeline run --ref=develop
 
 # Preview execution plan
-r2r eac run-pipeline --dry-run
+r2r eac pipeline run --dry-run
 ```
 
 ### Output
@@ -114,14 +116,14 @@ Total time: 3m 45s
 
 ---
 
-## pipeline-wait
+## pipeline wait
 
 Wait for GitHub workflow runs to complete.
 
 ### Synopsis
 
 ```bash
-r2r eac pipeline-wait <run-id> [run-id...] [options]
+r2r eac pipeline wait <run-id> [run-id...] [options]
 ```
 
 ### Description
@@ -145,16 +147,16 @@ Polls GitHub API to wait for workflow runs to complete. Displays live progress a
 
 ```bash
 # Wait for single run
-r2r eac pipeline-wait 1234567890
+r2r eac pipeline wait 1234567890
 
 # Wait for multiple runs
-r2r eac pipeline-wait 1234567890 1234567891
+r2r eac pipeline wait 1234567890 1234567891
 
 # Custom timeout (1 hour)
-r2r eac pipeline-wait 1234567890 --timeout=3600
+r2r eac pipeline wait 1234567890 --timeout=3600
 
 # Poll every 30 seconds
-r2r eac pipeline-wait 1234567890 --interval=30
+r2r eac pipeline wait 1234567890 --interval=30
 ```
 
 ### Output
@@ -202,14 +204,14 @@ Conclusions:
 
 ---
 
-## show-pipeline-status
+## pipeline status
 
 Show CI status for the head of trunk.
 
 ### Synopsis
 
 ```bash
-r2r eac show-pipeline-status [options]
+r2r eac pipeline status [options]
 ```
 
 ### Description
@@ -228,16 +230,16 @@ Queries GitHub to display the status of all workflows for a specific commit or b
 
 ```bash
 # Status for main HEAD
-r2r eac show-pipeline-status
+r2r eac pipeline status
 
 # Status for develop branch
-r2r eac show-pipeline-status --ref=develop
+r2r eac pipeline status --ref=develop
 
 # Status for specific commit
-r2r eac show-pipeline-status --commit=abc123
+r2r eac pipeline status --commit=abc123
 
 # JSON output
-r2r eac show-pipeline-status --json
+r2r eac pipeline status --json
 ```
 
 ### Output
@@ -281,21 +283,21 @@ Summary:
 ```bash
 # In GitHub Actions workflow
 - name: Run changed module pipelines
-  run: r2r eac run-pipeline --changed-only
+  run: r2r eac pipeline run --changed-only
 
 - name: Check status
-  run: r2r eac show-pipeline-status
+  run: r2r eac pipeline status
 ```
 
 ### Pre-Release CI Check
 
 ```bash
 # 1. Check CI status for current commit
-r2r eac show-pipeline-status --commit=$(git rev-parse HEAD)
+r2r eac pipeline status --commit=$(git rev-parse HEAD)
 
 # 2. If successful, proceed with release
 if [ $? -eq 0 ]; then
-  r2r eac release-calver eac-commands --create --push
+  r2r eac release generate-module-calver eac-commands --create --push
 fi
 ```
 
@@ -309,17 +311,17 @@ gh workflow run ci.yml --ref=main
 RUN_ID=$(gh run list --workflow=ci.yml --limit=1 --json databaseId -q '.[].databaseId')
 
 # 3. Wait for completion
-r2r eac pipeline-wait $RUN_ID
+r2r eac pipeline wait $RUN_ID
 
 # 4. Check final status
-r2r eac show-pipeline-status
+r2r eac pipeline status
 ```
 
 ### Dependency-Aware Execution
 
 ```bash
 # Preview execution order
-r2r eac run-pipeline --dry-run
+r2r eac pipeline run --dry-run
 
 # Example output:
 # Layer 1: eac-core, src-contracts
@@ -327,7 +329,7 @@ r2r eac run-pipeline --dry-run
 # Layer 3: r2r-cli
 
 # Run with full dependency resolution
-r2r eac run-pipeline
+r2r eac pipeline run
 ```
 
 ### Release Automation Script
@@ -337,17 +339,17 @@ r2r eac run-pipeline
 MODULE=$1
 
 # 1. Run pipelines for the module
-r2r eac run-pipeline $MODULE
+r2r eac pipeline run $MODULE
 
 # 2. Check status
-r2r eac show-pipeline-status
+r2r eac pipeline status
 if [ $? -ne 0 ]; then
   echo "❌ Pipeline failed"
   exit 1
 fi
 
 # 3. Create release
-r2r eac release-calver $MODULE --create --push
+r2r eac release generate-module-calver $MODULE --create --push
 echo "✓ Release complete"
 ```
 
@@ -382,20 +384,20 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
       - name: Run pipelines for changed modules
-        run: r2r eac run-pipeline --changed-only
+        run: r2r eac pipeline run --changed-only
 
       - name: Verify CI status
-        run: r2r eac show-pipeline-status --commit=${{ github.sha }}
+        run: r2r eac pipeline status --commit=${{ github.sha }}
 ```
 
 ### Local Development
 
 ```bash
 # Check what pipelines would run
-r2r eac get-changed-modules
+r2r eac get changed-modules
 
 # Run pipelines locally before pushing
-r2r eac run-pipeline --changed-only
+r2r eac pipeline run --changed-only
 
 # Push only if pipelines succeed
 if [ $? -eq 0 ]; then
@@ -422,7 +424,7 @@ jobs:
       - name: Check CI status for tag
         run: |
           COMMIT=$(git rev-list -n 1 ${{ github.ref }})
-          r2r eac show-pipeline-status --commit=$COMMIT
+          r2r eac pipeline status --commit=$COMMIT
 
   deploy:
     needs: verify
@@ -542,8 +544,18 @@ Token scopes needed:
 
 ---
 
+## Pipeline CI Commands
+
+For CI orchestration and diagnostic commands, see the dedicated [Pipeline CI Commands](pipeline-ci-commands.md) reference which covers:
+
+- `pipeline ci dispatch-and-wait` - Dispatch workflow and wait for completion
+- `pipeline ci summary-link` - Generate diagnostic markdown for CI summaries
+
+---
+
 ## Related Documentation
 
 - [Pipeline Overview](pipeline-overview.md) - Concepts and architecture
 - [Pipeline Configuration](pipeline-configuration.md) - Configuration reference
+- [Pipeline CI Commands](pipeline-ci-commands.md) - CI orchestration and diagnostics
 - [Release Commands](release-commands.md) - CI integration for releases

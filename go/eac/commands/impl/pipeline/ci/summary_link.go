@@ -1,4 +1,4 @@
-// Command: ci summary-link
+// Command: pipeline ci summary-link
 // Short: Generate diagnostic markdown for CI summaries
 // Long: Generate a markdown code block with gh CLI commands for diagnosing CI failures.
 // Long:
@@ -7,13 +7,13 @@
 // Long: copy-pasted directly.
 // Long:
 // Long: Example:
-// Long:   ci summary-link 12345678                    # Basic diagnostic link
-// Long:   ci summary-link 12345678 --type test       # Include artifact download
-// Long:   ci summary-link 12345678 --artifact results # Specific artifact name
-// Long:   ci summary-link 12345678 --type container   # Container-specific diagnostics
+// Long:   pipeline ci summary-link 12345678                    # Basic diagnostic link
+// Long:   pipeline ci summary-link 12345678 --type test       # Include artifact download
+// Long:   pipeline ci summary-link 12345678 --artifact results # Specific artifact name
+// Long:   pipeline ci summary-link 12345678 --type container   # Container-specific diagnostics
 // Long:
 // Long: In a workflow:
-// Long:   go run ./go/eac/commands ci summary-link ${{ github.run_id }} >> $GITHUB_STEP_SUMMARY
+// Long:   go run ./go/eac/commands pipeline ci summary-link ${{ github.run_id }} >> $GITHUB_STEP_SUMMARY
 // Flag.type: type=string, usage=Failure type: build, test, container, release, docs (default: build)
 // Flag.artifact: type=string, usage=Artifact name to include in download command
 // Flag.image: type=string, usage=Container image for container-type diagnostics
@@ -27,24 +27,21 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-var log = logging.C()
-
 func init() {
-	registry.Register(CISummaryLink)
+	registry.Register(PipelineCISummaryLink)
 }
 
-func CISummaryLink() int {
-	// Parse arguments
-	if len(os.Args) < 4 {
+func PipelineCISummaryLink() int {
+	// Parse arguments (args start at index 4 for "pipeline ci summary-link")
+	if len(os.Args) < 5 {
 		log.Error("Error: run ID required")
-		log.Error("Usage: ci summary-link <run-id> [--type <type>] [--artifact <name>]")
+		log.Error("Usage: pipeline ci summary-link <run-id> [--type <type>] [--artifact <name>]")
 		return 1
 	}
 
-	runID := os.Args[3]
+	runID := os.Args[4]
 	failureType := "build"
 	artifactName := ""
 	imageName := ""
@@ -52,7 +49,7 @@ func CISummaryLink() int {
 	commitSHA := ""
 
 	// Parse flags
-	for i := 4; i < len(os.Args); i++ {
+	for i := 5; i < len(os.Args); i++ {
 		arg := os.Args[i]
 		if arg == "--type" && i+1 < len(os.Args) {
 			failureType = os.Args[i+1]

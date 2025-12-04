@@ -6,22 +6,22 @@ Command reference for EAC's risk management system.
 
 | Command                 | Description                                                     |
 | ----------------------- | --------------------------------------------------------------- |
-| `create-risk`           | Create OSCAL profile from risk assessment using AI              |
-| `create-risk-assess`    | Update OSCAL assessment-results with test and security evidence |
-| `show-risk-report`      | Display aggregated risk assessment report                       |
-| `validate-risk`         | Validate OSCAL profiles and assessment-results against schemas  |
-| `validate-risk-catalog` | Validate OSCAL catalogs against OSCAL 1.1.3 schema              |
+| `create risk`           | Create OSCAL profile from risk assessment using AI              |
+| `create risk-assess`    | Update OSCAL assessment-results with test and security evidence |
+| `show risk-report`      | Display aggregated risk assessment report                       |
+| `validate risk`         | Validate OSCAL profiles and assessment-results against schemas  |
+| `validate risk-catalog` | Validate OSCAL catalogs against OSCAL 1.1.3 schema              |
 
 ---
 
-## create-risk
+## create risk
 
 Create an OSCAL profile from risk assessment requirements using AI.
 
 ### Synopsis
 
 ```bash
-r2r eac create-risk [options]
+r2r eac create risk [options]
 ```
 
 ### Description
@@ -47,19 +47,19 @@ Generates an OSCAL profile by analyzing project requirements and selecting appro
 
 ```bash
 # Create security risk profile
-r2r eac create-risk --domain security
+r2r eac create risk --domain security
 
 # Create SOC 2 compliance profile
-r2r eac create-risk --framework soc2
+r2r eac create risk --framework soc2
 
 # Create profile with multiple domains
-r2r eac create-risk --domain security --domain operational
+r2r eac create risk --domain security --domain operational
 
 # Use custom catalog
-r2r eac create-risk --catalog cis-v8
+r2r eac create risk --catalog cis-v8
 
 # Custom output location
-r2r eac create-risk --output custom/profile.json
+r2r eac create risk --output custom/profile.json
 ```
 
 ### Output
@@ -91,14 +91,14 @@ Selecting controls from NIST 800-53...
 
 ---
 
-## create-risk-assess
+## create risk-assess
 
 Update OSCAL assessment-results with evidence from tests and security scans.
 
 ### Synopsis
 
 ```bash
-r2r eac create-risk-assess [options]
+r2r eac create risk-assess [options]
 ```
 
 ### Description
@@ -125,16 +125,16 @@ Evidence sources:
 
 ```bash
 # Run assessment with defaults
-r2r eac create-risk-assess
+r2r eac create risk-assess
 
 # Use custom profile
-r2r eac create-risk-assess --profile custom/profile.json
+r2r eac create risk-assess --profile custom/profile.json
 
 # Specify evidence directory
-r2r eac create-risk-assess --evidence-dir build/reports/
+r2r eac create risk-assess --evidence-dir build/reports/
 
 # Debug mode
-r2r eac create-risk-assess --debug
+r2r eac create risk-assess --debug
 ```
 
 ### Output
@@ -175,14 +175,14 @@ Assessment complete:
 
 ---
 
-## show-risk-report
+## show risk-report
 
 Display aggregated risk assessment report.
 
 ### Synopsis
 
 ```bash
-r2r eac show-risk-report [options]
+r2r eac show risk-report [options]
 ```
 
 ### Description
@@ -207,19 +207,19 @@ Generates a human-readable report from OSCAL assessment results showing:
 
 ```bash
 # Display summary report
-r2r eac show-risk-report
+r2r eac show risk-report
 
 # Detailed report
-r2r eac show-risk-report --detailed
+r2r eac show risk-report --detailed
 
 # Show only gaps
-r2r eac show-risk-report --gaps-only
+r2r eac show risk-report --gaps-only
 
 # JSON output for processing
-r2r eac show-risk-report --format json
+r2r eac show risk-report --format json
 
 # Markdown for documentation
-r2r eac show-risk-report --format markdown > risk-report.md
+r2r eac show risk-report --format markdown > risk-report.md
 ```
 
 ### Output (Table Format)
@@ -269,14 +269,14 @@ Gaps Requiring Attention
 
 ---
 
-## validate-risk
+## validate risk
 
 Validate OSCAL profiles and assessment-results against schemas.
 
 ### Synopsis
 
 ```bash
-r2r eac validate-risk [options]
+r2r eac validate risk [options]
 ```
 
 ### Description
@@ -301,16 +301,16 @@ Validates OSCAL documents against the official OSCAL 1.1.3 JSON schemas:
 
 ```bash
 # Validate default files
-r2r eac validate-risk
+r2r eac validate risk
 
 # Validate specific profile
-r2r eac validate-risk --profile custom/profile.json
+r2r eac validate risk --profile custom/profile.json
 
 # Validate all OSCAL files
-r2r eac validate-risk --all
+r2r eac validate risk --all
 
 # Strict mode (fail on warnings)
-r2r eac validate-risk --strict
+r2r eac validate risk --strict
 ```
 
 ### Output
@@ -358,14 +358,14 @@ Assessment Results: .r2r/eac/risk/assessment-results.json
 
 ---
 
-## validate-risk-catalog
+## validate risk-catalog
 
 Validate OSCAL catalogs against OSCAL 1.1.3 schema.
 
 ### Synopsis
 
 ```bash
-r2r eac validate-risk-catalog [catalog-path]
+r2r eac validate risk-catalog [catalog-path]
 ```
 
 ### Description
@@ -388,10 +388,10 @@ Validates custom OSCAL catalog files against the official schema. Used when crea
 
 ```bash
 # Validate custom catalog
-r2r eac validate-risk-catalog .r2r/eac/risk/catalogs/custom.json
+r2r eac validate risk-catalog .r2r/eac/risk/catalogs/custom.json
 
 # Strict validation
-r2r eac validate-risk-catalog --strict custom-catalog.json
+r2r eac validate risk-catalog --strict custom-catalog.json
 ```
 
 ### Output
@@ -423,7 +423,7 @@ Validating catalog: .r2r/eac/risk/catalogs/custom.json
 
 ```bash
 # 1. Create risk profile
-r2r eac create-risk --framework soc2
+r2r eac create risk --framework soc2
 
 # 2. Run security scans
 r2r eac security
@@ -432,10 +432,10 @@ r2r eac security
 r2r eac test
 
 # 4. Create assessment
-r2r eac create-risk-assess
+r2r eac create risk-assess
 
 # 5. View report
-r2r eac show-risk-report
+r2r eac show risk-report
 ```
 
 ### Continuous Assessment
@@ -444,18 +444,18 @@ r2r eac show-risk-report
 # In CI pipeline
 r2r eac security
 r2r eac test
-r2r eac create-risk-assess
-r2r eac validate-risk
+r2r eac create risk-assess
+r2r eac validate risk
 ```
 
 ### Audit Preparation
 
 ```bash
 # Generate detailed report
-r2r eac show-risk-report --detailed --format markdown > audit-report.md
+r2r eac show risk-report --detailed --format markdown > audit-report.md
 
 # Export JSON for tools
-r2r eac show-risk-report --format json > audit-data.json
+r2r eac show risk-report --format json > audit-data.json
 ```
 
 ---

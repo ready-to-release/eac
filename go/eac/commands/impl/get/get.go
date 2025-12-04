@@ -29,7 +29,7 @@ func Get() int {
 	case "--help", "-h":
 		printGetUsage()
 		return 0
-	case "changed", "config", "dependencies", "environments", "execution", "files", "modules", "suite", "tests":
+	case "changed-modules", "changed-modules-ci", "config", "dependencies", "environments", "execution", "files", "modules", "suite", "tests", "valid-commands":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -54,12 +54,15 @@ func printGetUsage() {
 	log.Info("")
 	log.Info("Files and Changes:")
 	log.Info("  files                     Get repository files with module mappings")
-	log.Info("  changed modules           Get modules affected by changed files")
-	log.Info("  changed modules ci        Get modules requiring rebuild since last successful CI")
+	log.Info("  changed-modules           Get modules affected by changed files")
+	log.Info("  changed-modules-ci        Get modules requiring rebuild since last successful CI")
 	log.Info("")
 	log.Info("Testing:")
 	log.Info("  tests                     Get all tests in structured format")
 	log.Info("  suite <name>              Get test suite information")
+	log.Info("")
+	log.Info("Commands:")
+	log.Info("  valid-commands            Get all valid commands in structured format")
 	log.Info("")
 	log.Info("Environment:")
 	log.Info("  environments              Get all environment contracts")
@@ -72,10 +75,10 @@ func printGetUsage() {
 	log.Info("  r2r get dependencies")
 	log.Info("")
 	log.Info("  # Get affected modules")
-	log.Info("  r2r get changed modules")
+	log.Info("  r2r get changed-modules")
 	log.Info("")
 	log.Info("  # Get modules requiring rebuild in CI (includes cache invalidation)")
-	log.Info("  r2r get changed modules ci --as-json")
+	log.Info("  r2r get changed-modules-ci --as-json")
 	log.Info("")
 	log.Info("Use 'r2r get <subcommand> --help' for more information about a command.")
 }

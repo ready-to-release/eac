@@ -6,26 +6,26 @@ Command reference for EAC's release management system.
 
 | Command               | Description                                       |
 | --------------------- | ------------------------------------------------- |
-| `release-calver`      | Generate a CalVer tag for a module                |
-| `release-changelog`   | Generate or update changelog from commits         |
-| `release-this`        | Finalize changelog and prepare module for release |
-| `release-pending`     | Check if module has pending changes for release   |
-| `release-tag-pending` | Check for changelog versions without git tags     |
-| `release-check-ci`    | Check CI status for a commit before releasing     |
-| `release-get-version` | Extract latest version from changelog             |
-| `release-validate`    | Validate changelog format and structure           |
-| `release-r2r-cli`     | Create a semver tag for r2r-cli                   |
+| `release generate-module-calver`      | Generate a CalVer tag for a module                |
+| `release changelog`   | Generate or update changelog from commits         |
+| `release this`        | Finalize changelog and prepare module for release |
+| `release pending`     | Check if module has pending changes for release   |
+| `release tag-pending` | Check for changelog versions without git tags     |
+| `release check-ci`    | Check CI status for a commit before releasing     |
+| `release get-version` | Extract latest version from changelog             |
+| `validate release`    | Validate changelog format and structure           |
+| `release r2r-cli`     | Create a semver tag for r2r-cli                   |
 
 ---
 
-## release-calver
+## release generate-module-calver
 
 Generate a calendar-versioned tag for a module.
 
 ### Synopsis
 
 ```bash
-r2r eac release-calver <prefix> [options]
+r2r eac release generate-module-calver <prefix> [options]
 ```
 
 ### Description
@@ -50,16 +50,16 @@ Creates CalVer tags in the format `prefix/YYYY.MM.DD` or `prefix/YYYY.MM.DD.N` f
 
 ```bash
 # Preview next tag
-r2r eac release-calver auth --dry-run
+r2r eac release generate-module-calver auth --dry-run
 
 # Create tag locally
-r2r eac release-calver auth --create
+r2r eac release generate-module-calver auth --create
 
 # Create and push tag
-r2r eac release-calver auth --create --push
+r2r eac release generate-module-calver auth --create --push
 
 # Just display next tag
-r2r eac release-calver api
+r2r eac release generate-module-calver api
 ```
 
 ### Output
@@ -94,14 +94,14 @@ Release complete!
 
 ---
 
-## release-changelog
+## release changelog
 
 Generate or update changelog from commit history.
 
 ### Synopsis
 
 ```bash
-r2r eac release-changelog [module] [options]
+r2r eac release changelog [module] [options]
 ```
 
 ### Description
@@ -128,16 +128,16 @@ Analyzes commits since the last release and generates/updates the CHANGELOG.md f
 
 ```bash
 # Generate changelog for module
-r2r eac release-changelog eac-commands
+r2r eac release changelog eac-commands
 
 # Generate with specific version
-r2r eac release-changelog eac-commands --version 2025.12.01
+r2r eac release changelog eac-commands --version 2025.12.01
 
 # Generate from specific range
-r2r eac release-changelog --from v1.0.0 --to v1.1.0
+r2r eac release changelog --from v1.0.0 --to v1.1.0
 
 # Preview changes
-r2r eac release-changelog --dry-run
+r2r eac release changelog --dry-run
 ```
 
 ### Output
@@ -177,14 +177,14 @@ Updating CHANGELOG.md...
 
 ---
 
-## release-this
+## release this
 
 Finalize changelog and prepare module for release.
 
 ### Synopsis
 
 ```bash
-r2r eac release-this <module> [options]
+r2r eac release this <module> [options]
 ```
 
 ### Description
@@ -215,16 +215,16 @@ Comprehensive release preparation command that:
 
 ```bash
 # Full release workflow
-r2r eac release-this eac-commands
+r2r eac release this eac-commands
 
 # Preview release steps
-r2r eac release-this eac-commands --dry-run
+r2r eac release this eac-commands --dry-run
 
 # Release without pushing
-r2r eac release-this eac-commands --no-push
+r2r eac release this eac-commands --no-push
 
 # Skip CI check (use with caution)
-r2r eac release-this eac-commands --skip-ci-check
+r2r eac release this eac-commands --skip-ci-check
 ```
 
 ### Output
@@ -263,14 +263,14 @@ Step 5: Pushing to remote...
 
 ---
 
-## release-pending
+## release pending
 
 Check if module has pending changes for release.
 
 ### Synopsis
 
 ```bash
-r2r eac release-pending [module]
+r2r eac release pending [module]
 ```
 
 ### Description
@@ -293,13 +293,13 @@ Analyzes commits since the last release tag to determine if there are unreleased
 
 ```bash
 # Check all modules
-r2r eac release-pending
+r2r eac release pending
 
 # Check specific module
-r2r eac release-pending eac-commands
+r2r eac release pending eac-commands
 
 # JSON output
-r2r eac release-pending --json
+r2r eac release pending --json
 ```
 
 ### Output
@@ -336,14 +336,14 @@ Summary:
 
 ---
 
-## release-tag-pending
+## release tag-pending
 
 Check for changelog versions without corresponding git tags.
 
 ### Synopsis
 
 ```bash
-r2r eac release-tag-pending [module]
+r2r eac release tag-pending [module]
 ```
 
 ### Description
@@ -366,13 +366,13 @@ Compares changelog versions against git tags to find versions that have changelo
 
 ```bash
 # Check all modules
-r2r eac release-tag-pending
+r2r eac release tag-pending
 
 # Check specific module
-r2r eac release-tag-pending eac-commands
+r2r eac release tag-pending eac-commands
 
 # JSON output
-r2r eac release-tag-pending --json
+r2r eac release tag-pending --json
 ```
 
 ### Output
@@ -395,7 +395,7 @@ Summary:
   Modules with missing tags: 1
 
 Create missing tags with:
-  r2r eac release-calver eac-commands --create --push
+  r2r eac release generate-module-calver eac-commands --create --push
 ```
 
 ### Exit Codes
@@ -407,14 +407,14 @@ Create missing tags with:
 
 ---
 
-## release-check-ci
+## release check-ci
 
 Check CI status for a commit before releasing.
 
 ### Synopsis
 
 ```bash
-r2r eac release-check-ci [options]
+r2r eac release check-ci [options]
 ```
 
 ### Description
@@ -434,16 +434,16 @@ Queries GitHub Actions to verify all CI workflows pass for a specific commit. Wa
 
 ```bash
 # Check default CI workflow for HEAD
-r2r eac release-check-ci
+r2r eac release check-ci
 
 # Check specific workflow and commit
-r2r eac release-check-ci --workflow=ci --commit=abc123
+r2r eac release check-ci --workflow=ci --commit=abc123
 
 # Check with custom timeout
-r2r eac release-check-ci --commit=HEAD --timeout=300
+r2r eac release check-ci --commit=HEAD --timeout=300
 
 # Check current HEAD
-r2r eac release-check-ci --commit=$(git rev-parse HEAD)
+r2r eac release check-ci --commit=$(git rev-parse HEAD)
 ```
 
 ### Output (Success)
@@ -496,14 +496,14 @@ Do not proceed with release.
 
 ---
 
-## release-get-version
+## release get-version
 
 Extract latest version from changelog.
 
 ### Synopsis
 
 ```bash
-r2r eac release-get-version [module]
+r2r eac release get-version [module]
 ```
 
 ### Description
@@ -527,13 +527,13 @@ Parses the CHANGELOG.md file to extract the most recent version number.
 
 ```bash
 # Get latest version
-r2r eac release-get-version eac-commands
+r2r eac release get-version eac-commands
 
 # List all versions
-r2r eac release-get-version eac-commands --all
+r2r eac release get-version eac-commands --all
 
 # JSON output
-r2r eac release-get-version --json
+r2r eac release get-version --json
 ```
 
 ### Output
@@ -552,14 +552,14 @@ Latest version: 2025.12.01
 
 ---
 
-## release-validate
+## validate release
 
 Validate changelog format and structure.
 
 ### Synopsis
 
 ```bash
-r2r eac release-validate [module]
+r2r eac validate release [module]
 ```
 
 ### Description
@@ -587,13 +587,13 @@ Validates CHANGELOG.md files for:
 
 ```bash
 # Validate all changelogs
-r2r eac release-validate
+r2r eac validate release
 
 # Validate specific module
-r2r eac release-validate eac-commands
+r2r eac validate release eac-commands
 
 # Strict validation
-r2r eac release-validate --strict
+r2r eac validate release --strict
 ```
 
 ### Output (Success)
@@ -633,14 +633,14 @@ eac-commands/CHANGELOG.md:
 
 ---
 
-## release-r2r-cli
+## release r2r-cli
 
 Create a semantic version tag for r2r-cli.
 
 ### Synopsis
 
 ```bash
-r2r eac release-r2r-cli <version> [options]
+r2r eac release r2r-cli <version> [options]
 ```
 
 ### Description
@@ -664,16 +664,16 @@ Creates a SemVer tag specifically for the r2r-cli tool. Unlike CalVer used for m
 
 ```bash
 # Preview release
-r2r eac release-r2r-cli 1.2.0 --dry-run
+r2r eac release r2r-cli 1.2.0 --dry-run
 
 # Create and push tag (default)
-r2r eac release-r2r-cli 1.2.0
+r2r eac release r2r-cli 1.2.0
 
 # Create tag locally only
-r2r eac release-r2r-cli 1.2.0 --push=false
+r2r eac release r2r-cli 1.2.0 --push=false
 
 # Pre-release version
-r2r eac release-r2r-cli 2.0.0-beta.1
+r2r eac release r2r-cli 2.0.0-beta.1
 ```
 
 ### Output
@@ -720,29 +720,29 @@ Must follow SemVer:
 
 ```bash
 # 1. Check for pending changes
-r2r eac release-pending eac-commands
+r2r eac release pending eac-commands
 
 # 2. Generate changelog
-r2r eac release-changelog eac-commands
+r2r eac release changelog eac-commands
 
 # 3. Verify CI status
-r2r eac release-check-ci --commit=HEAD
+r2r eac release check-ci --commit=HEAD
 
 # 4. Create release
-r2r eac release-calver eac-commands --create --push
+r2r eac release generate-module-calver eac-commands --create --push
 ```
 
 ### Full Release with Validation
 
 ```bash
 # 1. Validate changelog format
-r2r eac release-validate eac-commands
+r2r eac validate release eac-commands
 
 # 2. Check for untagged versions
-r2r eac release-tag-pending eac-commands
+r2r eac release tag-pending eac-commands
 
 # 3. Prepare and release
-r2r eac release-this eac-commands
+r2r eac release this eac-commands
 ```
 
 ### Tool Release (SemVer)
@@ -752,17 +752,17 @@ r2r eac release-this eac-commands
 # ... edit version constants ...
 
 # 2. Update changelog
-r2r eac release-changelog r2r-cli --version 1.2.0
+r2r eac release changelog r2r-cli --version 1.2.0
 
 # 3. Commit changes
 git add . && git commit -m "chore: bump version to 1.2.0"
 git push origin main
 
 # 4. Check CI
-r2r eac release-check-ci --commit=HEAD
+r2r eac release check-ci --commit=HEAD
 
 # 5. Create release
-r2r eac release-r2r-cli 1.2.0
+r2r eac release r2r-cli 1.2.0
 ```
 
 ### CI/CD Integration
@@ -786,10 +786,10 @@ jobs:
           fetch-depth: 0
 
       - name: Check CI status
-        run: r2r eac release-check-ci --commit=${{ github.sha }}
+        run: r2r eac release check-ci --commit=${{ github.sha }}
 
       - name: Create release
-        run: r2r eac release-calver ${{ inputs.module }} --create --push
+        run: r2r eac release generate-module-calver ${{ inputs.module }} --create --push
 ```
 
 ---

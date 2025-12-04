@@ -407,7 +407,7 @@ Scenario: Works in local and staging
 ### Feature Validation
 
 ```bash
-r2r eac validate-specs
+r2r eac validate specs
 ```
 
 Validates:
@@ -445,13 +445,13 @@ Validates:
 
 ```yaml
 - name: Validate specifications
-  run: r2r eac validate-specs
+  run: r2r eac validate specs
 
 - name: Validate test tags
   run: r2r eac validate test-tags
 
 - name: Check unused steps
-  run: r2r eac specs-unused-steps
+  run: r2r eac get specs unused-steps
 
 - name: Run smoke tests
   run: r2r eac test --suite smoke
@@ -464,7 +464,7 @@ Validates:
 # .git/hooks/pre-commit
 
 # Validate specs
-r2r eac validate-specs || exit 1
+r2r eac validate specs || exit 1
 
 # Validate tags
 r2r eac validate test-tags || exit 1

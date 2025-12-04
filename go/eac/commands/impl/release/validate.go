@@ -1,4 +1,4 @@
-// Command: release validate
+// Command: validate release
 // Short: Validate changelog format and structure
 // Long: Validates that changelog files follow the Keep a Changelog format and
 // Long: contain valid version entries.

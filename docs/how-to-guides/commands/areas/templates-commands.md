@@ -7,12 +7,12 @@ Command reference for EAC's template system.
 | Command                     | Description                                  |
 | --------------------------- | -------------------------------------------- |
 | `templates`                 | Manage project templates                     |
-| `templates-apply`           | Apply templates with value replacements      |
-| `templates-apply-docs`      | Apply documentation templates                |
-| `templates-install`         | Install templates without value replacements |
-| `templates-install-reports` | Install report templates                     |
-| `templates-list`            | List template placeholder variables          |
-| `templates-tags`            | Extract template tags                        |
+| `templates apply`           | Apply templates with value replacements      |
+| `templates apply docs`      | Apply documentation templates                |
+| `templates install`         | Install templates without value replacements |
+| `templates install reports` | Install report templates                     |
+| `templates list`            | List template placeholder variables          |
+| `templates tags`            | Extract template tags                        |
 
 ---
 
@@ -54,14 +54,14 @@ r2r eac templates install
 
 ---
 
-## templates-apply
+## templates apply
 
 Apply templates with value replacements.
 
 ### Synopsis
 
 ```bash
-r2r eac templates-apply [options]
+r2r eac templates apply [options]
 ```
 
 ### Description
@@ -82,25 +82,25 @@ Processes template files and replaces placeholders with values from contracts, c
 
 ```bash
 # Apply all templates
-r2r eac templates-apply
+r2r eac templates apply
 
 # Apply documentation templates only
-r2r eac templates-apply --type docs
+r2r eac templates apply --type docs
 
 # Apply report templates
-r2r eac templates-apply --type reports
+r2r eac templates apply --type reports
 
 # Apply specific template
-r2r eac templates-apply --template module-readme.md.tmpl
+r2r eac templates apply --template module-readme.md.tmpl
 
 # Apply to specific module
-r2r eac templates-apply --template module-readme.md.tmpl --module eac-commands
+r2r eac templates apply --template module-readme.md.tmpl --module eac-commands
 
 # Preview changes
-r2r eac templates-apply --dry-run
+r2r eac templates apply --dry-run
 
 # Custom output directory
-r2r eac templates-apply --output out/docs/
+r2r eac templates apply --output out/docs/
 ```
 
 ### Output
@@ -134,19 +134,19 @@ Placeholders replaced:
 
 ---
 
-## templates-apply-docs
+## templates apply docs
 
 Apply documentation templates with value replacements.
 
 ### Synopsis
 
 ```bash
-r2r eac templates-apply-docs [options]
+r2r eac templates apply docs [options]
 ```
 
 ### Description
 
-Specialized command for applying documentation templates. Equivalent to `templates-apply --type docs` but with documentation-specific defaults and behavior.
+Specialized command for applying documentation templates. Equivalent to `templates apply --type docs` but with documentation-specific defaults and behavior.
 
 ### Flags
 
@@ -160,16 +160,16 @@ Specialized command for applying documentation templates. Equivalent to `templat
 
 ```bash
 # Apply all documentation templates
-r2r eac templates-apply-docs
+r2r eac templates apply docs
 
 # Generate docs for specific module
-r2r eac templates-apply-docs --module eac-commands
+r2r eac templates apply docs --module eac-commands
 
 # Custom output directory
-r2r eac templates-apply-docs --output generated/docs/
+r2r eac templates apply docs --output generated/docs/
 
 # Preview changes
-r2r eac templates-apply-docs --dry-run
+r2r eac templates apply docs --dry-run
 ```
 
 ### Output
@@ -200,14 +200,14 @@ Module documentation:
 
 ---
 
-## templates-install
+## templates install
 
 Install templates without value replacements.
 
 ### Synopsis
 
 ```bash
-r2r eac templates-install [options]
+r2r eac templates install [options]
 ```
 
 ### Description
@@ -226,16 +226,16 @@ Copies template files to the project without processing placeholders. Use this t
 
 ```bash
 # Install all default templates
-r2r eac templates-install
+r2r eac templates install
 
 # Install documentation templates
-r2r eac templates-install --type docs
+r2r eac templates install --type docs
 
 # Install to custom location
-r2r eac templates-install --output my-templates/
+r2r eac templates install --output my-templates/
 
 # Force overwrite existing
-r2r eac templates-install --force
+r2r eac templates install --force
 ```
 
 ### Output
@@ -266,14 +266,14 @@ Project templates:
 
 ---
 
-## templates-install-reports
+## templates install reports
 
 Install report templates without value replacements.
 
 ### Synopsis
 
 ```bash
-r2r eac templates-install-reports [options]
+r2r eac templates install reports [options]
 ```
 
 ### Description
@@ -291,13 +291,13 @@ Installs report template files for compliance, security, and status reporting. T
 
 ```bash
 # Install report templates
-r2r eac templates-install-reports
+r2r eac templates install reports
 
 # Install to custom location
-r2r eac templates-install-reports --output reports/templates/
+r2r eac templates install reports --output reports/templates/
 
 # Force overwrite
-r2r eac templates-install-reports --force
+r2r eac templates install reports --force
 ```
 
 ### Output
@@ -325,14 +325,14 @@ Templates installed:
 
 ---
 
-## templates-list
+## templates list
 
 List template placeholder variables.
 
 ### Synopsis
 
 ```bash
-r2r eac templates-list [options]
+r2r eac templates list [options]
 ```
 
 ### Description
@@ -351,16 +351,16 @@ Displays available templates and their placeholder variables. Optionally shows c
 
 ```bash
 # List all templates
-r2r eac templates-list
+r2r eac templates list
 
 # Show placeholder values
-r2r eac templates-list --show-values
+r2r eac templates list --show-values
 
 # Filter by type
-r2r eac templates-list --type docs
+r2r eac templates list --type docs
 
 # JSON output
-r2r eac templates-list --json
+r2r eac templates list --json
 ```
 
 ### Output
@@ -425,14 +425,14 @@ Available Placeholders (with current values):
 
 ---
 
-## templates-tags
+## templates tags
 
 Extract template tags.
 
 ### Synopsis
 
 ```bash
-r2r eac templates-tags [template] [options]
+r2r eac templates tags [template] [options]
 ```
 
 ### Description
@@ -456,16 +456,16 @@ Parses template files to extract all placeholder tags. Useful for validating tem
 
 ```bash
 # Extract tags from all templates
-r2r eac templates-tags
+r2r eac templates tags
 
 # Extract from specific template
-r2r eac templates-tags README.md.tmpl
+r2r eac templates tags README.md.tmpl
 
 # Unique tags only
-r2r eac templates-tags --unique
+r2r eac templates tags --unique
 
 # JSON output
-r2r eac templates-tags --json
+r2r eac templates tags --json
 ```
 
 ### Output
@@ -517,32 +517,32 @@ Control Structures:
 
 ```bash
 # 1. List available templates
-r2r eac templates-list
+r2r eac templates list
 
 # 2. Preview placeholder values
-r2r eac templates-list --show-values
+r2r eac templates list --show-values
 
 # 3. Apply documentation templates
-r2r eac templates-apply-docs
+r2r eac templates apply docs
 
 # 4. Build documentation site
 r2r eac build docs
 
 # 5. Serve locally
-r2r eac serve-docs
+r2r eac serve docs
 ```
 
 ### Report Generation
 
 ```bash
 # 1. Install report templates (first time)
-r2r eac templates-install-reports
+r2r eac templates install reports
 
 # 2. Customize templates if needed
 # Edit .r2r/templates/reports/*.tmpl
 
 # 3. Apply templates with current data
-r2r eac templates-apply --type reports
+r2r eac templates apply --type reports
 
 # 4. Review generated reports
 cat out/reports/compliance-report.md
@@ -552,19 +552,19 @@ cat out/reports/compliance-report.md
 
 ```bash
 # 1. Install default templates as base
-r2r eac templates-install
+r2r eac templates install
 
 # 2. Customize templates
 vim .r2r/templates/docs/README.md.tmpl
 
 # 3. Verify placeholders
-r2r eac templates-tags README.md.tmpl
+r2r eac templates tags README.md.tmpl
 
 # 4. Preview output
-r2r eac templates-apply --template README.md.tmpl --dry-run
+r2r eac templates apply --template README.md.tmpl --dry-run
 
 # 5. Apply template
-r2r eac templates-apply --template README.md.tmpl
+r2r eac templates apply --template README.md.tmpl
 ```
 
 ### Module Documentation
@@ -572,11 +572,11 @@ r2r eac templates-apply --template README.md.tmpl
 ```bash
 # Generate README for each module
 for module in eac-commands eac-core r2r-cli; do
-  r2r eac templates-apply-docs --module $module
+  r2r eac templates apply docs --module $module
 done
 
 # Or apply to all modules at once
-r2r eac templates-apply --template module-readme.md.tmpl
+r2r eac templates apply --template module-readme.md.tmpl
 ```
 
 ---
@@ -648,7 +648,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Generate documentation
-        run: r2r eac templates-apply-docs
+        run: r2r eac templates apply docs
 
       - name: Commit changes
         run: |
@@ -662,20 +662,20 @@ jobs:
 
 ```bash
 # Generate templated docs
-r2r eac templates-apply-docs
+r2r eac templates apply docs
 
 # Build MkDocs site
 r2r eac build docs
 
 # Serve locally
-r2r eac serve-docs
+r2r eac serve docs
 ```
 
 ### With Books
 
 ```bash
 # Apply templates first
-r2r eac templates-apply-docs
+r2r eac templates apply docs
 
 # Then build book
 r2r eac build docs-book
@@ -711,7 +711,7 @@ r2r eac build docs-book
 
 | Problem                  | Solution                               |
 | ------------------------ | -------------------------------------- |
-| Placeholder not replaced | Check spelling with `templates-list`   |
+| Placeholder not replaced | Check spelling with `templates list`   |
 | Missing value            | Ensure data source exists              |
 | Template syntax error    | Validate Go template syntax            |
 | Empty output             | Check conditionals, verify data exists |

@@ -1,4 +1,4 @@
-// Command: run pipeline
+// Command: pipeline run
 // Short: Execute module pipelines respecting dependencies
 // Long: Execute module pipelines respecting dependencies.
 // Long:
@@ -12,9 +12,9 @@
 // Long: when determining which modules have changed.
 // Long:
 // Long: Example:
-// Long:   run pipeline                    # Run all modules
-// Long:   run pipeline --changed-only     # Run only changed modules
-// Long:   run pipeline eac-core r2r-cli   # Run specific modules
+// Long:   pipeline run                    # Run all modules
+// Long:   pipeline run --changed-only     # Run only changed modules
+// Long:   pipeline run eac-core r2r-cli   # Run specific modules
 // Flag.changed-only: type=bool, usage=Only run pipelines for changed modules
 // Flag.ref: type=string, usage=Git ref to compare against (default: current branch)
 package pipeline
@@ -26,17 +26,14 @@ import (
 
 	pipelinerunner "github.com/ready-to-release/eac/go/eac/commands/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-var log = logging.C()
-
 func init() {
-	registry.Register(RunPipeline)
+	registry.Register(PipelineRun)
 }
 
-func RunPipeline() int {
+func PipelineRun() int {
 	// Parse flags
 	changedOnly := false
 	ref := getCurrentBranch()

@@ -159,7 +159,7 @@ semver:
 
 ```bash
 # Specific to r2r-cli
-r2r eac release-r2r-cli
+r2r eac release r2r-cli
 
 # Creates: r2r-cli/v1.2.3
 ```
@@ -551,7 +551,7 @@ ci:
 | Issue                      | Cause                         | Solution                |
 | -------------------------- | ----------------------------- | ----------------------- |
 | Version not incrementing   | Same month, MICRO not updated | Check existing tags     |
-| Changelog validation fails | Format error                  | Run `release-validate`  |
+| Changelog validation fails | Format error                  | Run `validate release`  |
 | CI check fails             | Workflows not complete        | Wait or check status    |
 | Tag exists                 | Version already released      | Increment version       |
 | GPG signing fails          | Key not available             | Check GPG configuration |

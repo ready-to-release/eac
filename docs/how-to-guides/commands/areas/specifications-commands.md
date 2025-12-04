@@ -6,20 +6,20 @@ Command reference for EAC's BDD specification system.
 
 | Command              | Description                                                        |
 | -------------------- | ------------------------------------------------------------------ |
-| `create-spec`        | Generate Gherkin specifications from natural language descriptions |
-| `validate-specs`     | Validate Gherkin specifications against quality contracts          |
-| `specs-unused-steps` | Detect unused godog step definitions                               |
+| `create spec`        | Generate Gherkin specifications from natural language descriptions |
+| `validate specs`     | Validate Gherkin specifications against quality contracts          |
+| `get specs unused-steps` | Detect unused godog step definitions                               |
 
 ---
 
-## create-spec
+## create spec
 
 Generate Gherkin feature files from natural language descriptions using AI.
 
 ### Synopsis
 
 ```bash
-r2r eac create-spec "<description>" [options]
+r2r eac create spec "<description>" [options]
 ```
 
 ### Description
@@ -51,24 +51,24 @@ Transforms natural language requirements into properly structured Gherkin featur
 
 ```bash
 # Simple feature
-r2r eac create-spec "Users can log in with email and password"
+r2r eac create spec "Users can log in with email and password"
 
 # Detailed requirements
-r2r eac create-spec "Users can reset their password via email. \
+r2r eac create spec "Users can reset their password via email. \
   They receive a link that expires in 24 hours. \
   The link can only be used once."
 
 # Specify module
-r2r eac create-spec "API rate limiting" --module src-api
+r2r eac create spec "API rate limiting" --module src-api
 
 # Add tags
-r2r eac create-spec "User authentication" --tags "@auth" --tags "@security"
+r2r eac create spec "User authentication" --tags "@auth" --tags "@security"
 
 # Custom output
-r2r eac create-spec "Shopping cart" --output specs/e-commerce/
+r2r eac create spec "Shopping cart" --output specs/e-commerce/
 
 # Debug mode
-r2r eac create-spec "Payment processing" --debug
+r2r eac create spec "Payment processing" --debug
 ```
 
 ### Output
@@ -117,14 +117,14 @@ Feature: User Authentication
 
 ---
 
-## validate-specs
+## validate specs
 
 Validate Gherkin specifications against quality contracts.
 
 ### Synopsis
 
 ```bash
-r2r eac validate-specs [options]
+r2r eac validate specs [options]
 ```
 
 ### Description
@@ -149,16 +149,16 @@ Validates all Gherkin feature files for:
 
 ```bash
 # Validate all specs
-r2r eac validate-specs
+r2r eac validate specs
 
 # Validate specific module
-r2r eac validate-specs --module src-auth
+r2r eac validate specs --module src-auth
 
 # Strict mode
-r2r eac validate-specs --strict
+r2r eac validate specs --strict
 
 # Auto-fix issues
-r2r eac validate-specs --fix
+r2r eac validate specs --fix
 ```
 
 ### Output (Success)
@@ -222,14 +222,14 @@ Validation Results:
 
 ---
 
-## specs-unused-steps
+## get specs unused-steps
 
 Detect step definitions that are not used by any feature file.
 
 ### Synopsis
 
 ```bash
-r2r eac specs-unused-steps [options]
+r2r eac get specs unused-steps [options]
 ```
 
 ### Description
@@ -254,16 +254,16 @@ Helps maintain clean test code by identifying unused steps for removal.
 
 ```bash
 # Check all modules
-r2r eac specs-unused-steps
+r2r eac get specs unused-steps
 
 # Check specific module
-r2r eac specs-unused-steps --module src-auth
+r2r eac get specs unused-steps --module src-auth
 
 # Include helper functions
-r2r eac specs-unused-steps --include-helpers
+r2r eac get specs unused-steps --include-helpers
 
 # JSON output
-r2r eac specs-unused-steps --json
+r2r eac get specs unused-steps --json
 ```
 
 ### Output
@@ -337,10 +337,10 @@ Consider removing unused steps or adding feature coverage.
 
 ```bash
 # 1. Generate spec from requirements
-r2r eac create-spec "User can update profile picture"
+r2r eac create spec "User can update profile picture"
 
 # 2. Validate the generated spec
-r2r eac validate-specs
+r2r eac validate specs
 
 # 3. Run tests (should fail - no implementation)
 r2r eac test src-users
@@ -352,20 +352,20 @@ r2r eac test src-users
 r2r eac test src-users
 
 # 6. Check for unused steps
-r2r eac specs-unused-steps
+r2r eac get specs unused-steps
 ```
 
 ### Spec Review
 
 ```bash
 # Validate all specs
-r2r eac validate-specs
+r2r eac validate specs
 
 # Check for undefined tags
 r2r eac validate test-tags
 
 # Find unused steps
-r2r eac specs-unused-steps
+r2r eac get specs unused-steps
 
 # Review and clean up
 ```
@@ -374,11 +374,11 @@ r2r eac specs-unused-steps
 
 ```bash
 # In CI pipeline
-r2r eac validate-specs --strict || exit 1
+r2r eac validate specs --strict || exit 1
 r2r eac validate test-tags || exit 1
 
 # Warn on unused steps (don't fail)
-r2r eac specs-unused-steps || echo "Warning: unused steps found"
+r2r eac get specs unused-steps || echo "Warning: unused steps found"
 
 # Run tests
 r2r eac test --suite commit
@@ -389,11 +389,11 @@ r2r eac test --suite commit
 ```bash
 # Generate specs for multiple features
 for feature in "User login" "User logout" "Password reset"; do
-  r2r eac create-spec "$feature" --module src-auth
+  r2r eac create spec "$feature" --module src-auth
 done
 
 # Validate all
-r2r eac validate-specs --module src-auth
+r2r eac validate specs --module src-auth
 ```
 
 ---
@@ -404,7 +404,7 @@ r2r eac validate-specs --module src-auth
 
 ```bash
 # Validate specs structure
-r2r eac validate-specs
+r2r eac validate specs
 
 # Validate tags are defined
 r2r eac validate test-tags
@@ -433,7 +433,7 @@ Feature: User Account Management
   ...
 
 # Then run assessment
-r2r eac create-risk-assess
+r2r eac create risk-assess
 ```
 
 ---

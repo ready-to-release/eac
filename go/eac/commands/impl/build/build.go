@@ -125,6 +125,7 @@ func Build() int {
 	pdfMode := false
 	pdfTheme := ""
 	version := ""
+	listArtifacts := false
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -149,6 +150,8 @@ func Build() int {
 		case "--accept-warnings":
 			// Flag is handled in mkdocs builder via os.Args check
 			// Just accept it here so it doesn't fail as unknown flag
+		case "--list-artifacts":
+			listArtifacts = true
 		case "--pdf-theme":
 			if i+1 >= len(args) {
 				log.Errorf("Error: --pdf-theme requires a value (dark, light, or all)")
@@ -203,8 +206,48 @@ func Build() int {
 		}
 	}
 
+	// Handle --list-artifacts flag
+	if listArtifacts {
+		return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
+	}
+
 	// Run build (single or multiple modules) - phases are handled inside
 	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipDeps, showTimings, pdfMode, pdfTheme)
+}
+
+// listModuleArtifacts lists the artifacts that would be produced by building the specified modules
+func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport) int {
+	// Sort monikers for consistent output
+	sort.Strings(monikers)
+
+	for _, moniker := range monikers {
+		module, exists := moduleReport.Registry.Get(moniker)
+		if !exists {
+			log.Errorf("Error: module not found: %s", moniker)
+			continue
+		}
+
+		listFunc := builders.GetListArtifactsFunc(module.Type)
+		if listFunc == nil {
+			// No artifacts for this module type
+			continue
+		}
+
+		artifacts := listFunc(module, workspaceRoot)
+		outputDir := repository.BuildOutputPath(workspaceRoot, moniker)
+
+		for _, artifact := range artifacts {
+			// Output full path relative to workspace root
+			fullPath := filepath.Join(outputDir, artifact)
+			relPath, err := filepath.Rel(workspaceRoot, fullPath)
+			if err != nil {
+				relPath = fullPath
+			}
+			fmt.Println(relPath)
+		}
+	}
+
+	return 0
 }
 
 
@@ -409,6 +452,7 @@ func printBuildUsage() {
 	log.Info("  module1, module2, ...     Module monikers to build (builds all if none specified)")
 	log.Info("")
 	log.Info("Flags:")
+	log.Info("  --list-artifacts          List artifacts that would be produced (no build)")
 	log.Info("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
 	log.Info("  --skip-deps               Skip build dependency verification")
@@ -443,4 +487,5 @@ func printBuildUsage() {
 	log.Info("  build --tidy-first docs              # Build with go mod tidy first")
 	log.Info("  build docs --pdf                     # Build docs with dark PDF")
 	log.Info("  build docs --pdf-theme=all           # Build docs with both PDF themes")
+	log.Info("  build r2r-cli --list-artifacts       # List artifacts without building")
 }

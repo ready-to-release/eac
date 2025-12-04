@@ -1,4 +1,4 @@
-// Command: release calver
+// Command: release generate-module-calver
 // Short: Generate a calver tag for a module
 // Long: Generates a calendar-versioned (calver) tag in the format prefix/YYYY.MM.DD.
 // Long:
@@ -8,9 +8,9 @@
 // Long: By default, only outputs the tag name. Use --create to create the git tag.
 // Long:
 // Long: Examples:
-// Long:   release calver docs                    # Output: docs/2025.01.15
-// Long:   release calver docs --create           # Create the tag locally
-// Long:   release calver docs --create --push    # Create and push the tag
+// Long:   release generate-module-calver docs                    # Output: docs/2025.01.15
+// Long:   release generate-module-calver docs --create           # Create the tag locally
+// Long:   release generate-module-calver docs --create --push    # Create and push the tag
 // Flag.create: type=bool, usage=Create the git tag (default: false, just output tag name)
 // Flag.push: type=bool, usage=Push the tag to remote after creation (requires --create)
 // Flag.dry-run: type=bool, usage=Show what would be done without creating/pushing
@@ -58,7 +58,7 @@ func ReleaseCalver() int {
 
 	if prefix == "" {
 		log.Errorf("Error: prefix required (e.g., 'docs')")
-		log.Errorf("Usage: release calver <prefix> [--create] [--push] [--dry-run]")
+		log.Errorf("Usage: release generate-module-calver <prefix> [--create] [--push] [--dry-run]")
 		return 1
 	}
 

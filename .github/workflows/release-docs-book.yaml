@@ -101,7 +101,7 @@ jobs:
           git fetch --tags --force
 
           # Generate calver tag for book release (book/YYYY.MM.DD or book/YYYY.MM.DD.N)
-          TAG=$($COMMANDS release calver book)
+          TAG=$($COMMANDS release generate-module-calver book)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Generated tag: $TAG"
 

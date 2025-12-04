@@ -6,7 +6,6 @@ nav:
   - Commands:
     - commands/help-command.md
     - commands/init-command.md
-    - commands/ci-command.md
     - commands/commit-command.md
     - commands/describe-command.md
     - commands/show-get-list-commands.md
@@ -27,6 +26,7 @@ nav:
     - commands/areas/pipeline-overview.md
     - commands/areas/pipeline-configuration.md
     - commands/areas/pipeline-commands.md
+    - commands/areas/pipeline-ci-commands.md
   - Release:
     - commands/areas/release-overview.md
     - commands/areas/release-configuration.md

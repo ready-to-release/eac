@@ -162,7 +162,7 @@ runs:
         else
           echo "Tests failed or produced no results for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS ci summary-link ${RUN_ID} --type test --artifact ${RESULTS_ARTIFACT_NAME} >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link ${RUN_ID} --type test --artifact ${RESULTS_ARTIFACT_NAME} >> $GITHUB_STEP_SUMMARY
         fi
         echo "" >> $GITHUB_STEP_SUMMARY
 

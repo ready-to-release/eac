@@ -77,12 +77,11 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      # Note: Using setup-go + go run on Windows since the composite action
-      # uses bash-specific commands that may not work reliably on Windows
-      - uses: actions/setup-go@v6
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
         with:
-          go-version: '1.24'
-          cache-dependency-path: go/eac/commands/go.sum
+          trigger-run-id: ${{ inputs.trigger_run_id }}
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v6
@@ -91,14 +90,16 @@ jobs:
           path: out/build/scripts-cli-installer
 
       - name: Test Module (Commit Suite - L0-L2)
-        working-directory: ./go/eac/commands
-        run: go run . test scripts-cli-installer --suite commit
+        shell: pwsh
+        run: |
+          & "${{ steps.commands.outputs.commands-path }}" test scripts-cli-installer --suite commit
 
       - name: Test Module (Acceptance Suite - L3)
         # Skip acceptance tests for PRs - only run on main/release branches
         if: ${{ !startsWith(inputs.ref, 'refs/pull/') }}
-        working-directory: ./go/eac/commands
-        run: go run . test scripts-cli-installer --suite acceptance
+        shell: pwsh
+        run: |
+          & "${{ steps.commands.outputs.commands-path }}" test scripts-cli-installer --suite acceptance
 
       - name: Upload Test Results
         if: always()

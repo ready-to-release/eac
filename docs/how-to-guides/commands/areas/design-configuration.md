@@ -405,7 +405,7 @@ modules:
 
 ### Structurizr Lite
 
-`serve-design` uses Docker:
+`serve design` uses Docker:
 
 ```yaml
 # Default container settings
@@ -419,14 +419,14 @@ structurizr:
 
 ```bash
 # Use custom port
-r2r eac serve-design eac-commands --port 9090
+r2r eac serve design eac-commands --port 9090
 ```
 
 ### Persistent Container
 
 ```bash
 # Keep container running
-r2r eac serve-design eac-commands --detach
+r2r eac serve design eac-commands --detach
 
 # Stop later
 docker stop structurizr-eac-commands
@@ -452,11 +452,11 @@ plugins:
 ```yaml
 # .github/workflows/docs.yml
 - name: Validate designs
-  run: r2r eac validate-design
+  run: r2r eac validate design
 
 - name: Export diagrams
   run: |
-    r2r eac serve-design --export svg
+    r2r eac serve design --export svg
     cp .design/*.svg docs/diagrams/
 ```
 
@@ -473,7 +473,7 @@ plugins:
 ### DSL Validation
 
 ```bash
-r2r eac validate-design eac-commands
+r2r eac validate design eac-commands
 ```
 
 Validates:

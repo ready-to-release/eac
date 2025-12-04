@@ -287,8 +287,8 @@ done
 ### By Suite
 
 ```bash
-r2r eac test-suite commit
-r2r eac test-suite integration
+r2r eac test suite commit
+r2r eac test suite integration
 ```
 
 ### By Tag (in specs)

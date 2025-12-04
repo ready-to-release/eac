@@ -15,10 +15,10 @@ inputs:
 outputs:
   commands-path:
     description: Absolute path to the commands binary
-    value: ${{ steps.setup.outputs.path }}
+    value: ${{ steps.setup.outputs.path || steps.setup-windows.outputs.path }}
   source:
     description: How the binary was obtained (artifact or built)
-    value: ${{ steps.setup.outputs.source }}
+    value: ${{ steps.setup.outputs.source || steps.setup-windows.outputs.source }}
 
 runs:
   using: composite
@@ -44,8 +44,9 @@ runs:
         path: out/build/eac-commands
       continue-on-error: true
 
-    - name: Check binary availability
+    - name: Check binary availability (Unix)
       id: check
+      if: runner.os != 'Windows'
       shell: bash
       run: |
         if [ -f "out/build/eac-commands/commands" ]; then
@@ -63,8 +64,28 @@ runs:
           echo "Commands binary not available, will build from source"
         fi
 
+    - name: Check binary availability (Windows)
+      id: check-windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (Test-Path "out/build/eac-commands/commands.exe") {
+          echo "available=true" >> $env:GITHUB_OUTPUT
+          Write-Host "✓ Commands binary available"
+        } else {
+          echo "available=false" >> $env:GITHUB_OUTPUT
+
+          # If trigger-run-id was provided, artifact MUST exist
+          if ("${{ inputs.trigger-run-id }}" -ne "") {
+            Write-Host "::error::Commands artifact not found in trigger workflow run ${{ inputs.trigger-run-id }}"
+            exit 1
+          }
+
+          Write-Host "Commands binary not available, will build from source"
+        }
+
     - name: Setup Go
-      if: steps.check.outputs.available != 'true'
+      if: (runner.os != 'Windows' && steps.check.outputs.available != 'true') || (runner.os == 'Windows' && steps.check-windows.outputs.available != 'true')
       uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.go-version }}
@@ -72,8 +93,8 @@ runs:
           go/eac/commands/go.sum
           go/eac/core/go.sum
 
-    - name: Build from source
-      if: steps.check.outputs.available != 'true'
+    - name: Build from source (Unix)
+      if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
       shell: bash
       run: |
         echo "Building commands binary from source..."
@@ -82,16 +103,35 @@ runs:
         go build -o ../../../out/build/eac-commands/commands .
         echo "✓ Commands binary built"
 
-    - name: Upload artifact (for downstream jobs)
-      if: steps.check.outputs.available != 'true'
+    - name: Build from source (Windows)
+      if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true'
+      shell: pwsh
+      run: |
+        Write-Host "Building commands binary from source..."
+        New-Item -ItemType Directory -Force -Path out/build/eac-commands | Out-Null
+        Set-Location go/eac/commands
+        go build -o ../../../out/build/eac-commands/commands.exe .
+        Write-Host "✓ Commands binary built"
+
+    - name: Upload artifact (for downstream jobs, Unix)
+      if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
       uses: actions/upload-artifact@v4
       with:
         name: commands-binary
         path: out/build/eac-commands/commands
         if-no-files-found: error
 
-    - name: Set output
+    - name: Upload artifact (for downstream jobs, Windows)
+      if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: commands-binary-windows
+        path: out/build/eac-commands/commands.exe
+        if-no-files-found: error
+
+    - name: Set output (Unix)
       id: setup
+      if: runner.os != 'Windows'
       shell: bash
       run: |
         BINARY_PATH="out/build/eac-commands/commands"
@@ -109,3 +149,23 @@ runs:
         else
           echo "source=built" >> $GITHUB_OUTPUT
         fi
+
+    - name: Set output (Windows)
+      id: setup-windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $BINARY_PATH = "out\build\eac-commands\commands.exe"
+
+        if (-not (Test-Path $BINARY_PATH)) {
+          Write-Host "::error::Commands binary not found at $BINARY_PATH"
+          exit 1
+        }
+
+        echo "path=$env:GITHUB_WORKSPACE\$BINARY_PATH" >> $env:GITHUB_OUTPUT
+
+        if ("${{ steps.check-windows.outputs.available }}" -eq "true") {
+          echo "source=artifact" >> $env:GITHUB_OUTPUT
+        } else {
+          echo "source=built" >> $env:GITHUB_OUTPUT
+        }

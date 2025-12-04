@@ -138,7 +138,7 @@ r2r eac build eac-core
 ```bash
 # Validate test infrastructure before testing
 r2r eac validate test-tags
-r2r eac test-suite commit
+r2r eac test suite commit
 ```
 
 ### Full CI Pipeline
