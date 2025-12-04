@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/cucumber/godog"
@@ -124,14 +125,29 @@ func booksCreateWithInlineCommand(ctx *internal.TestContext, cmd string) error {
 // Paths containing "/staging" are routed to out/staging/{module}/ instead of out/build/
 func booksBuildOutputExists(ctx *internal.TestContext, path string) error {
 	fullPath := resolveBuildPath(ctx.OriginalRepoRoot, path)
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		return fmt.Errorf("build output not found: %s", fullPath)
+
+	// Retry up to 3 times with 500ms delay for build artifacts to be available
+	maxRetries := 3
+	var lastErr error
+
+	for i := 0; i < maxRetries; i++ {
+		if i > 0 {
+			time.Sleep(500 * time.Millisecond)
+		}
+
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			lastErr = fmt.Errorf("build output not found: %s", fullPath)
+			continue
+		}
+
+		// Store content for subsequent "the file contains" steps
+		if data, err := os.ReadFile(fullPath); err == nil {
+			ctx.CommandOutput = string(data)
+		}
+		return nil
 	}
-	// Store content for subsequent "the file contains" steps
-	if data, err := os.ReadFile(fullPath); err == nil {
-		ctx.CommandOutput = string(data)
-	}
-	return nil
+
+	return lastErr
 }
 
 // resolveBuildPath converts a test path to the actual filesystem path.

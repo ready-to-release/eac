@@ -1,3 +1,4 @@
+@control:sa-3
 Feature: repository_one-module-per-file
 
   As a repository maintainer

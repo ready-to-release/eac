@@ -1,4 +1,4 @@
-@L1
+@L1 @control:sa-3
 Feature: Module Hierarchy Validation
   As a repository maintainer
   I want to ensure the module dependency graph is valid

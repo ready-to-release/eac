@@ -195,6 +195,10 @@ func generateWithoutValidationResult(executor *ai.Executor, fullPrompt string, m
 	providerName := ""
 	if provider := executor.GetLastUsedProvider(); provider != nil {
 		providerName = provider.Name()
+		// Log provider in debug mode (check for debug output dir as indicator)
+		if workspaceRoot != "" {
+			log.Debugf("AI provider used: %s", providerName)
+		}
 	}
 
 	// Trim output

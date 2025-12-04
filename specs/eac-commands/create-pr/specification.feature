@@ -1,4 +1,4 @@
-@L2 @deps:git @deps:go @ov @env:isolated-test-project
+@L2 @deps:git @deps:go @ov @env:isolated-test-project @control:ai-2
 Feature: eac-commands_create-pr
 
   As a developer who has completed work in a workspace

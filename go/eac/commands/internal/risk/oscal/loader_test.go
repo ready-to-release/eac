@@ -79,8 +79,8 @@ func TestLoadProfile(t *testing.T) {
 				return
 			}
 
-			if profile.Profile.UUID != "test-uuid" {
-				t.Errorf("UUID = %s, want test-uuid", profile.Profile.UUID)
+			if profile.UUID != "test-uuid" {
+				t.Errorf("UUID = %s, want test-uuid", profile.UUID)
 			}
 		})
 	}
@@ -150,8 +150,8 @@ func TestLoadAssessmentResults(t *testing.T) {
 				return
 			}
 
-			if ar.AssessmentResults.UUID != "ar-uuid" {
-				t.Errorf("UUID = %s, want ar-uuid", ar.AssessmentResults.UUID)
+			if ar.UUID != "ar-uuid" {
+				t.Errorf("UUID = %s, want ar-uuid", ar.UUID)
 			}
 		})
 	}
@@ -233,8 +233,8 @@ func TestDetectOSCALDocumentType(t *testing.T) {
 func TestDiscoverProfiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create specs/risk-controls directory
-	riskDir := filepath.Join(tmpDir, "specs", "risk-controls")
+	// Create specs/.risk-controls directory
+	riskDir := filepath.Join(tmpDir, "specs", ".risk-controls")
 	os.MkdirAll(riskDir, 0755)
 
 	// Create profile files

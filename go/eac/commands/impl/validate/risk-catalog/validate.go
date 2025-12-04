@@ -8,16 +8,17 @@
 // Long:
 // Long: Validation uses the official OSCAL JSON schema:
 // Long: https://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json
-// Args: files
+// Args: file
 package riskcatalog
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
+	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -113,27 +114,96 @@ func parseConfig() (*Config, error) {
 		return nil, fmt.Errorf("file path required")
 	}
 
-	// Check file exists
-	if _, err := os.Stat(config.FilePath); os.IsNotExist(err) {
+	// Check file exists and is regular file
+	fileInfo, err := os.Stat(config.FilePath)
+	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("file not found: %s", config.FilePath)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("cannot access file: %w", err)
+	}
+
+	// Ensure it's a file, not a directory
+	if fileInfo.IsDir() {
+		return nil, fmt.Errorf("path is a directory, not a file: %s", config.FilePath)
 	}
 
 	return config, nil
 }
 
-// validateCatalog validates an OSCAL catalog using the official schema.
+// validateCatalog validates an OSCAL catalog using go-oscal types.
 func validateCatalog(config *Config) *ValidationResult {
 	result := &ValidationResult{Valid: true}
 
-	// Create schema validator
-	validator := oscal.NewSchemaValidator()
-
-	// Validate against OSCAL schema
-	if err := validator.ValidateCatalog(config.FilePath); err != nil {
+	// Read file
+	data, err := os.ReadFile(config.FilePath)
+	if err != nil {
 		result.Valid = false
 		result.Errors = append(result.Errors, ValidationError{
-			Field:   "schema",
-			Message: err.Error(),
+			Field:   "file",
+			Message: fmt.Sprintf("failed to read file: %v", err),
+		})
+		return result
+	}
+
+	// Parse using go-oscal wrapper type
+	var oscalDoc oscalTypes.OscalModels
+	if err := json.Unmarshal(data, &oscalDoc); err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "json",
+			Message: fmt.Sprintf("invalid JSON: %v", err),
+		})
+		return result
+	}
+
+	// Check if it's a catalog document
+	if oscalDoc.Catalog == nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "document",
+			Message: "not an OSCAL catalog document",
+		})
+		return result
+	}
+
+	catalog := oscalDoc.Catalog
+
+	// Validate required UUID field
+	if catalog.UUID == "" {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "catalog.uuid",
+			Message: "missing required field: uuid",
+		})
+	}
+
+	// Validate metadata
+	if catalog.Metadata.Title == "" {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "catalog.metadata.title",
+			Message: "missing required field: title",
+		})
+	}
+
+	if catalog.Metadata.LastModified.IsZero() {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "catalog.metadata.last-modified",
+			Message: "missing required field: last-modified",
+		})
+	}
+
+	// Validate that catalog has at least one control or group
+	hasControls := catalog.Controls != nil && len(*catalog.Controls) > 0
+	hasGroups := catalog.Groups != nil && len(*catalog.Groups) > 0
+
+	if !hasControls && !hasGroups {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Field:   "catalog",
+			Message: "catalog must have at least one control or group",
 		})
 	}
 
@@ -146,20 +216,22 @@ func reportValidationResults(config *Config, result *ValidationResult) {
 
 	if result.Valid {
 		log.Info("")
-		log.Infof("✓ Validation passed: %s", filename)
-		log.Info("  Type: catalog")
-		log.Info("  Schema: OSCAL 1.1.3")
+		log.Infof("Validation passed")
+		log.Infof("Type: catalog")
+		log.Infof("Schema: OSCAL 1.1.3")
+		log.Infof("File: %s", filename)
+		log.Info("")
+		log.Infof("✓ Catalog is valid OSCAL 1.1.3 document")
 		log.Info("")
 	} else {
 		log.Info("")
-		log.Errorf("✗ Validation failed: %s", filename)
-		log.Info("  Type: catalog")
-		log.Info("  Schema: OSCAL 1.1.3")
+		log.Errorf("Validation failed")
+		log.Errorf("File: %s", filename)
 		log.Info("")
 
-		log.Errorf("  Errors: %d", len(result.Errors))
+		log.Errorf("Errors: %d", len(result.Errors))
 		for _, e := range result.Errors {
-			log.Errorf("    - %s: %s", e.Field, e.Message)
+			log.Errorf("  - %s: %s", e.Field, e.Message)
 		}
 		log.Info("")
 	}

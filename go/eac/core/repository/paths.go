@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // Repository directory conventions
@@ -24,6 +26,12 @@ const (
 
 	// SecurityDir is the subdirectory under OutDir for security scan outputs
 	SecurityDir = "security"
+
+	// RiskDir is the subdirectory under OutDir for risk assessment outputs
+	RiskDir = "risk"
+
+	// RiskControlsDir is the subdirectory under SpecsDir for OSCAL profiles
+	RiskControlsDir = ".risk-controls"
 
 	// SpecsDir is the root directory for specifications (Gherkin, Structurizr)
 	SpecsDir = "specs"
@@ -234,6 +242,29 @@ func TestOutputPath(repoRoot, suiteName string) string {
 // Example: out/security/trivy
 func SecurityOutputPath(repoRoot, scanner string) string {
 	return filepath.Join(repoRoot, OutDir, SecurityDir, scanner)
+}
+
+// RiskProfilePath returns the path to a module's OSCAL profile
+// Example: specs/risk-controls/billing.profile.json
+func RiskProfilePath(repoRoot, moduleName string) string {
+	if moduleName == "" {
+		moduleName = "common"
+	}
+	return filepath.Join(repoRoot, SpecsDir, RiskControlsDir, moduleName+".profile.json")
+}
+
+// RiskAssessmentResultsPath returns the path to a module's OSCAL assessment-results with timestamp
+// Example: out/risk/billing/assessment-results-20251204-143025.json
+func RiskAssessmentResultsPath(repoRoot, moduleName string) string {
+	timestamp := time.Now().Format("20060102-150405")
+	filename := fmt.Sprintf("assessment-results-%s.json", timestamp)
+	return filepath.Join(repoRoot, OutDir, RiskDir, moduleName, filename)
+}
+
+// RiskOutputPath returns the path to a module's risk output directory
+// Example: out/risk/billing
+func RiskOutputPath(repoRoot, moduleName string) string {
+	return filepath.Join(repoRoot, OutDir, RiskDir, moduleName)
 }
 
 // TemplatePath returns the path to a template file or directory

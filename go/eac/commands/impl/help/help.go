@@ -147,7 +147,42 @@ func showCommandHelp(commandName string, verbose bool) int {
 	commandRegistry := registry.GetCommandRegistry()
 
 	reg := commandRegistry[commandName]
+
+	// Check for subcommands even if the parent command doesn't exist
+	subcommands := getSubcommands(commandName)
+
 	if reg == nil {
+		// If command not found, check if it has subcommands
+		if len(subcommands) > 0 {
+			// Display help for command category with subcommands
+			log.Info("NAME")
+			log.Infof("    %s - Command category\n", commandName)
+
+			log.Info("DESCRIPTION")
+			log.Infof("    The '%s' command category contains the following subcommands:\n", commandName)
+
+			log.Info("COMMANDS")
+			for _, subcmd := range subcommands {
+				subReg := commandRegistry[subcmd]
+
+				desc := ""
+				if subReg != nil && subReg.Short != "" {
+					desc = subReg.Short
+				}
+
+				// Extract just the subcommand part (e.g., "risk-profile" from "create risk-profile")
+				subPart := strings.TrimPrefix(subcmd, commandName+" ")
+
+				// Format with padding
+				padding := strings.Repeat(" ", max(2, 30-len(subPart)))
+				log.Infof("    %s%s%s", subPart, padding, desc)
+			}
+			log.Info("")
+			log.Infof("Use 'help %s <command>' for detailed information about a specific command.", commandName)
+			return 0
+		}
+
+		// No command and no subcommands found
 		log.Errorf("Error: Command '%s' not found.", commandName)
 		log.Error("\nUse 'help' to see all available commands.")
 		return 1
@@ -178,7 +213,6 @@ func showCommandHelp(commandName string, verbose bool) int {
 	}
 
 	// Display COMMANDS section (subcommands)
-	subcommands := getSubcommands(commandName)
 	if len(subcommands) > 0 {
 		log.Info("COMMANDS")
 		for _, subcmd := range subcommands {
@@ -227,8 +261,10 @@ func buildSynopsis(reg *registry.CommandRegistration) string {
 		parts = append(parts, "[flags]")
 	}
 
-	// Add arguments placeholder (could be enhanced based on command specifics)
-	parts = append(parts, "[arguments]")
+	// Add arguments from command metadata
+	if reg.Args != "" {
+		parts = append(parts, "<"+reg.Args+">")
+	}
 
 	return strings.Join(parts, " ")
 }

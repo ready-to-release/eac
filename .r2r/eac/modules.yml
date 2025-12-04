@@ -52,6 +52,8 @@ modules:
     description: MkDocs documentation site including reference documentation
     # Note: docs uses the pre-built commands binary (out/build/eac-commands/commands.exe)
     # for book preprocessing. Build eac-commands separately if needed.
+    depends_on:
+      - eac-commands
     files:
       root: docs
       assets:
@@ -257,14 +259,12 @@ modules:
       config:
         - go.mod
         - go.sum
-        - "internal/risk/oscal/schemas/*.json"
       exclude:
         - ext/**
       workflows:
         ci: .github/workflows/ci-eac-commands.yaml
         release: ""
       assets:
-        - internal/risk/oscal/schemas/**/*.json
         - "README.md"
         - "**/README.md"
       repo:
@@ -343,6 +343,9 @@ modules:
         - "**/*.json"
         - "**/*.md"
         - "**/*.feature"
+      repo:
+        other:
+          - specs/.risk-controls/**
 
   # ============================================================================
   # VSCode Configuration

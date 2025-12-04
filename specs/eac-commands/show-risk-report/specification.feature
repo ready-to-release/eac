@@ -174,6 +174,42 @@ Feature: eac-commands_show-risk-report
       When I run "show risk-report"
       Then stdout contains "All controls are satisfied"
 
+  Rule: Reports are automatically written to file
+
+    @L2 @ov
+    Scenario: Text report written to timestamped file
+      Given assessment-results exist for "billing"
+      When I run "show risk-report"
+      Then the exit code is 0
+      And a file exists matching "out/risk/reports/*-risk-report.md"
+      And the file contains "RISK ASSESSMENT REPORT"
+      And stdout confirms file was written
+
+    @L2 @ov
+    Scenario: JSON report written to timestamped file
+      Given assessment-results exist for "billing"
+      When I run "show risk-report --format json"
+      Then the exit code is 0
+      And a file exists matching "out/risk/reports/*-risk-report.json"
+      And the file contains valid JSON
+
+    @L2 @ov
+    Scenario: Markdown report written to timestamped file
+      Given assessment-results exist for "billing"
+      When I run "show risk-report --format markdown"
+      Then the exit code is 0
+      And a file exists matching "out/risk/reports/*-risk-report.md"
+      And the file contains "# Risk Assessment Report"
+
+    @L2 @ov
+    Scenario: File write failure does not break stdout output
+      Given assessment-results exist for "billing"
+      And the out/risk/reports directory is not writable
+      When I run "show risk-report"
+      Then the exit code is 0
+      And stdout shows the report
+      And a warning is logged about file write failure
+
   Rule: Handle missing assessment-results gracefully
 
     @L2 @ov

@@ -1,0 +1,20 @@
+version: "0.1.0"
+name: "Gherkin Specification Structure"
+description: "Formal contract defining Gherkin specification validation rules"
+
+# Feature naming pattern
+feature_naming_pattern: "^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$"
+
+# Required verification tags (at least one must be present on each scenario)
+required_verification_tags:
+  - "@ov"   # Operational Verification
+  - "@iv"   # Installation Verification
+  - "@pv"   # Performance Verification
+  - "@piv"  # Production Installation Verification
+  - "@ppv"  # Production Performance Verification
+
+# Required structure elements
+required_elements:
+  - "Feature:"
+  - "Rule:"
+  - "Scenario:"

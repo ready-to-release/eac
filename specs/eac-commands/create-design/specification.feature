@@ -1,4 +1,4 @@
-@L2 @deps:docker @ov @env:isolated-test-project
+@L2 @deps:docker @ov @env:isolated-test-project @control:ai-2
 Feature: eac-commands_create-design
 
   As a developer of the eac platform

@@ -38,7 +38,7 @@ func registerDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return docsCheckDocker(dCtx)
 	})
 
-	// Then steps - MkDocs container state
+	// Given/Then steps - MkDocs container state
 	sc.Step(`^MkDocs container is running$`, func() error {
 		return docsContainerState(dCtx, true)
 	})

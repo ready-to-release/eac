@@ -170,7 +170,7 @@ Feature: eac-commands_validate-specs
 
   Rule: Security prevents path traversal
 
-    @L2 @ov
+    @L2 @ov @control:ac-3 @control:si-10
     Scenario: Path traversal attempts are rejected
       When I run "validate specs ../../../etc/passwd"
       Then the command exits with code 1

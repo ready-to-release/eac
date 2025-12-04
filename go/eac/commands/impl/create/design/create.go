@@ -222,7 +222,7 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 
 		if arg == "--debug" || arg == "-d" {
 			flags.debug = true
-		} else if arg == "--force" || arg == "-f" {
+		} else if arg == "--force" {
 			flags.force = true
 		} else if arg == "--skip-validation" {
 			flags.skipValidation = true
