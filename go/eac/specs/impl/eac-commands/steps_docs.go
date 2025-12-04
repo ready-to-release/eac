@@ -40,7 +40,7 @@ func registerDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 
 	// Given/Then steps - MkDocs container state
 	sc.Step(`^MkDocs container is running$`, func() error {
-		return docsEnsureContainerRunning(dCtx, ctx)
+		return docsContainerState(dCtx, true)
 	})
 	sc.Step(`^MkDocs container is not running$`, func() error {
 		return docsContainerState(dCtx, false)
@@ -84,15 +84,6 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 	if !dCtx.dockerAvailable || dCtx.dockerClient == nil {
 		return fmt.Errorf("Docker is not available")
 	}
-
-	// Retry up to 3 times with 1 second delay for container state to stabilize
-	maxRetries := 3
-	var lastErr error
-
-	for i := 0; i < maxRetries; i++ {
-		if i > 0 {
-			time.Sleep(1 * time.Second)
-		}
 
 	ctx := context.Background()
 	containers, err := dCtx.dockerClient.ContainerList(ctx, container.ListOptions{All: true})
