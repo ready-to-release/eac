@@ -43,21 +43,21 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 			// Build both themes sequentially
 			Logln(logWriter, "\n=== Building %s: %s (PDF mode - all themes) ===", module.Type, module.Moniker)
 
-			// First build dark theme
+			// First build dark theme (clean=true to start fresh)
 			darkOpts := opts
 			darkOpts.PDFTheme = "dark"
-			if exitCode := buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, darkOpts); exitCode != 0 {
+			if exitCode := buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, darkOpts, true); exitCode != 0 {
 				return exitCode
 			}
 
-			// Then build light theme
+			// Then build light theme (clean=false to preserve dark PDF)
 			lightOpts := opts
 			lightOpts.PDFTheme = "light"
-			return buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, lightOpts)
+			return buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, lightOpts, false)
 		}
 
-		// Single theme build
-		return buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, opts)
+		// Single theme build (always clean for single theme)
+		return buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, opts, true)
 	}
 
 	// Standard HTML-only build
@@ -318,7 +318,9 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 }
 
 // buildMkDocsWithTheme builds a PDF with a specific theme (dark or light)
-func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+// cleanBuild controls whether to use --clean flag; set false when building multiple themes
+// to preserve PDFs from previous theme builds
+func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, cleanBuild bool) int {
 	theme := opts.PDFTheme
 	if theme == "" {
 		theme = "dark"
@@ -449,14 +451,22 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 		imageName,
 		"mkdocs", "build",
 		"--site-dir", dockerSiteDir,
-		"--clean",
 	)
+
+	// Only add --clean for first build; preserve previous theme PDFs when building multiple themes
+	if cleanBuild {
+		buildArgs = append(buildArgs, "--clean")
+	}
 
 	Logln(logWriter, "   Image: %s", imageName)
 	Logln(logWriter, "   Output: %s", siteDir)
 	Logln(logWriter, "   Volume: %s:/docs", dockerVolume)
 	Logln(logWriter, "   SiteDir: %s", dockerSiteDir)
-	Logln(logWriter, "   Mode: non-strict (PDF mode)")
+	if cleanBuild {
+		Logln(logWriter, "   Mode: non-strict, clean build (PDF mode)")
+	} else {
+		Logln(logWriter, "   Mode: non-strict, incremental (preserving previous PDFs)")
+	}
 
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
 
