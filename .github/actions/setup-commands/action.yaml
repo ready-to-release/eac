@@ -8,7 +8,7 @@ inputs:
   trigger-run-id:
     description: |
       Run ID of the trigger workflow to download artifact from.
-      On Unix: artifact MUST exist (fails if not found).
+      On Linux/macOS: artifact MUST exist (fails if not found).
       On Windows: tries Windows artifact first, falls back to building from source
       if only Linux artifact exists (cross-platform CI support).
       If empty, builds from source.
@@ -38,7 +38,7 @@ runs:
         run-id: ${{ inputs.trigger-run-id }}
       continue-on-error: true
 
-    # On Unix or if Windows artifact doesn't exist, try standard artifact
+    # On Linux/macOS, or if Windows artifact doesn't exist, try standard artifact
     - name: Download from trigger workflow
       id: download-trigger
       if: inputs.trigger-run-id != '' && (runner.os != 'Windows' || steps.download-trigger-windows.outcome == 'failure')
@@ -60,7 +60,7 @@ runs:
         path: out/build/eac-commands
       continue-on-error: true
 
-    - name: Check binary availability (Unix)
+    - name: Check binary availability (Linux/macOS)
       id: check
       if: runner.os != 'Windows'
       shell: bash
@@ -104,7 +104,7 @@ runs:
           go/eac/commands/go.sum
           go/eac/core/go.sum
 
-    - name: Build from source (Unix)
+    - name: Build from source (Linux/macOS)
       if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
       shell: bash
       run: |
@@ -124,7 +124,7 @@ runs:
         go build -o ../../../out/build/eac-commands/commands.exe .
         Write-Host "✓ Commands binary built"
 
-    - name: Upload artifact (for downstream jobs, Unix)
+    - name: Upload artifact (for downstream jobs, Linux/macOS)
       if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
       uses: actions/upload-artifact@v4
       with:
@@ -140,7 +140,7 @@ runs:
         path: out/build/eac-commands/commands.exe
         if-no-files-found: error
 
-    - name: Set output (Unix)
+    - name: Set output (Linux/macOS)
       id: setup
       if: runner.os != 'Windows'
       shell: bash
