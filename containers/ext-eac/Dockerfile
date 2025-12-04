@@ -47,7 +47,7 @@ COPY go/eac/commands/ ./go/eac/commands/
 # Build the commands binary with Go module cache for faster rebuilds
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    cd go/eac/commands && go build -o /app/out/build/eac-commands/commands .
+    cd go/eac/commands && go build -o /app/out/tools/commands .
 
 # ============================================================
 # RUNTIME STAGE - Final image
@@ -69,8 +69,9 @@ COPY .r2r/ ./.r2r/
 COPY specs/ ./specs/
 COPY templates/ ./templates/
 
-# Copy pre-built binary from builder
-COPY --from=builder /app/out/build/eac-commands/commands /app/out/build/eac-commands/commands
+# Copy pre-built binary from builder to tools directory
+# (out/tools is for CI tools, out/build is for module build outputs)
+COPY --from=builder /app/out/tools/commands /app/out/tools/commands
 
 # Create fake .git so GetRepositoryRoot() finds /app when running tests
 # (tests run from /app, not /var/task which is for user repo mounts)
@@ -108,4 +109,4 @@ LABEL r2r-cli.multi-platform.support="true"
 WORKDIR /var/task
 
 # Use pre-built eac-commands binary as entrypoint
-ENTRYPOINT ["/app/out/build/eac-commands/commands"]
+ENTRYPOINT ["/app/out/tools/commands"]

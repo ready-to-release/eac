@@ -32,6 +32,7 @@ type OutConfig struct {
 	Test     string `yaml:"test"`
 	Logs     string `yaml:"logs"`
 	Security string `yaml:"security"`
+	Tools    string `yaml:"tools"` // CI tools like the commands binary (not build outputs)
 }
 
 // ConventionsConfig defines conventional filenames
@@ -54,6 +55,7 @@ func DefaultRepositoryConfig() RepositoryConfig {
 				Test:     "out/test",
 				Logs:     "out/logs",
 				Security: "out/security",
+				Tools:    "out/tools",
 			},
 		},
 		Conventions: ConventionsConfig{
@@ -110,6 +112,11 @@ func (c *RepositoryConfig) LogsPath(command string) string {
 	return c.Paths.Out.Logs + "/" + command
 }
 
+// ToolsPath returns the path to the tools directory
+func (c *RepositoryConfig) ToolsPath() string {
+	return c.Paths.Out.Tools
+}
+
 // IsGodogTestFile checks if a filename is the godog test file
 func (c *RepositoryConfig) IsGodogTestFile(filename string) bool {
 	return filename == c.Conventions.GodogTest
@@ -126,5 +133,6 @@ func (c *RepositoryConfig) GetPathVariables() map[string]string {
 		"out_test":       c.Paths.Out.Test,
 		"out_logs":       c.Paths.Out.Logs,
 		"out_security":   c.Paths.Out.Security,
+		"out_tools":      c.Paths.Out.Tools,
 	}
 }
