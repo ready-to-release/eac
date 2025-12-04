@@ -8,7 +8,9 @@ inputs:
   trigger-run-id:
     description: |
       Run ID of the trigger workflow to download artifact from.
-      If provided, artifact MUST exist (fails if not found).
+      On Unix: artifact MUST exist (fails if not found).
+      On Windows: tries Windows artifact first, falls back to building from source
+      if only Linux artifact exists (cross-platform CI support).
       If empty, builds from source.
     default: ''
 
@@ -24,15 +26,29 @@ runs:
   using: composite
   steps:
     # When trigger-run-id is provided, download from that specific run
+    # On Windows, try Windows-specific artifact first
+    - name: Download from trigger workflow (Windows)
+      id: download-trigger-windows
+      if: inputs.trigger-run-id != '' && runner.os == 'Windows'
+      uses: actions/download-artifact@v4
+      with:
+        name: commands-binary-windows
+        path: out/build/eac-commands
+        github-token: ${{ github.token }}
+        run-id: ${{ inputs.trigger-run-id }}
+      continue-on-error: true
+
+    # On Unix or if Windows artifact doesn't exist, try standard artifact
     - name: Download from trigger workflow
       id: download-trigger
-      if: inputs.trigger-run-id != ''
+      if: inputs.trigger-run-id != '' && (runner.os != 'Windows' || steps.download-trigger-windows.outcome == 'failure')
       uses: actions/download-artifact@v4
       with:
         name: commands-binary
         path: out/build/eac-commands
         github-token: ${{ github.token }}
         run-id: ${{ inputs.trigger-run-id }}
+      continue-on-error: ${{ runner.os == 'Windows' }}
 
     # When no trigger-run-id, try downloading from current run (for multi-job workflows)
     - name: Download from current run
@@ -74,13 +90,8 @@ runs:
           Write-Host "✓ Commands binary available"
         } else {
           echo "available=false" >> $env:GITHUB_OUTPUT
-
-          # If trigger-run-id was provided, artifact MUST exist
-          if ("${{ inputs.trigger-run-id }}" -ne "") {
-            Write-Host "::error::Commands artifact not found in trigger workflow run ${{ inputs.trigger-run-id }}"
-            exit 1
-          }
-
+          # On Windows, if trigger-run-id was provided but no Windows artifact exists,
+          # the trigger was Linux-only. Fall back to building from source.
           Write-Host "Commands binary not available, will build from source"
         }
 
