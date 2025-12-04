@@ -1,0 +1,7 @@
+/* Minimal CSS - just dark background */
+@media print {
+  body {
+    background: #0d1117 !important;
+    color: #e6edf3 !important;
+  }
+}

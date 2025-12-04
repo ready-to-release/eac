@@ -24,7 +24,7 @@ Choosing the right pattern aligns repository organization with your system archi
 
 ## Monorepo Pattern
 
-![Monorepo Structure](../../../assets/repository/single.drawio.png)
+![Monorepo Structure](../../../assets/repository/single.drawio.png){width=600}
 
 **This diagram illustrates the single-repository (mono-repository) pattern:** The diagram shows a single repository containing more than one deployable unit. In this pattern, multiple deployable units share a single version history and repository boundary. Path filters (glob patterns) define the boundaries of each deployable unit within the repository, allowing independent versioning and deployment of each unit despite sharing the same repository. This is also called a **single-repository** to distinguish it from large-scale organizational mono-repositories. The pattern enables atomic cross-cutting changes while maintaining independent deployment pipelines per deployable unit.
 
@@ -171,7 +171,7 @@ monorepo/
 
 ## Polyrepo Pattern
 
-![Polyrepo Structure](../../../assets/repository/poly.drawio.png)
+![Polyrepo Structure](../../../assets/repository/poly.drawio.png){width=300}
 
 **This diagram illustrates the poly-repository pattern:** The diagram shows the pattern where a repository boundary perfectly aligns with a single deployable unit boundary. In this pattern, one repository contains exactly one deployable unit - whether that's a versioned component (library, container, package) or a runtime system (service, application). The version of any commit is directly equal to the version of the deployable unit, making versioning simple and straightforward. This pattern is commonly used in GitHub open-source projects and enforces decoupling through versioned modules, where dependencies between units are managed through published versioned artifacts consumed via package managers rather than direct code references.
 
@@ -322,7 +322,7 @@ organization/
 
 ## Repository Types
 
-![Repository Types](../../../assets/repository/types.drawio.png)
+![Repository Types](../../../assets/repository/types.drawio.png){width=500}
 
 **This diagram shows the repository type taxonomy:** The diagram categorizes repositories by the number of deployable units they contain. **Poly-repository** (left) contains exactly one deployable unit - the repository boundary perfectly aligns with the deployable unit boundary, making versioning simple (any commit = new version of the unit). **Mono-repository** (right) contains more than one deployable unit, with three subtypes: **Team mono-repository** (single-repository) where one team owns multiple deployable units, **Product mono-repository** (single-repository) where multiple teams collaborate on one product's deployable units, and **Organizational mono-repository** used by large organizations like Google/Facebook (not recommended for most teams). The diagram establishes the fundamental distinction: poly = one deployable unit, mono = multiple deployable units.
 
@@ -384,7 +384,7 @@ flowchart LR
 
 ## Poor Repository Design (Anti-Pattern)
 
-![Repository Anti-Pattern](../../../assets/repository/bad.drawio.png)
+![Repository Anti-Pattern](../../../assets/repository/bad.drawio.png){width=400}
 
 **This diagram shows the anti-pattern of splitting repositories by technical boundary:** The diagram illustrates the problematic pattern of organizing repositories by technology type rather than by deployable unit boundaries. For example, creating separate repositories for **frontend/**, **backend/**, **scripts/**, **documentation/**, and **infrastructure/** - each representing a technical concern rather than a cohesive deployable unit. This creates dependency hell where there is no coherency or frontier of what one specific version consists of. Changes to a single feature require coordinating across multiple repositories (frontend repo, backend repo, scripts repo), with no clear version boundary for the complete system. This violates the principle that repositories should align with either poly-repository (one deployable unit) or single-repository (multiple deployable units owned together) patterns.
 

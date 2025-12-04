@@ -38,13 +38,13 @@ plugins:
       version: '9.4.3'
   # Mermaid to SVG conversion for PDF generation
   # Pre-renders mermaid diagrams to SVG images before PDF generation
-  # Only active when ENABLE_PDF_EXPORT=1 (same trigger as with-pdf)
+  # Only active when ENABLE_PDF_EXPORT=1 (same trigger as exporter)
   # Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
   - mermaid-to-svg:
       enabled_if_env: ENABLE_PDF_EXPORT
       # Output SVG files to rendered assets directory (gitignored)
       # Path is relative to docs_dir, so assets/ maps to docs/assets/
-      output_dir: assets/.rendered/mermaid
+      output_dir: assets/rendered/mermaid
       # Use dark theme to match PDF template
       theme: dark
       # Puppeteer configuration for Docker environments
@@ -58,30 +58,20 @@ plugins:
           htmlLabels: false
         class:
           htmlLabels: false
-  # PDF export plugin - only active when ENABLE_PDF_EXPORT=1
-  # Use: build docs --pdf (or set ENABLE_PDF_EXPORT=1 manually)
-  - with-pdf:
-      enabled_if_env: ENABLE_PDF_EXPORT
-      # Custom PDF theme (avoids Material theme CSS warnings)
-      # Use pdf-dark for digital viewing, pdf-light for paper printing
-      custom_template_path: docs/assets/templates/pdf-dark
-      # Cover page configuration
-      cover: true
-      cover_title: Ready-to-Release Documentation
-      cover_subtitle: Everything-as-Code Platform
-      cover_logo: docs/assets/logo/eac-logo.png
-      # Table of contents
-      toc_title: Table of Contents
-      toc_level: 3
-      # Heading configuration
-      heading_shift: true
-      ordered_chapter_level: 2
-      # Output configuration
-      output_path: pdf/ready-to-release-docs.pdf
-      # Debug options
-      debug_html: true
-      show_anchors: false
-      verbose: false
+  # PDF export plugin - Playwright-based, better scaling for large docs
+  # Use: build docs --pdf (or set ENABLE_PDF_EXPORT=true manually)
+  - exporter:
+      formats:
+        pdf:
+          # Conditional enable via environment variable
+          enabled: !ENV [ENABLE_PDF_EXPORT, false]
+          # Use concurrent PDF generation for speed (max 16)
+          concurrency: 8
+          # Custom stylesheet for PDF (dark theme with proper colors)
+          stylesheets:
+            - docs/assets/templates/pdf-dark/styles.css
+          # Aggregation disabled - we'll merge PDFs via post-processing
+          # mkdocs-exporter's aggregator has bugs with certain page paths
 
 markdown_extensions:
   - footnotes

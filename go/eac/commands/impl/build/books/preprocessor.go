@@ -65,12 +65,27 @@ func (p *Preprocessor) Preprocess() error {
 		return fmt.Errorf("step 5 (inline): %w", err)
 	}
 
-	// Step 6: Normalize links for PDF (only in PDF mode)
-	// Converts relative markdown links to anchor format for WeasyPrint compatibility
+	// Step 6: Convert attr_list images to HTML (for GitHub Pages + PDF compatibility)
+	// Converts: ![alt](img.png){width=100} -> <img src="img.png" width="100" alt="alt">
+	p.log("  Step 6: Converting attr_list images to HTML...")
+	if err := p.convertAttrListImagesToHTML(); err != nil {
+		return fmt.Errorf("step 6 (attr_list images): %w", err)
+	}
+
+	// PDF-specific processing steps (only in PDF mode)
 	if p.pdfMode {
-		p.log("  Step 6: Normalizing links for PDF...")
+		// Step 7: Add image width constraints for PDF
+		// Ensures large diagrams fit within PDF page boundaries
+		p.log("  Step 7: Adding image width constraints...")
 		if err := p.cleanupLinksForPDF(); err != nil {
-			return fmt.Errorf("step 6 (links): %w", err)
+			return fmt.Errorf("step 7 (image constraints): %w", err)
+		}
+
+		// Step 8: Optimize drawio images for PDF
+		// Resizes large drawio.png files to reduce PDF size and improve WeasyPrint compatibility
+		p.log("  Step 8: Optimizing drawio images...")
+		if err := p.optimizeDrawioImages(); err != nil {
+			return fmt.Errorf("step 8 (drawio optimization): %w", err)
 		}
 	}
 

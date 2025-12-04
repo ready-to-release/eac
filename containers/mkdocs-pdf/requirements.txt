@@ -11,10 +11,14 @@ pymdown-extensions
 # Mermaid diagrams (client-side JS for HTML)
 mkdocs-mermaid2-plugin>=1.1.0
 
-# PDF generation
-mkdocs-with-pdf>=0.9.3
-weasyprint>=60.0
-libsass>=0.23.0  # SCSS compilation for custom PDF templates
+# PDF generation (Playwright-based, better scaling for large docs)
+mkdocs-exporter>=6.2.0
 
 # Mermaid to SVG (server-side rendering for PDF)
+# Note: mkdocs-exporter can render Mermaid natively via Playwright,
+# but we keep this for preprocessing consistency
 mkdocs-mermaid-to-svg
+
+# PDF manipulation and generation
+pypdf>=4.0.0
+reportlab>=4.0.0

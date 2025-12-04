@@ -19,7 +19,7 @@ These four components work together to enable the continuous flow of software fr
 
 ### Trunk
 
-![Trunk Legend](../../../assets/branching/legend-trunk.drawio.png)
+![Trunk Legend](../../../assets/branching/legend-trunk.drawio.png){width=80}
 
 **Definition:** The conceptual container of Deployable Units, representing the versioned timeline in which they exist.
 
@@ -48,7 +48,7 @@ See [Trunk-Based Development](../workflow/trunk-based-development.md) for detail
 
 ### Deployable Unit
 
-![Deployable Unit Legend](../../../assets/branching/legend-deployable-unit.drawio.png)
+![Deployable Unit Legend](../../../assets/branching/legend-deployable-unit.drawio.png){width=100}
 
 **Definition:** The discrete body of work that is built, tested, and delivered as a single unit.
 
@@ -89,7 +89,7 @@ See [Deployable Units](deployable-units.md) for detailed explanation.
 
 ### Deployment Pipeline
 
-![Deployment Pipeline Legend](../../../assets/branching/legend-deployment-pipeline.drawio.png)
+![Deployment Pipeline Legend](../../../assets/branching/legend-deployment-pipeline.drawio.png){width=180}
 
 **Definition:** The automated, repeatable process that takes code from commit to production.
 
@@ -128,7 +128,7 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
 
 ### Live
 
-![Live Legend](../../../assets/branching/legend-live.drawio.png)
+![Live Legend](../../../assets/branching/legend-live.drawio.png){width=80}
 
 **Definition:** The runtime environment where deployed software serves end users.
 

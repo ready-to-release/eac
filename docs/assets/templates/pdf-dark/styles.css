@@ -1,0 +1,224 @@
+/* PDF Dark Theme for mkdocs-exporter (Playwright-based) */
+/* Applied directly (no @media print) since Playwright renders pages directly */
+
+*, *::before, *::after {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+@page {
+  size: A4;
+  margin: 2cm;
+  background: #0d1117;
+}
+
+/* Base styles - dark background, light text */
+html, body {
+  background: #0d1117 !important;
+  background-color: #0d1117 !important;
+  color: #e6edf3 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.6;
+}
+
+/* Material theme overrides */
+.md-content,
+.md-content__inner,
+.md-main,
+.md-main__inner,
+.md-container,
+.md-typeset,
+article,
+main,
+section,
+div {
+  background: #0d1117 !important;
+  background-color: #0d1117 !important;
+  color: #e6edf3 !important;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: #e6edf3 !important;
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  page-break-after: avoid;
+}
+
+h1 {
+  font-size: 24pt;
+  border-bottom: 2px solid #58a6ff !important;
+  padding-bottom: 0.3em;
+}
+
+h2 {
+  font-size: 18pt;
+  border-bottom: 1px solid #30363d !important;
+  padding-bottom: 0.2em;
+}
+
+h3 { font-size: 14pt; }
+h4 { font-size: 12pt; }
+h5 { font-size: 11pt; }
+h6 { font-size: 10pt; }
+
+p, li, td, th, span, label {
+  color: #e6edf3 !important;
+}
+
+/* Links */
+a {
+  color: #58a6ff !important;
+  text-decoration: none;
+}
+
+/* Code blocks */
+code, pre, .highlight {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 9pt;
+}
+
+code {
+  background: #21262d !important;
+  background-color: #21262d !important;
+  color: #e6edf3 !important;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+pre {
+  background: #161b22 !important;
+  background-color: #161b22 !important;
+  border: 1px solid #30363d !important;
+  border-radius: 6px;
+  padding: 1em;
+  overflow-x: auto;
+  page-break-inside: avoid;
+}
+
+pre code {
+  background: transparent !important;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Syntax highlighting */
+.highlight .k, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kt { color: #ff7b72 !important; font-weight: bold; }
+.highlight .s, .highlight .s1, .highlight .s2, .highlight .sb, .highlight .sc, .highlight .sd, .highlight .se, .highlight .sh, .highlight .si, .highlight .sx, .highlight .sr, .highlight .ss { color: #a5d6ff !important; }
+.highlight .c, .highlight .c1, .highlight .cm, .highlight .cp, .highlight .cs { color: #8b949e !important; font-style: italic; }
+.highlight .m, .highlight .mf, .highlight .mh, .highlight .mi, .highlight .mo { color: #79c0ff !important; }
+.highlight .na, .highlight .nb, .highlight .nc, .highlight .nd, .highlight .ne, .highlight .nf, .highlight .ni, .highlight .nl, .highlight .nn, .highlight .nt, .highlight .nv { color: #d2a8ff !important; }
+.highlight .o, .highlight .ow { color: #ff7b72 !important; }
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  page-break-inside: avoid;
+  font-size: 10pt;
+}
+
+th, td {
+  border: 1px solid #30363d !important;
+  padding: 0.5em 0.75em;
+  text-align: left;
+  color: #e6edf3 !important;
+}
+
+th {
+  background: #21262d !important;
+  background-color: #21262d !important;
+  font-weight: 600;
+}
+
+tr:nth-child(even) {
+  background: #161b22 !important;
+  background-color: #161b22 !important;
+}
+
+tr:nth-child(odd) {
+  background: #0d1117 !important;
+  background-color: #0d1117 !important;
+}
+
+/* Admonitions */
+.admonition, .md-typeset .admonition {
+  margin: 1em 0;
+  padding: 1em;
+  border-left: 4px solid #58a6ff !important;
+  background: #161b22 !important;
+  background-color: #161b22 !important;
+  page-break-inside: avoid;
+  border-radius: 4px;
+}
+
+.admonition-title, .md-typeset .admonition-title {
+  font-weight: 600;
+  margin-bottom: 0.5em;
+  color: #58a6ff !important;
+  background: transparent !important;
+}
+
+.admonition.note { border-left-color: #388bfd !important; }
+.admonition.note .admonition-title { color: #388bfd !important; }
+
+.admonition.tip, .admonition.hint { border-left-color: #2ea043 !important; }
+.admonition.tip .admonition-title, .admonition.hint .admonition-title { color: #2ea043 !important; }
+
+.admonition.warning, .admonition.caution { border-left-color: #bb8009 !important; }
+.admonition.warning .admonition-title, .admonition.caution .admonition-title { color: #bb8009 !important; }
+
+.admonition.danger, .admonition.error { border-left-color: #f85149 !important; }
+.admonition.danger .admonition-title, .admonition.error .admonition-title { color: #f85149 !important; }
+
+/* Lists */
+ul, ol {
+  margin: 0.5em 0;
+  padding-left: 2em;
+}
+
+li {
+  margin: 0.25em 0;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+  page-break-inside: avoid;
+}
+
+/* Blockquotes */
+blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid #30363d !important;
+  color: #8b949e !important;
+  font-style: italic;
+  background: #161b22 !important;
+  background-color: #161b22 !important;
+}
+
+/* Hide navigation elements */
+.md-header,
+.md-footer,
+.md-sidebar,
+.md-tabs,
+.md-search,
+.md-clipboard,
+.md-source,
+.headerlink,
+[data-md-component="navigation"],
+[data-md-component="toc"],
+[data-md-component="search"] {
+  display: none !important;
+}
+
+/* Page break utilities */
+.page-break { page-break-after: always; }
+.page-break-before { page-break-before: always; }
+.keep-together { page-break-inside: avoid; }
