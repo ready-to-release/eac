@@ -26,7 +26,7 @@ run commit             # Executes: show staged changes by module (markdown)
 run show               # Shows help for 'show' subcommands
 ```
 
-**Bash (Unix/Linux/macOS):**
+**Bash (Linux/macOS):**
 
 ```bash
 ./run.sh <command> [subcommand] [args...]

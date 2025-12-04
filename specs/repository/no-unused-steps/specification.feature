@@ -11,6 +11,6 @@ Feature: repository_no-unused-steps
 
     @L1 @ov
     Scenario: No unused step definitions in repository
-      When I run the command "specs unused-steps"
+      When I run the command "get specs unused-steps"
       Then the command should succeed
       And the output should contain "No unused step definitions found"

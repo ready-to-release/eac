@@ -425,6 +425,9 @@ func TestSuite() int {
 
 	allDeps := append(append([]string{}, systemDeps...), moduleDeps...)
 
+	// Track unavailable module deps - tests requiring them will be skipped
+	var unavailableModuleDeps []string
+
 	if len(allDeps) == 0 {
 		writeln(multiWriter, "No dependencies required")
 		writeln(multiWriter, "")
@@ -433,32 +436,40 @@ func TestSuite() int {
 		writeln(multiWriter, "Module dependencies: %s", strings.Join(moduleDeps, ", "))
 
 		if !skipDeps {
-			hasFailures := false
+			hasSystemFailures := false
 
-			// Verify system dependencies
+			// Verify system dependencies - these cause hard failures
 			sysResults := systemdeps.VerifyAll(systemDeps)
 			for _, result := range sysResults {
 				writeln(multiWriter, "%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
 				if !result.Available {
-					hasFailures = true
+					hasSystemFailures = true
 				}
 			}
 
-			// Verify module dependencies
+			// Verify module dependencies - unavailable ones cause tests to be skipped
 			modResults := moduledeps.VerifyAll(moduleDeps)
 			for _, result := range modResults {
 				writeln(multiWriter, "%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
 				if !result.Available {
-					hasFailures = true
+					unavailableModuleDeps = append(unavailableModuleDeps, result.Dependency)
 				}
 			}
 
 			writeln(multiWriter, "")
 
-			if hasFailures {
-				writeln(multiWriter, "%s Error: Required dependencies are missing", output.IconFail)
+			// Only fail for system dependencies - module deps cause skip instead
+			if hasSystemFailures {
+				writeln(multiWriter, "%s Error: Required system dependencies are missing", output.IconFail)
 				writeln(multiWriter, "Use --skip-deps to run tests anyway")
 				return 1
+			}
+
+			// Report skipped module dependencies
+			if len(unavailableModuleDeps) > 0 {
+				writeln(multiWriter, "%s Module dependencies not available, tests will be skipped: %s",
+					output.IconSkip, strings.Join(unavailableModuleDeps, ", "))
+				writeln(multiWriter, "")
 			}
 		} else {
 			writeln(multiWriter, "Dependency check skipped (--skip-deps)")
@@ -557,6 +568,13 @@ func TestSuite() int {
 	}
 
 	skipTags := cfg.TestingTags.GetSkipTagsForSuite()
+
+	// Add unavailable module dependencies as skip tags
+	// Tests tagged with @depm:modulename will be skipped if that module isn't built
+	for _, dep := range unavailableModuleDeps {
+		skipTags = append(skipTags, fmt.Sprintf("@depm:%s", dep))
+	}
+
 	suiteTagFilter := suite.BuildGodogTagFilterWithSkipTags(skipTags)
 
 	if parallel {

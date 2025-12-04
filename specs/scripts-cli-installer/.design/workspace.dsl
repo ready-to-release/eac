@@ -18,7 +18,7 @@ workspace "R2R CLI Installer Scripts" "Cross-platform installer scripts for R2R 
                 path_manager = component "Path Manager" "Adds to system PATH" "PowerShell"
             }
 
-            bash_installer = container "Bash Installer" "Unix/Linux/macOS bash installer" "Bash" {
+            bash_installer = container "Bash Installer" "Linux/macOS bash installer" "Bash" {
                 download_handler_sh = component "Download Handler" "Downloads release using curl/wget" "Bash"
                 platform_detector_sh = component "Platform Detector" "Detects OS and architecture" "Bash"
                 path_manager_sh = component "Path Manager" "Updates shell profile PATH" "Bash"
