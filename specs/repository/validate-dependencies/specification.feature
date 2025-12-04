@@ -1,4 +1,4 @@
-@deps:go
+@deps:go @control:si-7 @control:sa-10
 Feature: repository_validate-dependencies
 
   As a repository maintainer

@@ -101,11 +101,20 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 			return err
 		}
 
+		// Clear contracts directory (isolation setup copies real contracts, we only want test modules)
+		contractsDir := filepath.Join(ctx.CurrentWorkDir, "contracts")
+		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to clear contracts directory: %w", err)
+		}
+		if err := os.MkdirAll(contractsDir, 0755); err != nil {
+			return fmt.Errorf("failed to create contracts directory: %w", err)
+		}
+
 		// Create minimal modules.yml (isolation copies real one with all modules)
 		modulesYml := fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
-    type: service
+    type: go-library
     description: Test module
     files:
       root: .
@@ -118,7 +127,7 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		// Create module contract
 		moduleContract := fmt.Sprintf(`module:
   moniker: %s
-  type: service
+  type: go-library
   description: Test module
 paths:
   - .
@@ -144,11 +153,20 @@ paths:
 			return err
 		}
 
+		// Clear contracts directory (isolation setup copies real contracts, we only want test modules)
+		contractsDir := filepath.Join(ctx.CurrentWorkDir, "contracts")
+		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to clear contracts directory: %w", err)
+		}
+		if err := os.MkdirAll(contractsDir, 0755); err != nil {
+			return fmt.Errorf("failed to create contracts directory: %w", err)
+		}
+
 		// Create minimal modules.yml (isolation copies real one with all modules)
 		modulesYml := fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
-    type: service
+    type: go-library
     description: Test module
     files:
       root: .
@@ -161,7 +179,7 @@ paths:
 		// Create module contract
 		moduleContract := fmt.Sprintf(`module:
   moniker: %s
-  type: service
+  type: go-library
   description: Test module
 paths:
   - .

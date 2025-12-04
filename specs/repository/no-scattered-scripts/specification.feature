@@ -1,4 +1,4 @@
-@L1 @ov
+@L1 @ov @control:sa-3
 Feature: repository_no-scattered-scripts
 
   As a repository maintainer

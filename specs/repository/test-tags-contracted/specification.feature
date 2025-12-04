@@ -1,4 +1,4 @@
-@deps:go
+@deps:go @control:sa-3
 Feature: repository_test-tags-contracted
 
   As a repository maintainer

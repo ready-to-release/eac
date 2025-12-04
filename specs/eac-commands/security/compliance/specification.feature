@@ -1,4 +1,4 @@
-@ov @deps:go @deps:docker @env:isolated-test-project @skip:broken
+@ov @deps:go @deps:docker @env:isolated-test-project @skip:broken @control:sa-11
 Feature: security_compliance
 
   As a security auditor

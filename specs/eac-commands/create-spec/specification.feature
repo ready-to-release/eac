@@ -1,4 +1,4 @@
-@deps:go @env:isolated-test-project @skip:broken
+@deps:go @env:isolated-test-project @skip:broken @control:ai-2 @control:si-10
 Feature: eac-commands_create-spec
 
   As a developer of the eac platform

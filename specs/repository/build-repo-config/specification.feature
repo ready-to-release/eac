@@ -1,4 +1,4 @@
-@deps:go
+@deps:go @control:cm-2 @control:sa-10
 Feature: repository_build-repo-config
 
   As a repository maintainer

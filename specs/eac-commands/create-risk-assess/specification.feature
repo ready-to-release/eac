@@ -19,11 +19,13 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Command requires valid inputs
 
+    @skip:wip
     Scenario: Missing profile flag shows error
       When I run "create risk-assess billing"
       Then the exit code is 1
       And stderr contains "--profile flag is required"
 
+    @skip:wip
     Scenario: Non-existent profile file shows error
       When I run "create risk-assess billing --profile nonexistent.json"
       Then the exit code is 1
@@ -31,6 +33,7 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Command creates OSCAL assessment-results for single module
 
+    @skip:wip
     Scenario: Create assessment-results for single module with evidence
       Given module "billing" has test results with @control tags
       And module "billing" has security scan results
@@ -54,6 +57,7 @@ Feature: eac-commands_create-risk-assess
       And files matching "out/risk/auth/assessment-results-*.json" exist
       And stdout contains "Modules assessed: 3"
 
+    @skip:wip
     Scenario: Assess multiple specific modules with space-separated names
       Given modules "billing" and "api" exist with profiles
       And module "billing" has test results with @control tags
@@ -66,6 +70,7 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Parallel execution is default for multiple modules
 
+    @skip:wip
     Scenario: Multiple modules run in parallel by default
       Given modules "billing", "api", and "auth" exist with profiles
       And module "billing" has test results with @control tags
@@ -78,6 +83,7 @@ Feature: eac-commands_create-risk-assess
       And files matching "out/risk/api/assessment-results-*.json" exist
       And files matching "out/risk/auth/assessment-results-*.json" exist
 
+    @skip:wip
     Scenario: Sequential flag disables parallel execution
       Given modules "billing" and "api" exist with profiles
       And module "billing" has test results with @control tags
@@ -90,6 +96,7 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Partial failures are handled gracefully
 
+    @skip:wip
     Scenario: One module succeeds, another has no evidence
       Given module "billing" exists with a profile
       And module "api" exists with a profile

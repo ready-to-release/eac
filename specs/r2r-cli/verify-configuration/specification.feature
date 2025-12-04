@@ -1,6 +1,7 @@
 @skip:wip
 @env:isolated-test-project
 @L2 @ov @deps:go @depm:r2r-cli
+@control:cm-2
 Feature: r2r-cli_verify-configuration
 
   As a developer

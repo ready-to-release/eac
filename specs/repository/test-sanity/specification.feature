@@ -1,4 +1,4 @@
-@deps:go @L1 @ov
+@deps:go @L1 @ov @control:sa-11
 Feature: repository_test-sanity
 
   As a developer
