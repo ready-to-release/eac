@@ -79,3 +79,67 @@ func TestAddImageWidthConstraints(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertAttrListImages(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		count    int
+	}{
+		{
+			name:     "width only",
+			input:    `![icon](assets/icon.png){width=48}`,
+			expected: `<img src="assets/icon.png" width="48" alt="icon">`,
+			count:    1,
+		},
+		{
+			name:     "width with quotes",
+			input:    `![icon](assets/icon.png){width="48"}`,
+			expected: `<img src="assets/icon.png" width="48" alt="icon">`,
+			count:    1,
+		},
+		{
+			name:     "width with px",
+			input:    `![icon](assets/icon.png){width="48px"}`,
+			expected: `<img src="assets/icon.png" width="48px" alt="icon">`,
+			count:    1,
+		},
+		{
+			name:     "width and height",
+			input:    `![diagram](diagram.png){width=600 height=400}`,
+			expected: `<img src="diagram.png" width="600" height="400" alt="diagram">`,
+			count:    1,
+		},
+		{
+			name:     "with colon prefix",
+			input:    `![icon](icon.png){: width="48" }`,
+			expected: `<img src="icon.png" width="48" alt="icon">`,
+			count:    1,
+		},
+		{
+			name:     "no attrs - unchanged",
+			input:    `![image](image.png)`,
+			expected: `![image](image.png)`,
+			count:    0,
+		},
+		{
+			name:     "multiple images",
+			input:    `![a](a.png){width=100} text ![b](b.png){width=200}`,
+			expected: `<img src="a.png" width="100" alt="a"> text <img src="b.png" width="200" alt="b">`,
+			count:    2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, count := convertAttrListImages(tt.input)
+			if result != tt.expected {
+				t.Errorf("convertAttrListImages()\nexpected: %s\ngot:      %s", tt.expected, result)
+			}
+			if count != tt.count {
+				t.Errorf("convertAttrListImages() count = %d, want %d", tt.count, count)
+			}
+		})
+	}
+}

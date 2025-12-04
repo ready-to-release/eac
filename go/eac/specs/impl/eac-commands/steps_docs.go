@@ -77,7 +77,9 @@ func docsCheckDocker(dCtx *docsContext) error {
 	return nil
 }
 
-// docsContainerState checks if MkDocs container is in expected state.
+// docsContainerState ensures MkDocs container is in expected state.
+// When used as a Given step, it will start/stop the container as needed.
+// When used as a Then step, it verifies the container is in the expected state.
 func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 	if !dCtx.dockerAvailable || dCtx.dockerClient == nil {
 		return fmt.Errorf("Docker is not available")
@@ -92,83 +94,50 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 			time.Sleep(1 * time.Second)
 		}
 
-		containers, err := dCtx.dockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
-		if err != nil {
-			lastErr = fmt.Errorf("failed to list containers: %w", err)
-			continue
-		}
-
-		found := false
-		running := false
-		for _, c := range containers {
-			for _, name := range c.Names {
-				if strings.Contains(name, "mkdocs") || strings.Contains(name, "cli-mkdocs") {
-					found = true
-					running = c.State == "running"
-					break
-				}
-			}
-		}
-
-		if shouldBeRunning {
-			if !found {
-				lastErr = fmt.Errorf("MkDocs container not found")
-				continue
-			}
-			if !running {
-				lastErr = fmt.Errorf("MkDocs container exists but is not running")
-				continue
-			}
-			return nil // Success!
-		} else {
-			if found && running {
-				lastErr = fmt.Errorf("MkDocs container is still running")
-				continue
-			}
-			return nil // Success!
-		}
-	}
-
-	return lastErr
-}
-
-// docsEnsureContainerRunning ensures the MkDocs container is running, starting it if necessary.
-func docsEnsureContainerRunning(dCtx *docsContext, ctx *internal.TestContext) error {
-	if !dCtx.dockerAvailable || dCtx.dockerClient == nil {
-		return fmt.Errorf("Docker is not available")
-	}
-
-	containers, err := dCtx.dockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
+	ctx := context.Background()
+	containers, err := dCtx.dockerClient.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
 
 	var containerID string
+	found := false
 	running := false
 	for _, c := range containers {
 		for _, name := range c.Names {
 			if strings.Contains(name, "mkdocs") || strings.Contains(name, "cli-mkdocs") {
 				containerID = c.ID
+				found = true
 				running = c.State == "running"
 				break
 			}
 		}
-	}
-
-	// If container exists but is not running, start it
-	if containerID != "" && !running {
-		err := dCtx.dockerClient.ContainerStart(context.Background(), containerID, container.StartOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to start existing MkDocs container: %w", err)
+		if found {
+			break
 		}
-		return nil
 	}
 
-	// If container is already running, that's fine
-	if running {
-		return nil
+	if shouldBeRunning {
+		if !found {
+			return fmt.Errorf("MkDocs container not found")
+		}
+		if !running {
+			// Container exists but stopped - start it
+			if err := dCtx.dockerClient.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
+				return fmt.Errorf("failed to start stopped MkDocs container: %w", err)
+			}
+			// Brief wait for container to fully start
+			time.Sleep(2 * time.Second)
+		}
+	} else {
+		if found && running {
+			// Container is running but should be stopped - stop it
+			timeout := 10
+			if err := dCtx.dockerClient.ContainerStop(ctx, containerID, container.StopOptions{Timeout: &timeout}); err != nil {
+				return fmt.Errorf("failed to stop MkDocs container: %w", err)
+			}
+		}
 	}
 
-	// If no container exists, run the serve docs command to create it
-	return ctx.RunCommand("serve docs --no-browser")
+	return nil
 }

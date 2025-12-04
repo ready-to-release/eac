@@ -16,7 +16,7 @@ nul
 /test_*.md
 temp_*.txt
 *-example.yml
-
+**.drawio.png.bkp
 *.log
 
 out/*
@@ -67,7 +67,7 @@ package-lock.json
 site/
 .cache/
 # Generated files during PDF build (mermaid SVGs, etc.)
-docs/assets/.rendered/
+docs/assets/rendered/
 
 # Structurizr (architecture diagrams)
 # Generated files when running 'design serve'
@@ -93,3 +93,4 @@ docker-compose.override.yml
 # By default, it's ignored - remove the line below to commit custom prompts
 .r2r/prompts/
 nul
+__pycache__/

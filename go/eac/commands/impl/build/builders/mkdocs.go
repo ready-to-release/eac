@@ -40,20 +40,26 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		}
 
 		if theme == "all" {
-			// Build both themes sequentially
+			// Build both themes sequentially, sharing preprocessing
 			Logln(logWriter, "\n=== Building %s: %s (PDF mode - all themes) ===", module.Type, module.Moniker)
+
+			// Preprocess once, reuse for both themes
+			stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter, true)
+			if bookUsed && stagingDir == "" {
+				return 1 // Preprocessing failed
+			}
 
 			// First build dark theme (clean=true to start fresh)
 			darkOpts := opts
 			darkOpts.PDFTheme = "dark"
-			if exitCode := buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, darkOpts, true); exitCode != 0 {
+			if exitCode := buildMkDocsWithThemeAndStaging(module, workspaceRoot, outputDir, logWriter, darkOpts, true, stagingDir); exitCode != 0 {
 				return exitCode
 			}
 
 			// Then build light theme (clean=false to preserve dark PDF)
 			lightOpts := opts
 			lightOpts.PDFTheme = "light"
-			return buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, lightOpts, false)
+			return buildMkDocsWithThemeAndStaging(module, workspaceRoot, outputDir, logWriter, lightOpts, false, stagingDir)
 		}
 
 		// Single theme build (always clean for single theme)
@@ -218,10 +224,10 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	}
 
 	// Enable PDF export if PDFMode is set
-	// This sets the environment variable that mkdocs-with-pdf checks
+	// This sets the environment variable that mkdocs-exporter checks
 	if opts.PDFMode {
-		buildArgs = append(buildArgs, "-e", "ENABLE_PDF_EXPORT=1")
-		Logln(logWriter, "   PDF Export: enabled")
+		buildArgs = append(buildArgs, "-e", "ENABLE_PDF_EXPORT=true")
+		Logln(logWriter, "   PDF Export: enabled (mkdocs-exporter)")
 	}
 
 	// In Docker-in-Docker mode, run as current user to avoid permission issues
@@ -321,13 +327,6 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 // cleanBuild controls whether to use --clean flag; set false when building multiple themes
 // to preserve PDFs from previous theme builds
 func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, cleanBuild bool) int {
-	theme := opts.PDFTheme
-	if theme == "" {
-		theme = "dark"
-	}
-
-	Logln(logWriter, "\n=== Building %s: %s (PDF %s) ===", module.Type, module.Moniker, theme)
-
 	// Check for book configuration and run preprocessing if found
 	// pdfMode=true enables link normalization for PDF compatibility
 	stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter, true)
@@ -335,6 +334,19 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 		// Preprocessing failed
 		return 1
 	}
+
+	return buildMkDocsWithThemeAndStaging(module, workspaceRoot, outputDir, logWriter, opts, cleanBuild, stagingDir)
+}
+
+// buildMkDocsWithThemeAndStaging builds a PDF with a specific theme using a pre-computed staging directory
+// This allows multiple theme builds to share preprocessing work
+func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, cleanBuild bool, stagingDir string) int {
+	theme := opts.PDFTheme
+	if theme == "" {
+		theme = "dark"
+	}
+
+	Logln(logWriter, "\n=== Building %s: %s (PDF %s) ===", module.Type, module.Moniker, theme)
 
 	// Check for mkdocs.yml at repository root
 	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
@@ -423,7 +435,7 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
-		"-e", "ENABLE_PDF_EXPORT=1",
+		"-e", "ENABLE_PDF_EXPORT=true",
 	}
 
 	// Mount patched mkdocs.yml over the original (never modify source files)
@@ -436,7 +448,7 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 	}
 	buildArgs = append(buildArgs, "-v", patchedConfigMount+":/docs/mkdocs.yml:ro")
 
-	Logln(logWriter, "   PDF Export: enabled")
+	Logln(logWriter, "   PDF Export: enabled (mkdocs-exporter)")
 	Logln(logWriter, "   Patched config: %s", patchedConfigPath)
 
 	if isDinD {
@@ -475,41 +487,498 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 		return exitCode
 	}
 
-	// Rename the PDF to include theme name
-	srcPdfPath := filepath.Join(siteDir, "pdf", "ready-to-release-docs.pdf")
+	// Merge individual PDFs into single document
+	// mkdocs-exporter creates individual PDFs for each page, we merge them using pypdf
 	dstPdfPath := filepath.Join(siteDir, "pdf", fmt.Sprintf("ready-to-release-docs-%s.pdf", theme))
 
-	if _, err := os.Stat(srcPdfPath); err == nil {
-		// Rename the PDF
-		if err := os.Rename(srcPdfPath, dstPdfPath); err != nil {
-			Logln(logWriter, "⚠️  Failed to rename PDF: %v", err)
-			Logln(logWriter, "   PDF Output: %s", srcPdfPath)
-		} else {
-			Logln(logWriter, "✅ MkDocs PDF built successfully (%s theme)", theme)
-			Logln(logWriter, "   PDF Output: %s", dstPdfPath)
-		}
-		return 0
+	Logln(logWriter, "📄 Merging individual PDFs...")
+
+	if err := mergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, imageName, logWriter, isDinD); err != nil {
+		Logln(logWriter, "❌ PDF merge failed: %v", err)
+		return 1
 	}
 
-	// PDF not generated - this is an error in PDF mode
-	Logln(logWriter, "❌ PDF file not found at expected location: %s", srcPdfPath)
-
-	// List what's actually in the site directory for diagnostics
-	pdfDir := filepath.Join(siteDir, "pdf")
-	if entries, err := os.ReadDir(pdfDir); err == nil {
-		Logln(logWriter, "   Contents of %s:", pdfDir)
-		for _, e := range entries {
-			Logln(logWriter, "     - %s", e.Name())
-		}
-	} else if os.IsNotExist(err) {
-		Logln(logWriter, "   PDF directory does not exist: %s", pdfDir)
-		Logln(logWriter, "   This usually means mkdocs-with-pdf plugin didn't run")
-		Logln(logWriter, "   Check that ENABLE_PDF_EXPORT=1 environment is set")
+	// Copy PDF to build output directory for easier access
+	// Format: out/build/docs/ready-to-release-docs-{theme}.pdf
+	finalPdfPath := filepath.Join(outputDir, fmt.Sprintf("ready-to-release-docs-%s.pdf", theme))
+	if err := copyFile(dstPdfPath, finalPdfPath); err != nil {
+		Logln(logWriter, "⚠️  Failed to copy PDF to output: %v", err)
 	} else {
-		Logln(logWriter, "   Error reading PDF directory: %v", err)
+		Logln(logWriter, "✅ MkDocs PDF built successfully (%s theme)", theme)
+		Logln(logWriter, "   PDF Output: %s", finalPdfPath)
+	}
+	return 0
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
 	}
 
-	return 1
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	return err
+}
+
+// mergePDFs merges all individual page PDFs into a single document using pypdf
+// Generates a cover page, table of contents, and hierarchical bookmarks
+func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, imageName string, logWriter io.Writer, isDinD bool) error {
+	// Get relative paths for Docker
+	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
+	if err != nil {
+		return fmt.Errorf("calculating relative site dir: %w", err)
+	}
+	relOutputPath, err := filepath.Rel(workspaceRoot, outputPath)
+	if err != nil {
+		return fmt.Errorf("calculating relative output path: %w", err)
+	}
+
+	// Convert to Docker paths
+	dockerSiteDir := "/docs/" + strings.ReplaceAll(relSiteDir, "\\", "/")
+	dockerOutputPath := "/docs/" + strings.ReplaceAll(relOutputPath, "\\", "/")
+
+	volumeMountPath := hostRepoRoot
+	dockerVolume := FormatDockerVolumePath(volumeMountPath)
+
+	args := []string{
+		"run", "--rm",
+		"-v", dockerVolume + ":/docs",
+		"-w", "/docs",
+	}
+
+	if isDinD {
+		uid := os.Getuid()
+		gid := os.Getgid()
+		args = append(args, "--user", fmt.Sprintf("%d:%d", uid, gid))
+	}
+
+	// Python script to generate cover page, TOC, and merge all PDFs
+	// Parses .nav.yml files for proper titles and ordering
+	pythonScript := fmt.Sprintf(`
+import os
+import io
+import yaml
+from datetime import datetime
+from pathlib import Path
+from pypdf import PdfWriter, PdfReader
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.colors import HexColor
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+
+site_dir = '%s'
+output_path = '%s'
+docs_dir = '/docs/docs'  # Source docs directory with .nav.yml files
+
+# Dark theme colors (matching PDF dark theme)
+BG_COLOR = HexColor('#0d1117')
+TEXT_COLOR = HexColor('#e6edf3')
+ACCENT_COLOR = HexColor('#58a6ff')
+MUTED_COLOR = HexColor('#8b949e')
+
+def create_cover_page():
+    """Create a cover page PDF with title, subtitle, and metadata."""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    # Dark background
+    c.setFillColor(BG_COLOR)
+    c.rect(0, 0, width, height, fill=True, stroke=False)
+
+    # Title
+    c.setFillColor(TEXT_COLOR)
+    c.setFont('Helvetica-Bold', 36)
+    c.drawCentredString(width/2, height - 8*cm, 'Ready-to-Release')
+
+    # Subtitle
+    c.setFont('Helvetica', 24)
+    c.drawCentredString(width/2, height - 10*cm, 'Documentation')
+
+    # Horizontal line
+    c.setStrokeColor(ACCENT_COLOR)
+    c.setLineWidth(2)
+    c.line(4*cm, height - 12*cm, width - 4*cm, height - 12*cm)
+
+    # Description
+    c.setFillColor(MUTED_COLOR)
+    c.setFont('Helvetica', 14)
+    c.drawCentredString(width/2, height - 14*cm, 'Everything-as-Code Platform')
+    c.drawCentredString(width/2, height - 15*cm, 'for Software Delivery Flows')
+
+    # Date at bottom
+    c.setFillColor(MUTED_COLOR)
+    c.setFont('Helvetica', 11)
+    date_str = datetime.now().strftime('Generated: %%B %%d, %%Y')
+    c.drawCentredString(width/2, 3*cm, date_str)
+
+    c.save()
+    buffer.seek(0)
+    return PdfReader(buffer)
+
+def create_toc_pages(toc_entries, content_start_page):
+    """Create table of contents pages with page numbers and clickable links."""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    # Track current y position and page
+    y = height - 3*cm
+    entries_per_page = 35
+    entry_count = 0
+    # Store link info: (toc_page, x, y, width, height, target_page)
+    links = []
+    current_toc_page = 0
+
+    def start_new_page():
+        nonlocal y, current_toc_page
+        c.showPage()
+        current_toc_page += 1
+        # Dark background
+        c.setFillColor(BG_COLOR)
+        c.rect(0, 0, width, height, fill=True, stroke=False)
+        y = height - 3*cm
+
+    def draw_toc_header():
+        nonlocal y
+        # Dark background
+        c.setFillColor(BG_COLOR)
+        c.rect(0, 0, width, height, fill=True, stroke=False)
+
+        # TOC title
+        c.setFillColor(TEXT_COLOR)
+        c.setFont('Helvetica-Bold', 24)
+        c.drawString(2*cm, height - 2*cm, 'Table of Contents')
+
+        # Line under title
+        c.setStrokeColor(ACCENT_COLOR)
+        c.setLineWidth(1)
+        c.line(2*cm, height - 2.5*cm, width - 2*cm, height - 2.5*cm)
+        y = height - 3.5*cm
+
+    draw_toc_header()
+
+    for title, page_num, depth, path in toc_entries:
+        if entry_count > 0 and entry_count %% entries_per_page == 0:
+            start_new_page()
+            # Continue TOC header on new page
+            c.setFillColor(TEXT_COLOR)
+            c.setFont('Helvetica-Bold', 14)
+            c.drawString(2*cm, height - 2*cm, 'Table of Contents (continued)')
+            c.setStrokeColor(ACCENT_COLOR)
+            c.setLineWidth(0.5)
+            c.line(2*cm, height - 2.3*cm, width - 2*cm, height - 2.3*cm)
+            y = height - 3*cm
+
+        # Indentation based on depth (0.4cm per level)
+        indent = depth * 0.4 * cm
+        x = 2*cm + indent
+
+        # Font size and style based on depth
+        if depth == 1:
+            c.setFont('Helvetica-Bold', 11)
+            c.setFillColor(TEXT_COLOR)
+        elif depth == 2:
+            c.setFont('Helvetica', 10)
+            c.setFillColor(TEXT_COLOR)
+        else:
+            c.setFont('Helvetica', 9)
+            c.setFillColor(MUTED_COLOR)
+
+        # Draw title
+        c.drawString(x, y, title)
+
+        # Draw page number (adjusted for cover + TOC pages)
+        actual_page = page_num + content_start_page
+        c.setFillColor(MUTED_COLOR)
+        c.setFont('Helvetica', 9)
+        c.drawRightString(width - 2*cm, y, str(actual_page))
+
+        # Store link rectangle (full width of entry line)
+        # Links will be added after merging since we need final page numbers
+        links.append((current_toc_page, x, y - 0.1*cm, width - 2*cm - x, 0.4*cm, actual_page - 1))
+
+        # Dotted line between title and page number
+        c.setStrokeColor(HexColor('#30363d'))
+        c.setLineWidth(0.3)
+        c.setDash(1, 2)
+        title_width = c.stringWidth(title, 'Helvetica-Bold' if depth == 1 else 'Helvetica', 11 if depth == 1 else (10 if depth == 2 else 9))
+        line_start = x + title_width + 0.3*cm
+        line_end = width - 2*cm - 0.5*cm
+        if line_end > line_start:
+            c.line(line_start, y + 0.1*cm, line_end, y + 0.1*cm)
+        c.setDash()
+
+        y -= 0.5*cm
+        entry_count += 1
+
+    c.save()
+    buffer.seek(0)
+    return PdfReader(buffer), links
+
+# Parse .nav.yml files to build proper navigation structure
+def parse_nav_yml(nav_dir, base_path=''):
+    """Parse .nav.yml and return ordered list of (title, path, depth) entries."""
+    nav_file = os.path.join(nav_dir, '.nav.yml')
+    entries = []
+
+    if not os.path.exists(nav_file):
+        return entries
+
+    with open(nav_file, 'r') as f:
+        nav_data = yaml.safe_load(f)
+
+    if not nav_data:
+        return entries
+
+    section_title = nav_data.get('title', '')
+    nav_items = nav_data.get('nav', [])
+
+    for item in nav_items:
+        if isinstance(item, str):
+            # Simple file reference: "index.md" or "subdirectory/"
+            if item.endswith('.md'):
+                # File reference
+                file_path = os.path.join(base_path, item)
+                # Convert .md to site path (file.md -> file/index.pdf or index.md -> index.pdf)
+                if item == 'index.md':
+                    site_path = base_path if base_path else ''
+                else:
+                    site_path = os.path.join(base_path, item[:-3])  # Remove .md
+
+                # Get title from frontmatter or filename
+                title = item[:-3].replace('-', ' ').replace('_', ' ').title()
+                if item == 'index.md' and section_title:
+                    title = section_title
+
+                entries.append((title, site_path, file_path))
+            else:
+                # Subdirectory reference
+                subdir = item.rstrip('/')
+                subdir_path = os.path.join(nav_dir, subdir)
+                sub_base = os.path.join(base_path, subdir) if base_path else subdir
+                sub_entries = parse_nav_yml(subdir_path, sub_base)
+                entries.extend(sub_entries)
+        elif isinstance(item, dict):
+            # Titled section: {"Title": [...]} or {"Title": "path.md"}
+            for title, content in item.items():
+                if isinstance(content, str):
+                    # Single file with custom title
+                    file_path = os.path.join(base_path, content)
+                    if content.endswith('.md'):
+                        site_path = os.path.join(base_path, content[:-3])
+                    else:
+                        site_path = os.path.join(base_path, content)
+                    entries.append((title, site_path, file_path))
+                elif isinstance(content, list):
+                    # Inline section with items - add section header first
+                    # Use special marker for section headers (no PDF, just TOC entry)
+                    entries.append((title, '__section__', '__section__'))
+                    for sub_item in content:
+                        if isinstance(sub_item, str) and sub_item.endswith('.md'):
+                            file_path = os.path.join(base_path, sub_item)
+                            site_path = os.path.join(base_path, sub_item[:-3])
+                            sub_title = sub_item[:-3].split('/')[-1].replace('-', ' ').replace('_', ' ').title()
+                            entries.append((sub_title, site_path, file_path))
+
+    return entries
+
+def get_pdf_path(site_dir, site_path):
+    """Convert site path to PDF file path."""
+    if not site_path:
+        return os.path.join(site_dir, 'index.pdf')
+    # Try directory/index.pdf first
+    pdf_path = os.path.join(site_dir, site_path, 'index.pdf')
+    if os.path.exists(pdf_path):
+        return pdf_path
+    # Try file.pdf
+    pdf_path = os.path.join(site_dir, site_path + '.pdf')
+    if os.path.exists(pdf_path):
+        return pdf_path
+    return None
+
+# Parse navigation from .nav.yml files
+print('Parsing navigation structure from .nav.yml files...')
+nav_entries = parse_nav_yml(docs_dir)
+
+# Build TOC entries with PDF paths and page numbers
+toc_entries = []
+pdf_files = []
+page_counts = []
+current_section_depth = 1  # Track depth for section headers
+
+for title, site_path, file_path in nav_entries:
+    if site_path == '__section__':
+        # Section header (no PDF) - will point to next page
+        next_page = sum(page_counts)
+        toc_entries.append((title, next_page, current_section_depth, '__section__'))
+        current_section_depth = 2  # Items after section header are indented
+        continue
+
+    pdf_path = get_pdf_path(site_dir, site_path)
+    if pdf_path and os.path.exists(pdf_path):
+        # Calculate depth from site_path
+        if not site_path:
+            depth = 0
+        else:
+            depth = len(site_path.replace('\\\\', '/').split('/'))
+
+        # Use section depth for items in inline sections
+        if current_section_depth == 2 and depth <= 2:
+            depth = current_section_depth
+
+        reader = PdfReader(pdf_path)
+        page_count = len(reader.pages)
+        page_counts.append(page_count)
+
+        current_page = sum(page_counts[:-1])
+        toc_entries.append((title, current_page, depth, site_path))
+        pdf_files.append(pdf_path)
+
+        # Reset section depth when we hit a new top-level item
+        if depth <= 1:
+            current_section_depth = 1
+
+print(f'Found {len(pdf_files)} PDF files from navigation')
+
+# Create cover page
+print('Creating cover page...')
+cover_reader = create_cover_page()
+cover_pages = len(cover_reader.pages)
+
+# Estimate TOC pages (roughly 35 entries per page)
+toc_page_estimate = max(1, (len(toc_entries) + 34) // 35)
+
+# Content starts after cover + TOC
+content_start_page = cover_pages + toc_page_estimate + 1
+
+# Create TOC pages
+print(f'Creating table of contents ({len(toc_entries)} entries)...')
+toc_reader, toc_links = create_toc_pages(toc_entries, content_start_page)
+toc_pages = len(toc_reader.pages)
+
+# Recalculate if TOC pages changed
+if toc_pages != toc_page_estimate:
+    content_start_page = cover_pages + toc_pages + 1
+    toc_reader, toc_links = create_toc_pages(toc_entries, content_start_page)
+
+# Final merge
+writer = PdfWriter()
+
+# Add cover page
+for page in cover_reader.pages:
+    writer.add_page(page)
+
+# Add TOC pages
+for page in toc_reader.pages:
+    writer.add_page(page)
+
+# Add content pages
+current_page = cover_pages + toc_pages
+bookmarks = []
+
+for i, pdf_path in enumerate(pdf_files):
+    title, _, depth, site_path = toc_entries[i]
+    bookmarks.append((title, current_page, depth, site_path))
+
+    reader = PdfReader(pdf_path)
+    for page in reader.pages:
+        writer.add_page(page)
+    current_page += len(reader.pages)
+
+# Add clickable links to TOC pages
+print(f'Adding {len(toc_links)} TOC links...')
+from pypdf.generic import ArrayObject, DictionaryObject, FloatObject, NameObject, NumberObject
+
+for toc_page_idx, x, y, link_width, link_height, target_page in toc_links:
+    # Get the actual page in the merged PDF (cover + toc_page_idx)
+    page_num = cover_pages + toc_page_idx
+    if page_num < len(writer.pages) and target_page < len(writer.pages):
+        page = writer.pages[page_num]
+
+        # Create link annotation
+        link = DictionaryObject()
+        link[NameObject('/Type')] = NameObject('/Annot')
+        link[NameObject('/Subtype')] = NameObject('/Link')
+        link[NameObject('/Rect')] = ArrayObject([
+            FloatObject(x),
+            FloatObject(y),
+            FloatObject(x + link_width),
+            FloatObject(y + link_height)
+        ])
+        link[NameObject('/Border')] = ArrayObject([NumberObject(0), NumberObject(0), NumberObject(0)])
+        # Destination: go to target page, fit width
+        link[NameObject('/Dest')] = ArrayObject([
+            writer.pages[target_page].indirect_reference,
+            NameObject('/XYZ'),
+            NumberObject(0),
+            NumberObject(842),  # A4 height
+            NumberObject(0)
+        ])
+
+        # Add annotation to page
+        if '/Annots' not in page:
+            page[NameObject('/Annots')] = ArrayObject()
+        page['/Annots'].append(link)
+
+# Add hierarchical bookmarks/outline
+print(f'Adding {len(bookmarks)} bookmarks...')
+
+# Add TOC bookmark first
+toc_bookmark = writer.add_outline_item('Table of Contents', cover_pages)
+
+parent_stack = {}
+for title, page_num, depth, path in bookmarks:
+    if depth == 1:
+        parent = writer.add_outline_item(title, page_num)
+        parent_stack[1] = parent
+        parent_stack[2] = None
+        parent_stack[3] = None
+    elif depth == 2 and parent_stack.get(1):
+        parent = writer.add_outline_item(title, page_num, parent=parent_stack[1])
+        parent_stack[2] = parent
+        parent_stack[3] = None
+    elif depth == 3 and parent_stack.get(2):
+        parent = writer.add_outline_item(title, page_num, parent=parent_stack[2])
+        parent_stack[3] = parent
+    elif depth >= 4 and parent_stack.get(3):
+        writer.add_outline_item(title, page_num, parent=parent_stack[3])
+
+# Ensure output directory exists
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+# Write merged PDF
+with open(output_path, 'wb') as f:
+    writer.write(f)
+
+print(f'Merged PDF written to {output_path}')
+print(f'Total pages: {len(writer.pages)}')
+print(f'  - Cover: {cover_pages} page(s)')
+print(f'  - TOC: {toc_pages} page(s)')
+print(f'  - Content: {current_page - cover_pages - toc_pages} pages')
+print(f'TOC entries: {len(bookmarks)}')
+`, dockerSiteDir, dockerOutputPath)
+
+	args = append(args, imageName, "python3", "-c", pythonScript)
+
+	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
+	if exitCode != 0 {
+		return fmt.Errorf("PDF merge exited with code %d", exitCode)
+	}
+
+	return nil
 }
 
 // patchMkDocsConfig patches the custom_template_path in mkdocs.yml
@@ -539,7 +1008,7 @@ func removePDFPlugins(configContent string) string {
 		trimmed := strings.TrimLeft(line, " ")
 		currentIndent := len(line) - len(trimmed)
 
-		if strings.HasPrefix(trimmed, "- mermaid-to-svg:") || strings.HasPrefix(trimmed, "- with-pdf:") {
+		if strings.HasPrefix(trimmed, "- mermaid-to-svg:") || strings.HasPrefix(trimmed, "- with-pdf:") || strings.HasPrefix(trimmed, "- exporter:") {
 			// Start skipping this plugin block
 			skipUntilNextPlugin = true
 			pluginIndent = currentIndent
@@ -610,4 +1079,59 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	}
 
 	return stagingDir, true
+}
+
+// regenPDFWithWeasyPrint re-renders a PDF from processed HTML using WeasyPrint directly
+// This bypasses mkdocs-with-pdf's internal WeasyPrint call, allowing us to use HTML
+// with embedded CSS (which fixes WeasyPrint's image embedding bug in large documents)
+func regenPDFWithWeasyPrint(htmlPath, pdfPath, hostRepoRoot, workspaceRoot, imageName string, logWriter io.Writer, isDinD bool) error {
+	// Calculate relative paths for Docker
+	relHTMLPath, err := filepath.Rel(workspaceRoot, htmlPath)
+	if err != nil {
+		return fmt.Errorf("calculating relative HTML path: %w", err)
+	}
+	relPDFPath, err := filepath.Rel(workspaceRoot, pdfPath)
+	if err != nil {
+		return fmt.Errorf("calculating relative PDF path: %w", err)
+	}
+
+	// Convert to Docker paths (forward slashes)
+	dockerHTMLPath := "/docs/" + strings.ReplaceAll(relHTMLPath, "\\", "/")
+	dockerPDFPath := "/docs/" + strings.ReplaceAll(relPDFPath, "\\", "/")
+
+	volumeMountPath := hostRepoRoot
+	dockerVolume := FormatDockerVolumePath(volumeMountPath)
+
+	// Build Docker command to run WeasyPrint directly
+	args := []string{
+		"run", "--rm",
+		"-v", dockerVolume + ":/docs",
+		"-w", "/docs",
+	}
+
+	// In DinD mode, run as current user
+	if isDinD {
+		uid := os.Getuid()
+		gid := os.Getgid()
+		args = append(args, "--user", fmt.Sprintf("%d:%d", uid, gid))
+	}
+
+	// Run WeasyPrint via Python
+	pythonCmd := fmt.Sprintf(`
+import weasyprint
+doc = weasyprint.HTML(filename='%s', base_url='/docs/')
+doc.write_pdf('%s')
+print('WeasyPrint regeneration complete')
+`, dockerHTMLPath, dockerPDFPath)
+
+	args = append(args, imageName, "python3", "-c", pythonCmd)
+
+	Logln(logWriter, "   Running WeasyPrint on processed HTML...")
+	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
+
+	if exitCode != 0 {
+		return fmt.Errorf("WeasyPrint exited with code %d", exitCode)
+	}
+
+	return nil
 }
