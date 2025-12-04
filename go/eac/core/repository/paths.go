@@ -130,6 +130,13 @@ func CommandsBinaryPath(repoRoot string) string {
 // allowing the tools directory to be specified explicitly.
 // If toolsDir is empty, uses the default ToolsDir constant.
 // This variant is useful when the caller has access to configuration.
+//
+// If a .new version of the binary exists (staged by a build), this function
+// performs an atomic replacement before returning the path:
+// 1. Rename current binary to .old
+// 2. Rename .new to the target name
+// 3. Remove .old
+// This lazy update ensures the binary is always fresh after a build.
 func CommandsBinaryPathWithToolsDir(repoRoot string, toolsDir string) string {
 	binaryName := "commands"
 	if runtime.GOOS == "windows" {
@@ -142,7 +149,25 @@ func CommandsBinaryPathWithToolsDir(repoRoot string, toolsDir string) string {
 
 	// Use container root if running in container, otherwise use repo root
 	effectiveRoot := GetEffectiveRoot(repoRoot)
-	return filepath.Join(effectiveRoot, toolsDir, binaryName)
+	binaryPath := filepath.Join(effectiveRoot, toolsDir, binaryName)
+
+	// Check for staged .new binary and perform atomic replacement
+	newPath := binaryPath + ".new"
+	if _, err := os.Stat(newPath); err == nil {
+		oldPath := binaryPath + ".old"
+
+		// Atomic replacement: current -> .old, .new -> current, remove .old
+		os.Remove(oldPath)            // Clean up any stale .old
+		os.Rename(binaryPath, oldPath) // Move current to .old (may fail if doesn't exist)
+		if err := os.Rename(newPath, binaryPath); err == nil {
+			os.Remove(oldPath) // Cleanup .old on success
+		} else {
+			// Restore on failure
+			os.Rename(oldPath, binaryPath)
+		}
+	}
+
+	return binaryPath
 }
 
 // CommandsBinaryExists checks if the commands binary exists at the expected path.

@@ -352,6 +352,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		StatusUpdateInterval: 2, // Update every 2 seconds
 		ModuleTypes:          moduleTypes,
 		ShowTimings:          showTimings,
+		DryRun:               dryRun,
 	}
 
 	// Create worker function that builds a single module and returns type info

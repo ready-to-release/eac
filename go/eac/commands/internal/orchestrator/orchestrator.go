@@ -223,8 +223,14 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		return result
 	}
 
-	// Purge existing output directory (best effort)
-	_ = os.RemoveAll(moduleOutputDir)
+	// In dry-run mode, preserve existing artifacts and use separate log file
+	// This allows meta-tests to mock builds without destroying real build outputs
+	if o.config.DryRun {
+		// Don't purge - preserve existing artifacts
+	} else {
+		// Purge existing output directory (best effort)
+		_ = os.RemoveAll(moduleOutputDir)
+	}
 
 	if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
 		result.ExitCode = 1
@@ -235,8 +241,12 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		return result
 	}
 
-	// Create log file
-	logPath := filepath.Join(moduleOutputDir, o.config.LogFileName)
+	// Create log file (use separate file in dry-run mode to preserve real build logs)
+	logFileName := o.config.LogFileName
+	if o.config.DryRun {
+		logFileName = "dry-run." + logFileName
+	}
+	logPath := filepath.Join(moduleOutputDir, logFileName)
 	logFile, err := os.Create(logPath)
 	if err != nil {
 		result.ExitCode = 1

@@ -138,7 +138,7 @@ func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputD
 	if hasExecutable && hasCrossCompile {
 		return buildCrossCompiled(module, moduleRoot, workspaceRoot, outputDir, logWriter, opts)
 	} else if hasExecutable {
-		return buildSingleBinary(module, moduleRoot, outputDir, logWriter, opts)
+		return buildSingleBinary(module, moduleRoot, workspaceRoot, outputDir, logWriter, opts)
 	} else {
 		// Library - validate it compiles and write marker
 		Logln(logWriter, "Running: go build ./...")
@@ -158,7 +158,7 @@ func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputD
 }
 
 // buildSingleBinary builds a single binary for the current platform
-func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	// Use "commands" as the base name for go-commands type, otherwise use moniker
 	binaryName := module.Moniker
 	if module.Type == "go-commands" {
@@ -177,6 +177,13 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, output
 	exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
+
+		// For go-commands type, also copy to tools directory so the CI tool binary stays fresh
+		if module.Type == "go-commands" {
+			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
+				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
+			}
+		}
 	}
 	return exitCode
 }
@@ -556,4 +563,52 @@ func computeSHA256(filePath string) (string, error) {
 
 	h := sha256.Sum256(data)
 	return fmt.Sprintf("%x", h), nil
+}
+
+// copyToToolsDir copies the built commands binary to the tools directory as a .new file.
+// The actual replacement happens lazily in CommandsBinaryPath() when the binary is next invoked.
+// This avoids issues with replacing a running binary during the build process.
+func copyToToolsDir(srcPath, binaryName, workspaceRoot string, logWriter io.Writer) error {
+	// Get tools directory from repository config
+	cfg := config.Global()
+	toolsDir := "out/tools" // default
+	if cfg != nil && cfg.Repository != nil {
+		toolsDir = cfg.Repository.ToolsPath()
+	}
+
+	destDir := filepath.Join(workspaceRoot, toolsDir)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return fmt.Errorf("create tools dir: %w", err)
+	}
+
+	destPath := filepath.Join(destDir, binaryName)
+	newPath := destPath + ".new"
+
+	// Copy to .new file
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return fmt.Errorf("open source: %w", err)
+	}
+	defer srcFile.Close()
+
+	newFile, err := os.Create(newPath)
+	if err != nil {
+		return fmt.Errorf("create .new file: %w", err)
+	}
+
+	if _, err := io.Copy(newFile, srcFile); err != nil {
+		newFile.Close()
+		os.Remove(newPath)
+		return fmt.Errorf("copy to .new: %w", err)
+	}
+	newFile.Close()
+
+	// Make executable
+	if err := os.Chmod(newPath, 0755); err != nil {
+		os.Remove(newPath)
+		return fmt.Errorf("chmod .new: %w", err)
+	}
+
+	Logln(logWriter, "✅ Staged tools binary update: %s.new", filepath.Join(toolsDir, binaryName))
+	return nil
 }
