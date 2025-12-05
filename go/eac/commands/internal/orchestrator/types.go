@@ -58,4 +58,10 @@ type Config struct {
 	ModuleTypes map[string]string
 	// ShowTimings enables the timing summary section (use --timings flag)
 	ShowTimings bool
+	// DryRun skips actual execution and preserves existing output artifacts
+	DryRun bool
+	// TUI enables the TUI console for real-time output display
+	TUI bool
+	// TUIHeight is the height of the TUI console window (default: tui.DefaultHeight)
+	TUIHeight int
 }

@@ -36,7 +36,9 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/reporter"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/testers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -114,6 +116,49 @@ type PackageTestResult struct {
 	Duration      time.Duration // Time taken to run the package tests
 }
 
+// TestContext holds shared state for parallel test execution via orchestrator
+type TestContext struct {
+	testsByPackage  map[string][]testing.TestReference
+	testParallelism int
+	testRunDir      string
+	reportFormat    string
+	coverage        bool
+	suiteTagFilter  string
+
+	// Thread-safe result storage
+	mu      sync.Mutex
+	results map[string]PackageTestResult
+}
+
+// CreateWorker returns an orchestrator worker function for test execution
+func (ctx *TestContext) CreateWorker() orchestrator.WorkerFunc {
+	return func(pkgPath string, logWriter io.Writer) int {
+		tests := ctx.testsByPackage[pkgPath]
+		result := runPackageTests(pkgPath, tests, logWriter, ctx.testParallelism,
+			ctx.testRunDir, ctx.reportFormat, ctx.coverage, ctx.suiteTagFilter)
+
+		ctx.mu.Lock()
+		ctx.results[pkgPath] = result
+		ctx.mu.Unlock()
+
+		if result.PackageFailed || result.TestsFailed > 0 {
+			return 1
+		}
+		return 0
+	}
+}
+
+// CollectResults returns all collected test results
+func (ctx *TestContext) CollectResults() []PackageTestResult {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	results := make([]PackageTestResult, 0, len(ctx.results))
+	for _, r := range ctx.results {
+		results = append(results, r)
+	}
+	return results
+}
+
 // TestSuite runs tests for a specific test suite
 func TestSuite() int {
 	// Parse arguments and flags
@@ -150,6 +195,8 @@ func TestSuite() int {
 	reportFormat := "cucumber" // Default report format for BDD tests
 	coverage := false // Generate coverage reports
 	showTimings := false // Show timing summary
+	useTUI := false      // TUI console (reserved for future use)
+	tuiHeight := tui.DefaultHeight // TUI height
 	var moduleFilters []string // Optional module filters (can be comma-separated)
 
 	for i := 4; i < len(os.Args); i++ {
@@ -170,6 +217,20 @@ func TestSuite() int {
 			coverage = true
 		} else if arg == "--timings" {
 			showTimings = true
+		} else if arg == "--tui" {
+			useTUI = true
+		} else if arg == "--tui-height" {
+			if i+1 >= len(os.Args) {
+				log.Errorf("--tui-height requires a value")
+				return 1
+			}
+			i++
+			var err error
+			tuiHeight, err = strconv.Atoi(os.Args[i])
+			if err != nil || tuiHeight < 3 || tuiHeight > 20 {
+				log.Errorf("--tui-height must be a number between 3 and 20")
+				return 1
+			}
 		} else if arg == "--module" {
 			// Read module names from next argument (comma-separated)
 			if i+1 >= len(os.Args) {
@@ -188,10 +249,11 @@ func TestSuite() int {
 			}
 		} else if strings.HasPrefix(arg, "--") {
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>, --as-junit, --as-cucumber, --coverage, --timings")
+			log.Errorf("Valid flags: --skip-deps, --list-only, --sequential, --parallel, --module <name>, --as-junit, --as-cucumber, --coverage, --timings, --tui, --tui-height")
 			return 1
 		}
 	}
+
 
 	// Get repository root
 	workspaceRootNative, err := repository.GetRepositoryRoot("")
@@ -577,16 +639,65 @@ func TestSuite() int {
 
 	suiteTagFilter := suite.BuildGodogTagFilterWithSkipTags(skipTags)
 
+	// Calculate test parallelism based on execution mode
 	if parallel {
 		// Package-level parallel: distribute CPU across packages
-		// Each package gets a smaller share of CPU cores
 		testParallelism = max(2, numCPU/4)
-		results = runTestsParallel(testsByPackage, multiWriter, testParallelism, testRunDir, reportFormat, coverage, suiteTagFilter)
 	} else {
 		// Sequential packages: each package gets full CPU power
 		testParallelism = numCPU
-		results = runTestsSequential(testsByPackage, multiWriter, testParallelism, testRunDir, reportFormat, coverage, suiteTagFilter)
 	}
+
+	// Create test context for orchestrator
+	testCtx := &TestContext{
+		testsByPackage:  testsByPackage,
+		testParallelism: testParallelism,
+		testRunDir:      testRunDir,
+		reportFormat:    reportFormat,
+		coverage:        coverage,
+		suiteTagFilter:  suiteTagFilter,
+		results:         make(map[string]PackageTestResult),
+	}
+
+	// Configure orchestrator
+	maxConcurrency := 4
+	if !parallel {
+		maxConcurrency = 1 // Sequential mode
+	}
+
+	// OutputBaseDir needs to be relative to WorkspaceRoot
+	relTestRunDir := repoCfg.TestOutputPath(suiteName)
+
+	orchConfig := orchestrator.Config{
+		WorkspaceRoot:        workspaceRootNative,
+		OutputBaseDir:        relTestRunDir,
+		LogFileName:          "test.log",
+		OrchestratorLogName:  "orchestrator.log",
+		ActionVerb:           "testing",
+		MaxConcurrency:       maxConcurrency,
+		StatusUpdateInterval: 2, // seconds
+		TUI:                  useTUI,
+		TUIHeight:            tuiHeight,
+	}
+
+	// Build moniker list from package paths
+	monikers := make([]string, 0, len(testsByPackage))
+	for pkgPath := range testsByPackage {
+		monikers = append(monikers, pkgPath)
+	}
+
+	// Execute tests via orchestrator
+	orch := orchestrator.New(orchConfig, testCtx.CreateWorker())
+	_, orchErr := orch.Run(monikers)
+	if orchErr != nil {
+		writeln(multiWriter, "❌ Orchestrator error: %v", orchErr)
+		return 1
+	}
+	orch.StopTUI()
+	orch.Close()
+
+	// Collect results from test context
+	results = testCtx.CollectResults()
 
 	// Calculate totals from results
 	packagesPassed := 0
@@ -1098,57 +1209,6 @@ func max(a, b int) int {
 		return a
 	}
 	return b
-}
-
-// runTestsSequential runs tests package by package sequentially
-func runTestsSequential(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) []PackageTestResult {
-	results := []PackageTestResult{}
-
-	for pkgPath, tests := range testsByPackage {
-		result := runPackageTests(pkgPath, tests, multiWriter, testParallelism, testRunDir, reportFormat, coverage, suiteTagFilter)
-		results = append(results, result)
-	}
-
-	return results
-}
-
-// runTestsParallel runs tests across packages in parallel using goroutines
-func runTestsParallel(testsByPackage map[string][]testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) []PackageTestResult {
-	// Use a mutex to protect shared results
-	var mu sync.Mutex
-	results := []PackageTestResult{}
-
-	// Create a wait group to track all goroutines
-	var wg sync.WaitGroup
-
-	// Create a channel to limit concurrent package tests (use number of CPU cores)
-	// For now, use a fixed pool size of 4 to avoid overwhelming the system
-	semaphore := make(chan struct{}, 4)
-
-	for pkgPath, tests := range testsByPackage {
-		wg.Add(1)
-
-		go func(path string, testList []testing.TestReference) {
-			defer wg.Done()
-
-			// Acquire semaphore
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-
-			// Run tests for this package
-			result := runPackageTests(path, testList, multiWriter, testParallelism, testRunDir, reportFormat, coverage, suiteTagFilter)
-
-			// Append result (thread-safe)
-			mu.Lock()
-			results = append(results, result)
-			mu.Unlock()
-		}(pkgPath, tests)
-	}
-
-	// Wait for all packages to complete
-	wg.Wait()
-
-	return results
 }
 
 // runPackageTests runs tests for a single package and returns detailed test results
@@ -2121,10 +2181,16 @@ func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWrit
 
 	pkgName := filepath.ToSlash(pkgPath)
 
-	// Get module root from test's module dependency
-	// The tests come from repo.specs but the package.json is in the module's files.root
+	// Get module root - try from pkgPath first (format: moduleRoot:featurePath)
+	// This is set by findTscucumberTestRunner in groupTestsByPackage
 	var moduleRoot string
-	if len(tests) > 0 && len(tests[0].ModuleDependencies) > 0 {
+	if strings.Contains(pkgPath, ":") {
+		parts := strings.SplitN(pkgPath, ":", 2)
+		moduleRoot = filepath.Join(workspaceRootNative, parts[0])
+	}
+
+	// Fallback: get module root from test's module dependency (@depm: tag)
+	if moduleRoot == "" && len(tests) > 0 && len(tests[0].ModuleDependencies) > 0 {
 		moniker := tests[0].ModuleDependencies[0]
 		registry, err := modules.LoadFromWorkspace(workspaceRootNative)
 		if err == nil {
@@ -2134,7 +2200,7 @@ func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWrit
 		}
 	}
 
-	// Verify package.json exists
+	// Verify module root was found
 	if moduleRoot == "" {
 		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "no module"))
 		return PackageTestResult{

@@ -91,12 +91,13 @@ func booksCreateWithModule(ctx *internal.TestContext, module string) error {
 	}
 	content := fmt.Sprintf(`books:
   - name: %s
+    module: %s
     description: Test book with specific module
     sources:
       - type: copy
         from: "docs/**/*.md"
         to: ""
-`, module)
+`, module, module)
 	return internal.CreateFile(ctx, ".r2r/eac/books.yml", content)
 }
 
@@ -107,6 +108,7 @@ func booksCreateWithInlineCommand(ctx *internal.TestContext, cmd string) error {
 	}
 	content := fmt.Sprintf(`books:
   - name: docs
+    module: docs
     description: Test book with inline command
     sources:
       - type: copy

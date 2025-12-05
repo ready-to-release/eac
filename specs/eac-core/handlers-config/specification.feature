@@ -81,7 +81,7 @@ Feature: eac-core_handlers-config
 
     Scenario: Docker module uses docker build handler
       Given the handlers are loaded
-      When I get the build handler for module type "go-r2r-extension" with capabilities "go_module,container" and build dep "docker"
+      When I get the build handler for module type "r2r-extension" with capabilities "container" and build dep "docker"
       Then the resolved handler should be "docker"
 
     Scenario: MkDocs site uses mkdocs build handler via dispatch rule
@@ -94,10 +94,10 @@ Feature: eac-core_handlers-config
       When I get the build handler for module type "vscode-ext" with capabilities "npm_package,typescript" and build dep "npm"
       Then the resolved handler should be "npm"
 
-    Scenario: Static module with no build dep uses empty handler
+    Scenario: Scripts package uses scripts handler
       Given the handlers are loaded
       When I get the build handler for module type "scripts-package" with capabilities "" and build dep ""
-      Then the resolved handler should be ""
+      Then the resolved handler should be "scripts"
 
     Scenario: Primary build dep placeholder is resolved
       Given the handlers are loaded
@@ -360,10 +360,10 @@ Feature: eac-core_handlers-config
         | module_type     | capabilities                        | build_dep | expected_handler |
         | go-cli          | go_module,executable,cross_compile  | go        | go               |
         | go-library      | go_module                           | go        | go               |
-        | go-r2r-extension| go_module,container                 | docker    | docker           |
+        | r2r-extension   | container                           | docker    | docker           |
         | mkdocs-site     | documentation,serveable,container   | docker    | mkdocs           |
         | vscode-ext      | npm_package,typescript              | npm       | npm              |
-        | scripts-package |                                     |           |                  |
+        | scripts-package |                                     |           | scripts          |
         | configuration   |                                     |           |                  |
 
     Scenario Outline: Test handler dispatch for all module types

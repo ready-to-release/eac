@@ -218,6 +218,18 @@ blockquote {
   display: none !important;
 }
 
+/* Mermaid diagram containers with size control */
+.mermaid-wrapper {
+  display: block;
+  page-break-inside: avoid;
+  margin: 1em auto;
+}
+
+.mermaid-wrapper svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Page break utilities */
 .page-break { page-break-after: always; }
 .page-break-before { page-break-before: always; }

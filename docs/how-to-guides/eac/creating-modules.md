@@ -102,7 +102,7 @@ modules:
 | `go-cli` | Go CLI with cross-platform builds | go |
 | `go-commands` | Go library with CLI wrapper | go |
 | `go-mcp` | Go MCP server | go |
-| `go-r2r-extension` | r2r extension container | go, docker |
+| `r2r-extension` | r2r extension container | docker |
 | `mkdocs-site` | Documentation site | docker |
 | `scripts-package` | Shell scripts | none |
 | `configuration` | Config files only | none |

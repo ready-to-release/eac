@@ -44,16 +44,12 @@ modules:
           - scripts/sh/claude/env-setup.sh
 
   # ============================================================================
-  # Documentation
+  # Documentation - GitHub Pages Site
   # ============================================================================
   - moniker: docs
-    name: Documentation
+    name: Documentation Site
     type: mkdocs-site
-    description: MkDocs documentation site including reference documentation
-    # Note: docs uses the pre-built commands binary (out/build/eac-commands/commands.exe)
-    # for book preprocessing. Build eac-commands separately if needed.
-    depends_on:
-      - eac-commands
+    description: MkDocs documentation site for GitHub Pages (HTML only, no PDF)
     files:
       root: docs
       assets:
@@ -70,16 +66,34 @@ modules:
           - mkdocs.yml
           - .github/workflows/ci-docs.yaml
           - .github/workflows/release-docs.yml
-          - .github/workflows/release-docs-book.yaml
           - containers/mkdocs-site/**
-          - containers/mkdocs-pdf/**
+
+  # ============================================================================
+  # Documentation Books - PDF with Generated Content
+  # ============================================================================
+  - moniker: books
+    name: Documentation Books
+    type: mkdocs-site
+    description: PDF documentation books with generated reference content from EAC commands
+    files:
+      root: containers/mkdocs-pdf
+      assets:
+        - "**/*"  # All files in mkdocs-pdf container
+      changelog: ../../release/books/CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-books.yaml
+        release: .github/workflows/release-books.yaml
+      repo:
+        other:
+          - .github/workflows/ci-books.yaml
+          - .github/workflows/release-books.yaml
 
   # ============================================================================
   # EAC Extension
   # ============================================================================
   - moniker: ext-eac
     name: EAC Extension for R2R CLI
-    type: go-r2r-extension
+    type: r2r-extension
     description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
     depends_on:
       - eac-commands

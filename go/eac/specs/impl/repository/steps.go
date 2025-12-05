@@ -12,7 +12,6 @@ import (
 	"github.com/cucumber/godog"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	repositoryreports "github.com/ready-to-release/eac/go/eac/core/repository/reports"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
@@ -323,7 +322,12 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 		return err
 	}
 
-	moduleReport, err := contractsreports.GetModuleContracts(c.repoRoot)
+	// Use cached module contracts for performance
+	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
+		return err
+	}
+
+	moduleReport, err := c.sharedCtx.OriginalRepoCache.ModuleReport()
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -350,24 +354,18 @@ func (c *repositoryContext) discoverAllMarkdownFiles() error {
 		return err
 	}
 
-	err := filepath.Walk(c.repoRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		// Skip hidden directories and common ignore patterns
-		if info.IsDir() {
-			name := info.Name()
-			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if strings.HasSuffix(path, ".md") {
-			c.markdownFiles = append(c.markdownFiles, path)
-		}
-		return nil
-	})
-	return err
+	// Use cached git ls-files instead of filepath.Walk (49s -> <1s)
+	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
+		return err
+	}
+
+	// Get all .md files from cache and convert to absolute paths
+	relPaths := c.sharedCtx.OriginalRepoCache.FilesByExtension(".md")
+	c.markdownFiles = make([]string, len(relPaths))
+	for i, relPath := range relPaths {
+		c.markdownFiles[i] = c.sharedCtx.OriginalRepoCache.AbsolutePath(relPath)
+	}
+	return nil
 }
 
 func (c *repositoryContext) discoverAllGherkinFeatureFiles() error {
@@ -375,17 +373,18 @@ func (c *repositoryContext) discoverAllGherkinFeatureFiles() error {
 		return err
 	}
 
-	specsDir := filepath.Join(c.repoRoot, "specs")
-	err := filepath.Walk(specsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to walk specs directory: %w", err)
-		}
-		if !info.IsDir() && strings.HasSuffix(path, ".feature") {
-			c.featureFiles = append(c.featureFiles, path)
-		}
-		return nil
-	})
-	return err
+	// Use cached git ls-files instead of filepath.Walk
+	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
+		return err
+	}
+
+	// Get all .feature files in specs/ directory from cache
+	relPaths := c.sharedCtx.OriginalRepoCache.FilesInDirWithExtension("specs", ".feature")
+	c.featureFiles = make([]string, len(relPaths))
+	for i, relPath := range relPaths {
+		c.featureFiles[i] = c.sharedCtx.OriginalRepoCache.AbsolutePath(relPath)
+	}
+	return nil
 }
 
 // ============================================================================
@@ -570,7 +569,12 @@ func (c *repositoryContext) loadAllModuleContracts() error {
 		return err
 	}
 
-	moduleReport, err := contractsreports.GetModuleContracts(c.repoRoot)
+	// Use cached module contracts for performance
+	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
+		return err
+	}
+
+	moduleReport, err := c.sharedCtx.OriginalRepoCache.ModuleReport()
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
@@ -746,14 +750,29 @@ func (c *repositoryContext) checkForOrphanFiles() error {
 
 	c.orphanFiles = []repository.RepositoryFileWithModule{}
 
-	// Get all files with module ownership using the repository package
-	filesReport, err := repositoryreports.GetFilesModulesReport(true, false, false, c.repoRoot)
-	if err != nil {
-		return fmt.Errorf("failed to get files report: %w", err)
+	// Use cached file list instead of running git ls-files again
+	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
+		return fmt.Errorf("failed to get file list: %w", err)
 	}
 
-	// GetOrphanFiles returns files with no module ownership
-	c.orphanFiles = filesReport.OrphanFiles
+	// Check each file against the already-loaded module registry
+	for _, file := range c.sharedCtx.OriginalRepoCache.TrackedFiles() {
+		// Skip git internal files (.gitignore, .gitkeep) - same as GetRepositoryFiles
+		basename := filepath.Base(file)
+		if basename == ".gitignore" || basename == ".gitkeep" {
+			continue
+		}
+
+		// Use the already-loaded registry to check file ownership
+		matchingModules := c.moduleReport.Registry.FindModulesForFile(file)
+		if len(matchingModules) == 0 {
+			c.orphanFiles = append(c.orphanFiles, repository.RepositoryFileWithModule{
+				Name:    file,
+				Modules: []string{},
+			})
+		}
+	}
+
 	return nil
 }
 
@@ -780,40 +799,33 @@ func (c *repositoryContext) checkForFilesWithMultiModuleOwnership() error {
 	}
 
 	c.multiOwnershipMap = make(map[string][]string)
-	modules := c.moduleReport.Registry.All()
 
-	// Walk the repository and check each file against all modules
-	err := filepath.Walk(c.repoRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			name := info.Name()
-			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		// Get relative path
-		relPath, pathErr := filepath.Rel(c.repoRoot, path)
-		if pathErr != nil {
-			return nil
-		}
-		relPath = strings.ReplaceAll(relPath, "\\", "/")
+	// Use cached file list instead of running git ls-files again
+	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
+		return fmt.Errorf("failed to get file list: %w", err)
+	}
 
-		// Check which modules match this file
-		var matchingModules []string
-		for _, m := range modules {
-			if m.MatchesFile(relPath) {
-				matchingModules = append(matchingModules, m.Name)
-			}
+	// Check each file against the already-loaded module registry
+	for _, file := range c.sharedCtx.OriginalRepoCache.TrackedFiles() {
+		// Skip git internal files (.gitignore, .gitkeep)
+		basename := filepath.Base(file)
+		if basename == ".gitignore" || basename == ".gitkeep" {
+			continue
 		}
+
+		// Use the already-loaded registry to check file ownership
+		matchingModules := c.moduleReport.Registry.FindModulesForFile(file)
 		if len(matchingModules) > 1 {
-			c.multiOwnershipMap[relPath] = matchingModules
+			// Extract module names
+			moduleNames := make([]string, len(matchingModules))
+			for i, m := range matchingModules {
+				moduleNames[i] = m.Name
+			}
+			c.multiOwnershipMap[file] = moduleNames
 		}
-		return nil
-	})
-	return err
+	}
+
+	return nil
 }
 
 func (c *repositoryContext) noFilesShouldBelongToMultipleModules() error {
@@ -845,25 +857,23 @@ func (c *repositoryContext) discoverGodogTestFiles(dir string) error {
 	c.godogTestFiles = []string{}
 	c.filesWithBuildTags = make(map[string]string)
 
-	searchDir := filepath.Join(c.repoRoot, dir)
-	return filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
+	// Use cached file list instead of filepath.Walk
+	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
+		return err
+	}
+
+	// Get all godog_test.go files in the specified directory from cache
+	for _, file := range c.sharedCtx.OriginalRepoCache.FilesInDir(dir) {
+		if strings.HasSuffix(file, "godog_test.go") {
+			c.godogTestFiles = append(c.godogTestFiles, file)
 		}
-		if info.IsDir() {
-			return nil
-		}
-		if info.Name() == "godog_test.go" {
-			relPath, _ := filepath.Rel(c.repoRoot, path)
-			c.godogTestFiles = append(c.godogTestFiles, relPath)
-		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func (c *repositoryContext) checkFilesForBuildTags() error {
 	for _, relPath := range c.godogTestFiles {
-		fullPath := filepath.Join(c.repoRoot, relPath)
+		fullPath := c.sharedCtx.OriginalRepoCache.AbsolutePath(relPath)
 		content, err := os.ReadFile(fullPath)
 		if err != nil {
 			continue
@@ -940,30 +950,14 @@ func (c *repositoryContext) scanRepositoryForScriptFiles() error {
 		return err
 	}
 
-	return filepath.Walk(c.repoRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			name := info.Name()
-			// Skip excluded directories
-			if name == "node_modules" || name == "vendor" || name == "out" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
+	// Use cached git ls-files instead of filepath.Walk (55s -> <1s)
+	if err := c.sharedCtx.EnsureOriginalRepoCache(); err != nil {
+		return err
+	}
 
-		// Check if file has a script extension
-		for _, ext := range c.scriptExtensions {
-			if strings.HasSuffix(info.Name(), ext) {
-				relPath, _ := filepath.Rel(c.repoRoot, path)
-				relPath = strings.ReplaceAll(relPath, "\\", "/")
-				c.discoveredScripts = append(c.discoveredScripts, relPath)
-				break
-			}
-		}
-		return nil
-	})
+	// Get all files matching any script extension from cache
+	c.discoveredScripts = c.sharedCtx.OriginalRepoCache.FilesMatchingAnyExtension(c.scriptExtensions)
+	return nil
 }
 
 func (c *repositoryContext) allScriptsShouldBeInApprovedLocations(table *godog.Table) error {

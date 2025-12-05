@@ -37,12 +37,18 @@ type TestContext struct {
 	// MockOverrides holds per-scenario mock environment variable overrides.
 	// Keys are env var names (e.g., "R2R_MOCK_AI_SPECS"), values are mock file names.
 	MockOverrides map[string]string
+
+	// OriginalRepoCache provides cached data from the ORIGINAL repository root.
+	// This is NOT for isolated/mocked test repositories - only the real repo.
+	// This dramatically improves performance by avoiding repeated git/file operations.
+	OriginalRepoCache *TestCache
 }
 
 // NewTestContext creates a new test context.
 func NewTestContext() *TestContext {
 	return &TestContext{
 		SharedTestContext: coretesting.NewSharedTestContext(),
+		OriginalRepoCache: NewTestCache(),
 	}
 }
 
@@ -51,7 +57,17 @@ func (c *TestContext) Reset() {
 	c.SharedTestContext.Reset()
 	c.MockOverrides = nil // Clear per-scenario mock overrides
 	c.CurrentWorkDir = c.IsolatedDir // Reset to main isolated directory
-	// Don't reset OriginalRepoRoot or IsolatedDir - they're set once at init
+	// Don't reset OriginalRepoRoot, IsolatedDir, or Cache - they're set once at init
+}
+
+// EnsureOriginalRepoCache ensures the original repo cache is populated.
+// This should be called at the start of any scenario that needs cached data
+// from the ORIGINAL repository (not isolated/mocked repos).
+func (c *TestContext) EnsureOriginalRepoCache() error {
+	if c.OriginalRepoCache == nil {
+		c.OriginalRepoCache = NewTestCache()
+	}
+	return c.OriginalRepoCache.EnsurePopulated(c.OriginalRepoRoot)
 }
 
 // SetMockOverride sets a mock environment variable override for this scenario.

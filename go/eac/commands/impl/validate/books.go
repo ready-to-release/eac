@@ -67,25 +67,35 @@ func ValidateBooks() int {
 	var hasErrors bool
 	var validBooks int
 
+	// Check for duplicate book names
+	bookNames := make(map[string]bool)
+	for _, book := range cfg.Books.Books {
+		if bookNames[book.Name] {
+			log.Errorf("Duplicate book name: '%s'", book.Name)
+			hasErrors = true
+		}
+		bookNames[book.Name] = true
+	}
+
 	for _, book := range cfg.Books.Books {
 		log.Infof("Book '%s':", book.Name)
 
 		// Check module exists
-		module, found := cfg.Modules.GetModule(book.Name)
+		module, found := cfg.Modules.GetModule(book.Module)
 		if !found {
-			log.Errorf("  Module '%s' not found in modules.yml", book.Name)
+			log.Errorf("  Module '%s' not found in modules.yml", book.Module)
 			hasErrors = true
 			continue
 		}
 
 		// Check module is mkdocs-site
 		if module.Type != "mkdocs-site" {
-			log.Errorf("  Module '%s' is type '%s', expected 'mkdocs-site'", book.Name, module.Type)
+			log.Errorf("  Module '%s' is type '%s', expected 'mkdocs-site'", book.Module, module.Type)
 			hasErrors = true
 			continue
 		}
 
-		log.Infof("  Module: %s (mkdocs-site)", book.Name)
+		log.Infof("  Module: %s (mkdocs-site)", book.Module)
 
 		// Count sources
 		copyCount := len(book.GetCopySources())

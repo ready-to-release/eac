@@ -72,15 +72,15 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: commands-binary
-          path: out/build/eac-commands
+          path: out/tools
 
       - name: Make executable
-        run: chmod +x out/build/eac-commands/commands
+        run: chmod +x out/tools/commands
 
       - name: Run full test suite
         id: test
         run: |
-          COMMANDS="./out/build/eac-commands/commands"
+          COMMANDS="./out/tools/commands"
 
           echo "Running full commit test suite for all modules..."
           echo ""
@@ -153,17 +153,17 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: commands-binary
-          path: out/build/eac-commands
+          path: out/tools
 
       - name: Make executable
-        run: chmod +x out/build/eac-commands/commands
+        run: chmod +x out/tools/commands
 
       - name: Detect Changed Modules
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          COMMANDS="./out/build/eac-commands/commands"
+          COMMANDS="./out/tools/commands"
 
           # Check if trigger-all override is enabled
           TRIGGER_ALL="${{ inputs.trigger-all }}"
@@ -340,15 +340,15 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: commands-binary
-          path: out/build/eac-commands
+          path: out/tools
 
       - name: Make executable
-        run: chmod +x out/build/eac-commands/commands
+        run: chmod +x out/tools/commands
 
       - name: Calculate Execution Order
         id: calculate
         run: |
-          COMMANDS="./out/build/eac-commands/commands"
+          COMMANDS="./out/tools/commands"
 
           # Get execution order for changed modules
           MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
@@ -409,14 +409,14 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: commands-binary
-          path: out/build/eac-commands
+          path: out/tools
 
       - name: Make executable
-        run: chmod +x out/build/eac-commands/commands
+        run: chmod +x out/tools/commands
 
       - name: Execute All Layers
         run: |
-          COMMANDS="./out/build/eac-commands/commands"
+          COMMANDS="./out/tools/commands"
           PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
           LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
           IS_PR="${{ github.event_name == 'pull_request' }}"
