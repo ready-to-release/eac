@@ -47,7 +47,7 @@ books:
     description: "Complete repository structure report with all generated content"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
-    default: false # Slow PDF build - use --all to include
+    default: false  # Slow PDF build - use --all to include
 
     sources:
       # Assets for PDF rendering (required for stylesheets)
@@ -112,7 +112,7 @@ books:
     description: "Conceptual documentation - Everything as Code, CD practices, and methodology"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
-    default: false # Slow PDF build - use --all to include
+    default: false  # Slow PDF build - use --all to include
 
     sources:
       # Explanation content (conceptual docs)
@@ -135,7 +135,7 @@ books:
   - name: risk-evidence-package
     module: books
     description: "Comprehensive risk assessment evidence package with all supporting artifacts"
-    output: "pdf-dark"
+    output: pdf-dark
     default: false
 
     sources:
