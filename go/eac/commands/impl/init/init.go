@@ -26,13 +26,13 @@ package init
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -159,9 +159,8 @@ func Init() int {
 	defer logger.Sync()
 
 	// Define paths
-	eacDir := filepath.Join(workspaceRoot, ".r2r", "eac")
-	teamConfigPath := filepath.Join(eacDir, "eac-config.yml")
-	personalConfigPath := filepath.Join(eacDir, "eac-config.personal.yml")
+	teamConfigPath := paths.EACConfigFilePath(workspaceRoot)
+	personalConfigPath := paths.EACConfigPersonalFilePath(workspaceRoot)
 
 	// Check if config already exists
 	if err := checkExistingConfig(teamConfigPath, personalConfigPath, force, logger); err != nil {
@@ -357,7 +356,7 @@ func displayProviderInfo(config *agentConfig, logger *logging.Logger) {
 // createDirectoryStructure creates the .r2r/eac directory structure
 func createDirectoryStructure(workspaceRoot string) error {
 	// Create .r2r/eac directory
-	eacDir := filepath.Join(workspaceRoot, ".r2r", "eac")
+	eacDir := paths.EACConfigPath(workspaceRoot)
 	if err := os.MkdirAll(eacDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
 	}
@@ -367,20 +366,18 @@ func createDirectoryStructure(workspaceRoot string) error {
 
 // writeConfig writes the EAC configuration (team or personal based on tokens)
 func writeConfig(workspaceRoot string, config *agentConfig, tokens *tokenConfig, logger *logging.Logger) (string, error) {
-	eacDir := filepath.Join(workspaceRoot, ".r2r", "eac")
-
 	// Determine which file to write and whether to use env vars or direct tokens
 	var configPath string
 	var useEnvVars bool
 
 	if tokens.aiToken != "" {
 		// User provided AI token - write personal config with direct values
-		configPath = filepath.Join(eacDir, "eac-config.personal.yml")
+		configPath = paths.EACConfigPersonalFilePath(workspaceRoot)
 		useEnvVars = false
 		logger.Info("📝 Creating personal configuration with actual tokens...")
 	} else {
 		// No tokens provided - write team config with env var placeholders
-		configPath = filepath.Join(eacDir, "eac-config.yml")
+		configPath = paths.EACConfigFilePath(workspaceRoot)
 		useEnvVars = true
 		logger.Info("📝 Creating team configuration with environment variable placeholders...")
 	}

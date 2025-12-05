@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
@@ -170,10 +171,10 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 }
 
 // createCommand creates an exec.Cmd for running commands.
-// Uses repository.CommandsBinaryPath() to locate the pre-built binary.
+// Uses paths.CommandsBinaryPath() to locate the pre-built binary.
 // The binary must exist - tests should have @depm:eac-commands dependency.
 func (c *TestContext) createCommand(parts []string) *exec.Cmd {
-	binaryPath := repository.CommandsBinaryPath(c.OriginalRepoRoot)
+	binaryPath := paths.CommandsBinaryPath(c.OriginalRepoRoot)
 
 	// Check if binary exists and log diagnostic info if it doesn't
 	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {

@@ -37,6 +37,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // TestIsolation provides an isolated test environment for BDD tests.
@@ -180,7 +181,7 @@ ai:
 git:
   token: ""
 `
-		configDir := filepath.Join(t.isolatedDir, ".r2r", "eac")
+		configDir := paths.EACConfigPath(t.isolatedDir)
 		if err := os.MkdirAll(configDir, 0755); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
@@ -199,12 +200,12 @@ git:
 
 	// Write mock AI response file if provided
 	if t.mockAIResponse != "" {
-		mockDir := filepath.Join(t.isolatedDir, ".r2r", "test")
+		mockPath := paths.AITestMockPath(t.isolatedDir)
+		mockDir := filepath.Dir(mockPath)
 		if err := os.MkdirAll(mockDir, 0755); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to create .r2r/test directory: %w", err)
 		}
-		mockPath := filepath.Join(mockDir, "ai-mock.txt")
 		if err := os.WriteFile(mockPath, []byte(t.mockAIResponse), 0644); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to create ai-mock.txt: %w", err)
@@ -375,12 +376,11 @@ func (t *TestIsolation) SetMockAIResponse(response string) error {
 		return fmt.Errorf("cannot set mock AI response: isolation not set up")
 	}
 
-	mockDir := filepath.Join(t.isolatedDir, ".r2r", "test")
+	mockPath := paths.AITestMockPath(t.isolatedDir)
+	mockDir := filepath.Dir(mockPath)
 	if err := os.MkdirAll(mockDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .r2r/test directory: %w", err)
 	}
-
-	mockPath := filepath.Join(mockDir, "ai-mock.txt")
 	if err := os.WriteFile(mockPath, []byte(response), 0644); err != nil {
 		return fmt.Errorf("failed to write ai-mock.txt: %w", err)
 	}

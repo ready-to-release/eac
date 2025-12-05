@@ -23,6 +23,7 @@ import (
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -254,7 +255,7 @@ func printDesignValidateUsage() {
 // getValidationOutputPath returns the absolute path to the validation output JSON file
 func getValidationOutputPath(repoRoot string) (string, error) {
 	// Use out/logs/design directory
-	outDir := filepath.Join(repository.LogsPath(repoRoot), "design")
+	outDir := filepath.Join(paths.LogsPath(repoRoot), "design")
 
 	// Create directory if it doesn't exist
 	if err := os.MkdirAll(outDir, 0755); err != nil {

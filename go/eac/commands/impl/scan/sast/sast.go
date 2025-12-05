@@ -1,4 +1,4 @@
-// Command: security sast
+// Command: scan sast
 // Short: Static Application Security Testing using Semgrep
 // Long: Perform Static Application Security Testing (SAST) using Semgrep.
 // Long:
@@ -22,10 +22,11 @@
 package sast
 
 import (
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/security/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -51,7 +52,7 @@ func SAST() int {
 
 	// Parse module monikers and flags
 	var monikers []string
-	config := "auto" // Default to auto-detect
+	configValue := "auto" // Default to auto-detect
 	debug := false
 
 	for i := 0; i < len(args); i++ {
@@ -64,12 +65,12 @@ func SAST() int {
 				return 1
 			}
 			i++
-			config = args[i]
+			configValue = args[i]
 		case "--debug", "-d":
 			debug = true
 		default:
 			if strings.HasPrefix(arg, "--config=") {
-				config = strings.TrimPrefix(arg, "--config=")
+				configValue = strings.TrimPrefix(arg, "--config=")
 			} else if strings.HasPrefix(arg, "--") {
 				log.Errorf( "Error: unknown flag: %s\n", arg)
 				printSASTUsage()
@@ -99,8 +100,20 @@ func SAST() int {
 	}
 	defer logger.Sync()
 
+	// Load configuration
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		logger.Error("Failed to load configuration", zap.Error(err))
+		log.Errorf(" failed to load configuration: %v\n", err)
+		return 1
+	}
+
+	// Get Docker image from config
+	semgrepImage := cfg.SecurityTools.DockerImages.Semgrep.FullImage()
+	logger.Debug("Using Semgrep image", zap.String("image", semgrepImage))
+
 	logger.Info("Starting SAST scanner",
-		zap.String("config", config),
+		zap.String("config", configValue),
 		zap.Strings("modules", monikers),
 		zap.Bool("debug", debug))
 
@@ -141,7 +154,7 @@ func SAST() int {
 		log.Infof("🔬 Scanning %s...\n", moniker)
 
 		// Run Semgrep SAST scan
-		findings, err := internal.RunSemgrepSAST(workspaceRoot, module.Files.Root, config, logger)
+		findings, err := internal.RunSemgrepSAST(workspaceRoot, module.Files.Root, configValue, semgrepImage, logger)
 		if err != nil {
 			logger.Error("SAST scan failed", zap.String("moniker", moniker), zap.Error(err))
 			log.Errorf( "  ❌ Failed: %v\n", err)

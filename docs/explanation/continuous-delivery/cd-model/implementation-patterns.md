@@ -185,7 +185,7 @@ Instead of manual approval at Stage 9, the CDe pattern uses automated approval b
 
 - All tests passing (100%)
 - Code coverage meets threshold
-- No critical/high security vulnerabilities
+- No critical/high scan vulnerabilities
 - Performance within acceptable range
 - No open critical bugs
 

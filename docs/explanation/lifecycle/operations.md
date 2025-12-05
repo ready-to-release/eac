@@ -55,7 +55,7 @@ Validates that system access remains appropriate and secure.
 
 | Term         | Definition                                                                                        | Examples                                                          |
 |--------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-| **Defect**   | A flaw in software that causes incorrect behavior or failure to meet requirements                 | Bug in code, incorrect data display, security vulnerability       |
+| **Defect**   | A flaw in software that causes incorrect behavior or failure to meet requirements                 | Bug in code, incorrect data display, scan vulnerability       |
 | **Incident** | An unplanned interruption or reduction in quality of IT services requiring immediate attention    | System outage, application crash, network connectivity issue      |
 
 ### Defects

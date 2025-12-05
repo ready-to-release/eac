@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
@@ -336,7 +337,7 @@ paths:
 		// Create mock security scan results with timestamp filename (as expected by evidence loader)
 		// Use a recent timestamp so evidence is fresh
 		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
-		securityDir := filepath.Join("out", "security", module, "vuln")
+		securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module, "vuln")
 		trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001", "Severity": "HIGH"}]}]}`
 		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), trivyJSON)
 	})

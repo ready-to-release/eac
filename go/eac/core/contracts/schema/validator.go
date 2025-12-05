@@ -25,6 +25,7 @@ const (
 	SchemaRepository         SchemaType = "repository"
 	SchemaEACConfig          SchemaType = "eac-config"
 	SchemaBooks              SchemaType = "books"
+	SchemaSecurityTools      SchemaType = "security-tools"
 )
 
 // schemaFileNames maps schema types to their file names (without path)
@@ -39,6 +40,7 @@ var schemaFileNames = map[SchemaType]string{
 	SchemaRepository:         "repository.schema.json",
 	SchemaEACConfig:          "eac-config.schema.json",
 	SchemaBooks:              "books.schema.json",
+	SchemaSecurityTools:      "security-tools.schema.json",
 }
 
 // ContractVersion is the schema contract version
@@ -224,6 +226,7 @@ func GetSchemaTypes() []SchemaType {
 		SchemaRepository,
 		SchemaEACConfig,
 		SchemaBooks,
+		SchemaSecurityTools,
 	}
 }
 

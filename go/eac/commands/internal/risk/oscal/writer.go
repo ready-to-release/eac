@@ -11,6 +11,7 @@ import (
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/gofrs/flock"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 const (
@@ -143,7 +144,7 @@ func CleanStaleLocksIfNeeded(lockPath string) error {
 
 // EnsureRiskOutputDir ensures the risk output directory exists for a module.
 func EnsureRiskOutputDir(workspaceRoot, moduleName string) (string, error) {
-	outputDir := filepath.Join(workspaceRoot, "out", "risk", moduleName)
+	outputDir := paths.RiskOutputPath(workspaceRoot, moduleName)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create risk output directory: %w", err)
 	}
@@ -152,7 +153,7 @@ func EnsureRiskOutputDir(workspaceRoot, moduleName string) (string, error) {
 
 // EnsureProfilesDir ensures the profiles directory exists.
 func EnsureProfilesDir(workspaceRoot string) (string, error) {
-	profileDir := filepath.Join(workspaceRoot, "specs", "risk-controls")
+	profileDir := filepath.Join(workspaceRoot, paths.SpecsDir, paths.RiskControlsDir)
 	if err := os.MkdirAll(profileDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create profiles directory: %w", err)
 	}

@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // ScannerType represents the type of security scanner.
@@ -25,11 +27,11 @@ const (
 )
 
 // FindLatestSecurityScan finds the most recent security scan file for a module and scanner type.
-// Security scan files are stored in: out/security/<module>/<scanner>/<timestamp>.json
+// Security scan files are stored in: out/scan/<module>/<scanner>/<timestamp>.json
 // The timestamp format is sortable: "2006-01-02T15-04-05Z"
 func FindLatestSecurityScan(workspaceRoot, moduleName string, scannerType ScannerType) (string, error) {
-	// Construct scanner directory path
-	scanDir := filepath.Join(workspaceRoot, "out", "security", moduleName, string(scannerType))
+	// Construct scanner directory path using repository constants
+	scanDir := filepath.Join(workspaceRoot, paths.OutDir, paths.SecurityDir, moduleName, string(scannerType))
 
 	// Read directory contents
 	entries, err := os.ReadDir(scanDir)

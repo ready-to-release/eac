@@ -19,6 +19,7 @@ import (
 	docsInternal "github.com/ready-to-release/eac/go/eac/commands/impl/docs/helper"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"go.uber.org/zap"
 )
@@ -64,7 +65,7 @@ func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 		return
 	}
 
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "docs")
+	debugDir := paths.CommandLogsPath(workspaceRoot, "docs")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn("Failed to create debug directory", zap.Error(err))
 		return

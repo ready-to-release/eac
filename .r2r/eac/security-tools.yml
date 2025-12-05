@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/security-tools.schema.json
+
+# Security Scanning Tool Docker Image Configuration
+#
+# This file pins Docker image versions for security scanning tools to ensure
+# predictable behavior and compliance evidence tied to specific tool versions.
+#
+# Upgrading versions:
+# 1. Check release notes for breaking changes
+# 2. Update the tag and description below
+# 3. Test with: scan sbom <module> or scan vuln <module>
+# 4. Commit with explanation of version change
+
+docker_images:
+  trivy:
+    image: "ghcr.io/aquasecurity/trivy"
+    tag: "0.50.0"
+    description: "Trivy v0.50.0 - comprehensive vulnerability and misconfiguration scanner"
+
+  semgrep:
+    image: "semgrep/semgrep"
+    tag: "1.60.1"
+    description: "Semgrep v1.60.1 - static application security testing (SAST) tool"
+
+  zap:
+    image: "zaproxy/zap-stable"
+    tag: "2.14.0"
+    description: "OWASP ZAP v2.14.0 - dynamic application security testing (DAST) tool"

@@ -10,18 +10,12 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
-// EAC configuration path constants (local to avoid import cycle with repository)
-const (
-	r2rDir = ".r2r"
-	eacDir = "eac"
-
-	// EACConfigRelPath is the relative path from repo root to EAC configuration.
-	// Note: Duplicated here to avoid import cycle with repository package.
-	EACConfigRelPath = r2rDir + "/" + eacDir
-)
+// EACConfigRelPath is re-exported for backwards compatibility
+const EACConfigRelPath = paths.EACConfigRelPath
 
 // Config file names
 const (
@@ -52,6 +46,7 @@ type EACConfig struct {
 	SystemDependencies *SystemDependenciesConfig
 	Handlers           *HandlersConfig
 	Books              *BooksConfig
+	SecurityTools      *SecurityToolsConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -90,7 +85,7 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		}
 	}
 
-	configRoot := filepath.Join(repoRoot, r2rDir, eacDir)
+	configRoot := paths.EACConfigPath(repoRoot)
 
 	cfg := &EACConfig{
 		RepoRoot:   repoRoot,
@@ -149,6 +144,10 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 
 	if err := c.LoadHandlers(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("handlers: %w", err))
+	}
+
+	if err := c.LoadSecurityTools(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("security-tools: %w", err))
 	}
 
 	if len(errs) > 0 {
@@ -385,6 +384,37 @@ func (c *EACConfig) LoadBooks(validateSchema bool) error {
 	}
 
 	c.Books = &cfg
+	return nil
+}
+
+// LoadSecurityTools loads the security tools configuration (optional - only if file exists)
+func (c *EACConfig) LoadSecurityTools(validateSchema bool) error {
+	// Check if file exists - it's optional for backwards compatibility
+	toolsPath := filepath.Join(c.ConfigRoot, SecurityToolsFileName)
+	if _, err := os.Stat(toolsPath); os.IsNotExist(err) {
+		// Use defaults if file doesn't exist (backwards compatible)
+		cfg := DefaultSecurityToolsConfig()
+		c.SecurityTools = &cfg
+		return nil
+	}
+
+	data, err := c.readConfigFile(SecurityToolsFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaSecurityTools, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg SecurityToolsConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", SecurityToolsFileName, err)
+	}
+
+	c.SecurityTools = &cfg
 	return nil
 }
 

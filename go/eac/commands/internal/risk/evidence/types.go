@@ -110,19 +110,19 @@ type EvidenceCollection struct {
 
 // EvidenceAgePolicy controls when to auto-run evidence collection.
 type EvidenceAgePolicy struct {
-	MaxAge        time.Duration `json:"max_age"`
-	ForceTests    bool          `json:"force_tests"`
-	ForceSecurity bool          `json:"force_security"`
-	SkipAutoRun   bool          `json:"skip_auto_run"`
+	MaxAge      time.Duration `json:"max_age"`
+	ForceTests  bool          `json:"force_tests"`
+	ForceScan   bool          `json:"force_scan"`
+	SkipAutoRun bool          `json:"skip_auto_run"`
 }
 
 // DefaultEvidenceAgePolicy returns the default evidence age policy (24 hours).
 func DefaultEvidenceAgePolicy() EvidenceAgePolicy {
 	return EvidenceAgePolicy{
-		MaxAge:        24 * time.Hour,
-		ForceTests:    false,
-		ForceSecurity: false,
-		SkipAutoRun:   false,
+		MaxAge:      24 * time.Hour,
+		ForceTests:  false,
+		ForceScan:   false,
+		SkipAutoRun: false,
 	}
 }
 

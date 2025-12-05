@@ -28,8 +28,9 @@ package ai
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // Executor orchestrates AI provider execution
@@ -105,10 +106,8 @@ func (e *Executor) GetLastUsedProvider() Provider {
 // Personal config can override: api_key, model, provider name, endpoint, git token.
 // Both configs are validated against the eac-config schema.
 func (e *Executor) loadConfig() (*Config, error) {
-	eacDir := filepath.Join(e.workspaceRoot, ".r2r", "eac")
-
-	teamConfigPath := filepath.Join(eacDir, "eac-config.yml")
-	personalConfigPath := filepath.Join(eacDir, "eac-config.personal.yml")
+	teamConfigPath := paths.EACConfigFilePath(e.workspaceRoot)
+	personalConfigPath := paths.EACConfigPersonalFilePath(e.workspaceRoot)
 
 	// Use merge-based loading with schema validation
 	return LoadConfigWithOverrides(e.workspaceRoot, teamConfigPath, personalConfigPath)

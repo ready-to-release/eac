@@ -1,9 +1,9 @@
 // Testing utilities for security scanners
 // This file provides test helpers that are accessible from outside the package
-package security
+package scan
 
 import (
-	"github.com/ready-to-release/eac/go/eac/commands/impl/security/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 )
 
 // Evidence represents a security scan evidence file

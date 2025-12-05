@@ -462,6 +462,110 @@ func generateUnifiedDiff(path, original, staged string, status gogit.StatusCode)
 	return diff.String()
 }
 
+// GetBranchCommits returns all commits from baseBranch..HEAD.
+// Returns commits in reverse chronological order (newest first).
+// Returns error if baseBranch doesn't exist or no commits ahead.
+func (r *Repository) GetBranchCommits(baseBranch string) ([]CommitInfo, error) {
+	// Resolve base branch to verify it exists
+	baseRef := baseBranch
+	if !strings.HasPrefix(baseBranch, "origin/") && !strings.HasPrefix(baseBranch, "refs/") {
+		// Try origin/baseBranch first (for remote tracking)
+		_, err := r.runGitCommand("rev-parse", "--verify", "origin/"+baseBranch)
+		if err == nil {
+			baseRef = "origin/" + baseBranch
+		}
+	}
+
+	// Use CommitsBetween to get commits from baseBranch..HEAD
+	// This uses the two-dot notation which shows commits reachable from HEAD but not from baseBranch
+	commits, err := r.CommitsBetween(baseRef, "HEAD")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get branch commits: %w", err)
+	}
+
+	if len(commits) == 0 {
+		return nil, fmt.Errorf("no commits ahead of %s", baseBranch)
+	}
+
+	return commits, nil
+}
+
+// GetBranchDiff returns the cumulative diff from baseBranch...HEAD.
+// Uses three-dot notation to compare against merge-base.
+func (r *Repository) GetBranchDiff(baseBranch string) (string, error) {
+	// Resolve base branch reference
+	baseRef := baseBranch
+	if !strings.HasPrefix(baseBranch, "origin/") && !strings.HasPrefix(baseBranch, "refs/") {
+		// Try origin/baseBranch first
+		_, err := r.runGitCommand("rev-parse", "--verify", "origin/"+baseBranch)
+		if err == nil {
+			baseRef = "origin/" + baseBranch
+		}
+	}
+
+	// Use three-dot notation to compare against merge-base
+	output, err := r.runGitCommand("diff", baseRef+"...HEAD")
+	if err != nil {
+		return "", fmt.Errorf("failed to get branch diff: %w", err)
+	}
+
+	return output, nil
+}
+
+// GetBranchDiffStats returns diff statistics from baseBranch...HEAD.
+// Returns summary like "3 files changed, 45 insertions(+), 12 deletions(-)".
+func (r *Repository) GetBranchDiffStats(baseBranch string) (string, error) {
+	// Resolve base branch reference
+	baseRef := baseBranch
+	if !strings.HasPrefix(baseBranch, "origin/") && !strings.HasPrefix(baseBranch, "refs/") {
+		// Try origin/baseBranch first
+		_, err := r.runGitCommand("rev-parse", "--verify", "origin/"+baseBranch)
+		if err == nil {
+			baseRef = "origin/" + baseBranch
+		}
+	}
+
+	// Use three-dot notation with --stat
+	output, err := r.runGitCommand("diff", baseRef+"...HEAD", "--stat")
+	if err != nil {
+		return "", fmt.Errorf("failed to get branch diff stats: %w", err)
+	}
+
+	return output, nil
+}
+
+// GetBranchFiles returns list of files changed in baseBranch...HEAD.
+// Returns relative paths from repository root.
+func (r *Repository) GetBranchFiles(baseBranch string) ([]string, error) {
+	// Resolve base branch reference
+	baseRef := baseBranch
+	if !strings.HasPrefix(baseBranch, "origin/") && !strings.HasPrefix(baseBranch, "refs/") {
+		// Try origin/baseBranch first
+		_, err := r.runGitCommand("rev-parse", "--verify", "origin/"+baseBranch)
+		if err == nil {
+			baseRef = "origin/" + baseBranch
+		}
+	}
+
+	// Use three-dot notation with --name-only
+	output, err := r.runGitCommand("diff", baseRef+"...HEAD", "--name-only")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get branch files: %w", err)
+	}
+
+	// Split output into lines and filter empty lines
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	var files []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			files = append(files, line)
+		}
+	}
+
+	return files, nil
+}
+
 // GoGitRepo returns the underlying go-git repository for advanced operations.
 // Use sparingly - prefer the wrapper methods when possible.
 func (r *Repository) GoGitRepo() *gogit.Repository {
