@@ -1,10 +1,9 @@
 // Package srccommands contains godog step implementations for specs/eac-commands.
 //
-// This file contains step definitions for the new OSCAL-based risk commands:
+// This file contains step definitions for the OSCAL-based risk commands:
 // - create risk (OSCAL profile generation)
 // - create risk-assess (assessment-results creation)
 // - validate risk (OSCAL validation)
-// - show risk-report (aggregated reporting)
 package srccommands
 
 import (

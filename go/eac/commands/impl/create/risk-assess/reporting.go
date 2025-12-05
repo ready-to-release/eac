@@ -14,7 +14,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 )
 
-// reportAggregateResults displays summary for multiple modules.
+// reportAggregateResults displays summary for multiple modules with test evidence.
 func reportAggregateResults(config *AssessConfig, results []*ModuleAssessmentResult) {
 	assessLog.Info("")
 	assessLog.Info("═══════════════════════════════════════════════════════════")
@@ -24,7 +24,7 @@ func reportAggregateResults(config *AssessConfig, results []*ModuleAssessmentRes
 	assessLog.Infof("  Modules assessed: %d", len(results))
 	assessLog.Info("")
 
-	// Per-module summary
+	// Per-module summary with detailed evidence
 	totalSatisfied := 0
 	totalNotSatisfied := 0
 
@@ -46,6 +46,28 @@ func reportAggregateResults(config *AssessConfig, results []*ModuleAssessmentRes
 			result.NotSatisfied,
 			riskStr)
 
+		// Show test evidence summary for this module
+		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
+			moduleResult := result.AssessmentResults.Results[0]
+			if moduleResult.Observations != nil && len(*moduleResult.Observations) > 0 {
+				for _, obs := range *moduleResult.Observations {
+					if obs.Title == "Test Results" && obs.Props != nil {
+						for _, prop := range *obs.Props {
+							if prop.Name == "total-tests" || prop.Name == "passed-tests" || prop.Name == "failed-tests" {
+								assessLog.Infof("      • %s: %s", prop.Name, prop.Value)
+							}
+						}
+					} else if obs.Title == "Security Scan Results" && obs.Props != nil {
+						for _, prop := range *obs.Props {
+							if prop.Name == "critical-vulns" || prop.Name == "high-vulns" {
+								assessLog.Infof("      • %s: %s", prop.Name, prop.Value)
+							}
+						}
+					}
+				}
+			}
+		}
+
 		totalSatisfied += result.Satisfied
 		totalNotSatisfied += result.NotSatisfied
 	}
@@ -59,8 +81,8 @@ func reportAggregateResults(config *AssessConfig, results []*ModuleAssessmentRes
 		assessLog.Infof("    %s → %s", result.Module, result.OutputPath)
 	}
 	assessLog.Info("")
-	assessLog.Info("  Next steps:")
-	assessLog.Info("    show risk-report              # View aggregated report")
+	assessLog.Info("  Aggregated Report:")
+	assessLog.Infof("    %s/risk-assessment-*.md", config.OutputDir)
 	assessLog.Info("")
 }
 
@@ -118,7 +140,6 @@ func reportResults(config *AssessConfig, ar *oscalTypes.AssessmentResults, arPat
 	assessLog.Infof("  Output: %s", arPath)
 	assessLog.Info("")
 	assessLog.Info("  Next steps:")
-	assessLog.Infof("    show risk-report              # View aggregated report")
 	assessLog.Infof("    validate risk %s  # Validate OSCAL", filepath.Base(arPath))
 	assessLog.Info("")
 }

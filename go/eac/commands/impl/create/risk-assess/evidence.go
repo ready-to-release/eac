@@ -16,6 +16,25 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
+// preRunTestsForModules runs the test suite before assessment.
+// Tests are always run to ensure fresh results. Security scans are cached.
+func preRunTestsForModules(config *AssessConfig) error {
+	if config.SkipAutoRun {
+		assessLog.Info("Skipping test run (--skip-auto-run specified)")
+		return nil
+	}
+
+	// Always run test suite to get latest test results
+	assessLog.Infof("Running %s test suite...", config.TestSuite)
+
+	if err := runTestSuite(config); err != nil {
+		assessLog.Warnf("Test suite failed: %v", err)
+		return fmt.Errorf("test suite failed: %w", err)
+	}
+
+	return nil
+}
+
 // collectEvidenceForModule gathers evidence for a specific module.
 func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidence.EvidenceCollection, error) {
 	collection := &evidence.EvidenceCollection{
@@ -41,8 +60,8 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 	} else {
 		collection.TestResults = testResults
 
-		// Calculate test summary
-		summary, _ := evidence.GetTestSummaryForModule(config.WorkspaceRoot, moduleName)
+		// Calculate test summary from suite results
+		summary, _ := evidence.GetTestSummaryForModule(config.WorkspaceRoot, moduleName, config.TestSuite)
 		collection.TestSummary = summary
 	}
 
@@ -63,52 +82,35 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			vulnSummary, _ := evidence.ParseVulnerabilitySummary(vulnEvidence)
 			collection.VulnSummary = vulnSummary
 		}
+
+		// Calculate SBOM summary
+		if securityResults.SBOMFile != "" {
+			sbomEvidence, _ := evidence.LoadSecurityEvidence(securityResults.SBOMFile)
+			sbomSummary, _ := evidence.ParseSBOMSummary(sbomEvidence)
+			collection.SBOMSummary = sbomSummary
+		}
 	}
 
 	if !collection.HasAnyEvidence() {
-		if config.SkipAutoRun {
-			assessLog.Warnf("⚠️  No evidence available for module '%s'", moduleName)
-			assessLog.Warn("Controls will be marked as not-satisfied")
-			return collection, nil
-		}
-		return nil, fmt.Errorf("no evidence found for module '%s'", moduleName)
+		assessLog.Infof("No evidence available for module '%s' (module may not have tests in suite '%s')", moduleName, config.TestSuite)
+		assessLog.Info("Controls will be marked as not-satisfied")
+		return collection, nil
 	}
 
 	return collection, nil
 }
 
 // collectTestEvidenceForModule collects test evidence for a specific module.
+// Note: Tests are pre-run by preRunTestsForModules(), so this just loads existing evidence.
+// If a module has no tests, returns nil (not an error).
 func collectTestEvidenceForModule(config *AssessConfig, moduleName string, policy evidence.EvidenceAgePolicy) (*evidence.TestResults, error) {
-	results, err := evidence.FindTestResultsForModule(config.WorkspaceRoot, moduleName)
+	// Look for test results in the suite directory (e.g., out/test/acceptance/<module>/)
+	results, err := evidence.FindTestResultsForModuleInSuite(config.WorkspaceRoot, moduleName, config.TestSuite)
 
-	// Determine if we need to run tests
-	needsRun := false
 	if err != nil {
-		needsRun = true
-	} else if policy.ForceTests {
-		needsRun = true
-		assessLog.Infof("Forcing test re-run for %s...", moduleName)
-	} else if !evidence.IsEvidenceFresh(results.TestRunDirectory, policy.MaxAge) {
-		needsRun = true
-		age, _ := evidence.GetEvidenceAge(results.TestRunDirectory)
-		assessLog.Infof("Test results for %s are %s old, running tests...", moduleName, formatDuration(age))
-	}
-
-	if needsRun {
-		if policy.SkipAutoRun {
-			return nil, fmt.Errorf("test results are stale and --skip-auto-run was specified")
-		}
-
-		// Run tests
-		if err := runTestsForModule(config, moduleName); err != nil {
-			return nil, fmt.Errorf("auto-run tests failed: %w", err)
-		}
-
-		// Retry discovery
-		results, err = evidence.FindTestResultsForModule(config.WorkspaceRoot, moduleName)
-		if err != nil {
-			return nil, fmt.Errorf("no test results after auto-run: %w", err)
-		}
+		// Module has no test results - this is okay, many modules don't have tests in all suites
+		assessLog.Debugf("No test results for %s in suite %s (module may not have tests)", moduleName, config.TestSuite)
+		return nil, nil // Return nil results, not an error
 	}
 
 	return results, nil
@@ -145,13 +147,39 @@ func collectSecurityEvidenceForModule(config *AssessConfig, moduleName string, p
 	return results, err
 }
 
-// runTestsForModule runs the test suite for a specific module.
-func runTestsForModule(config *AssessConfig, moduleName string) error {
-	assessLog.Infof("Running tests for %s...", moduleName)
-
+// runTestSuite runs the test suite once for all modules.
+// This is more efficient than running tests per-module and produces proper output structure.
+func runTestSuite(config *AssessConfig) error {
 	// Use the canonical binary path
 	binaryPath := repository.CommandsBinaryPath(config.WorkspaceRoot)
-	cmd := exec.Command(binaryPath, "test", moduleName)
+
+	assessLog.Infof("Running %s test suite...", config.TestSuite)
+
+	// Run test suite without module filter (covers all modules)
+	cmd := exec.Command(binaryPath, "test", "--suite", config.TestSuite)
+	cmd.Dir = config.WorkspaceRoot
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("test suite failed: %w", err)
+	}
+
+	return nil
+}
+
+// runTestsForModule runs the test suite for a specific module.
+// Uses the specified test suite (default: acceptance) to run tests.
+// Called sequentially from preRunTestsForModules, so no locking needed.
+func runTestsForModule(config *AssessConfig, moduleName string) error {
+	// Use the canonical binary path
+	binaryPath := repository.CommandsBinaryPath(config.WorkspaceRoot)
+
+	assessLog.Infof("Running %s tests for %s...", config.TestSuite, moduleName)
+	assessLog.Debugf("Test command: %s test --suite %s %s", binaryPath, config.TestSuite, moduleName)
+
+	// Run test with specified suite (--suite must come before module name)
+	cmd := exec.Command(binaryPath, "test", "--suite", config.TestSuite, moduleName)
 	cmd.Dir = config.WorkspaceRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -213,6 +213,34 @@ func ParseVulnerabilitySummary(vulnEvidence *SecurityEvidenceFile) (*Vulnerabili
 	return summary, nil
 }
 
+// ParseSBOMSummary extracts component counts from SBOM evidence.
+func ParseSBOMSummary(sbomEvidence *SecurityEvidenceFile) (*SBOMSummary, error) {
+	if sbomEvidence == nil {
+		return nil, nil
+	}
+
+	summary := &SBOMSummary{}
+
+	// Parse findings to count components
+	// This handles the CycloneDX SBOM format from Trivy
+	var findings map[string]interface{}
+	if err := json.Unmarshal(sbomEvidence.Findings, &findings); err != nil {
+		return summary, nil // Return empty summary if parsing fails
+	}
+
+	// Handle CycloneDX format
+	if components, ok := findings["components"].([]interface{}); ok {
+		summary.TotalComponents = len(components)
+	}
+
+	// Handle SPDX format
+	if packages, ok := findings["packages"].([]interface{}); ok {
+		summary.TotalComponents = len(packages)
+	}
+
+	return summary, nil
+}
+
 // countSeverity increments the appropriate severity count based on finding.
 func countSeverity(finding map[string]interface{}, summary *VulnerabilitySummary) {
 	severity := ""

@@ -183,7 +183,6 @@ func isValidCommand(cmd string) bool {
 		"show tests",
 		"show config",
 		"show suite",
-		"show risk-report",
 		"show books",
 	}
 

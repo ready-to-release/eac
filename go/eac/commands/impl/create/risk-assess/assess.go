@@ -4,16 +4,17 @@
 // Long: by collecting test results and security scan evidence. It maps @control tags in
 // Long: feature files to OSCAL control IDs and determines satisfied/not-satisfied status.
 // Long:
-// Long: Evidence is automatically collected from:
-// Long: - Test results: out/test/<timestamp>/<module>/*.cucumber.json
-// Long: - Security scans: out/security/<module>/**/*.json
+// Long: Tests are run automatically to get the latest results. Security scans are cached
+// Long: and re-run only if older than the specified max-evidence-age (default: 24 hours).
 // Long:
-// Long: If evidence is older than 24 hours, tests and scans are automatically re-run.
+// Long: Evidence is collected from:
+// Long: - Test results: out/test/<suite>/<module>/*.json
+// Long: - Security scans: out/security/<module>/**/*.json
 // Flag.profile: type=string, shorthand=p, required=true, usage=Path to OSCAL profile JSON file
-// Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for evidence before auto-refresh (e.g., 24h, 7d)
-// Flag.force-tests: type=bool, default=false, usage=Force re-run tests regardless of age
+// Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for security evidence before auto-refresh (e.g., 24h, 7d)
 // Flag.force-security: type=bool, default=false, usage=Force re-run security scans regardless of age
 // Flag.skip-auto-run: type=bool, default=false, usage=Use existing evidence only, fail if missing
+// Flag.suite: type=string, default=acceptance, usage=Test suite to run (e.g., acceptance, commit)
 // Flag.sequential: type=bool, default=false, usage=Run assessments sequentially instead of parallel
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/logs/risk/
 // Args: modules
@@ -23,9 +24,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
@@ -54,6 +57,9 @@ type AssessConfig struct {
 	Debug          bool
 	WorkspaceRoot  string
 	Logger         *logging.Logger
+	Timestamp      string // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
+	OutputDir      string // Base output directory for this run: out/risk/<timestamp>/
+	TestSuite      string // Test suite to run (default: acceptance)
 }
 
 // ModuleAssessmentResult holds the results of assessing a single module.
@@ -76,6 +82,16 @@ func CreateRiskAssess() int {
 			return 0
 		}
 		assessLog.Errorf("Error: %v", err)
+		return 1
+	}
+
+	// Initialize timestamp and output directory for this assessment run
+	config.Timestamp = time.Now().Format("2006-01-02T15-04-05")
+	config.OutputDir = filepath.Join(config.WorkspaceRoot, "out", "risk", config.Timestamp)
+
+	// Ensure output directory exists
+	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+		assessLog.Errorf("Failed to create output directory: %v", err)
 		return 1
 	}
 
@@ -117,6 +133,11 @@ func CreateRiskAssess() int {
 	assessLog.Infof("Loaded profile with %d controls: %s", len(controlIDs), strings.Join(controlIDs, ", "))
 	assessLog.Info("")
 
+	// Pre-run tests for all modules if needed (before parallel assessment)
+	if err := preRunTestsForModules(config); err != nil {
+		assessLog.Warnf("Test pre-run completed with warnings: %v", err)
+	}
+
 	// Run assessments (parallel or sequential)
 	var results []*ModuleAssessmentResult
 
@@ -144,6 +165,13 @@ func CreateRiskAssess() int {
 			assessLog.Errorf("Module %s failed: %v", result.Module, result.Error)
 		} else {
 			successfulResults = append(successfulResults, result)
+		}
+	}
+
+	// Create aggregated report file
+	if len(successfulResults) > 0 {
+		if err := writeAggregatedReport(config, successfulResults, profile); err != nil {
+			assessLog.Warnf("Failed to write aggregated report: %v", err)
 		}
 	}
 
@@ -186,6 +214,7 @@ func parseAssessConfig() (*AssessConfig, error) {
 
 	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,
+		TestSuite:      "acceptance", // Default to acceptance suite
 	}
 
 	// Get workspace root
@@ -221,9 +250,6 @@ func parseAssessConfig() (*AssessConfig, error) {
 		arg := args[i]
 
 		switch {
-		case arg == "--help" || arg == "-h":
-			return nil, fmt.Errorf("help requested")
-
 		case arg == "--profile" || arg == "-p":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--profile requires a value")
@@ -276,6 +302,13 @@ func parseAssessConfig() (*AssessConfig, error) {
 		case arg == "--debug" || arg == "-d":
 			config.Debug = true
 			i++
+
+		case arg == "--suite":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--suite requires a value")
+			}
+			config.TestSuite = args[i+1]
+			i += 2
 
 		case strings.HasPrefix(arg, "-"):
 			return nil, fmt.Errorf("unknown flag: %s", arg)
@@ -366,6 +399,8 @@ Required Flags:
   -p, --profile <path>               Path to OSCAL profile JSON file
 
 Optional Flags:
+      --suite <name>                 Test suite to run (default: acceptance)
+                                     Options: acceptance, commit, production-verification
       --max-evidence-age <duration>  Maximum age for evidence (default: 24h)
       --force-tests                  Force re-run tests regardless of age
       --force-security               Force re-run security scans regardless of age
@@ -374,17 +409,24 @@ Optional Flags:
   -d, --debug                        Save intermediate outputs to out/logs/risk/
 
 Output:
-  out/risk/<module>/assessment-results.json (per module)
+  out/risk/<timestamp>/
+    ├── risk-assessment-<timestamp>-all.md         # Aggregated Markdown report (all modules)
+    ├── risk-assessment-<timestamp>-subset-NofM.md # Aggregated Markdown report (subset)
+    ├── <module>/assessment-results.json           # Per-module OSCAL JSON
+    └── ...
 
 Examples:
-  # Assess all modules with shared profile (parallel by default)
+  # Assess all modules with acceptance tests (default)
   create risk-assess --profile specs/.risk-controls/risk-profile.json
 
   # Assess specific modules (parallel, space-separated)
   create risk-assess billing api auth --profile specs/.risk-controls/risk-profile.json
 
-  # Assess single module
-  create risk-assess billing --profile specs/.risk-controls/risk-profile.json
+  # Use different test suite
+  create risk-assess --profile specs/.risk-controls/risk-profile.json --suite commit
+
+  # Assess single module with production tests
+  create risk-assess billing --profile specs/.risk-controls/risk-profile.json --suite production-verification
 
   # Sequential execution for debugging
   create risk-assess --profile specs/.risk-controls/risk-profile.json --sequential
@@ -396,4 +438,379 @@ Examples:
   create risk-assess data --profile specs/.risk-controls/risk-profile.json --max-evidence-age 1h
 `
 	assessLog.Info(help)
+}
+
+// writeAggregatedReport creates a consolidated Markdown report combining all module results.
+func writeAggregatedReport(config *AssessConfig, results []*ModuleAssessmentResult, profile *oscalTypes.Profile) error {
+	// Determine if this is all modules or a subset
+	allModules, err := loadModuleRegistry(config.WorkspaceRoot)
+	if err != nil {
+		return fmt.Errorf("failed to load module registry: %w", err)
+	}
+
+	totalModuleCount := len(allModules.All())
+	assessedModuleCount := len(results)
+	isSubset := assessedModuleCount < totalModuleCount
+
+	// Build filename with timestamp and subset indication
+	var filename string
+	if isSubset {
+		filename = fmt.Sprintf("risk-assessment-%s-subset-%dof%d.md",
+			config.Timestamp, assessedModuleCount, totalModuleCount)
+	} else {
+		filename = fmt.Sprintf("risk-assessment-%s-all.md", config.Timestamp)
+	}
+
+	outputPath := filepath.Join(config.OutputDir, filename)
+
+	// Generate Markdown report
+	report := generateMarkdownReport(config, results, profile, isSubset, totalModuleCount)
+
+	// Write to file
+	if err := os.WriteFile(outputPath, []byte(report), 0644); err != nil {
+		return fmt.Errorf("failed to write report: %w", err)
+	}
+
+	assessLog.Infof("Created aggregated report: %s", outputPath)
+	return nil
+}
+
+// generateMarkdownReport creates the Markdown content for the aggregated report.
+func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentResult, profile *oscalTypes.Profile, isSubset bool, totalModules int) string {
+	var md strings.Builder
+
+	// Header
+	md.WriteString("# Risk Assessment Report\n\n")
+	md.WriteString(fmt.Sprintf("**Generated:** %s\n\n", time.Now().Format("2006-01-02 15:04:05 MST")))
+
+	if isSubset {
+		md.WriteString(fmt.Sprintf("**Scope:** Subset Assessment (%d of %d modules)\n\n", len(results), totalModules))
+	} else {
+		md.WriteString(fmt.Sprintf("**Scope:** Full Assessment (all %d modules)\n\n", len(results)))
+	}
+
+	md.WriteString(fmt.Sprintf("**Profile:** %s\n\n", filepath.Base(config.ProfilePath)))
+	md.WriteString(fmt.Sprintf("**Test Suite:** %s\n\n", config.TestSuite))
+
+	// Executive Summary
+	md.WriteString("## Executive Summary\n\n")
+
+	totalSatisfied := 0
+	totalNotSatisfied := 0
+	for _, result := range results {
+		totalSatisfied += result.Satisfied
+		totalNotSatisfied += result.NotSatisfied
+	}
+
+	totalControls := totalSatisfied + totalNotSatisfied
+	satisfactionRate := 0.0
+	if totalControls > 0 {
+		satisfactionRate = float64(totalSatisfied) / float64(totalControls) * 100
+	}
+
+	md.WriteString(fmt.Sprintf("- **Total Controls Assessed:** %d\n", totalControls))
+	md.WriteString(fmt.Sprintf("- **Satisfied:** %d (%.1f%%)\n", totalSatisfied, satisfactionRate))
+	md.WriteString(fmt.Sprintf("- **Not Satisfied:** %d (%.1f%%)\n", totalNotSatisfied, 100-satisfactionRate))
+	md.WriteString(fmt.Sprintf("- **Modules Assessed:** %d\n\n", len(results)))
+
+	// Module Results
+	md.WriteString("## Module Assessment Results\n\n")
+	md.WriteString("| Module | Satisfied | Not Satisfied | Risk Score | Test Evidence | Security Evidence |\n")
+	md.WriteString("|--------|-----------|---------------|------------|---------------|-------------------|\n")
+
+	for _, result := range results {
+		riskStr := "N/A"
+		if result.RiskScore != nil {
+			riskStr = scoring.FormatRiskScorePlain(result.RiskScore)
+		}
+
+		// Extract test and security evidence counts
+		testEvidence := "N/A"
+		secEvidence := "N/A"
+
+		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
+			moduleResult := result.AssessmentResults.Results[0]
+			if moduleResult.Observations != nil {
+				for _, obs := range *moduleResult.Observations {
+					if obs.Title == "Test Results" && obs.Props != nil {
+						var totalTests, passedTests, failedTests string
+						for _, prop := range *obs.Props {
+							switch prop.Name {
+							case "total-tests":
+								totalTests = prop.Value
+							case "passed-tests":
+								passedTests = prop.Value
+							case "failed-tests":
+								failedTests = prop.Value
+							}
+						}
+						if totalTests != "" {
+							// Calculate skipped tests
+							total, _ := strconv.Atoi(totalTests)
+							passed, _ := strconv.Atoi(passedTests)
+							failed, _ := strconv.Atoi(failedTests)
+							skipped := total - passed - failed
+
+							if failed > 0 {
+								testEvidence = fmt.Sprintf("%s/%s tests (%d failed)", passedTests, totalTests, failed)
+							} else if skipped > 0 {
+								testEvidence = fmt.Sprintf("%s/%s tests (%d skipped)", passedTests, totalTests, skipped)
+							} else {
+								testEvidence = fmt.Sprintf("%s/%s tests", passedTests, totalTests)
+							}
+						}
+					} else if obs.Title == "Security Scan Results" && obs.Props != nil {
+						var critVulns, highVulns, medVulns, lowVulns, sbomComponents string
+						for _, prop := range *obs.Props {
+							switch prop.Name {
+							case "critical-vulns":
+								critVulns = prop.Value
+							case "high-vulns":
+								highVulns = prop.Value
+							case "medium-vulns":
+								medVulns = prop.Value
+							case "low-vulns":
+								lowVulns = prop.Value
+							case "sbom-components":
+								sbomComponents = prop.Value
+							}
+						}
+						if critVulns != "" {
+							secEvidence = fmt.Sprintf("Vulns: %sC/%sH/%sM/%sL", critVulns, highVulns, medVulns, lowVulns)
+							if sbomComponents != "" {
+								secEvidence += fmt.Sprintf(" | SBOM: %s pkgs", sbomComponents)
+							}
+						}
+					}
+				}
+			}
+		}
+
+		md.WriteString(fmt.Sprintf("| %s | %d | %d | %s | %s | %s |\n",
+			result.Module, result.Satisfied, result.NotSatisfied, riskStr, testEvidence, secEvidence))
+	}
+	md.WriteString("\n")
+
+	// Control Status Details
+	md.WriteString("## Control Status by Module\n\n")
+
+	for _, result := range results {
+		md.WriteString(fmt.Sprintf("### %s\n\n", result.Module))
+
+		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
+			moduleResult := result.AssessmentResults.Results[0]
+
+			if moduleResult.Findings != nil {
+				// Group by status
+				satisfied := []string{}
+				notSatisfied := []string{}
+
+				for _, finding := range *moduleResult.Findings {
+					controlID := finding.Target.TargetId
+					if finding.Target.Status.State == oscal.StateSatisfied {
+						satisfied = append(satisfied, controlID)
+					} else {
+						notSatisfied = append(notSatisfied, controlID)
+					}
+				}
+
+				if len(satisfied) > 0 {
+					md.WriteString(fmt.Sprintf("**✓ Satisfied (%d):** %s\n\n", len(satisfied), strings.Join(satisfied, ", ")))
+				}
+
+				if len(notSatisfied) > 0 {
+					md.WriteString(fmt.Sprintf("**✗ Not Satisfied (%d):** %s\n\n", len(notSatisfied), strings.Join(notSatisfied, ", ")))
+				}
+			}
+		}
+	}
+
+	// Risk Analysis
+	md.WriteString("## Risk Analysis\n\n")
+	md.WriteString("| Module | Risk Level | Likelihood | Impact | Reasoning |\n")
+	md.WriteString("|--------|------------|------------|--------|----------|\n")
+
+	for _, result := range results {
+		if result.RiskScore != nil {
+			md.WriteString(fmt.Sprintf("| %s | %s | %d | %d | %s |\n",
+				result.Module,
+				result.RiskScore.Band,
+				result.RiskScore.Likelihood,
+				result.RiskScore.Impact,
+				result.RiskScore.Reasoning))
+		}
+	}
+	md.WriteString("\n")
+
+	// Recommendations
+	md.WriteString("## Recommendations\n\n")
+
+	if totalNotSatisfied > 0 {
+		md.WriteString("### High Priority Actions\n\n")
+		md.WriteString("The following controls require immediate attention:\n\n")
+
+		for _, result := range results {
+			if result.NotSatisfied > 0 {
+				md.WriteString(fmt.Sprintf("**%s:** %d controls not satisfied\n", result.Module, result.NotSatisfied))
+
+				if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
+					moduleResult := result.AssessmentResults.Results[0]
+					if moduleResult.Findings != nil {
+						for _, finding := range *moduleResult.Findings {
+							if finding.Target.Status.State == oscal.StateNotSatisfied {
+								md.WriteString(fmt.Sprintf("  - %s: %s\n", finding.Target.TargetId, finding.Title))
+							}
+						}
+					}
+				}
+				md.WriteString("\n")
+			}
+		}
+	} else {
+		md.WriteString("✓ All assessed controls are satisfied. Continue monitoring and maintain current security practices.\n\n")
+	}
+
+	// Footer
+	md.WriteString("---\n\n")
+	md.WriteString("*Generated by EAC Risk Assessment Tool*\n\n")
+	md.WriteString(fmt.Sprintf("Report files:\n- Aggregated: `%s`\n", filepath.Join(config.OutputDir, "*.md")))
+
+	for _, result := range results {
+		relPath, _ := filepath.Rel(config.WorkspaceRoot, result.OutputPath)
+		md.WriteString(fmt.Sprintf("- %s: `%s`\n", result.Module, relPath))
+	}
+
+	return md.String()
+}
+
+// writeAggregatedOSCALReport creates a consolidated OSCAL JSON file (kept for compatibility).
+func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmentResult, profile *oscalTypes.Profile) error {
+	// Create aggregate assessment-results document
+	aggregateAR := oscal.NewAssessmentResults(
+		uuid.New().String(),
+		"Risk Assessment - All Modules",
+		config.ProfilePath,
+	)
+
+	// Collect all control IDs from profile
+	controlIDs := oscal.GetProfileControlIDs(profile)
+
+	// Build a combined result with all observations and findings
+	props := []oscalTypes.Property{
+		{Name: "assessment-type", Value: "automated"},
+		{Name: "modules-assessed", Value: fmt.Sprintf("%d", len(results))},
+	}
+
+	controlRefs := make([]oscalTypes.AssessedControlsSelectControlById, len(controlIDs))
+	for i, id := range controlIDs {
+		controlRefs[i] = oscalTypes.AssessedControlsSelectControlById{
+			ControlId: id,
+		}
+	}
+
+	controlSelections := []oscalTypes.AssessedControls{
+		{
+			IncludeControls: &controlRefs,
+		},
+	}
+
+	aggregateResult := oscalTypes.Result{
+		UUID:        uuid.New().String(),
+		Title:       "Aggregate Assessment Results",
+		Description: fmt.Sprintf("Combined assessment results from %d modules", len(results)),
+		Start:       time.Now().UTC(),
+		Props:       &props,
+		ReviewedControls: oscalTypes.ReviewedControls{
+			ControlSelections: controlSelections,
+		},
+	}
+
+	// Collect all observations from all modules
+	var allObservations []oscalTypes.Observation
+	for _, result := range results {
+		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
+			moduleResult := result.AssessmentResults.Results[0]
+			if moduleResult.Observations != nil {
+				for _, obs := range *moduleResult.Observations {
+					// Add module name to observation description
+					obs.Description = fmt.Sprintf("[%s] %s", result.Module, obs.Description)
+					allObservations = append(allObservations, obs)
+				}
+			}
+		}
+	}
+	aggregateResult.Observations = &allObservations
+
+	// Aggregate findings by control ID across all modules
+	controlFindings := make(map[string]*oscalTypes.Finding)
+
+	for _, result := range results {
+		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
+			moduleResult := result.AssessmentResults.Results[0]
+			if moduleResult.Findings != nil {
+				for _, finding := range *moduleResult.Findings {
+					controlID := finding.Target.TargetId
+
+					// If we don't have a finding for this control yet, create one
+					if controlFindings[controlID] == nil {
+						controlFindings[controlID] = &oscalTypes.Finding{
+							UUID:                uuid.New().String(),
+							Title:               fmt.Sprintf("Control %s Assessment", strings.ToUpper(controlID)),
+							Description:         fmt.Sprintf("Aggregate finding for control %s across %d modules", controlID, len(results)),
+							Target:              finding.Target,
+							RelatedObservations: &[]oscalTypes.RelatedObservation{},
+							Props:               &[]oscalTypes.Property{},
+							Remarks:             "",
+						}
+					}
+
+					// Aggregate the status - if any module has not-satisfied, the control is not-satisfied
+					if finding.Target.Status.State == oscal.StateNotSatisfied {
+						controlFindings[controlID].Target.Status.State = oscal.StateNotSatisfied
+					}
+
+					// Add module-specific remarks
+					if finding.Remarks != "" {
+						if controlFindings[controlID].Remarks != "" {
+							controlFindings[controlID].Remarks += "\n\n"
+						}
+						controlFindings[controlID].Remarks += fmt.Sprintf("=== %s ===\n%s", result.Module, finding.Remarks)
+					}
+
+					// Collect observation references
+					if finding.RelatedObservations != nil {
+						for _, relObs := range *finding.RelatedObservations {
+							*controlFindings[controlID].RelatedObservations = append(
+								*controlFindings[controlID].RelatedObservations,
+								relObs,
+							)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Convert map to slice
+	var aggregatedFindings []oscalTypes.Finding
+	for _, finding := range controlFindings {
+		aggregatedFindings = append(aggregatedFindings, *finding)
+	}
+	aggregateResult.Findings = &aggregatedFindings
+
+	// Add the aggregate result to the assessment-results
+	oscal.AddResult(aggregateAR, aggregateResult)
+
+	// Write to file
+	outputPath := filepath.Join(config.WorkspaceRoot, "out", "risk", "assessment-results-aggregate.json")
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	if err := oscal.WriteAssessmentResults(outputPath, aggregateAR); err != nil {
+		return fmt.Errorf("failed to write aggregated report: %w", err)
+	}
+
+	assessLog.Infof("Created aggregated report: %s", outputPath)
+	return nil
 }
