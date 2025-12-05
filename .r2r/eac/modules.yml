@@ -50,6 +50,8 @@ modules:
     name: Documentation Site
     type: mkdocs-site
     description: MkDocs documentation site for GitHub Pages (HTML only, no PDF)
+    depends_on:
+      - eac-commands
     files:
       root: docs
       assets:
@@ -75,6 +77,8 @@ modules:
     name: Documentation Books
     type: mkdocs-site
     description: PDF documentation books with generated reference content from EAC commands
+    depends_on:
+      - eac-commands
     files:
       root: containers/mkdocs-pdf
       assets:
