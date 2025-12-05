@@ -15,6 +15,7 @@
 // Flag.force-security: type=bool, default=false, usage=Force re-run security scans regardless of age
 // Flag.skip-auto-run: type=bool, default=false, usage=Use existing evidence only, fail if missing
 // Flag.suite: type=string, default=acceptance, usage=Test suite to run (e.g., acceptance, commit)
+// Flag.report-template: type=string, default=risk-assessment, usage=Report template variant (risk-assessment, risk-assessment-summary, risk-assessment-detailed)
 // Flag.sequential: type=bool, default=false, usage=Run assessments sequentially instead of parallel
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/logs/risk/
 // Args: modules
@@ -24,7 +25,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	sharedTemplate "github.com/ready-to-release/eac/go/eac/commands/internal/template"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -57,9 +58,10 @@ type AssessConfig struct {
 	Debug          bool
 	WorkspaceRoot  string
 	Logger         *logging.Logger
-	Timestamp      string // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
-	OutputDir      string // Base output directory for this run: out/risk/<timestamp>/
-	TestSuite      string // Test suite to run (default: acceptance)
+	Timestamp      string        // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
+	OutputDir      string        // Base output directory for this run: out/risk/<timestamp>/
+	TestSuite      string        // Test suite to run (default: acceptance)
+	ReportTemplate string        // Report template variant (default: risk-assessment)
 }
 
 // ModuleAssessmentResult holds the results of assessing a single module.
@@ -214,7 +216,8 @@ func parseAssessConfig() (*AssessConfig, error) {
 
 	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,
-		TestSuite:      "acceptance", // Default to acceptance suite
+		TestSuite:      "acceptance",       // Default to acceptance suite
+		ReportTemplate: "risk-assessment", // Default to standard template
 	}
 
 	// Get workspace root
@@ -308,6 +311,26 @@ func parseAssessConfig() (*AssessConfig, error) {
 				return nil, fmt.Errorf("--suite requires a value")
 			}
 			config.TestSuite = args[i+1]
+			i += 2
+
+		case arg == "--report-template":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--report-template requires a value")
+			}
+			template := args[i+1]
+			// Validate template variant
+			validTemplates := []string{"risk-assessment", "risk-assessment-summary", "risk-assessment-detailed"}
+			valid := false
+			for _, vt := range validTemplates {
+				if template == vt {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				return nil, fmt.Errorf("invalid template variant: %s (must be one of: %s)", template, strings.Join(validTemplates, ", "))
+			}
+			config.ReportTemplate = template
 			i += 2
 
 		case strings.HasPrefix(arg, "-"):
@@ -463,8 +486,11 @@ func writeAggregatedReport(config *AssessConfig, results []*ModuleAssessmentResu
 
 	outputPath := filepath.Join(config.OutputDir, filename)
 
-	// Generate Markdown report
-	report := generateMarkdownReport(config, results, profile, isSubset, totalModuleCount)
+	// Generate Markdown report using template
+	report, err := generateMarkdownReport(config, results, profile, isSubset, totalModuleCount)
+	if err != nil {
+		return fmt.Errorf("failed to generate report: %w", err)
+	}
 
 	// Write to file
 	if err := os.WriteFile(outputPath, []byte(report), 0644); err != nil {
@@ -475,212 +501,17 @@ func writeAggregatedReport(config *AssessConfig, results []*ModuleAssessmentResu
 	return nil
 }
 
-// generateMarkdownReport creates the Markdown content for the aggregated report.
-func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentResult, profile *oscalTypes.Profile, isSubset bool, totalModules int) string {
-	var md strings.Builder
+// generateMarkdownReport creates the Markdown content for the aggregated report using templates.
+func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentResult, profile *oscalTypes.Profile, isSubset bool, totalModules int) (string, error) {
+	// Build template data
+	reportData := buildReportData(config, results, profile, isSubset, totalModules)
 
-	// Header
-	md.WriteString("# Risk Assessment Report\n\n")
-	md.WriteString(fmt.Sprintf("**Generated:** %s\n\n", time.Now().Format("2006-01-02 15:04:05 MST")))
+	// Use selected template variant
+	templateName := config.ReportTemplate + ".md"
+	templatePath := filepath.Join(config.WorkspaceRoot, "templates", "reports", templateName)
+	renderer := sharedTemplate.NewRenderer(templatePath)
 
-	if isSubset {
-		md.WriteString(fmt.Sprintf("**Scope:** Subset Assessment (%d of %d modules)\n\n", len(results), totalModules))
-	} else {
-		md.WriteString(fmt.Sprintf("**Scope:** Full Assessment (all %d modules)\n\n", len(results)))
-	}
-
-	md.WriteString(fmt.Sprintf("**Profile:** %s\n\n", filepath.Base(config.ProfilePath)))
-	md.WriteString(fmt.Sprintf("**Test Suite:** %s\n\n", config.TestSuite))
-
-	// Executive Summary
-	md.WriteString("## Executive Summary\n\n")
-
-	totalSatisfied := 0
-	totalNotSatisfied := 0
-	for _, result := range results {
-		totalSatisfied += result.Satisfied
-		totalNotSatisfied += result.NotSatisfied
-	}
-
-	totalControls := totalSatisfied + totalNotSatisfied
-	satisfactionRate := 0.0
-	if totalControls > 0 {
-		satisfactionRate = float64(totalSatisfied) / float64(totalControls) * 100
-	}
-
-	md.WriteString(fmt.Sprintf("- **Total Controls Assessed:** %d\n", totalControls))
-	md.WriteString(fmt.Sprintf("- **Satisfied:** %d (%.1f%%)\n", totalSatisfied, satisfactionRate))
-	md.WriteString(fmt.Sprintf("- **Not Satisfied:** %d (%.1f%%)\n", totalNotSatisfied, 100-satisfactionRate))
-	md.WriteString(fmt.Sprintf("- **Modules Assessed:** %d\n\n", len(results)))
-
-	// Module Results
-	md.WriteString("## Module Assessment Results\n\n")
-	md.WriteString("| Module | Satisfied | Not Satisfied | Risk Score | Test Evidence | Security Evidence |\n")
-	md.WriteString("|--------|-----------|---------------|------------|---------------|-------------------|\n")
-
-	for _, result := range results {
-		riskStr := "N/A"
-		if result.RiskScore != nil {
-			riskStr = scoring.FormatRiskScorePlain(result.RiskScore)
-		}
-
-		// Extract test and security evidence counts
-		testEvidence := "N/A"
-		secEvidence := "N/A"
-
-		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
-			moduleResult := result.AssessmentResults.Results[0]
-			if moduleResult.Observations != nil {
-				for _, obs := range *moduleResult.Observations {
-					if obs.Title == "Test Results" && obs.Props != nil {
-						var totalTests, passedTests, failedTests string
-						for _, prop := range *obs.Props {
-							switch prop.Name {
-							case "total-tests":
-								totalTests = prop.Value
-							case "passed-tests":
-								passedTests = prop.Value
-							case "failed-tests":
-								failedTests = prop.Value
-							}
-						}
-						if totalTests != "" {
-							// Calculate skipped tests
-							total, _ := strconv.Atoi(totalTests)
-							passed, _ := strconv.Atoi(passedTests)
-							failed, _ := strconv.Atoi(failedTests)
-							skipped := total - passed - failed
-
-							if failed > 0 {
-								testEvidence = fmt.Sprintf("%s/%s tests (%d failed)", passedTests, totalTests, failed)
-							} else if skipped > 0 {
-								testEvidence = fmt.Sprintf("%s/%s tests (%d skipped)", passedTests, totalTests, skipped)
-							} else {
-								testEvidence = fmt.Sprintf("%s/%s tests", passedTests, totalTests)
-							}
-						}
-					} else if obs.Title == "Security Scan Results" && obs.Props != nil {
-						var critVulns, highVulns, medVulns, lowVulns, sbomComponents string
-						for _, prop := range *obs.Props {
-							switch prop.Name {
-							case "critical-vulns":
-								critVulns = prop.Value
-							case "high-vulns":
-								highVulns = prop.Value
-							case "medium-vulns":
-								medVulns = prop.Value
-							case "low-vulns":
-								lowVulns = prop.Value
-							case "sbom-components":
-								sbomComponents = prop.Value
-							}
-						}
-						if critVulns != "" {
-							secEvidence = fmt.Sprintf("Vulns: %sC/%sH/%sM/%sL", critVulns, highVulns, medVulns, lowVulns)
-							if sbomComponents != "" {
-								secEvidence += fmt.Sprintf(" | SBOM: %s pkgs", sbomComponents)
-							}
-						}
-					}
-				}
-			}
-		}
-
-		md.WriteString(fmt.Sprintf("| %s | %d | %d | %s | %s | %s |\n",
-			result.Module, result.Satisfied, result.NotSatisfied, riskStr, testEvidence, secEvidence))
-	}
-	md.WriteString("\n")
-
-	// Control Status Details
-	md.WriteString("## Control Status by Module\n\n")
-
-	for _, result := range results {
-		md.WriteString(fmt.Sprintf("### %s\n\n", result.Module))
-
-		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
-			moduleResult := result.AssessmentResults.Results[0]
-
-			if moduleResult.Findings != nil {
-				// Group by status
-				satisfied := []string{}
-				notSatisfied := []string{}
-
-				for _, finding := range *moduleResult.Findings {
-					controlID := finding.Target.TargetId
-					if finding.Target.Status.State == oscal.StateSatisfied {
-						satisfied = append(satisfied, controlID)
-					} else {
-						notSatisfied = append(notSatisfied, controlID)
-					}
-				}
-
-				if len(satisfied) > 0 {
-					md.WriteString(fmt.Sprintf("**✓ Satisfied (%d):** %s\n\n", len(satisfied), strings.Join(satisfied, ", ")))
-				}
-
-				if len(notSatisfied) > 0 {
-					md.WriteString(fmt.Sprintf("**✗ Not Satisfied (%d):** %s\n\n", len(notSatisfied), strings.Join(notSatisfied, ", ")))
-				}
-			}
-		}
-	}
-
-	// Risk Analysis
-	md.WriteString("## Risk Analysis\n\n")
-	md.WriteString("| Module | Risk Level | Likelihood | Impact | Reasoning |\n")
-	md.WriteString("|--------|------------|------------|--------|----------|\n")
-
-	for _, result := range results {
-		if result.RiskScore != nil {
-			md.WriteString(fmt.Sprintf("| %s | %s | %d | %d | %s |\n",
-				result.Module,
-				result.RiskScore.Band,
-				result.RiskScore.Likelihood,
-				result.RiskScore.Impact,
-				result.RiskScore.Reasoning))
-		}
-	}
-	md.WriteString("\n")
-
-	// Recommendations
-	md.WriteString("## Recommendations\n\n")
-
-	if totalNotSatisfied > 0 {
-		md.WriteString("### High Priority Actions\n\n")
-		md.WriteString("The following controls require immediate attention:\n\n")
-
-		for _, result := range results {
-			if result.NotSatisfied > 0 {
-				md.WriteString(fmt.Sprintf("**%s:** %d controls not satisfied\n", result.Module, result.NotSatisfied))
-
-				if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
-					moduleResult := result.AssessmentResults.Results[0]
-					if moduleResult.Findings != nil {
-						for _, finding := range *moduleResult.Findings {
-							if finding.Target.Status.State == oscal.StateNotSatisfied {
-								md.WriteString(fmt.Sprintf("  - %s: %s\n", finding.Target.TargetId, finding.Title))
-							}
-						}
-					}
-				}
-				md.WriteString("\n")
-			}
-		}
-	} else {
-		md.WriteString("✓ All assessed controls are satisfied. Continue monitoring and maintain current security practices.\n\n")
-	}
-
-	// Footer
-	md.WriteString("---\n\n")
-	md.WriteString("*Generated by EAC Risk Assessment Tool*\n\n")
-	md.WriteString(fmt.Sprintf("Report files:\n- Aggregated: `%s`\n", filepath.Join(config.OutputDir, "*.md")))
-
-	for _, result := range results {
-		relPath, _ := filepath.Rel(config.WorkspaceRoot, result.OutputPath)
-		md.WriteString(fmt.Sprintf("- %s: `%s`\n", result.Module, relPath))
-	}
-
-	return md.String()
+	return renderer.RenderToString(reportData)
 }
 
 // writeAggregatedOSCALReport creates a consolidated OSCAL JSON file (kept for compatibility).

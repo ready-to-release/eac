@@ -401,6 +401,22 @@ modules:
         - assets/**
 
   # ============================================================================
+  # Risk Evidence Package
+  # ============================================================================
+  - moniker: risk-evidence-package
+    name: Risk Evidence Package
+    type: mkdocs-site
+    description: Comprehensive risk assessment evidence package with all supporting artifacts
+    depends_on:
+      - eac-commands
+    files:
+      root: out/books/risk-evidence-package
+      assets:
+        - "**/*.md"
+        - "**/*.json"
+        - "**/*.feature"
+
+  # ============================================================================
   # Release Documentation
   # ============================================================================
   - moniker: release-docs
