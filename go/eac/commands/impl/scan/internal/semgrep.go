@@ -12,10 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// SemgrepImage is the official Semgrep Docker image
-	SemgrepImage = "semgrep/semgrep:latest"
-)
+// NOTE: SemgrepImage constant removed - now configured via security-tools.yml
+// Docker image versions are loaded from .r2r/eac/security-tools.yml configuration
 
 // Mock support for testing
 var mockSemgrepOutput interface{}
@@ -43,7 +41,7 @@ func getDefaultMockSemgrepOutput() map[string]interface{} {
 }
 
 // RunSemgrepSAST executes Semgrep static analysis via Docker
-func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, logger *logging.Logger) (interface{}, error) {
+func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, semgrepImage string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockSemgrepOutput != nil {
@@ -63,7 +61,7 @@ func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, logger *log
 	defer dockerRunner.Close()
 
 	// Pull image if needed
-	if err := dockerRunner.CheckAndPullImage(SemgrepImage); err != nil {
+	if err := dockerRunner.CheckAndPullImage(semgrepImage); err != nil {
 		return nil, err
 	}
 
@@ -86,7 +84,7 @@ func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, logger *log
 
 	// Configure container
 	containerConfig := &container.Config{
-		Image: SemgrepImage,
+		Image: semgrepImage,
 		Cmd: []string{
 			"semgrep",
 			"scan",

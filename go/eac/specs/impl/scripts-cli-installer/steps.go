@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
@@ -68,7 +68,7 @@ func initializeInstallerContext() {
 	// Use OriginalRepoRoot (not IsolatedDir) because build output is read-only
 	// and doesn't need to be copied to isolated test environments
 	repoRoot := instCtx.sharedCtx.OriginalRepoRoot
-	instCtx.scriptsRoot = repository.BuildOutputPath(repoRoot, "scripts-cli-installer")
+	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "scripts-cli-installer")
 
 	// Create isolated temp directory for this test scenario
 	tempDir, err := os.MkdirTemp("", "r2r-installer-test-*")

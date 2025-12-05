@@ -12,7 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -135,7 +135,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	// Setup debug directory if needed
 	debugOutputDir := ""
 	if debugEnabled {
-		debugOutputDir = filepath.Join(repository.LogsPath(workspaceRoot), "commit")
+		debugOutputDir = filepath.Join(paths.LogsPath(workspaceRoot), "commit")
 		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
 			log.Warnf("Failed to create debug directory: %v", err)
 		}

@@ -3,12 +3,12 @@ Feature: security_sast
 
   As a security auditor
   I want to perform static application security testing on source code
-  So that I can identify security vulnerabilities and code quality issues
+  So that I can identify scan vulnerabilities and code quality issues
 
   Rule: SAST scanner creates evidence file with integrity verification
 
     Scenario: Perform SAST scan with mocked tool
-      When I run the command "security sast eac-core"
+      When I run the command "scan sast eac-core"
       Then the exit code is 0
       And evidence files should exist in directory "out/security/eac-core/sast/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
@@ -18,21 +18,21 @@ Feature: security_sast
       And the latest evidence file should have JSON field "findings" with non-empty data
 
     Scenario: SAST scan with specific ruleset
-      When I run the command "security sast eac-core --config p/security-audit"
+      When I run the command "scan sast eac-core --config p/security-audit"
       Then the exit code is 0
       And evidence files should exist in directory "out/security/eac-core/sast/"
 
     Scenario: SAST scan with debug logging
-      When I run the command "security sast eac-core --debug"
+      When I run the command "scan sast eac-core --debug"
       Then the exit code is 0
       And a log file should exist in directory "out/logs/security/"
 
     Scenario: SAST scan with invalid module
-      When I run the command "security sast nonexistent-module-xyz"
+      When I run the command "scan sast nonexistent-module-xyz"
       Then the exit code is 1
       And I should see "not found" or "Error"
 
     Scenario: SAST help is accessible
-      When I run the command "security sast --help"
+      When I run the command "scan sast --help"
       Then the exit code is 0
       And I should see "sast" or "static" or "Usage"

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/security-tools/0.1.0",
+  "title": "Security Tools Configuration Schema",
+  "description": "Configuration for security scanning tool Docker images and settings",
+  "type": "object",
+  "properties": {
+    "docker_images": {
+      "type": "object",
+      "description": "Docker image specifications for security tools",
+      "properties": {
+        "trivy": {
+          "$ref": "#/definitions/docker_image",
+          "description": "Trivy vulnerability scanner"
+        },
+        "semgrep": {
+          "$ref": "#/definitions/docker_image",
+          "description": "Semgrep static analysis scanner"
+        },
+        "zap": {
+          "$ref": "#/definitions/docker_image",
+          "description": "OWASP ZAP dynamic scanner"
+        }
+      },
+      "required": ["trivy", "semgrep", "zap"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["docker_images"],
+  "additionalProperties": false,
+  "definitions": {
+    "docker_image": {
+      "type": "object",
+      "description": "Docker image specification with version pinning",
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Docker image name (registry/name)",
+          "pattern": "^[a-z0-9.-]+(/[a-z0-9._-]+)+$"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Docker image tag (version or digest)",
+          "pattern": "^[a-zA-Z0-9._-]+(:[a-z0-9]+)?$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this version"
+        }
+      },
+      "required": ["image", "tag"],
+      "additionalProperties": false
+    }
+  }
+}

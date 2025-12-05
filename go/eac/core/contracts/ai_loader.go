@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -161,9 +162,9 @@ func (cl *ContractLoader) GetContractPath() string {
 // Domain contracts: contracts/<module>/<version> (versioned)
 func (cl *ContractLoader) getConfigDir() string {
 	if cl.IsAI() {
-		return filepath.Join(".r2r", "eac", "ai", cl.contractPath)
+		return filepath.Join(paths.R2RDir, paths.EACDir, "ai", cl.contractPath)
 	}
-	return filepath.Join("contracts", cl.contractPath, cl.version)
+	return filepath.Join(paths.ContractsDir, cl.contractPath, cl.version)
 }
 
 // ExtractStringList is a helper to extract string arrays from YAML data

@@ -28,22 +28,32 @@ type MockRepository struct {
 	commitHistory []CommitInfo
 	tags          map[string]MockTag
 
+	// Branch comparison fields
+	branchCommits   []CommitInfo
+	branchDiff      string
+	branchDiffStats string
+	branchFiles     []string
+
 	// Error injection for testing failure paths
-	RemoteURLError       error
-	CurrentBranchError   error
-	HeadSHAError         error
-	TrackedFilesError    error
-	StagedFilesError     error
-	StagedDiffError      error
-	StagedDiffStatsError error
-	AddError             error
-	CommitError          error
-	ConfigSetError       error
-	AddRemoteError       error
-	CommitsBetweenError  error
-	TagsMatchingError    error
-	TagCommitError       error
-	TagDateError         error
+	RemoteURLError         error
+	CurrentBranchError     error
+	HeadSHAError           error
+	TrackedFilesError      error
+	StagedFilesError       error
+	StagedDiffError        error
+	StagedDiffStatsError   error
+	AddError               error
+	CommitError            error
+	ConfigSetError         error
+	AddRemoteError         error
+	CommitsBetweenError    error
+	TagsMatchingError      error
+	TagCommitError         error
+	TagDateError           error
+	GetBranchCommitsError  error
+	GetBranchDiffError     error
+	GetBranchDiffStatsError error
+	GetBranchFilesError    error
 }
 
 // MockTag represents a mock tag for testing
@@ -382,6 +392,67 @@ func (m *MockRepository) TagDate(tagName string) (time.Time, error) {
 func (m *MockRepository) TagExists(tagName string) (bool, error) {
 	_, ok := m.tags[tagName]
 	return ok, nil
+}
+
+// GetBranchCommits returns the mock branch commits.
+func (m *MockRepository) GetBranchCommits(baseBranch string) ([]CommitInfo, error) {
+	if m.GetBranchCommitsError != nil {
+		return nil, m.GetBranchCommitsError
+	}
+	if len(m.branchCommits) == 0 {
+		return nil, fmt.Errorf("no commits ahead of %s", baseBranch)
+	}
+	return m.branchCommits, nil
+}
+
+// GetBranchDiff returns the mock branch diff.
+func (m *MockRepository) GetBranchDiff(baseBranch string) (string, error) {
+	if m.GetBranchDiffError != nil {
+		return "", m.GetBranchDiffError
+	}
+	return m.branchDiff, nil
+}
+
+// GetBranchDiffStats returns the mock branch diff stats.
+func (m *MockRepository) GetBranchDiffStats(baseBranch string) (string, error) {
+	if m.GetBranchDiffStatsError != nil {
+		return "", m.GetBranchDiffStatsError
+	}
+	return m.branchDiffStats, nil
+}
+
+// GetBranchFiles returns the mock branch files.
+func (m *MockRepository) GetBranchFiles(baseBranch string) ([]string, error) {
+	if m.GetBranchFilesError != nil {
+		return nil, m.GetBranchFilesError
+	}
+	return m.branchFiles, nil
+}
+
+// Builder methods for branch comparison
+
+// WithBranchCommits sets the mock branch commits.
+func (m *MockRepository) WithBranchCommits(commits []CommitInfo) *MockRepository {
+	m.branchCommits = commits
+	return m
+}
+
+// WithBranchDiff sets the mock branch diff.
+func (m *MockRepository) WithBranchDiff(diff string) *MockRepository {
+	m.branchDiff = diff
+	return m
+}
+
+// WithBranchDiffStats sets the mock branch diff stats.
+func (m *MockRepository) WithBranchDiffStats(stats string) *MockRepository {
+	m.branchDiffStats = stats
+	return m
+}
+
+// WithBranchFiles sets the mock branch files.
+func (m *MockRepository) WithBranchFiles(files []string) *MockRepository {
+	m.branchFiles = files
+	return m
 }
 
 // Ensure MockRepository implements GitRepository

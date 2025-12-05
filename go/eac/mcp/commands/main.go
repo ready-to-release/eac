@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -177,7 +178,7 @@ func getCommands() CommandTree {
 	}
 
 	// Use the canonical binary path
-	binaryPath := repository.CommandsBinaryPath(repoRoot)
+	binaryPath := paths.CommandsBinaryPath(repoRoot)
 	cmd := exec.Command(binaryPath, "get", "commands")
 	cmd.Dir = repoRoot
 
@@ -224,7 +225,7 @@ func execCommand(commandName string, additionalArgs string) string {
 	}
 
 	// Use the canonical binary path
-	binaryPath := repository.CommandsBinaryPath(repoRoot)
+	binaryPath := paths.CommandsBinaryPath(repoRoot)
 	cmd := exec.Command(binaryPath, cmdParts...)
 	cmd.Dir = repoRoot
 

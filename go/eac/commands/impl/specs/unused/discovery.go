@@ -28,7 +28,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // ImplSpecsPair represents a mapping between step implementations and feature specs.
@@ -134,9 +134,9 @@ func extractSpecsPath(content, repoRoot string) (string, error) {
 
 	// Extract the specs/<module>/<feature> part from the relative path
 	// The path always contains "specs/" - extract from that point
-	specsIdx := strings.Index(relativePath, repository.SpecsDir+"/")
+	specsIdx := strings.Index(relativePath, paths.SpecsDir+"/")
 	if specsIdx == -1 {
-		return "", fmt.Errorf("SpecsPath does not contain '%s/': %s", repository.SpecsDir, relativePath)
+		return "", fmt.Errorf("SpecsPath does not contain '%s/': %s", paths.SpecsDir, relativePath)
 	}
 
 	// Get the specs-relative path (e.g., "specs/eac-commands")

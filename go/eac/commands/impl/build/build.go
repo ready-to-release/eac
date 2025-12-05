@@ -35,6 +35,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 )
@@ -234,7 +235,7 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 		}
 
 		artifacts := listFunc(module, workspaceRoot)
-		outputDir := repository.BuildOutputPath(workspaceRoot, moniker)
+		outputDir := paths.BuildOutputPath(workspaceRoot, moniker)
 
 		for _, artifact := range artifacts {
 			// Output full path relative to workspace root
@@ -332,7 +333,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		}
 		defer releaseModuleBuildLock(lockFile)
 
-		moduleOutputDir := repository.BuildOutputPath(workspaceRoot, moniker)
+		moduleOutputDir := paths.BuildOutputPath(workspaceRoot, moniker)
 		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version, pdfMode, pdfTheme)
 	}
 

@@ -7,13 +7,13 @@ Command reference for EAC's security scanning system.
 | Command               | Description                                          |
 | --------------------- | ---------------------------------------------------- |
 | `security`            | Run all security scans                               |
-| `security sast`       | Static Application Security Testing using Semgrep    |
-| `security vuln`       | Scan for dependency vulnerabilities using Trivy      |
-| `security iac`        | Scan Infrastructure as Code for misconfigurations    |
-| `security sbom`       | Generate Software Bill of Materials                  |
-| `security secrets`    | Detect secrets and credentials                       |
-| `security compliance` | Check compliance with security standards             |
-| `security zap`        | Dynamic Application Security Testing using OWASP ZAP |
+| `scan sast`       | Static Application Security Testing using Semgrep    |
+| `scan vuln`       | Scan for dependency vulnerabilities using Trivy      |
+| `scan iac`        | Scan Infrastructure as Code for misconfigurations    |
+| `scan sbom`       | Generate Software Bill of Materials                  |
+| `scan secrets`    | Detect secrets and credentials                       |
+| `scan compliance` | Check compliance with security standards             |
+| `scan zap`        | Dynamic Application Security Testing using OWASP ZAP |
 
 ---
 
@@ -105,19 +105,19 @@ Summary:
 
 ---
 
-## security sast
+## scan sast
 
 Static Application Security Testing using Semgrep.
 
 ### Synopsis
 
 ```bash
-r2r eac security sast [options]
+r2r eac scan sast [options]
 ```
 
 ### Description
 
-Analyzes source code for security vulnerabilities, bad patterns, and potential bugs using Semgrep rules.
+Analyzes source code for scan vulnerabilities, bad patterns, and potential bugs using Semgrep rules.
 
 ### Flags
 
@@ -135,22 +135,22 @@ Analyzes source code for security vulnerabilities, bad patterns, and potential b
 
 ```bash
 # Full SAST scan
-r2r eac security sast
+r2r eac scan sast
 
 # Quick scan for pre-commit
-r2r eac security sast --quick
+r2r eac scan sast --quick
 
 # Scan specific path
-r2r eac security sast --path go/eac/commands/
+r2r eac scan sast --path go/eac/commands/
 
 # Use specific ruleset
-r2r eac security sast --rules golang
+r2r eac scan sast --rules golang
 
 # Exclude test files
-r2r eac security sast --exclude "*_test.go"
+r2r eac scan sast --exclude "*_test.go"
 
 # SARIF output for GitHub
-r2r eac security sast --format sarif
+r2r eac scan sast --format sarif
 ```
 
 ### Output
@@ -212,14 +212,14 @@ Summary:
 
 ---
 
-## security vuln
+## scan vuln
 
 Scan for dependency vulnerabilities using Trivy.
 
 ### Synopsis
 
 ```bash
-r2r eac security vuln [options]
+r2r eac scan vuln [options]
 ```
 
 ### Description
@@ -239,16 +239,16 @@ Scans project dependencies for known CVEs using Trivy's vulnerability database.
 
 ```bash
 # Scan for vulnerabilities
-r2r eac security vuln
+r2r eac scan vuln
 
 # Include medium severity
-r2r eac security vuln --severity MEDIUM,HIGH,CRITICAL
+r2r eac scan vuln --severity MEDIUM,HIGH,CRITICAL
 
 # Ignore unfixed vulnerabilities
-r2r eac security vuln --ignore-unfixed
+r2r eac scan vuln --ignore-unfixed
 
 # JSON output
-r2r eac security vuln --format json
+r2r eac scan vuln --format json
 ```
 
 ### Output
@@ -298,14 +298,14 @@ Summary:
 
 ---
 
-## security iac
+## scan iac
 
 Scan Infrastructure as Code for misconfigurations.
 
 ### Synopsis
 
 ```bash
-r2r eac security iac [options]
+r2r eac scan iac [options]
 ```
 
 ### Description
@@ -326,16 +326,16 @@ Scans Dockerfiles, Kubernetes manifests, Terraform files, and GitHub Actions for
 
 ```bash
 # Scan all IaC files
-r2r eac security iac
+r2r eac scan iac
 
 # Scan specific types
-r2r eac security iac --type dockerfile,k8s
+r2r eac scan iac --type dockerfile,k8s
 
 # Scan specific path
-r2r eac security iac --path deploy/
+r2r eac scan iac --path deploy/
 
 # Include medium severity
-r2r eac security iac --severity MEDIUM,HIGH,CRITICAL
+r2r eac scan iac --severity MEDIUM,HIGH,CRITICAL
 ```
 
 ### Output
@@ -388,14 +388,14 @@ Summary:
 
 ---
 
-## security sbom
+## scan sbom
 
 Generate Software Bill of Materials.
 
 ### Synopsis
 
 ```bash
-r2r eac security sbom [options]
+r2r eac scan sbom [options]
 ```
 
 ### Description
@@ -413,13 +413,13 @@ Creates a comprehensive inventory of all software components including dependenc
 
 ```bash
 # Generate CycloneDX SBOM
-r2r eac security sbom
+r2r eac scan sbom
 
 # Generate SPDX SBOM
-r2r eac security sbom --format spdx
+r2r eac scan sbom --format spdx
 
 # Custom output directory
-r2r eac security sbom --output artifacts/sbom/
+r2r eac scan sbom --output artifacts/sbom/
 ```
 
 ### Output
@@ -459,14 +459,14 @@ Upload to dependency tracking:
 
 ---
 
-## security secrets
+## scan secrets
 
 Detect secrets and credentials using Trivy.
 
 ### Synopsis
 
 ```bash
-r2r eac security secrets [options]
+r2r eac scan secrets [options]
 ```
 
 ### Description
@@ -485,13 +485,13 @@ Scans code and configuration files for exposed secrets, API keys, passwords, and
 
 ```bash
 # Scan for secrets
-r2r eac security secrets
+r2r eac scan secrets
 
 # Scan specific path
-r2r eac security secrets --path config/
+r2r eac scan secrets --path config/
 
 # JSON output
-r2r eac security secrets --format json
+r2r eac scan secrets --format json
 ```
 
 ### Output
@@ -549,19 +549,19 @@ Summary:
 
 ---
 
-## security compliance
+## scan compliance
 
 Check compliance with security standards using Trivy.
 
 ### Synopsis
 
 ```bash
-r2r eac security compliance [options]
+r2r eac scan compliance [options]
 ```
 
 ### Description
 
-Validates configuration and code against security compliance frameworks.
+Validates configuration and code against scan compliance frameworks.
 
 ### Flags
 
@@ -585,13 +585,13 @@ Validates configuration and code against security compliance frameworks.
 
 ```bash
 # Check CIS compliance
-r2r eac security compliance --framework cis
+r2r eac scan compliance --framework cis
 
 # Check SOC 2 compliance
-r2r eac security compliance --framework soc2
+r2r eac scan compliance --framework soc2
 
 # Check multiple frameworks
-r2r eac security compliance --framework nist
+r2r eac scan compliance --framework nist
 ```
 
 ### Output
@@ -637,14 +637,14 @@ Summary:
 
 ---
 
-## security zap
+## scan zap
 
 Dynamic Application Security Testing using OWASP ZAP.
 
 ### Synopsis
 
 ```bash
-r2r eac security zap [options]
+r2r eac scan zap [options]
 ```
 
 ### Description
@@ -664,16 +664,16 @@ Runs OWASP ZAP against a live application to find runtime vulnerabilities. Requi
 
 ```bash
 # Baseline scan
-r2r eac security zap --target http://localhost:8080
+r2r eac scan zap --target http://localhost:8080
 
 # API scan
-r2r eac security zap --target http://localhost:8080/api --mode api
+r2r eac scan zap --target http://localhost:8080/api --mode api
 
 # Full scan
-r2r eac security zap --target http://localhost:8080 --mode full
+r2r eac scan zap --target http://localhost:8080 --mode full
 
 # With custom timeout
-r2r eac security zap --target http://localhost:8080 --timeout 7200
+r2r eac scan zap --target http://localhost:8080 --timeout 7200
 ```
 
 ### Output
@@ -745,8 +745,8 @@ Summary:
 
 ```bash
 # Quick checks before commit
-r2r eac security secrets
-r2r eac security sast --quick
+r2r eac scan secrets
+r2r eac scan sast --quick
 ```
 
 ### CI/CD Security Gate
@@ -756,20 +756,20 @@ r2r eac security sast --quick
 r2r eac security --fail-on HIGH
 
 # Or run individual scans
-r2r eac security sast
-r2r eac security vuln
-r2r eac security secrets
-r2r eac security iac
+r2r eac scan sast
+r2r eac scan vuln
+r2r eac scan secrets
+r2r eac scan iac
 ```
 
 ### Compliance Audit
 
 ```bash
 # Generate SBOM
-r2r eac security sbom --format spdx
+r2r eac scan sbom --format spdx
 
 # Run compliance checks
-r2r eac security compliance --framework soc2
+r2r eac scan compliance --framework soc2
 
 # Generate evidence for risk assessment
 r2r eac create risk-assess
@@ -785,7 +785,7 @@ r2r eac show risk-report
 ./your-api-server &
 
 # Run ZAP API scan
-r2r eac security zap --target http://localhost:8080 --mode api
+r2r eac scan zap --target http://localhost:8080 --mode api
 
 # Stop application
 kill %1
@@ -809,16 +809,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: SAST Scan
-        run: r2r eac security sast
+        run: r2r eac scan sast
 
       - name: Vulnerability Scan
-        run: r2r eac security vuln
+        run: r2r eac scan vuln
 
       - name: Secrets Check
-        run: r2r eac security secrets
+        run: r2r eac scan secrets
 
       - name: Generate SBOM
-        run: r2r eac security sbom
+        run: r2r eac scan sbom
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
@@ -835,8 +835,8 @@ jobs:
 
 echo "Running security checks..."
 
-r2r eac security secrets || exit 1
-r2r eac security sast --quick || exit 1
+r2r eac scan secrets || exit 1
+r2r eac scan sast --quick || exit 1
 
 echo "✓ Security checks passed"
 ```

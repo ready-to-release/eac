@@ -383,7 +383,7 @@ sbom:
 
 ```bash
 # Generate CycloneDX SBOM
-r2r eac security sbom --format cyclonedx
+r2r eac scan sbom --format cyclonedx
 
 # Output: out/sbom/sbom.cdx.json
 ```

@@ -5,13 +5,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"go.uber.org/zap/zapcore"
 )
 
-// logsPath returns the path to the logs output directory.
-// Inlined here to avoid import cycle with repository package.
+// logsPath returns the path to the logs output directory
 func logsPath(repoRoot string) string {
-	return filepath.Join(repoRoot, "out", "logs")
+	return paths.LogsPath(repoRoot)
 }
 
 // configLevelEnabler implements zapcore.LevelEnabler based on config

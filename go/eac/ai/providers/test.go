@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -58,7 +58,7 @@ func (p *TestProvider) Name() string {
 func (p *TestProvider) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
 	// 1. Try file-based mock response
 	if p.repoRoot != "" {
-		mockFilePath := filepath.Join(p.repoRoot, ".r2r", "test", "ai-mock.txt")
+		mockFilePath := paths.AITestMockPath(p.repoRoot)
 		if content, err := os.ReadFile(mockFilePath); err == nil {
 			return string(content), nil
 		}

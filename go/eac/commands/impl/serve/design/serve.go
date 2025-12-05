@@ -17,6 +17,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -94,7 +95,7 @@ func ServeDesign() int {
 	module = mod.Moniker
 
 	// Check if workspace exists
-	workspacePath := repository.WorkspaceDSLPath(repoRoot, module)
+	workspacePath := paths.WorkspaceDSLPath(repoRoot, module)
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		log.Infof("❌ Workspace not found: %s", workspacePath)
 		log.Info("")

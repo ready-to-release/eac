@@ -400,9 +400,9 @@ The EAC CLI is a command-line developer tool that provides:
 
 | Control | Implementation | Effort | Timeline |
 |---------|---------------|--------|----------|
-| **SR-4: SBOM Generation** | Use `security sbom` command to document CLI's own dependencies | Low | Week 1 |
-| **RA-5: Dependency Scanning** | Implement `security vuln` on CLI itself in CI/CD | Low | Week 1 |
-| **SR-6: Secrets Detection** | Add `security secrets` to pre-commit hooks | Low | Week 1 |
+| **SR-4: SBOM Generation** | Use `scan sbom` command to document CLI's own dependencies | Low | Week 1 |
+| **RA-5: Dependency Scanning** | Implement `scan vuln` on CLI itself in CI/CD | Low | Week 1 |
+| **SR-6: Secrets Detection** | Add `scan secrets` to pre-commit hooks | Low | Week 1 |
 | **IA-5: Secure Credential Storage** | Implement keyring integration for `.ai/config.json` | Medium | Week 2-3 |
 | **AU-9: Evidence Signing** | Add SHA256 signature to all security evidence files | Medium | Week 2-3 |
 | **AC-6: MCP Privilege Reduction** | Review and minimize MCP server permissions | Low | Week 2 |

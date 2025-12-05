@@ -8,7 +8,7 @@ import (
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // StripAgentNoise removes common initialization/greeting patterns from agent output
@@ -24,7 +24,7 @@ import (
 func StripAgentNoise(output string, agentType string, workspaceRoot string) string {
 	// Debug logging
 	if debugEnabled, _ := os.LookupEnv("DEBUG"); debugEnabled != "" {
-		os.WriteFile(filepath.Join(workspaceRoot, repository.OutDir, fmt.Sprintf("filter-%s-01-input.txt", agentType)), []byte(output), 0644)
+		os.WriteFile(filepath.Join(workspaceRoot, paths.OutDir, fmt.Sprintf("filter-%s-01-input.txt", agentType)), []byte(output), 0644)
 	}
 
 	// First, strip wrapping code fences if present (common AI noise pattern)
@@ -63,7 +63,7 @@ func StripAgentNoise(output string, agentType string, workspaceRoot string) stri
 
 	// Debug logging
 	if debugEnabled, _ := os.LookupEnv("DEBUG"); debugEnabled != "" {
-		os.WriteFile(filepath.Join(workspaceRoot, repository.OutDir, fmt.Sprintf("filter-%s-02-output.txt", agentType)), []byte(cleaned), 0644)
+		os.WriteFile(filepath.Join(workspaceRoot, paths.OutDir, fmt.Sprintf("filter-%s-02-output.txt", agentType)), []byte(cleaned), 0644)
 	}
 
 	return cleaned
