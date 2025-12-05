@@ -1,6 +1,7 @@
 package orchestrator
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -8,10 +9,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 )
 
 // Orchestrator manages parallel execution of work items
@@ -22,6 +25,17 @@ type Orchestrator struct {
 	orchestratorOut io.Writer
 	logger          *log.Logger // goroutine-safe logger
 	logFile         *os.File
+
+	// TUI console for real-time output display
+	tuiConsole *tui.Console
+	tuiCtx     context.Context
+	tuiCancel  context.CancelFunc
+
+	// TUI status tracking (protected by tuiMu)
+	tuiMu        sync.Mutex
+	tuiRunning   []string
+	tuiCompleted int
+	tuiTotal     int
 }
 
 // New creates a new Orchestrator with the given configuration and worker function
@@ -31,10 +45,27 @@ func New(config Config, worker WorkerFunc) *Orchestrator {
 		config.MaxConcurrency = runtime.NumCPU()
 	}
 
-	return &Orchestrator{
+	// Set default TUI height
+	if config.TUIHeight <= 0 {
+		config.TUIHeight = tui.DefaultHeight
+	}
+
+	o := &Orchestrator{
 		config: config,
 		worker: worker,
 	}
+
+	// Initialize TUI console if enabled
+	if config.TUI {
+		o.tuiConsole = tui.New(tui.Config{
+			Height:     config.TUIHeight,
+			ShowHeader: true,
+			BufferSize: 1000,
+		})
+		o.tuiCtx, o.tuiCancel = context.WithCancel(context.Background())
+	}
+
+	return o
 }
 
 // RunLayered executes modules in dependency layers - layers run sequentially, modules within a layer run in parallel
@@ -45,30 +76,41 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 		allMonikers = append(allMonikers, layer...)
 	}
 
-	// Create orchestrator log file
-	orchestratorLogPath := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, o.config.OrchestratorLogName)
-	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
-		return nil, fmt.Errorf("failed to create orchestrator log directory: %w", err)
+	// Initialize if not already done
+	if err := o.Init(); err != nil {
+		return nil, err
 	}
 
-	orchestratorLog, err := os.Create(orchestratorLogPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create orchestrator log: %w", err)
-	}
-	o.logFile = orchestratorLog
+	// Start TUI console if enabled (and not already started)
+	if o.tuiConsole != nil {
+		// Initialize TUI status tracking
+		o.tuiTotal = len(allMonikers)
+		o.tuiCompleted = 0
+		o.tuiRunning = nil
 
-	// Create a goroutine-safe logger
-	multiWriter := io.MultiWriter(os.Stdout, orchestratorLog)
-	o.logger = log.New(multiWriter, "", 0)
-	o.orchestratorOut = multiWriter
+		// StartAsync is idempotent - will not restart if already running
+		o.tuiConsole.StartAsync(o.tuiCtx)
+		// Send initial status
+		o.tuiConsole.UpdateStatus(tui.Status{
+			Phase:     capitalize(o.config.ActionVerb),
+			Running:   nil,
+			Completed: 0,
+			Total:     len(allMonikers),
+		})
+	}
 
 	// Print header with layer info
 	fmt.Fprintf(o.orchestratorOut, "%s %d modules in %d layer(s)%s%s",
 		capitalize(o.config.ActionVerb), len(allMonikers), len(layers), LineEnding, LineEnding)
 
-	// Create and start display manager
-	o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allMonikers), o.config.StatusUpdateInterval)
-	o.display.start()
+	// Create and start display manager (only when TUI is not enabled)
+	if !o.config.TUI {
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allMonikers), o.config.StatusUpdateInterval)
+		o.display.start()
+	}
+
+	// Set phase to Run when starting execution
+	o.SetPhase(tui.PhaseRun)
 
 	// Execute layers sequentially
 	allResults := make([]WorkResult, len(allMonikers))
@@ -103,8 +145,10 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 		for _, result := range layerResults {
 			if result.ExitCode != 0 {
 				// Stop display and return early with results up to this point
-				o.display.stop()
-				o.display.flushCompletedLines()
+				if o.display != nil {
+					o.display.stop()
+					o.display.flushCompletedLines()
+				}
 				return allResults[:globalIndex+len(layerMonikers)], nil
 			}
 		}
@@ -113,8 +157,10 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 	}
 
 	// Stop display manager and flush all collected completion lines
-	o.display.stop()
-	o.display.flushCompletedLines()
+	if o.display != nil {
+		o.display.stop()
+		o.display.flushCompletedLines()
+	}
 
 	return allResults, nil
 }
@@ -129,31 +175,42 @@ func formatMonikerList(monikers []string) string {
 
 // Run executes all work items in parallel and returns the results
 func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
-	// Create orchestrator log file
-	orchestratorLogPath := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, o.config.OrchestratorLogName)
-	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
-		return nil, fmt.Errorf("failed to create orchestrator log directory: %w", err)
+	// Initialize if not already done
+	if err := o.Init(); err != nil {
+		return nil, err
 	}
 
-	orchestratorLog, err := os.Create(orchestratorLogPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create orchestrator log: %w", err)
+	// Start TUI console if enabled (and not already started)
+	if o.tuiConsole != nil {
+		// Initialize TUI status tracking
+		o.tuiTotal = len(monikers)
+		o.tuiCompleted = 0
+		o.tuiRunning = nil
+
+		// StartAsync is idempotent - will not restart if already running
+		o.tuiConsole.StartAsync(o.tuiCtx)
+		// Send initial status
+		o.tuiConsole.UpdateStatus(tui.Status{
+			Phase:     capitalize(o.config.ActionVerb),
+			Running:   nil,
+			Completed: 0,
+			Total:     len(monikers),
+		})
 	}
-	o.logFile = orchestratorLog
 
-	// Create a goroutine-safe logger that writes to both console and log file
-	// log.Logger is documented as safe for concurrent use from multiple goroutines
-	multiWriter := io.MultiWriter(os.Stdout, orchestratorLog)
-	o.logger = log.New(multiWriter, "", 0) // No prefix, no flags (we format our own output)
-	o.orchestratorOut = multiWriter
+	// Print header (use display names for cleaner output)
+	displayNames := output.PackageDisplayNames(monikers)
+	fmt.Fprintf(o.orchestratorOut, "%s %d items in parallel:%s%s%s",
+		capitalize(o.config.ActionVerb), len(monikers), output.ListFormat(displayNames, 60, 5), LineEnding, LineEnding)
 
-	// Print header
-	fmt.Fprintf(o.orchestratorOut, "%s %d modules in parallel:%s%s%s",
-		capitalize(o.config.ActionVerb), len(monikers), output.ListFormat(monikers, 60, 5), LineEnding, LineEnding)
+	// Create and start display manager (only when TUI is not enabled)
+	if !o.config.TUI {
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(monikers), o.config.StatusUpdateInterval)
+		o.display.start()
+	}
 
-	// Create and start display manager
-	o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(monikers), o.config.StatusUpdateInterval)
-	o.display.start()
+	// Set phase to Run when starting execution
+	o.SetPhase(tui.PhaseRun)
 
 	// Create work items
 	workItems := make([]WorkItem, len(monikers))
@@ -168,8 +225,10 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 	results := o.executeParallel(workItems)
 
 	// Stop display manager and flush all collected completion lines
-	o.display.stop()
-	o.display.flushCompletedLines()
+	if o.display != nil {
+		o.display.stop()
+		o.display.flushCompletedLines()
+	}
 
 	return results, nil
 }
@@ -210,48 +269,79 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		Index:   item.Index,
 	}
 
+	// Helper to mark completed in display or TUI
+	markCompleted := func() {
+		if o.display != nil {
+			o.display.markCompleted(&result)
+		}
+		o.tuiMarkCompleted(item.Moniker)
+	}
+
 	// Create output directory for this module
-	moduleOutputDir := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, item.Moniker)
+	// Sanitize moniker for filesystem (replace : with _ for Windows compatibility)
+	sanitizedMoniker := sanitizePathForFS(item.Moniker)
+	moduleOutputDir := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, sanitizedMoniker)
 	parentDir := filepath.Dir(moduleOutputDir)
 
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		result.ExitCode = 1
 		result.Errors = []string{fmt.Sprintf("Failed to create parent directory %s: %v", parentDir, err)}
-		result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
+		result.LogPath = filepath.Join(o.config.OutputBaseDir, sanitizedMoniker, o.config.LogFileName)
 		result.Duration = time.Since(startTime)
-		o.display.markCompleted(&result)
+		markCompleted()
 		return result
 	}
 
-	// Purge existing output directory (best effort)
-	_ = os.RemoveAll(moduleOutputDir)
+	// In dry-run mode, preserve existing artifacts and use separate log file
+	// This allows meta-tests to mock builds without destroying real build outputs
+	if o.config.DryRun {
+		// Don't purge - preserve existing artifacts
+	} else {
+		// Purge existing output directory (best effort)
+		_ = os.RemoveAll(moduleOutputDir)
+	}
 
 	if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
 		result.ExitCode = 1
 		result.Errors = []string{fmt.Sprintf("Failed to create directory %s: %v", moduleOutputDir, err)}
-		result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
+		result.LogPath = filepath.Join(o.config.OutputBaseDir, sanitizedMoniker, o.config.LogFileName)
 		result.Duration = time.Since(startTime)
-		o.display.markCompleted(&result)
+		markCompleted()
 		return result
 	}
 
-	// Create log file
-	logPath := filepath.Join(moduleOutputDir, o.config.LogFileName)
+	// Create log file (use separate file in dry-run mode to preserve real build logs)
+	logFileName := o.config.LogFileName
+	if o.config.DryRun {
+		logFileName = "dry-run." + logFileName
+	}
+	logPath := filepath.Join(moduleOutputDir, logFileName)
 	logFile, err := os.Create(logPath)
 	if err != nil {
 		result.ExitCode = 1
 		result.Errors = []string{fmt.Sprintf("Failed to create log file %s: %v", logPath, err)}
-		result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
+		result.LogPath = filepath.Join(o.config.OutputBaseDir, sanitizedMoniker, o.config.LogFileName)
 		result.Duration = time.Since(startTime)
-		o.display.markCompleted(&result)
+		markCompleted()
 		return result
 	}
 
-	// Mark as running in display
-	o.display.markRunning(item.Moniker)
+	// Mark as running in display and TUI
+	if o.display != nil {
+		o.display.markRunning(item.Moniker)
+	}
+	o.tuiMarkRunning(item.Moniker)
 
-	// Execute worker function (all output goes to log file)
-	exitCode := o.worker(item.Moniker, logFile)
+	// Create writer for worker - use TUI multiwriter if TUI is enabled
+	var workerWriter io.Writer
+	if o.tuiConsole != nil {
+		workerWriter = o.tuiConsole.NewWriter(item.Moniker, logFile)
+	} else {
+		workerWriter = logFile
+	}
+
+	// Execute worker function
+	exitCode := o.worker(item.Moniker, workerWriter)
 	logFile.Close()
 
 	// Parse log for warnings/errors
@@ -260,7 +350,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	result.ExitCode = exitCode
 	result.Warnings = warnings
 	result.Errors = errors
-	result.LogPath = filepath.Join(o.config.OutputBaseDir, item.Moniker, o.config.LogFileName)
+	result.LogPath = filepath.Join(o.config.OutputBaseDir, sanitizedMoniker, o.config.LogFileName)
 	result.Duration = time.Since(startTime)
 
 	// Set module type from config if available
@@ -271,7 +361,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	}
 
 	// Mark as completed in display (will print completion line)
-	o.display.markCompleted(&result)
+	markCompleted()
 
 	return result
 }
@@ -341,12 +431,191 @@ func (o *Orchestrator) PrintSummary(results []WorkResult) {
 	fmt.Fprintf(o.orchestratorOut, "%sOutput: %s%s", nl, o.config.OutputBaseDir, nl)
 }
 
+// StopTUI stops the TUI console and restores stdout output.
+// Must be called before PrintSummary when TUI is enabled.
+func (o *Orchestrator) StopTUI() {
+	if o.tuiConsole != nil {
+		o.tuiConsole.Stop()
+		o.tuiConsole = nil
+	}
+	if o.tuiCancel != nil {
+		o.tuiCancel()
+		o.tuiCancel = nil
+	}
+	// Restore stdout for subsequent output (like PrintSummary)
+	if o.logFile != nil {
+		o.orchestratorOut = io.MultiWriter(os.Stdout, o.logFile)
+		o.logger = log.New(o.orchestratorOut, "", 0)
+	}
+}
+
 // Close releases resources held by the orchestrator
-// Must be called after PrintSummary
 func (o *Orchestrator) Close() {
+	// Stop TUI if not already stopped
+	o.StopTUI()
+
 	if o.logFile != nil {
 		o.logFile.Close()
+		o.logFile = nil
 	}
+}
+
+// tuiMarkRunning adds a module to the running list and updates TUI status
+func (o *Orchestrator) tuiMarkRunning(moniker string) {
+	if o.tuiConsole == nil {
+		return
+	}
+	o.tuiMu.Lock()
+	o.tuiRunning = append(o.tuiRunning, moniker)
+	running := make([]string, len(o.tuiRunning))
+	copy(running, o.tuiRunning)
+	completed := o.tuiCompleted
+	total := o.tuiTotal
+	o.tuiMu.Unlock()
+
+	o.tuiConsole.UpdateStatus(tui.Status{
+		Phase:     capitalize(o.config.ActionVerb),
+		Running:   running,
+		Completed: completed,
+		Total:     total,
+	})
+}
+
+// tuiMarkCompleted removes a module from running and increments completed count
+func (o *Orchestrator) tuiMarkCompleted(moniker string) {
+	if o.tuiConsole == nil {
+		return
+	}
+	o.tuiMu.Lock()
+	// Remove from running list
+	for i, m := range o.tuiRunning {
+		if m == moniker {
+			o.tuiRunning = append(o.tuiRunning[:i], o.tuiRunning[i+1:]...)
+			break
+		}
+	}
+	o.tuiCompleted++
+	running := make([]string, len(o.tuiRunning))
+	copy(running, o.tuiRunning)
+	completed := o.tuiCompleted
+	total := o.tuiTotal
+	o.tuiMu.Unlock()
+
+	o.tuiConsole.UpdateStatus(tui.Status{
+		Phase:     capitalize(o.config.ActionVerb),
+		Running:   running,
+		Completed: completed,
+		Total:     total,
+	})
+}
+
+// SetPhase switches the TUI to a specific phase (Init, Run, End)
+func (o *Orchestrator) SetPhase(phase tui.Phase) {
+	if o.tuiConsole != nil {
+		o.tuiConsole.SetPhase(phase)
+	}
+}
+
+// SetPhaseSummary sets the summary text for a phase (shown when collapsed)
+func (o *Orchestrator) SetPhaseSummary(phase tui.Phase, summary string) {
+	if o.tuiConsole != nil {
+		o.tuiConsole.SetPhaseSummary(phase, summary)
+	}
+}
+
+// CompletePhase marks a phase as complete
+func (o *Orchestrator) CompletePhase(phase tui.Phase, success bool, summary string) {
+	if o.tuiConsole != nil {
+		o.tuiConsole.CompletePhase(phase, success, summary)
+	}
+}
+
+// WriteToPhase writes a line to a specific phase's buffer
+func (o *Orchestrator) WriteToPhase(phase tui.Phase, text string) {
+	if o.tuiConsole != nil {
+		o.tuiConsole.WriteToPhase(phase, text)
+	}
+}
+
+// SendInitLine sends a line to the Init phase buffer
+func (o *Orchestrator) SendInitLine(text string) {
+	o.WriteToPhase(tui.PhaseInit, text)
+}
+
+// SendEndLine sends a line to the End phase buffer
+func (o *Orchestrator) SendEndLine(text string) {
+	o.WriteToPhase(tui.PhaseEnd, text)
+}
+
+// IsTUIEnabled returns whether TUI is enabled
+func (o *Orchestrator) IsTUIEnabled() bool {
+	return o.tuiConsole != nil
+}
+
+// Init initializes the orchestrator's output infrastructure (log file, writers).
+// This must be called before StartTUI or using phase methods.
+// It's automatically called by Run/RunLayered if not called explicitly.
+func (o *Orchestrator) Init() error {
+	if o.logFile != nil {
+		return nil // Already initialized
+	}
+
+	// Create orchestrator log file
+	orchestratorLogPath := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, o.config.OrchestratorLogName)
+	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
+		return fmt.Errorf("failed to create orchestrator log directory: %w", err)
+	}
+
+	orchestratorLog, err := os.Create(orchestratorLogPath)
+	if err != nil {
+		return fmt.Errorf("failed to create orchestrator log: %w", err)
+	}
+	o.logFile = orchestratorLog
+
+	// Create a goroutine-safe logger
+	// When TUI is enabled, only write to log file (TUI handles console display)
+	var multiWriter io.Writer
+	if o.config.TUI {
+		multiWriter = orchestratorLog
+	} else {
+		multiWriter = io.MultiWriter(os.Stdout, orchestratorLog)
+	}
+	o.logger = log.New(multiWriter, "", 0)
+	o.orchestratorOut = multiWriter
+
+	return nil
+}
+
+// StartTUI starts only the TUI console without running any jobs.
+// Use this to enable phase output before calling Run or RunLayered.
+// Returns quickly after TUI is initialized.
+// Call Init() first if you need logging infrastructure.
+func (o *Orchestrator) StartTUI() {
+	if o.tuiConsole == nil {
+		return
+	}
+	o.tuiConsole.StartAsync(o.tuiCtx)
+	// Set initial phase to Init
+	o.SetPhase(tui.PhaseInit)
+}
+
+// GetOrchestratorOut returns the writer for orchestrator-level output.
+// When TUI is enabled, this writes to the log file only.
+// When TUI is not enabled, this writes to both stdout and log file.
+func (o *Orchestrator) GetOrchestratorOut() io.Writer {
+	return o.orchestratorOut
+}
+
+// SetWorker sets the worker function for the orchestrator.
+// Must be called before Run or RunLayered.
+func (o *Orchestrator) SetWorker(worker WorkerFunc) {
+	o.worker = worker
+}
+
+// SetModuleTypes updates the module types map in the config.
+// Useful when module types are determined after orchestrator creation.
+func (o *Orchestrator) SetModuleTypes(moduleTypes map[string]string) {
+	o.config.ModuleTypes = moduleTypes
 }
 
 // GetExitCode returns the appropriate exit code based on results
@@ -371,4 +640,13 @@ func capitalize(s string) string {
 		return string(first-32) + s[1:]
 	}
 	return s
+}
+
+// sanitizePathForFS converts a moniker to a filesystem-safe path
+// Replaces : with _ (Windows doesn't allow : in paths)
+// Normalizes path separators to forward slashes
+func sanitizePathForFS(path string) string {
+	safe := strings.ReplaceAll(path, ":", "_")
+	safe = strings.ReplaceAll(safe, "\\", "/")
+	return safe
 }

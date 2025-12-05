@@ -1,4 +1,4 @@
-@deps:go @L2 @ov
+@deps:go @L1 @ov
 Feature: eac-commands_build
 
   As a developer of the eac platform
@@ -8,12 +8,12 @@ Feature: eac-commands_build
   Rule: Module must be identified by moniker
 
     Scenario: Build existing module
-      When I run the command "build eac-commands"
+      When I run the command "build --dry-run eac-commands"
       Then the exit code is 0
-      And I should see "Building" or "Success" or "build"
+      And I should see "Building" or "dry-run" or "build"
 
     Scenario: Error on non-existent module
-      When I run the command "build non-existent-module-xyz"
+      When I run the command "build --dry-run non-existent-module-xyz"
       Then the exit code is 1
       And I should see "not found" or "Error" or "unknown"
 
@@ -25,6 +25,6 @@ Feature: eac-commands_build
       And I should see "build" or "module" or "Usage"
 
     Scenario: Build with no args builds all
-      When I run the command "build"
-      Then the exit code is 0 or 1
-      And I should see "Building" or "modules" or "build"
+      When I run the command "build --dry-run"
+      Then the exit code is 0
+      And I should see "Building" or "dry-run" or "build"

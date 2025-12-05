@@ -22,6 +22,10 @@ outputs:
     description: How the binary was obtained (artifact or built)
     value: ${{ steps.setup.outputs.source || steps.setup-windows.outputs.source }}
 
+# NOTE: Commands binary is stored in out/tools/ (not out/build/) because it's a
+# CI tool used to create builds, not a build output itself. This separation ensures
+# the tool binary isn't confused with or overwritten by module build outputs.
+
 runs:
   using: composite
   steps:
@@ -33,7 +37,7 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: commands-binary-windows
-        path: out/build/eac-commands
+        path: out/tools
         github-token: ${{ github.token }}
         run-id: ${{ inputs.trigger-run-id }}
       continue-on-error: true
@@ -45,29 +49,60 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: commands-binary
-        path: out/build/eac-commands
+        path: out/tools
         github-token: ${{ github.token }}
         run-id: ${{ inputs.trigger-run-id }}
       continue-on-error: ${{ runner.os == 'Windows' }}
 
-    # When no trigger-run-id, try downloading from current run (for multi-job workflows)
+    # When no trigger-run-id, check if artifact exists before attempting download
+    # This avoids noisy error messages when artifact doesn't exist yet
+    - name: Check if artifact exists (current run)
+      id: artifact-check
+      if: inputs.trigger-run-id == ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # Check if commands-binary artifact exists in current run
+        ARTIFACT_NAME="commands-binary"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          ARTIFACT_NAME="commands-binary-windows"
+        fi
+
+        # Use gh api to check for artifact
+        # If API call fails (permissions, network, etc.), treat as "not found" and build from source
+        set +e
+        RESULT=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+           --jq ".artifacts[] | select(.name == \"$ARTIFACT_NAME\") | .id" 2>&1)
+        EXIT_CODE=$?
+        set -e
+
+        if [ $EXIT_CODE -eq 0 ] && [ -n "$RESULT" ] && ! echo "$RESULT" | grep -qi "error\|denied\|forbidden"; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+          echo "✓ Artifact '$ARTIFACT_NAME' found"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "No artifact available - will build from source"
+        fi
+
+    # Only download if artifact exists
     - name: Download from current run
       id: download-current
-      if: inputs.trigger-run-id == ''
+      if: inputs.trigger-run-id == '' && steps.artifact-check.outputs.exists == 'true'
       uses: actions/download-artifact@v4
       with:
-        name: commands-binary
-        path: out/build/eac-commands
-      continue-on-error: true
+        name: ${{ steps.artifact-check.outputs.artifact_name }}
+        path: out/tools
 
     - name: Check binary availability (Linux/macOS)
       id: check
       if: runner.os != 'Windows'
       shell: bash
       run: |
-        if [ -f "out/build/eac-commands/commands" ]; then
+        if [ -f "out/tools/commands" ]; then
           echo "available=true" >> $GITHUB_OUTPUT
-          echo "✓ Commands binary available"
+          echo "✓ Commands binary downloaded from artifact"
         else
           echo "available=false" >> $GITHUB_OUTPUT
 
@@ -77,7 +112,7 @@ runs:
             exit 1
           fi
 
-          echo "Commands binary not available, will build from source"
+          echo "Building commands binary from source"
         fi
 
     - name: Check binary availability (Windows)
@@ -85,14 +120,12 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        if (Test-Path "out/build/eac-commands/commands.exe") {
+        if (Test-Path "out/tools/commands.exe") {
           echo "available=true" >> $env:GITHUB_OUTPUT
-          Write-Host "✓ Commands binary available"
+          Write-Host "✓ Commands binary downloaded from artifact"
         } else {
           echo "available=false" >> $env:GITHUB_OUTPUT
-          # On Windows, if trigger-run-id was provided but no Windows artifact exists,
-          # the trigger was Linux-only. Fall back to building from source.
-          Write-Host "Commands binary not available, will build from source"
+          Write-Host "Building commands binary from source"
         }
 
     - name: Setup Go
@@ -109,9 +142,9 @@ runs:
       shell: bash
       run: |
         echo "Building commands binary from source..."
-        mkdir -p out/build/eac-commands
+        mkdir -p out/tools
         cd go/eac/commands
-        go build -o ../../../out/build/eac-commands/commands .
+        go build -o ../../../out/tools/commands .
         echo "✓ Commands binary built"
 
     - name: Build from source (Windows)
@@ -119,9 +152,9 @@ runs:
       shell: pwsh
       run: |
         Write-Host "Building commands binary from source..."
-        New-Item -ItemType Directory -Force -Path out/build/eac-commands | Out-Null
+        New-Item -ItemType Directory -Force -Path out/tools | Out-Null
         Set-Location go/eac/commands
-        go build -o ../../../out/build/eac-commands/commands.exe .
+        go build -o ../../../out/tools/commands.exe .
         Write-Host "✓ Commands binary built"
 
     - name: Upload artifact (for downstream jobs, Linux/macOS)
@@ -129,7 +162,7 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: commands-binary
-        path: out/build/eac-commands/commands
+        path: out/tools/commands
         if-no-files-found: error
 
     - name: Upload artifact (for downstream jobs, Windows)
@@ -137,7 +170,7 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: commands-binary-windows
-        path: out/build/eac-commands/commands.exe
+        path: out/tools/commands.exe
         if-no-files-found: error
 
     - name: Set output (Linux/macOS)
@@ -145,7 +178,7 @@ runs:
       if: runner.os != 'Windows'
       shell: bash
       run: |
-        BINARY_PATH="out/build/eac-commands/commands"
+        BINARY_PATH="out/tools/commands"
 
         if [ ! -f "$BINARY_PATH" ]; then
           echo "::error::Commands binary not found at $BINARY_PATH"
@@ -166,7 +199,7 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        $BINARY_PATH = "out\build\eac-commands\commands.exe"
+        $BINARY_PATH = "out\tools\commands.exe"
 
         if (-not (Test-Path $BINARY_PATH)) {
           Write-Host "::error::Commands binary not found at $BINARY_PATH"

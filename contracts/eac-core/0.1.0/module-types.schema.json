@@ -46,6 +46,16 @@
           },
           "default": []
         },
+        "test_framework": {
+          "type": "string",
+          "description": "Unit test framework for this module type (e.g., mocha, jest, pytest, go)",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "bdd_framework": {
+          "type": "string",
+          "description": "BDD test framework for Gherkin specs (e.g., godog, tscucumber). If not specified, inferred from build_deps.",
+          "enum": ["godog", "tscucumber"]
+        },
         "build": {
           "$ref": "#/definitions/build_config",
           "description": "Build output configuration for this module type"

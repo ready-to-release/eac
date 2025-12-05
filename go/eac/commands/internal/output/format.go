@@ -166,6 +166,33 @@ func FormatDurationShort(d time.Duration) string {
 	return fmt.Sprintf("%.1fs", d.Seconds())
 }
 
+// ListInline formats a list as a single line with truncation.
+// Example: " (eac-core, eac-commands, ...)" or " (eac-core)"
+// Returns empty string if items is empty.
+func ListInline(items []string, maxLen int) string {
+	if len(items) == 0 {
+		return ""
+	}
+	if maxLen <= 0 {
+		maxLen = 50
+	}
+
+	result := " ("
+	for i, item := range items {
+		if i > 0 {
+			result += ", "
+		}
+		// Check if adding this item would exceed max length
+		if len(result)+len(item)+4 > maxLen { // 4 for ", ...)"
+			result += "..."
+			break
+		}
+		result += item
+	}
+	result += ")"
+	return result
+}
+
 // ListFormat formats a list of items for display.
 // If the total length is short (<=maxInlineLen), returns inline format: "item1, item2, item3"
 // Otherwise returns multi-line format with itemsPerLine items per line:
@@ -244,4 +271,26 @@ func ListFormatWithPrefix(prefix string, items []string, maxInlineLen, itemsPerL
 	// Multi-line format
 	formatted := ListFormat(items, maxInlineLen, itemsPerLine)
 	return prefix + ":" + formatted
+}
+
+// PackageDisplayName extracts the display name from a package path.
+// For BDD tests with format "featureName:testRoot:featurePath", returns "featureName:testRoot".
+// For unit tests with format "path", returns "path" unchanged.
+func PackageDisplayName(pkgPath string) string {
+	parts := strings.Split(pkgPath, ":")
+	if len(parts) == 3 {
+		// BDD format: return first two parts (featureName:testRoot)
+		return parts[0] + ":" + parts[1]
+	}
+	// Unit test or other format: return as-is
+	return pkgPath
+}
+
+// PackageDisplayNames converts a list of package paths to display names.
+func PackageDisplayNames(pkgPaths []string) []string {
+	result := make([]string, len(pkgPaths))
+	for i, path := range pkgPaths {
+		result[i] = PackageDisplayName(path)
+	}
+	return result
 }

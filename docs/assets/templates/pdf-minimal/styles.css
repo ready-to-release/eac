@@ -5,3 +5,15 @@
     color: #e6edf3 !important;
   }
 }
+
+/* Mermaid diagram containers with size control */
+.mermaid-wrapper {
+  display: block;
+  page-break-inside: avoid;
+  margin: 1em auto;
+}
+
+.mermaid-wrapper svg {
+  max-width: 100%;
+  height: auto;
+}

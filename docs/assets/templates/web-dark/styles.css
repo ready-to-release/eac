@@ -223,3 +223,14 @@
   background-color: #161b22;
   color: #8b949e;
 }
+
+/* Mermaid diagram containers with size control */
+.mermaid-wrapper {
+  display: block;
+  margin: 1em auto;
+}
+
+.mermaid-wrapper svg {
+  max-width: 100%;
+  height: auto;
+}

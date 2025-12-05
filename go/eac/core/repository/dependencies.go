@@ -131,7 +131,17 @@ func calculateGraphStats(monikers []string, dependencies, dependents map[string]
 //
 // If monikers is empty or nil, calculates order for all modules
 // Returns error if circular dependencies detected
-func CalculateExecutionOrder(monikers []string, rootPath string) (*ExecutionPlan, error) {
+//
+// Optional includeDependencies parameter (default true):
+// - true: expands monikers to include all transitive dependencies
+// - false: only builds exactly the specified modules
+func CalculateExecutionOrder(monikers []string, rootPath string, includeDependencies ...bool) (*ExecutionPlan, error) {
+	// Default to including dependencies
+	includeDeps := true
+	if len(includeDependencies) > 0 {
+		includeDeps = includeDependencies[0]
+	}
+
 	if rootPath == "" {
 		var err error
 		rootPath, err = GetRepositoryRoot("")
@@ -150,12 +160,15 @@ func CalculateExecutionOrder(monikers []string, rootPath string) (*ExecutionPlan
 		monikers = registry.AllMonikers()
 	}
 
-	// Build set of all modules to include (input modules + their dependencies)
+	// Build set of all modules to include
 	allModules := make(map[string]bool)
 	for _, moniker := range monikers {
 		allModules[moniker] = true
-		if err := addDependenciesRecursive(moniker, registry, allModules); err != nil {
-			return nil, err
+		// Only expand dependencies if requested (default behavior)
+		if includeDeps {
+			if err := addDependenciesRecursive(moniker, registry, allModules); err != nil {
+				return nil, err
+			}
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ type displayManager struct {
 	startTime       time.Time
 	running         map[string]bool // monikers currently running
 	completed       int
+	failed          int  // count of failures
 	total           int
 	updateInterval  time.Duration
 	completionChan  chan *WorkResult
@@ -107,6 +109,10 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 	delete(dm.running, result.Moniker)
 	dm.completed++
 
+	// Extract display name and normalize path separators to forward slashes
+	displayName := output.PackageDisplayName(result.Moniker)
+	displayName = strings.ReplaceAll(displayName, "\\", "/")
+
 	// Format completion line with timing after the icon
 	// Format: "✅ 6.2s  module-name                    type     -"
 	var icon string
@@ -114,6 +120,10 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 
 	if result.ExitCode != 0 {
 		icon = output.IconFail
+		dm.failed++
+		if len(result.Errors) > 0 {
+			suffix = fmt.Sprintf("(%d errors)", len(result.Errors))
+		}
 	} else if len(result.Warnings) > 0 {
 		icon = output.IconWarn
 		suffix = fmt.Sprintf("(%d warnings)", len(result.Warnings))
@@ -129,7 +139,7 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 
 	// Format: icon + timing + name + type + suffix (no result column for builds)
 	timing := fmt.Sprintf("%5.1fs", result.Duration.Seconds())
-	baseLine := output.ResultLineNoTimeWithSuffix(icon, result.Moniker, typeStr, "", suffix)
+	baseLine := output.ResultLineNoTimeWithSuffix(icon, displayName, typeStr, "", suffix)
 	// Insert timing after the icon (icon is first 2-3 chars including space)
 	statusLine := fmt.Sprintf("%s %s %s", icon, timing, baseLine[len(icon)+1:]) + LineEndingPrefix
 
@@ -149,10 +159,11 @@ func (dm *displayManager) displayStatus() {
 	elapsed := time.Since(dm.startTime)
 	runningCount := len(dm.running)
 
-	// Get sorted list of running monikers
+	// Get sorted list of running monikers (convert to display names and normalize)
 	names := make([]string, 0, len(dm.running))
 	for name := range dm.running {
-		names = append(names, name)
+		displayName := output.PackageDisplayName(name)
+		names = append(names, strings.ReplaceAll(displayName, "\\", "/"))
 	}
 	sort.Strings(names)
 
@@ -167,8 +178,12 @@ func (dm *displayManager) displayStatus() {
 
 	// Note: On Windows, log.Printf only adds \n, but Windows console needs \r\n
 	// LineEndingPrefix adds \r on Windows so the final output is \r\n (log adds \n automatically)
-	dm.logger.Printf("Status: %s elapsed, %d/%d completed. %d running (%s)%s",
-		formatDuration(elapsed), dm.completed, dm.total, runningCount, nameList, LineEndingPrefix)
+	failedStr := ""
+	if dm.failed > 0 {
+		failedStr = fmt.Sprintf(" (%d failed)", dm.failed)
+	}
+	dm.logger.Printf("Status: %s elapsed, %d/%d completed%s. %d running (%s)%s",
+		formatDuration(elapsed), dm.completed, dm.total, failedStr, runningCount, nameList, LineEndingPrefix)
 }
 
 // formatDuration formats a duration as "1m 23s" or "45s"

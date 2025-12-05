@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -61,6 +62,11 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 
 		// Check exclusions
 		if isExcluded(match, p.workspaceRoot, exclude) {
+			continue
+		}
+
+		// Skip .drawio files in PDF mode (they're interactive diagrams for web only)
+		if p.pdfMode && strings.HasSuffix(strings.ToLower(match), ".drawio") {
 			continue
 		}
 

@@ -21,6 +21,7 @@ paths:
     test: "out/test"
     logs: "out/logs"
     security: "out/security"
+    tools: "out/tools"  # CI tools like the commands binary (not build outputs)
 
 # Conventional filenames
 conventions:

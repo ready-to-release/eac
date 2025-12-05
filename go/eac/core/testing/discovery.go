@@ -740,7 +740,8 @@ func getTestFrameworkForType(moduleType string) string {
 }
 
 // getFeatureTestTypeForModule returns the test type for Gherkin feature files.
-// Determined by primary build dependency from module-types.yml:
+// First checks bdd_framework from module-types.yml (explicit configuration).
+// Falls back to inference from primary build dependency:
 // - npm → "tscucumber" (TypeScript cucumber-js)
 // - go (or anything else) → "godog" (Go BDD framework)
 func getFeatureTestTypeForModule(module *modules.ModuleContract) string {
@@ -748,6 +749,14 @@ func getFeatureTestTypeForModule(module *modules.ModuleContract) string {
 	if cfg == nil || cfg.ModuleTypes == nil {
 		panic("discovery: module types configuration not loaded")
 	}
+
+	// First check for explicit bdd_framework configuration
+	bddFramework := cfg.ModuleTypes.GetBDDFramework(module.Type)
+	if bddFramework != "" {
+		return bddFramework
+	}
+
+	// Fall back to inference from primary build dependency
 	primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(module.Type)
 	if primaryDep == "npm" {
 		return "tscucumber"

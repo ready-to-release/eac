@@ -231,7 +231,7 @@ func TestHandlersConfig_GetBuildHandler(t *testing.T) {
 	})
 
 	t.Run("docker build dep", func(t *testing.T) {
-		handler := cfg.Handlers.GetBuildHandler("go-r2r-extension", []string{"go_module", "container"}, "docker")
+		handler := cfg.Handlers.GetBuildHandler("r2r-extension", []string{"container"}, "docker")
 		// Should match default rule with docker as primary build dep
 		assert.Equal(t, "docker", handler)
 	})

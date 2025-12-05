@@ -14,7 +14,7 @@ import (
 
 func TestLoggingFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../../specs/eac-core/logging",
+		SpecsPath:         "../../../../../../specs/eac-core/logging",
 		DefaultReportName: "cucumber-logging",
 		RegisterSteps:     RegisterSteps,
 	}

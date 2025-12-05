@@ -48,27 +48,15 @@ runs:
         fi
 
         if [ "$INPUT_DEPS" = "auto" ]; then
-          # Query module type from commands binary
-          MODULE_TYPE=$($COMMANDS get modules --as-json | jq -r --arg m "$MODULE" '.[] | select(.moniker == $m) | .type')
+          # Get build dependencies directly from the commands binary
+          # This queries module-types.yml configuration - the source of truth
+          RESULT=$($COMMANDS get build-deps "$MODULE" --as-json)
+          MODULE_TYPE=$(echo "$RESULT" | jq -r '.type')
+          DEPS=$(echo "$RESULT" | jq -r '.build_deps | join(",")')
 
           echo "Module: $MODULE"
           echo "Type: $MODULE_TYPE"
-
-          # Map module type to dependencies
-          case "$MODULE_TYPE" in
-            go-cli|go-library|go-commands|go-mcp|go-tests)
-              DEPS="go"
-              ;;
-            go-r2r-extension|mkdocs-site)
-              DEPS="docker"
-              ;;
-            vscode-ext)
-              DEPS="node"
-              ;;
-            *)
-              DEPS=""
-              ;;
-          esac
+          echo "Build deps: $DEPS"
         else
           # Use explicit deps
           DEPS="$INPUT_DEPS"
