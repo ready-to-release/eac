@@ -8,6 +8,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // log is the package-level logger for repository operations
@@ -332,5 +333,5 @@ func GetRepoEACConfigRoot(startPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return EACConfigPath(repoRoot), nil
+	return paths.EACConfigPath(repoRoot), nil
 }

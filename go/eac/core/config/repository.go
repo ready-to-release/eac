@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -69,7 +70,7 @@ func DefaultRepositoryConfig() RepositoryConfig {
 func LoadRepositoryConfig(repoRoot string) (*RepositoryConfig, error) {
 	cfg := DefaultRepositoryConfig()
 
-	configPath := filepath.Join(repoRoot, r2rDir, eacDir, RepositoryFileName)
+	configPath := filepath.Join(paths.EACConfigPath(repoRoot), RepositoryFileName)
 	data, err := os.ReadFile(configPath)
 	if os.IsNotExist(err) {
 		return &cfg, nil

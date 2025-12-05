@@ -4,17 +4,17 @@ package design
 import (
 	"time"
 
-	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 const (
 	// File and directory names - use repository package for canonical paths
-	WorkspaceFileName = repository.WorkspaceDSL
+	WorkspaceFileName = paths.WorkspaceDSL
 	WorkspaceJSONFile = "workspace.json"
-	SpecsDirectory    = repository.SpecsDir
-	DesignDirectory   = repository.DesignDir
-	SourceDirectory   = repository.SrcDir
-	OutputDirectory   = repository.OutDir
+	SpecsDirectory    = paths.SpecsDir
+	DesignDirectory   = paths.DesignDir
+	SourceDirectory   = paths.SrcDir
+	OutputDirectory   = paths.OutDir
 
 	// Docker configuration
 	DockerWorkspaceMount = "/workspace"

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // LoadProfile loads an OSCAL profile from a file using go-oscal types.
@@ -57,7 +57,7 @@ func LoadAssessmentResults(arPath string) (*oscalTypes.AssessmentResults, error)
 // DiscoverProfiles finds all profile files in the specs/risk-controls directory.
 // Returns a map of module name to profile path.
 func DiscoverProfiles(workspaceRoot string) (map[string]string, error) {
-	profileDir := filepath.Join(workspaceRoot, repository.SpecsDir, repository.RiskControlsDir)
+	profileDir := filepath.Join(workspaceRoot, paths.SpecsDir, paths.RiskControlsDir)
 
 	profiles := make(map[string]string)
 
@@ -123,7 +123,7 @@ func findLatestAssessmentResults(moduleDir string) (string, error) {
 // Returns a map of module name to assessment-results path.
 // If multiple assessment-results exist for a module, returns the most recent one.
 func DiscoverAssessmentResults(workspaceRoot string) (map[string]string, error) {
-	riskDir := filepath.Join(workspaceRoot, repository.OutDir, repository.RiskDir)
+	riskDir := filepath.Join(workspaceRoot, paths.OutDir, paths.RiskDir)
 
 	assessments := make(map[string]string)
 
@@ -197,13 +197,13 @@ func DiscoverAssessmentResults(workspaceRoot string) (map[string]string, error) 
 // GetProfilePath returns the default path for a module's profile.
 // Uses centralized repository path conventions.
 func GetProfilePath(workspaceRoot, moduleName string) string {
-	return repository.RiskProfilePath(workspaceRoot, moduleName)
+	return paths.RiskProfilePath(workspaceRoot, moduleName)
 }
 
 // GetAssessmentResultsPath returns the default path for a module's assessment-results.
 // Uses centralized repository path conventions.
 func GetAssessmentResultsPath(workspaceRoot, moduleName string) string {
-	return repository.RiskAssessmentResultsPath(workspaceRoot, moduleName)
+	return paths.RiskAssessmentResultsPath(workspaceRoot, moduleName)
 }
 
 // LoadAllAssessmentResults loads all assessment-results files for aggregated reporting.
@@ -214,7 +214,7 @@ func LoadAllAssessmentResults(workspaceRoot string) ([]*oscalTypes.AssessmentRes
 	}
 
 	if len(arMap) == 0 {
-		return nil, fmt.Errorf("no assessment-results found in %s/%s/", repository.OutDir, repository.RiskDir)
+		return nil, fmt.Errorf("no assessment-results found in %s/%s/", paths.OutDir, paths.RiskDir)
 	}
 
 	var results []*oscalTypes.AssessmentResults
@@ -237,7 +237,7 @@ func LoadAllProfiles(workspaceRoot string) ([]*oscalTypes.Profile, error) {
 	}
 
 	if len(profileMap) == 0 {
-		return nil, fmt.Errorf("no profiles found in %s/%s/", repository.SpecsDir, repository.RiskControlsDir)
+		return nil, fmt.Errorf("no profiles found in %s/%s/", paths.SpecsDir, paths.RiskControlsDir)
 	}
 
 	var profiles []*oscalTypes.Profile

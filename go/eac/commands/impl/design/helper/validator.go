@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -104,7 +105,7 @@ func listAvailableModules() ([]moduleInfo, error) {
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	specsDir := repository.SpecsPath(repoRoot, "")
+	specsDir := paths.SpecsPath(repoRoot, "")
 
 	// Check if specs directory exists
 	if _, err := os.Stat(specsDir); os.IsNotExist(err) {
@@ -126,7 +127,7 @@ func listAvailableModules() ([]moduleInfo, error) {
 		moduleName := entry.Name()
 
 		// Use new multi-file discovery
-		files, err := repository.WorkspaceDSLFiles(repoRoot, moduleName)
+		files, err := paths.WorkspaceDSLFiles(repoRoot, moduleName)
 		if err != nil {
 			continue // Skip modules with errors
 		}
@@ -135,7 +136,7 @@ func listAvailableModules() ([]moduleInfo, error) {
 		if len(files) > 0 {
 			modules = append(modules, moduleInfo{
 				Name:  moduleName,
-				Path:  repository.DesignPath(repoRoot, moduleName),
+				Path:  paths.DesignPath(repoRoot, moduleName),
 				Files: files,
 			})
 		}
@@ -166,13 +167,13 @@ func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*Validatio
 	}
 
 	// Get all DSL files for this module
-	files, err := repository.WorkspaceDSLFiles(repoRoot, moduleName)
+	files, err := paths.WorkspaceDSLFiles(repoRoot, moduleName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list DSL files: %w", err)
 	}
 
 	if len(files) == 0 {
-		return nil, fmt.Errorf("no DSL files found in %s", repository.DesignPath(repoRoot, moduleName))
+		return nil, fmt.Errorf("no DSL files found in %s", paths.DesignPath(repoRoot, moduleName))
 	}
 
 	// Start timing
@@ -260,7 +261,7 @@ func (v *StructurizrValidatorImpl) ValidateModuleFile(moduleName, fileName strin
 	}
 
 	// Construct file path
-	filePath := filepath.Join(repository.DesignPath(repoRoot, moduleName), fileName)
+	filePath := filepath.Join(paths.DesignPath(repoRoot, moduleName), fileName)
 
 	// Verify file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {

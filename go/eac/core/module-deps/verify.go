@@ -9,6 +9,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -131,7 +132,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 	}
 
 	// Verify build artifacts exist
-	buildDir := repository.BuildOutputPath(c.repoRoot, c.moniker)
+	buildDir := paths.BuildOutputPath(c.repoRoot, c.moniker)
 	resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
 	results := resolver.VerifyArtifacts(typeDef.GetArtifacts())
 
@@ -174,7 +175,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 	}
 
 	// Return info about build artifacts
-	buildDir := repository.BuildOutputPath(c.repoRoot, c.moniker)
+	buildDir := paths.BuildOutputPath(c.repoRoot, c.moniker)
 	resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
 	results := resolver.VerifyArtifacts(typeDef.GetArtifacts())
 

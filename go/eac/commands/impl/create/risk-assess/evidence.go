@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/evidence"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // preRunTestsForModules runs the test suite before assessment.
@@ -151,7 +151,7 @@ func collectSecurityEvidenceForModule(config *AssessConfig, moduleName string, p
 // This is more efficient than running tests per-module and produces proper output structure.
 func runTestSuite(config *AssessConfig) error {
 	// Use the canonical binary path
-	binaryPath := repository.CommandsBinaryPath(config.WorkspaceRoot)
+	binaryPath := paths.CommandsBinaryPath(config.WorkspaceRoot)
 
 	assessLog.Infof("Running %s test suite...", config.TestSuite)
 
@@ -173,7 +173,7 @@ func runTestSuite(config *AssessConfig) error {
 // Called sequentially from preRunTestsForModules, so no locking needed.
 func runTestsForModule(config *AssessConfig, moduleName string) error {
 	// Use the canonical binary path
-	binaryPath := repository.CommandsBinaryPath(config.WorkspaceRoot)
+	binaryPath := paths.CommandsBinaryPath(config.WorkspaceRoot)
 
 	assessLog.Infof("Running %s tests for %s...", config.TestSuite, moduleName)
 	assessLog.Debugf("Test command: %s test --suite %s %s", binaryPath, config.TestSuite, moduleName)
@@ -196,17 +196,17 @@ func runSecurityScansForModule(config *AssessConfig, moduleName string) error {
 	assessLog.Infof("Running security scans for %s...", moduleName)
 
 	// Use the canonical binary path
-	binaryPath := repository.CommandsBinaryPath(config.WorkspaceRoot)
+	binaryPath := paths.CommandsBinaryPath(config.WorkspaceRoot)
 
 	// Run vulnerability scan
-	cmd := exec.Command(binaryPath, "security", "vuln", moduleName)
+	cmd := exec.Command(binaryPath, "scan", "vuln", moduleName)
 	cmd.Dir = config.WorkspaceRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Run() // Don't fail on security scan errors
 
 	// Run SBOM
-	cmd = exec.Command(binaryPath, "security", "sbom", moduleName)
+	cmd = exec.Command(binaryPath, "scan", "sbom", moduleName)
 	cmd.Dir = config.WorkspaceRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

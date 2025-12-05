@@ -31,6 +31,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -85,7 +86,7 @@ func CreateDesign() int {
 	// Determine output path
 	outputPath := config.OutputPath
 	if outputPath == "" {
-		outputPath = repository.WorkspaceDSLPath(config.TemplateRoot, config.Module)
+		outputPath = paths.WorkspaceDSLPath(config.TemplateRoot, config.Module)
 	}
 
 	// Check if output exists (unless --force)

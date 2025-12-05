@@ -31,6 +31,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -75,7 +76,7 @@ func UpdateDesign() int {
 	// Determine workspace path
 	workspacePath := config.OutputPath
 	if workspacePath == "" {
-		workspacePath = repository.WorkspaceDSLPath(config.TemplateRoot, config.Module)
+		workspacePath = paths.WorkspaceDSLPath(config.TemplateRoot, config.Module)
 	}
 
 	// Load existing workspace
@@ -251,7 +252,7 @@ func validateModuleAndWorkspace(config *UpdateConfig, out *designHelper.Output) 
 	// Check if workspace exists
 	workspacePath := config.OutputPath
 	if workspacePath == "" {
-		workspacePath = repository.WorkspaceDSLPath(config.TemplateRoot, config.Module)
+		workspacePath = paths.WorkspaceDSLPath(config.TemplateRoot, config.Module)
 	}
 
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // InitLogger creates a logger for work commands.
@@ -27,7 +28,7 @@ func WriteDebugFile(logger *logging.Logger, workspaceRoot, filename, content str
 		return
 	}
 
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "work")
+	debugDir := paths.CommandLogsPath(workspaceRoot, "work")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
 		return

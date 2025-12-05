@@ -7,6 +7,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -26,10 +27,10 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 	}
 
 	// Get workspace directory (contains workspace.dsl)
-	workspaceDir := repository.DesignPath(repoRoot, moduleName)
+	workspaceDir := paths.DesignPath(repoRoot, moduleName)
 
 	// Verify workspace exists
-	workspacePath := repository.WorkspaceDSLPath(repoRoot, moduleName)
+	workspacePath := paths.WorkspaceDSLPath(repoRoot, moduleName)
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		return fmt.Errorf("workspace file not found: %s", workspacePath)
 	}

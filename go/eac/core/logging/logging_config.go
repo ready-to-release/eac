@@ -2,8 +2,8 @@ package logging
 
 import (
 	"os"
-	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,7 +54,7 @@ func DefaultLoggingConfig() LoggingConfig {
 // LoadLoggingConfig loads logging configuration from .r2r/eac/logging.yml
 // Falls back to defaults if file doesn't exist or can't be parsed
 func LoadLoggingConfig(workspaceRoot string) LoggingConfig {
-	configPath := filepath.Join(workspaceRoot, ".r2r", "eac", "logging.yml")
+	configPath := paths.EACLoggingConfigPath(workspaceRoot)
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {

@@ -10,18 +10,12 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
-// EAC configuration path constants (local to avoid import cycle with repository)
-const (
-	r2rDir = ".r2r"
-	eacDir = "eac"
-
-	// EACConfigRelPath is the relative path from repo root to EAC configuration.
-	// Note: Duplicated here to avoid import cycle with repository package.
-	EACConfigRelPath = r2rDir + "/" + eacDir
-)
+// EACConfigRelPath is re-exported for backwards compatibility
+const EACConfigRelPath = paths.EACConfigRelPath
 
 // Config file names
 const (
@@ -91,7 +85,7 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		}
 	}
 
-	configRoot := filepath.Join(repoRoot, r2rDir, eacDir)
+	configRoot := paths.EACConfigPath(repoRoot)
 
 	cfg := &EACConfig{
 		RepoRoot:   repoRoot,

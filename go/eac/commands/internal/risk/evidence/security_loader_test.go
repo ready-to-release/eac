@@ -6,13 +6,15 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func TestFindLatestSecurityScan(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create out/security/billing/vuln directory structure
-	vulnDir := filepath.Join(tmpDir, "out", "security", "billing", "vuln")
+	// Create out/scan/billing/vuln directory structure
+	vulnDir := filepath.Join(tmpDir, paths.OutDir, paths.SecurityDir, "billing", "vuln")
 	os.MkdirAll(vulnDir, 0755)
 
 	// Create security scan files with timestamps
@@ -85,8 +87,8 @@ func TestFindSecurityResultsForModule(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create security scan files for billing module
-	vulnDir := filepath.Join(tmpDir, "out", "security", "billing", "vuln")
-	sbomDir := filepath.Join(tmpDir, "out", "security", "billing", "sbom")
+	vulnDir := filepath.Join(tmpDir, paths.OutDir, paths.SecurityDir, "billing", "vuln")
+	sbomDir := filepath.Join(tmpDir, paths.OutDir, paths.SecurityDir, "billing", "sbom")
 	os.MkdirAll(vulnDir, 0755)
 	os.MkdirAll(sbomDir, 0755)
 
