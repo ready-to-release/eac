@@ -172,7 +172,7 @@ The CD Model is the central framework that integrates with:
 **[Core Concepts](../core-concepts/index.md)**:
 
 - Unit of Flow components map to CD Model stages
-- Deployable Units progress through all 12 stages
+- Deployable Modules progress through all 12 stages
 
 **[Workflow](../workflow/index.md)**:
 

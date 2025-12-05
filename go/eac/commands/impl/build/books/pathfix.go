@@ -58,16 +58,22 @@ func (p *Preprocessor) fixRelativePaths() error {
 func (p *Preprocessor) buildPathMappings() ([]pathMapping, error) {
 	var mappings []pathMapping
 
-	for _, src := range p.book.GetCopySources() {
+	copySources := p.book.GetCopySources()
+	p.log("    Found %d copy sources", len(copySources))
+
+	for _, src := range copySources {
 		// Only process markdown files
 		if !strings.Contains(src.From, ".md") {
+			p.log("    Skipping non-markdown source: %s", src.From)
 			continue
 		}
 
+		p.log("    Processing markdown source: %s -> %s", src.From, src.To)
 		srcMappings, err := p.buildMappingsForSource(src)
 		if err != nil {
 			return nil, err
 		}
+		p.log("    Built %d mappings", len(srcMappings))
 		mappings = append(mappings, srcMappings...)
 	}
 
@@ -157,7 +163,8 @@ func extractSourcePrefix(pattern string) string {
 func countPathDepth(path string) int {
 	path = filepath.ToSlash(path)
 	path = strings.Trim(path, "/")
-	if path == "" {
+	// Handle "." which represents root directory (depth 0)
+	if path == "" || path == "." {
 		return 0
 	}
 	return strings.Count(path, "/") + 1
@@ -192,8 +199,9 @@ func fixFileRelativePaths(filePath string, depthChange, fileDepth int) (bool, er
 // Only adjusts links that go OUTSIDE the content tree (more ../ than fileDepth)
 func adjustRelativePaths(content string, depthChange, fileDepth int) string {
 	// Match markdown links: [text](../path) and ![alt](../path)
-	// Also match links with attributes: [text](../path){attrs}
-	linkRe := regexp.MustCompile(`(!?\[.+?\]\()(\.\./)+(.*?)(\)(?:\{[^}]*\})?)`)
+	// Also match links with attributes: [text](../path){attrs} or [text](../path) { attrs }
+	// Note: attr_list can have optional whitespace before/after braces
+	linkRe := regexp.MustCompile(`(!?\[.+?\]\()(\.\./)+(.*?)(\)\s*(?:\{[^}]*\})?)`)
 
 	return linkRe.ReplaceAllStringFunc(content, func(match string) string {
 		// Parse the match

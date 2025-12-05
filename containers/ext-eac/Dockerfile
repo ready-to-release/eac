@@ -1,12 +1,50 @@
 # ============================================================
-# DEPENDENCIES STAGE - Download Go dependencies
+# DEPENDENCIES STAGE - Download Go dependencies (runs on build host)
 # ============================================================
-FROM golang:1.25-alpine AS deps
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS deps
 
-# Build arguments for multi-platform support
+# Install git for go mod download
+RUN apk add --no-cache git
+
+ENV GO111MODULE=on
+ENV GOWORK=off
+ENV CGO_ENABLED=0
+
+WORKDIR /app
+
+# Copy go.mod and go.sum files for dependency caching
+COPY go/eac/ai/go.mod go/eac/ai/go.sum ./go/eac/ai/
+COPY go/eac/core/go.mod go/eac/core/go.sum ./go/eac/core/
+COPY go/eac/commands/go.mod go/eac/commands/go.sum ./go/eac/commands/
+
+# Download dependencies with BuildKit cache mount for faster rebuilds
+RUN --mount=type=cache,target=/go/pkg/mod \
+    cd go/eac/commands && go mod download
+
+# ============================================================
+# BUILD STAGE - Cross-compile eac-commands binary (runs on build host)
+# ============================================================
+FROM deps AS builder
+
+# Target architecture for cross-compilation
 ARG TARGETARCH
 
-# Install dependencies
+# Copy source code
+COPY go/eac/ai/ ./go/eac/ai/
+COPY go/eac/core/ ./go/eac/core/
+COPY go/eac/commands/ ./go/eac/commands/
+
+# Cross-compile for target architecture (fast - no QEMU needed)
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOARCH=${TARGETARCH} cd go/eac/commands && go build -o /app/out/tools/commands .
+
+# ============================================================
+# RUNTIME STAGE - Final image (runs on target platform)
+# ============================================================
+FROM golang:1.25-alpine AS runtime
+
+# Install runtime dependencies
 # Note: github-cli requires community repo. We detect Alpine version dynamically.
 RUN apk add --no-cache \
     ca-certificates \
@@ -29,35 +67,6 @@ ENV CGO_ENABLED=0
 
 WORKDIR /app
 
-# Copy go.mod and go.sum files for dependency caching
-COPY go/eac/ai/go.mod go/eac/ai/go.sum ./go/eac/ai/
-COPY go/eac/core/go.mod go/eac/core/go.sum ./go/eac/core/
-COPY go/eac/commands/go.mod go/eac/commands/go.sum ./go/eac/commands/
-
-# Download dependencies with BuildKit cache mount for faster rebuilds
-RUN --mount=type=cache,target=/go/pkg/mod \
-    cd go/eac/commands && go mod download
-
-# ============================================================
-# BUILD STAGE - Build eac-commands binary
-# ============================================================
-FROM deps AS builder
-
-# Copy source code
-COPY go/eac/ai/ ./go/eac/ai/
-COPY go/eac/core/ ./go/eac/core/
-COPY go/eac/commands/ ./go/eac/commands/
-
-# Build the commands binary with Go module cache for faster rebuilds
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    cd go/eac/commands && go build -o /app/out/tools/commands .
-
-# ============================================================
-# RUNTIME STAGE - Final image
-# ============================================================
-FROM deps AS runtime
-
 # Note: R2R_DOCKER_MODE is set by r2r CLI at runtime, not here
 # This allows tests to find /app via .git while normal usage gets /var/task
 ENV TZ=UTC
@@ -73,7 +82,7 @@ COPY .r2r/ ./.r2r/
 COPY specs/ ./specs/
 COPY templates/ ./templates/
 
-# Copy pre-built binary from builder to tools directory
+# Copy cross-compiled binary from builder to tools directory
 # (out/tools is for CI tools, out/build is for module build outputs)
 COPY --from=builder /app/out/tools/commands /app/out/tools/commands
 

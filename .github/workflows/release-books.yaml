@@ -50,11 +50,18 @@ jobs:
         id: commands
         uses: ./.github/actions/setup-commands
 
+      - name: Setup Module Dependencies
+        uses: ./.github/actions/setup-module-deps
+        with:
+          module: books
+          commands-path: ${{ steps.commands.outputs.commands-path }}
+
       - name: Build PDF Books
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
           echo "Building PDF documentation (output mode from books.yml)..."
-          $COMMANDS build books
+          # Use --all to include books with default: false (all PDF books)
+          $COMMANDS build books --all
 
       - name: Verify PDF outputs
         id: verify
@@ -122,7 +129,7 @@ jobs:
 
             ---
             Generated from commit: ${{ github.sha }}
-          files: out/build/books/*.pdf
+          files: out/build/books/**/*.pdf
           draft: false
           prerelease: false
           generate_release_notes: false

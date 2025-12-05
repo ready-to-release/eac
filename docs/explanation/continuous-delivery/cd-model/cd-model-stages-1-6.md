@@ -336,9 +336,9 @@ Acceptance testing runs in a **Production-Like Test Environment (PLTE)** - an ep
 
 PLTEs enable realistic testing without production risk or resource contention.
 
-### Single vs Multiple Deployable Units
+### Single vs Multiple Deployable Modules
 
-The acceptance testing approach differs based on the number of deployable units:
+The acceptance testing approach differs based on the number of deployable modules:
 
 **Single Deployable Unit:**
 
@@ -348,13 +348,13 @@ The acceptance testing approach differs based on the number of deployable units:
 
 When the system consists of a single deployable unit (monolith, single service), this single-entry approach is typically sufficient.
 
-**Multiple Deployable Units:**
+**Multiple Deployable Modules:**
 
 ![Multi-Entry Acceptance Testing](../../../assets/cd-model/acceptance-multi-entry.drawio.png)
 
 **This diagram shows multi-entry acceptance testing:** The pipeline scales up to execute multiple commit verifications in parallel, up to a defined slot limit. Each commit gets its own isolated PLTE environment, enabling parallel progression through Stage 5 without waiting for other changes to complete.
 
-When the system consists of multiple deployable units (microservices, distributed system), this multi-entry approach helps maintain throughput by:
+When the system consists of multiple deployable modules (microservices, distributed system), this multi-entry approach helps maintain throughput by:
 
 - Coordinating deployments across units in parallel
 - Managing interdependencies within isolated environments

@@ -21,7 +21,7 @@ These four components work together to enable the continuous flow of software fr
 
 ![Trunk Legend](../../../assets/branching/legend-trunk.drawio.png){width=80}
 
-**Definition:** The conceptual container of Deployable Units, representing the versioned timeline in which they exist.
+**Definition:** The conceptual container of Deployable Modules, representing the versioned timeline in which they exist.
 
 **Key Characteristics:**
 
@@ -41,7 +41,7 @@ These four components work together to enable the continuous flow of software fr
 **Implementation:**
 
 - Can be a single repository (polyrepo) containing one deployable unit
-- Can be a monorepo containing multiple deployable units
+- Can be a monorepo containing multiple deployable modules
 - Always uses trunk-based development branching topology
 
 See [Trunk-Based Development](../workflow/trunk-based-development.md) for detailed practices.
@@ -85,7 +85,7 @@ See [Trunk-Based Development](../workflow/trunk-based-development.md) for detail
 - Establishes deployment boundaries
 - Enables independent testing and deployment
 
-See [Deployable Units](deployable-units.md) for detailed explanation.
+See [Deployable Modules](deployable-units.md) for detailed explanation.
 
 ### Deployment Pipeline
 
@@ -161,12 +161,12 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
 
 This diagram illustrates how the four components relate to each other:
 
-### Trunk Contains Deployable Units
+### Trunk Contains Deployable Modules
 
 A single trunk can contain:
 
 - **One deployable unit** (polyrepo pattern)
-- **Multiple deployable units** (monorepo pattern)
+- **Multiple deployable modules** (monorepo pattern)
 
 **Polyrepo Example:**
 
@@ -260,19 +260,19 @@ The Unit of Flow maps directly to CD Model stages:
 **Traceability:**
 
 - Code → Trunk commits
-- Commits → Deployable units
+- Commits → Deployable modules
 - Units → Pipeline executions
 - Pipelines → Live deployments
 
 **Independence:**
 
-- Deployable units can evolve independently
+- Deployable modules can evolve independently
 - Pipelines validate in isolation
 - Deployments don't block each other
 
 **Scalability:**
 
-- Add deployable units without disrupting existing ones
+- Add deployable modules without disrupting existing ones
 - Parallel pipeline execution
 - Independent release cadences
 
@@ -299,7 +299,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    TR[Trunk] --> DU[Multiple Deployable Units]
+    TR[Trunk] --> DU[Multiple Deployable Modules]
     DU --> PP[Multiple Pipelines]
     PP --> LS[Multiple Live Services]
 ```
@@ -315,7 +315,7 @@ flowchart LR
 ```mermaid
 flowchart LR
     TR[Multiple Trunks]
-    DU[Multiple Deployable Units]
+    DU[Multiple Deployable Modules]
     PP[Multiple Pipelines]
     LS[Multiple Live Services]
 
@@ -346,7 +346,7 @@ The Unit of Flow provides a mental model for Continuous Delivery:
 
 **Key Relationships:**
 
-- Trunk contains one or more deployable units
+- Trunk contains one or more deployable modules
 - Each deployable unit has its own deployment pipeline
 - Pipelines deliver artifacts to live environments
 - Live environments provide feedback to trunk
@@ -361,7 +361,7 @@ The Unit of Flow provides a mental model for Continuous Delivery:
 ## Next Steps
 
 - [Trunk-Based Development](../workflow/trunk-based-development.md) - Detailed branching practices
-- [Deployable Units](deployable-units.md) - Types, versioning, and management
+- [Deployable Modules](deployable-units.md) - Types, versioning, and management
 - [Branching Strategies](../workflow/branching-strategies.md) - Flows for RA and CDE patterns
 - [CD Model Overview](../cd-model/cd-model-overview.md) - Complete 12-stage framework
 - [Repository Patterns](../architecture/repository-patterns.md) - Monorepo vs polyrepo
