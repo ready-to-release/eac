@@ -140,6 +140,11 @@ books:
     default: false
 
     sources:
+      # Assets for PDF rendering (required for stylesheets)
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+
       # ==========================================================================
       # 00 - Risk Assessment Report
       # ==========================================================================

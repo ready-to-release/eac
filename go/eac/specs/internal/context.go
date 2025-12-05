@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -173,11 +174,9 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 			c.ExitCode = exitErr.ExitCode()
 		} else {
 			// Non-exit error (e.g., binary not found, permission denied)
-			// Include the error message in output so tests can diagnose the issue
+			// Include comprehensive diagnostic info so tests can diagnose CI issues
 			c.ExitCode = 1
-			if c.CommandOutput == "" {
-				c.CommandOutput = fmt.Sprintf("Command execution failed: %v\nBinary path: %s", err, cmd.Path)
-			}
+			c.CommandOutput = c.formatCommandExecutionError(cmd, cmdLine, err, string(output))
 		}
 	} else {
 		c.ExitCode = 0
@@ -186,21 +185,134 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 	return nil
 }
 
+// formatCommandExecutionError creates a detailed error message for command execution failures.
+// This helps diagnose issues in CI where we can't easily inspect the environment.
+func (c *TestContext) formatCommandExecutionError(cmd *exec.Cmd, cmdLine string, err error, output string) string {
+	var sb strings.Builder
+
+	sb.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
+	sb.WriteString("║  DIAGNOSTIC: Command execution failed                            ║\n")
+	sb.WriteString("╚══════════════════════════════════════════════════════════════════╝\n\n")
+
+	sb.WriteString(fmt.Sprintf("Command:     %s\n", cmdLine))
+	sb.WriteString(fmt.Sprintf("Binary:      %s\n", cmd.Path))
+	sb.WriteString(fmt.Sprintf("Error:       %v\n", err))
+	sb.WriteString(fmt.Sprintf("GOOS:        %s\n", runtime.GOOS))
+	sb.WriteString(fmt.Sprintf("GOARCH:      %s\n", runtime.GOARCH))
+	sb.WriteString("\n")
+
+	// Check if binary exists and its permissions
+	if info, statErr := os.Stat(cmd.Path); statErr == nil {
+		sb.WriteString(fmt.Sprintf("Binary exists: yes\n"))
+		sb.WriteString(fmt.Sprintf("Binary size:   %d bytes\n", info.Size()))
+		sb.WriteString(fmt.Sprintf("Binary mode:   %s\n", info.Mode()))
+	} else if os.IsNotExist(statErr) {
+		sb.WriteString(fmt.Sprintf("Binary exists: NO - file not found\n"))
+	} else {
+		sb.WriteString(fmt.Sprintf("Binary check:  error - %v\n", statErr))
+	}
+	sb.WriteString("\n")
+
+	// Include any output that was captured
+	if output != "" {
+		sb.WriteString("Captured output:\n")
+		sb.WriteString(output)
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
 // createCommand creates an exec.Cmd for running commands.
 // Uses paths.CommandsBinaryPath() to locate the pre-built binary.
 // The binary must exist - tests should have @depm:eac-commands dependency.
 func (c *TestContext) createCommand(parts []string) *exec.Cmd {
 	binaryPath := paths.CommandsBinaryPath(c.OriginalRepoRoot)
 
-	// Check if binary exists and log diagnostic info if it doesn't
+	// Check if binary exists and log comprehensive diagnostics if it doesn't
 	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		// Binary doesn't exist - log diagnostic info to help debug CI issues
-		fmt.Fprintf(os.Stderr, "DEBUG: Binary not found at: %s\n", binaryPath)
-		fmt.Fprintf(os.Stderr, "DEBUG: OriginalRepoRoot: %s\n", c.OriginalRepoRoot)
-		fmt.Fprintf(os.Stderr, "DEBUG: IsolatedDir: %s\n", c.IsolatedDir)
+		c.logBinaryNotFoundDiagnostics(binaryPath)
 	}
 
 	return exec.Command(binaryPath, parts...)
+}
+
+// logBinaryNotFoundDiagnostics outputs comprehensive diagnostic information
+// when the commands binary cannot be found. This helps debug CI failures.
+func (c *TestContext) logBinaryNotFoundDiagnostics(binaryPath string) {
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "╔══════════════════════════════════════════════════════════════════╗\n")
+	fmt.Fprintf(os.Stderr, "║  DIAGNOSTIC: Commands binary not found                           ║\n")
+	fmt.Fprintf(os.Stderr, "╚══════════════════════════════════════════════════════════════════╝\n")
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "Environment:\n")
+	fmt.Fprintf(os.Stderr, "  GOOS:     %s\n", runtime.GOOS)
+	fmt.Fprintf(os.Stderr, "  GOARCH:   %s\n", runtime.GOARCH)
+	fmt.Fprintf(os.Stderr, "  PWD:      %s\n", mustGetwd())
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "Paths:\n")
+	fmt.Fprintf(os.Stderr, "  Expected binary:    %s\n", binaryPath)
+	fmt.Fprintf(os.Stderr, "  OriginalRepoRoot:   %s\n", c.OriginalRepoRoot)
+	fmt.Fprintf(os.Stderr, "  IsolatedDir:        %s\n", c.IsolatedDir)
+	fmt.Fprintf(os.Stderr, "  R2R_CONTAINER_ROOT: %s\n", os.Getenv("R2R_CONTAINER_ROOT"))
+	fmt.Fprintf(os.Stderr, "\n")
+
+	// Check tools directory
+	toolsDir := filepath.Join(c.OriginalRepoRoot, "out", "tools")
+	fmt.Fprintf(os.Stderr, "Tools directory contents (%s):\n", toolsDir)
+	if entries, err := os.ReadDir(toolsDir); err == nil {
+		if len(entries) == 0 {
+			fmt.Fprintf(os.Stderr, "  (empty directory)\n")
+		}
+		for _, entry := range entries {
+			info, _ := entry.Info()
+			if info != nil {
+				fmt.Fprintf(os.Stderr, "  - %s (%d bytes, mode: %s)\n", entry.Name(), info.Size(), info.Mode())
+			} else {
+				fmt.Fprintf(os.Stderr, "  - %s\n", entry.Name())
+			}
+		}
+	} else if os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "  (directory does not exist)\n")
+	} else {
+		fmt.Fprintf(os.Stderr, "  (error reading: %v)\n", err)
+	}
+
+	// Check build directory for eac-commands
+	buildDir := filepath.Join(c.OriginalRepoRoot, "out", "build", "eac-commands")
+	fmt.Fprintf(os.Stderr, "\nBuild directory contents (%s):\n", buildDir)
+	if entries, err := os.ReadDir(buildDir); err == nil {
+		if len(entries) == 0 {
+			fmt.Fprintf(os.Stderr, "  (empty directory)\n")
+		}
+		for _, entry := range entries {
+			info, _ := entry.Info()
+			if info != nil {
+				fmt.Fprintf(os.Stderr, "  - %s (%d bytes)\n", entry.Name(), info.Size())
+			} else {
+				fmt.Fprintf(os.Stderr, "  - %s\n", entry.Name())
+			}
+		}
+	} else if os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "  (directory does not exist)\n")
+	} else {
+		fmt.Fprintf(os.Stderr, "  (error reading: %v)\n", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "Troubleshooting:\n")
+	fmt.Fprintf(os.Stderr, "  1. Ensure eac-commands is built before running tests\n")
+	fmt.Fprintf(os.Stderr, "  2. Check that @depm:eac-commands tag is on the test\n")
+	fmt.Fprintf(os.Stderr, "  3. In CI, verify the build artifact was downloaded\n")
+	fmt.Fprintf(os.Stderr, "\n")
+}
+
+// mustGetwd returns the current working directory or "(unknown)" on error.
+func mustGetwd() string {
+	if wd, err := os.Getwd(); err == nil {
+		return wd
+	}
+	return "(unknown)"
 }
 
 // parseCommandLine parses a command line string, respecting quoted arguments.
