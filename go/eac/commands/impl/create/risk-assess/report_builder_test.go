@@ -234,7 +234,7 @@ func TestExtractEvidenceFormatted(t *testing.T) {
 				},
 			},
 			expectedTest:     "N/A",
-			expectedSecurity: "Vulns: 2C/5H/10M/3L | SBOM: 42 pkgs",
+			expectedSecurity: "Vulns: 2C/5H/10M/3L, SBOM: 42 pkgs",
 		},
 		{
 			name: "security results without SBOM",
@@ -293,7 +293,7 @@ func TestExtractEvidenceFormatted(t *testing.T) {
 				},
 			},
 			expectedTest:     "10/10 tests",
-			expectedSecurity: "Vulns: 0C/1H/2M/3L | SBOM: 25 pkgs",
+			expectedSecurity: "Vulns: 0C/1H/2M/3L, SBOM: 25 pkgs",
 		},
 	}
 

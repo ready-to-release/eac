@@ -166,7 +166,7 @@ func extractEvidenceFormatted(result *ModuleAssessmentResult) (testEvidence, sec
 			if critVulns != "" {
 				secEvidence = fmt.Sprintf("Vulns: %sC/%sH/%sM/%sL", critVulns, highVulns, medVulns, lowVulns)
 				if sbomComponents != "" {
-					secEvidence += fmt.Sprintf(" | SBOM: %s pkgs", sbomComponents)
+					secEvidence += fmt.Sprintf(", SBOM: %s pkgs", sbomComponents)
 				}
 			}
 		}

@@ -15,7 +15,7 @@
 // Flag.force-security: type=bool, default=false, usage=Force re-run security scans regardless of age
 // Flag.skip-auto-run: type=bool, default=false, usage=Use existing evidence only, fail if missing
 // Flag.suite: type=string, default=acceptance, usage=Test suite to run (e.g., acceptance, commit)
-// Flag.report-template: type=string, default=risk-assessment, usage=Report template variant (risk-assessment, risk-assessment-summary, risk-assessment-detailed)
+// Flag.report-template: type=string, default=risk-assessment-detailed, usage=Report template variant (risk-assessment, risk-assessment-summary, risk-assessment-detailed)
 // Flag.sequential: type=bool, default=false, usage=Run assessments sequentially instead of parallel
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/logs/risk/
 // Args: modules
@@ -61,7 +61,7 @@ type AssessConfig struct {
 	Timestamp      string        // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
 	OutputDir      string        // Base output directory for this run: out/risk/<timestamp>/
 	TestSuite      string        // Test suite to run (default: acceptance)
-	ReportTemplate string        // Report template variant (default: risk-assessment)
+	ReportTemplate string        // Report template variant (default: risk-assessment-detailed)
 }
 
 // ModuleAssessmentResult holds the results of assessing a single module.
@@ -216,8 +216,8 @@ func parseAssessConfig() (*AssessConfig, error) {
 
 	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,
-		TestSuite:      "acceptance",       // Default to acceptance suite
-		ReportTemplate: "risk-assessment", // Default to standard template
+		TestSuite:      "acceptance",                // Default to acceptance suite
+		ReportTemplate: "risk-assessment-detailed", // Default to detailed template
 	}
 
 	// Get workspace root
