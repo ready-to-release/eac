@@ -103,18 +103,16 @@ types:
       repo:
         specs: []
 
-  - name: go-r2r-extension
+  - name: r2r-extension
     description: "R2R extension packaged as container image"
     build_deps: [docker]
-    capabilities: [go_module, container]
+    capabilities: [container]
     build:
       artifacts:
         - type: image
           pattern: "{moniker}:latest"
     defaults:
       files:
-        source: ["**/*.go"]
-        config: ["go.mod", "go.sum"]
         assets: ["README.md"]
       repo:
         specs: []
@@ -141,6 +139,7 @@ types:
     build_deps: [npm]
     capabilities: [npm_package, typescript]
     test_framework: mocha
+    bdd_framework: tscucumber
     build:
       artifacts:
         - type: marker

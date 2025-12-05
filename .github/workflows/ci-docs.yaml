@@ -175,15 +175,10 @@ jobs:
       (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') &&
       !startsWith(inputs.ref || github.ref, 'refs/pull/')
     steps:
-      - name: Trigger release workflows (pages + book)
+      - name: Trigger release workflow (GitHub Pages)
         run: |
           # Trigger GitHub Pages deployment
           gh workflow run release-docs.yml \
-            --repo ${{ github.repository }} \
-            -f ci_run_id=${{ github.run_id }}
-
-          # Trigger PDF book release (runs in parallel)
-          gh workflow run release-docs-book.yaml \
             --repo ${{ github.repository }} \
             -f ci_run_id=${{ github.run_id }}
         env:
@@ -193,12 +188,11 @@ jobs:
         run: |
           echo "## Release Triggered: docs" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Triggered release workflows:" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered release workflow:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Workflow | Description |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------------|" >> $GITHUB_STEP_SUMMARY
           echo "| \`release-docs.yml\` | Deploy to GitHub Pages |" >> $GITHUB_STEP_SUMMARY
-          echo "| \`release-docs-book.yaml\` | Build and release PDF books |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY

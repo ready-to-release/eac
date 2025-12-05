@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -237,12 +238,21 @@ func (c *testSanityContext) scanForGodogRunners() error {
 
 func (c *testSanityContext) scanForTypeScriptTests() error {
 	root := c.repoRoot
-	pattern := filepath.Join(root, "typescript", "**", "*.test.ts")
-	pattern = filepath.ToSlash(pattern)
 
-	matches, err := doublestar.FilepathGlob(pattern)
+	// Use git ls-files to avoid scanning node_modules (90MB+)
+	cmd := exec.Command("git", "ls-files", "typescript/**/*.test.ts")
+	cmd.Dir = root
+	output, err := cmd.Output()
 	if err != nil {
 		return err
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	var matches []string
+	for _, line := range lines {
+		if line != "" {
+			matches = append(matches, filepath.Join(root, line))
+		}
 	}
 
 	c.rawScanFiles = matches

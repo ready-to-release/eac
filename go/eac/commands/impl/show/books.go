@@ -47,7 +47,7 @@ func ShowBooks() int {
 	}
 
 	tb := render.NewTableBuilder().
-		WithHeaders("Name", "Description", "Copy", "Command", "Inline")
+		WithHeaders("Name", "Module", "Description", "Copy", "Command", "Inline")
 
 	for _, book := range cfg.Books.Books {
 		copyCount := len(book.GetCopySources())
@@ -61,6 +61,7 @@ func ShowBooks() int {
 
 		tb.AddRow(
 			book.Name,
+			book.Module,
 			description,
 			fmt.Sprintf("%d", copyCount),
 			fmt.Sprintf("%d", cmdCount),

@@ -7,12 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/go-git/go-git/v5/plumbing/object"
 
@@ -149,62 +147,20 @@ func (r *Repository) HeadShortSHA() (string, error) {
 
 // TrackedFiles returns all files tracked by Git (in the index).
 // This reflects the current index state: HEAD files + staged additions - staged deletions.
-// This is what will be committed, enabling pre-commit validation.
+// Uses native git command for performance (go-git's wt.Status() is slow).
 func (r *Repository) TrackedFiles() ([]string, error) {
-	tracked := make(map[string]bool)
-
-	// Start with files from HEAD commit
-	head, err := r.repo.Head()
-	if err != nil && err != plumbing.ErrReferenceNotFound {
-		return nil, fmt.Errorf("failed to get HEAD: %w", err)
-	}
-
-	if err == nil {
-		commit, err := r.repo.CommitObject(head.Hash())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get commit: %w", err)
-		}
-
-		tree, err := commit.Tree()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get tree: %w", err)
-		}
-
-		err = tree.Files().ForEach(func(f *object.File) error {
-			tracked[f.Name] = true
-			return nil
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to iterate files: %w", err)
-		}
-	}
-
-	// Adjust based on staging status
-	wt, err := r.repo.Worktree()
+	// Use native git ls-files which is fast
+	// This lists all files in the index (tracked files)
+	output, err := r.runGitCommand("ls-files")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get worktree: %w", err)
+		return nil, fmt.Errorf("failed to get tracked files: %w", err)
 	}
 
-	status, err := wt.Status()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get status: %w", err)
+	if output == "" {
+		return []string{}, nil
 	}
 
-	for path, fileStatus := range status {
-		switch fileStatus.Staging {
-		case gogit.Added:
-			tracked[path] = true
-		case gogit.Deleted:
-			delete(tracked, path)
-		}
-	}
-
-	// Convert to sorted slice
-	files := make([]string, 0, len(tracked))
-	for f := range tracked {
-		files = append(files, f)
-	}
-	sort.Strings(files)
+	files := strings.Split(strings.TrimSpace(output), "\n")
 	return files, nil
 }
 

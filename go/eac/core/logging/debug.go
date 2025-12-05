@@ -60,11 +60,22 @@ var debugOutput io.Writer = os.Stderr
 // detectExecutionContext determines the execution context based on environment
 func detectExecutionContext() {
 	contextOnce.Do(func() {
+		// Check explicit environment variable first
 		if os.Getenv("R2R_DOCKER_MODE") == "true" {
 			executionContext = ContextR2RCLI
-		} else {
-			executionContext = ContextImplicitCLI
+			return
 		}
+		// Check for Docker container indicators
+		if _, err := os.Stat("/.dockerenv"); err == nil {
+			executionContext = ContextR2RCLI
+			return
+		}
+		// Check if running from /app path (Docker container convention)
+		if exe, err := os.Executable(); err == nil && len(exe) > 4 && exe[:4] == "/app" {
+			executionContext = ContextR2RCLI
+			return
+		}
+		executionContext = ContextImplicitCLI
 	})
 }
 

@@ -21,12 +21,33 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Module moniker this book builds (must match a mkdocs-site module)",
+          "description": "Unique book identifier (kebab-case)",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "module": {
+          "type": "string",
+          "description": "Module moniker this book builds for (must be an mkdocs-site module). A module can have multiple books.",
           "pattern": "^[a-z0-9-]+$"
         },
         "description": {
           "type": "string",
           "description": "Human-readable description of the book"
+        },
+        "output": {
+          "type": "string",
+          "description": "Default output mode. Can be overridden with --theme or --html flags.",
+          "enum": ["site", "pdf-dark", "pdf-light", "pdf-all"],
+          "default": "pdf-dark"
+        },
+        "site_url": {
+          "type": "string",
+          "description": "Base URL for the published site (e.g., https://example.github.io/repo/). Used to fix broken internal links in PDF mode by converting them to absolute URLs.",
+          "format": "uri"
+        },
+        "default": {
+          "type": "boolean",
+          "description": "Whether to include this book in default builds. Set to false for slow or optional books that should only be built with --all flag.",
+          "default": true
         },
         "sources": {
           "type": "array",
@@ -48,7 +69,7 @@
           }
         }
       },
-      "required": ["name", "sources"],
+      "required": ["name", "module", "sources"],
       "additionalProperties": false
     },
     "copySource": {

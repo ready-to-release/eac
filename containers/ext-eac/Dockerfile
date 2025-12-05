@@ -6,18 +6,22 @@ FROM golang:1.25-alpine AS deps
 # Build arguments for multi-platform support
 ARG TARGETARCH
 
-# Install all dependencies (shared between build and runtime)
+# Install dependencies
+# Note: github-cli requires community repo. We detect Alpine version dynamically.
 RUN apk add --no-cache \
     ca-certificates \
     git \
     tzdata \
-    github-cli \
     bash \
+    nodejs \
     npm \
     docker-cli \
     docker-cli-buildx \
     curl \
-    && rm -rf /var/cache/apk/*
+    && ALPINE_VERSION=$(cat /etc/alpine-release | cut -d. -f1,2) \
+    && apk add --no-cache \
+        --repository=https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community \
+        github-cli
 
 ENV GO111MODULE=on
 ENV GOWORK=off

@@ -240,3 +240,14 @@
 [data-md-color-scheme="default"] .md-footer {
   background-color: #24292f;
 }
+
+/* Mermaid diagram containers with size control */
+.mermaid-wrapper {
+  display: block;
+  margin: 1em auto;
+}
+
+.mermaid-wrapper svg {
+  max-width: 100%;
+  height: auto;
+}

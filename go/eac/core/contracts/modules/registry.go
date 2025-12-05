@@ -3,21 +3,26 @@ package modules
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Registry provides fast access to module contracts
 type Registry struct {
-	modules       map[string]*ModuleContract // Keyed by moniker
-	version       string
-	workspaceRoot string
+	modules            map[string]*ModuleContract // Keyed by moniker
+	version            string
+	workspaceRoot      string
+	modulesByRoot      map[string][]*ModuleContract // Index: root -> modules with that root
+	modulesWithRepoPat []*ModuleContract            // Modules that have repo patterns (need checking for all files)
 }
 
 // NewRegistry creates a new module registry
 func NewRegistry(version, workspaceRoot string) *Registry {
 	return &Registry{
-		modules:       make(map[string]*ModuleContract),
-		version:       version,
-		workspaceRoot: workspaceRoot,
+		modules:            make(map[string]*ModuleContract),
+		version:            version,
+		workspaceRoot:      workspaceRoot,
+		modulesByRoot:      make(map[string][]*ModuleContract),
+		modulesWithRepoPat: make([]*ModuleContract, 0),
 	}
 }
 
@@ -32,7 +37,26 @@ func (r *Registry) Add(module *ModuleContract) error {
 	}
 
 	r.modules[module.Moniker] = module
+
+	// Build index by root
+	root := normalizeRoot(module.Files.Root)
+	r.modulesByRoot[root] = append(r.modulesByRoot[root], module)
+
+	// Track modules with repo patterns
+	if len(module.getRepoPatterns()) > 0 {
+		r.modulesWithRepoPat = append(r.modulesWithRepoPat, module)
+	}
+
 	return nil
+}
+
+// normalizeRoot normalizes a root path for indexing
+func normalizeRoot(root string) string {
+	if root == "" || root == "/" {
+		return ""
+	}
+	// Normalize path separators
+	return normalizePathSeparators(root)
 }
 
 // Get retrieves a module contract by moniker
@@ -144,13 +168,67 @@ func (r *Registry) GetUsedBy(moniker string) []string {
 // Returns empty slice if no modules match (orphan file).
 func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 	var matches []*ModuleContract
+	checked := make(map[string]bool) // Track which modules we've already checked
 
-	// Find all modules that explicitly match this file
-	for _, module := range r.modules {
-		if module.MatchesFile(filePath) {
-			matches = append(matches, module)
+	path := normalizePathSeparators(filePath)
+
+	// 1. Find modules by matching root prefix (fast path)
+	// Try progressively shorter prefixes of the file path
+	parts := splitPath(path)
+	for i := len(parts); i > 0; i-- {
+		prefix := joinPath(parts[:i])
+		if modules, ok := r.modulesByRoot[prefix]; ok {
+			for _, module := range modules {
+				if !checked[module.Moniker] {
+					checked[module.Moniker] = true
+					if module.MatchesFile(filePath) {
+						matches = append(matches, module)
+					}
+				}
+			}
+		}
+	}
+
+	// 2. Check modules with root="" (repository-wide modules)
+	if modules, ok := r.modulesByRoot[""]; ok {
+		for _, module := range modules {
+			if !checked[module.Moniker] {
+				checked[module.Moniker] = true
+				if module.MatchesFile(filePath) {
+					matches = append(matches, module)
+				}
+			}
+		}
+	}
+
+	// 3. Check modules with repo patterns (they can match files anywhere)
+	for _, module := range r.modulesWithRepoPat {
+		if !checked[module.Moniker] {
+			checked[module.Moniker] = true
+			if module.MatchesFile(filePath) {
+				matches = append(matches, module)
+			}
 		}
 	}
 
 	return matches
+}
+
+// splitPath splits a path into components
+func splitPath(path string) []string {
+	if path == "" {
+		return nil
+	}
+	var parts []string
+	for _, p := range strings.Split(path, "/") {
+		if p != "" {
+			parts = append(parts, p)
+		}
+	}
+	return parts
+}
+
+// joinPath joins path components
+func joinPath(parts []string) string {
+	return strings.Join(parts, "/")
 }

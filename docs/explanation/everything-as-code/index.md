@@ -101,9 +101,10 @@ This CLI automation layer exists to make "Everything as Code" **practical** rath
 "Everything as Code" is about recognizing that:
 
 1. **Compliance requirements are rules** - Rules can be encoded
-2. **Validation is testing** - Tests can be automated
+2. **Verification is testing** - Tests can be automated
 3. **Audit trails are history** - History can be version-controlled
 4. **Documentation describes systems** - Systems can document themselves
 5. **Quality comes from consistency** - Consistency comes from automation
+6. **Validation is a conclusion** - Data for the conclusion is the above.
 
-Organizations that embrace this don't just move faster—they move **safer**, with higher quality, better traceability, and lower compliance burden.
+Organizations that embrace this don't just move faster—they move **safer**, with **higher quality**, **better traceability**, and **lower compliance burden**.
