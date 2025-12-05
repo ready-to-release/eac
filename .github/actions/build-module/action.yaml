@@ -86,12 +86,19 @@ runs:
         fi
 
     - name: Build Module
+      id: build
       shell: bash
       env:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
-      run: $COMMANDS build $MODULE $EXTRA_ARGS
+      run: |
+        if $COMMANDS build $MODULE $EXTRA_ARGS; then
+          echo "build-failed=0" >> $GITHUB_OUTPUT
+        else
+          echo "build-failed=1" >> $GITHUB_OUTPUT
+          exit 1
+        fi
 
     - name: Upload Build Artifacts
       if: inputs.upload-artifact == 'true'
@@ -110,12 +117,13 @@ runs:
         ARTIFACT_NAME: ${{ steps.vars.outputs.artifact-name }}
         RUN_ID: ${{ github.run_id }}
         COMMIT: ${{ github.sha }}
+        BUILD_FAILED: ${{ steps.build.outputs.build-failed }}
       run: |
         echo "## Build: ${MODULE}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-        if [ -d "out/build/${MODULE}" ]; then
-          echo "Module built successfully." >> $GITHUB_STEP_SUMMARY
+        if [ "$BUILD_FAILED" = "0" ]; then
+          echo "✅ Module built successfully." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Build Details" >> $GITHUB_STEP_SUMMARY
@@ -131,7 +139,7 @@ runs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "${ARTIFACT_COUNT} file(s) uploaded as \`${ARTIFACT_NAME}\`" >> $GITHUB_STEP_SUMMARY
         else
-          echo "Module build failed or produced no artifacts." >> $GITHUB_STEP_SUMMARY
+          echo "❌ Module build failed." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           $COMMANDS pipeline ci summary-link ${RUN_ID} --type build >> $GITHUB_STEP_SUMMARY
         fi

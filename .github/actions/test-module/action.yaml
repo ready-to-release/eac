@@ -120,6 +120,7 @@ runs:
         path: ${{ steps.vars.outputs.build-artifact-path }}
 
     - name: Run Test Suites
+      id: test
       shell: bash
       env:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
@@ -128,12 +129,19 @@ runs:
         EXTRA_ARGS: ${{ inputs.extra-args }}
       run: |
         # Split suites by comma and run each
+        test_failed=0
         IFS=',' read -ra SUITE_ARRAY <<< "$SUITES"
         for suite in "${SUITE_ARRAY[@]}"; do
           suite=$(echo "$suite" | xargs)  # trim whitespace
           echo "Running test suite: $suite"
-          $COMMANDS test $MODULE --suite $suite $EXTRA_ARGS
+          if ! $COMMANDS test $MODULE --suite $suite $EXTRA_ARGS; then
+            test_failed=1
+          fi
         done
+        echo "test-failed=$test_failed" >> $GITHUB_OUTPUT
+        if [ "$test_failed" -eq 1 ]; then
+          exit 1
+        fi
 
     - name: Upload Test Results
       if: always()
@@ -152,15 +160,16 @@ runs:
         SUITES: ${{ inputs.suites }}
         RESULTS_ARTIFACT_NAME: ${{ steps.vars.outputs.results-artifact-name }}
         RUN_ID: ${{ github.run_id }}
+        TEST_FAILED: ${{ steps.test.outputs.test-failed }}
       run: |
         echo "## Test: ${MODULE}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-        # Check if test results exist
-        if [ -d "out/test" ] && find out/test -name "${MODULE}" -type d 2>/dev/null | grep -q .; then
-          echo "All tests passed for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
+        # Check test result from the test step output
+        if [ "$TEST_FAILED" = "0" ]; then
+          echo "✅ All tests passed for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
         else
-          echo "Tests failed or produced no results for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
+          echo "❌ Tests failed for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           $COMMANDS pipeline ci summary-link ${RUN_ID} --type test --artifact ${RESULTS_ARTIFACT_NAME} >> $GITHUB_STEP_SUMMARY
         fi
