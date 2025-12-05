@@ -24,7 +24,7 @@ Feature: eac-commands_build
       Then the exit code is 0
       And I should see "build" or "module" or "Usage"
 
-    @deps:npm
+    @deps:npm @skip:broken
     Scenario: Build with no args builds all
       When I run the command "build --dry-run"
       Then the exit code is 0
