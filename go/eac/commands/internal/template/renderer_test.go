@@ -3,6 +3,7 @@ package template
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -301,9 +302,10 @@ func TestDefaultFuncMap(t *testing.T) {
 
 func TestNormalizeSpecPath(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected string
+		name        string
+		input       string
+		expected    string
+		windowsOnly bool // Skip on non-Windows (backslash handling is OS-specific)
 	}{
 		{
 			name:     "already normalized",
@@ -326,9 +328,10 @@ func TestNormalizeSpecPath(t *testing.T) {
 			expected: "specs/module/test.feature",
 		},
 		{
-			name:     "with backslashes",
-			input:    "..\\specs\\module\\test.feature",
-			expected: "specs/module/test.feature",
+			name:        "with backslashes",
+			input:       "..\\specs\\module\\test.feature",
+			expected:    "specs/module/test.feature",
+			windowsOnly: true,
 		},
 		{
 			name:     "complex path",
@@ -339,6 +342,9 @@ func TestNormalizeSpecPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.windowsOnly && runtime.GOOS != "windows" {
+				t.Skip("backslash path handling is Windows-specific")
+			}
 			result := NormalizeSpecPath(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
