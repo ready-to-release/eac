@@ -33,6 +33,12 @@ jobs:
         id: commands
         uses: ./.github/actions/setup-commands
 
+      - name: Setup Module Dependencies
+        uses: ./.github/actions/setup-module-deps
+        with:
+          module: docs
+          commands-path: ${{ steps.commands.outputs.commands-path }}
+
       - name: Generate calver tag name
         id: tag
         run: |

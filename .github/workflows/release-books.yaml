@@ -50,6 +50,12 @@ jobs:
         id: commands
         uses: ./.github/actions/setup-commands
 
+      - name: Setup Module Dependencies
+        uses: ./.github/actions/setup-module-deps
+        with:
+          module: books
+          commands-path: ${{ steps.commands.outputs.commands-path }}
+
       - name: Build PDF Books
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
