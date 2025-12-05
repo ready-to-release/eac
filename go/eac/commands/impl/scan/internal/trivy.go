@@ -12,10 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// TrivyImage is the official Trivy Docker image
-	TrivyImage = "ghcr.io/aquasecurity/trivy:latest"
-)
+// NOTE: trivyImage constant removed - now configured via security-tools.yml
+// Docker image versions are loaded from .r2r/eac/security-tools.yml configuration
 
 // Mock support for testing
 var mockTrivyOutput interface{}
@@ -46,7 +44,7 @@ func getDefaultMockTrivyOutput() map[string]interface{} {
 }
 
 // RunTrivySBOM executes Trivy SBOM scanner via Docker
-func RunTrivySBOM(workspaceRoot, moduleRoot, format string, logger *logging.Logger) (interface{}, error) {
+func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -66,7 +64,7 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, logger *logging.Logg
 	defer dockerRunner.Close()
 
 	// Pull image if needed
-	if err := dockerRunner.CheckAndPullImage(TrivyImage); err != nil {
+	if err := dockerRunner.CheckAndPullImage(trivyImage); err != nil {
 		return nil, err
 	}
 
@@ -89,7 +87,7 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, logger *logging.Logg
 
 	// Configure container
 	config := &container.Config{
-		Image: TrivyImage,
+		Image: trivyImage,
 		Cmd: []string{
 			"fs",
 			"--format", format,
@@ -131,7 +129,7 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, logger *logging.Logg
 }
 
 // RunTrivyVuln executes Trivy vulnerability scanner via Docker
-func RunTrivyVuln(moduleRoot string, severityFilter []Severity, logger *logging.Logger) (interface{}, error) {
+func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -151,7 +149,7 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, logger *logging.
 	defer dockerRunner.Close()
 
 	// Pull image if needed
-	if err := dockerRunner.CheckAndPullImage(TrivyImage); err != nil {
+	if err := dockerRunner.CheckAndPullImage(trivyImage); err != nil {
 		return nil, err
 	}
 
@@ -191,7 +189,7 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, logger *logging.
 
 	// Configure container
 	config := &container.Config{
-		Image: TrivyImage,
+		Image: trivyImage,
 		Cmd:   cmd,
 	}
 
@@ -228,7 +226,7 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, logger *logging.
 }
 
 // RunTrivySecrets executes Trivy secrets scanner via Docker
-func RunTrivySecrets(moduleRoot string, logger *logging.Logger) (interface{}, error) {
+func RunTrivySecrets(moduleRoot string, trivyImage string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -248,7 +246,7 @@ func RunTrivySecrets(moduleRoot string, logger *logging.Logger) (interface{}, er
 	defer dockerRunner.Close()
 
 	// Pull image if needed
-	if err := dockerRunner.CheckAndPullImage(TrivyImage); err != nil {
+	if err := dockerRunner.CheckAndPullImage(trivyImage); err != nil {
 		return nil, err
 	}
 
@@ -269,7 +267,7 @@ func RunTrivySecrets(moduleRoot string, logger *logging.Logger) (interface{}, er
 
 	// Configure container
 	config := &container.Config{
-		Image: TrivyImage,
+		Image: trivyImage,
 		Cmd: []string{
 			"fs",
 			"--scanners", "secret",
@@ -312,7 +310,7 @@ func RunTrivySecrets(moduleRoot string, logger *logging.Logger) (interface{}, er
 }
 
 // RunTrivyCompliance executes Trivy compliance scanner via Docker
-func RunTrivyCompliance(moduleRoot, compliance string, logger *logging.Logger) (interface{}, error) {
+func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -332,7 +330,7 @@ func RunTrivyCompliance(moduleRoot, compliance string, logger *logging.Logger) (
 	defer dockerRunner.Close()
 
 	// Pull image if needed
-	if err := dockerRunner.CheckAndPullImage(TrivyImage); err != nil {
+	if err := dockerRunner.CheckAndPullImage(trivyImage); err != nil {
 		return nil, err
 	}
 
@@ -354,7 +352,7 @@ func RunTrivyCompliance(moduleRoot, compliance string, logger *logging.Logger) (
 
 	// Configure container
 	config := &container.Config{
-		Image: TrivyImage,
+		Image: trivyImage,
 		Cmd: []string{
 			"fs",
 			"--compliance", compliance,
@@ -397,7 +395,7 @@ func RunTrivyCompliance(moduleRoot, compliance string, logger *logging.Logger) (
 }
 
 // RunTrivyIaC executes Trivy Infrastructure as Code scanner via Docker
-func RunTrivyIaC(moduleRoot string, logger *logging.Logger) (interface{}, error) {
+func RunTrivyIaC(moduleRoot string, trivyImage string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -417,7 +415,7 @@ func RunTrivyIaC(moduleRoot string, logger *logging.Logger) (interface{}, error)
 	defer dockerRunner.Close()
 
 	// Pull image if needed
-	if err := dockerRunner.CheckAndPullImage(TrivyImage); err != nil {
+	if err := dockerRunner.CheckAndPullImage(trivyImage); err != nil {
 		return nil, err
 	}
 
@@ -438,7 +436,7 @@ func RunTrivyIaC(moduleRoot string, logger *logging.Logger) (interface{}, error)
 
 	// Configure container
 	config := &container.Config{
-		Image: TrivyImage,
+		Image: trivyImage,
 		Cmd: []string{
 			"config",
 			"--format", "json",

@@ -122,10 +122,10 @@ r2r eac show risk-report --format json > audit-report.json
 
 Risk assessment automatically incorporates:
 
-- SAST findings (`security sast`)
-- Vulnerability scan results (`security vuln`)
-- Compliance check results (`security compliance`)
-- SBOM data (`security sbom`)
+- SAST findings (`scan sast`)
+- Vulnerability scan results (`scan vuln`)
+- Compliance check results (`scan compliance`)
+- SBOM data (`scan sbom`)
 
 ### With Testing
 

@@ -1,4 +1,4 @@
-// Command: security vuln
+// Command: scan vuln
 // Short: Scan for vulnerabilities using Trivy
 // Long: Scan for vulnerabilities in container images and filesystems using Trivy.
 // Long:
@@ -21,10 +21,11 @@
 package vuln
 
 import (
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/security/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -119,6 +120,18 @@ func Vuln() int {
 	}
 	defer logger.Sync()
 
+	// Load configuration
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		logger.Error("Failed to load configuration", zap.Error(err))
+		log.Errorf(" failed to load configuration: %v\n", err)
+		return 1
+	}
+
+	// Get Docker image from config
+	trivyImage := cfg.SecurityTools.DockerImages.Trivy.FullImage()
+	logger.Debug("Using Trivy image", zap.String("image", trivyImage))
+
 	logger.Info("Starting vulnerability scanner",
 		zap.Any("severityFilter", severityFilter),
 		zap.Strings("modules", monikers),
@@ -161,7 +174,7 @@ func Vuln() int {
 		log.Infof("🔍 Scanning %s...\n", moniker)
 
 		// Run Trivy vulnerability scan
-		findings, err := internal.RunTrivyVuln(module.Files.Root, severityFilter, logger)
+		findings, err := internal.RunTrivyVuln(module.Files.Root, severityFilter, trivyImage, logger)
 		if err != nil {
 			logger.Error("Vulnerability scan failed", zap.String("moniker", moniker), zap.Error(err))
 			log.Errorf( "  ❌ Failed: %v\n", err)

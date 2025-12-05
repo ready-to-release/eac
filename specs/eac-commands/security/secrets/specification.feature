@@ -8,7 +8,7 @@ Feature: security_secrets
   Rule: Secrets scanner creates evidence file with integrity verification
 
     Scenario: Scan module for secrets with mocked tool
-      When I run the command "security secrets eac-core"
+      When I run the command "scan secrets eac-core"
       Then the exit code is 0 or 1
       And evidence files should exist in directory "out/security/eac-core/secrets/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
@@ -18,21 +18,21 @@ Feature: security_secrets
       And the latest evidence file should have JSON field "findings" with non-empty data
 
     Scenario: Secrets scan with debug logging
-      When I run the command "security secrets eac-core --debug"
+      When I run the command "scan secrets eac-core --debug"
       Then the exit code is 0 or 1
       And a log file should exist in directory "out/logs/security/"
 
     Scenario: Secrets scan with invalid module
-      When I run the command "security secrets nonexistent-module-xyz"
+      When I run the command "scan secrets nonexistent-module-xyz"
       Then the exit code is 1
       And I should see "not found" or "Error"
 
     Scenario: Secrets scan for all modules
-      When I run the command "security secrets"
+      When I run the command "scan secrets"
       Then the exit code is 0 or 1
       And I should see "modules" or "Scanning"
 
     Scenario: Secrets scan help is accessible
-      When I run the command "security secrets --help"
+      When I run the command "scan secrets --help"
       Then the exit code is 0
       And I should see "secrets" or "credentials" or "Usage"

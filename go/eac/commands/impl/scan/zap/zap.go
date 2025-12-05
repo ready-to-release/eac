@@ -1,4 +1,4 @@
-// Command: security zap
+// Command: scan zap
 // Short: Dynamic Application Security Testing using OWASP ZAP
 // Long: Perform Dynamic Application Security Testing (DAST) using OWASP ZAP.
 // Long:
@@ -26,10 +26,11 @@
 package zap
 
 import (
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/security/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -143,6 +144,18 @@ func ZAP() int {
 	}
 	defer logger.Sync()
 
+	// Load configuration
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		logger.Error("Failed to load configuration", zap.Error(err))
+		log.Errorf(" failed to load configuration: %v\n", err)
+		return 1
+	}
+
+	// Get Docker image from config
+	zapImage := cfg.SecurityTools.DockerImages.ZAP.FullImage()
+	logger.Debug("Using ZAP image", zap.String("image", zapImage))
+
 	logger.Info("Starting ZAP DAST scanner",
 		zap.String("module", moniker),
 		zap.String("target", targetURL),
@@ -169,7 +182,7 @@ func ZAP() int {
 	log.Infof("🕷️  Scanning %s at %s...\n", moniker, targetURL)
 
 	// Run OWASP ZAP scan
-	findings, err := internal.RunZAPScan(targetURL, scanType, workspaceRoot, logger)
+	findings, err := internal.RunZAPScan(targetURL, scanType, workspaceRoot, zapImage, logger)
 	if err != nil {
 		logger.Error("ZAP scan failed", zap.String("moniker", moniker), zap.Error(err))
 		log.Errorf( "  ❌ Failed: %v\n", err)

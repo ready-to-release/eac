@@ -56,7 +56,7 @@
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/"><img src="https://img.shields.io/badge/⏰-Audit_Prep-dc2626?style=for-the-badge" alt="Audit Prep"></a><br>
 <sub>Takes months, not minutes</sub><br>
-<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">security</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-overview/">risk</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">scan</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-overview/">risk</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-overview/"><img src="https://img.shields.io/badge/📦-Evidence_Scattered-dc2626?style=for-the-badge" alt="Evidence Scattered"></a><br>
@@ -64,9 +64,9 @@
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-overview/">validate</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/">guides</a></sup>
 </td>
 <td align="center">
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/"><img src="https://img.shields.io/badge/🛡️-Security_Late-dc2626?style=for-the-badge" alt="Security Late"></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/"><img src="https://img.shields.io/badge/🛡️-Scan_Late-dc2626?style=for-the-badge" alt="Scan Late"></a><br>
 <sub>Scans run too late to matter</sub><br>
-<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">security</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/">commands</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">scan</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/">commands</a></sup>
 </td>
 </tr>
 <tr>
@@ -100,7 +100,7 @@
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-overview/"><img src="https://img.shields.io/badge/🎲-Deployment_Roulette-dc2626?style=for-the-badge" alt="Deployment Roulette"></a><br>
 <sub>Nobody knows what's in production</sub><br>
-<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-overview/">release</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">sbom</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/release-overview/">release</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">scan</a></sup>
 </td>
 </tr>
 </table>
@@ -188,7 +188,7 @@ One commit. Validated build. Auditable release.
 <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/"><img src="https://img.shields.io/badge/🛡️-Audit-f97316?style=for-the-badge" alt="Audit"></a><br>
 <sub><del>Months of prep</del></sub><br>
 <strong>Always ready</strong><br>
-<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">Security →</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">Scan →</a></sup>
 </td>
 </tr>
 </table>
@@ -298,19 +298,25 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/validate-commands/">all</a></sup>
 </td>
 <td align="center">
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/"><img src="https://img.shields.io/badge/🔒-Security-eab308?style=for-the-badge" alt="Security"></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#security"><code>security</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#security-sast"><code>security sast</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#security-sbom"><code>security sbom</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/"><img src="https://img.shields.io/badge/🔒-Scan-eab308?style=for-the-badge" alt="Scan"></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#scan"><code>scan</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#scan-sast"><code>scan sast</code></a><br>
+<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/#scan-sbom"><code>scan sbom</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/security-commands/">all</a></sup>
 </td>
-<td align="center">
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-overview/"><img src="https://img.shields.io/badge/🛡️-Risk-f97316?style=for-the-badge" alt="Risk"></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#create-risk"><code>create risk</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#validate-risk"><code>validate risk</code></a><br>
-<a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#show-risk-report"><code>show risk-report</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-configuration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/">all</a></sup>
-</td>
+  <td align="center">
+  <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-overview/"><img
+  src="https://img.shields.io/badge/🛡️-Risk-f97316?style=for-the-badge" alt="Risk"></a><br>
+  <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#create-r
+  isk-profile"><code>create risk-profile</code></a><br>
+  <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#create-r
+  isk-assess"><code>create risk-assess</code></a><br>
+  <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-commands/#validate
+  -risk-profile"><code>validate risk-profile</code></a><br>
+  <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-overview/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/risks-confi
+  guration/">config</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/commands/areas/
+  risks-commands/">all</a></sup>
+  </td>
 </tr>
 <tr>
 <td align="center">

@@ -1,29 +1,31 @@
-// Command: security sbom
-// Short: Generate Software Bill of Materials (SBOM)
-// Long: Generate Software Bill of Materials (SBOM) using Trivy scanner.
+// Command: scan iac
+// Short: Scan Infrastructure as Code for misconfigurations using Trivy
+// Long: Scan Infrastructure as Code (IaC) files for security misconfigurations using Trivy.
 // Long:
-// Long: This command generates SBOM evidence files in CycloneDX format for audit compliance.
-// Long: Evidence files are timestamped and SHA256-signed for integrity verification.
+// Long: This command detects security issues in IaC files including Terraform, CloudFormation,
+// Long: Kubernetes manifests, Dockerfiles, and Helm charts. Results are saved as timestamped
+// Long: evidence files with SHA256 integrity verification for audit compliance.
 // Long:
-// Long: Output: out/security/<module>/sbom/<timestamp>.json
+// Long: Supported IaC types: Terraform, CloudFormation, Kubernetes, Docker, Helm
+// Long:
+// Long: Output: out/security/<module>/iac/<timestamp>.json
 // Long:
 // Long: Example:
-// Long:   security sbom                              # All modules
-// Long:   security sbom eac-core                     # Single module
-// Long:   security sbom eac-core r2r-cli             # Multiple modules
-// Long:   security sbom eac-core --format spdx-json  # SPDX format
-// Long:   security sbom eac-core --debug             # Debug logging
-// Flag.format: type=string, default=cyclonedx, usage=SBOM format (cyclonedx, spdx, spdx-json, github, etc.)
+// Long:   security iac                           # All modules
+// Long:   security iac eac-core                  # Single module
+// Long:   security iac eac-core r2r-cli          # Multiple modules
+// Long:   security iac eac-core --debug          # Debug logging
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 // HasSideEffects: false
 // Args: modules
-package sbom
+package iac
 
 import (
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/security/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -34,43 +36,32 @@ import (
 var log = logging.C()
 
 func init() {
-	registry.Register(SBOM)
+	registry.Register(IaC)
 }
 
-// SBOM command entry point
-func SBOM() int {
-	args := os.Args[3:] // Skip program name, "security", and "sbom"
+// IaC command entry point
+func IaC() int {
+	args := os.Args[3:] // Skip program name, "security", and "iac"
 
 	// Check for help flag
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
-		printSBOMUsage()
+		printIaCUsage()
 		return 0
 	}
 
 	// Parse module monikers and flags
 	var monikers []string
-	format := "cyclonedx" // Default to CycloneDX
 	debug := false
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "--format":
-			if i+1 >= len(args) {
-				log.Errorf(" --format requires a value\n")
-				printSBOMUsage()
-				return 1
-			}
-			i++
-			format = args[i]
 		case "--debug", "-d":
 			debug = true
 		default:
-			if strings.HasPrefix(arg, "--format=") {
-				format = strings.TrimPrefix(arg, "--format=")
-			} else if strings.HasPrefix(arg, "--") {
-				log.Errorf(" unknown flag: %s\n", arg)
-				printSBOMUsage()
+			if strings.HasPrefix(arg, "--") {
+				log.Errorf("unknown flag: %s", arg)
+				printIaCUsage()
 				return 1
 			} else {
 				monikers = append(monikers, arg)
@@ -82,7 +73,7 @@ func SBOM() int {
 	var logger *logging.Logger
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf(" failed to find repository root: %v\n", err)
+		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
 
@@ -92,13 +83,24 @@ func SBOM() int {
 		logger, err = logging.NewDefault("security", workspaceRoot)
 	}
 	if err != nil {
-		log.Errorf(" failed to initialize logger: %v\n", err)
+		log.Errorf("failed to initialize logger: %v", err)
 		return 1
 	}
 	defer logger.Sync()
 
-	logger.Info("Starting SBOM scanner",
-		zap.String("format", format),
+	// Load configuration
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		logger.Error("Failed to load configuration", zap.Error(err))
+		log.Errorf(" failed to load configuration: %v\n", err)
+		return 1
+	}
+
+	// Get Docker image from config
+	trivyImage := cfg.SecurityTools.DockerImages.Trivy.FullImage()
+	logger.Debug("Using Trivy image", zap.String("image", trivyImage))
+
+	logger.Info("Starting IaC scanner",
 		zap.Strings("modules", monikers),
 		zap.Bool("debug", debug))
 
@@ -106,7 +108,7 @@ func SBOM() int {
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		logger.Error("Failed to load module contracts", zap.Error(err))
-		log.Errorf(" failed to load module contracts: %v\n", err)
+		log.Errorf("failed to load module contracts: %v", err)
 		return 1
 	}
 
@@ -129,23 +131,23 @@ func SBOM() int {
 		module, exists := moduleReport.Registry.Get(moniker)
 		if !exists {
 			logger.Error("Module not found", zap.String("moniker", moniker))
-			log.Errorf(" module not found: %s\n", moniker)
+			log.Errorf("module not found: %s", moniker)
 			failureCount++
 			exitCode = 1
 			continue
 		}
 
 		logger.Info("Scanning module", zap.String("moniker", moniker), zap.String("root", module.Files.Root))
-		log.Infof("📦 Scanning %s...", moniker)
+		log.Infof("🏗️  Scanning %s...", moniker)
 
-		// Run Trivy SBOM scan
-		findings, err := internal.RunTrivySBOM(workspaceRoot, module.Files.Root, format, logger)
+		// Run Trivy IaC scan
+		findings, err := internal.RunTrivyIaC(module.Files.Root, trivyImage, logger)
 		if err != nil {
-			logger.Error("SBOM scan failed", zap.String("moniker", moniker), zap.Error(err))
+			logger.Error("IaC scan failed", zap.String("moniker", moniker), zap.Error(err))
 			log.Errorf("  ❌ Failed: %v", err)
 
 			// Write error evidence
-			outputPath, writeErr := internal.WriteErrorEvidence(workspaceRoot, moniker, internal.ScannerSBOM, err.Error())
+			outputPath, writeErr := internal.WriteErrorEvidence(workspaceRoot, moniker, internal.ScannerIaC, err.Error())
 			if writeErr != nil {
 				logger.Error("Failed to write error evidence", zap.Error(writeErr))
 			} else {
@@ -159,7 +161,7 @@ func SBOM() int {
 		}
 
 		// Write evidence file
-		outputPath, err := internal.WriteEvidence(workspaceRoot, moniker, internal.ScannerSBOM, findings)
+		outputPath, err := internal.WriteEvidence(workspaceRoot, moniker, internal.ScannerIaC, findings)
 		if err != nil {
 			logger.Error("Failed to write evidence", zap.String("moniker", moniker), zap.Error(err))
 			log.Errorf("  ❌ Failed to write evidence: %v", err)
@@ -168,14 +170,14 @@ func SBOM() int {
 			continue
 		}
 
-		logger.Info("SBOM scan completed", zap.String("moniker", moniker), zap.String("evidence", outputPath))
+		logger.Info("IaC scan completed", zap.String("moniker", moniker), zap.String("evidence", outputPath))
 		log.Infof("  ✅ Success: %s", outputPath)
 		successCount++
 	}
 
 	// Print summary
 	log.Info("")
-	logger.Info("SBOM scan summary",
+	logger.Info("IaC scan summary",
 		zap.Int("success", successCount),
 		zap.Int("failed", failureCount),
 		zap.Int("total", len(monikers)))
@@ -185,29 +187,33 @@ func SBOM() int {
 	return exitCode
 }
 
-func printSBOMUsage() {
-	log.Info("Generate Software Bill of Materials (SBOM)")
+func printIaCUsage() {
+	log.Info("Scan Infrastructure as Code for misconfigurations using Trivy")
 	log.Info("")
-	log.Info("Usage: security sbom [modules...] [flags]")
+	log.Info("Usage: security iac [modules...] [flags]")
 	log.Info("")
 	log.Info("Arguments:")
 	log.Info("  [modules...]          One or more module monikers to scan")
 	log.Info("                        If no modules specified, scans all modules")
 	log.Info("")
 	log.Info("Flags:")
-	log.Info("  --format <format>     SBOM format (default: cyclonedx)")
-	log.Info("                        Options: cyclonedx, spdx, spdx-json, github, json, sarif")
 	log.Info("  --debug, -d           Enable debug logging")
 	log.Info("")
+	log.Info("Supported IaC types:")
+	log.Info("  - Terraform (.tf)")
+	log.Info("  - CloudFormation (.yaml, .yml, .json)")
+	log.Info("  - Kubernetes manifests (.yaml, .yml)")
+	log.Info("  - Dockerfiles")
+	log.Info("  - Helm charts")
+	log.Info("")
 	log.Info("Examples:")
-	log.Info("  security sbom                              # All modules")
-	log.Info("  security sbom eac-core                     # Single module")
-	log.Info("  security sbom eac-core r2r-cli             # Multiple modules")
-	log.Info("  security sbom eac-core --format spdx-json  # SPDX format")
-	log.Info("  security sbom eac-core --debug             # Debug logging")
+	log.Info("  security iac                           # All modules")
+	log.Info("  security iac eac-core                  # Single module")
+	log.Info("  security iac eac-core r2r-cli          # Multiple modules")
+	log.Info("  security iac eac-core --debug          # Debug logging")
 	log.Info("")
 	log.Info("Output:")
-	log.Info("  out/security/<module>/sbom/<timestamp>.json")
+	log.Info("  out/security/<module>/iac/<timestamp>.json")
 	log.Info("")
 	log.Info("External tool:")
 	log.Info("  This command uses Trivy (Apache 2.0). See the NOTICE file in the")

@@ -8,7 +8,7 @@ Feature: security_sbom
   Rule: SBOM scanner creates evidence file with integrity verification
 
     Scenario: Generate SBOM for single module with mocked tool
-      When I run the command "security sbom eac-core"
+      When I run the command "scan sbom eac-core"
       Then the exit code is 0
       And evidence files should exist in directory "out/security/eac-core/sbom/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
@@ -18,21 +18,21 @@ Feature: security_sbom
       And the latest evidence file should have JSON field "findings" with non-empty data
 
     Scenario: SBOM with debug logging enabled
-      When I run the command "security sbom eac-core --debug"
+      When I run the command "scan sbom eac-core --debug"
       Then the exit code is 0
       And a log file should exist in directory "out/logs/security/"
 
     Scenario: SBOM with invalid module moniker
-      When I run the command "security sbom nonexistent-module-xyz"
+      When I run the command "scan sbom nonexistent-module-xyz"
       Then the exit code is 1
       And I should see "not found" or "Error"
 
     Scenario: SBOM for all modules when no arguments provided
-      When I run the command "security sbom"
+      When I run the command "scan sbom"
       Then the exit code is 0
       And I should see "modules" or "Scanning"
 
     Scenario: SBOM help is accessible
-      When I run the command "security sbom --help"
+      When I run the command "scan sbom --help"
       Then the exit code is 0
       And I should see "SBOM" or "Software Bill of Materials" or "Usage"

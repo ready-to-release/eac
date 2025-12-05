@@ -12,7 +12,7 @@
 // Long: - Security scans: out/security/<module>/**/*.json
 // Flag.profile: type=string, shorthand=p, required=true, usage=Path to OSCAL profile JSON file
 // Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for security evidence before auto-refresh (e.g., 24h, 7d)
-// Flag.force-security: type=bool, default=false, usage=Force re-run security scans regardless of age
+// Flag.force-scan: type=bool, default=false, usage=Force re-run security scans regardless of age
 // Flag.skip-auto-run: type=bool, default=false, usage=Use existing evidence only, fail if missing
 // Flag.suite: type=string, default=acceptance, usage=Test suite to run (e.g., acceptance, commit)
 // Flag.report-template: type=string, default=risk-assessment-detailed, usage=Report template variant (risk-assessment, risk-assessment-summary, risk-assessment-detailed)
@@ -52,7 +52,7 @@ type AssessConfig struct {
 	ProfilePath    string
 	MaxEvidenceAge time.Duration
 	ForceTests     bool
-	ForceSecurity  bool
+	ForceScan      bool
 	SkipAutoRun    bool
 	Sequential     bool // Disable parallel execution
 	Debug          bool
@@ -290,8 +290,8 @@ func parseAssessConfig() (*AssessConfig, error) {
 			config.ForceTests = true
 			i++
 
-		case arg == "--force-security":
-			config.ForceSecurity = true
+		case arg == "--force-scan":
+			config.ForceScan = true
 			i++
 
 		case arg == "--skip-auto-run":
@@ -400,8 +400,8 @@ Try:
 		if config.ForceTests {
 			return nil, fmt.Errorf("--skip-auto-run conflicts with --force-tests")
 		}
-		if config.ForceSecurity {
-			return nil, fmt.Errorf("--skip-auto-run conflicts with --force-security")
+		if config.ForceScan {
+			return nil, fmt.Errorf("--skip-auto-run conflicts with --force-scan")
 		}
 	}
 
@@ -426,7 +426,7 @@ Optional Flags:
                                      Options: acceptance, commit, production-verification
       --max-evidence-age <duration>  Maximum age for evidence (default: 24h)
       --force-tests                  Force re-run tests regardless of age
-      --force-security               Force re-run security scans regardless of age
+      --force-scan                   Force re-run security scans regardless of age
       --skip-auto-run                Use existing evidence only, fail if missing
       --sequential                   Run assessments sequentially (default: parallel)
   -d, --debug                        Save intermediate outputs to out/logs/risk/

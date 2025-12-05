@@ -12,10 +12,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// ZAP Docker image
-	ZAPImage = "zaproxy/zap-stable"
+// NOTE: ZAPImage constant removed - now configured via security-tools.yml
+// Docker image versions are loaded from .r2r/eac/security-tools.yml configuration
 
+const (
 	// ZAP scan types
 	ZAPBaseline = "baseline"
 	ZAPFull     = "full"
@@ -48,7 +48,7 @@ func getDefaultMockZAPOutput() map[string]interface{} {
 }
 
 // RunZAPScan executes OWASP ZAP dynamic security scan via Docker
-func RunZAPScan(targetURL, scanType, workspaceRoot string, logger *logging.Logger) (interface{}, error) {
+func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string, logger *logging.Logger) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockZAPOutput != nil {
@@ -70,7 +70,7 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, logger *logging.Logge
 	defer dockerRunner.Close()
 
 	// Pull image if needed
-	if err := dockerRunner.CheckAndPullImage(ZAPImage); err != nil {
+	if err := dockerRunner.CheckAndPullImage(zapImage); err != nil {
 		return nil, err
 	}
 
@@ -109,7 +109,7 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, logger *logging.Logge
 
 	// Configure container
 	containerConfig := &container.Config{
-		Image: ZAPImage,
+		Image: zapImage,
 		Cmd: []string{
 			zapScript,
 			"-t", targetURL,

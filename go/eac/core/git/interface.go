@@ -83,6 +83,25 @@ type GitRepository interface {
 
 	// TagExists checks if a tag with the given name exists.
 	TagExists(tagName string) (bool, error)
+
+	// --- Branch comparison operations (for squash commit messages) ---
+
+	// GetBranchCommits returns all commits from baseBranch..HEAD.
+	// Returns commits in reverse chronological order (newest first).
+	// Returns error if baseBranch doesn't exist or no commits ahead.
+	GetBranchCommits(baseBranch string) ([]CommitInfo, error)
+
+	// GetBranchDiff returns the cumulative diff from baseBranch...HEAD.
+	// Uses three-dot notation to compare against merge-base.
+	GetBranchDiff(baseBranch string) (string, error)
+
+	// GetBranchDiffStats returns diff statistics from baseBranch...HEAD.
+	// Returns summary like "3 files changed, 45 insertions(+), 12 deletions(-)".
+	GetBranchDiffStats(baseBranch string) (string, error)
+
+	// GetBranchFiles returns list of files changed in baseBranch...HEAD.
+	// Returns relative paths from repository root.
+	GetBranchFiles(baseBranch string) ([]string, error)
 }
 
 // Ensure Repository implements GitRepository

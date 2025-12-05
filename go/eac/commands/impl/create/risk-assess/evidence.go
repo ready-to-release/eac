@@ -45,7 +45,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 	policy := evidence.EvidenceAgePolicy{
 		MaxAge:        config.MaxEvidenceAge,
 		ForceTests:    config.ForceTests,
-		ForceSecurity: config.ForceSecurity,
+		ForceScan:     config.ForceScan,
 		SkipAutoRun:   config.SkipAutoRun,
 	}
 
@@ -124,7 +124,7 @@ func collectSecurityEvidenceForModule(config *AssessConfig, moduleName string, p
 	needsRun := false
 	if err != nil {
 		needsRun = true
-	} else if policy.ForceSecurity {
+	} else if policy.ForceScan {
 		needsRun = true
 		assessLog.Infof("Forcing security scan re-run for %s...", moduleName)
 	} else if results.VulnFile != "" && !evidence.IsEvidenceFresh(results.VulnFile, policy.MaxAge) {

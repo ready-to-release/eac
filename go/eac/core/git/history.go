@@ -298,10 +298,24 @@ func (r *Repository) resolveRef(ref string) (plumbing.Hash, error) {
 		return branchRef.Hash(), nil
 	}
 
-	// Try as a remote branch
-	remoteBranchRef, err := r.repo.Reference(plumbing.NewRemoteReferenceName("origin", ref), true)
-	if err == nil {
-		return remoteBranchRef.Hash(), nil
+	// Try as a remote branch (e.g., "origin/main")
+	// Check if ref already has remote prefix
+	if strings.Contains(ref, "/") {
+		parts := strings.SplitN(ref, "/", 2)
+		if len(parts) == 2 {
+			remoteName := parts[0]
+			branchName := parts[1]
+			remoteBranchRef, err := r.repo.Reference(plumbing.NewRemoteReferenceName(remoteName, branchName), true)
+			if err == nil {
+				return remoteBranchRef.Hash(), nil
+			}
+		}
+	} else {
+		// Try with "origin/" prefix if no slash in ref
+		remoteBranchRef, err := r.repo.Reference(plumbing.NewRemoteReferenceName("origin", ref), true)
+		if err == nil {
+			return remoteBranchRef.Hash(), nil
+		}
 	}
 
 	// Try as a direct hash

@@ -8,7 +8,7 @@ Feature: security_compliance
   Rule: Compliance scanner creates evidence file with integrity verification
 
     Scenario: Check module compliance with mocked tool
-      When I run the command "security compliance eac-core --compliance k8s-cis"
+      When I run the command "scan compliance eac-core --compliance k8s-cis"
       Then the exit code is 0 or 1
       And evidence files should exist in directory "out/security/eac-core/compliance/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
@@ -18,21 +18,21 @@ Feature: security_compliance
       And the latest evidence file should have JSON field "findings" with non-empty data
 
     Scenario: Compliance check with debug logging
-      When I run the command "security compliance eac-core --debug"
+      When I run the command "scan compliance eac-core --debug"
       Then the exit code is 0 or 1
       And a log file should exist in directory "out/logs/security/"
 
     Scenario: Compliance check with invalid module
-      When I run the command "security compliance nonexistent-module-xyz"
+      When I run the command "scan compliance nonexistent-module-xyz"
       Then the exit code is 1
       And I should see "not found" or "Error"
 
     Scenario: Compliance check for all modules
-      When I run the command "security compliance --compliance docker-cis"
+      When I run the command "scan compliance --compliance docker-cis"
       Then the exit code is 0 or 1
       And I should see "modules" or "Scanning"
 
     Scenario: Compliance help is accessible
-      When I run the command "security compliance --help"
+      When I run the command "scan compliance --help"
       Then the exit code is 0
       And I should see "compliance" or "CIS" or "Usage"

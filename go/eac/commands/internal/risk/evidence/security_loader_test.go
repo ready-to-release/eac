@@ -522,8 +522,8 @@ func TestEvidenceAgePolicy(t *testing.T) {
 		t.Error("ForceTests should be false by default")
 	}
 
-	if policy.ForceSecurity {
-		t.Error("ForceSecurity should be false by default")
+	if policy.ForceScan {
+		t.Error("ForceScan should be false by default")
 	}
 
 	if policy.SkipAutoRun {

@@ -1,29 +1,31 @@
-// Command: security secrets
-// Short: Detect secrets and credentials using Trivy
-// Long: Scan for hardcoded secrets and credentials in source code using Trivy.
+// Command: scan sbom
+// Short: Generate Software Bill of Materials (SBOM)
+// Long: Generate Software Bill of Materials (SBOM) using Trivy scanner.
 // Long:
-// Long: This command detects API keys, passwords, tokens, and other sensitive data
-// Long: that may have been accidentally committed to the repository. Results are
-// Long: saved as timestamped evidence files with SHA256 integrity verification.
+// Long: This command generates SBOM evidence files in CycloneDX format for audit compliance.
+// Long: Evidence files are timestamped and SHA256-signed for integrity verification.
 // Long:
-// Long: Output: out/security/<module>/secrets/<timestamp>.json
+// Long: Output: out/security/<module>/sbom/<timestamp>.json
 // Long:
 // Long: Example:
-// Long:   security secrets                       # All modules
-// Long:   security secrets eac-core              # Single module
-// Long:   security secrets eac-core r2r-cli      # Multiple modules
-// Long:   security secrets eac-core --debug      # Debug logging
+// Long:   security sbom                              # All modules
+// Long:   security sbom eac-core                     # Single module
+// Long:   security sbom eac-core r2r-cli             # Multiple modules
+// Long:   security sbom eac-core --format spdx-json  # SPDX format
+// Long:   security sbom eac-core --debug             # Debug logging
+// Flag.format: type=string, default=cyclonedx, usage=SBOM format (cyclonedx, spdx, spdx-json, github, etc.)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug logging
 // HasSideEffects: false
 // Args: modules
-package secrets
+package sbom
 
 import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/security/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -33,32 +35,43 @@ import (
 var log = logging.C()
 
 func init() {
-	registry.Register(Secrets)
+	registry.Register(SBOM)
 }
 
-// Secrets command entry point
-func Secrets() int {
-	args := os.Args[3:] // Skip program name, "security", and "secrets"
+// SBOM command entry point
+func SBOM() int {
+	args := os.Args[3:] // Skip program name, "security", and "sbom"
 
 	// Check for help flag
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
-		printSecretsUsage()
+		printSBOMUsage()
 		return 0
 	}
 
 	// Parse module monikers and flags
 	var monikers []string
+	format := "cyclonedx" // Default to CycloneDX
 	debug := false
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
+		case "--format":
+			if i+1 >= len(args) {
+				log.Errorf(" --format requires a value\n")
+				printSBOMUsage()
+				return 1
+			}
+			i++
+			format = args[i]
 		case "--debug", "-d":
 			debug = true
 		default:
-			if strings.HasPrefix(arg, "--") {
+			if strings.HasPrefix(arg, "--format=") {
+				format = strings.TrimPrefix(arg, "--format=")
+			} else if strings.HasPrefix(arg, "--") {
 				log.Errorf(" unknown flag: %s\n", arg)
-				printSecretsUsage()
+				printSBOMUsage()
 				return 1
 			} else {
 				monikers = append(monikers, arg)
@@ -85,9 +98,22 @@ func Secrets() int {
 	}
 	defer logger.Sync()
 
-	logger.Info("Starting secrets scanner",
+	logger.Info("Starting SBOM scanner",
+		zap.String("format", format),
 		zap.Strings("modules", monikers),
 		zap.Bool("debug", debug))
+
+	// Load configuration
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		logger.Error("Failed to load configuration", zap.Error(err))
+		log.Errorf(" failed to load configuration: %v\n", err)
+		return 1
+	}
+
+	// Get Docker image from config
+	trivyImage := cfg.SecurityTools.DockerImages.Trivy.FullImage()
+	logger.Debug("Using Trivy image", zap.String("image", trivyImage))
 
 	// Load module contracts
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
@@ -123,16 +149,16 @@ func Secrets() int {
 		}
 
 		logger.Info("Scanning module", zap.String("moniker", moniker), zap.String("root", module.Files.Root))
-		log.Infof("🔐 Scanning %s...", moniker)
+		log.Infof("📦 Scanning %s...", moniker)
 
-		// Run Trivy secrets scan
-		findings, err := internal.RunTrivySecrets(module.Files.Root, logger)
+		// Run Trivy SBOM scan
+		findings, err := internal.RunTrivySBOM(workspaceRoot, module.Files.Root, format, trivyImage, logger)
 		if err != nil {
-			logger.Error("Secrets scan failed", zap.String("moniker", moniker), zap.Error(err))
+			logger.Error("SBOM scan failed", zap.String("moniker", moniker), zap.Error(err))
 			log.Errorf("  ❌ Failed: %v", err)
 
 			// Write error evidence
-			outputPath, writeErr := internal.WriteErrorEvidence(workspaceRoot, moniker, internal.ScannerSecrets, err.Error())
+			outputPath, writeErr := internal.WriteErrorEvidence(workspaceRoot, moniker, internal.ScannerSBOM, err.Error())
 			if writeErr != nil {
 				logger.Error("Failed to write error evidence", zap.Error(writeErr))
 			} else {
@@ -146,7 +172,7 @@ func Secrets() int {
 		}
 
 		// Write evidence file
-		outputPath, err := internal.WriteEvidence(workspaceRoot, moniker, internal.ScannerSecrets, findings)
+		outputPath, err := internal.WriteEvidence(workspaceRoot, moniker, internal.ScannerSBOM, findings)
 		if err != nil {
 			logger.Error("Failed to write evidence", zap.String("moniker", moniker), zap.Error(err))
 			log.Errorf("  ❌ Failed to write evidence: %v", err)
@@ -155,14 +181,14 @@ func Secrets() int {
 			continue
 		}
 
-		logger.Info("Secrets scan completed", zap.String("moniker", moniker), zap.String("evidence", outputPath))
+		logger.Info("SBOM scan completed", zap.String("moniker", moniker), zap.String("evidence", outputPath))
 		log.Infof("  ✅ Success: %s", outputPath)
 		successCount++
 	}
 
 	// Print summary
 	log.Info("")
-	logger.Info("Secrets scan summary",
+	logger.Info("SBOM scan summary",
 		zap.Int("success", successCount),
 		zap.Int("failed", failureCount),
 		zap.Int("total", len(monikers)))
@@ -172,26 +198,29 @@ func Secrets() int {
 	return exitCode
 }
 
-func printSecretsUsage() {
-	log.Info("Detect secrets and credentials using Trivy")
+func printSBOMUsage() {
+	log.Info("Generate Software Bill of Materials (SBOM)")
 	log.Info("")
-	log.Info("Usage: security secrets [modules...] [flags]")
+	log.Info("Usage: security sbom [modules...] [flags]")
 	log.Info("")
 	log.Info("Arguments:")
 	log.Info("  [modules...]          One or more module monikers to scan")
 	log.Info("                        If no modules specified, scans all modules")
 	log.Info("")
 	log.Info("Flags:")
+	log.Info("  --format <format>     SBOM format (default: cyclonedx)")
+	log.Info("                        Options: cyclonedx, spdx, spdx-json, github, json, sarif")
 	log.Info("  --debug, -d           Enable debug logging")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  security secrets                       # All modules")
-	log.Info("  security secrets eac-core              # Single module")
-	log.Info("  security secrets eac-core r2r-cli      # Multiple modules")
-	log.Info("  security secrets eac-core --debug      # Debug logging")
+	log.Info("  security sbom                              # All modules")
+	log.Info("  security sbom eac-core                     # Single module")
+	log.Info("  security sbom eac-core r2r-cli             # Multiple modules")
+	log.Info("  security sbom eac-core --format spdx-json  # SPDX format")
+	log.Info("  security sbom eac-core --debug             # Debug logging")
 	log.Info("")
 	log.Info("Output:")
-	log.Info("  out/security/<module>/secrets/<timestamp>.json")
+	log.Info("  out/security/<module>/sbom/<timestamp>.json")
 	log.Info("")
 	log.Info("External tool:")
 	log.Info("  This command uses Trivy (Apache 2.0). See the NOTICE file in the")
