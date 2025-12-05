@@ -11,6 +11,7 @@ books:
     description: "GitHub Pages documentation site with module overview"
     output: site
     site_url: "https://ready-to-release.github.io/eac/"
+    default: true
 
     sources:
       # Static content from docs/
@@ -112,7 +113,7 @@ books:
     description: "Conceptual documentation - Everything as Code, CD practices, and methodology"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
-    default: false  # Slow PDF build - use --all to include
+    default: false  # Lightweight conceptual docs
 
     sources:
       # Explanation content (conceptual docs)

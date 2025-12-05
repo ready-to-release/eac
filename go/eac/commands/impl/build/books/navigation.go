@@ -339,24 +339,8 @@ func (p *Preprocessor) generateNavForDir(dir string) error {
 		nav = append(nav, item.name)
 	}
 
-	// Determine title from directory name or index.md
-	relDir, _ := filepath.Rel(p.stagingDir, dir)
-	title := ""
-	if relDir == "." {
-		title = toTitleCase(p.book.Name)
-	} else {
-		// Check for index.md title
-		indexPath := filepath.Join(dir, "index.md")
-		if _, err := os.Stat(indexPath); err == nil {
-			title = p.getTitleFromFile(indexPath)
-		} else {
-			title = toTitleCase(filepath.Base(dir))
-		}
-	}
-
 	navFile := NavFile{
-		Title: title,
-		Nav:   nav,
+		Nav: nav,
 	}
 
 	data, err := yaml.Marshal(navFile)
