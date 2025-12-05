@@ -388,12 +388,29 @@ func (c *EACConfig) LoadBooks(validateSchema bool) error {
 	return nil
 }
 
-// GetBookByName finds a book by its name (module moniker)
+// GetBookByName finds a book by its name
 func (c *EACConfig) GetBookByName(name string) *Book {
 	if c.Books == nil {
 		return nil
 	}
 	return c.Books.GetBookByName(name)
+}
+
+// GetBooksByModule returns all books that belong to a module
+func (c *EACConfig) GetBooksByModule(moniker string) []*Book {
+	if c.Books == nil {
+		return nil
+	}
+	return c.Books.GetBooksByModule(moniker)
+}
+
+// GetDefaultBooksByModule returns only default books for a module.
+// Books with default: false are excluded unless --all flag is used.
+func (c *EACConfig) GetDefaultBooksByModule(moniker string) []*Book {
+	if c.Books == nil {
+		return nil
+	}
+	return c.Books.GetDefaultBooksByModule(moniker)
 }
 
 // readConfigFile reads a config file from the config root

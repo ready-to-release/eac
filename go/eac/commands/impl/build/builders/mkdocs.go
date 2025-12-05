@@ -2,6 +2,7 @@
 package builders
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +10,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
+	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -29,44 +32,30 @@ func ListMkDocsArtifacts(module *modules.ModuleContract, workspaceRoot string) [
 
 // BuildMkDocsModule builds MkDocs documentation sites using Docker.
 // All MkDocs modules use this handler - behavior is the same for all.
-// When opts.PDFMode is true, generates PDF documentation in addition to HTML.
-// opts.PDFTheme controls which PDF theme(s) to build: "dark", "light", or "all".
+// If the module has books defined in books.yml, each book is built based on its output config:
+//   - site: HTML only
+//   - pdf-dark: PDF with dark theme
+//   - pdf-light: PDF with light theme
+//   - pdf-all: Both dark and light PDFs
+// Multiple books for the same module are built in parallel.
 func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	// Handle PDF theme builds
-	if opts.PDFMode {
-		theme := opts.PDFTheme
-		if theme == "" {
-			theme = "dark" // Default to dark theme
+	// Load config to check for book configuration
+	cfg, _ := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
+	if cfg != nil {
+		cfg.LoadBooks(false)
+		// Use filtered books unless --all flag is set
+		var moduleBooks []*config.Book
+		if opts.BuildAll {
+			moduleBooks = cfg.GetBooksByModule(module.Moniker)
+		} else {
+			moduleBooks = cfg.GetDefaultBooksByModule(module.Moniker)
 		}
-
-		if theme == "all" {
-			// Build both themes sequentially, sharing preprocessing
-			Logln(logWriter, "\n=== Building %s: %s (PDF mode - all themes) ===", module.Type, module.Moniker)
-
-			// Preprocess once, reuse for both themes
-			stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter, true)
-			if bookUsed && stagingDir == "" {
-				return 1 // Preprocessing failed
-			}
-
-			// First build dark theme (clean=true to start fresh)
-			darkOpts := opts
-			darkOpts.PDFTheme = "dark"
-			if exitCode := buildMkDocsWithThemeAndStaging(module, workspaceRoot, outputDir, logWriter, darkOpts, true, stagingDir); exitCode != 0 {
-				return exitCode
-			}
-
-			// Then build light theme (clean=false to preserve dark PDF)
-			lightOpts := opts
-			lightOpts.PDFTheme = "light"
-			return buildMkDocsWithThemeAndStaging(module, workspaceRoot, outputDir, logWriter, lightOpts, false, stagingDir)
+		if len(moduleBooks) > 0 {
+			return buildModuleBooks(module, moduleBooks, workspaceRoot, outputDir, logWriter)
 		}
-
-		// Single theme build (always clean for single theme)
-		return buildMkDocsWithTheme(module, workspaceRoot, outputDir, logWriter, opts, true)
 	}
 
-	// Standard HTML-only build
+	// No books configured - standard HTML-only build
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	// Check for book configuration and run preprocessing if found
@@ -85,11 +74,7 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		return 0
 	}
 
-	if opts.PDFMode {
-		Logln(logWriter, "📄 Building MkDocs site with PDF export using Docker")
-	} else {
-		Logln(logWriter, "📚 Building MkDocs site using Docker")
-	}
+	Logln(logWriter, "📚 Building MkDocs site using Docker")
 	Logln(logWriter, "   Config: %s", mkdocsConfig)
 	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
@@ -106,11 +91,9 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	patchedConfig := string(originalConfig)
 	needsPatch := false
 
-	// Remove PDF plugins for non-PDF builds
-	if !opts.PDFMode {
-		patchedConfig = removePDFPlugins(patchedConfig)
-		needsPatch = true
-	}
+	// Remove PDF plugins for HTML-only builds
+	patchedConfig = removePDFPlugins(patchedConfig)
+	needsPatch = true
 
 	// Override docs_dir for book preprocessing (use staging directory)
 	if stagingDir != "" {
@@ -145,17 +128,9 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		}
 	}
 
-	// Select Docker image based on build mode:
-	// - mkdocs-site: Lean Alpine image (~150MB) for HTML builds
-	// - mkdocs-pdf: Full image (~800MB) with WeasyPrint + Chromium for PDF
-	var imageName, containerDir string
-	if opts.PDFMode {
-		imageName = "cli-mkdocs-pdf:latest"
-		containerDir = "mkdocs-pdf"
-	} else {
-		imageName = "cli-mkdocs-site:latest"
-		containerDir = "mkdocs-site"
-	}
+	// Use lean mkdocs-site image for HTML builds (~150MB)
+	imageName := "cli-mkdocs-site:latest"
+	containerDir := "mkdocs-site"
 
 	// In DinD mode, docker build runs on host so paths must be host paths
 	var dockerfilePath, contextPath string
@@ -223,13 +198,6 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		buildArgs = append(buildArgs, "-v", patchedConfigMount+":/docs/mkdocs.yml:ro")
 	}
 
-	// Enable PDF export if PDFMode is set
-	// This sets the environment variable that mkdocs-exporter checks
-	if opts.PDFMode {
-		buildArgs = append(buildArgs, "-e", "ENABLE_PDF_EXPORT=true")
-		Logln(logWriter, "   PDF Export: enabled (mkdocs-exporter)")
-	}
-
 	// In Docker-in-Docker mode, run as current user to avoid permission issues
 	// This ensures files created in the container have the same ownership as the host
 	// We use the current process's UID/GID which matches the ext-eac container user
@@ -248,9 +216,8 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		"--clean",
 	)
 
-	// Determine strict mode: enabled by default, disabled for PDF mode or --accept-warnings
-	useStrict := !opts.PDFMode && !acceptWarnings
-	if useStrict {
+	// Determine strict mode: enabled by default, disabled with --accept-warnings
+	if !acceptWarnings {
 		buildArgs = append(buildArgs, "--strict")
 	}
 
@@ -259,9 +226,7 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "   Volume: %s:/docs", dockerVolume)
 	Logln(logWriter, "   SiteDir: %s", dockerSiteDir)
 
-	if opts.PDFMode {
-		Logln(logWriter, "   Mode: non-strict (PDF mode - CSS warnings expected)")
-	} else if acceptWarnings {
+	if acceptWarnings {
 		Logln(logWriter, "   Mode: accepting warnings (--accept-warnings)")
 	} else {
 		Logln(logWriter, "   Mode: strict (--strict flag enabled)")
@@ -281,17 +246,6 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 
 	Logln(logWriter, "✅ MkDocs site built successfully")
 	Logln(logWriter, "   HTML Output: %s", siteDir)
-
-	if opts.PDFMode {
-		// PDF is generated inside the site directory under /pdf/
-		pdfPath := filepath.Join(siteDir, "pdf", "ready-to-release-docs.pdf")
-		if _, err := os.Stat(pdfPath); err == nil {
-			Logln(logWriter, "   PDF Output: %s", pdfPath)
-		} else {
-			Logln(logWriter, "⚠️  PDF file not found at expected location: %s", pdfPath)
-		}
-	}
-
 	return 0
 }
 
@@ -323,10 +277,351 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 	return nil
 }
 
+// buildModuleBooks builds all books for a module.
+// HTML books can run in parallel, but PDF books run sequentially to avoid Playwright timeouts.
+// Final PDFs are copied to the module output root with naming: {book-name}-{theme}.pdf
+func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book, workspaceRoot string, outputDir string, logWriter io.Writer) int {
+	if len(moduleBooks) == 1 {
+		// Single book - build directly to module output directory
+		return buildSingleBook(module, moduleBooks[0], workspaceRoot, outputDir, logWriter)
+	}
+
+	// Separate books by output type
+	var htmlBooks, pdfBooks []*config.Book
+	for _, book := range moduleBooks {
+		output := book.GetOutput()
+		if output == "site" {
+			htmlBooks = append(htmlBooks, book)
+		} else {
+			pdfBooks = append(pdfBooks, book)
+		}
+	}
+
+	Logln(logWriter, "\n=== Building %s: %s (%d books) ===", module.Type, module.Moniker, len(moduleBooks))
+	for _, book := range moduleBooks {
+		Logln(logWriter, "   - %s (%s)", book.Name, book.GetOutput())
+	}
+
+	// Build HTML books in parallel (they're lightweight)
+	if len(htmlBooks) > 0 {
+		var wg sync.WaitGroup
+		results := make(chan int, len(htmlBooks))
+
+		for _, book := range htmlBooks {
+			wg.Add(1)
+			go func(b *config.Book) {
+				defer wg.Done()
+				bookOutputDir := filepath.Join(outputDir, b.Name)
+				if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
+					Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", b.Name, err)
+					results <- 1
+					return
+				}
+				var bookLog bytes.Buffer
+				exitCode := buildSingleBook(module, b, workspaceRoot, bookOutputDir, &bookLog)
+				logWriter.Write(bookLog.Bytes())
+				results <- exitCode
+			}(book)
+		}
+
+		wg.Wait()
+		close(results)
+
+		for exitCode := range results {
+			if exitCode != 0 {
+				return exitCode
+			}
+		}
+	}
+
+	// Build PDF books sequentially (Playwright/Docker are resource-intensive)
+	for _, book := range pdfBooks {
+		bookOutputDir := filepath.Join(outputDir, book.Name)
+		if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
+			Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", book.Name, err)
+			return 1
+		}
+
+		exitCode := buildSingleBook(module, book, workspaceRoot, bookOutputDir, logWriter)
+		if exitCode != 0 {
+			return exitCode
+		}
+
+		// Copy PDF to module output root
+		bookOutput := book.GetOutput()
+		themes := []string{}
+		switch bookOutput {
+		case "pdf-dark":
+			themes = []string{"dark"}
+		case "pdf-light":
+			themes = []string{"light"}
+		case "pdf-all":
+			themes = []string{"dark", "light"}
+		}
+
+		for _, theme := range themes {
+			srcPdf := filepath.Join(bookOutputDir, fmt.Sprintf("%s-%s.pdf", book.Name, theme))
+			dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", book.Name, theme))
+			if err := copyFile(srcPdf, dstPdf); err != nil {
+				Logln(logWriter, "⚠️  Failed to copy PDF to module root: %v", err)
+			} else {
+				Logln(logWriter, "   📄 %s-%s.pdf → module output root", book.Name, theme)
+			}
+		}
+	}
+
+	Logln(logWriter, "\n✅ All %d books built successfully", len(moduleBooks))
+	return 0
+}
+
+// buildSingleBook builds a single book based on its output configuration
+func buildSingleBook(module *modules.ModuleContract, book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer) int {
+	bookOutput := book.GetOutput()
+
+	// Determine build mode from book config
+	pdfMode := bookOutput == "pdf-dark" || bookOutput == "pdf-light" || bookOutput == "pdf-all"
+	pdfTheme := ""
+	switch bookOutput {
+	case "pdf-dark":
+		pdfTheme = "dark"
+	case "pdf-light":
+		pdfTheme = "light"
+	case "pdf-all":
+		pdfTheme = "all"
+	}
+
+	Logln(logWriter, "\n=== Building book: %s (%s) ===", book.Name, bookOutput)
+
+	if pdfMode {
+		if pdfTheme == "all" {
+			// Build both themes sequentially, sharing preprocessing
+			stagingDir, bookUsed := preprocessBook(book, workspaceRoot, outputDir, logWriter, true)
+			if bookUsed && stagingDir == "" {
+				return 1 // Preprocessing failed
+			}
+
+			// First build dark theme (clean=true to start fresh)
+			if exitCode := buildBookWithThemeAndStaging(module, book, workspaceRoot, outputDir, logWriter, "dark", true, stagingDir); exitCode != 0 {
+				return exitCode
+			}
+
+			// Then build light theme (clean=false to preserve dark PDF)
+			return buildBookWithThemeAndStaging(module, book, workspaceRoot, outputDir, logWriter, "light", false, stagingDir)
+		}
+
+		// Single theme build
+		return buildBookWithTheme(module, book, workspaceRoot, outputDir, logWriter, pdfTheme)
+	}
+
+	// HTML-only build
+	return buildBookHTML(module, book, workspaceRoot, outputDir, logWriter)
+}
+
+// preprocessBook runs book preprocessing and returns the staging directory.
+// Acquires a lock on the staging directory to prevent concurrent preprocessing.
+func preprocessBook(book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer, pdfMode bool) (string, bool) {
+	// Ensure staging base directory exists
+	stagingBase := filepath.Join(workspaceRoot, "out", "staging")
+	if err := os.MkdirAll(stagingBase, 0755); err != nil {
+		Logln(logWriter, "❌ Failed to create staging base directory: %v", err)
+		return "", true
+	}
+
+	// Acquire lock for this book's staging directory
+	lock, err := acquireStagingLock(book.Name, stagingBase)
+	if err != nil {
+		Logln(logWriter, "❌ Failed to acquire staging lock for book '%s': %v", book.Name, err)
+		return "", true
+	}
+	// Note: Lock is intentionally NOT released here - it persists for the build duration
+	// The lock file will be cleaned up when the process exits or on next successful build
+	_ = lock // Suppress unused warning - lock is held via file descriptor
+
+	// Use persistent staging directory at out/staging/{book-name}
+	stagingDir := filepath.Join(stagingBase, book.Name)
+
+	if err := os.MkdirAll(stagingDir, 0755); err != nil {
+		Logln(logWriter, "❌ Failed to create staging directory: %v", err)
+		return "", true
+	}
+
+	Logln(logWriter, "📚 Preprocessing book: %s", book.Name)
+
+	// Run preprocessing
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
+	if err := preprocessor.Preprocess(); err != nil {
+		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
+		return "", true
+	}
+
+	return stagingDir, true
+}
+
+// acquireStagingLock acquires an exclusive lock for a book's staging directory.
+// Returns the lock handle on success. The lock should be held for the duration of the build.
+func acquireStagingLock(bookName string, stagingBase string) (*flock.Flock, error) {
+	lockPath := filepath.Join(stagingBase, fmt.Sprintf(".lock-%s", bookName))
+
+	lock := flock.New(lockPath)
+
+	locked, err := lock.TryLock()
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	if !locked {
+		return nil, fmt.Errorf("book '%s' staging is already in use by another process", bookName)
+	}
+
+	return lock, nil
+}
+
+// buildBookWithTheme builds a book as PDF with a specific theme
+func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer, theme string) int {
+	stagingDir, bookUsed := preprocessBook(book, workspaceRoot, outputDir, logWriter, true)
+	if bookUsed && stagingDir == "" {
+		return 1
+	}
+	return buildBookWithThemeAndStaging(module, book, workspaceRoot, outputDir, logWriter, theme, true, stagingDir)
+}
+
+// buildBookWithThemeAndStaging builds a book as PDF using a pre-computed staging directory
+func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
+	// Delegate to existing PDF build logic, passing book name for output naming
+	return buildMkDocsWithThemeAndStaging(module, book.Name, workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
+}
+
+// buildBookHTML builds a book as HTML site
+func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer) int {
+	// Preprocess the book
+	stagingDir, bookUsed := preprocessBook(book, workspaceRoot, outputDir, logWriter, false)
+	if bookUsed && stagingDir == "" {
+		return 1
+	}
+
+	// Build using existing HTML logic with the staging directory
+	return buildHTMLWithStaging(module, workspaceRoot, outputDir, logWriter, stagingDir)
+}
+
+// buildHTMLWithStaging builds HTML site using a staging directory
+func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, stagingDir string) int {
+	// Check for mkdocs.yml at repository root
+	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
+	if _, err := os.Stat(mkdocsConfig); os.IsNotExist(err) {
+		Logln(logWriter, "⚠️  No mkdocs.yml found at: %s", mkdocsConfig)
+		Logln(logWriter, "ℹ️  Skipping MkDocs build")
+		return 0
+	}
+
+	Logln(logWriter, "📚 Building MkDocs site using Docker")
+	Logln(logWriter, "   Config: %s", mkdocsConfig)
+
+	// Read and patch mkdocs.yml
+	originalConfig, err := os.ReadFile(mkdocsConfig)
+	if err != nil {
+		Logln(logWriter, "❌ Failed to read mkdocs.yml: %v", err)
+		return 1
+	}
+
+	patchedConfig := removePDFPlugins(string(originalConfig))
+
+	// Override docs_dir for staging
+	if stagingDir != "" {
+		relStagingDir, _ := filepath.Rel(workspaceRoot, stagingDir)
+		relStagingDir = filepath.ToSlash(relStagingDir)
+		patchedConfig = patchDocsDir(patchedConfig, relStagingDir)
+		Logln(logWriter, "   Using staging: %s", relStagingDir)
+	}
+
+	// Write patched config
+	patchedConfigPath := filepath.Join(outputDir, "mkdocs.yml")
+	if err := os.WriteFile(patchedConfigPath, []byte(patchedConfig), 0644); err != nil {
+		Logln(logWriter, "❌ Failed to write patched mkdocs.yml: %v", err)
+		return 1
+	}
+
+	// Docker setup
+	hostRepoRoot := workspaceRoot
+	isDinD := isDockerInDocker()
+	if isDinD {
+		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+			hostRepoRoot = hostRoot
+		}
+	}
+
+	imageName := "cli-mkdocs-site:latest"
+	containerDir := "mkdocs-site"
+	var dockerfilePath, contextPath string
+	if isDinD {
+		dockerfilePath = hostRepoRoot + "\\containers\\" + containerDir + "\\Dockerfile"
+		contextPath = hostRepoRoot + "\\containers\\" + containerDir
+	} else {
+		dockerfilePath = filepath.Join(hostRepoRoot, "containers", containerDir, "Dockerfile")
+		contextPath = filepath.Join(hostRepoRoot, "containers", containerDir)
+	}
+
+	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
+		Logln(logWriter, "❌ Failed to ensure Docker image: %v", err)
+		return 1
+	}
+
+	siteDir := filepath.Join(outputDir, "site")
+	if err := os.MkdirAll(siteDir, 0755); err != nil {
+		Logln(logWriter, "❌ Failed to create output directory: %v", err)
+		return 1
+	}
+
+	relSiteDir, _ := filepath.Rel(workspaceRoot, siteDir)
+	dockerVolume := FormatDockerVolumePath(hostRepoRoot)
+	dockerSiteDir := strings.ReplaceAll(relSiteDir, "\\", "/")
+
+	buildArgs := []string{
+		"run", "--rm",
+		"-v", dockerVolume + ":/docs",
+		"-w", "/docs",
+	}
+
+	// Mount patched config
+	var patchedConfigMount string
+	if isDinD {
+		relPatchedConfig, _ := filepath.Rel(workspaceRoot, patchedConfigPath)
+		patchedConfigMount = FormatDockerVolumePath(filepath.Join(hostRepoRoot, relPatchedConfig))
+	} else {
+		patchedConfigMount = FormatDockerVolumePath(patchedConfigPath)
+	}
+	buildArgs = append(buildArgs, "-v", patchedConfigMount+":/docs/mkdocs.yml:ro")
+
+	if isDinD {
+		uid := os.Getuid()
+		gid := os.Getgid()
+		buildArgs = append(buildArgs, "--user", fmt.Sprintf("%d:%d", uid, gid))
+	}
+
+	buildArgs = append(buildArgs,
+		imageName,
+		"mkdocs", "build",
+		"--site-dir", dockerSiteDir,
+		"--clean",
+		"--strict",
+	)
+
+	Logln(logWriter, "   Image: %s", imageName)
+	Logln(logWriter, "   Output: %s", siteDir)
+
+	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
+	if exitCode != 0 {
+		Logln(logWriter, "❌ MkDocs build failed")
+		return exitCode
+	}
+
+	Logln(logWriter, "✅ MkDocs site built successfully")
+	return 0
+}
+
 // buildMkDocsWithTheme builds a PDF with a specific theme (dark or light)
 // cleanBuild controls whether to use --clean flag; set false when building multiple themes
 // to preserve PDFs from previous theme builds
-func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, cleanBuild bool) int {
+func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool) int {
 	// Check for book configuration and run preprocessing if found
 	// pdfMode=true enables link normalization for PDF compatibility
 	stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter, true)
@@ -335,13 +630,14 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 		return 1
 	}
 
-	return buildMkDocsWithThemeAndStaging(module, workspaceRoot, outputDir, logWriter, opts, cleanBuild, stagingDir)
+	// Use module moniker as default book name when no book config is present
+	return buildMkDocsWithThemeAndStaging(module, module.Moniker, workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
 }
 
 // buildMkDocsWithThemeAndStaging builds a PDF with a specific theme using a pre-computed staging directory
 // This allows multiple theme builds to share preprocessing work
-func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, cleanBuild bool, stagingDir string) int {
-	theme := opts.PDFTheme
+// bookName is used for the final PDF naming: {bookName}-{theme}.pdf
+func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName string, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
 	if theme == "" {
 		theme = "dark"
 	}
@@ -365,7 +661,11 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, workspaceRoo
 
 	// Patch mkdocs.yml to use the correct theme template path
 	// IMPORTANT: Write to temp file in output directory, never modify source
-	themePath := fmt.Sprintf("docs/assets/templates/pdf-%s", theme)
+	// When using staging directory, use staging-relative path (assets are copied to staging/assets/)
+	themePath := fmt.Sprintf("assets/templates/pdf-%s", theme)
+	if stagingDir == "" {
+		themePath = fmt.Sprintf("docs/assets/templates/pdf-%s", theme)
+	}
 	patchedConfig := patchMkDocsConfig(string(originalConfig), themePath)
 
 	// Override docs_dir for book preprocessing (use staging directory)
@@ -489,18 +789,18 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, workspaceRoo
 
 	// Merge individual PDFs into single document
 	// mkdocs-exporter creates individual PDFs for each page, we merge them using pypdf
-	dstPdfPath := filepath.Join(siteDir, "pdf", fmt.Sprintf("ready-to-release-docs-%s.pdf", theme))
+	dstPdfPath := filepath.Join(siteDir, "pdf", fmt.Sprintf("%s-%s.pdf", bookName, theme))
 
 	Logln(logWriter, "📄 Merging individual PDFs...")
 
-	if err := mergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, imageName, logWriter, isDinD); err != nil {
+	if err := mergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, logWriter, isDinD); err != nil {
 		Logln(logWriter, "❌ PDF merge failed: %v", err)
 		return 1
 	}
 
 	// Copy PDF to build output directory for easier access
-	// Format: out/build/docs/ready-to-release-docs-{theme}.pdf
-	finalPdfPath := filepath.Join(outputDir, fmt.Sprintf("ready-to-release-docs-%s.pdf", theme))
+	// Format: out/build/{module}/{bookName}-{theme}.pdf
+	finalPdfPath := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", bookName, theme))
 	if err := copyFile(dstPdfPath, finalPdfPath); err != nil {
 		Logln(logWriter, "⚠️  Failed to copy PDF to output: %v", err)
 	} else {
@@ -534,7 +834,7 @@ func copyFile(src, dst string) error {
 
 // mergePDFs merges all individual page PDFs into a single document using pypdf
 // Generates a cover page, table of contents, and hierarchical bookmarks
-func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, imageName string, logWriter io.Writer, isDinD bool) error {
+func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName string, logWriter io.Writer, isDinD bool) error {
 	// Get relative paths for Docker
 	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
 	if err != nil {
@@ -544,10 +844,15 @@ func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, imageName strin
 	if err != nil {
 		return fmt.Errorf("calculating relative output path: %w", err)
 	}
+	relStagingDir, err := filepath.Rel(workspaceRoot, stagingDir)
+	if err != nil {
+		return fmt.Errorf("calculating relative staging dir: %w", err)
+	}
 
 	// Convert to Docker paths
 	dockerSiteDir := "/docs/" + strings.ReplaceAll(relSiteDir, "\\", "/")
 	dockerOutputPath := "/docs/" + strings.ReplaceAll(relOutputPath, "\\", "/")
+	dockerStagingDir := "/docs/" + strings.ReplaceAll(relStagingDir, "\\", "/")
 
 	volumeMountPath := hostRepoRoot
 	dockerVolume := FormatDockerVolumePath(volumeMountPath)
@@ -580,7 +885,7 @@ from reportlab.lib.units import cm
 
 site_dir = '%s'
 output_path = '%s'
-docs_dir = '/docs/docs'  # Source docs directory with .nav.yml files
+docs_dir = '%s'  # Staging directory with .nav.yml files
 
 # Dark theme colors (matching PDF dark theme)
 BG_COLOR = HexColor('#0d1117')
@@ -969,7 +1274,7 @@ print(f'  - Cover: {cover_pages} page(s)')
 print(f'  - TOC: {toc_pages} page(s)')
 print(f'  - Content: {current_page - cover_pages - toc_pages} pages')
 print(f'TOC entries: {len(bookmarks)}')
-`, dockerSiteDir, dockerOutputPath)
+`, dockerSiteDir, dockerOutputPath, dockerStagingDir)
 
 	args = append(args, imageName, "python3", "-c", pythonScript)
 
@@ -989,10 +1294,27 @@ func patchMkDocsConfig(configContent string, themePath string) string {
 }
 
 // patchDocsDir patches the docs_dir in mkdocs.yml to use staging directory
+// Also fixes stylesheet paths to work with the new docs_dir
 func patchDocsDir(configContent string, newDocsDir string) string {
 	// Match docs_dir line and replace its value
 	re := regexp.MustCompile(`(?m)^(docs_dir:\s*).*$`)
-	return re.ReplaceAllString(configContent, "${1}"+newDocsDir)
+	result := re.ReplaceAllString(configContent, "${1}"+newDocsDir)
+
+	// Fix stylesheet paths: docs/assets/... -> {stagingDir}/assets/...
+	// The exporter plugin resolves stylesheets relative to project root, not docs_dir
+	// So we need to provide the full path from project root to staging assets
+	result = patchStylesheetPaths(result, newDocsDir)
+
+	return result
+}
+
+// patchStylesheetPaths fixes stylesheet paths for staging directory builds
+// Changes docs/assets/... to {stagingDir}/assets/... since assets are copied to staging/assets/
+// The exporter plugin resolves paths relative to project root, not relative to docs_dir
+func patchStylesheetPaths(configContent string, stagingDir string) string {
+	// Match stylesheet entries with docs/assets prefix
+	re := regexp.MustCompile(`(?m)^(\s*-\s*)docs/assets/(.*)$`)
+	return re.ReplaceAllString(configContent, "${1}"+stagingDir+"/assets/${2}")
 }
 
 // removePDFPlugins removes PDF-specific plugins from mkdocs.yml for site builds
@@ -1050,21 +1372,28 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 		return "", false
 	}
 
-	// Check if there's a book for this module
-	book := cfg.GetBookByName(moniker)
-	if book == nil {
+	// Check if there are books for this module
+	moduleBooks := cfg.GetBooksByModule(moniker)
+	if len(moduleBooks) == 0 {
 		return "", false
 	}
 
-	Logln(logWriter, "📚 Book configuration found for '%s'", moniker)
+	// Use the first book for this module
+	// TODO: Support multiple books per module with --book flag
+	book := moduleBooks[0]
+	if len(moduleBooks) > 1 {
+		Logln(logWriter, "📚 Found %d books for module '%s', using '%s'", len(moduleBooks), moniker, book.Name)
+	} else {
+		Logln(logWriter, "📚 Book configuration found: '%s' (module: %s)", book.Name, moniker)
+	}
 
-	// Use persistent staging directory at out/staging/{moniker}
+	// Use persistent staging directory at out/staging/{book.Name}
 	// This survives across builds, enabling:
 	// - Mermaid SVG caching (rendered diagrams persist)
 	// - Faster incremental builds (unchanged files already staged)
 	// NOTE: We don't clean this directory - files are overwritten incrementally.
 	// For a clean rebuild, delete out/staging/ manually.
-	stagingDir := filepath.Join(workspaceRoot, "out", "staging", moniker)
+	stagingDir := filepath.Join(workspaceRoot, "out", "staging", book.Name)
 
 	if err := os.MkdirAll(stagingDir, 0755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)

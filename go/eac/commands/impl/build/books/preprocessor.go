@@ -30,7 +30,7 @@ func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWri
 	}
 }
 
-// Preprocess runs the 5-step preprocessing pipeline
+// Preprocess runs the preprocessing pipeline
 func (p *Preprocessor) Preprocess() error {
 	p.log("📚 Book preprocessing: %s", p.book.Name)
 
@@ -40,52 +40,89 @@ func (p *Preprocessor) Preprocess() error {
 		return fmt.Errorf("step 1 (copy): %w", err)
 	}
 
-	// Step 2: Execute commands (capture outputs)
-	p.log("  Step 2: Executing commands...")
+	// Step 2: Fix relative paths based on source remapping
+	// Adjusts ../../../ links when source prefix is stripped (e.g., docs/explanation/ -> ./)
+	p.log("  Step 2: Fixing relative paths...")
+	if err := p.fixRelativePaths(); err != nil {
+		return fmt.Errorf("step 2 (path fix): %w", err)
+	}
+
+	// Step 3: Execute commands (capture outputs)
+	p.log("  Step 3: Executing commands...")
 	commandOutputs, err := p.executeCommands()
 	if err != nil {
-		return fmt.Errorf("step 2 (commands): %w", err)
+		return fmt.Errorf("step 3 (commands): %w", err)
 	}
 
-	// Step 3: Generate .nav.yml for generated sections
-	p.log("  Step 3: Generating navigation...")
-	if err := p.generateNavigation(); err != nil {
-		return fmt.Errorf("step 3 (nav): %w", err)
+	// Step 4: Ensure root index.md exists
+	// If no index.md, generate one with book metadata and TOC
+	// If index.md exists from copy, create toc.md for separate TOC
+	p.log("  Step 4: Ensuring root index...")
+	if err := p.ensureRootIndex(); err != nil {
+		return fmt.Errorf("step 4 (root index): %w", err)
 	}
 
-	// Step 4: Insert generated sections into parent navs
-	p.log("  Step 4: Inserting nav sections...")
-	if err := p.insertNavSections(); err != nil {
-		return fmt.Errorf("step 4 (insert nav): %w", err)
+	// Step 5: Ensure .nav.yml exists in all directories
+	// Scans staging and creates navigation for any directory missing .nav.yml
+	p.log("  Step 5: Ensuring navigation structure...")
+	if err := p.ensureNavigationStructure(); err != nil {
+		return fmt.Errorf("step 5 (navigation): %w", err)
 	}
 
-	// Step 5: Insert inline command outputs at markers
-	p.log("  Step 5: Inserting inline content...")
+	// Step 6: Insert inline command outputs at markers
+	p.log("  Step 6: Inserting inline content...")
 	if err := p.insertInlineContent(commandOutputs); err != nil {
-		return fmt.Errorf("step 5 (inline): %w", err)
+		return fmt.Errorf("step 6 (inline): %w", err)
 	}
 
-	// Step 6: Convert attr_list images to HTML (for GitHub Pages + PDF compatibility)
+	// Step 7: Convert attr_list images to HTML (for GitHub Pages + PDF compatibility)
 	// Converts: ![alt](img.png){width=100} -> <img src="img.png" width="100" alt="alt">
-	p.log("  Step 6: Converting attr_list images to HTML...")
+	p.log("  Step 7: Converting attr_list images to HTML...")
 	if err := p.convertAttrListImagesToHTML(); err != nil {
-		return fmt.Errorf("step 6 (attr_list images): %w", err)
+		return fmt.Errorf("step 7 (attr_list images): %w", err)
 	}
 
 	// PDF-specific processing steps (only in PDF mode)
 	if p.pdfMode {
-		// Step 7: Add image width constraints for PDF
-		// Ensures large diagrams fit within PDF page boundaries
-		p.log("  Step 7: Adding image width constraints...")
-		if err := p.cleanupLinksForPDF(); err != nil {
-			return fmt.Errorf("step 7 (image constraints): %w", err)
+		// Step 8: Strip nav titles (awesome-nav warns about top-level titles)
+		p.log("  Step 8: Stripping nav titles...")
+		if err := p.stripNavTitles(); err != nil {
+			return fmt.Errorf("step 8 (strip nav titles): %w", err)
 		}
 
-		// Step 8: Optimize drawio images for PDF
+		// Step 9: Process mermaid diagram sizing
+		// Wraps mermaid blocks with size directives in container divs
+		p.log("  Step 9: Processing mermaid sizing...")
+		if err := p.processMermaidSizing(); err != nil {
+			return fmt.Errorf("step 9 (mermaid sizing): %w", err)
+		}
+
+		// Step 10: Convert .drawio images to links
+		// Interactive diagrams can't display in PDFs, so convert to GitHub Pages links
+		p.log("  Step 10: Converting .drawio images to links...")
+		if err := p.convertDrawioToLinks(); err != nil {
+			return fmt.Errorf("step 10 (drawio to links): %w", err)
+		}
+
+		// Step 11: Fix broken internal links
+		// Converts links to files not in staging to absolute GitHub Pages URLs
+		p.log("  Step 11: Fixing broken internal links...")
+		if err := p.fixBrokenInternalLinks(); err != nil {
+			return fmt.Errorf("step 11 (fix broken links): %w", err)
+		}
+
+		// Step 12: Add image width constraints for PDF
+		// Ensures large diagrams fit within PDF page boundaries
+		p.log("  Step 12: Adding image width constraints...")
+		if err := p.cleanupLinksForPDF(); err != nil {
+			return fmt.Errorf("step 12 (image constraints): %w", err)
+		}
+
+		// Step 13: Optimize drawio images for PDF
 		// Resizes large drawio.png files to reduce PDF size and improve WeasyPrint compatibility
-		p.log("  Step 8: Optimizing drawio images...")
+		p.log("  Step 13: Optimizing drawio images...")
 		if err := p.optimizeDrawioImages(); err != nil {
-			return fmt.Errorf("step 8 (drawio optimization): %w", err)
+			return fmt.Errorf("step 13 (drawio optimization): %w", err)
 		}
 	}
 

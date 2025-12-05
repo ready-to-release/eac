@@ -23,12 +23,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -111,8 +113,12 @@ func Build() int {
 		return 0
 	}
 
-	// Detect CI environment
+	// Detect execution environment
 	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
+	isContainer := logging.GetExecutionContext() == logging.ContextR2RCLI
+	// Detect test context: R2R_TEST_RUN_ID (test runner), GODOG_FORMAT (godog tests), R2R_MOCK_SECURITY (spec test subprocess)
+	isTestContext := os.Getenv("R2R_TEST_RUN_ID") != "" || os.Getenv("GODOG_FORMAT") != "" || os.Getenv("R2R_MOCK_SECURITY") != ""
+	isLocalConsole := !isCI && !isContainer && !isTestContext
 
 	// Parse module monikers and flags
 	var monikers []string
@@ -123,11 +129,13 @@ func Build() int {
 	skipVerification := false // Skip system dependency verification (go, docker, etc.)
 	skipModuleDeps := false   // Skip including transitive module dependencies
 	showTimings := false
-	pdfMode := false
-	pdfTheme := ""
 	version := ""
 	listArtifacts := false
 	dryRun := false
+	buildAll := false         // Include non-default books (those with default: false)
+	useTUI := isLocalConsole  // TUI enabled by default for local console mode
+	tuiExplicitlySet := false
+	tuiHeight := tui.DefaultHeight // TUI console height
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -149,8 +157,6 @@ func Build() int {
 			skipVerification = true
 		case "--timings":
 			showTimings = true
-		case "--pdf":
-			pdfMode = true
 		case "--accept-warnings":
 			// Flag is handled in mkdocs builder via os.Args check
 			// Just accept it here so it doesn't fail as unknown flag
@@ -158,15 +164,28 @@ func Build() int {
 			listArtifacts = true
 		case "--dry-run":
 			dryRun = true
-		case "--pdf-theme":
+		case "--all":
+			buildAll = true
+		case "--tui":
+			useTUI = true
+			tuiExplicitlySet = true
+		case "--no-tui":
+			useTUI = false
+			tuiExplicitlySet = true
+		case "--tui-height":
 			if i+1 >= len(args) {
-				log.Errorf("Error: --pdf-theme requires a value (dark, light, or all)")
+				log.Errorf("Error: --tui-height requires a value")
 				printBuildUsage()
 				return 1
 			}
 			i++
-			pdfTheme = args[i]
-			pdfMode = true // --pdf-theme implies --pdf
+			var err error
+			tuiHeight, err = parseIntArg(args[i])
+			if err != nil || tuiHeight < 3 || tuiHeight > 20 {
+				log.Errorf("Error: --tui-height must be a number between 3 and 20")
+				printBuildUsage()
+				return 1
+			}
 		case "--version":
 			if i+1 >= len(args) {
 				log.Errorf("Error: --version requires a value")
@@ -176,11 +195,17 @@ func Build() int {
 			i++
 			version = args[i]
 		default:
-			if strings.HasPrefix(arg, "--pdf-theme=") {
-				pdfTheme = strings.TrimPrefix(arg, "--pdf-theme=")
-				pdfMode = true // --pdf-theme implies --pdf
-			} else if strings.HasPrefix(arg, "--version=") {
+			if strings.HasPrefix(arg, "--version=") {
 				version = strings.TrimPrefix(arg, "--version=")
+			} else if strings.HasPrefix(arg, "--tui-height=") {
+				heightStr := strings.TrimPrefix(arg, "--tui-height=")
+				var err error
+				tuiHeight, err = parseIntArg(heightStr)
+				if err != nil || tuiHeight < 3 || tuiHeight > 20 {
+					log.Errorf("Error: --tui-height must be a number between 3 and 20")
+					printBuildUsage()
+					return 1
+				}
 			} else if strings.HasPrefix(arg, "--") {
 				log.Errorf("Error: unknown flag: %s", arg)
 				printBuildUsage()
@@ -189,6 +214,16 @@ func Build() int {
 				monikers = append(monikers, arg)
 			}
 		}
+	}
+
+	// Validate TUI usage - error if explicitly enabled in CI or container mode
+	if tuiExplicitlySet && useTUI && (isCI || isContainer) {
+		if isCI {
+			log.Errorf("Error: --tui cannot be used in CI environments")
+		} else {
+			log.Errorf("Error: --tui cannot be used in container/extension mode (use local console instead)")
+		}
+		return 1
 	}
 
 	// Get repository root
@@ -218,7 +253,12 @@ func Build() int {
 	}
 
 	// Run build (single or multiple modules) - phases are handled inside
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, pdfMode, pdfTheme, dryRun)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, dryRun, buildAll, useTUI, tuiHeight)
+}
+
+// parseIntArg parses a string argument as an integer
+func parseIntArg(s string) (int, error) {
+	return strconv.Atoi(s)
 }
 
 // listModuleArtifacts lists the artifacts that would be produced by building the specified modules
@@ -258,14 +298,56 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, pdfMode bool, pdfTheme string, dryRun bool) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int) int {
+	// Build module type lookup for ALL modules (will be populated after execution plan)
+	moduleTypes := make(map[string]string)
+
+	// Configure orchestrator early so we can use it for Init phase output
+	orchConfig := orchestrator.Config{
+		WorkspaceRoot:        workspaceRoot,
+		OutputBaseDir:        "out/build",
+		LogFileName:          "build.log",
+		OrchestratorLogName:  "orchestrator.log",
+		ActionVerb:           "building",
+		MaxConcurrency:       0, // Use default (number of CPUs)
+		StatusUpdateInterval: 2, // Update every 2 seconds
+		ModuleTypes:          moduleTypes,
+		ShowTimings:          showTimings,
+		DryRun:               dryRun,
+		TUI:                  useTUI,
+		TUIHeight:            tuiHeight,
+	}
+
+	// Create orchestrator early for phase management
+	orch := orchestrator.New(orchConfig, nil) // Worker set later
+	defer orch.Close()
+
+	// Initialize and start TUI if enabled (for Init phase output)
+	if useTUI {
+		if err := orch.Init(); err != nil {
+			log.Errorf("Error initializing orchestrator: %v", err)
+			return 1
+		}
+		orch.StartTUI()
+	}
+
+	// Helper to write output to console OR TUI Init phase
+	writeInit := func(format string, args ...interface{}) {
+		msg := fmt.Sprintf(format, args...)
+		if useTUI {
+			orch.SendInitLine(msg)
+		} else {
+			log.Info(msg)
+		}
+	}
+
 	// Show execution context
-	log.Infof("Executing build via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
-	log.Info("")
+	writeInit("Executing build via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
+	writeInit("")
 
 	// Phase 1: Module Discovery
-	log.Info(output.PhaseHeader(1, "Module Discovery"))
-	log.Infof("Requested: %d modules:%s", len(monikers), output.ListFormat(monikers, 60, 5))
+	writeInit(output.PhaseHeader(1, "Module Discovery"))
+	writeInit("Requested: %d modules:%s", len(monikers), output.ListFormat(monikers, 60, 5))
 
 	// Calculate execution order to determine dependencies early
 	includeDependencies := !skipModuleDeps
@@ -288,8 +370,8 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 				addedDeps = append(addedDeps, m)
 			}
 		}
-		log.Infof("Dependencies: %d modules:%s", len(addedDeps), output.ListFormat(addedDeps, 60, 5))
-		log.Infof("Total: %d modules to build", len(executionPlan.ExecutionOrder))
+		writeInit("Dependencies: %d modules:%s", len(addedDeps), output.ListFormat(addedDeps, 60, 5))
+		writeInit("Total: %d modules to build", len(executionPlan.ExecutionOrder))
 	}
 
 	// Check if any requested modules are Go modules (for tidy mode logging)
@@ -306,54 +388,40 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	if hasGoModules {
 		if tidyFirst {
 			if tidyExplicitlySet {
-				log.Info("Tidy mode: enabled (explicit flag)")
+				writeInit("Tidy mode: enabled (explicit flag)")
 			} else {
-				log.Info("Tidy mode: enabled (default for local builds)")
+				writeInit("Tidy mode: enabled (default for local builds)")
 			}
 		} else {
 			if tidyExplicitlySet {
-				log.Info("Tidy mode: disabled (explicit flag)")
+				writeInit("Tidy mode: disabled (explicit flag)")
 			} else {
-				log.Info("Tidy mode: disabled (CI environment detected)")
+				writeInit("Tidy mode: disabled (CI environment detected)")
 			}
 		}
 	}
-	log.Info("")
+	writeInit("")
 
 	// Phase 2: Dependency Verification (system dependencies like go, docker, etc.)
 	// Use the expanded execution order to verify deps for ALL modules that will be built
 	if !skipVerification {
-		if exitCode := verifyBuildDependencies(executionPlan.ExecutionOrder, moduleReport); exitCode != 0 {
+		if exitCode := verifyBuildDependencies(executionPlan.ExecutionOrder, moduleReport, writeInit); exitCode != 0 {
 			return exitCode
 		}
 	}
 
-	// Phase 3: Build Execution
-	log.Info(output.PhaseHeader(3, "Build Execution"))
-	log.Info(output.OutputDir("out/build/"))
-	log.Info("")
+	// Phase 3: Build Execution (still part of Init in TUI, but transitions to Run when execution starts)
+	writeInit(output.PhaseHeader(3, "Build Execution"))
+	writeInit(output.OutputDir("out/build/"))
+	writeInit("")
 
 	// Build module type lookup for ALL modules in execution plan (including dependencies)
-	moduleTypes := make(map[string]string)
 	for _, mon := range executionPlan.ExecutionOrder {
 		if module, exists := moduleReport.Registry.Get(mon); exists {
 			moduleTypes[mon] = module.Type
 		}
 	}
-
-	// Configure orchestrator
-	orchConfig := orchestrator.Config{
-		WorkspaceRoot:        workspaceRoot,
-		OutputBaseDir:        "out/build",
-		LogFileName:          "build.log",
-		OrchestratorLogName:  "orchestrator.log",
-		ActionVerb:           "building",
-		MaxConcurrency:       0, // Use default (number of CPUs)
-		StatusUpdateInterval: 2, // Update every 2 seconds
-		ModuleTypes:          moduleTypes,
-		ShowTimings:          showTimings,
-		DryRun:               dryRun,
-	}
+	orch.SetModuleTypes(moduleTypes)
 
 	// Create worker function that builds a single module and returns type info
 	worker := func(moniker string, logWriter io.Writer) int {
@@ -376,27 +444,51 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		}
 
 		moduleOutputDir := repository.BuildOutputPath(workspaceRoot, moniker)
-		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version, pdfMode, pdfTheme, dryRun)
+		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version, dryRun, buildAll)
 	}
+	orch.SetWorker(worker)
 
-	// Create and run orchestrator with layered execution
-	orch := orchestrator.New(orchConfig, worker)
+	// Run orchestrator with layered execution (TUI transitions to Run phase automatically)
 	results, err := orch.RunLayered(executionPlan.Layers)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
 
-	// Print summary and close orchestrator
+	// Transition to End phase and send single result line
+	orch.SetPhase(tui.PhaseEnd)
+
+	// Count pass/fail from results
+	passed := 0
+	failed := 0
+	for _, r := range results {
+		if r.ExitCode == 0 {
+			passed++
+		} else {
+			failed++
+		}
+	}
+
+	// Send single result line to End pane (visible in TUI)
+	if useTUI {
+		resultIcon := output.IconPass
+		if failed > 0 {
+			resultIcon = output.IconFail
+		}
+		orch.SendEndLine(fmt.Sprintf("%s %d/%d modules built successfully",
+			resultIcon, passed, passed+failed))
+	}
+
+	// Stop TUI first (restores stdout), then print full summary
+	orch.StopTUI()
 	orch.PrintSummary(results)
-	orch.Close()
 
 	// Return exit code based on results
 	return orchestrator.GetExitCode(results)
 }
 
 // runModuleBuild runs build for a single module
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string, pdfMode bool, pdfTheme string, dryRun bool) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string, dryRun bool, buildAll bool) int {
 	// Get build function for module type
 	buildFunc := builders.GetBuildFunc(module.Type)
 
@@ -405,9 +497,8 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 		Compressed:    compressed,
 		CompressedUPX: compressedUPX,
 		Version:       version,
-		PDFMode:       pdfMode,
-		PDFTheme:      pdfTheme,
 		DryRun:        dryRun,
+		BuildAll:      buildAll,
 	}
 
 	// In dry-run mode, simulate a successful build
@@ -430,7 +521,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 }
 
 // verifyBuildDependencies checks that all required build dependencies are available
-func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleContractReport) int {
+func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleContractReport, writeFn func(format string, args ...interface{})) int {
 	cfg := config.Global()
 	if cfg == nil || cfg.ModuleTypes == nil {
 		// Config not loaded, skip verification
@@ -466,21 +557,21 @@ func verifyBuildDependencies(monikers []string, moduleReport *reports.ModuleCont
 	sort.Strings(deps)
 
 	// Print phase header
-	log.Info(output.PhaseHeader(2, "Dependency Verification"))
-	log.Infof("Required: %s", strings.Join(deps, ", "))
+	writeFn(output.PhaseHeader(2, "Dependency Verification"))
+	writeFn("Required: %s", strings.Join(deps, ", "))
 
 	// Verify all dependencies
 	results := systemdeps.VerifyAll(deps)
 	var missing []string
 
 	for _, result := range results {
-		log.Info(output.DependencyLine(result.Available, result.Name, result.Version))
+		writeFn(output.DependencyLine(result.Available, result.Name, result.Version))
 		if !result.Available {
 			missing = append(missing, result.Moniker)
 		}
 	}
 
-	log.Info("")
+	writeFn("")
 
 	if len(missing) > 0 {
 		log.Errorf("❌ Error: Required build dependencies are missing: %s", strings.Join(missing, ", "))
@@ -507,12 +598,14 @@ func printBuildUsage() {
 	log.Info("  --skip-deps               Only build specified modules (skip transitive dependencies)")
 	log.Info("  --skip-verification       Skip system dependency verification (go, docker, etc.)")
 	log.Info("  --timings                 Show detailed timing summary")
+	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")
+	log.Info("  --no-tui                  Disable TUI console (use plain output)")
+	log.Info(fmt.Sprintf("  --tui-height N            Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
 	log.Info("  --compressed              Strip debug info for smaller binaries (go-cli only)")
 	log.Info("  --compressed-upx          Also apply UPX compression for maximum size reduction")
 	log.Info("  --version VERSION         Inject version string into binary (go-cli only)")
-	log.Info("  --pdf                     Generate PDF documentation (mkdocs modules only)")
-	log.Info("  --pdf-theme THEME         PDF theme: dark, light, or all (default: dark)")
 	log.Info("  --accept-warnings         Don't fail on MkDocs warnings (non-strict mode)")
+	log.Info("  --all                     Include non-default books (those with default: false)")
 	log.Info("  -h, --help                Show this help message")
 	log.Info("")
 	log.Info("Compression (go-cli only):")
@@ -520,22 +613,18 @@ func printBuildUsage() {
 	log.Info("  --compressed:      Strip debug info with -ldflags \"-s -w\" (~26 MB, ~30% smaller)")
 	log.Info("  --compressed-upx:  Also UPX compress (~10 MB, ~70% smaller total)")
 	log.Info("")
-	log.Info("PDF Generation (mkdocs only):")
-	log.Info("  --pdf:                Enable PDF export alongside HTML site (dark theme)")
-	log.Info("  --pdf-theme=dark:     Dark PDF for digital viewing")
-	log.Info("  --pdf-theme=light:    Light PDF for paper printing")
-	log.Info("  --pdf-theme=all:      Build both dark and light PDFs")
-	log.Info("                        Uses mkdocs-with-pdf plugin with WeasyPrint")
-	log.Info("                        Output: out/build/<module>/site/pdf/ready-to-release-docs-{theme}.pdf")
+	log.Info("MkDocs modules with books (books.yml):")
+	log.Info("  Books with 'default: false' are skipped unless --all is used.")
+	log.Info("  Output is configured via the book's 'output' field:")
+	log.Info("    site       - HTML site only")
+	log.Info("    pdf-dark   - PDF with dark theme")
+	log.Info("    pdf-light  - PDF with light theme")
+	log.Info("    pdf-all    - Both dark and light PDFs")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  build                                # Build all modules (dev mode)")
+	log.Info("  build                                # Build all modules")
 	log.Info("  build r2r-cli                        # Build CLI with debug info")
 	log.Info("  build r2r-cli --compressed           # Build CLI for release")
-	log.Info("  build r2r-cli --compressed-upx       # Build CLI with UPX for minimal size")
-	log.Info("  build r2r-cli --version 1.0.0        # Build with version injection")
-	log.Info("  build --tidy-first docs              # Build with go mod tidy first")
-	log.Info("  build docs --pdf                     # Build docs with dark PDF")
-	log.Info("  build docs --pdf-theme=all           # Build docs with both PDF themes")
+	log.Info("  build books                          # Build books (uses books.yml output config)")
 	log.Info("  build r2r-cli --list-artifacts       # List artifacts without building")
 }

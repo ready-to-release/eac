@@ -3,14 +3,17 @@
 # Books aggregate static content with dynamically-generated content from EAC commands
 
 books:
-  # Primary documentation book
-  - name: docs
-    description: "Ready-to-Release Documentation with generated reference content"
+  # ==============================================================================
+  # GitHub Pages Site (docs module)
+  # ==============================================================================
+  - name: site
+    module: docs
+    description: "GitHub Pages documentation site with module overview"
+    output: site
+    site_url: "https://ready-to-release.github.io/eac/"
 
     sources:
-      # ==========================================================================
-      # Static Content - Copy from docs/
-      # ==========================================================================
+      # Static content from docs/
       - type: copy
         from: "docs/**/*.md"
         to: "./"
@@ -23,60 +26,7 @@ books:
         from: "docs/assets/**"
         to: "assets/"
 
-      # ==========================================================================
-      # Generated Content - New files from EAC commands
-      # ==========================================================================
-      - type: command
-        command: "show files"
-        target: "reference/generated/files.md"
-        frontmatter:
-          title: "Repository Files"
-          description: "Complete file inventory with module ownership"
-        order: 1
-
-      - type: command
-        command: "show modules"
-        target: "reference/generated/modules.md"
-        frontmatter:
-          title: "Modules"
-          description: "All module contracts in the repository"
-        order: 2
-
-      - type: command
-        command: "show dependencies"
-        target: "reference/generated/dependencies.md"
-        frontmatter:
-          title: "Dependencies"
-          description: "Module dependency relationships"
-        order: 3
-
-      - type: command
-        command: "show moduletypes"
-        target: "reference/generated/module-types.md"
-        frontmatter:
-          title: "Module Types"
-          description: "Available module type definitions"
-        order: 4
-
-      - type: command
-        command: "show environments"
-        target: "reference/generated/environments.md"
-        frontmatter:
-          title: "Environments"
-          description: "Environment contract definitions"
-        order: 5
-
-      - type: command
-        command: "show tests"
-        target: "reference/generated/tests.md"
-        frontmatter:
-          title: "Test Suites"
-          description: "All test suites in the repository"
-        order: 6
-
-      # ==========================================================================
-      # Inline Content - Insert at markers in existing files
-      # ==========================================================================
+      # Inline generated content at markers
       - type: inline
         target: "index.md"
         inserts:
@@ -89,21 +39,23 @@ books:
           - marker: "module-types-summary"
             command: "show moduletypes"
 
-    # Navigation for generated sections
-    generated_nav:
-      - section: "reference/generated"
-        title: "Generated Reference"
-        insert_into: "reference"
-        position: "after:index.md"
-
-  # Repository Report - standalone module/dependency report
+  # ==============================================================================
+  # Repository Report PDF (books module)
+  # ==============================================================================
   - name: repository-report
-    description: "Repository structure report with modules and dependency graph"
+    module: books
+    description: "Complete repository structure report with all generated content"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+    default: false  # Slow PDF build - use --all to include
 
     sources:
-      # ==========================================================================
-      # Generated Content - All content is dynamically generated
-      # ==========================================================================
+      # Assets for PDF rendering (required for stylesheets)
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+
+      # All show commands for complete repository documentation
       - type: command
         command: "show modules"
         target: "modules.md"
@@ -135,3 +87,44 @@ books:
           title: "File Ownership"
           description: "Repository files with module ownership"
         order: 4
+
+      - type: command
+        command: "show environments"
+        target: "environments.md"
+        frontmatter:
+          title: "Environments"
+          description: "Environment contract definitions"
+        order: 5
+
+      - type: command
+        command: "show tests"
+        target: "tests.md"
+        frontmatter:
+          title: "Test Suites"
+          description: "All test suites in the repository"
+        order: 6
+
+  # ==============================================================================
+  # Explanation PDF (books module)
+  # ==============================================================================
+  - name: explanation
+    module: books
+    description: "Conceptual documentation - Everything as Code, CD practices, and methodology"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+    default: false  # Slow PDF build - use --all to include
+
+    sources:
+      # Explanation content (conceptual docs)
+      - type: copy
+        from: "docs/explanation/**/*.md"
+        to: "./"
+
+      - type: copy
+        from: "docs/explanation/**/.nav.yml"
+        to: "./"
+
+      # Assets for PDF rendering
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"

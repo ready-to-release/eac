@@ -34,6 +34,18 @@ func ListDockerArtifacts(module *modules.ModuleContract, workspaceRoot string) [
 func BuildDockerModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
+	// Check if Docker is available before attempting to build
+	if !isDockerAvailable() {
+		Logln(logWriter, "❌ Docker is not available")
+		if isDockerInDocker() {
+			Logln(logWriter, "   Container detected but Docker socket not mounted")
+			Logln(logWriter, "   Ensure the Docker socket is mounted (-v /var/run/docker.sock:/var/run/docker.sock)")
+		} else {
+			Logln(logWriter, "   Ensure Docker is installed and the daemon is running")
+		}
+		return 1
+	}
+
 	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	// Get capabilities from contract
@@ -123,14 +135,47 @@ func getGitShortSHA(workspaceRoot string) string {
 
 // buildDockerLocal builds a Docker image locally using BuildKit for cache support
 func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath string, tags []string, logWriter io.Writer) int {
+	// Check for Docker-in-Docker mode
+	isDinD := isDockerInDocker()
+	var contextPath, dockerfileArg string
+
+	if isDinD {
+		// In DinD mode, the Docker daemon runs on the host but the client runs in the container.
+		// The client needs to tar up the build context locally before sending to the daemon.
+		// We use the container's mounted path (workspaceRoot = /var/task) as context because
+		// the client can access it. The daemon receives the tarred context and builds locally.
+		Logln(logWriter, "   Docker-in-Docker: using container path %s", workspaceRoot)
+		contextPath = workspaceRoot
+		dockerfileArg = dockerfilePath
+	} else {
+		contextPath = workspaceRoot
+		dockerfileArg = dockerfilePath
+	}
+
 	// Build docker command with all tags
-	args := []string{"buildx", "build"}
+	// In DinD mode, use regular 'docker build' instead of 'docker buildx build' because
+	// buildx is not always available in container images. Regular build with BuildKit
+	// still supports --mount=type=cache directives in Dockerfiles.
+	var args []string
+	if isDinD {
+		args = []string{"build"}
+	} else {
+		args = []string{"buildx", "build"}
+	}
 	for _, tag := range tags {
 		args = append(args, "-t", tag)
 	}
-	args = append(args, "-f", dockerfilePath, "--load", ".")
+	args = append(args, "-f", dockerfileArg)
+	if !isDinD {
+		// --load is buildx-specific flag to load image into local docker daemon
+		args = append(args, "--load")
+	}
+	args = append(args, contextPath)
 
-	// Use buildx to enable BuildKit cache mounts (RUN --mount=type=cache)
+	Logln(logWriter, "   Context: %s", contextPath)
+	Logln(logWriter, "   Dockerfile: %s", dockerfileArg)
+
+	// Use buildx (when available) to enable BuildKit cache mounts (RUN --mount=type=cache)
 	// This significantly speeds up subsequent builds by caching Go modules and build artifacts
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
 
@@ -215,4 +260,12 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 	}
 
 	return 0
+}
+
+// isDockerAvailable checks if Docker daemon is accessible
+func isDockerAvailable() bool {
+	cmd := exec.Command("docker", "info")
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Run() == nil
 }

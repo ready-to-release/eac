@@ -18,7 +18,7 @@ import (
 
 func TestHandlersConfigFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../../specs/eac-core/handlers-config",
+		SpecsPath:         "../../../../../../specs/eac-core/handlers-config",
 		DefaultReportName: "cucumber-handlers-config",
 		RegisterSteps:     RegisterSteps,
 	}

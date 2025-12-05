@@ -211,6 +211,11 @@ func setupTestEnvironment(tempRoot, testingDir string) error {
 		return err
 	}
 
+	// Copy .r2r/eac config files (required by config.Global() used in testing package)
+	if err := copyConfigFiles(repoRoot, tempRoot); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -254,7 +259,8 @@ func copyFile(src, dest string) error {
 
 func copyDependentPackages(coreDir, tempRoot string) error {
 	// Copy contracts, environments, config, etc. packages
-	packages := []string{"config", "contracts", "environments", "git", "markdown", "repository", "system-deps"}
+	// Note: defaults and logging are required by config/modules.go and contracts/retry.go
+	packages := []string{"config", "contracts", "defaults", "environments", "git", "logging", "markdown", "repository", "system-deps"}
 
 	for _, pkg := range packages {
 		srcPkgDir := filepath.Join(coreDir, pkg)
@@ -314,9 +320,54 @@ func copyPackageRecursive(src, dest string) error {
 	})
 }
 
+func copyConfigFiles(repoRoot, tempRoot string) error {
+	// Copy .r2r/eac config directory which contains repository.yml and other configs
+	// needed by config.Global()
+	configSrcDir := filepath.Join(repoRoot, ".r2r", "eac")
+	configDestDir := filepath.Join(tempRoot, ".r2r", "eac")
+
+	if err := os.MkdirAll(configDestDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config dir: %w", err)
+	}
+
+	// Create a fake .git directory so the config loader can find the repo root
+	gitDir := filepath.Join(tempRoot, ".git")
+	if err := os.MkdirAll(gitDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .git dir: %w", err)
+	}
+
+	// Copy essential config files
+	configFiles := []string{
+		"repository.yml",
+		"modules.yml",
+		"module-types.yml",
+		"testing-tags.yml",
+		"test-suites.yml",
+		"handlers.yml",
+	}
+
+	for _, file := range configFiles {
+		srcPath := filepath.Join(configSrcDir, file)
+		destPath := filepath.Join(configDestDir, file)
+
+		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+			continue // Skip if file doesn't exist
+		}
+
+		if err := copyFile(srcPath, destPath); err != nil {
+			return fmt.Errorf("failed to copy config file %s: %w", file, err)
+		}
+	}
+
+	return nil
+}
+
 func runGoTest(dir string) error {
 	cmd := exec.Command("go", "test", "-v", "-tags=L1,ov")
 	cmd.Dir = dir
+	// Set R2R_REPO_ROOT to tempRoot (parent of testing dir) so config.Global() finds configs
+	tempRoot := filepath.Dir(dir)
+	cmd.Env = append(os.Environ(), "R2R_REPO_ROOT="+tempRoot)
 	output, err := cmd.CombinedOutput()
 	tfCtx.testOutput = string(output)
 

@@ -1,0 +1,257 @@
+// Package repository provides repository-level operations.
+package repository
+
+import (
+	"path/filepath"
+	"strings"
+	"sync"
+
+	"github.com/ready-to-release/eac/go/eac/core/git"
+)
+
+// FileCache provides cached access to repository files.
+// It caches the output of `git ls-files` and provides efficient filtered views.
+//
+// The cache is thread-safe and lazily populated on first access.
+// All paths are normalized to forward slashes for cross-platform consistency.
+//
+// Example:
+//
+//	cache := repository.NewFileCache(repoRoot)
+//	mdFiles := cache.FilesByExtension(".md")
+//	goFiles := cache.FilesInDirWithExtension("go/", ".go")
+type FileCache struct {
+	mu sync.RWMutex
+
+	repoRoot string
+	gitRepo  *git.Repository
+
+	// trackedFiles is the cached output of `git ls-files`
+	// All paths are normalized to forward slashes
+	trackedFiles []string
+	populated    bool
+
+	// Cached filtered views (computed on demand)
+	byExtension map[string][]string
+	bySuffix    map[string][]string
+}
+
+// NewFileCache creates a new file cache for the given repository root.
+// The cache is lazily populated - no git operations are performed until
+// files are requested.
+func NewFileCache(repoRoot string) *FileCache {
+	return &FileCache{
+		repoRoot:    repoRoot,
+		byExtension: make(map[string][]string),
+		bySuffix:    make(map[string][]string),
+	}
+}
+
+// ensurePopulated ensures the cache is populated with git ls-files data.
+// Thread-safe and idempotent.
+func (c *FileCache) ensurePopulated() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.populated {
+		return nil
+	}
+
+	// Open git repository
+	repo, err := git.Open(c.repoRoot)
+	if err != nil {
+		return err
+	}
+	c.gitRepo = repo
+
+	// Get tracked files (uses native git ls-files for performance)
+	files, err := repo.TrackedFiles()
+	if err != nil {
+		return err
+	}
+
+	// Normalize paths to forward slashes
+	c.trackedFiles = make([]string, 0, len(files))
+	for _, f := range files {
+		if f != "" {
+			c.trackedFiles = append(c.trackedFiles, strings.ReplaceAll(f, "\\", "/"))
+		}
+	}
+
+	c.populated = true
+	return nil
+}
+
+// TrackedFiles returns all git-tracked files (normalized to forward slashes).
+// The result is cached after the first call.
+func (c *FileCache) TrackedFiles() ([]string, error) {
+	if err := c.ensurePopulated(); err != nil {
+		return nil, err
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.trackedFiles, nil
+}
+
+// FilesByExtension returns files matching the given extension (e.g., ".md").
+// Results are cached for subsequent calls with the same extension.
+func (c *FileCache) FilesByExtension(ext string) ([]string, error) {
+	if err := c.ensurePopulated(); err != nil {
+		return nil, err
+	}
+
+	c.mu.RLock()
+	if files, ok := c.byExtension[ext]; ok {
+		c.mu.RUnlock()
+		return files, nil
+	}
+	c.mu.RUnlock()
+
+	// Upgrade to write lock to compute
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if files, ok := c.byExtension[ext]; ok {
+		return files, nil
+	}
+
+	// Filter files by extension
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if strings.HasSuffix(f, ext) {
+			filtered = append(filtered, f)
+		}
+	}
+	c.byExtension[ext] = filtered
+	return filtered, nil
+}
+
+// FilesBySuffix returns files matching the given suffix (e.g., "_test.go").
+// Results are cached for subsequent calls with the same suffix.
+func (c *FileCache) FilesBySuffix(suffix string) ([]string, error) {
+	if err := c.ensurePopulated(); err != nil {
+		return nil, err
+	}
+
+	c.mu.RLock()
+	if files, ok := c.bySuffix[suffix]; ok {
+		c.mu.RUnlock()
+		return files, nil
+	}
+	c.mu.RUnlock()
+
+	// Upgrade to write lock to compute
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if files, ok := c.bySuffix[suffix]; ok {
+		return files, nil
+	}
+
+	// Filter files by suffix
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if strings.HasSuffix(f, suffix) {
+			filtered = append(filtered, f)
+		}
+	}
+	c.bySuffix[suffix] = filtered
+	return filtered, nil
+}
+
+// FilesInDir returns files under the given directory prefix.
+// The dir should use forward slashes (e.g., "go/eac/specs").
+// Results are NOT cached as directory queries vary widely.
+func (c *FileCache) FilesInDir(dir string) ([]string, error) {
+	if err := c.ensurePopulated(); err != nil {
+		return nil, err
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	// Ensure dir ends with /
+	if !strings.HasSuffix(dir, "/") {
+		dir = dir + "/"
+	}
+
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if strings.HasPrefix(f, dir) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered, nil
+}
+
+// FilesInDirWithExtension returns files under dir matching extension.
+// Results are NOT cached as these queries vary widely.
+func (c *FileCache) FilesInDirWithExtension(dir, ext string) ([]string, error) {
+	if err := c.ensurePopulated(); err != nil {
+		return nil, err
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	// Ensure dir ends with /
+	if !strings.HasSuffix(dir, "/") {
+		dir = dir + "/"
+	}
+
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if strings.HasPrefix(f, dir) && strings.HasSuffix(f, ext) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered, nil
+}
+
+// FilesMatchingAnyExtension returns files matching any of the given extensions.
+// Extensions should include the dot (e.g., ".sh", ".ps1").
+// Results are NOT cached as extension combinations vary widely.
+func (c *FileCache) FilesMatchingAnyExtension(extensions []string) ([]string, error) {
+	if err := c.ensurePopulated(); err != nil {
+		return nil, err
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		for _, ext := range extensions {
+			if strings.HasSuffix(f, ext) {
+				filtered = append(filtered, f)
+				break
+			}
+		}
+	}
+	return filtered, nil
+}
+
+// AbsolutePath returns the absolute path for a relative tracked file.
+func (c *FileCache) AbsolutePath(relPath string) string {
+	return filepath.Join(c.repoRoot, relPath)
+}
+
+// RepoRoot returns the repository root path.
+func (c *FileCache) RepoRoot() string {
+	return c.repoRoot
+}
+
+// Invalidate clears the cache, forcing a refresh on next access.
+// Use this if repository files have changed since the cache was populated.
+func (c *FileCache) Invalidate() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.trackedFiles = nil
+	c.populated = false
+	c.byExtension = make(map[string][]string)
+	c.bySuffix = make(map[string][]string)
+}

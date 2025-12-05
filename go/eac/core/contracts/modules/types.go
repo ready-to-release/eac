@@ -108,33 +108,32 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 	path := normalizePathSeparators(filePath)
 	root := normalizePathSeparators(m.Files.Root)
 
-	// 1. Check repo-root patterns first (specs, other)
+	// 1. Quick check: is file under module root?
+	isUnderRoot := root == "" || root == "/" || strings.HasPrefix(path, root+"/") || path == root
+
+	if isUnderRoot {
+		// 2a. File is under root - check relative patterns (most common case)
+		for _, pattern := range m.getRelativePatterns() {
+			pattern = normalizePathSeparators(pattern)
+
+			// Build full pattern with root
+			var fullPattern string
+			if root != "" && root != "/" {
+				fullPattern = root + "/" + pattern
+			} else {
+				fullPattern = pattern
+			}
+
+			if matchWithFallback(path, fullPattern) {
+				return !m.isExcluded(path)
+			}
+		}
+	}
+
+	// 2b. Check repo-root patterns (specs, other) - these match files anywhere
+	// Only check if file didn't match relative patterns above
 	for _, pattern := range m.getRepoPatterns() {
 		if matchWithFallback(path, normalizePathSeparators(pattern)) {
-			return !m.isExcluded(path)
-		}
-	}
-
-	// 2. Check if file is under module root
-	if root != "" && root != "/" {
-		if !strings.HasPrefix(path, root+"/") && path != root {
-			return false
-		}
-	}
-
-	// 3. Check relative patterns (source, config, assets, tests)
-	for _, pattern := range m.getRelativePatterns() {
-		pattern = normalizePathSeparators(pattern)
-
-		// Build full pattern with root
-		var fullPattern string
-		if root != "" && root != "/" {
-			fullPattern = root + "/" + pattern
-		} else {
-			fullPattern = pattern
-		}
-
-		if matchWithFallback(path, fullPattern) {
 			return !m.isExcluded(path)
 		}
 	}

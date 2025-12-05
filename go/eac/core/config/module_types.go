@@ -12,9 +12,10 @@ type ModuleTypesConfig struct {
 type ModuleTypeDef struct {
 	Name          string        `yaml:"name"`
 	Description   string        `yaml:"description"`
-	BuildDeps     []string      `yaml:"build_deps"`     // System dependencies required for building
+	BuildDeps     []string      `yaml:"build_deps"`               // System dependencies required for building
 	Capabilities  []string      `yaml:"capabilities"`
-	TestFramework string        `yaml:"test_framework,omitempty"` // Test framework: mocha, jest, pytest, go (default)
+	TestFramework string        `yaml:"test_framework,omitempty"` // Unit test framework: mocha, jest, pytest, go (default)
+	BDDFramework  string        `yaml:"bdd_framework,omitempty"`  // BDD test framework: godog, tscucumber (default: inferred from build_deps)
 	Build         *BuildConfig  `yaml:"build,omitempty"`
 	Defaults      *TypeDefaults `yaml:"defaults,omitempty"`
 }
@@ -160,6 +161,16 @@ func (c *ModuleTypesConfig) GetTestFramework(typeName string) string {
 		return ""
 	}
 	return typeDef.TestFramework
+}
+
+// GetBDDFramework returns the BDD test framework for a module type.
+// Returns empty string if not specified (caller should infer from build_deps).
+func (c *ModuleTypesConfig) GetBDDFramework(typeName string) string {
+	typeDef := c.Get(typeName)
+	if typeDef == nil {
+		return ""
+	}
+	return typeDef.BDDFramework
 }
 
 // GetTypesWithCapability returns all type names that have the given capability
