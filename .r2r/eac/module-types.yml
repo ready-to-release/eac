@@ -47,7 +47,7 @@ types:
 
   - name: go-commands
     description: "Go library with CLI invoke wrapper"
-    build_deps: [go]
+    build_deps: [go, npm]
     capabilities: [go_module, executable]
     build:
       artifacts:

@@ -1,10 +1,10 @@
-# Deployable Units
+# Deployable Modules
 
 ## Introduction
 
 A Deployable Unit is the fundamental building block of Continuous Delivery. It represents the discrete body of work that is built, tested, and delivered as a cohesive whole through the CD Model's 12 stages.
 
-Understanding deployable units is critical for:
+Understanding deployable modules is critical for:
 
 - Defining the scope of what gets built and deployed together
 - Determining versioning and release granularity
@@ -35,9 +35,9 @@ This diagram shows the deployable unit notation used throughout CD Model visuali
 
 ---
 
-## Types of Deployable Units
+## Types of Deployable Modules
 
-Deployable units fall into two primary categories, each with different characteristics and versioning strategies.
+Deployable modules fall into two primary categories, each with different characteristics and versioning strategies.
 
 ### Runtime Systems
 
@@ -106,7 +106,7 @@ Versioned components are libraries, tools, or containers consumed by other syste
 
 ## Versioning Strategies
 
-Deployable units must be versioned to enable traceability, rollback, and dependency management.
+Deployable modules must be versioned to enable traceability, rollback, and dependency management.
 
 ### Version Number Format
 
@@ -206,7 +206,7 @@ git rev-list main.. --count
 
 ## Immutable Artifacts
 
-Deployable units are built into immutable artifacts that progress through the pipeline.
+Deployable modules are built into immutable artifacts that progress through the pipeline.
 
 ### What is an Immutable Artifact?
 
@@ -302,7 +302,7 @@ This separation enables the same artifact to be deployed to multiple environment
 
 ## Dependency Management
 
-Deployable units often depend on other deployable units (libraries, services, APIs).
+Deployable modules often depend on other deployable modules (libraries, services, APIs).
 
 ### Internal Dependencies (Monorepo)
 
@@ -321,7 +321,7 @@ monorepo/
 
 - Supporting code doesn't have its own version
 - Version is implied by the deployable unit it's built with
-- Changes trigger rebuild of dependent deployable units
+- Changes trigger rebuild of dependent deployable modules
 - Simpler but requires monorepo
 
 ### External Dependencies (Polyrepo or Published Libraries)
@@ -392,11 +392,11 @@ See [Security](../security/security.md) for dependency scanning with Trivy and D
 
 ## Granularity: Choosing Deployable Unit Boundaries
 
-Defining the right boundaries for deployable units is a critical architectural decision.
+Defining the right boundaries for deployable modules is a critical architectural decision.
 
-### Too Coarse (Too Few Deployable Units)
+### Too Coarse (Too Few Deployable Modules)
 
-**Problem:** Large monolithic deployable units
+**Problem:** Large monolithic deployable modules
 
 **Issues:**
 
@@ -418,9 +418,9 @@ entire-platform/   # Single deployable unit
 
 All changes deploy together, even unrelated ones.
 
-### Too Fine (Too Many Deployable Units)
+### Too Fine (Too Many Deployable Modules)
 
-**Problem:** Over-segmentation into many tiny deployable units
+**Problem:** Over-segmentation into many tiny deployable modules
 
 **Issues:**
 
@@ -443,7 +443,7 @@ Simple user service split into 4 units requiring coordination.
 
 ### Right Balance
 
-**Goal:** Deployable units that can be independently developed, tested, and deployed
+**Goal:** Deployable modules that can be independently developed, tested, and deployed
 
 **Good Boundaries:**
 
@@ -466,7 +466,7 @@ Each unit is independently deployable with clear boundaries.
 
 ### Decision Factors
 
-**Split into separate deployable units when:**
+**Split into separate deployable modules when:**
 
 - Services have different release cadences
 - Teams want independent deployment
@@ -484,13 +484,13 @@ Each unit is independently deployable with clear boundaries.
 
 ---
 
-## Deployable Units in CD Model Stages
+## Deployable Modules in CD Model Stages
 
 ### Stage 4 (Commit): Build Artifacts
 
 When a trunk commit affects a deployable unit:
 
-1. Pipeline detects which deployable units changed
+1. Pipeline detects which deployable modules changed
 2. Build immutable artifacts for affected units
 3. Run unit and integration tests
 4. Publish artifacts to registry
@@ -527,7 +527,7 @@ Deploy the immutable artifact:
 
 ## Summary
 
-Deployable units are the fundamental building blocks of Continuous Delivery:
+Deployable modules are the fundamental building blocks of Continuous Delivery:
 
 **Definition:**
 
@@ -559,11 +559,11 @@ Deployable units are the fundamental building blocks of Continuous Delivery:
 
 ## Next Steps
 
-- [Unit of Flow](unit-of-flow.md) - See how deployable units fit into the bigger picture
-- [Trunk-Based Development](../workflow/trunk-based-development.md) - How code flows into deployable units
+- [Unit of Flow](unit-of-flow.md) - See how deployable modules fit into the bigger picture
+- [Trunk-Based Development](../workflow/trunk-based-development.md) - How code flows into deployable modules
 - [Branching Strategies](../workflow/branching-strategies.md) - Branching flows for RA and CDE patterns
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - Development stages for deployable units
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages for deployable units
+- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - Development stages for deployable modules
+- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages for deployable modules
 
 ## References
 

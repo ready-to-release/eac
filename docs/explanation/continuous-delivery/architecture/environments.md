@@ -384,7 +384,7 @@ Production deployments use various strategies to minimize risk and enable rapid 
 **Use when:**
 
 - Downtime acceptable (< 30 seconds)
-- Small deployable units
+- Small deployable modules
 - Fast startup times
 
 ### Rolling Deployment
@@ -430,7 +430,7 @@ Production deployments use various strategies to minimize risk and enable rapid 
 **Use when:**
 
 - Instant rollback critical
-- Large deployable units
+- Large deployable modules
 - High-risk changes
 - Database migrations need validation
 

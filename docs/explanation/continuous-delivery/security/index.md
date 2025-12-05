@@ -218,7 +218,7 @@ Not all security issues should block the pipeline. The CD Model uses risk-based 
 
 **[Core Concepts](../core-concepts/index.md)**:
 
-- Security applies to all Deployable Units
+- Security applies to all Deployable Modules
 - Immutable artifacts scanned once, deployed many times
 
 **[CD Model](../cd-model/index.md)**:

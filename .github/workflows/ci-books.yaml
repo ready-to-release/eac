@@ -62,11 +62,18 @@ jobs:
         with:
           trigger-run-id: ${{ inputs.trigger_run_id }}
 
+      - name: Setup Module Dependencies
+        uses: ./.github/actions/setup-module-deps
+        with:
+          module: books
+          commands-path: ${{ steps.commands.outputs.commands-path }}
+
       - name: Build PDF Books
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
           echo "Building PDF documentation (output mode from books.yml)..."
-          $COMMANDS build books
+          # Use --all to include books with default: false (all PDF books)
+          $COMMANDS build books --all
 
       - name: Verify PDF outputs
         id: verify

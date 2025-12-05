@@ -90,8 +90,9 @@ func (t *TestIsolation) WithCopyAIContracts(copy bool) *TestIsolation {
 	return t
 }
 
-// WithCopyMkdocsConfig enables copying mkdocs.yml to the isolated dir.
-// This is needed for commands that build documentation.
+// WithCopyMkdocsConfig enables copying MkDocs container templates to the isolated dir.
+// This copies containers/mkdocs-site/ and containers/mkdocs-pdf/ which contain the
+// mkdocs.yml templates used by the build system.
 func (t *TestIsolation) WithCopyMkdocsConfig(copy bool) *TestIsolation {
 	t.copyMkdocsConfig = copy
 	return t
@@ -158,14 +159,25 @@ func (t *TestIsolation) Setup() error {
 		}
 	}
 
-	// Copy mkdocs.yml if requested
+	// Copy MkDocs container templates if requested
+	// These are used by the build system to generate mkdocs.yml dynamically
 	if t.copyMkdocsConfig && t.originalRepoRoot != "" {
-		srcMkdocs := filepath.Join(t.originalRepoRoot, "mkdocs.yml")
-		if _, err := os.Stat(srcMkdocs); err == nil {
-			dstMkdocs := filepath.Join(t.isolatedDir, "mkdocs.yml")
-			if err := copyFile(srcMkdocs, dstMkdocs); err != nil {
+		// Copy mkdocs-site container (for HTML builds and serve docs)
+		srcSite := filepath.Join(t.originalRepoRoot, "containers", "mkdocs-site")
+		if _, err := os.Stat(srcSite); err == nil {
+			dstSite := filepath.Join(t.isolatedDir, "containers", "mkdocs-site")
+			if err := copyDir(srcSite, dstSite); err != nil {
 				t.Cleanup()
-				return fmt.Errorf("failed to copy mkdocs.yml: %w", err)
+				return fmt.Errorf("failed to copy mkdocs-site container: %w", err)
+			}
+		}
+		// Copy mkdocs-pdf container (for PDF builds)
+		srcPdf := filepath.Join(t.originalRepoRoot, "containers", "mkdocs-pdf")
+		if _, err := os.Stat(srcPdf); err == nil {
+			dstPdf := filepath.Join(t.isolatedDir, "containers", "mkdocs-pdf")
+			if err := copyDir(srcPdf, dstPdf); err != nil {
+				t.Cleanup()
+				return fmt.Errorf("failed to copy mkdocs-pdf container: %w", err)
 			}
 		}
 	}

@@ -571,7 +571,7 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 
 - [Branching Strategies](branching-strategies.md) - Detailed flows for RA and CDe patterns
 - [Unit of Flow](../core-concepts/unit-of-flow.md) - See how trunk fits into the bigger picture
-- [Deployable Units](../core-concepts/deployable-units.md) - What gets built from trunk
+- [Deployable Modules](../core-concepts/deployable-units.md) - What gets built from trunk
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe decision guidance
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages including feature flags
 

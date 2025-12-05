@@ -135,7 +135,7 @@ See **[CD Model](../cd-model/index.md)** for complete stage details.
 **[Core Concepts](../core-concepts/index.md)**:
 
 - Trunk is one of the four Unit of Flow components
-- Deployable Units are built from trunk
+- Deployable Modules are built from trunk
 - Understanding these concepts helps contextualize workflow
 
 **[Testing](../testing/index.md)**:

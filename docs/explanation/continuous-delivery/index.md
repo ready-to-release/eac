@@ -4,7 +4,7 @@ Understanding the Continuous Delivery Model, a comprehensive framework for deliv
 
 **Topics covered:**
 
-- Core concepts: Unit of Flow, Deployable Units, Trunk-Based Development, Branching
+- Core concepts: Unit of Flow, Deployable Modules, Trunk-Based Development, Branching
 - 12-stage Continuous Delivery Model
 - Implementation patterns (Release Approval vs Continuous Deployment)
 - Environment architecture and Infrastructure as Code
@@ -31,13 +31,13 @@ Understanding the four interconnected components that enable Continuous Delivery
 - Integration with CD Model stages
 - Common architectural patterns
 
-### [Deployable Units](core-concepts/deployable-units.md)
+### [Deployable Modules](core-concepts/deployable-units.md)
 
 Understanding what gets built, versioned, and deployed through the CD Model.
 
 **Topics covered:**
 
-- Definition and characteristics of deployable units
+- Definition and characteristics of deployable modules
 - Types: Runtime Systems vs Versioned Components
 - Versioning strategies (Implicit, CalVer, Release Number, SemVer, API)
 - Immutable artifacts and why they matter
