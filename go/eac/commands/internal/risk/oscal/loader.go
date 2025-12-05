@@ -135,18 +135,59 @@ func DiscoverAssessmentResults(workspaceRoot string) (map[string]string, error) 
 		return nil, fmt.Errorf("failed to read risk directory: %w", err)
 	}
 
+	// Find the latest timestamp directory (format: 2025-12-05T10-26-39)
+	var latestTimestamp string
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 
-		moduleName := entry.Name()
-		moduleDir := filepath.Join(riskDir, moduleName)
+		// Check if directory name looks like a timestamp (has 'T' character)
+		// This distinguishes between timestamp dirs and old-style module dirs
+		if strings.Contains(entry.Name(), "T") {
+			if entry.Name() > latestTimestamp {
+				latestTimestamp = entry.Name()
+			}
+		}
+	}
 
-		// Find latest assessment-results file
-		latestFile, err := findLatestAssessmentResults(moduleDir)
-		if err == nil && latestFile != "" {
-			assessments[moduleName] = latestFile
+	// If we found a timestamp directory, look for modules inside it
+	if latestTimestamp != "" {
+		timestampDir := filepath.Join(riskDir, latestTimestamp)
+		moduleEntries, err := os.ReadDir(timestampDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read timestamp directory: %w", err)
+		}
+
+		for _, entry := range moduleEntries {
+			if !entry.IsDir() {
+				continue
+			}
+
+			moduleName := entry.Name()
+			moduleDir := filepath.Join(timestampDir, moduleName)
+
+			// Look for assessment-results.json
+			arFile := filepath.Join(moduleDir, "assessment-results.json")
+			if _, err := os.Stat(arFile); err == nil {
+				assessments[moduleName] = arFile
+			}
+		}
+	} else {
+		// Fallback: Look for old-style structure (direct module directories)
+		for _, entry := range entries {
+			if !entry.IsDir() || strings.Contains(entry.Name(), "T") {
+				continue
+			}
+
+			moduleName := entry.Name()
+			moduleDir := filepath.Join(riskDir, moduleName)
+
+			// Find latest assessment-results file
+			latestFile, err := findLatestAssessmentResults(moduleDir)
+			if err == nil && latestFile != "" {
+				assessments[moduleName] = latestFile
+			}
 		}
 	}
 

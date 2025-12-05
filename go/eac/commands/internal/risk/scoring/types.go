@@ -207,3 +207,8 @@ func FormatRiskScore(rs *RiskScore) string {
 	reset := ResetColor()
 	return fmt.Sprintf("%s%s (%d)%s", color, rs.Band, rs.Score, reset)
 }
+
+// FormatRiskScorePlain formats risk score without ANSI color codes (for Markdown/text output).
+func FormatRiskScorePlain(rs *RiskScore) string {
+	return fmt.Sprintf("%s (%d)", rs.Band, rs.Score)
+}

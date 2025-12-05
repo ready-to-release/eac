@@ -45,6 +45,56 @@ func FindLatestTestRun(workspaceRoot string) (string, error) {
 	return filepath.Join(testDir, timestampDirs[0]), nil
 }
 
+// FindTestResultsForModuleInSuite discovers test result files for a given module in a specific test suite.
+// Test results are stored in: out/test/<suite>/<module>/
+func FindTestResultsForModuleInSuite(workspaceRoot, moduleName, suiteName string) (*TestResults, error) {
+	// Look for module test results in the suite directory
+	testRunDir := filepath.Join(workspaceRoot, "out", "test", suiteName)
+	moduleDir := filepath.Join(testRunDir, moduleName)
+
+	if _, err := os.Stat(moduleDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("no test results for module '%s' in suite '%s'", moduleName, suiteName)
+	}
+
+	results := &TestResults{
+		ModuleName:       moduleName,
+		TestRunDirectory: moduleDir, // Use module-specific directory for freshness checks
+	}
+
+	// Collect test result files
+	entries, err := os.ReadDir(moduleDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read module test directory: %w", err)
+	}
+
+	var latestModTime time.Time
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		filename := entry.Name()
+		fullPath := filepath.Join(moduleDir, filename)
+
+		// Track modification time
+		if info, err := entry.Info(); err == nil {
+			if info.ModTime().After(latestModTime) {
+				latestModTime = info.ModTime()
+			}
+		}
+
+		// Categorize files
+		if strings.HasSuffix(filename, ".cucumber.json") {
+			results.AcceptanceFiles = append(results.AcceptanceFiles, fullPath)
+		} else if strings.HasSuffix(filename, ".json") {
+			results.UnitTestFiles = append(results.UnitTestFiles, fullPath)
+		}
+	}
+
+	results.LastModified = latestModTime
+	return results, nil
+}
+
 // FindTestResultsForModule discovers test result files for a given module.
 // Test results are stored in: out/test/<timestamp>/<module>/
 func FindTestResultsForModule(workspaceRoot, moduleName string) (*TestResults, error) {
@@ -280,16 +330,18 @@ func CalculateTestSummary(features []CucumberFeature) *TestSummary {
 	return summary
 }
 
-// GetTestSummaryForModule calculates test summary for a module from all test results.
-func GetTestSummaryForModule(workspaceRoot, moduleName string) (*TestSummary, error) {
-	acceptanceFiles, err := FindAcceptanceTestResults(workspaceRoot, moduleName)
-	if err != nil || len(acceptanceFiles) == 0 {
-		return nil, fmt.Errorf("no acceptance test results found for module '%s'", moduleName)
+// GetTestSummaryForModule calculates test summary for a module from test results in a specific suite.
+func GetTestSummaryForModule(workspaceRoot, moduleName, testSuite string) (*TestSummary, error) {
+	// Use suite-based lookup
+	testResults, err := FindTestResultsForModuleInSuite(workspaceRoot, moduleName, testSuite)
+	if err != nil {
+		return nil, fmt.Errorf("no test results found for module '%s' in suite '%s'", moduleName, testSuite)
 	}
 
 	totalSummary := &TestSummary{}
 
-	for _, file := range acceptanceFiles {
+	// Process cucumber files
+	for _, file := range testResults.AcceptanceFiles {
 		features, err := ParseCucumberResults(file)
 		if err != nil {
 			continue // Skip files that can't be parsed
@@ -300,6 +352,58 @@ func GetTestSummaryForModule(workspaceRoot, moduleName string) (*TestSummary, er
 		totalSummary.Passed += summary.Passed
 		totalSummary.Failed += summary.Failed
 		totalSummary.Skipped += summary.Skipped
+	}
+
+	// Also count unit test files (Go tests)
+	// Each .json file represents one test package
+	for _, file := range testResults.UnitTestFiles {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+
+		// Parse Go test JSON (one JSON object per line)
+		lines := strings.Split(string(data), "\n")
+		testsPassed := 0
+		testsFailed := 0
+		testsSkipped := 0
+		seenTests := make(map[string]bool)
+
+		for _, line := range lines {
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			var result struct {
+				Action string `json:"Action"`
+				Test   string `json:"Test,omitempty"`
+			}
+			if err := json.Unmarshal([]byte(line), &result); err != nil {
+				continue
+			}
+
+			// Only count test-level results (not package-level)
+			if result.Test == "" {
+				continue
+			}
+
+			// Avoid double-counting tests that have multiple action lines
+			testKey := result.Test
+			if result.Action == "pass" && !seenTests[testKey] {
+				testsPassed++
+				seenTests[testKey] = true
+			} else if result.Action == "fail" && !seenTests[testKey] {
+				testsFailed++
+				seenTests[testKey] = true
+			} else if result.Action == "skip" && !seenTests[testKey] {
+				testsSkipped++
+				seenTests[testKey] = true
+			}
+		}
+
+		totalSummary.Total += testsPassed + testsFailed + testsSkipped
+		totalSummary.Passed += testsPassed
+		totalSummary.Failed += testsFailed
+		totalSummary.Skipped += testsSkipped
 	}
 
 	return totalSummary, nil
@@ -353,3 +457,153 @@ func GetControlToTestMapping(workspaceRoot, moduleName string) (map[string][]str
 
 	return controlMap, nil
 }
+
+// GetControlTestEvidence builds comprehensive control evidence directly from cucumber test results.
+// This function extracts @control: tags from cucumber JSON and builds evidence with test status.
+// This approach is more reliable than parsing feature files separately because:
+// - Cucumber already parses and validates the Gherkin
+// - Tags and test results are in the same file (no path matching needed)
+// - Only includes tests that actually ran in the suite
+func GetControlTestEvidence(workspaceRoot, moduleName, testSuite string) (map[string]*ControlTestEvidence, error) {
+	evidenceMap := make(map[string]*ControlTestEvidence)
+
+	// Load test results from the specified test suite
+	testResults, err := FindTestResultsForModuleInSuite(workspaceRoot, moduleName, testSuite)
+	if err != nil {
+		// No test results means no evidence (module may not have tests in this suite)
+		return evidenceMap, nil
+	}
+
+	// Build evidence directly from cucumber JSON files
+	for _, cucumberFile := range testResults.AcceptanceFiles {
+		features, err := ParseCucumberResults(cucumberFile)
+		if err != nil {
+			continue // Skip files that can't be parsed
+		}
+
+		// Extract control evidence from each feature
+		extractControlEvidenceFromCucumber(evidenceMap, features)
+	}
+
+	// Calculate test counts
+	for _, evidence := range evidenceMap {
+		evidence.TotalTests = len(evidence.Tests)
+		evidence.HasEvidence = evidence.TotalTests > 0
+
+		for _, test := range evidence.Tests {
+			switch test.Status {
+			case "passed":
+				evidence.PassedTests++
+			case "failed":
+				evidence.FailedTests++
+			case "skipped":
+				evidence.SkippedTests++
+			}
+		}
+	}
+
+	return evidenceMap, nil
+}
+
+// extractControlEvidenceFromCucumber extracts control tags and test evidence from cucumber JSON.
+func extractControlEvidenceFromCucumber(evidenceMap map[string]*ControlTestEvidence, features []CucumberFeature) {
+	controlTagPattern := regexp.MustCompile(`@control:([a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
+	controlsTagPattern := regexp.MustCompile(`@controls:((?:[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?,)*[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
+
+	for _, feature := range features {
+		// Extract feature-level control tags
+		featureControls := extractControlsFromTags(feature.Tags, controlTagPattern, controlsTagPattern)
+
+		for _, element := range feature.Elements {
+			if element.Type != "scenario" {
+				continue
+			}
+
+			// Extract scenario-level control tags
+			scenarioControls := extractControlsFromTags(element.Tags, controlTagPattern, controlsTagPattern)
+
+			// Combine feature and scenario controls (scenario tags override)
+			allControls := make(map[string]bool)
+			for _, ctrl := range featureControls {
+				allControls[ctrl] = true
+			}
+			for _, ctrl := range scenarioControls {
+				allControls[ctrl] = true
+			}
+
+			// Determine test status from steps
+			status := determineScenarioStatus(element.Steps)
+
+			// Create test evidence for each control
+			for controlID := range allControls {
+				testEv := TestEvidence{
+					FeaturePath:  feature.URI,
+					FeatureName:  feature.Name,
+					ScenarioName: element.Name,
+					Status:       status,
+					Location:     fmt.Sprintf("%s:%s", filepath.Base(feature.URI), element.Name),
+				}
+
+				// Initialize control evidence if not exists
+				if evidenceMap[controlID] == nil {
+					evidenceMap[controlID] = &ControlTestEvidence{
+						ControlID: controlID,
+						Tests:     []TestEvidence{},
+					}
+				}
+
+				// Add test evidence
+				evidenceMap[controlID].Tests = append(evidenceMap[controlID].Tests, testEv)
+			}
+		}
+	}
+}
+
+// extractControlsFromTags extracts control IDs from cucumber tags.
+func extractControlsFromTags(tags []CucumberTag, controlPattern, controlsPattern *regexp.Regexp) []string {
+	var controls []string
+
+	for _, tag := range tags {
+		// Check @control:<id>
+		if matches := controlPattern.FindStringSubmatch(tag.Name); len(matches) > 1 {
+			controls = append(controls, matches[1])
+		}
+
+		// Check @controls:<id1>,<id2>
+		if matches := controlsPattern.FindStringSubmatch(tag.Name); len(matches) > 1 {
+			ids := strings.Split(matches[1], ",")
+			for _, id := range ids {
+				controls = append(controls, strings.TrimSpace(id))
+			}
+		}
+	}
+
+	return controls
+}
+
+// determineScenarioStatus determines the status of a scenario from its steps.
+func determineScenarioStatus(steps []CucumberStep) string {
+	if len(steps) == 0 {
+		return "not-run"
+	}
+
+	status := "passed"
+	allSkipped := true
+
+	for _, step := range steps {
+		if step.Result.Status == "failed" {
+			return "failed"
+		} else if step.Result.Status == "passed" {
+			allSkipped = false
+		} else if step.Result.Status == "skipped" || step.Result.Status == "pending" {
+			status = "skipped"
+		}
+	}
+
+	if allSkipped {
+		return "skipped"
+	}
+
+	return status
+}
+

@@ -27,6 +27,8 @@ package riskassess
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
@@ -120,7 +122,14 @@ func assessSingleModule(
 	}
 
 	// Build assessment-results
-	arPath := oscal.GetAssessmentResultsPath(config.WorkspaceRoot, moduleName)
+	// Use timestamped directory: out/risk/<timestamp>/<module>/assessment-results.json
+	moduleOutputDir := filepath.Join(config.OutputDir, moduleName)
+	if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
+		result.Error = fmt.Errorf("error creating module output directory: %w", err)
+		return result
+	}
+	arPath := filepath.Join(moduleOutputDir, "assessment-results.json")
+
 	ar, err := buildAssessmentResultsForModule(&moduleConfig, moduleName, profile, evidenceCollection)
 	if err != nil {
 		result.Error = fmt.Errorf("error building assessment results: %w", err)

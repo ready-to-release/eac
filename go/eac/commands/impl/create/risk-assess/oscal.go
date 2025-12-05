@@ -23,8 +23,13 @@ import (
 func buildAssessmentResultsForModule(config *AssessConfig, moduleName string, profile *oscalTypes.Profile, ec *evidence.EvidenceCollection) (*oscalTypes.AssessmentResults, error) {
 	controlIDs := oscal.GetProfileControlIDs(profile)
 
-	// Get control to test mapping
-	controlTestMap, _ := evidence.GetControlToTestMapping(config.WorkspaceRoot, moduleName)
+	// Get control evidence directly from cucumber test results
+	// This extracts @control: tags and test status from the cucumber JSON
+	controlTestEvidence, err := evidence.GetControlTestEvidence(config.WorkspaceRoot, moduleName, config.TestSuite)
+	if err != nil {
+		assessLog.Debugf("Failed to load control evidence for %s: %v", moduleName, err)
+		controlTestEvidence = make(map[string]*evidence.ControlTestEvidence)
+	}
 
 	// Create assessment-results
 	arUUID := uuid.New().String()
@@ -68,7 +73,7 @@ func buildAssessmentResultsForModule(config *AssessConfig, moduleName string, pr
 	resultData.Observations = observations
 
 	// Create findings for each control
-	findings := createFindingsForModule(config, moduleName, controlIDs, controlTestMap, ec, observations)
+	findings := createFindingsForModule(config, moduleName, controlIDs, controlTestEvidence, ec, observations)
 	resultData.Findings = findings
 
 	oscal.AddResult(ar, resultData)
@@ -155,6 +160,13 @@ func createObservationsForModule(config *AssessConfig, moduleName string, ec *ev
 			)
 		}
 
+		// Add SBOM summary props
+		if ec.SBOMSummary != nil {
+			props = append(props,
+				oscalTypes.Property{Name: "sbom-components", Value: fmt.Sprintf("%d", ec.SBOMSummary.TotalComponents)},
+			)
+		}
+
 		secObs := oscalTypes.Observation{
 			UUID:             uuid.New().String(),
 			Title:            "Security Scan Results",
@@ -172,12 +184,15 @@ func createObservationsForModule(config *AssessConfig, moduleName string, ec *ev
 }
 
 // createFindingsForModule creates OSCAL findings for each control for a specific module.
-func createFindingsForModule(config *AssessConfig, moduleName string, controlIDs []string, controlTestMap map[string][]string, ec *evidence.EvidenceCollection, observations *[]oscalTypes.Observation) *[]oscalTypes.Finding {
+func createFindingsForModule(config *AssessConfig, moduleName string, controlIDs []string, controlTestEvidence map[string]*evidence.ControlTestEvidence, ec *evidence.EvidenceCollection, observations *[]oscalTypes.Observation) *[]oscalTypes.Finding {
 	var findings []oscalTypes.Finding
 
 	for _, controlID := range controlIDs {
+		// Get test evidence for this control
+		testEv := controlTestEvidence[controlID]
+
 		// Determine status based on evidence
-		state := determineControlStatus(controlID, controlTestMap, ec)
+		state := determineControlStatusFromEvidence(controlID, testEv, ec)
 
 		target := oscalTypes.FindingTarget{
 			Type:     oscal.TargetTypeControlID,
@@ -198,11 +213,13 @@ func createFindingsForModule(config *AssessConfig, moduleName string, controlIDs
 		}
 
 		var props []oscalTypes.Property
-		// Add test coverage info
-		if tests, ok := controlTestMap[controlID]; ok {
+		// Add test coverage info with detailed status
+		if testEv != nil && testEv.HasEvidence {
 			props = append(props, oscalTypes.Property{
 				Name:  "test-coverage",
-				Value: fmt.Sprintf("%d tests", len(tests)),
+				Value: fmt.Sprintf("%d tests (%d passed, %d failed, %d skipped/not-run)",
+					testEv.TotalTests, testEv.PassedTests, testEv.FailedTests,
+					testEv.SkippedTests+(testEv.TotalTests-testEv.PassedTests-testEv.FailedTests-testEv.SkippedTests)),
 			})
 		} else {
 			props = append(props, oscalTypes.Property{
@@ -211,10 +228,8 @@ func createFindingsForModule(config *AssessConfig, moduleName string, controlIDs
 			})
 		}
 
-		remarks := ""
-		if tests, ok := controlTestMap[controlID]; ok {
-			remarks = fmt.Sprintf("Tested by: %s", strings.Join(tests, ", "))
-		}
+		// Build detailed remarks with test evidence
+		remarks := buildRemarksFromEvidence(controlID, testEv)
 
 		finding := oscalTypes.Finding{
 			UUID:                uuid.New().String(),
@@ -232,7 +247,81 @@ func createFindingsForModule(config *AssessConfig, moduleName string, controlIDs
 	return &findings
 }
 
+// determineControlStatusFromEvidence determines the satisfied/not-satisfied status using comprehensive evidence.
+func determineControlStatusFromEvidence(controlID string, testEv *evidence.ControlTestEvidence, ec *evidence.EvidenceCollection) string {
+	// If no tests exist for this control, not-satisfied
+	if testEv == nil || !testEv.HasEvidence {
+		return oscal.StateNotSatisfied
+	}
+
+	// If any tests failed, not-satisfied
+	if testEv.FailedTests > 0 {
+		return oscal.StateNotSatisfied
+	}
+
+	// If critical/high vulnerabilities exist, not-satisfied
+	if ec.VulnSummary != nil && (ec.VulnSummary.Critical > 0 || ec.VulnSummary.High > 0) {
+		return oscal.StateNotSatisfied
+	}
+
+	// If tests passed and no critical/high vulns, satisfied
+	if testEv.PassedTests > 0 {
+		return oscal.StateSatisfied
+	}
+
+	// If tests exist but haven't run yet or were skipped, not-satisfied
+	return oscal.StateNotSatisfied
+}
+
+// buildRemarksFromEvidence builds detailed remarks string from test evidence.
+func buildRemarksFromEvidence(controlID string, testEv *evidence.ControlTestEvidence) string {
+	if testEv == nil || !testEv.HasEvidence {
+		return "No test coverage found for this control."
+	}
+
+	var remarks strings.Builder
+	remarks.WriteString(fmt.Sprintf("Control %s is covered by %d test(s):\n\n", controlID, testEv.TotalTests))
+
+	// Group tests by status
+	passed := []string{}
+	failed := []string{}
+	notRun := []string{}
+
+	for _, test := range testEv.Tests {
+		testDesc := fmt.Sprintf("  - %s: %s", test.ScenarioName, test.FeaturePath)
+		switch test.Status {
+		case "passed":
+			passed = append(passed, testDesc)
+		case "failed":
+			failed = append(failed, testDesc)
+		default:
+			notRun = append(notRun, testDesc)
+		}
+	}
+
+	if len(passed) > 0 {
+		remarks.WriteString("✓ Passed:\n")
+		remarks.WriteString(strings.Join(passed, "\n"))
+		remarks.WriteString("\n\n")
+	}
+
+	if len(failed) > 0 {
+		remarks.WriteString("✗ Failed:\n")
+		remarks.WriteString(strings.Join(failed, "\n"))
+		remarks.WriteString("\n\n")
+	}
+
+	if len(notRun) > 0 {
+		remarks.WriteString("○ Not Run/Skipped:\n")
+		remarks.WriteString(strings.Join(notRun, "\n"))
+		remarks.WriteString("\n")
+	}
+
+	return remarks.String()
+}
+
 // determineControlStatus determines the satisfied/not-satisfied status for a control.
+// Deprecated: Use determineControlStatusFromEvidence instead.
 func determineControlStatus(controlID string, controlTestMap map[string][]string, ec *evidence.EvidenceCollection) string {
 	// Check if we have tests for this control
 	tests, hasTests := controlTestMap[controlID]
