@@ -241,9 +241,6 @@ Action items:
 
 ## Report Files
 
-### Aggregated Report
-- `{{ .AggregatedReportPath }}`
-
 ### Individual Module Reports
 {{ range .ModuleResults -}}
 - **{{ .Module }}**: `{{ .ReportPath }}`
