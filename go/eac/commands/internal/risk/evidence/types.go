@@ -92,6 +92,11 @@ type VulnerabilitySummary struct {
 	Total    int `json:"total"`
 }
 
+// SBOMSummary provides aggregate SBOM information.
+type SBOMSummary struct {
+	TotalComponents int `json:"total_components"`
+}
+
 // EvidenceCollection holds all collected evidence for a module.
 type EvidenceCollection struct {
 	Module           string             `json:"module"`
@@ -99,6 +104,7 @@ type EvidenceCollection struct {
 	SecurityResults  *SecurityResults   `json:"security_results,omitempty"`
 	TestSummary      *TestSummary       `json:"test_summary,omitempty"`
 	VulnSummary      *VulnerabilitySummary `json:"vuln_summary,omitempty"`
+	SBOMSummary      *SBOMSummary       `json:"sbom_summary,omitempty"`
 	CollectedAt      time.Time          `json:"collected_at"`
 }
 
@@ -153,4 +159,24 @@ func (ec *EvidenceCollection) LatestModTime() time.Time {
 	}
 
 	return latest
+}
+
+// ControlTestEvidence represents evidence for a specific control from tests.
+type ControlTestEvidence struct {
+	ControlID     string         `json:"control_id"`
+	Tests         []TestEvidence `json:"tests"`
+	TotalTests    int            `json:"total_tests"`
+	PassedTests   int            `json:"passed_tests"`
+	FailedTests   int            `json:"failed_tests"`
+	SkippedTests  int            `json:"skipped_tests"`
+	HasEvidence   bool           `json:"has_evidence"`
+}
+
+// TestEvidence represents a single test covering a control.
+type TestEvidence struct {
+	FeaturePath  string `json:"feature_path"`
+	FeatureName  string `json:"feature_name"`
+	ScenarioName string `json:"scenario_name"`
+	Status       string `json:"status"` // "passed", "failed", "skipped", "not-run"
+	Location     string `json:"location"` // file:line or file:scenario
 }

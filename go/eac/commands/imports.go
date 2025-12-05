@@ -29,7 +29,6 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/serve/design"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/serve/docs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/show"
-	_ "github.com/ready-to-release/eac/go/eac/commands/impl/show/risk-report"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/specs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/specs/unused"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates"

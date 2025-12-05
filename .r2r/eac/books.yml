@@ -135,3 +135,78 @@ books:
           title: "File Ownership"
           description: "Repository files with module ownership"
         order: 4
+
+  # Risk Evidence Package - comprehensive audit evidence bundle
+  - name: risk-evidence-package
+    description: "Comprehensive risk assessment evidence package with all supporting artifacts"
+
+    sources:
+      # ==========================================================================
+      # 00 - Risk Assessment Report
+      # ==========================================================================
+      - type: copy
+        from: "out/risk/**/risk-assessment-*.md"
+        to: "00-risk-assessment/"
+
+      # ==========================================================================
+      # 01 - OSCAL Evidence
+      # ==========================================================================
+      - type: copy
+        from: "specs/.risk-controls/risk-profile.json"
+        to: "01-oscal-evidence/risk-profile.json"
+
+      - type: copy
+        from: "out/risk/**/assessment-results.json"
+        to: "01-oscal-evidence/"
+
+      # ==========================================================================
+      # 02 - Test Evidence
+      # ==========================================================================
+      - type: copy
+        from: "out/test/acceptance/**/*.json"
+        to: "02-test-evidence/acceptance/"
+
+      - type: copy
+        from: "out/test/commit/**/*.json"
+        to: "02-test-evidence/commit/"
+
+      - type: command
+        command: "show tests"
+        target: "02-test-evidence/test-suite-summary.md"
+        frontmatter:
+          title: "Test Suite Summary"
+          description: "Overview of all test suites and their status"
+        order: 1
+
+      # ==========================================================================
+      # 03 - Security Evidence
+      # ==========================================================================
+      - type: copy
+        from: "out/security/**/*.json"
+        to: "03-security-evidence/"
+
+      # ==========================================================================
+      # 04 - Specifications
+      # ==========================================================================
+      - type: copy
+        from: "specs/**/*.feature"
+        to: "04-specifications/"
+
+      # ==========================================================================
+      # 05 - Module Contracts
+      # ==========================================================================
+      - type: command
+        command: "show modules"
+        target: "05-module-contracts/modules.md"
+        frontmatter:
+          title: "Module Contracts"
+          description: "All module contracts in the repository"
+        order: 1
+
+      - type: command
+        command: "show dependencies"
+        target: "05-module-contracts/dependencies.md"
+        frontmatter:
+          title: "Module Dependencies"
+          description: "Dependency relationships between modules"
+        order: 2
