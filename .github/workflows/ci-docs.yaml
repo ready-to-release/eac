@@ -69,6 +69,13 @@ jobs:
           name: build-artifacts-docs
           path: out/build/docs/**
 
+      - name: Setup Commands Binary
+        id: commands
+        if: always()
+        uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+
       - name: Build Summary
         if: always()
         run: |
