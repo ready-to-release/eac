@@ -136,15 +136,18 @@ func convertAttrListImages(content string) (string, int) {
 			return match // No recognizable attributes, keep original
 		}
 
-		// Adjust relative paths for MkDocs directory structure
-		// MkDocs converts page.md → page/index.html, adding a directory level
-		// So relative paths need an extra ../ to compensate
-		if strings.HasPrefix(src, "../") {
-			src = "../" + src
+		// MkDocs converts markdown files to subdirectories (file.md -> file/index.html)
+		// This means relative paths need an extra "../" to work correctly in the HTML.
+		// For example: foo/bar.md with ../assets/x.png becomes foo/bar/index.html
+		// The path needs to be ../../assets/x.png to resolve correctly.
+		// Only adjust relative paths (starting with ../ or not starting with / or http)
+		adjustedSrc := src
+		if strings.HasPrefix(src, "../") || (!strings.HasPrefix(src, "/") && !strings.HasPrefix(src, "http")) {
+			adjustedSrc = "../" + src
 		}
 
 		count++
-		return fmt.Sprintf(`<img src="%s" %s alt="%s">`, src, htmlAttrs, alt)
+		return fmt.Sprintf(`<img src="%s" %s alt="%s">`, adjustedSrc, htmlAttrs, alt)
 	})
 
 	return result, count

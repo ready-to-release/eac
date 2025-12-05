@@ -66,7 +66,8 @@ jobs:
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
           echo "Building PDF documentation (output mode from books.yml)..."
-          $COMMANDS build books
+          # Use --all to include books with default: false (all PDF books)
+          $COMMANDS build books --all
 
       - name: Verify PDF outputs
         id: verify

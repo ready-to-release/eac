@@ -28,7 +28,7 @@ The Unit of Flow provides a mental model for how Continuous Delivery works by br
 
 ---
 
-## [Deployable Units](deployable-units.md)
+## [Deployable Modules](deployable-units.md)
 
 Understanding what gets built, versioned, and deployed through the CD Model.
 
@@ -55,14 +55,14 @@ Understanding these core concepts is essential because:
 
 - How code flows from development to production
 - Why trunk-based development matters
-- How deployable units relate to repositories
+- How deployable modules relate to repositories
 - Where the deployment pipeline fits in
 
-**Deployable Units** establish:
+**Deployable Modules** establish:
 
 - What gets versioned and released
 - How to structure your repositories
-- When to create new deployable units
+- When to create new deployable modules
 - How to manage dependencies between units
 
 These concepts are referenced throughout the CD Model documentation and are prerequisite knowledge for understanding implementation patterns.

@@ -78,7 +78,7 @@ Repository organization is a critical architectural decision that impacts develo
 **Monorepo (Single Repository):**
 
 - All code in one repository
-- Multiple deployable units in one trunk
+- Multiple deployable modules in one trunk
 - Shared dependencies and tooling
 - Atomic cross-service changes possible
 
@@ -123,9 +123,9 @@ The complete architecture flows from code organization through production deploy
 
 ### Layer 1 - Code Organization
 
-**Trunk (Repository)** contains one or more **Deployable Units**:
+**Trunk (Repository)** contains one or more **Deployable Modules**:
 
-- **Monorepo**: Multiple deployable units in single repository
+- **Monorepo**: Multiple deployable modules in single repository
 - **Polyrepo**: One deployable unit per repository
 - **Path filters** (monorepo) or **repository boundaries** (polyrepo) define unit boundaries
 

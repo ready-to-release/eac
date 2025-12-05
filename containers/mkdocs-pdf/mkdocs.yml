@@ -1,0 +1,85 @@
+# MkDocs PDF Template
+# This template is used for generating PDF documentation
+# Dynamic values are injected by the Go build layer:
+#   - site_name, site_url, docs_dir, extra_css are set at build time
+#   - extra_css is set based on theme (pdf-dark or pdf-light)
+
+site_name: Documentation
+site_description: Generated PDF documentation
+site_url: ""
+docs_dir: staging
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: light blue
+
+plugins:
+  - search
+  - awesome-nav
+  # Mermaid to SVG conversion for PDF generation
+  # Pre-renders mermaid diagrams to SVG images before PDF generation
+  # Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
+  - mermaid-to-svg:
+      # Output SVG files to rendered assets directory
+      output_dir: assets/rendered/mermaid
+      # Use dark theme to match PDF template
+      theme: dark
+      # Puppeteer configuration for Docker environments
+      puppeteer_config: /docs/containers/mkdocs-pdf/puppeteer-config.json
+      # Disable htmlLabels for PDF compatibility
+      # When enabled, mermaid generates <foreignObject> HTML elements
+      # that PDF tools cannot render, causing text to disappear
+      mermaid_config:
+        htmlLabels: false
+        flowchart:
+          htmlLabels: false
+        class:
+          htmlLabels: false
+  # PDF export plugin - Playwright-based
+  - exporter:
+      formats:
+        pdf:
+          enabled: true
+          # Use concurrent PDF generation for speed (max 16)
+          concurrency: 8
+          # Custom stylesheet for PDF - injected at build time based on theme
+          stylesheets:
+            - assets/templates/pdf-dark/styles.css
+
+markdown_extensions:
+  - footnotes
+  - attr_list
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: false  # Disabled for PDF compatibility
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          # For PDF, mermaid-to-svg handles rendering, so just pass through
+          format: !!python/name:pymdownx.superfences.fence_div_format
+
+# PDF-specific CSS - injected at build time based on theme
+extra_css:
+  - assets/templates/pdf-dark/styles.css
+
+# Validation settings
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn
