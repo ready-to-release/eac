@@ -404,37 +404,6 @@ modules:
           - .github/workflows/ci-vscode-ext-commit.yaml
 
   # ============================================================================
-  # Repository Report
-  # ============================================================================
-  - moniker: repository-report
-    name: Repository Report
-    type: mkdocs-site
-    description: Generated report of repository modules and dependency graph
-    depends_on:
-      - eac-commands
-    files:
-      root: out/reports/repository
-      assets:
-        - "**/*.md"
-        - assets/**
-
-  # ============================================================================
-  # Risk Evidence Package
-  # ============================================================================
-  - moniker: risk-evidence-package
-    name: Risk Evidence Package
-    type: mkdocs-site
-    description: Comprehensive risk assessment evidence package with all supporting artifacts
-    depends_on:
-      - eac-commands
-    files:
-      root: out/books/risk-evidence-package
-      assets:
-        - "**/*.md"
-        - "**/*.json"
-        - "**/*.feature"
-
-  # ============================================================================
   # Release Documentation
   # ============================================================================
   - moniker: release-docs
