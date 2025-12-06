@@ -42,15 +42,24 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	cfg, _ := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if cfg != nil {
 		cfg.LoadBooks(false)
-		// Use filtered books unless --all flag is set
-		var moduleBooks []*config.Book
-		if opts.BuildAll {
-			moduleBooks = cfg.GetBooksByModule(module.Moniker)
-		} else {
-			moduleBooks = cfg.GetDefaultBooksByModule(module.Moniker)
-		}
-		if len(moduleBooks) > 0 {
-			return buildModuleBooks(module, moduleBooks, workspaceRoot, outputDir, logWriter)
+		// Check if module has ANY books defined
+		allBooks := cfg.GetBooksByModule(module.Moniker)
+		if len(allBooks) > 0 {
+			// Module has books - use filtered list unless --all flag is set
+			var moduleBooks []*config.Book
+			if opts.BuildAll {
+				moduleBooks = allBooks
+			} else {
+				moduleBooks = cfg.GetDefaultBooksByModule(module.Moniker)
+			}
+			if len(moduleBooks) > 0 {
+				return buildModuleBooks(module, moduleBooks, workspaceRoot, outputDir, logWriter)
+			}
+			// Module has books but all are non-default - skip with success
+			Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+			Logln(logWriter, "📚 All %d book(s) have default: false - skipping (use --all to build)", len(allBooks))
+			Logln(logWriter, "✅ Build skipped (no default books)")
+			return 0
 		}
 	}
 

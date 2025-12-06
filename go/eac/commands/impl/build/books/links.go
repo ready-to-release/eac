@@ -96,7 +96,7 @@ func (p *Preprocessor) convertAttrListImagesToHTML() error {
 		}
 
 		original := string(content)
-		modified, count := convertAttrListImages(original)
+		modified, count := convertAttrListImages(original, true) // adjustPaths=true for MkDocs
 
 		if count > 0 {
 			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
@@ -117,7 +117,9 @@ func (p *Preprocessor) convertAttrListImagesToHTML() error {
 }
 
 // convertAttrListImages converts ![alt](path){attrs} to <img> tags
-func convertAttrListImages(content string) (string, int) {
+// If adjustPaths is true, prepends ../ to relative paths for MkDocs compatibility
+// (MkDocs converts file.md to file/index.html, changing relative path depth)
+func convertAttrListImages(content string, adjustPaths bool) (string, int) {
 	count := 0
 
 	result := imageWithAttrsPattern.ReplaceAllStringFunc(content, func(match string) string {
@@ -136,13 +138,9 @@ func convertAttrListImages(content string) (string, int) {
 			return match // No recognizable attributes, keep original
 		}
 
-		// MkDocs converts markdown files to subdirectories (file.md -> file/index.html)
-		// This means relative paths need an extra "../" to work correctly in the HTML.
-		// For example: foo/bar.md with ../assets/x.png becomes foo/bar/index.html
-		// The path needs to be ../../assets/x.png to resolve correctly.
-		// Only adjust relative paths (starting with ../ or not starting with / or http)
+		// Optionally adjust paths for MkDocs (file.md -> file/index.html changes depth)
 		adjustedSrc := src
-		if strings.HasPrefix(src, "../") || (!strings.HasPrefix(src, "/") && !strings.HasPrefix(src, "http")) {
+		if adjustPaths && !strings.HasPrefix(src, "/") && !strings.HasPrefix(src, "http") {
 			adjustedSrc = "../" + src
 		}
 
