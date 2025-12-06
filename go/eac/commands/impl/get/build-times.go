@@ -13,9 +13,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 )
 
 func init() {
@@ -62,18 +64,26 @@ func GetBuildTimes() int {
 func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 	return get.ExecuteGetCommand(func() (interface{}, error) {
 		// Get repository root if needed
+		var repoRoot string
 		if buildOutputDir == "" {
 			cwd, err := os.Getwd()
 			if err != nil {
 				return nil, fmt.Errorf("failed to get current directory: %w", err)
 			}
 
-			repoRoot, err := findRepoRoot(cwd)
+			repoRoot, err = findRepoRoot(cwd)
 			if err != nil {
 				return nil, fmt.Errorf("failed to find repository root: %w", err)
 			}
 
 			buildOutputDir = filepath.Join(repoRoot, "out", "build")
+		} else {
+			// If buildOutputDir is provided, derive repo root from it
+			var err error
+			repoRoot, err = findRepoRoot(buildOutputDir)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find repository root: %w", err)
+			}
 		}
 
 		// Check if build output directory exists
@@ -85,6 +95,12 @@ func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 		timings, err := ParseBuildLog(buildOutputDir)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse build logs: %w", err)
+		}
+
+		// Populate module types from contracts
+		timings, err = populateModuleTypes(timings, repoRoot)
+		if err != nil {
+			return nil, fmt.Errorf("failed to populate module types: %w", err)
 		}
 
 		// Filter by modules if specified
@@ -116,28 +132,63 @@ func ParseBuildLog(buildDir string) ([]BuildTiming, error) {
 	var timings []BuildTiming
 	scanner := bufio.NewScanner(file)
 
-	// Regex to match build result lines
-	// Format: "✅   1.1s eac-core                                       go-library"
-	// Format: "❌   2.3s module-name                                   module-type"
-	resultRe := regexp.MustCompile(`^([✅❌])\s+([0-9.]+)s\s+(\S+)\s+(\S+)\s*$`)
+	// Parse failed modules section first
+	failedModules := make(map[string]bool)
+	inFailedSection := false
+
+	// Regex to match timing summary lines
+	// Format: "  10.6s  docs"
+	// Format: "   2.7s  r2r-cli"
+	timingRe := regexp.MustCompile(`^\s+([0-9.]+)s\s+(\S+)`)
+
+	// Regex to match failed module lines (after "❌ Failed:" header)
+	// Format: "  module-name"
+	failedRe := regexp.MustCompile(`^\s+(\S+)`)
 
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Try to match build result line
-		if matches := resultRe.FindStringSubmatch(line); matches != nil {
-			statusIcon := matches[1]
-			durationStr := matches[2]
-			module := matches[3]
-			moduleType := matches[4]
+		// Check for failed section header
+		if strings.Contains(line, "❌ Failed:") {
+			inFailedSection = true
+			continue
+		}
+
+		// Check for section end (empty line or new section)
+		if inFailedSection && (line == "" || strings.HasPrefix(line, "===")) {
+			inFailedSection = false
+			continue
+		}
+
+		// Parse failed module names
+		if inFailedSection {
+			if matches := failedRe.FindStringSubmatch(line); matches != nil {
+				module := matches[1]
+				// Remove any trailing notes like "(retries exceeded)"
+				module = strings.Split(module, " ")[0]
+				failedModules[module] = true
+			}
+			continue
+		}
+
+		// Parse timing lines (in the "=== Timing Summary ===" section)
+		if matches := timingRe.FindStringSubmatch(line); matches != nil {
+			durationStr := matches[1]
+			module := matches[2]
+
+			// Skip the TOTAL line
+			if module == "TOTAL" {
+				continue
+			}
 
 			duration, err := strconv.ParseFloat(durationStr, 64)
 			if err != nil {
 				continue
 			}
 
+			// Determine status based on failed modules list
 			status := "PASS"
-			if statusIcon == "❌" {
+			if failedModules[module] {
 				status = "FAIL"
 			}
 
@@ -145,7 +196,7 @@ func ParseBuildLog(buildDir string) ([]BuildTiming, error) {
 				Module:   module,
 				Duration: duration,
 				Status:   status,
-				Type:     moduleType,
+				Type:     "", // Type will be populated later
 			})
 		}
 	}
@@ -173,6 +224,27 @@ func filterBuildTimingsByModules(timings []BuildTiming, modules []string) []Buil
 	}
 
 	return filtered
+}
+
+// populateModuleTypes loads module contracts and populates the Type field for each timing
+func populateModuleTypes(timings []BuildTiming, repoRoot string) ([]BuildTiming, error) {
+	// Load module contracts
+	moduleReport, err := reports.GetModuleContracts(repoRoot)
+	if err != nil {
+		return timings, fmt.Errorf("failed to load module contracts: %w", err)
+	}
+
+	// Populate types
+	for i := range timings {
+		if module, exists := moduleReport.Registry.Get(timings[i].Module); exists {
+			timings[i].Type = module.Type
+		} else {
+			// Module not found in contracts, use a placeholder
+			timings[i].Type = "unknown"
+		}
+	}
+
+	return timings, nil
 }
 
 // BuildBuildSummary aggregates timing data and builds summary

@@ -11,6 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 )
 
 func init() {
@@ -25,7 +26,8 @@ func ShowBuildTimes() int {
 // If modules is nil, shows all timings. topN controls how many slowest builds to show.
 // If buildOutputDir is empty, defaults to out/build.
 func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string) int {
-	// Get repository root if needed
+	// Get repository root
+	var repoRoot string
 	if buildOutputDir == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -33,14 +35,23 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 			return 1
 		}
 
-		repoRoot, err := findRepoRoot(cwd)
+		repoRoot, err = findRepoRoot(cwd)
 		if err != nil {
 			log.Errorf("failed to find repository root: %v", err)
 			return 1
 		}
 
 		buildOutputDir = filepath.Join(repoRoot, "out", "build")
+	} else {
+		// Derive repo root from buildOutputDir
+		var err error
+		repoRoot, err = findRepoRoot(buildOutputDir)
+		if err != nil {
+			log.Errorf("failed to find repository root: %v", err)
+			return 1
+		}
 	}
+
 	if _, err := os.Stat(buildOutputDir); os.IsNotExist(err) {
 		log.Errorf("build output directory not found: %s (run build first)", buildOutputDir)
 		return 1
@@ -51,6 +62,21 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 	if err != nil {
 		log.Errorf("failed to parse build logs: %v", err)
 		return 1
+	}
+
+	// Populate module types from contracts
+	moduleReport, err := reports.GetModuleContracts(repoRoot)
+	if err != nil {
+		log.Errorf("failed to load module contracts: %v", err)
+		return 1
+	}
+
+	for i := range timings {
+		if module, exists := moduleReport.Registry.Get(timings[i].Module); exists {
+			timings[i].Type = module.Type
+		} else {
+			timings[i].Type = "unknown"
+		}
 	}
 
 	// Filter by modules if specified
@@ -192,9 +218,9 @@ func displaySlowestBuilds(summary *get.BuildTimingSummary, topN int) {
 		WithHeaders("#", "Duration (s)", "Status", "Module", "Type")
 
 	for i, timing := range sortedTimings {
-		status := "✅"
+		status := "✅ "
 		if timing.Status == "FAIL" {
-			status = "❌"
+			status = "❌ "
 		}
 
 		tb.AddRow(

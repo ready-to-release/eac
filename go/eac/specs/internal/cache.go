@@ -2,7 +2,6 @@
 package internal
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +10,10 @@ import (
 
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+var log = logging.C()
 
 // TestCache provides cached repository data shared across all test scenarios.
 // Uses direct git operations, avoiding FileCache wrapper for simplicity.
@@ -29,9 +31,6 @@ type TestCache struct {
 
 	// trackedFiles is the cached list from git ls-files
 	trackedFiles []string
-
-	// moduleReport is the cached module contracts
-	moduleReport *contractsreports.ModuleContractReport
 }
 
 // NewTestCache creates a new empty test cache.
@@ -63,7 +62,6 @@ func (c *TestCache) EnsurePopulated(repoRoot string) error {
 	// Reset if repo root changed
 	if c.repoRoot != repoRoot {
 		c.trackedFiles = nil
-		c.moduleReport = nil
 		c.populated = false
 		c.repoRoot = repoRoot
 	}
@@ -76,10 +74,12 @@ func (c *TestCache) EnsurePopulated(repoRoot string) error {
 	if cachedData, err := os.ReadFile(cachedFilePath); err == nil && len(cachedData) > 0 {
 		c.trackedFiles = strings.Split(strings.TrimSpace(string(cachedData)), "\n")
 		c.populated = true
+		log.Debugf("Cache populated from pre-computed file (files=%d, source=.git/cached-files.txt)", len(c.trackedFiles))
 		return nil
 	}
 
 	// Fall back to git ls-files with timing
+	log.Debug("Pre-computed file list not found, using git ls-files")
 	start := time.Now()
 	repo, err := git.Open(repoRoot)
 	openDuration := time.Since(start)
@@ -95,8 +95,9 @@ func (c *TestCache) EnsurePopulated(repoRoot string) error {
 	}
 
 	// Log timing for investigation
-	fmt.Printf("⏱️  Cache populate timing: git.Open=%v, TrackedFiles=%v, total=%v, files=%d\n",
-		openDuration, lsFilesDuration, openDuration+lsFilesDuration, len(files))
+	totalDuration := openDuration + lsFilesDuration
+	log.Debugf("Cache populate timing: git.Open=%v, TrackedFiles=%v, total=%v, files=%d",
+		openDuration, lsFilesDuration, totalDuration, len(files))
 
 	// Normalize paths to forward slashes for consistency
 	c.trackedFiles = make([]string, len(files))
@@ -201,36 +202,15 @@ func (c *TestCache) FilesMatchingAnyExtension(extensions []string) []string {
 	return filtered
 }
 
-// ModuleReport returns the cached module report, loading it if necessary.
+// ModuleReport returns the module contract report.
+// Caching is handled internally by GetModuleContracts - consumers don't need to know.
 func (c *TestCache) ModuleReport() (*contractsreports.ModuleContractReport, error) {
 	c.mu.RLock()
-	if c.moduleReport != nil {
-		report := c.moduleReport
-		c.mu.RUnlock()
-		return report, nil
-	}
+	repoRoot := c.repoRoot
 	c.mu.RUnlock()
 
-	// Upgrade to write lock to load
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Double-check after acquiring write lock
-	if c.moduleReport != nil {
-		return c.moduleReport, nil
-	}
-
-	// Load module contracts with timing
-	start := time.Now()
-	report, err := contractsreports.GetModuleContracts(c.repoRoot)
-	duration := time.Since(start)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("⏱️  ModuleReport loading: %v, modules=%d\n", duration, len(report.Modules))
-	c.moduleReport = report
-	return report, nil
+	// GetModuleContracts has internal global caching - just call it
+	return contractsreports.GetModuleContracts(repoRoot)
 }
 
 // AbsolutePath returns the absolute path for a relative tracked file.

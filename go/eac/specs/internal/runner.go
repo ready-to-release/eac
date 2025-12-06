@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"sync"
@@ -16,6 +15,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
+
+// log is shared across the internal package (declared in cache.go)
 
 // Global process-level cache shared across ALL test packages
 // This prevents 14+ concurrent git ls-files calls when running tests in parallel
@@ -41,7 +42,7 @@ func BuildTagFilter() string {
 	// Load config for skip reasons
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
 	// Build base tag filter
@@ -174,7 +175,7 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 	// Get repo root once
 	repoRoot, err := GetRepoRoot()
 	if err != nil {
-		log.Fatalf("Failed to get repository root: %v", err)
+		panic(fmt.Sprintf("Failed to get repository root: %v", err))
 	}
 
 	// Log suite initialization diagnostics (only once per suite)
@@ -232,7 +233,7 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 						return gctx, fmt.Errorf("failed to create fixture template: %w", err)
 					}
 					fixtureTemplate = template
-					fmt.Printf("⏱️  Fixture template creation: %v\n", duration)
+					log.Debugf("Fixture template created: %v", duration)
 				}
 				templateMu.Unlock()
 
@@ -243,7 +244,7 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 				}
 				duration := time.Since(start)
 				if duration > 100*time.Millisecond {
-					fmt.Printf("⏱️  Isolation setup: %v\n", duration)
+					log.Debugf("Isolation setup: %v", duration)
 				}
 			}
 

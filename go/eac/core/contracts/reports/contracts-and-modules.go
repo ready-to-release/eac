@@ -4,12 +4,117 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 var log = logging.C()
+
+// Global process-level cache for module contracts
+// This prevents repeated parsing of module.contract.yaml files across parallel test packages
+var (
+	globalModuleContractCache     *ModuleContractCache
+	globalModuleContractCacheOnce sync.Once
+)
+
+// ModuleContractCache provides cached module contract data.
+// Thread-safe for concurrent access by parallel test packages.
+// No cache invalidation - data persists for process lifetime.
+type ModuleContractCache struct {
+	mu sync.RWMutex
+
+	// workspaceRoot is the workspace root used to populate this cache
+	workspaceRoot string
+
+	// populated indicates if the cache has been loaded and validated
+	populated bool
+
+	// report is the cached module contract report (validated)
+	report *ModuleContractReport
+}
+
+// NewModuleContractCache creates a new empty cache.
+func NewModuleContractCache() *ModuleContractCache {
+	return &ModuleContractCache{}
+}
+
+// EnsurePopulated ensures the cache is populated for the given workspace root.
+// If already populated for the same root, this is a no-op.
+// Thread-safe with double-checked locking pattern.
+//
+// Returns error if:
+//   - Module loading fails
+//   - Module validation fails
+//   - Report building fails
+func (c *ModuleContractCache) EnsurePopulated(workspaceRoot string) error {
+	// Fast path: read lock to check if already populated
+	c.mu.RLock()
+	if c.populated && c.workspaceRoot == workspaceRoot {
+		log.Debugf("Module contracts cache hit (workspace: %s)", workspaceRoot)
+		c.mu.RUnlock()
+		return nil
+	}
+	c.mu.RUnlock()
+
+	// Slow path: write lock to populate
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Double-check: another goroutine may have populated while we waited
+	if c.populated && c.workspaceRoot == workspaceRoot {
+		log.Debugf("Module contracts cache hit after wait (workspace: %s)", workspaceRoot)
+		return nil
+	}
+
+	// Reset if workspace root changed
+	if c.workspaceRoot != workspaceRoot {
+		log.Debugf("Module contracts cache reset (workspace changed: %s -> %s)", c.workspaceRoot, workspaceRoot)
+		c.report = nil
+		c.populated = false
+		c.workspaceRoot = workspaceRoot
+	}
+
+	// Load and validate module contracts with timing
+	start := time.Now()
+	log.Debugf("Module contracts loading started (workspace: %s)", workspaceRoot)
+
+	// Load all module contracts (VALIDATION happens inside LoadFromWorkspace)
+	registry, err := modules.LoadFromWorkspace(workspaceRoot)
+	if err != nil {
+		return fmt.Errorf("failed to load module contracts: %w", err)
+	}
+
+	// Build report from validated registry
+	report, err := buildModuleContractReport(registry)
+	if err != nil {
+		return fmt.Errorf("failed to build module contract report: %w", err)
+	}
+
+	duration := time.Since(start)
+	log.Debugf("Module contracts loaded: %v, modules=%d", duration, len(report.Modules))
+
+	// Cache the validated report
+	c.report = report
+	c.populated = true
+	return nil
+}
+
+// GetReport returns the cached module contract report.
+// MUST call EnsurePopulated first, otherwise panics.
+// This is a programmer error - all callers must ensure population.
+func (c *ModuleContractCache) GetReport() *ModuleContractReport {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if !c.populated {
+		panic("ModuleContractCache not populated - call EnsurePopulated() first")
+	}
+
+	return c.report
+}
 
 // ModuleContractReport contains information about loaded module contracts
 type ModuleContractReport struct {
@@ -18,11 +123,16 @@ type ModuleContractReport struct {
 	Registry     *modules.Registry
 }
 
-// GetModuleContracts loads and reports on all module contracts
+// GetModuleContracts loads and reports on all module contracts.
+// Uses global in-memory cache to avoid repeated file I/O and parsing.
+//
+// BACKWARD COMPATIBLE: API unchanged, caching is internal optimization.
+//
+// Thread-safe: Multiple goroutines can call concurrently.
+// First caller loads and validates, subsequent callers use cached data.
 //
 // Parameters:
 //   - workspaceRoot: Repository root (if empty, will be detected automatically)
-//   - version: Module contract version (e.g., "0.1.0")
 //
 // Returns:
 //   - ModuleContractReport containing all loaded contracts and metadata
@@ -36,12 +146,25 @@ type ModuleContractReport struct {
 //	}
 //	fmt.Printf("Total modules: %d\n", report.TotalModules)
 func GetModuleContracts(workspaceRoot string) (*ModuleContractReport, error) {
-	// Load all module contracts
-	registry, err := modules.LoadFromWorkspace(workspaceRoot)
-	if err != nil {
+	// Initialize global cache once per process
+	globalModuleContractCacheOnce.Do(func() {
+		log.Debug("Initializing global module contract cache")
+		globalModuleContractCache = NewModuleContractCache()
+	})
+
+	// Ensure cache is populated (no-op if already loaded)
+	if err := globalModuleContractCache.EnsurePopulated(workspaceRoot); err != nil {
 		return nil, err
 	}
 
+	// Return cached validated report
+	return globalModuleContractCache.GetReport(), nil
+}
+
+// buildModuleContractReport builds a report from a validated registry.
+// Extracted from GetModuleContracts for better separation of concerns.
+// PRIVATE helper function.
+func buildModuleContractReport(registry *modules.Registry) (*ModuleContractReport, error) {
 	// Get all modules sorted by moniker
 	allModules := registry.All()
 	sort.Slice(allModules, func(i, j int) bool {
