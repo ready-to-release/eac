@@ -61,6 +61,7 @@ type TestConfig struct {
 	SkipDeps     bool
 	ListOnly     bool
 	ShowTimings  bool
+	DebugMode    bool
 	UseTUI       bool
 	TUIHeight    int
 	Parallel     bool
@@ -160,6 +161,8 @@ func parseTestArgs(args []string) *TestConfig {
 			cfg.ListOnly = true
 		case arg == "--timings":
 			cfg.ShowTimings = true
+		case arg == "--debug":
+			cfg.DebugMode = true
 		case arg == "--tui":
 			cfg.UseTUI = true
 			tuiExplicitlySet = true
@@ -190,7 +193,7 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --tui, --no-tui, --tui-height, --sequential")
+			log.Errorf("Valid flags: --suite, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential")
 			return nil
 		default:
 			cfg.Monikers = append(cfg.Monikers, arg)
@@ -212,6 +215,11 @@ func parseTestArgs(args []string) *TestConfig {
 
 // executeTests runs tests directly using orchestrator (like buildMultipleModules)
 func executeTests(cfg *TestConfig) int {
+	// Enable debug logging if requested
+	if cfg.DebugMode {
+		logging.EnableDebug()
+	}
+
 	// Show execution context
 	log.Infof("Executing test via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
 	log.Info("")
@@ -1190,6 +1198,7 @@ func printTestUsage() {
 	log.Info("  --skip-deps            Skip dependency verification before running tests")
 	log.Info("  --list-only            List tests that would run without executing them")
 	log.Info("  --timings              Show detailed timing summary")
+	log.Info("  --debug                Enable debug logs to console (file logging always enabled)")
 	log.Info("  --no-tui               Disable TUI console (TUI is default for local console)")
 	log.Info(fmt.Sprintf("  --tui-height N         Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
 	log.Info("  --sequential           Run tests sequentially instead of in parallel")

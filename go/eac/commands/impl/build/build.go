@@ -131,6 +131,7 @@ func Build() int {
 	skipVerification := false // Skip system dependency verification (go, docker, etc.)
 	skipModuleDeps := false   // Skip including transitive module dependencies
 	showTimings := false
+	debugMode := false        // Enable debug logs to console
 	version := ""
 	listArtifacts := false
 	dryRun := false
@@ -159,6 +160,8 @@ func Build() int {
 			skipVerification = true
 		case "--timings":
 			showTimings = true
+		case "--debug":
+			debugMode = true
 		case "--accept-warnings":
 			// Flag is handled in mkdocs builder via os.Args check
 			// Just accept it here so it doesn't fail as unknown flag
@@ -254,8 +257,13 @@ func Build() int {
 		return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
 	}
 
+	// Enable debug logging if requested
+	if debugMode {
+		logging.EnableDebug()
+	}
+
 	// Run build (single or multiple modules) - phases are handled inside
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, dryRun, buildAll, useTUI, tuiHeight)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight)
 }
 
 // parseIntArg parses a string argument as an integer
@@ -300,7 +308,7 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int) int {
 	// Build module type lookup for ALL modules (will be populated after execution plan)
 	moduleTypes := make(map[string]string)
 
@@ -586,6 +594,7 @@ func printBuildUsage() {
 	log.Info("  --skip-deps               Only build specified modules (skip transitive dependencies)")
 	log.Info("  --skip-verification       Skip system dependency verification (go, docker, etc.)")
 	log.Info("  --timings                 Show detailed timing summary")
+	log.Info("  --debug                   Enable debug logs to console (file logging always enabled)")
 	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")
 	log.Info("  --no-tui                  Disable TUI console (use plain output)")
 	log.Info(fmt.Sprintf("  --tui-height N            Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
