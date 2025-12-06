@@ -136,6 +136,9 @@ runs:
         cache-dependency-path: |
           go/eac/commands/go.sum
           go/eac/core/go.sum
+          go/eac/specs/go.sum
+          go/eac/ai/go.sum
+          go/eac/mcp/commands/go.sum
 
     - name: Build from source (Linux/macOS)
       if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
