@@ -177,11 +177,16 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 	fixtureTemplate := (*coretesting.FixtureTemplate)(nil)
 	var templateMu sync.Mutex
 
+	// Create SHARED cache for original repo (one git ls-files call per suite, not per scenario)
+	// This dramatically improves performance: 49s -> <1s for file operations
+	sharedRepoCache := NewTestCache()
+
 	return func(sc *godog.ScenarioContext) {
 		// Create context for this scenario
 		ctx := NewTestContext()
 		ctx.OriginalRepoRoot = repoRoot
 		ctx.FixturePool = fixturePool
+		ctx.OriginalRepoCache = sharedRepoCache // Share cache across all scenarios!
 
 		// Register common steps
 		RegisterCommonSteps(sc, ctx)
