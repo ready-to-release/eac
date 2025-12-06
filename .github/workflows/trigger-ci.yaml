@@ -6,12 +6,15 @@
 #
 # Pipeline stages:
 # 1. build-tooling: Build/cache the commands binary for fast subsequent operations
-# 2. build-repository: Build repository module (contract validation infrastructure)
-# 3. validate-repository: Run repository commit suite (fast contract validation)
-# 4. detect-changes: Determine which modules need CI workflows triggered
-# 5. calculate-order: Compute dependency-based execution order
-# 6. execute-layers: Trigger child workflows in dependency order
-# 7. summary: Report results
+# 2. PARALLEL FLOWS:
+#    Flow A (Repository Validation):
+#      - build-repository: Build repository module
+#      - validate-repository: Run repository commit suite (contract validation)
+#    Flow B (Module CI Orchestration):
+#      - detect-changes: Determine which modules need CI workflows triggered
+#      - calculate-order: Compute dependency-based execution order
+#      - execute-layers: Trigger child workflows in dependency order
+# 3. summary: Report results (waits for both flows)
 #
 # For PRs: Compares against PR base SHA
 # For push: Compares against last successful CI SHA
@@ -60,7 +63,7 @@ jobs:
           echo "Commands binary: ${{ steps.commands.outputs.source }}" >> $GITHUB_STEP_SUMMARY
 
   # =========================================
-  # Stage 1: Validate Repository (Commit Suite Only)
+  # Flow A: Repository Validation (runs in parallel with Flow B)
   # =========================================
   build-repository:
     name: Build Repository
@@ -92,11 +95,11 @@ jobs:
           suites: commit
 
   # =========================================
-  # Stage 2: Detect Changed Modules
+  # Flow B: Module CI Orchestration (runs in parallel with Flow A)
   # =========================================
   detect-changes:
     name: Detect Changed Modules
-    needs: validate-repository
+    needs: build-tooling
     runs-on: ubuntu-latest
     outputs:
       changed-modules: ${{ steps.detect.outputs.modules }}
@@ -474,7 +477,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   # =========================================
-  # Stage 5: Summary
+  # Summary (waits for both parallel flows)
   # =========================================
   summary:
     name: Summary
