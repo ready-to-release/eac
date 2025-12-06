@@ -328,7 +328,6 @@ jobs:
   calculate-order:
     name: Calculate Execution Order
     needs: [detect-changes]
-    if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     outputs:
       execution-plan: ${{ steps.calculate.outputs.plan }}
@@ -400,7 +399,6 @@ jobs:
   execute-layers:
     name: Execute Dependency Layers
     needs: [detect-changes, calculate-order]
-    if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -416,6 +414,15 @@ jobs:
 
       - name: Execute All Layers
         run: |
+          # Early exit if no changes - job runs to satisfy status checks but skips execution
+          if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
+            echo "No modules require building - skipping execution"
+            echo "## Execute Dependency Layers" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No module CI workflows to execute." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
           COMMANDS="./out/tools/commands"
           PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
           LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
