@@ -26,7 +26,7 @@ Choosing the right pattern aligns repository organization with your system archi
 
 ![Monorepo Structure](../../../assets/repository/single.drawio.png){width=600}
 
-**This diagram illustrates the single-repository (mono-repository) pattern:** The diagram shows a single repository containing more than one deployable unit. In this pattern, multiple deployable modules share a single version history and repository boundary. Path filters (glob patterns) define the boundaries of each deployable unit within the repository, allowing independent versioning and deployment of each unit despite sharing the same repository. This is also called a **single-repository** to distinguish it from large-scale organizational mono-repositories. The pattern enables atomic cross-cutting changes while maintaining independent deployment pipelines per deployable unit.
+**This diagram illustrates the single-repository (mono-repository) pattern:** The diagram shows a single repository containing more than one deployable module. In this pattern, multiple deployable modules share a single version history and repository boundary. Path filters (glob patterns) define the boundaries of each deployable module within the repository, allowing independent versioning and deployment of each unit despite sharing the same repository. This is also called a **single-repository** to distinguish it from large-scale organizational mono-repositories. The pattern enables atomic cross-cutting changes while maintaining independent deployment pipelines per deployable module.
 
 ### Characteristics
 
@@ -173,13 +173,13 @@ monorepo/
 
 ![Polyrepo Structure](../../../assets/repository/poly.drawio.png){width=300}
 
-**This diagram illustrates the poly-repository pattern:** The diagram shows the pattern where a repository boundary perfectly aligns with a single deployable unit boundary. In this pattern, one repository contains exactly one deployable unit - whether that's a versioned component (library, container, package) or a runtime system (service, application). The version of any commit is directly equal to the version of the deployable unit, making versioning simple and straightforward. This pattern is commonly used in GitHub open-source projects and enforces decoupling through versioned modules, where dependencies between units are managed through published versioned artifacts consumed via package managers rather than direct code references.
+**This diagram illustrates the poly-repository pattern:** The diagram shows the pattern where a repository boundary perfectly aligns with a single deployable module boundary. In this pattern, one repository contains exactly one deployable module - whether that's a versioned component (library, container, package) or a runtime system (service, application). The version of any commit is directly equal to the version of the deployable module, making versioning simple and straightforward. This pattern is commonly used in GitHub open-source projects and enforces decoupling through versioned modules, where dependencies between units are managed through published versioned artifacts consumed via package managers rather than direct code references.
 
 ### Characteristics
 
 **Multiple Repositories:**
 
-- One repository per service or versioned component (one repository pr. deployable unit)
+- One repository per service or versioned component (one repository pr. deployable module)
 - Independent version history
 - Separate access controls
 - Isolated tooling and configuration
@@ -324,7 +324,7 @@ organization/
 
 ![Repository Types](../../../assets/repository/types.drawio.png){width=500}
 
-**This diagram shows the repository type taxonomy:** The diagram categorizes repositories by the number of deployable modules they contain. **Poly-repository** (left) contains exactly one deployable unit - the repository boundary perfectly aligns with the deployable unit boundary, making versioning simple (any commit = new version of the unit). **Mono-repository** (right) contains more than one deployable unit, with three subtypes: **Team mono-repository** (single-repository) where one team owns multiple deployable modules, **Product mono-repository** (single-repository) where multiple teams collaborate on one product's deployable modules, and **Organizational mono-repository** used by large organizations like Google/Facebook (not recommended for most teams). The diagram establishes the fundamental distinction: poly = one deployable unit, mono = multiple deployable modules.
+**This diagram shows the repository type taxonomy:** The diagram categorizes repositories by the number of deployable modules they contain. **Poly-repository** (left) contains exactly one deployable module - the repository boundary perfectly aligns with the deployable module boundary, making versioning simple (any commit = new version of the unit). **Mono-repository** (right) contains more than one deployable module, with three subtypes: **Team mono-repository** (single-repository) where one team owns multiple deployable modules, **Product mono-repository** (single-repository) where multiple teams collaborate on one product's deployable modules, and **Organizational mono-repository** used by large organizations like Google/Facebook (not recommended for most teams). The diagram establishes the fundamental distinction: poly = one deployable module, mono = multiple deployable modules.
 
 ### Side-by-Side Analysis
 
@@ -386,22 +386,22 @@ flowchart LR
 
 ![Repository Anti-Pattern](../../../assets/repository/bad.drawio.png){width=400}
 
-**This diagram shows the anti-pattern of splitting repositories by technical boundary:** The diagram illustrates the problematic pattern of organizing repositories by technology type rather than by deployable unit boundaries. For example, creating separate repositories for **frontend/**, **backend/**, **scripts/**, **documentation/**, and **infrastructure/** - each representing a technical concern rather than a cohesive deployable unit. This creates dependency hell where there is no coherency or frontier of what one specific version consists of. Changes to a single feature require coordinating across multiple repositories (frontend repo, backend repo, scripts repo), with no clear version boundary for the complete system. This violates the principle that repositories should align with either poly-repository (one deployable unit) or single-repository (multiple deployable modules owned together) patterns.
+**This diagram shows the anti-pattern of splitting repositories by technical boundary:** The diagram illustrates the problematic pattern of organizing repositories by technology type rather than by deployable module boundaries. For example, creating separate repositories for **frontend/**, **backend/**, **scripts/**, **documentation/**, and **infrastructure/** - each representing a technical concern rather than a cohesive deployable module. This creates dependency hell where there is no coherency or frontier of what one specific version consists of. Changes to a single feature require coordinating across multiple repositories (frontend repo, backend repo, scripts repo), with no clear version boundary for the complete system. This violates the principle that repositories should align with either poly-repository (one deployable module) or single-repository (multiple deployable modules owned together) patterns.
 
 ### How to Avoid This Anti-Pattern
 
 **✅ DO**:
 
-- Organize repositories around deployable unit boundaries, not technical boundaries
-- Use poly-repository pattern (one deployable unit per repository) OR single-repository pattern (multiple deployable modules per repository owned by same team)
-- Keep all code for a deployable unit together (frontend, backend, scripts, docs, infrastructure) in the same repository
-- Version Everything-as-Code (EaC) artifacts together, grouped by deployable unit boundaries
+- Organize repositories around deployable module boundaries, not technical boundaries
+- Use poly-repository pattern (one deployable module per repository) OR single-repository pattern (multiple deployable modules per repository owned by same team)
+- Keep all code for a deployable module together (frontend, backend, scripts, docs, infrastructure) in the same repository
+- Version Everything-as-Code (EaC) artifacts together, grouped by deployable module boundaries
 
 **❌ DO NOT**:
 
-- Create separate repositories for frontend, backend, scripts, documentation, or infrastructure unless each is a distinct deployable unit
+- Create separate repositories for frontend, backend, scripts, documentation, or infrastructure unless each is a distinct deployable module
 - Create loose gatherings of repositories with cross-repository dependencies
-- Split a single deployable unit across multiple repositories
+- Split a single deployable module across multiple repositories
 
 ---
 

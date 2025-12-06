@@ -1,30 +1,39 @@
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/repository.schema.json
-# Repository-wide path configuration
-# Defines repository-specific directory structures used by module type defaults
+# Repository-level configuration and metadata
 
-paths:
-  # Test implementation root directory
-  # Used in type defaults as: {test_impl_root}/{moniker}
-  test_impl_root: "go/eac/specs/impl"
+repository:
+  # Repository type: mono (monorepo), poly (polyrepo), adjunct (supporting repo)
+  type: mono
 
-  # Specs root directory
-  # Used in type defaults as: {specs_root}/{moniker}
-  specs_root: "specs"
+  # Valid versioning schemes that modules can declare
+  # SemVer: Semantic Versioning for libraries, tools, and versioned components
+  # CalVer: Calendar Versioning for runtime systems and services
+  schemes:
+    - SemVer
+    - CalVer
 
-  # Templates directory
-  templates: "templates"
+  # Trunk-based development configuration
+  trunk_branch: main
+  max_branch_age_days: 2
 
-  # Output directory structure
-  out:
-    root: "out"
-    build: "out/build"
-    test: "out/test"
-    logs: "out/logs"
-    security: "out/security"
-    tools: "out/tools"  # CI tools like the commands binary (not build outputs)
+  # Pull request workflow configuration
+  pr:
+    delete_branch_on_merge: true
+    merge_strategy: squash
 
-# Conventional filenames
-conventions:
-  godog_test: "godog_test.go"
-  package_json: "package.json"
-  changelog: "CHANGELOG.md"
+  # Versioning constraints and behavior control
+  # This controls how version bumps are allowed across all modules
+  versioning:
+    # Global constraint on version bumping
+    # Options:
+    #   - unrestricted: Allow major, minor, and patch bumps based on conventional commits
+    #   - patch-only: For semver modules, only allow patch bumps (0.0.x → 0.0.x+1)
+    #                 Stops major/minor bumps during early development
+    #   - calver-only: Force all modules to use calendar versioning
+    #
+    # When constraint is "patch-only", breaking changes and features
+    # are still recorded in the changelog but don't trigger version bumps
+    # beyond patch level. This preserves commit history while controlling versions.
+    #
+    # Set to "unrestricted" when ready to start semantic versioning properly.
+    constraint: patch-only

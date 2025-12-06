@@ -91,7 +91,7 @@ Repository organization is a critical architectural decision that impacts develo
 
 **Polyrepo (Multiple Repositories):**
 
-- Each deployable unit in separate repository
+- Each deployable module in separate repository
 - Independent release cadences
 - Clear ownership boundaries
 - Explicit dependency versioning
@@ -126,7 +126,7 @@ The complete architecture flows from code organization through production deploy
 **Trunk (Repository)** contains one or more **Deployable Modules**:
 
 - **Monorepo**: Multiple deployable modules in single repository
-- **Polyrepo**: One deployable unit per repository
+- **Polyrepo**: One deployable module per repository
 - **Path filters** (monorepo) or **repository boundaries** (polyrepo) define unit boundaries
 
 ### Layer 2 - Build and Test

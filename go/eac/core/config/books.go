@@ -12,6 +12,7 @@ type BooksConfig struct {
 // Book represents a single book configuration
 type Book struct {
 	Name         string         `yaml:"name"`
+	Title        string         `yaml:"title,omitempty"`        // Book-specific title for cover page (optional, defaults to Name)
 	Module       string         `yaml:"module"`
 	Description  string         `yaml:"description"`
 	Output       string         `yaml:"output,omitempty"`   // Default output mode: "site", "pdf-dark", "pdf-light", "pdf-all" (default: "pdf-dark" for book modules)

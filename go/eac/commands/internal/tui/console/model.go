@@ -7,19 +7,23 @@ import (
 )
 
 // Model is the Bubbletea model for the console window.
-// Displays build/test output in a 3-pane view (Init/Run/End).
+// Displays build/test output in a 2-pane view (Init/Run).
 type Model struct {
 	// Configuration
-	height     int  // Total height (default: tui.DefaultHeight)
-	width      int  // Terminal width
-	showHeader bool // Show status header
+	height       int    // Total height (default: tui.DefaultHeight)
+	width        int    // Terminal width
+	showHeader   bool   // Show status header
+	runPhaseName string // Custom name for Run phase (e.g., "building", "testing")
 
-	// 3-pane state
-	panes       [3]*Pane // Init, Run, End panes
+	// 2-pane state
+	panes       [2]*Pane // Init, Run panes
 	activePhase Phase    // Currently active phase
 
 	// Legacy single-buffer support (for backward compatibility)
 	buffer *RingBuffer // Shared buffer when not using panes
+
+	// Results buffer for post-execution output
+	resultsBuffer *RingBuffer // Output that appears after Run phase completes
 
 	// Run phase state (orchestrator status)
 	running   []string  // Currently running module monikers
@@ -49,31 +53,37 @@ type Model struct {
 }
 
 // NewModel creates a new console model.
-func NewModel(height int, showHeader bool, lineChan <-chan Line, statusChan <-chan Status) Model {
+func NewModel(height int, showHeader bool, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status) Model {
 	if height <= 0 {
 		height = 5
 	}
 
+	// Use default if no custom run phase name provided
+	if runPhaseName == "" {
+		runPhaseName = "Run"
+	}
+
 	// Create panes with appropriate buffer sizes
 	bufferSize := 500 // Per-pane buffer
-	panes := [3]*Pane{
+	panes := [2]*Pane{
 		NewPane(PhaseInit, bufferSize),
 		NewPane(PhaseRun, bufferSize),
-		NewPane(PhaseEnd, bufferSize),
 	}
 
 	return Model{
-		height:      height,
-		width:       80, // Default, will be updated on WindowSizeMsg
-		showHeader:  showHeader,
-		buffer:      NewRingBuffer(1000), // Legacy buffer
-		panes:       panes,
-		activePhase: PhaseInit, // Start with Init phase
-		lineChan:    lineChan,
-		statusChan:  statusChan,
-		startTime:   time.Now(),
-		phase:       "Starting",
-		usePanes:    true, // Enable 3-pane mode by default
+		height:        height,
+		width:         80, // Default, will be updated on WindowSizeMsg
+		showHeader:    showHeader,
+		runPhaseName:  runPhaseName,
+		buffer:        NewRingBuffer(1000), // Legacy buffer
+		resultsBuffer: NewRingBuffer(100),  // Results buffer
+		panes:         panes,
+		activePhase:   PhaseInit, // Start with Init phase
+		lineChan:      lineChan,
+		statusChan:    statusChan,
+		startTime:     time.Now(),
+		phase:         "Starting",
+		usePanes:      true, // Enable 2-pane mode by default
 	}
 }
 
@@ -180,51 +190,25 @@ func (m *Model) CompletePhase(phase Phase, success bool, summary string) {
 }
 
 // calculatePaneHeights determines how many lines each pane gets
-func (m Model) calculatePaneHeights() (initH, runH, endH int) {
-	available := m.height
-
-	// Reserve 1 line for each pane header
-	headerLines := 3
-	contentLines := available - headerLines
-	if contentLines < 3 {
-		contentLines = 3
-	}
-
-	// Distribute based on active phase
-	// Init always gets 3 lines minimum to show context info
-	const initMinHeight = 3
-
-	switch m.activePhase {
-	case PhaseInit:
-		// Init gets most space, others get 0 content
-		initH = contentLines
-		runH = 0
-		endH = 0
-	case PhaseRun:
-		// Init keeps 3 lines, Run gets the rest
-		initH = initMinHeight
-		runH = contentLines - initMinHeight
-		if runH < 3 {
-			runH = 3
-		}
-		endH = 0
-	case PhaseEnd:
-		// Init keeps 3 lines, Run gets 3 lines, End gets exactly 1 line (just result)
-		// Detailed summary rolls off to console after TUI stops
-		initH = initMinHeight
-		runH = 3
-		endH = 1
-	}
-
+// Fixed heights: Init=5 lines, Run=10 lines
+func (m Model) calculatePaneHeights() (initH, runH int) {
+	// Fixed heights as specified
+	initH = 5
+	runH = 10
 	return
 }
 
-// UsePanes returns whether 3-pane mode is enabled
+// UsePanes returns whether 2-pane mode is enabled
 func (m Model) UsePanes() bool {
 	return m.usePanes
 }
 
-// SetUsePanes enables or disables 3-pane mode
+// SetUsePanes enables or disables 2-pane mode
 func (m *Model) SetUsePanes(use bool) {
 	m.usePanes = use
+}
+
+// WriteResult writes a line to the results buffer
+func (m *Model) WriteResult(line Line) {
+	m.resultsBuffer.Push(line)
 }

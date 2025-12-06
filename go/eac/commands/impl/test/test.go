@@ -552,11 +552,11 @@ func executeTests(cfg *TestConfig) int {
 		return 1
 	}
 
-	// Transition to End phase for summary
-	orch.SetPhase(tui.PhaseEnd)
-
-	// Collect results (before stopping TUI so we can show summary)
+	// Collect results (before stopping TUI)
 	results := execCtx.collectResults()
+
+	// Stop TUI first (restores stdout)
+	orch.StopTUI()
 
 	// Calculate totals
 	packagesPassed := 0
@@ -577,19 +577,6 @@ func executeTests(cfg *TestConfig) int {
 		testsSkipped += result.TestsSkipped
 		testsTotal += result.TestsTotal
 	}
-
-	// Send single result line to End pane (visible in TUI)
-	if cfg.UseTUI {
-		resultIcon := output.IconPass
-		if packagesFailed > 0 || testsFailed > 0 {
-			resultIcon = output.IconFail
-		}
-		orch.SendEndLine(fmt.Sprintf("%s %d/%d packages, %d/%d tests passed",
-			resultIcon, packagesPassed, packagesPassed+packagesFailed, testsPassed, testsPassed+testsFailed))
-	}
-
-	// Stop TUI first (restores stdout)
-	orch.StopTUI()
 
 	// Show full summary
 	writeln(multiWriter, "%s", output.SectionHeader("Test Summary"))

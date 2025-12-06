@@ -592,14 +592,14 @@ jobs:
 **Example (monorepo with multiple deployable modules)**:
 
 ```yaml
-# deployable-unit-api/dependencies.yaml
+# deployable-module-api/dependencies.yaml
 dependencies:
   shared-models: v1.2.3
   shared-auth: v2.1.0
 ```
 
 ```yaml
-# deployable-unit-worker/dependencies.yaml
+# deployable-module-worker/dependencies.yaml
 dependencies:
   shared-models: v1.2.3
   shared-queue: v1.5.0
@@ -772,7 +772,7 @@ This article focuses on branching flows. For related topics, see:
 **Core Concepts**:
 
 - [Unit of Flow](../core-concepts/unit-of-flow.md) - 4-component model overview
-- [Deployable Modules](../core-concepts/deployable-units.md) - What gets built and deployed
+- [Deployable Modules](../core-concepts/deployable-modules.md) - What gets built and deployed
 - [Trunk-Based Development](trunk-based-development.md) - Core principles and practices
 
 **CD Model Stages**:
@@ -828,7 +828,7 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - Detailed guidance on choosing between RA and CDe
 - [Trunk-Based Development](trunk-based-development.md) - Daily development practices
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Understand release stages in detail
-- [Deployable Modules](../core-concepts/deployable-units.md) - What gets versioned and deployed
+- [Deployable Modules](../core-concepts/deployable-modules.md) - What gets versioned and deployed
 
 ## References
 

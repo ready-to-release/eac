@@ -58,7 +58,7 @@ func (m Model) viewFinal() string {
 		icon, m.phase, m.completed, m.total, status, formatElapsed(elapsed)))
 
 	// Show phase summaries if available
-	for _, phase := range []Phase{PhaseInit, PhaseRun, PhaseEnd} {
+	for _, phase := range []Phase{PhaseInit, PhaseRun} {
 		pane := m.panes[phase]
 		if pane.Summary != "" {
 			phaseIcon := "+"
@@ -77,34 +77,36 @@ func (m Model) viewFinal() string {
 	return b.String()
 }
 
-// viewPanes renders the 3-pane layout
+// viewPanes renders the 2-pane layout with footers and results
 func (m Model) viewPanes() string {
 	var b strings.Builder
 
 	// Calculate heights for each pane
-	initH, runH, endH := m.calculatePaneHeights()
+	initH, runH := m.calculatePaneHeights()
 
-	// Render Init pane
+	// Render Init pane (7 lines total: 1 header + 5 content + 1 footer)
 	b.WriteString(m.renderPaneHeader(PhaseInit))
-	if initH > 0 {
-		b.WriteString("\n")
-		b.WriteString(m.renderPaneContent(PhaseInit, initH))
-	}
+	b.WriteString("\n")
+	b.WriteString(m.renderPaneContent(PhaseInit, initH))
+	b.WriteString("\n")
+	b.WriteString(m.renderPaneFooter())
 	b.WriteString("\n")
 
-	// Render Run pane
+	// Render Run pane (12 lines total: 1 header + 10 content + 1 footer)
 	b.WriteString(m.renderPaneHeader(PhaseRun))
-	if runH > 0 {
-		b.WriteString("\n")
-		b.WriteString(m.renderPaneContent(PhaseRun, runH))
-	}
+	b.WriteString("\n")
+	b.WriteString(m.renderPaneContent(PhaseRun, runH))
+	b.WriteString("\n")
+	b.WriteString(m.renderPaneFooter())
 	b.WriteString("\n")
 
-	// Render End pane
-	b.WriteString(m.renderPaneHeader(PhaseEnd))
-	if endH > 0 {
-		b.WriteString("\n")
-		b.WriteString(m.renderPaneContent(PhaseEnd, endH))
+	// Blank line before results
+	b.WriteString("\n")
+
+	// Results section (rolling output from results buffer)
+	results := m.renderResults()
+	if results != "" {
+		b.WriteString(results)
 	}
 
 	return b.String()
@@ -117,6 +119,11 @@ func (m Model) renderPaneHeader(phase Phase) string {
 	// Build icon and name
 	icon := pane.Status.Icon()
 	name := phase.String()
+
+	// Use custom run phase name if provided
+	if phase == PhaseRun && m.runPhaseName != "" {
+		name = m.runPhaseName
+	}
 
 	// Style based on status
 	var iconStyle, nameStyle lipgloss.Style
@@ -203,6 +210,30 @@ func (m Model) renderPaneContent(phase Phase, height int) string {
 		}
 	}
 
+	return b.String()
+}
+
+// renderPaneFooter renders the bottom border for a pane
+func (m Model) renderPaneFooter() string {
+	borderLen := m.width - 2
+	if borderLen < 3 {
+		borderLen = 3
+	}
+	return "└" + strings.Repeat("─", borderLen) + "┘"
+}
+
+// renderResults renders the results section (rolling output after Run pane)
+func (m Model) renderResults() string {
+	lines := m.resultsBuffer.Last(20) // Show last 20 result lines
+	if len(lines) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	for _, line := range lines {
+		b.WriteString(m.renderLine(line))
+		b.WriteString("\n")
+	}
 	return b.String()
 }
 

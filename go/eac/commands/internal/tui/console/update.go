@@ -45,8 +45,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.buffer.Push(msg.Line)
 		return m, nil
 
+	case ResultLineMsg:
+		// Write to results buffer
+		m.resultsBuffer.Push(msg.Line)
+		return m, nil
+
 	case PhaseUpdateMsg:
-		if m.panes[msg.Phase] != nil {
+		if msg.Phase < Phase(len(m.panes)) && m.panes[msg.Phase] != nil {
 			// Only update status if it's set (non-zero)
 			if msg.Status != 0 {
 				m.panes[msg.Phase].Status = msg.Status
@@ -59,7 +64,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Track timing and active phase
 			if msg.Status == PhaseActive {
 				// Mark previous phase as complete if it was active
-				if m.activePhase != msg.Phase && m.panes[m.activePhase].Status == PhaseActive {
+				if m.activePhase != msg.Phase && m.activePhase < Phase(len(m.panes)) && m.panes[m.activePhase].Status == PhaseActive {
 					m.panes[m.activePhase].Status = PhaseComplete
 					m.panes[m.activePhase].EndTime = time.Now()
 				}
