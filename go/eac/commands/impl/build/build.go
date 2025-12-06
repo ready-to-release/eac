@@ -414,7 +414,6 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	// Phase 3: Build Execution (still part of Init in TUI, but transitions to Run when execution starts)
 	writeInit(output.PhaseHeader(3, "Build Execution"))
 	writeInit(output.OutputDir("out/build/"))
-	writeInit("")
 
 	// Build module type lookup for ALL modules in execution plan (including dependencies)
 	for _, mon := range executionPlan.ExecutionOrder {
@@ -454,30 +453,6 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
-	}
-
-	// Transition to End phase and send single result line
-	orch.SetPhase(tui.PhaseEnd)
-
-	// Count pass/fail from results
-	passed := 0
-	failed := 0
-	for _, r := range results {
-		if r.ExitCode == 0 {
-			passed++
-		} else {
-			failed++
-		}
-	}
-
-	// Send single result line to End pane (visible in TUI)
-	if useTUI {
-		resultIcon := output.IconPass
-		if failed > 0 {
-			resultIcon = output.IconFail
-		}
-		orch.SendEndLine(fmt.Sprintf("%s %d/%d modules built successfully",
-			resultIcon, passed, passed+failed))
 	}
 
 	// Stop TUI first (restores stdout), then print full summary

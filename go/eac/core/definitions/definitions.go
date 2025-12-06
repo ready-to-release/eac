@@ -1,5 +1,5 @@
 // Package definitions handles repository-wide definitions and constraints
-// loaded from .r2r/definitions.yml
+// loaded from .r2r/eac/repository.yml
 package definitions
 
 import (
@@ -7,11 +7,12 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"gopkg.in/yaml.v3"
 )
 
-// DefinitionsPath is the relative path to definitions file
-const DefinitionsPath = ".r2r/definitions.yml"
+// RepositoryConfigPath is the relative path to repository config file
+const RepositoryConfigPath = ".r2r/eac/repository.yml"
 
 // VersionConstraint defines how version bumping is constrained
 type VersionConstraint string
@@ -53,6 +54,7 @@ var (
 )
 
 // Load loads definitions from the workspace root
+// Reads versioning constraints from .r2r/eac/repository.yml
 // Returns default definitions if file doesn't exist
 func Load(workspaceRoot string) (*Definitions, error) {
 	cacheMutex.RLock()
@@ -70,7 +72,7 @@ func Load(workspaceRoot string) (*Definitions, error) {
 		return cachedDefs, nil
 	}
 
-	fullPath := filepath.Join(workspaceRoot, DefinitionsPath)
+	fullPath := filepath.Join(workspaceRoot, RepositoryConfigPath)
 
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
@@ -83,17 +85,25 @@ func Load(workspaceRoot string) (*Definitions, error) {
 		return nil, err
 	}
 
-	var defs Definitions
-	if err := yaml.Unmarshal(data, &defs); err != nil {
+	// Load repository contract
+	var repoContract contracts.RepositoryContract
+	if err := yaml.Unmarshal(data, &repoContract); err != nil {
 		return nil, err
 	}
 
-	// Validate constraint value
-	if defs.Versioning.Constraint == "" {
-		defs.Versioning.Constraint = Unrestricted
+	// Extract versioning constraint from repository config
+	constraint := VersionConstraint(repoContract.Repository.Versioning.Constraint)
+	if constraint == "" {
+		constraint = Unrestricted
 	}
 
-	cachedDefs = &defs
+	defs := &Definitions{
+		Versioning: Versioning{
+			Constraint: constraint,
+		},
+	}
+
+	cachedDefs = defs
 	cacheRoot = workspaceRoot
 	return cachedDefs, nil
 }

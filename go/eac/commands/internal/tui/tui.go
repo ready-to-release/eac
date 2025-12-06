@@ -22,9 +22,10 @@ const (
 
 // Config configures the console window.
 type Config struct {
-	Height     int  // Total height (default: DefaultHeight)
-	ShowHeader bool // Show status header (default: true)
-	BufferSize int  // Line buffer size (default: 1000)
+	Height       int    // Total height (default: DefaultHeight)
+	ShowHeader   bool   // Show status header (default: true)
+	BufferSize   int    // Line buffer size (default: 1000)
+	RunPhaseName string // Custom name for Run phase (e.g., "building", "testing")
 }
 
 // Console manages the TUI console window for build/test output.
@@ -74,6 +75,7 @@ func (c *Console) Start(ctx context.Context) error {
 	model := console.NewModel(
 		c.config.Height,
 		c.config.ShowHeader,
+		c.config.RunPhaseName,
 		c.lineChan,
 		c.statusChan,
 	)
@@ -303,6 +305,27 @@ func (c *Console) WriteToPhase(phase Phase, text string) {
 	})
 }
 
+// WriteResult writes a line to the results buffer (appears below Run pane)
+func (c *Console) WriteResult(text string) {
+	c.mu.Lock()
+	stopped := c.stopped
+	program := c.program
+	c.mu.Unlock()
+
+	if stopped || program == nil {
+		return
+	}
+
+	// Send line to results buffer via Bubbletea
+	program.Send(console.ResultLineMsg{
+		Line: console.Line{
+			Text:   text,
+			Source: "results",
+			Level:  console.LevelInfo,
+		},
+	})
+}
+
 // Status is an alias for console.Status for public use.
 type Status = console.Status
 
@@ -329,7 +352,6 @@ const (
 const (
 	PhaseInit = console.PhaseInit
 	PhaseRun  = console.PhaseRun
-	PhaseEnd  = console.PhaseEnd
 )
 
 // PhaseStatus constants for public use.

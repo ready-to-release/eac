@@ -25,13 +25,13 @@ Understanding the four interconnected components that enable Continuous Delivery
 
 **Topics covered:**
 
-- The four components: Trunk, Deployable Unit, Deployment Pipeline, Live
+- The four components: Trunk, Deployable Module, Deployment Pipeline, Live
 - Relationships between components
 - Polyrepo vs monorepo patterns
 - Integration with CD Model stages
 - Common architectural patterns
 
-### [Deployable Modules](core-concepts/deployable-units.md)
+### [Deployable Modules](core-concepts/deployable-modules.md)
 
 Understanding what gets built, versioned, and deployed through the CD Model.
 

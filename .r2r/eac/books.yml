@@ -7,6 +7,7 @@ books:
   # GitHub Pages Site (docs module)
   # ==============================================================================
   - name: site
+    title: "Everything-as-Code Documentation"
     module: docs
     description: "GitHub Pages documentation site with module overview"
     output: site
@@ -43,6 +44,7 @@ books:
   # Repository Report PDF (books module)
   # ==============================================================================
   - name: repository-report
+    title: "Repository Structure Report"
     module: books
     description: "Complete repository structure report with all generated content"
     output: pdf-dark
@@ -108,6 +110,7 @@ books:
   # Explanation PDF (books module)
   # ==============================================================================
   - name: explanation
+    title: "Continuous Delivery Practices & Everything-as-Code"
     module: books
     description: "Conceptual documentation - Everything as Code, CD practices, and methodology"
     output: pdf-dark
@@ -133,6 +136,7 @@ books:
   # Risk Evidence Package - comprehensive audit evidence bundle
   # ==============================================================================
   - name: risk-evidence-package
+    title: "Risk Assessment Evidence Package"
     module: books
     description: "Comprehensive risk assessment evidence package with all supporting artifacts"
     output: pdf-dark

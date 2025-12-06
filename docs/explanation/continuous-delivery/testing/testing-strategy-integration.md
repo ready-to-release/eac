@@ -47,7 +47,7 @@ This article explains how test levels integrate with CD Model stages, the proces
 - **Name**: In-Situ Vertical Tests
 - **Shift Direction**: LEFT
 - **Environment**: PLTE only (Stages 5-6)
-- **Scope**: Deployed system (single deployable unit boundaries - vertical)
+- **Scope**: Deployed system (single deployable module boundaries - vertical)
 - **Test doubles**: ALL external services replaced with test doubles
 - **Purpose**: Validate infrastructure, deployment, and configuration
 - **Determinism**: Moderate

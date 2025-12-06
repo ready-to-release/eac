@@ -453,8 +453,8 @@ func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, works
 
 // buildBookWithThemeAndStaging builds a book as PDF using a pre-computed staging directory
 func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
-	// Delegate to existing PDF build logic, passing book name for output naming
-	return buildMkDocsWithThemeAndStaging(module, book.Name, workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
+	// Delegate to existing PDF build logic, passing book metadata for PDF generation
+	return buildMkDocsWithThemeAndStaging(module, book.Name, book.Title, book.Description, workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
 }
 
 // buildBookHTML builds a book as HTML site
@@ -578,15 +578,22 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 	}
 
 	// Use module moniker as default book name when no book config is present
-	return buildMkDocsWithThemeAndStaging(module, module.Moniker, workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
+	// No title/description available for legacy builds (pass empty strings)
+	return buildMkDocsWithThemeAndStaging(module, module.Moniker, "", "", workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
 }
 
 // buildMkDocsWithThemeAndStaging builds a PDF with a specific theme using a pre-computed staging directory
 // This allows multiple theme builds to share preprocessing work
 // bookName is used for the final PDF naming: {bookName}-{theme}.pdf
-func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName string, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
+// bookTitle and bookDescription are used for the PDF cover page
+func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName string, bookTitle string, bookDescription string, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
 	if theme == "" {
 		theme = "dark"
+	}
+
+	// Default bookTitle to bookName if not provided
+	if bookTitle == "" {
+		bookTitle = bookName
 	}
 
 	Logln(logWriter, "\n=== Building %s: %s (PDF %s) ===", module.Type, module.Moniker, theme)
@@ -605,6 +612,8 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 	configOpts := books.ConfigOptions{
 		SiteName:        bookName,
 		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
+		BookTitle:       bookTitle,
+		BookDescription: bookDescription,
 		SiteURL:         "",
 		DocsDir:         relStagingDir,
 		Theme:           theme,
@@ -713,7 +722,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 
 	Logln(logWriter, "📄 Merging individual PDFs...")
 
-	if err := mergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, logWriter, isDinD); err != nil {
+	if err := mergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, bookTitle, bookDescription, logWriter, isDinD); err != nil {
 		Logln(logWriter, "❌ PDF merge failed: %v", err)
 		return 1
 	}
@@ -754,7 +763,8 @@ func copyFile(src, dst string) error {
 
 // mergePDFs merges all individual page PDFs into a single document using pypdf
 // Generates a cover page, table of contents, and hierarchical bookmarks
-func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName string, logWriter io.Writer, isDinD bool) error {
+// bookTitle and bookDescription are used for the cover page content
+func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName string, bookTitle string, bookDescription string, logWriter io.Writer, isDinD bool) error {
 	// Get relative paths for Docker
 	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
 	if err != nil {
@@ -791,6 +801,10 @@ func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, ima
 
 	// Python script to generate cover page, TOC, and merge all PDFs
 	// Parses .nav.yml files for proper titles and ordering
+	// Escape book title and description for Python (handle quotes and newlines)
+	escapedTitle := strings.ReplaceAll(strings.ReplaceAll(bookTitle, "\\", "\\\\"), "'", "\\'")
+	escapedDescription := strings.ReplaceAll(strings.ReplaceAll(bookDescription, "\\", "\\\\"), "'", "\\'")
+
 	pythonScript := fmt.Sprintf(`
 import os
 import io
@@ -806,12 +820,42 @@ from reportlab.lib.units import cm
 site_dir = '%s'
 output_path = '%s'
 docs_dir = '%s'  # Staging directory with .nav.yml files
+book_title = '''%s'''  # Book-specific title for cover page
+book_description = '''%s'''  # Book-specific description for cover page
 
 # Dark theme colors (matching PDF dark theme)
 BG_COLOR = HexColor('#0d1117')
 TEXT_COLOR = HexColor('#e6edf3')
 ACCENT_COLOR = HexColor('#58a6ff')
 MUTED_COLOR = HexColor('#8b949e')
+
+def draw_wrapped_text(canvas, text, x, y, max_width, font='Helvetica', size=12, line_height=0.5*cm, align='center'):
+    """Draw text with word wrapping."""
+    canvas.setFont(font, size)
+    words = text.split()
+    lines = []
+    current_line = []
+
+    for word in words:
+        test_line = ' '.join(current_line + [word])
+        if canvas.stringWidth(test_line, font, size) <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+            current_line = [word]
+
+    if current_line:
+        lines.append(' '.join(current_line))
+
+    # Draw lines centered or left-aligned
+    for i, line in enumerate(lines):
+        if align == 'center':
+            canvas.drawCentredString(x, y - (i * line_height), line)
+        else:
+            canvas.drawString(x, y - (i * line_height), line)
+
+    return len(lines)  # Return number of lines drawn
 
 def create_cover_page():
     """Create a cover page PDF with title, subtitle, and metadata."""
@@ -823,25 +867,68 @@ def create_cover_page():
     c.setFillColor(BG_COLOR)
     c.rect(0, 0, width, height, fill=True, stroke=False)
 
-    # Title
+    # Brand Title (top, smaller)
     c.setFillColor(TEXT_COLOR)
-    c.setFont('Helvetica-Bold', 36)
-    c.drawCentredString(width/2, height - 8*cm, 'Ready-to-Release')
+    c.setFont('Helvetica-Bold', 32)
+    c.drawCentredString(width/2, height - 6*cm, 'Ready-to-Release')
 
-    # Subtitle
-    c.setFont('Helvetica', 24)
-    c.drawCentredString(width/2, height - 10*cm, 'Documentation')
+    # Brand Subtitle
+    c.setFont('Helvetica', 20)
+    c.drawCentredString(width/2, height - 7.5*cm, 'Documentation')
+
+    # Book-specific title (larger, prominent, accent color)
+    # Auto-size or wrap if title is too long
+    if book_title:
+        c.setFillColor(ACCENT_COLOR)
+        max_title_width = width - 4*cm  # Leave 2cm margin on each side
+
+        # Try different font sizes to fit title on one line
+        title_font_size = 28
+        c.setFont('Helvetica-Bold', title_font_size)
+        title_width = c.stringWidth(book_title, 'Helvetica-Bold', title_font_size)
+
+        if title_width > max_title_width:
+            # Title too long, try smaller font
+            title_font_size = 24
+            c.setFont('Helvetica-Bold', title_font_size)
+            title_width = c.stringWidth(book_title, 'Helvetica-Bold', title_font_size)
+
+            if title_width > max_title_width:
+                # Still too long, try even smaller
+                title_font_size = 20
+                c.setFont('Helvetica-Bold', title_font_size)
+                title_width = c.stringWidth(book_title, 'Helvetica-Bold', title_font_size)
+
+                if title_width > max_title_width:
+                    # Still too long, wrap it
+                    draw_wrapped_text(c, book_title, width/2, height - 10*cm, max_title_width, 'Helvetica-Bold', 18, 0.6*cm, 'center')
+                else:
+                    c.drawCentredString(width/2, height - 10*cm, book_title)
+            else:
+                c.drawCentredString(width/2, height - 10*cm, book_title)
+        else:
+            c.drawCentredString(width/2, height - 10*cm, book_title)
+
+        c.setFillColor(TEXT_COLOR)  # Reset color
 
     # Horizontal line
     c.setStrokeColor(ACCENT_COLOR)
     c.setLineWidth(2)
-    c.line(4*cm, height - 12*cm, width - 4*cm, height - 12*cm)
+    c.line(4*cm, height - 11.5*cm, width - 4*cm, height - 11.5*cm)
 
-    # Description
+    # Brand description
     c.setFillColor(MUTED_COLOR)
     c.setFont('Helvetica', 14)
-    c.drawCentredString(width/2, height - 14*cm, 'Everything-as-Code Platform')
-    c.drawCentredString(width/2, height - 15*cm, 'for Software Delivery Flows')
+    c.drawCentredString(width/2, height - 13*cm, 'Everything-as-Code Platform')
+    c.drawCentredString(width/2, height - 14*cm, 'for Software Delivery Flows')
+
+    # Book-specific description (wrapped if needed)
+    current_y = height - 16*cm
+    if book_description:
+        c.setFont('Helvetica', 12)
+        c.setFillColor(TEXT_COLOR)
+        lines_drawn = draw_wrapped_text(c, book_description, width/2, current_y, width - 8*cm, 'Helvetica', 12, 0.5*cm, 'center')
+        current_y -= lines_drawn * 0.5*cm
 
     # Date at bottom
     c.setFillColor(MUTED_COLOR)
@@ -1194,7 +1281,7 @@ print(f'  - Cover: {cover_pages} page(s)')
 print(f'  - TOC: {toc_pages} page(s)')
 print(f'  - Content: {current_page - cover_pages - toc_pages} pages')
 print(f'TOC entries: {len(bookmarks)}')
-`, dockerSiteDir, dockerOutputPath, dockerStagingDir)
+`, dockerSiteDir, dockerOutputPath, dockerStagingDir, escapedTitle, escapedDescription)
 
 	args = append(args, imageName, "python3", "-c", pythonScript)
 

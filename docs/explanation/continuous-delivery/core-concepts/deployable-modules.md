@@ -2,7 +2,7 @@
 
 ## Introduction
 
-A Deployable Unit is the fundamental building block of Continuous Delivery. It represents the discrete body of work that is built, tested, and delivered as a cohesive whole through the CD Model's 12 stages.
+A Deployable Module is the fundamental building block of Continuous Delivery. It represents the discrete body of work that is built, tested, and delivered as a cohesive whole through the CD Model's 12 stages.
 
 Understanding deployable modules is critical for:
 
@@ -11,13 +11,13 @@ Understanding deployable modules is critical for:
 - Establishing clear ownership boundaries
 - Enabling independent testing and deployment
 
-![Deployable Unit Legend](../../../assets/branching/legend-deployable-unit.drawio.png){width=100}
+![Deployable Module Legend](../../../assets/branching/legend-deployable-module.drawio.png){width=100}
 
-This diagram shows the deployable unit notation used throughout CD Model visualizations.
+This diagram shows the deployable module notation used throughout CD Model visualizations.
 
 ## Definition
 
-**Deployable Unit:** The discrete body of work that is built, tested, and delivered.
+**Deployable Module:** The discrete body of work that is built, tested, and delivered.
 
 **Key Characteristics:**
 
@@ -27,7 +27,7 @@ This diagram shows the deployable unit notation used throughout CD Model visuali
 - Can be deployed without horizontally testing with other units
 - Lowest level of granularity for repository decomposition
 
-**What a Deployable Unit Is NOT:**
+**What a Deployable Module Is NOT:**
 
 - Not arbitrary code that happens to be in a repository
 - Not a feature or user story
@@ -126,7 +126,7 @@ Non-used positions default to zero (e.g., `1.2` = `1.2.0.0`).
 
 ### Versioning Schemes by Type
 
-The versioning scheme depends on the deployable unit type and distribution model.
+The versioning scheme depends on the deployable module type and distribution model.
 
 **Implicit Versioning:**
 
@@ -166,7 +166,7 @@ The versioning scheme depends on the deployable unit type and distribution model
 **API Versioning:**
 
 - **Use for**: Runtime APIs (REST, GraphQL, gRPC)
-- **Deployable Unit Version**: Uses CalVer or Release Number (tracks with the service)
+- **Deployable Module Version**: Uses CalVer or Release Number (tracks with the service)
 - **API Interface Version**: Separate version (v1, v2, v3)
 - **Example**: API service version `2024.1115.0.1234` contains API interfaces v1, v2, v3
 - **Purpose**: Maintain multiple API versions in single service for backward compatibility
@@ -190,7 +190,7 @@ git rev-list main.. --count
 
 ### Choosing a Versioning Strategy
 
-| Deployable Unit Type | Distribution Model | Versioning Strategy |
+| Deployable Module Type | Distribution Model | Versioning Strategy |
 |---------------------|-------------------|-------------------|
 | Microservice | SaaS (single version) | CalVer or Release Number |
 | Web Application | SaaS (single version) | CalVer or Release Number |
@@ -311,16 +311,16 @@ Deployable modules often depend on other deployable modules (libraries, services
 ```
 monorepo/
 ├── services/
-│   └── api/              # Deployable Unit 1
+│   └── api/              # Deployable Module 1
 │       └── depends on shared/models
 └── shared/
-    └── models/           # Not a deployable unit (implicit version)
+    └── models/           # Not a deployable module (implicit version)
 ```
 
 **Characteristics:**
 
 - Supporting code doesn't have its own version
-- Version is implied by the deployable unit it's built with
+- Version is implied by the deployable module it's built with
 - Changes trigger rebuild of dependent deployable modules
 - Simpler but requires monorepo
 
@@ -390,7 +390,7 @@ See [Security](../security/security.md) for dependency scanning with Trivy and D
 
 ---
 
-## Granularity: Choosing Deployable Unit Boundaries
+## Granularity: Choosing Deployable Module Boundaries
 
 Defining the right boundaries for deployable modules is a critical architectural decision.
 
@@ -409,7 +409,7 @@ Defining the right boundaries for deployable modules is a critical architectural
 **Example:**
 
 ```
-entire-platform/   # Single deployable unit
+entire-platform/   # Single deployable module
 ├── api/
 ├── web/
 ├── worker/
@@ -433,10 +433,10 @@ All changes deploy together, even unrelated ones.
 **Example:**
 
 ```
-user-service/          # Deployable unit
-user-service-models/   # Deployable unit
-user-service-client/   # Deployable unit
-user-service-worker/   # Deployable unit
+user-service/          # Deployable module
+user-service-models/   # Deployable module
+user-service-client/   # Deployable module
+user-service-worker/   # Deployable module
 ```
 
 Simple user service split into 4 units requiring coordination.
@@ -456,10 +456,10 @@ Simple user service split into 4 units requiring coordination.
 **Example:**
 
 ```
-api-service/      # Deployable unit (user-facing API)
-worker-service/   # Deployable unit (async processing)
-admin-app/        # Deployable unit (admin UI)
-shared-lib/       # Deployable unit (published library)
+api-service/      # Deployable module (user-facing API)
+worker-service/   # Deployable module (async processing)
+admin-app/        # Deployable module (admin UI)
+shared-lib/       # Deployable module (published library)
 ```
 
 Each unit is independently deployable with clear boundaries.
@@ -474,7 +474,7 @@ Each unit is independently deployable with clear boundaries.
 - Services scale independently
 - Different technology stacks
 
-**Keep as one deployable unit when:**
+**Keep as one deployable module when:**
 
 - Code changes together frequently
 - Shared codebase makes sense
@@ -488,7 +488,7 @@ Each unit is independently deployable with clear boundaries.
 
 ### Stage 4 (Commit): Build Artifacts
 
-When a trunk commit affects a deployable unit:
+When a trunk commit affects a deployable module:
 
 1. Pipeline detects which deployable modules changed
 2. Build immutable artifacts for affected units
@@ -498,7 +498,7 @@ When a trunk commit affects a deployable unit:
 
 ### Stage 5 (Acceptance Testing): Validate in PLTE
 
-Each deployable unit is tested independently:
+Each deployable module is tested independently:
 
 - Deploy to PLTE environment
 - Run acceptance tests for this unit
@@ -507,7 +507,7 @@ Each deployable unit is tested independently:
 
 ### Stage 8 (Start Release): Create Release Candidate
 
-For each deployable unit being released:
+For each deployable module being released:
 
 - Identify version to release
 - Create release branch or tag (RA pattern)
@@ -567,5 +567,14 @@ Deployable modules are the fundamental building blocks of Continuous Delivery:
 
 ## References
 
+### Internal Documentation
+
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Repository Patterns](../architecture/repository-patterns.md)
+
+### External Standards
+
+- [Semantic Versioning (SemVer)](https://semver.org/) - Versioning standard for libraries and tools
+- [Calendar Versioning (CalVer)](https://calver.org/) - Versioning standard for runtime systems
+- [Conventional Commits](https://www.conventionalcommits.org/) - Commit message convention
+- [Trunk-Based Development](https://trunkbaseddevelopment.com/) - Branching strategy and workflow
