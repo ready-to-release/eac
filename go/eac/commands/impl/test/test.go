@@ -215,21 +215,26 @@ func parseTestArgs(args []string) *TestConfig {
 
 // executeTests runs tests directly using orchestrator (like buildMultipleModules)
 func executeTests(cfg *TestConfig) int {
-	// Enable debug logging if requested
-	if cfg.DebugMode {
-		logging.EnableDebug()
-	}
-
-	// Show execution context
-	log.Infof("Executing test via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
-	log.Info("")
-
-	// Get workspace root
+	// Get workspace root first (needed for file logging)
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
+
+	// Enable file logging for debug output (always enabled for test)
+	// If --debug flag is set, also output to console
+	if err := logging.EnableFileLogging(workspaceRoot, "test", cfg.DebugMode); err != nil {
+		log.Warnf("Failed to enable file logging: %v", err)
+	}
+	defer logging.CloseFileLogging()
+
+	// Always enable debug logging (output destination is controlled by EnableFileLogging)
+	logging.EnableDebug()
+
+	// Show execution context
+	log.Infof("Executing test via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
+	log.Info("")
 
 	// Load repository config for paths
 	repoCfg, err := config.LoadRepositoryConfig(workspaceRoot)

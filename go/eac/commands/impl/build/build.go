@@ -257,10 +257,15 @@ func Build() int {
 		return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
 	}
 
-	// Enable debug logging if requested
-	if debugMode {
-		logging.EnableDebug()
+	// Enable file logging for debug output (always enabled for build)
+	// If --debug flag is set, also output to console
+	if err := logging.EnableFileLogging(workspaceRoot, "build", debugMode); err != nil {
+		log.Warnf("Failed to enable file logging: %v", err)
 	}
+	defer logging.CloseFileLogging()
+
+	// Always enable debug logging (output destination is controlled by EnableFileLogging)
+	logging.EnableDebug()
 
 	// Run build (single or multiple modules) - phases are handled inside
 	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight)
