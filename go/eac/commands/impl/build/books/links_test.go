@@ -133,7 +133,7 @@ func TestConvertAttrListImages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, count := convertAttrListImages(tt.input)
+			result, count := convertAttrListImages(tt.input, false) // adjustPaths=false for unit test
 			if result != tt.expected {
 				t.Errorf("convertAttrListImages()\nexpected: %s\ngot:      %s", tt.expected, result)
 			}
