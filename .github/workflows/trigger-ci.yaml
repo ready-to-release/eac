@@ -451,39 +451,30 @@ jobs:
             echo ""
             echo "PR Mode: Running all workflows in parallel"
 
-            ALL_RUN_IDS=""
             ALL_MODULES=$(echo "$PLAN" | jq -r '.layers[][]')
+            DISPATCHED_COUNT=0
 
             for module in $ALL_MODULES; do
               if [ -f ".github/workflows/ci-${module}.yaml" ]; then
-                echo "Triggering: ci-${module}.yaml"
+                echo "Dispatching: ci-${module}.yaml"
                 gh workflow run "ci-${module}.yaml" \
                   --ref "$DISPATCH_REF" \
                   -f ref=${{ github.ref }} \
                   -f sha=${{ github.sha }} \
                   -f trigger_run_id=${{ github.run_id }}
+                DISPATCHED_COUNT=$((DISPATCHED_COUNT + 1))
                 sleep 2
-
-                RUN_ID=$(gh run list --workflow="ci-${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
-                if [ -n "$RUN_ID" ]; then
-                  ALL_RUN_IDS="$ALL_RUN_IDS $RUN_ID"
-                fi
               fi
             done
 
-            # Wait for all workflows at once
-            if [ -n "$ALL_RUN_IDS" ]; then
-              echo ""
-              echo "Waiting for all workflows to complete..."
-              if ! $COMMANDS pipeline wait $ALL_RUN_IDS --timeout 1800; then
-                echo "::error::One or more workflows failed"
-                exit 1
-              fi
-            fi
+            echo ""
+            echo "Dispatched $DISPATCHED_COUNT workflow(s)"
+            echo "Child workflows will report their own statuses to the PR"
           else
             echo ""
-            echo "Trunk Mode: Executing $LAYER_COUNT layer(s) sequentially"
+            echo "Trunk Mode: Dispatching $LAYER_COUNT layer(s) in dependency order"
 
+            TOTAL_DISPATCHED=0
             for ((layer_idx=0; layer_idx<LAYER_COUNT; layer_idx++)); do
               LAYER_NUM=$((layer_idx + 1))
               LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$layer_idx][]")
@@ -495,35 +486,27 @@ jobs:
               echo ""
               echo "Layer $LAYER_NUM: $LAYER_MODULES"
 
-              RUN_IDS=""
               for module in $LAYER_MODULES; do
                 if [ -f ".github/workflows/ci-${module}.yaml" ]; then
+                  echo "  Dispatching: ci-${module}.yaml"
                   gh workflow run "ci-${module}.yaml" \
                     --ref "$DISPATCH_REF" \
                     -f ref=${{ github.ref }} \
                     -f sha=${{ github.sha }} \
                     -f trigger_run_id=${{ github.run_id }}
+                  TOTAL_DISPATCHED=$((TOTAL_DISPATCHED + 1))
                   sleep 2
-
-                  RUN_ID=$(gh run list --workflow="ci-${module}.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
-                  if [ -n "$RUN_ID" ]; then
-                    RUN_IDS="$RUN_IDS $RUN_ID"
-                  fi
                 fi
               done
-
-              # Wait for all workflows in this layer
-              if [ -n "$RUN_IDS" ]; then
-                if ! $COMMANDS pipeline wait $RUN_IDS --timeout 1800; then
-                  echo "::error::Layer $LAYER_NUM failed"
-                  exit 1
-                fi
-              fi
             done
+
+            echo ""
+            echo "Dispatched $TOTAL_DISPATCHED workflow(s) across $LAYER_COUNT layer(s)"
+            echo "Child workflows will report their own statuses"
           fi
 
           echo ""
-          echo "All workflows completed"
+          echo "All workflow dispatches completed"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -532,7 +515,7 @@ jobs:
   # =========================================
   summary:
     name: Summary
-    needs: [build-tooling, validate-all, detect-changes, calculate-order]
+    needs: [build-tooling, validate-all, detect-changes, calculate-order, execute-layers]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -628,7 +611,13 @@ jobs:
             echo "| Validate All | $VALIDATE_ALL | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # Module builds (asynchronous)
-          echo "| Module Builds | Running | $TOTAL_COUNT module workflow(s) triggered |" >> $GITHUB_STEP_SUMMARY
+          # Module builds (dispatched)
+          EXECUTION="${{ needs.execute-layers.result }}"
+          if [ "$EXECUTION" = "success" ]; then
+            echo "| Module Workflows | Dispatched | $TOTAL_COUNT workflow(s) triggered successfully |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Module Workflows | $EXECUTION | Failed to dispatch workflows |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> **Note**: Module builds run asynchronously and do not block PR merging." >> $GITHUB_STEP_SUMMARY
+          echo "> **Note**: Module CI workflows report their own statuses as separate checks." >> $GITHUB_STEP_SUMMARY
+          echo "> Check individual \`CI: <module>\` checks for build results." >> $GITHUB_STEP_SUMMARY
