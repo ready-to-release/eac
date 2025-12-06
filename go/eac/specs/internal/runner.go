@@ -16,6 +16,13 @@ import (
 	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
+// Global process-level cache shared across ALL test packages
+// This prevents 14+ concurrent git ls-files calls when running tests in parallel
+var (
+	globalRepoCache     *TestCache
+	globalRepoCacheOnce sync.Once
+)
+
 // RunnerConfig holds configuration for a spec runner.
 type RunnerConfig struct {
 	// SpecsPath is the relative path to feature files from the test file location
@@ -177,16 +184,19 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 	fixtureTemplate := (*coretesting.FixtureTemplate)(nil)
 	var templateMu sync.Mutex
 
-	// Create SHARED cache for original repo (one git ls-files call per suite, not per scenario)
-	// This dramatically improves performance: 49s -> <1s for file operations
-	sharedRepoCache := NewTestCache()
+	// Use GLOBAL process-level cache shared across all test packages
+	// This prevents 14+ concurrent git ls-files calls when running tests in parallel
+	// The cache is created once per process, not once per godog suite
+	globalRepoCacheOnce.Do(func() {
+		globalRepoCache = NewTestCache()
+	})
 
 	return func(sc *godog.ScenarioContext) {
 		// Create context for this scenario
 		ctx := NewTestContext()
 		ctx.OriginalRepoRoot = repoRoot
 		ctx.FixturePool = fixturePool
-		ctx.OriginalRepoCache = sharedRepoCache // Share cache across all scenarios!
+		ctx.OriginalRepoCache = globalRepoCache // Share global cache across ALL test packages!
 
 		// Register common steps
 		RegisterCommonSteps(sc, ctx)
