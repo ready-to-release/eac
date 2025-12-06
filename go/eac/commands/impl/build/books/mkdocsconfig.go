@@ -54,6 +54,8 @@ func LoadMkDocsTemplate(workspaceRoot string, outputFormat string) ([]byte, erro
 type ConfigOptions struct {
 	SiteName        string // Book/site name
 	SiteDescription string // Site description
+	BookTitle       string // Book-specific title for PDF cover page
+	BookDescription string // Book-specific description for PDF cover page
 	SiteURL         string // Site URL for links
 	DocsDir         string // Path to docs directory (relative to container mount)
 	Theme           string // Theme name: "dark" or "light" (for PDF)

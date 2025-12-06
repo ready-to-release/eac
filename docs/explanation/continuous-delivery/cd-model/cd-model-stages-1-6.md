@@ -340,13 +340,13 @@ PLTEs enable realistic testing without production risk or resource contention.
 
 The acceptance testing approach differs based on the number of deployable modules:
 
-**Single Deployable Unit:**
+**Single Deployable Module:**
 
 ![Single Entry Acceptance Testing](../../../assets/cd-model/acceptance-single-entry.drawio.png)
 
 **This diagram shows single-entry acceptance testing:** Only one change can be in Stage 5 at a time. The pipeline runs continuously on HEAD commits whenever the slot is ready and a commit exists that hasn't been acceptance tested yet. This prevents environment conflicts and ensures orderly progression through the stage.
 
-When the system consists of a single deployable unit (monolith, single service), this single-entry approach is typically sufficient.
+When the system consists of a single deployable module (monolith, single service), this single-entry approach is typically sufficient.
 
 **Multiple Deployable Modules:**
 

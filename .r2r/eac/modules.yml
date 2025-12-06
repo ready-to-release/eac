@@ -1,5 +1,35 @@
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/modules.schema.json
 # Repository Module Contracts
+
+# Module-level defaults (inherited by all modules)
+defaults:
+  paths:
+    # Test implementation root directory
+    # Used in type defaults as: {test_impl_root}/{moniker}
+    test_impl_root: "go/eac/specs/impl"
+
+    # Specs root directory
+    # Used in type defaults as: {specs_root}/{moniker}
+    specs_root: "specs"
+
+    # Templates directory
+    templates: "templates"
+
+    # Output directory structure
+    out:
+      root: "out"
+      build: "out/build"
+      test: "out/test"
+      logs: "out/logs"
+      security: "out/security"
+      tools: "out/tools"
+
+  conventions:
+    godog_test: "godog_test.go"
+    package_json: "package.json"
+    changelog: "CHANGELOG.md"
+
+# Module definitions
 modules:
   # ============================================================================
   # R2R Configuration
@@ -50,6 +80,8 @@ modules:
     name: Documentation Site
     type: mkdocs-site
     description: MkDocs documentation site for GitHub Pages (HTML only, no PDF)
+    versioning:
+      scheme: CalVer
     depends_on:
       - eac-commands
     files:
@@ -77,6 +109,8 @@ modules:
     name: Documentation Books
     type: mkdocs-site
     description: PDF documentation books with generated reference content from EAC commands
+    versioning:
+      scheme: CalVer
     depends_on:
       - eac-commands
     files:
@@ -99,6 +133,8 @@ modules:
     name: EAC Extension for R2R CLI
     type: r2r-extension
     description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
+    versioning:
+      scheme: SemVer
     depends_on:
       - eac-commands
     files:
@@ -138,6 +174,8 @@ modules:
     name: Go Command Invoker Scripts
     type: scripts-package
     description: Cross-shell wrappers with tab completion for running Go commands from go/eac/commands/
+    versioning:
+      scheme: SemVer
     depends_on:
       - eac-commands
     files:
@@ -175,8 +213,6 @@ modules:
         - cspell.config.yml
         - go.work
         - go.work.sum
-        - definitions.yml
-        - "**/definitions.yml"
         - test-repository-validations.sh
         - CHANGELOG.md
       repo:
@@ -195,6 +231,8 @@ modules:
     name: AI Provider Libraries
     type: go-library
     description: AI/LLM provider integrations (Claude, OpenAI, Gemini) for code generation and analysis
+    versioning:
+      scheme: SemVer
     depends_on:
       - r2r-config
     files:
@@ -217,6 +255,8 @@ modules:
     name: The CLI of CLIs
     type: go-cli
     description: The extendable go-based CLI tool
+    versioning:
+      scheme: SemVer
     depends_on:
       - eac-core
     files:
@@ -247,6 +287,8 @@ modules:
     name: R2R CLI Installer Scripts
     type: scripts-package
     description: Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases
+    versioning:
+      scheme: SemVer
     depends_on:
       - eac-core
     files:
@@ -269,6 +311,8 @@ modules:
     name: Go Commands Library
     type: go-commands
     description: Go library containing CLI command implementations
+    versioning:
+      scheme: SemVer
     depends_on:
       - eac-ai
       - eac-core
@@ -296,6 +340,8 @@ modules:
     name: Core Domain Libraries
     type: go-library
     description: Core library containing contracts and repository operations
+    versioning:
+      scheme: SemVer
     files:
       root: go/eac/core
       config:
@@ -321,6 +367,8 @@ modules:
     name: Go Commands MCP Server
     type: go-mcp
     description: Internal MCP server for Commands
+    versioning:
+      scheme: SemVer
     depends_on:
       - eac-core
     files:
@@ -384,6 +432,8 @@ modules:
     name: VSCode Extension - Git Commit
     type: vscode-ext
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
+    versioning:
+      scheme: SemVer
     files:
       root: typescript/vscode-ext-commit
       source:
@@ -410,6 +460,8 @@ modules:
     name: Release Documentation
     type: documentation
     description: Release notes and changelogs for published artifacts
+    versioning:
+      scheme: CalVer
     files:
       root: release
       assets:

@@ -9,7 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
-// ModuleContract represents a module deployable unit contract
+// ModuleContract represents a module deployable module contract
 type ModuleContract struct {
 	contracts.BaseContract `yaml:",inline"`
 

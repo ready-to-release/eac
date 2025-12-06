@@ -85,7 +85,7 @@ Feature: Container Integration Tests
 ### `@L3` - In-Situ Vertical Tests
 
 - **Execution**: PLTE (Production-Like Test Environment)
-- **Scope**: Deployed system (single deployable unit boundaries)
+- **Scope**: Deployed system (single deployable module boundaries)
 - **Dependencies**: All replaced with test doubles
 - **Speed**: Minutes
 - **Usage**: Go tests with `//go:build L3` build tag, Godog features with `@L3` tag (automatically inferred from `@iv` or `@pv`)

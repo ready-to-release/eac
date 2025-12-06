@@ -58,9 +58,10 @@ func New(config Config, worker WorkerFunc) *Orchestrator {
 	// Initialize TUI console if enabled
 	if config.TUI {
 		o.tuiConsole = tui.New(tui.Config{
-			Height:     config.TUIHeight,
-			ShowHeader: true,
-			BufferSize: 1000,
+			Height:       config.TUIHeight,
+			ShowHeader:   true,
+			BufferSize:   1000,
+			RunPhaseName: config.ActionVerb,
 		})
 		o.tuiCtx, o.tuiCancel = context.WithCancel(context.Background())
 	}
@@ -542,9 +543,11 @@ func (o *Orchestrator) SendInitLine(text string) {
 	o.WriteToPhase(tui.PhaseInit, text)
 }
 
-// SendEndLine sends a line to the End phase buffer
+// SendEndLine sends a line to the results buffer (appears below Run pane)
 func (o *Orchestrator) SendEndLine(text string) {
-	o.WriteToPhase(tui.PhaseEnd, text)
+	if o.tuiConsole != nil {
+		o.tuiConsole.WriteResult(text)
+	}
 }
 
 // IsTUIEnabled returns whether TUI is enabled

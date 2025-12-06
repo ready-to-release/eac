@@ -11,7 +11,7 @@ Understanding these components and their relationships is essential for implemen
 These four components work together to enable the continuous flow of software from development through production:
 
 - **[Trunk](#trunk)**: The version-controlled timeline where code lives
-- **[Deployable Unit](#deployable-unit)**: The discrete body of work that is built, tested, and delivered
+- **[Deployable Module](#deployable-module)**: The discrete body of work that is built, tested, and delivered
 - **[Deployment Pipeline](#deployment-pipeline)**: The automated process that validates and delivers changes
 - **[Live](#live)**: The runtime environment where software serves users
 
@@ -40,15 +40,15 @@ These four components work together to enable the continuous flow of software fr
 
 **Implementation:**
 
-- Can be a single repository (polyrepo) containing one deployable unit
+- Can be a single repository (polyrepo) containing one deployable module
 - Can be a monorepo containing multiple deployable modules
 - Always uses trunk-based development branching topology
 
 See [Trunk-Based Development](../workflow/trunk-based-development.md) for detailed practices.
 
-### Deployable Unit
+### Deployable Module
 
-![Deployable Unit Legend](../../../assets/branching/legend-deployable-unit.drawio.png){width=100}
+![Deployable Module Legend](../../../assets/branching/legend-deployable-module.drawio.png){width=100}
 
 **Definition:** The discrete body of work that is built, tested, and delivered as a single unit.
 
@@ -85,7 +85,7 @@ See [Trunk-Based Development](../workflow/trunk-based-development.md) for detail
 - Establishes deployment boundaries
 - Enables independent testing and deployment
 
-See [Deployable Modules](deployable-units.md) for detailed explanation.
+See [Deployable Modules](deployable-modules.md) for detailed explanation.
 
 ### Deployment Pipeline
 
@@ -165,14 +165,14 @@ This diagram illustrates how the four components relate to each other:
 
 A single trunk can contain:
 
-- **One deployable unit** (polyrepo pattern)
+- **One deployable module** (polyrepo pattern)
 - **Multiple deployable modules** (monorepo pattern)
 
 **Polyrepo Example:**
 
 ```text
 api-service/              # Trunk (repo)
-├── src/                  # Deployable Unit: API Service
+├── src/                  # Deployable Module: API Service
 ├── infrastructure/
 └── .github/workflows/    # Deployment Pipeline
 ```
@@ -182,20 +182,20 @@ api-service/              # Trunk (repo)
 ```text
 platform/                 # Trunk (repo)
 ├── services/
-│   ├── api/             # Deployable Unit 1
-│   ├── web/             # Deployable Unit 2
-│   └── worker/          # Deployable Unit 3
-└── shared/              # Supporting code (not a deployable unit)
+│   ├── api/             # Deployable Module 1
+│   ├── web/             # Deployable Module 2
+│   └── worker/          # Deployable Module 3
+└── shared/              # Supporting code (not a deployable module)
 ```
 
-### Each Deployable Unit Has a Deployment Pipeline
+### Each Deployable Module Has a Deployment Pipeline
 
-Every deployable unit has its own automated pipeline:
+Every deployable module has its own automated pipeline:
 
 - **Polyrepo**: One pipeline per repository
-- **Monorepo**: Multiple pipelines in one repository (one per deployable unit)
+- **Monorepo**: Multiple pipelines in one repository (one per deployable module)
 
-The pipeline is triggered when changes affect its deployable unit.
+The pipeline is triggered when changes affect its deployable module.
 
 ### Deployment Pipeline Delivers to Live
 
@@ -222,11 +222,11 @@ The Unit of Flow maps directly to CD Model stages:
 - Stage 3 (Merge Request): Changes integrated to trunk via PR
 - Stage 4 (Commit): Trunk commits trigger pipelines
 
-**Deployable Unit-Focused Stages:**
+**Deployable Module-Focused Stages:**
 
-- Stage 4 (Commit): Build artifacts for the deployable unit
-- Stage 5 (Acceptance Testing): Validate the deployable unit
-- Stage 8 (Start Release): Create release candidate for the deployable unit
+- Stage 4 (Commit): Build artifacts for the deployable module
+- Stage 5 (Acceptance Testing): Validate the deployable module
+- Stage 8 (Start Release): Create release candidate for the deployable module
 
 **Deployment Pipeline-Focused Stages:**
 
@@ -284,7 +284,7 @@ The Unit of Flow maps directly to CD Model stages:
 
 ```mermaid
 flowchart LR
-    TR[Trunk] --> DU[One Deployable Unit]
+    TR[Trunk] --> DU[One Deployable Module]
     DU --> PP[One Pipeline]
     PP --> LS[One Live Service]
 ```
@@ -340,14 +340,14 @@ The Unit of Flow provides a mental model for Continuous Delivery:
 **The Four Components:**
 
 1. **Trunk**: Where code lives (Git repository)
-2. **Deployable Unit**: What gets built and deployed
+2. **Deployable Module**: What gets built and deployed
 3. **Deployment Pipeline**: How code reaches production (12 stages)
 4. **Live**: Where software runs in production
 
 **Key Relationships:**
 
 - Trunk contains one or more deployable modules
-- Each deployable unit has its own deployment pipeline
+- Each deployable module has its own deployment pipeline
 - Pipelines deliver artifacts to live environments
 - Live environments provide feedback to trunk
 
@@ -361,7 +361,7 @@ The Unit of Flow provides a mental model for Continuous Delivery:
 ## Next Steps
 
 - [Trunk-Based Development](../workflow/trunk-based-development.md) - Detailed branching practices
-- [Deployable Modules](deployable-units.md) - Types, versioning, and management
+- [Deployable Modules](deployable-modules.md) - Types, versioning, and management
 - [Branching Strategies](../workflow/branching-strategies.md) - Flows for RA and CDE patterns
 - [CD Model Overview](../cd-model/cd-model-overview.md) - Complete 12-stage framework
 - [Repository Patterns](../architecture/repository-patterns.md) - Monorepo vs polyrepo

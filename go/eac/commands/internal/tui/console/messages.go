@@ -44,3 +44,8 @@ type PhaseLineMsg struct {
 	Phase Phase
 	Line  Line
 }
+
+// ResultLineMsg is sent when a line should go to the results buffer (exported for tui package)
+type ResultLineMsg struct {
+	Line Line
+}

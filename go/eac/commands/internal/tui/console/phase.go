@@ -10,8 +10,6 @@ const (
 	PhaseInit Phase = iota
 	// PhaseRun is the execution phase (parallel workers running)
 	PhaseRun
-	// PhaseEnd is the completion phase (summary, results)
-	PhaseEnd
 )
 
 // String returns the display name for a phase
@@ -21,8 +19,6 @@ func (p Phase) String() string {
 		return "Init"
 	case PhaseRun:
 		return "Run"
-	case PhaseEnd:
-		return "End"
 	default:
 		return "Unknown"
 	}
@@ -58,7 +54,7 @@ func (s PhaseStatus) Icon() string {
 	}
 }
 
-// Pane represents a single pane in the 3-pane layout
+// Pane represents a single pane in the 2-pane layout
 type Pane struct {
 	Phase     Phase
 	Status    PhaseStatus

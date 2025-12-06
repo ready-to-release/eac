@@ -10,7 +10,7 @@ The repository distinguishes between two categories:
 
 ### Deployable Modules
 
-Independently built, versioned, and deployed artifacts. Each has a detailed contract in `contracts/deployable-units/0.1.0/{moniker}.yml` defining:
+Independently built, versioned, and deployed artifacts. Each has a detailed contract in `contracts/deployable-modules/0.1.0/{moniker}.yml` defining:
 
 - Build and deployment configuration
 - Versioning strategy and current version

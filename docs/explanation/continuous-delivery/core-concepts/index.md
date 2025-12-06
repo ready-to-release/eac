@@ -1,6 +1,8 @@
 # Core Concepts
 
-Foundational concepts that underpin the Continuous Delivery Model. These articles establish the building blocks you need to understand before diving into the 12-stage model and implementation practices.
+Foundational concepts that underpin the Continuous Delivery Model.
+
+These articles establish the building blocks you need to understand before diving into the 12-stage model and implementation practices.
 
 **Start here** if you're new to the CD Model.
 
@@ -13,7 +15,7 @@ Understanding the four interconnected components that enable Continuous Delivery
 The Unit of Flow provides a mental model for how Continuous Delivery works by breaking it down into four discrete components:
 
 1. **Trunk**: The version-controlled timeline where code lives (Git repository)
-2. **Deployable Unit**: The discrete body of work that gets built and deployed
+2. **Deployable Module**: The discrete body of work that gets built and deployed
 3. **Deployment Pipeline**: The automated process that validates and delivers changes (12 stages)
 4. **Live**: The runtime environment where software serves users
 
@@ -28,11 +30,11 @@ The Unit of Flow provides a mental model for how Continuous Delivery works by br
 
 ---
 
-## [Deployable Modules](deployable-units.md)
+## [Deployable Modules](deployable-modules.md)
 
 Understanding what gets built, versioned, and deployed through the CD Model.
 
-A Deployable Unit is the fundamental building block of Continuous Delivery - the discrete body of work that is built, tested, and delivered as a cohesive whole.
+A Deployable Module is the fundamental building block of Continuous Delivery - the discrete body of work that is built, tested, and delivered as a cohesive whole.
 
 **Key topics:**
 

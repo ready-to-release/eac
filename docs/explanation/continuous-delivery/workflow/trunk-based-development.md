@@ -571,14 +571,23 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 
 - [Branching Strategies](branching-strategies.md) - Detailed flows for RA and CDe patterns
 - [Unit of Flow](../core-concepts/unit-of-flow.md) - See how trunk fits into the bigger picture
-- [Deployable Modules](../core-concepts/deployable-units.md) - What gets built from trunk
+- [Deployable Modules](../core-concepts/deployable-modules.md) - What gets built from trunk
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe decision guidance
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages including feature flags
 
 ## References
 
+### Internal Documentation
+
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Repository Layout](../../../reference/repository-layout.md)
+
+### External Standards
+
 - [Trunk-Based Development (trunkbaseddevelopment.com)](https://trunkbaseddevelopment.com/)
+- [Conventional Commits](https://www.conventionalcommits.org/) - Commit message convention
+
+### Additional Resources
+
 - [Feature Branches Considered Evil (YouTube)](https://www.youtube.com/watch?v=h7LeD7VevyI)
 - [Why CI is Better Than Feature Branching (YouTube)](https://www.youtube.com/watch?v=lXQEi1O5IOI)
