@@ -86,6 +86,34 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Pre-compute git file list using GitHub API (fast) instead of git ls-files (84s)
+      # GitHub API reads from database, not slow runner storage
+      - name: Pre-compute git file list via GitHub API
+        run: |
+          echo "Fetching file list via GitHub API..."
+
+          # Try GitHub API first (fast: ~2-5s)
+          if curl -s -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+               -H "Accept: application/vnd.github.v3+json" \
+               "https://api.github.com/repos/${{ github.repository }}/git/trees/${{ github.sha }}?recursive=1" \
+               | jq -r '.tree[] | select(.type=="blob") | .path' \
+               > .git/cached-files.txt 2>/dev/null; then
+
+            FILE_COUNT=$(wc -l < .git/cached-files.txt)
+            if [ "$FILE_COUNT" -gt 0 ]; then
+              echo "✓ Cached $FILE_COUNT files from GitHub API (~5s)"
+              exit 0
+            fi
+          fi
+
+          # Fallback to git ls-files if API fails (slow: ~84s)
+          echo "⚠ GitHub API failed, falling back to git ls-files (slow)..."
+          git ls-files > .git/cached-files.txt
+          FILE_COUNT=$(wc -l < .git/cached-files.txt)
+          echo "✓ Cached $FILE_COUNT files from git ls-files (~84s)"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Test Module
         uses: ./.github/actions/test-module
         with:

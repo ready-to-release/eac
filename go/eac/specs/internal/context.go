@@ -52,7 +52,8 @@ type TestContext struct {
 func NewTestContext() *TestContext {
 	return &TestContext{
 		SharedTestContext: coretesting.NewSharedTestContext(),
-		OriginalRepoCache: NewTestCache(),
+		// OriginalRepoCache is set by runner.go to the global cache
+		// Don't create a new one here - it's wasteful and gets overwritten
 	}
 }
 
@@ -68,8 +69,10 @@ func (c *TestContext) Reset() {
 // This should be called at the start of any scenario that needs cached data
 // from the ORIGINAL repository (not isolated/mocked repos).
 func (c *TestContext) EnsureOriginalRepoCache() error {
+	// OriginalRepoCache MUST be set by runner.go to globalRepoCache
+	// If it's nil, that's a programmer error - panic to catch it early
 	if c.OriginalRepoCache == nil {
-		c.OriginalRepoCache = NewTestCache()
+		panic("OriginalRepoCache is nil - runner.go must set it to globalRepoCache")
 	}
 	return c.OriginalRepoCache.EnsurePopulated(c.OriginalRepoRoot)
 }

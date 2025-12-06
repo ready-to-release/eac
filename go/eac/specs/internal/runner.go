@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -223,18 +224,26 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 				// Create fixture template once (first scenario with isolation tag)
 				templateMu.Lock()
 				if fixtureTemplate == nil {
+					start := time.Now()
 					template, err := fixturePool.CreateTemplate(repoRoot)
+					duration := time.Since(start)
 					if err != nil {
 						templateMu.Unlock()
 						return gctx, fmt.Errorf("failed to create fixture template: %w", err)
 					}
 					fixtureTemplate = template
+					fmt.Printf("⏱️  Fixture template creation: %v\n", duration)
 				}
 				templateMu.Unlock()
 
 				// Setup isolation (fast-copies from template, fails if template unavailable)
+				start := time.Now()
 				if err := ctx.SetupIsolation(); err != nil {
 					return gctx, fmt.Errorf("failed to setup isolation: %w", err)
+				}
+				duration := time.Since(start)
+				if duration > 100*time.Millisecond {
+					fmt.Printf("⏱️  Isolation setup: %v\n", duration)
 				}
 			}
 

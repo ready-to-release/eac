@@ -2,25 +2,33 @@
 package internal
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/git"
 )
 
 // TestCache provides cached repository data shared across all test scenarios.
-// It delegates file operations to repository.FileCache (single source of truth)
-// and adds module contract caching for test performance.
+// Uses direct git operations, avoiding FileCache wrapper for simplicity.
 //
 // This cache is for the ORIGINAL repository root only, not isolated test repos.
+// Thread-safe for concurrent access by parallel test packages.
 type TestCache struct {
 	mu sync.RWMutex
 
 	// repoRoot is the repository root used to populate this cache
 	repoRoot string
 
-	// fileCache delegates to core repository.FileCache for git operations
-	fileCache *repository.FileCache
+	// populated indicates if the cache has been loaded
+	populated bool
+
+	// trackedFiles is the cached list from git ls-files
+	trackedFiles []string
 
 	// moduleReport is the cached module contracts
 	moduleReport *contractsreports.ModuleContractReport
@@ -33,29 +41,71 @@ func NewTestCache() *TestCache {
 
 // EnsurePopulated ensures the cache is populated for the given repo root.
 // If already populated for the same root, this is a no-op.
-// Thread-safe.
+// Thread-safe with double-checked locking pattern.
 func (c *TestCache) EnsurePopulated(repoRoot string) error {
+	// Fast path: read lock to check if already populated
+	c.mu.RLock()
+	if c.populated && c.repoRoot == repoRoot {
+		c.mu.RUnlock()
+		return nil
+	}
+	c.mu.RUnlock()
+
+	// Slow path: write lock to populate
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Already populated for this repo
-	if c.repoRoot == repoRoot && c.fileCache != nil {
+	// Double-check: another goroutine may have populated while we waited
+	if c.populated && c.repoRoot == repoRoot {
 		return nil
 	}
 
 	// Reset if repo root changed
 	if c.repoRoot != repoRoot {
-		c.fileCache = nil
+		c.trackedFiles = nil
 		c.moduleReport = nil
+		c.populated = false
 		c.repoRoot = repoRoot
 	}
 
-	// Create file cache (delegates to core repository package)
-	c.fileCache = repository.NewFileCache(repoRoot)
+	// Load git tracked files - this is the ONLY git operation per process!
+	// First check for pre-computed file list (CI optimization via GitHub API)
+	// In CI: trigger-ci.yaml pre-computes this using GitHub Tree API (~5s vs 84s for git ls-files)
+	// Locally: file doesn't exist, falls through to git ls-files (fast on local storage)
+	cachedFilePath := filepath.Join(repoRoot, ".git", "cached-files.txt")
+	if cachedData, err := os.ReadFile(cachedFilePath); err == nil && len(cachedData) > 0 {
+		c.trackedFiles = strings.Split(strings.TrimSpace(string(cachedData)), "\n")
+		c.populated = true
+		return nil
+	}
 
-	// Pre-populate the cache (optional but improves first-access time)
-	_, err := c.fileCache.TrackedFiles()
-	return err
+	// Fall back to git ls-files with timing
+	start := time.Now()
+	repo, err := git.Open(repoRoot)
+	openDuration := time.Since(start)
+	if err != nil {
+		return err
+	}
+
+	start = time.Now()
+	files, err := repo.TrackedFiles()
+	lsFilesDuration := time.Since(start)
+	if err != nil {
+		return err
+	}
+
+	// Log timing for investigation
+	fmt.Printf("⏱️  Cache populate timing: git.Open=%v, TrackedFiles=%v, total=%v, files=%d\n",
+		openDuration, lsFilesDuration, openDuration+lsFilesDuration, len(files))
+
+	// Normalize paths to forward slashes for consistency
+	c.trackedFiles = make([]string, len(files))
+	for i, f := range files {
+		c.trackedFiles[i] = strings.ReplaceAll(f, "\\", "/")
+	}
+
+	c.populated = true
+	return nil
 }
 
 // TrackedFiles returns all git-tracked files (normalized paths).
@@ -63,41 +113,35 @@ func (c *TestCache) EnsurePopulated(repoRoot string) error {
 func (c *TestCache) TrackedFiles() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
-	if c.fileCache == nil {
-		return nil
-	}
-
-	files, _ := c.fileCache.TrackedFiles()
-	return files
+	return c.trackedFiles
 }
 
 // FilesByExtension returns files matching the given extension (e.g., ".md").
-// Results are cached for subsequent calls.
 func (c *TestCache) FilesByExtension(ext string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if c.fileCache == nil {
-		return nil
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if strings.HasSuffix(f, ext) {
+			filtered = append(filtered, f)
+		}
 	}
-
-	files, _ := c.fileCache.FilesByExtension(ext)
-	return files
+	return filtered
 }
 
 // FilesBySuffix returns files matching the given suffix (e.g., "_test.go").
-// Results are cached for subsequent calls.
 func (c *TestCache) FilesBySuffix(suffix string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if c.fileCache == nil {
-		return nil
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if strings.HasSuffix(f, suffix) {
+			filtered = append(filtered, f)
+		}
 	}
-
-	files, _ := c.fileCache.FilesBySuffix(suffix)
-	return files
+	return filtered
 }
 
 // FilesInDir returns files under the given directory prefix.
@@ -106,12 +150,18 @@ func (c *TestCache) FilesInDir(dir string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if c.fileCache == nil {
-		return nil
+	// Ensure dir ends with /
+	if !strings.HasSuffix(dir, "/") {
+		dir = dir + "/"
 	}
 
-	files, _ := c.fileCache.FilesInDir(dir)
-	return files
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if strings.HasPrefix(f, dir) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered
 }
 
 // FilesInDirWithExtension returns files under dir matching extension.
@@ -119,12 +169,18 @@ func (c *TestCache) FilesInDirWithExtension(dir, ext string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if c.fileCache == nil {
-		return nil
+	// Ensure dir ends with /
+	if !strings.HasSuffix(dir, "/") {
+		dir = dir + "/"
 	}
 
-	files, _ := c.fileCache.FilesInDirWithExtension(dir, ext)
-	return files
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		if strings.HasPrefix(f, dir) && strings.HasSuffix(f, ext) {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered
 }
 
 // FilesMatchingAnyExtension returns files matching any of the given extensions.
@@ -133,12 +189,16 @@ func (c *TestCache) FilesMatchingAnyExtension(extensions []string) []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if c.fileCache == nil {
-		return nil
+	var filtered []string
+	for _, f := range c.trackedFiles {
+		for _, ext := range extensions {
+			if strings.HasSuffix(f, ext) {
+				filtered = append(filtered, f)
+				break
+			}
+		}
 	}
-
-	files, _ := c.fileCache.FilesMatchingAnyExtension(extensions)
-	return files
+	return filtered
 }
 
 // ModuleReport returns the cached module report, loading it if necessary.
@@ -160,11 +220,15 @@ func (c *TestCache) ModuleReport() (*contractsreports.ModuleContractReport, erro
 		return c.moduleReport, nil
 	}
 
-	// Load module contracts
+	// Load module contracts with timing
+	start := time.Now()
 	report, err := contractsreports.GetModuleContracts(c.repoRoot)
+	duration := time.Since(start)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("⏱️  ModuleReport loading: %v, modules=%d\n", duration, len(report.Modules))
 	c.moduleReport = report
 	return report, nil
 }
@@ -173,12 +237,7 @@ func (c *TestCache) ModuleReport() (*contractsreports.ModuleContractReport, erro
 func (c *TestCache) AbsolutePath(relPath string) string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
-	if c.fileCache == nil {
-		return relPath
-	}
-
-	return c.fileCache.AbsolutePath(relPath)
+	return filepath.Join(c.repoRoot, relPath)
 }
 
 // RepoRoot returns the cached repository root.
