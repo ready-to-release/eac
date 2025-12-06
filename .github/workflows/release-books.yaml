@@ -49,6 +49,8 @@ jobs:
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.ci_run_id }}
 
       - name: Setup Module Dependencies
         uses: ./.github/actions/setup-module-deps

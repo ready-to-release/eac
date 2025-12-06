@@ -26,7 +26,7 @@ func Show() int {
 	case "--help", "-h":
 		printShowUsage()
 		return 0
-	case "books", "config", "dependencies", "environments", "files", "files-changed", "files-staged", "modules", "moduletypes", "suite", "tests", "valid-commands":
+	case "books", "build-times", "config", "dependencies", "environments", "files", "files-changed", "files-staged", "modules", "moduletypes", "suite", "tests", "test-timings", "valid-commands":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -57,9 +57,13 @@ func printShowUsage() {
 	log.Info("  files-changed             Show modified files with module ownership")
 	log.Info("  files-staged              Show staged files with module ownership")
 	log.Info("")
+	log.Info("Build:")
+	log.Info("  build-times               Show build timing analysis from recent builds")
+	log.Info("")
 	log.Info("Testing:")
 	log.Info("  tests                     Show all tests in the repository")
 	log.Info("  suite <name>              Show detailed test suite information")
+	log.Info("  test-timings              Show test timing analysis from recent test runs")
 	log.Info("")
 	log.Info("Environment:")
 	log.Info("  environments              Show all environment contracts")

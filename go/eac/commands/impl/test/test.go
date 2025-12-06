@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/runner"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/runners"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
@@ -545,6 +546,9 @@ func executeTests(cfg *TestConfig) int {
 	orch.SetWorker(execCtx.createWorker())
 	orch.SetModuleTypes(moduleTypes)
 
+	// Track test execution time
+	testStartTime := time.Now()
+
 	// Run tests (TUI transitions to Run phase automatically)
 	_, orchErr := orch.Run(monikers)
 	if orchErr != nil {
@@ -642,6 +646,32 @@ func executeTests(cfg *TestConfig) int {
 	}
 
 	writeln(multiWriter, "")
+
+	// Show timing analysis if requested
+	if cfg.ShowTimings {
+		writeln(multiWriter, "")
+		// Extract unique module monikers from tested packages
+		testedModules := make(map[string]bool)
+		for pkgPath := range testsByPackage {
+			moduleMoniker := moduleMapper.GetModuleForPackagePath(pkgPath)
+			if moduleMoniker != "" {
+				testedModules[moduleMoniker] = true
+			}
+		}
+
+		// Convert to slice
+		moduleList := make([]string, 0, len(testedModules))
+		for module := range testedModules {
+			moduleList = append(moduleList, module)
+		}
+
+		// Calculate wall-clock time (test execution duration)
+		wallClockSeconds := time.Since(testStartTime).Seconds()
+
+		// Display timing analysis for just the modules that were tested
+		// Pass the suite-specific output directory and wall-clock time
+		show.ShowTestTimingsForModules(moduleList, 5, testRunDir, wallClockSeconds)
+	}
 
 	// Return exit code based on failures
 	if packagesFailed > 0 || testsFailed > 0 {

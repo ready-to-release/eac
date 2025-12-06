@@ -13,6 +13,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // RunnerConfig holds configuration for a spec runner.
@@ -171,10 +172,16 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 	// Log suite initialization diagnostics (only once per suite)
 	logSuiteInitDiagnostics(repoRoot, cfg.SpecsPath)
 
+	// Create fixture pool for this test suite (mandatory for test isolation)
+	fixturePool := coretesting.NewFixturePool()
+	fixtureTemplate := (*coretesting.FixtureTemplate)(nil)
+	var templateMu sync.Mutex
+
 	return func(sc *godog.ScenarioContext) {
 		// Create context for this scenario
 		ctx := NewTestContext()
 		ctx.OriginalRepoRoot = repoRoot
+		ctx.FixturePool = fixturePool
 
 		// Register common steps
 		RegisterCommonSteps(sc, ctx)
@@ -189,12 +196,30 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 			ctx.Reset()
 
 			// Check for @env:isolated-test-project tag
+			hasIsolationTag := false
 			for _, tag := range scenario.Tags {
 				if tag.Name == "@env:isolated-test-project" {
-					if err := ctx.SetupIsolation(); err != nil {
-						return gctx, fmt.Errorf("failed to setup isolation: %w", err)
-					}
+					hasIsolationTag = true
 					break
+				}
+			}
+
+			if hasIsolationTag {
+				// Create fixture template once (first scenario with isolation tag)
+				templateMu.Lock()
+				if fixtureTemplate == nil {
+					template, err := fixturePool.CreateTemplate(repoRoot)
+					if err != nil {
+						templateMu.Unlock()
+						return gctx, fmt.Errorf("failed to create fixture template: %w", err)
+					}
+					fixtureTemplate = template
+				}
+				templateMu.Unlock()
+
+				// Setup isolation (fast-copies from template, fails if template unavailable)
+				if err := ctx.SetupIsolation(); err != nil {
+					return gctx, fmt.Errorf("failed to setup isolation: %w", err)
 				}
 			}
 

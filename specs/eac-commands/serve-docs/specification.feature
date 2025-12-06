@@ -16,7 +16,7 @@ Feature: eac-commands_serve-docs
 
     Scenario: Start MkDocs server with --no-browser flag
       Given docker service is available
-      When I run the command "serve docs --no-browser"
+      When I run the command "serve docs --no-browser --skip-validation"
       Then the exit code is 0
       And MkDocs container should start successfully
       And I should see "Starting MkDocs documentation server" or "MkDocs is already running"
@@ -26,7 +26,7 @@ Feature: eac-commands_serve-docs
     Scenario: Reject request for different port when container running
       Given docker service is available
       And MkDocs container is running
-      When I run the command "serve docs --no-browser --port 9999"
+      When I run the command "serve docs --no-browser --port 9999 --skip-validation"
       Then the exit code is 1
       And I should see "MkDocs is already running on port"
       And I should see "To use a different port"
@@ -34,7 +34,7 @@ Feature: eac-commands_serve-docs
     Scenario: Handle already running container
       Given docker service is available
       And MkDocs container is running
-      When I run the command "serve docs --no-browser"
+      When I run the command "serve docs --no-browser --skip-validation"
       Then the exit code is 0
       And I should see "MkDocs is already running"
       And I should see "Documentation:"
@@ -42,7 +42,7 @@ Feature: eac-commands_serve-docs
     Scenario: Stop MkDocs server
       Given docker service is available
       And MkDocs container is running
-      When I run the command "serve docs --stop"
+      When I run the command "serve docs --stop --skip-validation"
       Then the exit code is 0
       And MkDocs container should be stopped
       And I should see "MkDocs documentation server stopped"
@@ -50,7 +50,7 @@ Feature: eac-commands_serve-docs
     Scenario: Stop when container not running
       Given docker service is available
       And MkDocs container is not running
-      When I run the command "serve docs --stop"
+      When I run the command "serve docs --stop --skip-validation"
       Then the exit code is 0
       And I should see "MkDocs documentation server stopped"
 

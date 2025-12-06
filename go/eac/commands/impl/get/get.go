@@ -29,7 +29,7 @@ func Get() int {
 	case "--help", "-h":
 		printGetUsage()
 		return 0
-	case "changed-modules", "changed-modules-ci", "config", "dependencies", "environments", "execution", "files", "modules", "suite", "tests", "valid-commands":
+	case "build-times", "changed-modules", "changed-modules-ci", "config", "dependencies", "environments", "execution", "files", "modules", "suite", "tests", "test-timings", "valid-commands":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -57,9 +57,13 @@ func printGetUsage() {
 	log.Info("  changed-modules           Get modules affected by changed files")
 	log.Info("  changed-modules-ci        Get modules requiring rebuild since last successful CI")
 	log.Info("")
+	log.Info("Build:")
+	log.Info("  build-times               Get build timing data from build logs")
+	log.Info("")
 	log.Info("Testing:")
 	log.Info("  tests                     Get all tests in structured format")
 	log.Info("  suite <name>              Get test suite information")
+	log.Info("  test-timings              Get test timing data from test logs")
 	log.Info("")
 	log.Info("Commands:")
 	log.Info("  valid-commands            Get all valid commands in structured format")

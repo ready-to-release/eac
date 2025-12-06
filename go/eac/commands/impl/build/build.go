@@ -28,6 +28,7 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
@@ -458,6 +459,17 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	// Stop TUI first (restores stdout), then print full summary
 	orch.StopTUI()
 	orch.PrintSummary(results)
+
+	// Show rich timing analysis if requested
+	if showTimings {
+		log.Info("")
+		// Get the list of modules that were built
+		builtModules := executionPlan.ExecutionOrder
+
+		// Display rich timing analysis for the modules that were built
+		buildOutputDir := filepath.Join(workspaceRoot, "out", "build")
+		show.ShowBuildTimesForModules(builtModules, 10, buildOutputDir)
+	}
 
 	// Return exit code based on results
 	return orchestrator.GetExitCode(results)
