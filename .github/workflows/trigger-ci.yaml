@@ -6,11 +6,12 @@
 #
 # Pipeline stages:
 # 1. build-tooling: Build/cache the commands binary for fast subsequent operations
-# 2. validate-all: Run repository commit suite (fast contract validation)
-# 3. detect-changes: Determine which modules need CI workflows triggered
-# 4. calculate-order: Compute dependency-based execution order
-# 5. execute-layers: Trigger child workflows in dependency order
-# 6. summary: Report results
+# 2. build-repository: Build repository module (contract validation infrastructure)
+# 3. validate-repository: Run repository commit suite (fast contract validation)
+# 4. detect-changes: Determine which modules need CI workflows triggered
+# 5. calculate-order: Compute dependency-based execution order
+# 6. execute-layers: Trigger child workflows in dependency order
+# 7. summary: Report results
 #
 # For PRs: Compares against PR base SHA
 # For push: Compares against last successful CI SHA
@@ -61,79 +62,41 @@ jobs:
   # =========================================
   # Stage 1: Validate Repository (Commit Suite Only)
   # =========================================
-  validate-all:
-    name: Validate Repository
+  build-repository:
+    name: Build Repository
     needs: build-tooling
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
-      - name: Download commands binary
-        uses: actions/download-artifact@v6
+      - name: Build Module
+        uses: ./.github/actions/build-module
         with:
-          name: commands-binary
-          path: out/tools
+          module: repository
+          trigger-run-id: ${{ github.run_id }}
+          setup-deps: auto
 
-      - name: Make executable
-        run: chmod +x out/tools/commands
+  validate-repository:
+    name: Test Repository
+    needs: build-repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
 
-      - name: Run repository commit suite
-        id: test
-        run: |
-          COMMANDS="./out/tools/commands"
-
-          echo "Running repository commit test suite..."
-          echo ""
-
-          # Capture output for summary
-          OUTPUT_FILE=$(mktemp)
-          $COMMANDS test repository --suite commit 2>&1 | tee "$OUTPUT_FILE"
-          EXIT_CODE=${PIPESTATUS[0]}
-
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::Repository test suite failed"
-            echo "## Validate Repository" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Repository Test Suite Failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-
-            # Extract failed scenarios from output
-            FAILED_SCENARIOS=$(grep -E "--- FAIL:|FAIL\s+" "$OUTPUT_FILE" | head -20 || true)
-            ERROR_MESSAGES=$(grep -E "Error:|error:|FAIL" "$OUTPUT_FILE" | grep -v "^go: downloading" | head -30 || true)
-
-            if [ -n "$FAILED_SCENARIOS" ]; then
-              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "$FAILED_SCENARIOS" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-            fi
-
-            if [ -n "$ERROR_MESSAGES" ]; then
-              echo "### Error Details" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-              echo "$ERROR_MESSAGES" >> $GITHUB_STEP_SUMMARY
-              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            fi
-
-            rm -f "$OUTPUT_FILE"
-            exit 1
-          fi
-
-          rm -f "$OUTPUT_FILE"
-
-          echo ""
-          echo "All tests passed"
-          echo "## Validate Repository" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Repository commit suite passed" >> $GITHUB_STEP_SUMMARY
+      - name: Test Module
+        uses: ./.github/actions/test-module
+        with:
+          module: repository
+          trigger-run-id: ${{ github.run_id }}
+          setup-deps: auto
+          suites: commit
 
   # =========================================
   # Stage 2: Detect Changed Modules
   # =========================================
   detect-changes:
     name: Detect Changed Modules
-    needs: validate-all
+    needs: validate-repository
     runs-on: ubuntu-latest
     outputs:
       changed-modules: ${{ steps.detect.outputs.modules }}
@@ -515,7 +478,7 @@ jobs:
   # =========================================
   summary:
     name: Summary
-    needs: [build-tooling, validate-all, detect-changes, calculate-order, execute-layers]
+    needs: [build-tooling, build-repository, validate-repository, detect-changes, calculate-order, execute-layers]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -531,7 +494,8 @@ jobs:
 
           # Check build-tooling status
           BUILD_TOOLING="${{ needs.build-tooling.result }}"
-          VALIDATE_ALL="${{ needs.validate-all.result }}"
+          BUILD_REPOSITORY="${{ needs.build-repository.result }}"
+          VALIDATE_REPOSITORY="${{ needs.validate-repository.result }}"
 
           if [ "$BUILD_TOOLING" = "failure" ]; then
             echo "### Build Tooling Failed" >> $GITHUB_STEP_SUMMARY
@@ -540,7 +504,14 @@ jobs:
             exit 0
           fi
 
-          if [ "$VALIDATE_ALL" = "failure" ]; then
+          if [ "$BUILD_REPOSITORY" = "failure" ]; then
+            echo "### Repository Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Repository module build failed. Check the build-repository job for details." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          if [ "$VALIDATE_REPOSITORY" = "failure" ]; then
             echo "### Repository Validation Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Repository commit suite failed. Fix test failures before continuing." >> $GITHUB_STEP_SUMMARY
@@ -600,15 +571,26 @@ jobs:
             echo "| Build Tooling | $BUILD_TOOLING | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # Validation stage
-          if [ "$VALIDATE_ALL" = "success" ]; then
-            echo "| Validate Repository | Pass | Repository commit suite passed |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATE_ALL" = "failure" ]; then
-            echo "| Validate Repository | Fail | Repository test failures found |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATE_ALL" = "skipped" ]; then
-            echo "| Validate Repository | Skip | Skipped |" >> $GITHUB_STEP_SUMMARY
+          # Build repository stage
+          if [ "$BUILD_REPOSITORY" = "success" ]; then
+            echo "| Build Repository | Pass | Repository module built |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$BUILD_REPOSITORY" = "failure" ]; then
+            echo "| Build Repository | Fail | Build failed |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$BUILD_REPOSITORY" = "skipped" ]; then
+            echo "| Build Repository | Skip | Skipped |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Validate Repository | $VALIDATE_ALL | Unexpected state |" >> $GITHUB_STEP_SUMMARY
+            echo "| Build Repository | $BUILD_REPOSITORY | Unexpected state |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Validation stage
+          if [ "$VALIDATE_REPOSITORY" = "success" ]; then
+            echo "| Test Repository | Pass | Repository commit suite passed |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATE_REPOSITORY" = "failure" ]; then
+            echo "| Test Repository | Fail | Repository test failures found |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VALIDATE_REPOSITORY" = "skipped" ]; then
+            echo "| Test Repository | Skip | Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Test Repository | $VALIDATE_REPOSITORY | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
 
           # Module builds (dispatched)
