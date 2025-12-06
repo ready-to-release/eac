@@ -68,6 +68,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Report status - pending
+        if: github.event_name == 'pull_request'
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=pending \
+            -f context="CI Trigger / Validate All Modules" \
+            -f description="Running full test suite..." \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Download commands binary
         uses: actions/download-artifact@v6
         with:
@@ -127,6 +138,28 @@ jobs:
           echo "## Validate All Modules" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "All module tests passed (commit suite)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Report status - success
+        if: github.event_name == 'pull_request' && success()
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=success \
+            -f context="CI Trigger / Validate All Modules" \
+            -f description="All tests passed" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Report status - failure
+        if: github.event_name == 'pull_request' && failure()
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=failure \
+            -f context="CI Trigger / Validate All Modules" \
+            -f description="Tests failed" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   # =========================================
   # Stage 2: Detect Changed Modules
@@ -536,6 +569,19 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+
+      - name: Report status - pending
+        if: github.event_name == 'pull_request'
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=pending \
+            -f context="CI Trigger / Summary" \
+            -f description="Generating summary..." \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Generate Summary
         run: |
           echo "## CI/CD Orchestration Summary" >> $GITHUB_STEP_SUMMARY
@@ -641,3 +687,25 @@ jobs:
           else
             echo "| Module Builds | $EXECUTION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Report status - success
+        if: github.event_name == 'pull_request' && needs.validate-all.result == 'success' && (needs.execute-layers.result == 'success' || needs.execute-layers.result == 'skipped')
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=success \
+            -f context="CI Trigger / Summary" \
+            -f description="All checks passed" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Report status - failure
+        if: github.event_name == 'pull_request' && (needs.validate-all.result == 'failure' || needs.execute-layers.result == 'failure' || needs.build-tooling.result == 'failure')
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state=failure \
+            -f context="CI Trigger / Summary" \
+            -f description="Pipeline failed" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
