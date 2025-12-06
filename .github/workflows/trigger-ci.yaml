@@ -36,7 +36,6 @@ on:
 permissions:
   actions: write
   contents: read
-  statuses: write
 
 jobs:
   # =========================================
@@ -68,17 +67,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
-      - name: Report status - pending
-        if: github.event_name == 'pull_request'
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=pending \
-            -f context="CI Trigger / Validate All Modules" \
-            -f description="Running full test suite..." \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Download commands binary
         uses: actions/download-artifact@v6
@@ -139,28 +127,6 @@ jobs:
           echo "## Validate All Modules" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "All module tests passed (commit suite)" >> $GITHUB_STEP_SUMMARY
-
-      - name: Report status - success
-        if: github.event_name == 'pull_request' && success()
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=success \
-            -f context="CI Trigger / Validate All Modules" \
-            -f description="All tests passed" \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Report status - failure
-        if: github.event_name == 'pull_request' && failure()
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=failure \
-            -f context="CI Trigger / Validate All Modules" \
-            -f description="Tests failed" \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
 
   # =========================================
   # Stage 2: Detect Changed Modules
@@ -446,17 +412,6 @@ jobs:
       - name: Make executable
         run: chmod +x out/tools/commands
 
-      - name: Report status - pending
-        if: github.event_name == 'pull_request'
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=pending \
-            -f context="CI Trigger / Execute Dependency Layers" \
-            -f description="Triggering module workflows..." \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - name: Execute All Layers
         run: |
           # Early exit if no changes - job runs to satisfy status checks but skips execution
@@ -572,49 +527,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Report status - success
-        if: github.event_name == 'pull_request' && success()
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=success \
-            -f context="CI Trigger / Execute Dependency Layers" \
-            -f description="All module workflows completed" \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Report status - failure
-        if: github.event_name == 'pull_request' && failure()
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=failure \
-            -f context="CI Trigger / Execute Dependency Layers" \
-            -f description="Module workflow(s) failed" \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
   # =========================================
   # Stage 5: Summary
   # =========================================
   summary:
     name: Summary
-    needs: [build-tooling, validate-all, detect-changes, calculate-order, execute-layers]
+    needs: [build-tooling, validate-all, detect-changes, calculate-order]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
-      - name: Report status - pending
-        if: github.event_name == 'pull_request'
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=pending \
-            -f context="CI Trigger / Summary" \
-            -f description="Generating summary..." \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Generate Summary
         run: |
@@ -674,18 +596,13 @@ jobs:
             exit 0
           fi
 
-          # Determine overall status
-          EXECUTION="${{ needs.execute-layers.result }}"
+          # All validation passed
           TOTAL_MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
           TOTAL_COUNT=$(echo "$TOTAL_MODULES" | wc -w | tr -d ' ')
 
-          if [ "$VALIDATE_ALL" = "success" ] && [ "$EXECUTION" = "success" ]; then
-            echo "### All Module Builds Passed" >> $GITHUB_STEP_SUMMARY
-          elif [ "$EXECUTION" = "failure" ]; then
-            echo "### Module Build(s) Failed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### Partial Execution" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "### Validation Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All validation checks passed. Module workflows are running in the background." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Pipeline Stages" >> $GITHUB_STEP_SUMMARY
@@ -711,35 +628,7 @@ jobs:
             echo "| Validate All | $VALIDATE_ALL | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # Execution stage
-          if [ "$EXECUTION" = "success" ]; then
-            echo "| Module Builds | Pass | All $TOTAL_COUNT module workflow(s) succeeded |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$EXECUTION" = "failure" ]; then
-            echo "| Module Builds | Fail | One or more module builds failed |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$EXECUTION" = "skipped" ]; then
-            echo "| Module Builds | Skip | Skipped due to earlier failure |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Module Builds | $EXECUTION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Report status - success
-        if: github.event_name == 'pull_request' && needs.validate-all.result == 'success' && (needs.execute-layers.result == 'success' || needs.execute-layers.result == 'skipped')
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=success \
-            -f context="CI Trigger / Summary" \
-            -f description="All checks passed" \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Report status - failure
-        if: github.event_name == 'pull_request' && (needs.validate-all.result == 'failure' || needs.execute-layers.result == 'failure' || needs.build-tooling.result == 'failure')
-        run: |
-          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
-            -f state=failure \
-            -f context="CI Trigger / Summary" \
-            -f description="Pipeline failed" \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
+          # Module builds (asynchronous)
+          echo "| Module Builds | Running | $TOTAL_COUNT module workflow(s) triggered |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Note**: Module builds run asynchronously and do not block PR merging." >> $GITHUB_STEP_SUMMARY
