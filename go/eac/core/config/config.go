@@ -7,12 +7,68 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
+
+var log = logging.C()
+
+// Global process-level cache for EAC configuration
+// This prevents repeated file I/O and schema validation across parallel test packages
+var (
+	globalConfigCache     *ConfigCache
+	globalConfigCacheOnce sync.Once
+)
+
+// ConfigCache provides cached EAC configuration data.
+// Thread-safe for concurrent access by parallel test packages.
+// No cache invalidation - data persists for process lifetime.
+type ConfigCache struct {
+	mu sync.RWMutex
+
+	// Cache key: repoRoot + validateSchemas
+	// Map structure: map[repoRoot]map[validateSchemas]*EACConfig
+	cache map[string]map[bool]*EACConfig
+}
+
+// NewConfigCache creates a new empty cache.
+func NewConfigCache() *ConfigCache {
+	return &ConfigCache{
+		cache: make(map[string]map[bool]*EACConfig),
+	}
+}
+
+// Get returns cached config if available.
+func (c *ConfigCache) Get(repoRoot string, validateSchemas bool) (*EACConfig, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if repoConfigs, ok := c.cache[repoRoot]; ok {
+		if cfg, ok := repoConfigs[validateSchemas]; ok {
+			log.Debugf("Config cache hit (repoRoot=%s, validateSchemas=%v)", repoRoot, validateSchemas)
+			return cfg, true
+		}
+	}
+	return nil, false
+}
+
+// Set caches a config after validation.
+func (c *ConfigCache) Set(repoRoot string, validateSchemas bool, cfg *EACConfig) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.cache[repoRoot] == nil {
+		c.cache[repoRoot] = make(map[bool]*EACConfig)
+	}
+	c.cache[repoRoot][validateSchemas] = cfg
+	log.Debugf("Config cached (repoRoot=%s, validateSchemas=%v)", repoRoot, validateSchemas)
+}
 
 // EACConfigRelPath is re-exported for backwards compatibility
 const EACConfigRelPath = paths.EACConfigRelPath
@@ -73,6 +129,13 @@ func DefaultLoadOptions() LoadOptions {
 }
 
 // Load loads all EAC configuration from the repository.
+// Uses global in-memory cache to avoid repeated file I/O and validation.
+//
+// BACKWARD COMPATIBLE: API unchanged, caching is internal optimization.
+//
+// Thread-safe: Multiple goroutines can call concurrently.
+// First caller loads and validates, subsequent callers use cached data.
+//
 // It validates configs against JSON schemas if ValidateSchemas is true.
 func Load(opts LoadOptions) (*EACConfig, error) {
 	// Determine repo root
@@ -85,6 +148,30 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		}
 	}
 
+	// LazyLoad bypasses cache - return empty config immediately
+	if opts.LazyLoad {
+		configRoot := paths.EACConfigPath(repoRoot)
+		return &EACConfig{
+			RepoRoot:   repoRoot,
+			ConfigRoot: configRoot,
+		}, nil
+	}
+
+	// Initialize global cache once per process
+	globalConfigCacheOnce.Do(func() {
+		log.Debug("Initializing global EAC config cache")
+		globalConfigCache = NewConfigCache()
+	})
+
+	// Check cache first
+	if cachedCfg, ok := globalConfigCache.Get(repoRoot, opts.ValidateSchemas); ok {
+		return cachedCfg, nil
+	}
+
+	// Cache miss - load and validate
+	log.Debugf("Config cache miss, loading from disk (repoRoot=%s, validateSchemas=%v)", repoRoot, opts.ValidateSchemas)
+	start := time.Now()
+
 	configRoot := paths.EACConfigPath(repoRoot)
 
 	cfg := &EACConfig{
@@ -92,16 +179,42 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		ConfigRoot: configRoot,
 	}
 
-	if opts.LazyLoad {
-		return cfg, nil
-	}
-
-	// Load all configs
+	// Load all configs (validation happens inside LoadAll)
 	if err := cfg.LoadAll(opts.ValidateSchemas); err != nil {
 		return nil, err
 	}
 
+	duration := time.Since(start)
+	log.Debugf("Config loaded and validated: %v, files=%d", duration, countConfigFiles(cfg))
+
+	// Cache the validated config
+	globalConfigCache.Set(repoRoot, opts.ValidateSchemas, cfg)
+
 	return cfg, nil
+}
+
+// countConfigFiles returns the number of loaded config files (for logging).
+// Uses reflection to count non-nil pointer fields - automatically handles new configs.
+func countConfigFiles(cfg *EACConfig) int {
+	count := 0
+	v := reflect.ValueOf(cfg).Elem()
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldType := t.Field(i)
+
+		// Skip non-config fields (strings, sync.Once, etc.)
+		// Only count pointer fields (all config fields are pointers)
+		if field.Kind() == reflect.Ptr && !field.IsNil() {
+			// Skip internal fields (validator, validatorOnce, validatorErr)
+			if fieldType.Name == "validator" || fieldType.Name == "validatorOnce" || fieldType.Name == "validatorErr" {
+				continue
+			}
+			count++
+		}
+	}
+	return count
 }
 
 // LoadAll loads all configuration files

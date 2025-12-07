@@ -43,7 +43,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -291,14 +290,6 @@ func TestSuite() int {
 		return 1
 	}
 	defer releaseSuiteLock(lockFile)
-
-	// Show execution context
-	log.Infof("Executing test via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
-	log.Info("")
-
-	log.Infof("Running test suite: %s", suite.Name)
-	log.Infof("Description: %s", suite.Description)
-	log.Info("")
 
 	// Purge and recreate test output directory (now protected by lock)
 	testRunDir := filepath.Join(workspaceRootNative, repoCfg.TestOutputPath(suiteName))
@@ -673,7 +664,7 @@ func TestSuite() int {
 		OutputBaseDir:        relTestRunDir,
 		LogFileName:          "test.log",
 		OrchestratorLogName:  "orchestrator.log",
-		ActionVerb:           "testing",
+		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2, // seconds
 		TUI:                  useTUI,

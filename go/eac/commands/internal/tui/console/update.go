@@ -13,15 +13,40 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 
+	case tea.MouseMsg:
+		return m.handleMouse(msg)
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
+		m.height = msg.Height
+		// Reset scroll offsets when window size changes
+		if m.usePanes {
+			for _, pane := range m.panes {
+				if pane != nil && !pane.autoScroll {
+					// If user was scrolled up, try to maintain position, but cap at new max
+					initH, runH, summaryH := m.calculatePaneHeights()
+					paneHeight := initH
+					if pane.Phase == PhaseRun {
+						paneHeight = runH
+					} else if pane.Phase == PhaseSummary {
+						paneHeight = summaryH
+					}
+					pane.UpdateMaxScroll(paneHeight)
+				}
+			}
+		}
 		return m, nil
 
 	case lineMsg:
 		line := Line(msg)
 		// Write to active phase's buffer in pane mode
 		if m.usePanes {
-			m.panes[m.activePhase].Buffer.Push(line)
+			pane := m.panes[m.activePhase]
+			pane.Buffer.Push(line)
+			// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
+			if !pane.autoScroll && pane.scrollOffset > 0 {
+				pane.scrollOffset++
+			}
 		}
 		// Also write to legacy buffer for backward compatibility
 		m.buffer.Push(line)
@@ -40,7 +65,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case PhaseLineMsg:
 		// Write to specific phase's buffer
 		if m.usePanes && m.panes[msg.Phase] != nil {
-			m.panes[msg.Phase].Buffer.Push(msg.Line)
+			pane := m.panes[msg.Phase]
+			pane.Buffer.Push(msg.Line)
+			// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
+			if !pane.autoScroll && pane.scrollOffset > 0 {
+				pane.scrollOffset++
+			}
 		}
 		m.buffer.Push(msg.Line)
 		return m, nil
@@ -49,6 +79,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Write to results buffer
 		m.resultsBuffer.Push(msg.Line)
 		return m, nil
+
+	case SummaryDataMsg:
+		// Set summary data and activate Summary pane
+		m.summaryData = msg.Data
+		// Automatically activate Summary pane
+		if m.activePhase != PhaseSummary {
+			// Mark current phase as complete
+			if m.panes[m.activePhase].Status == PhaseActive {
+				m.panes[m.activePhase].Status = PhaseComplete
+				m.panes[m.activePhase].EndTime = time.Now()
+			}
+			// Activate Summary pane
+			m.activePhase = PhaseSummary
+			m.panes[PhaseSummary].Status = PhaseActive
+			m.panes[PhaseSummary].StartTime = time.Now()
+		}
+		// Mark as complete and quit immediately
+		m.panes[PhaseSummary].Status = PhaseComplete
+		m.panes[PhaseSummary].EndTime = time.Now()
+		m.quitting = true
+		return m, tea.Quit
 
 	case PhaseUpdateMsg:
 		if msg.Phase < Phase(len(m.panes)) && m.panes[msg.Phase] != nil {
@@ -89,11 +140,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tickMsg:
-		// Auto-quit when both channels are done (after one final render)
-		if m.linesDone && m.statusDone {
-			m.quitting = true // Triggers plain-text final render
-			return m, tea.Quit
-		}
 		return m, m.tickCmd()
 
 	case linesDoneMsg:
@@ -124,6 +170,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
+		m.quitting = true
 		return m, tea.Quit
 	case " ", "p":
 		// Toggle pause
@@ -136,6 +183,99 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.lastError = nil
 	}
 	return m, nil
+}
+
+// handleMouse handles mouse events for pane scrolling.
+func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	// Mouse scrolling:
+	// - Scroll wheel → scroll panes
+	// - Shift+Click → select text (standard terminal behavior, bypasses mouse mode)
+
+	// Wheel events: handle scrolling
+	if msg.Type == tea.MouseWheelUp || msg.Type == tea.MouseWheelDown {
+
+		// Only handle scrolling in pane mode
+		if !m.usePanes {
+			return m, nil
+		}
+
+		// Determine which pane the mouse is over
+		paneIdx := m.getPaneAtPosition(msg.Y)
+		if paneIdx < 0 || paneIdx >= len(m.panes) {
+			return m, nil // Mouse not over any pane
+		}
+
+		pane := m.panes[paneIdx]
+		if pane == nil {
+			return m, nil
+		}
+
+		// Calculate pane height for this specific pane
+		initH, runH, summaryH := m.calculatePaneHeights()
+		paneHeight := initH
+		if paneIdx == 1 { // Run pane
+			paneHeight = runH
+		} else if paneIdx == 2 { // Summary pane
+			paneHeight = summaryH
+		}
+
+		// Update max scroll based on current buffer size
+		pane.UpdateMaxScroll(paneHeight)
+
+		// Scroll the pane
+		scrollAmount := 3 // Lines to scroll per wheel tick
+		if msg.Type == tea.MouseWheelUp {
+			pane.ScrollUp(scrollAmount)
+		} else {
+			pane.ScrollDown(scrollAmount)
+		}
+
+		return m, nil
+	}
+
+	return m, nil
+}
+
+// getPaneAtPosition determines which pane (0, 1, or 2) is at the given Y coordinate.
+// Returns -1 if not over any pane content area.
+// All panes are always visible with dynamic heights based on terminal size.
+func (m Model) getPaneAtPosition(y int) int {
+	if !m.usePanes {
+		return -1
+	}
+
+	// Calculate pane boundaries dynamically based on terminal height
+	initH, runH, summaryH := m.calculatePaneHeights()
+
+	// Pane layout (each pane has header + content + footer):
+	// Init pane
+	currentLine := 1
+	initContentStart := currentLine
+	initContentEnd := currentLine + initH - 1
+	currentLine += initH + 1 // +1 for footer
+
+	// Run pane (dynamic height, fills available space)
+	currentLine++ // header
+	runContentStart := currentLine
+	runContentEnd := currentLine + runH - 1
+	currentLine += runH + 1 // +1 for footer
+
+	// Summary pane
+	currentLine++ // header
+	summaryContentStart := currentLine
+	summaryContentEnd := currentLine + summaryH - 1
+
+	// Check which pane content area the Y-coordinate falls into
+	// Add tolerance of ±1 to handle edge cases with terminal scrolling
+	if y >= initContentStart-1 && y <= initContentEnd+1 {
+		return 0 // Init pane content
+	} else if y >= runContentStart-1 && y <= runContentEnd+1 {
+		return 1 // Run pane content
+	} else if y >= summaryContentStart-1 && y <= summaryContentEnd+1 {
+		return 2 // Summary pane content
+	}
+
+	return -1 // Header/footer or outside panes
 }
 
 // IsDone returns true if both line and status channels are done.

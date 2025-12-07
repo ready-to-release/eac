@@ -44,11 +44,12 @@ func printHelp() {
 	log.Info("    the documentation in your browser.")
 	log.Info("")
 	log.Info("FLAGS")
-	log.Info("    --no-browser     Don't open browser after starting server")
-	log.Info("    -p, --port       Port number for MkDocs server (default: auto-allocated 9000-9999)")
-	log.Info("    --stop           Stop the running MkDocs server")
-	log.Info("    --debug          Enable debug mode with log streaming")
-	log.Info("    -h, --help       Show this help message")
+	log.Info("    --no-browser        Don't open browser after starting server")
+	log.Info("    -p, --port          Port number for MkDocs server (default: auto-allocated 9000-9999)")
+	log.Info("    --stop              Stop the running MkDocs server")
+	log.Info("    --debug             Enable debug mode with log streaming")
+	log.Info("    --skip-validation   Skip Docker validation (for testing)")
+	log.Info("    -h, --help          Show this help message")
 	log.Info("")
 	log.Info("EXAMPLES")
 	log.Info("    eac serve docs                  # Start server with auto-allocated port")
@@ -94,6 +95,7 @@ func ServeDocs() int {
 	var port int = 0 // 0 means auto-allocate from 9000-9999 range
 	var stop bool
 	var debug bool
+	var skipValidation bool
 
 	// Parse arguments
 	for i := 0; i < len(args); i++ {
@@ -109,6 +111,8 @@ func ServeDocs() int {
 			stop = true
 		case "--debug":
 			debug = true
+		case "--skip-validation":
+			skipValidation = true
 		case "--port", "-p":
 			if i+1 < len(args) {
 				i++
@@ -145,7 +149,67 @@ func ServeDocs() int {
 		zap.Bool("noBrowser", noBrowser),
 		zap.Int("port", port),
 		zap.Bool("stop", stop),
-		zap.Bool("debug", debug))
+		zap.Bool("debug", debug),
+		zap.Bool("skipValidation", skipValidation))
+
+	// Skip validation mode (for tests)
+	if skipValidation {
+		logger.Debug("Skipping Docker validation (test mode)")
+
+		// Use state file to track mock "running" state
+		stateFile := filepath.Join(workspaceRoot, "out", "test", ".mkdocs-mock-state")
+
+		if stop {
+			// Remove state file if it exists
+			os.Remove(stateFile)
+			log.Info("✅ MkDocs documentation server stopped")
+			return 0
+		}
+
+		// Check if mock server is "already running"
+		if _, err := os.Stat(stateFile); err == nil {
+			// State file exists - server is "already running"
+			// Read the port from state file
+			stateData, _ := os.ReadFile(stateFile)
+			runningPort := 9000
+			if len(stateData) > 0 {
+				fmt.Sscanf(string(stateData), "%d", &runningPort)
+			}
+
+			// If user requested a specific port and it's different, error
+			if port != 0 && port != runningPort {
+				log.Infof("❌ MkDocs is already running on port %d", runningPort)
+				log.Infof("📚 Running at: http://localhost:%d", runningPort)
+				log.Info("")
+				log.Info("💡 To use a different port:")
+				log.Info("  1. Stop the running container: go run . docs serve --stop")
+				log.Infof("  2. Start with new port: go run . docs serve --port %d", port)
+				return 1
+			}
+
+			// Server already running on expected port
+			log.Info("ℹ️  MkDocs is already running")
+			log.Infof("📚 Documentation: http://localhost:%d", runningPort)
+			return 0
+		}
+
+		// Not running - start it
+		if port == 0 {
+			port = 9000
+		}
+
+		// Create state file directory if it doesn't exist
+		os.MkdirAll(filepath.Dir(stateFile), 0755)
+
+		// Write port to state file
+		os.WriteFile(stateFile, []byte(fmt.Sprintf("%d", port)), 0644)
+
+		log.Info("🚀 Starting MkDocs documentation server")
+		log.Info("")
+		log.Info("✅ MkDocs documentation server is running")
+		log.Infof("📚 Documentation: http://localhost:%d", port)
+		return 0
+	}
 
 	// Handle --stop flag
 	if stop {

@@ -84,13 +84,15 @@ func cleanupInstallerContext() {
 }
 
 // isolatePathEnv returns an environment that prevents the installer from
-// modifying the persistent system/user PATH. It sets __R2R_TEST_NO_PATH_UPDATE=1
-// which the installer scripts should check before modifying PATH.
-// As a fallback, it also removes write access indicators that PowerShell uses.
+// modifying the persistent system/user PATH and enables mock mode to skip downloads.
+// Sets __R2R_TEST_NO_PATH_UPDATE=1 to skip PATH modification.
+// Sets __R2R_TEST_MOCK=1 to skip GitHub API calls and binary downloads.
 func isolatePathEnv() []string {
 	env := os.Environ()
 	// Add marker that installer scripts can check to skip PATH modification
 	env = append(env, "__R2R_TEST_NO_PATH_UPDATE=1")
+	// Add marker to skip downloads and use mock binaries
+	env = append(env, "__R2R_TEST_MOCK=1")
 	return env
 }
 
@@ -153,11 +155,18 @@ var binaryCheckDone = false
 // checkLatestReleaseHasBinary checks if the latest r2r-cli release has the expected binary.
 // Sets binaryAvailable flag - if false, subsequent steps should pass without doing real work.
 // Tests use UPX-compressed binaries for faster downloads where available.
+// In mock mode (__R2R_TEST_MOCK=1), skips GitHub API call and assumes binary is available.
 func checkLatestReleaseHasBinary() {
 	if binaryCheckDone {
 		return // Already checked
 	}
 	binaryCheckDone = true
+
+	// Skip GitHub API call in mock mode - assume binary available
+	if os.Getenv("__R2R_TEST_MOCK") == "1" {
+		binaryAvailable = true
+		return
+	}
 
 	// Determine expected binary name based on platform
 	// Use UPX-compressed variants for faster test downloads where available

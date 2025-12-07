@@ -149,7 +149,7 @@ func (r *Repository) HeadShortSHA() (string, error) {
 // This reflects the current index state: HEAD files + staged additions - staged deletions.
 // Uses native git command for performance (go-git's wt.Status() is slow).
 func (r *Repository) TrackedFiles() ([]string, error) {
-	// Use native git ls-files which is fast
+	// Use native git ls-files which is fast locally, slow in CI
 	// This lists all files in the index (tracked files)
 	output, err := r.runGitCommand("ls-files")
 	if err != nil {

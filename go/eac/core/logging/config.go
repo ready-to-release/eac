@@ -29,28 +29,42 @@ type Config struct {
 	// WorkspaceRoot is the repository root path
 	WorkspaceRoot string
 
-	// DebugMode enables Debug level output on console and file logging.
-	// When false (default), Debug only goes to file, and no file is created.
-	// When true, Debug appears on console and all levels are written to file.
+	// DebugMode enables Debug level output on console.
+	// When false (default), Debug logs are hidden from console.
+	// When true, Debug logs appear on console.
 	DebugMode bool
+
+	// EnableFileLogging enables writing logs to file.
+	// When true, logs are written to out/logs/<module>/debug.log.
+	// When false, no file logging occurs.
+	EnableFileLogging bool
 
 	// Development enables development mode (more verbose, stack traces)
 	Development bool
 }
 
 // DefaultConfig returns configuration with default settings.
-// Debug mode is disabled by default (no file logging, Debug hidden from console).
+// Debug mode and file logging are disabled by default.
 func DefaultConfig(module, workspaceRoot string) Config {
 	return Config{
-		Module:        module,
-		WorkspaceRoot: workspaceRoot,
-		DebugMode:     false,
-		Development:   false,
+		Module:            module,
+		WorkspaceRoot:     workspaceRoot,
+		DebugMode:         false,
+		EnableFileLogging: false,
+		Development:       false,
 	}
 }
 
 // WithDebugMode returns a new config with debug mode enabled.
+// This enables debug logs on console.
 func (c Config) WithDebugMode(enabled bool) Config {
 	c.DebugMode = enabled
+	return c
+}
+
+// WithFileLogging returns a new config with file logging enabled.
+// This enables writing all logs to file.
+func (c Config) WithFileLogging(enabled bool) Config {
+	c.EnableFileLogging = enabled
 	return c
 }

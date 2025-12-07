@@ -8,8 +8,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"gopkg.in/yaml.v3"
 )
+
+var navLog = logging.C()
 
 // NavFile represents a .nav.yml file structure
 type NavFile struct {
@@ -106,6 +109,13 @@ func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 		return entries
 	}
 
+	// DEBUG: Log directory scanning
+	relDir, _ := filepath.Rel(p.stagingDir, dir)
+	if relDir == "." {
+		relDir = "(root)"
+	}
+	navLog.Debugf("[TOC] Scanning directory: %s", relDir)
+
 	// Separate files and directories
 	var files, dirs []os.DirEntry
 	for _, item := range items {
@@ -116,8 +126,10 @@ func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 		}
 		if item.IsDir() {
 			dirs = append(dirs, item)
+			navLog.Debugf("[TOC]   Found directory: %s/", name)
 		} else if strings.HasSuffix(name, ".md") && name != "index.md" {
 			files = append(files, item)
+			navLog.Debugf("[TOC]   Found markdown: %s", name)
 		}
 	}
 
