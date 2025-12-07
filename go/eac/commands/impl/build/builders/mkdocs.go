@@ -101,7 +101,7 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	// When running inside a container, the Docker daemon runs on the host,
 	// so volume mounts need host paths instead of container paths
 	hostRepoRoot := workspaceRoot
-	isDinD := isDockerInDocker()
+	isDinD := IsDockerInDocker()
 	if isDinD {
 		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
 			hostRepoRoot = hostRoot
@@ -501,7 +501,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 
 	// Docker setup
 	hostRepoRoot := workspaceRoot
-	isDinD := isDockerInDocker()
+	isDinD := IsDockerInDocker()
 	if isDinD {
 		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
 			hostRepoRoot = hostRoot
@@ -637,7 +637,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 
 	// For Docker-in-Docker: use host path for volume mount
 	hostRepoRoot := workspaceRoot
-	isDinD := isDockerInDocker()
+	isDinD := IsDockerInDocker()
 	if isDinD {
 		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
 			hostRepoRoot = hostRoot

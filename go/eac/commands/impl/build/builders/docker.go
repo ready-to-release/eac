@@ -35,9 +35,9 @@ func BuildDockerModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	// Check if Docker is available before attempting to build
-	if !isDockerAvailable() {
+	if !IsDockerAvailable() {
 		Logln(logWriter, "❌ Docker is not available")
-		if isDockerInDocker() {
+		if IsDockerInDocker() {
 			Logln(logWriter, "   Container detected but Docker socket not mounted")
 			Logln(logWriter, "   Ensure the Docker socket is mounted (-v /var/run/docker.sock:/var/run/docker.sock)")
 		} else {
@@ -136,7 +136,7 @@ func getGitShortSHA(workspaceRoot string) string {
 // buildDockerLocal builds a Docker image locally using BuildKit for cache support
 func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath string, tags []string, logWriter io.Writer) int {
 	// Check for Docker-in-Docker mode
-	isDinD := isDockerInDocker()
+	isDinD := IsDockerInDocker()
 	var contextPath, dockerfileArg string
 
 	if isDinD {
@@ -260,12 +260,4 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 	}
 
 	return 0
-}
-
-// isDockerAvailable checks if Docker daemon is accessible
-func isDockerAvailable() bool {
-	cmd := exec.Command("docker", "info")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run() == nil
 }

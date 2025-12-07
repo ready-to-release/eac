@@ -89,6 +89,12 @@ jobs:
           name: build-artifacts-scripts-cli-installer
           path: out/build/scripts-cli-installer
 
+      - name: Download R2R CLI Build Artifacts (Test Dependency)
+        uses: actions/download-artifact@v6
+        with:
+          name: build-artifacts-r2r-cli
+          path: out/build/r2r-cli
+
       - name: Test Module (Commit Suite - L0-L2)
         shell: pwsh
         run: |

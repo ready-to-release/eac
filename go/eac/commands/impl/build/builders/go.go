@@ -188,35 +188,6 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, worksp
 	return exitCode
 }
 
-// isDockerInDocker detects if we're running inside a Docker container.
-// Uses multiple signals for robust detection:
-// 1. R2R_DOCKER_MODE env var (set by r2r CLI when launching containers)
-// 2. R2R_HOST_REPOROOT with Windows path while running on Linux (indicates container)
-// 3. /.dockerenv file exists (standard Docker container indicator)
-func isDockerInDocker() bool {
-	// Primary check: explicit env var
-	if os.Getenv("R2R_DOCKER_MODE") == "true" {
-		return true
-	}
-
-	// Fallback: R2R_HOST_REPOROOT is set with Windows path but we're on Linux
-	// This catches old r2r CLI binaries that don't set R2R_DOCKER_MODE
-	hostRoot := os.Getenv("R2R_HOST_REPOROOT")
-	if hostRoot != "" && runtime.GOOS == "linux" {
-		// Windows paths have backslashes or drive letters
-		if strings.Contains(hostRoot, "\\") || (len(hostRoot) >= 2 && hostRoot[1] == ':') {
-			return true
-		}
-	}
-
-	// Final fallback: check for Docker container indicator file
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
-
-	return false
-}
-
 // getHostPlatform returns the host's GOOS and GOARCH when running in a container.
 // Uses R2R_HOST_GOOS and R2R_HOST_GOARCH env vars set by r2r CLI.
 func getHostPlatform() (goos, goarch string) {
