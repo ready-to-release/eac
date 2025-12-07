@@ -105,8 +105,27 @@ types:
 
   - name: r2r-extension
     description: "R2R extension packaged as container image"
-    build_deps: [docker]
+    build_deps: [docker-build]
     capabilities: [container]
+    docker_build:
+      container: "{moniker}"
+      context: "."
+      dockerfile: "containers/{moniker}/Dockerfile"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      tags:
+        - "ghcr.io/ready-to-release/{moniker}:ci"
+        - "ghcr.io/ready-to-release/{moniker}:sha-{short_sha}"
+      push: true
+      registry: ghcr.io
+      cache:
+        type: registry
+        from: "ghcr.io/ready-to-release/{moniker}:buildcache"
+        to: "ghcr.io/ready-to-release/{moniker}:buildcache"
+        mode: max
+      sbom: true
+      provenance: true
     build:
       artifacts:
         - type: image
@@ -119,9 +138,19 @@ types:
 
   # Documentation family
   - name: mkdocs-site
-    description: "Primary MkDocs documentation site (builds via Docker)"
-    build_deps: [docker]
+    description: "Primary MkDocs documentation site (HTML via Docker)"
+    build_deps: [docker-build]
     capabilities: [documentation, serveable, container]
+    docker_build:
+      container: "mkdocs-site"
+      context: "containers/mkdocs-site"
+      dockerfile: "containers/mkdocs-site/Dockerfile"
+      tags:
+        - "cli-mkdocs-site:latest"
+      load: true
+      cache:
+        type: gha
+        scope: "mkdocs-site"
     build:
       artifacts:
         - type: directory
@@ -130,6 +159,31 @@ types:
       files:
         config: ["**/*.nav.yml", "**/*.json"]
         assets: ["**/*.md", "assets/**", "LICENSE"]
+      repo:
+        specs: []
+
+  - name: mkdocs-pdf
+    description: "MkDocs PDF documentation (PDF via Docker)"
+    build_deps: [docker-build]
+    capabilities: [documentation, container]
+    docker_build:
+      container: "mkdocs-pdf"
+      context: "containers/mkdocs-pdf"
+      dockerfile: "containers/mkdocs-pdf/Dockerfile"
+      tags:
+        - "cli-mkdocs-pdf:latest"
+      load: true
+      cache:
+        type: gha
+        scope: "mkdocs-pdf"
+    build:
+      artifacts:
+        - type: file
+          pattern: "*.pdf"
+    defaults:
+      files:
+        config: ["**/*.nav.yml", "**/*.json"]
+        assets: ["**/*"]
       repo:
         specs: []
 

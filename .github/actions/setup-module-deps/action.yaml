@@ -128,8 +128,8 @@ runs:
         fi
 
     - name: Check if Docker Buildx is already available
-      id: docker-check
-      if: contains(steps.resolve.outputs.deps, 'docker')
+      id: buildx-check
+      if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'docker-build')
       shell: bash
       run: |
         if command -v docker &> /dev/null && docker buildx version &> /dev/null; then
@@ -141,8 +141,25 @@ runs:
         fi
 
     - name: Setup Docker Buildx
-      if: contains(steps.resolve.outputs.deps, 'docker') && steps.docker-check.outputs.available != 'true'
+      if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'docker-build')) && steps.buildx-check.outputs.available != 'true'
       uses: docker/setup-buildx-action@v3
+
+    - name: Check if QEMU is already available
+      id: qemu-check
+      if: contains(steps.resolve.outputs.deps, 'docker-build')
+      shell: bash
+      run: |
+        if docker run --rm --privileged multiarch/qemu-user-static --version &> /dev/null 2>&1; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ QEMU already available"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "QEMU not found - will set up"
+        fi
+
+    - name: Setup QEMU
+      if: contains(steps.resolve.outputs.deps, 'docker-build') && steps.qemu-check.outputs.available != 'true'
+      uses: docker/setup-qemu-action@v3
 
     - name: Summary
       if: steps.resolve.outputs.deps != ''
@@ -152,7 +169,8 @@ runs:
         MODULE: ${{ inputs.module }}
         GO_AVAILABLE: ${{ steps.go-check.outputs.available }}
         NODE_AVAILABLE: ${{ steps.node-check.outputs.available }}
-        DOCKER_AVAILABLE: ${{ steps.docker-check.outputs.available }}
+        BUILDX_AVAILABLE: ${{ steps.buildx-check.outputs.available }}
+        QEMU_AVAILABLE: ${{ steps.qemu-check.outputs.available }}
       run: |
         echo "### Dependencies Setup for \`${MODULE}\`" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -174,8 +192,19 @@ runs:
           fi
           echo "| npm packages | Installed |" >> $GITHUB_STEP_SUMMARY
         fi
-        if [[ "$DEPS" == *"docker"* ]]; then
-          if [ "$DOCKER_AVAILABLE" = "true" ]; then
+        if [[ "$DEPS" == *"docker-build"* ]]; then
+          if [ "$BUILDX_AVAILABLE" = "true" ]; then
+            echo "| Docker Buildx | Already available |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "$QEMU_AVAILABLE" = "true" ]; then
+            echo "| QEMU | Already available |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| QEMU | Configured |" >> $GITHUB_STEP_SUMMARY
+          fi
+        elif [[ "$DEPS" == *"docker"* ]]; then
+          if [ "$BUILDX_AVAILABLE" = "true" ]; then
             echo "| Docker Buildx | Already available |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY

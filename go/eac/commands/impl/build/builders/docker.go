@@ -15,9 +15,13 @@ import (
 )
 
 func init() {
-	// Register handler for "docker" build system
+	// Register handler for "docker" build system (legacy)
 	RegisterSystem("docker", BuildDockerModule)
 	RegisterSystemArtifacts("docker", ListDockerArtifacts)
+
+	// Register handler for "docker-build" system (new: uses docker_build config from module type)
+	RegisterSystem("docker-build", BuildDockerBuildModule)
+	RegisterSystemArtifacts("docker-build", ListDockerBuildArtifacts)
 }
 
 // ListDockerArtifacts returns the artifacts that would be produced by building this Docker module

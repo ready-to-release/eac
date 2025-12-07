@@ -94,12 +94,12 @@ modules:
       changelog: ../release/docs/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-docs.yaml
-        release: .github/workflows/release-docs.yml
+        release: .github/workflows/release-docs.yaml
       repo:
         other:
           - mkdocs.yml
           - .github/workflows/ci-docs.yaml
-          - .github/workflows/release-docs.yml
+          - .github/workflows/release-docs.yaml
           - containers/mkdocs-site/**
 
   # ============================================================================
@@ -107,7 +107,7 @@ modules:
   # ============================================================================
   - moniker: books
     name: Documentation Books
-    type: mkdocs-site
+    type: mkdocs-pdf
     description: PDF documentation books with generated reference content from EAC commands
     versioning:
       scheme: CalVer
@@ -144,11 +144,11 @@ modules:
       changelog: ../../release/ext-eac/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-ext-eac.yaml
-        release: .github/workflows/release-ext-eac.yml
+        release: .github/workflows/release-ext-eac.yaml
       repo:
         other:
           - .github/workflows/ci-ext-eac.yaml
-          - .github/workflows/release-ext-eac.yml
+          - .github/workflows/release-ext-eac.yaml
 
   # ============================================================================
   # GitHub Configuration
@@ -165,7 +165,6 @@ modules:
         - README.md
       exclude:
         - workflows/*.yaml
-        - workflows/*.yml
 
   # ============================================================================
   # Scripts: Go Command Invoker
@@ -220,9 +219,9 @@ modules:
         other:
           - .github/workflows/change-trigger.yaml
           - .github/workflows/cron-full-trigger.yaml
-          - .github/workflows/codeql.yml
+          - .github/workflows/codeql.yaml
           - .github/workflows/trigger-ci.yaml
-          - .github/workflows/trigger-release.yml
+          - .github/workflows/trigger-release.yaml
 
   # ============================================================================
   # Source: AI Provider Libraries
@@ -267,12 +266,12 @@ modules:
       changelog: ../../../release/r2r-cli/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-r2r-cli.yaml
-        release: .github/workflows/release-r2r-cli.yml
+        release: .github/workflows/release-r2r-cli.yaml
       repo:
         other:
           - contracts/r2r-cli/**
           - .github/workflows/ci-r2r-cli.yaml
-          - .github/workflows/release-r2r-cli.yml
+          - .github/workflows/release-r2r-cli.yaml
     metadata:
       exe-linux-amd64: r2r-linux-amd64
       exe-linux-arm64: r2r-linux-arm64

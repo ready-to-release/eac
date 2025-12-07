@@ -33,19 +33,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and cache MkDocs PDF image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./containers/mkdocs-pdf
-          file: ./containers/mkdocs-pdf/Dockerfile
-          tags: cli-mkdocs-pdf:latest
-          load: true
-          cache-from: type=gha,scope=mkdocs-pdf
-          cache-to: type=gha,mode=max,scope=mkdocs-pdf
-
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands

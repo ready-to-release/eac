@@ -16,6 +16,14 @@ dependencies:
       command: "docker info"
       pattern: "Server Version: (\\d+\\.\\d+)"
 
+  - moniker: docker-build
+    name: "Docker Buildx"
+    description: "Docker buildx for multi-platform container image builds (includes Buildx + QEMU)"
+    version: "0.10"
+    verify:
+      command: "docker buildx version"
+      pattern: "github.com/docker/buildx v(\\d+\\.\\d+)"
+
   - moniker: npm
     name: "Node.js"
     description: "JavaScript runtime providing npm package manager"

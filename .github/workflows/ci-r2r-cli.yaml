@@ -44,72 +44,13 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
-        with:
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-
       - name: Build Module
-        run: ${{ steps.commands.outputs.commands-path }} build r2r-cli
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v5
+        uses: ./.github/actions/build-module
         with:
-          name: build-artifacts-r2r-cli
-          path: |
-            out/build/r2r-cli/**
-            go/r2r/cli/**/generated_*.go
-            go/r2r/cli/**/*.ebnf
-            go/r2r/cli/**/schema.json
-
-      - name: Build Summary
-        if: always()
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "## Build: r2r-cli" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "CLI binaries built for all platforms." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "CLI binary build failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Built Binaries" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Binary | Size |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|--------|------|" >> $GITHUB_STEP_SUMMARY
-
-          for file in out/build/r2r-cli/r2r-linux-amd64 out/build/r2r-cli/r2r-linux-arm64 out/build/r2r-cli/r2r-darwin-amd64 out/build/r2r-cli/r2r-darwin-arm64 out/build/r2r-cli/r2r-windows-amd64.exe; do
-            if [ -f "$file" ]; then
-              name=$(basename "$file")
-              size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
-              size_mb=$(echo "scale=1; $size / 1048576" | bc)
-              platform=""
-              case "$name" in
-                r2r-linux-amd64) platform="Linux AMD64" ;;
-                r2r-linux-arm64) platform="Linux ARM64" ;;
-                r2r-darwin-amd64) platform="macOS Intel" ;;
-                r2r-darwin-arm64) platform="macOS Apple Silicon" ;;
-                r2r-windows-amd64.exe) platform="Windows AMD64" ;;
-              esac
-              echo "| ${platform} | \`${name}\` | ${size_mb} MB |" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Module | \`r2r-cli\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Artifacts uploaded as \`build-artifacts-r2r-cli\`" >> $GITHUB_STEP_SUMMARY
+          module: r2r-cli
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          artifact-name: build-artifacts-r2r-cli
+          upload-artifact: 'true'
 
   test:
     name: Test
@@ -120,16 +61,14 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
+      - name: Test Module
+        uses: ./.github/actions/test-module
         with:
+          module: r2r-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v6
-        with:
-          name: build-artifacts-r2r-cli
+          results-artifact-name: test-results-r2r-cli
+          # PRs run commit suite only; main/release branches run full suite
+          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
 
       - name: Restore Executable Permissions
         run: |
@@ -137,56 +76,3 @@ jobs:
           chmod +x out/build/r2r-cli/r2r-linux-arm64
           chmod +x out/build/r2r-cli/r2r-darwin-amd64
           chmod +x out/build/r2r-cli/r2r-darwin-arm64
-
-      - name: Test Module (Commit Suite - L0-L2)
-        run: ${{ steps.commands.outputs.commands-path }} test r2r-cli --suite commit
-
-      - name: Test Module (Acceptance Suite - L3)
-        # Skip acceptance tests for PRs - only run on main/release branches
-        if: ${{ !startsWith(inputs.ref, 'refs/pull/') }}
-        run: ${{ steps.commands.outputs.commands-path }} test r2r-cli --suite acceptance
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: test-results-r2r-cli
-          path: out/test/**/r2r-cli/**
-
-      - name: Test Summary
-        if: always()
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "## Test: r2r-cli" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "All CLI tests passed." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "CLI tests failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type test --artifact test-results-r2r-cli >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Suite | Level | Description |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|-------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| commit | L0-L2 | Unit and integration tests |" >> $GITHUB_STEP_SUMMARY
-          echo "| acceptance | L3 | Acceptance verification tests |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Test Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Module | \`r2r-cli\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Binaries Verified" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- \`r2r-linux-amd64\` (Linux AMD64)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`r2r-linux-arm64\` (Linux ARM64)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`r2r-darwin-amd64\` (macOS Intel)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`r2r-darwin-arm64\` (macOS Apple Silicon)" >> $GITHUB_STEP_SUMMARY
