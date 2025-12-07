@@ -18,6 +18,7 @@ type Preprocessor struct {
 	logWriter      io.Writer
 	pdfMode        bool
 	linkTranslator *LinkTranslator // Handles source → staging path translations
+	assetCache     *AssetCache     // Persistent cache for expensive operations (mermaid, etc.)
 }
 
 // NewPreprocessor creates a new book preprocessor
@@ -30,6 +31,7 @@ func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWri
 		logWriter:      logWriter,
 		pdfMode:        pdfMode,
 		linkTranslator: NewLinkTranslator(workspaceRoot, stagingDir, logWriter, pdfMode),
+		assetCache:     NewAssetCache(workspaceRoot),
 	}
 }
 
@@ -38,14 +40,6 @@ func (p *Preprocessor) Preprocess() error {
 	p.log("📚 Book preprocessing: %s", p.book.Name)
 
 	startTime := time.Now()
-
-	// Check if we can use cached staging
-	if useCache, err := p.checkAndUseCache(); err != nil {
-		return fmt.Errorf("cache check failed: %w", err)
-	} else if useCache {
-		p.log("✅ Using cached staging (skipping preprocessing)")
-		return nil
-	}
 
 	// Step 1: Copy static files to staging
 	p.log("  Step 1: Copying static files...")
@@ -158,30 +152,15 @@ func (p *Preprocessor) Preprocess() error {
 	elapsed := time.Since(startTime)
 	p.log("✅ Book preprocessing complete: %s (took %v)", p.book.Name, elapsed)
 
-	// Write manifest for cache validation
-	if err := p.writeManifest(elapsed); err != nil {
-		p.log("⚠️  Failed to write manifest: %v", err)
-		// Non-fatal - preprocessing succeeded even if manifest write failed
+	// Log cache statistics
+	stats := p.assetCache.Stats()
+	if stats.MermaidHits+stats.MermaidMisses > 0 {
+		hitRate := float64(stats.MermaidHits) / float64(stats.MermaidHits+stats.MermaidMisses) * 100
+		p.log("   📊 Persistent cache: %d mermaid hits, %d misses (%.1f%% hit rate)",
+			stats.MermaidHits, stats.MermaidMisses, hitRate)
 	}
 
 	return nil
-}
-
-// checkAndUseCache checks if staging cache is valid and can be reused
-func (p *Preprocessor) checkAndUseCache() (bool, error) {
-	_, useCache, err := CheckStagingCache(p.book, p.workspaceRoot, p.pdfMode)
-	return useCache, err
-}
-
-// writeManifest creates a manifest file documenting the staging state
-func (p *Preprocessor) writeManifest(buildDuration time.Duration) error {
-	// Collect all files in staging
-	expectedFiles, err := collectStagingFiles(p.stagingDir)
-	if err != nil {
-		return fmt.Errorf("collecting staging files: %w", err)
-	}
-
-	return writeManifest(p.stagingDir, p.book, p.pdfMode, expectedFiles, buildDuration)
 }
 
 // log writes a formatted message to the log writer

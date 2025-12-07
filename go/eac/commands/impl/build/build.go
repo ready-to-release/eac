@@ -38,8 +38,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"github.com/ready-to-release/eac/go/eac/core/platform"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/platform"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 	"go.uber.org/zap/zapcore"
@@ -133,12 +133,12 @@ func Build() int {
 	skipVerification := false // Skip system dependency verification (go, docker, etc.)
 	skipModuleDeps := false   // Skip including transitive module dependencies
 	showTimings := false
-	debugMode := false        // Enable debug logs to console
+	debugMode := false // Enable debug logs to console
 	version := ""
 	listArtifacts := false
 	dryRun := false
-	buildAll := false         // Include non-default books (those with default: false)
-	useTUI := isLocalConsole  // TUI enabled by default for local console mode
+	buildAll := false        // Include non-default books (those with default: false)
+	useTUI := isLocalConsole // TUI enabled by default for local console mode
 	tuiExplicitlySet := false
 	tuiHeight := tui.DefaultHeight // TUI console height
 
@@ -312,7 +312,6 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 
 	return 0
 }
-
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
 func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int) int {
@@ -552,14 +551,14 @@ func buildTUISummary(results []orchestrator.WorkResult, totalTime time.Duration,
 	if failCount > 0 {
 		details = append(details, fmt.Sprintf("Failed: %d (%s)", failCount, strings.Join(failedModules, ", ")))
 	}
-	details = append(details, fmt.Sprintf("Output: out/build/"))
+	details = append(details, "Output: out/build/")
 
 	// Build next steps
 	nextSteps := ""
 	if failCount > 0 {
 		nextSteps = fmt.Sprintf("Review logs in out/build/ for %s", failedModules[0])
 	} else if !dryRun {
-		nextSteps = "Run 'commands test' to verify builds"
+		nextSteps = "Run 'test' to verify builds"
 	}
 
 	return &tui.SummaryData{

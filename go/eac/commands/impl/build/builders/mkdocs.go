@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -301,38 +300,69 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		}
 	}
 
-	// Build PDF books sequentially (Playwright/Docker are resource-intensive)
-	for _, book := range pdfBooks {
-		bookOutputDir := filepath.Join(outputDir, book.Name)
-		if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
-			Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", book.Name, err)
-			return 1
+	// Build PDF books in parallel (now safe with Docker resource limits)
+	// With --cpus=8 --memory=8g limits, each container won't overwhelm the system
+	if len(pdfBooks) > 0 {
+		Logln(logWriter, "\n🚀 Building %d PDF books in PARALLEL...", len(pdfBooks))
+		var wg sync.WaitGroup
+		results := make(chan int, len(pdfBooks))
+
+		for _, book := range pdfBooks {
+			wg.Add(1)
+			go func(b *config.Book) {
+				defer wg.Done()
+				bookOutputDir := filepath.Join(outputDir, b.Name)
+				if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
+					Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", b.Name, err)
+					results <- 1
+					return
+				}
+
+				// Use buffered writer to avoid interleaved output
+				var bookLog bytes.Buffer
+				exitCode := buildSingleBook(module, b, workspaceRoot, bookOutputDir, &bookLog)
+
+				if exitCode != 0 {
+					// Write log even on failure for debugging
+					logWriter.Write(bookLog.Bytes())
+					results <- exitCode
+					return
+				}
+
+				// Copy PDF to module output root
+				bookOutput := b.GetOutput()
+				themes := []string{}
+				switch bookOutput {
+				case "pdf-dark":
+					themes = []string{"dark"}
+				case "pdf-light":
+					themes = []string{"light"}
+				case "pdf-all":
+					themes = []string{"dark", "light"}
+				}
+
+				for _, theme := range themes {
+					srcPdf := filepath.Join(bookOutputDir, fmt.Sprintf("%s-%s.pdf", b.Name, theme))
+					dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", b.Name, theme))
+					if err := copyFile(srcPdf, dstPdf); err != nil {
+						Logln(&bookLog, "⚠️  Failed to copy PDF to module root: %v", err)
+					} else {
+						Logln(&bookLog, "   📄 %s-%s.pdf → module output root", b.Name, theme)
+					}
+				}
+
+				// Write complete log atomically (build + PDF copy)
+				logWriter.Write(bookLog.Bytes())
+				results <- 0
+			}(book)
 		}
 
-		exitCode := buildSingleBook(module, book, workspaceRoot, bookOutputDir, logWriter)
-		if exitCode != 0 {
-			return exitCode
-		}
+		wg.Wait()
+		close(results)
 
-		// Copy PDF to module output root
-		bookOutput := book.GetOutput()
-		themes := []string{}
-		switch bookOutput {
-		case "pdf-dark":
-			themes = []string{"dark"}
-		case "pdf-light":
-			themes = []string{"light"}
-		case "pdf-all":
-			themes = []string{"dark", "light"}
-		}
-
-		for _, theme := range themes {
-			srcPdf := filepath.Join(bookOutputDir, fmt.Sprintf("%s-%s.pdf", book.Name, theme))
-			dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", book.Name, theme))
-			if err := copyFile(srcPdf, dstPdf); err != nil {
-				Logln(logWriter, "⚠️  Failed to copy PDF to module root: %v", err)
-			} else {
-				Logln(logWriter, "   📄 %s-%s.pdf → module output root", book.Name, theme)
+		for exitCode := range results {
+			if exitCode != 0 {
+				return exitCode
 			}
 		}
 	}
@@ -385,52 +415,25 @@ func buildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 }
 
 // preprocessBook runs book preprocessing and returns the staging directory.
-// Acquires a lock on the staging directory to prevent concurrent preprocessing.
+// Uses ephemeral staging inside the build output directory (.staging/).
+// This is rebuilt on every build - no caching, no stale content.
 func preprocessBook(book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer, pdfMode bool) (string, bool) {
-	// Ensure staging base directory exists
-	stagingBase := filepath.Join(workspaceRoot, "out", "staging")
-	if err := os.MkdirAll(stagingBase, 0755); err != nil {
-		Logln(logWriter, "❌ Failed to create staging base directory: %v", err)
-		return "", true
-	}
+	// Use ephemeral staging inside build output directory
+	// Example: out/build/repository-report/.staging/
+	stagingDir := filepath.Join(outputDir, ".staging")
 
-	// Acquire lock for this book's staging directory
-	lock, err := acquireStagingLock(book.Name, stagingBase)
-	if err != nil {
-		Logln(logWriter, "❌ Failed to acquire staging lock for book '%s': %v", book.Name, err)
-		return "", true
-	}
-	// Note: Lock is intentionally NOT released here - it persists for the build duration
-	// The lock file will be cleaned up when the process exits or on next successful build
-	_ = lock // Suppress unused warning - lock is held via file descriptor
-
-	// Use persistent staging directory at out/staging/{book-name}
-	stagingDir := filepath.Join(stagingBase, book.Name)
-
-	// Check if we can use cached staging (before cleaning it!)
-	cachedStagingDir, useCache, err := books.CheckStagingCache(book, workspaceRoot, pdfMode)
-	if err != nil {
-		Logln(logWriter, "❌ Cache check failed: %v", err)
-		return "", true
-	}
-
-	if useCache {
-		Logln(logWriter, "✅ Using cached staging for '%s' (skipping preprocessing)", book.Name)
-		return cachedStagingDir, true
-	}
-
-	// Cache invalid or missing - clean staging directory to prevent stale content
-	// This ensures books.yml configuration changes are reflected correctly
+	// Clean staging directory on every build (ensures fresh content)
 	if err := os.RemoveAll(stagingDir); err != nil && !os.IsNotExist(err) {
 		Logln(logWriter, "❌ Failed to clean staging directory: %v", err)
 		Logln(logWriter, "   This may indicate file locks or permission issues")
 		Logln(logWriter, "   Try: rm -rf %s", stagingDir)
-		return "", true
+		return "", false
 	}
 
+	// Create fresh staging directory
 	if err := os.MkdirAll(stagingDir, 0755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)
-		return "", true
+		return "", false
 	}
 
 	Logln(logWriter, "📚 Preprocessing book: %s", book.Name)
@@ -439,29 +442,10 @@ func preprocessBook(book *config.Book, workspaceRoot string, outputDir string, l
 	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
-		return "", true
+		return "", false
 	}
 
 	return stagingDir, true
-}
-
-// acquireStagingLock acquires an exclusive lock for a book's staging directory.
-// Returns the lock handle on success. The lock should be held for the duration of the build.
-func acquireStagingLock(bookName string, stagingBase string) (*flock.Flock, error) {
-	lockPath := filepath.Join(stagingBase, fmt.Sprintf(".lock-%s", bookName))
-
-	lock := flock.New(lockPath)
-
-	locked, err := lock.TryLock()
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire lock: %w", err)
-	}
-
-	if !locked {
-		return nil, fmt.Errorf("book '%s' staging is already in use by another process", bookName)
-	}
-
-	return lock, nil
 }
 
 // buildBookWithTheme builds a book as PDF with a specific theme
@@ -696,6 +680,9 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
+		"--cpus", "8",              // Allocate 8 CPU cores for faster rendering
+		"--memory", "8g",           // 8GB RAM for Chromium and mkdocs
+		"--shm-size", "2gb",        // Shared memory for Chromium (prevents crashes)
 		"-e", "ENABLE_PDF_EXPORT=true",
 	}
 

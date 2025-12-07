@@ -346,8 +346,8 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 	// Create channels for work distribution
 	jobs := make(chan cacheStatus, len(toRender))
 	type result struct {
-		filename string
-		err      error
+		status cacheStatus
+		err    error
 	}
 	results := make(chan result, len(toRender))
 
@@ -357,7 +357,7 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 			for status := range jobs {
 				block := status.block
 				err := renderSingleDiagram(block, status.cachePath, p.workspaceRoot, p.logWriter)
-				results <- result{filename: block.filename, err: err}
+				results <- result{status: status, err: err}
 			}
 		}(w)
 	}
@@ -376,11 +376,21 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 	for i := 0; i < len(toRender); i++ {
 		res := <-results
 		if res.err != nil {
-			p.log("      ❌ Failed to render %s: %v", res.filename, res.err)
+			p.log("      ❌ Failed to render %s: %v", res.status.block.filename, res.err)
 			failed++
-			errors = append(errors, fmt.Sprintf("%s: %v", res.filename, res.err))
+			errors = append(errors, fmt.Sprintf("%s: %v", res.status.block.filename, res.err))
 		} else {
 			rendered++
+
+			// Save to persistent cache after successful rendering
+			block := res.status.block
+			if err := p.assetCache.PutMermaid(res.status.cachePath, MermaidCacheKey{
+				Code: block.content,
+			}); err != nil {
+				p.log("      ⚠️  Failed to cache %s: %v", block.filename, err)
+				// Non-fatal - rendering succeeded even if caching failed
+			}
+
 			// Log progress every 10 diagrams
 			if rendered%10 == 0 || rendered == len(toRender) {
 				p.log("      ✓ Progress: %d/%d diagrams rendered", rendered, len(toRender))
@@ -397,6 +407,7 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 }
 
 // checkMermaidCache checks which diagrams are already cached
+// Checks both persistent cache (out/cache/mermaid/) and local staging cache
 // Returns all blocks with their cache status
 func (p *Preprocessor) checkMermaidCache(blocks []mermaidBlock) ([]cacheStatus, error) {
 	// Cache directory: staging/assets/rendered/mermaid/
@@ -412,9 +423,24 @@ func (p *Preprocessor) checkMermaidCache(blocks []mermaidBlock) ([]cacheStatus, 
 	for _, block := range blocks {
 		svgPath := filepath.Join(cacheDir, block.filename)
 
-		// Check if file exists
+		// Check if file exists in local staging cache
 		_, err := os.Stat(svgPath)
 		cached := err == nil
+
+		// If not in local cache, check persistent cache
+		if !cached {
+			persistentPath, persistentHit := p.assetCache.GetMermaid(MermaidCacheKey{
+				Code: block.content,
+			})
+
+			if persistentHit {
+				// Copy from persistent cache to local staging cache
+				if err := copyFile(persistentPath, svgPath); err == nil {
+					cached = true
+					// No need to increment stats here - GetMermaid already did
+				}
+			}
+		}
 
 		statuses = append(statuses, cacheStatus{
 			block:     block,
