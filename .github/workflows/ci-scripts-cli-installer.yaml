@@ -83,17 +83,11 @@ jobs:
         with:
           trigger-run-id: ${{ inputs.trigger_run_id }}
 
-      - name: Download Build Artifacts
+      - name: Download Build Artifacts (including dependencies)
         uses: actions/download-artifact@v6
         with:
           name: build-artifacts-scripts-cli-installer
-          path: out/build/scripts-cli-installer
-
-      - name: Download R2R CLI Build Artifacts (Test Dependency)
-        uses: actions/download-artifact@v6
-        with:
-          name: build-artifacts-r2r-cli
-          path: out/build/r2r-cli
+          path: out/build/
 
       - name: Test Module (Commit Suite - L0-L2)
         shell: pwsh
@@ -109,7 +103,7 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v5
         with:
           name: test-results-scripts-cli-installer-windows
           path: out/test/**
