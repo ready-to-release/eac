@@ -585,10 +585,36 @@ var (
 	htmlImgPattern = regexp.MustCompile(`<img[^>]+src="([^"]+)"`)  // <img src="path">
 )
 
+// stripCodeBlocks removes both fenced and indented code blocks from markdown content
+// to prevent extracting links from code examples
+func stripCodeBlocks(content string) string {
+	// Remove fenced code blocks (```...```)
+	// Use (?s) flag to make . match newlines
+	fencedCodeBlockPattern := regexp.MustCompile("(?s)```.*?```")
+	content = fencedCodeBlockPattern.ReplaceAllString(content, "")
+
+	// Remove indented code blocks (lines starting with 4 spaces or tab)
+	lines := strings.Split(content, "\n")
+	var cleaned []string
+
+	for _, line := range lines {
+		// Skip lines that start with 4+ spaces or tab (indented code blocks)
+		if len(line) > 0 && (line[0] == '\t' || strings.HasPrefix(line, "    ")) {
+			continue
+		}
+		cleaned = append(cleaned, line)
+	}
+
+	return strings.Join(cleaned, "\n")
+}
+
 // extractRelativeLinks extracts all relative link references from markdown content
 func extractRelativeLinks(content string) []string {
 	seen := make(map[string]bool)
 	var links []string
+
+	// Strip code blocks (both fenced and indented) to avoid extracting links from examples
+	content = stripCodeBlocks(content)
 
 	// Extract from markdown images
 	for _, match := range mdImagePattern.FindAllStringSubmatch(content, -1) {
@@ -695,6 +721,12 @@ func (t *LinkTranslator) BuildTranslations(siteURL string) error {
 		stagingDir := filepath.Dir(stagingFile)
 
 		for _, oldLink := range links {
+			// Skip template variables (e.g. {{.Values.Docs.URL}})
+			if strings.Contains(oldLink, "{{") && strings.Contains(oldLink, "}}") {
+				t.logDebug("Skipping template variable link: %s", oldLink)
+				continue
+			}
+
 			// Strip anchor from path
 			pathPart := oldLink
 			anchor := ""

@@ -26,12 +26,20 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Register test sanity steps
 	registerTestSanitySteps(sc, ctx)
 
-	// Register Go version consistency steps
-	// Note: goVersionCtx will get repoRoot lazily when needed
+	// Initialize version consistency contexts
+	// Note: contexts will get repoRoot lazily when needed
 	goVersionCtx := &goVersionContext{
 		actionVersions: make(map[string]string),
 	}
-	registerGoVersionSteps(sc, goVersionCtx, repoCtx)
+	nodeVersionCtx := &nodeVersionContext{
+		actionVersions: make(map[string]string),
+	}
+
+	// Register Go version consistency steps (also initializes shared Node.js steps)
+	registerGoVersionSteps(sc, goVersionCtx, nodeVersionCtx, repoCtx)
+
+	// Register Node.js version consistency steps
+	registerNodeVersionSteps(sc, nodeVersionCtx, repoCtx)
 
 	// Given steps
 	// Note: "the repository root exists" is registered in common steps (internal/steps.go)

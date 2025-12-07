@@ -19,7 +19,7 @@ dependencies:
   - moniker: npm
     name: "Node.js"
     description: "JavaScript runtime providing npm package manager"
-    version: "22.0"
+    version: "20.0"
     verify:
       command: "node --version"
       pattern: "v(\\d+\\.\\d+)"

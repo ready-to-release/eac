@@ -207,8 +207,10 @@ func TestCheckMermaidCache(t *testing.T) {
 
 	// Create a preprocessor
 	p := &Preprocessor{
-		stagingDir: tmpDir,
-		logWriter:  os.Stdout,
+		stagingDir:    tmpDir,
+		workspaceRoot: tmpDir,
+		logWriter:     os.Stdout,
+		assetCache:    NewAssetCache(tmpDir),
 	}
 
 	// Create some test blocks
@@ -301,8 +303,10 @@ func TestCacheDirectoryCreation(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	p := &Preprocessor{
-		stagingDir: tmpDir,
-		logWriter:  os.Stdout,
+		stagingDir:    tmpDir,
+		workspaceRoot: tmpDir,
+		logWriter:     os.Stdout,
+		assetCache:    NewAssetCache(tmpDir),
 	}
 
 	// Cache directory shouldn't exist yet
@@ -402,8 +406,10 @@ Text after.
 
 	// Create preprocessor
 	p := &Preprocessor{
-		stagingDir: tmpDir,
-		logWriter:  os.Stdout,
+		stagingDir:     tmpDir,
+		workspaceRoot:  tmpDir,
+		logWriter:      os.Stdout,
+		linkTranslator: NewLinkTranslator(tmpDir, tmpDir, os.Stdout, false),
 	}
 
 	// Create blocks map
@@ -489,8 +495,10 @@ graph TD
 
 	// Create preprocessor
 	p := &Preprocessor{
-		stagingDir: tmpDir,
-		logWriter:  os.Stdout,
+		stagingDir:     tmpDir,
+		workspaceRoot:  tmpDir,
+		logWriter:      os.Stdout,
+		linkTranslator: NewLinkTranslator(tmpDir, tmpDir, os.Stdout, false),
 	}
 
 	// Create blocks map
