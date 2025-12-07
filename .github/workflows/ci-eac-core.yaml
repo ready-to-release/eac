@@ -64,6 +64,5 @@ jobs:
         with:
           module: eac-core
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          setup-deps: auto
           # PRs run commit suite only; main/release branches run full suite
           suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}

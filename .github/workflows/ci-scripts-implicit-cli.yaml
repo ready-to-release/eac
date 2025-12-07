@@ -51,7 +51,6 @@ jobs:
           module: scripts-implicit-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
           download-artifact: 'false'
-          setup-deps: auto
           # PRs run commit suite only; main/release branches run full suite
           suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
 
@@ -63,50 +62,11 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
+      - name: Test Module
+        uses: ./.github/actions/test-module
         with:
+          module: scripts-implicit-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
-
-      - name: Run Tests (Commit Suite)
-        shell: pwsh
-        run: |
-          & "${{ steps.commands.outputs.commands-path }}" test scripts-implicit-cli --suite commit
-
-      - name: Run Tests (Acceptance Suite)
-        # Skip acceptance tests for PRs - only run on main/release branches
-        if: ${{ !startsWith(inputs.ref, 'refs/pull/') }}
-        shell: pwsh
-        run: |
-          & "${{ steps.commands.outputs.commands-path }}" test scripts-implicit-cli --suite acceptance
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: test-results-scripts-implicit-cli-windows
-          path: out/test/**/scripts-implicit-cli/**
-          if-no-files-found: warn
-
-      - name: Test Summary
-        if: always()
-        shell: pwsh
-        run: |
-          @"
-          ## Test: scripts-implicit-cli (Windows)
-
-          ### Tests Executed
-
-          | Suite | Level | Description |
-          |-------|-------|-------------|
-          | commit | L0-L2 | Unit and integration tests |
-          | acceptance | L3 | Acceptance verification tests |
-
-          ### Test Details
-
-          | Property | Value |
-          |----------|-------|
-          | Module | ``scripts-implicit-cli`` |
-          | Platform | Windows |
-          "@ >> $env:GITHUB_STEP_SUMMARY
+          download-artifact: 'false'
+          # PRs run commit suite only; main/release branches run full suite
+          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}

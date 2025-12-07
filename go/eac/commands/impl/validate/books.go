@@ -2,7 +2,7 @@
 // Short: Validate books.yml configuration
 // Long: Validate the books.yml file including:
 // Long:   - Book names match existing module monikers
-// Long:   - Referenced modules are type mkdocs-site
+// Long:   - Referenced modules are type mkdocs-site or mkdocs-pdf
 // Long:   - Copy glob patterns are valid syntax
 // Long:   - Commands are valid EAC commands
 // Long:   - Navigation references are valid
@@ -88,14 +88,14 @@ func ValidateBooks() int {
 			continue
 		}
 
-		// Check module is mkdocs-site
-		if module.Type != "mkdocs-site" {
-			log.Errorf("  Module '%s' is type '%s', expected 'mkdocs-site'", book.Module, module.Type)
+		// Check module is mkdocs-site or mkdocs-pdf
+		if module.Type != "mkdocs-site" && module.Type != "mkdocs-pdf" {
+			log.Errorf("  Module '%s' is type '%s', expected 'mkdocs-site' or 'mkdocs-pdf'", book.Module, module.Type)
 			hasErrors = true
 			continue
 		}
 
-		log.Infof("  Module: %s (mkdocs-site)", book.Module)
+		log.Infof("  Module: %s (%s)", book.Module, module.Type)
 
 		// Count sources
 		copyCount := len(book.GetCopySources())

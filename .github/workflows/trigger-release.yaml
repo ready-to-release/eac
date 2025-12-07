@@ -18,7 +18,7 @@
 #   3. This workflow runs on push to main
 #   4. Detects new version in changelog without corresponding tag
 #   5. Creates tag (e.g., r2r-cli/0.1.0) and pushes it
-#   6. Dispatches release workflow (e.g., release-r2r-cli.yml) with version input
+#   6. Dispatches release workflow (e.g., release-r2r-cli.yaml) with version input
 #
 # Can also be triggered manually to check status or force tag creation.
 
@@ -38,6 +38,8 @@ on:
         required: true
         default: 'all'
         type: choice
+        # Note: Update this list when adding new release workflows (release-*.yaml)
+        # The actual dispatch logic dynamically discovers workflows
         options:
           - all
           - r2r-cli
@@ -137,30 +139,24 @@ jobs:
             MODULE=$(echo "$item" | jq -r '.module')
             VERSION=$(echo "$item" | jq -r '.version')
 
-            # Map module to release workflow
-            case "$MODULE" in
-              r2r-cli)
-                WORKFLOW="release-r2r-cli.yml"
-                echo "Triggering $WORKFLOW for version $VERSION"
+            # Dynamically discover release workflow for this module
+            WORKFLOW="release-${MODULE}.yaml"
+
+            if [ -f ".github/workflows/$WORKFLOW" ]; then
+              echo "Triggering $WORKFLOW for module $MODULE (version $VERSION)"
+
+              # Check if workflow accepts version input by looking for version in workflow_dispatch inputs
+              if grep -q "inputs:" ".github/workflows/$WORKFLOW" && grep -A 10 "inputs:" ".github/workflows/$WORKFLOW" | grep -q "version:"; then
                 gh workflow run "$WORKFLOW" -f version="$VERSION"
-                echo "✅ Dispatched $WORKFLOW"
-                ;;
-              ext-eac)
-                WORKFLOW="release-ext-eac.yml"
-                echo "Triggering $WORKFLOW for version $VERSION"
-                gh workflow run "$WORKFLOW" -f version="$VERSION"
-                echo "✅ Dispatched $WORKFLOW"
-                ;;
-              docs)
-                WORKFLOW="release-docs.yml"
-                echo "Triggering $WORKFLOW"
+              else
                 gh workflow run "$WORKFLOW"
-                echo "✅ Dispatched $WORKFLOW"
-                ;;
-              *)
-                echo "⚠️ No release workflow mapped for module: $MODULE"
-                ;;
-            esac
+              fi
+
+              echo "✅ Dispatched $WORKFLOW"
+            else
+              echo "⚠️ No release workflow found for module: $MODULE"
+              echo "   Expected: .github/workflows/$WORKFLOW"
+            fi
           done
         env:
           GH_TOKEN: ${{ github.token }}
