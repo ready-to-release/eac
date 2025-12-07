@@ -34,7 +34,7 @@ inputs:
     required: false
     default: ''
   build-artifact-path:
-    description: 'Path to download build artifacts to. If empty, uses out/build/{module}'
+    description: 'Path to download build artifacts to. If empty, uses out/build/ (includes all dependencies)'
     required: false
     default: ''
   results-artifact-name:
@@ -96,7 +96,7 @@ runs:
         if [ -n "$INPUT_BUILD_ARTIFACT_PATH" ]; then
           echo "build-artifact-path=$INPUT_BUILD_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         else
-          echo "build-artifact-path=out/build/${MODULE}" >> $GITHUB_OUTPUT
+          echo "build-artifact-path=out/build/" >> $GITHUB_OUTPUT
         fi
 
         # Results artifact settings
@@ -114,7 +114,7 @@ runs:
 
     - name: Download Build Artifacts
       if: inputs.download-artifact == 'true'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ steps.vars.outputs.build-artifact-name }}
         path: ${{ steps.vars.outputs.build-artifact-path }}
