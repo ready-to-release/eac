@@ -478,8 +478,12 @@ jobs:
               fi
 
               echo ""
+              echo "======================================================================"
               echo "Layer $LAYER_NUM: $LAYER_MODULES"
+              echo "======================================================================"
 
+              # Dispatch all workflows in this layer
+              DISPATCHED_WORKFLOWS=""
               for module in $LAYER_MODULES; do
                 if [ -f ".github/workflows/ci-${module}.yaml" ]; then
                   echo "  Dispatching: ci-${module}.yaml"
@@ -488,15 +492,59 @@ jobs:
                     -f ref=${{ github.ref }} \
                     -f sha=${{ github.sha }} \
                     -f trigger_run_id=${{ github.run_id }}
+                  DISPATCHED_WORKFLOWS="$DISPATCHED_WORKFLOWS ci-${module}.yaml"
                   TOTAL_DISPATCHED=$((TOTAL_DISPATCHED + 1))
                   sleep 2
                 fi
               done
+
+              # Wait for workflows to appear and collect their run IDs
+              if [ -n "$DISPATCHED_WORKFLOWS" ]; then
+                echo ""
+                echo "Waiting for workflows to start..."
+                sleep 10  # Give GitHub Actions time to register the runs
+
+                # Collect run IDs for this layer
+                LAYER_RUN_IDS=""
+                for workflow in $DISPATCHED_WORKFLOWS; do
+                  # Get the most recent run for this workflow matching our commit
+                  RUN_ID=$(gh run list \
+                    --workflow="$workflow" \
+                    --commit="${{ github.sha }}" \
+                    --limit=1 \
+                    --json databaseId \
+                    --jq '.[0].databaseId' 2>/dev/null || echo "")
+
+                  if [ -n "$RUN_ID" ]; then
+                    LAYER_RUN_IDS="$LAYER_RUN_IDS $RUN_ID"
+                    echo "  Found run ID $RUN_ID for $workflow"
+                  else
+                    echo "  ⚠️  Warning: Could not find run ID for $workflow"
+                  fi
+                done
+
+                # Wait for all workflows in this layer to complete
+                if [ -n "$LAYER_RUN_IDS" ]; then
+                  echo ""
+                  echo "Waiting for layer $LAYER_NUM to complete..."
+                  if ! $COMMANDS pipeline wait $LAYER_RUN_IDS --timeout 3600; then
+                    echo ""
+                    echo "❌ Layer $LAYER_NUM failed - stopping execution"
+                    exit 1
+                  fi
+                  echo ""
+                  echo "✅ Layer $LAYER_NUM completed successfully"
+                else
+                  echo "⚠️  No run IDs collected for layer $LAYER_NUM - cannot wait"
+                fi
+              fi
             done
 
             echo ""
-            echo "Dispatched $TOTAL_DISPATCHED workflow(s) across $LAYER_COUNT layer(s)"
-            echo "Child workflows will report their own statuses"
+            echo "======================================================================"
+            echo "All $LAYER_COUNT layer(s) completed successfully"
+            echo "Total workflows dispatched: $TOTAL_DISPATCHED"
+            echo "======================================================================"
           fi
 
           echo ""
