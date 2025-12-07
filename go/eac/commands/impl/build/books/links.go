@@ -311,11 +311,9 @@ func convertDrawioImages(content, relFileDir, siteURL string) (string, int) {
 		urlPath = filepath.ToSlash(filepath.Clean(urlPath))
 
 		// Handle paths that go outside staging
-		if strings.HasPrefix(urlPath, "../") {
-			// For explanation book, assets are at root level
-			// ../assets/x -> assets/x
-			urlPath = strings.TrimPrefix(urlPath, "../")
-		}
+		// For explanation book, assets are at root level
+		// ../assets/x -> assets/x
+		urlPath = strings.TrimPrefix(urlPath, "../")
 
 		fullURL, err := url.JoinPath(siteURL, urlPath)
 		if err != nil {
@@ -607,6 +605,7 @@ func stripCodeBlocks(content string) string {
 
 	return strings.Join(cleaned, "\n")
 }
+
 
 // extractRelativeLinks extracts all relative link references from markdown content
 func extractRelativeLinks(content string) []string {

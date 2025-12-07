@@ -388,7 +388,7 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 			cleanContent := stripSizeDirective(block.content)
 			if err := p.assetCache.PutMermaid(res.status.cachePath, MermaidCacheKey{
 				Code: cleanContent,
-			}); err != nil {
+			}); err != nil{
 				p.log("      ⚠️  Failed to cache %s: %v", block.filename, err)
 				// Non-fatal - rendering succeeded even if caching failed
 			}
