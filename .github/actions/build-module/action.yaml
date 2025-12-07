@@ -100,12 +100,12 @@ runs:
           exit 1
         fi
 
-    - name: Upload Build Artifacts
+    - name: Upload Build Artifacts (including dependencies)
       if: inputs.upload-artifact == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.vars.outputs.artifact-name }}
-        path: ${{ steps.vars.outputs.artifact-path }}
+        path: out/build/
         if-no-files-found: warn
 
     - name: Build Summary
