@@ -160,6 +160,7 @@ runs:
         SUITES: ${{ inputs.suites }}
         RUN_ID: ${{ github.run_id }}
         TEST_FAILED: ${{ steps.test.outputs.test-failed }}
+        GH_TOKEN: ${{ github.token }}
       run: |
         # Determine status from test result
         if [ "$TEST_FAILED" = "0" ]; then
@@ -173,3 +174,9 @@ runs:
 
         # Generate comprehensive summary using Go command
         $COMMANDS show test-summary $MODULE --suite $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
+
+        # Add diagnostic link on failure
+        if [ "$STATUS" = "failure" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link $RUN_ID --type test --artifact "test-results-${MODULE}" >> $GITHUB_STEP_SUMMARY
+        fi
