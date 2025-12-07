@@ -89,7 +89,7 @@ jobs:
           echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
 
       - name: Upload PDF artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: pdf-books
           path: out/build/books/**/*.pdf
