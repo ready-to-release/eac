@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 )
@@ -91,12 +92,17 @@ func CopyFile(src, dst string) error {
 // FormatDockerVolumePath formats a path for use as a Docker volume mount source
 // On Windows, converts C:\path to /c/path for Docker compatibility
 func FormatDockerVolumePath(path string) string {
-	if len(path) >= 2 && path[1] == ':' {
-		driveLetter := strings.ToLower(string(path[0]))
-		rest := strings.ReplaceAll(path[2:], "\\", "/")
-		return "/" + driveLetter + rest
-	}
-	return strings.ReplaceAll(path, "\\", "/")
+	return buildutil.FormatDockerVolumePath(path)
+}
+
+// IsDockerInDocker detects if we're running inside a Docker container
+func IsDockerInDocker() bool {
+	return buildutil.IsDockerInDocker()
+}
+
+// IsDockerAvailable checks if Docker daemon is accessible
+func IsDockerAvailable() bool {
+	return buildutil.IsDockerAvailable()
 }
 
 // BuildMarkerFilename is the standard name for build completion markers
