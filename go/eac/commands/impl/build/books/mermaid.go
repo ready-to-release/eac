@@ -384,9 +384,11 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 
 			// Save to persistent cache after successful rendering
 			block := res.status.block
+			// Use stripped content for cache key to ensure consistency
+			cleanContent := stripSizeDirective(block.content)
 			if err := p.assetCache.PutMermaid(res.status.cachePath, MermaidCacheKey{
-				Code: block.content,
-			}); err != nil {
+				Code: cleanContent,
+			}); err != nil{
 				p.log("      ⚠️  Failed to cache %s: %v", block.filename, err)
 				// Non-fatal - rendering succeeded even if caching failed
 			}
@@ -429,8 +431,11 @@ func (p *Preprocessor) checkMermaidCache(blocks []mermaidBlock) ([]cacheStatus, 
 
 		// If not in local cache, check persistent cache
 		if !cached {
+			// Use stripped content for cache key to ensure consistency
+			// (size directives are removed by processMermaidSizing step)
+			cleanContent := stripSizeDirective(block.content)
 			persistentPath, persistentHit := p.assetCache.GetMermaid(MermaidCacheKey{
-				Code: block.content,
+				Code: cleanContent,
 			})
 
 			if persistentHit {
