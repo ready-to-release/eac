@@ -391,7 +391,7 @@ jobs:
   # Stage 4: Execute Module Workflows
   # =========================================
   execute-layers:
-    name: Execute Dependency Layers -> Dispatch CI
+    name: Dispatch Layered CI
     needs: [detect-changes, calculate-order]
     runs-on: ubuntu-latest
     steps:
@@ -406,12 +406,12 @@ jobs:
       - name: Make executable
         run: chmod +x out/tools/commands
 
-      - name: Execute All Layers -> Dispatch CI
+      - name: Execute All Layers via Dispatch
         run: |
           # Early exit if no changes - job runs to satisfy status checks but skips execution
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
             echo "No modules require building - skipping execution"
-            echo "## Execute Dependency Layers" >> $GITHUB_STEP_SUMMARY
+            echo "## Dispatch Layered CI" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "No module CI workflows to execute." >> $GITHUB_STEP_SUMMARY
             exit 0

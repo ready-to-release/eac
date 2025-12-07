@@ -556,13 +556,21 @@ func (p *Preprocessor) validateNavEntry(entry any, dirPath string, actualFiles, 
 
 	switch v := entry.(type) {
 	case string:
-		// Simple file or directory reference: "modules.md" or "subdir/"
+		// Simple file or directory reference: "modules.md" or "subdir/" or "subdir/file.md"
 		if strings.HasSuffix(v, "/") {
 			// Directory reference
 			dirName := strings.TrimSuffix(v, "/")
 			if actualDirs[dirName] {
 				referenced[dirName+"/"] = true
 				return v, referenced // Valid directory
+			}
+			// For relative paths (containing /), check filesystem
+			if strings.Contains(dirName, "/") {
+				fullPath := filepath.Join(dirPath, dirName)
+				if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
+					referenced[dirName+"/"] = true
+					return v, referenced // Valid directory
+				}
 			}
 			// Directory missing, skip
 			return nil, referenced
@@ -571,6 +579,18 @@ func (p *Preprocessor) validateNavEntry(entry any, dirPath string, actualFiles, 
 			if actualFiles[v] {
 				referenced[v] = true
 				return v, referenced // Valid file
+			}
+			// For relative paths (containing /), check filesystem
+			if strings.Contains(v, "/") {
+				fullPath := filepath.Join(dirPath, v)
+				navLog.Debugf("[VALIDATE] Checking relative file: %s -> %s", v, fullPath)
+				if _, err := os.Stat(fullPath); err == nil {
+					navLog.Debugf("[VALIDATE] ✓ File exists: %s", v)
+					referenced[v] = true
+					return v, referenced // Valid file
+				} else {
+					navLog.Debugf("[VALIDATE] ✗ File missing: %s (error: %v)", v, err)
+				}
 			}
 			// File missing, skip
 			return nil, referenced
@@ -586,15 +606,31 @@ func (p *Preprocessor) validateNavEntry(entry any, dirPath string, actualFiles, 
 			switch c := content.(type) {
 			case string:
 				// {"Title": "file.md"}
-				if strings.HasSuffix(c, ".md") && actualFiles[c] {
-					validatedMap[title] = c
-					referenced[c] = true
+				if strings.HasSuffix(c, ".md") {
+					if actualFiles[c] {
+						validatedMap[title] = c
+						referenced[c] = true
+					} else if strings.Contains(c, "/") {
+						// For relative paths, check filesystem
+						fullPath := filepath.Join(dirPath, c)
+						if _, err := os.Stat(fullPath); err == nil {
+							validatedMap[title] = c
+							referenced[c] = true
+						}
+					}
 				} else if strings.HasSuffix(c, "/") {
 					// {"Title": "subdir/"}
 					dirName := strings.TrimSuffix(c, "/")
 					if actualDirs[dirName] {
 						validatedMap[title] = c
 						referenced[dirName+"/"] = true
+					} else if strings.Contains(dirName, "/") {
+						// For relative paths, check filesystem
+						fullPath := filepath.Join(dirPath, dirName)
+						if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
+							validatedMap[title] = c
+							referenced[dirName+"/"] = true
+						}
 					}
 				}
 				// If file/dir missing, omit this entry

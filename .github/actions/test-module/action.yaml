@@ -173,7 +173,7 @@ runs:
         PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
 
         # Generate comprehensive summary using Go command
-        $COMMANDS show test-summary $MODULE --suite $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
+        $COMMANDS show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
         # Add diagnostic link on failure
         if [ "$STATUS" = "failure" ]; then
