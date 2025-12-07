@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -53,9 +54,16 @@ var debugEnabled uint32
 // Can be changed for testing.
 var stdOutput io.Writer = os.Stdout
 
-// debugOutput is where Debug/Warn/Error messages are written (stderr by default).
+// debugOutput is where Debug messages are written (stderr by default).
 // Can be changed for testing.
 var debugOutput io.Writer = os.Stderr
+
+// warnErrorOutput is where Warn/Error messages are written (stderr by default, always).
+// Can be changed for testing.
+var warnErrorOutput io.Writer = os.Stderr
+
+// debugFileCloser holds the debug log file if file logging is enabled
+var debugFileCloser io.Closer
 
 // detectExecutionContext determines the execution context based on environment
 func detectExecutionContext() {
@@ -152,4 +160,77 @@ func DebugDirectf(module, format string, args ...interface{}) {
 	}
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintf(debugOutput, "%s  DEBUG  %s:%s\n", debugTime(), module, msg)
+}
+
+// EnableFileLogging configures debug output to write to a log file.
+// The log file is created at <workspaceRoot>/out/logs/<module>/debug.log.
+// If includeConsole is true, debug output also goes to stderr.
+// Call CloseFileLogging() when done to ensure the file is properly closed.
+func EnableFileLogging(workspaceRoot, module string, includeConsole bool) error {
+	// Create log directory
+	logDir := filepath.Join(workspaceRoot, "out", "logs", module)
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
+	}
+
+	// Create log file
+	logPath := filepath.Join(logDir, "debug.log")
+	file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create debug log file: %w", err)
+	}
+
+	// Configure debug output destination
+	if includeConsole {
+		debugOutput = io.MultiWriter(os.Stderr, file)
+	} else {
+		debugOutput = file
+	}
+
+	debugFileCloser = file
+
+	return nil
+}
+
+// CloseFileLogging closes the debug log file if file logging is enabled.
+func CloseFileLogging() {
+	if debugFileCloser != nil {
+		debugFileCloser.Close()
+		debugFileCloser = nil
+		debugOutput = os.Stderr // Reset to stderr only
+	}
+}
+
+// GetDebugOutput returns the current debug output writer.
+// This is useful for combining with other writers (e.g., TUI + file logging).
+func GetDebugOutput() io.Writer {
+	return debugOutput
+}
+
+// GetStdOutput returns the current standard output writer.
+// This is useful for combining with other writers (e.g., TUI + file logging).
+func GetStdOutput() io.Writer {
+	return stdOutput
+}
+
+// SetDebugOutput sets the destination for debug output.
+// Pass nil to reset to stderr.
+// This is useful for redirecting debug output to a TUI or other custom destination.
+func SetDebugOutput(w io.Writer) {
+	if w == nil {
+		debugOutput = os.Stderr
+	} else {
+		debugOutput = w
+	}
+}
+
+// SetStdOutput sets the destination for Info output.
+// Pass nil to reset to stdout.
+// This is useful for redirecting Info output to a TUI or other custom destination.
+func SetStdOutput(w io.Writer) {
+	if w == nil {
+		stdOutput = os.Stdout
+	} else {
+		stdOutput = w
+	}
 }

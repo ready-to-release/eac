@@ -91,13 +91,8 @@ func buildCore(cfg Config) (zapcore.Core, []io.Closer, error) {
 
 	consoleCore := buildConsoleCore(cfg, logCfg)
 
-	// Only add file core when enabled
-	if !logCfg.File.IsEnabled() {
-		return consoleCore, nil, nil
-	}
-
-	// File logging requires debug mode to actually write
-	if !cfg.DebugMode {
+	// Only add file core when enabled in config AND EnableFileLogging is true
+	if !logCfg.File.IsEnabled() || !cfg.EnableFileLogging {
 		return consoleCore, nil, nil
 	}
 

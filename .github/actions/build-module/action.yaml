@@ -12,7 +12,7 @@ inputs:
   go-version:
     description: 'Go version for building commands from source'
     required: false
-    default: '1.24'
+    default: '1.24.4'
   setup-deps:
     description: |
       Setup system dependencies before build:

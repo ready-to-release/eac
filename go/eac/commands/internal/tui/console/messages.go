@@ -49,3 +49,8 @@ type PhaseLineMsg struct {
 type ResultLineMsg struct {
 	Line Line
 }
+
+// SummaryDataMsg is sent to populate and activate the Summary pane (exported for tui package)
+type SummaryDataMsg struct {
+	Data *SummaryData
+}

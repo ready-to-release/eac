@@ -290,7 +290,7 @@ modules:
     versioning:
       scheme: SemVer
     depends_on:
-      - eac-core
+      - r2r-cli
     files:
       root: scripts
       source:

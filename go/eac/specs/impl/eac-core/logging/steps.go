@@ -119,7 +119,9 @@ func debugModeIsDisabled() error {
 
 func debugModeIsEnabled() error {
 	logCtx.debugMode = true
-	cfg := logging.DefaultConfig(logCtx.module, logCtx.workspaceRoot).WithDebugMode(true)
+	cfg := logging.DefaultConfig(logCtx.module, logCtx.workspaceRoot).
+		WithDebugMode(true).
+		WithFileLogging(true) // File logging required for debug mode tests
 	logger, err := logging.New(cfg)
 	if err != nil {
 		return err
@@ -132,7 +134,9 @@ func debugModeIsEnabled() error {
 func aLoggerConfiguredForModule(module string) error {
 	var cfg logging.Config
 	if logCtx.debugMode {
-		cfg = logging.DefaultConfig(module, logCtx.workspaceRoot).WithDebugMode(true)
+		cfg = logging.DefaultConfig(module, logCtx.workspaceRoot).
+			WithDebugMode(true).
+			WithFileLogging(true) // File logging required for debug mode tests
 	} else {
 		cfg = logging.DefaultConfig(module, logCtx.workspaceRoot)
 	}

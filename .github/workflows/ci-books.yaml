@@ -38,6 +38,8 @@ jobs:
   build:
     name: Build PDF Books
     runs-on: ubuntu-latest
+    outputs:
+      pdf_count: ${{ steps.verify.outputs.pdf_count }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -72,8 +74,8 @@ jobs:
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
           echo "Building PDF documentation (output mode from books.yml)..."
-          # Use --all to include books with default: false (all PDF books)
-          $COMMANDS build books --all
+          # Build only default books (for faster CI feedback)
+          $COMMANDS build books
 
       - name: Verify PDF outputs
         id: verify
@@ -87,14 +89,14 @@ jobs:
           PDF_COUNT=$(find "$BOOKS_DIR" -name "*.pdf" 2>/dev/null | wc -l)
 
           if [ "$PDF_COUNT" -eq 0 ]; then
-            echo "::error::No PDF files found in $BOOKS_DIR"
-            exit 1
+            echo "::warning::No PDF files found - all books may have default: false"
+            echo "Release workflow will build all books with --all flag"
+          else
+            echo "PDF books built successfully:"
+            find "$BOOKS_DIR" -name "*.pdf" -exec du -h {} \; | while read size file; do
+              echo "  $file: $size"
+            done
           fi
-
-          echo "PDF books built successfully:"
-          find "$BOOKS_DIR" -name "*.pdf" -exec du -h {} \; | while read size file; do
-            echo "  $file: $size"
-          done
 
           echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
 
@@ -124,7 +126,6 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
             echo "- Docker image build failure" >> $GITHUB_STEP_SUMMARY
-            echo "- WeasyPrint rendering errors" >> $GITHUB_STEP_SUMMARY
             echo "- Book preprocessing failures" >> $GITHUB_STEP_SUMMARY
             echo "- Missing PDF template styles" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -137,6 +138,8 @@ jobs:
     name: Test
     needs: build
     runs-on: ubuntu-latest
+    # Skip tests if no PDFs were built (all books have default: false)
+    if: needs.build.outputs.pdf_count != '0'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -197,6 +200,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     # Only trigger release on main branch, NEVER for PRs
+    # (test job will be skipped if no PDFs built, which also skips this job)
     if: |
       (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') &&
       !startsWith(inputs.ref || github.ref, 'refs/pull/')

@@ -25,9 +25,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
@@ -36,10 +38,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"github.com/ready-to-release/eac/go/eac/core/platform"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/platform"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
+	"go.uber.org/zap/zapcore"
 )
 
 var log = logging.C()
@@ -130,11 +133,12 @@ func Build() int {
 	skipVerification := false // Skip system dependency verification (go, docker, etc.)
 	skipModuleDeps := false   // Skip including transitive module dependencies
 	showTimings := false
+	debugMode := false // Enable debug logs to console
 	version := ""
 	listArtifacts := false
 	dryRun := false
-	buildAll := false         // Include non-default books (those with default: false)
-	useTUI := isLocalConsole  // TUI enabled by default for local console mode
+	buildAll := false        // Include non-default books (those with default: false)
+	useTUI := isLocalConsole // TUI enabled by default for local console mode
 	tuiExplicitlySet := false
 	tuiHeight := tui.DefaultHeight // TUI console height
 
@@ -158,6 +162,8 @@ func Build() int {
 			skipVerification = true
 		case "--timings":
 			showTimings = true
+		case "--debug":
+			debugMode = true
 		case "--accept-warnings":
 			// Flag is handled in mkdocs builder via os.Args check
 			// Just accept it here so it doesn't fail as unknown flag
@@ -253,8 +259,18 @@ func Build() int {
 		return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
 	}
 
+	// Enable file logging for debug output (always enabled for build)
+	// If --debug flag is set, also output to console
+	if err := logging.EnableFileLogging(workspaceRoot, "build", debugMode); err != nil {
+		log.Warnf("Failed to enable file logging: %v", err)
+	}
+	defer logging.CloseFileLogging()
+
+	// Always enable debug logging (output destination is controlled by EnableFileLogging)
+	logging.EnableDebug()
+
 	// Run build (single or multiple modules) - phases are handled inside
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, dryRun, buildAll, useTUI, tuiHeight)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight)
 }
 
 // parseIntArg parses a string argument as an integer
@@ -297,9 +313,8 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 	return 0
 }
 
-
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int) int {
 	// Build module type lookup for ALL modules (will be populated after execution plan)
 	moduleTypes := make(map[string]string)
 
@@ -309,7 +324,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		OutputBaseDir:        "out/build",
 		LogFileName:          "build.log",
 		OrchestratorLogName:  "orchestrator.log",
-		ActionVerb:           "building",
+		ActionVerb:           "Building",
 		MaxConcurrency:       0, // Use default (number of CPUs)
 		StatusUpdateInterval: 2, // Update every 2 seconds
 		ModuleTypes:          moduleTypes,
@@ -323,6 +338,9 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	orch := orchestrator.New(orchConfig, nil) // Worker set later
 	defer orch.Close()
 
+	// Track execution start time for summary
+	executionStart := time.Now()
+
 	// Initialize and start TUI if enabled (for Init phase output)
 	if useTUI {
 		if err := orch.Init(); err != nil {
@@ -330,6 +348,24 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			return 1
 		}
 		orch.StartTUI()
+
+		// Configure component logger to send output to TUI Init pane
+		if tuiWriter := orch.GetTUIWriter(tui.PhaseInit); tuiWriter != nil {
+			// Determine which log levels should go to TUI based on debug mode
+			tuiLevel := zapcore.InfoLevel
+			if debugMode {
+				tuiLevel = zapcore.DebugLevel
+			}
+
+			// Enable TUI output for all component loggers
+			if err := logging.EnableTUIForComponentLogger(tuiWriter, tuiLevel); err != nil {
+				log.Errorf("Error enabling TUI for logger: %v", err)
+			}
+		}
+
+		// Give TUI time to fully initialize and render first frame
+		// before sending messages to prevent partial renders
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	// Helper to write output to console OR TUI Init phase
@@ -342,8 +378,8 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		}
 	}
 
-	// Show execution context
-	writeInit("Executing build via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
+	// Show execution context in Init pane
+	writeInit("Executing build via %s", logging.GetExecutionContext())
 	writeInit("")
 
 	// Phase 1: Module Discovery
@@ -357,6 +393,9 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		log.Errorf("Failed to calculate execution order: %v", err)
 		return 1
 	}
+
+	// Track total modules for summary
+	totalModules := len(executionPlan.ExecutionOrder)
 
 	// Show dependencies if any were added
 	if includeDependencies && len(executionPlan.ExecutionOrder) > len(monikers) {
@@ -455,12 +494,81 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		return 1
 	}
 
-	// Stop TUI first (restores stdout), then print full summary
-	orch.StopTUI()
-	orch.PrintSummary(results)
+	// Build and send summary data to TUI, then wait for user to exit
+	if useTUI {
+		buildSummary := buildTUISummary(results, time.Since(executionStart), totalModules, dryRun)
+		orch.SendSummary(buildSummary)
+		// Wait for user to press any key to exit
+		orch.WaitTUI()
+	} else {
+		// Stop TUI and print plain text summary
+		orch.StopTUI()
+		orch.PrintSummary(results)
+	}
+
+	// Show rich timing analysis if requested
+	if showTimings {
+		log.Info("")
+		// Get the list of modules that were built
+		builtModules := executionPlan.ExecutionOrder
+
+		// Display rich timing analysis for the modules that were built
+		buildOutputDir := filepath.Join(workspaceRoot, "out", "build")
+		show.ShowBuildTimesForModules(builtModules, 10, buildOutputDir)
+	}
 
 	// Return exit code based on results
 	return orchestrator.GetExitCode(results)
+}
+
+// buildTUISummary creates summary data for the TUI Summary pane
+func buildTUISummary(results []orchestrator.WorkResult, totalTime time.Duration, totalModules int, dryRun bool) *tui.SummaryData {
+	// Count successes and failures
+	successCount := 0
+	failCount := 0
+	var failedModules []string
+
+	for _, result := range results {
+		if result.ExitCode == 0 {
+			successCount++
+		} else {
+			failCount++
+			failedModules = append(failedModules, result.Moniker)
+		}
+	}
+
+	// Build init summary
+	initSummary := fmt.Sprintf("%d modules prepared", totalModules)
+
+	// Build run summary
+	runSummary := fmt.Sprintf("%d/%d modules built", successCount, totalModules)
+	if dryRun {
+		runSummary += " (dry-run)"
+	}
+
+	// Build details
+	var details []string
+	if failCount > 0 {
+		details = append(details, fmt.Sprintf("Failed: %d (%s)", failCount, strings.Join(failedModules, ", ")))
+	}
+	details = append(details, "Output: out/build/")
+
+	// Build next steps
+	nextSteps := ""
+	if failCount > 0 {
+		nextSteps = fmt.Sprintf("Review logs in out/build/ for %s", failedModules[0])
+	} else if !dryRun {
+		nextSteps = "Run 'test' to verify builds"
+	}
+
+	return &tui.SummaryData{
+		Success:     failCount == 0,
+		TotalTime:   totalTime,
+		InitSummary: initSummary,
+		RunSummary:  runSummary,
+		Details:     details,
+		NextSteps:   nextSteps,
+	}
 }
 
 // runModuleBuild runs build for a single module
@@ -574,6 +682,7 @@ func printBuildUsage() {
 	log.Info("  --skip-deps               Only build specified modules (skip transitive dependencies)")
 	log.Info("  --skip-verification       Skip system dependency verification (go, docker, etc.)")
 	log.Info("  --timings                 Show detailed timing summary")
+	log.Info("  --debug                   Enable debug logs to console (file logging always enabled)")
 	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")
 	log.Info("  --no-tui                  Disable TUI console (use plain output)")
 	log.Info(fmt.Sprintf("  --tui-height N            Set TUI console height (3-20, default: %d)", tui.DefaultHeight))

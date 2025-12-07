@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/runner"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/runners"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
@@ -43,6 +44,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
+	"go.uber.org/zap/zapcore"
 )
 
 var log = logging.C()
@@ -60,6 +62,7 @@ type TestConfig struct {
 	SkipDeps     bool
 	ListOnly     bool
 	ShowTimings  bool
+	DebugMode    bool
 	UseTUI       bool
 	TUIHeight    int
 	Parallel     bool
@@ -159,6 +162,8 @@ func parseTestArgs(args []string) *TestConfig {
 			cfg.ListOnly = true
 		case arg == "--timings":
 			cfg.ShowTimings = true
+		case arg == "--debug":
+			cfg.DebugMode = true
 		case arg == "--tui":
 			cfg.UseTUI = true
 			tuiExplicitlySet = true
@@ -189,7 +194,7 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --tui, --no-tui, --tui-height, --sequential")
+			log.Errorf("Valid flags: --suite, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential")
 			return nil
 		default:
 			cfg.Monikers = append(cfg.Monikers, arg)
@@ -211,16 +216,22 @@ func parseTestArgs(args []string) *TestConfig {
 
 // executeTests runs tests directly using orchestrator (like buildMultipleModules)
 func executeTests(cfg *TestConfig) int {
-	// Show execution context
-	log.Infof("Executing test via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
-	log.Info("")
-
-	// Get workspace root
+	// Get workspace root first (needed for file logging)
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		log.Errorf("failed to find repository root: %v", err)
 		return 1
 	}
+
+	// Enable file logging for debug output (always enabled for test)
+	// If --debug flag is set, also output to console
+	if err := logging.EnableFileLogging(workspaceRoot, "test", cfg.DebugMode); err != nil {
+		log.Warnf("Failed to enable file logging: %v", err)
+	}
+	defer logging.CloseFileLogging()
+
+	// Always enable debug logging (output destination is controlled by EnableFileLogging)
+	logging.EnableDebug()
 
 	// Load repository config for paths
 	repoCfg, err := config.LoadRepositoryConfig(workspaceRoot)
@@ -284,7 +295,7 @@ func executeTests(cfg *TestConfig) int {
 		OutputBaseDir:        repoCfg.TestOutputPath(cfg.SuiteName),
 		LogFileName:          "test.log",
 		OrchestratorLogName:  "orchestrator.log",
-		ActionVerb:           "testing",
+		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2,
 		TUI:                  cfg.UseTUI,
@@ -302,6 +313,24 @@ func executeTests(cfg *TestConfig) int {
 			return 1
 		}
 		orch.StartTUI()
+
+		// Configure component logger to send output to TUI Init pane
+		if tuiWriter := orch.GetTUIWriter(tui.PhaseInit); tuiWriter != nil {
+			// Determine which log levels should go to TUI based on debug mode
+			tuiLevel := zapcore.InfoLevel
+			if cfg.DebugMode {
+				tuiLevel = zapcore.DebugLevel
+			}
+
+			// Enable TUI output for all component loggers
+			if err := logging.EnableTUIForComponentLogger(tuiWriter, tuiLevel); err != nil {
+				log.Errorf("Error enabling TUI for logger: %v", err)
+			}
+		}
+
+		// Give TUI time to fully initialize and render first frame
+		// before sending messages to prevent partial renders
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	// Helper to write output to console/log OR TUI Init phase
@@ -313,6 +342,10 @@ func executeTests(cfg *TestConfig) int {
 			writeln(multiWriter, "%s", msg)
 		}
 	}
+
+	// Show execution context in Init pane
+	writeInit("Executing test via %s", logging.GetExecutionContext())
+	writeInit("")
 
 	// Suite info
 	writeInit("Running test suite: %s", suite.Name)
@@ -545,6 +578,9 @@ func executeTests(cfg *TestConfig) int {
 	orch.SetWorker(execCtx.createWorker())
 	orch.SetModuleTypes(moduleTypes)
 
+	// Track test execution time
+	testStartTime := time.Now()
+
 	// Run tests (TUI transitions to Run phase automatically)
 	_, orchErr := orch.Run(monikers)
 	if orchErr != nil {
@@ -554,9 +590,6 @@ func executeTests(cfg *TestConfig) int {
 
 	// Collect results (before stopping TUI)
 	results := execCtx.collectResults()
-
-	// Stop TUI first (restores stdout)
-	orch.StopTUI()
 
 	// Calculate totals
 	packagesPassed := 0
@@ -578,8 +611,26 @@ func executeTests(cfg *TestConfig) int {
 		testsTotal += result.TestsTotal
 	}
 
-	// Show full summary
-	writeln(multiWriter, "%s", output.SectionHeader("Test Summary"))
+	// Send summary data to TUI and wait for user to exit
+	if cfg.UseTUI {
+		testSummary := testTUISummary(
+			results, time.Since(testStartTime), suite.Name,
+			osFilteredCount, len(selectedTests),
+			len(testsByPackage), packagesPassed, packagesFailed,
+			testsTotal, testsPassed, testsFailed,
+			testRunDir,
+		)
+		orch.SendSummary(testSummary)
+		// Wait for user to press any key to exit
+		orch.WaitTUI()
+	} else {
+		// Stop TUI and print plain text summary
+		orch.StopTUI()
+	}
+
+	// Show full summary (when not using TUI or after TUI exits)
+	if !cfg.UseTUI {
+		writeln(multiWriter, "%s", output.SectionHeader("Test Summary"))
 	writeln(multiWriter, "Suite: %s", suite.Name)
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Test Selection Breakdown:")
@@ -599,8 +650,10 @@ func executeTests(cfg *TestConfig) int {
 	writeln(multiWriter, "  Tests failed: %d", testsFailed)
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Results directory: %s", testRunDir)
+	}
 
-	// Show top 5 failed tests with log excerpts
+	// Show top 5 failed tests with log excerpts (always, even when using TUI)
+	// These "roll off" after the TUI exits, remaining visible for review
 	if packagesFailed > 0 || testsFailed > 0 {
 		writeln(multiWriter, "")
 		writeln(multiWriter, "%s", output.SectionHeader("Failed Tests"))
@@ -642,6 +695,32 @@ func executeTests(cfg *TestConfig) int {
 	}
 
 	writeln(multiWriter, "")
+
+	// Show timing analysis if requested
+	if cfg.ShowTimings {
+		writeln(multiWriter, "")
+		// Extract unique module monikers from tested packages
+		testedModules := make(map[string]bool)
+		for pkgPath := range testsByPackage {
+			moduleMoniker := moduleMapper.GetModuleForPackagePath(pkgPath)
+			if moduleMoniker != "" {
+				testedModules[moduleMoniker] = true
+			}
+		}
+
+		// Convert to slice
+		moduleList := make([]string, 0, len(testedModules))
+		for module := range testedModules {
+			moduleList = append(moduleList, module)
+		}
+
+		// Calculate wall-clock time (test execution duration)
+		wallClockSeconds := time.Since(testStartTime).Seconds()
+
+		// Display timing analysis for just the modules that were tested
+		// Pass the suite-specific output directory and wall-clock time
+		show.ShowTestTimingsForModules(moduleList, 5, testRunDir, wallClockSeconds)
+	}
 
 	// Return exit code based on failures
 	if packagesFailed > 0 || testsFailed > 0 {
@@ -1160,6 +1239,7 @@ func printTestUsage() {
 	log.Info("  --skip-deps            Skip dependency verification before running tests")
 	log.Info("  --list-only            List tests that would run without executing them")
 	log.Info("  --timings              Show detailed timing summary")
+	log.Info("  --debug                Enable debug logs to console (file logging always enabled)")
 	log.Info("  --no-tui               Disable TUI console (TUI is default for local console)")
 	log.Info(fmt.Sprintf("  --tui-height N         Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
 	log.Info("  --sequential           Run tests sequentially instead of in parallel")
@@ -1179,4 +1259,62 @@ func printTestUsage() {
 	log.Info("Related commands:")
 	log.Info("  r2r eac test suite <name>             # Run a specific test suite")
 	log.Info("  r2r eac test list-suites              # List all available test suites")
+}
+
+// testTUISummary creates summary data for the TUI Summary pane
+func testTUISummary(
+	results []PackageResult, totalTime time.Duration, suiteName string,
+	osFilteredCount, selectedCount,
+	totalPackages, packagesPassed, packagesFailed,
+	testsTotal, testsPassed, testsFailed int,
+	testRunDir string,
+) *tui.SummaryData {
+	// Calculate skipped tests
+	testsSkipped := testsTotal - testsPassed - testsFailed
+
+	// Init summary with OS-filtered count if applicable
+	initSummary := fmt.Sprintf("%d tests selected", selectedCount)
+	if osFilteredCount > 0 {
+		initSummary += fmt.Sprintf(" (%d filtered by OS)", osFilteredCount)
+	}
+
+	// Run summary with skipped count if applicable
+	runSummary := fmt.Sprintf("%d/%d packages passed, %d/%d tests passed",
+		packagesPassed, totalPackages, testsPassed, testsTotal)
+	if testsSkipped > 0 {
+		runSummary += fmt.Sprintf(", %d skipped", testsSkipped)
+	}
+
+	var details []string
+	if packagesFailed > 0 || testsFailed > 0 {
+		failedPackages := []string{}
+		for _, result := range results {
+			if result.PackageFailed || result.TestsFailed > 0 {
+				failedPackages = append(failedPackages, result.PackageName)
+			}
+		}
+		details = append(details, fmt.Sprintf("Failed: %d packages, %d tests", packagesFailed, testsFailed))
+		if len(failedPackages) <= 3 {
+			details = append(details, fmt.Sprintf("  (%s)", strings.Join(failedPackages, ", ")))
+		} else {
+			details = append(details, fmt.Sprintf("  (%s, +%d more)", failedPackages[0], len(failedPackages)-1))
+		}
+	}
+	details = append(details, fmt.Sprintf("Results: %s", testRunDir))
+
+	nextSteps := ""
+	if packagesFailed > 0 || testsFailed > 0 {
+		nextSteps = "Review detailed failure output below"
+	} else {
+		nextSteps = fmt.Sprintf("All tests passed for suite: %s", suiteName)
+	}
+
+	return &tui.SummaryData{
+		Success:     packagesFailed == 0 && testsFailed == 0,
+		TotalTime:   totalTime,
+		InitSummary: initSummary,
+		RunSummary:  runSummary,
+		Details:     details,
+		NextSteps:   nextSteps,
+	}
 }
