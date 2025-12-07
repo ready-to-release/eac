@@ -4,7 +4,7 @@ description: Get the EAC commands binary - download from trigger workflow or bui
 inputs:
   go-version:
     description: Go version to use if building from source
-    default: '1.24'
+    default: '1.24.4'
   trigger-run-id:
     description: |
       Run ID of the trigger workflow to download artifact from.

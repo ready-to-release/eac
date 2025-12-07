@@ -7,7 +7,7 @@ import (
 )
 
 // Model is the Bubbletea model for the console window.
-// Displays build/test output in a 2-pane view (Init/Run).
+// Displays build/test output in a 3-pane view (Init/Run/Summary).
 type Model struct {
 	// Configuration
 	height       int    // Total height (default: tui.DefaultHeight)
@@ -15,9 +15,10 @@ type Model struct {
 	showHeader   bool   // Show status header
 	runPhaseName string // Custom name for Run phase (e.g., "building", "testing")
 
-	// 2-pane state
-	panes       [2]*Pane // Init, Run panes
-	activePhase Phase    // Currently active phase
+	// 3-pane state
+	panes       [3]*Pane     // Init, Run, Summary panes
+	activePhase Phase        // Currently active phase
+	summaryData *SummaryData // Structured data for Summary pane
 
 	// Legacy single-buffer support (for backward compatibility)
 	buffer *RingBuffer // Shared buffer when not using panes
@@ -40,6 +41,7 @@ type Model struct {
 	// Display preferences
 	paused    bool // Pause scrolling (for review)
 	errorMode bool // Show only errors
+	mouseMode bool // Mouse mode: true=scrolling enabled, false=text selection enabled
 
 	// Done state
 	linesDone  bool
@@ -50,6 +52,9 @@ type Model struct {
 
 	// Quitting state - triggers plain-text final render
 	quitting bool
+
+	// Waiting for user to press any key before exiting
+	waitingForExit bool
 }
 
 // NewModel creates a new console model.
@@ -65,9 +70,10 @@ func NewModel(height int, showHeader bool, runPhaseName string, lineChan <-chan 
 
 	// Create panes with appropriate buffer sizes
 	bufferSize := 500 // Per-pane buffer
-	panes := [2]*Pane{
+	panes := [3]*Pane{
 		NewPane(PhaseInit, bufferSize),
 		NewPane(PhaseRun, bufferSize),
+		NewPane(PhaseSummary, bufferSize),
 	}
 
 	return Model{
@@ -84,6 +90,7 @@ func NewModel(height int, showHeader bool, runPhaseName string, lineChan <-chan 
 		startTime:     time.Now(),
 		phase:         "Starting",
 		usePanes:      true, // Enable 2-pane mode by default
+		mouseMode:     true, // Start with mouse ON (scrolling enabled)
 	}
 }
 
@@ -128,6 +135,13 @@ func (m Model) listenForStatus() tea.Cmd {
 func (m Model) tickCmd() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
 		return tickMsg(t)
+	})
+}
+
+// autoExitTimer returns a command that fires after 0.5 seconds to auto-exit.
+func (m Model) autoExitTimer() tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+		return autoExitTimerMsg{}
 	})
 }
 
@@ -190,11 +204,31 @@ func (m *Model) CompletePhase(phase Phase, success bool, summary string) {
 }
 
 // calculatePaneHeights determines how many lines each pane gets
-// Fixed heights: Init=5 lines, Run=10 lines
-func (m Model) calculatePaneHeights() (initH, runH int) {
-	// Fixed heights as specified
-	initH = 5
-	runH = 10
+// Dynamic heights: Init and Summary are fixed, Run fills remaining space
+func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
+	// Total lines needed for headers and footers (3 headers + 3 footers)
+	const headerFooterLines = 6
+
+	// Fixed heights for Init and Summary panes
+	const initHeight = 5
+	const summaryHeight = 10
+
+	// Minimum height for Run pane
+	const minRunHeight = 5
+
+	// Calculate available space for content
+	availableForContent := m.height - headerFooterLines
+
+	// Allocate heights: Init and Summary fixed, Run gets the rest
+	initH = initHeight
+	summaryH = summaryHeight
+	runH = availableForContent - initH - summaryH
+
+	// Ensure Run pane meets minimum height
+	if runH < minRunHeight {
+		runH = minRunHeight
+	}
+
 	return
 }
 
@@ -211,4 +245,19 @@ func (m *Model) SetUsePanes(use bool) {
 // WriteResult writes a line to the results buffer
 func (m *Model) WriteResult(line Line) {
 	m.resultsBuffer.Push(line)
+}
+
+// SummaryData holds structured information for the Summary pane
+type SummaryData struct {
+	Success     bool          // Overall success/failure
+	TotalTime   time.Duration // Total execution time
+	InitSummary string        // Init phase summary text
+	RunSummary  string        // Run phase summary text
+	Details     []string      // Detail lines (artifacts, errors, stats, etc.)
+	NextSteps   string        // Suggested next action
+}
+
+// SetSummaryData updates the summary data for the Summary pane
+func (m *Model) SetSummaryData(data *SummaryData) {
+	m.summaryData = data
 }

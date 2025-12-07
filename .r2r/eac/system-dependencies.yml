@@ -3,10 +3,10 @@ dependencies:
   - moniker: go
     name: "Go"
     description: "Go programming language compiler and toolchain"
-    version: "1.21"
+    version: "1.24.4"
     verify:
       command: "go version"
-      pattern: "go version go(\\d+\\.\\d+)"
+      pattern: "go version go(\\d+\\.\\d+\\.\\d+)"
 
   - moniker: docker
     name: "Docker"

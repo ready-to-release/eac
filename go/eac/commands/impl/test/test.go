@@ -44,6 +44,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
+	"go.uber.org/zap/zapcore"
 )
 
 var log = logging.C()
@@ -232,10 +233,6 @@ func executeTests(cfg *TestConfig) int {
 	// Always enable debug logging (output destination is controlled by EnableFileLogging)
 	logging.EnableDebug()
 
-	// Show execution context
-	log.Infof("Executing test via %s. \"%s\"", logging.GetExecutionContext(), logging.GetFullCommand())
-	log.Info("")
-
 	// Load repository config for paths
 	repoCfg, err := config.LoadRepositoryConfig(workspaceRoot)
 	if err != nil {
@@ -316,6 +313,24 @@ func executeTests(cfg *TestConfig) int {
 			return 1
 		}
 		orch.StartTUI()
+
+		// Configure component logger to send output to TUI Init pane
+		if tuiWriter := orch.GetTUIWriter(tui.PhaseInit); tuiWriter != nil {
+			// Determine which log levels should go to TUI based on debug mode
+			tuiLevel := zapcore.InfoLevel
+			if cfg.DebugMode {
+				tuiLevel = zapcore.DebugLevel
+			}
+
+			// Enable TUI output for all component loggers
+			if err := logging.EnableTUIForComponentLogger(tuiWriter, tuiLevel); err != nil {
+				log.Errorf("Error enabling TUI for logger: %v", err)
+			}
+		}
+
+		// Give TUI time to fully initialize and render first frame
+		// before sending messages to prevent partial renders
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	// Helper to write output to console/log OR TUI Init phase
@@ -327,6 +342,10 @@ func executeTests(cfg *TestConfig) int {
 			writeln(multiWriter, "%s", msg)
 		}
 	}
+
+	// Show execution context in Init pane
+	writeInit("Executing test via %s", logging.GetExecutionContext())
+	writeInit("")
 
 	// Suite info
 	writeInit("Running test suite: %s", suite.Name)
@@ -572,9 +591,6 @@ func executeTests(cfg *TestConfig) int {
 	// Collect results (before stopping TUI)
 	results := execCtx.collectResults()
 
-	// Stop TUI first (restores stdout)
-	orch.StopTUI()
-
 	// Calculate totals
 	packagesPassed := 0
 	packagesFailed := 0
@@ -595,8 +611,26 @@ func executeTests(cfg *TestConfig) int {
 		testsTotal += result.TestsTotal
 	}
 
-	// Show full summary
-	writeln(multiWriter, "%s", output.SectionHeader("Test Summary"))
+	// Send summary data to TUI and wait for user to exit
+	if cfg.UseTUI {
+		testSummary := testTUISummary(
+			results, time.Since(testStartTime), suite.Name,
+			osFilteredCount, len(selectedTests),
+			len(testsByPackage), packagesPassed, packagesFailed,
+			testsTotal, testsPassed, testsFailed,
+			testRunDir,
+		)
+		orch.SendSummary(testSummary)
+		// Wait for user to press any key to exit
+		orch.WaitTUI()
+	} else {
+		// Stop TUI and print plain text summary
+		orch.StopTUI()
+	}
+
+	// Show full summary (when not using TUI or after TUI exits)
+	if !cfg.UseTUI {
+		writeln(multiWriter, "%s", output.SectionHeader("Test Summary"))
 	writeln(multiWriter, "Suite: %s", suite.Name)
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Test Selection Breakdown:")
@@ -616,8 +650,10 @@ func executeTests(cfg *TestConfig) int {
 	writeln(multiWriter, "  Tests failed: %d", testsFailed)
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Results directory: %s", testRunDir)
+	}
 
-	// Show top 5 failed tests with log excerpts
+	// Show top 5 failed tests with log excerpts (always, even when using TUI)
+	// These "roll off" after the TUI exits, remaining visible for review
 	if packagesFailed > 0 || testsFailed > 0 {
 		writeln(multiWriter, "")
 		writeln(multiWriter, "%s", output.SectionHeader("Failed Tests"))
@@ -1223,4 +1259,62 @@ func printTestUsage() {
 	log.Info("Related commands:")
 	log.Info("  r2r eac test suite <name>             # Run a specific test suite")
 	log.Info("  r2r eac test list-suites              # List all available test suites")
+}
+
+// testTUISummary creates summary data for the TUI Summary pane
+func testTUISummary(
+	results []PackageResult, totalTime time.Duration, suiteName string,
+	osFilteredCount, selectedCount,
+	totalPackages, packagesPassed, packagesFailed,
+	testsTotal, testsPassed, testsFailed int,
+	testRunDir string,
+) *tui.SummaryData {
+	// Calculate skipped tests
+	testsSkipped := testsTotal - testsPassed - testsFailed
+
+	// Init summary with OS-filtered count if applicable
+	initSummary := fmt.Sprintf("%d tests selected", selectedCount)
+	if osFilteredCount > 0 {
+		initSummary += fmt.Sprintf(" (%d filtered by OS)", osFilteredCount)
+	}
+
+	// Run summary with skipped count if applicable
+	runSummary := fmt.Sprintf("%d/%d packages passed, %d/%d tests passed",
+		packagesPassed, totalPackages, testsPassed, testsTotal)
+	if testsSkipped > 0 {
+		runSummary += fmt.Sprintf(", %d skipped", testsSkipped)
+	}
+
+	var details []string
+	if packagesFailed > 0 || testsFailed > 0 {
+		failedPackages := []string{}
+		for _, result := range results {
+			if result.PackageFailed || result.TestsFailed > 0 {
+				failedPackages = append(failedPackages, result.PackageName)
+			}
+		}
+		details = append(details, fmt.Sprintf("Failed: %d packages, %d tests", packagesFailed, testsFailed))
+		if len(failedPackages) <= 3 {
+			details = append(details, fmt.Sprintf("  (%s)", strings.Join(failedPackages, ", ")))
+		} else {
+			details = append(details, fmt.Sprintf("  (%s, +%d more)", failedPackages[0], len(failedPackages)-1))
+		}
+	}
+	details = append(details, fmt.Sprintf("Results: %s", testRunDir))
+
+	nextSteps := ""
+	if packagesFailed > 0 || testsFailed > 0 {
+		nextSteps = "Review detailed failure output below"
+	} else {
+		nextSteps = fmt.Sprintf("All tests passed for suite: %s", suiteName)
+	}
+
+	return &tui.SummaryData{
+		Success:     packagesFailed == 0 && testsFailed == 0,
+		TotalTime:   totalTime,
+		InitSummary: initSummary,
+		RunSummary:  runSummary,
+		Details:     details,
+		NextSteps:   nextSteps,
+	}
 }

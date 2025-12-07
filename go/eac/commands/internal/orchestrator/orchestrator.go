@@ -432,6 +432,19 @@ func (o *Orchestrator) PrintSummary(results []WorkResult) {
 	fmt.Fprintf(o.orchestratorOut, "%sOutput: %s%s", nl, o.config.OutputBaseDir, nl)
 }
 
+// WaitTUI waits for the TUI to exit naturally (e.g., user presses a key).
+// Use this after SendSummary() to wait for user to review and exit.
+func (o *Orchestrator) WaitTUI() {
+	if o.tuiConsole != nil {
+		o.tuiConsole.Wait()
+	}
+	// Restore stdout after TUI exits
+	if o.logFile != nil {
+		o.orchestratorOut = io.MultiWriter(os.Stdout, o.logFile)
+		o.logger = log.New(o.orchestratorOut, "", 0)
+	}
+}
+
 // StopTUI stops the TUI console and restores stdout output.
 // Must be called before PrintSummary when TUI is enabled.
 func (o *Orchestrator) StopTUI() {
@@ -553,6 +566,43 @@ func (o *Orchestrator) SendEndLine(text string) {
 // IsTUIEnabled returns whether TUI is enabled
 func (o *Orchestrator) IsTUIEnabled() bool {
 	return o.tuiConsole != nil
+}
+
+// tuiWriter implements io.Writer and forwards all writes to the TUI Init phase
+type tuiWriter struct {
+	orch  *Orchestrator
+	phase tui.Phase
+}
+
+// Write implements io.Writer by forwarding to the appropriate TUI pane
+func (w *tuiWriter) Write(p []byte) (n int, err error) {
+	if w.orch.tuiConsole != nil {
+		// Convert bytes to string, trim trailing newline (TUI adds its own)
+		text := string(p)
+		text = strings.TrimSuffix(text, "\n")
+		if text != "" {
+			w.orch.WriteToPhase(w.phase, text)
+		}
+	}
+	return len(p), nil
+}
+
+// GetTUIWriter returns an io.Writer that sends output to the specified TUI phase.
+// Returns nil if TUI is not enabled.
+func (o *Orchestrator) GetTUIWriter(phase tui.Phase) io.Writer {
+	if o.tuiConsole == nil {
+		return nil
+	}
+	return &tuiWriter{orch: o, phase: phase}
+}
+
+// SendSummary sends summary data to activate the TUI Summary pane.
+// Should be called after work completes but before StopTUI.
+func (o *Orchestrator) SendSummary(data *tui.SummaryData) {
+	if o.tuiConsole == nil {
+		return
+	}
+	o.tuiConsole.SendSummary(data)
 }
 
 // Init initializes the orchestrator's output infrastructure (log file, writers).

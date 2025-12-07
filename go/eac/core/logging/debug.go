@@ -54,9 +54,13 @@ var debugEnabled uint32
 // Can be changed for testing.
 var stdOutput io.Writer = os.Stdout
 
-// debugOutput is where Debug/Warn/Error messages are written (stderr by default).
+// debugOutput is where Debug messages are written (stderr by default).
 // Can be changed for testing.
 var debugOutput io.Writer = os.Stderr
+
+// warnErrorOutput is where Warn/Error messages are written (stderr by default, always).
+// Can be changed for testing.
+var warnErrorOutput io.Writer = os.Stderr
 
 // debugFileCloser holds the debug log file if file logging is enabled
 var debugFileCloser io.Closer
@@ -176,12 +180,13 @@ func EnableFileLogging(workspaceRoot, module string, includeConsole bool) error 
 		return fmt.Errorf("failed to create debug log file: %w", err)
 	}
 
-	// Configure output destination
+	// Configure debug output destination
 	if includeConsole {
 		debugOutput = io.MultiWriter(os.Stderr, file)
 	} else {
 		debugOutput = file
 	}
+
 	debugFileCloser = file
 
 	return nil
@@ -193,5 +198,39 @@ func CloseFileLogging() {
 		debugFileCloser.Close()
 		debugFileCloser = nil
 		debugOutput = os.Stderr // Reset to stderr only
+	}
+}
+
+// GetDebugOutput returns the current debug output writer.
+// This is useful for combining with other writers (e.g., TUI + file logging).
+func GetDebugOutput() io.Writer {
+	return debugOutput
+}
+
+// GetStdOutput returns the current standard output writer.
+// This is useful for combining with other writers (e.g., TUI + file logging).
+func GetStdOutput() io.Writer {
+	return stdOutput
+}
+
+// SetDebugOutput sets the destination for debug output.
+// Pass nil to reset to stderr.
+// This is useful for redirecting debug output to a TUI or other custom destination.
+func SetDebugOutput(w io.Writer) {
+	if w == nil {
+		debugOutput = os.Stderr
+	} else {
+		debugOutput = w
+	}
+}
+
+// SetStdOutput sets the destination for Info output.
+// Pass nil to reset to stdout.
+// This is useful for redirecting Info output to a TUI or other custom destination.
+func SetStdOutput(w io.Writer) {
+	if w == nil {
+		stdOutput = os.Stdout
+	} else {
+		stdOutput = w
 	}
 }
