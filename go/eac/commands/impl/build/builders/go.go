@@ -184,6 +184,11 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, worksp
 				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
 			}
 		}
+
+		// Write build-complete marker for dependency verification
+		if err := WriteBuildMarker(outputDir); err != nil {
+			Logln(logWriter, "⚠️  Could not write build marker: %v", err)
+		}
 	}
 	return exitCode
 }
@@ -415,6 +420,11 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, works
 
 	// Generate checksums
 	generateChecksums(outputDir, binaryName, logWriter)
+
+	// Write build-complete marker for dependency verification
+	if err := WriteBuildMarker(outputDir); err != nil {
+		Logln(logWriter, "⚠️  Could not write build marker: %v", err)
+	}
 
 	return 0
 }
