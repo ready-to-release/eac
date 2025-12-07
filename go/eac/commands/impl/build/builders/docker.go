@@ -211,13 +211,23 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 		ciPlatforms = cfg.Handlers.GetCIPlatformsString()
 	}
 
+	// Check if we're in GitHub Actions (has GHA cache available)
+	isGitHubActions := os.Getenv("GITHUB_ACTIONS") == "true"
+
 	// Build docker command with all tags for single-platform
 	Logln(logWriter, "\n--- CI Mode: Building single-platform for testing ---")
 	args := []string{"buildx", "build", "--platform", "linux/amd64"}
 	for _, tag := range tags {
 		args = append(args, "-t", tag)
 	}
-	args = append(args, "-f", dockerfilePath, "--cache-from", "type=gha", "--cache-to", "type=gha,mode=max", "--load", ".")
+	args = append(args, "-f", dockerfilePath)
+
+	// Only use GitHub Actions cache when actually running in GitHub Actions
+	if isGitHubActions {
+		args = append(args, "--cache-from", "type=gha", "--cache-to", "type=gha,mode=max")
+	}
+
+	args = append(args, "--load", ".")
 
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
 
@@ -236,7 +246,14 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 	for _, tag := range tags {
 		args = append(args, "-t", tag)
 	}
-	args = append(args, "-f", dockerfilePath, "--cache-from", "type=gha", "-o", fmt.Sprintf("type=oci,dest=%s", ociArchivePath), ".")
+	args = append(args, "-f", dockerfilePath)
+
+	// Only use GitHub Actions cache when actually running in GitHub Actions
+	if isGitHubActions {
+		args = append(args, "--cache-from", "type=gha")
+	}
+
+	args = append(args, "-o", fmt.Sprintf("type=oci,dest=%s", ociArchivePath), ".")
 
 	exitCode = RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
 

@@ -391,7 +391,7 @@ jobs:
   # Stage 4: Execute Module Workflows
   # =========================================
   execute-layers:
-    name: Execute Dependency Layers
+    name: Execute Dependency Layers -> Dispatch CI
     needs: [detect-changes, calculate-order]
     runs-on: ubuntu-latest
     steps:
@@ -406,7 +406,7 @@ jobs:
       - name: Make executable
         run: chmod +x out/tools/commands
 
-      - name: Execute All Layers
+      - name: Execute All Layers -> Dispatch CI
         run: |
           # Early exit if no changes - job runs to satisfy status checks but skips execution
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
