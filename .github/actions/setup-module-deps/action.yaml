@@ -127,17 +127,19 @@ runs:
           echo "No package.json found for module $MODULE"
         fi
 
-    - name: Check if Docker Buildx is already available
+    - name: Check if Docker Buildx builder supports cache export
       id: buildx-check
       if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'docker-build')
       shell: bash
       run: |
-        if command -v docker &> /dev/null && docker buildx version &> /dev/null; then
+        # Check if a buildx builder exists with docker-container driver (supports cache export)
+        if docker buildx inspect 2>/dev/null | grep -q "Driver.*docker-container"; then
           echo "available=true" >> $GITHUB_OUTPUT
-          echo "✓ Docker Buildx already available: $(docker buildx version)"
+          echo "✓ Docker Buildx builder with cache export support already configured"
+          docker buildx inspect --bootstrap | head -5
         else
           echo "available=false" >> $GITHUB_OUTPUT
-          echo "Docker Buildx not found - will set up"
+          echo "Docker Buildx builder needs setup (requires docker-container driver for cache export)"
         fi
 
     - name: Setup Docker Buildx
@@ -194,7 +196,7 @@ runs:
         fi
         if [[ "$DEPS" == *"docker-build"* ]]; then
           if [ "$BUILDX_AVAILABLE" = "true" ]; then
-            echo "| Docker Buildx | Already available |" >> $GITHUB_STEP_SUMMARY
+            echo "| Docker Buildx | Already configured |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
           fi
@@ -205,7 +207,7 @@ runs:
           fi
         elif [[ "$DEPS" == *"docker"* ]]; then
           if [ "$BUILDX_AVAILABLE" = "true" ]; then
-            echo "| Docker Buildx | Already available |" >> $GITHUB_STEP_SUMMARY
+            echo "| Docker Buildx | Already configured |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
           fi
