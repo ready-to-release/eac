@@ -12,16 +12,24 @@ import (
 )
 
 // registerGoVersionSteps registers steps for Go version consistency validation
-func registerGoVersionSteps(sc *godog.ScenarioContext, ctx *goVersionContext, repoCtx *repositoryContext) {
+func registerGoVersionSteps(sc *godog.ScenarioContext, ctx *goVersionContext, nodeCtx *nodeVersionContext, repoCtx *repositoryContext) {
 	// Given steps
 	sc.Step(`^I load the system dependencies configuration$`, func() error {
-		return ctx.loadSystemDependencies(repoCtx)
+		// Initialize both Go and Node contexts for shared step
+		if err := ctx.loadSystemDependencies(repoCtx); err != nil {
+			return err
+		}
+		return nodeCtx.loadSystemDependencies(repoCtx)
 	})
 	sc.Step(`^I load the go\.work file$`, func() error {
 		return ctx.loadGoWorkFile(repoCtx)
 	})
 	sc.Step(`^I discover all GitHub Action workflow files$`, func() error {
-		return ctx.discoverGitHubActionFiles(repoCtx)
+		// Initialize both Go and Node contexts for shared step
+		if err := ctx.discoverGitHubActionFiles(repoCtx); err != nil {
+			return err
+		}
+		return nodeCtx.discoverGitHubActionFiles(repoCtx)
 	})
 
 	// When steps
