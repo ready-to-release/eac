@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
 )
 
 // Size presets for mermaid diagrams
@@ -237,6 +239,15 @@ type cacheStatus struct {
 // renderSingleDiagram renders a single mermaid diagram to SVG using mermaid-cli
 // Returns error if rendering fails
 func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot string, logWriter io.Writer) error {
+	// Detect Docker-in-Docker mode
+	isDinD := buildutil.IsDockerInDocker()
+	hostRepoRoot := workspaceRoot
+	if isDinD {
+		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+			hostRepoRoot = hostRoot
+		}
+	}
+
 	// Create temp file for mermaid content
 	tmpDir := filepath.Dir(outputPath)
 	tmpFile := filepath.Join(tmpDir, block.filename+".mmd")
@@ -261,8 +272,8 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 	dockerTmpFile := "/docs/" + strings.ReplaceAll(relTmpFile, "\\", "/")
 	dockerOutputPath := "/docs/" + strings.ReplaceAll(relOutputPath, "\\", "/")
 
-	// Format Docker volume path
-	dockerVolume := formatDockerVolumePath(workspaceRoot)
+	// Format Docker volume path using host paths for DinD
+	dockerVolume := buildutil.FormatDockerVolumePath(hostRepoRoot)
 
 	// Build Docker command
 	// Use cli-mkdocs-pdf container which has mermaid-cli installed
@@ -280,6 +291,15 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 		"-t", "dark",        // Theme (dark for PDF)
 		"-b", "transparent", // Background
 		"--configFile", "/docs/containers/mkdocs-pdf/mermaid-config.json", // Disable htmlLabels for PDF compatibility
+	}
+
+	// Add user spec in DinD mode to avoid permission issues
+	if isDinD {
+		uid := os.Getuid()
+		gid := os.Getgid()
+		userSpec := fmt.Sprintf("%d:%d", uid, gid)
+		// Insert --user after "run" and "--rm"
+		args = append([]string{"run", "--rm", "--user", userSpec}, args[2:]...)
 	}
 
 	// Run docker command
@@ -303,25 +323,21 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 	return nil
 }
 
-// formatDockerVolumePath formats a path for Docker volume mounting
-// Handles Windows paths (C:\path -> /c/path) and Unix paths
-func formatDockerVolumePath(path string) string {
-	// Convert backslashes to forward slashes
-	path = filepath.ToSlash(path)
-
-	// Handle Windows drive letters (C: -> /c)
-	if len(path) >= 2 && path[1] == ':' {
-		drive := strings.ToLower(string(path[0]))
-		path = "/" + drive + path[2:]
-	}
-
-	return path
-}
-
 // renderMermaidDiagrams renders multiple mermaid diagrams in parallel
 // Only renders cache misses (cached diagrams are skipped)
 // Returns number of diagrams rendered and any error
 func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error) {
+	// Check Docker availability first - fail fast if unavailable
+	if !buildutil.IsDockerAvailable() {
+		errorMsg := "Docker is not available but required for mermaid diagram rendering"
+		if buildutil.IsDockerInDocker() {
+			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
+		} else {
+			errorMsg += "\nEnsure Docker is installed and the daemon is running"
+		}
+		return 0, fmt.Errorf("%s", errorMsg)
+	}
+
 	// Filter for cache misses
 	toRender := []cacheStatus{}
 	for _, status := range statuses {
