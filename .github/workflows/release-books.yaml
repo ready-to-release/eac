@@ -180,6 +180,5 @@ jobs:
             echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "- Docker image build failure" >> $GITHUB_STEP_SUMMARY
-            echo "- WeasyPrint rendering errors" >> $GITHUB_STEP_SUMMARY
             echo "- Missing PDF template styles" >> $GITHUB_STEP_SUMMARY
           fi

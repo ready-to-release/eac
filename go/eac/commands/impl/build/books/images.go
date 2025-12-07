@@ -128,9 +128,9 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 	return nil
 }
 
-// drawioPattern matches references to *.drawio.png files in markdown
-// Handles both image syntax ![](path.drawio.png) and links [](path.drawio.png)
-var drawioPattern = regexp.MustCompile(`\]\(([^)]*\.drawio\.png)`)
+// drawioPattern matches references to *.drawio.png files in markdown and HTML
+// Handles: ![](path.drawio.png), [](path.drawio.png), and <img src="path.drawio.png">
+var drawioPattern = regexp.MustCompile(`(?:\]\(|src=")([^)"]*\.drawio\.png)`)
 
 // findDrawioReferences extracts all drawio.png paths from markdown content
 func findDrawioReferences(content string) []string {
@@ -153,9 +153,21 @@ func findDrawioReferences(content string) []string {
 // rewriteDrawioReferences updates drawio.png paths to point to rendered directory
 func rewriteDrawioReferences(content string, mdPath string, stagingDir string) string {
 	return drawioPattern.ReplaceAllStringFunc(content, func(match string) string {
-		// Extract the path (everything between ]( and )
-		pathStart := strings.Index(match, "](") + 2
-		oldPath := match[pathStart:]
+		// Determine if this is markdown ]( or HTML src="
+		var prefix string
+		var oldPath string
+
+		if strings.Contains(match, "](") {
+			// Markdown syntax: ](path.drawio.png)
+			prefix = "]("
+			pathStart := strings.Index(match, "](") + 2
+			oldPath = match[pathStart:]
+		} else {
+			// HTML syntax: src="path.drawio.png"
+			prefix = "src=\""
+			pathStart := strings.Index(match, "src=\"") + 5
+			oldPath = match[pathStart:]
+		}
 
 		// Get just the filename
 		filename := filepath.Base(oldPath)
@@ -172,7 +184,7 @@ func rewriteDrawioReferences(content string, mdPath string, stagingDir string) s
 		// Build new path using forward slashes (markdown standard)
 		newPath := filepath.ToSlash(filepath.Join(relPath, filename))
 
-		return "](" + newPath
+		return prefix + newPath
 	})
 }
 

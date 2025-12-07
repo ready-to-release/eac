@@ -5,7 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -88,20 +91,60 @@ func (c *Console) Start(ctx context.Context) error {
 
 	// Use alt screen mode to take over terminal, then restore on exit
 	// Disable bracketed paste to prevent escape sequence leaks
+	// Disable signal handler so our custom handler can catch Ctrl-C
 	// Start with mouse mode enabled for scrolling
 	c.program = tea.NewProgram(model,
 		tea.WithAltScreen(),           // Take over screen, restore on exit
 		tea.WithoutBracketedPaste(),
+		tea.WithoutSignalHandler(),    // Let our custom signal handler catch Ctrl-C
 		tea.WithMouseCellMotion(),     // Enable mouse for scrolling
 	)
 
 	// Signal that TUI is ready
 	close(c.ready)
 
-	// Handle context cancellation
+	// Set up signal handler for Ctrl-C (SIGINT)
+	// This ensures single Ctrl-C triggers immediate cleanup
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
+
+	// Ensure cleanup always runs on exit (normal, Ctrl-C, or error)
+	defer func() {
+		c.mu.Lock()
+		if !c.stopped {
+			c.stopped = true
+
+			// Close all multi-writers first
+			for _, w := range c.writers {
+				w.Close()
+			}
+			c.writers = nil
+
+			// Close channels to trigger TUI exit
+			close(c.lineChan)
+			close(c.statusChan)
+		}
+		c.mu.Unlock()
+
+		// Reset terminal state - always run this to ensure clean terminal
+		// \033[0m = reset attributes, \033[?25h = show cursor
+		fmt.Print("\033[0m\033[?25h")
+	}()
+
 	go func() {
-		<-ctx.Done()
-		c.Stop()
+		select {
+		case <-sigChan:
+			// On Ctrl-C, quit the TUI immediately
+			if c.program != nil {
+				c.program.Quit()
+			}
+		case <-ctx.Done():
+			// On context cancellation, quit the TUI
+			if c.program != nil {
+				c.program.Quit()
+			}
+		}
 	}()
 
 	// Run the TUI and capture final model state

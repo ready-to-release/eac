@@ -95,10 +95,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.panes[PhaseSummary].Status = PhaseActive
 			m.panes[PhaseSummary].StartTime = time.Now()
 		}
-		// Wait for user to press any key before exiting
-		m.waitingForExit = true
-		// Start auto-exit timer (0.5 seconds)
-		return m, m.autoExitTimer()
+		// Mark as complete and quit immediately
+		m.panes[PhaseSummary].Status = PhaseComplete
+		m.panes[PhaseSummary].EndTime = time.Now()
+		m.quitting = true
+		return m, tea.Quit
 
 	case PhaseUpdateMsg:
 		if msg.Phase < Phase(len(m.panes)) && m.panes[msg.Phase] != nil {
@@ -139,8 +140,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tickMsg:
-		// Never auto-quit - always wait for user to press a key
-		// Quitting only happens via handleKey() when waitingForExit is true
 		return m, m.tickCmd()
 
 	case linesDoneMsg:
@@ -163,29 +162,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.running = newRunning
 		return m, nil
-
-	case autoExitTimerMsg:
-		// Auto-exit if: still waiting for exit AND not already quitting
-		if m.waitingForExit && !m.quitting {
-			m.quitting = true
-			return m, tea.Quit
-		}
-		return m, nil
 	}
 
 	return m, nil
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// If waiting for user to exit, any key press quits
-	if m.waitingForExit {
-		m.quitting = true
-		return m, tea.Quit
-	}
-
-	// Normal key handling
 	switch msg.String() {
 	case "q", "ctrl+c":
+		m.quitting = true
 		return m, tea.Quit
 	case " ", "p":
 		// Toggle pause

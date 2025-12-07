@@ -8,6 +8,7 @@ site_name: Documentation
 site_description: Generated PDF documentation
 site_url: ""
 docs_dir: staging
+use_directory_urls: false
 
 theme:
   name: material
@@ -19,25 +20,20 @@ theme:
 plugins:
   - search
   - awesome-nav
-  # Mermaid to SVG conversion for PDF generation
-  # Pre-renders mermaid diagrams to SVG images before PDF generation
-  # Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
-  - mermaid-to-svg:
-      # Output SVG files to rendered assets directory
-      output_dir: assets/rendered/mermaid
-      # Use dark theme to match PDF template
-      theme: dark
-      # Puppeteer configuration for Docker environments
-      puppeteer_config: /docs/containers/mkdocs-pdf/puppeteer-config.json
-      # Disable htmlLabels for PDF compatibility
-      # When enabled, mermaid generates <foreignObject> HTML elements
-      # that PDF tools cannot render, causing text to disappear
-      mermaid_config:
-        htmlLabels: false
-        flowchart:
-          htmlLabels: false
-        class:
-          htmlLabels: false
+  # Mermaid rendering is handled by Go preprocessing (Step 9b)
+  # Diagrams are pre-rendered to SVG with caching, then replaced with img tags
+  # This approach is faster (caching) and doesn't require a plugin
+  # - mermaid-to-svg:
+  #     output_dir: assets/rendered/mermaid
+  #     theme: dark
+  #     cleanup_generated_images: false
+  #     puppeteer_config: /docs/containers/mkdocs-pdf/puppeteer-config.json
+  #     mermaid_config:
+  #       htmlLabels: false
+  #       flowchart:
+  #         htmlLabels: false
+  #       class:
+  #         htmlLabels: false
   # PDF export plugin - Playwright-based
   - exporter:
       formats:

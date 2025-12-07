@@ -5,28 +5,31 @@ package books
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // Preprocessor handles book preprocessing before MkDocs build
 type Preprocessor struct {
-	book          *config.Book
-	workspaceRoot string
-	stagingDir    string
-	logWriter     io.Writer
-	pdfMode       bool
+	book           *config.Book
+	workspaceRoot  string
+	stagingDir     string
+	logWriter      io.Writer
+	pdfMode        bool
+	linkTranslator *LinkTranslator // Handles source → staging path translations
 }
 
 // NewPreprocessor creates a new book preprocessor
 // pdfMode enables PDF-specific processing like link normalization
 func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer, pdfMode bool) *Preprocessor {
 	return &Preprocessor{
-		book:          book,
-		workspaceRoot: workspaceRoot,
-		stagingDir:    stagingDir,
-		logWriter:     logWriter,
-		pdfMode:       pdfMode,
+		book:           book,
+		workspaceRoot:  workspaceRoot,
+		stagingDir:     stagingDir,
+		logWriter:      logWriter,
+		pdfMode:        pdfMode,
+		linkTranslator: NewLinkTranslator(workspaceRoot, stagingDir, logWriter, pdfMode),
 	}
 }
 
@@ -34,17 +37,43 @@ func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWri
 func (p *Preprocessor) Preprocess() error {
 	p.log("📚 Book preprocessing: %s", p.book.Name)
 
+	startTime := time.Now()
+
+	// Check if we can use cached staging
+	if useCache, err := p.checkAndUseCache(); err != nil {
+		return fmt.Errorf("cache check failed: %w", err)
+	} else if useCache {
+		p.log("✅ Using cached staging (skipping preprocessing)")
+		return nil
+	}
+
 	// Step 1: Copy static files to staging
 	p.log("  Step 1: Copying static files...")
 	if err := p.copyStaticFiles(); err != nil {
 		return fmt.Errorf("step 1 (copy): %w", err)
 	}
 
-	// Step 2: Fix relative paths based on source remapping
-	// Adjusts ../../../ links when source prefix is stripped (e.g., docs/explanation/ -> ./)
-	p.log("  Step 2: Fixing relative paths...")
-	if err := p.fixRelativePaths(); err != nil {
-		return fmt.Errorf("step 2 (path fix): %w", err)
+	// Step 1b: Convert attr_list images to HTML (before link translation)
+	// Converts: ![alt](img.png){width=100} -> <img src="img.png" width="100" alt="alt">
+	// Path adjustments are handled by the link translator in Step 2
+	p.log("  Step 1b: Converting attr_list images to HTML...")
+	if err := p.convertAttrListImagesToHTML(); err != nil {
+		return fmt.Errorf("step 1b (attr_list images): %w", err)
+	}
+
+	// Step 2: Build and apply link translations
+	// Handles ALL link processing: path depth adjustment, external URLs, etc.
+	// Analyzes source markdown to extract all relative links, calculates new paths
+	// for staging directory structure, and applies translations to fix all paths
+	// NOTE: This processes both markdown links and HTML img src attributes
+	p.log("  Step 2: Building link translations...")
+	if err := p.linkTranslator.BuildTranslations(p.book.SiteURL); err != nil {
+		return fmt.Errorf("step 2 (build translations): %w", err)
+	}
+
+	p.log("  Step 2: Applying link translations...")
+	if err := p.linkTranslator.ApplyAllTranslations(); err != nil {
+		return fmt.Errorf("step 2 (apply translations): %w", err)
 	}
 
 	// Step 3: Execute commands (capture outputs)
@@ -75,13 +104,6 @@ func (p *Preprocessor) Preprocess() error {
 		return fmt.Errorf("step 6 (inline): %w", err)
 	}
 
-	// Step 7: Convert attr_list images to HTML (for GitHub Pages + PDF compatibility)
-	// Converts: ![alt](img.png){width=100} -> <img src="img.png" width="100" alt="alt">
-	p.log("  Step 7: Converting attr_list images to HTML...")
-	if err := p.convertAttrListImagesToHTML(); err != nil {
-		return fmt.Errorf("step 7 (attr_list images): %w", err)
-	}
-
 	// PDF-specific processing steps (only in PDF mode)
 	if p.pdfMode {
 		// Step 8: Strip nav titles (awesome-nav warns about top-level titles)
@@ -97,6 +119,20 @@ func (p *Preprocessor) Preprocess() error {
 			return fmt.Errorf("step 9 (mermaid sizing): %w", err)
 		}
 
+		// Step 9b: Process mermaid diagrams with caching
+		// Scans for diagrams, renders cache misses, replaces blocks with img tags
+		// Only modifies staging markdown (source stays pure)
+		p.log("  Step 9b: Processing mermaid diagrams...")
+		blocksByFile, err := p.scanForMermaidDiagrams()
+		if err != nil {
+			return fmt.Errorf("step 9b (mermaid scan): %w", err)
+		}
+
+		// Replace mermaid blocks with img tags in staging
+		if err := p.replaceMermaidBlocksWithImages(blocksByFile); err != nil {
+			return fmt.Errorf("step 9b (mermaid replace): %w", err)
+		}
+
 		// Step 10: Convert .drawio images to links
 		// Interactive diagrams can't display in PDFs, so convert to GitHub Pages links
 		p.log("  Step 10: Converting .drawio images to links...")
@@ -104,30 +140,48 @@ func (p *Preprocessor) Preprocess() error {
 			return fmt.Errorf("step 10 (drawio to links): %w", err)
 		}
 
-		// Step 11: Fix broken internal links
-		// Converts links to files not in staging to absolute GitHub Pages URLs
-		p.log("  Step 11: Fixing broken internal links...")
-		if err := p.fixBrokenInternalLinks(); err != nil {
-			return fmt.Errorf("step 11 (fix broken links): %w", err)
-		}
-
-		// Step 12: Add image width constraints for PDF
+		// Step 11: Add image width constraints for PDF
 		// Ensures large diagrams fit within PDF page boundaries
-		p.log("  Step 12: Adding image width constraints...")
+		p.log("  Step 11: Adding image width constraints...")
 		if err := p.cleanupLinksForPDF(); err != nil {
-			return fmt.Errorf("step 12 (image constraints): %w", err)
+			return fmt.Errorf("step 11 (image constraints): %w", err)
 		}
 
-		// Step 13: Optimize drawio images for PDF
-		// Resizes large drawio.png files to reduce PDF size and improve WeasyPrint compatibility
-		p.log("  Step 13: Optimizing drawio images...")
+		// Step 12: Optimize drawio images for PDF
+		// Resizes large drawio.png files to reduce PDF size and improve compatibility
+		p.log("  Step 12: Optimizing drawio images...")
 		if err := p.optimizeDrawioImages(); err != nil {
-			return fmt.Errorf("step 13 (drawio optimization): %w", err)
+			return fmt.Errorf("step 12 (drawio optimization): %w", err)
 		}
 	}
 
-	p.log("✅ Book preprocessing complete: %s", p.book.Name)
+	elapsed := time.Since(startTime)
+	p.log("✅ Book preprocessing complete: %s (took %v)", p.book.Name, elapsed)
+
+	// Write manifest for cache validation
+	if err := p.writeManifest(elapsed); err != nil {
+		p.log("⚠️  Failed to write manifest: %v", err)
+		// Non-fatal - preprocessing succeeded even if manifest write failed
+	}
+
 	return nil
+}
+
+// checkAndUseCache checks if staging cache is valid and can be reused
+func (p *Preprocessor) checkAndUseCache() (bool, error) {
+	_, useCache, err := CheckStagingCache(p.book, p.workspaceRoot, p.pdfMode)
+	return useCache, err
+}
+
+// writeManifest creates a manifest file documenting the staging state
+func (p *Preprocessor) writeManifest(buildDuration time.Duration) error {
+	// Collect all files in staging
+	expectedFiles, err := collectStagingFiles(p.stagingDir)
+	if err != nil {
+		return fmt.Errorf("collecting staging files: %w", err)
+	}
+
+	return writeManifest(p.stagingDir, p.book, p.pdfMode, expectedFiles, buildDuration)
 }
 
 // log writes a formatted message to the log writer

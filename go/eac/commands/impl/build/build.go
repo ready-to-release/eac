@@ -325,7 +325,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		OutputBaseDir:        "out/build",
 		LogFileName:          "build.log",
 		OrchestratorLogName:  "orchestrator.log",
-		ActionVerb:           "building",
+		ActionVerb:           "Building",
 		MaxConcurrency:       0, // Use default (number of CPUs)
 		StatusUpdateInterval: 2, // Update every 2 seconds
 		ModuleTypes:          moduleTypes,

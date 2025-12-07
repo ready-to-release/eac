@@ -14,17 +14,25 @@ const (
 	PhaseSummary
 )
 
+// Phase display names
+const (
+	PhaseNameInitialization = "Initialization"
+	PhaseNameRun            = "Run"
+	PhaseNameSummary        = "Summary"
+	PhaseNameUnknown        = "Unknown"
+)
+
 // String returns the display name for a phase
 func (p Phase) String() string {
 	switch p {
 	case PhaseInit:
-		return "Init"
+		return PhaseNameInitialization
 	case PhaseRun:
-		return "Run"
+		return PhaseNameRun
 	case PhaseSummary:
-		return "Summary"
+		return PhaseNameSummary
 	default:
-		return "Unknown"
+		return PhaseNameUnknown
 	}
 }
 

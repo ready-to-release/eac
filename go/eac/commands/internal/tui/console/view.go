@@ -94,11 +94,6 @@ func (m Model) viewPanes() string {
 		b.WriteString("\n")
 	}
 
-	// Show exit prompt when waiting for user
-	if m.waitingForExit {
-		b.WriteString(Styles.Dim.Render("Press any key to exit..."))
-	}
-
 	// No results section in pane view - results appear after TUI exits
 	// This ensures the view height stays constant (prevents cursor misalignment in inline mode)
 
@@ -427,7 +422,7 @@ func (m Model) renderSummaryContent(height int) string {
 	// Lines 3-4: Phase summaries
 	if data.InitSummary != "" {
 		initIcon := m.panes[PhaseInit].Status.Icon()
-		contentLines = append(contentLines, fmt.Sprintf("%s Init: %s", initIcon, data.InitSummary))
+		contentLines = append(contentLines, fmt.Sprintf("%s %s: %s", initIcon, PhaseNameInitialization, data.InitSummary))
 	}
 	if data.RunSummary != "" {
 		runIcon := m.panes[PhaseRun].Status.Icon()
@@ -456,28 +451,28 @@ func (m Model) renderSummaryContent(height int) string {
 		contentLines = append(contentLines, data.NextSteps)
 	}
 
-	// Render lines into pane format
-	for i := 0; i < height; i++ {
-		if i < len(contentLines) {
-			// Render as info-level line with proper styling
-			text := contentLines[i]
-			// Truncate to fit width
-			maxLen := m.width - 4 // Account for prefix
-			if maxLen < 10 {
-				maxLen = 10
-			}
-			if len(text) > maxLen {
-				text = text[:maxLen-1] + "…"
-			}
-
-			prefix := Styles.InfoPrefix.Render("│" + IconInfo)
-			styled := Styles.Info.Render(text)
-			b.WriteString(prefix + " " + styled)
-		} else {
-			// Empty line
-			b.WriteString(Styles.Dim.Render("│ "))
+	// Render lines into pane format (only render actual content, no trailing blanks)
+	numLines := len(contentLines)
+	if numLines > height {
+		numLines = height
+	}
+	for i := 0; i < numLines; i++ {
+		// Render as info-level line with proper styling
+		text := contentLines[i]
+		// Truncate to fit width
+		maxLen := m.width - 4 // Account for prefix
+		if maxLen < 10 {
+			maxLen = 10
 		}
-		if i < height-1 {
+		if len(text) > maxLen {
+			text = text[:maxLen-1] + "…"
+		}
+
+		prefix := Styles.InfoPrefix.Render("│" + IconInfo)
+		styled := Styles.Info.Render(text)
+		b.WriteString(prefix + " " + styled)
+
+		if i < numLines-1 {
 			b.WriteString("\n")
 		}
 	}
@@ -617,7 +612,7 @@ func (m Model) renderSummaryContentPlain(height int) string {
 		if m.panes[PhaseInit].Status == PhaseFailed {
 			initIcon = "✗"
 		}
-		contentLines = append(contentLines, fmt.Sprintf("%s Init: %s", initIcon, data.InitSummary))
+		contentLines = append(contentLines, fmt.Sprintf("%s %s: %s", initIcon, PhaseNameInitialization, data.InitSummary))
 	}
 	if data.RunSummary != "" {
 		runIcon := "✓"
@@ -649,22 +644,23 @@ func (m Model) renderSummaryContentPlain(height int) string {
 		contentLines = append(contentLines, data.NextSteps)
 	}
 
-	// Render lines into pane format
-	for i := 0; i < height; i++ {
-		if i < len(contentLines) {
-			text := contentLines[i]
-			maxLen := m.width - 4
-			if maxLen < 10 {
-				maxLen = 10
-			}
-			if len(text) > maxLen {
-				text = text[:maxLen-1] + "…"
-			}
-			b.WriteString("│  " + text)
-		} else {
-			b.WriteString("│ ")
+	// Render lines into pane format (only render actual content, no trailing blanks)
+	numLines := len(contentLines)
+	if numLines > height {
+		numLines = height
+	}
+	for i := 0; i < numLines; i++ {
+		text := contentLines[i]
+		maxLen := m.width - 4
+		if maxLen < 10 {
+			maxLen = 10
 		}
-		if i < height-1 {
+		if len(text) > maxLen {
+			text = text[:maxLen-1] + "…"
+		}
+		b.WriteString("│  " + text)
+
+		if i < numLines-1 {
 			b.WriteString("\n")
 		}
 	}

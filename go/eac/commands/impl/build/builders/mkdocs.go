@@ -36,6 +36,7 @@ func ListMkDocsArtifacts(module *modules.ModuleContract, workspaceRoot string) [
 //   - pdf-dark: PDF with dark theme
 //   - pdf-light: PDF with light theme
 //   - pdf-all: Both dark and light PDFs
+//
 // Multiple books for the same module are built in parallel.
 func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	// Load config to check for book configuration
@@ -405,6 +406,27 @@ func preprocessBook(book *config.Book, workspaceRoot string, outputDir string, l
 
 	// Use persistent staging directory at out/staging/{book-name}
 	stagingDir := filepath.Join(stagingBase, book.Name)
+
+	// Check if we can use cached staging (before cleaning it!)
+	cachedStagingDir, useCache, err := books.CheckStagingCache(book, workspaceRoot, pdfMode)
+	if err != nil {
+		Logln(logWriter, "❌ Cache check failed: %v", err)
+		return "", true
+	}
+
+	if useCache {
+		Logln(logWriter, "✅ Using cached staging for '%s' (skipping preprocessing)", book.Name)
+		return cachedStagingDir, true
+	}
+
+	// Cache invalid or missing - clean staging directory to prevent stale content
+	// This ensures books.yml configuration changes are reflected correctly
+	if err := os.RemoveAll(stagingDir); err != nil && !os.IsNotExist(err) {
+		Logln(logWriter, "❌ Failed to clean staging directory: %v", err)
+		Logln(logWriter, "   This may indicate file locks or permission issues")
+		Logln(logWriter, "   Try: rm -rf %s", stagingDir)
+		return "", true
+	}
 
 	if err := os.MkdirAll(stagingDir, 0755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)
@@ -1343,59 +1365,4 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	}
 
 	return stagingDir, true
-}
-
-// regenPDFWithWeasyPrint re-renders a PDF from processed HTML using WeasyPrint directly
-// This bypasses mkdocs-with-pdf's internal WeasyPrint call, allowing us to use HTML
-// with embedded CSS (which fixes WeasyPrint's image embedding bug in large documents)
-func regenPDFWithWeasyPrint(htmlPath, pdfPath, hostRepoRoot, workspaceRoot, imageName string, logWriter io.Writer, isDinD bool) error {
-	// Calculate relative paths for Docker
-	relHTMLPath, err := filepath.Rel(workspaceRoot, htmlPath)
-	if err != nil {
-		return fmt.Errorf("calculating relative HTML path: %w", err)
-	}
-	relPDFPath, err := filepath.Rel(workspaceRoot, pdfPath)
-	if err != nil {
-		return fmt.Errorf("calculating relative PDF path: %w", err)
-	}
-
-	// Convert to Docker paths (forward slashes)
-	dockerHTMLPath := "/docs/" + strings.ReplaceAll(relHTMLPath, "\\", "/")
-	dockerPDFPath := "/docs/" + strings.ReplaceAll(relPDFPath, "\\", "/")
-
-	volumeMountPath := hostRepoRoot
-	dockerVolume := FormatDockerVolumePath(volumeMountPath)
-
-	// Build Docker command to run WeasyPrint directly
-	args := []string{
-		"run", "--rm",
-		"-v", dockerVolume + ":/docs",
-		"-w", "/docs",
-	}
-
-	// In DinD mode, run as current user
-	if isDinD {
-		uid := os.Getuid()
-		gid := os.Getgid()
-		args = append(args, "--user", fmt.Sprintf("%d:%d", uid, gid))
-	}
-
-	// Run WeasyPrint via Python
-	pythonCmd := fmt.Sprintf(`
-import weasyprint
-doc = weasyprint.HTML(filename='%s', base_url='/docs/')
-doc.write_pdf('%s')
-print('WeasyPrint regeneration complete')
-`, dockerHTMLPath, dockerPDFPath)
-
-	args = append(args, imageName, "python3", "-c", pythonCmd)
-
-	Logln(logWriter, "   Running WeasyPrint on processed HTML...")
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
-
-	if exitCode != 0 {
-		return fmt.Errorf("WeasyPrint exited with code %d", exitCode)
-	}
-
-	return nil
 }

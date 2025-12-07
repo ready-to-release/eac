@@ -54,6 +54,3 @@ type ResultLineMsg struct {
 type SummaryDataMsg struct {
 	Data *SummaryData
 }
-
-// autoExitTimerMsg is sent when the auto-exit timer expires
-type autoExitTimerMsg struct{}

@@ -8,7 +8,10 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+var log = logging.C()
 
 // copyStaticFiles copies all copy-type sources to staging (Step 1)
 func (p *Preprocessor) copyStaticFiles() error {
@@ -79,10 +82,20 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 		// Destination in staging
 		destPath := filepath.Join(p.stagingDir, to, relPath)
 
+		// DEBUG: Log markdown file copies
+		if strings.HasSuffix(strings.ToLower(match), ".md") {
+			log.Debugf("[COPY] MD file: %s -> %s", match, destPath)
+		}
+
 		// Copy file
 		if err := copyFile(match, destPath); err != nil {
 			return copied, err
 		}
+
+		// Track source → staging mapping for link translation
+		// Track all files so we can generate correct relative paths for images, etc.
+		p.linkTranslator.AddFileMapping(destPath, match)
+
 		copied++
 	}
 

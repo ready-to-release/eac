@@ -295,7 +295,7 @@ func executeTests(cfg *TestConfig) int {
 		OutputBaseDir:        repoCfg.TestOutputPath(cfg.SuiteName),
 		LogFileName:          "test.log",
 		OrchestratorLogName:  "orchestrator.log",
-		ActionVerb:           "testing",
+		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2,
 		TUI:                  cfg.UseTUI,

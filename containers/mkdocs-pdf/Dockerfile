@@ -44,7 +44,8 @@ RUN npm install -g @mermaid-js/mermaid-cli \
     && npm cache clean --force
 
 # Chromium wrapper with container-safe flags (for mermaid-cli)
-RUN printf '#!/bin/sh\n/usr/bin/chromium --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu "$@" 2>/dev/null\n' > /usr/local/bin/chromium-wrapper \
+# NOTE: Do not redirect stderr - Puppeteer needs it to get the WebSocket debugging port
+RUN printf '#!/bin/sh\n/usr/bin/chromium --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu "$@"\n' > /usr/local/bin/chromium-wrapper \
     && chmod +x /usr/local/bin/chromium-wrapper
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chromium-wrapper

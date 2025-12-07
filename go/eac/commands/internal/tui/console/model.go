@@ -52,9 +52,6 @@ type Model struct {
 
 	// Quitting state - triggers plain-text final render
 	quitting bool
-
-	// Waiting for user to press any key before exiting
-	waitingForExit bool
 }
 
 // NewModel creates a new console model.
@@ -135,13 +132,6 @@ func (m Model) listenForStatus() tea.Cmd {
 func (m Model) tickCmd() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
 		return tickMsg(t)
-	})
-}
-
-// autoExitTimer returns a command that fires after 0.5 seconds to auto-exit.
-func (m Model) autoExitTimer() tea.Cmd {
-	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
-		return autoExitTimerMsg{}
 	})
 }
 

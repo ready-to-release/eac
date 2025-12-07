@@ -664,7 +664,7 @@ func TestSuite() int {
 		OutputBaseDir:        relTestRunDir,
 		LogFileName:          "test.log",
 		OrchestratorLogName:  "orchestrator.log",
-		ActionVerb:           "testing",
+		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2, // seconds
 		TUI:                  useTUI,
