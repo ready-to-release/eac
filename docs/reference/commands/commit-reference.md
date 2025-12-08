@@ -21,8 +21,8 @@ Complete technical reference for the commit command including all flags, commit 
 
 ## Related Files
 
-- [How-to Guide](../../how-to-guides/commands/commit-command.md) - Quick start and common workflows
-- [AI Process Explanation](../../explanation/commands/commit-ai-process.md) - How the AI generation works
+- [How-to Guide](../../how-to-guides/eac/commands/commit-command.md) - Quick start and common workflows
+- [AI Process Explanation](../../how-to-guides/eac/commands/commit-ai-process.md) - How the AI generation works
 
 -->
 
@@ -30,9 +30,9 @@ Complete technical reference for the commit command including all flags, commit 
 
 Complete technical reference for the `commit` command.
 
-For practical usage and workflows, see the [How-to Guide](../../how-to-guides/commands/commit-command.md).
+For practical usage and workflows, see the [How-to Guide](../../how-to-guides/eac/commands/commit-command.md).
 
-To understand the AI generation process, see [AI Process Explanation](../../explanation/commands/commit-ai-process.md).
+To understand the AI generation process, see [AI Process Explanation](../../how-to-guides/eac/commands/commit-ai-process.md).
 
 ## Command Syntax
 
@@ -577,6 +577,6 @@ Files modified:
 
 ## See Also
 
-- [How-to Guide](../../how-to-guides/commands/commit-command.md) - Quick start and common workflows
-- [AI Process Explanation](../../explanation/commands/commit-ai-process.md) - How the AI generation works
-- [Workspace Commands](../../how-to-guides/commands/areas/workspace-commands.md) - Workspace-aware development
+- [How-to Guide](../../how-to-guides/eac/commands/commit-command.md) - Quick start and common workflows
+- [AI Process Explanation](../../how-to-guides/eac/commands/commit-ai-process.md) - How the AI generation works
+- [Workspace Commands](../../how-to-guides/eac/commands/areas/workspace-commands.md) - Workspace-aware development

@@ -1,0 +1,11 @@
+title: Commands
+nav:
+  - index.md
+  - help-command.md
+  - init-command.md
+  - init-security.md
+  - commit-command.md
+  - commit-ai-process.md
+  - squash-message-command.md
+  - show-commands.md
+  - areas

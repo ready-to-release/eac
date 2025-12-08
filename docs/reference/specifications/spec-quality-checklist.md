@@ -84,5 +84,5 @@ Reference for evaluating specification health.
 ## Related
 
 - [Review and Iterate](../../explanation/specifications/review-and-iterate.md)
-- [Reviewing Specifications](../../how-to-guides/specifications/reviewing-specifications.md)
-- [Splitting Large Features](../../how-to-guides/specifications/splitting-large-features.md)
+- [Reviewing Specifications](../../how-to-guides/eac/specifications/reviewing-specifications.md)
+- [Splitting Large Features](../../how-to-guides/eac/specifications/splitting-large-features.md)

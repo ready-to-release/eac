@@ -399,5 +399,5 @@ eac init --ai claude-api --debug
 
 ## See Also
 
-- [Init Command Guide](../../how-to-guides/commands/init-command.md) - Quick start and basic usage
-- [Init Security Guide](../../how-to-guides/commands/init-security.md) - Security best practices
+- [Init Command Guide](../../how-to-guides/eac/commands/init-command.md) - Quick start and basic usage
+- [Init Security Guide](../../how-to-guides/eac/commands/init-security.md) - Security best practices

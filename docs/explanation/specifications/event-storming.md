@@ -473,5 +473,5 @@ grep -r "OrderPlaced\|OrderShipped" specs/
 
 ## Quick Reference
 
-- [Running Event Storming](../../how-to-guides/specifications/running-event-storming.md) - How to facilitate sessions
+- [Running Event Storming](../../how-to-guides/eac/specifications/running-event-storming.md) - How to facilitate sessions
 

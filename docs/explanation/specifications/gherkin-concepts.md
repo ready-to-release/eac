@@ -454,5 +454,5 @@ Convert Blue Cards → Rules, Green Cards → Scenarios
 
 - [Gherkin Limits](../../reference/specifications/gherkin-limits.md) - Rule and scenario count guidelines
 - [Feature Naming](../../reference/specifications/feature-naming.md) - Feature naming conventions
-- [Creating Feature Files](../../how-to-guides/specifications/creating-feature-files.md) - How to create new specs
-- [Splitting Large Features](../../how-to-guides/specifications/splitting-large-features.md) - How to refactor large features
+- [Creating Feature Files](../../how-to-guides/eac/specifications/creating-feature-files.md) - How to create new specs
+- [Splitting Large Features](../../how-to-guides/eac/specifications/splitting-large-features.md) - How to refactor large features

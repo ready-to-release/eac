@@ -146,4 +146,4 @@ Based on [Canon TDD by Kent Beck](https://tidyfirst.substack.com/p/canon-tdd).
 ## Related
 
 - [Three-Layer Approach](../../explanation/specifications/three-layer-approach.md)
-- [BDD Development Workflow](../../how-to-guides/specifications/bdd-development-workflow.md)
+- [BDD Development Workflow](../../how-to-guides/eac/specifications/bdd-development-workflow.md)

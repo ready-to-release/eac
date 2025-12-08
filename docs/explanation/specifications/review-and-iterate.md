@@ -290,4 +290,4 @@ grep -r "Scenario:" specs/ | cut -d: -f1 | uniq -c | sort -rn
 ## Quick Reference
 
 - [Spec Quality Checklist](../../reference/specifications/spec-quality-checklist.md) - Health indicators
-- [Reviewing Specifications](../../how-to-guides/specifications/reviewing-specifications.md) - How to conduct reviews
+- [Reviewing Specifications](../../how-to-guides/eac/specifications/reviewing-specifications.md) - How to conduct reviews
