@@ -415,3 +415,9 @@ Choose based on regulatory requirements, risk profile, and organizational maturi
 - [CD Model Overview](cd-model-overview.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
 - [Repository Layout](../../../reference/repository-layout.md)
+
+## Quick Reference
+
+- [RA Stage Breakdown](../../../reference/continuous-delivery/ra-stage-breakdown.md) - Stage-by-stage reference table
+- [CDe Stage Breakdown](../../../reference/continuous-delivery/cde-stage-breakdown.md) - Stage-by-stage reference table
+- [Choosing Implementation Pattern](../../../how-to-guides/continuous-delivery/choosing-implementation-pattern.md) - Decision tree for pattern selection

@@ -65,4 +65,4 @@ jobs:
           module: eac-mcp-commands
           trigger-run-id: ${{ inputs.trigger_run_id }}
           # PRs run commit suite only; main/release branches run full suite
-          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
+          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}

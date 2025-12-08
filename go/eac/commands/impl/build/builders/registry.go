@@ -11,12 +11,10 @@ import (
 
 // BuildOptions contains flags for controlling the build process.
 type BuildOptions struct {
-	TidyFirst     bool   // Run go mod tidy before building
-	Version       string // Version to inject via ldflags
-	Compressed    bool   // Strip debug info with -ldflags "-s -w" (for releases)
-	CompressedUPX bool   // Also apply UPX compression after build
-	DryRun        bool   // Simulate build without actually running it
-	BuildAll      bool   // Include non-default books (those with default: false)
+	TidyFirst          bool     // Run go mod tidy before building
+	Version            string   // Version to inject via ldflags
+	DryRun             bool     // Simulate build without actually running it
+	RequestedArtifacts []string // Specific artifact IDs to build (empty = default artifacts, "*" = all)
 }
 
 // BuildFunc is the signature for module build functions.

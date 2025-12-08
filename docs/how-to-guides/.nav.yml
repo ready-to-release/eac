@@ -1,6 +1,8 @@
 title: How-to Guides
 nav:
   - index.md
+  - continuous-delivery
+  - specifications
   - Configuration:
     - configuration/claude-mcp-setup.md
   - Commands:

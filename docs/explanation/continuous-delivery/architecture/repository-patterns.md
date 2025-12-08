@@ -453,3 +453,8 @@ flowchart LR
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
 - [Repository Layout](../../../reference/repository-layout.md)
+
+## Quick Reference
+
+- [Repository Comparison](../../../reference/continuous-delivery/repository-comparison.md) - Monorepo vs Polyrepo table
+- [Choosing Repository Pattern](../../../how-to-guides/continuous-delivery/choosing-repository-pattern.md) - Decision checklist

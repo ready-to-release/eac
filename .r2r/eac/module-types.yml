@@ -7,14 +7,23 @@ types:
     capabilities: [go_module, executable, cross_compile]
     build:
       artifacts:
+        # Standard binaries (amd64)
         - type: executable
           pattern: "{moniker}-{os}-amd64{ext}"
           platforms: [linux, windows, darwin]
           verify: current_platform
+        # Standard binaries (arm64)
         - type: executable
           pattern: "{moniker}-{os}-arm64{ext}"
           platforms: [linux, darwin]
           verify: current_platform
+        # UPX-compressed binaries (amd64, linux/windows only)
+        - type: executable
+          pattern: "{moniker}-{os}-amd64-upx{ext}"
+          platforms: [linux, windows]
+          verify: current_platform
+          compression: upx
+          derive_from: "{moniker}-{os}-amd64{ext}"
     defaults:
       files:
         source: ["**/*.go"]
@@ -74,7 +83,9 @@ types:
     build:
       artifacts:
         - type: executable
-          pattern: "{moniker}*"
+          pattern: "{moniker}{ext}"
+          platforms: [linux, windows, darwin]
+          verify: current_platform
     defaults:
       files:
         source: ["**/*.go"]
@@ -277,6 +288,17 @@ types:
     defaults:
       files:
         config: ["*.json", "*.md"]
+
+  - name: release
+    description: "Release notes and changelogs"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        source: ["**/*.md", "**/CHANGELOG.md"]
+        changelog: CHANGELOG.md
         workflows:
           ci: ""
           release: ""

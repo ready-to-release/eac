@@ -155,6 +155,12 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 	// Build go test command
 	goTestArgs := []string{"test", "-json", "-v", "-parallel", fmt.Sprintf("%d", cfg.Parallelism)}
 
+	// Extract Go build tags from suite filter (e.g., "@L0,@L1" -> "L0,L1")
+	// This ensures test files with //go:build constraints are compiled
+	if buildTags := extractGoBuildTags(cfg.SuiteTagFilter); buildTags != "" {
+		goTestArgs = append(goTestArgs, "-tags", buildTags)
+	}
+
 	// Add coverage if enabled
 	if cfg.Coverage {
 		coverageFile := filepath.Join(logDir, "coverage.out")
@@ -214,4 +220,28 @@ func sanitizePathForLog(pkgPath string) string {
 	safe := strings.ReplaceAll(pkgPath, ":", "_")
 	safe = strings.ReplaceAll(safe, "\\", "/")
 	return safe
+}
+
+// extractGoBuildTags extracts Go build tags from a suite tag filter.
+// Input: "@L0,@L1 && ~@skip:wip" or "@L0,@L1,@L2"
+// Output: "L0,L1" or "L0,L1,L2" (comma-separated Go build tags)
+func extractGoBuildTags(suiteTagFilter string) string {
+	if suiteTagFilter == "" {
+		return ""
+	}
+
+	var tags []string
+
+	// Look for L-level tags (@L0, @L1, @L2, @L3, @L4)
+	for _, level := range []string{"L0", "L1", "L2", "L3", "L4"} {
+		if strings.Contains(suiteTagFilter, "@"+level) {
+			tags = append(tags, level)
+		}
+	}
+
+	if len(tags) == 0 {
+		return ""
+	}
+
+	return strings.Join(tags, ",")
 }

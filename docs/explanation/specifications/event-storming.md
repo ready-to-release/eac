@@ -471,3 +471,7 @@ grep -r "OrderPlaced\|OrderShipped" specs/
 - [Three-Layer Testing Approach](./three-layer-approach.md) - How Event Storming fits the testing strategy
 - [Example Mapping](./example-mapping.md) - Requirements discovery using Event Storming vocabulary
 
+## Quick Reference
+
+- [Running Event Storming](../../how-to-guides/specifications/running-event-storming.md) - How to facilitate sessions
+

@@ -70,18 +70,56 @@ func (r *ArtifactResolver) ResolvePattern(pattern string) string {
 }
 
 // ResolvePatternWithMetadata resolves a pattern, checking metadata for custom names.
-// For executables, checks for exe-{os}-{arch} metadata key to allow per-module custom names.
-func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifactType string) string {
-	// For executables, check if module has custom name in metadata
-	if artifactType == ArtifactTypeExecutable && r.Metadata != nil {
-		metadataKey := fmt.Sprintf("exe-%s-%s", r.OS, r.Arch)
-		if customName, ok := r.Metadata[metadataKey]; ok && customName != "" {
-			return customName
-		}
+// Supports all artifact types via {type}-{variant} metadata keys (e.g., executable-linux-amd64, directory-site, file-pdf).
+func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifact Artifact) string {
+	if r.Metadata == nil {
+		return r.ResolvePattern(pattern)
 	}
 
-	// Fall back to pattern resolution
+	// Determine variant ID for metadata key
+	variantID := artifact.ID
+	if variantID == "" {
+		// Derive variant ID from pattern/context
+		variantID = r.deriveVariantID(pattern, artifact.Type)
+	}
+
+	// Check for metadata override: {type}-{variant}
+	// Uses FULL type name (e.g., executable-linux-amd64, not exe-linux-amd64)
+	metadataKey := fmt.Sprintf("%s-%s", artifact.Type, variantID)
+	if customValue, ok := r.Metadata[metadataKey]; ok && customValue != "" {
+		return customValue
+	}
+
+	// No override - use pattern
 	return r.ResolvePattern(pattern)
+}
+
+// deriveVariantID derives a variant ID from the pattern and artifact type.
+// For executables: {os}-{arch} (e.g., linux-amd64)
+// For files/directories: base filename/dirname from pattern
+func (r *ArtifactResolver) deriveVariantID(pattern string, artifactType string) string {
+	switch artifactType {
+	case ArtifactTypeExecutable:
+		// Executables use {os}-{arch} format
+		return fmt.Sprintf("%s-%s", r.OS, r.Arch)
+
+	case ArtifactTypeFile, ArtifactTypeDirectory, ArtifactTypeImage:
+		// For other types, resolve pattern and use base name
+		resolved := r.ResolvePattern(pattern)
+		base := filepath.Base(resolved)
+		// Remove extension for files
+		if artifactType == ArtifactTypeFile {
+			ext := filepath.Ext(base)
+			if ext != "" {
+				base = base[:len(base)-len(ext)]
+			}
+		}
+		return base
+
+	default:
+		// Markers, globs, etc. - use pattern as-is
+		return pattern
+	}
 }
 
 // ResolvePath resolves an artifact pattern to a full file path
@@ -112,7 +150,7 @@ type ArtifactVerificationResult struct {
 func (r *ArtifactResolver) VerifyArtifact(artifact Artifact) ArtifactVerificationResult {
 	result := ArtifactVerificationResult{
 		Artifact: artifact,
-		Pattern:  r.ResolvePatternWithMetadata(artifact.Pattern, artifact.Type),
+		Pattern:  r.ResolvePatternWithMetadata(artifact.Pattern, artifact),
 	}
 	result.Path = filepath.Join(r.BuildDir, result.Pattern)
 
@@ -151,6 +189,15 @@ func (r *ArtifactResolver) VerifyArtifacts(artifacts []Artifact) []ArtifactVerif
 		case ArtifactTypeGlob:
 			// Handle glob patterns
 			results = append(results, r.verifyGlobArtifact(artifact))
+		case ArtifactTypeImage:
+			// Docker images are stored in Docker's internal storage, not as files
+			// Skip filesystem verification - the Docker build command already validated success
+			results = append(results, ArtifactVerificationResult{
+				Artifact: artifact,
+				Pattern:  r.ResolvePattern(artifact.Pattern),
+				Path:     "", // Docker images don't have filesystem paths
+				Exists:   true, // Docker build succeeded, so image exists
+			})
 		default:
 			// Standard artifact verification
 			results = append(results, r.VerifyArtifact(artifact))

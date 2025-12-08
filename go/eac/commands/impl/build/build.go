@@ -21,13 +21,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofrs/flock"
+	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
@@ -128,8 +131,6 @@ func Build() int {
 	var monikers []string
 	tidyFirst := !isCI // Default: true for local, false for CI
 	tidyExplicitlySet := false
-	compressed := false
-	compressedUPX := false
 	skipVerification := false // Skip system dependency verification (go, docker, etc.)
 	skipModuleDeps := false   // Skip including transitive module dependencies
 	showTimings := false
@@ -151,11 +152,6 @@ func Build() int {
 		case "--no-tidy":
 			tidyFirst = false
 			tidyExplicitlySet = true
-		case "--compressed":
-			compressed = true
-		case "--compressed-upx":
-			compressedUPX = true
-			compressed = true // UPX implies stripped
 		case "--skip-deps":
 			skipModuleDeps = true
 		case "--skip-verification":
@@ -270,7 +266,7 @@ func Build() int {
 	logging.EnableDebug()
 
 	// Run build (single or multiple modules) - phases are handled inside
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, compressed, compressedUPX, version, skipVerification, skipModuleDeps, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, version, skipVerification, skipModuleDeps, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight)
 }
 
 // parseIntArg parses a string argument as an integer
@@ -314,7 +310,7 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 }
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, compressed bool, compressedUPX bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, version string, skipVerification bool, skipModuleDeps bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int) int {
 	// Build module type lookup for ALL modules (will be populated after execution plan)
 	moduleTypes := make(map[string]string)
 
@@ -483,7 +479,20 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		}
 
 		moduleOutputDir := paths.BuildOutputPath(workspaceRoot, moniker)
-		return runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, compressed, compressedUPX, version, dryRun, buildAll)
+		exitCode := runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, version, dryRun, buildAll)
+
+		// If build succeeded and not dry-run, validate artifacts were created
+		if exitCode == 0 && !dryRun {
+			modType, ok := moduleTypes[moniker]
+			if ok {
+				if err := validateModuleBuildOutputs(moniker, modType, workspaceRoot, logWriter, buildAll); err != nil {
+					fmt.Fprintf(logWriter, "\n❌ Build artifact validation failed: %v\n", err)
+					return 1
+				}
+			}
+		}
+
+		return exitCode
 	}
 	orch.SetWorker(worker)
 
@@ -492,6 +501,13 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
+	}
+
+	// Generate build manifest with successfully built modules
+	if !dryRun {
+		if err := generateBuildManifest(workspaceRoot, results, moduleTypes, executionPlan.ExecutionOrder, buildAll); err != nil {
+			log.Warnf("Failed to generate build manifest: %v", err)
+		}
 	}
 
 	// Build and send summary data to TUI, then wait for user to exit
@@ -550,13 +566,41 @@ func buildTUISummary(results []orchestrator.WorkResult, totalTime time.Duration,
 	var details []string
 	if failCount > 0 {
 		details = append(details, fmt.Sprintf("Failed: %d (%s)", failCount, strings.Join(failedModules, ", ")))
+		details = append(details, "")  // Blank line
+
+		// Add error messages from failed modules (top 5 per module)
+		for _, result := range results {
+			if result.ExitCode != 0 {
+				if len(result.Errors) > 0 {
+					// Show module name with log path
+					details = append(details, fmt.Sprintf("%s (%s):", result.Moniker, result.LogPath))
+					// Show up to 5 errors
+					errorCount := len(result.Errors)
+					if errorCount > 5 {
+						errorCount = 5
+					}
+					for i := 0; i < errorCount; i++ {
+						errMsg := result.Errors[i]
+						// Truncate long error messages
+						if len(errMsg) > 100 {
+							errMsg = errMsg[:97] + "..."
+						}
+						details = append(details, fmt.Sprintf("  • %s", errMsg))
+					}
+					if len(result.Errors) > 5 {
+						details = append(details, fmt.Sprintf("  ...and %d more errors", len(result.Errors)-5))
+					}
+				}
+			}
+		}
 	}
+	details = append(details, "")  // Blank line
 	details = append(details, "Output: out/build/")
 
 	// Build next steps
 	nextSteps := ""
 	if failCount > 0 {
-		nextSteps = fmt.Sprintf("Review logs in out/build/ for %s", failedModules[0])
+		nextSteps = fmt.Sprintf("Review full logs: out/build/%s/build.log", failedModules[0])
 	} else if !dryRun {
 		nextSteps = "Run 'test' to verify builds"
 	}
@@ -572,17 +616,18 @@ func buildTUISummary(results []orchestrator.WorkResult, totalTime time.Duration,
 }
 
 // runModuleBuild runs build for a single module
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, compressed bool, compressedUPX bool, version string, dryRun bool, buildAll bool) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun bool, buildAll bool) int {
 	// Get build function for module type
 	buildFunc := builders.GetBuildFunc(module.Type)
 
+	// Determine which artifacts to build
+	requestedArtifacts := determineRequestedArtifactsForBuild(module, buildAll, workspaceRoot)
+
 	opts := builders.BuildOptions{
-		TidyFirst:     tidyFirst,
-		Compressed:    compressed,
-		CompressedUPX: compressedUPX,
-		Version:       version,
-		DryRun:        dryRun,
-		BuildAll:      buildAll,
+		TidyFirst:          tidyFirst,
+		Version:            version,
+		DryRun:             dryRun,
+		RequestedArtifacts: requestedArtifacts,
 	}
 
 	// In dry-run mode, simulate a successful build
@@ -598,6 +643,18 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 	exitCode := buildFunc(module, workspaceRoot, outputDir, logWriter, opts)
 	if exitCode != 0 {
 		return exitCode
+	}
+
+	// Process artifact derivations (compression, etc.) if build succeeded
+	cfg := config.Global()
+	if cfg != nil && cfg.ModuleTypes != nil {
+		moduleTypeDef := cfg.ModuleTypes.Get(module.Type)
+		if moduleTypeDef != nil {
+			if err := ProcessArtifactDerivations(module.Moniker, moduleTypeDef, outputDir, opts.RequestedArtifacts, module.Metadata, logWriter); err != nil {
+				writeln(logWriter, "❌ Artifact derivation failed: %v", err)
+				return 1
+			}
+		}
 	}
 
 	// Execute post-build steps if build succeeded
@@ -686,17 +743,10 @@ func printBuildUsage() {
 	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")
 	log.Info("  --no-tui                  Disable TUI console (use plain output)")
 	log.Info(fmt.Sprintf("  --tui-height N            Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
-	log.Info("  --compressed              Strip debug info for smaller binaries (go-cli only)")
-	log.Info("  --compressed-upx          Also apply UPX compression for maximum size reduction")
 	log.Info("  --version VERSION         Inject version string into binary (go-cli only)")
 	log.Info("  --accept-warnings         Don't fail on MkDocs warnings (non-strict mode)")
 	log.Info("  --all                     Include non-default books (those with default: false)")
 	log.Info("  -h, --help                Show this help message")
-	log.Info("")
-	log.Info("Compression (go-cli only):")
-	log.Info("  Default (dev):     Full debug info for debugging (~39 MB)")
-	log.Info("  --compressed:      Strip debug info with -ldflags \"-s -w\" (~26 MB, ~30% smaller)")
-	log.Info("  --compressed-upx:  Also UPX compress (~10 MB, ~70% smaller total)")
 	log.Info("")
 	log.Info("MkDocs modules with books (books.yml):")
 	log.Info("  Books with 'default: false' are skipped unless --all is used.")
@@ -708,8 +758,225 @@ func printBuildUsage() {
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  build                                # Build all modules")
-	log.Info("  build r2r-cli                        # Build CLI with debug info")
-	log.Info("  build r2r-cli --compressed           # Build CLI for release")
+	log.Info("  build r2r-cli                        # Build CLI for current platform")
+	log.Info("  build r2r-cli --all                  # Build CLI for all platforms")
 	log.Info("  build books                          # Build books (uses books.yml output config)")
 	log.Info("  build r2r-cli --list-artifacts       # List artifacts without building")
+}
+
+// generateBuildManifest creates a build manifest file tracking what was built
+func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResult, moduleTypes map[string]string, executionOrder []string, buildAll bool) error {
+	// Get git commit SHA
+	gitCommit := getGitCommitSHA(workspaceRoot)
+
+	// Create new manifest
+	manifest := implinternal.NewBuildManifest(gitCommit)
+
+	// Load config for artifact resolution
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Track current platform
+	currentPlatform := implinternal.PlatformInfo{
+		OS:   runtime.GOOS,
+		Arch: runtime.GOARCH,
+	}
+
+	// Process each successfully built module
+	for _, result := range results {
+		// Skip failed builds
+		if result.ExitCode != 0 {
+			continue
+		}
+
+		moniker := result.Moniker
+		moduleType, ok := moduleTypes[moniker]
+		if !ok {
+			continue
+		}
+
+		// Get module config
+		module, ok := cfg.Modules.GetModule(moniker)
+		if !ok {
+			continue
+		}
+
+		// Get module type definition
+		moduleTypeDef := cfg.ModuleTypes.Get(moduleType)
+		if moduleTypeDef == nil {
+			continue
+		}
+
+		// Build directory
+		buildDir := cfg.Repository.BuildOutputPath(moniker)
+
+		// Resolve artifacts for current platform
+		artifacts, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
+			module, moduleTypeDef, buildDir, currentPlatform.OS, currentPlatform.Arch, cfg,
+		)
+		if err != nil {
+			log.Warnf("Failed to resolve artifacts for %s: %v", moniker, err)
+			continue
+		}
+
+		// Convert to ArtifactInfo
+		artifactInfos := make([]implinternal.ArtifactInfo, 0, len(artifacts))
+		for _, art := range artifacts {
+			platform := ""
+			if art.Type == "executable" {
+				platform = fmt.Sprintf("%s-%s", currentPlatform.OS, currentPlatform.Arch)
+			}
+
+			artifactInfos = append(artifactInfos, implinternal.ArtifactInfo{
+				Type:     art.Type,
+				ID:       art.ID,
+				Name:     art.ResolvedName,
+				Path:     art.ResolvedPath,
+				Platform: platform,
+			})
+		}
+
+		// Determine which artifacts were requested
+		requestedArtifactIDs := implinternal.DetermineRequestedArtifacts(module, moduleTypeDef, buildAll, cfg)
+
+		// Add module to manifest
+		moduleBuild := implinternal.ModuleBuild{
+			Moniker:            moniker,
+			Type:               moduleType,
+			BuildTime:          time.Now(),
+			RequestedArtifacts: requestedArtifactIDs,
+			Artifacts:          artifactInfos,
+			Platforms:          []implinternal.PlatformInfo{currentPlatform},
+		}
+
+		manifest.AddModule(moduleBuild)
+	}
+
+	// Save manifest
+	buildOutputDir := filepath.Join(workspaceRoot, "out", "build")
+	if err := manifest.Save(buildOutputDir); err != nil {
+		return fmt.Errorf("failed to save manifest: %w", err)
+	}
+
+	log.Debugf("Generated build manifest with %d modules", len(manifest.Modules))
+	return nil
+}
+
+// getGitCommitSHA gets the current git commit SHA
+func getGitCommitSHA(workspaceRoot string) string {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = workspaceRoot
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
+}
+
+// validateModuleBuildOutputs validates that a module's build produced the expected artifacts
+func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWriter io.Writer, buildAll bool) error {
+	// Load config
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Get module
+	module, ok := cfg.Modules.GetModule(moniker)
+	if !ok {
+		return fmt.Errorf("module not found: %s", moniker)
+	}
+
+	// Get module type definition
+	moduleTypeDef := cfg.ModuleTypes.Get(moduleType)
+	if moduleTypeDef == nil {
+		return fmt.Errorf("module type not found: %s", moduleType)
+	}
+
+	// If no artifacts defined, nothing to validate
+	if moduleTypeDef.Build == nil || len(moduleTypeDef.Build.Artifacts) == 0 {
+		fmt.Fprintf(logWriter, "  ℹ️  No artifacts defined for this module type\n")
+		return nil
+	}
+
+	// Determine which artifacts were requested for this build
+	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, moduleTypeDef, buildAll, cfg)
+
+	// Resolve and validate artifacts
+	// Note: BuildOutputPath returns a relative path, so we need to make it absolute
+	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
+	buildDir := filepath.Join(workspaceRoot, buildDirRel)
+	artifacts, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
+		module, moduleTypeDef, buildDir, runtime.GOOS, runtime.GOARCH, cfg,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to resolve artifacts: %w", err)
+	}
+
+	// Filter artifacts to only those that were requested
+	var requestedArtifactList []implinternal.ResolvedArtifact
+	var requestedMissing, requestedTotal int
+
+	for _, art := range artifacts {
+		// Check if this artifact was requested
+		isRequested := false
+		for _, reqID := range requestedArtifacts {
+			if art.ID == reqID {
+				isRequested = true
+				break
+			}
+		}
+
+		if isRequested {
+			requestedArtifactList = append(requestedArtifactList, art)
+			requestedTotal++
+			if !art.Exists {
+				requestedMissing++
+			}
+		}
+	}
+
+	// Check if any requested artifacts are missing
+	if requestedMissing > 0 {
+		fmt.Fprintf(logWriter, "\n❌ Expected artifacts were not created:\n")
+		for _, art := range requestedArtifactList {
+			if !art.Exists {
+				fmt.Fprintf(logWriter, "  - %s: %s\n", art.ID, art.ResolvedPath)
+			}
+		}
+		return fmt.Errorf("build succeeded but %d/%d artifacts missing", requestedMissing, requestedTotal)
+	}
+
+	// Success - all requested artifacts present
+	fmt.Fprintf(logWriter, "  ✅ Validated %d artifact(s) created\n", requestedTotal)
+	return nil
+}
+
+// determineRequestedArtifactsForBuild determines which artifact IDs should be built for a module
+func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract, buildAll bool, workspaceRoot string) []string {
+	// Load config to get module and type definitions
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		log.Debugf("Failed to load config for artifact determination: %v", err)
+		return []string{} // Empty list - builders will use defaults
+	}
+
+	// Get module from config
+	module, ok := cfg.Modules.GetModule(moduleContract.Moniker)
+	if !ok {
+		log.Debugf("Module %s not found in config", moduleContract.Moniker)
+		return []string{}
+	}
+
+	// Get module type definition
+	moduleType := cfg.ModuleTypes.Get(module.Type)
+	if moduleType == nil {
+		log.Debugf("Module type %s not found", module.Type)
+		return []string{}
+	}
+
+	// Use the DetermineRequestedArtifacts function
+	return implinternal.DetermineRequestedArtifacts(module, moduleType, buildAll, cfg)
 }

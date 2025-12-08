@@ -105,8 +105,8 @@ jobs:
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
           echo "Building r2r-cli with version $VERSION using build command..."
-          echo "Using --compressed-upx for release builds (stripped + UPX compressed)"
-          $COMMANDS build r2r-cli --version "$VERSION" --no-tidy --compressed-upx
+          echo "Using --all for release builds (all platforms + UPX compressed variants)"
+          $COMMANDS build r2r-cli --all --version "$VERSION" --no-tidy
 
       - name: Verify binaries
         run: |

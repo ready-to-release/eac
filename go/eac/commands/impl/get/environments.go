@@ -9,7 +9,7 @@ package get
 import (
 	"fmt"
 
-	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
@@ -20,7 +20,7 @@ func init() {
 
 func GetEnvironments() int {
 	// Use the shared get command helper
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		cfg, err := config.Load(config.DefaultLoadOptions())
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config: %w", err)

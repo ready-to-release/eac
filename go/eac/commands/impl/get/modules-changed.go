@@ -53,7 +53,7 @@ func GetChangedModules() int {
 	}
 
 	// Use the shared get command helper
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		modules, err := repository.GetChangedModules(changedFiles, workspaceRoot)
 		if err != nil {
 			return nil, err

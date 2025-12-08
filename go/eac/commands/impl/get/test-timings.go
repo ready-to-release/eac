@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
@@ -62,7 +62,7 @@ func GetTestTimings() int {
 
 // GetTestTimingsFiltered gets test timings with optional module filtering
 func GetTestTimingsFiltered(moduleFilter []string) int {
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// Get repository root
 		cwd, err := os.Getwd()
 		if err != nil {

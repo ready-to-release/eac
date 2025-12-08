@@ -273,11 +273,11 @@ modules:
           - .github/workflows/ci-r2r-cli.yaml
           - .github/workflows/release-r2r-cli.yaml
     metadata:
-      exe-linux-amd64: r2r-linux-amd64
-      exe-linux-arm64: r2r-linux-arm64
-      exe-darwin-amd64: r2r-darwin-amd64
-      exe-darwin-arm64: r2r-darwin-arm64
-      exe-windows-amd64: r2r-windows-amd64.exe
+      executable-linux-amd64: r2r-linux-amd64
+      executable-linux-arm64: r2r-linux-arm64
+      executable-darwin-amd64: r2r-darwin-amd64
+      executable-darwin-arm64: r2r-darwin-arm64
+      executable-windows-amd64: r2r-windows-amd64.exe
 
   # ============================================================================
   # Scripts: CLI Installer
@@ -457,7 +457,7 @@ modules:
   # ============================================================================
   - moniker: release-docs
     name: Release Documentation
-    type: documentation
+    type: release
     description: Release notes and changelogs for published artifacts
     versioning:
       scheme: CalVer

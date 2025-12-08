@@ -526,29 +526,7 @@ gh pr create --base release/v1.2.0 --title "Cherry-pick: Fix critical bug"
 
 ## Best Practices
 
-### ✅ DO
-
-- **Integrate at least daily** - preferably multiple times per day
-- **Keep changes small** - < 400 lines ideal, < 200 excellent
-- **Write semantic commit messages** - enables automated versioning and release notes
-- **Pull from trunk frequently** - every few hours to stay current
-- **Run Stage 2 checks before pushing** - all tests, linting, security scans
-- **Use feature flags for incomplete features** - deploy dark, enable later
-- **Delete branches immediately after merge** - keep repository clean
-- **Squash-merge topic branches** - one topic branch = one trunk commit
-- **Cherry-pick from trunk to release** - maintain single source of truth
-- **Fix-forward in production** - prefer fixing over reverting when possible
-
-### ❌ DON'T
-
-- **Keep topic branches open > 2 days** - violates continuous integration
-- **Make large, sweeping changes in single commit** - breaks reviewability
-- **Let your branch diverge significantly from trunk** - causes merge conflicts
-- **Push broken code to trunk** - violates "always releasable" principle
-- **Keep "work in progress" branches** - integrate incrementally instead
-- **Create long-lived feature branches** - antithetical to trunk-based development
-- **Fix on release branch without cherry-picking to trunk** - causes regressions
-- **Use topic branches to hide incomplete features** - use feature flags instead
+See [Workflow Overview: Best Practices](index.md#best-practices-summary) for complete DO/DON'T guidance.
 
 ### Stage Duration Guidelines
 

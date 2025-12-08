@@ -1,0 +1,10 @@
+title: Specifications
+nav:
+  - working-with-specifications.md
+  - creating-feature-files.md
+  - splitting-large-features.md
+  - running-example-mapping.md
+  - translating-to-gherkin.md
+  - running-event-storming.md
+  - reviewing-specifications.md
+  - bdd-development-workflow.md

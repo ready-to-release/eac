@@ -251,6 +251,10 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 		errs = append(errs, fmt.Errorf("test-suites: %w", err))
 	}
 
+	if err := c.LoadBooks(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("books: %w", err))
+	}
+
 	if err := c.LoadSystemDependencies(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
 	}

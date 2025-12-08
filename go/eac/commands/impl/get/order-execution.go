@@ -51,7 +51,7 @@ func GetExecutionOrder() int {
 	}
 
 	// Use the shared get command helper
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		plan, err := repository.CalculateExecutionOrder(monikers, workspaceRoot)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate execution order: %w", err)

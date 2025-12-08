@@ -316,43 +316,15 @@ flowchart LR
 
 ### Deployment Strategies
 
-Different deployment strategies balance risk and deployment speed:
+Stage 10 executes production deployment using one of five strategies. For detailed strategy comparison and selection guidance, see [Environments: Deployment Strategies](../architecture/environments.md#deployment-strategies).
 
-**Hot Deploy (In-Place)**:
+**Quick Reference**:
 
-- Deploy directly to running production servers
-- Brief downtime during deployment
-- Fast rollback (redeploy previous version)
-- Simplest strategy
-
-**Staged Deploy (Rolling)**:
-
-- Deploy to servers incrementally (e.g., 25% at a time)
-- Monitor each batch before proceeding
-- Minimal blast radius if issues occur
-- Zero downtime
-
-**Blue-Green Deploy**:
-
-- Maintain two production environments (Blue and Green)
-- Deploy to inactive environment (e.g., Green)
-- Test Green environment with production traffic (small percentage)
-- Switch traffic from Blue to Green
-- Zero downtime, instant rollback
-
-**Canary Deploy**:
-
-- Deploy to small subset of production servers and users (1-5%)
-- Monitor key metrics (errors, latency, resource usage)
-- Gradually increase traffic if healthy
-- Roll back if issues detected
-
-**Ring Deployment**:
-
-- Deploy to consecutive rings
-- Monitor key metrics (errors, latency, resource usage)
-- Gradually rollout to new rings
-- Roll back if issues detected
+- **Hot Deploy**: Fastest, brief downtime
+- **Rolling**: Zero downtime, gradual
+- **Blue-Green**: Instant rollback, 2x cost
+- **Canary**: Metrics-driven, 1-5% initial
+- **Rings**: User-segment phased rollout
 
 ### Deploy Agents and Segregated Access
 
@@ -654,3 +626,12 @@ These stages emphasize controlled release, comprehensive monitoring, and risk mi
 - [CD Model Overview](cd-model-overview.md)
 - [Stages 1-6](cd-model-stages-1-6.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
+
+## Quick Reference
+
+- [Release Quality Thresholds](../../../reference/continuous-delivery/release-quality-thresholds.md) - Stage 9 quality thresholds
+- [Release Documentation](../../../reference/continuous-delivery/release-documentation.md) - Required release documents
+- [Deployment Rings](../../../reference/continuous-delivery/deployment-rings.md) - Ring-based rollout reference
+- [Rollback Procedures](../../../how-to-guides/continuous-delivery/rollback-procedures.md) - How to execute rollbacks
+- [Managing Feature Flags](../../../how-to-guides/continuous-delivery/managing-feature-flags.md) - Feature flag lifecycle
+- [Writing Release Notes](../../../how-to-guides/continuous-delivery/writing-release-notes.md) - Release notes format
