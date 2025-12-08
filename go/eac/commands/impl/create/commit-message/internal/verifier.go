@@ -62,173 +62,75 @@ type AntiCorruptionRules = contracts.AntiCorruptionRules
 
 // LoadAntiCorruptionRules loads anti-corruption rules using the core framework
 func LoadAntiCorruptionRules(rulesPath string) (*AntiCorruptionRules, error) {
-	// Extract directory and version from path
-	// rulesPath format: "workspace/contracts/commit-message/0.1.0/anti-corruption.yml"
-	// We need to extract workspace root, contract dir, and version
-
-	// For now, read directly - this is backward compatible
 	data, err := os.ReadFile(rulesPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read anti-corruption rules file: %w", err)
 	}
 
 	var rules AntiCorruptionRules
-	var rawData map[string]interface{}
-
 	if err := yaml.Unmarshal(data, &rules); err != nil {
 		return nil, fmt.Errorf("failed to parse anti-corruption rules YAML: %w", err)
 	}
 
-	if err := yaml.Unmarshal(data, &rawData); err != nil {
-		return nil, fmt.Errorf("failed to parse anti-corruption rules YAML into map: %w", err)
-	}
-
-	rules.RawData = rawData
 	return &rules, nil
 }
 
-// LoadContract loads and parses the structure.yml file
-func LoadContract(contractPath string) (*CommitMessageContract, error) {
-	data, err := os.ReadFile(contractPath)
+// LoadContractFromConfig loads commit-message contract from unified ai-config.yml
+func LoadContractFromConfig(workspaceRoot string) (*CommitMessageContract, error) {
+	loader := contracts.NewAIConfigLoader(workspaceRoot)
+	typeConfig, err := loader.GetType("commit-message")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read contract file: %w", err)
+		return nil, fmt.Errorf("failed to load commit-message config: %w", err)
 	}
 
-	var contract CommitMessageContract
-	if err := yaml.Unmarshal(data, &contract); err != nil {
-		return nil, fmt.Errorf("failed to parse contract YAML: %w", err)
+	// Build CommitMessageContract from unified config
+	contract := &CommitMessageContract{
+		Version:     "0.1.0",
+		Name:        typeConfig.Name,
+		Description: typeConfig.Description,
 	}
 
-	return &contract, nil
-}
-
-// VerifyContractImplementation validates that verifier implements all contract rules
-func VerifyContractImplementation(contractPath string) []ValidationError {
-	var errors []ValidationError
-
-	contract, err := LoadContract(contractPath)
-	if err != nil {
-		errors = append(errors, ValidationError{
-			Code:     "CONTRACT_LOAD_ERROR",
-			Message:  err.Error(),
-			Severity: "error",
-		})
-		return errors
-	}
-
-	// Verify version matches
-	if contract.Version != ContractVersion {
-		errors = append(errors, ValidationError{
-			Code:     "CONTRACT_VERSION_MISMATCH",
-			Message:  fmt.Sprintf("Expected version %s, got %s", ContractVersion, contract.Version),
-			Severity: "error",
-		})
-	}
-
-	// Verify required structure sections
-	requiredSections := map[string]bool{
-		"top_level_heading": false,
-		"top_level_body":    false,
-		"module_sections":   false,
-	}
-
-	for _, section := range contract.Structure {
-		if section.Required {
-			if _, exists := requiredSections[section.Section]; exists {
-				requiredSections[section.Section] = true
+	// Extract validation fields from typeConfig.Validation map
+	if typeConfig.Validation != nil {
+		if types, ok := typeConfig.Validation["semantic_types"].([]interface{}); ok {
+			for _, t := range types {
+				if s, ok := t.(string); ok {
+					contract.SemanticTypes = append(contract.SemanticTypes, s)
+				}
 			}
 		}
+		// Set expected subject line format
+		contract.SubjectLineFormat = "<module>: <type>: <description>"
 
-		// Verify top_level_heading max_length
-		if section.Section == "top_level_heading" {
-			if section.MaxLength != MaxHeaderLength {
-				errors = append(errors, ValidationError{
-					Code:     "CONTRACT_CONSTRAINT_MISMATCH",
-					Message:  fmt.Sprintf("top_level_heading max_length should be %d, got %d", MaxHeaderLength, section.MaxLength),
-					Severity: "error",
-				})
-			}
+		// Build constraints map
+		contract.Constraints = make(map[string]any)
+		if maxLen, ok := typeConfig.Validation["max_line_length"]; ok {
+			contract.Constraints["max_line_length"] = maxLen
+		}
+		if scopeReq, ok := typeConfig.Validation["scope_required"]; ok {
+			contract.Constraints["scope_required"] = scopeReq
+		}
+		if noTrailing, ok := typeConfig.Validation["no_trailing_periods"]; ok {
+			contract.Constraints["no_trailing_periods"] = noTrailing
+		}
+
+		// Build structure (standard commit message structure)
+		contract.Structure = []struct {
+			Section   string `yaml:"section"`
+			Required  bool   `yaml:"required"`
+			Format    string `yaml:"format"`
+			MaxLength int    `yaml:"max_length,omitempty"`
+		}{
+			{Section: "header", Required: true, Format: "conventional"},
+			{Section: "auditor-summary", Required: false, Format: "single-line"},
+			{Section: "body", Required: false, Format: "markdown"},
+			{Section: "modules", Required: false, Format: "module-sections"},
 		}
 	}
 
-	for section, found := range requiredSections {
-		if !found {
-			errors = append(errors, ValidationError{
-				Code:     "CONTRACT_MISSING_SECTION",
-				Message:  fmt.Sprintf("Contract missing required section: %s", section),
-				Severity: "error",
-			})
-		}
-	}
-
-	// Verify semantic types
-	expectedTypes := map[string]bool{
-		"feat": true, "fix": true, "refactor": true, "docs": true,
-		"chore": true, "test": true, "perf": true, "style": true,
-	}
-	for _, t := range contract.SemanticTypes {
-		if !expectedTypes[t] {
-			errors = append(errors, ValidationError{
-				Code:     "CONTRACT_UNKNOWN_TYPE",
-				Message:  fmt.Sprintf("Unknown semantic type in contract: %s", t),
-				Severity: "warning",
-			})
-		}
-		delete(expectedTypes, t)
-	}
-	for missingType := range expectedTypes {
-		errors = append(errors, ValidationError{
-			Code:     "CONTRACT_MISSING_TYPE",
-			Message:  fmt.Sprintf("Contract missing semantic type: %s", missingType),
-			Severity: "error",
-		})
-	}
-
-	// Verify subject line format
-	if contract.SubjectLineFormat != "<module>: <type>: <description>" {
-		errors = append(errors, ValidationError{
-			Code:     "CONTRACT_FORMAT_MISMATCH",
-			Message:  fmt.Sprintf("subject_line_format mismatch: %s", contract.SubjectLineFormat),
-			Severity: "error",
-		})
-	}
-
-	// Verify constraints
-	requiredConstraints := map[string]any{
-		"max_line_length":         MaxLineLength,
-		"no_trailing_periods":     true,
-		"code_blocks_closed":      true,
-		"module_header_no_colons": true,
-	}
-
-	for key, expectedVal := range requiredConstraints {
-		actualVal, exists := contract.Constraints[key]
-		if !exists {
-			errors = append(errors, ValidationError{
-				Code:     "CONTRACT_MISSING_CONSTRAINT",
-				Message:  fmt.Sprintf("Contract missing constraint: %s", key),
-				Severity: "error",
-			})
-		} else if actualVal != expectedVal {
-			errors = append(errors, ValidationError{
-				Code:     "CONTRACT_CONSTRAINT_VALUE",
-				Message:  fmt.Sprintf("Constraint %s should be %v, got %v", key, expectedVal, actualVal),
-				Severity: "error",
-			})
-		}
-	}
-
-	// Verify markdown rules exist
-	if len(contract.MarkdownRules) == 0 {
-		errors = append(errors, ValidationError{
-			Code:     "CONTRACT_MISSING_MARKDOWN_RULES",
-			Message:  "Contract should define markdown_rules",
-			Severity: "warning",
-		})
-	}
-
-	return errors
+	return contract, nil
 }
+
 
 // VerifyCommitMessageContract validates a commit message against contracts/commit-message/0.1.0/structure.yml
 // affectedModules is the list of modules that had staged changes

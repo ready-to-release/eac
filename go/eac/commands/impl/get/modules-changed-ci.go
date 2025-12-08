@@ -5,7 +5,7 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --pr-base <sha>: For PRs, the base SHA to compare against
-//   --workflow <name>: Workflow name to find last success (default: "Change Trigger")
+//   --workflow <name>: Workflow name to find last success (default: "CI Trigger")
 //   --branch <name>: Branch to check for last success (default: main)
 //   --filter-workflows: Only include modules that have a ci-{module}.yaml workflow file
 package get
@@ -53,7 +53,7 @@ func GetChangedModulesCI() int {
 
 	// Parse flags
 	prBase := ""
-	workflow := "Change Trigger"
+	workflow := "CI Trigger"
 	branch := "main"
 	filterWorkflows := false
 

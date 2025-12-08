@@ -59,7 +59,7 @@ type GeneratorConfig struct {
 // GenerateWithContract generates AI output using a contract for validation
 //
 // This is a convenience function that:
-//  1. Loads the contract and anti-corruption rules
+//  1. Loads the AI config and anti-corruption rules
 //  2. Creates a validator
 //  3. Runs generation with retry on validation errors
 //
@@ -73,15 +73,9 @@ func GenerateWithContract(ctx context.Context, cfg *GeneratorConfig, prompt stri
 		return nil, fmt.Errorf("invalid generator config: %w", err)
 	}
 
-	// Load contract
-	loader := NewContractLoader(cfg.WorkspaceRoot, "ai/"+cfg.ContractName, cfg.ContractVersion)
-	contract, err := loader.LoadContract()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	// Load anti-corruption rules
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
+	// Load AI config
+	loader := NewAIConfigLoader(cfg.WorkspaceRoot)
+	antiCorruptionRules, err := loader.GetAntiCorruptionRules(cfg.ContractName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
@@ -89,14 +83,15 @@ func GenerateWithContract(ctx context.Context, cfg *GeneratorConfig, prompt stri
 	// Create validator based on contract type
 	var validator Validator
 	switch cfg.ContractName {
-	case "specifications":
-		validator = NewGherkinValidator(contract, antiCorruptionRules)
+	case "specs":
+		validator = NewGherkinValidatorFromConfig(loader, cfg.ContractName, antiCorruptionRules)
 	case "commit-message":
 		// For commit messages, we might not have a specific validator
 		// Just use anti-corruption filtering
 		validator = nil
 	default:
-		return nil, fmt.Errorf("unknown contract type: %s (no validator registered)", cfg.ContractName)
+		// No specific validator, just use anti-corruption filtering
+		validator = nil
 	}
 
 	// Configure retry

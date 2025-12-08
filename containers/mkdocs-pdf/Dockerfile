@@ -43,9 +43,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN npm install -g @mermaid-js/mermaid-cli \
     && npm cache clean --force
 
-# Chromium wrapper with container-safe and performance flags (for mermaid-cli)
+# Chromium wrapper with container-safe flags (for mermaid-cli)
 # NOTE: Do not redirect stderr - Puppeteer needs it to get the WebSocket debugging port
-RUN printf '#!/bin/sh\nexec /usr/bin/chromium \\\n  --no-sandbox \\\n  --disable-setuid-sandbox \\\n  --disable-dev-shm-usage \\\n  --disable-gpu \\\n  --disable-software-rasterizer \\\n  --disable-extensions \\\n  --disable-features=TranslateUI \\\n  --js-flags="--max-old-space-size=4096" \\\n  --single-process \\\n  "$@"\n' > /usr/local/bin/chromium-wrapper \
+# NOTE: --single-process removed - causes instability under parallel load
+RUN printf '#!/bin/sh\nexec /usr/bin/chromium \\\n  --no-sandbox \\\n  --disable-setuid-sandbox \\\n  --disable-dev-shm-usage \\\n  --disable-gpu \\\n  --disable-software-rasterizer \\\n  --disable-extensions \\\n  --disable-features=TranslateUI \\\n  --js-flags="--max-old-space-size=2048" \\\n  "$@"\n' > /usr/local/bin/chromium-wrapper \
     && chmod +x /usr/local/bin/chromium-wrapper
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chromium-wrapper

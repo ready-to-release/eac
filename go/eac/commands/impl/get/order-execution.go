@@ -5,6 +5,7 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+//   --no-deps: Don't expand to include transitive dependencies (only order the specified modules)
 package get
 
 import (
@@ -28,8 +29,9 @@ func GetExecutionOrder() int {
 		return 1
 	}
 
-	// Collect module monikers from command line args
+	// Collect module monikers from command line args and parse flags
 	var monikers []string
+	includeDeps := true // Default: expand dependencies
 	skipNext := false
 	for i, arg := range os.Args {
 		if i < 4 { // Skip program name, "get", "execution", "order"
@@ -39,7 +41,12 @@ func GetExecutionOrder() int {
 			skipNext = false
 			continue
 		}
-		// Skip flags
+		// Parse --no-deps flag
+		if arg == "--no-deps" {
+			includeDeps = false
+			continue
+		}
+		// Skip output format flags
 		if arg == "--as-yaml" || arg == "--as-json" || arg == "--as-toml" {
 			continue
 		}
@@ -52,7 +59,7 @@ func GetExecutionOrder() int {
 
 	// Use the shared get command helper
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
-		plan, err := repository.CalculateExecutionOrder(monikers, workspaceRoot)
+		plan, err := repository.CalculateExecutionOrder(monikers, workspaceRoot, includeDeps)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate execution order: %w", err)
 		}

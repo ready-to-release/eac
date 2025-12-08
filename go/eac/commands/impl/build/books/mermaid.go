@@ -291,6 +291,7 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 		"-t", "dark",        // Theme (dark for PDF)
 		"-b", "transparent", // Background
 		"--configFile", "/docs/containers/mkdocs-pdf/mermaid-config.json", // Disable htmlLabels for PDF compatibility
+		"-p", "/docs/containers/mkdocs-pdf/puppeteer-config.json", // Puppeteer config for container environment
 	}
 
 	// Add user spec in DinD mode to avoid permission issues
@@ -351,8 +352,9 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 		return 0, nil
 	}
 
-	// Determine worker count (max 8 parallel renders, or fewer if less work)
-	maxWorkers := 8
+	// Determine worker count (max 4 parallel renders to avoid overwhelming Chromium)
+	// Each worker spawns a Docker container with Chromium, so we keep this conservative
+	maxWorkers := 4
 	if maxWorkers > len(toRender) {
 		maxWorkers = len(toRender)
 	}
