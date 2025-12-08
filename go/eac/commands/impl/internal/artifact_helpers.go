@@ -299,18 +299,17 @@ func ValidateArtifactsWithDependencies(
 		return nil, fmt.Errorf("failed to resolve dependencies: %w", err)
 	}
 
-	// Load build manifest to get requested artifacts for each module
+	// Load build manifest to get requested artifacts and platform info for each module
 	buildOutputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Build)
-	manifest, err := LoadManifest(buildOutputDir)
+	manifest, _ := LoadManifest(buildOutputDir)
+
+	// Extract requested artifacts from manifest
 	requestedArtifactsMap := make(map[string][]string)
-	if err == nil && manifest != nil {
-		// Extract requested artifacts for all modules
+	if manifest != nil {
 		for moniker, moduleBuild := range manifest.Modules {
 			requestedArtifactsMap[moniker] = moduleBuild.RequestedArtifacts
 		}
 	}
-	// If manifest doesn't exist or can't be loaded, requestedArtifactsMap will be empty
-	// and validation will check all artifacts (fallback behavior)
 
 	// Validate each module
 	results := &ValidationResults{
@@ -321,8 +320,8 @@ func ValidateArtifactsWithDependencies(
 	for moniker := range allModules {
 		requestedArtifacts := requestedArtifactsMap[moniker]
 
-		// For dependencies, use the platform from the manifest (where they were actually built)
-		// This ensures cross-platform validation works (e.g., Windows test validating Linux-built deps)
+		// For dependencies, use the platform from manifest (where they were built)
+		// This supports cross-platform CI (e.g., Linux build with --all, Windows test)
 		resolveOS, resolveArch := targetOS, targetArch
 		if moniker != targetModule && manifest != nil {
 			if platforms := manifest.GetPlatformsForModule(moniker); len(platforms) > 0 {
