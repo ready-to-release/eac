@@ -1068,6 +1068,8 @@ func TestStartContainer_Unit(t *testing.T) {
 	defer mockClient.AssertExpectations(t)
 
 	// Test successful start with TTY resize
+	// Note: ContainerResize is only called when terminal.GetSize() returns valid dimensions.
+	// In CI environments without a TTY, this won't be called.
 	mockClient.On("ContainerStart", mock.Anything, "container123", mock.Anything).
 		Return(nil).Once()
 	mockClient.On("ContainerInspect", mock.Anything, "container123").
@@ -1075,7 +1077,7 @@ func TestStartContainer_Unit(t *testing.T) {
 			Config: &container.Config{Tty: true},
 		}, nil).Once()
 	mockClient.On("ContainerResize", mock.Anything, "container123", mock.Anything).
-		Return(nil).Once()
+		Return(nil).Maybe() // Optional - only called when terminal size is available
 
 	err := host.StartContainer("container123")
 	assert.NoError(t, err)
