@@ -203,13 +203,20 @@ func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite st
 
 	// Read actual test log from the correct output directory
 	// Test logs are output to out/test/{suite}/{module}/test.log
-	logPath := filepath.Join("out", "test", suite, module.Moniker, "test.log")
-	logContent := readLogTail(logPath, 100) // Last 100 lines for test failures
+	// For modules with subpackages, logs may be in subdirectories
+	moduleDir := filepath.Join("out", "test", suite, module.Moniker)
+	rootLogPath := filepath.Join(moduleDir, "test.log")
+	logContent := readLogTail(rootLogPath, 100) // Last 100 lines for test failures
+
+	if logContent == "" {
+		// Try to find test.log files in subdirectories
+		logContent = findAndReadSubpackageLogs(moduleDir, 100)
+	}
 
 	if logContent != "" {
 		diagnostics += f.Section(Emoji("diagnostics")+" Test Log (last 100 lines)", f.CodeBlock("", logContent))
 	} else {
-		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Tests failed - no log file found at %s", logPath))
+		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Tests failed - no log file found in %s", moduleDir))
 	}
 
 	// Show test timing if available
@@ -219,6 +226,36 @@ func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite st
 	}
 
 	return diagnostics
+}
+
+// findAndReadSubpackageLogs searches for test.log files in subdirectories and combines their content
+func findAndReadSubpackageLogs(moduleDir string, maxLines int) string {
+	var logs []string
+
+	err := filepath.Walk(moduleDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors
+		}
+		if !info.IsDir() && info.Name() == "test.log" {
+			content := readLogTail(path, 50) // Fewer lines per subpackage
+			if content != "" {
+				relPath, _ := filepath.Rel(moduleDir, path)
+				logs = append(logs, fmt.Sprintf("=== %s ===\n%s", relPath, content))
+			}
+		}
+		return nil
+	})
+
+	if err != nil || len(logs) == 0 {
+		return ""
+	}
+
+	// Combine logs, limiting total output
+	combined := ""
+	for _, log := range logs {
+		combined += log + "\n\n"
+	}
+	return combined
 }
 
 func testConfigSection(f *SummaryFormatter, module *config.Module, suite string, cfg *config.EACConfig) string {
