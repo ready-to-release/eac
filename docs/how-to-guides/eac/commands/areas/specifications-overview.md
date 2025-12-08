@@ -1,39 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/specifications-overview.md
-
-## Soul
-
-BDD specification system using Gherkin with AI-powered generation from natural language, tag-based categorization, and integration with testing and risk controls.
-
-## Sections
-
-1. What are Specifications?
-2. When to Use Specifications
-3. Key Concepts
-   - Gherkin Syntax
-   - Feature Structure
-   - Tags
-   - Step Definitions
-4. Workflow Overview
-   - TDD Workflow (Spec First)
-   - Validation Workflow
-   - AI Generation
-5. Spec Organization
-   - Directory Structure
-   - Naming Conventions
-6. Integration Points
-   - With Testing
-   - With Validation
-   - With Risk Management
-   - With CI/CD
-7. Best Practices
-   - Writing Good Specs
-   - Do's
-   - Don'ts
-8. Next Steps
-9. Related Areas
--->
-
 # Specifications (BDD)
 
 Specifications in EAC use Gherkin syntax to define behavior-driven development (BDD) scenarios that serve as both documentation and executable tests.

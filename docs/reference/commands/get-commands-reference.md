@@ -1,29 +1,3 @@
-<!-- EDITOR
-# Editor: reference/commands/get-commands-reference.md
-
-## Soul
-
-Complete technical reference for get commands that output JSON for automation, scripting, and CI/CD integration. Includes detailed examples with jq processing, performance notes, and integration patterns.
-
-## Sections
-
-1. Overview
-2. All Get Commands (11 commands)
-3. Integration Patterns
-4. Advanced Usage with jq
-5. Performance Notes
-6. Best Practices
-7. Troubleshooting
-8. Command Reference Table
-
-## Notes
-
-- Performance warning: "get files is expensive (~2,690 files, ~19k tokens)"
-- jq examples are critical for scripting users
-- Links back to show-commands.md for human-readable alternatives
-
--->
-
 # Get Commands Reference
 
 **Purpose**: Get commands output structured JSON data for automation, scripting, and CI/CD integration.

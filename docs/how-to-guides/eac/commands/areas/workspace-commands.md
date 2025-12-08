@@ -1,29 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/workspace-commands.md
-
-## Soul
-
-Command reference for workspace management covering create, commit, pull, merge, pr, remove, and show workspaces commands with AI-powered commit messages and PR descriptions.
-
-## Sections
-
-1. Quick Reference
-2. work create
-   - Synopsis, Description, Arguments, Flags
-   - Examples, Output, Exit Codes
-3. work commit (AI-generated messages)
-4. work pull (rebase sync)
-5. work merge (squash by default)
-6. work pr (AI-generated description)
-7. work remove
-8. show workspaces
-9. Common Workflows
-   - Feature Development
-   - Solo Development
-   - Parallel Development
-10. Related Documentation
--->
-
 # Workspace Commands
 
 Command reference for EAC's workspace management system.

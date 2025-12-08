@@ -1,35 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/specifications/bdd-development-workflow.md
-
-## Soul
-
-Complete BDD development workflow from discovery through implementation and validation, integrating Event Storming, Example Mapping, TDD, and specification evolution.
-
-## Sections
-
-1. Workflow Overview
-2. Discovery Phase
-3. Step 1: Event Storming
-4. Step 2: Example Mapping
-5. Step 3: Create Specification
-6. Step 4: Document Questions
-7. Implementation Phase
-8. Step 1: Write Step Definitions
-9. Step 2: Apply Canon TDD
-10. Step 3: Create Unit Tests
-11. Step 4: Implement Production Code
-12. Validation Phase
-13. Step 1: Run All Tests
-14. Step 2: Verify Coverage
-15. Step 3: Stakeholder Validation
-16. Review Phase
-17. During Implementation
-18. After Implementation
-19. File Structure
-20. Definition of Done
-21. Related
--->
-
 # BDD Development Workflow
 
 How to develop features using the three-layer testing approach.

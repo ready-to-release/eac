@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/index.md
-
-## Soul
-Task-oriented guides organized by functional area covering builds, tests, releases, pipelines, specifications, security, and more.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diataxis
--->
-
 # Command Areas
 
 This section organizes command guides by functional area. Each area includes overview, commands, and configuration guides for related functionality.

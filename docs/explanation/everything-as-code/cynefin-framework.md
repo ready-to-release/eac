@@ -1,39 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/everything-as-code/cynefin-framework.md
-
-## Soul
-
-Uses the Cynefin framework to explain why compliance can and should be automated by demonstrating that most compliance requirements are "Complicated" (rule-based, determinable) rather than "Complex" (emergent, requiring expert judgment).
-
-## Sections
-
-1. The Cynefin Framework
-   - The Four Domains
-     - Clear Domain (sense-categorize-respond)
-     - Complicated Domain (sense-analyze-respond)
-     - Complex Domain (probe-sense-respond)
-     - Chaotic Domain (act-sense-respond)
-2. Where Compliance Actually Lives
-   - The Common Misunderstanding
-   - The Reality
-   - The Critical Implication
-3. Enabling vs. Governing Constraints
-   - Enabling Constraints (Complex Domain)
-   - Governing Constraints (Complicated Domain)
-   - Why This Distinction Matters
-4. The Domain Shift
-   - Traditional Approach: Treating Complicated as Chaotic
-   - Modern Approach: Recognizing Complicated as Automatable
-5. The Insight: Shift Left on Complexity
-   - Instead of Complex (Manual, Expert-Driven)
-   - Make it Complicated (Automated, Rule-Based)
-   - Eventually Make it Clear (Best Practice, Routine)
-6. Moving Between Domains
-7. What This Means
-8. References
-
--->
-
 # Understanding Compliance Through Cynefin
 
 > **Why compliance can and should be automated**

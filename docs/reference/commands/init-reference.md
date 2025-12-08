@@ -1,23 +1,3 @@
-<!-- EDITOR
-# Editor: reference/commands/init-reference.md
-
-## Soul
-
-Complete technical reference for the init command including provider comparison, all configuration options, environment variables, and technical implementation details.
-
-## Sections
-
-1. Overview
-2. AI Provider Comparison
-3. Provider Selection Guide
-4. Configuration File Format
-5. Environment Variable Setup
-6. Configuration File Location
-7. Troubleshooting
-8. Technical Notes
-
--->
-
 # Init Command Reference
 
 ## Overview

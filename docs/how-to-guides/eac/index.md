@@ -1,17 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/eac/index.md
-
-## Soul
-
-Hub for all EAC (Everything as Code) tooling guides: CLI commands, BDD specifications, configuration, and module management.
-
-## Sections
-
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # EAC Guides
 
 Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, write BDD specifications, configure integrations, and manage modules.

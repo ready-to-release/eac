@@ -1,17 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/specifications/index.md
-
-## Soul
-
-Index for BDD specification guides covering Event Storming, Example Mapping, Gherkin, and specification workflows.
-
-## Sections
-
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # BDD Specification Guides
 
 Problem-oriented guides for working with behavior-driven development specifications. These guides cover the BDD workflow, collaboration techniques like Event Storming and Example Mapping, and working with Gherkin feature files.

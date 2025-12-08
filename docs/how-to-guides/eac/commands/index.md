@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/eac/commands/index.md
-
-## Soul
-Task-oriented guides for using core EAC commands including help, commit, init, and squash message generation.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diataxis
--->
-
 # Command Guides
 
 This section provides practical guides for using EAC commands.

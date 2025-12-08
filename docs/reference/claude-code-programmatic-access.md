@@ -1,18 +1,3 @@
-<!-- EDITOR
-# Editor: reference/claude-code-programmatic-access.md
-
-## Soul
-
-Technical reference for programmatic Claude API-like access using Max subscription via CLI print mode, Python/TypeScript SDKs, and Vercel AI integration.
-
-## Sections
-
-1. Overview
-2. Methods
-3. Important Notes
-4. Sources
--->
-
 # Claude Code Programmatic Access
 
 How to use a Claude CLI/Max subscription to make API-like calls to Claude programmatically.

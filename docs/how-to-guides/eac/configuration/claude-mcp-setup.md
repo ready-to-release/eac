@@ -1,29 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/configuration/claude-mcp-setup.md
-
-## Soul
-
-Step-by-step MCP server configuration for Claude Code integration covering Commands Server (local Go) and GitHub Server (official) with platform-specific shell setup.
-
-## Sections
-
-1. Introduction
-2. Setup
-   - Configure shell profile (PowerShell/Bash)
-   - Generate GitHub token
-   - Restart Claude Code
-3. Verify Setup
-4. How It Works
-5. Troubleshooting
-6. Configuration Files
-7. Resources
-
-## Notes
-
-- "IMPORTANT: Restart required" is critical timing constraint well-emphasized
-
--->
-
 # Claude Code MCP Server Setup
 
 This project uses MCP (Model Context Protocol) servers to give Claude access to:

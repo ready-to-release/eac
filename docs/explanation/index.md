@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/index.md
-
-## Soul
-Navigation hub for understanding-oriented documentation covering five major topic areas: Everything as Code, Specifications, Software Development Lifecycle, Continuous Delivery, and Compliance Transformation.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Explanation
 
 Understanding-oriented documentation that clarifies concepts, architecture, and design decisions across five major topic areas.

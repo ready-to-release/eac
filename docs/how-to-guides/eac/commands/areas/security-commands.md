@@ -1,28 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/security-commands.md
-
-## Soul
-
-Command reference for security scanning with 8 commands covering SAST, vulnerability scanning, IaC analysis, SBOM generation, secrets detection, compliance checking, and DAST with complete flag and exit code documentation.
-
-## Sections
-
-1. Quick Reference
-2. security
-3. scan sast
-4. scan vuln
-5. scan iac
-6. scan sbom
-7. scan secrets
-8. scan compliance
-9. scan zap
-10. Common Workflows
-11. Integration Patterns
-12. Best Practices
-13. Troubleshooting
-14. Related Documentation
--->
-
 # Security Commands
 
 Command reference for EAC's security scanning system.

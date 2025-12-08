@@ -1,28 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/show-commands.md
-
-## Soul
-
-Practical guide for using show commands to explore repository structure, modules, dependencies, and files with human-readable output for interactive debugging and exploration.
-
-## Sections
-
-1. Problem/Solution
-2. Key Benefits
-3. Available Show Commands
-4. Common Use Cases
-5. Typical Workflows
-6. Best Practices
-7. Summary
-
-## Notes
-
-- Focus on human-readable output and interactive use
-- Practical examples for common scenarios
-- Links to get-commands-reference.md for automation/scripting needs
-
--->
-
 # Show Commands
 
 **Problem**: Understanding repository structure, modules, dependencies, and files requires manual exploration.

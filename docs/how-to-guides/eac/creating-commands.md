@@ -1,21 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/eac/creating-commands.md
-
-## Soul
-
-Developer guide for creating new CLI commands providing structured comment header template for command metadata, flag definitions, and complete Go code template.
-
-## Sections
-
-1. Command File Header Template
-2. Header Field Descriptions
-3. Complete File Template
-4. Best Practices
-5. Testing Your Help Text
-6. Examples to Reference
-
--->
-
 # Creating CLI Commands
 
 This guide is for developers contributing new commands to the EAC CLI in `go/eac/commands/impl/`.

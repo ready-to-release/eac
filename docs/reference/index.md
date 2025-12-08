@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: docs/reference/index.md
-
-## Soul
-Central hub for all technical reference documentation, specifications, and API details in the EAC system.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Reference
 
 Technical reference material providing information-oriented documentation for the EAC system. Includes API specifications, command references, decision records, and architectural documentation.

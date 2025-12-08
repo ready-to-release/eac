@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: reference/specifications/index.md
-
-## Soul
-Technical reference for Gherkin specification standards, TDD workflows, tag conventions, and quality checklists.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diataxis
--->
-
 # Specification Reference
 
 This section provides technical reference documentation for writing and organizing Gherkin specifications. Find TDD workflows, naming conventions, tag references, quality standards, and structural patterns.

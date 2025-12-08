@@ -1,20 +1,3 @@
-<!-- EDITOR
-# Editor: reference/repository-layout.md
-
-## Soul
-
-Explains monorepo module boundaries, distinguishing deployable vs supporting modules with contract-based configuration.
-
-## Sections
-
-1. Overview
-2. Repository Structure
-3. Module Categories
-4. Module Configuration
-5. Module Types
-6. References
--->
-
 # Repository Layout and Module Structure
 
 ## Overview

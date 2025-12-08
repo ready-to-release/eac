@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: reference/commands/index.md
-
-## Soul
-Technical reference documentation for command syntax, parameters, and output formats.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diataxis
--->
-
 # Command Reference
 
 This section provides technical reference documentation for EAC commands. Find detailed syntax specifications, parameter definitions, output schemas, and API contracts.

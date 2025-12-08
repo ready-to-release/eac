@@ -1,20 +1,3 @@
-<!-- EDITOR
-# Editor: index.md
-
-## Soul
-
-Root documentation entry point positioning r2r as an extensible CLI for Everything-as-Code workflows and this repository as both the tool and a working example.
-
-## Sections
-
-1. What is r2r (Ready to Release)?
-2. Why Everything as Code?
-3. Documentation Navigation
-4. Repository Modules
-5. Working with Documentation
-
--->
-
 # Everything as Code
 
 > **Help turn every commit into deployable, compliant software you can trust**

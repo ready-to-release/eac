@@ -1,32 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/validate-overview.md
-
-## Soul
-
-Repository integrity validation system checking contract schemas, dependency consistency, test tags, module hierarchy, file ownership, markdown syntax, and Go tidiness with sequential validation workflow.
-
-## Sections
-
-1. What is the Validation System?
-2. When to Use Validate Commands
-3. Common Use Cases
-4. Key Concepts
-   - Validation Types
-   - Exit Codes
-   - Contract Files
-5. Workflow Overview
-   - Recommended Validation Order
-   - When to Run Each
-6. Integration Points
-   - With Build
-   - With Test
-   - Full CI Pipeline
-7. Best Practices
-8. Troubleshooting
-9. Next Steps
-10. Related Areas
--->
-
 # Validation System
 
 The validation system in EAC ensures repository integrity across contracts, dependencies, configurations, and code quality.

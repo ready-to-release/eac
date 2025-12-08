@@ -1,31 +1,3 @@
-<!-- EDITOR
-# Editor: reference/commands/commit-reference.md
-
-## Soul
-
-Complete technical reference for the commit command including all flags, commit types, validation rules, debug mode, pre-commit hooks, and advanced configuration.
-
-## Sections
-
-1. Command Syntax
-2. Options and Flags
-3. Commit Types
-4. Generated Format
-5. Debug Mode
-6. Validation and Retry Logic
-7. Integration with Work Command
-8. Advanced Usage
-9. Configuration
-10. Performance
-11. Example Outputs
-
-## Related Files
-
-- [How-to Guide](../../how-to-guides/eac/commands/commit-command.md) - Quick start and common workflows
-- [AI Process Explanation](../../how-to-guides/eac/commands/commit-ai-process.md) - How the AI generation works
-
--->
-
 # Commit Command Reference
 
 Complete technical reference for the `commit` command.

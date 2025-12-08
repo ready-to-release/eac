@@ -1,35 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/everything-as-code/compliance-velocity-paradox.md
-
-## Soul
-
-Problem statement articulating the fundamental contradiction facing regulated industries: increasing regulatory pressure versus accelerating market demands, with DORA research proving high performance is achievable in regulated contexts.
-
-## Sections
-
-1. The Challenge
-   - The Regulatory Landscape
-2. The Real Cost of Manual Compliance
-3. Evidence from Research: DORA Metrics Apply to Regulated Industries
-   - Industry Representation in DORA Research
-   - High Performers Exist in Regulated Industries
-   - The Critical Insights
-   - How High Performers Achieve These Results
-4. Why Manual Processes Cannot Scale
-   - Human Capacity Ceiling
-   - Knowledge Silos
-   - Inconsistency
-   - Poor Scalability
-   - Retroactive Reconstruction
-5. The Vicious Cycle
-6. The Alternative: Everything as Code
-7. References
-
-## Notes
-
-The Regulatory Landscape section is very comprehensive but lengthy - may overwhelm readers seeking core concepts.
--->
-
 # The Compliance-Velocity Paradox
 
 > **The fundamental contradiction facing regulated industries**

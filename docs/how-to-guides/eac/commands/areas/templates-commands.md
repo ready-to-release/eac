@@ -1,28 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/templates-commands.md
-
-## Soul
-
-Command reference for template system with 7 commands for applying templates with value substitution, installing without processing, and listing/extracting placeholders.
-
-## Sections
-
-1. Quick Reference
-2. templates
-3. templates apply
-4. templates apply docs
-5. templates install
-6. templates install reports
-7. templates list
-8. templates tags
-9. Common Workflows
-10. Template Syntax
-11. Integration Patterns
-12. Best Practices
-13. Troubleshooting
-14. Related Documentation
--->
-
 # Templates Commands
 
 Command reference for EAC's template system.

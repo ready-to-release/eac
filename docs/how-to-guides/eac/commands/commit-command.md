@@ -1,26 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/commit-command.md
-
-## Soul
-
-Practical quick-start guide for the AI-powered commit command with common workflows and basic usage patterns.
-
-## Sections
-
-1. Problem/Solution
-2. Key Benefits
-3. Quick Start
-4. Common Workflows
-5. Best Practices
-6. Troubleshooting
-
-## Related Files
-
-- [Reference Guide](../../../reference/commands/commit-reference.md) - Complete command options and technical details
-- [AI Process Explanation](./commit-ai-process.md) - How the AI generation works
-
--->
-
 # Commit Command
 
 **Problem**: Writing high-quality, semantic commit messages is time-consuming and requires consistency across team members, especially for complex multi-module changes.

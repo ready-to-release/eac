@@ -1,31 +1,3 @@
-<!-- EDITOR
-# Editor: reference/commands/describe-command.md
-
-## Soul
-
-API reference for get commands (formerly describe commands) which outputs structured JSON for shell completion, MCP server integration, and programmatic access to command metadata.
-
-## Sections
-
-1. Overview
-2. Command Syntax
-3. Output Schema
-4. JSON Structure Reference
-5. Field Definitions
-6. Example Output
-7. Usage Examples
-8. Output Characteristics
-9. Error Handling
-10. Implementation Notes
-
-## Notes
-
-- Reference-oriented documentation focusing on API/schema specification
-- jq examples demonstrate programmatic usage patterns
-- Technical details for integration developers
-
--->
-
 # Get Commands Reference
 
 ## Overview

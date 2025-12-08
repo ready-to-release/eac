@@ -1,25 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/books-commands.md
-
-## Soul
-
-Command reference for books with auto-detecting build, show books, and validate books commands supporting PDF generation and staging directory workflows.
-
-## Sections
-
-1. Quick Start
-2. Command Reference
-3. Output Structure
-4. Workflows
-5. Integration with Existing Commands
-6. MCP Tool Mapping
-7. Error Handling
-8. Best Practices
-9. Troubleshooting
-10. Summary
-11. Next Steps
--->
-
 # Books Commands
 
 **Problem**: You need to build documentation with aggregated content, view configured books, and validate book configuration.

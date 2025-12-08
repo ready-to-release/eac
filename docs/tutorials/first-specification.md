@@ -1,26 +1,3 @@
-<!-- EDITOR
-# Editor: tutorials/first-specification.md
-
-## Soul
-
-Learning-oriented tutorial teaching developers how to write Gherkin feature specifications using the Given/When/Then pattern with concrete examples and best practices.
-
-## Sections
-
-1. What is a Feature Specification?
-2. Step 1: Understand the Structure
-3. Step 2: Choose Your Approach
-4. Step 3: Create Your First Specification
-5. Step 4: Understand the Tags
-6. Step 5: Write Effective Scenarios
-7. Step 6: Validate Your Specification
-8. Step 7: Run Your Specification
-9. Step 8: Explore Real Examples
-10. Advanced: Using Background
-11. Best Practices
-12. Next Steps
--->
-
 # Your First Feature Specification
 
 This tutorial teaches you how to write Gherkin feature specifications that describe system behavior in a structured, testable format.

@@ -1,30 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/security-configuration.md
-
-## Soul
-
-Configuration reference for security scanners including Semgrep rules, Trivy settings, secrets detection, IaC policies, compliance frameworks, OWASP ZAP, severity thresholds, SARIF output, and CI integration.
-
-## Sections
-
-1. Configuration Files
-2. Security Settings
-3. SAST Configuration
-4. Vulnerability Scanning
-5. Secrets Detection
-6. IaC Scanning
-7. Compliance Scanning
-8. SBOM Generation
-9. DAST Configuration
-10. Severity Thresholds
-11. Output Configuration
-12. CI Integration
-13. Environment Variables
-14. Example Configurations
-15. Troubleshooting
-16. Related Documentation
--->
-
 # Security Configuration
 
 This guide covers configuration options for EAC's security scanning system, including scanner settings, thresholds, and compliance frameworks.

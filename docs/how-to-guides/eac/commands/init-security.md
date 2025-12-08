@@ -1,22 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/init-security.md
-
-## Soul
-
-Security-focused guide for API key acquisition, management, and best practices when configuring AI providers. Emphasizes secure configuration patterns and credential protection.
-
-## Sections
-
-1. Overview
-2. Getting API Keys
-3. Security Best Practices
-4. API Key Management
-5. Team Security Guidelines
-6. Secure Environment Setup
-7. Security Checklist
-
--->
-
 # Init Command Security Guide
 
 ## Overview

@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/lifecycle/index.md
-
-## Soul
-Navigation page introducing four lifecycle phases with interactive diagram, emphasizing DevOps model where teams handle both development and operations.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Software Development Lifecycle
 
 The complete software lifecycle from initiation through end-of-life, balancing regulatory compliance with continuous delivery in a DevOps model.

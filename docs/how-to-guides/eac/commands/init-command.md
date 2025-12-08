@@ -1,22 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/init-command.md
-
-## Soul
-
-Quick start guide for initializing AI provider configuration with simple examples and basic usage patterns.
-
-## Sections
-
-1. Purpose
-2. Quick Reference
-3. Command Syntax
-4. Usage Examples
-5. Next Steps
-6. Common Use Cases
-7. Related Resources
-
--->
-
 # Init Command
 
 ## Purpose

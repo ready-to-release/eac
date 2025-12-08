@@ -1,28 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/specifications/working-with-specifications.md
-
-## Soul
-
-Practical guide for writing and organizing Gherkin specifications using the unified Rule/Scenario format.
-
-## Sections
-
-1. Quick Start
-2. Writing Rule Blocks
-3. Writing Scenario Blocks
-4. File Organization
-5. From Example Mapping Cards to Gherkin
-6. Updating Specifications
-7. Common Patterns
-8. Related Documentation
-
-## Notes
-
-- Focused how-to guide with practical steps
-- Links to explanation docs for conceptual content
-- ~150-200 lines with actionable guidance
--->
-
 # Working with specifications
 
 Practical guide for writing and organizing Gherkin specifications.

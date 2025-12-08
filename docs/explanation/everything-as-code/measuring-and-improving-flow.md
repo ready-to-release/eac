@@ -1,33 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/everything-as-code/measuring-and-improving-flow.md
-
-## Soul
-
-Practical guide to continuous improvement through measurement using DORA metrics, Value Stream Mapping, and the six-step improvement cycle to systematically optimize delivery performance.
-
-## Sections
-
-1. The Continuous Improvement Principle
-2. Why Measurement Matters
-   - DORA Metrics as Outcome Indicators
-3. Value Stream Mapping: Finding the Bottlenecks
-   - What Gets Mapped
-4. What to Measure
-   - Outcome Metrics (DORA)
-   - Flow Metrics
-   - Process Metrics
-   - The Relationship
-5. The Continuous Improvement Cycle
-   - Step 1: Measure Current State
-   - Step 2: Map the Value Stream
-   - Step 3: Identify the Constraint
-   - Step 4: Improve the Constraint
-   - Step 5: Validate the Improvement
-   - Step 6: Repeat
-6. Flow Engineering Workshops
-
--->
-
 # Measuring and Improving Flow
 
 > **How to continuously optimize delivery performance using DORA metrics and Value Stream Mapping**

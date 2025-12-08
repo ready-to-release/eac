@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: docs/reference/decision-records/index.md
-
-## Soul
-Archive of architectural decisions documenting the rationale behind key design choices in the EAC system.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Decision Records
 
 Architectural Decision Records (ADRs) documenting significant design choices and their rationale. Each record captures the context, decision, and consequences of important architectural decisions.

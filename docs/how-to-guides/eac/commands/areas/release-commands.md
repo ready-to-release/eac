@@ -1,35 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/release-commands.md
-
-## Soul
-
-Command reference for release management covering CalVer tag generation, changelog automation, CI status checking, version validation, and semver support for r2r-cli.
-
-## Sections
-
-1. Quick Reference
-2. release generate-module-calver
-   - Synopsis, Description, Arguments, Flags
-   - Examples, Output, Tag Format, Exit Codes
-3. release changelog (AI-generated)
-4. release this (comprehensive release)
-5. release pending
-6. release tag-pending
-7. release check-ci
-   - Output (Success)
-   - Output (Failure)
-8. release get-version
-9. validate release
-10. release r2r-cli (SemVer)
-    - Version Format
-11. Common Workflows
-    - Standard Module Release
-    - Full Release with Validation
-    - Tool Release (SemVer)
-    - CI/CD Integration
-12. Related Documentation
--->
-
 # Release Commands
 
 Command reference for EAC's release management system.

@@ -1,39 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/pipeline-commands.md
-
-## Soul
-
-Command reference for pipeline orchestration covering run (dependency-aware execution), wait (GitHub workflow polling), and status (CI state visualization).
-
-## Sections
-
-1. Quick Reference
-2. pipeline run - Execute with dependency order (synopsis, arguments, flags, examples, output, execution rules, exit codes)
-3. pipeline wait - Wait for GitHub workflows (synopsis, arguments, flags, examples, output, status progression, exit codes)
-4. pipeline status - Show CI status (synopsis, flags, examples, output, exit codes)
-5. Common Workflows
-   - CI/CD Pipeline Orchestration
-   - Pre-Release CI Check
-   - Manual Pipeline Trigger
-   - Dependency-Aware Execution
-   - Release Automation Script
-6. Integration Patterns
-   - GitHub Actions Integration
-   - Local Development
-   - Continuous Deployment
-7. Dependency Layer Execution
-   - How Layers Work
-   - Performance Benefits
-8. GitHub CLI Requirements
-   - Installation
-   - Authentication
-   - Required Permissions
-9. Best Practices
-10. Troubleshooting
-11. Pipeline CI Commands
-12. Related Documentation
--->
-
 # Pipeline Commands
 
 Command reference for EAC's pipeline orchestration system.

@@ -1,38 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/design-overview.md
-
-## Soul
-
-C4 model architecture design using Structurizr DSL with AI-powered diagram generation from code analysis, maintaining living documentation synchronized with module contracts.
-
-## Sections
-
-1. What is Architecture Design?
-2. When to Use Design Commands
-3. Key Concepts
-   - C4 Model
-   - Structurizr DSL
-   - Workspace Files
-   - AI Generation
-4. Workflow Overview
-   - Initial Diagram Creation
-   - Updating After Changes
-   - Team Collaboration
-5. Diagram Types
-   - System Context
-   - Container Diagram
-   - Component Diagram
-6. Integration Points
-   - With Module Contracts
-   - With Documentation
-   - With CI/CD
-7. Visualization
-   - Structurizr Lite
-   - Export Options
-8. Next Steps
-9. Related Areas
--->
-
 # Architecture Design
 
 Architecture design in EAC uses the C4 model and Structurizr DSL to create living, diagram-as-code documentation that stays synchronized with your codebase.

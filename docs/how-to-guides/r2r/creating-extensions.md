@@ -1,25 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/r2r/creating-extensions.md
-
-## Soul
-
-Comprehensive guide for creating Docker-based r2r extensions covering lifecycle, configuration schema, multi-language examples, publishing, and best practices.
-
-## Sections
-
-1. Problem/Solution
-2. How Extensions Work
-3. Quick Start
-4. Extension Configuration
-5. Full Configuration Schema
-6. Building Extensions
-7. Repository Access
-8. Publishing Extensions
-9. Best Practices
-10. Troubleshooting
-
--->
-
 # Creating r2r Extensions
 
 **Problem**: You want to add custom automation commands to r2r that can be shared across teams and run consistently in any environment.

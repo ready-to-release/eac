@@ -1,27 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/help-command.md
-
-## Soul
-
-Guide for using the help command to discover and understand EAC commands covering help output format, sections (NAME, SYNOPSIS, FLAGS, EXAMPLES), and verbose mode.
-
-## Sections
-
-1. Purpose
-2. Quick Reference
-3. Command Syntax
-4. Usage Modes
-5. Understanding Help Output
-6. Common Use Cases
-7. Tips and Best Practices
-8. Related Commands
-9. Troubleshooting
-10. Configuration
-11. Notes
-12. See Also
-
--->
-
 # Help Command
 
 ## Purpose

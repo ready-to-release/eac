@@ -1,24 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/transformation/compliance-as-code.md
-
-## Soul
-
-Defines five interconnected principles for modern compliance: Everything as Code, Continuous Validation, Shift-Left, Automated Evidence, and Executable Specifications working as an integrated system.
-
-## Sections
-
-1. Introduction
-2. The Five Principles
-3. Principle 1: Everything as Code
-4. Principle 2: Continuous Validation
-5. Principle 3: Shift-Left Compliance
-6. Principle 4: Automated Evidence Collection
-7. Principle 5: Executable Specifications
-8. The System Effect
-9. Implementation Sequence
-10. Related Documentation
--->
-
 # Compliance as Code Principles
 
 ## Introduction

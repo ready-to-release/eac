@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/eac/modules/index.md
-
-## Soul
-Guides for creating and configuring EAC modules and module types.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Module Management
 
 Guides for creating and configuring EAC modules and module types in your repository.

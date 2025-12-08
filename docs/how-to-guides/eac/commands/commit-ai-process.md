@@ -1,26 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/eac/commands/commit-ai-process.md
-
-## Soul
-
-Conceptual explanation of how the AI-powered commit message generation works, covering the 5-phase process, parallel module analysis, and intelligent validation with retry logic.
-
-## Sections
-
-1. Overview
-2. Five-Phase Generation Process
-3. Context Analysis Details
-4. Module Processing Strategy
-5. Validation and Retry Logic
-6. Understanding the Output
-
-## Related Files
-
-- [How-to Guide](./commit-command.md) - Quick start and common workflows
-- [Command Reference](../../../reference/commands/commit-reference.md) - Complete technical reference
-
--->
-
 # AI Commit Message Generation Process
 
 This document explains how the AI-powered commit message generation works under the hood.

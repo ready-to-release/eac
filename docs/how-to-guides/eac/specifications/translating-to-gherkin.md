@@ -1,25 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/specifications/translating-to-gherkin.md
-
-## Soul
-
-Translation guide mapping Example Mapping colored cards to Gherkin elements with step-by-step conversion from yellow story to blue rules to green scenarios.
-
-## Sections
-
-1. Card to Gherkin Mapping
-2. Step-by-Step Translation
-3. Step 1: Yellow Card → Feature
-4. Step 2: Blue Cards → Rules
-5. Step 3: Green Cards → Scenarios
-6. Step 4: Red Cards → Actions
-7. Complete Example
-8. Cards
-9. Gherkin Output
-10. Checklist
-11. Related
--->
-
 # Translating Example Maps to Gherkin
 
 How to convert Example Mapping cards into Gherkin specifications.

@@ -1,26 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/risks-configuration.md
-
-## Soul
-
-Configuration reference for OSCAL profiles, assessment results, AI prompts, risk domains, evidence mapping, and CI/CD integration with built-in catalogs.
-
-## Sections
-
-1. Configuration Files
-2. OSCAL Profile Configuration
-3. Assessment Results Configuration
-4. AI Configuration
-5. Risk Domains
-6. Evidence Mapping
-7. Environment Variables
-8. Validation Rules
-9. Integration Settings
-10. Example Configurations
-11. Troubleshooting
-12. Related Documentation
--->
-
 # Risk Management Configuration
 
 This guide covers configuration options for EAC's risk management system, including OSCAL profiles, AI prompts, and assessment settings.

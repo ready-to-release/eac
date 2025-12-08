@@ -1,17 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/index.md
-
-## Soul
-
-Master navigation hub for how-to guides organized by two main areas: EAC tooling and R2R CLI extensions.
-
-## Sections
-
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # How-to Guides
 
 Step-by-step guides to accomplish specific tasks. These problem-oriented guides help you use EAC commands and specifications, and extend the R2R CLI.

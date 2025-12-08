@@ -1,36 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/squash-message-command.md
-
-## Soul
-
-Guide for AI-powered squash commit message generation for GitHub PR workflow that synthesizes branch commits into cohesive narrative suitable for squash merge UI.
-
-## Sections
-
-1. Problem/Solution
-2. Key Benefits
-3. Quick Start
-4. Command Reference
-5. Differences from commit-message
-6. Message Format
-7. Typical Workflows
-8. Example Outputs
-9. Synthesis Guidelines
-10. Debug Mode
-11. Best Practices
-12. Troubleshooting
-13. Configuration
-14. Integration
-15. Advanced Usage
-16. Summary
-
-## Notes
-
-- Auditor-Summary section is unique compliance feature
-- ">>>>>>OUTPUT START<<<<<<" marker is unusual UX pattern
-
--->
-
 # Squash Message Command
 
 **Problem**: When preparing to squash merge a pull request in GitHub, you need to create a cohesive commit message that synthesizes all branch commits into a single narrative, rather than just listing individual commits.

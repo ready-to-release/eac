@@ -1,22 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/risks-commands.md
-
-## Soul
-
-Command reference for OSCAL-based risk management with 5 commands: AI profile generation, evidence-based assessment, report display, profile validation, and catalog validation.
-
-## Sections
-
-1. Quick Reference
-2. create risk
-3. create risk-assess
-4. show risk-report
-5. validate risk
-6. validate risk-catalog
-7. Common Workflows
-8. Related Documentation
--->
-
 # Risk Commands
 
 Command reference for EAC's risk management system.

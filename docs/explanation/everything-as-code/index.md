@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/everything-as-code/index.md
-
-## Soul
-Foundational concept explaining the Everything as Code paradigm as the practice of representing all system lifecycle aspects as version-controlled, executable, machine-readable artifacts.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Everything as Code
 
 The foundational practice of representing all aspects of your system lifecycle as version-controlled, executable, machine-readable artifacts.

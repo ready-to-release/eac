@@ -1,33 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/specifications/running-example-mapping.md
-
-## Soul
-
-Facilitation guide for 25-minute Example Mapping workshops using colored cards to discover stories, rules, examples, and questions collaboratively.
-
-## Sections
-
-1. Session Setup
-2. Time
-3. Participants
-4. Materials
-5. Session Steps
-6. Step 1: Present the Story (2 minutes)
-7. Step 2: Discover Rules (8 minutes)
-8. Step 3: Add Examples (12 minutes)
-9. Step 4: Capture Questions (ongoing)
-10. Step 5: Assess Readiness (3 minutes)
-11. Output: Gherkin Translation
-12. Cards → Gherkin
-13. Example Translation
-14. Session Signals
-15. Stop and Split
-16. Stop and Research
-17. Ready to Go
-18. Virtual Sessions
-19. Related
--->
-
 # Running Example Mapping Sessions
 
 How to facilitate Example Mapping workshops for requirements discovery.

@@ -1,35 +1,3 @@
-<!-- EDITOR
-# Editor: how-to-guides/commands/areas/workspace-overview.md
-
-## Soul
-
-Git worktree-based workspace system enabling parallel development with isolated AI coding sessions, branch-per-workspace model, and automated squash merges with AI-generated messages.
-
-## Sections
-
-1. What is Workspace Management?
-2. When to Use Workspaces
-3. Common Use Cases
-4. Key Concepts
-   - Git Worktrees
-   - Branch-per-Workspace
-   - Merge Strategies
-   - AI-Powered Commits
-5. Workflow Overview
-   - Solo Development (Direct Merge)
-   - Team Development (PR Workflow)
-   - Parallel Development
-6. Workspace Lifecycle
-   - States
-7. Integration Points
-   - With AI Coding Assistants
-   - With Commit Command
-   - With CI/CD
-8. Best Practices
-9. Next Steps
-10. Related Areas
--->
-
 # Workspace Management
 
 Workspace management in EAC enables parallel development using git worktrees, allowing multiple AI agent sessions to work simultaneously without conflicts.
