@@ -1,3 +1,20 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/books-overview.md
+
+## Soul
+
+Book system aggregates static markdown with dynamically-generated EAC command output through a 5-step preprocessing layer for mkdocs-site modules, producing unified documentation sites.
+
+## Sections
+
+1. What is a Book?
+2. Key Concepts
+3. When to Use Books
+4. Architecture Integration
+5. Quick Example
+6. Next Steps
+-->
+
 # Books: Documentation Aggregation
 
 **Problem**: Documentation sites need both static content (hand-written markdown) and dynamic content (generated from repository state like module listings, file inventories, dependency graphs).

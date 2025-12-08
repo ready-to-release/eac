@@ -118,6 +118,19 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	}
 
 	Logln(logWriter, "📚 Building MkDocs site using Docker")
+
+	// Check Docker availability first - fail fast if unavailable
+	if !IsDockerAvailable() {
+		errorMsg := "Docker is not available but required for MkDocs builds"
+		if IsDockerInDocker() {
+			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
+		} else {
+			errorMsg += "\nEnsure Docker is installed and the daemon is running"
+		}
+		Logln(logWriter, "❌ %s", errorMsg)
+		return 1
+	}
+
 	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
 	// Generate mkdocs.yml from site template
@@ -417,6 +430,18 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 // buildSingleBook builds a single book based on its output configuration
 func buildSingleBook(module *modules.ModuleContract, book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer) int {
 	bookOutput := book.GetOutput()
+
+	// Check Docker availability first - fail fast if unavailable
+	if !IsDockerAvailable() {
+		errorMsg := "Docker is not available but required for book builds"
+		if IsDockerInDocker() {
+			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
+		} else {
+			errorMsg += "\nEnsure Docker is installed and the daemon is running"
+		}
+		Logln(logWriter, "❌ %s", errorMsg)
+		return 1
+	}
 
 	// Determine build mode from book config
 	pdfMode := bookOutput == "pdf-dark" || bookOutput == "pdf-light" || bookOutput == "pdf-all"

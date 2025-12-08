@@ -1,3 +1,23 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/network-zones.md
+
+## Soul
+
+Network zone architecture with Zone A (Development/Test), Zone B (Production), and Zone C (Deployment Gateway) segregation.
+
+## Sections
+
+1. Zone Definitions
+2. Zone A - Development/Test
+3. Zone B - Production (Isolated)
+4. Zone C - Deployment Gateway
+5. Traffic Flow
+6. Platform Implementation
+7. Security Benefits
+8. When to Use Network Segregation
+9. Related
+-->
+
 # Network Zone Architecture
 
 Reference for network segregation zones in the CD Model.

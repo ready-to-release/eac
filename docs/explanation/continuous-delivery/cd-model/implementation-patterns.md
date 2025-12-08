@@ -1,3 +1,22 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/cd-model/implementation-patterns.md
+
+## Soul
+
+Implementation patterns documentation comparing Release Approval (RA: 1-2 weeks cycle, manual approval gates, regulated systems) and Continuous Deployment (CDE: 2-4 hours cycle, automated approval, non-regulated systems) with decision tree, traceability requirements, and Quick Reference links to extracted content.
+
+## Sections
+
+1. Introduction
+2. Release Approval (RA) Pattern
+3. Continuous Deployment (CDE) Pattern
+4. Compliance and Signoffs
+5. Pattern Selection Decision Tree
+6. Summary
+7. Next Steps
+8. Quick Reference
+-->
+
 # Implementation Patterns
 
 ## Introduction

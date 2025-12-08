@@ -1,10 +1,46 @@
+<!-- EDITOR
+# Editor: explanation/everything-as-code/cynefin-framework.md
+
+## Soul
+
+Uses the Cynefin framework to explain why compliance can and should be automated by demonstrating that most compliance requirements are "Complicated" (rule-based, determinable) rather than "Complex" (emergent, requiring expert judgment).
+
+## Sections
+
+1. The Cynefin Framework
+   - The Four Domains
+     - Clear Domain (sense-categorize-respond)
+     - Complicated Domain (sense-analyze-respond)
+     - Complex Domain (probe-sense-respond)
+     - Chaotic Domain (act-sense-respond)
+2. Where Compliance Actually Lives
+   - The Common Misunderstanding
+   - The Reality
+   - The Critical Implication
+3. Enabling vs. Governing Constraints
+   - Enabling Constraints (Complex Domain)
+   - Governing Constraints (Complicated Domain)
+   - Why This Distinction Matters
+4. The Domain Shift
+   - Traditional Approach: Treating Complicated as Chaotic
+   - Modern Approach: Recognizing Complicated as Automatable
+5. The Insight: Shift Left on Complexity
+   - Instead of Complex (Manual, Expert-Driven)
+   - Make it Complicated (Automated, Rule-Based)
+   - Eventually Make it Clear (Best Practice, Routine)
+6. Moving Between Domains
+7. What This Means
+8. References
+
+-->
+
 # Understanding Compliance Through Cynefin
 
 > **Why compliance can and should be automated**
 
 ## The Cynefin Framework
 
-The Cynefin framework, developed by Dave Snowden, helps us understand different types of problems and choose appropriate responses. It reveals why traditional approaches to compliance fail and why automation succeeds.
+The Cynefin framework, developed by Dave Snowden, helps us understand different types of problems and choose appropriate responses. From this perspective, it suggests why traditional approaches to compliance often fail and why automation can succeed.
 
 ### The Four Domains
 
@@ -61,7 +97,7 @@ Many organizations treat compliance as **Chaotic** or **Complex**:
 
 ### The Reality
 
-Most compliance requirements are actually **Complicated**:
+This framework suggests that most compliance requirements are actually **Complicated**:
 
 **Characteristics:**
 
@@ -222,9 +258,9 @@ flowchart LR
 
 ## What This Means
 
-The Cynefin framework reveals a fundamental truth:
+The Cynefin framework suggests an important insight:
 
-**Organizations treat compliance as Complex (requiring expert interpretation) when it's actually Complicated (following determinable rules).**
+**Organizations often treat compliance as Complex (requiring expert interpretation) when it may actually be Complicated (following determinable rules).**
 
 This misunderstanding drives manual processes, slow delivery, and high costs.
 

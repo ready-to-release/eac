@@ -1,3 +1,38 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/build-overview.md
+
+## Soul
+
+Type-aware build system that dispatches to correct tooling (Go, MkDocs, Docker) based on module contracts, supporting multi-platform compilation with compression options.
+
+## Sections
+
+1. What is the Build System?
+2. When to Use Build Commands
+3. Common Use Cases
+4. Key Concepts
+   - Module Type Dispatch
+   - Build Output Structure
+   - Platform Targets
+   - Compression Options
+5. Workflow Overview
+   - Local Development
+   - CI/CD Pipeline
+   - Release Build
+6. Module Type Details
+   - Go Modules
+   - MkDocs Sites
+   - Containers
+7. Integration Points
+   - With Testing
+   - With Validation
+   - With Release
+8. Best Practices
+9. Troubleshooting
+10. Next Steps
+11. Related Areas
+-->
+
 # Build System
 
 The build system in EAC provides type-aware compilation and artifact generation for all module types in your monorepo.

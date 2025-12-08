@@ -1,3 +1,41 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/build-configuration.md
+
+## Soul
+
+Configuration reference for build system covering module types, build flags, version injection, compression settings, output directories, and CI/CD integration patterns.
+
+## Sections
+
+1. Module Contract Configuration
+   - Module Type Declaration
+   - Supported Module Types
+2. Build Flags
+   - Go Build Flags
+   - Version Injection
+   - Compression Settings
+3. Output Configuration
+   - Build Output Directory
+   - Platform-Specific Outputs
+   - MkDocs Output
+4. Environment Variables
+5. Module Type Configurations
+   - go-cli Configuration
+   - mkdocs-site Configuration
+   - containers Configuration
+6. CI/CD Configuration
+   - GitHub Actions Build
+   - Release Build Configuration
+7. Build Hooks
+   - Pre-build Hook
+   - Post-build Hook
+8. Parallel Build Settings
+   - Default Behavior
+   - Controlling Parallelism
+9. Troubleshooting
+10. Related Documentation
+-->
+
 # Build Configuration
 
 This guide covers configuration options for EAC's build system, including module types, build flags, and output settings.

@@ -1,45 +1,33 @@
+<!-- EDITOR
+# Editor: docs/reference/index.md
+
+## Soul
+Central hub for all technical reference documentation, specifications, and API details in the EAC system.
+
+## Sections
+1. Overview
+2. In This Section
+3. Diátaxis
+-->
+
 # Reference
 
-**Information-oriented**: Technical reference material, specifications, and API documentation.
+Technical reference material providing information-oriented documentation for the EAC system. Includes API specifications, command references, decision records, and architectural documentation.
+
+## In This Section
+
+| Reference | Description |
+|-----------|-------------|
+| [Claude Code Programmatic Access](./claude-code-programmatic-access.md) | How to use Claude CLI/Max subscription for API-like programmatic calls |
+| [Repository Layout](./repository-layout.md) | Repository structure and organization |
+| [Risk Assessment](./risk-assessment.md) | Risk assessment documentation |
+| [Commands](./commands/) | Command-line interface reference documentation |
+| [Continuous Delivery](./continuous-delivery/) | CI/CD pipeline and deployment reference materials |
+| [Decision Records](./decision-records/) | Architectural decisions and their rationale |
+| [Specifications](./specifications/) | Technical specifications and standards |
 
 ---
 
-## Module Types
+*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | **Reference** | [Explanation](../explanation/)*
 
-<!-- book:insert module-types-summary -->
-
----
-
-## Available Reference Documentation
-
-### [Decision Records](decision-records/index.md)
-
-Architectural decisions and their rationale.
-
-### [Repository Layout](repository-layout.md)
-
-Repository structure and organization.
-
-### [Claude Code Programmatic Access](claude-code-programmatic-access.md)
-
-How to use Claude CLI/Max subscription for API-like programmatic calls.
-
----
-
-## What is Reference?
-
-Reference documentation is **information-oriented** content that provides technical descriptions of the system. It's like a dictionary - organized for easy lookup when you know what you're looking for.
-
-**Characteristics:**
-
-- Technical and precise
-- Organized for quick lookup
-- Consistent structure
-- Comprehensive coverage
-- Assumes you know what to look for
-
-**Not finding what you need?**
-
-- **Just getting started?** See [Tutorials](../tutorials/index.md)
-- **Need to solve a problem?** See [How-to Guides](../how-to-guides/index.md)
-- **Want to understand concepts?** See [Explanation](../explanation/index.md)
+**You are here:** Reference — information-oriented technical descriptions of the system.

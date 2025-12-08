@@ -1,3 +1,22 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/deployment-rings.md
+
+## Soul
+
+Ring-based deployment rollout: Ring 0 (Canary 1-5%), Ring 1 (Early Adopters 10-25%), Ring 2 (Standard 50-75%), Ring 3 (GA 100%).
+
+## Sections
+
+1. Ring Structure
+2. Ring 0 - Canary
+3. Ring 1 - Early Adopters
+4. Ring 2 - Standard Users
+5. Ring 3 - General Availability
+6. Progression Criteria
+7. When to Use Rings
+8. Related
+-->
+
 # Deployment Rings
 
 Reference for ring-based deployment rollout strategy.

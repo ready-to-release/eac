@@ -1,84 +1,28 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/core-concepts/index.md
+
+## Soul
+Index for core concepts establishing foundational CD knowledge: Unit of Flow and Deployable Modules.
+
+## Sections
+1. Overview
+2. In This Section
+3. Diátaxis
+-->
+
 # Core Concepts
 
 Foundational concepts that underpin the Continuous Delivery Model.
 
-These articles establish the building blocks you need to understand before diving into the 12-stage model and implementation practices.
+## In This Section
 
-**Start here** if you're new to the CD Model.
-
----
-
-## [Unit of Flow](unit-of-flow.md)
-
-Understanding the four interconnected components that enable Continuous Delivery.
-
-The Unit of Flow provides a mental model for how Continuous Delivery works by breaking it down into four discrete components:
-
-1. **Trunk**: The version-controlled timeline where code lives (Git repository)
-2. **Deployable Module**: The discrete body of work that gets built and deployed
-3. **Deployment Pipeline**: The automated process that validates and delivers changes (12 stages)
-4. **Live**: The runtime environment where software serves users
-
-**Key topics:**
-
-- How the four components relate to each other
-- Polyrepo vs monorepo patterns
-- Integration with CD Model stages 1-12
-- Common architectural patterns
-
-**Read this article to understand**: The big picture of how Continuous Delivery components work together.
+| Topic                                         | Description                                                    |
+| --------------------------------------------- | -------------------------------------------------------------- |
+| [Unit of Flow](./unit-of-flow.md)             | Four interconnected components that enable Continuous Delivery |
+| [Deployable Modules](./deployable-modules.md) | What gets built, versioned, and deployed through the CD Model  |
 
 ---
 
-## [Deployable Modules](deployable-modules.md)
+_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
 
-Understanding what gets built, versioned, and deployed through the CD Model.
-
-A Deployable Module is the fundamental building block of Continuous Delivery - the discrete body of work that is built, tested, and delivered as a cohesive whole.
-
-**Key topics:**
-
-- Definition and characteristics
-- Two types: Runtime Systems (services, apps) vs Versioned Components (libraries, containers)
-- Six versioning strategies: Implicit, CalVer, Release Number, SemVer, API versioning
-- Immutable artifacts and why they matter
-- Dependency management (internal and external)
-- Choosing the right granularity and boundaries
-
-**Read this article to understand**: What you're actually building and deploying, how to version it, and how to manage dependencies.
-
----
-
-## Why These Concepts Matter
-
-Understanding these core concepts is essential because:
-
-**Unit of Flow** provides the mental model for:
-
-- How code flows from development to production
-- Why trunk-based development matters
-- How deployable modules relate to repositories
-- Where the deployment pipeline fits in
-
-**Deployable Modules** establish:
-
-- What gets versioned and released
-- How to structure your repositories
-- When to create new deployable modules
-- How to manage dependencies between units
-
-These concepts are referenced throughout the CD Model documentation and are prerequisite knowledge for understanding implementation patterns.
-
----
-
-## Next Steps
-
-Once you understand these core concepts, you're ready to explore:
-
-- **[CD Model](../cd-model/index.md)**: The complete 12-stage framework
-- **[Workflow](../workflow/index.md)**: Trunk-based development and branching strategies
-- **[Testing](../testing/index.md)**: Testing strategy across all stages
-- **[Architecture](../architecture/index.md)**: Environment and repository patterns
-- **[Security](../security/index.md)**: Security integration throughout the pipeline
-
-Or return to the **[Continuous Delivery Overview](../index.md)** for the complete navigation.
+**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.

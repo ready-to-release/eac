@@ -1,3 +1,62 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/test-commands.md
+
+## Soul
+
+Command reference for testing system covering test, test suite, test list-suites, and test debug commands with full flag documentation and integration patterns.
+
+## Sections
+
+1. Quick Reference
+2. test
+   - Synopsis
+   - Description
+   - Arguments
+   - Flags
+   - Examples
+   - Output (Single Module - Verbose)
+   - Output (Multiple Modules - Summary)
+   - Output (With Failures)
+   - Supported Module Types
+   - Exit Codes
+3. test suite
+   - Synopsis
+   - Description
+   - Arguments
+   - Flags
+   - Examples
+   - Output
+   - Exit Codes
+4. test list-suites
+   - Synopsis
+   - Description
+   - Examples
+   - Output
+   - Exit Codes
+5. test debug
+   - Synopsis
+   - Description
+   - Flags
+   - Examples
+   - Output
+   - Verbose Output
+   - Exit Codes
+6. Common Workflows
+   - Local Development
+   - TDD Workflow
+   - CI/CD Pipeline
+   - Pre-commit Hook
+7. Coverage Workflows
+   - Generate Coverage
+   - View Coverage
+   - Coverage in CI
+8. Integration Patterns
+   - GitHub Actions
+   - Makefile
+9. Troubleshooting
+10. Related Documentation
+-->
+
 # Test Commands
 
 Command reference for EAC's testing system.

@@ -1,3 +1,19 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/merge-request-quality-gates.md
+
+## Soul
+
+Stage 3 quality gate specifications requiring peer approval, passing automated tests, coverage thresholds, and security scans.
+
+## Sections
+
+1. Gate Summary
+2. Automated Checks
+3. Compliance Artifacts
+4. Environment
+5. Related
+-->
+
 # Merge Request Quality Gates
 
 Quality gates for Stage 3 (Merge Request) validation.

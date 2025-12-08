@@ -1,3 +1,21 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/verification-types.md
+
+## Soul
+
+Verification type specifications: Installation (IV), Operational (OV), and Performance (PV) with Gherkin tag mappings.
+
+## Sections
+
+1. Summary
+2. Installation Verification (IV)
+3. Operational Verification (OV)
+4. Performance Verification (PV)
+5. Gherkin Tags
+6. Stage Mapping
+7. Related
+-->
+
 # Verification Types
 
 Reference for verification types used in acceptance testing (Stage 5).

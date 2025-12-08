@@ -1,3 +1,20 @@
+<!-- EDITOR
+# Editor: reference/specifications/spec-quality-checklist.md
+
+## Soul
+
+Specification health checklist with red flags, green indicators, review triggers, and metrics for detecting specification debt.
+
+## Sections
+
+1. Health Indicators
+2. Review Triggers
+3. Signs of Specification Debt
+4. Review Cadence
+5. Metrics to Track
+6. Related
+-->
+
 # Specification Quality Checklist
 
 Reference for evaluating specification health.

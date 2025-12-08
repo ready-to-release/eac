@@ -1,3 +1,28 @@
+<!-- EDITOR
+# Editor: how-to-guides/eac/creating-modules.md
+
+## Soul
+
+Comprehensive guide for defining modules in modules.yml covering module anatomy (moniker, type, files, dependencies), file ownership patterns, and workflow integration.
+
+## Sections
+
+1. Problem/Solution
+2. What is a Module?
+3. Quick Start
+4. Module Contract Structure
+5. Common Module Types
+6. Dependencies
+7. File Ownership
+8. Workflows
+9. Repository-Level Files
+10. Build and Test
+11. Best Practices
+12. Troubleshooting
+13. See Also
+
+-->
+
 # Creating Modules
 
 **Problem**: You want to add a new component to your repository with proper file ownership, dependencies, and build configuration.

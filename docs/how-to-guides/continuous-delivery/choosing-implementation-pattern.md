@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/choosing-implementation-pattern.md
+
+## Soul
+
+Decision tree guide for selecting between Release Approval and Continuous Deployment patterns based on regulatory requirements, test coverage, and operational constraints.
+
+## Sections
+
+1. Decision Tree
+2. Step-by-Step Selection
+3. Step 1: Check Regulatory Requirements
+4. Step 2: Assess Change Operations
+5. Step 3: Evaluate Test Automation
+6. Step 4: Check Feature Flag Availability
+7. Pattern Comparison
+8. Hybrid Approaches
+9. Migration Path
+10. Related
+-->
+
 # Choosing an Implementation Pattern
 
 How to select between Release Approval (RA) and Continuous Deployment (CDe) patterns.

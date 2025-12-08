@@ -1,5 +1,6 @@
 title: Continuous Delivery
 nav:
+  - index.md
   - choosing-implementation-pattern.md
   - choosing-repository-pattern.md
   - setting-up-precommit.md

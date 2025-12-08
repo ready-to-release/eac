@@ -1,3 +1,35 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/managing-feature-flags.md
+
+## Soul
+
+Complete lifecycle management guide for feature flags from creation through gradual rollout, monitoring, and cleanup to prevent technical debt.
+
+## Sections
+
+1. Flag Lifecycle
+2. Creating a Flag
+3. Step 1: Define the Flag
+4. Step 2: Implement in Code
+5. Step 3: Deploy
+6. Enabling a Flag (Rollout)
+7. Simple Boolean
+8. Percentage Rollout
+9. User-Targeted Rollout
+10. Time-Based Flag
+11. Monitoring Flags
+12. Emergency Disable
+13. Removing Flags
+14. When to Remove
+15. Cleanup Steps
+16. Example Cleanup Commit
+17. Flag Hygiene
+18. Track Flag Age
+19. Enforce Cleanup Deadlines
+20. Anti-Patterns to Avoid
+21. Related
+-->
+
 # Managing Feature Flags
 
 How to implement, operate, and retire feature flags.

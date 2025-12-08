@@ -1,3 +1,19 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/repository-comparison.md
+
+## Soul
+
+Monorepo vs Polyrepo comparison across atomic changes, team autonomy, build times, and deployment independence.
+
+## Sections
+
+1. Factor Comparison
+2. Decision Factors
+3. CD Model Stage Impact
+4. Polyrepo Coordination Requirements
+5. Related
+-->
+
 # Repository Pattern Comparison
 
 Side-by-side comparison of Monorepo vs Polyrepo patterns.

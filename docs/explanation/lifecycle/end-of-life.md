@@ -1,3 +1,16 @@
+<!-- EDITOR
+# Editor: explanation/lifecycle/end-of-life.md
+
+## Soul
+
+System decommissioning phase ensuring compliant retirement with data migration, retention policy adherence, access revocation, and proper documentation archival.
+
+## Sections
+
+1. (Introduction)
+2. Checkpoints
+-->
+
 # End of Life
 
 The End of Life phase ensures the systematic and compliant decommissioning of IT systems, protecting data and maintaining business continuity throughout the transition.

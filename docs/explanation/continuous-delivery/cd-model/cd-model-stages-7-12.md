@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/cd-model/cd-model-stages-7-12.md
+
+## Soul
+
+Detailed explanation of release and production stages from Stage 7 (Exploration with stakeholder validation/UAT) through Stage 12 (Release Toggling with feature flags), including deployment strategies (hot, rolling, blue-green, canary, rings), monitoring, rollback procedures, and Quick Reference links to extracted content.
+
+## Sections
+
+1. Introduction
+2. Stage 7: Exploration
+3. Stage 8: Start Release
+4. Stage 9: Release Approval
+5. Stage 10: Production Deployment
+6. Stage 11: Live
+7. Stage 12: Release Toggling
+8. Stage Summary
+9. Next Steps
+10. Quick Reference
+-->
+
 # CD Model: Stages 7-12 (Release to Production)
 
 ## Introduction

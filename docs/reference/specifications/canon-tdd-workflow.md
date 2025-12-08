@@ -1,3 +1,22 @@
+<!-- EDITOR
+# Editor: reference/specifications/canon-tdd-workflow.md
+
+## Soul
+
+Kent Beck's five-step TDD workflow: List, Test (Red), Pass (Green), Refactor (Blue), Repeat.
+
+## Sections
+
+1. The Five Steps
+2. Step Details
+3. Red-Green-Refactor Cycle
+4. Key Principles
+5. Example Test List
+6. Anti-Patterns
+7. Reference
+8. Related
+-->
+
 # Canon TDD Workflow
 
 Reference for Kent Beck's test-driven development process.

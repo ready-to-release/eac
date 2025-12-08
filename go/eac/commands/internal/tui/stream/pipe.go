@@ -120,15 +120,23 @@ func classifyLine(text string) console.Level {
 	}
 
 	// Specific error indicators (more precise than substring matching)
+	// Note: "error:" alone causes false positives with test names like "TestFoo/error:_bar"
+	// so we only match "error:" when it appears at start of line or after whitespace/colon
 	errorIndicators := []string{
 		"panic:", "fatal error:", "compilation failed",
 		"undefined:", "cannot find package", "build failed",
-		": error:", "error:", // colon-prefixed to avoid matching "0 errors"
 	}
 	for _, indicator := range errorIndicators {
 		if strings.Contains(lowerText, indicator) {
 			return console.LevelError
 		}
+	}
+
+	// Check for "error:" more carefully - it must appear at a word boundary
+	// to avoid false positives in test names like "TestIsSummaryLine/error:_something"
+	// Returns LevelWarn for test output containing errors (orange), LevelError for real errors (red)
+	if level := classifyErrorIndicator(lowerText); level != console.LevelInfo {
+		return level
 	}
 
 	// Check for SKIP (Go test output: --- SKIP:)
@@ -142,6 +150,43 @@ func classifyLine(text string) console.Level {
 	}
 	if strings.Contains(lowerText, "deprecated") {
 		return console.LevelWarn
+	}
+
+	return console.LevelInfo
+}
+
+// classifyErrorIndicator checks if the line contains an error indicator
+// and returns the appropriate level. Returns LevelInfo if no error indicator found.
+// Test output containing "Error:" messages gets LevelWarn (orange) to distinguish
+// from actual test failures which get LevelError (red).
+func classifyErrorIndicator(lowerText string) console.Level {
+	// Skip lines that are clearly test output markers (--- PASS/FAIL/SKIP, === RUN)
+	if strings.Contains(lowerText, "--- pass:") ||
+		strings.Contains(lowerText, "--- fail:") ||
+		strings.Contains(lowerText, "--- skip:") ||
+		strings.Contains(lowerText, "=== run") {
+		return console.LevelInfo
+	}
+
+	// Check if this is test output (contains _test.go: filename pattern)
+	// These are log messages from tests, not actual failures
+	isTestOutput := strings.Contains(lowerText, "_test.go:")
+
+	// Match "error:" at start of line (after optional whitespace)
+	trimmed := strings.TrimSpace(lowerText)
+	if strings.HasPrefix(trimmed, "error:") {
+		if isTestOutput {
+			return console.LevelWarn // Orange for test output containing errors
+		}
+		return console.LevelError
+	}
+
+	// Match ": error:" (typical Go compiler output like "main.go:10: error:")
+	if strings.Contains(lowerText, ": error:") {
+		if isTestOutput {
+			return console.LevelWarn // Orange for test output containing errors
+		}
+		return console.LevelError
 	}
 
 	return console.LevelInfo

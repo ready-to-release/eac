@@ -1,3 +1,19 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/cde-stage-breakdown.md
+
+## Soul
+
+Continuous Deployment pattern 12-stage reference with automated progression, feature flags required, typical cycle time 2-4 hours.
+
+## Sections
+
+1. Stage Summary
+2. Key Characteristics
+3. Approval Gates
+4. Note
+5. Related
+-->
+
 # Continuous Deployment (CDe) Stage Breakdown
 
 Stage-by-stage reference for the Continuous Deployment implementation pattern.

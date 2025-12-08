@@ -1,3 +1,27 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/choosing-repository-pattern.md
+
+## Soul
+
+Decision checklist for selecting between monorepo and polyrepo patterns based on team structure, code sharing, and access control needs.
+
+## Sections
+
+1. Decision Checklist
+2. Question 1: How often do services change together?
+3. Question 2: How much code is shared?
+4. Question 3: How many teams?
+5. Question 4: What access control do you need?
+6. Question 5: Do you need atomic cross-service changes?
+7. Quick Decision Matrix
+8. Pattern Characteristics
+9. Monorepo
+10. Polyrepo
+11. Anti-Pattern: Technical Boundaries
+12. Migration Considerations
+13. Related
+-->
+
 # Choosing a Repository Pattern
 
 How to select between Monorepo and Polyrepo patterns.

@@ -1,3 +1,18 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/ra-stage-breakdown.md
+
+## Soul
+
+Release Approval pattern 12-stage reference with manual approval gates at Stage 3 and 9, typical cycle time 1-2 weeks.
+
+## Sections
+
+1. Stage Summary
+2. Key Characteristics
+3. Approval Gates
+4. Related
+-->
+
 # Release Approval (RA) Stage Breakdown
 
 Stage-by-stage reference for the Release Approval implementation pattern.

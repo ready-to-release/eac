@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/provisioning-plte.md
+
+## Soul
+
+Step-by-step guide for creating ephemeral Production-Like Test Environments using infrastructure as code with automated provisioning, testing, and teardown.
+
+## Sections
+
+1. Ephemeral PLTE Lifecycle
+2. Step 1: Trigger
+3. Step 2: Provision (5-10 minutes)
+4. Step 3: Deploy
+5. Step 4: Test (1-4 hours)
+6. Step 5: Destroy
+7. Infrastructure as Code Template
+8. Cost Management
+9. PLTE Characteristics
+10. Related
+-->
+
 # Provisioning PLTE Environments
 
 How to create and manage Production-Like Test Environments.

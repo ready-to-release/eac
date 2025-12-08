@@ -1,6 +1,23 @@
+<!-- EDITOR
+# Editor: index.md
+
+## Soul
+
+Root documentation entry point positioning r2r as an extensible CLI for Everything-as-Code workflows and this repository as both the tool and a working example.
+
+## Sections
+
+1. What is r2r (Ready to Release)?
+2. Why Everything as Code?
+3. Documentation Navigation
+4. Repository Modules
+5. Working with Documentation
+
+-->
+
 # Everything as Code
 
-> **Turn every commit into deployable, compliant software you can trust**
+> **Help turn every commit into deployable, compliant software you can trust**
 
 ---
 
@@ -35,38 +52,72 @@ Traditional compliance creates friction: manual documentation, periodic audits, 
 
 ## Documentation Navigation
 
-Documentation is organized using the [Diataxis framework](https://diataxis.fr/):
+Documentation is organized using the [Diataxis framework](https://diataxis.fr/) - a systematic approach to technical documentation authoring:
 
-### [Tutorials](tutorials/index.md)
+<table>
+<tr>
+<td width="50%" valign="top">
 
-**Learning-oriented**: Step-by-step lessons for newcomers
+### [Tutorials](tutorials/)
 
-Start here if you're new to the CLI and want hands-on guidance through core concepts and workflows.
+> **Learning-oriented guides**
 
-### [How-to Guides](how-to-guides/index.md)
+Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.
 
-**Problem-oriented**: Recipes for specific tasks
+- [Quick Start Guide](tutorials/quick-start.md)
+- [Your First Feature Specification](tutorials/first-specification.md)
 
-Use these when you need to accomplish a specific task like writing specifications, setting up CI validation, or linking risk controls.
+</td>
+<td width="50%" valign="top">
 
-### [Reference](reference/index.md)
+### [How-to Guides](how-to-guides/)
 
-**Information-oriented**: Technical descriptions and specifications
+**Task-oriented recipes**
 
-Look here for command syntax, configuration options, Gherkin format details, and API specifications.
+Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.
 
-### [Explanation](explanation/index.md)
+- [Commands by Area](how-to-guides/commands/)
+- [Working with Specifications](how-to-guides/specifications/)
+- [Continuous Delivery Practices](how-to-guides/continuous-delivery/)
 
-**Understanding-oriented**: Conceptual discussions and design rationale
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
-Read these to understand the "why" behind continuous delivery models, compliance transformation, testing strategies, and architectural decisions.
+### [Reference](reference/)
 
-**Choose based on what you need:**
+> **Information-oriented descriptions**
 
-- "I'm new and want to learn" → [Tutorials](tutorials/index.md)
-- "I need to accomplish a task" → [How-to Guides](how-to-guides/index.md)
-- "I need technical details" → [Reference](reference/index.md)
-- "I want to understand why" → [Explanation](explanation/index.md)
+Technical reference material for looking up details. Check here for command syntax, configuration options, and specifications.
+
+- [Command Reference](reference/commands/)
+- [Specification Standards](reference/specifications/)
+- [Decision Records](reference/decision-records/)
+
+</td>
+<td width="50%" valign="top">
+
+### [Explanation](explanation/)
+
+> **Understanding-oriented discussion**
+
+Conceptual explanations that clarify and illuminate. Read these to understand the "why" behind the system.
+
+- [Everything as Code](explanation/everything-as-code/)
+- [Continuous Delivery Model](explanation/continuous-delivery/)
+- [Compliance Transformation](explanation/transformation/)
+
+</td>
+</tr>
+</table>
+
+**Choose your path:**
+
+- "I'm new and want to learn" → [Tutorials](tutorials/)
+- "I need to accomplish a task" → [How-to Guides](how-to-guides/)
+- "I need technical details" → [Reference](reference/)
+- "I want to understand why" → [Explanation](explanation/)
 
 ---
 

@@ -1,3 +1,25 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/writing-commit-messages.md
+
+## Soul
+
+Format guide for semantic commit messages using conventional commits with type, scope, and description pattern for traceability.
+
+## Sections
+
+1. Format
+2. Type Keywords
+3. Scope
+4. Description Guidelines
+5. Body (Optional)
+6. Footer (Optional)
+7. Complete Example
+8. Commit Message for Releases
+9. What to Avoid
+10. Automation
+11. Related
+-->
+
 # Writing Commit Messages
 
 How to write semantic commit messages that maintain traceability.

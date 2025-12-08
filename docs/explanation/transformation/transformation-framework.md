@@ -1,3 +1,44 @@
+<!-- EDITOR
+# Editor: explanation/transformation/transformation-framework.md
+
+## Soul
+
+Four-phase roadmap from assessment through organization-wide adoption with concrete activities, deliverables, exit criteria, and timelines for compliance transformation.
+
+## Sections
+
+1. Introduction
+2. The Journey Overview
+3. Guiding Principles
+4. Phase 1: Assessment and Planning (4-6 weeks)
+   - Objective
+   - Key Activities
+   - Exit Criteria
+5. Phase 2: Pilot Implementation (12-16 weeks)
+   - Objective
+   - Key Activities
+   - Exit Criteria
+6. Phase 3: Automation and Scaling (8-12 weeks)
+   - Objective
+   - Key Activities
+   - Exit Criteria
+   - Deliverables
+7. Phase 4: Organization-Wide Rollout (6-12 months)
+   - Objective
+   - Key Activities
+   - Exit Criteria
+8. Continuous Improvement
+9. Common Pitfalls
+10. Next Steps
+11. Related Documentation
+
+## Notes
+
+- Phase 1 advice on SOP vs regulation starting points is practical but assumes readers have one or the other
+- Template catalog link (github.com/ready-to-release/eac) may become outdated if repository moves
+- "2-3 additional teams" in Phase 3 is specific but arbitrary - no rationale for this number
+-->
+
 # Compliance Transformation Framework
 
 ## Introduction

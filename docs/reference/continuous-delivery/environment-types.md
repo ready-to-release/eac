@@ -1,3 +1,22 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/environment-types.md
+
+## Soul
+
+Environment type specifications: DevBox, Build Agents, PLTE, Demo, Deploy Agents, and Production with lifecycle and CD stage mappings.
+
+## Sections
+
+1. Environment Summary
+2. DevBox
+3. Build Agents
+4. PLTE (Production-Like Test Environment)
+5. Demo Environment
+6. Deploy Agents
+7. Production
+8. Related
+-->
+
 # Environment Types
 
 Reference for environment types in the CD Model.

@@ -1,3 +1,18 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/precommit-quality-gates.md
+
+## Soul
+
+Stage 2 quality gate specifications with 5-10 minute target including formatting, linting, unit tests, and security scans.
+
+## Sections
+
+1. Gate Summary
+2. Time Budget
+3. Environment
+4. Related
+-->
+
 # Pre-commit Quality Gates
 
 Quality gates for Stage 2 (Pre-commit) validation.

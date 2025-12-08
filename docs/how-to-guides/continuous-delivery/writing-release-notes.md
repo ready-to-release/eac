@@ -1,3 +1,25 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/writing-release-notes.md
+
+## Soul
+
+Template and guidelines for writing user-focused release notes with features, fixes, breaking changes, and migration instructions.
+
+## Sections
+
+1. Release Notes Template
+2. Section Guidelines
+3. Summary
+4. New Features
+5. Bug Fixes
+6. Breaking Changes
+7. Security
+8. Auto-Generation from Commits
+9. Review Checklist
+10. Publishing
+11. Related
+-->
+
 # Writing Release Notes
 
 How to create comprehensive release notes for production releases.

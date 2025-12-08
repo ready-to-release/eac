@@ -22,6 +22,11 @@ func TestClassifyLine(t *testing.T) {
 		{"go test pass marker", "--- PASS: TestSomething (0.00s)", console.LevelInfo},
 		{"no errors found", "Validation: no errors found", console.LevelInfo},
 
+		// Should be Info (test names containing "error" - false positive prevention)
+		{"pass with error in name", "--- PASS: TestIsSummaryLine/error:_something (0.00s)", console.LevelInfo},
+		{"pass with Error in name", "--- PASS: TestValidateError (0.00s)", console.LevelInfo},
+		{"run with error in name", "=== RUN   TestErrorHandling/error:_case", console.LevelInfo},
+
 		// Should be Error (actual failures)
 		{"go test fail", "--- FAIL: TestSomething (0.00s)", console.LevelError},
 		{"package fail", "FAIL\tgithub.com/example/pkg", console.LevelError},
@@ -31,8 +36,13 @@ func TestClassifyLine(t *testing.T) {
 		{"undefined symbol", "undefined: someFunction", console.LevelError},
 		{"build failed", "build failed: missing dependency", console.LevelError},
 		{"error with colon", "main.go:10: error: undefined variable", console.LevelError},
+		{"standalone error", "error: something went wrong", console.LevelError},
 
-		// Should be Warn
+		// Should be Warn (test output containing error messages - not failures)
+		{"test output with Error", "scenarios_test.go:1280: Error: extensions.0.env.0.name: invalid", console.LevelWarn},
+		{"test output with error colon", "validation_test.go:50: error: missing field", console.LevelWarn},
+
+		// Should be Warn (warnings)
 		{"go test skip", "--- SKIP: TestSomething (0.00s)", console.LevelWarn},
 		{"warning message", "warning: deprecated function", console.LevelWarn},
 		{"deprecated usage", "this API is deprecated", console.LevelWarn},

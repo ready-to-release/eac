@@ -1,3 +1,19 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/release-quality-thresholds.md
+
+## Soul
+
+Stage 9 release approval thresholds requiring 100% test pass rate, 80% coverage, zero critical bugs, and complete documentation.
+
+## Sections
+
+1. Threshold Summary
+2. Documentation Requirements
+3. Approval Modes
+4. Environment
+5. Related
+-->
+
 # Release Quality Thresholds
 
 Automated quality thresholds for Stage 9 (Release Approval) validation.

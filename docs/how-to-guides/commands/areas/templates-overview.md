@@ -1,3 +1,25 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/templates-overview.md
+
+## Soul
+
+Placeholder-based template system for generating documentation, reports, and project files with Go template syntax and automatic value substitution from contracts and configuration.
+
+## Sections
+
+1. What are Templates?
+2. When to Use Templates
+3. Key Concepts
+4. Workflow Overview
+5. Template Structure
+6. Integration Points
+7. Placeholder Reference
+8. Best Practices
+9. Troubleshooting
+10. Next Steps
+11. Related Areas
+-->
+
 # Templates
 
 Templates in EAC provide a placeholder-based system for generating consistent documentation, reports, and project files with automatic value substitution.

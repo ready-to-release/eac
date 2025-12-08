@@ -1,3 +1,22 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/release-documentation.md
+
+## Soul
+
+Required release documentation including release notes, deployment runbook, rollback procedure, test evidence, and stakeholder sign-offs.
+
+## Sections
+
+1. Required Documents
+2. Release Notes Format
+3. Release Notes Content
+4. Deployment Runbook Contents
+5. Rollback Procedure Contents
+6. Test Evidence Requirements
+7. Stakeholder Sign-offs
+8. Related
+-->
+
 # Release Documentation Requirements
 
 Reference for documentation required during release approval (Stage 9).

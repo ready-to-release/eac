@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/cd-model/cd-model-stages-1-6.md
+
+## Soul
+
+Detailed explanation of development and testing stages from Stage 1 (Authoring with Requirements as Code) through Stage 6 (Extended Testing with performance/security/compliance), including PLTE deployment, L0-L3 tests, verification evidence (IV/OV/PV), and Quick Reference links to extracted content.
+
+## Sections
+
+1. Introduction
+2. Stage 1: Authoring Changes
+3. Stage 2: Pre-commit
+4. Stage 3: Merge Request
+5. Stage 4: Commit
+6. Stage 5: Acceptance Testing
+7. Stage 6: Extended Testing
+8. Stage Summary
+9. Next Steps
+10. Quick Reference
+-->
+
 # CD Model: Stages 1-6 (Development to Testing)
 
 ## Introduction

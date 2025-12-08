@@ -1,3 +1,20 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/core-concepts/unit-of-flow.md
+
+## Soul
+
+Conceptual framework dividing Continuous Delivery into four interconnected components: Trunk (version-controlled timeline), Deployable Module (built/deployed unit), Deployment Pipeline (12-stage automated process), and Live (production runtime), explaining relationships, CD Model integration, and common architectural patterns.
+
+## Sections
+
+1. Introduction
+2. The Four Components
+3. Relationships
+4. Integration with CD Model
+5. Benefits
+6. Common Patterns
+-->
+
 # Unit of Flow
 
 ## Introduction
