@@ -163,6 +163,29 @@ runs:
       if: contains(steps.resolve.outputs.deps, 'docker-build') && steps.qemu-check.outputs.available != 'true'
       uses: docker/setup-qemu-action@v3
 
+    - name: Check if UPX is available
+      id: upx-check
+      if: contains(steps.resolve.outputs.deps, 'upx')
+      shell: bash
+      run: |
+        if command -v upx &> /dev/null; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ UPX already installed: $(upx --version | head -1)"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "UPX not found - will install"
+        fi
+
+    - name: Install UPX
+      if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true'
+      shell: bash
+      run: |
+        echo "Installing UPX for binary compression..."
+        # UPX is available in Ubuntu repos
+        sudo apt-get update -qq
+        sudo apt-get install -y upx-ucl
+        echo "✓ UPX installed: $(upx --version | head -1)"
+
     - name: Summary
       if: steps.resolve.outputs.deps != ''
       shell: bash
@@ -173,6 +196,7 @@ runs:
         NODE_AVAILABLE: ${{ steps.node-check.outputs.available }}
         BUILDX_AVAILABLE: ${{ steps.buildx-check.outputs.available }}
         QEMU_AVAILABLE: ${{ steps.qemu-check.outputs.available }}
+        UPX_AVAILABLE: ${{ steps.upx-check.outputs.available }}
       run: |
         echo "### Dependencies Setup for \`${MODULE}\`" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -184,6 +208,13 @@ runs:
             echo "| Go | Already available |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Go | Installed |" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+        if [[ "$DEPS" == *"upx"* ]]; then
+          if [ "$UPX_AVAILABLE" = "true" ]; then
+            echo "| UPX | Already available |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| UPX | Installed |" >> $GITHUB_STEP_SUMMARY
           fi
         fi
         if [[ "$DEPS" == *"node"* ]] || [[ "$DEPS" == *"npm"* ]]; then

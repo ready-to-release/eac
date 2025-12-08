@@ -24,6 +24,7 @@ Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, w
 | [Specifications](./specifications/) | Writing and managing BDD/Gherkin specifications |
 | [Configuration](./configuration/) | System and tool configuration (Claude MCP, etc.) |
 | [Modules](./modules/) | Creating modules and module types |
+| [Creating Commands](./creating-commands.md) | Build new r2r CLI commands |
 
 ---
 
