@@ -99,7 +99,7 @@ func testSummaryContent(f *SummaryFormatter, module *config.Module, suite, statu
 	if status == "success" {
 		summary += testMetricsSection(f, module, suite)
 	} else {
-		summary += testDiagnosticsSection(f, module)
+		summary += testDiagnosticsSection(f, module, suite)
 	}
 
 	// Test configuration (collapsible)
@@ -198,21 +198,22 @@ func packageBreakdown(f *SummaryFormatter, details []PackageTestResults) string 
 	return f.Section(Emoji("chart")+" Package Breakdown", f.Table(headers, rows))
 }
 
-func testDiagnosticsSection(f *SummaryFormatter, module *config.Module) string {
+func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite string) string {
 	var diagnostics string
 
-	// Read actual test log
-	logPath := filepath.Join("out", "logs", fmt.Sprintf("%s-test.log", module.Moniker))
+	// Read actual test log from the correct output directory
+	// Test logs are output to out/test/{suite}/{module}/test.log
+	logPath := filepath.Join("out", "test", suite, module.Moniker, "test.log")
 	logContent := readLogTail(logPath, 100) // Last 100 lines for test failures
 
 	if logContent != "" {
 		diagnostics += f.Section(Emoji("diagnostics")+" Test Log (last 100 lines)", f.CodeBlock("", logContent))
 	} else {
-		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", "Tests failed - no log file found")
+		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Tests failed - no log file found at %s", logPath))
 	}
 
 	// Show test timing if available
-	timingPath := filepath.Join("out", "test", "test-timing.txt")
+	timingPath := filepath.Join("out", "test", suite, "test-timing.txt")
 	if timing, err := os.ReadFile(timingPath); err == nil {
 		diagnostics += f.Section(Emoji("time")+" Timing", string(timing))
 	}

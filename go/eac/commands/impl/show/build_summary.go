@@ -215,14 +215,15 @@ func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 func buildDiagnosticsSection(f *SummaryFormatter, module *config.Module) string {
 	var diagnostics string
 
-	// Read actual build log
-	logPath := filepath.Join("out", "logs", fmt.Sprintf("%s-build.log", module.Moniker))
+	// Read actual build log from the correct output directory
+	// Build logs are output to out/build/{module}/build.log
+	logPath := filepath.Join("out", "build", module.Moniker, "build.log")
 	logContent := readLogTail(logPath, 50) // Last 50 lines
 
 	if logContent != "" {
 		diagnostics += f.Section(Emoji("diagnostics")+" Build Log (last 50 lines)", f.CodeBlock("", logContent))
 	} else {
-		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", "Build failed - no log file found")
+		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Build failed - no log file found at %s", logPath))
 	}
 
 	// Show timing data if available
