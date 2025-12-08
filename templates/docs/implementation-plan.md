@@ -190,16 +190,15 @@ Feature files are plain text files stored in the same repository as the system c
 
 **Testing Taxonomy Tags:**
 
-| Tag Type                                  | Format                              | Purpose                                |
-| ----------------------------------------- | ----------------------------------- | -------------------------------------- |
-| Test Level                                | `@L0` - `@L4`, `@HE2E`              | Define execution environment and scope |
-| Verification (REQUIRED for all scenarios) | `@ov`, `@iv`, `@pv`, `@piv`, `@ppv` | Categorize validation type             |
-| Test Execution Control                    | `@skip:<reason>`, `@Manual`         | Control test execution behavior        |
-| System Dependencies                       | `@deps:<system-dependency>`         | Declare required system tooling        |
-| Module Dependencies                       | `@depm:<module-name>`               | Declare required internal modules      |
-| Environment Requirements                  | `@env:<env-moniker>`                | Declare specific test environments     |
-| Risk Tracking                             | `@risk:<risk-id>`                   | Link to project/domain risk tracking   |
-| OSCAL Controls                            | `@control:<id>`, `@controls:<ids>`  | Link to compliance control requirements |
+| Tag Type                                  | Format                              | Purpose                                 |
+| ----------------------------------------- | ----------------------------------- | --------------------------------------- |
+| Test Level                                | `@L0` - `@L4`, `@HE2E`              | Define execution environment and scope  |
+| Verification (REQUIRED for all scenarios) | `@ov`, `@iv`, `@pv`, `@piv`, `@ppv` | Categorize validation type              |
+| Test Execution Control                    | `@skip:<reason>`, `@Manual`         | Control test execution behavior         |
+| System Dependencies                       | `@deps:<system-dependency>`         | Declare required system tooling         |
+| Module Dependencies                       | `@depm:<module-name>`               | Declare required internal modules       |
+| Environment Requirements                  | `@env:<env-moniker>`                | Declare specific test environments      |
+| Risk Controls                             | `@control:<id>`, `@controls:<ids>`  | Link to compliance control requirements |
 
 **Skip Reason Codes:**
 
@@ -222,17 +221,17 @@ If manual test cases are required, they will be stored alongside the automated t
 
 ## Functional Risk Assessment
 
-A functional risk assessment is required whenever a requirement in a feature file is tagged with `@gxp`. In these cases, risk tracking must be established using `@risk:<risk-id>` tags to link scenarios to risk assessments, and compliance controls must be linked using `@control:<id>` tags for OSCAL-based controls.
+A functional risk assessment is required whenever a requirement in a feature file is tagged with `@gxp`. Risk assessments are documented separately and risks are mapped to applicable risk compliance controls. Test scenarios link to controls using `@control:<id>` tags.
 
 Risk assessments should include:
 
-- **Risk Description:** What could go wrong with the feature (use `@risk:<risk-id>` to tag scenarios)
+- **Risk Description:** What could go wrong with the feature
 - **Root Cause and Likelihood:** Identify the cause(s) and estimate the likelihood (Unlikely <30%, Possible 30-70%, Likely >70%)
 - **Impact:** Assess the impact on the supported process (Insignificant, Moderate, or Critical impact on Product, Patient, or Data Integrity per GAMP 5 and ICH Q9 guidelines)
-- **Controls:** Link to relevant OSCAL controls using `@control:<id>` tags
+- **Controls:** Identify relevant risk controls that mitigate the risk
 - **Risk Classification:** Classify both gross and net risk as High, Medium, or Low
 
-Controls are implemented as test scenarios that verify the mitigations are effective. These may include additional requirements, negative test scenarios, challenge tests, or validation of generic controls. Use `@control:<id>` tags to link scenarios to standardized compliance controls (e.g., NIST 800-53, ISO 27001, custom catalogs).
+Controls are implemented as test scenarios that verify the mitigations are effective. These may include additional requirements, negative test scenarios, challenge tests, or validation of generic controls. Use `@control:<id>` tags in scenarios to link to standardized compliance controls (e.g., NIST 800-53, ISO 27001, custom catalogs). Reference risk assessment documents in scenario comments for traceability.
 
 For all requirements tagged as `@gxp`, there must be test scenarios for negative testing and/or challenge tests, or a clear justification for performing only positive tests.
 

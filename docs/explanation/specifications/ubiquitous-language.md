@@ -1,23 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/specifications/ubiquitous-language.md
-
-## Soul
-
-DDD concept of rigorous shared vocabulary between business and technical teams. Prevents translation problems causing rework and bugs by establishing domain terms used consistently across conversations, specifications, and code.
-
-## Sections
-
-1. The Problem: Lost in Translation - Communication misalignment consequences (rework, bugs, failed validation, drift)
-2. The Solution: Ubiquitous Language (DDD) - Rigorous, shared, domain-based, evolving vocabulary
-3. Discovering Language Through Collaboration - Event Storming for domain discovery, Example Mapping for requirements
-4. From Shared Language to Executable Specifications - Flow: Event Storming → Example Mapping → Gherkin → Code
-5. Bounded Contexts: When Languages Diverge - Same terms, different meanings in different contexts
-6. Continuous Language Evolution - Review cadences (weekly, monthly, quarterly), propagating changes
-7. Why This Matters for Specifications - Prevents drift, enables stakeholder validation, creates living documentation
-8. Key Takeaways - 8 summary points
-9. See Also - Event Storming, Example Mapping, Review and Iterate, Working with specifications, Three-Layer Approach
--->
-
 # Ubiquitous Language: Building Shared Vocabulary
 
 > **How shared domain vocabulary creates the foundation for executable specifications**

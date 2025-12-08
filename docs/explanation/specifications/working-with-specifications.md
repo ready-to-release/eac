@@ -1,30 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/specifications/working-with-specifications.md
-
-## Soul
-
-Conceptual foundation for BDD and executable specifications - explaining why BDD, key principles, specification evolution, and the unified Gherkin approach.
-
-## Sections
-
-1. The Unified Approach
-2. Executable Specifications
-3. What is BDD?
-4. Gherkin and the Ubiquitous Language
-5. Requirements Discovery with Example Mapping
-6. From Discovery to Implementation
-7. Key Principles
-8. Specifications Evolve with Understanding
-9. Related Documentation
-
-## Notes
-
-- Explanation document focused on concepts and theory
-- Companion to how-to-guides/eac/specifications/working-with-specifications.md (practical steps)
-- Contains extensive examples of specification evolution
-- Links to related explanation docs for deeper dives
--->
-
 # Working with specifications
 
 Understanding BDD, executable specifications, and how specifications evolve with understanding.

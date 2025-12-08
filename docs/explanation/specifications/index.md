@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/specifications/index.md
-
-## Soul
-Navigation hub for three-layer testing approach, BDD concepts, and specification practices using executable specifications.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Specifications Concepts
 
 Understanding the three-layer testing approach, executable specifications, and test-driven development practices.

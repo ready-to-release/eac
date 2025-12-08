@@ -1,19 +1,24 @@
-# Risk Controls and Compliance Traceability
+# Risk Control Traceability
 
-> **Risk-based control management with automated evidence collection**
+> **Control-based risk management with automated evidence collection**
 
 ## What Are Risk Controls?
 
-Risk controls are **security and compliance requirements** that mitigate identified risks. This system uses two complementary tagging approaches:
+Risk controls are **standardized security and compliance requirements** from established catalogs (NIST 800-53, ISO 27001, CIS, etc.) that mitigate identified risks.
 
-- **`@risk:<risk-id>`** - Project-specific or domain risks identified in risk assessments
-- **`@control:<control-id>`** - Standardized compliance controls from catalogs (NIST 800-53, ISO 27001, etc.)
+**How Controls Address Risks**:
+
+- Each control is explicitly designed to mitigate specific risks
+- Control catalogs document which risks each control addresses
+- Risk assessments map risks to applicable controls
+- Test scenarios verify control implementation
 
 They answer:
 
-- **What could go wrong?** (Risk - tracked with `@risk:<risk-id>`)
-- **What must we do to prevent it?** (Control - tracked with `@control:<id>`)
-- **How do we prove it works?** (Evidence - test scenarios with tags)
+- **What could go wrong?** (Risk - documented in risk assessments)
+- **What must we do to prevent it?** (Control - risk catalog)
+- **How do we implement it?** (Control implementation)
+- **How do we prove it works?** (Evidence - test scenarios with `@control:` tags)
 
 **Traditional Approach**:
 
@@ -21,11 +26,11 @@ They answer:
 - Artifacts in separate systems, evidence gathered retroactively
 - Difficult to maintain traceability
 
-**Risk-based Approach**:
+**Control-based Approach**:
 
-- Risk assessment → Risk profile → BDD specifications → Automated testing
+- Risk assessment → risk control selection → BDD specifications with `@control:` tags → Automated testing
 - All in version control, traceability in real-time
-- Automated evidence collection for compliance audits
+- Automated evidence collection linking controls to test results
 
 **Benefits**:
 
@@ -36,75 +41,65 @@ They answer:
 
 ---
 
-## Tag System Overview
+## Risk Control Tagging
 
-### `@risk:<risk-id>` - Domain Risk Tracking
+### `@control:<control-id>` - Risk Compliance Controls
 
-**Purpose**: Link scenarios to project-specific or domain risks from your risk assessments
-
-**Format**: `@risk:<risk-id>` where risk-id is kebab-case identifier
-
-**Examples**: `@risk:data-loss`, `@risk:unauthorized-access`, `@risk:regulatory-non-compliance`
-
-**When to use**:
-- Tracking risks identified in your project's risk assessment
-- Domain-specific risks not covered by standard catalogs
-- Project-level hazards or concerns
-- Business continuity risks
-
-**Example**:
-
-```gherkin
-@ov @risk:data-loss
-Scenario: System prevents data loss during network interruption
-  Given I am uploading a large file
-  When the network connection is interrupted
-  Then the upload should be paused
-  And I can resume when connection is restored
-```
-
-### `@control:<control-id>` - OSCAL Compliance Controls
-
-**Purpose**: Link scenarios to standardized compliance controls from catalogs (NIST 800-53, ISO 27001, custom)
+**Purpose**: Link test scenarios to standardized compliance controls from catalogs
 
 **Format**: `@control:<family>-<number>` or `@control:<family>-<number>(<enhancement>)`
 
 **Examples**: `@control:ac-2`, `@control:ia-5(1)`, `@control:cis-5.1`
 
 **When to use**:
+
 - Compliance requirements (FedRAMP, HIPAA, ISO 27001, etc.)
 - Security control frameworks (NIST, CIS, CSA)
 - Regulatory mandates requiring specific controls
 - Audit and assessment requirements
+
+**Control-Risk Relationship**:
+
+Controls inherently address risks. When you tag a scenario with `@control:ac-2` (Account Management), you're implicitly addressing risks like:
+
+- Unauthorized access
+- Privilege escalation
+- Account misuse
+
+Risk assessments should document which risks exist and map them to applicable controls. Test scenarios then verify control implementation.
 
 **Example**:
 
 ```gherkin
 @ov @control:ac-2
 Scenario: Account creation requires approval
+  # Mitigates: Unauthorized access risk
+  # See: docs/risk-assessment/ra-2025-access-control.md
   Given a user registration request
   When an administrator reviews the request
   Then the account should require approval
   And the approval should be logged
 ```
 
-### Using Both Together
-
-Many scenarios will need both tags - a risk AND the control that mitigates it:
+**Multiple Controls Example**:
 
 ```gherkin
-@ov @risk:unauthorized-access @control:ac-2 @control:ia-5
+@ov @control:ac-2 @control:ia-5
 Scenario: Authentication prevents unauthorized access
+  # Mitigates: Unauthorized access, weak authentication risks
+  # Controls: AC-2 (Account Management), IA-5 (Authenticator Management)
   Given I am not authenticated
   When I attempt to access protected resources
   Then access should be denied
   And I should be redirected to login
 ```
 
-**Relationship**:
-- Risk Assessment identifies `@risk:unauthorized-access`
-- Control catalog specifies `@control:ac-2` (Account Management) and `@control:ia-5` (Authentication)
-- Test scenario verifies both the risk is mitigated AND controls are satisfied
+**Traceability**:
+
+- Risk Assessment (external) → identifies risks
+- Control Selection (Risk Profile) → maps risks to controls
+- Test Scenarios (`@control:` tags) → verifies control implementation
+- Evidence Collection (automated) → proves control satisfaction
 
 ---
 
@@ -253,71 +248,12 @@ create risk-assess --profile specs/.risk-controls/risk-profile.json
 
 ---
 
-## Tag Format Reference
-
-### Risk Tag Format
-
-**Single Risk**:
-
-```gherkin
-@risk:data-loss
-Scenario: Prevent data loss during failure
-  # Mitigates identified data loss risk
-```
-
-**Multiple Risks** (if needed):
-
-```gherkin
-@risk:data-loss @risk:service-disruption
-Scenario: Graceful degradation during outage
-  # Mitigates both data loss and service disruption risks
-```
-
-### Control Tag Format
-
-**Single Control**:
-
-```gherkin
-@control:ac-2
-Scenario: Account management
-  # Tests control AC-2 (Account Management)
-```
-
-**Control with Enhancement**:
-
-```gherkin
-@control:ia-5(1)
-Scenario: Password-based authentication
-  # Tests control IA-5(1) (Password-Based Authentication)
-```
-
-**Multiple Controls**:
-
-```gherkin
-@controls:ac-2,au-3
-Scenario: Audited account creation
-  # Tests both AC-2 (Account Management) and AU-3 (Audit Record Content)
-```
-
-### Combined Risk and Control Tags
-
-```gherkin
-@ov @risk:account-hijacking @control:ia-2(1) @control:ia-5
-Scenario: Multi-factor authentication prevents account hijacking
-  Given I am logging in with valid credentials
-  When MFA is required
-  Then I must provide a second factor
-  And only then should access be granted
-```
+## Control Tag Format Reference
 
 ### Format Rules
 
-**Risk Tags**:
-- **Pattern**: `@risk:<risk-id>`
-- **Format**: Kebab-case identifier (e.g., `data-loss`, `unauthorized-access`)
-- **Multiple**: Apply separate `@risk:` tags for each risk
-
 **Control Tags**:
+
 - **Pattern**: `@control:<family>-<number>` or `@control:<family>-<number>(<enhancement>)`
 - **Family**: 2-4 lowercase letters (e.g., `ac`, `au`, `ia`, `sc`, `cis`)
 - **Number**: 1+ digits (e.g., `2`, `12`)
@@ -336,7 +272,7 @@ validate control-tags
 
 ---
 
-## OSCAL Schema Validation
+## Schema Validation
 
 All OSCAL documents must conform to official NIST schemas. Validation ensures your control definitions, profiles, and assessment results are properly structured and interoperable.
 
