@@ -107,6 +107,6 @@ Different patterns for different systems:
 
 ## Related
 
-- [RA Stage Breakdown](../../reference/continuous-delivery/ra-stage-breakdown.md)
-- [CDe Stage Breakdown](../../reference/continuous-delivery/cde-stage-breakdown.md)
+- [RA Stage Breakdown](../../explanation/continuous-delivery/cd-model/implementation-patterns.md)
+- [CDe Stage Breakdown](../../explanation/continuous-delivery/cd-model/implementation-patterns.md)
 - [Implementation Patterns](../../explanation/continuous-delivery/cd-model/implementation-patterns.md)

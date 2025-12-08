@@ -193,4 +193,4 @@ Within 48 hours, conduct post-mortem:
 
 - [Rollback Procedures](rollback-procedures.md)
 - [Live Monitoring](../../explanation/continuous-delivery/cd-model/cd-model-stages-7-12.md#stage-11-live)
-- [Release Quality Thresholds](../../reference/continuous-delivery/release-quality-thresholds.md)
+- [Release Quality Thresholds](../../explanation/continuous-delivery/quality-gates/release-gates.md)

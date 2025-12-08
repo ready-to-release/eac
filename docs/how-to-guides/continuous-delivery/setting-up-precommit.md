@@ -135,5 +135,5 @@ git commit --no-verify -m "emergency fix"
 
 ## Related
 
-- [Pre-commit Quality Gates](../../reference/continuous-delivery/precommit-quality-gates.md)
+- [Pre-commit Quality Gates](../../explanation/continuous-delivery/quality-gates/precommit-gates.md)
 - [CD Model Stages 1-6](../../explanation/continuous-delivery/cd-model/cd-model-stages-1-6.md)

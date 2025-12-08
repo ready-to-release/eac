@@ -158,5 +158,5 @@ organization/
 
 ## Related
 
-- [Repository Comparison](../../reference/continuous-delivery/repository-comparison.md)
+- [Repository Comparison](../../explanation/continuous-delivery/architecture/repository-patterns.md)
 - [Repository Patterns](../../explanation/continuous-delivery/architecture/repository-patterns.md)

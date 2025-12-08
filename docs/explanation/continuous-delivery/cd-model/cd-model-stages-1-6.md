@@ -1,24 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/cd-model/cd-model-stages-1-6.md
-
-## Soul
-
-Detailed explanation of development and testing stages from Stage 1 (Authoring with Requirements as Code) through Stage 6 (Extended Testing with performance/security/compliance), including PLTE deployment, L0-L3 tests, verification evidence (IV/OV/PV), and Quick Reference links to extracted content.
-
-## Sections
-
-1. Introduction
-2. Stage 1: Authoring Changes
-3. Stage 2: Pre-commit
-4. Stage 3: Merge Request
-5. Stage 4: Commit
-6. Stage 5: Acceptance Testing
-7. Stage 6: Extended Testing
-8. Stage Summary
-9. Next Steps
-10. Quick Reference
--->
-
 # CD Model: Stages 1-6 (Development to Testing)
 
 ## Introduction
@@ -534,10 +513,8 @@ Each stage builds confidence incrementally, with quality gates preventing defect
 - [Security](../security/security.md)
 - [Repository Layout](../../../reference/repository-layout.md)
 
-## Quick Reference
+---
 
-- [Pre-commit Quality Gates](../../../reference/continuous-delivery/precommit-quality-gates.md) - Stage 2 quality gates
-- [Merge Request Quality Gates](../../../reference/continuous-delivery/merge-request-quality-gates.md) - Stage 3 quality gates
-- [Verification Types](../../../reference/continuous-delivery/verification-types.md) - IV, OV, PV reference
-- [Setting Up Pre-commit](../../../how-to-guides/continuous-delivery/setting-up-precommit.md) - How to configure pre-commit hooks
-- [Writing Commit Messages](../../../how-to-guides/continuous-delivery/writing-commit-messages.md) - Commit message format
+_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
+
+**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.

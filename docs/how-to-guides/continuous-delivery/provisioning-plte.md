@@ -121,4 +121,4 @@ resource "azurerm_resource_group" "plte" {
 ## Related
 
 - [Environments](../../explanation/continuous-delivery/architecture/environments.md)
-- [Deployment Strategies](../../reference/continuous-delivery/deployment-strategies.md)
+- [Deployment Strategies](../../explanation/continuous-delivery/deployment/deployment-strategies.md)

@@ -1,25 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/architecture/repository-patterns.md
-
-## Soul
-
-Repository pattern documentation comparing Monorepo and Polyrepo approaches, explaining impact on CD Model stages, benefits/tradeoffs, anti-patterns (technical boundary split), and Quick Reference links to extracted reference/how-to content.
-
-## Sections
-
-1. Introduction
-2. Monorepo Pattern
-3. Polyrepo Pattern
-4. Repository Types
-5. Side-by-Side Analysis
-6. Poor Repository Design (Anti-Pattern)
-7. Best Practices
-8. Impact on CD Model Stages
-9. Next Steps
-10. References
-11. Quick Reference
--->
-
 # Repository Patterns
 
 ## Introduction
@@ -476,7 +454,8 @@ flowchart LR
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
 - [Repository Layout](../../../reference/repository-layout.md)
 
-## Quick Reference
+---
 
-- [Repository Comparison](../../../reference/continuous-delivery/repository-comparison.md) - Monorepo vs Polyrepo table
-- [Choosing Repository Pattern](../../../how-to-guides/continuous-delivery/choosing-repository-pattern.md) - Decision checklist
+_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
+
+**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.

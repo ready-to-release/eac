@@ -168,6 +168,6 @@ Schedule regular rollback drills:
 
 ## Related
 
-- [Deployment Strategies](../../reference/continuous-delivery/deployment-strategies.md)
+- [Deployment Strategies](../../explanation/continuous-delivery/deployment/deployment-strategies.md)
 - [Production Deployment](../../explanation/continuous-delivery/cd-model/cd-model-stages-7-12.md#stage-10-production-deployment)
 - [Incident Response](incident-response.md)

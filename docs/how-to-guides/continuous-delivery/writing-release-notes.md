@@ -172,5 +172,5 @@ Before publishing release notes:
 ## Related
 
 - [Start Release](../../explanation/continuous-delivery/cd-model/cd-model-stages-7-12.md#stage-8-start-release)
-- [Release Documentation](../../reference/continuous-delivery/release-documentation.md)
+- [Release Documentation](../../explanation/continuous-delivery/release-management/release-documentation.md)
 - [Writing Commit Messages](writing-commit-messages.md)

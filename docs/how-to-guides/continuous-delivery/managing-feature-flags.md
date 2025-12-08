@@ -212,5 +212,5 @@ Alert when deadline approaches or passes.
 ## Related
 
 - [Release Toggling](../../explanation/continuous-delivery/cd-model/cd-model-stages-7-12.md#stage-12-release-toggling)
-- [Deployment Rings](../../reference/continuous-delivery/deployment-rings.md)
+- [Deployment Rings](../../explanation/continuous-delivery/deployment/deployment-rings.md)
 - [Rollback Procedures](rollback-procedures.md)

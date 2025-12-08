@@ -1,26 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/architecture/environments.md
-
-## Soul
-
-Comprehensive environment architecture covering six environment types (DevBox, Build Agents, PLTE, Demo, Deploy Agents, Production) with network segregation zones, deployment strategies, Infrastructure as Code integration, and Quick Reference links to extracted reference/how-to content.
-
-## Sections
-
-1. Introduction
-2. Environment Types Explained
-3. Network Segregation Architecture
-4. Production Environment
-5. Deployment Strategies
-6. Architecture Visuals Explained
-7. Traditional vs CD Model Comparison
-8. Infrastructure as Code Integration
-9. Next Steps
-10. References
-11. Quick Reference
-
--->
-
 # Environments Architecture
 
 ## Introduction
@@ -672,10 +649,3 @@ Benefits: No configuration drift, parallel testing without conflicts, cost-effec
 - [Stages 1-6](../cd-model/cd-model-stages-1-6.md)
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md)
 - [Testing Strategy Overview](../testing/testing-strategy-overview.md)
-
-## Quick Reference
-
-- [Environment Types](../../../reference/continuous-delivery/environment-types.md) - Environment summary table
-- [Network Zones](../../../reference/continuous-delivery/network-zones.md) - Zone architecture reference
-- [Deployment Strategies](../../../reference/continuous-delivery/deployment-strategies.md) - Strategy comparison table
-- [Provisioning PLTE](../../../how-to-guides/continuous-delivery/provisioning-plte.md) - How to create PLTEs
