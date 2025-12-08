@@ -1,3 +1,40 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/release-overview.md
+
+## Soul
+
+CalVer-based release management system with AI-generated changelogs, automated validation, CI integration, and git tagging for traceable, compliant releases.
+
+## Sections
+
+1. What is Release Management?
+2. When to Use Release Commands
+3. Common Use Cases
+4. Key Concepts
+   - Calendar Versioning (CalVer)
+   - Why CalVer?
+   - Changelog Format
+   - Release Tags
+5. Workflow Overview
+   - Standard Release Flow
+   - Automated CI Release
+   - Hotfix Release
+6. Version Lifecycle
+   - States
+7. Integration Points
+   - With CI/CD
+   - With GitHub Releases
+   - With Module Contracts
+   - With Workspace
+8. Special Cases
+   - r2r-cli Releases
+   - Multi-Module Releases
+   - Version Extraction
+9. Best Practices
+10. Next Steps
+11. Related Areas
+-->
+
 # Release Management
 
 Release management in EAC provides CalVer-based versioning, automated changelog generation, and CI-integrated release workflows for consistent, traceable releases.

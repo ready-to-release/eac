@@ -1,3 +1,21 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/risks-overview.md
+
+## Soul
+
+OSCAL-based risk management provides AI-powered compliance tracking, control assessment, and traceability from code to compliance controls with evidence from tests and security scans.
+
+## Sections
+
+1. What is Risk Management?
+2. When to Use Risk Management
+3. Key Concepts
+4. Workflow Overview
+5. Integration Points
+6. Next Steps
+7. Related Areas
+-->
+
 # Risk Management
 
 Risk management in EAC provides OSCAL-based compliance tracking, AI-powered risk assessment, and traceability from code to compliance controls.

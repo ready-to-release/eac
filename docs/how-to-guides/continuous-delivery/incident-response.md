@@ -1,3 +1,25 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/incident-response.md
+
+## Soul
+
+Production incident response playbook with severity levels, detection methods, communication templates, and post-mortem procedures.
+
+## Sections
+
+1. Incident Severity Levels
+2. Incident Response Steps
+3. Step 1: Detect
+4. Step 2: Triage
+5. Step 3: Communicate
+6. Step 4: Respond
+7. Step 5: Resolve
+8. Step 6: Post-Mortem
+9. On-Call Responsibilities
+10. Communication Templates
+11. Related
+-->
+
 # Incident Response
 
 How to respond to production incidents.

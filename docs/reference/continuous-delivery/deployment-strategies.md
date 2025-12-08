@@ -1,3 +1,18 @@
+<!-- EDITOR
+# Editor: reference/continuous-delivery/deployment-strategies.md
+
+## Soul
+
+Deployment strategy comparison: Hot Deploy, Rolling, Blue-Green, Canary, and Rings with trade-offs and pattern recommendations.
+
+## Sections
+
+1. Strategy Comparison
+2. Pattern Recommendations
+3. Strategy Details
+4. Related
+-->
+
 # Deployment Strategies
 
 Quick reference for production deployment strategy selection.

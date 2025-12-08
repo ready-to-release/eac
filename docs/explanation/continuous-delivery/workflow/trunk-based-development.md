@@ -1,3 +1,25 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/workflow/trunk-based-development.md
+
+## Soul
+
+Comprehensive guide to Trunk-Based Development enabling Continuous Integration and Continuous Delivery, covering 5 core principles (single source of truth, short-lived branches, small changes, CI, frequent integration), branch types, semantic commits, 7-step daily workflow, feature hiding strategies, and release flows for RA and CDE patterns.
+
+## Sections
+
+1. Introduction
+2. Core Principles
+3. Branch Types and Flow
+4. Commits
+5. Daily Development Flow
+6. Feature Hiding
+7. Branch by Abstraction
+8. Release Flows
+9. Cherry-Picking Fixes
+10. Best Practices
+11. Stage Duration Guidelines
+-->
+
 # Trunk-Based Development
 
 ## Introduction
@@ -526,7 +548,7 @@ gh pr create --base release/v1.2.0 --title "Cherry-pick: Fix critical bug"
 
 ## Best Practices
 
-See [Workflow Overview: Best Practices](index.md#best-practices-summary) for complete DO/DON'T guidance.
+Key guidelines for effective trunk-based development workflows.
 
 ### Stage Duration Guidelines
 

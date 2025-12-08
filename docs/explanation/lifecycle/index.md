@@ -1,25 +1,30 @@
+<!-- EDITOR
+# Editor: explanation/lifecycle/index.md
+
+## Soul
+Navigation page introducing four lifecycle phases with interactive diagram, emphasizing DevOps model where teams handle both development and operations.
+
+## Sections
+1. Overview
+2. In This Section
+3. Diátaxis
+-->
+
 # Software Development Lifecycle
 
-This lifecycle balances regulatory compliance with continuous delivery efficiency, using a DevOps approach where the same team handles both development and operations - eliminating handovers.
+The complete software lifecycle from initiation through end-of-life, balancing regulatory compliance with continuous delivery in a DevOps model.
 
-## Legend
+## In This Section
 
-- <span style="color:#D6B656">Lifecycle Phases</span> - Stages the project/solution progresses through
-- <span style="color:#6C8EBF">Documents</span> - Artifacts in Markdown and Gherkin format
-- <span style="color:#B85450">Automation</span> - Automated pipeline processes
-- <span style="color:#666666">CD Stages</span> - Continuous Delivery stages
-
-The drawing below is interactive, allowing you to navigate to relevant sections of the documentation by clicking the boxes.
-
-![](../../assets/lifecycle/lifecycle.drawio)
-
-**Non-regulated environments:** Use this lifecycle but skip regulatory-specific documents (intended use, digital signatures, etc.)
+| Topic                           | Description                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| [Initiation](./initiation.md)   | Feasibility assessment, design documentation, threat modeling, and initial planning |
+| [Development](./development.md) | Implementation, testing, validation, and automated documentation                    |
+| [Operations](./operations.md)   | Deployment, monitoring, maintenance, and incident management                        |
+| [End of Life](./end-of-life.md) | Decommissioning and knowledge transfer                                              |
 
 ---
 
-## Lifecycle Phases
+_[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Explanation** | [Reference](../../reference/)_
 
-1. **[Initiation](initiation.md)** - Feasibility assessment, design, threat modeling, and initial documentation
-2. **[Development](development.md)** - Implementation, testing, and validation
-3. **[Operations](operations.md)** - Deployment, monitoring, and maintenance
-4. **[End of Life](end-of-life.md)** - Decommissioning and knowledge transfer
+**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.

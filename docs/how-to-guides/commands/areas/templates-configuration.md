@@ -1,3 +1,27 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/templates-configuration.md
+
+## Soul
+
+Configuration reference for template system covering paths, engine settings, placeholder definitions, custom values, output configuration, and MkDocs navigation generation.
+
+## Sections
+
+1. Configuration Files
+2. Template Settings
+3. Template Locations
+4. Placeholder Configuration
+5. Template Syntax
+6. Output Configuration
+7. Apply Modes
+8. Tag Extraction
+9. MkDocs Integration
+10. Environment Variables
+11. Example Configurations
+12. Troubleshooting
+13. Related Documentation
+-->
+
 # Templates Configuration
 
 This guide covers configuration options for EAC's template system, including placeholder definitions, template locations, and value sources.

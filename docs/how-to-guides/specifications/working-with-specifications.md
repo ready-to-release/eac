@@ -1,265 +1,225 @@
+<!-- EDITOR
+# Editor: how-to-guides/specifications/working-with-specifications.md
+
+## Soul
+
+Practical guide for writing and organizing Gherkin specifications using the unified Rule/Scenario format.
+
+## Sections
+
+1. Quick Start
+2. Writing Rule Blocks
+3. Writing Scenario Blocks
+4. File Organization
+5. From Example Mapping Cards to Gherkin
+6. Updating Specifications
+7. Common Patterns
+8. Related Documentation
+
+## Notes
+
+- Focused how-to guide with practical steps
+- Links to explanation docs for conceptual content
+- ~150-200 lines with actionable guidance
+-->
+
 # Working with specifications
 
-How the three layered test structure support working with executable specifications.
+Practical guide for writing and organizing Gherkin specifications.
 
 ---
 
-## The Unified Approach
+## Quick Start
 
-This project maintains the conceptual distinction between Rules (often referred to as acceptance criteria) and Scenarios while using a single unified format: Gherkin.
+**Location**: All specifications live in `specs/<module>/<feature>/specification.feature`
 
-### Rule Blocks
+**Format**: Gherkin with Rules (acceptance criteria) and Scenarios (executable examples)
 
-- **Purpose**: Define acceptance criteria
-- **Format**: `Rule:` blocks in Gherkin
-- **Location**: `specs/<module>/<feature>/specification.feature`
-- **Origin**: Blue cards from Example Mapping, or policies from Event Storming
-- **Audience**: Product owners, stakeholders, QA
-- **Focus**: WHAT the system must do
-
-### Scenario Blocks
-
-- **Purpose**: Executable behavior examples
-- **Format**: `Scenario:` blocks under Rules
-- **Location**: `specs/<module>/<feature>/specification.feature` (same file as Rules)
-- **Glue**: `src/<module>/tests/steps_test.go` (separate from specification)
-- **Origin**: Green cards from Example Mapping, and any further scenarios needed to make the rule complete
-- **Audience**: Product Owners, Developers, QA, automation engineers
-- **Focus**: HOW the system behaves (described in specs/, implemented in src/)
-
-### Architectural Principle: Specs vs Implementation
-
-**IMPORTANT**: This documentation emphasizes the separation between:
-
-- **Specifications** (in `specs/`): Business-readable Gherkin describing WHAT
-- **Implementations** (in `src/`): Technical Go code describing HOW
-
-```mermaid
-flowchart LR
-    subgraph Specs["specs/ (Business Reviews)"]
-        SpecFile["specification.feature"]
-        Rule["Rule: User must provide<br/>valid credentials"]
-        Scenario["Scenario: Valid login succeeds"]
-
-        SpecFile --> Rule
-        Rule --> Scenario
-    end
-
-    subgraph Src["src/ (Developers Implement)"]
-        Steps["steps_test.go"]
-        Func1["func userProvidesCredentials()"]
-        Func2["func loginSucceeds()"]
-
-        Steps --> Func1
-        Steps --> Func2
-    end
-
-    Scenario -.implements.-> Func1
-    Scenario -.implements.-> Func2
-
-```
-
----
-
-## Executable Specifications
-
-Executable Specifications are specifications written in such a way that automated tests can be executed from them.
-
-Here we have decided to use a formal language called Gherkin. This allows us to express the specification in a natural language whilst creating a structure with keywords that will trigger tests.
-
-The tests are implemented in what is referred to as glue. This is since it provides the glue between the specification and the code.
-
----
-
-## What is BDD?
-
-**Behavior-Driven Development (BDD)** is a specification technique that describes user-facing behavior through concrete examples. BDD focuses on **observable behavior** - what users can see and interact with, not internal implementation details.
-
-### Core Purpose
-
-BDD answers the question: **"How does the system behave from the user's perspective?"**
-
-By writing scenarios in natural language (Given/When/Then), teams create:
-
-- Shared understanding of expected behavior
-- Executable specifications that become automated tests
-- Living documentation that stays synchronized with code
-
-### Why Use BDD?
-
-- **Common Language**
-  - **Problem:** Developers, testers, and product owners speak different languages
-  - **Solution:** BDD uses Gherkin (Given/When/Then), which is readable by all stakeholders
-- **Focus on Behavior**
-  - **Problem:** Tests focus on implementation details that change frequently
-  - **Solution:** BDD tests describe **what the system does**, not **how it does it**
-- **Living Documentation**
-  - **Problem:** Documentation becomes outdated
-  - **Solution:** BDD scenarios are executable — if they pass, the documentation is accurate
-
----
-
-## Gherkin and the Ubiquitous Language
-
-BDD scenarios are most effective when written using the **Ubiquitous Language** from Domain-Driven Design. The shared vocabulary that both business and technical teams understand.
-
-### Why This Matters
-
-**Using technical language** (harder for business to validate):
+**Basic structure**:
 
 ```gherkin
-Given the database record exists
-When the API endpoint is called
-Then the response code should be 200
+Feature: feature-name
+
+  Rule: Acceptance criterion in business language
+
+    @ov
+    Scenario: Specific example of the rule
+      Given [precondition]
+      When [action]
+      Then [expected outcome]
 ```
 
-**Using Ubiquitous Language** (clear to all stakeholders):
+**See**: [Understanding BDD & Specifications](../../explanation/specifications/working-with-specifications.md) for conceptual foundation.
+
+---
+
+## Writing Rule Blocks
+
+Rules define **acceptance criteria** - what the system must do.
+
+### Rule Format
 
 ```gherkin
-Given an order awaiting approval
-When the manager approves the order
-Then the order status should be "Approved"
+Rule: [Clear statement of business requirement]
 ```
 
-The second version uses domain terms that:
+### Best Practices
 
-- Business stakeholders recognize and can validate
-- Developers implement using the domain model
-- QA tests reflect actual business rules
-
-**Best practice**: Before writing specifications, participate in Event Storming and Example Mapping workshops to establish the shared language.
-
-See: [Ubiquitous Language](../../explanation/specifications/ubiquitous-language.md) for DDD foundation and [Event Storming](../../explanation/specifications/event-storming.md) for domain discovery workshops
-
----
-
-## Requirements Discovery with Example Mapping
-
-Requirements for features are discovered through **Example Mapping**, a collaborative workshop technique that uses colored index cards to surface acceptance criteria (Blue cards → Rules) and concrete examples (Green cards → Scenarios).
-
-### Card to Gherkin Mapping
-
-| Card Color                                                                                                                                            | Represents          | Maps To             | Location |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------- | -------- |
-| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#F7E55A" stroke="#D6C645"/></svg> **Yellow** | User Story          | Feature description | `specs/` |
-| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#5BA3F7" stroke="#4A89D6"/></svg> **Blue**   | Acceptance Criteria | `Rule:` blocks      | `specs/` |
-| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> **Green**  | Concrete Examples   | `Scenario:` blocks  | `specs/` |
-| <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#FF7EBF" stroke="#D66A9F"/></svg> **Pink**   | Questions/Unknowns  | issues.md           | `specs/` |
-| N/A                                                                                                                                                   | Step Implementation | Go functions        | `src/`   |
-
-**Workshop Format**:
-
-- < 25 minutes, time-boxed
-- Collaborative: Product Owner + Developer + Tester
-- Produces cards that map directly to Gherkin elements
-- Surfaces questions and risks early
-
-**Result**: A feature is ready to implement when you have:
-
-- 1 Yellow Card (user story)
-- < 4 Blue Cards (acceptance criteria)
-- < 4 Green Cards per Blue Card (examples)
-- No questions that can not be quickly resolved
-
-**See**: [Example Mapping Guide](../../explanation/specifications/example-mapping.md) for complete workshop process, best practices, and detailed examples.
-
----
-
-## From Discovery to Implementation
-
-The complete workflow proceeds through these phases:
-
-1. **Discovery**: Example Mapping workshop → produces colored cards
-2. **Formulation**: Formulate Gherkin specifications from example map in `specs/`
-3. **Implementation**: Write step definitions in `src/` → implement features
-4. **Validation**: All scenarios pass → feature complete
-
-**Key Points**:
-
-- **Before development**: Run Example Mapping, write specifications in `specs/`
-- **During development**: Implement steps in `src/`, write unit tests, implement features
-- **After development**: All scenarios pass = acceptance criteria met
-
----
-
-## Key Principles
-
-### Measurable Acceptance Criteria
-
-**Bad** (subjective):
+**Write measurable acceptance criteria**:
 
 ```gherkin
+# Good - measurable
+Rule: Creates 3 directories (src/, tests/, docs/)
+Rule: Command completes in under 2 seconds
+Rule: Error message contains "already initialized" text
+
+# Bad - subjective
 Rule: The interface is user-friendly
 Rule: Performance is good
 Rule: Error messages are helpful
 ```
 
-**Good** (measurable):
+**Use business language**:
 
 ```gherkin
-Rule: Creates 3 directories (src/, tests/, docs/)
-Rule: Command completes in under 2 seconds
-Rule: Error message contains "already initialized" text
+# Good - domain language
+Rule: Users must provide verified contact information
+
+# Bad - technical jargon
+Rule: Email field must match regex pattern
 ```
 
-### Collaboration Before Code
-
-BDD is **collaborative** - it requires:
-
-- Product Owner (business perspective)
-- Engineer (technical perspective)
-- Tester (quality perspective)
-
-**Don't**: Have developers write specifications alone
-**Do**: Run Example Mapping workshop with all roles present
-
-### Acceptance Criteria Drive Development
-
-Acceptance criteria define "done":
-
-- Development starts when criteria are clear
-- Development ends when all criteria pass
-- No "scope creep" mid-implementation
-
-### Living Documentation
-
-Gherkin specifications serve as:
-
-- **Requirements documentation** (what the feature does)
-- **Automated tests** (validation that it works)
-- **Audit trail** (proof of testing for compliance)
-
-All in one place, always up to date.
-
-### Behavior Over Implementation
-
-Focus on **what** the system does, not **how** it does it:
-
-**Bad**:
-
-```gherkin
-When the ConfigManager loads the file
-And the YAML parser deserializes the content
-Then the Config struct is populated
-```
-
-**Good**:
-
-```gherkin
-When I run "r2r init"
-Then a file named "r2r.yaml" should be created
-And the configuration should contain default values
-```
+**One Rule per acceptance criterion** - If you have multiple distinct requirements, use multiple Rule blocks.
 
 ---
 
-## Specifications Evolve with Understanding
+## Writing Scenario Blocks
 
-Specifications are not static artifacts written once and frozen. They are **living documents** that evolve as your understanding deepens through implementation, usage, and feedback.
+Scenarios provide **executable examples** that verify Rules.
 
-### Initial Specification
+### Scenario Format
 
-After Example Mapping, you might write:
+```gherkin
+@ov
+Scenario: [Describe the specific example]
+  Given [setup - what's already true]
+  When [action - what happens]
+  Then [outcome - what we expect]
+  And [additional outcomes]
+```
+
+### Step Guidelines
+
+**Focus on behavior, not implementation**:
+
+```gherkin
+# Good - observable behavior
+When I run "r2r init"
+Then a file named "r2r.yaml" should be created
+
+# Bad - implementation details
+When the ConfigManager loads the file
+Then the Config struct is populated
+```
+
+**Use concrete examples**:
+
+```gherkin
+# Good - specific
+When I provide my email "user@example.com"
+
+# Bad - vague
+When I provide my email
+```
+
+**Keep scenarios focused** - One scenario tests one path through one rule.
+
+### Required Tags
+
+- `@ov` - Operational Verification (marks executable scenarios)
+- Additional tags: `@risk-control:<name>-<id>`, `@gxp`, etc. (See: [Tag Reference](../../explanation/specifications/tag-reference.md))
+
+---
+
+## File Organization
+
+### Directory Structure
+
+```
+specs/
+└── <module>/
+    └── <feature>/
+        ├── specification.feature    # Rules & Scenarios
+        └── issues.md               # Questions/blockers (pink cards)
+
+src/
+└── <module>/
+    └── tests/
+        └── steps_test.go           # Step implementations
+```
+
+**Separation**: Specifications (`specs/`) are business-readable. Implementations (`src/`) are technical.
+
+### Example File
+
+```gherkin
+# specs/eac-commands/init/specification.feature
+
+Feature: eac_init
+
+  Rule: Initializes EAC workspace structure
+
+    @ov
+    Scenario: Initialize new workspace
+      Given I am in an empty directory
+      When I run "eac init"
+      Then a directory named "src/" should be created
+      And a directory named "tests/" should be created
+      And a directory named "docs/" should be created
+      And I should see "Workspace initialized"
+
+    @ov
+    Scenario: Prevent double initialization
+      Given I have already run "eac init"
+      When I run "eac init" again
+      Then I should see an error "already initialized"
+      And no new directories should be created
+```
+
+**See**: [Gherkin File Organization](../../explanation/specifications/gherkin-concepts.md) for detailed structure.
+
+---
+
+## From Example Mapping Cards to Gherkin
+
+After running an Example Mapping workshop, translate cards to Gherkin:
+
+| Card Color | Maps To | Action |
+|------------|---------|--------|
+| Yellow | Feature description | Write `Feature:` line |
+| Blue | Acceptance criteria | Write `Rule:` blocks |
+| Green | Concrete examples | Write `Scenario:` blocks under Rules |
+| Pink | Questions/unknowns | Create `issues.md` |
+
+### Step-by-Step
+
+1. **Create feature file**: `specs/<module>/<feature>/specification.feature`
+2. **Add Feature line**: Use yellow card content
+3. **For each blue card**: Create a `Rule:` block
+4. **For each green card**: Create a `Scenario:` under the relevant Rule
+5. **Add tags**: At minimum `@ov` for each executable scenario
+6. **Document questions**: Create `issues.md` for pink cards
+
+**Example**:
+
+```
+Yellow: "User Registration"
+Blue: "Users must provide contact information"
+Green: "User provides email user@example.com"
+Green: "User provides invalid email format"
+```
+
+Becomes:
 
 ```gherkin
 Feature: cli_user-registration
@@ -267,173 +227,125 @@ Feature: cli_user-registration
   Rule: Users must provide contact information
 
     @ov
-    Scenario: User provides email
+    Scenario: User provides valid email
       Given I am registering a new account
       When I provide my email "user@example.com"
       Then my account should be created
-      And I should see "Registration successful"
-```
-
-**What we knew**: Users need to provide an email to register.
-
-### After Implementation Learning
-
-During implementation, you discover:
-
-- Email validation requirements (unit testing reveals format rules)
-- Verification workflow (not just storage)
-- Error cases (what if email already exists?)
-
-Updated specification:
-
-```gherkin
-Feature: cli_user-registration
-
-  Rule: Users must provide verified contact information
-
-    @ov
-    Scenario: User provides valid email format
-      Given I am registering a new account
-      When I provide my email "user@example.com"
-      Then I should receive a verification email
-      And my account should be in "pending verification" status
-      And I should see "Check your email to verify your account"
 
     @ov
     Scenario: User provides invalid email format
       Given I am registering a new account
       When I provide my email "not-an-email"
       Then I should see an error "Invalid email format"
-      And my account should not be created
-
-    @ov
-    Scenario: User provides already registered email
-      Given an account exists with email "existing@example.com"
-      When I provide my email "existing@example.com"
-      Then I should see an error "Email already registered"
-      And I should be directed to password reset
 ```
 
-**What changed**:
+**See**: [Example Mapping Guide](../../explanation/specifications/example-mapping.md) for workshop process.
 
-- **Rule refined**: "contact information" → "verified contact information"
-- **Scenario expanded**: Added verification workflow steps
-- **Edge cases added**: Invalid format, duplicate email
-- **Acceptance criteria clarified**: Actual behavior now explicit
+---
 
-### After Production Use
+## Updating Specifications
 
-After users interact with the feature, you learn:
+Specifications evolve as understanding deepens. Update them when:
 
-- Typos are common (help users correct them)
-- Verification emails go to spam (provide resend option)
-- Users forget which email they used (need lookup)
+| Trigger | Action |
+|---------|--------|
+| Implementation reveals edge case | Add new scenario |
+| Stakeholder feedback | Refine Rule/Scenario wording |
+| Production bug | Add regression scenario |
+| Domain language evolves | Refactor to use new terms |
 
-Further updated specification:
+### Update Process
+
+1. **Edit specification file** in `specs/`
+2. **Update step definitions** in `src/` if needed
+3. **Run tests** to verify changes
+4. **Commit together** - spec and code in same commit
+
+**Important**: Keep specifications synchronized with code. Don't accumulate "specification debt."
+
+**See**: [Review and Iterate](../../explanation/specifications/review-and-iterate.md) for detailed evolution practices.
+
+---
+
+## Common Patterns
+
+### Multiple Examples of Same Rule
 
 ```gherkin
-Feature: cli_user-registration
+Rule: Command validates input format
 
-  Rule: Users must provide verified contact information with error recovery
+  @ov
+  Scenario: Valid input accepted
+    When I run "cmd --flag value"
+    Then the command should succeed
 
-    @ov
-    Scenario: User provides valid email format
-      Given I am registering a new account
-      When I provide my email "user@example.com"
-      Then I should receive a verification email
-      And my account should be in "pending verification" status
-      And I should see "Check your email to verify your account"
-      And I should see "Didn't receive it? Resend verification email"
+  @ov
+  Scenario: Missing flag rejected
+    When I run "cmd value"
+    Then I should see "flag required"
 
-    @ov
-    Scenario: User corrects email typo before verification
-      Given I registered with email "user@exampl.com"
-      And I have not yet verified my email
-      When I run "r2r account update-email --new user@example.com"
-      Then my verification email should be resent to "user@example.com"
-      And I should see "Verification email sent to updated address"
-
-    @ov
-    Scenario: User provides invalid email format
-      Given I am registering a new account
-      When I provide my email "not-an-email"
-      Then I should see an error "Invalid email format"
-      And I should see a suggestion "Did you mean: not-an-email@gmail.com?"
-      And my account should not be created
-
-    @ov
-    Scenario: User provides already registered email
-      Given an account exists with email "existing@example.com"
-      When I provide my email "existing@example.com"
-      Then I should see "This email is already registered"
-      And I should see "Forgot your password? Reset it here"
-      And I should not create a duplicate account
+  @ov
+  Scenario: Invalid flag rejected
+    When I run "cmd --wrong value"
+    Then I should see "unknown flag"
 ```
 
-**What changed**:
+### Background (Shared Setup)
 
-- **Rule expanded**: Added "with error recovery" (learned from user behavior)
-- **Scenarios added**: Email correction, typo suggestions
-- **User guidance**: Added helpful error messages and next steps
-- **Real-world refinement**: Specs now match actual user needs
+```gherkin
+Feature: file-operations
 
-### Evolution Triggers
+  Background:
+    Given I have a file "test.txt"
 
-Update specifications when:
+  Rule: Can read files
 
-| Trigger                    | Example                             | Action                     |
-| -------------------------- | ----------------------------------- | -------------------------- |
-| **Implementation reveals** | Unit testing finds edge case        | Add error scenario         |
-| **Stakeholder feedback**   | "This isn't what I meant"           | Refine acceptance criteria |
-| **Production bugs**        | Users encounter unexpected behavior | Add regression scenario    |
-| **Domain evolution**       | Business process changes            | Update Rules and scenarios |
-| **Language refinement**    | Team adopts clearer terminology     | Refactor scenario language |
-| **Requirements change**    | New regulatory requirement          | Add compliance scenarios   |
-
-### Maintaining Specification Quality
-
-As specifications evolve:
-
-✅ **Do**:
-
-- Update specifications **immediately** when you learn something new
-- Refactor for clarity as understanding deepens
-- Keep specifications synchronized with implementation
-- Document why changes were made (commit messages)
-- **Don't forget the code** - as we evolve the domain language we do not only change specifications, we also change the corresponding language in the code!
-
-❌ **Don't**:
-
-- Leave specifications unchanged while code evolves
-- Accumulate "specification debt" to fix later
-- Let scenarios become outdated documentation
-- Treat specifications as write-once artifacts
-- Skip renaming corresponding code elements
-
-### The Evolution Cycle
-
-```mermaid
-flowchart TD
-    Initial["Initial Understanding"] --> SpecV1["Specification v1"]
-    SpecV1 --> Impl1["Implementation"]
-    Impl1 --> Learn1["Discovery & Learning"]
-    Learn1 --> SpecV2["Specification v2<br/>(refined)"]
-    SpecV2 --> Impl2["More Implementation"]
-    Impl2 --> Learn2["More Learning"]
-    Learn2 --> SpecV3["Specification v3<br/>(evolved)"]
-    SpecV3 -.repeat.-> Impl2
-
+    @ov
+    Scenario: Read existing file
+      When I read "test.txt"
+      Then I should see the file contents
 ```
 
-**Remember**: Each iteration brings you closer to a specification that accurately captures both the **intended behavior** and the **actual behavior** of your system.
+**Use sparingly** - Explicit Given steps are often clearer.
+
+### Scenario Outlines (Data-Driven)
+
+```gherkin
+Rule: Validates email format
+
+  @ov
+  Scenario Outline: Email validation
+    When I provide email "<email>"
+    Then I should see "<result>"
+
+    Examples:
+      | email              | result  |
+      | user@example.com   | success |
+      | invalid            | error   |
+      | user@              | error   |
+```
+
+**Use when**: Testing same logic with different data.
 
 ---
 
 ## Related Documentation
 
-- [Three-Layer Testing Approach](../../explanation/specifications/three-layer-approach.md) - How Rule/Scenario/Unit Test work together
-- [Ubiquitous Language](../../explanation/specifications/ubiquitous-language.md) - DDD and shared vocabulary foundation
-- [Event Storming](../../explanation/specifications/event-storming.md) - Domain discovery workshops
-- [Example Mapping](../../explanation/specifications/example-mapping.md) - Requirements discovery workshops
-- [Gherkin File Organization](../../explanation/specifications/gherkin-concepts.md) - How to structure and organize specifications
-- [Review and Iterate](../../explanation/specifications/review-and-iterate.md) - Detailed evolution practices
+### Explanation (Concepts)
+
+- [Understanding BDD & Specifications](../../explanation/specifications/working-with-specifications.md) - Why BDD, key principles, evolution
+- [Three-Layer Testing](../../explanation/specifications/three-layer-approach.md) - Rule/Scenario/Unit test relationship
+- [Ubiquitous Language](../../explanation/specifications/ubiquitous-language.md) - Domain vocabulary
+- [Example Mapping](../../explanation/specifications/example-mapping.md) - Discovery workshops
+- [Gherkin Concepts](../../explanation/specifications/gherkin-concepts.md) - Structure and organization
+
+### How-To Guides
+
+- [BDD Development Workflow](./bdd-development-workflow.md) - Execute and implement tests
+- [Reviewing Specifications](./reviewing-specifications.md) - Conduct reviews
+- [Creating Feature Files](./creating-feature-files.md) - Start new specifications
+
+### Reference
+
+- [Tag Reference](../../reference/specifications/tag-reference.md) - All available tags
+- [Gherkin Limits](../../reference/specifications/gherkin-limits.md) - Syntax constraints and best practices

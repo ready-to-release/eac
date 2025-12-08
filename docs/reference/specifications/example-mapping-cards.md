@@ -1,3 +1,22 @@
+<!-- EDITOR
+# Editor: reference/specifications/example-mapping-cards.md
+
+## Soul
+
+Example Mapping card color reference: Yellow=Story, Blue=Acceptance Criteria/Rules, Green=Examples/Scenarios, Pink=Questions.
+
+## Sections
+
+1. Card Color Reference
+2. Yellow Card (User Story)
+3. Blue Card (Acceptance Criteria)
+4. Green Card (Examples)
+5. Pink Card (Questions)
+6. Visual Layout
+7. Workshop Readiness Signals
+8. Related
+-->
+
 # Example Mapping Card Colors
 
 Reference for card colors and meanings in Example Mapping workshops.

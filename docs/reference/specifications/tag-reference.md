@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: reference/specifications/tag-reference.md
+
+## Soul
+
+Complete canonical reference for testing taxonomy tags including test levels, verification types, execution control, dependencies, and risk controls.
+
+## Sections
+
+1. Overview
+2. Test Level Tags
+3. Verification Tags
+4. Test Execution Control Tags
+5. System Dependency Tags
+6. Risk Control Tags
+7. Tag Inheritance
+8. Test Suites
+9. Best Practices
+10. Related Documentation
+-->
+
 # Tag Reference
 
 Complete reference for the **testing taxonomy tags** used across the test suite.

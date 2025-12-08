@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/security-overview.md
+
+## Soul
+
+Comprehensive defense-in-depth security scanning with SAST, vulnerability detection, secrets scanning, IaC analysis, compliance checking, SBOM generation, and DAST using Semgrep, Trivy, and OWASP ZAP.
+
+## Sections
+
+1. What is Security Scanning?
+2. When to Use Security Commands
+3. Key Concepts
+4. Workflow Overview
+5. Scan Details
+6. Integration Points
+7. Best Practices
+8. Troubleshooting
+9. Next Steps
+10. Related Areas
+-->
+
 # Security Scanning
 
 Security scanning in EAC provides comprehensive application security testing including SAST, vulnerability scanning, secrets detection, and compliance checking.

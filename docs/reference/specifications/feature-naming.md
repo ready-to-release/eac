@@ -1,3 +1,19 @@
+<!-- EDITOR
+# Editor: reference/specifications/feature-naming.md
+
+## Soul
+
+Feature naming convention using module_feature-name pattern for traceability across specifications and tests.
+
+## Sections
+
+1. Feature Name Format
+2. Examples
+3. Why This Format?
+4. File Path Convention
+5. Related
+-->
+
 # Feature Naming Reference
 
 Naming conventions for Gherkin feature files.

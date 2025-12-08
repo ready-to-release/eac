@@ -1,3 +1,28 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/books-configuration.md
+
+## Soul
+
+Configuration reference for books.yml structure with copy, command, and inline source types plus navigation synthesis for generated content sections.
+
+## Sections
+
+1. Configuration File
+2. Book Definition
+3. Source Types
+4. Copy Sources
+5. Command Sources
+6. Inline Sources
+7. Navigation Configuration
+8. Complete Example
+9. Staging Directory
+10. Validation
+11. Schema Reference
+12. Best Practices
+13. Troubleshooting
+14. Next Steps
+-->
+
 # Books Configuration
 
 **Problem**: You need to define how a book aggregates static content with dynamically-generated content.

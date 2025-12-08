@@ -1,3 +1,27 @@
+<!-- EDITOR
+# Editor: reference/risk-assessment.md
+
+## Soul
+
+Comprehensive NIST 800-53 risk assessment treating EAC CLI as developer infrastructure in regulated environments, with threat analysis and prioritized control implementation.
+
+## Sections
+
+1. Executive Summary
+2. System Description
+3. Asset Inventory
+4. Threat Analysis
+5. Vulnerability Assessment
+6. Risk Evaluation
+7. Required Security Controls
+8. Recommended Control Implementation
+9. Residual Risk
+10. Compliance Mapping
+11. Conclusions and Recommendations
+12. Approval and Sign-Off
+13. Appendix A: References
+-->
+
 # Risk Assessment
 
 **Version**: 1.0

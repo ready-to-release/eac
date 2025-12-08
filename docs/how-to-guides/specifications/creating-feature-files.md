@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: how-to-guides/specifications/creating-feature-files.md
+
+## Soul
+
+Step-by-step guide for creating Gherkin feature files from templates with placeholder replacement, rule addition, and validation.
+
+## Sections
+
+1. Step 1: Copy Template
+2. Step 2: Replace Placeholders
+3. Before
+4. After
+5. Step 3: Add Rules from Example Mapping
+6. Step 4: Add Scenarios for Each Rule
+7. Step 5: Add Required Tags
+8. File Structure
+9. Validation
+10. Related
+-->
+
 # Creating Feature Files
 
 How to create new Gherkin specification files from templates.

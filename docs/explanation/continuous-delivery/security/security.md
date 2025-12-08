@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/security/security.md
+
+## Soul
+
+Comprehensive security integration documentation covering defense in depth (SAST, DAST, dependency scanning, container security), three open-source tools (OWASP ZAP, Trivy, Dependabot) with command examples, security by stage matrix, blocking strategy, and vulnerability remediation workflow with P0-P3 prioritization.
+
+## Sections
+
+1. Introduction
+2. Security Testing Layers
+3. OWASP ZAP
+4. Trivy
+5. Dependabot
+6. Security by Stage Matrix
+7. Shift-Left Practices
+8. Blocking Strategy
+9. Vulnerability Remediation Workflow
+10. Best Practices
+-->
+
 # Security in the CD Model
 
 ## Introduction

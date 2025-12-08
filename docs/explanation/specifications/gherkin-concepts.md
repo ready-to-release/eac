@@ -6,7 +6,9 @@ Understanding how to structure and organize Gherkin specification files effectiv
 
 ## Purpose
 
-This guide explains **how to organize Gherkin files** for maintainability and clarity. For understanding BDD, see [Working with specifications](working-with-specifications.md#what-is-bdd).
+This guide explains **how to organize Gherkin files** for maintainability and clarity.
+
+For understanding BDD, see [Working with specifications](working-with-specifications.md#what-is-bdd).
 
 ---
 

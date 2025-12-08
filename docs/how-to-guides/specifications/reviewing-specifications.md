@@ -1,3 +1,37 @@
+<!-- EDITOR
+# Editor: how-to-guides/specifications/reviewing-specifications.md
+
+## Soul
+
+Specification review and maintenance guide covering weekly reviews, stakeholder validation, feedback integration, and refactoring triggers.
+
+## Sections
+
+1. Review Ceremonies
+2. Weekly Specification Review
+3. Three Amigos Session
+4. Review Process
+5. Step 1: Gather Specs to Review
+6. Step 2: Check for Red Flags
+7. Step 3: Validate with Stakeholders
+8. Step 4: Document Actions
+9. After Example Mapping
+10. Immediate (Same Day)
+11. Short-term (1-2 Days)
+12. During Implementation (1 Week)
+13. After Implementation
+14. Handling Specification Changes
+15. Process
+16. Breaking Changes
+17. Feedback Integration
+18. From Implementation
+19. From Production (Bug-Driven)
+20. Specification Refactoring
+21. When to Refactor
+22. How to Refactor
+23. Related
+-->
+
 # Reviewing Specifications
 
 How to conduct specification reviews and maintain spec health.

@@ -1,3 +1,42 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/validate-configuration.md
+
+## Soul
+
+Configuration reference for validation system including contract schemas (modules, environments, testing-tags), pattern tag validation rules, file ownership patterns, markdown rules, and JSON Schema format.
+
+## Sections
+
+1. Contract Configuration
+   - Module Contract Schema
+   - Supported Module Types
+   - Environment Contract
+2. Test Tag Configuration
+   - Tag Contract
+   - Pattern Tags
+   - Skip Reason Configuration
+3. Test Suite Configuration
+   - Suite Definition
+4. File Ownership Configuration
+   - Module File Patterns
+   - Pattern Rules
+5. Markdown Validation Configuration
+   - Validated Rules
+   - Example Valid Structure
+6. Go Tidiness Configuration
+   - What Gets Validated
+   - Validation Command
+7. CI/CD Configuration
+   - GitHub Actions
+   - Pre-commit Hook
+   - Makefile Integration
+8. Schema Files
+   - Schema Location
+   - Schema Format
+9. Troubleshooting
+10. Related Documentation
+-->
+
 # Validate Configuration
 
 This guide covers configuration options for EAC's validation system, including contract schemas, tag patterns, and file ownership rules.

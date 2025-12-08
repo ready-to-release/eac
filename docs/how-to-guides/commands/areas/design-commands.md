@@ -1,3 +1,56 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/design-commands.md
+
+## Soul
+
+Command reference for architecture design covering create (AI generation), update (preserve customizations), validate (DSL syntax), and serve (Structurizr Lite visualization).
+
+## Sections
+
+1. Quick Reference
+2. create design
+   - Synopsis
+   - Description
+   - Arguments
+   - Flags
+   - Examples
+   - Output
+   - Exit Codes
+3. update design
+   - Synopsis
+   - Description
+   - Arguments
+   - Flags
+   - Examples
+   - Output
+   - Dry Run Output
+   - Exit Codes
+4. validate design
+   - Synopsis
+   - Description
+   - Arguments
+   - Flags
+   - Examples
+   - Output (Success)
+   - Output (Failure)
+   - Exit Codes
+5. serve design
+   - Synopsis
+   - Description
+   - Arguments
+   - Flags
+   - Examples
+   - Output
+   - Export Output
+   - Exit Codes
+6. Common Workflows
+   - Initial Design Creation
+   - Keeping Designs Current
+   - CI/CD Integration
+   - Documentation Export
+7. Related Documentation
+-->
+
 # Design Commands
 
 Command reference for EAC's architecture design system.

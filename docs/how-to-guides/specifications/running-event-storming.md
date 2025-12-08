@@ -1,3 +1,31 @@
+<!-- EDITOR
+# Editor: how-to-guides/specifications/running-event-storming.md
+
+## Soul
+
+Facilitation guide for Event Storming domain discovery workshops using timeline-ordered events, commands, actors, and policies to extract ubiquitous language.
+
+## Sections
+
+1. When to Use
+2. Session Setup
+3. Time
+4. Participants
+5. Materials
+6. Session Steps
+7. Step 1: Set the Stage (5 minutes)
+8. Step 2: Chaotic Exploration (20-30 minutes)
+9. Step 3: Enforce Timeline (15-20 minutes)
+10. Step 4: Add Commands and Actors (20-30 minutes)
+11. Step 5: Identify Aggregates and Bounded Contexts (20 minutes)
+12. Step 6: Capture Policies (10 minutes)
+13. Sticky Note Colors
+14. Common Pitfalls
+15. From Events to Specifications
+16. Virtual Sessions
+17. Related
+-->
+
 # Running Event Storming Sessions
 
 How to facilitate Event Storming workshops for domain discovery.

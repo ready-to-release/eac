@@ -1,3 +1,21 @@
+<!-- EDITOR
+# Editor: reference/decision-records/.template/item.md
+
+## Soul
+
+Standard ADR template with status checkboxes, problem context, decision rationale, and consequences structure.
+
+## Sections
+
+1. Title template
+2. Status checkboxes
+3. Date placeholder
+4. Context
+5. Decision
+6. Consequences
+7. Related Decisions
+-->
+
 # DR-XXX: [Title]
 
 ## Status

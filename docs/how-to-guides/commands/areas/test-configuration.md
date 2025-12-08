@@ -1,3 +1,46 @@
+<!-- EDITOR
+# Editor: how-to-guides/commands/areas/test-configuration.md
+
+## Soul
+
+Configuration reference for testing system including test suite definitions, tag contracts with pattern validation, output formats, coverage settings, and parallel execution control.
+
+## Sections
+
+1. Test Suite Configuration
+   - Suite Definition
+   - Suite Properties
+2. Test Tag Configuration
+   - Tag Contract
+   - Pattern Tags
+3. Output Format Configuration
+   - Cucumber JSON (Default)
+   - JUnit XML
+   - Output Directory Structure
+4. Coverage Configuration
+   - Coverage Flags
+   - Coverage Output
+   - Coverage Thresholds
+5. Module Type Test Configuration
+   - Go Modules
+   - Specification Modules
+6. Environment Variables
+7. CI/CD Configuration
+   - GitHub Actions
+   - Coverage Integration
+8. Parallel Test Execution
+   - Default Behavior
+   - Controlling Parallelism
+9. Test Filtering
+   - By Suite
+   - By Tag (in specs)
+10. Timeout Configuration
+    - Suite-level Timeout
+    - Module-level Timeout
+11. Troubleshooting
+12. Related Documentation
+-->
+
 # Test Configuration
 
 This guide covers configuration options for EAC's testing system, including test suites, output formats, and coverage settings.

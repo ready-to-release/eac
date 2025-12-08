@@ -1,3 +1,18 @@
+<!-- EDITOR
+# Editor: reference/specifications/gherkin-limits.md
+
+## Soul
+
+Size and complexity limits for feature files with action thresholds for splitting.
+
+## Sections
+
+1. Rule Count Per Feature
+2. Scenario Count Per Feature
+3. Scenarios Per Rule
+4. Related
+-->
+
 # Gherkin Limits Reference
 
 Guidelines for feature file size and complexity.

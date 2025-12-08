@@ -1,3 +1,22 @@
+<!-- EDITOR
+# Editor: explanation/specifications/gxp-tagging.md
+
+## Soul
+
+Regulatory compliance tagging system for GxP-regulated environments (pharmaceutical, medical device). Links specifications to risk controls for traceability and audit readiness.
+
+## Sections
+
+1. Overview - GxP regulatory contexts (GMP, GCP, GLP, ISO 13485, FDA 21 CFR Part 11)
+2. Specification Hierarchy: URS → FS → DS - User Requirements, Functional Spec, Design Spec
+3. Regulatory Classification Tags - Feature naming as URS identifier, @gxp, @gmp-critical-aspect
+4. Risk Control Tags - @risk-control:gxp-<name> linkage
+5. Integration with Testing Taxonomy - Combined @gxp + @L2/@ov tags
+6. Best Practices - DO: Use feature naming, create risk controls, maintain traceability; DON'T: Use @gmp-critical-aspect for non-GmP, tag without risk control
+7. Traceability and Reporting - URS/FS, Test Summary, Risk Traceability Matrix
+8. Related Documentation - Tag Reference, Three-Layer Approach, Gherkin File Organization, Risk Controls
+-->
+
 # GxP Tagging
 
 Understanding tagging for regulated software development in pharmaceutical and medical device contexts.
@@ -85,10 +104,10 @@ Feature: auth_user-authentication
 
 ### Relationship and Traceability
 
-```
+```text
 URS (User Requirements)
   ↓ "satisfies"
-FS (Functional Specification - Scenarios)
+ FS (Functional Specification - Scenarios)
   ↓ "implements"
 DS (Design Specification - Architecture)
   ↓ "builds"
@@ -366,4 +385,3 @@ At release approval, regulatory tags enable automatic generation of:
 
 - [Gherkin File Organization](gherkin-concepts.md) - Organizing specifications
 - [Risk Controls](risk-controls.md) - Risk control specifications
-

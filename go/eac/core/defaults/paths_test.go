@@ -7,26 +7,7 @@ import (
 )
 
 // All paths use forward slashes (/) for cross-platform config file compatibility.
-
-func TestTestImplPath(t *testing.T) {
-	tests := []struct {
-		moniker  string
-		expected string
-	}{
-		{"cli", "go/r2r/cli/tests"},
-		{"core", "go/eac/core/tests"},
-		{"commands", "go/eac/commands/tests"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.moniker, func(t *testing.T) {
-			got := TestImplPath(tt.moniker)
-			if got != tt.expected {
-				t.Errorf("TestImplPath(%q) = %q, want %q", tt.moniker, got, tt.expected)
-			}
-		})
-	}
-}
+// Note: TestImplPath is not provided here - it must come from repository.yml configuration.
 
 func TestDesignPath(t *testing.T) {
 	tests := []struct {

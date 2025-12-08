@@ -1,7 +1,28 @@
+<!-- EDITOR
+# Editor: explanation/lifecycle/operations.md
+
+## Soul
+
+Operations as continuous DevOps practice where builders run their systems, covering maintenance plans, periodic evaluations, user access reviews, and defect/incident management.
+
+## Sections
+
+1. (Introduction - DevOps model emphasis)
+2. Operation & Maintenance Plan
+   - Problem Management
+3. Operational Procedures
+   - Periodic Evaluation
+   - User Access Review
+4. Defects & Incidents
+   - Defects
+   - Incidents
+-->
+
 # Operations
 
-Operations is not a separate phase but an integral part of the continuous delivery lifecycle. In a DevOps model, the team that builds the system also runs and maintains it.
+Operations is not a separate phase but an integral part of the continuous delivery lifecycle.
 
+In a DevOps model, the team that builds the system also runs and maintains it.
 
 ---
 
@@ -53,10 +74,10 @@ Validates that system access remains appropriate and secure.
 
 ## Defects & Incidents
 
-| Term         | Definition                                                                                        | Examples                                                          |
-|--------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-| **Defect**   | A flaw in software that causes incorrect behavior or failure to meet requirements                 | Bug in code, incorrect data display, scan vulnerability       |
-| **Incident** | An unplanned interruption or reduction in quality of IT services requiring immediate attention    | System outage, application crash, network connectivity issue      |
+| Term         | Definition                                                                                     | Examples                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Defect**   | A flaw in software that causes incorrect behavior or failure to meet requirements              | Bug in code, incorrect data display, scan vulnerability      |
+| **Incident** | An unplanned interruption or reduction in quality of IT services requiring immediate attention | System outage, application crash, network connectivity issue |
 
 ### Defects
 

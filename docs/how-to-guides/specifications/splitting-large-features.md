@@ -1,3 +1,27 @@
+<!-- EDITOR
+# Editor: how-to-guides/specifications/splitting-large-features.md
+
+## Soul
+
+Refactoring guide for breaking large feature files into focused, manageable files using rule grouping, workflow separation, or scenario type strategies.
+
+## Sections
+
+1. When to Split
+2. Strategy 1: Split by Rule
+3. Before (12 Rules)
+4. After (3 features × 4 Rules)
+5. Strategy 2: Split by Workflow
+6. Before (35 scenarios)
+7. After (3 features)
+8. Strategy 3: Split by Scenario Type
+9. Before (30 scenarios)
+10. After (2 features)
+11. Refactoring Steps
+12. Naming After Split
+13. Related
+-->
+
 # Splitting Large Features
 
 How to refactor features that have grown too large.

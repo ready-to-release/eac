@@ -1,3 +1,21 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/setting-up-precommit.md
+
+## Soul
+
+Step-by-step configuration guide for pre-commit hooks that validate code quality, run fast tests, and scan for security issues before commits.
+
+## Sections
+
+1. Pre-commit Hook Script
+2. Make Hook Executable
+3. Using Pre-commit Framework
+4. Time Budget
+5. Checks to Include
+6. Skipping Hooks (Emergency Only)
+7. Related
+-->
+
 # Setting Up Pre-commit Checks
 
 How to configure pre-commit hooks for Stage 2 validation.

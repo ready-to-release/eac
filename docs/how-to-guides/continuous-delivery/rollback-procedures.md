@@ -1,3 +1,28 @@
+<!-- EDITOR
+# Editor: how-to-guides/continuous-delivery/rollback-procedures.md
+
+## Soul
+
+Emergency rollback execution guide covering detection criteria, decision thresholds, execution steps, and verification procedures for production deployments.
+
+## Sections
+
+1. When to Roll Back
+2. Pre-Deployment Checklist
+3. Rollback Steps
+4. Step 1: Detect Issue
+5. Step 2: Decide to Roll Back
+6. Step 3: Execute Rollback
+7. Step 4: Verify Rollback
+8. Step 5: Communicate
+9. Database Rollback Considerations
+10. Feature Flag Rollback
+11. Post-Rollback Actions
+12. Rollback Time Objectives
+13. Practice Rollbacks
+14. Related
+-->
+
 # Rollback Procedures
 
 How to plan and execute production rollbacks.

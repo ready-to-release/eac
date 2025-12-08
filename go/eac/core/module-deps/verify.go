@@ -133,10 +133,57 @@ func (c *ModuleChecker) IsAvailable() bool {
 
 	// Verify build artifacts exist
 	buildDir := paths.BuildOutputPath(c.repoRoot, c.moniker)
-	resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
-	results := resolver.VerifyArtifacts(typeDef.GetArtifacts())
 
-	return config.AllSuccessful(results)
+	// For dependency checking, we accept any platform's artifacts
+	// (unlike build validation which checks specific platforms)
+	// This allows Docker containers to recognize modules built on different platforms
+	artifacts := typeDef.GetArtifacts()
+	for _, artifact := range artifacts {
+		if artifact.Type == config.ArtifactTypeExecutable {
+			// Check if ANY platform's artifacts exist for executables
+			if c.checkAnyPlatformExists(artifact, buildDir, module.Metadata) {
+				return true
+			}
+		} else {
+			// Non-executables: use standard verification
+			resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
+			result := resolver.VerifyArtifact(artifact)
+			if result.Exists {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// checkAnyPlatformExists checks if ANY platform's artifacts exist for an executable
+// This is used for dependency checking to allow cross-platform builds
+func (c *ModuleChecker) checkAnyPlatformExists(artifact config.Artifact, buildDir string, metadata map[string]string) bool {
+	// Get platforms to check
+	platforms := artifact.Platforms
+	if len(platforms) == 0 {
+		platforms = []string{"linux", "windows", "darwin"}
+	}
+
+	// Check each platform - return true if ANY exist
+	for _, platform := range platforms {
+		// Try both amd64 and arm64 for each platform
+		archs := []string{"amd64"}
+		if platform != "windows" {
+			archs = append(archs, "arm64")
+		}
+
+		for _, arch := range archs {
+			resolver := config.NewArtifactResolverFull(c.moniker, buildDir, platform, arch, metadata)
+			result := resolver.VerifyArtifact(artifact)
+			if result.Exists {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // checkSourceRootExists verifies the module's source directory exists
@@ -176,23 +223,45 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 
 	// Return info about build artifacts
 	buildDir := paths.BuildOutputPath(c.repoRoot, c.moniker)
-	resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
-	results := resolver.VerifyArtifacts(typeDef.GetArtifacts())
 
-	if !config.AllSuccessful(results) {
-		failures := config.GetFailures(results)
-		return "", fmt.Errorf("missing build artifacts:\n%s", config.FormatVerificationResults(failures))
-	}
+	// For dependency checking, find any available artifact across platforms
+	artifacts := typeDef.GetArtifacts()
+	for _, artifact := range artifacts {
+		if artifact.Type == config.ArtifactTypeExecutable {
+			// Check all platforms
+			platforms := artifact.Platforms
+			if len(platforms) == 0 {
+				platforms = []string{"linux", "windows", "darwin"}
+			}
 
-	// Return first successful artifact path as version info
-	for _, r := range results {
-		if r.Exists {
-			absPath, _ := filepath.Abs(r.Path)
-			return fmt.Sprintf("Built: %s", absPath), nil
+			for _, platform := range platforms {
+				archs := []string{"amd64"}
+				if platform != "windows" {
+					archs = append(archs, "arm64")
+				}
+
+				for _, arch := range archs {
+					resolver := config.NewArtifactResolverFull(c.moniker, buildDir, platform, arch, module.Metadata)
+					result := resolver.VerifyArtifact(artifact)
+					if result.Exists {
+						absPath, _ := filepath.Abs(result.Path)
+						return fmt.Sprintf("Built: %s", absPath), nil
+					}
+				}
+			}
+		} else {
+			// Non-executables: check normally
+			resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
+			result := resolver.VerifyArtifact(artifact)
+			if result.Exists {
+				absPath, _ := filepath.Abs(result.Path)
+				return fmt.Sprintf("Built: %s", absPath), nil
+			}
 		}
 	}
 
-	return fmt.Sprintf("Build directory: %s", buildDir), nil
+	// No artifacts found
+	return "", fmt.Errorf("no build artifacts found in: %s", buildDir)
 }
 
 // loadModuleContract loads the module contract from the registry

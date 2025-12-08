@@ -3,16 +3,17 @@ nav:
   - index.md
   - continuous-delivery
   - specifications
-  - Configuration:
-    - configuration/claude-mcp-setup.md
+  - configuration
   - Commands:
+    - commands/index.md
     - commands/help-command.md
     - commands/init-command.md
+    - commands/init-security.md
     - commands/commit-command.md
     - commands/squash-message-command.md
-    - commands/describe-command.md
-    - commands/show-get-list-commands.md
-    - commands/command-template.md
+    - commands/show-commands.md
+  - Command Areas:
+    - commands/areas/index.md
   - Books:
     - commands/areas/books-overview.md
     - commands/areas/books-configuration.md

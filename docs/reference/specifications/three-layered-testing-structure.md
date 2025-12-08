@@ -1,3 +1,19 @@
+<!-- EDITOR
+# Editor: reference/specifications/three-layered-testing-structure.md
+
+## Soul
+
+Reference defining three-layer testing structure: Rules from Blue Cards, Scenarios from Green Cards, and Unit Tests.
+
+## Sections
+
+1. Introduction
+2. The Three Layers
+3. Layer 1: Rule
+4. Layer 2: Scenario
+5. Layer 3: Unit Tests
+-->
+
 # Three-Layer Testing Structure
 
 This project uses **a three layered approach to bind specifications to tests**:

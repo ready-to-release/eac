@@ -1,3 +1,26 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/architecture/environments.md
+
+## Soul
+
+Comprehensive environment architecture covering six environment types (DevBox, Build Agents, PLTE, Demo, Deploy Agents, Production) with network segregation zones, deployment strategies, Infrastructure as Code integration, and Quick Reference links to extracted reference/how-to content.
+
+## Sections
+
+1. Introduction
+2. Environment Types Explained
+3. Network Segregation Architecture
+4. Production Environment
+5. Deployment Strategies
+6. Architecture Visuals Explained
+7. Traditional vs CD Model Comparison
+8. Infrastructure as Code Integration
+9. Next Steps
+10. References
+11. Quick Reference
+
+-->
+
 # Environments Architecture
 
 ## Introduction
