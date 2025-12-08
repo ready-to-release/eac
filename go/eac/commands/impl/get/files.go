@@ -59,7 +59,7 @@ func GetFiles() int {
 	}
 
 	// Use the shared get command helper
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// Determine if we need staged-only files
 		stagedOnly := filterOpts.StagedOnly
 

@@ -121,111 +121,95 @@ func getModuleTypeDescription(moduleType string, cfg *config.EACConfig) string {
 func buildMetricsSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
 	outputDir := filepath.Join("out", "build", module.Moniker)
 
-	// Get module type to determine what metrics to show
-	switch module.Type {
-	case "mkdocs-site":
-		return mkdocsSiteMetrics(f, outputDir)
-	case "mkdocs-pdf":
-		return mkdocsPdfMetrics(f, outputDir)
-	case "go-library", "go-commands", "go-cli":
-		return goModuleMetrics(f, outputDir)
-	case "r2r-extension":
-		return extensionMetrics(f, module, cfg)
-	default:
-		return genericMetrics(f, outputDir)
-	}
-}
-
-func mkdocsSiteMetrics(f *SummaryFormatter, outputDir string) string {
-	siteDir := filepath.Join(outputDir, "site")
-
-	htmlCount, _ := GetFileCount(siteDir, "**/*.html")
-	totalFiles, _ := GetFileCount(siteDir, "**/*")
-	siteSize, _ := GetDirectorySize(siteDir)
-
-	headers := []string{"Metric", "Value"}
-	rows := [][]string{
-		{"HTML Pages", fmt.Sprintf("%d", htmlCount)},
-		{"Total Files", fmt.Sprintf("%d", totalFiles)},
-		{"Site Size", siteSize},
+	// Get artifact definitions from module type contract
+	moduleType := cfg.ModuleTypes.Get(module.Type)
+	if moduleType == nil || len(moduleType.Build.Artifacts) == 0 {
+		return f.Section(Emoji("metrics")+" Build Output", "No artifacts defined in contract")
 	}
 
-	return f.Section(Emoji("metrics")+" Build Output", f.Table(headers, rows))
+	// Verify artifacts using contract
+	resolver := config.NewArtifactResolverWithMetadata(
+		module.Moniker,
+		outputDir,
+		module.Metadata,
+	)
+	results := resolver.VerifyArtifacts(moduleType.Build.Artifacts)
+
+	// Show what actually exists
+	return formatArtifactMetrics(f, results, module.Type)
 }
 
-func mkdocsPdfMetrics(f *SummaryFormatter, outputDir string) string {
-	pdfCount, _ := GetFileCount(outputDir, "*.pdf")
+// formatArtifactMetrics formats artifact verification results intelligently based on types
+func formatArtifactMetrics(f *SummaryFormatter, results []config.ArtifactVerificationResult, moduleType string) string {
+	if len(results) == 0 {
+		return f.Section(Emoji("metrics")+" Build Output", "No artifacts defined")
+	}
 
-	// List individual PDFs with sizes
-	headers := []string{"Book", "Size"}
-	var rows [][]string
+	// Count artifacts by type and status
+	var foundArtifacts []config.ArtifactVerificationResult
+	var missingArtifacts []config.ArtifactVerificationResult
 
-	pdfs, _ := filepath.Glob(filepath.Join(outputDir, "*.pdf"))
-	for _, pdf := range pdfs {
-		info, err := os.Stat(pdf)
-		if err == nil {
-			rows = append(rows, []string{
-				filepath.Base(pdf),
-				formatBytes(info.Size()),
-			})
+	for _, r := range results {
+		if r.Exists && r.Error == nil {
+			foundArtifacts = append(foundArtifacts, r)
+		} else {
+			missingArtifacts = append(missingArtifacts, r)
 		}
 	}
 
-	summary := fmt.Sprintf("%s PDF Books: %d\n\n", Emoji("build"), pdfCount)
-	if len(rows) > 0 {
-		summary += f.Table(headers, rows)
-	}
-
-	return summary
-}
-
-func goModuleMetrics(f *SummaryFormatter, outputDir string) string {
-	// Check for build marker
-	markerPath := filepath.Join(outputDir, "build-complete.marker")
-	if _, err := os.Stat(markerPath); os.IsNotExist(err) {
+	// If nothing found, show error
+	if len(foundArtifacts) == 0 {
 		return f.Section(Emoji("metrics")+" Build Output", "Build artifacts not found")
 	}
 
-	headers := []string{"Metric", "Value"}
-	rows := [][]string{
-		{"Status", Emoji("success") + " Complete"},
-		{"Output", Code(outputDir)},
+	// Format based on artifact types present
+	headers := []string{"Artifact", "Type", "Details"}
+	var rows [][]string
+
+	for _, r := range foundArtifacts {
+		details := formatArtifactDetails(r)
+		rows = append(rows, []string{
+			Emoji("success") + " " + Code(r.Pattern),
+			r.Artifact.Type,
+			details,
+		})
 	}
 
 	return f.Section(Emoji("metrics")+" Build Output", f.Table(headers, rows))
 }
 
-func extensionMetrics(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
-	// Get docker_build config from module type
-	dockerBuild := cfg.ModuleTypes.GetDockerBuildConfig(module.Type)
-	if dockerBuild == nil {
-		return ""
+// formatArtifactDetails returns size/count info for an artifact
+func formatArtifactDetails(r config.ArtifactVerificationResult) string {
+	info, err := os.Stat(r.Path)
+	if err != nil {
+		return "-"
 	}
 
-	headers := []string{"Property", "Value"}
-	rows := [][]string{
-		{"Container", dockerBuild.Container},
-		{"Platforms", formatSlice(dockerBuild.Platforms)},
-		{"Tags", fmt.Sprintf("%d", len(dockerBuild.Tags))},
-	}
+	switch r.Artifact.Type {
+	case config.ArtifactTypeDirectory:
+		// Show file count and total size for directories
+		fileCount, _ := GetFileCount(r.Path, "**/*")
+		dirSize, _ := GetDirectorySize(r.Path)
+		if fileCount > 0 {
+			return fmt.Sprintf("%d files, %s", fileCount, dirSize)
+		}
+		return dirSize
 
-	if dockerBuild.SBOM {
-		rows = append(rows, []string{"SBOM", Emoji("success")})
-	}
-	if dockerBuild.Provenance {
-		rows = append(rows, []string{"Provenance", Emoji("success")})
-	}
+	case config.ArtifactTypeFile, config.ArtifactTypeExecutable:
+		// Show file size
+		return formatBytes(info.Size())
 
-	return f.Section(Emoji("build")+" Container Image", f.Table(headers, rows))
-}
+	case config.ArtifactTypeMarker:
+		// Just show that it exists
+		return "✓"
 
-func genericMetrics(f *SummaryFormatter, outputDir string) string {
-	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		return f.Section(Emoji("metrics")+" Build Output", "No build artifacts found")
+	case config.ArtifactTypeImage:
+		// Docker images - just confirm
+		return "Built"
+
+	default:
+		return "-"
 	}
-
-	dirSize, _ := GetDirectorySize(outputDir)
-	return f.Section(Emoji("metrics")+" Build Output", fmt.Sprintf("Output directory: %s (%s)", Code(outputDir), dirSize))
 }
 
 func buildDiagnosticsSection(f *SummaryFormatter, module *config.Module) string {

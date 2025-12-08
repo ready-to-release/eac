@@ -49,7 +49,7 @@ books:
     description: "Complete repository structure report with all generated content"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
-    default: false  # Slow PDF build - use --all to include
+    default: true
 
     sources:
       # Assets for PDF rendering (required for stylesheets)

@@ -512,3 +512,11 @@ Each stage builds confidence incrementally, with quality gates preventing defect
 - [Environments Architecture](../architecture/environments.md)
 - [Security](../security/security.md)
 - [Repository Layout](../../../reference/repository-layout.md)
+
+## Quick Reference
+
+- [Pre-commit Quality Gates](../../../reference/continuous-delivery/precommit-quality-gates.md) - Stage 2 quality gates
+- [Merge Request Quality Gates](../../../reference/continuous-delivery/merge-request-quality-gates.md) - Stage 3 quality gates
+- [Verification Types](../../../reference/continuous-delivery/verification-types.md) - IV, OV, PV reference
+- [Setting Up Pre-commit](../../../how-to-guides/continuous-delivery/setting-up-precommit.md) - How to configure pre-commit hooks
+- [Writing Commit Messages](../../../how-to-guides/continuous-delivery/writing-commit-messages.md) - Commit message format

@@ -24,12 +24,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofrs/flock"
+	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/runner"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/runners"
@@ -38,6 +40,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
@@ -503,6 +506,35 @@ func executeTests(cfg *TestConfig) int {
 				writeInit("⏭️ Module dependencies not available, tests will be skipped: %s", strings.Join(unavailableModuleDeps, ", "))
 			}
 		}
+	}
+	writeInit("")
+
+	// Phase 4.5: Build Artifact Validation
+	writeInit("=== Phase 4.5: Build Artifact Validation ===")
+
+	// Get unique modules being tested
+	modulesToValidate := getUniqueModulesFromTests(selectedTests)
+	if len(modulesToValidate) == 0 {
+		writeInit("No modules to validate")
+	} else {
+		writeInit("Validating artifacts for %d module(s): %s",
+			len(modulesToValidate), strings.Join(modulesToValidate, ", "))
+
+		// Validate each module
+		validationErrors := validateBuildArtifacts(modulesToValidate, eacCfg, workspaceRoot, writeInit)
+
+		if len(validationErrors) > 0 {
+			writeInit("")
+			writeInit("%s Error: Build artifacts are missing", output.IconFail)
+			for _, err := range validationErrors {
+				writeInit("  %s", err)
+			}
+			writeInit("")
+			writeInit("Resolution: Run 'build <module>' for each module to generate artifacts")
+			return 1
+		}
+
+		writeInit("✅ All build artifacts present")
 	}
 	writeInit("")
 
@@ -1317,4 +1349,83 @@ func testTUISummary(
 		Details:     details,
 		NextSteps:   nextSteps,
 	}
+}
+
+// getUniqueModulesFromTests extracts unique module monikers from test references
+func getUniqueModulesFromTests(tests []testing.TestReference) []string {
+	moduleSet := make(map[string]bool)
+	for _, test := range tests {
+		module := extractModuleFromPath(test.FilePath)
+		if module != "" {
+			moduleSet[module] = true
+		}
+	}
+
+	modules := make([]string, 0, len(moduleSet))
+	for module := range moduleSet {
+		modules = append(modules, module)
+	}
+
+	// Sort for consistent output
+	sort.Strings(modules)
+	return modules
+}
+
+// validateBuildArtifacts validates that build artifacts exist for the given modules
+// Returns a list of validation error messages (empty if all valid)
+func validateBuildArtifacts(
+	moduleList []string,
+	cfg *config.EACConfig,
+	workspaceRoot string,
+	writeInit func(format string, args ...interface{}),
+) []string {
+	var errors []string
+
+	// Load module registry
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+	if err != nil {
+		errors = append(errors, fmt.Sprintf("Failed to load module contracts: %v", err))
+		return errors
+	}
+
+	// Validate each module
+	targetOS := runtime.GOOS
+	targetArch := runtime.GOARCH
+
+	for _, moduleName := range moduleList {
+		// Check if module exists
+		if _, exists := moduleRegistry.Get(moduleName); !exists {
+			writeInit("  ⚠️  %s: module contract not found (skipping)", moduleName)
+			continue
+		}
+
+		// Validate artifacts for this module and its dependencies
+		results, err := implinternal.ValidateArtifactsWithDependencies(
+			moduleName, cfg, moduleRegistry, targetOS, targetArch, workspaceRoot,
+		)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("%s: validation error: %v", moduleName, err))
+			continue
+		}
+
+		// Check if validation passed
+		if !results.Passed {
+			// Collect missing artifact details
+			for _, modResult := range results.Modules {
+				if modResult.Summary != nil && modResult.Summary.Missing > 0 {
+					role := "target"
+					if modResult.IsDependency {
+						role = "dependency"
+					}
+					errors = append(errors, fmt.Sprintf("%s (%s): missing %d artifact(s)",
+						modResult.Moniker, role, modResult.Summary.Missing))
+				}
+			}
+		} else {
+			// Log success
+			writeInit("  ✅ %s (and %d dependencies)", moduleName, len(results.Modules)-1)
+		}
+	}
+
+	return errors
 }

@@ -44,10 +44,13 @@ const (
 
 // Artifact defines an expected build artifact
 type Artifact struct {
-	Type      string   `yaml:"type"`               // executable, file, directory, marker, image, glob
-	Pattern   string   `yaml:"pattern"`            // Path pattern with variables: {moniker}, {os}, {arch}, {ext}
-	Platforms []string `yaml:"platforms,omitempty"` // For executables: linux, windows, darwin
-	Verify    string   `yaml:"verify,omitempty"`   // Verification mode: current_platform (default), all, any
+	Type        string   `yaml:"type"`                  // executable, file, directory, marker, image, glob
+	Pattern     string   `yaml:"pattern"`               // Path pattern with variables: {moniker}, {os}, {arch}, {ext}
+	ID          string   `yaml:"id,omitempty"`          // Optional explicit ID for metadata override key
+	Platforms   []string `yaml:"platforms,omitempty"`   // For executables: linux, windows, darwin
+	Verify      string   `yaml:"verify,omitempty"`      // Verification mode: current_platform (default), all, any
+	Compression string   `yaml:"compression,omitempty"` // Compression type: none (default), strip, upx
+	DeriveFrom  string   `yaml:"derive_from,omitempty"` // Source artifact pattern to derive from (for compressed variants)
 }
 
 // ArtifactType constants
@@ -65,6 +68,13 @@ const (
 	VerifyCurrentPlatform = "current_platform"
 	VerifyAll             = "all"
 	VerifyAny             = "any"
+)
+
+// CompressionType constants
+const (
+	CompressionNone  = ""      // No compression (default)
+	CompressionStrip = "strip" // Strip debug symbols only
+	CompressionUPX   = "upx"   // UPX compression (implies strip)
 )
 
 // DockerBuildConfig contains Docker image build configuration
@@ -297,6 +307,24 @@ func (a *Artifact) IsExecutable() bool {
 // IsMarker returns true if this is a marker artifact
 func (a *Artifact) IsMarker() bool {
 	return a.Type == ArtifactTypeMarker
+}
+
+// GetCompression returns the compression type, defaulting to none
+func (a *Artifact) GetCompression() string {
+	if a.Compression == "" {
+		return CompressionNone
+	}
+	return a.Compression
+}
+
+// IsDerived returns true if this artifact is derived from another
+func (a *Artifact) IsDerived() bool {
+	return a.DeriveFrom != ""
+}
+
+// RequiresCompression returns true if this artifact needs compression
+func (a *Artifact) RequiresCompression() bool {
+	return a.Compression == CompressionStrip || a.Compression == CompressionUPX
 }
 
 // GetPostBuildSteps returns the post-build steps for this module type

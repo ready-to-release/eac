@@ -45,11 +45,54 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		// Check if module has ANY books defined
 		allBooks := cfg.GetBooksByModule(module.Moniker)
 		if len(allBooks) > 0 {
-			// Module has books - use filtered list unless --all flag is set
+			// Module has books - filter based on requested artifacts
 			var moduleBooks []*config.Book
-			if opts.BuildAll {
-				moduleBooks = allBooks
+			if len(opts.RequestedArtifacts) > 0 {
+				// Filter books to only those whose artifacts are requested
+				for _, book := range allBooks {
+					output := book.GetOutput()
+					shouldInclude := false
+
+					// Determine artifact IDs for this book based on output mode
+					// Match the logic from expandBookArtifacts in artifact_helpers.go
+					switch output {
+					case "pdf-dark", "pdf-light":
+						// Artifact ID is the book name
+						for _, reqID := range opts.RequestedArtifacts {
+							if reqID == book.Name {
+								shouldInclude = true
+								break
+							}
+						}
+					case "pdf-all":
+						// Artifact IDs are "{book-name}-dark" and "{book-name}-light"
+						darkID := fmt.Sprintf("%s-dark", book.Name)
+						lightID := fmt.Sprintf("%s-light", book.Name)
+						for _, reqID := range opts.RequestedArtifacts {
+							if reqID == darkID || reqID == lightID {
+								shouldInclude = true
+								break
+							}
+						}
+					case "site":
+						// HTML site - artifact ID is "site" directory
+						for _, reqID := range opts.RequestedArtifacts {
+							if reqID == "site" {
+								shouldInclude = true
+								break
+							}
+						}
+					}
+
+					if shouldInclude {
+						moduleBooks = append(moduleBooks, book)
+					}
+				}
+				if len(moduleBooks) > 0 {
+					Logln(logWriter, "📚 Building %d book(s) based on requested artifacts", len(moduleBooks))
+				}
 			} else {
+				// No specific artifacts requested - use default books
 				moduleBooks = cfg.GetDefaultBooksByModule(module.Moniker)
 			}
 			if len(moduleBooks) > 0 {

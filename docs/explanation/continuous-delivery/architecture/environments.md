@@ -649,3 +649,10 @@ Benefits: No configuration drift, parallel testing without conflicts, cost-effec
 - [Stages 1-6](../cd-model/cd-model-stages-1-6.md)
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md)
 - [Testing Strategy Overview](../testing/testing-strategy-overview.md)
+
+## Quick Reference
+
+- [Environment Types](../../../reference/continuous-delivery/environment-types.md) - Environment summary table
+- [Network Zones](../../../reference/continuous-delivery/network-zones.md) - Zone architecture reference
+- [Deployment Strategies](../../../reference/continuous-delivery/deployment-strategies.md) - Strategy comparison table
+- [Provisioning PLTE](../../../how-to-guides/continuous-delivery/provisioning-plte.md) - How to create PLTEs

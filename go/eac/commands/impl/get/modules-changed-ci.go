@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -91,7 +91,7 @@ func GetChangedModulesCI() int {
 	}
 
 	// Use the shared get command helper
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// If bootstrap (no previous success), return all modules
 		if isBootstrap {
 			allModules, err := getAllModuleMonikers(workspaceRoot)

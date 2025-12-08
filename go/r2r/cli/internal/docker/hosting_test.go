@@ -13,6 +13,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
+	dockerspec "github.com/moby/docker-image-spec/specs-go/v1"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/cache"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/conf"
 	"github.com/stretchr/testify/assert"
@@ -969,8 +971,10 @@ func TestCreateContainerConfig_Unit(t *testing.T) {
 	}
 
 	imageInspect := &image.InspectResponse{
-		Config: &container.Config{
-			Entrypoint: []string{},
+		Config: &dockerspec.DockerOCIImageConfig{
+			ImageConfig: ocispec.ImageConfig{
+				Entrypoint: []string{},
+			},
 		},
 	}
 
@@ -998,8 +1002,10 @@ func TestCreateContainerConfig_Unit(t *testing.T) {
 
 	// Test with entrypoint (should not set WorkingDir)
 	imageInspectWithEntrypoint := &image.InspectResponse{
-		Config: &container.Config{
-			Entrypoint: []string{"/app/entrypoint.sh"},
+		Config: &dockerspec.DockerOCIImageConfig{
+			ImageConfig: ocispec.ImageConfig{
+				Entrypoint: []string{"/app/entrypoint.sh"},
+			},
 		},
 	}
 	config = host.CreateContainerConfig(ext, ModeRun, []string{}, imageInspectWithEntrypoint)

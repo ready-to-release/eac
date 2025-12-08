@@ -51,6 +51,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           artifact-name: build-artifacts-r2r-cli
           upload-artifact: 'true'
+          extra-args: '--all'
 
   test:
     name: Test
@@ -68,7 +69,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           results-artifact-name: test-results-r2r-cli
           # PRs run commit suite only; main/release branches run full suite
-          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
+          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
 
       - name: Restore Executable Permissions
         run: |

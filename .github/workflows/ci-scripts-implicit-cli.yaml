@@ -52,7 +52,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           download-artifact: 'false'
           # PRs run commit suite only; main/release branches run full suite
-          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
+          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
 
   test-windows:
     name: Test (Windows)
@@ -69,4 +69,4 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           download-artifact: 'false'
           # PRs run commit suite only; main/release branches run full suite
-          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
+          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}

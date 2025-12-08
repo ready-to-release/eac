@@ -47,9 +47,8 @@ How test levels map to CD Model stages and integrate with Rules/Scenarios/Unit T
 
 **Test Distribution** (Test Pyramid):
 
-- **L0-L1**: 70-80% (hundreds to thousands)
-- **L2**: 15-20% (dozens to hundreds)
-- **L3**: 5% (5-20 critical scenarios)
+- **L0-L2**: 95% (hundreds to thousands) - fast, deterministic, test doubles
+- **L3**: 5% (5-20 critical vertical scenarios) - PLTE infrastructure validation
 - **L4**: Continuous (synthetic monitoring + exploratory)
 
 **Key Principle**: Test as early as possible (shift-left L0-L3), as fast as possible, then validate in production (shift-right L4). Avoid fragile horizontal pre-production environments.

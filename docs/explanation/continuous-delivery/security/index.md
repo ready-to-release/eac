@@ -109,14 +109,7 @@ The CD Model integrates security at multiple stages:
 
 ## Security by Stage
 
-| Stage | Security Activities | Tools | Time Budget |
-|-------|-------------------|-------|-------------|
-| **2. Pre-commit** | Secret scanning, basic SAST | Trivy, golangci-lint | < 2 min |
-| **3. Merge Request** | Full SAST, dependency scan | Trivy, language-specific | 5-10 min |
-| **4. Commit** | Container scan, SBOM generation | Trivy | 5 min |
-| **5. Acceptance** | DAST passive scan, API testing | OWASP ZAP | 15-30 min |
-| **6. Extended** | DAST active scan, authenticated | OWASP ZAP | 30-60 min |
-| **11. Live** | Runtime monitoring, incident response | Monitoring tools | Continuous |
+Security scanning integrates at Stages 2, 4, 5, 6, and 11. For the complete stage-by-stage matrix with tools and time budgets, see [Security Integration: Stage Matrix](security.md#security-by-stage-matrix).
 
 ---
 
@@ -181,36 +174,9 @@ Not all security issues should block the pipeline. The CD Model uses risk-based 
 
 ## Vulnerability Remediation Workflow
 
-**1. Detection** (Automated)
+See [Security Integration](security.md#vulnerability-remediation-workflow) for the complete 6-step remediation process:
 
-- Security scan identifies vulnerability
-- Trivy/ZAP/Dependabot reports finding
-- Finding includes: CVE, severity, affected component
-
-**2. Triage** (Automated + Manual)
-
-- Automated: Compare against severity thresholds
-- Manual: Review exploitability in your context
-- Decision: Block, warn, or accept risk
-
-**3. Remediation** (Developer Action)
-
-- Update dependency to patched version
-- Apply code fix for vulnerability
-- Add security control (WAF rule, input validation)
-- Document risk acceptance (if cannot fix immediately)
-
-**4. Verification** (Automated)
-
-- Re-run security scans
-- Verify vulnerability resolved
-- Update vulnerability tracking
-
-**5. Prevention** (Process Improvement)
-
-- Update security rules to catch similar issues
-- Improve developer training
-- Enhance pre-commit checks
+**Detection → Triage → Prioritize → Remediate → Verify → Document**
 
 ---
 

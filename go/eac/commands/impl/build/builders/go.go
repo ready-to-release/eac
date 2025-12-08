@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -62,33 +61,68 @@ func listSingleBinaryArtifacts(module *modules.ModuleContract) []string {
 }
 
 // listCrossCompiledArtifacts returns artifacts for cross-compiled builds
+// Now uses artifact definitions from module-types.yml to support derived artifacts (UPX, etc.)
 func listCrossCompiledArtifacts(module *modules.ModuleContract) []string {
-	binaryName := module.Moniker
-
-	// Get target platforms from handlers config
 	cfg := config.Global()
-	var targets []config.CrossCompileTarget
-	if cfg != nil && cfg.Handlers != nil {
-		targets = cfg.Handlers.GetCrossCompileTargets()
-	} else {
-		// Fallback to defaults
-		targets = []config.CrossCompileTarget{
-			{OS: "linux", Arch: "amd64", Suffix: ""},
-			{OS: "linux", Arch: "arm64", Suffix: ""},
-			{OS: "darwin", Arch: "amd64", Suffix: ""},
-			{OS: "darwin", Arch: "arm64", Suffix: ""},
-			{OS: "windows", Arch: "amd64", Suffix: ".exe"},
-		}
+	if cfg == nil || cfg.ModuleTypes == nil {
+		return []string{}
+	}
+
+	// Get module type definition to access artifact definitions
+	moduleTypeDef := cfg.ModuleTypes.Get(module.Type)
+	if moduleTypeDef == nil || moduleTypeDef.Build == nil {
+		return []string{}
 	}
 
 	var artifacts []string
-	for _, target := range targets {
-		metadataKey := fmt.Sprintf("exe-%s-%s", target.OS, target.Arch)
-		outputName := fmt.Sprintf("%s-%s-%s%s", binaryName, target.OS, target.Arch, target.Suffix)
-		if customName, ok := module.Metadata[metadataKey]; ok && customName != "" {
-			outputName = customName
+	binaryName := module.Moniker
+
+	// Process all artifact definitions (including UPX variants)
+	for _, artifact := range moduleTypeDef.Build.Artifacts {
+		if artifact.Type != config.ArtifactTypeExecutable {
+			continue
 		}
-		artifacts = append(artifacts, outputName)
+
+		// For each platform the artifact supports
+		platforms := artifact.Platforms
+		if len(platforms) == 0 {
+			platforms = []string{"linux", "windows", "darwin"}
+		}
+
+		for _, platform := range platforms {
+			// Determine architectures from the pattern
+			var archs []string
+			pattern := artifact.Pattern
+
+			// Parse pattern to determine supported architectures
+			if strings.Contains(pattern, "-amd64") || strings.Contains(pattern, "{os}-amd64") {
+				// amd64-only pattern (includes UPX variants: {moniker}-{os}-amd64-upx{ext})
+				archs = []string{"amd64"}
+			} else if strings.Contains(pattern, "-arm64") || strings.Contains(pattern, "{os}-arm64") {
+				// arm64-only pattern
+				archs = []string{"arm64"}
+			} else if platform == "windows" {
+				// Windows only supports amd64
+				archs = []string{"amd64"}
+			} else {
+				// Generic pattern - support both architectures
+				archs = []string{"amd64", "arm64"}
+			}
+
+			for _, arch := range archs {
+				// Resolve the pattern with platform variables
+				resolver := config.NewArtifactResolverWithPlatform(binaryName, "", platform, arch)
+				artifactName := resolver.ResolvePattern(pattern)
+
+				// Check for metadata override
+				metadataKey := fmt.Sprintf("executable-%s-%s", platform, arch)
+				if customName, ok := module.Metadata[metadataKey]; ok && customName != "" {
+					artifactName = customName
+				}
+
+				artifacts = append(artifacts, artifactName)
+			}
+		}
 	}
 
 	// Add checksums file
@@ -200,69 +234,47 @@ func getHostPlatform() (goos, goarch string) {
 }
 
 // buildCrossCompiled builds binaries for multiple platforms
-// In CI mode, builds all configured targets. In local dev mode, builds only for target platform.
-// In Docker-in-Docker mode, cross-compiles for the detected host platform.
+// With --all flag, builds all configured targets. In default mode, builds only current platform.
 func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	binaryName := module.Moniker
 
-	// Detect if running in CI
-	isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
-
-	// Get target platforms from handlers config
+	// Get target platforms from handlers config - fail fast if missing
 	cfg := config.Global()
-	var configTargets []config.CrossCompileTarget
-	if cfg != nil && cfg.Handlers != nil {
-		configTargets = cfg.Handlers.GetCrossCompileTargets()
-	} else {
-		// Fallback to defaults
-		configTargets = []config.CrossCompileTarget{
-			{OS: "linux", Arch: "amd64", Suffix: ""},
-			{OS: "linux", Arch: "arm64", Suffix: ""},
-			{OS: "darwin", Arch: "amd64", Suffix: ""},
-			{OS: "darwin", Arch: "arm64", Suffix: ""},
-			{OS: "windows", Arch: "amd64", Suffix: ".exe"},
-		}
+	if cfg == nil || cfg.Handlers == nil {
+		Logln(logWriter, "❌ Configuration not loaded - cannot determine cross-compile targets")
+		return 1
 	}
 
-	// In local dev mode, build only what's needed
-	if !isCI {
-		// Determine host platform
-		hostOS, hostArch := getHostPlatform()
-		if hostOS == "" {
-			hostOS = runtime.GOOS
-		}
-		if hostArch == "" {
-			hostArch = runtime.GOARCH
-		}
+	configTargets := cfg.Handlers.GetCrossCompileTargets()
+	if len(configTargets) == 0 {
+		Logln(logWriter, "❌ No cross-compile targets defined in contract for module: %s", module.Moniker)
+		return 1
+	}
 
+	// Filter targets based on requested artifacts
+	if len(opts.RequestedArtifacts) > 0 {
 		var filteredTargets []config.CrossCompileTarget
-
-		// Always build Linux for host architecture (works in container)
-		for _, t := range configTargets {
-			if t.OS == "linux" && t.Arch == hostArch {
-				filteredTargets = append(filteredTargets, t)
-				break
-			}
-		}
-
-		// Also build host's native platform if not Linux
-		if hostOS != "linux" {
-			for _, t := range configTargets {
-				if t.OS == hostOS && t.Arch == hostArch {
-					filteredTargets = append(filteredTargets, t)
+		for _, target := range configTargets {
+			// Artifact ID format for executables: {os}-{arch}
+			artifactID := fmt.Sprintf("%s-%s", target.OS, target.Arch)
+			// Check if this artifact was requested
+			for _, requestedID := range opts.RequestedArtifacts {
+				if requestedID == artifactID {
+					filteredTargets = append(filteredTargets, target)
 					break
 				}
 			}
 		}
-
-		if len(filteredTargets) > 0 {
-			var names []string
-			for _, t := range filteredTargets {
-				names = append(names, t.OS+"/"+t.Arch)
-			}
-			Logln(logWriter, "Local dev mode: building for %v", names)
-			configTargets = filteredTargets
+		if len(filteredTargets) == 0 {
+			Logln(logWriter, "No platforms match requested artifacts - skipping build")
+			return 0
 		}
+		configTargets = filteredTargets
+		var platformNames []string
+		for _, t := range configTargets {
+			platformNames = append(platformNames, fmt.Sprintf("%s/%s", t.OS, t.Arch))
+		}
+		Logln(logWriter, "Building requested platforms: %v", platformNames)
 	}
 
 	// Convert to internal structure with metadata keys
@@ -282,15 +294,15 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, works
 			goos:        t.OS,
 			goarch:      t.Arch,
 			suffix:      t.Suffix,
-			metadataKey: fmt.Sprintf("exe-%s-%s", t.OS, t.Arch),
+			metadataKey: fmt.Sprintf("executable-%s-%s", t.OS, t.Arch),
 		}
 	}
 
-	// Build ldflags
+	// Build ldflags for version injection
 	ldflags := ""
-	if opts.Compressed {
-		ldflags = "-s -w"
-	}
+
+	// Detect if running in CI (for version detection)
+	isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
 
 	// Determine version to inject
 	version := opts.Version
@@ -353,62 +365,6 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, works
 		}
 
 		successCount++
-
-		// Apply UPX compression if requested and available
-		// Creates a separate -upx suffixed binary, keeping the original intact
-		// Check if platform supports UPX from handlers config
-		upxSupported := false
-		if cfg != nil && cfg.Handlers != nil {
-			upxSupported = cfg.Handlers.IsUPXSupported(target.goos)
-		} else {
-			// Default: linux and windows support UPX
-			upxSupported = target.goos == "linux" || target.goos == "windows"
-		}
-		if opts.CompressedUPX && upxSupported {
-			if upxPath, err := exec.LookPath("upx"); err == nil {
-				// Create UPX output name by inserting -upx before the extension
-				var upxOutputName string
-				if target.suffix == ".exe" {
-					upxOutputName = strings.TrimSuffix(outputName, ".exe") + "-upx.exe"
-				} else {
-					upxOutputName = outputName + "-upx"
-				}
-				upxOutputPath := filepath.Join(outputDir, upxOutputName)
-
-				// Copy the binary to the UPX target
-				Logln(logWriter, "Creating UPX copy: %s", upxOutputName)
-				srcFile, err := os.Open(outputPath)
-				if err != nil {
-					Logln(logWriter, "⚠️  Failed to open source for UPX: %v", err)
-				} else {
-					dstFile, err := os.Create(upxOutputPath)
-					if err != nil {
-						srcFile.Close()
-						Logln(logWriter, "⚠️  Failed to create UPX target: %v", err)
-					} else {
-						_, copyErr := io.Copy(dstFile, srcFile)
-						srcFile.Close()
-						dstFile.Close()
-						if copyErr != nil {
-							Logln(logWriter, "⚠️  Failed to copy for UPX: %v", copyErr)
-						} else {
-							// Make executable
-							os.Chmod(upxOutputPath, 0755)
-
-							// Compress the copy
-							Logln(logWriter, "Compressing with UPX: %s", upxOutputName)
-							upxCmd := exec.Command(upxPath, "--best", "--lzma", upxOutputPath)
-							upxCmd.Stdout = logWriter
-							upxCmd.Stderr = logWriter
-							if err := upxCmd.Run(); err != nil {
-								Logln(logWriter, "⚠️  UPX compression failed: %v", err)
-								os.Remove(upxOutputPath) // Clean up failed UPX file
-							}
-						}
-					}
-				}
-			}
-		}
 	}
 
 	if successCount == 0 {

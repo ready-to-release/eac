@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -79,7 +79,7 @@ func GetBuildDeps() int {
 	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes)
 
 	// Use the shared get command helper for output formatting
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		return BuildDepsResult{
 			Module:    moniker,
 			Type:      module.Type,

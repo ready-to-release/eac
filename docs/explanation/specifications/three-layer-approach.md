@@ -409,3 +409,8 @@ For complete tag documentation, see:
 - [Event Storming](event-storming.md) - Domain discovery workshops
 - [Example Mapping](example-mapping.md) - Requirements discovery
 - [Risk Controls](risk-controls.md) - Integrating compliance requirements
+
+## Quick Reference
+
+- [Canon TDD Workflow](../../reference/specifications/canon-tdd-workflow.md) - Kent Beck's TDD steps
+- [BDD Development Workflow](../../how-to-guides/specifications/bdd-development-workflow.md) - Development workflow guide

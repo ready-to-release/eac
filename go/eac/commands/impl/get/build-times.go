@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 )
@@ -62,7 +62,7 @@ func GetBuildTimes() int {
 // GetBuildTimesFiltered gets build timings with optional module filtering
 // If buildOutputDir is empty, defaults to out/build
 func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// Get repository root if needed
 		var repoRoot string
 		if buildOutputDir == "" {

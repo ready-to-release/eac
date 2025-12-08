@@ -233,6 +233,11 @@
           "type": "string",
           "description": "Path pattern relative to build output. Variables: {moniker}, {os}, {arch}, {ext}"
         },
+        "id": {
+          "type": "string",
+          "description": "Optional explicit ID for metadata override key (e.g., 'output', 'book'). If not specified, variant is derived from pattern variables.",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
         "platforms": {
           "type": "array",
           "description": "Platforms this artifact is built for (for executables)",
