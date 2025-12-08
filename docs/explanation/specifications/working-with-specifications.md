@@ -22,10 +22,12 @@ This project maintains the conceptual distinction between Rules (often referred 
 - **Purpose**: Executable behavior examples
 - **Format**: `Scenario:` blocks under Rules
 - **Location**: `specs/<module>/<feature>/specification.feature` (same file as Rules)
-- **Glue**: `src/<module>/tests/steps_test.go` (separate from specification)
+- **Glue**: Step definition files (separate from specification)
 - **Origin**: Green cards from Example Mapping, and any further scenarios needed to make the rule complete
 - **Audience**: Product Owners, Developers, QA, automation engineers
-- **Focus**: HOW the system behaves (described in specs/, implemented in src/)
+- **Focus**: HOW the system behaves (described in specs/, implemented separately)
+
+> **This project**: Step definitions in `src/<module>/tests/steps_test.go`. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md) for implementation details.
 
 ### Architectural Principle: Specs vs Implementation
 

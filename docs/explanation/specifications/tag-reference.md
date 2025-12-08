@@ -26,112 +26,181 @@ Test level tags define the execution environment and scope based on the [Testing
 
 ### `@L0` - Fast Unit Tests
 
+**Characteristics**:
+
 - **Execution**: Devbox or agent
 - **Scope**: Source and binary
-- **Dependencies**: All replaced with test doubles
-- **Speed**: Milliseconds
-- **Usage**: Go tests with `//go:build L0` build tag, Godog features with `@L0` tag
+- **Dependencies**: All replaced with test doubles (pure functions, no I/O)
+- **Speed**: Milliseconds (microseconds per test)
+- **Isolation**: Maximum - no external dependencies, no filesystem, no network
 - **Trade-off**: Highest determinism, lowest domain coherency
 
-**Example**:
+**When to Use**:
 
-```go
-//go:build L0
-// +build L0
+- Testing business logic without side effects
+- Data parsing and validation
+- Calculations and transformations
+- Algorithm correctness
 
-package mypackage_test
+**Example** (Gherkin):
 
-func TestValidateEmail(t *testing.T) {
-    // Very fast unit test
-}
+```gherkin
+@L0 @ov
+Scenario: Validate email format
+  Given the input "user@example.com"
+  When I validate the email format
+  Then the result should be valid
 ```
+
+> **This project**: Uses `@L0` tag in Gherkin scenarios and `//go:build L0` for Go unit tests. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l0-tests).
 
 ### `@L1` - Unit Tests
 
+**Characteristics**:
+
 - **Execution**: Devbox or agent
 - **Scope**: Source and binary
-- **Dependencies**: All replaced with test doubles
-- **Speed**: Seconds
-- **Usage**: Go tests (default, no build tag needed), Godog features with `@L1` tag
+- **Dependencies**: All replaced with test doubles (mocked dependencies)
+- **Speed**: Seconds (milliseconds per test)
+- **Isolation**: High - can use temp files, simple mocks
 - **Trade-off**: Highest determinism, lowest domain coherency
 
-**Example**:
+**When to Use**:
 
-```go
-package mypackage_test
+- Unit testing with mocked dependencies
+- Testing components with filesystem access (temp directories)
+- Testing with in-memory databases
+- Service layer testing with mocked repositories
 
-func TestUserService_CreateUser(t *testing.T) {
-    // Unit test with mocked dependencies
-}
+**Example** (Gherkin):
+
+```gherkin
+@L1 @ov
+Scenario: Create user with valid data
+  Given a user repository
+  When I create a user with email "user@example.com"
+  Then the user should be persisted
 ```
+
+> **This project**: Default test level for Go unit tests (no build tag), explicit `@L1` for Gherkin. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l1-tests).
 
 ### `@L2` - Emulated System Tests
 
+**Characteristics**:
+
 - **Execution**: Devbox or agent
-- **Scope**: Deployable artifacts
-- **Dependencies**: All replaced with test doubles
-- **Speed**: Seconds
-- **Usage**: Go tests with `//go:build L2` build tag, Godog features (default if no level tag specified)
+- **Scope**: Deployable artifacts (binaries, containers)
+- **Dependencies**: All replaced with test doubles (emulated services)
+- **Speed**: Seconds to minutes
+- **Isolation**: Moderate - uses test containers, emulated APIs
 - **Trade-off**: High determinism, high domain coherency
 
-**Example**:
+**When to Use**:
+
+- Integration testing with emulated dependencies
+- Container and artifact validation
+- Testing with test containers (databases, message queues)
+- End-to-end testing with mocked external services
+
+**Example** (Gherkin):
 
 ```gherkin
 @L2 @deps:docker @ov
 Feature: Container Integration Tests
   Tests requiring Docker for artifact validation
+
+  Scenario: Container starts successfully
+    Given a Docker environment
+    When I start the application container
+    Then the health check should pass
 ```
+
+> **This project**: Uses `//go:build L2` for Go integration tests, `@L2` or default (no level tag) for Gherkin. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l2-tests).
 
 ### `@L3` - In-Situ Vertical Tests
 
+**Characteristics**:
+
 - **Execution**: PLTE (Production-Like Test Environment)
 - **Scope**: Deployed system (single deployable module boundaries)
-- **Dependencies**: All replaced with test doubles
+- **Dependencies**: All replaced with test doubles (isolated module testing)
 - **Speed**: Minutes
-- **Usage**: Go tests with `//go:build L3` build tag, Godog features with `@L3` tag (automatically inferred from `@iv` or `@pv`)
+- **Isolation**: Low - real infrastructure, mocked external dependencies
 - **Trade-off**: Moderate determinism, high domain coherency
 
-**Example**:
+**When to Use**:
+
+- Installation verification in PLTE
+- Deployment validation
+- Pre-production verification
+- Testing deployed modules in isolation
+
+**Example** (Gherkin):
 
 ```gherkin
 @L3 @iv
 Feature: API Service Deployment Verification
   Validates deployment in PLTE with test doubles
+
+  Scenario: API responds to health check
+    Given the service is deployed to PLTE
+    When I call the health endpoint
+    Then the response should be 200 OK
 ```
+
+> **This project**: Uses `//go:build L3` for Go tests, `@L3` or auto-inferred from `@iv`/`@pv` for Gherkin. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l3-tests).
 
 ### `@L4` - Testing in Production
 
-- **Execution**: Production
+**Characteristics**:
+
+- **Execution**: Production environment
 - **Scope**: Deployed system (cross-service interactions)
 - **Dependencies**: All production, may use live test doubles
-- **Speed**: Continuous
-- **Usage**: Go tests with `//go:build L4` build tag, Godog features with `@L4` tag (automatically inferred from `@piv` or `@ppv`)
+- **Speed**: Continuous (minutes to hours)
+- **Isolation**: None - tests run against live production
 - **Trade-off**: High determinism, highest domain coherency
 
-**Example**:
+**When to Use**:
+
+- Production smoke tests after deployment
+- Continuous production monitoring
+- Post-installation verification in production
+- Synthetic monitoring and health checks
+
+**Example** (Gherkin):
 
 ```gherkin
 @L4 @piv
 Feature: Production Smoke Tests
   Validates production deployment post-release
+
+  Scenario: Production health check passes
+    Given the production environment
+    When I check the system health
+    Then all critical services should be running
+    And response time should be under 200ms
 ```
 
-**Inference Rules**:
+> **This project**: Uses `//go:build L4` for Go tests, `@L4` or auto-inferred from `@piv`/`@ppv` for Gherkin. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l4-tests).
 
-**Go Tests:**
+### Test Level Implementation
 
-- No build tag → `@L1`
-- `//go:build L0` → `@L0`
-- `//go:build L2` → `@L2`
-- `//go:build L3` → `@L3`
-- `//go:build L4` → `@L4`
+Test levels can be implemented using various mechanisms depending on the language and test framework:
 
-**Godog Features:**
+- **Build system tags/attributes** - Language-specific build tags (e.g., Go build tags)
+- **Test file naming conventions** - Naming patterns to indicate level (e.g., `*_integration_test.js`)
+- **Separate test directories** - Organizing tests by level in different folders
+- **Test framework categories** - Framework-specific test categories or markers
 
-- No level tag → `@L2`
+**Gherkin Scenario Inference**:
+
+- No level tag specified → defaults to `@L2`
 - Explicit `@L0`, `@L1`, `@L2`, `@L3`, or `@L4` → corresponding level
-- Features with `@iv` or `@pv` → `@L3` (if no explicit level tag)
-- Features with `@piv` or `@ppv` → `@L4` (if no explicit level tag)
+- Scenarios with `@iv` or `@pv` → inferred as `@L3` (if no explicit level)
+- Scenarios with `@piv` or `@ppv` → inferred as `@L4` (if no explicit level)
+
+> **This project**: Uses Go build tags for unit/integration tests and Gherkin tags for BDD scenarios. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#build-tag-to-gherkin-mapping) for complete mapping and examples.
 
 ---
 

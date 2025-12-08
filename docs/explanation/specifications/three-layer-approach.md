@@ -18,11 +18,13 @@ Each layer serves a distinct purpose, uses different tools, and addresses differ
 
 ## The Three Layers
 
-| Layer           | Question | Stakeholders | Tool | Representation | Location |
-|-----------------|----------|--------------|------|----------------|----------|
-| **Rules**       | "What business value?" | Product Owner, Business | Godog | `Rule:` blocks | `specs/` |
-| **Scenarios**   | "How does user interact?" | QA, Developers, Product | Godog | `Scenario:` under Rules | `specs/` + `src/tests/` |
-| **Unite tests** | "Does code work?" | Developers | Go test | Unit test functions | `src/*_test.go` |
+| Layer           | Question | Stakeholders | Format | Representation | Location |
+|-----------------|----------|--------------|--------|----------------|----------|
+| **Rules**       | "What business value?" | Product Owner, Business | Gherkin | `Rule:` blocks | Specifications |
+| **Scenarios**   | "How does user interact?" | QA, Developers, Product | Gherkin | `Scenario:` under Rules | Specifications + Test implementations |
+| **Unit tests** | "Does code work?" | Developers | Test framework | Test functions | Test files |
+
+> **This project**: Uses Godog for Gherkin scenarios and Go test framework for unit tests. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md) for language-specific details.
 
 ### Layer 1: Rules (Acceptance Criteria)
 
@@ -73,16 +75,20 @@ Rule: Creates project directory structure
 ```
 
 **Origin**: <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> Green cards from Example Mapping
-**Specification**: `specs/<module>/<feature>/specification.feature`
-**Implementation**: `src/<module>/tests/steps_test.go`
+**Specification**: Written in specification files
+**Implementation**: Test implementation files (step definitions)
+
+> **This project**: Specifications in `specs/<module>/<feature>/specification.feature`, step definitions in `src/<module>/tests/steps_test.go`. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
 
 ### Layer 3: Unit Tests
 
 **Purpose**: Ensure code correctness through systematic test-first development
 
-**Format**: Unit tests in `*_test.go` files
+**Format**: Unit test functions in test files
 
-**Tool**: Go test framework
+**Tool**: Test framework (language-specific)
+
+> **This project**: Uses Go test framework with `*_test.go` files. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
 
 #### Canon TDD Workflow
 
@@ -119,45 +125,41 @@ flowchart LR
 - 🔵 **Refactor**: Improve design if needed
 - 🔁 **Repeat**: Next test from list
 
-**Example**:
+**Example** (conceptual):
 
-```go
-// Feature: cli_init-project
+Feature: cli_init-project
 
-// Step 1: List behavioral variants
-// - Create config in empty directory (success)
-// - Create config with custom path (success)
-// - Create config when file exists (error)
-// - Create config in read-only directory (error)
+**Step 1: List behavioral variants**
+- Create config in empty directory (success)
+- Create config with custom path (success)
+- Create config when file exists (error)
+- Create config in read-only directory (error)
 
-// Step 2-5: Test, Pass, Refactor, Repeat for each variant
-func Test_CreateConfig_InEmptyDirectory_ShouldSucceed(t *testing.T) {
-    tmpDir := t.TempDir()
-    configPath := filepath.Join(tmpDir, "r2r.yaml")
+**Steps 2-5: For each variant**
+1. **Write test** - Create test that calls the function and asserts expected outcome
+   - Arrange: Set up test conditions (empty directory, existing file, etc.)
+   - Act: Invoke the function being tested
+   - Assert: Verify the expected result or error
+2. **Pass** - Implement minimum code to make the test pass
+3. **Refactor** - Improve design if needed (optional)
+4. **Repeat** - Move to next behavioral variant from the list
 
-    err := CreateConfig(configPath)
+**Test structure** (pseudocode):
+```
+Test_CreateConfig_InEmptyDirectory_ShouldSucceed:
+    Arrange: Create empty temporary directory
+    Act: Call CreateConfig(path)
+    Assert: No error returned, file exists
 
-    if err != nil {
-        t.Fatalf("CreateConfig failed: %v", err)
-    }
-}
-
-func Test_CreateConfig_WhenFileExists_ShouldFail(t *testing.T) {
-    tmpDir := t.TempDir()
-    configPath := filepath.Join(tmpDir, "r2r.yaml")
-
-    // Create existing file
-    os.WriteFile(configPath, []byte("existing"), 0644)
-
-    err := CreateConfig(configPath)
-
-    if err == nil {
-        t.Fatal("Expected error when file exists")
-    }
-}
+Test_CreateConfig_WhenFileExists_ShouldFail:
+    Arrange: Create directory with existing config file
+    Act: Call CreateConfig(path)
+    Assert: Error returned
 ```
 
-**Location**: `src/<module>/*_test.go`
+**Location**: Test files in source tree (language-specific conventions)
+
+> **This project**: Unit tests in `src/<module>/*_test.go`. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md) for complete code examples.
 
 ---
 
@@ -185,9 +187,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Feature[Feature: cli_init-project] --> Spec[specs/cli/init-project/<br/>specification.feature]
-    Feature --> Steps[go/r2r/cli/tests/<br/>steps_test.go]
-    Feature --> Unit[go/r2r/cli/<br/>*_test.go]
+    Feature[Feature: cli_init-project] --> Spec[Specification files<br/>Rules + Scenarios]
+    Feature --> Steps[Step Definitions<br/>Test implementation]
+    Feature --> Unit[Unit Tests<br/>Test functions]
 
     Spec --> Rules[Rule blocks]
     Spec --> Scenarios[Scenario blocks]
@@ -197,6 +199,8 @@ flowchart TD
     Unit --> Code
 
 ```
+
+> **This project**: Specifications in `specs/cli/init-project/`, step definitions in `src/<module>/tests/steps_test.go`, unit tests in `src/<module>/*_test.go`. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
 
 ---
 
@@ -220,11 +224,13 @@ flowchart TD
 
 **Red-Green-Refactor**:
 
-1. Write step definitions (`src/<module>/tests/steps_test.go`)
+1. Write step definitions (test implementation)
 2. Write failing unit test (Red)
 3. Implement minimum code (Green)
 4. Refactor for quality
 5. Repeat until scenarios pass
+
+> **This project**: Step definitions in `src/<module>/tests/steps_test.go`. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
 
 **Definition of Done**:
 
@@ -269,15 +275,15 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    subgraph Specs["specs/ - WHAT to test"]
-        SpecFile[specification.feature<br/>Rules + Scenarios<br/>Domain language<br/>Business-readable]
-        Issues[issues.md<br/>Questions]
+    subgraph Specs["Specifications - WHAT to test"]
+        SpecFile[Specification files<br/>Rules + Scenarios<br/>Domain language<br/>Business-readable]
+        Issues[Issues / Questions<br/>Documentation]
     end
 
-    subgraph Src["src/ - HOW to test"]
-        Steps[tests/steps_test.go<br/>Step definitions<br/>Technical details]
-        Unit[*_test.go<br/>Unit tests]
-        Impl[*.go<br/>Production code]
+    subgraph Src["Implementation - HOW to test"]
+        Steps[Step Definitions<br/>Test implementation<br/>Technical details]
+        Unit[Unit Tests<br/>Test functions]
+        Impl[Production Code]
     end
 
     SpecFile --> Steps
@@ -285,6 +291,8 @@ flowchart TD
     Unit --> Impl
 
 ```
+
+> **This project**: Specifications in `specs/`, step definitions in `src/<module>/tests/steps_test.go`, unit tests in `src/<module>/*_test.go`, production code in `src/<module>/*.go`. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
 
 **Why Separate?**:
 
@@ -369,9 +377,14 @@ The three layers use different tag types:
 - Uses **testing taxonomy tags**: `@ov`, `@iv`, `@pv` (verification) + `@L2`, `@L3`, `@L4` (level)
 - See **[Tag Reference](tag-reference.md)** for complete taxonomy
 
-**Unit Test Layer** (Go tests):
+**Unit Test Layer**:
 
-- Uses **build tags** for test levels: `//go:build L0` for L0, default is L1
+- Uses **test level markers** to categorize tests by isolation and speed
+- L0: Isolated, no I/O (fastest)
+- L1: Unit tests with minimal dependencies (default)
+- L2: Integration tests with emulated dependencies
+
+> **This project**: Uses Go build tags (`//go:build L0`, `//go:build L2`) for test levels. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#test-levels) for details.
 
 **Example**:
 

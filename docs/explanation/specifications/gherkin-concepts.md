@@ -22,9 +22,11 @@ The project maintains strict separation:
 specs/<module>/<feature>/
 └── specification.feature    ← WHAT the system should do (business-readable)
 
-src/<module>/tests/
-└── steps_test.go            ← HOW to verify (technical implementation)
+<implementation>/
+└── Step Definitions         ← HOW to verify (technical implementation)
 ```
+
+> **This project**: Step definitions in `src/<module>/tests/steps_test.go`. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md) for file organization details.
 
 **Why separate?**
 

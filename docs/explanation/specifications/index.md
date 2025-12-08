@@ -2,6 +2,8 @@
 
 Understanding the three-layer testing approach, executable specifications, and test-driven development practices.
 
+> **Looking for implementation details?** This section covers concepts (WHAT and WHY). For language-specific implementation guides (HOW), see [Reference: Implementation Guides](../../reference/specifications/index.md#implementation-guides).
+
 ## In This Section
 
 | Topic                                                           | Description                                                                                    |

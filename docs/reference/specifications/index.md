@@ -16,6 +16,14 @@ This section provides technical reference documentation for writing and organizi
 
 ## In This Section
 
+### Implementation Guides
+
+| Reference                                                 | Description                                                     |
+| --------------------------------------------------------- | --------------------------------------------------------------- |
+| [Go Implementation Guide](./go-implementation-guide.md)   | Go-specific implementation: file organization, build tags, examples |
+
+### Standards and Conventions
+
 | Reference                                                               | Description                                           |
 | ----------------------------------------------------------------------- | ----------------------------------------------------- |
 | [Canon TDD Workflow](./canon-tdd-workflow.md)                           | Kent Beck's five-step test-driven development process |
