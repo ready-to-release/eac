@@ -63,3 +63,11 @@ dependencies:
     verify:
       command: "curl --version"
       pattern: "curl (\\d+\\.\\d+)"
+
+  - moniker: upx
+    name: "UPX"
+    description: "Ultimate Packer for eXecutables - binary compression tool"
+    version: "3.96"
+    verify:
+      command: "upx --version"
+      pattern: "UPX (\\d+\\.\\d+)"

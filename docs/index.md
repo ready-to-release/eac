@@ -56,7 +56,7 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 
 <table>
 <tr>
-<td width="50%" valign="top">
+<td width="50%" valign="top" markdown="1">
 
 ### [Tutorials](tutorials/)
 
@@ -68,11 +68,11 @@ Step-by-step lessons that take you through a series of steps to complete a proje
 - [Your First Feature Specification](tutorials/first-specification.md)
 
 </td>
-<td width="50%" valign="top">
+<td width="50%" valign="top" markdown="1">
 
 ### [How-to Guides](how-to-guides/)
 
-**Task-oriented recipes**
+> **Task-oriented recipes**
 
 Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.
 
@@ -83,7 +83,7 @@ Guides that show you how to solve specific problems. Use these when you need to 
 </td>
 </tr>
 <tr>
-<td width="50%" valign="top">
+<td width="50%" valign="top" markdown="1">
 
 ### [Reference](reference/)
 
@@ -96,7 +96,7 @@ Technical reference material for looking up details. Check here for command synt
 - [Decision Records](reference/decision-records/)
 
 </td>
-<td width="50%" valign="top">
+<td width="50%" valign="top" markdown="1">
 
 ### [Explanation](explanation/)
 

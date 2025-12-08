@@ -258,6 +258,8 @@ modules:
       scheme: SemVer
     depends_on:
       - eac-core
+    build_deps:
+      - upx
     files:
       root: go/r2r/cli
       config:
