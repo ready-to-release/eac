@@ -226,6 +226,12 @@ func (r *ArtifactResolver) verifyExecutableArtifact(artifact Artifact) []Artifac
 	switch verifyMode {
 	case VerifyCurrentPlatform:
 		// Only verify for current platform if it's in the list
+		// Also check architecture - patterns may contain hardcoded arch (e.g., "-arm64")
+		patternArch := extractArchFromPattern(artifact.Pattern)
+		if patternArch != "" && patternArch != r.Arch {
+			// Pattern specifies a different architecture, skip verification
+			break
+		}
 		for _, p := range platforms {
 			if p == r.OS {
 				results = append(results, r.VerifyArtifact(artifact))
@@ -318,4 +324,26 @@ func FormatVerificationResults(results []ArtifactVerificationResult) string {
 		}
 	}
 	return sb.String()
+}
+
+// extractArchFromPattern extracts hardcoded architecture from an artifact pattern.
+// Returns the architecture if found (e.g., "amd64", "arm64"), or empty string if
+// the pattern uses a placeholder like {arch}.
+func extractArchFromPattern(pattern string) string {
+	// Common architecture suffixes in patterns
+	// Check for hardcoded architectures (not placeholders)
+	archs := []string{"amd64", "arm64", "386", "arm"}
+
+	for _, arch := range archs {
+		// Look for arch in pattern, but not as a placeholder
+		if strings.Contains(pattern, "{arch}") {
+			// Pattern uses placeholder, architecture is variable
+			return ""
+		}
+		// Check for arch as a component (e.g., "-amd64", "-arm64")
+		if strings.Contains(pattern, "-"+arch) || strings.Contains(pattern, "_"+arch) {
+			return arch
+		}
+	}
+	return ""
 }
