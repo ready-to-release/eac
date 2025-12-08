@@ -49,6 +49,8 @@ jobs:
         with:
           module: scripts-implicit-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          # Build eac-commands dependency for all platforms (including Windows) to support cross-platform tests
+          extra-args: --all
 
   test-linux:
     name: Test (Linux)
