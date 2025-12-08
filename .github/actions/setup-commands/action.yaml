@@ -30,17 +30,38 @@ runs:
   using: composite
   steps:
     # When trigger-run-id is provided, download from that specific run
-    # On Windows, try Windows-specific artifact first
+    # On Windows, check if Windows-specific artifact exists before attempting download
+    - name: Check if Windows artifact exists in trigger workflow
+      id: check-trigger-windows
+      if: inputs.trigger-run-id != '' && runner.os == 'Windows'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # Check if commands-binary-windows exists in trigger run
+        set +e
+        RESULT=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.trigger-run-id }}/artifacts" \
+          --jq '.artifacts[] | select(.name == "commands-binary-windows") | .id' 2>&1)
+        EXIT_CODE=$?
+        set -e
+
+        if [ $EXIT_CODE -eq 0 ] && [ -n "$RESULT" ] && ! echo "$RESULT" | grep -qi "error"; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✓ Windows artifact found in trigger run"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "No Windows artifact in trigger run - will build from source"
+        fi
+
     - name: Download from trigger workflow (Windows)
       id: download-trigger-windows
-      if: inputs.trigger-run-id != '' && runner.os == 'Windows'
+      if: inputs.trigger-run-id != '' && runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists == 'true'
       uses: actions/download-artifact@v4
       with:
         name: commands-binary-windows
         path: out/tools
         github-token: ${{ github.token }}
         run-id: ${{ inputs.trigger-run-id }}
-      continue-on-error: true
 
     # On Linux/macOS only - download standard artifact from trigger workflow
     # NOTE: We intentionally skip this on Windows because the Linux binary cannot execute on Windows.
@@ -56,11 +77,11 @@ runs:
         run-id: ${{ inputs.trigger-run-id }}
 
     # Check if artifact exists in current run before attempting download
-    # This runs when: no trigger-run-id provided, OR on Windows when trigger artifact wasn't found
+    # This runs when: no trigger-run-id provided, OR on Windows when trigger artifact wasn't available
     # This avoids noisy error messages when artifact doesn't exist yet
     - name: Check if artifact exists (current run)
       id: artifact-check
-      if: inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.download-trigger-windows.outcome == 'failure')
+      if: inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -91,7 +112,7 @@ runs:
     # Only download if artifact exists in current run
     - name: Download from current run
       id: download-current
-      if: (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.download-trigger-windows.outcome == 'failure')) && steps.artifact-check.outputs.exists == 'true'
+      if: (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')) && steps.artifact-check.outputs.exists == 'true'
       uses: actions/download-artifact@v4
       with:
         name: ${{ steps.artifact-check.outputs.artifact_name }}
