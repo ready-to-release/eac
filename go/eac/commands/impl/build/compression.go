@@ -95,7 +95,7 @@ func ProcessArtifactDerivations(
 	// Process each derived artifact variant
 	for _, variant := range derivedVariants {
 		if err := processDerivedArtifact(moniker, variant.artifact, variant.os, variant.arch, buildDir, metadata, logWriter); err != nil {
-			return fmt.Errorf("failed to process derived artifact %s: %w", variant.artifact.Pattern, err)
+			return fmt.Errorf("failed to process derived artifact %s (os=%s arch=%s): %w", variant.artifact.Pattern, variant.os, variant.arch, err)
 		}
 	}
 

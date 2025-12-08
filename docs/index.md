@@ -76,8 +76,8 @@ Step-by-step lessons that take you through a series of steps to complete a proje
 
 Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.
 
-- [Commands by Area](how-to-guides/commands/)
-- [Working with Specifications](how-to-guides/specifications/)
+- [Commands by Area](how-to-guides/eac/commands/)
+- [Working with Specifications](how-to-guides/eac/specifications/)
 - [Continuous Delivery Practices](how-to-guides/continuous-delivery/)
 
 </td>

@@ -130,6 +130,6 @@ G1a G1b    G2a G2b    G3a G3b
 
 ## Related
 
-- [Running Example Mapping](../../how-to-guides/specifications/running-example-mapping.md)
-- [Translating to Gherkin](../../how-to-guides/specifications/translating-to-gherkin.md)
+- [Running Example Mapping](../../how-to-guides/eac/specifications/running-example-mapping.md)
+- [Translating to Gherkin](../../how-to-guides/eac/specifications/translating-to-gherkin.md)
 - [Example Mapping](../../explanation/specifications/example-mapping.md)

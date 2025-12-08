@@ -20,7 +20,7 @@ Conceptual foundation for BDD and executable specifications - explaining why BDD
 ## Notes
 
 - Explanation document focused on concepts and theory
-- Companion to how-to-guides/specifications/working-with-specifications.md (practical steps)
+- Companion to how-to-guides/eac/specifications/working-with-specifications.md (practical steps)
 - Contains extensive examples of specification evolution
 - Links to related explanation docs for deeper dives
 -->

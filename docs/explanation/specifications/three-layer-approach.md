@@ -413,4 +413,4 @@ For complete tag documentation, see:
 ## Quick Reference
 
 - [Canon TDD Workflow](../../reference/specifications/canon-tdd-workflow.md) - Kent Beck's TDD steps
-- [BDD Development Workflow](../../how-to-guides/specifications/bdd-development-workflow.md) - Development workflow guide
+- [BDD Development Workflow](../../how-to-guides/eac/specifications/bdd-development-workflow.md) - Development workflow guide

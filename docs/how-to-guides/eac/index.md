@@ -3,7 +3,7 @@
 
 ## Soul
 
-Index for EAC configuration guides covering module creation and module type definition.
+Hub for all EAC (Everything as Code) tooling guides: CLI commands, BDD specifications, configuration, and module management.
 
 ## Sections
 
@@ -12,16 +12,18 @@ Index for EAC configuration guides covering module creation and module type defi
 3. Diátaxis
 -->
 
-# EAC Configuration Guides
+# EAC Guides
 
-Guides for configuring the Everything as Code (EAC) system in your repository. Learn how to add new modules and define reusable module type templates.
+Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, write BDD specifications, configure integrations, and manage modules.
 
 ## In This Section
 
 | Guide | Description |
 |-------|-------------|
-| [Creating Modules](./creating-modules.md) | Add new modules to your repository |
-| [Creating Module Types](./creating-module-types.md) | Define reusable module type templates |
+| [Commands](./commands/) | CLI commands for build, test, validate, release, and more |
+| [Specifications](./specifications/) | Writing and managing BDD/Gherkin specifications |
+| [Configuration](./configuration/) | System and tool configuration (Claude MCP, etc.) |
+| [Modules](./modules/) | Creating modules and module types |
 
 ---
 

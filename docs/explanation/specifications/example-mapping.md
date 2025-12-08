@@ -252,5 +252,5 @@ Split when:
 ## Quick Reference
 
 - [Example Mapping Cards](../../reference/specifications/example-mapping-cards.md) - Card colors and quantities
-- [Running Example Mapping](../../how-to-guides/specifications/running-example-mapping.md) - How to facilitate sessions
-- [Translating to Gherkin](../../how-to-guides/specifications/translating-to-gherkin.md) - Converting cards to specs
+- [Running Example Mapping](../../how-to-guides/eac/specifications/running-example-mapping.md) - How to facilitate sessions
+- [Translating to Gherkin](../../how-to-guides/eac/specifications/translating-to-gherkin.md) - Converting cards to specs
