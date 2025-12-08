@@ -157,92 +157,18 @@ func TestIsDashesLine_EdgeCases(t *testing.T) {
 	}
 }
 
-// TestLoadContract_EdgeCases tests contract loading edge cases
-func TestLoadContract_EdgeCases(t *testing.T) {
-	tests := []struct {
-		name    string
-		setup   func(t *testing.T) string // Returns path to test contract
-		wantErr bool
-		errMsg  string
-	}{
-		{
-			name: "missing contract file",
-			setup: func(t *testing.T) string {
-				return "/nonexistent/path/contract.yml"
-			},
-			wantErr: true,
-			errMsg:  "failed to read contract file",
-		},
-		{
-			name: "malformed YAML",
-			setup: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-				contractPath := filepath.Join(tmpDir, "contract.yml")
-				content := `version: 0.1.0
-name: commit-message
-structure: [invalid: yaml: syntax
-`
-				if err := os.WriteFile(contractPath, []byte(content), 0644); err != nil {
-					t.Fatal(err)
-				}
-				return contractPath
-			},
-			wantErr: true,
-			errMsg:  "failed to parse contract YAML",
-		},
-		{
-			name: "empty contract file",
-			setup: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-				contractPath := filepath.Join(tmpDir, "contract.yml")
-				if err := os.WriteFile(contractPath, []byte(""), 0644); err != nil {
-					t.Fatal(err)
-				}
-				return contractPath
-			},
-			wantErr: false, // Empty YAML is valid, will have zero values
-		},
-		{
-			name: "contract with wrong version",
-			setup: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-				contractPath := filepath.Join(tmpDir, "contract.yml")
-				content := `version: 99.99.99
-name: commit-message
-`
-				if err := os.WriteFile(contractPath, []byte(content), 0644); err != nil {
-					t.Fatal(err)
-				}
-				return contractPath
-			},
-			wantErr: false, // Loading succeeds, verification fails
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			contractPath := tt.setup(t)
-			contract, err := LoadContract(contractPath)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("LoadContract() expected error containing %q, got nil", tt.errMsg)
-					return
-				}
-				if !contains(err.Error(), tt.errMsg) {
-					t.Errorf("LoadContract() error = %q, want error containing %q", err.Error(), tt.errMsg)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("LoadContract() unexpected error: %v", err)
-					return
-				}
-				if contract == nil {
-					t.Error("LoadContract() returned nil contract")
-				}
-			}
-		})
-	}
+// TestLoadContractFromConfig_EdgeCases tests contract loading edge cases
+func TestLoadContractFromConfig_EdgeCases(t *testing.T) {
+	t.Run("missing ai-config.yml", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		_, err := LoadContractFromConfig(tmpDir)
+		if err == nil {
+			t.Error("LoadContractFromConfig() expected error for missing config, got nil")
+		}
+		if !contains(err.Error(), "failed to load commit-message config") {
+			t.Errorf("LoadContractFromConfig() error = %q, want error containing 'failed to load commit-message config'", err.Error())
+		}
+	})
 }
 
 // TestLoadAntiCorruptionRules_EdgeCases tests anti-corruption rules loading edge cases

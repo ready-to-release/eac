@@ -1,0 +1,182 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/ai-config.schema.json
+version: "0.1.0"
+name: "AI Configuration"
+description: "Configuration for AI-assisted generation including validation and anti-corruption"
+
+defaults:
+  anti_corruption:
+    forbidden_prefixes:
+      - "Based on"
+      - "Here is"
+      - "Here's"
+      - "Let me"
+      - "I will"
+      - "I'll"
+      - "I've"
+      - "I'm"
+      - "I can"
+      - "I need to"
+      - "Looking at"
+      - "Now"
+      - "After reviewing"
+      - "After analyzing"
+      - "According to"
+      - "Would you like"
+      - "Should I"
+      - "Can I"
+      - "Shall I"
+      - "Below is"
+      - "Above is"
+      - "You are now"
+    forbidden_contains:
+      - "ready to assist"
+      - "ready to help"
+      - "here to help"
+      - "generating"
+      - "**Initialized"
+      - "**INITIALIZED"
+      - "Loading project"
+      - "I need to understand"
+      - "Let me examine"
+      - "Let me clarify"
+    forbidden_emojis:
+      - "\U0001F680"
+      - "\u2705"
+      - "\U0001F916"
+      - "\U0001F389"
+      - "\u2728"
+    agent_signatures:
+      - "Agent:"
+      - "Assistant:"
+      - "Claude:"
+      - "---END---"
+
+types:
+  commit-message:
+    name: "Commit Message Format"
+    description: "Conventional commit message generation"
+    output:
+      start_marker: null
+      format: text
+    validation:
+      semantic_types:
+        - feat
+        - fix
+        - refactor
+        - docs
+        - chore
+        - test
+        - perf
+        - style
+      max_line_length: 72
+      scope_required: true
+      no_trailing_periods: true
+    anti_corruption:
+      forbidden_prefixes:
+        - "The title"
+        - "The corrected"
+        - "The generated"
+        - "The changes"
+        - "However,"
+        - "But the"
+      forbidden_contains:
+        - "validation errors indicate"
+        - "Which would you like"
+        - "Are you asking me"
+
+  design:
+    name: "Structurizr DSL Architecture"
+    description: "C4 architecture diagram generation"
+    output:
+      start_marker: "workspace"
+      format: dsl
+    validation:
+      patterns:
+        workspace_name: "^[A-Z][A-Za-z0-9 -]+$"
+        identifier: "^[a-z][a-z0-9_]*$"
+      required_elements:
+        - workspace
+        - model
+        - views
+    anti_corruption:
+      forbidden_prefixes:
+        - "The workspace"
+        - "This workspace"
+      forbidden_contains:
+        - "workspace for you"
+        - "DSL syntax"
+        - "Structurizr DSL"
+      forbidden_emojis:
+        - "\U0001F4CB"
+        - "\U0001F3D7"
+        - "\U0001F527"
+
+  specs:
+    name: "Gherkin Specifications"
+    description: "BDD feature file generation"
+    output:
+      start_marker: "Feature:"
+      format: gherkin
+    validation:
+      patterns:
+        feature_naming: "^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$"
+      required_tags:
+        - "@ov"
+        - "@iv"
+        - "@pv"
+        - "@piv"
+        - "@ppv"
+      required_elements:
+        - "Feature:"
+        - "Rule:"
+        - "Scenario:"
+    anti_corruption:
+      forbidden_prefixes:
+        - "DEBUG INFO:"
+        - "The specification"
+        - "The feature"
+        - "This specification"
+        - "This feature"
+      forbidden_contains:
+        - "specification for you"
+        - "feature file"
+        - "Gherkin syntax"
+        - "I'll create"
+        - "I'll generate"
+        - "complete specification"
+        - "enough context"
+        - "Now I have"
+        - "timestamp:"
+        - "provider:"
+        - "duration:"
+        - "status:"
+        - "input_length:"
+        - "response_length:"
+      forbidden_emojis:
+        - "\U0001F4CB"
+        - "\U0001F4DD"
+        - "\U0001F4A1"
+        - "\U0001F50D"
+        - "\u26A1"
+
+  risk-profile:
+    name: "OSCAL Risk Profile"
+    description: "Security control mapping from risk assessment"
+    output:
+      start_marker: "["
+      format: json
+    validation:
+      required_elements:
+        - controls
+
+  risk-access:
+    name: "Risk Analysis"
+    description: "Security risk likelihood assessment"
+    output:
+      start_marker: "{"
+      format: json
+    validation:
+      required_fields:
+        - computed_likelihood
+        - reasoning
+        - risk_summary

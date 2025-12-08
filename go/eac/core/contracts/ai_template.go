@@ -67,7 +67,7 @@ func BuildPromptWithTemplate(
 
 	// Marshal anti-corruption rules to YAML string
 	if antiCorruption != nil {
-		rulesYAML, err := yaml.Marshal(antiCorruption.RawData)
+		rulesYAML, err := yaml.Marshal(antiCorruption)
 		if err != nil {
 			return "", fmt.Errorf("failed to marshal anti-corruption rules to YAML: %w", err)
 		}

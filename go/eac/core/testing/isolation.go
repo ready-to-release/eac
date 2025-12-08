@@ -149,13 +149,22 @@ func (t *TestIsolation) Setup() error {
 		}
 	}
 
-	// Copy AI contracts if requested
+	// Copy AI contracts and config if requested
 	if t.copyAIContracts && t.originalRepoRoot != "" {
+		// Copy contracts/ directory (JSON schemas)
 		srcContracts := filepath.Join(t.originalRepoRoot, "contracts")
 		dstContracts := filepath.Join(t.isolatedDir, "contracts")
 		if err := copyDir(srcContracts, dstContracts); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to copy AI contracts: %w", err)
+		}
+
+		// Copy .r2r/eac/ directory (unified ai-config.yml and prompts)
+		srcR2REac := filepath.Join(t.originalRepoRoot, ".r2r", "eac")
+		dstR2REac := filepath.Join(t.isolatedDir, ".r2r", "eac")
+		if err := copyDir(srcR2REac, dstR2REac); err != nil {
+			t.Cleanup()
+			return fmt.Errorf("failed to copy .r2r/eac config: %w", err)
 		}
 	}
 

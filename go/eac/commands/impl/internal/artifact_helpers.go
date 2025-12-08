@@ -49,6 +49,13 @@ func ResolveArtifactsForModule(
 	return ResolveArtifactsForModuleWithConfig(module, moduleType, buildDir, targetOS, targetArch, nil)
 }
 
+// DefaultMarkerArtifact is the default artifact used when a module type has no artifacts defined.
+// This ensures all buildable modules participate in the artifact validation system.
+var DefaultMarkerArtifact = config.Artifact{
+	Type:    config.ArtifactTypeMarker,
+	Pattern: "build-complete.marker",
+}
+
 // ResolveArtifactsForModuleWithConfig resolves all artifacts for a module with optional books config
 func ResolveArtifactsForModuleWithConfig(
 	module *config.Module,
@@ -61,7 +68,7 @@ func ResolveArtifactsForModuleWithConfig(
 		return nil, nil, fmt.Errorf("module cannot be nil")
 	}
 	if moduleType == nil || moduleType.Build == nil {
-		// No artifacts defined for this type
+		// No build config at all - not a buildable module type
 		return []ResolvedArtifact{}, &ArtifactResolutionSummary{}, nil
 	}
 
@@ -80,6 +87,12 @@ func ResolveArtifactsForModuleWithConfig(
 		// For resolution/validation, expand all books (not just default)
 		// Filtering by default/all is done later based on requested artifacts
 		artifacts = expandBookArtifacts(module, moduleType.Build.Artifacts, cfg, true)
+	}
+
+	// If no artifacts defined, use default marker artifact.
+	// This ensures all buildable modules participate in the artifact validation system.
+	if len(artifacts) == 0 {
+		artifacts = []config.Artifact{DefaultMarkerArtifact}
 	}
 
 	// Verify all artifacts

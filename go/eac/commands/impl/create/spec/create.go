@@ -585,9 +585,9 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 		return string(content), nil
 	}
 
-	// Load from AI config: .r2r/eac/ai/specs/
+	// Load from AI config: .r2r/eac/ai/prompts/specs/
 	loader := contracts.NewContractLoader(templateRoot, "ai/specs", "")
-	prompt, source, err := loader.LoadPrompt("specification.md", "")
+	prompt, source, err := loader.LoadPrompt("specs/specs.md", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
@@ -743,18 +743,11 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
-	// Load referenced files (tags and taxonomy)
+	// Load referenced files (tags)
 	tagsPath := filepath.Join(contracts.EACConfigRelPath, "testing-tags.yml")
 	tagsContent, err := loader.LoadReferencedFile(tagsPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load tags: %w", err)
-	}
-
-	// Taxonomy is co-located with the specs AI config (unversioned)
-	taxonomyPath := ".r2r/eac/ai/specs/testing-taxonomy.yml"
-	taxonomyContent, err := loader.LoadReferencedFile(taxonomyPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to load taxonomy: %w", err)
 	}
 
 	// Load available OSCAL controls for module (if profile exists)
@@ -763,7 +756,6 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	// Build prompt with contract using Go templates
 	customData := map[string]string{
 		"TagsSpec":          string(tagsContent),
-		"TaxonomySpec":      string(taxonomyContent),
 		"AvailableControls": availableControls,
 	}
 

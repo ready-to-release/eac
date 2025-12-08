@@ -30,6 +30,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/ai"
 	"github.com/ready-to-release/eac/go/eac/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -351,11 +352,11 @@ func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 
 // generateTopLevelMessage generates the top-level commit message using AI
 func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promptContext string) (string, error) {
-	// Load squash prompt template
-	promptPath := filepath.Join(workspaceRoot, ".r2r", "eac", "ai", "commit-message", "squash.md")
-	promptTemplate, err := os.ReadFile(promptPath)
+	// Load squash prompt template using unified loader
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+	promptTemplate, _, err := loader.LoadPrompt("commit/squash.md", "")
 	if err != nil {
-		return "", fmt.Errorf("failed to read squash.md template: %w", err)
+		return "", fmt.Errorf("failed to load squash.md template: %w", err)
 	}
 
 	// Build full prompt

@@ -9,27 +9,27 @@ type CommitMessageValidator struct {
 	contract        *CommitMessageContract
 	antiCorruption  *contracts.AntiCorruptionRules
 	affectedModules []string
-	contractPath    string
+	workspaceRoot   string
 }
 
 // NewCommitMessageValidator creates a new commit message validator
 //
 // Parameters:
-//   - contractData: The loaded commit message contract (structure.yml)
+//   - contractData: The loaded commit message contract
 //   - antiCorruption: Anti-corruption rules
 //   - affectedModules: List of modules with staged changes
-//   - contractPath: Path to contract file for implementation verification
+//   - workspaceRoot: Workspace root for config loading
 func NewCommitMessageValidator(
 	contractData *CommitMessageContract,
 	antiCorruption *contracts.AntiCorruptionRules,
 	affectedModules []string,
-	contractPath string,
+	workspaceRoot string,
 ) *CommitMessageValidator {
 	return &CommitMessageValidator{
 		contract:        contractData,
 		antiCorruption:  antiCorruption,
 		affectedModules: affectedModules,
-		contractPath:    contractPath,
+		workspaceRoot:   workspaceRoot,
 	}
 }
 
@@ -52,6 +52,14 @@ func (v *CommitMessageValidator) Validate(output string, context map[string]inte
 
 // VerifyImplementation verifies that the validator implements all contract rules
 func (v *CommitMessageValidator) VerifyImplementation() []contracts.ValidationError {
-	// Use existing contract verification function
-	return VerifyContractImplementation(v.contractPath)
+	// Verify contract can be loaded from unified config
+	_, err := LoadContractFromConfig(v.workspaceRoot)
+	if err != nil {
+		return []contracts.ValidationError{{
+			Code:     "CONTRACT_LOAD_ERROR",
+			Message:  err.Error(),
+			Severity: "error",
+		}}
+	}
+	return nil
 }
