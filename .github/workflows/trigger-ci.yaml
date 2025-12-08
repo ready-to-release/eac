@@ -346,8 +346,10 @@ jobs:
           # Get execution order for changed modules
           MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
 
-          # Calculate execution order using the new command
-          PLAN=$($COMMANDS get execution order $MODULES --as-json)
+          # Calculate execution order for detected modules
+          # --no-deps: Don't expand to include transitive dependencies (they're already built)
+          # The detection step already includes dependents (modules affected by changes)
+          PLAN=$($COMMANDS get execution order $MODULES --no-deps --as-json)
 
           echo "Execution plan:"
           echo "$PLAN" | jq .

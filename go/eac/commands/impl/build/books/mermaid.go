@@ -291,6 +291,7 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 		"-t", "dark",        // Theme (dark for PDF)
 		"-b", "transparent", // Background
 		"--configFile", "/docs/containers/mkdocs-pdf/mermaid-config.json", // Disable htmlLabels for PDF compatibility
+		"-p", "/docs/containers/mkdocs-pdf/puppeteer-config.json", // Puppeteer config for container environment
 	}
 
 	// Add user spec in DinD mode to avoid permission issues
