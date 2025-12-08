@@ -320,7 +320,18 @@ func ValidateArtifactsWithDependencies(
 
 	for moniker := range allModules {
 		requestedArtifacts := requestedArtifactsMap[moniker]
-		modResult := validateSingleModule(moniker, targetModule, cfg, registry, targetOS, targetArch, workspaceRoot, requestedArtifacts)
+
+		// For dependencies, use the platform from the manifest (where they were actually built)
+		// This ensures cross-platform validation works (e.g., Windows test validating Linux-built deps)
+		resolveOS, resolveArch := targetOS, targetArch
+		if moniker != targetModule && manifest != nil {
+			if platforms := manifest.GetPlatformsForModule(moniker); len(platforms) > 0 {
+				resolveOS = platforms[0].OS
+				resolveArch = platforms[0].Arch
+			}
+		}
+
+		modResult := validateSingleModule(moniker, targetModule, cfg, registry, resolveOS, resolveArch, workspaceRoot, requestedArtifacts)
 		results.Modules = append(results.Modules, modResult)
 
 		if modResult.Error != "" || modResult.Summary.Missing > 0 {
