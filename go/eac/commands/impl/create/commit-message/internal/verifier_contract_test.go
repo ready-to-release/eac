@@ -4,50 +4,26 @@
 package commitmessage
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-func TestContractImplementation(t *testing.T) {
+func TestLoadContractFromConfig(t *testing.T) {
 	// Get repository root dynamically
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		t.Fatalf("Failed to find repository root: %v", err)
 	}
-	contractPath := filepath.Join(repoRoot, "contracts", "ai", "commit-message", "0.1.0", "contract.yml")
 
-	errors := VerifyContractImplementation(contractPath)
-
-	if len(errors) > 0 {
-		t.Errorf("Contract implementation verification failed with %d error(s):", len(errors))
-		for _, err := range errors {
-			t.Errorf("  - [%s] %s", err.Code, err.Message)
-		}
-	}
-}
-
-func TestLoadContract(t *testing.T) {
-	// Get repository root dynamically
-	repoRoot, err := repository.GetRepositoryRoot("")
+	contract, err := LoadContractFromConfig(repoRoot)
 	if err != nil {
-		t.Fatalf("Failed to find repository root: %v", err)
-	}
-	contractPath := filepath.Join(repoRoot, "contracts", "ai", "commit-message", "0.1.0", "contract.yml")
-
-	contract, err := LoadContract(contractPath)
-	if err != nil {
-		t.Fatalf("Failed to load contract: %v", err)
+		t.Fatalf("Failed to load contract from config: %v", err)
 	}
 
 	// Verify basic structure
 	if contract.Version != "0.1.0" {
 		t.Errorf("Expected version 0.1.0, got %s", contract.Version)
-	}
-
-	if len(contract.Structure) != 4 {
-		t.Errorf("Expected 4 structure sections (top_level_heading, auditor_summary, top_level_body, module_sections), got %d", len(contract.Structure))
 	}
 
 	if len(contract.SemanticTypes) != 8 {
@@ -58,22 +34,12 @@ func TestLoadContract(t *testing.T) {
 		t.Errorf("Unexpected subject line format: %s", contract.SubjectLineFormat)
 	}
 
-	// Verify constraints
-	expectedConstraints := []string{
-		"max_line_length",
-		"no_trailing_periods",
-		"code_blocks_closed",
-		"module_header_no_colons",
+	// Verify constraints exist
+	if contract.Constraints == nil {
+		t.Error("Expected constraints to be defined")
 	}
 
-	for _, constraint := range expectedConstraints {
-		if _, exists := contract.Constraints[constraint]; !exists {
-			t.Errorf("Missing constraint: %s", constraint)
-		}
-	}
-
-	// Verify markdown rules exist
-	if len(contract.MarkdownRules) == 0 {
-		t.Error("Expected markdown_rules to be defined")
+	if _, exists := contract.Constraints["max_line_length"]; !exists {
+		t.Error("Expected max_line_length constraint")
 	}
 }

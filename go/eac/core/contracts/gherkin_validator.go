@@ -52,6 +52,47 @@ func NewGherkinValidatorWithTags(contract *Contract, tagsConfig *config.TestingT
 	}
 }
 
+// NewGherkinValidatorFromConfig creates a validator from the unified AI config
+func NewGherkinValidatorFromConfig(loader *AIConfigLoader, typeName string, antiCorruption *AntiCorruptionRules) *GherkinValidator {
+	// Get validation rules from the type config
+	validation, err := loader.GetValidation(typeName)
+	if err != nil {
+		// Return validator without contract data
+		return &GherkinValidator{
+			antiCorruption: antiCorruption,
+		}
+	}
+
+	// Convert validation map to Contract for backward compatibility
+	contract := &Contract{
+		Version: "0.1.0",
+		Name:    "Gherkin Specification Structure",
+		RawData: make(map[string]interface{}),
+	}
+
+	// Extract feature_naming_pattern from patterns.feature_naming
+	if patterns := ExtractMap(validation, "patterns"); patterns != nil {
+		if featureNaming := ExtractString(patterns, "feature_naming"); featureNaming != "" {
+			contract.RawData["feature_naming_pattern"] = featureNaming
+		}
+	}
+
+	// Extract required_verification_tags from required_tags
+	if requiredTags := ExtractStringList(validation, "required_tags"); len(requiredTags) > 0 {
+		// Convert []string to []interface{} for RawData compatibility
+		tags := make([]interface{}, len(requiredTags))
+		for i, t := range requiredTags {
+			tags[i] = t
+		}
+		contract.RawData["required_verification_tags"] = tags
+	}
+
+	return &GherkinValidator{
+		contract:       contract,
+		antiCorruption: antiCorruption,
+	}
+}
+
 // SetTagsConfig sets the tags config for tag validation
 func (v *GherkinValidator) SetTagsConfig(tagsConfig *config.TestingTagsConfig) {
 	v.tagsConfig = tagsConfig

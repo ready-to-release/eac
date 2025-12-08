@@ -79,9 +79,9 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 
 // buildProfilePrompt constructs the AI prompt for profile generation using templates.
 func buildProfilePrompt(workspaceRoot, assessmentContent, catalogURL string, availableControls []string) string {
-	// Load prompt template from .r2r/eac/ai/risk-profile/profile.md
+	// Load prompt template from .r2r/eac/ai/prompts/risk/profile.md
 	loader := contracts.NewContractLoader(workspaceRoot, "ai/risk-profile", "")
-	promptTemplate, _, err := loader.LoadPrompt("profile.md", defaultProfilePrompt)
+	promptTemplate, _, err := loader.LoadPrompt("risk/profile.md", defaultProfilePrompt)
 	if err != nil {
 		promptTemplate = defaultProfilePrompt
 	}

@@ -351,8 +351,9 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 		return 0, nil
 	}
 
-	// Determine worker count (max 8 parallel renders, or fewer if less work)
-	maxWorkers := 8
+	// Determine worker count (max 4 parallel renders to avoid overwhelming Chromium)
+	// Each worker spawns a Docker container with Chromium, so we keep this conservative
+	maxWorkers := 4
 	if maxWorkers > len(toRender) {
 		maxWorkers = len(toRender)
 	}

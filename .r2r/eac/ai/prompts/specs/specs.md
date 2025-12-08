@@ -79,11 +79,9 @@ EVERY scenario MUST have at least one verification tag:
 - `@piv` - Production Installation Verification
 - `@ppv` - Production Performance Verification
 
-### Testing Tags and Taxonomy
+### Testing Tags
 
 {{.Custom.TagsSpec}}
-
-{{.Custom.TaxonomySpec}}
 
 ### Optional Tags
 

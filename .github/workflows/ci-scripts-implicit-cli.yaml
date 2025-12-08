@@ -36,9 +36,23 @@ permissions:
   actions: read
 
 jobs:
-  # Scripts package has no build step - test only
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Build Module
+        uses: ./.github/actions/build-module
+        with:
+          module: scripts-implicit-cli
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+
   test-linux:
     name: Test (Linux)
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -50,12 +64,12 @@ jobs:
         with:
           module: scripts-implicit-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          download-artifact: 'false'
           # PRs run commit suite only; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
 
   test-windows:
     name: Test (Windows)
+    needs: build
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
@@ -67,6 +81,5 @@ jobs:
         with:
           module: scripts-implicit-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          download-artifact: 'false'
           # PRs run commit suite only; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}

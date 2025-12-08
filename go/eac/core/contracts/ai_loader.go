@@ -1,173 +1,221 @@
 // Package contracts provides generalized contract-based validation framework
-//
-// This package enables commands to:
-// - Load contract specifications from YAML files
-// - Apply anti-corruption filters to AI output
-// - Validate AI output against contracts
-// - Build AI prompts with contract context
 package contracts
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
-// ContractLoader handles loading validation contracts
-// Type is inferred from the contract path automatically
-type ContractLoader struct {
+// AIConfigLoader loads the unified AI configuration
+type AIConfigLoader struct {
 	workspaceRoot string
-	contractPath  string       // e.g., "commit-message" (AI) or "eac-core" (domain)
-	version       string       // Only used for domain contracts
-	contractType  ContractType // Inferred from path prefix
+	config        *AIConfig
 }
 
-// NewContractLoader creates a loader with automatic type inference
-// For AI configs: contractPath is command name (e.g., "commit-message", "specifications")
-// For domain contracts: contractPath is module name (e.g., "eac-core")
-// Version is only used for domain contracts; AI configs are unversioned
-func NewContractLoader(workspaceRoot string, contractPath string, version string) *ContractLoader {
-	// Infer type from path prefix
-	contractType := ContractTypeDomain
-	aiPath := contractPath
-	if strings.HasPrefix(contractPath, "ai/") {
-		contractType = ContractTypeAI
-		aiPath = strings.TrimPrefix(contractPath, "ai/")
-	}
-
-	return &ContractLoader{
+// NewAIConfigLoader creates a new AI config loader
+func NewAIConfigLoader(workspaceRoot string) *AIConfigLoader {
+	return &AIConfigLoader{
 		workspaceRoot: workspaceRoot,
-		contractPath:  aiPath,
-		version:       version,
-		contractType:  contractType,
 	}
 }
 
-// GetType returns the inferred contract type
-func (cl *ContractLoader) GetType() ContractType {
-	return cl.contractType
-}
+// Load loads the unified ai-config.yml file
+func (l *AIConfigLoader) Load() (*AIConfig, error) {
+	if l.config != nil {
+		return l.config, nil
+	}
 
-// IsAI returns true if this loader is for an AI contract
-func (cl *ContractLoader) IsAI() bool {
-	return cl.contractType == ContractTypeAI
-}
-
-// LoadContract loads contract.yml and sets the type
-func (cl *ContractLoader) LoadContract() (*Contract, error) {
-	contractPath := filepath.Join(cl.workspaceRoot, cl.getConfigDir(), "contract.yml")
-	data, err := os.ReadFile(contractPath)
+	configPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, "ai-config.yml")
+	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read contract file %s: %w", contractPath, err)
+		return nil, fmt.Errorf("failed to read AI config %s: %w", configPath, err)
 	}
 
-	var contract Contract
-	var rawData map[string]interface{}
-
-	// Parse into typed struct
-	if err := yaml.Unmarshal(data, &contract); err != nil {
-		return nil, fmt.Errorf("failed to parse contract YAML: %w", err)
+	var config AIConfig
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse AI config: %w", err)
 	}
 
-	// Also parse into raw map for custom access
-	if err := yaml.Unmarshal(data, &rawData); err != nil {
-		return nil, fmt.Errorf("failed to parse contract YAML into map: %w", err)
-	}
-
-	contract.RawData = rawData
-
-	// Set type from loader (inferred from path)
-	contract.Type = cl.contractType
-
-	// Validate contract schema
-	if err := validateContractSchema(&contract); err != nil {
-		return nil, fmt.Errorf("contract validation failed: %w", err)
-	}
-
-	return &contract, nil
+	l.config = &config
+	return &config, nil
 }
 
-// LoadAntiCorruptionRules loads anti-corruption.yml (only for AI contracts)
-func (cl *ContractLoader) LoadAntiCorruptionRules() (*AntiCorruptionRules, error) {
-	if !cl.IsAI() {
-		return nil, fmt.Errorf("anti-corruption rules are only for AI contracts (path: %s)", cl.contractPath)
-	}
-
-	rulesPath := filepath.Join(cl.workspaceRoot, cl.getConfigDir(), "anti-corruption.yml")
-	data, err := os.ReadFile(rulesPath)
+// GetType returns the configuration for a specific AI type with merged anti-corruption rules
+func (l *AIConfigLoader) GetType(typeName string) (*AITypeConfig, error) {
+	config, err := l.Load()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read anti-corruption rules file %s: %w", rulesPath, err)
+		return nil, err
 	}
 
-	var rules AntiCorruptionRules
-	var rawData map[string]interface{}
-
-	// Parse into typed struct
-	if err := yaml.Unmarshal(data, &rules); err != nil {
-		return nil, fmt.Errorf("failed to parse anti-corruption rules YAML: %w", err)
+	typeConfig, ok := config.Types[typeName]
+	if !ok {
+		return nil, fmt.Errorf("unknown AI type: %s", typeName)
 	}
 
-	// Also parse into raw map for custom access
-	if err := yaml.Unmarshal(data, &rawData); err != nil {
-		return nil, fmt.Errorf("failed to parse anti-corruption rules YAML into map: %w", err)
-	}
-
-	rules.RawData = rawData
-	return &rules, nil
+	return &typeConfig, nil
 }
 
-// LoadReferencedFile loads a file referenced by the contract (e.g., tags.yml, taxonomy.yml)
-func (cl *ContractLoader) LoadReferencedFile(relativePath string) ([]byte, error) {
-	fullPath := filepath.Join(cl.workspaceRoot, relativePath)
+// GetAntiCorruptionRules returns merged anti-corruption rules for a type (defaults + type-specific)
+func (l *AIConfigLoader) GetAntiCorruptionRules(typeName string) (*AntiCorruptionRules, error) {
+	config, err := l.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	typeConfig, ok := config.Types[typeName]
+	if !ok {
+		return nil, fmt.Errorf("unknown AI type: %s", typeName)
+	}
+
+	// Merge defaults with type-specific rules
+	merged := config.Defaults.AntiCorruption.Merge(typeConfig.AntiCorruption)
+	return &merged, nil
+}
+
+// GetStartMarker returns the content start marker for a type (nil means immediate start)
+func (l *AIConfigLoader) GetStartMarker(typeName string) (*string, error) {
+	typeConfig, err := l.GetType(typeName)
+	if err != nil {
+		return nil, err
+	}
+	return typeConfig.Output.StartMarker, nil
+}
+
+// GetValidation returns the validation rules for a type
+func (l *AIConfigLoader) GetValidation(typeName string) (map[string]interface{}, error) {
+	typeConfig, err := l.GetType(typeName)
+	if err != nil {
+		return nil, err
+	}
+	return typeConfig.Validation, nil
+}
+
+// LoadPrompt loads a prompt file from ai/prompts/<name>.md
+func (l *AIConfigLoader) LoadPrompt(promptName string) (string, error) {
+	promptPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, "ai", "prompts", promptName)
+	data, err := os.ReadFile(promptPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read prompt %s: %w", promptPath, err)
+	}
+	return string(data), nil
+}
+
+// LoadData loads a data file referenced by a type
+func (l *AIConfigLoader) LoadData(typeName string, dataKey string) ([]byte, error) {
+	typeConfig, err := l.GetType(typeName)
+	if err != nil {
+		return nil, err
+	}
+
+	dataPath, ok := typeConfig.Data[dataKey]
+	if !ok {
+		return nil, fmt.Errorf("unknown data key %s for type %s", dataKey, typeName)
+	}
+
+	fullPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, dataPath)
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read referenced file %s: %w", fullPath, err)
+		return nil, fmt.Errorf("failed to read data file %s: %w", fullPath, err)
 	}
 	return data, nil
 }
 
-// LoadPrompt loads a prompt file with fallback chain (only for AI configs)
-// Priority: AI config → embedded
-func (cl *ContractLoader) LoadPrompt(promptName string, embeddedPrompt string) (string, string, error) {
-	if !cl.IsAI() {
-		return "", "", fmt.Errorf("prompts are only for AI configs (path: %s)", cl.contractPath)
+// LoadReferencedFile loads a file by path relative to workspace root
+func (l *AIConfigLoader) LoadReferencedFile(relativePath string) ([]byte, error) {
+	fullPath := filepath.Join(l.workspaceRoot, relativePath)
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", fullPath, err)
 	}
-
-	// Try 1: AI config file in .r2r/eac/ai/<command>/<prompt>.md
-	aiConfigPrompt := filepath.Join(cl.workspaceRoot, cl.getConfigDir(), promptName)
-	if data, err := os.ReadFile(aiConfigPrompt); err == nil {
-		return string(data), "AI config", nil
-	}
-
-	// Try 2: Embedded prompt (fallback)
-	if embeddedPrompt != "" {
-		return embeddedPrompt, "embedded default", nil
-	}
-
-	return "", "", fmt.Errorf("prompt not found: %s (tried %s and embedded)", promptName, aiConfigPrompt)
+	return data, nil
 }
 
-// GetContractPath returns the full path to the config directory
+// GetWorkspaceRoot returns the workspace root
+func (l *AIConfigLoader) GetWorkspaceRoot() string {
+	return l.workspaceRoot
+}
+
+// ContractLoader provides backward-compatible API for loading AI configs
+// Deprecated: Use AIConfigLoader directly for new code
+type ContractLoader struct {
+	loader   *AIConfigLoader
+	typeName string
+}
+
+// NewContractLoader creates a backward-compatible loader
+// contractPath format: "ai/<type>" (e.g., "ai/specs", "ai/commit-message")
+// version is ignored (unified config is unversioned)
+func NewContractLoader(workspaceRoot string, contractPath string, version string) *ContractLoader {
+	// Extract type name from path (e.g., "ai/specs" -> "specs")
+	typeName := contractPath
+	if len(contractPath) > 3 && contractPath[:3] == "ai/" {
+		typeName = contractPath[3:]
+	}
+
+	return &ContractLoader{
+		loader:   NewAIConfigLoader(workspaceRoot),
+		typeName: typeName,
+	}
+}
+
+// LoadContract loads validation config as a Contract for backward compatibility
+func (cl *ContractLoader) LoadContract() (*Contract, error) {
+	typeConfig, err := cl.loader.GetType(cl.typeName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create Contract from type config
+	contract := &Contract{
+		Version:     "0.1.0",
+		Name:        typeConfig.Name,
+		Description: typeConfig.Description,
+		Type:        ContractTypeAI,
+		RawData:     typeConfig.Validation,
+	}
+
+	return contract, nil
+}
+
+// LoadAntiCorruptionRules loads merged anti-corruption rules
+func (cl *ContractLoader) LoadAntiCorruptionRules() (*AntiCorruptionRules, error) {
+	return cl.loader.GetAntiCorruptionRules(cl.typeName)
+}
+
+// LoadPrompt loads a prompt file from the new prompts directory
+func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string, string, error) {
+	prompt, err := cl.loader.LoadPrompt(promptName)
+	if err != nil {
+		if fallback != "" {
+			return fallback, "fallback", nil
+		}
+		return "", "", err
+	}
+	return prompt, "config", nil
+}
+
+// LoadReferencedFile loads a file by path
+func (cl *ContractLoader) LoadReferencedFile(relativePath string) ([]byte, error) {
+	return cl.loader.LoadReferencedFile(relativePath)
+}
+
+// GetContractPath returns the path to the AI config directory
 func (cl *ContractLoader) GetContractPath() string {
-	return filepath.Join(cl.workspaceRoot, cl.getConfigDir())
+	return filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, "ai", cl.typeName)
 }
 
-// getConfigDir returns the full config directory path
-// AI configs: .r2r/eac/ai/<command> (unversioned)
-// Domain contracts: contracts/<module>/<version> (versioned)
-func (cl *ContractLoader) getConfigDir() string {
-	if cl.IsAI() {
-		return filepath.Join(paths.R2RDir, paths.EACDir, "ai", cl.contractPath)
-	}
-	return filepath.Join(paths.ContractsDir, cl.contractPath, cl.version)
+// IsAI returns true (all ContractLoader instances are for AI configs)
+func (cl *ContractLoader) IsAI() bool {
+	return true
 }
 
-// ExtractStringList is a helper to extract string arrays from YAML data
+// Helper functions for extracting typed values from validation maps
+
+// ExtractStringList extracts a string array from a map
 func ExtractStringList(data map[string]interface{}, key string) []string {
 	if val, ok := data[key]; ok {
 		if list, ok := val.([]interface{}); ok {
@@ -183,7 +231,7 @@ func ExtractStringList(data map[string]interface{}, key string) []string {
 	return []string{}
 }
 
-// ExtractString is a helper to extract a string value from YAML data
+// ExtractString extracts a string value from a map
 func ExtractString(data map[string]interface{}, key string) string {
 	if val, ok := data[key]; ok {
 		if str, ok := val.(string); ok {
@@ -193,7 +241,32 @@ func ExtractString(data map[string]interface{}, key string) string {
 	return ""
 }
 
-// ExtractMap is a helper to extract a nested map from YAML data
+// ExtractInt extracts an int value from a map
+func ExtractInt(data map[string]interface{}, key string) int {
+	if val, ok := data[key]; ok {
+		switch v := val.(type) {
+		case int:
+			return v
+		case int64:
+			return int(v)
+		case float64:
+			return int(v)
+		}
+	}
+	return 0
+}
+
+// ExtractBool extracts a bool value from a map
+func ExtractBool(data map[string]interface{}, key string) bool {
+	if val, ok := data[key]; ok {
+		if b, ok := val.(bool); ok {
+			return b
+		}
+	}
+	return false
+}
+
+// ExtractMap extracts a nested map from a map
 func ExtractMap(data map[string]interface{}, key string) map[string]interface{} {
 	if val, ok := data[key]; ok {
 		if m, ok := val.(map[string]interface{}); ok {
@@ -201,34 +274,4 @@ func ExtractMap(data map[string]interface{}, key string) map[string]interface{} 
 		}
 	}
 	return nil
-}
-
-// validateContractSchema validates that a contract meets minimum requirements
-func validateContractSchema(contract *Contract) error {
-	// Required fields
-	if contract.Version == "" {
-		return fmt.Errorf("missing required field: version")
-	}
-	if contract.Name == "" {
-		return fmt.Errorf("missing required field: name")
-	}
-
-	// Version format validation (semantic versioning)
-	if !isValidVersion(contract.Version) {
-		return fmt.Errorf("invalid version format: %s (expected semantic version like 1.0.0)", contract.Version)
-	}
-
-	// Check for valid data structure
-	if contract.RawData == nil {
-		return fmt.Errorf("contract has no data")
-	}
-
-	return nil
-}
-
-// isValidVersion checks if a version string follows semantic versioning
-func isValidVersion(version string) bool {
-	// Semantic version: X.Y.Z
-	re := regexp.MustCompile(`^\d+\.\d+\.\d+$`)
-	return re.MatchString(version)
 }

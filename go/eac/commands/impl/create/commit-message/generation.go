@@ -38,8 +38,8 @@ func loadPromptWithFallback(promptName string, workspaceRoot string) (string, er
 	// No embedded prompt - load from .r2r/eac/ai/
 	var embeddedPrompt string
 
-	// Load prompt from AI config
-	agentContent, _, err := loader.LoadPrompt(promptName+".md", embeddedPrompt)
+	// Load prompt from AI config (prompts organized in folders)
+	agentContent, _, err := loader.LoadPrompt("commit/"+promptName+".md", embeddedPrompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
@@ -115,8 +115,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 		validator = commitmessageinternal.NewModuleSectionValidator("")
 	default:
 		// Fallback to full commit message validator for final assembly validation
-		contractPath := filepath.Join(loader.GetContractPath(), "contract.yml")
-		commitContract, err := commitmessageinternal.LoadContract(contractPath)
+		commitContract, err := commitmessageinternal.LoadContractFromConfig(workspaceRoot)
 		if err != nil {
 			log.Warnf("Could not load commit contract, proceeding without validation: %v", err)
 			return generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
@@ -125,7 +124,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 			commitContract,
 			antiCorruptionRules,
 			affectedModules,
-			loader.GetContractPath(),
+			workspaceRoot,
 		)
 	}
 
