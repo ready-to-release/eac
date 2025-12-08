@@ -1,25 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/workflow/branching-strategies.md
-
-## Soul
-
-Detailed branching flows for Release Approval (RA: trunk → release branches → production, 1-2 weeks) and Continuous Deployment (CDE: trunk → production, 2-4 hours) patterns, covering stage-by-stage progression through CD Model stages 1-12, release branch lifecycle, trunk-first bug fixing, pipeline integration, and pin-and-stitch dependency management.
-
-## Sections
-
-1. Introduction
-2. Branch Types Recap
-3. RA Pattern Flow
-4. Release Branch Lifecycle
-5. Fixing Bugs on Release Branches
-6. CDe Pattern Flow
-7. No Release Branches
-8. Fixing Bugs in Production
-9. Pipeline Integration
-10. Pin and Stitch
-11. Comparison Summary
--->
-
 # Branching Strategies
 
 ## Introduction
@@ -858,3 +836,9 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 - [Unit of Flow](../core-concepts/unit-of-flow.md)
 - [Repository Layout](../../../reference/repository-layout.md)
 - [Trunk-Based Development (trunkbaseddevelopment.com)](https://trunkbaseddevelopment.com/)
+
+---
+
+_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
+
+**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.

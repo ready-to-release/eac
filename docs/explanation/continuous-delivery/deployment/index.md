@@ -80,6 +80,9 @@ The right strategy depends on:
 | ------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [Deployment Strategies](./deployment-strategies.md) | Comprehensive explanation of deployment patterns with tradeoffs and use cases |
 | [Deployment Rings](./deployment-rings.md)          | Progressive user group rollout pattern explained in depth                     |
+| [Feature Flags](./feature-flags.md)                | Feature flag lifecycle management from creation to cleanup                    |
+| [Rollback Procedures](./rollback-procedures.md)    | Emergency rollback execution guide with decision criteria and procedures      |
+| [Incident Response](./incident-response.md)        | Production incident response playbook with severity levels and templates      |
 
 ---
 

@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/testing/index.md
-
-## Soul
-Index for testing strategy section covering L0-L4 test taxonomy with shift-left/shift-right strategy and CD Model stage integration.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Testing Strategy
 
 Comprehensive testing strategy integrated throughout all stages of the Continuous Delivery Model.

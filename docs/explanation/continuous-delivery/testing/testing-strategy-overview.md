@@ -1,26 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/testing/testing-strategy-overview.md
-
-## Soul
-
-Comprehensive test taxonomy documentation covering L0-L4 test levels based on execution environment/scope, determinism vs domain coherency trade-off, shift-left/shift-right strategy, and Horizontal E2E anti-pattern (lowest determinism, non-shifted classification).
-
-## Sections
-
-1. Introduction
-2. Test Taxonomy
-3. Determinism vs Domain Coherency
-4. Tag Taxonomy
-5. L0: Unit Tests
-6. L1: Unit Tests
-7. L2: Emulated System Tests
-8. L3: In-Situ Vertical Tests
-9. L4: Testing in Production
-10. Horizontal E2E (Anti-Pattern)
-11. Shift-Left Strategy
-12. Summary
--->
-
 # Testing Strategy: Overview
 
 ## Introduction
@@ -761,3 +738,9 @@ See **[Tag Reference](../../specifications/tag-reference.md)** for complete docu
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Stages 1-6](../cd-model/cd-model-stages-1-6.md)
 - [Three-Layer Testing](../../specifications/three-layer-approach.md)
+
+---
+
+_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
+
+**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.

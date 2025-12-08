@@ -286,6 +286,7 @@ Later stages assume earlier stages passed - don't repeat validations unnecessari
 | Topic                                             | Description                                                      |
 | ------------------------------------------------- | ---------------------------------------------------------------- |
 | [Pre-commit Gates](./precommit-gates.md)          | Stage 2 quality gates - fast local validation in 5-10 minutes    |
+| [Pre-commit Setup](./precommit-setup.md)          | Configuration guide for pre-commit hooks and validation          |
 | [Merge Request Gates](./merge-request-gates.md)   | Stage 3 quality gates - peer review and CI validation            |
 | [Release Gates](./release-gates.md)               | Stage 9 quality gates - production readiness validation          |
 

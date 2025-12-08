@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/core-concepts/index.md
-
-## Soul
-Index for core concepts establishing foundational CD knowledge: Unit of Flow and Deployable Modules.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Core Concepts
 
 Foundational concepts that underpin the Continuous Delivery Model.

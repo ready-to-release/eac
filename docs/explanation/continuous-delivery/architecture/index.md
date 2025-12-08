@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/architecture/index.md
-
-## Soul
-Architecture index documenting six environment types and repository patterns that shape how you implement the Continuous Delivery Model.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Architecture
 
 Infrastructure and organizational decisions that shape how you implement the Continuous Delivery Model.
@@ -20,6 +8,7 @@ Infrastructure and organizational decisions that shape how you implement the Con
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | [Environments](./environments.md)               | Six environment types (DevBox, Build Agents, PLTE, Demo, Deploy Agents, Production) and their roles |
 | [Repository Patterns](./repository-patterns.md) | Monorepo vs polyrepo patterns and their impact on CD Model implementation                           |
+| [PLTE Provisioning](./plte-provisioning.md)     | Creating and managing ephemeral Production-Like Test Environments                                   |
 
 ---
 

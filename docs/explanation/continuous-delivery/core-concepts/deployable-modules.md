@@ -1,24 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/core-concepts/deployable-modules.md
-
-## Soul
-
-Comprehensive guide to Deployable Modules (fundamental CD building blocks), covering definition, two types (Runtime Systems vs Versioned Components), six versioning strategies (Implicit, CalVer, Release Number, SemVer, API), immutable artifacts, dependency management, and granularity decisions.
-
-## Sections
-
-1. Introduction
-2. Definition
-3. Types of Deployable Modules
-4. Versioning Strategies
-5. Revision Number
-6. Immutable Artifacts
-7. Dependency Management
-8. Granularity
-9. CD Model Integration
-10. Summary
--->
-
 # Deployable Modules
 
 ## Introduction
@@ -599,3 +578,9 @@ Deployable modules are the fundamental building blocks of Continuous Delivery:
 - [Calendar Versioning (CalVer)](https://calver.org/) - Versioning standard for runtime systems
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message convention
 - [Trunk-Based Development](https://trunkbaseddevelopment.com/) - Branching strategy and workflow
+
+---
+
+_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
+
+**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.

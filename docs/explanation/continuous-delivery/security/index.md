@@ -1,15 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/security/index.md
-
-## Soul
-Index for security section covering shift-left security integration throughout CD Model stages with open-source tools.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Security
 
 Security integration throughout all stages of the Continuous Delivery Model using open-source solutions.

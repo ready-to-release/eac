@@ -70,6 +70,7 @@ Release management is the process of planning, scheduling, and controlling softw
 | --------------------------------------------------------- | -------------------------------------------------------------------- |
 | [Release Documentation](./release-documentation.md)       | Comprehensive explanation of release notes, runbooks, and procedures |
 | [Release Approval Patterns](./release-approval.md)        | RA vs CDe approval workflows explained in depth                      |
+| [Release Notes](./release-notes.md)                       | Template and guidelines for creating effective release notes         |
 
 ---
 

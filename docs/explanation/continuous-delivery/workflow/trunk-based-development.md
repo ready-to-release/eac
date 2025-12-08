@@ -1,25 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/workflow/trunk-based-development.md
-
-## Soul
-
-Comprehensive guide to Trunk-Based Development enabling Continuous Integration and Continuous Delivery, covering 5 core principles (single source of truth, short-lived branches, small changes, CI, frequent integration), branch types, semantic commits, 7-step daily workflow, feature hiding strategies, and release flows for RA and CDE patterns.
-
-## Sections
-
-1. Introduction
-2. Core Principles
-3. Branch Types and Flow
-4. Commits
-5. Daily Development Flow
-6. Feature Hiding
-7. Branch by Abstraction
-8. Release Flows
-9. Cherry-Picking Fixes
-10. Best Practices
-11. Stage Duration Guidelines
--->
-
 # Trunk-Based Development
 
 ## Introduction
@@ -591,3 +569,9 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 
 - [Feature Branches Considered Evil (YouTube)](https://www.youtube.com/watch?v=h7LeD7VevyI)
 - [Why CI is Better Than Feature Branching (YouTube)](https://www.youtube.com/watch?v=lXQEi1O5IOI)
+
+---
+
+_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
+
+**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
