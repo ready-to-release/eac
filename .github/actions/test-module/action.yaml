@@ -161,6 +161,7 @@ runs:
         RUN_ID: ${{ github.run_id }}
         TEST_FAILED: ${{ steps.test.outputs.test-failed }}
         GH_TOKEN: ${{ github.token }}
+        RESULTS_ARTIFACT_NAME: ${{ steps.vars.outputs.results-artifact-name }}
       run: |
         # Determine status from test result
         if [ "$TEST_FAILED" = "0" ]; then
@@ -178,5 +179,5 @@ runs:
         # Add diagnostic link on failure
         if [ "$STATUS" = "failure" ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS pipeline ci summary-link $RUN_ID --type test --artifact "test-results-${MODULE}" >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link $RUN_ID --type test --artifact "$RESULTS_ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY
         fi

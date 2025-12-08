@@ -299,18 +299,17 @@ func ValidateArtifactsWithDependencies(
 		return nil, fmt.Errorf("failed to resolve dependencies: %w", err)
 	}
 
-	// Load build manifest to get requested artifacts for each module
+	// Load build manifest to get requested artifacts and platform info for each module
 	buildOutputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Build)
-	manifest, err := LoadManifest(buildOutputDir)
+	manifest, _ := LoadManifest(buildOutputDir)
+
+	// Extract requested artifacts from manifest
 	requestedArtifactsMap := make(map[string][]string)
-	if err == nil && manifest != nil {
-		// Extract requested artifacts for all modules
+	if manifest != nil {
 		for moniker, moduleBuild := range manifest.Modules {
 			requestedArtifactsMap[moniker] = moduleBuild.RequestedArtifacts
 		}
 	}
-	// If manifest doesn't exist or can't be loaded, requestedArtifactsMap will be empty
-	// and validation will check all artifacts (fallback behavior)
 
 	// Validate each module
 	results := &ValidationResults{
@@ -320,7 +319,18 @@ func ValidateArtifactsWithDependencies(
 
 	for moniker := range allModules {
 		requestedArtifacts := requestedArtifactsMap[moniker]
-		modResult := validateSingleModule(moniker, targetModule, cfg, registry, targetOS, targetArch, workspaceRoot, requestedArtifacts)
+
+		// For dependencies, use the platform from manifest (where they were built)
+		// This supports cross-platform CI (e.g., Linux build with --all, Windows test)
+		resolveOS, resolveArch := targetOS, targetArch
+		if moniker != targetModule && manifest != nil {
+			if platforms := manifest.GetPlatformsForModule(moniker); len(platforms) > 0 {
+				resolveOS = platforms[0].OS
+				resolveArch = platforms[0].Arch
+			}
+		}
+
+		modResult := validateSingleModule(moniker, targetModule, cfg, registry, resolveOS, resolveArch, workspaceRoot, requestedArtifacts)
 		results.Modules = append(results.Modules, modResult)
 
 		if modResult.Error != "" || modResult.Summary.Missing > 0 {

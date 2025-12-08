@@ -138,9 +138,12 @@ jobs:
 
       - name: Summary
         if: always()
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            echo "## PDF Book Release" >> $GITHUB_STEP_SUMMARY
+            echo "## ✅ PDF Book Release" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Successfully built and released PDF documentation books." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -156,16 +159,23 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Book | Size |" >> $GITHUB_STEP_SUMMARY
             echo "|------|------|" >> $GITHUB_STEP_SUMMARY
-            find out/build/books -name "*.pdf" -exec sh -c 'echo "| $(basename {}) | $(du -h {} | cut -f1) |"' \; >> $GITHUB_STEP_SUMMARY
+            find out/build/books -name "*.pdf" -exec sh -c 'echo "| $(basename {}) | $(du -h {} | cut -f1) |"' \; >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "PDFs are available as release assets and workflow artifacts." >> $GITHUB_STEP_SUMMARY
           else
-            echo "## PDF Book Release Failed" >> $GITHUB_STEP_SUMMARY
+            echo "## ❌ PDF Book Release Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Failed to build or release PDF documentation." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "- Docker image build failure" >> $GITHUB_STEP_SUMMARY
-            echo "- Missing PDF template styles" >> $GITHUB_STEP_SUMMARY
+
+            # Add diagnostic link if commands binary is available
+            if [ -n "$COMMANDS" ] && [ -f "$COMMANDS" ]; then
+              $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --artifact pdf-books >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "- Commands binary not available (check CI trigger workflow)" >> $GITHUB_STEP_SUMMARY
+              echo "- Docker image build failure" >> $GITHUB_STEP_SUMMARY
+              echo "- Missing PDF template styles" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
