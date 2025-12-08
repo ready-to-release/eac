@@ -152,6 +152,13 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 	// Create streaming test runner
 	streamingRunner := runner.NewStreamingRunner(tuiWriter, logFile)
 
+	// Run go generate to ensure embedded files exist (e.g., from contracts)
+	// This is needed because test jobs may run on fresh checkouts without build artifacts
+	if err := runGoGenerate(actualPkgDir, logFile); err != nil {
+		fmt.Fprintf(logFile, "Warning: go generate failed: %v\n", err)
+		// Don't fail - go generate might not be needed for all packages
+	}
+
 	// Build go test command
 	goTestArgs := []string{"test", "-json", "-v", "-parallel", fmt.Sprintf("%d", cfg.Parallelism)}
 
@@ -213,6 +220,40 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// runGoGenerate runs go generate for a package directory.
+// This ensures embedded files from contracts are available for testing.
+func runGoGenerate(pkgDir string, logWriter io.Writer) error {
+	// Find the module root by walking up to find go.mod
+	moduleRoot := findModuleRoot(pkgDir)
+	if moduleRoot == "" {
+		return nil // No go.mod found, skip
+	}
+
+	cmd := exec.Command("go", "generate", "./...")
+	cmd.Dir = moduleRoot
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
+	if len(output) > 0 {
+		fmt.Fprintf(logWriter, "go generate output:\n%s\n", string(output))
+	}
+	return err
+}
+
+// findModuleRoot walks up from dir to find the directory containing go.mod
+func findModuleRoot(dir string) string {
+	for {
+		if fileExists(filepath.Join(dir, "go.mod")) {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "" // Reached root
+		}
+		dir = parent
+	}
 }
 
 // sanitizePathForLog converts a package path to a safe directory name
