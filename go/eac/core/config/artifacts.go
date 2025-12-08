@@ -80,7 +80,7 @@ func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifact A
 	variantID := artifact.ID
 	if variantID == "" {
 		// Derive variant ID from pattern/context
-		variantID = r.deriveVariantID(pattern, artifact.Type)
+		variantID = r.deriveVariantID(pattern, artifact)
 	}
 
 	// Check for metadata override: {type}-{variant}
@@ -94,21 +94,26 @@ func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifact A
 	return r.ResolvePattern(pattern)
 }
 
-// deriveVariantID derives a variant ID from the pattern and artifact type.
-// For executables: {os}-{arch} (e.g., linux-amd64)
+// deriveVariantID derives a variant ID from the pattern and artifact.
+// For executables: {os}-{arch} (e.g., linux-amd64), with optional compression suffix
 // For files/directories: base filename/dirname from pattern
-func (r *ArtifactResolver) deriveVariantID(pattern string, artifactType string) string {
-	switch artifactType {
+func (r *ArtifactResolver) deriveVariantID(pattern string, artifact Artifact) string {
+	switch artifact.Type {
 	case ArtifactTypeExecutable:
-		// Executables use {os}-{arch} format
-		return fmt.Sprintf("%s-%s", r.OS, r.Arch)
+		// Executables use {os}-{arch} format, with optional compression suffix
+		id := fmt.Sprintf("%s-%s", r.OS, r.Arch)
+		// Add compression suffix for compressed artifacts
+		if artifact.GetCompression() == CompressionUPX {
+			id += "-upx"
+		}
+		return id
 
 	case ArtifactTypeFile, ArtifactTypeDirectory, ArtifactTypeImage:
 		// For other types, resolve pattern and use base name
 		resolved := r.ResolvePattern(pattern)
 		base := filepath.Base(resolved)
 		// Remove extension for files
-		if artifactType == ArtifactTypeFile {
+		if artifact.Type == ArtifactTypeFile {
 			ext := filepath.Ext(base)
 			if ext != "" {
 				base = base[:len(base)-len(ext)]
@@ -221,6 +226,12 @@ func (r *ArtifactResolver) verifyExecutableArtifact(artifact Artifact) []Artifac
 	switch verifyMode {
 	case VerifyCurrentPlatform:
 		// Only verify for current platform if it's in the list
+		// Also check architecture - patterns may contain hardcoded arch (e.g., "-arm64")
+		patternArch := extractArchFromPattern(artifact.Pattern)
+		if patternArch != "" && patternArch != r.Arch {
+			// Pattern specifies a different architecture, skip verification
+			break
+		}
 		for _, p := range platforms {
 			if p == r.OS {
 				results = append(results, r.VerifyArtifact(artifact))
@@ -313,4 +324,26 @@ func FormatVerificationResults(results []ArtifactVerificationResult) string {
 		}
 	}
 	return sb.String()
+}
+
+// extractArchFromPattern extracts hardcoded architecture from an artifact pattern.
+// Returns the architecture if found (e.g., "amd64", "arm64"), or empty string if
+// the pattern uses a placeholder like {arch}.
+func extractArchFromPattern(pattern string) string {
+	// Common architecture suffixes in patterns
+	// Check for hardcoded architectures (not placeholders)
+	archs := []string{"amd64", "arm64", "386", "arm"}
+
+	for _, arch := range archs {
+		// Look for arch in pattern, but not as a placeholder
+		if strings.Contains(pattern, "{arch}") {
+			// Pattern uses placeholder, architecture is variable
+			return ""
+		}
+		// Check for arch as a component (e.g., "-amd64", "-arm64")
+		if strings.Contains(pattern, "-"+arch) || strings.Contains(pattern, "_"+arch) {
+			return arch
+		}
+	}
+	return ""
 }

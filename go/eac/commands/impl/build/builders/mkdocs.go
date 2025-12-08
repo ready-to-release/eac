@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -357,7 +358,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 	}
 
 	// Build PDF books in parallel (now safe with Docker resource limits)
-	// With --cpus=8 --memory=8g limits, each container won't overwhelm the system
+	// With --cpus=N --memory=8g limits, each container won't overwhelm the system
 	if len(pdfBooks) > 0 {
 		Logln(logWriter, "\n🚀 Building %d PDF books in PARALLEL...", len(pdfBooks))
 		var wg sync.WaitGroup
@@ -744,11 +745,14 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 	dockerSiteDir := "site"
 	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
 
+	// Use all available CPUs for PDF rendering (adapts to CI runners with fewer cores)
+	cpuLimit := fmt.Sprintf("%d", runtime.NumCPU())
+
 	buildArgs := []string{
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
-		"--cpus", "8",              // Allocate 8 CPU cores for faster rendering
+		"--cpus", cpuLimit,         // Allocate available CPU cores for faster rendering
 		"--memory", "8g",           // 8GB RAM for Chromium and mkdocs
 		"--shm-size", "2gb",        // Shared memory for Chromium (prevents crashes)
 		"-e", "ENABLE_PDF_EXPORT=true",
