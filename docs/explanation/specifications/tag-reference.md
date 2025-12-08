@@ -1,23 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/specifications/tag-reference.md
-
-## Soul
-
-Complete reference for testing taxonomy tags including test levels (L0-L4), verification tags (@ov, @iv, @pv, @piv, @ppv), execution control (@ignore, @Manual), dependencies (@deps:*), and OSCAL risk controls (@control:<id>). Defines tag inheritance and test suites.
-
-## Sections
-
-1. Overview - Tag categories summary
-2. Test Level Tags - @L0 (Fast Unit), @L1 (Unit), @L2 (Emulated System), @L3 (In-Situ Vertical), @L4 (Testing in Production)
-3. Verification Tags - @ov, @iv, @pv, @piv, @ppv (REQUIRED for all Gherkin scenarios)
-4. Test Execution Control Tags - @ignore, @Manual (with git evidence requirements)
-5. System Dependency Tags - @deps:docker, @deps:git, @deps:go, @deps:az-cli
-6. Risk Control Tags - OSCAL format @control:<id>, control families (AC, AU, IA, SC, SI, CM, IR)
-7. Tag Inheritance - Accumulation rules (Feature → Rule → Scenario), override rules for test levels
-8. Test Suites - pre-commit (L0-L2, 5-10min), acceptance (@iv/@ov/@pv, L3, 1-2hrs), production-verification (@L4 + @piv, continuous)
-9. Best Practices - Required tags, organization, manual test evidence in git
--->
-
 # Tag Reference
 
 Complete reference for the **testing taxonomy tags** used across the test suite.
@@ -260,37 +240,62 @@ Scenario: Production API maintains SLA
 
 ## Test Execution Control Tags
 
-### `@ignore` - Exclude from Test Execution
+### `@skip:<reason>` - Exclude from Test Execution with Reason
 
-**Purpose**: Exclude features or scenarios from all test suite runs (work-in-progress, temporarily disabled)
+**Purpose**: Exclude features or scenarios from test suite runs with documented reason
+
+**Format**: `@skip:<reason>`
+
+**Pattern**: `^@skip:(?P<reason>[a-z]+)$`
 
 **Usage**: Feature level (excludes all scenarios) OR Scenario level (excludes only that scenario)
+
+**Valid Reason Codes**:
+
+| Code | Name | Description |
+|------|------|-------------|
+| `wip` | Work In Progress | Test implementation not yet complete |
+| `broken` | Broken Test | Test is broken and needs fixing |
+| `flaky` | Flaky Test | Test intermittently fails, needs stabilization |
+| `deprecated` | Deprecated Feature | Feature deprecated, test kept for reference |
+| `blocked` | Blocked | Blocked by external dependency or decision |
 
 **Examples**:
 
 ```gherkin
-# Feature-level: Entire feature excluded
-@ignore @ov
+# Feature-level: Entire feature excluded (work in progress)
+@skip:wip @ov
 Feature: new-feature_experimental-api
-  Scenario: Create resource    # ❌ EXCLUDED
-  Scenario: Delete resource    # ❌ EXCLUDED
+  Scenario: Create resource    # ❌ EXCLUDED (wip)
+  Scenario: Delete resource    # ❌ EXCLUDED (wip)
 
 # Scenario-level: Only OAuth scenario excluded
 @ov
 Feature: stable-feature_authentication
   Scenario: Valid login        # ✅ RUNS
-  @ignore
-  Scenario: OAuth (WIP)        # ❌ EXCLUDED
+  @skip:wip
+  Scenario: OAuth (WIP)        # ❌ EXCLUDED (wip)
   Scenario: Session expiry     # ✅ RUNS
+
+# Flaky test - needs stabilization
+@ov
+Feature: performance-tests_api-load
+  Scenario: Basic load         # ✅ RUNS
+  @skip:flaky
+  Scenario: Peak load          # ❌ EXCLUDED (flaky)
 ```
 
-**Behavior**: `@ignore` is evaluated before other selectors. Ignored tests are excluded from all test suites regardless of other tags.
+**Behavior**: `@skip:` is evaluated before other selectors. Skipped tests are excluded from all test suites regardless of other tags.
+
+**Migration from `@ignore`**: The `@skip:<reason>` tag replaces the deprecated `@ignore` tag. Use `@skip:wip` as the direct replacement for most `@ignore` usage.
 
 ### `@Manual` - Manual Test Scenario
 
 **Purpose**: Mark scenarios that must be executed manually (cannot be automated)
 
 **Usage**: Scenario level (general use across all contexts)
+
+**Constraint**: Cannot be combined with taxonomy level tags (`@L0`-`@L4`) - manual tests are by definition not automated at any level
 
 **When to Use**:
 
@@ -361,16 +366,87 @@ When a test suite encounters scenarios tagged with `@Manual`, the pipeline must 
 
 ---
 
-## System Dependency Tags
+## Dependency Tags
 
-System dependency tags declare required tooling for test execution.
+Dependency tags declare required system tools, modules, and environments for test execution.
 
-### Available Dependencies
+### System Dependencies (`@deps:`)
+
+**Format**: `@deps:<system-dependency>`
+
+**Purpose**: Declare external system dependencies required for test execution
+
+**Available Dependencies**:
 
 **`@deps:docker`** - Docker engine required
 **`@deps:git`** - Git CLI required
 **`@deps:go`** - Go toolchain required
 **`@deps:az-cli`** - Azure CLI required
+
+**Example**:
+
+```gherkin
+@L2 @deps:docker @ov
+Feature: Container build tests
+  Tests requiring Docker for artifact builds
+```
+
+### Module Dependencies (`@depm:`)
+
+**Format**: `@depm:<module-name>`
+
+**Purpose**: Declare internal module dependencies required for test execution
+
+**Pattern**: `^@depm:(?P<module_name>[a-z0-9-]+)$`
+
+**Example**: `@depm:r2r-cli`, `@depm:eac-commands`
+
+**Valid Module Names**: Loaded from module contracts at runtime
+
+**Usage**:
+
+```gherkin
+@L2 @depm:r2r-cli @ov
+Feature: CLI integration tests
+  Tests requiring the r2r-cli module
+
+  @ov
+  Scenario: Execute CLI command
+    Given the r2r-cli module is available
+    When I run "r2r version"
+    Then the version should be displayed
+```
+
+**Purpose**: Enables dependency-aware test execution and module isolation
+
+### Environment Dependencies (`@env:`)
+
+**Format**: `@env:<env-moniker>`
+
+**Purpose**: Declare specific test environment requirements
+
+**Pattern**: `^@env:(?P<env_moniker>[a-z0-9-]+)$`
+
+**Example**: `@env:isolated-test-project`
+
+**Valid Environment Monikers**: Defined in environment contracts
+
+**Usage**:
+
+```gherkin
+@L2 @env:isolated-test-project @ov
+Feature: Isolated project tests
+  Tests requiring a clean, isolated test project environment
+
+  @ov
+  Scenario: Initialize new project
+    Given I am in an isolated test environment
+    When I run "r2r init"
+    Then a new project should be created
+    And the environment should remain isolated
+```
+
+**Purpose**: Ensures tests run in appropriate environments with correct setup
 
 ### Dependency Checking
 
@@ -386,12 +462,12 @@ System dependency tags declare required tooling for test execution.
 
 **Override**: `--dep-check=warn|fail` flag
 
-### Example
+### Combined Dependencies Example
 
 ```gherkin
-@L2 @deps:docker @deps:git @ov
+@L2 @deps:docker @deps:git @depm:eac-core @env:ci-build @ov
 Feature: Container Build Pipeline
-  Tests requiring Docker and Git for artifact builds
+  Tests requiring Docker, Git, eac-core module, and CI build environment
 
   @ov
   Scenario: Build container from Git repository
@@ -403,9 +479,39 @@ Feature: Container Build Pipeline
 
 ---
 
-## Risk Control Tags
+## Risk and Control Tags
 
-risk control tags link scenarios to standardized security and compliance requirements using [NIST OSCAL](https://pages.nist.gov/OSCAL/) format.
+Risk and control tags link scenarios to risk tracking and compliance requirements.
+
+### `@risk:<risk-id>` - Risk Tracking
+
+**Format**: `@risk:<risk-id>`
+
+**Purpose**: Tag specific risks for tracking and mitigation
+
+**Pattern**: `^@risk:(?P<risk_id>[a-z0-9-]+)$`
+
+**Example**: `@risk:data-loss`, `@risk:unauthorized-access`
+
+**Usage**:
+
+```gherkin
+@ov @risk:data-loss
+Scenario: System prevents data loss during network interruption
+  Given I am uploading a large file
+  When the network connection is interrupted
+  Then the upload should be paused
+  And I can resume the upload when connection is restored
+  And no data should be lost
+```
+
+**Purpose**: Enables risk-based test organization and traceability from risk assessments to verification scenarios
+
+**Note**: `@risk:` tags are broader than `@control:` tags - use `@risk:` for project-specific or domain risks, and `@control:` for standardized compliance controls.
+
+### OSCAL Control Tags
+
+OSCAL control tags link scenarios to standardized security and compliance requirements using [NIST OSCAL](https://pages.nist.gov/OSCAL/) format.
 
 ### Formats
 
@@ -631,12 +737,12 @@ Feature: Mixed-Level Tests
 
 Test suites select tests by tags for execution at specific CD Model stages.
 
-**Note**: All test suites automatically exclude tests tagged with `@ignore`.
+**Note**: All test suites automatically exclude tests tagged with `@skip:<reason>`.
 
 ### pre-commit
 
 **Selects**: `@L0`, `@L1`, `@L2`
-**Excludes**: `@ignore`
+**Excludes**: `@skip:<reason>`, `@Manual`
 **Time**: 5-10 minutes
 **Purpose**: Fast pre-commit validation
 **Environment**: DevBox or Build Agent
@@ -645,7 +751,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 ### acceptance
 
 **Selects**: `@iv`, `@ov`, `@pv`
-**Excludes**: `@ignore`
+**Excludes**: `@skip:<reason>`, `@Manual`
 **Infers**: `@L3` from `@iv` and `@pv`
 **Time**: 1-2 hours
 **Purpose**: PLTE deployment validation
@@ -655,7 +761,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 ### production-verification
 
 **Selects**: `@L4` AND `@piv`
-**Excludes**: `@ignore`
+**Excludes**: `@skip:<reason>`
 **Time**: Continuous
 **Purpose**: Production smoke tests
 **Environment**: Production
@@ -698,16 +804,20 @@ Test suites select tests by tags for execution at specific CD Model stages.
 
 ✅ **DO**:
 
-- Use `@ignore` temporarily for work-in-progress features
-- Document why tests are ignored (comments or issue links)
-- Review ignored tests regularly (weekly in active development)
-- Remove `@ignore` as soon as tests are stable
+- Use `@skip:<reason>` with appropriate reason code for excluded tests
+- Use `@skip:wip` temporarily for work-in-progress features
+- Use `@skip:flaky` for intermittently failing tests while investigating
+- Use `@skip:broken` for tests that need fixing
+- Document why tests are skipped (comments or issue links)
+- Review skipped tests regularly (weekly in active development)
+- Remove `@skip:` as soon as tests are stable
 
 ❌ **DON'T**:
 
-- Use `@ignore` as permanent solution for broken tests (fix or remove them)
-- Leave ignored tests without tracking (use issue numbers)
-- Ignore tests for extended periods (>1 sprint)
+- Use `@skip:broken` as permanent solution (fix or remove them)
+- Leave skipped tests without tracking (use issue numbers)
+- Skip tests for extended periods (>1 sprint)
+- Use deprecated `@ignore` tag (use `@skip:wip` instead)
 
 ### Manual Tests
 

@@ -1,22 +1,3 @@
-<!-- EDITOR
-# Editor: explanation/specifications/gxp-tagging.md
-
-## Soul
-
-Regulatory compliance tagging system for GxP-regulated environments (pharmaceutical, medical device). Links specifications to risk controls for traceability and audit readiness.
-
-## Sections
-
-1. Overview - GxP regulatory contexts (GMP, GCP, GLP, ISO 13485, FDA 21 CFR Part 11)
-2. Specification Hierarchy: URS → FS → DS - User Requirements, Functional Spec, Design Spec
-3. Regulatory Classification Tags - Feature naming as URS identifier, @gxp, @gmp-critical-aspect
-4. Risk Control Tags - @risk-control:gxp-<name> linkage
-5. Integration with Testing Taxonomy - Combined @gxp + @L2/@ov tags
-6. Best Practices - DO: Use feature naming, create risk controls, maintain traceability; DON'T: Use @gmp-critical-aspect for non-GmP, tag without risk control
-7. Traceability and Reporting - URS/FS, Test Summary, Risk Traceability Matrix
-8. Related Documentation - Tag Reference, Three-Layer Approach, Gherkin File Organization, Risk Controls
--->
-
 # GxP Tagging
 
 Understanding tagging for regulated software development in pharmaceutical and medical device contexts.
@@ -37,7 +18,8 @@ This document describes the **regulatory tagging taxonomy** used alongside the s
 **Regulatory Tags**:
 
 - **Requirement Classification** - GxP classification (`@gxp`, `@gmp-critical-aspect`)
-- **Risk Controls** - Link to GxP risk controls (`@risk-control:gxp-<name>`)
+- **Risk Tracking** - Link to GxP risks (`@risk:<risk-id>`)
+- **Compliance Controls** - Link to OSCAL controls (`@control:<id>`)
 
 ---
 
@@ -170,7 +152,7 @@ Feature: audit_trail-gxp-operations
 
   Rule: All GxP-critical actions must be logged
 
-    @ov @gxp @risk-control:gxp-audit-trail
+    @ov @gxp @risk:audit-trail-failure @control:au-2 @control:au-3
     Scenario: System records user action with timestamp
       Given I am logged in as a production operator
       When I approve a batch for release
@@ -180,15 +162,16 @@ Feature: audit_trail-gxp-operations
 
 **Requirements**:
 
-- All `@gxp` requirements **must** link to a risk control specification (`@risk-control:gxp-<name>`)
+- All `@gxp` requirements **should** link to risk tracking (`@risk:<risk-id>`) if project-specific risks are identified
+- All `@gxp` requirements **should** link to compliance controls (`@control:<id>`) for standardized controls
 - Must include both positive and negative test scenarios (challenge tests)
 - Requires approval from QA and System Owner
 
-**Risk Control Linkage**: When tagging with `@gxp`, you must:
+**Risk and Control Linkage**: When tagging with `@gxp`, you should:
 
-1. Create a risk control specification in `specs/risk-controls/gxp-<name>.feature`
-2. Link scenarios with `@risk-control:gxp-<name>` tag
-3. Document risk controls in the specification
+1. Identify project risks and tag with `@risk:<risk-id>` (e.g., `@risk:audit-trail-failure`)
+2. Link to applicable OSCAL controls with `@control:<id>` (e.g., `@control:au-2` for audit events)
+3. Document risks in risk assessment documentation
 4. Classify risk as High/Medium/Low
 
 ---
@@ -215,7 +198,7 @@ Feature: batch_release-quality-control
 
   Rule: Batch release requires quality approval
 
-    @ov @gxp @gmp-critical-aspect @risk-control:gxp-batch-release
+    @ov @gxp @gmp-critical-aspect @risk:unapproved-release @control:ac-2
     Scenario: Quality manager approves batch meeting specifications
       Given a production batch has completed all quality tests
       And all test results meet specifications
@@ -231,21 +214,22 @@ Feature: batch_release-quality-control
 **Requirements**:
 
 - Always used together with `@gxp`
-- Must link to risk control with `@risk-control:gxp-<name>`
+- Should link to risk tracking with `@risk:<risk-id>` if project-specific risks identified
+- Should link to compliance controls with `@control:<id>` for applicable standards
 - Requires enhanced testing (negative tests, challenge tests, boundary conditions)
 - Failure triggers validation deviation process
 
 ---
 
-## Risk Control Tags
+## Risk and Control Tags for GxP
 
-### `@risk-control:gxp-<name>` - GxP Risk Control
+### `@risk:<risk-id>` - GxP Risk Tracking
 
-**Purpose**: Link GxP scenarios to risk control specifications
+**Purpose**: Link GxP scenarios to project-specific risks from risk assessments
 
-**Usage**: Scenario level (required for all `@gxp` requirements)
+**Usage**: Scenario level (recommended for all `@gxp` requirements with identified risks)
 
-**Format**: `@risk-control:gxp-` followed by risk control name in kebab-case
+**Format**: `@risk:<risk-id>` in kebab-case (e.g., `@risk:brute-force-attack`)
 
 **Example**:
 
@@ -255,7 +239,7 @@ Feature: auth_user-authentication
 
   Rule: Failed login attempts must be monitored
 
-    @ov @gxp @risk-control:gxp-account-lockout
+    @ov @gxp @risk:brute-force-attack @control:ac-7
     Scenario: System locks account after 5 failed attempts
       Given I have a valid user account
       When I enter an incorrect password 5 times
@@ -264,37 +248,55 @@ Feature: auth_user-authentication
       And all failed attempts are logged
 ```
 
-**Risk Control Specification** (referenced by `@risk-control:gxp-account-lockout`):
+**Risk Documentation** (separate risk assessment document):
 
-Located in `specs/risk-controls/gxp-account-lockout.feature`:
+Risk assessments should be documented in dedicated risk management artifacts:
 
-```gherkin
-@risk-control:gxp-account-lockout
-Feature: risk-control_account-lockout
+```markdown
+# Risk Assessment: Authentication Security
 
-  # Source: Risk Assessment RA-2025-AUTH-001
-  # Risk: Unauthorized access due to weak password security
-  # Likelihood: Possible (30-70%)
-  # Impact: Critical (Patient Safety / Data Integrity)
-  # Gross Risk: High | Net Risk: Medium
+**Risk ID**: brute-force-attack
+**Source**: RA-2025-AUTH-001
+**Description**: Unauthorized access due to brute force password attacks
+**Likelihood**: Possible (30-70%)
+**Impact**: Critical (Patient Safety / Data Integrity)
+**Gross Risk**: High
+**Net Risk**: Medium (with controls)
 
-  Rule: Account lockout prevents brute force attacks
-
-    @risk-control:gxp-account-lockout-01
-    Scenario: Account locks after failed login attempts
-      Then the system MUST lock accounts after 5 failed login attempts
-      And locked accounts MUST require administrator unlock
-      And all failed attempts MUST be logged to audit trail
+**Controls**:
+- Account lockout after failed attempts (@control:ac-7)
+- Audit logging of authentication events (@control:au-2, @control:au-3)
+- Password complexity requirements (@control:ia-5(1))
 ```
+
+### `@control:<id>` - OSCAL Compliance Controls
+
+**Purpose**: Link GxP scenarios to standardized compliance controls
+
+**Usage**: Scenario level (required for regulatory compliance)
+
+**Format**: `@control:<family>-<number>` or `@control:<family>-<number>(<enhancement>)`
+
+**Examples**: `@control:ac-2`, `@control:au-3`, `@control:ia-5(1)`
+
+**Common GxP Controls**:
+
+| Control | Description | GxP Relevance |
+|---------|-------------|---------------|
+| `@control:ac-2` | Account Management | User access control |
+| `@control:au-2` | Audit Events | GxP audit trail requirements |
+| `@control:au-3` | Audit Record Content | FDA 21 CFR Part 11 compliance |
+| `@control:ia-5` | Authenticator Management | Identity verification |
+| `@control:si-7` | Software Integrity | Software validation |
 
 **Requirements**:
 
-- Every `@gxp` scenario must link to a risk control specification
-- Risk control specification stored in `specs/risk-controls/gxp-<name>.feature`
-- Risk assessment must be documented in the risk control feature
-- Risk controls must be reflected as test scenarios
+- Use `@risk:<risk-id>` for project-specific risks from risk assessments
+- Use `@control:<id>` for standardized compliance controls
+- Risk assessments should be documented separately (not as feature files)
+- Link test scenarios to both risks and controls as appropriate
 
-**See Also**: [Risk Controls](risk-controls.md) for general risk control tagging
+**See Also**: [Risk Controls](risk-controls.md) for complete documentation on risk and control tagging
 
 ---
 
@@ -308,7 +310,7 @@ Feature: auth_user-authentication-ldap
 
   Rule: Authentication validates against corporate LDAP
 
-    @ov @gxp @risk-control:gxp-ldap-auth
+    @ov @gxp @risk:ldap-auth-failure @control:ia-2 @control:au-2
     Scenario: Valid LDAP credentials grant access
       Given the LDAP server is available
       When I login with valid corporate credentials
@@ -319,7 +321,9 @@ Feature: auth_user-authentication-ldap
 
 **Tag Types Present**:
 
-- **Regulatory**: `@gxp`, `@risk-control:gxp-ldap-auth`
+- **Regulatory**: `@gxp`
+- **Risk Tracking**: `@risk:ldap-auth-failure`
+- **Compliance Controls**: `@control:ia-2`, `@control:au-2`
 - **Testing Taxonomy**: `@L2`, `@ov`, `@deps:ldap`
 - **Feature Name**: `auth_user-authentication-ldap` (serves as URS identifier)
 
@@ -333,18 +337,20 @@ Feature: auth_user-authentication-ldap
 
 - Use feature naming standard `<module>_<feature-name>` for URS identification
 - Add `@gxp` for any requirement affecting regulated processes
-- Create risk control specification for every `@gxp` requirement
+- Link to project risks with `@risk:<risk-id>` when specific risks are identified
+- Link to compliance controls with `@control:<id>` for standardized requirements
 - Use `@gmp-critical-aspect` only for GmP products
-- Link scenarios to risk controls with `@risk-control:gxp-<name>`
+- Document risk assessments separately in dedicated risk management artifacts
 - Maintain traceability from URS → FS → DS → Code → Tests
 - Use lowercase for all tags
 
 ❌ **DON'T**:
 
 - Use `@gmp-critical-aspect` for non-GmP products (GCP, GLP)
-- Tag with `@gxp` without creating corresponding risk control specification
+- Tag with `@gxp` without linking to appropriate risks and controls
 - Omit negative/challenge tests for `@gxp` requirements
 - Use separate `@URS:NAME` tag (feature name serves as identifier)
+- Use deprecated `@risk-control:gxp-*` format (use `@risk:` and `@control:` instead)
 
 ---
 
@@ -370,7 +376,8 @@ At release approval, regulatory tags enable automatic generation of:
 
 **Risk Traceability Matrix**:
 
-- Feature (URS) → `@gxp` scenarios → `@risk-control:gxp-<name>` → Risk control specifications → Test results
+- Feature (URS) → `@gxp` scenarios → `@risk:<risk-id>` tags → Risk assessments
+- Feature (URS) → `@gxp` scenarios → `@control:<id>` tags → OSCAL controls → Test results
 
 ---
 

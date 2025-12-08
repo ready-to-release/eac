@@ -4,6 +4,10 @@
 **Scope:** {{ .ScopeDescription }}
 **Profile:** {{ .ProfileName }}
 
+## Overview
+
+This assessment evaluated OSCAL compliance controls (tagged with `@control:<id>`) against test evidence. Test scenarios may also include project-specific risk tags (`@risk:<risk-id>`). This report focuses on control satisfaction.
+
 ## Executive Summary
 
 | Metric | Value |

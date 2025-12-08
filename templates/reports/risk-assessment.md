@@ -10,10 +10,14 @@
 
 ## Executive Summary
 
+### Control Assessment
 - **Total Controls Assessed:** {{ .Summary.TotalControls }}
 - **Satisfied:** {{ .Summary.Satisfied }} ({{ .Summary.SatisfactionRate }}%)
 - **Not Satisfied:** {{ .Summary.NotSatisfied }} ({{ .Summary.NotSatisfiedRate }}%)
 - **Modules Assessed:** {{ .Summary.ModulesAssessed }}
+
+### Risk Coverage
+Test scenarios address both project-specific risks (`@risk:` tags) and standardized compliance controls (`@control:` tags). This report focuses on OSCAL control satisfaction. For project risk tracking, refer to risk assessment documentation.
 
 ## Module Assessment Results
 

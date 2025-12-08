@@ -59,6 +59,13 @@ This assessment evaluated **{{ .Summary.ModulesAssessed }} modules** against **{
 - Test suite: **{{ .TestSuite }}**
 - Evidence collected from test results and security scans
 
+### Tag System
+This assessment tracks OSCAL compliance controls using `@control:<id>` tags. Test scenarios may also include:
+- **Project Risk Tags** (`@risk:<risk-id>`): Project-specific risks from risk assessments
+- **Control Tags** (`@control:<id>`): Standardized compliance controls (NIST, ISO, etc.)
+
+This report focuses on control satisfaction. Risk tracking is maintained in separate risk assessment artifacts.
+
 ### Control Distribution
 - **Satisfied controls:** {{ .Summary.Satisfied }} / {{ .Summary.TotalControls }}
 - **Not satisfied controls:** {{ .Summary.NotSatisfied }} / {{ .Summary.TotalControls }}
