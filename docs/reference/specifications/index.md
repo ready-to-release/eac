@@ -18,9 +18,16 @@ This section provides technical reference documentation for writing and organizi
 
 ### Implementation Guides
 
-| Reference                                                 | Description                                                     |
-| --------------------------------------------------------- | --------------------------------------------------------------- |
-| [Go Implementation Guide](./go-implementation-guide.md)   | Go-specific implementation: file organization, build tags, examples |
+Language-specific implementation details for BDD specifications and testing.
+
+| Language | Reference | Description |
+| -------- | --------- | ----------- |
+| **Go** | [Go Implementation Guide](./go-implementation-guide.md) | Go/Godog implementation: file organization, build tags, step definitions, test execution |
+| TypeScript | _Planned_ | TypeScript/Cucumber-js implementation guide |
+| Python | _Planned_ | Python/behave or pytest-bdd implementation guide |
+| Java | _Planned_ | Java/Cucumber implementation guide |
+
+**Note**: Explanation documents are technology-agnostic. Consult your language implementation guide for syntax, file organization, and execution details.
 
 ### Standards and Conventions
 

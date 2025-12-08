@@ -26,7 +26,15 @@ specs/<module>/<feature>/
 └── Step Definitions         ← HOW to verify (technical implementation)
 ```
 
-> **This project**: Step definitions in `src/<module>/tests/steps_test.go`. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md) for file organization details.
+> **Implementation**: Step definitions are organized in a module-specific test directory.
+>
+> Common patterns:
+> - **Go**: `src/<module>/tests/steps_test.go`
+> - **Python**: `src/<module>/tests/steps.py`
+> - **Java**: `src/test/java/<package>/StepDefinitions.java`
+> - **TypeScript**: `src/<module>/tests/steps.ts`
+>
+> Your implementation guide specifies the exact structure for your project.
 
 **Why separate?**
 

@@ -24,7 +24,16 @@ Each layer serves a distinct purpose, uses different tools, and addresses differ
 | **Scenarios**   | "How does user interact?" | QA, Developers, Product | Gherkin | `Scenario:` under Rules | Specifications + Test implementations |
 | **Unit tests** | "Does code work?" | Developers | Test framework | Test functions | Test files |
 
-> **This project**: Uses Godog for Gherkin scenarios and Go test framework for unit tests. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md) for language-specific details.
+> **Implementation**: Uses BDD frameworks for Gherkin scenarios and native test frameworks for unit tests.
+>
+> Common framework combinations:
+> - **Go**: Godog + go test
+> - **Python**: behave/pytest-bdd + pytest
+> - **Java**: Cucumber + JUnit
+> - **TypeScript**: Cucumber-js + Jest
+> - **Ruby**: Cucumber + RSpec
+>
+> See your language implementation guide for setup and configuration.
 
 ### Layer 1: Rules (Acceptance Criteria)
 
@@ -78,7 +87,7 @@ Rule: Creates project directory structure
 **Specification**: Written in specification files
 **Implementation**: Test implementation files (step definitions)
 
-> **This project**: Specifications in `specs/<module>/<feature>/specification.feature`, step definitions in `src/<module>/tests/steps_test.go`. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
+> **Implementation**: Step definitions are organized in a dedicated test directory within each module. Location and naming conventions vary by language. See your implementation guide for details.
 
 ### Layer 3: Unit Tests
 
@@ -88,7 +97,7 @@ Rule: Creates project directory structure
 
 **Tool**: Test framework (language-specific)
 
-> **This project**: Uses Go test framework with `*_test.go` files. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
+> **Implementation**: Unit tests are written using language-native test frameworks. Location and naming conventions vary by language. See your implementation guide for details.
 
 #### Canon TDD Workflow
 
@@ -159,7 +168,7 @@ Test_CreateConfig_WhenFileExists_ShouldFail:
 
 **Location**: Test files in source tree (language-specific conventions)
 
-> **This project**: Unit tests in `src/<module>/*_test.go`. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md) for complete code examples.
+> **Implementation**: Unit test files follow language-specific naming conventions and are placed alongside the code they test. See your implementation guide for complete code examples.
 
 ---
 
@@ -200,7 +209,7 @@ flowchart TD
 
 ```
 
-> **This project**: Specifications in `specs/cli/init-project/`, step definitions in `src/<module>/tests/steps_test.go`, unit tests in `src/<module>/*_test.go`. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
+> **Implementation**: Specifications are stored in feature-specific directories, with step definitions and unit tests organized according to language conventions. See your implementation guide for project structure details.
 
 ---
 
@@ -230,7 +239,7 @@ flowchart TD
 4. Refactor for quality
 5. Repeat until scenarios pass
 
-> **This project**: Step definitions in `src/<module>/tests/steps_test.go`. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
+> **Implementation**: Step definitions are implemented in language-specific test files. See your implementation guide for file organization and naming conventions.
 
 **Definition of Done**:
 
@@ -292,7 +301,7 @@ flowchart TD
 
 ```
 
-> **This project**: Specifications in `specs/`, step definitions in `src/<module>/tests/steps_test.go`, unit tests in `src/<module>/*_test.go`, production code in `src/<module>/*.go`. See [Implementation Guide](../../reference/specifications/go-implementation-guide.md).
+> **Implementation**: Specifications in `specs/`, with step definitions and unit tests organized according to language-specific conventions. See your implementation guide for project structure details.
 
 **Why Separate?**:
 
@@ -384,7 +393,7 @@ The three layers use different tag types:
 - L1: Unit tests with minimal dependencies (default)
 - L2: Integration tests with emulated dependencies
 
-> **This project**: Uses Go build tags (`//go:build L0`, `//go:build L2`) for test levels. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#test-levels) for details.
+> **Implementation**: Uses language-specific build tags or test markers to categorize tests by isolation level. See your implementation guide for details on test level syntax and configuration.
 
 **Example**:
 

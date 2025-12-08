@@ -27,14 +27,14 @@ This project maintains the conceptual distinction between Rules (often referred 
 - **Audience**: Product Owners, Developers, QA, automation engineers
 - **Focus**: HOW the system behaves (described in specs/, implemented separately)
 
-> **This project**: Step definitions in `src/<module>/tests/steps_test.go`. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md) for implementation details.
+> **Implementation**: Step definitions implement executable behavior for Gherkin steps. Location and naming conventions vary by language. See your implementation guide for details.
 
 ### Architectural Principle: Specs vs Implementation
 
 **IMPORTANT**: This documentation emphasizes the separation between:
 
 - **Specifications** (in `specs/`): Business-readable Gherkin describing WHAT
-- **Implementations** (in `src/`): Technical Go code describing HOW
+- **Implementations** (in implementation directories): Technical code describing HOW
 
 ```mermaid
 flowchart LR
@@ -47,10 +47,10 @@ flowchart LR
         Rule --> Scenario
     end
 
-    subgraph Src["src/ (Developers Implement)"]
-        Steps["steps_test.go"]
-        Func1["func userProvidesCredentials()"]
-        Func2["func loginSucceeds()"]
+    subgraph Src["Implementation (Developers Implement)"]
+        Steps["Step Definitions"]
+        Func1["function: userProvidesCredentials()"]
+        Func2["function: loginSucceeds()"]
 
         Steps --> Func1
         Steps --> Func2

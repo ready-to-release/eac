@@ -24,6 +24,23 @@ This reference documents the **testing taxonomy tags** that define test levels, 
 
 Test level tags define the execution environment and scope based on the [Testing Taxonomy](../continuous-delivery/testing/index.md).
 
+### Build Tags and Test Isolation
+
+Different languages use different mechanisms to isolate test levels:
+
+| Language | Mechanism | Example |
+|----------|-----------|---------|
+| Go | Build tags | `//go:build L0` |
+| Python | pytest markers | `@pytest.mark.L0` |
+| Java | JUnit tags | `@Tag("L0")` |
+| TypeScript | Jest tags | `// @jest L0` |
+| C# | NUnit categories | `[Category("L0")]` |
+
+Consult your language implementation guide for:
+- Exact syntax
+- Test runner configuration
+- Execution commands
+
 ### `@L0` - Fast Unit Tests
 
 **Characteristics**:
@@ -52,7 +69,9 @@ Scenario: Validate email format
   Then the result should be valid
 ```
 
-> **This project**: Uses `@L0` tag in Gherkin scenarios and `//go:build L0` for Go unit tests. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l0-tests).
+> **Implementation**: Use language-specific build tags or test markers to isolate L0 tests.
+> See implementation guides for syntax:
+> - [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md)
 
 ### `@L1` - Unit Tests
 
@@ -82,7 +101,9 @@ Scenario: Create user with valid data
   Then the user should be persisted
 ```
 
-> **This project**: Default test level for Go unit tests (no build tag), explicit `@L1` for Gherkin. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l1-tests).
+> **Implementation**: Use language-specific build tags or test markers to isolate L1 tests.
+> See implementation guides for syntax:
+> - [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md)
 
 ### `@L2` - Emulated System Tests
 
@@ -115,7 +136,9 @@ Feature: Container Integration Tests
     Then the health check should pass
 ```
 
-> **This project**: Uses `//go:build L2` for Go integration tests, `@L2` or default (no level tag) for Gherkin. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l2-tests).
+> **Implementation**: Use language-specific build tags or test markers to isolate L2 tests.
+> See implementation guides for syntax:
+> - [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md)
 
 ### `@L3` - In-Situ Vertical Tests
 
@@ -148,7 +171,9 @@ Feature: API Service Deployment Verification
     Then the response should be 200 OK
 ```
 
-> **This project**: Uses `//go:build L3` for Go tests, `@L3` or auto-inferred from `@iv`/`@pv` for Gherkin. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l3-tests).
+> **Implementation**: Use language-specific build tags or test markers to isolate L3 tests.
+> See implementation guides for syntax:
+> - [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md)
 
 ### `@L4` - Testing in Production
 
@@ -182,7 +207,9 @@ Feature: Production Smoke Tests
     And response time should be under 200ms
 ```
 
-> **This project**: Uses `//go:build L4` for Go tests, `@L4` or auto-inferred from `@piv`/`@ppv` for Gherkin. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#l4-tests).
+> **Implementation**: Use language-specific build tags or test markers to isolate L4 tests.
+> See implementation guides for syntax:
+> - [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md)
 
 ### Test Level Implementation
 
@@ -200,7 +227,7 @@ Test levels can be implemented using various mechanisms depending on the languag
 - Scenarios with `@iv` or `@pv` → inferred as `@L3` (if no explicit level)
 - Scenarios with `@piv` or `@ppv` → inferred as `@L4` (if no explicit level)
 
-> **This project**: Uses Go build tags for unit/integration tests and Gherkin tags for BDD scenarios. See [Go Implementation Guide](../../reference/specifications/go-implementation-guide.md#build-tag-to-gherkin-mapping) for complete mapping and examples.
+> **Implementation**: Test frameworks provide various mechanisms for test isolation. See your language-specific implementation guide for details on build tags, test markers, or other isolation mechanisms.
 
 ---
 
