@@ -565,8 +565,4 @@ echo "- Code coverage: $(cat test-results/coverage.txt)" >> RELEASE_NOTES.md
 | Compliance    | Regulatory approval  | If applicable |
 | Operations    | Deployment readiness | Required      |
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

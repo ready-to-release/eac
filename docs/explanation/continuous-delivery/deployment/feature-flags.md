@@ -184,8 +184,4 @@ Alert when deadline approaches or passes.
 - [Rollback Procedures](./rollback-procedures.md) - Emergency response procedures
 - [Deployment Strategies](./deployment-strategies.md) - Decoupling deployment from release
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

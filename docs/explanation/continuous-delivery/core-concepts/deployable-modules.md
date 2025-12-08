@@ -579,8 +579,4 @@ Deployable modules are the fundamental building blocks of Continuous Delivery:
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message convention
 - [Trunk-Based Development](https://trunkbaseddevelopment.com/) - Branching strategy and workflow
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

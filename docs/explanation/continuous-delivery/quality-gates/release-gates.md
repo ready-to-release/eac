@@ -710,8 +710,4 @@ def evaluate_release_gate():
 - [CD Model Stages 7-12](../cd-model/cd-model-stages-7-12.md) - See Stage 9 in full context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe approval differences
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

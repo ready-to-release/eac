@@ -32,8 +32,4 @@ This section organizes command guides by functional area. Each area includes ove
 | [Validate](./validate-overview.md)             | Contract and dependency validation               |
 | [Workspace](./workspace-overview.md)           | Git worktree management for parallel development |
 
----
-
-*[Tutorials](../../../../tutorials/) | **How-to Guides** | [Reference](../../../../reference/) | [Explanation](../../../../explanation/)*
-
-**You are here:** How-to Guides — task-oriented recipes that guide you through solving specific problems.
+{{ diataxis_footer() }}

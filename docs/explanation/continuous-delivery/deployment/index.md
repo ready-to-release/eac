@@ -97,8 +97,4 @@ The right strategy depends on:
 - [Deployment Strategies Reference](./deployment-strategies.md) - Strategy comparison table
 - [Deployment Rings Reference](./deployment-rings.md) - Ring structure table
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

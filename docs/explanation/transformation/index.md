@@ -22,8 +22,4 @@ How to transform compliance from a bottleneck into a continuous, automated capab
 | [Compliance as Code Principles](./compliance-as-code.md)  | Five interconnected principles that define modern compliance                        |
 | [Transformation Framework](./transformation-framework.md) | Four-phase approach from assessment to organization-wide adoption                   |
 
----
-
-_[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Explanation** | [Reference](../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

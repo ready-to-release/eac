@@ -271,8 +271,4 @@ You now know how to write Gherkin specifications! Here's what to explore next:
 
 For more details on specific commands, see the [How-to Guides](../how-to-guides/) and [Reference](../reference/) documentation.
 
----
-
-*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | [Reference](../reference/) | [Explanation](../explanation/)*
-
-**You are here:** Tutorials — learning-oriented guides that take you through steps to complete a project.
+{{ diataxis_footer() }}

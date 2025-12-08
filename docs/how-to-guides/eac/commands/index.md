@@ -29,8 +29,4 @@ Learn how to accomplish specific tasks like getting help, generating commit mess
 | [Show Commands](./show-commands.md)                   | Display repository information in human-readable format          |
 | [Command Areas](./areas/index.md)                     | Guides organized by functional area (build, test, release, etc.) |
 
----
-
-*[Tutorials](../../../tutorials/) | **How-to Guides** | [Reference](../../../reference/) | [Explanation](../../../explanation/)*
-
-**You are here:** How-to Guides — task-oriented recipes that guide you through solving specific problems.
+{{ diataxis_footer() }}

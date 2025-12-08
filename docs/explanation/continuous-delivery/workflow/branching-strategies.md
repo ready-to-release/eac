@@ -837,8 +837,4 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 - [Repository Layout](../../../reference/repository-layout.md)
 - [Trunk-Based Development (trunkbaseddevelopment.com)](https://trunkbaseddevelopment.com/)
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

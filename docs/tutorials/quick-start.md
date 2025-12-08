@@ -163,8 +163,4 @@ Available test suites:
 
 Congratulations! You now have the R2R CLI installed and working. Continue to [Your First Feature Specification](./first-specification.md) to learn how to write Gherkin specifications.
 
----
-
-*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | [Reference](../reference/) | [Explanation](../explanation/)*
-
-**You are here:** Tutorials — learning-oriented guides that take you through steps to complete a project.
+{{ diataxis_footer() }}

@@ -487,8 +487,4 @@ time make precommit
 - [CD Model Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See Stage 2 in full context
 - [Testing Strategy](../testing/testing-strategy-overview.md) - How unit tests fit in overall strategy
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

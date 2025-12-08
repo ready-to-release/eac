@@ -10,8 +10,4 @@ Day-to-day development workflow practices that enable Continuous Integration and
 | [Branching Strategies](./branching-strategies.md)       | Detailed branching flows for Release Approval and Continuous Deployment patterns |
 | [Commit Messages](./commit-messages.md)                 | Semantic commit format and conventions for traceability                          |
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

@@ -21,8 +21,4 @@ Guides for creating and configuring EAC modules and module types in your reposit
 | [Creating Modules](./creating-modules.md) | Define new modules in your repository |
 | [Creating Module Types](./creating-module-types.md) | Define custom module types with build configurations |
 
----
-
-*[Tutorials](../../../tutorials/) | **How-to Guides** | [Reference](../../../reference/) | [Explanation](../../../explanation/)*
-
-**You are here:** How-to Guides — task-oriented recipes that guide you through solving specific problems.
+{{ diataxis_footer() }}

@@ -16,8 +16,4 @@ Understanding the Continuous Delivery Model, a comprehensive framework for deliv
 | [Architecture](./architecture/)             | Environment types and repository organization patterns                       |
 | [Security](./security/)                     | Security integration using open-source tools                                 |
 
----
-
-_[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Explanation** | [Reference](../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

@@ -23,8 +23,4 @@ The foundational practice of representing all aspects of your system lifecycle a
 | [The Everything as Code Paradigm](./paradigm.md)                    | What it means to treat everything as code and the three fundamental changes this creates                   |
 | [Measuring and Improving Flow](./measuring-and-improving-flow.md)   | How to use DORA metrics and Value Stream Mapping to improve delivery performance                           |
 
----
-
-_[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Explanation** | [Reference](../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

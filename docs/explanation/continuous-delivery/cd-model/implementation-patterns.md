@@ -482,8 +482,4 @@ Choose based on regulatory requirements, risk profile, and organizational maturi
 
 **Note**: In CDe, Stage 3 approval also approves production deployment. By merging, the reviewer approves the change going to production.
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

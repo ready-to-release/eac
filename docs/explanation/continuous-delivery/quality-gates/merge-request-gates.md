@@ -555,8 +555,4 @@ Use bots to provide automated feedback:
 - [CD Model Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See Stage 3 in full context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe approval differences
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

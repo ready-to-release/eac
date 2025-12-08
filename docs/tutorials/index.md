@@ -23,8 +23,4 @@ Step-by-step guides to help you get started and learn the fundamentals of the R2
 | [Quick Start Guide](./quick-start.md) | Install the R2R CLI and run your first commands |
 | [Your First Feature Specification](./first-specification.md) | Learn how to write Gherkin specifications using Given/When/Then |
 
----
-
-*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | [Reference](../reference/) | [Explanation](../explanation/)*
-
-**You are here:** Tutorials — learning-oriented guides that take you through steps to complete a project.
+{{ diataxis_footer() }}

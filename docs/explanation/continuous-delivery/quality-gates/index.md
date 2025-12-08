@@ -299,8 +299,4 @@ Later stages assume earlier stages passed - don't repeat validations unnecessari
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe gate differences
 - [Testing Strategy](../testing/testing-strategy-overview.md) - How testing integrates with gates
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

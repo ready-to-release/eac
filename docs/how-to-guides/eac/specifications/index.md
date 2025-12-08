@@ -29,8 +29,4 @@ Problem-oriented guides for working with behavior-driven development specificati
 | [Translating to Gherkin](./translating-to-gherkin.md) | Convert examples to Gherkin scenarios |
 | [Working with Specifications](./working-with-specifications.md) | General specification workflows |
 
----
-
-*[Tutorials](../../../tutorials/) | **How-to Guides** | [Reference](../../../reference/) | [Explanation](../../../explanation/)*
-
-**You are here:** How-to Guides — task-oriented recipes that guide you through solving specific problems.
+{{ diataxis_footer() }}

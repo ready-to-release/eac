@@ -20,8 +20,4 @@ This section provides step-by-step guides for configuring EAC integrations and t
 | ----------------------------------------- | ------------------------------------------------- |
 | [Claude MCP Setup](./claude-mcp-setup.md) | Configure MCP servers for Claude Code integration |
 
----
-
-*[Tutorials](../../../tutorials/) | **How-to Guides** | [Reference](../../../reference/) | [Explanation](../../../explanation/)*
-
-**You are here:** How-to Guides — task-oriented recipes that guide you through solving specific problems.
+{{ diataxis_footer() }}

@@ -362,8 +362,4 @@ Maximize testing at L0-L3 (left) and L4 (right) to avoid horizontal pre-producti
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Three-Layer Testing Approach](../../specifications/three-layer-approach.md)
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

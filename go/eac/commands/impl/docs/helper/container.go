@@ -108,6 +108,21 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 	}
 	logger.Debug("Generated mkdocs.yml from template", zap.String("configPath", configPath))
 
+	// Copy mkdocs macros script for footer generation
+	// The macros plugin looks for main.py in the repository root (where Docker mounts)
+	macrosSource := filepath.Join(repoRoot, "scripts", "mkdocs-macros.py")
+	macrosTarget := filepath.Join(repoRoot, "main.py")
+	macrosData, err := os.ReadFile(macrosSource)
+	if err == nil {
+		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
+			logger.Warn("Failed to copy mkdocs macros script to root", zap.Error(err))
+		} else {
+			logger.Debug("Copied mkdocs macros script to root", zap.String("target", macrosTarget))
+		}
+	} else {
+		logger.Debug("Mkdocs macros script not found (optional)", zap.String("path", macrosSource))
+	}
+
 	// Calculate relative config path for Docker
 	relConfigPath, _ := filepath.Rel(repoRoot, configPath)
 	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")

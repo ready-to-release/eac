@@ -26,8 +26,4 @@ Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, w
 | [Modules](./modules/) | Creating modules and module types |
 | [Creating Commands](./creating-commands.md) | Build new r2r CLI commands |
 
----
-
-*[Tutorials](../../tutorials/) | **How-to Guides** | [Reference](../../reference/) | [Explanation](../../explanation/)*
-
-**You are here:** How-to Guides — task-oriented recipes that guide you through solving specific problems.
+{{ diataxis_footer() }}

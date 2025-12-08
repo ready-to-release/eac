@@ -683,8 +683,4 @@ Validation ensures:
 | Stage 5 (Acceptance) | IV, OV, PV            | PLTE        |
 | Stage 6 (Extended)   | Extended PV, Security | PLTE        |
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

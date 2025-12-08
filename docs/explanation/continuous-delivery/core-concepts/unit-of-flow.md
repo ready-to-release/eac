@@ -373,8 +373,4 @@ The Unit of Flow provides a mental model for Continuous Delivery:
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md)
 - [Implementation Patterns](../cd-model/implementation-patterns.md)
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

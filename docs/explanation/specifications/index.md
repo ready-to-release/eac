@@ -19,8 +19,4 @@ Understanding the three-layer testing approach, executable specifications, and t
 | [Risk Controls](./risk-controls.md)                             | Understanding risk-based testing and executable risk controls for compliance                   |
 | [GxP Tagging](./gxp-tagging.md)                                 | Tagging for regulated software development in pharmaceutical and medical device contexts       |
 
----
-
-_[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Explanation** | [Reference](../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

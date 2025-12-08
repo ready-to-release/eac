@@ -497,8 +497,4 @@ Stage 9 becomes a **verification** (did we meet criteria?) not a **decision** (s
 - [CDE Stage Breakdown Reference](../cd-model/implementation-patterns.md) - CDe pattern stage details
 - [RA Stage Breakdown Reference](../cd-model/implementation-patterns.md) - RA pattern stage details
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

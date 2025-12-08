@@ -120,8 +120,4 @@ git commit --no-verify -m "emergency fix"
 - [Pre-commit Quality Gates](./precommit-gates.md)
 - [CD Model Stages 1-6](../cd-model/cd-model-stages-1-6.md)
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

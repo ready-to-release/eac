@@ -23,8 +23,4 @@ This section provides technical reference documentation for EAC commands. Find d
 | [Init Reference](./init-reference.md)                 | AI provider initialization command specification |
 | [Commit Reference](./commit-reference.md)             | Commit message generation command specification  |
 
----
-
-_[Tutorials](../../tutorials/index.md) | [How-to Guides](../../how-to-guides/index.md) | [Reference](../../reference/index.md) | [Explanation](../../explanation/index.md)_
-
-**You are here:** Reference — information-oriented technical descriptions of the system.
+{{ diataxis_footer() }}

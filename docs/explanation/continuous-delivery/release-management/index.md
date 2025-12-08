@@ -86,8 +86,4 @@ Release management is the process of planning, scheduling, and controlling softw
 - [Release Documentation Reference](./release-documentation.md) - Documentation checklist
 - [Release Quality Thresholds Reference](../quality-gates/release-gates.md) - Threshold specifications
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

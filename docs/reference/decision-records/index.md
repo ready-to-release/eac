@@ -23,8 +23,4 @@ Architectural Decision Records (ADRs) documenting significant design choices and
 | [DR-003](./dr003.md) | Use Three-Layer Testing Approach (Rules/Scenarios/Unit Tests) |
 | [DR-004](./dr004.md) | Adopt Diataxis Framework for Documentation Organization |
 
----
-
-*[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Reference** | [Explanation](../../explanation/)*
-
-**You are here:** Reference — information-oriented technical descriptions of the system.
+{{ diataxis_footer() }}

@@ -22,8 +22,4 @@ Guides for working with the r2r (Ready to Release) command-line interface. Learn
 |-------|-------------|
 | [Creating Extensions](./creating-extensions.md) | Build custom CLI extensions as Docker containers |
 
----
-
-*[Tutorials](../../tutorials/) | **How-to Guides** | [Reference](../../reference/) | [Explanation](../../explanation/)*
-
-**You are here:** How-to Guides — task-oriented recipes that guide you through solving specific problems.
+{{ diataxis_footer() }}

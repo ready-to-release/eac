@@ -26,8 +26,4 @@ Technical reference material providing information-oriented documentation for th
 | [Decision Records](./decision-records/) | Architectural decisions and their rationale |
 | [Specifications](./specifications/) | Technical specifications and standards |
 
----
-
-*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | **Reference** | [Explanation](../explanation/)*
-
-**You are here:** Reference — information-oriented technical descriptions of the system.
+{{ diataxis_footer() }}

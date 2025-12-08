@@ -628,8 +628,4 @@ These stages emphasize controlled release, comprehensive monitoring, and risk mi
 - [Stages 1-6](cd-model-stages-1-6.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

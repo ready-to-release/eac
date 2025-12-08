@@ -739,8 +739,4 @@ See **[Tag Reference](../../specifications/tag-reference.md)** for complete docu
 - [Stages 1-6](../cd-model/cd-model-stages-1-6.md)
 - [Three-Layer Testing](../../specifications/three-layer-approach.md)
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

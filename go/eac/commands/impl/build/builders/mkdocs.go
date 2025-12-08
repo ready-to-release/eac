@@ -154,6 +154,17 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	}
 	Logln(logWriter, "   Config: %s (from template)", configPath)
 
+	// Copy mkdocs macros script for footer generation
+	macrosSource := filepath.Join(workspaceRoot, "scripts", "mkdocs-macros.py")
+	macrosTarget := filepath.Join(workspaceRoot, "main.py")
+	if macrosData, err := os.ReadFile(macrosSource); err == nil {
+		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
+			Logln(logWriter, "   ⚠️  Failed to copy mkdocs macros script: %v", err)
+		} else {
+			Logln(logWriter, "   Macros: %s", macrosTarget)
+		}
+	}
+
 	// For Docker-in-Docker: use host path for volume mount
 	// When running inside a container, the Docker daemon runs on the host,
 	// so volume mounts need host paths instead of container paths
@@ -567,6 +578,17 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 		return 1
 	}
 	Logln(logWriter, "   Config: %s (from template)", configPath)
+
+	// Copy mkdocs macros script for footer generation
+	macrosSource := filepath.Join(workspaceRoot, "scripts", "mkdocs-macros.py")
+	macrosTarget := filepath.Join(workspaceRoot, "main.py")
+	if macrosData, err := os.ReadFile(macrosSource); err == nil {
+		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
+			Logln(logWriter, "   ⚠️  Failed to copy mkdocs macros script: %v", err)
+		} else {
+			Logln(logWriter, "   Macros: %s", macrosTarget)
+		}
+	}
 
 	// Docker setup
 	hostRepoRoot := workspaceRoot

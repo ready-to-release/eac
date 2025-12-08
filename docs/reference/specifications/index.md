@@ -41,8 +41,4 @@ Language-specific implementation details for BDD specifications and testing.
 | [Tag Reference](./tag-reference.md)                                     | Standard tags for organizing and categorizing specs   |
 | [Three-Layered Testing Structure](./three-layered-testing-structure.md) | Integration, functional, and system test organization |
 
----
-
-_[Tutorials](../../tutorials/index.md) | [How-to Guides](../../how-to-guides/index.md) | [Reference](../../reference/index.md) | [Explanation](../../explanation/index.md)_
-
-**You are here:** Reference — information-oriented technical descriptions of the system.
+{{ diataxis_footer() }}
