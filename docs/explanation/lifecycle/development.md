@@ -1,3 +1,22 @@
+<!-- EDITOR
+# Editor: explanation/lifecycle/development.md
+
+## Soul
+
+Development phase implementing Continuous Delivery Model with executable specifications, automated testing, and evidence collection as integral parts of implementation.
+
+## Sections
+
+1. (Introduction - references CD Model)
+2. Implementation Plan
+3. Specifications
+4. Risk Controls
+5. Implementation Report
+   - Required Content
+6. Testing
+7. Documenting Changes
+-->
+
 # Development
 
 This phase implements the [Continuous Delivery Model](../continuous-delivery/index.md), taking the solution from design through to production deployment.

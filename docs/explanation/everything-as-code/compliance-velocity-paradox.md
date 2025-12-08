@@ -1,3 +1,35 @@
+<!-- EDITOR
+# Editor: explanation/everything-as-code/compliance-velocity-paradox.md
+
+## Soul
+
+Problem statement articulating the fundamental contradiction facing regulated industries: increasing regulatory pressure versus accelerating market demands, with DORA research proving high performance is achievable in regulated contexts.
+
+## Sections
+
+1. The Challenge
+   - The Regulatory Landscape
+2. The Real Cost of Manual Compliance
+3. Evidence from Research: DORA Metrics Apply to Regulated Industries
+   - Industry Representation in DORA Research
+   - High Performers Exist in Regulated Industries
+   - The Critical Insights
+   - How High Performers Achieve These Results
+4. Why Manual Processes Cannot Scale
+   - Human Capacity Ceiling
+   - Knowledge Silos
+   - Inconsistency
+   - Poor Scalability
+   - Retroactive Reconstruction
+5. The Vicious Cycle
+6. The Alternative: Everything as Code
+7. References
+
+## Notes
+
+The Regulatory Landscape section is very comprehensive but lengthy - may overwhelm readers seeking core concepts.
+-->
+
 # The Compliance-Velocity Paradox
 
 > **The fundamental contradiction facing regulated industries**
@@ -97,7 +129,7 @@ This creates:
 
 - **Traceability Gaps** – Requirements in one system, tests in another, code in a third, and deployment records elsewhere. Manual correlation is error-prone and time-consuming.
 - **Documentation Drift** – Specifications created before implementation are never updated to match reality, causing the gap between documented and actual behavior to grow over time.
-- **Validation Theater** – Checking boxes without improving quality. Manual review processes that can be skipped under pressure don’t provide real assurance.
+- **Validation Theater** – Checking boxes without improving quality. Manual review processes that can be skipped under pressure don't provide real assurance.
 - **Audit Burden** – Teams spend months preparing evidence that should already exist. Instead of building value, resources are spent extracting and compiling scattered information.
 - **Delayed Value** – Features ready for production wait in validation purgatory. Business value sits on shelves while paperwork catches up.
 - **Risk Accumulation** – Large, infrequent releases create high-risk deployments. When changes are batched together, failures become harder to diagnose and roll back.
@@ -137,12 +169,12 @@ The research shows that high performers in **all industries**, including regulat
 ### The Critical Insights
 
 - **DORA metrics work for regulated industries too** – The research proves that high-performance practices apply universally. Regulated industries can and do achieve the same performance levels as tech companies—when they adopt modern practices.
-- **The challenge is adoption, not regulations** – Regulations don’t prevent high performance. The real barriers are:
-  - Cultural assumptions (“compliance requires manual processes”)
-  - Organizational inertia (“we’ve always done it this way”)
+- **The challenge is adoption, not regulations** – Regulations don't prevent high performance. The real barriers are:
+  - Cultural assumptions ("compliance requires manual processes")
+  - Organizational inertia ("we've always done it this way")
   - Lack of tooling and guidance for regulated environments
   - Fear of regulatory pushback (unfounded—automation provides better evidence)
-- **High performers automate compliance** – Organizations achieving high performance in regulated industries don’t ignore compliance—they automate it.
+- **High performers automate compliance** – Organizations achieving high performance in regulated industries don't ignore compliance—they automate it.
 
 They recognize that:
 

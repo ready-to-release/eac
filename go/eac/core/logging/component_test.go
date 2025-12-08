@@ -1,19 +1,18 @@
 package logging
 
 import (
-	"bytes"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
-// TestMain sets up the test environment with timestamped formatter.
+// TestMain sets up the test environment.
 func TestMain(m *testing.M) {
-	consoleConfig = &SinkConfig{
-		Levels:    []string{"debug", "info", "warn", "error"},
-		Formatter: FormatterTimestamped,
-	}
 	os.Exit(m.Run())
 }
 
@@ -40,7 +39,7 @@ func TestComponentLoggerInferment(t *testing.T) {
 	if log == nil {
 		t.Fatal("expected non-nil logger")
 	}
-	// The inferred name should contain "core/logging" since we're in that package
+	// The inferred name should contain "logging" since we're in that package
 	if !strings.Contains(log.component, "logging") {
 		t.Errorf("expected component to contain 'logging', got '%s'", log.component)
 	}
@@ -65,256 +64,248 @@ func TestInferComponentFunction(t *testing.T) {
 	}
 }
 
+// setupTestLogger creates a component logger with an observer core for testing
+func setupTestLogger(component string) (*ComponentLogger, *observer.ObservedLogs) {
+	// Create observer core to capture log entries
+	core, logs := observer.New(zapcore.DebugLevel)
+
+	// Create a logger with the observer core
+	zapLogger := zap.New(core).With(zap.String("component", component))
+
+	// Create component logger
+	return &ComponentLogger{
+		component: component,
+		zap:       zapLogger,
+	}, logs
+}
+
 func TestComponentLoggerDebug(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	log, logs := setupTestLogger("test")
 
-	log := C("git")
-
-	// Test when disabled
-	DisableDebug()
-	log.Debug("should not appear")
-	if buf.Len() > 0 {
-		t.Error("expected no output when debug is disabled")
-	}
-
-	// Test when enabled
-	EnableDebug()
+	// Log a debug message
 	log.Debug("test message")
 
-	output := buf.String()
-	if !strings.Contains(output, "DEBUG") {
-		t.Errorf("expected output to contain 'DEBUG', got: %s", output)
+	// Verify message was logged
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
 	}
-	if !strings.Contains(output, "git:test message") {
-		t.Errorf("expected output to contain 'git:test message', got: %s", output)
+
+	entry := entries[0]
+	if entry.Level != zapcore.DebugLevel {
+		t.Errorf("expected DEBUG level, got %v", entry.Level)
+	}
+	if entry.Message != "test message" {
+		t.Errorf("expected message 'test message', got '%s'", entry.Message)
+	}
+
+	// Verify component field
+	componentField := entry.ContextMap()["component"]
+	if componentField != "test" {
+		t.Errorf("expected component 'test', got '%v'", componentField)
 	}
 }
 
 func TestComponentLoggerDebugf(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	log, logs := setupTestLogger("repository")
 
-	EnableDebug()
-	log := C("repository")
+	// Log formatted debug message
 	log.Debugf("processing %d files", 42)
 
-	output := buf.String()
-	if !strings.Contains(output, "repository:processing 42 files") {
-		t.Errorf("expected formatted message, got: %s", output)
+	// Verify message was logged
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
+	}
+
+	entry := entries[0]
+	if !strings.Contains(entry.Message, "processing 42 files") {
+		t.Errorf("expected formatted message, got: %s", entry.Message)
 	}
 }
 
 func TestComponentLoggerInfo(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := stdOutput
-	stdOutput = &buf
-	defer func() { stdOutput = originalOutput }()
+	log, logs := setupTestLogger("test")
 
-	DisableDebug() // Info should still work even when debug is disabled
-	log := C("test")
 	log.Info("info message")
 
-	output := buf.String()
-	if !strings.Contains(output, "INFO") {
-		t.Errorf("expected output to contain 'INFO', got: %s", output)
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
 	}
-	if !strings.Contains(output, "test:info message") {
-		t.Errorf("expected output to contain 'test:info message', got: %s", output)
+
+	entry := entries[0]
+	if entry.Level != zapcore.InfoLevel {
+		t.Errorf("expected INFO level, got %v", entry.Level)
+	}
+	if entry.Message != "info message" {
+		t.Errorf("expected message 'info message', got '%s'", entry.Message)
 	}
 }
 
 func TestComponentLoggerInfof(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := stdOutput
-	stdOutput = &buf
-	defer func() { stdOutput = originalOutput }()
+	log, logs := setupTestLogger("test")
 
-	log := C("test")
 	log.Infof("count: %d", 5)
 
-	output := buf.String()
-	if !strings.Contains(output, "test:count: 5") {
-		t.Errorf("expected formatted message, got: %s", output)
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
+	}
+
+	entry := entries[0]
+	if !strings.Contains(entry.Message, "count: 5") {
+		t.Errorf("expected formatted message, got: %s", entry.Message)
 	}
 }
 
 func TestComponentLoggerWarn(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	log, logs := setupTestLogger("test")
 
-	log := C("test")
 	log.Warn("warning message")
 
-	output := buf.String()
-	if !strings.Contains(output, "WARN") {
-		t.Errorf("expected output to contain 'WARN', got: %s", output)
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
 	}
-	if !strings.Contains(output, "test:warning message") {
-		t.Errorf("expected output to contain 'test:warning message', got: %s", output)
+
+	entry := entries[0]
+	if entry.Level != zapcore.WarnLevel {
+		t.Errorf("expected WARN level, got %v", entry.Level)
+	}
+	if entry.Message != "warning message" {
+		t.Errorf("expected message 'warning message', got '%s'", entry.Message)
 	}
 }
 
 func TestComponentLoggerWarnf(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	log, logs := setupTestLogger("test")
 
-	log := C("test")
 	log.Warnf("warning %s", "here")
 
-	output := buf.String()
-	if !strings.Contains(output, "test:warning here") {
-		t.Errorf("expected formatted message, got: %s", output)
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
+	}
+
+	entry := entries[0]
+	if !strings.Contains(entry.Message, "warning here") {
+		t.Errorf("expected formatted message, got: %s", entry.Message)
 	}
 }
 
 func TestComponentLoggerError(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	log, logs := setupTestLogger("test")
 
-	log := C("test")
 	log.Error("error message")
 
-	output := buf.String()
-	if !strings.Contains(output, "ERROR") {
-		t.Errorf("expected output to contain 'ERROR', got: %s", output)
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
 	}
-	if !strings.Contains(output, "test:error message") {
-		t.Errorf("expected output to contain 'test:error message', got: %s", output)
+
+	entry := entries[0]
+	if entry.Level != zapcore.ErrorLevel {
+		t.Errorf("expected ERROR level, got %v", entry.Level)
+	}
+	if entry.Message != "error message" {
+		t.Errorf("expected message 'error message', got '%s'", entry.Message)
 	}
 }
 
 func TestComponentLoggerErrorf(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	log, logs := setupTestLogger("test")
 
-	log := C("test")
 	log.Errorf("error code: %d", 500)
 
-	output := buf.String()
-	if !strings.Contains(output, "test:error code: 500") {
-		t.Errorf("expected formatted message, got: %s", output)
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
+	}
+
+	entry := entries[0]
+	if !strings.Contains(entry.Message, "error code: 500") {
+		t.Errorf("expected formatted message, got: %s", entry.Message)
 	}
 }
 
 func TestComponentLoggerWithSuffix(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	// Create base logger with observer
+	core, logs := observer.New(zapcore.DebugLevel)
+	baseZap := zap.New(core).With(zap.String("component", "git"))
+	baseLog := &ComponentLogger{
+		component: "git",
+		zap:       baseZap,
+	}
 
-	EnableDebug()
-	log := C("git")
-	funcLog := log.WithSuffix("StagedFiles")
+	// Create logger with suffix
+	funcLog := baseLog.WithSuffix("StagedFiles")
+
+	// Verify component name includes suffix
+	if funcLog.component != "git.StagedFiles" {
+		t.Errorf("expected component 'git.StagedFiles', got '%s'", funcLog.component)
+	}
+
+	// Log a message
 	funcLog.Debug("start")
 
-	output := buf.String()
-	if !strings.Contains(output, "git.StagedFiles:start") {
-		t.Errorf("expected 'git.StagedFiles:start', got: %s", output)
-	}
-}
-
-func TestComponentLoggerOutputFormat(t *testing.T) {
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
-
-	EnableDebug()
-	log := C("mymodule")
-	log.Debug("test")
-
-	output := strings.TrimSpace(buf.String())
-
-	// Format should be: "HH:MM:SS.mmm  DEBUG  module:message"
-	// Using double spaces as separators
-	parts := strings.Split(output, "  ")
-	if len(parts) != 3 {
-		t.Fatalf("expected 3 parts, got %d: %v", len(parts), parts)
+	// Verify the log was captured and has the correct component
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
 	}
 
-	// Part 0: timestamp
-	if len(parts[0]) != 12 { // "15:04:05.000"
-		t.Errorf("expected timestamp length 12, got %d: %s", len(parts[0]), parts[0])
+	entry := entries[0]
+	// The ContextMap should have both the original and new component field
+	// Zap keeps all fields, so we check if the message was logged
+	if entry.Message != "start" {
+		t.Errorf("expected message 'start', got '%s'", entry.Message)
 	}
 
-	// Part 1: level
-	if parts[1] != "DEBUG" {
-		t.Errorf("expected 'DEBUG', got '%s'", parts[1])
-	}
-
-	// Part 2: module:message
-	if parts[2] != "mymodule:test" {
-		t.Errorf("expected 'mymodule:test', got '%s'", parts[2])
-	}
-}
-
-func TestComponentLoggerLevelFormatAlignment(t *testing.T) {
-	// Capture both stdout (Info) and stderr (Debug/Warn/Error)
-	var stdBuf bytes.Buffer
-	var debugBuf bytes.Buffer
-	originalStdOutput := stdOutput
-	originalDebugOutput := debugOutput
-	stdOutput = &stdBuf
-	debugOutput = &debugBuf
-	defer func() {
-		stdOutput = originalStdOutput
-		debugOutput = originalDebugOutput
-	}()
-
-	EnableDebug()
-	log := C("test")
-
-	log.Debug("d")
-	log.Info("i")
-	log.Warn("w")
-	log.Error("e")
-
-	// Combine outputs: Debug/Warn/Error go to debugBuf, Info goes to stdBuf
-	allOutput := debugBuf.String() + stdBuf.String()
-	lines := strings.Split(strings.TrimSpace(allOutput), "\n")
-
-	// Should have 4 lines total (Debug, Info, Warn, Error)
-	if len(lines) != 4 {
-		t.Fatalf("expected 4 lines, got %d: %v", len(lines), lines)
-	}
-
-	// All level strings should be present (order may vary due to different buffers)
-	expectedLevels := []string{"DEBUG", "INFO", "WARN", "ERROR"}
-	for _, level := range expectedLevels {
-		found := false
-		for _, line := range lines {
-			if strings.Contains(line, level) {
-				found = true
-				break
-			}
+	// Verify the component field exists (Zap will have both fields in the chain)
+	ctx := entry.ContextMap()
+	if comp, ok := ctx["component"]; ok {
+		// Should have at least one component field
+		if comp == nil {
+			t.Error("component field is nil")
 		}
-		if !found {
-			t.Errorf("expected to find '%s' in output, got: %v", level, lines)
+	} else {
+		t.Error("component field not found in context")
+	}
+}
+
+func TestComponentLoggerLevelFiltering(t *testing.T) {
+	// Create logger with INFO level (filters out DEBUG)
+	core, logs := observer.New(zapcore.InfoLevel)
+	zapLogger := zap.New(core).With(zap.String("component", "test"))
+	log := &ComponentLogger{
+		component: "test",
+		zap:       zapLogger,
+	}
+
+	// Log at different levels
+	log.Debug("debug - should be filtered")
+	log.Info("info - should appear")
+	log.Warn("warn - should appear")
+	log.Error("error - should appear")
+
+	entries := logs.All()
+	// Should only have 3 entries (Info, Warn, Error - Debug filtered)
+	if len(entries) != 3 {
+		t.Fatalf("expected 3 log entries (Info, Warn, Error), got %d", len(entries))
+	}
+
+	// Verify levels
+	levels := []zapcore.Level{zapcore.InfoLevel, zapcore.WarnLevel, zapcore.ErrorLevel}
+	for i, entry := range entries {
+		if entry.Level != levels[i] {
+			t.Errorf("entry %d: expected level %v, got %v", i, levels[i], entry.Level)
 		}
 	}
 }
 
 func TestComponentLoggerConcurrency(t *testing.T) {
-	buf := &syncBuffer{}
-	originalOutput := debugOutput
-	debugOutput = buf
-	defer func() { debugOutput = originalOutput }()
-
-	EnableDebug()
-	log := C("concurrent")
+	log, logs := setupTestLogger("concurrent")
 
 	var wg sync.WaitGroup
 	for i := 0; i < 50; i++ {
@@ -326,27 +317,25 @@ func TestComponentLoggerConcurrency(t *testing.T) {
 	}
 	wg.Wait()
 
-	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
-	if len(lines) != 50 {
-		t.Errorf("expected 50 lines, got %d", len(lines))
+	entries := logs.All()
+	if len(entries) != 50 {
+		t.Errorf("expected 50 log entries, got %d", len(entries))
 	}
 }
 
 func TestComponentLoggerPackageLevelUsage(t *testing.T) {
-	// Simulate package-level logger pattern
-	var buf bytes.Buffer
-	originalOutput := debugOutput
-	debugOutput = &buf
-	defer func() { debugOutput = originalOutput }()
+	log, logs := setupTestLogger("eac-core-git")
 
-	EnableDebug()
+	log.Debug("package initialized")
 
-	// This is how it would be used in a real package
-	pkgLog := C("eac-core-git")
-	pkgLog.Debug("package initialized")
+	entries := logs.All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(entries))
+	}
 
-	output := buf.String()
-	if !strings.Contains(output, "eac-core-git:package initialized") {
-		t.Errorf("expected module name in output, got: %s", output)
+	entry := entries[0]
+	componentField := entry.ContextMap()["component"]
+	if componentField != "eac-core-git" {
+		t.Errorf("expected component 'eac-core-git', got '%v'", componentField)
 	}
 }

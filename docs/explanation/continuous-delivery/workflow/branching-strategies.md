@@ -1,3 +1,25 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/workflow/branching-strategies.md
+
+## Soul
+
+Detailed branching flows for Release Approval (RA: trunk → release branches → production, 1-2 weeks) and Continuous Deployment (CDE: trunk → production, 2-4 hours) patterns, covering stage-by-stage progression through CD Model stages 1-12, release branch lifecycle, trunk-first bug fixing, pipeline integration, and pin-and-stitch dependency management.
+
+## Sections
+
+1. Introduction
+2. Branch Types Recap
+3. RA Pattern Flow
+4. Release Branch Lifecycle
+5. Fixing Bugs on Release Branches
+6. CDe Pattern Flow
+7. No Release Branches
+8. Fixing Bugs in Production
+9. Pipeline Integration
+10. Pin and Stitch
+11. Comparison Summary
+-->
+
 # Branching Strategies
 
 ## Introduction
@@ -579,9 +601,9 @@ jobs:
 
 ![Pin and Stitch](../../../assets/branching/pin-and-stitch.drawio.png)
 
-**This diagram illustrates the pin and stitch dependency management pattern:** The diagram shows how deployable units declare dependencies on specific versions of shared modules. **Pinning** occurs in the build manifest (e.g., `shared-models: v1.2.3`) where the dependent explicitly declares which version it requires. **Stitching** happens at build time when the pinned version is retrieved from artifact storage (or local cache) and built into the immutable artifact. This ensures deterministic builds - the same commit always produces the same artifact with the same dependencies, including all transitive dependencies, regardless of when it's built. The pattern supports independent release cadences for different deployable units while maintaining version compatibility.
+**This diagram illustrates the pin and stitch dependency management pattern:** The diagram shows how deployable modules declare dependencies on specific versions of shared modules. **Pinning** occurs in the build manifest (e.g., `shared-models: v1.2.3`) where the dependent explicitly declares which version it requires. **Stitching** happens at build time when the pinned version is retrieved from artifact storage (or local cache) and built into the immutable artifact. This ensures deterministic builds - the same commit always produces the same artifact with the same dependencies, including all transitive dependencies, regardless of when it's built. The pattern supports independent release cadences for different deployable modules while maintaining version compatibility.
 
-**Challenge**: When multiple deployable units depend on each other, how do you ensure compatible versions are deployed together?
+**Challenge**: When multiple deployable modules depend on each other, how do you ensure compatible versions are deployed together?
 
 **Pin and Stitch Pattern**:
 
@@ -589,17 +611,17 @@ jobs:
 2. **Stitch**: During deployment, resolve pinned versions to ensure compatibility
 3. **Validate**: Test integrated system with pinned versions
 
-**Example (monorepo with multiple deployable units)**:
+**Example (monorepo with multiple deployable modules)**:
 
 ```yaml
-# deployable-unit-api/dependencies.yaml
+# deployable-module-api/dependencies.yaml
 dependencies:
   shared-models: v1.2.3
   shared-auth: v2.1.0
 ```
 
 ```yaml
-# deployable-unit-worker/dependencies.yaml
+# deployable-module-worker/dependencies.yaml
 dependencies:
   shared-models: v1.2.3
   shared-queue: v1.5.0
@@ -772,7 +794,7 @@ This article focuses on branching flows. For related topics, see:
 **Core Concepts**:
 
 - [Unit of Flow](../core-concepts/unit-of-flow.md) - 4-component model overview
-- [Deployable Units](../core-concepts/deployable-units.md) - What gets built and deployed
+- [Deployable Modules](../core-concepts/deployable-modules.md) - What gets built and deployed
 - [Trunk-Based Development](trunk-based-development.md) - Core principles and practices
 
 **CD Model Stages**:
@@ -828,7 +850,7 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - Detailed guidance on choosing between RA and CDe
 - [Trunk-Based Development](trunk-based-development.md) - Daily development practices
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Understand release stages in detail
-- [Deployable Units](../core-concepts/deployable-units.md) - What gets versioned and deployed
+- [Deployable Modules](../core-concepts/deployable-modules.md) - What gets versioned and deployed
 
 ## References
 

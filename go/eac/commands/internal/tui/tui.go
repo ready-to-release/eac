@@ -5,7 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -22,9 +25,10 @@ const (
 
 // Config configures the console window.
 type Config struct {
-	Height     int  // Total height (default: DefaultHeight)
-	ShowHeader bool // Show status header (default: true)
-	BufferSize int  // Line buffer size (default: 1000)
+	Height       int    // Total height (default: DefaultHeight)
+	ShowHeader   bool   // Show status header (default: true)
+	BufferSize   int    // Line buffer size (default: 1000)
+	RunPhaseName string // Custom name for Run phase (e.g., "building", "testing")
 }
 
 // Console manages the TUI console window for build/test output.
@@ -41,6 +45,9 @@ type Console struct {
 
 	// Track multi-writers for cleanup
 	writers []*stream.MultiWriter
+
+	// Store final model state for post-exit summary
+	finalModel *console.Model
 }
 
 // New creates a new console with the given configuration.
@@ -74,6 +81,7 @@ func (c *Console) Start(ctx context.Context) error {
 	model := console.NewModel(
 		c.config.Height,
 		c.config.ShowHeader,
+		c.config.RunPhaseName,
 		c.lineChan,
 		c.statusChan,
 	)
@@ -81,23 +89,81 @@ func (c *Console) Start(ctx context.Context) error {
 	// Prevent lipgloss from querying terminal background color (causes OSC escape leaks)
 	lipgloss.SetHasDarkBackground(true)
 
-	// Use inline mode (no alt screen) so output persists after TUI exits
+	// Use alt screen mode to take over terminal, then restore on exit
 	// Disable bracketed paste to prevent escape sequence leaks
+	// Disable signal handler so our custom handler can catch Ctrl-C
+	// Start with mouse mode enabled for scrolling
 	c.program = tea.NewProgram(model,
+		tea.WithAltScreen(),           // Take over screen, restore on exit
 		tea.WithoutBracketedPaste(),
+		tea.WithoutSignalHandler(),    // Let our custom signal handler catch Ctrl-C
+		tea.WithMouseCellMotion(),     // Enable mouse for scrolling
 	)
 
 	// Signal that TUI is ready
 	close(c.ready)
 
-	// Handle context cancellation
-	go func() {
-		<-ctx.Done()
-		c.Stop()
+	// Set up signal handler for Ctrl-C (SIGINT)
+	// This ensures single Ctrl-C triggers immediate cleanup
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
+
+	// Ensure cleanup always runs on exit (normal, Ctrl-C, or error)
+	defer func() {
+		c.mu.Lock()
+		if !c.stopped {
+			c.stopped = true
+
+			// Close all multi-writers first
+			for _, w := range c.writers {
+				w.Close()
+			}
+			c.writers = nil
+
+			// Close channels to trigger TUI exit
+			close(c.lineChan)
+			close(c.statusChan)
+		}
+		c.mu.Unlock()
+
+		// Reset terminal state - always run this to ensure clean terminal
+		// \033[0m = reset attributes, \033[?25h = show cursor
+		fmt.Print("\033[0m\033[?25h")
 	}()
 
-	_, err := c.program.Run()
-	return err
+	go func() {
+		select {
+		case <-sigChan:
+			// On Ctrl-C, quit the TUI immediately
+			if c.program != nil {
+				c.program.Quit()
+			}
+		case <-ctx.Done():
+			// On context cancellation, quit the TUI
+			if c.program != nil {
+				c.program.Quit()
+			}
+		}
+	}()
+
+	// Run the TUI and capture final model state
+	finalModel, err := c.program.Run()
+	if err != nil {
+		return err
+	}
+
+	// Store final model for post-exit summary
+	if m, ok := finalModel.(console.Model); ok {
+		c.mu.Lock()
+		c.finalModel = &m
+		c.mu.Unlock()
+
+		// Print plain-text summary after alt screen is restored
+		c.printSummary(&m)
+	}
+
+	return nil
 }
 
 // StartAsync starts the TUI program in a goroutine.
@@ -112,6 +178,23 @@ func (c *Console) StartAsync(ctx context.Context) {
 	case <-c.ready:
 	case <-time.After(1 * time.Second):
 	}
+}
+
+// Wait waits for the TUI program to exit naturally (e.g., user presses a key).
+// Does not force the program to quit. Use Stop() to force quit.
+func (c *Console) Wait() {
+	c.mu.Lock()
+	program := c.program
+	c.mu.Unlock()
+
+	if program != nil {
+		program.Wait()
+	}
+
+	// Mark as stopped after waiting
+	c.mu.Lock()
+	c.stopped = true
+	c.mu.Unlock()
 }
 
 // Stop stops the TUI program.
@@ -131,9 +214,6 @@ func (c *Console) Stop() {
 	}
 	c.writers = nil
 	c.mu.Unlock()
-
-	// Give TUI a moment to render final state
-	time.Sleep(100 * time.Millisecond)
 
 	// Close channels (this will trigger TUI to exit)
 	close(c.lineChan)
@@ -303,6 +383,43 @@ func (c *Console) WriteToPhase(phase Phase, text string) {
 	})
 }
 
+// WriteResult writes a line to the results buffer (appears below Run pane)
+func (c *Console) WriteResult(text string) {
+	c.mu.Lock()
+	stopped := c.stopped
+	program := c.program
+	c.mu.Unlock()
+
+	if stopped || program == nil {
+		return
+	}
+
+	// Send line to results buffer via Bubbletea
+	program.Send(console.ResultLineMsg{
+		Line: console.Line{
+			Text:   text,
+			Source: "results",
+			Level:  console.LevelInfo,
+		},
+	})
+}
+
+// SendSummary sends summary data and activates the Summary pane
+func (c *Console) SendSummary(data *SummaryData) {
+	c.mu.Lock()
+	stopped := c.stopped
+	program := c.program
+	c.mu.Unlock()
+
+	if stopped || program == nil {
+		return
+	}
+
+	program.Send(console.SummaryDataMsg{
+		Data: (*console.SummaryData)(data),
+	})
+}
+
 // Status is an alias for console.Status for public use.
 type Status = console.Status
 
@@ -318,6 +435,9 @@ type Phase = console.Phase
 // PhaseStatus is an alias for console.PhaseStatus for public use.
 type PhaseStatus = console.PhaseStatus
 
+// SummaryData is an alias for console.SummaryData for public use.
+type SummaryData = console.SummaryData
+
 // Level constants for public use.
 const (
 	LevelInfo  = console.LevelInfo
@@ -327,9 +447,9 @@ const (
 
 // Phase constants for public use.
 const (
-	PhaseInit = console.PhaseInit
-	PhaseRun  = console.PhaseRun
-	PhaseEnd  = console.PhaseEnd
+	PhaseInit    = console.PhaseInit
+	PhaseRun     = console.PhaseRun
+	PhaseSummary = console.PhaseSummary
 )
 
 // PhaseStatus constants for public use.
@@ -339,3 +459,10 @@ const (
 	PhaseComplete = console.PhaseComplete
 	PhaseFailed   = console.PhaseFailed
 )
+
+// printSummary prints a plain-text summary after the TUI exits
+func (c *Console) printSummary(m *console.Model) {
+	// Use the console package's ViewFinal method to generate plain-text output
+	summary := m.ViewFinal()
+	fmt.Print(summary)
+}

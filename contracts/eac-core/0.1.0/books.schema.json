@@ -24,6 +24,10 @@
           "description": "Unique book identifier (kebab-case)",
           "pattern": "^[a-z0-9-]+$"
         },
+        "title": {
+          "type": "string",
+          "description": "Book-specific title for PDF cover page (optional, defaults to name if not specified)"
+        },
         "module": {
           "type": "string",
           "description": "Module moniker this book builds for (must be an mkdocs-site module). A module can have multiple books.",

@@ -11,9 +11,10 @@ import (
 	"os"
 	"strings"
 
-	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -24,8 +25,8 @@ func init() {
 
 // BuildDepsResult contains the build dependencies for a module
 type BuildDepsResult struct {
-	Module   string   `json:"module" yaml:"module"`
-	Type     string   `json:"type" yaml:"type"`
+	Module    string   `json:"module" yaml:"module"`
+	Type      string   `json:"type" yaml:"type"`
 	BuildDeps []string `json:"build_deps" yaml:"build_deps"`
 }
 
@@ -74,19 +75,66 @@ func GetBuildDeps() int {
 		return 1
 	}
 
-	buildDeps := cfg.ModuleTypes.GetBuildDeps(module.Type)
-	if buildDeps == nil {
-		buildDeps = []string{}
-	}
+	// Aggregate build deps from module and all its dependencies
+	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes)
 
 	// Use the shared get command helper for output formatting
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		return BuildDepsResult{
 			Module:    moniker,
 			Type:      module.Type,
 			BuildDeps: buildDeps,
 		}, nil
 	})
+}
+
+// aggregateBuildDeps collects build dependencies from a module and all its dependencies
+func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes *config.ModuleTypesConfig) []string {
+	seen := make(map[string]bool)
+	depsSet := make(map[string]bool)
+
+	var collect func(m string)
+	collect = func(m string) {
+		if seen[m] {
+			return
+		}
+		seen[m] = true
+
+		module, exists := registry.Get(m)
+		if !exists {
+			return
+		}
+
+		// Add this module's build deps
+		deps := moduleTypes.GetBuildDeps(module.Type)
+		for _, dep := range deps {
+			depsSet[dep] = true
+		}
+
+		// Recurse into dependencies
+		for _, depMoniker := range module.DependsOn {
+			collect(depMoniker)
+		}
+	}
+
+	collect(moniker)
+
+	// Convert set to sorted slice for consistent output
+	result := make([]string, 0, len(depsSet))
+	for dep := range depsSet {
+		result = append(result, dep)
+	}
+
+	// Sort for consistent output
+	for i := 0; i < len(result)-1; i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[i] > result[j] {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	return result
 }
 
 // GetBuildDepsPlain returns build deps as comma-separated string (for shell scripts)
@@ -101,7 +149,7 @@ func GetBuildDepsPlain(moniker string) (string, error) {
 		return "", fmt.Errorf("failed to load module contracts: %v", err)
 	}
 
-	module, exists := moduleReport.Registry.Get(moniker)
+	_, exists := moduleReport.Registry.Get(moniker)
 	if !exists {
 		return "", fmt.Errorf("module not found: %s", moniker)
 	}
@@ -111,8 +159,9 @@ func GetBuildDepsPlain(moniker string) (string, error) {
 		return "", fmt.Errorf("module types configuration not loaded")
 	}
 
-	buildDeps := cfg.ModuleTypes.GetBuildDeps(module.Type)
-	if buildDeps == nil {
+	// Aggregate build deps from module and all its dependencies
+	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes)
+	if len(buildDeps) == 0 {
 		return "", nil
 	}
 

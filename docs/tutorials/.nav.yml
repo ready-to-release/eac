@@ -1,2 +1,5 @@
+title: Tutorials
 nav:
   - index.md
+  - quick-start.md
+  - first-specification.md

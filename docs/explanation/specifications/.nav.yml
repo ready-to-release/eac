@@ -5,6 +5,7 @@ nav:
   - working-with-specifications.md
   - gherkin-concepts.md
   - tag-reference.md
+  - test-taxonomy.md
   - gxp-tagging.md
   - ubiquitous-language.md
   - event-storming.md

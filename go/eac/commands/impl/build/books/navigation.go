@@ -8,8 +8,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"gopkg.in/yaml.v3"
 )
+
+var navLog = logging.C()
 
 // NavFile represents a .nav.yml file structure
 type NavFile struct {
@@ -106,6 +109,13 @@ func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 		return entries
 	}
 
+	// DEBUG: Log directory scanning
+	relDir, _ := filepath.Rel(p.stagingDir, dir)
+	if relDir == "." {
+		relDir = "(root)"
+	}
+	navLog.Debugf("[TOC] Scanning directory: %s", relDir)
+
 	// Separate files and directories
 	var files, dirs []os.DirEntry
 	for _, item := range items {
@@ -116,8 +126,10 @@ func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 		}
 		if item.IsDir() {
 			dirs = append(dirs, item)
+			navLog.Debugf("[TOC]   Found directory: %s/", name)
 		} else if strings.HasSuffix(name, ".md") && name != "index.md" {
 			files = append(files, item)
+			navLog.Debugf("[TOC]   Found markdown: %s", name)
 		}
 	}
 
@@ -218,9 +230,13 @@ func (p *Preprocessor) getOrderForFile(relPath string) int {
 	return 500 // Default order for non-command files
 }
 
-// ensureNavigationStructure ensures .nav.yml exists in all staging directories
+// ensureNavigationStructure ensures .nav.yml exists and is valid in all staging directories
+// This function now validates existing .nav.yml files and cleans up broken references
 func (p *Preprocessor) ensureNavigationStructure() error {
-	return filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
+	validated := 0
+	generated := 0
+
+	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -229,29 +245,52 @@ func (p *Preprocessor) ensureNavigationStructure() error {
 			return nil
 		}
 
-		// Skip hidden directories and assets
-		name := d.Name()
-		if strings.HasPrefix(name, ".") || name == "assets" {
-			return filepath.SkipDir
+		// Skip hidden directories and assets (but not the staging root itself)
+		if path != p.stagingDir {
+			name := d.Name()
+			if strings.HasPrefix(name, ".") || name == "assets" {
+				return filepath.SkipDir
+			}
 		}
 
 		// Check if .nav.yml exists
 		navPath := filepath.Join(path, ".nav.yml")
 		if _, err := os.Stat(navPath); err == nil {
-			return nil // Already has navigation
-		}
-
-		// Generate .nav.yml for this directory
-		if err := p.generateNavForDir(path); err != nil {
-			return err
+			// EXISTS: Validate and clean
+			if err := p.validateAndCleanNav(navPath, path); err != nil {
+				return err
+			}
+			validated++
+		} else if os.IsNotExist(err) {
+			// MISSING: Generate new
+			if err := p.generateNavForDir(path); err != nil {
+				return err
+			}
+			generated++
+		} else {
+			return err // Real error, not just "not found"
 		}
 
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	p.log("    Validated: %d .nav.yml files", validated)
+	p.log("    Generated: %d .nav.yml files", generated)
+
+	return nil
 }
 
 // generateNavForDir creates .nav.yml for a directory
 func (p *Preprocessor) generateNavForDir(dir string) error {
+	relDir, _ := filepath.Rel(p.stagingDir, dir)
+	if relDir == "." {
+		relDir = "(root)"
+	}
+
 	items, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -339,6 +378,21 @@ func (p *Preprocessor) generateNavForDir(dir string) error {
 		nav = append(nav, item.name)
 	}
 
+	// Determine title from directory name or index.md
+	relDir, _ := filepath.Rel(p.stagingDir, dir)
+	title := ""
+	if relDir == "." {
+		title = toTitleCase(p.book.Name)
+	} else {
+		// Check for index.md title
+		indexPath := filepath.Join(dir, "index.md")
+		if _, err := os.Stat(indexPath); err == nil {
+			title = p.getTitleFromFile(indexPath)
+		} else {
+			title = toTitleCase(filepath.Base(dir))
+		}
+	}
+
 	navFile := NavFile{
 		Nav: nav,
 	}
@@ -401,6 +455,275 @@ func toTitleCase(s string) string {
 		}
 	}
 	return strings.Join(words, " ")
+}
+
+// parseNavFile parses a .nav.yml file into structured format
+func (p *Preprocessor) parseNavFile(navPath string) (*NavFile, error) {
+	data, err := os.ReadFile(navPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var navFile NavFile
+	if err := yaml.Unmarshal(data, &navFile); err != nil {
+		return nil, err
+	}
+
+	return &navFile, nil
+}
+
+// scanMarkdownFiles returns a map of markdown files in a directory (filename -> true)
+func (p *Preprocessor) scanMarkdownFiles(dir string) map[string]bool {
+	files := make(map[string]bool)
+
+	items, err := os.ReadDir(dir)
+	if err != nil {
+		return files
+	}
+
+	for _, item := range items {
+		if !item.IsDir() && strings.HasSuffix(item.Name(), ".md") {
+			files[item.Name()] = true
+		}
+	}
+
+	return files
+}
+
+// scanSubdirectories returns a map of subdirectories with markdown content (dirname -> true)
+func (p *Preprocessor) scanSubdirectories(dir string) map[string]bool {
+	dirs := make(map[string]bool)
+
+	items, err := os.ReadDir(dir)
+	if err != nil {
+		return dirs
+	}
+
+	for _, item := range items {
+		if item.IsDir() && !strings.HasPrefix(item.Name(), ".") && item.Name() != "assets" {
+			// Only include if it has markdown content
+			subdir := filepath.Join(dir, item.Name())
+			if hasMarkdownContent(subdir) {
+				dirs[item.Name()] = true
+			}
+		}
+	}
+
+	return dirs
+}
+
+// sortNewFiles sorts new files intelligently using order from command sources, then alphabetically
+func (p *Preprocessor) sortNewFiles(files []string, dirPath string) []string {
+	type fileWithOrder struct {
+		name  string
+		order int
+	}
+
+	filesWithOrder := make([]fileWithOrder, 0, len(files))
+
+	for _, file := range files {
+		filePath := filepath.Join(dirPath, file)
+		relPath, _ := filepath.Rel(p.stagingDir, filePath)
+		relPath = filepath.ToSlash(relPath)
+
+		order := p.getOrderForFile(relPath)
+		filesWithOrder = append(filesWithOrder, fileWithOrder{
+			name:  file,
+			order: order,
+		})
+	}
+
+	// Sort by order, then alphabetically
+	sort.Slice(filesWithOrder, func(i, j int) bool {
+		if filesWithOrder[i].order != filesWithOrder[j].order {
+			return filesWithOrder[i].order < filesWithOrder[j].order
+		}
+		return filesWithOrder[i].name < filesWithOrder[j].name
+	})
+
+	result := make([]string, len(filesWithOrder))
+	for i, f := range filesWithOrder {
+		result[i] = f.name
+	}
+
+	return result
+}
+
+// validateNavEntry validates a single nav entry recursively
+// Returns (validatedEntry, referencedFiles) or (nil, empty) if invalid
+func (p *Preprocessor) validateNavEntry(entry any, dirPath string, actualFiles, actualDirs map[string]bool) (any, map[string]bool) {
+	referenced := make(map[string]bool)
+
+	switch v := entry.(type) {
+	case string:
+		// Simple file or directory reference: "modules.md" or "subdir/" or "subdir/file.md"
+		if strings.HasSuffix(v, "/") {
+			// Directory reference
+			dirName := strings.TrimSuffix(v, "/")
+			if actualDirs[dirName] {
+				referenced[dirName+"/"] = true
+				return v, referenced // Valid directory
+			}
+			// For relative paths (containing /), check filesystem
+			if strings.Contains(dirName, "/") {
+				fullPath := filepath.Join(dirPath, dirName)
+				if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
+					referenced[dirName+"/"] = true
+					return v, referenced // Valid directory
+				}
+			}
+			// Directory missing, skip
+			return nil, referenced
+		} else if strings.HasSuffix(v, ".md") {
+			// File reference
+			if actualFiles[v] {
+				referenced[v] = true
+				return v, referenced // Valid file
+			}
+			// For relative paths (containing /), check filesystem
+			if strings.Contains(v, "/") {
+				fullPath := filepath.Join(dirPath, v)
+				navLog.Debugf("[VALIDATE] Checking relative file: %s -> %s", v, fullPath)
+				if _, err := os.Stat(fullPath); err == nil {
+					navLog.Debugf("[VALIDATE] ✓ File exists: %s", v)
+					referenced[v] = true
+					return v, referenced // Valid file
+				} else {
+					navLog.Debugf("[VALIDATE] ✗ File missing: %s (error: %v)", v, err)
+				}
+			}
+			// File missing, skip
+			return nil, referenced
+		}
+		// Unknown format, keep as-is
+		return v, referenced
+
+	case map[string]any:
+		// Titled section: {"Section Name": [...]} or {"Title": "file.md"}
+		validatedMap := make(map[string]any)
+
+		for title, content := range v {
+			switch c := content.(type) {
+			case string:
+				// {"Title": "file.md"}
+				if strings.HasSuffix(c, ".md") {
+					if actualFiles[c] {
+						validatedMap[title] = c
+						referenced[c] = true
+					} else if strings.Contains(c, "/") {
+						// For relative paths, check filesystem
+						fullPath := filepath.Join(dirPath, c)
+						if _, err := os.Stat(fullPath); err == nil {
+							validatedMap[title] = c
+							referenced[c] = true
+						}
+					}
+				} else if strings.HasSuffix(c, "/") {
+					// {"Title": "subdir/"}
+					dirName := strings.TrimSuffix(c, "/")
+					if actualDirs[dirName] {
+						validatedMap[title] = c
+						referenced[dirName+"/"] = true
+					} else if strings.Contains(dirName, "/") {
+						// For relative paths, check filesystem
+						fullPath := filepath.Join(dirPath, dirName)
+						if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
+							validatedMap[title] = c
+							referenced[dirName+"/"] = true
+						}
+					}
+				}
+				// If file/dir missing, omit this entry
+
+			case []any:
+				// {"Section": [...items...]}
+				validatedItems := []any{}
+				for _, item := range c {
+					validated, refs := p.validateNavEntry(item, dirPath, actualFiles, actualDirs)
+					if validated != nil {
+						validatedItems = append(validatedItems, validated)
+						for ref := range refs {
+							referenced[ref] = true
+						}
+					}
+				}
+
+				// Only include section if it has valid items
+				if len(validatedItems) > 0 {
+					validatedMap[title] = validatedItems
+				}
+			}
+		}
+
+		if len(validatedMap) > 0 {
+			return validatedMap, referenced
+		}
+		return nil, referenced
+	}
+
+	return entry, referenced // Unknown type, keep as-is
+}
+
+// validateAndCleanNav validates existing .nav.yml, removes broken refs, adds new files
+func (p *Preprocessor) validateAndCleanNav(navPath, dirPath string) error {
+	// 1. Parse existing .nav.yml
+	navFile, err := p.parseNavFile(navPath)
+	if err != nil {
+		// If parse fails, regenerate from scratch
+		relPath, _ := filepath.Rel(p.stagingDir, navPath)
+		p.log("    ⚠️  Failed to parse %s, regenerating", relPath)
+		return p.generateNavForDir(dirPath)
+	}
+
+	// 2. Scan directory for actual files
+	actualFiles := p.scanMarkdownFiles(dirPath)
+	actualDirs := p.scanSubdirectories(dirPath)
+
+	// 3. Process nav entries
+	validatedNav := make([]any, 0)
+	referencedFiles := make(map[string]bool)
+
+	for _, entry := range navFile.Nav {
+		validated, referenced := p.validateNavEntry(entry, dirPath, actualFiles, actualDirs)
+		if validated != nil {
+			validatedNav = append(validatedNav, validated)
+			// Track what files are referenced
+			for file := range referenced {
+				referencedFiles[file] = true
+			}
+		}
+	}
+
+	// 4. Find unreferenced files (new from command sources or other additions)
+	newFiles := []string{}
+	for file := range actualFiles {
+		if !referencedFiles[file] {
+			newFiles = append(newFiles, file)
+		}
+	}
+
+	// 5. Add new files with intelligent ordering
+	if len(newFiles) > 0 {
+		sortedNew := p.sortNewFiles(newFiles, dirPath)
+		for _, file := range sortedNew {
+			validatedNav = append(validatedNav, file)
+		}
+
+		relDir, _ := filepath.Rel(p.stagingDir, dirPath)
+		if relDir == "." {
+			relDir = "(root)"
+		}
+		p.log("    Added %d new files to %s/.nav.yml", len(newFiles), relDir)
+	}
+
+	// 6. Write updated .nav.yml
+	navFile.Nav = validatedNav
+	data, err := yaml.Marshal(navFile)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(navPath, data, 0644)
 }
 
 // stripNavTitles removes the 'title' field from .nav.yml files

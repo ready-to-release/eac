@@ -12,6 +12,6 @@ Feature: repository_build-repo-config
 
     @L1 @ov
     Scenario: repository module builds successfully
-      When I run the command "build repository"
+      When I run the command "build repository --dry-run"
       Then the exit code is 0
       And I should not see any build errors

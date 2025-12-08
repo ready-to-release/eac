@@ -39,41 +39,50 @@ func New(cfg Config) (*Logger, error) {
 	}, nil
 }
 
-// NewDefault creates a logger with default configuration (debug mode disabled).
+// NewDefault creates a logger with default configuration (debug mode and file logging disabled).
 func NewDefault(module, workspaceRoot string) (*Logger, error) {
 	return New(DefaultConfig(module, workspaceRoot))
 }
 
-// NewWithDebug creates a logger with debug mode enabled.
+// NewWithDebug creates a logger with debug mode and file logging enabled.
 func NewWithDebug(module, workspaceRoot string) (*Logger, error) {
-	cfg := DefaultConfig(module, workspaceRoot).WithDebugMode(true)
+	cfg := DefaultConfig(module, workspaceRoot).
+		WithDebugMode(true).
+		WithFileLogging(true)
+	return New(cfg)
+}
+
+// NewWithFileLogging creates a logger with file logging enabled but console debug disabled.
+// This is useful for build and test commands that want debug logs in files only.
+func NewWithFileLogging(module, workspaceRoot string) (*Logger, error) {
+	cfg := DefaultConfig(module, workspaceRoot).WithFileLogging(true)
 	return New(cfg)
 }
 
 // Debug logs a debug message.
 // Console: only shown when debug mode is enabled
-// File: only written when debug mode is enabled
+// File: written when file logging is enabled
 func (l *Logger) Debug(msg string, fields ...zap.Field) {
 	l.Logger.Debug(msg, fields...)
 }
 
 // Info logs an info message.
 // Console: always shown
-// File: only written when debug mode is enabled
+// File: written when file logging is enabled
 func (l *Logger) Info(msg string, fields ...zap.Field) {
 	l.Logger.Info(msg, fields...)
 }
 
 // Warn logs a warning message.
 // Console: always shown
-// File: only written when debug mode is enabled
+// File: written when file logging is enabled
 func (l *Logger) Warn(msg string, fields ...zap.Field) {
 	l.Logger.Warn(msg, fields...)
 }
 
 // Error logs an error message.
 // Console: always shown
-// File: only written when debug mode is enabled
+// File: written when file logging is enabled
 func (l *Logger) Error(msg string, fields ...zap.Field) {
 	l.Logger.Error(msg, fields...)
 }

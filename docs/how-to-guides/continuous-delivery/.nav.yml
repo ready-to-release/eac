@@ -1,0 +1,12 @@
+title: Continuous Delivery
+nav:
+  - index.md
+  - choosing-implementation-pattern.md
+  - choosing-repository-pattern.md
+  - setting-up-precommit.md
+  - writing-commit-messages.md
+  - provisioning-plte.md
+  - managing-feature-flags.md
+  - rollback-procedures.md
+  - writing-release-notes.md
+  - incident-response.md

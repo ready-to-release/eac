@@ -5,6 +5,10 @@
   "description": "Schema for repository module contracts defining module boundaries and file ownership",
   "type": "object",
   "properties": {
+    "defaults": {
+      "$ref": "#/definitions/module_defaults",
+      "description": "Default values applied to all modules (can be overridden per module)"
+    },
     "modules": {
       "type": "array",
       "description": "List of module definitions",
@@ -62,6 +66,10 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "versioning": {
+          "$ref": "#/definitions/module_versioning",
+          "description": "Module versioning configuration"
         }
       },
       "required": ["moniker", "name"]
@@ -182,6 +190,118 @@
       "type": "object",
       "description": "Module behavior flags (reserved for future use)",
       "properties": {}
+    },
+    "module_defaults": {
+      "type": "object",
+      "description": "Repository-wide module defaults inherited by all modules",
+      "properties": {
+        "paths": {
+          "$ref": "#/definitions/default_paths",
+          "description": "Default path configuration for modules"
+        },
+        "conventions": {
+          "$ref": "#/definitions/default_conventions",
+          "description": "Default filename conventions for modules"
+        }
+      }
+    },
+    "default_paths": {
+      "type": "object",
+      "description": "Default path configuration used by module type defaults",
+      "properties": {
+        "test_impl_root": {
+          "type": "string",
+          "description": "Default root directory for test implementations. Used in type defaults as: {test_impl_root}/{moniker}",
+          "default": "go/eac/specs/impl"
+        },
+        "specs_root": {
+          "type": "string",
+          "description": "Default root directory for specifications. Used in type defaults as: {specs_root}/{moniker}",
+          "default": "specs"
+        },
+        "templates": {
+          "type": "string",
+          "description": "Default templates directory",
+          "default": "templates"
+        },
+        "out": {
+          "$ref": "#/definitions/out_paths",
+          "description": "Output directory structure"
+        }
+      }
+    },
+    "out_paths": {
+      "type": "object",
+      "description": "Output directory structure for build artifacts, test results, and logs",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Root output directory",
+          "default": "out"
+        },
+        "build": {
+          "type": "string",
+          "description": "Build output directory",
+          "default": "out/build"
+        },
+        "test": {
+          "type": "string",
+          "description": "Test output directory",
+          "default": "out/test"
+        },
+        "logs": {
+          "type": "string",
+          "description": "Logs output directory",
+          "default": "out/logs"
+        },
+        "security": {
+          "type": "string",
+          "description": "Security scan output directory",
+          "default": "out/security"
+        },
+        "tools": {
+          "type": "string",
+          "description": "Tools output directory (CI tools like commands binary)",
+          "default": "out/tools"
+        }
+      }
+    },
+    "default_conventions": {
+      "type": "object",
+      "description": "Default filename conventions used across the repository",
+      "properties": {
+        "godog_test": {
+          "type": "string",
+          "description": "Godog test file name",
+          "default": "godog_test.go"
+        },
+        "package_json": {
+          "type": "string",
+          "description": "Node.js package file name",
+          "default": "package.json"
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Changelog file name",
+          "default": "CHANGELOG.md"
+        }
+      }
+    },
+    "module_versioning": {
+      "type": "object",
+      "description": "Module versioning configuration",
+      "properties": {
+        "scheme": {
+          "type": "string",
+          "enum": ["SemVer", "CalVer"],
+          "description": "Versioning scheme for this module (must be in repository.schemes)"
+        },
+        "current": {
+          "type": "string",
+          "description": "Current version (optional, can be tracked in changelog instead)"
+        }
+      },
+      "required": ["scheme"]
     }
   },
   "examples": [

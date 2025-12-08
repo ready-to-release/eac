@@ -1,80 +1,41 @@
 package logging
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
+
+	"go.uber.org/zap"
 )
 
-// consoleConfig holds the lazily-loaded console configuration
+// Component global logger (separate from the main global logger in logger.go)
 var (
-	consoleConfig     *SinkConfig
-	consoleConfigOnce sync.Once
+	componentGlobalLogger *Logger
+	componentOnce         sync.Once
 )
 
-// getConsoleConfig lazily loads the console logging configuration
-func getConsoleConfig() *SinkConfig {
-	// If already set (e.g., by test), return it
-	if consoleConfig != nil {
-		return consoleConfig
-	}
-
-	consoleConfigOnce.Do(func() {
-		// Try to find workspace root by looking for .r2r directory
-		wd, err := os.Getwd()
+// initComponentGlobalLogger lazy-initializes the component global Zap logger
+func initComponentGlobalLogger() {
+	componentOnce.Do(func() {
+		// Create default logger (console only, no file logging)
+		cfg := DefaultConfig("eac", ".")
+		if IsDebugEnabled() {
+			cfg = cfg.WithDebugMode(true)
+		}
+		logger, err := New(cfg)
 		if err != nil {
-			cfg := DefaultLoggingConfig()
-			consoleConfig = &cfg.Console
-			return
+			// Fallback to basic logger if config fails
+			logger, _ = NewDefault("eac", ".")
 		}
-
-		// Walk up to find .r2r/eac/logging.yml
-		dir := wd
-		for {
-			configPath := filepath.Join(dir, ".r2r", "eac", "logging.yml")
-			if _, err := os.Stat(configPath); err == nil {
-				cfg := LoadLoggingConfig(dir)
-				consoleConfig = &cfg.Console
-				return
-			}
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
-		}
-
-		// Fall back to defaults
-		cfg := DefaultLoggingConfig()
-		consoleConfig = &cfg.Console
+		componentGlobalLogger = logger
 	})
-	return consoleConfig
-}
-
-// formatMessage formats a log message based on console config
-func formatMessage(level, component, msg string) string {
-	cfg := getConsoleConfig()
-
-	switch cfg.Formatter {
-	case FormatterRaw:
-		return msg
-	case FormatterJSON:
-		// Simple JSON for console (rare use case)
-		return fmt.Sprintf(`{"level":"%s","component":"%s","message":"%s"}`, level, component, msg)
-	case FormatterTimestamped:
-		fallthrough
-	default:
-		// Default to timestamped: "HH:MM:SS.mmm  LEVEL  component:message"
-		return fmt.Sprintf("%s  %-5s  %s:%s", debugTime(), level, component, msg)
-	}
 }
 
 // ComponentLogger provides logging for a specific module/component.
 // It is designed to be created once per package and reused.
+//
+// This is now backed by Zap Logger but maintains the simple API.
 //
 // Usage:
 //
@@ -86,9 +47,8 @@ func formatMessage(level, component, msg string) string {
 //	    log.Debug("operation complete")
 //	}
 type ComponentLogger struct {
-	// component is the inferred or explicit component path
-	// (e.g., "commands/impl/security/sast", "core/logging")
-	component string
+	component string       // e.g., "commands/impl/build"
+	zap       *zap.Logger  // Zap logger with component field
 }
 
 // C creates a ComponentLogger, inferring the component name from the call site.
@@ -105,19 +65,28 @@ type ComponentLogger struct {
 //	var log = logging.C()              // infers from call site (recommended)
 //	var log = logging.C("custom-name") // explicit override
 func C(component ...string) *ComponentLogger {
+	initComponentGlobalLogger()
+
+	comp := ""
 	if len(component) > 0 && component[0] != "" {
-		return &ComponentLogger{component: component[0]}
+		comp = component[0]
+	} else {
+		comp = inferComponent()
 	}
-	return &ComponentLogger{component: inferComponent()}
+
+	// Create child logger with component field
+	zapWithComp := componentGlobalLogger.Logger.With(zap.String("component", comp))
+
+	return &ComponentLogger{
+		component: comp,
+		zap:       zapWithComp,
+	}
 }
 
 // Component creates a ComponentLogger, inferring from call site or using explicit name.
 // This is the long form of C() - use when clarity is preferred.
 func Component(component ...string) *ComponentLogger {
-	if len(component) > 0 && component[0] != "" {
-		return &ComponentLogger{component: component[0]}
-	}
-	return &ComponentLogger{component: inferComponent()}
+	return C(component...)
 }
 
 // inferComponent extracts the component path from the caller's package.
@@ -169,85 +138,43 @@ func inferComponent() string {
 }
 
 // Debug logs a debug message if debug logging is enabled.
-// This has a fast-path check - if debug is disabled, it returns immediately
-// with only a single atomic load (no allocations, no formatting).
 func (c *ComponentLogger) Debug(msg string) {
-	if atomic.LoadUint32(&debugEnabled) == 0 {
-		return
-	}
-	fmt.Fprintln(debugOutput, formatMessage("DEBUG", c.component, msg))
+	c.zap.Debug(msg)
 }
 
 // Debugf logs a formatted debug message if debug logging is enabled.
-// The format string and args are only evaluated if debug is enabled.
 func (c *ComponentLogger) Debugf(format string, args ...interface{}) {
-	if atomic.LoadUint32(&debugEnabled) == 0 {
-		return
-	}
-	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintln(debugOutput, formatMessage("DEBUG", c.component, msg))
+	c.zap.Sugar().Debugf(format, args...)
 }
 
 // Info logs an informational message.
-// Info messages are always shown (not controlled by debug flag).
-// Info goes to stdout (normal output), while Debug/Warn/Error go to stderr.
 func (c *ComponentLogger) Info(msg string) {
-	fmt.Fprintln(stdOutput, formatMessage("INFO", c.component, msg))
-	// Explicitly sync stdout to ensure output is captured in tests (Linux CI buffering issue)
-	if f, ok := stdOutput.(*os.File); ok {
-		f.Sync()
-	}
+	c.zap.Info(msg)
 }
 
 // Infof logs a formatted informational message.
-// Info goes to stdout (normal output), while Debug/Warn/Error go to stderr.
 func (c *ComponentLogger) Infof(format string, args ...interface{}) {
-	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintln(stdOutput, formatMessage("INFO", c.component, msg))
-	// Explicitly sync stdout to ensure output is captured in tests (Linux CI buffering issue)
-	if f, ok := stdOutput.(*os.File); ok {
-		f.Sync()
-	}
+	c.zap.Sugar().Infof(format, args...)
 }
 
 // Warn logs a warning message.
-// Warning messages are always shown.
 func (c *ComponentLogger) Warn(msg string) {
-	fmt.Fprintln(debugOutput, formatMessage("WARN", c.component, msg))
-	// Explicitly sync stderr to ensure output is captured in tests (Linux CI buffering issue)
-	if f, ok := debugOutput.(*os.File); ok {
-		f.Sync()
-	}
+	c.zap.Warn(msg)
 }
 
 // Warnf logs a formatted warning message.
 func (c *ComponentLogger) Warnf(format string, args ...interface{}) {
-	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintln(debugOutput, formatMessage("WARN", c.component, msg))
-	// Explicitly sync stderr to ensure output is captured in tests (Linux CI buffering issue)
-	if f, ok := debugOutput.(*os.File); ok {
-		f.Sync()
-	}
+	c.zap.Sugar().Warnf(format, args...)
 }
 
 // Error logs an error message.
-// Error messages are always shown.
 func (c *ComponentLogger) Error(msg string) {
-	fmt.Fprintln(debugOutput, formatMessage("ERROR", c.component, msg))
-	// Explicitly sync stderr to ensure output is captured in tests (Linux CI buffering issue)
-	if f, ok := debugOutput.(*os.File); ok {
-		f.Sync()
-	}
+	c.zap.Error(msg)
 }
 
 // Errorf logs a formatted error message.
 func (c *ComponentLogger) Errorf(format string, args ...interface{}) {
-	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintln(debugOutput, formatMessage("ERROR", c.component, msg))
-	// Explicitly sync stderr to ensure output is captured in tests (Linux CI buffering issue)
-	if f, ok := debugOutput.(*os.File); ok {
-		f.Sync()
-	}
+	c.zap.Sugar().Errorf(format, args...)
 }
 
 // WithSuffix creates a new ComponentLogger with an additional suffix.
@@ -257,7 +184,22 @@ func (c *ComponentLogger) Errorf(format string, args ...interface{}) {
 //
 //	var log = logging.C("git")
 //	funcLog := log.WithSuffix("StagedFiles")
-//	funcLog.Debug("start")  // Output: "15:04:05.000  DEBUG  git.StagedFiles:start"
+//	funcLog.Debug("start")  // Component: "git.StagedFiles"
 func (c *ComponentLogger) WithSuffix(suffix string) *ComponentLogger {
-	return &ComponentLogger{component: c.component + "." + suffix}
+	newComp := c.component + "." + suffix
+	// Build on the existing logger, not the global one
+	zapWithComp := c.zap.With(zap.String("component", newComp))
+	return &ComponentLogger{
+		component: newComp,
+		zap:       zapWithComp,
+	}
+}
+
+// Sync flushes the component global logger.
+// Call this at program exit to ensure all logs are written.
+func Sync() error {
+	if componentGlobalLogger != nil {
+		return componentGlobalLogger.Sync()
+	}
+	return nil
 }

@@ -37,61 +37,34 @@ permissions:
 
 jobs:
   build:
-    name: Build Docker Image
+    name: Build
     runs-on: ubuntu-latest
+    outputs:
+      image-name: ghcr.io/ready-to-release/ext-eac
+      short-sha: ${{ steps.sha.outputs.short }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push multi-platform image
-        id: build
+      - name: Get short SHA
+        id: sha
         run: |
-          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
-          COMMIT_SHA="${{ github.sha }}"
-          SHORT_SHA="${COMMIT_SHA:0:7}"
+          SHORT_SHA="${{ github.sha }}"
+          echo "short=${SHORT_SHA:0:7}" >> $GITHUB_OUTPUT
 
-          echo "Building and pushing multi-platform image..."
-          echo "Using registry-based caching for fast rebuilds"
-
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag "$IMAGE_NAME:ci" \
-            --tag "$IMAGE_NAME:sha-$SHORT_SHA" \
-            --file ./containers/ext-eac/Dockerfile \
-            --cache-from type=registry,ref=$IMAGE_NAME:buildcache \
-            --cache-from type=registry,ref=$IMAGE_NAME:ci \
-            --cache-to type=registry,ref=$IMAGE_NAME:buildcache,mode=max \
-            --provenance=true \
-            --sbom=true \
-            --push \
-            .
-
-          echo ""
-          echo "Published images:"
-          echo "  - $IMAGE_NAME:ci"
-          echo "  - $IMAGE_NAME:sha-$SHORT_SHA"
-
-          echo "image-name=$IMAGE_NAME" >> $GITHUB_OUTPUT
-          echo "short-sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+      - name: Build Module
+        uses: ./.github/actions/build-module
+        with:
+          module: ext-eac
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify pushed image
         run: |
-          IMAGE_NAME="${{ steps.build.outputs.image-name }}"
-          SHORT_SHA="${{ steps.build.outputs.short-sha }}"
+          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
+          SHORT_SHA="${{ steps.sha.outputs.short }}"
 
           echo "Pulling and verifying pushed image..."
           docker pull "$IMAGE_NAME:sha-$SHORT_SHA"
@@ -103,46 +76,6 @@ jobs:
           echo ""
           echo "Testing extension metadata..."
           docker run --rm "$IMAGE_NAME:sha-$SHORT_SHA" extension-meta
-
-      - name: Build Summary
-        if: always()
-        run: |
-          COMMIT_SHA="${{ github.sha }}"
-          SHORT_SHA="${COMMIT_SHA:0:7}"
-          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
-
-          echo "## Build: ext-eac" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "Built and pushed multi-platform container image to GitHub Container Registry." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Container image build failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
-            echo "- Dockerfile syntax error" >> $GITHUB_STEP_SUMMARY
-            echo "- Base image pull failed" >> $GITHUB_STEP_SUMMARY
-            echo "- Go compilation error" >> $GITHUB_STEP_SUMMARY
-            echo "- Registry authentication failed" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Published Images" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | Image |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| CI | \`${IMAGE_NAME}:ci\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| SHA | \`${IMAGE_NAME}:sha-${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Platforms | \`linux/amd64\`, \`linux/arm64\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dockerfile | \`containers/ext-eac/Dockerfile\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Cache | Registry-based (\`:buildcache\`) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Attestations | SLSA Provenance, SBOM |" >> $GITHUB_STEP_SUMMARY
 
   test:
     name: Test Extension

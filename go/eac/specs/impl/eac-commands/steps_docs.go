@@ -112,7 +112,7 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 	if shouldBeRunning {
 		if !found {
 			// Container doesn't exist - create and start it via serve docs command
-			if err := dCtx.testCtx.RunCommand("serve docs --no-browser"); err != nil {
+			if err := dCtx.testCtx.RunCommand("serve docs --no-browser --skip-validation"); err != nil {
 				return fmt.Errorf("failed to start MkDocs container: %w", err)
 			}
 			// Verify the command succeeded
@@ -125,8 +125,10 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 			if err := dCtx.dockerClient.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 				return fmt.Errorf("failed to start stopped MkDocs container: %w", err)
 			}
-			// Brief wait for container to fully start
-			time.Sleep(2 * time.Second)
+			// Poll for container health instead of fixed sleep
+			if err := waitForContainerReady(ctx, dCtx.dockerClient, containerID, 5*time.Second); err != nil {
+				return fmt.Errorf("container failed to become ready: %w", err)
+			}
 		}
 	} else {
 		if found && running {

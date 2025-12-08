@@ -185,11 +185,40 @@ li {
   margin: 0.25em 0;
 }
 
-/* Images */
+/* Images - Chromium PDF rendering */
 img {
-  max-width: 100%;
-  height: auto;
+  max-width: 100% !important;
+  height: auto !important;
   page-break-inside: avoid;
+  display: block;
+  margin: 1em auto;
+  /* Force image rendering */
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Ensure images in paragraphs render correctly */
+p img {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0.25em;
+}
+
+/* SVG images */
+img[src$=".svg"] {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* PNG/JPG images - ensure they load */
+img[src$=".png"],
+img[src$=".jpg"],
+img[src$=".jpeg"] {
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: contain;
 }
 
 /* Blockquotes */
@@ -228,6 +257,34 @@ blockquote {
 .mermaid-wrapper svg {
   max-width: 100%;
   height: auto;
+}
+
+/* Mermaid diagrams rendered as SVG images */
+.mermaid svg,
+svg.mermaid {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Figure elements */
+figure {
+  margin: 1em 0;
+  text-align: center;
+  page-break-inside: avoid;
+}
+
+figure img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+figcaption {
+  color: #8b949e !important;
+  font-size: 9pt;
+  font-style: italic;
+  margin-top: 0.5em;
 }
 
 /* Page break utilities */

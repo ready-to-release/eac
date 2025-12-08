@@ -1,3 +1,25 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/workflow/trunk-based-development.md
+
+## Soul
+
+Comprehensive guide to Trunk-Based Development enabling Continuous Integration and Continuous Delivery, covering 5 core principles (single source of truth, short-lived branches, small changes, CI, frequent integration), branch types, semantic commits, 7-step daily workflow, feature hiding strategies, and release flows for RA and CDE patterns.
+
+## Sections
+
+1. Introduction
+2. Core Principles
+3. Branch Types and Flow
+4. Commits
+5. Daily Development Flow
+6. Feature Hiding
+7. Branch by Abstraction
+8. Release Flows
+9. Cherry-Picking Fixes
+10. Best Practices
+11. Stage Duration Guidelines
+-->
+
 # Trunk-Based Development
 
 ## Introduction
@@ -526,29 +548,7 @@ gh pr create --base release/v1.2.0 --title "Cherry-pick: Fix critical bug"
 
 ## Best Practices
 
-### ✅ DO
-
-- **Integrate at least daily** - preferably multiple times per day
-- **Keep changes small** - < 400 lines ideal, < 200 excellent
-- **Write semantic commit messages** - enables automated versioning and release notes
-- **Pull from trunk frequently** - every few hours to stay current
-- **Run Stage 2 checks before pushing** - all tests, linting, security scans
-- **Use feature flags for incomplete features** - deploy dark, enable later
-- **Delete branches immediately after merge** - keep repository clean
-- **Squash-merge topic branches** - one topic branch = one trunk commit
-- **Cherry-pick from trunk to release** - maintain single source of truth
-- **Fix-forward in production** - prefer fixing over reverting when possible
-
-### ❌ DON'T
-
-- **Keep topic branches open > 2 days** - violates continuous integration
-- **Make large, sweeping changes in single commit** - breaks reviewability
-- **Let your branch diverge significantly from trunk** - causes merge conflicts
-- **Push broken code to trunk** - violates "always releasable" principle
-- **Keep "work in progress" branches** - integrate incrementally instead
-- **Create long-lived feature branches** - antithetical to trunk-based development
-- **Fix on release branch without cherry-picking to trunk** - causes regressions
-- **Use topic branches to hide incomplete features** - use feature flags instead
+Key guidelines for effective trunk-based development workflows.
 
 ### Stage Duration Guidelines
 
@@ -571,14 +571,23 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 
 - [Branching Strategies](branching-strategies.md) - Detailed flows for RA and CDe patterns
 - [Unit of Flow](../core-concepts/unit-of-flow.md) - See how trunk fits into the bigger picture
-- [Deployable Units](../core-concepts/deployable-units.md) - What gets built from trunk
+- [Deployable Modules](../core-concepts/deployable-modules.md) - What gets built from trunk
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe decision guidance
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages including feature flags
 
 ## References
 
+### Internal Documentation
+
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Repository Layout](../../../reference/repository-layout.md)
+
+### External Standards
+
 - [Trunk-Based Development (trunkbaseddevelopment.com)](https://trunkbaseddevelopment.com/)
+- [Conventional Commits](https://www.conventionalcommits.org/) - Commit message convention
+
+### Additional Resources
+
 - [Feature Branches Considered Evil (YouTube)](https://www.youtube.com/watch?v=h7LeD7VevyI)
 - [Why CI is Better Than Feature Branching (YouTube)](https://www.youtube.com/watch?v=lXQEi1O5IOI)

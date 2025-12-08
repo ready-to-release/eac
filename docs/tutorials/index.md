@@ -1,29 +1,30 @@
+<!-- EDITOR
+# Editor: tutorials/index.md
+
+## Soul
+
+Learning-oriented tutorials that guide users through practical, hands-on exercises to get started with the R2R CLI and understand how to write Gherkin specifications.
+
+## Sections
+
+1. Overview
+2. In This Section
+3. Diataxis
+-->
+
 # Tutorials
 
-**Learning-oriented**: Step-by-step guides to help you get started and learn the fundamentals.
+Step-by-step guides to help you get started and learn the fundamentals of the R2R CLI and Everything-as-Code workflows. These tutorials are designed for newcomers who want hands-on guidance through core concepts.
 
-## Available Tutorials
+## In This Section
 
-### Coming Soon
-
-- **Quick Start Guide** - Get the CLI up and running
-- **Your First Feature Specification** - Write your first Gherkin specs
+| Guide | Description |
+|-------|-------------|
+| [Quick Start Guide](./quick-start.md) | Install the R2R CLI and run your first commands |
+| [Your First Feature Specification](./first-specification.md) | Learn how to write Gherkin specifications using Given/When/Then |
 
 ---
 
-## What are Tutorials?
+*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | [Reference](../reference/) | [Explanation](../explanation/)*
 
-Tutorials are **learning-oriented** lessons that take you through a series of steps to complete a project. They are designed for beginners who want to get started with a topic.
-
-**Characteristics:**
-
-- Step-by-step instructions
-- Focused on learning by doing
-- Assumes little prior knowledge
-- Gets you up and running quickly
-
-**Not finding what you need?**
-
-- **Specific tasks?** See [How-to Guides](../how-to-guides/index.md)
-- **Technical details?** See [Reference](../reference/index.md)
-- **Understanding concepts?** See [Explanation](../explanation/index.md)
+**You are here:** Tutorials — learning-oriented guides that take you through steps to complete a project.

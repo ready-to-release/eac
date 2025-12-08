@@ -3,16 +3,26 @@ package internal
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
+)
+
+// log is shared across the internal package (declared in cache.go)
+
+// Global process-level cache shared across ALL test packages
+// This prevents 14+ concurrent git ls-files calls when running tests in parallel
+var (
+	globalRepoCache     *TestCache
+	globalRepoCacheOnce sync.Once
 )
 
 // RunnerConfig holds configuration for a spec runner.
@@ -32,7 +42,7 @@ func BuildTagFilter() string {
 	// Load config for skip reasons
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
 	// Build base tag filter
@@ -165,16 +175,30 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 	// Get repo root once
 	repoRoot, err := GetRepoRoot()
 	if err != nil {
-		log.Fatalf("Failed to get repository root: %v", err)
+		panic(fmt.Sprintf("Failed to get repository root: %v", err))
 	}
 
 	// Log suite initialization diagnostics (only once per suite)
 	logSuiteInitDiagnostics(repoRoot, cfg.SpecsPath)
 
+	// Create fixture pool for this test suite (mandatory for test isolation)
+	fixturePool := coretesting.NewFixturePool()
+	fixtureTemplate := (*coretesting.FixtureTemplate)(nil)
+	var templateMu sync.Mutex
+
+	// Use GLOBAL process-level cache shared across all test packages
+	// This prevents 14+ concurrent git ls-files calls when running tests in parallel
+	// The cache is created once per process, not once per godog suite
+	globalRepoCacheOnce.Do(func() {
+		globalRepoCache = NewTestCache()
+	})
+
 	return func(sc *godog.ScenarioContext) {
 		// Create context for this scenario
 		ctx := NewTestContext()
 		ctx.OriginalRepoRoot = repoRoot
+		ctx.FixturePool = fixturePool
+		ctx.OriginalRepoCache = globalRepoCache // Share global cache across ALL test packages!
 
 		// Register common steps
 		RegisterCommonSteps(sc, ctx)
@@ -189,12 +213,38 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 			ctx.Reset()
 
 			// Check for @env:isolated-test-project tag
+			hasIsolationTag := false
 			for _, tag := range scenario.Tags {
 				if tag.Name == "@env:isolated-test-project" {
-					if err := ctx.SetupIsolation(); err != nil {
-						return gctx, fmt.Errorf("failed to setup isolation: %w", err)
-					}
+					hasIsolationTag = true
 					break
+				}
+			}
+
+			if hasIsolationTag {
+				// Create fixture template once (first scenario with isolation tag)
+				templateMu.Lock()
+				if fixtureTemplate == nil {
+					start := time.Now()
+					template, err := fixturePool.CreateTemplate(repoRoot)
+					duration := time.Since(start)
+					if err != nil {
+						templateMu.Unlock()
+						return gctx, fmt.Errorf("failed to create fixture template: %w", err)
+					}
+					fixtureTemplate = template
+					log.Debugf("Fixture template created: %v", duration)
+				}
+				templateMu.Unlock()
+
+				// Setup isolation (fast-copies from template, fails if template unavailable)
+				start := time.Now()
+				if err := ctx.SetupIsolation(); err != nil {
+					return gctx, fmt.Errorf("failed to setup isolation: %w", err)
+				}
+				duration := time.Since(start)
+				if duration > 100*time.Millisecond {
+					log.Debugf("Isolation setup: %v", duration)
 				}
 			}
 

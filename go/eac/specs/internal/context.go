@@ -35,6 +35,9 @@ type TestContext struct {
 	// Isolation infrastructure
 	Isolation *coretesting.TestIsolation
 
+	// FixturePool manages reusable test environment templates (per feature)
+	FixturePool *coretesting.FixturePool
+
 	// MockOverrides holds per-scenario mock environment variable overrides.
 	// Keys are env var names (e.g., "R2R_MOCK_AI_SPECS"), values are mock file names.
 	MockOverrides map[string]string
@@ -49,7 +52,8 @@ type TestContext struct {
 func NewTestContext() *TestContext {
 	return &TestContext{
 		SharedTestContext: coretesting.NewSharedTestContext(),
-		OriginalRepoCache: NewTestCache(),
+		// OriginalRepoCache is set by runner.go to the global cache
+		// Don't create a new one here - it's wasteful and gets overwritten
 	}
 }
 
@@ -65,8 +69,10 @@ func (c *TestContext) Reset() {
 // This should be called at the start of any scenario that needs cached data
 // from the ORIGINAL repository (not isolated/mocked repos).
 func (c *TestContext) EnsureOriginalRepoCache() error {
+	// OriginalRepoCache MUST be set by runner.go to globalRepoCache
+	// If it's nil, that's a programmer error - panic to catch it early
 	if c.OriginalRepoCache == nil {
-		c.OriginalRepoCache = NewTestCache()
+		panic("OriginalRepoCache is nil - runner.go must set it to globalRepoCache")
 	}
 	return c.OriginalRepoCache.EnsurePopulated(c.OriginalRepoRoot)
 }
@@ -81,26 +87,32 @@ func (c *TestContext) SetMockOverride(key, value string) {
 	c.MockOverrides[key] = value
 }
 
-// SetupIsolation creates an isolated test environment.
+// SetupIsolation creates an isolated test environment using fixture pool.
+// Requires fixture pool to be initialized (fails fast if not available).
+// Creates test isolation by fast-copying pre-built template (~50ms).
 func (c *TestContext) SetupIsolation() error {
-	c.Isolation = coretesting.NewTestIsolation().
-		WithOriginalRepoRoot(c.OriginalRepoRoot).
-		WithCopyContracts(true).
-		WithCopyAIContracts(true).
-		WithCopyMkdocsConfig(true).
-		WithMockAIConfig(true)
-
-	if err := c.Isolation.Setup(); err != nil {
-		return fmt.Errorf("failed to setup test isolation: %w", err)
+	if c.FixturePool == nil {
+		return fmt.Errorf("fixture pool not initialized - required for test isolation")
 	}
 
-	c.IsolatedDir = c.Isolation.IsolatedDir()
-	c.CurrentWorkDir = c.IsolatedDir // Start in main isolated directory
+	template := c.FixturePool.GetTemplate(c.OriginalRepoRoot)
+	if template == nil {
+		return fmt.Errorf("fixture template not created - call CreateTemplate() before SetupIsolation()")
+	}
+
+	// Fast-copy from template (~50ms)
+	isolation, err := c.FixturePool.NewIsolationFromTemplate(template)
+	if err != nil {
+		return fmt.Errorf("failed to create isolation from template: %w", err)
+	}
+
+	c.Isolation = isolation
+	c.IsolatedDir = isolation.IsolatedDir()
+	c.CurrentWorkDir = c.IsolatedDir
 	c.SharedTestContext.SetIsolation(c.OriginalRepoRoot, c.IsolatedDir)
 	c.SharedTestContext.Isolation = c.Isolation
 
-	// Create specs/ directory for commands that write to specs/{module}/.design/
-	// This prevents "permission denied" errors when creating design output directories
+	// Create specs/ directory for design output
 	specsDir := filepath.Join(c.IsolatedDir, "specs")
 	if err := os.MkdirAll(specsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create specs directory in isolation: %w", err)

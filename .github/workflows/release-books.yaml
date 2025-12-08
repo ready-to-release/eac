@@ -33,28 +33,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and cache MkDocs PDF image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./containers/mkdocs-pdf
-          file: ./containers/mkdocs-pdf/Dockerfile
-          tags: cli-mkdocs-pdf:latest
-          load: true
-          cache-from: type=gha,scope=mkdocs-pdf
-          cache-to: type=gha,mode=max,scope=mkdocs-pdf
-
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ inputs.ci_run_id }}
+
+      - name: Setup Module Dependencies
+        uses: ./.github/actions/setup-module-deps
+        with:
+          module: books
+          commands-path: ${{ steps.commands.outputs.commands-path }}
 
       - name: Build PDF Books
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
           echo "Building PDF documentation (output mode from books.yml)..."
-          $COMMANDS build books
+          # Use --all to include books with default: false (all PDF books)
+          $COMMANDS build books --all
 
       - name: Verify PDF outputs
         id: verify
@@ -122,7 +118,7 @@ jobs:
 
             ---
             Generated from commit: ${{ github.sha }}
-          files: out/build/books/*.pdf
+          files: out/build/books/**/*.pdf
           draft: false
           prerelease: false
           generate_release_notes: false
@@ -171,6 +167,5 @@ jobs:
             echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "- Docker image build failure" >> $GITHUB_STEP_SUMMARY
-            echo "- WeasyPrint rendering errors" >> $GITHUB_STEP_SUMMARY
             echo "- Missing PDF template styles" >> $GITHUB_STEP_SUMMARY
           fi

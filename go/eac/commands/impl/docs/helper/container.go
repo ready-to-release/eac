@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -86,6 +87,31 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 		return nil, fmt.Errorf("failed to determine repository root: %w", err)
 	}
 
+	// Generate mkdocs.yml from site template
+	configDir := filepath.Join(repoRoot, "out", "serve")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		logger.Error("Failed to create serve config directory", zap.Error(err))
+		return nil, fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	configPath := filepath.Join(configDir, "mkdocs.yml")
+	// docs_dir is relative to config file location (out/serve/mkdocs.yml)
+	// So we need ../../docs to get back to repo root's docs/ directory
+	configOpts := books.ConfigOptions{
+		SiteName:     "Documentation",
+		DocsDir:      "../../docs",
+		OutputFormat: "site",
+	}
+	if err := books.WriteMkDocsConfig(repoRoot, configPath, configOpts); err != nil {
+		logger.Error("Failed to generate mkdocs.yml", zap.Error(err))
+		return nil, fmt.Errorf("failed to generate mkdocs.yml: %w", err)
+	}
+	logger.Debug("Generated mkdocs.yml from template", zap.String("configPath", configPath))
+
+	// Calculate relative config path for Docker
+	relConfigPath, _ := filepath.Rel(repoRoot, configPath)
+	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
+
 	// Build configuration for the serve helper
 	dockerfilePath := filepath.Join(repoRoot, "containers", "mkdocs-site", "Dockerfile")
 	contextPath := filepath.Join(repoRoot, "containers", "mkdocs-site")
@@ -94,6 +120,7 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 		zap.String("dockerfile", dockerfilePath),
 		zap.String("contextPath", contextPath),
 		zap.String("contentPath", repoRoot),
+		zap.String("configPath", dockerConfigPath),
 		zap.Int("containerPort", containerInternalPort))
 
 	config := &serve.ServeConfig{
@@ -106,7 +133,7 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 		ContentPath:   repoRoot,
 		ContainerPath: "/docs",
 		ContainerPort: containerInternalPort,
-		Command:       []string{"mkdocs", "serve", "--dev-addr=0.0.0.0:8000"},
+		Command:       []string{"mkdocs", "serve", "-f", dockerConfigPath, "--dev-addr=0.0.0.0:8000"},
 		PreferredPort: port,
 		RestartPolicy: "unless-stopped",
 	}

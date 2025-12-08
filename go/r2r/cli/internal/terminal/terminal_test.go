@@ -1,5 +1,5 @@
-//go:build L1 && ov
-// +build L1,ov
+//go:build L1
+// +build L1
 
 package terminal
 

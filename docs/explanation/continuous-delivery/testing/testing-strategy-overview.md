@@ -1,3 +1,26 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/testing/testing-strategy-overview.md
+
+## Soul
+
+Comprehensive test taxonomy documentation covering L0-L4 test levels based on execution environment/scope, determinism vs domain coherency trade-off, shift-left/shift-right strategy, and Horizontal E2E anti-pattern (lowest determinism, non-shifted classification).
+
+## Sections
+
+1. Introduction
+2. Test Taxonomy
+3. Determinism vs Domain Coherency
+4. Tag Taxonomy
+5. L0: Unit Tests
+6. L1: Unit Tests
+7. L2: Emulated System Tests
+8. L3: In-Situ Vertical Tests
+9. L4: Testing in Production
+10. Horizontal E2E (Anti-Pattern)
+11. Shift-Left Strategy
+12. Summary
+-->
+
 # Testing Strategy: Overview
 
 ## Introduction
@@ -401,7 +424,7 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 
 ## L3: In-Situ Vertical Tests
 
-**Purpose**: Validate a deployable unit in-situ in a production-like environment (PLTE) with vertical testing boundaries.
+**Purpose**: Validate a deployable module in-situ in a production-like environment (PLTE) with vertical testing boundaries.
 
 ### Characteristics
 
@@ -413,7 +436,7 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 
 **Isolation:**
 
-- **Single deployable unit boundaries only** (vertical testing)
+- **Single deployable module boundaries only** (vertical testing)
 - **All external dependencies replaced with test doubles**
 - Tests the deployed system in production-like infrastructure
 - Validates deployment and configuration
@@ -421,7 +444,7 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 **Scope:**
 
 - **Deployed system** tested in-situ in PLTE
-- Single deployable unit behavior in production-like infrastructure
+- Single deployable module behavior in production-like infrastructure
 - Infrastructure validation (networking, load balancing, DNS)
 - Deployment procedure verification
 - Configuration correctness
@@ -431,7 +454,7 @@ func TestUserService_CreateAndRetrieveUser(t *testing.T) {
 
 L3 tests require a Production-Like Test Environment (PLTE) because they:
 
-- Validate the deployable unit runs correctly in cloud infrastructure
+- Validate the deployable module runs correctly in cloud infrastructure
 - Test with production-like networking, storage, and compute
 - Verify deployment procedures work
 - Validate infrastructure configuration (e.g., Kubernetes, load balancers)
@@ -462,7 +485,7 @@ Feature: API Service Deployment Verification
 
 **What L3 Tests Validate:**
 
-- Deployable unit runs in production-like infrastructure
+- Deployable module runs in production-like infrastructure
 - Deployment procedures work correctly
 - Infrastructure configuration is correct (networking, DNS, load balancing)
 - Service responds correctly in cloud environment
@@ -700,7 +723,7 @@ The CD Model uses a taxonomy based on execution environment and scope:
 **L3: In-Situ Vertical Tests (Shift LEFT)**:
 
 - **Execution**: PLTE
-- **Scope**: Deployed system (single deployable unit boundaries)
+- **Scope**: Deployed system (single deployable module boundaries)
 - **Dependencies**: All replaced with test doubles
 - **Tags**: `@L3 @iv` (installation), `@L3 @pv` (performance), `@L3 @ov` (operational)
 - **Trade-off**: Moderate determinism, high domain coherency

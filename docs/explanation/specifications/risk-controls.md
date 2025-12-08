@@ -16,15 +16,15 @@ Risk controls are **security and compliance requirements** that mitigate identif
 - Artifacts in separate systems, evidence gathered retroactively
 - Difficult to maintain traceability
 
-**Risk-based Approach**:
+**EAC OSCAL Approach**:
 
-- Risk assessment → risk profile → BDD specifications → Automated testing
+- Risk assessment → OSCAL profile → BDD specifications → Automated testing
 - All in version control, traceability in real-time
 - Automated evidence collection for compliance audits
 
 **Benefits**:
 
-- Machine-readable control definitions (JSON)
+- Machine-readable control definitions (OSCAL JSON)
 - Explicit traceability via `@control:` tags
 - Automated evidence linking test results to controls
 - Version controlled and audit-ready
@@ -58,21 +58,29 @@ Traditional security control management relies on documents (PDFs, spreadsheets,
 
 ### Three Core Documents
 
-```mermaid
-flowchart LR
-    classDef block fill:#eef3ff,stroke:#3459e6,stroke-width:1px,rx:6px,ry:6px,font-size:16px;
-
-    A["**Risk Catalog**<br/>Standard control definitions"]
-    B["**Risk Profile**<br/>Selected controls for a system"]
-    C["**BDD Scenarios**<br/>Executable tests tagged by control"]
-    D["**Assessment Results**<br/>Automated evidence & findings"]
-
-    A -->|"Reference controls"| B
-    B -->|"Drives testing"| C
-    C -->|"Generates evidence"| D
-
-    class A,B,C,D block;
-
+```text
+┌──────────────────┐
+│  OSCAL Catalog   │  Templates: Control definitions (NIST 800-53, etc.)
+│  controls.json   │  Location: templates/specs/risk-catalog/
+└────────┬─────────┘
+         │ References
+         ↓
+┌──────────────────┐
+│  OSCAL Profile   │  Solution: Control selection for YOUR system
+│  *.profile.json  │  Location: specs/.risk-controls/<module>.profile.json
+└────────┬─────────┘
+         │ Guides
+         ↓
+┌──────────────────┐
+│  BDD Scenarios   │  Implementation: Executable tests with @control: tags
+│  *.feature       │  Location: specs/<module>/**/*.feature
+└────────┬─────────┘
+         │ Produces
+         ↓
+┌──────────────────┐
+│ Assessment       │  Evidence: Test results + security scans
+│ Results JSON     │  Location: out/risk/<module>/assessment-results.json
+└──────────────────┘
 ```
 
 ### Risk Catalog (Templates)
@@ -105,7 +113,7 @@ flowchart LR
 create risk-profile assessment.md
 ```
 
-**Example:**
+**Example** (`specs/.risk-controls/auth-service.profile.json`):
 
 ```json
 {
@@ -190,6 +198,132 @@ flowchart TD
     H --> I[Audit Report<br/>Compliance evidence]
 ```
 
+### Step-by-Step Example
+
+> **1. Conduct Risk Assessment**
+
+```bash
+# Document risks in assessment.md
+echo "## Risk: Unauthorized Access
+- Likelihood: High
+- Impact: Critical
+- Controls Needed: AC-2, AC-3, IA-5
+" > assessment.md
+```
+
+> **2. Create OSCAL Profile**
+
+```bash
+create risk-profile assessment.md
+# Generates: specs/.risk-controls/risk-profile.json
+# Contains: Selected control IDs (ac-2, ac-3, ia-5)
+```
+
+> **3. Generate Specifications**
+
+```bash
+create-spec "User authentication with password" --module auth-service
+# AI receives available controls from profile
+# Generates spec with @control: tags
+```
+
+Output (`specs/auth-service/authentication.feature`):
+
+```gherkin
+@control:ac-2 @control:ia-5
+Feature: User Authentication
+
+  Scenario: Password authentication
+    Given a user with valid credentials
+    When they provide username and password
+    Then access should be granted
+```
+
+> **4. Run Tests**
+
+```bash
+test auth-service --suite acceptance
+# Produces: out/test/<timestamp>/auth-service/*.cucumber.json
+```
+
+> **5. Collect Evidence**
+
+```bash
+create risk-assess auth-service --profile specs/.risk-controls/risk-profile.json
+# Extracts @control: tags from specs
+# Matches to test results
+# Generates: out/risk/auth-service/assessment-results.json
+```
+
+> **6. Assessment Results** (`assessment-results.json`):
+
+```json
+{
+  "results": [{
+    "findings": [
+      {
+        "title": "Control AC-2 Assessment",
+        "target": {
+          "target-id": "ac-2",
+          "status": { "state": "satisfied" }
+        },
+        "related-observations": ["obs-uuid-1"],
+        "remarks": "Tested by: specs/auth-service/authentication.feature:Password authentication"
+      }
+    ],
+    "observations": [
+      {
+        "uuid": "obs-uuid-1",
+        "title": "Test Results",
+        "collected": "2025-12-04T...",
+        "relevant-evidence": [
+          { "href": "out/test/.../auth-service/acceptance.cucumber.json" }
+        ]
+      }
+    ]
+  }]
+}
+```
+
+---
+
+## IMPORTANT: Assessment-First Process
+
+**You MUST conduct a risk assessment BEFORE selecting controls.**
+
+### Correct Process
+
+1. **Conduct Risk Assessment**
+
+   - Identify YOUR specific threats and vulnerabilities
+   - Document in `assessment.md` or risk register
+   - Determine likelihood and impact
+
+2. **Create OSCAL Profile**
+
+   - Review OSCAL catalog controls
+   - Select controls that address YOUR risks
+   - Create profile: `create risk-profile assessment.md`
+
+3. **Generate Specifications**
+
+   - Use `create-spec` with module profile
+   - AI automatically tags scenarios with applicable controls
+   - Review and adjust tags as needed
+
+4. **Implement and Test**
+   - Write step definitions
+   - Run tests to verify control satisfaction
+   - Collect evidence with `create risk-assess`
+
+### Why OSCAL?
+
+**Standardization**: Industry-standard format (NIST)
+**Machine-Readable**: Automated tooling and validation
+**Interoperability**: Works with compliance management systems
+**Traceability**: Direct links from controls → tests → evidence
+**Auditability**: Version-controlled, timestamped evidence
+
 ---
 
 ## Control Tag Format
@@ -244,17 +378,25 @@ All OSCAL documents must conform to official NIST schemas. Validation ensures yo
 
 ### Schema Versions and Locations
 
-| Document Type | OSCAL Version | Schema URL |
-|--------------|---------------|------------|
-| **Catalog** | 1.1.3 | [oscal-catalog-schema.json](https://raw.githubusercontent.com/usnistgov/OSCAL/v1.1.3/json/schema/oscal_catalog_schema.json) |
-| **Profile** | 1.1.2 | [oscal-profile-schema.json](https://raw.githubusercontent.com/usnistgov/OSCAL/v1.1.2/json/schema/oscal_profile_schema.json) |
-| **Assessment Results** | 1.1.3 | [oscal-assessment-results-schema.json](https://raw.githubusercontent.com/usnistgov/OSCAL/v1.1.3/json/schema/oscal_assessment_results_schema.json) |
+| Family | Description                          | Example Controls                                                  |
+| ------ | ------------------------------------ | ----------------------------------------------------------------- |
+| **AC** | Access Control                       | `ac-2` (Account Management), `ac-3` (Access Enforcement)          |
+| **AU** | Audit and Accountability             | `au-2` (Event Logging), `au-3` (Audit Record Content)             |
+| **IA** | Identification and Authentication    | `ia-2` (User Identification), `ia-5(1)` (Password Authentication) |
+| **SC** | System and Communications Protection | `sc-7` (Boundary Protection), `sc-8(1)` (Encrypted Transmission)  |
+| **SI** | System and Information Integrity     | `si-2` (Flaw Remediation), `si-10` (Information Input Validation) |
 
 ### Validation Commands
 
 The CLI provides automated validation against OSCAL schemas:
 
-**Validate Control Catalog**:
+| Framework     | Maps to NIST 800-53          | Example                           |
+| ------------- | ---------------------------- | --------------------------------- |
+| **HIPAA**     | Security Rule requirements   | `ac-2`, `au-2`, `ia-2`, `sc-8`    |
+| **PCI-DSS**   | Data protection requirements | `ac-2`, `au-2`, `sc-7`, `sc-8(1)` |
+| **SOC 2**     | Trust Services Criteria      | `ac-2`, `au-2`, `ia-2`, `sc-12`   |
+| **ISO 27001** | Annex A controls             | `ac-2`, `ac-3`, `au-2`, `ia-5`    |
+| **FedRAMP**   | Security controls            | Entire NIST 800-53 catalog        |
 
 ```bash
 validate risk-catalog
@@ -337,6 +479,183 @@ Skip for:
 - Prototypes and experiments
 - Simple utilities
 - Personal/side projects without regulatory obligations
+
+---
+
+## Commands Reference
+
+### Create OSCAL Profile
+
+```bash
+create risk-profile <assessment.md>
+
+# Generates: specs/.risk-controls/risk-profile.json
+# AI selects controls based on risk assessment
+```
+
+### Generate Specifications with Control Tags
+
+```bash
+create-spec "<description>" --module <module-name>
+
+# AI receives available controls from module's profile
+# Automatically tags scenarios with @control: tags
+# Generates: specs/<module>/**/*.feature
+```
+
+### Validate Control Tags
+
+```bash
+validate control-tags
+
+# Checks: All @control: tags reference valid catalog controls
+# Reports: Invalid IDs with file locations
+```
+
+### Collect Evidence
+
+```bash
+create risk-assess <module> --profile <profile-path>
+
+# Extracts: @control: tags from feature files
+# Matches: Tags to test results
+# Generates: out/risk/<module>/assessment-results.json
+```
+
+### Validate OSCAL Documents
+
+```bash
+validate risk-profile     # Validate profile against OSCAL schema
+validate risk-catalog     # Validate catalog against OSCAL schema
+```
+
+---
+
+## Best Practices
+
+### Do ✅
+
+- **Start with risk assessment** - Document YOUR threats and vulnerabilities first
+- **Use standard controls** - Leverage NIST 800-53 or industry frameworks
+- **Tag all control scenarios** - Maintain complete traceability
+- **Validate tags** - Run `validate control-tags` in CI/CD
+- **Collect evidence regularly** - Run `create risk-assess` after test runs
+- **Version control everything** - Profiles, specs, and evidence in git
+- **Review quarterly** - Update controls as risks and regulations evolve
+
+### Don't ❌
+
+- **Don't skip risk assessment** - Controls without risk analysis are meaningless
+- **Don't modify the catalog** - Use profiles to select controls
+- **Don't forget enhancements** - Use `ia-5(1)` format when applicable
+- **Don't mix tag formats** - Use `@control:id` not old `@risk-control:name`
+- **Don't manually create assessment-results** - Use `create risk-assess`
+- **Don't tag unrelated scenarios** - Only tag scenarios that actually verify the control
+- **Don't forget validation** - Engage compliance experts for regulatory mappings
+
+---
+
+## Review and Maintenance
+
+### Review Cadence
+
+**Quarterly (Regular)**:
+
+```bash
+# 1. Review profile controls
+cat specs/.risk-controls/*.profile.json
+
+# 2. Check for invalid tags
+validate control-tags
+
+# 3. Verify evidence is current
+create risk-assess --profile specs/.risk-controls/risk-profile.json
+
+# 4. Review assessment results
+cat out/risk/*/assessment-results.json
+```
+
+**Event-Driven (Triggered)**:
+
+- New regulation → Update profile with new controls
+- Audit finding → Add missing control tags to specs
+- Security incident → Add defensive control scenarios
+- Architecture change → Review applicable controls
+- Threat intelligence → Update risk assessment and controls
+
+### Update Process
+
+1. **Update Risk Assessment** - Document new/changed risks
+2. **Update OSCAL Profile** - Add/remove controls using `create risk-profile`
+3. **Update Specifications** - Add `@control:` tags to new scenarios
+4. **Validate** - Run `validate control-tags`
+5. **Test** - Execute test suites
+6. **Collect Evidence** - Run `create risk-assess`
+7. **Document** - Update CHANGELOG and audit trail
+
+---
+
+## Troubleshooting
+
+### "Control not found in catalog"
+
+```bash
+validate control-tags
+# Error: Control 'ac-99' not found in catalog
+
+# Fix: Check catalog for valid control IDs
+cat templates/specs/risk-catalog/controls.catalog.json | jq '.catalog.groups[].controls[].id'
+
+# Use correct control ID (e.g., ac-2 instead of ac-99)
+```
+
+### "No controls in profile"
+
+```bash
+create risk-assess --profile specs/.risk-controls/empty.profile.json
+# Error: Profile has no controls
+
+# Fix: Add controls to profile
+create risk-profile assessment.md
+```
+
+### "No test evidence for control"
+
+```bash
+# Assessment shows control as not-satisfied
+
+# Fix: Add @control: tag to test scenario
+# Then run tests and re-collect evidence
+test <module>
+create risk-assess <module> --profile <profile>
+```
+
+---
+
+## Migration from Old Format
+
+### Old Format (Deprecated)
+
+```gherkin
+@risk-control:auth-mfa-01
+Scenario: MFA required
+```
+
+### New OSCAL Format
+
+```gherkin
+@control:ia-2(1)
+Scenario: Multi-factor authentication required
+```
+
+### Migration Steps
+
+1. **Map old controls to OSCAL** - Identify equivalent NIST 800-53 controls
+2. **Create OSCAL profile** - Select mapped controls
+3. **Update tags** - Replace `@risk-control:` with `@control:`
+4. **Validate** - Run `validate control-tags`
+5. **Test** - Verify tests still pass
+6. **Collect evidence** - Run `create risk-assess`
 
 ---
 

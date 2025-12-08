@@ -27,7 +27,7 @@ func GetModules() int {
 	}
 
 	// Use the shared get command helper
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		report, err := reports.GetModuleContracts(workspaceRoot)
 		if err != nil {
 			return nil, err

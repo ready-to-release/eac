@@ -248,3 +248,9 @@ Split when:
 - [Working with specifications](working-with-specifications.md) - Concepts behind specifications
 - [Three-Layer Approach](./three-layer-approach.md) - How Example Mapping fits the workflow
 - [Review and Iterate](review-and-iterate.md) - Maintaining living specifications
+
+## Quick Reference
+
+- [Example Mapping Cards](../../reference/specifications/example-mapping-cards.md) - Card colors and quantities
+- [Running Example Mapping](../../how-to-guides/eac/specifications/running-example-mapping.md) - How to facilitate sessions
+- [Translating to Gherkin](../../how-to-guides/eac/specifications/translating-to-gherkin.md) - Converting cards to specs

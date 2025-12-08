@@ -1,12 +1,30 @@
+<!-- EDITOR
+# Editor: docs/reference/decision-records/index.md
+
+## Soul
+Archive of architectural decisions documenting the rationale behind key design choices in the EAC system.
+
+## Sections
+1. Overview
+2. In This Section
+3. Diátaxis
+-->
+
 # Decision Records
 
-Architectural decisions and their rationale.
+Architectural Decision Records (ADRs) documenting significant design choices and their rationale. Each record captures the context, decision, and consequences of important architectural decisions.
+
+## In This Section
+
+| Reference | Description |
+|-----------|-------------|
+| [DR-001](./dr001.md) | Use Mono-Repository Layout (Single-Repository Type) |
+| [DR-002](./dr002.md) | Use Semantic Versioning with Trunk-Based Development |
+| [DR-003](./dr003.md) | Use Three-Layer Testing Approach (Rules/Scenarios/Unit Tests) |
+| [DR-004](./dr004.md) | Adopt Diataxis Framework for Documentation Organization |
 
 ---
 
-| ID | Title | Status | Date |
-|----|-------|--------|------|
-| [DR-001](dr001.md) | Use Mono-Repository Layout (Single-Repository Type) | Accepted | 2025-11-03 |
-| [DR-002](dr002.md) | Use Semantic Versioning with Trunk-Based Development | Accepted | 2025-11-03 |
-| [DR-003](dr003.md) | Use Three-Layer Testing Approach (Rules/Scenarios/Unit Tests) | Accepted | 2025-11-03 |
-| [DR-004](dr004.md) | Adopt Diataxis Framework for Documentation Organization | Accepted | 2025-11-03 |
+*[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Reference** | [Explanation](../../explanation/)*
+
+**You are here:** Reference — information-oriented technical descriptions of the system.

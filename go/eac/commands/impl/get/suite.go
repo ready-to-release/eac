@@ -10,7 +10,7 @@ package get
 import (
 	"os"
 
-	get "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -81,7 +81,7 @@ func GetSuite() int {
 	}
 
 	// Use the shared get command helper
-	return get.ExecuteGetCommand(func() (interface{}, error) {
+	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// Load module registry
 		moduleReport, err := contractsreports.GetModuleContracts(repoRoot)
 		if err != nil {

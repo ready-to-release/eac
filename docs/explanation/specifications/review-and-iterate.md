@@ -286,3 +286,8 @@ grep -r "Scenario:" specs/ | cut -d: -f1 | uniq -c | sort -rn
 - [Event Storming](event-storming.md) - Domain discovery
 - [Working with specifications](working-with-specifications.md) - Writing scenarios
 - [Risk Controls](risk-controls.md) - Compliance reviews
+
+## Quick Reference
+
+- [Spec Quality Checklist](../../reference/specifications/spec-quality-checklist.md) - Health indicators
+- [Reviewing Specifications](../../how-to-guides/eac/specifications/reviewing-specifications.md) - How to conduct reviews

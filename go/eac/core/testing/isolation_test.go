@@ -48,17 +48,17 @@ func TestTestIsolation_Setup(t *testing.T) {
 	}
 }
 
-func TestTestIsolation_NoGitDirectory(t *testing.T) {
+func TestTestIsolation_GitDirectory(t *testing.T) {
 	ti := NewTestIsolation()
 	if err := ti.Setup(); err != nil {
 		t.Fatalf("Setup() error = %v", err)
 	}
 	defer ti.Cleanup()
 
-	// Verify NO .git directory is created (this was the old behavior we're removing)
+	// Verify .git directory IS created - required for tests that run git commands
 	gitDir := filepath.Join(ti.IsolatedDir(), ".git")
-	if _, err := os.Stat(gitDir); !os.IsNotExist(err) {
-		t.Error(".git directory should NOT be created - R2R_REPO_ROOT env var is used instead")
+	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+		t.Error(".git directory should be created for isolated test environments")
 	}
 }
 

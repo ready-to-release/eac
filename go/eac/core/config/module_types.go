@@ -10,14 +10,15 @@ type ModuleTypesConfig struct {
 
 // ModuleTypeDef defines a module type
 type ModuleTypeDef struct {
-	Name          string        `yaml:"name"`
-	Description   string        `yaml:"description"`
-	BuildDeps     []string      `yaml:"build_deps"`               // System dependencies required for building
-	Capabilities  []string      `yaml:"capabilities"`
-	TestFramework string        `yaml:"test_framework,omitempty"` // Unit test framework: mocha, jest, pytest, go (default)
-	BDDFramework  string        `yaml:"bdd_framework,omitempty"`  // BDD test framework: godog, tscucumber (default: inferred from build_deps)
-	Build         *BuildConfig  `yaml:"build,omitempty"`
-	Defaults      *TypeDefaults `yaml:"defaults,omitempty"`
+	Name          string              `yaml:"name"`
+	Description   string              `yaml:"description"`
+	BuildDeps     []string            `yaml:"build_deps"`               // System dependencies required for building
+	Capabilities  []string            `yaml:"capabilities"`
+	TestFramework string              `yaml:"test_framework,omitempty"` // Unit test framework: mocha, jest, pytest, go (default)
+	BDDFramework  string              `yaml:"bdd_framework,omitempty"`  // BDD test framework: godog, tscucumber (default: inferred from build_deps)
+	DockerBuild   *DockerBuildConfig  `yaml:"docker_build,omitempty"`   // Docker image build configuration (for docker-build dependency)
+	Build         *BuildConfig        `yaml:"build,omitempty"`
+	Defaults      *TypeDefaults       `yaml:"defaults,omitempty"`
 }
 
 // BuildConfig contains build output configuration for a module type
@@ -43,10 +44,13 @@ const (
 
 // Artifact defines an expected build artifact
 type Artifact struct {
-	Type      string   `yaml:"type"`               // executable, file, directory, marker, image, glob
-	Pattern   string   `yaml:"pattern"`            // Path pattern with variables: {moniker}, {os}, {arch}, {ext}
-	Platforms []string `yaml:"platforms,omitempty"` // For executables: linux, windows, darwin
-	Verify    string   `yaml:"verify,omitempty"`   // Verification mode: current_platform (default), all, any
+	Type        string   `yaml:"type"`                  // executable, file, directory, marker, image, glob
+	Pattern     string   `yaml:"pattern"`               // Path pattern with variables: {moniker}, {os}, {arch}, {ext}
+	ID          string   `yaml:"id,omitempty"`          // Optional explicit ID for metadata override key
+	Platforms   []string `yaml:"platforms,omitempty"`   // For executables: linux, windows, darwin
+	Verify      string   `yaml:"verify,omitempty"`      // Verification mode: current_platform (default), all, any
+	Compression string   `yaml:"compression,omitempty"` // Compression type: none (default), strip, upx
+	DeriveFrom  string   `yaml:"derive_from,omitempty"` // Source artifact pattern to derive from (for compressed variants)
 }
 
 // ArtifactType constants
@@ -65,6 +69,37 @@ const (
 	VerifyAll             = "all"
 	VerifyAny             = "any"
 )
+
+// CompressionType constants
+const (
+	CompressionNone  = ""      // No compression (default)
+	CompressionStrip = "strip" // Strip debug symbols only
+	CompressionUPX   = "upx"   // UPX compression (implies strip)
+)
+
+// DockerBuildConfig contains Docker image build configuration
+type DockerBuildConfig struct {
+	Container   string             `yaml:"container"`             // Container name (references containers/{container}/)
+	Context     string             `yaml:"context"`               // Build context path
+	Dockerfile  string             `yaml:"dockerfile,omitempty"`  // Path to Dockerfile (default: {context}/Dockerfile)
+	Platforms   []string           `yaml:"platforms,omitempty"`   // Target platforms (e.g., linux/amd64, linux/arm64)
+	Tags        []string           `yaml:"tags"`                  // Image tags
+	Load        bool               `yaml:"load,omitempty"`        // Load image to local Docker daemon
+	Push        bool               `yaml:"push,omitempty"`        // Push image to registry
+	Registry    string             `yaml:"registry,omitempty"`    // Registry to push to (if push=true)
+	Cache       *DockerCacheConfig `yaml:"cache,omitempty"`       // Cache configuration
+	SBOM        bool               `yaml:"sbom,omitempty"`        // Generate SBOM
+	Provenance  bool               `yaml:"provenance,omitempty"`  // Generate provenance attestation
+}
+
+// DockerCacheConfig contains Docker build cache configuration
+type DockerCacheConfig struct {
+	Type  string `yaml:"type"`            // "gha" or "registry"
+	Scope string `yaml:"scope,omitempty"` // Cache scope (for GHA cache)
+	From  string `yaml:"from,omitempty"`  // Cache source image (for registry cache)
+	To    string `yaml:"to,omitempty"`    // Cache destination image (for registry cache)
+	Mode  string `yaml:"mode,omitempty"`  // Cache mode: "min" or "max"
+}
 
 // TypeDefaults contains default values for modules of this type.
 // Supports variable substitution: {moniker}, {root}, {type}
@@ -151,6 +186,15 @@ func (c *ModuleTypesConfig) GetPrimaryBuildDep(typeName string) string {
 		return ""
 	}
 	return deps[0]
+}
+
+// GetDockerBuildConfig returns the docker_build configuration for a module type
+func (c *ModuleTypesConfig) GetDockerBuildConfig(typeName string) *DockerBuildConfig {
+	typeDef := c.Get(typeName)
+	if typeDef == nil {
+		return nil
+	}
+	return typeDef.DockerBuild
 }
 
 // GetTestFramework returns the test framework for a module type.
@@ -263,6 +307,24 @@ func (a *Artifact) IsExecutable() bool {
 // IsMarker returns true if this is a marker artifact
 func (a *Artifact) IsMarker() bool {
 	return a.Type == ArtifactTypeMarker
+}
+
+// GetCompression returns the compression type, defaulting to none
+func (a *Artifact) GetCompression() string {
+	if a.Compression == "" {
+		return CompressionNone
+	}
+	return a.Compression
+}
+
+// IsDerived returns true if this artifact is derived from another
+func (a *Artifact) IsDerived() bool {
+	return a.DeriveFrom != ""
+}
+
+// RequiresCompression returns true if this artifact needs compression
+func (a *Artifact) RequiresCompression() bool {
+	return a.Compression == CompressionStrip || a.Compression == CompressionUPX
 }
 
 // GetPostBuildSteps returns the post-build steps for this module type

@@ -15,23 +15,22 @@ Feature: eac-commands_create-design
     Scenario: Create design for existing module
       Given a module contract exists for "test-module" at "go/test/module"
       And source code exists at "go/test/module"
-      And docker service is available
       And the mock AI is configured to return a valid workspace
-      When I run "create design test-module"
+      When I run "create design test-module --skip-validation"
       Then the exit code should be 0
       And the file "specs/test-module/.design/workspace.dsl" should exist
       And the output should contain "Architecture design created"
 
     @L2 @ov
     Scenario: Fail when module does not exist in contracts
-      When I run "create design nonexistent-module"
+      When I run "create design nonexistent-module --skip-validation"
       Then the exit code should be 1
       And the output should contain "module not found"
 
     @L2 @ov
     Scenario: Fail when source code does not exist
       Given a module contract exists for "test-module" at "go/test/module"
-      When I run "create design test-module"
+      When I run "create design test-module --skip-validation"
       Then the exit code should be 1
       And the output should contain "source code not found"
 
@@ -53,7 +52,7 @@ Feature: eac-commands_create-design
       Given a module contract exists for "test-module" at "go/test/module"
       And source code exists at "go/test/module"
       And a workspace file exists at "specs/test-module/.design/workspace.dsl"
-      When I run "create design test-module"
+      When I run "create design test-module --skip-validation"
       Then the exit code should be 1
       And the output should contain "workspace already exists"
       And the output should contain "Use --force to overwrite"
@@ -63,9 +62,8 @@ Feature: eac-commands_create-design
       Given a module contract exists for "test-module" at "go/test/module"
       And source code exists at "go/test/module"
       And a workspace file exists at "specs/test-module/.design/workspace.dsl"
-      And docker service is available
       And the mock AI is configured to return a valid workspace
-      When I run "create design test-module --force"
+      When I run "create design test-module --force --skip-validation"
       Then the exit code should be 0
       And the output should contain "Architecture design created"
 

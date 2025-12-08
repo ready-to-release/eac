@@ -8,11 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 
-	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -37,21 +35,74 @@ func ListMkDocsArtifacts(module *modules.ModuleContract, workspaceRoot string) [
 //   - pdf-dark: PDF with dark theme
 //   - pdf-light: PDF with light theme
 //   - pdf-all: Both dark and light PDFs
+//
 // Multiple books for the same module are built in parallel.
 func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	// Load config to check for book configuration
 	cfg, _ := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if cfg != nil {
 		cfg.LoadBooks(false)
-		// Use filtered books unless --all flag is set
-		var moduleBooks []*config.Book
-		if opts.BuildAll {
-			moduleBooks = cfg.GetBooksByModule(module.Moniker)
-		} else {
-			moduleBooks = cfg.GetDefaultBooksByModule(module.Moniker)
-		}
-		if len(moduleBooks) > 0 {
-			return buildModuleBooks(module, moduleBooks, workspaceRoot, outputDir, logWriter)
+		// Check if module has ANY books defined
+		allBooks := cfg.GetBooksByModule(module.Moniker)
+		if len(allBooks) > 0 {
+			// Module has books - filter based on requested artifacts
+			var moduleBooks []*config.Book
+			if len(opts.RequestedArtifacts) > 0 {
+				// Filter books to only those whose artifacts are requested
+				for _, book := range allBooks {
+					output := book.GetOutput()
+					shouldInclude := false
+
+					// Determine artifact IDs for this book based on output mode
+					// Match the logic from expandBookArtifacts in artifact_helpers.go
+					switch output {
+					case "pdf-dark", "pdf-light":
+						// Artifact ID is the book name
+						for _, reqID := range opts.RequestedArtifacts {
+							if reqID == book.Name {
+								shouldInclude = true
+								break
+							}
+						}
+					case "pdf-all":
+						// Artifact IDs are "{book-name}-dark" and "{book-name}-light"
+						darkID := fmt.Sprintf("%s-dark", book.Name)
+						lightID := fmt.Sprintf("%s-light", book.Name)
+						for _, reqID := range opts.RequestedArtifacts {
+							if reqID == darkID || reqID == lightID {
+								shouldInclude = true
+								break
+							}
+						}
+					case "site":
+						// HTML site - artifact ID is "site" directory
+						for _, reqID := range opts.RequestedArtifacts {
+							if reqID == "site" {
+								shouldInclude = true
+								break
+							}
+						}
+					}
+
+					if shouldInclude {
+						moduleBooks = append(moduleBooks, book)
+					}
+				}
+				if len(moduleBooks) > 0 {
+					Logln(logWriter, "📚 Building %d book(s) based on requested artifacts", len(moduleBooks))
+				}
+			} else {
+				// No specific artifacts requested - use default books
+				moduleBooks = cfg.GetDefaultBooksByModule(module.Moniker)
+			}
+			if len(moduleBooks) > 0 {
+				return buildModuleBooks(module, moduleBooks, workspaceRoot, outputDir, logWriter)
+			}
+			// Module has books but all are non-default - skip with success
+			Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+			Logln(logWriter, "📚 All %d book(s) have default: false - skipping (use --all to build)", len(allBooks))
+			Logln(logWriter, "✅ Build skipped (no default books)")
+			return 0
 		}
 	}
 
@@ -66,61 +117,47 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		return 1
 	}
 
-	// Check for mkdocs.yml at repository root
-	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
-	if _, err := os.Stat(mkdocsConfig); os.IsNotExist(err) {
-		Logln(logWriter, "⚠️  No mkdocs.yml found at: %s", mkdocsConfig)
-		Logln(logWriter, "ℹ️  Skipping MkDocs build")
-		return 0
-	}
-
 	Logln(logWriter, "📚 Building MkDocs site using Docker")
-	Logln(logWriter, "   Config: %s", mkdocsConfig)
-	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
-	// Patch mkdocs.yml as needed:
-	// 1. For site builds: remove PDF-specific plugins (container doesn't have WeasyPrint/Chromium)
-	// 2. For book builds: override docs_dir to use staging directory
-	// IMPORTANT: We write to a temp file and mount it in Docker, never modifying the source file
-	originalConfig, err := os.ReadFile(mkdocsConfig)
-	if err != nil {
-		Logln(logWriter, "❌ Failed to read mkdocs.yml: %v", err)
+	// Check Docker availability first - fail fast if unavailable
+	if !IsDockerAvailable() {
+		errorMsg := "Docker is not available but required for MkDocs builds"
+		if IsDockerInDocker() {
+			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
+		} else {
+			errorMsg += "\nEnsure Docker is installed and the daemon is running"
+		}
+		Logln(logWriter, "❌ %s", errorMsg)
 		return 1
 	}
 
-	patchedConfig := string(originalConfig)
-	needsPatch := false
+	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
-	// Remove PDF plugins for HTML-only builds
-	patchedConfig = removePDFPlugins(patchedConfig)
-	needsPatch = true
-
-	// Override docs_dir for book preprocessing (use staging directory)
+	// Generate mkdocs.yml from site template
+	// docs_dir must be relative to the config file location (outputDir), not workspaceRoot
+	configPath := filepath.Join(outputDir, "mkdocs.yml")
+	relStagingDir := ""
 	if stagingDir != "" {
-		// Get relative path from workspace root to staging dir
-		relStagingDir, _ := filepath.Rel(workspaceRoot, stagingDir)
-		relStagingDir = filepath.ToSlash(relStagingDir) // Use forward slashes for YAML
-		patchedConfig = patchDocsDir(patchedConfig, relStagingDir)
-		needsPatch = true
-		Logln(logWriter, "   Using staging: %s", relStagingDir)
+		relStagingDir, _ = filepath.Rel(outputDir, stagingDir)
+		relStagingDir = filepath.ToSlash(relStagingDir)
+		Logln(logWriter, "   Using staging: %s (relative to config)", relStagingDir)
 	}
-
-	// Write patched config to temp file in output directory (never modify source)
-	var patchedConfigPath string
-	if needsPatch {
-		patchedConfigPath = filepath.Join(outputDir, "mkdocs.yml")
-		if err := os.WriteFile(patchedConfigPath, []byte(patchedConfig), 0644); err != nil {
-			Logln(logWriter, "❌ Failed to write patched mkdocs.yml: %v", err)
-			return 1
-		}
-		Logln(logWriter, "   Patched config: %s", patchedConfigPath)
+	configOpts := books.ConfigOptions{
+		SiteName:     "Documentation",
+		DocsDir:      relStagingDir,
+		OutputFormat: "site",
 	}
+	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
+		return 1
+	}
+	Logln(logWriter, "   Config: %s (from template)", configPath)
 
 	// For Docker-in-Docker: use host path for volume mount
 	// When running inside a container, the Docker daemon runs on the host,
 	// so volume mounts need host paths instead of container paths
 	hostRepoRoot := workspaceRoot
-	isDinD := isDockerInDocker()
+	isDinD := IsDockerInDocker()
 	if isDinD {
 		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
 			hostRepoRoot = hostRoot
@@ -156,19 +193,12 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		return 1
 	}
 
-	// Calculate relative site dir for Docker volume mount
-	// In DinD mode, we need the relative path from container's workspaceRoot
-	// since that maps to the host's repo root
-	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
-	if err != nil {
-		Logln(logWriter, "❌ Failed to calculate relative path: %v", err)
-		return 1
-	}
+	// MkDocs resolves --site-dir relative to the config file directory when using -f
+	// Since both config and site are in outputDir, site-dir is just "site"
+	dockerSiteDir := "site"
 
 	volumeMountPath := hostRepoRoot
-
 	dockerVolume := FormatDockerVolumePath(volumeMountPath)
-	dockerSiteDir := strings.ReplaceAll(relSiteDir, "\\", "/")
 
 	// Check for --accept-warnings flag
 	acceptWarnings := false
@@ -179,23 +209,14 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		}
 	}
 
+	// Get relative config path for Docker (config is already in mounted volume)
+	relConfigPath, _ := filepath.Rel(workspaceRoot, configPath)
+	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
+
 	buildArgs := []string{
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
-	}
-
-	// Mount patched mkdocs.yml over the original (if patched)
-	if patchedConfigPath != "" {
-		var patchedConfigMount string
-		if isDinD {
-			// For DinD, convert to host path
-			relPatchedConfig, _ := filepath.Rel(workspaceRoot, patchedConfigPath)
-			patchedConfigMount = FormatDockerVolumePath(filepath.Join(hostRepoRoot, relPatchedConfig))
-		} else {
-			patchedConfigMount = FormatDockerVolumePath(patchedConfigPath)
-		}
-		buildArgs = append(buildArgs, "-v", patchedConfigMount+":/docs/mkdocs.yml:ro")
 	}
 
 	// In Docker-in-Docker mode, run as current user to avoid permission issues
@@ -212,6 +233,7 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	buildArgs = append(buildArgs,
 		imageName,
 		"mkdocs", "build",
+		"-f", dockerConfigPath,
 		"--site-dir", dockerSiteDir,
 		"--clean",
 	)
@@ -334,38 +356,69 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		}
 	}
 
-	// Build PDF books sequentially (Playwright/Docker are resource-intensive)
-	for _, book := range pdfBooks {
-		bookOutputDir := filepath.Join(outputDir, book.Name)
-		if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
-			Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", book.Name, err)
-			return 1
+	// Build PDF books in parallel (now safe with Docker resource limits)
+	// With --cpus=8 --memory=8g limits, each container won't overwhelm the system
+	if len(pdfBooks) > 0 {
+		Logln(logWriter, "\n🚀 Building %d PDF books in PARALLEL...", len(pdfBooks))
+		var wg sync.WaitGroup
+		results := make(chan int, len(pdfBooks))
+
+		for _, book := range pdfBooks {
+			wg.Add(1)
+			go func(b *config.Book) {
+				defer wg.Done()
+				bookOutputDir := filepath.Join(outputDir, b.Name)
+				if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
+					Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", b.Name, err)
+					results <- 1
+					return
+				}
+
+				// Use buffered writer to avoid interleaved output
+				var bookLog bytes.Buffer
+				exitCode := buildSingleBook(module, b, workspaceRoot, bookOutputDir, &bookLog)
+
+				if exitCode != 0 {
+					// Write log even on failure for debugging
+					logWriter.Write(bookLog.Bytes())
+					results <- exitCode
+					return
+				}
+
+				// Copy PDF to module output root
+				bookOutput := b.GetOutput()
+				themes := []string{}
+				switch bookOutput {
+				case "pdf-dark":
+					themes = []string{"dark"}
+				case "pdf-light":
+					themes = []string{"light"}
+				case "pdf-all":
+					themes = []string{"dark", "light"}
+				}
+
+				for _, theme := range themes {
+					srcPdf := filepath.Join(bookOutputDir, fmt.Sprintf("%s-%s.pdf", b.Name, theme))
+					dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", b.Name, theme))
+					if err := copyFile(srcPdf, dstPdf); err != nil {
+						Logln(&bookLog, "⚠️  Failed to copy PDF to module root: %v", err)
+					} else {
+						Logln(&bookLog, "   📄 %s-%s.pdf → module output root", b.Name, theme)
+					}
+				}
+
+				// Write complete log atomically (build + PDF copy)
+				logWriter.Write(bookLog.Bytes())
+				results <- 0
+			}(book)
 		}
 
-		exitCode := buildSingleBook(module, book, workspaceRoot, bookOutputDir, logWriter)
-		if exitCode != 0 {
-			return exitCode
-		}
+		wg.Wait()
+		close(results)
 
-		// Copy PDF to module output root
-		bookOutput := book.GetOutput()
-		themes := []string{}
-		switch bookOutput {
-		case "pdf-dark":
-			themes = []string{"dark"}
-		case "pdf-light":
-			themes = []string{"light"}
-		case "pdf-all":
-			themes = []string{"dark", "light"}
-		}
-
-		for _, theme := range themes {
-			srcPdf := filepath.Join(bookOutputDir, fmt.Sprintf("%s-%s.pdf", book.Name, theme))
-			dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", book.Name, theme))
-			if err := copyFile(srcPdf, dstPdf); err != nil {
-				Logln(logWriter, "⚠️  Failed to copy PDF to module root: %v", err)
-			} else {
-				Logln(logWriter, "   📄 %s-%s.pdf → module output root", book.Name, theme)
+		for exitCode := range results {
+			if exitCode != 0 {
+				return exitCode
 			}
 		}
 	}
@@ -377,6 +430,18 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 // buildSingleBook builds a single book based on its output configuration
 func buildSingleBook(module *modules.ModuleContract, book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer) int {
 	bookOutput := book.GetOutput()
+
+	// Check Docker availability first - fail fast if unavailable
+	if !IsDockerAvailable() {
+		errorMsg := "Docker is not available but required for book builds"
+		if IsDockerInDocker() {
+			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
+		} else {
+			errorMsg += "\nEnsure Docker is installed and the daemon is running"
+		}
+		Logln(logWriter, "❌ %s", errorMsg)
+		return 1
+	}
 
 	// Determine build mode from book config
 	pdfMode := bookOutput == "pdf-dark" || bookOutput == "pdf-light" || bookOutput == "pdf-all"
@@ -418,31 +483,25 @@ func buildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 }
 
 // preprocessBook runs book preprocessing and returns the staging directory.
-// Acquires a lock on the staging directory to prevent concurrent preprocessing.
+// Uses ephemeral staging inside the build output directory (.staging/).
+// This is rebuilt on every build - no caching, no stale content.
 func preprocessBook(book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer, pdfMode bool) (string, bool) {
-	// Ensure staging base directory exists
-	stagingBase := filepath.Join(workspaceRoot, "out", "staging")
-	if err := os.MkdirAll(stagingBase, 0755); err != nil {
-		Logln(logWriter, "❌ Failed to create staging base directory: %v", err)
-		return "", true
+	// Use ephemeral staging inside build output directory
+	// Example: out/build/repository-report/.staging/
+	stagingDir := filepath.Join(outputDir, ".staging")
+
+	// Clean staging directory on every build (ensures fresh content)
+	if err := os.RemoveAll(stagingDir); err != nil && !os.IsNotExist(err) {
+		Logln(logWriter, "❌ Failed to clean staging directory: %v", err)
+		Logln(logWriter, "   This may indicate file locks or permission issues")
+		Logln(logWriter, "   Try: rm -rf %s", stagingDir)
+		return "", false
 	}
 
-	// Acquire lock for this book's staging directory
-	lock, err := acquireStagingLock(book.Name, stagingBase)
-	if err != nil {
-		Logln(logWriter, "❌ Failed to acquire staging lock for book '%s': %v", book.Name, err)
-		return "", true
-	}
-	// Note: Lock is intentionally NOT released here - it persists for the build duration
-	// The lock file will be cleaned up when the process exits or on next successful build
-	_ = lock // Suppress unused warning - lock is held via file descriptor
-
-	// Use persistent staging directory at out/staging/{book-name}
-	stagingDir := filepath.Join(stagingBase, book.Name)
-
+	// Create fresh staging directory
 	if err := os.MkdirAll(stagingDir, 0755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)
-		return "", true
+		return "", false
 	}
 
 	Logln(logWriter, "📚 Preprocessing book: %s", book.Name)
@@ -451,29 +510,10 @@ func preprocessBook(book *config.Book, workspaceRoot string, outputDir string, l
 	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
-		return "", true
+		return "", false
 	}
 
 	return stagingDir, true
-}
-
-// acquireStagingLock acquires an exclusive lock for a book's staging directory.
-// Returns the lock handle on success. The lock should be held for the duration of the build.
-func acquireStagingLock(bookName string, stagingBase string) (*flock.Flock, error) {
-	lockPath := filepath.Join(stagingBase, fmt.Sprintf(".lock-%s", bookName))
-
-	lock := flock.New(lockPath)
-
-	locked, err := lock.TryLock()
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire lock: %w", err)
-	}
-
-	if !locked {
-		return nil, fmt.Errorf("book '%s' staging is already in use by another process", bookName)
-	}
-
-	return lock, nil
 }
 
 // buildBookWithTheme builds a book as PDF with a specific theme
@@ -487,8 +527,8 @@ func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, works
 
 // buildBookWithThemeAndStaging builds a book as PDF using a pre-computed staging directory
 func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.Book, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
-	// Delegate to existing PDF build logic, passing book name for output naming
-	return buildMkDocsWithThemeAndStaging(module, book.Name, workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
+	// Delegate to existing PDF build logic, passing book metadata for PDF generation
+	return buildMkDocsWithThemeAndStaging(module, book.Name, book.Title, book.Description, workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
 }
 
 // buildBookHTML builds a book as HTML site
@@ -505,44 +545,31 @@ func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceR
 
 // buildHTMLWithStaging builds HTML site using a staging directory
 func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, stagingDir string) int {
-	// Check for mkdocs.yml at repository root
-	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
-	if _, err := os.Stat(mkdocsConfig); os.IsNotExist(err) {
-		Logln(logWriter, "⚠️  No mkdocs.yml found at: %s", mkdocsConfig)
-		Logln(logWriter, "ℹ️  Skipping MkDocs build")
-		return 0
-	}
-
 	Logln(logWriter, "📚 Building MkDocs site using Docker")
-	Logln(logWriter, "   Config: %s", mkdocsConfig)
 
-	// Read and patch mkdocs.yml
-	originalConfig, err := os.ReadFile(mkdocsConfig)
-	if err != nil {
-		Logln(logWriter, "❌ Failed to read mkdocs.yml: %v", err)
-		return 1
-	}
-
-	patchedConfig := removePDFPlugins(string(originalConfig))
-
-	// Override docs_dir for staging
+	// Generate mkdocs.yml from site template
+	// docs_dir must be relative to the config file location (outputDir), not workspaceRoot
+	configPath := filepath.Join(outputDir, "mkdocs.yml")
+	relStagingDir := ""
 	if stagingDir != "" {
-		relStagingDir, _ := filepath.Rel(workspaceRoot, stagingDir)
+		relStagingDir, _ = filepath.Rel(outputDir, stagingDir)
 		relStagingDir = filepath.ToSlash(relStagingDir)
-		patchedConfig = patchDocsDir(patchedConfig, relStagingDir)
-		Logln(logWriter, "   Using staging: %s", relStagingDir)
+		Logln(logWriter, "   Using staging: %s (relative to config)", relStagingDir)
 	}
-
-	// Write patched config
-	patchedConfigPath := filepath.Join(outputDir, "mkdocs.yml")
-	if err := os.WriteFile(patchedConfigPath, []byte(patchedConfig), 0644); err != nil {
-		Logln(logWriter, "❌ Failed to write patched mkdocs.yml: %v", err)
+	configOpts := books.ConfigOptions{
+		SiteName:     "Documentation",
+		DocsDir:      relStagingDir,
+		OutputFormat: "site",
+	}
+	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return 1
 	}
+	Logln(logWriter, "   Config: %s (from template)", configPath)
 
 	// Docker setup
 	hostRepoRoot := workspaceRoot
-	isDinD := isDockerInDocker()
+	isDinD := IsDockerInDocker()
 	if isDinD {
 		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
 			hostRepoRoot = hostRoot
@@ -571,25 +598,18 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 		return 1
 	}
 
-	relSiteDir, _ := filepath.Rel(workspaceRoot, siteDir)
+	// MkDocs resolves --site-dir relative to the config file directory when using -f
+	// Since both config and site are in outputDir, site-dir is just "site"
+	relConfigPath, _ := filepath.Rel(workspaceRoot, configPath)
 	dockerVolume := FormatDockerVolumePath(hostRepoRoot)
-	dockerSiteDir := strings.ReplaceAll(relSiteDir, "\\", "/")
+	dockerSiteDir := "site"
+	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
 
 	buildArgs := []string{
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
 	}
-
-	// Mount patched config
-	var patchedConfigMount string
-	if isDinD {
-		relPatchedConfig, _ := filepath.Rel(workspaceRoot, patchedConfigPath)
-		patchedConfigMount = FormatDockerVolumePath(filepath.Join(hostRepoRoot, relPatchedConfig))
-	} else {
-		patchedConfigMount = FormatDockerVolumePath(patchedConfigPath)
-	}
-	buildArgs = append(buildArgs, "-v", patchedConfigMount+":/docs/mkdocs.yml:ro")
 
 	if isDinD {
 		uid := os.Getuid()
@@ -600,6 +620,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 	buildArgs = append(buildArgs,
 		imageName,
 		"mkdocs", "build",
+		"-f", dockerConfigPath,
 		"--site-dir", dockerSiteDir,
 		"--clean",
 		"--strict",
@@ -631,65 +652,60 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 	}
 
 	// Use module moniker as default book name when no book config is present
-	return buildMkDocsWithThemeAndStaging(module, module.Moniker, workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
+	// No title/description available for legacy builds (pass empty strings)
+	return buildMkDocsWithThemeAndStaging(module, module.Moniker, "", "", workspaceRoot, outputDir, logWriter, theme, cleanBuild, stagingDir)
 }
 
 // buildMkDocsWithThemeAndStaging builds a PDF with a specific theme using a pre-computed staging directory
 // This allows multiple theme builds to share preprocessing work
 // bookName is used for the final PDF naming: {bookName}-{theme}.pdf
-func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName string, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
+// bookTitle and bookDescription are used for the PDF cover page
+func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName string, bookTitle string, bookDescription string, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
 	if theme == "" {
 		theme = "dark"
 	}
 
+	// Default bookTitle to bookName if not provided
+	if bookTitle == "" {
+		bookTitle = bookName
+	}
+
 	Logln(logWriter, "\n=== Building %s: %s (PDF %s) ===", module.Type, module.Moniker, theme)
 
-	// Check for mkdocs.yml at repository root
-	mkdocsConfig := filepath.Join(workspaceRoot, "mkdocs.yml")
-	if _, err := os.Stat(mkdocsConfig); os.IsNotExist(err) {
-		Logln(logWriter, "⚠️  No mkdocs.yml found at: %s", mkdocsConfig)
-		Logln(logWriter, "ℹ️  Skipping MkDocs build")
-		return 0
-	}
-
-	// Read original mkdocs.yml
-	originalConfig, err := os.ReadFile(mkdocsConfig)
-	if err != nil {
-		Logln(logWriter, "❌ Failed to read mkdocs.yml: %v", err)
-		return 1
-	}
-
-	// Patch mkdocs.yml to use the correct theme template path
-	// IMPORTANT: Write to temp file in output directory, never modify source
-	// When using staging directory, use staging-relative path (assets are copied to staging/assets/)
-	themePath := fmt.Sprintf("assets/templates/pdf-%s", theme)
-	if stagingDir == "" {
-		themePath = fmt.Sprintf("docs/assets/templates/pdf-%s", theme)
-	}
-	patchedConfig := patchMkDocsConfig(string(originalConfig), themePath)
-
-	// Override docs_dir for book preprocessing (use staging directory)
+	// Generate mkdocs.yml from PDF template
+	// docs_dir must be relative to the config file location (outputDir), not workspaceRoot
+	configPath := filepath.Join(outputDir, "mkdocs.yml")
+	relStagingDir := ""
 	if stagingDir != "" {
-		relStagingDir, _ := filepath.Rel(workspaceRoot, stagingDir)
+		relStagingDir, _ = filepath.Rel(outputDir, stagingDir)
 		relStagingDir = filepath.ToSlash(relStagingDir)
-		patchedConfig = patchDocsDir(patchedConfig, relStagingDir)
-		Logln(logWriter, "   Using staging: %s", relStagingDir)
+		Logln(logWriter, "   Using staging: %s (relative to config)", relStagingDir)
 	}
 
-	patchedConfigPath := filepath.Join(outputDir, "mkdocs.yml")
-	if err := os.WriteFile(patchedConfigPath, []byte(patchedConfig), 0644); err != nil {
-		Logln(logWriter, "❌ Failed to write patched mkdocs.yml: %v", err)
+	outputFormat := fmt.Sprintf("pdf-%s", theme)
+	configOpts := books.ConfigOptions{
+		SiteName:        bookName,
+		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
+		BookTitle:       bookTitle,
+		BookDescription: bookDescription,
+		SiteURL:         "",
+		DocsDir:         relStagingDir,
+		Theme:           theme,
+		OutputFormat:    outputFormat,
+	}
+	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
+		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
 		return 1
 	}
 
 	Logln(logWriter, "📄 Building MkDocs site with PDF export (%s theme)", theme)
-	Logln(logWriter, "   Config: %s", mkdocsConfig)
-	Logln(logWriter, "   Theme: %s", themePath)
+	Logln(logWriter, "   Config: %s (from template)", configPath)
+	Logln(logWriter, "   Theme: pdf-%s", theme)
 	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
 	// For Docker-in-Docker: use host path for volume mount
 	hostRepoRoot := workspaceRoot
-	isDinD := isDockerInDocker()
+	isDinD := IsDockerInDocker()
 	if isDinD {
 		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
 			hostRepoRoot = hostRoot
@@ -721,35 +737,24 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 		return 1
 	}
 
-	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
-	if err != nil {
-		Logln(logWriter, "❌ Failed to calculate relative path: %v", err)
-		return 1
-	}
-
-	volumeMountPath := hostRepoRoot
-	dockerVolume := FormatDockerVolumePath(volumeMountPath)
-	dockerSiteDir := strings.ReplaceAll(relSiteDir, "\\", "/")
+	// MkDocs resolves --site-dir relative to the config file directory when using -f
+	// Since both config and site are in outputDir, site-dir is just "site"
+	relConfigPath, _ := filepath.Rel(workspaceRoot, configPath)
+	dockerVolume := FormatDockerVolumePath(hostRepoRoot)
+	dockerSiteDir := "site"
+	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
 
 	buildArgs := []string{
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
+		"--cpus", "8",              // Allocate 8 CPU cores for faster rendering
+		"--memory", "8g",           // 8GB RAM for Chromium and mkdocs
+		"--shm-size", "2gb",        // Shared memory for Chromium (prevents crashes)
 		"-e", "ENABLE_PDF_EXPORT=true",
 	}
 
-	// Mount patched mkdocs.yml over the original (never modify source files)
-	var patchedConfigMount string
-	if isDinD {
-		relPatchedConfig, _ := filepath.Rel(workspaceRoot, patchedConfigPath)
-		patchedConfigMount = FormatDockerVolumePath(filepath.Join(hostRepoRoot, relPatchedConfig))
-	} else {
-		patchedConfigMount = FormatDockerVolumePath(patchedConfigPath)
-	}
-	buildArgs = append(buildArgs, "-v", patchedConfigMount+":/docs/mkdocs.yml:ro")
-
 	Logln(logWriter, "   PDF Export: enabled (mkdocs-exporter)")
-	Logln(logWriter, "   Patched config: %s", patchedConfigPath)
 
 	if isDinD {
 		uid := os.Getuid()
@@ -762,6 +767,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 	buildArgs = append(buildArgs,
 		imageName,
 		"mkdocs", "build",
+		"-f", dockerConfigPath,
 		"--site-dir", dockerSiteDir,
 	)
 
@@ -793,7 +799,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 
 	Logln(logWriter, "📄 Merging individual PDFs...")
 
-	if err := mergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, logWriter, isDinD); err != nil {
+	if err := mergePDFs(siteDir, dstPdfPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, bookTitle, bookDescription, logWriter, isDinD); err != nil {
 		Logln(logWriter, "❌ PDF merge failed: %v", err)
 		return 1
 	}
@@ -834,7 +840,8 @@ func copyFile(src, dst string) error {
 
 // mergePDFs merges all individual page PDFs into a single document using pypdf
 // Generates a cover page, table of contents, and hierarchical bookmarks
-func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName string, logWriter io.Writer, isDinD bool) error {
+// bookTitle and bookDescription are used for the cover page content
+func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName string, bookTitle string, bookDescription string, logWriter io.Writer, isDinD bool) error {
 	// Get relative paths for Docker
 	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
 	if err != nil {
@@ -871,6 +878,10 @@ func mergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, ima
 
 	// Python script to generate cover page, TOC, and merge all PDFs
 	// Parses .nav.yml files for proper titles and ordering
+	// Escape book title and description for Python (handle quotes and newlines)
+	escapedTitle := strings.ReplaceAll(strings.ReplaceAll(bookTitle, "\\", "\\\\"), "'", "\\'")
+	escapedDescription := strings.ReplaceAll(strings.ReplaceAll(bookDescription, "\\", "\\\\"), "'", "\\'")
+
 	pythonScript := fmt.Sprintf(`
 import os
 import io
@@ -886,12 +897,42 @@ from reportlab.lib.units import cm
 site_dir = '%s'
 output_path = '%s'
 docs_dir = '%s'  # Staging directory with .nav.yml files
+book_title = '''%s'''  # Book-specific title for cover page
+book_description = '''%s'''  # Book-specific description for cover page
 
 # Dark theme colors (matching PDF dark theme)
 BG_COLOR = HexColor('#0d1117')
 TEXT_COLOR = HexColor('#e6edf3')
 ACCENT_COLOR = HexColor('#58a6ff')
 MUTED_COLOR = HexColor('#8b949e')
+
+def draw_wrapped_text(canvas, text, x, y, max_width, font='Helvetica', size=12, line_height=0.5*cm, align='center'):
+    """Draw text with word wrapping."""
+    canvas.setFont(font, size)
+    words = text.split()
+    lines = []
+    current_line = []
+
+    for word in words:
+        test_line = ' '.join(current_line + [word])
+        if canvas.stringWidth(test_line, font, size) <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+            current_line = [word]
+
+    if current_line:
+        lines.append(' '.join(current_line))
+
+    # Draw lines centered or left-aligned
+    for i, line in enumerate(lines):
+        if align == 'center':
+            canvas.drawCentredString(x, y - (i * line_height), line)
+        else:
+            canvas.drawString(x, y - (i * line_height), line)
+
+    return len(lines)  # Return number of lines drawn
 
 def create_cover_page():
     """Create a cover page PDF with title, subtitle, and metadata."""
@@ -903,25 +944,68 @@ def create_cover_page():
     c.setFillColor(BG_COLOR)
     c.rect(0, 0, width, height, fill=True, stroke=False)
 
-    # Title
+    # Brand Title (top, smaller)
     c.setFillColor(TEXT_COLOR)
-    c.setFont('Helvetica-Bold', 36)
-    c.drawCentredString(width/2, height - 8*cm, 'Ready-to-Release')
+    c.setFont('Helvetica-Bold', 32)
+    c.drawCentredString(width/2, height - 6*cm, 'Ready-to-Release')
 
-    # Subtitle
-    c.setFont('Helvetica', 24)
-    c.drawCentredString(width/2, height - 10*cm, 'Documentation')
+    # Brand Subtitle
+    c.setFont('Helvetica', 20)
+    c.drawCentredString(width/2, height - 7.5*cm, 'Documentation')
+
+    # Book-specific title (larger, prominent, accent color)
+    # Auto-size or wrap if title is too long
+    if book_title:
+        c.setFillColor(ACCENT_COLOR)
+        max_title_width = width - 4*cm  # Leave 2cm margin on each side
+
+        # Try different font sizes to fit title on one line
+        title_font_size = 28
+        c.setFont('Helvetica-Bold', title_font_size)
+        title_width = c.stringWidth(book_title, 'Helvetica-Bold', title_font_size)
+
+        if title_width > max_title_width:
+            # Title too long, try smaller font
+            title_font_size = 24
+            c.setFont('Helvetica-Bold', title_font_size)
+            title_width = c.stringWidth(book_title, 'Helvetica-Bold', title_font_size)
+
+            if title_width > max_title_width:
+                # Still too long, try even smaller
+                title_font_size = 20
+                c.setFont('Helvetica-Bold', title_font_size)
+                title_width = c.stringWidth(book_title, 'Helvetica-Bold', title_font_size)
+
+                if title_width > max_title_width:
+                    # Still too long, wrap it
+                    draw_wrapped_text(c, book_title, width/2, height - 10*cm, max_title_width, 'Helvetica-Bold', 18, 0.6*cm, 'center')
+                else:
+                    c.drawCentredString(width/2, height - 10*cm, book_title)
+            else:
+                c.drawCentredString(width/2, height - 10*cm, book_title)
+        else:
+            c.drawCentredString(width/2, height - 10*cm, book_title)
+
+        c.setFillColor(TEXT_COLOR)  # Reset color
 
     # Horizontal line
     c.setStrokeColor(ACCENT_COLOR)
     c.setLineWidth(2)
-    c.line(4*cm, height - 12*cm, width - 4*cm, height - 12*cm)
+    c.line(4*cm, height - 11.5*cm, width - 4*cm, height - 11.5*cm)
 
-    # Description
+    # Brand description
     c.setFillColor(MUTED_COLOR)
     c.setFont('Helvetica', 14)
-    c.drawCentredString(width/2, height - 14*cm, 'Everything-as-Code Platform')
-    c.drawCentredString(width/2, height - 15*cm, 'for Software Delivery Flows')
+    c.drawCentredString(width/2, height - 13*cm, 'Everything-as-Code Platform')
+    c.drawCentredString(width/2, height - 14*cm, 'for Software Delivery Flows')
+
+    # Book-specific description (wrapped if needed)
+    current_y = height - 16*cm
+    if book_description:
+        c.setFont('Helvetica', 12)
+        c.setFillColor(TEXT_COLOR)
+        lines_drawn = draw_wrapped_text(c, book_description, width/2, current_y, width - 8*cm, 'Helvetica', 12, 0.5*cm, 'center')
+        current_y -= lines_drawn * 0.5*cm
 
     # Date at bottom
     c.setFillColor(MUTED_COLOR)
@@ -1274,7 +1358,7 @@ print(f'  - Cover: {cover_pages} page(s)')
 print(f'  - TOC: {toc_pages} page(s)')
 print(f'  - Content: {current_page - cover_pages - toc_pages} pages')
 print(f'TOC entries: {len(bookmarks)}')
-`, dockerSiteDir, dockerOutputPath, dockerStagingDir)
+`, dockerSiteDir, dockerOutputPath, dockerStagingDir, escapedTitle, escapedDescription)
 
 	args = append(args, imageName, "python3", "-c", pythonScript)
 
@@ -1284,78 +1368,6 @@ print(f'TOC entries: {len(bookmarks)}')
 	}
 
 	return nil
-}
-
-// patchMkDocsConfig patches the custom_template_path in mkdocs.yml
-func patchMkDocsConfig(configContent string, themePath string) string {
-	// Match custom_template_path line and replace its value
-	re := regexp.MustCompile(`(?m)^(\s*custom_template_path:\s*).*$`)
-	return re.ReplaceAllString(configContent, "${1}"+themePath)
-}
-
-// patchDocsDir patches the docs_dir in mkdocs.yml to use staging directory
-// Also fixes stylesheet paths to work with the new docs_dir
-func patchDocsDir(configContent string, newDocsDir string) string {
-	// Match docs_dir line and replace its value
-	re := regexp.MustCompile(`(?m)^(docs_dir:\s*).*$`)
-	result := re.ReplaceAllString(configContent, "${1}"+newDocsDir)
-
-	// Fix stylesheet paths: docs/assets/... -> {stagingDir}/assets/...
-	// The exporter plugin resolves stylesheets relative to project root, not docs_dir
-	// So we need to provide the full path from project root to staging assets
-	result = patchStylesheetPaths(result, newDocsDir)
-
-	return result
-}
-
-// patchStylesheetPaths fixes stylesheet paths for staging directory builds
-// Changes docs/assets/... to {stagingDir}/assets/... since assets are copied to staging/assets/
-// The exporter plugin resolves paths relative to project root, not relative to docs_dir
-func patchStylesheetPaths(configContent string, stagingDir string) string {
-	// Match stylesheet entries with docs/assets prefix
-	re := regexp.MustCompile(`(?m)^(\s*-\s*)docs/assets/(.*)$`)
-	return re.ReplaceAllString(configContent, "${1}"+stagingDir+"/assets/${2}")
-}
-
-// removePDFPlugins removes PDF-specific plugins from mkdocs.yml for site builds
-// This allows using the lean mkdocs-site container without WeasyPrint/Chromium
-func removePDFPlugins(configContent string) string {
-	lines := strings.Split(configContent, "\n")
-	var result []string
-	skipUntilNextPlugin := false
-	pluginIndent := 0
-
-	for _, line := range lines {
-		// Check if this is a plugin entry (starts with "  - ")
-		trimmed := strings.TrimLeft(line, " ")
-		currentIndent := len(line) - len(trimmed)
-
-		if strings.HasPrefix(trimmed, "- mermaid-to-svg:") || strings.HasPrefix(trimmed, "- with-pdf:") || strings.HasPrefix(trimmed, "- exporter:") {
-			// Start skipping this plugin block
-			skipUntilNextPlugin = true
-			pluginIndent = currentIndent
-			continue
-		}
-
-		if skipUntilNextPlugin {
-			// Check if we've reached the next plugin or section
-			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
-				if currentIndent <= pluginIndent && strings.HasPrefix(trimmed, "- ") {
-					// Next plugin entry at same level
-					skipUntilNextPlugin = false
-				} else if currentIndent < pluginIndent {
-					// Back to parent level (e.g., new section)
-					skipUntilNextPlugin = false
-				}
-			}
-		}
-
-		if !skipUntilNextPlugin {
-			result = append(result, line)
-		}
-	}
-
-	return strings.Join(result, "\n")
 }
 
 // checkAndPreprocessBook checks for books.yml and runs preprocessing if a book matches
@@ -1408,59 +1420,4 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	}
 
 	return stagingDir, true
-}
-
-// regenPDFWithWeasyPrint re-renders a PDF from processed HTML using WeasyPrint directly
-// This bypasses mkdocs-with-pdf's internal WeasyPrint call, allowing us to use HTML
-// with embedded CSS (which fixes WeasyPrint's image embedding bug in large documents)
-func regenPDFWithWeasyPrint(htmlPath, pdfPath, hostRepoRoot, workspaceRoot, imageName string, logWriter io.Writer, isDinD bool) error {
-	// Calculate relative paths for Docker
-	relHTMLPath, err := filepath.Rel(workspaceRoot, htmlPath)
-	if err != nil {
-		return fmt.Errorf("calculating relative HTML path: %w", err)
-	}
-	relPDFPath, err := filepath.Rel(workspaceRoot, pdfPath)
-	if err != nil {
-		return fmt.Errorf("calculating relative PDF path: %w", err)
-	}
-
-	// Convert to Docker paths (forward slashes)
-	dockerHTMLPath := "/docs/" + strings.ReplaceAll(relHTMLPath, "\\", "/")
-	dockerPDFPath := "/docs/" + strings.ReplaceAll(relPDFPath, "\\", "/")
-
-	volumeMountPath := hostRepoRoot
-	dockerVolume := FormatDockerVolumePath(volumeMountPath)
-
-	// Build Docker command to run WeasyPrint directly
-	args := []string{
-		"run", "--rm",
-		"-v", dockerVolume + ":/docs",
-		"-w", "/docs",
-	}
-
-	// In DinD mode, run as current user
-	if isDinD {
-		uid := os.Getuid()
-		gid := os.Getgid()
-		args = append(args, "--user", fmt.Sprintf("%d:%d", uid, gid))
-	}
-
-	// Run WeasyPrint via Python
-	pythonCmd := fmt.Sprintf(`
-import weasyprint
-doc = weasyprint.HTML(filename='%s', base_url='/docs/')
-doc.write_pdf('%s')
-print('WeasyPrint regeneration complete')
-`, dockerHTMLPath, dockerPDFPath)
-
-	args = append(args, imageName, "python3", "-c", pythonCmd)
-
-	Logln(logWriter, "   Running WeasyPrint on processed HTML...")
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
-
-	if exitCode != 0 {
-		return fmt.Errorf("WeasyPrint exited with code %d", exitCode)
-	}
-
-	return nil
 }

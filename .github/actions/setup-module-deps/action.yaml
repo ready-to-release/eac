@@ -19,11 +19,11 @@ inputs:
   go-version:
     description: Go version to use
     required: false
-    default: '1.24'
+    default: '1.24.4'
   node-version:
     description: Node.js version to use
     required: false
-    default: '22'
+    default: '20'
 
 outputs:
   deps:
@@ -65,17 +65,46 @@ runs:
         echo "deps=$DEPS" >> $GITHUB_OUTPUT
         echo "Dependencies to setup: $DEPS"
 
-    - name: Setup Go
+    - name: Check if Go is already available
+      id: go-check
       if: contains(steps.resolve.outputs.deps, 'go')
+      shell: bash
+      run: |
+        if command -v go &> /dev/null; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ Go already installed: $(go version)"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "Go not found - will install"
+        fi
+
+    - name: Setup Go
+      if: contains(steps.resolve.outputs.deps, 'go') && steps.go-check.outputs.available != 'true'
       uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.go-version }}
         cache-dependency-path: |
           go/eac/commands/go.sum
           go/eac/core/go.sum
+          go/eac/specs/go.sum
+          go/eac/ai/go.sum
+          go/eac/mcp/commands/go.sum
+
+    - name: Check if Node.js is already available
+      id: node-check
+      if: contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm')
+      shell: bash
+      run: |
+        if command -v node &> /dev/null; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ Node.js already installed: $(node --version)"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "Node.js not found - will install"
+        fi
 
     - name: Setup Node.js
-      if: contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm')
+      if: (contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm')) && steps.node-check.outputs.available != 'true'
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
@@ -98,9 +127,64 @@ runs:
           echo "No package.json found for module $MODULE"
         fi
 
+    - name: Check if Docker Buildx builder supports cache export
+      id: buildx-check
+      if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'docker-build')
+      shell: bash
+      run: |
+        # Check if a buildx builder exists with docker-container driver (supports cache export)
+        if docker buildx inspect 2>/dev/null | grep -q "Driver.*docker-container"; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ Docker Buildx builder with cache export support already configured"
+          docker buildx inspect --bootstrap | head -5
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "Docker Buildx builder needs setup (requires docker-container driver for cache export)"
+        fi
+
     - name: Setup Docker Buildx
-      if: contains(steps.resolve.outputs.deps, 'docker')
+      if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'docker-build')) && steps.buildx-check.outputs.available != 'true'
       uses: docker/setup-buildx-action@v3
+
+    - name: Check if QEMU is already available
+      id: qemu-check
+      if: contains(steps.resolve.outputs.deps, 'docker-build')
+      shell: bash
+      run: |
+        if docker run --rm --privileged multiarch/qemu-user-static --version &> /dev/null 2>&1; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ QEMU already available"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "QEMU not found - will set up"
+        fi
+
+    - name: Setup QEMU
+      if: contains(steps.resolve.outputs.deps, 'docker-build') && steps.qemu-check.outputs.available != 'true'
+      uses: docker/setup-qemu-action@v3
+
+    - name: Check if UPX is available
+      id: upx-check
+      if: contains(steps.resolve.outputs.deps, 'upx')
+      shell: bash
+      run: |
+        if command -v upx &> /dev/null; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ UPX already installed: $(upx --version | head -1)"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "UPX not found - will install"
+        fi
+
+    - name: Install UPX
+      if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true'
+      shell: bash
+      run: |
+        echo "Installing UPX for binary compression..."
+        # UPX is available in Ubuntu repos
+        sudo apt-get update -qq
+        sudo apt-get install -y upx-ucl
+        echo "✓ UPX installed: $(upx --version | head -1)"
 
     - name: Summary
       if: steps.resolve.outputs.deps != ''
@@ -108,6 +192,11 @@ runs:
       env:
         DEPS: ${{ steps.resolve.outputs.deps }}
         MODULE: ${{ inputs.module }}
+        GO_AVAILABLE: ${{ steps.go-check.outputs.available }}
+        NODE_AVAILABLE: ${{ steps.node-check.outputs.available }}
+        BUILDX_AVAILABLE: ${{ steps.buildx-check.outputs.available }}
+        QEMU_AVAILABLE: ${{ steps.qemu-check.outputs.available }}
+        UPX_AVAILABLE: ${{ steps.upx-check.outputs.available }}
       run: |
         echo "### Dependencies Setup for \`${MODULE}\`" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -115,12 +204,42 @@ runs:
         echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
 
         if [[ "$DEPS" == *"go"* ]]; then
-          echo "| Go | Installed |" >> $GITHUB_STEP_SUMMARY
+          if [ "$GO_AVAILABLE" = "true" ]; then
+            echo "| Go | Already available |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Go | Installed |" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+        if [[ "$DEPS" == *"upx"* ]]; then
+          if [ "$UPX_AVAILABLE" = "true" ]; then
+            echo "| UPX | Already available |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| UPX | Installed |" >> $GITHUB_STEP_SUMMARY
+          fi
         fi
         if [[ "$DEPS" == *"node"* ]] || [[ "$DEPS" == *"npm"* ]]; then
-          echo "| Node.js | Installed |" >> $GITHUB_STEP_SUMMARY
+          if [ "$NODE_AVAILABLE" = "true" ]; then
+            echo "| Node.js | Already available |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Node.js | Installed |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "| npm packages | Installed |" >> $GITHUB_STEP_SUMMARY
         fi
-        if [[ "$DEPS" == *"docker"* ]]; then
-          echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
+        if [[ "$DEPS" == *"docker-build"* ]]; then
+          if [ "$BUILDX_AVAILABLE" = "true" ]; then
+            echo "| Docker Buildx | Already configured |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "$QEMU_AVAILABLE" = "true" ]; then
+            echo "| QEMU | Already available |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| QEMU | Configured |" >> $GITHUB_STEP_SUMMARY
+          fi
+        elif [[ "$DEPS" == *"docker"* ]]; then
+          if [ "$BUILDX_AVAILABLE" = "true" ]; then
+            echo "| Docker Buildx | Already configured |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
+          fi
         fi

@@ -12,15 +12,15 @@ inputs:
   go-version:
     description: 'Go version for building commands from source'
     required: false
-    default: '1.24'
+    default: '1.24.4'
   setup-deps:
     description: |
       Setup system dependencies before test:
-      - none: Skip (default, assumes deps already setup)
-      - auto: Auto-detect from module type
+      - auto: Auto-detect from module type (default)
+      - none: Skip (assumes deps already setup)
       - Explicit: go, node, docker (comma-separated)
     required: false
-    default: 'none'
+    default: 'auto'
   suites:
     description: Comma-separated list of test suites to run
     required: false
@@ -34,7 +34,7 @@ inputs:
     required: false
     default: ''
   build-artifact-path:
-    description: 'Path to download build artifacts to. If empty, uses out/build/{module}'
+    description: 'Path to download build artifacts to. If empty, uses out/build/ (includes all dependencies)'
     required: false
     default: ''
   results-artifact-name:
@@ -96,7 +96,7 @@ runs:
         if [ -n "$INPUT_BUILD_ARTIFACT_PATH" ]; then
           echo "build-artifact-path=$INPUT_BUILD_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         else
-          echo "build-artifact-path=out/build/${MODULE}" >> $GITHUB_OUTPUT
+          echo "build-artifact-path=out/build/" >> $GITHUB_OUTPUT
         fi
 
         # Results artifact settings
@@ -114,7 +114,7 @@ runs:
 
     - name: Download Build Artifacts
       if: inputs.download-artifact == 'true'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ steps.vars.outputs.build-artifact-name }}
         path: ${{ steps.vars.outputs.build-artifact-path }}
@@ -158,50 +158,25 @@ runs:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         SUITES: ${{ inputs.suites }}
-        RESULTS_ARTIFACT_NAME: ${{ steps.vars.outputs.results-artifact-name }}
         RUN_ID: ${{ github.run_id }}
         TEST_FAILED: ${{ steps.test.outputs.test-failed }}
+        GH_TOKEN: ${{ github.token }}
       run: |
-        echo "## Test: ${MODULE}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-
-        # Check test result from the test step output
+        # Determine status from test result
         if [ "$TEST_FAILED" = "0" ]; then
-          echo "✅ All tests passed for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
+          STATUS="success"
         else
-          echo "❌ Tests failed for ${MODULE} module." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS pipeline ci summary-link ${RUN_ID} --type test --artifact ${RESULTS_ARTIFACT_NAME} >> $GITHUB_STEP_SUMMARY
+          STATUS="failure"
         fi
-        echo "" >> $GITHUB_STEP_SUMMARY
 
-        echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Suite | Level | Description |" >> $GITHUB_STEP_SUMMARY
-        echo "|-------|-------|-------------|" >> $GITHUB_STEP_SUMMARY
+        # Extract primary suite (first in comma-separated list)
+        PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
 
-        IFS=',' read -ra SUITE_ARRAY <<< "$SUITES"
-        for suite in "${SUITE_ARRAY[@]}"; do
-          suite=$(echo "$suite" | xargs)
-          case "$suite" in
-            commit)
-              echo "| commit | L0-L2 | Unit and integration tests |" >> $GITHUB_STEP_SUMMARY
-              ;;
-            acceptance)
-              echo "| acceptance | L3 | Acceptance verification tests |" >> $GITHUB_STEP_SUMMARY
-              ;;
-            production-verification)
-              echo "| production-verification | L4 | Production smoke tests |" >> $GITHUB_STEP_SUMMARY
-              ;;
-            *)
-              echo "| $suite | - | Custom test suite |" >> $GITHUB_STEP_SUMMARY
-              ;;
-          esac
-        done
+        # Generate comprehensive summary using Go command
+        $COMMANDS show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
 
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Test Details" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-        echo "| Module | \`${MODULE}\` |" >> $GITHUB_STEP_SUMMARY
+        # Add diagnostic link on failure
+        if [ "$STATUS" = "failure" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link $RUN_ID --type test --artifact "test-results-${MODULE}" >> $GITHUB_STEP_SUMMARY
+        fi

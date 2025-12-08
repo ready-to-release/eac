@@ -1,3 +1,23 @@
+<!-- EDITOR
+# Editor: explanation/specifications/tag-reference.md
+
+## Soul
+
+Complete reference for testing taxonomy tags including test levels (L0-L4), verification tags (@ov, @iv, @pv, @piv, @ppv), execution control (@ignore, @Manual), dependencies (@deps:*), and OSCAL risk controls (@control:<id>). Defines tag inheritance and test suites.
+
+## Sections
+
+1. Overview - Tag categories summary
+2. Test Level Tags - @L0 (Fast Unit), @L1 (Unit), @L2 (Emulated System), @L3 (In-Situ Vertical), @L4 (Testing in Production)
+3. Verification Tags - @ov, @iv, @pv, @piv, @ppv (REQUIRED for all Gherkin scenarios)
+4. Test Execution Control Tags - @ignore, @Manual (with git evidence requirements)
+5. System Dependency Tags - @deps:docker, @deps:git, @deps:go, @deps:az-cli
+6. Risk Control Tags - OSCAL format @control:<id>, control families (AC, AU, IA, SC, SI, CM, IR)
+7. Tag Inheritance - Accumulation rules (Feature → Rule → Scenario), override rules for test levels
+8. Test Suites - pre-commit (L0-L2, 5-10min), acceptance (@iv/@ov/@pv, L3, 1-2hrs), production-verification (@L4 + @piv, continuous)
+9. Best Practices - Required tags, organization, manual test evidence in git
+-->
+
 # Tag Reference
 
 Complete reference for the **testing taxonomy tags** used across the test suite.
@@ -85,7 +105,7 @@ Feature: Container Integration Tests
 ### `@L3` - In-Situ Vertical Tests
 
 - **Execution**: PLTE (Production-Like Test Environment)
-- **Scope**: Deployed system (single deployable unit boundaries)
+- **Scope**: Deployed system (single deployable module boundaries)
 - **Dependencies**: All replaced with test doubles
 - **Speed**: Minutes
 - **Usage**: Go tests with `//go:build L3` build tag, Godog features with `@L3` tag (automatically inferred from `@iv` or `@pv`)
@@ -744,3 +764,4 @@ Feature: cli_container-management
 - [Gherkin Concepts](gherkin-concepts.md) - Organizing specifications with tags
 - [Risk Controls](risk-controls.md) - Risk control tagging for compliance
 - [Three-Layer Approach](three-layer-approach.md) - Rule/Scenario/Unit Test integration
+

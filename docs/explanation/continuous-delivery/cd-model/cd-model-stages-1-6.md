@@ -1,3 +1,24 @@
+<!-- EDITOR
+# Editor: explanation/continuous-delivery/cd-model/cd-model-stages-1-6.md
+
+## Soul
+
+Detailed explanation of development and testing stages from Stage 1 (Authoring with Requirements as Code) through Stage 6 (Extended Testing with performance/security/compliance), including PLTE deployment, L0-L3 tests, verification evidence (IV/OV/PV), and Quick Reference links to extracted content.
+
+## Sections
+
+1. Introduction
+2. Stage 1: Authoring Changes
+3. Stage 2: Pre-commit
+4. Stage 3: Merge Request
+5. Stage 4: Commit
+6. Stage 5: Acceptance Testing
+7. Stage 6: Extended Testing
+8. Stage Summary
+9. Next Steps
+10. Quick Reference
+-->
+
 # CD Model: Stages 1-6 (Development to Testing)
 
 ## Introduction
@@ -336,25 +357,25 @@ Acceptance testing runs in a **Production-Like Test Environment (PLTE)** - an ep
 
 PLTEs enable realistic testing without production risk or resource contention.
 
-### Single vs Multiple Deployable Units
+### Single vs Multiple Deployable Modules
 
-The acceptance testing approach differs based on the number of deployable units:
+The acceptance testing approach differs based on the number of deployable modules:
 
-**Single Deployable Unit:**
+**Single Deployable Module:**
 
 ![Single Entry Acceptance Testing](../../../assets/cd-model/acceptance-single-entry.drawio.png)
 
 **This diagram shows single-entry acceptance testing:** Only one change can be in Stage 5 at a time. The pipeline runs continuously on HEAD commits whenever the slot is ready and a commit exists that hasn't been acceptance tested yet. This prevents environment conflicts and ensures orderly progression through the stage.
 
-When the system consists of a single deployable unit (monolith, single service), this single-entry approach is typically sufficient.
+When the system consists of a single deployable module (monolith, single service), this single-entry approach is typically sufficient.
 
-**Multiple Deployable Units:**
+**Multiple Deployable Modules:**
 
 ![Multi-Entry Acceptance Testing](../../../assets/cd-model/acceptance-multi-entry.drawio.png)
 
 **This diagram shows multi-entry acceptance testing:** The pipeline scales up to execute multiple commit verifications in parallel, up to a defined slot limit. Each commit gets its own isolated PLTE environment, enabling parallel progression through Stage 5 without waiting for other changes to complete.
 
-When the system consists of multiple deployable units (microservices, distributed system), this multi-entry approach helps maintain throughput by:
+When the system consists of multiple deployable modules (microservices, distributed system), this multi-entry approach helps maintain throughput by:
 
 - Coordinating deployments across units in parallel
 - Managing interdependencies within isolated environments
@@ -512,3 +533,11 @@ Each stage builds confidence incrementally, with quality gates preventing defect
 - [Environments Architecture](../architecture/environments.md)
 - [Security](../security/security.md)
 - [Repository Layout](../../../reference/repository-layout.md)
+
+## Quick Reference
+
+- [Pre-commit Quality Gates](../../../reference/continuous-delivery/precommit-quality-gates.md) - Stage 2 quality gates
+- [Merge Request Quality Gates](../../../reference/continuous-delivery/merge-request-quality-gates.md) - Stage 3 quality gates
+- [Verification Types](../../../reference/continuous-delivery/verification-types.md) - IV, OV, PV reference
+- [Setting Up Pre-commit](../../../how-to-guides/continuous-delivery/setting-up-precommit.md) - How to configure pre-commit hooks
+- [Writing Commit Messages](../../../how-to-guides/continuous-delivery/writing-commit-messages.md) - Commit message format

@@ -6,7 +6,9 @@ Understanding how to structure and organize Gherkin specification files effectiv
 
 ## Purpose
 
-This guide explains **how to organize Gherkin files** for maintainability and clarity. For understanding BDD, see [Working with specifications](working-with-specifications.md#what-is-bdd).
+This guide explains **how to organize Gherkin files** for maintainability and clarity.
+
+For understanding BDD, see [Working with specifications](working-with-specifications.md#what-is-bdd).
 
 ---
 
@@ -447,3 +449,10 @@ Convert Blue Cards → Rules, Green Cards → Scenarios
 - [Working with specifications](working-with-specifications.md) - Understanding BDD
 - [Three-Layer Approach](./three-layer-approach.md) - Rules/Scenarios/Unit Test integration
 - [Example Mapping](./example-mapping.md) - Discovery workshops
+
+## Quick Reference
+
+- [Gherkin Limits](../../reference/specifications/gherkin-limits.md) - Rule and scenario count guidelines
+- [Feature Naming](../../reference/specifications/feature-naming.md) - Feature naming conventions
+- [Creating Feature Files](../../how-to-guides/eac/specifications/creating-feature-files.md) - How to create new specs
+- [Splitting Large Features](../../how-to-guides/eac/specifications/splitting-large-features.md) - How to refactor large features

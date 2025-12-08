@@ -2,94 +2,92 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ready-to-release.org/schemas/eac-core/repository/0.1.0",
   "title": "Repository Configuration Schema",
-  "description": "Schema for repository-wide path configuration and conventions used by module type defaults",
+  "description": "Schema for repository-level configuration including type, versioning schemes, and workflow policies",
   "type": "object",
   "properties": {
-    "paths": {
-      "$ref": "#/definitions/paths_config",
-      "description": "Repository-specific directory structures"
-    },
-    "conventions": {
-      "$ref": "#/definitions/conventions_config",
-      "description": "Conventional filenames used across the repository"
+    "repository": {
+      "$ref": "#/definitions/repository_config",
+      "description": "Repository-level configuration and metadata"
     }
   },
+  "required": ["repository"],
   "definitions": {
-    "paths_config": {
+    "repository_config": {
       "type": "object",
-      "description": "Repository-specific directory structures used by module type defaults",
+      "description": "Repository-level configuration",
       "properties": {
-        "test_impl_root": {
+        "type": {
           "type": "string",
-          "description": "Test implementation root directory. Used in type defaults as: {test_impl_root}/{moniker}",
-          "default": "go/eac/specs/impl"
+          "enum": ["mono", "poly", "adjunct"],
+          "description": "Repository type: mono (monorepo), poly (polyrepo), adjunct (supporting repo)"
         },
-        "specs_root": {
+        "schemes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["SemVer", "CalVer"]
+          },
+          "description": "Valid versioning schemes that modules can declare",
+          "default": ["SemVer", "CalVer"],
+          "minItems": 1
+        },
+        "trunk_branch": {
           "type": "string",
-          "description": "Specs root directory. Used in type defaults as: {specs_root}/{moniker}",
-          "default": "specs"
+          "description": "Main branch name for trunk-based development",
+          "default": "main",
+          "minLength": 1
         },
-        "templates": {
-          "type": "string",
-          "description": "Templates directory",
-          "default": "templates"
+        "max_branch_age_days": {
+          "type": "integer",
+          "description": "Maximum age in days for feature branches",
+          "minimum": 1,
+          "default": 2
         },
-        "out": {
-          "$ref": "#/definitions/out_config",
-          "description": "Output directory structure"
+        "pr": {
+          "$ref": "#/definitions/pr_config",
+          "description": "Pull request configuration"
+        },
+        "versioning": {
+          "$ref": "#/definitions/versioning_config",
+          "description": "Repository-wide versioning constraints and behavior"
         }
+      },
+      "required": ["type", "trunk_branch"]
+    },
+    "pr_config": {
+      "type": "object",
+      "description": "Pull request workflow configuration",
+      "properties": {
+        "delete_branch_on_merge": {
+          "type": "boolean",
+          "description": "Automatically delete branch after PR merge",
+          "default": true
+        },
+        "merge_strategy": {
+          "type": "string",
+          "enum": ["squash", "merge", "rebase"],
+          "description": "Default merge strategy for pull requests",
+          "default": "squash"
+        }
+      },
+      "default": {
+        "delete_branch_on_merge": true,
+        "merge_strategy": "squash"
       }
     },
-    "out_config": {
+    "versioning_config": {
       "type": "object",
-      "description": "Output directory structure for build artifacts, test results, and logs",
+      "description": "Repository-wide versioning constraints and behavior control",
       "properties": {
-        "root": {
+        "constraint": {
           "type": "string",
-          "description": "Root output directory",
-          "default": "out"
-        },
-        "build": {
-          "type": "string",
-          "description": "Build output directory",
-          "default": "out/build"
-        },
-        "test": {
-          "type": "string",
-          "description": "Test output directory",
-          "default": "out/test"
-        },
-        "logs": {
-          "type": "string",
-          "description": "Logs output directory",
-          "default": "out/logs"
-        },
-        "security": {
-          "type": "string",
-          "description": "Security scan output directory",
-          "default": "out/security"
+          "enum": ["unrestricted", "patch-only", "calver-only"],
+          "description": "Global constraint on version bumping. unrestricted: Allow major, minor, and patch bumps based on conventional commits. patch-only: For semver modules, only allow patch bumps (0.0.x → 0.0.x+1) - stops major/minor bumps during early development. calver-only: Force all modules to use calendar versioning.",
+          "default": "unrestricted"
         }
-      }
-    },
-    "conventions_config": {
-      "type": "object",
-      "description": "Conventional filenames used across the repository",
-      "properties": {
-        "godog_test": {
-          "type": "string",
-          "description": "Godog test file name",
-          "default": "godog_test.go"
-        },
-        "package_json": {
-          "type": "string",
-          "description": "Node.js package file name",
-          "default": "package.json"
-        },
-        "changelog": {
-          "type": "string",
-          "description": "Changelog file name",
-          "default": "CHANGELOG.md"
-        }
+      },
+      "default": {
+        "constraint": "unrestricted"
       }
     }
   }

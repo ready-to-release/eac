@@ -4,7 +4,7 @@ description: Get the EAC commands binary - download from trigger workflow or bui
 inputs:
   go-version:
     description: Go version to use if building from source
-    default: '1.24'
+    default: '1.24.4'
   trigger-run-id:
     description: |
       Run ID of the trigger workflow to download artifact from.
@@ -42,23 +42,25 @@ runs:
         run-id: ${{ inputs.trigger-run-id }}
       continue-on-error: true
 
-    # On Linux/macOS, or if Windows artifact doesn't exist, try standard artifact
-    - name: Download from trigger workflow
+    # On Linux/macOS only - download standard artifact from trigger workflow
+    # NOTE: We intentionally skip this on Windows because the Linux binary cannot execute on Windows.
+    # Windows will fall through to build from source or use cached artifact from current run.
+    - name: Download from trigger workflow (Linux/macOS)
       id: download-trigger
-      if: inputs.trigger-run-id != '' && (runner.os != 'Windows' || steps.download-trigger-windows.outcome == 'failure')
+      if: inputs.trigger-run-id != '' && runner.os != 'Windows'
       uses: actions/download-artifact@v4
       with:
         name: commands-binary
         path: out/tools
         github-token: ${{ github.token }}
         run-id: ${{ inputs.trigger-run-id }}
-      continue-on-error: ${{ runner.os == 'Windows' }}
 
-    # When no trigger-run-id, check if artifact exists before attempting download
+    # Check if artifact exists in current run before attempting download
+    # This runs when: no trigger-run-id provided, OR on Windows when trigger artifact wasn't found
     # This avoids noisy error messages when artifact doesn't exist yet
     - name: Check if artifact exists (current run)
       id: artifact-check
-      if: inputs.trigger-run-id == ''
+      if: inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.download-trigger-windows.outcome == 'failure')
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -86,10 +88,10 @@ runs:
           echo "No artifact available - will build from source"
         fi
 
-    # Only download if artifact exists
+    # Only download if artifact exists in current run
     - name: Download from current run
       id: download-current
-      if: inputs.trigger-run-id == '' && steps.artifact-check.outputs.exists == 'true'
+      if: (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.download-trigger-windows.outcome == 'failure')) && steps.artifact-check.outputs.exists == 'true'
       uses: actions/download-artifact@v4
       with:
         name: ${{ steps.artifact-check.outputs.artifact_name }}
@@ -136,6 +138,9 @@ runs:
         cache-dependency-path: |
           go/eac/commands/go.sum
           go/eac/core/go.sum
+          go/eac/specs/go.sum
+          go/eac/ai/go.sum
+          go/eac/mcp/commands/go.sum
 
     - name: Build from source (Linux/macOS)
       if: runner.os != 'Windows' && steps.check.outputs.available != 'true'

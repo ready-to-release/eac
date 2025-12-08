@@ -12,15 +12,15 @@ inputs:
   go-version:
     description: 'Go version for building commands from source'
     required: false
-    default: '1.24'
+    default: '1.24.4'
   setup-deps:
     description: |
       Setup system dependencies before build:
-      - none: Skip (default, assumes deps already setup)
-      - auto: Auto-detect from module type
+      - auto: Auto-detect from module type (default)
+      - none: Skip (assumes deps already setup)
       - Explicit: go, node, docker (comma-separated)
     required: false
-    default: 'none'
+    default: 'auto'
   artifact-name:
     description: 'Name for the build artifact. If empty, uses build-artifacts-{module}'
     required: false
@@ -100,12 +100,12 @@ runs:
           exit 1
         fi
 
-    - name: Upload Build Artifacts
+    - name: Upload Build Artifacts (including dependencies)
       if: inputs.upload-artifact == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.vars.outputs.artifact-name }}
-        path: ${{ steps.vars.outputs.artifact-path }}
+        path: out/build/
         if-no-files-found: warn
 
     - name: Build Summary
@@ -114,32 +114,22 @@ runs:
       env:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
-        ARTIFACT_NAME: ${{ steps.vars.outputs.artifact-name }}
         RUN_ID: ${{ github.run_id }}
-        COMMIT: ${{ github.sha }}
         BUILD_FAILED: ${{ steps.build.outputs.build-failed }}
+        GH_TOKEN: ${{ github.token }}
       run: |
-        echo "## Build: ${MODULE}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-
+        # Determine status from build result
         if [ "$BUILD_FAILED" = "0" ]; then
-          echo "✅ Module built successfully." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Module | \`${MODULE}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${COMMIT}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          ARTIFACT_COUNT=$(find "out/build/${MODULE}" -type f 2>/dev/null | wc -l | tr -d ' ')
-          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "${ARTIFACT_COUNT} file(s) uploaded as \`${ARTIFACT_NAME}\`" >> $GITHUB_STEP_SUMMARY
+          STATUS="success"
         else
-          echo "❌ Module build failed." >> $GITHUB_STEP_SUMMARY
+          STATUS="failure"
+        fi
+
+        # Generate comprehensive summary using Go command
+        $COMMANDS show build-summary $MODULE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
+
+        # Add diagnostic link on failure
+        if [ "$STATUS" = "failure" ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS pipeline ci summary-link ${RUN_ID} --type build >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link $RUN_ID --type build >> $GITHUB_STEP_SUMMARY
         fi

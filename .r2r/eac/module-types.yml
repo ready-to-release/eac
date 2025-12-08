@@ -7,14 +7,23 @@ types:
     capabilities: [go_module, executable, cross_compile]
     build:
       artifacts:
+        # Standard binaries (amd64)
         - type: executable
           pattern: "{moniker}-{os}-amd64{ext}"
           platforms: [linux, windows, darwin]
           verify: current_platform
+        # Standard binaries (arm64)
         - type: executable
           pattern: "{moniker}-{os}-arm64{ext}"
           platforms: [linux, darwin]
           verify: current_platform
+        # UPX-compressed binaries (amd64, linux/windows only)
+        - type: executable
+          pattern: "{moniker}-{os}-amd64-upx{ext}"
+          platforms: [linux, windows]
+          verify: current_platform
+          compression: upx
+          derive_from: "{moniker}-{os}-amd64{ext}"
     defaults:
       files:
         source: ["**/*.go"]
@@ -47,7 +56,7 @@ types:
 
   - name: go-commands
     description: "Go library with CLI invoke wrapper"
-    build_deps: [go]
+    build_deps: [go, npm]
     capabilities: [go_module, executable]
     build:
       artifacts:
@@ -74,7 +83,9 @@ types:
     build:
       artifacts:
         - type: executable
-          pattern: "{moniker}*"
+          pattern: "{moniker}{ext}"
+          platforms: [linux, windows, darwin]
+          verify: current_platform
     defaults:
       files:
         source: ["**/*.go"]
@@ -105,8 +116,27 @@ types:
 
   - name: r2r-extension
     description: "R2R extension packaged as container image"
-    build_deps: [docker]
+    build_deps: [docker-build]
     capabilities: [container]
+    docker_build:
+      container: "{moniker}"
+      context: "."
+      dockerfile: "containers/{moniker}/Dockerfile"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      tags:
+        - "ghcr.io/ready-to-release/{moniker}:ci"
+        - "ghcr.io/ready-to-release/{moniker}:sha-{short_sha}"
+      push: true
+      registry: ghcr.io
+      cache:
+        type: registry
+        from: "ghcr.io/ready-to-release/{moniker}:buildcache"
+        to: "ghcr.io/ready-to-release/{moniker}:buildcache"
+        mode: max
+      sbom: true
+      provenance: true
     build:
       artifacts:
         - type: image
@@ -119,9 +149,19 @@ types:
 
   # Documentation family
   - name: mkdocs-site
-    description: "Primary MkDocs documentation site (builds via Docker)"
-    build_deps: [docker]
+    description: "Primary MkDocs documentation site (HTML via Docker)"
+    build_deps: [docker-build]
     capabilities: [documentation, serveable, container]
+    docker_build:
+      container: "mkdocs-site"
+      context: "containers/mkdocs-site"
+      dockerfile: "containers/mkdocs-site/Dockerfile"
+      tags:
+        - "cli-mkdocs-site:latest"
+      load: true
+      cache:
+        type: gha
+        scope: "mkdocs-site"
     build:
       artifacts:
         - type: directory
@@ -130,6 +170,31 @@ types:
       files:
         config: ["**/*.nav.yml", "**/*.json"]
         assets: ["**/*.md", "assets/**", "LICENSE"]
+      repo:
+        specs: []
+
+  - name: mkdocs-pdf
+    description: "MkDocs PDF documentation (PDF via Docker)"
+    build_deps: [docker-build]
+    capabilities: [documentation, container]
+    docker_build:
+      container: "mkdocs-pdf"
+      context: "containers/mkdocs-pdf"
+      dockerfile: "containers/mkdocs-pdf/Dockerfile"
+      tags:
+        - "cli-mkdocs-pdf:latest"
+      load: true
+      cache:
+        type: gha
+        scope: "mkdocs-pdf"
+    build:
+      artifacts:
+        - type: file
+          pattern: "*.pdf"
+    defaults:
+      files:
+        config: ["**/*.nav.yml", "**/*.json"]
+        assets: ["**/*"]
       repo:
         specs: []
 
@@ -223,6 +288,17 @@ types:
     defaults:
       files:
         config: ["*.json", "*.md"]
+
+  - name: release
+    description: "Release notes and changelogs"
+    build_deps: []
+    capabilities: []
+    build:
+      artifacts: []
+    defaults:
+      files:
+        source: ["**/*.md", "**/CHANGELOG.md"]
+        changelog: CHANGELOG.md
         workflows:
           ci: ""
           release: ""

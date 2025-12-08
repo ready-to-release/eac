@@ -1,5 +1,5 @@
-//go:build L2 && ov
-// +build L2,ov
+//go:build L2
+// +build L2
 
 package conf
 
@@ -1007,13 +1007,18 @@ func TestUserSpecificConfigDiscovery(t *testing.T) {
 	err := os.Mkdir(gitDir, 0755)
 	require.NoError(t, err, "Failed to create .git directory")
 
+	// Create .r2r directory for config files
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	err = os.Mkdir(r2rDir, 0755)
+	require.NoError(t, err, "Failed to create .r2r directory")
+
 	// Create different configuration files with different content to verify priority
 	configs := map[string]string{
 		"r2r-cli.yml": `extensions:
   - name: "default-ext"
     image: "default:latest"`,
 		"r2r-cli.local.yml": `extensions:
-  - name: "local-ext" 
+  - name: "local-ext"
     image: "local:latest"`,
 		"r2r-cli.personal.yml": `extensions:
   - name: "personal-ext"
@@ -1064,15 +1069,15 @@ func TestUserSpecificConfigDiscovery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Clean up any existing config files
+			// Clean up any existing config files (in .r2r directory)
 			configFiles := []string{"r2r-cli.yml", "r2r-cli.local.yml", "r2r-cli.personal.yml", "r2r-cli.dev.yml"}
 			for _, configFile := range configFiles {
-				os.Remove(filepath.Join(tempDir, configFile))
+				os.Remove(filepath.Join(r2rDir, configFile))
 			}
 
-			// Create only the files specified for this test
+			// Create only the files specified for this test (in .r2r directory)
 			for _, filename := range tt.filesToCreate {
-				configPath := filepath.Join(tempDir, filename)
+				configPath := filepath.Join(r2rDir, filename)
 				err := os.WriteFile(configPath, []byte(configs[filename]), 0644)
 				require.NoError(t, err, "Failed to create config file: %s", filename)
 			}
@@ -1105,6 +1110,7 @@ func TestUserSpecificConfigDiscovery(t *testing.T) {
 // TestGetConfigFileCandidates tests the configuration file candidate generation
 func TestGetConfigFileCandidates(t *testing.T) {
 	tempDir := t.TempDir()
+	r2rDir := filepath.Join(tempDir, ".r2r")
 
 	candidates := getConfigFileCandidates(tempDir)
 
@@ -1113,7 +1119,7 @@ func TestGetConfigFileCandidates(t *testing.T) {
 	assert.GreaterOrEqual(t, len(candidates), 4, "Should have at least 4 candidates")
 	assert.LessOrEqual(t, len(candidates), 5, "Should have at most 5 candidates")
 
-	// Check that specific files are included in the right order
+	// Check that specific files are included in the right order (now in .r2r directory)
 	expectedFiles := []string{
 		"r2r-cli.local.yml",
 		"r2r-cli.personal.yml",
@@ -1121,12 +1127,12 @@ func TestGetConfigFileCandidates(t *testing.T) {
 	}
 
 	for i, expectedFile := range expectedFiles {
-		expectedPath := filepath.Join(tempDir, expectedFile)
+		expectedPath := filepath.Join(r2rDir, expectedFile)
 		assert.Equal(t, expectedPath, candidates[i], "Candidate %d should be %s", i, expectedFile)
 	}
 
-	// Repository default should be last
-	expectedDefault := filepath.Join(tempDir, "r2r-cli.yml")
+	// Repository default should be last (in .r2r directory)
+	expectedDefault := filepath.Join(r2rDir, "r2r-cli.yml")
 	assert.Equal(t, expectedDefault, candidates[len(candidates)-1], "Repository default should be last")
 }
 
@@ -1161,13 +1167,23 @@ func TestUserSpecificConfigPermissionError(t *testing.T) {
 		t.Skip("Skipping permission test in CI environment")
 	}
 
+	// Skip on Windows as file permissions work differently
+	if os.PathSeparator == '\\' {
+		t.Skip("Skipping permission test on Windows")
+	}
+
 	tempDir := t.TempDir()
 	gitDir := filepath.Join(tempDir, ".git")
 	err := os.Mkdir(gitDir, 0755)
 	require.NoError(t, err)
 
-	// Create a config file with no read permissions
-	configPath := filepath.Join(tempDir, "r2r-cli.local.yml")
+	// Create .r2r directory for config files
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	err = os.Mkdir(r2rDir, 0755)
+	require.NoError(t, err)
+
+	// Create a config file with no read permissions (in .r2r directory)
+	configPath := filepath.Join(r2rDir, "r2r-cli.local.yml")
 	err = os.WriteFile(configPath, []byte("extensions: []"), 0644)
 	require.NoError(t, err)
 
@@ -1204,8 +1220,13 @@ func TestConfigDebugLogging(t *testing.T) {
 	err := os.Mkdir(gitDir, 0755)
 	require.NoError(t, err)
 
-	// Create a local config file
-	configPath := filepath.Join(tempDir, "r2r-cli.local.yml")
+	// Create .r2r directory for config files
+	r2rDir := filepath.Join(tempDir, ".r2r")
+	err = os.Mkdir(r2rDir, 0755)
+	require.NoError(t, err)
+
+	// Create a local config file (in .r2r directory)
+	configPath := filepath.Join(r2rDir, "r2r-cli.local.yml")
 	configContent := `extensions:
   - name: "test-ext"
     image: "test:latest"`

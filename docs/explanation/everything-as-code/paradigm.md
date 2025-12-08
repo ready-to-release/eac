@@ -1,3 +1,31 @@
+<!-- EDITOR
+# Editor: explanation/everything-as-code/paradigm.md
+
+## Soul
+
+Deep dive into what "Everything as Code" means practically, extending beyond infrastructure-as-code to specifications, documentation, compliance, policy, and architecture, explaining the three fundamental changes this creates.
+
+## Sections
+
+1. What "Everything as Code" Means
+   - Not Just Infrastructure
+   - The Core Principle
+2. The Three Fundamental Changes
+   - Single Timeline for Traceability
+   - Building Shared Language: Domain-Driven Design
+   - Collaboration Through Executable Specifications
+   - Continuous Automation With Every Change
+3. The Value Proposition
+4. Key Principles
+   - Version Everything
+   - Make It Executable
+   - Automate Validation
+   - Capture Evidence Continuously
+   - Single Source of Truth
+5. References
+
+-->
+
 # The "Everything as Code" Paradigm
 
 > **What it means to treat everything as version-controlled, executable artifacts**
@@ -135,7 +163,7 @@ flowchart LR
 - Single shared language (Gherkin)
 - Readable by all stakeholders
 - Executable by automation
-- Impossible to drift from implementation
+- Significantly reduces drift from implementation
 - Immediate feedback on misunderstanding
 
 **In this project:**

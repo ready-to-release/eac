@@ -15,9 +15,13 @@ import (
 )
 
 func init() {
-	// Register handler for "docker" build system
+	// Register handler for "docker" build system (legacy)
 	RegisterSystem("docker", BuildDockerModule)
 	RegisterSystemArtifacts("docker", ListDockerArtifacts)
+
+	// Register handler for "docker-build" system (new: uses docker_build config from module type)
+	RegisterSystem("docker-build", BuildDockerBuildModule)
+	RegisterSystemArtifacts("docker-build", ListDockerBuildArtifacts)
 }
 
 // ListDockerArtifacts returns the artifacts that would be produced by building this Docker module
@@ -35,9 +39,9 @@ func BuildDockerModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	// Check if Docker is available before attempting to build
-	if !isDockerAvailable() {
+	if !IsDockerAvailable() {
 		Logln(logWriter, "❌ Docker is not available")
-		if isDockerInDocker() {
+		if IsDockerInDocker() {
 			Logln(logWriter, "   Container detected but Docker socket not mounted")
 			Logln(logWriter, "   Ensure the Docker socket is mounted (-v /var/run/docker.sock:/var/run/docker.sock)")
 		} else {
@@ -136,7 +140,7 @@ func getGitShortSHA(workspaceRoot string) string {
 // buildDockerLocal builds a Docker image locally using BuildKit for cache support
 func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath string, tags []string, logWriter io.Writer) int {
 	// Check for Docker-in-Docker mode
-	isDinD := isDockerInDocker()
+	isDinD := IsDockerInDocker()
 	var contextPath, dockerfileArg string
 
 	if isDinD {
@@ -207,13 +211,23 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 		ciPlatforms = cfg.Handlers.GetCIPlatformsString()
 	}
 
+	// Check if we're in GitHub Actions (has GHA cache available)
+	isGitHubActions := os.Getenv("GITHUB_ACTIONS") == "true"
+
 	// Build docker command with all tags for single-platform
 	Logln(logWriter, "\n--- CI Mode: Building single-platform for testing ---")
 	args := []string{"buildx", "build", "--platform", "linux/amd64"}
 	for _, tag := range tags {
 		args = append(args, "-t", tag)
 	}
-	args = append(args, "-f", dockerfilePath, "--cache-from", "type=gha", "--cache-to", "type=gha,mode=max", "--load", ".")
+	args = append(args, "-f", dockerfilePath)
+
+	// Only use GitHub Actions cache when actually running in GitHub Actions
+	if isGitHubActions {
+		args = append(args, "--cache-from", "type=gha", "--cache-to", "type=gha,mode=max")
+	}
+
+	args = append(args, "--load", ".")
 
 	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
 
@@ -232,7 +246,14 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 	for _, tag := range tags {
 		args = append(args, "-t", tag)
 	}
-	args = append(args, "-f", dockerfilePath, "--cache-from", "type=gha", "-o", fmt.Sprintf("type=oci,dest=%s", ociArchivePath), ".")
+	args = append(args, "-f", dockerfilePath)
+
+	// Only use GitHub Actions cache when actually running in GitHub Actions
+	if isGitHubActions {
+		args = append(args, "--cache-from", "type=gha")
+	}
+
+	args = append(args, "-o", fmt.Sprintf("type=oci,dest=%s", ociArchivePath), ".")
 
 	exitCode = RunCommandWithLog(workspaceRoot, logWriter, "docker", args...)
 
@@ -260,12 +281,4 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 	}
 
 	return 0
-}
-
-// isDockerAvailable checks if Docker daemon is accessible
-func isDockerAvailable() bool {
-	cmd := exec.Command("docker", "info")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run() == nil
 }

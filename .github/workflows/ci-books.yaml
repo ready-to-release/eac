@@ -43,88 +43,11 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and cache MkDocs PDF image
-        uses: docker/build-push-action@v6
+      - name: Build Module
+        uses: ./.github/actions/build-module
         with:
-          context: ./containers/mkdocs-pdf
-          file: ./containers/mkdocs-pdf/Dockerfile
-          tags: cli-mkdocs-pdf:latest
-          load: true
-          cache-from: type=gha,scope=mkdocs-pdf
-          cache-to: type=gha,mode=max,scope=mkdocs-pdf
-
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
-        with:
+          module: books
           trigger-run-id: ${{ inputs.trigger_run_id }}
-
-      - name: Build PDF Books
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          echo "Building PDF documentation (output mode from books.yml)..."
-          $COMMANDS build books
-
-      - name: Verify PDF outputs
-        id: verify
-        run: |
-          # Each book has its own output directory
-          BOOKS_DIR="out/build/books"
-
-          echo "Checking for PDF outputs..."
-
-          # Find all PDFs in the books output directory
-          PDF_COUNT=$(find "$BOOKS_DIR" -name "*.pdf" 2>/dev/null | wc -l)
-
-          if [ "$PDF_COUNT" -eq 0 ]; then
-            echo "::error::No PDF files found in $BOOKS_DIR"
-            exit 1
-          fi
-
-          echo "PDF books built successfully:"
-          find "$BOOKS_DIR" -name "*.pdf" -exec du -h {} \; | while read size file; do
-            echo "  $file: $size"
-          done
-
-          echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v5
-        with:
-          name: build-artifacts-books
-          path: out/build/books/**
-
-      - name: Build Summary
-        if: always()
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "## Build: books" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "PDF documentation books built successfully." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### PDF Books" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Book | Size |" >> $GITHUB_STEP_SUMMARY
-            echo "|------|------|" >> $GITHUB_STEP_SUMMARY
-            find out/build/books -name "*.pdf" -exec sh -c 'echo "| $(basename {}) | $(du -h {} | cut -f1) |"' \; >> $GITHUB_STEP_SUMMARY
-          else
-            echo "PDF book build failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
-            echo "- Docker image build failure" >> $GITHUB_STEP_SUMMARY
-            echo "- WeasyPrint rendering errors" >> $GITHUB_STEP_SUMMARY
-            echo "- Book preprocessing failures" >> $GITHUB_STEP_SUMMARY
-            echo "- Missing PDF template styles" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type build >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Artifacts uploaded as \`build-artifacts-books\`" >> $GITHUB_STEP_SUMMARY
 
   test:
     name: Test
@@ -135,64 +58,22 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
+      - name: Test Module
+        uses: ./.github/actions/test-module
         with:
+          module: books
           trigger-run-id: ${{ inputs.trigger_run_id }}
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v6
-        with:
-          name: build-artifacts-books
-          path: out/build/books
-
-      - name: Test Module (Commit Suite - L0-L2)
-        run: ${{ steps.commands.outputs.commands-path }} test books --suite commit
-
-      - name: Test Module (Acceptance Suite - L3)
-        # Skip acceptance tests for PRs - only run on main/release branches
-        if: ${{ !startsWith(inputs.ref, 'refs/pull/') }}
-        run: ${{ steps.commands.outputs.commands-path }} test books --suite acceptance
-
-      - name: Test Summary
-        if: always()
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          echo "## Test: books" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "PDF book validation tests passed." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "PDF book validation tests failed." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type books --artifact build-artifacts-books >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Suite | Level | Description |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|-------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| commit | L0-L2 | Unit and integration tests |" >> $GITHUB_STEP_SUMMARY
-          echo "| acceptance | L3 | Acceptance verification tests |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Checks Performed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- PDF file integrity" >> $GITHUB_STEP_SUMMARY
-          echo "- Book preprocessing validation" >> $GITHUB_STEP_SUMMARY
-          echo "- Generated content presence" >> $GITHUB_STEP_SUMMARY
+          # PRs run commit suite only; main/release branches run full suite
+          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
 
   trigger-release:
     name: Trigger Release
     needs: test
     runs-on: ubuntu-latest
     # Only trigger release on main branch, NEVER for PRs
+    # (test job will be skipped if no PDFs built, which also skips this job)
     if: |
-      (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') &&
-      !startsWith(inputs.ref || github.ref, 'refs/pull/')
+      (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') && !startsWith(inputs.ref || github.ref, 'refs/pull/')
     steps:
       - name: Trigger release workflow
         run: |

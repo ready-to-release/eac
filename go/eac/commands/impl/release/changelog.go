@@ -221,7 +221,7 @@ func ReleaseChangelog() int {
 	if defs.IsPatchOnly() {
 		maxBump = changelog.BumpPatch
 		if forceBreaking {
-			log.Warn("--breaking ignored due to patch-only constraint in .r2r/definitions.yml")
+			log.Warn("--breaking ignored due to patch-only constraint in .r2r/eac/repository.yml")
 			forceBreaking = false
 		}
 	}
@@ -267,7 +267,7 @@ func ReleaseChangelog() int {
 	log.Infof("Current version: %s", currentVersion)
 	log.Infof("New version: %s", newVersion)
 	if defs.IsPatchOnly() && versionType == changelog.Semver {
-		log.Info("Version constraint: patch-only (from .r2r/definitions.yml)")
+		log.Info("Version constraint: patch-only (from .r2r/eac/repository.yml)")
 	}
 	log.Infof("Commits analyzed: %d", len(commits))
 	log.Infof("Module commits: %d", len(filteredCommits))

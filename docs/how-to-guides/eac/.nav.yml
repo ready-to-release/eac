@@ -1,0 +1,8 @@
+title: EAC
+nav:
+  - index.md
+  - commands
+  - specifications
+  - configuration
+  - modules
+  - creating-commands.md

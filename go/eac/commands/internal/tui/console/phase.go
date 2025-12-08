@@ -10,21 +10,29 @@ const (
 	PhaseInit Phase = iota
 	// PhaseRun is the execution phase (parallel workers running)
 	PhaseRun
-	// PhaseEnd is the completion phase (summary, results)
-	PhaseEnd
+	// PhaseSummary is the summary phase (final results, statistics, next steps)
+	PhaseSummary
+)
+
+// Phase display names
+const (
+	PhaseNameInitialization = "Initialization"
+	PhaseNameRun            = "Run"
+	PhaseNameSummary        = "Summary"
+	PhaseNameUnknown        = "Unknown"
 )
 
 // String returns the display name for a phase
 func (p Phase) String() string {
 	switch p {
 	case PhaseInit:
-		return "Init"
+		return PhaseNameInitialization
 	case PhaseRun:
-		return "Run"
-	case PhaseEnd:
-		return "End"
+		return PhaseNameRun
+	case PhaseSummary:
+		return PhaseNameSummary
 	default:
-		return "Unknown"
+		return PhaseNameUnknown
 	}
 }
 
@@ -58,7 +66,7 @@ func (s PhaseStatus) Icon() string {
 	}
 }
 
-// Pane represents a single pane in the 3-pane layout
+// Pane represents a single pane in the 2-pane layout
 type Pane struct {
 	Phase     Phase
 	Status    PhaseStatus
@@ -66,14 +74,20 @@ type Pane struct {
 	Buffer    *RingBuffer // Output lines for this pane
 	StartTime time.Time   // When this phase started
 	EndTime   time.Time   // When this phase ended (zero if not complete)
+
+	// Scroll state for mouse wheel support
+	scrollOffset int  // Lines scrolled back from bottom (0 = showing most recent)
+	maxScroll    int  // Maximum scroll offset (updated when buffer changes)
+	autoScroll   bool // Whether to auto-scroll to bottom on new content
 }
 
 // NewPane creates a new pane for the given phase
 func NewPane(phase Phase, bufferSize int) *Pane {
 	return &Pane{
-		Phase:  phase,
-		Status: PhasePending,
-		Buffer: NewRingBuffer(bufferSize),
+		Phase:      phase,
+		Status:     PhasePending,
+		Buffer:     NewRingBuffer(bufferSize),
+		autoScroll: true, // Start with auto-scroll enabled
 	}
 }
 
@@ -109,4 +123,39 @@ func (p *Pane) HeaderText() string {
 	}
 
 	return icon + " " + name
+}
+
+// ScrollUp moves the viewport up (shows older content)
+func (p *Pane) ScrollUp(lines int) {
+	p.scrollOffset += lines
+	if p.scrollOffset > p.maxScroll {
+		p.scrollOffset = p.maxScroll
+	}
+	p.autoScroll = false // Disable auto-scroll when user manually scrolls
+}
+
+// ScrollDown moves the viewport down (shows newer content)
+func (p *Pane) ScrollDown(lines int) {
+	p.scrollOffset -= lines
+	if p.scrollOffset <= 0 {
+		p.scrollOffset = 0
+		p.autoScroll = true // Re-enable auto-scroll at bottom
+	}
+}
+
+// UpdateMaxScroll recalculates maximum scroll based on buffer size and pane height
+func (p *Pane) UpdateMaxScroll(paneHeight int) {
+	totalLines := p.Buffer.Count()
+	p.maxScroll = totalLines - paneHeight
+	if p.maxScroll < 0 {
+		p.maxScroll = 0
+	}
+
+	// If buffer wrapped and scroll is now invalid, adjust it
+	if p.scrollOffset > p.maxScroll {
+		p.scrollOffset = p.maxScroll
+		if p.scrollOffset == 0 {
+			p.autoScroll = true
+		}
+	}
 }

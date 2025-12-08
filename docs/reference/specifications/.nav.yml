@@ -1,3 +1,9 @@
 title: Specifications
 nav:
+  - tag-reference.md
+  - gherkin-limits.md
+  - feature-naming.md
+  - example-mapping-cards.md
+  - spec-quality-checklist.md
+  - canon-tdd-workflow.md
   - three-layered-testing-structure.md

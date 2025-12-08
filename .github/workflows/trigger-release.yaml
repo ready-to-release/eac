@@ -1,0 +1,195 @@
+# Automated Release Workflow
+#
+# This workflow detects merged release commits, creates git tags, and triggers
+# release workflows via workflow_dispatch.
+#
+# When a "release this" changelog update is merged to main, this workflow:
+#   1. Detects the new version in the changelog that doesn't have a tag
+#   2. Creates and pushes the git tag
+#   3. Triggers the module's release workflow via workflow_dispatch
+#
+# Note: We use workflow_dispatch instead of relying on tag push events because
+# tags created with GITHUB_TOKEN don't trigger push:tags workflows (by design).
+# See: https://github.blog/changelog/2022-09-08-github-actions-use-github_token-with-workflow_dispatch-and-repository_dispatch/
+#
+# Flow:
+#   1. Developer runs `release this r2r-cli` locally
+#   2. Developer commits changelog, creates PR, gets review, merges
+#   3. This workflow runs on push to main
+#   4. Detects new version in changelog without corresponding tag
+#   5. Creates tag (e.g., r2r-cli/0.1.0) and pushes it
+#   6. Dispatches release workflow (e.g., release-r2r-cli.yaml) with version input
+#
+# Can also be triggered manually to check status or force tag creation.
+
+name: "Release Trigger"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'release/*/CHANGELOG.md'
+
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Module to check (or "all")'
+        required: true
+        default: 'all'
+        type: choice
+        # Note: Update this list when adding new release workflows (release-*.yaml)
+        # The actual dispatch logic dynamically discovers workflows
+        options:
+          - all
+          - r2r-cli
+          - ext-eac
+          - docs
+      dry_run:
+        description: 'Dry run (check only, no tag creation)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  actions: write  # Required to trigger workflow_dispatch on release workflows
+
+jobs:
+  check-and-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Check for pending tags
+        id: check
+        run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.module }}" = "all" ]; then
+              RESULT=$($COMMANDS release tag-pending --all)
+            else
+              RESULT=$($COMMANDS release tag-pending ${{ inputs.module }})
+            fi
+          else
+            # Push event - check all modules
+            RESULT=$($COMMANDS release tag-pending --all)
+          fi
+
+          echo "Tag pending check result:"
+          echo "$RESULT" | jq .
+
+          # Handle both single module and multi-module responses
+          if echo "$RESULT" | jq -e '.has_pending' > /dev/null 2>&1; then
+            # Multi-module response
+            HAS_PENDING=$(echo "$RESULT" | jq -r '.has_pending')
+            MODULES_JSON=$(echo "$RESULT" | jq -c '[.results[] | select(.needs_tag == true)]')
+          else
+            # Single module response
+            NEEDS_TAG=$(echo "$RESULT" | jq -r '.needs_tag')
+            if [ "$NEEDS_TAG" = "true" ]; then
+              HAS_PENDING="true"
+              MODULES_JSON=$(echo "[$RESULT]")
+            else
+              HAS_PENDING="false"
+              MODULES_JSON="[]"
+            fi
+          fi
+
+          echo "has_pending=$HAS_PENDING" >> $GITHUB_OUTPUT
+          echo "modules_json=$MODULES_JSON" >> $GITHUB_OUTPUT
+
+      - name: Create tags
+        if: steps.check.outputs.has_pending == 'true' && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create and push tags for each module
+          echo '${{ steps.check.outputs.modules_json }}' | jq -c '.[]' | while read -r item; do
+            MODULE=$(echo "$item" | jq -r '.module')
+            TAG=$(echo "$item" | jq -r '.tag')
+            VERSION=$(echo "$item" | jq -r '.version')
+
+            echo "Creating tag: $TAG"
+            git tag -a "$TAG" -m "Release $MODULE v$VERSION"
+            git push origin "$TAG"
+            echo "✅ Pushed tag: $TAG"
+          done
+
+      - name: Trigger release workflows
+        if: steps.check.outputs.has_pending == 'true' && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
+        run: |
+          # Trigger release workflows via workflow_dispatch
+          # This is necessary because tag pushes from GITHUB_TOKEN don't trigger push:tags workflows
+          # See: https://github.blog/changelog/2022-09-08-github-actions-use-github_token-with-workflow_dispatch-and-repository_dispatch/
+
+          echo '${{ steps.check.outputs.modules_json }}' | jq -c '.[]' | while read -r item; do
+            MODULE=$(echo "$item" | jq -r '.module')
+            VERSION=$(echo "$item" | jq -r '.version')
+
+            # Dynamically discover release workflow for this module
+            WORKFLOW="release-${MODULE}.yaml"
+
+            if [ -f ".github/workflows/$WORKFLOW" ]; then
+              echo "Triggering $WORKFLOW for module $MODULE (version $VERSION)"
+
+              # Check if workflow accepts version input by looking for version in workflow_dispatch inputs
+              if grep -q "inputs:" ".github/workflows/$WORKFLOW" && grep -A 10 "inputs:" ".github/workflows/$WORKFLOW" | grep -q "version:"; then
+                gh workflow run "$WORKFLOW" -f version="$VERSION"
+              else
+                gh workflow run "$WORKFLOW"
+              fi
+
+              echo "✅ Dispatched $WORKFLOW"
+            else
+              echo "⚠️ No release workflow found for module: $MODULE"
+              echo "   Expected: .github/workflows/$WORKFLOW"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Summary
+        run: |
+          echo "## Release Trigger Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
+            echo "### Modules with pending tags:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Module | Version | Tag |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|---------|-----|" >> $GITHUB_STEP_SUMMARY
+
+            echo '${{ steps.check.outputs.modules_json }}' | jq -c '.[]' | while read -r item; do
+              MODULE=$(echo "$item" | jq -r '.module')
+              TAG=$(echo "$item" | jq -r '.tag')
+              VERSION=$(echo "$item" | jq -r '.version')
+              echo "| $MODULE | \`$VERSION\` | \`$TAG\` |" >> $GITHUB_STEP_SUMMARY
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "ℹ️ **Dry run** - no tags were created" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ Tags created and release workflows dispatched." >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Release workflows are now running. Check the Actions tab for progress." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ **No pending releases**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All changelog versions have corresponding git tags." >> $GITHUB_STEP_SUMMARY
+          fi

@@ -3,10 +3,10 @@ dependencies:
   - moniker: go
     name: "Go"
     description: "Go programming language compiler and toolchain"
-    version: "1.21"
+    version: "1.24.4"
     verify:
       command: "go version"
-      pattern: "go version go(\\d+\\.\\d+)"
+      pattern: "go version go(\\d+\\.\\d+\\.\\d+)"
 
   - moniker: docker
     name: "Docker"
@@ -16,10 +16,18 @@ dependencies:
       command: "docker info"
       pattern: "Server Version: (\\d+\\.\\d+)"
 
+  - moniker: docker-build
+    name: "Docker Buildx"
+    description: "Docker buildx for multi-platform container image builds (includes Buildx + QEMU)"
+    version: "0.10"
+    verify:
+      command: "docker buildx version"
+      pattern: "github.com/docker/buildx v(\\d+\\.\\d+)"
+
   - moniker: npm
     name: "Node.js"
     description: "JavaScript runtime providing npm package manager"
-    version: "22.0"
+    version: "20.0"
     verify:
       command: "node --version"
       pattern: "v(\\d+\\.\\d+)"
@@ -55,3 +63,11 @@ dependencies:
     verify:
       command: "curl --version"
       pattern: "curl (\\d+\\.\\d+)"
+
+  - moniker: upx
+    name: "UPX"
+    description: "Ultimate Packer for eXecutables - binary compression tool"
+    version: "3.96"
+    verify:
+      command: "upx --version"
+      pattern: "UPX (\\d+\\.\\d+)"

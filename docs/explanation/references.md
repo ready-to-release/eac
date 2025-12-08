@@ -1,3 +1,23 @@
+<!-- EDITOR
+# Editor: explanation/references.md
+
+## Soul
+
+Bibliography of foundational works, standards, and learning resources supporting the documentation's concepts and practices.
+
+## Sections
+
+1. Books
+   - Accelerate
+   - The DevOps Handbook
+   - Continuous Delivery
+   - Flow Engineering - From Value Stream Mapping to Effective Actions
+   - Effective Behavior-Driven Development
+2. PDFs
+   - State of devops
+   - Trunk based correlated practices
+-->
+
 # References
 
 ## Books
