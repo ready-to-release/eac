@@ -39,6 +39,7 @@ plugins:
   - search
   - macros
   - awesome-nav
+  - drawio
   # Mermaid diagram rendering for web (JavaScript-based)
   - mermaid2:
       version: '9.4.3'
