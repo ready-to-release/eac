@@ -529,6 +529,9 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 				changedSet[m] = true
 			}
 
+			// Save original execution order before filtering
+			originalOrder := executionPlan.ExecutionOrder
+
 			// Filter execution order to only include modules that need building
 			var filteredOrder []string
 			var filteredLayers [][]string
@@ -548,11 +551,24 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			executionPlan.Layers = filteredLayers
 			totalModules = len(filteredOrder)
 
+			// Calculate skipped modules as: original execution order - filtered order
+			// This ensures Changed + UpToDate = total modules
+			filteredSet := make(map[string]bool)
+			for _, m := range filteredOrder {
+				filteredSet[m] = true
+			}
+			var actualSkipped []string
+			for _, m := range originalOrder {
+				if !filteredSet[m] {
+					actualSkipped = append(actualSkipped, m)
+				}
+			}
+
 			incrementalInfo = &initsummary.IncrementalInfo{
 				Enabled:       true,
 				DetectionTime: incrementalDetectionTime,
-				Changed:       filteredOrder, // Includes both changed and explicitly requested
-				UpToDate:      skippedModules,
+				Changed:       filteredOrder,   // Modules that will be built
+				UpToDate:      actualSkipped,   // Modules that will be skipped
 			}
 		}
 	} else if forceRebuild {

@@ -35,6 +35,9 @@ permissions:
   contents: read
 
 jobs:
+  # =============================================================================
+  # Build HTML Site + PDF Books
+  # =============================================================================
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -43,12 +46,16 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Build Module
+      - name: Build Module (all artifacts)
         uses: ./.github/actions/build-module
         with:
           module: docs
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          extra-args: '--all'
 
+  # =============================================================================
+  # Test
+  # =============================================================================
   test:
     name: Test
     needs: build
@@ -66,6 +73,9 @@ jobs:
           # PRs run commit suite only; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
 
+  # =============================================================================
+  # Trigger Release (main branch only)
+  # =============================================================================
   trigger-release:
     name: Trigger Release
     needs: test
@@ -75,9 +85,9 @@ jobs:
       (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') &&
       !startsWith(inputs.ref || github.ref, 'refs/pull/')
     steps:
-      - name: Trigger release workflow (GitHub Pages)
+      - name: Trigger release workflow
         run: |
-          # Trigger GitHub Pages deployment
+          # Trigger docs release (site + PDFs)
           gh workflow run release-docs.yaml \
             --repo ${{ github.repository }} \
             -f ci_run_id=${{ github.run_id }}
@@ -92,7 +102,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Workflow | Description |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| \`release-docs.yaml\` | Deploy to GitHub Pages |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`release-docs.yaml\` | Deploy site to GitHub Pages + create GitHub Release with PDFs |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY

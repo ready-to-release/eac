@@ -237,19 +237,15 @@ func executeTests(cfg *TestConfig) int {
 	}
 	defer logging.CloseLogging()
 
-	// Load repository config for paths
-	repoCfg, err := config.LoadRepositoryConfig(workspaceRoot)
-	if err != nil {
-		log.Errorf("failed to load repository config: %v", err)
-		return 1
-	}
-
-	// Load EAC config for testing tags and suites
+	// Load EAC config for testing tags, suites, and repository paths
 	eacCfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
 		log.Errorf("failed to load EAC config: %v", err)
 		return 1
 	}
+
+	// Use repository config from EAC config (properly merged with defaults)
+	repoCfg := eacCfg.Repository
 
 	// Load suite configuration
 	suite, err := testing.GetSuite(cfg.SuiteName)

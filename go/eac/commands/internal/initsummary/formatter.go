@@ -85,10 +85,16 @@ func FormatCompact(s *Summary) string {
 		if inc.FreshBuild {
 			b.WriteString("Incremental: fresh build (no prior state)\n")
 		} else if inc.Enabled {
-			b.WriteString(fmt.Sprintf("Incremental: %d building, %d skipped (%v)\n",
-				len(inc.Changed),
-				len(inc.UpToDate),
-				inc.DetectionTime.Round(1e6))) // Round to ms
+			total := len(inc.Changed) + len(inc.UpToDate)
+			if len(inc.UpToDate) > 0 {
+				// Some modules skipped - show ratio
+				b.WriteString(fmt.Sprintf("Incremental: %d of %d changed (%v)\n",
+					len(inc.Changed), total, inc.DetectionTime.Round(1e6)))
+			} else {
+				// All modules need building - just show detection time
+				b.WriteString(fmt.Sprintf("Incremental: all %d changed (%v)\n",
+					total, inc.DetectionTime.Round(1e6)))
+			}
 		}
 	}
 

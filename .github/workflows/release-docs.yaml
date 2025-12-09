@@ -1,10 +1,24 @@
+# Release docs - Documentation Release Workflow
+#
+# This workflow releases documentation: HTML site to GitHub Pages + PDF books to GitHub Releases.
+# It verifies CI coverage before releasing and rebuilds from source.
+#
+# CI Verification: Requires a successful ci-docs.yaml run on the exact commit being released.
+# This ensures the code was built and tested before release.
+#
+# This workflow BUILDS FROM SOURCE, so it doesn't depend on pre-built artifacts.
+# It only needs verification that the code was tested.
+
 name: "release-docs (stage 7+)"
 
 on:
+  push:
+    tags:
+      - 'docs/*'
   workflow_dispatch:
     inputs:
       ci_run_id:
-        description: 'CI workflow run ID to download artifacts from'
+        description: 'CI workflow run ID (for verification)'
         required: false
         type: string
         default: ''
@@ -16,7 +30,7 @@ permissions:
   actions: read
 
 jobs:
-  deploy:
+  release:
     runs-on: ubuntu-latest
 
     environment:
@@ -33,13 +47,17 @@ jobs:
         id: commands
         uses: ./.github/actions/setup-commands
 
-      - name: Setup Module Dependencies
-        uses: ./.github/actions/setup-module-deps
-        with:
-          module: docs
-          commands-path: ${{ steps.commands.outputs.commands-path }}
+      - name: Check CI status
+        run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+          $COMMANDS release check-ci \
+            --workflow ci-docs.yaml \
+            --commit ${{ github.sha }} \
+            --timeout 300
+        env:
+          GH_TOKEN: ${{ github.token }}
 
-      - name: Generate calver tag name
+      - name: Generate calver tag
         id: tag
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
@@ -49,43 +67,91 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch --tags --force
 
-          # Generate calver tag (docs/YYYY.MM.DD or docs/YYYY.MM.DD.N)
-          TAG=$($COMMANDS release generate-module-calver docs)
+          # For tag triggers, extract version from tag
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#docs/}"
+            echo "Tag trigger: using existing tag $TAG"
+          else
+            # Generate calver tag (docs/YYYY.MM.DD or docs/YYYY.MM.DD.N)
+            TAG=$($COMMANDS release generate-module-calver docs)
+            VERSION="${TAG#docs/}"
+            echo "Manual trigger: generated tag $TAG"
+          fi
+
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "✅ Will create tag after successful deployment: $TAG"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      # Note: Tag creation moved to after deployment to prevent orphaned tags if deployment fails
+      - name: Check for existing release
+        run: |
+          TAG_NAME="${{ steps.tag.outputs.tag }}"
 
-      - name: Download build artifacts from CI
-        if: inputs.ci_run_id != ''
-        uses: actions/download-artifact@v6
+          # Check if a GitHub release already exists for this tag
+          if gh release view "$TAG_NAME" 2>/dev/null; then
+            echo ""
+            echo "❌ Error: Release already exists for tag $TAG_NAME"
+            echo ""
+            echo "A GitHub release has already been created for this version."
+            echo "If you want to create a new release:"
+            echo "1. Delete the existing release: gh release delete $TAG_NAME"
+            echo "2. Delete the tag: git push --delete origin $TAG_NAME"
+            echo "3. Re-run this workflow"
+            exit 1
+          fi
+
+          echo "✅ No existing release found for $TAG_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Setup Module Dependencies
+        uses: ./.github/actions/setup-module-deps
         with:
-          name: build-artifacts-docs
-          path: out/build
-          run-id: ${{ inputs.ci_run_id }}
-          github-token: ${{ github.token }}
+          module: docs
+          commands-path: ${{ steps.commands.outputs.commands-path }}
 
-      - name: Build docs (no CI artifacts)
-        if: inputs.ci_run_id == ''
+      - name: Build docs (site + PDFs)
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          echo "No CI run ID provided - building docs..."
-          $COMMANDS build docs
+          echo "Building documentation (HTML site + PDF books)..."
+          $COMMANDS build docs --all
 
-      - name: Verify build output
+      - name: Verify build outputs
+        id: verify
         run: |
+          # Verify HTML site
           if [ ! -f "out/build/docs/site/index.html" ]; then
-            echo "❌ Error: Build output not found"
+            echo "❌ Error: HTML site not found at out/build/docs/site/index.html"
             ls -la out/build/docs/ || echo "out/build/docs/ does not exist"
             exit 1
           fi
-          echo "✅ Build output verified"
-          ls -la out/build/docs/site/
+          echo "✅ HTML site verified"
 
+          # Count PDFs
+          PDF_COUNT=$(find "out/build/docs" -name "*.pdf" 2>/dev/null | wc -l)
+          echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
+
+          if [ "$PDF_COUNT" -eq 0 ]; then
+            echo "⚠️  Warning: No PDF files found"
+          else
+            echo "✅ Found $PDF_COUNT PDF file(s):"
+            find "out/build/docs" -name "*.pdf" -exec du -h {} \;
+          fi
+
+          # Site stats
+          FILE_COUNT=$(find out/build/docs/site -type f | wc -l | tr -d ' ')
+          HTML_COUNT=$(find out/build/docs/site -name "*.html" | wc -l | tr -d ' ')
+          TOTAL_SIZE=$(du -sh out/build/docs/site | cut -f1)
+          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+          echo "html_count=$HTML_COUNT" >> $GITHUB_OUTPUT
+          echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
+
+      # ==========================================================================
+      # Deploy HTML Site to GitHub Pages
+      # ==========================================================================
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: out/build/docs/site
@@ -94,79 +160,161 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Create calver tag (after successful deployment)
+      # ==========================================================================
+      # Create GitHub Release with PDFs
+      # ==========================================================================
+      - name: Create release notes
+        id: release_notes
         run: |
-          TAG="${{ steps.tag.outputs.tag }}"
+          VERSION="${{ steps.tag.outputs.version }}"
+          PDF_COUNT="${{ steps.verify.outputs.pdf_count }}"
 
-          echo "Creating tag: $TAG"
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
+          cat << 'EOF' > release_notes.md
+          ## Documentation Release
 
-          echo "✅ Created and pushed tag: $TAG"
+          This release includes:
+          - **HTML Site**: Deployed to [GitHub Pages](${{ steps.deployment.outputs.page_url }})
+          - **PDF Books**: Available as release assets below
 
+          ### PDF Books
+
+          Download PDF versions for offline reading:
+
+          | Book | Description |
+          |------|-------------|
+          | `repository-report-dark.pdf` | Complete repository structure with modules, dependencies, and test suites |
+          | `explanation-dark.pdf` | Conceptual documentation covering Everything-as-Code methodology |
+          | `risk-evidence-package-dark.pdf` | Comprehensive risk assessment evidence package |
+
+          ### Release Information
+
+          - **Version**: ${{ steps.tag.outputs.version }}
+          - **Commit**: ${{ github.sha }}
+          - **Site URL**: ${{ steps.deployment.outputs.page_url }}
+
+          ---
+          🤖 Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          EOF
+
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        run: |
+          TAG_NAME="${{ steps.tag.outputs.tag }}"
+          VERSION="${{ steps.tag.outputs.version }}"
+
+          echo "Creating release for tag: $TAG_NAME"
+
+          # Collect PDF files
+          PDF_FILES=$(find out/build/docs -name "*.pdf" -type f 2>/dev/null | tr '\n' ' ')
+
+          # For manual triggers, use --target to create tag atomically with release
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger: creating tag and release together"
+            if [ -n "$PDF_FILES" ]; then
+              gh release create "$TAG_NAME" \
+                --title "Documentation $VERSION" \
+                --notes-file release_notes.md \
+                --target "${{ github.sha }}" \
+                $PDF_FILES
+            else
+              gh release create "$TAG_NAME" \
+                --title "Documentation $VERSION" \
+                --notes-file release_notes.md \
+                --target "${{ github.sha }}"
+            fi
+          else
+            # Tag trigger: use --verify-tag to ensure tag exists
+            echo "Tag trigger: using existing tag"
+            if [ -n "$PDF_FILES" ]; then
+              gh release create "$TAG_NAME" \
+                --title "Documentation $VERSION" \
+                --notes-file release_notes.md \
+                --verify-tag \
+                $PDF_FILES
+            else
+              gh release create "$TAG_NAME" \
+                --title "Documentation $VERSION" \
+                --notes-file release_notes.md \
+                --verify-tag
+            fi
+          fi
+
+          echo "✅ Release created successfully"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # ==========================================================================
+      # Summary
+      # ==========================================================================
       - name: Summary (failure)
         if: failure()
         run: |
-          echo "## ❌ Documentation Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "## ❌ Documentation Release Failed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Common Failure Causes" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Step | Possible Cause | Fix |" >> $GITHUB_STEP_SUMMARY
           echo "|------|----------------|-----|" >> $GITHUB_STEP_SUMMARY
-          echo "| Download artifacts | Invalid ci_run_id or artifacts expired | Re-run CI or omit ci_run_id to build from source |" >> $GITHUB_STEP_SUMMARY
+          echo "| Check CI status | No successful CI run for this commit | Run CI first or wait for it to complete |" >> $GITHUB_STEP_SUMMARY
+          echo "| Check existing release | Release already exists | Delete existing release or wait for new commit |" >> $GITHUB_STEP_SUMMARY
           echo "| Build docs | MkDocs configuration error | Check mkdocs.yml syntax |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build docs | Missing dependencies | Verify docs/requirements.txt |" >> $GITHUB_STEP_SUMMARY
-          echo "| Verify build | No index.html generated | Check MkDocs build output |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build docs | Docker not available | Ensure Docker is running |" >> $GITHUB_STEP_SUMMARY
           echo "| Deploy to Pages | GitHub Pages not enabled | Enable Pages in repository settings |" >> $GITHUB_STEP_SUMMARY
-          echo "| Deploy to Pages | Permissions error | Check workflow has pages:write permission |" >> $GITHUB_STEP_SUMMARY
-          echo "| Create tag | Tag already exists | Tag will be incremented automatically |" >> $GITHUB_STEP_SUMMARY
+          echo "| Create release | Tag conflict | Check if tag already exists |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Debug Information" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| CI Run ID | \`${{ inputs.ci_run_id || 'none (building from source)' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Planned Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type docs --artifact build-artifacts-docs >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-docs.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Summary (success)
         if: success()
         run: |
-          echo "## ✅ Documentation Deployed" >> $GITHUB_STEP_SUMMARY
+          VERSION="${{ steps.tag.outputs.version }}"
+          TAG_NAME="${{ steps.tag.outputs.tag }}"
+
+          echo "## ✅ Documentation Released" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Successfully deployed project documentation to GitHub Pages." >> $GITHUB_STEP_SUMMARY
+          echo "Successfully released documentation **${VERSION}**." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Details" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | \`${TAG_NAME}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          if [ -n "${{ inputs.ci_run_id }}" ]; then
-            echo "| Source | CI artifacts from run #${{ inputs.ci_run_id }} |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Source | Built from source |" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### Site Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "### HTML Site" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -d "out/build/docs/site" ]; then
-            FILE_COUNT=$(find out/build/docs/site -type f | wc -l | tr -d ' ')
-            HTML_COUNT=$(find out/build/docs/site -name "*.html" | wc -l | tr -d ' ')
-            TOTAL_SIZE=$(du -sh out/build/docs/site | cut -f1)
-            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Total Files | ${FILE_COUNT} |" >> $GITHUB_STEP_SUMMARY
-            echo "| HTML Pages | ${HTML_COUNT} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Total Size | ${TOTAL_SIZE} |" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Files | ${{ steps.verify.outputs.file_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| HTML Pages | ${{ steps.verify.outputs.html_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Size | ${{ steps.verify.outputs.total_size }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 [**View Documentation Site**](${{ steps.deployment.outputs.page_url }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### Access" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🌐 [**View Documentation**](${{ steps.deployment.outputs.page_url }})" >> $GITHUB_STEP_SUMMARY
+          PDF_COUNT="${{ steps.verify.outputs.pdf_count }}"
+          if [ "$PDF_COUNT" -gt 0 ]; then
+            echo "### PDF Books" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Book | Size |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+            find out/build/docs -name "*.pdf" -exec sh -c 'echo "| $(basename {}) | $(du -h {} | cut -f1) |"' \; >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📦 [**View Release & Download PDFs**](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
+          fi

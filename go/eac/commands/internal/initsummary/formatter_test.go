@@ -68,11 +68,9 @@ func TestFormatCompactWithIncremental(t *testing.T) {
 	if !strings.Contains(output, "Incremental:") {
 		t.Errorf("FormatCompact missing incremental\n\nGot:\n%s", output)
 	}
-	if !strings.Contains(output, "1 building") {
-		t.Errorf("FormatCompact missing building count\n\nGot:\n%s", output)
-	}
-	if !strings.Contains(output, "2 skipped") {
-		t.Errorf("FormatCompact missing skipped count\n\nGot:\n%s", output)
+	// Format: "Incremental: 1 of 3 changed (45ms)"
+	if !strings.Contains(output, "1 of 3 changed") {
+		t.Errorf("FormatCompact missing incremental info\n\nGot:\n%s", output)
 	}
 }
 

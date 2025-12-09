@@ -333,7 +333,7 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 		}
 	}
 
-	userCfg, err := LoadRepositoryConfig(c.RepoRoot)
+	userCfg, err := loadRepositoryConfigUnmerged(c.RepoRoot)
 	if err != nil {
 		return err
 	}
