@@ -82,8 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     # Only trigger release on main branch, NEVER for PRs
     if: |
-      (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') &&
-      !startsWith(inputs.ref || github.ref, 'refs/pull/')
+      (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') && !startsWith(inputs.ref || github.ref, 'refs/pull/')
     steps:
       - name: Trigger release workflow
         run: |

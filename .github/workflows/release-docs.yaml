@@ -1,13 +1,10 @@
 # Release docs - Documentation Release Workflow
 #
 # This workflow releases documentation: HTML site to GitHub Pages + PDF books to GitHub Releases.
-# It verifies CI coverage before releasing and rebuilds from source.
+# It downloads pre-built artifacts from CI and deploys them.
 #
 # CI Verification: Requires a successful ci-docs.yaml run on the exact commit being released.
-# This ensures the code was built and tested before release.
-#
-# This workflow BUILDS FROM SOURCE, so it doesn't depend on pre-built artifacts.
-# It only needs verification that the code was tested.
+# If ci_run_id is not provided, it will find the latest successful CI run for the current commit.
 
 name: "release-docs (stage 7+)"
 
@@ -103,17 +100,35 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Setup Module Dependencies
-        uses: ./.github/actions/setup-module-deps
-        with:
-          module: docs
-          commands-path: ${{ steps.commands.outputs.commands-path }}
-
-      - name: Build docs (site + PDFs)
+      - name: Get CI run ID
+        id: ci
         run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          echo "Building documentation (HTML site + PDF books)..."
-          $COMMANDS build docs --all
+          if [ -n "${{ inputs.ci_run_id }}" ]; then
+            echo "run_id=${{ inputs.ci_run_id }}" >> $GITHUB_OUTPUT
+            echo "Using provided CI run ID: ${{ inputs.ci_run_id }}"
+          else
+            # Find latest successful CI run for this commit
+            RUN_ID=$(gh run list -w ci-docs.yaml -s success -L 5 --json databaseId,headSha \
+              | jq -r ".[] | select(.headSha == \"${{ github.sha }}\") | .databaseId" | head -1)
+
+            if [ -z "$RUN_ID" ]; then
+              echo "❌ No successful CI run found for commit ${{ github.sha }}"
+              exit 1
+            fi
+
+            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+            echo "Found CI run ID: $RUN_ID"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download CI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-docs
+          path: out/build
+          run-id: ${{ steps.ci.outputs.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Verify build outputs
         id: verify
