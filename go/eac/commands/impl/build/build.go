@@ -1194,7 +1194,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 				}
 			}
 
-			artifactInfos = append(artifactInfos, implinternal.ArtifactInfo{
+			artifactInfo := implinternal.ArtifactInfo{
 				Type:     art.Type,
 				ID:       art.ID,
 				Name:     art.ResolvedName,
@@ -1202,7 +1202,14 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 				Platform: platform,
 				Size:     size,
 				SHA256:   sha256Hash,
-			})
+			}
+
+			// For image artifacts, enrich with docker_build config info
+			if art.Type == "image" {
+				enrichImageArtifact(&artifactInfo, moduleTypeDef)
+			}
+
+			artifactInfos = append(artifactInfos, artifactInfo)
 		}
 
 		// Create per-module manifest (immutable - created once per build)
@@ -1439,3 +1446,13 @@ func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract,
 	return implinternal.DetermineRequestedArtifacts(module, moduleType, false, cfg)
 }
 
+// enrichImageArtifact populates image-specific fields (Tags, Registry) from docker_build config
+func enrichImageArtifact(artifactInfo *implinternal.ArtifactInfo, moduleTypeDef *config.ModuleTypeDef) {
+	if moduleTypeDef == nil || moduleTypeDef.DockerBuild == nil {
+		return
+	}
+
+	dockerConfig := moduleTypeDef.DockerBuild
+	artifactInfo.Tags = dockerConfig.Tags
+	artifactInfo.Registry = dockerConfig.Registry
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -183,7 +184,7 @@ func findWorkspaceRoot(startDir string) string {
 	}
 }
 
-// ValidateAndSave validates the manifest against the schema and saves it if valid
+// ValidateAndSave validates the manifest against the schema, verifies artifacts exist, and saves if valid
 func (m *ModuleManifest) ValidateAndSave(moduleBuildDir string) error {
 	validator, err := GetManifestValidator()
 	if err != nil {
@@ -194,5 +195,139 @@ func (m *ModuleManifest) ValidateAndSave(moduleBuildDir string) error {
 		return err
 	}
 
+	// Verify all declared artifacts actually exist
+	if err := m.VerifyArtifactsExist(moduleBuildDir); err != nil {
+		return err
+	}
+
 	return m.Save(moduleBuildDir)
+}
+
+// ArtifactExistenceError represents a missing artifact error
+type ArtifactExistenceError struct {
+	Moniker  string
+	Missing  []string
+	Details  map[string]string // artifact ID -> specific error
+}
+
+func (e *ArtifactExistenceError) Error() string {
+	return fmt.Sprintf("build for %s produced manifest but artifacts are missing: %v", e.Moniker, e.Missing)
+}
+
+// VerifyArtifactsExist checks that all artifacts declared in the manifest actually exist
+func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
+	var missing []string
+	details := make(map[string]string)
+
+	for _, art := range m.Artifacts {
+		var exists bool
+		var errMsg string
+
+		switch art.Type {
+		case "image":
+			// Docker images need docker verification
+			exists, errMsg = verifyDockerImageExists(art.Path)
+		case "directory":
+			// Directories should exist
+			dirPath := filepath.Join(moduleBuildDir, art.Path)
+			info, err := os.Stat(dirPath)
+			if err != nil {
+				exists = false
+				errMsg = fmt.Sprintf("directory not found: %s", dirPath)
+			} else if !info.IsDir() {
+				exists = false
+				errMsg = fmt.Sprintf("expected directory but found file: %s", dirPath)
+			} else {
+				exists = true
+			}
+		default:
+			// File-based artifacts (executable, file)
+			filePath := filepath.Join(moduleBuildDir, art.Path)
+			info, err := os.Stat(filePath)
+			if err != nil {
+				exists = false
+				errMsg = fmt.Sprintf("file not found: %s", filePath)
+			} else if info.IsDir() {
+				exists = false
+				errMsg = fmt.Sprintf("expected file but found directory: %s", filePath)
+			} else {
+				exists = true
+			}
+		}
+
+		if !exists {
+			missing = append(missing, art.ID)
+			details[art.ID] = errMsg
+		}
+	}
+
+	if len(missing) > 0 {
+		return &ArtifactExistenceError{
+			Moniker: m.Moniker,
+			Missing: missing,
+			Details: details,
+		}
+	}
+
+	return nil
+}
+
+// verifyDockerImageExists checks if a Docker image exists locally
+func verifyDockerImageExists(imageRef string) (bool, string) {
+	// Check if docker is available first
+	if !isDockerAvailable() {
+		// If docker isn't available, we can't verify - log warning but don't fail
+		// This allows builds to succeed when docker daemon isn't running
+		return true, ""
+	}
+
+	// Check if image exists locally using `docker images -q <ref>`
+	cmd := execCommand("docker", "images", "-q", imageRef)
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Sprintf("failed to check docker image: %v", err)
+	}
+
+	// If output is non-empty, image exists locally
+	if len(output) > 0 && len(output[0:]) > 0 {
+		trimmed := string(output)
+		for len(trimmed) > 0 && (trimmed[len(trimmed)-1] == '\n' || trimmed[len(trimmed)-1] == '\r') {
+			trimmed = trimmed[:len(trimmed)-1]
+		}
+		if trimmed != "" {
+			return true, ""
+		}
+	}
+
+	return false, fmt.Sprintf("docker image not found: %s", imageRef)
+}
+
+// isDockerAvailable checks if Docker CLI is available
+func isDockerAvailable() bool {
+	cmd := execCommand("docker", "version", "--format", "{{.Server.Version}}")
+	return cmd.Run() == nil
+}
+
+// execCommand is a variable to allow testing
+var execCommand = defaultExecCommand
+
+func defaultExecCommand(name string, args ...string) execCommandInterface {
+	return &realExecCmd{cmd: exec.Command(name, args...)}
+}
+
+type execCommandInterface interface {
+	Output() ([]byte, error)
+	Run() error
+}
+
+type realExecCmd struct {
+	cmd *exec.Cmd
+}
+
+func (r *realExecCmd) Output() ([]byte, error) {
+	return r.cmd.Output()
+}
+
+func (r *realExecCmd) Run() error {
+	return r.cmd.Run()
 }
