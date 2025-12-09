@@ -25,14 +25,12 @@ The EAC contract system defines all configuration via **YAML contracts validated
 | **Environments** | `environments.yml` | Test execution environments (L0-L4) |
 | **Test Suites** | `test-suites.yml` | Test suites with tag selectors |
 | **Testing Tags** | `testing-tags.yml` | Valid test tag definitions |
-| **Handlers** | `handlers.yml` | Command handler definitions |
 | **Books** | `books.yml` | Documentation book configuration |
 | **Repository** | `repository.yml` | Repository metadata |
 | **System Deps** | `system-dependencies.yml` | Required system tools (go, docker, etc.) |
 | **Security Tools** | `security-tools.yml` | Security scanning tool configuration |
 | **AI Config** | `ai-config.yml` | AI provider configuration |
 | **EAC Config** | `eac-config.yml` | EAC system configuration |
-| **R2R CLI** | `r2r-cli.yml` | R2R CLI extension configuration |
 | **Logging** | `logging.yml` | Logging configuration |
 
 **Location**: All contracts in `.r2r/eac/`, validated against schemas in `contracts/`

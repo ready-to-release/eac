@@ -25,7 +25,7 @@
 
 **The EAC extension** (`ext-eac:latest`) provides:
 
-- **105+ commands** spanning build, test, validation, security, AI, documentation, and release workflows
+- **110+ commands** spanning build, test, validation, security, AI, documentation, and release workflows
 - **Three execution models**: Docker CLI (`r2r eac <command>`), MCP server for LLM tools, and fallback mode for debugging
 - **Contract-driven architecture**: YAML contracts validated against JSON schemas to enforce consistency
 - **Modular design**: Independent packages for core libraries, commands, AI integrations, and MCP servers
@@ -57,7 +57,7 @@ The repository is organized as a **modular monorepo** with clearly defined modul
 cli/
 ├── .r2r/                       # R2R and EAC configuration
 │   ├── cache/                  # Build cache
-│   └── eac/                    # EAC contracts (14 YAML files)
+│   └── eac/                    # EAC contracts (12 YAML files)
 │       ├── modules.yml         # Module registry
 │       ├── module-types.yml    # Module type definitions
 │       ├── environments.yml    # Test environments (L0-L4)
@@ -72,8 +72,7 @@ cli/
 │
 ├── go/                         # Go source code
 │   ├── eac/                    # EAC modules
-│   │   ├── ai/                 # eac-ai (AI integrations)
-│   │   ├── commands/           # eac-commands (105+ commands)
+│   │   ├── commands/           # eac-commands (110+ commands with AI integrations)
 │   │   ├── core/               # eac-core (domain libraries)
 │   │   ├── mcp/                # eac-mcp-commands (MCP server)
 │   │   └── specs/              # eac-specs (BDD infrastructure)
@@ -117,8 +116,7 @@ cli/
 
 **Supporting Modules** - Shared code and infrastructure:
 - **eac-core** - Core domain libraries (contracts, repository, git)
-- **eac-ai** - AI provider integrations (Anthropic, OpenAI)
-- **eac-commands** - Command implementations (105+ commands)
+- **eac-commands** - Command implementations (110+ commands) with integrated AI providers (Anthropic, OpenAI)
 - **eac-specs** - BDD test infrastructure (Godog)
 - **eac-mcp-commands** - MCP server for LLM tools
 

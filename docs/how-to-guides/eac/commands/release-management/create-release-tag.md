@@ -123,8 +123,8 @@ gh release view src-auth/2025.12.09
 
 ## Related Commands
 
-- [`release this`](../../../reference/commands/release/this.md) - Create release
-- [`release generate-module-calver`](../../../reference/commands/release/generate-module-calver.md) - Generate CalVer
-- [`release r2r-cli`](../../../reference/commands/release/r2r-cli.md) - Release CLI
+- [`release this`](../../../../reference/commands/release/this.md) - Create release
+- [`release generate-module-calver`](../../../../reference/commands/release/generate-module-calver.md) - Generate CalVer
+- [`release r2r-cli`](../../../../reference/commands/release/r2r-cli.md) - Release CLI
 
 {{ diataxis_footer() }}

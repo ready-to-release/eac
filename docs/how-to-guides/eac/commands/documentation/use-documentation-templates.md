@@ -121,8 +121,8 @@ Common variables:
 
 ## Related Commands
 
-- [`templates install`](../../../reference/commands/templates/install.md) - Install templates
-- [`templates apply`](../../../reference/commands/templates/apply.md) - Apply with substitution
-- [`templates list`](../../../reference/commands/templates/list.md) - List variables
+- [`templates install`](../../../../reference/commands/templates/install.md) - Install templates
+- [`templates apply`](../../../../reference/commands/templates/apply.md) - Apply with substitution
+- [`templates list`](../../../../reference/commands/templates/list.md) - List variables
 
 {{ diataxis_footer() }}

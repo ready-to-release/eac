@@ -123,9 +123,9 @@ workspace "src-auth" {
 
 ## Related Commands
 
-- [`create design`](../../../reference/commands/create/design.md) - Generate diagram
-- [`update design`](../../../reference/commands/update/design.md) - Update existing
-- [`serve design`](../../../reference/commands/serve/design.md) - View in browser
-- [`validate design`](../../../reference/commands/validate/design.md) - Check syntax
+- [`create design`](../../../../reference/commands/create/design.md) - Generate diagram
+- [`update design`](../../../../reference/commands/update/design.md) - Update existing
+- [`serve design`](../../../../reference/commands/serve/design.md) - View in browser
+- [`validate design`](../../../../reference/commands/validate/design.md) - Check syntax
 
 {{ diataxis_footer() }}

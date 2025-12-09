@@ -22,7 +22,6 @@ graph TB
 
     Ext --> Commands
     Commands --> Core[eac-core]
-    Commands --> AI[eac-ai]
     Commands --> Specs[eac-specs]
 
     Core --> Contracts[YAML Contracts]
@@ -42,7 +41,7 @@ graph TB
 |-------|------------|---------|------------|
 | **CLI** | R2R CLI binary | Command-line interface, Docker orchestration | Go (Cobra, Docker SDK) |
 | **Extension** | ext-eac container | Isolated execution environment | Docker container |
-| **Core** | eac-commands, eac-core, eac-ai, eac-specs | Business logic and domain libraries | Go modules |
+| **Core** | eac-commands, eac-core, eac-specs | Business logic and domain libraries | Go modules |
 | **MCP** | eac-mcp-commands | LLM tool integration via MCP protocol | Go (JSON-RPC) |
 | **Repository** | Contracts, modules, specs | Configuration and source code | YAML, Go, Gherkin |
 
@@ -93,9 +92,8 @@ extensions:
 
 | Module | Purpose | Type |
 |--------|---------|------|
-| **eac-commands** | 105+ command implementations | go-commands |
+| **eac-commands** | 110+ command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
 | **eac-core** | Domain libraries, contract loading | go-library |
-| **eac-ai** | AI provider integrations (Anthropic, OpenAI) | go-library |
 | **eac-specs** | BDD test infrastructure (Godog) | go-library |
 | **eac-mcp-commands** | MCP server for LLM tool integration | go-mcp |
 
@@ -183,9 +181,11 @@ type Repository struct {
 
 ---
 
-## eac-ai
+## AI Integration (within eac-commands)
 
 **Purpose**: AI provider integrations for automated workflows
+
+**Location**: Integrated within eac-commands module at `go/eac/commands/internal/ai/`
 
 ### Supported Providers
 
@@ -210,6 +210,12 @@ api_key_env: ANTHROPIC_API_KEY
 - Create Gherkin specifications from natural language
 - Generate Structurizr architecture designs
 - Generate pull request descriptions
+
+**Implementation**:
+
+- Provider implementations: `go/eac/commands/internal/ai/providers/`
+- Configuration loading: `go/eac/commands/internal/ai/config_loader.go`
+- AI execution: `go/eac/commands/internal/ai/executor.go`
 
 ---
 
@@ -244,7 +250,7 @@ api_key_env: ANTHROPIC_API_KEY
 
 ### MCP Tools
 
-**105+ tools** exposed as `mcp__commands__*`:
+**110+ tools** exposed as `mcp__commands__*`:
 
 ```json
 {

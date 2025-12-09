@@ -109,7 +109,7 @@ modules:
 
   - moniker: eac-commands
     type: go-commands
-    depends_on: [eac-core, eac-ai]
+    depends_on: [eac-core]
 ```
 
 **Build Order** (topological sort):
@@ -514,8 +514,7 @@ r2r eac update-design <module>
 | Module | Type | Purpose |
 |--------|------|---------|
 | **eac-core** | go-library | Core libraries (contracts, repository, git) |
-| **eac-ai** | go-library | AI integrations (Anthropic, OpenAI) |
-| **eac-commands** | go-commands | Command implementations (105+) |
+| **eac-commands** | go-commands | Command implementations (110+) with integrated AI providers (Anthropic, OpenAI) |
 | **eac-specs** | go-library | BDD test infrastructure (Godog) |
 | **eac-mcp-commands** | go-mcp | MCP server (LLM tool integration) |
 

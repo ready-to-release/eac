@@ -80,8 +80,8 @@ code .
 
 ## Related Commands
 
-- [`work create`](../../../reference/commands/work/create.md) - Full command reference
-- [`show workspaces`](../../../reference/commands/show/workspaces.md) - List all workspaces
-- [`work remove`](../../../reference/commands/work/remove.md) - Delete workspace
+- [`work create`](../../../../reference/commands/work/create.md) - Full command reference
+- [`show workspaces`](../../../../reference/commands/show/workspaces.md) - List all workspaces
+- [`work remove`](../../../../reference/commands/work/remove.md) - Delete workspace
 
 {{ diataxis_footer() }}

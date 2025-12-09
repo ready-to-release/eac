@@ -43,7 +43,6 @@ Learn how to accomplish specific tasks with EAC commands through practical, step
 | [Quality and Validation](./quality-and-validation/index.md) | Quality checks and security scanning |
 | [Release Management](./release-management/index.md) | Preparing and publishing releases |
 | [Documentation](./documentation/index.md) | Creating specs and diagrams |
-| [Advanced](./advanced/index.md) | AI setup and advanced configuration |
 
 ## Need Command Details?
 

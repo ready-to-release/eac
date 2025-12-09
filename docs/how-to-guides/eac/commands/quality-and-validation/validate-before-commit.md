@@ -109,8 +109,8 @@ r2r eac validate || exit 1
 
 ## Related Commands
 
-- [`validate`](../../../reference/commands/validate/validate.md) - Run all validations
-- [`validate specs`](../../../reference/commands/validate/specs.md) - Validate specifications
-- [`validate dependencies`](../../../reference/commands/validate/dependencies.md) - Check dependencies
+- [`validate`](../../../../reference/commands/validate/validate.md) - Run all validations
+- [`validate specs`](../../../../reference/commands/validate/specs.md) - Validate specifications
+- [`validate dependencies`](../../../../reference/commands/validate/dependencies.md) - Check dependencies
 
 {{ diataxis_footer() }}

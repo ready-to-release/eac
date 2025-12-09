@@ -3,5 +3,6 @@ nav:
   - index.md
   - validate-before-commit.md
   - scan-for-security-issues.md
+  - manage-risk-compliance.md
   - check-dependencies.md
   - validate-specifications.md

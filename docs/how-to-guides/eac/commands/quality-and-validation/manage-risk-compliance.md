@@ -153,9 +153,9 @@ When tests run, evidence is collected for AC-1.
 
 ## Related Commands
 
-- [`create risk-profile`](../../../reference/commands/create/risk-profile.md) - Create profile
-- [`create risk-assess`](../../../reference/commands/create/risk-assess.md) - Update assessment
-- [`scan compliance`](../../../reference/commands/scan/compliance.md) - Check compliance
-- [`validate risk-profile`](../../../reference/commands/validate/risk-profile.md) - Validate profile
+- [`create risk-profile`](../../../../reference/commands/create/risk-profile.md) - Create profile
+- [`create risk-assess`](../../../../reference/commands/create/risk-assess.md) - Update assessment
+- [`scan compliance`](../../../../reference/commands/scan/compliance.md) - Check compliance
+- [`validate risk-profile`](../../../../reference/commands/validate/risk-profile.md) - Validate profile
 
 {{ diataxis_footer() }}

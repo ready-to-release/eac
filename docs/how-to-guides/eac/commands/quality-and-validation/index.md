@@ -10,6 +10,7 @@ Learn how to validate code quality and scan for issues before committing.
 |-------|------------------------|
 | [Validate Before Commit](./validate-before-commit.md) | Run comprehensive quality checks |
 | [Scan for Security Issues](./scan-for-security-issues.md) | Detect vulnerabilities and secrets |
+| [Manage Risk Compliance](./manage-risk-compliance.md) | Track OSCAL compliance with automated evidence |
 | [Check Dependencies](./check-dependencies.md) | Verify dependency contracts |
 | [Validate Specifications](./validate-specifications.md) | Check Gherkin specs for quality |
 

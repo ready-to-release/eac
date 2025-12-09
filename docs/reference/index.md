@@ -4,6 +4,13 @@
 
 Technical reference material providing information-oriented documentation for the EAC system. Includes API specifications, command references, decision records, and architectural documentation.
 
+## Quick Access
+
+| Resource | Description |
+|----------|-------------|
+| [Command Cheat Sheet](./commands/cheat-sheet.md) | Quick reference for most common commands |
+| [Glossary](./glossary.md) | Definitions of key terms and concepts |
+
 ## In This Section
 
 | Reference | Description |

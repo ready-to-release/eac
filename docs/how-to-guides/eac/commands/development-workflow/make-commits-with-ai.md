@@ -8,7 +8,7 @@ Generate semantic commit messages automatically from your staged changes using A
 
 ## Prerequisites
 
-- AI provider configured (see [Setup AI Provider](../advanced/setup-ai-provider.md))
+- AI provider configured (see [Setup AI Provider](../getting-started/setup-ai-provider.md))
 - Changes staged with `git add`
 - Working in EAC-managed repository
 
@@ -85,12 +85,11 @@ r2r eac create commit-message
 ## Next Steps
 
 - [Create Pull Request](./create-pull-request.md) → Generate PR description
-- [Understanding AI Process](../advanced/understand-ai-commit-process.md) → How AI works
 
 ## Related Commands
 
-- [`create commit-message`](../../../reference/commands/create/commit-message.md) - Full command reference
-- [`work commit`](../../../reference/commands/work/commit.md) - Commit in workspace
-- [`create squash-message`](../../../reference/commands/create/squash-message.md) - Generate squash message
+- [`create commit-message`](../../../../reference/commands/create/commit-message.md) - Full command reference
+- [`work commit`](../../../../reference/commands/work/commit.md) - Commit in workspace
+- [`create squash-message`](../../../../reference/commands/create/squash-message.md) - Generate squash message
 
 {{ diataxis_footer() }}

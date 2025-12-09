@@ -58,12 +58,14 @@ r2r eac work remove feature/authentication
 # Merge without squash (preserve commits)
 r2r eac work merge --no-squash
 
-# Merge without deleting branch
-r2r eac work merge --keep-branch
+# Merge without deleting worktree
+r2r eac work merge --keep-worktree
 
-# Custom squash message
-r2r eac work merge --message "feat: add authentication"
+# Merge to different target branch
+r2r eac work merge --target develop
 ```
+
+**Note**: Squash commit messages are always AI-generated based on all commits in the branch. Manual message customization is not supported.
 
 ## Example Scenario
 
@@ -107,8 +109,8 @@ r2r eac work remove add-jwt-auth
 
 ## Related Commands
 
-- [`work merge`](../../../reference/commands/work/merge.md) - Merge workspace
-- [`work pull`](../../../reference/commands/work/pull.md) - Sync with main
-- [`work remove`](../../../reference/commands/work/remove.md) - Clean up workspace
+- [`work merge`](../../../../reference/commands/work/merge.md) - Merge workspace
+- [`work pull`](../../../../reference/commands/work/pull.md) - Sync with main
+- [`work remove`](../../../../reference/commands/work/remove.md) - Clean up workspace
 
 {{ diataxis_footer() }}

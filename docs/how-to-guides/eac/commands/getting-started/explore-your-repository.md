@@ -77,9 +77,9 @@ r2r eac get modules | jq '.modules[] | select(.moniker == "src-auth")'
 
 ## Related Commands
 
-- [`show modules`](../../../reference/commands/show/modules.md) - Display all modules
-- [`show dependencies`](../../../reference/commands/show/dependencies.md) - Show dependency graph
-- [`show files`](../../../reference/commands/show/files.md) - Show file ownership
-- [`get modules`](../../../reference/commands/get/modules.md) - Get modules as JSON
+- [`show modules`](../../../../reference/commands/show/modules.md) - Display all modules
+- [`show dependencies`](../../../../reference/commands/show/dependencies.md) - Show dependency graph
+- [`show files`](../../../../reference/commands/show/files.md) - Show file ownership
+- [`get modules`](../../../../reference/commands/get/modules.md) - Get modules as JSON
 
 {{ diataxis_footer() }}

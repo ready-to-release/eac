@@ -69,12 +69,12 @@ r2r eac help release changelog
 ## Next Steps
 
 - [Explore Your Repository](./explore-your-repository.md) → Discover modules and files
-- [Command Reference](../../../reference/commands/index.md) → Complete command documentation
+- [Command Reference](../../../../reference/commands/index.md) → Complete command documentation
 
 ## Related Commands
 
-- [`help`](../../../reference/commands/other/help.md) - Display help information
-- [`show help`](../../../reference/commands/show/help.md) - Show help in table format
-- [`get commands`](../../../reference/commands/get/commands.md) - Get commands as JSON
+- [`help`](../../../../reference/commands/other/help.md) - Display help information
+- [`show help`](../../../../reference/commands/show/help.md) - Show help in table format
+- [`get commands`](../../../../reference/commands/get/commands.md) - Get commands as JSON
 
 {{ diataxis_footer() }}

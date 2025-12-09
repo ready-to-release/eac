@@ -105,8 +105,8 @@ r2r eac scan || exit 1
 
 ## Related Commands
 
-- [`scan`](../../../reference/commands/scan/scan.md) - Run all scans
-- [`scan vuln`](../../../reference/commands/scan/vuln.md) - Vulnerability scan
-- [`scan secrets`](../../../reference/commands/scan/secrets.md) - Secret detection
+- [`scan`](../../../../reference/commands/scan/scan.md) - Run all scans
+- [`scan vuln`](../../../../reference/commands/scan/vuln.md) - Vulnerability scan
+- [`scan secrets`](../../../../reference/commands/scan/secrets.md) - Secret detection
 
 {{ diataxis_footer() }}

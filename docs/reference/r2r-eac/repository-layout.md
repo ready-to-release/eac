@@ -33,8 +33,9 @@ eac/
 │       ├── modules.yml         # Module contracts (central registry)
 │       ├── module-types.yml    # Module type definitions
 │       ├── environments.yml    # Environment configurations
-│       ├── handlers.yml        # Command handlers
+│       ├── test-suites.yml     # Test suite definitions
 │       ├── books.yml           # PDF book generation config
+│       ├── ai-config.yml       # AI provider configuration
 │       └── system-dependencies.yml
 │
 ├── .vscode/                    # VSCode workspace configuration
@@ -63,8 +64,7 @@ eac/
 │
 ├── go/                         # Go source code
 │   ├── eac/                    # EAC implementation
-│   │   ├── ai/                 # AI provider integrations (eac-ai module)
-│   │   ├── commands/           # CLI commands library (eac-commands module)
+│   │   ├── commands/           # CLI commands library (eac-commands module) with integrated AI providers
 │   │   ├── core/               # Core domain libraries (eac-core module)
 │   │   ├── mcp/                # MCP server implementations
 │   │   └── specs/              # Shared BDD test infrastructure
@@ -113,8 +113,7 @@ Modules are organized into two categories:
 **Supporting Modules** - Shared code and infrastructure:
 
 - **eac-core** - Core domain libraries
-- **eac-ai** - AI provider integrations
-- **eac-commands** - Command implementations (105+ commands)
+- **eac-commands** - Command implementations (110+ commands) with integrated AI providers (Anthropic, OpenAI)
 - **eac-specs** - BDD test infrastructure
 - **eac-mcp-commands** - MCP server for LLM tools
 
@@ -136,7 +135,7 @@ modules:
   - moniker: eac-commands
     name: Go Commands Library
     type: go-commands
-    depends_on: [eac-ai, eac-core]
+    depends_on: [eac-core]
     files:
       root: go/eac/commands
       source: ["**/*.go"]
@@ -165,7 +164,7 @@ For comprehensive information about the R2R and EAC system:
 ### Related Topics
 
 - [Trunk-Based Development](../../explanation/continuous-delivery/workflow/trunk-based-development.md)
-- [Command Reference](../commands/index.md) - All 105+ EAC commands
+- [Command Reference](../commands/index.md) - All 110+ EAC commands
 
 ### Configuration Files
 

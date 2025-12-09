@@ -44,15 +44,19 @@ Visit the PR URL provided and review:
 - Changed files
 - Checks status
 
-## Manual PR Creation
+## Alternative: Manual PR Creation with GitHub CLI
+
+If you prefer to create the PR manually using GitHub CLI:
 
 ```bash
-# Generate description only
-r2r eac create pr --dry-run > pr-description.md
+# Use gh pr create with your own title and description
+gh pr create --title "Add JWT authentication" --body "Your PR description"
 
-# Use with gh pr create
-gh pr create --title "Add JWT authentication" --body-file pr-description.md
+# Or create interactively
+gh pr create
 ```
+
+**Note**: The `create pr` command currently creates the PR directly. For manual control, use GitHub CLI (`gh`) or the GitHub web interface.
 
 ## Example Scenario
 
@@ -99,7 +103,7 @@ r2r eac create pr
 
 ## Related Commands
 
-- [`create pr`](../../../reference/commands/create/pr.md) - Full command reference
-- [`create squash-message`](../../../reference/commands/create/squash-message.md) - Generate squash message
+- [`create pr`](../../../../reference/commands/create/pr.md) - Full command reference
+- [`create squash-message`](../../../../reference/commands/create/squash-message.md) - Generate squash message
 
 {{ diataxis_footer() }}

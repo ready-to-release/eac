@@ -116,9 +116,9 @@ git push origin src-auth/v1.2.0
 
 ## Related Commands
 
-- [`release pending`](../../../reference/commands/release/pending.md) - Check pending changes
-- [`release changelog`](../../../reference/commands/release/changelog.md) - Generate changelog
-- [`release this`](../../../reference/commands/release/this.md) - Create release
-- [`release check-ci`](../../../reference/commands/release/check-ci.md) - Verify CI
+- [`release pending`](../../../../reference/commands/release/pending.md) - Check pending changes
+- [`release changelog`](../../../../reference/commands/release/changelog.md) - Generate changelog
+- [`release this`](../../../../reference/commands/release/this.md) - Create release
+- [`release check-ci`](../../../../reference/commands/release/check-ci.md) - Verify CI
 
 {{ diataxis_footer() }}

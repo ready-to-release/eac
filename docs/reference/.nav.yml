@@ -1,7 +1,6 @@
 nav:
   - index.md
+  - r2r-eac
   - continuous-delivery
-  - specifications
   - decision-records
   - commands
-  - repository-layout.md

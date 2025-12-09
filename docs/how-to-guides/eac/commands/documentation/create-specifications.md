@@ -115,7 +115,7 @@ Generated specifications include:
 
 ## Related Commands
 
-- [`create spec`](../../../reference/commands/create/spec.md) - Generate specification
-- [`validate specs`](../../../reference/commands/validate/specs.md) - Validate quality
+- [`create spec`](../../../../reference/commands/create/spec.md) - Generate specification
+- [`validate specs`](../../../../reference/commands/validate/specs.md) - Validate quality
 
 {{ diataxis_footer() }}

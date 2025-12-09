@@ -111,8 +111,8 @@ r2r eac test suite acceptance
 
 ## Related Commands
 
-- [`test suite`](../../../reference/commands/test/suite.md) - Run test suite
-- [`test list-suites`](../../../reference/commands/test/list-suites.md) - List suites
-- [`show suite`](../../../reference/commands/show/suite.md) - Suite details
+- [`test suite`](../../../../reference/commands/test/suite.md) - Run test suite
+- [`test list-suites`](../../../../reference/commands/test/list-suites.md) - List suites
+- [`show suite`](../../../../reference/commands/show/suite.md) - Suite details
 
 {{ diataxis_footer() }}
