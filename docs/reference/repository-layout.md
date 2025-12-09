@@ -256,7 +256,7 @@ Each module type defines:
 ```yaml
 types:
   - name: go
-    description: "Go module (library, executable, or test - driven by module artifacts)"
+    description: "Go module"
 
     capabilities:                      # Module capabilities
       - go_module

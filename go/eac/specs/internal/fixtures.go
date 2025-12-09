@@ -191,7 +191,7 @@ func CreateModuleTypesYml(ctx *TestContext, types ...string) error {
 	// Map of type definitions
 	typeDefinitions := map[string]string{
 		"go": `  - name: go
-    description: Go module (library, executable, or test - driven by module artifacts)
+    description: Go module
     capabilities:
       - go_module
 `,
@@ -395,4 +395,3 @@ func copyFile(src, dst string) error {
 	_, err = io.Copy(dstFile, srcFile)
 	return err
 }
-
