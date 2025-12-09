@@ -2,7 +2,7 @@
 // Short: Initialize AI provider configuration for the project
 // Long: Initialize AI provider configuration for the project.
 // Long:
-// Long: Creates .r2r/eac/eac-config.yml (team config) or .r2r/eac/eac-config.personal.yml (personal config).
+// Long: Creates .r2r/eac/ai-provider.yml (team config) or .r2r/eac/ai-provider.personal.yml (personal config).
 // Long: Team config contains environment variable placeholders (safe to commit).
 // Long: Personal config contains actual tokens when provided via flags (gitignored).
 // Long:
@@ -408,7 +408,7 @@ func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars boo
 		content.WriteString("#\n")
 		content.WriteString("# For local development with Claude CLI (no API costs):\n")
 		content.WriteString("# - Run: .\\importer.ps1\n")
-		content.WriteString("# - This creates: .r2r/eac/eac-config.personal.yml (gitignored)\n")
+		content.WriteString("# - This creates: .r2r/eac/ai-provider.personal.yml (gitignored)\n")
 		content.WriteString("# - Personal config takes precedence over this team config\n")
 	} else {
 		content.WriteString("# EAC Configuration (Personal)\n")

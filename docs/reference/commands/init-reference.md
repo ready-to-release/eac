@@ -22,7 +22,7 @@ Complete technical reference for the init command including provider comparison,
 
 ## Overview
 
-The `init` command creates the AI provider configuration file at `.r2r/eac/eac-config.yml`. This configuration enables AI-powered features throughout EAC including commit message generation, specification creation, architecture design, and pull request descriptions.
+The `init` command creates the AI provider configuration file at `.r2r/eac/ai-provider.yml`. This configuration enables AI-powered features throughout EAC including commit message generation, specification creation, architecture design, and pull request descriptions.
 
 ## AI Provider Comparison
 
@@ -78,7 +78,7 @@ The `init` command creates the AI provider configuration file at `.r2r/eac/eac-c
 
 ## Configuration File Format
 
-The init command creates `.r2r/eac/eac-config.yml` with provider-specific configuration.
+The init command creates `.r2r/eac/ai-provider.yml` with provider-specific configuration.
 
 ### Claude API Configuration
 
@@ -217,7 +217,7 @@ echo $GOOGLE_API_KEY
 # In your workflow:
 - name: Initialize AI provider
   env:
-    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    ANTHROPIC_API_KEY: $\{{ secrets.ANTHROPIC_API_KEY }}
   run: eac init --ai claude-api
 ```
 
@@ -226,7 +226,7 @@ echo $GOOGLE_API_KEY
 The configuration file is stored at:
 
 ```text
-.r2r/eac/eac-config.yml
+.r2r/eac/ai-provider.yml
 ```
 
 **Important:** This file should **NOT** be committed to version control as it may contain sensitive information or preferences specific to your environment.
@@ -235,7 +235,7 @@ The configuration file is stored at:
 
 ```gitignore
 # AI provider configuration (personal settings)
-.r2r/eac/eac-config.yml
+.r2r/eac/ai-provider.yml
 ```
 
 ## Troubleshooting
@@ -281,7 +281,7 @@ Error: Authentication failed - invalid API key
 **Error:**
 
 ```text
-Warning: Configuration file already exists at .r2r/eac/eac-config.yml
+Warning: Configuration file already exists at .r2r/eac/ai-provider.yml
 ```
 
 **Solution:**
@@ -293,7 +293,7 @@ Warning: Configuration file already exists at .r2r/eac/eac-config.yml
 eac init --ai claude-api
 
 # 2. Back up old config first
-cp .r2r/eac/eac-config.yml .r2r/eac/eac-config.yml.backup
+cp .r2r/eac/ai-provider.yml .r2r/eac/ai-provider.yml.backup
 eac init --ai claude-api
 ```
 
@@ -302,7 +302,7 @@ eac init --ai claude-api
 **Error:**
 
 ```text
-Error: Permission denied: .r2r/eac/eac-config.yml
+Error: Permission denied: .r2r/eac/ai-provider.yml
 ```
 
 **Solution:**
@@ -313,7 +313,7 @@ ls -la .r2r/eac/
 
 # Fix permissions
 chmod 755 .r2r/eac
-chmod 644 .r2r/eac/eac-config.yml
+chmod 644 .r2r/eac/ai-provider.yml
 
 # Try again
 eac init --ai claude-api
@@ -366,7 +366,7 @@ eac init --ai claude      # ✗ Invalid
 
 ```bash
 # 1. Verify configuration exists
-cat .r2r/eac/eac-config.yml
+cat .r2r/eac/ai-provider.yml
 
 # 2. Check environment variable
 echo $ANTHROPIC_API_KEY  # or appropriate variable

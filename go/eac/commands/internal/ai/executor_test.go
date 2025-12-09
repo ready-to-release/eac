@@ -45,7 +45,7 @@ git:
 			createConfig: false,
 			input:        "test prompt",
 			wantErr:      true,
-			errContains:  ".r2r/eac/eac-config.yml not found",
+			errContains:  ".r2r/eac/ai-provider.yml not found",
 		},
 		{
 			name:         "execute with malformed config returns error",
@@ -54,7 +54,7 @@ git:
   - broken`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "failed to parse .r2r/eac/eac-config.yml",
+			errContains: "failed to parse .r2r/eac/ai-provider.yml",
 		},
 		{
 			name:         "execute with malformed config suggests eac init",
@@ -101,7 +101,7 @@ git:
 
 			// Create temporary directory for config
 			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+			configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
 
 			// Create config file if needed
 			if tt.createConfig {
@@ -189,7 +189,7 @@ func TestExecutor_ExecuteWithDebug(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			// Create config with claude-cli
-			configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+			configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
 			configContent := fmt.Sprintf(`ai:
   provider: claude-cli
   model: %s
@@ -236,7 +236,7 @@ func TestExecutor_ExecuteWithDebugDefault(t *testing.T) {
 	// Verify debug is false by default
 	tmpDir := t.TempDir()
 
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
 	configContent := `ai:
   provider: mock
   model: test-model
@@ -284,7 +284,7 @@ func TestExecutor_NoLogFilesCreated(t *testing.T) {
 	// Verify that NO log files are created in .r2r directory
 	tmpDir := t.TempDir()
 
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
 	configContent := fmt.Sprintf(`ai:
   provider: claude-cli
   model: %s
@@ -334,7 +334,7 @@ func TestExecutor_ExecuteWithOptions(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config with claude-cli
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
 	configContent := fmt.Sprintf(`ai:
   provider: claude-cli
   model: %s
@@ -483,7 +483,7 @@ func TestExecutor_WithMockProvider(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config with mock provider
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "eac-config.yml")
+	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
 	configContent := `ai:
   provider: mock
   model: test-model

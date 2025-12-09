@@ -1,7 +1,7 @@
 // File: go/eac/commands/internal/ai/config.go
 package ai
 
-// Config represents AI and Git configuration loaded from .r2r/eac/eac-config.yml
+// Config represents AI and Git configuration loaded from .r2r/eac/ai-provider.yml
 //
 // Intent: Hold provider configuration with environment variable references.
 //

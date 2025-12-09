@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ready-to-release.org/schemas/eac-core/eac-config/0.1.0",
+  "$id": "https://ready-to-release.org/schemas/eac-core/ai-provider/0.1.0",
   "title": "EAC Configuration Schema",
   "description": "Schema for EAC configuration including AI provider and Git settings",
   "type": "object",

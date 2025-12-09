@@ -365,6 +365,9 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 		result.Modules = user.Modules
 	}
 
+	// Apply module defaults (type placeholder, description from name, etc.)
+	result.applyModuleDefaults()
+
 	return &result
 }
 

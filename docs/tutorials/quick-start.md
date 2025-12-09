@@ -86,7 +86,7 @@ r2r init --ai claude-api
 This command:
 
 - Creates the `.r2r/eac/` directory structure
-- Generates `eac-config.yml` with AI provider settings
+- Generates `ai-provider.yml` with AI provider settings
 - Uses environment variable placeholders for API keys (safe to commit)
 
 Available AI providers:

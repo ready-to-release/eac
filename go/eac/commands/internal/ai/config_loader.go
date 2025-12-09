@@ -56,7 +56,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	// Validate required fields
 	if config.AI.Provider == "" {
-		return nil, fmt.Errorf("ai.provider is required in .r2r/eac/eac-config.yml\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
+		return nil, fmt.Errorf("ai.provider is required in .r2r/eac/ai-provider.yml\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
 	}
 
 	return config, nil
@@ -64,16 +64,17 @@ func LoadConfig(path string) (*Config, error) {
 
 // LoadConfigWithOverrides loads team config and merges with personal overrides.
 // Personal config can override any field: provider, model, api_key, endpoint, git token.
-// Validates both configs against the eac-config schema.
+// Validates both configs against the ai-provider schema.
 //
 // Schema (both files use same structure):
-//   ai:
-//     provider: claude-api          # or claude-cli, openai, gemini
-//     model: claude-3-haiku-20240307
-//     endpoint: https://api.anthropic.com/v1
-//     api_key: ${ANTHROPIC_API_KEY}  # or literal key
-//   git:
-//     token: ${GIT_TOKEN}  # or literal token
+//
+//	ai:
+//	  provider: claude-api          # or claude-cli, openai, gemini
+//	  model: claude-3-haiku-20240307
+//	  endpoint: https://api.anthropic.com/v1
+//	  api_key: ${ANTHROPIC_API_KEY}  # or literal key
+//	git:
+//	  token: ${GIT_TOKEN}  # or literal token
 //
 // Personal config only needs to specify fields to override.
 func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath string) (*Config, error) {
@@ -124,13 +125,13 @@ func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, e
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf(".r2r/eac/eac-config.yml not found at %s\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini", path)
+			return nil, fmt.Errorf(".r2r/eac/ai-provider.yml not found at %s\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini", path)
 		}
 		return nil, fmt.Errorf("failed to read config file %s: %w\n\nPlease run: eac init --ai <provider>", path, err)
 	}
 
 	if len(data) == 0 {
-		return nil, fmt.Errorf(".r2r/eac/eac-config.yml is empty\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
+		return nil, fmt.Errorf(".r2r/eac/ai-provider.yml is empty\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
 	}
 
 	// Validate against schema if workspaceRoot is provided
@@ -142,13 +143,13 @@ func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, e
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse .r2r/eac/eac-config.yml: %w\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini", err)
+		return nil, fmt.Errorf("failed to parse .r2r/eac/ai-provider.yml: %w\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini", err)
 	}
 
 	return &config, nil
 }
 
-// validateAgentConfigSchema validates config data against the eac-config schema
+// validateAgentConfigSchema validates config data against the ai-provider schema
 func validateAgentConfigSchema(workspaceRoot string, data []byte) error {
 	schemaValidatorOnce.Do(func() {
 		schemaValidator, schemaValidatorErr = schema.NewValidator(workspaceRoot)
@@ -228,7 +229,7 @@ func applyEnvVarSubstitution(config *Config) error {
 	// Only error on missing env vars if provider requires an API key
 	// claude-cli doesn't need an API key (uses local Claude installation)
 	if len(missingVars) > 0 && config.AI.Provider != "claude-cli" {
-		return fmt.Errorf("missing environment variable(s) for API key: %v\n\nPlease set:\n  export %s=your-api-key\n\nOr use claude-cli provider (no API key needed):\n  Run: .\\importer.ps1 (creates .r2r/eac/eac-config.personal.yml with claude-cli)",
+		return fmt.Errorf("missing environment variable(s) for API key: %v\n\nPlease set:\n  export %s=your-api-key\n\nOr use claude-cli provider (no API key needed):\n  Run: .\\importer.ps1 (creates .r2r/eac/ai-provider.personal.yml with claude-cli)",
 			missingVars, missingVars[0])
 	}
 

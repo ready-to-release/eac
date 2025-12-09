@@ -51,8 +51,8 @@ Import-Module $ModulePath -Force
 
 Write-Host "✅ CommandRunner module imported successfully!" -ForegroundColor Green
 
-# Create eac-config.personal.yml for local development with claude-cli
-$PersonalConfigPath = Join-Path $PSScriptRoot ".r2r\eac\eac-config.personal.yml"
+# Create ai-provider.personal.yml for local development with claude-cli
+$PersonalConfigPath = Join-Path $PSScriptRoot ".r2r\eac\ai-provider.personal.yml"
 if (-not (Test-Path $PersonalConfigPath)) {
     # Ensure directory exists
     $PersonalConfigDir = Split-Path $PersonalConfigPath -Parent
@@ -77,7 +77,7 @@ git:
 
     Set-Content -Path $PersonalConfigPath -Value $ConfigContent -Encoding UTF8
     Write-Host "✅ Created local AI config with claude-cli provider" -ForegroundColor Green
-    Write-Host "   File: .r2r\eac\eac-config.personal.yml" -ForegroundColor Gray
+    Write-Host "   File: .r2r\eac\ai-provider.personal.yml" -ForegroundColor Gray
 }
 
 # Create r2r alias pointing to the OS-specific binary

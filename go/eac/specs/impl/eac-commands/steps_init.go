@@ -24,11 +24,11 @@ func registerInitSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the \.r2r/eac directory is created$`, func() error {
 		return initDirExists(ctx, ".r2r/eac")
 	})
-	sc.Step(`^a \.r2r/eac/eac-config\.yml file is created$`, func() error {
-		return initFileExists(ctx, ".r2r/eac/eac-config.yml")
+	sc.Step(`^a \.r2r/eac/ai-provider\.yml file is created$`, func() error {
+		return initFileExists(ctx, ".r2r/eac/ai-provider.yml")
 	})
-	sc.Step(`^the \.r2r/eac/eac-config\.yml file contains "([^"]*)"$`, func(content string) error {
-		return initFileContains(ctx, ".r2r/eac/eac-config.yml", content)
+	sc.Step(`^the \.r2r/eac/ai-provider\.yml file contains "([^"]*)"$`, func(content string) error {
+		return initFileContains(ctx, ".r2r/eac/ai-provider.yml", content)
 	})
 	sc.Step(`^stdout contains provider selection confirmation$`, func() error {
 		return initOutputContainsAny(ctx, "claude", "openai", "provider", "Initialized", "gemini")
@@ -41,12 +41,12 @@ func registerInitSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 
 	// Pre-existing configuration steps
-	sc.Step(`^a \.r2r/eac/eac-config\.yml file exists with ([^"]*)$`, func(provider string) error {
+	sc.Step(`^a \.r2r/eac/ai-provider\.yml file exists with ([^"]*)$`, func(provider string) error {
 		content := fmt.Sprintf("provider: %s\n", provider)
-		return internal.CreateFile(ctx, ".r2r/eac/eac-config.yml", content)
+		return internal.CreateFile(ctx, ".r2r/eac/ai-provider.yml", content)
 	})
-	sc.Step(`^no \.r2r/eac/eac-config\.yml file exists$`, func() error {
-		return internal.RemoveFile(ctx, ".r2r/eac/eac-config.yml")
+	sc.Step(`^no \.r2r/eac/ai-provider\.yml file exists$`, func() error {
+		return internal.RemoveFile(ctx, ".r2r/eac/ai-provider.yml")
 	})
 }
 
