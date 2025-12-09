@@ -4,7 +4,8 @@
 
 FROM node:25-slim
 
-WORKDIR /docs
+# Install mermaid-cli to /opt/mermaid (NOT /docs which gets volume-mounted at runtime)
+WORKDIR /opt/mermaid
 
 # Install Chromium and dependencies for mermaid-cli
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -32,8 +33,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY package.json .
 RUN npm install && npm cache clean --force
 
-# Add local node_modules binaries to PATH
-ENV PATH="/docs/node_modules/.bin:$PATH"
+# Add mermaid-cli binaries to PATH (in /opt/mermaid, not /docs which gets mounted)
+ENV PATH="/opt/mermaid/node_modules/.bin:$PATH"
+
+# Set working directory for runtime (this is where workspace gets mounted)
+WORKDIR /docs
 
 # Chromium wrapper with container-safe flags
 # NOTE: Do not redirect stderr - Puppeteer needs it to get the WebSocket debugging port
