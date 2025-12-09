@@ -116,6 +116,13 @@ func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes 
 			depsSet["docker"] = true
 		}
 
+		// Check per-module artifacts for compression requirements
+		for _, artifact := range module.GetBuildArtifacts() {
+			if artifact.Compression == "upx" {
+				depsSet["upx"] = true
+			}
+		}
+
 		// Recurse into dependencies
 		for _, depMoniker := range module.DependsOn {
 			collect(depMoniker)
