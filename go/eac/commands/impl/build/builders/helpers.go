@@ -105,30 +105,6 @@ func IsDockerAvailable() bool {
 	return buildutil.IsDockerAvailable()
 }
 
-// BuildMarkerFilename is the standard name for build completion markers
-// Note: Using a non-hidden filename ensures reliable artifact upload/download in CI
-const BuildMarkerFilename = "build-complete.marker"
-
-// WriteBuildMarker writes a build completion marker file to the output directory.
-// This marker is used by module dependency verification to confirm a module was built.
-func WriteBuildMarker(outputDir string) error {
-	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
-	}
-
-	markerPath := fmt.Sprintf("%s/%s", outputDir, BuildMarkerFilename)
-	f, err := os.Create(markerPath)
-	if err != nil {
-		return fmt.Errorf("failed to create build marker: %w", err)
-	}
-	defer f.Close()
-
-	// Write timestamp for debugging purposes
-	fmt.Fprintf(f, "Build completed successfully\n")
-	return nil
-}
-
 // ExecutePostBuildSteps runs any post-build steps defined for the module type.
 // Returns non-zero exit code if any step fails.
 func ExecutePostBuildSteps(moduleType, moniker, workspaceRoot, outputDir string, logWriter io.Writer) int {
@@ -212,8 +188,8 @@ func CopyBuildOutput(srcDir, dstDir string, include, exclude []string, logWriter
 			return err
 		}
 
-		// Skip the build marker and log files
-		if relPath == BuildMarkerFilename || strings.HasSuffix(relPath, ".log") {
+		// Skip log files and manifest
+		if strings.HasSuffix(relPath, ".log") || relPath == ".manifest.json" {
 			return nil
 		}
 

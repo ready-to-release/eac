@@ -16,7 +16,6 @@ workspace "R2R Configuration" "Repository-specific R2R CLI configuration and AI 
 
             eac_config = container "EAC Configuration" "EAC-specific settings" "YAML" {
                 repository_yml = component "repository.yml" "Repository metadata and settings" "YAML"
-                handlers_yml = component "handlers.yml" "Event handlers configuration" "YAML"
                 logging_yml = component "logging.yml" "Logging configuration" "YAML"
                 agent_config_yml = component "agent-config.yml" "AI agent configuration" "YAML"
             }

@@ -1,0 +1,6 @@
+modules:
+  - moniker: test-module
+    name: Test Module
+    type: go-library
+    files:
+      root: go/test-module

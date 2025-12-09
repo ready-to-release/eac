@@ -212,8 +212,8 @@ func ReleaseChangelog() int {
 	workspaceRoot, _ := registry.GetWorkspaceRoot()
 	defs, err := definitions.Load(workspaceRoot)
 	if err != nil {
-		log.Warnf("failed to load definitions: %v", err)
-		defs = definitions.Default()
+		log.Errorf("failed to load definitions: %v", err)
+		return 1
 	}
 
 	// Determine max bump based on constraints

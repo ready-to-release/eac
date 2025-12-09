@@ -3,9 +3,8 @@ package modules
 import (
 	"path/filepath"
 	"strings"
-	"sync"
 
-	"github.com/gobwas/glob"
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
@@ -42,11 +41,19 @@ func (m *ModuleContract) getRelativePatterns() []string {
 }
 
 // getRepoPatterns returns all patterns relative to repo root
-// Includes specs, other, and converts test_impl/design paths to glob patterns
+// Includes specs, other, workflows, and converts test_impl/design paths to glob patterns
 func (m *ModuleContract) getRepoPatterns() []string {
 	var patterns []string
 	patterns = append(patterns, m.Files.Repo.Specs...)
 	patterns = append(patterns, m.Files.Repo.Other...)
+
+	// Include workflow files for ownership
+	if m.Files.Workflows.CI != "" {
+		patterns = append(patterns, m.Files.Workflows.CI)
+	}
+	if m.Files.Workflows.Release != "" {
+		patterns = append(patterns, m.Files.Workflows.Release)
+	}
 
 	// Convert test_impl directory path to glob pattern for file ownership
 	if m.Files.Repo.TestImpl != "" {
@@ -112,8 +119,15 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 	isUnderRoot := root == "" || root == "/" || strings.HasPrefix(path, root+"/") || path == root
 
 	if isUnderRoot {
-		// 2a. File is under root - check relative patterns (most common case)
-		for _, pattern := range m.getRelativePatterns() {
+		relativePatterns := m.getRelativePatterns()
+
+		// 2a. If no relative patterns defined, root ownership implies all files under root match
+		if len(relativePatterns) == 0 && root != "" && root != "/" {
+			return !m.isExcluded(path)
+		}
+
+		// 2b. File is under root - check relative patterns (most common case)
+		for _, pattern := range relativePatterns {
 			pattern = normalizePathSeparators(pattern)
 
 			// Build full pattern with root
@@ -130,7 +144,7 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 		}
 	}
 
-	// 2b. Check repo-root patterns (specs, other) - these match files anywhere
+	// 2c. Check repo-root patterns (specs, other) - these match files anywhere
 	// Only check if file didn't match relative patterns above
 	for _, pattern := range m.getRepoPatterns() {
 		if matchWithFallback(path, normalizePathSeparators(pattern)) {
@@ -267,13 +281,7 @@ func normalizePathSeparators(path string) string {
 	return strings.ReplaceAll(path, "\\", "/")
 }
 
-// Glob pattern cache for performance
-var (
-	globCache      = make(map[string]glob.Glob)
-	globCacheMutex sync.RWMutex
-)
-
-// matchGlobPattern performs glob pattern matching using github.com/gobwas/glob
+// matchGlobPattern performs glob pattern matching using github.com/bmatcuk/doublestar
 // Supports full glob syntax including:
 // - ** (any depth of directories)
 // - * (any characters within a segment)
@@ -285,26 +293,7 @@ func matchGlobPattern(path, pattern string) bool {
 	path = normalizePathSeparators(path)
 	pattern = normalizePathSeparators(pattern)
 
-	// Try to get compiled glob from cache
-	globCacheMutex.RLock()
-	g, exists := globCache[pattern]
-	globCacheMutex.RUnlock()
-
-	if !exists {
-		// Compile the pattern
-		var err error
-		g, err = glob.Compile(pattern, '/')
-		if err != nil {
-			// If pattern is invalid, return false
-			return false
-		}
-
-		// Cache the compiled pattern
-		globCacheMutex.Lock()
-		globCache[pattern] = g
-		globCacheMutex.Unlock()
-	}
-
-	// Match the path against the compiled glob pattern
-	return g.Match(path)
+	// Match the path against the pattern
+	matched, _ := doublestar.Match(pattern, path)
+	return matched
 }

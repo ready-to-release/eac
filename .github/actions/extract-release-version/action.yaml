@@ -5,10 +5,6 @@ inputs:
   module-prefix:
     description: 'Module prefix in tag (e.g., r2r-cli, ext-eac, docs)'
     required: true
-  legacy-prefixes:
-    description: 'Comma-separated legacy prefixes to also accept (e.g., src-cli)'
-    required: false
-    default: ''
   commands-path:
     description: 'Path to commands binary for validation (optional, skips validation if not provided)'
     required: false
@@ -33,7 +29,6 @@ runs:
       shell: bash
       env:
         MODULE_PREFIX: ${{ inputs.module-prefix }}
-        LEGACY_PREFIXES: ${{ inputs.legacy-prefixes }}
         EVENT_NAME: ${{ github.event_name }}
         DISPATCH_VERSION: ${{ github.event.inputs.version }}
         GITHUB_REF: ${{ github.ref }}
@@ -48,16 +43,6 @@ runs:
           # Extract from tag ref
           TAG_NAME="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG_NAME#${MODULE_PREFIX}/}"
-
-          # Handle legacy prefixes
-          if [ -n "$LEGACY_PREFIXES" ]; then
-            IFS=',' read -ra PREFIXES <<< "$LEGACY_PREFIXES"
-            for prefix in "${PREFIXES[@]}"; do
-              prefix=$(echo "$prefix" | xargs)  # trim whitespace
-              VERSION="${VERSION#${prefix}/}"
-            done
-          fi
-
           echo "Extracting from tag: tag=$TAG_NAME version=$VERSION"
         fi
 

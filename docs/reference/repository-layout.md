@@ -42,7 +42,6 @@ eac/
 │       ├── modules.yml         # Module contracts (central registry)
 │       ├── module-types.yml    # Module type definitions
 │       ├── environments.yml    # Environment configurations
-│       ├── handlers.yml        # Command handlers
 │       ├── books.yml           # PDF book generation config
 │       └── system-dependencies.yml
 │

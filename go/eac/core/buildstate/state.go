@@ -1,0 +1,457 @@
+// Package buildstate manages incremental build state for detecting which modules need rebuilding.
+// It uses a hybrid git + file hash approach for fast and accurate change detection.
+package buildstate
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
+)
+
+// State represents the build state for incremental builds
+type State struct {
+	// Git commit SHA at time of last build
+	Commit string `json:"commit"`
+
+	// Hash of uncommitted changes at build time (empty if clean)
+	UncommittedHash string `json:"uncommitted_hash,omitempty"`
+
+	// Per-module build state
+	Modules map[string]ModuleState `json:"modules"`
+
+	// Timestamp of last state update
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ModuleState represents build state for a single module
+type ModuleState struct {
+	// Hash of all source files in the module
+	SourceHash string `json:"source_hash"`
+
+	// Timestamp of successful build
+	BuiltAt time.Time `json:"built_at"`
+
+	// List of file paths included in hash (for debugging)
+	Files []string `json:"files,omitempty"`
+}
+
+// ChangeResult represents the result of change detection
+type ChangeResult struct {
+	// Modules that need rebuilding (changed or new)
+	ChangedModules []string
+
+	// Modules that are up-to-date
+	UpToDateModules []string
+
+	// Reason for each changed module
+	ChangeReasons map[string]string
+
+	// Whether this is a fresh build (no prior state)
+	FreshBuild bool
+
+	// Detection time
+	DetectionTime time.Duration
+}
+
+const (
+	stateFileName = ".build-state.json"
+)
+
+// Load loads build state from the build output directory
+func Load(workspaceRoot string) (*State, error) {
+	statePath := paths.BuildStatePath(workspaceRoot, stateFileName)
+
+	data, err := os.ReadFile(statePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil // No state file = fresh build
+		}
+		return nil, fmt.Errorf("failed to read build state: %w", err)
+	}
+
+	var state State
+	if err := json.Unmarshal(data, &state); err != nil {
+		return nil, fmt.Errorf("failed to parse build state: %w", err)
+	}
+
+	return &state, nil
+}
+
+// Save saves build state to the build output directory
+func (s *State) Save(workspaceRoot string) error {
+	buildDir := filepath.Join(workspaceRoot, paths.OutBuildRelPath)
+	if err := os.MkdirAll(buildDir, 0755); err != nil {
+		return fmt.Errorf("failed to create build directory: %w", err)
+	}
+
+	s.UpdatedAt = time.Now()
+
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal build state: %w", err)
+	}
+
+	statePath := filepath.Join(buildDir, stateFileName)
+	if err := os.WriteFile(statePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write build state: %w", err)
+	}
+
+	return nil
+}
+
+// DetectChanges detects which modules need rebuilding based on file changes
+// moduleFiles maps moniker -> list of source file paths (relative to workspaceRoot)
+//
+// Detection strategy:
+// 1. Fast path: If git commit + uncommitted state matches previous build exactly,
+//    AND all modules were in the previous build, trust the stored hashes
+// 2. Slow path: Hash source files and compare to stored hashes
+//
+// The module source hash is always the source of truth - git state is only used
+// as an optimization to skip hashing when we know nothing could have changed.
+func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*ChangeResult, error) {
+	start := time.Now()
+
+	result := &ChangeResult{
+		ChangeReasons: make(map[string]string),
+	}
+
+	// Load previous state
+	prevState, err := Load(workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load build state: %w", err)
+	}
+
+	if prevState == nil {
+		// Fresh build - all modules need building
+		result.FreshBuild = true
+		for moniker := range moduleFiles {
+			result.ChangedModules = append(result.ChangedModules, moniker)
+			result.ChangeReasons[moniker] = "fresh build (no prior state)"
+		}
+		sort.Strings(result.ChangedModules)
+		result.DetectionTime = time.Since(start)
+		return result, nil
+	}
+
+	// Get current git state for fast-path optimization
+	currentCommit, _ := getGitCommit(workspaceRoot)
+	uncommittedFiles, _ := getUncommittedFiles(workspaceRoot)
+
+	// Calculate current uncommitted hash
+	currentUncommittedHash := ""
+	if len(uncommittedFiles) > 0 {
+		currentUncommittedHash = hashUncommittedFiles(workspaceRoot, uncommittedFiles)
+	}
+
+	// Fast path: If git state matches exactly AND all requested modules have stored hashes,
+	// we can skip file hashing entirely. This covers the common case of "no changes since last build".
+	gitStateMatches := currentCommit != "" &&
+		currentCommit == prevState.Commit &&
+		currentUncommittedHash == prevState.UncommittedHash
+
+	// Check if fast path is possible (all modules must have prior state)
+	canUseFastPath := gitStateMatches
+	if canUseFastPath {
+		for moniker := range moduleFiles {
+			if _, exists := prevState.Modules[moniker]; !exists {
+				canUseFastPath = false
+				break
+			}
+		}
+	}
+
+	if canUseFastPath {
+		// Fast path: git state unchanged, all modules have prior hashes
+		// Trust that files haven't changed
+		for moniker := range moduleFiles {
+			result.UpToDateModules = append(result.UpToDateModules, moniker)
+		}
+		sort.Strings(result.UpToDateModules)
+		result.DetectionTime = time.Since(start)
+		return result, nil
+	}
+
+	// Slow path: Hash source files for each module and compare
+	// This handles: branch switches, git reset, stash/unstash, cherry-pick, etc.
+	for moniker, files := range moduleFiles {
+		prevModState, exists := prevState.Modules[moniker]
+
+		if !exists {
+			result.ChangedModules = append(result.ChangedModules, moniker)
+			result.ChangeReasons[moniker] = "new module (not in previous build)"
+			continue
+		}
+
+		// Calculate current source hash
+		currentHash, err := hashModuleFiles(workspaceRoot, files)
+		if err != nil {
+			result.ChangedModules = append(result.ChangedModules, moniker)
+			result.ChangeReasons[moniker] = fmt.Sprintf("hash error: %v", err)
+			continue
+		}
+
+		if currentHash != prevModState.SourceHash {
+			result.ChangedModules = append(result.ChangedModules, moniker)
+			result.ChangeReasons[moniker] = "source files changed"
+		} else {
+			result.UpToDateModules = append(result.UpToDateModules, moniker)
+		}
+	}
+
+	sort.Strings(result.ChangedModules)
+	sort.Strings(result.UpToDateModules)
+	result.DetectionTime = time.Since(start)
+
+	return result, nil
+}
+
+// UpdateModuleState updates the build state for successfully built modules
+func UpdateModuleState(workspaceRoot string, builtModules []string, moduleFiles map[string][]string) error {
+	// Load or create state
+	state, err := Load(workspaceRoot)
+	if err != nil {
+		return err
+	}
+	if state == nil {
+		state = &State{
+			Modules: make(map[string]ModuleState),
+		}
+	}
+
+	// Update git state
+	state.Commit, _ = getGitCommit(workspaceRoot)
+	uncommittedFiles, _ := getUncommittedFiles(workspaceRoot)
+	if len(uncommittedFiles) > 0 {
+		state.UncommittedHash = hashUncommittedFiles(workspaceRoot, uncommittedFiles)
+	} else {
+		state.UncommittedHash = ""
+	}
+
+	// Update each built module
+	for _, moniker := range builtModules {
+		files, ok := moduleFiles[moniker]
+		if !ok {
+			continue
+		}
+
+		hash, err := hashModuleFiles(workspaceRoot, files)
+		if err != nil {
+			continue // Skip modules we can't hash
+		}
+
+		state.Modules[moniker] = ModuleState{
+			SourceHash: hash,
+			BuiltAt:    time.Now(),
+			Files:      files,
+		}
+	}
+
+	return state.Save(workspaceRoot)
+}
+
+// ClearState removes the build state file (for --rebuild)
+func ClearState(workspaceRoot string) error {
+	statePath := paths.BuildStatePath(workspaceRoot, stateFileName)
+	err := os.Remove(statePath)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
+// getGitCommit returns the current HEAD commit SHA
+func getGitCommit(workspaceRoot string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = workspaceRoot
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// getUncommittedFiles returns list of uncommitted file paths (relative to repo root)
+func getUncommittedFiles(workspaceRoot string) ([]string, error) {
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = workspaceRoot
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	var files []string
+	for _, line := range lines {
+		if len(line) < 3 {
+			continue
+		}
+		// Format: XY filename or XY "filename" for paths with spaces
+		path := strings.TrimSpace(line[3:])
+		path = strings.Trim(path, "\"")
+		files = append(files, path)
+	}
+
+	return files, nil
+}
+
+// hashUncommittedFiles creates a hash representing the uncommitted state
+func hashUncommittedFiles(workspaceRoot string, files []string) string {
+	h := sha256.New()
+
+	// Sort for deterministic hash
+	sorted := make([]string, len(files))
+	copy(sorted, files)
+	sort.Strings(sorted)
+
+	for _, file := range sorted {
+		path := filepath.Join(workspaceRoot, file)
+		f, err := os.Open(path)
+		if err != nil {
+			// File might be deleted - include that in hash
+			h.Write([]byte(file + ":deleted\n"))
+			continue
+		}
+		io.Copy(h, f)
+		f.Close()
+	}
+
+	return hex.EncodeToString(h.Sum(nil))[:16] // Short hash is sufficient
+}
+
+// hashModuleFiles computes a hash of all source files for a module
+func hashModuleFiles(workspaceRoot string, files []string) (string, error) {
+	h := sha256.New()
+
+	// Sort for deterministic hash
+	sorted := make([]string, len(files))
+	copy(sorted, files)
+	sort.Strings(sorted)
+
+	for _, file := range sorted {
+		path := filepath.Join(workspaceRoot, file)
+		f, err := os.Open(path)
+		if err != nil {
+			return "", fmt.Errorf("failed to open %s: %w", file, err)
+		}
+
+		// Include filename in hash (so renames are detected)
+		h.Write([]byte(file + "\n"))
+		io.Copy(h, f)
+		f.Close()
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// ExpandGlobPatterns expands glob patterns to actual file paths
+// Returns files relative to workspaceRoot
+func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, error) {
+	var result []string
+	seen := make(map[string]bool)
+
+	for _, pattern := range patterns {
+		// Make pattern absolute
+		absPattern := pattern
+		if !filepath.IsAbs(pattern) {
+			absPattern = filepath.Join(workspaceRoot, pattern)
+		}
+
+		// Expand glob
+		matches, err := filepath.Glob(absPattern)
+		if err != nil {
+			return nil, fmt.Errorf("invalid glob pattern %s: %w", pattern, err)
+		}
+
+		for _, match := range matches {
+			// Convert back to relative path
+			rel, err := filepath.Rel(workspaceRoot, match)
+			if err != nil {
+				continue
+			}
+			rel = filepath.ToSlash(rel)
+
+			// Skip directories, only include files
+			info, err := os.Stat(match)
+			if err != nil || info.IsDir() {
+				continue
+			}
+
+			if !seen[rel] {
+				seen[rel] = true
+				result = append(result, rel)
+			}
+		}
+	}
+
+	sort.Strings(result)
+	return result, nil
+}
+
+// ModuleFileGetter is an interface for getting module glob patterns
+type ModuleFileGetter interface {
+	GetGlobPatterns() []string
+}
+
+// GetModuleSourceFiles returns source files for each module for change detection.
+// This is the canonical implementation used by both build command and get changed-modules-local.
+func GetModuleSourceFiles(workspaceRoot string, modules map[string]ModuleFileGetter) (map[string][]string, error) {
+	result := make(map[string][]string)
+
+	for moniker, module := range modules {
+		patterns := module.GetGlobPatterns()
+		files, err := ExpandGlobPatterns(workspaceRoot, patterns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to expand patterns for %s: %w", moniker, err)
+		}
+		result[moniker] = files
+	}
+
+	return result, nil
+}
+
+// DetectChangesForModules is the high-level API for detecting which modules need rebuilding.
+// It combines GetModuleSourceFiles and DetectChanges into a single call.
+// Returns (changedModules, upToDateModules, changeReasons, isFreshBuild, detectionTime, error)
+func DetectChangesForModules(workspaceRoot string, modules map[string]ModuleFileGetter) ([]string, []string, map[string]string, bool, time.Duration, error) {
+	moduleFiles, err := GetModuleSourceFiles(workspaceRoot, modules)
+	if err != nil {
+		return nil, nil, nil, false, 0, err
+	}
+
+	result, err := DetectChanges(workspaceRoot, moduleFiles)
+	if err != nil {
+		return nil, nil, nil, false, 0, err
+	}
+
+	return result.ChangedModules, result.UpToDateModules, result.ChangeReasons, result.FreshBuild, result.DetectionTime, nil
+}
+
+// HashModuleFiles computes a SHA-256 hash of all source files for a module.
+// This is the public API for computing input hashes for manifest storage.
+// The hash includes both filename and content to detect renames.
+func HashModuleFiles(workspaceRoot string, files []string) (string, error) {
+	return hashModuleFiles(workspaceRoot, files)
+}
+
+// ComputeModuleInputHash computes the input hash for a single module.
+// This is a convenience function that expands glob patterns and computes the hash.
+func ComputeModuleInputHash(workspaceRoot string, module ModuleFileGetter) (string, error) {
+	patterns := module.GetGlobPatterns()
+	files, err := ExpandGlobPatterns(workspaceRoot, patterns)
+	if err != nil {
+		return "", fmt.Errorf("failed to expand patterns: %w", err)
+	}
+	return hashModuleFiles(workspaceRoot, files)
+}
+

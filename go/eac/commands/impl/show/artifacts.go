@@ -15,6 +15,7 @@ import (
 	showinternal "github.com/ready-to-release/eac/go/eac/commands/impl/show/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 func init() {
@@ -61,6 +62,13 @@ func ShowArtifacts() int {
 }
 
 func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms, missingOnly bool) int {
+	// Get workspace root
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		log.Errorf("failed to find repository root: %v", err)
+		return 1
+	}
+
 	// Load configuration
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -83,12 +91,12 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 	}
 
 	if moduleType.Build == nil || len(moduleType.Build.Artifacts) == 0 {
-		log.Info(fmt.Sprintf("# Artifacts: %s (%s)\n\nNo artifacts defined for this module type", moduleName, module.Type))
+		log.Debugf("No artifacts defined for module type %s", module.Type)
 		return 0
 	}
 
 	// Build directory
-	buildDir := cfg.Repository.BuildOutputPath(moduleName)
+	buildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moduleName)
 
 	// Resolve artifacts
 	var results []implinternal.ResolvedArtifact

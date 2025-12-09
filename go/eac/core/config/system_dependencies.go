@@ -2,7 +2,8 @@ package config
 
 // SystemDependenciesConfig holds the system dependencies configuration
 type SystemDependenciesConfig struct {
-	Dependencies []SystemDependency `yaml:"dependencies"`
+	Dependencies            []SystemDependency  `yaml:"dependencies"`
+	CapabilityRequirements map[string][]string `yaml:"capability_requirements,omitempty"`
 
 	// Runtime lookup map (built after load)
 	depMap map[string]*SystemDependency
@@ -26,6 +27,9 @@ type SystemDependencyVerify struct {
 	// Environment variable verification
 	EnvVars []string `yaml:"env_vars,omitempty"`
 	Require string   `yaml:"require,omitempty"` // "any" or "all"
+
+	// OS platform verification (linux, windows, darwin)
+	OSPlatform string `yaml:"os_platform,omitempty"`
 }
 
 // IsCommandBased returns true if this verification uses a command
@@ -36,6 +40,11 @@ func (v *SystemDependencyVerify) IsCommandBased() bool {
 // IsEnvBased returns true if this verification uses environment variables
 func (v *SystemDependencyVerify) IsEnvBased() bool {
 	return len(v.EnvVars) > 0
+}
+
+// IsOSPlatformBased returns true if this verification checks OS platform
+func (v *SystemDependencyVerify) IsOSPlatformBased() bool {
+	return v.OSPlatform != ""
 }
 
 // buildDepMap builds the lookup map for quick access by moniker
@@ -67,4 +76,36 @@ func (c *SystemDependenciesConfig) GetMonikers() []string {
 // HasMoniker returns true if the moniker is defined
 func (c *SystemDependenciesConfig) HasMoniker(moniker string) bool {
 	return c.Get(moniker) != nil
+}
+
+// GetRequiredDeps returns the system dependencies required for the given capabilities.
+// Uses the capability_requirements mapping to resolve capabilities to dependency monikers.
+func (c *SystemDependenciesConfig) GetRequiredDeps(capabilities []string) []string {
+	if c.CapabilityRequirements == nil {
+		return nil
+	}
+
+	seen := make(map[string]bool)
+	var deps []string
+
+	for _, cap := range capabilities {
+		if reqs, ok := c.CapabilityRequirements[cap]; ok {
+			for _, dep := range reqs {
+				if !seen[dep] {
+					seen[dep] = true
+					deps = append(deps, dep)
+				}
+			}
+		}
+	}
+
+	return deps
+}
+
+// GetCapabilityDeps returns the system dependencies for a single capability.
+func (c *SystemDependenciesConfig) GetCapabilityDeps(capability string) []string {
+	if c.CapabilityRequirements == nil {
+		return nil
+	}
+	return c.CapabilityRequirements[capability]
 }

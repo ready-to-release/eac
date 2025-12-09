@@ -100,7 +100,6 @@ type EACConfig struct {
 	TestingTags        *TestingTagsConfig
 	TestSuites         *TestSuitesConfig
 	SystemDependencies *SystemDependenciesConfig
-	Handlers           *HandlersConfig
 	Books              *BooksConfig
 	SecurityTools      *SecurityToolsConfig
 
@@ -259,10 +258,6 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 		errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
 	}
 
-	if err := c.LoadHandlers(validateSchemas); err != nil {
-		errs = append(errs, fmt.Errorf("handlers: %w", err))
-	}
-
 	if err := c.LoadSecurityTools(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("security-tools: %w", err))
 	}
@@ -274,14 +269,20 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 	return nil
 }
 
-// LoadRepository loads the repository-wide configuration
+// LoadRepository loads the repository-wide configuration.
+// Merges contract defaults with user config.
 func (c *EACConfig) LoadRepository(validateSchema bool) error {
+	// Load defaults from contract
+	defaults, err := LoadRepositoryDefaults(c.RepoRoot)
+	if err != nil {
+		return fmt.Errorf("loading repository defaults: %w", err)
+	}
+
 	// repository.yml is optional - check if it exists
 	repoPath := filepath.Join(c.ConfigRoot, RepositoryFileName)
 	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
-		// Use defaults if file doesn't exist
-		cfg := DefaultRepositoryConfig()
-		c.Repository = &cfg
+		// Use defaults only
+		c.Repository = defaults
 		return nil
 	}
 
@@ -295,16 +296,31 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 		}
 	}
 
-	cfg, err := LoadRepositoryConfig(c.RepoRoot)
+	userCfg, err := LoadRepositoryConfig(c.RepoRoot)
 	if err != nil {
 		return err
 	}
-	c.Repository = cfg
+
+	// Merge defaults with user config
+	c.Repository = MergeRepository(defaults, userCfg)
 	return nil
 }
 
-// LoadModules loads the modules configuration
+// LoadModules loads the modules configuration.
+// Falls back to contract defaults if user config doesn't exist.
 func (c *EACConfig) LoadModules(validateSchema bool) error {
+	// Check if user config exists
+	modulesPath := filepath.Join(c.ConfigRoot, ModulesFileName)
+	if _, err := os.Stat(modulesPath); os.IsNotExist(err) {
+		// Use defaults from contract
+		cfg, err := LoadModulesDefaults(c.RepoRoot)
+		if err != nil {
+			return fmt.Errorf("loading module defaults: %w", err)
+		}
+		c.Modules = cfg
+		return nil
+	}
+
 	data, err := c.readConfigFile(ModulesFileName)
 	if err != nil {
 		return err
@@ -326,8 +342,23 @@ func (c *EACConfig) LoadModules(validateSchema bool) error {
 	return nil
 }
 
-// LoadModuleTypes loads the module-types configuration
+// LoadModuleTypes loads the module-types configuration.
+// Merges contract defaults with user-defined types.
 func (c *EACConfig) LoadModuleTypes(validateSchema bool) error {
+	// Load defaults from contract
+	defaults, err := LoadModuleTypesDefaults(c.RepoRoot)
+	if err != nil {
+		return fmt.Errorf("loading module-types defaults: %w", err)
+	}
+
+	// Check if user config exists
+	typesPath := filepath.Join(c.ConfigRoot, ModuleTypesFileName)
+	if _, err := os.Stat(typesPath); os.IsNotExist(err) {
+		// Use defaults only
+		c.ModuleTypes = defaults
+		return nil
+	}
+
 	data, err := c.readConfigFile(ModuleTypesFileName)
 	if err != nil {
 		return err
@@ -339,18 +370,24 @@ func (c *EACConfig) LoadModuleTypes(validateSchema bool) error {
 		}
 	}
 
-	var cfg ModuleTypesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	var userCfg ModuleTypesConfig
+	if err := yaml.Unmarshal(data, &userCfg); err != nil {
 		return fmt.Errorf("failed to parse %s: %w", ModuleTypesFileName, err)
 	}
 
-	cfg.buildTypeMap()
-	c.ModuleTypes = &cfg
+	// Merge defaults with user config
+	c.ModuleTypes = MergeModuleTypes(defaults, &userCfg)
 	return nil
 }
 
-// LoadEnvironments loads the environments configuration
+// LoadEnvironments loads the environments configuration (optional).
 func (c *EACConfig) LoadEnvironments(validateSchema bool) error {
+	// Check if file exists - it's optional
+	envsPath := filepath.Join(c.ConfigRoot, EnvironmentsFileName)
+	if _, err := os.Stat(envsPath); os.IsNotExist(err) {
+		return nil
+	}
+
 	data, err := c.readConfigFile(EnvironmentsFileName)
 	if err != nil {
 		return err
@@ -371,8 +408,14 @@ func (c *EACConfig) LoadEnvironments(validateSchema bool) error {
 	return nil
 }
 
-// LoadTestingTags loads the testing-tags configuration
+// LoadTestingTags loads the testing-tags configuration (optional).
 func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
+	// Check if file exists - it's optional
+	tagsPath := filepath.Join(c.ConfigRoot, TestingTagsFileName)
+	if _, err := os.Stat(tagsPath); os.IsNotExist(err) {
+		return nil
+	}
+
 	data, err := c.readConfigFile(TestingTagsFileName)
 	if err != nil {
 		return err
@@ -397,8 +440,14 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 	return nil
 }
 
-// LoadTestSuites loads the test-suites configuration
+// LoadTestSuites loads the test-suites configuration (optional).
 func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
+	// Check if file exists - it's optional
+	suitesPath := filepath.Join(c.ConfigRoot, TestSuitesFileName)
+	if _, err := os.Stat(suitesPath); os.IsNotExist(err) {
+		return nil
+	}
+
 	data, err := c.readConfigFile(TestSuitesFileName)
 	if err != nil {
 		return err
@@ -420,8 +469,24 @@ func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 	return nil
 }
 
-// LoadSystemDependencies loads the system-dependencies configuration
+// LoadSystemDependencies loads the system-dependencies configuration.
+// Merges contract defaults with user config.
 func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
+	// Load defaults from contract
+	defaults, err := LoadSystemDependenciesDefaults(c.RepoRoot)
+	if err != nil {
+		return fmt.Errorf("loading system-dependencies defaults: %w", err)
+	}
+
+	// Check if user config exists
+	depsPath := filepath.Join(c.ConfigRoot, SystemDependenciesFileName)
+	if _, err := os.Stat(depsPath); os.IsNotExist(err) {
+		// Use defaults only
+		defaults.buildDepMap()
+		c.SystemDependencies = defaults
+		return nil
+	}
+
 	data, err := c.readConfigFile(SystemDependenciesFileName)
 	if err != nil {
 		return err
@@ -433,45 +498,13 @@ func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
 		}
 	}
 
-	var cfg SystemDependenciesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	var userCfg SystemDependenciesConfig
+	if err := yaml.Unmarshal(data, &userCfg); err != nil {
 		return fmt.Errorf("failed to parse %s: %w", SystemDependenciesFileName, err)
 	}
 
-	cfg.buildDepMap()
-	c.SystemDependencies = &cfg
-	return nil
-}
-
-// LoadHandlers loads the handlers configuration
-func (c *EACConfig) LoadHandlers(validateSchema bool) error {
-	// Check if handlers file exists - it's optional
-	handlersPath := filepath.Join(c.ConfigRoot, HandlersFileName)
-	if _, err := os.Stat(handlersPath); os.IsNotExist(err) {
-		// Handlers config is optional - use empty config
-		c.Handlers = &HandlersConfig{}
-		c.Handlers.buildHandlerMap()
-		return nil
-	}
-
-	data, err := c.readConfigFile(HandlersFileName)
-	if err != nil {
-		return err
-	}
-
-	if validateSchema {
-		if err := c.validateSchema(schema.SchemaHandlers, data); err != nil {
-			return err
-		}
-	}
-
-	var cfg HandlersConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", HandlersFileName, err)
-	}
-
-	cfg.buildHandlerMap()
-	c.Handlers = &cfg
+	// Merge defaults with user config
+	c.SystemDependencies = MergeSystemDependencies(defaults, &userCfg)
 	return nil
 }
 
@@ -640,16 +673,6 @@ func (c *EACConfig) ValidateAll() error {
 		data, _ := c.readConfigFile(SystemDependenciesFileName)
 		if err := c.validateSchema(schema.SchemaSystemDependencies, data); err != nil {
 			errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
-		}
-	}
-
-	if c.Handlers != nil {
-		data, err := c.readConfigFile(HandlersFileName)
-		// Only validate if file exists (handlers are optional)
-		if err == nil {
-			if err := c.validateSchema(schema.SchemaHandlers, data); err != nil {
-				errs = append(errs, fmt.Errorf("handlers: %w", err))
-			}
 		}
 	}
 

@@ -64,23 +64,28 @@ func TestInferComponentFunction(t *testing.T) {
 	}
 }
 
-// setupTestLogger creates a component logger with an observer core for testing
-func setupTestLogger(component string) (*ComponentLogger, *observer.ObservedLogs) {
+// setupTestLogger creates a component logger with an observer core for testing.
+// Returns the logger, observed logs, and a cleanup function that must be called
+// when the test is done (use defer).
+func setupTestLogger(component string) (*ComponentLogger, *observer.ObservedLogs, func()) {
 	// Create observer core to capture log entries
 	core, logs := observer.New(zapcore.DebugLevel)
 
-	// Create a logger with the observer core
-	zapLogger := zap.New(core).With(zap.String("component", component))
+	// Create a zap logger with the observer core
+	zapLogger := zap.New(core)
 
-	// Create component logger
+	// Inject this logger into the global state
+	cleanup := SetTestLogger(zapLogger)
+
+	// Create component logger (will use the injected test logger)
 	return &ComponentLogger{
 		component: component,
-		zap:       zapLogger,
-	}, logs
+	}, logs, cleanup
 }
 
 func TestComponentLoggerDebug(t *testing.T) {
-	log, logs := setupTestLogger("test")
+	log, logs, cleanup := setupTestLogger("test")
+	defer cleanup()
 
 	// Log a debug message
 	log.Debug("test message")
@@ -99,15 +104,13 @@ func TestComponentLoggerDebug(t *testing.T) {
 		t.Errorf("expected message 'test message', got '%s'", entry.Message)
 	}
 
-	// Verify component field
-	componentField := entry.ContextMap()["component"]
-	if componentField != "test" {
-		t.Errorf("expected component 'test', got '%v'", componentField)
-	}
+	// Note: component field is NOT added to log context to avoid polluting console output.
+	// The component name is stored in ComponentLogger.component for internal tracking only.
 }
 
 func TestComponentLoggerDebugf(t *testing.T) {
-	log, logs := setupTestLogger("repository")
+	log, logs, cleanup := setupTestLogger("repository")
+	defer cleanup()
 
 	// Log formatted debug message
 	log.Debugf("processing %d files", 42)
@@ -125,7 +128,8 @@ func TestComponentLoggerDebugf(t *testing.T) {
 }
 
 func TestComponentLoggerInfo(t *testing.T) {
-	log, logs := setupTestLogger("test")
+	log, logs, cleanup := setupTestLogger("test")
+	defer cleanup()
 
 	log.Info("info message")
 
@@ -144,7 +148,8 @@ func TestComponentLoggerInfo(t *testing.T) {
 }
 
 func TestComponentLoggerInfof(t *testing.T) {
-	log, logs := setupTestLogger("test")
+	log, logs, cleanup := setupTestLogger("test")
+	defer cleanup()
 
 	log.Infof("count: %d", 5)
 
@@ -160,7 +165,8 @@ func TestComponentLoggerInfof(t *testing.T) {
 }
 
 func TestComponentLoggerWarn(t *testing.T) {
-	log, logs := setupTestLogger("test")
+	log, logs, cleanup := setupTestLogger("test")
+	defer cleanup()
 
 	log.Warn("warning message")
 
@@ -179,7 +185,8 @@ func TestComponentLoggerWarn(t *testing.T) {
 }
 
 func TestComponentLoggerWarnf(t *testing.T) {
-	log, logs := setupTestLogger("test")
+	log, logs, cleanup := setupTestLogger("test")
+	defer cleanup()
 
 	log.Warnf("warning %s", "here")
 
@@ -195,7 +202,8 @@ func TestComponentLoggerWarnf(t *testing.T) {
 }
 
 func TestComponentLoggerError(t *testing.T) {
-	log, logs := setupTestLogger("test")
+	log, logs, cleanup := setupTestLogger("test")
+	defer cleanup()
 
 	log.Error("error message")
 
@@ -214,7 +222,8 @@ func TestComponentLoggerError(t *testing.T) {
 }
 
 func TestComponentLoggerErrorf(t *testing.T) {
-	log, logs := setupTestLogger("test")
+	log, logs, cleanup := setupTestLogger("test")
+	defer cleanup()
 
 	log.Errorf("error code: %d", 500)
 
@@ -231,12 +240,8 @@ func TestComponentLoggerErrorf(t *testing.T) {
 
 func TestComponentLoggerWithSuffix(t *testing.T) {
 	// Create base logger with observer
-	core, logs := observer.New(zapcore.DebugLevel)
-	baseZap := zap.New(core).With(zap.String("component", "git"))
-	baseLog := &ComponentLogger{
-		component: "git",
-		zap:       baseZap,
-	}
+	baseLog, logs, cleanup := setupTestLogger("git")
+	defer cleanup()
 
 	// Create logger with suffix
 	funcLog := baseLog.WithSuffix("StagedFiles")
@@ -249,38 +254,30 @@ func TestComponentLoggerWithSuffix(t *testing.T) {
 	// Log a message
 	funcLog.Debug("start")
 
-	// Verify the log was captured and has the correct component
+	// Verify the log was captured
 	entries := logs.All()
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 log entry, got %d", len(entries))
 	}
 
 	entry := entries[0]
-	// The ContextMap should have both the original and new component field
-	// Zap keeps all fields, so we check if the message was logged
 	if entry.Message != "start" {
 		t.Errorf("expected message 'start', got '%s'", entry.Message)
 	}
 
-	// Verify the component field exists (Zap will have both fields in the chain)
-	ctx := entry.ContextMap()
-	if comp, ok := ctx["component"]; ok {
-		// Should have at least one component field
-		if comp == nil {
-			t.Error("component field is nil")
-		}
-	} else {
-		t.Error("component field not found in context")
-	}
+	// Note: component field is NOT added to log context to avoid polluting console output.
+	// The suffix is tracked internally in ComponentLogger.component only.
 }
 
 func TestComponentLoggerLevelFiltering(t *testing.T) {
 	// Create logger with INFO level (filters out DEBUG)
 	core, logs := observer.New(zapcore.InfoLevel)
-	zapLogger := zap.New(core).With(zap.String("component", "test"))
+	zapLogger := zap.New(core)
+	cleanup := SetTestLogger(zapLogger)
+	defer cleanup()
+
 	log := &ComponentLogger{
 		component: "test",
-		zap:       zapLogger,
 	}
 
 	// Log at different levels
@@ -305,7 +302,8 @@ func TestComponentLoggerLevelFiltering(t *testing.T) {
 }
 
 func TestComponentLoggerConcurrency(t *testing.T) {
-	log, logs := setupTestLogger("concurrent")
+	log, logs, cleanup := setupTestLogger("concurrent")
+	defer cleanup()
 
 	var wg sync.WaitGroup
 	for i := 0; i < 50; i++ {
@@ -324,7 +322,8 @@ func TestComponentLoggerConcurrency(t *testing.T) {
 }
 
 func TestComponentLoggerPackageLevelUsage(t *testing.T) {
-	log, logs := setupTestLogger("eac-core-git")
+	log, logs, cleanup := setupTestLogger("eac-core-git")
+	defer cleanup()
 
 	log.Debug("package initialized")
 
@@ -334,8 +333,12 @@ func TestComponentLoggerPackageLevelUsage(t *testing.T) {
 	}
 
 	entry := entries[0]
-	componentField := entry.ContextMap()["component"]
-	if componentField != "eac-core-git" {
-		t.Errorf("expected component 'eac-core-git', got '%v'", componentField)
+	if entry.Message != "package initialized" {
+		t.Errorf("expected message 'package initialized', got '%s'", entry.Message)
+	}
+
+	// Verify the component is stored internally (not in log context)
+	if log.component != "eac-core-git" {
+		t.Errorf("expected component 'eac-core-git', got '%s'", log.component)
 	}
 }

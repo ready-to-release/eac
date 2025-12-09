@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -45,7 +46,9 @@ func (v *Verifier) Verify(dependency string) Result {
 	result.RequiredVersion = dep.Version
 
 	// Run verification
-	if dep.Verify.IsCommandBased() {
+	if dep.Verify.IsOSPlatformBased() {
+		result = v.verifyOSPlatform(result, dep)
+	} else if dep.Verify.IsCommandBased() {
 		result = v.verifyCommand(result, dep)
 	} else if dep.Verify.IsEnvBased() {
 		result = v.verifyEnvVars(result, dep)
@@ -100,6 +103,21 @@ func (v *Verifier) verifyCommand(result Result, dep *config.SystemDependency) Re
 			result.Available = false
 			result.Error = fmt.Errorf("version %s does not meet requirement %s", result.Version, dep.Version)
 		}
+	}
+
+	return result
+}
+
+// verifyOSPlatform checks if the current OS matches the required platform
+func (v *Verifier) verifyOSPlatform(result Result, dep *config.SystemDependency) Result {
+	requiredOS := dep.Verify.OSPlatform
+	currentOS := runtime.GOOS
+
+	result.Available = currentOS == requiredOS
+	result.Version = currentOS // Report current OS as "version"
+
+	if !result.Available {
+		result.Error = fmt.Errorf("requires %s, running on %s", requiredOS, currentOS)
 	}
 
 	return result

@@ -110,8 +110,8 @@ func ReleasePending() int {
 	// Load definitions for versioning constraints
 	defs, err := definitions.Load(workspaceRoot)
 	if err != nil {
-		log.Warnf("failed to load definitions: %v", err)
-		defs = definitions.Default()
+		log.Errorf("failed to load definitions: %v", err)
+		return 1
 	}
 
 	// Load module contracts

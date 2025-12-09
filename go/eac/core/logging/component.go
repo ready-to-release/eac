@@ -32,6 +32,27 @@ func initComponentGlobalLogger() {
 	})
 }
 
+// SetTestLogger sets a custom zap logger for testing purposes.
+// This replaces the global component logger. Returns a cleanup function
+// that restores the previous logger.
+// FOR TESTING ONLY - do not use in production code.
+func SetTestLogger(zapLogger *zap.Logger) func() {
+	oldLogger := componentGlobalLogger
+	oldOnce := componentOnce
+
+	// Reset the once so the test logger takes effect
+	componentOnce = sync.Once{}
+	componentGlobalLogger = &Logger{
+		Logger: zapLogger,
+		config: DefaultConfig("test", "."),
+	}
+
+	return func() {
+		componentGlobalLogger = oldLogger
+		componentOnce = oldOnce
+	}
+}
+
 // ComponentLogger provides logging for a specific module/component.
 // It is designed to be created once per package and reused.
 //
@@ -47,8 +68,10 @@ func initComponentGlobalLogger() {
 //	    log.Debug("operation complete")
 //	}
 type ComponentLogger struct {
-	component string       // e.g., "commands/impl/build"
-	zap       *zap.Logger  // Zap logger with component field
+	component string // e.g., "commands/impl/build"
+	// Note: We don't cache zap.Logger here because ConfigureLogging may reconfigure
+	// the global logger after ComponentLogger instances are created.
+	// Instead, we access componentGlobalLogger.Logger dynamically in each method.
 }
 
 // C creates a ComponentLogger, inferring the component name from the call site.
@@ -74,13 +97,21 @@ func C(component ...string) *ComponentLogger {
 		comp = inferComponent()
 	}
 
-	// Create child logger with component field
-	zapWithComp := componentGlobalLogger.Logger.With(zap.String("component", comp))
-
 	return &ComponentLogger{
 		component: comp,
-		zap:       zapWithComp,
 	}
+}
+
+// getZap returns the current zap logger.
+// This is called on each log operation to ensure we use the current global logger
+// (which may have been reconfigured via ConfigureLogging).
+// Note: Component name is stored in ComponentLogger but not added to log output
+// to avoid polluting console output with structured fields.
+func (c *ComponentLogger) getZap() *zap.Logger {
+	if componentGlobalLogger == nil {
+		initComponentGlobalLogger()
+	}
+	return componentGlobalLogger.Logger
 }
 
 // Component creates a ComponentLogger, inferring from call site or using explicit name.
@@ -139,42 +170,42 @@ func inferComponent() string {
 
 // Debug logs a debug message if debug logging is enabled.
 func (c *ComponentLogger) Debug(msg string) {
-	c.zap.Debug(msg)
+	c.getZap().Debug(msg)
 }
 
 // Debugf logs a formatted debug message if debug logging is enabled.
 func (c *ComponentLogger) Debugf(format string, args ...interface{}) {
-	c.zap.Sugar().Debugf(format, args...)
+	c.getZap().Sugar().Debugf(format, args...)
 }
 
 // Info logs an informational message.
 func (c *ComponentLogger) Info(msg string) {
-	c.zap.Info(msg)
+	c.getZap().Info(msg)
 }
 
 // Infof logs a formatted informational message.
 func (c *ComponentLogger) Infof(format string, args ...interface{}) {
-	c.zap.Sugar().Infof(format, args...)
+	c.getZap().Sugar().Infof(format, args...)
 }
 
 // Warn logs a warning message.
 func (c *ComponentLogger) Warn(msg string) {
-	c.zap.Warn(msg)
+	c.getZap().Warn(msg)
 }
 
 // Warnf logs a formatted warning message.
 func (c *ComponentLogger) Warnf(format string, args ...interface{}) {
-	c.zap.Sugar().Warnf(format, args...)
+	c.getZap().Sugar().Warnf(format, args...)
 }
 
 // Error logs an error message.
 func (c *ComponentLogger) Error(msg string) {
-	c.zap.Error(msg)
+	c.getZap().Error(msg)
 }
 
 // Errorf logs a formatted error message.
 func (c *ComponentLogger) Errorf(format string, args ...interface{}) {
-	c.zap.Sugar().Errorf(format, args...)
+	c.getZap().Sugar().Errorf(format, args...)
 }
 
 // WithSuffix creates a new ComponentLogger with an additional suffix.
@@ -187,11 +218,8 @@ func (c *ComponentLogger) Errorf(format string, args ...interface{}) {
 //	funcLog.Debug("start")  // Component: "git.StagedFiles"
 func (c *ComponentLogger) WithSuffix(suffix string) *ComponentLogger {
 	newComp := c.component + "." + suffix
-	// Build on the existing logger, not the global one
-	zapWithComp := c.zap.With(zap.String("component", newComp))
 	return &ComponentLogger{
 		component: newComp,
-		zap:       zapWithComp,
 	}
 }
 

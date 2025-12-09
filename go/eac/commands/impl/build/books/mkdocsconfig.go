@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // TemplateType represents the type of mkdocs template to use
@@ -29,11 +31,11 @@ func GetTemplateType(outputFormat string) TemplateType {
 func GetTemplatePath(workspaceRoot string, templateType TemplateType) string {
 	switch templateType {
 	case TemplateSite:
-		return filepath.Join(workspaceRoot, "containers", "mkdocs-site", "mkdocs.yml")
+		return paths.MkDocsSiteTemplatePath(workspaceRoot)
 	case TemplatePDF:
-		return filepath.Join(workspaceRoot, "containers", "mkdocs-pdf", "mkdocs.yml")
+		return paths.MkDocsPdfTemplatePath(workspaceRoot)
 	default:
-		return filepath.Join(workspaceRoot, "containers", "mkdocs-site", "mkdocs.yml")
+		return paths.MkDocsSiteTemplatePath(workspaceRoot)
 	}
 }
 

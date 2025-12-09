@@ -1,0 +1,5 @@
+types:
+  - name: go-library
+    description: Go library module
+    capabilities:
+      - go_module

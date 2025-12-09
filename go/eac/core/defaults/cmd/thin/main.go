@@ -6,13 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
 func main() {
 	repoRoot := findRepoRoot()
-	modulesPath := filepath.Join(repoRoot, ".r2r", "eac", "modules.yml")
-	typesPath := filepath.Join(repoRoot, ".r2r", "eac", "module-types.yml")
+	modulesPath := filepath.Join(paths.EACConfigPath(repoRoot), "modules.yml")
+	typesPath := filepath.Join(paths.EACConfigPath(repoRoot), "module-types.yml")
 
 	// Load module types
 	typesData, err := os.ReadFile(typesPath)

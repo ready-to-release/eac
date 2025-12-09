@@ -15,6 +15,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func init() {
@@ -274,7 +275,7 @@ func testConfigSection(f *SummaryFormatter, module *config.Module, suite string,
 	}
 
 	// Output directory
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("out/test/%s", suite)))
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("%s/%s", paths.OutTestRelPath, suite)))
 
 	return f.CollapsibleSection(Emoji("config")+" Test Configuration", configDetails)
 }

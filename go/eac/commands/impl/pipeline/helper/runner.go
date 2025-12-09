@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -34,9 +35,9 @@ func (r *PipelineRunner) RunPipeline(moniker string, ref string) error {
 	workflowFile := moniker + ".yaml"
 
 	// Check if workflow file exists
-	workflowPath := filepath.Join(r.repoPath, ".github", "workflows", workflowFile)
+	workflowPath := paths.WorkflowPath(r.repoPath, workflowFile)
 	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
-		return fmt.Errorf("workflow file not found: %s\nHint: Create .github/workflows/%s", workflowPath, workflowFile)
+		return fmt.Errorf("workflow file not found: %s\nHint: Create %s/%s/%s", workflowPath, paths.GitHubDir, paths.WorkflowsDir, workflowFile)
 	}
 
 	log.Infof("Triggering workflow: %s", workflowFile)
@@ -219,7 +220,7 @@ func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref strin
 
 // filterModulesWithWorkflows filters the execution plan to only include modules with workflow files
 func (r *PipelineRunner) filterModulesWithWorkflows(plan *repository.ExecutionPlan) (*repository.ExecutionPlan, error) {
-	workflowsDir := filepath.Join(r.repoPath, ".github", "workflows")
+	workflowsDir := filepath.Join(r.repoPath, paths.GitHubDir, paths.WorkflowsDir)
 
 	filtered := &repository.ExecutionPlan{
 		Layers:         [][]string{},

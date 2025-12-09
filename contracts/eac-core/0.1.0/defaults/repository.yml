@@ -1,0 +1,55 @@
+# Default repository settings
+# Merged with .r2r/eac/repository.yml (user values override these)
+
+# Trunk-based development configuration
+trunk_branch: main
+
+# Repository settings
+repository:
+  # Repository type: poly (polyrepo), mono (monorepo), adjunct (supporting repo)
+  type: poly
+
+  # Valid versioning schemes that modules can declare
+  schemes:
+    - SemVer
+    - CalVer
+
+  # Trunk-based development: max branch age before warning
+  max_branch_age_days: 2
+
+  # Pull request workflow configuration
+  pr:
+    delete_branch_on_merge: true
+    merge_strategy: squash
+
+  # Versioning constraints and behavior control
+  versioning:
+    # Options: patch-only, unrestricted, calver-only
+    # patch-only: Only allow patch bumps during early development
+    constraint: patch-only
+
+# Default paths configuration
+paths:
+  # Specs root directory - where feature specifications live
+  specs_root: specs
+
+  # Test implementation root directory
+  test_impl_root: tests
+
+  # Templates directory
+  templates: templates
+
+  # Output directory structure
+  out:
+    root: out
+    build: out/build
+    test: out/test
+    logs: out/logs
+    security: out/security
+    tools: out/tools
+
+# Filename conventions
+conventions:
+  godog_test: godog_test.go
+  package_json: package.json
+  changelog: CHANGELOG.md

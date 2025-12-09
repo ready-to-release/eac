@@ -11,14 +11,45 @@ type ModulesConfig struct {
 
 // Module represents a single module definition
 type Module struct {
-	Moniker     string            `yaml:"moniker"`
-	Name        string            `yaml:"name"`
-	Type        string            `yaml:"type"`
-	Description string            `yaml:"description"`
-	DependsOn   []string          `yaml:"depends_on"`
-	Files       Files             `yaml:"files"`
-	Flags       Flags             `yaml:"flags"`
-	Metadata    map[string]string `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
+	Moniker     string                 `yaml:"moniker"`
+	Name        string                 `yaml:"name"`
+	Type        string                 `yaml:"type"`
+	Description string                 `yaml:"description"`
+	DependsOn   []string               `yaml:"depends_on"`
+	Build       *ModuleBuild           `yaml:"build,omitempty"`       // Per-module build configuration
+	DockerBuild map[string]interface{} `yaml:"docker_build,omitempty"` // Per-module Docker build configuration
+	Files       Files                  `yaml:"files"`
+	Flags       Flags                  `yaml:"flags"`
+	Metadata    map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
+}
+
+// ModuleBuild contains per-module build configuration
+type ModuleBuild struct {
+	Handler   string           `yaml:"handler,omitempty"`   // Explicit build handler override
+	Artifacts []ModuleArtifact `yaml:"artifacts,omitempty"` // Artifacts to produce
+	Options   *BuildOptions    `yaml:"options,omitempty"`   // Build behavior options
+}
+
+// ModuleArtifact defines an artifact to be produced by a module build
+type ModuleArtifact struct {
+	ID          string `yaml:"id"`                    // Unique artifact identifier
+	Type        string `yaml:"type"`                  // executable, file, directory, test
+	Pattern     string `yaml:"pattern"`               // Output path pattern
+	Compression string `yaml:"compression,omitempty"` // none, strip, upx
+	DeriveFrom  string `yaml:"derive_from,omitempty"` // Source artifact to derive from
+}
+
+// BuildOptions contains optional build behavior flags
+type BuildOptions struct {
+	CommandsBinary bool `yaml:"commands_binary,omitempty"` // Copy to tools directory after build
+}
+
+// GetBuildHandler returns the explicit build handler for this module
+func (m *Module) GetBuildHandler() string {
+	if m.Build == nil {
+		return ""
+	}
+	return m.Build.Handler
 }
 
 // Files defines file ownership patterns for a module

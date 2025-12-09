@@ -14,7 +14,6 @@ on:
   push:
     tags:
       - 'r2r-cli/*'
-      - 'src-cli/*'  # Legacy tag format for backwards compatibility
   workflow_dispatch:
     inputs:
       version:
@@ -56,7 +55,6 @@ jobs:
         uses: ./.github/actions/extract-release-version
         with:
           module-prefix: r2r-cli
-          legacy-prefixes: src-cli
           commands-path: ${{ steps.commands.outputs.commands-path }}
 
       - name: Verify version is valid

@@ -120,10 +120,10 @@ Books fit into the EAC ecosystem without disruption:
 │                    EAC Module System                             │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  modules.yml          module-types.yml         handlers.yml      │
+│  modules.yml          module-types.yml         build handlers    │
 │  ┌─────────────┐       ┌──────────────┐         ┌─────────────┐  │
-│  │ docs:       │       │ mkdocs-site  │         │ mkdocs:     │  │
-│  │   type:     │─────▶│   caps:      │────────▶│   handler   │  │
+│  │ docs:       │       │ mkdocs-site  │         │ MkDocsHandler│  │
+│  │   type:     │─────▶│   caps:      │────────▶│   (builtin)  │  │
 │  │   mkdocs-   │       │   [doc,      │         │             │  │
 │  │   site      │       │    container]│         └──────┬──────┘  │
 │  └─────────────┘       └──────────────┘                │         │
@@ -147,7 +147,6 @@ Books fit into the EAC ecosystem without disruption:
 | ------------------ | --------------------------------------- |
 | `modules.yml`      | No changes—`docs` remains `mkdocs-site` |
 | `module-types.yml` | No changes—no new types needed          |
-| `handlers.yml`     | No changes—dispatch rules unchanged     |
 | CI workflows       | No changes—`build docs` works as before |
 
 ### What's New

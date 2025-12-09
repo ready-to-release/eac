@@ -35,8 +35,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/runner"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/runners"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -44,6 +44,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
+	"github.com/ready-to-release/eac/go/eac/core/teststate"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
@@ -69,6 +70,7 @@ type TestConfig struct {
 	UseTUI       bool
 	TUIHeight    int
 	Parallel     bool
+	ForceRetest  bool // --retest flag to bypass incremental testing
 }
 
 // TestExecutionContext holds shared state for parallel test execution
@@ -175,6 +177,8 @@ func parseTestArgs(args []string) *TestConfig {
 			tuiExplicitlySet = true
 		case arg == "--sequential":
 			cfg.Parallel = false
+		case arg == "--retest":
+			cfg.ForceRetest = true
 		case arg == "--tui-height":
 			if i+1 >= len(args) {
 				log.Errorf("--tui-height requires a value")
@@ -197,7 +201,7 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential")
+			log.Errorf("Valid flags: --suite, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --retest")
 			return nil
 		default:
 			cfg.Monikers = append(cfg.Monikers, arg)
@@ -226,15 +230,12 @@ func executeTests(cfg *TestConfig) int {
 		return 1
 	}
 
-	// Enable file logging for debug output (always enabled for test)
-	// If --debug flag is set, also output to console
-	if err := logging.EnableFileLogging(workspaceRoot, "test", cfg.DebugMode); err != nil {
-		log.Warnf("Failed to enable file logging: %v", err)
+	// Configure logging for test command
+	// Debug always goes to file, also to console if --debug flag set
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "test", cfg.DebugMode); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	defer logging.CloseFileLogging()
-
-	// Always enable debug logging (output destination is controlled by EnableFileLogging)
-	logging.EnableDebug()
+	defer logging.CloseLogging()
 
 	// Load repository config for paths
 	repoCfg, err := config.LoadRepositoryConfig(workspaceRoot)
@@ -346,34 +347,32 @@ func executeTests(cfg *TestConfig) int {
 		}
 	}
 
-	// Show execution context in Init pane
-	writeInit("Executing test via %s", logging.GetExecutionContext())
-	writeInit("")
+	// writeInitSummary outputs the full initialization summary
+	writeInitSummary := func(summary *initsummary.Summary) {
+		var formatted string
+		if cfg.UseTUI {
+			formatted = initsummary.FormatCompact(summary)
+		} else {
+			formatted = initsummary.FormatDetailed(summary)
+		}
+		for _, line := range strings.Split(strings.TrimSpace(formatted), "\n") {
+			writeInit("%s", line)
+		}
+	}
 
-	// Suite info
-	writeInit("Running test suite: %s", suite.Name)
-	writeInit("Description: %s", suite.Description)
-	writeInit("")
-
-	// Phase 1: Test Discovery
-	writeInit("%s", output.PhaseHeader(1, "Test Discovery"))
+	// Test Discovery
 	allTests, err := testing.DiscoverAllTests(workspaceRoot)
 	if err != nil {
-		writeInit("❌ Failed to discover tests: %v", err)
+		log.Errorf("Failed to discover tests: %v", err)
 		return 1
 	}
-	writeInit("Discovered %d tests", len(allTests))
-	writeInit("")
+	log.Debugf("Discovered %d tests", len(allTests))
 
-	// Phase 2: Tag Inference
-	writeInit("%s", output.PhaseHeader(2, "Tag Inference"))
+	// Tag Inference
 	allTests = testing.ApplyInferences(allTests, suite.Inferences)
-	writeInit("Applied %d inference rules", len(suite.Inferences))
-	writeInit("Inferred system deps from module types")
-	writeInit("")
+	log.Debugf("Applied %d inference rules", len(suite.Inferences))
 
-	// Phase 3: Suite Selection
-	writeInit("%s", output.PhaseHeader(3, "Suite Selection"))
+	// Suite Selection
 
 	// Track selection stats
 	type selectionStats struct {
@@ -381,6 +380,7 @@ func executeTests(cfg *TestConfig) int {
 		Skipped          int
 		NotMatchingSuite int
 		Selected         int
+		OSFiltered       int
 	}
 	stats := selectionStats{TotalDiscovered: len(allTests)}
 
@@ -432,21 +432,11 @@ func executeTests(cfg *TestConfig) int {
 	}
 	stats.Selected = len(selectedTests)
 
-	if stats.Skipped > 0 {
-		writeInit("%d tests skipped (tagged with @skip:<reason>)", stats.Skipped)
-	}
-	writeInit("Selected %d tests for suite '%s'", len(selectedTests), cfg.SuiteName)
-
 	// Filter by OS compatibility
 	osCompatibleTests := filterByOSCompatibility(selectedTests, multiWriter)
 	osFilteredCount := len(selectedTests) - len(osCompatibleTests)
-	if osFilteredCount > 0 {
-		writeInit("INFO: %d tests excluded (incompatible with %s)", osFilteredCount, runtime.GOOS)
-	}
 	selectedTests = osCompatibleTests
-
-	writeInit("Running %d production tests", len(selectedTests))
-	writeInit("")
+	stats.OSFiltered = osFilteredCount
 
 	// If list-only, just show tests and exit
 	if cfg.ListOnly {
@@ -460,18 +450,21 @@ func executeTests(cfg *TestConfig) int {
 		return 0
 	}
 
-	// Phase 4: Dependency Verification
-	writeInit("%s", output.PhaseHeader(4, "Dependency Verification"))
+	// Dependency Verification
 	systemDeps := testing.GetSystemDependencies(selectedTests)
 	moduleDeps := testing.GetModuleDependencies(selectedTests)
 
 	var unavailableModuleDeps []string
+	var depsStatus initsummary.DepsStatus
 
 	if len(systemDeps) == 0 && len(moduleDeps) == 0 {
-		writeInit("No dependencies required")
+		depsStatus = initsummary.DepsStatus{Verified: true}
 	} else {
-		writeInit("System dependencies: %s", strings.Join(systemDeps, ", "))
-		writeInit("Module dependencies: %s", strings.Join(moduleDeps, ", "))
+		depsStatus = initsummary.DepsStatus{
+			Verified: !cfg.SkipDeps,
+			Skipped:  cfg.SkipDeps,
+			Required: append(systemDeps, moduleDeps...),
+		}
 
 		if !cfg.SkipDeps {
 			hasSystemFailures := false
@@ -479,68 +472,133 @@ func executeTests(cfg *TestConfig) int {
 			// Verify system dependencies
 			sysResults := systemdeps.VerifyAll(systemDeps)
 			for _, result := range sysResults {
-				writeInit("%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
+				depsStatus.Available = append(depsStatus.Available, initsummary.DepsResult{
+					Name:      result.Name,
+					Available: result.Available,
+					Version:   result.Version,
+				})
 				if !result.Available {
 					hasSystemFailures = true
+					depsStatus.Missing = append(depsStatus.Missing, result.Name)
 				}
 			}
 
 			// Verify module dependencies
 			modResults := moduledeps.VerifyAll(moduleDeps)
 			for _, result := range modResults {
-				writeInit("%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
+				depsStatus.Available = append(depsStatus.Available, initsummary.DepsResult{
+					Name:      result.Dependency,
+					Available: result.Available,
+					Version:   result.Version,
+				})
 				if !result.Available {
 					unavailableModuleDeps = append(unavailableModuleDeps, result.Dependency)
 				}
 			}
 
 			if hasSystemFailures {
+				// Output summary showing what failed
+				initSummary := initsummary.New("test").
+					SetRequest(cfg.Monikers, cfg.Monikers).
+					SetExecutionContext(string(logging.GetExecutionContext())).
+					SetDepsStatus(depsStatus).
+					SetTestInfo(&initsummary.TestInfo{
+						SuiteName:        suite.Name,
+						SuiteDescription: suite.Description,
+						TotalDiscovered:  stats.TotalDiscovered,
+						Skipped:          stats.Skipped,
+						NotMatchingSuite: stats.NotMatchingSuite,
+						OSFiltered:       stats.OSFiltered,
+						Selected:         len(selectedTests),
+					}).
+					SetOutputDir(testRunDir)
+				writeInitSummary(initSummary)
 				writeInit("")
-				writeInit("%s Error: Required system dependencies are missing", output.IconFail)
-				writeInit("Use --skip-deps to run tests anyway")
+				writeInit("❌ Required system dependencies are missing: %s", strings.Join(depsStatus.Missing, ", "))
+				writeInit("   Use --skip-deps to run tests anyway")
 				return 1
-			}
-
-			if len(unavailableModuleDeps) > 0 {
-				writeInit("")
-				writeInit("⏭️ Module dependencies not available, tests will be skipped: %s", strings.Join(unavailableModuleDeps, ", "))
 			}
 		}
 	}
-	writeInit("")
 
-	// Phase 4.5: Build Artifact Validation
-	writeInit("=== Phase 4.5: Build Artifact Validation ===")
-
-	// Get unique modules being tested
+	// Build Artifact Validation
 	modulesToValidate := getUniqueModulesFromTests(selectedTests)
-	if len(modulesToValidate) == 0 {
-		writeInit("No modules to validate")
-	} else {
-		writeInit("Validating artifacts for %d module(s): %s",
-			len(modulesToValidate), strings.Join(modulesToValidate, ", "))
+	var artifactValidation *initsummary.ArtifactValidationInfo
 
-		// Validate each module
-		validationErrors := validateBuildArtifacts(modulesToValidate, eacCfg, workspaceRoot, writeInit)
+	if len(modulesToValidate) > 0 {
+		validationErrors := validateBuildArtifactsQuiet(modulesToValidate, eacCfg, workspaceRoot)
 
 		if len(validationErrors) > 0 {
+			artifactValidation = &initsummary.ArtifactValidationInfo{
+				Validated:      true,
+				ModulesChecked: modulesToValidate,
+				AllPresent:     false,
+				MissingFrom:    validationErrors,
+			}
+
+			// Output summary showing what failed
+			initSummary := initsummary.New("test").
+				SetRequest(cfg.Monikers, cfg.Monikers).
+				SetExecutionContext(string(logging.GetExecutionContext())).
+				SetDepsStatus(depsStatus).
+				SetTestInfo(&initsummary.TestInfo{
+					SuiteName:        suite.Name,
+					SuiteDescription: suite.Description,
+					TotalDiscovered:  stats.TotalDiscovered,
+					Skipped:          stats.Skipped,
+					NotMatchingSuite: stats.NotMatchingSuite,
+					OSFiltered:       stats.OSFiltered,
+					Selected:         len(selectedTests),
+				}).
+				SetArtifactValidation(artifactValidation).
+				SetOutputDir(testRunDir)
+			writeInitSummary(initSummary)
 			writeInit("")
-			writeInit("%s Error: Build artifacts are missing", output.IconFail)
+			writeInit("❌ Build artifacts are missing")
 			for _, err := range validationErrors {
-				writeInit("  %s", err)
+				writeInit("  - %s", err)
 			}
 			writeInit("")
 			writeInit("Resolution: Run 'build <module>' for each module to generate artifacts")
 			return 1
 		}
 
-		writeInit("✅ All build artifacts present")
+		artifactValidation = &initsummary.ArtifactValidationInfo{
+			Validated:      true,
+			ModulesChecked: modulesToValidate,
+			AllPresent:     true,
+		}
 	}
-	writeInit("")
 
-	// Phase 5: Test Execution (transitions to Run phase when orchestrator starts)
-	writeInit("%s", output.PhaseHeader(5, "Test Execution"))
-	writeInit("%s", output.OutputDir(testRunDir))
+	// Build and output the structured initialization summary
+	initSummary := initsummary.New("test").
+		SetRequest(cfg.Monikers, cfg.Monikers).
+		SetExecutionContext(string(logging.GetExecutionContext())).
+		SetFlags(initsummary.Flags{
+			ListOnly:    cfg.ListOnly,
+			ShowTimings: cfg.ShowTimings,
+			DebugMode:   cfg.DebugMode,
+			UseTUI:      cfg.UseTUI,
+		}).
+		SetDepsStatus(depsStatus).
+		SetTestInfo(&initsummary.TestInfo{
+			SuiteName:             suite.Name,
+			SuiteDescription:      suite.Description,
+			TotalDiscovered:       stats.TotalDiscovered,
+			Skipped:               stats.Skipped,
+			NotMatchingSuite:      stats.NotMatchingSuite,
+			OSFiltered:            stats.OSFiltered,
+			Selected:              len(selectedTests),
+			InferenceRulesApplied: len(suite.Inferences),
+		}).
+		SetOutputDir(testRunDir)
+
+	if artifactValidation != nil {
+		initSummary.SetArtifactValidation(artifactValidation)
+	}
+
+	// Output the structured initialization summary
+	writeInitSummary(initSummary)
 
 	// Group tests by package
 	testsByPackage := groupTestsByPackage(selectedTests, workspaceRoot)
@@ -549,6 +607,83 @@ func executeTests(cfg *TestConfig) int {
 		writeInit("No test packages to execute")
 		writeInit("")
 		return 0
+	}
+
+	// Load module registry for incremental test detection
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+	if err != nil {
+		log.Warnf("Failed to load module registry for incremental testing: %v", err)
+	}
+
+	// Incremental Test Detection
+	// Only enabled for local (devbox) mode, not CI
+	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
+	useIncremental := !isCI && !cfg.ForceRetest && moduleRegistry != nil
+
+	log.Debugf("Incremental test setup: isCI=%v, forceRetest=%v, registryNil=%v, useIncremental=%v",
+		isCI, cfg.ForceRetest, moduleRegistry == nil, useIncremental)
+
+	// Track which modules need testing and which are skipped
+	var modulesNeedingTest map[string]bool
+	var incrementalInfo *incrementalTestInfo
+
+	if useIncremental {
+		log.Debugf("Incremental test detection: isCI=%v, forceRetest=%v, useIncremental=%v", isCI, cfg.ForceRetest, useIncremental)
+
+		// Build module test info from tests
+		moduleTestInfo, uniqueModules := buildModuleTestInfo(testsByPackage, moduleRegistry, eacCfg, workspaceRoot)
+		log.Debugf("Unique modules for incremental detection: %v", uniqueModules)
+
+		// Detect which modules need testing
+		changeResult, err := teststate.DetectChanges(workspaceRoot, moduleTestInfo)
+		if err != nil {
+			log.Warnf("Incremental test detection failed, running all tests: %v", err)
+		} else {
+			incrementalInfo = &incrementalTestInfo{
+				detectionTime:   changeResult.DetectionTime,
+				modulesNeedTest: changeResult.ModulesNeedingTest,
+				modulesUpToDate: changeResult.UpToDateModules,
+				freshRun:        changeResult.FreshRun,
+				changeReasons:   changeResult.ChangeReasons,
+			}
+
+			// Build set of modules needing test
+			modulesNeedingTest = make(map[string]bool)
+			for _, m := range changeResult.ModulesNeedingTest {
+				modulesNeedingTest[m] = true
+			}
+
+			log.Debugf("Change detection result: %d need testing, %d up-to-date, detection time=%v",
+				len(changeResult.ModulesNeedingTest), len(changeResult.UpToDateModules), changeResult.DetectionTime)
+
+			// If all modules are up-to-date, we can skip testing entirely
+			if len(changeResult.ModulesNeedingTest) == 0 && !changeResult.FreshRun {
+				writeInit("")
+				writeInit("✅ All tests up-to-date (nothing to run)")
+				writeInit("   Use --retest to force a full test run")
+				return 0
+			}
+		}
+	}
+
+	// If incremental detected, show info
+	if incrementalInfo != nil && !incrementalInfo.freshRun {
+		writeInit("")
+		writeInit("=== Incremental Test Detection ===")
+		writeInit("Detection time: %v", incrementalInfo.detectionTime.Round(time.Millisecond))
+		if len(incrementalInfo.modulesNeedTest) > 0 {
+			writeInit("Need testing: %d modules", len(incrementalInfo.modulesNeedTest))
+			for _, m := range incrementalInfo.modulesNeedTest {
+				if reason, ok := incrementalInfo.changeReasons[m]; ok {
+					writeInit("  - %s (%s)", m, reason)
+				} else {
+					writeInit("  - %s", m)
+				}
+			}
+		}
+		if len(incrementalInfo.modulesUpToDate) > 0 {
+			writeInit("Up-to-date: %d modules (skipping)", len(incrementalInfo.modulesUpToDate))
+		}
 	}
 
 	// Build skip tags for godog filter
@@ -572,13 +707,27 @@ func executeTests(cfg *TestConfig) int {
 
 	// Create module-based moniker mapping
 	// Maps module output path -> original package path for test lookup
+	// Also filter by incremental detection if enabled
 	modulePathToPkg := make(map[string]string)
 	testsByModulePath := make(map[string][]testing.TestReference)
+	skippedPackages := 0
 	for pkgPath, tests := range testsByPackage {
 		moduleMoniker := moduleMapper.GetModuleForPackagePath(pkgPath)
+
+		// Filter by incremental detection
+		if modulesNeedingTest != nil && !modulesNeedingTest[moduleMoniker] {
+			skippedPackages++
+			continue
+		}
+
 		modulePath := moduleMapper.BuildModuleOutputPath(pkgPath, moduleMoniker)
 		modulePathToPkg[modulePath] = pkgPath
 		testsByModulePath[modulePath] = tests
+	}
+
+	if skippedPackages > 0 {
+		writeInit("")
+		writeInit("Skipped %d packages (modules up-to-date)", skippedPackages)
 	}
 
 	// Create test execution context using module-based paths
@@ -643,6 +792,43 @@ func executeTests(cfg *TestConfig) int {
 		testsTotal += result.TestsTotal
 	}
 
+	// Update incremental test state (only in local devbox mode)
+	log.Debugf("State update check: useIncremental=%v, registryNil=%v", useIncremental, moduleRegistry == nil)
+	if useIncremental && moduleRegistry != nil {
+		log.Debugf("Updating incremental test state for %d module paths", len(testsByModulePath))
+		// Build map of module -> pass/fail from results
+		testedModuleResults := make(map[string]bool)
+
+		for modulePath := range testsByModulePath {
+			// Extract module moniker from path
+			moduleMoniker := strings.Split(modulePath, "/")[0]
+
+			// Check if any test in this module failed
+			result, exists := execCtx.results[modulePath]
+			if !exists {
+				continue
+			}
+
+			// If module already failed, keep it failed
+			if existing, ok := testedModuleResults[moduleMoniker]; ok && !existing {
+				continue
+			}
+
+			passed := !result.PackageFailed && result.TestsFailed == 0
+			testedModuleResults[moduleMoniker] = passed
+		}
+
+		// Rebuild module test info for saving state
+		moduleTestInfo, _ := buildModuleTestInfo(testsByPackage, moduleRegistry, eacCfg, workspaceRoot)
+
+		// Update test state
+		if err := teststate.UpdateModuleState(workspaceRoot, testedModuleResults, moduleTestInfo); err != nil {
+			log.Warnf("Failed to update test state: %v", err)
+		} else {
+			log.Debugf("Updated test state for %d modules", len(testedModuleResults))
+		}
+	}
+
 	// Send summary data to TUI and wait for user to exit
 	if cfg.UseTUI {
 		testSummary := testTUISummary(
@@ -662,7 +848,9 @@ func executeTests(cfg *TestConfig) int {
 
 	// Show full summary (when not using TUI or after TUI exits)
 	if !cfg.UseTUI {
-		writeln(multiWriter, "%s", output.SectionHeader("Test Summary"))
+		writeln(multiWriter, "══════════════════════════════════")
+		writeln(multiWriter, "  Test Summary")
+		writeln(multiWriter, "══════════════════════════════════")
 	writeln(multiWriter, "Suite: %s", suite.Name)
 	writeln(multiWriter, "")
 	writeln(multiWriter, "Test Selection Breakdown:")
@@ -688,7 +876,9 @@ func executeTests(cfg *TestConfig) int {
 	// These "roll off" after the TUI exits, remaining visible for review
 	if packagesFailed > 0 || testsFailed > 0 {
 		writeln(multiWriter, "")
-		writeln(multiWriter, "%s", output.SectionHeader("Failed Tests"))
+		writeln(multiWriter, "══════════════════════════════════")
+		writeln(multiWriter, "  Failed Tests")
+		writeln(multiWriter, "══════════════════════════════════")
 
 		// Collect failed results
 		failedResults := []PackageResult{}
@@ -1275,6 +1465,7 @@ func printTestUsage() {
 	log.Info("  --no-tui               Disable TUI console (TUI is default for local console)")
 	log.Info(fmt.Sprintf("  --tui-height N         Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
 	log.Info("  --sequential           Run tests sequentially instead of in parallel")
+	log.Info("  --retest               Force full test run, bypassing incremental detection")
 	log.Info("")
 	log.Info("Available suites:")
 	log.Info("  commit                 L0-L2 tests (fast, pre-commit)")
@@ -1371,61 +1562,137 @@ func getUniqueModulesFromTests(tests []testing.TestReference) []string {
 	return modules
 }
 
-// validateBuildArtifacts validates that build artifacts exist for the given modules
-// Returns a list of validation error messages (empty if all valid)
-func validateBuildArtifacts(
+// validateBuildArtifactsQuiet validates that build artifacts exist for the given modules silently.
+// It performs:
+// 1. Manifest schema validation against the build-manifest contract
+// 2. Artifact existence validation (files actually exist on disk)
+// Returns a list of module names with missing/invalid artifacts (empty if all valid)
+func validateBuildArtifactsQuiet(
 	moduleList []string,
 	cfg *config.EACConfig,
 	workspaceRoot string,
-	writeInit func(format string, args ...interface{}),
 ) []string {
-	var errors []string
-
-	// Load module registry
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+	// Use the manifest loader to validate manifests against schema and check artifacts
+	summary, err := implinternal.LoadAndValidateManifests(workspaceRoot, moduleList, cfg)
 	if err != nil {
-		errors = append(errors, fmt.Sprintf("Failed to load module contracts: %v", err))
-		return errors
+		log.Debugf("Manifest validation error: %v", err)
+		return moduleList // If we can't validate, assume all need rebuilding
 	}
 
-	// Validate each module
-	targetOS := runtime.GOOS
-	targetArch := runtime.GOARCH
+	var missingFrom []string
+	for _, result := range summary.Results {
+		if result.Error != "" {
+			log.Debugf("Module %s: %s", result.Moniker, result.Error)
+			missingFrom = append(missingFrom, result.Moniker)
+		} else if !result.SchemaValid {
+			log.Debugf("Module %s: manifest schema invalid", result.Moniker)
+			missingFrom = append(missingFrom, result.Moniker)
+		} else if !result.ArtifactsValid {
+			log.Debugf("Module %s: missing artifacts %v", result.Moniker, result.MissingArtifacts)
+			missingFrom = append(missingFrom, result.Moniker)
+		}
+	}
 
-	for _, moduleName := range moduleList {
-		// Check if module exists
-		if _, exists := moduleRegistry.Get(moduleName); !exists {
-			writeInit("  ⚠️  %s: module contract not found (skipping)", moduleName)
+	return missingFrom
+}
+
+// incrementalTestInfo holds information about incremental test detection results
+type incrementalTestInfo struct {
+	detectionTime   time.Duration
+	modulesNeedTest []string
+	modulesUpToDate []string
+	freshRun        bool
+	changeReasons   map[string]string
+}
+
+// buildModuleTestInfo builds the ModuleTestFiles map for incremental test detection.
+// Returns the moduleInfo map and a list of unique module monikers.
+func buildModuleTestInfo(
+	testsByPackage map[string][]testing.TestReference,
+	moduleRegistry *modules.Registry,
+	eacCfg *config.EACConfig,
+	workspaceRoot string,
+) (map[string]teststate.ModuleTestFiles, []string) {
+	moduleInfo := make(map[string]teststate.ModuleTestFiles)
+	uniqueModules := make(map[string]bool)
+
+	// Create a module mapper to find which module owns each package
+	moduleMapper := NewModuleMapper(eacCfg, workspaceRoot)
+
+	// Collect all test package paths per module
+	testPackagesByModule := make(map[string][]string)
+	for pkgPath := range testsByPackage {
+		moduleMoniker := moduleMapper.GetModuleForPackagePath(pkgPath)
+		if moduleMoniker != "" {
+			uniqueModules[moduleMoniker] = true
+			testPackagesByModule[moduleMoniker] = append(testPackagesByModule[moduleMoniker], pkgPath)
+		}
+	}
+
+	// Build ModuleTestFiles for each module
+	for moniker := range uniqueModules {
+		module, exists := moduleRegistry.Get(moniker)
+		if !exists {
 			continue
 		}
 
-		// Validate artifacts for this module and its dependencies
-		results, err := implinternal.ValidateArtifactsWithDependencies(
-			moduleName, cfg, moduleRegistry, targetOS, targetArch, workspaceRoot,
-		)
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("%s: validation error: %v", moduleName, err))
-			continue
+		info := teststate.ModuleTestFiles{
+			Dependencies: module.GetDependencies(),
 		}
 
-		// Check if validation passed
-		if !results.Passed {
-			// Collect missing artifact details
-			for _, modResult := range results.Modules {
-				if modResult.Summary != nil && modResult.Summary.Missing > 0 {
-					role := "target"
-					if modResult.IsDependency {
-						role = "dependency"
-					}
-					errors = append(errors, fmt.Sprintf("%s (%s): missing %d artifact(s)",
-						modResult.Moniker, role, modResult.Summary.Missing))
+		// Get source files from module definition
+		sourcePatterns := module.GetGlobPatterns()
+		sourceFiles, err := teststate.ExpandGlobPatterns(workspaceRoot, sourcePatterns)
+		if err == nil {
+			// Filter to only include actual source files (not test files)
+			for _, f := range sourceFiles {
+				if !isTestFile(f) {
+					info.SourceFiles = append(info.SourceFiles, f)
 				}
 			}
-		} else {
-			// Log success
-			writeInit("  ✅ %s (and %d dependencies)", moduleName, len(results.Modules)-1)
 		}
+
+		// Get test files from the test packages
+		for _, pkgPath := range testPackagesByModule[moniker] {
+			// Extract actual path from godog-style paths
+			actualPath := pkgPath
+			if idx := strings.Index(pkgPath, ":"); idx >= 0 {
+				parts := strings.SplitN(pkgPath, ":", 3)
+				if len(parts) >= 2 {
+					actualPath = parts[1] // testRoot for godog paths
+				} else {
+					actualPath = parts[0]
+				}
+			}
+
+			// Find test files in this package
+			testGlobs := []string{
+				filepath.Join(actualPath, "*_test.go"),
+				filepath.Join(actualPath, "*.feature"),
+			}
+			testFiles, err := teststate.ExpandGlobPatterns(workspaceRoot, testGlobs)
+			if err == nil {
+				info.TestFiles = append(info.TestFiles, testFiles...)
+			}
+		}
+
+		moduleInfo[moniker] = info
 	}
 
-	return errors
+	// Convert uniqueModules map to slice
+	moduleList := make([]string, 0, len(uniqueModules))
+	for m := range uniqueModules {
+		moduleList = append(moduleList, m)
+	}
+	sort.Strings(moduleList)
+
+	return moduleInfo, moduleList
+}
+
+// isTestFile returns true if the file path looks like a test file
+func isTestFile(path string) bool {
+	return strings.HasSuffix(path, "_test.go") ||
+		strings.HasSuffix(path, ".feature") ||
+		strings.HasSuffix(path, ".test.ts") ||
+		strings.HasSuffix(path, ".spec.ts")
 }

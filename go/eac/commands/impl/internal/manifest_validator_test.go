@@ -1,0 +1,181 @@
+package internal
+
+import (
+	"testing"
+	"time"
+)
+
+func TestManifestValidator_ValidManifest(t *testing.T) {
+	validator, err := NewManifestValidator()
+	if err != nil {
+		t.Fatalf("failed to create validator: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:   "550e8400-e29b-41d4-a716-446655440000",
+		Moniker:   "test-module",
+		Type:      "go-library",
+		BuildTime: time.Now(),
+		GitCommit: "abcdef1234567890abcdef1234567890abcdef12",
+		Artifacts: []ArtifactInfo{}, // go-library has no artifacts, manifest is the contract
+		Platforms: []PlatformInfo{
+			{OS: "linux", Arch: "amd64"},
+		},
+		Version: "2.0",
+	}
+
+	err = validator.ValidateManifest(manifest)
+	if err != nil {
+		t.Errorf("valid manifest should pass validation: %v", err)
+	}
+}
+
+func TestManifestValidator_MissingRequiredField(t *testing.T) {
+	validator, err := NewManifestValidator()
+	if err != nil {
+		t.Fatalf("failed to create validator: %v", err)
+	}
+
+	// Missing moniker
+	manifest := &ModuleManifest{
+		BuildID:   "550e8400-e29b-41d4-a716-446655440000",
+		Type:      "go-library",
+		BuildTime: time.Now(),
+		Artifacts: []ArtifactInfo{},
+		Platforms: []PlatformInfo{
+			{OS: "linux", Arch: "amd64"},
+		},
+		Version: "2.0",
+	}
+
+	err = validator.ValidateManifest(manifest)
+	if err == nil {
+		t.Error("manifest missing moniker should fail validation")
+	}
+}
+
+func TestManifestValidator_InvalidPlatform(t *testing.T) {
+	validator, err := NewManifestValidator()
+	if err != nil {
+		t.Fatalf("failed to create validator: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:   "550e8400-e29b-41d4-a716-446655440000",
+		Moniker:   "test-module",
+		Type:      "go-library",
+		BuildTime: time.Now(),
+		Artifacts: []ArtifactInfo{},
+		Platforms: []PlatformInfo{
+			{OS: "invalid-os", Arch: "amd64"},
+		},
+		Version: "2.0",
+	}
+
+	err = validator.ValidateManifest(manifest)
+	if err == nil {
+		t.Error("manifest with invalid platform should fail validation")
+	}
+}
+
+func TestManifestValidator_InvalidVersion(t *testing.T) {
+	validator, err := NewManifestValidator()
+	if err != nil {
+		t.Fatalf("failed to create validator: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:   "550e8400-e29b-41d4-a716-446655440000",
+		Moniker:   "test-module",
+		Type:      "go-library",
+		BuildTime: time.Now(),
+		Artifacts: []ArtifactInfo{},
+		Platforms: []PlatformInfo{
+			{OS: "linux", Arch: "amd64"},
+		},
+		Version: "1.0", // Wrong version
+	}
+
+	err = validator.ValidateManifest(manifest)
+	if err == nil {
+		t.Error("manifest with wrong version should fail validation")
+	}
+}
+
+func TestManifestValidator_ValidArtifactWithPlatform(t *testing.T) {
+	validator, err := NewManifestValidator()
+	if err != nil {
+		t.Fatalf("failed to create validator: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:   "550e8400-e29b-41d4-a716-446655440000",
+		Moniker:   "test-cli",
+		Type:      "go-cli",
+		BuildTime: time.Now(),
+		GitCommit: "abcdef1234567890abcdef1234567890abcdef12",
+		Artifacts: []ArtifactInfo{
+			{
+				Type:     "executable",
+				ID:       "windows-amd64",
+				Name:     "test-cli-windows-amd64.exe",
+				Path:     "out/build/test-cli/test-cli-windows-amd64.exe",
+				Platform: "windows-amd64",
+			},
+		},
+		Platforms: []PlatformInfo{
+			{OS: "windows", Arch: "amd64"},
+		},
+		Version: "2.0",
+	}
+
+	err = validator.ValidateManifest(manifest)
+	if err != nil {
+		t.Errorf("valid manifest with platform artifact should pass: %v", err)
+	}
+}
+
+func TestManifestValidator_WithVerifiedUnchangedAt(t *testing.T) {
+	validator, err := NewManifestValidator()
+	if err != nil {
+		t.Fatalf("failed to create validator: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:             "550e8400-e29b-41d4-a716-446655440000",
+		Moniker:             "test-module",
+		Type:                "go-library",
+		BuildTime:           time.Now(),
+		GitCommit:           "abcdef1234567890abcdef1234567890abcdef12",
+		VerifiedUnchangedAt: "1234567890abcdef1234567890abcdef12345678",
+		Artifacts:           []ArtifactInfo{},
+		Platforms: []PlatformInfo{
+			{OS: "linux", Arch: "amd64"},
+		},
+		Version: "2.0",
+	}
+
+	err = validator.ValidateManifest(manifest)
+	if err != nil {
+		t.Errorf("manifest with verified_unchanged_at should pass: %v", err)
+	}
+}
+
+func TestGetManifestValidator_Singleton(t *testing.T) {
+	// Reset global for test
+	globalManifestValidator = nil
+
+	v1, err := GetManifestValidator()
+	if err != nil {
+		t.Fatalf("first call failed: %v", err)
+	}
+
+	v2, err := GetManifestValidator()
+	if err != nil {
+		t.Fatalf("second call failed: %v", err)
+	}
+
+	if v1 != v2 {
+		t.Error("GetManifestValidator should return the same instance")
+	}
+}

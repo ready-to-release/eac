@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/cucumber"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -21,7 +22,7 @@ func generateSummary(moniker string) error {
 	}
 
 	// Construct paths
-	outputDir := filepath.Join(workspaceRoot, "out", "test", moniker)
+	outputDir := paths.TestOutputPath(workspaceRoot, moniker)
 	return generateSummaryForOutputDir(outputDir)
 }
 

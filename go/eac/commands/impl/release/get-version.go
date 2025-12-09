@@ -19,12 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 var getVersionLog = logging.C("release")
@@ -79,7 +79,7 @@ func ReleaseGetVersion() int {
 	// Determine changelog path
 	changelogPath := customPath
 	if changelogPath == "" {
-		changelogPath = filepath.Join("release", module, "CHANGELOG.md")
+		changelogPath = paths.ChangelogPath(".", module)
 	}
 
 	// Check if file exists

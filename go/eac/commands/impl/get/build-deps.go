@@ -76,7 +76,7 @@ func GetBuildDeps() int {
 	}
 
 	// Aggregate build deps from module and all its dependencies
-	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes)
+	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes, cfg.SystemDependencies)
 
 	// Use the shared get command helper for output formatting
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
@@ -89,7 +89,7 @@ func GetBuildDeps() int {
 }
 
 // aggregateBuildDeps collects build dependencies from a module and all its dependencies
-func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes *config.ModuleTypesConfig) []string {
+func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes *config.ModuleTypesConfig, sysDeps *config.SystemDependenciesConfig) []string {
 	seen := make(map[string]bool)
 	depsSet := make(map[string]bool)
 
@@ -105,8 +105,8 @@ func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes 
 			return
 		}
 
-		// Add this module's build deps
-		deps := moduleTypes.GetBuildDeps(module.Type)
+		// Add this module's build deps (resolved from capabilities)
+		deps := moduleTypes.GetBuildDepsFromCapabilities(module.Type, sysDeps)
 		for _, dep := range deps {
 			depsSet[dep] = true
 		}
@@ -160,7 +160,7 @@ func GetBuildDepsPlain(moniker string) (string, error) {
 	}
 
 	// Aggregate build deps from module and all its dependencies
-	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes)
+	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes, cfg.SystemDependencies)
 	if len(buildDeps) == 0 {
 		return "", nil
 	}

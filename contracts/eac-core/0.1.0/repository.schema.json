@@ -52,7 +52,7 @@
           "description": "Repository-wide versioning constraints and behavior"
         }
       },
-      "required": ["type", "trunk_branch"]
+      "additionalProperties": false
     },
     "pr_config": {
       "type": "object",
