@@ -33,13 +33,14 @@ Specifications aren't written once - they evolve with understanding, implementat
 
 ### 1. Specifications are Living Documents
 
-```
+```text
 Discovery → Specification → Implementation → Review → Iterate
                 ↑_______________________________________↓
                           Feedback Loop
 ```
 
 Specifications improve through:
+
 - **Discovery**: Example Mapping workshops reveal requirements
 - **Implementation**: Edge cases emerge during development
 - **Production**: Bugs expose missing scenarios
@@ -48,18 +49,21 @@ Specifications improve through:
 ### 2. Review Cadence
 
 **Weekly (Active Development)**:
+
 - Review new/changed scenarios
 - Discuss ambiguous language
 - Identify missing coverage
 - Refactor verbose scenarios
 
 **Monthly (Maintenance)**:
+
 - Check scenario relevance
 - Verify language matches code
 - Consolidate similar scenarios
 - Update evolved terminology
 
 **Quarterly (Comprehensive)**:
+
 - Review all specs in module
 - Split files >20 scenarios
 - Update Ubiquitous Language
@@ -68,6 +72,7 @@ Specifications improve through:
 ### 3. Specification Health Indicators
 
 **Red Flags 🚩:**
+
 - Scenarios unchanged >6 months while code evolved
 - All scenarios always passing (testing nothing)
 - Testing implementation details ("database updated")
@@ -75,6 +80,7 @@ Specifications improve through:
 - Technical jargon ("POST to /api/users")
 
 **Green Indicators ✅:**
+
 - Specs committed with code changes
 - Scenarios catch regression bugs
 - Business can read and validate
@@ -100,7 +106,7 @@ Specifications improve through:
 
 ### Running Your First Review
 
-**Step 1: Gather specs to review**
+**Step 1: Gather specs to review**:
 
 ```bash
 # Find recently changed specs
@@ -113,25 +119,27 @@ find specs/ -name "*.feature" -exec wc -l {} \; | awk '$1 > 500'
 find specs/ -name "*.feature" -mtime +180
 ```
 
-**Step 2: Check for red flags**
+**Step 2: Check for red flags**:
 
 For each spec file:
+
 - [ ] Scenarios have meaningful assertions
 - [ ] Language matches domain glossary
 - [ ] No implementation details exposed
 - [ ] Scenarios test behavior, not code
 - [ ] File size is manageable (<30 scenarios)
 
-**Step 3: Validate with stakeholders**
+**Step 3: Validate with stakeholders**:
 
 - Can Product Owner read and understand?
 - Do scenarios match expected behavior?
 - Are edge cases covered?
 - Is language consistent with business terms?
 
-**Step 4: Document actions**
+**Step 4: Document actions**:
 
 For each issue found:
+
 1. Create task or ticket
 2. Assign owner
 3. Set deadline
@@ -144,6 +152,7 @@ For each issue found:
 ### Specification Debt
 
 **Symptoms:**
+
 - Scenarios always pass but don't verify behavior
 - Ambiguous steps with multiple interpretations
 - Gap between spec language and code reality
@@ -151,6 +160,7 @@ For each issue found:
 - Files unchanged while code evolved
 
 **Solutions:**
+
 - Add meaningful assertions to scenarios
 - Refine ambiguous steps with concrete examples
 - Update language to match domain terms
@@ -160,12 +170,14 @@ For each issue found:
 ### Over-Specification
 
 **Symptoms:**
+
 - \>30 scenarios in single file
 - Testing every possible input combination
 - Duplicated logic across scenarios
 - Scenarios coupling to implementation details
 
 **Solutions:**
+
 - Split large files into focused features
 - Use Scenario Outlines for input variations
 - Extract common steps to reduce duplication
@@ -174,12 +186,14 @@ For each issue found:
 ### Under-Specification
 
 **Symptoms:**
+
 - Missing error case scenarios
 - Happy path only testing
 - No edge case coverage
 - Gaps in Rule coverage
 
 **Solutions:**
+
 - Run Example Mapping to discover edge cases
 - Add at least one error scenario per Rule
 - Use boundary value analysis
@@ -211,6 +225,7 @@ For each issue found:
 **Example:**
 
 Split `validation.feature` (40 scenarios) into:
+
 - `format-validation.feature` (10 scenarios)
 - `completeness-validation.feature` (10 scenarios)
 - `business-rule-validation.feature` (10 scenarios)
@@ -300,6 +315,7 @@ r2r eac validate test-tags
 ## Best Practices
 
 ### DO
+
 - ✅ Review specifications regularly (weekly/monthly/quarterly)
 - ✅ Commit spec changes with code changes
 - ✅ Refactor immediately when issues found
@@ -307,6 +323,7 @@ r2r eac validate test-tags
 - ✅ Treat specs as living, evolving documentation
 
 ### DON'T
+
 - ❌ "We'll clean up specs later" - They never get cleaned
 - ❌ Write once and forget
 - ❌ Let only developers maintain specs
@@ -318,15 +335,18 @@ r2r eac validate test-tags
 ## Related Documentation
 
 ### Discovery
+
 - [Example Mapping](../discovery/example-mapping.md) - Discovering requirements
 - [Event Storming](../discovery/event-storming-overview.md) - Domain discovery
 
 ### Core Concepts
+
 - [BDD Fundamentals](../concepts/bdd-fundamentals.md) - BDD principles
 - [Specifications Evolution](../concepts/specifications-evolution.md) - How specs change
 - [Ubiquitous Language](../concepts/ubiquitous-language.md) - Shared vocabulary
 
 ### Organization
+
 - [Size Guidelines](../organization/size-guidelines.md) - Rule and scenario limits
 - [File Structure](../organization/file-structure.md) - Organizing specifications
 

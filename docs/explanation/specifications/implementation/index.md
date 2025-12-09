@@ -13,6 +13,7 @@ Learn how to implement executable specifications using your programming language
 This section provides implementation-specific guidance for writing step definitions, organizing test code, and integrating BDD specifications with your test runner.
 
 Each implementation guide covers:
+
 - Framework installation and setup
 - File organization and directory structure
 - Writing step definitions
@@ -27,10 +28,6 @@ Each implementation guide covers:
 | Language | Framework | Status | Link |
 |----------|-----------|--------|------|
 | **Go** | Godog | ✅ Complete | [Go Implementation Guide](./go/) |
-| Python | behave | 🚧 Planned | - |
-| Java | Cucumber-JVM | 🚧 Planned | - |
-| TypeScript | Cucumber.js | 🚧 Planned | - |
-| Ruby | Cucumber-Ruby | 🚧 Planned | - |
 
 ---
 
@@ -41,11 +38,13 @@ Complete guide for implementing BDD specifications with Go and Godog.
 ### Quick Start
 
 **Installation**:
+
 ```bash
 go get github.com/cucumber/godog/cmd/godog@latest
 ```
 
 **Essential Commands**:
+
 ```bash
 # Run all scenarios
 godog run
@@ -59,7 +58,8 @@ go test -tags=L2 ./...
 ```
 
 **File Organization**:
-```
+
+```text
 specs/<module>/<feature>/
 └── specification.feature    # Gherkin specifications (WHAT)
 
@@ -77,6 +77,7 @@ See: [Go Implementation Guide](./go/) for complete details.
 ### 1. Separation of WHAT and HOW
 
 **Specifications** (WHAT) are business-readable:
+
 ```gherkin
 Feature: cli_init-project
   Rule: Creates project directory structure
@@ -87,6 +88,7 @@ Feature: cli_init-project
 ```
 
 **Step definitions** (HOW) are language-specific:
+
 ```go
 func (s *StepContext) iAmInAnEmptyFolder() error {
     s.tempDir, _ = os.MkdirTemp("", "test-*")
@@ -107,6 +109,7 @@ Different test levels run in different environments:
 ```
 
 Execute by level:
+
 ```bash
 go test -tags=L0 ./...  # Fast unit tests only
 go test -tags=L2 ./...  # Integration tests
@@ -115,6 +118,7 @@ go test -tags=L2 ./...  # Integration tests
 ### 3. Step Definition Organization
 
 **Recommended structure**:
+
 ```go
 // TestFeatures is the test runner entry point
 func TestFeatures(t *testing.T) {
@@ -143,18 +147,21 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 ### Go (Godog)
 
 **Best for**:
+
 - CLI tools and system utilities
 - High-performance applications
 - Concurrent/parallel testing
 - Docker and Kubernetes tooling
 
 **Strengths**:
+
 - Fast execution
 - Built-in concurrency primitives
 - Strong typing catches errors early
 - Single binary distribution
 
 **Considerations**:
+
 - Less mature BDD ecosystem than Ruby/Java
 - Fewer step definition libraries
 - Build tag system requires discipline
@@ -162,12 +169,14 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 ### Python (behave) - Planned
 
 **Best for**:
+
 - Data science and ML pipelines
 - API testing and automation
 - Web applications (Django, Flask)
 - Quick prototyping
 
 **Strengths**:
+
 - Mature Cucumber ecosystem
 - Rich library ecosystem
 - Easy to read and write
@@ -176,12 +185,14 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 ### Java (Cucumber-JVM) - Planned
 
 **Best for**:
+
 - Enterprise applications
 - Android applications
 - Legacy system integration
 - Large team environments
 
 **Strengths**:
+
 - Most mature Cucumber implementation
 - Enterprise tool integration (Maven, Gradle)
 - Strong typing and IDE support
@@ -190,12 +201,14 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 ### TypeScript (Cucumber.js) - Planned
 
 **Best for**:
+
 - Web frontend applications
 - Node.js backend services
 - Full-stack JavaScript applications
 - React/Vue/Angular testing
 
 **Strengths**:
+
 - JavaScript ecosystem compatibility
 - TypeScript type safety
 - Same language for frontend and backend
@@ -264,7 +277,7 @@ src/mymodule/tests/
 
 ## Getting Started
 
-### If you're new to BDD implementation:
+### If you're new to BDD implementation
 
 1. **Understand the concepts first**:
    - [BDD Fundamentals](../concepts/bdd-fundamentals.md) - What is BDD?
@@ -287,20 +300,24 @@ src/mymodule/tests/
 ## Related Documentation
 
 ### Core Concepts
+
 - [BDD Fundamentals](../concepts/bdd-fundamentals.md) - BDD principles and Gherkin
 - [Three-Layer Approach](../concepts/three-layer-approach.md) - Rules/Scenarios/Unit Tests
 - [Executable Specifications](../concepts/executable-specifications.md) - Living documentation
 
 ### Organization
+
 - [File Structure](../organization/file-structure.md) - Separation of specs and implementation
 - [Organizing Specifications](../organization/) - File and folder structure
 
 ### Testing Taxonomy
+
 - [Test Levels](../taxonomy/test-levels.md) - L0-L4 execution environments
 - [Verification Tags](../taxonomy/verification-tags.md) - @ov, @iv, @pv tags
 - [Test Suites](../taxonomy/test-suites.md) - Pre-commit, acceptance, production
 
 ### Quality
+
 - [Review and Iterate](../quality/review-and-iterate.md) - Maintaining specifications
 
 {{ diataxis_footer() }}

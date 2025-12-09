@@ -51,13 +51,14 @@ This scenario is both documentation AND an automated test.
 
 ### 2. Three layers of testing
 
-```
+```text
 Rules (Acceptance Criteria)
   └── Scenarios (Examples)
         └── Unit Tests (Implementation)
 ```
 
 Each layer serves a distinct purpose:
+
 - **Rules** define measurable business requirements
 - **Scenarios** provide concrete examples
 - **Unit Tests** verify implementation details
@@ -72,6 +73,7 @@ Use domain terms consistently across specifications, code, and conversations:
 ### 4. Specifications evolve
 
 Specifications are living documents that improve through:
+
 - Discovery (Event Storming, Example Mapping)
 - Implementation (edge cases, refinement)
 - Feedback (bugs, production issues)
@@ -90,6 +92,7 @@ Specifications are living documents that improve through:
 ### Common Workflows
 
 **Test-Driven Development**:
+
 1. Write failing scenario (Red)
 2. Write step definitions
 3. Implement minimal code (Green)
@@ -99,6 +102,7 @@ Specifications are living documents that improve through:
 See: [Canon TDD Workflow](./canon-tdd-workflow.md)
 
 **Specification-First Development**:
+
 1. Run Example Mapping workshop
 2. Write feature with Rules and Scenarios
 3. Implement step definitions
@@ -110,14 +114,17 @@ See: [Canon TDD Workflow](./canon-tdd-workflow.md)
 ## Related Documentation
 
 ### Workshop Techniques
+
 - [Event Storming](../discovery/event-storming-overview.md) - Discover domain events and language
 - [Example Mapping](../discovery/example-mapping.md) - Discover acceptance criteria with colored cards
 
 ### Organization
+
 - [Organizing Specifications](../organization/) - File structure and naming conventions
 - [Testing Taxonomy](../taxonomy/) - Tags, test levels, and execution control
 
 ### Implementation
+
 - [Go Implementation Guide](../implementation/go/) - Go/Godog BDD implementation
 - [Quality & Maintenance](../quality/) - Review and iterate on specifications
 

@@ -44,11 +44,13 @@ go tool cover -html=coverage.out
 ## Related Documentation
 
 ### Conceptual Understanding
+
 - [Three-Layer Testing Approach](../../concepts/three-layer-approach.md) - Conceptual overview
 - [BDD Fundamentals](../../concepts/bdd-fundamentals.md) - BDD fundamentals
 - [Testing Taxonomy](../../taxonomy/) - Tag taxonomy concepts
 
 ### Organizational
+
 - [Organizing Specifications](../../organization/) - Specification structure
 - [Example Mapping](../../discovery/example-mapping.md) - Requirements discovery
 
