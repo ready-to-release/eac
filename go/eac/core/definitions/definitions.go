@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"gopkg.in/yaml.v3"
 )
 
@@ -48,17 +49,10 @@ var (
 	cacheRoot  string
 )
 
-// defaultsRoot returns the root for loading contract defaults (container-aware)
-func defaultsRoot(repoRoot string) string {
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
-		return containerRoot
-	}
-	return repoRoot
-}
 
 // loadDefaults loads defaults from contract defaults file
 func loadDefaults(workspaceRoot string) (*Definitions, error) {
-	root := defaultsRoot(workspaceRoot)
+	root := repository.GetDistRoot(workspaceRoot)
 	defaultsPath := filepath.Join(root, DefaultsPath)
 
 	data, err := os.ReadFile(defaultsPath)

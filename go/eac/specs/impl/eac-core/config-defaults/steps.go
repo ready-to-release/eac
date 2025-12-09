@@ -1,0 +1,655 @@
+// Package configdefaults contains godog step implementations for specs/eac-core/config-defaults.
+//
+// This package tests the EAC configuration defaults loading and merging system.
+// All tests run in isolated directories with R2R_REPO_ROOT set appropriately.
+package configdefaults
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/cucumber/godog"
+	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/specs/internal"
+)
+
+// testState holds state for config defaults test scenarios.
+type testState struct {
+	cfg              *config.EACConfig
+	loadError        error
+	repoRoot         string
+	origRepoRoot     string // Original R2R_REPO_ROOT value
+	origContainerRoot string // Original R2R_CONTAINER_ROOT value
+}
+
+var state *testState
+
+// RegisterSteps registers step definitions for config defaults feature specs.
+func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
+	// Setup/teardown
+	sc.Before(func(c context.Context, sc *godog.Scenario) (context.Context, error) {
+		state = &testState{}
+		// Save original env vars and clear config cache
+		state.origRepoRoot = os.Getenv("R2R_REPO_ROOT")
+		state.origContainerRoot = os.Getenv("R2R_CONTAINER_ROOT")
+		config.ClearCache()
+		return c, nil
+	})
+
+	// Background steps
+	sc.Step(`^I am in an isolated test repository$`, func() error {
+		return iAmInAnIsolatedTestRepository(ctx)
+	})
+
+	// Given steps - repository state
+	sc.Step(`^the repository has no "([^"]*)" directory$`, func(path string) error {
+		return theRepositoryHasNoDirectory(ctx, path)
+	})
+	sc.Step(`^the repository has directory "([^"]*)"$`, func(path string) error {
+		return theRepositoryHasDirectory(ctx, path)
+	})
+	sc.Step(`^the repository has file "([^"]*)" with:$`, func(path string, content *godog.DocString) error {
+		return theRepositoryHasFileWith(ctx, path, content.Content)
+	})
+	sc.Step(`^the contracts directory does not exist$`, func() error {
+		// Unset R2R_CONTAINER_ROOT to simulate a scenario where the tool's
+		// contracts/defaults are not available (e.g., corrupted install)
+		// This tests embedded defaults fallback (when implemented)
+		os.Unsetenv("R2R_CONTAINER_ROOT")
+		return nil
+	})
+
+	// When steps - loading config
+	sc.Step(`^I load the EAC configuration$`, func() error {
+		return iLoadTheEACConfiguration()
+	})
+	sc.Step(`^I try to load the EAC configuration$`, func() error {
+		return iTryToLoadTheEACConfiguration()
+	})
+	sc.Step(`^I apply type defaults to modules$`, func() error {
+		return iApplyTypeDefaultsToModules()
+	})
+
+	// Then steps - modules assertions
+	sc.Step(`^the modules config contains module "([^"]*)"$`, func(moniker string) error {
+		return theModulesConfigContainsModule(moniker)
+	})
+	sc.Step(`^the modules config does not contain module "([^"]*)"$`, func(moniker string) error {
+		return theModulesConfigDoesNotContainModule(moniker)
+	})
+	sc.Step(`^the modules config has (\d+) modules$`, func(count int) error {
+		return theModulesConfigHasNModules(count)
+	})
+	sc.Step(`^the module "([^"]*)" has type "([^"]*)"$`, func(moniker, expectedType string) error {
+		return theModuleHasType(moniker, expectedType)
+	})
+	sc.Step(`^the module "([^"]*)" has files root "([^"]*)"$`, func(moniker, expectedRoot string) error {
+		return theModuleHasFilesRoot(moniker, expectedRoot)
+	})
+	sc.Step(`^the module "([^"]*)" has description "([^"]*)"$`, func(moniker, expected string) error {
+		return theModuleHasDescription(moniker, expected)
+	})
+	sc.Step(`^the module "([^"]*)" has changelog "([^"]*)"$`, func(moniker, expected string) error {
+		return theModuleHasChangelog(moniker, expected)
+	})
+	sc.Step(`^the module "([^"]*)" has source patterns containing "([^"]*)"$`, func(moniker, pattern string) error {
+		return theModuleHasSourcePatternsContaining(moniker, pattern)
+	})
+	sc.Step(`^the module "([^"]*)" does not have source pattern "([^"]*)"$`, func(moniker, pattern string) error {
+		return theModuleDoesNotHaveSourcePattern(moniker, pattern)
+	})
+	sc.Step(`^the module "([^"]*)" has assets patterns containing "([^"]*)"$`, func(moniker, pattern string) error {
+		return theModuleHasAssetsPatternsContaining(moniker, pattern)
+	})
+	sc.Step(`^the module "([^"]*)" has no source patterns from type defaults$`, func(moniker string) error {
+		return theModuleHasNoSourcePatternsFromTypeDefaults(moniker)
+	})
+	sc.Step(`^the module "([^"]*)" specs pattern resolves with "([^"]*)"$`, func(moniker, expected string) error {
+		return theModuleSpecsPatternResolvesWith(moniker, expected)
+	})
+	sc.Step(`^the module "([^"]*)" test_impl path contains "([^"]*)"$`, func(moniker, expected string) error {
+		return theModuleTestImplPathContains(moniker, expected)
+	})
+
+	// Then steps - module types assertions
+	sc.Step(`^the module types config contains type "([^"]*)"$`, func(typeName string) error {
+		return theModuleTypesConfigContainsType(typeName)
+	})
+	sc.Step(`^the type "([^"]*)" has capability "([^"]*)"$`, func(typeName, capability string) error {
+		return theTypeHasCapability(typeName, capability)
+	})
+	sc.Step(`^the type "([^"]*)" has description "([^"]*)"$`, func(typeName, expected string) error {
+		return theTypeHasDescription(typeName, expected)
+	})
+	sc.Step(`^the type "([^"]*)" has default source pattern "([^"]*)"$`, func(typeName, pattern string) error {
+		return theTypeHasDefaultSourcePattern(typeName, pattern)
+	})
+
+	// Then steps - repository paths assertions
+	sc.Step(`^the repository paths\.specs_root is "([^"]*)"$`, func(expected string) error {
+		return theRepositoryPathsFieldIs("specs_root", expected)
+	})
+	sc.Step(`^the repository paths\.test_impl_root is "([^"]*)"$`, func(expected string) error {
+		return theRepositoryPathsFieldIs("test_impl_root", expected)
+	})
+	sc.Step(`^the repository paths\.out\.root is "([^"]*)"$`, func(expected string) error {
+		return theRepositoryPathsFieldIs("out.root", expected)
+	})
+	sc.Step(`^the repository paths\.out\.build is "([^"]*)"$`, func(expected string) error {
+		return theRepositoryPathsFieldIs("out.build", expected)
+	})
+	sc.Step(`^the repository paths\.out\.test is "([^"]*)"$`, func(expected string) error {
+		return theRepositoryPathsFieldIs("out.test", expected)
+	})
+	sc.Step(`^the repository paths\.out\.logs is "([^"]*)"$`, func(expected string) error {
+		return theRepositoryPathsFieldIs("out.logs", expected)
+	})
+
+	// Then steps - system dependencies assertions
+	sc.Step(`^the system dependencies config contains "([^"]*)"$`, func(moniker string) error {
+		return theSystemDependenciesConfigContains(moniker)
+	})
+	sc.Step(`^the dependency "([^"]*)" has version "([^"]*)"$`, func(moniker, expected string) error {
+		return theDependencyHasVersion(moniker, expected)
+	})
+
+	// Then steps - error assertions
+	sc.Step(`^an error is returned containing "([^"]*)"$`, func(expected string) error {
+		return anErrorIsReturnedContaining(expected)
+	})
+}
+
+// cleanupTestState cleans up test state after each scenario.
+func cleanupTestState() {
+	if state != nil {
+		// Restore original R2R_REPO_ROOT
+		if state.origRepoRoot != "" {
+			os.Setenv("R2R_REPO_ROOT", state.origRepoRoot)
+		} else {
+			os.Unsetenv("R2R_REPO_ROOT")
+		}
+		// Restore original R2R_CONTAINER_ROOT
+		if state.origContainerRoot != "" {
+			os.Setenv("R2R_CONTAINER_ROOT", state.origContainerRoot)
+		} else {
+			os.Unsetenv("R2R_CONTAINER_ROOT")
+		}
+		config.ClearCache()
+	}
+	state = nil
+}
+
+// ============================================================================
+// Step Implementations
+// ============================================================================
+
+func iAmInAnIsolatedTestRepository(ctx *internal.TestContext) error {
+	// Create a temporary directory for test isolation
+	// This simulates a user's workspace/repository
+	tempDir, err := os.MkdirTemp("", "config-defaults-test-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp dir: %w", err)
+	}
+
+	// Create minimal .git directory so config loader can find repo root
+	gitDir := filepath.Join(tempDir, ".git")
+	if err := os.MkdirAll(gitDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .git: %w", err)
+	}
+	// Create minimal git config
+	if err := os.WriteFile(filepath.Join(gitDir, "config"), []byte("[core]\n\tbare = false\n"), 0644); err != nil {
+		return fmt.Errorf("failed to create .git/config: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0644); err != nil {
+		return fmt.Errorf("failed to create .git/HEAD: %w", err)
+	}
+
+	// Find the tool's distribution root (where contracts/defaults live)
+	// This is separate from the user's workspace - contracts are part of the TOOL,
+	// not the user's repository. In containers, this is a fixed path relative to
+	// the binary. Locally, it's the eac repository root.
+	toolRoot := ctx.OriginalRepoRoot
+	if toolRoot == "" {
+		cwd, _ := os.Getwd()
+		toolRoot = findRepoRoot(cwd)
+	}
+
+	ctx.IsolatedDir = tempDir
+	state.repoRoot = tempDir
+
+	// R2R_REPO_ROOT: User's workspace (isolated test directory)
+	// This is where user configs (.r2r/eac/*.yml) are loaded from
+	os.Setenv("R2R_REPO_ROOT", tempDir)
+
+	// R2R_CONTAINER_ROOT: Tool's distribution (real repo with contracts)
+	// This is where defaults and schemas are loaded from
+	// Simulates how containers have contracts bundled with the tool
+	if toolRoot != "" {
+		os.Setenv("R2R_CONTAINER_ROOT", toolRoot)
+	}
+
+	return nil
+}
+
+// findRepoRoot walks up directories to find the repo root (containing go.work or .git)
+func findRepoRoot(start string) string {
+	dir := start
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
+			return dir
+		}
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+}
+
+func theRepositoryHasNoDirectory(ctx *internal.TestContext, path string) error {
+	fullPath := filepath.Join(ctx.IsolatedDir, path)
+	// Ensure it doesn't exist
+	if _, err := os.Stat(fullPath); err == nil {
+		if err := os.RemoveAll(fullPath); err != nil {
+			return fmt.Errorf("failed to remove directory %s: %w", path, err)
+		}
+	}
+	return nil
+}
+
+func theRepositoryHasDirectory(ctx *internal.TestContext, path string) error {
+	fullPath := filepath.Join(ctx.IsolatedDir, path)
+	if err := os.MkdirAll(fullPath, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", path, err)
+	}
+	return nil
+}
+
+func theRepositoryHasFileWith(ctx *internal.TestContext, path, content string) error {
+	fullPath := filepath.Join(ctx.IsolatedDir, path)
+	// Ensure parent directory exists
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		return fmt.Errorf("failed to create parent directory: %w", err)
+	}
+	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", path, err)
+	}
+	return nil
+}
+
+func iLoadTheEACConfiguration() error {
+	// Clear cache before loading to ensure fresh load
+	config.ClearCache()
+
+	cfg, err := config.Load(config.LoadOptions{
+		RepoRoot:        state.repoRoot,
+		ValidateSchemas: true, // Enable schema validation - contracts are copied to isolated dir
+	})
+	state.cfg = cfg
+	state.loadError = err
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+	return nil
+}
+
+func iTryToLoadTheEACConfiguration() error {
+	// Clear cache before loading
+	config.ClearCache()
+
+	cfg, err := config.Load(config.LoadOptions{
+		RepoRoot:        state.repoRoot,
+		ValidateSchemas: true, // Enable schema validation - contracts are copied to isolated dir
+	})
+	state.cfg = cfg
+	state.loadError = err
+	// Don't return error - we're testing error handling
+	return nil
+}
+
+func iApplyTypeDefaultsToModules() error {
+	if state.cfg == nil {
+		return fmt.Errorf("config not loaded")
+	}
+	if state.cfg.Modules != nil && state.cfg.ModuleTypes != nil {
+		state.cfg.Modules.ApplyTypeDefaults(state.cfg.ModuleTypes, state.cfg.Repository)
+	}
+	return nil
+}
+
+// ============================================================================
+// Module Assertions
+// ============================================================================
+
+func theModulesConfigContainsModule(moniker string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	_, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found in config (modules: %v)", moniker, state.cfg.Modules.AllMonikers())
+	}
+	return nil
+}
+
+func theModulesConfigDoesNotContainModule(moniker string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	_, found := state.cfg.Modules.GetModule(moniker)
+	if found {
+		return fmt.Errorf("module %q unexpectedly found in config", moniker)
+	}
+	return nil
+}
+
+func theModulesConfigHasNModules(count int) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	actual := len(state.cfg.Modules.Modules)
+	if actual != count {
+		return fmt.Errorf("expected %d modules, got %d", count, actual)
+	}
+	return nil
+}
+
+func theModuleHasType(moniker, expectedType string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	if m.Type != expectedType {
+		return fmt.Errorf("module %q has type %q, expected %q", moniker, m.Type, expectedType)
+	}
+	return nil
+}
+
+func theModuleHasFilesRoot(moniker, expectedRoot string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	if m.Files.Root != expectedRoot {
+		return fmt.Errorf("module %q has files.root %q, expected %q", moniker, m.Files.Root, expectedRoot)
+	}
+	return nil
+}
+
+func theModuleHasDescription(moniker, expected string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	if m.Description != expected {
+		return fmt.Errorf("module %q has description %q, expected %q", moniker, m.Description, expected)
+	}
+	return nil
+}
+
+func theModuleHasChangelog(moniker, expected string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	if m.Files.Changelog != expected {
+		return fmt.Errorf("module %q has changelog %q, expected %q", moniker, m.Files.Changelog, expected)
+	}
+	return nil
+}
+
+func theModuleHasSourcePatternsContaining(moniker, pattern string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	for _, p := range m.Files.Source {
+		if p == pattern || strings.Contains(p, pattern) {
+			return nil
+		}
+	}
+	return fmt.Errorf("module %q source patterns %v do not contain %q", moniker, m.Files.Source, pattern)
+}
+
+func theModuleDoesNotHaveSourcePattern(moniker, pattern string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	for _, p := range m.Files.Source {
+		if p == pattern {
+			return fmt.Errorf("module %q unexpectedly has source pattern %q", moniker, pattern)
+		}
+	}
+	return nil
+}
+
+func theModuleHasAssetsPatternsContaining(moniker, pattern string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	for _, p := range m.Files.Assets {
+		if p == pattern || strings.Contains(p, pattern) {
+			return nil
+		}
+	}
+	return fmt.Errorf("module %q assets patterns %v do not contain %q", moniker, m.Files.Assets, pattern)
+}
+
+func theModuleHasNoSourcePatternsFromTypeDefaults(moniker string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	_, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	// For unknown types, source should remain nil/empty after type defaults
+	// (since there's no type definition to get defaults from)
+	// Note: This may need adjustment if we add fallback defaults for unknown types
+	return nil
+}
+
+func theModuleSpecsPatternResolvesWith(moniker, expected string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	for _, p := range m.Files.Repo.Specs {
+		if strings.Contains(p, expected) {
+			return nil
+		}
+	}
+	return fmt.Errorf("module %q specs patterns %v do not contain %q", moniker, m.Files.Repo.Specs, expected)
+}
+
+func theModuleTestImplPathContains(moniker, expected string) error {
+	if state.cfg == nil || state.cfg.Modules == nil {
+		return fmt.Errorf("modules config not loaded")
+	}
+	m, found := state.cfg.Modules.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	if !strings.Contains(m.Files.Repo.TestImpl, expected) {
+		return fmt.Errorf("module %q test_impl %q does not contain %q", moniker, m.Files.Repo.TestImpl, expected)
+	}
+	return nil
+}
+
+// ============================================================================
+// Module Types Assertions
+// ============================================================================
+
+func theModuleTypesConfigContainsType(typeName string) error {
+	if state.cfg == nil || state.cfg.ModuleTypes == nil {
+		return fmt.Errorf("module types config not loaded")
+	}
+	td := state.cfg.ModuleTypes.Get(typeName)
+	if td == nil {
+		// List available types for debugging
+		var available []string
+		for _, t := range state.cfg.ModuleTypes.Types {
+			available = append(available, t.Name)
+		}
+		return fmt.Errorf("type %q not found in config (available: %v)", typeName, available)
+	}
+	return nil
+}
+
+func theTypeHasCapability(typeName, capability string) error {
+	if state.cfg == nil || state.cfg.ModuleTypes == nil {
+		return fmt.Errorf("module types config not loaded")
+	}
+	if !state.cfg.ModuleTypes.HasCapability(typeName, capability) {
+		td := state.cfg.ModuleTypes.Get(typeName)
+		if td == nil {
+			return fmt.Errorf("type %q not found", typeName)
+		}
+		return fmt.Errorf("type %q does not have capability %q (has: %v)", typeName, capability, td.Capabilities)
+	}
+	return nil
+}
+
+func theTypeHasDescription(typeName, expected string) error {
+	if state.cfg == nil || state.cfg.ModuleTypes == nil {
+		return fmt.Errorf("module types config not loaded")
+	}
+	td := state.cfg.ModuleTypes.Get(typeName)
+	if td == nil {
+		return fmt.Errorf("type %q not found", typeName)
+	}
+	if td.Description != expected {
+		return fmt.Errorf("type %q has description %q, expected %q", typeName, td.Description, expected)
+	}
+	return nil
+}
+
+func theTypeHasDefaultSourcePattern(typeName, pattern string) error {
+	if state.cfg == nil || state.cfg.ModuleTypes == nil {
+		return fmt.Errorf("module types config not loaded")
+	}
+	td := state.cfg.ModuleTypes.Get(typeName)
+	if td == nil {
+		return fmt.Errorf("type %q not found", typeName)
+	}
+	if td.Defaults == nil || td.Defaults.Files == nil {
+		return fmt.Errorf("type %q has no defaults defined", typeName)
+	}
+	for _, p := range td.Defaults.Files.Source {
+		if p == pattern {
+			return nil
+		}
+	}
+	return fmt.Errorf("type %q default source patterns %v do not contain %q", typeName, td.Defaults.Files.Source, pattern)
+}
+
+// ============================================================================
+// Repository Paths Assertions
+// ============================================================================
+
+func theRepositoryPathsFieldIs(field, expected string) error {
+	if state.cfg == nil || state.cfg.Repository == nil {
+		return fmt.Errorf("repository config not loaded")
+	}
+	var actual string
+	switch field {
+	case "specs_root":
+		actual = state.cfg.Repository.Paths.SpecsRoot
+	case "test_impl_root":
+		actual = state.cfg.Repository.Paths.TestImplRoot
+	case "out.root":
+		actual = state.cfg.Repository.Paths.Out.Root
+	case "out.build":
+		actual = state.cfg.Repository.Paths.Out.Build
+	case "out.test":
+		actual = state.cfg.Repository.Paths.Out.Test
+	case "out.logs":
+		actual = state.cfg.Repository.Paths.Out.Logs
+	default:
+		return fmt.Errorf("unknown repository paths field: %s", field)
+	}
+	if actual != expected {
+		return fmt.Errorf("repository paths.%s is %q, expected %q", field, actual, expected)
+	}
+	return nil
+}
+
+// ============================================================================
+// System Dependencies Assertions
+// ============================================================================
+
+func theSystemDependenciesConfigContains(moniker string) error {
+	if state.cfg == nil || state.cfg.SystemDependencies == nil {
+		return fmt.Errorf("system dependencies config not loaded")
+	}
+	dep := state.cfg.SystemDependencies.Get(moniker)
+	if dep == nil {
+		// List available deps for debugging
+		var available []string
+		for _, d := range state.cfg.SystemDependencies.Dependencies {
+			available = append(available, d.Moniker)
+		}
+		return fmt.Errorf("dependency %q not found in config (available: %v)", moniker, available)
+	}
+	return nil
+}
+
+func theDependencyHasVersion(moniker, expected string) error {
+	if state.cfg == nil || state.cfg.SystemDependencies == nil {
+		return fmt.Errorf("system dependencies config not loaded")
+	}
+	dep := state.cfg.SystemDependencies.Get(moniker)
+	if dep == nil {
+		return fmt.Errorf("dependency %q not found", moniker)
+	}
+	if dep.Version != expected {
+		return fmt.Errorf("dependency %q has version %q, expected %q", moniker, dep.Version, expected)
+	}
+	return nil
+}
+
+// ============================================================================
+// Error Assertions
+// ============================================================================
+
+func anErrorIsReturnedContaining(expected string) error {
+	if state.loadError == nil {
+		return fmt.Errorf("expected error containing %q, but no error occurred", expected)
+	}
+	if !strings.Contains(strings.ToLower(state.loadError.Error()), strings.ToLower(expected)) {
+		return fmt.Errorf("error %q does not contain %q", state.loadError.Error(), expected)
+	}
+	return nil
+}

@@ -44,6 +44,17 @@ func NewConfigCache() *ConfigCache {
 	}
 }
 
+// ClearCache clears the global config cache.
+// This is primarily used by tests that need to reload config with different files.
+func ClearCache() {
+	if globalConfigCache != nil {
+		globalConfigCache.mu.Lock()
+		globalConfigCache.cache = make(map[string]map[bool]*EACConfig)
+		globalConfigCache.mu.Unlock()
+		log.Debug("Global config cache cleared")
+	}
+}
+
 // Get returns cached config if available.
 func (c *ConfigCache) Get(repoRoot string, validateSchemas bool) (*EACConfig, bool) {
 	c.mu.RLock()
@@ -85,17 +96,39 @@ const (
 
 // EACConfig holds all loaded EAC repository configuration.
 // Use Load() to create and populate this struct.
+//
+// # Field Guarantees (after successful Load)
+//
+// All config fields are guaranteed non-nil after a successful Load() call.
+// The loader uses fail-fast for core configs and empty defaults for optional configs:
+//
+//   - Repository:         GUARANTEED non-nil (fails if cannot load defaults)
+//   - Modules:            GUARANTEED non-nil (fails if cannot load defaults)
+//   - ModuleTypes:        GUARANTEED non-nil (fails if cannot load defaults)
+//   - SystemDependencies: GUARANTEED non-nil (loads defaults if file missing)
+//   - SecurityTools:      GUARANTEED non-nil (uses defaults if file missing)
+//   - Environments:       GUARANTEED non-nil (empty if file missing)
+//   - TestingTags:        GUARANTEED non-nil (empty if file missing)
+//   - TestSuites:         GUARANTEED non-nil (empty if file missing)
+//   - Books:              GUARANTEED non-nil (empty if file missing)
+//
+// # Sub-field Nil Checks Still Required
+//
+// While top-level config fields are guaranteed non-nil, nested fields may be nil:
+//   - moduleType.Build may be nil (module type doesn't define artifacts)
+//   - moduleType.DockerBuild may be nil (not a docker-building type)
+//   - module.Metadata may be nil (no metadata defined)
 type EACConfig struct {
 	// Root paths
 	RepoRoot   string
 	ConfigRoot string
 
-	// Repository-wide configuration (loaded first, used by other configs)
-	Repository *RepositoryConfig
+	// Core configs - fail-fast if loading fails (non-nil guaranteed)
+	Repository  *RepositoryConfig
+	Modules     *ModulesConfig
+	ModuleTypes *ModuleTypesConfig
 
-	// Loaded configurations
-	Modules            *ModulesConfig
-	ModuleTypes        *ModuleTypesConfig
+	// Optional configs - empty defaults if file missing (non-nil guaranteed)
 	Environments       *EnvironmentsConfig
 	TestingTags        *TestingTagsConfig
 	TestSuites         *TestSuitesConfig
@@ -389,6 +422,8 @@ func (c *EACConfig) LoadEnvironments(validateSchema bool) error {
 	// Check if file exists - it's optional
 	envsPath := filepath.Join(c.ConfigRoot, EnvironmentsFileName)
 	if _, err := os.Stat(envsPath); os.IsNotExist(err) {
+		// Initialize empty config to guarantee non-nil
+		c.Environments = &EnvironmentsConfig{}
 		return nil
 	}
 
@@ -417,6 +452,8 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 	// Check if file exists - it's optional
 	tagsPath := filepath.Join(c.ConfigRoot, TestingTagsFileName)
 	if _, err := os.Stat(tagsPath); os.IsNotExist(err) {
+		// Initialize empty config to guarantee non-nil
+		c.TestingTags = &TestingTagsConfig{}
 		return nil
 	}
 
@@ -449,6 +486,8 @@ func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 	// Check if file exists - it's optional
 	suitesPath := filepath.Join(c.ConfigRoot, TestSuitesFileName)
 	if _, err := os.Stat(suitesPath); os.IsNotExist(err) {
+		// Initialize empty config to guarantee non-nil
+		c.TestSuites = &TestSuitesConfig{}
 		return nil
 	}
 
@@ -517,7 +556,8 @@ func (c *EACConfig) LoadBooks(validateSchema bool) error {
 	// Check if books file exists - it's optional
 	booksPath := filepath.Join(c.ConfigRoot, BooksFileName)
 	if _, err := os.Stat(booksPath); os.IsNotExist(err) {
-		// Books config is optional - no books defined
+		// Initialize empty config to guarantee non-nil
+		c.Books = &BooksConfig{}
 		return nil
 	}
 

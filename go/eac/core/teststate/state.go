@@ -41,6 +41,9 @@ type ModuleTestState struct {
 	// Hash of all test files in the module
 	TestHash string `json:"test_hash"`
 
+	// Build ID from manifest at time of test (links tests to specific build)
+	BuildID string `json:"build_id,omitempty"`
+
 	// Whether the last test run passed
 	Passed bool `json:"passed"`
 
@@ -79,6 +82,10 @@ type ModuleTestFiles struct {
 
 	// Direct dependencies (module monikers this module depends on)
 	Dependencies []string
+
+	// BuildID from the module's build manifest (empty if no manifest)
+	// Used to detect when a module was rebuilt and needs retesting
+	BuildID string
 }
 
 const (
@@ -161,7 +168,7 @@ func DetectChanges(workspaceRoot string, moduleInfo map[string]ModuleTestFiles) 
 		return result, nil
 	}
 
-	// First pass: detect directly changed modules (source or test files changed)
+	// First pass: detect directly changed modules (source or test files changed, or build changed)
 	directlyChanged := make(map[string]bool)
 	for moniker, info := range moduleInfo {
 		prevModState, exists := prevState.Modules[moniker]
@@ -176,6 +183,21 @@ func DetectChanges(workspaceRoot string, moduleInfo map[string]ModuleTestFiles) 
 		if !prevModState.Passed {
 			directlyChanged[moniker] = true
 			result.ChangeReasons[moniker] = "previous test failed"
+			continue
+		}
+
+		// Check if build changed (rebuild detected via manifest BuildID)
+		// This ensures `build --rebuild` triggers `test --retest`
+		if info.BuildID != "" && prevModState.BuildID != "" && info.BuildID != prevModState.BuildID {
+			directlyChanged[moniker] = true
+			result.ChangeReasons[moniker] = "build changed (rebuild detected)"
+			continue
+		}
+
+		// Check if module was tested without a build but now has one
+		if info.BuildID != "" && prevModState.BuildID == "" {
+			directlyChanged[moniker] = true
+			result.ChangeReasons[moniker] = "new build detected"
 			continue
 		}
 
@@ -306,6 +328,7 @@ func UpdateModuleState(workspaceRoot string, testedModules map[string]bool, modu
 		state.Modules[moniker] = ModuleTestState{
 			SourceHash:   sourceHash,
 			TestHash:     testHash,
+			BuildID:      info.BuildID, // Record which build was tested
 			Passed:       passed,
 			TestedAt:     time.Now(),
 			Dependencies: info.Dependencies,
