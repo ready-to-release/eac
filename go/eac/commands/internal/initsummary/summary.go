@@ -99,8 +99,8 @@ type DepsResult struct {
 type IncrementalInfo struct {
 	Enabled       bool          // Is incremental mode active?
 	DetectionTime time.Duration // How long detection took
-	Changed       []string      // Modules that need rebuilding
-	UpToDate      []string      // Modules that can be skipped
+	Changed       []string      // Modules that will be built (changed + propagated + explicitly requested)
+	UpToDate      []string      // Modules that will be skipped (up-to-date and not requested)
 	FreshBuild    bool          // True if no prior state (first build)
 }
 
