@@ -1,5 +1,7 @@
 # Claude Code MCP Server Setup
 
+{{ page_breadcrumb() }}
+
 This project uses MCP (Model Context Protocol) servers to give Claude access to:
 
 - **Commands Server**: All `r2r` CLI commands (modules, tests, builds, specs, etc.) - Local implementation
@@ -146,3 +148,5 @@ If it fails, generate a new token with proper scopes.
 - [Claude Code MCP Docs](https://docs.claude.com/en/docs/claude-code/mcp)
 - [MCP Specification](https://spec.modelcontextprotocol.io/)
 - [GitHub Tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+
+{{ diataxis_footer() }}

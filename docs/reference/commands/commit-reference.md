@@ -1,5 +1,7 @@
 # Commit Command Reference
 
+{{ page_breadcrumb() }}
+
 Complete technical reference for the `commit` command.
 
 For practical usage and workflows, see the [How-to Guide](../../how-to-guides/eac/commands/commit-command.md).
@@ -552,3 +554,5 @@ Files modified:
 - [How-to Guide](../../how-to-guides/eac/commands/commit-command.md) - Quick start and common workflows
 - [AI Process Explanation](../../how-to-guides/eac/commands/commit-ai-process.md) - How the AI generation works
 - [Workspace Commands](../../how-to-guides/eac/commands/areas/workspace-commands.md) - Workspace-aware development
+
+{{ diataxis_footer() }}

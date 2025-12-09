@@ -1,5 +1,7 @@
 # Squash Message Command
 
+{{ page_breadcrumb() }}
+
 **Problem**: When preparing to squash merge a pull request in GitHub, you need to create a cohesive commit message that synthesizes all branch commits into a single narrative, rather than just listing individual commits.
 
 **Solution**: Use `create squash-message` to generate AI-powered squash commit messages that analyze your branch commits and create a comprehensive message suitable for GitHub PR squash merge UI.
@@ -440,3 +442,5 @@ fi
 6. **Complete merge**: Finalize the PR
 
 The squash-message command analyzes your entire branch history to create a synthesized, cohesive commit message that tells the story of your feature as a whole - perfect for GitHub PR squash merges.
+
+{{ diataxis_footer() }}

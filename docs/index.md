@@ -60,7 +60,6 @@ Step-by-step lessons that take you through a series of steps to complete a proje
 Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.
 
 - [Commands by Area](how-to-guides/eac/commands/)
-- [Working with Specifications](how-to-guides/eac/specifications/)
 - [Continuous Delivery Practices](how-to-guides/continuous-delivery/)
 
 </td>
@@ -75,7 +74,6 @@ Guides that show you how to solve specific problems. Use these when you need to 
 Technical reference material for looking up details. Check here for command syntax, configuration options, and specifications.
 
 - [Command Reference](reference/commands/)
-- [Specification Standards](reference/specifications/)
 - [Decision Records](reference/decision-records/)
 
 </td>

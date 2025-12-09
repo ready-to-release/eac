@@ -1,0 +1,9 @@
+title: Core Concepts
+nav:
+  - index.md
+  - three-layer-approach.md
+  - bdd-fundamentals.md
+  - executable-specifications.md
+  - specifications-evolution.md
+  - canon-tdd-workflow.md
+  - ubiquitous-language.md

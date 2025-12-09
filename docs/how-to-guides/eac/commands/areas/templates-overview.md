@@ -1,5 +1,7 @@
 # Templates
 
+{{ page_breadcrumb() }}
+
 Templates in EAC provide a placeholder-based system for generating consistent documentation, reports, and project files with automatic value substitution.
 
 ## What are Templates?
@@ -337,3 +339,5 @@ Version: {{.Version}}
 - [Books](books-overview.md) - Aggregate templated docs into books
 - [Design](design-overview.md) - Architecture diagrams in documentation
 - [Release](release-overview.md) - Release notes generation
+
+{{ diataxis_footer() }}

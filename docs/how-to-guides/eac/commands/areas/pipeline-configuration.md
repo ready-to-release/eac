@@ -1,5 +1,7 @@
 # Pipeline Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's pipeline orchestration system, including dependency settings, execution modes, and GitHub Actions integration.
 
 ## Configuration Files
@@ -526,3 +528,5 @@ output:
 - [Pipeline Commands](pipeline-commands.md) - Command reference
 - [Build Commands](build-overview.md) - Build module operations
 - [Test Commands](test-overview.md) - Test module operations
+
+{{ diataxis_footer() }}

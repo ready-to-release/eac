@@ -1,5 +1,7 @@
 # References
 
+{{ page_breadcrumb() }}
+
 ## Books
 
 ### Accelerate
@@ -45,3 +47,5 @@
 ![Trunk Correlated Practices](../assets/references/correlated-practices.png){ width="150" }
 
 - [Trunk Correlated Practices](../assets/lfs/pdf/Trunk_Correlated_Practices_v2.8.pdf)
+
+{{ diataxis_footer() }}

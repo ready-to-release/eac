@@ -1,5 +1,7 @@
 # Command Guides
 
+{{ page_breadcrumb() }}
+
 This section provides practical guides for using EAC commands.
 
 Learn how to accomplish specific tasks like getting help, generating commit messages, initializing AI providers, and creating squash messages for merges.

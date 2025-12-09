@@ -1,5 +1,7 @@
 # Claude Code Programmatic Access
 
+{{ page_breadcrumb() }}
+
 How to use a Claude CLI/Max subscription to make API-like calls to Claude programmatically.
 
 ---
@@ -131,3 +133,5 @@ Use `-p` flag with a prompt to enable headless mode.
 - [Using Claude Code with Pro/Max](https://support.claude.com/en/articles/11145838-using-claude-code-with-your-pro-or-max-plan)
 - [AI SDK Provider for Claude Code](https://github.com/ben-vargas/ai-sdk-provider-claude-code)
 - [Output Format in Claude Code](https://claudelog.com/faqs/what-is-output-format-in-claude-code/)
+
+{{ diataxis_footer() }}

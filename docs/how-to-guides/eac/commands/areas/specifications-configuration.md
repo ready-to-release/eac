@@ -1,5 +1,7 @@
 # Specifications Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's BDD specification system, including AI prompts, tag contracts, and validation rules.
 
 ## Configuration Files
@@ -554,3 +556,5 @@ pattern_tags:
 - [Specifications Overview](specifications-overview.md) - Concepts and workflows
 - [Specifications Commands](specifications-commands.md) - Command reference
 - [Validate Commands](validate-overview.md) - Tag validation
+
+{{ diataxis_footer() }}

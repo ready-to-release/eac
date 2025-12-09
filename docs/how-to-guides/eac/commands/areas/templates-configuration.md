@@ -1,5 +1,7 @@
 # Templates Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's template system, including placeholder definitions, template locations, and value sources.
 
 ## Configuration Files
@@ -546,3 +548,5 @@ tags:
 - [Templates Overview](templates-overview.md) - Concepts and workflows
 - [Templates Commands](templates-commands.md) - Command reference
 - [Books Configuration](books-configuration.md) - Book generation
+
+{{ diataxis_footer() }}

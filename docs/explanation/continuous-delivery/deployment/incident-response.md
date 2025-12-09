@@ -1,5 +1,7 @@
 # Incident Response
 
+{{ page_breadcrumb() }}
+
 How to respond to production incidents.
 
 ## Incident Severity Levels

@@ -1,5 +1,7 @@
 # Validate Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's validation system, including contract schemas, tag patterns, and file ownership rules.
 
 ## Contract Configuration
@@ -350,3 +352,5 @@ Schemas use JSON Schema (Draft 7):
 - [Validate Overview](validate-overview.md) - Validation concepts
 - [Validate Commands](validate-commands.md) - Command reference
 - [Test Configuration](test-configuration.md) - Test tag integration
+
+{{ diataxis_footer() }}

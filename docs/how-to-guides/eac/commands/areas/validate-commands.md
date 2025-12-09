@@ -1,5 +1,7 @@
 # Validate Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's validation system.
 
 ## Quick Reference
@@ -542,3 +544,5 @@ validate-go-tidy:
 - [Validate Overview](validate-overview.md) - Validation concepts
 - [Validate Configuration](validate-configuration.md) - Configuration options
 - [Test Commands](test-commands.md) - Run tests after validating
+
+{{ diataxis_footer() }}

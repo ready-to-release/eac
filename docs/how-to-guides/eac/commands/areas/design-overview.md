@@ -1,5 +1,7 @@
 # Architecture Design
 
+{{ page_breadcrumb() }}
+
 Architecture design in EAC uses the C4 model and Structurizr DSL to create living, diagram-as-code documentation that stays synchronized with your codebase.
 
 ## What is Architecture Design?
@@ -238,3 +240,5 @@ From Structurizr Lite, export:
 - [Specifications](specifications-overview.md) - BDD specs that complement architecture docs
 - [Templates](templates-overview.md) - Documentation templates including diagrams
 - [Books](books-overview.md) - Aggregate designs into documentation books
+
+{{ diataxis_footer() }}

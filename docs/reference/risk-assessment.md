@@ -1,5 +1,7 @@
 # Risk Assessment
 
+{{ page_breadcrumb() }}
+
 **Version**: 1.0
 **Date**: 2025-12-04
 **Assessment Type**: Initial Risk Assessment
@@ -531,3 +533,5 @@ Applicable if CLI is used in government systems development:
 - OWASP Top 10 for Large Language Model Applications
 - CIS Software Supply Chain Security Guide
 - CISA Software Bill of Materials (SBOM) Guidance
+
+{{ diataxis_footer() }}

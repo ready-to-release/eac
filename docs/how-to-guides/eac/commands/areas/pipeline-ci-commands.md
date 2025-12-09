@@ -1,5 +1,7 @@
 # Pipeline CI Commands
 
+{{ page_breadcrumb() }}
+
 **Problem**: CI failures need context-rich diagnostic summaries that link to logs, artifacts, and troubleshooting steps for efficient debugging.
 
 **Solution**: Use `pipeline ci summary-link` to generate markdown diagnostics optimized for GitHub's `$GITHUB_STEP_SUMMARY` environment.
@@ -665,3 +667,5 @@ r2r eac pipeline ci summary-link $RUN_ID --type test --artifact test-results >> 
 - `deviation` - Contract and validation failures
 
 The pipeline CI commands enhance GitHub Actions workflows with rich, context-aware diagnostic summaries that accelerate debugging and resolution.
+
+{{ diataxis_footer() }}

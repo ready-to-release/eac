@@ -1,5 +1,7 @@
 # Architecture Design Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's architecture design system, including Structurizr DSL settings, themes, and AI generation options.
 
 ## Configuration Files
@@ -593,3 +595,5 @@ workspace "CLI Tool" "Command-line interface" {
 - [Design Overview](design-overview.md) - Concepts and workflows
 - [Design Commands](design-commands.md) - Command reference
 - [Templates Configuration](templates-configuration.md) - Documentation templates
+
+{{ diataxis_footer() }}

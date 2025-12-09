@@ -1,5 +1,7 @@
 # Compliance as Code Principles
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 "Compliance as Code" applies software engineering best practices to regulatory compliance. Instead of manual documentation and periodic reviews, organizations encode requirements as executable specifications, automate validation, and generate evidence as a delivery pipeline byproduct.
@@ -150,9 +152,9 @@ Feature: cli_user-login
 
 **See**:
 
-- [Three-Layer Testing Approach](../specifications/three-layer-approach.md) - How Rules/Scenarios/Unit Tests work together
-- [Risk Controls](../specifications/risk-controls.md) - Risk control specification pattern
-- [Gherkin File Organization](../specifications/gherkin-concepts.md) - How to structure specifications
+- [Three-Layer Testing Approach](../specifications/concepts/three-layer-approach.md) - How Rules/Scenarios/Unit Tests work together
+- [Risk Controls](../specifications/compliance/risk-controls.md) - Risk control specification pattern
+- [File Structure](../specifications/organization/file-structure.md) - How to structure specifications
 
 ---
 
@@ -206,3 +208,5 @@ Organizations typically implement in this order:
 
 - [Why Transform](./why-transformation.md) - Business case
 - [Transformation Framework](./transformation-framework.md) - How to implement
+
+{{ diataxis_footer() }}

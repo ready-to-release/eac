@@ -1,5 +1,7 @@
 # Repository Patterns
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 Repository organization is a foundational decision that affects how teams collaborate, how code is versioned, and how the CD Model is implemented.

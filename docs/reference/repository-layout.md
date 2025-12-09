@@ -1,5 +1,7 @@
 # Repository Layout and Module Structure
 
+{{ page_breadcrumb() }}
+
 ## Overview
 
 This repository is organized as a monorepo with clearly defined module boundaries. Understanding module structure is essential for creating accurate semantic commit messages and version increments.
@@ -323,3 +325,5 @@ Pattern variables supported:
 - Module Configuration: `.r2r/eac/modules.yml`
 - Module Types: `.r2r/eac/module-types.yml`
 - JSON Schemas: `contracts/eac-core/0.1.0/`
+
+{{ diataxis_footer() }}

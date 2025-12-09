@@ -1,5 +1,7 @@
 # Creating Modules
 
+{{ page_breadcrumb() }}
+
 **Problem**: You want to add a new component to your repository with proper file ownership, dependencies, and build configuration.
 
 **Solution**: Define a module contract in `.r2r/eac/modules.yml`.
@@ -220,3 +222,5 @@ r2r eac validate contracts
 ## See Also
 
 - [Creating Module Types](creating-module-types.md) - Define new module type templates
+
+{{ diataxis_footer() }}

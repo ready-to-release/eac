@@ -1,5 +1,7 @@
 # Core Concepts
 
+{{ page_breadcrumb() }}
+
 Foundational concepts that underpin the Continuous Delivery Model.
 
 ## In This Section

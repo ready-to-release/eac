@@ -1,5 +1,7 @@
 # Test Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's testing system, including test suites, output formats, and coverage settings.
 
 ## Test Suite Configuration
@@ -337,3 +339,5 @@ modules:
 - [Test Overview](test-overview.md) - Testing concepts
 - [Test Commands](test-commands.md) - Command reference
 - [Specifications Configuration](specifications-configuration.md) - BDD test configuration
+
+{{ diataxis_footer() }}

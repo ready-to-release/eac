@@ -1,5 +1,7 @@
 # Risk Management
 
+{{ page_breadcrumb() }}
+
 Risk management in EAC provides OSCAL-based compliance tracking, AI-powered risk assessment, and traceability from code to compliance controls.
 
 ## What is Risk Management?
@@ -157,3 +159,5 @@ Integrate risk assessment into pipelines:
 - [Security](security-overview.md) - Security scanning that feeds into risk assessment
 - [Specifications](specifications-overview.md) - BDD specs that provide control evidence
 - [Pipeline](pipeline-overview.md) - CI/CD integration for automated assessment
+
+{{ diataxis_footer() }}

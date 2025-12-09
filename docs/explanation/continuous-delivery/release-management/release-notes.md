@@ -1,5 +1,7 @@
 # Release Notes
 
+{{ page_breadcrumb() }}
+
 How to create comprehensive release notes for production releases.
 
 ## Release Notes Template

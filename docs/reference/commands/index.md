@@ -1,5 +1,7 @@
 # Command Reference
 
+{{ page_breadcrumb() }}
+
 This section provides technical reference documentation for EAC commands. Find detailed syntax specifications, parameter definitions, output schemas, and API contracts.
 
 ## In This Section

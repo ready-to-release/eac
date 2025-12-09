@@ -1,5 +1,7 @@
 # Commit Command
 
+{{ page_breadcrumb() }}
+
 **Problem**: Writing high-quality, semantic commit messages is time-consuming and requires consistency across team members, especially for complex multi-module changes.
 
 **Solution**: Use `commit` to generate AI-powered commit messages that analyze your staged changes and follow project conventions automatically.
@@ -177,3 +179,5 @@ For more troubleshooting details and advanced usage, see the [Command Reference]
 - **Understand the AI**: Read [AI Process Explanation](./commit-ai-process.md) to see how the 5-phase generation works
 - **Work command integration**: Use `r2r eac work commit` for workspace-aware commits
 - **Custom editor**: Set `GIT_EDITOR` to your preferred editor
+
+{{ diataxis_footer() }}

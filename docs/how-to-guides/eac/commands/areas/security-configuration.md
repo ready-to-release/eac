@@ -1,5 +1,7 @@
 # Security Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's security scanning system, including scanner settings, thresholds, and compliance frameworks.
 
 ## Configuration Files
@@ -731,3 +733,5 @@ output:
 - [Security Overview](security-overview.md) - Concepts and workflows
 - [Security Commands](security-commands.md) - Command reference
 - [Risk Configuration](risks-configuration.md) - Risk assessment settings
+
+{{ diataxis_footer() }}

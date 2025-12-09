@@ -1,5 +1,7 @@
 # Design Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's architecture design system.
 
 ## Quick Reference
@@ -436,3 +438,5 @@ done
 - [Design Overview](design-overview.md) - Concepts and workflows
 - [Design Configuration](design-configuration.md) - Configuration reference
 - [Templates Commands](templates-commands.md) - Documentation templates
+
+{{ diataxis_footer() }}

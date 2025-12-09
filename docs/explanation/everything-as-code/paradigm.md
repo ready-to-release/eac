@@ -1,5 +1,7 @@
 # The "Everything as Code" Paradigm
 
+{{ page_breadcrumb() }}
+
 > **What it means to treat everything as version-controlled, executable artifacts**
 
 ## What "Everything as Code" Means
@@ -102,8 +104,8 @@ When specifications use the Ubiquitous Language:
 
 For more on building shared language for specifications, see:
 
-- [Ubiquitous Language](../specifications/ubiquitous-language.md) - DDD foundation
-- [Event Storming](../specifications/event-storming.md) - Domain discovery workshops
+- [Ubiquitous Language](../specifications/concepts/ubiquitous-language.md) - DDD foundation
+- [Event Storming](../specifications/discovery/event-storming-overview.md) - Domain discovery workshops
 
 ### Collaboration Through Executable Specifications
 
@@ -268,3 +270,5 @@ Duplication causes drift:
 - [Accelerate: The Science of Lean Software and DevOps](../references.md#accelerate)
 - [The DevOps Handbook](../references.md#the-devops-handbook)
 - [Continuous Delivery](../references.md#continuous-delivery)
+
+{{ diataxis_footer() }}

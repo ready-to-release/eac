@@ -1,5 +1,7 @@
 # Get Commands Reference
 
+{{ page_breadcrumb() }}
+
 **Purpose**: Get commands output structured JSON data for automation, scripting, and CI/CD integration.
 
 **For interactive use**: See [Show Commands](../../how-to-guides/eac/commands/show-commands.md) for human-readable output.
@@ -860,3 +862,5 @@ done
 | `list`                   | Extensions         | Fast        | Command discovery                 |
 
 **For human-readable output**: Use [show commands](../../how-to-guides/eac/commands/show-commands.md) instead.
+
+{{ diataxis_footer() }}

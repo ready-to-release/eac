@@ -1,5 +1,7 @@
 # Release Management
 
+{{ page_breadcrumb() }}
+
 Release management in EAC provides CalVer-based versioning, automated changelog generation, and CI-integrated release workflows for consistent, traceable releases.
 
 ## What is Release Management?
@@ -299,3 +301,5 @@ r2r eac release get-version eac-commands
 - [Pipeline](pipeline-overview.md) - CI/CD integration for releases
 - [Workspace](workspace-overview.md) - Development workflow before release
 - [Validate Commands](validate-overview.md) - Contract validation before release
+
+{{ diataxis_footer() }}

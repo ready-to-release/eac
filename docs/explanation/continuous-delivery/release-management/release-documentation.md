@@ -1,5 +1,7 @@
 # Release Documentation
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 Release documentation is the **complete set of artifacts** that describe what's changing, how to deploy it, and how to recover if problems arise. Proper documentation is essential for:

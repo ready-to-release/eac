@@ -1,5 +1,7 @@
 # Environments Architecture
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 Environments are the foundation of the Continuous Delivery Model. Each environment serves a specific purpose in the software delivery pipeline, from local development through production deployment. Understanding environment types, their characteristics, and their relationships is essential for implementing an effective CD Model.

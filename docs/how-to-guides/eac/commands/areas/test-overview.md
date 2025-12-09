@@ -1,5 +1,7 @@
 # Testing System
 
+{{ page_breadcrumb() }}
+
 The testing system in EAC provides unified test execution across all module types with multiple output formats and test suite management.
 
 ## What is the Testing System?
@@ -276,3 +278,5 @@ r2r eac test src-feature  # Passes
 - [Build](build-overview.md) - Build before testing
 - [Specifications](specifications-overview.md) - BDD specs for tests
 - [Validate](validate-overview.md) - Validate test tags
+
+{{ diataxis_footer() }}

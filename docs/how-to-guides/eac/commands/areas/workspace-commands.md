@@ -1,5 +1,7 @@
 # Workspace Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's workspace management system.
 
 ## Quick Reference
@@ -605,3 +607,5 @@ cd ../eac-feature-api
 - [Workspace Overview](workspace-overview.md) - Concepts and workflows
 - [Workspace Configuration](workspace-configuration.md) - Configuration reference
 - [Commit Command](../commit-command.md) - AI commit messages
+
+{{ diataxis_footer() }}

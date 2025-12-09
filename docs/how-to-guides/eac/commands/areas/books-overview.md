@@ -1,5 +1,7 @@
 # Books: Documentation Aggregation
 
+{{ page_breadcrumb() }}
+
 **Problem**: Documentation sites need both static content (hand-written markdown) and dynamic content (generated from repository state like module listings, file inventories, dependency graphs).
 
 **Solution**: The **book** system aggregates static markdown from `docs/` with dynamically-generated content from EAC commands, producing a unified MkDocs site.
@@ -191,3 +193,5 @@ Running `build docs` will:
 
 - [Books Configuration](books-configuration.md) - Detailed configuration reference
 - [Books Commands](books-commands.md) - Command reference for working with books
+
+{{ diataxis_footer() }}

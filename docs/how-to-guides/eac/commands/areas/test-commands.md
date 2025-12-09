@@ -1,5 +1,7 @@
 # Test Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's testing system.
 
 ## Quick Reference
@@ -503,3 +505,5 @@ test-suite:
 - [Test Overview](test-overview.md) - Testing concepts
 - [Test Configuration](test-configuration.md) - Configuration options
 - [Build Commands](build-commands.md) - Build before testing
+
+{{ diataxis_footer() }}

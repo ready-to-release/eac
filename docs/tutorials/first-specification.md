@@ -1,5 +1,7 @@
 # Your First Feature Specification
 
+{{ page_breadcrumb() }}
+
 This tutorial teaches you how to write Gherkin feature specifications that describe system behavior in a structured, testable format.
 
 ## What is a Feature Specification?

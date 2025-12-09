@@ -1,5 +1,7 @@
 # Command Areas
 
+{{ page_breadcrumb() }}
+
 This section organizes command guides by functional area. Each area includes overview, commands, and configuration guides for related functionality.
 
 ## In This Section

@@ -1,5 +1,7 @@
 # Pipeline Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's pipeline orchestration system.
 
 ## Quick Reference
@@ -559,3 +561,5 @@ For CI orchestration and diagnostic commands, see the dedicated [Pipeline CI Com
 - [Pipeline Configuration](pipeline-configuration.md) - Configuration reference
 - [Pipeline CI Commands](pipeline-ci-commands.md) - CI orchestration and diagnostics
 - [Release Commands](release-commands.md) - CI integration for releases
+
+{{ diataxis_footer() }}

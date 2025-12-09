@@ -1,5 +1,7 @@
 # Release Quality Gates
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 Release quality gates operate at **Stage 9** of the CD Model, serving as the final checkpoint before production deployment. Stage 9 answers the critical question: **"Is this code ready for production?"**

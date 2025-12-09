@@ -1,5 +1,7 @@
 # Init Command Reference
 
+{{ page_breadcrumb() }}
+
 ## Overview
 
 The `init` command creates the AI provider configuration file at `.r2r/eac/eac-config.yml`. This configuration enables AI-powered features throughout EAC including commit message generation, specification creation, architecture design, and pull request descriptions.
@@ -381,3 +383,5 @@ eac init --ai claude-api --debug
 
 - [Init Command Guide](../../how-to-guides/eac/commands/init-command.md) - Quick start and basic usage
 - [Init Security Guide](../../how-to-guides/eac/commands/init-security.md) - Security best practices
+
+{{ diataxis_footer() }}

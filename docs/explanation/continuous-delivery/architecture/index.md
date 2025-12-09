@@ -1,5 +1,7 @@
 # Architecture
 
+{{ page_breadcrumb() }}
+
 Infrastructure and organizational decisions that shape how you implement the Continuous Delivery Model.
 
 ## In This Section

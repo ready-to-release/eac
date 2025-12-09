@@ -1,5 +1,7 @@
 # Explanation
 
+{{ page_breadcrumb() }}
+
 Understanding-oriented documentation that clarifies concepts, architecture, and design decisions across five major topic areas.
 
 ## In This Section

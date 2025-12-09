@@ -1,6 +1,8 @@
 
 # CD Model: Stages 7-12 (Release to Production)
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 Stages 7-12 of the Continuous Delivery Model cover the release, deployment, and operational phases. These stages transition validated software from testing environments into production, where it serves end users. The focus shifts from development and testing to stakeholder validation, controlled deployment, and operational excellence.

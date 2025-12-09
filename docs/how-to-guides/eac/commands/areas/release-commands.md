@@ -1,5 +1,7 @@
 # Release Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's release management system.
 
 ## Quick Reference
@@ -799,3 +801,5 @@ jobs:
 - [Release Overview](release-overview.md) - Concepts and versioning strategies
 - [Release Configuration](release-configuration.md) - Configuration reference
 - [Pipeline Commands](pipeline-commands.md) - CI/CD integration
+
+{{ diataxis_footer() }}

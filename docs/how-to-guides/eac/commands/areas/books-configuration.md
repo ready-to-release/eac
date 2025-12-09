@@ -1,5 +1,7 @@
 # Books Configuration
 
+{{ page_breadcrumb() }}
+
 **Problem**: You need to define how a book aggregates static content with dynamically-generated content.
 
 **Solution**: Configure books in `.r2r/eac/books.yml` with copy sources for static files and command sources for generated content.
@@ -505,3 +507,5 @@ Use `order` field to maintain consistent navigation order:
 
 - [Books Overview](books-overview.md) - Concept and architecture
 - [Books Commands](books-commands.md) - Command reference for working with books
+
+{{ diataxis_footer() }}

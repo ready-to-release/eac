@@ -1,5 +1,7 @@
 # Commit Messages
 
+{{ page_breadcrumb() }}
+
 How to write semantic commit messages that maintain traceability.
 
 ## Format

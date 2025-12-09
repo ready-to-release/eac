@@ -1,5 +1,7 @@
 # Rollback Procedures
 
+{{ page_breadcrumb() }}
+
 How to plan and execute production rollbacks.
 
 ## When to Roll Back

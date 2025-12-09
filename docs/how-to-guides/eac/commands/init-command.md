@@ -1,5 +1,7 @@
 # Init Command
 
+{{ page_breadcrumb() }}
+
 ## Purpose
 
 The `init` command initializes AI provider configuration for the EAC project. It creates the necessary configuration file to enable AI-powered features such as automated commit messages, specification generation, architecture design, and pull request descriptions.
@@ -202,3 +204,5 @@ eac init --ai claude-api
 - [Design Commands](areas/design-overview.md) - Architecture diagram generation
 - [Tutorials](../../../tutorials/index.md) - Introduction to EAC
 - [Claude MCP Setup](../configuration/claude-mcp-setup.md) - MCP server configuration
+
+{{ diataxis_footer() }}

@@ -1,5 +1,7 @@
 # Init Command Security Guide
 
+{{ page_breadcrumb() }}
+
 ## Overview
 
 This guide covers security best practices for managing API keys and configuring AI providers with the `init` command. Proper API key management is critical to protect your credentials and prevent unauthorized access to AI services.
@@ -419,3 +421,5 @@ eac work commit --all --debug
 - [Init Reference](../../../reference/commands/init-reference.md) - Complete technical details
 - [Anthropic Security Best Practices](https://docs.anthropic.com/claude/docs/security-best-practices)
 - [OpenAI API Key Safety](https://platform.openai.com/docs/guides/safety-best-practices)
+
+{{ diataxis_footer() }}

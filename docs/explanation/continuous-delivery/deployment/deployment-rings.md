@@ -1,5 +1,7 @@
 # Deployment Rings
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 Deployment rings are a **progressive rollout strategy** that deploys to increasingly larger user groups (rings) over time. Each ring serves as validation for the next, building confidence through production exposure while limiting blast radius.

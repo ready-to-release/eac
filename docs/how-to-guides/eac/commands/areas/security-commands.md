@@ -1,5 +1,7 @@
 # Security Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's security scanning system.
 
 ## Quick Reference
@@ -893,3 +895,5 @@ r2r eac show risk-report
 - [Security Overview](security-overview.md) - Concepts and scan types
 - [Security Configuration](security-configuration.md) - Configuration reference
 - [Risk Commands](risks-commands.md) - Risk assessment integration
+
+{{ diataxis_footer() }}

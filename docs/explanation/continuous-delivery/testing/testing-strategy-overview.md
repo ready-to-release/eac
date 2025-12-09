@@ -1,5 +1,7 @@
 # Testing Strategy: Overview
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 Testing is integrated throughout every stage of the Continuous Delivery Model. Rather than treating testing as a separate phase that happens after development, the CD Model embraces continuous validation through multiple test levels executed at different stages.
@@ -116,7 +118,7 @@ flowchart TB
 
 ## Tag Taxonomy
 
-The testing taxonomy uses tags to categorize tests by level, verification type, and dependencies. See **[Tag Reference](../../specifications/tag-reference.md)** for complete documentation.
+The testing taxonomy uses tags to categorize tests by level, verification type, and dependencies. See **[Testing Taxonomy](../../specifications/taxonomy/)** for complete documentation.
 
 **Key Tag Categories**:
 
@@ -724,7 +726,7 @@ The CD Model uses a taxonomy based on execution environment and scope:
 
 **Tag Usage**:
 
-See **[Tag Reference](../../specifications/tag-reference.md)** for complete documentation of all tags, verification requirements, test suites, and filtering rules.
+See **[Testing Taxonomy](../../specifications/taxonomy/)** for complete documentation of all tags, verification requirements, test suites, and filtering rules.
 
 ## Next Steps
 

@@ -1,5 +1,7 @@
 # How-to Guides
 
+{{ page_breadcrumb() }}
+
 Step-by-step guides to accomplish specific tasks. These problem-oriented guides help you use EAC commands and specifications, and extend the R2R CLI.
 
 **Note**: For Continuous Delivery conceptual guidance, see [Explanation > Continuous Delivery](../explanation/continuous-delivery/).

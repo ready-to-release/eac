@@ -1,5 +1,7 @@
 # Specifications Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's BDD specification system.
 
 ## Quick Reference
@@ -443,3 +445,5 @@ r2r eac create risk-assess
 - [Specifications Overview](specifications-overview.md) - Concepts and workflows
 - [Specifications Configuration](specifications-configuration.md) - Configuration reference
 - [Validate Commands](validate-overview.md) - Tag validation
+
+{{ diataxis_footer() }}

@@ -1,5 +1,7 @@
 # Everything as Code
 
+{{ page_breadcrumb() }}
+
 The foundational practice of representing all aspects of your system lifecycle as version-controlled, executable, machine-readable artifacts.
 
 ## In This Section

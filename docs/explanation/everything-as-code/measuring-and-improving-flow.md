@@ -1,5 +1,7 @@
 # Measuring and Improving Flow
 
+{{ page_breadcrumb() }}
+
 > **How to continuously optimize delivery performance using DORA metrics and Value Stream Mapping**
 
 ## The Continuous Improvement Principle
@@ -274,3 +276,5 @@ These workshops provide a systematic framework for teams to identify improvement
 
 - [Flow Engineering Book](../references.md#flow-engineering---from-value-stream-mapping-to-effective-actions)
 - [Flow Engineering Quick Start Guide](../../assets/lfs/pdf/Flow_Engineering_Quick_Start_Guide.pdf)
+
+{{ diataxis_footer() }}

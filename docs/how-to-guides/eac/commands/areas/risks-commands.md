@@ -1,5 +1,7 @@
 # Risk Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's risk management system.
 
 ## Quick Reference
@@ -465,3 +467,5 @@ r2r eac show risk-report --format json > audit-data.json
 - [Risk Management Overview](risks-overview.md) - Concepts and workflows
 - [Risk Configuration](risks-configuration.md) - Configuration reference
 - [Security Commands](security-commands.md) - Security scanning
+
+{{ diataxis_footer() }}

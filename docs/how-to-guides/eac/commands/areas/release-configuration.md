@@ -1,5 +1,7 @@
 # Release Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's release management system, including CalVer settings, changelog format, and release validation rules.
 
 ## Configuration Files
@@ -561,3 +563,5 @@ ci:
 - [Release Overview](release-overview.md) - Concepts and workflows
 - [Release Commands](release-commands.md) - Command reference
 - [Pipeline Configuration](pipeline-configuration.md) - CI/CD settings
+
+{{ diataxis_footer() }}

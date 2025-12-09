@@ -1,5 +1,7 @@
 # Understanding Compliance Through Cynefin
 
+{{ page_breadcrumb() }}
+
 > **Why compliance can and should be automated**
 
 ## The Cynefin Framework
@@ -243,3 +245,5 @@ This is the foundation of [Everything as Code](paradigm.md) - recognizing that r
 
 - [The Cynefin Framework](https://en.wikipedia.org/wiki/Cynefin_framework)
 - [Accelerate](../references.md#accelerate) - Evidence for automation effectiveness
+
+{{ diataxis_footer() }}

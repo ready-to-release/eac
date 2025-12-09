@@ -1,5 +1,7 @@
 # Build Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's build system, including module types, build flags, and output settings.
 
 ## Module Contract Configuration
@@ -307,3 +309,5 @@ r2r eac get execution order r2r-cli | xargs r2r eac build
 - [Build Overview](build-overview.md) - Build system concepts
 - [Build Commands](build-commands.md) - Command reference
 - [Test Configuration](test-configuration.md) - Test after build
+
+{{ diataxis_footer() }}

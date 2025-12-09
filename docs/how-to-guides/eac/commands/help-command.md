@@ -1,5 +1,7 @@
 # Help Command
 
+{{ page_breadcrumb() }}
+
 ## Purpose
 
 The `help` command provides built-in documentation for all EAC commands. It displays usage information, available flags, subcommands, and detailed descriptions to help you understand and use any command effectively.
@@ -469,3 +471,5 @@ To modify help output, update the command source code and rebuild EAC.
 
 - [How-to Guides](../index.md) - Complete list of all command guides
 - [Tutorials](../../../tutorials/index.md) - Introduction to EAC
+
+{{ diataxis_footer() }}

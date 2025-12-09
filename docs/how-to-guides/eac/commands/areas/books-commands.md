@@ -1,5 +1,7 @@
 # Books Commands
 
+{{ page_breadcrumb() }}
+
 **Problem**: You need to build documentation with aggregated content, view configured books, and validate book configuration.
 
 **Solution**: Use the book-related commands to build, list, and validate books.
@@ -390,3 +392,5 @@ Books integrate transparently with existing EAC workflows—the same `build` com
 
 - [Books Overview](books-overview.md) - Concept and architecture
 - [Books Configuration](books-configuration.md) - Detailed configuration reference
+
+{{ diataxis_footer() }}

@@ -1,5 +1,7 @@
 # Testing Strategy: Integration with CD Model
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 This article explains how test levels integrate with CD Model stages, the process isolation strategies for each level, and how testing aligns with the Rules/Scenarios/Unit Tests approach. Understanding this integration ensures you execute the right tests at the right stages with appropriate quality gates.
@@ -264,7 +266,7 @@ Feature: API Service Deployment
 
 ## Tag Usage and Test Suites
 
-The testing strategy uses tags to select tests for execution at specific CD Model stages. See **[Tag Reference](../../specifications/tag-reference.md)** for complete tag documentation.
+The testing strategy uses tags to select tests for execution at specific CD Model stages. See **[Testing Taxonomy](../../specifications/taxonomy/)** for complete tag documentation.
 
 **Test Level to Stage Mapping**:
 

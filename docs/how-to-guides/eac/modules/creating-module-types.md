@@ -1,5 +1,7 @@
 # Creating Module Types
 
+{{ page_breadcrumb() }}
+
 **Problem**: You have multiple modules with the same structure (e.g., Python services, React apps) and want to define consistent defaults.
 
 **Solution**: Create a module type in `.r2r/eac/module-types.yml` that provides templates for common patterns.
@@ -271,3 +273,5 @@ r2r eac get modules --format=json | jq '.modules[].type' | sort -u
 ## See Also
 
 - [Creating Modules](creating-modules.md) - Use types in module definitions
+
+{{ diataxis_footer() }}

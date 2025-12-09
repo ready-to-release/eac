@@ -1,5 +1,7 @@
 # Build Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's build system.
 
 ## Quick Reference
@@ -322,3 +324,5 @@ clean:
 - [Build Overview](build-overview.md) - Build system concepts
 - [Build Configuration](build-configuration.md) - Configuration options
 - [Test Commands](test-commands.md) - Run tests after building
+
+{{ diataxis_footer() }}

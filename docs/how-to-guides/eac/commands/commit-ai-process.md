@@ -1,5 +1,7 @@
 # AI Commit Message Generation Process
 
+{{ page_breadcrumb() }}
+
 This document explains how the AI-powered commit message generation works under the hood.
 
 For practical usage, see the [How-to Guide](./commit-command.md).
@@ -646,3 +648,5 @@ This approach provides:
 For practical usage, see the [How-to Guide](./commit-command.md).
 
 For technical details, see the [Command Reference](../../../reference/commands/commit-reference.md).
+
+{{ diataxis_footer() }}

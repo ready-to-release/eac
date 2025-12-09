@@ -1,5 +1,7 @@
 # Pipeline Orchestration
 
+{{ page_breadcrumb() }}
+
 Pipeline orchestration in EAC provides dependency-aware execution of modules, enabling efficient CI/CD workflows that respect module relationships and maximize parallelism.
 
 ## What is Pipeline Orchestration?
@@ -345,3 +347,5 @@ See [Pipeline CI Commands](pipeline-ci-commands.md) for detailed documentation.
 - [Test Commands](test-overview.md) - Individual module test
 - [Pipeline CI Commands](pipeline-ci-commands.md) - CI diagnostics and summaries
 - [Validate Commands](validate-overview.md) - Dependency graph validation
+
+{{ diataxis_footer() }}

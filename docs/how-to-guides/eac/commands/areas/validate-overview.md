@@ -1,5 +1,7 @@
 # Validation System
 
+{{ page_breadcrumb() }}
+
 The validation system in EAC ensures repository integrity across contracts, dependencies, configurations, and code quality.
 
 ## What is the Validation System?
@@ -191,3 +193,5 @@ r2r eac validate go-tidy
 - [Build](build-overview.md) - Build after validating
 - [Test](test-overview.md) - Test after validating
 - [Specifications](specifications-overview.md) - Validate test tags
+
+{{ diataxis_footer() }}

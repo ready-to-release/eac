@@ -155,8 +155,8 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "   Config: %s (from template)", configPath)
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "scripts", "mkdocs-macros.py")
-	macrosTarget := filepath.Join(workspaceRoot, "main.py")
+	macrosSource := filepath.Join(workspaceRoot, "scripts", "mkdocs_macros.py")
+	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
 			Logln(logWriter, "   ⚠️  Failed to copy mkdocs macros script: %v", err)
@@ -580,8 +580,8 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 	Logln(logWriter, "   Config: %s (from template)", configPath)
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "scripts", "mkdocs-macros.py")
-	macrosTarget := filepath.Join(workspaceRoot, "main.py")
+	macrosSource := filepath.Join(workspaceRoot, "scripts", "mkdocs_macros.py")
+	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
 			Logln(logWriter, "   ⚠️  Failed to copy mkdocs macros script: %v", err)

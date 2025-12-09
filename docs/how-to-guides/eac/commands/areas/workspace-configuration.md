@@ -1,5 +1,7 @@
 # Workspace Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's workspace management system, including worktree paths, branch naming, and merge settings.
 
 ## Configuration Files
@@ -458,3 +460,5 @@ merge:
 - [Workspace Overview](workspace-overview.md) - Concepts and workflows
 - [Workspace Commands](workspace-commands.md) - Command reference
 - [Commit Command](../commit-command.md) - AI commit messages
+
+{{ diataxis_footer() }}

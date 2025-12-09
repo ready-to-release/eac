@@ -1,5 +1,7 @@
 # Build System
 
+{{ page_breadcrumb() }}
+
 The build system in EAC provides type-aware compilation and artifact generation for all module types in your monorepo.
 
 ## What is the Build System?
@@ -219,3 +221,5 @@ r2r eac build --version $(r2r eac release get-version) --compressed r2r-cli
 - [Test](test-overview.md) - Run tests after building
 - [Validate](validate-overview.md) - Validate before building
 - [Release](release-overview.md) - Release built artifacts
+
+{{ diataxis_footer() }}

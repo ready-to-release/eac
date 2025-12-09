@@ -1,5 +1,7 @@
 # Workspace Management
 
+{{ page_breadcrumb() }}
+
 Workspace management in EAC enables parallel development using git worktrees, allowing multiple AI agent sessions to work simultaneously without conflicts.
 
 ## What is Workspace Management?
@@ -229,3 +231,5 @@ r2r eac work merge  # or work pr
 - [Commit Command](../commit-command.md) - AI-powered commit messages
 - [Release](release-overview.md) - Versioning after merging features
 - [Pipeline](pipeline-overview.md) - CI/CD for workspace branches
+
+{{ diataxis_footer() }}

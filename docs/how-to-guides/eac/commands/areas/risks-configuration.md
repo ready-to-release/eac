@@ -1,5 +1,7 @@
 # Risk Management Configuration
 
+{{ page_breadcrumb() }}
+
 This guide covers configuration options for EAC's risk management system, including OSCAL profiles, AI prompts, and assessment settings.
 
 ## Configuration Files
@@ -421,3 +423,5 @@ reports:
 - [Risk Management Overview](risks-overview.md) - Concepts and workflows
 - [Risk Commands](risks-commands.md) - Command reference
 - [Security Configuration](security-configuration.md) - Security scan settings
+
+{{ diataxis_footer() }}

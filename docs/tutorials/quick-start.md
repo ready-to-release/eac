@@ -1,5 +1,7 @@
 # Quick Start Guide
 
+{{ page_breadcrumb() }}
+
 This tutorial will help you install the R2R CLI and run your first commands.
 
 ## Step 1: Install the CLI

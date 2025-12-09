@@ -1,5 +1,7 @@
 # Security Scanning
 
+{{ page_breadcrumb() }}
+
 Security scanning in EAC provides comprehensive application security testing including SAST, vulnerability scanning, secrets detection, and compliance checking.
 
 ## What is Security Scanning?
@@ -361,3 +363,5 @@ echo "✅ Security checks passed"
 - [Risk Management](risks-overview.md) - Security findings feed into risk assessment
 - [Pipeline](pipeline-overview.md) - CI/CD integration for security gates
 - [Validate Commands](validate-overview.md) - Contract and configuration validation
+
+{{ diataxis_footer() }}

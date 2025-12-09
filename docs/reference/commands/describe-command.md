@@ -1,5 +1,7 @@
 # Get Commands Reference
 
+{{ page_breadcrumb() }}
+
 ## Overview
 
 **Command**: `r2r eac get commands`
@@ -381,3 +383,5 @@ func loadModuleMonikers() []string {
 ---
 
 > **Note**: The command was renamed from `describe commands` to `get commands` as part of the verb-first command restructuring.
+
+{{ diataxis_footer() }}

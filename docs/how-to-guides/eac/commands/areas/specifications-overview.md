@@ -1,5 +1,7 @@
 # Specifications (BDD)
 
+{{ page_breadcrumb() }}
+
 Specifications in EAC use Gherkin syntax to define behavior-driven development (BDD) scenarios that serve as both documentation and executable tests.
 
 ## What are Specifications?
@@ -285,3 +287,5 @@ Scenario: Send email
 - [Test Commands](test-overview.md) - Running specification tests
 - [Validate Commands](validate-overview.md) - Tag and spec validation
 - [Risk Management](risks-overview.md) - Specs as compliance evidence
+
+{{ diataxis_footer() }}

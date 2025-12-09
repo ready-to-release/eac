@@ -1,5 +1,7 @@
 # Templates Commands
 
+{{ page_breadcrumb() }}
+
 Command reference for EAC's template system.
 
 ## Quick Reference
@@ -724,3 +726,5 @@ r2r eac build docs-book
 - [Templates Overview](templates-overview.md) - Concepts and placeholder reference
 - [Templates Configuration](templates-configuration.md) - Configuration options
 - [Books Commands](books-commands.md) - Documentation aggregation
+
+{{ diataxis_footer() }}

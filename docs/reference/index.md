@@ -1,5 +1,7 @@
 # Reference
 
+{{ page_breadcrumb() }}
+
 Technical reference material providing information-oriented documentation for the EAC system. Includes API specifications, command references, decision records, and architectural documentation.
 
 ## In This Section

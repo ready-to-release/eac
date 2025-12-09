@@ -1,5 +1,7 @@
 # Pre-commit Setup
 
+{{ page_breadcrumb() }}
+
 How to configure pre-commit hooks for Stage 2 validation.
 
 ## Pre-commit Hook Script

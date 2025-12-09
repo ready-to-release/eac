@@ -1,5 +1,7 @@
 # Implementation Patterns
 
+{{ page_breadcrumb() }}
+
 ## Introduction
 
 The Continuous Delivery Model can be implemented in different patterns based on your system's regulatory requirements, risk profile, and organizational maturity. Understanding these patterns helps you choose the right approach for your context and implement the CD Model effectively.

@@ -1,5 +1,7 @@
 # Tutorials
 
+{{ page_breadcrumb() }}
+
 Step-by-step guides to help you get started and learn the fundamentals of the R2R CLI and Everything-as-Code workflows. These tutorials are designed for newcomers who want hands-on guidance through core concepts.
 
 ## In This Section

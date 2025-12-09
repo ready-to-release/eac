@@ -1,5 +1,7 @@
 # Show Commands
 
+{{ page_breadcrumb() }}
+
 **Problem**: Understanding repository structure, modules, dependencies, and files requires manual exploration.
 
 **Solution**: Use `show` commands to display repository information in human-readable tables for quick insights and interactive debugging.
@@ -324,3 +326,5 @@ Show commands provide quick, human-readable insights into your repository:
 - **`show config`** - EAC configuration
 
 **For automation and scripting**: Use `get` commands instead (see [Get Commands Reference](../../../reference/commands/get-commands-reference.md)).
+
+{{ diataxis_footer() }}
