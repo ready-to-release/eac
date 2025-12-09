@@ -1,4 +1,4 @@
-// File: go/eac/ai/providers/claude_api.go
+// File: go/eac/commands/internal/ai/providers/claude_api.go
 package providers
 
 import (
@@ -7,7 +7,7 @@ import (
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 // DefaultClaudeAPIModel is the default model for Claude API provider

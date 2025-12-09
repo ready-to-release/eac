@@ -1,14 +1,14 @@
 //go:build L1 && ov
 // +build L1,ov
 
-// File: go/eac/ai/providers/mock_test.go
+// File: go/eac/commands/internal/ai/providers/mock_test.go
 package providers
 
 import (
 	"context"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 func TestMockProvider_Execute(t *testing.T) {

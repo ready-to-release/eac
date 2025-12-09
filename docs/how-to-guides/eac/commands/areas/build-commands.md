@@ -113,13 +113,13 @@ r2r eac build --version v1.2.0 --compressed-upx r2r-cli
 ### Output (Single Module)
 
 ```text
-Building module: eac-commands (type: go-commands)
+Building module: eac-commands (type: go)
 Module root: go/eac/commands
 Output directory: C:\projects\eac\out\build\eac-commands
 Build log: C:\projects\eac\out\build\eac-commands\build.log
 Tidy mode: enabled (default for local builds)
 
-=== go-commands: eac-commands ===
+=== go: eac-commands ===
 🔄 Running go mod tidy...
 ✅ go mod tidy completed
 🔄 Running go generate...
@@ -132,11 +132,11 @@ Tidy mode: enabled (default for local builds)
 ### Output (CLI Module)
 
 ```text
-Building module: r2r-cli (type: go-cli)
+Building module: r2r-cli (type: go)
 Module root: scripts/r2r-cli
 Output directory: C:\projects\eac\out\build\r2r-cli
 
-=== go-cli: r2r-cli ===
+=== go: r2r-cli ===
 🔄 Running go mod tidy...
 ✅ go mod tidy completed
 🔄 Building for linux/amd64...
@@ -151,6 +151,7 @@ Output directory: C:\projects\eac\out\build\r2r-cli
 ✅ Built: r2r-darwin-arm64
 
 ✅ Build complete: 5 binaries generated
+ℹ️  This module defines executable artifacts for multi-platform binary generation
 ```
 
 ### Output (Multiple Modules)
@@ -168,18 +169,20 @@ Total time: 8.5s
 
 ### Supported Module Types
 
-| Type             | Build Action                      |
-| ---------------- | --------------------------------- |
-| `go-cli`         | Multi-platform binary compilation |
-| `go-commands`    | Go package build (no binary)      |
-| `go-library`     | Go package build (no binary)      |
-| `go-mcp`         | MCP server binary compilation     |
-| `mkdocs-site`    | `mkdocs build` → static site      |
-| `mkdocs-book`    | PDF/EPUB generation               |
-| `containers`     | Docker image build                |
-| `specifications` | Gherkin syntax validation         |
-| `contracts`      | Schema validation                 |
-| `markdown`       | Markdown validation               |
+The unified type system uses four base types. Build behavior is determined by artifact definitions in the module contract.
+
+| Type             | Build Action                                                    |
+| ---------------- | --------------------------------------------------------------- |
+| `go`             | Go build (with `go mod tidy`, `go generate`)                    |
+|                  | - No artifacts: library/package build only                      |
+|                  | - With `executable` artifacts: multi-platform binary generation |
+| `container`      | Docker image build                                              |
+| `typescript`     | TypeScript/npm build                                            |
+| `static`         | Static validation (markdown, schemas, specifications)           |
+| `mkdocs-site`    | `mkdocs build` → static site                                    |
+| `mkdocs-book`    | PDF/EPUB generation                                             |
+
+**Note**: The unified module type system uses type `go` for all Go modules. Behavior is determined by per-module artifact definitions in `modules.yml` rather than type variants.
 
 ### Build Output Location
 
@@ -252,7 +255,7 @@ done
 
 ```bash
 # Build only Go modules
-r2r eac get modules --type go-* | while read module; do
+r2r eac get modules --type go | while read module; do
   r2r eac build $module
 done
 

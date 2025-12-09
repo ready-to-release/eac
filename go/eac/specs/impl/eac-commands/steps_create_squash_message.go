@@ -57,7 +57,7 @@ func registerCreateSquashMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		modulesYml := `modules:
   - moniker: test-module
     name: Test Module
-    type: go-library
+    type: go
     files:
       root: go/test-module
 `
@@ -145,7 +145,7 @@ func registerCreateSquashMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		modulesYml := `modules:
   - moniker: test-module
     name: Test Module
-    type: go-library
+    type: go
     files:
       root: go/test-module
 `

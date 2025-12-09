@@ -468,14 +468,14 @@ ci:
 # modules.yml
 modules:
   - moniker: r2r-cli
-    type: go-cli
+    type: go
     release:
       strategy: semver
       changelog: CHANGELOG.md
       require_ci: true
 
   - moniker: eac-commands
-    type: go-commands
+    type: go
     release:
       strategy: calver
       changelog: CHANGELOG.md

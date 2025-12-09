@@ -298,7 +298,7 @@ In module contracts:
 # modules.yml
 modules:
   - moniker: src-auth
-    type: go-library
+    type: go
     specs:
       path: specs/src-auth/
       default_tags:

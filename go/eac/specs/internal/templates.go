@@ -34,111 +34,77 @@ type TemplateParams map[string]string
 // Module Types Templates
 // ============================================================================
 
-// ModuleTypesGoLibrary is the module-types.yml for Go library modules.
-const ModuleTypesGoLibrary = `types:
-  - name: go-library
-    description: Go library module
-    capabilities:
-      - go_module
-`
-
-// ModuleTypesGoCommand is the module-types.yml for Go command modules.
-const ModuleTypesGoCommand = `types:
-  - name: go-command
-    description: Go CLI application
-    capabilities:
-      - go_module
-      - executable
-`
-
-// ModuleTypesGo is the module-types.yml for both Go library and command modules.
+// ModuleTypesGo is the module-types.yml for Go modules.
+// In the unified type system, behavior is driven by artifact definitions, not type variants.
 const ModuleTypesGo = `types:
-  - name: go-library
-    description: Go library module
+  - name: go
+    description: Go module (library, executable, or test - driven by module artifacts)
     capabilities:
       - go_module
-
-  - name: go-command
-    description: Go CLI application
-    capabilities:
-      - go_module
-      - executable
 `
 
 // ModuleTypesDocker is the module-types.yml with Docker support.
 const ModuleTypesDocker = `types:
-  - name: go-library
-    description: Go library module
+  - name: go
+    description: Go module (library, executable, or test - driven by module artifacts)
     capabilities:
       - go_module
 
-  - name: go-command
-    description: Go CLI application
+  - name: container
+    description: Docker container module
     capabilities:
-      - go_module
-      - executable
-
-  - name: docker-image
-    description: Docker image
-    capabilities:
-      - docker
+      - docker_build
 `
 
 // ModuleTypesComplete is the module-types.yml with all common module types.
 const ModuleTypesComplete = `types:
-  - name: go-library
-    description: Go library module
+  - name: go
+    description: Go module (library, executable, or test - driven by module artifacts)
     capabilities:
       - go_module
 
-  - name: go-command
-    description: Go CLI application
+  - name: container
+    description: Docker container module
     capabilities:
-      - go_module
-      - executable
+      - docker_build
 
-  - name: docker-image
-    description: Docker image
+  - name: typescript
+    description: TypeScript/npm module
     capabilities:
-      - docker
+      - npm_package
+      - typescript
 
-  - name: mkdocs-book
-    description: MkDocs documentation book
-    capabilities:
-      - mkdocs
-
-  - name: gherkin-spec
-    description: Gherkin specification module
-    capabilities:
-      - gherkin
+  - name: static
+    description: Static files module (no build step)
+    capabilities: []
 `
 
 // ============================================================================
 // Modules Templates
 // ============================================================================
 
-// ModulesSingleGoLibrary is modules.yml with a single Go library module.
+// ModulesSingleGo is modules.yml with a single Go module.
 // Parameters: {{MODULE_NAME}}, {{MODULE_PATH}}
-const ModulesSingleGoLibrary = `modules:
+const ModulesSingleGo = `modules:
   - moniker: {{MODULE_NAME}}
     name: {{MODULE_NAME}} Module
-    type: go-library
+    type: go
     files:
       root: {{MODULE_PATH}}
 `
 
-// ModulesTwoGoLibraries is modules.yml with two Go library modules.
+// ModulesTwoGo is modules.yml with two Go modules.
 // Parameters: {{MODULE1_NAME}}, {{MODULE1_PATH}}, {{MODULE2_NAME}}, {{MODULE2_PATH}}
-const ModulesTwoGoLibraries = `modules:
+const ModulesTwoGo = `modules:
   - moniker: {{MODULE1_NAME}}
     name: {{MODULE1_NAME}} Module
-    type: go-library
+    type: go
     files:
       root: {{MODULE1_PATH}}
 
   - moniker: {{MODULE2_NAME}}
     name: {{MODULE2_NAME}} Module
-    type: go-library
+    type: go
     files:
       root: {{MODULE2_PATH}}
 `
@@ -169,18 +135,18 @@ const SystemDependenciesWithDocker = `dependencies:
 var namedTemplates = map[string]*Template{
 	"minimal": {
 		Name:        "minimal",
-		Description: "Minimal EAC configuration with a single Go library module",
+		Description: "Minimal EAC configuration with a single Go module",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":      ModulesSingleGoLibrary,
-			".r2r/eac/module-types.yml": ModuleTypesGoLibrary,
+			".r2r/eac/modules.yml":      ModulesSingleGo,
+			".r2r/eac/module-types.yml": ModuleTypesGo,
 		},
 	},
 	"minimal-go": {
 		Name:        "minimal-go",
 		Description: "Minimal EAC config for Go development",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":            ModulesSingleGoLibrary,
-			".r2r/eac/module-types.yml":       ModuleTypesGo,
+			".r2r/eac/modules.yml":             ModulesSingleGo,
+			".r2r/eac/module-types.yml":        ModuleTypesGo,
 			".r2r/eac/system-dependencies.yml": SystemDependenciesMinimal,
 		},
 	},
@@ -188,17 +154,17 @@ var namedTemplates = map[string]*Template{
 		Name:        "minimal-with-docker",
 		Description: "Minimal EAC config with Docker support",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":            ModulesSingleGoLibrary,
-			".r2r/eac/module-types.yml":       ModuleTypesDocker,
+			".r2r/eac/modules.yml":             ModulesSingleGo,
+			".r2r/eac/module-types.yml":        ModuleTypesDocker,
 			".r2r/eac/system-dependencies.yml": SystemDependenciesWithDocker,
 		},
 	},
 	"multi-module": {
 		Name:        "multi-module",
-		Description: "EAC config with two Go library modules",
+		Description: "EAC config with two Go modules",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":            ModulesTwoGoLibraries,
-			".r2r/eac/module-types.yml":       ModuleTypesGo,
+			".r2r/eac/modules.yml":             ModulesTwoGo,
+			".r2r/eac/module-types.yml":        ModuleTypesGo,
 			".r2r/eac/system-dependencies.yml": SystemDependenciesMinimal,
 		},
 	},
@@ -206,8 +172,8 @@ var namedTemplates = map[string]*Template{
 		Name:        "complete",
 		Description: "Complete EAC config with all module types",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":            ModulesSingleGoLibrary,
-			".r2r/eac/module-types.yml":       ModuleTypesComplete,
+			".r2r/eac/modules.yml":             ModulesSingleGo,
+			".r2r/eac/module-types.yml":        ModuleTypesComplete,
 			".r2r/eac/system-dependencies.yml": SystemDependenciesWithDocker,
 		},
 	},

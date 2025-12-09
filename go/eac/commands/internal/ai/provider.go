@@ -1,4 +1,4 @@
-// File: go/eac/ai/provider.go
+// File: go/eac/commands/internal/ai/provider.go
 // Package ai provides an abstraction layer for AI provider integrations
 package ai
 

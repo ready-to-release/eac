@@ -74,7 +74,6 @@ require (
 )
 
 replace (
-	github.com/ready-to-release/eac/go/eac/ai => ../ai
 	github.com/ready-to-release/eac/go/eac/commands => ../commands
 	github.com/ready-to-release/eac/go/eac/core => ../core
 	github.com/ready-to-release/eac/go/r2r/cli => ../../r2r/cli

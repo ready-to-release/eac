@@ -21,7 +21,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Module type name (e.g., go-cli, mkdocs-site)",
+          "description": "Module type name (e.g., go, container, typescript, static)",
           "pattern": "^[a-z][a-z0-9-]*$"
         },
         "description": {

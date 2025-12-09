@@ -1,5 +1,4 @@
-
-// File: go/eac/ai/providers/claude_api_test.go
+// File: go/eac/commands/internal/ai/providers/claude_api_test.go
 //go:build L2 && ov
 
 // Integration tests that require real Claude API - excluded from L0-L1 (commit suite)
@@ -12,7 +11,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 func TestClaudeAPI_Name(t *testing.T) {

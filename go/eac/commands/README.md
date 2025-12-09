@@ -255,10 +255,7 @@ SHOW MODULETYPES
 | containers       | 1     |
 | contracts        | 2     |
 | definitions-type | 1     |
-| go-cli           | 1     |
-| go-commands      | 1     |
-| go-library       | 1     |
-| go-mcp           | 2     |
+| go               | 5     |
 | markdown         | 1     |
 | mkdocs-site      | 1     |
 | mkdocs-subsite   | 1     |
@@ -333,7 +330,7 @@ Tables can still be piped and parsed in shells:
 ```powershell
 # PowerShell examples
 run show files | Select-String "eac-commands"
-run show modules | Select-String "go-library"
+run show modules | Select-String "go"
 
 # Count lines (subtract header/separator)
 (run show files | Measure-Object).Count - 2
@@ -342,7 +339,7 @@ run show modules | Select-String "go-library"
 ```bash
 # Bash examples
 ./run.sh show files | grep "eac-commands"
-./run.sh show modules | grep "go-library"
+./run.sh show modules | grep "go"
 ```
 
 ## Dependencies
@@ -362,7 +359,7 @@ Defined in `contracts/modules/0.1.0/eac-commands.yml`:
 ```yaml
 moniker: "eac-commands"
 name: "Go command dispatcher with auto-discovery"
-type: "go-library"
+type: "go"
 source:
   root: "go/eac/commands"
   includes:

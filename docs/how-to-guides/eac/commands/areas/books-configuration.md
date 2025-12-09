@@ -155,7 +155,7 @@ description: "Repository module listing"
 | # | Moniker | Type | Root Path |
 |---|---------|------|-----------|
 | 1 | docs | mkdocs-site | docs |
-| 2 | eac-commands | go-commands | go/eac/commands |
+| 2 | eac-commands | go | go/eac/commands |
 ...
 ```
 

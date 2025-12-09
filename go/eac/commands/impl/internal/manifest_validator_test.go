@@ -40,10 +40,10 @@ func TestManifestValidator_ValidManifest(t *testing.T) {
 		BuildID:    "550e8400-e29b-41d4-a716-446655440000",
 		BuildAgent: BuildAgentDevbox,
 		Moniker:    "test-module",
-		Type:       "go-library",
+		Type:       "go",
 		BuildTime:  time.Now(),
 		GitCommit:  "abcdef1234567890abcdef1234567890abcdef12",
-		Artifacts:  []ArtifactInfo{}, // go-library has no artifacts, manifest is the contract
+		Artifacts:  []ArtifactInfo{}, // go module with no artifacts (library)
 		Platforms: []PlatformInfo{
 			{OS: "linux", Arch: "amd64"},
 		},
@@ -67,7 +67,7 @@ func TestManifestValidator_MissingRequiredField(t *testing.T) {
 	manifest := &ModuleManifest{
 		BuildID:    "550e8400-e29b-41d4-a716-446655440000",
 		BuildAgent: BuildAgentDevbox,
-		Type:       "go-library",
+		Type:       "go",
 		BuildTime:  time.Now(),
 		Artifacts:  []ArtifactInfo{},
 		Platforms: []PlatformInfo{
@@ -93,7 +93,7 @@ func TestManifestValidator_InvalidPlatform(t *testing.T) {
 		BuildID:    "550e8400-e29b-41d4-a716-446655440000",
 		BuildAgent: BuildAgentDevbox,
 		Moniker:    "test-module",
-		Type:       "go-library",
+		Type:       "go",
 		BuildTime:  time.Now(),
 		Artifacts:  []ArtifactInfo{},
 		Platforms: []PlatformInfo{
@@ -119,7 +119,7 @@ func TestManifestValidator_InvalidVersion(t *testing.T) {
 		BuildID:    "550e8400-e29b-41d4-a716-446655440000",
 		BuildAgent: BuildAgentDevbox,
 		Moniker:    "test-module",
-		Type:       "go-library",
+		Type:       "go",
 		BuildTime:  time.Now(),
 		Artifacts:  []ArtifactInfo{},
 		Platforms: []PlatformInfo{
@@ -145,7 +145,7 @@ func TestManifestValidator_ValidArtifactWithPlatform(t *testing.T) {
 		BuildID:    "550e8400-e29b-41d4-a716-446655440000",
 		BuildAgent: BuildAgentCI,
 		Moniker:    "test-cli",
-		Type:       "go-cli",
+		Type:       "go",
 		BuildTime:  time.Now(),
 		GitCommit:  "abcdef1234567890abcdef1234567890abcdef12",
 		Artifacts: []ArtifactInfo{
@@ -180,7 +180,7 @@ func TestManifestValidator_WithVerifiedUnchangedAt(t *testing.T) {
 		BuildID:             "550e8400-e29b-41d4-a716-446655440000",
 		BuildAgent:          BuildAgentDevbox,
 		Moniker:             "test-module",
-		Type:                "go-library",
+		Type:                "go",
 		BuildTime:           time.Now(),
 		GitCommit:           "abcdef1234567890abcdef1234567890abcdef12",
 		VerifiedUnchangedAt: "1234567890abcdef1234567890abcdef12345678",
@@ -208,7 +208,7 @@ func TestManifestValidator_MissingBuildAgent(t *testing.T) {
 	manifest := &ModuleManifest{
 		BuildID:   "550e8400-e29b-41d4-a716-446655440000",
 		Moniker:   "test-module",
-		Type:      "go-library",
+		Type:      "go",
 		BuildTime: time.Now(),
 		Artifacts: []ArtifactInfo{},
 		Platforms: []PlatformInfo{
@@ -234,7 +234,7 @@ func TestManifestValidator_InvalidBuildAgent(t *testing.T) {
 		BuildID:    "550e8400-e29b-41d4-a716-446655440000",
 		BuildAgent: "invalid-agent", // Not "ci" or "devbox"
 		Moniker:    "test-module",
-		Type:       "go-library",
+		Type:       "go",
 		BuildTime:  time.Now(),
 		Artifacts:  []ArtifactInfo{},
 		Platforms: []PlatformInfo{

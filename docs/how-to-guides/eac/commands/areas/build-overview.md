@@ -3,7 +3,7 @@
 
 ## Soul
 
-Type-aware build system that dispatches to correct tooling (Go, MkDocs, Docker) based on module contracts, supporting multi-platform compilation with compression options.
+Unified type-aware build system that dispatches to correct tooling based on module type (go, container, typescript, static) and artifact definitions, supporting multi-platform compilation with compression options.
 
 ## Sections
 
@@ -21,8 +21,9 @@ Type-aware build system that dispatches to correct tooling (Go, MkDocs, Docker) 
    - Release Build
 6. Module Type Details
    - Go Modules
-   - MkDocs Sites
-   - Containers
+   - Container Modules
+   - TypeScript Modules
+   - Static Modules
 7. Integration Points
    - With Testing
    - With Validation
@@ -72,18 +73,19 @@ Use build commands when you need:
 
 ### Module Type Dispatch
 
-The build system dispatches to different builders based on module type:
+The build system dispatches to different builders based on module type. EAC uses a **unified type system** with four base types: `go`, `container`, `typescript`, and `static`. Module behavior is determined by artifact definitions in module contracts.
 
-| Module Type      | Builder          | Output              |
-| ---------------- | ---------------- | ------------------- |
-| `go-cli`         | Go compiler      | Platform binaries   |
-| `go-commands`    | Go compiler      | Library package     |
-| `go-library`     | Go compiler      | Library package     |
-| `go-mcp`         | Go compiler      | MCP server binary   |
-| `mkdocs-site`    | MkDocs           | Static HTML site    |
-| `containers`     | Docker           | Container image     |
-| `specifications` | Gherkin parser   | Validated specs     |
-| `contracts`      | Schema validator | Validated contracts |
+| Module Type   | Builder          | Output                                      |
+| ------------- | ---------------- | ------------------------------------------- |
+| `go`          | Go compiler      | Executables, libraries, or tests (see note) |
+| `container`   | Docker           | Container images (MkDocs, custom, etc.)     |
+| `typescript`  | npm/TypeScript   | npm packages, VS Code extensions            |
+| `static`      | None             | File ownership only (specs, contracts)      |
+
+**Note on Go modules**: The `go` type is unified - behavior depends on artifact definitions:
+- No artifacts: library (compile-only verification)
+- Executable artifacts: builds binaries for specified platforms (Linux, Windows, macOS)
+- Test artifacts: runs tests and captures results
 
 ### Build Output Structure
 
@@ -105,7 +107,7 @@ out/
 
 ### Platform Targets
 
-For `go-cli` modules, builds target multiple platforms:
+For `go` modules with executable artifacts, builds target multiple platforms:
 
 | Platform | Architecture | Binary                     |
 | -------- | ------------ | -------------------------- |
@@ -161,8 +163,23 @@ ls out/build/r2r-cli/
 
 ### Go Modules
 
-Go modules (`go-cli`, `go-commands`, `go-library`, `go-mcp`) use:
+The unified `go` module type supports all Go-based modules. Behavior is determined by artifact definitions in the module contract:
 
+**Library Modules** (no artifacts):
+```bash
+# Compile-only verification
+r2r eac build eac-core
+```
+
+**Executable Modules** (executable artifacts):
+```bash
+# Builds binaries for all platforms
+r2r eac build r2r-cli
+
+# Output: r2r-linux-amd64, r2r-windows-amd64.exe, etc.
+```
+
+**Build Process**:
 - `go mod tidy` (optional, controlled by flags)
 - `go generate` (if generate directives exist)
 - `go build` with appropriate flags
@@ -175,24 +192,41 @@ r2r eac build --tidy-first eac-commands
 r2r eac build --no-tidy eac-commands
 ```
 
-### MkDocs Sites
+### Container Modules
 
-MkDocs sites build static documentation:
+Container modules use Docker to build images. The `container` type supports different build contexts through per-module configuration:
 
+**MkDocs Documentation**:
 ```bash
 r2r eac build docs
 
 # Output: out/build/docs/site/
 ```
 
-### Containers
-
-Container modules build Docker images:
-
+**Custom Containers**:
 ```bash
 r2r eac build ext-eac
 
 # Tags and pushes to configured registry
+```
+
+### TypeScript Modules
+
+TypeScript modules use npm/TypeScript tooling:
+
+```bash
+r2r eac build vscode-ext-commit
+
+# Builds npm package or VS Code extension
+```
+
+### Static Modules
+
+Static modules have no build step - they provide file ownership and change tracking:
+
+```bash
+# Specs and contracts are validated, not built
+r2r eac validate eac-specs
 ```
 
 ## Integration Points

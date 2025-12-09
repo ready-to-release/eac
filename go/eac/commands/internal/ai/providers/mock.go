@@ -1,10 +1,10 @@
-// File: go/eac/ai/providers/mock.go
+// File: go/eac/commands/internal/ai/providers/mock.go
 package providers
 
 import (
 	"context"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 // MockProvider is a test provider that returns a configured response

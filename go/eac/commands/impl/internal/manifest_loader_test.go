@@ -120,7 +120,7 @@ func TestManifestWithVerifiedUnchangedAt(t *testing.T) {
 		BuildID:             "550e8400-e29b-41d4-a716-446655440000",
 		BuildAgent:          BuildAgentDevbox,
 		Moniker:             "test-module",
-		Type:                "go-library",
+		Type:                "go",
 		BuildTime:           time.Now(),
 		GitCommit:           "abcdef1234567890abcdef1234567890abcdef12",
 		VerifiedUnchangedAt: "1111111111111111111111111111111111111111",

@@ -1,10 +1,10 @@
-// File: go/eac/ai/providers/registry.go
+// File: go/eac/commands/internal/ai/providers/registry.go
 package providers
 
 import (
 	"fmt"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 // ExecutorRegistry defines the interface for registering providers

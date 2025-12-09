@@ -87,7 +87,6 @@ runs:
           go/eac/commands/go.sum
           go/eac/core/go.sum
           go/eac/specs/go.sum
-          go/eac/ai/go.sum
           go/eac/mcp/commands/go.sum
 
     - name: Check if Node.js is already available

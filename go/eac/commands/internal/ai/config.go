@@ -1,4 +1,4 @@
-// File: go/eac/ai/config.go
+// File: go/eac/commands/internal/ai/config.go
 package ai
 
 // Config represents AI and Git configuration loaded from .r2r/eac/eac-config.yml

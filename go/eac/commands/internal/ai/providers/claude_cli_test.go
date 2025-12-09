@@ -1,4 +1,4 @@
-// File: go/eac/ai/providers/claude_cli_test.go
+// File: go/eac/commands/internal/ai/providers/claude_cli_test.go
 //go:build L2 && ov
 // +build L2,ov
 
@@ -13,7 +13,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 func TestClaudeCLI_Name(t *testing.T) {

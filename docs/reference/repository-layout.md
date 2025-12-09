@@ -162,7 +162,7 @@ All modules are defined in `.r2r/eac/modules.yml`. Each module contract specifie
 modules:
   - moniker: eac-commands              # Unique identifier (kebab-case)
     name: Go Commands Library          # Human-readable name
-    type: go-commands                  # Module type (see Module Types section)
+    type: go                           # Module type (see Module Types section)
     description: Go library containing CLI command implementations
 
     versioning:                        # Optional: for deployable modules
@@ -228,62 +228,29 @@ Note: For artifact naming, prefer using literal patterns in `build.artifacts` (e
 
 Module types are defined in `.r2r/eac/module-types.yml` and provide defaults and build configuration for modules of that type.
 
-### Common Module Types
+### Module Types
 
-#### Go Family
+The unified module type system uses four base types. Behavior is driven by per-module artifact definitions in `modules.yml`:
 
-- **go-cli** - Go CLI application with cross-platform builds
-  - Capabilities: `go_module`, `executable`, `cross_compile`
-  - Build artifacts: Platform-specific executables (linux/darwin/windows, amd64/arm64)
-  - Example: `r2r-cli`
-
-- **go-library** - Go library package (no executable)
+- **go** - Go module (library, executable, or test)
   - Capabilities: `go_module`
-  - Build artifacts: Build marker file
-  - Example: `eac-core`, `eac-ai`
+  - Build artifacts driven by module config: none (library), executables (CLI), test results
+  - Examples: `eac-core`, `eac-commands`, `r2r-cli`, `eac-specs`
 
-- **go-commands** - Go library with CLI invoke wrapper
-  - Capabilities: `go_module`, `executable`
-  - Build artifacts: Single executable (`commands`)
-  - Example: `eac-commands`
+- **container** - Docker container module
+  - Capabilities: `docker_build`
+  - Build artifacts: Container images
+  - Examples: `docs`, `ext-eac`
 
-- **go-mcp** - Go MCP server module
-  - Capabilities: `go_module`, `executable`
-  - Build artifacts: MCP server executable
-  - Example: `eac-mcp-commands`
-
-- **go-tests** - Shared BDD test infrastructure
-  - Capabilities: `go_module`
-  - Example: `eac-specs`
-
-#### TypeScript Family
-
-- **vscode-ext** - VSCode extension
-  - Capabilities: `npm_package`, `vscode_extension`
-  - Build artifacts: VSIX package
+- **typescript** - TypeScript/npm module
+  - Capabilities: `npm_package`, `typescript`
+  - Build artifacts: VSIX package, compiled JS
   - Example: `vscode-ext-commit`
 
-#### Documentation
-
-- **mkdocs-site** - MkDocs documentation site (HTML)
-  - Build artifacts: Static site in `out/build/{moniker}/site`
-  - Example: `docs`
-
-- **mkdocs-pdf** - PDF documentation with generated content
-  - Build artifacts: PDF files
-  - Example: `books`
-
-#### Infrastructure
-
-- **r2r-config** - R2R configuration files
-- **r2r-extension** - Docker-based R2R CLI extension
-- **claude-config** - Claude Code CLI configuration
-- **vscode-config** - VSCode workspace configuration
-- **configuration** - Generic configuration module
-- **scripts-package** - Cross-platform script packages
-- **templates** - Template files
-- **release** - Release documentation
-- **repository-root** - Repository root configuration
+- **static** - Static files module (no build step)
+  - Capabilities: none
+  - No build artifacts - file ownership only
+  - Examples: `r2r-config`, `github`, `templates`
 
 ### Module Type Schema
 
@@ -291,27 +258,15 @@ Each module type defines:
 
 ```yaml
 types:
-  - name: go-cli
-    description: "Go CLI application with cross-platform builds"
-
-    build_deps:                        # System dependencies
-      - go
+  - name: go
+    description: "Go module (library, executable, or test - driven by module artifacts)"
 
     capabilities:                      # Module capabilities
       - go_module
-      - executable
-      - cross_compile
-
-    build:                             # Build configuration
-      artifacts:                       # Expected build artifacts
-        - type: executable
-          pattern: "{moniker}-{os}-amd64{ext}"
-          platforms: [linux, windows, darwin]
-          verify: current_platform
 
     defaults:                          # Default values for modules of this type
       files:
-        source: ["**/*.go"]
+        source: ["**/*.go", "**/*.go.txt"]
         tests: ["**/*_test.go"]
         config: ["go.mod", "go.sum"]
         changelog: CHANGELOG.md

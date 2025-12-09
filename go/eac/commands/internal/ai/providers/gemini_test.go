@@ -1,7 +1,7 @@
 //go:build L1 && ov
 // +build L1,ov
 
-// File: go/eac/ai/providers/gemini_test.go
+// File: go/eac/commands/internal/ai/providers/gemini_test.go
 package providers
 
 import (
@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 func TestGemini_Name(t *testing.T) {

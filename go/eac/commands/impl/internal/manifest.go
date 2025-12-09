@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,7 +58,7 @@ const manifestVersion = "2.0"
 const manifestFileName = "build.manifest.json"
 
 // CollectBuildFiles walks the build directory and returns all file paths relative to the directory.
-// It excludes the manifest file itself and any hidden files/directories.
+// It excludes the manifest file itself, build logs, and intermediate build artifacts like staging directories.
 func CollectBuildFiles(buildDir string) ([]string, error) {
 	var files []string
 
@@ -66,15 +67,19 @@ func CollectBuildFiles(buildDir string) ([]string, error) {
 			return err
 		}
 
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-
-		// Get relative path
+		// Get relative path first (needed for directory skip logic)
 		relPath, err := filepath.Rel(buildDir, path)
 		if err != nil {
 			return err
+		}
+
+		// Skip hidden directories (like .staging) and their contents entirely
+		if info.IsDir() {
+			name := info.Name()
+			if strings.HasPrefix(name, ".") && name != "." {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 
 		// Skip manifest file and build log

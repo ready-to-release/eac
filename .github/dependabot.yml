@@ -49,18 +49,6 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - go/eac/ai
-  - package-ecosystem: "gomod"
-    directory: "/go/eac/ai"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    commit-message:
-      prefix: "chore(deps)"
-    labels:
-      - "dependencies"
-      - "go"
-
   # Go modules - go/eac/specs
   - package-ecosystem: "gomod"
     directory: "/go/eac/specs"

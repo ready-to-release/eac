@@ -34,7 +34,7 @@ Comprehensive guide for defining modules in modules.yml covering module anatomy 
 A module is a logical unit of code with:
 
 - **Moniker**: Unique identifier (e.g., `eac-core`, `my-service`)
-- **Type**: Classification that provides defaults (e.g., `go-library`, `go-cli`)
+- **Type**: Classification that provides defaults (e.g., `go`, `container`, `typescript`, `static`)
 - **Files**: Ownership boundaries (which files belong to this module)
 - **Dependencies**: Other modules this depends on
 
@@ -46,7 +46,7 @@ Add a module to `.r2r/eac/modules.yml`:
 modules:
   - moniker: my-service
     name: My Service
-    type: go-library
+    type: go
     description: Core business logic service
     files:
       root: src/my-service
@@ -67,7 +67,7 @@ r2r eac get files my-service   # Show files owned by module
 modules:
   - moniker: my-module        # Required: unique identifier
     name: My Module           # Required: human-readable name
-    type: go-library          # Required: module type (from module-types.yml)
+    type: go                  # Required: module type (go, container, typescript, static)
     files:
       root: src/my-module     # Required: root directory
 ```
@@ -78,15 +78,20 @@ modules:
 modules:
   - moniker: my-service
     name: My Service
-    type: go-cli
+    type: go
     description: API service for user management
 
     depends_on:               # Other modules this depends on
       - eac-core
       - eac-ai
 
+    build:                    # Build configuration (defines executables)
+      artifacts:
+        - id: linux-amd64
+          type: executable
+          pattern: "my-service-linux-amd64"
+
     metadata:                 # Custom key-value data
-      exe: my-service         # Binary name for go-cli types
       team: platform
 
     files:
@@ -119,18 +124,16 @@ modules:
         test_impl: "go/eac/specs/impl/my-service"
 ```
 
-## Common Module Types
+## Module Types
 
-| Type | Description | Build Deps |
-|------|-------------|------------|
-| `go-library` | Go package (no binary) | go |
-| `go-cli` | Go CLI with cross-platform builds | go |
-| `go-commands` | Go library with CLI wrapper | go |
-| `go-mcp` | Go MCP server | go |
-| `r2r-extension` | r2r extension container | docker |
-| `mkdocs-site` | Documentation site | docker |
-| `scripts-package` | Shell scripts | none |
-| `configuration` | Config files only | none |
+The unified type system uses four base types. Behavior is determined by per-module artifact definitions:
+
+| Type | Description | Capabilities |
+|------|-------------|--------------|
+| `go` | Go module (library, executable, or test) | go_module |
+| `container` | Docker container module | docker_build |
+| `typescript` | TypeScript/npm module | npm_package, typescript |
+| `static` | Static files (no build) | none |
 
 See available types:
 

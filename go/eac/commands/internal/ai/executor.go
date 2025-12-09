@@ -1,4 +1,4 @@
-// File: go/eac/ai/executor.go
+// File: go/eac/commands/internal/ai/executor.go
 // Intent: Orchestrate AI provider invocation with configuration loading and error handling
 //
 // Design (Three Rules of Vibe Coding):
