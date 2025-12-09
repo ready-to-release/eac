@@ -123,8 +123,11 @@ func buildMetricsSection(f *SummaryFormatter, module *config.Module, cfg *config
 	outputDir := filepath.Join("out", "build", module.Moniker)
 
 	// Get artifact definitions from module type contract
+	if cfg.ModuleTypes == nil {
+		return f.Section(Emoji("metrics")+" Build Output", "Module types not loaded")
+	}
 	moduleType := cfg.ModuleTypes.Get(module.Type)
-	if moduleType == nil || len(moduleType.Build.Artifacts) == 0 {
+	if moduleType == nil || moduleType.Build == nil || len(moduleType.Build.Artifacts) == 0 {
 		return f.Section(Emoji("metrics")+" Build Output", "No artifacts defined in contract")
 	}
 
