@@ -4,13 +4,14 @@
 
 books:
   # ==============================================================================
-  # GitHub Pages Site (docs module)
+  # GitHub Pages Site (HTML)
   # ==============================================================================
   - name: site
     title: "Everything-as-Code Documentation"
     module: docs
     description: "GitHub Pages documentation site with module overview"
     output: site
+    default: true
     site_url: "https://ready-to-release.github.io/eac/"
 
     sources:
@@ -35,15 +36,15 @@ books:
             command: "show modules"
 
   # ==============================================================================
-  # Repository Report PDF (books module)
+  # Repository Report PDF
   # ==============================================================================
   - name: repository-report
     title: "Repository Structure Report"
-    module: books
+    module: docs
     description: "Complete repository structure report with all generated content"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
-    default: true
+    default: false
 
     sources:
       # Assets for PDF rendering (required for stylesheets)
@@ -101,15 +102,15 @@ books:
         order: 6
 
   # ==============================================================================
-  # Explanation PDF (books module)
+  # Explanation PDF
   # ==============================================================================
   - name: explanation
     title: "Continuous Delivery Practices & Everything-as-Code"
-    module: books
+    module: docs
     description: "Conceptual documentation - Everything as Code, CD practices, and methodology"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
-    default: false  # Slow PDF build - use --all to include
+    default: false
 
     sources:
       # Explanation content (conceptual docs)
@@ -131,7 +132,7 @@ books:
   # ==============================================================================
   - name: risk-evidence-package
     title: "Risk Assessment Evidence Package"
-    module: books
+    module: docs
     description: "Comprehensive risk assessment evidence package with all supporting artifacts"
     output: pdf-dark
     default: false

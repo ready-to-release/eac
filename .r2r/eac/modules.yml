@@ -54,12 +54,12 @@ modules:
           - scripts/sh/claude/env-setup.sh
 
   # ============================================================================
-  # Documentation - GitHub Pages Site
+  # Documentation - HTML Site + PDF Books
   # ============================================================================
   - moniker: docs
-    name: Documentation Site
+    name: Documentation
     type: container
-    description: MkDocs documentation site for GitHub Pages (HTML only, no PDF)
+    description: MkDocs documentation - HTML site (default) and PDF books (with --all)
     versioning:
       scheme: CalVer
     depends_on:
@@ -67,10 +67,26 @@ modules:
     build:
       handler: mkdocs
       artifacts:
+        # HTML site - built by default
         - id: site
           type: directory
           pattern: "site"
+        # PDF books - only built with --all flag
+        - id: repository-report
+          type: file
+          pattern: "repository-report/repository-report-dark.pdf"
+          default: false
+        - id: explanation
+          type: file
+          pattern: "explanation/explanation-dark.pdf"
+          default: false
+        - id: risk-evidence-package
+          type: file
+          pattern: "risk-evidence-package/risk-evidence-package-dark.pdf"
+          default: false
     docker_build:
+      # Default container for HTML site
+      # Handler dynamically uses mkdocs-pdf container for PDF books
       container: "mkdocs-site"
       context: "containers/mkdocs-site"
       dockerfile: "containers/mkdocs-site/Dockerfile"
@@ -95,42 +111,7 @@ modules:
         other:
           - mkdocs.yml
           - containers/mkdocs-site/**
-
-  # ============================================================================
-  # Documentation Books - PDF with Generated Content
-  # ============================================================================
-  - moniker: books
-    name: Documentation Books
-    type: container
-    description: PDF documentation books with generated reference content from EAC commands
-    versioning:
-      scheme: CalVer
-    depends_on:
-      - eac-commands
-    build:
-      handler: mkdocs
-      artifacts:
-        - id: pdf
-          type: file
-          pattern: "*.pdf"
-    docker_build:
-      container: "mkdocs-pdf"
-      context: "containers/mkdocs-pdf"
-      dockerfile: "containers/mkdocs-pdf/Dockerfile"
-      tags:
-        - "cli-mkdocs-pdf:latest"
-      load: true
-      cache:
-        type: gha
-        scope: "mkdocs-pdf"
-    files:
-      root: containers/mkdocs-pdf
-      assets:
-        - "**/*"
-      changelog: ../../release/books/CHANGELOG.md
-      workflows:
-        ci: .github/workflows/ci-books.yaml
-        release: .github/workflows/release-books.yaml
+          - containers/mkdocs-pdf/**
 
   # ============================================================================
   # EAC Extension

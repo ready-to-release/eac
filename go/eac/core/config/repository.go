@@ -43,10 +43,11 @@ type ConventionsConfig struct {
 	Changelog   string `yaml:"changelog"`
 }
 
-// LoadRepositoryConfig loads repository configuration from YAML.
-// Returns an empty config if the file doesn't exist.
-// Note: Defaults are loaded separately via LoadRepositoryDefaults and merged by the caller.
-func LoadRepositoryConfig(repoRoot string) (*RepositoryConfig, error) {
+// loadRepositoryConfigUnmerged loads repository configuration from user's YAML file only.
+// WARNING: This returns UNMERGED config without defaults. Do NOT use directly.
+// Use config.Load().Repository instead to get properly merged config with defaults.
+// This is only exported for use by the config package's merge logic.
+func loadRepositoryConfigUnmerged(repoRoot string) (*RepositoryConfig, error) {
 	configPath := filepath.Join(paths.EACConfigPath(repoRoot), RepositoryFileName)
 	data, err := os.ReadFile(configPath)
 	if os.IsNotExist(err) {

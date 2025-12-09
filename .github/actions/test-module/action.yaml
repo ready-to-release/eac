@@ -151,7 +151,7 @@ runs:
       with:
         name: ${{ steps.vars.outputs.results-artifact-name }}
         path: ${{ steps.vars.outputs.results-artifact-path }}
-        if-no-files-found: warn
+        if-no-files-found: ignore
 
     - name: Test Summary
       if: always()

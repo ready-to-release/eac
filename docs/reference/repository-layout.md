@@ -215,14 +215,14 @@ Modules declare ownership of files and directories:
 
 ### Metadata
 
-Modules can include custom metadata for module-specific configuration:
+Modules can include custom metadata for module-specific configuration. This is an optional escape hatch for special cases:
 
 ```yaml
     metadata:
-      executable-linux-amd64: r2r-linux-amd64
-      executable-windows-amd64: r2r-windows-amd64.exe
       custom-property: "value"
 ```
+
+Note: For artifact naming, prefer using literal patterns in `build.artifacts` (e.g., `pattern: "r2r-linux-amd64"`) rather than metadata overrides.
 
 ## Module Types
 

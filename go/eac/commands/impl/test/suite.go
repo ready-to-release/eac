@@ -263,12 +263,13 @@ func TestSuite() int {
 	// Codebase uses Unix-style paths throughout - normalize for path comparisons
 	workspaceRoot := filepath.ToSlash(workspaceRootNative)
 
-	// Load repository configuration for path resolution
-	repoCfg, err := config.LoadRepositoryConfig(workspaceRootNative)
+	// Load EAC config (properly merged with defaults) for path resolution
+	eacCfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Errorf("failed to load repository config: %v", err)
+		log.Errorf("failed to load EAC config: %v", err)
 		return 1
 	}
+	repoCfg := eacCfg.Repository
 
 	// Get the test suite
 	suite, err := testing.GetSuite(suiteName)
