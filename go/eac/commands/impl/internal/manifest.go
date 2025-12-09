@@ -18,18 +18,19 @@ import (
 // This is stored per-module at out/build/<module>/.manifest.json and is immutable after creation.
 // The VerifiedUnchangedAt field can be updated by the builder when it verifies the module is up-to-date.
 type ModuleManifest struct {
-	BuildID             string         `json:"build_id"`                         // Unique identifier for this build
-	Moniker             string         `json:"moniker"`                          // Module identifier
-	Type                string         `json:"type"`                             // Module type
-	BuildTime           time.Time      `json:"build_time"`                       // When this module was built
-	GitCommit           string         `json:"git_commit,omitempty"`             // Git commit SHA at build time
-	InputHash           string         `json:"input_hash,omitempty"`             // SHA-256 hash of source files at build time
-	RequestedArtifacts  []string       `json:"requested_artifacts,omitempty"`    // Artifact IDs requested to build
-	Artifacts           []ArtifactInfo `json:"artifacts"`                        // Artifacts actually produced
-	Files               []string       `json:"files,omitempty"`                  // All files in build output (relative paths)
-	Platforms           []PlatformInfo `json:"platforms"`                        // Platforms this was built for
-	VerifiedUnchangedAt string         `json:"verified_unchanged_at,omitempty"`  // Git SHA when builder verified module unchanged
-	Version             string         `json:"version"`                          // Manifest format version
+	BuildID             string         `json:"build_id"`                        // Unique identifier for this build (UUID locally, GitHub run ID in CI)
+	BuildAgent          string         `json:"build_agent"`                     // Build agent type: "ci" or "devbox"
+	Moniker             string         `json:"moniker"`                         // Module identifier
+	Type                string         `json:"type"`                            // Module type
+	BuildTime           time.Time      `json:"build_time"`                      // When this module was built
+	GitCommit           string         `json:"git_commit,omitempty"`            // Git commit SHA at build time
+	InputHash           string         `json:"input_hash,omitempty"`            // SHA-256 hash of source files at build time
+	RequestedArtifacts  []string       `json:"requested_artifacts,omitempty"`   // Artifact IDs requested to build
+	Artifacts           []ArtifactInfo `json:"artifacts"`                       // Artifacts actually produced
+	Files               []string       `json:"files,omitempty"`                 // All files in build output (relative paths)
+	Platforms           []PlatformInfo `json:"platforms"`                       // Platforms this was built for
+	VerifiedUnchangedAt string         `json:"verified_unchanged_at,omitempty"` // Git SHA when builder verified module unchanged
+	Version             string         `json:"version"`                         // Manifest format version
 }
 
 // ArtifactInfo describes a single built artifact
@@ -87,15 +88,33 @@ func CollectBuildFiles(buildDir string) ([]string, error) {
 	return files, err
 }
 
-// NewModuleManifest creates a new module manifest
+// BuildAgentCI is the build agent value for CI builds (GitHub Actions)
+const BuildAgentCI = "ci"
+
+// BuildAgentDevbox is the build agent value for local developer builds
+const BuildAgentDevbox = "devbox"
+
+// NewModuleManifest creates a new module manifest.
+// In CI (GITHUB_RUN_ID set), uses the run ID as BuildID and sets BuildAgent to "ci".
+// Locally, generates a UUID for BuildID and sets BuildAgent to "devbox".
 func NewModuleManifest(moniker, moduleType, gitCommit string) *ModuleManifest {
+	buildID := uuid.New().String()
+	buildAgent := BuildAgentDevbox
+
+	// In CI, use GitHub run ID as build identifier for traceability
+	if runID := os.Getenv("GITHUB_RUN_ID"); runID != "" {
+		buildID = runID
+		buildAgent = BuildAgentCI
+	}
+
 	return &ModuleManifest{
-		BuildID:   uuid.New().String(),
-		Moniker:   moniker,
-		Type:      moduleType,
-		BuildTime: time.Now(),
-		GitCommit: gitCommit,
-		Version:   manifestVersion,
+		BuildID:    buildID,
+		BuildAgent: buildAgent,
+		Moniker:    moniker,
+		Type:       moduleType,
+		BuildTime:  time.Now(),
+		GitCommit:  gitCommit,
+		Version:    manifestVersion,
 	}
 }
 

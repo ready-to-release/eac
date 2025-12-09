@@ -29,7 +29,7 @@ import (
 // The assetPath is relative to the assets directory (e.g., "specs/valid-spec.txt").
 // Uses container root if in container, otherwise repo root.
 func LoadAsset(ctx *TestContext, assetPath string) (string, error) {
-	assetsRoot := repository.GetEffectiveRoot(ctx.OriginalRepoRoot)
+	assetsRoot := repository.GetDistRoot(ctx.OriginalRepoRoot)
 	fullPath := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", assetPath)
 	data, err := os.ReadFile(fullPath)
 	if err != nil {

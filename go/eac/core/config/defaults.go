@@ -79,8 +79,9 @@ func LoadSystemDependenciesDefaults(repoRoot string) (*SystemDependenciesConfig,
 }
 
 // defaultsRoot returns the root directory for loading contract defaults.
-// In container mode (R2R_CONTAINER_ROOT set), uses the container's internal
-// /app directory where contracts are baked in. Otherwise uses repoRoot.
+// Uses the distribution root (container root if in container, otherwise repoRoot).
+// Note: Can't import repository package here to avoid cycles, so inline the check.
+// See repository.GetDistRoot() for the canonical implementation.
 func defaultsRoot(repoRoot string) string {
 	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
 		return containerRoot

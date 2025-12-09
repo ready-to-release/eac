@@ -7,8 +7,12 @@
   "properties": {
     "build_id": {
       "type": "string",
-      "format": "uuid",
-      "description": "Unique identifier (UUID) for this build"
+      "description": "Unique identifier for this build (UUID locally, GitHub run ID in CI)"
+    },
+    "build_agent": {
+      "type": "string",
+      "enum": ["ci", "devbox"],
+      "description": "Build agent type: 'ci' for GitHub Actions builds, 'devbox' for local developer builds"
     },
     "moniker": {
       "type": "string",
@@ -63,7 +67,7 @@
       "description": "Manifest format version"
     }
   },
-  "required": ["build_id", "moniker", "type", "build_time", "artifacts", "platforms", "version"],
+  "required": ["build_id", "build_agent", "moniker", "type", "build_time", "artifacts", "platforms", "version"],
   "definitions": {
     "artifact_info": {
       "type": "object",

@@ -118,6 +118,7 @@ func TestManifestWithVerifiedUnchangedAt(t *testing.T) {
 	// Create a valid manifest
 	manifest := &ModuleManifest{
 		BuildID:             "550e8400-e29b-41d4-a716-446655440000",
+		BuildAgent:          BuildAgentDevbox,
 		Moniker:             "test-module",
 		Type:                "go-library",
 		BuildTime:           time.Now(),

@@ -1640,6 +1640,13 @@ func buildModuleTestInfo(
 			Dependencies: module.GetDependencies(),
 		}
 
+		// Load build manifest to get BuildID (links tests to specific build)
+		// This ensures `build --rebuild` triggers retesting
+		moduleBuildDir := eacCfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
+		if manifest, err := implinternal.LoadModuleManifest(moduleBuildDir); err == nil {
+			info.BuildID = manifest.BuildID
+		}
+
 		// Get source files from module definition
 		sourcePatterns := module.GetGlobPatterns()
 		sourceFiles, err := teststate.ExpandGlobPatterns(workspaceRoot, sourcePatterns)

@@ -60,10 +60,10 @@ func NewRepositoryError(op, path string, err error, message string) *RepositoryE
 //	root, err := repository.GetRepositoryRoot("")
 //	root, err := repository.GetRepositoryRoot("/path/to/subdir")
 func GetRepositoryRoot(startPath string) (string, error) {
-	// Check for explicit repository root override first
+	// Check for explicit workspace root override first
 	// This takes precedence over R2R_DOCKER_MODE to allow test isolation
 	// Used by CLI wrapper and tests to specify the repository root
-	if repoRoot := os.Getenv("R2R_REPO_ROOT"); repoRoot != "" {
+	if repoRoot := GetWorkspaceRoot(); repoRoot != "" {
 		return filepath.Clean(repoRoot), nil
 	}
 
@@ -313,14 +313,35 @@ func GetContainerRoot() string {
 	return os.Getenv("R2R_CONTAINER_ROOT")
 }
 
-// GetEffectiveRoot returns R2R_CONTAINER_ROOT if set, otherwise falls back to
-// the provided repoRoot. Use this when looking up container-internal files
-// that should come from the container's /app directory rather than the mounted repo.
-func GetEffectiveRoot(repoRoot string) string {
+// GetDistRoot returns the distribution root where tool assets live (contracts,
+// schemas, defaults). In container mode, this is R2R_CONTAINER_ROOT. Otherwise
+// falls back to the provided fallback (typically the repo root).
+//
+// Use this for loading:
+//   - Contract schemas (contracts/eac-core/*/schemas/)
+//   - Default configs (contracts/eac-core/*/defaults/)
+//   - Tool definitions and templates
+//
+// These are part of the TOOL distribution, not the user's workspace.
+func GetDistRoot(fallback string) string {
 	if containerRoot := GetContainerRoot(); containerRoot != "" {
 		return containerRoot
 	}
-	return repoRoot
+	return fallback
+}
+
+// GetWorkspaceRoot returns the workspace root override (R2R_REPO_ROOT) if set,
+// otherwise returns empty string. The caller should fall back to git-based
+// discovery if this returns empty.
+//
+// Use this for loading:
+//   - User configs (.r2r/eac/*.yml)
+//   - Project source files
+//   - Build outputs
+//
+// These are part of the USER's workspace, not the tool distribution.
+func GetWorkspaceRoot() string {
+	return os.Getenv("R2R_REPO_ROOT")
 }
 
 // GetRepoEACConfigRoot returns the path to the EAC repository configuration directory.

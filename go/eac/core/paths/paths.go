@@ -187,9 +187,14 @@ func CommandsBinaryPathWithToolsDir(repoRoot string, toolsDir string) string {
 		toolsDir = filepath.Join(OutDir, ToolsDir)
 	}
 
-	// Use container root if running in container, otherwise use repo root
-	effectiveRoot := GetEffectiveRoot(repoRoot)
-	binaryPath := filepath.Join(effectiveRoot, toolsDir, binaryName)
+	// Use distribution root for tool binaries (container root if running in container)
+	// Note: Can't import repository package here to avoid cycles, so inline the check
+	// See repository.GetDistRoot() for the canonical implementation
+	distRoot := repoRoot
+	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+		distRoot = containerRoot
+	}
+	binaryPath := filepath.Join(distRoot, toolsDir, binaryName)
 
 	// Check for staged .new binary and perform atomic replacement
 	newPath := binaryPath + ".new"
@@ -381,14 +386,6 @@ func EACConfigPersonalFilePath(repoRoot string) string {
 // EACLoggingConfigPath returns the path to the EAC logging configuration
 func EACLoggingConfigPath(repoRoot string) string {
 	return filepath.Join(EACConfigPath(repoRoot), "logging.yml")
-}
-
-// GetEffectiveRoot returns the effective repository root
-func GetEffectiveRoot(repoRoot string) string {
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
-		return containerRoot
-	}
-	return repoRoot
 }
 
 // ChangelogPath returns the path to a module's CHANGELOG.md file

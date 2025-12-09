@@ -2,15 +2,14 @@
 package internal
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
-
-//go:embed contracts/build-manifest.schema.json
-var buildManifestSchema string
 
 // ManifestValidator validates build manifests against the contract schema
 type ManifestValidator struct {
@@ -31,14 +30,36 @@ func (e *ManifestValidationError) Error() string {
 	return fmt.Sprintf("manifest validation failed for %s: %s", e.Moniker, e.Message)
 }
 
-// NewManifestValidator creates a new manifest validator with the embedded schema
-func NewManifestValidator() (*ManifestValidator, error) {
+// Contract version for build manifest schema
+const manifestContractVersion = "0.1.0"
+
+// NewManifestValidator creates a new manifest validator that loads schema from contracts
+func NewManifestValidator(workspaceRoot string) (*ManifestValidator, error) {
 	c := jsonschema.NewCompiler()
 
-	// Parse the embedded schema
+	// Use distribution root (schemas are part of tool distribution, not user workspace)
+	// In containers, R2R_CONTAINER_ROOT points to the tool distribution
+	schemaRoot := workspaceRoot
+	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+		schemaRoot = containerRoot
+	}
+
+	// Build path to schema: contracts/eac-core/<version>/build-manifest.schema.json
+	schemaPath := filepath.Join(
+		paths.ContractsVersionPath(schemaRoot, "eac-core", manifestContractVersion),
+		"build-manifest.schema.json",
+	)
+
+	// Read schema from contracts
+	data, err := os.ReadFile(schemaPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read build manifest schema from %s: %w", schemaPath, err)
+	}
+
+	// Parse the schema
 	var schemaDoc any
-	if err := json.Unmarshal([]byte(buildManifestSchema), &schemaDoc); err != nil {
-		return nil, fmt.Errorf("failed to parse embedded schema: %w", err)
+	if err := json.Unmarshal(data, &schemaDoc); err != nil {
+		return nil, fmt.Errorf("failed to parse build manifest schema: %w", err)
 	}
 
 	// Add schema to compiler
@@ -50,7 +71,7 @@ func NewManifestValidator() (*ManifestValidator, error) {
 	// Compile the schema
 	schema, err := c.Compile(schemaURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile schema: %w", err)
+		return nil, fmt.Errorf("failed to compile build manifest schema: %w", err)
 	}
 
 	return &ManifestValidator{schema: schema}, nil
@@ -103,17 +124,63 @@ func extractManifestValidationDetails(err error) []string {
 
 // Global validator instance (lazy initialized)
 var globalManifestValidator *ManifestValidator
+var globalManifestValidatorRoot string
 
-// GetManifestValidator returns the global manifest validator instance
+// GetManifestValidator returns the global manifest validator instance.
+// Uses repository.GetRepositoryRoot() to find workspace root.
 func GetManifestValidator() (*ManifestValidator, error) {
-	if globalManifestValidator == nil {
-		var err error
-		globalManifestValidator, err = NewManifestValidator()
-		if err != nil {
-			return nil, err
+	return GetManifestValidatorWithRoot("")
+}
+
+// GetManifestValidatorWithRoot returns the global manifest validator instance with explicit workspace root.
+// If workspaceRoot is empty, it will be detected automatically.
+func GetManifestValidatorWithRoot(workspaceRoot string) (*ManifestValidator, error) {
+	// If no root provided, try to detect it
+	if workspaceRoot == "" {
+		// Use distribution root for schema loading
+		if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+			workspaceRoot = containerRoot
+		} else {
+			// Try to find workspace root by looking for .r2r directory
+			cwd, err := os.Getwd()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get working directory: %w", err)
+			}
+			workspaceRoot = findWorkspaceRoot(cwd)
+			if workspaceRoot == "" {
+				return nil, fmt.Errorf("could not find workspace root (no .r2r directory found)")
+			}
 		}
 	}
+
+	// Check if we need to reinitialize (different root)
+	if globalManifestValidator != nil && globalManifestValidatorRoot == workspaceRoot {
+		return globalManifestValidator, nil
+	}
+
+	var err error
+	globalManifestValidator, err = NewManifestValidator(workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+	globalManifestValidatorRoot = workspaceRoot
+
 	return globalManifestValidator, nil
+}
+
+// findWorkspaceRoot walks up the directory tree looking for .r2r directory
+func findWorkspaceRoot(startDir string) string {
+	dir := startDir
+	for {
+		if _, err := os.Stat(filepath.Join(dir, ".r2r")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "" // Reached root
+		}
+		dir = parent
+	}
 }
 
 // ValidateAndSave validates the manifest against the schema and saves it if valid

@@ -28,6 +28,7 @@ const (
 	SchemaSecurityTools      SchemaType = "security-tools"
 )
 
+
 // schemaFileNames maps schema types to their file names (without path)
 var schemaFileNames = map[SchemaType]string{
 	SchemaModules:            "modules.schema.json",
@@ -79,7 +80,14 @@ func NewValidator(workspaceRoot string) (*Validator, error) {
 	}
 
 	// Build the schema directory path: contracts/eac-core/<version>/
-	schemaDir := paths.ContractsVersionPath(workspaceRoot, "eac-core", ContractVersion)
+	// Use distribution root (schemas are part of tool distribution, not user workspace)
+	// Note: Can't import repository package here to avoid cycles, so inline the check
+	// See repository.GetDistRoot() for the canonical implementation
+	schemaRoot := workspaceRoot
+	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+		schemaRoot = containerRoot
+	}
+	schemaDir := paths.ContractsVersionPath(schemaRoot, "eac-core", ContractVersion)
 
 	// Load and compile all schemas from the repository
 	for schemaType, fileName := range schemaFileNames {
