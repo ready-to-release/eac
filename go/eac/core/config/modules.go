@@ -8,11 +8,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/defaults"
 )
 
-// ModulesConfig represents the modules.yml configuration
-type ModulesConfig struct {
-	Modules []Module `yaml:"modules"`
-}
-
 // Module represents a single module definition
 type Module struct {
 	Moniker     string                 `yaml:"moniker"`
@@ -26,6 +21,13 @@ type Module struct {
 	Files       Files                  `yaml:"files"`
 	Flags       Flags                  `yaml:"flags"`
 	Metadata    map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
+	Versioning  *ModuleVersioning      `yaml:"versioning,omitempty"`
+}
+
+// ModuleVersioning holds module versioning configuration
+type ModuleVersioning struct {
+	Scheme  string `yaml:"scheme"`  // SemVer, CalVer
+	Current string `yaml:"current"` // Current version (optional)
 }
 
 // ModuleBuild contains per-module build configuration
@@ -92,9 +94,9 @@ type Flags struct {
 	ExplicitOwnership bool `yaml:"explicit_ownership,omitempty"`
 }
 
-// applyDefaults applies default values to all modules (generic defaults only).
+// applyModuleDefaults applies default values to all modules (generic defaults only).
 // Call ApplyTypeDefaults after loading ModuleTypes for type-specific defaults.
-func (c *ModulesConfig) applyDefaults() {
+func (c *RepositoryConfig) applyModuleDefaults() {
 	for i := range c.Modules {
 		m := &c.Modules[i]
 
@@ -114,12 +116,9 @@ func (c *ModulesConfig) applyDefaults() {
 
 // ApplyTypeDefaults applies type-specific defaults to all modules.
 // This should be called after both Modules and ModuleTypes are loaded.
-func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig, repoCfg *RepositoryConfig) {
+func (c *RepositoryConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
 	// Build path variables from repository config
-	var pathVars map[string]string
-	if repoCfg != nil {
-		pathVars = repoCfg.GetPathVariables()
-	}
+	pathVars := c.GetPathVariables()
 
 	for i := range c.Modules {
 		m := &c.Modules[i]
@@ -211,51 +210,12 @@ func convertTypeDefaults(td *TypeDefaults) *defaults.TypeDefaults {
 	return result
 }
 
-// GetModule returns a module by moniker
-func (c *ModulesConfig) GetModule(moniker string) (*Module, bool) {
-	for i := range c.Modules {
-		if c.Modules[i].Moniker == moniker {
-			return &c.Modules[i], true
-		}
-	}
-	return nil, false
-}
-
-// GetByMoniker returns a module by moniker, or nil if not found
-func (c *ModulesConfig) GetByMoniker(moniker string) *Module {
-	m, ok := c.GetModule(moniker)
-	if !ok {
-		return nil
-	}
-	return m
-}
-
-// GetModulesByType returns all modules of a specific type
-func (c *ModulesConfig) GetModulesByType(moduleType string) []Module {
-	var result []Module
-	for _, m := range c.Modules {
-		if m.Type == moduleType {
-			result = append(result, m)
-		}
-	}
-	return result
-}
-
-// AllMonikers returns a list of all module monikers
-func (c *ModulesConfig) AllMonikers() []string {
-	monikers := make([]string, len(c.Modules))
-	for i, m := range c.Modules {
-		monikers[i] = m.Moniker
-	}
-	return monikers
-}
-
 // ValidateAndDiscoverWorkflows validates workflow paths and auto-discovers missing ones.
 // For each module:
 //   - If workflow is defined but file doesn't exist → returns error
 //   - If workflow is empty but conventional file exists → sets the path (auto-discovery)
 //   - If workflow is empty and file doesn't exist → remains empty (no workflow)
-func (c *ModulesConfig) ValidateAndDiscoverWorkflows(repoRoot string) error {
+func (c *RepositoryConfig) ValidateAndDiscoverWorkflows(repoRoot string) error {
 	var errs []error
 
 	for i := range c.Modules {

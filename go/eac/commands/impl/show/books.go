@@ -39,8 +39,8 @@ func ShowBooks() int {
 		return 1
 	}
 
-	if err := cfg.LoadModules(false); err != nil {
-		log.Errorf("failed to load modules: %v", err)
+	if err := cfg.LoadRepository(false); err != nil {
+		log.Errorf("failed to load repository: %v", err)
 		return 1
 	}
 
@@ -53,8 +53,8 @@ func ShowBooks() int {
 
 	// Build a reverse map: book name -> modules that reference it
 	bookToModules := make(map[string][]string)
-	if cfg.Modules != nil {
-		for _, mod := range cfg.Modules.Modules {
+	if cfg.Repository != nil {
+		for _, mod := range cfg.Repository.Modules {
 			for _, bookName := range mod.Books {
 				bookToModules[bookName] = append(bookToModules[bookName], mod.Moniker)
 			}

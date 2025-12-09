@@ -1,8 +1,5 @@
-# Default repository settings
+# Unified repository defaults
 # Merged with .r2r/eac/repository.yml (user values override these)
-
-# Trunk-based development configuration
-trunk_branch: main
 
 # Repository settings
 repository:
@@ -13,6 +10,9 @@ repository:
   schemes:
     - SemVer
     - CalVer
+
+  # Main branch name for trunk-based development
+  trunk_branch: main
 
   # Trunk-based development: max branch age before warning
   max_branch_age_days: 2
@@ -53,3 +53,12 @@ conventions:
   godog_test: godog_test.go
   package_json: package.json
   changelog: CHANGELOG.md
+
+# Default module (used when no modules defined in repository.yml)
+modules:
+  - moniker: default
+    name: Default Module
+    type: go
+    description: Auto-generated module for unconfigured repositories
+    files:
+      root: "."

@@ -76,7 +76,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 	}
 
 	// Get module
-	module, ok := cfg.Modules.GetModule(moduleName)
+	module, ok := cfg.Repository.GetModule(moduleName)
 	if !ok {
 		log.Errorf("module not found: %s", moduleName)
 		return 1

@@ -1045,7 +1045,7 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 	}
 
 	// Get module
-	module, ok := cfg.Modules.GetModule(moniker)
+	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		return false
 	}
@@ -1160,7 +1160,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 		}
 
 		// Get module config
-		module, ok := cfg.Modules.GetModule(moniker)
+		module, ok := cfg.Repository.GetModule(moniker)
 		if !ok {
 			continue
 		}
@@ -1377,7 +1377,7 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 	}
 
 	// Get module
-	module, ok := cfg.Modules.GetModule(moniker)
+	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		return fmt.Errorf("module not found: %s", moniker)
 	}
@@ -1464,7 +1464,7 @@ func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract,
 	}
 
 	// Get module from config
-	module, ok := cfg.Modules.GetModule(moduleContract.Moniker)
+	module, ok := cfg.Repository.GetModule(moduleContract.Moniker)
 	if !ok {
 		log.Debugf("Module %s not found in config", moduleContract.Moniker)
 		return []string{}

@@ -28,18 +28,18 @@ func TestNewValidator(t *testing.T) {
 	assert.NotNil(t, v)
 }
 
-func TestValidator_ValidateModulesYAML(t *testing.T) {
+func TestValidator_ValidateRepositoryYAML(t *testing.T) {
 	repoRoot := getRepoRoot(t)
 	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
-	// Load the actual modules.yml from the repository
-	modulesPath := filepath.Join(repoRoot, ".r2r", "eac", "modules.yml")
-	data, err := os.ReadFile(modulesPath)
+	// Load the actual repository.yml from the repository
+	repoPath := filepath.Join(repoRoot, ".r2r", "eac", "repository.yml")
+	data, err := os.ReadFile(repoPath)
 	require.NoError(t, err)
 
-	err = v.ValidateYAML(schema.SchemaModules, data)
-	assert.NoError(t, err, "modules.yml should be valid against schema")
+	err = v.ValidateYAML(schema.SchemaRepository, data)
+	assert.NoError(t, err, "repository.yml should be valid against schema")
 }
 
 func TestValidator_ValidateEnvironmentsYAML(t *testing.T) {
@@ -70,7 +70,7 @@ func TestValidator_ValidateTestingTagsYAML(t *testing.T) {
 	assert.NoError(t, err, "testing-tags.yml should be valid against schema")
 }
 
-func TestValidator_InvalidModulesYAML(t *testing.T) {
+func TestValidator_InvalidRepositoryYAML(t *testing.T) {
 	repoRoot := getRepoRoot(t)
 	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
@@ -81,12 +81,12 @@ something_else:
   - name: test
 `)
 
-	err = v.ValidateYAML(schema.SchemaModules, invalidYAML)
+	err = v.ValidateYAML(schema.SchemaRepository, invalidYAML)
 	assert.Error(t, err, "should fail validation for missing 'modules' field")
 
 	var validErr *schema.ValidationError
 	assert.ErrorAs(t, err, &validErr)
-	assert.Equal(t, schema.SchemaModules, validErr.SchemaType)
+	assert.Equal(t, schema.SchemaRepository, validErr.SchemaType)
 }
 
 func TestValidator_InvalidEnvironmentsYAML(t *testing.T) {
@@ -138,24 +138,24 @@ modules:
     name: Test Module
 `)
 
-	err = v.ValidateYAML(schema.SchemaModules, invalidYAML)
+	err = v.ValidateYAML(schema.SchemaRepository, invalidYAML)
 	assert.Error(t, err, "should fail validation for invalid moniker pattern")
 }
 
-func TestValidator_ValidMinimalModulesYAML(t *testing.T) {
+func TestValidator_ValidMinimalRepositoryYAML(t *testing.T) {
 	repoRoot := getRepoRoot(t)
 	v, err := schema.NewValidator(repoRoot)
 	require.NoError(t, err)
 
-	// Minimal valid modules config
+	// Minimal valid repository config with modules
 	validYAML := []byte(`
 modules:
   - moniker: test-module
     name: Test Module
 `)
 
-	err = v.ValidateYAML(schema.SchemaModules, validYAML)
-	assert.NoError(t, err, "minimal valid modules config should pass")
+	err = v.ValidateYAML(schema.SchemaRepository, validYAML)
+	assert.NoError(t, err, "minimal valid repository config should pass")
 }
 
 func TestValidator_ValidMinimalEnvironmentsYAML(t *testing.T) {
@@ -198,7 +198,7 @@ modules:
     name: [unclosed bracket
 `)
 
-	err = v.ValidateYAML(schema.SchemaModules, invalidYAML)
+	err = v.ValidateYAML(schema.SchemaRepository, invalidYAML)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse YAML")
 }
@@ -217,7 +217,7 @@ func TestValidator_ValidateJSON(t *testing.T) {
 		]
 	}`)
 
-	err = v.ValidateJSON(schema.SchemaModules, validJSON)
+	err = v.ValidateJSON(schema.SchemaRepository, validJSON)
 	assert.NoError(t, err)
 }
 
@@ -228,15 +228,14 @@ func TestValidator_InvalidJSON(t *testing.T) {
 
 	invalidJSON := []byte(`{ invalid json }`)
 
-	err = v.ValidateJSON(schema.SchemaModules, invalidJSON)
+	err = v.ValidateJSON(schema.SchemaRepository, invalidJSON)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse JSON")
 }
 
 func TestGetSchemaTypes(t *testing.T) {
 	types := schema.GetSchemaTypes()
-	assert.Len(t, types, 10)
-	assert.Contains(t, types, schema.SchemaModules)
+	assert.Len(t, types, 9)
 	assert.Contains(t, types, schema.SchemaModuleTypes)
 	assert.Contains(t, types, schema.SchemaEnvironments)
 	assert.Contains(t, types, schema.SchemaTestingTags)

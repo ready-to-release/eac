@@ -314,8 +314,8 @@ func iApplyTypeDefaultsToModules() error {
 	if state.cfg == nil {
 		return fmt.Errorf("config not loaded")
 	}
-	if state.cfg.Modules != nil && state.cfg.ModuleTypes != nil {
-		state.cfg.Modules.ApplyTypeDefaults(state.cfg.ModuleTypes, state.cfg.Repository)
+	if state.cfg.Repository != nil && state.cfg.ModuleTypes != nil {
+		state.cfg.Repository.ApplyTypeDefaults(state.cfg.ModuleTypes)
 	}
 	return nil
 }
@@ -325,21 +325,21 @@ func iApplyTypeDefaultsToModules() error {
 // ============================================================================
 
 func theModulesConfigContainsModule(moniker string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	_, found := state.cfg.Modules.GetModule(moniker)
+	_, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
-		return fmt.Errorf("module %q not found in config (modules: %v)", moniker, state.cfg.Modules.AllMonikers())
+		return fmt.Errorf("module %q not found in config (modules: %v)", moniker, state.cfg.Repository.AllMonikers())
 	}
 	return nil
 }
 
 func theModulesConfigDoesNotContainModule(moniker string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	_, found := state.cfg.Modules.GetModule(moniker)
+	_, found := state.cfg.Repository.GetModule(moniker)
 	if found {
 		return fmt.Errorf("module %q unexpectedly found in config", moniker)
 	}
@@ -347,10 +347,10 @@ func theModulesConfigDoesNotContainModule(moniker string) error {
 }
 
 func theModuleHasType(moniker, expectedType string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -361,10 +361,10 @@ func theModuleHasType(moniker, expectedType string) error {
 }
 
 func theModuleHasFilesRoot(moniker, expectedRoot string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -375,10 +375,10 @@ func theModuleHasFilesRoot(moniker, expectedRoot string) error {
 }
 
 func theModuleHasDescription(moniker, expected string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -389,10 +389,10 @@ func theModuleHasDescription(moniker, expected string) error {
 }
 
 func theModuleHasChangelog(moniker, expected string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -403,10 +403,10 @@ func theModuleHasChangelog(moniker, expected string) error {
 }
 
 func theModuleHasSourcePatternsContaining(moniker, pattern string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -419,10 +419,10 @@ func theModuleHasSourcePatternsContaining(moniker, pattern string) error {
 }
 
 func theModuleDoesNotHaveSourcePattern(moniker, pattern string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -435,10 +435,10 @@ func theModuleDoesNotHaveSourcePattern(moniker, pattern string) error {
 }
 
 func theModuleHasAssetsPatternsContaining(moniker, pattern string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -451,10 +451,10 @@ func theModuleHasAssetsPatternsContaining(moniker, pattern string) error {
 }
 
 func theModuleHasNoSourcePatternsFromTypeDefaults(moniker string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	_, found := state.cfg.Modules.GetModule(moniker)
+	_, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -465,10 +465,10 @@ func theModuleHasNoSourcePatternsFromTypeDefaults(moniker string) error {
 }
 
 func theModuleSpecsPatternResolvesWith(moniker, expected string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
@@ -481,10 +481,10 @@ func theModuleSpecsPatternResolvesWith(moniker, expected string) error {
 }
 
 func theModuleTestImplPathContains(moniker, expected string) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
+	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
-	m, found := state.cfg.Modules.GetModule(moniker)
+	m, found := state.cfg.Repository.GetModule(moniker)
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}

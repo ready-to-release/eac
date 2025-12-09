@@ -86,7 +86,6 @@ const EACConfigRelPath = paths.EACConfigRelPath
 
 // Config file names
 const (
-	ModulesFileName            = "modules.yml"
 	ModuleTypesFileName        = "module-types.yml"
 	EnvironmentsFileName       = "environments.yml"
 	TestingTagsFileName        = "testing-tags.yml"
@@ -103,7 +102,6 @@ const (
 // The loader uses fail-fast for core configs and empty defaults for optional configs:
 //
 //   - Repository:         GUARANTEED non-nil (fails if cannot load defaults)
-//   - Modules:            GUARANTEED non-nil (fails if cannot load defaults)
 //   - ModuleTypes:        GUARANTEED non-nil (fails if cannot load defaults)
 //   - SystemDependencies: GUARANTEED non-nil (loads defaults if file missing)
 //   - SecurityTools:      GUARANTEED non-nil (uses defaults if file missing)
@@ -111,6 +109,10 @@ const (
 //   - TestingTags:        GUARANTEED non-nil (empty if file missing)
 //   - TestSuites:         GUARANTEED non-nil (empty if file missing)
 //   - Books:              GUARANTEED non-nil (empty if file missing)
+//
+// # Module Access
+//
+// Modules are now part of Repository config. Access via cfg.Repository.Modules.
 //
 // # Sub-field Nil Checks Still Required
 //
@@ -124,8 +126,8 @@ type EACConfig struct {
 	ConfigRoot string
 
 	// Core configs - fail-fast if loading fails (non-nil guaranteed)
+	// Repository now includes modules (unified config from repository.yml)
 	Repository  *RepositoryConfig
-	Modules     *ModulesConfig
 	ModuleTypes *ModuleTypesConfig
 
 	// Optional configs - empty defaults if file missing (non-nil guaranteed)
@@ -250,19 +252,15 @@ func countConfigFiles(cfg *EACConfig) int {
 }
 
 // LoadAll loads all configuration files.
-// Core configs (Repository, Modules, ModuleTypes) must load successfully - fails immediately on error.
+// Core configs (Repository, ModuleTypes) must load successfully - fails immediately on error.
 // Optional configs (Environments, TestingTags, etc.) collect errors but continue loading.
 func (c *EACConfig) LoadAll(validateSchemas bool) error {
 	// === CORE CONFIGS: Fail fast if any of these fail ===
 	// These are required for the system to function correctly
 
-	// Load repository config first (provides path variables for other configs)
+	// Load repository config first (now includes modules)
 	if err := c.LoadRepository(validateSchemas); err != nil {
 		return fmt.Errorf("core config failed - repository: %w", err)
-	}
-
-	if err := c.LoadModules(validateSchemas); err != nil {
-		return fmt.Errorf("core config failed - modules: %w", err)
 	}
 
 	if err := c.LoadModuleTypes(validateSchemas); err != nil {
@@ -270,10 +268,10 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 	}
 
 	// Apply type-specific defaults after both modules and types are loaded
-	c.Modules.ApplyTypeDefaults(c.ModuleTypes, c.Repository)
+	c.Repository.ApplyTypeDefaults(c.ModuleTypes)
 
 	// Validate defined workflow paths and auto-discover missing ones
-	if err := c.Modules.ValidateAndDiscoverWorkflows(c.RepoRoot); err != nil {
+	if err := c.Repository.ValidateAndDiscoverWorkflows(c.RepoRoot); err != nil {
 		return fmt.Errorf("workflow validation failed: %w", err)
 	}
 
@@ -345,42 +343,6 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 
 	// Merge defaults with user config
 	c.Repository = MergeRepository(defaults, userCfg)
-	return nil
-}
-
-// LoadModules loads the modules configuration.
-// Falls back to contract defaults if user config doesn't exist.
-func (c *EACConfig) LoadModules(validateSchema bool) error {
-	// Check if user config exists
-	modulesPath := filepath.Join(c.ConfigRoot, ModulesFileName)
-	if _, err := os.Stat(modulesPath); os.IsNotExist(err) {
-		// Use defaults from contract
-		cfg, err := LoadModulesDefaults(c.RepoRoot)
-		if err != nil {
-			return fmt.Errorf("loading module defaults: %w", err)
-		}
-		c.Modules = cfg
-		return nil
-	}
-
-	data, err := c.readConfigFile(ModulesFileName)
-	if err != nil {
-		return err
-	}
-
-	if validateSchema {
-		if err := c.validateSchema(schema.SchemaModules, data); err != nil {
-			return err
-		}
-	}
-
-	var cfg ModulesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", ModulesFileName, err)
-	}
-
-	cfg.applyDefaults()
-	c.Modules = &cfg
 	return nil
 }
 
@@ -628,11 +590,11 @@ func (c *EACConfig) GetBookByName(name string) *Book {
 // GetBooksByModule returns all books that belong to a module.
 // Uses the module's books list to look up Book configs by name.
 func (c *EACConfig) GetBooksByModule(moniker string) []*Book {
-	if c.Books == nil || c.Modules == nil {
+	if c.Books == nil || c.Repository == nil {
 		return nil
 	}
 	// Find the module and get its books list
-	module := c.Modules.GetByMoniker(moniker)
+	module := c.Repository.GetByMoniker(moniker)
 	if module == nil {
 		return nil
 	}
@@ -642,11 +604,11 @@ func (c *EACConfig) GetBooksByModule(moniker string) []*Book {
 // GetDefaultBooksByModule returns only default books for a module.
 // The first book in a module's books list is the default; others require --all flag.
 func (c *EACConfig) GetDefaultBooksByModule(moniker string) []*Book {
-	if c.Books == nil || c.Modules == nil {
+	if c.Books == nil || c.Repository == nil {
 		return nil
 	}
 	// Find the module and get its books list
-	module := c.Modules.GetByMoniker(moniker)
+	module := c.Repository.GetByMoniker(moniker)
 	if module == nil {
 		return nil
 	}
@@ -683,7 +645,7 @@ func (c *EACConfig) validateSchema(schemaType schema.SchemaType, data []byte) er
 func (c *EACConfig) ValidateAll() error {
 	var errs []error
 
-	// Repository config is optional
+	// Repository config includes modules
 	if c.Repository != nil {
 		repoPath := filepath.Join(c.ConfigRoot, RepositoryFileName)
 		if _, err := os.Stat(repoPath); err == nil {
@@ -691,13 +653,6 @@ func (c *EACConfig) ValidateAll() error {
 			if err := c.validateSchema(schema.SchemaRepository, data); err != nil {
 				errs = append(errs, fmt.Errorf("repository: %w", err))
 			}
-		}
-	}
-
-	if c.Modules != nil {
-		data, _ := c.readConfigFile(ModulesFileName)
-		if err := c.validateSchema(schema.SchemaModules, data); err != nil {
-			errs = append(errs, fmt.Errorf("modules: %w", err))
 		}
 	}
 
@@ -761,7 +716,7 @@ func (e *MultiError) Error() string {
 
 // GetBuildArtifacts returns the final list of artifact IDs to build for a module.
 // This method encapsulates all artifact merging and filtering logic:
-// - Merges module-level artifacts (from modules.yml) with type-level artifacts (from module-types.yml)
+// - Merges module-level artifacts (from repository.yml) with type-level artifacts (from module-types.yml)
 // - Module-level artifacts take priority if defined
 // - Filters UPX-compressed artifacts: only included when buildAll is true
 // - When buildAll is false: returns only current platform artifacts
@@ -770,7 +725,7 @@ func (e *MultiError) Error() string {
 //
 // This is the ONLY method non-core code should use to determine build artifacts.
 func (c *EACConfig) GetBuildArtifacts(moniker string, buildAll bool) []Artifact {
-	module := c.Modules.GetByMoniker(moniker)
+	module := c.Repository.GetByMoniker(moniker)
 	if module == nil {
 		return nil
 	}

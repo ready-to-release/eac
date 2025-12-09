@@ -456,7 +456,7 @@ func executeTests(cfg *TestConfig) int {
 		modulesToCheck = cfg.Monikers
 	} else {
 		// Default: check all modules in config
-		modulesToCheck = eacCfg.Modules.AllMonikers()
+		modulesToCheck = eacCfg.Repository.AllMonikers()
 	}
 
 	for _, m := range modulesToCheck {
@@ -1431,7 +1431,7 @@ func findTscucumberTestRunner(featurePath string, cfg *config.EACConfig) string 
 	moniker := parts[0]
 
 	// Look up the module by moniker
-	module, ok := cfg.Modules.GetModule(moniker)
+	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		return ""
 	}
