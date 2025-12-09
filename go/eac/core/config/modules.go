@@ -1,6 +1,10 @@
 package config
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/ready-to-release/eac/go/eac/core/defaults"
 )
 
@@ -81,8 +85,11 @@ type RepoFiles struct {
 	Exclude  []string `yaml:"exclude"`
 }
 
-// Flags defines module behavior flags (reserved for future use)
+// Flags defines module behavior flags
 type Flags struct {
+	// ExplicitOwnership disables the default "all files under root" ownership.
+	// When true, the module only owns files that explicitly match its patterns.
+	ExplicitOwnership bool `yaml:"explicit_ownership,omitempty"`
 }
 
 // applyDefaults applies default values to all modules (generic defaults only).
@@ -241,4 +248,72 @@ func (c *ModulesConfig) AllMonikers() []string {
 		monikers[i] = m.Moniker
 	}
 	return monikers
+}
+
+// ValidateAndDiscoverWorkflows validates workflow paths and auto-discovers missing ones.
+// For each module:
+//   - If workflow is defined but file doesn't exist → returns error
+//   - If workflow is empty but conventional file exists → sets the path (auto-discovery)
+//   - If workflow is empty and file doesn't exist → remains empty (no workflow)
+func (c *ModulesConfig) ValidateAndDiscoverWorkflows(repoRoot string) error {
+	var errs []error
+
+	for i := range c.Modules {
+		m := &c.Modules[i]
+
+		// Validate/discover CI workflow
+		ciPath := defaults.WorkflowCIPath(m.Moniker)
+		ciFullPath := filepath.Join(repoRoot, ciPath)
+
+		if m.Files.Workflows.CI != "" {
+			// Defined - validate it exists
+			definedPath := filepath.Join(repoRoot, m.Files.Workflows.CI)
+			if _, err := os.Stat(definedPath); os.IsNotExist(err) {
+				errs = append(errs, fmt.Errorf("module %s: CI workflow file not found: %s", m.Moniker, m.Files.Workflows.CI))
+			}
+		} else {
+			// Not defined - check for auto-discovery
+			if _, err := os.Stat(ciFullPath); err == nil {
+				m.Files.Workflows.CI = ciPath
+			}
+		}
+
+		// Validate/discover Release workflow
+		releasePath := defaults.WorkflowReleasePath(m.Moniker)
+		releaseFullPath := filepath.Join(repoRoot, releasePath)
+
+		if m.Files.Workflows.Release != "" {
+			// Defined - validate it exists
+			definedPath := filepath.Join(repoRoot, m.Files.Workflows.Release)
+			if _, err := os.Stat(definedPath); os.IsNotExist(err) {
+				errs = append(errs, fmt.Errorf("module %s: release workflow file not found: %s", m.Moniker, m.Files.Workflows.Release))
+			}
+		} else {
+			// Not defined - check for auto-discovery
+			if _, err := os.Stat(releaseFullPath); err == nil {
+				m.Files.Workflows.Release = releasePath
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return &MultiWorkflowError{Errors: errs}
+	}
+	return nil
+}
+
+// MultiWorkflowError holds multiple workflow validation errors
+type MultiWorkflowError struct {
+	Errors []error
+}
+
+func (e *MultiWorkflowError) Error() string {
+	if len(e.Errors) == 1 {
+		return e.Errors[0].Error()
+	}
+	msg := fmt.Sprintf("%d workflow errors:", len(e.Errors))
+	for _, err := range e.Errors {
+		msg += "\n  - " + err.Error()
+	}
+	return msg
 }

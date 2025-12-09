@@ -7,3 +7,8 @@
 repository:
   # This is a monorepo (default is poly)
   type: mono
+
+# Override: Go-specific test implementation location
+# (moved from modules.yml defaults since repository.yml is the correct location)
+paths:
+  test_impl_root: "go/eac/specs/impl"

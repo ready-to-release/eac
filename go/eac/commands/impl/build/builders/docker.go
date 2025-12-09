@@ -31,7 +31,7 @@ type DockerHandler struct{}
 
 func (h *DockerHandler) Name() string { return "docker" }
 
-func (h *DockerHandler) Capabilities() []string { return []string{"container", "docker_build"} }
+func (h *DockerHandler) Capabilities() []string { return []string{"container"} }
 
 func (h *DockerHandler) Requirements() []string { return []string{"docker"} }
 

@@ -1,4 +1,4 @@
-// docker-build.go - Build handler for docker-build dependency (uses docker_build config from module or type)
+// buildx.go - Build handler for buildx capability (uses docker_build config from module or type)
 package builders
 
 import (
@@ -15,19 +15,20 @@ import (
 )
 
 func init() {
-	RegisterHandler(&DockerBuildHandler{})
+	RegisterHandler(&BuildxHandler{})
 }
 
-// DockerBuildHandler builds Docker images using docker_build config from module or type.
-type DockerBuildHandler struct{}
+// BuildxHandler builds Docker images using docker_build config from module or type.
+// This handler uses docker buildx for multi-platform builds, registry cache, SBOM, and provenance.
+type BuildxHandler struct{}
 
-func (h *DockerBuildHandler) Name() string { return "docker-build" }
+func (h *BuildxHandler) Name() string { return "buildx" }
 
-func (h *DockerBuildHandler) Capabilities() []string { return []string{"docker_build"} }
+func (h *BuildxHandler) Capabilities() []string { return []string{"buildx"} }
 
-func (h *DockerBuildHandler) Requirements() []string { return []string{"docker"} }
+func (h *BuildxHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *DockerBuildHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+func (h *BuildxHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")
@@ -37,11 +38,11 @@ func (h *DockerBuildHandler) ValidateModule(module *modules.ModuleContract, work
 	return nil
 }
 
-func (h *DockerBuildHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+func (h *BuildxHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
 	return []string{fmt.Sprintf("docker-image:%s", module.Moniker)}
 }
 
-func (h *DockerBuildHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *BuildxHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	Logln(logWriter, "\n=== Building Docker Image: %s ===", module.Moniker)
 
 	// Check if Docker is available

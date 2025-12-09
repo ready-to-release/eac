@@ -80,9 +80,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the modules config does not contain module "([^"]*)"$`, func(moniker string) error {
 		return theModulesConfigDoesNotContainModule(moniker)
 	})
-	sc.Step(`^the modules config has (\d+) modules$`, func(count int) error {
-		return theModulesConfigHasNModules(count)
-	})
 	sc.Step(`^the module "([^"]*)" has type "([^"]*)"$`, func(moniker, expectedType string) error {
 		return theModuleHasType(moniker, expectedType)
 	})
@@ -345,17 +342,6 @@ func theModulesConfigDoesNotContainModule(moniker string) error {
 	_, found := state.cfg.Modules.GetModule(moniker)
 	if found {
 		return fmt.Errorf("module %q unexpectedly found in config", moniker)
-	}
-	return nil
-}
-
-func theModulesConfigHasNModules(count int) error {
-	if state.cfg == nil || state.cfg.Modules == nil {
-		return fmt.Errorf("modules config not loaded")
-	}
-	actual := len(state.cfg.Modules.Modules)
-	if actual != count {
-		return fmt.Errorf("expected %d modules, got %d", count, actual)
 	}
 	return nil
 }

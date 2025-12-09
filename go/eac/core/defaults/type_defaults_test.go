@@ -267,31 +267,32 @@ func TestResolveDefaults_ExplicitOverridesType(t *testing.T) {
 	assert.Equal(t, "custom/design", result.Design)
 }
 
-// TestResolveDefaults_EmptySlicePreserved tests that explicit empty slice is preserved
-func TestResolveDefaults_EmptySlicePreserved(t *testing.T) {
+// TestResolveDefaults_EmptySliceUsesDefault tests that empty slice is treated as unset
+// and gets filled with the default value (consistent with nil behavior)
+func TestResolveDefaults_EmptySliceUsesDefault(t *testing.T) {
 	typeDef := &TypeDefaults{
 		Repo: &RepoDefaults{
 			Specs: []string{"{specs_root}/{moniker}/**"},
 		},
 	}
 
-	// Explicit empty slice (not nil)
+	// Empty slice (not nil) should be treated as unset
 	emptySpecs := []string{}
 
 	result := ResolveDefaults(
 		typeDef,
 		"my-lib", "src/lib", "go",
-		nil, // pathVars
+		map[string]string{"specs_root": "specs"}, // pathVars
 		nil, nil, nil, nil,
 		"",
 		"", "",
-		emptySpecs, // explicit empty
+		emptySpecs, // explicit empty - treated as unset
 		"", "",
 	)
 
-	// Empty slice should be preserved, not replaced with type default
+	// Empty slice should use type default (with substitution applied)
 	assert.NotNil(t, result.Specs)
-	assert.Empty(t, result.Specs)
+	assert.Equal(t, []string{"specs/my-lib/**"}, result.Specs)
 }
 
 // TestResolveDefaults_PartialTypeDefaults tests when type has only some defaults

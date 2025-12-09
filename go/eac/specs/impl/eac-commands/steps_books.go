@@ -40,20 +40,23 @@ func booksRemoveBooksYaml(ctx *internal.TestContext) error {
 	return internal.RemoveFile(ctx, ".r2r/eac/books.yml")
 }
 
-// booksCreateWithModule creates books.yml referencing a specific module (requires isolation).
+// booksCreateWithModule creates books.yml with a command that references a non-existent module.
+// Since books don't directly reference modules (modules reference books), we test this by
+// creating a command source that would fail when the module doesn't exist.
 func booksCreateWithModule(ctx *internal.TestContext, module string) error {
 	if ctx.IsolatedDir == "" {
 		return fmt.Errorf("books.yml creation requires isolated test environment")
 	}
+	// Create a book with a command that requires the module to exist
+	// The "show artifacts" command requires a valid module moniker
 	content := fmt.Sprintf(`books:
-  - name: %s
-    module: %s
-    description: Test book with specific module
+  - name: test-book
+    description: Test book referencing module via command
     sources:
-      - type: copy
-        from: "docs/**/*.md"
-        to: ""
-`, module, module)
+      - type: command
+        command: "show artifacts %s"
+        target: "artifacts.md"
+`, module)
 	return internal.CreateFile(ctx, ".r2r/eac/books.yml", content)
 }
 
@@ -64,12 +67,11 @@ func booksCreateWithInlineCommand(ctx *internal.TestContext, cmd string) error {
 	}
 	content := fmt.Sprintf(`books:
   - name: docs
-    module: docs
     description: Test book with inline command
     sources:
       - type: copy
         from: "docs/**/*.md"
-        to: ""
+        to: "./"
       - type: inline
         target: "index.md"
         inserts:

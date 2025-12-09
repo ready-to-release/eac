@@ -88,7 +88,9 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 					Exclude:  m.Files.Repo.Exclude,
 				},
 			},
-			Flags:       contracts.Flags{},
+			Flags: contracts.Flags{
+				ExplicitOwnership: m.Flags.ExplicitOwnership,
+			},
 			Metadata:    m.Metadata,
 			DockerBuild: m.DockerBuild,
 			Books:       m.Books,

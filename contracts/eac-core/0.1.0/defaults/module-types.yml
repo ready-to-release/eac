@@ -26,17 +26,20 @@ types:
         design: "{specs_root}/{moniker}/.design"
 
   # Container module type - unified type for all Docker-based modules
-  # Behavior is driven by per-module docker_build and handler config:
-  #   - handler: mkdocs -> documentation builds
-  #   - handler: docker (default) -> standard container builds
+  # Behavior is driven by per-module docker_build config:
+  #   - Uses buildx handler for multi-platform builds with docker_build config
+  #   - Requires docker and buildx system dependencies
   - name: container
     description: "Docker container module (behavior driven by per-module docker_build config)"
-    capabilities: [docker_build]
+    capabilities: [buildx]
     defaults:
       files:
-        assets: ["Dockerfile", "**/*"]
+        source: ["Dockerfile"]
+        assets: ["Dockerfile"]
       repo:
-        specs: []
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
+        design: "{specs_root}/{moniker}/.design"
 
   # TypeScript module type - for npm/TypeScript projects
   - name: typescript
@@ -44,15 +47,14 @@ types:
     capabilities: [npm_package, typescript]
     defaults:
       files:
-        source: ["src/**/*.ts"]
-        tests: ["test/**/*.ts"]
+        source: ["src/**/*.ts", "features/**/*.ts"]
+        tests: ["**/*.test.ts"]
         config: ["package.json", "tsconfig.json", "*.config.js"]
         changelog: CHANGELOG.md
-        workflows:
-          ci: ""
-          release: ""
       repo:
-        specs: []
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
+        design: "{specs_root}/{moniker}/.design"
 
   # Static module type - for modules with no build step (config, scripts, docs, etc.)
   - name: static
@@ -61,8 +63,7 @@ types:
     defaults:
       files:
         changelog: CHANGELOG.md
-        workflows:
-          ci: ""
-          release: ""
       repo:
-        specs: []
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
+        design: "{specs_root}/{moniker}/.design"

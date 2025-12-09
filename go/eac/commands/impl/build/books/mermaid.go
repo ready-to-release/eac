@@ -237,6 +237,59 @@ type cacheStatus struct {
 	cachePath string // absolute path to cached SVG (if exists)
 }
 
+// mermaidImageName is the Docker image used for mermaid-cli rendering
+const mermaidImageName = "cli-mermaid-cli:latest"
+
+// ensureMermaidImage ensures the mermaid-cli Docker image exists.
+// Similar to ensureMkDocsImage, this checks if image exists first; only builds if missing.
+func ensureMermaidImage(workspaceRoot string, logWriter io.Writer) error {
+	// Check if image already exists
+	cmd := exec.Command("docker", "image", "inspect", mermaidImageName)
+	if err := cmd.Run(); err == nil {
+		fmt.Fprintf(logWriter, "    Docker image exists: %s (using pre-built)\n", mermaidImageName)
+		return nil
+	}
+
+	// Image doesn't exist, build it
+	fmt.Fprintf(logWriter, "    Building Docker image: %s\n", mermaidImageName)
+
+	// Detect Docker-in-Docker mode for path handling
+	isDinD := buildutil.IsDockerInDocker()
+	hostRepoRoot := workspaceRoot
+	if isDinD {
+		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+			hostRepoRoot = hostRoot
+		}
+	}
+
+	// Build paths for Dockerfile and context
+	var dockerfilePath, contextPath string
+	if isDinD {
+		// Host is Windows, construct Windows paths manually
+		dockerfilePath = hostRepoRoot + "\\containers\\mermaid-cli\\Dockerfile"
+		contextPath = hostRepoRoot + "\\containers\\mermaid-cli"
+	} else {
+		dockerfilePath = filepath.Join(workspaceRoot, "containers", "mermaid-cli", "Dockerfile")
+		contextPath = filepath.Join(workspaceRoot, "containers", "mermaid-cli")
+	}
+
+	fmt.Fprintf(logWriter, "    Dockerfile: %s\n", dockerfilePath)
+	fmt.Fprintf(logWriter, "    Context: %s\n", contextPath)
+
+	cmd = exec.Command("docker", "build",
+		"-t", mermaidImageName,
+		"-f", dockerfilePath,
+		contextPath)
+	cmd.Stdout = logWriter
+	cmd.Stderr = logWriter
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("docker build failed: %w", err)
+	}
+
+	return nil
+}
+
 // renderSingleDiagram renders a single mermaid diagram to SVG using mermaid-cli
 // Returns error if rendering fails
 func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot string, logWriter io.Writer) error {
@@ -285,7 +338,7 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 		"-w", "/docs",
 		"--shm-size=1gb", // Increase shared memory for Chromium (prevents crashes)
 		"--security-opt", "seccomp=unconfined", // Allow Chromium to run without sandboxing restrictions
-		"cli-mermaid-cli:latest",
+		mermaidImageName,
 		"mmdc",
 		"-i", dockerTmpFile,
 		"-o", dockerOutputPath,
@@ -338,6 +391,11 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 			errorMsg += "\nEnsure Docker is installed and the daemon is running"
 		}
 		return 0, fmt.Errorf("%s", errorMsg)
+	}
+
+	// Ensure mermaid-cli image exists (build if needed)
+	if err := ensureMermaidImage(p.workspaceRoot, p.logWriter); err != nil {
+		return 0, fmt.Errorf("failed to ensure mermaid image: %w", err)
 	}
 
 	// Filter for cache misses

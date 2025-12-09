@@ -39,6 +39,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -377,8 +378,14 @@ func executeTests(cfg *TestConfig) int {
 		NotMatchingSuite int
 		Selected         int
 		OSFiltered       int
+		ModulesRequested []string
+		ModulesInScope   []string
+		ModulesNoTests   []string
 	}
-	stats := selectionStats{TotalDiscovered: len(allTests)}
+	stats := selectionStats{
+		TotalDiscovered:  len(allTests),
+		ModulesRequested: cfg.Monikers,
+	}
 
 	// Filter tests by suite and modules
 	var selectedTests []testing.TestReference
@@ -433,6 +440,30 @@ func executeTests(cfg *TestConfig) int {
 	osFilteredCount := len(selectedTests) - len(osCompatibleTests)
 	selectedTests = osCompatibleTests
 	stats.OSFiltered = osFilteredCount
+
+	// Calculate module stats
+	stats.ModulesInScope = getUniqueModulesFromTests(selectedTests)
+
+	// Find modules that have no tests
+	inScopeSet := make(map[string]bool)
+	for _, m := range stats.ModulesInScope {
+		inScopeSet[m] = true
+	}
+
+	// Determine which modules to check for no-tests
+	var modulesToCheck []string
+	if len(cfg.Monikers) > 0 {
+		modulesToCheck = cfg.Monikers
+	} else {
+		// Default: check all modules in config
+		modulesToCheck = eacCfg.Modules.AllMonikers()
+	}
+
+	for _, m := range modulesToCheck {
+		if !inScopeSet[m] {
+			stats.ModulesNoTests = append(stats.ModulesNoTests, m)
+		}
+	}
 
 	// If list-only, just show tests and exit
 	if cfg.ListOnly {
@@ -506,6 +537,9 @@ func executeTests(cfg *TestConfig) int {
 						NotMatchingSuite: stats.NotMatchingSuite,
 						OSFiltered:       stats.OSFiltered,
 						Selected:         len(selectedTests),
+						ModulesRequested: stats.ModulesRequested,
+						ModulesInScope:   stats.ModulesInScope,
+						ModulesNoTests:   stats.ModulesNoTests,
 					}).
 					SetOutputDir(testRunDir)
 				writeInitSummary(initSummary)
@@ -517,21 +551,19 @@ func executeTests(cfg *TestConfig) int {
 		}
 	}
 
-	// Build Artifact Validation
-	modulesToValidate := getUniqueModulesFromTests(selectedTests)
+	// Load module registry early - needed for artifact validation and incremental testing
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+	if err != nil {
+		log.Warnf("Failed to load module registry: %v", err)
+	}
+
+	// Build Artifact Validation (includes staleness check)
 	var artifactValidation *initsummary.ArtifactValidationInfo
 
-	if len(modulesToValidate) > 0 {
-		validationErrors := validateBuildArtifactsQuiet(modulesToValidate, eacCfg, workspaceRoot)
+	if len(stats.ModulesInScope) > 0 {
+		artifactValidation = validateBuildArtifactsQuiet(stats.ModulesInScope, eacCfg, workspaceRoot, moduleRegistry)
 
-		if len(validationErrors) > 0 {
-			artifactValidation = &initsummary.ArtifactValidationInfo{
-				Validated:      true,
-				ModulesChecked: modulesToValidate,
-				AllPresent:     false,
-				MissingFrom:    validationErrors,
-			}
-
+		if !artifactValidation.AllValid() {
 			// Output summary showing what failed
 			initSummary := initsummary.New("test").
 				SetRequest(cfg.Monikers, cfg.Monikers).
@@ -545,24 +577,36 @@ func executeTests(cfg *TestConfig) int {
 					NotMatchingSuite: stats.NotMatchingSuite,
 					OSFiltered:       stats.OSFiltered,
 					Selected:         len(selectedTests),
+					ModulesRequested: stats.ModulesRequested,
+					ModulesInScope:   stats.ModulesInScope,
+					ModulesNoTests:   stats.ModulesNoTests,
 				}).
 				SetArtifactValidation(artifactValidation).
 				SetOutputDir(testRunDir)
 			writeInitSummary(initSummary)
 			writeInit("")
-			writeInit("❌ Build artifacts are missing")
-			for _, err := range validationErrors {
-				writeInit("  - %s", err)
-			}
-			writeInit("")
-			writeInit("Resolution: Run 'build <module>' for each module to generate artifacts")
-			return 1
-		}
 
-		artifactValidation = &initsummary.ArtifactValidationInfo{
-			Validated:      true,
-			ModulesChecked: modulesToValidate,
-			AllPresent:     true,
+			if !artifactValidation.AllPresent {
+				writeInit("❌ Build artifacts are missing")
+				for _, moduleName := range artifactValidation.MissingFrom {
+					writeInit("  - %s", moduleName)
+				}
+			}
+
+			if !artifactValidation.AllCurrent {
+				if !artifactValidation.AllPresent {
+					writeInit("")
+				}
+				writeInit("❌ Build artifacts are stale (source changed since build)")
+				for _, moduleName := range artifactValidation.StaleModules {
+					reason := artifactValidation.StaleReasons[moduleName]
+					writeInit("  - %s: %s", moduleName, reason)
+				}
+			}
+
+			writeInit("")
+			writeInit("Resolution: Run 'build <module>' for each module to generate up-to-date artifacts")
+			return 1
 		}
 	}
 
@@ -585,6 +629,9 @@ func executeTests(cfg *TestConfig) int {
 			NotMatchingSuite:      stats.NotMatchingSuite,
 			OSFiltered:            stats.OSFiltered,
 			Selected:              len(selectedTests),
+			ModulesRequested:      stats.ModulesRequested,
+			ModulesInScope:        stats.ModulesInScope,
+			ModulesNoTests:        stats.ModulesNoTests,
 			InferenceRulesApplied: len(suite.Inferences),
 		}).
 		SetOutputDir(testRunDir)
@@ -597,7 +644,7 @@ func executeTests(cfg *TestConfig) int {
 	writeInitSummary(initSummary)
 
 	// Group tests by package
-	testsByPackage := groupTestsByPackage(selectedTests, workspaceRoot)
+	testsByPackage := groupTestsByPackage(selectedTests, workspaceRoot, eacCfg)
 
 	if len(testsByPackage) == 0 {
 		writeInit("No test packages to execute")
@@ -605,13 +652,8 @@ func executeTests(cfg *TestConfig) int {
 		return 0
 	}
 
-	// Load module registry for incremental test detection
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	if err != nil {
-		log.Warnf("Failed to load module registry for incremental testing: %v", err)
-	}
-
 	// Incremental Test Detection
+	// (moduleRegistry already loaded earlier for artifact validation)
 	// Only enabled for local (devbox) mode, not CI
 	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
 	useIncremental := !isCI && !cfg.ForceRetest && moduleRegistry != nil
@@ -630,8 +672,18 @@ func executeTests(cfg *TestConfig) int {
 		moduleTestInfo, uniqueModules := buildModuleTestInfo(testsByPackage, moduleRegistry, eacCfg, workspaceRoot)
 		log.Debugf("Unique modules for incremental detection: %v", uniqueModules)
 
+		// Create a BuildID loader for dependencies not in the current test run
+		// This ensures that if a dependency was rebuilt, dependents are retested
+		loadDepBuildID := func(moniker string) string {
+			moduleBuildDir := eacCfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
+			if manifest, err := implinternal.LoadModuleManifest(moduleBuildDir); err == nil {
+				return manifest.BuildID
+			}
+			return ""
+		}
+
 		// Detect which modules need testing
-		changeResult, err := teststate.DetectChanges(workspaceRoot, moduleTestInfo)
+		changeResult, err := teststate.DetectChangesWithLoader(workspaceRoot, moduleTestInfo, loadDepBuildID)
 		if err != nil {
 			log.Warnf("Incremental test detection failed, running all tests: %v", err)
 		} else {
@@ -1265,15 +1317,10 @@ func (ctx *TestExecutionContext) collectResults() []PackageResult {
 	return results
 }
 
-// groupTestsByPackage groups tests by their package path using registered runners
-func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string) map[string][]testing.TestReference {
+// groupTestsByPackage groups tests by their package path using registered runners.
+// Uses the provided merged config to get correct test_impl_root path.
+func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string, cfg *config.EACConfig) map[string][]testing.TestReference {
 	testsByPackage := make(map[string][]testing.TestReference)
-
-	// Load config once for all tests
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		return testsByPackage
-	}
 
 	for _, test := range tests {
 		var pkgPath string
@@ -1363,63 +1410,12 @@ var newCommand = func(name string, args ...string) *exec.Cmd {
 	return exec.Command(name, args...)
 }
 
-// findGodogTestRunner finds the test runner package for a feature file
-// Feature files are in specs/<module>/<feature>/..., test runners are in {test_impl_root}/<module>/ or {test_impl_root}/<module>/<feature>/
-// Returns empty string if no test runner with godog_test.go is found
-func findGodogTestRunner(featurePath string, workspaceRoot string) string {
-	// Load config to get paths
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		return ""
-	}
-
-	// Extract relative path from specs root
-	// e.g., "specs/eac-core/handlers-config/specification.feature" -> "eac-core/handlers-config/specification.feature"
-	specsPrefix := cfg.Repository.Paths.SpecsRoot + "/"
-	relPath := strings.TrimPrefix(filepath.ToSlash(featurePath), specsPrefix)
-	relPath = strings.TrimPrefix(relPath, strings.ReplaceAll(specsPrefix, "/", "\\"))
-	relPath = filepath.ToSlash(relPath)
-
-	// Get path components (e.g., ["eac-core", "handlers-config", "specification.feature"])
-	parts := strings.Split(relPath, "/")
-	if len(parts) == 0 {
-		return ""
-	}
-
-	// Try progressively deeper paths to find godog_test.go
-	// e.g., first try go/eac/specs/impl/eac-core/, then go/eac/specs/impl/eac-core/handlers-config/
-	moniker := parts[0]
-	basePath := cfg.Repository.TestImplPath(moniker)
-
-	// Check if godog_test.go exists at base path
-	if fileExists(filepath.Join(workspaceRoot, basePath, "godog_test.go")) {
-		return basePath
-	}
-
-	// Try adding subdirectories (skip the filename at the end)
-	for i := 1; i < len(parts)-1; i++ {
-		subPath := filepath.Join(basePath, strings.Join(parts[1:i+1], "/"))
-		subPath = filepath.ToSlash(subPath)
-		if fileExists(filepath.Join(workspaceRoot, subPath, "godog_test.go")) {
-			return subPath
-		}
-	}
-
-	// No test runner found
-	return ""
-}
-
 // findTscucumberTestRunner finds the test runner location for a TypeScript cucumber feature file.
 // Feature files are in specs/<module>/..., the test runner is in the module's root directory
 // where cucumber.js is located.
+// Uses the provided merged config to get correct paths.
 // Returns empty string if no matching module is found.
-func findTscucumberTestRunner(featurePath string) string {
-	// Load config to get modules
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		return ""
-	}
-
+func findTscucumberTestRunner(featurePath string, cfg *config.EACConfig) string {
 	// Extract module moniker from specs path
 	// e.g., "specs/vscode-ext-commit/progress-buffer/specification.feature" -> "vscode-ext-commit"
 	specsPrefix := cfg.Repository.Paths.SpecsRoot + "/"
@@ -1558,38 +1554,109 @@ func getUniqueModulesFromTests(tests []testing.TestReference) []string {
 	return modules
 }
 
-// validateBuildArtifactsQuiet validates that build artifacts exist for the given modules silently.
+// validateBuildArtifactsQuiet validates that build artifacts exist and are up-to-date for the given modules.
 // It performs:
 // 1. Manifest schema validation against the build-manifest contract
 // 2. Artifact existence validation (files actually exist on disk)
-// Returns a list of module names with missing/invalid artifacts (empty if all valid)
+// 3. Staleness check (source files unchanged since build)
+// Returns ArtifactValidationInfo with details about missing/stale artifacts
 func validateBuildArtifactsQuiet(
 	moduleList []string,
 	cfg *config.EACConfig,
 	workspaceRoot string,
-) []string {
+	moduleRegistry *modules.Registry,
+) *initsummary.ArtifactValidationInfo {
 	// Use the manifest loader to validate manifests against schema and check artifacts
 	summary, err := implinternal.LoadAndValidateManifests(workspaceRoot, moduleList, cfg)
 	if err != nil {
 		log.Debugf("Manifest validation error: %v", err)
-		return moduleList // If we can't validate, assume all need rebuilding
+		// If we can't validate, report all modules as missing
+		return &initsummary.ArtifactValidationInfo{
+			Validated:      true,
+			ModulesChecked: moduleList,
+			AllPresent:     false,
+			MissingFrom:    moduleList,
+		}
 	}
 
 	var missingFrom []string
+	missingDetails := make(map[string][]string)
+
 	for _, result := range summary.Results {
 		if result.Error != "" {
 			log.Debugf("Module %s: %s", result.Moniker, result.Error)
 			missingFrom = append(missingFrom, result.Moniker)
+			missingDetails[result.Moniker] = []string{result.Error}
 		} else if !result.SchemaValid {
 			log.Debugf("Module %s: manifest schema invalid", result.Moniker)
 			missingFrom = append(missingFrom, result.Moniker)
+			missingDetails[result.Moniker] = []string{"manifest schema invalid"}
 		} else if !result.ArtifactsValid {
 			log.Debugf("Module %s: missing artifacts %v", result.Moniker, result.MissingArtifacts)
 			missingFrom = append(missingFrom, result.Moniker)
+			missingDetails[result.Moniker] = result.MissingArtifacts
 		}
 	}
 
-	return missingFrom
+	// Check for staleness using buildstate change detection
+	var staleModules []string
+	staleReasons := make(map[string]string)
+
+	if moduleRegistry != nil {
+		// Build modules map for change detection
+		modulesMap := make(map[string]buildstate.ModuleFileGetter)
+		for _, moniker := range moduleList {
+			if contract, ok := moduleRegistry.Get(moniker); ok {
+				modulesMap[moniker] = contract
+			}
+		}
+
+		if len(modulesMap) > 0 {
+			moduleFiles, err := buildstate.GetModuleSourceFiles(workspaceRoot, modulesMap)
+			if err != nil {
+				log.Debugf("Failed to get module source files for staleness check: %v", err)
+			} else {
+				changeResult, err := buildstate.DetectChanges(workspaceRoot, moduleFiles)
+				if err != nil {
+					log.Debugf("Failed to detect changes for staleness check: %v", err)
+				} else if !changeResult.FreshBuild {
+					// Report changed modules as stale (they need rebuild)
+					for _, moniker := range changeResult.ChangedModules {
+						// Only report as stale if artifacts are present (otherwise it's already in missingFrom)
+						if !contains(missingFrom, moniker) {
+							staleModules = append(staleModules, moniker)
+							if reason, ok := changeResult.ChangeReasons[moniker]; ok {
+								staleReasons[moniker] = reason
+							} else {
+								staleReasons[moniker] = "source files changed since build"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return &initsummary.ArtifactValidationInfo{
+		Validated:              true,
+		ModulesChecked:         moduleList,
+		AllPresent:             len(missingFrom) == 0,
+		MissingFrom:            missingFrom,
+		MissingArtifactDetails: missingDetails,
+		AllCurrent:             len(staleModules) == 0,
+		StaleModules:           staleModules,
+		StaleReasons:           staleReasons,
+	}
+}
+
+// contains checks if a string is in a slice
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
 
 // incrementalTestInfo holds information about incremental test detection results

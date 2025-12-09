@@ -33,6 +33,14 @@ func FormatCompact(s *Summary) string {
 		b.WriteString(fmt.Sprintf("Suite: %s\n", s.Test.SuiteName))
 		b.WriteString(fmt.Sprintf("Tests: %d selected (of %d discovered)\n",
 			s.Test.Selected, s.Test.TotalDiscovered))
+		// Module summary for tests
+		withTests := len(s.Test.ModulesInScope)
+		noTests := len(s.Test.ModulesNoTests)
+		total := withTests + noTests
+		if total > 0 {
+			b.WriteString(fmt.Sprintf("Modules: %d/%d with tests, %d/%d no tests\n",
+				withTests, total, noTests, total))
+		}
 	}
 
 	// Key flags (only show non-default)
@@ -72,10 +80,12 @@ func FormatCompact(s *Summary) string {
 	// Artifact validation (test only)
 	if s.HasArtifactValidation() {
 		av := s.ArtifactValidation
-		if av.AllPresent {
+		if av.AllValid() {
 			b.WriteString(fmt.Sprintf("Artifacts: ✅ %d module(s) validated\n", len(av.ModulesChecked)))
-		} else {
+		} else if !av.AllPresent {
 			b.WriteString(fmt.Sprintf("Artifacts: ❌ missing from %s\n", strings.Join(av.MissingFrom, ", ")))
+		} else if !av.AllCurrent {
+			b.WriteString(fmt.Sprintf("Artifacts: ⚠️ stale builds: %s\n", strings.Join(av.StaleModules, ", ")))
 		}
 	}
 
@@ -143,21 +153,36 @@ func FormatDetailed(s *Summary) string {
 			b.WriteString(fmt.Sprintf("  Inference rules applied: %d\n", s.Test.InferenceRulesApplied))
 		}
 		b.WriteString("\n")
+
+		// Module filtering (test only)
+		b.WriteString("── Modules ──\n")
+		if len(s.Test.ModulesRequested) > 0 {
+			b.WriteString(fmt.Sprintf("  Requested: %d (%s)\n", len(s.Test.ModulesRequested), strings.Join(s.Test.ModulesRequested, ", ")))
+		} else {
+			b.WriteString("  Requested: all\n")
+		}
+		b.WriteString(fmt.Sprintf("  In scope: %d (%s)\n", len(s.Test.ModulesInScope), strings.Join(s.Test.ModulesInScope, ", ")))
+		if len(s.Test.ModulesNoTests) > 0 {
+			b.WriteString(fmt.Sprintf("  No tests: %d (%s)\n", len(s.Test.ModulesNoTests), strings.Join(s.Test.ModulesNoTests, ", ")))
+		}
+		b.WriteString("\n")
 	}
 
-	// Modules section
-	b.WriteString("── Modules ──\n")
-	b.WriteString(fmt.Sprintf("  Requested: %d%s\n",
-		len(s.RequestedModules),
-		formatModuleListInline(s.RequestedModules, 60)))
+	// Modules section (build only - tests have their own module section above)
+	if !s.HasTestInfo() {
+		b.WriteString("── Modules ──\n")
+		b.WriteString(fmt.Sprintf("  Requested: %d%s\n",
+			len(s.RequestedModules),
+			formatModuleListInline(s.RequestedModules, 60)))
 
-	if s.HasDepmAdded() {
-		b.WriteString(fmt.Sprintf("  Added depm: %d%s\n",
-			len(s.AddedDepm),
-			formatModuleListInline(s.AddedDepm, 60)))
-		b.WriteString(fmt.Sprintf("  Total: %d modules\n", len(s.CalculatedModules)))
+		if s.HasDepmAdded() {
+			b.WriteString(fmt.Sprintf("  Added depm: %d%s\n",
+				len(s.AddedDepm),
+				formatModuleListInline(s.AddedDepm, 60)))
+			b.WriteString(fmt.Sprintf("  Total: %d modules\n", len(s.CalculatedModules)))
+		}
+		b.WriteString("\n")
 	}
-	b.WriteString("\n")
 
 	// Execution plan
 	if s.LayerCount > 0 {
@@ -220,13 +245,54 @@ func FormatDetailed(s *Summary) string {
 	if s.HasArtifactValidation() {
 		b.WriteString("── Build Artifacts ──\n")
 		av := s.ArtifactValidation
-		if av.AllPresent {
+		if av.AllValid() {
 			b.WriteString(fmt.Sprintf("  ✅ Validated %d module(s)\n", len(av.ModulesChecked)))
 			if len(av.ModulesChecked) > 0 {
 				b.WriteString(fmt.Sprintf("  Modules: %s\n", strings.Join(av.ModulesChecked, ", ")))
 			}
 		} else {
-			b.WriteString(fmt.Sprintf("  ❌ Missing artifacts from: %s\n", strings.Join(av.MissingFrom, ", ")))
+			if !av.AllPresent {
+				b.WriteString(fmt.Sprintf("  ❌ Missing artifacts from: %s\n", strings.Join(av.MissingFrom, ", ")))
+				// Show top 5 missing artifacts
+				if len(av.MissingArtifactDetails) > 0 {
+					b.WriteString("  Top missing:\n")
+					count := 0
+					for module, artifacts := range av.MissingArtifactDetails {
+						for _, artifact := range artifacts {
+							if count >= 5 {
+								remaining := countTotalMissingArtifacts(av.MissingArtifactDetails) - 5
+								if remaining > 0 {
+									b.WriteString(fmt.Sprintf("    ... and %d more\n", remaining))
+								}
+								break
+							}
+							b.WriteString(fmt.Sprintf("    - %s: %s\n", module, artifact))
+							count++
+						}
+						if count >= 5 {
+							break
+						}
+					}
+				}
+			}
+			if !av.AllCurrent && len(av.StaleModules) > 0 {
+				b.WriteString(fmt.Sprintf("  ⚠️  Stale builds: %s\n", strings.Join(av.StaleModules, ", ")))
+				// Show top 5 stale reasons
+				b.WriteString("  Reasons:\n")
+				count := 0
+				for _, module := range av.StaleModules {
+					if count >= 5 {
+						remaining := len(av.StaleModules) - 5
+						if remaining > 0 {
+							b.WriteString(fmt.Sprintf("    ... and %d more\n", remaining))
+						}
+						break
+					}
+					reason := av.StaleReasons[module]
+					b.WriteString(fmt.Sprintf("    - %s: %s\n", module, reason))
+					count++
+				}
+			}
 		}
 		b.WriteString("\n")
 	}
@@ -416,4 +482,13 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// countTotalMissingArtifacts counts total number of missing artifacts across all modules.
+func countTotalMissingArtifacts(details map[string][]string) int {
+	total := 0
+	for _, artifacts := range details {
+		total += len(artifacts)
+	}
+	return total
 }

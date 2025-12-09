@@ -345,12 +345,12 @@ modules:
 	// Generic defaults for others
 	assert.Equal(t, "CHANGELOG.md", module.Files.Changelog)
 	assert.Equal(t, []string{"specs/partial-module/**"}, module.Files.Repo.Specs)
-	assert.Equal(t, "go/eac/specs/impl/partial-module", module.Files.Repo.TestImpl)
 	assert.Equal(t, "specs/partial-module/.design", module.Files.Repo.Design)
 
-	// Empty for fields without generic defaults
+	// Empty for fields without generic defaults (test_impl requires repository.yml)
 	assert.Empty(t, module.Files.Config)
 	assert.Empty(t, module.Files.Assets)
+	assert.Empty(t, module.Files.Repo.TestImpl, "test_impl requires repository.yml configuration")
 }
 
 // TestTypeDefaults_MultipleModulesSameType tests multiple modules with same type

@@ -134,6 +134,11 @@ func (s *State) Save(workspaceRoot string) error {
 	return nil
 }
 
+// DependencyBuildIDLoader is a function that loads the current BuildID for a dependency module.
+// This allows the detection logic to check if dependencies were rebuilt even if they're not
+// in the current test run's moduleInfo.
+type DependencyBuildIDLoader func(moniker string) string
+
 // DetectChanges detects which modules need retesting based on file changes and dependency propagation.
 // moduleInfo maps moniker -> ModuleTestFiles (source files, test files, dependencies)
 //
@@ -143,7 +148,14 @@ func (s *State) Save(workspaceRoot string) error {
 // 3. Any of its dependencies (transitively) need retesting
 // 4. Its previous test run failed
 // 5. It's a new module (not in previous state)
+// 6. Any dependency was rebuilt (BuildID changed) - even if not in current test run
 func DetectChanges(workspaceRoot string, moduleInfo map[string]ModuleTestFiles) (*TestChangeResult, error) {
+	return DetectChangesWithLoader(workspaceRoot, moduleInfo, nil)
+}
+
+// DetectChangesWithLoader is like DetectChanges but accepts an optional loader function
+// to check BuildIDs of dependencies that aren't in the current test run.
+func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleTestFiles, loadDepBuildID DependencyBuildIDLoader) (*TestChangeResult, error) {
 	start := time.Now()
 
 	result := &TestChangeResult{
@@ -236,6 +248,34 @@ func DetectChanges(workspaceRoot string, moduleInfo map[string]ModuleTestFiles) 
 	// Build dependency graph and memoization cache
 	needsTest := make(map[string]bool)
 	checked := make(map[string]bool)
+	depBuildIDChanged := make(map[string]bool) // Cache for dependency BuildID checks
+
+	// Helper to check if a dependency's BuildID changed (even if not in moduleInfo)
+	checkDepBuildIDChanged := func(dep string) bool {
+		if changed, ok := depBuildIDChanged[dep]; ok {
+			return changed
+		}
+
+		// If dependency is in moduleInfo, we already checked it in first pass
+		if _, inModuleInfo := moduleInfo[dep]; inModuleInfo {
+			depBuildIDChanged[dep] = directlyChanged[dep]
+			return directlyChanged[dep]
+		}
+
+		// Dependency not in current test run - check its BuildID against stored state
+		if loadDepBuildID != nil && prevState != nil {
+			currentBuildID := loadDepBuildID(dep)
+			if prevDepState, exists := prevState.Modules[dep]; exists {
+				if currentBuildID != "" && prevDepState.BuildID != "" && currentBuildID != prevDepState.BuildID {
+					depBuildIDChanged[dep] = true
+					return true
+				}
+			}
+		}
+
+		depBuildIDChanged[dep] = false
+		return false
+	}
 
 	var checkNeedsTest func(moniker string) bool
 	checkNeedsTest = func(moniker string) bool {
@@ -264,6 +304,16 @@ func DetectChanges(workspaceRoot string, moduleInfo map[string]ModuleTestFiles) 
 		}
 
 		for _, dep := range info.Dependencies {
+			// First check if dependency's BuildID changed (even if not in moduleInfo)
+			if checkDepBuildIDChanged(dep) {
+				needsTest[moniker] = true
+				if result.ChangeReasons[moniker] == "" {
+					result.ChangeReasons[moniker] = fmt.Sprintf("dependency rebuilt: %s", dep)
+				}
+				return true
+			}
+
+			// Then check if dependency needs testing (recursive)
 			if checkNeedsTest(dep) {
 				needsTest[moniker] = true
 				if result.ChangeReasons[moniker] == "" {
