@@ -2,7 +2,7 @@
 # Full image with PDF generation support via Playwright (mkdocs-exporter)
 # Includes Chromium for mermaid-to-svg pre-rendering
 
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /docs
 
