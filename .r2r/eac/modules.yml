@@ -280,33 +280,33 @@ modules:
       - eac-core
     build:
       artifacts:
-        # Cross-platform executables
+        # Cross-platform executables (r2r-* naming for CLI distribution)
         - id: linux-amd64
           type: executable
-          pattern: "{moniker}-linux-amd64"
+          pattern: "r2r-linux-amd64"
         - id: linux-arm64
           type: executable
-          pattern: "{moniker}-linux-arm64"
+          pattern: "r2r-linux-arm64"
         - id: darwin-amd64
           type: executable
-          pattern: "{moniker}-darwin-amd64"
+          pattern: "r2r-darwin-amd64"
         - id: darwin-arm64
           type: executable
-          pattern: "{moniker}-darwin-arm64"
+          pattern: "r2r-darwin-arm64"
         - id: windows-amd64
           type: executable
-          pattern: "{moniker}-windows-amd64.exe"
+          pattern: "r2r-windows-amd64.exe"
         # UPX-compressed variants
         - id: linux-amd64-upx
           type: executable
-          pattern: "{moniker}-linux-amd64-upx"
+          pattern: "r2r-linux-amd64-upx"
           compression: upx
-          derive_from: "{moniker}-linux-amd64"
+          derive_from: "r2r-linux-amd64"
         - id: windows-amd64-upx
           type: executable
-          pattern: "{moniker}-windows-amd64-upx.exe"
+          pattern: "r2r-windows-amd64-upx.exe"
           compression: upx
-          derive_from: "{moniker}-windows-amd64.exe"
+          derive_from: "r2r-windows-amd64.exe"
     files:
       root: go/r2r/cli
       changelog: ../../../release/r2r-cli/CHANGELOG.md
@@ -316,12 +316,6 @@ modules:
       repo:
         other:
           - contracts/r2r-cli/**
-    metadata:
-      executable-linux-amd64: r2r-linux-amd64
-      executable-linux-arm64: r2r-linux-arm64
-      executable-darwin-amd64: r2r-darwin-amd64
-      executable-darwin-arm64: r2r-darwin-arm64
-      executable-windows-amd64: r2r-windows-amd64.exe
 
   # ============================================================================
   # Scripts: CLI Installer
