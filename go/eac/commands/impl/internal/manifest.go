@@ -35,13 +35,16 @@ type ModuleManifest struct {
 
 // ArtifactInfo describes a single built artifact
 type ArtifactInfo struct {
-	Type     string `json:"type"`               // Artifact type (executable, file, etc.)
-	ID       string `json:"id"`                 // Artifact identifier
-	Name     string `json:"name"`               // Resolved artifact name
-	Path     string `json:"path"`               // Relative path from build root
-	Platform string `json:"platform,omitempty"` // Platform (e.g., "windows-amd64") if applicable
-	Size     int64  `json:"size,omitempty"`     // File size in bytes (for file-based artifacts)
-	SHA256   string `json:"sha256,omitempty"`   // SHA-256 hash of artifact content (for integrity verification)
+	Type     string   `json:"type"`               // Artifact type (executable, file, directory, image)
+	ID       string   `json:"id"`                 // Artifact identifier
+	Name     string   `json:"name"`               // Resolved artifact name or image reference
+	Path     string   `json:"path"`               // Relative path from build root, or image reference for type=image
+	Platform string   `json:"platform,omitempty"` // Platform (e.g., "windows-amd64", "linux/amd64") if applicable
+	Size     int64    `json:"size,omitempty"`     // File size in bytes (for file-based artifacts)
+	SHA256   string   `json:"sha256,omitempty"`   // SHA-256 hash of artifact content (for file-based artifacts)
+	Digest   string   `json:"digest,omitempty"`   // Image digest (for type=image, e.g., "sha256:abc123...")
+	Tags     []string `json:"tags,omitempty"`     // Image tags (for type=image)
+	Registry string   `json:"registry,omitempty"` // Container registry (for type=image, e.g., "ghcr.io")
 }
 
 // PlatformInfo describes a platform that was built

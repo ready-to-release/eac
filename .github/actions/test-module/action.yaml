@@ -109,7 +109,8 @@ runs:
         if [ -n "$INPUT_RESULTS_ARTIFACT_PATH" ]; then
           echo "results-artifact-path=$INPUT_RESULTS_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         else
-          echo "results-artifact-path=out/test/**/${MODULE}/**" >> $GITHUB_OUTPUT
+          # Upload all test output - structured as out/test/<suite>/<module-path>/
+          echo "results-artifact-path=out/test/" >> $GITHUB_OUTPUT
         fi
 
     - name: Download Build Artifacts

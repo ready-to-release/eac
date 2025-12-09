@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -195,14 +196,8 @@ func (r *ArtifactResolver) VerifyArtifacts(artifacts []Artifact) []ArtifactVerif
 			// Handle glob patterns
 			results = append(results, r.verifyGlobArtifact(artifact))
 		case ArtifactTypeImage:
-			// Docker images are stored in Docker's internal storage, not as files
-			// Skip filesystem verification - the Docker build command already validated success
-			results = append(results, ArtifactVerificationResult{
-				Artifact: artifact,
-				Pattern:  r.ResolvePattern(artifact.Pattern),
-				Path:     "", // Docker images don't have filesystem paths
-				Exists:   true, // Docker build succeeded, so image exists
-			})
+			// Docker images require actual verification - check if image exists locally
+			results = append(results, r.verifyImageArtifact(artifact))
 		default:
 			// Standard artifact verification
 			results = append(results, r.VerifyArtifact(artifact))
@@ -288,6 +283,59 @@ func (r *ArtifactResolver) verifyGlobArtifact(artifact Artifact) ArtifactVerific
 	}
 
 	return result
+}
+
+// verifyImageArtifact handles Docker image artifacts by checking if the image exists locally
+func (r *ArtifactResolver) verifyImageArtifact(artifact Artifact) ArtifactVerificationResult {
+	imageRef := r.ResolvePattern(artifact.Pattern)
+
+	result := ArtifactVerificationResult{
+		Artifact: artifact,
+		Pattern:  imageRef,
+		Path:     imageRef, // For images, Path is the image reference
+	}
+
+	// Check if Docker is available
+	if !isDockerAvailable() {
+		result.Error = fmt.Errorf("docker not available for image verification")
+		result.Exists = false
+		return result
+	}
+
+	// Check if image exists locally using `docker images -q <ref>`
+	cmd := exec.Command("docker", "images", "-q", imageRef)
+	output, err := cmd.Output()
+	if err != nil {
+		result.Error = fmt.Errorf("failed to check docker image: %w", err)
+		result.Exists = false
+		return result
+	}
+
+	// If output is non-empty, image exists locally
+	if strings.TrimSpace(string(output)) != "" {
+		result.Exists = true
+		return result
+	}
+
+	// Image not found locally - for registry images, try manifest inspect
+	if strings.Contains(imageRef, "/") {
+		// Looks like a registry image (e.g., ghcr.io/...)
+		cmd = exec.Command("docker", "manifest", "inspect", imageRef)
+		if err := cmd.Run(); err == nil {
+			result.Exists = true
+			return result
+		}
+	}
+
+	result.Exists = false
+	result.Error = fmt.Errorf("docker image not found: %s", imageRef)
+	return result
+}
+
+// isDockerAvailable checks if Docker CLI is available
+func isDockerAvailable() bool {
+	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
+	return cmd.Run() == nil
 }
 
 // AllSuccessful returns true if all verification results are successful
