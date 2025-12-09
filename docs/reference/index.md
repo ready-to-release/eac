@@ -8,7 +8,6 @@ Technical reference material providing information-oriented documentation for th
 
 | Reference | Description |
 |-----------|-------------|
-| [Claude Code Programmatic Access](./claude-code-programmatic-access.md) | How to use Claude CLI/Max subscription for API-like programmatic calls |
 | [Repository Layout](./repository-layout.md) | Repository structure and organization |
 | [Risk Assessment](./risk-assessment.md) | Risk assessment documentation |
 | [Commands](./commands/) | Command-line interface reference documentation |

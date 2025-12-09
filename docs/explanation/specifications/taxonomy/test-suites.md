@@ -247,6 +247,7 @@ godog run --tags="@ov && !@Manual"
 - **Total**: 8-10 minutes maximum
 
 **If exceeding 10 minutes**:
+
 - Move slow L2 tests to acceptance suite (change to @L3)
 - Optimize test doubles and mocks
 - Run tests in parallel
@@ -260,6 +261,7 @@ godog run --tags="@ov && !@Manual"
 - **Total**: 70-120 minutes
 
 **If exceeding 2 hours**:
+
 - Parallelize test execution
 - Optimize test data setup
 - Review test coverage (remove redundant tests)
@@ -272,6 +274,7 @@ godog run --tags="@ov && !@Manual"
 - **Frequency**: Continuous (24/7)
 
 **If tests are too slow**:
+
 - Simplify smoke tests (only critical paths)
 - Reduce monitoring frequency for non-critical checks
 - Use read-only operations only

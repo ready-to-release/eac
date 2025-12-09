@@ -10,7 +10,7 @@ All modules are defined in `.r2r/eac/modules.yml`, which serves as the central c
 
 ## Repository Structure
 
-```
+```text
 eac/
 ├── .claude/                    # Claude Code CLI configuration
 │   ├── agents/                 # Custom agent definitions

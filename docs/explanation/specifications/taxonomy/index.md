@@ -9,6 +9,7 @@ Complete reference for the testing taxonomy and tag system.
 ## Overview
 
 The testing taxonomy defines:
+
 - **Test Levels** (L0-L4): Execution environment and scope
 - **Verification Tags** (@ov, @iv, @pv, @piv, @ppv): Type of validation
 - **Execution Control** (@skip, @Manual): Test execution behavior

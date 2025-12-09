@@ -466,8 +466,6 @@ Each ring provides validation before expanding to more users.
 
 ### Incident Response
 
-<!-- TODO: this needs to be an article on its own -->
-
 When issues occur in production:
 
 1. **Detect**: Monitoring alerts or user reports

@@ -207,16 +207,19 @@ Scenario: Multi-factor authentication required
 ### Example Mappings
 
 **Access Control**:
+
 - Account management → `@control:ac-2`
 - Least privilege → `@control:ac-6`
 - Session termination → `@control:ac-12`
 
 **Audit**:
+
 - Audit events → `@control:au-2`
 - Audit record content → `@control:au-3`
 - Audit review → `@control:au-6`
 
 **Authentication**:
+
 - Identification and authentication → `@control:ia-2`
 - MFA → `@control:ia-2(1)`
 - Authenticator management → `@control:ia-5`
