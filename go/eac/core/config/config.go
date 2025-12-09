@@ -216,27 +216,31 @@ func countConfigFiles(cfg *EACConfig) int {
 	return count
 }
 
-// LoadAll loads all configuration files
+// LoadAll loads all configuration files.
+// Core configs (Repository, Modules, ModuleTypes) must load successfully - fails immediately on error.
+// Optional configs (Environments, TestingTags, etc.) collect errors but continue loading.
 func (c *EACConfig) LoadAll(validateSchemas bool) error {
-	var errs []error
+	// === CORE CONFIGS: Fail fast if any of these fail ===
+	// These are required for the system to function correctly
 
 	// Load repository config first (provides path variables for other configs)
 	if err := c.LoadRepository(validateSchemas); err != nil {
-		errs = append(errs, fmt.Errorf("repository: %w", err))
+		return fmt.Errorf("core config failed - repository: %w", err)
 	}
 
 	if err := c.LoadModules(validateSchemas); err != nil {
-		errs = append(errs, fmt.Errorf("modules: %w", err))
+		return fmt.Errorf("core config failed - modules: %w", err)
 	}
 
 	if err := c.LoadModuleTypes(validateSchemas); err != nil {
-		errs = append(errs, fmt.Errorf("module-types: %w", err))
+		return fmt.Errorf("core config failed - module-types: %w", err)
 	}
 
 	// Apply type-specific defaults after both modules and types are loaded
-	if c.Modules != nil {
-		c.Modules.ApplyTypeDefaults(c.ModuleTypes, c.Repository)
-	}
+	c.Modules.ApplyTypeDefaults(c.ModuleTypes, c.Repository)
+
+	// === OPTIONAL CONFIGS: Continue on error, collect for reporting ===
+	var errs []error
 
 	if err := c.LoadEnvironments(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("environments: %w", err))
