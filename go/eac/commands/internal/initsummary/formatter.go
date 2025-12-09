@@ -85,7 +85,7 @@ func FormatCompact(s *Summary) string {
 		if inc.FreshBuild {
 			b.WriteString("Incremental: fresh build (no prior state)\n")
 		} else if inc.Enabled {
-			b.WriteString(fmt.Sprintf("Incremental: %d changed, %d up-to-date (%v)\n",
+			b.WriteString(fmt.Sprintf("Incremental: %d building, %d skipped (%v)\n",
 				len(inc.Changed),
 				len(inc.UpToDate),
 				inc.DetectionTime.Round(1e6))) // Round to ms
@@ -235,8 +235,8 @@ func FormatDetailed(s *Summary) string {
 			b.WriteString("  🆕 Fresh build (no prior state)\n")
 		} else {
 			b.WriteString(fmt.Sprintf("  ✅ Enabled (detection: %v)\n", inc.DetectionTime.Round(1e6)))
-			b.WriteString(fmt.Sprintf("  Changed: %d modules\n", len(inc.Changed)))
-			b.WriteString(fmt.Sprintf("  Up-to-date: %d modules\n", len(inc.UpToDate)))
+			b.WriteString(fmt.Sprintf("  Building: %d modules\n", len(inc.Changed)))
+			b.WriteString(fmt.Sprintf("  Skipped: %d modules\n", len(inc.UpToDate)))
 		}
 		b.WriteString("\n")
 	}
