@@ -1091,7 +1091,7 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 }
 
 // generateBuildManifest creates per-module manifest files tracking what was built.
-// Each module gets its own immutable manifest at out/build/<module>/.manifest.json
+// Each module gets its own immutable manifest at out/build/<module>/build.manifest.json
 func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResult, moduleTypes map[string]string, executionOrder []string, buildAll bool) error {
 	// Get git commit SHA
 	gitCommit := getGitCommitSHA(workspaceRoot)

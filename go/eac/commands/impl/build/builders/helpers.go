@@ -189,7 +189,7 @@ func CopyBuildOutput(srcDir, dstDir string, include, exclude []string, logWriter
 		}
 
 		// Skip log files and manifest
-		if strings.HasSuffix(relPath, ".log") || relPath == ".manifest.json" {
+		if strings.HasSuffix(relPath, ".log") || relPath == "build.manifest.json" {
 			return nil
 		}
 
