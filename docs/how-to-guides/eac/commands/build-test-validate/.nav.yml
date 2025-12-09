@@ -1,0 +1,13 @@
+title: Build, Test & Validate
+nav:
+  - index.md
+  - build-single-module.md
+  - build-changed-modules.md
+  - run-tests-for-module.md
+  - debug-test-failures.md
+  - run-test-suites.md
+  - validate-before-commit.md
+  - check-dependencies.md
+  - validate-specifications.md
+  - scan-for-security-issues.md
+  - manage-risk-compliance.md

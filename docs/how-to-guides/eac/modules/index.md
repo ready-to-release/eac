@@ -2,7 +2,7 @@
 
 {{ page_breadcrumb() }}
 
-Guides for creating and configuring EAC modules and module types in your repository.
+Guides for creating and configuring EAC modules and module types in the repository.
 
 ## In This Section
 

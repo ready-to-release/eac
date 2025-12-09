@@ -3,7 +3,6 @@ nav:
   - index.md
   - getting-started/
   - development-workflow/
-  - building-and-testing/
-  - quality-and-validation/
+  - build-test-validate/
   - release-management/
   - documentation/

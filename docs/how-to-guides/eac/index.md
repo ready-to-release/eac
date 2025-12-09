@@ -8,10 +8,47 @@ Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, w
 
 | Guide | Description |
 |-------|-------------|
+| [Configuration](./configuration/) | Setup EAC and understand contracts (modules, environments, books) |
 | [Commands](./commands/) | CLI commands for build, test, validate, release, and more |
 | [Specifications](./specifications/) | Writing and managing BDD/Gherkin specifications |
-| [Configuration](./configuration/) | System and tool configuration (Claude MCP, etc.) |
 | [Modules](./modules/) | Creating modules and module types |
-| [Creating Commands](./creating-commands.md) | Build new r2r CLI commands |
+| [Integration](./integration/) | Integrate with CI/CD, IDEs, Git hooks, and tools |
+| [Troubleshooting](./troubleshooting/) | Solutions to common problems |
+
+## Getting Started
+
+New to EAC? Start here:
+
+1. **[Configuration](./configuration/)** - Set up EAC in your project
+2. **[Commands](./commands/)** - Learn the essential commands
+3. **[Modules](./modules/)** - Create your first module
+
+## Common Tasks
+
+### Development Workflow
+
+- [Create Feature Workspace](./commands/development-workflow/create-feature-workspace.md)
+- [Build and Test](./commands/build-test-validate/)
+- [Validate Before Commit](./commands/build-test-validate/validate-before-commit.md)
+- [Make Commits with AI](./commands/development-workflow/make-commits-with-ai.md)
+
+### Quality Assurance
+
+- [Run Tests](./commands/build-test-validate/run-tests-for-module.md)
+- [Scan for Security Issues](./commands/build-test-validate/scan-for-security-issues.md)
+- [Validate Specifications](./commands/build-test-validate/validate-specifications.md)
+
+### Release Management
+
+- [Prepare Release](./commands/release-management/prepare-module-release.md)
+- [Generate Changelog](./commands/release-management/generate-changelog.md)
+- [Create Release Tag](./commands/release-management/create-release-tag.md)
+
+## Need More Detail?
+
+These how-to guides focus on accomplishing tasks. For comprehensive technical details:
+
+- **[Command Reference](../../reference/commands/)** - Complete command syntax and options
+- **[Contributing](../../reference/eac/contributing/)** - Extend EAC with new commands
 
 {{ diataxis_footer() }}

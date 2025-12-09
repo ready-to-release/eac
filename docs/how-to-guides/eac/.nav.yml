@@ -1,8 +1,9 @@
 title: EAC
 nav:
   - index.md
+  - configuration
   - commands
   - specifications
-  - configuration
   - modules
-  - creating-commands.md
+  - integration
+  - troubleshooting

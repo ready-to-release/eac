@@ -17,16 +17,12 @@ Learn how to accomplish specific tasks with EAC commands through practical, step
 - [Make Commits with AI](./development-workflow/make-commits-with-ai.md) - Generate commit messages
 - [More development guides →](./development-workflow/index.md)
 
-### Need to Build and Test?
+### Need to Build, Test, and Validate?
 
-- [Build Single Module](./building-and-testing/build-single-module.md) - Compile your code
-- [Run Tests for Module](./building-and-testing/run-tests-for-module.md) - Verify changes
-- [More build/test guides →](./building-and-testing/index.md)
-
-### Ensuring Quality?
-
-- [Validate Before Commit](./quality-and-validation/validate-before-commit.md) - Run quality checks
-- [More validation guides →](./quality-and-validation/index.md)
+- [Build Single Module](./build-test-validate/build-single-module.md) - Compile your code
+- [Run Tests for Module](./build-test-validate/run-tests-for-module.md) - Verify changes
+- [Validate Before Commit](./build-test-validate/validate-before-commit.md) - Run quality checks
+- [More build/test/validate guides →](./build-test-validate/index.md)
 
 ### Ready to Release?
 
@@ -39,8 +35,7 @@ Learn how to accomplish specific tasks with EAC commands through practical, step
 |----------|-------------------|
 | [Getting Started](./getting-started/index.md) | Basic command usage and repository exploration |
 | [Development Workflow](./development-workflow/index.md) | Workspaces, commits, and pull requests |
-| [Building and Testing](./building-and-testing/index.md) | Compiling modules and running tests |
-| [Quality and Validation](./quality-and-validation/index.md) | Quality checks and security scanning |
+| [Build, Test & Validate](./build-test-validate/index.md) | Compiling modules, running tests, and quality checks |
 | [Release Management](./release-management/index.md) | Preparing and publishing releases |
 | [Documentation](./documentation/index.md) | Creating specs and diagrams |
 
