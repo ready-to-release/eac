@@ -247,19 +247,29 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 	return enriched
 }
 
-// osPlatforms is the hardcoded list of OS platform names.
-// These are intrinsic to the test system, not configurable.
-var osPlatforms = []string{"linux", "macos", "windows"}
-
-// GetOSPlatformTags returns the hardcoded OS platform names.
+// GetOSPlatformTags returns OS platform monikers from system dependencies config.
+// Falls back to built-in defaults if config cannot be loaded.
 func GetOSPlatformTags() []string {
-	return osPlatforms
+	cfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil || cfg.SystemDependencies == nil {
+		// Fallback to built-in defaults
+		return []string{"linux", "macos", "windows", "darwin"}
+	}
+
+	var platforms []string
+	for _, dep := range cfg.SystemDependencies.Dependencies {
+		if dep.Verify.IsOSPlatformBased() {
+			platforms = append(platforms, dep.Moniker)
+		}
+	}
+	return platforms
 }
 
 // GetOSPlatformTagsFull returns OS platform tags with @deps: prefix as a map.
 func GetOSPlatformTagsFull() map[string]bool {
-	result := make(map[string]bool, len(osPlatforms))
-	for _, p := range osPlatforms {
+	platforms := GetOSPlatformTags()
+	result := make(map[string]bool, len(platforms))
+	for _, p := range platforms {
 		result["@deps:"+p] = true
 	}
 	return result
@@ -267,7 +277,8 @@ func GetOSPlatformTagsFull() map[string]bool {
 
 // IsOSPlatformDep checks if a dependency name is an OS platform.
 func IsOSPlatformDep(dep string) bool {
-	for _, p := range osPlatforms {
+	platforms := GetOSPlatformTags()
+	for _, p := range platforms {
 		if dep == p {
 			return true
 		}

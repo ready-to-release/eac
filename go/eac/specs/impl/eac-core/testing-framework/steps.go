@@ -343,7 +343,6 @@ func copyConfigFiles(repoRoot, tempRoot string) error {
 		"module-types.yml",
 		"testing-tags.yml",
 		"test-suites.yml",
-		"handlers.yml",
 	}
 
 	for _, file := range configFiles {

@@ -18,6 +18,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func init() {
@@ -75,7 +76,7 @@ func GetTestTimingsFiltered(moduleFilter []string) int {
 		}
 
 		// Find test output directory
-		testOutputDir := filepath.Join(repoRoot, "out", "test")
+		testOutputDir := filepath.Join(repoRoot, paths.OutTestRelPath)
 		if _, err := os.Stat(testOutputDir); os.IsNotExist(err) {
 			return nil, fmt.Errorf("test output directory not found: %s (run tests first)", testOutputDir)
 		}

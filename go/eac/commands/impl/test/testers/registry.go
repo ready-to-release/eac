@@ -7,7 +7,10 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+var log = logging.C()
 
 // TestFunc is the signature for module test functions.
 // Parameters: module contract, workspace root, output directory, log writer, report format, suite name
@@ -28,16 +31,20 @@ func RegisterSystem(buildDep string, fn TestFunc) {
 	systemHandlers[buildDep] = fn
 }
 
+// Capability to test handler mapping
+var capabilityTestHandlers = map[string]string{
+	"go_module":   "go",
+	"npm_package": "npm",
+}
+
 // GetTestFunc returns the appropriate test function for a module type.
-// It uses dispatch rules from handlers.yml to determine which handler to use,
-// falling back to the primary build_dep from module-types.yml.
+// It matches module capabilities to test handlers.
 func GetTestFunc(moduleType string) TestFunc {
 	mu.RLock()
 	defer mu.RUnlock()
 
 	cfg := config.Global()
 	if cfg == nil || cfg.ModuleTypes == nil {
-		// No config available, use static handler
 		if fn, ok := systemHandlers[""]; ok {
 			return fn
 		}
@@ -46,32 +53,21 @@ func GetTestFunc(moduleType string) TestFunc {
 		}
 	}
 
-	// Get module capabilities and primary build dep
+	// Get module capabilities and find matching handler
 	capabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
-	primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
-
-	// Use handlers config dispatch rules if available
-	var handlerName string
-	if cfg.Handlers != nil {
-		handlerName = cfg.Handlers.GetTestHandler(moduleType, capabilities, primaryDep)
-	} else {
-		// Legacy fallback: use primary build dep
-		handlerName = primaryDep
-	}
-
-	// Look up the handler
-	if handlerName != "" {
-		if fn, ok := systemHandlers[handlerName]; ok {
-			return fn
+	for _, cap := range capabilities {
+		if handlerName, ok := capabilityTestHandlers[cap]; ok {
+			if fn, ok := systemHandlers[handlerName]; ok {
+				return fn
+			}
 		}
 	}
 
-	// Fallback: static module test (no-op for types with no build deps)
+	// Fallback: static module test (no-op for types with no test handler)
 	if fn, ok := systemHandlers[""]; ok {
 		return fn
 	}
 
-	// Panic-safe fallback (should never reach here)
 	return func(*modules.ModuleContract, string, string, io.Writer, string, string) int {
 		return 0
 	}

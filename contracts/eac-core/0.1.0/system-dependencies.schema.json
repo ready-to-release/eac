@@ -11,6 +11,17 @@
       "items": {
         "$ref": "#/definitions/dependency"
       }
+    },
+    "capability_requirements": {
+      "type": "object",
+      "description": "Maps capabilities to required system dependencies",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        }
+      }
     }
   },
   "required": ["dependencies"],
@@ -40,7 +51,7 @@
           "$ref": "#/definitions/verify"
         }
       },
-      "required": ["moniker", "name", "version", "verify"]
+      "required": ["moniker"]
     },
     "verify": {
       "type": "object",
@@ -80,6 +91,18 @@
             }
           },
           "required": ["env_vars"]
+        },
+        {
+          "type": "object",
+          "description": "OS platform verification - checks runtime.GOOS",
+          "properties": {
+            "os_platform": {
+              "type": "string",
+              "description": "Required OS platform (linux, windows, darwin)",
+              "enum": ["linux", "windows", "darwin"]
+            }
+          },
+          "required": ["os_platform"]
         }
       ]
     }

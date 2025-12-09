@@ -1,39 +1,9 @@
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/repository.schema.json
-# Repository-level configuration and metadata
+#
+# Project-specific repository configuration overrides
+# Defaults loaded from contracts/eac-core/0.1.0/defaults/repository.yml
+#
 
 repository:
-  # Repository type: mono (monorepo), poly (polyrepo), adjunct (supporting repo)
+  # This is a monorepo (default is poly)
   type: mono
-
-  # Valid versioning schemes that modules can declare
-  # SemVer: Semantic Versioning for libraries, tools, and versioned components
-  # CalVer: Calendar Versioning for runtime systems and services
-  schemes:
-    - SemVer
-    - CalVer
-
-  # Trunk-based development configuration
-  trunk_branch: main
-  max_branch_age_days: 2
-
-  # Pull request workflow configuration
-  pr:
-    delete_branch_on_merge: true
-    merge_strategy: squash
-
-  # Versioning constraints and behavior control
-  # This controls how version bumps are allowed across all modules
-  versioning:
-    # Global constraint on version bumping
-    # Options:
-    #   - unrestricted: Allow major, minor, and patch bumps based on conventional commits
-    #   - patch-only: For semver modules, only allow patch bumps (0.0.x → 0.0.x+1)
-    #                 Stops major/minor bumps during early development
-    #   - calver-only: Force all modules to use calendar versioning
-    #
-    # When constraint is "patch-only", breaking changes and features
-    # are still recorded in the changelog but don't trigger version bumps
-    # beyond patch level. This preserves commit history while controlling versions.
-    #
-    # Set to "unrestricted" when ready to start semantic versioning properly.
-    constraint: patch-only

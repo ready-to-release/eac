@@ -14,6 +14,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func init() {
@@ -199,10 +200,6 @@ func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 		// Show file size
 		return formatBytes(info.Size())
 
-	case config.ArtifactTypeMarker:
-		// Just show that it exists
-		return "✓"
-
 	case config.ArtifactTypeImage:
 		// Docker images - just confirm
 		return "Built"
@@ -255,7 +252,7 @@ func buildConfigSection(f *SummaryFormatter, module *config.Module, cfg *config.
 	}
 
 	// Output directory
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("out/build/%s", module.Moniker)))
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("%s/%s", paths.OutBuildRelPath, module.Moniker)))
 
 	return f.CollapsibleSection(Emoji("config")+" Build Configuration", configDetails)
 }

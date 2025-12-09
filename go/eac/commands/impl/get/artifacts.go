@@ -15,6 +15,7 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 func init() {
@@ -60,6 +61,13 @@ func GetArtifacts() int {
 }
 
 func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms, asJSON, asYAML bool) int {
+	// Get workspace root
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		log.Errorf("failed to find repository root: %v", err)
+		return 1
+	}
+
 	// Load configuration
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -82,7 +90,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 	}
 
 	// Build directory
-	buildDir := cfg.Repository.BuildOutputPath(moduleName)
+	buildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moduleName)
 
 	// Resolve artifacts
 	var allResults []implinternal.ResolvedArtifact

@@ -87,18 +87,6 @@ updates:
       - "dependencies"
       - "go"
 
-  # Python - mkdocs container
-  - package-ecosystem: "pip"
-    directory: "/containers/mkdocs"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    commit-message:
-      prefix: "chore(deps)"
-    labels:
-      - "dependencies"
-      - "python"
-
   # npm - VSCode extension
   - package-ecosystem: "npm"
     directory: "/typescript/vscode-ext-commit"
@@ -110,6 +98,10 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+
+  # ============================================================================
+  # Containers - Docker base images
+  # ============================================================================
 
   # Docker - ext-eac container (golang base image)
   - package-ecosystem: "docker"
@@ -123,9 +115,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - mkdocs container (python base image)
+  # Docker - mkdocs-site container (python base image)
   - package-ecosystem: "docker"
-    directory: "/containers/mkdocs"
+    directory: "/containers/mkdocs-site"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -134,3 +126,67 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+
+  # Docker - mkdocs-pdf container (python base image)
+  - package-ecosystem: "docker"
+    directory: "/containers/mkdocs-pdf"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Docker - mermaid-cli container (node base image)
+  - package-ecosystem: "docker"
+    directory: "/containers/mermaid-cli"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # npm - mermaid-cli container
+  - package-ecosystem: "npm"
+    directory: "/containers/mermaid-cli"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # ============================================================================
+  # Containers - Python dependencies (pip)
+  # ============================================================================
+
+  # Python - mkdocs-site container
+  - package-ecosystem: "pip"
+    directory: "/containers/mkdocs-site"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Python - mkdocs-pdf container
+  - package-ecosystem: "pip"
+    directory: "/containers/mkdocs-pdf"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"

@@ -72,7 +72,7 @@ func ShowModules() int {
 	for _, mod := range report.Modules {
 		if withArtifacts {
 			// Get artifact statistics for this module
-			artifactStats := getArtifactStats(mod, cfg)
+			artifactStats := getArtifactStats(mod, cfg, workspaceRoot)
 			tb.AddRow(
 				mod.Moniker,
 				mod.Type,
@@ -98,7 +98,7 @@ type artifactStats struct {
 }
 
 // getArtifactStats calculates artifact statistics for a module
-func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig) artifactStats {
+func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig, workspaceRoot string) artifactStats {
 	stats := artifactStats{}
 
 	if cfg == nil {
@@ -118,7 +118,7 @@ func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig) artifa
 	}
 
 	// Build directory
-	buildDir := cfg.Repository.BuildOutputPath(mod.Moniker)
+	buildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, mod.Moniker)
 
 	// Resolve artifacts for current platform
 	targetOS := runtime.GOOS

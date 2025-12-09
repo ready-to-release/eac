@@ -69,7 +69,7 @@ var updateCmd = &cobra.Command{
 		}
 
 		if runtime.GOOS == "windows" {
-			// Try to find Windows ZIP archive first (preferred, matching installer)
+			// Find Windows ZIP archive (matching installer)
 			for _, asset := range release.Assets {
 				if strings.Contains(asset.Name, "r2r-cli-") && strings.Contains(asset.Name, "windows-amd64.zip") {
 					selectedAsset = &struct {
@@ -84,25 +84,6 @@ var updateCmd = &cobra.Command{
 						Size:        asset.Size,
 					}
 					break
-				}
-			}
-			// Try legacy naming pattern if not found
-			if selectedAsset == nil {
-				for _, asset := range release.Assets {
-					if strings.Contains(asset.Name, "r2r-windows-amd64") && strings.HasSuffix(asset.Name, ".exe") {
-						selectedAsset = &struct {
-							Name        string `json:"name"`
-							DownloadURL string `json:"browser_download_url"`
-							ID          int    `json:"id"`
-							Size        int    `json:"size"`
-						}{
-							Name:        asset.Name,
-							DownloadURL: asset.DownloadURL,
-							ID:          asset.ID,
-							Size:        asset.Size,
-						}
-						break
-					}
 				}
 			}
 		} else {

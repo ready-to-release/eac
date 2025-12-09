@@ -1,0 +1,68 @@
+# Built-in module types
+# Merged with .r2r/eac/module-types.yml (user types override these)
+#
+# Capabilities drive both system dependency resolution and handler dispatch:
+#   - System deps: capability_requirements in system-dependencies.yml
+#   - Handlers: dispatch rules in handlers.yml match on capability
+
+types:
+  # Go module type - unified type for all Go modules
+  # Behavior is driven by per-module artifact definitions in modules.yml:
+  #   - No artifacts: library (compile-only verification)
+  #   - executable artifacts: builds binaries for specified platforms
+  #   - test artifacts: runs tests and captures results
+  - name: go
+    description: "Go module (library, executable, or test - driven by module artifacts)"
+    capabilities: [go_module]
+    defaults:
+      files:
+        source: ["**/*.go", "**/*.go.txt"]
+        tests: ["**/*_test.go"]
+        config: ["go.mod", "go.sum"]
+        changelog: CHANGELOG.md
+      repo:
+        specs: ["{specs_root}/{moniker}/**"]
+        test_impl: "{test_impl_root}/{moniker}"
+        design: "{specs_root}/{moniker}/.design"
+
+  # Container module type - unified type for all Docker-based modules
+  # Behavior is driven by per-module docker_build and handler config:
+  #   - handler: mkdocs -> documentation builds
+  #   - handler: docker (default) -> standard container builds
+  - name: container
+    description: "Docker container module (behavior driven by per-module docker_build config)"
+    capabilities: [docker_build]
+    defaults:
+      files:
+        assets: ["Dockerfile", "**/*"]
+      repo:
+        specs: []
+
+  # TypeScript module type - for npm/TypeScript projects
+  - name: typescript
+    description: "TypeScript/npm module"
+    capabilities: [npm_package, typescript]
+    defaults:
+      files:
+        source: ["src/**/*.ts"]
+        tests: ["test/**/*.ts"]
+        config: ["package.json", "tsconfig.json", "*.config.js"]
+        changelog: CHANGELOG.md
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []
+
+  # Static module type - for modules with no build step (config, scripts, docs, etc.)
+  - name: static
+    description: "Static files module (no build step, file ownership only)"
+    capabilities: []
+    defaults:
+      files:
+        changelog: CHANGELOG.md
+        workflows:
+          ci: ""
+          release: ""
+      repo:
+        specs: []

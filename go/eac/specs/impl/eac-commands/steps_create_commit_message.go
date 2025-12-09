@@ -29,128 +29,42 @@ func registerCreateCommitMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 
 	// Git state steps
 	sc.Step(`^no files are staged$`, func() error {
-		// Ensure clean git state - no files staged
-		cmd := exec.Command("git", "reset", "HEAD", ".")
-		cmd.Dir = ctx.IsolatedDir
-		_ = cmd.Run() // Ignore error if nothing to reset
-		return nil
+		return internal.UnstageAll(ctx)
 	})
 
 	sc.Step(`^files are staged with changes$`, func() error {
-		// Create module structure matching the working scenarios pattern
-		if err := internal.CreateDirectory(ctx, ".r2r/eac"); err != nil {
+		// Use pre-built test repository layout for realistic test fixture
+		if err := internal.CopyTestLayout(ctx, "single-go-module", true); err != nil {
 			return err
 		}
-
-		// Create modules.yml with test module in subdirectory (like working tests)
-		modulesYml := `modules:
-  - moniker: test-module
-    name: Test Module
-    type: go-library
-    files:
-      root: go/test-module
-`
-		if err := internal.CreateFile(ctx, ".r2r/eac/modules.yml", modulesYml); err != nil {
-			return err
-		}
-
-		// Create test file in module subdirectory (not root)
-		testFile := filepath.Join("go", "test-module", "test.go")
-		if err := internal.CreateFile(ctx, testFile, "package testmodule\n\n// Test file\n"); err != nil {
-			return err
-		}
-
-		cmd := exec.Command("git", "add", testFile)
-		cmd.Dir = ctx.IsolatedDir
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("failed to stage file: %w (output: %s)", err, string(output))
-		}
-
-		state.stagedFiles = append(state.stagedFiles, testFile)
+		state.stagedFiles = append(state.stagedFiles, filepath.Join("go", "test-module", "lib.go"))
 		return nil
 	})
 
 	sc.Step(`^files are staged in module "([^"]*)"$`, func(module string) error {
-		// Create module structure
-		if err := internal.CreateDirectory(ctx, ".r2r/eac"); err != nil {
+		// Use template system for consistent EAC config
+		if err := internal.SetupGoModuleWithEAC(ctx, module, true); err != nil {
 			return err
 		}
-
-		// Create modules.yml with the specified module
-		modulesYml := fmt.Sprintf(`modules:
-  - moniker: %s
-    name: %s Module
-    type: go-library
-    files:
-      root: go/%s
-`, module, module, module)
-		if err := internal.CreateFile(ctx, ".r2r/eac/modules.yml", modulesYml); err != nil {
-			return err
-		}
-
-		// Create a file in that module and stage it
-		moduleFile := filepath.Join("go", module, "test.go")
-		if err := internal.CreateFile(ctx, moduleFile, "package main\n"); err != nil {
-			return err
-		}
-
-		cmd := exec.Command("git", "add", moduleFile)
-		cmd.Dir = ctx.IsolatedDir
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("failed to stage module file: %w (output: %s)", err, string(output))
-		}
-
-		state.stagedFiles = append(state.stagedFiles, moduleFile)
+		state.stagedFiles = append(state.stagedFiles, filepath.Join("go", module, "lib.go"))
 		return nil
 	})
 
 	sc.Step(`^files are staged in modules "([^"]*)" and "([^"]*)"$`, func(module1, module2 string) error {
-		// Create modules.yml with both modules first
-		modulesYml := fmt.Sprintf(`modules:
-  - moniker: %s
-    name: %s Module
-    type: go-library
-    files:
-      root: go/%s
-  - moniker: %s
-    name: %s Module
-    type: go-library
-    files:
-      root: go/%s
-`, module1, module1, module1, module2, module2, module2)
-		if err := internal.CreateFile(ctx, ".r2r/eac/modules.yml", modulesYml); err != nil {
+		// Use template system for two modules
+		if err := internal.SetupTwoGoModulesWithEAC(ctx, module1, module2, true); err != nil {
 			return err
 		}
-
-		// Create both module files and stage them
-		for _, module := range []string{module1, module2} {
-			moduleFile := filepath.Join("go", module, "test.go")
-			if err := internal.CreateFile(ctx, moduleFile, fmt.Sprintf("package %s\n", module)); err != nil {
-				return err
-			}
-
-			cmd := exec.Command("git", "add", moduleFile)
-			cmd.Dir = ctx.IsolatedDir
-			output, err := cmd.CombinedOutput()
-			if err != nil {
-				return fmt.Errorf("failed to stage module file %s: %w (output: %s)", moduleFile, err, string(output))
-			}
-
-			state.stagedFiles = append(state.stagedFiles, moduleFile)
-		}
-
+		state.stagedFiles = append(state.stagedFiles,
+			filepath.Join("go", module1, "lib.go"),
+			filepath.Join("go", module2, "lib.go"),
+		)
 		return nil
 	})
 
 	// Mock AI configuration
 	sc.Step(`^the mock AI is configured to return a valid commit message$`, func() error {
-		mockContent, err := internal.LoadAsset(ctx, "commit-message/mock-response.txt")
-		if err != nil {
-			return err
-		}
-		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
+		return internal.SetupMockAIFromAsset(ctx, "commit-message/mock-response.txt")
 	})
 
 	// Output verification steps

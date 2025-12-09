@@ -109,24 +109,6 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - name: Install npm dependencies
-      if: contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm')
-      shell: bash
-      env:
-        COMMANDS: ${{ inputs.commands-path }}
-        MODULE: ${{ inputs.module }}
-      run: |
-        # Get module root from commands binary
-        MODULE_ROOT=$($COMMANDS get modules --as-json | jq -r --arg m "$MODULE" '.[] | select(.moniker == $m) | .files.root')
-
-        if [ -n "$MODULE_ROOT" ] && [ -f "$MODULE_ROOT/package.json" ]; then
-          echo "Installing npm dependencies in $MODULE_ROOT"
-          cd "$MODULE_ROOT"
-          npm install
-        else
-          echo "No package.json found for module $MODULE"
-        fi
-
     - name: Check if Docker Buildx builder supports cache export
       id: buildx-check
       if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'docker-build')

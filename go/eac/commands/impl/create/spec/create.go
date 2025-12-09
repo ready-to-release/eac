@@ -607,14 +607,9 @@ func generateWithAI(templateRoot string, prompt string, debug bool) (string, err
 		return mock, nil
 	}
 
-	// Check for mock response (test mode) - module-level mock takes precedence
+	// Check for mock response (test mode)
 	if mockAIResponse != "" {
 		return mockAIResponse, nil
-	}
-
-	// Fallback: check for legacy environment variable (for backward compatibility)
-	if mockResponse := os.Getenv("R2R_TEST_AI_RESPONSE"); mockResponse != "" {
-		return mockResponse, nil
 	}
 
 	// Create executor

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // Size presets for mermaid diagrams
@@ -276,22 +277,22 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 	dockerVolume := buildutil.FormatDockerVolumePath(hostRepoRoot)
 
 	// Build Docker command
-	// Use cli-mkdocs-pdf container which has mermaid-cli installed
-	// The container has PUPPETEER_EXECUTABLE_PATH set to chromium-wrapper with proper flags
+	// Use dedicated cli-mkdocs-mermaid container for diagram rendering
+	// The container has mermaid-cli, chromium, and embedded configs at /etc/mermaid/
 	args := []string{
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
 		"--shm-size=1gb", // Increase shared memory for Chromium (prevents crashes)
 		"--security-opt", "seccomp=unconfined", // Allow Chromium to run without sandboxing restrictions
-		"cli-mkdocs-pdf:latest",
+		"cli-mermaid-cli:latest",
 		"mmdc",
 		"-i", dockerTmpFile,
 		"-o", dockerOutputPath,
 		"-t", "dark",        // Theme (dark for PDF)
 		"-b", "transparent", // Background
-		"--configFile", "/docs/containers/mkdocs-pdf/mermaid-config.json", // Disable htmlLabels for PDF compatibility
-		"-p", "/docs/containers/mkdocs-pdf/puppeteer-config.json", // Puppeteer config for container environment
+		"--configFile", "/etc/mermaid/mermaid-config.json", // Disable htmlLabels for PDF compatibility
+		"-p", "/etc/mermaid/puppeteer-config.json", // Puppeteer config for container environment
 	}
 
 	// Add user spec in DinD mode to avoid permission issues
@@ -431,7 +432,7 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 // Returns all blocks with their cache status
 func (p *Preprocessor) checkMermaidCache(blocks []mermaidBlock) ([]cacheStatus, error) {
 	// Cache directory: staging/assets/rendered/mermaid/
-	cacheDir := filepath.Join(p.stagingDir, "assets", "rendered", "mermaid")
+	cacheDir := paths.RenderedAssetsPath(p.stagingDir, "mermaid")
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
@@ -479,7 +480,7 @@ func (p *Preprocessor) checkMermaidCache(blocks []mermaidBlock) ([]cacheStatus, 
 // This is done ONLY in staging directory, source markdown stays pure
 func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]mermaidBlock) error {
 	// Cache directory (absolute path)
-	cacheDir := filepath.Join(p.stagingDir, "assets", "rendered", "mermaid")
+	cacheDir := paths.RenderedAssetsPath(p.stagingDir, "mermaid")
 
 	for filePath, blocks := range blocksByFile {
 		if len(blocks) == 0 {

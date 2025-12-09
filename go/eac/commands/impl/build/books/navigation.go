@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,7 +25,7 @@ type NavFile struct {
 // If no index.md exists, generates one with book metadata and TOC
 // If index.md exists (from copy source), keeps it as-is
 func (p *Preprocessor) ensureRootIndex() error {
-	indexPath := filepath.Join(p.stagingDir, "index.md")
+	indexPath := paths.IndexMarkdownPath(p.stagingDir)
 
 	// Check if index.md already exists
 	if _, err := os.Stat(indexPath); err == nil {
@@ -169,7 +170,7 @@ func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 		relPath = filepath.ToSlash(relPath)
 
 		// Check for index.md in subdirectory
-		indexPath := filepath.Join(subdir, "index.md")
+		indexPath := paths.IndexMarkdownPath(subdir)
 		if _, err := os.Stat(indexPath); err == nil {
 			title := p.getTitleFromFile(indexPath)
 			entries = append(entries, tocEntry{
@@ -254,7 +255,7 @@ func (p *Preprocessor) ensureNavigationStructure() error {
 		}
 
 		// Check if .nav.yml exists
-		navPath := filepath.Join(path, ".nav.yml")
+		navPath := paths.NavigationConfigPath(path)
 		if _, err := os.Stat(navPath); err == nil {
 			// EXISTS: Validate and clean
 			if err := p.validateAndCleanNav(navPath, path); err != nil {
@@ -384,7 +385,7 @@ func (p *Preprocessor) generateNavForDir(dir string) error {
 		title = toTitleCase(p.book.Name)
 	} else {
 		// Check for index.md title
-		indexPath := filepath.Join(dir, "index.md")
+		indexPath := paths.IndexMarkdownPath(dir)
 		if _, err := os.Stat(indexPath); err == nil {
 			title = p.getTitleFromFile(indexPath)
 		} else {
@@ -402,7 +403,7 @@ func (p *Preprocessor) generateNavForDir(dir string) error {
 		return err
 	}
 
-	navPath := filepath.Join(dir, ".nav.yml")
+	navPath := paths.NavigationConfigPath(dir)
 	if err := os.WriteFile(navPath, data, 0644); err != nil {
 		return err
 	}

@@ -58,9 +58,9 @@ const (
 	ArtifactTypeExecutable = "executable"
 	ArtifactTypeFile       = "file"
 	ArtifactTypeDirectory  = "directory"
-	ArtifactTypeMarker     = "marker"
 	ArtifactTypeImage      = "image"
 	ArtifactTypeGlob       = "glob"
+	ArtifactTypeTest       = "test"
 )
 
 // VerifyMode constants
@@ -170,13 +170,35 @@ func (c *ModuleTypesConfig) GetCapabilities(typeName string) []string {
 	return typeDef.Capabilities
 }
 
-// GetBuildDeps returns the build dependencies for a module type
+// GetBuildDeps returns the build dependencies for a module type.
+// Deprecated: Use GetBuildDepsFromCapabilities with SystemDependenciesConfig for capability-driven resolution.
 func (c *ModuleTypesConfig) GetBuildDeps(typeName string) []string {
 	typeDef := c.Get(typeName)
 	if typeDef == nil {
 		return nil
 	}
 	return typeDef.BuildDeps
+}
+
+// GetBuildDepsFromCapabilities returns build dependencies by resolving through capabilities.
+// This is the preferred method for capability-driven architecture.
+func (c *ModuleTypesConfig) GetBuildDepsFromCapabilities(typeName string, sysDeps *SystemDependenciesConfig) []string {
+	typeDef := c.Get(typeName)
+	if typeDef == nil {
+		return nil
+	}
+
+	// If explicit BuildDeps defined, use them (backward compatibility)
+	if len(typeDef.BuildDeps) > 0 {
+		return typeDef.BuildDeps
+	}
+
+	// Otherwise, resolve from capabilities
+	if sysDeps != nil {
+		return sysDeps.GetRequiredDeps(typeDef.Capabilities)
+	}
+
+	return nil
 }
 
 // GetPrimaryBuildDep returns the first build dependency (used for build dispatch)
@@ -195,6 +217,26 @@ func (c *ModuleTypesConfig) GetDockerBuildConfig(typeName string) *DockerBuildCo
 		return nil
 	}
 	return typeDef.DockerBuild
+}
+
+// GetDockerImageName returns the primary Docker image name for a module type.
+// Returns empty string if not configured.
+func (c *ModuleTypesConfig) GetDockerImageName(typeName string) string {
+	dockerConfig := c.GetDockerBuildConfig(typeName)
+	if dockerConfig == nil || len(dockerConfig.Tags) == 0 {
+		return ""
+	}
+	return dockerConfig.Tags[0]
+}
+
+// GetDockerContainerDir returns the container context directory for a module type.
+// Returns empty string if not configured.
+func (c *ModuleTypesConfig) GetDockerContainerDir(typeName string) string {
+	dockerConfig := c.GetDockerBuildConfig(typeName)
+	if dockerConfig == nil {
+		return ""
+	}
+	return dockerConfig.Context
 }
 
 // GetTestFramework returns the test framework for a module type.
@@ -304,10 +346,6 @@ func (a *Artifact) IsExecutable() bool {
 	return a.Type == ArtifactTypeExecutable
 }
 
-// IsMarker returns true if this is a marker artifact
-func (a *Artifact) IsMarker() bool {
-	return a.Type == ArtifactTypeMarker
-}
 
 // GetCompression returns the compression type, defaulting to none
 func (a *Artifact) GetCompression() string {

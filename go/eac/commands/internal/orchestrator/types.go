@@ -42,7 +42,7 @@ type WorkerFunc func(moniker string, logWriter io.Writer) int
 type Config struct {
 	// WorkspaceRoot is the root directory of the repository
 	WorkspaceRoot string
-	// OutputBaseDir is the base directory for all output (e.g., "out/build" or "out/test")
+	// OutputBaseDir is the base directory for all output (e.g., paths.OutBuildRelPath or paths.OutTestRelPath)
 	OutputBaseDir string
 	// LogFileName is the name of the log file for each module (e.g., "build.log" or "test.log")
 	LogFileName string

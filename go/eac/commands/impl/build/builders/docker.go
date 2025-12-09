@@ -15,27 +15,41 @@ import (
 )
 
 func init() {
-	// Register handler for "docker" build system (legacy)
-	RegisterSystem("docker", BuildDockerModule)
-	RegisterSystemArtifacts("docker", ListDockerArtifacts)
-
-	// Register handler for "docker-build" system (new: uses docker_build config from module type)
-	RegisterSystem("docker-build", BuildDockerBuildModule)
-	RegisterSystemArtifacts("docker-build", ListDockerBuildArtifacts)
+	RegisterHandler(&DockerHandler{})
 }
 
-// ListDockerArtifacts returns the artifacts that would be produced by building this Docker module
-func ListDockerArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	// Docker builds produce container images, not files
-	// Return image reference pattern for CI to use
+// resolveDockerfilePath resolves a dockerfile path template
+func resolveDockerfilePath(pathTemplate string, moniker string, root string) string {
+	result := pathTemplate
+	result = strings.ReplaceAll(result, "{moniker}", moniker)
+	result = strings.ReplaceAll(result, "{root}", root)
+	return result
+}
+
+// DockerHandler builds Docker container images.
+type DockerHandler struct{}
+
+func (h *DockerHandler) Name() string { return "docker" }
+
+func (h *DockerHandler) Capabilities() []string { return []string{"container", "docker_build"} }
+
+func (h *DockerHandler) Requirements() []string { return []string{"docker"} }
+
+func (h *DockerHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+	if !IsDockerAvailable() {
+		if IsDockerInDocker() {
+			return fmt.Errorf("Docker socket not mounted (-v /var/run/docker.sock:/var/run/docker.sock)")
+		}
+		return fmt.Errorf("Docker is not available")
+	}
+	return nil
+}
+
+func (h *DockerHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
 	return []string{fmt.Sprintf("docker-image:%s", module.Moniker)}
 }
 
-// BuildDockerModule builds a Docker container image.
-// Behavior is determined by capabilities:
-// - go_module → run go mod tidy first
-// - container → build Docker image
-func BuildDockerModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	// Check if Docker is available before attempting to build
@@ -68,15 +82,12 @@ func BuildDockerModule(module *modules.ModuleContract, workspaceRoot string, out
 		}
 	}
 
-	// Find Dockerfile using configured search paths
+	// Find Dockerfile using default search paths
 	var dockerfilePath string
 	searchPaths := []string{"containers/{moniker}/Dockerfile", "{root}/Dockerfile"}
-	if cfg != nil && cfg.Handlers != nil {
-		searchPaths = cfg.Handlers.GetDockerfilePaths()
-	}
 
 	for _, pathTemplate := range searchPaths {
-		resolvedPath := config.ResolveDockerfilePath(pathTemplate, module.Moniker, module.Files.Root)
+		resolvedPath := resolveDockerfilePath(pathTemplate, module.Moniker, module.Files.Root)
 		fullPath := filepath.Join(workspaceRoot, resolvedPath)
 		if _, err := os.Stat(fullPath); err == nil {
 			dockerfilePath = fullPath
@@ -204,12 +215,8 @@ func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath str
 
 // buildDockerCI builds a Docker image in CI with multi-platform support
 func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputDir string, dockerfilePath string, tags []string, logWriter io.Writer) int {
-	// Get CI platforms from handlers config
-	cfg := config.Global()
+	// Default CI platforms
 	ciPlatforms := "linux/amd64,linux/arm64"
-	if cfg != nil && cfg.Handlers != nil {
-		ciPlatforms = cfg.Handlers.GetCIPlatformsString()
-	}
 
 	// Check if we're in GitHub Actions (has GHA cache available)
 	isGitHubActions := os.Getenv("GITHUB_ACTIONS") == "true"

@@ -63,7 +63,7 @@ func writeln(w io.Writer, format string, args ...interface{}) {
 // Returns the lock handle and nil error on success.
 // Returns nil and error if lock is already held (suite is running).
 func acquireSuiteLock(suiteName, workspaceRoot string, repoCfg *config.RepositoryConfig) (*flock.Flock, error) {
-	// Ensure out/test directory exists (parent directory for lock files)
+	// Ensure test output directory exists (parent directory for lock files)
 	testDir := filepath.Join(workspaceRoot, repoCfg.Paths.Out.Test)
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create test directory: %w", err)
@@ -1428,7 +1428,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Reports are only generated for individual feature files in specs/
 		if relFeatureFile != "" {
 			// Set output directory for cucumber.json/junit.xml reports
-			// For feature files, this is the parent directory (e.g., "out/test/commit/eac-commands/")
+			// For feature files, this is the parent directory (e.g., paths.OutTestRelPath + "/commit/eac-commands/")
 			reportOutputDir := filepath.Dir(logFilePath)
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", reportOutputDir))
 

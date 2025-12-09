@@ -76,6 +76,10 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 				Tests:     m.Files.Tests,
 				Exclude:   m.Files.Exclude,
 				Changelog: m.Files.Changelog,
+				Workflows: contracts.Workflows{
+					CI:      m.Files.Workflows.CI,
+					Release: m.Files.Workflows.Release,
+				},
 				Repo: contracts.RepoPatterns{
 					Specs:    m.Files.Repo.Specs,
 					TestImpl: m.Files.Repo.TestImpl,
@@ -84,8 +88,30 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 					Exclude:  m.Files.Repo.Exclude,
 				},
 			},
-			Flags: contracts.Flags{},
-			Metadata: m.Metadata,
+			Flags:       contracts.Flags{},
+			Metadata:    m.Metadata,
+			DockerBuild: m.DockerBuild,
+		}
+
+		// Convert Build config if present
+		if m.Build != nil {
+			base.Build = &contracts.ModuleBuild{
+				Handler: m.Build.Handler,
+			}
+			if m.Build.Options != nil {
+				base.Build.Options = &contracts.BuildOptions{
+					CommandsBinary: m.Build.Options.CommandsBinary,
+				}
+			}
+			for _, a := range m.Build.Artifacts {
+				base.Build.Artifacts = append(base.Build.Artifacts, contracts.ModuleArtifact{
+					ID:          a.ID,
+					Type:        a.Type,
+					Pattern:     a.Pattern,
+					Compression: a.Compression,
+					DeriveFrom:  a.DeriveFrom,
+				})
+			}
 		}
 		// Note: Defaults are already applied by config.ModulesConfig.applyDefaults() and ApplyTypeDefaults()
 

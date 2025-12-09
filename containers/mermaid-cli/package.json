@@ -1,0 +1,7 @@
+{
+  "name": "mermaid-cli-container",
+  "private": true,
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "^11.4.2"
+  }
+}

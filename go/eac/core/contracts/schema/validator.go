@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 )
@@ -21,7 +22,6 @@ const (
 	SchemaTestingTags        SchemaType = "testing-tags"
 	SchemaTestSuites         SchemaType = "test-suites"
 	SchemaSystemDependencies SchemaType = "system-dependencies"
-	SchemaHandlers           SchemaType = "handlers"
 	SchemaRepository         SchemaType = "repository"
 	SchemaEACConfig          SchemaType = "eac-config"
 	SchemaBooks              SchemaType = "books"
@@ -36,7 +36,6 @@ var schemaFileNames = map[SchemaType]string{
 	SchemaTestingTags:        "testing-tags.schema.json",
 	SchemaTestSuites:         "test-suites.schema.json",
 	SchemaSystemDependencies: "system-dependencies.schema.json",
-	SchemaHandlers:           "handlers.schema.json",
 	SchemaRepository:         "repository.schema.json",
 	SchemaEACConfig:          "eac-config.schema.json",
 	SchemaBooks:              "books.schema.json",
@@ -80,7 +79,7 @@ func NewValidator(workspaceRoot string) (*Validator, error) {
 	}
 
 	// Build the schema directory path: contracts/eac-core/<version>/
-	schemaDir := filepath.Join(workspaceRoot, "contracts", "eac-core", ContractVersion)
+	schemaDir := paths.ContractsVersionPath(workspaceRoot, "eac-core", ContractVersion)
 
 	// Load and compile all schemas from the repository
 	for schemaType, fileName := range schemaFileNames {
@@ -222,7 +221,6 @@ func GetSchemaTypes() []SchemaType {
 		SchemaTestingTags,
 		SchemaTestSuites,
 		SchemaSystemDependencies,
-		SchemaHandlers,
 		SchemaRepository,
 		SchemaEACConfig,
 		SchemaBooks,

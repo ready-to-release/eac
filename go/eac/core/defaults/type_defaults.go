@@ -104,7 +104,7 @@ func ResolveDefaults(
 ) ModuleDefaults {
 	result := ModuleDefaults{}
 
-	// Source - type default only
+	// Source - type default only (root-based ownership is handled in MatchesFile)
 	if source != nil {
 		result.Source = source
 	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.Source != nil {

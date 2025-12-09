@@ -34,12 +34,6 @@ books:
           - marker: "modules-overview"
             command: "show modules"
 
-      - type: inline
-        target: "reference/index.md"
-        inserts:
-          - marker: "module-types-summary"
-            command: "show moduletypes"
-
   # ==============================================================================
   # Repository Report PDF (books module)
   # ==============================================================================

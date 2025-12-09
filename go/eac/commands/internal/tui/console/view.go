@@ -37,13 +37,15 @@ func (m Model) ViewFinal() string {
 	b.WriteString(m.renderPaneFooterPlain(PhaseInit))
 	b.WriteString("\n")
 
-	// Render Run pane
-	b.WriteString(m.renderPaneHeaderPlain(PhaseRun))
-	b.WriteString("\n")
-	b.WriteString(m.renderPaneContentPlain(PhaseRun, runH))
-	b.WriteString("\n")
-	b.WriteString(m.renderPaneFooterPlain(PhaseRun))
-	b.WriteString("\n")
+	// Render Run pane only if it actually ran (not still pending)
+	if m.panes[PhaseRun].Status != PhasePending {
+		b.WriteString(m.renderPaneHeaderPlain(PhaseRun))
+		b.WriteString("\n")
+		b.WriteString(m.renderPaneContentPlain(PhaseRun, runH))
+		b.WriteString("\n")
+		b.WriteString(m.renderPaneFooterPlain(PhaseRun))
+		b.WriteString("\n")
+	}
 
 	// Render Summary pane (only if data exists)
 	if m.summaryData != nil {
@@ -58,15 +60,12 @@ func (m Model) ViewFinal() string {
 	return b.String()
 }
 
-// viewPanes renders the 3-pane layout with all panes always visible
+// viewPanes renders the 3-pane layout with panes appearing progressively
 func (m Model) viewPanes() string {
 	var b strings.Builder
 
 	// Calculate heights for each pane
 	initH, runH, summaryH := m.calculatePaneHeights()
-
-	// Always show all three panes for full context
-	// Total: 27 lines (3 headers + 21 content + 3 footers)
 
 	// Render Init pane (always visible)
 	b.WriteString(m.renderPaneHeader(PhaseInit))
@@ -76,13 +75,15 @@ func (m Model) viewPanes() string {
 	b.WriteString(m.renderPaneFooter(PhaseInit, initH))
 	b.WriteString("\n")
 
-	// Render Run pane (always visible)
-	b.WriteString(m.renderPaneHeader(PhaseRun))
-	b.WriteString("\n")
-	b.WriteString(m.renderPaneContent(PhaseRun, runH))
-	b.WriteString("\n")
-	b.WriteString(m.renderPaneFooter(PhaseRun, runH))
-	b.WriteString("\n")
+	// Render Run pane only if it actually started (not still pending)
+	if m.panes[PhaseRun].Status != PhasePending {
+		b.WriteString(m.renderPaneHeader(PhaseRun))
+		b.WriteString("\n")
+		b.WriteString(m.renderPaneContent(PhaseRun, runH))
+		b.WriteString("\n")
+		b.WriteString(m.renderPaneFooter(PhaseRun, runH))
+		b.WriteString("\n")
+	}
 
 	// Render Summary pane (only when summary data is available)
 	if m.summaryData != nil {

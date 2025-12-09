@@ -538,9 +538,8 @@ function extractCommitMessageFromOutput(output: string): string | null {
     }
 
     if (outputStartIndex === -1) {
-        // Fallback: No marker found, try old extraction method
-        log('[WARN] No >>>>>>OUTPUT START<<<<<< marker found, using fallback extraction');
-        return extractCommitMessageFallback(output);
+        log('[ERROR] No >>>>>>OUTPUT START<<<<<< marker found in output');
+        return null;
     }
 
     // Extract EVERYTHING after the marker (including validation errors)
@@ -552,71 +551,6 @@ function extractCommitMessageFromOutput(output: string): string | null {
 
     // Get all lines from start to end
     const messageLines = lines.slice(messageStartIndex);
-    const message = messageLines.join('\n').trim();
-
-    return message.length > 0 ? message : null;
-}
-
-/**
- * Fallback extraction method when >>>>>>OUTPUT START<<<<<< marker is not found
- * Uses the old heuristic-based approach
- */
-function extractCommitMessageFallback(output: string): string | null {
-    const lines = output.split('\n');
-
-    // Find the separator "---"
-    let separatorIndex = -1;
-    for (let i = lines.length - 1; i >= 0; i--) {
-        if (lines[i].trim() === '---') {
-            separatorIndex = i;
-            break;
-        }
-    }
-
-    if (separatorIndex === -1) {
-        return null;
-    }
-
-    // Skip vanity progress messages at the start
-    let messageStartIndex = 0;
-    for (let i = 0; i < separatorIndex; i++) {
-        const trimmed = lines[i].trim();
-
-        // Skip all known progress message patterns
-        if (trimmed.startsWith('🤖') ||
-            trimmed.startsWith('🔧') ||
-            trimmed.startsWith('Discombobulating') ||
-            trimmed.startsWith('Reticulating') ||
-            trimmed.startsWith('Consulting') ||
-            trimmed.startsWith('Parsing semantic') ||
-            trimmed.startsWith('Harmonizing') ||
-            trimmed.startsWith('Calibrating') ||
-            trimmed.startsWith('Summoning') ||
-            trimmed.startsWith('Extracting essence') ||
-            trimmed.startsWith('Wrapping lines') ||
-            trimmed.startsWith('Polishing commit') ||
-            trimmed.startsWith('Validating YAML') ||
-            trimmed.startsWith('Generating subject') ||
-            trimmed.startsWith('Contemplating') ||
-            trimmed.startsWith('Assembling markdown') ||
-            trimmed.startsWith('Invoking the') ||
-            trimmed.startsWith('Measuring semantic') ||
-            trimmed.startsWith('Calculating commit') ||
-            trimmed.startsWith('Negotiating with') ||
-            trimmed.startsWith('Ugh,') ||
-            trimmed.startsWith('*Sigh*') ||
-            trimmed.startsWith('Fine,') ||
-            trimmed === '') {
-            continue;
-        }
-
-        // Found the start of actual commit message
-        messageStartIndex = i;
-        break;
-    }
-
-    // Extract message from start to separator
-    const messageLines = lines.slice(messageStartIndex, separatorIndex);
     const message = messageLines.join('\n').trim();
 
     return message.length > 0 ? message : null;
