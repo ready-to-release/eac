@@ -71,10 +71,12 @@ Guides that show you how to solve specific problems. Use these when you need to 
 
 > **Information-oriented descriptions**
 
-Technical reference material for looking up details. Check here for command syntax, configuration options, and specifications.
+Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.
 
-- [Command Reference](reference/commands/)
-- [Decision Records](reference/decision-records/)
+- [R2R and EAC Architecture](reference/r2r-eac/) - System overview and design
+- [Repository Layout](reference/repository-layout.md) - File structure
+- [Command Reference](reference/commands/) - CLI commands
+- [Decision Records](reference/decision-records/) - Architectural decisions
 
 </td>
 <td width="50%" valign="top" markdown="1">

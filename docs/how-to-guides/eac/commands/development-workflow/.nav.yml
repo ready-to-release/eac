@@ -1,0 +1,7 @@
+title: Development Workflow
+nav:
+  - index.md
+  - create-feature-workspace.md
+  - make-commits-with-ai.md
+  - create-pull-request.md
+  - merge-workspace-changes.md

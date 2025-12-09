@@ -8,11 +8,9 @@ Technical reference material providing information-oriented documentation for th
 
 | Reference | Description |
 |-----------|-------------|
-| [Repository Layout](./repository-layout.md) | Repository structure and organization |
-| [Risk Assessment](./risk-assessment.md) | Risk assessment documentation |
+| [R2R and EAC Architecture](./r2r-eac/) | System architecture, module system, contracts, and design principles |
 | [Commands](./commands/) | Command-line interface reference documentation |
 | [Continuous Delivery](./continuous-delivery/) | CI/CD pipeline and deployment reference materials |
 | [Decision Records](./decision-records/) | Architectural decisions and their rationale |
-| [Specifications](./specifications/) | Technical specifications and standards |
 
 {{ diataxis_footer() }}

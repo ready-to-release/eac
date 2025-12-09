@@ -1,0 +1,420 @@
+# Get Commands
+
+{{ page_breadcrumb() }}
+
+## Overview
+
+Get commands provide structured JSON output designed for automation, CI/CD pipelines, build scripts, and programmatic processing. All get commands output valid JSON that can be piped through `jq` or processed by other tools.
+
+**Key Characteristics**:
+
+- Valid JSON output
+- Machine-readable structured data
+- Designed for automation
+- Deterministic and cacheable
+- Non-zero exit codes on errors
+
+**When to use**: In CI/CD pipelines, build scripts, or when you need programmatic access to repository data.
+
+**For interactive use**: Use [show commands](./show.md) instead, which provide human-readable formatted output.
+
+## All Get Commands
+
+### Module & Repository Information
+
+| Command | Purpose | Output Schema |
+|---------|---------|---------------|
+| [get modules](../get/modules.md) | Module contracts | `{modules: [...]}` |
+| [get dependencies](../get/dependencies.md) | Dependency graph | `{dependencies: {...}}` |
+| [get files](../get/files.md) | File-to-module mappings | `{files: [...], total: N}` |
+| [get config](../get/config.md) | EAC configuration | `{repository: {...}, ai: {...}}` |
+| [get environments](../get/environments.md) | Environment contracts | `{environments: [...]}` |
+
+### Build & Test Information
+
+| Command | Purpose | Output Schema |
+|---------|---------|---------------|
+| [get artifacts](../get/artifacts.md) | Resolved artifacts for module | `{artifacts: [...]}` |
+| [get build-deps](../get/build-deps.md) | Build dependencies | `{dependencies: [...]}` |
+| [get build-times](../get/build-times.md) | Build performance data | `{builds: [...]}` |
+| [get execution order](../get/execution-order.md) | Dependency-based build order | `{execution_order: [...]}` |
+| [get suite](../get/suite.md) | Test suite information | `{name: ..., tests: N}` |
+| [get tests](../get/tests.md) | All tests in repository | `{tests: [...], total: N}` |
+| [get test-timings](../get/test-timings.md) | Test performance data | `{tests: [...]}` |
+
+### Change Detection
+
+| Command | Purpose | Output Schema |
+|---------|---------|---------------|
+| [get changed-modules](../get/changed-modules.md) | Modules affected by local changes | `{changed_modules: [...]}` |
+| [get changed-modules-ci](../get/changed-modules-ci.md) | Modules requiring rebuild | `{changed_modules: [...], base_commit: ...}` |
+
+### Command Metadata
+
+| Command | Purpose | Output Schema |
+|---------|---------|---------------|
+| [get commands](../get/commands.md) | Command metadata for shell integration | `{commands: [...], tree: {...}}` |
+| [get valid-commands](../get/valid-commands.md) | All valid commands | `{commands: [...]}` |
+
+### Specifications
+
+| Command | Purpose | Output Schema |
+|---------|---------|---------------|
+| [get specs unused-steps](../get/specs-unused-steps.md) | Unused godog step definitions | `{unused_steps: [...]}` |
+
+### Base Command
+
+| Command | Purpose | Output Schema |
+|---------|---------|---------------|
+| [get](../get/get.md) | Retrieve repository data | Varies by subcommand |
+
+## Common Patterns
+
+### JSON Output Structure
+
+All get commands return valid JSON with consistent structure:
+
+```json
+{
+  "data_field": [...],
+  "metadata": {...},
+  "total": N
+}
+```
+
+### Processing with jq
+
+Get commands are designed to be piped through `jq`:
+
+```bash
+# Extract specific fields
+r2r eac get modules | jq -r '.modules[].moniker'
+
+# Filter results
+r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+
+# Transform data
+r2r eac get dependencies | jq 'to_entries | map({module: .key, deps: .value})'
+
+# Count results
+r2r eac get modules | jq '.modules | length'
+```
+
+### Caching Results
+
+JSON output is deterministic and cacheable:
+
+```bash
+# Cache expensive queries
+r2r eac get files > files.json
+
+# Query from cache
+jq '.files[] | select(.module == "src-auth")' files.json
+```
+
+## get vs show Duality
+
+Most get commands have corresponding `show` commands that provide the same information in human-readable format:
+
+| get command | show command | Output Format |
+|-------------|--------------|---------------|
+| `get modules` | `show modules` | JSON / Table |
+| `get dependencies` | `show dependencies` | JSON / Table |
+| `get files` | `show files` | JSON / Table |
+| `get config` | `show config` | JSON / Formatted |
+| `get tests` | `show tests` | JSON / Table |
+| `get environments` | `show environments` | JSON / Table |
+| `get build-times` | `show build-times` | JSON / Table |
+| `get test-timings` | `show test-timings` | JSON / Table |
+| `get suite <name>` | `show suite <name>` | JSON / Formatted |
+| `get artifacts <m>` | `show artifacts <m>` | JSON / Table |
+| `get valid-commands` | `show valid-commands` | JSON / Table |
+
+**Rule**: Use `get` for automation and scripts, `show` for interactive terminal use.
+
+## Common Workflows
+
+### CI/CD Integration
+
+```bash
+# Get changed modules
+CHANGED=$(r2r eac get changed-modules-ci | jq -r '.changed_modules[]')
+
+# Build in dependency order
+for module in $CHANGED; do
+  ORDER=$(r2r eac get execution order $module | jq -r '.execution_order[]')
+  for dep in $ORDER; do
+    r2r eac build $dep
+  done
+done
+```
+
+### Module Analysis
+
+```bash
+# Get all module monikers
+r2r eac get modules | jq -r '.modules[].moniker'
+
+# Find modules by type
+r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+
+# Count modules by type
+r2r eac get modules | jq '.modules | group_by(.type) | map({type: .[0].type, count: length})'
+```
+
+### Dependency Analysis
+
+```bash
+# Get dependency graph
+r2r eac get dependencies | jq '.'
+
+# Find dependencies of a module
+r2r eac get dependencies | jq '.dependencies["src-api"]'
+
+# Find modules with no dependencies
+r2r eac get dependencies | jq 'to_entries[] | select(.value | length == 0) | .key'
+```
+
+### Build Optimization
+
+```bash
+# Get execution order for parallel builds
+r2r eac get execution order r2r-cli | jq -r '.execution_order[]'
+
+# Get build dependencies
+r2r eac get build-deps src-api | jq '.dependencies[]'
+
+# Analyze build performance
+r2r eac get build-times | jq '[.builds[]] | sort_by(.duration) | reverse'
+```
+
+## Performance Notes
+
+### Fast Commands
+
+Execute quickly (< 1s):
+
+- `get modules`
+- `get dependencies`
+- `get config`
+- `get environments`
+- `get changed-modules`
+- `get execution order`
+
+### Moderate Commands
+
+May take a few seconds:
+
+- `get tests` (scans test files)
+- `get build-times` (parses build logs)
+- `get test-timings` (parses test logs)
+
+### Expensive Commands
+
+Avoid in tight loops:
+
+- **`get files`** - Loads ~2,690 files (~19k tokens)
+  - Use `show files-changed` or `show files-staged` instead when possible
+  - Cache results if querying multiple times
+
+## Best Practices
+
+### Always Use jq
+
+Validate and process JSON output:
+
+```bash
+# Good: Validate JSON and extract data
+r2r eac get modules | jq -r '.modules[].moniker'
+
+# Avoid: Raw grep on JSON (fragile)
+r2r eac get modules | grep '"moniker"'
+```
+
+### Check Exit Codes
+
+Commands return non-zero on errors:
+
+```bash
+if ! OUTPUT=$(r2r eac get modules 2>&1); then
+  echo "Error: Failed to get modules"
+  exit 1
+fi
+
+echo "$OUTPUT" | jq '.modules[]'
+```
+
+### Cache Expensive Queries
+
+```bash
+# Cache files query
+if [ ! -f files.json ]; then
+  r2r eac get files > files.json
+fi
+
+# Query from cache
+jq '.files[] | select(.module == "src-auth")' files.json
+```
+
+### Use Raw Output (-r)
+
+Extract values without quotes:
+
+```bash
+# With -r: produces raw strings
+r2r eac get modules | jq -r '.modules[].moniker'
+# Output: eac-commands
+
+# Without -r: produces quoted strings
+r2r eac get modules | jq '.modules[].moniker'
+# Output: "eac-commands"
+```
+
+### Handle Empty Results
+
+```bash
+MODULES=$(r2r eac get modules | jq -r '.modules[]')
+if [ -z "$MODULES" ]; then
+  echo "No modules found"
+  exit 1
+fi
+```
+
+## Integration Examples
+
+### GitHub Actions
+
+```yaml
+name: Incremental Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Get Changed Modules
+        id: changed
+        run: |
+          MODULES=$(r2r eac get changed-modules-ci | jq -r '.changed_modules | join(" ")')
+          echo "modules=$MODULES" >> $GITHUB_OUTPUT
+
+      - name: Build
+        run: |
+          for module in ${{ steps.changed.outputs.modules }}; do
+            r2r eac build $module
+          done
+```
+
+### Build Matrix
+
+```yaml
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          MATRIX=$(r2r eac get modules | jq -c '{module: [.modules[].moniker]}')
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  build:
+    needs: generate-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - run: r2r eac build ${{ matrix.module }}
+```
+
+### Build Script
+
+```bash
+#!/bin/bash
+set -e
+
+# Get changed modules
+CHANGED=$(r2r eac get changed-modules | jq -r '.changed_modules[]')
+
+if [ -z "$CHANGED" ]; then
+  echo "No changes detected"
+  exit 0
+fi
+
+# Build each in dependency order
+for module in $CHANGED; do
+  ORDER=$(r2r eac get execution order $module | jq -r '.execution_order[]')
+
+  for dep in $ORDER; do
+    echo "Building $dep..."
+    r2r eac build $dep || exit 1
+  done
+done
+```
+
+## Common Issues
+
+### Invalid JSON Output
+
+**Problem**: `jq` reports invalid JSON
+
+**Solution**: Check command exit code and stderr
+
+```bash
+if ! OUTPUT=$(r2r eac get modules 2>&1); then
+  echo "Command failed: $OUTPUT"
+  exit 1
+fi
+
+if ! echo "$OUTPUT" | jq empty 2>/dev/null; then
+  echo "Invalid JSON output"
+  exit 1
+fi
+```
+
+### Empty Output
+
+**Problem**: Command returns `{}`
+
+**Solution**: Verify repository state
+
+```bash
+# Check if modules exist
+TOTAL=$(r2r eac get modules | jq '.modules | length')
+if [ "$TOTAL" -eq 0 ]; then
+  echo "No modules found in repository"
+fi
+```
+
+### Performance Issues
+
+**Problem**: `get files` too slow
+
+**Solution**: Use alternatives or cache
+
+```bash
+# Avoid: Calling get files repeatedly
+for module in $(r2r eac get modules | jq -r '.modules[].moniker'); do
+  r2r eac get files | jq ".files[] | select(.module == \"$module\")"
+done
+
+# Better: Cache once
+r2r eac get files > files.json
+for module in $(r2r eac get modules | jq -r '.modules[].moniker'); do
+  jq ".files[] | select(.module == \"$module\")" files.json
+done
+
+# Best: Use get modules (includes file counts)
+r2r eac get modules | jq '.modules[] | "\(.moniker): \(.files) files"'
+```
+
+## See Also
+
+- [Show Commands](./show.md) - Human-readable output
+- [Output Formats](../overview/output-formats.md) - JSON vs formatted
+- [Command Taxonomy](../overview/command-taxonomy.md) - Command organization
+
+{{ diataxis_footer() }}

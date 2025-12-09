@@ -1,0 +1,7 @@
+title: Quality and Validation
+nav:
+  - index.md
+  - validate-before-commit.md
+  - scan-for-security-issues.md
+  - check-dependencies.md
+  - validate-specifications.md
