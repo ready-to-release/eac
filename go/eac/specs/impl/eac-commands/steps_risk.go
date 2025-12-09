@@ -110,8 +110,8 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
-		// Create minimal modules.yml (isolation copies real one with all modules)
-		modulesYml := fmt.Sprintf(`modules:
+		// Create minimal repository.yml (isolation copies real one with all modules)
+		repositoryYml := fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
     type: go
@@ -119,9 +119,9 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
     files:
       root: .
 `, module, module)
-		modulesYmlPath := filepath.Join(".r2r", "eac", "modules.yml")
-		if err := internal.CreateFile(ctx, modulesYmlPath, modulesYml); err != nil {
-			return fmt.Errorf("failed to create modules.yml: %w", err)
+		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
+		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
+			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
 
 		// Create module contract
@@ -162,8 +162,8 @@ paths:
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
-		// Create minimal modules.yml (isolation copies real one with all modules)
-		modulesYml := fmt.Sprintf(`modules:
+		// Create minimal repository.yml (isolation copies real one with all modules)
+		repositoryYml := fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
     type: go
@@ -171,9 +171,9 @@ paths:
     files:
       root: .
 `, module, module)
-		modulesYmlPath := filepath.Join(".r2r", "eac", "modules.yml")
-		if err := internal.CreateFile(ctx, modulesYmlPath, modulesYml); err != nil {
-			return fmt.Errorf("failed to create modules.yml: %w", err)
+		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
+		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
+			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
 
 		// Create module contract
@@ -234,19 +234,19 @@ paths:
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
-		// Create modules.yml with only test modules (isolation copies real one with all modules)
-		modulesYml := "modules:\n"
+		// Create repository.yml with only test modules (isolation copies real one with all modules)
+		repositoryYml := "modules:\n"
 		for _, module := range modules {
-			modulesYml += "  - moniker: " + module + "\n"
-			modulesYml += "    name: Test Module " + module + "\n"
-			modulesYml += "    type: service\n"
-			modulesYml += "    description: Test module\n"
-			modulesYml += "    files:\n"
-			modulesYml += "      root: .\n"
+			repositoryYml += "  - moniker: " + module + "\n"
+			repositoryYml += "    name: Test Module " + module + "\n"
+			repositoryYml += "    type: service\n"
+			repositoryYml += "    description: Test module\n"
+			repositoryYml += "    files:\n"
+			repositoryYml += "      root: .\n"
 		}
-		modulesYmlPath := filepath.Join(".r2r", "eac", "modules.yml")
-		if err := internal.CreateFile(ctx, modulesYmlPath, modulesYml); err != nil {
-			return fmt.Errorf("failed to create modules.yml: %w", err)
+		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
+		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
+			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
 
 		// Create module contracts (for backward compatibility)
@@ -288,19 +288,19 @@ paths:
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
-		// Create modules.yml with only test modules (isolation copies real one with all modules)
-		modulesYml := "modules:\n"
+		// Create repository.yml with only test modules (isolation copies real one with all modules)
+		repositoryYml := "modules:\n"
 		for _, module := range modules {
-			modulesYml += "  - moniker: " + module + "\n"
-			modulesYml += "    name: Test Module " + module + "\n"
-			modulesYml += "    type: service\n"
-			modulesYml += "    description: Test module\n"
-			modulesYml += "    files:\n"
-			modulesYml += "      root: .\n"
+			repositoryYml += "  - moniker: " + module + "\n"
+			repositoryYml += "    name: Test Module " + module + "\n"
+			repositoryYml += "    type: service\n"
+			repositoryYml += "    description: Test module\n"
+			repositoryYml += "    files:\n"
+			repositoryYml += "      root: .\n"
 		}
-		modulesYmlPath := filepath.Join(".r2r", "eac", "modules.yml")
-		if err := internal.CreateFile(ctx, modulesYmlPath, modulesYml); err != nil {
-			return fmt.Errorf("failed to create modules.yml: %w", err)
+		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
+		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
+			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
 
 		// Create module contracts (for backward compatibility)

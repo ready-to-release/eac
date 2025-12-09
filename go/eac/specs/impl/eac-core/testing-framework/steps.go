@@ -337,9 +337,9 @@ func copyConfigFiles(repoRoot, tempRoot string) error {
 	}
 
 	// Copy essential config files
+	// Note: Modules are defined in repository.yml (unified config)
 	configFiles := []string{
 		"repository.yml",
-		"modules.yml",
 		"module-types.yml",
 		"testing-tags.yml",
 		"test-suites.yml",

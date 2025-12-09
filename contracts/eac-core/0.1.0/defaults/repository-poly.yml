@@ -1,0 +1,24 @@
+# Type-specific defaults for polyrepo architecture
+# Merged on top of base repository.yml defaults when repository.type = "poly"
+#
+# Merge order: base defaults → type-specific defaults → user config
+# User values always win over these defaults.
+#
+# Note: Base defaults are already optimized for polyrepos, so this file
+# contains minimal overrides. It exists for completeness and to allow
+# future poly-specific customizations.
+
+repository:
+  # Polyrepos can be more aggressive with branch age since changes
+  # are typically isolated to a single module/service
+  max_branch_age_days: 2
+
+  # Standard PR configuration
+  pr:
+    merge_strategy: squash
+    delete_branch_on_merge: true
+
+  # Polyrepos often release independently and can have more relaxed
+  # versioning since there are no cross-module dependencies to manage
+  versioning:
+    constraint: unrestricted

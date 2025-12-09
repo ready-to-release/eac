@@ -127,7 +127,7 @@ func SetupMultiModuleConfig(ctx *TestContext, module1Name, module1Path, module2N
 // This combines EAC configuration setup with module source file creation.
 //
 // Creates:
-//   - .r2r/eac/modules.yml with the module definition
+//   - .r2r/eac/repository.yml with the module definition
 //   - .r2r/eac/module-types.yml with go type
 //   - Module directory with Go source file
 //   - Optionally stages all files in git
@@ -172,7 +172,8 @@ func SetupTwoGoModulesWithEAC(ctx *TestContext, module1, module2 string, stage b
 // Individual Config File Helpers
 // ============================================================================
 
-// CreateModulesYml creates only the modules.yml file with a single module.
+// CreateModulesYml creates module definitions in repository.yml.
+// Note: Modules are now part of the unified repository.yml config.
 func CreateModulesYml(ctx *TestContext, moduleName, modulePath, moduleType string) error {
 	content := fmt.Sprintf(`modules:
   - moniker: %s
@@ -182,7 +183,7 @@ func CreateModulesYml(ctx *TestContext, moduleName, modulePath, moduleType strin
       root: %s
 `, moduleName, moduleName, moduleType, modulePath)
 
-	return CreateFile(ctx, ".r2r/eac/modules.yml", content)
+	return CreateFile(ctx, ".r2r/eac/repository.yml", content)
 }
 
 // CreateModuleTypesYml creates module-types.yml with the specified types.

@@ -310,22 +310,47 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 }
 
 // LoadRepository loads the repository-wide configuration.
-// Merges contract defaults with user config.
+// Merges contract defaults with type-specific defaults and user config.
+//
+// Merge order: base defaults → type-specific defaults → user config
+// User values always win over all defaults.
 func (c *EACConfig) LoadRepository(validateSchema bool) error {
-	// Load defaults from contract
+	// Step 1: Load base defaults from contract
 	defaults, err := LoadRepositoryDefaults(c.RepoRoot)
 	if err != nil {
 		return fmt.Errorf("loading repository defaults: %w", err)
 	}
 
-	// repository.yml is optional - check if it exists
+	// Step 2: Peek at user config to get repository type
+	// This determines which type-specific defaults to load
+	repoType, err := peekRepositoryType(c.ConfigRoot)
+	if err != nil {
+		return fmt.Errorf("detecting repository type: %w", err)
+	}
+
+	// If no user-specified type, use type from base defaults
+	if repoType == "" && defaults != nil {
+		repoType = defaults.Repository.Type
+	}
+
+	// Step 3: Load type-specific defaults (if they exist)
+	typeDefaults, err := LoadRepositoryTypeDefaults(c.RepoRoot, repoType)
+	if err != nil {
+		return fmt.Errorf("loading repository type defaults: %w", err)
+	}
+
+	// Step 4: Pre-merge base + type-specific defaults
+	mergedDefaults := MergeRepository(defaults, typeDefaults)
+
+	// Step 5: Check if user config exists
 	repoPath := filepath.Join(c.ConfigRoot, RepositoryFileName)
 	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
-		// Use defaults only
-		c.Repository = defaults
+		// Use merged defaults only
+		c.Repository = mergedDefaults
 		return nil
 	}
 
+	// Step 6: Validate schema if requested
 	if validateSchema {
 		data, err := c.readConfigFile(RepositoryFileName)
 		if err != nil {
@@ -336,13 +361,14 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 		}
 	}
 
+	// Step 7: Load user config (unmerged)
 	userCfg, err := loadRepositoryConfigUnmerged(c.RepoRoot)
 	if err != nil {
 		return err
 	}
 
-	// Merge defaults with user config
-	c.Repository = MergeRepository(defaults, userCfg)
+	// Step 8: Final merge: (base + type-specific) + user
+	c.Repository = MergeRepository(mergedDefaults, userCfg)
 	return nil
 }
 
