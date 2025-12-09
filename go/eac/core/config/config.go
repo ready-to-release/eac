@@ -835,6 +835,7 @@ func (c *EACConfig) filterArtifacts(artifacts []Artifact, buildAll bool) []Artif
 								Type:        artifact.Type,
 								Pattern:     artifact.Pattern,
 								Compression: artifact.Compression,
+								DeriveFrom:  artifact.DeriveFrom,
 								Platforms:   []string{os},
 							})
 						}

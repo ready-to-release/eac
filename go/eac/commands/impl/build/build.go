@@ -914,14 +914,15 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 	}
 
 	// Process artifact derivations (compression, etc.) if build succeeded
+	// Use merged artifacts from cfg.GetBuildArtifacts to ensure module-level takes priority
 	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		moduleTypeDef := cfg.ModuleTypes.Get(module.Type)
-		if moduleTypeDef != nil {
-			if err := ProcessArtifactDerivations(module.Moniker, moduleTypeDef, outputDir, opts.RequestedArtifacts, module.Metadata, logWriter); err != nil {
-				writeln(logWriter, "❌ Artifact derivation failed: %v", err)
-				return 1
-			}
+	if cfg != nil {
+		// Get merged artifacts (module-level takes priority over type-level)
+		// Pass buildAll=true to include all derived artifacts (UPX variants, etc.)
+		mergedArtifacts := cfg.GetBuildArtifacts(module.Moniker, true)
+		if err := ProcessArtifactDerivations(module.Moniker, mergedArtifacts, outputDir, opts.RequestedArtifacts, module.Metadata, logWriter); err != nil {
+			writeln(logWriter, "❌ Artifact derivation failed: %v", err)
+			return 1
 		}
 	}
 
@@ -1388,14 +1389,16 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 		return fmt.Errorf("module type not found: %s", moduleType)
 	}
 
-	// If no artifacts defined, nothing to validate
-	if moduleTypeDef.Build == nil || len(moduleTypeDef.Build.Artifacts) == 0 {
-		fmt.Fprintf(logWriter, "  ℹ️  No artifacts defined for this module type\n")
+	// Determine which artifacts were requested for this build
+	// This uses cfg.GetBuildArtifactIDs which correctly handles both module-level
+	// and type-level artifacts (module-level takes priority)
+	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, moduleTypeDef, buildAll, cfg)
+
+	// If no artifacts to validate, nothing to do
+	if len(requestedArtifacts) == 0 {
+		fmt.Fprintf(logWriter, "  ℹ️  No artifacts defined for this module\n")
 		return nil
 	}
-
-	// Determine which artifacts were requested for this build
-	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, moduleTypeDef, buildAll, cfg)
 
 	// Resolve and validate artifacts
 	// Note: BuildOutputPath returns a relative path, so we need to make it absolute
