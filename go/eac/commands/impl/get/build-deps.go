@@ -111,6 +111,11 @@ func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes 
 			depsSet[dep] = true
 		}
 
+		// Modules with books require docker for mkdocs builds
+		if len(module.Books) > 0 {
+			depsSet["docker"] = true
+		}
+
 		// Recurse into dependencies
 		for _, depMoniker := range module.DependsOn {
 			collect(depMoniker)

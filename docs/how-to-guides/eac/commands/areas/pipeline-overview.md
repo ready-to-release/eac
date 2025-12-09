@@ -84,7 +84,6 @@ modules:
   - moniker: eac-commands
     depends_on:
       - eac-core
-      - eac-ai
 
   - moniker: r2r-cli
     depends_on:
@@ -96,7 +95,7 @@ modules:
 Dependencies determine execution layers:
 
 ```text
-Layer 0: [eac-core, eac-ai]        # No dependencies
+Layer 0: [eac-core]                # No dependencies
     │
     ▼
 Layer 1: [eac-commands]            # Depends on Layer 0
@@ -118,11 +117,11 @@ Modules in the same layer run in parallel.
                     │eac-commands │
                     └──────┬──────┘
                            │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-        ┌─────────┐  ┌─────────┐  ┌─────────┐
-        │eac-core │  │ eac-ai  │  │eac-mcp  │
-        └─────────┘  └─────────┘  └─────────┘
+              ┌────────────┴────────────┐
+              ▼                         ▼
+        ┌─────────┐               ┌─────────┐
+        │eac-core │               │eac-mcp  │
+        └─────────┘               └─────────┘
 ```
 
 ### Pipeline Execution
@@ -229,7 +228,6 @@ r2r eac pipeline status
 # | Module        | Build  | Test   | Overall |
 # |---------------|--------|--------|---------|
 # | eac-core      | ✅     | ✅     | ✅      |
-# | eac-ai        | ✅     | ✅     | ✅      |
 # | eac-commands  | ✅     | ⏳     | ⏳      |
 # | r2r-cli       | ⏳     | -      | ⏳      |
 #
@@ -303,12 +301,12 @@ r2r eac pipeline ci summary-link $RUN_ID --type build
 r2r eac get execution order r2r-cli
 
 # Output:
-# Layer 0: eac-core, eac-ai
+# Layer 0: eac-core
 # Layer 1: eac-commands
 # Layer 2: r2r-cli
 
 # Run specific layers
-r2r eac build eac-core eac-ai       # Layer 0
+r2r eac build eac-core              # Layer 0
 r2r eac build eac-commands          # Layer 1
 r2r eac build r2r-cli               # Layer 2
 ```

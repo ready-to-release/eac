@@ -8,7 +8,6 @@ workspace "EAC Core Library" "Core domain libraries for contracts, repository op
         # Dependents (modules that depend on eac-core per contracts)
         eac_commands = softwareSystem "EAC Commands" "CLI command implementations" "Dependent"
         eac_mcp_commands = softwareSystem "EAC MCP Commands" "MCP server for commands" "Dependent"
-        eac_specs = softwareSystem "EAC Specs" "Shared BDD test infrastructure" "Dependent"
         r2r_cli = softwareSystem "R2R CLI" "Containerized workflow CLI" "Dependent"
         repository_mod = softwareSystem "Repository Module" "Repository validation rules" "Dependent"
         scripts_cli_installer = softwareSystem "Scripts CLI Installer" "CLI installer scripts" "Dependent"
@@ -116,7 +115,6 @@ workspace "EAC Core Library" "Core domain libraries for contracts, repository op
         # Dependent relationships (modules that import eac-core per contracts)
         eac_commands -> eac_core "Uses core libraries" "Go Import"
         eac_mcp_commands -> eac_core "Uses repository utilities" "Go Import"
-        eac_specs -> eac_core "Uses test utilities" "Go Import"
         r2r_cli -> eac_core "Uses repository discovery" "Go Import"
         repository_mod -> eac_core "Uses validation libraries" "Go Import"
         scripts_cli_installer -> eac_core "Uses installer utilities" "Go Import"

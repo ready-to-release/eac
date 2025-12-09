@@ -96,7 +96,7 @@ func loadAndValidateModule(workspaceRoot, moniker string, cfg *config.EACConfig,
 	result.SchemaValid = true
 
 	// Validate artifacts exist on disk
-	missingArtifacts := validateArtifactsExist(workspaceRoot, manifest)
+	missingArtifacts := validateArtifactsExist(moduleBuildDir, manifest)
 	result.MissingArtifacts = missingArtifacts
 	result.ArtifactsValid = len(missingArtifacts) == 0
 
@@ -108,12 +108,12 @@ func loadAndValidateModule(workspaceRoot, moniker string, cfg *config.EACConfig,
 }
 
 // validateArtifactsExist checks that all artifacts in the manifest exist on disk
-func validateArtifactsExist(workspaceRoot string, manifest *ModuleManifest) []string {
+func validateArtifactsExist(buildDir string, manifest *ModuleManifest) []string {
 	var missing []string
 
 	for _, artifact := range manifest.Artifacts {
-		// Path in manifest is relative to workspace root
-		artifactPath := filepath.Join(workspaceRoot, artifact.Path)
+		// Path in manifest is relative to module build directory
+		artifactPath := filepath.Join(buildDir, artifact.Path)
 
 		// Normalize path separators
 		artifactPath = filepath.FromSlash(artifactPath)
@@ -167,7 +167,7 @@ func IsManifestUpToDate(workspaceRoot string, moniker string, cfg *config.EACCon
 	}
 
 	// Check artifacts exist
-	missing := validateArtifactsExist(workspaceRoot, manifest)
+	missing := validateArtifactsExist(moduleBuildDir, manifest)
 	if len(missing) > 0 {
 		return false, fmt.Sprintf("missing artifacts: %v", missing)
 	}
