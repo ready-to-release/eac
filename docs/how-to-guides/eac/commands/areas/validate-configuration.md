@@ -58,7 +58,7 @@ modules:
         - "go.mod"
         - "go.sum"
     depends_on:
-      - eac-config
+      - ai-provider
 ```
 
 ### Supported Module Types

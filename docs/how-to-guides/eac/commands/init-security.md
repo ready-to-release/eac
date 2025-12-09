@@ -109,13 +109,13 @@ This guide covers security best practices for managing API keys and configuring 
 
 ```bash
 # Add to .gitignore BEFORE initializing
-echo ".r2r/eac/eac-config.yml" >> .gitignore
+echo ".r2r/eac/ai-provider.yml" >> .gitignore
 
 # Verify it's not tracked
 git status .r2r/
 
 # If accidentally committed, remove from history
-git rm --cached .r2r/eac/eac-config.yml
+git rm --cached .r2r/eac/ai-provider.yml
 git commit -m "Remove sensitive config file"
 ```
 
@@ -214,10 +214,10 @@ export ANTHROPIC_API_KEY="sk-ant-api03-prod-..."
 
 ```bash
 # Check if config file is tracked by git
-git ls-files .r2r/eac/eac-config.yml
+git ls-files .r2r/eac/ai-provider.yml
 
 # If tracked, remove it
-git rm --cached .r2r/eac/eac-config.yml
+git rm --cached .r2r/eac/ai-provider.yml
 
 # Check git history for exposed keys
 git log -p | grep -i "api.*key"
@@ -260,7 +260,7 @@ eac init --ai claude-api
 
 ```bash
 # 1. Add .gitignore rule (if not already present)
-echo ".r2r/eac/eac-config.yml" >> .gitignore
+echo ".r2r/eac/ai-provider.yml" >> .gitignore
 git add .gitignore
 git commit -m "Ensure AI config is ignored"
 
@@ -367,7 +367,7 @@ Use this checklist when setting up AI provider configuration:
 
 - [ ] Generated API key from provider dashboard
 - [ ] Stored key in password manager or secure location
-- [ ] Added `.r2r/eac/eac-config.yml` to `.gitignore`
+- [ ] Added `.r2r/eac/ai-provider.yml` to `.gitignore`
 - [ ] Set environment variable (not hardcoded)
 - [ ] Ran `eac init --ai <provider>`
 - [ ] Verified configuration file is not tracked by git

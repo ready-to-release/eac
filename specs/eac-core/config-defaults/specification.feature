@@ -8,6 +8,8 @@ Feature: Configuration Defaults System
   The EAC configuration system loads defaults from contracts/eac-core/0.1.0/defaults/*.yml
   and merges them with user config from .r2r/eac/*.yml. User values override defaults.
 
+  Note: Modules are defined in repository.yml (not a separate modules.yml file).
+
   Background:
     Given I am in an isolated test repository
 
@@ -40,7 +42,7 @@ Feature: Configuration Defaults System
       Then the modules config contains module "default"
       And the repository paths.specs_root is "specs"
 
-    Scenario: A3 - Missing modules.yml uses default module
+    Scenario: A3 - Missing modules in repository.yml uses default module
       Given the repository has file ".r2r/eac/module-types.yml" with:
         """
         types:
@@ -54,7 +56,7 @@ Feature: Configuration Defaults System
       And the module types config contains type "go"
 
     Scenario: A4 - Missing module-types.yml uses default types
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: myapp
@@ -68,8 +70,8 @@ Feature: Configuration Defaults System
       And the module types config contains type "go"
       And the module types config contains type "container"
 
-    Scenario: A5 - Missing repository.yml uses default paths
-      Given the repository has file ".r2r/eac/modules.yml" with:
+    Scenario: A5 - Repository with modules only uses default paths
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: myapp
@@ -84,7 +86,7 @@ Feature: Configuration Defaults System
       And the repository paths.out.test is "out/test"
 
     Scenario: A6 - Missing system-dependencies.yml uses default deps
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: myapp
@@ -104,8 +106,8 @@ Feature: Configuration Defaults System
 
   Rule: User can provide complete config without needing defaults
 
-    Scenario: B1 - User provides complete modules.yml
-      Given the repository has file ".r2r/eac/modules.yml" with:
+    Scenario: B1 - User provides complete module list in repository.yml
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: app1
@@ -124,9 +126,17 @@ Feature: Configuration Defaults System
       And the modules config contains module "app2"
       And the modules config does not contain module "default"
 
-    Scenario: B2 - User provides all four config files
-      Given the repository has file ".r2r/eac/modules.yml" with:
+    Scenario: B2 - User provides all config files
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
+        repository:
+          type: poly
+        paths:
+          specs_root: features
+          test_impl_root: impl
+          out:
+            root: dist
+            build: dist/build
         modules:
           - moniker: myapp
             name: My App
@@ -140,17 +150,6 @@ Feature: Configuration Defaults System
           - name: custom
             description: Custom type
             capabilities: [custom_cap]
-        """
-      And the repository has file ".r2r/eac/repository.yml" with:
-        """
-        repository:
-          type: poly
-        paths:
-          specs_root: features
-          test_impl_root: impl
-          out:
-            root: dist
-            build: dist/build
         """
       And the repository has file ".r2r/eac/system-dependencies.yml" with:
         """
@@ -235,10 +234,14 @@ Feature: Configuration Defaults System
     Scenario: D1 - Override specs_root only
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
-        repository:
-          type: poly
         paths:
           specs_root: features
+        modules:
+          - moniker: myapp
+            name: My App
+            type: go
+            files:
+              root: app
         """
       When I load the EAC configuration
       Then the repository paths.specs_root is "features"
@@ -248,10 +251,14 @@ Feature: Configuration Defaults System
     Scenario: D2 - Override test_impl_root only
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
-        repository:
-          type: poly
         paths:
           test_impl_root: test-implementations
+        modules:
+          - moniker: myapp
+            name: My App
+            type: go
+            files:
+              root: app
         """
       When I load the EAC configuration
       Then the repository paths.specs_root is "specs"
@@ -260,11 +267,15 @@ Feature: Configuration Defaults System
     Scenario: D3 - Override out.build only
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
-        repository:
-          type: poly
         paths:
           out:
             build: build/output
+        modules:
+          - moniker: myapp
+            name: My App
+            type: go
+            files:
+              root: app
         """
       When I load the EAC configuration
       Then the repository paths.out.build is "build/output"
@@ -273,14 +284,18 @@ Feature: Configuration Defaults System
     Scenario: D4 - Override all out paths
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
-        repository:
-          type: poly
         paths:
           out:
             root: dist
             build: dist/build
             test: dist/test
             logs: dist/logs
+        modules:
+          - moniker: myapp
+            name: My App
+            type: go
+            files:
+              root: app
         """
       When I load the EAC configuration
       Then the repository paths.out.root is "dist"
@@ -295,7 +310,7 @@ Feature: Configuration Defaults System
   Rule: Type-specific defaults are applied to modules
 
     Scenario: E1 - Module gets type default source patterns
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: mylib
@@ -309,7 +324,7 @@ Feature: Configuration Defaults System
       Then the module "mylib" has source patterns containing "**/*.go"
 
     Scenario: E2 - User source patterns are not overridden
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: mylib
@@ -325,7 +340,7 @@ Feature: Configuration Defaults System
       And the module "mylib" does not have source pattern "**/*.go"
 
     Scenario: E3 - Container type gets default assets pattern
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: mycontainer
@@ -339,7 +354,7 @@ Feature: Configuration Defaults System
       Then the module "mycontainer" has assets patterns containing "Dockerfile"
 
     Scenario: E4 - User changelog overrides type default
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: mylib
@@ -360,9 +375,6 @@ Feature: Configuration Defaults System
           type: poly
         paths:
           specs_root: features
-        """
-      And the repository has file ".r2r/eac/modules.yml" with:
-        """
         modules:
           - moniker: mylib
             name: My Library
@@ -375,7 +387,7 @@ Feature: Configuration Defaults System
       Then the module "mylib" specs pattern resolves with "features"
 
     Scenario: E6 - Type defaults resolve {moniker} variable
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: mylib
@@ -458,7 +470,7 @@ Feature: Configuration Defaults System
     # NOTE: Schema requires at least 1 module (minItems: 1), so empty list is invalid.
     # This tests that schema validation correctly rejects empty modules.
     Scenario: H1 - Empty modules list in user config fails validation
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules: []
         """
@@ -468,7 +480,7 @@ Feature: Configuration Defaults System
     # NOTE: When type is not specified, applyDefaults() sets it to "no-module-type"
     # to clearly indicate the module type is not configured. This is intentional.
     Scenario: H2 - Module missing type field gets placeholder type
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: myapp
@@ -480,7 +492,7 @@ Feature: Configuration Defaults System
       Then the module "myapp" has type "no-module-type"
 
     Scenario: H3 - Module missing description defaults to name
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: myapp
@@ -493,7 +505,7 @@ Feature: Configuration Defaults System
       Then the module "myapp" has description "My Application"
 
     Scenario: H4 - Invalid YAML returns error
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: myapp
@@ -503,7 +515,7 @@ Feature: Configuration Defaults System
       Then an error is returned containing "yaml"
 
     Scenario: H5 - Module with unknown type loads without type defaults
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: myapp
@@ -517,7 +529,7 @@ Feature: Configuration Defaults System
       And the module "myapp" has no source patterns from type defaults
 
     Scenario: H6 - Very long module name is handled
-      Given the repository has file ".r2r/eac/modules.yml" with:
+      Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
           - moniker: this-is-a-very-long-module-moniker-name

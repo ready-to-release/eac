@@ -27,7 +27,7 @@ Feature: eac-commands_init
 
   Rule: Init creates .r2r/eac directory structure
     The init command must create the necessary directory structure
-    for storing configuration at .r2r/eac/eac-config.yml.
+    for storing configuration at .r2r/eac/ai-provider.yml.
 
     Scenario: Init creates .r2r directory
       Given no .r2r directory exists
@@ -37,39 +37,39 @@ Feature: eac-commands_init
 
     Scenario: Init works when .r2r directory already exists
       Given a .r2r directory already exists
-      And no .r2r/eac/eac-config.yml file exists
+      And no .r2r/eac/ai-provider.yml file exists
       When I run "init --ai claude-api"
       Then the command exits with code 0
-      And a .r2r/eac/eac-config.yml file is created
+      And a .r2r/eac/ai-provider.yml file is created
 
-  Rule: Init writes valid eac-config.yml to .r2r/eac
+  Rule: Init writes valid ai-provider.yml to .r2r/eac
     The generated configuration file must be valid YAML and contain
     environment variable references (not actual secrets).
-    Config is stored at .r2r/eac/eac-config.yml.
+    Config is stored at .r2r/eac/ai-provider.yml.
 
     Scenario: Init creates valid config for claude-api
       Given no .r2r directory exists
       When I run "init --ai claude-api"
-      Then a .r2r/eac/eac-config.yml file is created
-      And the .r2r/eac/eac-config.yml file contains "provider: claude-api"
-      And the .r2r/eac/eac-config.yml file contains "model: claude-3-haiku-20240307"
-      And the .r2r/eac/eac-config.yml file contains "api_key: ${ANTHROPIC_API_KEY}"
+      Then a .r2r/eac/ai-provider.yml file is created
+      And the .r2r/eac/ai-provider.yml file contains "provider: claude-api"
+      And the .r2r/eac/ai-provider.yml file contains "model: claude-3-haiku-20240307"
+      And the .r2r/eac/ai-provider.yml file contains "api_key: ${ANTHROPIC_API_KEY}"
 
     Scenario: Init creates valid config for gemini
       Given no .r2r directory exists
       When I run "init --ai gemini"
-      Then a .r2r/eac/eac-config.yml file is created
-      And the .r2r/eac/eac-config.yml file contains "provider: gemini"
-      And the .r2r/eac/eac-config.yml file contains "model: gemini-1.5-pro"
-      And the .r2r/eac/eac-config.yml file contains "api_key: ${GOOGLE_API_KEY}"
+      Then a .r2r/eac/ai-provider.yml file is created
+      And the .r2r/eac/ai-provider.yml file contains "provider: gemini"
+      And the .r2r/eac/ai-provider.yml file contains "model: gemini-1.5-pro"
+      And the .r2r/eac/ai-provider.yml file contains "api_key: ${GOOGLE_API_KEY}"
 
     Scenario: Init creates valid config for openai
       Given no .r2r directory exists
       When I run "init --ai openai"
-      Then a .r2r/eac/eac-config.yml file is created
-      And the .r2r/eac/eac-config.yml file contains "provider: openai"
-      And the .r2r/eac/eac-config.yml file contains "model: gpt-4-turbo"
-      And the .r2r/eac/eac-config.yml file contains "api_key: ${OPENAI_API_KEY}"
+      Then a .r2r/eac/ai-provider.yml file is created
+      And the .r2r/eac/ai-provider.yml file contains "provider: openai"
+      And the .r2r/eac/ai-provider.yml file contains "model: gpt-4-turbo"
+      And the .r2r/eac/ai-provider.yml file contains "api_key: ${OPENAI_API_KEY}"
 
     Scenario: Init shows helpful provider information
       Given no .r2r directory exists
@@ -80,15 +80,15 @@ Feature: eac-commands_init
       And the command exits with code 0
 
     Scenario: Reinitializing requires --force flag
-      Given a .r2r/eac/eac-config.yml file exists with claude-api
+      Given a .r2r/eac/ai-provider.yml file exists with claude-api
       When I run "init --ai openai"
       Then the command exits with code 1
       And stdout contains "Configuration already exists"
       And stdout contains "Use --force to overwrite existing config"
 
     Scenario: Reinitializing with --force overwrites existing config
-      Given a .r2r/eac/eac-config.yml file exists with claude-api
+      Given a .r2r/eac/ai-provider.yml file exists with claude-api
       When I run "init --ai openai --force"
       Then stdout contains "Overwriting existing configuration"
-      And the .r2r/eac/eac-config.yml file contains "provider: openai"
+      And the .r2r/eac/ai-provider.yml file contains "provider: openai"
       And the command exits with code 0

@@ -22,7 +22,7 @@ const (
 	SchemaTestSuites         SchemaType = "test-suites"
 	SchemaSystemDependencies SchemaType = "system-dependencies"
 	SchemaRepository         SchemaType = "repository"
-	SchemaEACConfig          SchemaType = "eac-config"
+	SchemaEACConfig          SchemaType = "ai-provider"
 	SchemaBooks              SchemaType = "books"
 	SchemaSecurityTools      SchemaType = "security-tools"
 )
@@ -35,7 +35,7 @@ var schemaFileNames = map[SchemaType]string{
 	SchemaTestSuites:         "test-suites.schema.json",
 	SchemaSystemDependencies: "system-dependencies.schema.json",
 	SchemaRepository:         "repository.schema.json",
-	SchemaEACConfig:          "eac-config.schema.json",
+	SchemaEACConfig:          "ai-provider.schema.json",
 	SchemaBooks:              "books.schema.json",
 	SchemaSecurityTools:      "security-tools.schema.json",
 }

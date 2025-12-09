@@ -202,7 +202,7 @@ func CommandsBinaryPathWithToolsDir(repoRoot string, toolsDir string) string {
 		oldPath := binaryPath + ".old"
 
 		// Atomic replacement: current -> .old, .new -> current, remove .old
-		os.Remove(oldPath)            // Clean up any stale .old
+		os.Remove(oldPath)             // Clean up any stale .old
 		os.Rename(binaryPath, oldPath) // Move current to .old (may fail if doesn't exist)
 		if err := os.Rename(newPath, binaryPath); err == nil {
 			os.Remove(oldPath) // Cleanup .old on success
@@ -375,12 +375,12 @@ func AITestMockPath(repoRoot string) string {
 
 // EACConfigFilePath returns the path to the main EAC configuration file
 func EACConfigFilePath(repoRoot string) string {
-	return filepath.Join(EACConfigPath(repoRoot), "eac-config.yml")
+	return filepath.Join(EACConfigPath(repoRoot), "ai-provider.yml")
 }
 
 // EACConfigPersonalFilePath returns the path to the personal EAC configuration file
 func EACConfigPersonalFilePath(repoRoot string) string {
-	return filepath.Join(EACConfigPath(repoRoot), "eac-config.personal.yml")
+	return filepath.Join(EACConfigPath(repoRoot), "ai-provider.personal.yml")
 }
 
 // EACLoggingConfigPath returns the path to the EAC logging configuration
@@ -492,7 +492,8 @@ func StagingAssetsPath(stagingDir string) string {
 
 // RenderedAssetsPath returns the path to rendered assets for a specific renderer
 // Examples: renderer="mermaid" -> staging/assets/rendered/mermaid
-//           renderer="drawio" -> staging/assets/rendered/drawio
+//
+//	renderer="drawio" -> staging/assets/rendered/drawio
 func RenderedAssetsPath(stagingDir, renderer string) string {
 	return filepath.Join(stagingDir, "assets", "rendered", renderer)
 }

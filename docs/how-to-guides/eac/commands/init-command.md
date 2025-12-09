@@ -71,7 +71,7 @@ eac init --ai claude-api
 
 ```text
 Initializing AI provider configuration...
-✓ Created configuration file: .r2r/eac/eac-config.yml
+✓ Created configuration file: .r2r/eac/ai-provider.yml
 ✓ Provider: claude-api
 ✓ API key: Found in environment variable ANTHROPIC_API_KEY
 
@@ -92,7 +92,7 @@ eac init --ai claude-cli
 
 ```text
 Initializing AI provider configuration...
-✓ Created configuration file: .r2r/eac/eac-config.yml
+✓ Created configuration file: .r2r/eac/ai-provider.yml
 ✓ Provider: claude-cli
 ✓ Using Claude Pro subscription (no API key required)
 
@@ -116,7 +116,7 @@ eac init --ai openai
 
 ```text
 Initializing AI provider configuration...
-✓ Created configuration file: .r2r/eac/eac-config.yml
+✓ Created configuration file: .r2r/eac/ai-provider.yml
 ✓ Provider: openai
 ✓ API key: Found in environment variable OPENAI_API_KEY
 
