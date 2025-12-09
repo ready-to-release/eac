@@ -113,23 +113,100 @@ runs:
           echo "results-artifact-path=out/test/" >> $GITHUB_OUTPUT
         fi
 
+    - name: Pre-Download Diagnostics
+      if: inputs.download-artifact == 'true'
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        ARTIFACT_NAME: ${{ steps.vars.outputs.build-artifact-name }}
+        DOWNLOAD_PATH: ${{ steps.vars.outputs.build-artifact-path }}
+      run: |
+        echo "=== Pre-Download Artifact Diagnostics ==="
+        echo "Module: $MODULE"
+        echo "Artifact name: $ARTIFACT_NAME"
+        echo "Download path: $DOWNLOAD_PATH"
+        echo "Current directory: $(pwd)"
+        echo ""
+
+        # Check if download path already exists
+        if [ -d "$DOWNLOAD_PATH" ]; then
+          echo "Download path exists with contents:"
+          find "$DOWNLOAD_PATH" -type f | head -10
+        else
+          echo "Download path does not exist yet (will be created)"
+        fi
+
     - name: Download Build Artifacts
+      id: download
       if: inputs.download-artifact == 'true'
       uses: actions/download-artifact@v6
       with:
         name: ${{ steps.vars.outputs.build-artifact-name }}
         path: ${{ steps.vars.outputs.build-artifact-path }}
 
-    - name: List Downloaded Artifacts (diagnostic)
+    - name: Post-Download Diagnostics
       if: inputs.download-artifact == 'true'
       shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        ARTIFACT_NAME: ${{ steps.vars.outputs.build-artifact-name }}
+        DOWNLOAD_PATH: ${{ steps.vars.outputs.build-artifact-path }}
       run: |
-        echo "=== Downloaded artifacts structure ==="
-        if [ -d "out/build" ]; then
-          find out/build -type f | head -50
-          echo "Total files: $(find out/build -type f | wc -l)"
+        echo "=== Post-Download Artifact Diagnostics ==="
+        echo "Module: $MODULE"
+        echo "Artifact name: $ARTIFACT_NAME"
+        echo "Download path: $DOWNLOAD_PATH"
+        echo ""
+
+        if [ ! -d "$DOWNLOAD_PATH" ]; then
+          echo "❌ ERROR: Download path does not exist after download!"
+          echo "Listing current directory:"
+          ls -la
+          exit 1
+        fi
+
+        echo "Directory structure after download:"
+        find "$DOWNLOAD_PATH" -type d | head -20
+        echo ""
+
+        echo "All downloaded files:"
+        find "$DOWNLOAD_PATH" -type f
+        echo ""
+
+        echo "Total files: $(find "$DOWNLOAD_PATH" -type f | wc -l)"
+        echo "Total size: $(du -sh "$DOWNLOAD_PATH" | cut -f1)"
+        echo ""
+
+        # Check for manifest files
+        echo "Manifest files found:"
+        find "$DOWNLOAD_PATH" -name "build.manifest.json" -type f
+        MANIFEST_COUNT=$(find "$DOWNLOAD_PATH" -name "build.manifest.json" -type f | wc -l)
+        echo "Found $MANIFEST_COUNT manifest file(s)"
+        echo ""
+
+        # Verify module manifest specifically
+        MODULE_MANIFEST="$DOWNLOAD_PATH/$MODULE/build.manifest.json"
+        if [ -f "$MODULE_MANIFEST" ]; then
+          echo "✓ Module manifest exists: $MODULE_MANIFEST"
+          echo "  Size: $(stat -c%s "$MODULE_MANIFEST" 2>/dev/null || stat -f%z "$MODULE_MANIFEST" 2>/dev/null) bytes"
+          echo "  First 5 lines:"
+          head -5 "$MODULE_MANIFEST"
         else
-          echo "WARNING: out/build directory does not exist after download!"
+          echo "❌ ERROR: Module manifest missing: $MODULE_MANIFEST"
+          echo ""
+          echo "Contents of $DOWNLOAD_PATH:"
+          ls -la "$DOWNLOAD_PATH"
+          echo ""
+          echo "Looking for $MODULE directory:"
+          if [ -d "$DOWNLOAD_PATH/$MODULE" ]; then
+            echo "Contents of $DOWNLOAD_PATH/$MODULE/:"
+            ls -la "$DOWNLOAD_PATH/$MODULE/"
+          else
+            echo "Directory $DOWNLOAD_PATH/$MODULE/ does not exist"
+            echo ""
+            echo "Available subdirectories in $DOWNLOAD_PATH:"
+            ls -d "$DOWNLOAD_PATH"/*/ 2>/dev/null || echo "  (none)"
+          fi
         fi
 
     - name: Run Test Suites
