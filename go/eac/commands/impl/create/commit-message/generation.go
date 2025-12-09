@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
-	"github.com/ready-to-release/eac/go/eac/ai"
-	"github.com/ready-to-release/eac/go/eac/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/paths"

@@ -38,6 +38,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 var assessLog = logging.C()
@@ -89,7 +90,7 @@ func CreateRiskAssess() int {
 
 	// Initialize timestamp and output directory for this assessment run
 	config.Timestamp = time.Now().Format("2006-01-02T15-04-05")
-	config.OutputDir = filepath.Join(config.WorkspaceRoot, "out", "risk", config.Timestamp)
+	config.OutputDir = filepath.Join(paths.RiskOutputPath(config.WorkspaceRoot, config.Timestamp))
 
 	// Ensure output directory exists
 	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
@@ -633,7 +634,7 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 	oscal.AddResult(aggregateAR, aggregateResult)
 
 	// Write to file
-	outputPath := filepath.Join(config.WorkspaceRoot, "out", "risk", "assessment-results-aggregate.json")
+	outputPath := filepath.Join(paths.RiskOutputPath(config.WorkspaceRoot, ""), "assessment-results-aggregate.json")
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}

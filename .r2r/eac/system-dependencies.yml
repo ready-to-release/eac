@@ -1,53 +1,18 @@
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/system-dependencies.schema.json
+#
+# Project-specific system dependency overrides
+# Base dependencies (go, git, docker, npm, gh-cli, curl) loaded from contract defaults
+#
 dependencies:
+  # Override: pin to specific Go version for this project
   - moniker: go
-    name: "Go"
-    description: "Go programming language compiler and toolchain"
     version: "1.24.4"
-    verify:
-      command: "go version"
-      pattern: "go version go(\\d+\\.\\d+\\.\\d+)"
 
-  - moniker: docker
-    name: "Docker"
-    description: "Container runtime for building and running containers"
-    version: "20.10"
-    verify:
-      command: "docker info"
-      pattern: "Server Version: (\\d+\\.\\d+)"
-
-  - moniker: docker-build
-    name: "Docker Buildx"
-    description: "Docker buildx for multi-platform container image builds (includes Buildx + QEMU)"
-    version: "0.10"
-    verify:
-      command: "docker buildx version"
-      pattern: "github.com/docker/buildx v(\\d+\\.\\d+)"
-
+  # Override: require Node.js 20+
   - moniker: npm
-    name: "Node.js"
-    description: "JavaScript runtime providing npm package manager"
     version: "20.0"
-    verify:
-      command: "node --version"
-      pattern: "v(\\d+\\.\\d+)"
 
-  - moniker: git
-    name: "Git"
-    description: "Distributed version control system"
-    version: "2.30"
-    verify:
-      command: "git --version"
-      pattern: "git version (\\d+\\.\\d+)"
-
-  - moniker: gh-cli
-    name: "GitHub CLI"
-    description: "GitHub command-line interface"
-    version: "2.0"
-    verify:
-      command: "gh --version"
-      pattern: "gh version (\\d+\\.\\d+)"
-
+  # Project-specific: Azure CLI for cloud deployments
   - moniker: az-cli
     name: "Azure CLI"
     description: "Azure command-line interface"
@@ -56,14 +21,7 @@ dependencies:
       command: "az --version"
       pattern: "azure-cli\\s+(\\d+\\.\\d+)"
 
-  - moniker: curl
-    name: "cURL"
-    description: "Command-line tool for transferring data with URLs"
-    version: "7.0"
-    verify:
-      command: "curl --version"
-      pattern: "curl (\\d+\\.\\d+)"
-
+  # Project-specific: UPX for binary compression
   - moniker: upx
     name: "UPX"
     description: "Ultimate Packer for eXecutables - binary compression tool"

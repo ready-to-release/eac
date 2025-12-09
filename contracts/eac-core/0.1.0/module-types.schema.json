@@ -21,7 +21,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Module type name (e.g., go-cli, mkdocs-site)",
+          "description": "Module type name (e.g., go, container, typescript, static)",
           "pattern": "^[a-z][a-z0-9-]*$"
         },
         "description": {
@@ -30,7 +30,7 @@
         },
         "build_deps": {
           "type": "array",
-          "description": "System dependencies required for building this module type. References monikers from system-dependencies.yml",
+          "description": "Explicit system dependencies",
           "items": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9-]*$"
@@ -39,7 +39,7 @@
         },
         "capabilities": {
           "type": "array",
-          "description": "List of capabilities this type has",
+          "description": "Capabilities that drive system dependency resolution and handler dispatch",
           "items": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9_-]*$"
@@ -65,7 +65,7 @@
           "description": "Default values applied to modules of this type"
         }
       },
-      "required": ["name", "build_deps"]
+      "required": ["name"]
     },
     "type_defaults": {
       "type": "object",

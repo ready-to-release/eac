@@ -347,14 +347,11 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
 
-	goModuleTypes := []string{"go-cli", "go-commands", "go-library", "go-mcp", "go-tests"}
 	for _, module := range moduleReport.Registry.All() {
-		for _, t := range goModuleTypes {
-			if module.Type == t {
-				modulePath := filepath.Join(c.repoRoot, module.Files.Root)
-				c.discoveredModules = append(c.discoveredModules, modulePath)
-				break
-			}
+		// In the unified type system, "go" is the only Go module type
+		if module.Type == "go" {
+			modulePath := filepath.Join(c.repoRoot, module.Files.Root)
+			c.discoveredModules = append(c.discoveredModules, modulePath)
 		}
 	}
 

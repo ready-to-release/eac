@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func init() {
@@ -33,7 +34,7 @@ func TestMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outp
 	Writeln(logWriter, "Suite: %s", suiteName)
 
 	// Check that the build output exists
-	buildOutputDir := filepath.Join(workspaceRoot, "out", "build", module.Moniker, "site")
+	buildOutputDir := filepath.Join(workspaceRoot, paths.OutBuildRelPath, module.Moniker, "site")
 	indexFile := filepath.Join(buildOutputDir, "index.html")
 
 	Writeln(logWriter, "Checking build output: %s", buildOutputDir)

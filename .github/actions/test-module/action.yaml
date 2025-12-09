@@ -109,7 +109,8 @@ runs:
         if [ -n "$INPUT_RESULTS_ARTIFACT_PATH" ]; then
           echo "results-artifact-path=$INPUT_RESULTS_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         else
-          echo "results-artifact-path=out/test/**/${MODULE}/**" >> $GITHUB_OUTPUT
+          # Upload all test output - structured as out/test/<suite>/<module-path>/
+          echo "results-artifact-path=out/test/" >> $GITHUB_OUTPUT
         fi
 
     - name: Download Build Artifacts
@@ -128,13 +129,14 @@ runs:
         SUITES: ${{ inputs.suites }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
       run: |
-        # Split suites by comma and run each
+        # CI tests THIS module only:
+        # --retest: force full test run (no incremental detection, CI handles orchestration)
         test_failed=0
         IFS=',' read -ra SUITE_ARRAY <<< "$SUITES"
         for suite in "${SUITE_ARRAY[@]}"; do
           suite=$(echo "$suite" | xargs)  # trim whitespace
           echo "Running test suite: $suite"
-          if ! $COMMANDS test $MODULE --suite $suite $EXTRA_ARGS; then
+          if ! $COMMANDS test $MODULE --suite $suite --retest $EXTRA_ARGS; then
             test_failed=1
           fi
         done
@@ -149,7 +151,7 @@ runs:
       with:
         name: ${{ steps.vars.outputs.results-artifact-name }}
         path: ${{ steps.vars.outputs.results-artifact-path }}
-        if-no-files-found: warn
+        if-no-files-found: ignore
 
     - name: Test Summary
       if: always()

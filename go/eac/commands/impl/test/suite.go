@@ -63,7 +63,7 @@ func writeln(w io.Writer, format string, args ...interface{}) {
 // Returns the lock handle and nil error on success.
 // Returns nil and error if lock is already held (suite is running).
 func acquireSuiteLock(suiteName, workspaceRoot string, repoCfg *config.RepositoryConfig) (*flock.Flock, error) {
-	// Ensure out/test directory exists (parent directory for lock files)
+	// Ensure test output directory exists (parent directory for lock files)
 	testDir := filepath.Join(workspaceRoot, repoCfg.Paths.Out.Test)
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create test directory: %w", err)
@@ -263,12 +263,13 @@ func TestSuite() int {
 	// Codebase uses Unix-style paths throughout - normalize for path comparisons
 	workspaceRoot := filepath.ToSlash(workspaceRootNative)
 
-	// Load repository configuration for path resolution
-	repoCfg, err := config.LoadRepositoryConfig(workspaceRootNative)
+	// Load EAC config (properly merged with defaults) for path resolution
+	eacCfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Errorf("failed to load repository config: %v", err)
+		log.Errorf("failed to load EAC config: %v", err)
 		return 1
 	}
+	repoCfg := eacCfg.Repository
 
 	// Get the test suite
 	suite, err := testing.GetSuite(suiteName)
@@ -1428,7 +1429,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Reports are only generated for individual feature files in specs/
 		if relFeatureFile != "" {
 			// Set output directory for cucumber.json/junit.xml reports
-			// For feature files, this is the parent directory (e.g., "out/test/commit/eac-commands/")
+			// For feature files, this is the parent directory (e.g., paths.OutTestRelPath + "/commit/eac-commands/")
 			reportOutputDir := filepath.Dir(logFilePath)
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", reportOutputDir))
 

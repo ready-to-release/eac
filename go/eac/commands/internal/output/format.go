@@ -46,7 +46,7 @@ func SectionHeader(name string) string {
 // Parameters:
 //   - icon: Status icon (IconPass, IconFail, etc.)
 //   - name: Module or package name (truncated/padded to NameWidth)
-//   - typeStr: Type identifier (go, godog, go-cli, mkdocs, etc.)
+//   - typeStr: Type identifier (go, godog, container, typescript, static, etc.)
 //   - result: Result string (e.g., "12/12" for tests, empty string for builds)
 //   - duration: Time taken
 func ResultLine(icon, name, typeStr, result string, duration time.Duration) string {

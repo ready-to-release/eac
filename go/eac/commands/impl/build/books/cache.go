@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // AssetCache provides content-addressable caching for expensive operations
@@ -32,7 +34,7 @@ type MermaidCacheKey struct {
 // NewAssetCache creates a new asset cache rooted at workspace_root/out/cache
 func NewAssetCache(workspaceRoot string) *AssetCache {
 	return &AssetCache{
-		cacheRoot: filepath.Join(workspaceRoot, "out", "cache"),
+		cacheRoot: paths.CachePath(workspaceRoot),
 	}
 }
 
@@ -40,7 +42,7 @@ func NewAssetCache(workspaceRoot string) *AssetCache {
 // Returns: (cachePath, cacheHit)
 func (c *AssetCache) GetMermaid(key MermaidCacheKey) (string, bool) {
 	hash := c.hashMermaid(key)
-	cachePath := filepath.Join(c.cacheRoot, "mermaid", hash+".svg")
+	cachePath := paths.MermaidCachePath(c.cacheRoot, hash)
 
 	if _, err := os.Stat(cachePath); err == nil {
 		c.stats.MermaidHits++
@@ -54,7 +56,7 @@ func (c *AssetCache) GetMermaid(key MermaidCacheKey) (string, bool) {
 // PutMermaid stores a rendered SVG in the cache for future reuse
 func (c *AssetCache) PutMermaid(svgPath string, key MermaidCacheKey) error {
 	hash := c.hashMermaid(key)
-	cachePath := filepath.Join(c.cacheRoot, "mermaid", hash+".svg")
+	cachePath := paths.MermaidCachePath(c.cacheRoot, hash)
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {

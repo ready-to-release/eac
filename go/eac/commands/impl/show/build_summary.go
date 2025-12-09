@@ -14,6 +14,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func init() {
@@ -122,8 +123,11 @@ func buildMetricsSection(f *SummaryFormatter, module *config.Module, cfg *config
 	outputDir := filepath.Join("out", "build", module.Moniker)
 
 	// Get artifact definitions from module type contract
+	if cfg.ModuleTypes == nil {
+		return f.Section(Emoji("metrics")+" Build Output", "Module types not loaded")
+	}
 	moduleType := cfg.ModuleTypes.Get(module.Type)
-	if moduleType == nil || len(moduleType.Build.Artifacts) == 0 {
+	if moduleType == nil || moduleType.Build == nil || len(moduleType.Build.Artifacts) == 0 {
 		return f.Section(Emoji("metrics")+" Build Output", "No artifacts defined in contract")
 	}
 
@@ -199,10 +203,6 @@ func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 		// Show file size
 		return formatBytes(info.Size())
 
-	case config.ArtifactTypeMarker:
-		// Just show that it exists
-		return "✓"
-
 	case config.ArtifactTypeImage:
 		// Docker images - just confirm
 		return "Built"
@@ -255,7 +255,7 @@ func buildConfigSection(f *SummaryFormatter, module *config.Module, cfg *config.
 	}
 
 	// Output directory
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("out/build/%s", module.Moniker)))
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("%s/%s", paths.OutBuildRelPath, module.Moniker)))
 
 	return f.CollapsibleSection(Emoji("config")+" Build Configuration", configDetails)
 }

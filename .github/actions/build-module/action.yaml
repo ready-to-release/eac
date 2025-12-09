@@ -85,6 +85,57 @@ runs:
           echo "artifact-path=out/build/${MODULE}/**" >> $GITHUB_OUTPUT
         fi
 
+    - name: Download Dependency Artifacts
+      shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # Get module dependencies from contract
+        DEPS=$($COMMANDS get modules --as-json | jq -r ".[] | select(.moniker == \"$MODULE\") | .depends_on[]" 2>/dev/null || echo "")
+
+        if [ -z "$DEPS" ]; then
+          echo "No module dependencies to download"
+          exit 0
+        fi
+
+        # Get current commit SHA for same-trigger detection
+        CURRENT_SHA=$(git rev-parse HEAD)
+        echo "Current commit: $CURRENT_SHA"
+        echo "Downloading dependency artifacts..."
+        mkdir -p out/build
+
+        for dep in $DEPS; do
+          # Skip if already exists
+          if [ -d "out/build/$dep" ]; then
+            echo "  ✓ $dep: already exists"
+            continue
+          fi
+
+          # First: Check for successful run from CURRENT commit (same CI trigger)
+          # This ensures layer N gets fresh artifacts from layer N-1
+          CURRENT_RUN=$(gh run list -w "ci-$dep" -s success -L 5 --json databaseId,headSha \
+            | jq -r ".[] | select(.headSha == \"$CURRENT_SHA\") | .databaseId" | head -1 2>/dev/null || echo "")
+
+          if [ -n "$CURRENT_RUN" ]; then
+            echo "  ↓ $dep: downloading from current trigger (run $CURRENT_RUN)"
+            if gh run download "$CURRENT_RUN" -n "build-artifacts-$dep" -D out/build/ 2>/dev/null; then
+              continue
+            fi
+          fi
+
+          # Fallback: Use last successful run from any commit (incremental CI)
+          LAST_SUCCESS=$(gh run list -w "ci-$dep" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+
+          if [ -n "$LAST_SUCCESS" ]; then
+            echo "  ↓ $dep: downloading from previous CI (run $LAST_SUCCESS)"
+            gh run download "$LAST_SUCCESS" -n "build-artifacts-$dep" -D out/build/ 2>/dev/null || echo "    ⚠ download failed"
+          else
+            echo "  ⚠ $dep: no successful CI run found (will build from source if needed)"
+          fi
+        done
+
     - name: Build Module
       id: build
       shell: bash
@@ -93,7 +144,10 @@ runs:
         MODULE: ${{ inputs.module }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
       run: |
-        if $COMMANDS build $MODULE $EXTRA_ARGS; then
+        # CI builds THIS module only:
+        # --rebuild: force full build (CI was triggered, so build fresh)
+        # --use-existing-depm: use dependency artifacts from previous/current CI runs
+        if $COMMANDS build $MODULE --rebuild --use-existing-depm $EXTRA_ARGS; then
           echo "build-failed=0" >> $GITHUB_OUTPUT
         else
           echo "build-failed=1" >> $GITHUB_OUTPUT

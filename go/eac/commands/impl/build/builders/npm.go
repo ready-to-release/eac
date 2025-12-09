@@ -2,6 +2,7 @@
 package builders
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,33 +12,42 @@ import (
 )
 
 func init() {
-	// Register handler for "npm" build system
-	RegisterSystem("npm", BuildNpmModule)
-	RegisterSystemArtifacts("npm", ListNpmArtifacts)
+	RegisterHandler(&NpmHandler{})
 }
 
-// ListNpmArtifacts returns the artifacts that would be produced by building this npm module
-func ListNpmArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	// npm builds produce compiled JS files and package.json in output directory
-	return []string{"package.json", ".build-complete"}
+// NpmHandler builds npm-based modules.
+type NpmHandler struct{}
+
+func (h *NpmHandler) Name() string { return "npm" }
+
+func (h *NpmHandler) Capabilities() []string { return []string{"npm_package", "typescript"} }
+
+func (h *NpmHandler) Requirements() []string { return []string{"npm"} }
+
+func (h *NpmHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	packageJSON := filepath.Join(moduleRoot, "package.json")
+	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
+		return fmt.Errorf("package.json not found at %s", packageJSON)
+	}
+	return nil
 }
 
-// BuildNpmModule builds npm-based modules.
-// Uses capabilities to determine build steps:
-// - typescript: run tsc to compile, output to out/build/{moniker}/
-func BuildNpmModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *NpmHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+	return []string{"package.json"}
+}
+
+func (h *NpmHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
-	// Check for package.json
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
 		Logln(logWriter, "❌ No package.json found at: %s", packageJSON)
 		return 1
 	}
 
-	// Step 1: npm install (in module root for node_modules)
 	Logln(logWriter, "📦 Installing dependencies")
 	Logln(logWriter, "Running: npm install")
 
@@ -47,13 +57,11 @@ func BuildNpmModule(module *modules.ModuleContract, workspaceRoot string, output
 		return exitCode
 	}
 
-	// Step 2: Compile based on capabilities
 	cfg := config.Global()
 	hasTypeScript := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "typescript")
 
 	if hasTypeScript {
 		Logln(logWriter, "🔨 Compiling TypeScript")
-		// Compile to out/build/{moniker}/ instead of module's out/
 		Logln(logWriter, "Running: npx tsc -p ./ --outDir %s", outputDir)
 
 		exitCode = RunCommandWithLog(moduleRoot, logWriter, "npx", "tsc", "-p", "./", "--outDir", outputDir)
@@ -63,15 +71,9 @@ func BuildNpmModule(module *modules.ModuleContract, workspaceRoot string, output
 		}
 	}
 
-	// Copy package.json to output directory for post-build steps
 	destPackageJSON := filepath.Join(outputDir, "package.json")
 	if err := CopyFile(packageJSON, destPackageJSON); err != nil {
 		Logln(logWriter, "⚠️  Could not copy package.json: %v", err)
-	}
-
-	// Write build marker for dependency verification
-	if err := WriteBuildMarker(outputDir); err != nil {
-		Logln(logWriter, "⚠️  Could not write build marker: %v", err)
 	}
 
 	Logln(logWriter, "✅ npm module built successfully")

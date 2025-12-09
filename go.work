@@ -1,7 +1,6 @@
 go 1.24.4
 
 use (
-	./go/eac/ai
 	./go/eac/commands
 	./go/eac/core
 	./go/eac/mcp/commands

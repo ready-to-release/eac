@@ -158,7 +158,7 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 	// Set mock AI directory for subprocess commands
 	// This enables commands to use mock responses instead of real AI calls
 	// Use container root if in container, otherwise repo root
-	assetsRoot := repository.GetEffectiveRoot(c.OriginalRepoRoot)
+	assetsRoot := repository.GetDistRoot(c.OriginalRepoRoot)
 	if assetsRoot != "" {
 		assetsDir := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets")
 		if _, err := os.Stat(assetsDir); err == nil {

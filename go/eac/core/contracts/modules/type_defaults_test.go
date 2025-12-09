@@ -50,7 +50,7 @@ func createTestRepoWithTypes(t *testing.T, modulesContent, typesContent string) 
 // Standard fixture for module-types.yml
 const standardModuleTypesYAML = `
 types:
-  - name: go-library
+  - name: go
     build_deps: [go]
     defaults:
       files:
@@ -79,13 +79,13 @@ types:
         specs: ["custom/{moniker}/**"]
 `
 
-// TestTypeDefaults_GoLibrary tests Go library type defaults application
-func TestTypeDefaults_GoLibrary(t *testing.T) {
+// TestTypeDefaults_Go tests Go type defaults application
+func TestTypeDefaults_Go(t *testing.T) {
 	modulesContent := `
 modules:
   - moniker: my-lib
     name: My Library
-    type: go-library
+    type: go
     files:
       root: src/lib
 `
@@ -217,7 +217,7 @@ func TestTypeDefaults_ExplicitOverridesTypeDefaults(t *testing.T) {
 modules:
   - moniker: explicit-module
     name: Explicit Module
-    type: go-library
+    type: go
     files:
       root: src/explicit
       source:
@@ -254,7 +254,7 @@ func TestTypeDefaults_ExplicitEmptySpecsPreserved(t *testing.T) {
 modules:
   - moniker: empty-specs-module
     name: Empty Specs Module
-    type: go-library
+    type: go
     files:
       root: src/emptyspecs
       repo:
@@ -359,13 +359,13 @@ func TestTypeDefaults_MultipleModulesSameType(t *testing.T) {
 modules:
   - moniker: lib-one
     name: Library One
-    type: go-library
+    type: go
     files:
       root: src/one
 
   - moniker: lib-two
     name: Library Two
-    type: go-library
+    type: go
     files:
       root: src/two
 `
@@ -398,7 +398,7 @@ func TestTypeDefaults_MixedTypes(t *testing.T) {
 modules:
   - moniker: go-mod
     name: Go Module
-    type: go-library
+    type: go
     files:
       root: src/go
 
@@ -423,7 +423,7 @@ modules:
 	customMod, _ := registry.Get("custom-mod")
 	noSpecsMod, _ := registry.Get("no-specs-mod")
 
-	// Go library type
+	// Go type
 	assert.Equal(t, []string{"**/*.go", "**/*.go.txt"}, goMod.Files.Source)
 	assert.Equal(t, []string{"go.mod", "go.sum"}, goMod.Files.Config)
 

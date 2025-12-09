@@ -32,7 +32,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gobwas/glob"
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -186,17 +186,15 @@ func applyFilters(files []repository.RepositoryFileWithModule, opts *filterOptio
 		// Normalize pattern to use forward slashes
 		pattern := strings.ReplaceAll(opts.Pattern, "\\", "/")
 
-		// Compile glob pattern
-		g, err := glob.Compile(pattern, '/')
-		if err != nil {
-			return nil, fmt.Errorf("invalid pattern %q: %w", opts.Pattern, err)
-		}
-
 		filtered := make([]repository.RepositoryFileWithModule, 0)
 		for _, file := range result {
 			// Normalize file path to forward slashes
 			normalizedPath := strings.ReplaceAll(file.Name, "\\", "/")
-			if g.Match(normalizedPath) {
+			matched, err := doublestar.Match(pattern, normalizedPath)
+			if err != nil {
+				return nil, fmt.Errorf("invalid pattern %q: %w", opts.Pattern, err)
+			}
+			if matched {
 				filtered = append(filtered, file)
 			}
 		}

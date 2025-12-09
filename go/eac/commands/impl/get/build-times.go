@@ -29,7 +29,7 @@ type BuildTiming struct {
 	Module   string  `json:"module" yaml:"module"`
 	Duration float64 `json:"duration_seconds" yaml:"duration_seconds"`
 	Status   string  `json:"status" yaml:"status"` // PASS or FAIL
-	Type     string  `json:"type" yaml:"type"`     // Module type (e.g., go-library, go-cli)
+	Type     string  `json:"type" yaml:"type"`     // Module type (e.g., go, container, typescript, static)
 }
 
 // BuildTimingSummary represents complete build timing analysis

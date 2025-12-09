@@ -49,12 +49,6 @@ func ResolveArtifactsForModule(
 	return ResolveArtifactsForModuleWithConfig(module, moduleType, buildDir, targetOS, targetArch, nil)
 }
 
-// DefaultMarkerArtifact is the default artifact used when a module type has no artifacts defined.
-// This ensures all buildable modules participate in the artifact validation system.
-var DefaultMarkerArtifact = config.Artifact{
-	Type:    config.ArtifactTypeMarker,
-	Pattern: "build-complete.marker",
-}
 
 // ResolveArtifactsForModuleWithConfig resolves all artifacts for a module with optional books config
 func ResolveArtifactsForModuleWithConfig(
@@ -81,19 +75,44 @@ func ResolveArtifactsForModuleWithConfig(
 		module.Metadata,
 	)
 
-	// Check if this is a book module with PDF wildcards that need expansion
-	artifacts := moduleType.Build.Artifacts
-	if cfg != nil && isBookModule(module.Type) {
-		// For resolution/validation, expand all books (not just default)
-		// Filtering by default/all is done later based on requested artifacts
-		artifacts = expandBookArtifacts(module, moduleType.Build.Artifacts, cfg, true)
+	// Determine artifacts to resolve, in priority order:
+	// 1. Per-module Build.Artifacts (from modules.yml)
+	// 2. Type-level artifacts (from module-types.yml) with book expansion
+	// 3. Book-derived artifacts (from books.yml) for book modules
+	var artifacts []config.Artifact
+
+	// Check for per-module artifact definitions first
+	if module.Build != nil && len(module.Build.Artifacts) > 0 {
+		// Convert ModuleArtifact to config.Artifact
+		for _, ma := range module.Build.Artifacts {
+			artifacts = append(artifacts, config.Artifact{
+				ID:      ma.ID,
+				Type:    ma.Type,
+				Pattern: ma.Pattern,
+			})
+		}
+	} else {
+		// Use type-level artifacts
+		artifacts = moduleType.Build.Artifacts
 	}
 
-	// If no artifacts defined, use default marker artifact.
-	// This ensures all buildable modules participate in the artifact validation system.
-	if len(artifacts) == 0 {
-		artifacts = []config.Artifact{DefaultMarkerArtifact}
+	// For modules with books defined, add book-derived artifacts (deduplicate by ID)
+	if hasBooks(module, cfg) {
+		existingIDs := make(map[string]bool)
+		for _, a := range artifacts {
+			existingIDs[a.ID] = true
+		}
+		bookArtifacts := generateBookArtifacts(module, cfg, true)
+		for _, ba := range bookArtifacts {
+			if !existingIDs[ba.ID] {
+				artifacts = append(artifacts, ba)
+				existingIDs[ba.ID] = true
+			}
+		}
 	}
+
+	// If no artifacts defined, module type doesn't produce artifacts.
+	// The per-module manifest is the contract for validation (not markers).
 
 	// Verify all artifacts
 	results := resolver.VerifyArtifacts(artifacts)
@@ -213,9 +232,69 @@ func FormatArtifactSize(sizeBytes int64) string {
 	}
 }
 
-// isBookModule checks if a module type is a book module
+// isBookModule checks if a module type is a book module (uses mkdocs handler)
 func isBookModule(moduleType string) bool {
-	return strings.Contains(moduleType, "mkdocs")
+	// Check by type name - container modules with mkdocs handler
+	return moduleType == "container" || strings.Contains(moduleType, "mkdocs")
+}
+
+// hasBooks checks if a module has books defined in books.yml
+func hasBooks(module *config.Module, cfg *config.EACConfig) bool {
+	if cfg == nil {
+		return false
+	}
+	// Ensure books are loaded
+	cfg.LoadBooks(false)
+	books := cfg.GetBooksByModule(module.Moniker)
+	return len(books) > 0
+}
+
+// generateBookArtifacts creates artifact definitions from books.yml for a module
+func generateBookArtifacts(module *config.Module, cfg *config.EACConfig, buildAll bool) []config.Artifact {
+	var artifacts []config.Artifact
+
+	books := cfg.GetBooksByModule(module.Moniker)
+	for _, book := range books {
+		// Skip non-default books unless --all flag is used
+		if !buildAll && !book.IsDefault() {
+			continue
+		}
+
+		output := book.GetOutput()
+
+		switch {
+		case strings.HasPrefix(output, "pdf-"):
+			theme := strings.TrimPrefix(output, "pdf-")
+			if theme == "all" {
+				// Generate both dark and light PDFs
+				for _, t := range []string{"dark", "light"} {
+					pdfName := fmt.Sprintf("%s-%s.pdf", book.Name, t)
+					artifacts = append(artifacts, config.Artifact{
+						ID:      fmt.Sprintf("%s-%s", book.Name, t),
+						Type:    config.ArtifactTypeFile,
+						Pattern: pdfName,
+					})
+				}
+			} else {
+				// Single theme PDF
+				pdfName := fmt.Sprintf("%s-%s.pdf", book.Name, theme)
+				artifacts = append(artifacts, config.Artifact{
+					ID:      book.Name,
+					Type:    config.ArtifactTypeFile,
+					Pattern: pdfName,
+				})
+			}
+		case output == "site":
+			// HTML site directory
+			artifacts = append(artifacts, config.Artifact{
+				ID:      "site",
+				Type:    config.ArtifactTypeDirectory,
+				Pattern: "site",
+			})
+		}
+	}
+
+	return artifacts
 }
 
 // expandBookArtifacts expands wildcard PDF patterns to specific book PDFs
@@ -312,15 +391,14 @@ func ValidateArtifactsWithDependencies(
 		return nil, fmt.Errorf("failed to resolve dependencies: %w", err)
 	}
 
-	// Load build manifest to get requested artifacts and platform info for each module
-	buildOutputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Build)
-	manifest, _ := LoadManifest(buildOutputDir)
-
-	// Extract requested artifacts from manifest
-	requestedArtifactsMap := make(map[string][]string)
-	if manifest != nil {
-		for moniker, moduleBuild := range manifest.Modules {
-			requestedArtifactsMap[moniker] = moduleBuild.RequestedArtifacts
+	// Load per-module manifests to get requested artifacts and platform info
+	// Each module has its own manifest at out/build/<module>/build.manifest.json
+	moduleManifests := make(map[string]*ModuleManifest)
+	for moniker := range allModules {
+		moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
+		manifest, err := LoadModuleManifest(moduleBuildDir)
+		if err == nil && manifest != nil {
+			moduleManifests[moniker] = manifest
 		}
 	}
 
@@ -331,15 +409,21 @@ func ValidateArtifactsWithDependencies(
 	}
 
 	for moniker := range allModules {
-		requestedArtifacts := requestedArtifactsMap[moniker]
+		// Get requested artifacts from per-module manifest
+		var requestedArtifacts []string
+		if manifest, ok := moduleManifests[moniker]; ok {
+			requestedArtifacts = manifest.GetRequestedArtifacts()
+		}
 
 		// For dependencies, use the platform from manifest (where they were built)
 		// This supports cross-platform CI (e.g., Linux build with --all, Windows test)
 		resolveOS, resolveArch := targetOS, targetArch
-		if moniker != targetModule && manifest != nil {
-			if platforms := manifest.GetPlatformsForModule(moniker); len(platforms) > 0 {
-				resolveOS = platforms[0].OS
-				resolveArch = platforms[0].Arch
+		if moniker != targetModule {
+			if manifest, ok := moduleManifests[moniker]; ok {
+				if platforms := manifest.GetPlatforms(); len(platforms) > 0 {
+					resolveOS = platforms[0].OS
+					resolveArch = platforms[0].Arch
+				}
 			}
 		}
 
@@ -512,14 +596,44 @@ func DetermineRequestedArtifacts(
 		return []string{}
 	}
 
-	artifacts := moduleType.Build.Artifacts
-	if cfg != nil && isBookModule(module.Type) {
-		artifacts = expandBookArtifacts(module, moduleType.Build.Artifacts, cfg, buildAll)
+	// Determine artifacts using same priority as ResolveArtifactsForModuleWithConfig:
+	// 1. Per-module Build.Artifacts
+	// 2. Type-level artifacts
+	// 3. Book-derived artifacts
+	var artifacts []config.Artifact
+
+	if module.Build != nil && len(module.Build.Artifacts) > 0 {
+		for _, ma := range module.Build.Artifacts {
+			artifacts = append(artifacts, config.Artifact{
+				ID:      ma.ID,
+				Type:    ma.Type,
+				Pattern: ma.Pattern,
+			})
+		}
+	} else {
+		artifacts = moduleType.Build.Artifacts
+	}
+
+	// Add book-derived artifacts (deduplicate by ID)
+	if hasBooks(module, cfg) {
+		existingIDs := make(map[string]bool)
+		for _, a := range artifacts {
+			existingIDs[a.ID] = true
+		}
+		bookArtifacts := generateBookArtifacts(module, cfg, buildAll)
+		for _, ba := range bookArtifacts {
+			if !existingIDs[ba.ID] {
+				artifacts = append(artifacts, ba)
+				existingIDs[ba.ID] = true
+			}
+		}
 	}
 
 	// Check if running in CI (for compression artifacts)
 	isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
 
+	// Use a set to deduplicate IDs
+	seenIDs := make(map[string]bool)
 	var requestedIDs []string
 	currentOS := runtime.GOOS
 	currentArch := runtime.GOARCH
@@ -553,13 +667,19 @@ func DetermineRequestedArtifacts(
 
 				for _, arch := range archs {
 					artifactID := deriveArtifactID(artifact, os, arch)
-					requestedIDs = append(requestedIDs, artifactID)
+					if !seenIDs[artifactID] {
+						seenIDs[artifactID] = true
+						requestedIDs = append(requestedIDs, artifactID)
+					}
 				}
 			}
 		} else {
 			// For non-executables or default mode, use current platform
 			artifactID := deriveArtifactID(artifact, currentOS, currentArch)
-			requestedIDs = append(requestedIDs, artifactID)
+			if !seenIDs[artifactID] {
+				seenIDs[artifactID] = true
+				requestedIDs = append(requestedIDs, artifactID)
+			}
 		}
 	}
 

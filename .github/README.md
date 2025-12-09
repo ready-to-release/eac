@@ -410,7 +410,7 @@ Build once. Reuse everywhere.
 <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/creating-modules/"><img src="https://img.shields.io/badge/📦-EAC_Modules-8b5cf6?style=for-the-badge" alt="Modules"></a><br><br>
 <code>modules:</code><br>
 <code>&nbsp;&nbsp;- moniker: my-svc</code><br>
-<code>&nbsp;&nbsp;&nbsp;&nbsp;type: go-library</code><br><br>
+<code>&nbsp;&nbsp;&nbsp;&nbsp;type: go</code><br><br>
 <sup><a href="https://ready-to-release.github.io/eac/how-to-guides/eac/creating-modules/">Add modules →</a></sup>
 </td>
 </tr>

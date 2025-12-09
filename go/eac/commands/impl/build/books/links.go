@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // cleanupLinksForPDF processes all markdown files in staging for PDF compatibility (Step 6)
@@ -562,7 +564,7 @@ func (t *LinkTranslator) AddFileMapping(stagingPath, sourcePath string) {
 
 	// Calculate docs-relative path for external link generation
 	// sourcePath should be under sourceRoot/docs/
-	docsDir := filepath.Join(t.sourceRoot, "docs")
+	docsDir := paths.DocsSourcePath(t.sourceRoot)
 	if relPath, err := filepath.Rel(docsDir, sourcePath); err == nil {
 		t.docsRelPath[sourcePath] = filepath.ToSlash(relPath)
 	}
@@ -748,7 +750,7 @@ func (t *LinkTranslator) BuildTranslations(siteURL string) error {
 				// If it exists in docs/, handle as external reference
 				// If it doesn't exist anywhere, FAIL FAST (broken link)
 
-				docsDir := filepath.Join(t.sourceRoot, "docs")
+				docsDir := paths.DocsSourcePath(t.sourceRoot)
 				if _, err := os.Stat(absSourcePath); err == nil && strings.HasPrefix(absSourcePath, docsDir) {
 					// File exists in docs/ but wasn't copied
 					if t.pdfMode {

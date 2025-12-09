@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/nfnt/resize"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // MaxImageWidthPDF is the maximum width for images in PDF output
@@ -72,7 +73,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 	}
 
 	// Create output directory (in staging/assets, not staging/docs/assets)
-	outputDir := filepath.Join(p.stagingDir, "assets", renderedDrawioDir)
+	outputDir := paths.RenderedAssetsPath(p.stagingDir, "drawio")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("creating output directory: %w", err)
 	}
@@ -174,7 +175,7 @@ func rewriteDrawioReferences(content string, mdPath string, stagingDir string) s
 
 		// Calculate the relative path from this markdown file to the rendered directory
 		mdDir := filepath.Dir(mdPath)
-		renderedDir := filepath.Join(stagingDir, "assets", renderedDrawioDir)
+		renderedDir := paths.RenderedAssetsPath(stagingDir, "drawio")
 
 		relPath, err := filepath.Rel(mdDir, renderedDir)
 		if err != nil {

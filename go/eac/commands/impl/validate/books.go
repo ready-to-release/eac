@@ -64,6 +64,12 @@ func ValidateBooks() int {
 		return 1
 	}
 
+	// Load module types for capability checking
+	if err := cfg.LoadModuleTypes(false); err != nil {
+		log.Errorf("failed to load module types: %v", err)
+		return 1
+	}
+
 	var hasErrors bool
 	var validBooks int
 
@@ -88,9 +94,12 @@ func ValidateBooks() int {
 			continue
 		}
 
-		// Check module is mkdocs-site or mkdocs-pdf
-		if module.Type != "mkdocs-site" && module.Type != "mkdocs-pdf" {
-			log.Errorf("  Module '%s' is type '%s', expected 'mkdocs-site' or 'mkdocs-pdf'", book.Module, module.Type)
+		// Check module has mkdocs handler or documentation capability
+		// Per-module handler takes precedence, then fall back to type capability
+		handler := module.GetBuildHandler()
+		hasDocCapability := cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "documentation")
+		if handler != "mkdocs" && !hasDocCapability {
+			log.Errorf("  Module '%s' type '%s' does not have 'mkdocs' handler or 'documentation' capability", book.Module, module.Type)
 			hasErrors = true
 			continue
 		}

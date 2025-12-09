@@ -43,13 +43,13 @@ type ImplSpecsPair struct {
 // DiscoverPairs finds all impl↔specs pairs by scanning for godog_test.go files.
 // Each godog_test.go declares its SpecsPath, giving us the exact pairing.
 func DiscoverPairs(repoRoot string) ([]ImplSpecsPair, error) {
-	// Load repository config to get test_impl_root path
-	repoCfg, err := config.LoadRepositoryConfig(repoRoot)
+	// Load EAC config (properly merged with defaults) for path resolution
+	eacCfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		return nil, fmt.Errorf("failed to load repository config: %w", err)
+		return nil, fmt.Errorf("failed to load EAC config: %w", err)
 	}
 
-	implRoot := filepath.Join(repoRoot, repoCfg.Paths.TestImplRoot)
+	implRoot := filepath.Join(repoRoot, eacCfg.Repository.Paths.TestImplRoot)
 
 	// Find all godog_test.go files
 	var godogFiles []string

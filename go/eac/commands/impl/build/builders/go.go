@@ -9,45 +9,103 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
 func init() {
-	// Register handler for "go" build dependency
-	// All go-* types use this via their build_deps contract
-	// Behavior is determined by capabilities, not type names
-	RegisterSystem("go", BuildGoModule)
-	RegisterSystemArtifacts("go", ListGoModuleArtifacts)
+	RegisterHandler(&GoHandler{})
 }
 
-// ListGoModuleArtifacts returns the artifacts that would be produced by building this Go module
-func ListGoModuleArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+// GoHandler builds Go modules (libraries, CLIs, tests).
+type GoHandler struct{}
+
+func (h *GoHandler) Name() string { return "go" }
+
+func (h *GoHandler) Capabilities() []string { return []string{"go_module", "cross_compile"} }
+
+func (h *GoHandler) Requirements() []string { return []string{"go"} }
+
+func (h *GoHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	goMod := filepath.Join(moduleRoot, "go.mod")
+	if _, err := os.Stat(goMod); os.IsNotExist(err) {
+		return fmt.Errorf("go.mod not found at %s", goMod)
+	}
+	return nil
+}
+
+func (h *GoHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+	return listGoModuleArtifacts(module, workspaceRoot)
+}
+
+func (h *GoHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	return buildGoModule(module, workspaceRoot, outputDir, logWriter, opts)
+}
+
+// listGoModuleArtifacts returns the artifacts that would be produced by building this Go module
+func listGoModuleArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
 	cfg := config.Global()
-	hasExecutable := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "executable")
-	hasCrossCompile := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "cross_compile")
 	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
 
 	if !hasGoModule {
 		return nil
 	}
 
-	if hasExecutable && hasCrossCompile {
-		return listCrossCompiledArtifacts(module)
-	} else if hasExecutable {
-		return listSingleBinaryArtifacts(module)
-	} else {
-		// Library - only produces build marker
-		return []string{".build-complete"}
+	// Check for per-module artifact definitions
+	if module.HasBuildArtifacts() {
+		return listModuleArtifacts(module)
 	}
+
+	// No artifacts = library (compile-only verification)
+	return []string{".build-complete"}
+}
+
+// listModuleArtifacts returns artifacts based on per-module definitions
+func listModuleArtifacts(module *modules.ModuleContract) []string {
+	var artifacts []string
+
+	for _, artifact := range module.GetBuildArtifacts() {
+		switch artifact.Type {
+		case "executable":
+			// Resolve pattern with current platform
+			resolver := config.NewArtifactResolverWithPlatform(module.Moniker, "", runtime.GOOS, runtime.GOARCH)
+			name := resolver.ResolvePattern(artifact.Pattern)
+			artifacts = append(artifacts, name)
+		case "test":
+			// Test artifact
+			artifacts = append(artifacts, artifact.Pattern)
+		default:
+			// Other artifact types - resolve as-is
+			resolver := config.NewArtifactResolver(module.Moniker, "")
+			name := resolver.ResolvePattern(artifact.Pattern)
+			artifacts = append(artifacts, name)
+		}
+	}
+
+	// Add checksums for cross-platform builds (multiple executables)
+	execCount := 0
+	for _, a := range module.GetBuildArtifacts() {
+		if a.Type == "executable" {
+			execCount++
+		}
+	}
+	if execCount > 1 {
+		artifacts = append(artifacts, "checksums.txt")
+	}
+
+	return artifacts
 }
 
 // listSingleBinaryArtifacts returns artifacts for a single-platform build
 func listSingleBinaryArtifacts(module *modules.ModuleContract) []string {
 	binaryName := module.Moniker
-	if module.Type == "go-commands" {
+	// Use per-module build.options.commands_binary to determine if this produces the "commands" binary
+	if module.IsToolsBinary() {
 		binaryName = "commands"
 	}
 
@@ -131,19 +189,19 @@ func listCrossCompiledArtifacts(module *modules.ModuleContract) []string {
 	return artifacts
 }
 
-// BuildGoModule builds any Go module based on its capabilities from the contract.
-// - executable + cross_compile → cross-compiled binaries for multiple platforms
-// - executable → single binary for current platform
-// - no executable → library, just validate it compiles
-func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+// buildGoModule builds any Go module based on per-module artifact definitions.
+// Behavior is driven by artifacts defined in modules.yml:
+//   - No artifacts: library (compile-only verification)
+//   - Single executable: builds binary for current platform
+//   - Multiple executables: cross-compiled binaries
+//   - Test artifacts: runs tests and captures results
+func buildGoModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
 
 	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
 
 	// Get capabilities from contract
 	cfg := config.Global()
-	hasExecutable := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "executable")
-	hasCrossCompile := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "cross_compile")
 	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
 
 	// Skip if not a go_module (shouldn't happen if build_deps is correct, but defensive)
@@ -168,34 +226,232 @@ func BuildGoModule(module *modules.ModuleContract, workspaceRoot string, outputD
 		return exitCode
 	}
 
-	// Step 3: Build based on capabilities
-	if hasExecutable && hasCrossCompile {
-		return buildCrossCompiled(module, moduleRoot, workspaceRoot, outputDir, logWriter, opts)
-	} else if hasExecutable {
-		return buildSingleBinary(module, moduleRoot, workspaceRoot, outputDir, logWriter, opts)
-	} else {
-		// Library - validate it compiles and write marker
-		Logln(logWriter, "Running: go build ./...")
-		if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./..."); exitCode != 0 {
-			Logln(logWriter, "❌ go build failed")
-			return exitCode
-		}
-
-		// Write build-complete marker for dependency verification
-		if err := WriteBuildMarker(outputDir); err != nil {
-			Logln(logWriter, "⚠️  Could not write build marker: %v", err)
-		}
-
-		Logln(logWriter, "✅ Library module built successfully")
-		return 0
+	// Step 3: Build based on per-module artifact definitions
+	if !module.HasBuildArtifacts() {
+		// No artifacts = library (compile-only verification)
+		return buildLibrary(module, moduleRoot, outputDir, logWriter)
 	}
+
+	// Check artifact types
+	hasExecutables := module.HasExecutableArtifacts()
+	hasTests := module.HasTestArtifacts()
+
+	if hasTests {
+		// Test module - run tests and capture results
+		return buildTestModule(module, moduleRoot, outputDir, logWriter, opts)
+	}
+
+	if hasExecutables {
+		execArtifacts := module.GetArtifactsByType("executable")
+		if len(execArtifacts) == 1 {
+			// Single executable - build for current platform
+			return buildSingleBinaryFromArtifact(module, moduleRoot, workspaceRoot, outputDir, logWriter, opts, execArtifacts[0])
+		}
+		// Multiple executables - cross-compile
+		return buildCrossCompiledFromArtifacts(module, moduleRoot, workspaceRoot, outputDir, logWriter, opts, execArtifacts)
+	}
+
+	// Fallback: library behavior
+	return buildLibrary(module, moduleRoot, outputDir, logWriter)
+}
+
+// buildLibrary builds a library module (compile-only verification)
+func buildLibrary(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer) int {
+	Logln(logWriter, "Running: go build ./...")
+	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./..."); exitCode != 0 {
+		Logln(logWriter, "❌ go build failed")
+		return exitCode
+	}
+
+
+	Logln(logWriter, "✅ Library module built successfully")
+	return 0
+}
+
+// buildTestModule runs tests and captures results
+func buildTestModule(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	Logln(logWriter, "Running: go test ./... -json")
+
+	// First verify it compiles
+	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./..."); exitCode != 0 {
+		Logln(logWriter, "❌ go build failed")
+		return exitCode
+	}
+
+	// Run tests with JSON output for results capture
+	resultsPath := filepath.Join(outputDir, "results.json")
+	resultsFile, err := os.Create(resultsPath)
+	if err != nil {
+		Logln(logWriter, "❌ Failed to create results file: %v", err)
+		return 1
+	}
+	defer resultsFile.Close()
+
+	cmd := exec.Command("go", "test", "./...", "-json")
+	cmd.Dir = moduleRoot
+	cmd.Stdout = resultsFile
+	cmd.Stderr = logWriter
+
+	if err := cmd.Run(); err != nil {
+		// Test failures are expected - capture the results anyway
+		Logln(logWriter, "⚠️  Tests completed with failures")
+	}
+
+
+	Logln(logWriter, "✅ Test module built and results captured")
+	return 0
+}
+
+// buildSingleBinaryFromArtifact builds a single binary from a per-module artifact definition
+func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, artifact contracts.ModuleArtifact) int {
+	// Resolve artifact pattern to binary name
+	resolver := config.NewArtifactResolverWithPlatform(module.Moniker, "", runtime.GOOS, runtime.GOARCH)
+	binaryName := resolver.ResolvePattern(artifact.Pattern)
+	binaryPath := filepath.Join(outputDir, binaryName)
+
+	Logln(logWriter, "Running: go build -o %s", binaryPath)
+	exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
+	if exitCode == 0 {
+		Logln(logWriter, "✅ Built executable: %s", binaryName)
+
+		// For tools_binary option, also copy to tools directory
+		if module.IsToolsBinary() {
+			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
+				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
+			}
+		}
+	}
+	return exitCode
+}
+
+// buildCrossCompiledFromArtifacts builds binaries for multiple platforms from per-module artifact definitions
+func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, artifacts []contracts.ModuleArtifact) int {
+	// Extract platform targets from artifact IDs
+	type buildTarget struct {
+		goos        string
+		goarch      string
+		pattern     string
+		compression string
+		deriveFrom  string
+	}
+
+	var targets []buildTarget
+	for _, artifact := range artifacts {
+		// Parse platform from artifact ID (e.g., "linux-amd64", "windows-amd64-upx")
+		parts := strings.Split(artifact.ID, "-")
+		if len(parts) < 2 {
+			continue
+		}
+		goos := parts[0]
+		goarch := parts[1]
+
+		targets = append(targets, buildTarget{
+			goos:        goos,
+			goarch:      goarch,
+			pattern:     artifact.Pattern,
+			compression: artifact.Compression,
+			deriveFrom:  artifact.DeriveFrom,
+		})
+	}
+
+	if len(targets) == 0 {
+		Logln(logWriter, "❌ No valid platform targets found in artifacts")
+		return 1
+	}
+
+	// Build ldflags for version injection
+	ldflags := buildLdflags(module, moduleRoot, workspaceRoot, opts.Version, logWriter)
+
+	successCount := 0
+	for _, target := range targets {
+		// Skip derived artifacts (UPX) - they're processed after base builds
+		if target.deriveFrom != "" {
+			continue
+		}
+
+		resolver := config.NewArtifactResolverWithPlatform(module.Moniker, "", target.goos, target.goarch)
+		outputName := resolver.ResolvePattern(target.pattern)
+		outputPath := filepath.Join(outputDir, outputName)
+
+		Logln(logWriter, "Building: %s/%s → %s", target.goos, target.goarch, outputName)
+
+		args := []string{"build", "-o", outputPath}
+		if ldflags != "" {
+			args = append(args, "-ldflags", ldflags)
+		}
+
+		cmd := exec.Command("go", args...)
+		cmd.Dir = moduleRoot
+		cmd.Env = append(os.Environ(),
+			fmt.Sprintf("GOOS=%s", target.goos),
+			fmt.Sprintf("GOARCH=%s", target.goarch),
+			"CGO_ENABLED=0",
+		)
+		cmd.Stdout = logWriter
+		cmd.Stderr = logWriter
+
+		if err := cmd.Run(); err != nil {
+			Logln(logWriter, "❌ Failed to build %s/%s: %v", target.goos, target.goarch, err)
+			continue
+		}
+
+		successCount++
+	}
+
+	if successCount == 0 {
+		Logln(logWriter, "❌ All builds failed")
+		return 1
+	}
+
+	Logln(logWriter, "✅ Built %d/%d targets successfully", successCount, len(targets))
+
+	// Generate checksums
+	generateChecksums(outputDir, module.Moniker, logWriter)
+
+
+	return 0
+}
+
+// buildLdflags builds ldflags for version injection
+func buildLdflags(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, explicitVersion string, logWriter io.Writer) string {
+	ldflags := ""
+
+	// Detect if running in CI (for version detection)
+	isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+
+	// Determine version to inject
+	version := explicitVersion
+	if version == "" {
+		if isCI {
+			// CI: Auto-detect from changelog for release builds
+			version = getVersionFromChangelog(moduleRoot, workspaceRoot, module.Moniker)
+		} else {
+			// Local dev: Use high version number to always be "newer" than releases
+			version = "666.666.666-local"
+		}
+	}
+
+	// Inject version if available
+	if version != "" {
+		// Get module import path for correct ldflags
+		modulePath := getGoModulePath(moduleRoot)
+		if modulePath != "" {
+			// Use module/cmd.Version pattern (standard for CLI tools)
+			versionFlag := fmt.Sprintf("-X %s/cmd.Version=%s", modulePath, version)
+			ldflags = versionFlag
+			Logln(logWriter, "Injecting version: %s", version)
+		}
+	}
+
+	return ldflags
 }
 
 // buildSingleBinary builds a single binary for the current platform
 func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	// Use "commands" as the base name for go-commands type, otherwise use moniker
+	// Use "commands" as the base name for commands_binary option, otherwise use moniker
 	binaryName := module.Moniker
-	if module.Type == "go-commands" {
+	isCommandsBinary := module.IsToolsBinary()
+	if isCommandsBinary {
 		binaryName = "commands"
 	}
 
@@ -212,16 +468,11 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, worksp
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
 
-		// For go-commands type, also copy to tools directory so the CI tool binary stays fresh
-		if module.Type == "go-commands" {
+		// For commands_binary capability, also copy to tools directory so the CI tool binary stays fresh
+		if isCommandsBinary {
 			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
 				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
 			}
-		}
-
-		// Write build-complete marker for dependency verification
-		if err := WriteBuildMarker(outputDir); err != nil {
-			Logln(logWriter, "⚠️  Could not write build marker: %v", err)
 		}
 	}
 	return exitCode
@@ -233,27 +484,33 @@ func getHostPlatform() (goos, goarch string) {
 	return os.Getenv("R2R_HOST_GOOS"), os.Getenv("R2R_HOST_GOARCH")
 }
 
+// CrossCompileTarget represents a cross-compilation target platform
+type CrossCompileTarget struct {
+	OS     string
+	Arch   string
+	Suffix string
+}
+
+// Default cross-compile targets for Go executables
+var defaultCrossCompileTargets = []CrossCompileTarget{
+	{"linux", "amd64", ""},
+	{"linux", "arm64", ""},
+	{"darwin", "amd64", ""},
+	{"darwin", "arm64", ""},
+	{"windows", "amd64", ".exe"},
+}
+
 // buildCrossCompiled builds binaries for multiple platforms
 // With --all flag, builds all configured targets. In default mode, builds only current platform.
 func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	binaryName := module.Moniker
 
-	// Get target platforms from handlers config - fail fast if missing
-	cfg := config.Global()
-	if cfg == nil || cfg.Handlers == nil {
-		Logln(logWriter, "❌ Configuration not loaded - cannot determine cross-compile targets")
-		return 1
-	}
-
-	configTargets := cfg.Handlers.GetCrossCompileTargets()
-	if len(configTargets) == 0 {
-		Logln(logWriter, "❌ No cross-compile targets defined in contract for module: %s", module.Moniker)
-		return 1
-	}
+	// Use default cross-compile targets
+	configTargets := defaultCrossCompileTargets
 
 	// Filter targets based on requested artifacts
 	if len(opts.RequestedArtifacts) > 0 {
-		var filteredTargets []config.CrossCompileTarget
+		var filteredTargets []CrossCompileTarget
 		for _, target := range configTargets {
 			// Artifact ID format for executables: {os}-{arch}
 			artifactID := fmt.Sprintf("%s-%s", target.OS, target.Arch)
@@ -377,10 +634,6 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, works
 	// Generate checksums
 	generateChecksums(outputDir, binaryName, logWriter)
 
-	// Write build-complete marker for dependency verification
-	if err := WriteBuildMarker(outputDir); err != nil {
-		Logln(logWriter, "⚠️  Could not write build marker: %v", err)
-	}
 
 	return 0
 }
@@ -506,12 +759,12 @@ func computeSHA256(filePath string) (string, error) {
 // The actual replacement happens lazily in CommandsBinaryPath() when the binary is next invoked.
 // This avoids issues with replacing a running binary during the build process.
 func copyToToolsDir(srcPath, binaryName, workspaceRoot string, logWriter io.Writer) error {
-	// Get tools directory from repository config
+	// Get tools directory from repository config - config required
 	cfg := config.Global()
-	toolsDir := "out/tools" // default
-	if cfg != nil && cfg.Repository != nil {
-		toolsDir = cfg.Repository.ToolsPath()
+	if cfg == nil || cfg.Repository == nil {
+		return fmt.Errorf("repository configuration required for tools directory")
 	}
+	toolsDir := cfg.Repository.ToolsPath()
 
 	destDir := filepath.Join(workspaceRoot, toolsDir)
 	if err := os.MkdirAll(destDir, 0755); err != nil {

@@ -15,21 +15,110 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func init() {
-	// Register handler for "mkdocs" build system
-	RegisterSystem("mkdocs", BuildMkDocsModule)
-	RegisterSystemArtifacts("mkdocs", ListMkDocsArtifacts)
+	RegisterHandler(&MkDocsHandler{})
 }
 
-// ListMkDocsArtifacts returns the artifacts that would be produced by building this MkDocs module
-func ListMkDocsArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	// MkDocs produces a site directory
+// MkDocsHandler builds MkDocs documentation sites using Docker.
+type MkDocsHandler struct{}
+
+func (h *MkDocsHandler) Name() string { return "mkdocs" }
+
+func (h *MkDocsHandler) Capabilities() []string { return []string{"documentation", "container"} }
+
+func (h *MkDocsHandler) Requirements() []string { return []string{"docker"} }
+
+func (h *MkDocsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+	if !IsDockerAvailable() {
+		if IsDockerInDocker() {
+			return fmt.Errorf("Docker socket not mounted")
+		}
+		return fmt.Errorf("Docker is not available")
+	}
+	return nil
+}
+
+func (h *MkDocsHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
 	return []string{"site/"}
 }
 
-// BuildMkDocsModule builds MkDocs documentation sites using Docker.
+func (h *MkDocsHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	return buildMkDocsModule(module, workspaceRoot, outputDir, logWriter, opts)
+}
+
+// mkdocsDockerConfig holds resolved docker configuration for mkdocs builds
+type mkdocsDockerConfig struct {
+	ImageName      string
+	ContainerDir   string
+	DockerfilePath string
+	ContextPath    string
+}
+
+// getMkDocsDockerConfig resolves docker configuration from module first, then type, then defaults.
+// This ensures per-module docker_build config (like books using mkdocs-pdf) is respected.
+func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string, isPDF bool) mkdocsDockerConfig {
+	// Defaults based on output type
+	var defaultImage, defaultContainer string
+	if isPDF {
+		defaultImage = "cli-mkdocs-pdf:latest"
+		defaultContainer = "mkdocs-pdf"
+	} else {
+		defaultImage = "cli-mkdocs-site:latest"
+		defaultContainer = "mkdocs-site"
+	}
+
+	cfg := mkdocsDockerConfig{
+		ImageName:    defaultImage,
+		ContainerDir: defaultContainer,
+	}
+
+	// First priority: module's own docker_build config
+	if module.DockerBuild != nil && len(module.DockerBuild) > 0 {
+		if tags, ok := module.DockerBuild["tags"].([]interface{}); ok && len(tags) > 0 {
+			if tag, ok := tags[0].(string); ok {
+				cfg.ImageName = tag
+			}
+		} else if container, ok := module.DockerBuild["container"].(string); ok {
+			cfg.ImageName = container + ":latest"
+		}
+
+		if context, ok := module.DockerBuild["context"].(string); ok {
+			cfg.ContainerDir = filepath.Base(context)
+			cfg.ContextPath = filepath.Join(workspaceRoot, context)
+		}
+
+		if dockerfile, ok := module.DockerBuild["dockerfile"].(string); ok {
+			cfg.DockerfilePath = filepath.Join(workspaceRoot, dockerfile)
+		}
+	}
+
+	// Second priority: module type config (for backwards compatibility)
+	if cfg.ContextPath == "" {
+		if globalCfg := config.Global(); globalCfg != nil && globalCfg.ModuleTypes != nil {
+			if img := globalCfg.ModuleTypes.GetDockerImageName(module.Type); img != "" {
+				cfg.ImageName = img
+			}
+			if dir := globalCfg.ModuleTypes.GetDockerContainerDir(module.Type); dir != "" {
+				cfg.ContainerDir = filepath.Base(dir)
+			}
+		}
+	}
+
+	// Build paths if not set from module config
+	if cfg.ContextPath == "" {
+		cfg.ContextPath = filepath.Join(workspaceRoot, "containers", cfg.ContainerDir)
+	}
+	if cfg.DockerfilePath == "" {
+		cfg.DockerfilePath = filepath.Join(cfg.ContextPath, "Dockerfile")
+	}
+
+	return cfg
+}
+
+// buildMkDocsModule builds MkDocs documentation sites using Docker.
 // All MkDocs modules use this handler - behavior is the same for all.
 // If the module has books defined in books.yml, each book is built based on its output config:
 //   - site: HTML only
@@ -38,7 +127,7 @@ func ListMkDocsArtifacts(module *modules.ModuleContract, workspaceRoot string) [
 //   - pdf-all: Both dark and light PDFs
 //
 // Multiple books for the same module are built in parallel.
-func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	// Load config to check for book configuration
 	cfg, _ := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if cfg != nil {
@@ -48,7 +137,21 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		if len(allBooks) > 0 {
 			// Module has books - filter based on requested artifacts
 			var moduleBooks []*config.Book
-			if len(opts.RequestedArtifacts) > 0 {
+
+			// Check if --all flag was used (RequestedArtifacts contains "*")
+			buildAllArtifacts := false
+			for _, reqID := range opts.RequestedArtifacts {
+				if reqID == "*" {
+					buildAllArtifacts = true
+					break
+				}
+			}
+
+			if buildAllArtifacts {
+				// Build all books when --all is specified
+				moduleBooks = allBooks
+				Logln(logWriter, "📚 Building all %d book(s) (--all specified)", len(moduleBooks))
+			} else if len(opts.RequestedArtifacts) > 0 {
 				// Filter books to only those whose artifacts are requested
 				for _, book := range allBooks {
 					output := book.GetOutput()
@@ -177,19 +280,19 @@ func BuildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 		}
 	}
 
-	// Use lean mkdocs-site image for HTML builds (~150MB)
-	imageName := "cli-mkdocs-site:latest"
-	containerDir := "mkdocs-site"
+	// Get docker configuration from module first, then type, then defaults
+	dockerCfg := getMkDocsDockerConfig(module, workspaceRoot, false)
+	imageName := dockerCfg.ImageName
 
 	// In DinD mode, docker build runs on host so paths must be host paths
 	var dockerfilePath, contextPath string
 	if isDinD {
 		// Host is Windows, construct Windows paths manually
-		dockerfilePath = hostRepoRoot + "\\containers\\" + containerDir + "\\Dockerfile"
-		contextPath = hostRepoRoot + "\\containers\\" + containerDir
+		dockerfilePath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir + "\\Dockerfile"
+		contextPath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir
 	} else {
-		dockerfilePath = filepath.Join(hostRepoRoot, "containers", containerDir, "Dockerfile")
-		contextPath = filepath.Join(hostRepoRoot, "containers", containerDir)
+		dockerfilePath = dockerCfg.DockerfilePath
+		contextPath = dockerCfg.ContextPath
 	}
 
 	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
@@ -297,6 +400,8 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 
 	// Image doesn't exist, build it
 	Logln(logWriter, "   Building Docker image: %s", imageName)
+	Logln(logWriter, "   Dockerfile: %s", dockerfilePath)
+	Logln(logWriter, "   Context: %s", contextPath)
 
 	exitCode := RunCommandWithLog("", logWriter,
 		"docker", "build",
@@ -599,15 +704,17 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 		}
 	}
 
-	imageName := "cli-mkdocs-site:latest"
-	containerDir := "mkdocs-site"
+	// Get docker configuration from module first, then type, then defaults
+	dockerCfg := getMkDocsDockerConfig(module, workspaceRoot, false)
+	imageName := dockerCfg.ImageName
+
 	var dockerfilePath, contextPath string
 	if isDinD {
-		dockerfilePath = hostRepoRoot + "\\containers\\" + containerDir + "\\Dockerfile"
-		contextPath = hostRepoRoot + "\\containers\\" + containerDir
+		dockerfilePath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir + "\\Dockerfile"
+		contextPath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir
 	} else {
-		dockerfilePath = filepath.Join(hostRepoRoot, "containers", containerDir, "Dockerfile")
-		contextPath = filepath.Join(hostRepoRoot, "containers", containerDir)
+		dockerfilePath = dockerCfg.DockerfilePath
+		contextPath = dockerCfg.ContextPath
 	}
 
 	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
@@ -736,16 +843,17 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 		}
 	}
 
-	// PDF builds always use the mkdocs-pdf image
-	imageName := "cli-mkdocs-pdf:latest"
-	containerDir := "mkdocs-pdf"
+	// Get docker configuration from module first, then type, then defaults (PDF mode)
+	dockerCfg := getMkDocsDockerConfig(module, workspaceRoot, true)
+	imageName := dockerCfg.ImageName
+
 	var dockerfilePath, contextPath string
 	if isDinD {
-		dockerfilePath = hostRepoRoot + "\\containers\\" + containerDir + "\\Dockerfile"
-		contextPath = hostRepoRoot + "\\containers\\" + containerDir
+		dockerfilePath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir + "\\Dockerfile"
+		contextPath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir
 	} else {
-		dockerfilePath = filepath.Join(hostRepoRoot, "containers", containerDir, "Dockerfile")
-		contextPath = filepath.Join(hostRepoRoot, "containers", containerDir)
+		dockerfilePath = dockerCfg.DockerfilePath
+		contextPath = dockerCfg.ContextPath
 	}
 
 	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
@@ -1431,7 +1539,7 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	// - Faster incremental builds (unchanged files already staged)
 	// NOTE: We don't clean this directory - files are overwritten incrementally.
 	// For a clean rebuild, delete out/staging/ manually.
-	stagingDir := filepath.Join(workspaceRoot, "out", "staging", book.Name)
+	stagingDir := paths.StagingPath(workspaceRoot, book.Name)
 
 	if err := os.MkdirAll(stagingDir, 0755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)

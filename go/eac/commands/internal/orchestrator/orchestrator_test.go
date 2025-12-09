@@ -14,6 +14,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func TestOrchestrator_Basic(t *testing.T) {
@@ -23,7 +25,7 @@ func TestOrchestrator_Basic(t *testing.T) {
 	// Configure orchestrator
 	config := Config{
 		WorkspaceRoot:        tmpDir,
-		OutputBaseDir:        "out/test",
+		OutputBaseDir:        paths.OutTestRelPath,
 		LogFileName:          "test.log",
 		OrchestratorLogName:  "orchestrator.log",
 		ActionVerb:           "processing",
@@ -71,7 +73,7 @@ func TestOrchestrator_Basic(t *testing.T) {
 	}
 
 	// Verify orchestrator log was created
-	logPath := filepath.Join(tmpDir, "out/test/orchestrator.log")
+	logPath := filepath.Join(tmpDir, paths.OutTestRelPath, "orchestrator.log")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Errorf("Orchestrator log was not created at %s", logPath)
 	}
@@ -84,7 +86,7 @@ func TestOrchestrator_WithFailures(t *testing.T) {
 	// Configure orchestrator
 	config := Config{
 		WorkspaceRoot:        tmpDir,
-		OutputBaseDir:        "out/test",
+		OutputBaseDir:        paths.OutTestRelPath,
 		LogFileName:          "test.log",
 		OrchestratorLogName:  "orchestrator.log",
 		ActionVerb:           "processing",
@@ -269,7 +271,7 @@ func TestOrchestrator_PrintSummary(t *testing.T) {
 	// Configure orchestrator
 	config := Config{
 		WorkspaceRoot:        tmpDir,
-		OutputBaseDir:        "out/test",
+		OutputBaseDir:        paths.OutTestRelPath,
 		LogFileName:          "test.log",
 		OrchestratorLogName:  "orchestrator.log",
 		ActionVerb:           "testing",

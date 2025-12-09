@@ -29,7 +29,7 @@ type WorkResult struct {
 	Errors []string
 	// Duration is the time taken to process this work item
 	Duration time.Duration
-	// Type is the module/work type (e.g., "go-cli", "mkdocs", "go")
+	// Type is the module/work type (e.g., "go", "container", "typescript", "static")
 	Type string
 }
 
@@ -42,7 +42,7 @@ type WorkerFunc func(moniker string, logWriter io.Writer) int
 type Config struct {
 	// WorkspaceRoot is the root directory of the repository
 	WorkspaceRoot string
-	// OutputBaseDir is the base directory for all output (e.g., "out/build" or "out/test")
+	// OutputBaseDir is the base directory for all output (e.g., paths.OutBuildRelPath or paths.OutTestRelPath)
 	OutputBaseDir string
 	// LogFileName is the name of the log file for each module (e.g., "build.log" or "test.log")
 	LogFileName string
@@ -54,7 +54,7 @@ type Config struct {
 	MaxConcurrency int
 	// StatusUpdateInterval is how often to show status updates (default: 2 seconds)
 	StatusUpdateInterval int // in seconds
-	// ModuleTypes maps moniker to type string (e.g., "go-cli", "mkdocs") for display
+	// ModuleTypes maps moniker to type string (e.g., "go", "container") for display
 	ModuleTypes map[string]string
 	// ShowTimings enables the timing summary section (use --timings flag)
 	ShowTimings bool

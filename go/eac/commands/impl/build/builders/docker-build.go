@@ -1,4 +1,4 @@
-// docker-build.go - Build handler for docker-build dependency (uses docker_build config from module type)
+// docker-build.go - Build handler for docker-build dependency (uses docker_build config from module or type)
 package builders
 
 import (
@@ -11,18 +11,37 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"gopkg.in/yaml.v3"
 )
 
-// ListDockerBuildArtifacts returns the artifacts that would be produced by building this docker-build module
-func ListDockerBuildArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	// Docker builds produce container images, not files
-	// Return image reference pattern for CI to use
+func init() {
+	RegisterHandler(&DockerBuildHandler{})
+}
+
+// DockerBuildHandler builds Docker images using docker_build config from module or type.
+type DockerBuildHandler struct{}
+
+func (h *DockerBuildHandler) Name() string { return "docker-build" }
+
+func (h *DockerBuildHandler) Capabilities() []string { return []string{"docker_build"} }
+
+func (h *DockerBuildHandler) Requirements() []string { return []string{"docker"} }
+
+func (h *DockerBuildHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+	if !IsDockerAvailable() {
+		if IsDockerInDocker() {
+			return fmt.Errorf("Docker socket not mounted")
+		}
+		return fmt.Errorf("Docker is not available")
+	}
+	return nil
+}
+
+func (h *DockerBuildHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
 	return []string{fmt.Sprintf("docker-image:%s", module.Moniker)}
 }
 
-// BuildDockerBuildModule builds a Docker container image using docker_build configuration from module type.
-// This is the new system that uses configuration from module-types.yml instead of handlers.yml.
-func BuildDockerBuildModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (h *DockerBuildHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	Logln(logWriter, "\n=== Building Docker Image: %s ===", module.Moniker)
 
 	// Check if Docker is available
@@ -37,16 +56,10 @@ func BuildDockerBuildModule(module *modules.ModuleContract, workspaceRoot string
 		return 1
 	}
 
-	// Get docker_build config from module type
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		Logln(logWriter, "❌ No module types configuration available")
-		return 1
-	}
-
-	dockerBuild := cfg.ModuleTypes.GetDockerBuildConfig(module.Type)
+	// Get docker_build config from module first, then fall back to module type
+	dockerBuild := getDockerBuildConfig(module, logWriter)
 	if dockerBuild == nil {
-		Logln(logWriter, "❌ Module type %s does not have docker_build configuration", module.Type)
+		Logln(logWriter, "❌ No docker_build configuration found for module %s", module.Moniker)
 		return 1
 	}
 
@@ -280,4 +293,42 @@ func expandTemplate(template, moniker string) string {
 	}
 
 	return result
+}
+
+// getDockerBuildConfig gets docker_build config from module first, then falls back to module type
+func getDockerBuildConfig(module *modules.ModuleContract, logWriter io.Writer) *config.DockerBuildConfig {
+	// First, check if module has docker_build config
+	if module.DockerBuild != nil && len(module.DockerBuild) > 0 {
+		// Convert map[string]interface{} to DockerBuildConfig via YAML round-trip
+		dockerCfg, err := convertDockerBuildConfig(module.DockerBuild)
+		if err != nil {
+			Logln(logWriter, "⚠️  Failed to parse module docker_build config: %v", err)
+		} else {
+			return dockerCfg
+		}
+	}
+
+	// Fall back to module type config
+	cfg := config.Global()
+	if cfg == nil || cfg.ModuleTypes == nil {
+		return nil
+	}
+
+	return cfg.ModuleTypes.GetDockerBuildConfig(module.Type)
+}
+
+// convertDockerBuildConfig converts map[string]interface{} to DockerBuildConfig via YAML
+func convertDockerBuildConfig(m map[string]interface{}) (*config.DockerBuildConfig, error) {
+	// Marshal to YAML, then unmarshal to typed struct
+	data, err := yaml.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	var dockerCfg config.DockerBuildConfig
+	if err := yaml.Unmarshal(data, &dockerCfg); err != nil {
+		return nil, fmt.Errorf("unmarshal: %w", err)
+	}
+
+	return &dockerCfg, nil
 }

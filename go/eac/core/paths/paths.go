@@ -37,6 +37,12 @@ const (
 	// ToolsDir is the subdirectory under OutDir for CI tools (not build outputs)
 	ToolsDir = "tools"
 
+	// StagingDir is the subdirectory under OutDir for build staging areas
+	StagingDir = "staging"
+
+	// CacheDir is the subdirectory under OutDir for build caches
+	CacheDir = "cache"
+
 	// SpecsDir is the root directory for specifications (Gherkin, Structurizr)
 	SpecsDir = "specs"
 
@@ -63,15 +69,15 @@ const (
 
 	// WorkspaceDSL is the standard name for Structurizr workspace files
 	WorkspaceDSL = "workspace.dsl"
-)
 
-// Conventional filenames
-const (
-	// GodogTestFile is the conventional name for godog test files
-	GodogTestFile = "godog_test.go"
+	// ReleaseDir is the directory for release metadata and changelogs
+	ReleaseDir = "release"
 
-	// PackageJSONFile is the conventional name for npm package files
-	PackageJSONFile = "package.json"
+	// GitHubDir is the GitHub configuration directory
+	GitHubDir = ".github"
+
+	// WorkflowsDir is the workflows subdirectory under GitHubDir
+	WorkflowsDir = "workflows"
 )
 
 // Relative path constants
@@ -91,6 +97,12 @@ const (
 	// OutSecurityRelPath is the relative path from repo root to scan output
 	OutSecurityRelPath = OutDir + "/" + SecurityDir
 
+	// OutStagingRelPath is the relative path from repo root to staging area
+	OutStagingRelPath = OutDir + "/" + StagingDir
+
+	// OutCacheRelPath is the relative path from repo root to cache
+	OutCacheRelPath = OutDir + "/" + CacheDir
+
 	// EACCommandsModule is the module name for the EAC commands binary
 	EACCommandsModule = "eac-commands"
 )
@@ -100,6 +112,26 @@ const (
 // BuildOutputPath returns the path to a module's build output directory
 func BuildOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker)
+}
+
+// TestOutputPath returns the path to a module's test output directory
+func TestOutputPath(repoRoot, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, moniker)
+}
+
+// TestOutputDir returns the root test output directory
+func TestOutputDir(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir)
+}
+
+// StagingPath returns the path to a module's staging directory
+func StagingPath(repoRoot, name string) string {
+	return filepath.Join(repoRoot, OutDir, StagingDir, name)
+}
+
+// CachePath returns the path to the cache directory
+func CachePath(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, CacheDir)
 }
 
 // CommandsBinaryPath returns the full path to the pre-built eac-commands binary.
@@ -155,9 +187,14 @@ func CommandsBinaryPathWithToolsDir(repoRoot string, toolsDir string) string {
 		toolsDir = filepath.Join(OutDir, ToolsDir)
 	}
 
-	// Use container root if running in container, otherwise use repo root
-	effectiveRoot := GetEffectiveRoot(repoRoot)
-	binaryPath := filepath.Join(effectiveRoot, toolsDir, binaryName)
+	// Use distribution root for tool binaries (container root if running in container)
+	// Note: Can't import repository package here to avoid cycles, so inline the check
+	// See repository.GetDistRoot() for the canonical implementation
+	distRoot := repoRoot
+	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+		distRoot = containerRoot
+	}
+	binaryPath := filepath.Join(distRoot, toolsDir, binaryName)
 
 	// Check for staged .new binary and perform atomic replacement
 	newPath := binaryPath + ".new"
@@ -268,11 +305,6 @@ func LogsPath(repoRoot string) string {
 	return filepath.Join(repoRoot, OutDir, LogsDir)
 }
 
-// TestOutputPath returns the path to a test suite's output directory
-func TestOutputPath(repoRoot, suiteName string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, suiteName)
-}
-
 // SecurityOutputPath returns the path to security scan output
 func SecurityOutputPath(repoRoot, scanner string) string {
 	return filepath.Join(repoRoot, OutDir, SecurityDir, scanner)
@@ -316,12 +348,6 @@ func StripSpecsPrefix(path string) string {
 	return path
 }
 
-// IsGodogTestDir checks if a directory contains a godog_test.go file
-func IsGodogTestDir(dir string) bool {
-	_, err := os.Stat(filepath.Join(dir, GodogTestFile))
-	return err == nil
-}
-
 // ExtractMonikerFromSpecsPath extracts the module moniker from a specs path
 func ExtractMonikerFromSpecsPath(specsPath string) string {
 	relPath := StripSpecsPrefix(specsPath)
@@ -362,10 +388,150 @@ func EACLoggingConfigPath(repoRoot string) string {
 	return filepath.Join(EACConfigPath(repoRoot), "logging.yml")
 }
 
-// GetEffectiveRoot returns the effective repository root
-func GetEffectiveRoot(repoRoot string) string {
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
-		return containerRoot
-	}
-	return repoRoot
+// ChangelogPath returns the path to a module's CHANGELOG.md file
+func ChangelogPath(repoRoot, module string) string {
+	return filepath.Join(repoRoot, ReleaseDir, module, "CHANGELOG.md")
+}
+
+// WorkflowPath returns the path to a GitHub workflow file
+func WorkflowPath(repoRoot, workflow string) string {
+	return filepath.Join(repoRoot, GitHubDir, WorkflowsDir, workflow)
+}
+
+// ============================================================================
+// Common File Pattern Helpers
+// ============================================================================
+
+// GoModPath returns the path to a go.mod file in a module directory
+func GoModPath(moduleRoot string) string {
+	return filepath.Join(moduleRoot, "go.mod")
+}
+
+// GitDir returns the path to the .git directory
+func GitDir(repoRoot string) string {
+	return filepath.Join(repoRoot, ".git")
+}
+
+// GitConfigPath returns the path to the .git/config file
+func GitConfigPath(repoRoot string) string {
+	return filepath.Join(repoRoot, ".git", "config")
+}
+
+// GitHeadPath returns the path to the .git/HEAD file
+func GitHeadPath(repoRoot string) string {
+	return filepath.Join(repoRoot, ".git", "HEAD")
+}
+
+// IndexMarkdownPath returns the path to index.md in a directory
+func IndexMarkdownPath(dir string) string {
+	return filepath.Join(dir, "index.md")
+}
+
+// NavigationConfigPath returns the path to .nav.yml navigation config
+func NavigationConfigPath(dir string) string {
+	return filepath.Join(dir, ".nav.yml")
+}
+
+// ChecksumFilePath returns the path to checksums.txt in an output directory
+func ChecksumFilePath(outputDir string) string {
+	return filepath.Join(outputDir, "checksums.txt")
+}
+
+// ============================================================================
+// Container/Build Helpers
+// ============================================================================
+
+// ContainersPath returns the path to a container directory
+func ContainersPath(repoRoot, container string) string {
+	return filepath.Join(repoRoot, "containers", container)
+}
+
+// ContainerDockerfilePath returns the path to a container's Dockerfile
+func ContainerDockerfilePath(repoRoot, container string) string {
+	return filepath.Join(repoRoot, "containers", container, "Dockerfile")
+}
+
+// MkDocsConfigPath returns the path to mkdocs.yml in an output directory
+func MkDocsConfigPath(outputDir string) string {
+	return filepath.Join(outputDir, "mkdocs.yml")
+}
+
+// MkDocsSiteTemplatePath returns the path to the mkdocs-site template
+func MkDocsSiteTemplatePath(repoRoot string) string {
+	return filepath.Join(repoRoot, "containers", "mkdocs-site", "mkdocs.yml")
+}
+
+// MkDocsPdfTemplatePath returns the path to the mkdocs-pdf template
+func MkDocsPdfTemplatePath(repoRoot string) string {
+	return filepath.Join(repoRoot, "containers", "mkdocs-pdf", "mkdocs.yml")
+}
+
+// SiteOutputPath returns the path to the site output directory
+func SiteOutputPath(outputDir string) string {
+	return filepath.Join(outputDir, "site")
+}
+
+// ServeOutputPath returns the path to the serve output directory (for live docs serving)
+func ServeOutputPath(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, "serve")
+}
+
+// BuildLockPath returns the path to a build lock file
+func BuildLockPath(buildDir, moniker string) string {
+	return filepath.Join(buildDir, fmt.Sprintf(".lock-%s", moniker))
+}
+
+// ============================================================================
+// Staging/Asset Helpers (for book building)
+// ============================================================================
+
+// StagingAssetsPath returns the path to assets directory within staging
+func StagingAssetsPath(stagingDir string) string {
+	return filepath.Join(stagingDir, "assets")
+}
+
+// RenderedAssetsPath returns the path to rendered assets for a specific renderer
+// Examples: renderer="mermaid" -> staging/assets/rendered/mermaid
+//           renderer="drawio" -> staging/assets/rendered/drawio
+func RenderedAssetsPath(stagingDir, renderer string) string {
+	return filepath.Join(stagingDir, "assets", "rendered", renderer)
+}
+
+// MermaidCachePath returns the path to a cached mermaid SVG
+func MermaidCachePath(cacheRoot, hash string) string {
+	return filepath.Join(cacheRoot, "mermaid", hash+".svg")
+}
+
+// DocsSourcePath returns the path to docs directory within a source root
+func DocsSourcePath(sourceRoot string) string {
+	return filepath.Join(sourceRoot, "docs")
+}
+
+// ============================================================================
+// Specs/Test Asset Helpers
+// ============================================================================
+
+// SpecsImplPath returns the path to a spec implementation directory
+func SpecsImplPath(repoRoot, module string) string {
+	return filepath.Join(repoRoot, GoDir, EACDir, "specs", "impl", module)
+}
+
+// SpecsAssetsPath returns the path to spec assets for a module
+func SpecsAssetsPath(repoRoot, module string) string {
+	return filepath.Join(SpecsImplPath(repoRoot, module), "assets")
+}
+
+// ToolsPath returns the path to the tools output directory
+func ToolsPath(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, ToolsDir)
+}
+
+// BuildStatePath returns the path to the build state file
+func BuildStatePath(repoRoot, stateFileName string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, stateFileName)
+}
+
+// TestStatePath returns the path to the test state file
+func TestStatePath(repoRoot, stateFileName string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, stateFileName)
 }

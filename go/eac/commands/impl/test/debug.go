@@ -22,6 +22,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/testjson"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // ansiRegex matches ANSI escape sequences for color/formatting
@@ -49,7 +50,7 @@ func TestDebug() int {
 		return 1
 	}
 
-	testOutputDir := filepath.Join(workspaceRoot, "out", "test")
+	testOutputDir := paths.TestOutputDir(workspaceRoot)
 
 	// Find all test result files
 	goTestFiles, err := findGoTestJSONFiles(testOutputDir)

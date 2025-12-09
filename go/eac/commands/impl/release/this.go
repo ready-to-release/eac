@@ -158,7 +158,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	// Load definitions for versioning constraints
 	defs, err := definitions.Load(workspaceRoot)
 	if err != nil {
-		defs = definitions.Default()
+		result.Error = fmt.Sprintf("failed to load definitions: %v", err)
+		return result
 	}
 
 	// Set constraint info

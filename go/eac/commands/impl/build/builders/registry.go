@@ -7,6 +7,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 // BuildOptions contains flags for controlling the build process.
@@ -17,87 +18,122 @@ type BuildOptions struct {
 	RequestedArtifacts []string // Specific artifact IDs to build (empty = default artifacts, "*" = all)
 }
 
-// BuildFunc is the signature for module build functions.
-type BuildFunc func(*modules.ModuleContract, string, string, io.Writer, BuildOptions) int
+// Handler is the interface for build handlers.
+// Each handler is responsible for building modules of specific types.
+type Handler interface {
+	// Name returns the handler identifier (e.g., "go", "mkdocs", "docker")
+	Name() string
 
-// ListArtifactsFunc returns a list of artifacts that would be produced by building a module.
-// The returned paths are relative to the module's output directory.
-type ListArtifactsFunc func(*modules.ModuleContract, string) []string
+	// Build executes the build for a module.
+	// Returns exit code (0 = success, non-zero = failure).
+	Build(module *modules.ModuleContract, workspaceRoot, outputDir string,
+		logWriter io.Writer, opts BuildOptions) int
+
+	// ListArtifacts returns artifact paths that would be produced.
+	// Paths are relative to the module's output directory.
+	ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string
+
+	// Capabilities returns module capabilities this handler supports.
+	// Used for dispatch matching (e.g., ["go_module", "cross_compile"]).
+	Capabilities() []string
+
+	// Requirements returns system dependencies required by this handler.
+	// Used for early validation (e.g., ["go", "docker"]).
+	Requirements() []string
+
+	// ValidateModule checks if a module's configuration is valid.
+	// Returns nil if valid, or an error describing the problem.
+	// Called before build starts for early failure.
+	ValidateModule(module *modules.ModuleContract, workspaceRoot string) error
+}
 
 var (
-	mu               sync.RWMutex
-	systemHandlers   = make(map[string]BuildFunc)
-	artifactHandlers = make(map[string]ListArtifactsFunc)
+	mu       sync.RWMutex
+	handlers = make(map[string]Handler)
+	log      = logging.C()
 )
 
-// RegisterSystem registers a handler for a build dependency.
+// RegisterHandler registers a handler for a build dependency.
 // Call this from init() in your builder file.
-// The primary build_dep is looked up from module-types.yml contract.
-func RegisterSystem(buildDep string, fn BuildFunc) {
+func RegisterHandler(h Handler) {
 	mu.Lock()
 	defer mu.Unlock()
-	systemHandlers[buildDep] = fn
+	handlers[h.Name()] = h
 }
 
-// RegisterSystemArtifacts registers an artifacts listing function for a build dependency.
-func RegisterSystemArtifacts(buildDep string, fn ListArtifactsFunc) {
-	mu.Lock()
-	defer mu.Unlock()
-	artifactHandlers[buildDep] = fn
+// GetHandler returns the handler for a given name, or nil if not found.
+func GetHandler(name string) Handler {
+	mu.RLock()
+	defer mu.RUnlock()
+	return handlers[name]
 }
 
-// GetBuildFunc returns the appropriate build function for a module type.
-// It uses dispatch rules from handlers.yml to determine which handler to use,
-// falling back to the primary build_dep from module-types.yml.
-func GetBuildFunc(moduleType string) BuildFunc {
+// GetAllHandlers returns all registered handlers.
+func GetAllHandlers() map[string]Handler {
+	mu.RLock()
+	defer mu.RUnlock()
+	result := make(map[string]Handler, len(handlers))
+	for k, v := range handlers {
+		result[k] = v
+	}
+	return result
+}
+
+// GetHandlerForModule returns the appropriate handler for a module.
+// It first checks for a per-module handler override, then finds a handler
+// whose capabilities match the module's capabilities from module-types.yml.
+func GetHandlerForModule(module *modules.ModuleContract, moduleType string) Handler {
 	mu.RLock()
 	defer mu.RUnlock()
 
+	// Check for per-module handler override first
+	if module != nil && module.GetBuildHandler() != "" {
+		handlerName := module.GetBuildHandler()
+		if h, ok := handlers[handlerName]; ok {
+			return h
+		}
+	}
+
+	// Get module capabilities from config
 	cfg := config.Global()
 	if cfg == nil || cfg.ModuleTypes == nil {
-		// No config available, use no-op handler
-		if fn, ok := systemHandlers[""]; ok {
-			return fn
+		if h, ok := handlers[""]; ok {
+			return h
 		}
-		return func(*modules.ModuleContract, string, string, io.Writer, BuildOptions) int {
-			return 0
-		}
+		return nil
 	}
 
-	// Get module capabilities and primary build dep
-	capabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
-	primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
+	moduleCapabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
 
-	// Use handlers config dispatch rules if available
-	var handlerName string
-	if cfg.Handlers != nil {
-		handlerName = cfg.Handlers.GetBuildHandler(moduleType, capabilities, primaryDep)
-	} else {
-		// Legacy fallback: special case for documentation + container
-		if cfg.ModuleTypes.HasCapability(moduleType, "documentation") &&
-			cfg.ModuleTypes.HasCapability(moduleType, "container") {
-			handlerName = "mkdocs"
-		} else {
-			handlerName = primaryDep
+	// Find handler whose capabilities match module capabilities
+	for _, h := range handlers {
+		if h.Name() == "" {
+			continue // Skip no-op handler for now
+		}
+		handlerCaps := h.Capabilities()
+		if matchesCapabilities(moduleCapabilities, handlerCaps) {
+			return h
 		}
 	}
 
-	// Look up the handler
-	if handlerName != "" {
-		if fn, ok := systemHandlers[handlerName]; ok {
-			return fn
+	// Fallback: no-op handler (for types with no matching capabilities)
+	if h, ok := handlers[""]; ok {
+		return h
+	}
+
+	return nil
+}
+
+// matchesCapabilities returns true if the module has any capability the handler supports
+func matchesCapabilities(moduleCapabilities, handlerCapabilities []string) bool {
+	for _, mc := range moduleCapabilities {
+		for _, hc := range handlerCapabilities {
+			if mc == hc {
+				return true
+			}
 		}
 	}
-
-	// Fallback: no-op (for types with no build deps)
-	if fn, ok := systemHandlers[""]; ok {
-		return fn
-	}
-
-	// Panic-safe fallback (should never reach here)
-	return func(*modules.ModuleContract, string, string, io.Writer, BuildOptions) int {
-		return 0
-	}
+	return false
 }
 
 // IsGoModuleType returns true if the module type uses Go tooling (has go_module capability)
@@ -107,43 +143,4 @@ func IsGoModuleType(moduleType string) bool {
 		return cfg.ModuleTypes.HasCapability(moduleType, "go_module")
 	}
 	return false
-}
-
-// GetListArtifactsFunc returns the appropriate artifacts listing function for a module type.
-// Returns nil if no artifacts function is registered for this type.
-func GetListArtifactsFunc(moduleType string) ListArtifactsFunc {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		return nil
-	}
-
-	// Get module capabilities and primary build dep
-	capabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
-	primaryDep := cfg.ModuleTypes.GetPrimaryBuildDep(moduleType)
-
-	// Use handlers config dispatch rules if available
-	var handlerName string
-	if cfg.Handlers != nil {
-		handlerName = cfg.Handlers.GetBuildHandler(moduleType, capabilities, primaryDep)
-	} else {
-		// Legacy fallback: special case for documentation + container
-		if cfg.ModuleTypes.HasCapability(moduleType, "documentation") &&
-			cfg.ModuleTypes.HasCapability(moduleType, "container") {
-			handlerName = "mkdocs"
-		} else {
-			handlerName = primaryDep
-		}
-	}
-
-	// Look up the artifacts handler
-	if handlerName != "" {
-		if fn, ok := artifactHandlers[handlerName]; ok {
-			return fn
-		}
-	}
-
-	return nil
 }

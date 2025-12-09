@@ -3,7 +3,7 @@ package commitmessage
 import (
 	"context"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 // aiExecutorAdapter adapts ai.Executor to contracts.AIExecutor interface.

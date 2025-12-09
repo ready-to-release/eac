@@ -43,44 +43,21 @@ type ConventionsConfig struct {
 	Changelog   string `yaml:"changelog"`
 }
 
-// DefaultRepositoryConfig returns the default configuration
-func DefaultRepositoryConfig() RepositoryConfig {
-	return RepositoryConfig{
-		Paths: PathsConfig{
-			TestImplRoot: "go/eac/specs/impl",
-			SpecsRoot:    "specs",
-			Templates:    "templates",
-			Out: OutConfig{
-				Root:     "out",
-				Build:    "out/build",
-				Test:     "out/test",
-				Logs:     "out/logs",
-				Security: "out/security",
-				Tools:    "out/tools",
-			},
-		},
-		Conventions: ConventionsConfig{
-			GodogTest:   "godog_test.go",
-			PackageJSON: "package.json",
-			Changelog:   "CHANGELOG.md",
-		},
-	}
-}
-
-// LoadRepositoryConfig loads repository configuration from YAML.
-// Returns defaults if the file doesn't exist.
-func LoadRepositoryConfig(repoRoot string) (*RepositoryConfig, error) {
-	cfg := DefaultRepositoryConfig()
-
+// loadRepositoryConfigUnmerged loads repository configuration from user's YAML file only.
+// WARNING: This returns UNMERGED config without defaults. Do NOT use directly.
+// Use config.Load().Repository instead to get properly merged config with defaults.
+// This is only exported for use by the config package's merge logic.
+func loadRepositoryConfigUnmerged(repoRoot string) (*RepositoryConfig, error) {
 	configPath := filepath.Join(paths.EACConfigPath(repoRoot), RepositoryFileName)
 	data, err := os.ReadFile(configPath)
 	if os.IsNotExist(err) {
-		return &cfg, nil
+		return &RepositoryConfig{}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
 
+	var cfg RepositoryConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
@@ -98,9 +75,15 @@ func (c *RepositoryConfig) SpecsPath(moniker string) string {
 	return c.Paths.SpecsRoot + "/" + moniker
 }
 
-// BuildOutputPath returns the path to a module's build output
+// BuildOutputPath returns the relative path to a module's build output.
+// For absolute paths, use paths.BuildOutputPath(workspaceRoot, moniker) instead.
 func (c *RepositoryConfig) BuildOutputPath(moniker string) string {
 	return c.Paths.Out.Build + "/" + moniker
+}
+
+// BuildOutputPathAbs returns the absolute path to a module's build output
+func (c *RepositoryConfig) BuildOutputPathAbs(workspaceRoot, moniker string) string {
+	return filepath.Join(workspaceRoot, c.Paths.Out.Build, moniker)
 }
 
 // TestOutputPath returns the path to a test suite's output

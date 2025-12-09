@@ -13,22 +13,22 @@ func TestModuleTypesConfig_Get(t *testing.T) {
 	t.Run("returns correct type definition", func(t *testing.T) {
 		cfg := &ModuleTypesConfig{
 			Types: []ModuleTypeDef{
-				{Name: "go-library", BuildDeps: []string{"go"}},
-				{Name: "python-lib", BuildDeps: []string{"python"}},
+				{Name: "go", BuildDeps: []string{"go"}},
+				{Name: "python", BuildDeps: []string{"python"}},
 			},
 		}
 
-		result := cfg.Get("go-library")
+		result := cfg.Get("go")
 
 		assert.NotNil(t, result)
-		assert.Equal(t, "go-library", result.Name)
+		assert.Equal(t, "go", result.Name)
 		assert.Equal(t, []string{"go"}, result.BuildDeps)
 	})
 
 	t.Run("returns nil for unknown type", func(t *testing.T) {
 		cfg := &ModuleTypesConfig{
 			Types: []ModuleTypeDef{
-				{Name: "go-library", BuildDeps: []string{"go"}},
+				{Name: "go", BuildDeps: []string{"go"}},
 			},
 		}
 
@@ -50,7 +50,7 @@ func TestModuleTypesConfig_Get(t *testing.T) {
 	t.Run("builds type map lazily", func(t *testing.T) {
 		cfg := &ModuleTypesConfig{
 			Types: []ModuleTypeDef{
-				{Name: "go-library", BuildDeps: []string{"go"}},
+				{Name: "go", BuildDeps: []string{"go"}},
 			},
 		}
 
@@ -58,7 +58,7 @@ func TestModuleTypesConfig_Get(t *testing.T) {
 		assert.Nil(t, cfg.typeMap)
 
 		// After Get, typeMap should be built
-		_ = cfg.Get("go-library")
+		_ = cfg.Get("go")
 		assert.NotNil(t, cfg.typeMap)
 	})
 }
@@ -68,23 +68,23 @@ func TestModuleTypesConfig_HasCapability(t *testing.T) {
 	cfg := &ModuleTypesConfig{
 		Types: []ModuleTypeDef{
 			{
-				Name:         "go-library",
+				Name:         "go",
 				Capabilities: []string{"testing", "documentation"},
 			},
 			{
-				Name:         "scripts",
+				Name:         "static",
 				Capabilities: []string{},
 			},
 		},
 	}
 
 	t.Run("returns true when type has capability", func(t *testing.T) {
-		assert.True(t, cfg.HasCapability("go-library", "testing"))
-		assert.True(t, cfg.HasCapability("go-library", "documentation"))
+		assert.True(t, cfg.HasCapability("go", "testing"))
+		assert.True(t, cfg.HasCapability("go", "documentation"))
 	})
 
 	t.Run("returns false when type lacks capability", func(t *testing.T) {
-		assert.False(t, cfg.HasCapability("go-library", "deployment"))
+		assert.False(t, cfg.HasCapability("go", "deployment"))
 	})
 
 	t.Run("returns false for unknown type", func(t *testing.T) {
@@ -92,7 +92,7 @@ func TestModuleTypesConfig_HasCapability(t *testing.T) {
 	})
 
 	t.Run("returns false for type with no capabilities", func(t *testing.T) {
-		assert.False(t, cfg.HasCapability("scripts", "testing"))
+		assert.False(t, cfg.HasCapability("static", "testing"))
 	})
 }
 
@@ -100,15 +100,15 @@ func TestModuleTypesConfig_HasCapability(t *testing.T) {
 func TestModuleTypesConfig_GetBuildDeps(t *testing.T) {
 	cfg := &ModuleTypesConfig{
 		Types: []ModuleTypeDef{
-			{Name: "go-library", BuildDeps: []string{"go"}},
-			{Name: "go-r2r-ext", BuildDeps: []string{"go", "docker"}},
-			{Name: "config", BuildDeps: []string{}},
+			{Name: "go", BuildDeps: []string{"go"}},
+			{Name: "container", BuildDeps: []string{"docker"}},
+			{Name: "static", BuildDeps: []string{}},
 		},
 	}
 
 	t.Run("returns correct build deps", func(t *testing.T) {
-		assert.Equal(t, []string{"go"}, cfg.GetBuildDeps("go-library"))
-		assert.Equal(t, []string{"go", "docker"}, cfg.GetBuildDeps("go-r2r-ext"))
+		assert.Equal(t, []string{"go"}, cfg.GetBuildDeps("go"))
+		assert.Equal(t, []string{"docker"}, cfg.GetBuildDeps("container"))
 	})
 
 	t.Run("returns nil for unknown type", func(t *testing.T) {
@@ -116,7 +116,7 @@ func TestModuleTypesConfig_GetBuildDeps(t *testing.T) {
 	})
 
 	t.Run("returns empty slice for type with no build deps", func(t *testing.T) {
-		assert.Equal(t, []string{}, cfg.GetBuildDeps("config"))
+		assert.Equal(t, []string{}, cfg.GetBuildDeps("static"))
 	})
 }
 
@@ -124,15 +124,15 @@ func TestModuleTypesConfig_GetBuildDeps(t *testing.T) {
 func TestModuleTypesConfig_GetPrimaryBuildDep(t *testing.T) {
 	cfg := &ModuleTypesConfig{
 		Types: []ModuleTypeDef{
-			{Name: "go-library", BuildDeps: []string{"go"}},
-			{Name: "go-r2r-ext", BuildDeps: []string{"go", "docker"}},
-			{Name: "config", BuildDeps: []string{}},
+			{Name: "go", BuildDeps: []string{"go"}},
+			{Name: "container", BuildDeps: []string{"docker"}},
+			{Name: "static", BuildDeps: []string{}},
 		},
 	}
 
 	t.Run("returns first build dep", func(t *testing.T) {
-		assert.Equal(t, "go", cfg.GetPrimaryBuildDep("go-library"))
-		assert.Equal(t, "go", cfg.GetPrimaryBuildDep("go-r2r-ext"))
+		assert.Equal(t, "go", cfg.GetPrimaryBuildDep("go"))
+		assert.Equal(t, "docker", cfg.GetPrimaryBuildDep("container"))
 	})
 
 	t.Run("returns empty for unknown type", func(t *testing.T) {
@@ -140,7 +140,7 @@ func TestModuleTypesConfig_GetPrimaryBuildDep(t *testing.T) {
 	})
 
 	t.Run("returns empty for type with no build deps", func(t *testing.T) {
-		assert.Equal(t, "", cfg.GetPrimaryBuildDep("config"))
+		assert.Equal(t, "", cfg.GetPrimaryBuildDep("static"))
 	})
 }
 
@@ -148,21 +148,21 @@ func TestModuleTypesConfig_GetPrimaryBuildDep(t *testing.T) {
 func TestModuleTypesConfig_GetTypesWithCapability(t *testing.T) {
 	cfg := &ModuleTypesConfig{
 		Types: []ModuleTypeDef{
-			{Name: "go-library", Capabilities: []string{"testing", "docs"}},
-			{Name: "go-cli", Capabilities: []string{"testing", "binary"}},
-			{Name: "scripts", Capabilities: []string{"docs"}},
-			{Name: "config", Capabilities: []string{}},
+			{Name: "go", Capabilities: []string{"testing", "docs"}},
+			{Name: "typescript", Capabilities: []string{"testing", "npm"}},
+			{Name: "container", Capabilities: []string{"docs"}},
+			{Name: "static", Capabilities: []string{}},
 		},
 	}
 
 	t.Run("returns types with capability", func(t *testing.T) {
 		result := cfg.GetTypesWithCapability("testing")
-		assert.ElementsMatch(t, []string{"go-library", "go-cli"}, result)
+		assert.ElementsMatch(t, []string{"go", "typescript"}, result)
 	})
 
 	t.Run("returns single type", func(t *testing.T) {
-		result := cfg.GetTypesWithCapability("binary")
-		assert.Equal(t, []string{"go-cli"}, result)
+		result := cfg.GetTypesWithCapability("npm")
+		assert.Equal(t, []string{"typescript"}, result)
 	})
 
 	t.Run("returns empty for unknown capability", func(t *testing.T) {
@@ -175,21 +175,21 @@ func TestModuleTypesConfig_GetTypesWithCapability(t *testing.T) {
 func TestModuleTypesConfig_GetTypesWithBuildDep(t *testing.T) {
 	cfg := &ModuleTypesConfig{
 		Types: []ModuleTypeDef{
-			{Name: "go-library", BuildDeps: []string{"go"}},
-			{Name: "go-cli", BuildDeps: []string{"go"}},
-			{Name: "go-r2r-ext", BuildDeps: []string{"go", "docker"}},
-			{Name: "config", BuildDeps: []string{}},
+			{Name: "go", BuildDeps: []string{"go"}},
+			{Name: "typescript", BuildDeps: []string{"node"}},
+			{Name: "container", BuildDeps: []string{"docker"}},
+			{Name: "static", BuildDeps: []string{}},
 		},
 	}
 
 	t.Run("returns types with build dep", func(t *testing.T) {
 		result := cfg.GetTypesWithBuildDep("go")
-		assert.ElementsMatch(t, []string{"go-library", "go-cli", "go-r2r-ext"}, result)
+		assert.Equal(t, []string{"go"}, result)
 	})
 
 	t.Run("returns types with docker dep", func(t *testing.T) {
 		result := cfg.GetTypesWithBuildDep("docker")
-		assert.Equal(t, []string{"go-r2r-ext"}, result)
+		assert.Equal(t, []string{"container"}, result)
 	})
 
 	t.Run("returns empty for unknown build dep", func(t *testing.T) {
@@ -201,7 +201,7 @@ func TestModuleTypesConfig_GetTypesWithBuildDep(t *testing.T) {
 // TestModuleTypeDef_HasCapability tests the type-level capability check
 func TestModuleTypeDef_HasCapability(t *testing.T) {
 	typeDef := &ModuleTypeDef{
-		Name:         "go-library",
+		Name:         "go",
 		Capabilities: []string{"testing", "documentation"},
 	}
 
@@ -223,7 +223,7 @@ func TestModuleTypeDef_HasCapability(t *testing.T) {
 func TestModuleTypeDef_Defaults(t *testing.T) {
 	t.Run("can access Files defaults", func(t *testing.T) {
 		typeDef := &ModuleTypeDef{
-			Name: "go-library",
+			Name: "go",
 			Defaults: &TypeDefaults{
 				Files: &FilesDefaults{
 					Source: []string{"**/*.go"},
@@ -240,7 +240,7 @@ func TestModuleTypeDef_Defaults(t *testing.T) {
 
 	t.Run("can access Repo defaults", func(t *testing.T) {
 		typeDef := &ModuleTypeDef{
-			Name: "go-library",
+			Name: "go",
 			Defaults: &TypeDefaults{
 				Repo: &RepoDefaults{
 					Specs:    []string{"specs/{moniker}/**"},

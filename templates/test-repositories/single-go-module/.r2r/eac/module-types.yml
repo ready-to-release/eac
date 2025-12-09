@@ -1,0 +1,5 @@
+types:
+  - name: go
+    description: Go module (library, executable, or test - driven by module artifacts)
+    capabilities:
+      - go_module

@@ -26,8 +26,8 @@ import (
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
 	createDesign "github.com/ready-to-release/eac/go/eac/commands/impl/create/design"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/ai"
-	"github.com/ready-to-release/eac/go/eac/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -373,7 +373,7 @@ func loadPrompt(config *UpdateConfig) (string, error) {
 	}
 
 	// Load default prompt from repo path
-	repoPath := filepath.Join(config.TemplateRoot, "contracts", "ai", "design", "0.1.0", "design.md")
+	repoPath := filepath.Join(paths.ContractsVersionPath(config.TemplateRoot, "ai", "design"), "0.1.0", "design.md")
 	content, err := os.ReadFile(repoPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read prompt from %s: %w", repoPath, err)
@@ -425,7 +425,7 @@ func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, pr
 	}
 
 	if config.Debug {
-		retryConfig.DebugOutputDir = filepath.Join(config.TemplateRoot, "out", "logs", "design")
+		retryConfig.DebugOutputDir = paths.CommandLogsPath(config.TemplateRoot, "design")
 	}
 
 	result, err := contracts.GenerateWithRetry(
