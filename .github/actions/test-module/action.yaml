@@ -120,6 +120,18 @@ runs:
         name: ${{ steps.vars.outputs.build-artifact-name }}
         path: ${{ steps.vars.outputs.build-artifact-path }}
 
+    - name: List Downloaded Artifacts (diagnostic)
+      if: inputs.download-artifact == 'true'
+      shell: bash
+      run: |
+        echo "=== Downloaded artifacts structure ==="
+        if [ -d "out/build" ]; then
+          find out/build -type f | head -50
+          echo "Total files: $(find out/build -type f | wc -l)"
+        else
+          echo "WARNING: out/build directory does not exist after download!"
+        fi
+
     - name: Run Test Suites
       id: test
       shell: bash

@@ -113,16 +113,10 @@ modules:
     type: go
     # No dependencies - Layer 0
 
-  - moniker: eac-ai
-    type: go
-    depends_on:
-      - eac-core  # Layer 1
-
   - moniker: eac-commands
     type: go
     depends_on:
-      - eac-core
-      - eac-ai    # Layer 2
+      - eac-core    # Layer 1
 
   - moniker: r2r-cli
     type: go
@@ -136,13 +130,10 @@ modules:
 Layer 0: eac-core
            │
            ▼
-Layer 1: eac-ai ──────┐
-           │          │
-           ▼          ▼
-Layer 2: eac-commands
+Layer 1: eac-commands
            │
            ▼
-Layer 3: r2r-cli
+Layer 2: r2r-cli
 ```
 
 ### Execution Order
@@ -153,9 +144,8 @@ r2r eac get execution order r2r-cli
 
 # Output:
 # Layer 0: eac-core
-# Layer 1: eac-ai
-# Layer 2: eac-commands
-# Layer 3: r2r-cli
+# Layer 1: eac-commands
+# Layer 2: r2r-cli
 ```
 
 ## Execution Configuration
@@ -425,7 +415,6 @@ r2r eac pipeline status
 # │ Module        │ Build │ Test  │ Time   │ Status │
 # ├───────────────┼───────┼───────┼────────┼────────┤
 # │ eac-core      │ ✅    │ ✅    │ 45s    │ ✅     │
-# │ eac-ai        │ ✅    │ ✅    │ 1m 12s │ ✅     │
 # │ eac-commands  │ ✅    │ ⏳    │ 2m 30s │ ⏳     │
 # │ r2r-cli       │ ⏳    │ -     │ -      │ ⏳     │
 #
