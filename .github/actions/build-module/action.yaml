@@ -144,9 +144,10 @@ runs:
         MODULE: ${{ inputs.module }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
       run: |
-        # Use --use-existing-depm for incremental CI: skip building module dependencies
-        # if their artifacts already exist (downloaded from previous/current CI runs)
-        if $COMMANDS build $MODULE --use-existing-depm $EXTRA_ARGS; then
+        # CI builds THIS module only:
+        # --rebuild: force full build (CI was triggered, so build fresh)
+        # --use-existing-depm: use dependency artifacts from previous/current CI runs
+        if $COMMANDS build $MODULE --rebuild --use-existing-depm $EXTRA_ARGS; then
           echo "build-failed=0" >> $GITHUB_OUTPUT
         else
           echo "build-failed=1" >> $GITHUB_OUTPUT
