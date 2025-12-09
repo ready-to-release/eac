@@ -50,6 +50,28 @@ type VersioningConfig struct {
 	Constraint string `yaml:"constraint"` // unrestricted, patch-only, calver-only
 }
 
+// Versioning constraint constants
+const (
+	VersioningUnrestricted = "unrestricted"
+	VersioningPatchOnly    = "patch-only"
+	VersioningCalverOnly   = "calver-only"
+)
+
+// IsPatchOnly returns true if versioning is constrained to patch-only
+func (v VersioningConfig) IsPatchOnly() bool {
+	return v.Constraint == VersioningPatchOnly
+}
+
+// IsCalverOnly returns true if versioning is forced to calver
+func (v VersioningConfig) IsCalverOnly() bool {
+	return v.Constraint == VersioningCalverOnly
+}
+
+// IsUnrestricted returns true if versioning is unrestricted
+func (v VersioningConfig) IsUnrestricted() bool {
+	return v.Constraint == VersioningUnrestricted || v.Constraint == ""
+}
+
 // PathsConfig defines repository-specific directory structures
 type PathsConfig struct {
 	TestImplRoot string    `yaml:"test_impl_root"`

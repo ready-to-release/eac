@@ -32,8 +32,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/definitions"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 )
 
@@ -107,12 +107,13 @@ func ReleasePending() int {
 		return 1
 	}
 
-	// Load definitions for versioning constraints
-	defs, err := definitions.Load(workspaceRoot)
+	// Load config for versioning constraints
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Errorf("failed to load definitions: %v", err)
+		log.Errorf("failed to load config: %v", err)
 		return 1
 	}
+	versioning := cfg.Repository.Repository.Versioning
 
 	// Load module contracts
 	moduleRegistry, err := modules.LoadFromWorkspace("")
@@ -144,7 +145,7 @@ func ReleasePending() int {
 	}
 
 	for _, mod := range modulesToCheck {
-		pending, err := checkModulePending(mod, moduleRegistry, repo, defs, workspaceRoot)
+		pending, err := checkModulePending(mod, moduleRegistry, repo, versioning, workspaceRoot)
 		if err != nil {
 			log.Warnf("failed to check module '%s': %v", mod, err)
 			continue
@@ -181,7 +182,7 @@ func ReleasePending() int {
 	return 0
 }
 
-func checkModulePending(module string, moduleRegistry *modules.Registry, repo git.GitRepository, defs *definitions.Definitions, workspaceRoot string) (PendingRelease, error) {
+func checkModulePending(module string, moduleRegistry *modules.Registry, repo git.GitRepository, versioning config.VersioningConfig, workspaceRoot string) (PendingRelease, error) {
 	pending := PendingRelease{
 		Module:     module,
 		HasChanges: false,
@@ -224,9 +225,9 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 	pending.VersionType = versionType.String()
 
 	// Get constraint
-	if defs.IsPatchOnly() {
+	if versioning.IsPatchOnly() {
 		pending.Constraint = "patch-only"
-	} else if defs.IsCalverOnly() {
+	} else if versioning.IsCalverOnly() {
 		pending.Constraint = "calver-only"
 	} else {
 		pending.Constraint = "unrestricted"
@@ -315,7 +316,7 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 	}
 
 	maxBump := changelog.BumpMajor
-	if defs.IsPatchOnly() {
+	if versioning.IsPatchOnly() {
 		maxBump = changelog.BumpPatch
 	}
 

@@ -34,8 +34,8 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["mono", "poly", "adjunct"],
-          "description": "Repository type: mono (monorepo), poly (polyrepo), adjunct (supporting repo)"
+          "enum": ["mono", "poly", "adjacent"],
+          "description": "Repository type: mono (monorepo), poly (polyrepo), adjacent (supporting repo)"
         },
         "schemes": {
           "type": "array",

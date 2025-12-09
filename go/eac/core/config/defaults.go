@@ -14,6 +14,59 @@ import (
 // DefaultsVersion is the contract version for defaults
 const DefaultsVersion = "0.1.0"
 
+// peekRepositoryType reads only the repository.type field from user config.
+// This is a minimal read to determine which type-specific defaults to load.
+// Returns empty string if file doesn't exist or type is not specified.
+func peekRepositoryType(configRoot string) (string, error) {
+	repoPath := filepath.Join(configRoot, RepositoryFileName)
+	data, err := os.ReadFile(repoPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil // No user config, will use defaults
+		}
+		return "", fmt.Errorf("reading repository config: %w", err)
+	}
+
+	// Minimal struct to extract just the type
+	var peek struct {
+		Repository struct {
+			Type string `yaml:"type"`
+		} `yaml:"repository"`
+	}
+
+	if err := yaml.Unmarshal(data, &peek); err != nil {
+		return "", fmt.Errorf("parsing repository type: %w", err)
+	}
+
+	return peek.Repository.Type, nil
+}
+
+// LoadRepositoryTypeDefaults loads type-specific repository defaults.
+// Returns nil if the type-specific defaults file doesn't exist (not an error).
+// Type-specific defaults are merged BETWEEN base defaults and user config.
+func LoadRepositoryTypeDefaults(repoRoot, repoType string) (*RepositoryConfig, error) {
+	if repoType == "" {
+		return nil, nil
+	}
+
+	filename := fmt.Sprintf("repository-%s.yml", repoType)
+	data, err := loadDefaultFile(repoRoot, filename)
+	if err != nil {
+		// Type-specific defaults are optional
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("loading repository type defaults (%s): %w", repoType, err)
+	}
+
+	var cfg RepositoryConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing repository type defaults (%s): %w", repoType, err)
+	}
+
+	return &cfg, nil
+}
+
 // LoadRepositoryDefaults loads default repository config from contract defaults.
 // This now includes modules (unified config).
 // Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.

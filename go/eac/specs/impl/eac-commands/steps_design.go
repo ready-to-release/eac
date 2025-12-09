@@ -207,21 +207,22 @@ func minimalWorkspaceDSL(module string) string {
 }`, module, module)
 }
 
-// createModuleContract creates a minimal module contract for testing by appending to modules.yml.
+// createModuleContract creates a minimal module contract for testing by appending to repository.yml.
+// Note: Modules are defined in repository.yml (unified config).
 func createModuleContract(ctx *internal.TestContext, module, sourcePath string) error {
-	// Path to modules.yml in isolated environment
-	modulesYmlPath := filepath.Join(internal.ResolvePath(ctx, ""), ".r2r", "eac", "modules.yml")
+	// Path to repository.yml in isolated environment
+	repoYmlPath := filepath.Join(internal.ResolvePath(ctx, ""), ".r2r", "eac", "repository.yml")
 
-	// Read existing modules.yml
-	existingData, err := os.ReadFile(modulesYmlPath)
+	// Read existing repository.yml
+	existingData, err := os.ReadFile(repoYmlPath)
 	if err != nil {
-		return fmt.Errorf("failed to read modules.yml: %w", err)
+		return fmt.Errorf("failed to read repository.yml: %w", err)
 	}
 
 	// Parse existing YAML
 	var config map[string]interface{}
 	if err := yaml.Unmarshal(existingData, &config); err != nil {
-		return fmt.Errorf("failed to parse modules.yml: %w", err)
+		return fmt.Errorf("failed to parse repository.yml: %w", err)
 	}
 
 	// Get modules array
@@ -246,12 +247,12 @@ func createModuleContract(ctx *internal.TestContext, module, sourcePath string) 
 	// Marshal back to YAML
 	updatedData, err := yaml.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("failed to marshal updated modules.yml: %w", err)
+		return fmt.Errorf("failed to marshal updated repository.yml: %w", err)
 	}
 
 	// Write back to file
-	if err := os.WriteFile(modulesYmlPath, updatedData, 0644); err != nil {
-		return fmt.Errorf("failed to write updated modules.yml: %w", err)
+	if err := os.WriteFile(repoYmlPath, updatedData, 0644); err != nil {
+		return fmt.Errorf("failed to write updated repository.yml: %w", err)
 	}
 
 	return nil

@@ -212,7 +212,7 @@ func TestLoad_ModuleTypesLoaded(t *testing.T) {
 	// Type lookup should work
 	goType := cfg.ModuleTypes.Get("go")
 	assert.NotNil(t, goType, "should find go type")
-	assert.Equal(t, []string{"go"}, goType.BuildDeps)
+	assert.Contains(t, goType.Capabilities, "go_module")
 }
 
 // TestLoad_TypeDefaultsApplied verifies type defaults are applied after Load
@@ -392,6 +392,90 @@ func TestRepositoryConfig_ApplyTypeDefaults(t *testing.T) {
 	})
 }
 
+// TestPeekRepositoryType tests the type detection function
+func TestPeekRepositoryType(t *testing.T) {
+	t.Run("detects mono type", func(t *testing.T) {
+		// Use the real config root which should have repository.yml
+		cfg, err := Load(LoadOptions{ValidateSchemas: false, LazyLoad: true})
+		require.NoError(t, err)
+
+		repoType, err := peekRepositoryType(cfg.ConfigRoot)
+		require.NoError(t, err)
+		// This repo is configured as mono
+		assert.Equal(t, "mono", repoType)
+	})
+
+	t.Run("returns empty for nonexistent directory", func(t *testing.T) {
+		repoType, err := peekRepositoryType("/nonexistent/path")
+		require.NoError(t, err) // Should not error, just return empty
+		assert.Empty(t, repoType)
+	})
+}
+
+// TestLoadRepositoryTypeDefaults tests loading type-specific defaults
+func TestLoadRepositoryTypeDefaults(t *testing.T) {
+	repoRoot, err := findRepositoryRoot("")
+	require.NoError(t, err)
+
+	t.Run("loads mono defaults", func(t *testing.T) {
+		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "mono")
+		require.NoError(t, err)
+		require.NotNil(t, cfg)
+		// Mono should have max_branch_age_days = 7
+		assert.Equal(t, 7, cfg.Repository.MaxBranchAgeDays)
+	})
+
+	t.Run("loads poly defaults", func(t *testing.T) {
+		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "poly")
+		require.NoError(t, err)
+		require.NotNil(t, cfg)
+		// Poly should have unrestricted versioning
+		assert.Equal(t, "unrestricted", cfg.Repository.Versioning.Constraint)
+	})
+
+	t.Run("loads adjacent defaults", func(t *testing.T) {
+		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "adjacent")
+		require.NoError(t, err)
+		require.NotNil(t, cfg)
+		// Adjacent should have merge strategy
+		assert.Equal(t, "merge", cfg.Repository.PR.MergeStrategy)
+	})
+
+	t.Run("returns nil for unknown type", func(t *testing.T) {
+		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "unknown")
+		require.NoError(t, err)
+		assert.Nil(t, cfg)
+	})
+
+	t.Run("returns nil for empty type", func(t *testing.T) {
+		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "")
+		require.NoError(t, err)
+		assert.Nil(t, cfg)
+	})
+}
+
+// TestLoadRepository_TypeSpecificMerge tests the type-specific merge order
+func TestLoadRepository_TypeSpecificMerge(t *testing.T) {
+	t.Run("applies type-specific defaults", func(t *testing.T) {
+		// Load config - this repo is type=mono
+		cfg, err := Load(DefaultLoadOptions())
+		require.NoError(t, err)
+
+		// Mono type defaults should be applied (max_branch_age_days=7)
+		// unless overridden in user config
+		assert.NotZero(t, cfg.Repository.Repository.MaxBranchAgeDays)
+	})
+
+	t.Run("user config overrides type defaults", func(t *testing.T) {
+		// Load config - user config values should win
+		cfg, err := Load(DefaultLoadOptions())
+		require.NoError(t, err)
+
+		// Repository type should be mono (from user config)
+		assert.Equal(t, "mono", cfg.Repository.Repository.Type)
+	})
+}
+
 // TestModuleTypesConfig_Integration tests type config methods with real data
 func TestModuleTypesConfig_Integration(t *testing.T) {
 	cfg, err := Load(DefaultLoadOptions())
@@ -401,7 +485,7 @@ func TestModuleTypesConfig_Integration(t *testing.T) {
 	t.Run("Get returns type definition", func(t *testing.T) {
 		goType := cfg.ModuleTypes.Get("go")
 		require.NotNil(t, goType)
-		assert.Equal(t, []string{"go"}, goType.BuildDeps)
+		assert.Contains(t, goType.Capabilities, "go_module")
 	})
 
 	t.Run("Get returns nil for unknown type", func(t *testing.T) {
@@ -409,13 +493,13 @@ func TestModuleTypesConfig_Integration(t *testing.T) {
 		assert.Nil(t, unknown)
 	})
 
-	t.Run("GetPrimaryBuildDep returns correct dep", func(t *testing.T) {
-		buildDep := cfg.ModuleTypes.GetPrimaryBuildDep("go")
-		assert.Equal(t, "go", buildDep)
+	t.Run("HasCapability returns true for go_module", func(t *testing.T) {
+		hasCapability := cfg.ModuleTypes.HasCapability("go", "go_module")
+		assert.True(t, hasCapability)
 	})
 
-	t.Run("GetTypesWithBuildDep finds go types", func(t *testing.T) {
-		goTypes := cfg.ModuleTypes.GetTypesWithBuildDep("go")
+	t.Run("GetTypesWithCapability finds go types", func(t *testing.T) {
+		goTypes := cfg.ModuleTypes.GetTypesWithCapability("go_module")
 		assert.NotEmpty(t, goTypes)
 		assert.Contains(t, goTypes, "go")
 	})
