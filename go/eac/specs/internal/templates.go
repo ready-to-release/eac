@@ -53,7 +53,7 @@ const ModuleTypesDocker = `types:
   - name: container
     description: Docker container module
     capabilities:
-      - docker_build
+      - buildx
 `
 
 // ModuleTypesComplete is the module-types.yml with all common module types.
@@ -66,7 +66,7 @@ const ModuleTypesComplete = `types:
   - name: container
     description: Docker container module
     capabilities:
-      - docker_build
+      - buildx
 
   - name: typescript
     description: TypeScript/npm module

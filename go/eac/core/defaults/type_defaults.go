@@ -141,25 +141,24 @@ func ResolveDefaults(
 		result.Changelog = Changelog
 	}
 
-	// WorkflowCI - type default, then generic default
+	// WorkflowCI - type default only (no generic fallback - empty means no workflow)
 	if workflowCI != "" {
 		result.WorkflowCI = workflowCI
 	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.WorkflowCI != "" {
 		result.WorkflowCI = SubstituteVariables(typeDef.Files.WorkflowCI, moniker, root, moduleType, pathVars)
-	} else {
-		result.WorkflowCI = WorkflowCIPath(moniker)
 	}
+	// else: leave empty - no workflow
 
-	// WorkflowRelease - type default, then generic default
+	// WorkflowRelease - type default only (no generic fallback - empty means no workflow)
 	if workflowRelease != "" {
 		result.WorkflowRelease = workflowRelease
 	} else if typeDef != nil && typeDef.Files != nil && typeDef.Files.WorkflowRelease != "" {
 		result.WorkflowRelease = SubstituteVariables(typeDef.Files.WorkflowRelease, moniker, root, moduleType, pathVars)
-	} else {
-		result.WorkflowRelease = WorkflowReleasePath(moniker)
 	}
+	// else: leave empty - no workflow
 
 	// Specs - type default, then generic default
+	// Use nil check instead of len() to distinguish "not set" from "explicitly empty []"
 	if specs != nil {
 		result.Specs = specs
 	} else if typeDef != nil && typeDef.Repo != nil && typeDef.Repo.Specs != nil {

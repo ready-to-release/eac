@@ -1056,8 +1056,12 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 		return false
 	}
 
-	// If no artifacts defined, consider it as "exists" (nothing to build)
-	if moduleTypeDef.Build == nil || len(moduleTypeDef.Build.Artifacts) == 0 {
+	// Check if module has any artifacts defined (type-level OR per-module)
+	hasTypeArtifacts := moduleTypeDef.Build != nil && len(moduleTypeDef.Build.Artifacts) > 0
+	hasModuleArtifacts := module.Build != nil && len(module.Build.Artifacts) > 0
+
+	// If no artifacts defined at either level, consider it as "exists" (nothing to build)
+	if !hasTypeArtifacts && !hasModuleArtifacts {
 		return true
 	}
 

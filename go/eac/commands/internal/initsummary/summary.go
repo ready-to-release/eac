@@ -110,12 +110,17 @@ type TestInfo struct {
 	SuiteName        string // Name of the test suite
 	SuiteDescription string // Suite description
 
-	// Discovery stats
-	TotalDiscovered int // Total tests discovered in codebase
-	Skipped         int // Tests skipped due to @skip tags
+	// Discovery stats (tests)
+	TotalDiscovered  int // Total tests discovered in codebase
+	Skipped          int // Tests skipped due to @skip tags
 	NotMatchingSuite int // Tests not matching suite criteria
-	OSFiltered      int // Tests filtered by OS compatibility
-	Selected        int // Final selected tests to run
+	OSFiltered       int // Tests filtered by OS compatibility
+	Selected         int // Final selected tests to run
+
+	// Module stats
+	ModulesRequested   []string // Modules requested via CLI (empty = all)
+	ModulesInScope     []string // Modules with tests that will run
+	ModulesNoTests     []string // Requested modules with no matching tests
 
 	// Tag inference
 	InferenceRulesApplied int // Number of inference rules applied
@@ -123,10 +128,21 @@ type TestInfo struct {
 
 // ArtifactValidationInfo captures build artifact validation results.
 type ArtifactValidationInfo struct {
-	Validated      bool     // Was validation performed?
-	ModulesChecked []string // Modules whose artifacts were validated
-	AllPresent     bool     // Were all required artifacts present?
-	MissingFrom    []string // Modules with missing artifacts
+	Validated              bool                // Was validation performed?
+	ModulesChecked         []string            // Modules whose artifacts were validated
+	AllPresent             bool                // Were all required artifacts present?
+	MissingFrom            []string            // Modules with missing artifacts
+	MissingArtifactDetails map[string][]string // Module -> list of missing artifact IDs
+
+	// Staleness check (source files changed since build)
+	AllCurrent   bool              // Are all builds current (source unchanged)?
+	StaleModules []string          // Modules where source changed since build
+	StaleReasons map[string]string // Module -> reason for staleness
+}
+
+// AllValid returns true if all artifacts are present AND all builds are current.
+func (a *ArtifactValidationInfo) AllValid() bool {
+	return a.AllPresent && a.AllCurrent
 }
 
 // New creates a new Summary with command type.

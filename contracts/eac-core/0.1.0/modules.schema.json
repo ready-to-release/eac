@@ -196,8 +196,15 @@
     },
     "flags": {
       "type": "object",
-      "description": "Module behavior flags (reserved for future use)",
-      "properties": {}
+      "description": "Module behavior flags",
+      "properties": {
+        "explicit_ownership": {
+          "type": "boolean",
+          "description": "When true, the module only owns files matching explicit patterns (source, config, assets, tests). Disables the default 'all files under root' ownership fallback. Use for catch-all modules that should only own specific files.",
+          "default": false
+        }
+      },
+      "additionalProperties": false
     },
     "module_defaults": {
       "type": "object",

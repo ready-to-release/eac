@@ -198,7 +198,7 @@ func CreateModuleTypesYml(ctx *TestContext, types ...string) error {
 		"container": `  - name: container
     description: Docker container module
     capabilities:
-      - docker_build
+      - buildx
 `,
 		"typescript": `  - name: typescript
     description: TypeScript/npm module

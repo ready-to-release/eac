@@ -100,7 +100,7 @@ func TestModuleContract_MatchesFile(t *testing.T) {
 	base := contracts.BaseContract{
 		Files: contracts.Files{
 			Root:   "go/eac/mcp/vscode",
-			Source: []string{"go.mod", "**.go"},
+			Source: []string{"go.mod", "**/*.go"},
 		},
 	}
 	module := NewModuleContract(base, "")
@@ -251,6 +251,55 @@ func TestModuleContract_MatchesFile_RepoSpecs(t *testing.T) {
 			if got != tt.expected {
 				t.Errorf("MatchesFile(%s) with root=%q specs=%v source=%v = %v, expected %v",
 					tt.filePath, tt.root, tt.specs, tt.source, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestModuleContract_MatchesFile_ExplicitOwnership tests the flags.explicit_ownership behavior
+func TestModuleContract_MatchesFile_ExplicitOwnership(t *testing.T) {
+	tests := []struct {
+		name              string
+		root              string
+		source            []string
+		explicitOwnership bool
+		filePath          string
+		expected          bool
+	}{
+		// Without explicit_ownership (default), all files under root match if no patterns
+		{"default ownership, no patterns, file under root", "go/module", nil, false, "go/module/main.go", true},
+		{"default ownership, no patterns, nested file", "go/module", nil, false, "go/module/sub/lib.go", true},
+
+		// With explicit_ownership=true, files only match if patterns are defined
+		{"explicit ownership, no patterns, file under root", "go/module", nil, true, "go/module/main.go", false},
+		{"explicit ownership, no patterns, nested file", "go/module", nil, true, "go/module/sub/lib.go", false},
+
+		// With explicit_ownership=true and patterns, only matching files owned
+		{"explicit ownership, with patterns, matching", "go/module", []string{"**/*.go"}, true, "go/module/main.go", true},
+		{"explicit ownership, with patterns, not matching", "go/module", []string{"**/*.go"}, true, "go/module/README.md", false},
+
+		// Default ownership with patterns still uses pattern matching
+		{"default ownership, with patterns, matching", "go/module", []string{"**/*.go"}, false, "go/module/main.go", true},
+		{"default ownership, with patterns, not matching", "go/module", []string{"**/*.go"}, false, "go/module/README.md", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := contracts.BaseContract{
+				Files: contracts.Files{
+					Root:   tt.root,
+					Source: tt.source,
+				},
+				Flags: contracts.Flags{
+					ExplicitOwnership: tt.explicitOwnership,
+				},
+			}
+			module := NewModuleContract(base, "")
+
+			got := module.MatchesFile(tt.filePath)
+			if got != tt.expected {
+				t.Errorf("MatchesFile(%s) with explicit_ownership=%v, patterns=%v = %v, expected %v",
+					tt.filePath, tt.explicitOwnership, tt.source, got, tt.expected)
 			}
 		})
 	}

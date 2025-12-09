@@ -40,6 +40,16 @@ func (m *ModuleContract) getRelativePatterns() []string {
 	return patterns
 }
 
+// hasExplicitPatterns returns true if the module has user-specified patterns.
+// This is used to determine whether to fall back to "all files under root" matching.
+// Default files like Changelog don't count as explicit patterns.
+func (m *ModuleContract) hasExplicitPatterns() bool {
+	return len(m.Files.Source) > 0 ||
+		len(m.Files.Config) > 0 ||
+		len(m.Files.Assets) > 0 ||
+		len(m.Files.Tests) > 0
+}
+
 // getRepoPatterns returns all patterns relative to repo root
 // Includes specs, other, workflows, and converts test_impl/design paths to glob patterns
 func (m *ModuleContract) getRepoPatterns() []string {
@@ -119,14 +129,15 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 	isUnderRoot := root == "" || root == "/" || strings.HasPrefix(path, root+"/") || path == root
 
 	if isUnderRoot {
-		relativePatterns := m.getRelativePatterns()
-
-		// 2a. If no relative patterns defined, root ownership implies all files under root match
-		if len(relativePatterns) == 0 && root != "" && root != "/" {
+		// 2a. If no explicit patterns defined, root ownership implies all files under root match
+		// Default files like Changelog don't count as explicit patterns.
+		// This fallback is disabled when flags.explicit_ownership is true.
+		if !m.hasExplicitPatterns() && !m.Flags.ExplicitOwnership && root != "" && root != "/" {
 			return !m.isExcluded(path)
 		}
 
 		// 2b. File is under root - check relative patterns (most common case)
+		relativePatterns := m.getRelativePatterns()
 		for _, pattern := range relativePatterns {
 			pattern = normalizePathSeparators(pattern)
 

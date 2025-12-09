@@ -235,7 +235,7 @@ The unified module type system uses four base types. Behavior is driven by per-m
   - Examples: `eac-core`, `eac-commands`, `r2r-cli`
 
 - **container** - Docker container module
-  - Capabilities: `docker_build`
+  - Capabilities: `buildx`
   - Build artifacts: Container images
   - Examples: `docs`, `ext-eac`
 

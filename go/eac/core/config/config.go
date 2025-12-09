@@ -272,6 +272,11 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 	// Apply type-specific defaults after both modules and types are loaded
 	c.Modules.ApplyTypeDefaults(c.ModuleTypes, c.Repository)
 
+	// Validate defined workflow paths and auto-discover missing ones
+	if err := c.Modules.ValidateAndDiscoverWorkflows(c.RepoRoot); err != nil {
+		return fmt.Errorf("workflow validation failed: %w", err)
+	}
+
 	// === OPTIONAL CONFIGS: Continue on error, collect for reporting ===
 	var errs []error
 

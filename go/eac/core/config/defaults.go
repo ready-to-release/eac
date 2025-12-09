@@ -16,9 +16,14 @@ const DefaultsVersion = "0.1.0"
 
 // LoadModulesDefaults loads default modules from contract defaults.
 // Returns default modules config when .r2r/eac/modules.yml doesn't exist.
+// Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
 func LoadModulesDefaults(repoRoot string) (*ModulesConfig, error) {
 	data, err := loadDefaultFile(repoRoot, "modules.yml")
 	if err != nil {
+		// Defaults are optional - return nil if they don't exist
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("loading modules defaults: %w", err)
 	}
 
@@ -33,9 +38,14 @@ func LoadModulesDefaults(repoRoot string) (*ModulesConfig, error) {
 
 // LoadModuleTypesDefaults loads default module types from contract defaults.
 // These are merged with user-defined types (user types override defaults).
+// Returns nil (not error) when defaults don't exist - allows tests to use their own types.
 func LoadModuleTypesDefaults(repoRoot string) (*ModuleTypesConfig, error) {
 	data, err := loadDefaultFile(repoRoot, "module-types.yml")
 	if err != nil {
+		// Defaults are optional - return nil if they don't exist
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("loading module-types defaults: %w", err)
 	}
 
@@ -49,9 +59,14 @@ func LoadModuleTypesDefaults(repoRoot string) (*ModuleTypesConfig, error) {
 }
 
 // LoadRepositoryDefaults loads default repository config from contract defaults.
+// Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
 func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
 	data, err := loadDefaultFile(repoRoot, "repository.yml")
 	if err != nil {
+		// Defaults are optional - return nil if they don't exist
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("loading repository defaults: %w", err)
 	}
 
@@ -64,9 +79,14 @@ func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
 }
 
 // LoadSystemDependenciesDefaults loads default system dependencies from contract defaults.
+// Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
 func LoadSystemDependenciesDefaults(repoRoot string) (*SystemDependenciesConfig, error) {
 	data, err := loadDefaultFile(repoRoot, "system-dependencies.yml")
 	if err != nil {
+		// Defaults are optional - return nil if they don't exist
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("loading system-dependencies defaults: %w", err)
 	}
 
@@ -92,6 +112,7 @@ func defaultsRoot(repoRoot string) string {
 // loadDefaultFile loads a default YAML file from the contracts folder.
 // Container-aware: uses R2R_CONTAINER_ROOT/contracts/ when running in container,
 // otherwise uses repoRoot/contracts/.
+// Returns the raw os error (not wrapped) so callers can check os.IsNotExist.
 func loadDefaultFile(repoRoot, filename string) ([]byte, error) {
 	root := defaultsRoot(repoRoot)
 	if root == "" {
@@ -101,6 +122,10 @@ func loadDefaultFile(repoRoot, filename string) ([]byte, error) {
 	fsPath := filepath.Join(root, "contracts", "eac-core", DefaultsVersion, "defaults", filename)
 	data, err := os.ReadFile(fsPath)
 	if err != nil {
+		// Return raw error for IsNotExist checks, wrapped for other errors
+		if os.IsNotExist(err) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("reading %s: %w", fsPath, err)
 	}
 
@@ -109,7 +134,8 @@ func loadDefaultFile(repoRoot, filename string) ([]byte, error) {
 }
 
 // MergeModuleTypes merges user-defined module types with defaults.
-// User types override defaults with the same name.
+// User types are merged with defaults of the same name at field level.
+// User values override defaults when specified.
 // Returns a new config with all types.
 func MergeModuleTypes(defaults, user *ModuleTypesConfig) *ModuleTypesConfig {
 	if defaults == nil {
@@ -131,11 +157,11 @@ func MergeModuleTypes(defaults, user *ModuleTypesConfig) *ModuleTypesConfig {
 		typeMap[t.Name] = i
 	}
 
-	// Merge user types (override or append)
+	// Merge user types (field-level merge or append)
 	for _, userType := range user.Types {
 		if idx, exists := typeMap[userType.Name]; exists {
-			// Override existing type
-			result.Types[idx] = userType
+			// Field-level merge with existing type
+			result.Types[idx] = mergeModuleTypeDef(result.Types[idx], userType)
 		} else {
 			// Append new type
 			result.Types = append(result.Types, userType)
@@ -144,6 +170,140 @@ func MergeModuleTypes(defaults, user *ModuleTypesConfig) *ModuleTypesConfig {
 
 	result.buildTypeMap()
 	return result
+}
+
+// mergeModuleTypeDef merges a user type definition with a default type definition.
+// User values override defaults when specified (non-empty).
+func mergeModuleTypeDef(base, user ModuleTypeDef) ModuleTypeDef {
+	result := base
+
+	// Override simple fields if user specifies them
+	if user.Description != "" {
+		result.Description = user.Description
+	}
+	if len(user.BuildDeps) > 0 {
+		result.BuildDeps = user.BuildDeps
+	}
+	if len(user.Capabilities) > 0 {
+		result.Capabilities = user.Capabilities
+	}
+	if user.TestFramework != "" {
+		result.TestFramework = user.TestFramework
+	}
+	if user.BDDFramework != "" {
+		result.BDDFramework = user.BDDFramework
+	}
+	if user.DockerBuild != nil {
+		result.DockerBuild = user.DockerBuild
+	}
+	if user.Build != nil {
+		result.Build = user.Build
+	}
+
+	// Merge defaults at field level if user has partial defaults
+	if user.Defaults != nil {
+		if result.Defaults == nil {
+			result.Defaults = user.Defaults
+		} else {
+			result.Defaults = mergeTypeDefaults(result.Defaults, user.Defaults)
+		}
+	}
+
+	return result
+}
+
+// mergeTypeDefaults merges user type defaults with base defaults.
+func mergeTypeDefaults(base, user *TypeDefaults) *TypeDefaults {
+	if base == nil {
+		return user
+	}
+	if user == nil {
+		return base
+	}
+
+	result := &TypeDefaults{}
+
+	// Merge Files
+	if base.Files != nil || user.Files != nil {
+		result.Files = mergeFilesDefaults(base.Files, user.Files)
+	}
+
+	// Merge Repo
+	if base.Repo != nil || user.Repo != nil {
+		result.Repo = mergeRepoDefaults(base.Repo, user.Repo)
+	}
+
+	return result
+}
+
+// mergeFilesDefaults merges file defaults.
+func mergeFilesDefaults(base, user *FilesDefaults) *FilesDefaults {
+	if base == nil {
+		return user
+	}
+	if user == nil {
+		return base
+	}
+
+	result := *base // Copy base
+
+	// Override with user values if specified
+	if len(user.Source) > 0 {
+		result.Source = user.Source
+	}
+	if len(user.Config) > 0 {
+		result.Config = user.Config
+	}
+	if len(user.Assets) > 0 {
+		result.Assets = user.Assets
+	}
+	if len(user.Tests) > 0 {
+		result.Tests = user.Tests
+	}
+	if user.Changelog != "" {
+		result.Changelog = user.Changelog
+	}
+	if user.Workflows != nil {
+		if result.Workflows == nil {
+			result.Workflows = user.Workflows
+		} else {
+			merged := *result.Workflows
+			if user.Workflows.CI != "" {
+				merged.CI = user.Workflows.CI
+			}
+			if user.Workflows.Release != "" {
+				merged.Release = user.Workflows.Release
+			}
+			result.Workflows = &merged
+		}
+	}
+
+	return &result
+}
+
+// mergeRepoDefaults merges repo defaults.
+func mergeRepoDefaults(base, user *RepoDefaults) *RepoDefaults {
+	if base == nil {
+		return user
+	}
+	if user == nil {
+		return base
+	}
+
+	result := *base // Copy base
+
+	// Override with user values if specified
+	if len(user.Specs) > 0 {
+		result.Specs = user.Specs
+	}
+	if user.TestImpl != "" {
+		result.TestImpl = user.TestImpl
+	}
+	if user.Design != "" {
+		result.Design = user.Design
+	}
+
+	return &result
 }
 
 // MergeRepository merges user repository config with defaults at field level.

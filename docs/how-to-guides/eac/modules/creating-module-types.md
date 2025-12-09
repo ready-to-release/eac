@@ -208,7 +208,7 @@ The unified type system uses four base types:
 ```yaml
 - name: container
   description: Docker container module
-  capabilities: [docker_build]
+  capabilities: [buildx]
   files:
     assets: ["Dockerfile", "**/*"]
 ```
