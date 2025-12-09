@@ -39,6 +39,11 @@ func ShowBooks() int {
 		return 1
 	}
 
+	if err := cfg.LoadModules(false); err != nil {
+		log.Errorf("failed to load modules: %v", err)
+		return 1
+	}
+
 	if cfg.Books == nil || len(cfg.Books.Books) == 0 {
 		log.Info("No books configured")
 		log.Info("")
@@ -46,8 +51,18 @@ func ShowBooks() int {
 		return 0
 	}
 
+	// Build a reverse map: book name -> modules that reference it
+	bookToModules := make(map[string][]string)
+	if cfg.Modules != nil {
+		for _, mod := range cfg.Modules.Modules {
+			for _, bookName := range mod.Books {
+				bookToModules[bookName] = append(bookToModules[bookName], mod.Moniker)
+			}
+		}
+	}
+
 	tb := render.NewTableBuilder().
-		WithHeaders("Name", "Module", "Description", "Copy", "Command", "Inline")
+		WithHeaders("Name", "Output", "Modules", "Description", "Copy", "Cmd", "Inline")
 
 	for _, book := range cfg.Books.Books {
 		copyCount := len(book.GetCopySources())
@@ -55,13 +70,24 @@ func ShowBooks() int {
 		inlineCount := len(book.GetInlineSources())
 
 		description := book.Description
-		if len(description) > 40 {
-			description = description[:37] + "..."
+		if len(description) > 30 {
+			description = description[:27] + "..."
+		}
+
+		// Get modules that reference this book
+		modules := bookToModules[book.Name]
+		moduleStr := "-"
+		if len(modules) > 0 {
+			moduleStr = modules[0]
+			if len(modules) > 1 {
+				moduleStr = fmt.Sprintf("%s +%d", modules[0], len(modules)-1)
+			}
 		}
 
 		tb.AddRow(
 			book.Name,
-			book.Module,
+			book.GetOutput(),
+			moduleStr,
 			description,
 			fmt.Sprintf("%d", copyCount),
 			fmt.Sprintf("%d", cmdCount),

@@ -620,21 +620,32 @@ func (c *EACConfig) GetBookByName(name string) *Book {
 	return c.Books.GetBookByName(name)
 }
 
-// GetBooksByModule returns all books that belong to a module
+// GetBooksByModule returns all books that belong to a module.
+// Uses the module's books list to look up Book configs by name.
 func (c *EACConfig) GetBooksByModule(moniker string) []*Book {
-	if c.Books == nil {
+	if c.Books == nil || c.Modules == nil {
 		return nil
 	}
-	return c.Books.GetBooksByModule(moniker)
+	// Find the module and get its books list
+	module := c.Modules.GetByMoniker(moniker)
+	if module == nil {
+		return nil
+	}
+	return c.Books.GetBooksByNames(module.Books)
 }
 
 // GetDefaultBooksByModule returns only default books for a module.
-// Books with default: false are excluded unless --all flag is used.
+// The first book in a module's books list is the default; others require --all flag.
 func (c *EACConfig) GetDefaultBooksByModule(moniker string) []*Book {
-	if c.Books == nil {
+	if c.Books == nil || c.Modules == nil {
 		return nil
 	}
-	return c.Books.GetDefaultBooksByModule(moniker)
+	// Find the module and get its books list
+	module := c.Modules.GetByMoniker(moniker)
+	if module == nil {
+		return nil
+	}
+	return c.Books.GetDefaultBooksByNames(module.Books)
 }
 
 // readConfigFile reads a config file from the config root
@@ -741,6 +752,208 @@ func (e *MultiError) Error() string {
 		msg += "\n  - " + err.Error()
 	}
 	return msg
+}
+
+// GetBuildArtifacts returns the final list of artifact IDs to build for a module.
+// This method encapsulates all artifact merging and filtering logic:
+// - Merges module-level artifacts (from modules.yml) with type-level artifacts (from module-types.yml)
+// - Module-level artifacts take priority if defined
+// - Filters UPX-compressed artifacts: only included when buildAll is true
+// - When buildAll is false: returns only current platform artifacts
+// - When buildAll is true: returns all platform artifacts plus UPX variants
+// - Adds book-derived artifacts if module has books defined
+//
+// This is the ONLY method non-core code should use to determine build artifacts.
+func (c *EACConfig) GetBuildArtifacts(moniker string, buildAll bool) []Artifact {
+	module := c.Modules.GetByMoniker(moniker)
+	if module == nil {
+		return nil
+	}
+
+	moduleType := c.ModuleTypes.Get(module.Type)
+
+	// Determine source artifacts: module-level takes priority over type-level
+	var artifacts []Artifact
+	if module.Build != nil && len(module.Build.Artifacts) > 0 {
+		// Use module-level artifacts
+		for _, ma := range module.Build.Artifacts {
+			artifacts = append(artifacts, Artifact{
+				ID:          ma.ID,
+				Type:        ma.Type,
+				Pattern:     ma.Pattern,
+				Compression: ma.Compression,
+				DeriveFrom:  ma.DeriveFrom,
+			})
+		}
+	} else if moduleType != nil && moduleType.Build != nil && len(moduleType.Build.Artifacts) > 0 {
+		// Use type-level artifacts
+		artifacts = moduleType.Build.Artifacts
+	}
+
+	// Add book-derived artifacts if module has books
+	if len(module.Books) > 0 {
+		c.LoadBooks(false) // Ensure books are loaded
+		bookArtifacts := c.generateBookArtifacts(module, buildAll)
+
+		// Deduplicate by ID
+		existingIDs := make(map[string]bool)
+		for _, a := range artifacts {
+			existingIDs[a.ID] = true
+		}
+		for _, ba := range bookArtifacts {
+			if !existingIDs[ba.ID] {
+				artifacts = append(artifacts, ba)
+				existingIDs[ba.ID] = true
+			}
+		}
+	}
+
+	// Filter and expand artifacts based on buildAll flag
+	return c.filterArtifacts(artifacts, buildAll)
+}
+
+// GetBuildArtifactIDs returns just the artifact IDs to build for a module.
+// This is a convenience wrapper around GetBuildArtifacts for callers that only need IDs.
+func (c *EACConfig) GetBuildArtifactIDs(moniker string, buildAll bool) []string {
+	artifacts := c.GetBuildArtifacts(moniker, buildAll)
+	ids := make([]string, len(artifacts))
+	for i, a := range artifacts {
+		ids[i] = a.ID
+	}
+	return ids
+}
+
+// filterArtifacts filters and expands artifacts based on the buildAll flag
+func (c *EACConfig) filterArtifacts(artifacts []Artifact, buildAll bool) []Artifact {
+	var result []Artifact
+	seenIDs := make(map[string]bool)
+
+	for _, artifact := range artifacts {
+		// Skip UPX-compressed artifacts unless --all flag is used
+		if artifact.Compression == CompressionUPX && !buildAll {
+			continue
+		}
+
+		// For executables, handle platform expansion
+		if artifact.Type == ArtifactTypeExecutable && len(artifact.Platforms) > 0 {
+			if buildAll {
+				// Expand to all platforms
+				for _, os := range artifact.Platforms {
+					archs := c.getArchitecturesForPlatform(os, artifact.Pattern)
+					for _, arch := range archs {
+						id := c.deriveArtifactID(artifact, os, arch)
+						if !seenIDs[id] {
+							seenIDs[id] = true
+							result = append(result, Artifact{
+								ID:          id,
+								Type:        artifact.Type,
+								Pattern:     artifact.Pattern,
+								Compression: artifact.Compression,
+								Platforms:   []string{os},
+							})
+						}
+					}
+				}
+			} else {
+				// Current platform only - use original ID
+				if !seenIDs[artifact.ID] {
+					seenIDs[artifact.ID] = true
+					result = append(result, artifact)
+				}
+			}
+		} else {
+			// Non-executable artifacts - include as-is
+			if !seenIDs[artifact.ID] {
+				seenIDs[artifact.ID] = true
+				result = append(result, artifact)
+			}
+		}
+	}
+
+	return result
+}
+
+// getArchitecturesForPlatform determines supported architectures based on OS and pattern
+func (c *EACConfig) getArchitecturesForPlatform(os, pattern string) []string {
+	// Check for architecture-specific patterns
+	if containsAny(pattern, "-amd64", "{os}-amd64") {
+		return []string{"amd64"}
+	}
+	if containsAny(pattern, "-arm64", "{os}-arm64") {
+		return []string{"arm64"}
+	}
+	// Windows only supports amd64
+	if os == "windows" {
+		return []string{"amd64"}
+	}
+	// Linux and Darwin support both
+	return []string{"amd64", "arm64"}
+}
+
+// deriveArtifactID creates an artifact ID based on OS, arch, and compression
+func (c *EACConfig) deriveArtifactID(artifact Artifact, os, arch string) string {
+	baseID := os + "-" + arch
+	if artifact.Compression == CompressionUPX {
+		return baseID + "-upx"
+	}
+	return baseID
+}
+
+// generateBookArtifacts creates artifact definitions from books for a module
+func (c *EACConfig) generateBookArtifacts(module *Module, buildAll bool) []Artifact {
+	var artifacts []Artifact
+
+	books := c.Books.GetBooksByNames(module.Books)
+	for i, book := range books {
+		// Skip non-default books (not first) unless --all flag is used
+		isDefault := i == 0
+		if !buildAll && !isDefault {
+			continue
+		}
+
+		output := book.GetOutput()
+		switch {
+		case output == "site":
+			artifacts = append(artifacts, Artifact{
+				ID:      "site",
+				Type:    ArtifactTypeDirectory,
+				Pattern: "site",
+			})
+		case len(output) > 4 && output[:4] == "pdf-":
+			theme := output[4:]
+			if theme == "all" {
+				for _, t := range []string{"dark", "light"} {
+					artifacts = append(artifacts, Artifact{
+						ID:      book.Name + "-" + t,
+						Type:    ArtifactTypeFile,
+						Pattern: book.Name + "-" + t + ".pdf",
+					})
+				}
+			} else {
+				artifacts = append(artifacts, Artifact{
+					ID:      book.Name,
+					Type:    ArtifactTypeFile,
+					Pattern: book.Name + "-" + theme + ".pdf",
+				})
+			}
+		}
+	}
+
+	return artifacts
+}
+
+// containsAny checks if s contains any of the substrings
+func containsAny(s string, substrs ...string) bool {
+	for _, sub := range substrs {
+		if len(s) >= len(sub) {
+			for i := 0; i <= len(s)-len(sub); i++ {
+				if s[i:i+len(sub)] == sub {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // findRepositoryRoot finds the git repository root by walking up directories.

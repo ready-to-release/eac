@@ -70,6 +70,14 @@
         "versioning": {
           "$ref": "#/definitions/module_versioning",
           "description": "Module versioning configuration"
+        },
+        "books": {
+          "type": "array",
+          "description": "List of book names from books.yml that this module builds. First book is default; others require --all flag.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
         }
       },
       "required": ["moniker", "name"]

@@ -60,7 +60,6 @@ modules:
 
     depends_on:               # Other modules this depends on
       - eac-core
-      - eac-ai
 
     build:                    # Build configuration (defines executables)
       artifacts:

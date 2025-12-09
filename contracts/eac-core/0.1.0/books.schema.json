@@ -17,21 +17,16 @@
   "definitions": {
     "book": {
       "type": "object",
-      "description": "A book definition that aggregates content for an mkdocs-site module",
+      "description": "A book definition that aggregates content for documentation. Books are referenced by modules via the books field in modules.yml.",
       "properties": {
         "name": {
           "type": "string",
-          "description": "Unique book identifier (kebab-case)",
+          "description": "Unique book identifier (kebab-case). Modules reference books by this name.",
           "pattern": "^[a-z0-9-]+$"
         },
         "title": {
           "type": "string",
           "description": "Book-specific title for PDF cover page (optional, defaults to name if not specified)"
-        },
-        "module": {
-          "type": "string",
-          "description": "Module moniker this book builds for (must be an mkdocs-site module). A module can have multiple books.",
-          "pattern": "^[a-z0-9-]+$"
         },
         "description": {
           "type": "string",
@@ -39,7 +34,7 @@
         },
         "output": {
           "type": "string",
-          "description": "Default output mode. Can be overridden with --theme or --html flags.",
+          "description": "Output format. 'site' for HTML, 'pdf-dark'/'pdf-light' for themed PDFs, 'pdf-all' for both themes.",
           "enum": ["site", "pdf-dark", "pdf-light", "pdf-all"],
           "default": "pdf-dark"
         },
@@ -47,11 +42,6 @@
           "type": "string",
           "description": "Base URL for the published site (e.g., https://example.github.io/repo/). Used to fix broken internal links in PDF mode by converting them to absolute URLs.",
           "format": "uri"
-        },
-        "default": {
-          "type": "boolean",
-          "description": "Whether to include this book in default builds. Set to false for slow or optional books that should only be built with --all flag.",
-          "default": true
         },
         "sources": {
           "type": "array",
@@ -73,7 +63,7 @@
           }
         }
       },
-      "required": ["name", "module", "sources"],
+      "required": ["name", "sources"],
       "additionalProperties": false
     },
     "copySource": {

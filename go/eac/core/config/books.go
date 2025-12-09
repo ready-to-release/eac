@@ -12,23 +12,12 @@ type BooksConfig struct {
 // Book represents a single book configuration
 type Book struct {
 	Name         string         `yaml:"name"`
-	Title        string         `yaml:"title,omitempty"`        // Book-specific title for cover page (optional, defaults to Name)
-	Module       string         `yaml:"module"`
+	Title        string         `yaml:"title,omitempty"`    // Book-specific title for cover page (optional, defaults to Name)
 	Description  string         `yaml:"description"`
 	Output       string         `yaml:"output,omitempty"`   // Default output mode: "site", "pdf-dark", "pdf-light", "pdf-all" (default: "pdf-dark" for book modules)
 	SiteURL      string         `yaml:"site_url,omitempty"` // Base URL for GitHub Pages (e.g., https://ready-to-release.github.io/eac/)
-	Default      *bool          `yaml:"default,omitempty"`  // Include in default builds (nil/true = yes, false = only with --all)
 	Sources      []Source       `yaml:"sources"`
 	GeneratedNav []GeneratedNav `yaml:"generated_nav"`
-}
-
-// IsDefault returns true if the book should be included in default builds.
-// Books are included by default unless explicitly set to false.
-func (b *Book) IsDefault() bool {
-	if b.Default == nil {
-		return true
-	}
-	return *b.Default
 }
 
 // OutputMode constants for book default output
@@ -145,27 +134,29 @@ func (c *BooksConfig) GetBookByName(name string) *Book {
 	return nil
 }
 
-// GetBooksByModule returns all books that belong to a module
-func (c *BooksConfig) GetBooksByModule(moniker string) []*Book {
+// GetBooksByNames returns books matching the given names.
+// Used to resolve a module's books list to actual Book configs.
+func (c *BooksConfig) GetBooksByNames(names []string) []*Book {
 	var books []*Book
-	for i := range c.Books {
-		if c.Books[i].Module == moniker {
-			books = append(books, &c.Books[i])
+	for _, name := range names {
+		if book := c.GetBookByName(name); book != nil {
+			books = append(books, book)
 		}
 	}
 	return books
 }
 
-// GetDefaultBooksByModule returns only default books for a module.
-// Books with default: false are excluded unless --all flag is used.
-func (c *BooksConfig) GetDefaultBooksByModule(moniker string) []*Book {
-	var books []*Book
-	for i := range c.Books {
-		if c.Books[i].Module == moniker && c.Books[i].IsDefault() {
-			books = append(books, &c.Books[i])
-		}
+// GetDefaultBooksByNames returns only the first book (the default) from the names list.
+// The first book in a module's books list is the default; others require --all flag.
+func (c *BooksConfig) GetDefaultBooksByNames(names []string) []*Book {
+	if len(names) == 0 {
+		return nil
 	}
-	return books
+	// First book is the default
+	if book := c.GetBookByName(names[0]); book != nil {
+		return []*Book{book}
+	}
+	return nil
 }
 
 // SourceCount returns the total number of sources

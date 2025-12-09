@@ -173,7 +173,7 @@ The unified type system uses four base types:
 
 ```yaml
 - name: go
-  description: Go module (library, executable, or test - driven by module artifacts)
+  description: Go module
   capabilities: [go_module]
   files:
     source: ["**/*.go", "**/*.go.txt"]

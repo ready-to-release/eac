@@ -38,7 +38,7 @@ type TemplateParams map[string]string
 // In the unified type system, behavior is driven by artifact definitions, not type variants.
 const ModuleTypesGo = `types:
   - name: go
-    description: Go module (library, executable, or test - driven by module artifacts)
+    description: Go module
     capabilities:
       - go_module
 `
@@ -46,7 +46,7 @@ const ModuleTypesGo = `types:
 // ModuleTypesDocker is the module-types.yml with Docker support.
 const ModuleTypesDocker = `types:
   - name: go
-    description: Go module (library, executable, or test - driven by module artifacts)
+    description: Go module
     capabilities:
       - go_module
 
@@ -59,7 +59,7 @@ const ModuleTypesDocker = `types:
 // ModuleTypesComplete is the module-types.yml with all common module types.
 const ModuleTypesComplete = `types:
   - name: go
-    description: Go module (library, executable, or test - driven by module artifacts)
+    description: Go module
     capabilities:
       - go_module
 

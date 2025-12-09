@@ -154,13 +154,26 @@ runs:
           exit 1
         fi
 
+    - name: List Build Output (diagnostic)
+      if: inputs.upload-artifact == 'true'
+      shell: bash
+      run: |
+        echo "=== Build output directory structure ==="
+        if [ -d "out/build" ]; then
+          find out/build -type f | head -50
+          echo "Total files: $(find out/build -type f | wc -l)"
+        else
+          echo "WARNING: out/build directory does not exist!"
+          ls -la out/ 2>/dev/null || echo "out/ directory also missing"
+        fi
+
     - name: Upload Build Artifacts (including dependencies)
       if: inputs.upload-artifact == 'true'
       uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.vars.outputs.artifact-name }}
         path: out/build/
-        if-no-files-found: warn
+        if-no-files-found: error
 
     - name: Build Summary
       if: always()

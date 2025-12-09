@@ -80,7 +80,8 @@ func GetAllHandlers() map[string]Handler {
 }
 
 // GetHandlerForModule returns the appropriate handler for a module.
-// It first checks for a per-module handler override, then finds a handler
+// It first checks for a per-module handler override, then checks if module
+// has books (which routes to mkdocs handler), then finds a handler
 // whose capabilities match the module's capabilities from module-types.yml.
 func GetHandlerForModule(module *modules.ModuleContract, moduleType string) Handler {
 	mu.RLock()
@@ -101,6 +102,14 @@ func GetHandlerForModule(module *modules.ModuleContract, moduleType string) Hand
 			return h
 		}
 		return nil
+	}
+
+	// Check if module has books - route to mkdocs handler
+	// This allows any module type to build documentation by adding books
+	if module != nil && len(module.Books) > 0 {
+		if h, ok := handlers["mkdocs"]; ok {
+			return h
+		}
 	}
 
 	moduleCapabilities := cfg.ModuleTypes.GetCapabilities(moduleType)

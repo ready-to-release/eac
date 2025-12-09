@@ -647,6 +647,12 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	}
 	orch.SetModuleTypes(moduleTypes)
 
+	// Build set of originally requested modules for skip logic
+	requestedSet := make(map[string]bool)
+	for _, m := range monikers {
+		requestedSet[m] = true
+	}
+
 	// Create worker function that builds a single module and returns type info
 	worker := func(moniker string, logWriter io.Writer) int {
 		module, exists := moduleReport.Registry.Get(moniker)
@@ -655,9 +661,12 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			return 1
 		}
 
-		// With --use-existing-depm: skip building if module dependency artifacts already exist
+		// With --use-existing-depm: skip building if module DEPENDENCY artifacts already exist
 		// This enables incremental CI where dependencies are downloaded from previous runs
-		if useExistingDepm && !dryRun {
+		// IMPORTANT: Only skip dependencies, NOT the originally requested modules
+		// When --rebuild is used, the requested modules should always be rebuilt
+		isRequestedModule := requestedSet[moniker]
+		if useExistingDepm && !dryRun && !isRequestedModule {
 			if hasExistingArtifacts(moniker, moduleTypes[moniker], workspaceRoot, buildAll) {
 				fmt.Fprintf(logWriter, "⏭️  Skipping %s (module dependency artifacts exist)\n", moniker)
 				return 0
@@ -1194,17 +1203,23 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 
 			// For image artifacts, use the image reference as the path
 			// (images don't have file paths, they have tags/references)
+			// For file-based artifacts, store relative path from build dir for portability
 			artifactPath := art.ResolvedPath
 			if art.Type == "image" && artifactPath == "" {
 				artifactPath = art.ResolvedName // e.g., "ext-eac:latest"
+			} else if art.Type != "image" && art.ResolvedPath != "" {
+				// Make path relative to module build dir for manifest
+				if relPath, err := filepath.Rel(moduleBuildDir, art.ResolvedPath); err == nil {
+					artifactPath = relPath
+				}
 			}
 
 			// Compute content hash for file-based artifacts (not images or directories)
 			var size int64
 			var sha256Hash string
 			if art.Type != "image" && art.ResolvedPath != "" {
-				absPath := filepath.Join(workspaceRoot, art.ResolvedPath)
-				if s, h, err := implinternal.HashArtifactFile(absPath); err == nil {
+				// ResolvedPath is already absolute - use it directly for hashing
+				if s, h, err := implinternal.HashArtifactFile(art.ResolvedPath); err == nil {
 					size = s
 					sha256Hash = h
 				}

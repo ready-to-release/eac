@@ -79,6 +79,7 @@ type BaseContract struct {
 	Versioning  *ModuleVersioning      `yaml:"versioning,omitempty"`  // Module versioning configuration
 	Build       *ModuleBuild           `yaml:"build,omitempty"`       // Per-module build configuration (artifacts, options)
 	DockerBuild map[string]interface{} `yaml:"docker_build,omitempty"` // Per-module Docker build configuration
+	Books       []string               `yaml:"books,omitempty"`        // Book names to build for this module (references books.yml)
 	Files       Files                  `yaml:"files"`
 	Flags       Flags                  `yaml:"flags"`
 	Metadata    map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
@@ -230,4 +231,14 @@ func (b *BaseContract) GetArtifactsByType(artifactType string) []ModuleArtifact 
 		}
 	}
 	return result
+}
+
+// HasBooks returns true if the module has books defined
+func (b *BaseContract) HasBooks() bool {
+	return len(b.Books) > 0
+}
+
+// GetBooks returns the list of book names for this module
+func (b *BaseContract) GetBooks() []string {
+	return b.Books
 }

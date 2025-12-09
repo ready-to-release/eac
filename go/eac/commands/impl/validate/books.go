@@ -83,28 +83,31 @@ func ValidateBooks() int {
 		bookNames[book.Name] = true
 	}
 
+	// Build a reverse map: book name -> modules that reference it
+	bookToModules := make(map[string][]*config.Module)
+	if cfg.Modules != nil {
+		for i := range cfg.Modules.Modules {
+			mod := &cfg.Modules.Modules[i]
+			for _, bookName := range mod.Books {
+				bookToModules[bookName] = append(bookToModules[bookName], mod)
+			}
+		}
+	}
+
 	for _, book := range cfg.Books.Books {
 		log.Infof("Book '%s':", book.Name)
 
-		// Check module exists
-		module, found := cfg.Modules.GetModule(book.Module)
-		if !found {
-			log.Errorf("  Module '%s' not found in modules.yml", book.Module)
-			hasErrors = true
-			continue
+		// Check if any module references this book
+		modules := bookToModules[book.Name]
+		if len(modules) == 0 {
+			log.Warnf("  No module references this book (orphaned)")
+		} else {
+			// Show all referencing modules
+			// In the new design, modules with books are implicitly documentation modules
+			for _, module := range modules {
+				log.Infof("  Module: %s (%s)", module.Moniker, module.Type)
+			}
 		}
-
-		// Check module has mkdocs handler or documentation capability
-		// Per-module handler takes precedence, then fall back to type capability
-		handler := module.GetBuildHandler()
-		hasDocCapability := cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "documentation")
-		if handler != "mkdocs" && !hasDocCapability {
-			log.Errorf("  Module '%s' type '%s' does not have 'mkdocs' handler or 'documentation' capability", book.Module, module.Type)
-			hasErrors = true
-			continue
-		}
-
-		log.Infof("  Module: %s (%s)", book.Module, module.Type)
 
 		// Count sources
 		copyCount := len(book.GetCopySources())
