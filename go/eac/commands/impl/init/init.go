@@ -28,7 +28,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"

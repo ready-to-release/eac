@@ -49,7 +49,7 @@ This guide covers configuration options for EAC's validation system, including c
 # .r2r/eac/modules.yml
 modules:
   - moniker: eac-core
-    type: go-library
+    type: go
     description: Core EAC functionality
     files:
       root: go/eac/core
@@ -63,18 +63,12 @@ modules:
 
 ### Supported Module Types
 
-| Type             | Description             | Validated              |
-| ---------------- | ----------------------- | ---------------------- |
-| `go-cli`         | Go CLI application      | Dependencies, tidiness |
-| `go-commands`    | Go command package      | Dependencies, tidiness |
-| `go-library`     | Go library              | Dependencies, tidiness |
-| `go-mcp`         | Go MCP server           | Dependencies, tidiness |
-| `go-tests`       | Go test module          | Dependencies, tidiness |
-| `mkdocs-site`    | MkDocs documentation    | Markdown syntax        |
-| `mkdocs-book`    | MkDocs book             | Markdown syntax        |
-| `specifications` | Gherkin specs           | Test tags              |
-| `contracts`      | Configuration contracts | Schema validity        |
-| `markdown`       | Markdown files          | Markdown syntax        |
+| Type         | Description                       | Validated              |
+| ------------ | --------------------------------- | ---------------------- |
+| `go`         | Go module (library, exe, or test) | Dependencies, tidiness |
+| `container`  | Docker container module           | Dockerfile             |
+| `typescript` | TypeScript/npm module             | Package.json           |
+| `static`     | Static files (no build)           | File existence         |
 
 ### Environment Contract
 
@@ -366,7 +360,7 @@ Schemas use JSON Schema (Draft 7):
         "required": ["moniker", "type"],
         "properties": {
           "moniker": {"type": "string"},
-          "type": {"enum": ["go-cli", "go-library", ...]}
+          "type": {"enum": ["go", "container", "typescript", "static"]}
         }
       }
     }

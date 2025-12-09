@@ -1,4 +1,4 @@
-// File: go/eac/ai/config_loader.go
+// File: go/eac/commands/internal/ai/config_loader.go
 package ai
 
 import (

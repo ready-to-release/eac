@@ -257,7 +257,7 @@ Release commands read module configuration:
 # modules.yml
 modules:
   - moniker: eac-commands
-    type: go-commands
+    type: go
     version_strategy: calver
     changelog: CHANGELOG.md
 ```

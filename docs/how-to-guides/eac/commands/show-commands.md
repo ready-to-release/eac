@@ -67,10 +67,10 @@ r2r eac show modules
 # ┌─────────────────┬──────────────┬────────────┬─────────────┐
 # │ Module          │ Type         │ Files      │ Dependencies│
 # ├─────────────────┼──────────────┼────────────┼─────────────┤
-# │ eac-commands    │ go-commands  │ 45         │ 2           │
-# │ eac-core        │ go-library   │ 32         │ 0           │
-# │ src-auth        │ go-library   │ 28         │ 1           │
-# │ docs            │ mkdocs-site  │ 156        │ 0           │
+# │ eac-commands    │ go           │ 45         │ 2           │
+# │ eac-core        │ go           │ 32         │ 0           │
+# │ src-auth        │ go           │ 28         │ 1           │
+# │ docs            │ container    │ 156        │ 0           │
 # └─────────────────┴──────────────┴────────────┴─────────────┘
 ```
 
@@ -144,14 +144,12 @@ r2r eac show moduletypes
 # Output:
 # Module Types:
 #
-# go-library       : 8 modules
-# go-commands      : 3 modules
-# go-cli           : 1 module
-# mkdocs-site      : 1 module
-# specifications   : 1 module
-# contracts        : 1 module
+# go               : 6 modules
+# static           : 9 modules
+# container        : 2 modules
+# typescript       : 1 module
 #
-# Total: 15 modules across 6 types
+# Total: 18 modules across 4 types
 ```
 
 **Use this when:**

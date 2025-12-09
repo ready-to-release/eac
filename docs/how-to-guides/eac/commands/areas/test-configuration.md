@@ -221,7 +221,7 @@ fi
 ```yaml
 modules:
   - moniker: eac-core
-    type: go-library
+    type: go
     test:
       timeout: 300
       coverage: true

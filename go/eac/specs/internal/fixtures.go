@@ -128,7 +128,7 @@ func SetupMultiModuleConfig(ctx *TestContext, module1Name, module1Path, module2N
 //
 // Creates:
 //   - .r2r/eac/modules.yml with the module definition
-//   - .r2r/eac/module-types.yml with go-library type
+//   - .r2r/eac/module-types.yml with go type
 //   - Module directory with Go source file
 //   - Optionally stages all files in git
 func SetupGoModuleWithEAC(ctx *TestContext, moduleName string, stage bool) error {
@@ -186,35 +186,29 @@ func CreateModulesYml(ctx *TestContext, moduleName, modulePath, moduleType strin
 }
 
 // CreateModuleTypesYml creates module-types.yml with the specified types.
-// Common type names: "go-library", "go-command", "docker-image", "mkdocs-book"
+// Common type names: "go", "container", "typescript", "static"
 func CreateModuleTypesYml(ctx *TestContext, types ...string) error {
 	// Map of type definitions
 	typeDefinitions := map[string]string{
-		"go-library": `  - name: go-library
-    description: Go library module
+		"go": `  - name: go
+    description: Go module (library, executable, or test - driven by module artifacts)
     capabilities:
       - go_module
 `,
-		"go-command": `  - name: go-command
-    description: Go CLI application
+		"container": `  - name: container
+    description: Docker container module
     capabilities:
-      - go_module
-      - executable
+      - docker_build
 `,
-		"docker-image": `  - name: docker-image
-    description: Docker image
+		"typescript": `  - name: typescript
+    description: TypeScript/npm module
     capabilities:
-      - docker
+      - npm_package
+      - typescript
 `,
-		"mkdocs-book": `  - name: mkdocs-book
-    description: MkDocs documentation book
-    capabilities:
-      - mkdocs
-`,
-		"gherkin-spec": `  - name: gherkin-spec
-    description: Gherkin specification module
-    capabilities:
-      - gherkin
+		"static": `  - name: static
+    description: Static files module (no build step)
+    capabilities: []
 `,
 	}
 

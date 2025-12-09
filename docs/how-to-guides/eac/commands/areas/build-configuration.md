@@ -20,9 +20,8 @@ Configuration reference for build system covering module types, build flags, ver
    - MkDocs Output
 4. Environment Variables
 5. Module Type Configurations
-   - go-cli Configuration
-   - mkdocs-site Configuration
-   - containers Configuration
+   - Go Module Configuration
+   - Container Configuration
 6. CI/CD Configuration
    - GitHub Actions Build
    - Release Build Configuration
@@ -48,7 +47,7 @@ This guide covers configuration options for EAC's build system, including module
 # .r2r/eac/modules.yml
 modules:
   - moniker: r2r-cli
-    type: go-cli
+    type: go
     description: R2R command-line interface
     files:
       root: scripts/r2r-cli
@@ -56,22 +55,22 @@ modules:
         - "**/*.go"
         - "go.mod"
         - "go.sum"
+    artifacts:
+      - type: executable
+        name: r2r
+        platforms: [linux-amd64, linux-arm64, windows-amd64, darwin-amd64, darwin-arm64]
 ```
 
 ### Supported Module Types
 
+The unified type system uses four base types. Behavior (library vs executable) is determined by artifact definitions:
+
 | Type | Description | Build Output |
 |------|-------------|--------------|
-| `go-cli` | Go CLI application | Multi-platform binaries |
-| `go-commands` | Go command package | Library (no binary) |
-| `go-library` | Go library | Library (no binary) |
-| `go-mcp` | Go MCP server | Server binary |
-| `mkdocs-site` | MkDocs documentation | Static HTML site |
-| `mkdocs-book` | MkDocs book (PDF/EPUB) | PDF and EPUB files |
-| `containers` | Docker container | Container image |
-| `specifications` | Gherkin specs | Validated specs |
-| `contracts` | Configuration contracts | Validated contracts |
-| `markdown` | Markdown files | Validated markdown |
+| `go` | Go module | Library or multi-platform binaries (based on artifacts) |
+| `container` | Docker container | Container image |
+| `typescript` | TypeScript/Node.js module | npm package |
+| `static` | Static files (no build) | Validated/copied files |
 
 ## Build Flags
 
@@ -144,7 +143,7 @@ out/
 
 ### Platform-Specific Outputs
 
-For `go-cli` modules:
+For Go modules with executable artifacts:
 
 ```text
 out/build/r2r-cli/
@@ -178,42 +177,35 @@ out/build/docs/
 
 ## Module Type Configurations
 
-### go-cli Configuration
+### Go Module Configuration
+
+Go modules can be libraries (no artifacts) or executables (with artifact definitions):
 
 ```yaml
+# Library (no build artifacts)
 modules:
+  - moniker: eac-core
+    type: go
+    files:
+      root: go/eac/core
+
+# Executable with multi-platform build
   - moniker: r2r-cli
-    type: go-cli
+    type: go
     files:
       root: scripts/r2r-cli
-    build:
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - windows/amd64
-        - darwin/amd64
-        - darwin/arm64
+    artifacts:
+      - type: executable
+        name: r2r
+        platforms: [linux-amd64, linux-arm64, windows-amd64, darwin-amd64, darwin-arm64]
 ```
 
-### mkdocs-site Configuration
-
-```yaml
-modules:
-  - moniker: docs
-    type: mkdocs-site
-    files:
-      root: docs
-      patterns:
-        - "**/*.md"
-        - "mkdocs.yml"
-```
-
-### containers Configuration
+### Container Configuration
 
 ```yaml
 modules:
   - moniker: ext-eac
-    type: containers
+    type: container
     files:
       root: containers/ext-eac
       patterns:
@@ -296,7 +288,7 @@ jobs:
 # Module with pre-build hook
 modules:
   - moniker: eac-commands
-    type: go-commands
+    type: go
     hooks:
       pre_build:
         - "go generate ./..."
@@ -307,7 +299,10 @@ modules:
 ```yaml
 modules:
   - moniker: r2r-cli
-    type: go-cli
+    type: go
+    artifacts:
+      - type: executable
+        name: r2r
     hooks:
       post_build:
         - "sha256sum out/build/r2r-cli/* > checksums.txt"
@@ -335,7 +330,7 @@ r2r eac get execution order r2r-cli | xargs r2r eac build
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | Build hangs | Large module | Check `build.log` for progress |
-| Missing binary | Wrong module type | Verify `go-cli` type in contract |
+| Missing binary | Missing artifact definition | Add `artifacts` with `type: executable` |
 | UPX fails | UPX not installed | Install UPX or use `--compressed` |
 | Version not injected | Wrong variable name | Use `var version = "dev"` |
 | Cross-compile fails | CGO dependency | Set `CGO_ENABLED=0` |

@@ -114,7 +114,7 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		modulesYml := fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
-    type: go-library
+    type: go
     description: Test module
     files:
       root: .
@@ -127,7 +127,7 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		// Create module contract
 		moduleContract := fmt.Sprintf(`module:
   moniker: %s
-  type: go-library
+  type: go
   description: Test module
 paths:
   - .
@@ -166,7 +166,7 @@ paths:
 		modulesYml := fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
-    type: go-library
+    type: go
     description: Test module
     files:
       root: .
@@ -179,7 +179,7 @@ paths:
 		// Create module contract
 		moduleContract := fmt.Sprintf(`module:
   moniker: %s
-  type: go-library
+  type: go
   description: Test module
 paths:
   - .

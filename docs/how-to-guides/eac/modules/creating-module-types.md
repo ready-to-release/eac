@@ -179,7 +179,7 @@ Modules can override any pattern:
 ```yaml
 modules:
   - moniker: my-module
-    type: go-library
+    type: go
     files:
       root: src/my-module
       source:                    # Override source pattern
@@ -187,32 +187,30 @@ modules:
         - "internal/**/*.go"
 ```
 
-## Common Type Patterns
+## Base Module Types
 
-### Go Library
+The unified type system uses four base types:
+
+### Go
 
 ```yaml
-- name: go-library
-  description: Go library package
-  build_deps: [go]
+- name: go
+  description: Go module (library, executable, or test - driven by module artifacts)
   capabilities: [go_module]
   files:
-    source: ["**/*.go", "!**/*_test.go"]
+    source: ["**/*.go", "**/*.go.txt"]
     config: ["go.mod", "go.sum"]
     tests: ["**/*_test.go"]
 ```
 
-### Go CLI
+### Container
 
 ```yaml
-- name: go-cli
-  description: Go CLI application
-  build_deps: [go]
-  capabilities: [go_module, executable, cross_compile]
+- name: container
+  description: Docker container module
+  capabilities: [docker_build]
   files:
-    source: ["**/*.go", "!**/*_test.go"]
-    config: ["go.mod", "go.sum"]
-    tests: ["**/*_test.go"]
+    assets: ["Dockerfile", "**/*"]
 ```
 
 ### Node.js Package

@@ -1,7 +1,7 @@
 //go:build L1 && ov
 // +build L1,ov
 
-// File: go/eac/ai/provider_test.go
+// File: go/eac/commands/internal/ai/provider_test.go
 package ai
 
 import (

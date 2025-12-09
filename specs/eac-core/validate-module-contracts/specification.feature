@@ -86,7 +86,7 @@ Rule: Module type defaults must be properly applied
 
 @ov @L1
 Scenario: Default values from module type are applied to module contract
-  Given a module with type "go-library" and missing optional fields
+  Given a module with type "go" and missing optional fields
   When the module contract is processed with type defaults
   Then default values from the module type are applied
   And explicit values are not overwritten
@@ -99,15 +99,15 @@ Scenario: Description defaults to name when not specified
 
 @ov @L1
 Scenario: Module type-specific defaults are applied
-  Given a module with type "go-cli"
+  Given a module with type "go"
   When the module contract is processed
-  Then build dependencies from the "go-cli" type are available
+  Then build dependencies from the "go" type are available
 
 Rule: Module contracts must reference valid module types
 
 @ov @L1
 Scenario: Valid module type reference is accepted
-  Given a module with type "go-library" from the module type registry
+  Given a module with type "go" from the module type registry
   When the module contract is validated
   Then the module type reference is confirmed as valid
 

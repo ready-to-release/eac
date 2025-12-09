@@ -1,4 +1,4 @@
-// File: go/eac/ai/providers/gemini.go
+// File: go/eac/commands/internal/ai/providers/gemini.go
 // Intent: Call Google Gemini API using official SDK
 //
 // Design (Three Rules of Vibe Coding):
@@ -28,7 +28,7 @@ import (
 	"fmt"
 
 	"github.com/google/generative-ai-go/genai"
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"google.golang.org/api/option"
 )
 

@@ -129,7 +129,7 @@ r2r eac test eac-core --coverage --as-junit
 ### Output (Single Module - Verbose)
 
 ```text
-Testing module: eac-commands (type: go-commands)
+Testing module: eac-commands (type: go)
 Module root: go/eac/commands
 Test suite: commit
 
@@ -178,12 +178,10 @@ exit status 1
 
 | Type | Test Runner | Output |
 |------|-------------|--------|
-| `go-cli` | `go test` | Go test output |
-| `go-commands` | `go test` | Go test output |
-| `go-library` | `go test` | Go test output |
-| `go-mcp` | `go test` | Go test output |
-| `go-tests` | godog | Cucumber JSON |
-| `specifications` | godog | Cucumber JSON |
+| `go` | `go test` | Go test output |
+| `typescript` | Test framework | Framework-specific output |
+| `container` | N/A | No direct testing |
+| `static` | N/A | No direct testing |
 
 ### Exit Codes
 

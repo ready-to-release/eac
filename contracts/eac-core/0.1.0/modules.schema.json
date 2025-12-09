@@ -310,7 +310,7 @@
         {
           "moniker": "eac-core",
           "name": "Core Domain Libraries",
-          "type": "go-library",
+          "type": "go",
           "description": "Core library containing contracts and repository operations",
           "depends_on": [],
           "files": {

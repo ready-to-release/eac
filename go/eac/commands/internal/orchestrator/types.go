@@ -29,7 +29,7 @@ type WorkResult struct {
 	Errors []string
 	// Duration is the time taken to process this work item
 	Duration time.Duration
-	// Type is the module/work type (e.g., "go-cli", "mkdocs", "go")
+	// Type is the module/work type (e.g., "go", "container", "typescript", "static")
 	Type string
 }
 
@@ -54,7 +54,7 @@ type Config struct {
 	MaxConcurrency int
 	// StatusUpdateInterval is how often to show status updates (default: 2 seconds)
 	StatusUpdateInterval int // in seconds
-	// ModuleTypes maps moniker to type string (e.g., "go-cli", "mkdocs") for display
+	// ModuleTypes maps moniker to type string (e.g., "go", "container") for display
 	ModuleTypes map[string]string
 	// ShowTimings enables the timing summary section (use --timings flag)
 	ShowTimings bool

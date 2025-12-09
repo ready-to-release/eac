@@ -1,7 +1,7 @@
 //go:build L1 && ov
 // +build L1,ov
 
-// File: go/eac/ai/executor_test.go
+// File: go/eac/commands/internal/ai/executor_test.go
 package ai_test
 
 import (
@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
-	"github.com/ready-to-release/eac/go/eac/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 )
 
 func TestExecutor_Execute(t *testing.T) {

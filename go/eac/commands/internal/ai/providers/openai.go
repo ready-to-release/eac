@@ -1,4 +1,4 @@
-// File: go/eac/ai/providers/openai.go
+// File: go/eac/commands/internal/ai/providers/openai.go
 // Intent: Call OpenAI API using official SDK for GPT models
 //
 // Design (Three Rules of Vibe Coding):
@@ -27,7 +27,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	openai "github.com/sashabaranov/go-openai"
 )
 

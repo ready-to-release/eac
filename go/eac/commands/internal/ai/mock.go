@@ -1,4 +1,4 @@
-// File: go/eac/ai/mock.go
+// File: go/eac/commands/internal/ai/mock.go
 package ai
 
 import "context"

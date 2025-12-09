@@ -107,12 +107,14 @@ out/reports/coverage/
 
 ### Module Type Dispatch
 
+The unified type system has four base types: `go`, `container`, `typescript`, `static`.
+
 | Module Type      | Test Runner | Output         |
 | ---------------- | ----------- | -------------- |
-| `go-cli`         | `go test`   | Go test output |
-| `go-commands`    | `go test`   | Go test output |
-| `go-library`     | `go test`   | Go test output |
-| `go-tests`       | godog       | Cucumber JSON  |
+| `go`             | `go test`   | Go test output |
+| `container`      | N/A         | N/A            |
+| `typescript`     | npm test    | Test output    |
+| `static`         | N/A         | N/A            |
 | `specifications` | godog       | Cucumber JSON  |
 
 ## Workflow Overview

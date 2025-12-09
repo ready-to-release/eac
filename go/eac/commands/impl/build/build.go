@@ -1003,7 +1003,7 @@ func printBuildUsage() {
 	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")
 	log.Info("  --no-tui                  Disable TUI console (use plain output)")
 	log.Info(fmt.Sprintf("  --tui-height N            Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
-	log.Info("  --version VERSION         Inject version string into binary (go-cli only)")
+	log.Info("  --version VERSION         Inject version string into binary (Go modules with executable artifacts)")
 	log.Info("  --accept-warnings         Don't fail on MkDocs warnings (non-strict mode)")
 	log.Info("  --all                     Include non-default books (those with default: false)")
 	log.Info("  -h, --help                Show this help message")

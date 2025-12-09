@@ -1,4 +1,4 @@
-// File: go/eac/ai/providers/claude_cli.go
+// File: go/eac/commands/internal/ai/providers/claude_cli.go
 package providers
 
 import (
@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/ai"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
 // Claude CLI model names (using full model IDs for consistency across providers)

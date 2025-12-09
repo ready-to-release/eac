@@ -13,7 +13,6 @@ ENV CGO_ENABLED=0
 WORKDIR /app
 
 # Copy go.mod and go.sum files for dependency caching
-COPY go/eac/ai/go.mod go/eac/ai/go.sum ./go/eac/ai/
 COPY go/eac/core/go.mod go/eac/core/go.sum ./go/eac/core/
 COPY go/eac/commands/go.mod go/eac/commands/go.sum ./go/eac/commands/
 
@@ -30,7 +29,6 @@ FROM deps AS builder
 ARG TARGETARCH
 
 # Copy source code
-COPY go/eac/ai/ ./go/eac/ai/
 COPY go/eac/core/ ./go/eac/core/
 COPY go/eac/commands/ ./go/eac/commands/
 
@@ -73,7 +71,6 @@ ENV TZ=UTC
 ENV R2R_CONTAINER_ROOT=/app
 
 # Copy source code to /app (needed for go test in acceptance tests)
-COPY go/eac/ai/ ./go/eac/ai/
 COPY go/eac/core/ ./go/eac/core/
 COPY go/eac/commands/ ./go/eac/commands/
 COPY go/eac/specs/ ./go/eac/specs/

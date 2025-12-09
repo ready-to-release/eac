@@ -441,7 +441,7 @@ Override in module contract:
 # modules.yml
 modules:
   - moniker: eac-commands
-    type: go-commands
+    type: go
     design:
       enabled: true
       autoLayout: lr

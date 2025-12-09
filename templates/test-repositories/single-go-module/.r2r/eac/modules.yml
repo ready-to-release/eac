@@ -1,6 +1,6 @@
 modules:
   - moniker: test-module
     name: Test Module
-    type: go-library
+    type: go
     files:
       root: go/test-module

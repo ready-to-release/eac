@@ -9,7 +9,7 @@ import (
 
 func init() {
 	// Register handler for "go" build dependency
-	// All go-* types (go-cli, go-library, go-commands, etc.) use this via their build_deps contract
+	// The unified "go" type uses this via its build_deps contract
 	RegisterSystem("go", TestGoModule)
 }
 

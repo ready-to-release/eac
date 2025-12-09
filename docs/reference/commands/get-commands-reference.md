@@ -53,7 +53,7 @@ r2r eac get modules
   "modules": [
     {
       "moniker": "eac-commands",
-      "type": "go-commands",
+      "type": "go",
       "path": "go/eac/commands",
       "dependencies": ["eac-core"],
       "files": 45
@@ -74,7 +74,7 @@ r2r eac get modules
 r2r eac get modules | jq -r '.modules[].moniker'
 
 # Find modules of a specific type
-r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+r2r eac get modules | jq '.modules[] | select(.type == "go")'
 
 # Count modules by type
 r2r eac get modules | jq -r '.modules[].type' | sort | uniq -c
@@ -809,7 +809,7 @@ r2r eac get modules > .cache/modules.json
 r2r eac get dependencies > .cache/dependencies.json
 
 # Query from cache
-jq '.modules[] | select(.type == "go-library")' .cache/modules.json
+jq '.modules[] | select(.type == "go")' .cache/modules.json
 ```
 
 **Invalidate cache on changes:**

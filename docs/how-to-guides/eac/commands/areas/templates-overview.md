@@ -276,13 +276,13 @@ r2r eac build docs-book
 
 ### Module Placeholders
 
-| Placeholder               | Description                |
-| ------------------------- | -------------------------- |
-| `{{.Module.Moniker}}`     | Module identifier          |
-| `{{.Module.Type}}`        | Module type (go-cli, etc.) |
-| `{{.Module.Description}}` | Module description         |
-| `{{.Module.Path}}`        | Relative path              |
-| `{{.Module.ImportPath}}`  | Go import path             |
+| Placeholder               | Description                                             |
+| ------------------------- | ------------------------------------------------------- |
+| `{{.Module.Moniker}}`     | Module identifier                                       |
+| `{{.Module.Type}}`        | Module type (go, container, typescript, static)         |
+| `{{.Module.Description}}` | Module description                                      |
+| `{{.Module.Path}}`        | Relative path                                           |
+| `{{.Module.ImportPath}}`  | Go import path                                          |
 
 ### Runtime Placeholders
 
@@ -335,7 +335,7 @@ Version: {{.Version}}
 
 ```markdown
 {{/* Bad: Complex logic in templates */}}
-{{if and (eq .Module.Type "go-cli") (gt (len .Module.Files) 10)}}
+{{if and (eq .Module.Type "go") (gt (len .Module.Files) 10)}}
 ...complex nested logic...
 {{end}}
 ```

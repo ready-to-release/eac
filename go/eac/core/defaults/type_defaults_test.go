@@ -23,7 +23,7 @@ func TestSubstituteVariables(t *testing.T) {
 			pattern:    "specs/{moniker}/**",
 			moniker:    "eac-core",
 			root:       "go/eac/core",
-			moduleType: "go-library",
+			moduleType: "go",
 			expected:   "specs/eac-core/**",
 		},
 		{
@@ -31,7 +31,7 @@ func TestSubstituteVariables(t *testing.T) {
 			pattern:    "{root}/tests",
 			moniker:    "eac-core",
 			root:       "go/eac/core",
-			moduleType: "go-library",
+			moduleType: "go",
 			expected:   "go/eac/core/tests",
 		},
 		{
@@ -39,8 +39,8 @@ func TestSubstituteVariables(t *testing.T) {
 			pattern:    "types/{type}/config",
 			moniker:    "eac-core",
 			root:       "go/eac/core",
-			moduleType: "go-library",
-			expected:   "types/go-library/config",
+			moduleType: "go",
+			expected:   "types/go/config",
 		},
 		{
 			name:       "multiple variables",
@@ -55,7 +55,7 @@ func TestSubstituteVariables(t *testing.T) {
 			pattern:    "**/*.go",
 			moniker:    "eac-core",
 			root:       "go/eac/core",
-			moduleType: "go-library",
+			moduleType: "go",
 			expected:   "**/*.go",
 		},
 		{
@@ -63,7 +63,7 @@ func TestSubstituteVariables(t *testing.T) {
 			pattern:    "",
 			moniker:    "eac-core",
 			root:       "go/eac/core",
-			moduleType: "go-library",
+			moduleType: "go",
 			expected:   "",
 		},
 		{
@@ -109,13 +109,13 @@ func TestSubstituteVariables_WithPathVars(t *testing.T) {
 		{
 			name:     "combined with standard vars",
 			pattern:  "{test_impl_root}/{moniker}/{type}",
-			expected: "go/eac/specs/impl/test-mod/go-lib",
+			expected: "go/eac/specs/impl/test-mod/go",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := SubstituteVariables(tt.pattern, "test-mod", "src/test", "go-lib", pathVars)
+			result := SubstituteVariables(tt.pattern, "test-mod", "src/test", "go", pathVars)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -140,7 +140,7 @@ func TestSubstituteAll(t *testing.T) {
 			"{root}/tests",
 			"**/*.go",
 		}
-		result := SubstituteAll(patterns, "eac-core", "go/eac/core", "go-library", nil)
+		result := SubstituteAll(patterns, "eac-core", "go/eac/core", "go", nil)
 
 		assert.Len(t, result, 3)
 		assert.Equal(t, "specs/eac-core/**", result[0])
@@ -204,7 +204,7 @@ func TestResolveDefaults_WithTypeDefaults(t *testing.T) {
 
 	result := ResolveDefaults(
 		typeDef,
-		"my-lib", "src/lib", "go-library",
+		"my-lib", "src/lib", "go",
 		pathVars,
 		nil, nil, nil, nil,
 		"",
@@ -249,7 +249,7 @@ func TestResolveDefaults_ExplicitOverridesType(t *testing.T) {
 
 	result := ResolveDefaults(
 		typeDef,
-		"my-lib", "src/lib", "go-library",
+		"my-lib", "src/lib", "go",
 		pathVars,
 		explicitSource, explicitConfig, nil, nil,
 		"CUSTOM.md", // explicit changelog
@@ -280,7 +280,7 @@ func TestResolveDefaults_EmptySlicePreserved(t *testing.T) {
 
 	result := ResolveDefaults(
 		typeDef,
-		"my-lib", "src/lib", "go-library",
+		"my-lib", "src/lib", "go",
 		nil, // pathVars
 		nil, nil, nil, nil,
 		"",

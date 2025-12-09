@@ -110,22 +110,22 @@ In `modules.yml`:
 ```yaml
 modules:
   - moniker: eac-core
-    type: go-library
+    type: go
     # No dependencies - Layer 0
 
   - moniker: eac-ai
-    type: go-library
+    type: go
     depends_on:
       - eac-core  # Layer 1
 
   - moniker: eac-commands
-    type: go-commands
+    type: go
     depends_on:
       - eac-core
       - eac-ai    # Layer 2
 
   - moniker: r2r-cli
-    type: go-cli
+    type: go
     depends_on:
       - eac-commands  # Layer 3
 ```
@@ -241,9 +241,8 @@ actions:
 
     # Build command (per module type)
     commands:
-      go-cli: "go build -o {output} ./..."
-      go-library: "go build ./..."
-      mkdocs-site: "mkdocs build"
+      go: "go build ./..."
+      container: "docker build ."
 
     # Post-build commands
     post:
@@ -257,9 +256,7 @@ actions:
   test:
     # Test command per module type
     commands:
-      go-cli: "go test -v ./..."
-      go-library: "go test -v ./..."
-      go-tests: "godog run"
+      go: "go test -v ./..."
 
     # Coverage settings
     coverage:
