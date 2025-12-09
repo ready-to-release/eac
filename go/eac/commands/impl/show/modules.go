@@ -106,7 +106,7 @@ func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig, worksp
 	}
 
 	// Get module from config
-	module, ok := cfg.Modules.GetModule(mod.Moniker)
+	module, ok := cfg.Repository.GetModule(mod.Moniker)
 	if !ok {
 		return stats
 	}

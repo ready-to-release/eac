@@ -487,7 +487,7 @@ func validateSingleModule(
 	result.Type = moduleContract.Type
 
 	// Get module from config
-	module, ok := cfg.Modules.GetModule(moniker)
+	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		result.Error = fmt.Sprintf("module not found in config")
 		return result

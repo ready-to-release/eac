@@ -14,25 +14,27 @@ import (
 // DefaultsVersion is the contract version for defaults
 const DefaultsVersion = "0.1.0"
 
-// LoadModulesDefaults loads default modules from contract defaults.
-// Returns default modules config when .r2r/eac/modules.yml doesn't exist.
+// LoadRepositoryDefaults loads default repository config from contract defaults.
+// This now includes modules (unified config).
 // Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
-func LoadModulesDefaults(repoRoot string) (*ModulesConfig, error) {
-	data, err := loadDefaultFile(repoRoot, "modules.yml")
+func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
+	data, err := loadDefaultFile(repoRoot, "repository.yml")
 	if err != nil {
 		// Defaults are optional - return nil if they don't exist
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("loading modules defaults: %w", err)
+		return nil, fmt.Errorf("loading repository defaults: %w", err)
 	}
 
-	var cfg ModulesConfig
+	var cfg RepositoryConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing modules defaults: %w", err)
+		return nil, fmt.Errorf("parsing repository defaults: %w", err)
 	}
 
-	cfg.applyDefaults()
+	// Apply module defaults
+	cfg.applyModuleDefaults()
+
 	return &cfg, nil
 }
 
@@ -55,26 +57,6 @@ func LoadModuleTypesDefaults(repoRoot string) (*ModuleTypesConfig, error) {
 	}
 
 	cfg.buildTypeMap()
-	return &cfg, nil
-}
-
-// LoadRepositoryDefaults loads default repository config from contract defaults.
-// Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
-func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
-	data, err := loadDefaultFile(repoRoot, "repository.yml")
-	if err != nil {
-		// Defaults are optional - return nil if they don't exist
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("loading repository defaults: %w", err)
-	}
-
-	var cfg RepositoryConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing repository defaults: %w", err)
-	}
-
 	return &cfg, nil
 }
 
@@ -307,7 +289,7 @@ func mergeRepoDefaults(base, user *RepoDefaults) *RepoDefaults {
 }
 
 // MergeRepository merges user repository config with defaults at field level.
-// User values override defaults.
+// User values override defaults. Now includes modules.
 func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	if defaults == nil {
 		return user
@@ -317,6 +299,26 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	}
 
 	result := *defaults // Copy defaults
+
+	// Override repository settings if set
+	if user.Repository.Type != "" {
+		result.Repository.Type = user.Repository.Type
+	}
+	if user.Repository.TrunkBranch != "" {
+		result.Repository.TrunkBranch = user.Repository.TrunkBranch
+	}
+	if user.Repository.MaxBranchAgeDays != 0 {
+		result.Repository.MaxBranchAgeDays = user.Repository.MaxBranchAgeDays
+	}
+	if len(user.Repository.Schemes) > 0 {
+		result.Repository.Schemes = user.Repository.Schemes
+	}
+	if user.Repository.PR.MergeStrategy != "" {
+		result.Repository.PR = user.Repository.PR
+	}
+	if user.Repository.Versioning.Constraint != "" {
+		result.Repository.Versioning = user.Repository.Versioning
+	}
 
 	// Override paths if set
 	if user.Paths.SpecsRoot != "" {
@@ -356,6 +358,11 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	}
 	if user.Conventions.Changelog != "" {
 		result.Conventions.Changelog = user.Conventions.Changelog
+	}
+
+	// Modules: user modules completely override defaults (no merge)
+	if len(user.Modules) > 0 {
+		result.Modules = user.Modules
 	}
 
 	return &result

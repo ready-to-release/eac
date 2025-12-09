@@ -46,8 +46,8 @@ func ShowConfig() int {
 		WithHeaders("Config", "Status", "Items")
 
 	// Modules
-	if cfg.Modules != nil {
-		summaryTb.AddRow("modules", "✓ loaded", len(cfg.Modules.Modules))
+	if cfg.Repository != nil {
+		summaryTb.AddRow("modules", "✓ loaded", len(cfg.Repository.Modules))
 	} else {
 		summaryTb.AddRow("modules", "✗ not loaded", "-")
 	}
@@ -86,12 +86,12 @@ func ShowConfig() int {
 	// Display detailed tables for each config
 
 	// Modules
-	if cfg.Modules != nil && len(cfg.Modules.Modules) > 0 {
+	if cfg.Repository != nil && len(cfg.Repository.Modules) > 0 {
 		log.Info("## Modules")
 		log.Info("")
 		modTb := render.NewTableBuilder().
 			WithHeaders("Moniker", "Type", "Root")
-		for _, mod := range cfg.Modules.Modules {
+		for _, mod := range cfg.Repository.Modules {
 			modTb.AddRow(mod.Moniker, mod.Type, mod.Files.Root)
 		}
 		log.Info(modTb.Build())

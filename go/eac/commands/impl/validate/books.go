@@ -58,9 +58,9 @@ func ValidateBooks() int {
 	log.Info("  books.yml: schema valid")
 	log.Info("")
 
-	// Load modules for cross-reference validation
-	if err := cfg.LoadModules(false); err != nil {
-		log.Errorf("failed to load modules: %v", err)
+	// Load repository for modules cross-reference validation
+	if err := cfg.LoadRepository(false); err != nil {
+		log.Errorf("failed to load repository: %v", err)
 		return 1
 	}
 
@@ -85,9 +85,9 @@ func ValidateBooks() int {
 
 	// Build a reverse map: book name -> modules that reference it
 	bookToModules := make(map[string][]*config.Module)
-	if cfg.Modules != nil {
-		for i := range cfg.Modules.Modules {
-			mod := &cfg.Modules.Modules[i]
+	if cfg.Repository != nil {
+		for i := range cfg.Repository.Modules {
+			mod := &cfg.Repository.Modules[i]
 			for _, bookName := range mod.Books {
 				bookToModules[bookName] = append(bookToModules[bookName], mod)
 			}

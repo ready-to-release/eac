@@ -44,7 +44,7 @@ func (r *TsCucumberRunner) FindTestRoot(featurePath string, cfg *config.EACConfi
 	moniker := parts[0]
 
 	// Look up the module by moniker
-	module, ok := cfg.Modules.GetModule(moniker)
+	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		return ""
 	}

@@ -141,7 +141,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	cfg, _ := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if cfg != nil {
 		cfg.LoadBooks(false)
-		cfg.LoadModules(false) // Need modules to look up books by module's books list
+		cfg.LoadRepository(false) // Need modules to look up books by module's books list
 		// Check if module has ANY books defined
 		allBooks := cfg.GetBooksByModule(module.Moniker)
 		if len(allBooks) > 0 {

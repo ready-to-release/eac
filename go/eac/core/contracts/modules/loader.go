@@ -36,10 +36,10 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 		return nil, contracts.NewContractError("load", "config", err, "failed to initialize config loader")
 	}
 
-	// Load modules
-	if err := cfg.LoadModules(validate); err != nil {
-		modulesPath := filepath.Join(config.EACConfigRelPath, config.ModulesFileName)
-		return nil, contracts.NewContractError("load", modulesPath, err, "failed to load modules.yml")
+	// Load repository config (now includes modules)
+	if err := cfg.LoadRepository(validate); err != nil {
+		repoPath := filepath.Join(config.EACConfigRelPath, config.RepositoryFileName)
+		return nil, contracts.NewContractError("load", repoPath, err, "failed to load repository.yml")
 	}
 
 	// Load module types for type-specific defaults
@@ -48,19 +48,14 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 		// This allows backward compatibility when module-types.yml doesn't exist
 	}
 
-	// Load repository config for path variables
-	if err := cfg.LoadRepository(validate); err != nil {
-		// Repository config is optional - continue with defaults
-	}
-
 	// Apply type-specific defaults with repository path variables
-	cfg.Modules.ApplyTypeDefaults(cfg.ModuleTypes, cfg.Repository)
+	cfg.Repository.ApplyTypeDefaults(cfg.ModuleTypes)
 
 	// Create registry (version kept for internal compatibility)
 	registry := NewRegistry("0.1.0", workspaceRoot)
 
 	// Convert config.Module to contracts.BaseContract and process
-	for _, m := range cfg.Modules.Modules {
+	for _, m := range cfg.Repository.Modules {
 		// Convert to BaseContract for ModuleContract creation
 		base := contracts.BaseContract{
 			Moniker:     m.Moniker,
@@ -116,12 +111,12 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 				})
 			}
 		}
-		// Note: Defaults are already applied by config.ModulesConfig.applyDefaults() and ApplyTypeDefaults()
+		// Note: Defaults are already applied by config.RepositoryConfig.applyModuleDefaults() and ApplyTypeDefaults()
 
 		// Validate required fields
 		if base.Moniker == "" {
-			modulesPath := filepath.Join(config.EACConfigRelPath, config.ModulesFileName)
-			return nil, contracts.NewContractError("validate", modulesPath, nil, "moniker field is required")
+			repoPath := filepath.Join(config.EACConfigRelPath, config.RepositoryFileName)
+			return nil, contracts.NewContractError("validate", repoPath, nil, "moniker field is required")
 		}
 
 		// Create module contract
@@ -129,14 +124,14 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 
 		// Add to registry
 		if err := registry.Add(module); err != nil {
-			return nil, contracts.NewContractError("add", config.ModulesFileName, err,
+			return nil, contracts.NewContractError("add", config.RepositoryFileName, err,
 				fmt.Sprintf("failed to add module '%s' to registry: %v", base.Moniker, err))
 		}
 	}
 
 	// Validate registry has at least one module
 	if registry.Count() == 0 {
-		return nil, contracts.NewContractError("load", config.ModulesFileName, nil, "no module contracts found")
+		return nil, contracts.NewContractError("load", config.RepositoryFileName, nil, "no module contracts found")
 	}
 
 	return registry, nil

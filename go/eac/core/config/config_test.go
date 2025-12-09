@@ -16,7 +16,8 @@ func TestLoad_DefaultOptions(t *testing.T) {
 
 	assert.NotEmpty(t, cfg.RepoRoot)
 	assert.NotEmpty(t, cfg.ConfigRoot)
-	assert.NotNil(t, cfg.Modules)
+	assert.NotNil(t, cfg.Repository)
+	assert.NotEmpty(t, cfg.Repository.Modules)
 	assert.NotNil(t, cfg.Environments)
 	assert.NotNil(t, cfg.TestingTags)
 	assert.NotNil(t, cfg.TestSuites)
@@ -47,15 +48,15 @@ func TestLoad_LazyLoad(t *testing.T) {
 	require.NoError(t, err)
 
 	// Configs should not be loaded yet
-	assert.Nil(t, cfg.Modules)
+	assert.Nil(t, cfg.Repository)
 	assert.Nil(t, cfg.Environments)
 	assert.Nil(t, cfg.TestingTags)
 	assert.Nil(t, cfg.TestSuites)
 
 	// Load on demand
-	err = cfg.LoadModules(true)
+	err = cfg.LoadRepository(true)
 	require.NoError(t, err)
-	assert.NotNil(t, cfg.Modules)
+	assert.NotNil(t, cfg.Repository)
 }
 
 func TestLoad_WithoutSchemaValidation(t *testing.T) {
@@ -65,30 +66,31 @@ func TestLoad_WithoutSchemaValidation(t *testing.T) {
 
 	cfg, err := Load(opts)
 	require.NoError(t, err)
-	assert.NotNil(t, cfg.Modules)
+	assert.NotNil(t, cfg.Repository)
+	assert.NotEmpty(t, cfg.Repository.Modules)
 }
 
-func TestModulesConfig_Defaults(t *testing.T) {
+func TestRepositoryConfig_ModuleDefaults(t *testing.T) {
 	cfg, err := Load(DefaultLoadOptions())
 	require.NoError(t, err)
 
 	// Check that defaults are applied
-	for _, m := range cfg.Modules.Modules {
+	for _, m := range cfg.Repository.Modules {
 		assert.NotEmpty(t, m.Type, "module %s should have type", m.Moniker)
 		assert.NotEmpty(t, m.Description, "module %s should have description", m.Moniker)
 		assert.NotNil(t, m.DependsOn, "module %s should have depends_on", m.Moniker)
 	}
 }
 
-func TestModulesConfig_GetModule(t *testing.T) {
+func TestRepositoryConfig_GetModule(t *testing.T) {
 	cfg, err := Load(DefaultLoadOptions())
 	require.NoError(t, err)
 
-	m, ok := cfg.Modules.GetModule("eac-core")
+	m, ok := cfg.Repository.GetModule("eac-core")
 	assert.True(t, ok)
 	assert.Equal(t, "eac-core", m.Moniker)
 
-	_, ok = cfg.Modules.GetModule("nonexistent")
+	_, ok = cfg.Repository.GetModule("nonexistent")
 	assert.False(t, ok)
 }
 
@@ -219,7 +221,7 @@ func TestLoad_TypeDefaultsApplied(t *testing.T) {
 	require.NoError(t, err)
 
 	// Find a go module (eac-core)
-	srcCore, ok := cfg.Modules.GetModule("eac-core")
+	srcCore, ok := cfg.Repository.GetModule("eac-core")
 	require.True(t, ok, "eac-core module should exist")
 	assert.Equal(t, "go", srcCore.Type)
 
@@ -228,18 +230,18 @@ func TestLoad_TypeDefaultsApplied(t *testing.T) {
 	require.NotNil(t, goType)
 
 	if goType.Defaults != nil && goType.Defaults.Files != nil {
-		// If type has source defaults, they should be applied (unless explicit in modules.yml)
+		// If type has source defaults, they should be applied (unless explicit in repository.yml)
 		if goType.Defaults.Files.Source != nil {
-			// eac-core has explicit source in modules.yml, so check that format
+			// eac-core has explicit source in repository.yml, so check that format
 			assert.NotEmpty(t, srcCore.Files.Source)
 		}
 	}
 }
 
-// TestModulesConfig_ApplyTypeDefaults tests direct ApplyTypeDefaults call
-func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
+// TestRepositoryConfig_ApplyTypeDefaults tests direct ApplyTypeDefaults call
+func TestRepositoryConfig_ApplyTypeDefaults(t *testing.T) {
 	t.Run("applies type defaults", func(t *testing.T) {
-		modules := &ModulesConfig{
+		repo := &RepositoryConfig{
 			Modules: []Module{
 				{
 					Moniker: "test-mod",
@@ -271,9 +273,9 @@ func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
 			},
 		}
 
-		modules.ApplyTypeDefaults(types)
+		repo.ApplyTypeDefaults(types)
 
-		m := modules.Modules[0]
+		m := repo.Modules[0]
 		assert.Equal(t, []string{"**/*.go"}, m.Files.Source)
 		assert.Equal(t, []string{"go.mod"}, m.Files.Config)
 		assert.Equal(t, []string{"specs/test-mod/**"}, m.Files.Repo.Specs)
@@ -281,7 +283,7 @@ func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
 	})
 
 	t.Run("preserves explicit values", func(t *testing.T) {
-		modules := &ModulesConfig{
+		repo := &RepositoryConfig{
 			Modules: []Module{
 				{
 					Moniker: "explicit-mod",
@@ -318,9 +320,9 @@ func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
 			},
 		}
 
-		modules.ApplyTypeDefaults(types)
+		repo.ApplyTypeDefaults(types)
 
-		m := modules.Modules[0]
+		m := repo.Modules[0]
 		// Explicit values should be preserved
 		assert.Equal(t, []string{"custom/*.go"}, m.Files.Source)
 		assert.Equal(t, []string{"custom.mod"}, m.Files.Config)
@@ -329,7 +331,7 @@ func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
 	})
 
 	t.Run("handles nil types", func(t *testing.T) {
-		modules := &ModulesConfig{
+		repo := &RepositoryConfig{
 			Modules: []Module{
 				{
 					Moniker: "test-mod",
@@ -343,16 +345,16 @@ func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
 		}
 
 		// Should not panic with nil types
-		modules.ApplyTypeDefaults(nil)
+		repo.ApplyTypeDefaults(nil)
 
-		m := modules.Modules[0]
+		m := repo.Modules[0]
 		// Generic defaults should be applied
 		assert.Equal(t, "CHANGELOG.md", m.Files.Changelog)
 		assert.Equal(t, []string{"specs/test-mod/**"}, m.Files.Repo.Specs)
 	})
 
 	t.Run("preserves explicit empty specs", func(t *testing.T) {
-		modules := &ModulesConfig{
+		repo := &RepositoryConfig{
 			Modules: []Module{
 				{
 					Moniker: "no-specs-mod",
@@ -381,9 +383,9 @@ func TestModulesConfig_ApplyTypeDefaults(t *testing.T) {
 			},
 		}
 
-		modules.ApplyTypeDefaults(types)
+		repo.ApplyTypeDefaults(types)
 
-		m := modules.Modules[0]
+		m := repo.Modules[0]
 		// Explicit empty should be preserved
 		assert.NotNil(t, m.Files.Repo.Specs)
 		assert.Empty(t, m.Files.Repo.Specs)
