@@ -208,7 +208,7 @@ Updating architecture design for eac-commands...
 
 Analyzing changes since last update...
   + New package: impl/security
-  + New dependency: eac-ai
+  + New dependency: eac-core
   - Removed package: impl/deprecated
   ~ Modified: impl/build (2 new components)
 

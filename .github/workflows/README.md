@@ -69,7 +69,7 @@ This repository implements a sophisticated CI/CD pipeline with:
 
 Standard Go Modules (8):
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│ eac-core     │  │ eac-ai       │  │ r2r-cli      │
+│ eac-core     │  │ eac-commands │  │ r2r-cli      │
 │ Build → Test │  │ Build → Test │  │ Build → Test │
 └──────────────┘  └──────────────┘  └──────────────┘
 
