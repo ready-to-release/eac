@@ -392,7 +392,7 @@ func ValidateArtifactsWithDependencies(
 	}
 
 	// Load per-module manifests to get requested artifacts and platform info
-	// Each module has its own manifest at out/build/<module>/.manifest.json
+	// Each module has its own manifest at out/build/<module>/build.manifest.json
 	moduleManifests := make(map[string]*ModuleManifest)
 	for moniker := range allModules {
 		moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)

@@ -89,7 +89,7 @@ type ModuleTestFiles struct {
 }
 
 const (
-	stateFileName = ".test-state.json"
+	stateFileName = "test-suite.state.json"
 )
 
 // Load loads test state from the test output directory

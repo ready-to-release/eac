@@ -15,7 +15,7 @@ import (
 )
 
 // ModuleManifest represents the build manifest for a single module.
-// This is stored per-module at out/build/<module>/.manifest.json and is immutable after creation.
+// This is stored per-module at out/build/<module>/build.manifest.json and is immutable after creation.
 // The VerifiedUnchangedAt field can be updated by the builder when it verifies the module is up-to-date.
 type ModuleManifest struct {
 	BuildID             string         `json:"build_id"`                        // Unique identifier for this build (UUID locally, GitHub run ID in CI)
@@ -51,7 +51,7 @@ type PlatformInfo struct {
 }
 
 const manifestVersion = "2.0"
-const manifestFileName = ".manifest.json"
+const manifestFileName = "build.manifest.json"
 
 // CollectBuildFiles walks the build directory and returns all file paths relative to the directory.
 // It excludes the manifest file itself and any hidden files/directories.
@@ -119,7 +119,7 @@ func NewModuleManifest(moniker, moduleType, gitCommit string) *ModuleManifest {
 }
 
 // Save writes the manifest to the module's build output directory.
-// The manifest is stored at <moduleBuildDir>/.manifest.json
+// The manifest is stored at <moduleBuildDir>/build.manifest.json
 func (m *ModuleManifest) Save(moduleBuildDir string) error {
 	manifestPath := filepath.Join(moduleBuildDir, manifestFileName)
 
