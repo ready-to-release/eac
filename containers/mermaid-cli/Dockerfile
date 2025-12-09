@@ -2,7 +2,7 @@
 # Lightweight container for mermaid-cli (mmdc) diagram rendering
 # Used by eac-commands for pre-rendering mermaid diagrams to SVG
 
-FROM node:20-slim
+FROM node:25-slim
 
 WORKDIR /docs
 
