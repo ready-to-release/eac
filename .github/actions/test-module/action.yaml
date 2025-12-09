@@ -128,13 +128,14 @@ runs:
         SUITES: ${{ inputs.suites }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
       run: |
-        # Split suites by comma and run each
+        # CI tests THIS module only:
+        # --retest: force full test run (no incremental detection, CI handles orchestration)
         test_failed=0
         IFS=',' read -ra SUITE_ARRAY <<< "$SUITES"
         for suite in "${SUITE_ARRAY[@]}"; do
           suite=$(echo "$suite" | xargs)  # trim whitespace
           echo "Running test suite: $suite"
-          if ! $COMMANDS test $MODULE --suite $suite $EXTRA_ARGS; then
+          if ! $COMMANDS test $MODULE --suite $suite --retest $EXTRA_ARGS; then
             test_failed=1
           fi
         done
