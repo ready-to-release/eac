@@ -56,7 +56,7 @@ runs:
     - name: Download from trigger workflow (Windows)
       id: download-trigger-windows
       if: inputs.trigger-run-id != '' && runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists == 'true'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: commands-binary-windows
         path: out/tools
@@ -69,7 +69,7 @@ runs:
     - name: Download from trigger workflow (Linux/macOS)
       id: download-trigger
       if: inputs.trigger-run-id != '' && runner.os != 'Windows'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: commands-binary
         path: out/tools
@@ -113,7 +113,7 @@ runs:
     - name: Download from current run
       id: download-current
       if: (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')) && steps.artifact-check.outputs.exists == 'true'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: ${{ steps.artifact-check.outputs.artifact_name }}
         path: out/tools
@@ -184,7 +184,7 @@ runs:
 
     - name: Upload artifact (for downstream jobs, Linux/macOS)
       if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: commands-binary
         path: out/tools/commands
@@ -192,7 +192,7 @@ runs:
 
     - name: Upload artifact (for downstream jobs, Windows)
       if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: commands-binary-windows
         path: out/tools/commands.exe

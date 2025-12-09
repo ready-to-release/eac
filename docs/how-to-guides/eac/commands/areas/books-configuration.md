@@ -27,17 +27,18 @@ Configuration reference for books.yml structure with copy, command, and inline s
 
 **Problem**: You need to define how a book aggregates static content with dynamically-generated content.
 
-**Solution**: Configure books in `.r2r/eac/books.yml` with copy sources for static files and command sources for generated content.
+**Solution**: Configure books in `.r2r/eac/books.yml` with copy sources for static files and command sources for generated content. Then reference books from modules using the `books:` field in `modules.yml`.
 
-## Configuration File
+## Configuration Overview
 
-Books are configured in `.r2r/eac/books.yml`:
+Books are defined in `.r2r/eac/books.yml` and referenced by modules in `.r2r/eac/modules.yml`:
 
 ```yaml
 # .r2r/eac/books.yml
 books:
-  - name: docs                              # Module moniker
-    description: "Ready-to-Release Docs"    # Human description
+  - name: site                            # Book identifier
+    description: "Documentation site"     # Human description
+    output: site                          # Output format: site, pdf-dark, pdf-light, pdf-all
     sources:
       - type: copy
         from: "docs/**/*.md"
@@ -47,16 +48,36 @@ books:
         target: "reference/generated/modules.md"
 ```
 
+```yaml
+# .r2r/eac/modules.yml
+modules:
+  - moniker: docs
+    type: container
+    books:
+      - site              # First book is default
+      - repository-report # Requires --all flag
+```
+
 ## Book Definition
 
 Each book in the `books` array has these fields:
 
-| Field           | Required | Description                                                         |
-| --------------- | -------- | ------------------------------------------------------------------- |
-| `name`          | Yes      | Module moniker this book builds (must match a `mkdocs-site` module) |
-| `description`   | No       | Human-readable description                                          |
-| `sources`       | Yes      | Array of content sources (copy or command)                          |
-| `generated_nav` | No       | Navigation configuration for generated sections                     |
+| Field           | Required | Description                                           |
+| --------------- | -------- | ----------------------------------------------------- |
+| `name`          | Yes      | Unique book identifier (referenced by modules)        |
+| `description`   | No       | Human-readable description                            |
+| `output`        | No       | Output format: `site`, `pdf-dark`, `pdf-light`, `pdf-all` (default: `pdf-dark`) |
+| `site_url`      | No       | Base URL for GitHub Pages (fixes internal links in PDFs) |
+| `sources`       | Yes      | Array of content sources (copy, command, or inline)   |
+| `generated_nav` | No       | Navigation configuration for generated sections       |
+
+## Module Book Reference
+
+Modules reference books via the `books:` field in `modules.yml`:
+
+- **First book** in the list is the default (built without `--all`)
+- **Additional books** require the `--all` flag to build
+- **Artifacts** are automatically derived from book output formats
 
 ## Source Types
 

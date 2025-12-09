@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/books.schema.json
 # Book Definitions
 # Books aggregate static content with dynamically-generated content from EAC commands
+# Books are referenced by modules via the `books:` field in modules.yml
 
 books:
   # ==============================================================================
@@ -8,10 +9,8 @@ books:
   # ==============================================================================
   - name: site
     title: "Everything-as-Code Documentation"
-    module: docs
     description: "GitHub Pages documentation site with module overview"
     output: site
-    default: true
     site_url: "https://ready-to-release.github.io/eac/"
 
     sources:
@@ -40,11 +39,9 @@ books:
   # ==============================================================================
   - name: repository-report
     title: "Repository Structure Report"
-    module: docs
     description: "Complete repository structure report with all generated content"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
-    default: false
 
     sources:
       # Assets for PDF rendering (required for stylesheets)
@@ -106,11 +103,9 @@ books:
   # ==============================================================================
   - name: explanation
     title: "Continuous Delivery Practices & Everything-as-Code"
-    module: docs
     description: "Conceptual documentation - Everything as Code, CD practices, and methodology"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
-    default: false
 
     sources:
       # Explanation content (conceptual docs)
@@ -132,10 +127,8 @@ books:
   # ==============================================================================
   - name: risk-evidence-package
     title: "Risk Assessment Evidence Package"
-    module: docs
     description: "Comprehensive risk assessment evidence package with all supporting artifacts"
     output: pdf-dark
-    default: false
 
     sources:
       # Assets for PDF rendering (required for stylesheets)

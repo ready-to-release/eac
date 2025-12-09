@@ -91,6 +91,7 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 			Flags:       contracts.Flags{},
 			Metadata:    m.Metadata,
 			DockerBuild: m.DockerBuild,
+			Books:       m.Books,
 		}
 
 		// Convert Build config if present

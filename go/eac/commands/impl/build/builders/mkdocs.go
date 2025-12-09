@@ -58,7 +58,8 @@ type mkdocsDockerConfig struct {
 }
 
 // getMkDocsDockerConfig resolves docker configuration from module first, then type, then defaults.
-// This ensures per-module docker_build config (like books using mkdocs-pdf) is respected.
+// For PDF builds, always use mkdocs-pdf container (module config only applies to site builds).
+// For site builds, module docker_build config is respected.
 func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string, isPDF bool) mkdocsDockerConfig {
 	// Defaults based on output type
 	var defaultImage, defaultContainer string
@@ -75,7 +76,15 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 		ContainerDir: defaultContainer,
 	}
 
-	// First priority: module's own docker_build config
+	// For PDF builds, always use the PDF container - don't let module config override
+	// PDF requires specific plugins (mkdocs-exporter, playwright) only in mkdocs-pdf container
+	if isPDF {
+		cfg.ContextPath = filepath.Join(workspaceRoot, "containers", cfg.ContainerDir)
+		cfg.DockerfilePath = filepath.Join(cfg.ContextPath, "Dockerfile")
+		return cfg
+	}
+
+	// For site builds: module's own docker_build config takes priority
 	if module.DockerBuild != nil && len(module.DockerBuild) > 0 {
 		if tags, ok := module.DockerBuild["tags"].([]interface{}); ok && len(tags) > 0 {
 			if tag, ok := tags[0].(string); ok {
@@ -132,6 +141,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	cfg, _ := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if cfg != nil {
 		cfg.LoadBooks(false)
+		cfg.LoadModules(false) // Need modules to look up books by module's books list
 		// Check if module has ANY books defined
 		allBooks := cfg.GetBooksByModule(module.Moniker)
 		if len(allBooks) > 0 {

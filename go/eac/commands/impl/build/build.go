@@ -1194,17 +1194,23 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 
 			// For image artifacts, use the image reference as the path
 			// (images don't have file paths, they have tags/references)
+			// For file-based artifacts, store relative path from build dir for portability
 			artifactPath := art.ResolvedPath
 			if art.Type == "image" && artifactPath == "" {
 				artifactPath = art.ResolvedName // e.g., "ext-eac:latest"
+			} else if art.Type != "image" && art.ResolvedPath != "" {
+				// Make path relative to module build dir for manifest
+				if relPath, err := filepath.Rel(moduleBuildDir, art.ResolvedPath); err == nil {
+					artifactPath = relPath
+				}
 			}
 
 			// Compute content hash for file-based artifacts (not images or directories)
 			var size int64
 			var sha256Hash string
 			if art.Type != "image" && art.ResolvedPath != "" {
-				absPath := filepath.Join(workspaceRoot, art.ResolvedPath)
-				if s, h, err := implinternal.HashArtifactFile(absPath); err == nil {
+				// ResolvedPath is already absolute - use it directly for hashing
+				if s, h, err := implinternal.HashArtifactFile(art.ResolvedPath); err == nil {
 					size = s
 					sha256Hash = h
 				}

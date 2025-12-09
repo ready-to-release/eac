@@ -71,7 +71,7 @@ eac/
 │
 ├── go/                         # Go source code
 │   ├── eac/                    # EAC implementation
-│   │   ├── ai/                 # AI provider integrations (eac-ai module)
+│   │   ├── ai/                 # AI provider integrations
 │   │   ├── commands/           # CLI commands library (eac-commands module)
 │   │   ├── core/               # Core domain libraries (eac-core module)
 │   │   ├── mcp/                # MCP server implementations
@@ -137,9 +137,7 @@ Non-deployable modules containing shared code, configuration, or infrastructure.
 
 **Examples from this repository:**
 
-- **eac-core** - Core domain libraries shared by multiple modules
-- **eac-ai** - AI provider integrations library
-- **eac-specs** - Shared BDD test infrastructure
+- **eac-core** - Core domain libraries shared by multiple modules (includes shared BDD test infrastructure)
 - **r2r-config** - Repository configuration files
 - **github** - GitHub Actions workflows and configuration
 - **vscode** - VSCode workspace configuration
@@ -169,7 +167,6 @@ modules:
       scheme: SemVer                   # SemVer or CalVer
 
     depends_on:                        # Module dependencies
-      - eac-ai
       - eac-core
 ```
 
@@ -234,8 +231,8 @@ The unified module type system uses four base types. Behavior is driven by per-m
 
 - **go** - Go module (library, executable, or test)
   - Capabilities: `go_module`
-  - Build artifacts driven by module config: none (library), executables (CLI), test results
-  - Examples: `eac-core`, `eac-commands`, `r2r-cli`, `eac-specs`
+  - Build artifacts driven by module config: none (library), executables (CLI)
+  - Examples: `eac-core`, `eac-commands`, `r2r-cli`
 
 - **container** - Docker container module
   - Capabilities: `docker_build`

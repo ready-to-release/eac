@@ -3,9 +3,7 @@ package internal
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -61,8 +59,15 @@ func ResolveArtifactsForModuleWithConfig(
 	if module == nil {
 		return nil, nil, fmt.Errorf("module cannot be nil")
 	}
-	if moduleType == nil || moduleType.Build == nil {
-		// No build config at all - not a buildable module type
+
+	// Check if module has per-module artifacts OR type-level artifacts OR books
+	// Per-module artifacts take priority (defined in modules.yml)
+	hasModuleArtifacts := module.Build != nil && len(module.Build.Artifacts) > 0
+	hasTypeArtifacts := moduleType != nil && moduleType.Build != nil && len(moduleType.Build.Artifacts) > 0
+	hasModuleBooks := hasBooks(module, cfg)
+
+	if !hasModuleArtifacts && !hasTypeArtifacts && !hasModuleBooks {
+		// No artifacts defined anywhere - not a buildable module
 		return []ResolvedArtifact{}, &ArtifactResolutionSummary{}, nil
 	}
 
@@ -82,7 +87,7 @@ func ResolveArtifactsForModuleWithConfig(
 	var artifacts []config.Artifact
 
 	// Check for per-module artifact definitions first
-	if module.Build != nil && len(module.Build.Artifacts) > 0 {
+	if hasModuleArtifacts {
 		// Convert ModuleArtifact to config.Artifact
 		for _, ma := range module.Build.Artifacts {
 			artifacts = append(artifacts, config.Artifact{
@@ -91,7 +96,7 @@ func ResolveArtifactsForModuleWithConfig(
 				Pattern: ma.Pattern,
 			})
 		}
-	} else {
+	} else if hasTypeArtifacts {
 		// Use type-level artifacts
 		artifacts = moduleType.Build.Artifacts
 	}
@@ -250,13 +255,15 @@ func hasBooks(module *config.Module, cfg *config.EACConfig) bool {
 }
 
 // generateBookArtifacts creates artifact definitions from books.yml for a module
+// The first book in the module's books list is the default; others require --all flag.
 func generateBookArtifacts(module *config.Module, cfg *config.EACConfig, buildAll bool) []config.Artifact {
 	var artifacts []config.Artifact
 
 	books := cfg.GetBooksByModule(module.Moniker)
-	for _, book := range books {
-		// Skip non-default books unless --all flag is used
-		if !buildAll && !book.IsDefault() {
+	for i, book := range books {
+		// Skip non-default books (not first) unless --all flag is used
+		isDefault := i == 0
+		if !buildAll && !isDefault {
 			continue
 		}
 
@@ -298,6 +305,7 @@ func generateBookArtifacts(module *config.Module, cfg *config.EACConfig, buildAl
 }
 
 // expandBookArtifacts expands wildcard PDF patterns to specific book PDFs
+// The first book in the module's books list is the default; others require --all flag.
 func expandBookArtifacts(module *config.Module, artifacts []config.Artifact, cfg *config.EACConfig, buildAll bool) []config.Artifact {
 	var expanded []config.Artifact
 
@@ -308,9 +316,10 @@ func expandBookArtifacts(module *config.Module, artifacts []config.Artifact, cfg
 			books := cfg.GetBooksByModule(module.Moniker)
 
 			// Expand to specific book PDFs
-			for _, book := range books {
-				// Skip non-default books unless --all flag is used
-				if !buildAll && !book.IsDefault() {
+			for i, book := range books {
+				// Skip non-default books (not first) unless --all flag is used
+				isDefault := i == 0
+				if !buildAll && !isDefault {
 					continue
 				}
 
@@ -484,15 +493,15 @@ func validateSingleModule(
 		return result
 	}
 
-	// Get module type
+	// Get module type (may be nil for modules without type definition)
 	moduleType := cfg.ModuleTypes.Get(module.Type)
-	if moduleType == nil {
-		result.Error = fmt.Sprintf("module type '%s' not found", module.Type)
-		return result
-	}
 
-	// Check if module has build artifacts
-	if moduleType.Build == nil || len(moduleType.Build.Artifacts) == 0 {
+	// Check if module has build artifacts (either per-module or type-level or books)
+	hasModuleArtifacts := module.Build != nil && len(module.Build.Artifacts) > 0
+	hasTypeArtifacts := moduleType != nil && moduleType.Build != nil && len(moduleType.Build.Artifacts) > 0
+	hasModuleBooks := hasBooks(module, cfg)
+
+	if !hasModuleArtifacts && !hasTypeArtifacts && !hasModuleBooks {
 		result.HasBuildArtifacts = false
 		result.Summary = &ArtifactResolutionSummary{}
 		return result
@@ -585,103 +594,20 @@ func addDependenciesRecursive(moniker string, registry *modules.Registry, result
 }
 
 // DetermineRequestedArtifacts returns the list of artifact IDs that should be built
-// based on the module type and whether --all mode is requested
+// based on the module type and whether --all mode is requested.
+//
+// This delegates to config.EACConfig.GetBuildArtifactIDs which encapsulates all
+// artifact merging and filtering logic (module vs type-level, UPX filtering, etc.)
 func DetermineRequestedArtifacts(
 	module *config.Module,
 	moduleType *config.ModuleTypeDef,
 	buildAll bool,
 	cfg *config.EACConfig,
 ) []string {
-	if module == nil || moduleType == nil || moduleType.Build == nil {
+	if module == nil || cfg == nil {
 		return []string{}
 	}
 
-	// Determine artifacts using same priority as ResolveArtifactsForModuleWithConfig:
-	// 1. Per-module Build.Artifacts
-	// 2. Type-level artifacts
-	// 3. Book-derived artifacts
-	var artifacts []config.Artifact
-
-	if module.Build != nil && len(module.Build.Artifacts) > 0 {
-		for _, ma := range module.Build.Artifacts {
-			artifacts = append(artifacts, config.Artifact{
-				ID:      ma.ID,
-				Type:    ma.Type,
-				Pattern: ma.Pattern,
-			})
-		}
-	} else {
-		artifacts = moduleType.Build.Artifacts
-	}
-
-	// Add book-derived artifacts (deduplicate by ID)
-	if hasBooks(module, cfg) {
-		existingIDs := make(map[string]bool)
-		for _, a := range artifacts {
-			existingIDs[a.ID] = true
-		}
-		bookArtifacts := generateBookArtifacts(module, cfg, buildAll)
-		for _, ba := range bookArtifacts {
-			if !existingIDs[ba.ID] {
-				artifacts = append(artifacts, ba)
-				existingIDs[ba.ID] = true
-			}
-		}
-	}
-
-	// Check if running in CI (for compression artifacts)
-	isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
-
-	// Use a set to deduplicate IDs
-	seenIDs := make(map[string]bool)
-	var requestedIDs []string
-	currentOS := runtime.GOOS
-	currentArch := runtime.GOARCH
-
-	for _, artifact := range artifacts {
-		// Skip UPX-compressed artifacts in non-CI environments (tools not available locally)
-		if artifact.Compression == config.CompressionUPX && !isCI {
-			continue
-		}
-		if artifact.Type == config.ArtifactTypeExecutable && buildAll && len(artifact.Platforms) > 0 {
-			// For executables in --all mode, build for all specified platforms
-			for _, os := range artifact.Platforms {
-				// Determine architectures from the pattern
-				var archs []string
-				pattern := artifact.Pattern
-
-				// Parse pattern to determine supported architectures
-				if strings.Contains(pattern, "-amd64") || strings.Contains(pattern, "{os}-amd64") {
-					// amd64-only pattern (includes UPX variants: {moniker}-{os}-amd64-upx{ext})
-					archs = []string{"amd64"}
-				} else if strings.Contains(pattern, "-arm64") || strings.Contains(pattern, "{os}-arm64") {
-					// arm64-only pattern
-					archs = []string{"arm64"}
-				} else if os == "windows" {
-					// Generic pattern on Windows - only amd64 supported
-					archs = []string{"amd64"}
-				} else {
-					// Generic pattern on Linux/Darwin - both architectures
-					archs = []string{"amd64", "arm64"}
-				}
-
-				for _, arch := range archs {
-					artifactID := deriveArtifactID(artifact, os, arch)
-					if !seenIDs[artifactID] {
-						seenIDs[artifactID] = true
-						requestedIDs = append(requestedIDs, artifactID)
-					}
-				}
-			}
-		} else {
-			// For non-executables or default mode, use current platform
-			artifactID := deriveArtifactID(artifact, currentOS, currentArch)
-			if !seenIDs[artifactID] {
-				seenIDs[artifactID] = true
-				requestedIDs = append(requestedIDs, artifactID)
-			}
-		}
-	}
-
-	return requestedIDs
+	// Delegate to core config - single source of truth for artifact resolution
+	return cfg.GetBuildArtifactIDs(module.Moniker, buildAll)
 }

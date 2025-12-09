@@ -16,8 +16,9 @@ type Module struct {
 	Type        string                 `yaml:"type"`
 	Description string                 `yaml:"description"`
 	DependsOn   []string               `yaml:"depends_on"`
-	Build       *ModuleBuild           `yaml:"build,omitempty"`       // Per-module build configuration
+	Build       *ModuleBuild           `yaml:"build,omitempty"`        // Per-module build configuration
 	DockerBuild map[string]interface{} `yaml:"docker_build,omitempty"` // Per-module Docker build configuration
+	Books       []string               `yaml:"books,omitempty"`        // Book names to build for this module (references books.yml)
 	Files       Files                  `yaml:"files"`
 	Flags       Flags                  `yaml:"flags"`
 	Metadata    map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
@@ -211,6 +212,15 @@ func (c *ModulesConfig) GetModule(moniker string) (*Module, bool) {
 		}
 	}
 	return nil, false
+}
+
+// GetByMoniker returns a module by moniker, or nil if not found
+func (c *ModulesConfig) GetByMoniker(moniker string) *Module {
+	m, ok := c.GetModule(moniker)
+	if !ok {
+		return nil
+	}
+	return m
 }
 
 // GetModulesByType returns all modules of a specific type

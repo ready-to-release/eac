@@ -225,8 +225,8 @@ r2r eac build vscode-ext-commit
 Static modules have no build step - they provide file ownership and change tracking:
 
 ```bash
-# Specs and contracts are validated, not built
-r2r eac validate eac-specs
+# Static modules are validated, not built
+r2r eac validate r2r-config
 ```
 
 ## Integration Points
