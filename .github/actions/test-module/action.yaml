@@ -131,7 +131,7 @@ runs:
         # Check if download path already exists
         if [ -d "$DOWNLOAD_PATH" ]; then
           echo "Download path exists with contents:"
-          find "$DOWNLOAD_PATH" -type f | head -10
+          find "$DOWNLOAD_PATH" -type f 2>/dev/null | head -10 || true
         else
           echo "Download path does not exist yet (will be created)"
         fi
@@ -166,11 +166,11 @@ runs:
         fi
 
         echo "Directory structure after download:"
-        find "$DOWNLOAD_PATH" -type d | head -20
+        find "$DOWNLOAD_PATH" -type d 2>/dev/null | head -20 || true
         echo ""
 
         echo "All downloaded files:"
-        find "$DOWNLOAD_PATH" -type f
+        find "$DOWNLOAD_PATH" -type f 2>/dev/null | head -50 || true
         echo ""
 
         echo "Total files: $(find "$DOWNLOAD_PATH" -type f | wc -l)"

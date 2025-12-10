@@ -53,8 +53,8 @@ jobs:
           upload-artifact: 'true'
           extra-args: '--all'
 
-  test:
-    name: Test
+  test-linux:
+    name: Test (Linux)
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -67,7 +67,7 @@ jobs:
         with:
           module: r2r-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          results-artifact-name: test-results-r2r-cli
+          results-artifact-name: test-results-r2r-cli-linux
           # PRs run commit suite only; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
 
@@ -77,3 +77,21 @@ jobs:
           chmod +x out/build/r2r-cli/r2r-linux-arm64
           chmod +x out/build/r2r-cli/r2r-darwin-amd64
           chmod +x out/build/r2r-cli/r2r-darwin-arm64
+
+  test-windows:
+    name: Test (Windows)
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Test Module
+        uses: ./.github/actions/test-module
+        with:
+          module: r2r-cli
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          results-artifact-name: test-results-r2r-cli-windows
+          # PRs run commit suite only; main/release branches run full suite
+          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
