@@ -486,11 +486,15 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 
 				for _, theme := range themes {
 					// Move PDF from site/pdf/ to module root
+					// Use copy+delete instead of rename to handle cross-user permission issues
+					// (Docker creates files as different user than the Go process)
 					srcPdf := filepath.Join(bookOutputDir, "site", "pdf", fmt.Sprintf("%s-%s.pdf", b.Name, theme))
 					dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", b.Name, theme))
-					if err := os.Rename(srcPdf, dstPdf); err != nil {
-						Logln(bookLogWriter, "⚠️  Failed to move PDF to module root: %v", err)
+					if err := copyFile(srcPdf, dstPdf); err != nil {
+						Logln(bookLogWriter, "⚠️  Failed to copy PDF to module root: %v", err)
 					} else {
+						// Remove source after successful copy
+						os.Remove(srcPdf)
 						Logln(bookLogWriter, "   📄 %s-%s.pdf → module output root", b.Name, theme)
 					}
 				}
