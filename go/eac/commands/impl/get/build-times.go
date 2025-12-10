@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 )
@@ -71,7 +72,7 @@ func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 				return nil, fmt.Errorf("failed to get current directory: %w", err)
 			}
 
-			repoRoot, err = findRepoRoot(cwd)
+			repoRoot, err = testdata.FindRepoRoot(cwd)
 			if err != nil {
 				return nil, fmt.Errorf("failed to find repository root: %w", err)
 			}
@@ -80,7 +81,7 @@ func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 		} else {
 			// If buildOutputDir is provided, derive repo root from it
 			var err error
-			repoRoot, err = findRepoRoot(buildOutputDir)
+			repoRoot, err = testdata.FindRepoRoot(buildOutputDir)
 			if err != nil {
 				return nil, fmt.Errorf("failed to find repository root: %w", err)
 			}

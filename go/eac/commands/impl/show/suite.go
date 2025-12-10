@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
-	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	testing "github.com/ready-to-release/eac/go/eac/core/testing"
 )
@@ -80,7 +80,7 @@ func ShowSuite() int {
 	}
 
 	// Build file-to-module mapping
-	fileModuleMap, err := buildFileModuleMap(repoRoot)
+	fileModuleMap, err := testdata.BuildFileModuleMap(repoRoot)
 	if err != nil {
 		log.Errorf("Warning: could not load file-module mapping: %v", err)
 		fileModuleMap = make(map[string]string)
@@ -223,30 +223,4 @@ func ShowSuite() int {
 	}
 
 	return 0
-}
-
-// buildFileModuleMap creates a map of file paths to module names
-func buildFileModuleMap(repoRoot string) (map[string]string, error) {
-	fileMap := make(map[string]string)
-
-	// Open git repository
-	repo, err := git.Open(repoRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get all files with module ownership
-	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the mapping
-	for _, file := range files {
-		if len(file.Modules) > 0 {
-			fileMap[file.Name] = file.Modules[0] // Use first module
-		}
-	}
-
-	return fileMap, nil
 }
