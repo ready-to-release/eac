@@ -1,0 +1,50 @@
+# Cleanup Failed Release Action
+#
+# Cleans up orphaned tags and partial releases after a release workflow fails.
+# Call this in a cleanup job that runs on failure.
+#
+# Usage:
+#   cleanup:
+#     name: Cleanup on Failure
+#     needs: [approve, release]
+#     if: failure()
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: write
+#     steps:
+#       - uses: actions/checkout@v6
+#       - uses: ./.github/actions/cleanup-failed-release
+#         with:
+#           tag_name: ${{ needs.approve.outputs.tag_name }}
+
+name: Cleanup Failed Release
+description: Remove orphaned tags and partial releases after failure
+
+inputs:
+  tag_name:
+    description: 'Tag name to clean up (e.g., r2r-cli/1.0.0)'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      if: inputs.tag_name != ''
+      id: commands
+      uses: ./.github/actions/setup-commands
+
+    - name: Cleanup release artifacts
+      if: inputs.tag_name != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+        $COMMANDS release cleanup --tag "${{ inputs.tag_name }}"
+
+    - name: Skip cleanup
+      if: inputs.tag_name == ''
+      shell: bash
+      run: |
+        echo "No tag name provided, skipping cleanup"

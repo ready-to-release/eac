@@ -90,6 +90,7 @@ func (m *ModuleMapper) GetModuleForFile(filePath string) string {
 // GetModuleForPackagePath returns the module moniker for a package path.
 // Package paths are like "go/eac/core/contracts" or for godog:
 // "featureName:go/eac/specs/impl/eac-commands:specs/eac-commands/..."
+// Returns empty string if no module found - no fallback heuristics.
 func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 	// Handle godog BDD paths: "featureName:testRoot:featurePath"
 	// The testRoot (second part) is where the test runner lives and determines the module
@@ -105,78 +106,20 @@ func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 		actualPath = pkgPath
 	}
 
-	// Try to find a file in this directory to determine ownership
-	// Use a synthetic test file path
-	testFilePath := actualPath + "/*_test.go"
-
-	// First try the directory itself
+	// Try to find module via registry lookup
 	if moniker := m.GetModuleForFile(actualPath); moniker != "" {
 		return moniker
 	}
 
-	// Try with test file extension
-	if moniker := m.GetModuleForFile(testFilePath); moniker != "" {
+	// Try with synthetic test file
+	if moniker := m.GetModuleForFile(actualPath + "/*_test.go"); moniker != "" {
 		return moniker
 	}
 
-	// Fallback to heuristic extraction
-	return extractModuleMonikerFromPath(actualPath)
+	// No fallback - return empty string
+	return ""
 }
 
-// extractModuleMonikerFromPath extracts module moniker from package path using heuristics.
-// This is a fallback when registry lookup fails.
-func extractModuleMonikerFromPath(pkgPath string) string {
-	// Normalize path
-	normalizedPath := filepath.ToSlash(pkgPath)
-
-	// Handle godog paths: "go/eac/specs/impl/eac-commands:specs/..."
-	if idx := strings.Index(normalizedPath, ":"); idx >= 0 {
-		normalizedPath = normalizedPath[:idx]
-	}
-
-	// Check for Go module paths: go/eac/<module>/... or go/r2r/<module>/...
-	for _, boundary := range []string{"go/eac/", "go/r2r/"} {
-		idx := strings.Index(normalizedPath, boundary)
-		if idx >= 0 {
-			relativePath := normalizedPath[idx+len(boundary):]
-			parts := strings.Split(relativePath, "/")
-			if len(parts) >= 1 && parts[0] != "" {
-				prefix := "eac"
-				if boundary == "go/r2r/" {
-					prefix = "r2r"
-				}
-
-				// Special case: specs/impl -> use directory name after impl
-				if len(parts) >= 3 && parts[0] == "specs" && parts[1] == "impl" {
-					return parts[2] // e.g., "eac-commands" from "specs/impl/eac-commands"
-				}
-
-				return prefix + "-" + parts[0]
-			}
-		}
-	}
-
-	// Check for TypeScript paths: typescript/<module>/...
-	if idx := strings.Index(normalizedPath, "typescript/"); idx >= 0 {
-		relativePath := normalizedPath[idx+len("typescript/"):]
-		parts := strings.Split(relativePath, "/")
-		if len(parts) >= 1 && parts[0] != "" {
-			return parts[0]
-		}
-	}
-
-	// Check for specs paths: specs/<module>/...
-	if idx := strings.Index(normalizedPath, "specs/"); idx >= 0 {
-		relativePath := normalizedPath[idx+len("specs/"):]
-		parts := strings.Split(relativePath, "/")
-		if len(parts) >= 1 && parts[0] != "" {
-			return parts[0] + "-specs"
-		}
-	}
-
-	// Fallback: use the package path itself
-	return strings.ReplaceAll(normalizedPath, "/", "-")
-}
 
 // BuildModuleOutputPath constructs the output path for a module's test results.
 // Returns a path like "<module-moniker>/<package-suffix>" or "<module-moniker>/<feature-name>" for godog

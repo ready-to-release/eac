@@ -32,6 +32,7 @@ func (r *GoRunner) TestTypes() []string {
 // FindTestRoot finds the test runner package for a godog feature file.
 // For gotest, returns empty string (tests are in the same directory as source).
 // For godog, returns the path to the directory containing godog_test.go.
+// Returns empty string if module not found or no godog_test.go exists - caller must handle.
 func (r *GoRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) string {
 	// gotest doesn't need a separate test root
 	if !strings.HasSuffix(featurePath, ".feature") {
@@ -50,8 +51,15 @@ func (r *GoRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) strin
 		return ""
 	}
 
-	// Try progressively deeper paths to find godog_test.go
+	// Extract moniker from first path component
 	moniker := parts[0]
+
+	// Verify module exists - fail early if not
+	if cfg.Repository.GetByMoniker(moniker) == nil {
+		return "" // Unknown module, no fallback guessing
+	}
+
+	// Get test impl path from module contract
 	basePath := cfg.Repository.TestImplPath(moniker)
 
 	// Check if godog_test.go exists at base path
@@ -69,7 +77,7 @@ func (r *GoRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) strin
 		}
 	}
 
-	// No test runner found
+	// No test runner found - no fallback
 	return ""
 }
 

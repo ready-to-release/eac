@@ -249,18 +249,10 @@ type CacheStatus struct {
 // mermaidImageName is the Docker image used for mermaid-cli rendering
 const mermaidImageName = "cli-mermaid-cli:latest"
 
-// EnsureMermaidImage ensures the mermaid-cli Docker image exists.
-// Similar to ensureMkDocsImage, this checks if image exists first; only builds if missing.
+// EnsureMermaidImage ensures the mermaid-cli Docker image is built.
+// Always runs docker build - Docker's layer cache handles efficiency.
 // Exported for use by update docs command
 func EnsureMermaidImage(workspaceRoot string, logWriter io.Writer) error {
-	// Check if image already exists
-	cmd := exec.Command("docker", "image", "inspect", mermaidImageName)
-	if err := cmd.Run(); err == nil {
-		fmt.Fprintf(logWriter, "    Docker image exists: %s (using pre-built)\n", mermaidImageName)
-		return nil
-	}
-
-	// Image doesn't exist, build it
 	fmt.Fprintf(logWriter, "    Building Docker image: %s\n", mermaidImageName)
 
 	// Detect Docker-in-Docker mode for path handling
@@ -286,7 +278,7 @@ func EnsureMermaidImage(workspaceRoot string, logWriter io.Writer) error {
 	fmt.Fprintf(logWriter, "    Dockerfile: %s\n", dockerfilePath)
 	fmt.Fprintf(logWriter, "    Context: %s\n", contextPath)
 
-	cmd = exec.Command("docker", "build",
+	cmd := exec.Command("docker", "build",
 		"-t", mermaidImageName,
 		"-f", dockerfilePath,
 		contextPath)

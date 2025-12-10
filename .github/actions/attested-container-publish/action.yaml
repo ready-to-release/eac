@@ -1,0 +1,306 @@
+# Attested Container Publish Action
+#
+# Retags CI-built container image with release tags and generates attestations.
+# Requires Ubuntu runner with these permissions at job level:
+#   permissions:
+#     contents: write
+#     packages: write
+#     id-token: write
+#     attestations: write
+#
+# Usage:
+#   jobs:
+#     release:
+#       runs-on: ubuntu-latest
+#       permissions:
+#         contents: write
+#         packages: write
+#         id-token: write
+#         attestations: write
+#       steps:
+#         - uses: actions/checkout@v6
+#         - uses: ./.github/actions/attested-container-publish
+#           with:
+#             module: ext-eac
+#             version: 1.0.0
+#             tag_name: ext-eac/1.0.0
+
+name: Attested Container Publish
+description: Retag, attest, and publish container image from CI build
+
+inputs:
+  module:
+    description: 'Module name (e.g., ext-eac)'
+    required: true
+  version:
+    description: 'Version to publish (e.g., 1.0.0)'
+    required: true
+  tag_name:
+    description: 'Full tag name (e.g., ext-eac/1.0.0)'
+    required: true
+  registry:
+    description: 'Container registry'
+    required: false
+    default: 'ghcr.io'
+  create-release:
+    description: 'Create GitHub Release for tracking'
+    required: false
+    default: 'true'
+
+outputs:
+  image-digest:
+    description: 'Published image digest'
+    value: ${{ steps.push.outputs.digest }}
+  release_url:
+    description: 'URL to GitHub Release'
+    value: ${{ steps.create_release.outputs.url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+
+    - name: Setup dependencies
+      uses: ./.github/actions/setup-module-deps
+      with:
+        module: ${{ inputs.module }}
+        commands-path: ${{ steps.commands.outputs.commands-path }}
+        deps: buildx
+
+    - name: Determine source image
+      id: source
+      shell: bash
+      run: |
+        # Source image is sha-<short> from CI build
+        SHORT_SHA="${{ github.sha }}"
+        SHORT_SHA="${SHORT_SHA:0:7}"
+        echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "source_tag=sha-$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "Source image tag: sha-$SHORT_SHA"
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
+    - name: Check for existing version
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        MODULE: ${{ inputs.module }}
+        REGISTRY: ${{ inputs.registry }}
+      run: |
+        IMAGE="$REGISTRY/${{ github.repository_owner }}/$MODULE:$VERSION"
+
+        echo "Checking if container image already exists for version $VERSION..."
+
+        if docker pull "$IMAGE" 2>/dev/null; then
+          echo ""
+          echo "::error::Container image already exists: $IMAGE"
+          echo ""
+          echo "To release a new version:"
+          echo "  1. Increment the version number"
+          echo "  2. Re-run this workflow with the new version"
+          exit 1
+        fi
+
+        echo "No existing image for version $VERSION"
+
+    - name: Retag and push release versions
+      id: push
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        MODULE: ${{ inputs.module }}
+        REGISTRY: ${{ inputs.registry }}
+        SOURCE_TAG: ${{ steps.source.outputs.source_tag }}
+      run: |
+        IMAGE_BASE="$REGISTRY/${{ github.repository_owner }}/$MODULE"
+
+        # Extract major and minor for additional tags
+        MAJOR=$(echo "$VERSION" | cut -d. -f1)
+        MINOR=$(echo "$VERSION" | cut -d. -f2)
+
+        echo "Retagging $IMAGE_BASE:$SOURCE_TAG with release tags..."
+        echo ""
+
+        docker buildx imagetools create \
+          --tag "$IMAGE_BASE:$VERSION" \
+          --tag "$IMAGE_BASE:$MAJOR.$MINOR" \
+          --tag "$IMAGE_BASE:$MAJOR" \
+          --tag "$IMAGE_BASE:latest" \
+          "$IMAGE_BASE:$SOURCE_TAG"
+
+        echo ""
+        echo "Published release tags:"
+        echo "  - $IMAGE_BASE:$VERSION"
+        echo "  - $IMAGE_BASE:$MAJOR.$MINOR"
+        echo "  - $IMAGE_BASE:$MAJOR"
+        echo "  - $IMAGE_BASE:latest"
+        echo ""
+
+        # Get digest for attestation
+        DIGEST=$(docker buildx imagetools inspect "$IMAGE_BASE:$VERSION" --format '{{json .Manifest.Digest}}' | tr -d '"')
+        echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+        echo "Image digest: $DIGEST"
+
+    - name: Generate container attestation
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-name: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.module }}
+        subject-digest: ${{ steps.push.outputs.digest }}
+        push-to-registry: true
+
+    - name: Verify published images
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        MODULE: ${{ inputs.module }}
+        REGISTRY: ${{ inputs.registry }}
+      run: |
+        IMAGE_BASE="$REGISTRY/${{ github.repository_owner }}/$MODULE"
+
+        echo "Verifying published container images..."
+        echo ""
+
+        # Wait for registry to be updated
+        sleep 5
+
+        echo "Pulling and verifying version tag..."
+        docker pull "$IMAGE_BASE:$VERSION"
+        docker inspect "$IMAGE_BASE:$VERSION" --format='Version: {{index .Config.Labels "org.opencontainers.image.version"}}'
+
+        echo ""
+        echo "Container images successfully published to GHCR"
+
+    - name: Create GitHub Release
+      if: inputs.create-release == 'true'
+      id: create_release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ inputs.version }}
+        TAG_NAME: ${{ inputs.tag_name }}
+        MODULE: ${{ inputs.module }}
+        REGISTRY: ${{ inputs.registry }}
+        DIGEST: ${{ steps.push.outputs.digest }}
+      run: |
+        IMAGE_BASE="$REGISTRY/${{ github.repository_owner }}/$MODULE"
+        MAJOR=$(echo "$VERSION" | cut -d. -f1)
+        MINOR=$(echo "$VERSION" | cut -d. -f2)
+
+        cat << EOF > release_notes.md
+        # $MODULE v$VERSION
+
+        ## Container Image
+
+        \`\`\`bash
+        docker pull $IMAGE_BASE:$VERSION
+        \`\`\`
+
+        ## Available Tags
+
+        | Tag | Image |
+        |-----|-------|
+        | Version | \`$IMAGE_BASE:$VERSION\` |
+        | Minor | \`$IMAGE_BASE:$MAJOR.$MINOR\` |
+        | Major | \`$IMAGE_BASE:$MAJOR\` |
+        | Latest | \`$IMAGE_BASE:latest\` |
+
+        ## Platforms
+
+        - \`linux/amd64\` (x86_64)
+        - \`linux/arm64\` (Apple Silicon, ARM servers)
+
+        ## Supply Chain Security
+
+        This container has [build attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations). Verify with:
+
+        \`\`\`bash
+        gh attestation verify oci://$IMAGE_BASE:$VERSION --repo ${{ github.repository }}
+        \`\`\`
+
+        ## Release Information
+
+        - **Version**: $VERSION
+        - **Commit**: ${{ github.sha }}
+        - **Digest**: \`$DIGEST\`
+
+        ---
+        Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        EOF
+
+        echo "Creating GitHub Release for tag: $TAG_NAME"
+
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "Manual trigger: creating tag and release together"
+          gh release create "$TAG_NAME" \
+            --title "$MODULE v$VERSION" \
+            --notes-file release_notes.md \
+            --target "${{ github.sha }}"
+        else
+          echo "Tag trigger: using existing tag"
+          gh release create "$TAG_NAME" \
+            --title "$MODULE v$VERSION" \
+            --notes-file release_notes.md \
+            --verify-tag
+        fi
+
+        RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+        echo "url=$RELEASE_URL" >> $GITHUB_OUTPUT
+        echo "Release created: $RELEASE_URL"
+
+    - name: Summary
+      if: always()
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        TAG_NAME: ${{ inputs.tag_name }}
+        MODULE: ${{ inputs.module }}
+        REGISTRY: ${{ inputs.registry }}
+        DIGEST: ${{ steps.push.outputs.digest }}
+        SOURCE_TAG: ${{ steps.source.outputs.source_tag }}
+        RUN_ID: ${{ github.run_id }}
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+      run: |
+        IMAGE_BASE="$REGISTRY/${{ github.repository_owner }}/$MODULE"
+        RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+
+        # Check if this step is running after a failure
+        if [ "${{ job.status }}" = "failure" ]; then
+          echo "## :x: Container Publish Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link $RUN_ID --type container --image "$IMAGE_BASE:$SOURCE_TAG" >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+
+        echo "## :package: $MODULE v$VERSION Published" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "### Container Image" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Image | \`$IMAGE_BASE:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Source | \`$IMAGE_BASE:$SOURCE_TAG\` |" >> $GITHUB_STEP_SUMMARY
+        if [ -n "$DIGEST" ]; then
+          echo "| Digest | \`${DIGEST:0:20}...\` |" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "| Platforms | linux/amd64, linux/arm64 |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "### Published Tags" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Tag | Purpose |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|---------|" >> $GITHUB_STEP_SUMMARY
+        echo "| \`$VERSION\` | Exact version |" >> $GITHUB_STEP_SUMMARY
+        echo "| \`latest\` | Most recent |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo ":lock: Container has build attestation" >> $GITHUB_STEP_SUMMARY

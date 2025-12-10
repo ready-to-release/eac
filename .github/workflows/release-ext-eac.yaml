@@ -1,11 +1,11 @@
 # Release ext-eac - Container Image Release Workflow
 #
-# This workflow releases the EAC extension container image by retagging a CI-built image.
+# This workflow releases the EAC extension container image using reusable actions:
+# 1. approve-release: Validates CI passed and release preconditions
+# 2. attested-container-publish: Retags, attests, and publishes container
 #
-# CI Verification: Requires a successful ci-ext-eac.yaml run on the exact commit being released.
-# This ensures the container image was built and tested before release.
-#
-# The workflow retags the CI-built image (sha-<short>) with release version tags.
+# CI Verification: Requires a successful ci-ext-eac.yaml run on the EXACT commit
+# being released (strict mode). This ensures the container was built and tested.
 
 name: "release-ext-eac (stage 7+)"
 
@@ -19,243 +19,137 @@ on:
         description: 'Version to release (semver format: x.y.z)'
         required: true
         type: string
-
-permissions:
-  contents: write
-  packages: write
+      skip-ci-check:
+        description: 'Skip CI verification (dangerous - very hot fixes only, unregulated path)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  release:
+  approve:
+    name: Approve Release
     runs-on: ubuntu-latest
-
+    outputs:
+      version: ${{ steps.gate.outputs.version }}
+      tag_name: ${{ steps.gate.outputs.tag_name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Approve release
+        id: gate
+        uses: ./.github/actions/approve-release
+        with:
+          module: ext-eac
+          skip-ci-check: ${{ inputs.skip-ci-check || 'false' }}
+          timeout: '300'
+
+  release:
+    name: Publish Container
+    needs: approve
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Publish container
+        uses: ./.github/actions/attested-container-publish
+        with:
+          module: ext-eac
+          version: ${{ needs.approve.outputs.version }}
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+
+  cleanup:
+    name: Cleanup on Failure
+    needs: [approve, release]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Cleanup failed release
+        uses: ./.github/actions/cleanup-failed-release
+        with:
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+
+  summary:
+    name: Summary
+    needs: [approve, release, cleanup]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
 
-      - name: Check CI status and find source image
-        id: ci_check
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          $COMMANDS release check-ci \
-            --workflow ci-ext-eac.yaml \
-            --commit ${{ github.sha }} \
-            --timeout 300
-
-          # Set output for image source
-          echo "image_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+      - name: Generate summary
         env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
           GH_TOKEN: ${{ github.token }}
-
-      - name: Extract and validate version
-        id: extract_version
-        uses: ./.github/actions/extract-release-version
-        with:
-          module-prefix: ext-eac
-          commands-path: ${{ steps.commands.outputs.commands-path }}
-
-      - name: Verify version is valid
-        if: steps.extract_version.outputs.is_valid != 'true'
         run: |
-          echo "Error: Invalid version format: ${{ steps.extract_version.outputs.version }}"
-          echo "Expected format: x.y.z (e.g., 1.0.0)"
-          exit 1
+          VERSION="${{ needs.approve.outputs.version }}"
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          APPROVE_RESULT="${{ needs.approve.result }}"
+          RELEASE_RESULT="${{ needs.release.result }}"
+          CLEANUP_RESULT="${{ needs.cleanup.result }}"
+          RUN_ID="${{ github.run_id }}"
+          COMMIT="${{ github.sha }}"
+          SHORT_SHA="${COMMIT:0:7}"
 
-      - name: Check for existing container image
-        run: |
-          VERSION="${{ steps.extract_version.outputs.version }}"
-          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
+          IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/ext-eac"
 
-          echo "Checking if container image already exists for version $VERSION..."
-
-          # Try to pull the specific version tag
-          if docker pull "$IMAGE_NAME:$VERSION" 2>/dev/null; then
-            echo ""
-            echo "❌ Error: Container image already exists for version $VERSION"
-            echo ""
-            echo "Image: $IMAGE_NAME:$VERSION"
-            echo ""
-            echo "If you want to release a new version:"
-            echo "1. Increment the version number"
-            echo "2. Re-run this workflow with the new version"
-            exit 1
-          fi
-
-          echo "✅ No existing container image found for version $VERSION"
-
-      # Note: Tag creation moved to after successful image publish to prevent orphaned tags
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Retag and push release versions
-        run: |
-          VERSION="${{ steps.extract_version.outputs.version }}"
-          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
-
-          # Use the image SHA from CI check (may be different from github.sha if module didn't need rebuild)
-          IMAGE_SHA="${{ steps.ci_check.outputs.image_sha }}"
-          SHORT_SHA="${IMAGE_SHA:0:7}"
-
-          # Extract major and minor versions for additional tags
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
-          MINOR=$(echo "$VERSION" | cut -d. -f2)
-
-          echo "Source image commit: $IMAGE_SHA"
-          echo "Release commit: ${{ github.sha }}"
-          if [ "$IMAGE_SHA" != "${{ github.sha }}" ]; then
-            echo "ℹ️  Note: Source image is from a previous commit (no ext-eac changes since then)"
-          fi
-          echo ""
-
-          echo "Retagging CI image sha-$SHORT_SHA with release tags..."
-          docker buildx imagetools create \
-            --tag "$IMAGE_NAME:$VERSION" \
-            --tag "$IMAGE_NAME:$MAJOR.$MINOR" \
-            --tag "$IMAGE_NAME:$MAJOR" \
-            --tag "$IMAGE_NAME:latest" \
-            "$IMAGE_NAME:sha-$SHORT_SHA"
-
-          echo ""
-          echo "✅ Published release tags:"
-          echo "  - $IMAGE_NAME:$VERSION"
-          echo "  - $IMAGE_NAME:$MAJOR.$MINOR"
-          echo "  - $IMAGE_NAME:$MAJOR"
-          echo "  - $IMAGE_NAME:latest"
-          echo ""
-          echo "Source: $IMAGE_NAME:sha-$SHORT_SHA (from commit $IMAGE_SHA)"
-          echo "Platforms: linux/amd64, linux/arm64"
-
-      - name: Verify container images published
-        run: |
-          VERSION="${{ steps.extract_version.outputs.version }}"
-          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
-
-          echo "Verifying published container images..."
-          echo ""
-          echo "Published tags:"
-          echo "- $IMAGE_NAME:$VERSION"
-          echo "- $IMAGE_NAME:latest"
-          echo ""
-
-          # Wait a moment for registry to be updated
-          sleep 5
-
-          echo "Pulling and verifying version tag..."
-          docker pull "$IMAGE_NAME:$VERSION"
-          docker inspect "$IMAGE_NAME:$VERSION" --format='Version: {{index .Config.Labels "org.opencontainers.image.version"}}'
-
-          echo ""
-          echo "✅ Container images successfully published to GHCR"
-
-      - name: Create tag (after successful publish)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
-
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Fetch all tags from remote
-          git fetch --tags --force
-
-          # Check if tag already exists
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "ℹ️  Tag $TAG_NAME already exists"
+          if [ "$APPROVE_RESULT" = "failure" ]; then
+            echo "## :x: Release Failed - Approval" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release preconditions not met. Check the approve job for details." >> $GITHUB_STEP_SUMMARY
+            if [ "$CLEANUP_RESULT" = "success" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Tag cleaned up. Retry after fixing." >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link $RUN_ID --type release --workflow ci-ext-eac.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
+          elif [ "$RELEASE_RESULT" = "failure" ]; then
+            echo "## :x: Release Failed - Publish" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Container publish failed. Check the release job for details." >> $GITHUB_STEP_SUMMARY
+            if [ "$CLEANUP_RESULT" = "success" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Tag cleaned up. Retry with same version." >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link $RUN_ID --type container --image "$IMAGE_NAME:sha-$SHORT_SHA" >> $GITHUB_STEP_SUMMARY
+          elif [ "$RELEASE_RESULT" = "success" ]; then
+            RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+            echo "## :white_check_mark: ext-eac v$VERSION Released" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Container Image" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull $IMAGE_NAME:$VERSION" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
-            echo "Creating new tag: $TAG_NAME"
-            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-            git push origin "$TAG_NAME"
-            echo "✅ Created and pushed tag: $TAG_NAME"
+            echo "## :grey_question: Release Status Unknown" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Approve | $APPROVE_RESULT |" >> $GITHUB_STEP_SUMMARY
+            echo "| Release | $RELEASE_RESULT |" >> $GITHUB_STEP_SUMMARY
+            echo "| Cleanup | $CLEANUP_RESULT |" >> $GITHUB_STEP_SUMMARY
           fi
-
-      - name: Summary (failure)
-        if: failure()
-        run: |
-          SHORT_SHA="${GITHUB_SHA:0:7}"
-          echo "## ❌ Release Failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Common Failure Causes" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Step | Possible Cause | Fix |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|----------------|-----|" >> $GITHUB_STEP_SUMMARY
-          echo "| Check CI status | No successful CI run for this commit | Run CI first: \`gh workflow run ci-ext-eac.yaml\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Extract version | Invalid semver format | Use format: x.y.z (e.g., 1.0.0) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Check existing image | Image version already exists | Bump version number |" >> $GITHUB_STEP_SUMMARY
-          echo "| Retag and push | Source image not found | Verify CI built image: \`sha-<commit>\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Retag and push | Registry authentication failed | Check GITHUB_TOKEN permissions |" >> $GITHUB_STEP_SUMMARY
-          echo "| Verify images | Image not accessible | Check GHCR package visibility settings |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Debug Information" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Version Input | \`${{ github.event.inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Expected Source | \`ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type container --image "ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}" >> $GITHUB_STEP_SUMMARY
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Summary (success)
-        if: success()
-        run: |
-          VERSION="${{ steps.extract_version.outputs.version }}"
-          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
-          IMAGE_SHA="${{ steps.ci_check.outputs.image_sha }}"
-          SHORT_SHA="${IMAGE_SHA:0:7}"
-
-          echo "## ✅ EAC Extension Released" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Successfully published **ext-eac v${VERSION}** container image to GitHub Container Registry." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Release Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | \`${TAG_NAME}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Release Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Source Image | \`sha-${SHORT_SHA}\` |" >> $GITHUB_STEP_SUMMARY
-          if [ "$IMAGE_SHA" != "${{ github.sha }}" ]; then
-            echo "| Note | Image from earlier build (no ext-eac changes since) |" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Published Container Images" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | Image |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | \`ghcr.io/ready-to-release/ext-eac:${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Latest | \`ghcr.io/ready-to-release/ext-eac:latest\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Platforms" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Multi-architecture image supporting:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`linux/amd64\` (x86_64)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`linux/arm64\` (Apple Silicon, ARM servers)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Usage" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/ready-to-release/ext-eac:${VERSION}" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "📦 [**View GitHub Release**](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
