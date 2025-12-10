@@ -419,8 +419,28 @@ Text after.
 		testFile: blocks,
 	}
 
+	// Create cache statuses with mock cache paths
+	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		t.Fatalf("Failed to create cache dir: %v", err)
+	}
+
+	var statuses []CacheStatus
+	for _, block := range blocks {
+		cachePath := filepath.Join(cacheDir, block.Filename)
+		// Create empty SVG file
+		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0644); err != nil {
+			t.Fatalf("Failed to write mock SVG: %v", err)
+		}
+		statuses = append(statuses, CacheStatus{
+			Block:     block,
+			Cached:    true,
+			CachePath: cachePath,
+		})
+	}
+
 	// Replace blocks
-	if err := p.replaceMermaidBlocksWithImages(blocksByFile); err != nil {
+	if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
 		t.Fatalf("replaceMermaidBlocksWithImages failed: %v", err)
 	}
 
@@ -508,8 +528,28 @@ graph TD
 		testFile: blocks,
 	}
 
+	// Create cache statuses with mock cache paths in assets/rendered/mermaid/
+	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		t.Fatalf("Failed to create cache dir: %v", err)
+	}
+
+	var statuses []CacheStatus
+	for _, block := range blocks {
+		cachePath := filepath.Join(cacheDir, block.Filename)
+		// Create empty SVG file
+		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0644); err != nil {
+			t.Fatalf("Failed to write mock SVG: %v", err)
+		}
+		statuses = append(statuses, CacheStatus{
+			Block:     block,
+			Cached:    true,
+			CachePath: cachePath,
+		})
+	}
+
 	// Replace blocks
-	if err := p.replaceMermaidBlocksWithImages(blocksByFile); err != nil {
+	if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
 		t.Fatalf("replaceMermaidBlocksWithImages failed: %v", err)
 	}
 
