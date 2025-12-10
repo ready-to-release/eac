@@ -106,6 +106,8 @@ func ReleaseCheckCI() int {
 
 	startTime := time.Now()
 	lastStatus := ""
+	noCIFoundCount := 0
+	const noCIFoundThreshold = 4 // After 4 checks (~60s), fail fast if no CI exists
 
 	for {
 		elapsed := time.Since(startTime)
@@ -150,7 +152,20 @@ func ReleaseCheckCI() int {
 			return 1
 		} else if runningCount > 0 {
 			currentStatus = fmt.Sprintf("⏱ %s  ◐ CI running", elapsedStr)
+			noCIFoundCount = 0 // Reset counter when CI is running
 		} else {
+			// No CI runs found for this commit
+			noCIFoundCount++
+			if noCIFoundCount >= noCIFoundThreshold {
+				// Fail fast - no CI has been triggered for this commit
+				log.Infof("")
+				log.Infof("✗ No CI workflow found for commit %s", commitSHA[:7])
+				log.Infof("")
+				log.Infof("  CI must run before release. Options:")
+				log.Infof("  1. Push changes to trigger CI via change-trigger workflow")
+				log.Infof("  2. Manually trigger: gh workflow run %s --ref %s", workflow, commitSHA[:7])
+				return 1
+			}
 			currentStatus = fmt.Sprintf("⏱ %s  ○ Waiting for CI", elapsedStr)
 		}
 
@@ -164,8 +179,34 @@ func ReleaseCheckCI() int {
 	}
 }
 
+// CIRunWithSHA includes headSha for commit matching
+type CIRunWithSHA struct {
+	Status     string `json:"status"`
+	Conclusion string `json:"conclusion"`
+	HeadSHA    string `json:"headSha"`
+	HeadBranch string `json:"headBranch"`
+}
+
 // getWorkflowRuns queries GitHub for workflow runs on a specific commit
+// It first tries exact commit match, then falls back to checking recent runs
+// to handle cases where CI headSha differs from the target commit
 func getWorkflowRuns(workflow, commitSHA string) ([]CIRunStatus, error) {
+	// First try exact commit match (fast path)
+	runs, err := queryRunsByCommit(workflow, commitSHA)
+	if err != nil {
+		return nil, err
+	}
+	if len(runs) > 0 {
+		return runs, nil
+	}
+
+	// If no exact match, check if target commit is ancestor of any recent successful run
+	// This handles the case where CI ran after more commits were pushed
+	return queryRecentRunsForCommit(workflow, commitSHA)
+}
+
+// queryRunsByCommit queries runs filtered by exact commit SHA
+func queryRunsByCommit(workflow, commitSHA string) ([]CIRunStatus, error) {
 	cmd := exec.Command("gh", "run", "list",
 		"--commit", commitSHA,
 		"--workflow", workflow,
@@ -184,6 +225,56 @@ func getWorkflowRuns(workflow, commitSHA string) ([]CIRunStatus, error) {
 	}
 
 	return runs, nil
+}
+
+// queryRecentRunsForCommit checks if targetCommit is an ancestor of any recent CI run
+func queryRecentRunsForCommit(workflow, targetCommit string) ([]CIRunStatus, error) {
+	// Get recent runs without commit filter
+	cmd := exec.Command("gh", "run", "list",
+		"--workflow", workflow,
+		"--branch", "main",
+		"--json", "status,conclusion,headSha",
+		"--limit", "10",
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("gh run list failed: %w", err)
+	}
+
+	var runs []CIRunWithSHA
+	if err := json.Unmarshal(output, &runs); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	// Check each run to see if targetCommit is ancestor of its headSha
+	var matchingRuns []CIRunStatus
+	for _, run := range runs {
+		if run.HeadSHA == targetCommit {
+			// Exact match
+			matchingRuns = append(matchingRuns, CIRunStatus{
+				Status:     run.Status,
+				Conclusion: run.Conclusion,
+			})
+		} else if run.Status == "completed" && run.Conclusion == "success" {
+			// Check if targetCommit is ancestor of this successful run
+			if isAncestor(targetCommit, run.HeadSHA) {
+				matchingRuns = append(matchingRuns, CIRunStatus{
+					Status:     run.Status,
+					Conclusion: run.Conclusion,
+				})
+			}
+		}
+	}
+
+	return matchingRuns, nil
+}
+
+// isAncestor checks if potentialAncestor is an ancestor of commit
+func isAncestor(potentialAncestor, commit string) bool {
+	cmd := exec.Command("git", "merge-base", "--is-ancestor", potentialAncestor, commit)
+	err := cmd.Run()
+	return err == nil
 }
 
 // formatElapsed formats elapsed time as M:SS
