@@ -1212,14 +1212,21 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	}()
 
 	// pkgPath is already workspace-relative (from test grouping phase)
-	// Check if this is a synthetic Godog package key (testrunner:featurefile)
-	var relPkgPath string      // Relative path for display
-	var relFeatureFile string  // Relative feature file path (if Godog)
+	// Parse package path format from BuildPackagePath:
+	//   - "featureName:testRoot:featurePath" (BDD tests with feature file)
+	//   - "packagePath" (unit tests or BDD without specific feature)
+	var relPkgPath string      // Relative path to test runner package
+	var relFeatureFile string  // Relative feature file path (if BDD)
 	if strings.Contains(pkgPath, ":") {
-		// Synthetic key for Godog feature file
-		parts := strings.SplitN(pkgPath, ":", 2)
-		relPkgPath = parts[0]       // Test runner package path (relative)
-		relFeatureFile = parts[1]   // Feature file path (relative)
+		parts := strings.Split(pkgPath, ":")
+		if len(parts) == 3 {
+			// BDD format: featureName:testRoot:featurePath
+			relPkgPath = parts[1]       // Test runner package path
+			relFeatureFile = parts[2]   // Feature file path
+		} else {
+			// Unexpected format, use as-is
+			relPkgPath = pkgPath
+		}
 	} else {
 		relPkgPath = pkgPath
 	}
