@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -35,7 +36,7 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 			return 1
 		}
 
-		repoRoot, err = findRepoRoot(cwd)
+		repoRoot, err = testdata.FindRepoRoot(cwd)
 		if err != nil {
 			log.Errorf("failed to find repository root: %v", err)
 			return 1
@@ -45,7 +46,7 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 	} else {
 		// Derive repo root from buildOutputDir
 		var err error
-		repoRoot, err = findRepoRoot(buildOutputDir)
+		repoRoot, err = testdata.FindRepoRoot(buildOutputDir)
 		if err != nil {
 			log.Errorf("failed to find repository root: %v", err)
 			return 1

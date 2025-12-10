@@ -11,10 +11,10 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
-	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
@@ -90,7 +90,7 @@ func GetSuite() int {
 		}
 
 		// Build file-to-module mapping
-		fileModuleMap, err := buildFileModuleMap(repoRoot)
+		fileModuleMap, err := testdata.BuildFileModuleMap(repoRoot)
 		if err != nil {
 			// Non-fatal: use empty map
 			fileModuleMap = make(map[string]string)
@@ -109,29 +109,4 @@ func GetSuite() int {
 
 		return report, nil
 	})
-}
-
-// buildFileModuleMap creates a mapping from file paths to module monikers
-// TODO: This is duplicated from show/suite.go - should be extracted to a shared location
-func buildFileModuleMap(repoRoot string) (map[string]string, error) {
-	// Open git repository
-	repo, err := git.Open(repoRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	files, err := repository.GetRepositoryFilesWithModules(repo, true, false, false)
-	if err != nil {
-		return nil, err
-	}
-
-	fileModuleMap := make(map[string]string)
-	for _, file := range files {
-		if len(file.Modules) > 0 {
-			// Use first module if multiple
-			fileModuleMap[file.Name] = file.Modules[0]
-		}
-	}
-
-	return fileModuleMap, nil
 }
