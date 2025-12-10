@@ -107,7 +107,9 @@ func ReleaseCheckCI() int {
 	startTime := time.Now()
 	lastStatus := ""
 	noCIFoundCount := 0
-	const noCIFoundThreshold = 4 // After 4 checks (~60s), fail fast if no CI exists
+	chainCompletedCount := 0
+	const noCIFoundThreshold = 4      // After 4 checks (~60s), fail fast if no CI exists
+	const chainCompletedThreshold = 2 // After 2 checks (~30s), confirm chain really completed (runner startup buffer)
 
 	for {
 		elapsed := time.Since(startTime)
@@ -118,58 +120,84 @@ func ReleaseCheckCI() int {
 			return 1
 		}
 
-		// Query GitHub for workflow runs on this commit
-		runs, err := getWorkflowRuns(workflow, commitSHA)
+		elapsedStr := formatElapsed(elapsed)
+
+		// ===========================================
+		// Question 1: Has our MODULE CI completed?
+		// ===========================================
+		moduleStatus, err := getModuleCIStatus(workflow, commitSHA)
 		if err != nil {
-			log.Errorf("Warning: failed to query runs: %v", err)
+			log.Errorf("Warning: failed to query module CI: %v", err)
 			time.Sleep(time.Duration(interval) * time.Second)
 			continue
 		}
 
-		// Count statuses
-		var successCount, failedCount, runningCount int
-		for _, run := range runs {
-			if run.Status == "completed" {
-				if run.Conclusion == "success" {
-					successCount++
-				} else {
-					failedCount++
-				}
-			} else if run.Status == "in_progress" || run.Status == "queued" {
-				runningCount++
-			}
-		}
-
-		// Determine current state and print status
-		var currentStatus string
-		elapsedStr := formatElapsed(elapsed)
-
-		if successCount > 0 {
+		// Check module CI result
+		if moduleStatus.success {
 			log.Infof("\r⏱ %s  ✓ CI passed", elapsedStr)
 			return 0
-		} else if failedCount > 0 {
+		}
+		if moduleStatus.failed {
 			log.Infof("\r⏱ %s  ✗ CI failed", elapsedStr)
 			return 1
-		} else if runningCount > 0 {
-			currentStatus = fmt.Sprintf("⏱ %s  ◐ CI running", elapsedStr)
-			noCIFoundCount = 0 // Reset counter when CI is running
+		}
+		if moduleStatus.running {
+			// Module CI is running - just wait
+			currentStatus := fmt.Sprintf("⏱ %s  ◐ %s running", elapsedStr, moduleName)
+			if currentStatus != lastStatus {
+				log.Infof("\r%s", currentStatus)
+				lastStatus = currentStatus
+			}
+			noCIFoundCount = 0
+			time.Sleep(time.Duration(interval) * time.Second)
+			continue
+		}
+
+		// ===========================================
+		// Question 2: Should we keep waiting?
+		// Module CI not found - check if CI chain is in progress
+		// ===========================================
+		chainStatus, chainErr := getCIChainStatus(commitSHA)
+		if chainErr != nil {
+			log.Errorf("Warning: failed to check CI chain: %v", chainErr)
+		}
+
+		var currentStatus string
+		if chainStatus.running {
+			// CI chain is running, our module hasn't started yet
+			currentStatus = fmt.Sprintf("⏱ %s  ○ Waiting (CI chain in progress)", elapsedStr)
+			noCIFoundCount = 0      // Reset - CI is happening
+			chainCompletedCount = 0 // Reset - chain is still running
+		} else if chainStatus.completed {
+			// CI chain appears completed but our module CI wasn't triggered
+			// Wait a bit longer to account for GitHub runner startup delays
+			chainCompletedCount++
+			if chainCompletedCount >= chainCompletedThreshold {
+				// Confirmed: chain completed but module wasn't in changed set
+				log.Infof("")
+				log.Infof("✗ CI chain completed but %s was not tested", moduleName)
+				log.Infof("")
+				log.Infof("  The module may not have been in the changed set.")
+				log.Infof("  Manually trigger: gh workflow run %s", workflow)
+				return 1
+			}
+			currentStatus = fmt.Sprintf("⏱ %s  ○ Waiting (runner startup)", elapsedStr)
+			noCIFoundCount = 0 // Reset - we saw CI activity
 		} else {
-			// No CI runs found for this commit
+			// No CI chain found at all
 			noCIFoundCount++
 			if noCIFoundCount >= noCIFoundThreshold {
-				// Fail fast - no CI has been triggered for this commit
 				log.Infof("")
-				log.Infof("✗ No CI workflow found for commit %s", commitSHA[:7])
+				log.Infof("✗ No CI found for commit %s", commitSHA[:7])
 				log.Infof("")
 				log.Infof("  CI must run before release. Options:")
 				log.Infof("  1. Push changes to trigger CI via change-trigger workflow")
-				log.Infof("  2. Manually trigger: gh workflow run %s --ref %s", workflow, commitSHA[:7])
+				log.Infof("  2. Manually trigger: gh workflow run %s", workflow)
 				return 1
 			}
 			currentStatus = fmt.Sprintf("⏱ %s  ○ Waiting for CI", elapsedStr)
 		}
 
-		// Update status line (only if changed to reduce flicker)
 		if currentStatus != lastStatus {
 			log.Infof("\r%s", currentStatus)
 			lastStatus = currentStatus
@@ -177,6 +205,79 @@ func ReleaseCheckCI() int {
 
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
+}
+
+// ModuleCIStatus represents the status of the target module's CI
+type ModuleCIStatus struct {
+	success bool
+	failed  bool
+	running bool
+}
+
+// getModuleCIStatus checks if the specific module CI has run for the commit
+func getModuleCIStatus(workflow, commitSHA string) (ModuleCIStatus, error) {
+	runs, err := getWorkflowRuns(workflow, commitSHA)
+	if err != nil {
+		return ModuleCIStatus{}, err
+	}
+
+	var status ModuleCIStatus
+	for _, run := range runs {
+		switch run.Status {
+		case "completed":
+			if run.Conclusion == "success" {
+				status.success = true
+				return status, nil // Success - done
+			} else {
+				status.failed = true
+			}
+		case "in_progress", "queued":
+			status.running = true
+		}
+	}
+
+	return status, nil
+}
+
+// CIChainStatus represents the status of the overall CI chain
+type CIChainStatus struct {
+	running   bool
+	completed bool
+}
+
+// getCIChainStatus checks if any CI workflow is running/completed that covers our commit
+func getCIChainStatus(commitSHA string) (CIChainStatus, error) {
+	var status CIChainStatus
+
+	// Check all recent CI runs on main
+	allRuns, err := queryAllRecentRuns("main", 30)
+	if err != nil {
+		return status, err
+	}
+
+	for _, run := range allRuns {
+		// Only consider CI-related workflows
+		if !strings.HasPrefix(run.WorkflowName, "ci-") && !strings.Contains(run.WorkflowName, "CI") {
+			continue
+		}
+
+		// Check if this run covers our commit
+		if !ciRunCoversCommit(run.HeadSHA, commitSHA) {
+			continue
+		}
+
+		// This run is relevant to our commit
+		if run.Status == "in_progress" || run.Status == "queued" {
+			status.running = true
+			return status, nil // If anything is running, we should wait
+		}
+		if run.Status == "completed" {
+			status.completed = true
+			// Don't return yet - keep checking for running ones
+		}
+	}
+
+	return status, nil
 }
 
 // CIRunWithSHA includes headSha for commit matching
@@ -275,6 +376,48 @@ func isAncestor(potentialAncestor, commit string) bool {
 	cmd := exec.Command("git", "merge-base", "--is-ancestor", potentialAncestor, commit)
 	err := cmd.Run()
 	return err == nil
+}
+
+// ciRunCoversCommit returns true if a CI run with the given headSHA covers targetCommit
+// This is true when:
+// - headSHA == targetCommit (exact match)
+// - targetCommit is ancestor of headSHA (CI is testing newer code that includes targetCommit)
+func ciRunCoversCommit(headSHA, targetCommit string) bool {
+	if headSHA == targetCommit {
+		return true
+	}
+	// Check if targetCommit is ancestor of headSHA
+	// (meaning the CI run includes changes from targetCommit)
+	return isAncestor(targetCommit, headSHA)
+}
+
+// CIRunWithWorkflow includes workflow name for chain detection
+type CIRunWithWorkflow struct {
+	Status       string `json:"status"`
+	Conclusion   string `json:"conclusion"`
+	HeadSHA      string `json:"headSha"`
+	WorkflowName string `json:"workflowName"`
+}
+
+// queryAllRecentRuns queries recent runs across all workflows on a branch
+func queryAllRecentRuns(branch string, limit int) ([]CIRunWithWorkflow, error) {
+	cmd := exec.Command("gh", "run", "list",
+		"--branch", branch,
+		"--json", "status,conclusion,headSha,workflowName",
+		"--limit", fmt.Sprintf("%d", limit),
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("gh run list failed: %w", err)
+	}
+
+	var runs []CIRunWithWorkflow
+	if err := json.Unmarshal(output, &runs); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return runs, nil
 }
 
 // formatElapsed formats elapsed time as M:SS
