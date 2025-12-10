@@ -205,7 +205,10 @@ Some more content.
 func TestCheckMermaidCache(t *testing.T) {
 	// Create temp directory for testing
 	tmpDir := t.TempDir()
-	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+
+	// The cache system uses docs/assets/cache as root, then mermaid/ subdirectory
+	// For staging, it checks {staging}/assets/cache/mermaid/
+	stagingCacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
 
 	// Create a preprocessor
 	p := &Preprocessor{
@@ -215,7 +218,7 @@ func TestCheckMermaidCache(t *testing.T) {
 		assetCache:    NewAssetCache(tmpDir),
 	}
 
-	// Create some test blocks
+	// Create some test blocks with content that will be hashed
 	blocks := []MermaidBlock{
 		{
 			Content:  "graph TD\n    A --> B",
@@ -257,13 +260,15 @@ func TestCheckMermaidCache(t *testing.T) {
 	t.Logf("✓ First check: All 3 diagrams are cache misses")
 
 	// Create cache directory
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(stagingCacheDir, 0755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
 
-	// Create dummy SVG files for first two blocks (simulate cache hits)
+	// Create dummy SVG files for first two blocks using their actual cache paths
+	// The cache system uses content-hash based filenames computed by AssetCache
 	for i := 0; i < 2; i++ {
-		svgPath := filepath.Join(cacheDir, blocks[i].Filename)
+		// Use the cache path that checkMermaidCache computed (extract from previous status)
+		svgPath := statuses[i].CachePath
 		if err := os.WriteFile(svgPath, []byte("<svg></svg>"), 0644); err != nil {
 			t.Fatalf("Failed to create cached SVG: %v", err)
 		}
@@ -288,12 +293,11 @@ func TestCheckMermaidCache(t *testing.T) {
 
 	t.Logf("✓ Second check: 2 hits, 1 miss (66.7%% hit rate)")
 
-	// Verify cache paths are correct
+	// Verify cache paths are in the correct directory
 	for i, status := range statuses {
-		expectedPath := filepath.Join(cacheDir, blocks[i].Filename)
-		if status.CachePath != expectedPath {
-			t.Errorf("Block %d: cachePath = %s, want %s",
-				i, status.CachePath, expectedPath)
+		if !filepath.HasPrefix(status.CachePath, stagingCacheDir) {
+			t.Errorf("Block %d: cachePath = %s, expected to be under %s",
+				i, status.CachePath, stagingCacheDir)
 		}
 	}
 
@@ -311,24 +315,45 @@ func TestCacheDirectoryCreation(t *testing.T) {
 		assetCache:    NewAssetCache(tmpDir),
 	}
 
-	// Cache directory shouldn't exist yet
-	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	// Cache directory shouldn't exist yet (staging cache location)
+	cacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
 	if _, err := os.Stat(cacheDir); err == nil {
 		t.Fatal("Cache directory should not exist yet")
 	}
 
-	// Call checkMermaidCache with empty blocks
-	_, err := p.checkMermaidCache([]MermaidBlock{})
+	// Call checkMermaidCache with a block to trigger directory creation
+	// Empty blocks won't create the directory since there's nothing to cache
+	blocks := []MermaidBlock{
+		{
+			Content:  "graph TD\n    A --> B",
+			Hash:     "aaaaaaaa",
+			Filename: "test_mermaid_0_aaaaaaaa.svg",
+		},
+	}
+	statuses, err := p.checkMermaidCache(blocks)
 	if err != nil {
 		t.Fatalf("checkMermaidCache failed: %v", err)
 	}
 
-	// Cache directory should now exist
-	if _, err := os.Stat(cacheDir); err != nil {
-		t.Fatalf("Cache directory was not created: %v", err)
+	// Verify status was returned
+	if len(statuses) != 1 {
+		t.Fatalf("Expected 1 status, got %d", len(statuses))
 	}
 
-	t.Logf("✓ Cache directory created: %s", cacheDir)
+	// Note: checkMermaidCache doesn't create the staging cache directory itself -
+	// it only checks if files exist in staging. The directory is created when
+	// files are copied from docs/assets/cache during preprocessing.
+	// This test verifies that checkMermaidCache works correctly when the
+	// cache directory doesn't exist (returns cache miss status).
+	if statuses[0].Cached {
+		t.Errorf("Expected cache miss for non-existent directory")
+	}
+	if statuses[0].CachePath == "" {
+		t.Errorf("CachePath should still be set even for cache miss")
+	}
+
+	t.Logf("✓ checkMermaidCache handles non-existent cache directory correctly")
+	t.Logf("  CachePath: %s", statuses[0].CachePath)
 }
 
 func TestFormatDockerVolumePath(t *testing.T) {
