@@ -6,7 +6,13 @@ type TestReference struct {
 	FilePath string   // Path to test file
 	Type     string   // "godog", "gotest"
 	TestName string   // Name of test/scenario
-	Tags     []string // All effective tags (inherited + explicit + inferred)
+	Tags     []string // All effective tags (source + inherited + inferred)
+
+	// Tag provenance tracking
+	SourceTags   []string // Tags explicitly in source file (physical tags before inference)
+	InferredTags []string // Tags added by inference rules
+	InferredDeps []string // System deps inferred from module types (@deps:go from go-* modules)
+	InferredDepm []string // Module deps inferred from file path (@depm:X from specs/X/...)
 
 	// Execution control
 	IsIgnored  bool   // Has @skip:<reason> tag

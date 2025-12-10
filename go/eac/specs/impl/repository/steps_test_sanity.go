@@ -271,7 +271,8 @@ func (c *testSanityContext) runTestDiscovery() error {
 	} else {
 		discoveryCacheMutex.Unlock()
 
-		tests, err := testing.DiscoverAllTests(root)
+		// Raw discovery only - no inferences needed for sanity checks
+		tests, err := testing.DiscoverAndEnrich(root, testing.DiscoveryOptions{})
 		if err != nil {
 			return err
 		}

@@ -226,14 +226,6 @@ func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot st
 	exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
-
-		// For tools_binary option, also copy to tools directory (local dev only)
-		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
-		if !isCI && module.IsToolsBinary() {
-			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
-				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
-			}
-		}
 	}
 	return exitCode
 }
@@ -309,19 +301,6 @@ func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot 
 			continue
 		}
 
-		// For commands_binary, copy native binary to tools directory for local dev
-		// Skip in CI - there the binary is built/uploaded as artifact via setup-commands action
-		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
-		if !isCI && module.IsToolsBinary() && target.goos == runtime.GOOS && target.goarch == runtime.GOARCH {
-			toolsBinaryName := "commands"
-			if target.goos == "windows" {
-				toolsBinaryName = "commands.exe"
-			}
-			if err := copyToToolsDir(outputPath, toolsBinaryName, workspaceRoot, logWriter); err != nil {
-				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
-			}
-		}
-
 		successCount++
 	}
 
@@ -375,12 +354,7 @@ func buildLdflags(module *modules.ModuleContract, moduleRoot string, workspaceRo
 
 // buildSingleBinary builds a single binary for the current platform
 func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	// Use "commands" as the base name for commands_binary option, otherwise use moniker
 	binaryName := module.Moniker
-	isCommandsBinary := module.IsToolsBinary()
-	if isCommandsBinary {
-		binaryName = "commands"
-	}
 
 	// Add platform-specific extension
 	if strings.Contains(strings.ToLower(os.Getenv("GOOS")), "windows") ||
@@ -394,14 +368,6 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, worksp
 	exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "-o", binaryPath)
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
-
-		// For commands_binary capability, copy to tools directory (local dev only)
-		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
-		if !isCI && isCommandsBinary {
-			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
-				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
-			}
-		}
 	}
 	return exitCode
 }
@@ -683,50 +649,3 @@ func computeSHA256(filePath string) (string, error) {
 	return fmt.Sprintf("%x", h), nil
 }
 
-// copyToToolsDir copies the built commands binary to the tools directory as a .new file.
-// The actual replacement happens lazily in CommandsBinaryPath() when the binary is next invoked.
-// This avoids issues with replacing a running binary during the build process.
-func copyToToolsDir(srcPath, binaryName, workspaceRoot string, logWriter io.Writer) error {
-	// Get tools directory from repository config - config required
-	cfg := config.Global()
-	if cfg == nil || cfg.Repository == nil {
-		return fmt.Errorf("repository configuration required for tools directory")
-	}
-	toolsDir := cfg.Repository.ToolsPath()
-
-	destDir := filepath.Join(workspaceRoot, toolsDir)
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return fmt.Errorf("create tools dir: %w", err)
-	}
-
-	destPath := filepath.Join(destDir, binaryName)
-	newPath := destPath + ".new"
-
-	// Copy to .new file
-	srcFile, err := os.Open(srcPath)
-	if err != nil {
-		return fmt.Errorf("open source: %w", err)
-	}
-	defer srcFile.Close()
-
-	newFile, err := os.Create(newPath)
-	if err != nil {
-		return fmt.Errorf("create .new file: %w", err)
-	}
-
-	if _, err := io.Copy(newFile, srcFile); err != nil {
-		newFile.Close()
-		os.Remove(newPath)
-		return fmt.Errorf("copy to .new: %w", err)
-	}
-	newFile.Close()
-
-	// Make executable
-	if err := os.Chmod(newPath, 0755); err != nil {
-		os.Remove(newPath)
-		return fmt.Errorf("chmod .new: %w", err)
-	}
-
-	Logln(logWriter, "✅ Staged tools binary update: %s.new", filepath.Join(toolsDir, binaryName))
-	return nil
-}

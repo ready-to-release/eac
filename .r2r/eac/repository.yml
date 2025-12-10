@@ -305,8 +305,6 @@ modules:
         - id: commands
           type: executable
           pattern: "commands{ext}"
-      options:
-        commands_binary: true
     files:
       root: go/eac/commands
       exclude:
@@ -320,6 +318,7 @@ modules:
         other:
           - containers/mermaid-cli/Dockerfile
           - containers/mermaid-cli/*.json
+          - containers/pdf-tools/Dockerfile
 
   # ============================================================================
   # Source: Core Domain Libraries

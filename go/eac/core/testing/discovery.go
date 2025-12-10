@@ -227,12 +227,49 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-// DiscoverAllTests discovers all tests from a root path using module contracts.
-// All test discovery is driven by module definitions in modules.yml and module-types.yml:
-// - files.tests: patterns for test files within module (e.g., "test/**/*.ts", "**/*_test.go")
-// - repo.specs: patterns for specification files (e.g., "specs/{moniker}/**")
-// - repo.test_impl: path to test implementation (e.g., "{root}/tests")
-func DiscoverAllTests(rootPath string) ([]TestReference, error) {
+// DiscoveryOptions configures post-discovery processing for DiscoverAndEnrich.
+type DiscoveryOptions struct {
+	// Inferences to apply after discovery (nil = skip inference)
+	Inferences []Inference
+
+	// ModuleRegistry for module-dependency inference (nil = skip)
+	ModuleRegistry *modules.Registry
+
+	// Environments for environment-dependency inference (nil = skip)
+	Environments *config.EnvironmentsConfig
+}
+
+// DiscoverAndEnrich is the unified discovery entry point.
+// It discovers all tests and applies configured enrichments.
+// This consolidates: DiscoverAllTests + ApplyInferences + InferSystemDepsFromModuleDeps + InferSystemDepsFromEnv
+func DiscoverAndEnrich(repoRoot string, opts DiscoveryOptions) ([]TestReference, error) {
+	// Phase 1: Discovery
+	tests, err := discoverAllTests(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Phase 2: Apply inferences (if configured)
+	if opts.Inferences != nil {
+		tests = ApplyInferences(tests, opts.Inferences)
+	}
+
+	// Phase 3: Module-based inference (if registry provided)
+	if opts.ModuleRegistry != nil {
+		tests = InferSystemDepsFromModuleDeps(tests, opts.ModuleRegistry)
+	}
+
+	// Phase 4: Environment-based inference (if environments provided)
+	if opts.Environments != nil {
+		tests = InferSystemDepsFromEnv(tests, opts.Environments)
+	}
+
+	return tests, nil
+}
+
+// discoverAllTests is the internal discovery implementation.
+// Use DiscoverAndEnrich as the public API.
+func discoverAllTests(rootPath string) ([]TestReference, error) {
 	dc := NewDiscoveryConfig()
 	refs := []TestReference{}
 

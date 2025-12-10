@@ -104,7 +104,7 @@ type ModuleArtifact struct {
 
 // BuildOptions contains optional build behavior flags
 type BuildOptions struct {
-	CommandsBinary bool `yaml:"commands_binary,omitempty"` // Copy to tools directory after build
+	// Reserved for future build options
 }
 
 // Files represents all file ownership patterns for a module
@@ -210,11 +210,6 @@ func (b *BaseContract) HasTestArtifacts() bool {
 		}
 	}
 	return false
-}
-
-// IsToolsBinary returns true if this module should copy its binary to tools directory
-func (b *BaseContract) IsToolsBinary() bool {
-	return b.Build != nil && b.Build.Options != nil && b.Build.Options.CommandsBinary
 }
 
 // GetBuildHandler returns the explicit build handler for this module, or empty string if not set
