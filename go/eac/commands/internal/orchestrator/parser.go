@@ -57,16 +57,21 @@ func parseLogForIssues(logPath string) (warnings []string, errors []string) {
 		if !isTestOutput {
 			if strings.Contains(lowerContent, "error:") ||
 				strings.Contains(content, "❌") ||
-				strings.Contains(lowerContent, "fatal:") {
+				strings.Contains(lowerContent, "fatal:") ||
+				strings.HasPrefix(content, "WARNING -") || // MkDocs strict mode warnings (these cause build failures)
+				strings.HasPrefix(content, "ERROR -") || // MkDocs errors
+				strings.Contains(lowerContent, "aborted with") { // MkDocs abort message
 				errors = append(errors, content)
 			}
 		}
 
 		// Check for warnings (but not if also an error)
 		// Look for WARNING (case-insensitive) but not in test names
+		// Exclude MkDocs "WARNING -" format as those are treated as errors in strict mode
 		if !isTestOutput &&
 			(strings.Contains(lowerContent, "warning:") || strings.Contains(content, "WARNING:")) &&
-			!strings.Contains(lowerContent, "error:") {
+			!strings.Contains(lowerContent, "error:") &&
+			!strings.HasPrefix(content, "WARNING -") {
 			warnings = append(warnings, content)
 		}
 	}

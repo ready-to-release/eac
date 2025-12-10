@@ -130,40 +130,22 @@ jobs:
           run-id: ${{ steps.ci.outputs.run_id }}
           github-token: ${{ github.token }}
 
-      - name: Verify build outputs
+      - name: Validate artifacts
         id: verify
         run: |
-          # For the 'site' book, MkDocs outputs to a nested 'site' subdirectory
-          # Structure is: out/build/docs/site/site/index.html (book dir + mkdocs output)
-          SITE_DIR="out/build/docs/site/site"
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
 
-          # Verify HTML site exists
-          if [ ! -f "$SITE_DIR/index.html" ]; then
-            echo "❌ Error: HTML site not found at $SITE_DIR/index.html"
-            echo "Contents of out/build/docs/:"
-            ls -la out/build/docs/ || echo "out/build/docs/ does not exist"
-            echo ""
-            echo "Contents of out/build/docs/site/:"
-            ls -la out/build/docs/site/ || echo "out/build/docs/site/ does not exist"
-            exit 1
-          fi
-          echo "✅ HTML site verified at $SITE_DIR"
+          # Validate artifacts against build manifest (checks existence, paths, hashes)
+          $COMMANDS validate artifacts docs
 
-          # Count PDFs
-          PDF_COUNT=$(find "out/build/docs" -name "*.pdf" 2>/dev/null | wc -l)
-          echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
-
-          if [ "$PDF_COUNT" -eq 0 ]; then
-            echo "⚠️  Warning: No PDF files found"
-          else
-            echo "✅ Found $PDF_COUNT PDF file(s):"
-            find "out/build/docs" -name "*.pdf" -exec du -h {} \;
-          fi
-
-          # Site stats (from nested site directory)
+          # Collect stats for summary
+          SITE_DIR="out/build/docs/site"
+          PDF_COUNT=$(find "out/build/docs" -maxdepth 1 -name "*.pdf" -type f 2>/dev/null | wc -l)
           FILE_COUNT=$(find "$SITE_DIR" -type f | wc -l | tr -d ' ')
           HTML_COUNT=$(find "$SITE_DIR" -name "*.html" | wc -l | tr -d ' ')
           TOTAL_SIZE=$(du -sh "$SITE_DIR" | cut -f1)
+
+          echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
           echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
           echo "html_count=$HTML_COUNT" >> $GITHUB_OUTPUT
           echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
@@ -177,8 +159,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          # MkDocs outputs to nested 'site' directory within the book output dir
-          path: out/build/docs/site/site
+          path: out/build/docs/site
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -190,25 +171,18 @@ jobs:
       - name: Create release notes
         id: release_notes
         run: |
-          VERSION="${{ steps.tag.outputs.version }}"
-          PDF_COUNT="${{ steps.verify.outputs.pdf_count }}"
-
           cat << 'EOF' > release_notes.md
           ## Documentation Release
 
           This release includes:
           - **HTML Site**: Deployed to [GitHub Pages](${{ steps.deployment.outputs.page_url }})
-          - **PDF Books**: Available as release assets below
+          - **PDF Book**: Available as release asset below
 
-          ### PDF Books
-
-          Download PDF versions for offline reading:
+          ### PDF Book
 
           | Book | Description |
           |------|-------------|
-          | `repository-report-dark.pdf` | Complete repository structure with modules, dependencies, and test suites |
-          | `explanation-dark.pdf` | Conceptual documentation covering Everything-as-Code methodology |
-          | `risk-evidence-package-dark.pdf` | Comprehensive risk assessment evidence package |
+          | `explanation-dark.pdf` | Continuous Delivery practices & Everything-as-Code methodology |
 
           ### Release Information
 
@@ -229,8 +203,8 @@ jobs:
 
           echo "Creating release for tag: $TAG_NAME"
 
-          # Collect PDF files
-          PDF_FILES=$(find out/build/docs -name "*.pdf" -type f 2>/dev/null | tr '\n' ' ')
+          # Collect PDF files at module root (flat structure from optimized builder)
+          PDF_FILES=$(find out/build/docs -maxdepth 1 -name "*.pdf" -type f 2>/dev/null | tr '\n' ' ')
 
           # For manual triggers, use --target to create tag atomically with release
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -334,11 +308,11 @@ jobs:
 
           PDF_COUNT="${{ steps.verify.outputs.pdf_count }}"
           if [ "$PDF_COUNT" -gt 0 ]; then
-            echo "### PDF Books" >> $GITHUB_STEP_SUMMARY
+            echo "### PDF Book" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Book | Size |" >> $GITHUB_STEP_SUMMARY
             echo "|------|------|" >> $GITHUB_STEP_SUMMARY
-            find out/build/docs -name "*.pdf" -exec sh -c 'echo "| $(basename {}) | $(du -h {} | cut -f1) |"' \; >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+            find out/build/docs -maxdepth 1 -name "*.pdf" -exec sh -c 'echo "| $(basename {}) | $(du -h {} | cut -f1) |"' \; >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📦 [**View Release & Download PDFs**](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
+            echo "📦 [**View Release & Download PDF**](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
           fi

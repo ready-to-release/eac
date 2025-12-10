@@ -308,12 +308,11 @@ Developer-initiated release via CHANGELOG:
 
 ### Release Strategies
 
-| Workflow        | Uses CI Artifacts | Strategy            | Reason                          |
-| --------------- | ----------------- | ------------------- | ------------------------------- |
-| release-r2r-cli | ❌                | Build from source   | Reproducible builds             |
-| release-ext-eac | ✅                | Retag image         | Ensures tested image released   |
-| release-docs    | ✅ (optional)     | Download or rebuild | Flexibility for manual triggers |
-| release-books   | ❌                | Build from source   | Release needs `--all` flag      |
+| Workflow        | Uses CI Artifacts | Strategy            | Reason                        |
+| --------------- | ----------------- | ------------------- | ----------------------------- |
+| release-r2r-cli | ❌                | Build from source   | Reproducible builds           |
+| release-ext-eac | ✅                | Retag image         | Ensures tested image released |
+| release-docs    | ✅                | Download artifacts  | No rebuild, CI-tested assets  |
 
 ---
 

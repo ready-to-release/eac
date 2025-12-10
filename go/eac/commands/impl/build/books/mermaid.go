@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // Size presets for mermaid diagrams
@@ -498,48 +497,34 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error
 }
 
 // checkMermaidCache checks which diagrams are already cached
-// Checks both persistent cache (docs/assets/cache/mermaid/) and local staging cache
+// Cache is at staging/assets/cache/mermaid/ (copied from docs/assets/cache/mermaid/)
 // Returns all blocks with their cache status
 func (p *Preprocessor) checkMermaidCache(blocks []MermaidBlock) ([]CacheStatus, error) {
-	// Cache directory: staging/assets/rendered/mermaid/
-	cacheDir := paths.RenderedAssetsPath(p.stagingDir, "mermaid")
-
-	// Ensure cache directory exists
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return nil, fmt.Errorf("creating cache directory: %w", err)
-	}
+	// Cache directory: staging/assets/cache/mermaid/ (copied from docs/assets/cache/)
+	cacheDir := filepath.Join(p.stagingDir, "assets", "cache", "mermaid")
 
 	statuses := make([]CacheStatus, 0, len(blocks))
 
 	for _, block := range blocks {
-		svgPath := filepath.Join(cacheDir, block.Filename)
+		// Use stripped content for cache key to ensure consistency
+		cleanContent := StripSizeDirective(block.Content)
+		cacheKey := MermaidCacheKey{Code: cleanContent}
 
-		// Check if file exists in local staging cache
-		_, err := os.Stat(svgPath)
-		cached := err == nil
+		// Get the hash for this diagram (assetCache computes the hash)
+		persistentPath, _ := p.assetCache.GetMermaid(cacheKey)
+		hashFilename := filepath.Base(persistentPath)
+		stagingCachePath := filepath.Join(cacheDir, hashFilename)
 
-		// If not in local cache, check persistent cache
-		if !cached {
-			// Use stripped content for cache key to ensure consistency
-			// (size directives are removed by processMermaidSizing step)
-			cleanContent := StripSizeDirective(block.Content)
-			persistentPath, persistentHit := p.assetCache.GetMermaid(MermaidCacheKey{
-				Code: cleanContent,
-			})
-
-			if persistentHit {
-				// Copy from persistent cache to local staging cache
-				if err := copyFile(persistentPath, svgPath); err == nil {
-					cached = true
-					// No need to increment stats here - GetMermaid already did
-				}
-			}
+		// Check if file exists in staging (copied from docs/assets/cache/)
+		cached := false
+		if _, err := os.Stat(stagingCachePath); err == nil {
+			cached = true
 		}
 
 		statuses = append(statuses, CacheStatus{
 			Block:     block,
 			Cached:    cached,
-			CachePath: svgPath,
+			CachePath: stagingCachePath,
 		})
 	}
 
@@ -548,9 +533,13 @@ func (p *Preprocessor) checkMermaidCache(blocks []MermaidBlock) ([]CacheStatus, 
 
 // replaceMermaidBlocksWithImages replaces mermaid code blocks with img references
 // This is done ONLY in staging directory, source markdown stays pure
-func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]MermaidBlock) error {
-	// Cache directory (absolute path)
-	cacheDir := paths.RenderedAssetsPath(p.stagingDir, "mermaid")
+// Uses cache statuses to get the correct SVG path for each block
+func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]MermaidBlock, statuses []CacheStatus) error {
+	// Build a map from block filename to cache path for quick lookup
+	cachePathByBlock := make(map[string]string)
+	for _, status := range statuses {
+		cachePathByBlock[status.Block.Filename] = status.CachePath
+	}
 
 	for filePath, blocks := range blocksByFile {
 		if len(blocks) == 0 {
@@ -568,9 +557,13 @@ func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]
 		for i := len(blocks) - 1; i >= 0; i-- {
 			block := blocks[i]
 
+			// Get the SVG path from cache status
+			svgAbsPath := cachePathByBlock[block.Filename]
+			if svgAbsPath == "" {
+				return fmt.Errorf("no cache path found for block %s", block.Filename)
+			}
+
 			// Calculate relative path from markdown file to SVG using link translator
-			// This ensures consistency with all other path calculations
-			svgAbsPath := filepath.Join(cacheDir, block.Filename)
 			relPath, err := p.linkTranslator.CalculateRelativePath(filePath, svgAbsPath)
 			if err != nil {
 				return fmt.Errorf("calculating relative path for %s: %w", block.Filename, err)
@@ -598,9 +591,9 @@ func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]
 }
 
 // scanForMermaidDiagrams scans all markdown files in staging directory
-// Returns all mermaid blocks found, grouped by file
+// Returns all mermaid blocks found (grouped by file) and their cache statuses
 // Now includes cache checking and statistics
-func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, error) {
+func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, []CacheStatus, error) {
 	blocksByFile := make(map[string][]MermaidBlock)
 	allBlocks := []MermaidBlock{}
 
@@ -628,18 +621,18 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, erro
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(allBlocks) == 0 {
 		p.log("    No mermaid diagrams found")
-		return blocksByFile, nil
+		return blocksByFile, nil, nil
 	}
 
 	// Step 2: Check cache for all blocks
 	statuses, err := p.checkMermaidCache(allBlocks)
 	if err != nil {
-		return nil, fmt.Errorf("checking cache: %w", err)
+		return nil, nil, fmt.Errorf("checking cache: %w", err)
 	}
 
 	// Step 3: Analyze cache statistics
@@ -727,10 +720,10 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, erro
 	}
 
 	// Return rendering error if any diagrams failed
-	// (but still return the blocksByFile so caller can see what was found)
+	// (but still return the blocksByFile and statuses so caller can see what was found)
 	if renderErr != nil {
-		return blocksByFile, fmt.Errorf("rendering: %w", renderErr)
+		return blocksByFile, statuses, fmt.Errorf("rendering: %w", renderErr)
 	}
 
-	return blocksByFile, nil
+	return blocksByFile, statuses, nil
 }
