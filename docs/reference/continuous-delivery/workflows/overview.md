@@ -38,7 +38,7 @@ Modules are built in layers based on their dependency relationships:
 - **Layer 2:** Modules that depend only on Layer 1 modules
 - **Layer N:** Modules that depend on modules in previous layers
 
-Dependencies are defined in `.r2r/eac/modules.yml` under the `depends_on` field.
+Dependencies are defined in `.r2r/eac/repository.yml` under the `depends_on` field.
 
 ### Parallel Execution Within Layers
 

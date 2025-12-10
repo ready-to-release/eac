@@ -106,7 +106,7 @@ Changes to repository-level configuration:
 
 **Examples:**
 
-- Module contracts updates (`.r2r/eac/modules.yml`)
+- Module contracts updates (`.r2r/eac/repository.yml`)
 - Workspace configuration
 - Repository-level documentation
 - Project templates

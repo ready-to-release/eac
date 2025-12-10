@@ -32,9 +32,9 @@ import (
 	"go.uber.org/zap"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
-	sharedTemplate "github.com/ready-to-release/eac/go/eac/commands/internal/template"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
+	sharedTemplate "github.com/ready-to-release/eac/go/eac/commands/internal/template"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -59,10 +59,10 @@ type AssessConfig struct {
 	Debug          bool
 	WorkspaceRoot  string
 	Logger         *logging.Logger
-	Timestamp      string        // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
-	OutputDir      string        // Base output directory for this run: out/risk/<timestamp>/
-	TestSuite      string        // Test suite to run (default: acceptance)
-	ReportTemplate string        // Report template variant (default: risk-assessment-detailed)
+	Timestamp      string // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
+	OutputDir      string // Base output directory for this run: out/risk/<timestamp>/
+	TestSuite      string // Test suite to run (default: acceptance)
+	ReportTemplate string // Report template variant (default: risk-assessment-detailed)
 }
 
 // ModuleAssessmentResult holds the results of assessing a single module.
@@ -217,7 +217,7 @@ func parseAssessConfig() (*AssessConfig, error) {
 
 	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,
-		TestSuite:      "acceptance",                // Default to acceptance suite
+		TestSuite:      "acceptance",               // Default to acceptance suite
 		ReportTemplate: "risk-assessment-detailed", // Default to detailed template
 	}
 
@@ -385,7 +385,7 @@ Available modules:
 Try:
   - Check module name spelling
   - List all modules: show modules
-  - View module contracts: cat .r2r/eac/modules.yml`,
+  - View module contracts: cat .r2r/eac/repository.yml`,
 				strings.Join(invalidModules, ", "),
 				strings.Join(availableModules, ", "))
 		}

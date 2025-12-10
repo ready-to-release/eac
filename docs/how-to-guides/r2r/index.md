@@ -1,4 +1,4 @@
-# r2r CLI Guides
+# R2R
 
 {{ page_breadcrumb() }}
 

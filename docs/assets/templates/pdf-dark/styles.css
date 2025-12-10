@@ -9,9 +9,14 @@
 
 @page {
   size: A4;
-  margin: 2cm;
+  margin: 2cm 2cm 2.5cm 2cm;  /* Extra bottom margin for footer overlay */
   background: #0d1117;
 }
+
+/* Page footers (page numbers, book title, section) are added
+   during PDF merge via Python/ReportLab overlay - not CSS.
+   This is necessary because mkdocs-exporter generates individual
+   PDFs per page, and CSS counters reset per document. */
 
 /* Base styles - dark background, light text */
 html, body {

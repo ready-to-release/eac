@@ -101,9 +101,8 @@ func listModuleArtifacts(module *modules.ModuleContract) []string {
 	return artifacts
 }
 
-
 // buildGoModule builds any Go module based on per-module artifact definitions.
-// Behavior is driven by artifacts defined in modules.yml:
+// Behavior is driven by artifacts defined in repository.yml:
 //   - No artifacts: library (compile-only verification)
 //   - Single executable: builds binary for current platform
 //   - Multiple executables: cross-compiled binaries
@@ -176,7 +175,6 @@ func buildLibrary(module *modules.ModuleContract, moduleRoot string, outputDir s
 		return exitCode
 	}
 
-
 	Logln(logWriter, "✅ Library module built successfully")
 	return 0
 }
@@ -209,7 +207,6 @@ func buildTestModule(module *modules.ModuleContract, moduleRoot string, outputDi
 		// Test failures are expected - capture the results anyway
 		Logln(logWriter, "⚠️  Tests completed with failures")
 	}
-
 
 	Logln(logWriter, "✅ Test module built and results captured")
 	return 0
@@ -313,7 +310,6 @@ func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot 
 
 	// Generate checksums
 	generateChecksums(outputDir, module.Moniker, logWriter)
-
 
 	return 0
 }
@@ -528,7 +524,6 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, works
 	// Generate checksums
 	generateChecksums(outputDir, binaryName, logWriter)
 
-
 	return 0
 }
 
@@ -648,4 +643,3 @@ func computeSHA256(filePath string) (string, error) {
 	h := sha256.Sum256(data)
 	return fmt.Sprintf("%x", h), nil
 }
-

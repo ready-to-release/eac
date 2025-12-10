@@ -397,6 +397,6 @@ r2r eac test eac-commands --suite commit,acceptance
 - [CI Orchestration](./ci-orchestration.md) - How modules are orchestrated
 - [Overview](./overview.md) - Workflow architecture
 - Reusable actions: `.github/actions/build-module`, `.github/actions/test-module`
-- Module contracts: `.r2r/eac/modules.yml`
+- Module contracts: `.r2r/eac/repository.yml`
 
 {{ diataxis_footer() }}

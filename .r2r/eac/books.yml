@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/books.schema.json
 # Book Definitions
 # Books aggregate static content with dynamically-generated content from EAC commands
-# Books are referenced by modules via the `books:` field in modules.yml
+# Books are referenced by modules via the `books:` field in repository.yml
 
 books:
   # ==============================================================================
@@ -102,7 +102,7 @@ books:
   # Explanation PDF
   # ==============================================================================
   - name: explanation
-    title: "Continuous Delivery Practices & Everything-as-Code"
+    title: "Explanation"
     description: "Conceptual documentation - Everything as Code, CD practices, and methodology"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
@@ -118,6 +118,58 @@ books:
         to: "./"
 
       # Assets for PDF rendering (exclude embedded PDFs - can't view PDFs inside PDF)
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+  # ==============================================================================
+  # How-to guide PDF
+  # ==============================================================================
+  - name: howto
+    title: "How-to Guides"
+    description: "Howtos"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      # content
+      - type: copy
+        from: "docs/how-to-guides/**/*.md"
+        to: "./"
+
+      - type: copy
+        from: "docs/how-to-guides/**/.nav.yml"
+        to: "./"
+
+      # Assets for PDF
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+# ==============================================================================
+  # tutorials PDF
+  # ==============================================================================
+  - name: tutorials
+    title: "Tutorials"
+    description: "tutorials"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      # content
+      - type: copy
+        from: "docs/tutorials/**/*.md"
+        to: "./"
+
+      - type: copy
+        from: "docs/tutorials/**/.nav.yml"
+        to: "./"
+
+      # Assets for PDF
       - type: copy
         from: "docs/assets/**"
         to: "assets/"

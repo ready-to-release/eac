@@ -1013,11 +1013,71 @@ docs_dir = '%s'  # Staging directory with .nav.yml files
 book_title = '''%s'''  # Book-specific title for cover page
 book_description = '''%s'''  # Book-specific description for cover page
 
+import re
+
+def get_title_from_markdown(md_path):
+    """Extract title from markdown file (frontmatter or first H1)."""
+    if not os.path.exists(md_path):
+        return None
+
+    try:
+        with open(md_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except:
+        return None
+
+    # Try frontmatter title
+    if content.startswith('---'):
+        end_idx = content.find('---', 3)
+        if end_idx > 0:
+            frontmatter = content[3:end_idx]
+            match = re.search(r'^title:\s*["\']?([^"\'\\n]+)["\']?', frontmatter, re.MULTILINE)
+            if match:
+                return match.group(1).strip()
+
+    # Try first H1
+    match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+
+    return None
+
 # Dark theme colors (matching PDF dark theme)
 BG_COLOR = HexColor('#0d1117')
 TEXT_COLOR = HexColor('#e6edf3')
 ACCENT_COLOR = HexColor('#58a6ff')
 MUTED_COLOR = HexColor('#8b949e')
+FOOTER_COLOR = HexColor('#6e7681')
+
+def create_page_footer_overlay(page_num, total_pages, book_title, section_title=''):
+    """Create a PDF page with footer overlay (page number, book title, section)."""
+    packet = io.BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    width, height = A4
+
+    # Footer Y position (2cm from bottom = ~56 points)
+    footer_y = 1.5 * cm
+
+    # Page number - center
+    c.setFont('Helvetica', 9)
+    c.setFillColor(MUTED_COLOR)
+    page_text = str(page_num)
+    c.drawCentredString(width / 2, footer_y, page_text)
+
+    # Book title - left (truncate if too long)
+    c.setFont('Helvetica', 8)
+    c.setFillColor(FOOTER_COLOR)
+    display_title = book_title[:40] + '...' if len(book_title) > 40 else book_title
+    c.drawString(2 * cm, footer_y, display_title)
+
+    # Section title - right (truncate if too long)
+    if section_title:
+        display_section = section_title[:35] + '...' if len(section_title) > 35 else section_title
+        c.drawRightString(width - 2 * cm, footer_y, display_section)
+
+    c.save()
+    packet.seek(0)
+    return PdfReader(packet)
 
 def draw_wrapped_text(canvas, text, x, y, max_width, font='Helvetica', size=12, line_height=0.5*cm, align='center'):
     """Draw text with word wrapping."""
@@ -1195,22 +1255,23 @@ def create_toc_pages(toc_entries, content_start_page):
         elif depth == 2:
             c.setFont('Helvetica', 10)
             c.setFillColor(TEXT_COLOR)
-        else:
+        else:  # depth 3, 4, etc. - all same format
             c.setFont('Helvetica', 9)
-            c.setFillColor(MUTED_COLOR)
+            c.setFillColor(TEXT_COLOR)
 
         # Draw title
         c.drawString(x, y, title)
 
-        # Draw page number (adjusted for cover + TOC pages)
-        actual_page = page_num + content_start_page
+        # Draw page number (content pages start at 1)
+        display_page = page_num + 1
         c.setFillColor(MUTED_COLOR)
         c.setFont('Helvetica', 9)
-        c.drawRightString(width - 2*cm, y, str(actual_page))
+        c.drawRightString(width - 2*cm, y, str(display_page))
 
-        # Store link rectangle (full width of entry line)
-        # Links will be added after merging since we need final page numbers
-        links.append((current_toc_page, x, y - 0.1*cm, width - 2*cm - x, 0.4*cm, actual_page - 1))
+        # Store link rectangle - target is absolute page in merged PDF
+        # page_num is 0-indexed content offset, add content_start_page for absolute position
+        absolute_target = page_num + content_start_page
+        links.append((current_toc_page, x, y - 0.1*cm, width - 2*cm - x, 0.4*cm, absolute_target))
 
         # Dotted line between title and page number
         c.setStrokeColor(HexColor('#30363d'))
@@ -1260,10 +1321,12 @@ def parse_nav_yml(nav_dir, base_path=''):
                 else:
                     site_path = os.path.join(base_path, item[:-3])  # Remove .md
 
-                # Get title from frontmatter or filename
-                title = item[:-3].replace('-', ' ').replace('_', ' ').title()
-                if item == 'index.md' and section_title:
-                    title = section_title
+                # Get title from markdown file, fallback to filename
+                md_file_path = os.path.join(nav_dir, item)
+                title = get_title_from_markdown(md_file_path)
+                if not title:
+                    # Fallback to filename-based title
+                    title = item[:-3].replace('-', ' ').replace('_', ' ').title()
 
                 entries.append((title, site_path, file_path))
             else:
@@ -1292,7 +1355,11 @@ def parse_nav_yml(nav_dir, base_path=''):
                         if isinstance(sub_item, str) and sub_item.endswith('.md'):
                             file_path = os.path.join(base_path, sub_item)
                             site_path = os.path.join(base_path, sub_item[:-3])
-                            sub_title = sub_item[:-3].split('/')[-1].replace('-', ' ').replace('_', ' ').title()
+                            # Get title from markdown file, fallback to filename
+                            md_file_path = os.path.join(nav_dir, sub_item)
+                            sub_title = get_title_from_markdown(md_file_path)
+                            if not sub_title:
+                                sub_title = sub_item[:-3].split('/')[-1].replace('-', ' ').replace('_', ' ').title()
                             entries.append((sub_title, site_path, file_path))
 
     return entries
@@ -1363,8 +1430,8 @@ cover_pages = len(cover_reader.pages)
 # Estimate TOC pages (roughly 35 entries per page)
 toc_page_estimate = max(1, (len(toc_entries) + 34) // 35)
 
-# Content starts after cover + TOC
-content_start_page = cover_pages + toc_page_estimate + 1
+# Content starts after cover + TOC (page numbers start at 1, not 0)
+content_start_page = cover_pages + toc_page_estimate
 
 # Create TOC pages
 print(f'Creating table of contents ({len(toc_entries)} entries)...')
@@ -1373,7 +1440,7 @@ toc_pages = len(toc_reader.pages)
 
 # Recalculate if TOC pages changed
 if toc_pages != toc_page_estimate:
-    content_start_page = cover_pages + toc_pages + 1
+    content_start_page = cover_pages + toc_pages
     toc_reader, toc_links = create_toc_pages(toc_entries, content_start_page)
 
 # Final merge
@@ -1387,18 +1454,62 @@ for page in cover_reader.pages:
 for page in toc_reader.pages:
     writer.add_page(page)
 
-# Add content pages
+# Add content pages and track section titles for each page
 current_page = cover_pages + toc_pages
 bookmarks = []
+page_sections = {}  # Map page index -> section title
 
+current_section = ''
 for i, pdf_path in enumerate(pdf_files):
     title, _, depth, site_path = toc_entries[i]
     bookmarks.append((title, current_page, depth, site_path))
 
+    # Update current section for top-level entries (depth <= 1)
+    if depth <= 1:
+        current_section = title
+
     reader = PdfReader(pdf_path)
-    for page in reader.pages:
+    for j, page in enumerate(reader.pages):
         writer.add_page(page)
+        # Store section title for this page (use document title for first page of section)
+        page_sections[current_page + j] = title if j == 0 else current_section
     current_page += len(reader.pages)
+
+# Overlay page footers on TOC and content pages (skip cover only)
+total_pages = len(writer.pages)
+toc_start = cover_pages
+content_start = cover_pages + toc_pages
+footer_page_count = total_pages - cover_pages  # All pages after cover get footers
+
+print(f'Adding page footers to {toc_pages} TOC + {total_pages - content_start} content pages...')
+
+# Add footers to TOC pages (roman numerals style: i, ii, iii...)
+for toc_idx in range(toc_pages):
+    page_idx = toc_start + toc_idx
+    page = writer.pages[page_idx]
+    # Use roman numerals for TOC pages
+    roman_num = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'][toc_idx] if toc_idx < 10 else str(toc_idx + 1)
+    footer_reader = create_page_footer_overlay(
+        page_num=roman_num,
+        total_pages=footer_page_count,
+        book_title=book_title,
+        section_title='Table of Contents'
+    )
+    page.merge_page(footer_reader.pages[0])
+
+# Add footers to content pages (arabic numerals: 1, 2, 3...)
+for page_idx in range(content_start, total_pages):
+    page = writer.pages[page_idx]
+    display_page_num = page_idx - content_start + 1  # Content pages start at 1
+    section = page_sections.get(page_idx, '')
+
+    footer_reader = create_page_footer_overlay(
+        page_num=display_page_num,
+        total_pages=total_pages - content_start,
+        book_title=book_title,
+        section_title=section
+    )
+    page.merge_page(footer_reader.pages[0])
 
 # Add clickable links to TOC pages
 print(f'Adding {len(toc_links)} TOC links...')

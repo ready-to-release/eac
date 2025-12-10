@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// createTestRepoWithTypes creates a temporary repository with both modules.yml and module-types.yml
+// createTestRepoWithTypes creates a temporary repository with both repository.yml and module-types.yml
 func createTestRepoWithTypes(t *testing.T, modulesContent, typesContent string) string {
 	t.Helper()
 
@@ -30,10 +30,10 @@ func createTestRepoWithTypes(t *testing.T, modulesContent, typesContent string) 
 		t.Fatalf("failed to create .git directory: %v", err)
 	}
 
-	// Write modules.yml
-	modulesPath := filepath.Join(eacDir, "modules.yml")
+	// Write repository.yml
+	modulesPath := filepath.Join(eacDir, "repository.yml")
 	if err := os.WriteFile(modulesPath, []byte(modulesContent), 0644); err != nil {
-		t.Fatalf("failed to write modules.yml: %v", err)
+		t.Fatalf("failed to write repository.yml: %v", err)
 	}
 
 	// Write module-types.yml if provided

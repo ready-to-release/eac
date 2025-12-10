@@ -25,18 +25,18 @@ type RepositoryConfig struct {
 	// Filename conventions
 	Conventions ConventionsConfig `yaml:"conventions"`
 
-	// Module definitions (previously in separate modules.yml)
+	// Module definitions (previously in separate repository.yml)
 	Modules []Module `yaml:"modules"`
 }
 
 // RepositorySettings holds repository-level configuration
 type RepositorySettings struct {
-	Type             string           `yaml:"type"`               // mono, poly, adjunct
-	TrunkBranch      string           `yaml:"trunk_branch"`       // main branch name
+	Type             string           `yaml:"type"`                // mono, poly, adjunct
+	TrunkBranch      string           `yaml:"trunk_branch"`        // main branch name
 	MaxBranchAgeDays int              `yaml:"max_branch_age_days"` // max age for feature branches
-	Schemes          []string         `yaml:"schemes"`            // valid versioning schemes
-	PR               PRConfig         `yaml:"pr"`                 // PR workflow config
-	Versioning       VersioningConfig `yaml:"versioning"`         // versioning constraints
+	Schemes          []string         `yaml:"schemes"`             // valid versioning schemes
+	PR               PRConfig         `yaml:"pr"`                  // PR workflow config
+	Versioning       VersioningConfig `yaml:"versioning"`          // versioning constraints
 }
 
 // PRConfig holds pull request workflow configuration

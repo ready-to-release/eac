@@ -17,7 +17,7 @@ This section will provide comprehensive guides on:
 
 ### Understanding Contracts
 
-- **Module Contracts (.eac/modules.yml)** - Defining modules and their configurations
+- **Module Contracts (.eac/repository.yml)** - Defining modules and their configurations
   - Module properties and metadata
   - Build pipeline configuration
   - Artifact definitions

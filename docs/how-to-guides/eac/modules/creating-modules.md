@@ -4,7 +4,7 @@
 
 **Problem**: You want to add a new component to your repository with proper file ownership, dependencies, and build configuration.
 
-**Solution**: Define a module contract in `.r2r/eac/modules.yml`.
+**Solution**: Define a module contract in `.r2r/eac/repository.yml`.
 
 ## What is a Module?
 
@@ -33,7 +33,7 @@ See [Module Types Reference](../../../reference/r2r-eac/module-types-reference.m
 
 ## Quick Start
 
-Add a module to `.r2r/eac/modules.yml`:
+Add a module to `.r2r/eac/repository.yml`:
 
 ```yaml
 modules:

@@ -5,7 +5,7 @@
 // Long: This command validates all EAC repository configuration files against their
 // Long: JSON Schema definitions. It checks:
 // Long:   - repository.yml (optional)
-// Long:   - modules.yml
+// Long:   - repository.yml
 // Long:   - environments.yml
 // Long:   - testing-tags.yml
 // Long:   - test-suites.yml

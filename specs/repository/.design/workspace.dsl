@@ -12,7 +12,7 @@ workspace "Repository Module" "Root configuration module defining contracts and 
         repository = softwareSystem "Repository Module" "Defines repository contracts, validation rules, and module ownership" {
 
             contracts = container "Contracts" "YAML contract definitions" "YAML" {
-                modules_yml = component "modules.yml" "Module definitions and ownership" "YAML"
+                modules_yml = component "repository.yml" "Module definitions and ownership" "YAML"
                 environments_yml = component "environments.yml" "Environment configurations" "YAML"
                 module_types_yml = component "module-types.yml" "Module type definitions" "YAML"
                 test_suites_yml = component "test-suites.yml" "Test suite definitions" "YAML"

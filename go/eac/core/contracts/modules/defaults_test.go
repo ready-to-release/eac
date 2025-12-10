@@ -18,7 +18,7 @@ func loadTestModules(repoRoot string) (*modules.Registry, error) {
 	return modules.LoadFromWorkspaceNoValidation(repoRoot)
 }
 
-// createTestRepo creates a temporary repository with minimal modules.yml for testing defaults
+// createTestRepo creates a temporary repository with minimal repository.yml for testing defaults
 func createTestRepo(t *testing.T, modulesContent string) string {
 	t.Helper()
 
@@ -36,10 +36,10 @@ func createTestRepo(t *testing.T, modulesContent string) string {
 		t.Fatalf("failed to create .git directory: %v", err)
 	}
 
-	// Write modules.yml
-	modulesPath := filepath.Join(eacDir, "modules.yml")
+	// Write repository.yml
+	modulesPath := filepath.Join(eacDir, "repository.yml")
 	if err := os.WriteFile(modulesPath, []byte(modulesContent), 0644); err != nil {
-		t.Fatalf("failed to write modules.yml: %v", err)
+		t.Fatalf("failed to write repository.yml: %v", err)
 	}
 
 	return tmpDir

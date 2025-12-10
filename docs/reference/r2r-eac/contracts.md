@@ -20,7 +20,7 @@ The EAC contract system defines all configuration via **YAML contracts validated
 
 | Contract | File | Purpose |
 |----------|------|---------|
-| **Modules** | `modules.yml` | Module definitions, dependencies, file ownership |
+| **Modules** | `repository.yml` | Module definitions, dependencies, file ownership |
 | **Module Types** | `module-types.yml` | Type templates with build/test behavior |
 | **Environments** | `environments.yml` | Test execution environments (L0-L4) |
 | **Test Suites** | `test-suites.yml` | Test suites with tag selectors |
@@ -39,7 +39,7 @@ The EAC contract system defines all configuration via **YAML contracts validated
 
 ## Modules Contract
 
-**File**: `.r2r/eac/modules.yml`
+**File**: `.r2r/eac/repository.yml`
 
 **Purpose**: Central module registry defining module identities, dependencies, and file ownership
 
@@ -390,7 +390,7 @@ suites:
 
 ```mermaid
 graph TB
-    Modules[modules.yml] -->|references| Types[module-types.yml]
+    Modules[repository.yml] -->|references| Types[module-types.yml]
     Modules -->|depends_on| Modules
     Types -->|requires| SysDeps[system-dependencies.yml]
     Suites[test-suites.yml] -->|selects| Tags[testing-tags.yml]
@@ -453,7 +453,7 @@ r2r eac validate-design
 3. **Type defaults** (from `module-types.yml`)
 4. **System defaults** (hardcoded in eac-core)
 
-**Example**: `.r2r/eac/modules.personal.yml` overrides `.r2r/eac/modules.yml`
+**Example**: `.r2r/eac/modules.personal.yml` overrides `.r2r/eac/repository.yml`
 
 ---
 

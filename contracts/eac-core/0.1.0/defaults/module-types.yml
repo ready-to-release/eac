@@ -7,7 +7,7 @@
 
 types:
   # Go module type - unified type for all Go modules
-  # Behavior is driven by per-module artifact definitions in modules.yml:
+  # Behavior is driven by per-module artifact definitions in repository.yml:
   #   - No artifacts: library (compile-only verification)
   #   - executable artifacts: builds binaries for specified platforms
   #   - test artifacts: runs tests and captures results

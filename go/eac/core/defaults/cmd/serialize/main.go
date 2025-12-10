@@ -14,7 +14,7 @@ import (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: serialize <output-file>")
-		fmt.Println("Loads modules.yml and serializes resolved config to output file")
+		fmt.Println("Loads repository.yml and serializes resolved config to output file")
 		os.Exit(1)
 	}
 	outputFile := os.Args[1]

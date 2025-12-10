@@ -14,7 +14,7 @@ This tutorial teaches you how to set up and work with TypeScript/npm modules in 
 
 - Create TypeScript modules in the monorepo
 - Configure `package.json` and `tsconfig.json`
-- Register npm modules in `.r2r/eac/modules.yml`
+- Register npm modules in `.r2r/eac/repository.yml`
 - Build TypeScript modules with `r2r build`
 - Test TypeScript modules with `r2r test`
 - Manage npm dependencies between modules
@@ -35,7 +35,7 @@ This tutorial teaches you how to set up and work with TypeScript/npm modules in 
    - Configure `tsconfig.json`
 
 3. **Module contract configuration**
-   - Add to `.r2r/eac/modules.yml`
+   - Add to `.r2r/eac/repository.yml`
    - Define module type (npm-app, npm-lib)
    - Specify dependencies
    - Configure build settings
@@ -88,7 +88,7 @@ go/api-client/
 └── README.md
 ```
 
-**Module contract (`.r2r/eac/modules.yml`):**
+**Module contract (`.r2r/eac/repository.yml`):**
 ```yaml
 modules:
   - name: api-client
@@ -149,7 +149,7 @@ modules:
 
 ```bash
 # Register module (done once)
-# Edit .r2r/eac/modules.yml
+# Edit .r2r/eac/repository.yml
 
 # Install dependencies
 cd go/api-client

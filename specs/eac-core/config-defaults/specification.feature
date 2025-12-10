@@ -8,7 +8,7 @@ Feature: Configuration Defaults System
   The EAC configuration system loads defaults from contracts/eac-core/0.1.0/defaults/*.yml
   and merges them with user config from .r2r/eac/*.yml. User values override defaults.
 
-  Note: Modules are defined in repository.yml (not a separate modules.yml file).
+  Note: Modules are defined in repository.yml (not a separate repository.yml file).
 
   Background:
     Given I am in an isolated test repository
