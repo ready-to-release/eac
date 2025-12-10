@@ -1411,6 +1411,14 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 		return fmt.Errorf("failed to resolve artifacts: %w", err)
 	}
 
+	// Check if this module has docker_build with push=true
+	// If so, image artifacts are pushed to registry and may not exist locally
+	dockerConfig := module.GetDockerBuildConfig()
+	if dockerConfig == nil && moduleTypeDef != nil {
+		dockerConfig = moduleTypeDef.DockerBuild
+	}
+	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.Push
+
 	// Filter artifacts to only those that were requested
 	var requestedArtifactList []implinternal.ResolvedArtifact
 	var requestedMissing, requestedTotal int
@@ -1428,6 +1436,14 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 		if isRequested {
 			requestedArtifactList = append(requestedArtifactList, art)
 			requestedTotal++
+
+			// For image artifacts with push=true, trust that buildx push succeeded
+			// (buildx would have failed if push failed). The image may not exist locally.
+			if art.Type == "image" && imagesPushedToRegistry {
+				// Image was pushed to registry - trust the build
+				continue
+			}
+
 			if !art.Exists {
 				requestedMissing++
 			}
@@ -1439,6 +1455,10 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 		fmt.Fprintf(logWriter, "\n❌ Expected artifacts were not created:\n")
 		for _, art := range requestedArtifactList {
 			if !art.Exists {
+				// Skip image artifacts that were pushed to registry
+				if art.Type == "image" && imagesPushedToRegistry {
+					continue
+				}
 				fmt.Fprintf(logWriter, "  - %s: %s\n", art.ID, art.ResolvedPath)
 			}
 		}
