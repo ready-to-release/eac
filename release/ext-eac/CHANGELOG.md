@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6] - 2025-12-10
+
+### Added
+
+- feat(multi-module): enhance build system with dependencies and dry-run (#29)
+
+### Changed
+
+- chore(multi-module): consolidate AI module into eac-commands
+- ci: fix
+- chore(multi-module): refactor workflows and add build summaries
+- refactor(multi-module): migrate mkdocs config to templates (#35)
+- chore(multi-module): add books support and documentation infrastructure
+- refactor(multi-module): simplify template resolution logic
+- chore(deps): bump golang from 1.24-alpine to 1.25-alpine in /containers/ext-eac (#18)
+- chore(deps): bump actions/checkout from 4 to 6 (#19)
+- chore(multi-module): standardize template tagging system
+- chore(multi-module): standardize CI/CD workflows and build system
+
+### Fixed
+
+- fix(multi-module): enhance ci workflows and error handling
+
 ## [0.0.5] - 2025-12-02
 
 ### Added
@@ -70,7 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial container-based extension release
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.5...HEAD
+[Unreleased]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.6...HEAD
+[0.0.6]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.5...ext-eac/0.0.6
 [0.0.5]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.4...ext-eac/0.0.5
 [0.0.4]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.3...ext-eac/0.0.4
 [0.0.3]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.2...ext-eac/0.0.3
