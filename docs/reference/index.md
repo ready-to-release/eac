@@ -9,7 +9,6 @@ Technical reference material providing information-oriented documentation for th
 | Resource | Description |
 |----------|-------------|
 | [Command Cheat Sheet](./commands/cheat-sheet.md) | Quick reference for most common commands |
-| [Glossary](../glossary.md) | Definitions of key terms and concepts |
 
 ## In This Section
 

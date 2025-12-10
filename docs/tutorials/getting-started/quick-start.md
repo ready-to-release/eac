@@ -1,6 +1,21 @@
 # Quick Start Guide
 
-This tutorial will help you install the R2R CLI and run your first commands.
+{{ page_breadcrumb() }}
+
+Get up and running with the r2r CLI in 15 minutes. This tutorial walks you through installation, initialization, and running your first commands.
+
+**Estimated time:** 15 minutes
+**Prerequisites:** Command-line access, internet connection
+
+## What You'll Learn
+
+By the end of this tutorial, you'll be able to:
+
+- Install the r2r CLI on your platform (Linux, macOS, or Windows)
+- Initialize r2r configuration in a project
+- Run basic commands to explore your repository
+- Execute tests using the r2r CLI
+- Navigate to the next steps in your learning journey
 
 ## Step 1: Install the CLI
 
@@ -141,12 +156,26 @@ Available test suites:
 - `acceptance` - IV/OV/PV tests (PLTE acceptance)
 - `production-verification` - L4+PIV tests (production smoke tests)
 
+## What You Learned
+
+Congratulations! You've successfully:
+
+- ✅ Installed the r2r CLI on your system
+- ✅ Initialized r2r configuration with AI provider settings
+- ✅ Explored available commands with `r2r show help`
+- ✅ Viewed repository structure with `r2r show modules`
+- ✅ Ran tests with different test suites
+
+## Key Concepts Covered
+
+- **r2r CLI installation** - Binary distribution for multiple platforms
+- **Project initialization** - Setting up `.r2r/eac/` configuration
+- **AI provider configuration** - Claude, OpenAI, or Gemini integration
+- **Repository exploration** - Using `show` commands to understand structure
+- **Test suites** - Different test levels (commit, acceptance, production-verification)
+
 ## Next Steps
 
-Congratulations! You now have the R2R CLI installed and working. Continue to [Your First Feature Specification](./first-specification.md) to learn how to write Gherkin specifications.
+Continue to [Your First Feature Specification](./first-specification.md) to learn how to write Gherkin specifications that describe system behavior.
 
----
-
-*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | [Reference](../reference/) | [Explanation](../explanation/)*
-
-**You are here:** Tutorials — learning-oriented guides that take you through steps to complete a project.
+{{ diataxis_footer() }}

@@ -148,7 +148,9 @@ All modules defined in `.r2r/eac/modules.yml` with explicit dependencies and fil
 | Document | Description |
 |----------|-------------|
 | [Architecture](./architecture.md) | System architecture, components, and execution models |
+| [Viewing Architecture](./viewing-architecture.md) | How to view and work with C4 architecture diagrams |
 | [Modules](./modules.md) | Module system, dependencies, and build management |
+| [Module Types Reference](./module-types-reference.md) | Language support and module type specifications |
 | [Contracts](./contracts.md) | YAML contracts, schemas, and validation system |
 | [Repository Layout](./repository-layout.md) | Directory structure and file organization |
 | [Creating Commands](./creating-commands.md) | Developer guide for extending EAC with new commands |

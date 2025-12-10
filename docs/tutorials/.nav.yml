@@ -1,5 +1,31 @@
 title: Tutorials
 nav:
-  - index.md
-  - quick-start.md
-  - first-specification.md
+  - Overview: index.md
+
+  - Getting Started:
+    - getting-started/index.md
+    - Quick Start: getting-started/quick-start.md
+    - Your First Specification: getting-started/first-specification.md
+    - Your First Module: getting-started/first-module.md
+    - Understanding Test Suites: getting-started/understanding-test-suites.md
+
+  - Core Workflows:
+    - core-workflows/index.md
+    - TDD with Specifications: core-workflows/tdd-with-specifications.md
+    - Building and Testing Changes: core-workflows/building-and-testing.md
+    - Working with Git Worktrees: core-workflows/working-with-worktrees.md
+    - Making Your First Release: core-workflows/making-first-release.md
+
+  - Advanced Practices:
+    - advanced-practices/index.md
+    - Compliance-as-Code Basics: advanced-practices/compliance-as-code-basics.md
+    - CI/CD Integration: advanced-practices/ci-cd-integration.md
+    - Multi-Module Development: advanced-practices/multi-module-development.md
+    - Creating Custom Commands: advanced-practices/creating-custom-commands.md
+
+  - Specialized Topics:
+    - specialized-topics/index.md
+    - Effective BDD Scenarios: specialized-topics/effective-bdd-scenarios.md
+    - Architecture Documentation: specialized-topics/architecture-documentation.md
+    - Security Scanning Workflow: specialized-topics/security-scanning-workflow.md
+    - TypeScript Module Setup: specialized-topics/typescript-module-setup.md

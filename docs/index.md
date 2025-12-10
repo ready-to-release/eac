@@ -47,8 +47,8 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 
 Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.
 
-- [Quick Start Guide](tutorials/quick-start.md)
-- [Your First Feature Specification](tutorials/first-specification.md)
+- [Quick Start Guide](tutorials/getting-started/quick-start.md)
+- [Your First Feature Specification](tutorials/getting-started/first-specification.md)
 
 </td>
 <td width="50%" valign="top" markdown="1">

@@ -15,6 +15,23 @@ The EAC module system provides **independently buildable, testable units** with 
 
 ---
 
+## Module Architectures
+
+Each module includes C4 architecture diagrams documenting its design. View them interactively:
+
+```bash
+r2r eac serve-design
+# Opens http://localhost:8080
+```
+
+**Design files in repository:**
+- All modules: `specs/[module]/.design/workspace.dsl`
+- View in GitHub: [specs/*/​.design/](https://github.com/ready-to-release/eac/tree/main/specs)
+
+See [Viewing Architecture](./viewing-architecture.md) for detailed instructions.
+
+---
+
 ## Module Registry
 
 **File**: `.r2r/eac/modules.yml`

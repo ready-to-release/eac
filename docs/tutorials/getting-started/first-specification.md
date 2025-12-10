@@ -2,7 +2,22 @@
 
 {{ page_breadcrumb() }}
 
-This tutorial teaches you how to write Gherkin feature specifications that describe system behavior in a structured, testable format.
+Learn how to write Gherkin feature specifications that describe system behavior in a structured, testable format using the Given/When/Then pattern.
+
+**Estimated time:** 20 minutes
+**Prerequisites:** [Quick Start Guide](./quick-start.md), basic understanding of software requirements
+
+## What You'll Learn
+
+By the end of this tutorial, you'll be able to:
+
+- Understand the structure of Gherkin feature specifications
+- Write specifications using the Given/When/Then pattern
+- Use Features, Rules, and Scenarios to organize requirements
+- Apply appropriate tags for test levels and verification types
+- Validate specifications against quality standards
+- Use AI to generate specifications from natural language
+- Write effective, concrete scenarios
 
 ## What is a Feature Specification?
 
@@ -239,15 +254,36 @@ And I press enter
 Then I should see 10 results in the results div
 ```
 
+## What You Learned
+
+Congratulations! You've successfully:
+
+- ✅ Understood the structure of Gherkin specifications (Feature/Rule/Scenario)
+- ✅ Written specifications using Given/When/Then pattern
+- ✅ Applied tags for test levels and verification types
+- ✅ Created concrete, independent, and focused scenarios
+- ✅ Validated specifications against quality standards
+- ✅ Learned both manual and AI-assisted specification creation
+
+## Key Concepts Covered
+
+- **Gherkin syntax** - Feature, Rule, Scenario, Given/When/Then structure
+- **Specification tags** - Test levels (@L0-L4), verification types (@ov, @iv, @pv), dependencies (@deps:go)
+- **Scenario quality** - Concrete examples, independence, focus, declarative style
+- **AI-assisted generation** - Using `r2r create spec` to generate from descriptions
+- **Validation** - Ensuring specifications meet quality standards with `r2r validate specs`
+- **Background sections** - Sharing common setup across scenarios
+- **Best practices** - Writing effective, maintainable specifications
+
 ## Next Steps
 
-You now know how to write Gherkin specifications! Here's what to explore next:
+You now have the foundation for writing specifications! Continue your learning journey:
 
+- **Create your first module** - [Your First Module](./first-module.md) to implement the code
+- **Learn TDD workflow** - [TDD with Specifications](../core-workflows/tdd-with-specifications.md) for the full development loop
 - **Browse existing specs** - Look in the `specs/` directory for real-world examples
-- **Use AI generation** - Try `r2r create spec` to generate specifications from descriptions
-- **Learn validation** - Run `r2r validate specs specs/` to check all specifications
-- **Integrate with testing** - Implement step definitions to make specs executable
+- **Explore how-to guides** - See [Specifications](../../how-to-guides/eac/specifications/) for task-oriented guidance
 
-For more details on specific commands, see the [How-to Guides](../how-to-guides/) and [Reference](../reference/) documentation.
+For comprehensive details, see the [Specifications Explanation](../../explanation/specifications/) documentation.
 
 {{ diataxis_footer() }}

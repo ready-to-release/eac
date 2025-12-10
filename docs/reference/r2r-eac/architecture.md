@@ -10,6 +10,26 @@ R2R and EAC implement a **container-based, contract-driven architecture** for ev
 
 ---
 
+## Viewing Architecture Diagrams
+
+All architecture diagrams referenced in this document can be viewed interactively using Structurizr:
+
+```bash
+r2r eac serve-design
+# Opens http://localhost:8080
+```
+
+**Design files:**
+- **eac-commands**: [specs/eac-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-commands/.design/)
+- **eac-core**: [specs/eac-core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-core/.design/)
+- **eac-mcp-commands**: [specs/eac-mcp-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-commands/.design/)
+- **r2r-cli**: [specs/r2r-cli/.design/](https://github.com/ready-to-release/eac/tree/main/specs/r2r-cli/.design/)
+- **ext-eac**: [specs/ext-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ext-eac/.design/)
+
+See [Viewing Architecture](./viewing-architecture.md) for detailed instructions.
+
+---
+
 ## System Diagram
 
 ```mermaid
