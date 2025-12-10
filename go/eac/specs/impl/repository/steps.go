@@ -3,14 +3,18 @@ package repository
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/cucumber/godog"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
@@ -248,6 +252,34 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^scripts/cmd/ should contain only directories if it exists$`, func() error {
 		return repoCtx.scriptsCmdDirShouldContainOnlyDirectoriesIfExists()
 	})
+
+	// Docs mermaid cache validation steps
+	sc.Step(`^I scan docs/ for all mermaid code blocks$`, func() error {
+		return repoCtx.scanDocsForMermaidBlocks()
+	})
+	sc.Step(`^I check each mermaid block against the cache$`, func() error {
+		return repoCtx.checkMermaidBlocksAgainstCache()
+	})
+	sc.Step(`^all mermaid diagrams should have cached SVGs$`, func() error {
+		return repoCtx.allMermaidDiagramsShouldHaveCachedSVGs()
+	})
+	sc.Step(`^if any diagrams are missing from cache, I should see:$`, func(expected *godog.DocString) error {
+		return repoCtx.ifDiagramsMissingShowUpdateCommand(expected)
+	})
+
+	// Docs drawio cache validation steps
+	sc.Step(`^I scan docs/ for all drawio\.png images$`, func() error {
+		return repoCtx.scanDocsForDrawioImages()
+	})
+	sc.Step(`^I check each drawio image against the cache$`, func() error {
+		return repoCtx.checkDrawioImagesAgainstCache()
+	})
+	sc.Step(`^all drawio images should have cached optimized PNGs$`, func() error {
+		return repoCtx.allDrawioImagesShouldHaveCachedPNGs()
+	})
+	sc.Step(`^if any images are missing from cache, I should see:$`, func(expected *godog.DocString) error {
+		return repoCtx.ifImagesMissingShowUpdateCommand(expected)
+	})
 }
 
 // repositoryContext holds state for repository validation scenarios.
@@ -289,6 +321,31 @@ type repositoryContext struct {
 	discoveredScripts    []string
 	disallowedScripts    []string
 	looseScriptsInType   []string
+
+	// Docs mermaid cache validation
+	mermaidBlocks         []mermaidBlockInfo
+	uncachedMermaidBlocks []mermaidBlockInfo
+
+	// Docs drawio cache validation
+	drawioImages         []drawioImageInfo
+	uncachedDrawioImages []drawioImageInfo
+}
+
+// mermaidBlockInfo is a local struct for mermaid block tracking
+// (to avoid importing books package which violates module isolation)
+type mermaidBlockInfo struct {
+	content    string
+	hash       string
+	sourceFile string
+	blockIndex int
+}
+
+// drawioImageInfo is a local struct for drawio image tracking
+// (to avoid importing books package which violates module isolation)
+type drawioImageInfo struct {
+	sourceFile string
+	relPath    string
+	hash       string
 }
 
 func (c *repositoryContext) ensureRepoRoot() error {
@@ -1198,6 +1255,248 @@ func (c *repositoryContext) scriptsTypeDirShouldContainOnlyDirectories(typeDir s
 
 func (c *repositoryContext) scriptsCmdDirShouldContainOnlyDirectoriesIfExists() error {
 	return c.scriptsTypeDirShouldContainOnlyDirectories("scripts/cmd")
+}
+
+// ============================================================================
+// Docs Mermaid Cache Validation Steps
+// ============================================================================
+
+// mermaidBlockPlain matches ```mermaid...``` blocks
+var mermaidBlockPlain = regexp.MustCompile("(?s)```mermaid\\s*\n(.*?)```")
+
+// sizeDirectivePattern matches %%{size:...}%% or %%{width:...}%% lines
+var sizeDirectivePattern = regexp.MustCompile(`(?m)^%%\{(?:size|width):[^}]+\}%%\s*\n?`)
+
+func (c *repositoryContext) scanDocsForMermaidBlocks() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	c.mermaidBlocks = []mermaidBlockInfo{}
+	docsDir := paths.DocsSourcePath(c.repoRoot)
+
+	err := filepath.WalkDir(docsDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		// Extract mermaid blocks
+		matches := mermaidBlockPlain.FindAllStringSubmatch(string(content), -1)
+		for idx, match := range matches {
+			if len(match) < 2 {
+				continue
+			}
+			diagramContent := strings.TrimSpace(match[1])
+			if diagramContent == "" {
+				continue
+			}
+
+			// Strip size directives before hashing
+			cleanContent := sizeDirectivePattern.ReplaceAllString(diagramContent, "")
+			cleanContent = strings.TrimSpace(cleanContent)
+
+			// Hash content (same algorithm as books package)
+			hash := hashMermaidContent(cleanContent)
+
+			c.mermaidBlocks = append(c.mermaidBlocks, mermaidBlockInfo{
+				content:    diagramContent,
+				hash:       hash,
+				sourceFile: path,
+				blockIndex: idx,
+			})
+		}
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to scan docs for mermaid: %w", err)
+	}
+	return nil
+}
+
+// hashMermaidContent creates a cache key hash for mermaid content
+// Must match the algorithm in books/cache.go
+func hashMermaidContent(code string) string {
+	h := sha256.New()
+	fmt.Fprintf(h, "code:%s\n", code)
+	fmt.Fprintf(h, "width:%d\n", 0)
+	fmt.Fprintf(h, "height:%d\n", 0)
+	fmt.Fprintf(h, "theme:%s\n", "")
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func (c *repositoryContext) checkMermaidBlocksAgainstCache() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	cacheDir := paths.DocsCachePath(c.repoRoot)
+	c.uncachedMermaidBlocks = []mermaidBlockInfo{}
+
+	for _, block := range c.mermaidBlocks {
+		// Check if cached SVG exists
+		cachePath := filepath.Join(cacheDir, "mermaid", block.hash+".svg")
+		if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+			c.uncachedMermaidBlocks = append(c.uncachedMermaidBlocks, block)
+		}
+	}
+	return nil
+}
+
+func (c *repositoryContext) allMermaidDiagramsShouldHaveCachedSVGs() error {
+	if len(c.uncachedMermaidBlocks) > 0 {
+		docsDir := paths.DocsSourcePath(c.repoRoot)
+		var details strings.Builder
+		details.WriteString(fmt.Sprintf("Found %d mermaid diagram(s) missing from cache:\n\n", len(c.uncachedMermaidBlocks)))
+
+		for _, block := range c.uncachedMermaidBlocks {
+			relPath, _ := filepath.Rel(docsDir, block.sourceFile)
+			firstLine := strings.Split(block.content, "\n")[0]
+			if len(firstLine) > 50 {
+				firstLine = firstLine[:50] + "..."
+			}
+			details.WriteString(fmt.Sprintf("  - %s [%d]: %s\n", relPath, block.blockIndex, firstLine))
+		}
+
+		details.WriteString("\nRun 'r2r update docs' to update the mermaid cache.\n")
+		return fmt.Errorf("%s", details.String())
+	}
+	return nil
+}
+
+func (c *repositoryContext) ifDiagramsMissingShowUpdateCommand(expected *godog.DocString) error {
+	// This is a passive assertion - the error message from allMermaidDiagramsShouldHaveCachedSVGs
+	// already includes the update command instruction
+	return nil
+}
+
+// ============================================================================
+// Docs Drawio Cache Validation Steps
+// ============================================================================
+
+func (c *repositoryContext) scanDocsForDrawioImages() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	c.drawioImages = []drawioImageInfo{}
+	docsDir := paths.DocsSourcePath(c.repoRoot)
+
+	err := filepath.WalkDir(docsDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		// Check if this is a drawio.png file
+		if !strings.HasSuffix(path, ".drawio.png") {
+			return nil
+		}
+
+		// Hash the file content
+		hash, err := hashFileContent(path)
+		if err != nil {
+			return fmt.Errorf("hashing %s: %w", path, err)
+		}
+
+		// Calculate relative path from docs directory
+		relPath, err := filepath.Rel(docsDir, path)
+		if err != nil {
+			relPath = path
+		}
+
+		c.drawioImages = append(c.drawioImages, drawioImageInfo{
+			sourceFile: path,
+			relPath:    relPath,
+			hash:       hash,
+		})
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to scan docs for drawio images: %w", err)
+	}
+	return nil
+}
+
+// hashFileContent returns the SHA256 hash of a file's content
+func hashFileContent(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// hashDrawioContent creates a cache key hash for drawio image
+// Must match the algorithm in books/cache.go
+func hashDrawioContent(sourceHash string, maxWidth int) string {
+	h := sha256.New()
+	fmt.Fprintf(h, "source:%s\n", sourceHash)
+	fmt.Fprintf(h, "maxWidth:%d\n", maxWidth)
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func (c *repositoryContext) checkDrawioImagesAgainstCache() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	cacheDir := paths.DocsCachePath(c.repoRoot)
+	c.uncachedDrawioImages = []drawioImageInfo{}
+
+	// MaxImageWidthPDF = 1200 (must match books/images.go)
+	const maxWidth = 1200
+
+	for _, img := range c.drawioImages {
+		// Calculate cache key hash (same algorithm as books/cache.go)
+		cacheHash := hashDrawioContent(img.hash, maxWidth)
+		cachePath := filepath.Join(cacheDir, "drawio", cacheHash+".png")
+
+		if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+			c.uncachedDrawioImages = append(c.uncachedDrawioImages, img)
+		}
+	}
+	return nil
+}
+
+func (c *repositoryContext) allDrawioImagesShouldHaveCachedPNGs() error {
+	if len(c.uncachedDrawioImages) > 0 {
+		var details strings.Builder
+		details.WriteString(fmt.Sprintf("Found %d drawio image(s) missing from cache:\n\n", len(c.uncachedDrawioImages)))
+
+		for _, img := range c.uncachedDrawioImages {
+			details.WriteString(fmt.Sprintf("  - %s\n", img.relPath))
+		}
+
+		details.WriteString("\nRun 'r2r update docs' to update the drawio cache.\n")
+		return fmt.Errorf("%s", details.String())
+	}
+	return nil
+}
+
+func (c *repositoryContext) ifImagesMissingShowUpdateCommand(expected *godog.DocString) error {
+	// This is a passive assertion - the error message from allDrawioImagesShouldHaveCachedPNGs
+	// already includes the update command instruction
+	return nil
 }
 
 // Helper functions

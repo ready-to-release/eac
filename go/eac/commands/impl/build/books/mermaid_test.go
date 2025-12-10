@@ -48,47 +48,47 @@ sequenceDiagram
 	}
 
 	// Verify first block
-	if blocks[0].blockIndex != 0 {
-		t.Errorf("Block 0: expected index 0, got %d", blocks[0].blockIndex)
+	if blocks[0].BlockIndex != 0 {
+		t.Errorf("Block 0: expected index 0, got %d", blocks[0].BlockIndex)
 	}
-	if !contains(blocks[0].content, "graph TD") {
+	if !contains(blocks[0].Content, "graph TD") {
 		t.Errorf("Block 0: expected content to contain 'graph TD'")
 	}
-	if blocks[0].filename != "test_mermaid_0_"+blocks[0].hash+".svg" {
-		t.Errorf("Block 0: unexpected filename %s", blocks[0].filename)
+	if blocks[0].Filename != "test_mermaid_0_"+blocks[0].Hash+".svg" {
+		t.Errorf("Block 0: unexpected filename %s", blocks[0].Filename)
 	}
 
 	// Verify second block (with size directive)
-	if blocks[1].blockIndex != 1 {
-		t.Errorf("Block 1: expected index 1, got %d", blocks[1].blockIndex)
+	if blocks[1].BlockIndex != 1 {
+		t.Errorf("Block 1: expected index 1, got %d", blocks[1].BlockIndex)
 	}
-	if !contains(blocks[1].content, "flowchart LR") {
+	if !contains(blocks[1].Content, "flowchart LR") {
 		t.Errorf("Block 1: expected content to contain 'flowchart LR'")
 	}
 	// Content should include size directive
-	if !contains(blocks[1].content, "%%{size:medium}%%") {
+	if !contains(blocks[1].Content, "%%{size:medium}%%") {
 		t.Errorf("Block 1: expected content to preserve size directive")
 	}
 
 	// Verify third block
-	if blocks[2].blockIndex != 2 {
-		t.Errorf("Block 2: expected index 2, got %d", blocks[2].blockIndex)
+	if blocks[2].BlockIndex != 2 {
+		t.Errorf("Block 2: expected index 2, got %d", blocks[2].BlockIndex)
 	}
-	if !contains(blocks[2].content, "sequenceDiagram") {
+	if !contains(blocks[2].Content, "sequenceDiagram") {
 		t.Errorf("Block 2: expected content to contain 'sequenceDiagram'")
 	}
 
 	t.Logf("✓ Found %d diagrams", len(blocks))
 	for i, block := range blocks {
-		t.Logf("  [%d] %s (hash: %s)", i, block.filename, block.hash)
+		t.Logf("  [%d] %s (hash: %s)", i, block.Filename, block.Hash)
 	}
 }
 
 func TestHashContent(t *testing.T) {
 	// Test that hash is deterministic
 	content := "graph TD\n    A --> B"
-	hash1 := hashContent(content)
-	hash2 := hashContent(content)
+	hash1 := HashContent(content)
+	hash2 := HashContent(content)
 
 	if hash1 != hash2 {
 		t.Errorf("Hash not deterministic: %s != %s", hash1, hash2)
@@ -101,7 +101,7 @@ func TestHashContent(t *testing.T) {
 
 	// Different content should give different hash
 	content2 := "graph TD\n    A --> C"
-	hash3 := hashContent(content2)
+	hash3 := HashContent(content2)
 
 	if hash1 == hash3 {
 		t.Errorf("Different content should have different hashes")
@@ -143,9 +143,9 @@ flowchart LR
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := stripSizeDirective(tt.input)
+			result := StripSizeDirective(tt.input)
 			if result != tt.expected {
-				t.Errorf("stripSizeDirective() = %q, want %q", result, tt.expected)
+				t.Errorf("StripSizeDirective() = %q, want %q", result, tt.expected)
 			}
 		})
 	}
@@ -187,19 +187,19 @@ Some more content.
 
 	// Verify the block
 	block := blocks[0]
-	if block.sourceFile != testFile {
-		t.Errorf("Expected sourceFile %s, got %s", testFile, block.sourceFile)
+	if block.SourceFile != testFile {
+		t.Errorf("Expected sourceFile %s, got %s", testFile, block.SourceFile)
 	}
-	if block.relPath != "real-test.md" {
-		t.Errorf("Expected relPath 'real-test.md', got %s", block.relPath)
+	if block.RelPath != "real-test.md" {
+		t.Errorf("Expected relPath 'real-test.md', got %s", block.RelPath)
 	}
-	if !contains(block.content, "A[Start]") {
+	if !contains(block.Content, "A[Start]") {
 		t.Errorf("Expected content to contain 'A[Start]'")
 	}
 
-	t.Logf("✓ Extracted from real file: %s", block.filename)
-	t.Logf("  Hash: %s", block.hash)
-	t.Logf("  Content preview: %s", block.content[:30]+"...")
+	t.Logf("✓ Extracted from real file: %s", block.Filename)
+	t.Logf("  Hash: %s", block.Hash)
+	t.Logf("  Content preview: %s", block.Content[:30]+"...")
 }
 
 func TestCheckMermaidCache(t *testing.T) {
@@ -216,21 +216,21 @@ func TestCheckMermaidCache(t *testing.T) {
 	}
 
 	// Create some test blocks
-	blocks := []mermaidBlock{
+	blocks := []MermaidBlock{
 		{
-			content:  "graph TD\n    A --> B",
-			hash:     "aaaaaaaa",
-			filename: "test_mermaid_0_aaaaaaaa.svg",
+			Content:  "graph TD\n    A --> B",
+			Hash:     "aaaaaaaa",
+			Filename: "test_mermaid_0_aaaaaaaa.svg",
 		},
 		{
-			content:  "graph TD\n    C --> D",
-			hash:     "bbbbbbbb",
-			filename: "test_mermaid_1_bbbbbbbb.svg",
+			Content:  "graph TD\n    C --> D",
+			Hash:     "bbbbbbbb",
+			Filename: "test_mermaid_1_bbbbbbbb.svg",
 		},
 		{
-			content:  "graph TD\n    E --> F",
-			hash:     "cccccccc",
-			filename: "test_mermaid_2_cccccccc.svg",
+			Content:  "graph TD\n    E --> F",
+			Hash:     "cccccccc",
+			Filename: "test_mermaid_2_cccccccc.svg",
 		},
 	}
 
@@ -246,10 +246,10 @@ func TestCheckMermaidCache(t *testing.T) {
 
 	// All should be cache misses
 	for i, status := range statuses {
-		if status.cached {
+		if status.Cached {
 			t.Errorf("Block %d: expected cache miss, got hit", i)
 		}
-		if status.cachePath == "" {
+		if status.CachePath == "" {
 			t.Errorf("Block %d: cachePath should be set", i)
 		}
 	}
@@ -263,7 +263,7 @@ func TestCheckMermaidCache(t *testing.T) {
 
 	// Create dummy SVG files for first two blocks (simulate cache hits)
 	for i := 0; i < 2; i++ {
-		svgPath := filepath.Join(cacheDir, blocks[i].filename)
+		svgPath := filepath.Join(cacheDir, blocks[i].Filename)
 		if err := os.WriteFile(svgPath, []byte("<svg></svg>"), 0644); err != nil {
 			t.Fatalf("Failed to create cached SVG: %v", err)
 		}
@@ -276,13 +276,13 @@ func TestCheckMermaidCache(t *testing.T) {
 	}
 
 	// Check results
-	if !statuses[0].cached {
+	if !statuses[0].Cached {
 		t.Errorf("Block 0: expected cache hit")
 	}
-	if !statuses[1].cached {
+	if !statuses[1].Cached {
 		t.Errorf("Block 1: expected cache hit")
 	}
-	if statuses[2].cached {
+	if statuses[2].Cached {
 		t.Errorf("Block 2: expected cache miss")
 	}
 
@@ -290,10 +290,10 @@ func TestCheckMermaidCache(t *testing.T) {
 
 	// Verify cache paths are correct
 	for i, status := range statuses {
-		expectedPath := filepath.Join(cacheDir, blocks[i].filename)
-		if status.cachePath != expectedPath {
+		expectedPath := filepath.Join(cacheDir, blocks[i].Filename)
+		if status.CachePath != expectedPath {
 			t.Errorf("Block %d: cachePath = %s, want %s",
-				i, status.cachePath, expectedPath)
+				i, status.CachePath, expectedPath)
 		}
 	}
 
@@ -318,7 +318,7 @@ func TestCacheDirectoryCreation(t *testing.T) {
 	}
 
 	// Call checkMermaidCache with empty blocks
-	_, err := p.checkMermaidCache([]mermaidBlock{})
+	_, err := p.checkMermaidCache([]MermaidBlock{})
 	if err != nil {
 		t.Fatalf("checkMermaidCache failed: %v", err)
 	}
@@ -415,7 +415,7 @@ Text after.
 	}
 
 	// Create blocks map
-	blocksByFile := map[string][]mermaidBlock{
+	blocksByFile := map[string][]MermaidBlock{
 		testFile: blocks,
 	}
 
@@ -441,11 +441,11 @@ Text after.
 		t.Errorf("Modified file doesn't contain img tags")
 	}
 
-	if !contains(modifiedStr, blocks[0].filename) {
+	if !contains(modifiedStr, blocks[0].Filename) {
 		t.Errorf("Modified file doesn't contain first diagram filename")
 	}
 
-	if !contains(modifiedStr, blocks[1].filename) {
+	if !contains(modifiedStr, blocks[1].Filename) {
 		t.Errorf("Modified file doesn't contain second diagram filename")
 	}
 
@@ -504,7 +504,7 @@ graph TD
 	}
 
 	// Create blocks map
-	blocksByFile := map[string][]mermaidBlock{
+	blocksByFile := map[string][]MermaidBlock{
 		testFile: blocks,
 	}
 
@@ -531,12 +531,12 @@ graph TD
 		t.Errorf("Modified file doesn't have correct relative path, got: %s", modifiedStr)
 	}
 
-	if !contains(modifiedStr, blocks[0].filename) {
+	if !contains(modifiedStr, blocks[0].Filename) {
 		t.Errorf("Modified file doesn't contain diagram filename")
 	}
 
 	t.Logf("✓ Replaced mermaid block with correct relative path")
-	t.Logf("  Path: ../../assets/rendered/mermaid/%s", blocks[0].filename)
+	t.Logf("  Path: ../../assets/rendered/mermaid/%s", blocks[0].Filename)
 }
 
 // Helper function

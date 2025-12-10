@@ -156,8 +156,13 @@ func (p *Preprocessor) Preprocess() error {
 	stats := p.assetCache.Stats()
 	if stats.MermaidHits+stats.MermaidMisses > 0 {
 		hitRate := float64(stats.MermaidHits) / float64(stats.MermaidHits+stats.MermaidMisses) * 100
-		p.log("   📊 Persistent cache: %d mermaid hits, %d misses (%.1f%% hit rate)",
+		p.log("   📊 Mermaid cache: %d hits, %d misses (%.1f%% hit rate)",
 			stats.MermaidHits, stats.MermaidMisses, hitRate)
+	}
+	if stats.DrawioHits+stats.DrawioMisses > 0 {
+		hitRate := float64(stats.DrawioHits) / float64(stats.DrawioHits+stats.DrawioMisses) * 100
+		p.log("   📊 Drawio cache: %d hits, %d misses (%.1f%% hit rate)",
+			stats.DrawioHits, stats.DrawioMisses, hitRate)
 	}
 
 	return nil
