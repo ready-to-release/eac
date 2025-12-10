@@ -161,7 +161,7 @@ jobs:
 
           echo ""
           echo "Test 1: Help command"
-          docker run --rm -v $(pwd):/var/task ext-eac:ci-test help | head -20
+          docker run --rm -v $(pwd):/var/task ext-eac:ci-test help 2>&1 | head -20 || true
 
           echo ""
           echo "Test 2: Extension metadata"

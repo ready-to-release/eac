@@ -172,11 +172,11 @@ runs:
         fi
 
         echo "Directory structure:"
-        find out/build -type d | head -20
+        find out/build -type d 2>/dev/null | head -20 || true
         echo ""
 
         echo "All files to upload:"
-        find out/build -type f
+        find out/build -type f 2>/dev/null | head -50 || true
         echo ""
 
         echo "Total files: $(find out/build -type f | wc -l)"
