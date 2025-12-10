@@ -401,8 +401,8 @@ func (o *Orchestrator) PrintSummary(results []WorkResult) {
 				fmt.Fprintf(o.orchestratorOut, "  %s%s", result.Moniker, nl)
 				if len(result.Errors) > 0 {
 					for _, errMsg := range result.Errors {
-						if len(errMsg) > 80 {
-							errMsg = errMsg[:77] + "..."
+						if len(errMsg) > 120 {
+							errMsg = errMsg[:117] + "..."
 						}
 						fmt.Fprintf(o.orchestratorOut, "    %s%s", errMsg, nl)
 					}

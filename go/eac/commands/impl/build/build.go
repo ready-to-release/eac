@@ -1459,7 +1459,8 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 				if art.Type == "image" && imagesPushedToRegistry {
 					continue
 				}
-				fmt.Fprintf(logWriter, "  - %s: %s\n", art.ID, art.ResolvedPath)
+				// Include ❌ so log parser picks up each missing artifact for summary display
+				fmt.Fprintf(logWriter, "  ❌ Missing: %s (%s)\n", art.ID, art.ResolvedPath)
 			}
 		}
 		return fmt.Errorf("build succeeded but %d/%d artifacts missing", requestedMissing, requestedTotal)
