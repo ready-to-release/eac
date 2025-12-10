@@ -78,6 +78,7 @@ Organizations must now navigate an increasingly complex web of regulations:
 Consider a typical regulated software release:
 
 ```mermaid
+%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '16px'}}}%%
 flowchart LR
     A[Development] --> B[Manual testing]
     B --> C[Documentation]

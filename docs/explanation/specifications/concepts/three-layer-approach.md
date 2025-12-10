@@ -106,6 +106,7 @@ Rule: Creates project directory structure
 Kent Beck's **Canon TDD** provides a specific five-step workflow for test-driven development:
 
 ```mermaid
+%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '16px'}}}%%
 flowchart LR
     List[1. List<br/>Behavioral variants] --> Test[2. Test<br/>Write one test]
     Test --> Pass[3. Pass<br/>Make it work]
@@ -113,7 +114,6 @@ flowchart LR
     Refactor --> Repeat{Test List Empty?}
     Repeat -->|No| Test
     Repeat -->|Yes| Done[Complete]
-
 ```
 *We often discover new tests while we implement a test, add them to the test list.*
 
