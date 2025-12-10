@@ -178,6 +178,62 @@ Fatal: critical failure
 	}
 }
 
+func TestOrchestrator_LogParsing_MkDocs(t *testing.T) {
+	// Test that MkDocs-style warnings are captured as errors
+	tmpDir := t.TempDir()
+	logPath := filepath.Join(tmpDir, "mkdocs.log")
+
+	// Simulate MkDocs strict mode output
+	logContent := `📚 Building MkDocs site using Docker
+INFO - Building documentation...
+WARNING -  Doc file 'intro.md' contains a link 'nonexistent.md', but target not found
+WARNING -  Doc file 'guide.md' contains unrecognized extension
+INFO -  Documentation built in 1.23 seconds
+Aborted with 2 warnings in strict mode!
+❌ MkDocs build failed
+`
+	if err := os.WriteFile(logPath, []byte(logContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	warnings, errors := parseLogForIssues(logPath)
+
+	// MkDocs "WARNING -" lines should be treated as errors, not warnings
+	if len(warnings) != 0 {
+		t.Errorf("Expected 0 warnings (MkDocs WARNING - should be errors), got %d: %v", len(warnings), warnings)
+	}
+
+	// Should capture: 2 WARNING - lines + 1 Aborted + 1 ❌ line = 4 errors
+	if len(errors) != 4 {
+		t.Errorf("Expected 4 errors, got %d: %v", len(errors), errors)
+	}
+
+	// Verify specific error messages are captured
+	hasWarning := false
+	hasAborted := false
+	hasEmoji := false
+	for _, e := range errors {
+		if strings.HasPrefix(e, "WARNING -") {
+			hasWarning = true
+		}
+		if strings.Contains(e, "Aborted with") {
+			hasAborted = true
+		}
+		if strings.Contains(e, "❌") {
+			hasEmoji = true
+		}
+	}
+	if !hasWarning {
+		t.Error("Expected to capture MkDocs 'WARNING -' lines as errors")
+	}
+	if !hasAborted {
+		t.Error("Expected to capture 'Aborted with' message as error")
+	}
+	if !hasEmoji {
+		t.Error("Expected to capture ❌ emoji as error")
+	}
+}
+
 func TestFormatDuration(t *testing.T) {
 	tests := []struct {
 		duration time.Duration

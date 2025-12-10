@@ -251,6 +251,9 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 			} else if info.IsDir() {
 				exists = false
 				errMsg = fmt.Sprintf("expected file but found directory: %s", filePath)
+			} else if info.Size() == 0 {
+				exists = false
+				errMsg = fmt.Sprintf("file is empty: %s", filePath)
 			} else {
 				exists = true
 			}
