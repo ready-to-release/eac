@@ -317,6 +317,11 @@ func RenderSingleDiagram(block MermaidBlock, outputPath string, workspaceRoot st
 	tmpDir := filepath.Dir(outputPath)
 	tmpFile := filepath.Join(tmpDir, block.Filename+".mmd")
 
+	// Ensure directory exists before writing
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return fmt.Errorf("creating temp directory: %w", err)
+	}
+
 	// Write diagram content to temp file
 	if err := os.WriteFile(tmpFile, []byte(block.Content), 0644); err != nil {
 		return fmt.Errorf("writing temp file: %w", err)

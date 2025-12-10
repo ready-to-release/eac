@@ -219,3 +219,7 @@ MD059:
     - "here"
     - "link"
     - "more"
+
+# MD060 - Table column style (consistent, padded, compact)
+MD060:
+  style: "padded"

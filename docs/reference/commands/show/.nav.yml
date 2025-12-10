@@ -1,0 +1,23 @@
+title: show Commands
+nav:
+  - index.md
+  - show.md
+  - artifacts.md
+  - books.md
+  - build-summary.md
+  - build-times.md
+  - config.md
+  - dependencies.md
+  - environments.md
+  - files.md
+  - files-changed.md
+  - files-staged.md
+  - help.md
+  - modules.md
+  - moduletypes.md
+  - suite.md
+  - test-summary.md
+  - test-timings.md
+  - tests.md
+  - valid-commands.md
+  - workspaces.md

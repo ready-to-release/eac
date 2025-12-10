@@ -1,32 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/everything-as-code/paradigm.md
-
-## Soul
-
-Deep dive into what "Everything as Code" means practically, extending beyond infrastructure-as-code to specifications, documentation, compliance, policy, and architecture, explaining the three fundamental changes this creates.
-
-## Sections
-
-1. What "Everything as Code" Means
-   - Not Just Infrastructure
-   - The Core Principle
-2. The Three Fundamental Changes
-   - Single Timeline for Traceability
-   - Building Shared Language: Domain-Driven Design
-   - Collaboration Through Executable Specifications
-   - Continuous Automation With Every Change
-3. The Value Proposition
-4. Key Principles
-   - Version Everything
-   - Make It Executable
-   - Automate Validation
-   - Capture Evidence Continuously
-   - Single Source of Truth
-5. References
-
--->
-
 # The "Everything as Code" Paradigm
+
+{{ page_breadcrumb() }}
 
 > **What it means to treat everything as version-controlled, executable artifacts**
 
@@ -130,8 +104,8 @@ When specifications use the Ubiquitous Language:
 
 For more on building shared language for specifications, see:
 
-- [Ubiquitous Language](../specifications/ubiquitous-language.md) - DDD foundation
-- [Event Storming](../specifications/event-storming.md) - Domain discovery workshops
+- [Ubiquitous Language](../specifications/concepts/ubiquitous-language.md) - DDD foundation
+- [Event Storming](../specifications/discovery/event-storming-overview.md) - Domain discovery workshops
 
 ### Collaboration Through Executable Specifications
 
@@ -296,3 +270,5 @@ Duplication causes drift:
 - [Accelerate: The Science of Lean Software and DevOps](../references.md#accelerate)
 - [The DevOps Handbook](../references.md#the-devops-handbook)
 - [Continuous Delivery](../references.md#continuous-delivery)
+
+{{ diataxis_footer() }}

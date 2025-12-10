@@ -1,10 +1,6 @@
-title: Reference
 nav:
   - index.md
+  - r2r-eac
   - continuous-delivery
-  - specifications
   - decision-records
   - commands
-  - repository-layout.md
-  - claude-code-programmatic-access.md
-  - risk-assessment.md

@@ -96,3 +96,4 @@ docker-compose.override.yml
 .r2r/prompts/
 nul
 __pycache__/
+main.py

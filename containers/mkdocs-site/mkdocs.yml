@@ -37,7 +37,9 @@ theme:
 
 plugins:
   - search
+  - macros
   - awesome-nav
+  - drawio
   # Mermaid diagram rendering for web (JavaScript-based)
   - mermaid2:
       version: '9.4.3'
@@ -63,6 +65,8 @@ markdown_extensions:
 extra_css:
   - assets/templates/web-light/styles.css
   - assets/templates/web-dark/styles.css
+  - assets/css/diataxis-footer.css
+  - assets/css/breadcrumb.css
 
 extra_javascript:
   # Draw.io viewer - enables interactive/clickable .drawio diagrams

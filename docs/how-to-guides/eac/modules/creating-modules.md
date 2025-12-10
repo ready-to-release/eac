@@ -1,29 +1,6 @@
-<!-- EDITOR
-# Editor: how-to-guides/eac/creating-modules.md
-
-## Soul
-
-Comprehensive guide for defining modules in modules.yml covering module anatomy (moniker, type, files, dependencies), file ownership patterns, and workflow integration.
-
-## Sections
-
-1. Problem/Solution
-2. What is a Module?
-3. Quick Start
-4. Module Contract Structure
-5. Common Module Types
-6. Dependencies
-7. File Ownership
-8. Workflows
-9. Repository-Level Files
-10. Build and Test
-11. Best Practices
-12. Troubleshooting
-13. See Also
-
--->
-
 # Creating Modules
+
+{{ page_breadcrumb() }}
 
 **Problem**: You want to add a new component to your repository with proper file ownership, dependencies, and build configuration.
 
@@ -37,6 +14,22 @@ A module is a logical unit of code with:
 - **Type**: Classification that provides defaults (e.g., `go`, `container`, `typescript`, `static`)
 - **Files**: Ownership boundaries (which files belong to this module)
 - **Dependencies**: Other modules this depends on
+
+## Choosing a Module Type
+
+Select the appropriate type based on your module's language:
+
+| Language | Module Type | Build Support | Test Support |
+|----------|-------------|---------------|--------------|
+| Go | `go` | ✅ Full (cross-compile, version inject) | ✅ gotest, godog |
+| TypeScript/JavaScript | `typescript` | ✅ npm, tsc | ✅ mocha, cucumber-js |
+| Any (containerized) | `container` | ✅ Docker buildx | Depends on container |
+| Documentation | `docs` | ✅ MkDocs | ❌ No tests |
+| None (static files) | `static` | ❌ No build | ❌ No tests |
+
+**For other languages** (Python, Rust, Java): Use `container` type with a Dockerfile that builds your code.
+
+See [Module Types Reference](../../../reference/r2r-eac/module-types-reference.md) for detailed language support and configuration options.
 
 ## Quick Start
 
@@ -247,3 +240,5 @@ r2r eac validate contracts
 ## See Also
 
 - [Creating Module Types](creating-module-types.md) - Define new module type templates
+
+{{ diataxis_footer() }}

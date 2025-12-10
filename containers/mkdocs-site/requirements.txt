@@ -10,3 +10,8 @@ pymdown-extensions
 
 # Mermaid diagrams (client-side JS rendering)
 mkdocs-mermaid2-plugin>=1.1.0
+
+# Macros for dynamic content generation
+mkdocs-macros-plugin>=1.0.0
+
+mkdocs-drawio

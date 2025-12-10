@@ -1,25 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/security/security.md
-
-## Soul
-
-Comprehensive security integration documentation covering defense in depth (SAST, DAST, dependency scanning, container security), three open-source tools (OWASP ZAP, Trivy, Dependabot) with command examples, security by stage matrix, blocking strategy, and vulnerability remediation workflow with P0-P3 prioritization.
-
-## Sections
-
-1. Introduction
-2. Security Testing Layers
-3. OWASP ZAP
-4. Trivy
-5. Dependabot
-6. Security by Stage Matrix
-7. Shift-Left Practices
-8. Blocking Strategy
-9. Vulnerability Remediation Workflow
-10. Best Practices
--->
-
 # Security in the CD Model
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -373,7 +354,7 @@ docker run -t owasp/zap2docker-stable zap-api-scan.py \
 - name: OWASP ZAP Baseline Scan
   run: |
     docker run -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable \
-      zap-baseline.py -t ${{ secrets.APP_URL }} -r zap-report.html
+      zap-baseline.py -t ⟪ secrets.APP_URL ⟫ -r zap-report.html
 
 - name: Upload ZAP Report
   uses: actions/upload-artifact@v3
@@ -459,7 +440,7 @@ trivy fs --scanners secret --skip-dirs vendor .
 - name: Run Trivy vulnerability scanner
   uses: aquasecurity/trivy-action@master
   with:
-    image-ref: 'myapp:${{ github.sha }}'
+    image-ref: 'myapp:⟪ github.sha ⟫'
     format: 'sarif'
     output: 'trivy-results.sarif'
     severity: 'HIGH,CRITICAL'
@@ -777,3 +758,5 @@ By integrating these free, open-source tools throughout the CD Model, teams achi
 - [Trivy Documentation](https://aquasecurity.github.io/trivy/)
 - [Dependabot Documentation](https://docs.github.com/en/code-security/dependabot)
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+
+{{ diataxis_footer() }}

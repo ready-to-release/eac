@@ -93,6 +93,7 @@ modules:
           - mkdocs.yml
           - containers/mkdocs-site/**
           - containers/mkdocs-pdf/**
+          - scripts/mkdocs_macros.py
 
   # ============================================================================
   # EAC Extension

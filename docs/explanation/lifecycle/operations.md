@@ -1,24 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/lifecycle/operations.md
-
-## Soul
-
-Operations as continuous DevOps practice where builders run their systems, covering maintenance plans, periodic evaluations, user access reviews, and defect/incident management.
-
-## Sections
-
-1. (Introduction - DevOps model emphasis)
-2. Operation & Maintenance Plan
-   - Problem Management
-3. Operational Procedures
-   - Periodic Evaluation
-   - User Access Review
-4. Defects & Incidents
-   - Defects
-   - Incidents
--->
-
 # Operations
+
+{{ page_breadcrumb() }}
 
 Operations is not a separate phase but an integral part of the continuous delivery lifecycle.
 
@@ -105,3 +87,5 @@ Record all production incidents in the IT service management system. Complete th
 - Conduct [Blameless Post Mortem](https://github.com/ready-to-release/eac/blob/main/templates/docs/operations/blameless-post-mortem.md) for significant incidents
 
 Templates: [Incident](https://github.com/ready-to-release/eac/blob/main/templates/docs/operations/incident.md)
+
+{{ diataxis_footer() }}

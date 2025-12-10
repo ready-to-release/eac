@@ -1,0 +1,7 @@
+title: Release Management
+nav:
+  - index.md
+  - prepare-module-release.md
+  - generate-changelog.md
+  - create-release-tag.md
+  - check-ci-before-release.md

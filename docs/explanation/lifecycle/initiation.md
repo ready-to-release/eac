@@ -1,25 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/lifecycle/initiation.md
-
-## Soul
-
-Initiation phase guidance covering Design Thinking-based feasibility assessment (feasibility, desirability, viability), architecture design, threat modeling, and regulatory intended use documentation.
-
-## Sections
-
-1. (Introduction - Design Thinking criteria)
-2. Key Activities
-3. Design
-   - Architecture Diagrams
-   - Infrastructure and Tooling
-4. Decision Records
-5. Threat Modeling
-   - Integration into Development
-   - Tools
-6. Intended Use
--->
-
 # Initiation
+
+{{ page_breadcrumb() }}
 
 The initiation process evaluates whether good ideas are truly great ideas using **Design Thinking**, where user researchers and designers collaborate iteratively to assess three key criteria:
 
@@ -99,3 +80,5 @@ The **intended use** is a regulatory requirement that formally defines the purpo
 **Specifications** then translate the intended use into specific, testable, and compliant requirements that guide development, validation, and regulatory adherence.
 
 Templates: [Intended Use Template](https://github.com/ready-to-release/eac/blob/main/templates/docs/intended-use.md)
+
+{{ diataxis_footer() }}

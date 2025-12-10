@@ -1,0 +1,20 @@
+title: validate Commands
+nav:
+  - index.md
+  - validate.md
+  - artifacts.md
+  - books.md
+  - contracts.md
+  - control-tags.md
+  - dependencies.md
+  - design.md
+  - go-tidy.md
+  - markdown.md
+  - module-files.md
+  - module-hierarchy.md
+  - release.md
+  - release-version.md
+  - risk-catalog.md
+  - risk-profile.md
+  - specs.md
+  - test-tags.md

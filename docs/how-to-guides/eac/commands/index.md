@@ -1,36 +1,48 @@
-<!-- EDITOR
-# Editor: how-to-guides/eac/commands/index.md
+# Command How-To Guides
 
-## Soul
-Task-oriented guides for using core EAC commands including help, commit, init, and squash message generation.
+{{ page_breadcrumb() }}
 
-## Sections
-1. Overview
-2. In This Section
-3. Diataxis
--->
+Learn how to accomplish specific tasks with EAC commands through practical, step-by-step guides.
 
-# Command Guides
+## Choose by Your Goal
 
-This section provides practical guides for using EAC commands.
+### Just Getting Started?
 
-Learn how to accomplish specific tasks like getting help, generating commit messages, initializing AI providers, and creating squash messages for merges.
+- [Get Help with Commands](./getting-started/get-help-with-commands.md) - Find and understand commands
+- [Explore Your Repository](./getting-started/explore-your-repository.md) - Discover modules and files
 
-## In This Section
+### Want to Develop a Feature?
 
-| Guide                                                 | Description                                                      |
-| ----------------------------------------------------- | ---------------------------------------------------------------- |
-| [Help Command](./help-command.md)                     | Using the help system to discover and understand commands        |
-| [Commit Command](./commit-command.md)                 | Generate AI-powered semantic commit messages                     |
-| [Commit AI Process](./commit-ai-process.md)           | Understanding how AI generates commit messages                   |
-| [Init Command](./init-command.md)                     | Initialize AI provider configuration                             |
-| [Init Security](./init-security.md)                   | Configure security scanning with AI provider                     |
-| [Squash Message Command](./squash-message-command.md) | Generate squash merge commit messages                            |
-| [Show Commands](./show-commands.md)                   | Display repository information in human-readable format          |
-| [Command Areas](./areas/index.md)                     | Guides organized by functional area (build, test, release, etc.) |
+- [Create Feature Workspace](./development-workflow/create-feature-workspace.md) - Start isolated work
+- [Make Commits with AI](./development-workflow/make-commits-with-ai.md) - Generate commit messages
+- [More development guides →](./development-workflow/index.md)
 
----
+### Need to Build, Test, and Validate?
 
-*[Tutorials](../../../tutorials/) | **How-to Guides** | [Reference](../../../reference/) | [Explanation](../../../explanation/)*
+- [Build Single Module](./build-test-validate/build-single-module.md) - Compile your code
+- [Run Tests for Module](./build-test-validate/run-tests-for-module.md) - Verify changes
+- [Validate Before Commit](./build-test-validate/validate-before-commit.md) - Run quality checks
+- [More build/test/validate guides →](./build-test-validate/index.md)
 
-**You are here:** How-to Guides — task-oriented recipes that guide you through solving specific problems.
+### Ready to Release?
+
+- [Prepare Module Release](./release-management/prepare-module-release.md) - Complete release workflow
+- [More release guides →](./release-management/index.md)
+
+## All Guide Categories
+
+| Category | What You'll Learn |
+|----------|-------------------|
+| [Getting Started](./getting-started/index.md) | Basic command usage and repository exploration |
+| [Development Workflow](./development-workflow/index.md) | Workspaces, commits, and pull requests |
+| [Build, Test & Validate](./build-test-validate/index.md) | Compiling modules, running tests, and quality checks |
+| [Release Management](./release-management/index.md) | Preparing and publishing releases |
+| [Documentation](./documentation/index.md) | Creating specs and diagrams |
+
+## Need Command Details?
+
+These how-to guides focus on accomplishing tasks. For complete command syntax and options:
+
+**→ [Command Reference Documentation](../../../reference/commands/index.md)**
+
+{{ diataxis_footer() }}

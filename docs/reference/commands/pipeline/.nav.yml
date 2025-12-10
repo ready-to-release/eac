@@ -1,0 +1,10 @@
+title: pipeline Commands
+nav:
+  - index.md
+  - pipeline.md
+  - ci.md
+  - ci-dispatch-and-wait.md
+  - ci-summary-link.md
+  - run.md
+  - status.md
+  - wait.md

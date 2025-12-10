@@ -1,16 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/cd-model/index.md
-
-## Soul
-Navigation index for the 12-Stage Continuous Delivery Model framework covering overview, development stages, release stages, and implementation patterns.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # CD Model: The 12-Stage Framework
+
+{{ page_breadcrumb() }}
 
 The Continuous Delivery Model is a comprehensive framework for delivering software from development through production with quality, traceability, and compliance built in.
 
@@ -23,8 +13,4 @@ The Continuous Delivery Model is a comprehensive framework for delivering softwa
 | [Stages 7-12: Release to Production](./cd-model-stages-7-12.md) | Release and production stages from stakeholder validation through live monitoring |
 | [Implementation Patterns](./implementation-patterns.md)         | When and how to use Release Approval vs Continuous Deployment patterns            |
 
----
-
-_[Tutorials](../../../tutorials/) | [How-to Guides](../../../how-to-guides/) | **Explanation** | [Reference](../../../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

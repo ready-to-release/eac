@@ -1,16 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/index.md
-
-## Soul
-Navigation hub for understanding-oriented documentation covering five major topic areas: Everything as Code, Specifications, Software Development Lifecycle, Continuous Delivery, and Compliance Transformation.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Explanation
+
+{{ page_breadcrumb() }}
 
 Understanding-oriented documentation that clarifies concepts, architecture, and design decisions across five major topic areas.
 
@@ -24,8 +14,4 @@ Understanding-oriented documentation that clarifies concepts, architecture, and 
 | [Continuous Delivery](./continuous-delivery/) | 12-stage framework for delivering software with quality, traceability, and compliance                 |
 | [Transformation](./transformation/)           | How to transform compliance from a bottleneck into a continuous capability                            |
 
----
-
-_[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | **Explanation** | [Reference](../reference/)_
-
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+{{ diataxis_footer() }}

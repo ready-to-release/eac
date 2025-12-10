@@ -1,0 +1,16 @@
+title: Categories
+nav:
+  - index.md
+  - create.md
+  - get.md
+  - show.md
+  - validate.md
+  - work.md
+  - test.md
+  - pipeline.md
+  - release.md
+  - scan.md
+  - serve.md
+  - templates.md
+  - update.md
+  - other.md
