@@ -5,7 +5,10 @@
 // Long: The tag follows semantic versioning (semver) and will automatically trigger
 // Long: the GitHub Actions workflow to build and release binaries for multiple platforms.
 // Long: The version must follow semver format (x.y.z) where x, y, z are non-negative integers.
-// Long: Example: release r2r-cli 1.0.0
+// Long: IMPORTANT: This command requires --tag-direct flag to prevent accidental releases.
+// Long: The preferred flow is: release this → commit → push → workflow creates tag.
+// Long: Use --tag-direct only when you need to tag directly from devbox.
+// Long: Example: release r2r-cli --tag-direct 1.0.0
 package release
 
 import (
@@ -27,6 +30,7 @@ func init() {
 
 func ReleaseSrcCli() int {
 	fs := flag.NewFlagSet("release r2r-cli", flag.ExitOnError)
+	tagDirect := fs.Bool("tag-direct", false, "Required flag to confirm direct tagging from devbox")
 	dryRun := fs.Bool("dry-run", false, "Show what would be done without actually creating the tag")
 	push := fs.Bool("push", true, "Push the tag to the remote repository after creation")
 
@@ -54,13 +58,24 @@ func ReleaseSrcCli() int {
 	remainingArgs := fs.Args()
 	if len(remainingArgs) == 0 {
 		log.Errorf("Error: version required")
-		log.Errorf("Usage: release r2r-cli [--dry-run] [--push=true|false] <version>")
-		log.Errorf("Example: release r2r-cli --dry-run 1.0.0")
+		log.Errorf("Usage: release r2r-cli --tag-direct [--dry-run] [--push=true|false] <version>")
+		log.Errorf("Example: release r2r-cli --tag-direct 1.0.0")
 		log.Errorf("Note: Flags must come before the version number")
 		return 1
 	}
 
 	version := remainingArgs[0]
+
+	// Require --tag-direct flag to prevent accidental releases
+	if !*tagDirect && !*dryRun {
+		log.Errorf("Error: --tag-direct flag required")
+		log.Errorf("")
+		log.Errorf("Direct tagging from devbox requires explicit confirmation.")
+		log.Errorf("Preferred flow: release this → commit → push → workflow dispatch")
+		log.Errorf("")
+		log.Errorf("To tag directly: release r2r-cli --tag-direct %s", version)
+		return 1
+	}
 
 	// Validate module exists
 	if err := validateModule("r2r-cli"); err != nil {

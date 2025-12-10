@@ -73,6 +73,37 @@ runs:
         fi
         echo "Version ${{ steps.version.outputs.version }} is valid"
 
+    - name: Validate changelog has version entry
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
+        # Get the latest version from changelog
+        CHANGELOG_VERSION=$($COMMANDS release get-version "$MODULE" 2>/dev/null || echo "")
+
+        if [ -z "$CHANGELOG_VERSION" ]; then
+          echo "::error::No changelog found for module $MODULE"
+          echo ""
+          echo "Create changelog at: release/$MODULE/CHANGELOG.md"
+          exit 1
+        fi
+
+        if [ "$CHANGELOG_VERSION" != "$VERSION" ]; then
+          echo "::error::Changelog not updated for version $VERSION"
+          echo ""
+          echo "Changelog shows: $CHANGELOG_VERSION"
+          echo "Releasing:       $VERSION"
+          echo ""
+          echo "Run first: commands release this $MODULE"
+          echo "This will update the changelog with version $VERSION"
+          exit 1
+        fi
+
+        echo "Changelog verified: $VERSION"
+
     - name: Check for existing release
       shell: bash
       env:
@@ -146,10 +177,11 @@ runs:
         echo "| Tag | \`$TAG_NAME\` |" >> $GITHUB_STEP_SUMMARY
         echo "| Commit | \`${COMMIT:0:7}\` |" >> $GITHUB_STEP_SUMMARY
 
+        echo "| Changelog | :white_check_mark: Updated |" >> $GITHUB_STEP_SUMMARY
+        echo "| Existing Release | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
+
         if [ "$SKIP_CI" = "true" ]; then
           echo "| CI Check | :warning: Skipped |" >> $GITHUB_STEP_SUMMARY
         else
           echo "| CI Check | :white_check_mark: Passed (strict) |" >> $GITHUB_STEP_SUMMARY
         fi
-
-        echo "| Existing Release | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
