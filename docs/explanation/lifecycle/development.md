@@ -1,23 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/lifecycle/development.md
-
-## Soul
-
-Development phase implementing Continuous Delivery Model with executable specifications, automated testing, and evidence collection as integral parts of implementation.
-
-## Sections
-
-1. (Introduction - references CD Model)
-2. Implementation Plan
-3. Specifications
-4. Risk Controls
-5. Implementation Report
-   - Required Content
-6. Testing
-7. Documenting Changes
--->
-
 # Development
+
+{{ page_breadcrumb() }}
 
 This phase implements the [Continuous Delivery Model](../continuous-delivery/index.md), taking the solution from design through to production deployment.
 
@@ -48,7 +31,7 @@ Follow the guidance in the [Specifications section](../specifications/index.md).
 
 ## Risk Controls
 
-Follow the guidance in the [Risk Controls article](../specifications/risk-controls.md).
+Follow the guidance in the [Risk Controls article](../specifications/compliance/risk-controls.md).
 
 ---
 
@@ -101,3 +84,5 @@ All tests should be automated and run in the pipeline. Manual testing occurs dur
 ## Documenting Changes
 
 This is a fully automated process handled by the pipeline. It prepares all artifacts needed for [Release Approval](../continuous-delivery/cd-model/cd-model-stages-7-12.md#stage-9-release-approval).
+
+{{ diataxis_footer() }}

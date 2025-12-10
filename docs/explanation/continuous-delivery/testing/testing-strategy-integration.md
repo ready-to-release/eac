@@ -1,24 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/testing/testing-strategy-integration.md
-
-## Soul
-
-Explains test level integration with CD Model stages, process isolation strategies (in-process L0/L1, cross-process L2, in-situ L3), Rules/Scenarios/Unit Tests integration, stage-by-stage mapping with time budgets (Stage 2: 5-10 min, Stage 5: 1-2 hours), and test distribution (95% L0-L2, 5% L3).
-
-## Sections
-
-1. Introduction
-2. Test Level Environment Mapping
-3. Out-of-Category Anti-Pattern
-4. Process Isolation Explained
-5. Tag Usage and Test Suites
-6. Test Levels by CD Model Stage
-7. Integration with Rules/Scenarios/Unit Tests
-8. Test Distribution
-9. Next Steps
--->
-
 # Testing Strategy: Integration with CD Model
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -284,7 +266,7 @@ Feature: API Service Deployment
 
 ## Tag Usage and Test Suites
 
-The testing strategy uses tags to select tests for execution at specific CD Model stages. See **[Tag Reference](../../specifications/tag-reference.md)** for complete tag documentation.
+The testing strategy uses tags to select tests for execution at specific CD Model stages. See **[Testing Taxonomy](../../specifications/taxonomy/)** for complete tag documentation.
 
 **Test Level to Stage Mapping**:
 
@@ -352,7 +334,7 @@ The CD Model integrates three testing methodologies:
 - Process: Define criteria → Validate in production
 - Horizontal testing with real services
 
-See **[Three-Layer Testing Approach](../../specifications/three-layer-approach.md)** for detailed integration.
+See **[Three-Layer Testing Approach](../../specifications/concepts/three-layer-approach.md)** for detailed integration.
 
 ---
 
@@ -380,4 +362,6 @@ Maximize testing at L0-L3 (left) and L4 (right) to avoid horizontal pre-producti
 ## References
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
-- [Three-Layer Testing Approach](../../specifications/three-layer-approach.md)
+- [Three-Layer Testing Approach](../../specifications/concepts/three-layer-approach.md)
+
+{{ diataxis_footer() }}

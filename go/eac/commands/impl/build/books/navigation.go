@@ -380,6 +380,7 @@ func (p *Preprocessor) generateNavForDir(dir string) error {
 	}
 
 	// Determine title from directory name or index.md
+	relDir, _ = filepath.Rel(p.stagingDir, dir)
 	title := ""
 	if relDir == "." {
 		title = toTitleCase(p.book.Name)

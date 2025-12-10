@@ -1,14 +1,10 @@
 title: Specifications
 nav:
   - index.md
-  - three-layer-approach.md
-  - working-with-specifications.md
-  - gherkin-concepts.md
-  - tag-reference.md
-  - test-taxonomy.md
-  - gxp-tagging.md
-  - ubiquitous-language.md
-  - event-storming.md
-  - example-mapping.md
-  - review-and-iterate.md
-  - risk-controls.md
+  - concepts/
+  - organization/
+  - taxonomy/
+  - discovery/
+  - quality/
+  - compliance/
+  - implementation/

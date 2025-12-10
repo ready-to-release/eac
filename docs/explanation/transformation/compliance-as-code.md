@@ -1,25 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/transformation/compliance-as-code.md
-
-## Soul
-
-Defines five interconnected principles for modern compliance: Everything as Code, Continuous Validation, Shift-Left, Automated Evidence, and Executable Specifications working as an integrated system.
-
-## Sections
-
-1. Introduction
-2. The Five Principles
-3. Principle 1: Everything as Code
-4. Principle 2: Continuous Validation
-5. Principle 3: Shift-Left Compliance
-6. Principle 4: Automated Evidence Collection
-7. Principle 5: Executable Specifications
-8. The System Effect
-9. Implementation Sequence
-10. Related Documentation
--->
-
 # Compliance as Code Principles
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -171,9 +152,9 @@ Feature: cli_user-login
 
 **See**:
 
-- [Three-Layer Testing Approach](../specifications/three-layer-approach.md) - How Rules/Scenarios/Unit Tests work together
-- [Risk Controls](../specifications/risk-controls.md) - Risk control specification pattern
-- [Gherkin File Organization](../specifications/gherkin-concepts.md) - How to structure specifications
+- [Three-Layer Testing Approach](../specifications/concepts/three-layer-approach.md) - How Rules/Scenarios/Unit Tests work together
+- [Risk Controls](../specifications/compliance/risk-controls.md) - Risk control specification pattern
+- [File Structure](../specifications/organization/file-structure.md) - How to structure specifications
 
 ---
 
@@ -227,3 +208,5 @@ Organizations typically implement in this order:
 
 - [Why Transform](./why-transformation.md) - Business case
 - [Transformation Framework](./transformation-framework.md) - How to implement
+
+{{ diataxis_footer() }}

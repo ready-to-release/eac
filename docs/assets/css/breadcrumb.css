@@ -1,0 +1,46 @@
+/* Breadcrumb Navigation Styling */
+.breadcrumb {
+    font-size: 0.85em;
+    color: var(--md-default-fg-color--light);
+    margin-bottom: 1.5em;
+    padding: 0.5em 0;
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.breadcrumb a {
+    color: var(--md-accent-fg-color);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.breadcrumb a:hover {
+    color: var(--md-accent-fg-color--lighter);
+    text-decoration: underline;
+}
+
+.breadcrumb-separator {
+    color: var(--md-default-fg-color--lighter);
+    margin: 0 0.5em;
+    user-select: none;
+}
+
+.breadcrumb span:last-child {
+    color: var(--md-default-fg-color);
+    font-weight: 500;
+}
+
+/* Print styles for breadcrumbs */
+@media print {
+    .breadcrumb {
+        border-bottom-color: #ddd;
+    }
+
+    .breadcrumb a {
+        color: #000;
+        text-decoration: none;
+    }
+
+    .breadcrumb-separator {
+        color: #666;
+    }
+}

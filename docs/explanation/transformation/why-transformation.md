@@ -1,36 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/transformation/why-transformation.md
-
-## Soul
-
-Business case for compliance transformation, contrasting manual periodic compliance (slow, error-prone, expensive) with continuous automated validation (fast, consistent, scalable).
-
-## Sections
-
-1. Introduction
-2. The Traditional Compliance Approach
-   - Characteristics
-   - Problems with Traditional Compliance
-3. The Cost of Traditional Compliance
-   - Time Overhead
-   - Cycle Time Impact
-   - Risk Exposure
-4. Root Causes
-5. The Opportunity
-   - What Could Be Different
-   - Expected Benefits
-6. Is Transformation Right for You?
-   - Good Fit Organizations
-   - Poor Fit Organizations
-7. Prerequisites
-   - Essential Prerequisites
-   - Recommended Prerequisites
-   - Building Prerequisites
-8. Next Steps
-9. Related Documentation
--->
-
 # Why Compliance Transformation?
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -446,3 +416,5 @@ If prerequisites are missing, focus on building foundational capabilities first.
 - [Transformation Framework](transformation-framework.md) - How to execute transformation
 - [CD Model Overview](../continuous-delivery/cd-model/cd-model-overview.md) - Delivery pipeline foundation
 - [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing practices foundation
+
+{{ diataxis_footer() }}

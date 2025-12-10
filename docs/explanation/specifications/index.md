@@ -1,36 +1,83 @@
-<!-- EDITOR
-# Editor: explanation/specifications/index.md
-
-## Soul
-Navigation hub for three-layer testing approach, BDD concepts, and specification practices using executable specifications.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Specifications Concepts
 
-Understanding the three-layer testing approach, executable specifications, and test-driven development practices.
+{{ page_breadcrumb() }}
 
-## In This Section
-
-| Topic                                                           | Description                                                                                    |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| [Three-Layer Testing Approach](./three-layer-approach.md)       | How Rules, Scenarios, and Unit Tests work together to deliver quality software                 |
-| [Working with Specifications](./working-with-specifications.md) | How ATDD and BDD work together using unified Gherkin format                                    |
-| [Gherkin File Organization](./gherkin-concepts.md)              | How to structure and organize Gherkin specification files effectively                          |
-| [Tag Reference](./tag-reference.md)                             | Complete reference for testing taxonomy tags (L0-L4, verification, dependencies)               |
-| [Ubiquitous Language](./ubiquitous-language.md)                 | Building shared domain vocabulary that bridges business and technical communication            |
-| [Event Storming](./event-storming.md)                           | Collaborative workshop technique for discovering domain language and business processes        |
-| [Example Mapping](./example-mapping.md)                         | Collaborative workshop technique for discovering requirements and creating acceptance criteria |
-| [Review and Iterate](./review-and-iterate.md)                   | Maintaining living specifications through continuous feedback and refinement                   |
-| [Risk Controls](./risk-controls.md)                             | Understanding risk-based testing and executable risk controls for compliance                   |
-| [GxP Tagging](./gxp-tagging.md)                                 | Tagging for regulated software development in pharmaceutical and medical device contexts       |
+Understanding specifications, BDD, TDD, and executable testing practices.
 
 ---
 
-_[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Explanation** | [Reference](../../reference/)_
+## In This Section
 
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+### [Core Concepts](./concepts/)
+
+Foundation of behavior-driven development and test-driven development.
+
+- Three-Layer Testing Approach
+- BDD Fundamentals
+- Executable Specifications
+- Specifications Evolution
+- Canon TDD Workflow
+- Ubiquitous Language
+
+### [Organizing Specifications](./organization/)
+
+How to structure and organize Gherkin specification files.
+
+- File Structure
+- Organizing Rules
+- Organizing Scenarios
+- Naming Conventions
+- Size Guidelines
+
+### [Testing Taxonomy](./taxonomy/)
+
+Complete reference for test levels, verification tags, and test suites.
+
+- Test Levels (L0-L4)
+- Verification Tags (@ov, @iv, @pv, @piv, @ppv)
+- Execution Control (@ignore, @Manual)
+- Dependency Tags (@deps, @depm, @env)
+- Control Tags (@control)
+- Tag Inheritance
+- Test Suites
+
+### [Discovery Techniques](./discovery/)
+
+Collaborative workshop techniques for discovering requirements.
+
+- Event Storming (Overview, Formats, Facilitation)
+- Example Mapping
+- Card Reference
+
+### [Quality & Maintenance](./quality/)
+
+Maintaining living specifications through continuous improvement.
+
+- Specification Quality Checklist
+- Review and Iterate
+
+### [Compliance & Risk](./compliance/)
+
+Risk-based testing and regulatory compliance.
+
+- Risk Controls (OSCAL integration)
+- GxP Tagging (pharmaceutical/medical device)
+
+### [Implementation Guides](./implementation/)
+
+Language-specific implementation details.
+
+- [Go/Godog Implementation](./implementation/go/)
+
+---
+
+## Quick Start
+
+New to specifications? Start here:
+
+1. [What is BDD?](./concepts/bdd-fundamentals.md)
+2. [Three-Layer Approach](./concepts/three-layer-approach.md)
+3. [Example Mapping Workshop](./discovery/example-mapping.md)
+4. [Organizing Your First Feature](./organization/file-structure.md)
+
+{{ diataxis_footer() }}

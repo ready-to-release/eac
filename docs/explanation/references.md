@@ -1,24 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/references.md
-
-## Soul
-
-Bibliography of foundational works, standards, and learning resources supporting the documentation's concepts and practices.
-
-## Sections
-
-1. Books
-   - Accelerate
-   - The DevOps Handbook
-   - Continuous Delivery
-   - Flow Engineering - From Value Stream Mapping to Effective Actions
-   - Effective Behavior-Driven Development
-2. PDFs
-   - State of devops
-   - Trunk based correlated practices
--->
-
 # References
+
+{{ page_breadcrumb() }}
 
 ## Books
 
@@ -40,7 +22,7 @@ Bibliography of foundational works, standards, and learning resources supporting
 
 > Jez Humble, Dave Farley.
 
-### Flow Engineering - From Value Stream Mapping to Effective Actions {#flow-engineering---from-value-stream-mapping-to-effective-actions}
+### Flow Engineering - From Value Stream Mapping to Effective Actions
 
 ![Flow Engineering](../assets/references/flow-engineering.png){ width="150" }
 
@@ -65,3 +47,5 @@ Bibliography of foundational works, standards, and learning resources supporting
 ![Trunk Correlated Practices](../assets/references/correlated-practices.png){ width="150" }
 
 - [Trunk Correlated Practices](../assets/lfs/pdf/Trunk_Correlated_Practices_v2.8.pdf)
+
+{{ diataxis_footer() }}

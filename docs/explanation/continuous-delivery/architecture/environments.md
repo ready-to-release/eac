@@ -1,67 +1,14 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/architecture/environments.md
-
-## Soul
-
-Comprehensive environment architecture covering six environment types (DevBox, Build Agents, PLTE, Demo, Deploy Agents, Production) with network segregation zones, deployment strategies, Infrastructure as Code integration, and Quick Reference links to extracted reference/how-to content.
-
-## Sections
-
-1. Introduction
-2. Environment Types Explained
-3. Network Segregation Architecture
-4. Production Environment
-5. Deployment Strategies
-6. Architecture Visuals Explained
-7. Traditional vs CD Model Comparison
-8. Infrastructure as Code Integration
-9. Next Steps
-10. References
-11. Quick Reference
-
--->
-
 # Environments Architecture
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
 Environments are the foundation of the Continuous Delivery Model. Each environment serves a specific purpose in the software delivery pipeline, from local development through production deployment. Understanding environment types, their characteristics, and their relationships is essential for implementing an effective CD Model.
 
-Traditional approaches often rely on long-lived, shared environments that created inter-team bottlenecks and inconsistencies. The CD Model reimagines environments as purpose-built, often ephemeral resources that enable parallel execution, rapid feedback, and consistent infrastructure.
+Traditional approaches often rely on long-lived, shared environments that create inter-team bottlenecks and inconsistencies. The CD Model reimagines environments as purpose-built, often ephemeral resources that enable parallel execution, rapid feedback, and consistent infrastructure. By "controlling the variables" of our verification processes, we make verifications more deterministic and trustworthy.
 
-Doing this, we are "controlling the variables" of our verification processes, making our verifications more deterministic and thereby trustworthy.
-
-### Traditional vs Modern Approach
-
-**Traditional Environment Model:**
-
-Traditional software delivery relies on a linear progression through fixed, long-lived environments:
-
-- **Development** → **Test** → **Validation** → **Production**
-- Shared environments create resource contention
-- Configuration drift between environments
-- Manual environment setup and maintenance
-- Bottlenecks when multiple teams share resources
-- Environment-specific bugs discovered late
-
-**CD Model Environment Approach:**
-
-The CD Model uses purpose-built environments that match specific validation needs:
-
-- **DevBox** for local development
-- **Build Agents** for CI/CD automation
-- **PLTE** (Production-Like Test Environments) for realistic validation
-- **Demo** environments for stakeholder feedback
-- **Deploy Agents** with segregated production access
-- **Production** with phased rollout capabilities
-
-Key improvements:
-
-- Infrastructure as Code ensures consistency
-- Ephemeral environments eliminate drift
-- Parallel execution without conflicts
-- Purpose-built for specific validation
-- Production-like characteristics from early stages
+For a comprehensive comparison of traditional vs CD Model approaches, see [CD Model Overview](../cd-model/cd-model-overview.md).
 
 ---
 
@@ -368,10 +315,9 @@ The Production environment is where software serves end users and delivers busin
 
 **Deployment Strategies:**
 
-- Hot deploy (in-place updates)
-- Staged deploy (rolling updates)
-- Blue-green deployment
-- Canary deployment
+Production deployments use various strategies to minimize risk and enable rapid rollback. The CD Model supports multiple deployment patterns including Hot Deploy, Rolling, Blue-Green, Canary, and Feature Flag-based deployments.
+
+For comprehensive coverage of deployment strategies, implementation patterns, and selection guidance, see [Deployment Strategies](../deployment/deployment-strategies.md) and [Deployment Rings](../deployment/deployment-rings.md).
 
 **Monitoring:**
 
@@ -387,147 +333,6 @@ The Production environment is where software serves end users and delivers busin
 - Manual rollback procedures
 - Database rollback considerations
 - Feature flag kill switches
-
----
-
-## Deployment Strategies
-
-Production deployments use various strategies to minimize risk and enable rapid rollback.
-
-### Hot Deploy (In-Place Updates)
-
-**Pattern**: Replace running instances with new version directly
-
-**Characteristics:**
-
-- Fastest deployment (seconds)
-- Brief downtime during replacement
-- Simple rollback (redeploy previous version)
-
-**Use when:**
-
-- Downtime acceptable (< 30 seconds)
-- Small deployable modules
-- Fast startup times
-
-### Rolling Deployment
-
-**Pattern**: Update instances gradually, one or few at a time
-
-**Characteristics:**
-
-- Zero downtime
-- Mixed versions running during rollout
-- Gradual traffic shift
-- Built-in health checks stop rollout if issues detected
-
-**Use when:**
-
-- Zero downtime required
-- Multiple instances available
-- Backward-compatible changes
-
-### Blue-Green Deployment
-
-**Pattern**: Maintain two identical environments, switch traffic between them
-
-**Blue Environment:**
-
-- Current production version
-- Serving 100% live traffic
-- Stable and verified
-
-**Green Environment:**
-
-- New version deployed
-- Receives test traffic (0%)
-- Validation before traffic switch
-
-**Deployment Flow:**
-
-1. Deploy new version to Green (while Blue serves traffic)
-2. Run smoke tests against Green
-3. Switch traffic from Blue to Green (instant cutover)
-4. Blue becomes idle (ready for next deployment or instant rollback)
-
-**Use when:**
-
-- Instant rollback critical
-- Large deployable modules
-- High-risk changes
-- Database migrations need validation
-
-### Canary Deployment
-
-**Pattern**: Route small percentage of traffic to new version, gradually increase
-
-**Deployment Flow:**
-
-1. Deploy new version alongside current version
-2. Route 1-5% traffic to new version (canary)
-3. Monitor metrics (errors, latency, business KPIs)
-4. If healthy: Gradually increase (10% → 25% → 50% → 100%)
-5. If issues: Instant rollback to 0%
-
-**Use when:**
-
-- Need production validation with minimal risk
-- Metrics-driven deployment decisions
-- Gradual rollout preferred
-- A/B testing infrastructure available
-
-### Deployment Rings
-
-**Pattern**: Deploy to progressively larger user groups
-
-**Ring Structure:**
-
-- **Ring 0**: Internal users/developers (hours)
-- **Ring 1**: Early adopters/beta users (1-2 days)
-- **Ring 2**: Standard users (3-7 days)
-- **Ring 3**: All users (complete)
-
-**Use when:**
-
-- Large user base
-- Need production feedback before full rollout
-- Compliance requires phased approach
-- Different user segments exist
-
-### Feature Flags with Deployment
-
-**Pattern**: Deploy code with features disabled, enable via flags
-
-**Decouples:**
-
-- **Deployment** (code to production) from **Release** (feature enabled for users)
-
-**Benefits:**
-
-- Deploy anytime, release when ready
-- Gradual rollout per feature
-- Instant disable if issues arise
-- A/B testing different implementations
-
-**Use in CDe pattern:**
-
-- Deploy to production continuously (flags OFF)
-- Enable features through Stage 12 (Release Toggling)
-- Maintains automated deployment with controlled release
-
-### Strategy Selection
-
-| Strategy | Rollback Speed | Downtime | Complexity | Resource Cost |
-|----------|---------------|----------|------------|---------------|
-| Hot Deploy | Fast (1-2 min) | Brief (< 30s) | Low | Low |
-| Rolling | Fast (< 1 min) | None | Medium | Low |
-| Blue-Green | Instant | None | Medium | High (2x) |
-| Canary | Instant | None | High | Medium |
-| Rings | Gradual | None | High | Medium |
-
-**For RA pattern**: Blue-Green or Rolling recommended (manual approval before full rollout)
-
-**For CDe pattern**: Canary or Feature Flags recommended (automated with gradual validation)
 
 ---
 
@@ -553,108 +358,11 @@ Production deployments use various strategies to minimize risk and enable rapid 
 
 ---
 
-## Traditional vs CD Model Comparison
-
-### Traditional Model: Dev → Test → Val → Prod
-
-**Development Environment:**
-
-- Shared by multiple developers
-- Frequent conflicts and contention
-- Configuration often differs from production
-- Manual setup and maintenance
-
-**Test Environment:**
-
-- Shared by QA team
-- Test results affected by concurrent testing
-- Environment state inconsistent
-- Configuration drift from production
-
-**Validation Environment:**
-
-- Pre-production validation
-- Limited capacity creates bottleneck
-- Often differs from production
-- Manual approvals delay releases
-
-**Production Environment:**
-
-- Live user traffic
-- Issues discovered late
-- Risky deployments due to environment differences
-
-**Problems with Traditional Approach:**
-
-- Environment drift causes late discovery of bugs
-- Shared resources create bottlenecks
-- Manual environment management is error-prone
-- Configuration differences hide issues until production
-- Long feedback loops (days to weeks)
-
-### CD Model Approach
-
-**DevBox (Local):**
-
-- Isolated, developer-controlled
-- Consistent through containerization
-- Fast feedback (seconds to minutes)
-- No resource contention
-
-**Build Agents (Ephemeral):**
-
-- Consistent, reproducible
-- Parallel execution
-- Isolated per build
-- Infrastructure as Code
-
-**PLTE (On-Demand):**
-
-- Production-like from Stage 5
-- Isolated per feature/release
-- Catch issues early
-- Ephemeral, no drift
-
-**Production (Controlled):**
-
-- Phased rollout (canary, rings)
-- Feature flags for control
-- Automated monitoring and rollback
-- High confidence from earlier validation
-
-**Benefits of CD Model Approach:**
-
-- Consistency eliminates environment-specific bugs
-- Parallel execution removes bottlenecks
-- Infrastructure as Code prevents drift
-- Early production-like validation reduces risk
-- Fast feedback loops (minutes to hours)
-- High confidence in production deployments
-
-### Migration Path
-
-**Moving from Traditional to CD Model:**
-
-1. **Infrastructure as Code**: Define environments as code for consistency
-2. **Ephemeral PLTEs**: Implement on-demand PLTE creation and automated testing
-3. **Agent Segregation**: Separate Build and Deploy Agents with network isolation, if required
-4. **Production Readiness**: Add deployment strategies, monitoring, and automated rollback
-
----
-
 ## Infrastructure as Code Integration
 
 Infrastructure as Code (IaC) ensures all environments are created from the same definitions, providing consistency, version control, and automated provisioning. Use Terraform/CloudFormation/Bicep for cloud infrastructure, Docker for packaging, docker compose for emulation and Kubernetes or vendor PaaS for PLTE and production orchestration.
 
-**Ephemeral PLTE Lifecycle:**
-
-1. **Trigger**: Merge to main or release candidate creation
-2. **Provision**: Create from IaC (5-10 min)
-3. **Deploy**: Install application and seed test data
-4. **Test**: Run acceptance/extended tests (1-4 hours)
-5. **Destroy**: Tear down infrastructure
-
-Benefits: No configuration drift, parallel testing without conflicts, cost-effective (pay only when used).
+For detailed PLTE provisioning procedures, lifecycle management, and Infrastructure as Code templates, see [PLTE Provisioning](plte-provisioning.md).
 
 ---
 
@@ -673,9 +381,4 @@ Benefits: No configuration drift, parallel testing without conflicts, cost-effec
 - [Stages 7-12](../cd-model/cd-model-stages-7-12.md)
 - [Testing Strategy Overview](../testing/testing-strategy-overview.md)
 
-## Quick Reference
-
-- [Environment Types](../../../reference/continuous-delivery/environment-types.md) - Environment summary table
-- [Network Zones](../../../reference/continuous-delivery/network-zones.md) - Zone architecture reference
-- [Deployment Strategies](../../../reference/continuous-delivery/deployment-strategies.md) - Strategy comparison table
-- [Provisioning PLTE](../../../how-to-guides/continuous-delivery/provisioning-plte.md) - How to create PLTEs
+{{ diataxis_footer() }}

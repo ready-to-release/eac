@@ -190,37 +190,48 @@ Feature files are plain text files stored in the same repository as the system c
 
 **Testing Taxonomy Tags:**
 
-| Tag Type                                  | Format                              | Purpose                                |
-| ----------------------------------------- | ----------------------------------- | -------------------------------------- |
-| Test Level                                | `@L0` - `@L4`                       | Define execution environment and scope |
-| Verification (REQUIRED for all scenarios) | `@ov`, `@iv`, `@pv`, `@piv`, `@ppv` | Categorize validation type             |
-| Test Execution Control                    | `@ignore`, `@Manual`                | Control test execution behavior        |
-| System Dependencies                       | `@deps:docker`, `@deps:git`, etc.     | Declare required tooling               |
-| Risk Controls                             | `@risk-control:<name>-<id>`         | Link to compliance requirements        |
+| Tag Type                                  | Format                              | Purpose                                 |
+| ----------------------------------------- | ----------------------------------- | --------------------------------------- |
+| Test Level                                | `@L0` - `@L4`, `@HE2E`              | Define execution environment and scope  |
+| Verification (REQUIRED for all scenarios) | `@ov`, `@iv`, `@pv`, `@piv`, `@ppv` | Categorize validation type              |
+| Test Execution Control                    | `@skip:<reason>`, `@Manual`         | Control test execution behavior         |
+| System Dependencies                       | `@deps:<system-dependency>`         | Declare required system tooling         |
+| Module Dependencies                       | `@depm:<module-name>`               | Declare required internal modules       |
+| Environment Requirements                  | `@env:<env-moniker>`                | Declare specific test environments      |
+| Risk Controls                             | `@control:<id>`, `@controls:<ids>`  | Link to compliance control requirements |
+
+**Skip Reason Codes:**
+
+| Code | Purpose |
+|------|---------|
+| `wip` | Work in progress - test implementation incomplete |
+| `broken` | Broken test - needs fixing |
+| `flaky` | Flaky test - intermittent failures, needs stabilization |
+| `deprecated` | Deprecated feature - test kept for reference |
+| `blocked` | Blocked by external dependency or decision |
 
 **Regulatory Tags (for GxP environments):**
 
 | Tag Type                   | Format                     | Purpose                                 |
 | -------------------------- | -------------------------- | --------------------------------------- |
 | GxP-Related Requirement    | `@gxp`                     | Identify GxP-controlled aspects         |
-| Critical Aspect (GmP only) | `@gmp-critical-aspect`         | Mark critical aspects for GmP products  |
-| GxP Risk Control           | `@risk-control:gxp-<name>` | Link to GxP risk control specifications |
+| Critical Aspect (GmP only) | `@gmp-critical-aspect`     | Mark critical aspects for GmP products  |
 
-If manual test cases are required, they will be stored alongside the automated test scenarios and marked with the tag `@Manual`. Test results will be fed back into the repository and stored alongside the automated test results, enabling visualization within a unified traceability matrix.
+If manual test cases are required, they will be stored alongside the automated test scenarios and marked with the tag `@Manual`. Manual tests cannot be combined with taxonomy level tags (`@L0`-`@L4`) as they represent non-automated verification. Test results will be fed back into the repository and stored alongside the automated test results, enabling visualization within a unified traceability matrix.
 
 ## Functional Risk Assessment
 
-A functional risk assessment is required whenever a requirement in a feature file is tagged with `@gxp`. In these cases, a risk control specification must be created in and explicitly linked to the relevant requirement using `@risk-control:gxp-<name>`.
+A functional risk assessment is required whenever a requirement in a feature file is tagged with `@gxp`. Risk assessments are documented separately and risks are mapped to applicable risk compliance controls. Test scenarios link to controls using `@control:<id>` tags.
 
-The risk control specification should include:
+Risk assessments should include:
 
-- **Risk Description:** What could go wrong with the feature.
-- **Root Cause and Likelihood:** Identify the cause(s) and estimate the likelihood (Unlikely <30%, Possible 30-70%, Likely >70%).
-- **Impact:** Assess the impact on the supported process (Insignificant, Moderate, or Critical impact on Product, Patient, or Data Integrity per GAMP 5 and ICH Q9 guidelines).
-- **Risk Controls:** List the controls or mitigations, documented as test scenarios within the risk control specification.
-- **Risk Classification:** Classify both gross and net risk as High, Medium, or Low.
+- **Risk Description:** What could go wrong with the feature
+- **Root Cause and Likelihood:** Identify the cause(s) and estimate the likelihood (Unlikely <30%, Possible 30-70%, Likely >70%)
+- **Impact:** Assess the impact on the supported process (Insignificant, Moderate, or Critical impact on Product, Patient, or Data Integrity per GAMP 5 and ICH Q9 guidelines)
+- **Controls:** Identify relevant risk controls that mitigate the risk
+- **Risk Classification:** Classify both gross and net risk as High, Medium, or Low
 
-Risk controls are implemented as test scenarios that verify the mitigations are effective. These may include additional requirements, negative test scenarios, challenge tests, or validation of generic controls.
+Controls are implemented as test scenarios that verify the mitigations are effective. These may include additional requirements, negative test scenarios, challenge tests, or validation of generic controls. Use `@control:<id>` tags in scenarios to link to standardized compliance controls (e.g., NIST 800-53, ISO 27001, custom catalogs). Reference risk assessment documents in scenario comments for traceability.
 
 For all requirements tagged as `@gxp`, there must be test scenarios for negative testing and/or challenge tests, or a clear justification for performing only positive tests.
 

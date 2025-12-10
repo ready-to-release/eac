@@ -1,0 +1,7 @@
+title: Documentation
+nav:
+  - index.md
+  - generate-architecture-diagrams.md
+  - create-specifications.md
+  - use-documentation-templates.md
+  - build-documentation-site.md

@@ -1,33 +1,22 @@
-<!-- EDITOR
-# Editor: docs/reference/index.md
-
-## Soul
-Central hub for all technical reference documentation, specifications, and API details in the EAC system.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Reference
 
+{{ page_breadcrumb() }}
+
 Technical reference material providing information-oriented documentation for the EAC system. Includes API specifications, command references, decision records, and architectural documentation.
+
+## Quick Access
+
+| Resource | Description |
+|----------|-------------|
+| [Command Cheat Sheet](./commands/cheat-sheet.md) | Quick reference for most common commands |
 
 ## In This Section
 
 | Reference | Description |
 |-----------|-------------|
-| [Claude Code Programmatic Access](./claude-code-programmatic-access.md) | How to use Claude CLI/Max subscription for API-like programmatic calls |
-| [Repository Layout](./repository-layout.md) | Repository structure and organization |
-| [Risk Assessment](./risk-assessment.md) | Risk assessment documentation |
+| [R2R and EAC Architecture](./r2r-eac/) | System architecture, module system, contracts, and design principles |
 | [Commands](./commands/) | Command-line interface reference documentation |
 | [Continuous Delivery](./continuous-delivery/) | CI/CD pipeline and deployment reference materials |
 | [Decision Records](./decision-records/) | Architectural decisions and their rationale |
-| [Specifications](./specifications/) | Technical specifications and standards |
 
----
-
-*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | **Reference** | [Explanation](../explanation/)*
-
-**You are here:** Reference — information-oriented technical descriptions of the system.
+{{ diataxis_footer() }}

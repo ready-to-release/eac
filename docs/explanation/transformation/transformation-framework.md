@@ -1,45 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/transformation/transformation-framework.md
-
-## Soul
-
-Four-phase roadmap from assessment through organization-wide adoption with concrete activities, deliverables, exit criteria, and timelines for compliance transformation.
-
-## Sections
-
-1. Introduction
-2. The Journey Overview
-3. Guiding Principles
-4. Phase 1: Assessment and Planning (4-6 weeks)
-   - Objective
-   - Key Activities
-   - Exit Criteria
-5. Phase 2: Pilot Implementation (12-16 weeks)
-   - Objective
-   - Key Activities
-   - Exit Criteria
-6. Phase 3: Automation and Scaling (8-12 weeks)
-   - Objective
-   - Key Activities
-   - Exit Criteria
-   - Deliverables
-7. Phase 4: Organization-Wide Rollout (6-12 months)
-   - Objective
-   - Key Activities
-   - Exit Criteria
-8. Continuous Improvement
-9. Common Pitfalls
-10. Next Steps
-11. Related Documentation
-
-## Notes
-
-- Phase 1 advice on SOP vs regulation starting points is practical but assumes readers have one or the other
-- Template catalog link (github.com/ready-to-release/eac) may become outdated if repository moves
-- "2-3 additional teams" in Phase 3 is specific but arbitrary - no rationale for this number
--->
-
 # Compliance Transformation Framework
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -233,7 +194,7 @@ Write test code for specifications:
 - Implement L3 tests (PLTE vertical testing)
 - Implement L4 tests (production monitoring)
 
-**Reference**: [Three-layer testing approach](../specifications/three-layer-approach.md)
+**Reference**: [Three-layer testing approach](../specifications/concepts/three-layer-approach.md)
 
 **Deliverable**: Automated test suite with passing tests
 
@@ -517,3 +478,5 @@ To begin transformation:
 - [Compliance as Code](compliance-as-code.md) - Core principles
 - [CD Model](../continuous-delivery/cd-model/cd-model-overview.md) - Pipeline integration points
 - [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing approach
+
+{{ diataxis_footer() }}

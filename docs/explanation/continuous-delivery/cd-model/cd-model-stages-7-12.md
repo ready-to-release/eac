@@ -1,25 +1,7 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/cd-model/cd-model-stages-7-12.md
-
-## Soul
-
-Detailed explanation of release and production stages from Stage 7 (Exploration with stakeholder validation/UAT) through Stage 12 (Release Toggling with feature flags), including deployment strategies (hot, rolling, blue-green, canary, rings), monitoring, rollback procedures, and Quick Reference links to extracted content.
-
-## Sections
-
-1. Introduction
-2. Stage 7: Exploration
-3. Stage 8: Start Release
-4. Stage 9: Release Approval
-5. Stage 10: Production Deployment
-6. Stage 11: Live
-7. Stage 12: Release Toggling
-8. Stage Summary
-9. Next Steps
-10. Quick Reference
--->
 
 # CD Model: Stages 7-12 (Release to Production)
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -337,7 +319,7 @@ flowchart LR
 
 ### Deployment Strategies
 
-Stage 10 executes production deployment using one of five strategies. For detailed strategy comparison and selection guidance, see [Environments: Deployment Strategies](../architecture/environments.md#deployment-strategies).
+Stage 10 executes production deployment using one of five strategies. For detailed strategy comparison and selection guidance, see [Environments: Production Environment](../architecture/environments.md#production-environment) and [Deployment Strategies](../deployment/deployment-strategies.md).
 
 **Quick Reference**:
 
@@ -483,8 +465,6 @@ Instead of deploying to all users simultaneously, use rings:
 Each ring provides validation before expanding to more users.
 
 ### Incident Response
-
-<!-- TODO: this needs to be an article on its own -->
 
 When issues occur in production:
 
@@ -648,11 +628,4 @@ These stages emphasize controlled release, comprehensive monitoring, and risk mi
 - [Stages 1-6](cd-model-stages-1-6.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
 
-## Quick Reference
-
-- [Release Quality Thresholds](../../../reference/continuous-delivery/release-quality-thresholds.md) - Stage 9 quality thresholds
-- [Release Documentation](../../../reference/continuous-delivery/release-documentation.md) - Required release documents
-- [Deployment Rings](../../../reference/continuous-delivery/deployment-rings.md) - Ring-based rollout reference
-- [Rollback Procedures](../../../how-to-guides/continuous-delivery/rollback-procedures.md) - How to execute rollbacks
-- [Managing Feature Flags](../../../how-to-guides/continuous-delivery/managing-feature-flags.md) - Feature flag lifecycle
-- [Writing Release Notes](../../../how-to-guides/continuous-delivery/writing-release-notes.md) - Release notes format
+{{ diataxis_footer() }}

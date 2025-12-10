@@ -1,20 +1,3 @@
-<!-- EDITOR
-# Editor: index.md
-
-## Soul
-
-Root documentation entry point positioning r2r as an extensible CLI for Everything-as-Code workflows and this repository as both the tool and a working example.
-
-## Sections
-
-1. What is r2r (Ready to Release)?
-2. Why Everything as Code?
-3. Documentation Navigation
-4. Repository Modules
-5. Working with Documentation
-
--->
-
 # Everything as Code
 
 > **Help turn every commit into deployable, compliant software you can trust**
@@ -64,8 +47,8 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 
 Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.
 
-- [Quick Start Guide](tutorials/quick-start.md)
-- [Your First Feature Specification](tutorials/first-specification.md)
+- [Quick Start Guide](tutorials/getting-started/quick-start.md)
+- [Your First Feature Specification](tutorials/getting-started/first-specification.md)
 
 </td>
 <td width="50%" valign="top" markdown="1">
@@ -76,9 +59,9 @@ Step-by-step lessons that take you through a series of steps to complete a proje
 
 Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.
 
-- [Commands by Area](how-to-guides/eac/commands/)
-- [Working with Specifications](how-to-guides/eac/specifications/)
-- [Continuous Delivery Practices](how-to-guides/continuous-delivery/)
+- [EAC Commands](how-to-guides/eac/commands/)
+- [EAC Configuration](how-to-guides/eac/configuration/)
+- [EAC Modules](how-to-guides/eac/modules/)
 
 </td>
 </tr>
@@ -89,11 +72,12 @@ Guides that show you how to solve specific problems. Use these when you need to 
 
 > **Information-oriented descriptions**
 
-Technical reference material for looking up details. Check here for command syntax, configuration options, and specifications.
+Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.
 
-- [Command Reference](reference/commands/)
-- [Specification Standards](reference/specifications/)
-- [Decision Records](reference/decision-records/)
+- [R2R and EAC Architecture](reference/r2r-eac/) - System overview and design
+- [Repository Layout](reference/r2r-eac/repository-layout.md) - File structure
+- [Command Reference](reference/commands/) - CLI commands
+- [Decision Records](reference/decision-records/) - Architectural decisions
 
 </td>
 <td width="50%" valign="top" markdown="1">
@@ -118,12 +102,6 @@ Conceptual explanations that clarify and illuminate. Read these to understand th
 - "I need to accomplish a task" → [How-to Guides](how-to-guides/)
 - "I need technical details" → [Reference](reference/)
 - "I want to understand why" → [Explanation](explanation/)
-
----
-
-## Repository Modules
-
-<!-- book:insert modules-overview -->
 
 ---
 

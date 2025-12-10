@@ -1,0 +1,18 @@
+title: Commands
+nav:
+  - index.md
+  - overview/
+  - categories/
+  - create/
+  - get/
+  - show/
+  - validate/
+  - work/
+  - test/
+  - pipeline/
+  - release/
+  - scan/
+  - serve/
+  - templates/
+  - update/
+  - other/

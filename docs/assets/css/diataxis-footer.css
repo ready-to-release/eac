@@ -1,0 +1,22 @@
+/* Diátaxis Footer Styling */
+/* Target paragraphs that come after the last <hr> in the article */
+article hr:last-of-type ~ p {
+    font-size: 0.85em;
+    color: var(--md-default-fg-color--light, #666);
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+}
+
+/* Ensure links in footer are visible */
+article hr:last-of-type ~ p a {
+    color: var(--md-typeset-a-color, #4051b5);
+}
+
+article hr:last-of-type ~ p a:hover {
+    opacity: 0.7;
+}
+
+/* Add some spacing after the hr */
+article hr:last-of-type {
+    margin-bottom: 1rem;
+}

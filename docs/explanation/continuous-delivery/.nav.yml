@@ -5,5 +5,8 @@ nav:
   - cd-model/
   - workflow/
   - testing/
+  - quality-gates/
   - architecture/
+  - deployment/
+  - release-management/
   - security/

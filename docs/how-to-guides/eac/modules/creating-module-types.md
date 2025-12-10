@@ -1,28 +1,6 @@
-<!-- EDITOR
-# Editor: how-to-guides/eac/creating-module-types.md
-
-## Soul
-
-Guide for defining reusable module type templates covering build dependencies, capabilities, default file patterns, and common type patterns for Go, Node, Python, and documentation.
-
-## Sections
-
-1. Problem/Solution
-2. What is a Module Type?
-3. Quick Start
-4. Type Definition Structure
-5. Build Dependencies
-6. Capabilities
-7. File Patterns
-8. Common Type Patterns
-9. Viewing Types
-10. Best Practices
-11. Troubleshooting
-12. See Also
-
--->
-
 # Creating Module Types
+
+{{ page_breadcrumb() }}
 
 **Problem**: You have multiple modules with the same structure (e.g., Python services, React apps) and want to define consistent defaults.
 
@@ -293,3 +271,5 @@ r2r eac get modules --format=json | jq '.modules[].type' | sort -u
 ## See Also
 
 - [Creating Modules](creating-modules.md) - Use types in module definitions
+
+{{ diataxis_footer() }}

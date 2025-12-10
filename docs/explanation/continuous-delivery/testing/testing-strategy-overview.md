@@ -1,27 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/testing/testing-strategy-overview.md
-
-## Soul
-
-Comprehensive test taxonomy documentation covering L0-L4 test levels based on execution environment/scope, determinism vs domain coherency trade-off, shift-left/shift-right strategy, and Horizontal E2E anti-pattern (lowest determinism, non-shifted classification).
-
-## Sections
-
-1. Introduction
-2. Test Taxonomy
-3. Determinism vs Domain Coherency
-4. Tag Taxonomy
-5. L0: Unit Tests
-6. L1: Unit Tests
-7. L2: Emulated System Tests
-8. L3: In-Situ Vertical Tests
-9. L4: Testing in Production
-10. Horizontal E2E (Anti-Pattern)
-11. Shift-Left Strategy
-12. Summary
--->
-
 # Testing Strategy: Overview
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -139,7 +118,7 @@ flowchart TB
 
 ## Tag Taxonomy
 
-The testing taxonomy uses tags to categorize tests by level, verification type, and dependencies. See **[Tag Reference](../../specifications/tag-reference.md)** for complete documentation.
+The testing taxonomy uses tags to categorize tests by level, verification type, and dependencies. See **[Testing Taxonomy](../../specifications/taxonomy/)** for complete documentation.
 
 **Key Tag Categories**:
 
@@ -747,7 +726,7 @@ The CD Model uses a taxonomy based on execution environment and scope:
 
 **Tag Usage**:
 
-See **[Tag Reference](../../specifications/tag-reference.md)** for complete documentation of all tags, verification requirements, test suites, and filtering rules.
+See **[Testing Taxonomy](../../specifications/taxonomy/)** for complete documentation of all tags, verification requirements, test suites, and filtering rules.
 
 ## Next Steps
 
@@ -760,4 +739,6 @@ See **[Tag Reference](../../specifications/tag-reference.md)** for complete docu
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Stages 1-6](../cd-model/cd-model-stages-1-6.md)
-- [Three-Layer Testing](../../specifications/three-layer-approach.md)
+- [Three-Layer Testing](../../specifications/concepts/three-layer-approach.md)
+
+{{ diataxis_footer() }}

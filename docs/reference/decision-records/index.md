@@ -1,16 +1,6 @@
-<!-- EDITOR
-# Editor: docs/reference/decision-records/index.md
-
-## Soul
-Archive of architectural decisions documenting the rationale behind key design choices in the EAC system.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Decision Records
+
+{{ page_breadcrumb() }}
 
 Architectural Decision Records (ADRs) documenting significant design choices and their rationale. Each record captures the context, decision, and consequences of important architectural decisions.
 
@@ -23,8 +13,4 @@ Architectural Decision Records (ADRs) documenting significant design choices and
 | [DR-003](./dr003.md) | Use Three-Layer Testing Approach (Rules/Scenarios/Unit Tests) |
 | [DR-004](./dr004.md) | Adopt Diataxis Framework for Documentation Organization |
 
----
-
-*[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Reference** | [Explanation](../../explanation/)*
-
-**You are here:** Reference — information-oriented technical descriptions of the system.
+{{ diataxis_footer() }}

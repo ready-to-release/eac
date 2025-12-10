@@ -1,16 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/lifecycle/index.md
-
-## Soul
-Navigation page introducing four lifecycle phases with interactive diagram, emphasizing DevOps model where teams handle both development and operations.
-
-## Sections
-1. Overview
-2. In This Section
-3. Diátaxis
--->
-
 # Software Development Lifecycle
+
+{{ page_breadcrumb() }}
 
 The complete software lifecycle from initiation through end-of-life, balancing regulatory compliance with continuous delivery in a DevOps model.
 
@@ -23,8 +13,15 @@ The complete software lifecycle from initiation through end-of-life, balancing r
 | [Operations](./operations.md)   | Deployment, monitoring, maintenance, and incident management                        |
 | [End of Life](./end-of-life.md) | Decommissioning and knowledge transfer                                              |
 
----
+## Interactive lifecycle
 
-_[Tutorials](../../tutorials/) | [How-to Guides](../../how-to-guides/) | **Explanation** | [Reference](../../reference/)_
+- <span style="color:#D6B656">Lifecycle Phases</span> - Stages the project/solution progresses through
+- <span style="color:#6C8EBF">Documents</span> - Artifacts in Markdown and Gherkin format
+- <span style="color:#B85450">Automation</span> - Automated pipeline processes
+- <span style="color:#666666">CD Stages</span> - Continuous Delivery stages
 
-**You are here:** Explanation — understanding-oriented discussion that clarifies concepts.
+The drawing below is interactive, allowing you to navigate to relevant sections of the documentation by clicking the boxes.
+
+![](../../assets/lifecycle/lifecycle.drawio){ width="100%" }
+
+{{ diataxis_footer() }}

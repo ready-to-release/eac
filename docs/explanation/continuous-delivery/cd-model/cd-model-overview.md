@@ -1,24 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/cd-model/cd-model-overview.md
-
-## Soul
-
-Overview of the 12-stage Continuous Delivery Model framework, explaining visual notation (start elements, quality gates, signoff points, exploration activities, environment agents, PLTE), traditional vs CD Model approach, and key principles (shift-left, fail fast, automation, traceability).
-
-## Sections
-
-1. Introduction
-2. The 12-Stage Model
-3. Traditional vs CD Model Approach
-4. Understanding the Visual Notation
-5. The 12 Stages Overview
-6. Key Principles
-7. Patterns and Variations
-8. Benefits
-9. How to Use This Documentation
--->
-
 # Continuous Delivery Model: Overview
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -330,4 +312,6 @@ See [Implementation Patterns](implementation-patterns.md) for detailed guidance 
 
 **Additional Resources:**
 
-- [Repository Layout](../../../reference/repository-layout.md)
+- [Repository Layout](../../../reference/r2r-eac/repository-layout.md)
+
+{{ diataxis_footer() }}

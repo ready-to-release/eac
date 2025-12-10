@@ -77,12 +77,6 @@ tags:
     description: "Production monitoring and performance validation"
     type: verification
 
-  - tag: "@risk:<risk-id>"
-    description: "Tag specific risks for tracking and mitigation"
-    type: safety
-    pattern: "^@risk:(?P<risk_id>[a-z0-9-]+)$"
-    example: "@risk:data-loss"
-
   - tag: "@skip:<reason>"
     description: "Exclude from test suite runs with documented reason"
     type: execution_control

@@ -1,23 +1,6 @@
-<!-- EDITOR
-# Editor: explanation/continuous-delivery/cd-model/implementation-patterns.md
-
-## Soul
-
-Implementation patterns documentation comparing Release Approval (RA: 1-2 weeks cycle, manual approval gates, regulated systems) and Continuous Deployment (CDE: 2-4 hours cycle, automated approval, non-regulated systems) with decision tree, traceability requirements, and Quick Reference links to extracted content.
-
-## Sections
-
-1. Introduction
-2. Release Approval (RA) Pattern
-3. Continuous Deployment (CDE) Pattern
-4. Compliance and Signoffs
-5. Pattern Selection Decision Tree
-6. Summary
-7. Next Steps
-8. Quick Reference
--->
-
 # Implementation Patterns
+
+{{ page_breadcrumb() }}
 
 ## Introduction
 
@@ -262,6 +245,7 @@ Without feature flags, the CDe pattern has limited control over feature exposure
 ![Compliance Signoffs](../../../assets/cd-model/canvas-signoffs.drawio.png)
 
 **This diagram shows three formal sign-off gates across both patterns:** The diagram identifies five manually initiated stages, with three being formal sign-off gates:
+
 - **B** - Stage 3 (Merge Request): First-level sign-off - peer review approval
 - **D** - Stage 9 (Release Approval): Second-level sign-off - release manager approval (RA only; auto-approved in CDe)
 - **E** - Stage 12 (Release Toggling): Third-level sign-off - feature toggle approval
@@ -433,10 +417,71 @@ Choose based on regulatory requirements, risk profile, and organizational maturi
 
 - [CD Model Overview](cd-model-overview.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
-- [Repository Layout](../../../reference/repository-layout.md)
+- [Repository Layout](../../../reference/r2r-eac/repository-layout.md)
 
 ## Quick Reference
 
-- [RA Stage Breakdown](../../../reference/continuous-delivery/ra-stage-breakdown.md) - Stage-by-stage reference table
-- [CDe Stage Breakdown](../../../reference/continuous-delivery/cde-stage-breakdown.md) - Stage-by-stage reference table
-- [Choosing Implementation Pattern](../../../how-to-guides/continuous-delivery/choosing-implementation-pattern.md) - Decision tree for pattern selection
+### Release Approval (RA) Stage Breakdown
+
+| Stage                     | Automation Level          | Approval Required     | Duration          |
+| ------------------------- | ------------------------- | --------------------- | ----------------- |
+| 1. Authoring              | Manual                    | No                    | hours to days     |
+| 2. Pre-commit             | Automated                 | No                    | 5-10 min          |
+| 3. Merge Request          | Automated + Manual Review | Yes (Peer)            | hours             |
+| 4. Commit                 | Automated                 | No                    | 5-10 min          |
+| 5. Acceptance Testing     | Automated                 | No                    | minutes to 1 hour |
+| 6. Extended Testing       | Automated + Manual        | No                    | hours             |
+| 7. Exploration            | Manual                    | No                    | continuous        |
+| 8. Start Release          | Automated                 | No                    | minutes           |
+| 9. Release Approval       | Manual Review             | Yes (Release Manager) | hours to days     |
+| 10. Production Deployment | Automated                 | No                    | minutes           |
+| 11. Live                  | Automated Monitoring      | No                    | Ongoing           |
+| 12. Release Toggling      | Manual Control            | No                    | As needed         |
+
+**Key Characteristics**:
+
+- Typical cycle time: 1-2 weeks from commit to production
+- Manual approval gates: Stage 3 (Peer) and Stage 9 (Release Manager)
+- Primary constraints: Authoring time and Release Approval queue
+
+**Approval Gates**:
+
+| Gate         | Stage    | Approver        | Purpose              |
+| ------------ | -------- | --------------- | -------------------- |
+| First-level  | Stage 3  | Peer reviewer   | Code quality, design |
+| Second-level | Stage 9  | Release manager | Production readiness |
+| Third-level  | Stage 12 | Feature owner   | Feature exposure     |
+
+### Continuous Deployment (CDe) Stage Breakdown
+
+| Stage                     | Automation Level          | Approval Required  | Duration          |
+| ------------------------- | ------------------------- | ------------------ | ----------------- |
+| 1. Authoring              | Manual                    | No                 | hours to days     |
+| 2. Pre-commit             | Automated                 | No                 | 5-10 min          |
+| 3. Merge Request          | Automated + Manual Review | Yes (Peer)         | hours             |
+| 4. Commit                 | Automated                 | No                 | 5-10 min          |
+| 5. Acceptance Testing     | Automated                 | No                 | minutes to 1 hour |
+| 6. Extended Testing       | Automated                 | No                 | hours             |
+| 7. Exploration            | Automated (or skipped)    | No                 | continuous        |
+| 8. Start Release          | Automated                 | No                 | seconds           |
+| 9. Release Approval       | Automated                 | No (Auto-approved) | seconds           |
+| 10. Production Deployment | Automated                 | No                 | minutes           |
+| 11. Live                  | Automated Monitoring      | No                 | Ongoing           |
+| 12. Release Toggling      | Automated Control         | No                 | Real-time         |
+
+**Key Characteristics**:
+
+- Typical cycle time: 2-4 hours from commit to production
+- Single approval gate: Stage 3 serves as both first-level and second-level sign-off
+- Feature flags: Required for runtime control of feature exposure
+
+**Approval Gates**:
+
+| Gate | Stage | Approver | Purpose |
+|------|-------|----------|---------|
+| Combined first/second-level | Stage 3 | Peer reviewer | Code quality + production approval |
+| Third-level | Stage 12 | Feature owner | Feature exposure (via flags) |
+
+**Note**: In CDe, Stage 3 approval also approves production deployment. By merging, the reviewer approves the change going to production.
+
+{{ diataxis_footer() }}
