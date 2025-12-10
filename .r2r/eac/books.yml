@@ -117,10 +117,12 @@ books:
         from: "docs/explanation/**/.nav.yml"
         to: "./"
 
-      # Assets for PDF rendering
+      # Assets for PDF rendering (exclude embedded PDFs - can't view PDFs inside PDF)
       - type: copy
         from: "docs/assets/**"
         to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
 
   # ==============================================================================
   # Risk Evidence Package - comprehensive audit evidence bundle
