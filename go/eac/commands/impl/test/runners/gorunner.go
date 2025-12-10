@@ -29,6 +29,80 @@ func (r *GoRunner) TestTypes() []string {
 	return []string{"gotest", "godog"}
 }
 
+// GetTestInfo extracts structured test metadata from a Go test reference.
+func (r *GoRunner) GetTestInfo(test testing.TestReference, workspaceRoot string, cfg *config.EACConfig) *TestInfo {
+	// Calculate relative path from workspace root
+	relPath, err := filepath.Rel(workspaceRoot, test.FilePath)
+	if err != nil {
+		return nil
+	}
+	relPath = filepath.ToSlash(relPath)
+
+	info := &TestInfo{Language: "go"}
+
+	if test.Type == "godog" {
+		// BDD test: extract from specs path
+		specsPrefix := cfg.Repository.Paths.SpecsRoot + "/"
+		specRelPath := strings.TrimPrefix(relPath, specsPrefix)
+		specRelPath = filepath.ToSlash(specRelPath)
+
+		// Get module moniker from first path component
+		parts := strings.Split(specRelPath, "/")
+		if len(parts) == 0 {
+			return nil
+		}
+		info.ModuleMoniker = parts[0]
+
+		// Verify module exists
+		if cfg.Repository.GetByMoniker(info.ModuleMoniker) == nil {
+			return nil
+		}
+
+		// Find test root
+		info.TestRoot = r.FindTestRoot(relPath, cfg)
+		if info.TestRoot == "" {
+			return nil
+		}
+
+		// Build package key and display name
+		featureFolderName := extractFeatureFolderName(relPath)
+		info.PackageKey = featureFolderName + ":" + info.TestRoot + ":" + relPath
+		info.DisplayName = featureFolderName + ":" + info.TestRoot
+	} else {
+		// Unit test (gotest): extract module from path using module_mapping
+		absDir := filepath.Dir(test.FilePath)
+		relDir, err := filepath.Rel(workspaceRoot, absDir)
+		if err != nil {
+			return nil
+		}
+		relDir = filepath.ToSlash(relDir)
+
+		// Find the module this path belongs to
+		info.ModuleMoniker = findModuleForPath(relDir, cfg)
+		if info.ModuleMoniker == "" {
+			return nil
+		}
+
+		info.TestRoot = relDir
+		info.PackageKey = relDir
+		info.DisplayName = relDir
+	}
+
+	return info
+}
+
+// findModuleForPath finds the module moniker for a given relative path.
+func findModuleForPath(relPath string, cfg *config.EACConfig) string {
+	// Iterate through modules to find the one that owns this path
+	for _, module := range cfg.Repository.Modules {
+		moduleRoot := filepath.ToSlash(module.Files.Root)
+		if strings.HasPrefix(relPath, moduleRoot+"/") || relPath == moduleRoot {
+			return module.Moniker
+		}
+	}
+	return ""
+}
+
 // FindTestRoot finds the test runner package for a godog feature file.
 // For gotest, returns empty string (tests are in the same directory as source).
 // For godog, returns the path to the directory containing godog_test.go.
@@ -130,7 +204,10 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 		relPkgPath = pkgPath
 	}
 
-	result := RunResult{PackageName: displayName}
+	result := RunResult{
+		PackageName:   displayName,
+		ModuleMoniker: cfg.ModuleMoniker,
+	}
 
 	actualPkgDir := filepath.Join(cfg.WorkspaceRoot, relPkgPath)
 

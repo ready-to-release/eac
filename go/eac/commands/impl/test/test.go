@@ -93,6 +93,7 @@ type TestExecutionContext struct {
 
 // PackageResult holds test results for a single package
 type PackageResult struct {
+	ModuleMoniker string // Module this package belongs to (for aggregation)
 	PackageName   string
 	LogFilePath   string
 	TestsPassed   int
@@ -709,6 +710,21 @@ func executeTests(cfg *TestConfig) int {
 				writeInit("")
 				writeInit("✅ All tests up-to-date (nothing to run)")
 				writeInit("   Use --retest to force a full test run")
+
+				// Print summary even when skipping
+				fmt.Fprintln(multiWriter)
+				fmt.Fprintf(multiWriter, "✓ Initialization: %d modules up-to-date\n", len(changeResult.UpToDateModules))
+				fmt.Fprintf(multiWriter, "✓ Testing: skipped (no changes detected)\n")
+				fmt.Fprintln(multiWriter)
+				fmt.Fprintln(multiWriter, strings.Repeat("-", 58))
+				fmt.Fprintln(multiWriter, "Module               Pkgs  Asserts  Fail  Skip  Pass")
+				fmt.Fprintln(multiWriter, strings.Repeat("-", 58))
+				fmt.Fprintf(multiWriter, "%-20s %4d  %7d  %4d  %4d  %4d\n", "(no tests run)", 0, 0, 0, 0, 0)
+				fmt.Fprintln(multiWriter, strings.Repeat("-", 58))
+				fmt.Fprintf(multiWriter, "%-20s %4d  %7d  %4d  %4d  %4d\n", "TOTAL", 0, 0, 0, 0, 0)
+				fmt.Fprintln(multiWriter)
+				fmt.Fprintf(multiWriter, "Results: %s\n", testRunDir)
+
 				return 0
 			}
 		}
@@ -896,28 +912,11 @@ func executeTests(cfg *TestConfig) int {
 
 	// Show full summary (when not using TUI or after TUI exits)
 	if !cfg.UseTUI {
-		writeln(multiWriter, "══════════════════════════════════")
-		writeln(multiWriter, "  Test Summary")
-		writeln(multiWriter, "══════════════════════════════════")
-	writeln(multiWriter, "Suite: %s", suite.Name)
-	writeln(multiWriter, "")
-	writeln(multiWriter, "Test Selection Breakdown:")
-	writeln(multiWriter, "  Tests discovered:        %d", stats.TotalDiscovered)
-	writeln(multiWriter, "  - Skipped (@skip:*):     %d", stats.Skipped)
-	writeln(multiWriter, "  - Not matching suite:    %d", stats.NotMatchingSuite)
-	writeln(multiWriter, "  = Selected for suite:    %d", stats.Selected)
-	writeln(multiWriter, "  - OS incompatible:       %d", osFilteredCount)
-	writeln(multiWriter, "  = Production tests:      %d", len(selectedTests))
-	writeln(multiWriter, "")
-	writeln(multiWriter, "Test Execution:")
-	writeln(multiWriter, "  Total packages: %d", len(testsByPackage))
-	writeln(multiWriter, "  Packages passed: %d", packagesPassed)
-	writeln(multiWriter, "  Packages failed: %d", packagesFailed)
-	writeln(multiWriter, "  Tests total: %d", testsTotal)
-	writeln(multiWriter, "  Tests passed: %d", testsPassed)
-	writeln(multiWriter, "  Tests failed: %d", testsFailed)
-	writeln(multiWriter, "")
-	writeln(multiWriter, "Results directory: %s", testRunDir)
+		printTestSummary(multiWriter, results, suite.Name,
+			len(selectedTests), osFilteredCount,
+			len(testsByPackage), packagesPassed, packagesFailed,
+			testsTotal, testsPassed, testsFailed,
+			testRunDir)
 	}
 
 	// Show top 5 failed tests with log excerpts (always, even when using TUI)
@@ -1033,6 +1032,12 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 
 	// If we have a registered runner, use it
 	if testRunner != nil {
+		// Extract module moniker from modulePath (format: "<moniker>/<subpath>" or just "<moniker>")
+		moduleMoniker := modulePath
+		if idx := strings.Index(modulePath, "/"); idx > 0 {
+			moduleMoniker = modulePath[:idx]
+		}
+
 		// Use the module path directly as the output path (orchestrator already uses this)
 		cfg := runners.RunConfig{
 			WorkspaceRoot:    ctx.workspaceRoot,
@@ -1041,11 +1046,13 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 			Coverage:         ctx.coverage,
 			SuiteTagFilter:   ctx.suiteTagFilter,
 			Parallelism:      ctx.testParallelism,
-			ModuleOutputPath: modulePath, // Orchestrator creates this directory
+			ModuleMoniker:    moduleMoniker, // For result aggregation
+			ModuleOutputPath: modulePath,    // Orchestrator creates this directory
 		}
 		// Pass original package path to runner for test execution
 		runResult := testRunner.Execute(originalPkgPath, tests, tuiWriter, cfg)
 		return PackageResult{
+			ModuleMoniker: runResult.ModuleMoniker,
 			PackageName:   runResult.PackageName,
 			LogFilePath:   runResult.LogFilePath,
 			TestsPassed:   runResult.TestsPassed,
@@ -1476,6 +1483,63 @@ func printTestUsage() {
 	log.Info("  r2r eac test list-suites              # List all available test suites")
 }
 
+// printTestSummary prints unified test summary to a writer (for non-TUI mode)
+func printTestSummary(w io.Writer, results []PackageResult, suiteName string,
+	selectedCount, osFilteredCount,
+	totalPackages, packagesPassed, packagesFailed,
+	testsTotal, testsPassed, testsFailed int,
+	testRunDir string,
+) {
+	testsSkipped := testsTotal - testsPassed - testsFailed
+	moduleStats := aggregateResultsByModule(results)
+
+	// Init summary line
+	initSummary := fmt.Sprintf("%d test cases selected", selectedCount)
+	if osFilteredCount > 0 {
+		initSummary += fmt.Sprintf(" (%d filtered by OS)", osFilteredCount)
+	}
+
+	// Run summary line
+	var runSummary string
+	if packagesFailed == 0 && testsFailed == 0 {
+		assertionInfo := fmt.Sprintf("%d assertions", testsTotal)
+		if testsSkipped > 0 {
+			assertionInfo += fmt.Sprintf(", %d skipped", testsSkipped)
+		}
+		runSummary = fmt.Sprintf("%d packages passed (%s)", totalPackages, assertionInfo)
+	} else {
+		runSummary = fmt.Sprintf("%d/%d packages passed, %d assertions failed",
+			packagesPassed, totalPackages, testsFailed)
+	}
+
+	// Status icons
+	initIcon := "✓"
+	runIcon := "✓"
+	if packagesFailed > 0 || testsFailed > 0 {
+		runIcon = "✗"
+	}
+
+	fmt.Fprintf(w, "%s Initialization: %s\n", initIcon, initSummary)
+	fmt.Fprintf(w, "%s Testing: %s\n", runIcon, runSummary)
+	fmt.Fprintln(w)
+
+	// Module breakdown table
+	fmt.Fprintln(w, strings.Repeat("-", 58))
+	fmt.Fprintln(w, "Module               Pkgs  Asserts  Fail  Skip  Pass")
+	fmt.Fprintln(w, strings.Repeat("-", 58))
+	for _, ms := range moduleStats {
+		fmt.Fprintf(w, "%-20s %4d  %7d  %4d  %4d  %4d\n",
+			truncateString(ms.Module, 20), ms.Packages, ms.Assertions, ms.Failed, ms.Skipped, ms.Passed)
+	}
+	fmt.Fprintln(w, strings.Repeat("-", 58))
+	fmt.Fprintf(w, "%-20s %4d  %7d  %4d  %4d  %4d\n",
+		"TOTAL", totalPackages, testsTotal, testsFailed, testsSkipped, testsPassed)
+	fmt.Fprintln(w)
+
+	// Results path
+	fmt.Fprintf(w, "Results: %s\n", testRunDir)
+}
+
 // testTUISummary creates summary data for the TUI Summary pane
 func testTUISummary(
 	results []PackageResult, totalTime time.Duration, suiteName string,
@@ -1484,21 +1548,32 @@ func testTUISummary(
 	testsTotal, testsPassed, testsFailed int,
 	testRunDir string,
 ) *tui.SummaryData {
-	// Calculate skipped tests
 	testsSkipped := testsTotal - testsPassed - testsFailed
 
-	// Init summary with OS-filtered count if applicable
-	initSummary := fmt.Sprintf("%d tests selected", selectedCount)
+	// Init summary: test cases selected (scenarios/functions we chose to run)
+	initSummary := fmt.Sprintf("%d test cases selected", selectedCount)
 	if osFilteredCount > 0 {
 		initSummary += fmt.Sprintf(" (%d filtered by OS)", osFilteredCount)
 	}
 
-	// Run summary with skipped count if applicable
-	runSummary := fmt.Sprintf("%d/%d packages passed, %d/%d tests passed",
-		packagesPassed, totalPackages, testsPassed, testsTotal)
-	if testsSkipped > 0 {
-		runSummary += fmt.Sprintf(", %d skipped", testsSkipped)
+	// Run summary: packages are the unit of execution, assertions are what ran inside them
+	// (testsTotal includes subtests from t.Run, which is why it can exceed selectedCount)
+	var runSummary string
+	if packagesFailed == 0 && testsFailed == 0 {
+		// All passed - show packages passed and total assertions
+		assertionInfo := fmt.Sprintf("%d assertions", testsTotal)
+		if testsSkipped > 0 {
+			assertionInfo += fmt.Sprintf(", %d skipped", testsSkipped)
+		}
+		runSummary = fmt.Sprintf("%d packages passed (%s)", totalPackages, assertionInfo)
+	} else {
+		// Failures - show what failed
+		runSummary = fmt.Sprintf("%d/%d packages passed, %d assertions failed",
+			packagesPassed, totalPackages, testsFailed)
 	}
+
+	// Build per-module breakdown
+	moduleStats := aggregateResultsByModule(results)
 
 	var details []string
 	if packagesFailed > 0 || testsFailed > 0 {
@@ -1515,6 +1590,21 @@ func testTUISummary(
 			details = append(details, fmt.Sprintf("  (%s, +%d more)", failedPackages[0], len(failedPackages)-1))
 		}
 	}
+
+	// Add per-module breakdown table
+	details = append(details, "")
+	details = append(details, strings.Repeat("-", 58))
+	details = append(details, "Module               Pkgs  Asserts  Fail  Skip  Pass")
+	details = append(details, strings.Repeat("-", 58))
+	for _, ms := range moduleStats {
+		details = append(details, fmt.Sprintf("%-20s %4d  %7d  %4d  %4d  %4d",
+			truncateString(ms.Module, 20), ms.Packages, ms.Assertions, ms.Failed, ms.Skipped, ms.Passed))
+	}
+	details = append(details, strings.Repeat("-", 58))
+	details = append(details, fmt.Sprintf("%-20s %4d  %7d  %4d  %4d  %4d",
+		"TOTAL", totalPackages, testsTotal, testsFailed, testsSkipped, testsPassed))
+
+	details = append(details, "")
 	details = append(details, fmt.Sprintf("Results: %s", testRunDir))
 
 	nextSteps := ""
@@ -1533,6 +1623,80 @@ func testTUISummary(
 		NextSteps:   nextSteps,
 	}
 }
+
+// moduleTestStats holds aggregated test statistics for a module
+type moduleTestStats struct {
+	Module     string
+	Packages   int
+	Passed     int
+	Failed     int
+	Skipped    int
+	Assertions int
+}
+
+// aggregateResultsByModule groups test results by module moniker
+func aggregateResultsByModule(results []PackageResult) []moduleTestStats {
+	moduleMap := make(map[string]*moduleTestStats)
+
+	for _, result := range results {
+		// Use ModuleMoniker directly (set by runner via GetTestInfo)
+		module := result.ModuleMoniker
+		if module == "" {
+			// Fallback: extract from package name if ModuleMoniker not set
+			module = result.PackageName
+			if idx := strings.Index(module, "/"); idx > 0 {
+				module = module[:idx]
+			}
+		}
+
+		stats, exists := moduleMap[module]
+		if !exists {
+			stats = &moduleTestStats{Module: module}
+			moduleMap[module] = stats
+		}
+
+		stats.Packages++
+		stats.Passed += result.TestsPassed
+		stats.Failed += result.TestsFailed
+		stats.Skipped += result.TestsSkipped
+		stats.Assertions += result.TestsTotal
+	}
+
+	// Convert to sorted slice
+	var moduleList []moduleTestStats
+	for _, stats := range moduleMap {
+		moduleList = append(moduleList, *stats)
+	}
+	sort.Slice(moduleList, func(i, j int) bool {
+		return moduleList[i].Module < moduleList[j].Module
+	})
+
+	return moduleList
+}
+
+// truncateString truncates a string to maxLen, adding "..." if truncated
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// Terminology for test metrics:
+//
+// | Framework    | Test Case                | Package              | Assertion              |
+// |--------------|--------------------------|----------------------|------------------------|
+// | Go (gotest)  | Test* function           | Go package directory | t.Run subtests + main  |
+// | Go (godog)   | Gherkin scenario         | Feature file folder  | Scenario steps         |
+// | TS (mocha)   | describe() block         | Test file            | it() blocks            |
+// | TS (cucumber)| Gherkin scenario         | Feature file folder  | Scenario steps         |
+//
+// - "Test cases selected" = scenarios + Test* functions discovered and matched by suite filter
+// - "Packages" = execution units (directories/files containing test cases)
+// - "Assertions" = actual test executions reported by runner (includes subtests)
 
 // getUniqueModulesFromTests extracts unique module monikers from test references
 func getUniqueModulesFromTests(tests []testing.TestReference) []string {

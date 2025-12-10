@@ -14,8 +14,29 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
+// TestInfo provides structured metadata for test execution and reporting.
+// This normalizes information across all test types for consistent aggregation.
+type TestInfo struct {
+	// ModuleMoniker is the module identifier for aggregation (e.g., "eac-commands", "books")
+	ModuleMoniker string
+
+	// Language is the programming language (e.g., "go", "ts")
+	Language string
+
+	// PackageKey is the unique key for grouping tests (used internally)
+	PackageKey string
+
+	// DisplayName is the human-readable name for TUI display
+	DisplayName string
+
+	// TestRoot is the directory where tests are executed from
+	TestRoot string
+}
+
 // RunResult holds the results from running a package's tests
 type RunResult struct {
+	// ModuleMoniker is the module this package belongs to (for aggregation)
+	ModuleMoniker string
 	PackageName   string
 	LogFilePath   string
 	TestsPassed   int
@@ -35,6 +56,9 @@ type RunConfig struct {
 	SuiteTagFilter string
 	Parallelism    int
 
+	// ModuleMoniker is the module this package belongs to (for result aggregation).
+	ModuleMoniker string
+
 	// ModuleOutputPath is the module-based output path for this package's results.
 	// Format: "<module-moniker>/<subpath>" e.g., "eac-core/contracts"
 	// This is used instead of the raw package path for cleaner output organization.
@@ -47,6 +71,15 @@ type TestTypeRunner interface {
 	// TestTypes returns the test types this runner handles.
 	// Most runners handle a single type, but some (like GoRunner) handle multiple.
 	TestTypes() []string
+
+	// GetTestInfo extracts structured test metadata from a test reference.
+	// This provides consistent information for grouping, display, and aggregation.
+	// Parameters:
+	//   - test: the test reference to analyze
+	//   - workspaceRoot: the workspace root directory
+	//   - cfg: loaded configuration
+	// Returns structured test info, or nil if the test cannot be processed.
+	GetTestInfo(test testing.TestReference, workspaceRoot string, cfg *config.EACConfig) *TestInfo
 
 	// FindTestRoot finds the test runner location for a feature file.
 	// For BDD tests, this returns the package/module where test implementation lives.

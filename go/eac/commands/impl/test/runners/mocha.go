@@ -27,6 +27,42 @@ func (r *MochaRunner) TestTypes() []string {
 	return []string{"mocha"}
 }
 
+// GetTestInfo extracts structured test metadata from a mocha test reference.
+func (r *MochaRunner) GetTestInfo(test testing.TestReference, workspaceRoot string, cfg *config.EACConfig) *TestInfo {
+	// Calculate relative path from workspace root
+	relPath, err := filepath.Rel(workspaceRoot, test.FilePath)
+	if err != nil {
+		return nil
+	}
+	relPath = filepath.ToSlash(relPath)
+	relDir := filepath.ToSlash(filepath.Dir(relPath))
+
+	info := &TestInfo{Language: "ts"}
+
+	// Find the module this path belongs to
+	info.ModuleMoniker = findTsModuleForPath(relDir, cfg)
+	if info.ModuleMoniker == "" {
+		return nil
+	}
+
+	info.TestRoot = relDir
+	info.PackageKey = relDir
+	info.DisplayName = relDir
+
+	return info
+}
+
+// findTsModuleForPath finds the module moniker for a given TypeScript path.
+func findTsModuleForPath(relPath string, cfg *config.EACConfig) string {
+	for _, module := range cfg.Repository.Modules {
+		moduleRoot := filepath.ToSlash(module.Files.Root)
+		if strings.HasPrefix(relPath, moduleRoot+"/") || relPath == moduleRoot {
+			return module.Moniker
+		}
+	}
+	return ""
+}
+
 // FindTestRoot finds the module root for a mocha test file.
 // Mocha tests are typically in a test/ directory within the module.
 // Returns the parent directory of the test directory.
@@ -46,7 +82,10 @@ func (r *MochaRunner) BuildPackagePath(testRoot string, testPath string) string 
 // Execute runs TypeScript mocha tests for a package.
 func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, cfg RunConfig) RunResult {
 	start := time.Now()
-	result := RunResult{PackageName: pkgPath}
+	result := RunResult{
+		PackageName:   pkgPath,
+		ModuleMoniker: cfg.ModuleMoniker,
+	}
 
 	// pkgPath is the test directory (e.g., "typescript/vscode-ext-commit/test")
 	// We need to find the module root (parent of test directory)

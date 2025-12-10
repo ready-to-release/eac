@@ -27,6 +27,48 @@ func (r *TsCucumberRunner) TestTypes() []string {
 	return []string{"tscucumber"}
 }
 
+// GetTestInfo extracts structured test metadata from a TypeScript cucumber test reference.
+func (r *TsCucumberRunner) GetTestInfo(test testing.TestReference, workspaceRoot string, cfg *config.EACConfig) *TestInfo {
+	// Calculate relative path from workspace root
+	relPath, err := filepath.Rel(workspaceRoot, test.FilePath)
+	if err != nil {
+		return nil
+	}
+	relPath = filepath.ToSlash(relPath)
+
+	info := &TestInfo{Language: "ts"}
+
+	// Extract module moniker from specs path
+	specsPrefix := cfg.Repository.Paths.SpecsRoot + "/"
+	specRelPath := strings.TrimPrefix(relPath, specsPrefix)
+	specRelPath = filepath.ToSlash(specRelPath)
+
+	// Get module moniker from first path component
+	parts := strings.Split(specRelPath, "/")
+	if len(parts) == 0 {
+		return nil
+	}
+	info.ModuleMoniker = parts[0]
+
+	// Verify module exists
+	if cfg.Repository.GetByMoniker(info.ModuleMoniker) == nil {
+		return nil
+	}
+
+	// Find test root
+	info.TestRoot = r.FindTestRoot(relPath, cfg)
+	if info.TestRoot == "" {
+		return nil
+	}
+
+	// Build package key and display name
+	featureFolderName := extractTsFeatureFolderName(relPath)
+	info.PackageKey = featureFolderName + ":" + info.TestRoot + ":" + relPath
+	info.DisplayName = featureFolderName + ":" + info.TestRoot
+
+	return info
+}
+
 // FindTestRoot finds the module root for a TypeScript cucumber feature file.
 // The test runner (cucumber-js) is located in the module's root directory.
 func (r *TsCucumberRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) string {
@@ -102,7 +144,10 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 		relPkgPath = pkgPath
 	}
 
-	result := RunResult{PackageName: displayName}
+	result := RunResult{
+		PackageName:   displayName,
+		ModuleMoniker: cfg.ModuleMoniker,
+	}
 
 	// moduleRoot is the TypeScript module directory
 	moduleRoot := filepath.Join(cfg.WorkspaceRoot, relPkgPath)
