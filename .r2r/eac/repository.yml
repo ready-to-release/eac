@@ -71,10 +71,8 @@ modules:
     # Books define what this module builds - artifacts derived automatically
     # First book is default, others require --all flag
     books:
-      - site                    # HTML site (output: site)
-      - repository-report       # PDF (output: pdf-dark)
-      - explanation             # PDF (output: pdf-dark)
-      - risk-evidence-package   # PDF (output: pdf-dark)
+      - site # HTML site (output: site)
+      - explanation # PDF (output: pdf-dark)
     # Container selection is automatic based on book output:
     #   output: site    → containers/mkdocs-site
     #   output: pdf-*   → containers/mkdocs-pdf
@@ -189,6 +187,9 @@ modules:
     depends_on:
       - eac-core
       - r2r-config
+    books:
+      - repository-report # PDF (output: pdf-dark)
+      - risk-evidence-package # PDF (output: pdf-dark)
     files:
       root: /
       config:
