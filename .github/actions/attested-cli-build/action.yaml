@@ -1,0 +1,283 @@
+# Attested CLI Build Action
+#
+# Builds CLI binaries with attestations and publishes to GitHub Releases.
+# Requires Ubuntu runner with these permissions at job level:
+#   permissions:
+#     contents: write
+#     id-token: write
+#     attestations: write
+#
+# Usage:
+#   jobs:
+#     release:
+#       runs-on: ubuntu-latest
+#       permissions:
+#         contents: write
+#         id-token: write
+#         attestations: write
+#       steps:
+#         - uses: actions/checkout@v6
+#         - uses: ./.github/actions/attested-cli-build
+#           with:
+#             module: r2r-cli
+#             version: 1.0.0
+#             tag_name: r2r-cli/1.0.0
+
+name: Attested CLI Build
+description: Build, attest, and publish CLI binaries to GitHub Releases
+
+inputs:
+  module:
+    description: 'Module name (e.g., r2r-cli)'
+    required: true
+  version:
+    description: 'Version to build (e.g., 1.0.0)'
+    required: true
+  tag_name:
+    description: 'Full tag name (e.g., r2r-cli/1.0.0)'
+    required: true
+  build-args:
+    description: 'Extra build arguments'
+    required: false
+    default: '--all'
+
+outputs:
+  release_url:
+    description: 'URL to the GitHub release'
+    value: ${{ steps.create_release.outputs.url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+
+    - name: Install UPX
+      shell: bash
+      run: |
+        echo "Installing UPX for binary compression..."
+        sudo apt-get update && sudo apt-get install -y upx-ucl
+        upx --version
+
+    - name: Build binaries
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        MODULE: ${{ inputs.module }}
+        BUILD_ARGS: ${{ inputs.build-args }}
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+        echo "Building $MODULE with version $VERSION..."
+        echo "Build args: $BUILD_ARGS"
+        $COMMANDS build "$MODULE" $BUILD_ARGS --version "$VERSION" --no-tidy
+
+    - name: Verify binaries
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+      run: |
+        echo "Verifying built binaries..."
+        ls -lh "out/build/$MODULE/"
+
+        # Expected binary patterns for CLI modules
+        BINARY_PREFIX="r2r"
+        if [ "$MODULE" = "ext-eac" ]; then
+          BINARY_PREFIX="eac"
+        fi
+
+        REQUIRED_FILES=(
+          "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64"
+          "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64-upx"
+          "out/build/$MODULE/${BINARY_PREFIX}-linux-arm64"
+          "out/build/$MODULE/${BINARY_PREFIX}-darwin-amd64"
+          "out/build/$MODULE/${BINARY_PREFIX}-darwin-arm64"
+          "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64.exe"
+          "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64-upx.exe"
+        )
+
+        for file in "${REQUIRED_FILES[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "❌ Error: Required file missing: $file"
+            exit 1
+          fi
+          size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+          size_mb=$(echo "scale=1; $size / 1048576" | bc)
+          echo "✅ Found: $file (${size_mb} MB)"
+        done
+
+        echo ""
+        echo "Testing Linux binary version:"
+        chmod +x "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64"
+        "./out/build/$MODULE/${BINARY_PREFIX}-linux-amd64" version || true
+
+    - name: Generate build attestations
+      uses: actions/attest-build-provenance@v3
+      with:
+        subject-path: |
+          out/build/${{ inputs.module }}/r2r-linux-amd64
+          out/build/${{ inputs.module }}/r2r-linux-amd64-upx
+          out/build/${{ inputs.module }}/r2r-linux-arm64
+          out/build/${{ inputs.module }}/r2r-darwin-amd64
+          out/build/${{ inputs.module }}/r2r-darwin-arm64
+          out/build/${{ inputs.module }}/r2r-windows-amd64.exe
+          out/build/${{ inputs.module }}/r2r-windows-amd64-upx.exe
+
+    - name: Create release notes
+      id: release_notes
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        VERSION: ${{ inputs.version }}
+        TAG_NAME: ${{ inputs.tag_name }}
+      run: |
+        get_size_mb() {
+          local file="$1"
+          if [ -f "$file" ]; then
+            size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+            echo "scale=1; $size / 1048576" | bc
+          else
+            echo "?"
+          fi
+        }
+
+        BINARY_PREFIX="r2r"
+        if [ "$MODULE" = "ext-eac" ]; then
+          BINARY_PREFIX="eac"
+        fi
+
+        SIZE_LINUX_AMD64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64")
+        SIZE_LINUX_ARM64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-linux-arm64")
+        SIZE_DARWIN_AMD64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-darwin-amd64")
+        SIZE_DARWIN_ARM64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-darwin-arm64")
+        SIZE_WINDOWS_AMD64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64.exe")
+        SIZE_LINUX_AMD64_UPX=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64-upx")
+        SIZE_WINDOWS_AMD64_UPX=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64-upx.exe")
+
+        cat << EOF > release_notes.md
+        # $MODULE v$VERSION
+
+        ## Installation
+
+        Download the appropriate binary for your platform:
+
+        ### Standard Binaries (Recommended)
+
+        | Platform              | Binary                              | Size                     |
+        |-----------------------|-------------------------------------|--------------------------|
+        | Linux (AMD64)         | \`${BINARY_PREFIX}-linux-amd64\`       | ${SIZE_LINUX_AMD64} MB   |
+        | Linux (ARM64)         | \`${BINARY_PREFIX}-linux-arm64\`       | ${SIZE_LINUX_ARM64} MB   |
+        | macOS (Intel)         | \`${BINARY_PREFIX}-darwin-amd64\`      | ${SIZE_DARWIN_AMD64} MB  |
+        | macOS (Apple Silicon) | \`${BINARY_PREFIX}-darwin-arm64\`      | ${SIZE_DARWIN_ARM64} MB  |
+        | Windows (AMD64)       | \`${BINARY_PREFIX}-windows-amd64.exe\` | ${SIZE_WINDOWS_AMD64} MB |
+
+        ### UPX-Compressed Binaries (Minimal Size)
+
+        | Platform        | Binary                                  | Size                         |
+        |-----------------|-----------------------------------------|------------------------------|
+        | Linux (AMD64)   | \`${BINARY_PREFIX}-linux-amd64-upx\`       | ${SIZE_LINUX_AMD64_UPX} MB   |
+        | Windows (AMD64) | \`${BINARY_PREFIX}-windows-amd64-upx.exe\` | ${SIZE_WINDOWS_AMD64_UPX} MB |
+
+        ## Supply Chain Security
+
+        All binaries include [build attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations). Verify with:
+
+        \`\`\`bash
+        gh attestation verify <binary-file> --repo ${{ github.repository }}
+        \`\`\`
+
+        ## Release Information
+
+        - **Version**: $VERSION
+        - **Commit**: ${{ github.sha }}
+        - **Tag**: $TAG_NAME
+
+        ---
+        Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        EOF
+
+        cat release_notes.md
+
+    - name: Create GitHub Release
+      id: create_release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        MODULE: ${{ inputs.module }}
+        VERSION: ${{ inputs.version }}
+        TAG_NAME: ${{ inputs.tag_name }}
+      run: |
+        BINARY_PREFIX="r2r"
+        if [ "$MODULE" = "ext-eac" ]; then
+          BINARY_PREFIX="eac"
+        fi
+
+        echo "Creating release for tag: $TAG_NAME"
+
+        # For manual triggers, use --target to create tag atomically
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "Manual trigger: creating tag and release together"
+          gh release create "$TAG_NAME" \
+            --title "$MODULE v$VERSION" \
+            --notes-file release_notes.md \
+            --target "${{ github.sha }}" \
+            "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64" \
+            "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64-upx" \
+            "out/build/$MODULE/${BINARY_PREFIX}-linux-arm64" \
+            "out/build/$MODULE/${BINARY_PREFIX}-darwin-amd64" \
+            "out/build/$MODULE/${BINARY_PREFIX}-darwin-arm64" \
+            "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64.exe" \
+            "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64-upx.exe"
+        else
+          echo "Tag trigger: using existing tag"
+          gh release create "$TAG_NAME" \
+            --title "$MODULE v$VERSION" \
+            --notes-file release_notes.md \
+            --verify-tag \
+            "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64" \
+            "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64-upx" \
+            "out/build/$MODULE/${BINARY_PREFIX}-linux-arm64" \
+            "out/build/$MODULE/${BINARY_PREFIX}-darwin-amd64" \
+            "out/build/$MODULE/${BINARY_PREFIX}-darwin-arm64" \
+            "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64.exe" \
+            "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64-upx.exe"
+        fi
+
+        RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+        echo "url=$RELEASE_URL" >> $GITHUB_OUTPUT
+        echo "✅ Release created: $RELEASE_URL"
+
+    - name: Verify release assets
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG_NAME: ${{ inputs.tag_name }}
+      run: |
+        echo "Verifying uploaded assets..."
+        gh release view "$TAG_NAME" --json assets --jq '.assets[] | .name'
+
+    - name: Summary
+      if: always()
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        VERSION: ${{ inputs.version }}
+        TAG_NAME: ${{ inputs.tag_name }}
+      run: |
+        RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+
+        echo "## :package: $MODULE v$VERSION Released" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Binaries" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Platform | Standard | UPX |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|----------|-----|" >> $GITHUB_STEP_SUMMARY
+        echo "| Linux AMD64 | :white_check_mark: | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+        echo "| Linux ARM64 | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
+        echo "| macOS Intel | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
+        echo "| macOS ARM64 | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
+        echo "| Windows AMD64 | :white_check_mark: | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo ":lock: All binaries have build attestations" >> $GITHUB_STEP_SUMMARY

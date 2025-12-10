@@ -13,10 +13,12 @@
 // Long: Example:
 // Long:   release check-ci --workflow ci-r2r-cli.yaml --commit abc123
 // Long:   release check-ci --workflow ci-ext-eac.yaml --commit abc123 --timeout 600
+// Long:   release check-ci --workflow ci-r2r-cli.yaml --commit abc123 --strict
 // Flag.workflow: type=string, usage=CI workflow filename (e.g., ci-r2r-cli.yaml)
 // Flag.commit: type=string, usage=Commit SHA to check
 // Flag.timeout: type=int, usage=Maximum wait time in seconds (default: 300)
 // Flag.interval: type=int, usage=Poll interval in seconds (default: 15)
+// Flag.strict: type=bool, usage=Require exact commit match (no ancestor check)
 package release
 
 import (
@@ -57,6 +59,7 @@ func ReleaseCheckCI() int {
 	commitSHA := ""
 	timeout := 300
 	interval := 15
+	strict := false
 
 	for i := 3; i < len(os.Args); i++ {
 		arg := os.Args[i]
@@ -85,6 +88,8 @@ func ReleaseCheckCI() int {
 				}
 				i++
 			}
+		case "--strict":
+			strict = true
 		}
 	}
 
@@ -102,7 +107,11 @@ func ReleaseCheckCI() int {
 	moduleName = strings.TrimSuffix(moduleName, ".yaml")
 	moduleName = strings.TrimSuffix(moduleName, ".yml")
 
-	log.Infof("Checking CI for %s @ %s", moduleName, commitSHA[:7])
+	if strict {
+		log.Infof("Checking CI for %s @ %s (strict mode)", moduleName, commitSHA[:7])
+	} else {
+		log.Infof("Checking CI for %s @ %s", moduleName, commitSHA[:7])
+	}
 
 	startTime := time.Now()
 	lastStatus := ""
@@ -125,7 +134,7 @@ func ReleaseCheckCI() int {
 		// ===========================================
 		// Question 1: Has our MODULE CI completed?
 		// ===========================================
-		moduleStatus, err := getModuleCIStatus(workflow, commitSHA)
+		moduleStatus, err := getModuleCIStatus(workflow, commitSHA, strict)
 		if err != nil {
 			log.Errorf("Warning: failed to query module CI: %v", err)
 			time.Sleep(time.Duration(interval) * time.Second)
@@ -215,8 +224,9 @@ type ModuleCIStatus struct {
 }
 
 // getModuleCIStatus checks if the specific module CI has run for the commit
-func getModuleCIStatus(workflow, commitSHA string) (ModuleCIStatus, error) {
-	runs, err := getWorkflowRuns(workflow, commitSHA)
+// If strict is true, only exact commit matches are accepted (no ancestor check)
+func getModuleCIStatus(workflow, commitSHA string, strict bool) (ModuleCIStatus, error) {
+	runs, err := getWorkflowRuns(workflow, commitSHA, strict)
 	if err != nil {
 		return ModuleCIStatus{}, err
 	}
@@ -289,9 +299,9 @@ type CIRunWithSHA struct {
 }
 
 // getWorkflowRuns queries GitHub for workflow runs on a specific commit
-// It first tries exact commit match, then falls back to checking recent runs
-// to handle cases where CI headSha differs from the target commit
-func getWorkflowRuns(workflow, commitSHA string) ([]CIRunStatus, error) {
+// If strict is true, only exact commit matches are accepted
+// If strict is false, falls back to checking if commit is ancestor of recent runs
+func getWorkflowRuns(workflow, commitSHA string, strict bool) ([]CIRunStatus, error) {
 	// First try exact commit match (fast path)
 	runs, err := queryRunsByCommit(workflow, commitSHA)
 	if err != nil {
@@ -299,6 +309,11 @@ func getWorkflowRuns(workflow, commitSHA string) ([]CIRunStatus, error) {
 	}
 	if len(runs) > 0 {
 		return runs, nil
+	}
+
+	// In strict mode, only accept exact matches - no ancestor fallback
+	if strict {
+		return nil, nil
 	}
 
 	// If no exact match, check if target commit is ancestor of any recent successful run
