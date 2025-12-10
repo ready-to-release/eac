@@ -128,18 +128,28 @@ func calculateRelativePath(matchPath, pattern, workspaceRoot string) (string, er
 
 // isExcluded checks if a file matches any exclusion pattern
 func isExcluded(path, workspaceRoot string, excludePatterns []string) bool {
+	// Normalize path to forward slashes for cross-platform matching
+	normalizedPath := filepath.ToSlash(path)
+
+	// Always exclude files in any 'lfs' directory (large file storage)
+	// These are typically large binary files not suitable for PDF embedding
+	if strings.Contains(normalizedPath, "/lfs/") {
+		return true
+	}
+
 	for _, pattern := range excludePatterns {
 		// Make pattern relative to workspace root for matching
-		fullPattern := filepath.Join(workspaceRoot, pattern)
+		fullPattern := filepath.ToSlash(filepath.Join(workspaceRoot, pattern))
 
 		// Use doublestar for glob matching
-		if matched, _ := doublestar.Match(fullPattern, path); matched {
+		if matched, _ := doublestar.Match(fullPattern, normalizedPath); matched {
 			return true
 		}
 
 		// Also try matching just the relative path
 		relPath, _ := filepath.Rel(workspaceRoot, path)
-		if matched, _ := doublestar.Match(pattern, relPath); matched {
+		normalizedRelPath := filepath.ToSlash(relPath)
+		if matched, _ := doublestar.Match(pattern, normalizedRelPath); matched {
 			return true
 		}
 	}
