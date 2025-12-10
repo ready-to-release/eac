@@ -133,13 +133,21 @@ jobs:
       - name: Verify build outputs
         id: verify
         run: |
-          # Verify HTML site
-          if [ ! -f "out/build/docs/site/index.html" ]; then
-            echo "❌ Error: HTML site not found at out/build/docs/site/index.html"
+          # For the 'site' book, MkDocs outputs to a nested 'site' subdirectory
+          # Structure is: out/build/docs/site/site/index.html (book dir + mkdocs output)
+          SITE_DIR="out/build/docs/site/site"
+
+          # Verify HTML site exists
+          if [ ! -f "$SITE_DIR/index.html" ]; then
+            echo "❌ Error: HTML site not found at $SITE_DIR/index.html"
+            echo "Contents of out/build/docs/:"
             ls -la out/build/docs/ || echo "out/build/docs/ does not exist"
+            echo ""
+            echo "Contents of out/build/docs/site/:"
+            ls -la out/build/docs/site/ || echo "out/build/docs/site/ does not exist"
             exit 1
           fi
-          echo "✅ HTML site verified"
+          echo "✅ HTML site verified at $SITE_DIR"
 
           # Count PDFs
           PDF_COUNT=$(find "out/build/docs" -name "*.pdf" 2>/dev/null | wc -l)
@@ -152,10 +160,10 @@ jobs:
             find "out/build/docs" -name "*.pdf" -exec du -h {} \;
           fi
 
-          # Site stats
-          FILE_COUNT=$(find out/build/docs/site -type f | wc -l | tr -d ' ')
-          HTML_COUNT=$(find out/build/docs/site -name "*.html" | wc -l | tr -d ' ')
-          TOTAL_SIZE=$(du -sh out/build/docs/site | cut -f1)
+          # Site stats (from nested site directory)
+          FILE_COUNT=$(find "$SITE_DIR" -type f | wc -l | tr -d ' ')
+          HTML_COUNT=$(find "$SITE_DIR" -name "*.html" | wc -l | tr -d ' ')
+          TOTAL_SIZE=$(du -sh "$SITE_DIR" | cut -f1)
           echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
           echo "html_count=$HTML_COUNT" >> $GITHUB_OUTPUT
           echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
@@ -169,7 +177,8 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: out/build/docs/site
+          # MkDocs outputs to nested 'site' directory within the book output dir
+          path: out/build/docs/site/site
 
       - name: Deploy to GitHub Pages
         id: deployment

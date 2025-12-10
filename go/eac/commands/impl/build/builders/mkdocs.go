@@ -441,6 +441,8 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 	}
 
 	// Build HTML books in parallel (they're lightweight)
+	// HTML books output to outputDir/{bookName}/site/ - we pass outputDir/{bookName} as the output dir
+	// EXCEPT: if book name is "site", we pass outputDir directly to avoid site/site/ nesting
 	if len(htmlBooks) > 0 {
 		var wg sync.WaitGroup
 		results := make(chan int, len(htmlBooks))
@@ -449,7 +451,12 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 			wg.Add(1)
 			go func(b *config.Book) {
 				defer wg.Done()
-				bookOutputDir := filepath.Join(outputDir, b.Name)
+				// For HTML books named "site", build directly to outputDir to avoid site/site/ nesting
+				// The buildBookHTML function will create the site/ subdirectory
+				bookOutputDir := outputDir
+				if b.Name != "site" {
+					bookOutputDir = filepath.Join(outputDir, b.Name)
+				}
 				if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
 					Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", b.Name, err)
 					results <- 1
