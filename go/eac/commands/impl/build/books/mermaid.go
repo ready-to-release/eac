@@ -566,6 +566,12 @@ func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]
 				return fmt.Errorf("calculating relative path for %s: %w", block.Filename, err)
 			}
 
+			// For site builds (non-PDF), MkDocs converts file.md to file/index.html,
+			// adding an extra directory level. Prepend ../ to account for this.
+			if !p.pdfMode {
+				relPath = "../" + relPath
+			}
+
 			// Build img tag with relative path to SVG
 			imgTag := fmt.Sprintf(
 				"<img src=\"%s\" alt=\"Mermaid diagram\" style=\"max-width: 100%%;\">",

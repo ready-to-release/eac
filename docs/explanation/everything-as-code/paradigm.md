@@ -39,6 +39,7 @@ But "Everything as Code" extends much further:
 #### Traditional Approach: Multiple Disconnected Systems
 
 ```mermaid
+%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '16px'}}}%%
 flowchart LR
     A[Word] --> B[Visio]
     B --> C[Git]

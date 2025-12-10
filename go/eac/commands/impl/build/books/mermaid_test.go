@@ -591,16 +591,121 @@ graph TD
 		t.Errorf("Modified file still contains mermaid blocks")
 	}
 
-	// Should have relative path with ../ to go up from docs/subfolder/ to assets/
-	if !contains(modifiedStr, "../../assets/rendered/mermaid/") {
-		t.Errorf("Modified file doesn't have correct relative path, got: %s", modifiedStr)
+	// For site builds (pdfMode=false), MkDocs converts file.md to file/index.html,
+	// adding an extra directory level. The path needs an extra ../ compared to
+	// the staging file location.
+	// Staging: docs/subfolder/nested.md -> ../../assets/rendered/mermaid/xxx.svg (2 levels up)
+	// Site:    docs/subfolder/nested/index.html -> ../../../assets/rendered/mermaid/xxx.svg (3 levels up)
+	if !contains(modifiedStr, "../../../assets/rendered/mermaid/") {
+		t.Errorf("Modified file doesn't have correct relative path for site build, got: %s", modifiedStr)
 	}
 
 	if !contains(modifiedStr, blocks[0].Filename) {
 		t.Errorf("Modified file doesn't contain diagram filename")
 	}
 
-	t.Logf("✓ Replaced mermaid block with correct relative path")
+	t.Logf("✓ Replaced mermaid block with correct relative path for site build (pdfMode=false)")
+	t.Logf("  Path: ../../../assets/rendered/mermaid/%s", blocks[0].Filename)
+}
+
+func TestReplaceMermaidBlocksWithImagesPDFMode(t *testing.T) {
+	// Create temp directory for testing with nested structure
+	tmpDir := t.TempDir()
+	nestedDir := filepath.Join(tmpDir, "docs", "subfolder")
+	if err := os.MkdirAll(nestedDir, 0755); err != nil {
+		t.Fatalf("Failed to create nested dir: %v", err)
+	}
+
+	// Create markdown with mermaid block in nested directory
+	content := `# Nested Document
+
+` + "```mermaid" + `
+graph TD
+    X --> Y
+` + "```" + `
+`
+
+	// Write test file in nested directory
+	testFile := filepath.Join(nestedDir, "nested.md")
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	// Extract blocks
+	blocks := extractMermaidBlocks(content, testFile, tmpDir)
+	if len(blocks) != 1 {
+		t.Fatalf("Expected 1 block, got %d", len(blocks))
+	}
+
+	// Create preprocessor with pdfMode=true
+	p := &Preprocessor{
+		stagingDir:     tmpDir,
+		workspaceRoot:  tmpDir,
+		logWriter:      os.Stdout,
+		pdfMode:        true, // PDF mode - should NOT add extra ../
+		linkTranslator: NewLinkTranslator(tmpDir, tmpDir, os.Stdout, true),
+	}
+
+	// Create blocks map
+	blocksByFile := map[string][]MermaidBlock{
+		testFile: blocks,
+	}
+
+	// Create cache statuses with mock cache paths in assets/rendered/mermaid/
+	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		t.Fatalf("Failed to create cache dir: %v", err)
+	}
+
+	var statuses []CacheStatus
+	for _, block := range blocks {
+		cachePath := filepath.Join(cacheDir, block.Filename)
+		// Create empty SVG file
+		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0644); err != nil {
+			t.Fatalf("Failed to write mock SVG: %v", err)
+		}
+		statuses = append(statuses, CacheStatus{
+			Block:     block,
+			Cached:    true,
+			CachePath: cachePath,
+		})
+	}
+
+	// Replace blocks
+	if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
+		t.Fatalf("replaceMermaidBlocksWithImages failed: %v", err)
+	}
+
+	// Read modified file
+	modified, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read modified file: %v", err)
+	}
+
+	modifiedStr := string(modified)
+
+	// Verify replacements
+	if contains(modifiedStr, "```mermaid") {
+		t.Errorf("Modified file still contains mermaid blocks")
+	}
+
+	// For PDF builds (pdfMode=true), MkDocs-with-pdf uses the staging structure directly,
+	// so NO extra ../ is needed. The path should match the staging file location.
+	// Staging: docs/subfolder/nested.md -> ../../assets/rendered/mermaid/xxx.svg (2 levels up)
+	if !contains(modifiedStr, "../../assets/rendered/mermaid/") {
+		t.Errorf("Modified file doesn't have correct relative path for PDF build, got: %s", modifiedStr)
+	}
+
+	// Ensure it does NOT have the extra ../ that site builds need
+	if contains(modifiedStr, "../../../assets/rendered/mermaid/") {
+		t.Errorf("PDF build incorrectly has extra ../ in path, got: %s", modifiedStr)
+	}
+
+	if !contains(modifiedStr, blocks[0].Filename) {
+		t.Errorf("Modified file doesn't contain diagram filename")
+	}
+
+	t.Logf("✓ Replaced mermaid block with correct relative path for PDF build (pdfMode=true)")
 	t.Logf("  Path: ../../assets/rendered/mermaid/%s", blocks[0].Filename)
 }
 
