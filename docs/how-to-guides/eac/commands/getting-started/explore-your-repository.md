@@ -73,7 +73,7 @@ r2r eac get modules | jq '.modules[] | select(.moniker == "src-auth")'
 ## Next Steps
 
 - [Create Feature Workspace](../development-workflow/create-feature-workspace.md) → Start working on feature
-- [Build Single Module](../building-and-testing/build-single-module.md) → Build a module
+- [Build Single Module](../build-test-validate/build-single-module.md) → Build a module
 
 ## Related Commands
 

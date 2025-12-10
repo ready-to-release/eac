@@ -149,7 +149,7 @@ When tests run, evidence is collected for AC-1.
 
 ## Next Steps
 
-- [Scan for Security Issues](../quality-and-validation/scan-for-security-issues.md) → Collect evidence
+- [Scan for Security Issues](./scan-for-security-issues.md) → Collect evidence
 
 ## Related Commands
 

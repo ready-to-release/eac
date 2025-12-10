@@ -95,7 +95,7 @@ r2r eac get dependencies | jq '.dependencies["src-api"]'
 
 ## Next Steps
 
-- [Build Single Module](../building-and-testing/build-single-module.md) → Build with deps
+- [Build Single Module](./build-single-module.md) → Build with deps
 
 ## Related Commands
 

@@ -22,6 +22,12 @@ This section will provide comprehensive guides on:
   - Build pipeline configuration
   - Artifact definitions
   - File ownership patterns
+  - **Language-Specific Module Types**:
+    - `go` - Go modules with go.mod, cross-compilation, Go test support
+    - `typescript` - TypeScript/npm modules with package.json, tsc builds
+    - `container` - Docker builds via Dockerfile (any language)
+    - `docs` - MkDocs documentation generation
+    - `static` - File ownership only, no builds
 
 - **Environment Contracts (.eac/environments.yml)** - Configuring deployment environments
   - Environment definitions

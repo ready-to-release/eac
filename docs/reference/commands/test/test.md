@@ -8,6 +8,15 @@
 **Purpose**: Test one or more modules by moniker
 **Category**: [test](../categories/test.md)
 
+## Language Support
+
+The test command supports multiple test frameworks via language-specific runners:
+
+- **Go** - `gotest` (unit tests), `godog` (BDD/Gherkin)
+- **TypeScript** - `mocha` (unit tests), `cucumber-js` (BDD/Gherkin)
+
+Tests are discovered by file patterns (`*_test.go`, `*.test.ts`, `*.feature`) and executed by the appropriate runner based on module type and test type. See [Language Support](../language-support.md) for details.
+
 ## Syntax
 
 ```bash

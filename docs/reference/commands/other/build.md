@@ -8,6 +8,18 @@
 **Purpose**: Build one or more modules by moniker
 **Category**: [other](../categories/other.md)
 
+## Language Support
+
+The build command supports multiple languages via capability-based handlers:
+
+- **Go** (`type: go`) - Compiles Go binaries with cross-platform support
+- **TypeScript** (`type: typescript`) - Runs npm install and tsc compilation
+- **Docker** (`type: container`) - Builds container images with buildx
+- **MkDocs** (`type: docs`) - Generates documentation sites
+- **Scripts** (`type: static` with scripts) - Custom build commands
+
+The command automatically selects the appropriate build handler based on the module's declared capabilities. See [Module Types Reference](../../r2r-eac/module-types-reference.md) for configuration details.
+
 ## Syntax
 
 ```bash

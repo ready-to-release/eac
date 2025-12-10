@@ -1,8 +1,0 @@
-title: Building and Testing
-nav:
-  - index.md
-  - build-single-module.md
-  - build-changed-modules.md
-  - run-tests-for-module.md
-  - debug-test-failures.md
-  - run-test-suites.md

@@ -15,6 +15,17 @@ Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, w
 | [Integration](./integration/) | Integrate with CI/CD, IDEs, Git hooks, and tools |
 | [Troubleshooting](./troubleshooting/) | Solutions to common problems |
 
+## Language Support
+
+EAC currently provides native support for **Go** and **TypeScript** projects:
+
+- **Go modules** - Full build, test, and cross-compilation support
+- **TypeScript/npm** - Build and test integration
+- **Docker containers** - Multi-platform builds for any language
+- **Documentation** - MkDocs site generation
+
+Other languages can use container-based or script-based builds. See [R2R and EAC Reference](../../reference/r2r-eac/#language-support) for details.
+
 ## Getting Started
 
 New to EAC? Start here:
@@ -49,6 +60,6 @@ New to EAC? Start here:
 These how-to guides focus on accomplishing tasks. For comprehensive technical details:
 
 - **[Command Reference](../../reference/commands/)** - Complete command syntax and options
-- **[Contributing](../../reference/eac/contributing/)** - Extend EAC with new commands
+- **[R2R and EAC Reference](../../reference/r2r-eac/)** - Architecture, contracts, and extending EAC
 
 {{ diataxis_footer() }}

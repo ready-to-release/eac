@@ -15,6 +15,22 @@ A module is a logical unit of code with:
 - **Files**: Ownership boundaries (which files belong to this module)
 - **Dependencies**: Other modules this depends on
 
+## Choosing a Module Type
+
+Select the appropriate type based on your module's language:
+
+| Language | Module Type | Build Support | Test Support |
+|----------|-------------|---------------|--------------|
+| Go | `go` | ✅ Full (cross-compile, version inject) | ✅ gotest, godog |
+| TypeScript/JavaScript | `typescript` | ✅ npm, tsc | ✅ mocha, cucumber-js |
+| Any (containerized) | `container` | ✅ Docker buildx | Depends on container |
+| Documentation | `docs` | ✅ MkDocs | ❌ No tests |
+| None (static files) | `static` | ❌ No build | ❌ No tests |
+
+**For other languages** (Python, Rust, Java): Use `container` type with a Dockerfile that builds your code.
+
+See [Module Types Reference](../../../reference/r2r-eac/module-types-reference.md) for detailed language support and configuration options.
+
 ## Quick Start
 
 Add a module to `.r2r/eac/modules.yml`:

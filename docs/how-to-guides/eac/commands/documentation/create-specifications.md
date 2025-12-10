@@ -111,7 +111,7 @@ Generated specifications include:
 
 ## Next Steps
 
-- [Validate Specifications](../quality-and-validation/validate-specifications.md) → Check quality
+- [Validate Specifications](../build-test-validate/validate-specifications.md) → Check quality
 
 ## Related Commands
 

@@ -47,7 +47,7 @@ This section will provide comprehensive guides on:
 While this section is being developed, see:
 
 - [Create Specifications with AI](../commands/documentation/create-specifications.md) - Using the `create spec` command
-- [Validate Specifications](../commands/quality-and-validation/validate-specifications.md) - Running specification validation
+- [Validate Specifications](../commands/build-test-validate/validate-specifications.md) - Running specification validation
 
 ## Reference Documentation
 

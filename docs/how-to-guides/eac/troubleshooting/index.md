@@ -140,9 +140,9 @@ go run ./go/eac/commands pipeline status
 
 ## Related Guides
 
-- [Validate Before Commit](../commands/quality-and-validation/validate-before-commit.md)
-- [Debug Test Failures](../commands/building-and-testing/debug-test-failures.md)
-- [Check Dependencies](../commands/quality-and-validation/check-dependencies.md)
+- [Validate Before Commit](../commands/build-test-validate/validate-before-commit.md)
+- [Debug Test Failures](../commands/build-test-validate/debug-test-failures.md)
+- [Check Dependencies](../commands/build-test-validate/check-dependencies.md)
 
 ## Getting Help
 

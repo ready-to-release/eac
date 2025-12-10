@@ -6,6 +6,7 @@ Complete technical reference for all EAC commands.
 
 ## Quick Access
 
+- [Language Support](./language-support.md) - Which commands work with which languages
 - [Command Taxonomy](./overview/command-taxonomy.md) - How commands are organized
 - [All Categories](./categories/index.md) - Browse by category
 - [Naming Conventions](./overview/naming-conventions.md) - Command naming patterns

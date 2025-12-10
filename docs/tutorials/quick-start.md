@@ -1,21 +1,3 @@
-<!-- EDITOR
-# Editor: tutorials/quick-start.md
-
-## Soul
-
-Hands-on walkthrough to install the R2R CLI and run your first commands in minutes.
-
-## Sections
-
-1. Step 1: Install the CLI
-2. Step 2: Verify Installation
-3. Step 3: Initialize Your Project
-4. Step 4: Explore Available Commands
-5. Step 5: View Your Project Structure
-6. Step 6: Run Tests
-7. Next Steps
--->
-
 # Quick Start Guide
 
 This tutorial will help you install the R2R CLI and run your first commands.
