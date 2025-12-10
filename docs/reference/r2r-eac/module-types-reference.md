@@ -234,7 +234,7 @@ EAC supports different module types, each optimized for specific languages and b
 
 EAC uses a **capability-based dispatch system** to match module types to build/test handlers:
 
-1. **Module declares capabilities** in `.r2r/eac/modules.yml`:
+1. **Module declares capabilities** in `.r2r/eac/repository.yml`:
 
    ```yaml
    capabilities: [go_module, cross_compile]

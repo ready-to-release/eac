@@ -14,7 +14,7 @@ Each deployable module maintains its own changelog to track module-specific chan
 
 ## Module Changelog Locations
 
-Module changelog locations are defined in `.r2r/eac/modules.yml` under `files.changelog`.
+Module changelog locations are defined in `.r2r/eac/repository.yml` under `files.changelog`.
 
 ### Common Patterns
 
@@ -461,7 +461,7 @@ r2r eac validate release r2r-cli
 
 ## References
 
-- Module contracts: `.r2r/eac/modules.yml`
+- Module contracts: `.r2r/eac/repository.yml`
 - [Format Specification](./format-specification.md) - Keep a Changelog format
 - [Repository Changelog](./repository-changelog.md) - Repository-level conventions
 - [Versioning](./versioning.md) - Semantic versioning and CalVer

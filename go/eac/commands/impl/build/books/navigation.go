@@ -379,24 +379,10 @@ func (p *Preprocessor) generateNavForDir(dir string) error {
 		nav = append(nav, item.name)
 	}
 
-	// Determine title from directory name or index.md
-	relDir, _ = filepath.Rel(p.stagingDir, dir)
-	title := ""
-	if relDir == "." {
-		title = toTitleCase(p.book.Name)
-	} else {
-		// Check for index.md title
-		indexPath := paths.IndexMarkdownPath(dir)
-		if _, err := os.Stat(indexPath); err == nil {
-			title = p.getTitleFromFile(indexPath)
-		} else {
-			title = toTitleCase(filepath.Base(dir))
-		}
-	}
-
+	// Don't set title - let the nav system auto-generate from markdown files
+	// The awesome-nav plugin extracts titles from frontmatter or first H1
 	navFile := NavFile{
-		Title: title,
-		Nav:   nav,
+		Nav: nav,
 	}
 
 	data, err := yaml.Marshal(navFile)
@@ -719,6 +705,8 @@ func (p *Preprocessor) validateAndCleanNav(navPath, dirPath string) error {
 	}
 
 	// 6. Write updated .nav.yml
+	// Clear title to let nav system auto-generate from markdown files
+	navFile.Title = ""
 	navFile.Nav = validatedNav
 	data, err := yaml.Marshal(navFile)
 	if err != nil {
@@ -726,6 +714,57 @@ func (p *Preprocessor) validateAndCleanNav(navPath, dirPath string) error {
 	}
 
 	return os.WriteFile(navPath, data, 0644)
+}
+
+// stripMacros removes Jinja2 macro calls from markdown files (PDF only)
+// The macros plugin is only enabled for site builds, not PDF builds
+// Common macros: {{ diataxis_footer() }}, {{ page_breadcrumb() }}
+func (p *Preprocessor) stripMacros() error {
+	p.log("    Stripping macros from markdown files...")
+
+	// Pattern matches {{ macro_name() }} or {{ macro_name(args) }}
+	macroPattern := regexp.MustCompile(`\{\{\s*\w+\([^)]*\)\s*\}\}`)
+
+	stripped := 0
+	filesModified := 0
+
+	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		original := string(content)
+		modified := macroPattern.ReplaceAllString(original, "")
+
+		if modified != original {
+			// Count how many macros were stripped
+			matches := macroPattern.FindAllString(original, -1)
+			stripped += len(matches)
+			filesModified++
+
+			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	p.log("    Stripped %d macros from %d files", stripped, filesModified)
+	return nil
 }
 
 // stripNavTitles removes the 'title' field from .nav.yml files

@@ -77,7 +77,7 @@ cli/
 ├── .r2r/                       # R2R and EAC configuration
 │   ├── cache/                  # Build cache
 │   └── eac/                    # EAC contracts (12 YAML files)
-│       ├── modules.yml         # Module registry
+│       ├── repository.yml         # Module registry
 │       ├── module-types.yml    # Module type definitions
 │       ├── environments.yml    # Test environments (L0-L4)
 │       ├── test-suites.yml     # Test suite definitions
@@ -139,7 +139,7 @@ cli/
 - **eac-specs** - BDD test infrastructure (Godog)
 - **eac-mcp-commands** - MCP server for LLM tools
 
-All modules defined in `.r2r/eac/modules.yml` with explicit dependencies and file ownership.
+All modules defined in `.r2r/eac/repository.yml` with explicit dependencies and file ownership.
 
 ---
 

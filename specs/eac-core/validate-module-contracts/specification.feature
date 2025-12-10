@@ -5,7 +5,7 @@ I want to validate module contracts are well-formed and consistent
 So that the repository maintains a valid architecture with clear module boundaries and dependencies
 
 Background:
-  Given a repository with module contracts defined in .r2r/eac/modules.yml
+  Given a repository with module contracts defined in .r2r/eac/repository.yml
   And a module type registry in .r2r/eac/module-types.yml
 
 Rule: Module contract fields must meet schema requirements

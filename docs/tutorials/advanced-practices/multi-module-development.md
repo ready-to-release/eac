@@ -30,7 +30,7 @@ This tutorial teaches you how to work effectively across multiple modules, manag
    - Visualize dependency graph
 
 2. **Module contracts**
-   - Define dependencies in `.r2r/eac/modules.yml`
+   - Define dependencies in `.r2r/eac/repository.yml`
    - Dependency syntax and semantics
    - Contract validation
    - Breaking vs. non-breaking changes

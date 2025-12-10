@@ -14,7 +14,7 @@ This tutorial will teach you how to create a complete Go module from scratch in 
 
 - Create a simple Go module (`hello-world-service`)
 - Write table-driven unit tests (`*_test.go`)
-- Define the module contract in `.r2r/eac/modules.yml`
+- Define the module contract in `.r2r/eac/repository.yml`
 - Understand module types, dependencies, and artifacts
 - Build and test with `r2r build` and `r2r test`
 - Verify module registration with `r2r show modules`
@@ -37,7 +37,7 @@ This tutorial will teach you how to create a complete Go module from scratch in 
    - Run tests with `go test`
 
 4. **Register the module**
-   - Add module contract to `.r2r/eac/modules.yml`
+   - Add module contract to `.r2r/eac/repository.yml`
    - Define module type, dependencies, and build configuration
    - Understand contract schema
 

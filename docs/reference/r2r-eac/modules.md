@@ -34,7 +34,7 @@ See [Viewing Architecture](./viewing-architecture.md) for detailed instructions.
 
 ## Module Registry
 
-**File**: `.r2r/eac/modules.yml`
+**File**: `.r2r/eac/repository.yml`
 
 Modules are registered with:
 
@@ -153,7 +153,7 @@ r2r eac validate-module-hierarchy
 
 ### Dependency Rules
 
-- Dependencies must exist in `modules.yml`
+- Dependencies must exist in `repository.yml`
 - No circular dependencies allowed
 - Topological sort determines build order
 - Changed modules trigger rebuild of dependents
@@ -221,7 +221,7 @@ r2r eac show-files-staged
 r2r eac get-modules
 ```
 
-**Output**: All modules from `modules.yml` with resolved dependencies
+**Output**: All modules from `repository.yml` with resolved dependencies
 
 ### 2. Build
 
@@ -313,7 +313,7 @@ r2r eac release-this <module>
 
 ### Creating a New Module
 
-**1. Add to modules.yml**:
+**1. Add to repository.yml**:
 
 ```yaml
 modules:
@@ -342,7 +342,7 @@ r2r eac build my-new-module
 
 ### Modifying Dependencies
 
-**1. Update modules.yml**:
+**1. Update repository.yml**:
 
 ```yaml
 depends_on: [logging-go, config-go]  # Add config-go

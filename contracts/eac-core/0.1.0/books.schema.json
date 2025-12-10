@@ -17,7 +17,7 @@
   "definitions": {
     "book": {
       "type": "object",
-      "description": "A book definition that aggregates content for documentation. Books are referenced by modules via the books field in modules.yml.",
+      "description": "A book definition that aggregates content for documentation. Books are referenced by modules via the books field in repository.yml.",
       "properties": {
         "name": {
           "type": "string",

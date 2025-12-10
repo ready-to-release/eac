@@ -221,7 +221,7 @@ Extensions automatically receive the repository mounted at `/var/task`:
 ```go
 // Access repository files
 repoRoot := os.Getenv("R2R_CONTAINER_REPOROOT") // "/var/task"
-configPath := filepath.Join(repoRoot, ".r2r", "eac", "modules.yml")
+configPath := filepath.Join(repoRoot, ".r2r", "eac", "repository.yml")
 ```
 
 Key environment variables available in extensions:

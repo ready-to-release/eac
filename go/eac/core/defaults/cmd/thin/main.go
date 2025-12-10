@@ -1,4 +1,4 @@
-// Thin modules.yml by removing fields that match type defaults
+// Thin repository.yml by removing fields that match type defaults
 package main
 
 import (
@@ -12,7 +12,7 @@ import (
 
 func main() {
 	repoRoot := findRepoRoot()
-	modulesPath := filepath.Join(paths.EACConfigPath(repoRoot), "modules.yml")
+	modulesPath := filepath.Join(paths.EACConfigPath(repoRoot), "repository.yml")
 	typesPath := filepath.Join(paths.EACConfigPath(repoRoot), "module-types.yml")
 
 	// Load module types
@@ -74,7 +74,7 @@ func main() {
 	// Load modules as raw YAML to preserve structure
 	modulesData, err := os.ReadFile(modulesPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading modules.yml: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error reading repository.yml: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -82,7 +82,7 @@ func main() {
 		Modules []map[string]interface{} `yaml:"modules"`
 	}
 	if err := yaml.Unmarshal(modulesData, &modulesConfig); err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing modules.yml: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error parsing repository.yml: %v\n", err)
 		os.Exit(1)
 	}
 

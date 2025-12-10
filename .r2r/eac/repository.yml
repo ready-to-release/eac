@@ -72,7 +72,9 @@ modules:
     # First book is default, others require --all flag
     books:
       - site # HTML site (output: site)
-      - explanation # PDF (output: pdf-dark)
+      - tutorials
+      - howto
+      - explanation
     # Container selection is automatic based on book output:
     #   output: site    → containers/mkdocs-site
     #   output: pdf-*   → containers/mkdocs-pdf

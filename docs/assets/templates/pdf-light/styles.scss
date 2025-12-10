@@ -24,25 +24,13 @@ $accent-purple: #8250df;
 
 @page {
   size: A4;
-  margin: 2cm 1.5cm;
-
-  @top-center {
-    content: string(chapter);
-    font-size: 9pt;
-    color: $text-secondary;
-  }
-
-  @bottom-center {
-    content: counter(page);
-    font-size: 9pt;
-    color: $text-secondary;
-  }
+  margin: 2cm 2cm 2.5cm 2cm;  // Extra bottom margin for footer overlay
 }
 
-@page :first {
-  @top-center { content: none; }
-  @bottom-center { content: none; }
-}
+// Page footers (page numbers, book title, section) are added
+// during PDF merge via Python/ReportLab overlay - not CSS.
+// This is necessary because mkdocs-exporter generates individual
+// PDFs per page, and CSS counters reset per document.
 
 // =============================================================================
 // Base styles
@@ -78,7 +66,6 @@ h1 {
   font-size: 24pt;
   border-bottom: 2px solid $accent-color;
   padding-bottom: 0.3em;
-  string-set: chapter content();
 }
 
 h2 {

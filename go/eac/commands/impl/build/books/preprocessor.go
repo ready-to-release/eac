@@ -98,13 +98,17 @@ func (p *Preprocessor) Preprocess() error {
 		return fmt.Errorf("step 6 (inline): %w", err)
 	}
 
-	// Step 8: Strip nav titles (PDF only)
+	// Step 8: Strip nav titles and macros (PDF only)
 	// awesome-nav warns about top-level titles which conflict with PDF navigation
-	// For HTML site, these titles are useful in the sidebar
+	// Macros like {{ diataxis_footer() }} are only processed by site builds
 	if p.pdfMode {
-		p.log("  Step 8: Stripping nav titles...")
+		p.log("  Step 8a: Stripping nav titles...")
 		if err := p.stripNavTitles(); err != nil {
-			return fmt.Errorf("step 8 (strip nav titles): %w", err)
+			return fmt.Errorf("step 8a (strip nav titles): %w", err)
+		}
+		p.log("  Step 8b: Stripping macros...")
+		if err := p.stripMacros(); err != nil {
+			return fmt.Errorf("step 8b (strip macros): %w", err)
 		}
 	}
 
