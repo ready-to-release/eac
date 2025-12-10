@@ -423,6 +423,19 @@ func validateSingleModule(
 		return result
 	}
 
+	// Check if this module has docker_build with push=true
+	// If so, image artifacts are pushed to registry and may not exist locally
+	dockerConfig := module.GetDockerBuildConfig()
+	if dockerConfig == nil {
+		// Check type-level docker config
+		if cfg != nil && cfg.ModuleTypes != nil {
+			if typeDef := cfg.ModuleTypes.Get(moduleContract.Type); typeDef != nil {
+				dockerConfig = typeDef.DockerBuild
+			}
+		}
+	}
+	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.Push
+
 	// Filter artifacts to only requested ones if requestedArtifacts is specified
 	if len(requestedArtifacts) > 0 {
 		var filteredArtifacts []ResolvedArtifact
@@ -441,7 +454,14 @@ func validateSingleModule(
 			if isRequested {
 				filteredArtifacts = append(filteredArtifacts, artifact)
 				filteredSummary.Total++
-				if artifact.Exists {
+
+				// For image artifacts with push=true, trust that buildx push succeeded
+				// (buildx would have failed if push failed). The image may not exist locally.
+				if artifact.Type == "image" && imagesPushedToRegistry {
+					// Treat pushed images as existing
+					artifact.Exists = true
+					filteredSummary.Exists++
+				} else if artifact.Exists {
 					filteredSummary.Exists++
 				} else {
 					filteredSummary.Missing++
@@ -456,6 +476,16 @@ func validateSingleModule(
 		result.Summary = filteredSummary
 	} else {
 		// No filtering - validate all artifacts (fallback behavior)
+		// Still need to handle pushed images
+		if imagesPushedToRegistry {
+			for i := range artifacts {
+				if artifacts[i].Type == "image" {
+					artifacts[i].Exists = true
+					summary.Missing--
+					summary.Exists++
+				}
+			}
+		}
 		result.Artifacts = artifacts
 		result.Summary = summary
 	}
