@@ -115,7 +115,7 @@ r2r scan sbom eac-commands
 ### Understanding Scan Results
 
 **Vulnerability scan output:**
-```
+```text
 Scanning eac-commands for vulnerabilities...
 
 ┌──────────────────────────────────────────────────────────┐
@@ -133,7 +133,7 @@ Total: 1 vulnerability found
 ```
 
 **SAST output:**
-```
+```text
 Running SAST scan...
 
 ┌──────────────────────────────────────────────────────────┐

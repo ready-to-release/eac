@@ -130,7 +130,7 @@ r2r release this eac-commands
 
 Understanding commit message format:
 
-```
+```text
 <type>(<scope>): <subject>
 
 <body>

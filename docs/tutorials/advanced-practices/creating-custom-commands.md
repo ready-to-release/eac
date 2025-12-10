@@ -76,7 +76,7 @@ r2r run-checks --module api-gateway --env production
 ```
 
 **Implementation structure:**
-```
+```text
 go/eac-extensions/
 ├── commands/
 │   └── checks/

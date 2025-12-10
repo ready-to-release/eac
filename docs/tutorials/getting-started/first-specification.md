@@ -54,6 +54,9 @@ Feature: Module_Feature-Name
 
 ## Step 2: Choose Your Approach
 
+!!! tip "Choose Your Method"
+    For this tutorial, we recommend creating the specification manually to understand the structure. Once you're comfortable with Gherkin syntax, use AI-assisted generation for faster workflows.
+
 You can create specifications in two ways:
 
 ### Option A: Manual Creation
@@ -69,7 +72,7 @@ specs/[module-name]/[feature-name]/specification.feature
 Use the `create spec` command to generate a specification from a description:
 
 ```bash
-r2r create spec "Add user authentication with email and password"
+r2r eac create spec "Add user authentication with email and password"
 ```
 
 The command will:
@@ -122,6 +125,9 @@ Feature: my-app_user-greeting
 
 ## Step 4: Understand the Tags
 
+!!! note "Tag Purpose"
+    Tags enable test filtering, categorization, and dependency tracking. They help organize tests by level, type, and technology stack.
+
 Tags at the top of the feature provide metadata:
 
 - `@L2` - Test level (L0=unit, L1=integration, L2=component, L3=system, L4=smoke)
@@ -136,6 +142,9 @@ Common verification tags:
 - `@pv` - Performance Verification (tests performance/scalability)
 
 ## Step 5: Write Effective Scenarios
+
+!!! warning "Common Pitfall"
+    Avoid vague scenarios with abstract concepts. Always use specific, concrete examples that demonstrate exact behavior.
 
 **Good scenarios are:**
 
@@ -167,7 +176,7 @@ Scenario: Discounts work correctly
 Check that your specification follows the project's quality standards:
 
 ```bash
-r2r validate specs specs/my-app/user-greeting/specification.feature
+r2r eac validate specs specs/my-app/user-greeting/specification.feature
 ```
 
 This validates:
@@ -184,7 +193,7 @@ If validation fails, you'll see specific error messages indicating what needs to
 While this specification doesn't have implementation code yet, you can see how it would be discovered by the test runner:
 
 ```bash
-r2r show tests
+r2r eac show tests
 ```
 
 This lists all tests in the repository, including your new specification.

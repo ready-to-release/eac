@@ -12,7 +12,6 @@ books:
     description: "GitHub Pages documentation site with module overview"
     output: site
     site_url: "https://ready-to-release.github.io/eac/"
-    default: true
 
     sources:
       # Static content from docs/

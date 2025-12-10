@@ -75,7 +75,7 @@ This tutorial teaches advanced BDD techniques including Example Mapping for spec
 The tutorial includes a complete Example Mapping session:
 
 **User Story:**
-```
+```text
 As a customer
 I want to apply discount codes to my order
 So that I can save money on purchases

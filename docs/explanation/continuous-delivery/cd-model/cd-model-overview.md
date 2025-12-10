@@ -312,6 +312,6 @@ See [Implementation Patterns](implementation-patterns.md) for detailed guidance 
 
 **Additional Resources:**
 
-- [Repository Layout](../../../reference/repository-layout.md)
+- [Repository Layout](../../../reference/r2r-eac/repository-layout.md)
 
 {{ diataxis_footer() }}

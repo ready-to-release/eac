@@ -560,7 +560,7 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 ### Internal Documentation
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
-- [Repository Layout](../../../reference/repository-layout.md)
+- [Repository Layout](../../../reference/r2r-eac/repository-layout.md)
 
 ### External Standards
 

@@ -76,7 +76,7 @@ This tutorial teaches you how to set up and work with TypeScript/npm modules in 
 The tutorial creates a TypeScript service:
 
 **Directory structure:**
-```
+```text
 go/api-client/
 ├── src/
 │   ├── index.ts
@@ -157,15 +157,15 @@ cd go/api-client
 npm install
 
 # Build module
-r2r build api-client
+r2r eac build api-client
 # Runs: npm run build
 
 # Test module
-r2r test api-client
+r2r eac test api-client
 # Runs: npm test
 
 # View artifacts
-r2r show artifacts api-client
+r2r eac show artifacts api-client
 ```
 
 ### npm Module Types
@@ -225,7 +225,7 @@ describe('APIClient', () => {
 
 Repository with both Go and TypeScript:
 
-```
+```text
 go/
 ├── eac-commands/        # Go CLI
 ├── eac-web-ui/          # TypeScript React app
@@ -270,10 +270,10 @@ jobs:
           node-version: '20'
 
       - name: Build TypeScript modules
-        run: r2r build api-client
+        run: r2r eac build api-client
 
       - name: Test TypeScript modules
-        run: r2r test api-client
+        run: r2r eac test api-client
 ```
 
 ### Next Steps

@@ -90,7 +90,7 @@ The tutorial implements authentication across three modules:
 - Manages user data
 
 **Dependency graph:**
-```
+```text
 auth-lib
 ├── api-gateway
 └── user-service
@@ -162,7 +162,7 @@ modules:
 ### Common Patterns
 
 **Layered architecture:**
-```
+```text
 infrastructure (base)
 ├── domain (business logic)
 │   └── application (use cases)
@@ -170,7 +170,7 @@ infrastructure (base)
 ```
 
 **Shared library pattern:**
-```
+```text
 common-lib (shared utilities)
 ├── service-a
 ├── service-b
@@ -178,7 +178,7 @@ common-lib (shared utilities)
 ```
 
 **Microservices pattern:**
-```
+```text
 (independent modules, communication via APIs)
 service-a  service-b  service-c
 ```

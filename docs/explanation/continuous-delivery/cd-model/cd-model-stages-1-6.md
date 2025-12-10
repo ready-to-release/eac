@@ -513,6 +513,6 @@ Each stage builds confidence incrementally, with quality gates preventing defect
 - [CD Model Overview](cd-model-overview.md)
 - [Environments Architecture](../architecture/environments.md)
 - [Security](../security/security.md)
-- [Repository Layout](../../../reference/repository-layout.md)
+- [Repository Layout](../../../reference/r2r-eac/repository-layout.md)
 
 {{ diataxis_footer() }}
