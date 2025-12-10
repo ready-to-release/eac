@@ -416,23 +416,18 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 }
 
 // buildModuleBooks builds all books for a module.
-// HTML books can run in parallel, but PDF books run sequentially to avoid Playwright timeouts.
-// Final PDFs are copied to the module output root with naming: {book-name}-{theme}.pdf
+// Books are built in parallel with isolated staging directories.
+// Final PDFs are moved to the module output root with naming: {book-name}-{theme}.pdf
 func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book, workspaceRoot string, outputDir string, logWriter io.Writer) int {
-	if len(moduleBooks) == 1 {
-		// Single book - still use isolated directories for consistency
-		book := moduleBooks[0]
-		bookOutputDir := filepath.Join(outputDir, book.Name)
-		return buildSingleBook(module, book, workspaceRoot, outputDir, bookOutputDir, logWriter)
+	if len(moduleBooks) > 1 {
+		Logln(logWriter, "\n=== Building %s: %s (%d books) ===", module.Type, module.Moniker, len(moduleBooks))
+		for _, book := range moduleBooks {
+			Logln(logWriter, "   - %s (%s)", book.Name, book.GetOutput())
+		}
+		Logln(logWriter, "\n🚀 Building %d books in PARALLEL...", len(moduleBooks))
 	}
 
-	Logln(logWriter, "\n=== Building %s: %s (%d books) ===", module.Type, module.Moniker, len(moduleBooks))
-	for _, book := range moduleBooks {
-		Logln(logWriter, "   - %s (%s)", book.Name, book.GetOutput())
-	}
-
-	// Build ALL books in parallel - each has isolated staging at staging/<bookname>
-	Logln(logWriter, "\n🚀 Building %d books in PARALLEL...", len(moduleBooks))
+	// Build books (parallel if multiple, sequential if single)
 	var wg sync.WaitGroup
 	results := make(chan int, len(moduleBooks))
 
@@ -441,8 +436,15 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		go func(b *config.Book) {
 			defer wg.Done()
 
-			// Each book gets its own isolated output directory: outputDir/<bookname>/
-			bookOutputDir := filepath.Join(outputDir, b.Name)
+			// Determine output directory based on book type:
+			// - Site books: output directly to module dir (MkDocs creates site/ subdirectory)
+			// - PDF books: use isolated subdirectory (PDF is moved to module root after build)
+			var bookOutputDir string
+			if b.GetOutput() == "site" {
+				bookOutputDir = outputDir
+			} else {
+				bookOutputDir = filepath.Join(outputDir, b.Name)
+			}
 
 			if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
 				Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", b.Name, err)
@@ -450,18 +452,26 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 				return
 			}
 
-			// Use buffered writer to avoid interleaved output
+			// Use buffered writer for parallel builds to avoid interleaved output
 			var bookLog bytes.Buffer
-			// Pass both module output dir (for staging) and book output dir (for final output)
-			exitCode := buildSingleBook(module, b, workspaceRoot, outputDir, bookOutputDir, &bookLog)
+			var bookLogWriter io.Writer = &bookLog
+			if len(moduleBooks) == 1 {
+				// Single book - write directly to main log
+				bookLogWriter = logWriter
+			}
+
+			// Build the book
+			exitCode := buildSingleBook(module, b, workspaceRoot, outputDir, bookOutputDir, bookLogWriter)
 
 			if exitCode != 0 {
-				logWriter.Write(bookLog.Bytes())
+				if len(moduleBooks) > 1 {
+					logWriter.Write(bookLog.Bytes())
+				}
 				results <- exitCode
 				return
 			}
 
-			// For PDF books, copy PDF to module output root
+			// For PDF books, move PDF to module output root
 			bookOutput := b.GetOutput()
 			if bookOutput != "site" {
 				themes := []string{}
@@ -475,19 +485,21 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 				}
 
 				for _, theme := range themes {
-					// Move PDF from site/pdf/ to module root (no duplicate)
+					// Move PDF from site/pdf/ to module root
 					srcPdf := filepath.Join(bookOutputDir, "site", "pdf", fmt.Sprintf("%s-%s.pdf", b.Name, theme))
 					dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", b.Name, theme))
 					if err := os.Rename(srcPdf, dstPdf); err != nil {
-						Logln(&bookLog, "⚠️  Failed to move PDF to module root: %v", err)
+						Logln(bookLogWriter, "⚠️  Failed to move PDF to module root: %v", err)
 					} else {
-						Logln(&bookLog, "   📄 %s-%s.pdf → module output root", b.Name, theme)
+						Logln(bookLogWriter, "   📄 %s-%s.pdf → module output root", b.Name, theme)
 					}
 				}
 			}
 
-			// Write complete log atomically
-			logWriter.Write(bookLog.Bytes())
+			// Write complete log atomically for parallel builds
+			if len(moduleBooks) > 1 {
+				logWriter.Write(bookLog.Bytes())
+			}
 			results <- 0
 		}(book)
 	}
@@ -501,7 +513,9 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		}
 	}
 
-	Logln(logWriter, "\n✅ All %d books built successfully", len(moduleBooks))
+	if len(moduleBooks) > 1 {
+		Logln(logWriter, "\n✅ All %d books built successfully", len(moduleBooks))
+	}
 	return 0
 }
 
