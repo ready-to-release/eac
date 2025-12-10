@@ -8,6 +8,11 @@ Run comprehensive quality checks before committing to ensure code meets reposito
 
 ## Prerequisites
 
+### Required Knowledge
+**New to validation?** Learn these concepts first:
+- [Building and Testing Changes](../../../../tutorials/core-workflows/building-and-testing.md) - Understand pre-commit validation workflow
+
+### Required Setup
 - Working in EAC-managed repository
 - Changes ready to commit
 

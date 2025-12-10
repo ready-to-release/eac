@@ -8,6 +8,11 @@ Prepare and release a new version of your module following a complete pre-releas
 
 ## Prerequisites
 
+### Required Knowledge
+**New to releases?** Learn these concepts first:
+- [Making Your First Release](../../../../tutorials/core-workflows/making-first-release.md) - Understand the complete release workflow
+
+### Required Setup
 - Module has pending changes to release
 - CI is passing for HEAD commit
 - You have permission to create git tags

@@ -277,13 +277,20 @@ Congratulations! You've successfully:
 
 ## Next Steps
 
-You now have the foundation for writing specifications! Continue your learning journey:
+### Continue Learning
+- **Next tutorial:** [Your First Module](./first-module.md) - Create a Go module with tests (30 min)
+- **Advanced:** [TDD with Specifications](../core-workflows/tdd-with-specifications.md) - Full TDD development loop (45 min)
 
-- **Create your first module** - [Your First Module](./first-module.md) to implement the code
-- **Learn TDD workflow** - [TDD with Specifications](../core-workflows/tdd-with-specifications.md) for the full development loop
+### Apply What You Learned
+Now that you can write specifications, you can accomplish these tasks:
+
+- **[Create Specifications](../../how-to-guides/eac/commands/documentation/create-specifications.md)** - Generate specs from descriptions with AI
+- **[Validate Specifications](../../how-to-guides/eac/commands/build-test-validate/validate-specifications.md)** - Check specs against quality standards
 - **Browse existing specs** - Look in the `specs/` directory for real-world examples
-- **Explore how-to guides** - See [Specifications](../../how-to-guides/eac/specifications/) for task-oriented guidance
 
-For comprehensive details, see the [Specifications Explanation](../../explanation/specifications/) documentation.
+### Dive Deeper
+- [Specifications Explanation](../../explanation/specifications/) - Understand BDD concepts and philosophy
+- [Gherkin Best Practices](../../explanation/specifications/quality/) - Writing effective scenarios
+- [Tag Taxonomy](../../explanation/specifications/taxonomy/) - Complete guide to test tags
 
 {{ diataxis_footer() }}

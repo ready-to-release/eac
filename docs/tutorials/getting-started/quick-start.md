@@ -176,6 +176,18 @@ Congratulations! You've successfully:
 
 ## Next Steps
 
-Continue to [Your First Feature Specification](./first-specification.md) to learn how to write Gherkin specifications that describe system behavior.
+### Continue Learning
+- **Next tutorial:** [Your First Feature Specification](./first-specification.md) - Learn to write Gherkin specifications (20 min)
+
+### Apply What You Learned
+Now that you know the basics of r2r, you can accomplish these tasks:
+
+- **[Get Help with Commands](../../how-to-guides/eac/commands/getting-started/get-help-with-commands.md)** - Find and understand any r2r command
+- **[Explore Your Repository](../../how-to-guides/eac/commands/getting-started/explore-your-repository.md)** - Discover modules, files, and structure
+- **[Setup AI Provider](../../how-to-guides/eac/commands/getting-started/setup-ai-provider.md)** - Configure Claude, OpenAI, or Gemini
+
+### Dive Deeper
+- [Everything as Code Paradigm](../../explanation/everything-as-code/paradigm.md) - Understand the philosophy
+- [Command Reference](../../reference/commands/) - Complete command documentation
 
 {{ diataxis_footer() }}

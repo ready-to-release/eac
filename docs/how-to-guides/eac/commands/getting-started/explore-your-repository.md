@@ -8,6 +8,11 @@ Discover what modules, files, and dependencies exist in your repository using sh
 
 ## Prerequisites
 
+### Required Knowledge
+**New to r2r?** Learn these concepts first:
+- [Quick Start Guide](../../../../tutorials/getting-started/quick-start.md) - Understand r2r basics and repository structure
+
+### Required Setup
 - Working in an EAC-managed repository
 - Repository has module contracts defined
 

@@ -8,6 +8,12 @@ Execute tests for a module and view results with timing information and coverage
 
 ## Prerequisites
 
+### Required Knowledge
+**New to testing?** Learn these concepts first:
+- [Understanding Test Suites](../../../../tutorials/getting-started/understanding-test-suites.md) - Test levels and when to use each
+- [Building and Testing Changes](../../../../tutorials/core-workflows/building-and-testing.md) - Efficient test workflows
+
+### Required Setup
 - Module has tests defined
 - Module is built (or will be built automatically)
 - Test dependencies available

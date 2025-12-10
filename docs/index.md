@@ -59,8 +59,9 @@ Step-by-step lessons that take you through a series of steps to complete a proje
 
 Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.
 
-- [Commands by Area](how-to-guides/eac/commands/)
-- [Continuous Delivery Practices](how-to-guides/continuous-delivery/)
+- [EAC Commands](how-to-guides/eac/commands/)
+- [EAC Configuration](how-to-guides/eac/configuration/)
+- [EAC Modules](how-to-guides/eac/modules/)
 
 </td>
 </tr>
@@ -74,7 +75,7 @@ Guides that show you how to solve specific problems. Use these when you need to 
 Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.
 
 - [R2R and EAC Architecture](reference/r2r-eac/) - System overview and design
-- [Repository Layout](reference/repository-layout.md) - File structure
+- [Repository Layout](reference/r2r-eac/repository-layout.md) - File structure
 - [Command Reference](reference/commands/) - CLI commands
 - [Decision Records](reference/decision-records/) - Architectural decisions
 
@@ -101,12 +102,6 @@ Conceptual explanations that clarify and illuminate. Read these to understand th
 - "I need to accomplish a task" → [How-to Guides](how-to-guides/)
 - "I need technical details" → [Reference](reference/)
 - "I want to understand why" → [Explanation](explanation/)
-
----
-
-## Repository Modules
-
-<!-- book:insert modules-overview -->
 
 ---
 

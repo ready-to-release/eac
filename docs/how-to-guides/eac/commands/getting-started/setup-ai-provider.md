@@ -11,6 +11,12 @@ Configure AI provider (Anthropic Claude, OpenAI, or Google Gemini) to enable AI-
 
 ## Prerequisites
 
+### Required Knowledge
+**New to r2r?** Learn these concepts first:
+- [Quick Start Guide](../../../../tutorials/getting-started/quick-start.md) - Initialize r2r and understand AI provider configuration
+
+### Required Setup
+
 You need an Anthropic API key:
 
 | Provider | API Key Required | Best For |

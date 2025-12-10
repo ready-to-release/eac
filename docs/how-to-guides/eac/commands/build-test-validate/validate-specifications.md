@@ -8,6 +8,11 @@ Check Gherkin BDD specifications for quality and detect unused step definitions.
 
 ## Prerequisites
 
+### Required Knowledge
+**New to specifications?** Learn these concepts first:
+- [Your First Feature Specification](../../../../tutorials/getting-started/first-specification.md) - Understand specification structure and quality standards
+
+### Required Setup
 - Gherkin feature files in repository
 - Step definitions implemented
 
