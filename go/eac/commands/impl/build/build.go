@@ -1242,7 +1242,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 
 			// For image artifacts, enrich with docker_build config info
 			if art.Type == "image" {
-				enrichImageArtifact(&artifactInfo, moduleTypeDef)
+				enrichImageArtifact(&artifactInfo, module, moduleTypeDef, moniker)
 			}
 
 			artifactInfos = append(artifactInfos, artifactInfo)
@@ -1484,13 +1484,45 @@ func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract,
 	return implinternal.DetermineRequestedArtifacts(module, moduleType, false, cfg)
 }
 
-// enrichImageArtifact populates image-specific fields (Tags, Registry) from docker_build config
-func enrichImageArtifact(artifactInfo *implinternal.ArtifactInfo, moduleTypeDef *config.ModuleTypeDef) {
-	if moduleTypeDef == nil || moduleTypeDef.DockerBuild == nil {
+// enrichImageArtifact populates image-specific fields (Tags, Registry) from docker_build config.
+// It uses module-level docker_build if available (takes precedence), otherwise falls back to type-level config.
+func enrichImageArtifact(artifactInfo *implinternal.ArtifactInfo, module *config.Module, moduleTypeDef *config.ModuleTypeDef, moniker string) {
+	// Try module-level docker_build first (takes precedence)
+	var dockerConfig *config.DockerBuildConfig
+	if module != nil {
+		dockerConfig = module.GetDockerBuildConfig()
+	}
+
+	// Fall back to type-level config if no module-level config
+	if dockerConfig == nil && moduleTypeDef != nil {
+		dockerConfig = moduleTypeDef.DockerBuild
+	}
+
+	if dockerConfig == nil {
 		return
 	}
 
-	dockerConfig := moduleTypeDef.DockerBuild
-	artifactInfo.Tags = dockerConfig.Tags
+	// Expand template variables in tags
+	expandedTags := make([]string, 0, len(dockerConfig.Tags))
+	for _, tag := range dockerConfig.Tags {
+		expanded := expandImageTag(tag, moniker)
+		expandedTags = append(expandedTags, expanded)
+	}
+
+	artifactInfo.Tags = expandedTags
 	artifactInfo.Registry = dockerConfig.Registry
+}
+
+// expandImageTag expands template variables in an image tag
+func expandImageTag(tag, moniker string) string {
+	result := tag
+	result = strings.ReplaceAll(result, "{moniker}", moniker)
+	result = strings.ReplaceAll(result, "{container}", moniker)
+
+	// Get short SHA if available
+	if sha := os.Getenv("GITHUB_SHA"); sha != "" && len(sha) >= 7 {
+		result = strings.ReplaceAll(result, "{short_sha}", sha[:7])
+	}
+
+	return result
 }

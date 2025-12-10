@@ -66,6 +66,7 @@ jobs:
         with:
           module: scripts-implicit-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          results-artifact-name: test-results-scripts-implicit-cli-linux
           # PRs run commit suite only; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
 
@@ -83,5 +84,6 @@ jobs:
         with:
           module: scripts-implicit-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          results-artifact-name: test-results-scripts-implicit-cli-windows
           # PRs run commit suite only; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}

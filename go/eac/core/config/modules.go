@@ -59,6 +59,79 @@ func (m *Module) GetBuildHandler() string {
 	return m.Build.Handler
 }
 
+// GetDockerBuildConfig parses and returns the per-module docker_build configuration.
+// Returns nil if no docker_build is defined at module level.
+// This allows modules to override or extend type-level docker_build config.
+func (m *Module) GetDockerBuildConfig() *DockerBuildConfig {
+	if m.DockerBuild == nil || len(m.DockerBuild) == 0 {
+		return nil
+	}
+
+	// Parse the raw map[string]interface{} into DockerBuildConfig
+	cfg := &DockerBuildConfig{}
+
+	if v, ok := m.DockerBuild["container"].(string); ok {
+		cfg.Container = v
+	}
+	if v, ok := m.DockerBuild["context"].(string); ok {
+		cfg.Context = v
+	}
+	if v, ok := m.DockerBuild["dockerfile"].(string); ok {
+		cfg.Dockerfile = v
+	}
+	if v, ok := m.DockerBuild["platforms"].([]interface{}); ok {
+		for _, p := range v {
+			if ps, ok := p.(string); ok {
+				cfg.Platforms = append(cfg.Platforms, ps)
+			}
+		}
+	}
+	if v, ok := m.DockerBuild["tags"].([]interface{}); ok {
+		for _, t := range v {
+			if ts, ok := t.(string); ok {
+				cfg.Tags = append(cfg.Tags, ts)
+			}
+		}
+	}
+	if v, ok := m.DockerBuild["load"].(bool); ok {
+		cfg.Load = v
+	}
+	if v, ok := m.DockerBuild["push"].(bool); ok {
+		cfg.Push = v
+	}
+	if v, ok := m.DockerBuild["registry"].(string); ok {
+		cfg.Registry = v
+	}
+	if v, ok := m.DockerBuild["sbom"].(bool); ok {
+		cfg.SBOM = v
+	}
+	if v, ok := m.DockerBuild["provenance"].(bool); ok {
+		cfg.Provenance = v
+	}
+
+	// Parse cache config if present
+	if cacheMap, ok := m.DockerBuild["cache"].(map[string]interface{}); ok {
+		cfg.Cache = &DockerCacheConfig{}
+		if v, ok := cacheMap["type"].(string); ok {
+			cfg.Cache.Type = v
+		}
+		if v, ok := cacheMap["scope"].(string); ok {
+			cfg.Cache.Scope = v
+		}
+		if v, ok := cacheMap["from"].(string); ok {
+			cfg.Cache.From = v
+		}
+		if v, ok := cacheMap["to"].(string); ok {
+			cfg.Cache.To = v
+		}
+		if v, ok := cacheMap["mode"].(string); ok {
+			cfg.Cache.Mode = v
+		}
+	}
+
+	return cfg
+}
+
 // Files defines file ownership patterns for a module
 type Files struct {
 	Root      string    `yaml:"root"`
