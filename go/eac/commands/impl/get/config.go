@@ -40,8 +40,8 @@ func GetConfig() int {
 		// Build output structure
 		output := ConfigOutput{}
 
-		if cfg.Modules != nil {
-			output.Modules = cfg.Modules
+		if cfg.Repository != nil {
+			output.Modules = cfg.Repository
 		}
 
 		if cfg.ModuleTypes != nil {

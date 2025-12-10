@@ -10,20 +10,20 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// ProcessArtifactDerivations handles deriving and compressing artifacts after build
+// ProcessArtifactDerivations handles deriving and compressing artifacts after build.
+// artifacts should be the merged artifacts from cfg.GetBuildArtifacts() - this function
+// does NOT access moduleTypeDef directly to ensure module-level artifacts take priority.
 func ProcessArtifactDerivations(
 	moniker string,
-	moduleTypeDef *config.ModuleTypeDef,
+	artifacts []config.Artifact,
 	buildDir string,
 	requestedArtifacts []string,
 	metadata map[string]string,
 	logWriter io.Writer,
 ) error {
-	if moduleTypeDef.Build == nil {
+	if len(artifacts) == 0 {
 		return nil
 	}
-
-	artifacts := moduleTypeDef.Build.Artifacts
 
 	// Collect all derived artifact variants to process
 	type derivedVariant struct {
@@ -33,57 +33,43 @@ func ProcessArtifactDerivations(
 	}
 	var derivedVariants []derivedVariant
 
+	// Check if all artifacts are requested (wildcard "*")
+	allRequested := false
+	for _, reqID := range requestedArtifacts {
+		if reqID == "*" {
+			allRequested = true
+			break
+		}
+	}
+
 	for _, art := range artifacts {
 		if !art.IsDerived() {
 			continue
 		}
 
-		// For executable artifacts, check all platform/arch combinations
-		if art.IsExecutable() && len(art.Platforms) > 0 {
-			for _, targetOS := range art.Platforms {
-				// Determine supported architectures for this OS
-				// Pattern analysis: {moniker}-{os}-amd64-upx{ext} suggests only amd64 is supported for UPX
-				var archs []string
-				if art.Pattern != "" && (art.Pattern == "{moniker}-{os}-amd64-upx{ext}" ||
-					art.Pattern == "{moniker}-{os}-amd64{ext}") {
-					archs = []string{"amd64"}
-				} else if targetOS == "windows" {
-					archs = []string{"amd64"}
-				} else {
-					archs = []string{"amd64", "arm64"}
-				}
-
-				for _, arch := range archs {
-					// Derive the artifact ID for this platform
-					artifactID := deriveArtifactIDForPlatform(art, targetOS, arch)
-
-					// Check if this variant was requested
-					isRequested := false
-					for _, reqID := range requestedArtifacts {
-						if artifactID == reqID {
-							isRequested = true
-							break
-						}
-					}
-
-					if isRequested {
-						derivedVariants = append(derivedVariants, derivedVariant{
-							artifact: art,
-							os:       targetOS,
-							arch:     arch,
-						})
-					}
+		// Check if this artifact was requested (or all are requested via "*")
+		isRequested := allRequested
+		if !isRequested {
+			for _, reqID := range requestedArtifacts {
+				if art.ID == reqID {
+					isRequested = true
+					break
 				}
 			}
-		} else {
-			// Non-executable derived artifacts (rare, but handle generically)
-			// Use current platform
-			derivedVariants = append(derivedVariants, derivedVariant{
-				artifact: art,
-				os:       "",
-				arch:     "",
-			})
 		}
+		if !isRequested {
+			continue
+		}
+
+		// Artifacts from cfg.GetBuildArtifacts are already expanded per-platform
+		// Extract OS and arch from artifact ID (format: {os}-{arch} or {os}-{arch}-upx)
+		targetOS, targetArch := extractPlatformFromID(art.ID)
+
+		derivedVariants = append(derivedVariants, derivedVariant{
+			artifact: art,
+			os:       targetOS,
+			arch:     targetArch,
+		})
 	}
 
 	if len(derivedVariants) == 0 {
@@ -103,25 +89,28 @@ func ProcessArtifactDerivations(
 	return nil
 }
 
-// deriveArtifactIDForPlatform derives an artifact ID based on the pattern and compression
-// For UPX compressed artifacts with pattern {moniker}-{os}-amd64-upx{ext}, the ID is {os}-amd64-upx
-func deriveArtifactIDForPlatform(artifact config.Artifact, targetOS, targetArch string) string {
-	if artifact.ID != "" {
-		return artifact.ID
-	}
+// extractPlatformFromID extracts OS and architecture from an artifact ID.
+// Expected formats: "{os}-{arch}" or "{os}-{arch}-upx"
+// Examples: "linux-amd64" -> ("linux", "amd64"), "linux-amd64-upx" -> ("linux", "amd64")
+func extractPlatformFromID(id string) (os, arch string) {
+	// Known OS values
+	knownOS := []string{"linux", "darwin", "windows"}
 
-	// For executables with "-upx" in pattern, append -upx to the ID
-	if artifact.IsExecutable() && artifact.GetCompression() == config.CompressionUPX {
-		return fmt.Sprintf("%s-%s-upx", targetOS, targetArch)
+	for _, osVal := range knownOS {
+		if len(id) > len(osVal) && id[:len(osVal)] == osVal && id[len(osVal)] == '-' {
+			remainder := id[len(osVal)+1:]
+			// Extract arch (everything before next dash or end)
+			archEnd := len(remainder)
+			for i, c := range remainder {
+				if c == '-' {
+					archEnd = i
+					break
+				}
+			}
+			return osVal, remainder[:archEnd]
+		}
 	}
-
-	// Default executable ID
-	if artifact.IsExecutable() {
-		return fmt.Sprintf("%s-%s", targetOS, targetArch)
-	}
-
-	// For other types, use base of pattern
-	return filepath.Base(artifact.Pattern)
+	return "", ""
 }
 
 // processDerivedArtifact derives a single artifact from its source

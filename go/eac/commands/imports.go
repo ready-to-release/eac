@@ -39,6 +39,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/tags"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/test"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/design"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/docs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk-catalog"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk-profile"

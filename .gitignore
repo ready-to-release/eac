@@ -66,8 +66,10 @@ package-lock.json
 # MkDocs
 site/
 .cache/
-# Generated files during PDF build (mermaid SVGs, etc.)
+# Generated files during PDF build (staging area - not committed)
 docs/assets/rendered/
+# Mermaid cache IS tracked in git for CI optimization
+# (docs/assets/cache/ is NOT ignored)
 
 # Structurizr (architecture diagrams)
 # Generated files when running 'design serve'

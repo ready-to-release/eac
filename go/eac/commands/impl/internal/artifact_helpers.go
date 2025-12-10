@@ -48,10 +48,12 @@ func ResolveArtifactsForModule(
 }
 
 
-// ResolveArtifactsForModuleWithConfig resolves all artifacts for a module with optional books config
+// ResolveArtifactsForModuleWithConfig resolves all artifacts for a module with optional books config.
+// The moduleType parameter is deprecated and ignored - artifact resolution uses cfg.GetBuildArtifacts()
+// which properly merges module-level and type-level artifacts (module-level takes priority).
 func ResolveArtifactsForModuleWithConfig(
 	module *config.Module,
-	moduleType *config.ModuleTypeDef,
+	moduleType *config.ModuleTypeDef, // Deprecated: unused, kept for API compatibility
 	buildDir string,
 	targetOS, targetArch string,
 	cfg *config.EACConfig,
@@ -60,14 +62,15 @@ func ResolveArtifactsForModuleWithConfig(
 		return nil, nil, fmt.Errorf("module cannot be nil")
 	}
 
-	// Check if module has per-module artifacts OR type-level artifacts OR books
-	// Per-module artifacts take priority (defined in modules.yml)
-	hasModuleArtifacts := module.Build != nil && len(module.Build.Artifacts) > 0
-	hasTypeArtifacts := moduleType != nil && moduleType.Build != nil && len(moduleType.Build.Artifacts) > 0
-	hasModuleBooks := hasBooks(module, cfg)
+	// Get merged artifacts from config (module-level takes priority over type-level)
+	// Pass buildAll=true to get all artifacts including UPX variants for resolution
+	var artifacts []config.Artifact
+	if cfg != nil {
+		artifacts = cfg.GetBuildArtifacts(module.Moniker, true)
+	}
 
-	if !hasModuleArtifacts && !hasTypeArtifacts && !hasModuleBooks {
-		// No artifacts defined anywhere - not a buildable module
+	if len(artifacts) == 0 {
+		// No artifacts defined - not a buildable module
 		return []ResolvedArtifact{}, &ArtifactResolutionSummary{}, nil
 	}
 
@@ -79,42 +82,6 @@ func ResolveArtifactsForModuleWithConfig(
 		targetArch,
 		module.Metadata,
 	)
-
-	// Determine artifacts to resolve, in priority order:
-	// 1. Per-module Build.Artifacts (from modules.yml)
-	// 2. Type-level artifacts (from module-types.yml) with book expansion
-	// 3. Book-derived artifacts (from books.yml) for book modules
-	var artifacts []config.Artifact
-
-	// Check for per-module artifact definitions first
-	if hasModuleArtifacts {
-		// Convert ModuleArtifact to config.Artifact
-		for _, ma := range module.Build.Artifacts {
-			artifacts = append(artifacts, config.Artifact{
-				ID:      ma.ID,
-				Type:    ma.Type,
-				Pattern: ma.Pattern,
-			})
-		}
-	} else if hasTypeArtifacts {
-		// Use type-level artifacts
-		artifacts = moduleType.Build.Artifacts
-	}
-
-	// For modules with books defined, add book-derived artifacts (deduplicate by ID)
-	if hasBooks(module, cfg) {
-		existingIDs := make(map[string]bool)
-		for _, a := range artifacts {
-			existingIDs[a.ID] = true
-		}
-		bookArtifacts := generateBookArtifacts(module, cfg, true)
-		for _, ba := range bookArtifacts {
-			if !existingIDs[ba.ID] {
-				artifacts = append(artifacts, ba)
-				existingIDs[ba.ID] = true
-			}
-		}
-	}
 
 	// If no artifacts defined, module type doesn't produce artifacts.
 	// The per-module manifest is the contract for validation (not markers).
@@ -241,67 +208,6 @@ func FormatArtifactSize(sizeBytes int64) string {
 func isBookModule(moduleType string) bool {
 	// Check by type name - container modules with mkdocs handler
 	return moduleType == "container" || strings.Contains(moduleType, "mkdocs")
-}
-
-// hasBooks checks if a module has books defined in books.yml
-func hasBooks(module *config.Module, cfg *config.EACConfig) bool {
-	if cfg == nil {
-		return false
-	}
-	// Ensure books are loaded
-	cfg.LoadBooks(false)
-	books := cfg.GetBooksByModule(module.Moniker)
-	return len(books) > 0
-}
-
-// generateBookArtifacts creates artifact definitions from books.yml for a module
-// The first book in the module's books list is the default; others require --all flag.
-func generateBookArtifacts(module *config.Module, cfg *config.EACConfig, buildAll bool) []config.Artifact {
-	var artifacts []config.Artifact
-
-	books := cfg.GetBooksByModule(module.Moniker)
-	for i, book := range books {
-		// Skip non-default books (not first) unless --all flag is used
-		isDefault := i == 0
-		if !buildAll && !isDefault {
-			continue
-		}
-
-		output := book.GetOutput()
-
-		switch {
-		case strings.HasPrefix(output, "pdf-"):
-			theme := strings.TrimPrefix(output, "pdf-")
-			if theme == "all" {
-				// Generate both dark and light PDFs
-				for _, t := range []string{"dark", "light"} {
-					pdfName := fmt.Sprintf("%s-%s.pdf", book.Name, t)
-					artifacts = append(artifacts, config.Artifact{
-						ID:      fmt.Sprintf("%s-%s", book.Name, t),
-						Type:    config.ArtifactTypeFile,
-						Pattern: pdfName,
-					})
-				}
-			} else {
-				// Single theme PDF
-				pdfName := fmt.Sprintf("%s-%s.pdf", book.Name, theme)
-				artifacts = append(artifacts, config.Artifact{
-					ID:      book.Name,
-					Type:    config.ArtifactTypeFile,
-					Pattern: pdfName,
-				})
-			}
-		case output == "site":
-			// HTML site directory
-			artifacts = append(artifacts, config.Artifact{
-				ID:      "site",
-				Type:    config.ArtifactTypeDirectory,
-				Pattern: "site",
-			})
-		}
-	}
-
-	return artifacts
 }
 
 // expandBookArtifacts expands wildcard PDF patterns to specific book PDFs
@@ -487,21 +393,16 @@ func validateSingleModule(
 	result.Type = moduleContract.Type
 
 	// Get module from config
-	module, ok := cfg.Modules.GetModule(moniker)
+	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		result.Error = fmt.Sprintf("module not found in config")
 		return result
 	}
 
-	// Get module type (may be nil for modules without type definition)
-	moduleType := cfg.ModuleTypes.Get(module.Type)
-
-	// Check if module has build artifacts (either per-module or type-level or books)
-	hasModuleArtifacts := module.Build != nil && len(module.Build.Artifacts) > 0
-	hasTypeArtifacts := moduleType != nil && moduleType.Build != nil && len(moduleType.Build.Artifacts) > 0
-	hasModuleBooks := hasBooks(module, cfg)
-
-	if !hasModuleArtifacts && !hasTypeArtifacts && !hasModuleBooks {
+	// Check if module has build artifacts using merged config
+	// cfg.GetBuildArtifacts handles module-level vs type-level priority and book artifacts
+	allArtifacts := cfg.GetBuildArtifacts(moniker, true)
+	if len(allArtifacts) == 0 {
 		result.HasBuildArtifacts = false
 		result.Summary = &ArtifactResolutionSummary{}
 		return result
@@ -513,14 +414,27 @@ func validateSingleModule(
 	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
 	buildDir := filepath.Join(workspaceRoot, buildDirRel)
 
-	// Resolve artifacts
+	// Resolve artifacts (moduleType parameter is deprecated, passing nil)
 	artifacts, summary, err := ResolveArtifactsForModuleWithConfig(
-		module, moduleType, buildDir, targetOS, targetArch, cfg,
+		module, nil, buildDir, targetOS, targetArch, cfg,
 	)
 	if err != nil {
 		result.Error = err.Error()
 		return result
 	}
+
+	// Check if this module has docker_build with push=true
+	// If so, image artifacts are pushed to registry and may not exist locally
+	dockerConfig := module.GetDockerBuildConfig()
+	if dockerConfig == nil {
+		// Check type-level docker config
+		if cfg != nil && cfg.ModuleTypes != nil {
+			if typeDef := cfg.ModuleTypes.Get(moduleContract.Type); typeDef != nil {
+				dockerConfig = typeDef.DockerBuild
+			}
+		}
+	}
+	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.Push
 
 	// Filter artifacts to only requested ones if requestedArtifacts is specified
 	if len(requestedArtifacts) > 0 {
@@ -540,7 +454,14 @@ func validateSingleModule(
 			if isRequested {
 				filteredArtifacts = append(filteredArtifacts, artifact)
 				filteredSummary.Total++
-				if artifact.Exists {
+
+				// For image artifacts with push=true, trust that buildx push succeeded
+				// (buildx would have failed if push failed). The image may not exist locally.
+				if artifact.Type == "image" && imagesPushedToRegistry {
+					// Treat pushed images as existing
+					artifact.Exists = true
+					filteredSummary.Exists++
+				} else if artifact.Exists {
 					filteredSummary.Exists++
 				} else {
 					filteredSummary.Missing++
@@ -555,6 +476,16 @@ func validateSingleModule(
 		result.Summary = filteredSummary
 	} else {
 		// No filtering - validate all artifacts (fallback behavior)
+		// Still need to handle pushed images
+		if imagesPushedToRegistry {
+			for i := range artifacts {
+				if artifacts[i].Type == "image" {
+					artifacts[i].Exists = true
+					summary.Missing--
+					summary.Exists++
+				}
+			}
+		}
 		result.Artifacts = artifacts
 		result.Summary = summary
 	}
@@ -594,13 +525,15 @@ func addDependenciesRecursive(moniker string, registry *modules.Registry, result
 }
 
 // DetermineRequestedArtifacts returns the list of artifact IDs that should be built
-// based on the module type and whether --all mode is requested.
+// based on the module and whether --all mode is requested.
 //
 // This delegates to config.EACConfig.GetBuildArtifactIDs which encapsulates all
 // artifact merging and filtering logic (module vs type-level, UPX filtering, etc.)
+//
+// The moduleType parameter is deprecated and ignored - kept for API compatibility.
 func DetermineRequestedArtifacts(
 	module *config.Module,
-	moduleType *config.ModuleTypeDef,
+	moduleType *config.ModuleTypeDef, // Deprecated: unused, kept for API compatibility
 	buildAll bool,
 	cfg *config.EACConfig,
 ) []string {

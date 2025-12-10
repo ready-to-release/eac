@@ -2,15 +2,31 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ready-to-release.org/schemas/eac-core/repository/0.1.0",
   "title": "Repository Configuration Schema",
-  "description": "Schema for repository-level configuration including type, versioning schemes, and workflow policies",
+  "description": "Unified schema for repository configuration and module contracts",
   "type": "object",
   "properties": {
     "repository": {
       "$ref": "#/definitions/repository_config",
       "description": "Repository-level configuration and metadata"
+    },
+    "paths": {
+      "$ref": "#/definitions/paths_config",
+      "description": "Repository path configuration (optional, has sensible defaults)"
+    },
+    "conventions": {
+      "$ref": "#/definitions/conventions_config",
+      "description": "Filename conventions (optional, has sensible defaults)"
+    },
+    "modules": {
+      "type": "array",
+      "description": "List of module definitions",
+      "items": {
+        "$ref": "#/definitions/module"
+      },
+      "minItems": 1
     }
   },
-  "required": ["repository"],
+  "required": ["modules"],
   "definitions": {
     "repository_config": {
       "type": "object",
@@ -18,8 +34,8 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["mono", "poly", "adjunct"],
-          "description": "Repository type: mono (monorepo), poly (polyrepo), adjunct (supporting repo)"
+          "enum": ["mono", "poly", "adjacent"],
+          "description": "Repository type: mono (monorepo), poly (polyrepo), adjacent (supporting repo)"
         },
         "schemes": {
           "type": "array",
@@ -89,6 +105,379 @@
       "default": {
         "constraint": "unrestricted"
       }
+    },
+    "paths_config": {
+      "type": "object",
+      "description": "Repository path configuration for specs, tests, and output directories",
+      "properties": {
+        "specs_root": {
+          "type": "string",
+          "description": "Root directory for feature specifications",
+          "default": "specs"
+        },
+        "test_impl_root": {
+          "type": "string",
+          "description": "Root directory for test implementations (godog steps, etc.)",
+          "default": "tests"
+        },
+        "templates": {
+          "type": "string",
+          "description": "Templates directory",
+          "default": "templates"
+        },
+        "out": {
+          "$ref": "#/definitions/out_paths",
+          "description": "Output directory structure"
+        }
+      }
+    },
+    "out_paths": {
+      "type": "object",
+      "description": "Output directory structure for build artifacts, test results, and logs",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Root output directory",
+          "default": "out"
+        },
+        "build": {
+          "type": "string",
+          "description": "Build output directory",
+          "default": "out/build"
+        },
+        "test": {
+          "type": "string",
+          "description": "Test output directory",
+          "default": "out/test"
+        },
+        "logs": {
+          "type": "string",
+          "description": "Logs output directory",
+          "default": "out/logs"
+        },
+        "security": {
+          "type": "string",
+          "description": "Security scan output directory",
+          "default": "out/security"
+        },
+        "tools": {
+          "type": "string",
+          "description": "Tools output directory (CI tools like commands binary)",
+          "default": "out/tools"
+        }
+      }
+    },
+    "conventions_config": {
+      "type": "object",
+      "description": "Filename conventions used across the repository",
+      "properties": {
+        "godog_test": {
+          "type": "string",
+          "description": "Godog test file name",
+          "default": "godog_test.go"
+        },
+        "package_json": {
+          "type": "string",
+          "description": "Node.js package file name",
+          "default": "package.json"
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Changelog file name",
+          "default": "CHANGELOG.md"
+        }
+      }
+    },
+    "module": {
+      "type": "object",
+      "description": "A module contract definition",
+      "properties": {
+        "moniker": {
+          "type": "string",
+          "description": "Unique module identifier",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable module name",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Module type classification (defaults to 'no-module-type')",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "default": "no-module-type"
+        },
+        "description": {
+          "type": "string",
+          "description": "Module description (defaults to name if not specified)"
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "List of module monikers this module depends on (defaults to [])",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": []
+        },
+        "files": {
+          "$ref": "#/definitions/files"
+        },
+        "flags": {
+          "$ref": "#/definitions/flags"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Generic key-value store for module-specific data (e.g., executable names, custom properties)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "versioning": {
+          "$ref": "#/definitions/module_versioning",
+          "description": "Module versioning configuration"
+        },
+        "books": {
+          "type": "array",
+          "description": "List of book names from books.yml that this module builds. First book is default; others require --all flag.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
+        "build": {
+          "$ref": "#/definitions/module_build",
+          "description": "Per-module build configuration"
+        },
+        "docker_build": {
+          "type": "object",
+          "description": "Per-module Docker build configuration",
+          "additionalProperties": true
+        }
+      },
+      "required": ["moniker", "name"]
+    },
+    "module_build": {
+      "type": "object",
+      "description": "Per-module build configuration",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "description": "Explicit build handler override"
+        },
+        "artifacts": {
+          "type": "array",
+          "description": "Artifacts to produce",
+          "items": {
+            "$ref": "#/definitions/module_artifact"
+          }
+        },
+        "options": {
+          "$ref": "#/definitions/build_options",
+          "description": "Build behavior options"
+        }
+      }
+    },
+    "module_artifact": {
+      "type": "object",
+      "description": "An artifact to be produced by a module build",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique artifact identifier"
+        },
+        "type": {
+          "type": "string",
+          "description": "Artifact type: executable, file, directory, image"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Output path pattern"
+        },
+        "compression": {
+          "type": "string",
+          "description": "Compression type: none, strip, upx"
+        },
+        "derive_from": {
+          "type": "string",
+          "description": "Source artifact to derive from"
+        }
+      },
+      "required": ["id", "type", "pattern"]
+    },
+    "build_options": {
+      "type": "object",
+      "description": "Build behavior options",
+      "properties": {
+        "commands_binary": {
+          "type": "boolean",
+          "description": "Copy to tools directory after build"
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "description": "File ownership configuration",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Root directory for the module (relative to repo root, use '/' for repo root)"
+        },
+        "source": {
+          "type": "array",
+          "description": "Source file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "config": {
+          "type": "array",
+          "description": "Configuration file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "assets": {
+          "type": "array",
+          "description": "Asset file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "tests": {
+          "type": "array",
+          "description": "Test file patterns (glob patterns)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "exclude": {
+          "type": "array",
+          "description": "File patterns to exclude from ownership",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Changelog file path relative to module root (defaults to 'CHANGELOG.md')",
+          "default": "CHANGELOG.md"
+        },
+        "workflows": {
+          "$ref": "#/definitions/workflows"
+        },
+        "repo": {
+          "$ref": "#/definitions/repo_files"
+        }
+      }
+    },
+    "workflows": {
+      "type": "object",
+      "description": "GitHub Actions workflow file ownership",
+      "properties": {
+        "ci": {
+          "type": "string",
+          "description": "CI workflow file path (e.g., '.github/workflows/ci-{moniker}.yaml')"
+        },
+        "release": {
+          "type": "string",
+          "description": "Release workflow file path (e.g., '.github/workflows/release-{moniker}.yml')"
+        }
+      }
+    },
+    "repo_files": {
+      "type": "object",
+      "description": "Repository-level file ownership (files outside module root)",
+      "properties": {
+        "specs": {
+          "type": "array",
+          "description": "Specification file patterns (defaults to ['specs/<moniker>/**'])",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test_impl": {
+          "type": "string",
+          "description": "Path to test implementation directory (e.g., 'go/eac/specs/impl/repository' for godog step definitions)"
+        },
+        "design": {
+          "type": "string",
+          "description": "Path to design workspace directory (e.g., 'specs/<moniker>/.design' for Structurizr DSL files)"
+        },
+        "other": {
+          "type": "array",
+          "description": "Other repository files owned by this module",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "exclude": {
+          "type": "array",
+          "description": "Repository file patterns to exclude",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "flags": {
+      "type": "object",
+      "description": "Module behavior flags",
+      "properties": {
+        "explicit_ownership": {
+          "type": "boolean",
+          "description": "When true, the module only owns files matching explicit patterns (source, config, assets, tests). Disables the default 'all files under root' ownership fallback. Use for catch-all modules that should only own specific files.",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "module_versioning": {
+      "type": "object",
+      "description": "Module versioning configuration",
+      "properties": {
+        "scheme": {
+          "type": "string",
+          "enum": ["SemVer", "CalVer"],
+          "description": "Versioning scheme for this module (must be in repository.schemes)"
+        },
+        "current": {
+          "type": "string",
+          "description": "Current version (optional, can be tracked in changelog instead)"
+        }
+      },
+      "required": ["scheme"]
     }
-  }
+  },
+  "examples": [
+    {
+      "repository": {
+        "type": "mono"
+      },
+      "paths": {
+        "test_impl_root": "go/eac/specs/impl"
+      },
+      "modules": [
+        {
+          "moniker": "eac-core",
+          "name": "Core Domain Libraries",
+          "type": "go",
+          "description": "Core library containing contracts and repository operations",
+          "files": {
+            "root": "go/eac/core",
+            "config": ["go.mod", "go.sum"]
+          }
+        }
+      ]
+    }
+  ]
 }

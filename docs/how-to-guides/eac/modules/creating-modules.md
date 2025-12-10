@@ -107,7 +107,7 @@ The unified type system uses four base types. Behavior is determined by per-modu
 | Type | Description | Capabilities |
 |------|-------------|--------------|
 | `go` | Go module (library, executable, or test) | go_module |
-| `container` | Docker container module | docker_build |
+| `container` | Docker container module | buildx |
 | `typescript` | TypeScript/npm module | npm_package, typescript |
 | `static` | Static files (no build) | none |
 

@@ -16,6 +16,15 @@ const (
 	// OutDir is the root output directory for all generated artifacts
 	OutDir = "out"
 
+	// DocsDir is the root directory for documentation
+	DocsDir = "docs"
+
+	// AssetsDir is the assets subdirectory under docs
+	AssetsDir = "assets"
+
+	// DocsCacheDir is the cache subdirectory under docs/assets (git-tracked for CI optimization)
+	DocsCacheDir = "cache"
+
 	// BuildDir is the subdirectory under OutDir for build outputs
 	BuildDir = "build"
 
@@ -202,7 +211,7 @@ func CommandsBinaryPathWithToolsDir(repoRoot string, toolsDir string) string {
 		oldPath := binaryPath + ".old"
 
 		// Atomic replacement: current -> .old, .new -> current, remove .old
-		os.Remove(oldPath)            // Clean up any stale .old
+		os.Remove(oldPath)             // Clean up any stale .old
 		os.Rename(binaryPath, oldPath) // Move current to .old (may fail if doesn't exist)
 		if err := os.Rename(newPath, binaryPath); err == nil {
 			os.Remove(oldPath) // Cleanup .old on success
@@ -375,12 +384,12 @@ func AITestMockPath(repoRoot string) string {
 
 // EACConfigFilePath returns the path to the main EAC configuration file
 func EACConfigFilePath(repoRoot string) string {
-	return filepath.Join(EACConfigPath(repoRoot), "eac-config.yml")
+	return filepath.Join(EACConfigPath(repoRoot), "ai-provider.yml")
 }
 
 // EACConfigPersonalFilePath returns the path to the personal EAC configuration file
 func EACConfigPersonalFilePath(repoRoot string) string {
-	return filepath.Join(EACConfigPath(repoRoot), "eac-config.personal.yml")
+	return filepath.Join(EACConfigPath(repoRoot), "ai-provider.personal.yml")
 }
 
 // EACLoggingConfigPath returns the path to the EAC logging configuration
@@ -492,19 +501,46 @@ func StagingAssetsPath(stagingDir string) string {
 
 // RenderedAssetsPath returns the path to rendered assets for a specific renderer
 // Examples: renderer="mermaid" -> staging/assets/rendered/mermaid
-//           renderer="drawio" -> staging/assets/rendered/drawio
+//
+//	renderer="drawio" -> staging/assets/rendered/drawio
 func RenderedAssetsPath(stagingDir, renderer string) string {
 	return filepath.Join(stagingDir, "assets", "rendered", renderer)
 }
 
 // MermaidCachePath returns the path to a cached mermaid SVG
+// Deprecated: Use MermaidDocsCachePath for the git-tracked cache location
 func MermaidCachePath(cacheRoot, hash string) string {
 	return filepath.Join(cacheRoot, "mermaid", hash+".svg")
 }
 
+// DocsCachePath returns the path to the docs cache directory (git-tracked)
+// This is used for assets that should be committed to the repository
+// for CI optimization (e.g., pre-rendered mermaid diagrams)
+func DocsCachePath(repoRoot string) string {
+	return filepath.Join(repoRoot, DocsDir, AssetsDir, DocsCacheDir)
+}
+
+// MermaidDocsCachePath returns the path to a cached mermaid SVG in docs/assets/cache
+// This is the git-tracked cache location for CI optimization
+func MermaidDocsCachePath(repoRoot, hash string) string {
+	return filepath.Join(DocsCachePath(repoRoot), "mermaid", hash+".svg")
+}
+
+// DrawioCachePath returns the path to a cached optimized drawio PNG
+// Takes cacheRoot (from DocsCachePath) for consistency with MermaidCachePath
+func DrawioCachePath(cacheRoot, hash string) string {
+	return filepath.Join(cacheRoot, "drawio", hash+".png")
+}
+
+// DrawioDocsCachePath returns the path to a cached optimized drawio PNG in docs/assets/cache
+// This is the git-tracked cache location for CI optimization (pre-optimized drawio images)
+func DrawioDocsCachePath(repoRoot, hash string) string {
+	return filepath.Join(DocsCachePath(repoRoot), "drawio", hash+".png")
+}
+
 // DocsSourcePath returns the path to docs directory within a source root
 func DocsSourcePath(sourceRoot string) string {
-	return filepath.Join(sourceRoot, "docs")
+	return filepath.Join(sourceRoot, DocsDir)
 }
 
 // ============================================================================

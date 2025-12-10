@@ -27,8 +27,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/definitions"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -208,17 +208,16 @@ func ReleaseChangelog() int {
 		existingVersions = append(existingVersions, v.Number)
 	}
 
-	// Load definitions for versioning constraints
-	workspaceRoot, _ := registry.GetWorkspaceRoot()
-	defs, err := definitions.Load(workspaceRoot)
+	// Load config for versioning constraints
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Errorf("failed to load definitions: %v", err)
+		log.Errorf("failed to load config: %v", err)
 		return 1
 	}
 
 	// Determine max bump based on constraints
 	maxBump := changelog.BumpMajor // Default: unrestricted
-	if defs.IsPatchOnly() {
+	if cfg.Repository.Repository.Versioning.IsPatchOnly() {
 		maxBump = changelog.BumpPatch
 		if forceBreaking {
 			log.Warn("--breaking ignored due to patch-only constraint in .r2r/eac/repository.yml")
@@ -266,7 +265,7 @@ func ReleaseChangelog() int {
 	log.Infof("Module: %s", module)
 	log.Infof("Current version: %s", currentVersion)
 	log.Infof("New version: %s", newVersion)
-	if defs.IsPatchOnly() && versionType == changelog.Semver {
+	if cfg.Repository.Repository.Versioning.IsPatchOnly() && versionType == changelog.Semver {
 		log.Info("Version constraint: patch-only (from .r2r/eac/repository.yml)")
 	}
 	log.Infof("Commits analyzed: %d", len(commits))

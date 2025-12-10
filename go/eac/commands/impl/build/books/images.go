@@ -2,38 +2,56 @@ package books
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"image"
 	"image/png"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/nfnt/resize"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // MaxImageWidthPDF is the maximum width for images in PDF output
 // A4 at 150 DPI is about 1240px wide, so 1200px leaves some margin
 const MaxImageWidthPDF = 1200
 
-// renderedDrawioDir is the output directory for optimized drawio images (relative to assets)
-// Note: Using "rendered" (not ".rendered") to avoid MkDocs default exclusion of dot-directories
-const renderedDrawioDir = "rendered/drawio"
+// drawioCacheDir is the cache directory for optimized drawio images (relative to assets)
+// Uses the same cache directory as the persistent cache (docs/assets/cache/drawio)
+const drawioCacheDir = "cache/drawio"
 
-// optimizeDrawioImages finds, optimizes, and stages drawio.png files for PDF (Step 6b)
+// DrawioImage represents a discovered drawio.png image in the docs
+type DrawioImage struct {
+	// SourceFile is the absolute path to the drawio.png file
+	SourceFile string
+	// RelPath is the relative path from docs directory
+	RelPath string
+	// Hash is the SHA256 hash of the source file content
+	Hash string
+}
+
+// optimizeDrawioImages finds, optimizes, and stages drawio.png files for PDF (Step 12)
 //
-// This step:
+// This step uses the persistent cache (docs/assets/cache/drawio/) to avoid
+// re-optimizing images that haven't changed:
 // 1. Scans markdown files for *.drawio.png references
-// 2. Resizes large images to MaxImageWidthPDF while preserving aspect ratio
-// 3. Stages optimized images in assets/rendered/drawio/
-// 4. Updates markdown references to point to optimized versions
+// 2. Checks cache for each image (by content hash)
+// 3. Uses cached version if available, otherwise optimizes and caches
+// 4. Stages optimized images in assets/rendered/drawio/
+// 5. Updates markdown references to point to optimized versions
 func (p *Preprocessor) optimizeDrawioImages() error {
 	p.log("    Optimizing drawio images for PDF...")
 
-	// Track unique images found and their source paths
-	imageRefs := make(map[string]string) // relative path -> absolute source path
+	// Track unique images found: absolute path -> DrawioImageRef
+	type DrawioImageRef struct {
+		AbsPath  string
+		Hash     string
+		Filename string
+	}
+	imageRefs := make(map[string]DrawioImageRef) // absolute path -> ref
 
 	// Step 1: Scan markdown files for drawio.png references
 	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
@@ -52,12 +70,23 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		// Find all drawio.png references
 		refs := findDrawioReferences(string(content))
 		for _, ref := range refs {
-			if _, exists := imageRefs[ref]; !exists {
-				// Resolve the absolute path from the markdown file location
-				mdDir := filepath.Dir(path)
-				absPath := filepath.Join(mdDir, ref)
+			// Resolve the absolute path from the markdown file location
+			mdDir := filepath.Dir(path)
+			absPath := filepath.Clean(filepath.Join(mdDir, ref))
+
+			if _, exists := imageRefs[absPath]; !exists {
 				if _, err := os.Stat(absPath); err == nil {
-					imageRefs[ref] = absPath
+					// Hash the source file for cache lookup
+					hash, hashErr := HashFileContent(absPath)
+					if hashErr != nil {
+						p.log("    Warning: failed to hash %s: %v", ref, hashErr)
+						continue
+					}
+					imageRefs[absPath] = DrawioImageRef{
+						AbsPath:  absPath,
+						Hash:     hash,
+						Filename: filepath.Base(ref),
+					}
 				}
 			}
 		}
@@ -72,30 +101,60 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		return nil
 	}
 
-	// Create output directory (in staging/assets, not staging/docs/assets)
-	outputDir := paths.RenderedAssetsPath(p.stagingDir, "drawio")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("creating output directory: %w", err)
-	}
+	// Cache directory: staging/assets/cache/drawio/ (copied from docs/assets/cache/)
+	cacheDir := filepath.Join(p.stagingDir, "assets", drawioCacheDir)
 
-	// Step 2: Optimize each image
-	optimized := 0
-	for relPath, absPath := range imageRefs {
-		// Get just the filename for output
-		filename := filepath.Base(relPath)
-		outputPath := filepath.Join(outputDir, filename)
+	// Step 2: Check cache for each image
+	// Cache files are at staging/assets/cache/drawio/{hash}.png (copied from docs/assets/cache/drawio/)
+	cacheHits := 0
+	cacheMisses := 0
+	// Map from original path to cache path for markdown rewriting
+	cachePathBySource := make(map[string]string)
 
-		if err := optimizeImage(absPath, outputPath, MaxImageWidthPDF); err != nil {
-			p.log("    Warning: failed to optimize %s: %v", filename, err)
+	for _, ref := range imageRefs {
+		// Check cache using hash
+		cacheKey := DrawioCacheKey{
+			SourceHash: ref.Hash,
+			MaxWidth:   MaxImageWidthPDF,
+		}
+		// Get the hash filename from assetCache
+		persistentPath, _ := p.assetCache.GetDrawio(cacheKey)
+		hashFilename := filepath.Base(persistentPath)
+		stagingCachePath := filepath.Join(cacheDir, hashFilename)
+
+		// Check if file exists in staging (copied from docs/assets/cache/)
+		if _, err := os.Stat(stagingCachePath); err == nil {
+			cacheHits++
+			cachePathBySource[ref.AbsPath] = stagingCachePath
+			continue
+		}
+
+		// Cache miss - need to optimize the image
+		cacheMisses++
+
+		// Ensure cache directory exists for new renders
+		if err := os.MkdirAll(cacheDir, 0755); err != nil {
+			return fmt.Errorf("creating cache directory: %w", err)
+		}
+
+		if err := optimizeImage(ref.AbsPath, stagingCachePath, MaxImageWidthPDF); err != nil {
+			p.log("    Warning: failed to optimize %s: %v", ref.Filename, err)
 			// Copy original as fallback
-			if err := copyFile(absPath, outputPath); err != nil {
-				return fmt.Errorf("copying fallback image %s: %w", filename, err)
+			if err := copyFile(ref.AbsPath, stagingCachePath); err != nil {
+				return fmt.Errorf("copying fallback image %s: %w", ref.Filename, err)
 			}
 		}
-		optimized++
+
+		// Store in persistent cache for future builds
+		if err := p.assetCache.PutDrawio(stagingCachePath, cacheKey); err != nil {
+			p.log("    Warning: failed to cache %s: %v", ref.Filename, err)
+			// Non-fatal - continue
+		}
+
+		cachePathBySource[ref.AbsPath] = stagingCachePath
 	}
 
-	// Step 3: Update markdown references
+	// Step 3: Update markdown references to point to cached images
 	updated := 0
 	err = filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -111,7 +170,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		}
 
 		original := string(content)
-		modified := rewriteDrawioReferences(original, path, p.stagingDir)
+		modified := p.rewriteDrawioReferences(original, path, cachePathBySource)
 
 		if modified != original {
 			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
@@ -125,7 +184,28 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		return fmt.Errorf("updating markdown references: %w", err)
 	}
 
-	p.log("    Optimized %d images, updated %d markdown files", optimized, updated)
+	// Step 4: Delete original drawio.png files from staging
+	// These are no longer referenced (markdown now points to rendered/) and would bloat the PDF
+	deleted := 0
+	for _, ref := range imageRefs {
+		if err := os.Remove(ref.AbsPath); err != nil {
+			if !os.IsNotExist(err) {
+				p.log("    Warning: failed to delete %s: %v", ref.Filename, err)
+			}
+		} else {
+			deleted++
+		}
+	}
+
+	// Log summary with cache statistics
+	totalImages := len(imageRefs)
+	hitRate := 0.0
+	if totalImages > 0 {
+		hitRate = float64(cacheHits) / float64(totalImages) * 100
+	}
+	p.log("    Found %d drawio images: %d cached, %d optimized (%.1f%% hit rate)",
+		totalImages, cacheHits, cacheMisses, hitRate)
+	p.log("    Updated %d markdown files, deleted %d originals", updated, deleted)
 	return nil
 }
 
@@ -151,8 +231,10 @@ func findDrawioReferences(content string) []string {
 	return refs
 }
 
-// rewriteDrawioReferences updates drawio.png paths to point to rendered directory
-func rewriteDrawioReferences(content string, mdPath string, stagingDir string) string {
+// rewriteDrawioReferences updates drawio.png paths to point to cached images
+func (p *Preprocessor) rewriteDrawioReferences(content string, mdPath string, cachePathBySource map[string]string) string {
+	mdDir := filepath.Dir(mdPath)
+
 	return drawioPattern.ReplaceAllStringFunc(content, func(match string) string {
 		// Determine if this is markdown ]( or HTML src="
 		var prefix string
@@ -170,20 +252,21 @@ func rewriteDrawioReferences(content string, mdPath string, stagingDir string) s
 			oldPath = match[pathStart:]
 		}
 
-		// Get just the filename
-		filename := filepath.Base(oldPath)
+		// Resolve to absolute path to look up cache path
+		absPath := filepath.Clean(filepath.Join(mdDir, oldPath))
+		cachePath, found := cachePathBySource[absPath]
+		if !found {
+			return match // Keep original if not found
+		}
 
-		// Calculate the relative path from this markdown file to the rendered directory
-		mdDir := filepath.Dir(mdPath)
-		renderedDir := paths.RenderedAssetsPath(stagingDir, "drawio")
-
-		relPath, err := filepath.Rel(mdDir, renderedDir)
+		// Calculate relative path from markdown file to cached image
+		relPath, err := filepath.Rel(mdDir, cachePath)
 		if err != nil {
 			return match // Keep original on error
 		}
 
 		// Build new path using forward slashes (markdown standard)
-		newPath := filepath.ToSlash(filepath.Join(relPath, filename))
+		newPath := filepath.ToSlash(relPath)
 
 		return prefix + newPath
 	})
@@ -245,4 +328,86 @@ func optimizeImage(srcPath, dstPath string, maxWidth uint) error {
 	}
 
 	return nil
+}
+
+// ============================================================================
+// Exported functions for update docs command
+// ============================================================================
+
+// FindDrawioImages scans the docs directory for all .drawio.png files
+// Returns a list of DrawioImage with source path, relative path, and content hash
+func FindDrawioImages(docsDir string) ([]DrawioImage, error) {
+	var images []DrawioImage
+	seen := make(map[string]bool)
+
+	err := filepath.WalkDir(docsDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		// Check if this is a drawio.png file
+		if !strings.HasSuffix(path, ".drawio.png") {
+			return nil
+		}
+
+		// Skip duplicates (same absolute path)
+		if seen[path] {
+			return nil
+		}
+		seen[path] = true
+
+		// Calculate hash of file content
+		hash, err := HashFileContent(path)
+		if err != nil {
+			return fmt.Errorf("hashing %s: %w", path, err)
+		}
+
+		// Calculate relative path from docs directory
+		relPath, err := filepath.Rel(docsDir, path)
+		if err != nil {
+			relPath = path
+		}
+
+		images = append(images, DrawioImage{
+			SourceFile: path,
+			RelPath:    relPath,
+			Hash:       hash,
+		})
+
+		return nil
+	})
+
+	return images, err
+}
+
+// HashFileContent returns the SHA256 hash of a file's content
+func HashFileContent(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// OptimizeSingleImage optimizes a single drawio.png image to the output path
+// Returns an error if optimization fails
+func OptimizeSingleImage(srcPath, dstPath string, maxWidth int) error {
+	return optimizeImage(srcPath, dstPath, uint(maxWidth))
+}
+
+// DrawioCacheStatus tracks whether a drawio image is cached
+type DrawioCacheStatus struct {
+	Image     DrawioImage
+	Cached    bool
+	CachePath string
 }

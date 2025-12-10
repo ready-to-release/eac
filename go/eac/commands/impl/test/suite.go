@@ -1745,6 +1745,21 @@ func extractModuleFromPath(filePath string) string {
 	// Normalize path separators to forward slashes
 	normalizedPath := filepath.ToSlash(filePath)
 
+	// Special case: go/eac/specs/impl/<module>/... or go/r2r/specs/impl/<module>/...
+	// These are test implementations that belong to <module>, not eac-specs/r2r-specs
+	// Must check this BEFORE the general /go/eac/ or /go/r2r/ boundary check
+	for _, implPattern := range []string{"/go/eac/specs/impl/", "/go/r2r/specs/impl/", "go/eac/specs/impl/", "go/r2r/specs/impl/"} {
+		idx := strings.Index(normalizedPath, implPattern)
+		if idx >= 0 {
+			// Extract module name after impl/
+			relativePath := normalizedPath[idx+len(implPattern):]
+			parts := strings.Split(relativePath, "/")
+			if len(parts) >= 1 && parts[0] != "" {
+				return parts[0] // Return module name directly (e.g., "eac-core", "r2r-cli")
+			}
+		}
+	}
+
 	// Find "/go/eac/" in the path (handles both absolute and relative paths)
 	// For paths like /project/go/eac/commands/..., extract "eac-commands"
 	for _, boundary := range []string{"/go/eac/", "/go/r2r/"} {

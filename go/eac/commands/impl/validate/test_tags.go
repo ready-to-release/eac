@@ -307,12 +307,12 @@ func isValidEnvMoniker(moniker string) bool {
 // isValidModuleName checks if a module name is defined in module contracts
 func isValidModuleName(moduleName string) bool {
 	// Use the already-loaded config
-	if eacConfig == nil || eacConfig.Modules == nil {
+	if eacConfig == nil || eacConfig.Repository == nil {
 		log.Errorf("Warning: modules config not loaded")
 		return true
 	}
 
 	// Check if module exists
-	_, found := eacConfig.Modules.GetModule(moduleName)
+	_, found := eacConfig.Repository.GetModule(moduleName)
 	return found
 }

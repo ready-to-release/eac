@@ -84,6 +84,16 @@ tags:
     pattern: "^@skip:(?P<reason>[a-z]+)$"
     example: "@skip:wip"
 
+  - tag: "@skip"
+    description: "Exclude from test suite runs (simple form without reason)"
+    type: execution_control
+    level: feature-or-scenario
+
+  - tag: "@pending"
+    description: "Test is pending implementation or review"
+    type: execution_control
+    level: feature-or-scenario
+
   - tag: "@Manual"
     description: "Manual test requiring human execution and evidence collection (cannot have L0-L4 taxonomy tags)"
     type: execution_control

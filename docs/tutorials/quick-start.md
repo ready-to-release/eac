@@ -1,6 +1,22 @@
-# Quick Start Guide
+<!-- EDITOR
+# Editor: tutorials/quick-start.md
 
-{{ page_breadcrumb() }}
+## Soul
+
+Hands-on walkthrough to install the R2R CLI and run your first commands in minutes.
+
+## Sections
+
+1. Step 1: Install the CLI
+2. Step 2: Verify Installation
+3. Step 3: Initialize Your Project
+4. Step 4: Explore Available Commands
+5. Step 5: View Your Project Structure
+6. Step 6: Run Tests
+7. Next Steps
+-->
+
+# Quick Start Guide
 
 This tutorial will help you install the R2R CLI and run your first commands.
 
@@ -70,7 +86,7 @@ r2r init --ai claude-api
 This command:
 
 - Creates the `.r2r/eac/` directory structure
-- Generates `eac-config.yml` with AI provider settings
+- Generates `ai-provider.yml` with AI provider settings
 - Uses environment variable placeholders for API keys (safe to commit)
 
 Available AI providers:
@@ -147,4 +163,8 @@ Available test suites:
 
 Congratulations! You now have the R2R CLI installed and working. Continue to [Your First Feature Specification](./first-specification.md) to learn how to write Gherkin specifications.
 
-{{ diataxis_footer() }}
+---
+
+*[Tutorials](../tutorials/) | [How-to Guides](../how-to-guides/) | [Reference](../reference/) | [Explanation](../explanation/)*
+
+**You are here:** Tutorials — learning-oriented guides that take you through steps to complete a project.

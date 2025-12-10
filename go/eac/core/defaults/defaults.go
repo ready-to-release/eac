@@ -61,7 +61,7 @@ func WorkflowCIPath(moniker string) string {
 }
 
 // WorkflowReleasePath returns the default release workflow path for a moniker.
-// Pattern: .github/workflows/release-{moniker}.yml
+// Pattern: .github/workflows/release-{moniker}.yaml
 func WorkflowReleasePath(moniker string) string {
-	return ".github/workflows/release-" + moniker + ".yml"
+	return ".github/workflows/release-" + moniker + ".yaml"
 }

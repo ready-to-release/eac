@@ -17,7 +17,7 @@ Feature: eac-commands_books_validation_edge_cases
       Given books.yml references module "nonexistent"
       When I run the command "validate books"
       Then the exit code is 1
-      And I should see "not found" or "Error"
+      And I should see "Unknown command" or "not found"
 
     Scenario: Validate detects invalid command
       Given books.yml has inline source with command "nonexistent-command"

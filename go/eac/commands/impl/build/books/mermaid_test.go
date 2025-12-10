@@ -48,47 +48,47 @@ sequenceDiagram
 	}
 
 	// Verify first block
-	if blocks[0].blockIndex != 0 {
-		t.Errorf("Block 0: expected index 0, got %d", blocks[0].blockIndex)
+	if blocks[0].BlockIndex != 0 {
+		t.Errorf("Block 0: expected index 0, got %d", blocks[0].BlockIndex)
 	}
-	if !contains(blocks[0].content, "graph TD") {
+	if !contains(blocks[0].Content, "graph TD") {
 		t.Errorf("Block 0: expected content to contain 'graph TD'")
 	}
-	if blocks[0].filename != "test_mermaid_0_"+blocks[0].hash+".svg" {
-		t.Errorf("Block 0: unexpected filename %s", blocks[0].filename)
+	if blocks[0].Filename != "test_mermaid_0_"+blocks[0].Hash+".svg" {
+		t.Errorf("Block 0: unexpected filename %s", blocks[0].Filename)
 	}
 
 	// Verify second block (with size directive)
-	if blocks[1].blockIndex != 1 {
-		t.Errorf("Block 1: expected index 1, got %d", blocks[1].blockIndex)
+	if blocks[1].BlockIndex != 1 {
+		t.Errorf("Block 1: expected index 1, got %d", blocks[1].BlockIndex)
 	}
-	if !contains(blocks[1].content, "flowchart LR") {
+	if !contains(blocks[1].Content, "flowchart LR") {
 		t.Errorf("Block 1: expected content to contain 'flowchart LR'")
 	}
 	// Content should include size directive
-	if !contains(blocks[1].content, "%%{size:medium}%%") {
+	if !contains(blocks[1].Content, "%%{size:medium}%%") {
 		t.Errorf("Block 1: expected content to preserve size directive")
 	}
 
 	// Verify third block
-	if blocks[2].blockIndex != 2 {
-		t.Errorf("Block 2: expected index 2, got %d", blocks[2].blockIndex)
+	if blocks[2].BlockIndex != 2 {
+		t.Errorf("Block 2: expected index 2, got %d", blocks[2].BlockIndex)
 	}
-	if !contains(blocks[2].content, "sequenceDiagram") {
+	if !contains(blocks[2].Content, "sequenceDiagram") {
 		t.Errorf("Block 2: expected content to contain 'sequenceDiagram'")
 	}
 
 	t.Logf("✓ Found %d diagrams", len(blocks))
 	for i, block := range blocks {
-		t.Logf("  [%d] %s (hash: %s)", i, block.filename, block.hash)
+		t.Logf("  [%d] %s (hash: %s)", i, block.Filename, block.Hash)
 	}
 }
 
 func TestHashContent(t *testing.T) {
 	// Test that hash is deterministic
 	content := "graph TD\n    A --> B"
-	hash1 := hashContent(content)
-	hash2 := hashContent(content)
+	hash1 := HashContent(content)
+	hash2 := HashContent(content)
 
 	if hash1 != hash2 {
 		t.Errorf("Hash not deterministic: %s != %s", hash1, hash2)
@@ -101,7 +101,7 @@ func TestHashContent(t *testing.T) {
 
 	// Different content should give different hash
 	content2 := "graph TD\n    A --> C"
-	hash3 := hashContent(content2)
+	hash3 := HashContent(content2)
 
 	if hash1 == hash3 {
 		t.Errorf("Different content should have different hashes")
@@ -143,9 +143,9 @@ flowchart LR
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := stripSizeDirective(tt.input)
+			result := StripSizeDirective(tt.input)
 			if result != tt.expected {
-				t.Errorf("stripSizeDirective() = %q, want %q", result, tt.expected)
+				t.Errorf("StripSizeDirective() = %q, want %q", result, tt.expected)
 			}
 		})
 	}
@@ -187,25 +187,28 @@ Some more content.
 
 	// Verify the block
 	block := blocks[0]
-	if block.sourceFile != testFile {
-		t.Errorf("Expected sourceFile %s, got %s", testFile, block.sourceFile)
+	if block.SourceFile != testFile {
+		t.Errorf("Expected sourceFile %s, got %s", testFile, block.SourceFile)
 	}
-	if block.relPath != "real-test.md" {
-		t.Errorf("Expected relPath 'real-test.md', got %s", block.relPath)
+	if block.RelPath != "real-test.md" {
+		t.Errorf("Expected relPath 'real-test.md', got %s", block.RelPath)
 	}
-	if !contains(block.content, "A[Start]") {
+	if !contains(block.Content, "A[Start]") {
 		t.Errorf("Expected content to contain 'A[Start]'")
 	}
 
-	t.Logf("✓ Extracted from real file: %s", block.filename)
-	t.Logf("  Hash: %s", block.hash)
-	t.Logf("  Content preview: %s", block.content[:30]+"...")
+	t.Logf("✓ Extracted from real file: %s", block.Filename)
+	t.Logf("  Hash: %s", block.Hash)
+	t.Logf("  Content preview: %s", block.Content[:30]+"...")
 }
 
 func TestCheckMermaidCache(t *testing.T) {
 	// Create temp directory for testing
 	tmpDir := t.TempDir()
-	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+
+	// The cache system uses docs/assets/cache as root, then mermaid/ subdirectory
+	// For staging, it checks {staging}/assets/cache/mermaid/
+	stagingCacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
 
 	// Create a preprocessor
 	p := &Preprocessor{
@@ -215,22 +218,22 @@ func TestCheckMermaidCache(t *testing.T) {
 		assetCache:    NewAssetCache(tmpDir),
 	}
 
-	// Create some test blocks
-	blocks := []mermaidBlock{
+	// Create some test blocks with content that will be hashed
+	blocks := []MermaidBlock{
 		{
-			content:  "graph TD\n    A --> B",
-			hash:     "aaaaaaaa",
-			filename: "test_mermaid_0_aaaaaaaa.svg",
+			Content:  "graph TD\n    A --> B",
+			Hash:     "aaaaaaaa",
+			Filename: "test_mermaid_0_aaaaaaaa.svg",
 		},
 		{
-			content:  "graph TD\n    C --> D",
-			hash:     "bbbbbbbb",
-			filename: "test_mermaid_1_bbbbbbbb.svg",
+			Content:  "graph TD\n    C --> D",
+			Hash:     "bbbbbbbb",
+			Filename: "test_mermaid_1_bbbbbbbb.svg",
 		},
 		{
-			content:  "graph TD\n    E --> F",
-			hash:     "cccccccc",
-			filename: "test_mermaid_2_cccccccc.svg",
+			Content:  "graph TD\n    E --> F",
+			Hash:     "cccccccc",
+			Filename: "test_mermaid_2_cccccccc.svg",
 		},
 	}
 
@@ -246,10 +249,10 @@ func TestCheckMermaidCache(t *testing.T) {
 
 	// All should be cache misses
 	for i, status := range statuses {
-		if status.cached {
+		if status.Cached {
 			t.Errorf("Block %d: expected cache miss, got hit", i)
 		}
-		if status.cachePath == "" {
+		if status.CachePath == "" {
 			t.Errorf("Block %d: cachePath should be set", i)
 		}
 	}
@@ -257,13 +260,15 @@ func TestCheckMermaidCache(t *testing.T) {
 	t.Logf("✓ First check: All 3 diagrams are cache misses")
 
 	// Create cache directory
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(stagingCacheDir, 0755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
 
-	// Create dummy SVG files for first two blocks (simulate cache hits)
+	// Create dummy SVG files for first two blocks using their actual cache paths
+	// The cache system uses content-hash based filenames computed by AssetCache
 	for i := 0; i < 2; i++ {
-		svgPath := filepath.Join(cacheDir, blocks[i].filename)
+		// Use the cache path that checkMermaidCache computed (extract from previous status)
+		svgPath := statuses[i].CachePath
 		if err := os.WriteFile(svgPath, []byte("<svg></svg>"), 0644); err != nil {
 			t.Fatalf("Failed to create cached SVG: %v", err)
 		}
@@ -276,24 +281,23 @@ func TestCheckMermaidCache(t *testing.T) {
 	}
 
 	// Check results
-	if !statuses[0].cached {
+	if !statuses[0].Cached {
 		t.Errorf("Block 0: expected cache hit")
 	}
-	if !statuses[1].cached {
+	if !statuses[1].Cached {
 		t.Errorf("Block 1: expected cache hit")
 	}
-	if statuses[2].cached {
+	if statuses[2].Cached {
 		t.Errorf("Block 2: expected cache miss")
 	}
 
 	t.Logf("✓ Second check: 2 hits, 1 miss (66.7%% hit rate)")
 
-	// Verify cache paths are correct
+	// Verify cache paths are in the correct directory
 	for i, status := range statuses {
-		expectedPath := filepath.Join(cacheDir, blocks[i].filename)
-		if status.cachePath != expectedPath {
-			t.Errorf("Block %d: cachePath = %s, want %s",
-				i, status.cachePath, expectedPath)
+		if !filepath.HasPrefix(status.CachePath, stagingCacheDir) {
+			t.Errorf("Block %d: cachePath = %s, expected to be under %s",
+				i, status.CachePath, stagingCacheDir)
 		}
 	}
 
@@ -311,24 +315,45 @@ func TestCacheDirectoryCreation(t *testing.T) {
 		assetCache:    NewAssetCache(tmpDir),
 	}
 
-	// Cache directory shouldn't exist yet
-	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	// Cache directory shouldn't exist yet (staging cache location)
+	cacheDir := filepath.Join(tmpDir, "assets", "cache", "mermaid")
 	if _, err := os.Stat(cacheDir); err == nil {
 		t.Fatal("Cache directory should not exist yet")
 	}
 
-	// Call checkMermaidCache with empty blocks
-	_, err := p.checkMermaidCache([]mermaidBlock{})
+	// Call checkMermaidCache with a block to trigger directory creation
+	// Empty blocks won't create the directory since there's nothing to cache
+	blocks := []MermaidBlock{
+		{
+			Content:  "graph TD\n    A --> B",
+			Hash:     "aaaaaaaa",
+			Filename: "test_mermaid_0_aaaaaaaa.svg",
+		},
+	}
+	statuses, err := p.checkMermaidCache(blocks)
 	if err != nil {
 		t.Fatalf("checkMermaidCache failed: %v", err)
 	}
 
-	// Cache directory should now exist
-	if _, err := os.Stat(cacheDir); err != nil {
-		t.Fatalf("Cache directory was not created: %v", err)
+	// Verify status was returned
+	if len(statuses) != 1 {
+		t.Fatalf("Expected 1 status, got %d", len(statuses))
 	}
 
-	t.Logf("✓ Cache directory created: %s", cacheDir)
+	// Note: checkMermaidCache doesn't create the staging cache directory itself -
+	// it only checks if files exist in staging. The directory is created when
+	// files are copied from docs/assets/cache during preprocessing.
+	// This test verifies that checkMermaidCache works correctly when the
+	// cache directory doesn't exist (returns cache miss status).
+	if statuses[0].Cached {
+		t.Errorf("Expected cache miss for non-existent directory")
+	}
+	if statuses[0].CachePath == "" {
+		t.Errorf("CachePath should still be set even for cache miss")
+	}
+
+	t.Logf("✓ checkMermaidCache handles non-existent cache directory correctly")
+	t.Logf("  CachePath: %s", statuses[0].CachePath)
 }
 
 func TestFormatDockerVolumePath(t *testing.T) {
@@ -415,12 +440,32 @@ Text after.
 	}
 
 	// Create blocks map
-	blocksByFile := map[string][]mermaidBlock{
+	blocksByFile := map[string][]MermaidBlock{
 		testFile: blocks,
 	}
 
+	// Create cache statuses with mock cache paths
+	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		t.Fatalf("Failed to create cache dir: %v", err)
+	}
+
+	var statuses []CacheStatus
+	for _, block := range blocks {
+		cachePath := filepath.Join(cacheDir, block.Filename)
+		// Create empty SVG file
+		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0644); err != nil {
+			t.Fatalf("Failed to write mock SVG: %v", err)
+		}
+		statuses = append(statuses, CacheStatus{
+			Block:     block,
+			Cached:    true,
+			CachePath: cachePath,
+		})
+	}
+
 	// Replace blocks
-	if err := p.replaceMermaidBlocksWithImages(blocksByFile); err != nil {
+	if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
 		t.Fatalf("replaceMermaidBlocksWithImages failed: %v", err)
 	}
 
@@ -441,11 +486,11 @@ Text after.
 		t.Errorf("Modified file doesn't contain img tags")
 	}
 
-	if !contains(modifiedStr, blocks[0].filename) {
+	if !contains(modifiedStr, blocks[0].Filename) {
 		t.Errorf("Modified file doesn't contain first diagram filename")
 	}
 
-	if !contains(modifiedStr, blocks[1].filename) {
+	if !contains(modifiedStr, blocks[1].Filename) {
 		t.Errorf("Modified file doesn't contain second diagram filename")
 	}
 
@@ -504,12 +549,32 @@ graph TD
 	}
 
 	// Create blocks map
-	blocksByFile := map[string][]mermaidBlock{
+	blocksByFile := map[string][]MermaidBlock{
 		testFile: blocks,
 	}
 
+	// Create cache statuses with mock cache paths in assets/rendered/mermaid/
+	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		t.Fatalf("Failed to create cache dir: %v", err)
+	}
+
+	var statuses []CacheStatus
+	for _, block := range blocks {
+		cachePath := filepath.Join(cacheDir, block.Filename)
+		// Create empty SVG file
+		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0644); err != nil {
+			t.Fatalf("Failed to write mock SVG: %v", err)
+		}
+		statuses = append(statuses, CacheStatus{
+			Block:     block,
+			Cached:    true,
+			CachePath: cachePath,
+		})
+	}
+
 	// Replace blocks
-	if err := p.replaceMermaidBlocksWithImages(blocksByFile); err != nil {
+	if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
 		t.Fatalf("replaceMermaidBlocksWithImages failed: %v", err)
 	}
 
@@ -531,12 +596,12 @@ graph TD
 		t.Errorf("Modified file doesn't have correct relative path, got: %s", modifiedStr)
 	}
 
-	if !contains(modifiedStr, blocks[0].filename) {
+	if !contains(modifiedStr, blocks[0].Filename) {
 		t.Errorf("Modified file doesn't contain diagram filename")
 	}
 
 	t.Logf("✓ Replaced mermaid block with correct relative path")
-	t.Logf("  Path: ../../assets/rendered/mermaid/%s", blocks[0].filename)
+	t.Logf("  Path: ../../assets/rendered/mermaid/%s", blocks[0].Filename)
 }
 
 // Helper function

@@ -111,7 +111,7 @@ func TestWriteAgentConfig(t *testing.T) {
 				t.Fatalf("failed to create .r2r/eac directory: %v", err)
 			}
 
-			configPath := filepath.Join(eacDir, "eac-config.yml")
+			configPath := filepath.Join(eacDir, "ai-provider.yml")
 
 			// Create empty token config since we're just testing team config generation
 			tokens := &tokenConfig{}

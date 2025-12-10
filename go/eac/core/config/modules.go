@@ -1,13 +1,12 @@
 package config
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/ready-to-release/eac/go/eac/core/defaults"
 )
-
-// ModulesConfig represents the modules.yml configuration
-type ModulesConfig struct {
-	Modules []Module `yaml:"modules"`
-}
 
 // Module represents a single module definition
 type Module struct {
@@ -22,6 +21,13 @@ type Module struct {
 	Files       Files                  `yaml:"files"`
 	Flags       Flags                  `yaml:"flags"`
 	Metadata    map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
+	Versioning  *ModuleVersioning      `yaml:"versioning,omitempty"`
+}
+
+// ModuleVersioning holds module versioning configuration
+type ModuleVersioning struct {
+	Scheme  string `yaml:"scheme"`  // SemVer, CalVer
+	Current string `yaml:"current"` // Current version (optional)
 }
 
 // ModuleBuild contains per-module build configuration
@@ -53,6 +59,79 @@ func (m *Module) GetBuildHandler() string {
 	return m.Build.Handler
 }
 
+// GetDockerBuildConfig parses and returns the per-module docker_build configuration.
+// Returns nil if no docker_build is defined at module level.
+// This allows modules to override or extend type-level docker_build config.
+func (m *Module) GetDockerBuildConfig() *DockerBuildConfig {
+	if m.DockerBuild == nil || len(m.DockerBuild) == 0 {
+		return nil
+	}
+
+	// Parse the raw map[string]interface{} into DockerBuildConfig
+	cfg := &DockerBuildConfig{}
+
+	if v, ok := m.DockerBuild["container"].(string); ok {
+		cfg.Container = v
+	}
+	if v, ok := m.DockerBuild["context"].(string); ok {
+		cfg.Context = v
+	}
+	if v, ok := m.DockerBuild["dockerfile"].(string); ok {
+		cfg.Dockerfile = v
+	}
+	if v, ok := m.DockerBuild["platforms"].([]interface{}); ok {
+		for _, p := range v {
+			if ps, ok := p.(string); ok {
+				cfg.Platforms = append(cfg.Platforms, ps)
+			}
+		}
+	}
+	if v, ok := m.DockerBuild["tags"].([]interface{}); ok {
+		for _, t := range v {
+			if ts, ok := t.(string); ok {
+				cfg.Tags = append(cfg.Tags, ts)
+			}
+		}
+	}
+	if v, ok := m.DockerBuild["load"].(bool); ok {
+		cfg.Load = v
+	}
+	if v, ok := m.DockerBuild["push"].(bool); ok {
+		cfg.Push = v
+	}
+	if v, ok := m.DockerBuild["registry"].(string); ok {
+		cfg.Registry = v
+	}
+	if v, ok := m.DockerBuild["sbom"].(bool); ok {
+		cfg.SBOM = v
+	}
+	if v, ok := m.DockerBuild["provenance"].(bool); ok {
+		cfg.Provenance = v
+	}
+
+	// Parse cache config if present
+	if cacheMap, ok := m.DockerBuild["cache"].(map[string]interface{}); ok {
+		cfg.Cache = &DockerCacheConfig{}
+		if v, ok := cacheMap["type"].(string); ok {
+			cfg.Cache.Type = v
+		}
+		if v, ok := cacheMap["scope"].(string); ok {
+			cfg.Cache.Scope = v
+		}
+		if v, ok := cacheMap["from"].(string); ok {
+			cfg.Cache.From = v
+		}
+		if v, ok := cacheMap["to"].(string); ok {
+			cfg.Cache.To = v
+		}
+		if v, ok := cacheMap["mode"].(string); ok {
+			cfg.Cache.Mode = v
+		}
+	}
+
+	return cfg
+}
+
 // Files defines file ownership patterns for a module
 type Files struct {
 	Root      string    `yaml:"root"`
@@ -81,13 +160,16 @@ type RepoFiles struct {
 	Exclude  []string `yaml:"exclude"`
 }
 
-// Flags defines module behavior flags (reserved for future use)
+// Flags defines module behavior flags
 type Flags struct {
+	// ExplicitOwnership disables the default "all files under root" ownership.
+	// When true, the module only owns files that explicitly match its patterns.
+	ExplicitOwnership bool `yaml:"explicit_ownership,omitempty"`
 }
 
-// applyDefaults applies default values to all modules (generic defaults only).
+// applyModuleDefaults applies default values to all modules (generic defaults only).
 // Call ApplyTypeDefaults after loading ModuleTypes for type-specific defaults.
-func (c *ModulesConfig) applyDefaults() {
+func (c *RepositoryConfig) applyModuleDefaults() {
 	for i := range c.Modules {
 		m := &c.Modules[i]
 
@@ -107,12 +189,9 @@ func (c *ModulesConfig) applyDefaults() {
 
 // ApplyTypeDefaults applies type-specific defaults to all modules.
 // This should be called after both Modules and ModuleTypes are loaded.
-func (c *ModulesConfig) ApplyTypeDefaults(types *ModuleTypesConfig, repoCfg *RepositoryConfig) {
+func (c *RepositoryConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
 	// Build path variables from repository config
-	var pathVars map[string]string
-	if repoCfg != nil {
-		pathVars = repoCfg.GetPathVariables()
-	}
+	pathVars := c.GetPathVariables()
 
 	for i := range c.Modules {
 		m := &c.Modules[i]
@@ -204,41 +283,70 @@ func convertTypeDefaults(td *TypeDefaults) *defaults.TypeDefaults {
 	return result
 }
 
-// GetModule returns a module by moniker
-func (c *ModulesConfig) GetModule(moniker string) (*Module, bool) {
+// ValidateAndDiscoverWorkflows validates workflow paths and auto-discovers missing ones.
+// For each module:
+//   - If workflow is defined but file doesn't exist → returns error
+//   - If workflow is empty but conventional file exists → sets the path (auto-discovery)
+//   - If workflow is empty and file doesn't exist → remains empty (no workflow)
+func (c *RepositoryConfig) ValidateAndDiscoverWorkflows(repoRoot string) error {
+	var errs []error
+
 	for i := range c.Modules {
-		if c.Modules[i].Moniker == moniker {
-			return &c.Modules[i], true
+		m := &c.Modules[i]
+
+		// Validate/discover CI workflow
+		ciPath := defaults.WorkflowCIPath(m.Moniker)
+		ciFullPath := filepath.Join(repoRoot, ciPath)
+
+		if m.Files.Workflows.CI != "" {
+			// Defined - validate it exists
+			definedPath := filepath.Join(repoRoot, m.Files.Workflows.CI)
+			if _, err := os.Stat(definedPath); os.IsNotExist(err) {
+				errs = append(errs, fmt.Errorf("module %s: CI workflow file not found: %s", m.Moniker, m.Files.Workflows.CI))
+			}
+		} else {
+			// Not defined - check for auto-discovery
+			if _, err := os.Stat(ciFullPath); err == nil {
+				m.Files.Workflows.CI = ciPath
+			}
+		}
+
+		// Validate/discover Release workflow
+		releasePath := defaults.WorkflowReleasePath(m.Moniker)
+		releaseFullPath := filepath.Join(repoRoot, releasePath)
+
+		if m.Files.Workflows.Release != "" {
+			// Defined - validate it exists
+			definedPath := filepath.Join(repoRoot, m.Files.Workflows.Release)
+			if _, err := os.Stat(definedPath); os.IsNotExist(err) {
+				errs = append(errs, fmt.Errorf("module %s: release workflow file not found: %s", m.Moniker, m.Files.Workflows.Release))
+			}
+		} else {
+			// Not defined - check for auto-discovery
+			if _, err := os.Stat(releaseFullPath); err == nil {
+				m.Files.Workflows.Release = releasePath
+			}
 		}
 	}
-	return nil, false
+
+	if len(errs) > 0 {
+		return &MultiWorkflowError{Errors: errs}
+	}
+	return nil
 }
 
-// GetByMoniker returns a module by moniker, or nil if not found
-func (c *ModulesConfig) GetByMoniker(moniker string) *Module {
-	m, ok := c.GetModule(moniker)
-	if !ok {
-		return nil
-	}
-	return m
+// MultiWorkflowError holds multiple workflow validation errors
+type MultiWorkflowError struct {
+	Errors []error
 }
 
-// GetModulesByType returns all modules of a specific type
-func (c *ModulesConfig) GetModulesByType(moduleType string) []Module {
-	var result []Module
-	for _, m := range c.Modules {
-		if m.Type == moduleType {
-			result = append(result, m)
-		}
+func (e *MultiWorkflowError) Error() string {
+	if len(e.Errors) == 1 {
+		return e.Errors[0].Error()
 	}
-	return result
-}
-
-// AllMonikers returns a list of all module monikers
-func (c *ModulesConfig) AllMonikers() []string {
-	monikers := make([]string, len(c.Modules))
-	for i, m := range c.Modules {
-		monikers[i] = m.Moniker
+	msg := fmt.Sprintf("%d workflow errors:", len(e.Errors))
+	for _, err := range e.Errors {
+		msg += "\n  - " + err.Error()
 	}
-	return monikers
+	return msg
 }

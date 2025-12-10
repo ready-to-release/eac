@@ -110,26 +110,26 @@ runs:
 
     - name: Check if Docker Buildx builder supports cache export
       id: buildx-check
-      if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'docker-build')
+      if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')
       shell: bash
       run: |
         # Check if a buildx builder exists with docker-container driver (supports cache export)
         if docker buildx inspect 2>/dev/null | grep -q "Driver.*docker-container"; then
           echo "available=true" >> $GITHUB_OUTPUT
           echo "✓ Docker Buildx builder with cache export support already configured"
-          docker buildx inspect --bootstrap | head -5
+          docker buildx inspect --bootstrap 2>&1 | head -5 || true
         else
           echo "available=false" >> $GITHUB_OUTPUT
           echo "Docker Buildx builder needs setup (requires docker-container driver for cache export)"
         fi
 
     - name: Setup Docker Buildx
-      if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'docker-build')) && steps.buildx-check.outputs.available != 'true'
+      if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')) && steps.buildx-check.outputs.available != 'true'
       uses: docker/setup-buildx-action@v3
 
     - name: Check if QEMU is already available
       id: qemu-check
-      if: contains(steps.resolve.outputs.deps, 'docker-build')
+      if: contains(steps.resolve.outputs.deps, 'buildx')
       shell: bash
       run: |
         if docker run --rm --privileged multiarch/qemu-user-static --version &> /dev/null 2>&1; then
@@ -141,7 +141,7 @@ runs:
         fi
 
     - name: Setup QEMU
-      if: contains(steps.resolve.outputs.deps, 'docker-build') && steps.qemu-check.outputs.available != 'true'
+      if: contains(steps.resolve.outputs.deps, 'buildx') && steps.qemu-check.outputs.available != 'true'
       uses: docker/setup-qemu-action@v3
 
     - name: Check if UPX is available
@@ -151,21 +151,39 @@ runs:
       run: |
         if command -v upx &> /dev/null; then
           echo "available=true" >> $GITHUB_OUTPUT
-          echo "✓ UPX already installed: $(upx --version | head -1)"
+          echo "✓ UPX already installed: $(upx --version 2>&1 | head -1 || true)"
         else
           echo "available=false" >> $GITHUB_OUTPUT
           echo "UPX not found - will install"
         fi
 
-    - name: Install UPX
-      if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true'
+    - name: Install UPX (Linux)
+      if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true' && runner.os == 'Linux'
       shell: bash
       run: |
         echo "Installing UPX for binary compression..."
         # UPX is available in Ubuntu repos
         sudo apt-get update -qq
         sudo apt-get install -y upx-ucl
-        echo "✓ UPX installed: $(upx --version | head -1)"
+        echo "✓ UPX installed: $(upx --version 2>&1 | head -1 || true)"
+
+    - name: Install UPX (Windows)
+      if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true' && runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        Write-Host "Installing UPX for binary compression..."
+        # UPX is available via Chocolatey on Windows runners
+        choco install upx -y --no-progress
+        Write-Host "✓ UPX installed: $(upx --version | Select-Object -First 1)"
+
+    - name: Install UPX (macOS)
+      if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true' && runner.os == 'macOS'
+      shell: bash
+      run: |
+        echo "Installing UPX for binary compression..."
+        # UPX is available via Homebrew on macOS
+        brew install upx
+        echo "✓ UPX installed: $(upx --version 2>&1 | head -1 || true)"
 
     - name: Summary
       if: steps.resolve.outputs.deps != ''
@@ -206,7 +224,7 @@ runs:
           fi
           echo "| npm packages | Installed |" >> $GITHUB_STEP_SUMMARY
         fi
-        if [[ "$DEPS" == *"docker-build"* ]]; then
+        if [[ "$DEPS" == *"buildx"* ]]; then
           if [ "$BUILDX_AVAILABLE" = "true" ]; then
             echo "| Docker Buildx | Already configured |" >> $GITHUB_STEP_SUMMARY
           else

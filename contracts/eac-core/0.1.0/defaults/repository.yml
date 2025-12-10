@@ -1,18 +1,25 @@
-# Default repository settings
-# Merged with .r2r/eac/repository.yml (user values override these)
-
-# Trunk-based development configuration
-trunk_branch: main
+# Base repository defaults
+# Merge order: base defaults → type-specific defaults → user config
+#
+# Type-specific defaults are loaded from repository-{type}.yml:
+#   - repository-mono.yml     (monorepo defaults)
+#   - repository-poly.yml     (polyrepo defaults)
+#   - repository-adjacent.yml (adjacent/supporting repo defaults)
+#
+# User values in .r2r/eac/repository.yml always win over all defaults.
 
 # Repository settings
 repository:
-  # Repository type: poly (polyrepo), mono (monorepo), adjunct (supporting repo)
+  # Repository type: poly (polyrepo), mono (monorepo), adjacent (supporting repo)
   type: poly
 
   # Valid versioning schemes that modules can declare
   schemes:
     - SemVer
     - CalVer
+
+  # Main branch name for trunk-based development
+  trunk_branch: main
 
   # Trunk-based development: max branch age before warning
   max_branch_age_days: 2
@@ -53,3 +60,12 @@ conventions:
   godog_test: godog_test.go
   package_json: package.json
   changelog: CHANGELOG.md
+
+# Default module (used when no modules defined in repository.yml)
+modules:
+  - moniker: default
+    name: Default Module
+    type: go
+    description: Auto-generated module for unconfigured repositories
+    files:
+      root: "."

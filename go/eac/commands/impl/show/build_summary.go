@@ -58,7 +58,7 @@ func generateBuildSummary(moduleName, status, runID string) int {
 	}
 
 	// Get module contract
-	module, ok := cfg.Modules.GetModule(moduleName)
+	module, ok := cfg.Repository.GetModule(moduleName)
 	if !ok {
 		log.Errorf("module not found: %s", moduleName)
 		return 1

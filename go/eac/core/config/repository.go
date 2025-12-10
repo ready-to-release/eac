@@ -1,4 +1,5 @@
-// repository.go provides repository-wide path configuration loading.
+// repository.go provides unified repository configuration loading.
+// This is the single source of truth for all repository configuration including modules.
 package config
 
 import (
@@ -9,13 +10,66 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RepositoryFileName is the config file for repository-wide settings
+// RepositoryFileName is the config file for all repository settings
 const RepositoryFileName = "repository.yml"
 
-// RepositoryConfig holds repository-wide configuration
+// RepositoryConfig holds all repository configuration including modules.
+// This is the unified config loaded from .r2r/eac/repository.yml
 type RepositoryConfig struct {
-	Paths       PathsConfig       `yaml:"paths"`
+	// Repository settings
+	Repository RepositorySettings `yaml:"repository"`
+
+	// Path configuration
+	Paths PathsConfig `yaml:"paths"`
+
+	// Filename conventions
 	Conventions ConventionsConfig `yaml:"conventions"`
+
+	// Module definitions (previously in separate modules.yml)
+	Modules []Module `yaml:"modules"`
+}
+
+// RepositorySettings holds repository-level configuration
+type RepositorySettings struct {
+	Type             string           `yaml:"type"`               // mono, poly, adjunct
+	TrunkBranch      string           `yaml:"trunk_branch"`       // main branch name
+	MaxBranchAgeDays int              `yaml:"max_branch_age_days"` // max age for feature branches
+	Schemes          []string         `yaml:"schemes"`            // valid versioning schemes
+	PR               PRConfig         `yaml:"pr"`                 // PR workflow config
+	Versioning       VersioningConfig `yaml:"versioning"`         // versioning constraints
+}
+
+// PRConfig holds pull request workflow configuration
+type PRConfig struct {
+	DeleteBranchOnMerge bool   `yaml:"delete_branch_on_merge"`
+	MergeStrategy       string `yaml:"merge_strategy"` // squash, merge, rebase
+}
+
+// VersioningConfig holds repository-wide versioning constraints
+type VersioningConfig struct {
+	Constraint string `yaml:"constraint"` // unrestricted, patch-only, calver-only
+}
+
+// Versioning constraint constants
+const (
+	VersioningUnrestricted = "unrestricted"
+	VersioningPatchOnly    = "patch-only"
+	VersioningCalverOnly   = "calver-only"
+)
+
+// IsPatchOnly returns true if versioning is constrained to patch-only
+func (v VersioningConfig) IsPatchOnly() bool {
+	return v.Constraint == VersioningPatchOnly
+}
+
+// IsCalverOnly returns true if versioning is forced to calver
+func (v VersioningConfig) IsCalverOnly() bool {
+	return v.Constraint == VersioningCalverOnly
+}
+
+// IsUnrestricted returns true if versioning is unrestricted
+func (v VersioningConfig) IsUnrestricted() bool {
+	return v.Constraint == VersioningUnrestricted || v.Constraint == ""
 }
 
 // PathsConfig defines repository-specific directory structures
@@ -119,4 +173,43 @@ func (c *RepositoryConfig) GetPathVariables() map[string]string {
 		"out_security":   c.Paths.Out.Security,
 		"out_tools":      c.Paths.Out.Tools,
 	}
+}
+
+// GetModule returns a module by moniker
+func (c *RepositoryConfig) GetModule(moniker string) (*Module, bool) {
+	for i := range c.Modules {
+		if c.Modules[i].Moniker == moniker {
+			return &c.Modules[i], true
+		}
+	}
+	return nil, false
+}
+
+// GetByMoniker returns a module by moniker, or nil if not found
+func (c *RepositoryConfig) GetByMoniker(moniker string) *Module {
+	m, ok := c.GetModule(moniker)
+	if !ok {
+		return nil
+	}
+	return m
+}
+
+// GetModulesByType returns all modules of a specific type
+func (c *RepositoryConfig) GetModulesByType(moduleType string) []Module {
+	var result []Module
+	for _, m := range c.Modules {
+		if m.Type == moduleType {
+			result = append(result, m)
+		}
+	}
+	return result
+}
+
+// AllMonikers returns a list of all module monikers
+func (c *RepositoryConfig) AllMonikers() []string {
+	monikers := make([]string, len(c.Modules))
+	for i, m := range c.Modules {
+		monikers[i] = m.Moniker
+	}
+	return monikers
 }

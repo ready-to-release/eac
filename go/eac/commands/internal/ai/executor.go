@@ -104,7 +104,7 @@ func (e *Executor) GetLastUsedProvider() Provider {
 // loadConfig loads the EAC configuration from .r2r/eac directory.
 // Loads team config and merges with personal overrides if present.
 // Personal config can override: api_key, model, provider name, endpoint, git token.
-// Both configs are validated against the eac-config schema.
+// Both configs are validated against the ai-provider schema.
 func (e *Executor) loadConfig() (*Config, error) {
 	teamConfigPath := paths.EACConfigFilePath(e.workspaceRoot)
 	personalConfigPath := paths.EACConfigPersonalFilePath(e.workspaceRoot)

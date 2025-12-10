@@ -226,7 +226,8 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 		switch art.Type {
 		case "image":
 			// Docker images need docker verification
-			exists, errMsg = verifyDockerImageExists(art.Path)
+			// Pass the full artifact info so we can check registry tags if local image not found
+			exists, errMsg = verifyDockerImageExists(art)
 		case "directory":
 			// Directories should exist
 			dirPath := filepath.Join(moduleBuildDir, art.Path)
@@ -250,6 +251,9 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 			} else if info.IsDir() {
 				exists = false
 				errMsg = fmt.Sprintf("expected file but found directory: %s", filePath)
+			} else if info.Size() == 0 {
+				exists = false
+				errMsg = fmt.Sprintf("file is empty: %s", filePath)
 			} else {
 				exists = true
 			}
@@ -272,8 +276,8 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 	return nil
 }
 
-// verifyDockerImageExists checks if a Docker image exists locally
-func verifyDockerImageExists(imageRef string) (bool, string) {
+// verifyDockerImageExists checks if a Docker image exists locally or in registry (for pushed images)
+func verifyDockerImageExists(art ArtifactInfo) (bool, string) {
 	// Check if docker is available first
 	if !isDockerAvailable() {
 		// If docker isn't available, we can't verify - log warning but don't fail
@@ -281,25 +285,60 @@ func verifyDockerImageExists(imageRef string) (bool, string) {
 		return true, ""
 	}
 
-	// Check if image exists locally using `docker images -q <ref>`
+	// First try to find image locally using the path (local reference)
+	if checkDockerImageLocal(art.Path) {
+		return true, ""
+	}
+
+	// If image has registry tags (CI pushed image), check those instead
+	// This handles the case where buildx --push pushed to registry without loading locally
+	if len(art.Tags) > 0 {
+		for _, tag := range art.Tags {
+			// Check if the tag exists locally (might have been pulled)
+			if checkDockerImageLocal(tag) {
+				return true, ""
+			}
+			// For CI with push=true, the image won't exist locally but was pushed
+			// Check if this is a registry image that was pushed (contains registry prefix)
+			// Registry images are verified by successful push, not local existence
+			if art.Registry != "" && isRegistryTag(tag, art.Registry) {
+				// Image was pushed to registry - trust the buildx push succeeded
+				// (buildx would have failed if push failed)
+				return true, ""
+			}
+		}
+	}
+
+	return false, fmt.Sprintf("docker image not found: %s (checked local and registry tags)", art.Path)
+}
+
+// checkDockerImageLocal checks if an image exists in local Docker daemon
+func checkDockerImageLocal(imageRef string) bool {
 	cmd := execCommand("docker", "images", "-q", imageRef)
 	output, err := cmd.Output()
 	if err != nil {
-		return false, fmt.Sprintf("failed to check docker image: %v", err)
+		return false
 	}
 
 	// If output is non-empty, image exists locally
-	if len(output) > 0 && len(output[0:]) > 0 {
+	if len(output) > 0 {
 		trimmed := string(output)
 		for len(trimmed) > 0 && (trimmed[len(trimmed)-1] == '\n' || trimmed[len(trimmed)-1] == '\r') {
 			trimmed = trimmed[:len(trimmed)-1]
 		}
-		if trimmed != "" {
-			return true, ""
-		}
+		return trimmed != ""
 	}
+	return false
+}
 
-	return false, fmt.Sprintf("docker image not found: %s", imageRef)
+// isRegistryTag checks if a tag is a registry image (contains registry prefix)
+func isRegistryTag(tag, registry string) bool {
+	// Registry must be non-empty and tag must start with registry prefix
+	if registry == "" {
+		return false
+	}
+	// Check if tag starts with registry (e.g., ghcr.io/ready-to-release/ext-eac:ci starts with ghcr.io)
+	return len(tag) > len(registry) && tag[:len(registry)] == registry
 }
 
 // isDockerAvailable checks if Docker CLI is available

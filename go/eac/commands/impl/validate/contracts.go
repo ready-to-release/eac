@@ -50,28 +50,15 @@ func ValidateContracts() int {
 	var validated int
 	var total int
 
-	// Validate repository.yml (optional)
+	// Validate repository.yml (includes modules)
+	total++
 	log.Infof("  %-25s ", "repository.yml")
 	if err := cfg.LoadRepository(true); err != nil {
 		log.Info("FAILED")
 		log.Errorf("    %v", err)
 		hasErrors = true
-		total++
 	} else if cfg.Repository != nil {
-		log.Info("OK (optional)")
-		validated++
-		total++
-	}
-
-	// Validate modules.yml
-	total++
-	log.Infof("  %-25s ", "modules.yml")
-	if err := cfg.LoadModules(true); err != nil {
-		log.Info("FAILED")
-		log.Errorf("    %v", err)
-		hasErrors = true
-	} else {
-		log.Infof("OK (%d modules)", len(cfg.Modules.Modules))
+		log.Infof("OK (%d modules)", len(cfg.Repository.Modules))
 		validated++
 	}
 

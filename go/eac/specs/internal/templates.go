@@ -53,7 +53,7 @@ const ModuleTypesDocker = `types:
   - name: container
     description: Docker container module
     capabilities:
-      - docker_build
+      - buildx
 `
 
 // ModuleTypesComplete is the module-types.yml with all common module types.
@@ -66,7 +66,7 @@ const ModuleTypesComplete = `types:
   - name: container
     description: Docker container module
     capabilities:
-      - docker_build
+      - buildx
 
   - name: typescript
     description: TypeScript/npm module
@@ -80,10 +80,10 @@ const ModuleTypesComplete = `types:
 `
 
 // ============================================================================
-// Modules Templates
+// Modules Templates (for repository.yml)
 // ============================================================================
 
-// ModulesSingleGo is modules.yml with a single Go module.
+// ModulesSingleGo is the modules section for repository.yml with a single Go module.
 // Parameters: {{MODULE_NAME}}, {{MODULE_PATH}}
 const ModulesSingleGo = `modules:
   - moniker: {{MODULE_NAME}}
@@ -93,7 +93,7 @@ const ModulesSingleGo = `modules:
       root: {{MODULE_PATH}}
 `
 
-// ModulesTwoGo is modules.yml with two Go modules.
+// ModulesTwoGo is the modules section for repository.yml with two Go modules.
 // Parameters: {{MODULE1_NAME}}, {{MODULE1_PATH}}, {{MODULE2_NAME}}, {{MODULE2_PATH}}
 const ModulesTwoGo = `modules:
   - moniker: {{MODULE1_NAME}}
@@ -132,12 +132,13 @@ const SystemDependenciesWithDocker = `dependencies:
 // ============================================================================
 
 // namedTemplates maps template names to their definitions.
+// Note: Modules are defined in repository.yml (unified config).
 var namedTemplates = map[string]*Template{
 	"minimal": {
 		Name:        "minimal",
 		Description: "Minimal EAC configuration with a single Go module",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":      ModulesSingleGo,
+			".r2r/eac/repository.yml":   ModulesSingleGo,
 			".r2r/eac/module-types.yml": ModuleTypesGo,
 		},
 	},
@@ -145,7 +146,7 @@ var namedTemplates = map[string]*Template{
 		Name:        "minimal-go",
 		Description: "Minimal EAC config for Go development",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":             ModulesSingleGo,
+			".r2r/eac/repository.yml":          ModulesSingleGo,
 			".r2r/eac/module-types.yml":        ModuleTypesGo,
 			".r2r/eac/system-dependencies.yml": SystemDependenciesMinimal,
 		},
@@ -154,7 +155,7 @@ var namedTemplates = map[string]*Template{
 		Name:        "minimal-with-docker",
 		Description: "Minimal EAC config with Docker support",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":             ModulesSingleGo,
+			".r2r/eac/repository.yml":          ModulesSingleGo,
 			".r2r/eac/module-types.yml":        ModuleTypesDocker,
 			".r2r/eac/system-dependencies.yml": SystemDependenciesWithDocker,
 		},
@@ -163,7 +164,7 @@ var namedTemplates = map[string]*Template{
 		Name:        "multi-module",
 		Description: "EAC config with two Go modules",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":             ModulesTwoGo,
+			".r2r/eac/repository.yml":          ModulesTwoGo,
 			".r2r/eac/module-types.yml":        ModuleTypesGo,
 			".r2r/eac/system-dependencies.yml": SystemDependenciesMinimal,
 		},
@@ -172,7 +173,7 @@ var namedTemplates = map[string]*Template{
 		Name:        "complete",
 		Description: "Complete EAC config with all module types",
 		Files: map[string]string{
-			".r2r/eac/modules.yml":             ModulesSingleGo,
+			".r2r/eac/repository.yml":          ModulesSingleGo,
 			".r2r/eac/module-types.yml":        ModuleTypesComplete,
 			".r2r/eac/system-dependencies.yml": SystemDependenciesWithDocker,
 		},

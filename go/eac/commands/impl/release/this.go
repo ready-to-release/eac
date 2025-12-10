@@ -40,8 +40,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/definitions"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 )
 
@@ -155,17 +155,18 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 		return result
 	}
 
-	// Load definitions for versioning constraints
-	defs, err := definitions.Load(workspaceRoot)
+	// Load config for versioning constraints
+	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		result.Error = fmt.Sprintf("failed to load definitions: %v", err)
+		result.Error = fmt.Sprintf("failed to load config: %v", err)
 		return result
 	}
+	versioning := cfg.Repository.Repository.Versioning
 
 	// Set constraint info
-	if defs.IsPatchOnly() {
+	if versioning.IsPatchOnly() {
 		result.Constraint = "patch-only"
-	} else if defs.IsCalverOnly() {
+	} else if versioning.IsCalverOnly() {
 		result.Constraint = "calver-only"
 	} else {
 		result.Constraint = "unrestricted"
@@ -289,7 +290,7 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 
 	// Calculate next version with constraints
 	maxBump := changelog.BumpMajor
-	if defs.IsPatchOnly() {
+	if versioning.IsPatchOnly() {
 		maxBump = changelog.BumpPatch
 	}
 

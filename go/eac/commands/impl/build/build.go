@@ -914,14 +914,15 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 	}
 
 	// Process artifact derivations (compression, etc.) if build succeeded
+	// Use merged artifacts from cfg.GetBuildArtifacts to ensure module-level takes priority
 	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		moduleTypeDef := cfg.ModuleTypes.Get(module.Type)
-		if moduleTypeDef != nil {
-			if err := ProcessArtifactDerivations(module.Moniker, moduleTypeDef, outputDir, opts.RequestedArtifacts, module.Metadata, logWriter); err != nil {
-				writeln(logWriter, "❌ Artifact derivation failed: %v", err)
-				return 1
-			}
+	if cfg != nil {
+		// Get merged artifacts (module-level takes priority over type-level)
+		// Pass buildAll=true to include all derived artifacts (UPX variants, etc.)
+		mergedArtifacts := cfg.GetBuildArtifacts(module.Moniker, true)
+		if err := ProcessArtifactDerivations(module.Moniker, mergedArtifacts, outputDir, opts.RequestedArtifacts, module.Metadata, logWriter); err != nil {
+			writeln(logWriter, "❌ Artifact derivation failed: %v", err)
+			return 1
 		}
 	}
 
@@ -1045,7 +1046,7 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 	}
 
 	// Get module
-	module, ok := cfg.Modules.GetModule(moniker)
+	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		return false
 	}
@@ -1056,8 +1057,12 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 		return false
 	}
 
-	// If no artifacts defined, consider it as "exists" (nothing to build)
-	if moduleTypeDef.Build == nil || len(moduleTypeDef.Build.Artifacts) == 0 {
+	// Check if module has any artifacts defined (type-level OR per-module)
+	hasTypeArtifacts := moduleTypeDef.Build != nil && len(moduleTypeDef.Build.Artifacts) > 0
+	hasModuleArtifacts := module.Build != nil && len(module.Build.Artifacts) > 0
+
+	// If no artifacts defined at either level, consider it as "exists" (nothing to build)
+	if !hasTypeArtifacts && !hasModuleArtifacts {
 		return true
 	}
 
@@ -1156,7 +1161,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 		}
 
 		// Get module config
-		module, ok := cfg.Modules.GetModule(moniker)
+		module, ok := cfg.Repository.GetModule(moniker)
 		if !ok {
 			continue
 		}
@@ -1237,7 +1242,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 
 			// For image artifacts, enrich with docker_build config info
 			if art.Type == "image" {
-				enrichImageArtifact(&artifactInfo, moduleTypeDef)
+				enrichImageArtifact(&artifactInfo, module, moduleTypeDef, moniker)
 			}
 
 			artifactInfos = append(artifactInfos, artifactInfo)
@@ -1373,7 +1378,7 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 	}
 
 	// Get module
-	module, ok := cfg.Modules.GetModule(moniker)
+	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		return fmt.Errorf("module not found: %s", moniker)
 	}
@@ -1384,14 +1389,16 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 		return fmt.Errorf("module type not found: %s", moduleType)
 	}
 
-	// If no artifacts defined, nothing to validate
-	if moduleTypeDef.Build == nil || len(moduleTypeDef.Build.Artifacts) == 0 {
-		fmt.Fprintf(logWriter, "  ℹ️  No artifacts defined for this module type\n")
+	// Determine which artifacts were requested for this build
+	// This uses cfg.GetBuildArtifactIDs which correctly handles both module-level
+	// and type-level artifacts (module-level takes priority)
+	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, moduleTypeDef, buildAll, cfg)
+
+	// If no artifacts to validate, nothing to do
+	if len(requestedArtifacts) == 0 {
+		fmt.Fprintf(logWriter, "  ℹ️  No artifacts defined for this module\n")
 		return nil
 	}
-
-	// Determine which artifacts were requested for this build
-	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, moduleTypeDef, buildAll, cfg)
 
 	// Resolve and validate artifacts
 	// Note: BuildOutputPath returns a relative path, so we need to make it absolute
@@ -1403,6 +1410,14 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 	if err != nil {
 		return fmt.Errorf("failed to resolve artifacts: %w", err)
 	}
+
+	// Check if this module has docker_build with push=true
+	// If so, image artifacts are pushed to registry and may not exist locally
+	dockerConfig := module.GetDockerBuildConfig()
+	if dockerConfig == nil && moduleTypeDef != nil {
+		dockerConfig = moduleTypeDef.DockerBuild
+	}
+	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.Push
 
 	// Filter artifacts to only those that were requested
 	var requestedArtifactList []implinternal.ResolvedArtifact
@@ -1421,6 +1436,14 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 		if isRequested {
 			requestedArtifactList = append(requestedArtifactList, art)
 			requestedTotal++
+
+			// For image artifacts with push=true, trust that buildx push succeeded
+			// (buildx would have failed if push failed). The image may not exist locally.
+			if art.Type == "image" && imagesPushedToRegistry {
+				// Image was pushed to registry - trust the build
+				continue
+			}
+
 			if !art.Exists {
 				requestedMissing++
 			}
@@ -1432,6 +1455,10 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 		fmt.Fprintf(logWriter, "\n❌ Expected artifacts were not created:\n")
 		for _, art := range requestedArtifactList {
 			if !art.Exists {
+				// Skip image artifacts that were pushed to registry
+				if art.Type == "image" && imagesPushedToRegistry {
+					continue
+				}
 				fmt.Fprintf(logWriter, "  - %s: %s\n", art.ID, art.ResolvedPath)
 			}
 		}
@@ -1460,7 +1487,7 @@ func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract,
 	}
 
 	// Get module from config
-	module, ok := cfg.Modules.GetModule(moduleContract.Moniker)
+	module, ok := cfg.Repository.GetModule(moduleContract.Moniker)
 	if !ok {
 		log.Debugf("Module %s not found in config", moduleContract.Moniker)
 		return []string{}
@@ -1477,13 +1504,45 @@ func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract,
 	return implinternal.DetermineRequestedArtifacts(module, moduleType, false, cfg)
 }
 
-// enrichImageArtifact populates image-specific fields (Tags, Registry) from docker_build config
-func enrichImageArtifact(artifactInfo *implinternal.ArtifactInfo, moduleTypeDef *config.ModuleTypeDef) {
-	if moduleTypeDef == nil || moduleTypeDef.DockerBuild == nil {
+// enrichImageArtifact populates image-specific fields (Tags, Registry) from docker_build config.
+// It uses module-level docker_build if available (takes precedence), otherwise falls back to type-level config.
+func enrichImageArtifact(artifactInfo *implinternal.ArtifactInfo, module *config.Module, moduleTypeDef *config.ModuleTypeDef, moniker string) {
+	// Try module-level docker_build first (takes precedence)
+	var dockerConfig *config.DockerBuildConfig
+	if module != nil {
+		dockerConfig = module.GetDockerBuildConfig()
+	}
+
+	// Fall back to type-level config if no module-level config
+	if dockerConfig == nil && moduleTypeDef != nil {
+		dockerConfig = moduleTypeDef.DockerBuild
+	}
+
+	if dockerConfig == nil {
 		return
 	}
 
-	dockerConfig := moduleTypeDef.DockerBuild
-	artifactInfo.Tags = dockerConfig.Tags
+	// Expand template variables in tags
+	expandedTags := make([]string, 0, len(dockerConfig.Tags))
+	for _, tag := range dockerConfig.Tags {
+		expanded := expandImageTag(tag, moniker)
+		expandedTags = append(expandedTags, expanded)
+	}
+
+	artifactInfo.Tags = expandedTags
 	artifactInfo.Registry = dockerConfig.Registry
+}
+
+// expandImageTag expands template variables in an image tag
+func expandImageTag(tag, moniker string) string {
+	result := tag
+	result = strings.ReplaceAll(result, "{moniker}", moniker)
+	result = strings.ReplaceAll(result, "{container}", moniker)
+
+	// Get short SHA if available
+	if sha := os.Getenv("GITHUB_SHA"); sha != "" && len(sha) >= 7 {
+		result = strings.ReplaceAll(result, "{short_sha}", sha[:7])
+	}
+
+	return result
 }

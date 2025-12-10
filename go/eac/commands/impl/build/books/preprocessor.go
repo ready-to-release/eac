@@ -98,55 +98,67 @@ func (p *Preprocessor) Preprocess() error {
 		return fmt.Errorf("step 6 (inline): %w", err)
 	}
 
-	// PDF-specific processing steps (only in PDF mode)
+	// Step 8: Strip nav titles (PDF only)
+	// awesome-nav warns about top-level titles which conflict with PDF navigation
+	// For HTML site, these titles are useful in the sidebar
 	if p.pdfMode {
-		// Step 8: Strip nav titles (awesome-nav warns about top-level titles)
 		p.log("  Step 8: Stripping nav titles...")
 		if err := p.stripNavTitles(); err != nil {
 			return fmt.Errorf("step 8 (strip nav titles): %w", err)
 		}
+	}
 
-		// Step 9: Process mermaid diagram sizing
-		// Wraps mermaid blocks with size directives in container divs
-		p.log("  Step 9: Processing mermaid sizing...")
-		if err := p.processMermaidSizing(); err != nil {
-			return fmt.Errorf("step 9 (mermaid sizing): %w", err)
-		}
+	// Step 9: Process mermaid diagram sizing (both PDF and site)
+	// Wraps mermaid blocks with size directives in container divs
+	p.log("  Step 9: Processing mermaid sizing...")
+	if err := p.processMermaidSizing(); err != nil {
+		return fmt.Errorf("step 9 (mermaid sizing): %w", err)
+	}
 
-		// Step 9b: Process mermaid diagrams with caching
-		// Scans for diagrams, renders cache misses, replaces blocks with img tags
-		// Only modifies staging markdown (source stays pure)
-		p.log("  Step 9b: Processing mermaid diagrams...")
-		blocksByFile, err := p.scanForMermaidDiagrams()
-		if err != nil {
-			return fmt.Errorf("step 9b (mermaid scan): %w", err)
-		}
+	// Step 9b: Process mermaid diagrams with caching (both PDF and site)
+	// Scans for diagrams, uses cached SVGs, replaces blocks with img tags
+	// Only modifies staging markdown (source stays pure)
+	p.log("  Step 9b: Processing mermaid diagrams...")
+	blocksByFile, statuses, err := p.scanForMermaidDiagrams()
+	if err != nil {
+		return fmt.Errorf("step 9b (mermaid scan): %w", err)
+	}
 
-		// Replace mermaid blocks with img tags in staging
-		if err := p.replaceMermaidBlocksWithImages(blocksByFile); err != nil {
-			return fmt.Errorf("step 9b (mermaid replace): %w", err)
-		}
+	// Replace mermaid blocks with img tags in staging
+	if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
+		return fmt.Errorf("step 9b (mermaid replace): %w", err)
+	}
 
-		// Step 10: Convert .drawio images to links
-		// Interactive diagrams can't display in PDFs, so convert to GitHub Pages links
-		p.log("  Step 10: Converting .drawio images to links...")
+	// Step 10: Convert .drawio to cached images (PDF only)
+	// Interactive .drawio diagrams can't display in PDFs, so render to static images
+	// For HTML site, .drawio files are rendered by JavaScript viewer
+	if p.pdfMode {
+		p.log("  Step 10: Converting .drawio to cached images...")
 		if err := p.convertDrawioToLinks(); err != nil {
-			return fmt.Errorf("step 10 (drawio to links): %w", err)
+			return fmt.Errorf("step 10 (drawio to images): %w", err)
 		}
+	}
 
-		// Step 11: Add image width constraints for PDF
-		// Ensures large diagrams fit within PDF page boundaries
-		p.log("  Step 11: Adding image width constraints...")
-		if err := p.cleanupLinksForPDF(); err != nil {
-			return fmt.Errorf("step 11 (image constraints): %w", err)
-		}
+	// Step 11: Add image width constraints (both PDF and site)
+	// Ensures large diagrams fit within page/container boundaries
+	p.log("  Step 11: Adding image width constraints...")
+	if err := p.cleanupLinksForPDF(); err != nil {
+		return fmt.Errorf("step 11 (image constraints): %w", err)
+	}
 
-		// Step 12: Optimize drawio images for PDF
-		// Resizes large drawio.png files to reduce PDF size and improve compatibility
-		p.log("  Step 12: Optimizing drawio images...")
-		if err := p.optimizeDrawioImages(); err != nil {
-			return fmt.Errorf("step 12 (drawio optimization): %w", err)
-		}
+	// Step 12: Optimize drawio images (both PDF and site)
+	// Uses cached optimized versions for faster builds and smaller output
+	p.log("  Step 12: Optimizing drawio images...")
+	if err := p.optimizeDrawioImages(); err != nil {
+		return fmt.Errorf("step 12 (drawio optimization): %w", err)
+	}
+
+	// Step 13: Clean up unreferenced assets (runs for both PDF and HTML)
+	// Removes any files in staging that are not referenced by markdown
+	// This catches orphaned images, stale assets, and intermediate files
+	p.log("  Step 13: Cleaning up unreferenced assets...")
+	if err := p.cleanupUnreferencedAssets(); err != nil {
+		return fmt.Errorf("step 13 (cleanup unreferenced): %w", err)
 	}
 
 	elapsed := time.Since(startTime)
@@ -156,8 +168,13 @@ func (p *Preprocessor) Preprocess() error {
 	stats := p.assetCache.Stats()
 	if stats.MermaidHits+stats.MermaidMisses > 0 {
 		hitRate := float64(stats.MermaidHits) / float64(stats.MermaidHits+stats.MermaidMisses) * 100
-		p.log("   📊 Persistent cache: %d mermaid hits, %d misses (%.1f%% hit rate)",
+		p.log("   📊 Mermaid cache: %d hits, %d misses (%.1f%% hit rate)",
 			stats.MermaidHits, stats.MermaidMisses, hitRate)
+	}
+	if stats.DrawioHits+stats.DrawioMisses > 0 {
+		hitRate := float64(stats.DrawioHits) / float64(stats.DrawioHits+stats.DrawioMisses) * 100
+		p.log("   📊 Drawio cache: %d hits, %d misses (%.1f%% hit rate)",
+			stats.DrawioHits, stats.DrawioMisses, hitRate)
 	}
 
 	return nil

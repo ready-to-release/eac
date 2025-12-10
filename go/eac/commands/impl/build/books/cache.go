@@ -20,6 +20,8 @@ type AssetCache struct {
 type CacheStats struct {
 	MermaidHits   int
 	MermaidMisses int
+	DrawioHits    int
+	DrawioMisses  int
 }
 
 // MermaidCacheKey contains all inputs that affect mermaid rendering
@@ -31,10 +33,18 @@ type MermaidCacheKey struct {
 	Theme  string
 }
 
-// NewAssetCache creates a new asset cache rooted at workspace_root/out/cache
+// DrawioCacheKey contains all inputs that affect drawio image optimization
+// Any change to these values will produce a different cache key
+type DrawioCacheKey struct {
+	SourceHash string // SHA256 of original image file content
+	MaxWidth   int    // Target max width for optimization
+}
+
+// NewAssetCache creates a new asset cache rooted at docs/assets/cache
+// This cache is git-tracked for CI optimization (pre-rendered mermaid diagrams)
 func NewAssetCache(workspaceRoot string) *AssetCache {
 	return &AssetCache{
-		cacheRoot: paths.CachePath(workspaceRoot),
+		cacheRoot: paths.DocsCachePath(workspaceRoot),
 	}
 }
 
@@ -80,6 +90,49 @@ func (c *AssetCache) hashMermaid(key MermaidCacheKey) string {
 	fmt.Fprintf(h, "width:%d\n", key.Width)
 	fmt.Fprintf(h, "height:%d\n", key.Height)
 	fmt.Fprintf(h, "theme:%s\n", key.Theme)
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+// GetDrawio checks if an optimized drawio PNG is already cached
+// Returns: (cachePath, cacheHit)
+func (c *AssetCache) GetDrawio(key DrawioCacheKey) (string, bool) {
+	hash := c.hashDrawio(key)
+	cachePath := paths.DrawioCachePath(c.cacheRoot, hash)
+
+	if _, err := os.Stat(cachePath); err == nil {
+		c.stats.DrawioHits++
+		return cachePath, true
+	}
+
+	c.stats.DrawioMisses++
+	return cachePath, false
+}
+
+// PutDrawio stores an optimized PNG in the cache for future reuse
+func (c *AssetCache) PutDrawio(pngPath string, key DrawioCacheKey) error {
+	hash := c.hashDrawio(key)
+	cachePath := paths.DrawioCachePath(c.cacheRoot, hash)
+
+	// Ensure cache directory exists
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {
+		return err
+	}
+
+	// Atomic write: write to temp file, then rename
+	// This prevents corruption if multiple builds run concurrently
+	tempPath := cachePath + ".tmp"
+	if err := copyFile(pngPath, tempPath); err != nil {
+		return err
+	}
+
+	return os.Rename(tempPath, cachePath)
+}
+
+// hashDrawio creates a deterministic hash of all drawio optimization inputs
+func (c *AssetCache) hashDrawio(key DrawioCacheKey) string {
+	h := sha256.New()
+	fmt.Fprintf(h, "source:%s\n", key.SourceHash)
+	fmt.Fprintf(h, "maxWidth:%d\n", key.MaxWidth)
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 

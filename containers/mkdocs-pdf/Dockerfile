@@ -8,10 +8,10 @@ WORKDIR /docs
 
 # System dependencies for PDF generation
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Fonts
+    # Fonts - Noto family only (sans + mono + emoji)
     fontconfig \
-    fonts-liberation \
-    fonts-dejavu-core \
+    fonts-noto-core \
+    fonts-noto-mono \
     fonts-noto-color-emoji \
     # Build tools
     gcc \

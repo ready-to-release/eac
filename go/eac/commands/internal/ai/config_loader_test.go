@@ -108,7 +108,7 @@ git:
 
 			// Create temporary config file
 			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, "eac-config.yml")
+			configPath := filepath.Join(tmpDir, "ai-provider.yml")
 			if err := os.WriteFile(configPath, []byte(tt.configYAML), 0644); err != nil {
 				t.Fatalf("failed to write test config: %v", err)
 			}
@@ -154,8 +154,8 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 	}
 
 	// Verify error message contains init instructions
-	if !strings.Contains(err.Error(), ".r2r/eac/eac-config.yml not found") {
-		t.Errorf("LoadConfig() error = %v, want error containing '.r2r/eac/eac-config.yml not found'", err)
+	if !strings.Contains(err.Error(), ".r2r/eac/ai-provider.yml not found") {
+		t.Errorf("LoadConfig() error = %v, want error containing '.r2r/eac/ai-provider.yml not found'", err)
 	}
 	if !strings.Contains(err.Error(), "run: eac init") {
 		t.Errorf("LoadConfig() error = %v, want error containing 'run: eac init'", err)
@@ -166,8 +166,8 @@ func TestLoadConfigFromRepoRoot(t *testing.T) {
 	// Test that config is loaded from repository root
 	tmpDir := t.TempDir()
 
-	// Create eac-config.yml in repo root (tmpDir simulates repo root)
-	configPath := filepath.Join(tmpDir, "eac-config.yml")
+	// Create ai-provider.yml in repo root (tmpDir simulates repo root)
+	configPath := filepath.Join(tmpDir, "ai-provider.yml")
 	configContent := `ai:
   provider: claude-cli
   model: claude-3-haiku-20240307

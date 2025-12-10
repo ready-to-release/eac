@@ -170,7 +170,16 @@ runs:
         mkdir -p out/tools
         cd go/eac/commands
         go build -o ../../../out/tools/commands .
-        echo "✓ Commands binary built"
+        echo "✓ Commands binary built (native)"
+
+    - name: Cross-compile for Windows (from Linux)
+      if: runner.os == 'Linux' && steps.check.outputs.available != 'true'
+      shell: bash
+      run: |
+        echo "Cross-compiling commands binary for Windows..."
+        cd go/eac/commands
+        GOOS=windows GOARCH=amd64 go build -o ../../../out/tools/commands.exe .
+        echo "✓ Commands binary built (windows-amd64)"
 
     - name: Build from source (Windows)
       if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true'
@@ -188,6 +197,14 @@ runs:
       with:
         name: commands-binary
         path: out/tools/commands
+        if-no-files-found: error
+
+    - name: Upload Windows artifact (cross-compiled from Linux)
+      if: runner.os == 'Linux' && steps.check.outputs.available != 'true'
+      uses: actions/upload-artifact@v5
+      with:
+        name: commands-binary-windows
+        path: out/tools/commands.exe
         if-no-files-found: error
 
     - name: Upload artifact (for downstream jobs, Windows)

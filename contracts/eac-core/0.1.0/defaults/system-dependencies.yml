@@ -60,7 +60,7 @@ dependencies:
       command: "docker info"
       pattern: "Server Version: (\\d+\\.\\d+)"
 
-  - moniker: docker-build
+  - moniker: buildx
     name: "Docker Buildx"
     description: "Docker buildx for multi-platform container image builds"
     version: ">=0.10"
@@ -91,3 +91,13 @@ dependencies:
     verify:
       command: "curl --version"
       pattern: "curl (\\d+\\.\\d+)"
+
+# Capability to system dependency mappings
+# Used by get build-deps to resolve module capabilities to actual deps
+capability_requirements:
+  go_module: [go]
+  buildx: [docker, buildx]
+  npm_package: [npm]
+  typescript: [npm]
+  documentation: [docker]
+  container: [docker]

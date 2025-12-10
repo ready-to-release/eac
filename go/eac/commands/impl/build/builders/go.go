@@ -101,93 +101,6 @@ func listModuleArtifacts(module *modules.ModuleContract) []string {
 	return artifacts
 }
 
-// listSingleBinaryArtifacts returns artifacts for a single-platform build
-func listSingleBinaryArtifacts(module *modules.ModuleContract) []string {
-	binaryName := module.Moniker
-	// Use per-module build.options.commands_binary to determine if this produces the "commands" binary
-	if module.IsToolsBinary() {
-		binaryName = "commands"
-	}
-
-	// Add platform-specific extension based on current platform
-	if strings.Contains(strings.ToLower(os.Getenv("GOOS")), "windows") ||
-		(os.Getenv("GOOS") == "" && filepath.Separator == '\\') {
-		binaryName += ".exe"
-	}
-
-	return []string{binaryName}
-}
-
-// listCrossCompiledArtifacts returns artifacts for cross-compiled builds
-// Now uses artifact definitions from module-types.yml to support derived artifacts (UPX, etc.)
-func listCrossCompiledArtifacts(module *modules.ModuleContract) []string {
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		return []string{}
-	}
-
-	// Get module type definition to access artifact definitions
-	moduleTypeDef := cfg.ModuleTypes.Get(module.Type)
-	if moduleTypeDef == nil || moduleTypeDef.Build == nil {
-		return []string{}
-	}
-
-	var artifacts []string
-	binaryName := module.Moniker
-
-	// Process all artifact definitions (including UPX variants)
-	for _, artifact := range moduleTypeDef.Build.Artifacts {
-		if artifact.Type != config.ArtifactTypeExecutable {
-			continue
-		}
-
-		// For each platform the artifact supports
-		platforms := artifact.Platforms
-		if len(platforms) == 0 {
-			platforms = []string{"linux", "windows", "darwin"}
-		}
-
-		for _, platform := range platforms {
-			// Determine architectures from the pattern
-			var archs []string
-			pattern := artifact.Pattern
-
-			// Parse pattern to determine supported architectures
-			if strings.Contains(pattern, "-amd64") || strings.Contains(pattern, "{os}-amd64") {
-				// amd64-only pattern (includes UPX variants: {moniker}-{os}-amd64-upx{ext})
-				archs = []string{"amd64"}
-			} else if strings.Contains(pattern, "-arm64") || strings.Contains(pattern, "{os}-arm64") {
-				// arm64-only pattern
-				archs = []string{"arm64"}
-			} else if platform == "windows" {
-				// Windows only supports amd64
-				archs = []string{"amd64"}
-			} else {
-				// Generic pattern - support both architectures
-				archs = []string{"amd64", "arm64"}
-			}
-
-			for _, arch := range archs {
-				// Resolve the pattern with platform variables
-				resolver := config.NewArtifactResolverWithPlatform(binaryName, "", platform, arch)
-				artifactName := resolver.ResolvePattern(pattern)
-
-				// Check for metadata override
-				metadataKey := fmt.Sprintf("executable-%s-%s", platform, arch)
-				if customName, ok := module.Metadata[metadataKey]; ok && customName != "" {
-					artifactName = customName
-				}
-
-				artifacts = append(artifacts, artifactName)
-			}
-		}
-	}
-
-	// Add checksums file
-	artifacts = append(artifacts, "checksums.txt")
-
-	return artifacts
-}
 
 // buildGoModule builds any Go module based on per-module artifact definitions.
 // Behavior is driven by artifacts defined in modules.yml:
@@ -314,8 +227,9 @@ func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot st
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
 
-		// For tools_binary option, also copy to tools directory
-		if module.IsToolsBinary() {
+		// For tools_binary option, also copy to tools directory (local dev only)
+		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+		if !isCI && module.IsToolsBinary() {
 			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
 				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
 			}
@@ -395,6 +309,19 @@ func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot 
 			continue
 		}
 
+		// For commands_binary, copy native binary to tools directory for local dev
+		// Skip in CI - there the binary is built/uploaded as artifact via setup-commands action
+		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+		if !isCI && module.IsToolsBinary() && target.goos == runtime.GOOS && target.goarch == runtime.GOARCH {
+			toolsBinaryName := "commands"
+			if target.goos == "windows" {
+				toolsBinaryName = "commands.exe"
+			}
+			if err := copyToToolsDir(outputPath, toolsBinaryName, workspaceRoot, logWriter); err != nil {
+				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
+			}
+		}
+
 		successCount++
 	}
 
@@ -468,8 +395,9 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, worksp
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
 
-		// For commands_binary capability, also copy to tools directory so the CI tool binary stays fresh
-		if isCommandsBinary {
+		// For commands_binary capability, copy to tools directory (local dev only)
+		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+		if !isCI && isCommandsBinary {
 			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
 				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
 			}

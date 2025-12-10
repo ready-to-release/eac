@@ -132,6 +132,16 @@ type Workflows struct {
 	Release string `yaml:"release"` // Release workflow file path
 }
 
+// Flags defines module behavior flags
+type Flags struct {
+	// ExplicitOwnership disables the default "all files under root" ownership.
+	// When true, the module only owns files that explicitly match its patterns
+	// (source, config, assets, tests). When false (default), if no patterns are
+	// defined, all files under files.root are implicitly owned.
+	// Use this for catch-all modules that should only own specific files.
+	ExplicitOwnership bool `yaml:"explicit_ownership,omitempty"`
+}
+
 // RepoPatterns represents patterns relative to repository root
 type RepoPatterns struct {
 	Specs    []string `yaml:"specs"`     // Specification files
@@ -139,10 +149,6 @@ type RepoPatterns struct {
 	Design   string   `yaml:"design"`    // Design workspace directory path
 	Other    []string `yaml:"other"`     // Other files outside module root
 	Exclude  []string `yaml:"exclude"`   // Exclusions relative to repo root
-}
-
-// Flags represents behavioral flags for a module (reserved for future use)
-type Flags struct {
 }
 
 // Getter methods for BaseContract

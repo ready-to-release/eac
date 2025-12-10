@@ -21,7 +21,7 @@ func NewModuleMapper(eacCfg *config.EACConfig, workspaceRoot string) *ModuleMapp
 	registry := modules.NewRegistry("0.1.0", workspaceRoot)
 
 	// Convert config modules to contract modules
-	for _, m := range eacCfg.Modules.Modules {
+	for _, m := range eacCfg.Repository.Modules {
 		base := contracts.BaseContract{
 			Moniker:     m.Moniker,
 			Name:        m.Name,

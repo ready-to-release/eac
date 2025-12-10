@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // Size presets for mermaid diagrams
@@ -136,23 +135,25 @@ func countMermaidBlocks(content string) int {
 	return len(mermaidBlockPlain.FindAllString(content, -1))
 }
 
-// mermaidBlock represents a mermaid diagram found in markdown
+// MermaidBlock represents a mermaid diagram found in markdown
 // Used for caching and pre-rendering during preprocessing
-type mermaidBlock struct {
-	content      string // The mermaid diagram code
-	hash         string // SHA256 hash of content (first 8 chars for filename)
-	sourceFile   string // Absolute path to the .md file
-	relPath      string // Relative path from staging dir (for logging)
-	blockIndex   int    // Index of block in file (0, 1, 2, ...)
-	filename     string // Generated SVG filename: {source}_mermaid_{idx}_{hash}.svg
-	startPos     int    // Start position in file (for replacement later)
-	endPos       int    // End position in file (for replacement later)
+// Exported for use by update docs command
+type MermaidBlock struct {
+	Content    string // The mermaid diagram code
+	Hash       string // SHA256 hash of content (first 8 chars for filename)
+	SourceFile string // Absolute path to the .md file
+	RelPath    string // Relative path from staging dir (for logging)
+	BlockIndex int    // Index of block in file (0, 1, 2, ...)
+	Filename   string // Generated SVG filename: {source}_mermaid_{idx}_{hash}.svg
+	StartPos   int    // Start position in file (for replacement later)
+	EndPos     int    // End position in file (for replacement later)
 }
+
 
 // extractMermaidBlocks scans a markdown file for mermaid code blocks
 // Returns all blocks with metadata for caching and rendering
-func extractMermaidBlocks(content string, absSourcePath string, stagingDir string) []mermaidBlock {
-	blocks := []mermaidBlock{}
+func extractMermaidBlocks(content string, absSourcePath string, stagingDir string) []MermaidBlock {
+	blocks := []MermaidBlock{}
 
 	// Get relative path for logging
 	relPath, _ := filepath.Rel(stagingDir, absSourcePath)
@@ -184,32 +185,38 @@ func extractMermaidBlocks(content string, absSourcePath string, stagingDir strin
 
 		// Remove size directives from content before hashing
 		// This ensures the hash is based on actual diagram code, not formatting
-		diagramForHash := stripSizeDirective(diagramContent)
+		diagramForHash := StripSizeDirective(diagramContent)
 
 		// Hash the content for cache key (8 chars like the plugin does)
-		hash := hashContent(diagramForHash)
+		hash := HashContent(diagramForHash)
 
 		// Generate filename: {basename}_mermaid_{idx}_{hash}.svg
 		filename := fmt.Sprintf("%s_mermaid_%d_%s.svg", basename, idx, hash)
 
-		blocks = append(blocks, mermaidBlock{
-			content:    diagramContent,
-			hash:       hash,
-			sourceFile: absSourcePath,
-			relPath:    relPath,
-			blockIndex: idx,
-			filename:   filename,
-			startPos:   match[0],
-			endPos:     match[1],
+		blocks = append(blocks, MermaidBlock{
+			Content:    diagramContent,
+			Hash:       hash,
+			SourceFile: absSourcePath,
+			RelPath:    relPath,
+			BlockIndex: idx,
+			Filename:   filename,
+			StartPos:   match[0],
+			EndPos:     match[1],
 		})
 	}
 
 	return blocks
 }
 
-// stripSizeDirective removes size directive lines from diagram content
+// ExtractMermaidBlocks is the exported version for use by update docs command
+func ExtractMermaidBlocks(content string, absSourcePath string, baseDir string) []MermaidBlock {
+	return extractMermaidBlocks(content, absSourcePath, baseDir)
+}
+
+// StripSizeDirective removes size directive lines from diagram content
 // Example: %%{size:medium}%% is removed before hashing
-func stripSizeDirective(content string) string {
+// Exported for use by update docs command
+func StripSizeDirective(content string) string {
 	// Remove lines starting with %%{size: or %%{width:
 	lines := strings.Split(content, "\n")
 	filtered := []string{}
@@ -223,23 +230,80 @@ func stripSizeDirective(content string) string {
 	return strings.Join(filtered, "\n")
 }
 
-// hashContent returns first 8 chars of SHA256 hash
+// HashContent returns first 8 chars of SHA256 hash
 // This matches the naming convention used by the mermaid-to-svg plugin
-func hashContent(content string) string {
+// Exported for use by update docs command
+func HashContent(content string) string {
 	h := sha256.Sum256([]byte(content))
 	return fmt.Sprintf("%x", h)[:8]
 }
 
-// cacheStatus represents the cache state for a mermaid block
-type cacheStatus struct {
-	block     mermaidBlock
-	cached    bool   // true if SVG exists in cache
-	cachePath string // absolute path to cached SVG (if exists)
+// CacheStatus represents the cache state for a mermaid block
+// Exported for use by update docs command
+type CacheStatus struct {
+	Block     MermaidBlock
+	Cached    bool   // true if SVG exists in cache
+	CachePath string // absolute path to cached SVG (if exists)
 }
 
-// renderSingleDiagram renders a single mermaid diagram to SVG using mermaid-cli
+// mermaidImageName is the Docker image used for mermaid-cli rendering
+const mermaidImageName = "cli-mermaid-cli:latest"
+
+// EnsureMermaidImage ensures the mermaid-cli Docker image exists.
+// Similar to ensureMkDocsImage, this checks if image exists first; only builds if missing.
+// Exported for use by update docs command
+func EnsureMermaidImage(workspaceRoot string, logWriter io.Writer) error {
+	// Check if image already exists
+	cmd := exec.Command("docker", "image", "inspect", mermaidImageName)
+	if err := cmd.Run(); err == nil {
+		fmt.Fprintf(logWriter, "    Docker image exists: %s (using pre-built)\n", mermaidImageName)
+		return nil
+	}
+
+	// Image doesn't exist, build it
+	fmt.Fprintf(logWriter, "    Building Docker image: %s\n", mermaidImageName)
+
+	// Detect Docker-in-Docker mode for path handling
+	isDinD := buildutil.IsDockerInDocker()
+	hostRepoRoot := workspaceRoot
+	if isDinD {
+		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+			hostRepoRoot = hostRoot
+		}
+	}
+
+	// Build paths for Dockerfile and context
+	var dockerfilePath, contextPath string
+	if isDinD {
+		// Host is Windows, construct Windows paths manually
+		dockerfilePath = hostRepoRoot + "\\containers\\mermaid-cli\\Dockerfile"
+		contextPath = hostRepoRoot + "\\containers\\mermaid-cli"
+	} else {
+		dockerfilePath = filepath.Join(workspaceRoot, "containers", "mermaid-cli", "Dockerfile")
+		contextPath = filepath.Join(workspaceRoot, "containers", "mermaid-cli")
+	}
+
+	fmt.Fprintf(logWriter, "    Dockerfile: %s\n", dockerfilePath)
+	fmt.Fprintf(logWriter, "    Context: %s\n", contextPath)
+
+	cmd = exec.Command("docker", "build",
+		"-t", mermaidImageName,
+		"-f", dockerfilePath,
+		contextPath)
+	cmd.Stdout = logWriter
+	cmd.Stderr = logWriter
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("docker build failed: %w", err)
+	}
+
+	return nil
+}
+
+// RenderSingleDiagram renders a single mermaid diagram to SVG using mermaid-cli
 // Returns error if rendering fails
-func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot string, logWriter io.Writer) error {
+// Exported for use by update docs command
+func RenderSingleDiagram(block MermaidBlock, outputPath string, workspaceRoot string, logWriter io.Writer) error {
 	// Detect Docker-in-Docker mode
 	isDinD := buildutil.IsDockerInDocker()
 	hostRepoRoot := workspaceRoot
@@ -251,10 +315,10 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 
 	// Create temp file for mermaid content
 	tmpDir := filepath.Dir(outputPath)
-	tmpFile := filepath.Join(tmpDir, block.filename+".mmd")
+	tmpFile := filepath.Join(tmpDir, block.Filename+".mmd")
 
 	// Write diagram content to temp file
-	if err := os.WriteFile(tmpFile, []byte(block.content), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(block.Content), 0644); err != nil {
 		return fmt.Errorf("writing temp file: %w", err)
 	}
 	defer os.Remove(tmpFile) // Clean up temp file
@@ -285,7 +349,7 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 		"-w", "/docs",
 		"--shm-size=1gb", // Increase shared memory for Chromium (prevents crashes)
 		"--security-opt", "seccomp=unconfined", // Allow Chromium to run without sandboxing restrictions
-		"cli-mermaid-cli:latest",
+		mermaidImageName,
 		"mmdc",
 		"-i", dockerTmpFile,
 		"-o", dockerOutputPath,
@@ -314,7 +378,7 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("mmdc failed for %s: %w (stderr: %s)",
-			block.filename, err, stderr.String())
+			block.Filename, err, stderr.String())
 	}
 
 	// Verify SVG was created
@@ -328,7 +392,7 @@ func renderSingleDiagram(block mermaidBlock, outputPath string, workspaceRoot st
 // renderMermaidDiagrams renders multiple mermaid diagrams in parallel
 // Only renders cache misses (cached diagrams are skipped)
 // Returns number of diagrams rendered and any error
-func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error) {
+func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error) {
 	// Check Docker availability first - fail fast if unavailable
 	if !buildutil.IsDockerAvailable() {
 		errorMsg := "Docker is not available but required for mermaid diagram rendering"
@@ -340,10 +404,15 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 		return 0, fmt.Errorf("%s", errorMsg)
 	}
 
+	// Ensure mermaid-cli image exists (build if needed)
+	if err := EnsureMermaidImage(p.workspaceRoot, p.logWriter); err != nil {
+		return 0, fmt.Errorf("failed to ensure mermaid image: %w", err)
+	}
+
 	// Filter for cache misses
-	toRender := []cacheStatus{}
+	toRender := []CacheStatus{}
 	for _, status := range statuses {
-		if !status.cached {
+		if !status.Cached {
 			toRender = append(toRender, status)
 		}
 	}
@@ -363,9 +432,9 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 	p.log("    Rendering %d diagram(s) in parallel (using %d workers)...", len(toRender), maxWorkers)
 
 	// Create channels for work distribution
-	jobs := make(chan cacheStatus, len(toRender))
+	jobs := make(chan CacheStatus, len(toRender))
 	type result struct {
-		status cacheStatus
+		status CacheStatus
 		err    error
 	}
 	results := make(chan result, len(toRender))
@@ -374,8 +443,8 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 	for w := 0; w < maxWorkers; w++ {
 		go func(workerID int) {
 			for status := range jobs {
-				block := status.block
-				err := renderSingleDiagram(block, status.cachePath, p.workspaceRoot, p.logWriter)
+				block := status.Block
+				err := RenderSingleDiagram(block, status.CachePath, p.workspaceRoot, p.logWriter)
 				results <- result{status: status, err: err}
 			}
 		}(w)
@@ -395,20 +464,20 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 	for i := 0; i < len(toRender); i++ {
 		res := <-results
 		if res.err != nil {
-			p.log("      ❌ Failed to render %s: %v", res.status.block.filename, res.err)
+			p.log("      ❌ Failed to render %s: %v", res.status.Block.Filename, res.err)
 			failed++
-			errors = append(errors, fmt.Sprintf("%s: %v", res.status.block.filename, res.err))
+			errors = append(errors, fmt.Sprintf("%s: %v", res.status.Block.Filename, res.err))
 		} else {
 			rendered++
 
 			// Save to persistent cache after successful rendering
-			block := res.status.block
+			block := res.status.Block
 			// Use stripped content for cache key to ensure consistency
-			cleanContent := stripSizeDirective(block.content)
-			if err := p.assetCache.PutMermaid(res.status.cachePath, MermaidCacheKey{
+			cleanContent := StripSizeDirective(block.Content)
+			if err := p.assetCache.PutMermaid(res.status.CachePath, MermaidCacheKey{
 				Code: cleanContent,
-			}); err != nil{
-				p.log("      ⚠️  Failed to cache %s: %v", block.filename, err)
+			}); err != nil {
+				p.log("      ⚠️  Failed to cache %s: %v", block.Filename, err)
 				// Non-fatal - rendering succeeded even if caching failed
 			}
 
@@ -428,48 +497,34 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []cacheStatus) (int, error
 }
 
 // checkMermaidCache checks which diagrams are already cached
-// Checks both persistent cache (out/cache/mermaid/) and local staging cache
+// Cache is at staging/assets/cache/mermaid/ (copied from docs/assets/cache/mermaid/)
 // Returns all blocks with their cache status
-func (p *Preprocessor) checkMermaidCache(blocks []mermaidBlock) ([]cacheStatus, error) {
-	// Cache directory: staging/assets/rendered/mermaid/
-	cacheDir := paths.RenderedAssetsPath(p.stagingDir, "mermaid")
+func (p *Preprocessor) checkMermaidCache(blocks []MermaidBlock) ([]CacheStatus, error) {
+	// Cache directory: staging/assets/cache/mermaid/ (copied from docs/assets/cache/)
+	cacheDir := filepath.Join(p.stagingDir, "assets", "cache", "mermaid")
 
-	// Ensure cache directory exists
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return nil, fmt.Errorf("creating cache directory: %w", err)
-	}
-
-	statuses := make([]cacheStatus, 0, len(blocks))
+	statuses := make([]CacheStatus, 0, len(blocks))
 
 	for _, block := range blocks {
-		svgPath := filepath.Join(cacheDir, block.filename)
+		// Use stripped content for cache key to ensure consistency
+		cleanContent := StripSizeDirective(block.Content)
+		cacheKey := MermaidCacheKey{Code: cleanContent}
 
-		// Check if file exists in local staging cache
-		_, err := os.Stat(svgPath)
-		cached := err == nil
+		// Get the hash for this diagram (assetCache computes the hash)
+		persistentPath, _ := p.assetCache.GetMermaid(cacheKey)
+		hashFilename := filepath.Base(persistentPath)
+		stagingCachePath := filepath.Join(cacheDir, hashFilename)
 
-		// If not in local cache, check persistent cache
-		if !cached {
-			// Use stripped content for cache key to ensure consistency
-			// (size directives are removed by processMermaidSizing step)
-			cleanContent := stripSizeDirective(block.content)
-			persistentPath, persistentHit := p.assetCache.GetMermaid(MermaidCacheKey{
-				Code: cleanContent,
-			})
-
-			if persistentHit {
-				// Copy from persistent cache to local staging cache
-				if err := copyFile(persistentPath, svgPath); err == nil {
-					cached = true
-					// No need to increment stats here - GetMermaid already did
-				}
-			}
+		// Check if file exists in staging (copied from docs/assets/cache/)
+		cached := false
+		if _, err := os.Stat(stagingCachePath); err == nil {
+			cached = true
 		}
 
-		statuses = append(statuses, cacheStatus{
-			block:     block,
-			cached:    cached,
-			cachePath: svgPath,
+		statuses = append(statuses, CacheStatus{
+			Block:     block,
+			Cached:    cached,
+			CachePath: stagingCachePath,
 		})
 	}
 
@@ -478,9 +533,13 @@ func (p *Preprocessor) checkMermaidCache(blocks []mermaidBlock) ([]cacheStatus, 
 
 // replaceMermaidBlocksWithImages replaces mermaid code blocks with img references
 // This is done ONLY in staging directory, source markdown stays pure
-func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]mermaidBlock) error {
-	// Cache directory (absolute path)
-	cacheDir := paths.RenderedAssetsPath(p.stagingDir, "mermaid")
+// Uses cache statuses to get the correct SVG path for each block
+func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]MermaidBlock, statuses []CacheStatus) error {
+	// Build a map from block filename to cache path for quick lookup
+	cachePathByBlock := make(map[string]string)
+	for _, status := range statuses {
+		cachePathByBlock[status.Block.Filename] = status.CachePath
+	}
 
 	for filePath, blocks := range blocksByFile {
 		if len(blocks) == 0 {
@@ -498,12 +557,16 @@ func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]
 		for i := len(blocks) - 1; i >= 0; i-- {
 			block := blocks[i]
 
+			// Get the SVG path from cache status
+			svgAbsPath := cachePathByBlock[block.Filename]
+			if svgAbsPath == "" {
+				return fmt.Errorf("no cache path found for block %s", block.Filename)
+			}
+
 			// Calculate relative path from markdown file to SVG using link translator
-			// This ensures consistency with all other path calculations
-			svgAbsPath := filepath.Join(cacheDir, block.filename)
 			relPath, err := p.linkTranslator.CalculateRelativePath(filePath, svgAbsPath)
 			if err != nil {
-				return fmt.Errorf("calculating relative path for %s: %w", block.filename, err)
+				return fmt.Errorf("calculating relative path for %s: %w", block.Filename, err)
 			}
 
 			// Build img tag with relative path to SVG
@@ -513,7 +576,7 @@ func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]
 			)
 
 			// Replace mermaid block with img tag
-			modified = modified[:block.startPos] + imgTag + modified[block.endPos:]
+			modified = modified[:block.StartPos] + imgTag + modified[block.EndPos:]
 		}
 
 		// Write back to staging file
@@ -521,18 +584,18 @@ func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]
 			return fmt.Errorf("writing file %s: %w", filePath, err)
 		}
 
-		p.log("      ✓ Replaced %d mermaid block(s) in %s", len(blocks), blocks[0].relPath)
+		p.log("      ✓ Replaced %d mermaid block(s) in %s", len(blocks), blocks[0].RelPath)
 	}
 
 	return nil
 }
 
 // scanForMermaidDiagrams scans all markdown files in staging directory
-// Returns all mermaid blocks found, grouped by file
+// Returns all mermaid blocks found (grouped by file) and their cache statuses
 // Now includes cache checking and statistics
-func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]mermaidBlock, error) {
-	blocksByFile := make(map[string][]mermaidBlock)
-	allBlocks := []mermaidBlock{}
+func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, []CacheStatus, error) {
+	blocksByFile := make(map[string][]MermaidBlock)
+	allBlocks := []MermaidBlock{}
 
 	// Step 1: Extract all mermaid blocks
 	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
@@ -558,25 +621,25 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]mermaidBlock, erro
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(allBlocks) == 0 {
 		p.log("    No mermaid diagrams found")
-		return blocksByFile, nil
+		return blocksByFile, nil, nil
 	}
 
 	// Step 2: Check cache for all blocks
 	statuses, err := p.checkMermaidCache(allBlocks)
 	if err != nil {
-		return nil, fmt.Errorf("checking cache: %w", err)
+		return nil, nil, fmt.Errorf("checking cache: %w", err)
 	}
 
 	// Step 3: Analyze cache statistics
 	cacheHits := 0
 	cacheMisses := 0
 	for _, status := range statuses {
-		if status.cached {
+		if status.Cached {
 			cacheHits++
 		} else {
 			cacheMisses++
@@ -608,15 +671,15 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]mermaidBlock, erro
 
 	// Step 6: Log detailed breakdown by file
 	for _, blocks := range blocksByFile {
-		relPath := blocks[0].relPath
+		relPath := blocks[0].RelPath
 		fileHits := 0
 		fileMisses := 0
 
 		for _, block := range blocks {
 			// Find this block's cache status
 			for _, status := range statuses {
-				if status.block.filename == block.filename {
-					if status.cached {
+				if status.Block.Filename == block.Filename {
+					if status.Cached {
 						fileHits++
 					} else {
 						fileMisses++
@@ -634,8 +697,8 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]mermaidBlock, erro
 			// Find cache status
 			cached := false
 			for _, status := range statuses {
-				if status.block.filename == block.filename {
-					cached = status.cached
+				if status.Block.Filename == block.Filename {
+					cached = status.Cached
 					break
 				}
 			}
@@ -646,21 +709,21 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]mermaidBlock, erro
 			}
 
 			// Show first line of content
-			firstLine := strings.Split(block.content, "\n")[0]
+			firstLine := strings.Split(block.Content, "\n")[0]
 			if len(firstLine) > 45 {
 				firstLine = firstLine[:45] + "..."
 			}
 
 			p.log("        [%d] %s %s %s",
-				block.blockIndex, cacheMarker, firstLine, block.filename)
+				block.BlockIndex, cacheMarker, firstLine, block.Filename)
 		}
 	}
 
 	// Return rendering error if any diagrams failed
-	// (but still return the blocksByFile so caller can see what was found)
+	// (but still return the blocksByFile and statuses so caller can see what was found)
 	if renderErr != nil {
-		return blocksByFile, fmt.Errorf("rendering: %w", renderErr)
+		return blocksByFile, statuses, fmt.Errorf("rendering: %w", renderErr)
 	}
 
-	return blocksByFile, nil
+	return blocksByFile, statuses, nil
 }

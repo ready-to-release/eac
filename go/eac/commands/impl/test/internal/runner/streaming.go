@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
+
+// ansiEscapeRegex matches all ANSI escape sequences for stripping from log files
+var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
 // TestEvent represents a single event from `go test -json` output
 type TestEvent struct {
@@ -140,19 +144,19 @@ func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
-		// Write full JSON line to log
-		if r.logWriter != nil {
-			r.logWriter.Write(line)
-			r.logWriter.Write([]byte("\n"))
-		}
-
 		// Parse JSON event
 		var event TestEvent
 		if err := json.Unmarshal(line, &event); err != nil {
-			// Not valid JSON, write raw line to TUI
+			// Not valid JSON, write raw line to both outputs
 			if r.tuiWriter != nil {
 				r.tuiWriter.Write(line)
 				r.tuiWriter.Write([]byte("\n"))
+			}
+			if r.logWriter != nil {
+				// Strip ANSI codes for log file readability
+				stripped := ansiEscapeRegex.ReplaceAll(line, []byte{})
+				r.logWriter.Write(stripped)
+				r.logWriter.Write([]byte("\n"))
 			}
 			continue
 		}
@@ -162,19 +166,26 @@ func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 		r.events = append(r.events, event)
 		r.mu.Unlock()
 
-		// Send human-readable output to TUI
-		if r.tuiWriter != nil && event.Action == "output" && event.Output != "" {
-			// Filter out noisy lines
+		// Write human-readable output to both TUI and log file
+		if event.Action == "output" && event.Output != "" {
 			output := event.Output
 			trimmed := strings.TrimSpace(output)
 
-			// Skip empty lines and test framework noise
+			// Skip empty lines
 			if trimmed == "" {
 				continue
 			}
 
-			// Write the output (preserving original formatting)
-			r.tuiWriter.Write([]byte(output))
+			// Write to TUI (with ANSI codes for color)
+			if r.tuiWriter != nil {
+				r.tuiWriter.Write([]byte(output))
+			}
+
+			// Write to log file (strip ANSI codes for readability)
+			if r.logWriter != nil {
+				stripped := ansiEscapeRegex.ReplaceAllString(output, "")
+				r.logWriter.Write([]byte(stripped))
+			}
 		}
 	}
 }
@@ -185,13 +196,16 @@ func (r *StreamingRunner) processStderr(reader io.Reader) {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
-		// Write to both TUI and log
+		// Write to TUI (with ANSI codes)
 		if r.tuiWriter != nil {
 			r.tuiWriter.Write(line)
 			r.tuiWriter.Write([]byte("\n"))
 		}
+
+		// Write to log (strip ANSI codes for readability)
 		if r.logWriter != nil {
-			r.logWriter.Write(line)
+			stripped := ansiEscapeRegex.ReplaceAll(line, []byte{})
+			r.logWriter.Write(stripped)
 			r.logWriter.Write([]byte("\n"))
 		}
 	}
