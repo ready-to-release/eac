@@ -5,18 +5,26 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// SuiteTestEntry represents a single test in a suite report
+// SuiteTestEntry represents a single test (assertion) in a suite report
 type SuiteTestEntry struct {
 	Moniker          string   `yaml:"moniker" json:"moniker" toml:"moniker"`
 	TestName         string   `yaml:"test_name" json:"test_name" toml:"test_name"`
 	Type             string   `yaml:"type" json:"type" toml:"type"`
 	FilePath         string   `yaml:"file_path" json:"file_path" toml:"file_path"`
+	Package          string   `yaml:"package" json:"package" toml:"package"`                   // Feature/package name from path
 	Module           string   `yaml:"module" json:"module" toml:"module"`
 	ModuleType       string   `yaml:"module_type" json:"module_type" toml:"module_type"`
 	Level            []string `yaml:"level" json:"level" toml:"level"`
 	Verification     []string `yaml:"verification" json:"verification" toml:"verification"`
 	SystemDeps       []string `yaml:"system_deps" json:"system_deps" toml:"system_deps"`
 	ModuleDeps       []string `yaml:"module_deps" json:"module_deps" toml:"module_deps"`
+
+	// Tag provenance - tracking what was inferred vs explicit
+	SourceTags       []string `yaml:"source_tags" json:"source_tags" toml:"source_tags"`             // Original tags from source
+	InferredTags     []string `yaml:"inferred_tags" json:"inferred_tags" toml:"inferred_tags"`       // Tags added by inference
+	InferredDeps     []string `yaml:"inferred_deps" json:"inferred_deps" toml:"inferred_deps"`       // Deps inferred from module type
+	InferredDepm     []string `yaml:"inferred_depm" json:"inferred_depm" toml:"inferred_depm"`       // Module deps inferred from path
+
 	IsIgnored        bool     `yaml:"is_ignored" json:"is_ignored" toml:"is_ignored"`
 	SkipReason       string   `yaml:"skip_reason,omitempty" json:"skip_reason,omitempty" toml:"skip_reason,omitempty"`
 	IsManual         bool     `yaml:"is_manual" json:"is_manual" toml:"is_manual"`
@@ -45,27 +53,24 @@ func GenerateSuiteReport(
 	moduleRegistry *modules.Registry,
 	fileModuleMap map[string]string,
 ) (*SuiteReport, error) {
-	// Phase 1: Discover all tests
-	allTests, err := DiscoverAllTests(repoRoot)
+	// Load environments for inference
+	cfg, _ := config.Load(config.DefaultLoadOptions())
+	var environments *config.EnvironmentsConfig
+	if cfg != nil {
+		environments = cfg.Environments
+	}
+
+	// Use unified discovery with suite-specific inferences
+	allTests, err := DiscoverAndEnrich(repoRoot, DiscoveryOptions{
+		Inferences:     suite.Inferences,
+		ModuleRegistry: moduleRegistry,
+		Environments:   environments,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Phase 2: Apply inferences
-	allTests = ApplyInferences(allTests, suite.Inferences)
-
-	// Phase 2.5: Infer system deps from module deps (if registry available)
-	if moduleRegistry != nil {
-		allTests = InferSystemDepsFromModuleDeps(allTests, moduleRegistry)
-	}
-
-	// Phase 2.6: Infer system deps from environment tags (if environment config available)
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err == nil {
-		allTests = InferSystemDepsFromEnv(allTests, cfg.Environments)
-	}
-
-	// Phase 3: Select tests for this suite
+	// Select tests for this suite
 	selectedTests := suite.SelectTests(allTests)
 
 	// Phase 4: Separate production tests from framework tests
@@ -82,9 +87,9 @@ func GenerateSuiteReport(
 	// Phase 5: Validate post-inference tags
 	validationErrors := ValidateAllPostInference(productionTests, repoRoot)
 
-	// Convert test references to suite entries
-	productionEntries := convertToSuiteEntries(productionTests, fileModuleMap, moduleRegistry, repoRoot)
-	frameworkEntries := convertToSuiteEntries(frameworkTests, fileModuleMap, moduleRegistry, repoRoot)
+	// Convert test references to suite entries using canonical conversion
+	productionEntries := ConvertToEntries(productionTests, fileModuleMap, moduleRegistry, repoRoot)
+	frameworkEntries := ConvertToEntries(frameworkTests, fileModuleMap, moduleRegistry, repoRoot)
 
 	report := &SuiteReport{
 		SuiteMoniker:     suite.Moniker,
@@ -98,163 +103,4 @@ func GenerateSuiteReport(
 	}
 
 	return report, nil
-}
-
-// convertToSuiteEntries converts TestReferences to SuiteTestEntries with metadata
-func convertToSuiteEntries(
-	tests []TestReference,
-	fileModuleMap map[string]string,
-	moduleRegistry *modules.Registry,
-	repoRoot string,
-) []SuiteTestEntry {
-	entries := make([]SuiteTestEntry, len(tests))
-
-	for i, test := range tests {
-		// Extract module from file path
-		module := extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
-		if module == "unknown" {
-			module = ""
-		}
-
-		// Look up the owning module's type
-		moduleType := ""
-		if module != "" && moduleRegistry != nil {
-			if mod, exists := moduleRegistry.Get(module); exists {
-				moduleType = mod.Type
-			}
-		}
-
-		// Generate test moniker
-		moniker := GenerateTestMoniker(test, module)
-
-		// Extract tag categories
-		levelTags := filterTagsByPrefix(test.Tags, "@L")
-		verificationTags := filterTagsByPatterns(test.Tags, []string{"@ov", "@iv", "@pv", "@piv", "@ppv"})
-		systemDeps := filterTagsByPrefix(test.Tags, "@deps:")
-		moduleDeps := filterTagsByPrefix(test.Tags, "@depm:")
-
-		entries[i] = SuiteTestEntry{
-			Moniker:          moniker,
-			TestName:         test.TestName,
-			Type:             test.Type,
-			FilePath:         test.FilePath,
-			Module:           module,
-			ModuleType:       moduleType,
-			Level:            levelTags,
-			Verification:     verificationTags,
-			SystemDeps:       systemDeps,
-			ModuleDeps:       moduleDeps,
-			IsIgnored:        test.IsIgnored,
-			SkipReason:       test.SkipReason,
-			IsManual:         test.IsManual,
-			RiskControls:     test.RiskControls,
-			IsGxP:            test.IsGxP,
-			IsCriticalAspect: test.IsCriticalAspect,
-		}
-	}
-
-	return entries
-}
-
-// Helper functions for tag filtering
-func filterTagsByPrefix(tags []string, prefix string) []string {
-	result := []string{}
-	for _, tag := range tags {
-		if len(tag) >= len(prefix) && tag[:len(prefix)] == prefix {
-			result = append(result, tag)
-		}
-	}
-	return result
-}
-
-func filterTagsByPatterns(tags []string, patterns []string) []string {
-	result := []string{}
-	for _, tag := range tags {
-		for _, pattern := range patterns {
-			if tag == pattern {
-				result = append(result, tag)
-				break
-			}
-		}
-	}
-	return result
-}
-
-func trimPrefix(s, prefix string) string {
-	if len(s) >= len(prefix) && s[:len(prefix)] == prefix {
-		return s[len(prefix):]
-	}
-	return s
-}
-
-// extractModuleFromPath looks up the module for a file path using the file-module mapping
-func extractModuleFromPath(filePath string, fileModuleMap map[string]string, repoRoot string) string {
-	if fileModuleMap == nil {
-		return "unknown"
-	}
-
-	// Normalize separators
-	filePath = normalizePathSeparators(filePath)
-	repoRoot = normalizePathSeparators(repoRoot)
-
-	// Convert absolute path to relative path from repo root
-	relativePath := filePath
-	if len(filePath) >= len(repoRoot) && filePath[:len(repoRoot)] == repoRoot {
-		relativePath = filePath[len(repoRoot):]
-		// Trim leading slash
-		if len(relativePath) > 0 && relativePath[0] == '/' {
-			relativePath = relativePath[1:]
-		}
-	}
-
-	// For specs/ files, extract module from path structure (specs/MODULE/...)
-	if len(relativePath) >= 6 && relativePath[:6] == "specs/" {
-		parts := splitPath(relativePath)
-		if len(parts) >= 2 {
-			return parts[1]
-		}
-	}
-
-	// For go/ files, look up in the file-module map
-	if module, found := fileModuleMap[relativePath]; found {
-		return module
-	}
-
-	// Try direct lookup as fallback
-	if module, found := fileModuleMap[filePath]; found {
-		return module
-	}
-
-	return "unknown"
-}
-
-// normalizePathSeparators converts backslashes to forward slashes
-func normalizePathSeparators(path string) string {
-	result := make([]byte, len(path))
-	for i := 0; i < len(path); i++ {
-		if path[i] == '\\' {
-			result[i] = '/'
-		} else {
-			result[i] = path[i]
-		}
-	}
-	return string(result)
-}
-
-// splitPath splits a path by forward slashes
-func splitPath(path string) []string {
-	parts := []string{}
-	start := 0
-	for i := 0; i < len(path); i++ {
-		if path[i] == '/' {
-			if i > start {
-				parts = append(parts, path[start:i])
-			}
-			start = i + 1
-		}
-	}
-	if start < len(path) {
-		parts = append(parts, path[start:])
-	}
-	return parts
 }

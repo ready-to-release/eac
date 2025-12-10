@@ -309,13 +309,8 @@
     },
     "build_options": {
       "type": "object",
-      "description": "Build behavior options",
-      "properties": {
-        "commands_binary": {
-          "type": "boolean",
-          "description": "Copy to tools directory after build"
-        }
-      }
+      "description": "Build behavior options (reserved for future use)",
+      "properties": {}
     },
     "files": {
       "type": "object",

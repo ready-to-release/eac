@@ -10,12 +10,20 @@ import (
 // ApplyInferences applies inference rules to enrich test tags
 // NOTE: L-level tags (@L0-@L4) are NEVER inferred - tests MUST have explicit L-tags.
 // Verification tags (@ov) ARE inferred: if no verification tag is present, @ov is added.
+// Tracks which tags were inferred in TestReference.InferredTags
+// Captures SourceTags (pre-inference tags) if not already set
 func ApplyInferences(tests []TestReference, inferences []Inference) []TestReference {
 	enriched := make([]TestReference, len(tests))
 
 	for i, test := range tests {
 		enriched[i] = test
 		enriched[i].Tags = copyTags(test.Tags)
+		enriched[i].InferredTags = copyTags(test.InferredTags) // Preserve existing
+
+		// Capture source tags before inference (if not already set)
+		if len(enriched[i].SourceTags) == 0 {
+			enriched[i].SourceTags = copyTags(test.Tags)
+		}
 
 		// Apply each inference rule
 		for _, inference := range inferences {
@@ -31,17 +39,23 @@ func ApplyInferences(tests []TestReference, inferences []Inference) []TestRefere
 
 			// Check if conditions match
 			if matchesConditions(test.Tags, inference.IfTags, inference.ThenAddTags) {
-				// Add inferred tags
+				// Add inferred tags and track them
 				for _, tag := range inference.ThenAddTags {
 					if !contains(enriched[i].Tags, tag) {
 						enriched[i].Tags = append(enriched[i].Tags, tag)
+						enriched[i].InferredTags = append(enriched[i].InferredTags, tag)
 					}
 				}
 			}
 		}
 
 		// Derive @ov if no other verification tag is present
+		hadOV := contains(enriched[i].Tags, "@ov")
 		enriched[i].Tags = DeriveOperationalVerification(enriched[i].Tags)
+		// Track @ov as inferred if it was added
+		if !hadOV && contains(enriched[i].Tags, "@ov") {
+			enriched[i].InferredTags = append(enriched[i].InferredTags, "@ov")
+		}
 	}
 
 	return enriched
@@ -201,6 +215,7 @@ func filterTags(tags []string, pattern string) []string {
 // InferSystemDepsFromModuleDeps infers system dependencies based on module dependencies
 // For example, if a test has @depm:eac-commands and eac-commands is a go-* module,
 // then @deps:go should be inferred
+// Tracks inferred deps in TestReference.InferredDeps
 func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Registry) []TestReference {
 	if registry == nil {
 		return tests // No registry available, return unchanged
@@ -211,6 +226,7 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 	for i, test := range tests {
 		enriched[i] = test
 		enriched[i].Tags = copyTags(test.Tags)
+		enriched[i].InferredDeps = copyTags(test.InferredDeps) // Preserve existing
 
 		// Extract module dependencies from tags
 		for _, tag := range test.Tags {
@@ -232,15 +248,21 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 
 			// If module type starts with "go-", infer @deps:go
 			if strings.HasPrefix(moduleType, "go-") {
-				if !contains(enriched[i].Tags, "@deps:go") {
-					enriched[i].Tags = append(enriched[i].Tags, "@deps:go")
+				depTag := "@deps:go"
+				if !contains(enriched[i].Tags, depTag) {
+					enriched[i].Tags = append(enriched[i].Tags, depTag)
+					enriched[i].InferredDeps = append(enriched[i].InferredDeps, depTag)
 				}
 			}
 
-			// TODO: Add more module type -> system dependency mappings as needed
-			// For example:
-			// - python-* modules -> @deps:python
-			// - docker-* modules -> @deps:docker
+			// npm-* modules -> @deps:npm
+			if strings.HasPrefix(moduleType, "npm-") {
+				depTag := "@deps:npm"
+				if !contains(enriched[i].Tags, depTag) {
+					enriched[i].Tags = append(enriched[i].Tags, depTag)
+					enriched[i].InferredDeps = append(enriched[i].InferredDeps, depTag)
+				}
+			}
 		}
 	}
 
@@ -284,6 +306,36 @@ func IsOSPlatformDep(dep string) bool {
 		}
 	}
 	return false
+}
+
+// FilterByCurrentOS filters tests to only those compatible with the current OS.
+// Tests with OS-specific deps (e.g., @deps:linux) only run on that OS.
+// Tests without any OS-specific deps are OS-agnostic and run everywhere.
+// Returns (compatible tests, filtered count).
+func FilterByCurrentOS(tests []TestReference, currentOS string) ([]TestReference, int) {
+	compatible := []TestReference{}
+
+	for _, test := range tests {
+		hasOSDep := false
+		matchesCurrentOS := false
+
+		for _, dep := range test.SystemDependencies {
+			if IsOSPlatformDep(dep) {
+				hasOSDep = true
+				if dep == currentOS {
+					matchesCurrentOS = true
+				}
+			}
+		}
+
+		// Include if no OS deps (agnostic) or matches current OS
+		if !hasOSDep || matchesCurrentOS {
+			compatible = append(compatible, test)
+		}
+	}
+
+	filteredCount := len(tests) - len(compatible)
+	return compatible, filteredCount
 }
 
 // InferSystemDepsFromEnv infers system dependencies based on environment tags

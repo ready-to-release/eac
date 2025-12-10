@@ -97,9 +97,7 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 				Handler: m.Build.Handler,
 			}
 			if m.Build.Options != nil {
-				base.Build.Options = &contracts.BuildOptions{
-					CommandsBinary: m.Build.Options.CommandsBinary,
-				}
+				base.Build.Options = &contracts.BuildOptions{}
 			}
 			for _, a := range m.Build.Artifacts {
 				base.Build.Artifacts = append(base.Build.Artifacts, contracts.ModuleArtifact{

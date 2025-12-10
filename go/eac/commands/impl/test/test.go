@@ -358,17 +358,15 @@ func executeTests(cfg *TestConfig) int {
 		}
 	}
 
-	// Test Discovery
-	allTests, err := testing.DiscoverAllTests(workspaceRoot)
+	// Test Discovery with suite-specific inferences
+	allTests, err := testing.DiscoverAndEnrich(workspaceRoot, testing.DiscoveryOptions{
+		Inferences: suite.Inferences,
+	})
 	if err != nil {
 		log.Errorf("Failed to discover tests: %v", err)
 		return 1
 	}
-	log.Debugf("Discovered %d tests", len(allTests))
-
-	// Tag Inference
-	allTests = testing.ApplyInferences(allTests, suite.Inferences)
-	log.Debugf("Applied %d inference rules", len(suite.Inferences))
+	log.Debugf("Discovered %d tests with %d inference rules applied", len(allTests), len(suite.Inferences))
 
 	// Suite Selection
 

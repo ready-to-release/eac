@@ -48,7 +48,7 @@ type ModuleArtifact struct {
 
 // BuildOptions contains optional build behavior flags
 type BuildOptions struct {
-	CommandsBinary bool `yaml:"commands_binary,omitempty"` // Copy to tools directory after build
+	// Reserved for future build options
 }
 
 // GetBuildHandler returns the explicit build handler for this module

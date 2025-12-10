@@ -110,6 +110,42 @@ func releaseModuleBuildLock(lock *flock.Flock) {
 	os.Remove(lockPath)
 }
 
+// ensureCommandsBinary rebuilds the commands binary on every local build call.
+// This ensures the binary always reflects the latest source code changes.
+// CI uses the setup-commands action instead.
+func ensureCommandsBinary(workspaceRoot string) error {
+	fmt.Println("⚙️  Building commands binary...")
+
+	// Determine binary name for current platform
+	binaryName := "commands"
+	if runtime.GOOS == "windows" {
+		binaryName = "commands.exe"
+	}
+
+	// Create tools directory
+	toolsDir := filepath.Join(workspaceRoot, paths.OutDir, paths.ToolsDir)
+	if err := os.MkdirAll(toolsDir, 0755); err != nil {
+		return fmt.Errorf("create tools dir: %w", err)
+	}
+
+	// Build from source: go/eac/commands
+	cmdDir := filepath.Join(workspaceRoot, "go", "eac", "commands")
+	outputPath := filepath.Join(toolsDir, binaryName)
+
+	// Build the binary
+	buildCmd := exec.Command("go", "build", "-o", outputPath, ".")
+	buildCmd.Dir = cmdDir
+	buildCmd.Stdout = os.Stdout
+	buildCmd.Stderr = os.Stderr
+
+	if err := buildCmd.Run(); err != nil {
+		return fmt.Errorf("go build: %w", err)
+	}
+
+	fmt.Printf("   ✅ Built: %s\n", outputPath)
+	return nil
+}
+
 // Build command entry point - builds one or more modules
 func Build() int {
 	args := os.Args[2:] // Skip program name and "build"
@@ -240,6 +276,14 @@ func Build() int {
 	if err != nil {
 		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
+	}
+
+	// Ensure commands binary exists (devbox only - CI uses setup-commands action)
+	if !isCI && !isContainer {
+		if err := ensureCommandsBinary(workspaceRoot); err != nil {
+			log.Errorf("Error: failed to build commands binary: %v", err)
+			return 1
+		}
 	}
 
 	// Load module contracts

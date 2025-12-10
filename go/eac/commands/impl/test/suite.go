@@ -320,30 +320,30 @@ func TestSuite() int {
 	// Phase 1: Discover all tests (Go + Godog)
 	writeln(multiWriter, "%s", output.PhaseHeader(1, "Test Discovery"))
 
-	allTests, err := testing.DiscoverAllTests(workspaceRoot)
+	// Load module registry for inference
+	moduleReport, err := contractsreports.GetModuleContracts(workspaceRoot)
+	var moduleRegistry *modules.Registry
+	if err != nil {
+		log.Errorf("Warning: failed to load module contracts: %v", err)
+	} else {
+		moduleRegistry = moduleReport.Registry
+	}
+
+	// Use unified discovery with suite-specific inferences + module deps
+	allTests, err := testing.DiscoverAndEnrich(workspaceRoot, testing.DiscoveryOptions{
+		Inferences:     suite.Inferences,
+		ModuleRegistry: moduleRegistry,
+	})
 	if err != nil {
 		log.Errorf("failed to discover tests: %v", err)
 		return 1
 	}
 
 	writeln(multiWriter, "Discovered %d tests", len(allTests))
-	writeln(multiWriter, "")
-
-	// Phase 2: Apply inference rules
-	writeln(multiWriter, "%s", output.PhaseHeader(2, "Tag Inference"))
-	allTests = testing.ApplyInferences(allTests, suite.Inferences)
 	writeln(multiWriter, "Applied %d inference rules", len(suite.Inferences))
-
-	// Load module registry for module-based inference
-	moduleReport, err := contractsreports.GetModuleContracts(workspaceRoot)
-	if err != nil {
-		log.Errorf("Warning: failed to load module contracts: %v", err)
-	} else {
-		// Infer system dependencies from module dependencies
-		allTests = testing.InferSystemDepsFromModuleDeps(allTests, moduleReport.Registry)
+	if moduleRegistry != nil {
 		writeln(multiWriter, "Inferred system deps from module types")
 	}
-
 	writeln(multiWriter, "")
 
 	// Phase 3: Select tests for suite
