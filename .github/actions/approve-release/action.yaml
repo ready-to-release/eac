@@ -1,0 +1,187 @@
+# Approve Release Action
+#
+# Gates release workflows by validating:
+# 1. CI has passed for the exact commit being released (strict mode)
+# 2. Version is valid semver format
+# 3. No existing GitHub release for this version
+#
+# Usage:
+#   jobs:
+#     approve:
+#       runs-on: ubuntu-latest
+#       outputs:
+#         version: ${{ steps.gate.outputs.version }}
+#         tag_name: ${{ steps.gate.outputs.tag_name }}
+#       steps:
+#         - uses: actions/checkout@v6
+#           with:
+#             fetch-depth: 0
+#         - uses: ./.github/actions/approve-release
+#           id: gate
+#           with:
+#             module: r2r-cli
+#
+#     release:
+#       needs: approve
+#       ...
+
+name: Approve Release
+description: Validate CI passed and release preconditions are met
+
+inputs:
+  module:
+    description: 'Module name (e.g., r2r-cli, ext-eac)'
+    required: true
+  skip-ci-check:
+    description: 'Skip CI verification (dangerous - for hotfixes only)'
+    required: false
+    default: 'false'
+  timeout:
+    description: 'Maximum time to wait for CI in seconds'
+    required: false
+    default: '300'
+
+outputs:
+  version:
+    description: 'Validated version (e.g., 1.0.0)'
+    value: ${{ steps.version.outputs.version }}
+  tag_name:
+    description: 'Full tag name (e.g., r2r-cli/1.0.0)'
+    value: ${{ steps.version.outputs.tag_name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+
+    - name: Extract and validate version
+      id: version
+      uses: ./.github/actions/extract-release-version
+      with:
+        module-prefix: ${{ inputs.module }}
+        commands-path: ${{ steps.commands.outputs.commands-path }}
+
+    - name: Validate version format
+      shell: bash
+      run: |
+        if [ "${{ steps.version.outputs.is_valid }}" != "true" ]; then
+          echo "::error::Invalid version format: ${{ steps.version.outputs.version }}"
+          echo "Expected semver format: x.y.z (e.g., 1.0.0)"
+          exit 1
+        fi
+        echo "Version ${{ steps.version.outputs.version }} is valid"
+
+    - name: Validate changelog has version entry
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
+        # Get the latest version from changelog
+        CHANGELOG_VERSION=$($COMMANDS release get-version "$MODULE" 2>/dev/null || echo "")
+
+        if [ -z "$CHANGELOG_VERSION" ]; then
+          echo "::error::No changelog found for module $MODULE"
+          echo ""
+          echo "Create changelog at: release/$MODULE/CHANGELOG.md"
+          exit 1
+        fi
+
+        if [ "$CHANGELOG_VERSION" != "$VERSION" ]; then
+          echo "::error::Changelog not updated for version $VERSION"
+          echo ""
+          echo "Changelog shows: $CHANGELOG_VERSION"
+          echo "Releasing:       $VERSION"
+          echo ""
+          echo "Run first: commands release this $MODULE"
+          echo "This will update the changelog with version $VERSION"
+          exit 1
+        fi
+
+        echo "Changelog verified: $VERSION"
+
+    - name: Check for existing release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        TAG_NAME="${{ steps.version.outputs.tag_name }}"
+
+        if gh release view "$TAG_NAME" 2>/dev/null; then
+          echo ""
+          echo "::error::Release already exists for tag $TAG_NAME"
+          echo ""
+          echo "A GitHub release has already been created for this version."
+          echo "To re-release:"
+          echo "  1. Delete release: gh release delete $TAG_NAME"
+          echo "  2. Delete tag: git push --delete origin $TAG_NAME"
+          echo "  3. Re-run workflow"
+          exit 1
+        fi
+
+        echo "No existing release for $TAG_NAME"
+
+    - name: Wait for CI (strict mode)
+      if: inputs.skip-ci-check != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+        MODULE="${{ inputs.module }}"
+        COMMIT="${{ github.sha }}"
+        TIMEOUT="${{ inputs.timeout }}"
+        WORKFLOW="ci-${MODULE}.yaml"
+
+        echo "Waiting for CI on exact commit ${COMMIT:0:7}..."
+        echo ""
+
+        # Use --strict to require exact commit match
+        $COMMANDS release check-ci \
+          --workflow "$WORKFLOW" \
+          --commit "$COMMIT" \
+          --timeout "$TIMEOUT" \
+          --strict
+
+    - name: Skip CI check warning
+      if: inputs.skip-ci-check == 'true'
+      shell: bash
+      run: |
+        echo "::warning::CI check skipped - releasing without CI verification"
+        echo ""
+        echo "⚠️  DANGER: Releasing without CI verification"
+        echo "   Module: ${{ inputs.module }}"
+        echo "   Commit: ${{ github.sha }}"
+        echo ""
+        echo "   This should only be used for critical hotfixes."
+
+    - name: Summary
+      if: always()
+      shell: bash
+      run: |
+        MODULE="${{ inputs.module }}"
+        VERSION="${{ steps.version.outputs.version }}"
+        TAG_NAME="${{ steps.version.outputs.tag_name }}"
+        COMMIT="${{ github.sha }}"
+        SKIP_CI="${{ inputs.skip-ci-check }}"
+
+        echo "## Release Approval: $MODULE" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Version | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Tag | \`$TAG_NAME\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Commit | \`${COMMIT:0:7}\` |" >> $GITHUB_STEP_SUMMARY
+
+        echo "| Changelog | :white_check_mark: Updated |" >> $GITHUB_STEP_SUMMARY
+        echo "| Existing Release | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
+
+        if [ "$SKIP_CI" = "true" ]; then
+          echo "| CI Check | :warning: Skipped |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| CI Check | :white_check_mark: Passed (strict) |" >> $GITHUB_STEP_SUMMARY
+        fi

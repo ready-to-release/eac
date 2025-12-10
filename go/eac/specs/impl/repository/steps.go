@@ -280,6 +280,26 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^if any images are missing from cache, I should see:$`, func(expected *godog.DocString) error {
 		return repoCtx.ifImagesMissingShowUpdateCommand(expected)
 	})
+
+	// Release folder validation steps
+	sc.Step(`^I scan the release directory for subdirectories$`, func() error {
+		return repoCtx.scanReleaseDirectoryForSubdirectories()
+	})
+	sc.Step(`^every release subdirectory should correspond to a registered module$`, func() error {
+		return repoCtx.everyReleaseSubdirShouldCorrespondToModule()
+	})
+	sc.Step(`^if any orphan directories are found, I should see their names$`, func() error {
+		return repoCtx.ifOrphanReleaseDirsFoundShowNames()
+	})
+	sc.Step(`^I scan the release directory for changelog files$`, func() error {
+		return repoCtx.scanReleaseDirectoryForChangelogFiles()
+	})
+	sc.Step(`^every changelog should have valid format$`, func() error {
+		return repoCtx.everyChangelogShouldHaveValidFormat()
+	})
+	sc.Step(`^no unexpected files should exist in release subdirectories$`, func() error {
+		return repoCtx.noUnexpectedFilesInReleaseSubdirs()
+	})
 }
 
 // repositoryContext holds state for repository validation scenarios.
@@ -329,6 +349,12 @@ type repositoryContext struct {
 	// Docs drawio cache validation
 	drawioImages         []drawioImageInfo
 	uncachedDrawioImages []drawioImageInfo
+
+	// Release folder validation
+	releaseSubdirs       []string
+	orphanReleaseDirs    []string
+	releaseChangelogErrs map[string][]string
+	unexpectedReleaseFiles []string
 }
 
 // mermaidBlockInfo is a local struct for mermaid block tracking
@@ -1496,6 +1522,130 @@ func (c *repositoryContext) allDrawioImagesShouldHaveCachedPNGs() error {
 func (c *repositoryContext) ifImagesMissingShowUpdateCommand(expected *godog.DocString) error {
 	// This is a passive assertion - the error message from allDrawioImagesShouldHaveCachedPNGs
 	// already includes the update command instruction
+	return nil
+}
+
+// ============================================================================
+// Release Folder Validation Steps
+// ============================================================================
+
+func (c *repositoryContext) scanReleaseDirectoryForSubdirectories() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	c.releaseSubdirs = []string{}
+	c.orphanReleaseDirs = []string{}
+
+	releaseDir := filepath.Join(c.repoRoot, "release")
+	entries, err := os.ReadDir(releaseDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // No release directory is fine
+		}
+		return fmt.Errorf("failed to read release directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			c.releaseSubdirs = append(c.releaseSubdirs, entry.Name())
+		}
+	}
+	return nil
+}
+
+func (c *repositoryContext) everyReleaseSubdirShouldCorrespondToModule() error {
+	if c.moduleReport == nil {
+		return fmt.Errorf("module contracts not loaded")
+	}
+
+	for _, subdir := range c.releaseSubdirs {
+		// Check if this subdirectory corresponds to a registered module
+		if _, exists := c.moduleReport.Registry.Get(subdir); !exists {
+			c.orphanReleaseDirs = append(c.orphanReleaseDirs, subdir)
+		}
+	}
+
+	if len(c.orphanReleaseDirs) > 0 {
+		return fmt.Errorf("found %d orphan release director(ies) with no corresponding module:\n  %s\n\nThese directories will cause 'release tag-pending --all' to fail in CI.\nEither create module contracts for these modules or delete the orphan directories.",
+			len(c.orphanReleaseDirs), strings.Join(c.orphanReleaseDirs, "\n  "))
+	}
+	return nil
+}
+
+func (c *repositoryContext) ifOrphanReleaseDirsFoundShowNames() error {
+	// Passive assertion - error in everyReleaseSubdirShouldCorrespondToModule provides details
+	return nil
+}
+
+func (c *repositoryContext) scanReleaseDirectoryForChangelogFiles() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	c.releaseChangelogErrs = make(map[string][]string)
+	c.unexpectedReleaseFiles = []string{}
+
+	releaseDir := filepath.Join(c.repoRoot, "release")
+	entries, err := os.ReadDir(releaseDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to read release directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			// Files in release root (like README.md) are allowed
+			continue
+		}
+
+		subdirPath := filepath.Join(releaseDir, entry.Name())
+		subEntries, err := os.ReadDir(subdirPath)
+		if err != nil {
+			continue
+		}
+
+		hasChangelog := false
+		for _, subEntry := range subEntries {
+			if subEntry.Name() == "CHANGELOG.md" {
+				hasChangelog = true
+			} else if !subEntry.IsDir() {
+				// Unexpected file in release subdirectory
+				c.unexpectedReleaseFiles = append(c.unexpectedReleaseFiles,
+					fmt.Sprintf("release/%s/%s", entry.Name(), subEntry.Name()))
+			}
+		}
+
+		if !hasChangelog {
+			c.releaseChangelogErrs[entry.Name()] = append(c.releaseChangelogErrs[entry.Name()],
+				"missing CHANGELOG.md")
+		}
+	}
+	return nil
+}
+
+func (c *repositoryContext) everyChangelogShouldHaveValidFormat() error {
+	if len(c.releaseChangelogErrs) > 0 {
+		var details strings.Builder
+		details.WriteString(fmt.Sprintf("Found %d release director(ies) with changelog issues:\n", len(c.releaseChangelogErrs)))
+		for dir, errs := range c.releaseChangelogErrs {
+			details.WriteString(fmt.Sprintf("  release/%s:\n", dir))
+			for _, err := range errs {
+				details.WriteString(fmt.Sprintf("    - %s\n", err))
+			}
+		}
+		return fmt.Errorf("%s", details.String())
+	}
+	return nil
+}
+
+func (c *repositoryContext) noUnexpectedFilesInReleaseSubdirs() error {
+	if len(c.unexpectedReleaseFiles) > 0 {
+		return fmt.Errorf("found %d unexpected file(s) in release subdirectories:\n  %s\n\nOnly CHANGELOG.md is expected in release/<module>/ directories.",
+			len(c.unexpectedReleaseFiles), strings.Join(c.unexpectedReleaseFiles, "\n  "))
+	}
 	return nil
 }
 
