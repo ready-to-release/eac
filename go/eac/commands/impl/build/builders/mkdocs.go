@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -396,22 +395,11 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	return 0
 }
 
-// ensureMkDocsImage ensures the cli-mkdocs Docker image exists.
-// In CI workflows, the image is pre-built by docker/build-push-action with GHA caching.
-// This function checks if the image exists first; only builds if missing.
+// ensureMkDocsImage ensures the cli-mkdocs Docker image is built.
+// Always runs docker build - Docker's layer cache handles efficiency.
 // In DinD mode, dockerfilePath and contextPath are host (Windows) paths.
 func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter io.Writer) error {
-	// Check if image already exists (e.g., pre-built by CI workflow)
-	cmd := exec.Command("docker", "image", "inspect", imageName)
-	if err := cmd.Run(); err == nil {
-		Logln(logWriter, "   Docker image exists: %s (using pre-built)", imageName)
-		return nil
-	}
-
-	// Image doesn't exist, build it
 	Logln(logWriter, "   Building Docker image: %s", imageName)
-	Logln(logWriter, "   Dockerfile: %s", dockerfilePath)
-	Logln(logWriter, "   Context: %s", contextPath)
 
 	exitCode := RunCommandWithLog("", logWriter,
 		"docker", "build",

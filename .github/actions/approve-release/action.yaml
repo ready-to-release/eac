@@ -162,12 +162,16 @@ runs:
     - name: Summary
       if: always()
       shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        RUN_ID: ${{ github.run_id }}
       run: |
         MODULE="${{ inputs.module }}"
         VERSION="${{ steps.version.outputs.version }}"
         TAG_NAME="${{ steps.version.outputs.tag_name }}"
         COMMIT="${{ github.sha }}"
         SKIP_CI="${{ inputs.skip-ci-check }}"
+        WORKFLOW="ci-${MODULE}.yaml"
 
         echo "## Release Approval: $MODULE" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -177,11 +181,18 @@ runs:
         echo "| Tag | \`$TAG_NAME\` |" >> $GITHUB_STEP_SUMMARY
         echo "| Commit | \`${COMMIT:0:7}\` |" >> $GITHUB_STEP_SUMMARY
 
-        echo "| Changelog | :white_check_mark: Updated |" >> $GITHUB_STEP_SUMMARY
-        echo "| Existing Release | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
+        # Show success status only if job succeeded
+        if [ "${{ job.status }}" != "failure" ]; then
+          echo "| Changelog | :white_check_mark: Updated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Existing Release | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
 
-        if [ "$SKIP_CI" = "true" ]; then
-          echo "| CI Check | :warning: Skipped |" >> $GITHUB_STEP_SUMMARY
+          if [ "$SKIP_CI" = "true" ]; then
+            echo "| CI Check | :warning: Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| CI Check | :white_check_mark: Passed (strict) |" >> $GITHUB_STEP_SUMMARY
+          fi
         else
-          echo "| CI Check | :white_check_mark: Passed (strict) |" >> $GITHUB_STEP_SUMMARY
+          # On failure, add diagnostic link
+          echo "" >> $GITHUB_STEP_SUMMARY
+          $COMMANDS pipeline ci summary-link $RUN_ID --type release --workflow "$WORKFLOW" --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
         fi

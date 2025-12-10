@@ -63,7 +63,6 @@ jobs:
       - name: Build and release
         uses: ./.github/actions/attested-cli-build
         with:
-          module: r2r-cli
           version: ${{ needs.approve.outputs.version }}
           tag_name: ${{ needs.approve.outputs.tag_name }}
 
@@ -75,30 +74,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Delete tag on failure
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ needs.approve.outputs.tag_name }}
-        run: |
-          if [ -z "$TAG_NAME" ]; then
-            echo "No tag name available, skipping cleanup"
-            exit 0
-          fi
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-          echo "Release failed - cleaning up tag: $TAG_NAME"
-
-          # Delete any partial release first (if it exists)
-          if gh release view "$TAG_NAME" --repo "${{ github.repository }}" 2>/dev/null; then
-            echo "Deleting partial release..."
-            gh release delete "$TAG_NAME" --repo "${{ github.repository }}" --yes || true
-          fi
-
-          # Delete the tag using gh api (no checkout needed)
-          echo "Deleting tag from remote..."
-          gh api --method DELETE "repos/${{ github.repository }}/git/refs/tags/${TAG_NAME}" 2>/dev/null || echo "Tag not found or already deleted"
-
-          echo ""
-          echo "Cleanup complete. You can re-run the release after fixing the issue."
+      - name: Cleanup failed release
+        uses: ./.github/actions/cleanup-failed-release
+        with:
+          tag_name: ${{ needs.approve.outputs.tag_name }}
 
   summary:
     name: Summary
@@ -106,13 +88,25 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
       - name: Generate summary
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ needs.approve.outputs.version }}"
           TAG_NAME="${{ needs.approve.outputs.tag_name }}"
           APPROVE_RESULT="${{ needs.approve.result }}"
           RELEASE_RESULT="${{ needs.release.result }}"
           CLEANUP_RESULT="${{ needs.cleanup.result }}"
+          RUN_ID="${{ github.run_id }}"
+          COMMIT="${{ github.sha }}"
 
           if [ "$APPROVE_RESULT" = "failure" ]; then
             echo "## :x: Release Failed - Approval" >> $GITHUB_STEP_SUMMARY
@@ -120,12 +114,16 @@ jobs:
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "Tag cleaned up. Retry after fixing." >> $GITHUB_STEP_SUMMARY
             fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link $RUN_ID --type release --workflow ci-r2r-cli.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
           elif [ "$RELEASE_RESULT" = "failure" ]; then
             echo "## :x: Release Failed - Build/Publish" >> $GITHUB_STEP_SUMMARY
             if [ "$CLEANUP_RESULT" = "success" ]; then
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "Tag cleaned up. Retry with same version." >> $GITHUB_STEP_SUMMARY
             fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link $RUN_ID --type release --workflow ci-r2r-cli.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
           elif [ "$RELEASE_RESULT" = "success" ]; then
             RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
             echo "## :white_check_mark: r2r-cli v$VERSION Released" >> $GITHUB_STEP_SUMMARY

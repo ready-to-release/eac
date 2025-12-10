@@ -143,7 +143,17 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
       - name: Generate Summary
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "## Scheduled Full CI" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -180,26 +190,10 @@ jobs:
             echo "- **Integration issue**: Modules work individually but fail together" >> $GITHUB_STEP_SUMMARY
             echo "- **Environment drift**: CI environment changed between runs" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Diagnose Locally" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "# View the failed full rebuild run" >> $GITHUB_STEP_SUMMARY
-            echo "gh run view ${RUN_ID} --repo ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# View failed step logs from the full rebuild" >> $GITHUB_STEP_SUMMARY
-            echo "gh run view ${RUN_ID} --repo ${{ github.repository }} --log-failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# Compare with recent incremental CI runs" >> $GITHUB_STEP_SUMMARY
-            echo "gh run list --repo ${{ github.repository }} --workflow trigger-ci.yaml --branch main --limit 5" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# Check which modules failed in full rebuild" >> $GITHUB_STEP_SUMMARY
-            echo "gh run view ${RUN_ID} --repo ${{ github.repository }} --json jobs --jq '.jobs[] | select(.conclusion != \"success\") | {name, conclusion}'" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link "$RUN_ID" --type deviation >> $GITHUB_STEP_SUMMARY
           else
             echo "| Result | Unknown |" >> $GITHUB_STEP_SUMMARY
           fi
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Fail on deviation
         if: needs.check-and-trigger.outputs.result == 'failure'

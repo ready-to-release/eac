@@ -119,8 +119,21 @@ func loadRepositoryConfigUnmerged(repoRoot string) (*RepositoryConfig, error) {
 	return &cfg, nil
 }
 
-// TestImplPath returns the full path to a module's test implementation
+// TestImplPath returns the full path to a module's test implementation.
+// Panics if module not found - invalid moniker is a programming error.
+// Checks module contract for custom test_impl path before using default convention.
 func (c *RepositoryConfig) TestImplPath(moniker string) string {
+	module, found := c.GetModule(moniker)
+	if !found {
+		panic("TestImplPath: unknown module " + moniker)
+	}
+
+	// Use custom test_impl if defined in module contract
+	if module.Files.Repo.TestImpl != "" {
+		return module.Files.Repo.TestImpl
+	}
+
+	// Default convention: {test_impl_root}/{moniker}
 	return c.Paths.TestImplRoot + "/" + moniker
 }
 

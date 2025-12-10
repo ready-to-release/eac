@@ -19,7 +19,6 @@
 #         - uses: actions/checkout@v6
 #         - uses: ./.github/actions/attested-cli-build
 #           with:
-#             module: r2r-cli
 #             version: 1.0.0
 #             tag_name: r2r-cli/1.0.0
 
@@ -27,14 +26,11 @@ name: Attested CLI Build
 description: Build, attest, and publish CLI binaries to GitHub Releases
 
 inputs:
-  module:
-    description: 'Module name (e.g., r2r-cli)'
-    required: true
   version:
     description: 'Version to build (e.g., 1.0.0)'
     required: true
   tag_name:
-    description: 'Full tag name (e.g., r2r-cli/1.0.0)'
+    description: 'Git tag name (e.g., r2r-cli/1.0.0)'
     required: true
   build-args:
     description: 'Extra build arguments'
@@ -49,85 +45,31 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Setup Commands Binary
-      id: commands
-      uses: ./.github/actions/setup-commands
-
-    - name: Install UPX
-      shell: bash
-      run: |
-        echo "Installing UPX for binary compression..."
-        sudo apt-get update && sudo apt-get install -y upx-ucl
-        upx --version
-
-    - name: Build binaries
-      shell: bash
-      env:
-        VERSION: ${{ inputs.version }}
-        MODULE: ${{ inputs.module }}
-        BUILD_ARGS: ${{ inputs.build-args }}
-      run: |
-        COMMANDS="${{ steps.commands.outputs.commands-path }}"
-        echo "Building $MODULE with version $VERSION..."
-        echo "Build args: $BUILD_ARGS"
-        $COMMANDS build "$MODULE" $BUILD_ARGS --version "$VERSION" --no-tidy
-
-    - name: Verify binaries
-      shell: bash
-      env:
-        MODULE: ${{ inputs.module }}
-      run: |
-        echo "Verifying built binaries..."
-        ls -lh "out/build/$MODULE/"
-
-        # Expected binary patterns for CLI modules
-        BINARY_PREFIX="r2r"
-        if [ "$MODULE" = "ext-eac" ]; then
-          BINARY_PREFIX="eac"
-        fi
-
-        REQUIRED_FILES=(
-          "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64"
-          "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64-upx"
-          "out/build/$MODULE/${BINARY_PREFIX}-linux-arm64"
-          "out/build/$MODULE/${BINARY_PREFIX}-darwin-amd64"
-          "out/build/$MODULE/${BINARY_PREFIX}-darwin-arm64"
-          "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64.exe"
-          "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64-upx.exe"
-        )
-
-        for file in "${REQUIRED_FILES[@]}"; do
-          if [ ! -f "$file" ]; then
-            echo "❌ Error: Required file missing: $file"
-            exit 1
-          fi
-          size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
-          size_mb=$(echo "scale=1; $size / 1048576" | bc)
-          echo "✅ Found: $file (${size_mb} MB)"
-        done
-
-        echo ""
-        echo "Testing Linux binary version:"
-        chmod +x "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64"
-        "./out/build/$MODULE/${BINARY_PREFIX}-linux-amd64" version || true
+    - name: Build Module
+      uses: ./.github/actions/build-module
+      with:
+        module: r2r-cli
+        artifact-name: build-artifacts-r2r-cli
+        upload-artifact: 'true'
+        extra-args: ${{ inputs.build-args }}
 
     - name: Generate build attestations
       uses: actions/attest-build-provenance@v3
       with:
         subject-path: |
-          out/build/${{ inputs.module }}/r2r-linux-amd64
-          out/build/${{ inputs.module }}/r2r-linux-amd64-upx
-          out/build/${{ inputs.module }}/r2r-linux-arm64
-          out/build/${{ inputs.module }}/r2r-darwin-amd64
-          out/build/${{ inputs.module }}/r2r-darwin-arm64
-          out/build/${{ inputs.module }}/r2r-windows-amd64.exe
-          out/build/${{ inputs.module }}/r2r-windows-amd64-upx.exe
+          out/build/r2r-cli/r2r-linux-amd64
+          out/build/r2r-cli/r2r-linux-amd64-upx
+          out/build/r2r-cli/r2r-linux-arm64
+          out/build/r2r-cli/r2r-darwin-amd64
+          out/build/r2r-cli/r2r-darwin-arm64
+          out/build/r2r-cli/r2r-windows-amd64.exe
+          out/build/r2r-cli/r2r-windows-amd64-upx.exe
 
     - name: Create release notes
       id: release_notes
       shell: bash
       env:
-        MODULE: ${{ inputs.module }}
+        MODULE: r2r-cli
         VERSION: ${{ inputs.version }}
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
@@ -142,20 +84,17 @@ runs:
         }
 
         BINARY_PREFIX="r2r"
-        if [ "$MODULE" = "ext-eac" ]; then
-          BINARY_PREFIX="eac"
-        fi
 
-        SIZE_LINUX_AMD64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64")
-        SIZE_LINUX_ARM64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-linux-arm64")
-        SIZE_DARWIN_AMD64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-darwin-amd64")
-        SIZE_DARWIN_ARM64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-darwin-arm64")
-        SIZE_WINDOWS_AMD64=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64.exe")
-        SIZE_LINUX_AMD64_UPX=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64-upx")
-        SIZE_WINDOWS_AMD64_UPX=$(get_size_mb "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64-upx.exe")
+        SIZE_LINUX_AMD64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-linux-amd64")
+        SIZE_LINUX_ARM64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-linux-arm64")
+        SIZE_DARWIN_AMD64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-darwin-amd64")
+        SIZE_DARWIN_ARM64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-darwin-arm64")
+        SIZE_WINDOWS_AMD64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-windows-amd64.exe")
+        SIZE_LINUX_AMD64_UPX=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-linux-amd64-upx")
+        SIZE_WINDOWS_AMD64_UPX=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-windows-amd64-upx.exe")
 
         cat << EOF > release_notes.md
-        # $MODULE v$VERSION
+        # r2r-cli v$VERSION
 
         ## Installation
 
@@ -203,14 +142,11 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
-        MODULE: ${{ inputs.module }}
+        MODULE: r2r-cli
         VERSION: ${{ inputs.version }}
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
         BINARY_PREFIX="r2r"
-        if [ "$MODULE" = "ext-eac" ]; then
-          BINARY_PREFIX="eac"
-        fi
 
         echo "Creating release for tag: $TAG_NAME"
 
@@ -218,29 +154,29 @@ runs:
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "Manual trigger: creating tag and release together"
           gh release create "$TAG_NAME" \
-            --title "$MODULE v$VERSION" \
+            --title "r2r-cli v$VERSION" \
             --notes-file release_notes.md \
             --target "${{ github.sha }}" \
-            "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64" \
-            "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64-upx" \
-            "out/build/$MODULE/${BINARY_PREFIX}-linux-arm64" \
-            "out/build/$MODULE/${BINARY_PREFIX}-darwin-amd64" \
-            "out/build/$MODULE/${BINARY_PREFIX}-darwin-arm64" \
-            "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64.exe" \
-            "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64-upx.exe"
+            "out/build/r2r-cli/${BINARY_PREFIX}-linux-amd64" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-linux-amd64-upx" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-linux-arm64" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-darwin-amd64" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-darwin-arm64" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-windows-amd64.exe" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-windows-amd64-upx.exe"
         else
           echo "Tag trigger: using existing tag"
           gh release create "$TAG_NAME" \
-            --title "$MODULE v$VERSION" \
+            --title "r2r-cli v$VERSION" \
             --notes-file release_notes.md \
             --verify-tag \
-            "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64" \
-            "out/build/$MODULE/${BINARY_PREFIX}-linux-amd64-upx" \
-            "out/build/$MODULE/${BINARY_PREFIX}-linux-arm64" \
-            "out/build/$MODULE/${BINARY_PREFIX}-darwin-amd64" \
-            "out/build/$MODULE/${BINARY_PREFIX}-darwin-arm64" \
-            "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64.exe" \
-            "out/build/$MODULE/${BINARY_PREFIX}-windows-amd64-upx.exe"
+            "out/build/r2r-cli/${BINARY_PREFIX}-linux-amd64" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-linux-amd64-upx" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-linux-arm64" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-darwin-amd64" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-darwin-arm64" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-windows-amd64.exe" \
+            "out/build/r2r-cli/${BINARY_PREFIX}-windows-amd64-upx.exe"
         fi
 
         RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
@@ -260,13 +196,13 @@ runs:
       if: always()
       shell: bash
       env:
-        MODULE: ${{ inputs.module }}
+        MODULE: r2r-cli
         VERSION: ${{ inputs.version }}
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
         RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
 
-        echo "## :package: $MODULE v$VERSION Released" >> $GITHUB_STEP_SUMMARY
+        echo "## :package: r2r-cli v$VERSION Released" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
