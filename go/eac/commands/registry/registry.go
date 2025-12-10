@@ -173,9 +173,48 @@ type flagDefinition struct {
 	Attributes   map[string]string // type, default, shorthand, usage, required, completion
 }
 
+// translateCrossCompilePath converts a compile-time file path to a runtime path
+// when running a cross-compiled binary. This handles the case where a binary
+// compiled on Linux (with paths like /home/runner/work/eac/eac/...) is executed
+// on Windows where those paths don't exist.
+func translateCrossCompilePath(compilePath string) string {
+	// If the file already exists, use it as-is
+	if _, err := os.Stat(compilePath); err == nil {
+		return compilePath
+	}
+
+	// Check for Linux CI path pattern: /home/runner/work/<repo>/<repo>/...
+	// We need to extract the relative path after the repo root and resolve it locally
+	linuxCIPrefix := "/home/runner/work/"
+	if strings.HasPrefix(compilePath, linuxCIPrefix) {
+		// Path format: /home/runner/work/eac/eac/go/eac/commands/...
+		// We need to extract: go/eac/commands/...
+		parts := strings.SplitN(compilePath[len(linuxCIPrefix):], "/", 3)
+		if len(parts) >= 3 {
+			// parts[0] = repo name, parts[1] = repo name again, parts[2] = relative path
+			relativePath := parts[2]
+			// Try to find the file relative to current working directory
+			if _, err := os.Stat(relativePath); err == nil {
+				return relativePath
+			}
+			// Also try with backslashes for Windows
+			windowsPath := strings.ReplaceAll(relativePath, "/", "\\")
+			if _, err := os.Stat(windowsPath); err == nil {
+				return windowsPath
+			}
+		}
+	}
+
+	// Fallback: return original path (will fail gracefully in caller)
+	return compilePath
+}
+
 // extractCommandMetadata parses a Go source file to extract command metadata from header comments
 func extractCommandMetadata(filePath string) commandMetadata {
 	var metadata commandMetadata
+
+	// Handle cross-compiled binaries (e.g., Linux binary running on Windows)
+	filePath = translateCrossCompilePath(filePath)
 
 	file, err := os.Open(filePath)
 	if err != nil {

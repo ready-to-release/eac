@@ -227,8 +227,9 @@ func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot st
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
 
-		// For tools_binary option, also copy to tools directory
-		if module.IsToolsBinary() {
+		// For tools_binary option, also copy to tools directory (local dev only)
+		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+		if !isCI && module.IsToolsBinary() {
 			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
 				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
 			}
@@ -308,6 +309,19 @@ func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot 
 			continue
 		}
 
+		// For commands_binary, copy native binary to tools directory for local dev
+		// Skip in CI - there the binary is built/uploaded as artifact via setup-commands action
+		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+		if !isCI && module.IsToolsBinary() && target.goos == runtime.GOOS && target.goarch == runtime.GOARCH {
+			toolsBinaryName := "commands"
+			if target.goos == "windows" {
+				toolsBinaryName = "commands.exe"
+			}
+			if err := copyToToolsDir(outputPath, toolsBinaryName, workspaceRoot, logWriter); err != nil {
+				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
+			}
+		}
+
 		successCount++
 	}
 
@@ -381,8 +395,9 @@ func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, worksp
 	if exitCode == 0 {
 		Logln(logWriter, "✅ Built executable: %s", binaryName)
 
-		// For commands_binary capability, also copy to tools directory so the CI tool binary stays fresh
-		if isCommandsBinary {
+		// For commands_binary capability, copy to tools directory (local dev only)
+		isCI := os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+		if !isCI && isCommandsBinary {
 			if err := copyToToolsDir(binaryPath, binaryName, workspaceRoot, logWriter); err != nil {
 				Logln(logWriter, "⚠️  Failed to copy to tools dir: %v", err)
 			}
