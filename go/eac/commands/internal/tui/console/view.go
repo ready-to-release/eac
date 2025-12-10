@@ -22,17 +22,22 @@ func (m Model) View() string {
 }
 
 // ViewFinal renders a clean plain-text version of all panes (no ANSI escape codes)
-// Used for post-exit summary when using alt screen mode
+// Used for post-exit summary when using alt screen mode.
+// Shows expanded content: up to 40 lines for Init, up to 30 for Run, all Summary details.
 func (m Model) ViewFinal() string {
 	var b strings.Builder
 
-	// Render all three panes in plain text (no ANSI styling)
-	initH, runH, summaryH := m.calculatePaneHeights()
+	// Final render uses expanded heights to show full content
+	const (
+		finalInitHeight    = 40 // Show full initialization output
+		finalRunHeight     = 30 // Show recent run output
+		finalSummaryHeight = 50 // Show all summary details including module table
+	)
 
-	// Render Init pane
+	// Render Init pane with expanded height
 	b.WriteString(m.renderPaneHeaderPlain(PhaseInit))
 	b.WriteString("\n")
-	b.WriteString(m.renderPaneContentPlain(PhaseInit, initH))
+	b.WriteString(m.renderPaneContentPlainExpanded(PhaseInit, finalInitHeight))
 	b.WriteString("\n")
 	b.WriteString(m.renderPaneFooterPlain(PhaseInit))
 	b.WriteString("\n")
@@ -41,7 +46,7 @@ func (m Model) ViewFinal() string {
 	if m.panes[PhaseRun].Status != PhasePending {
 		b.WriteString(m.renderPaneHeaderPlain(PhaseRun))
 		b.WriteString("\n")
-		b.WriteString(m.renderPaneContentPlain(PhaseRun, runH))
+		b.WriteString(m.renderPaneContentPlainExpanded(PhaseRun, finalRunHeight))
 		b.WriteString("\n")
 		b.WriteString(m.renderPaneFooterPlain(PhaseRun))
 		b.WriteString("\n")
@@ -51,7 +56,7 @@ func (m Model) ViewFinal() string {
 	if m.summaryData != nil {
 		b.WriteString(m.renderPaneHeaderPlain(PhaseSummary))
 		b.WriteString("\n")
-		b.WriteString(m.renderPaneContentPlain(PhaseSummary, summaryH))
+		b.WriteString(m.renderSummaryContentPlainExpanded())
 		b.WriteString("\n")
 		b.WriteString(m.renderPaneFooterPlain(PhaseSummary))
 		b.WriteString("\n")
@@ -662,6 +667,114 @@ func (m Model) renderSummaryContentPlain(height int) string {
 		b.WriteString("│  " + text)
 
 		if i < numLines-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	return b.String()
+}
+
+// renderPaneContentPlainExpanded renders buffer content for final display.
+// Unlike renderPaneContentPlain, this only renders actual lines (no blank padding).
+func (m Model) renderPaneContentPlainExpanded(phase Phase, maxHeight int) string {
+	var b strings.Builder
+	pane := m.panes[phase]
+
+	// Get all lines from buffer, capped at maxHeight
+	allLines := pane.Buffer.All()
+	lines := allLines
+	if len(lines) > maxHeight {
+		lines = lines[len(lines)-maxHeight:]
+	}
+
+	for i, line := range lines {
+		// Render line without styling, strip newlines to prevent multi-line rendering
+		text := strings.ReplaceAll(line.Text, "\n", " ")
+		text = strings.ReplaceAll(text, "\r", "")
+		maxLen := m.width - 4
+		if maxLen < 10 {
+			maxLen = 10
+		}
+		if len(text) > maxLen {
+			text = text[:maxLen-1] + "…"
+		}
+		b.WriteString("│  " + text)
+		if i < len(lines)-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	return b.String()
+}
+
+// renderSummaryContentPlainExpanded renders all Summary content without height limit.
+func (m Model) renderSummaryContentPlainExpanded() string {
+	var b strings.Builder
+	data := m.summaryData
+
+	// Build content lines
+	var contentLines []string
+
+	// Line 1: Primary status with timing
+	icon := "✓"
+	statusText := "Complete"
+	if !data.Success {
+		icon = "✗"
+		statusText = "Failed"
+	}
+	primaryStatus := fmt.Sprintf("%s %s (%s)", icon, statusText, formatElapsed(data.TotalTime))
+	contentLines = append(contentLines, primaryStatus)
+	contentLines = append(contentLines, "") // Blank line
+
+	// Lines 3-4: Phase summaries
+	if data.InitSummary != "" {
+		initIcon := "✓"
+		if m.panes[PhaseInit].Status == PhaseFailed {
+			initIcon = "✗"
+		}
+		contentLines = append(contentLines, fmt.Sprintf("%s %s: %s", initIcon, PhaseNameInitialization, data.InitSummary))
+	}
+	if data.RunSummary != "" {
+		runIcon := "✓"
+		if m.panes[PhaseRun].Status == PhaseFailed {
+			runIcon = "✗"
+		}
+		runName := m.runPhaseName
+		if runName == "" {
+			runName = "Run"
+		}
+		contentLines = append(contentLines, fmt.Sprintf("%s %s: %s", runIcon, runName, data.RunSummary))
+	}
+
+	// Add blank line before details
+	if len(data.Details) > 0 {
+		contentLines = append(contentLines, "")
+	}
+
+	// Add all detail lines (no truncation)
+	contentLines = append(contentLines, data.Details...)
+
+	// Add blank line before next steps
+	if data.NextSteps != "" && len(contentLines) > 0 {
+		contentLines = append(contentLines, "")
+	}
+
+	// Last line: Next steps
+	if data.NextSteps != "" {
+		contentLines = append(contentLines, data.NextSteps)
+	}
+
+	// Render all lines (no height limit)
+	for i, text := range contentLines {
+		maxLen := m.width - 4
+		if maxLen < 10 {
+			maxLen = 10
+		}
+		if len(text) > maxLen {
+			text = text[:maxLen-1] + "…"
+		}
+		b.WriteString("│  " + text)
+		if i < len(contentLines)-1 {
 			b.WriteString("\n")
 		}
 	}

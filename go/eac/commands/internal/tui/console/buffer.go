@@ -131,6 +131,11 @@ func (rb *RingBuffer) Clear() {
 	rb.count = 0
 }
 
+// All returns all lines in chronological order.
+func (rb *RingBuffer) All() []Line {
+	return rb.Last(rb.Count())
+}
+
 // LastByLevel returns the last n lines filtered by level.
 func (rb *RingBuffer) LastByLevel(n int, level Level) []Line {
 	rb.mu.RLock()
