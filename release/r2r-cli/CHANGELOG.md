@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.18] - 2025-12-10
+
+### Changed
+
+- chore(deps): bump golang.org/x/sys from 0.38.0 to 0.39.0 in /go/r2r/cli (#47)
+- chore(deps): bump github.com/spf13/cobra from 1.10.1 to 1.10.2 in /go/r2r/cli (#48)
+- refactor(multi-module): consolidate AI configuration framework
+- chore(multi-module): expand documentation and enhance artifact handling
+- chore(multi-module): refactor workflows and add build summaries
+- refactor(multi-module): unify risk profile command and architecture
+- chore(multi-module): refactor CI/CD and improve cross-platform paths
+- chore(multi-module): add books support and documentation infrastructure
+- refactor(multi-module): implement test isolation for work-pull command
+- chore(deps): bump actions/checkout from 4 to 6 (#19)
+- chore(deps)!: bump actions/upload-artifact from 4 to 5 (#21)
+- chore(multi-module): standardize template tagging system
+- chore(deps)!: bump actions/download-artifact from 4 to 6 (#5)
+- chore(deps): bump golang.org/x/sys from 0.37.0 to 0.38.0 in /go/r2r/cli (#12)
+- chore(deps): bump github.com/docker/docker from 28.0.0+incompatible to 28.5.2+incompatible in /go/r2r/cli (#14)
+- ci: add acceptance
+
+### Fixed
+
+- fix(multi-module): enhance ci workflows and error handling
+
 ## [0.0.17] - 2025-12-02
 
 ### Changed
@@ -126,7 +151,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release with core CLI functionality
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.17...HEAD
+[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.18...HEAD
+[0.0.18]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.17...r2r-cli/0.0.18
 [0.0.17]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.16...r2r-cli/0.0.17
 [0.0.16]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.15...r2r-cli/0.0.16
 [0.0.15]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.14...r2r-cli/0.0.15
