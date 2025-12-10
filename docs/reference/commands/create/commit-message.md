@@ -4,9 +4,7 @@
 
 Complete technical reference for the `commit` command.
 
-For practical usage and workflows, see the [How-to Guide](../../how-to-guides/eac/commands/commit-command.md).
-
-To understand the AI generation process, see [AI Process Explanation](../../how-to-guides/eac/commands/commit-ai-process.md).
+For practical usage and workflows, see the [How-to Guide](../../../how-to-guides/eac/commands/development-workflow/make-commits-with-ai.md).
 
 ## Command Syntax
 
@@ -565,8 +563,7 @@ Files modified:
 
 ## See Also
 
-- [How-to Guide](../../how-to-guides/eac/commands/commit-command.md) - Quick start and common workflows
-- [AI Process Explanation](../../how-to-guides/eac/commands/commit-ai-process.md) - How the AI generation works
-- [Workspace Commands](../../how-to-guides/eac/commands/areas/workspace-commands.md) - Workspace-aware development
+- [How-to Guide](../../../how-to-guides/eac/commands/development-workflow/make-commits-with-ai.md) - Quick start and common workflows
+- [Workspace Commands](../work/index.md) - Workspace-aware development
 
 {{ diataxis_footer() }}

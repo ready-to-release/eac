@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 60 minutes
 **Prerequisites:** [Making Your First Release](../core-workflows/making-first-release.md), GitHub Actions basics
 
 ## Planned Content
@@ -171,11 +170,11 @@ jobs:
 
       - name: Build
         if: steps.changed.outputs.modules != ''
-        run: r2r build ${{ steps.changed.outputs.modules }}
+        run: r2r build ⟪ steps.changed.outputs.modules ⟫
 
       - name: Test (commit suite)
         if: steps.changed.outputs.modules != ''
-        run: r2r test ${{ steps.changed.outputs.modules }}
+        run: r2r test ⟪ steps.changed.outputs.modules ⟫
 
       - name: Validate
         run: r2r validate

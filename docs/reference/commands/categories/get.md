@@ -303,7 +303,7 @@ jobs:
 
       - name: Build
         run: |
-          for module in ${{ steps.changed.outputs.modules }}; do
+          for module in ⟪ steps.changed.outputs.modules ⟫; do
             r2r eac build $module
           done
 ```
@@ -315,7 +315,7 @@ jobs:
   generate-matrix:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ⟪ steps.set-matrix.outputs.matrix ⟫
     steps:
       - id: set-matrix
         run: |
@@ -325,9 +325,9 @@ jobs:
   build:
     needs: generate-matrix
     strategy:
-      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+      matrix: ⟪ fromJson(needs.generate-matrix.outputs.matrix) ⟫
     steps:
-      - run: r2r eac build ${{ matrix.module }}
+      - run: r2r eac build ⟪ matrix.module ⟫
 ```
 
 ### Build Script

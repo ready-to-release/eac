@@ -17,8 +17,8 @@ Release management and version control for changelogs and tagging.
 | [release tag-pending](./tag-pending.md) | Check for missing git tags |
 | [release generate-module-calver](./generate-module-calver.md) | Generate calver tag for module |
 | [release r2r-cli](./r2r-cli.md) | Release r2r-cli with semver |
-| [validate release](./validate-release.md) | Validate changelog format |
-| [validate release-version](./validate-release-version.md) | Validate version format |
+| [validate release](./../validate/release.md) | Validate changelog format |
+| [validate release-version](../validate/release-version.md) | Validate version format |
 
 ## Quick Examples
 

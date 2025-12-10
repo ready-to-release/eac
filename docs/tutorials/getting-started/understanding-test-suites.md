@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 20 minutes
 **Prerequisites:** [Your First Module](./first-module.md)
 
 ## Planned Content

@@ -89,7 +89,7 @@ r2r eac get changed-modules-ci | jq -r '.changed_modules[]' | xargs r2r eac buil
     echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
 - name: Build Changed Modules
-  run: r2r eac build ${{ steps.changed.outputs.modules }}
+  run: r2r eac build ⟪ steps.changed.outputs.modules ⟫
 ```
 
 ## Common Issues

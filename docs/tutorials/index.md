@@ -8,53 +8,53 @@ Step-by-step guides to help you get started and master r2r and Everything-as-Cod
 
 Choose your path based on your experience level:
 
-### Beginner Path (1-2 hours)
+### Beginner Path
 
 **Goal:** Get r2r installed and understand the fundamentals
 
 Start here if you're new to r2r and Everything-as-Code:
 
 1. [Getting Started](./getting-started/) - Installation, first spec, first module, test suites
-   - [Quick Start](./getting-started/quick-start.md) - Install and run first commands (15 min)
-   - [Your First Specification](./getting-started/first-specification.md) - Write Gherkin specs (20 min)
-   - [Your First Module](./getting-started/first-module.md) - Create a Go module (30 min)
-   - [Understanding Test Suites](./getting-started/understanding-test-suites.md) - Test levels and suites (20 min)
+   - [Quick Start](./getting-started/quick-start.md) - Install and run first commands
+   - [Your First Specification](./getting-started/first-specification.md) - Write Gherkin specs
+   - [Your First Module](./getting-started/first-module.md) - Create a Go module
+   - [Understanding Test Suites](./getting-started/understanding-test-suites.md) - Test levels and suites
 
-### Developer Path (2-3 hours)
+### Developer Path
 
 **Goal:** Master daily development workflows
 
 Continue here to learn productive development practices:
 
 2. [Core Workflows](./core-workflows/) - TDD, building, testing, worktrees, releases
-   - [TDD with Specifications](./core-workflows/tdd-with-specifications.md) - Full TDD loop (45 min)
-   - [Building and Testing Changes](./core-workflows/building-and-testing.md) - Efficient builds (30 min)
-   - [Working with Git Worktrees](./core-workflows/working-with-worktrees.md) - Parallel development (30 min)
-   - [Making Your First Release](./core-workflows/making-first-release.md) - Changelog and tags (45 min)
+   - [TDD with Specifications](./core-workflows/tdd-with-specifications.md) - Full TDD loop
+   - [Building and Testing Changes](./core-workflows/building-and-testing.md) - Efficient builds
+   - [Working with Git Worktrees](./core-workflows/working-with-worktrees.md) - Parallel development
+   - [Making Your First Release](./core-workflows/making-first-release.md) - Changelog and tags
 
-### Advanced Path (3-4 hours)
+### Advanced Path
 
 **Goal:** Implement compliance automation and CI/CD
 
 Continue here for power user features:
 
 3. [Advanced Practices](./advanced-practices/) - Compliance, CI/CD, multi-module, extensions
-   - [Compliance-as-Code Basics](./advanced-practices/compliance-as-code-basics.md) - GxP automation (45 min)
-   - [CI/CD Integration](./advanced-practices/ci-cd-integration.md) - GitHub Actions setup (60 min)
-   - [Multi-Module Development](./advanced-practices/multi-module-development.md) - Dependencies (45 min)
-   - [Creating Custom Commands](./advanced-practices/creating-custom-commands.md) - Extend CLI (60 min)
+   - [Compliance-as-Code Basics](./advanced-practices/compliance-as-code-basics.md) - GxP automation
+   - [CI/CD Integration](./advanced-practices/ci-cd-integration.md) - GitHub Actions setup
+   - [Multi-Module Development](./advanced-practices/multi-module-development.md) - Dependencies
+   - [Creating Custom Commands](./advanced-practices/creating-custom-commands.md) - Extend CLI
 
-### Specialized Topics (30-60 minutes each)
+### Specialized Topics
 
 **Goal:** Deep dive into specific areas
 
 Choose topics based on your needs:
 
 4. [Specialized Topics](./specialized-topics/) - BDD, architecture, security, TypeScript
-   - [Effective BDD Scenarios](./specialized-topics/effective-bdd-scenarios.md) - Example Mapping (45 min)
-   - [Architecture Documentation](./specialized-topics/architecture-documentation.md) - C4 diagrams (60 min)
-   - [Security Scanning Workflow](./specialized-topics/security-scanning-workflow.md) - SAST, SBOM (45 min)
-   - [TypeScript Module Setup](./specialized-topics/typescript-module-setup.md) - npm modules (30 min)
+   - [Effective BDD Scenarios](./specialized-topics/effective-bdd-scenarios.md) - Example Mapping
+   - [Architecture Documentation](./specialized-topics/architecture-documentation.md) - C4 diagrams
+   - [Security Scanning Workflow](./specialized-topics/security-scanning-workflow.md) - SAST, SBOM
+   - [TypeScript Module Setup](./specialized-topics/typescript-module-setup.md) - npm modules
 
 ---
 
@@ -64,7 +64,6 @@ Each tutorial follows a consistent structure:
 
 - **Prerequisites** - What you need before starting
 - **Learning objectives** - What you'll accomplish
-- **Estimated time** - How long it takes
 - **Step-by-step instructions** - Detailed walkthrough with commands
 - **Key concepts** - Important takeaways
 - **Troubleshooting** - Common issues and solutions

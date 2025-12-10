@@ -4,7 +4,6 @@
 
 Learn how to write Gherkin feature specifications that describe system behavior in a structured, testable format using the Given/When/Then pattern.
 
-**Estimated time:** 20 minutes
 **Prerequisites:** [Quick Start Guide](./quick-start.md), basic understanding of software requirements
 
 ## What You'll Learn
@@ -287,8 +286,8 @@ Congratulations! You've successfully:
 ## Next Steps
 
 ### Continue Learning
-- **Next tutorial:** [Your First Module](./first-module.md) - Create a Go module with tests (30 min)
-- **Advanced:** [TDD with Specifications](../core-workflows/tdd-with-specifications.md) - Full TDD development loop (45 min)
+- **Next tutorial:** [Your First Module](./first-module.md) - Create a Go module with tests
+- **Advanced:** [TDD with Specifications](../core-workflows/tdd-with-specifications.md) - Full TDD development loop
 
 ### Apply What You Learned
 Now that you can write specifications, you can accomplish these tasks:

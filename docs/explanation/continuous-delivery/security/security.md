@@ -354,7 +354,7 @@ docker run -t owasp/zap2docker-stable zap-api-scan.py \
 - name: OWASP ZAP Baseline Scan
   run: |
     docker run -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable \
-      zap-baseline.py -t ${{ secrets.APP_URL }} -r zap-report.html
+      zap-baseline.py -t ⟪ secrets.APP_URL ⟫ -r zap-report.html
 
 - name: Upload ZAP Report
   uses: actions/upload-artifact@v3
@@ -440,7 +440,7 @@ trivy fs --scanners secret --skip-dirs vendor .
 - name: Run Trivy vulnerability scanner
   uses: aquasecurity/trivy-action@master
   with:
-    image-ref: 'myapp:${{ github.sha }}'
+    image-ref: 'myapp:⟪ github.sha ⟫'
     format: 'sarif'
     output: 'trivy-results.sarif'
     severity: 'HIGH,CRITICAL'

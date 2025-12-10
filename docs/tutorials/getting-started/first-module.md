@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 30 minutes
 **Prerequisites:** [Quick Start Guide](./quick-start.md), Go 1.21+ installed
 
 ## Planned Content

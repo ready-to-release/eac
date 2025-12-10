@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 45 minutes
 **Prerequisites:** [Working with Git Worktrees](./working-with-worktrees.md), completed feature ready to release
 
 ## Planned Content

@@ -30,7 +30,7 @@ r2r eac validate release
 ## See Also
 
 - [release this](./this.md)
-- [validate release](./validate-release.md)
+- [validate release](../validate/release.md)
 - [release Commands](../categories/release.md)
 
 {{ diataxis_footer() }}

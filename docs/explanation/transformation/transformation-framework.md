@@ -194,7 +194,7 @@ Write test code for specifications:
 - Implement L3 tests (PLTE vertical testing)
 - Implement L4 tests (production monitoring)
 
-**Reference**: [Three-layer testing approach](../specifications/three-layer-approach.md)
+**Reference**: [Three-layer testing approach](../specifications/concepts/three-layer-approach.md)
 
 **Deliverable**: Automated test suite with passing tests
 

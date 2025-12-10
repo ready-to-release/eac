@@ -7,11 +7,11 @@ Quick reference for the most commonly used EAC commands. Commands are organized 
 ## Quick Navigation
 
 - [Module Development](#module-development)
-- [Building & Testing](#building--testing)
+- [Building & Testing](#building-testing)
 - [Git Workflow](#git-workflow)
 - [CI/CD](#cicd)
 - [Release Management](#release-management)
-- [Quality & Validation](#quality--validation)
+- [Quality & Validation](#quality-validation)
 - [Documentation](#documentation)
 - [Security Scanning](#security-scanning)
 

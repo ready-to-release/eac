@@ -654,7 +654,7 @@ r2r eac release-this <module>      # Create release
 
 ## Related Documentation
 
-- [Overview](./overview.md) - System overview and key concepts
+- [Overview](./index.md) - System overview and key concepts
 - [Architecture](./architecture.md) - System architecture and components
 - [Contracts](./contracts.md) - Contract system and YAML schemas
 

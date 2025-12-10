@@ -228,12 +228,12 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/tutorials/"><img src="https://img.shields.io/badge/1-Install_R2R-3b82f6?style=for-the-badge" alt="Step 1"></a><br>
 <sub>CLI for your platform</sub><br>
-<sup><a href="https://ready-to-release.github.io/eac/tutorials/">Linux/macOS</a> · <a href="https://ready-to-release.github.io/eac/tutorials/">Windows</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start">Linux/macOS</a> · <a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start">Windows</a></sup>
 </td>
 <td align="center">
-<a href="https://ready-to-release.github.io/eac/tutorials/"><img src="https://img.shields.io/badge/2-Setup-10b981?style=for-the-badge" alt="Step 2"></a><br>
-<a href="https://ready-to-release.github.io/eac/tutorials/"><code>r2r init</code></a><br>
-<a href="https://ready-to-release.github.io/eac/tutorials/"><code>r2r install eac</code></a>
+<a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start"><img src="https://img.shields.io/badge/2-Setup-10b981?style=for-the-badge" alt="Step 2"></a><br>
+<a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start"><code>r2r init</code></a><br>
+<a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start"><code>r2r install eac</code></a>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/other/init"><img src="https://img.shields.io/badge/3-Initialize-8b5cf6?style=for-the-badge" alt="Step 3"></a><br>

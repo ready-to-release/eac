@@ -8,7 +8,7 @@ This repository is organized as a **modular monorepo** with clearly defined modu
 
 **Quick Reference**: For complete documentation on the R2R CLI and EAC system, see:
 
-- [R2R and EAC Overview](./overview.md) - System overview with repository structure
+- [R2R and EAC Overview](./index.md) - System overview with repository structure
 - [Modules](./modules.md) - Module system and dependency management
 - [Contracts](./contracts.md) - Module contracts and configuration
 
@@ -156,7 +156,7 @@ For comprehensive information about the R2R and EAC system:
 
 ### Core Documentation
 
-- [R2R and EAC Overview](./overview.md) - System overview with repository structure
+- [R2R and EAC Overview](./index.md) - System overview with repository structure
 - [Architecture](./architecture.md) - System architecture, components, and execution models
 - [Contracts](./contracts.md) - Contract system and YAML configuration
 - [Modules](./modules.md) - Module system and dependency management

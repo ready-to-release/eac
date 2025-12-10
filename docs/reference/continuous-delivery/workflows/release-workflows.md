@@ -135,10 +135,10 @@ Verifies that CI has run successfully on the commit being released.
   run: |
     commands release check-ci \
       --workflow ci-r2r-cli.yaml \
-      --commit ${{ github.sha }} \
+      --commit ⟪ github.sha ⟫ \
       --timeout 300
   env:
-    GH_TOKEN: ${{ github.token }}
+    GH_TOKEN: ⟪ github.token ⟫
 ```
 
 **Behavior:**
@@ -158,7 +158,7 @@ Verifies that CI has run successfully on the commit being released.
   with:
     module-prefix: r2r-cli
     legacy-prefixes: src-cli
-    commands-path: ${{ steps.commands.outputs.commands-path }}
+    commands-path: ⟪ steps.commands.outputs.commands-path ⟫
 ```
 
 **Outputs:**
@@ -173,7 +173,7 @@ Verifies that CI has run successfully on the commit being released.
 - name: Verify version is valid
   if: steps.extract_version.outputs.is_valid != 'true'
   run: |
-    echo "Error: Invalid version format: ${{ steps.extract_version.outputs.version }}"
+    echo "Error: Invalid version format: ⟪ steps.extract_version.outputs.version ⟫"
     echo "Expected format: x.y.z (e.g., 1.0.0)"
     exit 1
 ```
@@ -183,7 +183,7 @@ Verifies that CI has run successfully on the commit being released.
 ```yaml
 - name: Check for existing release
   run: |
-    TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+    TAG_NAME="⟪ steps.extract_version.outputs.tag_name ⟫"
 
     if gh release view "$TAG_NAME" 2>/dev/null; then
       echo "Error: Release already exists for tag $TAG_NAME"
@@ -209,7 +209,7 @@ Verifies that CI has run successfully on the commit being released.
 ```yaml
 - name: Build binaries for multiple platforms
   env:
-    VERSION: ${{ steps.extract_version.outputs.version }}
+    VERSION: ⟪ steps.extract_version.outputs.version ⟫
   run: |
     commands build r2r-cli --all --version "$VERSION" --no-tidy
 ```
@@ -290,11 +290,11 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
   id: release_notes
   run: |
     cat << EOF > release_notes.md
-    # r2r CLI ${{ steps.extract_version.outputs.version }}
+    # r2r CLI ⟪ steps.extract_version.outputs.version ⟫
 
     ## What's New
 
-    Release of r2r CLI version ${{ steps.extract_version.outputs.version }}.
+    Release of r2r CLI version ⟪ steps.extract_version.outputs.version ⟫.
 
     ## Installation
 
@@ -319,15 +319,15 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
 ```yaml
 - name: Create GitHub Release with binaries
   run: |
-    TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
-    VERSION="${{ steps.extract_version.outputs.version }}"
+    TAG_NAME="⟪ steps.extract_version.outputs.tag_name ⟫"
+    VERSION="⟪ steps.extract_version.outputs.version ⟫"
 
-    if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+    if [ "⟪ github.event_name ⟫" = "workflow_dispatch" ]; then
       # Manual trigger: create tag and release together
       gh release create "$TAG_NAME" \
         --title "r2r CLI v$VERSION" \
         --notes-file release_notes.md \
-        --target "${{ github.sha }}" \
+        --target "⟪ github.sha ⟫" \
         out/build/r2r-cli/*
     else
       # Tag trigger: use existing tag
@@ -338,7 +338,7 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
         out/build/r2r-cli/*
     fi
   env:
-    GH_TOKEN: ${{ github.token }}
+    GH_TOKEN: ⟪ github.token ⟫
 ```
 
 **Behavior:**
@@ -352,10 +352,10 @@ gh attestation verify r2r-linux-amd64 --repo <owner>/<repo>
 ```yaml
 - name: Verify release assets
   run: |
-    gh release view ${{ steps.extract_version.outputs.tag_name }} \
+    gh release view ⟪ steps.extract_version.outputs.tag_name ⟫ \
       --json assets --jq '.assets[] | .name'
   env:
-    GH_TOKEN: ${{ github.token }}
+    GH_TOKEN: ⟪ github.token ⟫
 ```
 
 #### Step 13: Generate Summaries

@@ -22,6 +22,6 @@ The complete software lifecycle from initiation through end-of-life, balancing r
 
 The drawing below is interactive, allowing you to navigate to relevant sections of the documentation by clicking the boxes.
 
-![](../../assets/lifecycle/lifecycle.drawio)
+![](../../assets/lifecycle/lifecycle.drawio){ width="100%" }
 
 {{ diataxis_footer() }}

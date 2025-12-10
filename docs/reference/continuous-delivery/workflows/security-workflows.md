@@ -83,7 +83,7 @@ strategy:
 - name: Initialize CodeQL
   uses: github/codeql-action/init@v3
   with:
-    languages: ${{ matrix.language }}
+    languages: ⟪ matrix.language ⟫
     queries: security-extended
 ```
 
@@ -118,7 +118,7 @@ strategy:
 - name: Perform CodeQL Analysis
   uses: github/codeql-action/analyze@v3
   with:
-    category: "/language:${{ matrix.language }}"
+    category: "/language:⟪ matrix.language ⟫"
 ```
 
 **Output:**

@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 30 minutes
 **Prerequisites:** [Building and Testing Changes](./building-and-testing.md), Git fundamentals
 
 ## Planned Content

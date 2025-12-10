@@ -30,6 +30,5 @@ r2r eac show environments | tail -n +4 | wc -l
 ## See Also
 
 - [get environments](../get/environments.md) - JSON output
-- [Deployment Guide](../../../how-to-guides/eac/deployment/overview.md)
 
 {{ diataxis_footer() }}

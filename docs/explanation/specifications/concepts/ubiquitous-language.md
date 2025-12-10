@@ -184,7 +184,7 @@ When domain language evolves:
 - Team explains terms clearly to newcomers
 - Stakeholders recognize terminology in specifications
 
-**See**: [Review and Iterate](review-and-iterate.md) for ongoing specification maintenance practices.
+**See**: [Review and Iterate](../quality/review-and-iterate.md) for ongoing specification maintenance practices.
 
 ---
 

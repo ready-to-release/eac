@@ -237,7 +237,7 @@ export EAC_AI_API_KEY=sk-...
 - name: Configure EAC
   env:
     EAC_AI_PROVIDER: anthropic
-    EAC_AI_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    EAC_AI_API_KEY: ⟪ secrets.ANTHROPIC_API_KEY ⟫
   run: r2r eac init --non-interactive
 ```
 
@@ -466,7 +466,7 @@ export EAC_VERBOSE=true
 
    ```yaml
    env:
-     EAC_AI_API_KEY: ${{ secrets.API_KEY }}
+     EAC_AI_API_KEY: ⟪ secrets.API_KEY ⟫
    ```
 
 3. **Document required configuration**
@@ -573,7 +573,6 @@ r2r eac extension-meta
 - [test](../categories/test.md) - Run tests
 - [work](../categories/work.md) - Workspace management
 - [get modules](../get/modules.md) - Module metadata
-- [Build Guide](../../../how-to-guides/eac/building/overview.md)
-- [Configuration Guide](../../../how-to-guides/eac/configuration/overview.md)
+- [Configuration Guide](../../../how-to-guides/eac/configuration/index.md)
 
 {{ diataxis_footer() }}

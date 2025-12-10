@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 45 minutes
 **Prerequisites:** [Your First Specification](../getting-started/first-specification.md), [TDD with Specifications](../core-workflows/tdd-with-specifications.md)
 
 ## Planned Content

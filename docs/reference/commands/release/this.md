@@ -34,7 +34,7 @@ r2r eac release this
 
 - [release changelog](./changelog.md)
 - [release check-ci](./check-ci.md)
-- [validate release](./validate-release.md)
+- [validate release](./../validate/release.md)
 - [release Commands](../categories/release.md)
 
 {{ diataxis_footer() }}

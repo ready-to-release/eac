@@ -106,7 +106,7 @@ A business-readable, domain-specific language for describing software behavior. 
 
 ### MCP (Model Context Protocol)
 
-A protocol enabling LLMs to use EAC commands as tools. See [MCP Server Setup](./how-to-guides/eac/configuration/claude-mcp-setup.md).
+A protocol enabling LLMs to use EAC commands as tools.
 
 ### Module
 

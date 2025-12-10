@@ -15,11 +15,12 @@ R2R and EAC implement a **container-based, contract-driven architecture** for ev
 All architecture diagrams referenced in this document can be viewed interactively using Structurizr:
 
 ```bash
-r2r eac serve-design
+r2r eac serve design
 # Opens http://localhost:8080
 ```
 
 **Design files:**
+
 - **eac-commands**: [specs/eac-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-commands/.design/)
 - **eac-core**: [specs/eac-core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-core/.design/)
 - **eac-mcp-commands**: [specs/eac-mcp-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-commands/.design/)
@@ -391,7 +392,7 @@ api_key_env: ANTHROPIC_API_KEY
 
 ## Related Documentation
 
-- [Overview](./overview.md) - System overview and key concepts
+- [Overview](./index.md) - System overview and key concepts
 - [Contracts](./contracts.md) - Contract system and YAML schemas
 - [Modules](./modules.md) - Module system and types
 

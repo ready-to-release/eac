@@ -202,7 +202,7 @@ Work commands manage parallel development workspaces, enabling multiple feature 
 
 **When to use**: When you need to work on multiple features simultaneously or want isolated development environments.
 
-**See also**: [Work Commands Category](../categories/work.md), [Workspace Commands Guide](../../how-to-guides/eac/commands/areas/workspace-commands.md)
+**See also**: [Work Commands Category](../categories/work.md), [Workspace Commands Guide](../work/index.md)
 
 ---
 
@@ -302,7 +302,6 @@ Scan commands perform various security scans and generate compliance evidence.
 
 **When to use**: In pre-commit hooks (fast scans), CI pipelines (comprehensive scans), and for compliance evidence generation.
 
-**See also**: [Scan Commands Category](../categories/scan.md), [Security Commands Guide](../../how-to-guides/eac/commands/areas/security-commands.md)
 
 ---
 

@@ -31,7 +31,7 @@ Follow the guidance in the [Specifications section](../specifications/index.md).
 
 ## Risk Controls
 
-Follow the guidance in the [Risk Controls article](../specifications/risk-controls.md).
+Follow the guidance in the [Risk Controls article](../specifications/compliance/risk-controls.md).
 
 ---
 

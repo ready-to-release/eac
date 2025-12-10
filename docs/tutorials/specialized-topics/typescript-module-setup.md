@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 30 minutes
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), Node.js and npm installed
 
 ## Planned Content

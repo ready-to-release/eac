@@ -31,6 +31,6 @@ r2r eac show config | grep -A 3 "Repository"
 
 - [get config](../get/config.md) - JSON output
 - [init](../other/init.md) - Configure AI provider
-- [Configuration Guide](../../../how-to-guides/eac/configuration/overview.md)
+- [Configuration Guide](../../../how-to-guides/eac/configuration/index.md)
 
 {{ diataxis_footer() }}

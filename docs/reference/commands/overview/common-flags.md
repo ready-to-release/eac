@@ -75,8 +75,6 @@ r2r eac create pr --debug
 - Understanding the generation process
 - Customizing AI prompts
 
-**See also**: [Commit AI Process](../../how-to-guides/eac/commands/commit-ai-process.md)
-
 ---
 
 ## Common Flag Patterns

@@ -334,7 +334,7 @@ The CD Model integrates three testing methodologies:
 - Process: Define criteria → Validate in production
 - Horizontal testing with real services
 
-See **[Three-Layer Testing Approach](../../specifications/three-layer-approach.md)** for detailed integration.
+See **[Three-Layer Testing Approach](../../specifications/concepts/three-layer-approach.md)** for detailed integration.
 
 ---
 
@@ -362,6 +362,6 @@ Maximize testing at L0-L3 (left) and L4 (right) to avoid horizontal pre-producti
 ## References
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
-- [Three-Layer Testing Approach](../../specifications/three-layer-approach.md)
+- [Three-Layer Testing Approach](../../specifications/concepts/three-layer-approach.md)
 
 {{ diataxis_footer() }}

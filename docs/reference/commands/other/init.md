@@ -199,7 +199,7 @@ echo $GOOGLE_API_KEY
 # In your workflow:
 - name: Initialize AI provider
   env:
-    ANTHROPIC_API_KEY: $\{{ secrets.ANTHROPIC_API_KEY }}
+    ANTHROPIC_API_KEY: ⟪ secrets.ANTHROPIC_API_KEY ⟫
   run: eac init --ai claude-api
 ```
 
@@ -381,7 +381,6 @@ eac init --ai claude-api --debug
 
 ## See Also
 
-- [Init Command Guide](../../how-to-guides/eac/commands/init-command.md) - Quick start and basic usage
-- [Init Security Guide](../../how-to-guides/eac/commands/init-security.md) - Security best practices
+- [Init Command Guide](../../../how-to-guides/eac/commands/getting-started/setup-ai-provider.md) - Quick start and basic usage
 
 {{ diataxis_footer() }}

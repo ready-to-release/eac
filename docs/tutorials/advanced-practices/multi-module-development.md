@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 45 minutes
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), [Building and Testing Changes](../core-workflows/building-and-testing.md)
 
 ## Planned Content

@@ -2,9 +2,8 @@
 
 {{ page_breadcrumb() }}
 
-Get up and running with the r2r CLI in 15 minutes. This tutorial walks you through installation, initialization, and running your first commands.
+Get up and running with the r2r CLI. This tutorial walks you through installation, initialization, and running your first commands.
 
-**Estimated time:** 15 minutes
 **Prerequisites:** Command-line access, internet connection
 
 ## What You'll Learn
@@ -177,7 +176,7 @@ Congratulations! You've successfully:
 ## Next Steps
 
 ### Continue Learning
-- **Next tutorial:** [Your First Feature Specification](./first-specification.md) - Learn to write Gherkin specifications (20 min)
+- **Next tutorial:** [Your First Feature Specification](./first-specification.md) - Learn to write Gherkin specifications
 
 ### Apply What You Learned
 Now that you know the basics of r2r, you can accomplish these tasks:

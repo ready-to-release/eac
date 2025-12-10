@@ -53,6 +53,6 @@ While this section is being developed, see:
 
 For detailed specification contracts and validation rules:
 
-**→ [Specification Reference](../../reference/specifications/)** (Coming)
+**→ Specification Reference** (Coming)
 
 {{ diataxis_footer() }}

@@ -609,6 +609,5 @@ r2r eac test debug
 - [show test-summary](../show/test-summary.md) - Test execution summary
 - [show test-timings](../show/test-timings.md) - Test performance analysis
 - [get tests](../get/tests.md) - Test metadata as JSON
-- [Testing Guide](../../../how-to-guides/eac/testing/overview.md)
 
 {{ diataxis_footer() }}

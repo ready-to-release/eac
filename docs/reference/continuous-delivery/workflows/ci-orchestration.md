@@ -135,7 +135,7 @@ Determines which modules need to be rebuilt based on file changes.
 **Manual Override:**
 
 ```bash
-if [ "${{ inputs.trigger-all }}" = "true" ]; then
+if [ "⟪ inputs.trigger-all ⟫" = "true" ]; then
   # Build all modules with CI workflows
 fi
 ```
@@ -144,7 +144,7 @@ fi
 
 ```bash
 # Compare against PR base SHA
-RESULT=$(commands get changed-modules-ci --pr-base "${{ github.event.pull_request.base.sha }}" --as-json)
+RESULT=$(commands get changed-modules-ci --pr-base "⟪ github.event.pull_request.base.sha ⟫" --as-json)
 ```
 
 **Push to Main:**
@@ -230,9 +230,9 @@ Dispatches module CI workflows in dependency order.
 for module in $ALL_MODULES; do
   gh workflow run "ci-${module}.yaml" \
     --ref "$DISPATCH_REF" \
-    -f ref=${{ github.ref }} \
-    -f sha=${{ github.sha }} \
-    -f trigger_run_id=${{ github.run_id }}
+    -f ref=⟪ github.ref ⟫ \
+    -f sha=⟪ github.sha ⟫ \
+    -f trigger_run_id=⟪ github.run_id ⟫
 done
 # Child workflows report their own statuses
 ```
@@ -437,6 +437,6 @@ If no modules need rebuilding:
 - Workflow file: `.github/workflows/trigger-ci.yaml`
 - [Overview](./overview.md) - Workflow architecture
 - [CI Modules](./ci-modules.md) - Module CI workflow patterns
-- [Repository Layout](../../repository-layout.md) - Module structure
+- [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure
 
 {{ diataxis_footer() }}

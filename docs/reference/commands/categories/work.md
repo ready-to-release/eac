@@ -444,6 +444,6 @@ fi
 - [show workspaces](../show/workspaces.md) - List all workspaces
 - [create commit-message](../create/commit-message.md) - AI commit messages
 - [create squash-message](../create/squash-message.md) - Squash merge messages
-- [Workspace Commands Guide](../../../how-to-guides/eac/commands/areas/workspace-commands.md)
+- [Workspace Commands Guide](../work/index.md)
 
 {{ diataxis_footer() }}

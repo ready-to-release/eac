@@ -4,18 +4,16 @@
 
 Master advanced workflows including compliance automation, CI/CD integration, multi-module development, and CLI extensibility.
 
-**Estimated time:** 3-4 hours total
-
 ## Learning Path
 
 These tutorials cover advanced topics for power users:
 
-| Tutorial | Time | Description |
-|----------|------|-------------|
-| [Compliance-as-Code Basics](./compliance-as-code-basics.md) | 45 min | Tag specs for GxP compliance, generate risk assessments |
-| [CI/CD Integration](./ci-cd-integration.md) | 60 min | Set up GitHub Actions with quality gates |
-| [Multi-Module Development](./multi-module-development.md) | 45 min | Manage dependencies across multiple modules |
-| [Creating Custom Commands](./creating-custom-commands.md) | 60 min | Extend r2r CLI with custom commands |
+| Tutorial | Description |
+|----------|-------------|
+| [Compliance-as-Code Basics](./compliance-as-code-basics.md) | Tag specs for GxP compliance, generate risk assessments |
+| [CI/CD Integration](./ci-cd-integration.md) | Set up GitHub Actions with quality gates |
+| [Multi-Module Development](./multi-module-development.md) | Manage dependencies across multiple modules |
+| [Creating Custom Commands](./creating-custom-commands.md) | Extend r2r CLI with custom commands |
 
 ## What You'll Learn
 

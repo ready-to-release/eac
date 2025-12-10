@@ -54,13 +54,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ⟪ inputs.ref || github.ref ⟫
 
       - name: Build Module
         uses: ./.github/actions/build-module
         with:
           module: {moniker}
-          trigger-run-id: ${{ inputs.trigger_run_id }}
+          trigger-run-id: ⟪ inputs.trigger_run_id ⟫
 
   test:
     name: Test
@@ -69,14 +69,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ⟪ inputs.ref || github.ref ⟫
 
       - name: Test Module
         uses: ./.github/actions/test-module
         with:
           module: {moniker}
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
+          trigger-run-id: ⟪ inputs.trigger_run_id ⟫
+          suites: ⟪ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' ⟫
 ```
 
 ### Workflow Naming Convention
@@ -171,7 +171,7 @@ Runs both commit and acceptance test suites (full validation)
 **Detection Logic:**
 
 ```yaml
-${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
+⟪ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' ⟫
 ```
 
 ## Module CI Workflows Inventory
@@ -245,13 +245,13 @@ build:
   steps:
     - uses: actions/checkout@v6
       with:
-        ref: ${{ inputs.ref || github.ref }}
+        ref: ⟪ inputs.ref || github.ref ⟫
 
     - name: Build Module
       uses: ./.github/actions/build-module
       with:
         module: eac-commands
-        trigger-run-id: ${{ inputs.trigger_run_id }}
+        trigger-run-id: ⟪ inputs.trigger_run_id ⟫
 ```
 
 **Build Action Behavior:**
@@ -271,15 +271,15 @@ test:
   steps:
     - uses: actions/checkout@v6
       with:
-        ref: ${{ inputs.ref || github.ref }}
+        ref: ⟪ inputs.ref || github.ref ⟫
 
     - name: Test Module
       uses: ./.github/actions/test-module
       with:
         module: eac-commands
-        trigger-run-id: ${{ inputs.trigger_run_id }}
+        trigger-run-id: ⟪ inputs.trigger_run_id ⟫
         # PRs run commit suite only; main/release branches run full suite
-        suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' }}
+        suites: ⟪ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'commit' || 'commit,acceptance' ⟫
 ```
 
 **Test Action Behavior:**
@@ -303,7 +303,7 @@ When `trigger_run_id` is provided, workflows download artifacts from the trigger
   with:
     name: commands-binary
     path: out/tools
-    run-id: ${{ inputs.trigger_run_id }}
+    run-id: ⟪ inputs.trigger_run_id ⟫
 ```
 
 ### Artifact Upload

@@ -249,7 +249,7 @@ jobs:
 
       - name: Build and Test
         run: |
-          for module in ${{ steps.changed.outputs.modules }}; do
+          for module in ⟪ steps.changed.outputs.modules ⟫; do
             r2r eac build $module
             r2r eac test $module
           done
@@ -293,10 +293,10 @@ echo "✓ Release created"
 
 See [How-to Guides](../../how-to-guides/eac/commands/index.md) for practical, task-oriented documentation:
 
-- [Commit Command Guide](../../how-to-guides/eac/commands/commit-command.md) - Generate AI commit messages
-- [Init Command Guide](../../how-to-guides/eac/commands/init-command.md) - Setup AI provider
-- [Workspace Commands Guide](../../how-to-guides/eac/commands/areas/workspace-commands.md) - Use git worktrees
-- [Show Commands Guide](../../how-to-guides/eac/commands/show-commands.md) - Explore repository
+- [Commit Command Guide](../../how-to-guides/eac/commands/development-workflow/make-commits-with-ai.md) - Generate AI commit messages
+- [Init Command Guide](../../how-to-guides/eac/commands/getting-started/setup-ai-provider.md) - Setup AI provider
+- [Workspace Commands Guide](./work/index.md) - Use git worktrees
+- [Show Commands Guide](../../how-to-guides/eac/commands/getting-started/explore-your-repository.md) - Explore repository
 
 ## Contributing
 
@@ -321,8 +321,6 @@ Command reference pages should include:
 - Error handling guidance
 - Links to related commands
 
-See [Command Reference Template](../../contributing/command-reference-template.md) for the standard format.
-
 ## See Also
 
 ### Overview
@@ -342,6 +340,5 @@ See [Command Reference Template](../../contributing/command-reference-template.m
 ### How-to Guides
 
 - [Command Guides](../../how-to-guides/eac/commands/index.md) - Task-oriented guides
-- [Command Areas](../../how-to-guides/eac/commands/areas/index.md) - Functional area guides
 
 {{ diataxis_footer() }}

@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 45 minutes
 **Prerequisites:** [Your First Specification](../getting-started/first-specification.md), [Your First Module](../getting-started/first-module.md)
 
 ## Planned Content

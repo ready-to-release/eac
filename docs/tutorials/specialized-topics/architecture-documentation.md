@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 60 minutes
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), understanding of C4 model
 
 ## Planned Content

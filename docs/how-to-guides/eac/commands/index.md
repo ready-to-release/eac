@@ -43,6 +43,6 @@ Learn how to accomplish specific tasks with EAC commands through practical, step
 
 These how-to guides focus on accomplishing tasks. For complete command syntax and options:
 
-**→ [Command Reference Documentation](../../reference/commands/index.md)**
+**→ [Command Reference Documentation](../../../reference/commands/index.md)**
 
 {{ diataxis_footer() }}

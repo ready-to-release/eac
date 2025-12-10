@@ -4,18 +4,16 @@
 
 Essential workflows for daily development with r2r and Everything-as-Code. These tutorials teach you the practices you'll use every day as a productive developer.
 
-**Estimated time:** 2-3 hours total
-
 ## Learning Path
 
 Follow these tutorials to master core development workflows:
 
-| Tutorial | Time | Description |
-|----------|------|-------------|
-| [TDD with Specifications](./tdd-with-specifications.md) | 45 min | Write spec → implement steps → write code (the full TDD loop) |
-| [Building and Testing Changes](./building-and-testing.md) | 30 min | Build affected modules, run tests, validate dependencies |
-| [Working with Git Worktrees](./working-with-worktrees.md) | 30 min | Parallel development with isolated workspaces |
-| [Making Your First Release](./making-first-release.md) | 45 min | Generate changelog, validate CI, create release tags |
+| Tutorial | Description |
+|----------|-------------|
+| [TDD with Specifications](./tdd-with-specifications.md) | Write spec → implement steps → write code (the full TDD loop) |
+| [Building and Testing Changes](./building-and-testing.md) | Build affected modules, run tests, validate dependencies |
+| [Working with Git Worktrees](./working-with-worktrees.md) | Parallel development with isolated workspaces |
+| [Making Your First Release](./making-first-release.md) | Generate changelog, validate CI, create release tags |
 
 ## What You'll Learn
 

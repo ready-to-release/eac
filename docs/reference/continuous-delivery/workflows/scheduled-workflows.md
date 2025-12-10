@@ -75,7 +75,7 @@ Checks if a full rebuild is needed and triggers it if necessary.
       --branch main \
       --status success \
       --json headSha,createdAt \
-      | jq --arg cutoff "$TWO_HOURS_AGO" --arg sha "${{ github.sha }}" \
+      | jq --arg cutoff "$TWO_HOURS_AGO" --arg sha "⟪ github.sha ⟫" \
         '[.[] | select(.createdAt > $cutoff and .headSha == $sha)] | length')
 
     if [ "${RECENT_SUCCESS:-0}" -gt 0 ]; then
@@ -102,7 +102,7 @@ Checks if a full rebuild is needed and triggers it if necessary.
   if: steps.check.outputs.skip != 'true'
   run: |
     gh workflow run trigger-ci.yaml \
-      --repo ${{ github.repository }} \
+      --repo ⟪ github.repository ⟫ \
       --ref main \
       -f trigger-all=true
 
@@ -136,7 +136,7 @@ Checks if a full rebuild is needed and triggers it if necessary.
   id: wait
   if: steps.check.outputs.skip != 'true' && steps.trigger.outputs.run_id != ''
   run: |
-    RUN_ID="${{ steps.trigger.outputs.run_id }}"
+    RUN_ID="⟪ steps.trigger.outputs.run_id ⟫"
 
     if gh run watch "$RUN_ID" --exit-status; then
       echo "result=success"
@@ -169,9 +169,9 @@ Generates summary and reports deviations.
 ```yaml
 - name: Generate Summary
   run: |
-    SKIPPED="${{ needs.check-and-trigger.outputs.skipped }}"
-    RESULT="${{ needs.check-and-trigger.outputs.result }}"
-    RUN_ID="${{ needs.check-and-trigger.outputs.run_id }}"
+    SKIPPED="⟪ needs.check-and-trigger.outputs.skipped ⟫"
+    RESULT="⟪ needs.check-and-trigger.outputs.result ⟫"
+    RUN_ID="⟪ needs.check-and-trigger.outputs.run_id ⟫"
 
     if [ "$SKIPPED" = "true" ]; then
       echo "No action needed - recent full rebuild exists"

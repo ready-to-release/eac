@@ -19,8 +19,8 @@
 | [release pending](./pending.md) | Check pending changes |
 | [release tag-pending](./tag-pending.md) | Check missing tags |
 | [release r2r-cli](./r2r-cli.md) | Release r2r-cli |
-| [validate release](./validate-release.md) | Validate changelog |
-| [validate release-version](./validate-release-version.md) | Validate version |
+| [validate release](./../validate/release.md) | Validate changelog |
+| [validate release-version](../validate/release-version.md) | Validate version |
 
 ## Examples
 

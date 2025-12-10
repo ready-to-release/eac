@@ -4,18 +4,16 @@
 
 Begin your journey with r2r and Everything-as-Code. These foundational tutorials will take you from installation through creating your first modules and understanding the testing framework.
 
-**Estimated time:** 1-2 hours total
-
 ## Learning Path
 
 Follow these tutorials in order:
 
-| Tutorial | Time | Description |
-|----------|------|-------------|
-| [Quick Start](./quick-start.md) | 15 min | Install r2r CLI and run your first commands |
-| [Your First Specification](./first-specification.md) | 20 min | Write Gherkin specifications using Given/When/Then |
-| [Your First Module](./first-module.md) | 30 min | Create a Go module with tests from scratch |
-| [Understanding Test Suites](./understanding-test-suites.md) | 20 min | Learn test levels and when to use each suite |
+| Tutorial | Description |
+|----------|-------------|
+| [Quick Start](./quick-start.md) | Install r2r CLI and run your first commands |
+| [Your First Specification](./first-specification.md) | Write Gherkin specifications using Given/When/Then |
+| [Your First Module](./first-module.md) | Create a Go module with tests from scratch |
+| [Understanding Test Suites](./understanding-test-suites.md) | Learn test levels and when to use each suite |
 
 ## What You'll Learn
 

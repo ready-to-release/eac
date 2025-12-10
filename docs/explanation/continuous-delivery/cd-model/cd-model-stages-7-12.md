@@ -319,7 +319,7 @@ flowchart LR
 
 ### Deployment Strategies
 
-Stage 10 executes production deployment using one of five strategies. For detailed strategy comparison and selection guidance, see [Environments: Deployment Strategies](../architecture/environments.md#deployment-strategies).
+Stage 10 executes production deployment using one of five strategies. For detailed strategy comparison and selection guidance, see [Environments: Production Environment](../architecture/environments.md#production-environment) and [Deployment Strategies](../deployment/deployment-strategies.md).
 
 **Quick Reference**:
 

@@ -104,7 +104,7 @@ Child workflows download artifacts from the trigger workflow using the `trigger_
   with:
     name: commands-binary
     path: out/tools
-    run-id: ${{ inputs.trigger_run_id }}
+    run-id: ⟪ inputs.trigger_run_id ⟫
 ```
 
 ### Status Check Naming Conventions
@@ -154,7 +154,7 @@ Builds a module using the commands binary.
   uses: ./.github/actions/build-module
   with:
     module: eac-commands
-    trigger-run-id: ${{ inputs.trigger_run_id }}
+    trigger-run-id: ⟪ inputs.trigger_run_id ⟫
 ```
 
 ### `.github/actions/test-module`
@@ -175,7 +175,7 @@ Tests a module using the commands binary.
   uses: ./.github/actions/test-module
   with:
     module: eac-commands
-    trigger-run-id: ${{ inputs.trigger_run_id }}
+    trigger-run-id: ⟪ inputs.trigger_run_id ⟫
     suites: commit,acceptance
 ```
 
@@ -203,13 +203,13 @@ Extracts and validates version from git tag or workflow input.
   uses: ./.github/actions/extract-release-version
   with:
     module-prefix: r2r-cli
-    commands-path: ${{ steps.commands.outputs.commands-path }}
+    commands-path: ⟪ steps.commands.outputs.commands-path ⟫
 ```
 
 ## References
 
 - [CI Orchestration](./ci-orchestration.md) - Detailed trigger-ci.yaml specification
 - [CI Modules](./ci-modules.md) - Module CI workflow patterns
-- [Repository Layout](../../repository-layout.md) - Module structure and dependencies
+- [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure and dependencies
 
 {{ diataxis_footer() }}

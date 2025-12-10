@@ -627,7 +627,7 @@ r2r eac get-config              # Config JSON
 
 ## Related Documentation
 
-- [Overview](./overview.md) - System overview and key concepts
+- [Overview](./index.md) - System overview and key concepts
 - [Architecture](./architecture.md) - System architecture and components
 - [Modules](./modules.md) - Module system and dependency management
 

@@ -18,8 +18,8 @@ The **release** category contains 11 commands for release management and version
 | [release tag-pending](../release/tag-pending.md) | Check for missing git tags |
 | [release generate-module-calver](../release/generate-module-calver.md) | Generate calver tag for module |
 | [release r2r-cli](../release/r2r-cli.md) | Release r2r-cli with semver |
-| [validate release](../release/validate-release.md) | Validate changelog format |
-| [validate release-version](../release/validate-release-version.md) | Validate version format |
+| [validate release](../validate/release.md) | Validate changelog format |
+| [validate release-version](../validate/release-version.md) | Validate version format |
 
 ## Common Use Cases
 
@@ -58,7 +58,7 @@ git tag -a $TAG -m "Release $TAG"
 ## See Also
 
 - [pipeline status](../pipeline/status.md)
-- [validate release](../release/validate-release.md)
+- [validate release](../validate/release.md)
 - [create squash-message](../create/squash-message.md)
 
 {{ diataxis_footer() }}

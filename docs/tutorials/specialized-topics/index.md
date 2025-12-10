@@ -4,16 +4,14 @@
 
 Deep dive tutorials covering specialized areas of r2r and Everything-as-Code. These optional tutorials provide in-depth coverage of specific techniques and tools.
 
-**Estimated time:** Variable (30-60 minutes each)
-
 ## Available Topics
 
-| Tutorial | Time | Description |
-|----------|------|-------------|
-| [Effective BDD Scenarios](./effective-bdd-scenarios.md) | 45 min | Advanced specification techniques with Example Mapping |
-| [Architecture Documentation](./architecture-documentation.md) | 60 min | Generate and maintain C4 diagrams with Structurizr |
-| [Security Scanning Workflow](./security-scanning-workflow.md) | 45 min | SAST, vulnerability scanning, SBOM generation with Trivy |
-| [TypeScript Module Setup](./typescript-module-setup.md) | 30 min | Working with npm modules in the monorepo |
+| Tutorial | Description |
+|----------|-------------|
+| [Effective BDD Scenarios](./effective-bdd-scenarios.md) | Advanced specification techniques with Example Mapping |
+| [Architecture Documentation](./architecture-documentation.md) | Generate and maintain C4 diagrams with Structurizr |
+| [Security Scanning Workflow](./security-scanning-workflow.md) | SAST, vulnerability scanning, SBOM generation with Trivy |
+| [TypeScript Module Setup](./typescript-module-setup.md) | Working with npm modules in the monorepo |
 
 ## What You'll Learn
 

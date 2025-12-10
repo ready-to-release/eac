@@ -1,0 +1,7 @@
+title: Quality Gates
+nav:
+  - index.md
+  - merge-request-gates.md
+  - precommit-gates.md
+  - precommit-setup.md
+  - release-gates.md

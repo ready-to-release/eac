@@ -4,7 +4,6 @@
 
 **Status:** Placeholder - Content coming soon
 
-**Estimated time:** 45 minutes
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), [CI/CD Integration](../advanced-practices/ci-cd-integration.md)
 
 ## Planned Content

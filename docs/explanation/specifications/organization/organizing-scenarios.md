@@ -181,12 +181,6 @@ These steps are vague and tied to specific context.
 
 ---
 
-## Learn More About Scenario Independence
-
-To learn more about this critical principle, read [Effective Behaviour Driven Development](../references.md#effective-behavior-driven-development) by Gáspár Nagy and Seb Rose.
-
----
-
 ## Best Practices
 
 ### DO
