@@ -222,8 +222,15 @@ func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string
 		return string(content), "team override", nil
 	}
 
-	// Priority 3: System default (templates/ai/<type>/<name>)
-	systemDefaultPath := filepath.Join(cl.loader.workspaceRoot, paths.TemplatesDir, "ai", cl.typeName, promptName)
+	// Priority 3: System default from distribution root
+	// In container: uses R2R_CONTAINER_ROOT (/app where Dockerfile copies templates)
+	// In local dev: uses workspaceRoot (repo root where templates/ exists)
+	// This ensures templates work in both container and development scenarios
+	distRoot := cl.loader.workspaceRoot
+	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+		distRoot = containerRoot
+	}
+	systemDefaultPath := filepath.Join(distRoot, paths.TemplatesDir, "ai", cl.typeName, promptName)
 	if content, err := os.ReadFile(systemDefaultPath); err == nil {
 		return string(content), "system default", nil
 	}
