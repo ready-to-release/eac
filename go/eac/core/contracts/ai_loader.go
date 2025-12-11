@@ -217,6 +217,7 @@ func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string
 	}
 
 	// Priority 2: Team override (.r2r/eac/templates/ai/<type>/<name>)
+	// Note: Team override uses "ai/<type>" path structure
 	teamOverridePath := filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, "templates", "ai", cl.typeName, promptName)
 	if content, err := os.ReadFile(teamOverridePath); err == nil {
 		return string(content), "team override", nil
@@ -226,6 +227,7 @@ func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string
 	// In container: uses R2R_CONTAINER_ROOT (/app where Dockerfile copies templates)
 	// In local dev: uses workspaceRoot (repo root where templates/ exists)
 	// This ensures templates work in both container and development scenarios
+	// Note: System default uses "ai/<type>" path structure
 	distRoot := cl.loader.workspaceRoot
 	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
 		distRoot = containerRoot
