@@ -580,7 +580,7 @@ func TestHasLatestTag(t *testing.T) {
 		{"implicit latest - simple", "alpine", true},
 		{"implicit latest - with namespace", "library/alpine", true},
 		{"implicit latest - with registry", "docker.io/library/alpine", true},
-		{"implicit latest - github registry", "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh", true},
+		{"implicit latest - github registry", "ghcr.io/ready-to-release/ext-eac", true},
 
 		// Specific versions (not latest)
 		{"specific version tag", "alpine:3.14", false},

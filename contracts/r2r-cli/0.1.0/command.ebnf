@@ -54,8 +54,7 @@ special = "-" | "=" | '"' | "'" ;
 (* Command examples *)
 (*
   r2r version
-  r2r --r2r-debug list
-  r2r run pwsh -- Write-Host "Hello"
-  r2r pwsh -- Write-Host "Hello"   (* using extension alias *)
-  r2r init --config-file r2r.yml
+  r2r init (* creates config-file r2r/r2r-cli.yml with default extension eac*)
+  r2r run eac show modules
+  r2r eac show modules  (* using extension alias *)
 *)

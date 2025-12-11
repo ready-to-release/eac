@@ -107,8 +107,9 @@ type IncrementalInfo struct {
 // TestInfo captures test-specific initialization data.
 type TestInfo struct {
 	// Suite information
-	SuiteName        string // Name of the test suite
-	SuiteDescription string // Suite description
+	SuiteName        string   // Name of the test suite
+	SuiteDescription string   // Suite description
+	SuitesIncluded   []string // For "all" suite: component, integration, acceptance
 
 	// Discovery stats (tests)
 	TotalDiscovered  int // Total tests discovered in codebase
@@ -118,9 +119,9 @@ type TestInfo struct {
 	Selected         int // Final selected tests to run
 
 	// Module stats
-	ModulesRequested   []string // Modules requested via CLI (empty = all)
-	ModulesInScope     []string // Modules with tests that will run
-	ModulesNoTests     []string // Requested modules with no matching tests
+	ModulesRequested []string // Modules requested via CLI (empty = all)
+	ModulesInScope   []string // Modules with tests that will run
+	ModulesNoTests   []string // Requested modules with no matching tests
 
 	// Tag inference
 	InferenceRulesApplied int // Number of inference rules applied

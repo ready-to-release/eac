@@ -732,16 +732,17 @@ func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 				baseImage = baseImage[:idx]
 			}
 
-			// Extract extension name from image path
-			// Supports both /extensions/name and /ext-name patterns
+			// Extract extension name from image path (e.g., ext-eac -> eac)
 			var extensionName string
 			parts := strings.Split(baseImage, "/")
 			if len(parts) > 0 {
 				lastPart := parts[len(parts)-1]
-				// Use the last path segment as the extension name
-				// For /extensions/pwsh -> pwsh
-				// For /ext-eac -> ext-eac
-				extensionName = lastPart
+				// For ext-<name> format, extract the name
+				if strings.HasPrefix(lastPart, "ext-") {
+					extensionName = strings.TrimPrefix(lastPart, "ext-")
+				} else {
+					extensionName = lastPart
+				}
 			}
 
 			// Get pinned version from cache or fetch if needed
@@ -899,12 +900,14 @@ func getActualImageVersion(image string) string {
 		baseImage = baseImage[:idx]
 	}
 
-	// Extract extension name from image path (e.g., "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh" -> "pwsh")
+	// Extract extension name from image path (e.g., "ghcr.io/ready-to-release/ext-eac" -> "eac")
 	var extensionName string
-	if strings.Contains(baseImage, "/extensions/") {
-		parts := strings.Split(baseImage, "/")
-		if len(parts) > 0 {
-			extensionName = parts[len(parts)-1]
+	parts := strings.Split(baseImage, "/")
+	if len(parts) > 0 {
+		lastPart := parts[len(parts)-1]
+		// For ext-<name> format, extract the name
+		if strings.HasPrefix(lastPart, "ext-") {
+			extensionName = strings.TrimPrefix(lastPart, "ext-")
 		}
 	}
 

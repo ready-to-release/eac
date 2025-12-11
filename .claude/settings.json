@@ -8,36 +8,6 @@
     "deny": ["Bash(git:*)"]
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "pwsh -File .claude/hooks/session-start.ps1"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "pwsh -File .claude/hooks/file-write.ps1"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "pwsh -File .claude/hooks/file-write.ps1"
-          }
-        ]
-      }
-    ]
   },
   "cleanupPeriodDays": 99999
 }

@@ -293,16 +293,11 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	dockerCfg := getMkDocsDockerConfig(module, workspaceRoot, false)
 	imageName := dockerCfg.ImageName
 
-	// In DinD mode, docker build runs on host so paths must be host paths
-	var dockerfilePath, contextPath string
-	if isDinD {
-		// Host is Windows, construct Windows paths manually
-		dockerfilePath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir + "\\Dockerfile"
-		contextPath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir
-	} else {
-		dockerfilePath = dockerCfg.DockerfilePath
-		contextPath = dockerCfg.ContextPath
-	}
+	// For docker build, use container paths (workspaceRoot) because the Docker CLI
+	// runs in the container and tars up the context locally before sending to the daemon.
+	// Host paths are only needed for volume mounts (docker run -v).
+	dockerfilePath := dockerCfg.DockerfilePath
+	contextPath := dockerCfg.ContextPath
 
 	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
 		Logln(logWriter, "❌ Failed to ensure Docker image: %v", err)
@@ -694,14 +689,11 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 	dockerCfg := getMkDocsDockerConfig(module, workspaceRoot, false)
 	imageName := dockerCfg.ImageName
 
-	var dockerfilePath, contextPath string
-	if isDinD {
-		dockerfilePath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir + "\\Dockerfile"
-		contextPath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir
-	} else {
-		dockerfilePath = dockerCfg.DockerfilePath
-		contextPath = dockerCfg.ContextPath
-	}
+	// For docker build, use container paths (workspaceRoot) because the Docker CLI
+	// runs in the container and tars up the context locally before sending to the daemon.
+	// Host paths are only needed for volume mounts (docker run -v).
+	dockerfilePath := dockerCfg.DockerfilePath
+	contextPath := dockerCfg.ContextPath
 
 	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
 		Logln(logWriter, "❌ Failed to ensure Docker image: %v", err)

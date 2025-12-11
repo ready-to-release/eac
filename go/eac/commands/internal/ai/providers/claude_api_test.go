@@ -1,7 +1,7 @@
 // File: go/eac/commands/internal/ai/providers/claude_api_test.go
 //go:build L2 && ov
 
-// Integration tests that require real Claude API - excluded from L0-L1 (commit suite)
+// Integration tests that require real Claude API - excluded from L0-L1 (component suite)
 // Go tests should only be L0-L1 unit tests with mocks
 // Real provider tests belong in Godog specs (L2+)
 package providers

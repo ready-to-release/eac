@@ -92,6 +92,17 @@ dependencies:
       command: "curl --version"
       pattern: "curl (\\d+\\.\\d+)"
 
+  # Environment-based dependencies (credentials, secrets, etc.)
+  - moniker: gh-token
+    name: "GitHub Credentials"
+    description: "GitHub authentication credentials for registry access"
+    version: "any"
+    verify:
+      env_vars:
+        - GITHUB_TOKEN
+        - GITHUB_USERNAME
+      require: "all"
+
 # Capability to system dependency mappings
 # Used by get build-deps to resolve module capabilities to actual deps
 capability_requirements:

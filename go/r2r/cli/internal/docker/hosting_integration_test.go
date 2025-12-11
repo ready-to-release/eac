@@ -55,12 +55,12 @@ func TestContainerHost_L2_Integration(t *testing.T) {
 		defer host.Close()
 
 		ext := &ExtensionConfig{
-			Name:            "pwsh",
-			Image:           "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:0.0.2",
+			Name:            "eac",
+			Image:           "ghcr.io/ready-to-release/ext-eac:latest",
 			ImagePullPolicy: "IfNotPresent",
 		}
 
-		// Test metadata command (expected to fail since pwsh doesn't support it yet)
+		// Test metadata command
 		_, err = host.ExecuteMetadataCommand(ext)
 		if err == nil {
 			t.Log("Extension unexpectedly supports metadata command")

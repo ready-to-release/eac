@@ -23,7 +23,7 @@ func init() {
 // ShowSuite displays detailed information about a test suite in markdown table format
 //
 // Command: show suite <suite-moniker>
-// Example: show suite commit
+// Example: show suite component
 //
 // Output format:
 // - Suite header with metadata

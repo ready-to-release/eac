@@ -102,8 +102,8 @@ Can optionally show all available tags for each extension.`,
 			// Use cached extension list
 			knownExtensions = make(map[string]string)
 			for name := range registryCache.Extensions {
-				// Reconstruct image path from cache
-				knownExtensions[name] = fmt.Sprintf("ghcr.io/ready-to-release/r2r-cli/extensions/%s", name)
+				// Reconstruct image path from cache (ext-<name> format)
+				knownExtensions[name] = fmt.Sprintf("ghcr.io/ready-to-release/ext-%s", name)
 			}
 		}
 

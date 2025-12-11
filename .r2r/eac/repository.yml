@@ -206,6 +206,7 @@ modules:
         - go.work.sum
         - test-repository-validations.sh
         - CHANGELOG.md
+        - SECURITY.md
       repo:
         test_impl: go/eac/specs/impl/repository
         design: ""

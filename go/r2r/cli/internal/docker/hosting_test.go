@@ -124,8 +124,8 @@ func TestExecuteMetadataCommand_Integration(t *testing.T) {
 
 	// Test with a real extension that supports metadata
 	ext := &ExtensionConfig{
-		Name:            "text",
-		Image:           "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:0.0.2", //this will fail currently, we have no real extension supporting metadata yet.
+		Name:            "eac",
+		Image:           "ghcr.io/ready-to-release/ext-eac:latest",
 		ImagePullPolicy: "IfNotPresent",
 	}
 
