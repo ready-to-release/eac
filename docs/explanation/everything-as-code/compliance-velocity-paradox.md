@@ -262,7 +262,7 @@ This is the promise of [Everything as Code](paradigm.md).
 ## References
 
 - [Accelerate: The Science of Lean Software and DevOps](../references.md#accelerate)
-- [State of DevOps Report 2025** - DORA / Google Cloud](../references.md#state-of-devops)
+- [State of DevOps Report 2025 - DORA / Google Cloud](../references.md#state-of-devops)
 - [The DevOps Handbook](../references.md#the-devops-handbook)
 
 {{ diataxis_footer() }}

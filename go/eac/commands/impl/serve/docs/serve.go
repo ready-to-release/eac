@@ -1,10 +1,11 @@
 // Command: serve docs
 // Short: Start or stop MkDocs server
 // Long: The serve docs command manages the MkDocs documentation server using Docker.
-// Long: It can start a server on a specified port, stop a running server, and open the documentation in your browser.
+// Long: It can start a server on a specified port, stop a running server, reload to pick up changes, and open the documentation in your browser.
 // Flag.no-browser: type=bool, default=false, usage=Don't open browser after starting server
 // Flag.port: type=int, shorthand=p, default=9000, usage=Port number for MkDocs server (auto-allocated from 9000-9999 if not specified)
 // Flag.stop: type=bool, default=false, usage=Stop the running MkDocs server
+// Flag.reload: type=bool, default=false, usage=Reload documentation by restarting the running server
 // Flag.debug: type=bool, default=false, usage=Enable debug mode with log streaming
 package docs
 
@@ -47,6 +48,7 @@ func printHelp() {
 	log.Info("    --no-browser        Don't open browser after starting server")
 	log.Info("    -p, --port          Port number for MkDocs server (default: auto-allocated 9000-9999)")
 	log.Info("    --stop              Stop the running MkDocs server")
+	log.Info("    --reload            Reload documentation by restarting the running server")
 	log.Info("    --debug             Enable debug mode with log streaming")
 	log.Info("    --skip-validation   Skip Docker validation (for testing)")
 	log.Info("    -h, --help          Show this help message")
@@ -55,6 +57,7 @@ func printHelp() {
 	log.Info("    eac serve docs                  # Start server with auto-allocated port")
 	log.Info("    eac serve docs --port 9001      # Start server on specific port")
 	log.Info("    eac serve docs --no-browser     # Start without opening browser")
+	log.Info("    eac serve docs --reload         # Reload to pick up documentation changes")
 	log.Info("    eac serve docs --stop           # Stop the running server")
 	log.Info("")
 }
@@ -94,6 +97,7 @@ func ServeDocs() int {
 	var noBrowser bool
 	var port int = 0 // 0 means auto-allocate from 9000-9999 range
 	var stop bool
+	var reload bool
 	var debug bool
 	var skipValidation bool
 
@@ -109,6 +113,8 @@ func ServeDocs() int {
 			noBrowser = true
 		case "--stop":
 			stop = true
+		case "--reload":
+			reload = true
 		case "--debug":
 			debug = true
 		case "--skip-validation":
@@ -149,6 +155,7 @@ func ServeDocs() int {
 		zap.Bool("noBrowser", noBrowser),
 		zap.Int("port", port),
 		zap.Bool("stop", stop),
+		zap.Bool("reload", reload),
 		zap.Bool("debug", debug),
 		zap.Bool("skipValidation", skipValidation))
 
@@ -240,40 +247,67 @@ func ServeDocs() int {
 	}
 
 	if running && info != nil {
-		// If user requested a specific port and it's different from running container, error
-		if port != 0 && info.Port != port {
-			logger.Error("MkDocs container already running on different port",
-				zap.Int("runningPort", info.Port),
-				zap.Int("requestedPort", port))
-			log.Infof("❌ MkDocs is already running on port %d", info.Port)
-			log.Infof("📚 Running at: %s", info.URL)
-			log.Info("")
-			log.Info("💡 To use a different port:")
-			log.Info("  1. Stop the running container: go run . docs serve --stop")
-			log.Infof("  2. Start with new port: go run . docs serve --port %d", port)
-			return 1
-		}
+		// Handle reload flag - restart the container to pick up changes
+		if reload {
+			logger.Info("Reloading MkDocs server", zap.String("containerName", info.Name), zap.Int("port", info.Port))
+			log.Info("🔄 Reloading MkDocs documentation server...")
 
-		// Container is running on the expected port (or port was auto-allocated)
-		logger.Info("MkDocs container already running",
-			zap.String("url", info.URL),
-			zap.Int("port", info.Port))
-		log.Info("ℹ️  MkDocs is already running")
-		log.Infof("📚 Documentation: %s", info.URL)
-
-		if !noBrowser {
-			opened, err := dockerClient.OpenBrowserWithFallback(info.URL)
-			if err != nil {
-				logger.Warn("Failed to open browser", zap.Error(err))
-				log.Info("")
-				log.Infof("⚠️  Failed to open browser: %v", err)
-				log.Infof("📖 Please open manually: %s", info.URL)
-			} else if !opened {
-				logger.Debug("Browser opening skipped (DinD mode or no display)")
-				log.Infof("📖 Open in your browser: %s", info.URL)
+			// Preserve the port from the running container if not explicitly specified
+			if port == 0 {
+				port = info.Port
+				logger.Debug("Preserving port from running container", zap.Int("port", port))
 			}
+
+			// Stop existing container
+			err = dockerClient.StopContainer()
+			if err != nil {
+				logger.Error("Failed to stop container for reload", zap.Error(err))
+				log.Infof("❌ Failed to stop container: %v", err)
+				return 1
+			}
+
+			logger.Info("Container stopped, starting fresh instance on same port", zap.Int("port", port))
+			log.Info("🚀 Starting fresh MkDocs instance...")
+			// Continue below to start a new container
+		} else {
+			// If user requested a specific port and it's different from running container, error
+			if port != 0 && info.Port != port {
+				logger.Error("MkDocs container already running on different port",
+					zap.Int("runningPort", info.Port),
+					zap.Int("requestedPort", port))
+				log.Infof("❌ MkDocs is already running on port %d", info.Port)
+				log.Infof("📚 Running at: %s", info.URL)
+				log.Info("")
+				log.Info("💡 To use a different port:")
+				log.Info("  1. Stop the running container: go run . docs serve --stop")
+				log.Infof("  2. Start with new port: go run . docs serve --port %d", port)
+				return 1
+			}
+
+			// Container is running on the expected port (or port was auto-allocated)
+			logger.Info("MkDocs container already running",
+				zap.String("url", info.URL),
+				zap.Int("port", info.Port))
+			log.Info("ℹ️  MkDocs is already running")
+			log.Infof("📚 Documentation: %s", info.URL)
+			log.Info("")
+			log.Info("💡 To reload after making changes:")
+			log.Info("  go run . serve docs --reload")
+
+			if !noBrowser {
+				opened, err := dockerClient.OpenBrowserWithFallback(info.URL)
+				if err != nil {
+					logger.Warn("Failed to open browser", zap.Error(err))
+					log.Info("")
+					log.Infof("⚠️  Failed to open browser: %v", err)
+					log.Infof("📖 Please open manually: %s", info.URL)
+				} else if !opened {
+					logger.Debug("Browser opening skipped (DinD mode or no display)")
+					log.Infof("📖 Open in your browser: %s", info.URL)
+				}
+			}
+			return 0
 		}
-		return 0
 	}
 
 	// Start container
