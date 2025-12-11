@@ -146,18 +146,18 @@ func ReleaseCheckCI() int {
 
 		// Check module CI result
 		if moduleStatus.success {
-			log.Infof("\r⏱ %s  ✓ CI passed", elapsedStr)
+			log.Infof("⏱ %s  ✓ CI passed", elapsedStr)
 			return 0
 		}
 		if moduleStatus.failed {
-			log.Infof("\r⏱ %s  ✗ CI failed", elapsedStr)
+			log.Infof("⏱ %s  ✗ CI failed", elapsedStr)
 			return 1
 		}
 		if moduleStatus.running {
 			// Module CI is running - just wait
 			currentStatus := fmt.Sprintf("⏱ %s  ◐ %s running", elapsedStr, moduleName)
 			if currentStatus != lastStatus {
-				log.Infof("\r%s", currentStatus)
+				log.Infof("%s", currentStatus)
 				lastStatus = currentStatus
 			}
 			noCIFoundCount = 0
@@ -234,7 +234,7 @@ func ReleaseCheckCI() int {
 		}
 
 		if currentStatus != lastStatus {
-			log.Infof("\r%s", currentStatus)
+			log.Infof("%s", currentStatus)
 			lastStatus = currentStatus
 		}
 
