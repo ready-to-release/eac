@@ -48,6 +48,9 @@ outputs:
   tag_name:
     description: 'Full tag name (e.g., r2r-cli/1.0.0)'
     value: ${{ steps.version.outputs.tag_name }}
+  ci_sha:
+    description: 'SHA of the commit that passed CI (may differ from release commit if inherited)'
+    value: ${{ steps.ci_check.outputs.ci_sha || steps.ci_check_skip.outputs.ci_sha }}
 
 runs:
   using: composite
@@ -126,6 +129,7 @@ runs:
         echo "No existing release for $TAG_NAME"
 
     - name: Wait for CI (strict mode)
+      id: ci_check
       if: inputs.skip-ci-check != 'true'
       shell: bash
       env:
@@ -141,13 +145,29 @@ runs:
         echo ""
 
         # Use --strict to require exact commit match
-        $COMMANDS release check-ci \
+        # Capture output to extract INHERITED_CI_SHA if present
+        OUTPUT=$($COMMANDS release check-ci \
           --workflow "$WORKFLOW" \
           --commit "$COMMIT" \
           --timeout "$TIMEOUT" \
-          --strict
+          --strict 2>&1) || {
+          echo "$OUTPUT"
+          exit 1
+        }
+        echo "$OUTPUT"
+
+        # Extract inherited SHA if CI was inherited from previous run
+        INHERITED_SHA=$(echo "$OUTPUT" | grep "^INHERITED_CI_SHA=" | cut -d= -f2)
+        if [ -n "$INHERITED_SHA" ]; then
+          echo "CI inherited from commit: $INHERITED_SHA"
+          echo "ci_sha=$INHERITED_SHA" >> $GITHUB_OUTPUT
+        else
+          # Use current commit SHA (CI ran directly on this commit)
+          echo "ci_sha=$COMMIT" >> $GITHUB_OUTPUT
+        fi
 
     - name: Skip CI check warning
+      id: ci_check_skip
       if: inputs.skip-ci-check == 'true'
       shell: bash
       run: |
@@ -158,6 +178,8 @@ runs:
         echo "   Commit: ${{ github.sha }}"
         echo ""
         echo "   This should only be used for critical hotfixes."
+        # When skipping CI, use current commit SHA
+        echo "ci_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Summary
       if: always()

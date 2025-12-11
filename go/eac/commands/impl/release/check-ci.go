@@ -47,12 +47,13 @@ type CIRunStatus struct {
 
 // CheckCIResult represents the result of the CI check
 type CheckCIResult struct {
-	Success   bool   `json:"success"`
-	Status    string `json:"status"` // "success", "failure", "timeout", "not_found"
-	Message   string `json:"message"`
-	CommitSHA string `json:"commit_sha"`
-	Workflow  string `json:"workflow"`
-	Elapsed   string `json:"elapsed"`
+	Success      bool   `json:"success"`
+	Status       string `json:"status"` // "success", "failure", "timeout", "not_found"
+	Message      string `json:"message"`
+	CommitSHA    string `json:"commit_sha"`
+	Workflow     string `json:"workflow"`
+	Elapsed      string `json:"elapsed"`
+	InheritedSHA string `json:"inherited_sha,omitempty"` // Set when CI was inherited from previous run
 }
 
 func ReleaseCheckCI() int {
@@ -189,10 +190,12 @@ func ReleaseCheckCI() int {
 				// (safe when only changelog changed for this module)
 				workspaceRoot, rootErr := repository.GetRepositoryRoot("")
 				if rootErr == nil {
-					canInherit, inheritMsg := canInheritCIFromPrevious(moduleName, workflow, commitSHA, workspaceRoot)
+					canInherit, inheritedSHA, inheritMsg := canInheritCIFromPrevious(moduleName, workflow, commitSHA, workspaceRoot)
 					if canInherit {
 						log.Infof("")
 						log.Infof("✓ %s", inheritMsg)
+						// Output parseable inherited SHA for workflows to capture
+						fmt.Printf("INHERITED_CI_SHA=%s\n", inheritedSHA)
 						return 0
 					}
 					// If we have a specific reason why we can't inherit, show it
@@ -470,38 +473,38 @@ func formatElapsed(d time.Duration) string {
 // successful run. This is safe when the only module-owned files that changed since
 // the last successful CI are changelog files.
 //
-// Returns (canInherit bool, message string)
-// - canInherit=true, message=success message: Safe to inherit
-// - canInherit=false, message="": No previous CI or error
-// - canInherit=false, message=reason: Specific reason we can't inherit
-func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot string) (bool, string) {
+// Returns (canInherit bool, inheritedSHA string, message string)
+// - canInherit=true, inheritedSHA=sha, message=success message: Safe to inherit
+// - canInherit=false, inheritedSHA="", message="": No previous CI or error
+// - canInherit=false, inheritedSHA="", message=reason: Specific reason we can't inherit
+func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot string) (bool, string, string) {
 	// 1. Get the last successful CI SHA for this module's workflow
 	lastCISHA, err := getLastSuccessfulModuleCISHA(workflow, "main", workspaceRoot)
 	if err != nil || lastCISHA == "" {
-		return false, "" // No previous successful CI
+		return false, "", "" // No previous successful CI
 	}
 
 	// 2. Get changed files between last CI and release commit
 	changedFiles, err := getChangedFilesBetweenCommits(lastCISHA, releaseCommit, workspaceRoot)
 	if err != nil {
-		return false, "" // Can't determine changes
+		return false, "", "" // Can't determine changes
 	}
 
 	if len(changedFiles) == 0 {
 		// No files changed - this shouldn't happen but is safe
-		return true, fmt.Sprintf("CI inherited from %s (no files changed)", lastCISHA[:7])
+		return true, lastCISHA, fmt.Sprintf("CI inherited from %s (no files changed)", lastCISHA[:7])
 	}
 
 	// 3. Load module registry to determine file ownership and changelog path
 	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
-		return false, "" // Can't load module registry
+		return false, "", "" // Can't load module registry
 	}
 
 	// Find the module contract
 	module, found := registry.Get(moduleName)
 	if !found {
-		return false, "" // Module not found
+		return false, "", "" // Module not found
 	}
 
 	// 4. Get the changelog path for this module (normalized)
@@ -519,7 +522,7 @@ func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot
 	// 6. Check if all module changes are just the changelog
 	if len(moduleChangedFiles) == 0 {
 		// No module files changed - safe to inherit
-		return true, fmt.Sprintf("CI inherited from %s (no module files changed)", lastCISHA[:7])
+		return true, lastCISHA, fmt.Sprintf("CI inherited from %s (no module files changed)", lastCISHA[:7])
 	}
 
 	// Check each changed file - must be the changelog
@@ -533,13 +536,13 @@ func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot
 	if len(nonChangelogFiles) > 0 {
 		// Module source files changed - cannot inherit
 		if len(nonChangelogFiles) == 1 {
-			return false, fmt.Sprintf("Module file changed: %s", nonChangelogFiles[0])
+			return false, "", fmt.Sprintf("Module file changed: %s", nonChangelogFiles[0])
 		}
-		return false, fmt.Sprintf("Module files changed: %s (and %d more)", nonChangelogFiles[0], len(nonChangelogFiles)-1)
+		return false, "", fmt.Sprintf("Module files changed: %s (and %d more)", nonChangelogFiles[0], len(nonChangelogFiles)-1)
 	}
 
 	// Only changelog changed - safe to inherit!
-	return true, fmt.Sprintf("CI inherited from %s (only changelog changed)", lastCISHA[:7])
+	return true, lastCISHA, fmt.Sprintf("CI inherited from %s (only changelog changed)", lastCISHA[:7])
 }
 
 // getLastSuccessfulModuleCISHA queries gh CLI for the last successful workflow run SHA
