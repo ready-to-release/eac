@@ -45,7 +45,7 @@ jobs:
         with:
           module: ext-eac
           skip-ci-check: ${{ inputs.skip-ci-check || 'false' }}
-          timeout: '300'
+          timeout: '900'
 
   release:
     name: Publish Container
