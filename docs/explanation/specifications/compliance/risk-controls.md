@@ -155,14 +155,14 @@ Traditional security control management relies on documents (PDFs, spreadsheets,
 
 One of OSCAL's most powerful features is its ability to unify compliance efforts across multiple regulatory frameworks. Organizations operating in multiple regulated industries can use OSCAL to:
 
-| Benefit | How It Helps |
-|---------|--------------|
-| **Unified risk catalog** | Map GxP, banking rules, GDPR, NIS2, AI Act → into one standardized structure |
-| **Compliance-as-Code** | Treat controls as code, versioned in Git, reusable across systems |
-| **Crosswalk of controls** | Link equivalent responsibilities (e.g., ISO 27001 = GDPR Art. 32 = NIS2 security) |
-| **System-to-control traceability** | Each system component linked to control objectives + evidence |
-| **Automated reporting** | Generate audits and regulatory submissions programmatically |
-| **Evidence integration** | Link logs, tests, validation results directly into compliance artifacts |
+| Benefit                            | How It Helps                                                                      |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| **Unified risk catalog**           | Map GxP, banking rules, GDPR, NIS2, AI Act → into one standardized structure      |
+| **Compliance-as-Code**             | Treat controls as code, versioned in Git, reusable across systems                 |
+| **Crosswalk of controls**          | Link equivalent responsibilities (e.g., ISO 27001 = GDPR Art. 32 = NIS2 security) |
+| **System-to-control traceability** | Each system component linked to control objectives + evidence                     |
+| **Automated reporting**            | Generate audits and regulatory submissions programmatically                       |
+| **Evidence integration**           | Link logs, tests, validation results directly into compliance artifacts           |
 
 **Example**: A healthcare technology company operating in the EU might need to comply with GDPR (data protection), MDR (medical devices), NIS2 (cybersecurity), and ISO 13485 (quality management). With OSCAL, they can:
 

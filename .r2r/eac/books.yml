@@ -99,6 +99,28 @@ books:
         order: 6
 
   # ==============================================================================
+  # Specifications PDF
+  # ==============================================================================
+  - name: specifications
+    title: "Explanation - Specifications"
+    description: "Specifications in the EaC CD Model"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      # content
+      - type: copy
+        from: "docs/explanation/specifications/**"
+        to: "./"
+
+      # assets
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+  # ==============================================================================
   # Explanation PDF
   # ==============================================================================
   - name: explanation
@@ -108,16 +130,14 @@ books:
     site_url: "https://ready-to-release.github.io/eac/"
 
     sources:
-      # Explanation content (conceptual docs)
+      # content
       - type: copy
-        from: "docs/explanation/**/*.md"
+        from: "docs/explanation/**"
+        exclude:
+          - "docs/explanation/specifications/**"
         to: "./"
 
-      - type: copy
-        from: "docs/explanation/**/.nav.yml"
-        to: "./"
-
-      # Assets for PDF rendering (exclude embedded PDFs - can't view PDFs inside PDF)
+      # assets
       - type: copy
         from: "docs/assets/**"
         to: "assets/"
@@ -136,21 +156,17 @@ books:
     sources:
       # content
       - type: copy
-        from: "docs/how-to-guides/**/*.md"
+        from: "docs/how-to-guides/**"
         to: "./"
 
-      - type: copy
-        from: "docs/how-to-guides/**/.nav.yml"
-        to: "./"
-
-      # Assets for PDF
+      # assets
       - type: copy
         from: "docs/assets/**"
         to: "assets/"
         exclude:
           - "docs/assets/lfs/pdf/**"
 
-# ==============================================================================
+  # ==============================================================================
   # tutorials PDF
   # ==============================================================================
   - name: tutorials
@@ -162,14 +178,10 @@ books:
     sources:
       # content
       - type: copy
-        from: "docs/tutorials/**/*.md"
+        from: "docs/tutorials/**"
         to: "./"
 
-      - type: copy
-        from: "docs/tutorials/**/.nav.yml"
-        to: "./"
-
-      # Assets for PDF
+      # assets
       - type: copy
         from: "docs/assets/**"
         to: "assets/"

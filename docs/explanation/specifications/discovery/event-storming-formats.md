@@ -78,7 +78,7 @@ After a Process Modeling session, you'll have:
 
 **Example**: "Order Approval Process"
 
-```
+```text
 [Customer] → Places Order → [Order Placed]
                                     ↓
                             [Check Amount Policy]
@@ -127,7 +127,7 @@ After a Software Design session, you'll have:
 
 **Example**: "Order Aggregate"
 
-```
+```text
 Order Aggregate
 ├── Commands:
 │   ├── PlaceOrder
@@ -178,7 +178,7 @@ Order Aggregate
 
 Event Storming formats build on each other:
 
-```
+```text
 Big Picture Event Storming
     ↓
 Identifies bounded contexts and major processes
@@ -213,16 +213,16 @@ You don't always need all formats. Choose based on your needs:
 
 Event Storming uses color-coded sticky notes as a visual language:
 
-| Color | Represents | Format | Example |
-|-------|------------|--------|---------|
-| **Orange** | Domain Event | Past tense, something that happened | "Order Placed", "Payment Received" |
-| **Blue** | Command/Action | Imperative, action that triggers event | "Place Order", "Approve Request" |
-| **Yellow** | Actor/Persona | Who initiates commands | "Customer", "Manager", "System" |
-| **Pink** | Policy/Rule | Business rule that triggers commands | "When order >$10k → require approval" |
-| **Purple** | External System | Systems outside your control | "Payment Gateway", "Email Service" |
-| **Red** | Problem/Question | Uncertainty or blocker | "What if...?", "How does...?" |
-| **Green** | Opportunity | Improvement ideas | "Could automate...", "Might simplify..." |
-| **White** | Definition | Glossary term clarification | "Approved = manager signed off" |
+| Color      | Represents       | Format                                 | Example                                  |
+| ---------- | ---------------- | -------------------------------------- | ---------------------------------------- |
+| **Orange** | Domain Event     | Past tense, something that happened    | "Order Placed", "Payment Received"       |
+| **Blue**   | Command/Action   | Imperative, action that triggers event | "Place Order", "Approve Request"         |
+| **Yellow** | Actor/Persona    | Who initiates commands                 | "Customer", "Manager", "System"          |
+| **Pink**   | Policy/Rule      | Business rule that triggers commands   | "When order >$10k → require approval"    |
+| **Purple** | External System  | Systems outside your control           | "Payment Gateway", "Email Service"       |
+| **Red**    | Problem/Question | Uncertainty or blocker                 | "What if...?", "How does...?"            |
+| **Green**  | Opportunity      | Improvement ideas                      | "Could automate...", "Might simplify..." |
+| **White**  | Definition       | Glossary term clarification            | "Approved = manager signed off"          |
 
 ---
 

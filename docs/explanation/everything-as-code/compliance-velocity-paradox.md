@@ -116,7 +116,7 @@ The [DevOps Research and Assessment (DORA)](https://dora.dev/research/) program 
 The State of DevOps Report 2025 includes respondents from regulated industries:
 
 | Industry                     | % of Survey Respondents |
-|------------------------------|-------------------------|
+| ---------------------------- | ----------------------- |
 | Technology                   | 38.0%                   |
 | Financial Services           | 13.6%                   |
 | Other                        | 9.7%                    |
@@ -262,7 +262,7 @@ This is the promise of [Everything as Code](paradigm.md).
 ## References
 
 - [Accelerate: The Science of Lean Software and DevOps](../references.md#accelerate)
-- [State of DevOps Report 2025** - DORA / Google Cloud](../references.md#state-of-devops)
+- [State of DevOps Report 2025\*\* - DORA / Google Cloud](../references.md#state-of-devops)
 - [The DevOps Handbook](../references.md#the-devops-handbook)
 
 {{ diataxis_footer() }}

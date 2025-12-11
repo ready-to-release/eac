@@ -882,11 +882,14 @@ func buildTUISummary(results []orchestrator.WorkResult, totalTime time.Duration,
 					}
 					for i := 0; i < errorCount; i++ {
 						errMsg := result.Errors[i]
-						// Truncate long error messages
-						if len(errMsg) > 100 {
-							errMsg = errMsg[:97] + "..."
+						// Truncate very long error messages (keep enough for full paths in errors)
+						if len(errMsg) > 300 {
+							errMsg = errMsg[:297] + "..."
+							details = append(details, fmt.Sprintf("  • %s", errMsg))
+							details = append(details, fmt.Sprintf("    See: %s", result.LogPath))
+						} else {
+							details = append(details, fmt.Sprintf("  • %s", errMsg))
 						}
-						details = append(details, fmt.Sprintf("  • %s", errMsg))
 					}
 					if len(result.Errors) > 5 {
 						details = append(details, fmt.Sprintf("  ...and %d more errors", len(result.Errors)-5))

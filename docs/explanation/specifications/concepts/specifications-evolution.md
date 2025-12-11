@@ -142,14 +142,14 @@ Feature: cli_user-registration
 
 Update specifications when:
 
-| Trigger | Example | Action |
-|---------|---------|--------|
-| **Implementation reveals** | Unit testing finds edge case | Add error scenario |
-| **Stakeholder feedback** | "This isn't what I meant" | Refine acceptance criteria |
-| **Production bugs** | Users encounter unexpected behavior | Add regression scenario |
-| **Domain evolution** | Business process changes | Update Rules and scenarios |
-| **Language refinement** | Team adopts clearer terminology | Refactor scenario language |
-| **Requirements change** | New regulatory requirement | Add compliance scenarios |
+| Trigger                    | Example                             | Action                     |
+| -------------------------- | ----------------------------------- | -------------------------- |
+| **Implementation reveals** | Unit testing finds edge case        | Add error scenario         |
+| **Stakeholder feedback**   | "This isn't what I meant"           | Refine acceptance criteria |
+| **Production bugs**        | Users encounter unexpected behavior | Add regression scenario    |
+| **Domain evolution**       | Business process changes            | Update Rules and scenarios |
+| **Language refinement**    | Team adopts clearer terminology     | Refactor scenario language |
+| **Requirements change**    | New regulatory requirement          | Add compliance scenarios   |
 
 ---
 
@@ -199,16 +199,19 @@ flowchart TD
 ### When to Update Specifications
 
 **During Development**:
+
 - Discovered a new edge case? Add scenario immediately
 - Found better wording? Refactor specification
 - Acceptance criteria unclear? Refine with stakeholders
 
 **After Development**:
+
 - Bug found in production? Add regression scenario
 - User feedback reveals misunderstanding? Update specification
 - Domain language evolved? Refactor terminology
 
 **During Refactoring**:
+
 - Code structure changes? Ensure specifications still accurate
 - Domain model refactored? Update specification language
 - Step definitions change? Verify specifications still pass
@@ -222,7 +225,8 @@ flowchart TD
 5. **Commit with context**: Explain why the change was made
 
 **Example commit message**:
-```
+
+```text
 feat(auth): add email typo correction
 
 After production deployment, users frequently registered with
@@ -242,11 +246,13 @@ Added scenario: User corrects email typo before verification
 **Problem**: Specifications not updated as code evolves
 
 **Symptoms**:
+
 - Specifications don't match actual behavior
 - Failing scenarios ignored
 - New features have no specifications
 
 **Solution**:
+
 - Update specifications immediately when code changes
 - Make specification updates part of "done" definition
 - Review specifications during code review
@@ -256,11 +262,13 @@ Added scenario: User corrects email typo before verification
 **Problem**: Trying to anticipate every future scenario
 
 **Symptoms**:
+
 - Specifications for features not yet needed
 - Overly complex acceptance criteria
 - Scenarios for hypothetical edge cases
 
 **Solution**:
+
 - Write specifications for current understanding
 - Add scenarios when you actually encounter the need
 - Let specifications evolve naturally with the system
@@ -270,11 +278,13 @@ Added scenario: User corrects email typo before verification
 **Problem**: Domain terminology changes but specifications don't
 
 **Symptoms**:
+
 - Specifications use outdated terms
 - New team members confused by language
 - Disconnect between business and technical vocabulary
 
 **Solution**:
+
 - Refactor specifications when domain language evolves
 - Update both specifications AND code together
 - Keep glossary current

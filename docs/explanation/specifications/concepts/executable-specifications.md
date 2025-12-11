@@ -104,16 +104,20 @@ And the configuration should contain default values
 ### Discovery Phase: Example Mapping
 
 **Yellow Card** (User Story):
+
 > As a developer, I want to initialize a CLI project so that I can quickly start development
 
 **Blue Card** (Acceptance Criteria):
+
 > Rule: Creates project directory structure
 
 **Green Cards** (Examples):
+
 > 1. Initialize in empty directory → creates r2r.yaml
 > 2. Initialize in existing project → shows error
 
 **Pink Card** (Questions):
+
 > What if directory has other files?
 
 ### Formulation Phase: Gherkin Specification
@@ -210,23 +214,27 @@ godog run specs/cli/init-project/
 Use this checklist to evaluate specification quality:
 
 **Clarity**:
+
 - [ ] Uses ubiquitous language (domain terms)
 - [ ] Readable by stakeholders
 - [ ] Clear Given/When/Then structure
 - [ ] No technical implementation details
 
 **Measurability**:
+
 - [ ] Acceptance criteria are objective
 - [ ] Pass/fail is unambiguous
 - [ ] Observable behavior (not internal state)
 
 **Completeness**:
+
 - [ ] Happy path covered
 - [ ] Error cases covered
 - [ ] Edge cases covered
 - [ ] All acceptance criteria have scenarios
 
 **Maintainability**:
+
 - [ ] Scenarios are independent
 - [ ] Steps are reusable
 - [ ] File size is manageable (< 30 scenarios)
@@ -239,12 +247,14 @@ Use this checklist to evaluate specification quality:
 ### Testing Implementation Details
 
 **Bad**:
+
 ```gherkin
 Then the ConfigManager.Parse() method should return Config struct
 And the Config.Validate() method should return no errors
 ```
 
 **Good**:
+
 ```gherkin
 Then the configuration file should be valid
 And I should be able to run commands
@@ -253,11 +263,13 @@ And I should be able to run commands
 ### Vague Acceptance Criteria
 
 **Bad**:
+
 ```gherkin
 Rule: The system works well
 ```
 
 **Good**:
+
 ```gherkin
 Rule: Command completes within 2 seconds for projects with 100 files
 ```
@@ -265,11 +277,13 @@ Rule: Command completes within 2 seconds for projects with 100 files
 ### Skipping Collaboration
 
 **Bad**:
+
 - Developer writes specifications alone
 - No Example Mapping workshop
 - Stakeholders see specs only after implementation
 
 **Good**:
+
 - Example Mapping with all roles
 - Specifications reviewed before coding
 - Continuous stakeholder feedback
@@ -277,11 +291,13 @@ Rule: Command completes within 2 seconds for projects with 100 files
 ### Specifications Drift from Implementation
 
 **Bad**:
+
 - Code changes, specifications don't update
 - Failing scenarios ignored
 - Specifications become outdated documentation
 
 **Good**:
+
 - Specifications updated with code changes
 - All scenarios pass before merging
 - Specifications are living documentation

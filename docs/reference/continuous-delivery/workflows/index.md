@@ -2,26 +2,31 @@
 
 {{ page_breadcrumb() }}
 
-GitHub Actions workflow specifications for continuous integration and continuous delivery.
+GitHub Actions workflow specifications for continuous integration and RA and continuous deployment releases.
 
 ## Overview
 
-The repository uses 19 GitHub Actions workflows organized into four categories: CI workflows for individual modules, release workflows for deployment, orchestration workflows for change detection and execution ordering, and security workflows for vulnerability scanning.
+The repository uses GitHub Actions workflows organized into four categories:
+
+1. CI workflows for individual modules
+2. Release workflows for deployment
+3. Trigger orchestration workflows for change detection and execution ordering
+4. Security workflows for vulnerability scanning
 
 ## In This Section
 
-| Reference | Description |
-|-----------|-------------|
-| [Overview](./overview.md) | Workflow architecture and design principles |
-| [CI Orchestration](./ci-orchestration.md) | CI orchestration system (trigger-ci.yaml) |
-| [CI Modules](./ci-modules.md) | Module CI workflows (ci-*.yaml) |
-| [Release Workflows](./release-workflows.md) | Release workflows (release-*.yaml) |
-| [Security Workflows](./security-workflows.md) | Security scanning workflows (codeql.yaml) |
-| [Scheduled Workflows](./scheduled-workflows.md) | Scheduled workflows (cron-*.yaml) |
+| Reference                                           | Description                                           |
+| --------------------------------------------------- | ----------------------------------------------------- |
+| [Overview](./overview.md)                           | Workflow architecture and design principles           |
+| [Trigger Orchestration](./trigger-orchestration.md) | Change trigger orchestration system (trigger-ci.yaml) |
+| [CI Workflows](./ci-workflows.md)                   | Module CI workflows (ci-\*.yaml)                      |
+| [Release Workflows](./release-workflows.md)         | Release workflows (release-\*.yaml)                   |
+| [Security Workflows](./security-workflows.md)       | Security scanning workflows (codeql.yaml)             |
+| [Scheduled Workflows](./scheduled-workflows.md)     | Scheduled workflows (cron-\*.yaml)                    |
 
 ## Workflow Categories
 
-### CI Workflows (11)
+### CI Workflows
 
 Module-specific continuous integration workflows that build and test individual modules:
 
@@ -37,7 +42,7 @@ Module-specific continuous integration workflows that build and test individual 
 - `ci-scripts-cli-installer.yaml` - CLI Installer scripts CI
 - `ci-scripts-implicit-cli.yaml` - Implicit CLI scripts CI
 
-### Release Workflows (4)
+### Release Workflows
 
 Workflows that publish deployable artifacts to production:
 

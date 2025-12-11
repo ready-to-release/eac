@@ -22,10 +22,10 @@ Compliance isn't separate from development - it's integrated through tags that l
 
 ## In This Section
 
-| Topic | Description |
-|-------|-------------|
+| Topic                               | Description                                             |
+| ----------------------------------- | ------------------------------------------------------- |
 | [Risk Controls](./risk-controls.md) | OSCAL control tagging and automated evidence generation |
-| [GxP Tagging](./gxp-tagging.md) | Pharmaceutical/medical device regulatory compliance |
+| [GxP Tagging](./gxp-tagging.md)     | Pharmaceutical/medical device regulatory compliance     |
 
 ---
 
@@ -227,13 +227,13 @@ r2r eac validate risk-profile
 
 ## Common Control Families
 
-| Family | Description | Example Tags |
-|--------|-------------|--------------|
-| **AC** | Access Control | `@control:ac-2`, `@control:ac-3` |
-| **AU** | Audit and Accountability | `@control:au-2`, `@control:au-3` |
-| **IA** | Identification and Authentication | `@control:ia-2`, `@control:ia-5(1)` |
+| Family | Description                          | Example Tags                        |
+| ------ | ------------------------------------ | ----------------------------------- |
+| **AC** | Access Control                       | `@control:ac-2`, `@control:ac-3`    |
+| **AU** | Audit and Accountability             | `@control:au-2`, `@control:au-3`    |
+| **IA** | Identification and Authentication    | `@control:ia-2`, `@control:ia-5(1)` |
 | **SC** | System and Communications Protection | `@control:sc-7`, `@control:sc-8(1)` |
-| **SI** | System and Information Integrity | `@control:si-2`, `@control:si-10` |
+| **SI** | System and Information Integrity     | `@control:si-2`, `@control:si-10`   |
 
 See [Risk Controls](./risk-controls.md) for complete reference.
 
