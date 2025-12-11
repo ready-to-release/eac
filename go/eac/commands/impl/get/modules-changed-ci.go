@@ -125,6 +125,13 @@ func GetChangedModulesCI() int {
 			return nil, fmt.Errorf("failed to get changed files: %w", err)
 		}
 
+		// Filter out files that are owned by modules but shouldn't trigger CI:
+		// - Release workflows (files.workflows.release): only affect release process
+		// - Changelogs (files.changelog): only affect release documentation
+		// - README.md files: documentation only
+		ciExcludedFiles := getCIExcludedFiles(workspaceRoot)
+		changedFiles = filterOutCIExcludedFiles(changedFiles, ciExcludedFiles)
+
 		if len(changedFiles) == 0 {
 			return CIChangedModulesResult{
 				Modules:          []string{},
@@ -321,4 +328,58 @@ func filterModulesWithWorkflows(monikers []string, workspaceRoot string) ([]stri
 	}
 
 	return filtered, filteredOut
+}
+
+// getCIExcludedFiles returns a set of file paths that should not trigger CI.
+// These files are owned by modules but changes to them don't affect module functionality:
+// - files.workflows.release: Release workflow configuration
+// - files.changelog: Release documentation
+func getCIExcludedFiles(workspaceRoot string) map[string]bool {
+	result := make(map[string]bool)
+
+	registry, err := modules.LoadFromWorkspace(workspaceRoot)
+	if err != nil {
+		return result // Return empty on error - non-fatal
+	}
+
+	for _, module := range registry.All() {
+		// Exclude release workflows
+		if module.Files.Workflows.Release != "" {
+			path := strings.TrimPrefix(module.Files.Workflows.Release, "./")
+			result[path] = true
+		}
+
+		// Exclude changelogs
+		changelogPath := module.GetChangelogPath()
+		if changelogPath != "" {
+			result[changelogPath] = true
+		}
+	}
+
+	return result
+}
+
+// filterOutCIExcludedFiles removes files that shouldn't trigger CI from the changed files list.
+func filterOutCIExcludedFiles(files []string, excluded map[string]bool) []string {
+	result := make([]string, 0, len(files))
+	for _, f := range files {
+		// Check exact match for excluded files (release workflows, changelogs)
+		if excluded[f] {
+			continue
+		}
+
+		// Check for README.md files (documentation only)
+		if isReadmeFile(f) {
+			continue
+		}
+
+		result = append(result, f)
+	}
+	return result
+}
+
+// isReadmeFile returns true if the file is a README.md file
+func isReadmeFile(filePath string) bool {
+	base := filepath.Base(filePath)
+	return strings.EqualFold(base, "README.md")
 }

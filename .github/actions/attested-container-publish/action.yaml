@@ -38,6 +38,10 @@ inputs:
   tag_name:
     description: 'Full tag name (e.g., ext-eac/1.0.0)'
     required: true
+  ci_sha:
+    description: 'SHA of the commit that built the CI image (use this when CI is inherited)'
+    required: false
+    default: ''
   registry:
     description: 'Container registry'
     required: false
@@ -74,8 +78,17 @@ runs:
       shell: bash
       run: |
         # Source image is sha-<short> from CI build
-        SHORT_SHA="${{ github.sha }}"
-        SHORT_SHA="${SHORT_SHA:0:7}"
+        # Use ci_sha if provided (when CI was inherited from previous run)
+        # Otherwise use github.sha
+        if [ -n "${{ inputs.ci_sha }}" ]; then
+          CI_SHA="${{ inputs.ci_sha }}"
+          echo "Using CI SHA from approve-release: $CI_SHA"
+        else
+          CI_SHA="${{ github.sha }}"
+          echo "Using github.sha: $CI_SHA"
+        fi
+
+        SHORT_SHA="${CI_SHA:0:7}"
         echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
         echo "source_tag=sha-$SHORT_SHA" >> $GITHUB_OUTPUT
         echo "Source image tag: sha-$SHORT_SHA"

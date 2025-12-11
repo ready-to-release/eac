@@ -32,6 +32,7 @@ jobs:
     outputs:
       version: ${{ steps.gate.outputs.version }}
       tag_name: ${{ steps.gate.outputs.tag_name }}
+      ci_sha: ${{ steps.gate.outputs.ci_sha }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -44,7 +45,7 @@ jobs:
         with:
           module: ext-eac
           skip-ci-check: ${{ inputs.skip-ci-check || 'false' }}
-          timeout: '300'
+          timeout: '900'
 
   release:
     name: Publish Container
@@ -67,6 +68,7 @@ jobs:
           module: ext-eac
           version: ${{ needs.approve.outputs.version }}
           tag_name: ${{ needs.approve.outputs.tag_name }}
+          ci_sha: ${{ needs.approve.outputs.ci_sha }}
 
   cleanup:
     name: Cleanup on Failure
