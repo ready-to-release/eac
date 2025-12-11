@@ -358,6 +358,15 @@ func AITestMockPath(repoRoot string) string {
 	return filepath.Join(repoRoot, R2RDir, "test", "ai-mock.txt")
 }
 
+// AIPromptsPath returns path to AI prompts (team override or system default)
+// promptType: "team" for .r2r/eac/templates/ai, "system" for templates/ai
+func AIPromptsPath(repoRoot string, promptType, command, filename string) string {
+	if promptType == "team" {
+		return filepath.Join(repoRoot, R2RDir, EACDir, "templates", "ai", command, filename)
+	}
+	return filepath.Join(repoRoot, TemplatesDir, "ai", command, filename)
+}
+
 // EACConfigFilePath returns the path to the main EAC configuration file
 func EACConfigFilePath(repoRoot string) string {
 	return filepath.Join(EACConfigPath(repoRoot), "ai-provider.yml")

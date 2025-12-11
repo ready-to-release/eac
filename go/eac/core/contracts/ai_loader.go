@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
@@ -186,16 +187,83 @@ func (cl *ContractLoader) LoadAntiCorruptionRules() (*AntiCorruptionRules, error
 	return cl.loader.GetAntiCorruptionRules(cl.typeName)
 }
 
-// LoadPrompt loads a prompt file from the new prompts directory
+// LoadPrompt loads a prompt with three-tier priority:
+// 1. Custom path (absolute path means --prompt flag was used)
+// 2. Team override (.r2r/eac/templates/ai/<type>/<name>)
+// 3. System default (templates/ai/<type>/<name>)
+// 4. Fallback (if provided, for backward compatibility)
+//
+// Convention: If promptName is empty, uses type name as file name.
+// Example: type "ai/specs" with promptName "" → "specs.md"
+// Extension: Automatically adds ".md" if not present
 func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string, string, error) {
-	prompt, err := cl.loader.LoadPrompt(promptName)
-	if err != nil {
-		if fallback != "" {
-			return fallback, "fallback", nil
-		}
-		return "", "", err
+	// Convention: Use type name if no prompt name provided
+	if promptName == "" {
+		promptName = cl.getDefaultPromptName()
 	}
-	return prompt, "config", nil
+
+	// Normalize: Add .md extension if missing (unless absolute path)
+	if !filepath.IsAbs(promptName) && !strings.HasSuffix(promptName, ".md") {
+		promptName = promptName + ".md"
+	}
+
+	// Priority 1: Custom path from --prompt flag (absolute path)
+	if filepath.IsAbs(promptName) {
+		content, err := os.ReadFile(promptName)
+		if err != nil {
+			return "", "", fmt.Errorf("custom prompt not found: %w", err)
+		}
+		return string(content), "command flag", nil
+	}
+
+	// Priority 2: Team override (.r2r/eac/templates/ai/<type>/<name>)
+	teamOverridePath := filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, "templates", "ai", cl.typeName, promptName)
+	if content, err := os.ReadFile(teamOverridePath); err == nil {
+		return string(content), "team override", nil
+	}
+
+	// Priority 3: System default (templates/ai/<type>/<name>)
+	systemDefaultPath := filepath.Join(cl.loader.workspaceRoot, paths.TemplatesDir, "ai", cl.typeName, promptName)
+	if content, err := os.ReadFile(systemDefaultPath); err == nil {
+		return string(content), "system default", nil
+	}
+
+	// Priority 4: Fallback (for backward compatibility)
+	if fallback != "" {
+		return fallback, "embedded fallback", nil
+	}
+
+	return "", "", fmt.Errorf("no prompt found: %s (checked team override and system default)", promptName)
+}
+
+// getDefaultPromptName derives the default prompt file name from the AI type name.
+// Convention: "ai/specs" → "specs.md", "ai/commit-message" → "commit-message.md"
+func (cl *ContractLoader) getDefaultPromptName() string {
+	// Extract base name from type path
+	// "ai/specs" → "specs"
+	// "ai/commit-message" → "commit-message"
+	// "ai/risk-profile" → "risk-profile"
+	baseName := filepath.Base(cl.typeName)
+	return baseName + ".md"
+}
+
+// LoadPromptWithPriority loads a prompt with explicit priority handling
+// This method provides explicit control over custom path vs prompt name
+func (cl *ContractLoader) LoadPromptWithPriority(promptName string, customPath string) (string, string, error) {
+	// Priority 1: Custom path from --prompt flag
+	if customPath != "" {
+		if !filepath.IsAbs(customPath) {
+			customPath = filepath.Join(cl.loader.workspaceRoot, customPath)
+		}
+		content, err := os.ReadFile(customPath)
+		if err != nil {
+			return "", "", fmt.Errorf("custom prompt not found: %w", err)
+		}
+		return string(content), "command flag", nil
+	}
+
+	// Priority 2 & 3: Delegate to LoadPrompt
+	return cl.LoadPrompt(promptName, "")
 }
 
 // LoadReferencedFile loads a file by path

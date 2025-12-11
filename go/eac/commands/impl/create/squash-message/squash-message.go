@@ -352,9 +352,13 @@ func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 
 // generateTopLevelMessage generates the top-level commit message using AI
 func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promptContext string) (string, error) {
-	// Load squash prompt template using unified loader
+	// Load squash prompt template with three-tier priority:
+	// 1. Command flag (not applicable - internal function)
+	// 2. Team override (.r2r/eac/templates/ai/commit-message/squash.md)
+	// 3. System default (templates/ai/commit-message/squash.md)
+	// Note: "squash" is a variant prompt (convention adds .md automatically)
 	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
-	promptTemplate, _, err := loader.LoadPrompt("commit/squash.md", "")
+	promptTemplate, _, err := loader.LoadPrompt("squash", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load squash.md template: %w", err)
 	}

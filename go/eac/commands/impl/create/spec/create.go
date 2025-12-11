@@ -585,9 +585,13 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 		return string(content), nil
 	}
 
-	// Load from AI config: .r2r/eac/ai/prompts/specs/
+	// Load prompt with three-tier priority:
+	// 1. Command flag (--prompt)
+	// 2. Team override (.r2r/eac/templates/ai/specs/specs.md)
+	// 3. System default (templates/ai/specs/specs.md)
+	// Convention: Empty string uses type name (specs.md)
 	loader := contracts.NewContractLoader(templateRoot, "ai/specs", "")
-	prompt, source, err := loader.LoadPrompt("specs/specs.md", "")
+	prompt, source, err := loader.LoadPromptWithPriority("", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}

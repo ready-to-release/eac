@@ -125,10 +125,34 @@
           "description": "Templates directory",
           "default": "templates"
         },
+        "ai_prompts": {
+          "$ref": "#/definitions/ai_prompts_paths",
+          "description": "AI prompt template paths"
+        },
         "out": {
           "$ref": "#/definitions/out_paths",
           "description": "Output directory structure"
         }
+      }
+    },
+    "ai_prompts_paths": {
+      "type": "object",
+      "description": "AI prompt template paths with three-tier priority system",
+      "properties": {
+        "system": {
+          "type": "string",
+          "description": "System default prompts (version controlled, shipped with repo)",
+          "default": "templates/ai"
+        },
+        "team": {
+          "type": "string",
+          "description": "Team override prompts (version controlled, team customizations)",
+          "default": ".r2r/eac/templates/ai"
+        }
+      },
+      "default": {
+        "system": "templates/ai",
+        "team": ".r2r/eac/templates/ai"
       }
     },
     "out_paths": {

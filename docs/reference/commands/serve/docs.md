@@ -83,6 +83,6 @@ If a server is already running on a different port, you'll need to stop it first
 
 - [show books](../show/books.md)
 - [validate books](../validate/books.md)
-- [build books](../../other/build.md)
+- [build](../other/build.md)
 
 {{ diataxis_footer() }}

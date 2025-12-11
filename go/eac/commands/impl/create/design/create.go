@@ -385,25 +385,25 @@ func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 	return prompt.String(), nil
 }
 
-// loadPrompt loads the AI prompt for design generation
+// loadPrompt loads the AI prompt for design generation with three-tier priority:
+// 1. Command flag (--prompt)
+// 2. Team override (.r2r/eac/templates/ai/design/design.md)
+// 3. System default (templates/ai/design/design.md)
+// Convention: Empty string uses type name (design.md)
 func loadPrompt(config *DesignConfig) (string, error) {
-	// If custom prompt specified, load that
-	if config.PromptPath != "" {
-		content, err := os.ReadFile(config.PromptPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read custom prompt from %s: %w", config.PromptPath, err)
-		}
-		return string(content), nil
-	}
-
-	// Load default prompt from repo path
-	repoPath := filepath.Join(config.TemplateRoot, "contracts", "ai", "design", "0.1.0", "design.md")
-	content, err := os.ReadFile(repoPath)
+	// Load prompt with three-tier priority system
+	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "")
+	prompt, source, err := loader.LoadPromptWithPriority("", config.PromptPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read prompt from %s: %w", repoPath, err)
+		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
 
-	return string(content), nil
+	// Log source if not default
+	if source != "embedded fallback" && config.Debug {
+		log.Errorf("ℹ️  Using %s prompt", source)
+	}
+
+	return prompt, nil
 }
 
 // generateAndValidate generates AI output with retry and validates with Structurizr CLI

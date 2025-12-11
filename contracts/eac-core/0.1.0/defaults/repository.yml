@@ -46,6 +46,14 @@ paths:
   # Templates directory
   templates: templates
 
+  # AI prompt templates
+  ai_prompts:
+    # System defaults (version controlled, shipped with repo)
+    system: templates/ai
+
+    # Team overrides (version controlled, team customizations)
+    team: .r2r/eac/templates/ai
+
   # Output directory structure
   out:
     root: out
