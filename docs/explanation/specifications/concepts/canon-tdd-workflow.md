@@ -80,7 +80,7 @@ Reference for Kent Beck's test-driven development process.
 
 ## Red-Green-Refactor Cycle
 
-```
+```text
 Red → Green → Refactor → Red → Green → Refactor → ...
 ```
 

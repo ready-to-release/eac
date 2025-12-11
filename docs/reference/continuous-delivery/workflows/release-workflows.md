@@ -518,7 +518,7 @@ ls -lh out/build/r2r-cli/
 
 ## References
 
-- [CI Modules](./ci-modules.md) - Module CI workflows that run before release
+- [CI Workflows](./ci-workflows.md) - Module CI workflows that run before release
 - [Versioning](../changelog/versioning.md) - Semantic versioning rules
 - [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure
 - Release workflow files: `.github/workflows/release-*.yaml`

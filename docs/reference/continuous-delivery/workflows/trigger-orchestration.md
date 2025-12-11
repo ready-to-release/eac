@@ -1,12 +1,14 @@
-# CI Orchestration
+# Trigger Orchestration
 
 {{ page_breadcrumb() }}
 
-Detailed reference for the CI orchestration system (`trigger-ci.yaml`).
+Detailed reference for the trigger orchestration system (`trigger-ci.yaml`).
 
 ## Overview
 
 The `trigger-ci.yaml` workflow implements incremental CI by detecting which modules have changed and orchestrating their build and test execution in dependency order. This workflow serves as the main entry point for continuous integration.
+
+The `trigger-release.yaml` workflow orcehstrates pending releases
 
 **Location:** `.github/workflows/trigger-ci.yaml`
 
@@ -436,7 +438,7 @@ If no modules need rebuilding:
 
 - Workflow file: `.github/workflows/trigger-ci.yaml`
 - [Overview](./overview.md) - Workflow architecture
-- [CI Modules](./ci-modules.md) - Module CI workflow patterns
+- [CI Workflows](./ci-workflows.md) - Module CI workflow patterns
 - [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure
 
 {{ diataxis_footer() }}

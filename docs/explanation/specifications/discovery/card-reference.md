@@ -89,7 +89,7 @@ So that [business value]
 
 ## Visual Layout
 
-```
+```text
         [Yellow: User Story]
                |
     +----------+----------+

@@ -23,14 +23,14 @@ This section covers:
 
 ## In This Section
 
-| Topic | Description |
-|-------|-------------|
-| [Three-Layer Approach](./three-layer-approach.md) | Rules, Scenarios, and Unit Tests hierarchy |
-| [BDD Fundamentals](./bdd-fundamentals.md) | Behavior-Driven Development and Gherkin syntax |
-| [Executable Specifications](./executable-specifications.md) | Living documentation as automated tests |
-| [Specifications Evolution](./specifications-evolution.md) | How specifications change with understanding |
-| [Canon TDD Workflow](./canon-tdd-workflow.md) | Test-Driven Development cycle (Red-Green-Refactor) |
-| [Ubiquitous Language](./ubiquitous-language.md) | Domain-specific shared vocabulary |
+| Topic                                                       | Description                                        |
+| ----------------------------------------------------------- | -------------------------------------------------- |
+| [Three-Layer Approach](./three-layer-approach.md)           | Rules, Scenarios, and Unit Tests hierarchy         |
+| [BDD Fundamentals](./bdd-fundamentals.md)                   | Behavior-Driven Development and Gherkin syntax     |
+| [Executable Specifications](./executable-specifications.md) | Living documentation as automated tests            |
+| [Specifications Evolution](./specifications-evolution.md)   | How specifications change with understanding       |
+| [Canon TDD Workflow](./canon-tdd-workflow.md)               | Test-Driven Development cycle (Red-Green-Refactor) |
+| [Ubiquitous Language](./ubiquitous-language.md)             | Domain-specific shared vocabulary                  |
 
 ---
 

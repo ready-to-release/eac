@@ -182,9 +182,7 @@ Organizations typically implement in this order:
 2. Add Executable Specifications (risk controls in Gherkin)
 3. Enable Continuous Validation (CI runs specs)
 
-**Phase 2** (Scale):
-4. Implement Shift-Left (pre-commit hooks)
-5. Automate Evidence Collection (pipeline integration)
+**Phase 2** (Scale): 4. Implement Shift-Left (pre-commit hooks) 5. Automate Evidence Collection (pipeline integration)
 
 **Timeline**: 12-16 weeks for pilot, 8-12 weeks for automation tooling
 

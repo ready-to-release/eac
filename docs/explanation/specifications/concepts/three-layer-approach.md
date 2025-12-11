@@ -20,15 +20,16 @@ Each layer serves a distinct purpose, uses different tools, and addresses differ
 
 ## The Three Layers
 
-| Layer           | Question | Stakeholders | Format | Representation | Location |
-|-----------------|----------|--------------|--------|----------------|----------|
-| **Rules**       | "What business value?" | Product Owner, Business | Gherkin | `Rule:` blocks | Specifications |
-| **Scenarios**   | "How does user interact?" | QA, Developers, Product | Gherkin | `Scenario:` under Rules | Specifications + Test implementations |
-| **Unit tests** | "Does code work?" | Developers | Test framework | Test functions | Test files |
+| Layer          | Question                  | Stakeholders            | Format         | Representation          | Location                              |
+| -------------- | ------------------------- | ----------------------- | -------------- | ----------------------- | ------------------------------------- |
+| **Rules**      | "What business value?"    | Product Owner, Business | Gherkin        | `Rule:` blocks          | Specifications                        |
+| **Scenarios**  | "How does user interact?" | QA, Developers, Product | Gherkin        | `Scenario:` under Rules | Specifications + Test implementations |
+| **Unit tests** | "Does code work?"         | Developers              | Test framework | Test functions          | Test files                            |
 
 > **Implementation**: Uses BDD frameworks for Gherkin scenarios and native test frameworks for unit tests.
 >
 > Common framework combinations:
+>
 > - **Go**: Godog + go test
 > - **Python**: behave/pytest-bdd + pytest
 > - **Java**: Cucumber + JUnit
@@ -115,9 +116,10 @@ flowchart LR
     Repeat -->|No| Test
     Repeat -->|Yes| Done[Complete]
 ```
-*We often discover new tests while we implement a test, add them to the test list.*
 
-*Based on [Canon TDD by Kent Beck](https://tidyfirst.substack.com/p/canon-tdd), flowchart concept by Vic Wu*
+_We often discover new tests while we implement a test, add them to the test list._
+
+_Based on [Canon TDD by Kent Beck](https://tidyfirst.substack.com/p/canon-tdd), flowchart concept by Vic Wu_
 
 **The Five Steps**:
 
@@ -140,13 +142,15 @@ flowchart LR
 
 Feature: cli_init-project
 
-**Step 1: List behavioral variants**
+> **Step 1: List behavioral variants**
+
 - Create config in empty directory (success)
 - Create config with custom path (success)
 - Create config when file exists (error)
 - Create config in read-only directory (error)
 
-**Steps 2-5: For each variant**
+> **Steps 2-5: For each variant**
+
 1. **Write test** - Create test that calls the function and asserts expected outcome
    - Arrange: Set up test conditions (empty directory, existing file, etc.)
    - Act: Invoke the function being tested
@@ -155,8 +159,9 @@ Feature: cli_init-project
 3. **Refactor** - Improve design if needed (optional)
 4. **Repeat** - Move to next behavioral variant from the list
 
-**Test structure** (pseudocode):
-```
+> **Test structure** (pseudocode):
+
+```test
 Test_CreateConfig_InEmptyDirectory_ShouldSucceed:
     Arrange: Create empty temporary directory
     Act: Call CreateConfig(path)
@@ -314,11 +319,11 @@ flowchart TD
 
 **Example**:
 
-| Specification (WHAT) | Implementation (HOW) |
-|---------------------|---------------------|
-| `Given I have an account` | `testDB.CreateUser(username, hash)` |
-| `When I run "r2r login"` | `exec.Command("r2r", "login").Run()` |
-| `Then I should be authenticated` | `os.ReadFile("~/.r2r/session")` |
+| Specification (WHAT)             | Implementation (HOW)                 |
+| -------------------------------- | ------------------------------------ |
+| `Given I have an account`        | `testDB.CreateUser(username, hash)`  |
+| `When I run "r2r login"`         | `exec.Command("r2r", "login").Run()` |
+| `Then I should be authenticated` | `os.ReadFile("~/.r2r/session")`      |
 
 **Key Insight**: Specification describes user-visible behavior; implementation handles technical details (database, filesystem, process execution).
 

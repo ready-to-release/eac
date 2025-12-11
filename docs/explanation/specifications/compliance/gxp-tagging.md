@@ -280,13 +280,13 @@ Risk assessments should be documented separately and map risks to controls:
 
 **Common GxP Controls**:
 
-| Control | Description | GxP Relevance |
-|---------|-------------|---------------|
-| `@control:ac-2` | Account Management | User access control |
-| `@control:au-2` | Audit Events | GxP audit trail requirements |
-| `@control:au-3` | Audit Record Content | FDA 21 CFR Part 11 compliance |
-| `@control:ia-5` | Authenticator Management | Identity verification |
-| `@control:si-7` | Software Integrity | Software validation |
+| Control         | Description              | GxP Relevance                 |
+| --------------- | ------------------------ | ----------------------------- |
+| `@control:ac-2` | Account Management       | User access control           |
+| `@control:au-2` | Audit Events             | GxP audit trail requirements  |
+| `@control:au-3` | Audit Record Content     | FDA 21 CFR Part 11 compliance |
+| `@control:ia-5` | Authenticator Management | Identity verification         |
+| `@control:si-7` | Software Integrity       | Software validation           |
 
 **Requirements**:
 

@@ -193,20 +193,20 @@ flowchart LR
 
 ## The Value Proposition
 
-| Aspect | Manual Approach | Everything as Code |
-|--------|----------------|-------------------|
-| **Traceability** | Reconstructed retroactively, gaps likely | Complete immutable history, cryptographically verified |
-| **Documentation** | Created after the fact, often incomplete | Auto-generated, always current, never drifts |
-| **Testing** | Sample-based, may miss edge cases | 100% execution on every change |
-| **Reviews** | Can be skipped under pressure | Enforced by automation (branch protection) |
-| **Audit Trail** | Compiled from logs, may be incomplete | Complete Git history with all context |
-| **Reproducibility** | "Works on my machine" syndrome | Deterministic builds, identical environments |
-| **Compliance Validation** | Weeks of manual checking | Minutes of automated validation |
-| **Knowledge Transfer** | Tribal knowledge in people's heads | Encoded in executable specifications |
-| **Risk** | Accumulates in large batches | Distributed across small, frequent changes |
-| **Audit Preparation** | Months of evidence compilation | Always audit-ready, evidence exists |
-| **Consistency** | Varies by person, day, pressure | Identical every time |
-| **Scalability** | Limited by human capacity | Scales with compute resources |
+| Aspect                    | Manual Approach                          | Everything as Code                                     |
+| ------------------------- | ---------------------------------------- | ------------------------------------------------------ |
+| **Traceability**          | Reconstructed retroactively, gaps likely | Complete immutable history, cryptographically verified |
+| **Documentation**         | Created after the fact, often incomplete | Auto-generated, always current, never drifts           |
+| **Testing**               | Sample-based, may miss edge cases        | 100% execution on every change                         |
+| **Reviews**               | Can be skipped under pressure            | Enforced by automation (branch protection)             |
+| **Audit Trail**           | Compiled from logs, may be incomplete    | Complete Git history with all context                  |
+| **Reproducibility**       | "Works on my machine" syndrome           | Deterministic builds, identical environments           |
+| **Compliance Validation** | Weeks of manual checking                 | Minutes of automated validation                        |
+| **Knowledge Transfer**    | Tribal knowledge in people's heads       | Encoded in executable specifications                   |
+| **Risk**                  | Accumulates in large batches             | Distributed across small, frequent changes             |
+| **Audit Preparation**     | Months of evidence compilation           | Always audit-ready, evidence exists                    |
+| **Consistency**           | Varies by person, day, pressure          | Identical every time                                   |
+| **Scalability**           | Limited by human capacity                | Scales with compute resources                          |
 
 ---
 

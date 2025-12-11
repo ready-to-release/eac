@@ -14,12 +14,12 @@ This document describes a four-phase framework that guides compliance transforma
 
 ## The Journey Overview
 
-| Phase | Duration | Primary Objective | Success Criterion |
-|-------|----------|------------------|-------------------|
-| **Phase 1: Assessment** | 4-6 weeks | Understand current state, plan transformation | Approved roadmap |
-| **Phase 2: Pilot** | 12-16 weeks | Prove approach with one team | Successful test audit |
-| **Phase 3: Automation** | 8-12 weeks | Build reusable automation tools | Documented tools, trained teams |
-| **Phase 4: Rollout** | 6-12 months | Scale to organization | 80% adoption |
+| Phase                   | Duration    | Primary Objective                             | Success Criterion               |
+| ----------------------- | ----------- | --------------------------------------------- | ------------------------------- |
+| **Phase 1: Assessment** | 4-6 weeks   | Understand current state, plan transformation | Approved roadmap                |
+| **Phase 2: Pilot**      | 12-16 weeks | Prove approach with one team                  | Successful test audit           |
+| **Phase 3: Automation** | 8-12 weeks  | Build reusable automation tools               | Documented tools, trained teams |
+| **Phase 4: Rollout**    | 6-12 months | Scale to organization                         | 80% adoption                    |
 
 ```mermaid
 flowchart LR

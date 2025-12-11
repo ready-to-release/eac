@@ -75,6 +75,7 @@ modules:
       - tutorials
       - howto
       - explanation
+      - specifications
     # Container selection is automatic based on book output:
     #   output: site    → containers/mkdocs-site
     #   output: pdf-*   → containers/mkdocs-pdf
