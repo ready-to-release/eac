@@ -144,16 +144,12 @@ runs:
         echo "Waiting for CI on exact commit ${COMMIT:0:7}..."
         echo ""
 
-        # Use --strict to require exact commit match
-        # Capture output to extract INHERITED_CI_SHA if present
+        # Run CI check and capture output to extract inherited SHA
         OUTPUT=$($COMMANDS release check-ci \
           --workflow "$WORKFLOW" \
           --commit "$COMMIT" \
           --timeout "$TIMEOUT" \
-          --strict 2>&1) || {
-          echo "$OUTPUT"
-          exit 1
-        }
+          --strict)
         echo "$OUTPUT"
 
         # Extract inherited SHA if CI was inherited from previous run
@@ -162,7 +158,6 @@ runs:
           echo "CI inherited from commit: $INHERITED_SHA"
           echo "ci_sha=$INHERITED_SHA" >> $GITHUB_OUTPUT
         else
-          # Use current commit SHA (CI ran directly on this commit)
           echo "ci_sha=$COMMIT" >> $GITHUB_OUTPUT
         fi
 
