@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.22] - 2025-12-11
+
+### Fixed
+
+- fix(multi-module): enhance release and test infrastructure
+
 ## [0.0.21] - 2025-12-10
 
 ### Fixed
@@ -158,7 +164,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release with core CLI functionality
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.21...HEAD
+[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.22...HEAD
+[0.0.22]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.21...r2r-cli/0.0.22
 [0.0.21]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.19...r2r-cli/0.0.21
 [0.0.19]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.17...r2r-cli/0.0.19
 [0.0.17]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.16...r2r-cli/0.0.17
