@@ -112,12 +112,13 @@ type Files struct {
 	Root string `yaml:"root"` // Base directory for this module
 
 	// Patterns relative to Root
-	Source    []string `yaml:"source"`    // Primary source code files
-	Config    []string `yaml:"config"`    // Configuration/build files
-	Assets    []string `yaml:"assets"`    // Static assets, templates, docs
-	Tests     []string `yaml:"tests"`     // Test files
-	Exclude   []string `yaml:"exclude"`   // Patterns to exclude
-	Changelog string   `yaml:"changelog"` // Changelog file path
+	Source       []string `yaml:"source"`        // Primary source code files
+	Config       []string `yaml:"config"`        // Configuration/build files
+	Assets       []string `yaml:"assets"`        // Static assets, templates, docs
+	Tests        []string `yaml:"tests"`         // Test files
+	Exclude      []string `yaml:"exclude"`       // Patterns to exclude
+	Changelog    string   `yaml:"changelog"`     // Changelog file path
+	ReleaseNotes string   `yaml:"release_notes"` // Release notes file path
 
 	// Workflow file ownership (paths relative to repo root)
 	Workflows Workflows `yaml:"workflows"`

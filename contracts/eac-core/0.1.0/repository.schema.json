@@ -389,6 +389,10 @@
           "description": "Changelog file path relative to module root (defaults to 'CHANGELOG.md')",
           "default": "CHANGELOG.md"
         },
+        "release_notes": {
+          "type": "string",
+          "description": "Release notes file path (defaults to 'release/{moniker}/RELEASE-NOTES.md')"
+        },
         "workflows": {
           "$ref": "#/definitions/workflows"
         },

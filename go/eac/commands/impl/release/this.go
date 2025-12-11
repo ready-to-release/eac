@@ -43,6 +43,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	"github.com/ready-to-release/eac/go/eac/core/releasenotes"
 )
 
 func init() {
@@ -363,7 +364,43 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 		return result
 	}
 
-	// Write changelog
+	// Validate RELEASE-NOTES.md before writing changelog
+	releaseNotesPath := moduleContract.GetReleaseNotesPath()
+	fullReleaseNotesPath := filepath.Join(workspaceRoot, releaseNotesPath)
+
+	// Check if RELEASE-NOTES.md exists
+	if _, err := os.Stat(fullReleaseNotesPath); os.IsNotExist(err) {
+		// Generate from template using repository config
+		if err := releasenotes.GenerateTemplate(workspaceRoot, cfg.Repository, fullReleaseNotesPath, module, newVersion, releaseDate); err != nil {
+			result.Error = fmt.Sprintf("failed to generate release notes: %v", err)
+			return result
+		}
+
+		result.Error = fmt.Sprintf(
+			"RELEASE-NOTES.md created at %s\n\n"+
+				"Please:\n"+
+				"  1. Edit the file and fill in required sections\n"+
+				"  2. Run 'release this %s' again to complete the release",
+			releaseNotesPath, module)
+		return result // HALT - user must edit
+	}
+
+	// Parse and validate release notes
+	rn, err := releasenotes.Parse(fullReleaseNotesPath)
+	if err != nil {
+		result.Error = fmt.Sprintf("failed to parse release notes: %v", err)
+		return result
+	}
+
+	if err := rn.ValidateVersion(newVersion); err != nil {
+		result.Error = fmt.Sprintf(
+			"RELEASE-NOTES.md validation failed: %v\n\n"+
+				"Please add version [%s] to %s",
+			err, newVersion, releaseNotesPath)
+		return result // HALT - version missing or empty
+	}
+
+	// Validation passed - write changelog
 	if err := existingChangelog.Write(fullChangelogPath); err != nil {
 		result.Error = fmt.Sprintf("failed to write changelog: %v", err)
 		return result

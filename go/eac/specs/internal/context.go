@@ -155,6 +155,11 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 		env = append(env, fmt.Sprintf("R2R_REPO_ROOT=%s", c.IsolatedDir))
 	}
 
+	// Set distribution root for template loading
+	// Templates are NOT copied to isolated test directories - they live in the original repo
+	// This allows AI commands to load system default templates from templates/ai/
+	env = append(env, fmt.Sprintf("R2R_CONTAINER_ROOT=%s", c.OriginalRepoRoot))
+
 	// Set mock AI directory for subprocess commands
 	// This enables commands to use mock responses instead of real AI calls
 	// Use container root if in container, otherwise repo root
