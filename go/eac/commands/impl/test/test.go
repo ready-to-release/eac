@@ -6,15 +6,15 @@
 // Long: This command discovers tests, applies inference rules (e.g., Go tests default to @L1),
 // Long: filters by suite tags, and runs matching tests with consistent summary output.
 // Long:
-// Long: Use --suite to select which tests to run. The default suite is "commit" which
-// Long: includes L0, L1, and L2 tests (fast tests for pre-commit/MR validation).
+// Long: Use --suite to select which tests to run. The default suite is "component" which
+// Long: includes L0 and L1 tests (fast unit tests for component-level validation).
 // Long:
 // Long: Example:
 // Long:   test eac-commands                    # Test single module
 // Long:   test eac-core r2r-cli                # Test multiple modules
 // Long:   test                                 # Test all modules
 // Long:   test eac-commands --suite acceptance # Run acceptance tests only
-// Flag.suite: type=string, usage=Filter tests by suite (default: "commit")
+// Flag.suite: type=string, usage=Filter tests by suite (default: "component")
 package test
 
 import (
@@ -72,6 +72,7 @@ type TestConfig struct {
 	TUIHeight    int
 	Parallel     bool
 	ForceRetest  bool // --retest flag to bypass incremental testing
+	RunAllSuites bool // --all flag to run component, integration, and acceptance suites
 }
 
 // TestExecutionContext holds shared state for parallel test execution
@@ -85,6 +86,10 @@ type TestExecutionContext struct {
 	suiteTagFilter  string
 	workspaceRoot   string
 	moduleMapper    *ModuleMapper // Maps package paths to module monikers
+
+	// Suite routing for "all" suite
+	suiteMoniker   string                    // "all" or specific suite name
+	repoCfg        *config.RepositoryConfig  // For computing suite output paths
 
 	// Thread-safe result storage
 	mu      sync.Mutex
@@ -126,8 +131,29 @@ func Test() int {
 		return 1
 	}
 
+	// Handle --all flag: run component, integration, and acceptance suites sequentially
+	if cfg.RunAllSuites {
+		return executeAllSuites(cfg)
+	}
+
 	// Execute tests directly (like build command)
 	return executeTests(cfg)
+}
+
+// executeAllSuites runs component, integration, and acceptance suites in a SINGLE test pass.
+// This creates a combined suite from all 3 suites and runs them together to avoid
+// multiple logging sessions and the "file already closed" errors.
+func executeAllSuites(cfg *TestConfig) int {
+	// Create a combined suite that matches L0, L1, L2, and L3 tests
+	// This is equivalent to: component (L0,L1) + integration (L2) + acceptance (L3)
+	suiteCfg := *cfg
+	suiteCfg.SuiteName = "all" // Use virtual "all" suite
+	suiteCfg.RunAllSuites = false // Prevent recursion
+
+	log.Infof("Running combined suites: component + integration + acceptance")
+	log.Info("")
+
+	return executeTests(&suiteCfg)
 }
 
 // parseTestArgs parses command line arguments into TestConfig
@@ -138,7 +164,7 @@ func parseTestArgs(args []string) *TestConfig {
 	isLocalConsole := !isCI && !isContainer
 
 	cfg := &TestConfig{
-		SuiteName:    "commit",
+		SuiteName:    "component",
 		ReportFormat: "cucumber",
 		TUIHeight:    tui.DefaultHeight,
 		Parallel:     true,
@@ -181,6 +207,8 @@ func parseTestArgs(args []string) *TestConfig {
 			cfg.Parallel = false
 		case arg == "--retest":
 			cfg.ForceRetest = true
+		case arg == "--all":
+			cfg.RunAllSuites = true
 		case arg == "--tui-height":
 			if i+1 >= len(args) {
 				log.Errorf("--tui-height requires a value")
@@ -203,7 +231,7 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --retest")
+			log.Errorf("Valid flags: --suite, --all, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --retest")
 			return nil
 		default:
 			cfg.Monikers = append(cfg.Monikers, arg)
@@ -531,6 +559,7 @@ func executeTests(cfg *TestConfig) int {
 					SetTestInfo(&initsummary.TestInfo{
 						SuiteName:        suite.Name,
 						SuiteDescription: suite.Description,
+						SuitesIncluded:   getSuitesIncluded(suite.Moniker),
 						TotalDiscovered:  stats.TotalDiscovered,
 						Skipped:          stats.Skipped,
 						NotMatchingSuite: stats.NotMatchingSuite,
@@ -571,6 +600,7 @@ func executeTests(cfg *TestConfig) int {
 				SetTestInfo(&initsummary.TestInfo{
 					SuiteName:        suite.Name,
 					SuiteDescription: suite.Description,
+					SuitesIncluded:   getSuitesIncluded(suite.Moniker),
 					TotalDiscovered:  stats.TotalDiscovered,
 					Skipped:          stats.Skipped,
 					NotMatchingSuite: stats.NotMatchingSuite,
@@ -623,6 +653,7 @@ func executeTests(cfg *TestConfig) int {
 		SetTestInfo(&initsummary.TestInfo{
 			SuiteName:             suite.Name,
 			SuiteDescription:      suite.Description,
+			SuitesIncluded:        getSuitesIncluded(suite.Moniker),
 			TotalDiscovered:       stats.TotalDiscovered,
 			Skipped:               stats.Skipped,
 			NotMatchingSuite:      stats.NotMatchingSuite,
@@ -803,6 +834,8 @@ func executeTests(cfg *TestConfig) int {
 		suiteTagFilter:    suiteTagFilter,
 		workspaceRoot:     workspaceRoot,
 		moduleMapper:      moduleMapper,
+		suiteMoniker:      suite.Moniker,
+		repoCfg:           repoCfg,
 		results:           make(map[string]PackageResult),
 	}
 
@@ -894,7 +927,7 @@ func executeTests(cfg *TestConfig) int {
 	// Send summary data to TUI and wait for user to exit
 	if cfg.UseTUI {
 		testSummary := testTUISummary(
-			results, time.Since(testStartTime), suite.Name,
+			results, time.Since(testStartTime), suite.Name, suite.Moniker,
 			osFilteredCount, len(selectedTests),
 			len(testsByPackage), packagesPassed, packagesFailed,
 			testsTotal, testsPassed, testsFailed,
@@ -910,7 +943,7 @@ func executeTests(cfg *TestConfig) int {
 
 	// Show full summary (when not using TUI or after TUI exits)
 	if !cfg.UseTUI {
-		printTestSummary(multiWriter, results, suite.Name,
+		printTestSummary(multiWriter, results, suite.Name, suite.Moniker,
 			len(selectedTests), osFilteredCount,
 			len(testsByPackage), packagesPassed, packagesFailed,
 			testsTotal, testsPassed, testsFailed,
@@ -1013,6 +1046,19 @@ func (ctx *TestExecutionContext) createWorker() orchestrator.WorkerFunc {
 	}
 }
 
+// getEffectiveTestRunDir returns the appropriate test run directory for a package.
+// For "all" suite, routes to component/integration/acceptance based on test L-level tags.
+// For other suites, returns the context's testRunDir.
+func (ctx *TestExecutionContext) getEffectiveTestRunDir(tests []testing.TestReference) string {
+	if ctx.suiteMoniker != "all" || ctx.repoCfg == nil {
+		return ctx.testRunDir
+	}
+
+	// Determine effective suite based on test tags
+	effectiveSuite := getEffectiveSuiteForTests(tests, "component")
+	return filepath.Join(ctx.workspaceRoot, ctx.repoCfg.TestOutputPath(effectiveSuite))
+}
+
 // runPackageTests executes tests for a single package with streaming output
 // modulePath is the module-based path (e.g., eac-core/config) used for output organization
 func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []testing.TestReference, tuiWriter io.Writer) PackageResult {
@@ -1036,10 +1082,13 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 			moduleMoniker = modulePath[:idx]
 		}
 
+		// Get effective test run dir (routes to correct suite folder for "all")
+		effectiveTestRunDir := ctx.getEffectiveTestRunDir(tests)
+
 		// Use the module path directly as the output path (orchestrator already uses this)
 		cfg := runners.RunConfig{
 			WorkspaceRoot:    ctx.workspaceRoot,
-			TestRunDir:       ctx.testRunDir,
+			TestRunDir:       effectiveTestRunDir,
 			ReportFormat:     ctx.reportFormat,
 			Coverage:         ctx.coverage,
 			SuiteTagFilter:   ctx.suiteTagFilter,
@@ -1451,7 +1500,8 @@ func printTestUsage() {
 	log.Info("Usage: r2r eac test [module1] [module2] ... [options]")
 	log.Info("")
 	log.Info("Options:")
-	log.Info("  --suite <name>         Filter tests by suite (default: \"commit\")")
+	log.Info("  --suite <name>         Filter tests by suite (default: \"component\")")
+	log.Info("  --all                  Run all suites: component, integration, acceptance (excludes production-verification)")
 	log.Info("  --as-cucumber          Generate Cucumber JSON reports (default)")
 	log.Info("  --as-junit             Generate JUnit XML reports")
 	log.Info("  --coverage             Generate coverage reports (coverage.out, coverage.json)")
@@ -1465,12 +1515,14 @@ func printTestUsage() {
 	log.Info("  --retest               Force full test run, bypassing incremental detection")
 	log.Info("")
 	log.Info("Available suites:")
-	log.Info("  commit                 L0-L2 tests (fast, pre-commit)")
-	log.Info("  acceptance             IV/OV/PV tests (PLTE acceptance)")
+	log.Info("  component                L0-L1 tests (fast unit tests)")
+	log.Info("  integration              L2 tests (Docker-based emulated tests)")
+	log.Info("  acceptance               L3 tests (production-like tests)")
 	log.Info("  production-verification  L4+PIV tests (production smoke)")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  r2r eac test                          # Test all modules")
+	log.Info("  r2r eac test                          # Test all modules (component suite)")
+	log.Info("  r2r eac test --all                    # Run component, integration, acceptance")
 	log.Info("  r2r eac test eac-commands             # Test single module")
 	log.Info("  r2r eac test r2r-cli eac-core         # Test multiple modules")
 	log.Info("  r2r eac test eac-commands --suite acceptance")
@@ -1482,12 +1534,18 @@ func printTestUsage() {
 }
 
 // printTestSummary prints unified test summary to a writer (for non-TUI mode)
-func printTestSummary(w io.Writer, results []PackageResult, suiteName string,
+// Note: suiteName/suiteMoniker kept for API compatibility but suite info is shown during init
+func printTestSummary(w io.Writer, results []PackageResult, suiteName, suiteMoniker string,
 	selectedCount, osFilteredCount,
 	totalPackages, packagesPassed, packagesFailed,
 	testsTotal, testsPassed, testsFailed int,
 	testRunDir string,
 ) {
+	// Note: Suite info is displayed during init phase (via writeInitSummary)
+	// The suiteName/suiteMoniker params are kept for potential future use
+	_ = suiteName
+	_ = suiteMoniker
+
 	testsSkipped := testsTotal - testsPassed - testsFailed
 	moduleStats := aggregateResultsByModule(results)
 
@@ -1540,13 +1598,19 @@ func printTestSummary(w io.Writer, results []PackageResult, suiteName string,
 
 // testTUISummary creates summary data for the TUI Summary pane
 func testTUISummary(
-	results []PackageResult, totalTime time.Duration, suiteName string,
+	results []PackageResult, totalTime time.Duration, suiteName, suiteMoniker string,
 	osFilteredCount, selectedCount,
 	totalPackages, packagesPassed, packagesFailed,
 	testsTotal, testsPassed, testsFailed int,
 	testRunDir string,
 ) *tui.SummaryData {
 	testsSkipped := testsTotal - testsPassed - testsFailed
+
+	// Format suite name with included suites for "all"
+	displaySuiteName := suiteName
+	if suitesIncluded := getSuitesIncluded(suiteMoniker); len(suitesIncluded) > 0 {
+		displaySuiteName = fmt.Sprintf("%s (%s)", suiteName, strings.Join(suitesIncluded, ", "))
+	}
 
 	// Init summary: test cases selected (scenarios/functions we chose to run)
 	initSummary := fmt.Sprintf("%d test cases selected", selectedCount)
@@ -1609,7 +1673,7 @@ func testTUISummary(
 	if packagesFailed > 0 || testsFailed > 0 {
 		nextSteps = "Review detailed failure output below"
 	} else {
-		nextSteps = fmt.Sprintf("All tests passed for suite: %s", suiteName)
+		nextSteps = fmt.Sprintf("All tests passed for suite: %s", displaySuiteName)
 	}
 
 	return &tui.SummaryData{
@@ -1927,4 +1991,35 @@ func isTestFile(path string) bool {
 		strings.HasSuffix(path, ".feature") ||
 		strings.HasSuffix(path, ".test.ts") ||
 		strings.HasSuffix(path, ".spec.ts")
+}
+
+// getSuitesIncluded returns the list of suites included for the "all" suite.
+// For other suites, returns nil.
+func getSuitesIncluded(suiteMoniker string) []string {
+	if suiteMoniker == "all" {
+		return []string{"component", "integration", "acceptance"}
+	}
+	return nil
+}
+
+// getEffectiveSuiteForTests determines which suite a set of tests belongs to based on L-level tags.
+// Returns "component" for L0/L1, "integration" for L2, "acceptance" for L3.
+// If tests have mixed levels or no L-level tags, returns the provided fallback.
+func getEffectiveSuiteForTests(tests []testing.TestReference, fallback string) string {
+	if len(tests) == 0 {
+		return fallback
+	}
+
+	// Check L-level tags of first test (tests in same package should have same level)
+	for _, tag := range tests[0].Tags {
+		switch tag {
+		case "@L0", "@L1":
+			return "component"
+		case "@L2":
+			return "integration"
+		case "@L3":
+			return "acceptance"
+		}
+	}
+	return fallback
 }

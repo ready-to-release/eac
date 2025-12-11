@@ -25,8 +25,8 @@ func TestValidatorScenarios(t *testing.T) {
 			config: map[string]interface{}{
 				"extensions": []map[string]interface{}{
 					{
-						"name":  "pwsh",
-						"image": "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:latest",
+						"name":  "eac",
+						"image": "ghcr.io/ready-to-release/ext-eac:latest",
 					},
 				},
 			},
@@ -57,10 +57,10 @@ func TestValidatorScenarios(t *testing.T) {
 				},
 				"extensions": []map[string]interface{}{
 					{
-						"name":              "pwsh",
-						"image":             "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0",
+						"name":              "eac",
+						"image":             "ghcr.io/ready-to-release/ext-eac:v1.0.0",
 						"image_pull_policy": "IfNotPresent",
-						"description":       "PowerShell extension",
+						"description":       "EAC extension",
 						"version":           "1.0.0",
 						"repo_url":          "https://github.com/ready-to-release/eac/go/r2r/cli",
 						"docs_url":          "https://docs.example.com",

@@ -78,8 +78,8 @@ func (c *RegistryClient) ListTags(imagePath string) ([]string, error) {
 
 // listTagsViaGitHubAPI uses the GitHub API to list tags (requires authentication, works with private packages)
 func (c *RegistryClient) listTagsViaGitHubAPI(imagePath string) ([]string, error) {
-	// Parse image path to get org/repo/package
-	// Example: ghcr.io/ready-to-release/r2r-cli/extensions/pwsh -> ready-to-release/r2r-cli/extensions/pwsh
+	// Parse image path to get org/package
+	// Example: ghcr.io/ready-to-release/ext-eac -> ready-to-release/ext-eac
 	cleanPath := strings.TrimPrefix(imagePath, "ghcr.io/")
 	parts := strings.Split(cleanPath, "/")
 
@@ -88,7 +88,7 @@ func (c *RegistryClient) listTagsViaGitHubAPI(imagePath string) ([]string, error
 	}
 
 	org := parts[0]
-	// Package name needs URL encoding: r2r-cli/extensions/pwsh -> r2r-cli%2Fextensions%2Fpwsh
+	// Package name (may need URL encoding for nested paths)
 	packageName := strings.Join(parts[1:], "%2F")
 
 	// GitHub API endpoint for package versions
@@ -250,9 +250,9 @@ func (c *RegistryClient) GetLatestStableTag(imagePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
-	// For extensions, prefer SHA tags for pinning
-	if strings.Contains(imagePath, "/extensions/") {
+
+	// For extensions (ext-* packages), prefer SHA tags for pinning
+	if strings.Contains(imagePath, "/ext-") {
 		// Look for sha-XXX tags first (these are the most stable for pinning)
 		shaPattern := regexp.MustCompile(`^sha-[a-f0-9]{7,}$`)
 		for _, tag := range tags {
@@ -262,14 +262,14 @@ func (c *RegistryClient) GetLatestStableTag(imagePath string) (string, error) {
 			}
 		}
 	}
-	
+
 	// Look for run-XXX tags (these are stable release tags)
 	runTagPattern := regexp.MustCompile(`^run-\d+$`)
 	var runTags []struct {
 		tag string
 		num int
 	}
-	
+
 	for _, tag := range tags {
 		if runTagPattern.MatchString(tag) {
 			// Extract the number
@@ -281,33 +281,33 @@ func (c *RegistryClient) GetLatestStableTag(imagePath string) (string, error) {
 			}{tag, num})
 		}
 	}
-	
+
 	if len(runTags) == 0 {
 		// No run tags found, look for semantic version tags
 		semverPattern := regexp.MustCompile(`^v?\d+\.\d+\.\d+(-.*)?$`)
 		var semverTags []string
-		
+
 		for _, tag := range tags {
 			if semverPattern.MatchString(tag) {
 				semverTags = append(semverTags, tag)
 			}
 		}
-		
+
 		if len(semverTags) > 0 {
 			// Sort and return the latest
 			sort.Strings(semverTags)
 			return semverTags[len(semverTags)-1], nil
 		}
-		
+
 		// No stable tags found
 		return "", fmt.Errorf("no stable tags found (sha-XXX, run-XXX or semantic version)")
 	}
-	
+
 	// Sort run tags by number and return the highest
 	sort.Slice(runTags, func(i, j int) bool {
 		return runTags[i].num > runTags[j].num
 	})
-	
+
 	return runTags[0].tag, nil
 }
 
@@ -318,13 +318,13 @@ func (c *RegistryClient) GetLatestTag(imagePath string) (string, error) {
 	if err == nil {
 		return tag, nil
 	}
-	
+
 	// Fall back to any non-latest tag
 	tags, err := c.ListTags(imagePath)
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Filter out unwanted tags
 	var candidateTags []string
 	for _, tag := range tags {
@@ -332,18 +332,18 @@ func (c *RegistryClient) GetLatestTag(imagePath string) (string, error) {
 			candidateTags = append(candidateTags, tag)
 		}
 	}
-	
+
 	if len(candidateTags) == 0 {
 		return "", fmt.Errorf("no suitable tags found")
 	}
-	
+
 	// Prefer sha- tags over dev- tags
 	for _, tag := range candidateTags {
 		if strings.HasPrefix(tag, "sha-") {
 			return tag, nil
 		}
 	}
-	
+
 	// Return first available tag
 	return candidateTags[0], nil
 }
@@ -356,26 +356,26 @@ type ExtensionInfo struct {
 }
 
 // ListExtensions discovers available extensions by querying the registry
-// Extensions are packages under r2r-cli/extensions/* namespace
+// Extensions are packages with ext-* naming convention
 func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 	// Query GitHub API for all container packages in the organization
 	url := "https://api.github.com/orgs/ready-to-release/packages?package_type=container&per_page=100"
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
-	
+
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("executing request: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		logging.Debugf("GitHub API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
@@ -383,29 +383,29 @@ func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 	}
 
 	var packages []struct {
-		Name string `json:"name"`
+		Name        string `json:"name"`
 		PackageType string `json:"package_type"`
-		Visibility string `json:"visibility"`
+		Visibility  string `json:"visibility"`
 	}
-	
+
 	if err := json.NewDecoder(resp.Body).Decode(&packages); err != nil {
 		return nil, fmt.Errorf("decoding response: %w", err)
 	}
-	
+
 	var extensions []ExtensionInfo
-	extensionPrefix := "r2r-cli/extensions/"
-	
+	extensionPrefix := "ext-"
+
 	for _, pkg := range packages {
-		// Filter for extensions only (packages under r2r-cli/extensions/*)
+		// Filter for extensions only (packages with ext-* prefix)
 		if strings.HasPrefix(pkg.Name, extensionPrefix) {
-			// Extract extension name from package path
+			// Extract extension name (e.g., ext-eac -> eac)
 			extName := strings.TrimPrefix(pkg.Name, extensionPrefix)
-			
-			// Skip if it's a nested path (e.g., extensions/foo/bar)
+
+			// Skip if it's a nested path
 			if strings.Contains(extName, "/") {
 				continue
 			}
-			
+
 			extensions = append(extensions, ExtensionInfo{
 				Name:        extName,
 				Description: fmt.Sprintf("%s development environment", strings.Title(extName)),
@@ -414,11 +414,11 @@ func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 			logging.Debugf("Found extension: extension=%s package=%s", extName, pkg.Name)
 		}
 	}
-	
+
 	// Sort extensions by name for consistent output
 	sort.Slice(extensions, func(i, j int) bool {
 		return extensions[i].Name < extensions[j].Name
 	})
-	
+
 	return extensions, nil
 }

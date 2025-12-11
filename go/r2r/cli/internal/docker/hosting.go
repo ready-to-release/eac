@@ -22,8 +22,8 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/cache"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/conf"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/github"
-	"github.com/ready-to-release/eac/go/r2r/cli/internal/terminal"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
+	"github.com/ready-to-release/eac/go/r2r/cli/internal/terminal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -81,9 +81,9 @@ func NewContainerHost() (*ContainerHost, error) {
 		// Check for common Docker service not running errors
 		errStr := pingErr.Error()
 		if strings.Contains(errStr, "docker_engine") ||
-		   strings.Contains(errStr, "cannot connect to the Docker daemon") ||
-		   strings.Contains(errStr, "Is the docker daemon running") ||
-		   strings.Contains(errStr, "system cannot find the file specified") {
+			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
+			strings.Contains(errStr, "Is the docker daemon running") ||
+			strings.Contains(errStr, "system cannot find the file specified") {
 			return nil, fmt.Errorf("Docker service is not running. Please start Docker Desktop or the Docker daemon and try again")
 		}
 		return nil, fmt.Errorf("cannot connect to Docker daemon: %w", pingErr)
@@ -131,7 +131,6 @@ func (ch *ContainerHost) FindExtension(name string) (*ExtensionConfig, error) {
 				AutoRemoveChildren: ext.AutoRemoveChildren,
 				Env:                ext.Env,
 			}
-
 
 			return config, nil
 		}
@@ -346,7 +345,7 @@ func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode Contai
 			// ANSI escape sequences will be filtered out by the CLI
 			logging.Debugf("ModeRun: Args present, enabling TTY for terminal width detection: args_count=%d args=%v", len(args), args)
 			config.Tty = true
-			config.OpenStdin = false  // Disable stdin for command mode to avoid TTY corruption
+			config.OpenStdin = false // Disable stdin for command mode to avoid TTY corruption
 		}
 		config.Cmd = args
 	}
@@ -659,9 +658,9 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		// Check for common Docker service not running errors
 		errStr := pingErr.Error()
 		if strings.Contains(errStr, "docker_engine") ||
-		   strings.Contains(errStr, "cannot connect to the Docker daemon") ||
-		   strings.Contains(errStr, "Is the docker daemon running") ||
-		   strings.Contains(errStr, "system cannot find the file specified") {
+			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
+			strings.Contains(errStr, "Is the docker daemon running") ||
+			strings.Contains(errStr, "system cannot find the file specified") {
 			return fmt.Errorf("Docker service is not running. Please start Docker Desktop or the Docker daemon and try again")
 		}
 		return fmt.Errorf("cannot connect to Docker: %w", pingErr)
@@ -673,8 +672,8 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		// Check if this is a Docker service issue
 		errStr := err.Error()
 		if strings.Contains(errStr, "docker_engine") ||
-		   strings.Contains(errStr, "cannot connect to the Docker daemon") ||
-		   strings.Contains(errStr, "system cannot find the file specified") {
+			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
+			strings.Contains(errStr, "system cannot find the file specified") {
 			return fmt.Errorf("Docker service is not running. Please start Docker Desktop or the Docker daemon and try again")
 		}
 		return fmt.Errorf("error logging in to registry: %w", err)
@@ -972,7 +971,7 @@ func (ch *ContainerHost) extractTag(imageName string) string {
 }
 
 // extractExtensionName extracts the extension name from an image name
-// For ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:0.0.2 -> "pwsh"
+// For ghcr.io/ready-to-release/ext-eac:0.0.2 -> "eac"
 func (ch *ContainerHost) extractExtensionName(imageName string) string {
 	// Remove tag first
 	imageWithoutTag := imageName

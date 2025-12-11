@@ -135,7 +135,7 @@ To run tests for your project:
 r2r test
 ```
 
-This runs all modules with the default "commit" test suite (L0-L2 fast tests).
+This runs all modules with the default "component" test suite (L0-L1 fast tests).
 
 To test a specific module:
 
@@ -151,8 +151,9 @@ r2r test --suite acceptance
 
 Available test suites:
 
-- `commit` - L0-L2 tests (fast, for pre-commit)
-- `acceptance` - IV/OV/PV tests (PLTE acceptance)
+- `component` - L0-L1 tests (fast unit tests, <5 min)
+- `integration` - L2 tests (Docker-based emulated tests, <15 min)
+- `acceptance` - L3 tests (production-like tests in PLTE, 1-2 hours)
 - `production-verification` - L4+PIV tests (production smoke tests)
 
 ## What You Learned
@@ -171,7 +172,7 @@ Congratulations! You've successfully:
 - **Project initialization** - Setting up `.r2r/eac/` configuration
 - **AI provider configuration** - Claude, OpenAI, or Gemini integration
 - **Repository exploration** - Using `show` commands to understand structure
-- **Test suites** - Different test levels (commit, acceptance, production-verification)
+- **Test suites** - Different test levels (component, integration, acceptance, production-verification)
 
 ## Next Steps
 
