@@ -50,7 +50,7 @@ outputs:
     value: ${{ steps.version.outputs.tag_name }}
   ci_sha:
     description: 'SHA of the commit that passed CI (may differ from release commit if inherited)'
-    value: ${{ steps.ci_check.outputs.ci_sha || steps.ci_check_skip.outputs.ci_sha }}
+    value: ${{ steps.set_ci_sha.outputs.ci_sha || steps.ci_check_skip.outputs.ci_sha }}
 
 runs:
   using: composite
@@ -144,22 +144,21 @@ runs:
         echo "Waiting for CI on exact commit ${COMMIT:0:7}..."
         echo ""
 
-        # Run CI check and capture output to extract inherited SHA
-        OUTPUT=$($COMMANDS release check-ci \
+        # Verify CI passed for this commit (or inherit from previous if only changelog changed)
+        # On success, may set INHERITED_CI_SHA in GITHUB_ENV for next step
+        $COMMANDS release check-ci \
           --workflow "$WORKFLOW" \
           --commit "$COMMIT" \
           --timeout "$TIMEOUT" \
-          --strict)
-        echo "$OUTPUT"
+          --strict
 
-        # Extract inherited SHA if CI was inherited from previous run
-        INHERITED_SHA=$(echo "$OUTPUT" | grep "^INHERITED_CI_SHA=" | cut -d= -f2)
-        if [ -n "$INHERITED_SHA" ]; then
-          echo "CI inherited from commit: $INHERITED_SHA"
-          echo "ci_sha=$INHERITED_SHA" >> $GITHUB_OUTPUT
-        else
-          echo "ci_sha=$COMMIT" >> $GITHUB_OUTPUT
-        fi
+    - name: Set CI SHA output
+      id: set_ci_sha
+      if: inputs.skip-ci-check != 'true'
+      shell: bash
+      run: |
+        # Use inherited SHA if CI was inherited from previous run, otherwise current commit
+        echo "ci_sha=${INHERITED_CI_SHA:-${{ github.sha }}}" >> $GITHUB_OUTPUT
 
     - name: Skip CI check warning
       id: ci_check_skip

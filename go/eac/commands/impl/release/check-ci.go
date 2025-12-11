@@ -45,17 +45,6 @@ type CIRunStatus struct {
 	Conclusion string `json:"conclusion"`
 }
 
-// CheckCIResult represents the result of the CI check
-type CheckCIResult struct {
-	Success      bool   `json:"success"`
-	Status       string `json:"status"` // "success", "failure", "timeout", "not_found"
-	Message      string `json:"message"`
-	CommitSHA    string `json:"commit_sha"`
-	Workflow     string `json:"workflow"`
-	Elapsed      string `json:"elapsed"`
-	InheritedSHA string `json:"inherited_sha,omitempty"` // Set when CI was inherited from previous run
-}
-
 func ReleaseCheckCI() int {
 	// Parse flags
 	workflow := ""
@@ -194,8 +183,13 @@ func ReleaseCheckCI() int {
 					if canInherit {
 						log.Infof("")
 						log.Infof("✓ %s", inheritMsg)
-						// Output parseable inherited SHA for workflows to capture
-						fmt.Printf("INHERITED_CI_SHA=%s\n", inheritedSHA)
+						// Export INHERITED_CI_SHA to GitHub Actions environment
+						if ghEnv := os.Getenv("GITHUB_ENV"); ghEnv != "" {
+							if f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+								fmt.Fprintf(f, "INHERITED_CI_SHA=%s\n", inheritedSHA)
+								f.Close()
+							}
+						}
 						return 0
 					}
 					// If we have a specific reason why we can't inherit, show it
@@ -321,7 +315,6 @@ type CIRunWithSHA struct {
 	Status     string `json:"status"`
 	Conclusion string `json:"conclusion"`
 	HeadSHA    string `json:"headSha"`
-	HeadBranch string `json:"headBranch"`
 }
 
 // getWorkflowRuns queries GitHub for workflow runs on a specific commit
@@ -588,3 +581,4 @@ func getChangedFilesBetweenCommits(baseSHA, headSHA, workspaceRoot string) ([]st
 func normalizeSlashes(path string) string {
 	return strings.ReplaceAll(path, "\\", "/")
 }
+
